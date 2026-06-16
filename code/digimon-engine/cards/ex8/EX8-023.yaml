@@ -1,0 +1,228 @@
+# EX8-023 PolarBearmon — Digimon, Lv.5, Blue/Yellow, DP 7000, Cost 7.
+# Traits: Ice-Snow, LIBERATOR. Attribute: Vaccine. Rarity: U.
+#
+# Printed card text (card image EX8-023 — authoritative; cards.json agrees):
+#   Evo box: Lv.4 from blue: Cost 4   (JSON evo_costs [{card_color:1, level:4, memory_cost:4}])
+#   Evo box: "Digivolve Lv.4 w/[Ice-Snow] trait: Cost 3"   (JSON xros_req)
+#   <Iceclad> (Other than against Security Digimon, compare the number of
+#     digivolution cards instead of DP in this Digimon's battles.)
+#   [On Play] [When Digivolving] Trash any 2 digivolution cards from your
+#     opponent's Digimon. Then, 1 of your opponent's Digimon with no
+#     digivolution cards can't suspend or activate [When Digivolving] effects
+#     until the end of their turn.
+#   Inherited Effect:
+#   [Your Turn] While your opponent has no Digimon with digivolution cards,
+#     this Digimon with the [Ice-Snow] trait gains <Piercing> (...) and
+#     <Security A. +1> (This Digimon checks 1 additional security card.)
+#
+# DCGO crosscheck (DCGO/Assets/Scripts/CardEffect/EX8/Blue/EX8_023.cs):
+#   Alternate Digivolution Requirement (None):
+#     AddSelfDigivolutionRequirementStaticEffect(permanentCondition:
+#     EqualsTraits("Ice-Snow") && HasLevel && Level == 4, digivolutionCost: 3,
+#     ignoreDigivolutionRequirement: false) → `from: { level_eq: 4,
+#     trait_has: Ice-Snow }`, cost 3.
+#   Iceclad (None): IcecladSelfStaticEffect(isInheritedEffect: false) →
+#     face-up `grant_keyword: Iceclad` (engine Keyword::Iceclad consumed at
+#     Game::resolve_battle — stack-size compare instead of DP; security
+#     battles unaffected). EX8-022 idiom.
+#   On Play + When Digivolving (OnEnterFieldAnyone, two ActivateClass bodies
+#     with identical coroutines):
+#     - CanActivateCondition: self on battle area AND ≥1 opponent battle-area
+#       Digimon (ANY — sources not required) → clause-level `condition:`.
+#     - SelectTrashDigivolutionCards(permanentCondition: opponent battle-area
+#       Digimon, maxCount: 2, canNoTrash: false, isFromOnly1Permanent: false):
+#       a MANDATORY cross-permanent pick of EXACTLY
+#       maxDigivolutionDiscardCount = min(total selectable opponent
+#       digivolution cards, 2). With 1 available card the player must trash
+#       that 1; with 0 the sub-flow no-ops.
+#     - THEN (gated only on HasMatchConditionPermanent(opponent Digimon with
+#       DigivolutionCards.Count == 0) — NOT on the trash having trashed
+#       anything): MANDATORY SelectPermanentEffect(maxCount: 1, canNoSelect:
+#       false) → CanNotSuspendClass + DisableEffectClass(IsWhenDigivolving),
+#       both appended to selectedPermanent.UntilOwnerTurnEndEffects = until
+#       the end of the TARGET OWNER's (= opponent's) turn.
+#   Your Turn (None + OnDetermineDoSecurityCheck, isInheritedEffect: true):
+#     ChangeSelfSAttackStaticEffect(+1) and PierceSelfEffect, both gated on
+#     IsExistOnBattleArea + IsOwnerTurn + carrier EqualsTraits("Ice-Snow") +
+#     NO opponent battle-area Digimon with DigivolutionCards.
+#
+# ─── Authoring notes ──────────────────────────────────────────────────────────
+#
+# "Trash any 2" mandatory clamp: the engine's `select_opponent_sources` with
+# min > 0 drops its captured tail when candidates run out below `min`, so a
+# bare `min: 2, max: 2` would misbehave with exactly 1 available source
+# (DCGO: must trash that 1, and the "Then" half still runs). Expressed as an
+# if/else count ladder mirroring DCGO's maxDigivolutionDiscardCount clamp:
+#   - total opponent digivolution cards >= 2 → mandatory exact-2 pick
+#     (one stack with >= 2 sources [stack_size_gte: 3] OR two stacks with
+#      >= 1 source each [count_gte n: 2 of stack_size_gte: 2]);
+#   - exactly 1 → mandatory exact-1 pick;
+#   - zero → no pick.
+# The lock half sits AFTER the ladder as sibling steps: the dispatcher parks
+# the outer tail across the in-branch selection, so it runs in every arm.
+#
+# Known minor divergence (shared with BT25-028's cross-permanent pick):
+# `select_opponent_sources` enumerates sources under EVERY opponent
+# battle-area permanent — there is no DSL filter for "host permanent is a
+# Digimon" on source picks (filters evaluate against the source CARD). DCGO
+# restricts hosts to Digimon. The count-ladder conditions deliberately match
+# the enumerator (no kind gate) for internal consistency. Only divergent on
+# the exotic board "opponent TAMER carrying digivolution cards".
+#
+# Lock modifiers: `CannotSuspend` (BT25-026 idiom) + the engine-enforced
+# `CannotActivateWhenDigivolvingEffects` (effect_queue::
+# permanent_activation_blocked_for_timing), both expiry
+# end_of_opponents_turn ("until the end of their turn" — DCGO
+# UntilOwnerTurnEndEffects on the opponent-owned target).
+#
+# Inherited aura: BT12-050 (inherited self-aura grant_keyword Piercing) +
+# EX11-002 (active_when: your_turn + carrier trait_has + no_permanent
+# stack_size_gte: 2) idioms, with the Track H flat `security_attack: 1`.
+#
+# Implementation status (faithfulness diff):
+# | Std digivolve Lv.4 blue / Cost 4                          | IMPLEMENTED (alt_paths + JSON evo_costs) |
+# | Alt digivolve Lv.4 w/[Ice-Snow] / Cost 3                  | IMPLEMENTED (alt_paths trait_has)        |
+# | <Iceclad>                                                 | IMPLEMENTED (grant_keyword)              |
+# | [OP][WD] trash any 2 sources of opp Digimon (cross-perm)  | IMPLEMENTED (select_opponent_sources + clamp ladder) |
+# | [OP][WD] then 1 sourceless opp Digimon can't suspend      | IMPLEMENTED (CannotSuspend, end_of_opponents_turn — modifier installed; engine-wide attack/block mask consult for CannotSuspend does not exist yet, same as BT25-026/EX9-019/BT20-084) |
+# | [OP][WD] ...or activate [When Digivolving] effects        | IMPLEMENTED (CannotActivateWhenDigivolvingEffects — enforced at effect_queue) |
+# | Inherited [Your Turn] Piercing + Security A. +1           | IMPLEMENTED (inherited conditional self-aura) |
+
+card: EX8-023
+name: PolarBearmon
+kind: digimon
+level: 5
+color: [blue, yellow]
+cost: 7
+dp: 7000
+traits: [Ice-Snow, LIBERATOR]
+attribute: Vaccine
+form: Ultimate
+alt_paths:
+  # Printed standard evo box: Lv.4 from blue, cost 4 (encoded explicitly like
+  # neighbor EX8 specs so DSL-only loads carry the printed cost table).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 4
+  # Printed alt evo box: "Digivolve Lv.4 w/[Ice-Snow] trait: Cost 3". DCGO
+  # gates on EqualsTraits("Ice-Snow") && Level == 4.
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: Ice-Snow }
+    cost: 3
+
+effects:
+  # ─── Clause 1: <Iceclad> ─────────────────────────────────────────────────────
+  #
+  # "(Other than against Security Digimon, compare the number of digivolution
+  #  cards instead of DP in this Digimon's battles.)"
+  #
+  # Engine Keyword::Iceclad is consumed at the combat resolver
+  # (Game::resolve_battle): when either combatant has it, the battle compares
+  # `card_sources.len()` instead of effective DP. Security battles route
+  # through resolve_player_security_loop and are unaffected. EX8-022 idiom.
+  - kind: grant_keyword
+    keyword: Iceclad
+    summary: "<Iceclad> (Compare digivolution-card counts instead of DP in this Digimon's battles, other than against Security Digimon)"
+
+  # ─── Clause 2: [On Play][When Digivolving] trash any 2 + lock ────────────────
+  #
+  # "Trash any 2 digivolution cards from your opponent's Digimon. Then, 1 of
+  #  your opponent's Digimon with no digivolution cards can't suspend or
+  #  activate [When Digivolving] effects until the end of their turn."
+  #
+  # Mandatory throughout (DCGO canNoTrash: false / canNoSelect: false; no
+  # printed "you may" — no `optional:` per the optional-on-mandatory pitfall).
+  # Clause condition = DCGO CanActivateCondition (≥1 opponent battle-area
+  # Digimon). The trash is a cross-permanent player pick clamped to
+  # min(2, available) — see the authoring note. The "Then" lock select is
+  # gated only by its own candidate filter (sourceless opponent Digimon):
+  # with no candidate the mandatory select silently skips (DCGO
+  # HasMatchConditionPermanent guard), and a Digimon stripped bare by the
+  # trash IS a legal target.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash any 2 digivolution cards from the opponent's Digimon; then 1 sourceless opponent Digimon can't suspend or activate [When Digivolving] effects until the end of their turn"
+    condition:
+      any_field_permanent: { of: opponent, kind: digimon }
+    process:
+      # DCGO maxDigivolutionDiscardCount = min(total, 2) clamp ladder.
+      - if:
+          condition:
+            any_of:
+              # one opponent stack alone carries >= 2 digivolution cards…
+              - any_field_permanent: { of: opponent, stack_size_gte: 3 }
+              # …or >= 2 opponent stacks carry >= 1 digivolution card each.
+              - count_gte:
+                  filter:
+                    of: opponent
+                    zone: [battle_area]
+                    stack_size_gte: 2
+                  n: 2
+          then:
+            - select_opponent_sources:
+                min: 2
+                max: 2
+                bind_as: picks
+                prompt: "Trash any 2 digivolution cards from your opponent's Digimon"
+                then:
+                  - trash_selected_sources: { source_refs: picks }
+          else:
+            - if:
+                condition:
+                  any_field_permanent: { of: opponent, stack_size_gte: 2 }
+                then:
+                  - select_opponent_sources:
+                      min: 1
+                      max: 1
+                      bind_as: picks
+                      prompt: "Trash any 2 digivolution cards from your opponent's Digimon (only 1 available)"
+                      then:
+                        - trash_selected_sources: { source_refs: picks }
+      # "Then, 1 of your opponent's Digimon with no digivolution cards…"
+      # (sibling steps — the dispatcher parks this outer tail across the
+      # in-branch source selection, so it runs in every ladder arm).
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte: 0
+          prompt: "Choose 1 opponent Digimon with no digivolution cards — it can't suspend or activate [When Digivolving] effects until the end of their turn"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn
+      - add_modifier:
+          target: lock_target
+          modifier: CannotActivateWhenDigivolvingEffects
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # ─── Clause 3: Inherited [Your Turn] Piercing + Security A. +1 ───────────────
+  #
+  # "[Your Turn] While your opponent has no Digimon with digivolution cards,
+  #  this Digimon with the [Ice-Snow] trait gains <Piercing> and
+  #  <Security A. +1>."
+  #
+  # Inherited conditional self-aura (BT12-050 / EX11-002 idiom). All three
+  # gates live in active_when (subject = the carrier permanent):
+  #   1. your_turn — printed [Your Turn] timing header (DCGO IsOwnerTurn).
+  #   2. trait_has Ice-Snow — "this Digimon with the [Ice-Snow] trait".
+  #   3. no_permanent(opponent, battle_area, digimon, stack >= 2) — "your
+  #      opponent has no Digimon with digivolution cards" (stack size
+  #      includes the top card, so >= 1 digivolution card ⇔ stack >= 2).
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when:
+      all_of:
+        - your_turn: true
+        - trait_has: Ice-Snow
+        - no_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            stack_size_gte: 2
+    grant_keyword: { keyword: Piercing }
+    security_attack: 1
+    summary: "[Inherited][Your Turn] While opp has no Digimon w/ digivolution cards, this [Ice-Snow] Digimon gains <Piercing> and <Security A. +1>"

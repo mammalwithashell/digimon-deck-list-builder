@@ -136,14 +136,22 @@ impl<'a> EffectContext<'a> {
                     break;
                 }
             };
-            if !card.is_token {
-                let card_id = card.card_id(&self.game.card_data).to_string();
-                let seq = self.game.next_event_seq();
-                self.game
-                    .events
-                    .push(crate::events::GameEvent::Mill { seq, player, card_id });
-            }
-            self.game.player_mut(player).trash.push(card);
+            let card_id = card.card_id(&self.game.card_data).to_string();
+            let card_name = card.card_name(&self.game.card_data).to_string();
+            let seq = self.game.next_event_seq();
+            self.game.events.push(crate::events::GameEvent::Reveal {
+                seq,
+                player,
+                card_id,
+                card_name,
+                source_zone: crate::events::RevealZone::TrashFromDeckTop,
+            });
+            // Route the deck→trash movement through the canonical trash path so
+            // a `GameEvent::Trash` also fires (event-stream completeness per the
+            // engine-event-emission "every card-to-trash emits Trash" rule). The
+            // preceding `Reveal{TrashFromDeckTop}` is what the match log renders;
+            // the frontend suppresses the paired `Trash` line to avoid a dup.
+            self.game.trash_card(player, card);
             trashed += 1;
         }
         trashed

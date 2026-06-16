@@ -2,7 +2,8 @@
 
 use digimon_dsl::compile::compile;
 use digimon_dsl::compiled::{
-    CompiledBindingRef, CompiledClause, CompiledFormula, CompiledPredicate, CompiledStep,
+    CompiledBindingRef, CompiledClause, CompiledCountBound, CompiledFormula, CompiledPredicate,
+    CompiledStep,
 };
 use digimon_dsl::spec::CardSpec;
 
@@ -199,14 +200,16 @@ effects:
             filter,
             min,
             max,
+            clamp_to_available,
             bind_as,
             prompt,
             then,
         } => {
             assert_eq!(target, Some(CompiledBindingRef::Named("opp_stack".into())));
             assert_eq!(filter, CompiledPredicate::default());
-            assert_eq!(min, 3);
-            assert_eq!(max, 3);
+            assert_eq!(min, CompiledCountBound::Literal(3));
+            assert_eq!(max, CompiledCountBound::Literal(3));
+            assert!(!clamp_to_available, "clamp defaults to false");
             assert_eq!(bind_as.as_deref(), Some("trashed_sources"));
             assert_eq!(
                 prompt,
@@ -257,10 +260,149 @@ effects:
             ..
         } => {
             assert!(target.is_none());
-            assert_eq!(min, 0);
-            assert_eq!(max, 2);
+            assert_eq!(min, CompiledCountBound::Literal(0));
+            assert_eq!(max, CompiledCountBound::Literal(2));
             assert_eq!(bind_as.as_deref(), Some("picked"));
             assert_eq!(prompt, "Choose source cards");
+        }
+        other => panic!("expected SelectOpponentSources, got {other:?}"),
+    }
+}
+
+#[test]
+fn select_opponent_sources_accepts_formula_counts_and_clamp_flag() {
+    // G-DSL-SELECT-SOURCES-FORMULA-COUNT — EX11-057 [On Play] shape: "For
+    // each of your [Ice-Snow] trait Digimon, trash any 1 digivolution card
+    // from your opponent's Digimon" — N is computed at resolution and the
+    // pick clamps to min(N, available) (DCGO TrashDigivolutionCards.cs
+    // `maxDigivolutionDiscardCount = Math.Min(digivolutionCardsSum, maxCount)`).
+    let yaml = r#"
+card: X-OPP-FORMULA
+name: Formula Count Picker
+kind: tamer
+color: [blue]
+cost: 4
+effects:
+  - when: on_play
+    process:
+      - select_opponent_sources:
+          min:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  zone: battle_area
+                  of: you
+                  filter: { kind: digimon, trait_has: Ice-Snow }
+              delta: 1
+          max:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  zone: battle_area
+                  of: you
+                  filter: { kind: digimon, trait_has: Ice-Snow }
+              delta: 1
+          clamp_to_available: true
+          bind_as: picks
+          prompt: "Trash any 1 digivolution card per Ice-Snow Digimon"
+          then:
+            - trash_selected_sources:
+                source_refs: picks
+"#;
+
+    let spec: CardSpec =
+        serde_yml::from_str(yaml).expect("formula-valued min/max + clamp_to_available must parse");
+    let compiled = compile(&spec).expect("compile");
+    let clause = &compiled.effects[0];
+    let process = match clause {
+        CompiledClause::Triggered(t) => &t.process,
+        _ => panic!("expected triggered clause"),
+    };
+    match &process[0] {
+        CompiledStep::SelectOpponentSources {
+            min,
+            max,
+            clamp_to_available,
+            bind_as,
+            then,
+            ..
+        } => {
+            assert!(
+                matches!(min, CompiledCountBound::Formula(_)),
+                "min must compile to a formula bound, got {min:?}"
+            );
+            assert!(
+                matches!(max, CompiledCountBound::Formula(_)),
+                "max must compile to a formula bound, got {max:?}"
+            );
+            assert!(*clamp_to_available, "clamp_to_available: true must survive lowering");
+            assert_eq!(bind_as.as_deref(), Some("picks"));
+            assert_eq!(
+                then,
+                &vec![CompiledStep::TrashSelectedSources {
+                    source_refs: "picks".to_string(),
+                }]
+            );
+        }
+        other => panic!("expected SelectOpponentSources, got {other:?}"),
+    }
+}
+
+#[test]
+fn select_opponent_sources_literal_counts_default_to_unclamped_literals() {
+    // Back-compat regression: plain YAML integers must keep deserializing
+    // exactly as before (CountBound's untagged literal arm) and the new
+    // clamp flag must default to FALSE — committed cards (EX7-021 / EX7-023 /
+    // EX11-017 / EX8-066) build availability LADDERS on the unclamped
+    // drop-continuation semantics.
+    let yaml = r#"
+card: X-OPP-LIT
+name: Literal Count Picker
+kind: tamer
+color: [blue]
+cost: 4
+effects:
+  - when: on_play
+    process:
+      - select_opponent_sources:
+          min: 1
+          max: 3
+          bind_as: picks
+          then:
+            - trash_selected_sources:
+                source_refs: picks
+"#;
+
+    let spec: CardSpec = serde_yml::from_str(yaml).expect("literal min/max must keep parsing");
+    let compiled = compile(&spec).expect("compile");
+    let clause = &compiled.effects[0];
+    let process = match clause {
+        CompiledClause::Triggered(t) => &t.process,
+        _ => panic!("expected triggered clause"),
+    };
+    match &process[0] {
+        CompiledStep::SelectOpponentSources {
+            min,
+            max,
+            clamp_to_available,
+            ..
+        } => {
+            assert_eq!(
+                min,
+                &CompiledCountBound::Literal(1),
+                "plain integer min must stay a literal bound"
+            );
+            assert_eq!(
+                max,
+                &CompiledCountBound::Literal(3),
+                "plain integer max must stay a literal bound"
+            );
+            assert!(
+                !*clamp_to_available,
+                "clamp_to_available must default to false (ladder back-compat)"
+            );
         }
         other => panic!("expected SelectOpponentSources, got {other:?}"),
     }

@@ -31,6 +31,88 @@ use crate::selection::{
     SourceSelectionRef,
 };
 
+/// Emit a `GameEvent::EffectTarget` for a committed target selection, naming
+/// the effect's source card and the chosen target card. Resolves the source
+/// identity from `source_card`; if it can't be resolved the event is skipped
+/// (an unattributed target line is worse than none). Called from selection
+/// callbacks at commit time, before the effect's own callback runs, so the
+/// "X's effect targeted Y" line precedes the consequence (Y trashed, etc.).
+pub(crate) fn push_effect_target(
+    game: &mut Game,
+    controller: PlayerId,
+    source_card: CardHandle,
+    target_id: String,
+    target_name: String,
+) {
+    let Some((source_card_id, source_card_name)) = game
+        .card_data_for_handle(source_card)
+        .map(|cd| (cd.card_id.clone(), cd.card_name.clone()))
+    else {
+        return;
+    };
+    let seq = game.next_event_seq();
+    game.events.push(crate::events::GameEvent::EffectTarget {
+        seq,
+        player: controller,
+        source_card_id,
+        source_card_name,
+        targets: vec![crate::events::EventCardRef {
+            card_id: target_id,
+            card_name: target_name,
+        }],
+    });
+}
+
+/// Multi-target variant of [`push_effect_target`]: emit one `EffectTarget`
+/// naming all chosen targets at once (for multi-select effects). No-op if
+/// `targets` is empty or the source can't be resolved.
+pub(crate) fn push_effect_target_multi(
+    game: &mut Game,
+    controller: PlayerId,
+    source_card: CardHandle,
+    targets: Vec<crate::events::EventCardRef>,
+) {
+    if targets.is_empty() {
+        return;
+    }
+    let Some((source_card_id, source_card_name)) = game
+        .card_data_for_handle(source_card)
+        .map(|cd| (cd.card_id.clone(), cd.card_name.clone()))
+    else {
+        return;
+    };
+    let seq = game.next_event_seq();
+    game.events.push(crate::events::GameEvent::EffectTarget {
+        seq,
+        player: controller,
+        source_card_id,
+        source_card_name,
+        targets,
+    });
+}
+
+/// Resolve a list of permanents to their top-card `EventCardRef`s.
+fn permanents_to_refs(
+    game: &Game,
+    handles: &[PermanentHandle],
+) -> Vec<crate::events::EventCardRef> {
+    handles
+        .iter()
+        .filter_map(|h| {
+            game.player(h.player)
+                .battle_area
+                .get(h.index as usize)
+                .map(|p| {
+                    let top = p.top_card();
+                    crate::events::EventCardRef {
+                        card_id: top.card_id(&game.card_data).to_string(),
+                        card_name: top.card_name(&game.card_data).to_string(),
+                    }
+                })
+        })
+        .collect()
+}
+
 /// Identifies which zone `select_count_capped_multi` draws candidates from.
 ///
 /// - `Hand`  — action IDs map to `PLAY_HAND_START + i` (range 0–29)
@@ -243,6 +325,11 @@ impl<'a> EffectContext<'a> {
             source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let hand_index = action_id.saturating_sub(PLAY_HAND_START) as usize;
+                if let Some(card) = game.player(of_player).hand.get(hand_index) {
+                    let tid = card.card_id(&game.card_data).to_string();
+                    let tname = card.card_name(&game.card_data).to_string();
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -310,6 +397,11 @@ impl<'a> EffectContext<'a> {
             source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let trash_index = action_id.saturating_sub(TRASH_EFFECT_START) as usize;
+                if let Some(card) = game.player(of_player).trash.get(trash_index) {
+                    let tid = card.card_id(&game.card_data).to_string();
+                    let tname = card.card_name(&game.card_data).to_string();
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -396,6 +488,16 @@ impl<'a> EffectContext<'a> {
                 // `decode_source_select`, so a breeding-carrier action ID
                 // (in the BREEDING_SOURCE_SELECT range) decodes correctly.
                 let source_idx = action_id.saturating_sub(range_start) as usize;
+                if let Some(card) = game
+                    .player(of_permanent.player)
+                    .battle_area
+                    .get(of_permanent.index as usize)
+                    .and_then(|p| p.card_sources.get(source_idx))
+                {
+                    let tid = card.card_id(&game.card_data).to_string();
+                    let tname = card.card_name(&game.card_data).to_string();
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -655,6 +757,8 @@ impl<'a> EffectContext<'a> {
             source_kind,
             previous_phase,
             Box::new(move |game, picked| {
+                let refs = permanents_to_refs(game, &picked);
+                push_effect_target_multi(game, controller, source_card, refs);
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -709,6 +813,8 @@ impl<'a> EffectContext<'a> {
             source_kind,
             previous_phase,
             Box::new(move |game, picked| {
+                let refs = permanents_to_refs(game, &picked);
+                push_effect_target_multi(game, controller, source_card, refs);
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -774,6 +880,10 @@ impl<'a> EffectContext<'a> {
             source_permanent,
             source_kind,
             callback: Box::new(move |game, _| {
+                if let Some(cd) = game.card_data_for_handle(selection_ref.card) {
+                    let (tid, tname) = (cd.card_id.clone(), cd.card_name.clone());
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -917,6 +1027,11 @@ impl<'a> EffectContext<'a> {
             source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let index = action_id.saturating_sub(SEL_REVEAL_START) as usize;
+                if let Some(card) = game.revealed_cards.get(index) {
+                    let tid = card.card_id(&game.card_data).to_string();
+                    let tname = card.card_name(&game.card_data).to_string();
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -1035,7 +1150,13 @@ impl<'a> EffectContext<'a> {
         let previous_phase = self.game.current_phase;
         self.game.current_phase = GamePhase::SelectSecurity;
         self.game.pending_selection = Some(PendingSelection {
-            zone_owner: None,
+            // Disambiguate whose security stack is being indexed: own security
+            // uses action ids 40-49, opponent's 50-59. The frontend reads
+            // `zone_owner` to pick the correct base offset and the correct
+            // (face-down) security stack to render. Without it, an
+            // opponent-security prompt (e.g. BT24-018 Styracomon) renders
+            // against the local player's stack and is unselectable.
+            zone_owner: Some(of_player),
             kind: SelectionKind::Security,
             selecting_player,
             previous_phase,
@@ -1048,6 +1169,11 @@ impl<'a> EffectContext<'a> {
             source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let index = action_id.saturating_sub(base) as usize;
+                if let Some(card) = game.player(of_player).security.get(index) {
+                    let tid = card.card_id(&game.card_data).to_string();
+                    let tname = card.card_name(&game.card_data).to_string();
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -1301,6 +1427,10 @@ impl<'a> EffectContext<'a> {
                         crate::selection::UnionZoneOrigin::Hand,
                     )
                 };
+                if let Some(cd) = game.card_data_for_handle(handle) {
+                    let (tid, tname) = (cd.card_id.clone(), cd.card_name.clone());
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -1560,6 +1690,18 @@ impl<'a> EffectContext<'a> {
             dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync,
         > = Box::new(
             move |game: &mut Game, picks: Vec<crate::card_source::CardHandle>| {
+                let refs: Vec<crate::events::EventCardRef> = picks
+                    .iter()
+                    .filter_map(|h| {
+                        game.card_data_for_handle(*h).map(|cd| {
+                            crate::events::EventCardRef {
+                                card_id: cd.card_id.clone(),
+                                card_name: cd.card_name.clone(),
+                            }
+                        })
+                    })
+                    .collect();
+                push_effect_target_multi(game, controller, source_card, refs);
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -1804,6 +1946,18 @@ impl<'a> EffectContext<'a> {
                     player: target_player,
                     index: target_index,
                 };
+                // Emit EffectTarget BEFORE the effect runs so the log reads
+                // "[source] targeted [target]" ahead of the consequence.
+                if let Some(perm) = game
+                    .player(target_player)
+                    .battle_area
+                    .get(target_index as usize)
+                {
+                    let top = perm.top_card();
+                    let tid = top.card_id(&game.card_data).to_string();
+                    let tname = top.card_name(&game.card_data).to_string();
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let previous_effect_source = game.effect_source_player;
                 game.effect_source_player = Some(controller);
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
@@ -3209,7 +3363,12 @@ fn install_count_capped_step(
     game.current_phase = GamePhase::SelectBudgeted;
     game.pending_selection = Some(PendingSelection {
         zone_owner: None,
-        kind: SelectionKind::CountCappedMultiSelect { max, picked },
+        kind: SelectionKind::CountCappedMultiSelect {
+            min: effective_min,
+            max,
+            picked,
+            distinct: distinct_by.is_some(),
+        },
         selecting_player,
         previous_phase,
         valid_action_ids,

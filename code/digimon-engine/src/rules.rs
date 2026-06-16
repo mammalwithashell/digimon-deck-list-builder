@@ -1,92 +1,10 @@
 use std::collections::BTreeMap;
-use std::sync::LazyLock;
 
 use serde::{Deserialize, Serialize};
 
 use crate::enums::{GameMode, Rarity, SkipDraw, TitanRole};
 
 const PAUPER_RARITY_MASK: u8 = Rarity::C.mask() | Rarity::U.mask();
-
-/// Built once, cloned on each `CardRestriction::official_eng()` call — the data
-/// is effectively static config, so don't re-allocate the map and vectors every time.
-static OFFICIAL_ENG_RESTRICTION: LazyLock<CardRestriction> = LazyLock::new(|| {
-    let mut card_limits = BTreeMap::new();
-
-    // 3 Banned cards (0 copies allowed)
-    for id in ["BT2-090", "BT5-109", "EX5-065"] {
-        card_limits.insert(id.to_string(), 0);
-    }
-
-    // 47 Restricted cards (max 1 copy)
-    for id in [
-        "BT1-090", "BT10-009", "BT11-033", "BT11-064", "BT13-012", "BT13-110", "BT14-002",
-        "BT14-084", "BT15-057", "BT15-102", "BT16-011", "BT17-069", "BT19-040", "BT2-047",
-        "BT2-069", "BT3-054", "BT3-103", "BT4-104", "BT4-111", "BT6-100", "BT6-104", "BT7-038",
-        "BT7-064", "BT7-069", "BT7-072", "BT7-107", "BT9-098", "BT9-099", "EX1-021", "EX1-068",
-        "EX2-039", "EX2-070", "EX3-057", "EX4-006", "EX4-019", "EX4-030", "EX5-015", "EX5-018",
-        "EX5-062", "P-008", "P-025", "P-029", "P-030", "P-123", "P-130", "ST2-13", "ST9-09",
-    ] {
-        card_limits.insert(id.to_string(), 1);
-    }
-
-    let choice_groups = vec![
-        // Choice 1: Mother D-Reaper vs Shoto Kazama
-        (vec!["EX2-007".to_string()], vec!["EX7-064".to_string()]),
-        // Choice 2: Chaosmon: Valdur Arm vs Taomon + Sakuyamon (X Antibody)
-        (
-            vec!["BT20-037".to_string()],
-            vec!["BT17-035".to_string(), "EX8-037".to_string()],
-        ),
-    ];
-
-    CardRestriction {
-        card_limits,
-        choice_groups,
-    }
-});
-
-/// EDEN Format 1.1.1 custom restricted list.
-///
-/// Source: "Digimon Card Game EDEN Format Rules & Guidance", version 1.1.1,
-/// last updated 18/01/2025.
-static EDEN_RESTRICTION: LazyLock<CardRestriction> = LazyLock::new(|| {
-    let mut card_limits = BTreeMap::new();
-
-    for id in [
-        "BT3-097",  // A Delicate Plan
-        "BT9-103",  // Kongou
-        "BT16-011", // Garudamon (X Antibody)
-        "EX4-008",  // BlackGrowlmon
-        "EX6-042",  // RaijiLudomon
-        "BT12-092", // Marcus Damon
-        "EX2-007",  // Mother D-Reaper (document spells this EX02-007)
-        "BT15-082", // Sora Takenouchi
-    ] {
-        card_limits.insert(id.to_string(), 0);
-    }
-
-    for id in [
-        "BT1-107", "BT1-112", "BT2-039", "BT2-047", "BT2-069", "BT3-054", "BT3-058", "BT3-103",
-        "BT4-098", "BT4-109", "BT5-062", "BT6-085", "BT6-079", "BT6-100", "BT7-014", "BT7-025",
-        "BT7-021", "BT7-038", "BT7-064", "BT7-072", "BT7-075", "BT7-107", "BT8-095", "BT8-097",
-        "BT9-109", "BT11-064", "BT13-012", "BT14-002", "BT14-060", "BT14-093", "BT16-024",
-        "BT17-023", "BT17-065", "BT17-067", "BT17-075", "BT17-092", "BT18-087", "BT19-070",
-        "EX3-067", "EX5-048", "ST1-09",
-    ] {
-        card_limits.insert(id.to_string(), 1);
-    }
-
-    // Eosmon BT6-085 is explicitly "limited to 4*" in EDEN. It is listed above
-    // only to keep the source order readable, so override it back to 4 copies.
-    card_limits.insert("BT6-085".to_string(), 4);
-
-    let choice_groups = vec![(vec!["EX4-015".to_string()], vec!["EX5-065".to_string()])];
-
-    CardRestriction {
-        card_limits,
-        choice_groups,
-    }
-});
 
 /// Card-copy restrictions and mutual-exclusivity groups for a format.
 /// Mirrors `digimon_gym/engine/data/deck_loader.py:CardRestriction`.
@@ -109,30 +27,32 @@ impl CardRestriction {
     /// Official ENG restricted list from https://digimoncard.io/restricted-list
     /// (matches DCGO's `DataBase.ENGBanList`).
     ///
-    /// Must stay in sync with `digimon_gym/engine/data/deck_loader.py`:
-    /// `_BANNED`, `_RESTRICTED`, `_CHOICE_GROUPS`. Update both sides together
-    /// until the Python engine is retired.
+    /// Now sourced from `data/deck_formats.json` via the format registry — the
+    /// single source of truth shared with the hosted API, so there is no longer
+    /// a parallel Python list to keep in sync.
     ///
-    /// Clones from a process-wide cached copy (see `OFFICIAL_ENG_RESTRICTION`);
-    /// use `official_eng_ref()` if you only need a shared reference.
+    /// Clones from the process-wide cached registry copy; use
+    /// `official_eng_ref()` if you only need a shared reference.
     pub fn official_eng() -> Self {
-        OFFICIAL_ENG_RESTRICTION.clone()
+        Self::official_eng_ref().clone()
     }
 
     /// Shared reference to the cached official ENG restricted list.
     /// Prefer this over `official_eng()` when you don't need ownership.
     pub fn official_eng_ref() -> &'static Self {
-        &OFFICIAL_ENG_RESTRICTION
+        crate::format::restriction_by_name("official_eng")
+            .expect("deck_formats.json must define the `official_eng` restriction")
     }
 
-    /// EDEN Format 1.1.1 custom restricted list.
+    /// EDEN custom restricted list (see `data/deck_formats.json`).
     pub fn eden() -> Self {
-        EDEN_RESTRICTION.clone()
+        Self::eden_ref().clone()
     }
 
     /// Shared reference to the cached EDEN restricted list.
     pub fn eden_ref() -> &'static Self {
-        &EDEN_RESTRICTION
+        crate::format::restriction_by_name("eden")
+            .expect("deck_formats.json must define the `eden` restriction")
     }
 }
 
@@ -202,6 +122,16 @@ impl Rules {
     pub fn eden() -> Self {
         Self {
             restriction: CardRestriction::eden(),
+            ..Self::standard()
+        }
+    }
+
+    /// EDEN Singleton: EDEN's pool and banlist played highlander (one copy of
+    /// any card). Standard gameplay parameters; deck legality differs.
+    pub fn eden_singleton() -> Self {
+        Self {
+            restriction: CardRestriction::eden(),
+            singleton: true,
             ..Self::standard()
         }
     }
@@ -278,6 +208,7 @@ impl Rules {
             (GameMode::Pauper, None) => Ok(Self::pauper()),
             (GameMode::NoRestriction, None) => Ok(Self::no_restriction()),
             (GameMode::Eden, None) => Ok(Self::eden()),
+            (GameMode::EdenSingleton, None) => Ok(Self::eden_singleton()),
             (GameMode::EdhCommander, None) => Ok(Self::edh()),
             (GameMode::Titan, Some(TitanRole::Boss)) => Ok(Self::titan_boss()),
             (GameMode::Titan, Some(TitanRole::Team)) => Ok(Self::titan_team()),
@@ -399,6 +330,19 @@ mod tests {
     }
 
     #[test]
+    fn eden_singleton_is_eden_plus_singleton() {
+        let r = Rules::eden_singleton();
+        assert!(r.singleton);
+        assert_eq!(r.restriction, CardRestriction::eden());
+        // Same standard gameplay shape otherwise.
+        let std = Rules::standard();
+        assert_eq!(r.deck_size, std.deck_size);
+        assert_eq!(r.egg_deck_max, std.egg_deck_max);
+        assert_eq!(r.security_count, std.security_count);
+        assert_eq!(r.skip_first_draw, std.skip_first_draw);
+    }
+
+    #[test]
     fn edh_settings() {
         let r = Rules::edh();
         assert_eq!(r.player_count, 4);
@@ -503,6 +447,10 @@ mod tests {
         assert_eq!(
             Rules::for_mode(GameMode::Eden, None).unwrap(),
             Rules::eden()
+        );
+        assert_eq!(
+            Rules::for_mode(GameMode::EdenSingleton, None).unwrap(),
+            Rules::eden_singleton()
         );
         assert_eq!(
             Rules::for_mode(GameMode::EdhCommander, None).unwrap(),

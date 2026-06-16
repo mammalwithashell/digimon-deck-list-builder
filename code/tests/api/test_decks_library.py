@@ -70,7 +70,13 @@ async def _register_login(client: AsyncClient, username: str) -> str:
     return resp.json()["access_token"]
 
 
-async def _create_deck(client: AsyncClient, token: str, name: str = "Library Deck") -> dict:
+async def _create_deck(
+    client: AsyncClient,
+    token: str,
+    name: str = "Library Deck",
+    commander_id: str | None = None,
+) -> dict:
+    main_deck = _legal_deck()
     resp = await client.post(
         "/decks",
         headers={"Authorization": f"Bearer {token}"},
@@ -78,8 +84,9 @@ async def _create_deck(client: AsyncClient, token: str, name: str = "Library Dec
             "name": name,
             "description": "Test notes",
             "game_mode": "standard",
-            "main_deck": _legal_deck(),
+            "main_deck": main_deck,
             "egg_deck": [],
+            "commander_id": commander_id,
             "tags": ["meta"],
         },
     )
@@ -130,7 +137,8 @@ async def test_folder_crud_seeds_defaults_and_enforces_owner(client: AsyncClient
 @pytest.mark.asyncio
 async def test_deck_library_patch_updates_folder_pin_and_summary_fields(client: AsyncClient):
     token = await _register_login(client, "library_patch")
-    deck = await _create_deck(client, token)
+    deck = await _create_deck(client, token, commander_id=_legal_deck()[4])
+    assert deck["commander_id"] == _legal_deck()[4]
     folder_resp = await client.post(
         "/decks/folders",
         headers={"Authorization": f"Bearer {token}"},
@@ -156,6 +164,8 @@ async def test_deck_library_patch_updates_folder_pin_and_summary_fields(client: 
     assert summary["is_pinned"] is True
     assert summary["description"] == "Test notes"
     assert summary["tags"] == ["meta"]
+    assert summary["commander_id"] == _legal_deck()[4]
+    assert summary["deck_icon_card_id"] == _legal_deck()[4]
     assert summary["main_count"] == 50
     assert summary["egg_count"] == 0
     assert summary["card_count"] == 50
@@ -168,6 +178,44 @@ async def test_deck_library_patch_updates_folder_pin_and_summary_fields(client: 
     assert clear_resp.status_code == 200, clear_resp.text
     assert clear_resp.json()["folder_id"] is None
     assert clear_resp.json()["is_pinned"] is False
+
+
+@pytest.mark.asyncio
+async def test_standard_deck_icon_must_reference_card_in_deck(client: AsyncClient):
+    token = await _register_login(client, "library_icon")
+    main_deck = _legal_deck()
+
+    ok_resp = await client.post(
+        "/decks",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "name": "Icon Deck",
+            "game_mode": "standard",
+            "main_deck": main_deck,
+            "egg_deck": [],
+            "commander_id": main_deck[8],
+        },
+    )
+    assert ok_resp.status_code == 201, ok_resp.text
+
+    list_resp = await client.get("/decks", headers={"Authorization": f"Bearer {token}"})
+    assert list_resp.status_code == 200, list_resp.text
+    assert list_resp.json()[0]["commander_id"] == main_deck[8]
+    assert list_resp.json()[0]["deck_icon_card_id"] == main_deck[8]
+
+    bad_resp = await client.post(
+        "/decks",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "name": "Bad Icon Deck",
+            "game_mode": "standard",
+            "main_deck": main_deck,
+            "egg_deck": [],
+            "commander_id": "BT99-999",
+        },
+    )
+    assert bad_resp.status_code == 400
+    assert "commander_id" in bad_resp.json()["detail"]
 
 
 @pytest.mark.asyncio

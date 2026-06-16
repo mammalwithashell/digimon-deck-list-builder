@@ -2,11 +2,11 @@
 //! Python's `digimon_gym/engine/events.py::GameEvent` — a tagged enum
 //! consumed by UI animation and replay layers.
 //!
-//! Emission coverage is complete — every variant below is emitted by the
-//! engine: `MemoryChange`/`Play`/`GameOver`/`Concede`/`EffectFizzled` (core),
-//! `Digivolve`/`Attack`/`Trash`/`SecurityReveal` (combat + card-migration),
-//! and `TurnStart`/`PhaseChange`/`Mill` (the turn machine in `game_phases.rs`
-//! and the mill flow in `effect_context::action::trash`).
+//! Emission coverage is currently partial: `MemoryChange`, `Play`, and
+//! `GameOver` are wired in by this module's initial landing.
+//! `TurnStart`, `PhaseChange`, `Digivolve`, `Attack`, `Trash`, `Mill`,
+//! and `SecurityReveal` variants exist on the enum and will be emitted
+//! as game-phase and card-migration work wires the corresponding paths.
 //!
 //! Every event carries a monotonically increasing `seq` allocated by
 //! `Game::next_event_seq`. Consumers drain the buffer via
@@ -15,6 +15,30 @@
 use crate::enums::{GamePhase, PlayerId};
 use crate::game::TerminalOutcomeReason;
 use crate::permanent::PermanentHandle;
+
+/// A card referenced by an event, carrying both its canonical id and its
+/// printed name. Used by events that name one or more cards so log/UI
+/// consumers render `[CARD-ID: Name]` without reconstructing the name from
+/// (possibly-mutated) board state.
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct EventCardRef {
+    pub card_id: String,
+    pub card_name: String,
+}
+
+/// Which non-security reveal site produced a [`GameEvent::Reveal`]. Mirrors
+/// the DCGO recorder reveal chokepoints (CLAUDE.md rule 27); `SecurityReveal`
+/// remains a distinct variant for the security-check path.
+#[derive(Debug, Clone, Copy, serde::Serialize)]
+pub enum RevealZone {
+    /// Top of the main deck revealed by an effect (peek/reveal).
+    DeckTop,
+    /// Card revealed as it is trashed from the top of the deck (mill).
+    TrashFromDeckTop,
+    // NOTE: a `Hand` reveal zone is intentionally absent — the engine has no
+    // reveal-from-hand primitive and no card in the pool reveals from hand.
+    // Re-add a variant (+ emission site) if such a card is ever implemented.
+}
 
 /// Tagged event payload. `#[non_exhaustive]` on each variant would force
 /// Python consumers to pattern-match defensively forever; we prefer the
@@ -37,6 +61,13 @@ pub enum GameEvent {
         player: PlayerId,
         delta: i16,
         total: i16,
+        /// When the change originates from a card effect (routed through
+        /// `EffectContext::gain_memory` / `lose_memory`), the effect's
+        /// source card id. `None` for cost payment, turn-pass, and other
+        /// structural memory changes with no card source.
+        source_card_id: Option<String>,
+        /// Printed name paired with `source_card_id` (same `Option` arm).
+        source_card_name: Option<String>,
     },
 
     /// A new turn has started. Emitted after `turn_count` bumps.
@@ -71,6 +102,9 @@ pub enum GameEvent {
         seq: u64,
         player: PlayerId,
         card_id: String,
+        /// Printed name of the played card, captured at emission from
+        /// `CardData` so log/UI consumers need not reconstruct it.
+        card_name: String,
         field_index: u8,
         cost_paid: i16,
         cost_printed: i16,
@@ -93,6 +127,9 @@ pub enum GameEvent {
         seq: u64,
         player: PlayerId,
         top_card_id: String,
+        /// Printed name of the card digivolved into (`top_card_id`),
+        /// captured at emission from `CardData`.
+        card_name: String,
         field_index: u8,
         from_stack_top: String,
         was_dna: bool,
@@ -100,37 +137,80 @@ pub enum GameEvent {
         memory_paid: i16,
     },
 
-    /// A Digimon declared an attack. Emitted by the combat declare-attack flow.
+    /// A Digimon declared an attack.
     Attack {
         seq: u64,
         player: PlayerId,
         attacker_field_index: u8,
         target_field_index: Option<u8>,
         target_player: Option<PlayerId>,
+        /// Id + name of the attacking permanent's top card, read from
+        /// `CardData` at declaration. Non-optional — an attacker always
+        /// exists.
+        attacker_card_id: String,
+        attacker_card_name: String,
+        /// Id + name of the defending Digimon's top card when the attack
+        /// targets a Digimon (`target_field_index.is_some()`); `None` when
+        /// the attack targets the security stack.
+        target_card_id: Option<String>,
+        target_card_name: Option<String>,
+        /// Effective DP (incl. modifiers) of the attacker at declaration,
+        /// via `Game::effective_dp`. `None` only if the attacker has no DP.
+        attacker_dp: Option<i32>,
+        /// Effective DP of the defending Digimon; `None` for a security-stack
+        /// attack (no Digimon target).
+        target_dp: Option<i32>,
     },
 
-    /// A card was moved to trash from some zone. Emitted by the trash /
-    /// batched-deletion flows in `game/mod.rs`.
+    /// A card was moved to trash from some zone.
     Trash {
         seq: u64,
         player: PlayerId,
         card_id: String,
+        /// Printed name of the trashed card, captured at emission.
+        card_name: String,
     },
 
-    /// A card was milled (deck→trash from the top of the deck). Emitted by
-    /// `EffectContext::trash_from_top`.
+    /// A card was milled (deck→trash from the top of the deck).
     Mill {
         seq: u64,
         player: PlayerId,
         card_id: String,
+        /// Printed name of the milled card, captured at emission.
+        card_name: String,
     },
 
-    /// A security card was revealed during a security check. Emitted by the
-    /// combat security-check flow.
+    /// A security card was revealed during a security check.
     SecurityReveal {
         seq: u64,
         defender: PlayerId,
         card_id: String,
+        /// Printed name of the revealed security card, captured at emission.
+        card_name: String,
+    },
+
+    /// A card effect committed a target selection. Carries the effect's
+    /// source card and the chosen target card(s). Emitted at the selection
+    /// commit choke point for every card-bearing selection kind, including
+    /// forced single-target picks (no-approximations policy). Non-card
+    /// selections (effect-choice menus, trigger-order, play-order) do not
+    /// emit this event.
+    EffectTarget {
+        seq: u64,
+        player: PlayerId,
+        source_card_id: String,
+        source_card_name: String,
+        targets: Vec<EventCardRef>,
+    },
+
+    /// A card was revealed at a non-security reveal site (see [`RevealZone`]).
+    /// One event fires per revealed card, in reveal order.
+    Reveal {
+        seq: u64,
+        player: PlayerId,
+        card_id: String,
+        card_name: String,
+        source_zone: RevealZone,
     },
 
     /// The game ended. `winner` is `None` on a draw.
@@ -184,6 +264,8 @@ impl GameEvent {
             | GameEvent::Trash { seq, .. }
             | GameEvent::Mill { seq, .. }
             | GameEvent::SecurityReveal { seq, .. }
+            | GameEvent::EffectTarget { seq, .. }
+            | GameEvent::Reveal { seq, .. }
             | GameEvent::GameOver { seq, .. }
             | GameEvent::Concede { seq, .. }
             | GameEvent::EffectFizzled { seq, .. } => *seq,
@@ -204,6 +286,8 @@ impl GameEvent {
             GameEvent::Trash { .. } => "Trash",
             GameEvent::Mill { .. } => "Mill",
             GameEvent::SecurityReveal { .. } => "SecurityReveal",
+            GameEvent::EffectTarget { .. } => "EffectTarget",
+            GameEvent::Reveal { .. } => "Reveal",
             GameEvent::GameOver { .. } => "GameOver",
             GameEvent::Concede { .. } => "Concede",
             GameEvent::EffectFizzled { .. } => "EffectFizzled",

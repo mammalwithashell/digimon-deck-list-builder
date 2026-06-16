@@ -34,6 +34,7 @@ from server.routers.schemas import (
     GameActionRequest,
     SurrenderRequest,
 )
+from server.routers.seed_utils import seed_to_wire
 from server.routers.state import active_games
 
 router = APIRouter(tags=["games"])
@@ -152,6 +153,7 @@ def _build_state_payload(
         # `agent_pending` (cross-wire parity, add-bot-action-pacing).
         "agent_pending": not game.is_game_over and not _is_human_turn(game, meta),
         "player_labels": meta.player_labels,
+        "seed": seed_to_wire(meta.seed),
     }
 
 
@@ -385,7 +387,10 @@ def game_agent_step(game_id: str):
 def game_state(game_id: str):
     """Return the current `to_ui_json` snapshot."""
     game = _require_game(game_id)
-    return game.to_ui_json()
+    meta = _require_meta(game_id)
+    state = dict(game.to_ui_json())
+    state["seed"] = seed_to_wire(meta.seed)
+    return state
 
 
 @router.post("/games/{game_id}/export-scenario")
@@ -410,6 +415,21 @@ def game_mask(game_id: str):
     """Return the current action mask."""
     game = _require_game(game_id)
     return {"action_mask": game.get_action_mask().tolist()}
+
+
+@router.get("/games/{game_id}/decoded-actions")
+@router.get("/game/{game_id}/decoded-actions", include_in_schema=False)
+def game_decoded_actions(game_id: str):
+    """Decoded list of every currently-legal action for the current decision
+    player, each carrying source-card and effect identity (`card_name`,
+    `effect_name`, `source_zone`, `source_index`, `label`). The React action
+    bar renders activatable effects from this list instead of re-deriving
+    action semantics from raw mask bit-ranges. Mirrors the desktop
+    `rust_get_decoded_actions` Tauri command (same `ActionExplanation` shape).
+
+    Engine-only route: no DB/auth dependency."""
+    game = _require_game(game_id)
+    return {"decoded_actions": game.legal_decoded_actions()}
 
 
 @router.post("/games/{game_id}/surrender")

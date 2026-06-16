@@ -487,7 +487,7 @@ fn bt24_017_full_sequence_two_trash_two_tokens_dp_boost() {
     assert!(
         matches!(
             runner.pending_kind(),
-            Some(SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 })
+            Some(SelectionKind::CountCappedMultiSelect { max: 2, picked: 0, .. })
         ),
         "trash multi-select (max 2) must follow the delete; got {:?}",
         runner.pending_kind()
@@ -745,7 +745,7 @@ fn bt24_017_more_than_two_trash_returns_exactly_two() {
     assert!(
         matches!(
             runner.pending_kind(),
-            Some(SelectionKind::CountCappedMultiSelect { max: 2, picked: 0 })
+            Some(SelectionKind::CountCappedMultiSelect { max: 2, picked: 0, .. })
         ),
         "the return cost caps at exactly 2 even with 5 trash cards"
     );

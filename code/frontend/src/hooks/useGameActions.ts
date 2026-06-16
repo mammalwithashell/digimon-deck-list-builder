@@ -3,7 +3,7 @@ import { useGameStore } from '@/stores/gameStore';
 import * as gameApi from '@/api/gameApi';
 
 export function useGameActions() {
-  const { gameId, setGameState, setActionMask, appendLogs, appendEvents } = useGameStore();
+  const { gameId, setGameState, setActionMask, appendEvents } = useGameStore();
   const isPending = useRef(false);
 
   const sendAction = useCallback(
@@ -16,7 +16,6 @@ export function useGameActions() {
         const actionResult = await gameApi.sendAction(gameId, actionId);
         setGameState(actionResult.state);
         setActionMask(actionResult.action_mask);
-        if (actionResult.logs) appendLogs(actionResult.logs);
         if (actionResult.events) appendEvents(actionResult.events);
 
         // Then step the game (runs agent turns, pauses on next human turn)
@@ -24,14 +23,13 @@ export function useGameActions() {
           const stepResult = await gameApi.stepGame(gameId);
           setGameState(stepResult.state);
           setActionMask(stepResult.action_mask);
-          if (stepResult.logs) appendLogs(stepResult.logs);
           if (stepResult.events) appendEvents(stepResult.events);
         }
       } finally {
         isPending.current = false;
       }
     },
-    [gameId, setGameState, setActionMask, appendLogs, appendEvents],
+    [gameId, setGameState, setActionMask, appendEvents],
   );
 
   return { sendAction, isPending };

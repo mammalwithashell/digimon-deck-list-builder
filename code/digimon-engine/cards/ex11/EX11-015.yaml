@@ -1,0 +1,122 @@
+# EX11-015 Frigimon — Digimon, Lv.4, Blue/Yellow, DP 6000, Cost 5.
+# Traits: Ice-Snow, LIBERATOR. Attribute: Vaccine. Form: Champion. Rarity: U.
+#
+# Printed card text (card image EX11-015.webp, authoritative; cards.json
+# agrees):
+#
+#   Evo box: Lv.3 from blue: Cost 3
+#     (JSON evo_costs [{card_color:1, level:3, memory_cost:3}])
+#   Evo box: "Digivolve Lv.3 w/[Ice-Snow] trait: Cost 2"  (JSON xros_req)
+#
+#   [When Digivolving] If you have 1 or fewer Tamers, you may play 1
+#   [Suzune Kazuki] from your hand without paying the cost.
+#
+#   Inherited Effect: <Jamming> (This Digimon can't be deleted in battles
+#   against Security Digimon.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX11/Blue/EX11_015.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Alternate Digivolution Requirement (EffectTiming.None):
+#   AddSelfDigivolutionRequirementStaticEffect(permanentCondition:
+#   targetPermanent.TopCard.EqualsTraits("Ice-Snow") && TopCard.IsLevel3,
+#   digivolutionCost: 2, ignoreDigivolutionRequirement: false) — trait + level
+#   gate, NO color restriction → `from: { level_eq: 3, trait_has: Ice-Snow }`
+#   (AD1-010 idiom).
+#
+# When Digivolving (OnEnterFieldAnyone): ActivateClass.
+#   - CanActivateCondition: IsExistOnBattleArea(card) AND a matching hand
+#     card exists AND card.Owner battle-area permanents with IsTamer <= 1
+#     → "If you have 1 or fewer Tamers" = `count_lte` over own battle_area
+#     tamers, n: 1 (EX8-048 / BT21-017 idiom — same printed clause shape).
+#   - Hand filter IsTamerCardCondition: cardSource.IsTamer &&
+#     cardSource.EqualsCardName("Suzune Kazuki") — EXACT-name match →
+#     `name_is`, not `name_contains`. (kind: tamer kept alongside the name
+#     filter, mirroring DCGO's explicit IsTamer check.)
+#   - SelectHandEffect maxCount: 1, canNoSelect: TRUE — printed "you may";
+#     the select is optional (decline path legal).
+#   - PlayPermanentCards(payCost: false, isTapped: false, activateETB: true)
+#     → `play_from_hand_free` (unsuspended; [On Play] effects DO activate —
+#     no suppress_on_play).
+#
+# Inherited <Jamming> (EffectTiming.None): JammingSelfStaticEffect(
+#   isInheritedEffect: true, condition: null) — unconditional inherited
+#   keyword grant → `scope: inherited / kind: grant_keyword` (EX11-014 /
+#   AD1-010 idiom).
+#
+# ─── Clause layout ───────────────────────────────────────────────────────────
+#
+# Clause 1 — [When Digivolving] conditional optional free-play:
+#   IMPLEMENTED: optional triggered clause, condition count_lte(own
+#   battle-area tamers) <= 1; process select_hand (optional, name_is
+#   "Suzune Kazuki" + kind tamer) → play_from_hand_free. (EX8-048 idiom —
+#   identical printed clause with [Close].)
+#
+# Clause 2 — Inherited <Jamming>:
+#   IMPLEMENTED: scope: inherited, kind: grant_keyword, keyword: Jamming.
+#
+# NOTE: data/cards.json `form_eng` is empty — the card image shows form
+# "Champion"; the image is authoritative.
+
+card: EX11-015
+name: Frigimon
+kind: digimon
+level: 4
+color: [blue, yellow]
+cost: 5
+dp: 6000
+traits: [Ice-Snow, LIBERATOR]
+attribute: Vaccine
+form: Champion
+
+alt_paths:
+  # Printed standard evo box: Lv.3 from blue, cost 3 (encoded explicitly like
+  # sibling EX11-014 so DSL-only loads carry the printed cost table).
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+  # Printed alt evo box: "Digivolve Lv.3 w/[Ice-Snow] trait: Cost 2".
+  # DCGO gates on EqualsTraits("Ice-Snow") && IsLevel3 — no color restriction.
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: Ice-Snow }
+    cost: 2
+
+effects:
+  # ─── Clause 1: [When Digivolving] conditional optional free-play ────────────
+  #
+  # "If you have 1 or fewer Tamers, you may play 1 [Suzune Kazuki] from your
+  #  hand without paying the cost."
+  #
+  # optional: true — printed "you may" (DCGO canNoSelect: true).
+  # condition: count_lte own battle-area tamers <= 1 ("1 or fewer Tamers").
+  # process: select_hand filtered to Tamer cards named exactly "Suzune Kazuki"
+  #   (DCGO IsTamer && EqualsCardName) → play_from_hand_free.
+  - when: when_digivolving
+    optional: true
+    summary: "If ≤1 Tamer, you may play 1 [Suzune Kazuki] from hand without paying the cost"
+    condition:
+      count_lte:
+        filter: { of: you, zone: [battle_area], kind: tamer }
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - name_is: "Suzune Kazuki"
+          prompt: "Play 1 [Suzune Kazuki] from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick }
+
+  # ─── Clause 2: Inherited <Jamming> ──────────────────────────────────────────
+  #
+  # "<Jamming> (This Digimon can't be deleted in battles against Security
+  #  Digimon.)"
+  # DCGO: JammingSelfStaticEffect(isInheritedEffect: true) — unconditional.
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Jamming
+    summary: "[Inherited] <Jamming>"

@@ -1,4 +1,8 @@
 mod ex8_005;
+mod ex8_019;
+mod ex8_022;
+mod ex8_023;
+mod ex8_028;
 mod ex8_030;
 mod ex8_046;
 mod ex8_047;
@@ -6,6 +10,7 @@ mod ex8_048;
 mod ex8_050;
 mod ex8_051;
 mod ex8_055;
+mod ex8_066;
 mod ex8_067;
 mod ex8_070;
 mod ex8_073;

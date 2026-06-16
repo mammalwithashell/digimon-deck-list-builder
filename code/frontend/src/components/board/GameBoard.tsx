@@ -5,8 +5,8 @@ import { MemoryGauge } from './MemoryGauge';
 import { RevealedCardsZone } from './RevealedCardsZone';
 import { ActionTraceTicker } from './ActionTraceTicker';
 import { TensorDebugBadge } from './TensorDebugBadge';
-import { fieldSelectionHighlights } from '@/utils/selectionTargets';
-import type { ActionTrace, TensorSummary } from '@/types/game';
+import { anyFieldSelectionHighlights, fieldSelectionHighlights } from '@/utils/selectionTargets';
+import { GamePhase, type ActionTrace, type TensorSummary } from '@/types/game';
 
 interface GameBoardProps {
   onPlayCard?: (handIndex: number) => void;
@@ -105,9 +105,24 @@ export function GameBoard({
     pendingSelection?.kind,
     pendingSelection?.validIndices ?? [],
   );
+  // `AnyField` selections (`select_any_permanent`) span both battle areas and
+  // decode the side from each action id — see `utils/selectionTargets.ts`.
+  const anyFieldHighlights = anyFieldSelectionHighlights(
+    pendingSelection?.kind,
+    pendingSelection?.validIndices ?? [],
+    pendingSelection?.selectingPlayer,
+  );
 
-  const ownSlots = new Set([...(highlightedOwnSlots ?? []), ...fieldHighlights.own]);
-  const enemySlots = new Set([...(highlightedEnemySlots ?? []), ...fieldHighlights.enemy]);
+  const ownSlots = new Set([
+    ...(highlightedOwnSlots ?? []),
+    ...fieldHighlights.own,
+    ...anyFieldHighlights.own,
+  ]);
+  const enemySlots = new Set([
+    ...(highlightedEnemySlots ?? []),
+    ...fieldHighlights.enemy,
+    ...anyFieldHighlights.enemy,
+  ]);
   const latestActionLabel = (actionTraces as unknown as { at(index: number): ActionTrace | undefined }).at(-1)?.decoded.label ?? null;
 
   return (
@@ -171,6 +186,11 @@ export function GameBoard({
             cards={revealedCards}
             validIndices={validRevealedIndices}
             onCardClick={onRevealedClick}
+            title={
+              currentPhase === GamePhase.SelectReveal && pendingSelection?.prompt
+                ? pendingSelection.prompt
+                : 'Revealed Cards'
+            }
           />
         </div>
       )}

@@ -120,7 +120,7 @@ fn bt24_035_debuffs_then_dna_digivolves_into_silphymon_on_your_turn() {
         .expect("select Silphymon in hand");
 
     let first_dna = runner.pending_selection_view().expect("first DNA material");
-    assert_eq!(first_dna.kind, SelectionKind::Target);
+    assert_eq!(first_dna.kind, SelectionKind::AnyField);
     let yellow_action = encode_attack(0, yellow.index as u16);
     assert!(
         first_dna.valid_action_ids.contains(&yellow_action),

@@ -388,6 +388,98 @@ fn eden_restricted_list() -> PyCardRestriction {
     CardRestriction::eden().into()
 }
 
+/// Display + deck-construction metadata for one format (from the registry).
+#[pyclass(module = "digimon_engine", name = "FormatDescriptor")]
+#[derive(Clone)]
+pub struct PyFormatDescriptor {
+    #[pyo3(get)]
+    pub id: String,
+    #[pyo3(get)]
+    pub name: String,
+    #[pyo3(get)]
+    pub description: String,
+    #[pyo3(get)]
+    pub deck_size: u16,
+    #[pyo3(get)]
+    pub egg_max: u8,
+    /// "all" | "common_uncommon" | "eden_anomaly".
+    #[pyo3(get)]
+    pub rarity_policy: String,
+    #[pyo3(get)]
+    pub singleton: bool,
+    #[pyo3(get)]
+    pub default_max_copies: u8,
+    #[pyo3(get)]
+    pub playable: bool,
+}
+
+/// All formats from the registry, in declaration order.
+#[pyfunction]
+fn list_formats() -> Vec<PyFormatDescriptor> {
+    use ::digimon_engine::format::RarityPolicy;
+    ::digimon_engine::format::list_formats()
+        .iter()
+        .map(|f| PyFormatDescriptor {
+            id: f.id.clone(),
+            name: f.name.clone(),
+            description: f.description.clone(),
+            deck_size: f.deck_size,
+            egg_max: f.egg_max,
+            rarity_policy: match f.rarity_policy {
+                RarityPolicy::All => "all",
+                RarityPolicy::CommonUncommon => "common_uncommon",
+                RarityPolicy::EdenAnomaly => "eden_anomaly",
+            }
+            .to_string(),
+            singleton: f.singleton,
+            default_max_copies: f.default_max_copies,
+            playable: f.playable,
+        })
+        .collect()
+}
+
+/// Per-card legality under a format.
+#[pyclass(module = "digimon_engine", name = "CardLegality")]
+#[derive(Clone)]
+pub struct PyCardLegality {
+    #[pyo3(get)]
+    pub legal: bool,
+    #[pyo3(get)]
+    pub max_copies: u32,
+    #[pyo3(get)]
+    pub reason: Option<String>,
+}
+
+#[pyfunction]
+fn card_legality(card_id: &str, game_mode: &str) -> PyResult<PyCardLegality> {
+    let leg = deck_tools::card_legality(card_id, game_mode).map_err(PyValueError::new_err)?;
+    Ok(PyCardLegality {
+        legal: leg.legal,
+        max_copies: leg.max_copies,
+        reason: leg.reason,
+    })
+}
+
+/// Legality for every tested-allowlist card under a game mode, keyed by card
+/// id — lets the deck builder filter/badge the whole pool in one call.
+#[pyfunction]
+fn card_legality_bulk(game_mode: &str) -> PyResult<HashMap<String, PyCardLegality>> {
+    let map = deck_tools::card_legality_bulk(game_mode).map_err(PyValueError::new_err)?;
+    Ok(map
+        .into_iter()
+        .map(|(k, leg)| {
+            (
+                k,
+                PyCardLegality {
+                    legal: leg.legal,
+                    max_copies: leg.max_copies,
+                    reason: leg.reason,
+                },
+            )
+        })
+        .collect())
+}
+
 #[pyfunction]
 fn expand_deck_dict(counts: HashMap<String, u32>) -> Vec<String> {
     deck_tools::expand_deck_dict(&counts)
@@ -782,6 +874,21 @@ impl RustHeadlessGame {
     /// `state_filter.py` and the React frontend.
     fn to_ui_json(&self, py: Python) -> PyResult<PyObject> {
         let value = ::digimon_engine::serialization::to_ui_json(&self.inner.game);
+        json_to_pyobject(py, &value)
+    }
+
+    /// Decoded list of every currently-legal action for the current decision
+    /// player, each carrying source-card and effect identity (`card_id`,
+    /// `card_name`, `effect_name`, `source_zone`, `source_index`, `label`).
+    /// Mirrors the desktop `rust_get_decoded_actions` Tauri command byte-for-byte
+    /// (same `ActionExplanation` serialization) so the React action bar renders
+    /// activatable effects identically on both surfaces. Returns an empty list
+    /// when the queried player is not the current decision player.
+    fn legal_decoded_actions(&self, py: Python) -> PyResult<PyObject> {
+        let pid = self.inner.current_decision_player();
+        let actions = ::digimon_engine::action::explain::legal_decoded_actions(&self.inner.game, pid);
+        let value = serde_json::to_value(&actions)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
         json_to_pyobject(py, &value)
     }
 
@@ -1413,8 +1520,10 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
     d.set_item("meta", PyDict::new_bound(py))?;
     // defaults
     d.set_item("source_card_id", py.None())?;
+    d.set_item("source_card_name", py.None())?;
     d.set_item("source_slot", py.None())?;
     d.set_item("target_card_id", py.None())?;
+    d.set_item("target_card_name", py.None())?;
     d.set_item("target_slot", py.None())?;
     d.set_item("player", 0)?;
 
@@ -1425,9 +1534,17 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             player,
             delta,
             total,
+            source_card_id,
+            source_card_name,
             ..
         } => {
             d.set_item("player", py_pid(*player))?;
+            if let Some(id) = source_card_id {
+                d.set_item("source_card_id", id.as_str())?;
+            }
+            if let Some(name) = source_card_name {
+                d.set_item("source_card_name", name.as_str())?;
+            }
             let meta = PyDict::new_bound(py);
             meta.set_item("delta", *delta)?;
             meta.set_item("total", *total)?;
@@ -1450,6 +1567,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
         GameEvent::Play {
             player,
             card_id,
+            card_name,
             field_index,
             cost_paid,
             cost_printed,
@@ -1458,6 +1576,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
             d.set_item("source_slot", *field_index)?;
             // New per-play payload from the `add-reward-profiles` change
             // (capability `engine-event-emission`). Surfaces in meta so
@@ -1478,6 +1597,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
         GameEvent::Digivolve {
             player,
             top_card_id,
+            card_name,
             field_index,
             from_stack_top,
             was_dna,
@@ -1487,6 +1607,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", top_card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
             d.set_item("source_slot", *field_index)?;
             // New payload from the `add-reward-profiles` change
             // (capability `engine-event-emission`). Surfaces in `meta`
@@ -1505,34 +1626,97 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             attacker_field_index,
             target_field_index,
             target_player,
+            attacker_card_id,
+            attacker_card_name,
+            target_card_id,
+            target_card_name,
+            attacker_dp,
+            target_dp,
             ..
         } => {
             d.set_item("player", py_pid(*player))?;
+            d.set_item("source_card_id", attacker_card_id.as_str())?;
+            d.set_item("source_card_name", attacker_card_name.as_str())?;
             d.set_item("source_slot", *attacker_field_index)?;
             if let Some(t) = target_field_index {
                 d.set_item("target_slot", *t)?;
             }
+            if let Some(id) = target_card_id {
+                d.set_item("target_card_id", id.as_str())?;
+            }
+            if let Some(name) = target_card_name {
+                d.set_item("target_card_name", name.as_str())?;
+            }
             let meta = PyDict::new_bound(py);
             meta.set_item("target_player", target_player.map(|p| py_pid(p)))?;
+            meta.set_item("attacker_dp", *attacker_dp)?;
+            meta.set_item("target_dp", *target_dp)?;
             d.set_item("meta", meta)?;
         }
         GameEvent::Trash {
-            player, card_id, ..
+            player,
+            card_id,
+            card_name,
+            ..
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
         }
         GameEvent::Mill {
-            player, card_id, ..
+            player,
+            card_id,
+            card_name,
+            ..
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
         }
         GameEvent::SecurityReveal {
-            defender, card_id, ..
+            defender,
+            card_id,
+            card_name,
+            ..
         } => {
             d.set_item("player", py_pid(*defender))?;
             d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
+        }
+        GameEvent::EffectTarget {
+            player,
+            source_card_id,
+            source_card_name,
+            targets,
+            ..
+        } => {
+            d.set_item("player", py_pid(*player))?;
+            d.set_item("source_card_id", source_card_id.as_str())?;
+            d.set_item("source_card_name", source_card_name.as_str())?;
+            let targets_list = pyo3::types::PyList::empty_bound(py);
+            for t in targets {
+                let entry = PyDict::new_bound(py);
+                entry.set_item("card_id", t.card_id.as_str())?;
+                entry.set_item("card_name", t.card_name.as_str())?;
+                targets_list.append(entry)?;
+            }
+            let meta = PyDict::new_bound(py);
+            meta.set_item("targets", targets_list)?;
+            d.set_item("meta", meta)?;
+        }
+        GameEvent::Reveal {
+            player,
+            card_id,
+            card_name,
+            source_zone,
+            ..
+        } => {
+            d.set_item("player", py_pid(*player))?;
+            d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
+            let meta = PyDict::new_bound(py);
+            meta.set_item("source_zone", format!("{:?}", source_zone))?;
+            d.set_item("meta", meta)?;
         }
         GameEvent::GameOver { winner, reason, .. } => {
             let meta = PyDict::new_bound(py);
@@ -1567,6 +1751,11 @@ fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<PyCardRestriction>()?;
     m.add_function(wrap_pyfunction!(restricted_list, m)?)?;
     m.add_function(wrap_pyfunction!(eden_restricted_list, m)?)?;
+    m.add_class::<PyFormatDescriptor>()?;
+    m.add_function(wrap_pyfunction!(list_formats, m)?)?;
+    m.add_class::<PyCardLegality>()?;
+    m.add_function(wrap_pyfunction!(card_legality, m)?)?;
+    m.add_function(wrap_pyfunction!(card_legality_bulk, m)?)?;
     m.add_function(wrap_pyfunction!(expand_deck_dict, m)?)?;
     m.add_class::<CardKind>()?;
     m.add_class::<GamePhase>()?;

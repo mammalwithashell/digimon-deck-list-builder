@@ -14,6 +14,11 @@ During a game, the system SHALL display a scrolling action log whose entries are
 - **WHEN** the bot opponent takes actions during its turn and emits events
 - **THEN** those actions appear as log entries without requiring the local player to act
 
+#### Scenario: Opening bot prelude events appear in the log
+
+- **WHEN** a create-game response includes events emitted before the first local decision
+- **THEN** those events are appended to the event stream and rendered in the log
+
 #### Scenario: Empty state before any events
 
 - **WHEN** no events have been received yet
@@ -22,6 +27,11 @@ During a game, the system SHALL display a scrolling action log whose entries are
 ### Requirement: Events are formatted into readable lines
 
 The system SHALL convert each relevant `GameEvent` variant into one or more human-readable log lines, resolving card and player references to display names using the event payload and current game state. Events that carry no player-meaningful information MAY be omitted.
+
+#### Scenario: Event type names are normalized before formatting
+
+- **WHEN** events arrive with Rust/PyO3 PascalCase names or legacy lowercase names
+- **THEN** the log formatter and animation consumers observe the same canonical frontend event names
 
 #### Scenario: Common gameplay events render readable text
 
@@ -51,3 +61,17 @@ The action log SHALL be a projection of the structured event stream that already
 
 - **WHEN** an event triggers a board animation (e.g., digivolve, battle)
 - **THEN** a corresponding log entry is produced from the same event, so the log and the animation reflect the same underlying action
+
+### Requirement: Desktop responses expose the structured event stream
+
+The desktop/Tauri gameplay commands SHALL populate their existing `events` response field by draining the in-process Rust `Game` event buffer into the frontend `GameEvent` DTO shape. This SHALL preserve the existing response contract and SHALL NOT introduce a parallel textual logger.
+
+#### Scenario: Tauri action response includes drained events
+
+- **WHEN** a desktop game action emits one or more Rust `GameEvent`s
+- **THEN** the Tauri action/step response includes those events in the existing `events` field
+
+#### Scenario: Draining events is one-shot
+
+- **WHEN** the desktop event drain is called twice without another game action
+- **THEN** the second drain returns no duplicate events

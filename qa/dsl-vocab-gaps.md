@@ -3625,3 +3625,29 @@ Surfaced: judge-quiz Q15 authoring (BT17-016 first draft).
 > placement order. BT12-112 (whose pre-attach coincidentally matches its own
 > recipe) keeps the slot-resolving path. Pinned by
 > `judge_quiz::e_partition_digixros::q29_*`.
+
+## RESOLVED 2026-06-12 — `on_any_link` board-wide link observer  [G-DSL-WHEN-ANY-OWN-DIGIMON-LINKED]
+
+**Status: RESOLVED 2026-06-12 (Appmon BT21 wave).**
+
+Cards of the form "[Your Turn] When your Digimon get linked, …" (a Tamer or a
+Digimon observing a link onto *any* of the controller's Digimon, not just
+itself) had no DSL timing. The two extant OnLink timings both force a filter:
+`when_linked` (self-filter `event_card == source_card`, requires `scope: linked`)
+and `when_card_linked_to_this` (host self-filter `event_permanent ==
+source_permanent`). Neither expresses a board-wide observer on a third party.
+
+**Resolution:** added `when: on_any_link` (`Timing::OnAnyLink` →
+`CompiledTiming::OnAnyLink` → `EffectTiming::OnLink` in `timing_map.rs`). It
+lowers to `OnLink` with NO forced self/host filter — scope is gated entirely by
+`active_when:` predicates that already read the Linked trigger payload:
+`event_target_owner: you` (the link HOST's controller), `event_card_trait_has:`
+(the just-linked card's traits), and `your_turn: true`. Pair with
+`source_is_unsuspended:` + `activation_cost: { suspend_self: true }` (or a body
+`unsuspend: { target: source }`) for the common "by suspending/unsuspending this"
+cost. First production users (all green): BT21-084, BT21-101, P-217 (and BT21-009
+family via the host-side timing). Same timing unblocks P-241, BT23-079, BT24-087,
+BT25-075's observer sub-clause.
+
+## RESOLVED 2026-06-13 — `app_fuse` step (effect-initiated App Fuse)  [G-DSL-APP-FUSE]
+**Status: RESOLVED 2026-06-13.** New DSL step `app_fuse: { from: hand|trash, result_filter?, optional }` for the printed "1 of your Digimon may app fuse into a Digimon card in the hand/trash" rider. Lowers to `CompiledStep::AppFuse` → `EffectContext::initiate_effect_app_fuse`. Added to `body_first_step_is_declinable` (installs its own PASS-able selections). First users: BT21-084, BT23-079, P-241, BT24-087, BT25-089. See `docs/RUST_ENGINE_GAPS.md` "Effect-initiated App Fuse — RESOLVED 2026-06-13".

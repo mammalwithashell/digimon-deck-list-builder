@@ -91,7 +91,7 @@ export function ModeSelectPage() {
           </span>
           <button
             type="button"
-            onClick={() => navigate(opponentMode === 'room' ? '/play/room/new' : '/play/deck')}
+            onClick={() => navigate(opponentMode === 'room' ? '/play/room' : '/play/deck')}
             disabled={!selected.enabled}
           >
             ENTER FORMAT

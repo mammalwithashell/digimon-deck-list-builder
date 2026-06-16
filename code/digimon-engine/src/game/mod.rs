@@ -1145,12 +1145,14 @@ impl Game {
         };
         let top_card = self.players[player_id as usize].battle_area[field_index].top_card();
         let emitted_card_id = top_card.card_id(&self.card_data).to_string();
+        let emitted_card_name = top_card.card_name(&self.card_data).to_string();
         let cost_printed = self.card_data[top_card.data_index].play_cost as i16;
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::Play {
             seq,
             player: player_id,
             card_id: emitted_card_id,
+            card_name: emitted_card_name,
             field_index: field_index as u8,
             // Effect-initiated free play — no memory paid.
             cost_paid: 0,
@@ -1234,6 +1236,7 @@ impl Game {
         for (player_id, card_source) in removed {
             let card = card_source.handle();
             let emitted_card_id = card_source.card_id(&self.card_data).to_string();
+            let emitted_card_name = card_source.card_name(&self.card_data).to_string();
             let cost_printed = self.card_data[card_source.data_index].play_cost as i16;
             let player = self.player_mut(player_id);
             player
@@ -1249,6 +1252,7 @@ impl Game {
                 seq,
                 player: player_id,
                 card_id: emitted_card_id,
+                card_name: emitted_card_name,
                 field_index: field_index as u8,
                 // Effect-initiated multi-source free play — no memory paid.
                 cost_paid: 0,
@@ -1506,11 +1510,13 @@ impl Game {
             return;
         }
         let card_id = card.card_id(&self.card_data).to_string();
+        let card_name = card.card_name(&self.card_data).to_string();
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::Trash {
             seq,
             player,
             card_id,
+            card_name,
         });
         self.player_mut(player).trash.push(card);
     }
@@ -1539,11 +1545,13 @@ impl Game {
                 // Linked cards on an empty stack are still real cards —
                 // emit per-card.
                 let card_id = card.card_id(&self.card_data).to_string();
+                let card_name = card.card_name(&self.card_data).to_string();
                 let seq = self.next_event_seq();
                 self.events.push(crate::events::GameEvent::Trash {
                     seq,
                     player,
                     card_id,
+                    card_name,
                 });
                 self.player_mut(player).trash.push(card);
             }
@@ -1561,21 +1569,25 @@ impl Game {
         // `card_sources` is stack-top-first per the spec ordering invariant.
         for card in perm.card_sources {
             let card_id = card.card_id(&self.card_data).to_string();
+            let card_name = card.card_name(&self.card_data).to_string();
             let seq = self.next_event_seq();
             self.events.push(crate::events::GameEvent::Trash {
                 seq,
                 player,
                 card_id,
+                card_name,
             });
             self.player_mut(player).trash.push(card);
         }
         for card in perm.linked_cards {
             let card_id = card.card_id(&self.card_data).to_string();
+            let card_name = card.card_name(&self.card_data).to_string();
             let seq = self.next_event_seq();
             self.events.push(crate::events::GameEvent::Trash {
                 seq,
                 player,
                 card_id,
+                card_name,
             });
             self.player_mut(player).trash.push(card);
         }
@@ -1609,6 +1621,8 @@ impl Game {
             player,
             delta,
             total: self.memory,
+            source_card_id: None,
+            source_card_name: None,
         });
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
@@ -1770,6 +1784,7 @@ impl Game {
         // Capture top_card_id from the removed-hand source before it moves
         // into the merged permanent's stack.
         let top_card_id = new_top.card_id(&self.card_data).to_string();
+        let top_card_name = new_top.card_name(&self.card_data).to_string();
 
         let turn = self.turn_count;
         {
@@ -1796,6 +1811,7 @@ impl Game {
             seq,
             player: merged_handle.player,
             top_card_id,
+            card_name: top_card_name,
             field_index: merged_handle.index,
             from_stack_top,
             was_dna: true,
@@ -1943,6 +1959,7 @@ impl Game {
         };
         // Capture top_card_id from the result source before it moves.
         let top_card_id = result_source.card_id(&self.card_data).to_string();
+        let top_card_name = result_source.card_name(&self.card_data).to_string();
 
         let turn = self.turn_count;
         {
@@ -1962,6 +1979,7 @@ impl Game {
             seq,
             player: merged_handle.player,
             top_card_id,
+            card_name: top_card_name,
             field_index: merged_handle.index,
             from_stack_top,
             was_dna: true,

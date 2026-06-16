@@ -1,4 +1,8 @@
-"""WebSocket connection manager for multiplayer games and spectating."""
+"""WebSocket connection manager for multiplayer games and spectating.
+
+Games run on the Rust engine (``digimon_engine.RustHeadlessGame``); this
+module imports nothing from ``engine_py_legacy`` (rule 22).
+"""
 
 from __future__ import annotations
 
@@ -9,7 +13,8 @@ from typing import Any, Dict, List, Optional
 
 from starlette.websockets import WebSocket, WebSocketState
 
-from server.rust_interactive_game import RustInteractiveGame
+from digimon_engine import RustHeadlessGame
+
 from server.state_filter import (
     filter_state_for_player,
     filter_state_for_spectator,
@@ -26,6 +31,7 @@ class GameSettings:
     spectator_mode: str = "hidden"  # "hidden" or "open"
     host_user_id: Optional[str] = None
     joiner_user_id: Optional[str] = None  # Set when player 2 joins via lobby
+    seed: Optional[str] = None
 
 
 @dataclass
@@ -157,25 +163,29 @@ class ConnectionManager:
     async def broadcast_state(
         self,
         game_id: str,
-        runner: RustInteractiveGame,
+        runner: RustHeadlessGame,
         *,
         logs: Optional[List[str]] = None,
         events: Optional[List[Dict[str, Any]]] = None,
     ) -> None:
-        """Send perspective-filtered state to every connected client."""
+        """Send perspective-filtered state to every connected client.
+
+        Logs/events are drained from the runner by the caller (the Rust
+        event buffer drains once per read) and fanned out here.
+        """
         conn = self._games.get(game_id)
         if conn is None:
             return
 
-        full_state = runner.game.to_ui_json()
+        full_state = runner.to_ui_json()
         mask = runner.get_action_mask().tolist()
-        current_pid = runner.game.current_player_id
-        descriptions = runner.game.describe_actions(current_pid)
+        current_pid = runner.current_player_id
         is_game_over = runner.is_game_over
 
         tasks: List[asyncio.Task] = []
 
-        # Players get their own perspective
+        # Players get their own perspective; the mask only goes to the
+        # decision player (rule 14: never send raw to_ui_json to clients).
         for pid, ws in list(conn.players.items()):
             filtered = filter_state_for_player(full_state, pid)
             player_mask = mask if current_pid == pid else []
@@ -183,16 +193,18 @@ class ConnectionManager:
                 "type": "state_update",
                 "state": filtered,
                 "action_mask": player_mask,
-                "action_descriptions": descriptions if player_mask else {},
                 "current_player_id": current_pid,
                 "is_game_over": is_game_over,
+                "your_player_id": pid,
             }
+            if conn.settings.seed is not None:
+                payload["seed"] = conn.settings.seed
             if logs:
                 payload["logs"] = logs
             if events:
                 payload["events"] = events
             if is_game_over:
-                payload["winner_id"] = runner.game.winner.player_id if runner.game.winner else None
+                payload["winner_id"] = runner.winner_id
             tasks.append(asyncio.create_task(self._safe_send(ws, payload)))
 
         # Spectators get redacted state, no mask
@@ -204,12 +216,14 @@ class ConnectionManager:
                 "current_player_id": current_pid,
                 "is_game_over": is_game_over,
             }
+            if conn.settings.seed is not None:
+                spec_payload["seed"] = conn.settings.seed
             if logs:
                 spec_payload["logs"] = logs
             if events:
                 spec_payload["events"] = events
             if is_game_over:
-                spec_payload["winner_id"] = runner.game.winner.player_id if runner.game.winner else None
+                spec_payload["winner_id"] = runner.winner_id
             for ws in list(conn.spectators):
                 tasks.append(asyncio.create_task(self._safe_send(ws, spec_payload)))
 

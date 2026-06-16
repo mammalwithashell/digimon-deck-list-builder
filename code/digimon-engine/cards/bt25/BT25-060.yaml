@@ -1,0 +1,163 @@
+# BT25-060 Rebootmon — Digimon, Lv.6, Green, DP 12000, Play Cost 12.
+# Trait line (card image): God/Appmon | God | Reboot.
+#   → traits: [God, Appmon, Reboot], attribute: God.
+#
+# ─── Corrected printed card text (card image — authoritative) ─────────────────
+# Digivolve boxes: Lv.5 / Cost 4 (standard, printed evo_costs) + Ult. / Cost 4 (alt).
+# App Fusion [Bootmon] & [Shutmon]: Cost 0.
+#   "If 2 such cards are linked together, stack the link card on top and digivolve."
+# ＜Security A. +1＞ ＜Reboot＞ ＜Link +1＞ (Add 1 to this Digimon's maximum links.)
+# [When Digivolving] [When Attacking] [Once Per Turn] By linking 1 [Appmon] trait
+#   Digimon card from your hand or this Digimon's digivolution cards to this Digimon
+#   without paying the cost, 1 of your Digimon may unsuspend.
+# [All Turns] [Once Per Turn] When this Digimon gets linked or unsuspends, until your
+#   turn ends, this Digimon gains ＜Piercing＞ and ＜Blocker＞, and your opponent's
+#   Digimon effects don't affect it.
+# (NO printed Link box — Rebootmon is a finisher, NOT a link card → no link_condition.
+#  It still RECEIVES links from other Appmon, which fire the host-side
+#  when_card_linked_to_this trigger.)
+#
+# ─── DCGO C# reference (authoritative — READ-ONLY) ────────────────────────────
+# DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_060.cs
+#   - AddSelfDigivolutionRequirementStaticEffect(HasUltimateAppTraits, cost 4,
+#     ignoreDigivolutionRequirement:false) — Ult. alt-digivolve, NO level gate.
+#   - AddAppfuseMethodByName(["Bootmon","Shutmon"]) — App Fusion alt-play (cost 0).
+#   - ChangeSelfSAttackStaticEffect(+1), RebootSelfStaticEffect,
+#     ChangeSelfLinkMaxStaticEffect(1) — all EffectTiming.None statics.
+#   - Shared WD/WA (maxCountPerTurn 1, shared hash BT25_060_WD_WA): SetIntSelection
+#     "Link from Hand / Link from Digivolution Cards / Don't link"; LinkableCard =
+#     HasAppmonTraits && canLinkToTargetPermanent(self). If a card is actually
+#     linked (linked == true), SelectPermanentEffect Mode.UnTap over own
+#     battle-area Digimon with canNoSelect:true (1 of your Digimon MAY unsuspend).
+#     If NOT linked → activateClass.RemoveUse() (OPT refunded).
+#   - Shared All-Turns (WhenLinked + OnUnTappedAnyone, shared hash
+#     BT25_060_AT_GAIN_EFFECTS, maxCount 1): GainPierce + GainBlocker
+#     (UntilOwnerTurnEnd) + DigimonEffectImmunity on UntilOwnerTurnEndEffects.
+#
+# ─── Modeling notes ───────────────────────────────────────────────────────────
+# WD/WA clause: link_card_to_self optional:true. Declining the link selection
+#   (PASS) takes the on_decline:None path, so the parked tail (the unsuspend) is
+#   NOT run — matching DCGO's `if (linked)` gate (the unsuspend only happens when
+#   a card was actually linked). The unsuspend itself is "1 of your Digimon MAY
+#   unsuspend" → select_own_permanent optional:true, then unsuspend the binding.
+# All-Turns clause: dual-timing [when_card_linked_to_this, on_unsuspend] shares one
+#   once-per-turn (G-OPT-MULTI-TIMING-SHARED-LOCKOUT), mirroring DCGO's shared
+#   hash across the two ActivateClasses. [All Turns] → no your_turn gate.
+#   grant_keyword Piercing/Blocker (end_of_your_turn = DCGO UntilOwnerTurnEnd) +
+#   grant_effect_immunity (digimon / opponent / end_of_your_turn).
+# Precedents: BT21-101 Gaiamon (sister God/Appmon Lv.6: Ult.+App Fusion+<Link +1>
+#   aura + WD/WA link_card_to_self); AD1-009 (grant_effect_immunity self,
+#   end-of-turn keyword grant via grant_keyword step).
+#
+# ─── Faithfulness diff ────────────────────────────────────────────────────────
+# | Std digivolve Lv.5 Green / Cost 4                         | IMPLEMENTED (alt_paths digivolve) |
+# | Ult. digivolve / Cost 4 (trait gate, no level)           | IMPLEMENTED (alt_paths digivolve trait_has Ult.) |
+# | App Fusion [Bootmon] & [Shutmon] / Cost 0                | IMPLEMENTED (alt_paths app_fusion) |
+# | <Security A. +1>                                          | IMPLEMENTED (grant_keyword SecurityAttackPlus 1) |
+# | <Reboot>                                                  | IMPLEMENTED (grant_keyword Reboot) |
+# | <Link +1>                                                 | IMPLEMENTED (aura ChangeLinkMax 1) |
+# | [WD][WA][OPT] link Appmon → unsuspend 1 own Digimon       | IMPLEMENTED (link_card_to_self + select+unsuspend) |
+# | [All Turns][OPT] on link/unsuspend: Pierce+Blocker+immune | IMPLEMENTED (dual-timing grant + grant_effect_immunity) |
+
+card: BT25-060
+name: Rebootmon
+kind: digimon
+level: 6
+color: [green]
+cost: 12
+dp: 12000
+traits: [God, Appmon, Reboot]
+attribute: God
+
+alt_paths:
+  # ─── Standard digivolve: Lv.5 Green / Cost 4 (printed evo_costs) ─────────────
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+
+  # ─── Ult. digivolve: host top card has [Ult.] trait / Cost 4 ────────────────
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(HasUltimateAppTraits, 4,
+  #       ignoreDigivolutionRequirement:false). No level gate — trait gate only.
+  - kind: digivolve
+    from: { trait_has: "Ult." }
+    cost: 4
+
+  # ─── App Fusion: [Bootmon] & [Shutmon] / Cost 0 ─────────────────────────────
+  # DCGO: AddAppfuseMethodByName(["Bootmon","Shutmon"]).
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Bootmon, Shutmon]
+    cost: 0
+
+effects:
+  # ─── <Security A. +1> ───────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  # ─── <Reboot> ───────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  # ─── <Link +1> ──────────────────────────────────────────────────────────────
+  # "Add 1 to this Digimon's maximum links." DCGO ChangeSelfLinkMaxStaticEffect(1).
+  - kind: aura
+    target: {}
+    modifier: ChangeLinkMax
+    modifier_value: 1
+    summary: "<Link +1> Rebootmon's maximum links raised by 1"
+
+  # ─── [WD][WA][OPT] link 1 Appmon from hand/sources → 1 own Digimon may unsuspend ─
+  # The link (free) is the COST; the unsuspend is the effect. DCGO gates the
+  # unsuspend on a link actually occurring (`if (linked)`); declining the link
+  # selection (PASS) skips the parked unsuspend tail, matching that gate.
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[WD][WA][OPT] Link 1 [Appmon] Digimon from hand or digivolution cards to self (free), then 1 of your Digimon may unsuspend"
+    process:
+      - link_card_to_self:
+          from: [hand, digivolution_sources]
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Appmon
+          cost: 0
+          optional: true
+      # "1 of your Digimon may unsuspend" — optional select (DCGO canNoSelect:true),
+      # only reached when a card was linked (the line above did not decline).
+      - select_own_permanent:
+          bind_as: unsuspend_target
+          optional: true
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon may unsuspend"
+      - if:
+          condition: { binding_present: unsuspend_target }
+          then:
+            - unsuspend: { target: unsuspend_target }
+
+  # ─── [All Turns][OPT] when this gets linked OR unsuspends → gain keywords + immunity ─
+  # Dual-timing: when_card_linked_to_this (host-side: a card links TO Rebootmon)
+  # AND on_unsuspend (this Digimon unsuspends). One shared once-per-turn across
+  # both timings (DCGO shared hash). [All Turns] → no your_turn gate.
+  # Grants <Piercing> + <Blocker> + "opponent's Digimon effects don't affect it",
+  # all until your turn ends (DCGO UntilOwnerTurnEnd → expiry end_of_your_turn).
+  - when: [when_card_linked_to_this, on_unsuspend]
+    once_per_turn: true
+    summary: "[All Turns][OPT] When this Digimon gets linked or unsuspends, until your turn ends it gains <Piercing> + <Blocker> and isn't affected by opponent Digimon effects"
+    process:
+      - grant_keyword:
+          target: self
+          keyword: Piercing
+          expiry: end_of_your_turn
+      - grant_keyword:
+          target: self
+          keyword: Blocker
+          expiry: end_of_your_turn
+      - grant_effect_immunity:
+          target: self
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_your_turn

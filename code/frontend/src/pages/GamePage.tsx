@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect, useMemo } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import {
   DndContext,
   PointerSensor,
@@ -18,6 +18,7 @@ import { ActionBar } from '@/components/game/ActionBar';
 import { PhaseIndicator } from '@/components/game/PhaseIndicator';
 import { PromptBar } from '@/components/game/PromptBar';
 import { SelectionPanel } from '@/components/game/SelectionPanel';
+import { TrashSelectModal } from '@/components/game/TrashSelectModal';
 import { TrashViewer } from '@/components/game/TrashViewer';
 import { ResultOverlay } from '@/components/game/ResultOverlay';
 import { AttackArrow } from '@/components/game/AttackArrow';
@@ -48,8 +49,11 @@ import {
   SELECTION,
 } from '@/utils/constants';
 import {
+  anyFieldSelectionActionId,
+  anyFieldSelectionHighlights,
   fieldSelectionActionId,
   fieldSelectionHighlights,
+  isAnyFieldSelectionKind,
   isFieldSelectionKind,
 } from '@/utils/selectionTargets';
 import {
@@ -62,6 +66,7 @@ import {
 import { useUiStore } from '@/stores/uiStore';
 import { BotSpeedControl } from '@/components/game/BotSpeedControl';
 import { usePacedAgentDriver } from '@/hooks/usePacedAgentDriver';
+import { formatEvents } from '@/utils/gameLogFormat';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 type ActionTraceResponse = { action_traces?: ActionTrace[] };
@@ -76,6 +81,7 @@ const decks = IS_DESKTOP ? deckStore : deckApiMod;
 
 export function GamePage() {
   const { id: urlGameId } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const mode = searchParams.get('mode');
   const isPvpMode = mode === 'pvp';
@@ -87,7 +93,7 @@ export function GamePage() {
 
 
   const store = useGameStore();
-  const { opponentMode } = usePlayFlowStore();
+  const { opponentMode, seed: flowSeed, clearLaunchState } = usePlayFlowStore();
   useEffectHighlight();
   // Bot action pacing (add-bot-action-pacing): non-instant speeds advance
   // local bot games one agent action per request, paced by the driver
@@ -108,7 +114,9 @@ export function GamePage() {
       onStateUpdate: (payload) => {
         store.setGameState(payload.state);
         store.setActionMask(payload.action_mask ?? []);
-        if (payload.logs) store.appendLogs(payload.logs);
+        if (payload.seed !== undefined) {
+          store.setGameSeed(payload.seed ?? null);
+        }
         if (payload.events) store.appendEvents(payload.events);
         if (payload.your_player_id != null) {
           store.setPlayerLabels({
@@ -142,10 +150,13 @@ export function GamePage() {
       logs?: string[];
       events?: GameEvent[];
       agent_pending?: boolean;
+      seed?: string;
     } & ActionTraceResponse) => {
       store.setGameState(res.state);
       store.setActionMask(res.action_mask);
-      if (res.logs) store.appendLogs(res.logs);
+      if (res.seed !== undefined) {
+        store.setGameSeed(res.seed ?? null);
+      }
       if (res.events) store.appendEvents(res.events);
       appendResponseActionTraces(res);
       store.setAgentPending(res.agent_pending ?? false);
@@ -210,6 +221,8 @@ export function GamePage() {
   const [opponentDeckId, setOpponentDeckId] = useState<string>('');
   const [agentType, setAgentType] = useState<string>('greedy');
   const [starting, setStarting] = useState(false);
+  const [startSeedInput, setStartSeedInput] = useState('');
+  const [startSeedError, setStartSeedError] = useState('');
   const [localModels, setLocalModels] = useState<LocalModelMeta[]>([]);
   const [selectedModelId, setSelectedModelId] = useState<string>('');
 
@@ -232,13 +245,46 @@ export function GamePage() {
     };
   }, []);
 
+  // Refresh the engine-decoded action list whenever the legal-action set
+  // changes. The action bar renders activatable effects (card + effect name)
+  // from this instead of re-deriving labels from raw mask ranges. Cleared
+  // while the agent is acting or the game is over. WebSocket modes (PvP /
+  // vs-AI-online / spectator) drive state through their own channel and the
+  // /games decoded-actions endpoint may not back them — they fall back to the
+  // action bar's mask-based rendering, so we skip the fetch there.
+  useEffect(() => {
+    const gid = store.gameId;
+    if (!gid || useWebSocket || store.agentPending || store.isGameOver) {
+      store.setDecodedActions([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const actions = await gameApi.getDecodedActions(gid);
+        if (!cancelled) store.setDecodedActions(actions);
+      } catch {
+        if (!cancelled) store.setDecodedActions([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    store.gameId,
+    store.actionMask,
+    store.agentPending,
+    store.isGameOver,
+    useWebSocket,
+  ]);
+
   // Hydrate store from URL param when navigating to /game/:id
   useEffect(() => {
     if (urlGameId && !store.gameId) {
       if (useWebSocket) {
         // PvP / vs-AI-online / spectator: WebSocket hook will send initial state
         store.setGameId(urlGameId);
-        store.clearLogs();
         store.clearActionTraces();
       } else {
         // Local mode: fetch state via HTTP
@@ -248,10 +294,11 @@ export function GamePage() {
               gameApi.getState(urlGameId),
               gameApi.getMask(urlGameId),
             ]);
+            const stateSeed = (state as GameState & { seed?: string }).seed;
             store.setGameId(urlGameId);
             store.setGameState(state);
             store.setActionMask(maskData);
-            store.clearLogs();
+            store.setGameSeed(stateSeed ?? flowSeed ?? null);
             store.clearActionTraces();
             store.setPlayerLabels({
               1: 'YOU',
@@ -350,6 +397,15 @@ export function GamePage() {
     if (agentType === 'trained' && !selectedModelId) return;
     setStarting(true);
     try {
+      let normalizedSeed: string | null = null;
+      try {
+        normalizedSeed = gameApi.normalizeSeedInput(startSeedInput);
+        setStartSeedError('');
+      } catch (err) {
+        setStartSeedError((err as Error).message);
+        setStarting(false);
+        return;
+      }
       const [deck, oppDeck] = await Promise.all([
         decks.getDeck(selectedDeckId),
         decks.getDeck(opponentDeckId),
@@ -382,11 +438,13 @@ export function GamePage() {
         // prelude — cap it at one beat so the opening bot turn is paced
         // too. (Desktop create runs no prelude; the flag is inert there.)
         paced,
+        seed: normalizedSeed,
       });
 
       // Set game state before gameId so the board has player data when it first renders
       store.setGameState(result.state);
       store.setActionMask(result.action_mask);
+      store.setGameSeed(result.seed ?? normalizedSeed);
       if (result.player_labels) {
         store.setPlayerLabels(result.player_labels);
       } else {
@@ -395,9 +453,9 @@ export function GamePage() {
           2: agentType === 'greedy' ? 'GREEDY BOT' : 'OPPONENT',
         });
       }
-      store.clearLogs();
       store.clearEvents();
       store.clearActionTraces();
+      if (result.events) store.appendEvents(result.events);
       store.setAgentPending(result.agent_pending ?? false);
       store.setGameId(result.game_id);
 
@@ -428,10 +486,8 @@ export function GamePage() {
       if (!res) return; // Tauri path returns null — undo disabled there
       store.setGameState(res.state);
       store.setActionMask(res.action_mask);
-      store.clearLogs();
       store.clearEvents();
       store.clearActionTraces();
-      if (res.logs) store.appendLogs(res.logs);
       if (res.events) store.appendEvents(res.events);
       // Clear any in-flight UI selection state so we land on the
       // replayed snapshot with a clean slate.
@@ -450,7 +506,6 @@ export function GamePage() {
       const res = await gameApi.surrenderGame(store.gameId, 1);
       store.setGameState(res.state);
       store.setActionMask(res.action_mask);
-      if (res.logs) store.appendLogs(res.logs);
       if (res.events) store.appendEvents(res.events);
       appendResponseActionTraces(res as typeof res & ActionTraceResponse);
       store.setAgentPending(false);
@@ -459,6 +514,46 @@ export function GamePage() {
       // Ignore errors (e.g. game already over)
     }
   }, [appendResponseActionTraces, store]);
+
+  const handleReturnToLauncher = useCallback(() => {
+    store.reset();
+    clearLaunchState();
+    navigate('/');
+  }, [clearLaunchState, navigate, store]);
+
+  const gameLogLines = useMemo(() => {
+    if (!store.player1 || !store.player2) return [];
+    return formatEvents(store.events, {
+      state: {
+        turnCount: store.turnCount,
+        currentPhase: store.currentPhase,
+        currentPlayer: store.currentPlayer,
+        memoryGauge: store.memoryGauge,
+        isGameOver: store.isGameOver,
+        winner: store.winner,
+        player1: store.player1,
+        player2: store.player2,
+        revealedCards: store.revealedCards,
+        pendingSelection: store.pendingSelection,
+        pendingAttack: store.pendingAttack,
+      },
+      playerLabels: store.playerLabels,
+    });
+  }, [
+    store.currentPhase,
+    store.currentPlayer,
+    store.events,
+    store.isGameOver,
+    store.memoryGauge,
+    store.pendingAttack,
+    store.pendingSelection,
+    store.player1,
+    store.player2,
+    store.playerLabels,
+    store.revealedCards,
+    store.turnCount,
+    store.winner,
+  ]);
 
   const handlePlayCard = useCallback(
     (handIndex: number) => {
@@ -611,6 +706,26 @@ export function GamePage() {
           isOpponent,
           slotIndex,
           parsedMask.validSelections,
+        );
+        if (selIdx !== null) {
+          handleAction(selIdx);
+          return;
+        }
+      }
+
+      // `AnyField` selections (`select_any_permanent` / `select_dna_pair`) span
+      // BOTH battle areas and encode the engine player in the action id
+      // (`encode_attack(player, index)`), so route by decoding the id rather
+      // than the single-side `OwnField`/`OppField` kind. Without this branch,
+      // "place 1 Digimon as the bottom security card"-style prompts (EX8-028
+      // Skadimon) swallowed every click — the softlock.
+      if (isAnyFieldSelectionKind(store.pendingSelection?.kind)) {
+        const selIdx = anyFieldSelectionActionId(
+          store.pendingSelection?.kind,
+          isOpponent,
+          slotIndex,
+          parsedMask.validSelections,
+          store.pendingSelection?.selectingPlayer,
         );
         if (selIdx !== null) {
           handleAction(selIdx);
@@ -836,6 +951,23 @@ export function GamePage() {
             </div>
           )}
 
+          <div>
+            <label className="block text-sm text-gray-400 mb-1">Shuffle Seed</label>
+            <input
+              value={startSeedInput}
+              onChange={(e) => {
+                setStartSeedInput(e.target.value);
+                setStartSeedError('');
+              }}
+              placeholder="Random"
+              inputMode="numeric"
+              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
+            />
+            {startSeedError && (
+              <p className="mt-1 max-w-[220px] text-xs text-yellow-300">{startSeedError}</p>
+            )}
+          </div>
+
           <button
             onClick={handleStartGame}
             disabled={
@@ -889,6 +1021,15 @@ export function GamePage() {
     );
     for (const slot of fieldHighlights.own) highlightedOwnSlots.add(slot);
     for (const slot of fieldHighlights.enemy) highlightedEnemySlots.add(slot);
+
+    // `AnyField` (both-battle-area) selections decode the side from each id.
+    const anyHighlights = anyFieldSelectionHighlights(
+      store.pendingSelection?.kind,
+      parsedMask.validSelections,
+      store.pendingSelection?.selectingPlayer,
+    );
+    for (const slot of anyHighlights.own) highlightedOwnSlots.add(slot);
+    for (const slot of anyHighlights.enemy) highlightedEnemySlots.add(slot);
   }
 
   // DNA material selection highlights its own-field candidates by RAW
@@ -1049,7 +1190,7 @@ export function GamePage() {
           />
           <SecurityRevealOverlay />
           <EffectPopup />
-          <GameLogDrawer logs={store.logs} />
+          <GameLogDrawer logs={gameLogLines} />
           <AttackArrow
             pendingAttack={store.pendingAttack}
             selectedAttacker={store.selectedAttacker}
@@ -1164,6 +1305,22 @@ export function GamePage() {
             <BotSpeedControl />
           </div>
         )}
+        {(store.gameSeed ?? flowSeed) && (
+          <div className="flex items-center justify-end gap-2 px-3 py-1 text-xs text-gray-300">
+            <span className="uppercase tracking-widest text-gray-500">Seed</span>
+            <code className="max-w-[260px] truncate rounded border border-white/10 bg-black/30 px-2 py-1">
+              {store.gameSeed ?? flowSeed}
+            </code>
+            <button
+              type="button"
+              aria-label="Copy seed"
+              onClick={() => void navigator.clipboard?.writeText((store.gameSeed ?? flowSeed) ?? '')}
+              className="rounded border border-white/15 px-2 py-1 text-gray-100 hover:bg-white/10"
+            >
+              Copy
+            </button>
+          </div>
+        )}
         <ActionBar
           phase={store.currentPhase}
           actionMask={store.agentPending ? EMPTY_MASK : store.actionMask}
@@ -1171,6 +1328,7 @@ export function GamePage() {
           onSurrender={handleSurrender}
           isGameOver={store.isGameOver}
           canActivateEffect={parsedMask.canActivateEffect}
+          decodedActions={store.agentPending ? [] : store.decodedActions}
         />
       </div>
 
@@ -1181,7 +1339,8 @@ export function GamePage() {
         localPlayer={1}
         playerLabels={store.playerLabels}
         surrenderedBy={surrenderedBy}
-        onReturnToMenu={() => store.reset()}
+        gameSeed={store.gameSeed ?? flowSeed}
+        onReturnToMenu={handleReturnToLauncher}
       />
 
       {/* Trash viewer modal */}
@@ -1200,18 +1359,29 @@ export function GamePage() {
         }
       />
 
-      {/* Selection panel modal for hand/trash/security/effect-choice selections */}
+      {/* Selection panel modal for hand/security/effect-choice selections */}
       <SelectionPanel
         currentPhase={store.currentPhase}
         pendingSelection={store.pendingSelection}
         actionMask={store.actionMask}
         handIds={store.player1?.handIds ?? []}
-        trashIds={store.player1?.trashIds ?? []}
-        opponentTrashIds={store.player2?.trashIds ?? []}
-        securityIds={store.player1?.securityIds ?? []}
+        securityCount={store.player1?.securityCount ?? 0}
+        opponentSecurityCount={store.player2?.securityCount ?? 0}
         battleArea={store.player1?.battleArea ?? []}
         onAction={handleAction}
         localPlayer={1}
+        onInspectCard={setInspectedCardId}
+      />
+
+      {/* Interactive trash-selection modal — single + capped multi-select,
+          either player's trash (replaces the old SelectionPanel trash path). */}
+      <TrashSelectModal
+        pendingSelection={store.pendingSelection}
+        actionMask={store.actionMask}
+        ownTrashIds={store.player1?.trashIds ?? []}
+        opponentTrashIds={store.player2?.trashIds ?? []}
+        localPlayer={1}
+        onAction={handleAction}
         onInspectCard={setInspectedCardId}
       />
 

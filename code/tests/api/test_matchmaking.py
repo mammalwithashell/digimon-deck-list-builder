@@ -283,10 +283,11 @@ class TestQueueEndpoints:
 
     async def test_two_compatible_tickets_match(self, client: AsyncClient):
         """Two players in casual 'any' queue with same format should match
-        immediately; the matcher synthesizes a join code that the second
-        ticket's owner can feed to /lobby/join/{code}."""
+        immediately; the matcher constructs the Rust game on the spot and
+        the response carries the game_id plus the caller's seat."""
         from server.routers.matchmaking import tickets, user_to_ticket
-        from server.routers.lobby import pending_games, code_to_game
+        from server.routers.state import active_games
+        from digimon_engine import RustHeadlessGame
 
         tok1 = await _register_login(client, "alice")
         tok2 = await _register_login(client, "bob")
@@ -305,20 +306,20 @@ class TestQueueEndpoints:
         r2 = await client.post("/matchmaking/queue", json={
             "queue_type": "casual", "deck_id": d2,
         }, headers=h2)
-        # Second ticket triggers a match on submit: response carries join_code
+        # Second ticket triggers a match on submit: response carries the
+        # game_id and the caller's seat (incoming ticket = player 2).
         assert r2.status_code == 200
         body = r2.json()
         assert body["status"] == "matched"
-        assert "join_code" in body
         assert "game_id" in body
+        assert body["your_seat"] == 2
 
         # Both tickets transition to "matched" but are retained briefly so
-        # the other client can poll and pick up the join code.
+        # the other client can poll and pick up the game.
         assert len(tickets) == 2
         assert all(t.status == "matched" for t in tickets.values())
-        # PendingGame was synthesized for the handoff
-        assert body["game_id"] in pending_games
-        assert body["join_code"] in code_to_game
+        # The Rust game was constructed immediately — no lobby handoff.
+        assert isinstance(active_games.get(body["game_id"]), RustHeadlessGame)
 
     async def test_format_mismatch_does_not_match(self, client: AsyncClient):
         from server.routers.matchmaking import tickets
@@ -348,7 +349,7 @@ class TestQueueEndpoints:
     async def test_first_ticket_owner_polls_and_sees_match(self, client: AsyncClient):
         """Player A queues first (no match, gets 201 waiting). Player B queues
         second and matches. Player A polls their ticket and now sees
-        `status=matched` with the join code."""
+        `status=matched` with the shared game_id and the host seat."""
         tok1 = await _register_login(client, "pollA")
         tok2 = await _register_login(client, "pollB")
         h1 = {"Authorization": f"Bearer {tok1}"}
@@ -363,18 +364,20 @@ class TestQueueEndpoints:
 
         poll_before = await client.get(f"/matchmaking/queue/{t1}", headers=h1)
         assert poll_before.json()["status"] == "waiting"
-        assert poll_before.json()["join_code"] is None
+        assert poll_before.json()["game_id"] is None
 
         r2 = await client.post("/matchmaking/queue", json={
             "queue_type": "casual", "deck_id": d2,
         }, headers=h2)
-        shared_code = r2.json()["join_code"]
+        shared_game_id = r2.json()["game_id"]
 
         poll_after = await client.get(f"/matchmaking/queue/{t1}", headers=h1)
         assert poll_after.status_code == 200
         body = poll_after.json()
         assert body["status"] == "matched"
-        assert body["join_code"] == shared_code
+        assert body["game_id"] == shared_game_id
+        # Older ticket takes the host seat (player 1)
+        assert body["your_seat"] == 1
 
     async def test_cannot_cancel_matched_ticket(self, client: AsyncClient):
         tok1 = await _register_login(client, "noc1")
@@ -395,10 +398,13 @@ class TestQueueEndpoints:
         r_cancel = await client.delete(f"/matchmaking/queue/{t1}", headers=h1)
         assert r_cancel.status_code == 409
 
-    async def test_matched_pair_can_join_via_lobby_code(self, client: AsyncClient):
-        """After matching, the joiner hitting /lobby/join/{code} must produce a
-        live InteractiveGame — same path as the friend-code flow."""
+    async def test_match_creates_live_game_with_seat_assignments(self, client: AsyncClient):
+        """After matching, the game is already live in active_games (no lobby
+        join round-trip) and the WS seat validation settings carry both
+        users' ids so each client connects to its own seat."""
         from server.routers.state import active_games
+        from server.routers.ws_manager import manager
+        from server.routers import matchmaking as mm
 
         tok1 = await _register_login(client, "join1")
         tok2 = await _register_login(client, "join2")
@@ -414,16 +420,14 @@ class TestQueueEndpoints:
             "queue_type": "casual", "deck_id": d2,
         }, headers=h2)
         body = r2.json()
-        join_code = body["join_code"]
         game_id = body["game_id"]
 
-        # The non-host matched player joins using the code
-        rj = await client.post(f"/lobby/join/{join_code}", json={
-            "deck": _legal_deck(),
-        }, headers=h2)
-        assert rj.status_code == 200
-        assert rj.json()["game_id"] == game_id
         assert game_id in active_games
+        settings = manager.get_settings(game_id)
+        host_ticket = next(t for t in mm.tickets.values() if t.matched_seat == 1)
+        joiner_ticket = next(t for t in mm.tickets.values() if t.matched_seat == 2)
+        assert settings.host_user_id == host_ticket.user_id
+        assert settings.joiner_user_id == joiner_ticket.user_id
 
 
 # ── Enqueue-time ban-list enforcement (defense in depth) ────────────────
@@ -670,7 +674,8 @@ class TestMatchmakingWebSocket:
 
     def test_sends_waiting_then_match_found(self):
         """A queues, opens WS, gets 'waiting'. B queues via REST, triggers
-        match. A's WS receives 'match_found' with the same join_code."""
+        match. A's WS receives 'match_found' with the shared game_id and
+        A's seat (host = player 1)."""
         client, teardown = self._setup()
         try:
             tok_a = self._register_login_sync(client, "wsA")
@@ -698,12 +703,12 @@ class TestMatchmakingWebSocket:
                     "queue_type": "casual", "deck_id": db_,
                 }, headers=hb)
                 assert r_b.json()["status"] == "matched"
-                shared_code = r_b.json()["join_code"]
+                assert r_b.json()["your_seat"] == 2
 
                 msg = ws.receive_json()
                 assert msg["type"] == "match_found"
-                assert msg["join_code"] == shared_code
                 assert msg["game_id"] == r_b.json()["game_id"]
+                assert msg["your_seat"] == 1
         finally:
             teardown()
 

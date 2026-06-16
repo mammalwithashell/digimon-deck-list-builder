@@ -25,6 +25,7 @@ export interface SaveBuilderDeckParams {
   main_deck_alt_arts?: boolean[];
   egg_deck_alt_arts?: boolean[];
   game_mode?: string;
+  commander_id?: string | null;
 }
 
 export function listBuilderDecks(): Promise<DeckSummary[]> {
@@ -44,6 +45,10 @@ export async function saveBuilderDeck(
     egg_deck: params.egg_deck,
     main_deck_alt_arts: params.main_deck_alt_arts,
     egg_deck_alt_arts: params.egg_deck_alt_arts,
+    commander_id: params.commander_id ?? null,
+    // Thread the selected format through updates too — previously dropped here,
+    // so editing a non-standard deck silently reverted its mode.
+    ...(params.game_mode ? { game_mode: params.game_mode } : {}),
   };
 
   if (usesDesktopStorage()) {
@@ -60,6 +65,7 @@ export async function saveBuilderDeck(
       egg_deck: params.egg_deck,
       main_deck_alt_arts: params.main_deck_alt_arts ?? existing?.main_deck_alt_arts,
       egg_deck_alt_arts: params.egg_deck_alt_arts ?? existing?.egg_deck_alt_arts,
+      commander_id: params.commander_id ?? null,
     });
   }
 

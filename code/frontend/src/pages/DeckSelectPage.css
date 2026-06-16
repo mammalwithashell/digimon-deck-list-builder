@@ -81,6 +81,8 @@
 }
 
 .deck-select-card .glyph {
+  position: relative;
+  overflow: hidden;
   width: 62px;
   height: 78px;
   display: grid;
@@ -88,6 +90,21 @@
   border: 1px solid rgba(255, 122, 24, 0.45);
   color: #ff7a18;
   font-weight: 800;
+}
+
+.deck-select-card .glyph img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.deck-select-card .glyph span {
+  position: relative;
+  z-index: 1;
+  padding: 2px 5px;
+  background: rgba(5, 6, 8, 0.7);
 }
 
 .deck-select-card .name {
@@ -121,6 +138,32 @@
   border: 1px solid rgba(255, 122, 24, 0.4);
 }
 
+.deck-confirm-info {
+  display: grid;
+  gap: 10px;
+}
+
+.deck-seed-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: rgba(245, 241, 232, 0.7);
+  font-size: 11px;
+}
+
+.deck-seed-control input {
+  width: 220px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: #f5f1e8;
+  padding: 8px 10px;
+}
+
+.deck-seed-control em {
+  color: #ffcc4a;
+  font-style: normal;
+}
+
 .deck-confirm-bar button {
   background: #ff7a18;
   border: 0;
@@ -144,4 +187,40 @@
     align-items: stretch;
     flex-direction: column;
   }
+}
+
+/* --- Format-aware deck selection (format filter toggle + empty state) --- */
+.deck-select-toolbar .deck-select-toggle {
+  background: transparent;
+  color: inherit;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 4px;
+  padding: 6px 12px;
+  font: inherit;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.deck-select-toolbar .deck-select-toggle[aria-pressed='true'] {
+  border-color: rgba(255, 255, 255, 0.6);
+}
+
+.deck-select-empty {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 40px 16px;
+  opacity: 0.85;
+  text-align: center;
+}
+.deck-select-empty a,
+.deck-select-empty button {
+  color: inherit;
+  text-decoration: underline;
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
 }

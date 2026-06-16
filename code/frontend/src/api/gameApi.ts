@@ -27,11 +27,13 @@ import type {
   PermanentDto,
   PlayerDto,
 } from './engineDtos';
+import { normalizeGameEvents } from '@/utils/gameEvents';
 
 // ─── Engine response envelopes ────────────────────────────────────────
 
 interface CreateGameCommandResponse {
   game_id: string;
+  seed: string;
   state: GameStateDto;
   action_mask: number[];
 }
@@ -79,6 +81,7 @@ interface DecodedActionDto {
   target_index: number | null;
   card_id: string | null;
   card_name: string | null;
+  effect_name: string | null;
 }
 
 interface TensorSummaryDto {
@@ -120,6 +123,7 @@ interface CreateGameParams {
   agent_action_delay_ms?: number;
   player_kinds?: PlayerKind[];
   player_model_ids?: (string | null)[];
+  seed?: string | null;
   /** Paced agent stepping (add-bot-action-pacing): cap agent autoplay at
    *  one action per request so each bot action renders as a beat. Only
    *  meaningful on the browser wire's create (which runs an opening agent
@@ -129,8 +133,11 @@ interface CreateGameParams {
 
 interface CreateGameResponse {
   game_id: string;
+  seed?: string;
   state: GameState;
   action_mask: number[];
+  logs?: string[];
+  events?: GameEvent[];
   recording_metadata?: Record<string, unknown>;
   player_labels?: Record<number, string>;
   /** True when an agent action remains after a paced create's prelude
@@ -138,10 +145,26 @@ interface CreateGameResponse {
   agent_pending?: boolean;
 }
 
+const MAX_U64 = 18_446_744_073_709_551_615n;
+
+export function normalizeSeedInput(seed: string | null | undefined): string | null {
+  const trimmed = seed?.trim() ?? '';
+  if (!trimmed) return null;
+  if (!/^\d+$/.test(trimmed)) {
+    throw new Error('Seed must be a base-10 integer in the u64 range.');
+  }
+  const parsed = BigInt(trimmed);
+  if (parsed > MAX_U64) {
+    throw new Error('Seed must be in the u64 range.');
+  }
+  return parsed.toString();
+}
+
 interface ActionResponse {
   state: GameState;
   action_mask: number[];
   is_game_over: boolean;
+  seed?: string;
   logs?: string[];
   events?: GameEvent[];
   action_context?: Record<string, unknown>;
@@ -154,6 +177,7 @@ interface ActionResponse {
 interface StepResponse {
   state: GameState;
   action_mask: number[];
+  seed?: string;
   logs: string[];
   events?: GameEvent[];
   is_human_turn: boolean;
@@ -166,6 +190,7 @@ interface StepResponse {
 interface SurrenderResponse {
   state: GameState;
   action_mask: number[];
+  seed?: string;
   logs: string[];
   events?: GameEvent[];
   is_game_over: boolean;
@@ -459,6 +484,7 @@ export function toDecodedAction(action: DecodedActionDto): DecodedAction {
     targetIndex: action.target_index,
     cardId: action.card_id,
     cardName: action.card_name,
+    effectName: action.effect_name ?? null,
   };
 }
 
@@ -503,17 +529,26 @@ export async function createGame(
       player1_policy: 'greedy',
       player2_policy: 'greedy',
       paced: params.paced ?? false,
+      seed: normalizeSeedInput(params.seed),
     };
     const httpResp = await httpJson<{
       game_id: string;
       state: GameState;
       action_mask: number[];
+      logs?: string[];
+      events?: GameEvent[];
+      player_labels?: Record<number, string>;
       agent_pending?: boolean;
+      seed?: string;
     }>('/games', { method: 'POST', body });
     return {
       game_id: httpResp.game_id,
+      seed: httpResp.seed,
       state: httpResp.state,
       action_mask: httpResp.action_mask,
+      logs: httpResp.logs ?? [],
+      events: normalizeGameEvents(httpResp.events),
+      player_labels: httpResp.player_labels,
       agent_pending: httpResp.agent_pending,
     };
   }
@@ -530,11 +565,15 @@ export async function createGame(
     deck2: params.deck2 ?? null,
     playerKinds: kinds ?? null,
     playerModelIds: modelIds,
+    seed: normalizeSeedInput(params.seed),
   });
   return {
     game_id: resp.game_id,
+    seed: resp.seed,
     state: dtoToGameState(resp.state),
     action_mask: resp.action_mask,
+    logs: [],
+    events: [],
   };
 }
 
@@ -581,13 +620,15 @@ export async function sendAction(
       events: GameEvent[];
       action_context?: Record<string, unknown>;
       agent_pending?: boolean;
+      seed?: string;
     }>(`/games/${gameId}/actions`, { method: 'POST', body: { action, paced } });
     return {
       state: httpResp.state,
       action_mask: httpResp.action_mask,
       is_game_over: httpResp.is_game_over,
+      seed: httpResp.seed,
       logs: httpResp.logs,
-      events: httpResp.events,
+      events: normalizeGameEvents(httpResp.events),
       action_context: httpResp.action_context,
       // Browser-dev path doesn't currently surface action_traces — those
       // are produced by the Tauri command's per-step `explain_action`
@@ -606,7 +647,7 @@ export async function sendAction(
     action_mask: resp.action_mask,
     is_game_over: resp.is_game_over,
     logs: resp.logs,
-    events: resp.events,
+    events: normalizeGameEvents(resp.events),
     action_context: resp.action_context,
     action_traces: toActionTraces(resp.action_traces),
     agent_pending: resp.agent_pending,
@@ -630,12 +671,14 @@ export async function stepGame(
       events: GameEvent[];
       is_human_turn: boolean;
       agent_pending?: boolean;
+      seed?: string;
     }>(route, { method: 'POST' });
     return {
       state: httpResp.state,
       action_mask: httpResp.action_mask,
+      seed: httpResp.seed,
       logs: httpResp.logs,
-      events: httpResp.events,
+      events: normalizeGameEvents(httpResp.events),
       is_human_turn: httpResp.is_human_turn,
       is_game_over: httpResp.is_game_over,
       action_traces: [],
@@ -647,7 +690,7 @@ export async function stepGame(
     state: dtoToGameState(resp.state),
     action_mask: resp.action_mask,
     logs: resp.logs,
-    events: resp.events,
+    events: normalizeGameEvents(resp.events),
     is_human_turn: resp.is_human_turn,
     is_game_over: resp.is_game_over,
     action_traces: toActionTraces(resp.action_traces),
@@ -691,6 +734,26 @@ export async function getMask(gameId: string): Promise<number[]> {
   return invoke<number[]>('rust_get_mask');
 }
 
+/**
+ * Decoded list of every currently-legal action for the current decision
+ * player, each carrying source-card and effect identity. The action bar
+ * renders activatable effects from this instead of re-deriving action
+ * semantics from raw mask bit-ranges (which mis-decodes trash/hand [Main]
+ * effects). Parallel to {@link getMask}: dedicated call on both wires.
+ */
+export async function getDecodedActions(
+  gameId: string,
+): Promise<DecodedAction[]> {
+  if (!isInTauriRuntime()) {
+    const resp = await httpJson<{ decoded_actions: DecodedActionDto[] }>(
+      `/games/${gameId}/decoded-actions`,
+    );
+    return resp.decoded_actions.map(toDecodedAction);
+  }
+  const dtos = await invoke<DecodedActionDto[]>('rust_get_decoded_actions');
+  return dtos.map(toDecodedAction);
+}
+
 export async function getLog(_gameId: string): Promise<string[]> {
   if (!isInTauriRuntime()) {
     // No dedicated log endpoint in the browser-dev FastAPI surface — the
@@ -713,6 +776,7 @@ export async function surrenderGame(
       events: GameEvent[];
       is_game_over: boolean;
       surrendered_by: number;
+      seed?: string;
     }>(`/games/${gameId}/surrender`, {
       method: 'POST',
       body: { player_id: playerId },
@@ -720,8 +784,9 @@ export async function surrenderGame(
     return {
       state: httpResp.state,
       action_mask: httpResp.action_mask,
+      seed: httpResp.seed,
       logs: httpResp.logs,
-      events: httpResp.events,
+      events: normalizeGameEvents(httpResp.events),
       is_game_over: httpResp.is_game_over,
       surrendered_by: httpResp.surrendered_by,
     };
@@ -733,7 +798,7 @@ export async function surrenderGame(
     state: dtoToGameState(resp.state),
     action_mask: resp.action_mask,
     logs: resp.logs,
-    events: resp.events,
+    events: normalizeGameEvents(resp.events),
     is_game_over: resp.is_game_over,
     surrendered_by: resp.surrendered_by,
   };
@@ -760,7 +825,7 @@ export async function undoGame(gameId: string): Promise<StepResponse | null> {
       state: httpResp.state,
       action_mask: httpResp.action_mask,
       logs: httpResp.logs,
-      events: httpResp.events,
+      events: normalizeGameEvents(httpResp.events),
       is_human_turn: httpResp.is_human_turn,
       is_game_over: httpResp.is_game_over,
       action_traces: [],

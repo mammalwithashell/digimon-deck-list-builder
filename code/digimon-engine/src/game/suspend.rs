@@ -33,6 +33,18 @@ impl Game {
     /// use the plain `suspend` (`false`). Feeds `event_is_effect_initiated`
     /// ("when an EFFECT suspends…", G-SUSPEND-EFFECT-INITIATED).
     pub fn suspend_with_cause(&mut self, handle: PermanentHandle, effect_initiated: bool) {
+        // Prohibition gate (15-1-3 "a prohibiting effect takes precedence"):
+        // a permanent under `CannotSuspend` is not suspended by effects or
+        // cost payments — the suspension silently no-ops, mirroring DCGO's
+        // universal suspend executor (`CardController.SuspendPermanentsClass
+        // .Tap()`, CardController.cs:5633, which filters out `!CanSuspend`
+        // permanents). Attack/block declaration legality is enforced
+        // upstream (11-2-5 / 12-1-4 in `can_attack*` and the blocker
+        // candidate walk); this chokepoint is the universal backstop for
+        // every other suspension source.
+        if self.modifiers.has(handle, ModifierType::CannotSuspend) {
+            return;
+        }
         let is_breeding = handle.index == crate::action::space::BREEDING_TARGET as u8;
         let event_card = if is_breeding {
             self.players
@@ -107,6 +119,14 @@ impl Game {
 
     /// See [`Self::suspend_with_cause`] — the unsuspend twin.
     pub fn unsuspend_with_cause(&mut self, handle: PermanentHandle, effect_initiated: bool) {
+        // Sibling prohibition gate — `CannotUnsuspend` stops EFFECT
+        // unsuspension at the same chokepoint (DCGO `CardController.
+        // IUnsuspendPermanents.Unsuspend()`, CardController.cs:5716, filters
+        // out `!CanUnsuspend` permanents). The unsuspend-phase and Reboot
+        // gates live separately in `game_phases.rs`.
+        if self.modifiers.has(handle, ModifierType::CannotUnsuspend) {
+            return;
+        }
         let event_card = self
             .players
             .get(handle.player as usize)

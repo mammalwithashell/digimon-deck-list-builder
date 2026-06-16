@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type {
   ActionTrace,
+  DecodedAction,
   GameState,
   GameEvent,
   GamePhase,
@@ -9,10 +10,12 @@ import type {
   PendingAttack,
   TensorSummary,
 } from '@/types/game';
+import { normalizeGameEvents } from '@/utils/gameEvents';
 
 interface GameStore {
   // Game session
   gameId: string | null;
+  gameSeed: string | null;
 
   // Game state
   turnCount: number;
@@ -29,13 +32,17 @@ interface GameStore {
 
   // UI state
   actionMask: number[];
+  /** Engine-decoded list of every currently-legal action for the decision
+   *  player, each carrying source-card + effect identity. The action bar
+   *  renders activatable effects from this (card + effect name) instead of
+   *  re-deriving labels from raw mask ranges. Refreshed alongside the mask. */
+  decodedActions: DecodedAction[];
   /** True while a non-human agent still has actions to take in paced mode
    *  (add-bot-action-pacing). GamePage's pacing driver requests the next
    *  beat while set; human action submission is locked for the duration. */
   agentPending: boolean;
   selectedAttacker: number | null;
   hoveredCard: string | null;
-  logs: string[];
   events: GameEvent[];
   actionTraces: ActionTrace[];
   latestTensorSummary: TensorSummary | null;
@@ -45,14 +52,14 @@ interface GameStore {
 
   // Actions
   setGameId: (id: string | null) => void;
+  setGameSeed: (seed: string | null) => void;
   setGameState: (state: GameState) => void;
   setActionMask: (mask: number[]) => void;
+  setDecodedActions: (actions: DecodedAction[]) => void;
   setAgentPending: (pending: boolean) => void;
   setPlayerLabels: (labels: Record<number, string>) => void;
   selectAttacker: (slot: number | null) => void;
   setHoveredCard: (cardId: string | null) => void;
-  appendLogs: (newLogs: string[]) => void;
-  clearLogs: () => void;
   appendEvents: (newEvents: GameEvent[]) => void;
   clearEvents: () => void;
   appendActionTraces: (traces: ActionTrace[]) => void;
@@ -64,6 +71,7 @@ interface GameStore {
 
 const initialState = {
   gameId: null,
+  gameSeed: null,
   turnCount: 0,
   currentPhase: 0 as GamePhase,
   currentPlayer: 0,
@@ -76,10 +84,10 @@ const initialState = {
   pendingSelection: null,
   pendingAttack: null,
   actionMask: [],
+  decodedActions: [],
   agentPending: false,
   selectedAttacker: null,
   hoveredCard: null,
-  logs: [],
   events: [],
   actionTraces: [],
   latestTensorSummary: null,
@@ -92,6 +100,7 @@ export const useGameStore = create<GameStore>((set) => ({
   ...initialState,
 
   setGameId: (id) => set({ gameId: id }),
+  setGameSeed: (seed) => set({ gameSeed: seed }),
 
   setGameState: (state) =>
     set({
@@ -109,15 +118,13 @@ export const useGameStore = create<GameStore>((set) => ({
     }),
 
   setActionMask: (mask) => set({ actionMask: mask }),
+  setDecodedActions: (actions) => set({ decodedActions: actions }),
   setAgentPending: (pending) => set({ agentPending: pending }),
   setPlayerLabels: (labels) => set({ playerLabels: labels }),
   selectAttacker: (slot) => set({ selectedAttacker: slot }),
   setHoveredCard: (cardId) => set({ hoveredCard: cardId }),
-  appendLogs: (newLogs) =>
-    set((s) => ({ logs: [...s.logs, ...newLogs] })),
-  clearLogs: () => set({ logs: [] }),
   appendEvents: (newEvents) =>
-    set((s) => ({ events: [...s.events, ...newEvents] })),
+    set((s) => ({ events: [...s.events, ...normalizeGameEvents(newEvents)] })),
   clearEvents: () => set({ events: [] }),
   appendActionTraces: (traces) =>
     set((s) => {

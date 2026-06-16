@@ -284,6 +284,13 @@ impl Game {
                 if !effect.declarative || effect.inherited != inherited_source {
                     continue;
                 }
+                // `.linked()` effects are Link-ESS auras that boost the HOST when
+                // THIS card is a link card attached to a host. They must NOT be
+                // summed here (where `target` is the card's own permanent) — the
+                // `linked_cards` loop below handles that direction.
+                if effect.linked {
+                    continue;
+                }
                 if effect.materializes_declarative_state
                     || effect.dp_modifier == 0
                     || effect.dp_modifier_fn.is_some()

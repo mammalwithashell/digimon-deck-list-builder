@@ -1,7 +1,6 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
-import { useWebSocketGame } from '@/hooks/useWebSocketGame';
 import { useMatchmaking } from '@/hooks/useMatchmaking';
 import * as lobbyApi from '@/api/lobbyApi';
 import * as deckApiMod from '@/api/deckApi';
@@ -40,28 +39,13 @@ export function LobbyPage() {
       .catch(() => {/* fall back to the default alpha set */});
   }, []);
 
-  // When a match is found, join the synthesized lobby by code and navigate
-  // to the game — same handoff as the manual "Join by code" flow.
+  // When a match is found, the game is already live server-side — navigate
+  // straight in as the assigned seat.
   useEffect(() => {
-    if (matchmaking.status !== 'matched' || !matchmaking.match || !playDeckId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const deck = await decks.getDeck(playDeckId);
-        const result = await lobbyApi.joinLobby(matchmaking.match!.join_code, {
-          deck: [...deck.egg_deck, ...deck.main_deck],
-        });
-        if (!cancelled) {
-          navigate(`/game/${result.game_id}?mode=pvp&player=${result.player_id}`);
-        }
-      } catch (err) {
-        console.error('Failed to join matched game:', err);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [matchmaking.status, matchmaking.match, playDeckId, navigate]);
+    if (matchmaking.status !== 'matched' || !matchmaking.match) return;
+    const { game_id, your_seat } = matchmaking.match;
+    navigate(`/game/${game_id}?mode=pvp&player=${your_seat}`);
+  }, [matchmaking.status, matchmaking.match, navigate]);
 
   // Drive a local waited-seconds counter between WS heartbeats so the
   // "Searching..." display updates every second without server pings.
@@ -105,23 +89,14 @@ export function LobbyPage() {
   const [creating, setCreating] = useState(false);
   const [opponentJoined, setOpponentJoined] = useState(false);
 
-  // WebSocket connection to detect when opponent joins
-  const wsOptions = useMemo(
-    () =>
-      createdGameId
-        ? {
-            gameId: createdGameId,
-            role: 'player' as const,
-            onPlayerJoined: () => {
-              setOpponentJoined(true);
-              // Auto-navigate to game when opponent connects
-              navigate(`/game/${createdGameId}?mode=pvp&player=1`);
-            },
-          }
-        : null,
-    [createdGameId, navigate],
-  );
-  useWebSocketGame(wsOptions);
+  // Two-phase rooms: there is no live game to watch over WS until the host
+  // starts it. Created rooms hand off to the room screen, which polls
+  // lobby state for the opponent's arrival and the start signal.
+  useEffect(() => {
+    if (createdGameId) {
+      navigate(`/play/room/${createdGameId}`);
+    }
+  }, [createdGameId, navigate]);
 
   // Join tab state
   const [joinCode, setJoinCode] = useState('');
@@ -148,15 +123,14 @@ export function LobbyPage() {
     }
   };
 
-  const handleJoin = async (code: string, deckId: string) => {
-    if (!deckId || !code) return;
+  const handleJoin = async (code: string, _deckId: string) => {
+    if (!code) return;
     setJoining(true);
     try {
-      const deck = await decks.getDeck(deckId);
-      const result = await lobbyApi.joinLobby(code, {
-        deck: [...deck.egg_deck, ...deck.main_deck],
-      });
-      navigate(`/game/${result.game_id}?mode=pvp&player=${result.player_id}`);
+      // Two-phase rooms: joining reserves the seat; deck locking and the
+      // ready/start dance happen on the room screen.
+      const result = await lobbyApi.joinLobby(code);
+      navigate(`/play/room/${result.game_id}`);
     } catch (err) {
       console.error('Failed to join lobby:', err);
     } finally {

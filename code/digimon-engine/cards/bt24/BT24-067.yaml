@@ -1,0 +1,83 @@
+# BT24-067 Hackmon — Digimon, Lv.3, Purple, DP 1000, Cost 3.
+# Trait line: Stnd./Appmon | System | Hacking. Attribute: System.
+#
+# DCGO BT24_067.cs (authoritative):
+#   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 1)
+#       → kind: link_condition, cost 1, filter: { trait_has: Appmon }
+#   - AddSelfDigivolutionRequirementStaticEffect(IsLevel2 && EqualsTraits("Appmon"), cost 0)
+#       → alt_paths digivolve from { level_eq: 2, trait_has: Appmon } cost 0
+#   - [WhenLinked] ActivateClass (IsOwnerTurn gate → CanActivateCondition: ≤1 tamers +
+#       Rei Katsura in hand): play 1 [Rei Katsura] from hand free (optional, once per turn)
+#       → when: when_card_linked_to_this, once_per_turn, optional, active_when: all_of[your_turn,
+#         count_lte(tamers ≤ 1)], select_hand name_is "Rei Katsura" optional + play_from_hand_free
+#   - Link ESS: RetaliationSelfEffect(isLinkedEffect: true)
+#       → scope: linked, kind: grant_keyword, keyword: Retaliation
+#   - Link DP bonus: +2000 (card image link box; data-driven LinkDP in DCGO
+#       Permanent.cs, not a CardEffect) → scope: linked, kind: aura, dp_modifier: 2000
+#
+# Near-twin: BT21-009 Gatchmon (Red; identical structure except Haru Shinkai + Raid +
+#   dual Appmon/Hero alt-digi condition). Hackmon: Purple, single Appmon alt-digi,
+#   Rei Katsura, Retaliation.
+
+card: BT24-067
+name: Hackmon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 1000
+traits: ["Stnd.", Appmon, System, Hacking]
+attribute: System
+
+alt_paths:
+  # Digivolve from Lv.2 with [Appmon] trait for cost 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Appmon }
+    cost: 0
+
+effects:
+  # ─── Self link-condition: link onto an [Appmon] host for cost 1 ──────────────
+  - kind: link_condition
+    cost: 1
+    filter: { trait_has: Appmon }
+
+  # ─── [Link] <Retaliation> — host gains Retaliation while this card is linked ─
+  - kind: grant_keyword
+    scope: linked
+    keyword: Retaliation
+    summary: "[Link] <Retaliation> (host gains Retaliation while this card is linked)"
+
+  # ─── Link ESS: +2000 DP (applies to the host while linked) ──────────────────
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 2000
+    summary: "[Link] +2000 DP"
+
+  # ─── [Your Turn][OPT][Once Per Turn] When this Digimon gets linked:
+  #     if ≤1 Tamers, may play 1 [Rei Katsura] from hand free ──────────────────
+  - when: when_card_linked_to_this
+    once_per_turn: true
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - count_lte:
+            filter:
+              owner: you
+              zone: [battle_area]
+              kind: tamer
+            n: 1
+    summary: "[Your Turn][OPT] When this Digimon gets linked, if ≤1 Tamers, may play 1 [Rei Katsura] from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: rei
+          optional: true
+          filter:
+            name_is: "Rei Katsura"
+          prompt: "Play 1 [Rei Katsura] from your hand without paying the cost"
+      - if:
+          condition: { binding_present: rei }
+          then:
+            - play_from_hand_free: { of: you, hand_index: rei }

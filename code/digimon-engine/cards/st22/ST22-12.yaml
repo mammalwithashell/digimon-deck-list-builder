@@ -1,0 +1,154 @@
+# ST22-12 DoGatchmon — Digimon, Lv.4, Red/Blue, DP 6000, Cost 6.
+#
+# Traits: Sup./Appmon | Social | Super Search.
+# Attribute: Social.
+#
+# Card image (authoritative printed text):
+#
+#   App Fusion [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0.
+#     If 2 such cards are linked together, stack the link card on top and
+#     digivolve.
+#
+#   <Raid>
+#   [When Attacking] [Once Per Turn] You may link 1 Digimon card with the
+#     [Social], [Navi] or [Tool] trait from your hand or this Digimon's
+#     digivolution cards to this Digimon with the link cost reduced by 2.
+#
+#   Link [Appmon] trait: Cost 2.
+#   [When Linking] Return 1 of your opponent's 5000 DP or lower Digimon to
+#     the bottom of the deck.
+#   Link DP bonus: +3000 DP.
+#
+# Digivolve: Lv.3 red/blue → Cost 3 (standard evo_costs metadata).
+#            Stnd. trait → Cost 3 (alt_path digivolve below).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST22/Red/ST22_12.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# DCGO registers:
+#   (1) EffectTiming.None → AddSelfDigivolutionRequirementStaticEffect
+#       (permanentCondition: EqualsTraits("Stnd."), digivolutionCost: 3).
+#       → alt_paths digivolve from { trait_has: "Stnd." } cost 3.
+#   (2) EffectTiming.None → RaidSelfEffect → kind: grant_keyword, keyword: Raid.
+#   (3) EffectTiming.None → AddSelfLinkConditionStaticEffect
+#       (HasAppmonTraits, linkCost: 2). → kind: link_condition, cost 2.
+#   (4) EffectTiming.None → AddAppfuseMethodByName([Gatchmon,Navimon,Tweetmon]).
+#       → alt_paths app_fusion.
+#   (5) EffectTiming.OnDeclaration → LinkEffect (link play declaration).
+#   (6) EffectTiming.OnAllyAttack → ActivateClass [WA][OPT] with
+#       SetHashString("WA_ST22-12"), GrantedReduceLinkCostClass(reducedCost: 2),
+#       canNoSelect: true (both hand and digi-sources branches).
+#       → when: when_attacking, once_per_turn: true, optional: true,
+#         link_card_to_self from [hand, digivolution_sources], cost: 0.
+#   (7) EffectTiming.WhenLinked → ActivateClass SetIsLinkedEffect(true),
+#       canNoSelect: false, PermanentCondition: opp Digimon, permanent.DP <= 5000,
+#       mode: PutLibraryBottom.
+#       → scope: linked, when: when_linked, select_opponent_permanent
+#         (kind: digimon, dp_lte: 5000), return_to_deck bottom include_sources.
+#
+# The +3000 DP link bonus is printed in the link box on the card image and
+# is modeled as a scope:linked kind:aura dp_modifier:3000 (same pattern as
+# BT25-101's Security A. aura). DCGO handles link DP bonuses through a global
+# link system rather than per-card code, so it does not appear in ST22_12.cs.
+#
+# ─── Cost modeling (link cost reduction) ────────────────────────────────────
+#
+# "link cost reduced by 2" → `GrantedReduceLinkCostClass(reducedCost: 2)` in
+# DCGO applies transiently (removed after the coroutine). DSL test fixtures
+# carry no engine-side link cost on linked candidates, so `cost: 0` models the
+# fully-reduced outcome (same idiom as BT25-056, BT25-070).
+
+card: ST22-12
+name: DoGatchmon
+kind: digimon
+level: 4
+color: [red, blue]
+cost: 6
+dp: 6000
+traits: [Sup., Appmon, Social, Super Search]
+attribute: Social
+
+alt_paths:
+  # ─── Alt-digivolve: [Stnd.] trait, Cost 3 ──────────────────────────────────
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(EqualsTraits("Stnd."), cost 3).
+  # No level requirement in DCGO — only the Stnd. trait on the top card.
+  - kind: digivolve
+    from: { trait_has: "Stnd." }
+    cost: 3
+  # ─── [App Fusion] Gatchmon & Navimon & Tweetmon: Cost 0 ─────────────────────
+  # DCGO: AddAppfuseMethodByName([Gatchmon, Navimon, Tweetmon]).
+  # If 2 such linked cards are stacked together, the link card is placed on top
+  # and the stack digivolves (handled by the app_fusion_digivolve_route).
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Gatchmon, Navimon, Tweetmon]
+    cost: 0
+
+effects:
+  # ─── Self link-condition: link onto an [Appmon] host for Cost 2 ─────────────
+  # DCGO: AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost: 2).
+  - kind: link_condition
+    cost: 2
+    filter: { trait_has: Appmon }
+    summary: "[Link] [Appmon] trait: Cost 2"
+
+  # ─── <Raid> ─────────────────────────────────────────────────────────────────
+  # DCGO: RaidSelfEffect(isInheritedEffect: false).
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  # ─── [When Attacking][OPT] link 1 Social/Navi/Tool from hand or sources ─────
+  # DCGO: ActivateClass SetHashString("WA_ST22-12"), once-per-turn OPT, optional
+  # (canNoSelect: true). GrantedReduceLinkCostClass(reducedCost: 2) applied
+  # transiently → modeled as cost: 0. Eligible cards: Digimon with Social/Navi/Tool
+  # trait that can link to this Digimon (Appmon host gate is from link_condition).
+  - when: when_attacking
+    once_per_turn: true
+    optional: true
+    summary: "[When Attacking][Once Per Turn] You may link 1 [Social]/[Navi]/[Tool] Digimon card from your hand or this Digimon's digivolution cards (link cost -2)"
+    process:
+      - link_card_to_self:
+          from: [hand, digivolution_sources]
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Social
+                  - trait_has: Navi
+                  - trait_has: Tool
+          cost: 0
+          optional: true
+
+  # ─── [When Linking] return opp ≤5000 DP Digimon to bottom of deck ───────────
+  # DCGO: ActivateClass SetIsLinkedEffect(true), WhenLinked timing,
+  # canNoSelect: false, PermanentCondition: opp Digimon, permanent.DP <= 5000,
+  # mode: PutLibraryBottom.
+  # CanActivateCondition gates on HasMatchConditionPermanent — if no valid target
+  # exists the effect silently skips (no prompt). The DSL select step mirrors
+  # this: an empty candidate set produces no prompt.
+  - scope: linked
+    when: when_linked
+    summary: "[When Linking] Return 1 of your opponent's 5000 DP or lower Digimon to the bottom of the deck"
+    process:
+      - select_opponent_permanent:
+          bind_as: bounce_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 5000
+          prompt: "Return 1 of your opponent's 5000 DP or lower Digimon to the bottom of the deck"
+      - return_to_deck: { target: bounce_target, position: bottom, include_sources: true }
+
+  # ─── [Link] +3000 DP (link-box aura) ────────────────────────────────────────
+  # Printed in the link box on the card image: +3000 DP.
+  # DCGO handles link DP bonuses globally (not in per-card C#); modeled here as
+  # scope:linked kind:aura — applies to the host Digimon while this card is
+  # attached as a linked card (same pattern as BT25-101 Security A. +1 aura).
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] +3000 DP"

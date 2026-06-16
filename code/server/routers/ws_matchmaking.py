@@ -3,13 +3,13 @@
 Protocol (server → client only; no messages accepted from the client):
 
     {"type": "waiting",     "waited_seconds": float, "rating_window": float|None}
-    {"type": "match_found", "join_code": str, "game_id": str,
+    {"type": "match_found", "game_id": str, "your_seat": int,
                             "opponent": {"user_id": str, "display_name": str}}
     {"type": "cancelled",   "reason": str}
 
 Disconnecting while waiting auto-cancels the ticket so it doesn't sit in the
 queue as a ghost. Matched tickets are retained regardless of WS state so the
-REST `GET /matchmaking/queue/{id}` poller can still pick up the code.
+REST `GET /matchmaking/queue/{id}` poller can still pick up the game.
 """
 from __future__ import annotations
 
@@ -48,8 +48,8 @@ def _match_found_payload(ticket: mm.QueueTicket) -> dict:
                 break
     return {
         "type": "match_found",
-        "join_code": ticket.matched_join_code,
         "game_id": ticket.matched_game_id,
+        "your_seat": ticket.matched_seat,
         "opponent": {
             "user_id": opponent_id,
             "display_name": opponent_name,

@@ -1,0 +1,189 @@
+# EX8-022 Frigimon — Digimon, Lv.4, Blue/Yellow, DP 5000, Cost 5.
+# Traits: Ice-Snow, LIBERATOR. Attribute: Vaccine. Rarity: R.
+#
+# Printed card text (card image EX8-022 — authoritative; cards.json agrees on
+# the face text, but see the inherited-text contradiction note below):
+#   Evo box: Lv.3 from blue: Cost 3   (JSON evo_costs [{card_color:1, level:3, memory_cost:3}])
+#   Evo box: "Digivolve Lv.3 w/[Ice-Snow] trait: Cost 2"   (JSON xros_req)
+#   <Iceclad> (Other than against Security Digimon, compare the number of
+#     digivolution cards instead of DP in this Digimon's battles.)
+#   [On Play] [When Digivolving] Trash the bottom 2 digivolution cards from 1
+#     of your opponent's Digimon. Then, if your opponent has no Digimon with
+#     digivolution cards, gain 1 memory.
+#   Inherited Effect:
+#   [When Attacking] Give 1 of your opponent's Digimon <Security A. -1> (This
+#     Digimon checks 1 fewer security card.) until the end of their turn.
+#
+# ─── SOURCE PRIORITY NOTE — inherited reminder-text contradiction ─────────────
+#
+# cards.json inherited_effect_description_eng reads "<Security A. -1> (This
+# Digimon checks 1 ADDITIONAL security card.)" — the keyword badge says minus
+# but the API-ingested reminder says additional. The card IMAGE badge clearly
+# reads "Security A. -1", and DCGO resolves it as ChangeDigimonSAttack(
+# changeValue: -1, UntilOpponentTurnEnd) — Security Attack MINUS 1 ("checks 1
+# FEWER security card"). Image + DCGO win per CLAUDE.md source priority:
+# implemented as SecurityAttackChange -1.
+#
+# DCGO crosscheck (DCGO/Assets/Scripts/CardEffect/EX8/Blue/EX8_022.cs):
+#   Alternate Digivolution Requirement (None):
+#     AddSelfDigivolutionRequirementStaticEffect(permanentCondition:
+#     EqualsTraits("Ice-Snow") && HasLevel && Level == 3, digivolutionCost: 2,
+#     ignoreDigivolutionRequirement: false) → `from: { level_eq: 3,
+#     trait_has: Ice-Snow }`, cost 2.
+#   Iceclad (None): IcecladSelfStaticEffect(isInheritedEffect: false) →
+#     face-up `grant_keyword: Iceclad` (engine Keyword::Iceclad is consumed
+#     directly at Game::resolve_battle — stack-size compare instead of DP,
+#     security battles unaffected).
+#   On Play + When Digivolving (OnEnterFieldAnyone, two ActivateClass bodies
+#     with identical coroutines):
+#     - IF an opponent battle-area Digimon exists (HasMatchConditionPermanent
+#       over ANY opponent Digimon — NO digivolution-cards requirement on the
+#       target): mandatory SelectPermanentEffect(maxCount: 1, canNoSelect:
+#       false, canEndNotMax: false) → TrashDigivolutionCardsFromTopOrBottom(
+#       trashCount: 2, isFromTop: false).
+#     - THEN — OUTSIDE the target-exists guard, so it runs even when no
+#       opponent Digimon existed and no selection happened: if the opponent
+#       has no Digimon with DigivolutionCards.Count > 0, AddMemory(1).
+#       The DSL's empty mandatory select drops the captured tail, so the
+#       memory leg is expressed via an explicit if/else split on "any
+#       opponent Digimon exists" with the memory check in both arms —
+#       behaviorally identical to DCGO's flat coroutine.
+#   When Attacking - ESS (OnAllyAttack, isInheritedEffect: true):
+#     CanActivateCondition: IsExistOnBattleAreaDigimon(card) &&
+#       HasMatchConditionPermanent(opponent battle-area Digimon) — the DSL's
+#       empty mandatory select is silently skipped, same contract.
+#     SelectPermanentEffect(maxCount: 1, canNoSelect: false) — MANDATORY
+#       single pick, no PASS (no printed "you may").
+#     ChangeDigimonSAttack(changeValue: -1, UntilOpponentTurnEnd) →
+#       `SecurityAttackChange -1, expiry: end_of_opponents_turn`.
+#
+# Clause analysis:
+#   Clause 1 (face-up): <Iceclad> — static keyword; `grant_keyword: Iceclad`
+#     (keyword mapping added to lookup_keyword + KNOWN_KEYWORD_KEYS with this
+#     card — first DSL Iceclad carrier).
+#   Clause 2 (face-up): [On Play][When Digivolving] mandatory select of 1
+#     opponent Digimon (ANY — DCGO has no sources filter, matching BT25-026's
+#     trash-bottom shape) → trash_bottom_sources count 2 → if the opponent
+#     has no Digimon with digivolution cards (`no_permanent` +
+#     `stack_size_gte: 2`, the EX11-002 idiom), gain 1 memory. The memory
+#     check also runs (vacuously true) when no opponent Digimon existed.
+#   Clause 3 (inherited): [When Attacking] mandatory select 1 opponent
+#     Digimon → SecurityAttackChange -1 until end of opponent's turn. Same
+#     shape as EX8-019's inherited clause.
+#
+# Implementation status (faithfulness diff):
+# | Std digivolve Lv.3 blue / Cost 3                       | IMPLEMENTED (alt_paths + JSON evo_costs) |
+# | Alt digivolve Lv.3 w/[Ice-Snow] / Cost 2               | IMPLEMENTED (alt_paths trait_has)        |
+# | <Iceclad>                                              | IMPLEMENTED (grant_keyword)              |
+# | [OP][WD] trash bottom 2 sources of 1 opp Digimon       | IMPLEMENTED (trash_bottom_sources)       |
+# | [OP][WD] then if opp has no sourced Digimon, +1 memory | IMPLEMENTED (if/else + no_permanent)     |
+# | Inherited [When Attacking] Security A. -1 to 1 opp     | IMPLEMENTED (triggered inherited)        |
+
+card: EX8-022
+name: Frigimon
+kind: digimon
+level: 4
+color: [blue, yellow]
+cost: 5
+dp: 5000
+traits: [Ice-Snow, LIBERATOR]
+attribute: Vaccine
+alt_paths:
+  # Printed standard evo box: Lv.3 from blue, cost 3 (encoded explicitly like
+  # neighbor EX8 specs so DSL-only loads carry the printed cost table).
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+  # Printed alt evo box: "Digivolve Lv.3 w/[Ice-Snow] trait: Cost 2". DCGO
+  # gates on EqualsTraits("Ice-Snow") && Level == 3.
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: Ice-Snow }
+    cost: 2
+
+effects:
+  # ─── Clause 1: <Iceclad> ─────────────────────────────────────────────────────
+  #
+  # "(Other than against Security Digimon, compare the number of digivolution
+  #  cards instead of DP in this Digimon's battles.)"
+  #
+  # Engine Keyword::Iceclad is consumed at the combat resolver
+  # (Game::resolve_battle): when either combatant has it, the battle compares
+  # `card_sources.len()` instead of effective DP. Security battles route
+  # through resolve_player_security_loop and are unaffected.
+  - kind: grant_keyword
+    keyword: Iceclad
+    summary: "<Iceclad> (Compare digivolution-card counts instead of DP in this Digimon's battles, other than against Security Digimon)"
+
+  # ─── Clause 2: [On Play][When Digivolving] trash bottom 2 + memory ──────────
+  #
+  # "Trash the bottom 2 digivolution cards from 1 of your opponent's Digimon.
+  #  Then, if your opponent has no Digimon with digivolution cards, gain 1
+  #  memory."
+  #
+  # The selection targets ANY opponent Digimon (DCGO has no sources filter —
+  # picking a sourceless one trashes nothing) and is MANDATORY (canNoSelect:
+  # false; no printed "you may"). DCGO's memory check sits OUTSIDE the
+  # target-exists guard: with no opponent Digimon at all the trash leg is
+  # skipped but the (vacuously true) memory check still grants 1. The DSL's
+  # empty mandatory select drops its captured tail, so the memory leg is
+  # duplicated into an explicit else arm — same observable behavior.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash the bottom 2 digivolution cards from 1 opponent Digimon; then if the opponent has no Digimon with digivolution cards, gain 1 memory"
+    process:
+      - if:
+          condition:
+            any_field_permanent: { of: opponent, kind: digimon }
+          then:
+            - select_opponent_permanent:
+                bind_as: target
+                filter: { kind: digimon }
+                prompt: "Trash the bottom 2 digivolution cards from 1 of your opponent's Digimon"
+            - trash_bottom_sources:
+                target: target
+                count: 2
+            - if:
+                condition:
+                  no_permanent:
+                    of: opponent
+                    zone: [battle_area]
+                    kind: digimon
+                    stack_size_gte: 2
+                then:
+                  - gain_memory: 1
+          else:
+            # No opponent Digimon: DCGO still runs the memory check, which is
+            # vacuously satisfied ("no Digimon with digivolution cards").
+            - if:
+                condition:
+                  no_permanent:
+                    of: opponent
+                    zone: [battle_area]
+                    kind: digimon
+                    stack_size_gte: 2
+                then:
+                  - gain_memory: 1
+
+  # ─── Clause 3: Inherited [When Attacking] Security A. -1 ────────────────────
+  #
+  # "[When Attacking] Give 1 of your opponent's Digimon <Security A. -1> (This
+  #  Digimon checks 1 fewer security card.) until the end of their turn."
+  #
+  # Mandatory selection (DCGO canNoSelect: false; no printed "you may" — no
+  # `optional:` per the optional-on-mandatory-selection pitfall). With no
+  # opponent Digimon the empty mandatory select is silently skipped (DCGO
+  # CanActivateCondition gate). "Until the end of their turn" = DCGO
+  # EffectDuration.UntilOpponentTurnEnd = expiry: end_of_opponents_turn.
+  # Same shape as EX8-019's inherited clause.
+  - scope: inherited
+    when: when_attacking
+    summary: "[Inherited][When Attacking] Give 1 opponent Digimon Security A. -1 until the end of their turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to gain Security Attack -1"
+      - add_modifier:
+          target: target
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_opponents_turn

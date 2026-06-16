@@ -7,7 +7,9 @@ from __future__ import annotations
 
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from server.routers.seed_utils import parse_optional_seed
 
 
 class SimulationRequest(BaseModel):
@@ -44,7 +46,7 @@ class CreateGameRequest(BaseModel):
     # human actions are auto-played via the same greedy loop the live
     # /games/<id>/actions endpoint uses, so the script only needs to
     # capture *your* decisions.
-    seed: Optional[int] = Field(None, ge=0)
+    seed: Optional[int | str] = None
     action_script: Optional[list[int]] = None
     # Paced agent stepping (add-bot-action-pacing): when true, the opening
     # agent prelude advances at most one action; the client then drives
@@ -54,6 +56,11 @@ class CreateGameRequest(BaseModel):
     # presentation). Distinct from the vestigial `agent_action_delay_ms`
     # (legacy server-side sleep — unused by the Rust-backed router).
     paced: bool = False
+
+    @field_validator("seed", mode="before")
+    @classmethod
+    def _validate_seed(cls, value):
+        return parse_optional_seed(value)
 
 
 class GameActionRequest(BaseModel):
@@ -75,7 +82,10 @@ class DeckValidateRequest(BaseModel):
     deck: Optional[str] = None
     main_deck: list[str] = Field(default_factory=list)
     egg_deck: list[str] = Field(default_factory=list)
-    game_mode: str = Field("standard", pattern=r"^(standard|eden|edh_commander|titan|no_restriction)$")
+    game_mode: str = Field(
+        "standard",
+        pattern=r"^(standard|eden|eden_singleton|pauper|edh_commander|titan|no_restriction)$",
+    )
 
 
 class CreateDebugGameRequest(BaseModel):

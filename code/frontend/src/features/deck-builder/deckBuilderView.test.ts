@@ -7,6 +7,7 @@ import {
   filterBuilderCards,
   getBuilderCounts,
   groupDeckEntriesForBuilder,
+  selectDeckIconCardId,
   slotArraysToDeckEntries,
   type BuilderCardFilters,
 } from './deckBuilderView';
@@ -44,6 +45,7 @@ function filters(overrides: Partial<BuilderCardFilters> = {}): BuilderCardFilter
     rarity: '',
     inheritedOnly: false,
     securityOnly: false,
+    legalOnly: false,
     ...overrides,
   };
 }
@@ -121,6 +123,24 @@ describe('deck builder view helpers', () => {
     expect(filterBuilderCards([target], filters({ type: 'all', level: 'all', rarity: 'all' }))).toEqual([target]);
   });
 
+  it('hides format-illegal cards only when legalOnly is set and a legality map is given', () => {
+    const legal = card({ cardnumber: 'BT1-010', name: 'Legal Mon' });
+    const banned = card({ cardnumber: 'BT1-011', name: 'Banned Mon' });
+    const unknown = card({ cardnumber: 'ZZZ-999', name: 'Untested Mon' });
+    const legality = {
+      'BT1-010': { legal: true, max_copies: 4, reason: null },
+      'BT1-011': { legal: false, max_copies: 0, reason: 'Banned in EDEN' },
+      // ZZZ-999 intentionally absent → treated as legal (engine warns, not rejects).
+    };
+    const pool = [legal, banned, unknown];
+    // legalOnly off → no filtering even with a map.
+    expect(filterBuilderCards(pool, filters({ legalOnly: false }), legality)).toEqual(pool);
+    // legalOnly on, no map → no-op (can't gate without data).
+    expect(filterBuilderCards(pool, filters({ legalOnly: true }))).toEqual(pool);
+    // legalOnly on with map → drops the banned card, keeps legal + unknown.
+    expect(filterBuilderCards(pool, filters({ legalOnly: true }), legality)).toEqual([legal, unknown]);
+  });
+
   it('computes main, egg, total, type, and level counts from deck entries', () => {
     const lv2 = card({ cardnumber: 'BT1-001', name: 'DemiVeemon', type: 'Digi-Egg', level: '2' });
     const lv3 = card({ cardnumber: 'BT1-002', name: 'Veemon', type: 'Digimon', level: '3' });
@@ -194,5 +214,54 @@ describe('deck builder view helpers', () => {
       label: 'LV2 / DIGI-EGG',
       total: 2,
     });
+  });
+
+  it('selects an explicit deck icon only while that card is still present', () => {
+    const egg = card({ cardnumber: 'BT1-001', name: 'DemiVeemon', type: 'Digi-Egg', level: '2' });
+    const rookie = card({ cardnumber: 'BT1-002', name: 'Veemon', type: 'Digimon', level: '3' });
+    const tamer = card({ cardnumber: 'BT1-003', name: 'Davis Motomiya', type: 'Tamer', level: '' });
+
+    expect(selectDeckIconCardId([entry(rookie, 4), entry(tamer, 2)], [entry(egg, 4)], tamer.cardnumber)).toBe(
+      tamer.cardnumber,
+    );
+    expect(selectDeckIconCardId([entry(rookie, 4)], [entry(egg, 4)], tamer.cardnumber)).toBe(rookie.cardnumber);
+  });
+
+  it('uses a DCGO-inspired representative-card heuristic for automatic deck icons', () => {
+    const rookie = card({
+      cardnumber: 'BT1-010',
+      name: 'Rookie',
+      type: 'Digimon',
+      color: 'Blue',
+      level: '3',
+      play_cost: '3',
+      dp: '2000',
+    });
+    const mega = card({
+      cardnumber: 'BT1-011',
+      name: 'Mega',
+      type: 'Digimon',
+      color: 'Red',
+      level: '6',
+      play_cost: '12',
+      dp: '11000',
+    });
+    const tamer = card({
+      cardnumber: 'BT1-012',
+      name: 'Tamer',
+      type: 'Tamer',
+      color: 'Blue',
+      level: '',
+      play_cost: '3',
+    });
+
+    expect(selectDeckIconCardId([entry(tamer, 4), entry(rookie, 4), entry(mega, 2)], [])).toBe(mega.cardnumber);
+  });
+
+  it('falls back to the first egg when the main deck is empty', () => {
+    const firstEgg = card({ cardnumber: 'BT1-001', name: 'First Egg', type: 'Digi-Egg', level: '2' });
+    const secondEgg = card({ cardnumber: 'BT1-002', name: 'Second Egg', type: 'Digi-Egg', level: '2' });
+
+    expect(selectDeckIconCardId([], [entry(secondEgg, 4), entry(firstEgg, 1)])).toBe(firstEgg.cardnumber);
   });
 });

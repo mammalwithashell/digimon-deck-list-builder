@@ -1,0 +1,312 @@
+# EX11-017 Skadimon — Digimon, Lv.6, Blue/Yellow, DP 12000, Cost 12.
+# Traits: Ice-Snow, LIBERATOR. Form: Mega. Attribute: Vaccine. Rarity: R.
+#
+# Printed card text (card image EX11-017.webp — authoritative; cards.json
+# agrees):
+#   Evo box: Lv.5 from blue: Cost 4   (JSON evo_costs [{card_color:1, level:5, memory_cost:4}])
+#   Evo box: "Digivolve Lv.5 w/[Ice-Snow] trait: Cost 3"   (JSON xros_req)
+#   <Iceclad> (Other than against Security Digimon, compare the number of
+#     digivolution cards instead of DP in this Digimon's battles.)
+#   <Barrier> (When this Digimon would be deleted in battle, by trashing the
+#     top card of your security stack, prevent that deletion.)
+#   [On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may play
+#     1 [Suzune Kazuki] or level 4 or lower [Ice-Snow] trait Digimon card from
+#     your hand without paying the cost.
+#   [All Turns] [Once Per Turn] When other Digimon are played or digivolve,
+#     trash any 3 digivolution cards from your opponent's Digimon. Then, 1 of
+#     their Digimon with no digivolution cards can't suspend until their turn
+#     ends.
+#   Inherited Effect: (none)
+#
+# DCGO crosscheck (DCGO/Assets/Scripts/CardEffect/EX11/Blue/EX11_017.cs):
+#   Alternate Digivolution Requirement (None):
+#     AddSelfDigivolutionRequirementStaticEffect(permanentCondition:
+#     EqualsTraits("Ice-Snow") && IsLevel5, digivolutionCost: 3,
+#     ignoreDigivolutionRequirement: false) → `from: { level_eq: 5,
+#     trait_has: Ice-Snow }`, cost 3 (EX8-028 / EX11-015 idiom — no color).
+#   Iceclad (None): IcecladSelfStaticEffect(isInheritedEffect: false) →
+#     face-up `grant_keyword: Iceclad` (Game::resolve_battle stack-size
+#     compare; EX8-022/EX8-028 idiom).
+#   Barrier (WhenPermanentWouldBeDeleted): BarrierSelfEffect(false) →
+#     face-up `grant_keyword: Barrier` (engine auto-installs the optional
+#     battle-deletion replacement; EX8-028 / BT23-102 idiom).
+#   Shared OP / WD / WA (three ActivateClass bodies at OnEnterFieldAnyone ×2
+#     + OnAllyAttack, ALL SetHashString("EX11_017_OP_WD_WA_Play_Card") → ONE
+#     shared once-per-turn counter across the three timings; isOptional TRUE):
+#     - ValidCardToPlay: EqualsCardName("Suzune Kazuki") || (IsDigimon &&
+#       EqualsTraits("Ice-Snow") && HasLevel && Level <= 4) — DISJUNCTIVE;
+#       NOTE the name branch carries NO IsTamer check (unlike EX11-015's
+#       explicit IsTamer) — mirrored below with a bare `name_is`.
+#     - SharedCanActivateCondition: IsExistOnBattleArea &&
+#       HasMatchConditionOwnersHand(ValidCardToPlay) → clause-level
+#       `condition: count_gte(matching hand cards) >= 1` (BT16-085 idiom —
+#       no empty prompt).
+#     - SelectHandEffect(maxCount: 1, canNoSelect: TRUE — printed "You may")
+#       → optional select_hand → PlayPermanentCards(payCost: false,
+#       isTapped: false, activateETB: true) → `play_from_hand_free`
+#       (EX11-015 idiom; [On Play] effects of the played card DO activate).
+#   All Turns (OnEnterFieldAnyone, ActivateClass, hash
+#     "EX11_017_AT_Trash_3_Stun", maxCount 1, isOptional FALSE — MANDATORY):
+#     - CanUseCondition: IsExistOnBattleArea && (CanTriggerOnPermanentPlay ||
+#       CanTriggerWhenPermanentDigivolving) with PermanentCondition:
+#       permanent != card.PermanentOfThisCard() && IsPermanentExistsOn
+#       BattleAreaDigimon(permanent) — ANY OWNER ("other Digimon", both
+#       players), self excluded → `when: [on_any_digimon_played,
+#       on_digivolve]` (AD1-024 idiom; on_any_digimon_played lowers to
+#       OnEnterFieldAnyone, on_digivolve to the global OnDigivolve broadcast;
+#       the digivolve bundle does NOT fire OnEnterFieldAnyone so the pair
+#       cannot double-fire) + `event_target_kind: digimon` +
+#       `event_permanent_is_source: false` (BT22-002 self-exclusion idiom).
+#     - CanActivateCondition: IsExistOnBattleArea only — NO opponent-board
+#       gate; the body's halves guard themselves.
+#     - SelectTrashDigivolutionCards(permanentCondition: OPPONENT battle-area
+#       Digimon with >=1 trashable source, maxCount: 3, canNoTrash: FALSE,
+#       isFromOnly1Permanent: FALSE): MANDATORY cross-permanent pick of
+#       exactly min(total selectable opponent digivolution cards, 3); with 0
+#       available the helper exits without a prompt.
+#     - THEN, if HasMatchConditionOpponentsPermanent(opponent battle-area
+#       Digimon && HasNoDigivolutionCards): MANDATORY SelectPermanentEffect
+#       (maxCount: 1, canNoSelect: FALSE) → CanNotSuspendClass appended to
+#       permanent.UntilOwnerTurnEndEffects = until the end of the TARGET
+#       OWNER's (= the opponent's) turn → `add_modifier: CannotSuspend,
+#       expiry: end_of_opponents_turn` (EX8-023 idiom).
+#
+# ─── Authoring notes ──────────────────────────────────────────────────────────
+#
+# "Trash any 3" mandatory clamp: `select_opponent_sources` carries a STATIC
+# `min` — if min exceeded the live candidate count the picker would drop its
+# continuation. DCGO's min(total, 3) cap is therefore an explicit if/else
+# availability ladder (EX7-023's >=3 decomposition; total = Σ(stack_size − 1);
+# stack_size INCLUDES the top card):
+#   total >= 3 ⟺ (a stack has >= 3 sources [ss >= 4])
+#              ∨ (a stack has >= 2 sources [ss >= 3] ∧ >= 2 stacks have
+#                 >= 1 source [count(ss >= 2) >= 2])                — 2+1
+#              ∨ (>= 3 stacks have >= 1 source [count(ss >= 2) >= 3]) — 1+1+1
+#   total == 2 ⟺ (ss >= 3) ∨ (count(ss >= 2) >= 2)        — EX8-023 idiom
+#   total == 1 ⟺ (ss >= 2)
+# Soundness/completeness proven by the partition-sweep test
+# ex11_017_observer_trash_clamp_ladder_demands_min_of_total_and_three
+# (configs [3],[4],[2,1],[1,1,1] → 3; [2],[1,1] → 2; [1] → 1).
+#
+# Known minor divergence (shared with EX7-023 / EX8-023 / BT25-028's
+# cross-permanent pick): `select_opponent_sources` enumerates sources under
+# EVERY opponent battle-area permanent — there is no DSL filter for "host
+# permanent is a Digimon" on source picks. DCGO restricts hosts to Digimon.
+# The ladder conditions deliberately match the enumerator (no kind gate).
+# Only divergent on the exotic board "opponent TAMER carrying digivolution
+# cards".
+#
+# Lock modifier: `CannotSuspend`, expiry end_of_opponents_turn ("until their
+# turn ends" — DCGO UntilOwnerTurnEndEffects on the opponent-owned target).
+# KNOWN ENGINE GAP (pre-existing, do not fix here — shared with BT25-026/028,
+# EX9-019, BT20-084, EX8-023, EX7-023): CannotSuspend installs/expires but
+# has no engine consult site yet; enforcement-dependent test assertions are
+# #[ignore]d.
+#
+# Implementation status (faithfulness diff):
+# | Std digivolve Lv.5 blue / Cost 4                          | IMPLEMENTED (alt_paths + JSON evo_costs) |
+# | Alt digivolve Lv.5 w/[Ice-Snow] / Cost 3                  | IMPLEMENTED (alt_paths trait_has)        |
+# | <Iceclad>                                                 | IMPLEMENTED (grant_keyword)              |
+# | <Barrier>                                                 | IMPLEMENTED (grant_keyword)              |
+# | [OP][WD][WA][OPT] may play Suzune / Lv<=4 Ice-Snow free   | IMPLEMENTED (one clause × 3 timings, shared OPT; disjunctive select_hand + play_from_hand_free) |
+# | [AT][OPT] other-Digimon play/digivolve observer           | IMPLEMENTED (on_any_digimon_played + on_digivolve, self-excluded, both owners) |
+# | ...trash any 3 sources of opp Digimon (cross-perm)        | IMPLEMENTED (select_opponent_sources + min(total,3) ladder) |
+# | ...then 1 sourceless opp Digimon can't suspend            | IMPLEMENTED (CannotSuspend, end_of_opponents_turn — modifier installed; engine-wide suspend/attack consult is a pre-existing gap) |
+
+card: EX11-017
+name: Skadimon
+kind: digimon
+level: 6
+color: [blue, yellow]
+cost: 12
+dp: 12000
+traits: [Ice-Snow, LIBERATOR]
+attribute: Vaccine
+form: Mega
+
+alt_paths:
+  # Printed standard evo box: Lv.5 from blue, cost 4 (encoded explicitly like
+  # siblings EX8-028 / EX11-015 so DSL-only loads carry the printed cost table).
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  # Printed alt evo box: "Digivolve Lv.5 w/[Ice-Snow] trait: Cost 3". DCGO
+  # gates on EqualsTraits("Ice-Snow") && IsLevel5 — no color restriction.
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: Ice-Snow }
+    cost: 3
+
+effects:
+  # ─── Clause 1: <Iceclad> ─────────────────────────────────────────────────────
+  #
+  # "(Other than against Security Digimon, compare the number of digivolution
+  #  cards instead of DP in this Digimon's battles.)"
+  # Engine Keyword::Iceclad is consumed at Game::resolve_battle. EX8-028 idiom.
+  - kind: grant_keyword
+    keyword: Iceclad
+    summary: "<Iceclad> (Compare digivolution-card counts instead of DP in this Digimon's battles, other than against Security Digimon)"
+
+  # ─── Clause 2: <Barrier> ─────────────────────────────────────────────────────
+  #
+  # "(When this Digimon would be deleted in battle, by trashing the top card
+  #  of your security stack, prevent that deletion.)"
+  # DCGO BarrierSelfEffect at WhenPermanentWouldBeDeleted; the engine
+  # auto-installs the optional battle-deletion replacement. EX8-028 idiom.
+  - kind: grant_keyword
+    keyword: Barrier
+    summary: "<Barrier> (When this Digimon would be deleted in battle, by trashing the top card of your security stack, prevent that deletion)"
+
+  # ─── Clause 3: [OP][WD][WA][Once Per Turn] disjunctive free play ─────────────
+  #
+  # "You may play 1 [Suzune Kazuki] or level 4 or lower [Ice-Snow] trait
+  #  Digimon card from your hand without paying the cost."
+  #
+  # ONE clause registered at all THREE timings: the engine's per-(card,
+  # clause) OPT bookkeeping then equals DCGO's shared
+  # "EX11_017_OP_WD_WA_Play_Card" hash — an On Play activation locks the
+  # WD and WA windows for the turn and vice versa.
+  # optional: true — printed "You may" (DCGO canNoSelect: true); the inner
+  # optional select IS the decline path (no outer prompt).
+  # condition — DCGO SharedCanActivateCondition's hand-existence gate
+  # (BT16-085 idiom): no empty prompt when no legal card is in hand.
+  # Filter is DISJUNCTIVE (DCGO ValidCardToPlay): exact name [Suzune Kazuki]
+  # (no kind gate — DCGO's name branch carries no IsTamer check) OR
+  # Digimon + [Ice-Snow] trait + level <= 4.
+  - when: [on_play, when_digivolving, when_attacking]
+    optional: true
+    once_per_turn: true
+    summary: "[On Play][When Digivolving][When Attacking][Once Per Turn] You may play 1 [Suzune Kazuki] or level 4 or lower [Ice-Snow] trait Digimon card from your hand without paying the cost"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - name_is: "Suzune Kazuki"
+            - all_of:
+                - kind: digimon
+                - trait_has: Ice-Snow
+                - level_lte: 4
+        n: 1
+    process:
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            any_of:
+              - name_is: "Suzune Kazuki"
+              - all_of:
+                  - kind: digimon
+                  - trait_has: Ice-Snow
+                  - level_lte: 4
+          prompt: "Play 1 [Suzune Kazuki] or level 4 or lower [Ice-Snow] trait Digimon card from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: pick }
+
+  # ─── Clause 4: [All Turns][Once Per Turn] other-Digimon observer ─────────────
+  #
+  # "When other Digimon are played or digivolve, trash any 3 digivolution
+  #  cards from your opponent's Digimon. Then, 1 of their Digimon with no
+  #  digivolution cards can't suspend until their turn ends."
+  #
+  # Mandatory once triggered (DCGO isOptional false / canNoTrash false /
+  # canNoSelect false — no printed "you may"; no `optional:` per the
+  # optional-on-mandatory-selection pitfall). Trigger = ANY OTHER Digimon —
+  # either owner (DCGO PermanentCondition has no owner check), self excluded
+  # via `event_permanent_is_source: false` (BT22-002 idiom). The trash is a
+  # cross-permanent player pick clamped to min(3, available) — see the
+  # availability-ladder note in the header. The "Then" lock select is gated
+  # only by its own candidate filter (sourceless opponent Digimon): with no
+  # candidate the mandatory select silently skips (DCGO
+  # HasMatchConditionOpponentsPermanent guard), and a Digimon stripped bare
+  # by the trash IS a legal target.
+  - when: [on_any_digimon_played, on_digivolve]
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns][Once Per Turn] When other Digimon are played or digivolve, trash any 3 digivolution cards from your opponent's Digimon; then 1 of their sourceless Digimon can't suspend until their turn ends"
+    condition:
+      all_of:
+        - event_target_kind: digimon
+        - event_permanent_is_source: false
+    process:
+      # Trash half — availability ladder encoding DCGO's min(total, 3) cap.
+      - if:
+          # total opponent digivolution cards >= 3 (partitions 3 / 2+1 /
+          # 1+1+1 — see header decomposition).
+          condition:
+            any_of:
+              - any_field_permanent: { of: opponent, stack_size_gte: 4 }
+              - all_of:
+                  - any_field_permanent: { of: opponent, stack_size_gte: 3 }
+                  - count_gte:
+                      filter:
+                        of: opponent
+                        zone: [battle_area]
+                        stack_size_gte: 2
+                      n: 2
+              - count_gte:
+                  filter:
+                    of: opponent
+                    zone: [battle_area]
+                    stack_size_gte: 2
+                  n: 3
+          then:
+            - select_opponent_sources:
+                min: 3
+                max: 3
+                bind_as: picks
+                prompt: "Trash any 3 digivolution cards from your opponent's Digimon"
+                then:
+                  - trash_selected_sources: { source_refs: picks }
+          else:
+            - if:
+                # total == 2 (>= 2 given the >= 3 arm failed): partitions
+                # 2 / 1+1 (EX8-023 idiom).
+                condition:
+                  any_of:
+                    - any_field_permanent: { of: opponent, stack_size_gte: 3 }
+                    - count_gte:
+                        filter:
+                          of: opponent
+                          zone: [battle_area]
+                          stack_size_gte: 2
+                        n: 2
+                then:
+                  - select_opponent_sources:
+                      min: 2
+                      max: 2
+                      bind_as: picks
+                      prompt: "Trash any 3 digivolution cards from your opponent's Digimon (only 2 available)"
+                      then:
+                        - trash_selected_sources: { source_refs: picks }
+                else:
+                  - if:
+                      # total == 1.
+                      condition:
+                        any_field_permanent: { of: opponent, stack_size_gte: 2 }
+                      then:
+                        - select_opponent_sources:
+                            min: 1
+                            max: 1
+                            bind_as: picks
+                            prompt: "Trash any 3 digivolution cards from your opponent's Digimon (only 1 available)"
+                            then:
+                              - trash_selected_sources: { source_refs: picks }
+      # "Then, 1 of their Digimon with no digivolution cards can't suspend
+      #  until their turn ends." (sibling steps — the dispatcher parks this
+      #  outer tail across the in-branch source selections, so it runs in
+      #  every ladder arm, observing the POST-trash board.) "No digivolution
+      #  cards" = materials_count 0 (EX8-023 idiom); the mandatory select
+      #  silently skips when no sourceless opponent Digimon exists.
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte: 0
+          prompt: "Choose 1 of your opponent's Digimon with no digivolution cards — it can't suspend until their turn ends"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn

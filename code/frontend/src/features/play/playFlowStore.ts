@@ -7,6 +7,8 @@ interface QueueState {
   ticketId?: string | null;
   roomCode?: string | null;
   gameId?: string | null;
+  seat?: 1 | 2 | null;
+  seed?: string | null;
 }
 
 interface PlayFlowState {
@@ -17,6 +19,9 @@ interface PlayFlowState {
   ticketId: string | null;
   roomCode: string | null;
   gameId: string | null;
+  seed: string | null;
+  /** This client's seat (1 = host, 2 = joiner) in a room or matched game. */
+  seat: 1 | 2 | null;
   selectFormat: (formatId: PlayFormatId) => void;
   selectOpponentMode: (mode: OpponentMode) => void;
   selectQueueType: (queueType: QueueType) => void;
@@ -34,6 +39,8 @@ const initial = {
   ticketId: null,
   roomCode: null,
   gameId: null,
+  seed: null,
+  seat: null,
 };
 
 export const usePlayFlowStore = create<PlayFlowState>()(
@@ -44,13 +51,16 @@ export const usePlayFlowStore = create<PlayFlowState>()(
       selectOpponentMode: (opponentMode) => set({ opponentMode }),
       selectQueueType: (queueType) => set({ queueType }),
       selectDeck: (deckId) => set({ deckId }),
-      setQueue: ({ ticketId, roomCode, gameId }) =>
+      setQueue: ({ ticketId, roomCode, gameId, seat, seed }) =>
         set((state) => ({
           ticketId: ticketId === undefined ? state.ticketId : ticketId,
           roomCode: roomCode === undefined ? state.roomCode : roomCode,
           gameId: gameId === undefined ? state.gameId : gameId,
+          seat: seat === undefined ? state.seat : seat,
+          seed: seed === undefined ? state.seed : seed,
         })),
-      clearLaunchState: () => set({ ticketId: null, roomCode: null, gameId: null }),
+      clearLaunchState: () =>
+        set({ ticketId: null, roomCode: null, gameId: null, seat: null, seed: null }),
       reset: () => set(initial),
     }),
     {

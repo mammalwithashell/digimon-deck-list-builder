@@ -226,6 +226,12 @@ impl Game {
         if perm.is_suspended {
             return false;
         }
+        // 11-2-5: "An attack declaration can't be made using a Digimon that
+        // can't suspend." (DCGO `Permanent.CanAttackTargetDigimon` →
+        // `!CanSuspend`, Permanent.cs:2230.)
+        if self.modifiers.has(handle, ModifierType::CannotSuspend) {
+            return false;
+        }
         // Summoning sickness: can't attack on the turn it was played unless
         // Rush is present (native printed OR modifier-granted) or this is a
         // Vortex end-of-turn attack (§2.1b parity fix).
@@ -275,6 +281,10 @@ impl Game {
         if perm.is_suspended {
             return false;
         }
+        // 11-2-5 — see `can_attack`.
+        if self.modifiers.has(handle, ModifierType::CannotSuspend) {
+            return false;
+        }
         let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
         if is_fresh
             && !ignore_summoning_sickness
@@ -301,6 +311,15 @@ impl Game {
             None => return false,
         };
         if !perm.is_digimon_for_rules(&self.card_data, &self.modifiers, handle) {
+            return false;
+        }
+        // 11-2-5 is UNQUALIFIED: "An attack declaration can't be made using
+        // a Digimon that can't suspend" — it applies even to granted
+        // "without suspending" attacks. NOTE: DCGO diverges here
+        // (`CanAttackTargetDigimon` skips the `CanSuspend` consult when
+        // `withoutTap == true`); per source priority the rules manual
+        // governs over DCGO for pure rules questions.
+        if self.modifiers.has(handle, ModifierType::CannotSuspend) {
             return false;
         }
         // "Without suspending" bypasses only the suspend cost/unsuspended
@@ -536,6 +555,38 @@ impl Game {
             AttackTarget::Digimon(d) => (Some(d.index), Some(d.player)),
             AttackTarget::Player(p) => (None, Some(p)),
         };
+        let (attacker_card_id, attacker_card_name) = self
+            .player(attacker.player)
+            .battle_area
+            .get(attacker.index as usize)
+            .map(|p| {
+                let top = p.top_card();
+                (
+                    top.card_id(&self.card_data).to_string(),
+                    top.card_name(&self.card_data).to_string(),
+                )
+            })
+            .unwrap_or_default();
+        let (target_card_id, target_card_name) = match target {
+            AttackTarget::Digimon(d) => self
+                .player(d.player)
+                .battle_area
+                .get(d.index as usize)
+                .map(|p| {
+                    let top = p.top_card();
+                    (
+                        Some(top.card_id(&self.card_data).to_string()),
+                        Some(top.card_name(&self.card_data).to_string()),
+                    )
+                })
+                .unwrap_or((None, None)),
+            AttackTarget::Player(_) => (None, None),
+        };
+        let attacker_dp = self.effective_dp(attacker);
+        let target_dp = match target {
+            AttackTarget::Digimon(d) => self.effective_dp(d),
+            AttackTarget::Player(_) => None,
+        };
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::Attack {
             seq,
@@ -543,6 +594,12 @@ impl Game {
             attacker_field_index: attacker.index,
             target_field_index: attack_target_field_index,
             target_player: attack_target_player,
+            attacker_card_id,
+            attacker_card_name,
+            target_card_id,
+            target_card_name,
+            attacker_dp,
+            target_dp,
         });
 
         // Phase 9: WhenWouldAttack fires on the attacker BEFORE any
@@ -1169,6 +1226,12 @@ impl Game {
                 continue;
             }
             if !self.permanent_is_digimon_for_rules(h) {
+                continue;
+            }
+            // The ally's suspension is a COST — a CannotSuspend ally can't
+            // pay it (DCGO `Alliance.cs:18` `CanActivateSuspendCostEffect`
+            // → `CanSuspend`; prohibition precedence 15-1-3).
+            if self.modifiers.has(h, ModifierType::CannotSuspend) {
                 continue;
             }
             candidates.push(i as u8);
@@ -1841,6 +1904,12 @@ impl Game {
             // every opponent Digimon to "has Blocker" but does NOT
             // override a printed/modifier `CannotBlock` gate.
             if self.modifiers.has(h, ModifierType::CannotBlock) {
+                continue;
+            }
+            // 12-1-4: "A block can't be performed using a Digimon that
+            // can't suspend" — blocking suspends the blocker. (DCGO
+            // `Permanent.CanBlock` → `!CanSuspend`, Permanent.cs:2140.)
+            if self.modifiers.has(h, ModifierType::CannotSuspend) {
                 continue;
             }
             // Track C: `CannotBeRedirectedAsAttackTarget` on a candidate
@@ -2671,11 +2740,13 @@ impl Game {
         // `GameEvent::Trash` that fires when the dispose phase trashes
         // the revealed card.
         let revealed_card_id = sec_card.card_id(&self.card_data).to_string();
+        let revealed_card_name = sec_card.card_name(&self.card_data).to_string();
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::SecurityReveal {
             seq,
             defender,
             card_id: revealed_card_id,
+            card_name: revealed_card_name,
         });
 
         // Park the revealed card for the duration of the check.

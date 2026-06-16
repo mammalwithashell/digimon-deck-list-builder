@@ -5,9 +5,9 @@ Pins the contract from changes shrink-legacy-engine-surface (non-PvP surfaces +
 tools) and excise-legacy-engine-from-hosted-api (the PvP cutover). Deck
 legality, replay, recordings, state-redaction, the admin router (script-promotion
 retired), AND the live PvP/WebSocket runtime (``ws_games``/``ws_manager``/
-``lobby``, now on ``RustInteractiveGame``) all run on the Rust engine. The whole
-``code/server/`` is legacy-free — `server.api` itself must assemble with
-``engine_py_legacy`` blocked.
+``lobby``, on ``RustHeadlessGame`` via ``lobby.create_pvp_game``) all run on the
+Rust engine. The whole ``code/server/`` is legacy-free — `server.api` itself must
+assemble with ``engine_py_legacy`` blocked.
 
 Imports run in a FRESH subprocess with ``engine_py_legacy`` forced unimportable
 (``sys.modules[...] = None``), so module caching from other tests can't mask a
@@ -56,12 +56,12 @@ import server.db.routers.admin_ai  # noqa: F401  (script_promotion lane retired)
 # Relocated redaction module (was engine_py_legacy.engine.state_filter).
 from server.state_filter import filter_state_for_player  # noqa: F401
 
-# PvP/WebSocket runtime — migrated to the Rust interactive runner.
+# PvP/WebSocket runtime — runs on the Rust engine (lobby.create_pvp_game →
+# RustHeadlessGame; no legacy InteractiveGame).
 import server.routers.ws_games  # noqa: F401
 import server.routers.ws_manager  # noqa: F401
 import server.routers.lobby  # noqa: F401
 import server.routers.matchmaking  # noqa: F401
-from server.rust_interactive_game import RustInteractiveGame  # noqa: F401
 
 # The whole hosted API assembles without the sunset Python engine.
 import server.api  # noqa: F401

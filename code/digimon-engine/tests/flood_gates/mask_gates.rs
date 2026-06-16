@@ -4,7 +4,9 @@
 //!   - CannotPlayFromHand (player-scoped upgrade)
 //!   - CannotAttack (player-scoped gate on attack bits, Main phase AND EndOfTurnAction)
 //!   - CannotActivateMainEffects (player-scoped gate on FIELD_EFFECT bits)
-//!   - CannotSuspend — no mask bit exists (suspend is effect-only); skipped.
+//!   - CannotSuspend — permanent-scoped; enforced in attack/block legality
+//!     and the suspend chokepoint. Covered by
+//!     `tests/combat/cannot_suspend_enforcement.rs`, not here.
 
 use std::sync::Arc;
 

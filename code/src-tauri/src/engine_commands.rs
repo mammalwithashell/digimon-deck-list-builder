@@ -12,11 +12,12 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 
 use digimon_engine::action::build_action_mask;
-use digimon_engine::action::explain::{explain_action, ActionExplanation};
+use digimon_engine::action::explain::{explain_action, legal_decoded_actions, ActionExplanation};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_registry::CardRegistry;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::enums::{CardColor, CardKind, GamePhase, PlayerId};
+use digimon_engine::events::GameEvent;
 use digimon_engine::game::Game;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::rules::Rules;
@@ -941,8 +942,10 @@ pub struct GameEventDto {
     pub seq: u32,
     pub player: i32,
     pub source_card_id: Option<String>,
+    pub source_card_name: Option<String>,
     pub source_slot: Option<i32>,
     pub target_card_id: Option<String>,
+    pub target_card_name: Option<String>,
     pub target_slot: Option<i32>,
     pub meta: serde_json::Value,
 }
@@ -992,6 +995,7 @@ pub struct ActionResponseDto {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CreateGameResponseDto {
     pub game_id: String,
+    pub seed: String,
     pub state: GameStateDto,
     pub action_mask: Vec<u8>,
 }
@@ -1042,12 +1046,218 @@ pub fn action_mask_bytes(game: &Game) -> Vec<u8> {
         .collect()
 }
 
+fn py_player_id(player: PlayerId) -> i32 {
+    i32::from(player) + 1
+}
+
+fn event_to_dto(event: GameEvent) -> GameEventDto {
+    let mut dto = GameEventDto {
+        event_type: event.type_str().to_string(),
+        seq: event.seq() as u32,
+        player: 0,
+        source_card_id: None,
+        source_card_name: None,
+        source_slot: None,
+        target_card_id: None,
+        target_card_name: None,
+        target_slot: None,
+        meta: serde_json::json!({}),
+    };
+
+    match event {
+        GameEvent::MemoryChange {
+            player,
+            delta,
+            total,
+            source_card_id,
+            source_card_name,
+            ..
+        } => {
+            dto.player = py_player_id(player);
+            dto.source_card_id = source_card_id;
+            dto.source_card_name = source_card_name;
+            dto.meta = serde_json::json!({ "delta": delta, "total": total });
+        }
+        GameEvent::TurnStart {
+            player, turn_count, ..
+        } => {
+            dto.player = py_player_id(player);
+            dto.meta = serde_json::json!({ "turn_count": turn_count });
+        }
+        GameEvent::PhaseChange { player, phase, .. } => {
+            dto.player = py_player_id(player);
+            dto.meta = serde_json::json!({ "phase": format!("{:?}", phase) });
+        }
+        GameEvent::Play {
+            player,
+            card_id,
+            card_name,
+            field_index,
+            cost_paid,
+            cost_printed,
+            via_alt_path,
+            ..
+        } => {
+            dto.player = py_player_id(player);
+            dto.source_card_id = Some(card_id);
+            dto.source_card_name = Some(card_name);
+            dto.source_slot = Some(i32::from(field_index));
+            dto.meta = serde_json::json!({
+                "cost_paid": cost_paid,
+                "cost_printed": cost_printed,
+                "via_alt_path": via_alt_path,
+            });
+        }
+        GameEvent::Digivolve {
+            player,
+            top_card_id,
+            card_name,
+            field_index,
+            from_stack_top,
+            was_dna,
+            was_blast_dna,
+            memory_paid,
+            ..
+        } => {
+            dto.player = py_player_id(player);
+            dto.source_card_id = Some(top_card_id);
+            dto.source_card_name = Some(card_name);
+            dto.source_slot = Some(i32::from(field_index));
+            dto.meta = serde_json::json!({
+                "from_stack_top": from_stack_top,
+                "was_dna": was_dna,
+                "was_blast_dna": was_blast_dna,
+                "memory_paid": memory_paid,
+            });
+        }
+        GameEvent::Attack {
+            player,
+            attacker_field_index,
+            target_field_index,
+            target_player,
+            attacker_card_id,
+            attacker_card_name,
+            target_card_id,
+            target_card_name,
+            attacker_dp,
+            target_dp,
+            ..
+        } => {
+            dto.player = py_player_id(player);
+            dto.source_card_id = Some(attacker_card_id);
+            dto.source_card_name = Some(attacker_card_name);
+            dto.source_slot = Some(i32::from(attacker_field_index));
+            dto.target_card_id = target_card_id;
+            dto.target_card_name = target_card_name;
+            dto.target_slot = target_field_index.map(i32::from);
+            dto.meta = serde_json::json!({
+                "target_player": target_player.map(py_player_id),
+                "attacker_dp": attacker_dp,
+                "target_dp": target_dp,
+            });
+        }
+        GameEvent::Trash {
+            player,
+            card_id,
+            card_name,
+            ..
+        }
+        | GameEvent::Mill {
+            player,
+            card_id,
+            card_name,
+            ..
+        } => {
+            dto.player = py_player_id(player);
+            dto.source_card_id = Some(card_id);
+            dto.source_card_name = Some(card_name);
+        }
+        GameEvent::SecurityReveal {
+            defender,
+            card_id,
+            card_name,
+            ..
+        } => {
+            dto.player = py_player_id(defender);
+            dto.source_card_id = Some(card_id);
+            dto.source_card_name = Some(card_name);
+        }
+        GameEvent::EffectTarget {
+            player,
+            source_card_id,
+            source_card_name,
+            targets,
+            ..
+        } => {
+            dto.player = py_player_id(player);
+            dto.source_card_id = Some(source_card_id);
+            dto.source_card_name = Some(source_card_name);
+            let targets_json: Vec<serde_json::Value> = targets
+                .into_iter()
+                .map(|t| serde_json::json!({ "card_id": t.card_id, "card_name": t.card_name }))
+                .collect();
+            dto.meta = serde_json::json!({ "targets": targets_json });
+        }
+        GameEvent::Reveal {
+            player,
+            card_id,
+            card_name,
+            source_zone,
+            ..
+        } => {
+            dto.player = py_player_id(player);
+            dto.source_card_id = Some(card_id);
+            dto.source_card_name = Some(card_name);
+            dto.meta = serde_json::json!({ "source_zone": format!("{:?}", source_zone) });
+        }
+        GameEvent::GameOver { winner, reason, .. } => {
+            dto.meta = serde_json::json!({
+                "winner": winner.map(py_player_id),
+                "reason": reason.as_str(),
+                "result": reason.result(),
+            });
+        }
+        GameEvent::Concede { player, .. } => {
+            dto.player = py_player_id(player);
+        }
+        GameEvent::EffectFizzled {
+            source_permanent,
+            reason,
+            ..
+        } => {
+            if let Some(handle) = source_permanent {
+                dto.player = py_player_id(handle.player);
+                dto.source_slot = Some(i32::from(handle.index));
+            }
+            dto.meta = serde_json::json!({ "reason": reason });
+        }
+        _ => {}
+    }
+    dto
+}
+
+fn parse_optional_seed(seed: Option<String>) -> Result<Option<u64>, String> {
+    let Some(raw) = seed else {
+        return Ok(None);
+    };
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+    if !trimmed.chars().all(|c| c.is_ascii_digit()) {
+        return Err("seed must be a base-10 integer in the u64 range".to_string());
+    }
+    trimmed
+        .parse::<u64>()
+        .map(Some)
+        .map_err(|_| "seed must be in the u64 range".to_string())
+}
+
 /// Drain structured gameplay events emitted by the engine during the last
-/// action. The Rust engine does not yet emit `GameEvent`s (animations in
-/// Rust mode will be a no-op until a follow-up milestone adds this). For now
-/// we return an empty vector so the response shape matches Python's.
-fn drain_events(_game: &mut Game) -> Vec<GameEventDto> {
-    Vec::new()
+/// action. The DTO mirrors the browser/PyO3 `GameEvent.to_dict` shape so the
+/// shared frontend can consume desktop and browser responses identically.
+fn drain_events(game: &mut Game) -> Vec<GameEventDto> {
+    game.drain_events().into_iter().map(event_to_dto).collect()
 }
 
 /// Ensure a game exists (auto-seed a test game on first call) and return a
@@ -1087,6 +1297,7 @@ pub fn rust_create_game(
     deck2: Option<Vec<String>>,
     player_kinds: Option<Vec<PlayerKind>>,
     player_model_ids: Option<Vec<Option<String>>>,
+    seed: Option<String>,
 ) -> Result<CreateGameResponseDto, String> {
     // When the caller provided real decks, use the production card pool so
     // BT/EX/AD/P/ST card IDs resolve. Without this, `Game::new` would fail
@@ -1103,7 +1314,8 @@ pub fn rust_create_game(
         deck2.unwrap_or_else(test_deck),
     ];
     let player_count = decks.len();
-    let mut game = Game::new(&decks, &db, Rules::standard(), Some(42))
+    let effective_seed = parse_optional_seed(seed)?.unwrap_or_else(rand::random::<u64>);
+    let mut game = Game::new(&decks, &db, Rules::standard(), Some(effective_seed))
         .map_err(|e| format!("Game::new failed: {}", e))?;
     game.start_game();
 
@@ -1134,6 +1346,7 @@ pub fn rust_create_game(
 
     Ok(CreateGameResponseDto {
         game_id: "rust-local".to_string(),
+        seed: effective_seed.to_string(),
         state: dto,
         action_mask: mask,
     })
@@ -1475,6 +1688,22 @@ pub fn rust_get_mask(state: tauri::State<'_, RustEngineState>) -> Result<Vec<u8>
     let guard = state.game.lock().map_err(|e| e.to_string())?;
     let game = guard.as_ref().ok_or("No active game")?;
     Ok(action_mask_bytes(game))
+}
+
+/// Decoded list of every currently-legal action for the current decision
+/// player, each carrying source-card and effect identity (`card_name`,
+/// `effect_name`, `source_zone`, `source_index`, `label`). The action bar
+/// renders activatable effects from this list so it never re-derives action
+/// semantics from raw mask bit-ranges (which mis-decodes trash/hand [Main]
+/// effects). Parallels `rust_get_mask` and is fetched per state update.
+#[tauri::command]
+pub fn rust_get_decoded_actions(
+    state: tauri::State<'_, RustEngineState>,
+) -> Result<Vec<ActionExplanation>, String> {
+    let guard = state.game.lock().map_err(|e| e.to_string())?;
+    let game = guard.as_ref().ok_or("No active game")?;
+    let pid = current_decision_player(game);
+    Ok(legal_decoded_actions(game, pid))
 }
 
 #[tauri::command]
@@ -2013,6 +2242,80 @@ mod tests {
     }
 
     #[test]
+    fn drain_events_converts_engine_events_and_is_one_shot() {
+        use digimon_engine::events::GameEvent;
+        use digimon_engine::game::TerminalOutcomeReason;
+
+        let (mut game, _registry) = build_playable_game();
+        let memory_seq = game.next_event_seq();
+        game.events.push(GameEvent::MemoryChange {
+            seq: memory_seq,
+            player: 0,
+            delta: -3,
+            total: 0,
+            source_card_id: Some("BT25-098".to_string()),
+            source_card_name: Some("Cyber Engage".to_string()),
+        });
+        let play_seq = game.next_event_seq();
+        game.events.push(GameEvent::Play {
+            seq: play_seq,
+            player: 0,
+            card_id: "BT1-001".to_string(),
+            card_name: "Agumon".to_string(),
+            field_index: 0,
+            cost_paid: 3,
+            cost_printed: 3,
+            via_alt_path: None,
+        });
+        let attack_seq = game.next_event_seq();
+        game.events.push(GameEvent::Attack {
+            seq: attack_seq,
+            player: 0,
+            attacker_field_index: 0,
+            target_field_index: Some(1),
+            target_player: Some(1),
+            attacker_card_id: "BT1-009".to_string(),
+            attacker_card_name: "Greymon".to_string(),
+            target_card_id: Some("BT25-020".to_string()),
+            target_card_name: Some("Tyrannomon".to_string()),
+            attacker_dp: Some(5000),
+            target_dp: Some(3000),
+        });
+        let game_over_seq = game.next_event_seq();
+        game.events.push(GameEvent::GameOver {
+            seq: game_over_seq,
+            winner: Some(0),
+            reason: TerminalOutcomeReason::SecurityAttack,
+        });
+
+        let drained = drain_events(&mut game);
+
+        assert_eq!(drained.len(), 4);
+        assert_eq!(drained[0].event_type, "MemoryChange");
+        assert_eq!(drained[0].player, 1);
+        assert_eq!(drained[0].meta["delta"], -3);
+        // Effect-source attribution surfaces on the desktop DTO.
+        assert_eq!(drained[0].source_card_id.as_deref(), Some("BT25-098"));
+        assert_eq!(drained[0].source_card_name.as_deref(), Some("Cyber Engage"));
+        assert_eq!(drained[1].event_type, "Play");
+        assert_eq!(drained[1].source_card_id.as_deref(), Some("BT1-001"));
+        assert_eq!(drained[1].source_card_name.as_deref(), Some("Agumon"));
+        assert_eq!(drained[1].source_slot, Some(0));
+        assert_eq!(drained[1].meta["cost_paid"], 3);
+        // Attack carries attacker + target identity (no more "slot N").
+        assert_eq!(drained[2].event_type, "Attack");
+        assert_eq!(drained[2].source_card_id.as_deref(), Some("BT1-009"));
+        assert_eq!(drained[2].source_card_name.as_deref(), Some("Greymon"));
+        assert_eq!(drained[2].target_card_id.as_deref(), Some("BT25-020"));
+        assert_eq!(drained[2].target_card_name.as_deref(), Some("Tyrannomon"));
+        assert_eq!(drained[2].meta["attacker_dp"], 5000);
+        assert_eq!(drained[2].meta["target_dp"], 3000);
+        assert_eq!(drained[3].event_type, "GameOver");
+        assert_eq!(drained[3].meta["winner"], 1);
+        assert_eq!(drain_events(&mut game).len(), 0);
+    }
+
+    #[test]
     fn action_response_allows_human_trace_without_registry() {
         let (mut game, _registry) = build_playable_game();
         let pid = current_decision_player(&game);
@@ -2287,6 +2590,27 @@ mod tests {
         let err = normalize_player_model_ids(Some(vec![None, None]), 2, &kinds).unwrap_err();
         assert!(err.contains("player 0"));
         assert!(err.contains("model_id"));
+    }
+
+    #[test]
+    fn parse_optional_seed_accepts_blank_and_max_u64() {
+        assert_eq!(parse_optional_seed(None).unwrap(), None);
+        assert_eq!(parse_optional_seed(Some("   ".to_string())).unwrap(), None);
+        assert_eq!(
+            parse_optional_seed(Some("18446744073709551615".to_string())).unwrap(),
+            Some(u64::MAX)
+        );
+    }
+
+    #[test]
+    fn parse_optional_seed_rejects_invalid_values() {
+        for value in ["-1", "1.5", "seed", "18446744073709551616"] {
+            let err = parse_optional_seed(Some(value.to_string())).unwrap_err();
+            assert!(
+                err.contains("base-10") || err.contains("u64"),
+                "unexpected error for {value}: {err}"
+            );
+        }
     }
 
     #[test]

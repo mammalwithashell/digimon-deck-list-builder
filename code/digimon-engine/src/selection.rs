@@ -109,6 +109,18 @@ pub enum SelectionKind {
     OwnField,
     /// Pick a Digimon on the opponent's field.
     OppField,
+    /// Pick one permanent from a union spanning BOTH battle areas (own AND
+    /// opponent), e.g. `select_any_permanent` / `select_dna_pair`. Unlike
+    /// `OwnField` / `OppField` — whose `valid_action_ids` are `encode_attack(0,
+    /// slot)` (`100 + slot`) with the side carried implicitly by the kind — an
+    /// `AnyField` selection encodes each candidate as `encode_attack(player,
+    /// index)` (`100 + player * TARGETS_PER_ATTACKER + index`), so the absolute
+    /// player id is recoverable from the action id itself. The UI must decode
+    /// (player, index) per id and highlight/route to the correct side; a single
+    /// `OwnField`/`OppField` kind can't express a both-sides target set (which is
+    /// why routing these as `Target` left them unclickable — the board's
+    /// field-selection helpers only recognize `OwnField`/`OppField`).
+    AnyField,
     /// Pick a card from a player's hand.
     Hand,
     /// Pick a card from a player's trash.
@@ -153,7 +165,21 @@ pub enum SelectionKind {
     /// Pick up to `max` cards from a zone; `picked` tracks how many have been
     /// chosen so far. The callback fires on each pick; the effect decides when
     /// to stop (or the player passes once `picked >= 1`). Full decoder in Task 4.
-    CountCappedMultiSelect { max: u8, picked: u8 },
+    ///
+    /// `min` is the EFFECTIVE floor (`min.max(is_optional_zero ? 0 : 1)`) — the
+    /// UI uses it to gate a confirm/Done control for deferred-toggle selection,
+    /// since the per-step `is_optional` only reveals the floor after the engine
+    /// has advanced. `distinct` is true when a distinct-by constraint removes
+    /// remaining candidates between picks; the UI cannot safely precompute a
+    /// pick batch in that case and falls back to immediate per-click commit.
+    /// Both ride the serialized kind string (`format!("{:?}", kind)`) on both
+    /// the browser and desktop pending-selection wires — no DTO struct change.
+    CountCappedMultiSelect {
+        min: u8,
+        max: u8,
+        picked: u8,
+        distinct: bool,
+    },
 
     /// Player may accept or decline an optional replacement effect. Backed by
     /// EffectChoice action range (accept) + PASS (decline). `valid_action_ids`

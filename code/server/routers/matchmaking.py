@@ -8,9 +8,10 @@ Queues:
                    ``MATCHMAKING_RANKED_ENABLED`` env var (off for alpha)
 
 State lives in-memory in the API process, mirroring the existing lobby
-`pending_games` pattern. Matched pairs are handed off to the existing
-`/lobby/join/{code}` pipeline by synthesizing a join code server-side, so no
-game-creation logic is duplicated.
+`pending_games` pattern. Matched pairs get a game constructed immediately
+(both decks are already in the tickets) through the lobby's shared Rust
+construction path (`lobby.create_pvp_game`), so no game-creation logic is
+duplicated; each ticket carries the game_id and the caller's seat.
 
 Public contracts consumed by the matcher:
     - `Deck.meta_tier`   → populated by `server.classifier.deck_tagger`
@@ -23,8 +24,6 @@ import asyncio
 import logging
 import math
 import os
-import secrets
-import string
 from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 from uuid import uuid4
@@ -38,12 +37,8 @@ from server.db.auth import get_current_user
 from server.db.database import get_db
 from server.db.models import Deck, User
 from digimon_engine import validate_deck
-from server.routers.lobby import (
-    PendingGame,
-    _generate_join_code,
-    code_to_game,
-    pending_games,
-)
+from server.routers.lobby import create_pvp_game
+from server.routers.state import active_games
 from server.routers.ws_manager import GameSettings, manager
 
 logger = logging.getLogger(__name__)
@@ -94,8 +89,8 @@ class QueueTicket(BaseModel):
     created_at: datetime
     status: TicketStatus = "waiting"
     matched_with_user_id: Optional[str] = None
-    matched_join_code: Optional[str] = None
     matched_game_id: Optional[str] = None
+    matched_seat: Optional[int] = None  # 1 = host slot, 2 = joiner slot
     matched_at: Optional[datetime] = None
 
 
@@ -201,67 +196,54 @@ class TicketInfoResponse(BaseModel):
     queue_type: QueueType
     waited_seconds: float
     rating_window: Optional[float] = None
-    join_code: Optional[str] = None
     game_id: Optional[str] = None
+    your_seat: Optional[int] = None
 
 
 # ── Match handoff ───────────────────────────────────────────────────────
 
-def _create_pending_game_from_match(
+def _create_game_from_match(
     host_ticket: QueueTicket,
     joiner_ticket: QueueTicket,
-) -> tuple[str, str]:
-    """Synthesize a PendingGame + join code. Mirrors lobby.create_lobby_game
-    so the joiner can use the existing `/lobby/join/{code}` path verbatim."""
+) -> str:
+    """Construct the Rust game immediately — both decks are already in the
+    tickets, so quick match skips the room phase entirely. Goes through the
+    lobby's shared construction path (`create_pvp_game`); first player is
+    always random for matchmade games."""
     game_id = str(uuid4())
-    join_code = _generate_join_code()
-    while join_code in code_to_game:
-        join_code = _generate_join_code()
-
-    pending = PendingGame(
-        game_id=game_id,
-        join_code=join_code,
-        host_user_id=host_ticket.user_id,
-        host_display_name=host_ticket.display_name,
-        host_deck=host_ticket.deck,
-        host_deck_raw=host_ticket.deck_raw,
-        created_at=datetime.now(timezone.utc),
-        is_public=False,             # hidden from the public lobby browser
-        allow_spectators=False,
-        spectator_mode="hidden",
-    )
-    pending_games[game_id] = pending
-    code_to_game[join_code] = game_id
+    runner = create_pvp_game(host_ticket.deck, joiner_ticket.deck, "random")
+    active_games[game_id] = runner
     manager.set_settings(game_id, GameSettings(
         allow_spectators=False,
         spectator_mode="hidden",
         host_user_id=host_ticket.user_id,
+        joiner_user_id=joiner_ticket.user_id,
     ))
     logger.info(
-        "matchmaking: paired %s vs %s as game_id=%s code=%s",
-        host_ticket.user_id, joiner_ticket.user_id, game_id, join_code,
+        "matchmaking: paired %s vs %s as game_id=%s",
+        host_ticket.user_id, joiner_ticket.user_id, game_id,
     )
-    return (game_id, join_code)
+    return game_id
 
 
 def _promote_to_matched(
     incoming: QueueTicket,
     opponent: QueueTicket,
-) -> tuple[str, str]:
-    """Create the lobby handoff and mark both tickets as matched.
-    The older ticket is host (it's been waiting longer); the incoming ticket
-    is joiner."""
+) -> str:
+    """Create the game and mark both tickets as matched. The older ticket
+    takes the host seat (player 1 — it's been waiting longer); the incoming
+    ticket is player 2."""
     host, joiner = (opponent, incoming) if opponent.created_at <= incoming.created_at else (incoming, opponent)
-    game_id, join_code = _create_pending_game_from_match(host, joiner)
+    game_id = _create_game_from_match(host, joiner)
     now = datetime.now(timezone.utc)
-    for side, other in ((host, joiner), (joiner, host)):
+    for side, other, seat in ((host, joiner, 1), (joiner, host, 2)):
         side.status = "matched"
         side.matched_with_user_id = other.user_id
-        side.matched_join_code = join_code
         side.matched_game_id = game_id
+        side.matched_seat = seat
         side.matched_at = now
         _fire_listener(side.ticket_id)
-    return (game_id, join_code)
+    return game_id
 
 
 def cancel_waiting_ticket(ticket_id: str) -> bool:
@@ -407,13 +389,13 @@ async def enqueue(
         # promote both.
         tickets[ticket.ticket_id] = ticket
         user_to_ticket[ticket.user_id] = ticket.ticket_id
-        game_id, join_code = _promote_to_matched(ticket, opponent)
+        game_id = _promote_to_matched(ticket, opponent)
         return {
             "status": "matched",
             "ticket_id": ticket.ticket_id,
             "opponent_ticket_id": opponent.ticket_id,
             "game_id": game_id,
-            "join_code": join_code,
+            "your_seat": ticket.matched_seat,
         }
 
     tickets[ticket.ticket_id] = ticket
@@ -449,8 +431,8 @@ async def get_ticket(
         queue_type=ticket.queue_type,
         waited_seconds=waited,
         rating_window=win,
-        join_code=ticket.matched_join_code,
         game_id=ticket.matched_game_id,
+        your_seat=ticket.matched_seat,
     )
 
 

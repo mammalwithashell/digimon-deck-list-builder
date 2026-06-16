@@ -1,7 +1,7 @@
 //! Phase 2g: source selections can bind stable cross-permanent source refs and
 //! consume them from later DSL steps.
 
-use digimon_dsl::compiled::{CompiledBindingRef, CompiledPredicate, CompiledStep};
+use digimon_dsl::compiled::{CompiledBindingRef, CompiledCountBound, CompiledPredicate, CompiledStep};
 use digimon_engine::action::space::{encode_source_select, PASS};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
@@ -275,8 +275,9 @@ fn select_opponent_sources_binds_opponent_source_refs_for_trashing() {
     let steps = vec![CompiledStep::SelectOpponentSources {
         target: None,
         filter: CompiledPredicate::default(),
-        min: 2,
-        max: 2,
+        min: CompiledCountBound::Literal(2),
+        max: CompiledCountBound::Literal(2),
+        clamp_to_available: false,
         bind_as: Some("chosen_sources".to_string()),
         prompt: "Choose two opponent sources".to_string(),
         then: vec![CompiledStep::TrashSelectedSources {
@@ -364,8 +365,9 @@ fn select_opponent_sources_restricts_to_target_opponent_permanent() {
     let steps = vec![CompiledStep::SelectOpponentSources {
         target: Some(CompiledBindingRef::Binding("opp_stack".to_string())),
         filter: CompiledPredicate::default(),
-        min: 1,
-        max: 1,
+        min: CompiledCountBound::Literal(1),
+        max: CompiledCountBound::Literal(1),
+        clamp_to_available: false,
         bind_as: Some("chosen".to_string()),
         prompt: "Choose a source under the chosen opponent Digimon".to_string(),
         then: vec![CompiledStep::TrashSelectedSources {
@@ -412,8 +414,9 @@ fn empty_select_opponent_sources_silently_skips_outer_tail_when_min_positive() {
         CompiledStep::SelectOpponentSources {
             target: None,
             filter: CompiledPredicate::default(),
-            min: 1,
-            max: 1,
+            min: CompiledCountBound::Literal(1),
+            max: CompiledCountBound::Literal(1),
+            clamp_to_available: false,
             bind_as: Some("chosen".to_string()),
             prompt: "Choose opponent source".to_string(),
             then: vec![CompiledStep::GainMemory(7)],
@@ -430,6 +433,337 @@ fn empty_select_opponent_sources_silently_skips_outer_tail_when_min_positive() {
     assert!(runner.game.pending_selection.is_none());
     // Neither the `then` body nor the outer tail ran — mandatory cost unpayable.
     assert_eq!(runner.game.memory, 0);
+}
+
+// ─── G-DSL-SELECT-SOURCES-FORMULA-COUNT (EX11-057 substrate) ──────────────────
+//
+// `select_opponent_sources` accepts formula-valued `min`/`max` (resolved once
+// at execution time) and an opt-in `clamp_to_available` flag that mirrors
+// DCGO `TrashDigivolutionCards.cs`'s
+// `maxDigivolutionDiscardCount = Math.Min(digivolutionCardsSum, maxCount)`.
+// Default semantics (no flag) stay the unpayable-drop behavior committed
+// ladder cards rely on.
+
+fn make_frost_digimon(id: &str) -> digimon_engine::card_data::CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = digimon_engine::enums::CardKind::Digimon;
+    c.level = Some(3);
+    c.dp = Some(2000);
+    c.traits = vec!["Frost".to_string()];
+    c
+}
+
+const FORMULA_TRASHER_YAML: &str = r#"
+card: DSL-OPP-SRC-FORMULA
+name: Formula Source Trasher
+kind: digimon
+level: 4
+color: [blue]
+cost: 4
+dp: 4000
+effects:
+  - when: main_on_field
+    process:
+      - select_opponent_sources:
+          min:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  zone: battle_area
+                  of: you
+                  filter: { trait_has: Frost }
+              delta: 1
+          max:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  zone: battle_area
+                  of: you
+                  filter: { trait_has: Frost }
+              delta: 1
+          bind_as: picks
+          prompt: "Trash 1 opponent digivolution card per Frost Digimon"
+          then:
+            - trash_selected_sources:
+                source_refs: picks
+            - gain_memory: 5
+      - gain_memory: 1
+"#;
+
+const CLAMPED_FORMULA_TRASHER_YAML: &str = r#"
+card: DSL-OPP-SRC-CLAMP
+name: Clamped Formula Source Trasher
+kind: digimon
+level: 4
+color: [blue]
+cost: 4
+dp: 4000
+effects:
+  - when: main_on_field
+    process:
+      - select_opponent_sources:
+          min:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  zone: battle_area
+                  of: you
+                  filter: { trait_has: Frost }
+              delta: 1
+          max:
+            formula:
+              base: 0
+              per:
+                card_count_in_zone:
+                  zone: battle_area
+                  of: you
+                  filter: { trait_has: Frost }
+              delta: 1
+          clamp_to_available: true
+          bind_as: picks
+          prompt: "Trash 1 opponent digivolution card per Frost Digimon"
+          then:
+            - trash_selected_sources:
+                source_refs: picks
+            - gain_memory: 5
+      - gain_memory: 1
+"#;
+
+/// Formula `min`/`max` resolve at execution time: 2 own Frost Digimon → an
+/// exact-2 mandatory cross-permanent pick (no PASS below the resolved min).
+#[test]
+fn select_opponent_sources_formula_counts_resolve_at_runtime() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(FORMULA_TRASHER_YAML)
+        .expect("formula-count fixture compiles")
+        .add_card(make_frost_digimon("FROST-A"))
+        .add_card(make_frost_digimon("FROST-B"))
+        .add_card(make_test_card("OPP-SRC-A", "Opp Source A"))
+        .add_card(make_test_card("OPP-TOP-A", "Opp Top A"))
+        .add_card(make_test_card("OPP-SRC-B", "Opp Source B"))
+        .add_card(make_test_card("OPP-TOP-B", "Opp Top B"))
+        .build();
+
+    let carrier = runner.place_on_field(0, "DSL-OPP-SRC-FORMULA", Some(0));
+    runner.place_on_field(0, "FROST-A", Some(0));
+    runner.place_on_field(0, "FROST-B", Some(0));
+    let opp_a = runner.place_stack(1, &["OPP-SRC-A", "OPP-TOP-A"]);
+    let opp_b = runner.place_stack(1, &["OPP-SRC-B", "OPP-TOP-B"]);
+
+    assert!(
+        runner.game.activate_field_main(0, carrier.index as usize),
+        "fixture exposes its Main effect"
+    );
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::SourceMulti {
+            min: 2,
+            max: 2,
+            picked: 0,
+        }),
+        "min/max formulas must resolve to the live Frost count (2)"
+    );
+    {
+        let pending = runner.game.pending_selection.as_ref().expect("pending");
+        assert!(
+            !pending.valid_action_ids.contains(&PASS),
+            "mandatory: no PASS below the resolved min"
+        );
+    }
+
+    let action_a = encode_source_select(opp_a.index as u16, 0).expect("opp A source action");
+    let action_b = encode_source_select(opp_b.index as u16, 0).expect("opp B source action");
+    runner.execute_action(0, action_a).expect("pick opp A");
+    runner.execute_action(0, action_b).expect("pick opp B");
+
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(
+        runner.game.players[1].trash.len(),
+        2,
+        "exactly 2 opponent digivolution cards trashed (cross-permanent)"
+    );
+    assert_eq!(
+        runner.game.memory, 6,
+        "then-body (+5) and outer tail (+1) both ran"
+    );
+}
+
+/// `clamp_to_available: true`: formula resolves 3 but only 1 candidate exists →
+/// the pick clamps to an exact-1 selection (DCGO min(total, N)) and the
+/// continuation still runs.
+#[test]
+fn select_opponent_sources_clamp_to_available_clamps_min_and_max() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(CLAMPED_FORMULA_TRASHER_YAML)
+        .expect("clamped formula-count fixture compiles")
+        .add_card(make_frost_digimon("FROST-A"))
+        .add_card(make_frost_digimon("FROST-B"))
+        .add_card(make_frost_digimon("FROST-C"))
+        .add_card(make_test_card("OPP-SRC-A", "Opp Source A"))
+        .add_card(make_test_card("OPP-TOP-A", "Opp Top A"))
+        .build();
+
+    let carrier = runner.place_on_field(0, "DSL-OPP-SRC-CLAMP", Some(0));
+    runner.place_on_field(0, "FROST-A", Some(0));
+    runner.place_on_field(0, "FROST-B", Some(0));
+    runner.place_on_field(0, "FROST-C", Some(0));
+    let opp_a = runner.place_stack(1, &["OPP-SRC-A", "OPP-TOP-A"]);
+
+    assert!(
+        runner.game.activate_field_main(0, carrier.index as usize),
+        "fixture exposes its Main effect"
+    );
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::SourceMulti {
+            min: 1,
+            max: 1,
+            picked: 0,
+        }),
+        "min/max must clamp from the resolved 3 down to the 1 available candidate"
+    );
+
+    let action_a = encode_source_select(opp_a.index as u16, 0).expect("opp A source action");
+    runner.execute_action(0, action_a).expect("pick opp A");
+
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(runner.game.players[1].trash.len(), 1, "the 1 available source trashed");
+    assert_eq!(
+        runner.game.memory, 6,
+        "clamped pick completes: then-body (+5) and outer tail (+1) both ran"
+    );
+}
+
+/// `clamp_to_available: true` with ZERO candidates: the pick is silently
+/// skipped (DCGO `if maxCount <= 0 yield break`) and the rest of the clause
+/// still runs — no unpayable-cost abort.
+#[test]
+fn select_opponent_sources_clamp_to_available_zero_candidates_skips_pick() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(CLAMPED_FORMULA_TRASHER_YAML)
+        .expect("clamped formula-count fixture compiles")
+        .add_card(make_frost_digimon("FROST-A"))
+        .add_card(make_test_card("OPP-TOP-A", "Opp Top A"))
+        .build();
+
+    let carrier = runner.place_on_field(0, "DSL-OPP-SRC-CLAMP", Some(0));
+    runner.place_on_field(0, "FROST-A", Some(0));
+    // Opponent permanent with NO digivolution sources.
+    runner.place_on_field(1, "OPP-TOP-A", Some(0));
+
+    assert!(
+        runner.game.activate_field_main(0, carrier.index as usize),
+        "fixture exposes its Main effect"
+    );
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "zero candidates → no source-pick prompt"
+    );
+    assert!(runner.game.players[1].trash.is_empty(), "nothing trashed");
+    assert_eq!(
+        runner.game.memory, 1,
+        "the outer tail (+1) still runs; the dropped pick's then-body (+5) does not"
+    );
+}
+
+/// Formula resolving to 0 (no Frost Digimon) skips the pick entirely even
+/// though opponent candidates exist — the EX11-057 "N = 0" gate.
+#[test]
+fn select_opponent_sources_formula_zero_skips_pick_entirely() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(CLAMPED_FORMULA_TRASHER_YAML)
+        .expect("clamped formula-count fixture compiles")
+        .add_card(make_test_card("OPP-SRC-A", "Opp Source A"))
+        .add_card(make_test_card("OPP-TOP-A", "Opp Top A"))
+        .build();
+
+    let carrier = runner.place_on_field(0, "DSL-OPP-SRC-CLAMP", Some(0));
+    let _opp_a = runner.place_stack(1, &["OPP-SRC-A", "OPP-TOP-A"]);
+
+    assert!(
+        runner.game.activate_field_main(0, carrier.index as usize),
+        "fixture exposes its Main effect"
+    );
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "formula resolves 0 → no source-pick prompt"
+    );
+    assert!(runner.game.players[1].trash.is_empty(), "nothing trashed");
+    assert_eq!(runner.game.memory, 1, "outer tail (+1) still runs");
+}
+
+/// Back-compat regression: WITHOUT `clamp_to_available`, a literal `min`
+/// above the live candidate count keeps the historical drop-continuation
+/// semantics (committed EX7-021 / EX7-023 / EX11-017 / EX8-066 availability
+/// ladders are built on this exact behavior).
+#[test]
+fn select_opponent_sources_unclamped_min_above_available_still_drops_continuation() {
+    let yaml = r#"
+card: DSL-OPP-SRC-UNCLAMPED
+name: Unclamped Exact Two Trasher
+kind: digimon
+level: 4
+color: [blue]
+cost: 4
+dp: 4000
+effects:
+  - when: main_on_field
+    process:
+      - select_opponent_sources:
+          min: 2
+          max: 2
+          bind_as: picks
+          prompt: "Trash exactly 2 opponent digivolution cards"
+          then:
+            - trash_selected_sources:
+                source_refs: picks
+            - gain_memory: 5
+      - gain_memory: 1
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("unclamped fixture compiles")
+        .add_card(make_test_card("OPP-SRC-A", "Opp Source A"))
+        .add_card(make_test_card("OPP-TOP-A", "Opp Top A"))
+        .build();
+
+    let carrier = runner.place_on_field(0, "DSL-OPP-SRC-UNCLAMPED", Some(0));
+    let opp_a = runner.place_stack(1, &["OPP-SRC-A", "OPP-TOP-A"]);
+
+    assert!(
+        runner.game.activate_field_main(0, carrier.index as usize),
+        "fixture exposes its Main effect"
+    );
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::SourceMulti {
+            min: 2,
+            max: 2,
+            picked: 0,
+        }),
+        "unclamped: the selection installs with the authored exact-2 counts"
+    );
+
+    let action_a = encode_source_select(opp_a.index as u16, 0).expect("opp A source action");
+    runner.execute_action(0, action_a).expect("pick the only candidate");
+
+    // After the only candidate is picked, no candidates remain and
+    // picked (1) < min (2): the continuation is dropped — nothing is
+    // trashed and neither the then-body nor the outer tail runs.
+    assert!(runner.game.pending_selection.is_none());
+    assert!(
+        runner.game.players[1].trash.is_empty(),
+        "drop-continuation: the pick never commits"
+    );
+    assert_eq!(
+        runner.game.memory, 0,
+        "drop-continuation: neither then-body (+5) nor outer tail (+1) runs"
+    );
 }
 
 #[test]

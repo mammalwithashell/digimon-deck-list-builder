@@ -94,27 +94,62 @@ export async function getRoomState(gameId: string): Promise<lobbyApi.LobbyState>
   return lobbyApi.getLobbyState(gameId);
 }
 
+/** Reserve the joiner seat in a room by its 5-digit code. */
+export async function joinRoom(code: string): Promise<{ game_id: string; your_seat: 2 }> {
+  const { game_id, your_seat } = await lobbyApi.joinLobby(code);
+  return { game_id, your_seat };
+}
+
+export async function setRoomFirstPlayer(params: {
+  gameId: string;
+  firstPlayer: lobbyApi.FirstPlayerChoice;
+}): Promise<lobbyApi.LobbyState> {
+  return lobbyApi.setFirstPlayer(params.gameId, params.firstPlayer);
+}
+
+export async function setRoomSeed(params: {
+  gameId: string;
+  seed: string | null;
+}): Promise<lobbyApi.LobbyState> {
+  return lobbyApi.setSeed(params.gameId, params.seed);
+}
+
+export async function startRoom(gameId: string): Promise<lobbyApi.LobbyState> {
+  return lobbyApi.startLobby(gameId);
+}
+
+export async function leaveRoom(gameId: string): Promise<lobbyApi.LobbyState> {
+  return lobbyApi.leaveLobby(gameId);
+}
+
+export async function cancelRoom(gameId: string): Promise<void> {
+  return lobbyApi.cancelLobby(gameId);
+}
+
 export async function createBotGame(params: {
   deck: DeckResponse;
   opponentDeck: DeckResponse;
-}): Promise<{ game_id: string }> {
+  seed?: string | null;
+}): Promise<{ game_id: string; seed?: string }> {
   const deck1 = [...params.deck.egg_deck, ...params.deck.main_deck];
   const deck2 = [...params.opponentDeck.egg_deck, ...params.opponentDeck.main_deck];
   if (!hasTauriBridge()) {
-    const { data } = await client.post<{ game_id: string }>('/games', {
+    const { data } = await client.post<{ game_id: string; seed?: string }>('/games', {
       deck1,
       deck2,
       player1_type: 'human',
       player2_type: 'agent',
       player2_policy: 'greedy',
+      seed: params.seed,
     });
-    return { game_id: data.game_id };
+    return { game_id: data.game_id, seed: data.seed };
   }
   const response = await gameApi.createGame({
     deck1,
     deck2,
     player_kinds: ['human', 'greedy'],
     player_model_ids: [null, null],
+    seed: params.seed,
   });
-  return { game_id: response.game_id };
+  return { game_id: response.game_id, seed: response.seed };
 }

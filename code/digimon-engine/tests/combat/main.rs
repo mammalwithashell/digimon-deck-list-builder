@@ -3,6 +3,7 @@
 
 mod alliance_interrupt;
 mod block_interrupt;
+mod cannot_suspend_enforcement;
 mod collision_mandatory;
 mod counter_hand_play;
 mod counter_interrupt;

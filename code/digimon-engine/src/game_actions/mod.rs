@@ -48,6 +48,15 @@ enum OptionSource {
     Trash(usize),
 }
 
+/// Source zone for the result (fusing-in) card in an effect-initiated App Fuse
+/// (`Game::commit_effect_app_fuse`). The shipped riders fuse from hand
+/// (BT21-084 / BT23-079 / P-241 / BT25-089) or trash (BT24-087).
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum AppFuseSourceZone {
+    Hand,
+    Trash,
+}
+
 struct TakenCardSource {
     card: CardSource,
     restore_face_up_security_for: Option<PlayerId>,
@@ -1580,7 +1589,21 @@ impl Game {
             .battle_area
             .iter()
             .enumerate()
-            .filter(|(_, perm)| !perm.is_suspended && perm.is_digimon(&self.card_data))
+            .filter(|(i, perm)| {
+                // Suspend-cost candidacy requires the permanent to actually
+                // be suspendable: a `CannotSuspend` permanent can't pay the
+                // cost (DCGO `CanActivatePermanentSuspendCostEffect` →
+                // `CanSuspend`; prohibition precedence 15-1-3).
+                !perm.is_suspended
+                    && perm.is_digimon(&self.card_data)
+                    && !self.modifiers.has(
+                        PermanentHandle {
+                            player,
+                            index: *i as u8,
+                        },
+                        ModifierType::CannotSuspend,
+                    )
+            })
             .map(|(i, _)| i)
             .collect()
     }
@@ -1921,6 +1944,16 @@ impl Game {
         infos
     }
 
+    /// Push BeforePayCost cost-reduction sources from a player's breeding area.
+    ///
+    /// Per general_rule.pdf 3-4-6-4 ("Effects on cards can't trigger or
+    /// activate unless the effect explicitly specifies/references breeding
+    /// areas"), a Digimon being *raised* in the breeding area does NOT have its
+    /// battle-area effects active there (e.g. BT23-005 Elizamon's "[Your Turn]
+    /// reduce digivolution cost" must not fire while it raises). Only Digi-Eggs
+    /// are breeding-resident by nature, so their effects are the only ones that
+    /// legitimately activate in the breeding area (e.g. BT13-007 King Drasil_7D6
+    /// reducing Royal Knight play cost). Gate on card kind accordingly.
     fn push_breeding_cost_sources(
         &self,
         player_id: PlayerId,
@@ -1936,6 +1969,9 @@ impl Game {
         };
         for source_idx in 0..stack_size {
             let source = &perm.card_sources[source_idx];
+            if source.card_kind(&self.card_data) != CardKind::DigiEgg {
+                continue;
+            }
             self.push_cost_source_info(
                 infos,
                 Some(handle),
@@ -2048,6 +2084,8 @@ impl Game {
         infos
     }
 
+    /// Breeding-area BeforePayCostObserve sources — same Digi-Egg-only gate as
+    /// `push_breeding_cost_sources` (general_rule.pdf 3-4-6-4).
     fn push_breeding_observer_sources(
         &self,
         player_id: PlayerId,
@@ -2063,6 +2101,9 @@ impl Game {
         };
         for source_idx in 0..stack_size {
             let source = &perm.card_sources[source_idx];
+            if source.card_kind(&self.card_data) != CardKind::DigiEgg {
+                continue;
+            }
             self.push_observer_source_info(
                 infos,
                 Some(handle),

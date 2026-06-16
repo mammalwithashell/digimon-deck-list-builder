@@ -193,6 +193,7 @@ fn v2_lite_pending_choice_details_are_private_to_selecting_player() {
         source_card,
         source_permanent: Some(source),
         source_kind: EffectSourceKind::Digimon,
+        zone_owner: None,
         callback: Box::new(|_, _| {}),
         on_decline: Some(Box::new(|_| {})),
     });
@@ -243,6 +244,7 @@ fn v2_lite_pending_choice_rows_follow_valid_action_order() {
         source_card,
         source_permanent: None,
         source_kind: EffectSourceKind::Digimon,
+        zone_owner: None,
         callback: Box::new(|_, _| {}),
         on_decline: None,
     });
@@ -301,6 +303,7 @@ fn v2_lite_pending_choice_rows_include_choice_source_kind_timing_and_source_card
         source_card: selection_source_card,
         source_permanent: Some(selection_source),
         source_kind: EffectSourceKind::Digimon,
+        zone_owner: None,
         callback: Box::new(|_, _| {}),
         on_decline: None,
     });
@@ -356,6 +359,7 @@ fn v2_lite_pending_choice_rows_encode_effect_category_metadata() {
         source_card,
         source_permanent: Some(source),
         source_kind: EffectSourceKind::Digimon,
+        zone_owner: None,
         callback: Box::new(|_, _| {}),
         on_decline: None,
     });

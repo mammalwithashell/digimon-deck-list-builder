@@ -4,12 +4,19 @@ interface RevealedCardsZoneProps {
   cards: { cardId: string; owner: number }[];
   validIndices?: Set<number>;
   onCardClick?: (index: number) => void;
+  /** Label for the zone. Driven by context (e.g. the active selection prompt)
+   *  so a deck SEARCH is not mislabeled "Security". */
+  title?: string;
+  /** Optional second line under the title. */
+  subtitle?: string;
 }
 
 export function RevealedCardsZone({
   cards,
   validIndices,
   onCardClick,
+  title = 'Revealed',
+  subtitle,
 }: RevealedCardsZoneProps) {
   if (cards.length === 0) return null;
 
@@ -23,11 +30,11 @@ export function RevealedCardsZone({
           : 'bg-gray-800/50 border-gray-600/40'
       }`}
     >
-      <div className="flex flex-col items-center mr-1">
-        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400">
-          Security
+      <div className="flex flex-col items-center mr-1 max-w-[120px]">
+        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-400 text-center leading-tight">
+          {title}
         </span>
-        <span className="text-[9px] text-gray-400">Check</span>
+        {subtitle && <span className="text-[9px] text-gray-400">{subtitle}</span>}
       </div>
       <div className="w-px h-10 bg-gray-600/50" />
       <div className="flex gap-1.5">
