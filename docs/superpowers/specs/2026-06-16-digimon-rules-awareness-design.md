@@ -64,6 +64,10 @@ This is **structural, not a discipline problem**:
 - PDFs stay base-only and git-ignored.
 - Solution must work identically from any linked worktree (rule 29 environment).
 - Per-session passive cost must stay small (light baseline only).
+- **No Pinecone / vector-DB / MCP dependency.** The hooks and the skill read the
+  committed `docs/digimon-rules/*` artifacts and the base-repo PDF *directly* via
+  the `Read` tool. Nothing here queries Pinecone (contrast `/implement-archetype`,
+  which does). The workflow must function with `PINECONE_API_KEY` unset.
 
 ## Core principle — separate the *authoritative* from the *reachable*
 
@@ -148,13 +152,18 @@ the card-lookup pattern):
   game is actually played. This is the user's opt-in "deeply aware thinking
   partner."
 
+Both modes use **only** the `Read` tool against the committed artifacts and the
+base-repo PDF — **no Pinecone**, no MCP, no network. The skill works with
+`PINECONE_API_KEY` unset.
+
 ## Component 5 — Retire `RULES_CONTEXT.md`; reachability convention
 
 - **Retire `docs/RULES_CONTEXT.md`.** Once `digest.md` exists and is verified,
   replace `RULES_CONTEXT.md` with a one-line pointer to the new artifacts so
   there is a single trusted decomposition. Update CLAUDE.md's "Source priority"
-  list (item #5) accordingly, and **flag the Pinecone `rules-docs` namespace for
-  re-ingestion** (it currently ingests `RULES_CONTEXT.md`).
+  list (item #5) accordingly. **Pinecone is not part of this workflow** — if the
+  optional `rules-docs` namespace is used elsewhere it may later want a
+  re-ingest, but that is out of scope and nothing here depends on it.
 - **New CLAUDE.md rule (~rule 32), parallel to rule 29 (DCGO).** Document that
   the rules PDFs resolve from a worktree to
   `"$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/Digimon TCG resources/<file>.pdf"`,
@@ -207,8 +216,8 @@ the card-lookup pattern):
 
 - Auto-detecting manual version bumps and regenerating artifacts.
 - Wiring `manual.pdf` page images into UI-design workflows beyond the routing note.
-- Folding the digest into the Pinecone `rules-docs` namespace (noted, not done
-  here beyond flagging re-ingestion).
+- Folding the digest into the Pinecone `rules-docs` namespace. Pinecone is
+  explicitly **out of scope** — this workflow neither requires nor touches it.
 
 ## Verification / testing approach
 
