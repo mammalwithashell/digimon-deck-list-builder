@@ -1,3 +1,13 @@
+> **Update (2026-06-16):** the legacy-free training GOAL is now permanently met —
+> `code/engine_py_legacy/` was **deleted** entirely (excise-legacy-engine-from-hosted-api),
+> the architect simulator was migrated to `RustHeadlessGame`, and `code/digimon_gym/`
+> has **zero** `engine_py_legacy` references (verified). The training env runs on Rust
+> with `engine_py_legacy` blocked. The 3 unchecked tasks below (1.8 / 4.4 / 7.2) are
+> **cloud-deploy verification only** (rebuild the training image, run a job past first
+> eval on a pod) — operational training-functionality checks, blocked on infra
+> (no Docker Linux engine / pod stopped here), NOT legacy-removal work. With the
+> engine deleted, the image cannot include legacy by construction.
+
 ## 1. Unblock the cloud run (entrypoint imports + deps)
 
 - [x] 1.1 In `code/digimon_gym/digimon_gym.py`, delete the Python `HeadlessGame` import (line ~17). Rewrite `_make_runner` to always construct `RustHeadlessGame`: drop the `use_rust`/profile branch, drop the `random.seed`/`seeded_choice` shim, and keep a single actionable `RuntimeError` when `RustHeadlessGame is None`. **— done; also removed the now-unused `import random` and dropped the unused `GamePhase` import; `_make_runner` default profile → `standard_lite_v2`. `DIGIMON_BACKEND` now only rejects an explicit non-`rust` value.**
