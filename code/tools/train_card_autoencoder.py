@@ -3,9 +3,14 @@
 Usage:
     python -m tools.train_card_autoencoder [--embedding-dim 16] [--epochs 500] [--lr 1e-3]
 
-Outputs:
-    digimon_gym/engine/data/card_encoder.pt    - Encoder weights (for re-encoding new cards)
-    digimon_gym/engine/data/card_embeddings.npy - Precomputed embedding table (vocab_size+1, dim)
+Outputs (under <repo_root>/models/):
+    card_encoder.pt     - Encoder weights (for re-encoding new cards)
+    card_embeddings.npy - Precomputed embedding table (vocab_size+1, dim)
+
+The embeddings are an optional warm-start consumed by pilot_training. The old
+digimon_gym/engine/data/ output path no longer exists (Rust pivot), so the
+artifacts now live under models/ — the path pilot_training's warm-start loader
+reads (shrink-legacy-engine-surface).
 """
 
 import argparse
@@ -16,9 +21,9 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, TensorDataset
 
-from engine_py_legacy.engine.data.card_features import CardFeatureVectorizer, FEATURE_DIM
+from tools.card_features import CardFeatureVectorizer, FEATURE_DIM
 
-DATA_DIR = Path(__file__).resolve().parent.parent / 'digimon_gym' / 'engine' / 'data'
+DATA_DIR = Path(__file__).resolve().parent.parent.parent / 'models'
 
 
 class CardAutoencoder(nn.Module):

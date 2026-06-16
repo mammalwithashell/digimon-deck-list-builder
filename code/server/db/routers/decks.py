@@ -26,10 +26,11 @@ from server.db.schemas import (
 )
 # Registry-backed formats (standard / no_restriction / pauper / eden /
 # eden_singleton) defer to the Rust engine — the single source of truth for
-# banlists, rarity gates, the EDEN anomaly protocol, and singleton. Only the
-# legacy EDH / Titan paths still use the Python `validate_deck`.
-from engine_py_legacy.engine.data.deck_loader import validate_deck
-from digimon_engine import out_of_set_cards, validate_deck_for_game_mode
+# banlists, rarity gates, the EDEN anomaly protocol, and singleton. EDH / Titan
+# use the Rust `validate_deck` for the base ban check plus a thin Python
+# size/singleton wrapper. The Python legacy engine has been removed (rule 22),
+# so every path runs on the Rust binding.
+from digimon_engine import out_of_set_cards, validate_deck, validate_deck_for_game_mode
 
 router = APIRouter(prefix="/decks", tags=["decks"])
 
