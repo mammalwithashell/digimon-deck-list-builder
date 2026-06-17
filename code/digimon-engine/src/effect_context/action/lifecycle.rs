@@ -140,6 +140,22 @@ impl<'a> EffectContext<'a> {
                     return;
                 }
                 pending.card
+            } else if let Some(pending) = self.game.pending_option.take() {
+                // Real Option-play lifecycle: play_option_core moved the Option
+                // into the single-occupancy `pending_option` slot BEFORE running
+                // the [Main] body, so it is no longer in hand/trash. Claim it for
+                // self-placement when it is OUR source Option. Taking it here
+                // leaves `pending_option` empty, so the subsequent
+                // `dispose_option` (play_option_core step 8) finds nothing and
+                // skips the Standard trash — exactly the desired end state.
+                // Fixes G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH.
+                if pending.card.handle() != self.source_card
+                    || pending.card.card_kind(&self.game.card_data) != CardKind::Option
+                {
+                    self.game.pending_option = Some(pending);
+                    return;
+                }
+                pending.card
             } else {
                 let Some(source_card) = self.remove_source_option_from_controller_zones() else {
                     return;
