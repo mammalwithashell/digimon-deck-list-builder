@@ -3355,13 +3355,18 @@ impl Game {
             return;
         }
 
-        // WhenAttacking: observer timing — fires for every permanent in the
-        // attacker's battle area right after OnAttack. Distinct from OnAttack
-        // (which is scoped to the single attacker). Both fire before the
-        // Alliance window opens.
+        // WhenAttacking: the `[When Attacking]` keyword is carrier-scoped
+        // ("when THIS Digimon attacks") — it must fire ONLY for the attacker's
+        // own stack (its top card + inherited digivolution sources), exactly
+        // like OnAttack. Cross-Digimon "when one of your (other) Digimon
+        // attacks" observers are a DIFFERENT timing (OnAllyAttack, fanned out
+        // below). Scoping to the attacker via `Permanent(handle)` (not the
+        // battle-area-wide `PlayerBattleArea`) prevents a non-attacking stack's
+        // inherited `[When Attacking]` from firing on a different Digimon's
+        // attack. Fires before the Alliance window opens.
         self.enqueue_triggered(
             crate::enums::EffectTiming::WhenAttacking,
-            crate::selection::TriggerSource::PlayerBattleArea(handle.player),
+            crate::selection::TriggerSource::Permanent(handle),
         );
         self.maybe_drain_effect_queue();
         if self.pending_selection.is_some() || !self.handle_still_attacking(handle) {

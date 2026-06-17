@@ -30,4 +30,5 @@ mod security_effects;
 mod track_c_deferred_modifiers;
 mod track_c_modifiers;
 mod until_condition_controller;
+mod when_attacking_scope;
 mod would_attack_replacements;
