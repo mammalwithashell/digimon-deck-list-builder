@@ -37,9 +37,9 @@ use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{CardColor, EffectSourceKind, EffectTiming};
-use digimon_engine::permanent::{OptionState, PermanentHandle};
+use digimon_engine::permanent::OptionState;
 use digimon_engine::replacement::ReplacementCause;
-use digimon_engine::selection::{AttackTarget, TriggerSource};
+use digimon_engine::selection::{AttackTarget, OptionPlayResult, TriggerSource};
 
 use super::support::snapshot;
 
@@ -222,33 +222,83 @@ fn combo_a_standard_digivolve_does_not_grant_immunity() {
 // Combo B — Miraculous Mega Knight Delay → reactive DNA Omnimon (BT17-095)
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// Cards: BT17-095 (Option, seated as a Delay) + an own Lv.6 [Greymon]
-//   (ST1-11 WarGreymon) on field + an [Omnimon]-name Lv.7 (EX4-060 Omnimon
-//   Alter-S) in hand + a Lv.6 DNA partner (ST2-10 Plesiomon) in hand.
-// Expected outcome (model Combo B): when an own Lv.6 [Greymon]/[Garurumon]
-//   *would leave the battle area outside of battle*, the Delay fires: that
-//   leaving Lv.6 + a hand card DNA digivolve into an [Omnimon]-name Lv.7 in hand.
-//   The leaving Lv.6 is CONSUMED as a DNA material under the merged Omnimon —
-//   it does NOT go to trash.
+// Cards: BT17-095 (Option, played from hand → seats itself as a Delay) + an own
+//   Lv.6 [Greymon] (ST1-11 WarGreymon) on field + an [Omnimon]-name Lv.7
+//   (EX4-060 Omnimon Alter-S) in hand + a Lv.6 DNA partner (ST2-10 Plesiomon)
+//   in hand + a Red colour anchor (ST1-04 Dracomon) on field for the
+//   Option-play colour requirement.
+// Expected outcome (model Combo B): BT17-095's [Main] (Clause A) plays no body
+//   here (no [Agumon]/[Gabumon] is eligible to recur — the optional union pick
+//   declines) and runs its mandatory "Then, place this card in the battle area"
+//   tail, seating BT17-095 as a Delay-Option. Then, when an own Lv.6
+//   [Greymon]/[Garurumon] *would leave the battle area outside of battle*, the
+//   Delay (Clause B) fires: that leaving Lv.6 + a hand card DNA digivolve into
+//   an [Omnimon]-name Lv.7 in hand. The leaving Lv.6 is CONSUMED as a DNA
+//   material under the merged Omnimon — it does NOT go to trash.
 // Rules basis: §8-2 (DNA digivolution); §16 <Delay>. DCGO
-//   `BT17/Red/BT17_095.cs` (WhenRemoveField Delay). Engine: cards/bt17/BT17-095.yaml.
+//   `BT17/Red/BT17_095.cs` (Clause A place-as-Delay; Clause B WhenRemoveField).
+//   Engine: cards/bt17/BT17-095.yaml.
 //   The DNA-into-Omnimon body uses `effect_initiated_dna_digivolve_hand_partner`
 //   (G-DSL-DNA-FROM-HAND-PARTNER CLOSED 2026-05-20) — a hand card is the 2nd material.
 //   The merge runs with ignore_requirements, so any real [Omnimon]-name Lv.7
 //   result is a faithful DNA target for ST1-11 WarGreymon + a Lv.6 hand partner.
+//
+// REAL play path (B3, 2026-06-16): BT17-095 is seated as a Delay through its
+//   REAL Option-play lifecycle — `play_option_from_hand` → Clause A [Main] body
+//   → `place_self_as_delay_option`. This was previously scaffolded by directly
+//   stamping `OptionState::Delayed` (the `seat_as_delay_option` helper, removed)
+//   because the engine's `place_self_as_delay_option_permanent` did not claim
+//   the in-flight Option from `pending_option` on the real play path
+//   (G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH). That gap is now RESOLVED
+//   (qa/resolved-gaps.md) — the same fix that greens
+//   `omnimon_ace::combo1_mega_knight_*` — so the Option-seating scaffold is gone
+//   and BT17-095 seats itself through its true [Main] body. The Lv.6 "leaving"
+//   trigger is still driven by `delete_permanent_with_cause(_, OwnEffect)` — the
+//   ability UNDER TEST (BT17-095's Clause-B reaction) still fires through its
+//   real replacement-observer trigger path; only the Option-seating scaffold is
+//   removed in B3.
 
-/// Seat a placed BT17-095 Option permanent as a Delay-Option so its [All Turns]
-/// `when_would_leave_battle_area` replacement can fire (Clause B is gated on
-/// `source_is_delayed_option`). Mirrors `place_self_as_delay_option_permanent`.
-fn seat_as_delay_option(runner: &mut DebugRunner, handle: PermanentHandle) {
-    let turn = runner.game.turn_count;
-    let perm = &mut runner.game.players[handle.player as usize].battle_area[handle.index as usize];
-    perm.option_state = OptionState::Delayed {
-        owner: handle.player,
-        trash_on_turn: turn + 2,
-        trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
-        placed_on_turn: turn,
-    };
+/// True if any of `player`'s battle-area permanents tops with `card_id` and is
+/// currently a seated Delay-Option. Used to confirm BT17-095 seated itself as a
+/// Delay through its REAL [Main] body (Clause A `place_self_as_delay_option`).
+fn delay_option_present(runner: &DebugRunner, player: u8, card_id: &str) -> bool {
+    runner.game.players[player as usize].battle_area.iter().any(|p| {
+        p.top_card().card_id(&runner.game.card_data) == card_id
+            && matches!(p.option_state, OptionState::Delayed { .. })
+    })
+}
+
+/// Play BT17-095 from `player`'s hand through its REAL Option-play path and let
+/// it seat itself as a Delay-Option via Clause A's `place_self_as_delay_option`
+/// tail. The optional [Agumon]/[Gabumon] union recursion has no eligible target
+/// in the Combo B fixtures, so every installed prompt is driven to its first
+/// valid action (which, for the empty optional union pick, is PASS) — leaving
+/// the mandatory place-self tail to run. Asserts the Delay actually seated.
+fn play_and_seat_bt17_095_as_delay(runner: &mut DebugRunner, player: u8) {
+    let gh_idx = runner.game.players[player as usize]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "BT17-095")
+        .expect("BT17-095 must be in hand to play it via the real Option-play path");
+    // Real Option-play lifecycle: pays BT17-095's own cost (2), runs Clause A's
+    // [Main] body, and seats it as a Delay via place_self_as_delay_option. The
+    // optional union pick parks a `Pending` selection (it offers PASS even with
+    // no eligible Agumon/Gabumon); a fully-synchronous seat would return
+    // `Delayed`. Either is a legal entry — only `Invalid` is a failure.
+    let res = runner.game.play_option_from_hand(player, gh_idx);
+    assert_ne!(
+        res,
+        OptionPlayResult::Invalid,
+        "BT17-095 must enter its real Option-play lifecycle (got {res:?})"
+    );
+    // Drain Clause A's optional union pick (declines — no eligible Agumon/Gabumon)
+    // so the mandatory place-self tail runs.
+    drive_first_valid(runner, 20);
+    assert!(
+        delay_option_present(runner, player, "BT17-095"),
+        "BT17-095 must seat itself as a Delay-Option through its REAL [Main] body \
+         (Clause A place_self_as_delay_option on the real play path)"
+    );
 }
 
 /// Drive every installed selection by picking its first non-PASS valid action,
@@ -290,17 +340,25 @@ fn combo_b_delay_consumes_leaving_lv6_into_merged_omnimon() {
         .expect("EX4-060 (Omnimon Alter-S) in embedded DSL pack")
         .dsl_card("ST2-10") // Plesiomon — Lv.6 hand DNA partner
         .expect("ST2-10 (Plesiomon) in embedded DSL pack")
-        .dsl_card("ST1-04") // Dracomon — vanilla deck filler
+        .dsl_card("ST1-04") // Dracomon — Red Lv.3 colour anchor + deck filler
         .expect("ST1-04 (Dracomon) in embedded DSL pack")
-        .hand(0, &["EX4-060", "ST2-10"])
+        // BT17-095 is in HAND so it is played through its real Option-play path.
+        .hand(0, &["BT17-095", "EX4-060", "ST2-10"])
         .deck(0, &["ST1-04"; 5])
         .deck(1, &["ST1-04"; 5])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
-    let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
-    seat_as_delay_option(&mut runner, bt17_095);
+    // Red colour anchor on field (satisfies BT17-095's Red+Blue colour
+    // requirement at Option-play time, mirroring omnimon_ace combo 1).
+    runner.place_on_field(0, "ST1-04", Some(0));
+    runner.game.enter_main_phase();
+
+    // Seat BT17-095 as a Delay through its REAL Option-play [Main] body (Clause A
+    // `place_self_as_delay_option`) — no `OptionState::Delayed` scaffold.
+    play_and_seat_bt17_095_as_delay(&mut runner, 0);
+
     let greymon_handle = runner.place_on_field(0, "ST1-11", None);
     let greymon_card = runner.top_card(greymon_handle);
 
@@ -365,20 +423,29 @@ fn combo_b_delay_does_not_fire_for_opponent_lv6_leaving() {
         .expect("EX4-060 (Omnimon Alter-S) in embedded DSL pack")
         .dsl_card("ST2-10") // Plesiomon — DNA partner that must stay in hand
         .expect("ST2-10 (Plesiomon) in embedded DSL pack")
-        .dsl_card("ST1-04") // Dracomon — vanilla deck filler
+        .dsl_card("ST1-04") // Dracomon — Red Lv.3 colour anchor + deck filler
         .expect("ST1-04 (Dracomon) in embedded DSL pack")
-        .hand(0, &["EX4-060", "ST2-10"])
+        // BT17-095 is in HAND so it is played through its real Option-play path.
+        .hand(0, &["BT17-095", "EX4-060", "ST2-10"])
         .deck(0, &["ST1-04"; 5])
         .deck(1, &["ST1-04"; 5])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
-    let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
-    seat_as_delay_option(&mut runner, bt17_095);
+    // Red colour anchor on field for BT17-095's Option-play colour requirement.
+    runner.place_on_field(0, "ST1-04", Some(0));
+    runner.game.enter_main_phase();
+
+    // Seat BT17-095 as a Delay through its REAL Option-play [Main] body, arming
+    // Clause B's leave-observer — no `OptionState::Delayed` scaffold.
+    play_and_seat_bt17_095_as_delay(&mut runner, 0);
+
     // The leaving Lv.6 WarGreymon belongs to the OPPONENT (player 1).
     let opp_greymon = runner.place_on_field(1, "ST1-11", None);
 
+    // Snapshot AFTER the play+seat: P0's hand now holds only the result + partner
+    // (EX4-060, ST2-10); the assertions below verify the Delay does NOT fire.
     let before = snapshot(&runner);
     runner
         .game

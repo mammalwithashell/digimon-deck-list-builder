@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-06-13
+Last updated: 2026-06-16
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,17 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## `place_self_as_delay_option` does not compose with the real Option-play disposal lifecycle (G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH) — RESOLVED 2026-06-16
+
+- **Severity (at close):** was 🟠 BLOCKER for the affected combo path (per-card coverage already existed via the `activate_hand_main` bypass).
+- **Discovered in:** Omnimon ACE interaction tests (2026-06-02, `/archetype-interaction-test-author`).
+- **Card(s):** BT17-095 Miraculous Mega Knight (a **Standard** Option whose [Main] body ends with the DSL step `place_self_as_delay_option`). Any future Standard Option that seats *itself* on the field from within its own play body.
+- **Effect text:** "[Main] You may play 1 [Agumon]/[Gabumon] … . **Then, place this card in the battle area.**"
+- **What was missing:** On the real `Game::play_option_from_hand` / `play_option_from_trash` lifecycle, `play_option_core` removes the Option from hand/trash into the single-occupancy `pending_option` slot **before** firing the [Main] body. When the body then ran `place_self_as_delay_option`, `EffectContext::place_self_as_delay_option_permanent` (non-security branch) only scanned the controller's `hand`/`trash` for the source card — the card was in `pending_option`, so the scan found nothing and the step **no-op'd**. `play_option_core` then called `dispose_option`, which trashed the Standard Option. Net: the Option ended in trash, never seated as a Delay-Option permanent — the printed "place this card in the battle area" was silently dropped on the path the game actually uses. The per-card test sidestepped this by driving the [Main] via `Game::activate_hand_main` (card stays in hand, no Option disposal lifecycle), a harness shortcut, not the real play path.
+- **Resolution (engine fix, B2):** `place_self_as_delay_option_permanent` (`src/effect_context/action/lifecycle.rs`) now, when `source_permanent`/`pending_security`/hand/trash all miss, **claims the in-flight Option from `self.game.pending_option.take()`** when the pending Option's card matches `self.source_card` and is an Option (else it restores `pending_option` and returns). Taking it leaves `pending_option` empty, so the subsequent `dispose_option` (`play_option_core` step 8) finds nothing and **skips** the Standard trash — reaching the same seated-Delay end state as a `kind: delay` Option. Mirrors the existing security-path special-case (`add_this_option_to_hand` already consumed `pending_security`). Zero card-script / DSL change.
+- **Gate / coverage:** `tests/archetypes/omnimon_ace.rs::combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay` and `…_declining_recursion_still_seats_delay` (both un-ignored and green on the real `play_option_from_hand` path), plus DNA Omnimon Combo B on the real play path — `tests/archetypes/dna_omnimon.rs::combo_b_delay_consumes_leaving_lv6_into_merged_omnimon` and `…_delay_does_not_fire_for_opponent_lv6_leaving`, which now seat BT17-095 via `play_option_from_hand` (the `seat_as_delay_option` scaffold that stamped `OptionState::Delayed` directly is removed). Per-card mechanism still pinned by `tests/cards_behavioral/bt17/bt17_095.rs`.
+- **Related:** `G-PLACE-SELF-AS-OPTION-PERMANENT` (the step itself; previously closed for the `activate_hand_main` path only). DCGO `BT17_095.cs` Clause A `CardEffectCommons.PlaceDelayOptionCards`.
 
 ## Formula-valued count on cross-permanent source selections (G-DSL-SELECT-SOURCES-FORMULA-COUNT) — RESOLVED 2026-06-13
 

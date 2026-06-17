@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-06-15",
+  "last_updated": "2026-06-16",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -1987,7 +1987,7 @@
         "G2",
         "C5"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust. Gap-closure 2026-06-16 (Task B3): [Main] place-self-as-Delay now seats BT17-095 on the REAL play path (G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH RESOLVED, qa/resolved-gaps.md); covered through the real ability by omnimon_ace combo 1 + DNA Omnimon combo B (tests/archetypes/dna_omnimon.rs::combo_b_*) — the OptionState::Delayed seat scaffold removed."
     },
     "BT22-005": {
       "card_name": "Tsumemon",
