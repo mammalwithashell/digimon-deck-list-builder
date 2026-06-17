@@ -306,6 +306,8 @@ pub struct CompiledPredicate {
     pub card_number_is: Option<String>,
     pub play_cost_lte: Option<CompiledDpConstraint>,
     pub play_cost_gte: Option<CompiledDpConstraint>,
+    /// G-PLAY-OR-USE-COST-LTE: max(play_cost, option_use_cost) <= N.
+    pub play_or_use_cost_lte: Option<CompiledDpConstraint>,
     pub can_digivolve_from_source: Option<bool>,
     pub dp_eq: Option<CompiledDpConstraint>,
     pub dp_lte: Option<CompiledDpConstraint>,

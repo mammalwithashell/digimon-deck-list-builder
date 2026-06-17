@@ -1143,6 +1143,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.card_number_is.is_none()
         && pred.play_cost_lte.is_none()
         && pred.play_cost_gte.is_none()
+        && pred.play_or_use_cost_lte.is_none()
         && pred.self_color_count_gte.is_none()
         && pred.dp_eq.is_none()
         && pred.dp_lte.is_none()
@@ -2156,6 +2157,20 @@ fn eval_card_fields(
     }
     if let Some(floor) = &pred.play_cost_gte {
         if i32::from(data.play_cost) < eval_int_constraint(floor, rctx, formula_target, bindings) {
+            return false;
+        }
+    }
+    if let Some(cap) = &pred.play_or_use_cost_lte {
+        // G-PLAY-OR-USE-COST-LTE: the larger of the candidate's play cost and
+        // its Option-use cost must be at most the threshold. Mirrors DCGO
+        // `CardSource.GetCostItself <= N` for "play or use 1 ... card with a
+        // play or use cost of N or less". For a Digimon / Tamer
+        // `option_use_cost()` is `None` so the bound is `play_cost`; for a pure
+        // Option both coincide; for a Dual it is the max of the two faces.
+        let play = i32::from(data.play_cost);
+        let use_cost = data.option_use_cost().map(i32::from).unwrap_or(play);
+        let cost = play.max(use_cost);
+        if cost > eval_int_constraint(cap, rctx, formula_target, bindings) {
             return false;
         }
     }

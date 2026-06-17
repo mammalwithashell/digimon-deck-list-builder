@@ -98,6 +98,15 @@ pub struct PredicateSpec {
     pub play_cost_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub play_cost_gte: Option<DpConstraint>,
+    /// Card-subject leaf (G-PLAY-OR-USE-COST-LTE): true when the larger of the
+    /// candidate's *play* cost (Digimon / Tamer) and *use* cost (Option / the
+    /// Option face of a Dual) is at most this threshold. Mirrors DCGO
+    /// `CardSource.GetCostItself <= N` over a "play or use 1 ... card with a
+    /// play or use cost of N or less" hand filter (ST24-06 RizeGreymon). For a
+    /// pure Option the play and use costs coincide; for a Dual it compares the
+    /// max of both faces; for a Digimon / Tamer it is exactly `play_cost`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub play_or_use_cost_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_digivolve_from_source: Option<bool>,
 
