@@ -119,6 +119,7 @@ fn main() {
             deck_storage::decks_put,
             deck_storage::decks_delete,
             deck_storage::decks_update_library,
+            deck_storage::rust_list_starter_decks,
             deck_storage::deck_folders_list,
             deck_storage::deck_folders_create,
             deck_storage::deck_folders_update,
