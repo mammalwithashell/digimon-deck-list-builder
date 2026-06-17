@@ -232,6 +232,13 @@ impl Game {
         if self.modifiers.has(handle, ModifierType::CannotSuspend) {
             return false;
         }
+        // A permanent-scoped `CannotAttack` modifier (e.g. ST2-14 "Sorrow
+        // Blue") blocks the attack declaration. Without this consult the mask
+        // marked the attack legal while execution refused it — a no-op the
+        // policy looped on until the step limit.
+        if self.modifiers.has(handle, ModifierType::CannotAttack) {
+            return false;
+        }
         // Summoning sickness: can't attack on the turn it was played unless
         // Rush is present (native printed OR modifier-granted) or this is a
         // Vortex end-of-turn attack (§2.1b parity fix).
@@ -285,6 +292,10 @@ impl Game {
         if self.modifiers.has(handle, ModifierType::CannotSuspend) {
             return false;
         }
+        // Permanent-scoped CannotAttack — see `can_attack`.
+        if self.modifiers.has(handle, ModifierType::CannotAttack) {
+            return false;
+        }
         let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
         if is_fresh
             && !ignore_summoning_sickness
@@ -320,6 +331,10 @@ impl Game {
         // `withoutTap == true`); per source priority the rules manual
         // governs over DCGO for pure rules questions.
         if self.modifiers.has(handle, ModifierType::CannotSuspend) {
+            return false;
+        }
+        // Permanent-scoped CannotAttack — see `can_attack`.
+        if self.modifiers.has(handle, ModifierType::CannotAttack) {
             return false;
         }
         // "Without suspending" bypasses only the suspend cost/unsuspended
