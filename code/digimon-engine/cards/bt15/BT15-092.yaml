@@ -4,13 +4,122 @@ kind: option
 color: [yellow]
 cost: 4
 
-effects: []
+# ─── Printed text (data/cards.json + card image — authoritative) ─────────────
+#
+#   When an effect trashes this card from the security stack, activate this
+#   card's [Security] effects.
+#   [Main] Search your security stack. You may play 1 yellow level 4 or lower
+#   Digimon card among it without paying the cost. Then, shuffle your security
+#   stack. If you have a Tamer with [Kari Kamiya] in its name, place this card
+#   on top of your security stack.
+#
+#   Security Effect [Security] All of your opponent's Digimon and security
+#   Digimon get -5000 DP until the end of your turn.
+#
+# ─── DCGO crosscheck (DCGO/Assets/Scripts/CardEffect/BT15/Yellow/BT15_092.cs) ─
+#
+#   - OnDiscardSecurity (CanTriggerOnTrashSelfSecurity): re-runs the card's own
+#     [Security] body via CardEffectCommons.OptionSecurityEffect(card). Modelled
+#     by inlining the [Security] body into the on_discard_security clause (the
+#     DCGO self-dispatch is just a re-run of the SecuritySkill body).
+#   - OptionSkill ([Main]): SelectCard from Security root, canNoSelect:true
+#     (optional play), maxCount = Min(1, count of yellow Lv<=4 Digimon);
+#     IReduceSecurity + PlayPermanentCards(payCost:false); then
+#     ShuffledDeckCards(SecurityCards); then if a Tamer permanent with "Kari
+#     Kamiya" in its top-card name exists -> AddSecurityCard(card, toTop:true).
+#   - SecuritySkill ([Security]): ChangeDigimonDPPlayerEffect(opp battle-area
+#     Digimon, -5000, UntilOwnerTurnEnd) + ChangeSecurityDigimonCardDPPlayerEffect
+#     (opp security Digimon, -5000, UntilOwnerTurnEnd).
+#
+# ─── Substrate (all shipped — no engine/DSL gap; G-DSL-ON-DISCARD-SECURITY-
+#     TRIGGER is already-closed and the security-Digimon DP debuff rides on the
+#     shipped SecurityDpChange player modifier) ──────────────────────────────
+#
+#   - on_discard_security + scope: security      → BT25-034 / BT25-040
+#   - select_security (filtered) + play_security_card + shuffle_security
+#                                                → BT13-012
+#   - place_self_option_at_security              → ST20-15
+#   - add_modifier { continuous: true } board -DP → EX4-074
+#   - add_player_modifier { modifier: SecurityDpChange } opp security -DP
+#                                                → ST3-13 / ST1-14
+#     (consumed by Game::defender_security_dp_adjustment for the OPPONENT)
+#
+#   "Until the end of your turn": the [Security] effect resolves during the
+#   OPPONENT's turn (they attacked into this card in your security). From the
+#   owner's perspective the next turn-end of "your turn" expires it — Expiry::
+#   EndOfYourTurn (installed during the opponent's turn does NOT expire on the
+#   current opponent turn-end; it expires on the source player's own next
+#   turn-end). DCGO UntilOwnerTurnEnd == owner's (defender's) next own turn end.
 
-# Stubbed:
-# - When this card is trashed from security by an effect, activate this card's
-#   Security effect. Needs security-trash observer dispatch for the trashed card.
-# - [Main] search security, play a yellow level 4 or lower Digimon from it,
-#   shuffle security, then if you have Kari Kamiya place this card on top of
-#   security. Needs filtered security search/play and self-to-security top.
-# - [Security] all opponent Digimon and security Digimon get -5000 DP. Needs
-#   security-Digimon battle modifiers in addition to board-wide debuff.
+# Anchor the [Security] effect body once and reference it from both the
+# OnDiscardSecurity dispatch clause and the on_security clause.
+effects:
+  # ─── When an effect trashes this from security → activate the [Security]
+  #     effect (DCGO OnDiscardSecurity → OptionSecurityEffect re-run). ──────────
+  - when: on_discard_security
+    scope: security
+    summary: "[Security-trash] When an effect trashes this from security, activate its [Security] effect (-5000 DP to opp Digimon + security Digimon)"
+    process:
+      - add_modifier:
+          continuous: true
+          target: { of: opponent, kind: digimon }
+          modifier: ChangeDp
+          value: -5000
+          expiry: end_of_your_turn
+      - add_player_modifier:
+          target_player: opponent
+          modifier: SecurityDpChange
+          value: -5000
+          expiry: end_of_your_turn
+
+  # ─── [Main] search security; may play 1 yellow Lv<=4 Digimon free; shuffle;
+  #     if a [Kari Kamiya] Tamer in play, place self on top of security. ────────
+  - when: main_from_hand
+    summary: "[Main] Search security; may play 1 yellow Lv<=4 Digimon free; shuffle; if [Kari Kamiya] Tamer in play, place self on top of security"
+    process:
+      - select_security:
+          of: you
+          bind_as: sec_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: yellow
+              - level_lte: 4
+          prompt: "You may play 1 yellow level 4 or lower Digimon from your security stack without paying the cost"
+      - if:
+          condition: { binding_present: sec_pick }
+          then:
+            - play_security_card: { of: you, card: sec_pick }
+      - shuffle_security: { of: you }
+      - if:
+          condition:
+            count_gte:
+              filter:
+                of: you
+                zone: [battle_area]
+                all_of:
+                  - kind: tamer
+                  - name_contains: "Kari Kamiya"
+              n: 1
+          then:
+            - place_self_option_at_security:
+                position: top
+                face: up
+
+  # ─── [Security] -5000 DP to all opponent Digimon AND opponent security
+  #     Digimon until the end of your turn. ────────────────────────────────────
+  - when: on_security
+    summary: "[Security] All opponent Digimon and opponent security Digimon get -5000 DP until end of your turn"
+    process:
+      - add_modifier:
+          continuous: true
+          target: { of: opponent, kind: digimon }
+          modifier: ChangeDp
+          value: -5000
+          expiry: end_of_your_turn
+      - add_player_modifier:
+          target_player: opponent
+          modifier: SecurityDpChange
+          value: -5000
+          expiry: end_of_your_turn

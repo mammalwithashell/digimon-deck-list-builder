@@ -201,6 +201,11 @@ pub(crate) struct PendingWouldDigivolveResume {
     pub(crate) permanent: PermanentHandle,
     pub(crate) card: crate::card_source::CardHandle,
     pub(crate) effective_cost: u16,
+    /// Whether the player chose an App-Fusion route for this digivolution. The
+    /// commit path consumes the host's linked cards only when this is set.
+    /// Threaded from the chosen route so the commit honors the player's pick
+    /// (`pending_digivolve_route_choice`) rather than re-deriving the min route.
+    pub(crate) app_fusion: bool,
 }
 
 /// The core game state. Drives the turn state machine.
@@ -508,6 +513,17 @@ pub struct Game {
     /// once consumed. `0` means "no player-scoped reduction" (also the
     /// decline outcome).
     pub(crate) pending_player_digivolve_reduction: i32,
+
+    /// The digivolution route (cost + app-fusion-ness) the player CHOSE when a
+    /// hand card offered more than one distinct-cost route over the target base
+    /// (rule 17 — no auto-selection of the cheapest). Set by the cost-choice
+    /// `EffectChoice` callback, which re-enters `digivolve_from_hand_inner`;
+    /// peeked there to pin the printed cost; consumed (`take`) when the
+    /// `PendingWouldDigivolveResume` is built. Cleared at the public
+    /// `digivolve_from_hand` entry so each fresh user attempt starts clean (the
+    /// cost-choice callback bypasses that entry, preserving the pick across the
+    /// reducer/replacement re-entries). `None` means "no pending choice".
+    pub(crate) pending_digivolve_route_choice: Option<crate::dna_digivolve::DigivolveRouteMatch>,
 
     /// Spec §7.5 once-per-event guard. Records `(timing, subject)` pairs that
     /// have already fired within the current `try_replace` call chain so a

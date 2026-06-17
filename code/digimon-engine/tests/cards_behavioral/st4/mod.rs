@@ -4,7 +4,9 @@ use digimon_dsl::compiled::{CompiledClause, CompiledTiming};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, GamePhase, Keyword, ModifierType, PlaySource};
+use digimon_engine::enums::{
+    CardColor, CardKind, GamePhase, Keyword, ModifierType, PlaySource, PlayerId,
+};
 use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::SelectionKind;
 
@@ -53,6 +55,35 @@ fn digivolve_target(id: &str, color: CardColor, level: u8, dp: i32, from_level: 
         memory_cost: 0,
     }];
     card
+}
+
+/// Digivolve from hand, auto-resolving the rule-17 cost-choice prompt (when the
+/// base satisfies more than one distinct-cost route) by taking the CHEAPEST
+/// option. Used by setup digivolves that don't care which cost is paid — e.g.
+/// ST4-10 here, whose synthetic evo-cost 0 + YAML alt-path cost 3 give two
+/// distinct costs over a green Lv.4 base. Returns whether the digivolve
+/// proceeded.
+fn digivolve_cheapest(
+    runner: &mut DebugRunner,
+    player: PlayerId,
+    hand: usize,
+    field: usize,
+    source: PlaySource,
+) -> bool {
+    if runner.game.digivolve_from_hand(player, hand, field, source) {
+        return true; // single distinct cost — completed immediately
+    }
+    // A cost-choice EffectChoice was installed; its options are cheapest-first,
+    // so the first valid action id is the cheapest route.
+    if runner.pending_kind() == Some(SelectionKind::EffectChoice) {
+        if let Some(aid) = runner
+            .pending_selection()
+            .and_then(|s| s.valid_action_ids.first().copied())
+        {
+            return runner.execute_action(player, aid).is_ok();
+        }
+    }
+    false
 }
 
 fn make_p0_turn(runner: &mut DebugRunner) {
@@ -217,9 +248,13 @@ fn st4_10_reveal_search_adds_only_level_six_or_higher_digimon() {
     make_p0_turn(&mut hit);
     let base = hit.place_on_field(0, "BASE", Some(0));
 
-    assert!(hit
-        .game
-        .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByDigivolve));
+    assert!(digivolve_cheapest(
+        &mut hit,
+        0,
+        0,
+        base.index as usize,
+        PlaySource::ByDigivolve
+    ));
     resolve_all(&mut hit);
     assert_eq!(
         hit.hand_size(0),
@@ -242,9 +277,13 @@ fn st4_10_reveal_search_adds_only_level_six_or_higher_digimon() {
     make_p0_turn(&mut miss);
     let base = miss.place_on_field(0, "BASE", Some(0));
 
-    assert!(miss
-        .game
-        .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByDigivolve));
+    assert!(digivolve_cheapest(
+        &mut miss,
+        0,
+        0,
+        base.index as usize,
+        PlaySource::ByDigivolve
+    ));
     resolve_all(&mut miss);
     assert_eq!(miss.hand_size(0), 1, "only the rule draw adds a card");
     assert_eq!(miss.deck_size(0), 1, "missed reveal returns to deck bottom");
@@ -383,9 +422,13 @@ fn st4_12_suppresses_attack_and_block_until_opponents_turn_ends() {
     let base = runner.place_on_field(0, "BASE", Some(0));
     let target = runner.place_on_field(1, "TARGET", Some(0));
 
-    assert!(runner
-        .game
-        .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByDigivolve));
+    assert!(digivolve_cheapest(
+        &mut runner,
+        0,
+        0,
+        base.index as usize,
+        PlaySource::ByDigivolve
+    ));
     resolve_all(&mut runner);
 
     assert!(runner
@@ -619,9 +662,13 @@ fn st4_10_reveal_add_is_mandatory_when_eligible() {
     make_p0_turn(&mut runner);
     let base = runner.place_on_field(0, "BASE", Some(0));
 
-    assert!(runner
-        .game
-        .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByDigivolve));
+    assert!(digivolve_cheapest(
+        &mut runner,
+        0,
+        0,
+        base.index as usize,
+        PlaySource::ByDigivolve
+    ));
     let prompt = runner
         .pending_selection()
         .expect("ST4-10 reveals a level-6 Digimon and prompts to add it");

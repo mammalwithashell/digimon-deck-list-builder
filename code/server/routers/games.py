@@ -184,7 +184,9 @@ def create_game(request: CreateGameRequest):
     # accepts u64; `secrets.randbits(64)` stays inside that range.
     seed = request.seed if request.seed is not None else secrets.randbits(64)
     try:
-        game = RustHeadlessGame(deck1, deck2, False, False, False, seed)
+        # record_actions=True so the game can be persisted via
+        # POST /games/{id}/recordings and replayed through RustReplayRunner.
+        game = RustHeadlessGame(deck1, deck2, False, True, False, seed)
     except Exception as exc:  # PyValueError from the Rust binding
         raise HTTPException(status_code=400, detail=f"Engine construction failed: {exc}")
 
@@ -413,6 +415,21 @@ def game_mask(game_id: str):
     """Return the current action mask."""
     game = _require_game(game_id)
     return {"action_mask": game.get_action_mask().tolist()}
+
+
+@router.get("/games/{game_id}/decoded-actions")
+@router.get("/game/{game_id}/decoded-actions", include_in_schema=False)
+def game_decoded_actions(game_id: str):
+    """Decoded list of every currently-legal action for the current decision
+    player, each carrying source-card and effect identity (`card_name`,
+    `effect_name`, `source_zone`, `source_index`, `label`). The React action
+    bar renders activatable effects from this list instead of re-deriving
+    action semantics from raw mask bit-ranges. Mirrors the desktop
+    `rust_get_decoded_actions` Tauri command (same `ActionExplanation` shape).
+
+    Engine-only route: no DB/auth dependency."""
+    game = _require_game(game_id)
+    return {"decoded_actions": game.legal_decoded_actions()}
 
 
 @router.post("/games/{game_id}/surrender")

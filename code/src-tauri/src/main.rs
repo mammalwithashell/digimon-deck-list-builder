@@ -7,14 +7,12 @@ use digimon_tcg::deck_commands;
 use digimon_tcg::deck_storage;
 use digimon_tcg::engine_commands;
 use digimon_tcg::format_commands;
-use digimon_tcg::inference_state;
 use digimon_tcg::models;
 use digimon_tcg::updater;
 
 use std::sync::Arc;
 
-use engine_commands::RustEngineState;
-use inference_state::InferenceState;
+use engine_commands::EngineHandle;
 use models::ModelsManager;
 
 /// Where the model cache lives. `dirs::data_dir()` resolves to the standard
@@ -29,6 +27,11 @@ fn models_cache_root() -> std::path::PathBuf {
 }
 
 fn main() {
+    // Spawn the single engine worker thread (64 MB stack) up front; its
+    // handle is the only way commands reach the game state. See
+    // `engine_commands::EngineHandle`.
+    let engine = EngineHandle::spawn();
+
     tauri::Builder::default()
         // File + stdout logging. Without this, `log::warn!`/`log::info!`
         // (e.g. from the updater) route to a null logger and updater
@@ -53,26 +56,26 @@ fn main() {
         // source of truth for size) across launches so multi-monitor
         // users find the window where they left it.
         .plugin(tauri_plugin_window_state::Builder::default().build())
-        .setup(|app| {
-            let handle = app.handle().clone();
-            updater::spawn_min_version_check(handle);
-            // Dev-only staging bridge (feature `debug-bridge`, env-gated).
-            // Shares the managed game/session Arcs so external staging is
-            // reflected live in the window.
-            #[cfg(feature = "debug-bridge")]
-            {
-                use tauri::Manager;
-                let state = app.state::<RustEngineState>();
-                digimon_tcg::debug_bridge::maybe_spawn(
-                    &app.handle().clone(),
-                    state.game.clone(),
-                    state.session.clone(),
-                );
+        .setup({
+            let engine = engine.clone();
+            move |app| {
+                let handle = app.handle().clone();
+                updater::spawn_min_version_check(handle);
+                // Dev-only staging bridge (feature `debug-bridge`, env-gated).
+                // Dispatches its reads/stages through the same engine worker as
+                // the `rust_*` commands, so external staging is reflected live
+                // in the window.
+                #[cfg(feature = "debug-bridge")]
+                {
+                    digimon_tcg::debug_bridge::maybe_spawn(&app.handle().clone(), engine.clone());
+                }
+                // Engine handle is unused in `setup` outside the debug bridge,
+                // but the move-capture keeps the signature uniform.
+                let _ = &engine;
+                Ok(())
             }
-            Ok(())
         })
-        .manage(RustEngineState::default())
-        .manage(InferenceState::default())
+        .manage(engine.clone())
         .manage(Arc::new(ModelsManager::new(models_cache_root())))
         .invoke_handler(tauri::generate_handler![
             engine_commands::create_test_game,
@@ -89,6 +92,7 @@ fn main() {
             engine_commands::rust_submit_action,
             engine_commands::rust_step_game,
             engine_commands::rust_get_mask,
+            engine_commands::rust_get_decoded_actions,
             engine_commands::rust_get_board_tensor_summary,
             engine_commands::rust_get_log,
             engine_commands::rust_surrender,

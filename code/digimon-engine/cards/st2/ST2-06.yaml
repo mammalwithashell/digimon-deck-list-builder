@@ -24,6 +24,5 @@ effects:
           filter:
             all_of:
               - kind: digimon
-              - materials_count_gte: 1
-          prompt: "Choose 1 opponent Digimon with a source"
+          prompt: "Choose 1 opponent Digimon"
       - trash_bottom_sources: { target: target, count: 1 }

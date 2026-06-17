@@ -26,10 +26,11 @@ from server.db.schemas import (
 )
 # Registry-backed formats (standard / no_restriction / pauper / eden /
 # eden_singleton) defer to the Rust engine — the single source of truth for
-# banlists, rarity gates, the EDEN anomaly protocol, and singleton. Only the
-# legacy EDH / Titan paths still use the Python `validate_deck`.
-from engine_py_legacy.engine.data.deck_loader import validate_deck
-from digimon_engine import out_of_set_cards, validate_deck_for_game_mode
+# banlists, rarity gates, the EDEN anomaly protocol, and singleton. EDH / Titan
+# use the Rust `validate_deck` for the base ban check plus a thin Python
+# size/singleton wrapper. The Python legacy engine has been removed (rule 22),
+# so every path runs on the Rust binding.
+from digimon_engine import out_of_set_cards, validate_deck, validate_deck_for_game_mode
 
 router = APIRouter(prefix="/decks", tags=["decks"])
 
@@ -133,6 +134,22 @@ def _normalize_alt_arts(flags: list[bool] | None, expected_len: int) -> list[boo
     return out
 
 
+def _summary_icon_card_id(main_ids: list[str], egg_ids: list[str], commander_id: str | None) -> str | None:
+    all_ids = set(main_ids) | set(egg_ids)
+    if commander_id and commander_id in all_ids:
+        return commander_id
+    if main_ids:
+        return sorted(main_ids)[0]
+    if egg_ids:
+        return sorted(egg_ids)[0]
+    return None
+
+
+def _validate_deck_icon_card(commander_id: str | None, main_ids: list[str], egg_ids: list[str]) -> None:
+    if commander_id and commander_id not in (set(main_ids) | set(egg_ids)):
+        raise HTTPException(status_code=400, detail="commander_id must reference a card in the deck")
+
+
 def _deck_to_response(deck: Deck) -> DeckResponse:
     main_ids = json.loads(deck.main_deck)
     egg_ids = json.loads(deck.egg_deck) if deck.egg_deck else []
@@ -180,6 +197,8 @@ def _deck_to_summary(deck: Deck) -> DeckSummary:
         main_count=len(main_ids),
         egg_count=len(egg_ids),
         tags=tags,
+        commander_id=deck.commander_id,
+        deck_icon_card_id=_summary_icon_card_id(main_ids, egg_ids, deck.commander_id),
         meta_tier=deck.meta_tier,
         meta_archetype=deck.meta_archetype,
         colors=[],
@@ -215,14 +234,11 @@ async def create_deck(
     db: AsyncSession = Depends(get_db),
 ):
     # Validate mode-specific constraints on request
-    if request.game_mode == "edh_commander" and not request.commander_id:
-        raise HTTPException(status_code=400, detail="EDH Commander mode requires a commander_id")
     if request.game_mode == "titan" and not request.titan_role:
         raise HTTPException(status_code=400, detail="Titan mode requires a titan_role (titan or team)")
-    if request.game_mode != "edh_commander" and request.commander_id:
-        raise HTTPException(status_code=400, detail="commander_id only valid for edh_commander mode")
     if request.game_mode != "titan" and request.titan_role:
         raise HTTPException(status_code=400, detail="titan_role only valid for titan mode")
+    _validate_deck_icon_card(request.commander_id, request.main_deck, request.egg_deck)
 
     # Alpha gate: reject cards without behavioral test coverage.
     _reject_untested_cards(request.main_deck, request.egg_deck)
@@ -427,6 +443,12 @@ async def update_deck(
         else json.loads(deck.egg_deck or "[]")
     )
     _reject_untested_cards(proposed_main, proposed_egg)
+    proposed_commander_id = (
+        request.commander_id
+        if "commander_id" in request.model_fields_set
+        else deck.commander_id
+    )
+    _validate_deck_icon_card(proposed_commander_id, proposed_main, proposed_egg)
 
     # Apply updates
     if request.name is not None:
@@ -454,7 +476,7 @@ async def update_deck(
         deck.egg_deck_alt_arts = json.dumps(
             _normalize_alt_arts(request.egg_deck_alt_arts, current_len)
         )
-    if request.commander_id is not None:
+    if "commander_id" in request.model_fields_set:
         deck.commander_id = request.commander_id
     if request.is_public is not None:
         deck.is_public = 1 if request.is_public else 0

@@ -1,18 +1,195 @@
+# BT19-093 Queen Device — Option, Yellow, Cost 3. Traits: [Device].
+#
+# Printed card text (card image C:/Users/james/Documents/DCGO_Application/
+# Assets/Textures/Card/BT19-093.webp — authoritative; cross-checked
+# data/cards.json + DCGO C#):
+#
+#   While you don't have [Queen Device] in the battle area, you may ignore
+#   this card's color requirements.
+#   When this card is trashed from the battle area, until the end of your
+#   opponent's turn, 1 of their Digimon can't activate [When Digivolving]
+#   effects and gets -3000 DP.
+#   [Main] Until the end of your opponent's turn, 1 of their Digimon can't
+#   activate [When Digivolving] effects and gets -3000 DP. Then, place this
+#   card in the battle area.
+#
+# Inherited (Security):
+#   Security Effect [Security] Give 2 of your opponent's Digimon
+#   <Security A. -2> for the turn. Then, add this card to the hand.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT19/Yellow/BT19_093.cs
+#
+# ─── DCGO crosscheck (per clause) ─────────────────────────────────────────────
+#
+# Clause 0 — color bypass. `EffectTiming.None` IgnoreColorConditionClass.
+#   CanUseCondition: `!HasMatchConditionOwnersPermanent(card, perm =>
+#       perm.TopCard.EqualsCardName("Queen Device"))` — active while NO
+#       [Queen Device] permanent is in the OWNER's battle area (NEGATIVE gate).
+#   CardCondition: `cardSource == card` — bypass scopes to THIS card only.
+#   Mirror of BT22-099 / BT23-096 Clause 0, but with `no_permanent` (negation)
+#   instead of `any_permanent`, and name_is "Queen Device".
+#
+# Clause 1 — trash-from-battle. `EffectTiming.OnDestroyedAnyone`.
+#   CanTriggerOnDeletion(card) — fires when THIS card is trashed in its
+#   controller's battle area. ActivateCoroutine: `Math.Min(1, count)` select
+#   of an opponent Digimon → ChangeDigimonDP(-3000, UntilOpponentTurnEnd) +
+#   DisableEffectClass(IsWhenDigivolving) on the picked Digimon until owner
+#   turn end. Same debuff body as Clause 2 (Main), minus the place step.
+#
+# Clause 2 — [Main]. `EffectTiming.OptionSkill`. Same `Math.Min(1,count)`
+#   select + ChangeDigimonDP(-3000, UntilOpponentTurnEnd) +
+#   DisableEffectClass(IsWhenDigivolving). Then
+#   `CardEffectCommons.PlaceDelayOptionCards(card)` — places this Option in the
+#   controller's battle area as a persistent field permanent.
+#
+# Clause 3 — [Security] (inherited). `EffectTiming.SecuritySkill`,
+#   SetIsSecurityEffect(true). `Math.Min(2, count)` select of opponent Digimon
+#   → ChangeDigimonSAttack(-2, UntilEachTurnEnd). Then AddThisCardToHand(card).
+#
+# ─── Source-priority / faithfulness audit ─────────────────────────────────────
+#
+# - DCGO `Math.Min(1, count)` / `Math.Min(2, count)` (canEndNotMax: false,
+#   canNoSelect: false) = a MANDATORY effect-target select that affects
+#   min(N, available) and can't stop early. Authored via
+#   `select_count_capped_multi { max: N, clamp_to_available: true }` (the
+#   shipped MP-30/31 idiom; precedent BT12-028 Clause 0b) + `per_selected`.
+# - The -3000 DP modifier expires `end_of_opponents_turn` (DCGO
+#   UntilOpponentTurnEnd). The CannotActivateWhenDigivolvingEffects modifier
+#   matches DCGO's DisableEffectClass(IsWhenDigivolving) until owner turn end.
+# - The <Security A. -2> uses ModifierType::SecurityAttackChange value:-2
+#   expiry:end_of_turn (DCGO UntilEachTurnEnd → for-the-turn). Precedent:
+#   AD1-017 inherited [Security] SecurityAttackChange -1.
+# - cards.json mis-files the [Security] body under
+#   inherited_effect_description_eng, but the card image + DCGO confirm it is
+#   the Security Effect (inherited security clause). The image is authoritative.
+#
+# ─── Substrate gaps (real — see qa/dsl-vocab-gaps.md / docs/RUST_ENGINE_GAPS.md) ──
+#
+# G-OPTION-PERSIST-AS-FIELD-CARRIER — Clause 2's "place this card in the battle
+#   area" must seat BT19-093 as a PERSISTENT field Option (DCGO
+#   PlaceDelayOptionCards plays it as an ordinary permanent with NO scheduled
+#   auto-trash; it stays until trashed by an external effect). The only shipped
+#   self-placement step, `place_self_as_delay_option`, seats it as
+#   OptionState::Delayed { EndOfYourNextTurn }, which the end-of-turn scan
+#   AUTO-TRASHES at the owner's next turn end — unfaithful. Needs a
+#   `place_self_as_field_option` step lowering to OrdinaryFieldOption.
+#
+# G-OPTION-SELF-TRASH-TRIGGER — Clause 1's "When THIS card is trashed from the
+#   battle area" needs the TRASHED option's OWN on_option_trashed effect to
+#   fire. `Game::trash_field_option` dispatches OnOptionTrashed only to OTHER
+#   live battle-area permanents (the BT23-059 observer shape); the trashed card
+#   is already removed before dispatch, so its own clause never fires. Needs an
+#   enqueue-from-trashed-source branch for OnOptionTrashed (cf.
+#   SourceTrashedFromStack).
+#
+# Both gaps are interlocking (placement persistence feeds the self-trash
+# trigger). The color-bypass (Clause 0), the [Main] debuff (Clause 2 body), and
+# the [Security] clause (Clause 3) are fully faithful with shipped vocabulary
+# and are authored + tested here. The placement (Clause 2 tail) and the
+# self-trash trigger (Clause 1) are stubbed pending the two gaps above.
+
 card: BT19-093
-name: Queen Device
+name: "Queen Device"
 kind: option
 color: [yellow]
 cost: 3
 traits: [Device]
 
-effects: []
+effects:
+  # ─── Clause 0: Color bypass (negative-gate IgnoreColorRequirement) ─────────
+  #
+  # "While you don't have [Queen Device] in the battle area, you may ignore
+  # this card's color requirements."
+  #
+  # DCGO: IgnoreColorConditionClass, CanUseCondition negates
+  # HasMatchConditionOwnersPermanent(Queen Device); CardCondition scopes the
+  # bypass to THIS card (cardSource == card). Mirror of BT22-099 Clause 0 with
+  # `any_permanent` swapped for `no_permanent` + name_is "Queen Device".
+  - kind: flood_gate
+    active_when:
+      no_permanent:
+        of: you
+        zone: [battle_area]
+        name_is: "Queen Device"
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT19-093" }
+    summary: "While you have no [Queen Device] in the battle area, ignore color requirements for this card"
 
-# Stubbed:
-# - Ignore color requirements while you do not have Queen Device in battle area
-#   needs a negative battle-area-name predicate for this card.
-# - Main and trashed-from-battle-area effects target one opponent Digimon with
-#   CannotActivateWhenDigivolvingEffects and -3000 DP, then the Main clause
-#   places this Option in the battle area. The battle-area Option placement is
-#   required for the later trash trigger and is not approximated here.
-# - [Security] give two opponent Digimon Security A. -2, then add this card to
-#   hand. Needs multi-target temporary SecurityAttackMinus and security-to-hand.
+  # ─── Clause 2: [Main] -3000 DP + CannotActivateWhenDigivolving on 1 opp ────
+  #
+  # Printed: "[Main] Until the end of your opponent's turn, 1 of their Digimon
+  # can't activate [When Digivolving] effects and gets -3000 DP. Then, place
+  # this card in the battle area."
+  #
+  # Outer trigger NOT optional (DCGO SetUpActivateClass(null, ..., false, ...);
+  # no "you may"). The `select_count_capped_multi { max: 1, clamp_to_available }`
+  # is DCGO's Math.Min(1, count) mandatory single-target select. The per-target
+  # body applies the -3000 DP (end_of_opponents_turn) + the
+  # CannotActivateWhenDigivolvingEffects modifier (until owner turn end).
+  #
+  # NOTE — the trailing "Then, place this card in the battle area" is STUBBED:
+  # G-OPTION-PERSIST-AS-FIELD-CARRIER. `place_self_as_delay_option` would seat
+  # it as an auto-trashing Delayed option, which is unfaithful (DCGO
+  # PlaceDelayOptionCards persists). The debuff body is fully faithful.
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] -3000 DP + can't activate [When Digivolving] on 1 opp Digimon until opp turn end (place-self STUBBED: G-OPTION-PERSIST-AS-FIELD-CARRIER)"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 1
+          clamp_to_available: true
+          filter: { kind: digimon }
+          bind_as: main_tgt
+          prompt: "Select 1 opponent Digimon to give -3000 DP and prevent its [When Digivolving] effects"
+      - per_selected:
+          selection: main_tgt
+          bind_as: t
+          body:
+            - add_dp_modifier:
+                target: { binding: t }
+                value: -3000
+                expiry: end_of_opponents_turn
+            - add_modifier:
+                target: { binding: t }
+                modifier: CannotActivateWhenDigivolvingEffects
+                value: 1
+                expiry: end_of_opponents_turn
+      # Gap: G-OPTION-PERSIST-AS-FIELD-CARRIER — "Then, place this card in the
+      # battle area" needs a persistent (OrdinaryFieldOption) self-placement.
+      # `place_self_as_delay_option` would auto-trash at end of next turn.
+
+  # ─── Clause 3: [Security] (inherited) Security A. -2 on 2 opp + add self ────
+  #
+  # Printed (Security Effect): "[Security] Give 2 of your opponent's Digimon
+  # <Security A. -2> for the turn. Then, add this card to the hand."
+  #
+  # DCGO: SecuritySkill, Math.Min(2, count) select of opponent Digimon →
+  # ChangeDigimonSAttack(-2, UntilEachTurnEnd). Then AddThisCardToHand(card).
+  # `select_count_capped_multi { max: 2, clamp_to_available }` (Math.Min(2,
+  # count)) + per_selected add_modifier SecurityAttackChange -2 end_of_turn.
+  # `add_this_option_to_hand` routes this Option from security staging to hand.
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security][Inherited] 2 opp Digimon get <Security A. -2> for the turn; then add this card to hand"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 2
+          clamp_to_available: true
+          filter: { kind: digimon }
+          bind_as: sec_tgts
+          prompt: "Select 2 opponent Digimon to give <Security A. -2>"
+      - per_selected:
+          selection: sec_tgts
+          bind_as: s
+          body:
+            - add_modifier:
+                target: { binding: s }
+                modifier: SecurityAttackChange
+                value: -2
+                expiry: end_of_turn
+      - add_this_option_to_hand: {}

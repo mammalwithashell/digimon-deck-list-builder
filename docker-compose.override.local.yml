@@ -4,7 +4,7 @@
 #     -f docker-compose.prod.yml -f docker-compose.override.local.yml \
 #     up -d postgres api
 #
-# `.env.local` is gitignored — see ops/deploy/README.md for the template.
+# `.env.local` is gitignored — see docs/runbooks/api-deploy.md for the template.
 services:
   api:
     ports:

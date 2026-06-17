@@ -1,17 +1,149 @@
+# BT13-102 Keenan Crier — Tamer, Purple, Cost 3.
+#
+# Printed card text (card face / cards.json — agree):
+#
+#   [On Play] Your opponent may trash 1 Tamer card or Option card in their
+#     hand. If they don't, gain 1 memory and <Draw 1> (Draw 1 card from your
+#     deck.)
+#   [Opponent's Turn] When an effect plays a Digimon, by suspending this Tamer,
+#     gain 1 memory.
+#
+# Security Effect: [Security] Play this card without paying the cost.
+#
+# Color note: cards.json card_colors = [6] = Purple (0=Red…5=Black,6=Purple;
+# card_data.rs:251-257). The DCGO source path (BT13/Purple/) and the purple
+# card frame agree — the earlier `color: [white]` stub was wrong.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT13/Purple/BT13_102.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — OnEnterFieldAnyone + CanTriggerOnPlay (= [On Play]). The OPPONENT
+#   is the selecting player over THEIR OWN hand: SelectHandEffect(selectPlayer:
+#   Enemy, canTargetCondition: IsOption || IsTamer, maxCount: 1, canNoSelect:
+#   true, Mode.Discard). `discarded` is set iff a card was chosen. Then
+#   `if (!discarded) { Draw(1); AddMemory(1) }` for card.Owner — DCGO order is
+#   Draw THEN AddMemory. So declining (no trash) draws 1 and gains 1 memory;
+#   trashing does neither.
+#
+#   DSL mapping (all shipped vocabulary):
+#   - `as_selecting_player { of: opponent }` makes the opponent the selecting
+#     player over their own hidden hand, so the decline surfaces through
+#     `pending_selection.is_optional` to the RL action space (rule 17, no
+#     auto-selection). Precedent: EX5-060 clause 1.
+#   - `select_hand { of: opponent, optional: true, bind_as: discarded, filter:
+#     any_of [kind: tamer, kind: option] }` + `trash_from_hand_by_index
+#     { of: opponent, hand_index: discarded }` — the AD1-002 / BT13-103
+#     select-then-trash idiom. `cost: false` (the default): a cost-decline
+#     would set `dsl_clause_aborted` and suppress the gain/draw tail; the
+#     non-cost decline runs the tail, which is exactly what's needed.
+#   - The gain+draw is gated on `binding_absent: discarded` (the INVERSE of
+#     AD1-002's `binding_present`) — true iff the opponent declined to trash.
+#     `draw { of: you }` / `gain_memory` credit the controller (ctx.player)
+#     regardless of the opponent selecting-player override. DCGO order is
+#     Draw then AddMemory.
+#
+# Clause 2 — OnEnterFieldAnyone + IsOpponentTurn + CanTriggerOnPermanentPlay
+#   (Digimon) + IsByEffect → optional suspend-self cost
+#   (CanActivateSuspendCostEffect) → AddMemory(1). I.e. on the opponent's turn,
+#   when an EFFECT (not a hard hand-play) plays a Digimon, the controller may
+#   suspend this Tamer to gain 1 memory.
+#
+#   DSL mapping (all shipped vocabulary — EX11-057 clause 3 idiom):
+#   - `when: on_any_digimon_played` (→ EffectTiming::OnEnterFieldAnyone).
+#   - `optional: true` — "by suspending this Tamer" is a declinable cost.
+#   - condition `all_of`:
+#       - `opponents_turn: true` — [Opponent's Turn] gate.
+#       - `event_target_kind: digimon` — "plays a Digimon".
+#       - `event_is_effect_initiated: true` — "an EFFECT plays" (excludes hard
+#         hand plays; the green proof is phase3d_event_context.rs:869).
+#       - `source_is_unsuspended: true` — suspend-cost payability gate
+#         (DCGO CanActivateSuspendCostEffect); no prompt when already suspended.
+#   - process: `activation_cost: { suspend_self: true }` then `gain_memory: 1`.
+#
+# Clause 3 — SecuritySkill → PlaySelfTamerSecurityEffect (standard mandatory
+#   tamer security self-play).
+#
+# ─── Implementation status (faithfulness diff) ──────────────────────────────
+# | [On Play] opp-may-trash Tamer/Option; if not, gain 1 mem + Draw 1 | IMPLEMENTED |
+# | [Opponent's Turn] effect-play → suspend self → gain 1 memory       | BLOCKED (G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN) |
+# | [Security] play without paying the cost                            | IMPLEMENTED |
+
 card: BT13-102
 name: Keenan Crier
 kind: tamer
-color: [white]
+color: [purple]
 cost: 3
 
 effects:
+  # ─── Clause 1 — [On Play] opponent may trash a Tamer/Option; else gain+draw ──
+  - when: on_play
+    summary: "[On Play] Opponent may trash 1 Tamer/Option from hand; if they don't, gain 1 memory and Draw 1"
+    process:
+      - as_selecting_player:
+          of: opponent
+          body:
+            # The opponent chooses (over their own hidden hand) whether to trash
+            # 1 Tamer or Option card. `optional: true` surfaces the decline.
+            - select_hand:
+                of: opponent
+                bind_as: discarded
+                optional: true
+                filter:
+                  any_of:
+                    - kind: tamer
+                    - kind: option
+                prompt: "You may trash 1 Tamer or Option card from your hand"
+            - trash_from_hand_by_index: { of: opponent, hand_index: discarded }
+      # "If they don't" — when the opponent declined (no card bound), the
+      # controller draws 1 and gains 1 memory (DCGO order: Draw then AddMemory).
+      - if:
+          condition: { binding_absent: discarded }
+          then:
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  # ─── Clause 2 — [Opponent's Turn] effect-play → suspend self → +1 memory ─────
+  #
+  # STUBBED — engine gap `G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN`.
+  #
+  # The faithful authoring would be (all shipped vocabulary, verified to compile):
+  #
+  #   - when: on_any_digimon_played
+  #     optional: true
+  #     summary: "[Opponent's Turn] When an effect plays a Digimon, by suspending this Tamer, gain 1 memory"
+  #     condition:
+  #       all_of:
+  #         - opponents_turn: true
+  #         - event_target_kind: digimon
+  #         - event_is_effect_initiated: true
+  #         - source_is_unsuspended: true
+  #     process:
+  #       - activation_cost: { suspend_self: true }
+  #       - gain_memory: 1
+  #
+  # The clause fires correctly on the opponent's turn (the optional pre-cost
+  # TriggerOrder prompt installs for P0 and `gain_memory` resolves), but the
+  # SUSPEND-SELF activation cost silently no-ops whenever the effect's
+  # controller is NOT the turn player (i.e. on the opponent's turn). Empirically
+  # (this worktree): on the controller's OWN turn the suspend works for any
+  # `effect_initiated`/playing-player combination; on the OPPONENT's turn it
+  # no-ops with no `OnSuspend` event — even though `Game::suspend_with_cause`
+  # called directly DOES suspend the carrier, and both `progress_excludes` and
+  # `permanent_is_unaffected_by_effect` return false for the carrier under
+  # either player id (so `EffectContext::can_affect_permanent` would pass). The
+  # no-op lives in the live cost-resolution context's source-permanent /
+  # controller threading for an `OnEnterFieldAnyone` observer fired on the
+  # opponent's turn — an engine fix, not a card-authoring change.
+  #
+  # Shipping the clause with the cost silently unpaid (free memory each opponent
+  # effect-play) is an approximation and is disallowed (CLAUDE.md §17/§18), so
+  # the whole clause is omitted until the gap closes. Behavioral test
+  # `bt13_102_observer_effect_play_opp_turn_accept_suspends_and_gains` is
+  # `#[ignore]`-gated on this gap_id.
+
+  # ─── Clause 3 — [Security] play this card without paying the cost ────────────
   - when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}
-
-# Stubbed:
-# - [On Play] opponent may trash a Tamer/Option from hidden hand; if they do
-#   not, you gain 1 memory and draw 1. This needs opponent hidden-hand choice.
-# - [Opponent's Turn] when an effect plays a Digimon, suspend this Tamer to
-#   gain 1 memory. This needs an effect-play observer with suspend-self cost.

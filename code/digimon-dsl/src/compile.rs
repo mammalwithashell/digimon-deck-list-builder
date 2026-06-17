@@ -616,6 +616,7 @@ fn compile_predicate(
             .color_matches_any_field_digimon
             .map(|s| compile_player_ref(s.player())),
         color_matches_binding: p.color_matches_binding.clone(),
+        color_matches_returned_card: p.color_matches_returned_card,
         trait_has: p.trait_has.clone(),
         trait_contains: p.trait_contains.clone(),
         form_is: p.form_is.clone(),
@@ -702,6 +703,7 @@ fn compile_predicate(
         }),
         source_is_tamer: p.source_is_tamer,
         source_is_unsuspended: p.source_is_unsuspended,
+        is_source_permanent: p.is_source_permanent,
         source_name_contains: p.source_name_contains.clone(),
         source_permanent_trait_has: p.source_permanent_trait_has.clone(),
         is_face_down: p.is_face_down,
@@ -845,6 +847,7 @@ fn compile_predicate(
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
+        event_card_text_contains: p.event_card_text_contains.clone(),
         event_card_level_eq: p.event_card_level_eq,
         event_card_level_gte: p.event_card_level_gte.as_ref().map(|d| {
             compile_dp_constraint(
@@ -896,6 +899,17 @@ fn compile_predicate(
         }),
         effect_deleted_any_own_digimon: p.effect_deleted_any_own_digimon,
         effect_deleted_any_opponent_digimon: p.effect_deleted_any_opponent_digimon,
+        effect_deleted_opponent_digimon_dp_gte: p
+            .effect_deleted_opponent_digimon_dp_gte
+            .as_ref()
+            .map(|d| {
+                compile_dp_constraint(
+                    d,
+                    &format!("{prefix}.effect_deleted_opponent_digimon_dp_gte"),
+                    card_id,
+                    errors,
+                )
+            }),
         effect_played_any_digimon: p.effect_played_any_digimon,
         effect_digivolved_any_digimon: p.effect_digivolved_any_digimon,
         effect_added_any_card_to_hand: p.effect_added_any_card_to_hand,
@@ -1736,6 +1750,7 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
             binding,
             of_permanent,
             deck_top,
+            own_breeding,
             ..
         }) => {
             if let Some(p) = permanent {
@@ -1746,6 +1761,8 @@ fn compile_binding_ref(b: &crate::step::BindingRef) -> CompiledBindingRef {
                 CompiledBindingRef::OfPermanent(o.clone())
             } else if let Some(p) = deck_top {
                 CompiledBindingRef::DeckTop(compile_player_ref(*p))
+            } else if matches!(own_breeding, Some(true)) {
+                CompiledBindingRef::OwnBreeding
             } else {
                 CompiledBindingRef::Named(String::new())
             }
@@ -2062,6 +2079,10 @@ fn compile_step(
         },
         S::ReturnSelectedSourcesToHand(a) => CompiledStep::ReturnSelectedSourcesToHand {
             source_refs: a.source_refs.clone(),
+        },
+        S::ReturnSelectedSourcesToDeck(a) => CompiledStep::ReturnSelectedSourcesToDeck {
+            source_refs: a.source_refs.clone(),
+            position: compile_stack_position(a.position),
         },
         S::BindPermanentProperty(a) => CompiledStep::BindPermanentProperty {
             from: compile_binding_ref(&a.from),
@@ -2744,6 +2765,39 @@ fn compile_step(
             zones: a.zones.iter().map(|z| compile_zone(*z)).collect(),
             material_of: a.material_of.as_ref().map(compile_binding_ref),
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+            zone_filters: a
+                .zone_filters
+                .as_ref()
+                .map(|zf| crate::compiled::CompiledUnionZoneFilters {
+                    hand: zf.hand.as_ref().map(|p| {
+                        compile_predicate(p, &format!("{prefix}.zone_filters.hand"), card_id, errors)
+                    }),
+                    trash: zf.trash.as_ref().map(|p| {
+                        compile_predicate(
+                            p,
+                            &format!("{prefix}.zone_filters.trash"),
+                            card_id,
+                            errors,
+                        )
+                    }),
+                    material: zf.material.as_ref().map(|p| {
+                        compile_predicate(
+                            p,
+                            &format!("{prefix}.zone_filters.material"),
+                            card_id,
+                            errors,
+                        )
+                    }),
+                })
+                .unwrap_or_default(),
+            material_carrier_filter: a.material_carrier_filter.as_ref().map(|p| {
+                compile_predicate(
+                    p,
+                    &format!("{prefix}.material_carrier_filter"),
+                    card_id,
+                    errors,
+                )
+            }),
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),

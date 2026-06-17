@@ -512,6 +512,68 @@ fn drasil_observer_cost_reduction_lowers_from_yaml() {
 }
 
 #[test]
+fn drasil_production_structured_formula_matches_raw_rust() {
+    // The PRODUCTION BT13-007 (cards/bt13/) reduces Royal Knight play cost via a
+    // structured `amount_fn: { base: 4, per: material_count, delta: 1 }` instead
+    // of the raw_rust escape hatch the _examples copy uses. It MUST reduce
+    // identically (4 + digivolution cards under King Drasil) — proving the
+    // migration off the test-only-registered raw_rust fn preserved behavior
+    // (fix-dsl-substrate-rot-and-bugs: BT13-007 was a silent no-op in production).
+    let spec: digimon_dsl::CardSpec =
+        serde_yml::from_str(include_str!("../../cards/bt13/BT13-007.yaml"))
+            .expect("production BT13-007 YAML parses");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("production BT13-007 compiles");
+
+    let dsl = DslCardEffect::new(Arc::new(compiled));
+    let effects = dsl.effects(CardHandle(0));
+    let reducer = effects
+        .iter()
+        .find(|effect| effect.timing == EffectTiming::BeforePayCost)
+        .expect("structured BT13-007 emits a BeforePayCost reducer");
+    assert!(
+        reducer.cost_reduction_fn.is_some(),
+        "structured Drasil uses a formula reduction (not a flat literal or raw_rust)"
+    );
+
+    let mut rules = Rules::standard();
+    rules.memory_range = (-20, 20);
+    let mut r = DebugRunner::builder()
+        .with_rules(rules)
+        .add_card(digimon("AD1-025", 15, &["Royal Knight"]))
+        .add_card(egg("BT13-007", &[]))
+        .add_card(egg("SRC-1", &[]))
+        .add_card(egg("SRC-2", &[]))
+        .hand(0, &["AD1-025"])
+        .memory(20)
+        .start();
+
+    r.register_effect("BT13-007", Arc::new(dsl));
+    r.register_effect("AD1-025", Arc::new(NoEffect));
+    r.register_effect("SRC-1", Arc::new(NoEffect));
+    r.register_effect("SRC-2", Arc::new(NoEffect));
+    r.place_in_breeding(0, "BT13-007");
+    add_breeding_source(&mut r, 0, "SRC-1");
+    add_breeding_source(&mut r, 0, "SRC-2");
+    r.game_mut().enter_main_phase();
+
+    assert!(
+        r.play(0, 0).is_none(),
+        "structured Drasil parks as an optional reducer"
+    );
+    assert!(r.pending_selection().is_some());
+    assert_eq!(r.memory(), 20);
+
+    r.execute_branch(0).expect("accept structured Drasil");
+
+    assert_eq!(
+        r.memory(),
+        11,
+        "15 - (4 + 2 sources) = 9 — structured formula matches the former raw_rust"
+    );
+    assert_ad1_played(&r);
+}
+
+#[test]
 fn observer_cost_reduction_preserves_compiled_optional_flag() {
     let observer = digimon_dsl::compiled::CompiledPredicate {
         trait_has: Some("Royal Knight".to_string()),

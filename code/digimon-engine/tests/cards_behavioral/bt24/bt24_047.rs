@@ -109,7 +109,7 @@ fn bt24_047_suspending_own_bird_unsuspends_it_and_opens_may_attack() {
     let suspend_prompt = runner
         .pending_selection_view()
         .expect("Kokatorimon should offer a Digimon to suspend");
-    assert_eq!(suspend_prompt.kind, SelectionKind::Target);
+    assert_eq!(suspend_prompt.kind, SelectionKind::AnyField);
     let bird_suspend_action = encode_attack(bird.player as u16, bird.index as u16);
     assert!(
         suspend_prompt

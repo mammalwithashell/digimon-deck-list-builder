@@ -3,6 +3,10 @@
 This doc covers shipping the hosted API (`digimon_gym.api:app`) to a public
 endpoint. Desktop sidecar packaging is separate (`docs/TOOLS.md`).
 
+> **How to actually run a deploy / rollback / restore:** see the procedural
+> runbook [`docs/runbooks/api-deploy.md`](runbooks/api-deploy.md) (or the
+> `deploy-hosted-api` skill for the happy path).
+
 ## Target: DigitalOcean
 
 The recommended topology for alpha:

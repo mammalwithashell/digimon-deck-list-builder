@@ -23,7 +23,7 @@
 //! - Cost-reduction formula: floor(combined_trash / 5) * 2 (BasePerDelta)
 //! - Rush keyword installed on field entry
 //! - Blocker keyword installed on field entry
-//! - [On Play] delete-or-recover: SelectionKind::Target (select_any_permanent)
+//! - [On Play] delete-or-recover: SelectionKind::AnyField (select_any_permanent)
 //! - [When Digivolving] same delete-or-recover via enqueue_triggered
 //! - Recovery +1 (Deck) fires when no ≥13000 DP target exists (binding absent)
 //! - Recovery +1 does NOT fire when a target is deleted (binding present)
@@ -578,7 +578,7 @@ fn p_186_cost_reduction_gate_includes_own_field_digimon() {
 // ═══════════════════════════════════════════════════════════════════════════════
 
 /// [On Play] with a ≥13000 DP Digimon on the field installs a selection prompt
-/// (SelectionKind::Target, since select_any_permanent encodes via encode_attack).
+/// (SelectionKind::AnyField, since select_any_permanent encodes via encode_attack).
 #[test]
 fn p_186_on_play_installs_target_selection_when_high_dp_target_exists() {
     let mut runner = DebugRunner::builder()
@@ -606,8 +606,8 @@ fn p_186_on_play_installs_target_selection_when_high_dp_target_exists() {
         .expect("selection view must be present");
     assert_eq!(
         view.kind,
-        SelectionKind::Target,
-        "select_any_permanent must install SelectionKind::Target"
+        SelectionKind::AnyField,
+        "select_any_permanent must install SelectionKind::AnyField"
     );
 }
 

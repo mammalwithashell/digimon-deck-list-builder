@@ -13,14 +13,83 @@ alt_paths:
     cost: 3
 
 effects:
-  - kind: raw_rust
-    fn: bt11_042_when_digivolving_security_search_recovery
-    triggers: [when_digivolving]
+  # ─── [When Digivolving] security search → reveal/add → Recovery +1 → shuffle ───
+  #
+  # Printed text:
+  #   "[When Digivolving] You may search your security stack, reveal 1 card with
+  #    the [Angel], [Archangel] or [Fallen Angel] trait from it, and add it to
+  #    your hand. If you added a card, <Recovery +1 (Deck)>. Then, shuffle your
+  #    security stack."
+  #
+  # DCGO BT11_042.cs — SetUpActivateClass(CanActivateCondition, ActivateCoroutine,
+  #   maxCountPerTurn = -1, isOptional = TRUE, ...). ICardEffect.cs:
+  #   Activate_Optional shows the outer accept/decline (OptionalSkill); the
+  #   coroutine runs ONLY if (UseOptional || !IsOptional). So the WHOLE effect is
+  #   declinable at an OUTER prompt → declining skips everything (incl. shuffle).
+  #   Inside the coroutine: SelectCardEffect root=Security, maxCount=1,
+  #   canNoSelect=()=>true (inner PASS — no add, but shuffle still runs),
+  #   isShowOpponent=true, mode=AddHand; if a card was added → IRecovery(owner,1);
+  #   ShuffledDeckCards(SecurityCards) runs unconditionally (security count>=1).
+  #
+  # Two-level optionality requires BOTH `optional: true` AND `outer_prompt: true`
+  # at the clause level: because the first body step (search) is itself
+  # declinable, plain `optional: true` would collapse to a single prompt whose
+  # inner PASS doubles as the decline (and would wrongly skip the shuffle on a
+  # pass). `outer_prompt: true` forces the distinct outer Yes/No so:
+  #   - outer decline           → whole body skipped, NO shuffle   (DCGO isOptional)
+  #   - outer accept + inner PASS→ no add/recover, shuffle runs     (DCGO canNoSelect)
+  #   - outer accept + pick     → add + recover + shuffle           (DCGO normal)
+  - when: when_digivolving
+    optional: true
+    outer_prompt: true
+    summary: "[When Digivolving] You may add 1 Angel/Archangel/Fallen Angel card from your security to hand; if added, Recovery +1 (Deck); then shuffle security"
+    process:
+      - search_own_security_stack:
+          optional: true
+          bind_as: chosen
+          prompt: "You may reveal 1 [Angel]/[Archangel]/[Fallen Angel] card from your security and add it to your hand"
+          filter:
+            any_of:
+              - trait_has: Angel
+              - trait_has: Archangel
+              - trait_has: "Fallen Angel"
+          on_select:
+            - add_to_hand_from_security: { of: you, card: chosen }
+            - recover: { of: you, count: 1 }
+      - shuffle_security: { of: you }
 
-  - kind: raw_rust
-    fn: bt11_042_your_turn_ladydevimon_or_mirei
-    triggers: [on_ally_played]
+  # ─── [Your Turn][Once Per Turn] play LadyDevimon/Mirei Mikagura → gain 1 memory ───
+  #
+  # Printed text:
+  #   "[Your Turn] [Once Per Turn] When you play [LadyDevimon] or
+  #    [Mirei Mikagura], gain 1 memory."
+  #
+  # DCGO: SetUpActivateClass(..., maxCountPerTurn = 1, isOptional = FALSE, ...)
+  #   + SetHashString("Memory+1_BT11_042"); CanUseCondition = IsExistOnBattleArea
+  #   + IsOwnerTurn + CanTriggerOnPermanentPlay(PermanentCondition) where the
+  #   played permanent is on the OWNER's battle area and TopCard.CardNames
+  #   .Contains "LadyDevimon" OR "Mirei Mikagura"/"MireiMikagura". Mandatory
+  #   AddMemory(1). NOT restricted to Digimon (Mirei Mikagura is a Tamer).
+  #
+  # Mapping: active_when your_turn (IsOwnerTurn); once_per_turn (SetHashString /
+  #   maxCountPerTurn=1); event_target_name_contains (CardNames.Contains, case-
+  #   insensitive substring); no event_target_kind (Tamer must qualify); not
+  #   optional (mandatory). event_target_owner: you is redundant given on_ally_played
+  #   already scans only the playing player's own field, but kept for clarity.
+  - when: on_ally_played
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_target_name_contains: "LadyDevimon"
+            - event_target_name_contains: "Mirei Mikagura"
+    summary: "[Your Turn][OPT] When you play LadyDevimon or Mirei Mikagura, gain 1 memory"
+    process:
+      - gain_memory: 1
 
+  # ─── Inherited [Opponent's Turn] conditional Blocker aura (already pure DSL) ───
   - scope: inherited
     kind: aura
     active_when:
@@ -37,5 +106,5 @@ effects:
       any_of:
         - trait_has: Angel
         - trait_has: Archangel
-        - trait_has: Fallen Angel
+        - trait_has: "Fallen Angel"
     grant_keyword: { keyword: Blocker }

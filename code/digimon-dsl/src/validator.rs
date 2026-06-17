@@ -952,6 +952,32 @@ fn validate_step(
                 ctx,
                 errors,
             );
+            if let Some(zf) = &args.zone_filters {
+                for (label, pred) in [
+                    ("hand", &zf.hand),
+                    ("trash", &zf.trash),
+                    ("material", &zf.material),
+                ] {
+                    if let Some(pred) = pred {
+                        validate_predicate(
+                            pred,
+                            &format!("{prefix}.zone_filters.{label}"),
+                            card_id,
+                            ctx,
+                            errors,
+                        );
+                    }
+                }
+            }
+            if let Some(pred) = &args.material_carrier_filter {
+                validate_predicate(
+                    pred,
+                    &format!("{prefix}.material_carrier_filter"),
+                    card_id,
+                    ctx,
+                    errors,
+                );
+            }
         }
         StepSpec::SelectCountCappedMulti(args) => {
             if let crate::step::CountBound::Formula { formula } = &args.max {
@@ -1320,6 +1346,32 @@ fn validate_step_binding_scope(
                 scope,
                 errors,
             );
+            if let Some(zf) = &args.zone_filters {
+                for (label, pred) in [
+                    ("hand", &zf.hand),
+                    ("trash", &zf.trash),
+                    ("material", &zf.material),
+                ] {
+                    if let Some(pred) = pred {
+                        validate_predicate_binding_scope(
+                            pred,
+                            &format!("{prefix}.zone_filters.{label}"),
+                            card_id,
+                            scope,
+                            errors,
+                        );
+                    }
+                }
+            }
+            if let Some(pred) = &args.material_carrier_filter {
+                validate_predicate_binding_scope(
+                    pred,
+                    &format!("{prefix}.material_carrier_filter"),
+                    card_id,
+                    scope,
+                    errors,
+                );
+            }
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::SelectOrderedPermutation(args) => {
@@ -1858,6 +1910,7 @@ fn validate_binding_ref(
         source_permanent,
         of_permanent,
         deck_top,
+        own_breeding,
         ..
     }) = binding_ref
     else {
@@ -1877,6 +1930,7 @@ fn validate_binding_ref(
         permanent.is_some(),
         of_permanent.is_some(),
         deck_top.is_some(),
+        matches!(own_breeding, Some(true)),
     ]
     .iter()
     .filter(|present| **present)
