@@ -109,6 +109,18 @@ pub enum SelectionKind {
     OwnField,
     /// Pick a Digimon on the opponent's field.
     OppField,
+    /// Pick one permanent from a union spanning BOTH battle areas (own AND
+    /// opponent), e.g. `select_any_permanent` / `select_dna_pair`. Unlike
+    /// `OwnField` / `OppField` — whose `valid_action_ids` are `encode_attack(0,
+    /// slot)` (`100 + slot`) with the side carried implicitly by the kind — an
+    /// `AnyField` selection encodes each candidate as `encode_attack(player,
+    /// index)` (`100 + player * TARGETS_PER_ATTACKER + index`), so the absolute
+    /// player id is recoverable from the action id itself. The UI must decode
+    /// (player, index) per id and highlight/route to the correct side; a single
+    /// `OwnField`/`OppField` kind can't express a both-sides target set (which is
+    /// why routing these as `Target` left them unclickable — the board's
+    /// field-selection helpers only recognize `OwnField`/`OppField`).
+    AnyField,
     /// Pick a card from a player's hand.
     Hand,
     /// Pick a card from a player's trash.

@@ -78,127 +78,6 @@ fn bt21_093_delete_highest_dp_opponent(_ctx: &mut EffectContext<'_>, _bindings: 
     // a raw_rust-driven selection installer.
 }
 
-/// EX8-070 Zofr Kabus — [Security] Delete 1 of opponent's Digimon with the
-/// lowest play cost.
-///
-/// Printed text: "[Security] Delete 1 of your opponent's Digimon with the
-/// lowest play cost."
-///
-/// GAP G-PLAY-COST-AGGREGATE: No DSL predicate for selecting permanents by
-/// aggregate (minimum) play cost. This step computes the minimum play cost
-/// among opponent Digimon and deletes the first one at that cost. When
-/// multiple Digimon share the lowest cost, the printed "1 of" implies a
-/// player choice (tie-breaking selection), but that requires a two-pass
-/// raw_rust pending G-PLAY-COST-AGGREGATE closure. For now the lowest-index
-/// tied target is auto-deleted as a simplification.
-///
-/// When G-PLAY-COST-AGGREGATE closes, replace with a native DSL expression
-/// that uses `select_opponent_permanent` filtered by `play_cost_lte: { agg: min }`.
-///
-/// Tracked in qa/dsl-vocab-gaps.md under G-PLAY-COST-AGGREGATE.
-fn ex8_070_delete_lowest_cost_digimon(ctx: &mut EffectContext<'_>, _bindings: &mut Bindings) {
-    use crate::enums::CardKind;
-    use crate::permanent::PermanentHandle;
-
-    let opponent = ctx.opponent_id();
-
-    // Collect (handle, play_cost) for every opponent Digimon.
-    let digimon_costs: Vec<(PermanentHandle, u16)> = ctx
-        .game
-        .player(opponent)
-        .battle_area
-        .iter()
-        .enumerate()
-        .filter_map(|(idx, perm)| {
-            let top = perm.top_card();
-            let data = &ctx.game.card_data[top.data_index];
-            if data.card_kind == CardKind::Digimon {
-                let handle = PermanentHandle {
-                    player: opponent,
-                    index: idx as u8,
-                };
-                Some((handle, data.play_cost))
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    // Nothing to do if opponent has no Digimon.
-    if digimon_costs.is_empty() {
-        return;
-    }
-
-    // Find the minimum play cost.
-    let min_cost = digimon_costs
-        .iter()
-        .map(|(_, cost)| *cost)
-        .min()
-        .unwrap_or(0);
-
-    // Delete the first Digimon at the minimum cost (lowest battle-area index).
-    // Tie-breaking selection pending G-PLAY-COST-AGGREGATE.
-    if let Some((handle, _)) = digimon_costs
-        .into_iter()
-        .find(|(_, cost)| *cost == min_cost)
-    {
-        ctx.delete_permanent(handle);
-    }
-}
-
-/// BT24-062 MasterBlimpmon — inherited [Your Turn] target-lock declarative.
-///
-/// Printed inherited text: "[Your Turn] This Digimon's attack target can't change."
-///
-/// Refreshes `ModifierType::CannotSwitchAttackTarget` on the host permanent
-/// (the active top card of the digivolution stack containing this card source)
-/// every declarative tick when the host's controller is the turn player. The
-/// modifier is auto-cleared between ticks because `add_declarative_modifier`
-/// sets `materialized_declarative: true`, and Track D's combat consult sites
-/// (Block window early-return, Raid retarget early-return, and the unified
-/// `apply_attack_target_substitution` no-op) read the modifier directly.
-///
-/// Two declaratives are emitted to cover both scopes the Rust engine's tick
-/// model exposes — `face_up` (BT24-062 is the active top card) and
-/// `inherited` (BT24-062 is a digivolution source under another Digimon).
-/// In both cases `source_permanent` resolves to the host, so the body is
-/// identical; only the `.inherited()` flag differs. Without the face-up
-/// emission the modifier would not install when BT24-062 IS the host —
-/// the tick walks the top card with `inherited_source = false` and skips
-/// effects whose `inherited` flag is set.
-fn bt24_062_attack_target_lock(card: crate::card_source::CardHandle) -> Vec<Effect> {
-    use crate::enums::{Expiry, ModifierType};
-
-    fn install(ctx: &mut EffectContext<'_>) {
-        let Some(host) = ctx.source_permanent else {
-            return;
-        };
-        if ctx.game.turn_player() != host.player {
-            return;
-        }
-        ctx.add_declarative_modifier(
-            host,
-            ModifierType::CannotSwitchAttackTarget,
-            0,
-            Expiry::Permanent,
-        );
-    }
-
-    vec![
-        Effect::declarative(card)
-            .name("[Your Turn] target lock — face up")
-            .materializes_declarative_state()
-            .process(install)
-            .build(),
-        Effect::declarative(card)
-            .name("[Your Turn] target lock — inherited source")
-            .inherited()
-            .materializes_declarative_state()
-            .process(install)
-            .build(),
-    ]
-}
-
 /// BT13-040 Magnamon — would-leave observer tail.
 ///
 /// Printed text: "When this Digimon would leave the battle area, <Draw 1>.
@@ -327,11 +206,11 @@ pub fn build_registry() -> EngineRawRustRegistry {
         "bt21_093_delete_highest_dp_opponent",
         bt21_093_delete_highest_dp_opponent,
     );
-    r.register_step(
-        "ex8_070_delete_lowest_cost_digimon",
-        ex8_070_delete_lowest_cost_digimon,
-    );
-    r.register_declarative("bt24_062_attack_target_lock", bt24_062_attack_target_lock);
+    // EX8-070 (security delete lowest-play-cost) and BT24-062 (inherited
+    // attack-target lock) were migrated off raw_rust to pure DSL —
+    // `select_opponent_permanent { selector: lowest_play_cost }` and
+    // `flood_gate { target: { is_source_permanent: true }, scope: both }`
+    // respectively (fix-dsl-substrate-rot-and-bugs).
     r.register_step(
         "bt13_040_may_play_veemon_from_hand_or_source",
         bt13_040_may_play_veemon_from_hand_or_source,

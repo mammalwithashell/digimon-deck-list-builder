@@ -7,7 +7,16 @@ import { canUseDeckForFormat, getPlayFormat } from '@/features/play/formatCatalo
 import { createBotGame } from '@/features/play/playApi';
 import { usePlayFlowStore } from '@/features/play/playFlowStore';
 import type { DeckSummary } from '@/types/deck';
+import { getCardImageUrl } from '@/utils/cardImages';
 import './DeckSelectPage.css';
+
+function deckInitials(name: string): string {
+  return name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('');
+}
 
 export function DeckSelectPage() {
   const navigate = useNavigate();
@@ -159,11 +168,18 @@ export function DeckSelectPage() {
                 onClick={() => selectDeck(deck.id)}
               >
                 <span className="glyph">
-                  {deck.name
-                    .split(/\s+/)
-                    .map((part) => part[0])
-                    .slice(0, 2)
-                    .join('')}
+                  {deck.deck_icon_card_id ? (
+                    <img
+                      src={getCardImageUrl(deck.deck_icon_card_id)}
+                      alt=""
+                      loading="lazy"
+                      draggable={false}
+                      onError={(event) => {
+                        event.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  ) : null}
+                  <span>{deckInitials(deck.name)}</span>
                 </span>
                 <span className="name">{deck.name}</span>
                 <span className="meta">

@@ -275,9 +275,10 @@ fn permutation_then_opponent_union_zone_tech_flow() {
             p0,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "Opponent: choose a card from your opponent's hand or trash",
             false,
-            |_, _| true,
+            |_, _, _| true,
             move |resolve_ctx, chosen_handle, origin| {
                 // The callback receives the picked card's handle plus the
                 // zone it came from (UnionZoneOrigin).

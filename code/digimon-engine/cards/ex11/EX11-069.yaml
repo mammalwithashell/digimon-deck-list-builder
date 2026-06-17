@@ -28,11 +28,88 @@ effects:
     process:
       - play_from_security: {}
 
-  # Omitted:
-  # - [Your Turn][OPT] attack observer that digivolves from trash into a Dark
-  #   Dragon/Evil Dragon with cost reduced by 1.
-  # - [End of All Turns] hand-size-gated suspend-self cost to return an Evil,
-  #   Dark Dragon, or Evil Dragon card from trash to hand.
+  # ─── Clause 3 — [Your Turn][Once Per Turn] attack-digivolve from trash ──────
   #
-  # These require trash-zone effect digivolve and an end-of-all-turns
-  # source-bound suspend-cost recursion shape.
+  # Printed: "[Your Turn] [Once Per Turn] When one of your Digimon attacks, if
+  # you have 4 or fewer cards in your hand, it may digivolve into a [Dark Dragon]
+  # or [Evil Dragon] trait Digimon card in the trash with the digivolution cost
+  # reduced by 1."
+  #
+  # DCGO (EX11_069.cs OnAllyAttack): SetUpActivateClass(..., 1, true, ...) =
+  # once-per-turn + optional. CanUse gates on owner's turn + the ATTACKING
+  # permanent being an owner battle-area Digimon. CanActivate gates on hand <= 4
+  # and a matching [Dark Dragon]/[Evil Dragon] Digimon in the owner's trash.
+  # Body: DigivolveIntoHandOrTrashCard(targetPermanent: AttackingPermanent,
+  # payCost:true, reduceCost:1, isHand:false). The attacker is the digivolve
+  # target (target: event_target — on_ally_attack binds the attacker as the
+  # event permanent); the trash card is the result (source: <trash binding>).
+  # The shared trash-source reduced-cost digivolve idiom is proven by
+  # BT25-024 Lekismon (select_trash -> effect_initiated_digivolve cost reduce 1);
+  # the on_ally_attack + event_target(attacker) half by ST18-14 / BT25-016.
+  - when: [on_ally_attack]
+    optional: true
+    once_per_turn: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][Once Per Turn] When your Digimon attacks & hand ≤ 4, it may digivolve into a [Dark Dragon]/[Evil Dragon] in trash, cost -1"
+    condition:
+      count_lte:
+        filter: { of: you, zone: [hand] }
+        n: 4
+    process:
+      - select_trash:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "Dark Dragon"
+                  - trait_has: "Evil Dragon"
+          prompt: "Digivolve the attacker into a [Dark Dragon]/[Evil Dragon] card in trash (cost -1)"
+      - effect_initiated_digivolve:
+          target: event_target
+          source: evo
+          cost: { reduce: 1 }
+          ignore_requirements: false
+
+  # ─── Clause 4 — [End of All Turns] suspend self → return trait card ─────────
+  #
+  # Printed: "[End of All Turns] If you have 4 or fewer cards in your hand, by
+  # suspending this Tamer, you may return 1 [Evil], [Dark Dragon] or [Evil
+  # Dragon] trait card from your trash to the hand."
+  #
+  # DCGO (EX11_069.cs OnEndTurn): SetUpActivateClass(..., -1, true, ...) =
+  # optional. CanActivate gates on hand <= 4 && CanActivateSuspendCostEffect.
+  # Body: suspend self (Tap), then SelectCardEffect(canNoSelect:true, AddHand
+  # from Trash). CanSelectCardCondition admits EqualsTraits("Evil") ||
+  # ("Dark Dragon") || ("Evil Dragon") — NOT restricted to Digimon, so the
+  # filter is a bare trait-union with no kind gate.
+  #
+  # [End of All Turns] = end_of_your_turn + end_of_opponents_turn (BT20-084).
+  # `activation_cost: { suspend_self: true }` as the first step is the
+  # source-bound suspend cost (EX11-054, BT13-101, BT24-085). `source_is_
+  # unsuspended: true` mirrors DCGO's CanActivateSuspendCostEffect (the suspend
+  # cost can only be paid while Yuuki is unsuspended). The select_trash is
+  # `optional: true` to surface DCGO's canNoSelect:true on the inner pick.
+  - when: [end_of_your_turn, end_of_opponents_turn]
+    optional: true
+    summary: "[End of All Turns] If hand ≤ 4, suspend this Tamer to return 1 [Evil]/[Dark Dragon]/[Evil Dragon] card from trash to hand"
+    condition:
+      all_of:
+        - count_lte:
+            filter: { of: you, zone: [hand] }
+            n: 4
+        - source_is_unsuspended: true
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_trash:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            any_of:
+              - trait_has: "Evil"
+              - trait_has: "Dark Dragon"
+              - trait_has: "Evil Dragon"
+          prompt: "Return 1 [Evil]/[Dark Dragon]/[Evil Dragon] card from trash to hand"
+      - add_to_hand_from_trash: { of: you, card: pick }

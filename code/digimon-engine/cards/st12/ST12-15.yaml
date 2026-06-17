@@ -10,10 +10,17 @@ effects:
     summary: "[Main] Reveal 3; add Huckmon/Sistermon/Royal Knight; trash rest; place self in battle area"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      # "Add 1 card with [Huckmon]/[Sistermon] in its name or [Royal Knight] in
+      # its traits among them to your hand." DCGO (ST12_15.cs) reveals via
+      # SimplifiedRevealDeckTopCardsAndSelect with maxCount:1 and no canNoSelect
+      # — a mandatory add when a qualifying card is revealed. `optional: false`
+      # forces the pick when a candidate exists and is a no-op when none match
+      # (select_reveal auto-skips a zero-candidate forced pick); `optional: true`
+      # would auto-decline the add and unfaithfully trash the matching card.
       - select_reveal:
           of: you
           bind_as: picked
-          optional: true
+          optional: false
           filter:
             any_of:
               - name_contains: "Huckmon"
@@ -32,10 +39,11 @@ effects:
     summary: "[Security] Activate this card's Main effect"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      # Mandatory add-if-able — see the [Main] clause note above.
       - select_reveal:
           of: you
           bind_as: picked
-          optional: true
+          optional: false
           filter:
             any_of:
               - name_contains: "Huckmon"
@@ -50,7 +58,24 @@ effects:
             - trash_from_reveal: { of: you, card: rest }
       - place_self_as_delay_option: {}
 
-  # Omitted:
-  # [Delay] Next time one of your Digimon would digivolve this turn, reduce the
-  # digivolution cost by 1. Current DSL lacks a Delay activation that installs a
-  # one-shot next-digivolution cost reduction.
+  # [Main] <Delay> (Trash this card in your battle area to activate the effect
+  # below. You can't activate this effect the turn this card enters play.)
+  #   The next time one of your Digimon would digivolve this turn, reduce the
+  #   digivolution cost by 1.
+  #
+  # `trigger: delayed` parks the Option until its controller activates it on a
+  # later main phase (the activation trashes ST12-15 as its cost); the body
+  # then arms a player-scoped, turn-scoped, single-fire, ANY-color, FREE
+  # digivolve cost reducer. DCGO (ST12_15.cs OnDeclaration) installs an
+  # unconditional `Cost -= 1` for any of the controller's Digimon with NO
+  # accept/decline gate, so `suspend_cost` is omitted (false) — the engine
+  # auto-applies the -1 at the next qualifying digivolution. `target_color` is
+  # omitted (any color) and `single_fire` makes it a one-shot ("the next
+  # time ... this turn"). G-DELAY-NEXT-DIGIVOLVE-COST-REDUCTION.
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> The next time one of your Digimon would digivolve this turn, reduce the cost by 1"
+    process:
+      - arm_digivolve_cost_reducer:
+          amount: 1
+          single_fire: true

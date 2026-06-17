@@ -74,9 +74,10 @@ fn install_sets_phase_and_kind() {
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "pick one",
             false,
-            |_, _| true,
+            |_, _, _| true,
             |_, _, _| {},
         );
     }
@@ -117,9 +118,10 @@ fn valid_action_ids_covers_both_zones() {
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "pick",
             false,
-            |_, _| true,
+            |_, _, _| true,
             |_, _, _| {},
         );
     }
@@ -173,9 +175,10 @@ fn filter_restricts_valid_action_ids() {
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "trash only",
             false,
-            |game, card| game.card_data[card.data_index].card_id.starts_with('T'),
+            |game, card, _zone| game.card_data[card.data_index].card_id.starts_with('T'),
             |_, _, _| {},
         );
     }
@@ -211,9 +214,10 @@ fn empty_filter_is_noop() {
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "none eligible",
             true,
-            |_, _| false,
+            |_, _, _| false,
             |_, _, _| {},
         );
     }
@@ -246,9 +250,10 @@ fn hand_only_zone_excludes_trash() {
             tp,
             UnionZoneSet::HAND,
             None,
+            None, // material_carrier_filter
             "hand only",
             false,
-            |_, _| true,
+            |_, _, _| true,
             |_, _, _| {},
         );
     }
@@ -274,9 +279,10 @@ fn trash_only_zone_excludes_hand() {
             tp,
             UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "trash only",
             false,
-            |_, _| true,
+            |_, _, _| true,
             |_, _, _| {},
         );
     }
@@ -314,9 +320,10 @@ fn callback_receives_correct_handle_for_trash_pick() {
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "pick",
             false,
-            |_, _| true,
+            |_, _, _| true,
             move |_, handle, origin| {
                 *slot.lock().unwrap() = Some((handle, origin));
             },
@@ -363,9 +370,10 @@ fn callback_receives_correct_handle_for_hand_pick() {
             tp,
             UnionZoneSet::HAND | UnionZoneSet::TRASH,
             None,
+            None, // material_carrier_filter
             "pick",
             false,
-            |_, _| true,
+            |_, _, _| true,
             move |_, handle, origin| {
                 *slot.lock().unwrap() = Some((handle, origin));
             },
@@ -399,9 +407,10 @@ fn mandatory_rejects_pass() {
             tp,
             UnionZoneSet::HAND,
             None,
+            None, // material_carrier_filter
             "must pick",
             false,
-            |_, _| true,
+            |_, _, _| true,
             |_, _, _| {},
         );
     }
@@ -428,9 +437,10 @@ fn optional_accepts_pass() {
             tp,
             UnionZoneSet::HAND,
             None,
+            None, // material_carrier_filter
             "optional",
             true,
-            |_, _| true,
+            |_, _, _| true,
             |_, _, _| {
                 panic!("callback must NOT fire on decline");
             },

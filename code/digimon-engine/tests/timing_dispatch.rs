@@ -518,9 +518,12 @@ impl CardEffect for AttackingMemoryGain {
 }
 
 #[test]
-fn when_attacking_fires_for_attackers_battle_area() {
+fn when_attacking_fires_only_for_the_attacker() {
     // ATK is the attacker (Lv5, 8000 DP so it survives any security hit).
-    // OBS is a bystander on the same side with WhenAttacking — it should fire.
+    // OBS is a bystander on the same side. BOTH carry a [When Attacking]
+    // +1-memory clause. [When Attacking] is carrier-scoped ("when THIS Digimon
+    // attacks"), so when ATK attacks ONLY ATK's clause fires — the bystander's
+    // must NOT. (The retired battle-area-wide behavior fired both → +2.)
     let mut attacker_data = plain_digimon("ATK", "Attacker", 5);
     attacker_data.level = Some(5);
     attacker_data.dp = Some(8000);
@@ -535,6 +538,7 @@ fn when_attacking_fires_for_attackers_battle_area() {
         .deck(1, &filler)
         .memory(10)
         .start();
+    r.register_effect("ATK", Arc::new(AttackingMemoryGain));
     r.register_effect("OBS", Arc::new(AttackingMemoryGain));
 
     // Play ATK then OBS. ATK lands at battle_area[0], OBS at battle_area[1].
@@ -549,11 +553,13 @@ fn when_attacking_fires_for_attackers_battle_area() {
     // vortex=true bypasses summoning sickness (both were just played this turn).
     let _ = r.attack_player(attacker_handle, 1, /* vortex */ true);
 
-    // WhenAttacking fires for every permanent in player 0's battle area.
-    // OBS's effect grants +1 memory.
-    assert!(
-        r.memory() > before,
-        "WhenAttacking should have fired, granting +1 from OBS (before={}, after={})",
+    // Exactly +1: only the attacker's [When Attacking] fires; the bystander
+    // OBS does not.
+    assert_eq!(
+        r.memory(),
+        before + 1,
+        "only the attacker's [When Attacking] should fire (+1); the non-attacking \
+         bystander OBS must not (before={}, after={})",
         before,
         r.memory()
     );
@@ -561,6 +567,10 @@ fn when_attacking_fires_for_attackers_battle_area() {
 
 #[test]
 fn cannot_activate_when_attacking_effects_suppresses_when_attacking_queue() {
+    // The attacker itself carries a [When Attacking] +1-memory clause, but is
+    // gated by CannotActivateWhenAttackingEffects — so it must NOT fire even
+    // though it is the one attacking. (Carrier-scoped: only the attacker's own
+    // clause is in scope, and the gate suppresses it.)
     let mut attacker_data = plain_digimon("ATK", "Attacker", 5);
     attacker_data.level = Some(5);
     attacker_data.dp = Some(8000);
@@ -568,23 +578,21 @@ fn cannot_activate_when_attacking_effects_suppresses_when_attacking_queue() {
     let filler: Vec<&str> = vec!["F"; 10];
     let mut r = DebugRunner::builder()
         .add_card(attacker_data)
-        .add_card(plain_digimon("OBS", "Observer", 3))
         .add_card(plain_digimon("F", "F", 1))
-        .hand(0, &["ATK", "OBS"])
+        .hand(0, &["ATK"])
         .deck(0, &filler)
         .deck(1, &filler)
         .memory(10)
         .start();
-    r.register_effect("OBS", Arc::new(AttackingMemoryGain));
+    r.register_effect("ATK", Arc::new(AttackingMemoryGain));
 
-    r.play(0, 0);
-    r.play(0, 0);
-    let observer_handle = PermanentHandle {
+    r.play(0, 0); // ATK -> battle_area[0]
+    let attacker_handle = PermanentHandle {
         player: 0,
-        index: 1,
+        index: 0,
     };
     r.game.modifiers.add(
-        observer_handle,
+        attacker_handle,
         ModifierEntry::simple(
             ModifierType::CannotActivateWhenAttackingEffects,
             0,
@@ -593,10 +601,6 @@ fn cannot_activate_when_attacking_effects_suppresses_when_attacking_queue() {
         ),
     );
 
-    let attacker_handle = PermanentHandle {
-        player: 0,
-        index: 0,
-    };
     let before = r.memory();
     let result = r.attack_player(attacker_handle, 1, /* vortex */ true);
 
@@ -609,7 +613,7 @@ fn cannot_activate_when_attacking_effects_suppresses_when_attacking_queue() {
     assert_eq!(
         r.memory(),
         before,
-        "WhenAttacking effects on the gated Digimon must not queue"
+        "the attacker's own gated [When Attacking] must not queue"
     );
 }
 

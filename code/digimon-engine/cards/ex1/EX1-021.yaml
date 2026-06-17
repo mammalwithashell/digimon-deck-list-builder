@@ -77,7 +77,7 @@
 # `return_to_deck { include_sources: false }` is the correct lowering once
 # the candidate filter primitive lands.
 #
-# BLOCKED — `has_on_deletion_effect` predicate  [G-DSL-HAS-ON-DELETION-EFFECT]
+# authorable-now — `has_on_deletion_effect` predicate  [G-DSL-HAS-ON-DELETION-EFFECT] RESOLVED (qa/resolved-gaps.md)
 #   `PredicateSpec` has no leaf that asks "does this permanent's top card
 #   (or any card in its digivolution stack) carry a triggered effect with
 #   `EffectTiming::OnDeletion`?" The closest existing leaf is `has_keyword`

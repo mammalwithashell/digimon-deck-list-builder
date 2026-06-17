@@ -540,6 +540,8 @@ class DeckSummary(BaseModel):
     main_count: int
     egg_count: int
     tags: List[str] = Field(default_factory=list)
+    commander_id: Optional[str] = None
+    deck_icon_card_id: Optional[str] = None
     meta_tier: Optional[str] = None
     meta_archetype: Optional[str] = None
     colors: List[str] = Field(default_factory=list)

@@ -47,11 +47,33 @@ A card missing from the local mirror is auto-downloaded from the digimoncard.io 
 
 ### 3. Trust order
 
-- **Printed text** ("what does it say"): the **card image** is authoritative → then
-  `data/card_overrides.json` (trusted patches) → then `data/cards.json`.
+- **Digivolution requirements** (cost circles, level, colour, DNA/alt-digivolve "black
+  text") — **use the authoritative bundle, NOT the image or cards.json.** The card image
+  is *unreliable* for the small digivolve circles (colours are easy to misread — black vs
+  blue, the level digit), and `data/cards.json` (digimoncard.io API ingest) **drops the
+  second colour** of multi-colour digivolve lines. The authoritative source is the
+  official Bandai DB, captured per card in **`data/card_bundles/<ID>.md`** (and the
+  machine-readable **`data/card_official.json`**). `resolve_cards.py` prints the bundle
+  path when one exists — `Read` it for digivolve costs. To (re)generate a bundle for a
+  card not yet covered: `python code/tools/build_card_bundles.py --ids <ID>`.
+- **Printed text** ("what does it say"): the **card image** is authoritative → the bundle's
+  official text → `data/card_overrides.json` → `data/cards.json`.
 - **Behavior** ("how does it resolve"): keep following the project's source-priority
   chain — DCGO C# → `general_rule.pdf` → fandom wiki. The image tells you the text;
   DCGO/rules tell you how that text actually plays out.
+
+### Authoritative digivolution data — tooling
+
+The flaky-API problem (cards.json drops off-colour digivolve circles; vision misreads
+them) is solved by sourcing from the **official Bandai card DB** (`world.digimoncard.com`):
+
+- `code/tools/scrape_official_evo_costs.py` — scrape authoritative `evo_costs` per card.
+- `code/tools/build_card_bundles.py` — build the full `data/card_bundles/<ID>.md` resource
+  (standard cost circles + Special Digivolution Condition + official text + image path) and
+  the `data/card_official.json` index.
+
+When implementing a card or writing a real-card test/scenario, prefer the bundle's
+`evo_costs` over cards.json — they are the publisher's ground truth.
 
 ## Useful flags
 

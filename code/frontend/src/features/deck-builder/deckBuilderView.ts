@@ -57,6 +57,7 @@ const SECTION_DEFINITIONS: Record<SectionKey, SectionDefinition> = {
 };
 
 const SECTION_ORDER: readonly SectionKey[] = ['lv2', 'lv3', 'lv4', 'lv5', 'lv6', 'tamer', 'option', 'other'];
+const DECK_ICON_COLOR_ORDER = ['red', 'blue', 'yellow', 'green', 'black', 'purple', 'white'];
 
 function normalize(value: string | undefined): string {
   return (value ?? '').trim().toLowerCase();
@@ -65,6 +66,11 @@ function normalize(value: string | undefined): string {
 function parseLevel(card: Pick<DigimonCardData, 'level'> | undefined): number {
   const level = Number.parseInt(card?.level ?? '', 10);
   return Number.isFinite(level) ? level : 0;
+}
+
+function parseNumber(value: string | number | undefined): number {
+  const parsed = Number.parseInt(String(value ?? ''), 10);
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function isDigiEgg(card: DigimonCardData | undefined): boolean {
@@ -96,6 +102,41 @@ function compareEntries(a: DeckEntry, b: DeckEntry): number {
   const nameB = normalize(b.cardData?.name) || normalize(b.cardId);
   const nameDelta = nameA.localeCompare(nameB);
   if (nameDelta !== 0) return nameDelta;
+
+  const idDelta = a.cardId.localeCompare(b.cardId);
+  if (idDelta !== 0) return idDelta;
+  return Number(a.isAltArt) - Number(b.isAltArt);
+}
+
+function deckIconKindRank(card: DigimonCardData | undefined): number {
+  const type = normalize(card?.type);
+  if (type === 'digimon') return 0;
+  if (type === 'tamer') return 1;
+  if (type === 'option') return 2;
+  if (type === 'digi-egg') return 3;
+  return 4;
+}
+
+function deckIconColorRank(card: DigimonCardData | undefined): number {
+  const index = DECK_ICON_COLOR_ORDER.indexOf(normalize(card?.color));
+  return index === -1 ? DECK_ICON_COLOR_ORDER.length : index;
+}
+
+function compareDeckIconCandidates(a: DeckEntry, b: DeckEntry): number {
+  const kindDelta = deckIconKindRank(a.cardData) - deckIconKindRank(b.cardData);
+  if (kindDelta !== 0) return kindDelta;
+
+  const levelDelta = parseLevel(b.cardData) - parseLevel(a.cardData);
+  if (levelDelta !== 0) return levelDelta;
+
+  const colorDelta = deckIconColorRank(a.cardData) - deckIconColorRank(b.cardData);
+  if (colorDelta !== 0) return colorDelta;
+
+  const costDelta = parseNumber(b.cardData?.play_cost) - parseNumber(a.cardData?.play_cost);
+  if (costDelta !== 0) return costDelta;
+
+  const dpDelta = parseNumber(b.cardData?.dp) - parseNumber(a.cardData?.dp);
+  if (dpDelta !== 0) return dpDelta;
 
   const idDelta = a.cardId.localeCompare(b.cardId);
   if (idDelta !== 0) return idDelta;
@@ -221,6 +262,29 @@ export function getBuilderCounts(mainDeck: DeckEntry[], eggDeck: DeckEntry[]): B
   }
 
   return counts;
+}
+
+export function selectDeckIconCardId(
+  mainDeck: DeckEntry[],
+  eggDeck: DeckEntry[],
+  explicitCardId?: string | null,
+): string | null {
+  const presentEntries = [...mainDeck, ...eggDeck].filter((entry) => entry.count > 0);
+  if (explicitCardId && presentEntries.some((entry) => entry.cardId === explicitCardId)) {
+    return explicitCardId;
+  }
+
+  const mainCandidates = mainDeck.filter((entry) => entry.count > 0);
+  if (mainCandidates.length > 0) {
+    return [...mainCandidates].sort(compareDeckIconCandidates)[0]?.cardId ?? null;
+  }
+
+  const eggCandidates = eggDeck.filter((entry) => entry.count > 0);
+  if (eggCandidates.length > 0) {
+    return [...eggCandidates].sort((a, b) => a.cardId.localeCompare(b.cardId))[0]?.cardId ?? null;
+  }
+
+  return null;
 }
 
 export function slotArraysToDeckEntries(

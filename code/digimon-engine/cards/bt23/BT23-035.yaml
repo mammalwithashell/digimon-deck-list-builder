@@ -34,7 +34,33 @@ effects:
                 value: -6000
                 expiry: end_of_turn
 
-# Stubbed:
-# - [All Turns][Once Per Turn] when security is removed, this Digimon gains
-#   Security A. +1 until your turn ends and may recover at 3 or fewer security.
-#   Needs security-removed observer plus until-your-turn-ends expiry.
+  # ─── [All Turns][Once Per Turn] security-removed → Sec A.+1, then recover ────
+  #
+  # "When your security stack is removed from, this Digimon gains
+  #  <Security A. +1> until your turn ends. Then, if you have 3 or fewer
+  #  security cards, <Recovery +1 (Deck)>."
+  #
+  # DCGO (BT23_035.cs, EffectTiming.OnLoseSecurity, max-per-turn 1, gated by
+  # IsYourSecurity): grant Security A. +1 to this permanent for
+  # EffectDuration.UntilOwnerTurnEnd, then `if (SecurityCards.Count <= 3)`
+  # Recovery +1.
+  #
+  # `on_own_security_removed` fires only when the controller's own security is
+  # removed from (BT4-097 precedent). The grant uses `end_of_your_next_turn`:
+  # this observer typically fires on the OPPONENT's turn (their attack removes
+  # your security), so "until your turn ends" resolves to the end of your NEXT
+  # turn. The Recovery is gated on `security_count_lte: 3`.
+  - when: on_own_security_removed
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns][OPT] When your security is removed, this Digimon gains Security A. +1; then if 3 or fewer security, Recovery +1"
+    process:
+      - grant_keyword:
+          target: source
+          keyword: SecurityAttackPlus
+          value: 1
+          expiry: end_of_your_next_turn
+      - if:
+          condition: { security_count_lte: 3 }
+          then:
+            - recover: { of: you, count: 1 }

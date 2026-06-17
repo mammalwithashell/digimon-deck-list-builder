@@ -5,17 +5,24 @@
 //! - <Reboot> and <Blocker>.
 //! - [All Turns] optional suspend-self replacement preventing one of your
 //!   Digimon/Tamers from leaving by an opponent's effect.
-//!
-//! Gap-routed:
 //! - [All Turns][OPT] when this Digimon suspends, delete all opponent Digimon
-//!   with the lowest play cost needs a self-scoped on_suspend predicate plus
-//!   aggregate lowest-play-cost deletion.
+//!   with the lowest play cost (self-scoped on_suspend + aggregate lowest
+//!   play-cost delete-all — the BT9-112 DeathXmon Clause C precedent gated on
+//!   the BT23-077 Sistermon Ciel `event_permanent_is_source` self-scope).
+//!
+//! # Patterns this test covers (RUST_DSL_TEST_API §4.3)
+//! - F3 leave-prevention replacement (suspend-self cost)
+//! - G3 self-scoped OnSuspend observer (`event_permanent_is_source`)
+//! - lowest-play-cost delete-all via play_cost_lte aggregate (lowest_play_cost,
+//!   scope: opponent)
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
-    CompiledDeclarativeClause,
+    CompiledDeclarativeClause, CompiledPredicate, CompiledScope, CompiledTiming,
 };
-use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::card_data::CardData;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::CardKind;
 
 fn runner() -> DebugRunner {
     DebugRunner::builder()
@@ -23,6 +30,35 @@ fn runner() -> DebugRunner {
         .expect("BT23-058 YAML loads")
         .memory(10)
         .start()
+}
+
+fn make_digimon(id: &str, play_cost: u16) -> CardData {
+    let mut card = make_test_card(id, id);
+    card.card_kind = CardKind::Digimon;
+    card.level = Some(4);
+    card.dp = Some(4000);
+    card.play_cost = play_cost;
+    card
+}
+
+fn predicate_has_event_permanent_is_source(predicate: &CompiledPredicate) -> bool {
+    predicate.event_permanent_is_source == Some(true)
+        || predicate
+            .all_of
+            .iter()
+            .any(predicate_has_event_permanent_is_source)
+        || predicate
+            .any_of
+            .iter()
+            .any(predicate_has_event_permanent_is_source)
+        || predicate
+            .none_of
+            .iter()
+            .any(predicate_has_event_permanent_is_source)
+        || predicate
+            .not
+            .as_ref()
+            .is_some_and(|p| predicate_has_event_permanent_is_source(p))
 }
 
 #[test]
@@ -96,7 +132,110 @@ fn bt23_058_has_optional_leave_prevention_replacement() {
 }
 
 #[test]
-#[ignore = "pending: G-SELF-ON-SUSPEND plus G-PLAY-COST-AGGREGATE — self-scoped on_suspend and lowest play-cost delete-all; tracker: qa/archetype-qa/dsl/royal-knights-2026-05-03-dsl-engine-gaps.md"]
-fn bt23_058_when_this_suspends_deletes_all_opponent_lowest_play_cost_digimon() {
-    panic!("requires self-only on_suspend predicate plus aggregate lowest play-cost deletion");
+fn bt23_058_has_self_scoped_on_suspend_delete_clause() {
+    let runner = runner();
+    let card = runner
+        .compiled_card("BT23-058")
+        .expect("BT23-058 compiled card present");
+
+    let on_suspend = card
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
+            CompiledClause::Triggered(t)
+                if t.scope == CompiledScope::FaceUp
+                    && t.when == vec![CompiledTiming::OnSuspend] =>
+            {
+                Some(t)
+            }
+            _ => None,
+        })
+        .expect("self-suspend lowest-play-cost delete clause should be authored");
+    assert!(
+        on_suspend
+            .condition
+            .as_ref()
+            .is_some_and(predicate_has_event_permanent_is_source),
+        "OnSuspend must be gated to the suspending event permanent being this Craniamon"
+    );
+}
+
+#[test]
+fn bt23_058_self_suspend_deletes_all_lowest_play_cost_opponent_digimon() {
+    // Opponent board: two cost-3 Digimon (the lowest) and one cost-5 Digimon.
+    // Suspending THIS Craniamon deletes every cost-3 Digimon and leaves the
+    // cost-5 one. No selection installs — "delete ALL with the lowest play
+    // cost" is a deterministic sweep.
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT23-058")
+        .expect("BT23-058 YAML loads")
+        .add_card(make_digimon("CHEAP-A", 3))
+        .add_card(make_digimon("CHEAP-B", 3))
+        .add_card(make_digimon("PRICEY", 5))
+        .memory(10)
+        .start();
+    let craniamon = runner.place_on_field(0, "BT23-058", Some(0));
+    runner.place_on_field(1, "CHEAP-A", Some(0));
+    runner.place_on_field(1, "CHEAP-B", Some(0));
+    runner.place_on_field(1, "PRICEY", Some(0));
+    assert_eq!(runner.battle_area_size(1), 3);
+
+    runner.game.suspend(craniamon);
+    runner.auto_resolve().expect("resolve lowest-play-cost sweep");
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "both cost-3 (lowest play cost) opponent Digimon are deleted; cost-5 remains"
+    );
+    assert_eq!(
+        runner.game.players[1].trash.len(),
+        2,
+        "the two deleted Digimon move to their owner's trash"
+    );
+}
+
+#[test]
+fn bt23_058_other_permanent_suspending_does_not_fire_delete_clause() {
+    // NEGATIVE: a different own permanent suspending must NOT trigger
+    // Craniamon's self-scoped OnSuspend delete-all.
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT23-058")
+        .expect("BT23-058 YAML loads")
+        .add_card(make_digimon("OWN-OTHER", 4))
+        .add_card(make_digimon("CHEAP-A", 3))
+        .memory(10)
+        .start();
+    let _craniamon = runner.place_on_field(0, "BT23-058", Some(0));
+    let other = runner.place_on_field(0, "OWN-OTHER", Some(0));
+    runner.place_on_field(1, "CHEAP-A", Some(0));
+
+    runner.game.suspend(other);
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "another permanent suspending must not delete the opponent's Digimon"
+    );
+}
+
+#[test]
+fn bt23_058_self_suspend_with_no_opponent_digimon_is_a_noop() {
+    // NEGATIVE: Craniamon suspends but the opponent controls no Digimon, so the
+    // lowest-play-cost sweep has nothing to delete and installs no selection.
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT23-058")
+        .expect("BT23-058 YAML loads")
+        .memory(10)
+        .start();
+    let craniamon = runner.place_on_field(0, "BT23-058", Some(0));
+
+    runner.game.suspend(craniamon);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "self-suspend with no opponent Digimon installs no prompt"
+    );
+    assert_eq!(runner.battle_area_size(1), 0);
 }

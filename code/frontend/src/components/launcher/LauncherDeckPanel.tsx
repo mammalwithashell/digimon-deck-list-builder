@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { getCardImageUrl } from '@/utils/cardImages';
 import type { LauncherDeckRow } from './launcherData';
 
 interface LauncherDeckPanelProps {
@@ -16,7 +17,20 @@ export function LauncherDeckPanel({ decks, loaded }: LauncherDeckPanelProps) {
       <div className="launcher-deck-list">
         {decks.map((deck) => (
           <Link className="launcher-deck-row" to={deck.href} key={deck.id}>
-            <div className="launcher-deck-color"><span>{deck.levelLabel}</span></div>
+            <div className="launcher-deck-color">
+              {deck.deckIconCardId ? (
+                <img
+                  src={getCardImageUrl(deck.deckIconCardId)}
+                  alt=""
+                  loading="lazy"
+                  draggable={false}
+                  onError={(event) => {
+                    event.currentTarget.style.display = 'none';
+                  }}
+                />
+              ) : null}
+              <span>{deck.levelLabel}</span>
+            </div>
             <div className="launcher-deck-info">
               <div className="launcher-deck-name">{deck.name}</div>
               <div className="launcher-deck-meta">

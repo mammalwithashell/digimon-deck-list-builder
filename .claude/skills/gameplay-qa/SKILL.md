@@ -533,6 +533,17 @@ Always include:
 
 ## YAML Scenario Files (Regression Testing)
 
+> **SUNSET LANE.** This legacy-Python `ScenarioRunner` YAML lane lives under
+> `code/engine_py_legacy/` and dies with the Python engine — its scenarios and
+> the `run_scenario.py` CLI were relocated there (shrink-legacy-engine-surface),
+> and its internal data paths are bit-rotted (e.g. a stale `deck_library.json`).
+> For NEW regression scenarios use the **Rust scenario system** —
+> `qa/scenarios/*.json` staged/authored via `digimon-scenario-mcp` (see
+> `docs/SCENARIO_MCP.md` and the `/run-desktop` skill). The Rust
+> `digimon-engine-cli scenario` subcommand is a deliberate v1 stub, so there is
+> no Rust YAML-CLI equivalent; author through the scenario-MCP instead. The
+> section below is retained only for the few remaining legacy YAML scenarios.
+
 After testing a card, save the test as a YAML scenario for regression testing.
 
 ### Generate scenario stubs
@@ -568,16 +579,17 @@ assertions:
   - { zone_contains: { player: 1, zone: field, card: "BT24-059" } }
 ```
 
-### Run scenarios
+### Run scenarios (legacy lane)
 ```bash
-# Via pytest (preferred — auto-discovers all scenarios)
-python -m pytest tests -m scenario -v
+# Via pytest (the `scenario` marker lives only in the excluded legacy tree,
+# so point pytest at it explicitly)
+python -m pytest code/engine_py_legacy/tests -m scenario -v
 
-# Single scenario via CLI
-python code/tools/run_scenario.py code/engine_py_legacy/tests/scenarios/medusamon/bt24_059.yaml
+# Single scenario via CLI (relocated into the legacy tree)
+python code/engine_py_legacy/run_scenario.py code/engine_py_legacy/tests/scenarios/medusamon/bt24_059.yaml
 
 # All scenarios for an archetype via CLI
-python code/tools/run_scenario.py code/engine_py_legacy/tests/scenarios/medusamon/ --all
+python code/engine_py_legacy/run_scenario.py code/engine_py_legacy/tests/scenarios/medusamon/ --all
 ```
 
 ### Assertion types

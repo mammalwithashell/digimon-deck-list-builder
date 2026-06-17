@@ -16,10 +16,57 @@ effects:
     process:
       - play_from_security: {}
 
-  # Omitted:
-  # - When this card is trashed from security by an effect, give 1 opponent
-  #   Digimon Security Attack -1 until their turn ends.
-  # - [All Turns] When an effect removes cards from your security stack, by
-  #   suspending this Tamer, apply Security Attack -1.
+  # ─── [All Turns] own-security-removed → suspend self → opp Security A. -1 ─────
   #
-  # Both need security-stack event observers with source-bound cost handling.
+  # "When an effect removes cards from your security stack, by suspending this
+  # Tamer, 1 of your opponent's Digimon gains <Security A. -1> until the end of
+  # their turn." DCGO BT15_084.cs OnLoseSecurity ActivateClass: player-activated
+  # (optional), source_is_unsuspended gate, SuspendPermanentsClass([self]) cost,
+  # then mandatory opponent-Digimon SecurityAttackChange(-1, UntilOpponentTurnEnd).
+  - when: on_own_security_removed
+    active_when: { all_turns: true }
+    optional: true
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+    summary: "[All Turns] When your security is removed, by suspending this Tamer, 1 opponent Digimon gets Security A. -1 until their turn ends"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get Security A. -1 until their turn ends"
+      - add_modifier:
+          target: target
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_opponents_turn
+
+  # ─── [Security-trash] this card effect-trashed from security → opp Sec A. -1 ──
+  #
+  # "When an effect trashes this card from the security stack, 1 of your
+  # opponent's Digimon gains <Security A. -1> until the end of their turn."
+  # DCGO BT15_084.cs OnDiscardSecurity: MANDATORY (canNoSelect:false), gated on
+  # HasMatchConditionPermanent (>=1 opponent Digimon). scope:security +
+  # on_discard_security (BT25-040 idiom).
+  - when: on_discard_security
+    scope: security
+    summary: "[Security-trash] When an effect trashes this from security, 1 opp Digimon gets Security A. -1 until their turn ends"
+    condition:
+      count_gte:
+        filter: { of: opponent, zone: [battle_area], kind: digimon }
+        n: 1
+    process:
+      - select_opponent_permanent:
+          bind_as: sa_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets [Security A. -1] until the end of their turn"
+      - add_modifier:
+          target: sa_target
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_opponents_turn
