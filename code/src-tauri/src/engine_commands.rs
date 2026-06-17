@@ -4,12 +4,24 @@
 //! Response shapes mirror the hosted API's `/games/*` router so the web
 //! and desktop frontends share one set of TypeScript types.
 //!
-//! All commands mutate shared state behind a `Mutex<Option<Game>>`. The
-//! frontend calls `create_test_game` first, then uses `get_state` /
+//! **Threading model (see the `desktop-engine-worker-thread` change).** All
+//! engine work runs on a single dedicated worker thread spawned with an
+//! explicit 64 MB stack — large enough to absorb the bounded recursive
+//! `bincode` deserialization of the `CompiledStep` card pack that overflowed
+//! Tauri's 1 MB UI main thread in debug builds. The worker is the SOLE owner
+//! of an [`EngineWorld`] (`game` + `session` + ONNX `inference`); there is no
+//! `Arc<Mutex<Game>>` shared across threads. Commands are `async fn`s that
+//! capture their (owned) args, dispatch a boxed closure to the worker via
+//! [`EngineHandle::run`], and await the reply over a `oneshot` channel — so
+//! the UI event loop is never blocked while the worker runs (e.g. during a
+//! long bot turn). The external command contract (names, args, DTOs, errors)
+//! is byte-identical to the previous synchronous version.
+//!
+//! The frontend calls `create_test_game` first, then uses `get_state` /
 //! `play_card` / `attack_digimon` / `attack_player` / `end_turn` to drive it.
 
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::panic::AssertUnwindSafe;
 
 use digimon_engine::action::build_action_mask;
 use digimon_engine::action::explain::{explain_action, legal_decoded_actions, ActionExplanation};
@@ -24,14 +36,12 @@ use digimon_engine::rules::Rules;
 use digimon_engine::tensor::build_tensor;
 use digimon_engine::tensor_profiles::default_profile;
 use serde::{Deserialize, Serialize};
+use tokio::sync::{mpsc, oneshot};
 
 use crate::inference_state::InferenceState;
 
 /// Per-player game configuration — which kind of decider drives each seat,
 /// and (for `Trained`) which loaded model to consult.
-///
-/// Lock order invariant: always acquire `RustEngineState::game` before
-/// `RustEngineState::session` — avoids deadlock between the two.
 #[derive(Default)]
 pub struct GameSession {
     pub registry: Option<CardRegistry>,
@@ -39,17 +49,76 @@ pub struct GameSession {
     pub player_model_ids: Vec<Option<String>>,
 }
 
-/// Shared mutable Rust-engine state, held by Tauri.
-///
-/// `game` / `session` are wrapped in `Arc` so the optional dev-only debug
-/// bridge (`debug_bridge.rs`, feature `debug-bridge`) can hold a second
-/// handle to the same game and drive staging from its localhost server.
-/// `.lock()` derefs through the `Arc`, so existing command code is
-/// unchanged; only construction/sharing differs.
-#[derive(Default, Clone)]
-pub struct RustEngineState {
-    pub game: Arc<Mutex<Option<Game>>>,
-    pub session: Arc<Mutex<GameSession>>,
+// ─── Engine worker thread ─────────────────────────────────────────────
+
+/// The single owner of all desktop engine state. Lives entirely on the
+/// `digimon-engine` worker thread — never shared across threads, so the
+/// `Game`, its session metadata, and the ONNX `inference` sessions need no
+/// `Send`/`Sync` plumbing. Constructed once, inside the worker closure, via
+/// `EngineWorld::default()`.
+#[derive(Default)]
+pub struct EngineWorld {
+    pub game: Option<Game>,
+    pub session: GameSession,
+    pub inference: InferenceState,
+}
+
+/// A unit of engine work: a boxed closure run on the worker against the
+/// world. `Send` so it can cross the channel; `'static` so it can outlive
+/// the dispatching command's stack frame.
+type EngineJob = Box<dyn FnOnce(&mut EngineWorld) + Send + 'static>;
+
+/// Tauri-managed handle to the engine worker. Cheap to clone (just an
+/// `UnboundedSender`); the dev-only debug bridge holds its own clone.
+#[derive(Clone)]
+pub struct EngineHandle {
+    tx: mpsc::UnboundedSender<EngineJob>,
+}
+
+impl EngineHandle {
+    /// Spawn the engine worker thread and return a handle to it.
+    ///
+    /// The thread is created with an explicit 64 MB stack — far beyond the
+    /// engine's bounded recursion (notably `bincode`-deserializing the
+    /// recursive `CompiledStep` card pack) that overflows Tauri's 1 MB UI
+    /// main thread in debug builds. The worker owns the [`EngineWorld`] for
+    /// its entire lifetime and services jobs serially. Each job is wrapped in
+    /// `catch_unwind` so a panic in one unit of work doesn't tear down the
+    /// thread; subsequent commands still work (the panicked job's awaiting
+    /// caller observes a dropped reply and returns `Err`).
+    pub fn spawn() -> Self {
+        let (tx, mut rx) = mpsc::unbounded_channel::<EngineJob>();
+        std::thread::Builder::new()
+            .name("digimon-engine".into())
+            .stack_size(64 * 1024 * 1024)
+            .spawn(move || {
+                let mut world = EngineWorld::default();
+                while let Some(job) = rx.blocking_recv() {
+                    let _ = std::panic::catch_unwind(AssertUnwindSafe(|| job(&mut world)));
+                }
+            })
+            .expect("failed to spawn digimon-engine worker thread");
+        Self { tx }
+    }
+
+    /// Run `f` on the engine worker and await its result without blocking the
+    /// calling (UI/event-loop) thread. `send` failure → the worker has
+    /// stopped; a dropped reply → the job panicked mid-flight (D7).
+    pub async fn run<R, F>(&self, f: F) -> Result<R, String>
+    where
+        R: Send + 'static,
+        F: FnOnce(&mut EngineWorld) -> R + Send + 'static,
+    {
+        let (reply_tx, reply_rx) = oneshot::channel::<R>();
+        self.tx
+            .send(Box::new(move |w| {
+                let _ = reply_tx.send(f(w));
+            }))
+            .map_err(|_| "engine worker stopped".to_string())?;
+        reply_rx
+            .await
+            .map_err(|_| "engine worker did not reply".to_string())
+    }
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
@@ -779,153 +848,190 @@ pub fn test_deck() -> Vec<String> {
 
 /// Create a new 2-player game with built-in test cards.
 #[tauri::command]
-pub fn create_test_game(state: tauri::State<'_, RustEngineState>) -> Result<GameStateDto, String> {
-    let db = test_card_db();
-    let decks = vec![test_deck(), test_deck()];
-    let mut game = Game::new(&decks, &db, Rules::standard(), Some(42))
-        .map_err(|e| format!("Game::new failed: {}", e))?;
-    game.start_game();
-    let dto = game_state_dto(&game);
-    *state.game.lock().map_err(|e| e.to_string())? = Some(game);
-    Ok(dto)
+pub async fn create_test_game(
+    engine: tauri::State<'_, EngineHandle>,
+) -> Result<GameStateDto, String> {
+    engine
+        .run(move |world| -> Result<GameStateDto, String> {
+            let db = test_card_db();
+            let decks = vec![test_deck(), test_deck()];
+            let mut game = Game::new(&decks, &db, Rules::standard(), Some(42))
+                .map_err(|e| format!("Game::new failed: {}", e))?;
+            game.start_game();
+            let dto = game_state_dto(&game);
+            world.game = Some(game);
+            Ok(dto)
+        })
+        .await?
 }
 
 /// Get the current game state as JSON.
 #[tauri::command]
-pub fn get_rust_game_state(
-    state: tauri::State<'_, RustEngineState>,
+pub async fn get_rust_game_state(
+    engine: tauri::State<'_, EngineHandle>,
 ) -> Result<GameStateDto, String> {
-    let guard = state.game.lock().map_err(|e| e.to_string())?;
-    let game = guard.as_ref().ok_or("No active game")?;
-    Ok(game_state_dto(game))
+    engine
+        .run(move |world| -> Result<GameStateDto, String> {
+            let game = world.game.as_ref().ok_or("No active game")?;
+            Ok(game_state_dto(game))
+        })
+        .await?
 }
 
 /// Play a card from a player's hand.
 #[tauri::command]
-pub fn rust_play_card(
-    state: tauri::State<'_, RustEngineState>,
+pub async fn rust_play_card(
+    engine: tauri::State<'_, EngineHandle>,
     player_id: PlayerId,
     hand_index: usize,
 ) -> Result<GameStateDto, String> {
-    let mut guard = state.game.lock().map_err(|e| e.to_string())?;
-    let game = guard.as_mut().ok_or("No active game")?;
-    let field_index = game
-        .play_from_hand(player_id, hand_index)
-        .ok_or("Cannot play that card (invalid hand index or field is full)")?;
-    let _ = field_index; // currently unused in the response
-    Ok(game_state_dto(game))
+    engine
+        .run(move |world| -> Result<GameStateDto, String> {
+            let game = world.game.as_mut().ok_or("No active game")?;
+            let field_index = game
+                .play_from_hand(player_id, hand_index)
+                .ok_or("Cannot play that card (invalid hand index or field is full)")?;
+            let _ = field_index; // currently unused in the response
+            Ok(game_state_dto(game))
+        })
+        .await?
 }
 
 /// Attack an opposing Digimon.
 #[tauri::command]
-pub fn rust_attack_digimon(
-    state: tauri::State<'_, RustEngineState>,
+pub async fn rust_attack_digimon(
+    engine: tauri::State<'_, EngineHandle>,
     attacker_player: PlayerId,
     attacker_index: u8,
     defender_player: PlayerId,
     defender_index: u8,
 ) -> Result<AttackResultDto, String> {
-    let mut guard = state.game.lock().map_err(|e| e.to_string())?;
-    let game = guard.as_mut().ok_or("No active game")?;
-    let attacker = PermanentHandle {
-        player: attacker_player,
-        index: attacker_index,
-    };
-    let defender = PermanentHandle {
-        player: defender_player,
-        index: defender_index,
-    };
-    // Tauri UI only drives Main-phase attacks today; <Vortex> end-of-turn
-    // attacks will get a dedicated command once §4.6 mask coverage lands.
-    let result = game.attack_digimon(attacker, defender, false);
-    Ok(AttackResultDto {
-        result: attack_result_str(result).to_string(),
-        state: game_state_dto(game),
-    })
+    engine
+        .run(move |world| -> Result<AttackResultDto, String> {
+            let game = world.game.as_mut().ok_or("No active game")?;
+            let attacker = PermanentHandle {
+                player: attacker_player,
+                index: attacker_index,
+            };
+            let defender = PermanentHandle {
+                player: defender_player,
+                index: defender_index,
+            };
+            // Tauri UI only drives Main-phase attacks today; <Vortex> end-of-turn
+            // attacks will get a dedicated command once §4.6 mask coverage lands.
+            let result = game.attack_digimon(attacker, defender, false);
+            Ok(AttackResultDto {
+                result: attack_result_str(result).to_string(),
+                state: game_state_dto(game),
+            })
+        })
+        .await?
 }
 
 /// Attack the opposing player (security check).
 #[tauri::command]
-pub fn rust_attack_player(
-    state: tauri::State<'_, RustEngineState>,
+pub async fn rust_attack_player(
+    engine: tauri::State<'_, EngineHandle>,
     attacker_player: PlayerId,
     attacker_index: u8,
     defender_player: PlayerId,
 ) -> Result<AttackResultDto, String> {
-    let mut guard = state.game.lock().map_err(|e| e.to_string())?;
-    let game = guard.as_mut().ok_or("No active game")?;
-    let attacker = PermanentHandle {
-        player: attacker_player,
-        index: attacker_index,
-    };
-    let result = game.attack_player(attacker, defender_player, false);
-    Ok(AttackResultDto {
-        result: attack_result_str(result).to_string(),
-        state: game_state_dto(game),
-    })
+    engine
+        .run(move |world| -> Result<AttackResultDto, String> {
+            let game = world.game.as_mut().ok_or("No active game")?;
+            let attacker = PermanentHandle {
+                player: attacker_player,
+                index: attacker_index,
+            };
+            let result = game.attack_player(attacker, defender_player, false);
+            Ok(AttackResultDto {
+                result: attack_result_str(result).to_string(),
+                state: game_state_dto(game),
+            })
+        })
+        .await?
 }
 
 /// End the current turn.
 #[tauri::command]
-pub fn rust_end_turn(state: tauri::State<'_, RustEngineState>) -> Result<GameStateDto, String> {
-    let mut guard = state.game.lock().map_err(|e| e.to_string())?;
-    let game = guard.as_mut().ok_or("No active game")?;
-    game.end_turn();
-    Ok(game_state_dto(game))
+pub async fn rust_end_turn(
+    engine: tauri::State<'_, EngineHandle>,
+) -> Result<GameStateDto, String> {
+    engine
+        .run(move |world| -> Result<GameStateDto, String> {
+            let game = world.game.as_mut().ok_or("No active game")?;
+            game.end_turn();
+            Ok(game_state_dto(game))
+        })
+        .await?
 }
 
 /// Pass turn (memory to -3, then end turn).
 #[tauri::command]
-pub fn rust_pass_turn(state: tauri::State<'_, RustEngineState>) -> Result<GameStateDto, String> {
-    let mut guard = state.game.lock().map_err(|e| e.to_string())?;
-    let game = guard.as_mut().ok_or("No active game")?;
-    game.pass_turn();
-    Ok(game_state_dto(game))
+pub async fn rust_pass_turn(
+    engine: tauri::State<'_, EngineHandle>,
+) -> Result<GameStateDto, String> {
+    engine
+        .run(move |world| -> Result<GameStateDto, String> {
+            let game = world.game.as_mut().ok_or("No active game")?;
+            game.pass_turn();
+            Ok(game_state_dto(game))
+        })
+        .await?
 }
 
 /// Apply a mulligan decision for the currently-deciding player.
 /// `keep = true` keeps the opening hand; `keep = false` shuffles it back
 /// and redraws the same count. Returns the updated state.
 #[tauri::command]
-pub fn rust_mulligan_decide(
-    state: tauri::State<'_, RustEngineState>,
+pub async fn rust_mulligan_decide(
+    engine: tauri::State<'_, EngineHandle>,
     keep: bool,
 ) -> Result<GameStateDto, String> {
-    let mut guard = state.game.lock().map_err(|e| e.to_string())?;
-    let game = guard.as_mut().ok_or("No active game")?;
-    let p = game
-        .mulligan_current_player()
-        .ok_or("Mulligan is already complete")?;
-    game.accept_mulligan(p, keep).map_err(|e| e.to_string())?;
-    Ok(game_state_dto(game))
+    engine
+        .run(move |world| -> Result<GameStateDto, String> {
+            let game = world.game.as_mut().ok_or("No active game")?;
+            let p = game
+                .mulligan_current_player()
+                .ok_or("Mulligan is already complete")?;
+            game.accept_mulligan(p, keep).map_err(|e| e.to_string())?;
+            Ok(game_state_dto(game))
+        })
+        .await?
 }
 
 /// Hatch: move top egg to breeding area.
 #[tauri::command]
-pub fn rust_hatch(
-    state: tauri::State<'_, RustEngineState>,
+pub async fn rust_hatch(
+    engine: tauri::State<'_, EngineHandle>,
     player_id: PlayerId,
 ) -> Result<GameStateDto, String> {
-    let mut guard = state.game.lock().map_err(|e| e.to_string())?;
-    let game = guard.as_mut().ok_or("No active game")?;
-    if !game.hatch(player_id) {
-        return Err("Cannot hatch (no egg or breeding occupied)".into());
-    }
-    Ok(game_state_dto(game))
+    engine
+        .run(move |world| -> Result<GameStateDto, String> {
+            let game = world.game.as_mut().ok_or("No active game")?;
+            if !game.hatch(player_id) {
+                return Err("Cannot hatch (no egg or breeding occupied)".into());
+            }
+            Ok(game_state_dto(game))
+        })
+        .await?
 }
 
 /// Move from breeding area to battle area.
 #[tauri::command]
-pub fn rust_move_from_breeding(
-    state: tauri::State<'_, RustEngineState>,
+pub async fn rust_move_from_breeding(
+    engine: tauri::State<'_, EngineHandle>,
     player_id: PlayerId,
 ) -> Result<GameStateDto, String> {
-    let mut guard = state.game.lock().map_err(|e| e.to_string())?;
-    let game = guard.as_mut().ok_or("No active game")?;
-    if !game.move_from_breeding(player_id) {
-        return Err("Cannot move from breeding".into());
-    }
-    Ok(game_state_dto(game))
+    engine
+        .run(move |world| -> Result<GameStateDto, String> {
+            let game = world.game.as_mut().ok_or("No active game")?;
+            if !game.move_from_breeding(player_id) {
+                return Err("Cannot move from breeding".into());
+            }
+            Ok(game_state_dto(game))
+        })
+        .await?
 }
 
 // ─── Action-ID dispatch envelope (parity with hosted-API shape) ───
@@ -1262,19 +1368,18 @@ fn drain_events(game: &mut Game) -> Vec<GameEventDto> {
 
 /// Ensure a game exists (auto-seed a test game on first call) and return a
 /// mutable reference. Lets the frontend skip the explicit create-game step
-/// during rapid iteration.
-fn ensure_game<'a>(
-    guard: &'a mut std::sync::MutexGuard<'_, Option<Game>>,
-) -> Result<&'a mut Game, String> {
-    if guard.is_none() {
+/// during rapid iteration. Operates directly on the worker's owned
+/// `Option<Game>`.
+fn ensure_game(game: &mut Option<Game>) -> Result<&mut Game, String> {
+    if game.is_none() {
         let db = test_card_db();
         let decks = vec![test_deck(), test_deck()];
-        let mut game = Game::new(&decks, &db, Rules::standard(), Some(42))
+        let mut g = Game::new(&decks, &db, Rules::standard(), Some(42))
             .map_err(|e| format!("Game::new failed: {}", e))?;
-        game.start_game();
-        **guard = Some(game);
+        g.start_game();
+        *game = Some(g);
     }
-    guard.as_mut().ok_or_else(|| "No active game".to_string())
+    game.as_mut().ok_or_else(|| "No active game".to_string())
 }
 
 /// Create a new local game. When `deck1`/`deck2` are provided by the
@@ -1290,66 +1395,68 @@ fn ensure_game<'a>(
 /// Player indices in the request are 0-based (matching the Rust engine's
 /// `PlayerId` convention).
 #[tauri::command]
-pub fn rust_create_game(
-    state: tauri::State<'_, RustEngineState>,
-    inference: tauri::State<'_, InferenceState>,
+pub async fn rust_create_game(
+    engine: tauri::State<'_, EngineHandle>,
     deck1: Option<Vec<String>>,
     deck2: Option<Vec<String>>,
     player_kinds: Option<Vec<PlayerKind>>,
     player_model_ids: Option<Vec<Option<String>>>,
     seed: Option<String>,
 ) -> Result<CreateGameResponseDto, String> {
-    // When the caller provided real decks, use the production card pool so
-    // BT/EX/AD/P/ST card IDs resolve. Without this, `Game::new` would fail
-    // on the very first card-id lookup against the 8-card synthetic
-    // `test_card_db()` that this command historically defaulted to.
-    let caller_provided_decks = deck1.is_some() || deck2.is_some();
-    let db = if caller_provided_decks {
-        digimon_engine::deck_tools::full_card_data()
-    } else {
-        test_card_db()
-    };
-    let decks = vec![
-        deck1.unwrap_or_else(test_deck),
-        deck2.unwrap_or_else(test_deck),
-    ];
-    let player_count = decks.len();
-    let effective_seed = parse_optional_seed(seed)?.unwrap_or_else(rand::random::<u64>);
-    let mut game = Game::new(&decks, &db, Rules::standard(), Some(effective_seed))
-        .map_err(|e| format!("Game::new failed: {}", e))?;
-    game.start_game();
+    // Parse the seed on the dispatching thread so a bad value short-circuits
+    // before reaching the worker (preserving the prior error contract).
+    let parsed_seed = parse_optional_seed(seed)?;
+    engine
+        .run(move |world| -> Result<CreateGameResponseDto, String> {
+            // When the caller provided real decks, use the production card pool so
+            // BT/EX/AD/P/ST card IDs resolve. Without this, `Game::new` would fail
+            // on the very first card-id lookup against the 8-card synthetic
+            // `test_card_db()` that this command historically defaulted to.
+            let caller_provided_decks = deck1.is_some() || deck2.is_some();
+            let db = if caller_provided_decks {
+                digimon_engine::deck_tools::full_card_data()
+            } else {
+                test_card_db()
+            };
+            let decks = vec![
+                deck1.unwrap_or_else(test_deck),
+                deck2.unwrap_or_else(test_deck),
+            ];
+            let player_count = decks.len();
+            let effective_seed = parsed_seed.unwrap_or_else(rand::random::<u64>);
+            let mut game = Game::new(&decks, &db, Rules::standard(), Some(effective_seed))
+                .map_err(|e| format!("Game::new failed: {}", e))?;
+            game.start_game();
 
-    let kinds = normalize_player_kinds(player_kinds, player_count)?;
-    let model_ids = normalize_player_model_ids(player_model_ids, player_count, &kinds)?;
-    validate_models_loaded(&inference, &kinds, &model_ids)?;
-    // Fresh episode — reset LSTM state on every model any player will drive.
-    // Silent for models the user passed but never loaded; the predict path
-    // will surface that as a clean error instead.
-    for model_id in model_ids.iter().flatten() {
-        let _ = inference.reset(model_id);
-    }
+            let kinds = normalize_player_kinds(player_kinds, player_count)?;
+            let model_ids = normalize_player_model_ids(player_model_ids, player_count, &kinds)?;
+            validate_models_loaded(&world.inference, &kinds, &model_ids)?;
+            // Fresh episode — reset LSTM state on every model any player will drive.
+            // Silent for models the user passed but never loaded; the predict path
+            // will surface that as a clean error instead.
+            for model_id in model_ids.iter().flatten() {
+                let _ = world.inference.reset(model_id);
+            }
 
-    let registry = CardRegistry::from_cards(&db);
-    let mask = action_mask_bytes(&game);
-    let dto = game_state_dto(&game);
+            let registry = CardRegistry::from_cards(&db);
+            let mask = action_mask_bytes(&game);
+            let dto = game_state_dto(&game);
 
-    {
-        let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
-        let mut session_guard = state.session.lock().map_err(|e| e.to_string())?;
-        *game_guard = Some(game);
-        *session_guard = GameSession {
-            registry: Some(registry),
-            player_kinds: kinds,
-            player_model_ids: model_ids,
-        };
-    }
+            world.game = Some(game);
+            world.session = GameSession {
+                registry: Some(registry),
+                player_kinds: kinds,
+                player_model_ids: model_ids,
+            };
 
-    Ok(CreateGameResponseDto {
-        game_id: "rust-local".to_string(),
-        seed: effective_seed.to_string(),
-        state: dto,
-        action_mask: mask,
-    })
+            Ok(CreateGameResponseDto {
+                game_id: "rust-local".to_string(),
+                seed: effective_seed.to_string(),
+                state: dto,
+                action_mask: mask,
+            })
+        })
+        .await?
 }
 
 fn normalize_player_kinds(
@@ -1423,53 +1530,51 @@ fn validate_models_loaded(
 /// player needs to see — same pattern the hosted API uses in
 /// `InteractiveGame.step`.
 #[tauri::command]
-pub fn rust_submit_action(
-    state: tauri::State<'_, RustEngineState>,
-    inference: tauri::State<'_, InferenceState>,
+pub async fn rust_submit_action(
+    engine: tauri::State<'_, EngineHandle>,
     action: u32,
     paced: Option<bool>,
 ) -> Result<ActionResponseDto, String> {
-    let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
-    let session_guard = state.session.lock().map_err(|e| e.to_string())?;
-    let game = ensure_game(&mut game_guard)?;
-    let pid = current_decision_player(game);
-    let action_u16 = u16::try_from(action)
-        .map_err(|_| format!("action {action} is out of range for a u16 action ID"))?;
-    let mask_before = build_action_mask(game, pid);
-    let human_trace = action_trace_for(
-        game,
-        "human",
-        pid,
-        action_u16,
-        optional_tensor_summary_for(game, pid, session_guard.registry.as_ref(), &mask_before),
-    );
-    game.decode_action(action_u16, pid);
-    // Paced mode: the human's action lands, then at most ONE agent action
-    // executes per request so the frontend can render each beat (the
-    // pacing driver keeps calling `rust_step_game { paced: true }` while
-    // `agent_pending`).
-    let max_agent_actions = if paced.unwrap_or(false) { Some(1) } else { None };
-    let mut action_traces = vec![human_trace];
-    action_traces.extend(run_agent_steps(
-        game,
-        &session_guard,
-        &inference,
-        max_agent_actions,
-    )?);
-    let events = drain_events(game);
-    let mask = action_mask_bytes(game);
-    let is_over = game.game_over;
-    let pending = agent_pending(game, &session_guard);
-    Ok(ActionResponseDto {
-        state: game_state_dto(game),
-        action_mask: mask,
-        is_game_over: is_over,
-        logs: Vec::new(),
-        events,
-        action_context: serde_json::json!({}),
-        action_traces,
-        agent_pending: pending,
-    })
+    engine
+        .run(move |world| -> Result<ActionResponseDto, String> {
+            let game = ensure_game(&mut world.game)?;
+            let session = &world.session;
+            let inference = &world.inference;
+            let pid = current_decision_player(game);
+            let action_u16 = u16::try_from(action)
+                .map_err(|_| format!("action {action} is out of range for a u16 action ID"))?;
+            let mask_before = build_action_mask(game, pid);
+            let human_trace = action_trace_for(
+                game,
+                "human",
+                pid,
+                action_u16,
+                optional_tensor_summary_for(game, pid, session.registry.as_ref(), &mask_before),
+            );
+            game.decode_action(action_u16, pid);
+            // Paced mode: the human's action lands, then at most ONE agent action
+            // executes per request so the frontend can render each beat (the
+            // pacing driver keeps calling `rust_step_game { paced: true }` while
+            // `agent_pending`).
+            let max_agent_actions = if paced.unwrap_or(false) { Some(1) } else { None };
+            let mut action_traces = vec![human_trace];
+            action_traces.extend(run_agent_steps(game, session, inference, max_agent_actions)?);
+            let events = drain_events(game);
+            let mask = action_mask_bytes(game);
+            let is_over = game.game_over;
+            let pending = agent_pending(game, session);
+            Ok(ActionResponseDto {
+                state: game_state_dto(game),
+                action_mask: mask,
+                is_game_over: is_over,
+                logs: Vec::new(),
+                events,
+                action_context: serde_json::json!({}),
+                action_traces,
+                agent_pending: pending,
+            })
+        })
+        .await?
 }
 
 /// Drive the game forward until a human decision is required, or the game
@@ -1484,35 +1589,38 @@ pub fn rust_submit_action(
 /// means the frontend should wait for user input, `false` means the game
 /// ended while the last decider was still an agent.
 #[tauri::command]
-pub fn rust_step_game(
-    state: tauri::State<'_, RustEngineState>,
-    inference: tauri::State<'_, InferenceState>,
+pub async fn rust_step_game(
+    engine: tauri::State<'_, EngineHandle>,
     paced: Option<bool>,
 ) -> Result<StepResponseDto, String> {
-    let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
-    let session_guard = state.session.lock().map_err(|e| e.to_string())?;
-    let game = ensure_game(&mut game_guard)?;
-    // Paced mode executes exactly one agent action per invoke; this command
-    // doubles as the "advance one beat" call the frontend pacing driver
-    // repeats while `agent_pending` is true.
-    let max_agent_actions = if paced.unwrap_or(false) { Some(1) } else { None };
-    let action_traces = run_agent_steps(game, &session_guard, &inference, max_agent_actions)?;
-    let mask = action_mask_bytes(game);
-    let pid = current_decision_player(game);
-    let is_human_turn =
-        matches!(decider_kind(&session_guard, pid), PlayerKind::Human) || game.game_over;
-    let is_over = game.game_over;
-    let pending = agent_pending(game, &session_guard);
-    Ok(StepResponseDto {
-        state: game_state_dto(game),
-        action_mask: mask,
-        logs: Vec::new(),
-        events: Vec::new(),
-        is_human_turn,
-        is_game_over: is_over,
-        action_traces,
-        agent_pending: pending,
-    })
+    engine
+        .run(move |world| -> Result<StepResponseDto, String> {
+            let game = ensure_game(&mut world.game)?;
+            let session = &world.session;
+            let inference = &world.inference;
+            // Paced mode executes exactly one agent action per invoke; this command
+            // doubles as the "advance one beat" call the frontend pacing driver
+            // repeats while `agent_pending` is true.
+            let max_agent_actions = if paced.unwrap_or(false) { Some(1) } else { None };
+            let action_traces = run_agent_steps(game, session, inference, max_agent_actions)?;
+            let mask = action_mask_bytes(game);
+            let pid = current_decision_player(game);
+            let is_human_turn =
+                matches!(decider_kind(session, pid), PlayerKind::Human) || game.game_over;
+            let is_over = game.game_over;
+            let pending = agent_pending(game, session);
+            Ok(StepResponseDto {
+                state: game_state_dto(game),
+                action_mask: mask,
+                logs: Vec::new(),
+                events: Vec::new(),
+                is_human_turn,
+                is_game_over: is_over,
+                action_traces,
+                agent_pending: pending,
+            })
+        })
+        .await?
 }
 
 fn decider_kind(session: &GameSession, pid: PlayerId) -> PlayerKind {
@@ -1684,10 +1792,13 @@ fn action_trace_for(
 
 /// Read the current action mask.
 #[tauri::command]
-pub fn rust_get_mask(state: tauri::State<'_, RustEngineState>) -> Result<Vec<u8>, String> {
-    let guard = state.game.lock().map_err(|e| e.to_string())?;
-    let game = guard.as_ref().ok_or("No active game")?;
-    Ok(action_mask_bytes(game))
+pub async fn rust_get_mask(engine: tauri::State<'_, EngineHandle>) -> Result<Vec<u8>, String> {
+    engine
+        .run(move |world| -> Result<Vec<u8>, String> {
+            let game = world.game.as_ref().ok_or("No active game")?;
+            Ok(action_mask_bytes(game))
+        })
+        .await?
 }
 
 /// Decoded list of every currently-legal action for the current decision
@@ -1697,56 +1808,65 @@ pub fn rust_get_mask(state: tauri::State<'_, RustEngineState>) -> Result<Vec<u8>
 /// semantics from raw mask bit-ranges (which mis-decodes trash/hand [Main]
 /// effects). Parallels `rust_get_mask` and is fetched per state update.
 #[tauri::command]
-pub fn rust_get_decoded_actions(
-    state: tauri::State<'_, RustEngineState>,
+pub async fn rust_get_decoded_actions(
+    engine: tauri::State<'_, EngineHandle>,
 ) -> Result<Vec<ActionExplanation>, String> {
-    let guard = state.game.lock().map_err(|e| e.to_string())?;
-    let game = guard.as_ref().ok_or("No active game")?;
-    let pid = current_decision_player(game);
-    Ok(legal_decoded_actions(game, pid))
+    engine
+        .run(move |world| -> Result<Vec<ActionExplanation>, String> {
+            let game = world.game.as_ref().ok_or("No active game")?;
+            let pid = current_decision_player(game);
+            Ok(legal_decoded_actions(game, pid))
+        })
+        .await?
 }
 
 #[tauri::command]
-pub fn rust_get_board_tensor_summary(
-    state: tauri::State<'_, RustEngineState>,
+pub async fn rust_get_board_tensor_summary(
+    engine: tauri::State<'_, EngineHandle>,
     player_id: PlayerId,
 ) -> Result<TensorSummaryDto, String> {
-    let game_guard = state.game.lock().map_err(|e| e.to_string())?;
-    let session_guard = state.session.lock().map_err(|e| e.to_string())?;
-    let game = game_guard.as_ref().ok_or("No active game")?;
-    let registry = session_guard.registry.as_ref().ok_or_else(|| {
-        "tensor summary: session has no card registry (game not created?)".to_string()
-    })?;
-    let mask = build_action_mask(game, player_id);
-    Ok(tensor_summary_for(game, player_id, registry, &mask))
+    engine
+        .run(move |world| -> Result<TensorSummaryDto, String> {
+            let game = world.game.as_ref().ok_or("No active game")?;
+            let registry = world.session.registry.as_ref().ok_or_else(|| {
+                "tensor summary: session has no card registry (game not created?)".to_string()
+            })?;
+            let mask = build_action_mask(game, player_id);
+            Ok(tensor_summary_for(game, player_id, registry, &mask))
+        })
+        .await?
 }
 
 /// Read the accumulated log (empty for now — Rust engine doesn't log yet).
 #[tauri::command]
-pub fn rust_get_log(state: tauri::State<'_, RustEngineState>) -> Result<Vec<String>, String> {
-    let _guard = state.game.lock().map_err(|e| e.to_string())?;
-    Ok(Vec::new())
+pub async fn rust_get_log(engine: tauri::State<'_, EngineHandle>) -> Result<Vec<String>, String> {
+    engine
+        .run(move |_world| -> Result<Vec<String>, String> { Ok(Vec::new()) })
+        .await?
 }
 
 /// Surrender ends the game with the opposing player as winner.
 #[tauri::command]
-pub fn rust_surrender(
-    state: tauri::State<'_, RustEngineState>,
+pub async fn rust_surrender(
+    engine: tauri::State<'_, EngineHandle>,
     player_id: PlayerId,
 ) -> Result<SurrenderResponseDto, String> {
-    let mut guard = state.game.lock().map_err(|e| e.to_string())?;
-    let game = guard.as_mut().ok_or("No active game")?;
-    let winner = if player_id == 0 { 1 } else { 0 };
-    game.declare_winner(winner);
-    let mask = action_mask_bytes(game);
-    Ok(SurrenderResponseDto {
-        state: game_state_dto(game),
-        action_mask: mask,
-        logs: Vec::new(),
-        events: Vec::new(),
-        is_game_over: true,
-        surrendered_by: player_id,
-    })
+    engine
+        .run(move |world| -> Result<SurrenderResponseDto, String> {
+            let game = world.game.as_mut().ok_or("No active game")?;
+            let winner = if player_id == 0 { 1 } else { 0 };
+            game.declare_winner(winner);
+            let mask = action_mask_bytes(game);
+            Ok(SurrenderResponseDto {
+                state: game_state_dto(game),
+                action_mask: mask,
+                logs: Vec::new(),
+                events: Vec::new(),
+                is_game_over: true,
+                surrendered_by: player_id,
+            })
+        })
+        .await?
 }
 
 /// Delete the active game (used by the frontend cleanup path). Clears the
@@ -1754,12 +1874,13 @@ pub fn rust_surrender(
 /// time — but loaded ONNX policies stay in the inference cache since the
 /// next game will likely reuse them.
 #[tauri::command]
-pub fn rust_delete_game(state: tauri::State<'_, RustEngineState>) -> Result<(), String> {
-    let mut game_guard = state.game.lock().map_err(|e| e.to_string())?;
-    let mut session_guard = state.session.lock().map_err(|e| e.to_string())?;
-    *game_guard = None;
-    *session_guard = GameSession::default();
-    Ok(())
+pub async fn rust_delete_game(engine: tauri::State<'_, EngineHandle>) -> Result<(), String> {
+    engine
+        .run(move |world| {
+            world.game = None;
+            world.session = GameSession::default();
+        })
+        .await
 }
 
 /// Load an ONNX model into the inference cache, keyed by `model_id`. This
@@ -1767,38 +1888,102 @@ pub fn rust_delete_game(state: tauri::State<'_, RustEngineState>) -> Result<(), 
 /// the frontend can call it directly with a filesystem path for testing.
 /// Idempotent: reloading the same `model_id` replaces the previous entry.
 #[tauri::command]
-pub fn rust_load_model(
-    inference: tauri::State<'_, InferenceState>,
+pub async fn rust_load_model(
+    engine: tauri::State<'_, EngineHandle>,
     model_id: String,
     onnx_path: String,
 ) -> Result<(), String> {
-    let path = std::path::PathBuf::from(&onnx_path);
-    if !path.exists() {
-        return Err(format!("ONNX file not found: {onnx_path}"));
-    }
-    inference.load(model_id, &path)
+    engine
+        .run(move |world| -> Result<(), String> {
+            let path = std::path::PathBuf::from(&onnx_path);
+            if !path.exists() {
+                return Err(format!("ONNX file not found: {onnx_path}"));
+            }
+            world.inference.load(model_id, &path)
+        })
+        .await?
 }
 
 /// Unload a model from the cache, freeing its ONNX session.
 #[tauri::command]
-pub fn rust_unload_model(
-    inference: tauri::State<'_, InferenceState>,
+pub async fn rust_unload_model(
+    engine: tauri::State<'_, EngineHandle>,
     model_id: String,
 ) -> Result<bool, String> {
-    inference.unload(&model_id)
+    engine
+        .run(move |world| world.inference.unload(&model_id))
+        .await?
 }
 
 /// List currently-loaded model IDs.
 #[tauri::command]
-pub fn rust_list_loaded_models(
-    inference: tauri::State<'_, InferenceState>,
+pub async fn rust_list_loaded_models(
+    engine: tauri::State<'_, EngineHandle>,
 ) -> Result<Vec<String>, String> {
-    inference.loaded_ids()
+    engine
+        .run(move |world| world.inference.loaded_ids())
+        .await?
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ─── engine worker thread (desktop-engine-worker-thread) ────────────
+
+    /// `EngineHandle::run` must dispatch the closure to the worker thread —
+    /// which owns the `EngineWorld` — and return its value to the awaiting
+    /// caller. We prove the closure ran on the named worker thread (not the
+    /// caller's) and that it observed/mutated the single-owner world.
+    #[tokio::test]
+    async fn engine_handle_run_dispatches_to_worker_and_returns_value() {
+        let engine = EngineHandle::spawn();
+
+        let thread_name = engine
+            .run(|_world| std::thread::current().name().map(str::to_string))
+            .await
+            .expect("worker must reply");
+        assert_eq!(
+            thread_name.as_deref(),
+            Some("digimon-engine"),
+            "the closure must execute on the dedicated engine worker thread"
+        );
+
+        // The world persists across jobs (single owner): seed a test game in
+        // one job, observe it in the next.
+        engine
+            .run(|world| {
+                world.session.player_kinds = vec![PlayerKind::Greedy, PlayerKind::Human];
+            })
+            .await
+            .expect("worker must reply");
+        let kinds = engine
+            .run(|world| world.session.player_kinds.clone())
+            .await
+            .expect("worker must reply");
+        assert_eq!(kinds, vec![PlayerKind::Greedy, PlayerKind::Human]);
+    }
+
+    /// A panicking job must be contained (D7): the awaiting caller observes a
+    /// dropped reply (`Err`) but the worker thread survives, so a subsequent
+    /// `run` still succeeds.
+    #[tokio::test]
+    async fn engine_handle_panicking_job_errors_without_killing_worker() {
+        let engine = EngineHandle::spawn();
+
+        let err = engine
+            .run(|_world| panic!("boom"))
+            .await
+            .expect_err("a panicked job must surface as an Err, not hang or abort");
+        assert!(
+            err.contains("did not reply"),
+            "a panicked job drops its reply; got: {err}"
+        );
+
+        // The worker is still alive — the next job runs normally.
+        let ok = engine.run(|_world| 7u32).await.expect("worker survived panic");
+        assert_eq!(ok, 7);
+    }
 
     #[test]
     fn dto_roundtrip_through_json() {
@@ -2247,6 +2432,11 @@ mod tests {
         use digimon_engine::game::TerminalOutcomeReason;
 
         let (mut game, _registry) = build_playable_game();
+        // Game setup (`start_game` → turn-1 `begin_turn`) legitimately emits its
+        // own events (`TurnStart`, the initial `MemoryChange`, …). Drain them
+        // first so this test isolates conversion of the four events it pushes
+        // below — otherwise the assertion counts setup noise.
+        let _ = drain_events(&mut game);
         let memory_seq = game.next_event_seq();
         game.events.push(GameEvent::MemoryChange {
             seq: memory_seq,

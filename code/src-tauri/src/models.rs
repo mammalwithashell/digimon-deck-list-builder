@@ -32,6 +32,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use tokio::io::AsyncWriteExt;
 
+use crate::engine_commands::EngineHandle;
 use crate::inference_state::InferenceState;
 
 /// Shape of a single entry in `GET /models/manifest.json`. Must stay in
@@ -386,26 +387,41 @@ pub async fn models_download(
 }
 
 #[tauri::command]
-pub fn models_delete(
+pub async fn models_delete(
     manager: tauri::State<'_, Arc<ModelsManager>>,
-    inference: tauri::State<'_, InferenceState>,
+    engine: tauri::State<'_, EngineHandle>,
     model_id: String,
 ) -> Result<bool, String> {
-    // Evict from inference cache if loaded — otherwise the session would
-    // hold an open handle to a file we're about to remove.
-    let _ = inference.unload(&model_id);
+    // Evict from inference cache (owned by the engine worker) if loaded —
+    // otherwise the session would hold an open handle to a file we're about
+    // to remove.
+    let evict_id = model_id.clone();
+    engine
+        .run(move |world| {
+            let _ = world.inference.unload(&evict_id);
+        })
+        .await?;
     manager.delete(&model_id).map_err(|e| e.to_string())
 }
 
 #[tauri::command]
-pub fn models_load_cached(
+pub async fn models_load_cached(
     manager: tauri::State<'_, Arc<ModelsManager>>,
-    inference: tauri::State<'_, InferenceState>,
+    engine: tauri::State<'_, EngineHandle>,
     model_id: String,
 ) -> Result<LocalModelMeta, String> {
-    manager
-        .load_cached(&model_id, &inference)
-        .map_err(|e| e.to_string())
+    // The ONNX session build (`InferenceState::load`) must run on the engine
+    // worker that owns the inference cache, so the session never crosses
+    // threads. `ModelsManager` is `Send + Sync`, so we clone the `Arc` into
+    // the worker closure.
+    let manager: Arc<ModelsManager> = Arc::clone(&manager);
+    engine
+        .run(move |world| -> Result<LocalModelMeta, String> {
+            manager
+                .load_cached(&model_id, &world.inference)
+                .map_err(|e| e.to_string())
+        })
+        .await?
 }
 
 #[cfg(test)]

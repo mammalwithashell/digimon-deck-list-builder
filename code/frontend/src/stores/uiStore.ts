@@ -22,7 +22,7 @@ export const BOT_SPEED_DELAY_MS: Record<Exclude<BotSpeed, 'instant'>, number> = 
 };
 
 const BOT_SPEEDS: BotSpeed[] = ['slow', 'normal', 'fast', 'instant'];
-const DEFAULT_BOT_SPEED: BotSpeed = 'normal';
+const DEFAULT_BOT_SPEED: BotSpeed = 'slow';
 
 function loadPersistedBotSpeed(): BotSpeed {
   if (typeof window === 'undefined') return DEFAULT_BOT_SPEED;
