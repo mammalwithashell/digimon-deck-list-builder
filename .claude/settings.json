@@ -12,6 +12,18 @@
       {
         "matcher": "",
         "hooks": [
+          { "type": "command", "command": "bash .claude/pm/startup-briefing.sh 2>/dev/null" }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
+          { "type": "command", "command": "python .claude/hooks/digimon_card_image_hint.py" }
+        ]
+      },
+      {
+        "matcher": "",
+        "hooks": [
           { "type": "command", "command": "python .claude/hooks/digimon_rules_hint.py" }
         ]
       }
