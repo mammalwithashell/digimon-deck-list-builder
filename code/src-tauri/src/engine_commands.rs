@@ -2432,6 +2432,11 @@ mod tests {
         use digimon_engine::game::TerminalOutcomeReason;
 
         let (mut game, _registry) = build_playable_game();
+        // Game setup (`start_game` → turn-1 `begin_turn`) legitimately emits its
+        // own events (`TurnStart`, the initial `MemoryChange`, …). Drain them
+        // first so this test isolates conversion of the four events it pushes
+        // below — otherwise the assertion counts setup noise.
+        let _ = drain_events(&mut game);
         let memory_seq = game.next_event_seq();
         game.events.push(GameEvent::MemoryChange {
             seq: memory_seq,
