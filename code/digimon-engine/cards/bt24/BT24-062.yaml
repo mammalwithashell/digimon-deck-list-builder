@@ -19,23 +19,25 @@ traits: [Machine, Iliad, TS]
 effects:
   # ─── Inherited: target lock on the controller's turn ─────────────────────
   #
-  # Track C / D close-out (2026-05-07). The inherited text installs
-  # `ModifierType::CannotSwitchAttackTarget` on the host permanent (active top
-  # card of the digivolution stack containing this card source) every
-  # declarative tick when the host's controller is the turn player. Track D
-  # consult sites read the modifier in `try_enter_block` (early-return,
-  # suppressing the Block window), `try_enter_raid_retarget` (early-return,
-  # suppressing Raid retarget), and `apply_attack_target_substitution`
-  # (no-op for replacement-driven and `redirect_attack` retargets).
+  # "[Your Turn] This Digimon's attack target can't change." Installs
+  # `ModifierType::CannotSwitchAttackTarget` on the carrier each declarative
+  # tick when its controller is the turn player. Track D consult sites read it
+  # in `try_enter_block` (early-return, suppressing the Block window),
+  # `try_enter_raid_retarget` (suppressing Raid retarget), and
+  # `apply_attack_target_substitution` (no-op for replacement / redirect_attack
+  # retargets).
   #
-  # Implemented as a raw_rust declarative because the YAML `kind: flood_gate`
-  # target predicate has no native "is source permanent" filter — the closest
-  # alternative would scan all permanents and use an aux predicate for
-  # self-identity. The raw_rust path reads `ctx.source_permanent` directly,
-  # which is the host whether BT24-062 is the active top or a digivolution
-  # source (inherited scope).
-  - kind: raw_rust
-    fn: bt24_062_attack_target_lock
+  # `target: { is_source_permanent: true }` installs on the carrier itself (no
+  # board scan + aux self-identity predicate). `scope: both` emits the gate from
+  # BOTH the active-top (face_up) and digivolution-source (inherited) positions,
+  # so the carrier resolves to this card's own permanent when it is the top, or
+  # to the host when it is a source — matching the former raw_rust
+  # `bt24_062_attack_target_lock` exactly, without the escape hatch.
+  - kind: flood_gate
+    scope: both
+    active_when: { your_turn: true }
+    target: { is_source_permanent: true }
+    modifier: CannotSwitchAttackTarget
 
   # ─── Omitted clauses ──────────────────────────────────────────────────────
   #

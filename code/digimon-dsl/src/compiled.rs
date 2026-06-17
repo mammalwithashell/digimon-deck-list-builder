@@ -336,6 +336,7 @@ pub struct CompiledPredicate {
     pub binding_card_kind: Option<CompiledBindingCardKindPredicate>,
     pub source_is_tamer: Option<bool>,
     pub source_is_unsuspended: Option<bool>,
+    pub is_source_permanent: Option<bool>,
     pub source_name_contains: Option<String>,
     pub source_permanent_trait_has: Option<String>,
     pub is_face_down: Option<bool>,

@@ -910,12 +910,8 @@ status).
 - **Verdict:** BT25-102 BLOCKED (gap_kind: engine). No YAML shipped.
 
 ## G-ENGINE-ON-DISCARD-HAND — no "when your hand is trashed from" observer timing
-- **Discovered by:** BT25-084 Titamon (aegiomon-2 slice), 2026-06-06.
-- **Clause:** "[All Turns] When your hand is trashed from, delete 1 of your opponent's lowest DP Digimon."
-- **DCGO (BT25_084.cs):** `EffectTiming.OnDiscardHand` ActivateClass, `CanTriggerOnTrashHand(hashtable, ..., cardSource => cardSource.Owner == card.Owner)` — fires whenever a card leaves the controller's hand to the trash (by any effect), then deletes 1 opp lowest-DP Digimon.
-- **What the DSL/engine has:** `EffectTiming` (code/digimon-engine/src/enums.rs) has `OnTrash` (a card moved to trash) and `OnDiscardSecurity`/`OnLoseSecurity`, but **no** "your hand was trashed from" observer. The DSL `Timing` enum (code/digimon-dsl/src/clause.rs) correspondingly has no `on_discard_hand` value.
-- **Suggested fix:** add an `OnDiscardHand` (or `OnTrashFromHand`) `EffectTiming` variant fired by the hand-trash code path (carrying the trashing player as event context so observers can gate on `event_target_owner: you`), plus the matching DSL `on_discard_hand` timing.
-- **Faithfulness impact:** shipping without it silently drops Titamon's third clause. Implemented clauses 1+2 (mass highest-DP delete + leave-prevention) ship; clause 3 omitted → BT25-084 verdict PARTIAL.
+- **CONSOLIDATED 2026-06-15 → canonical entry now in `docs/RUST_ENGINE_GAPS.md` (`[G-ENGINE-ON-DISCARD-HAND]`)** — engine-primitive gaps live there per the gap-filing rules; this was a duplicate. Surfaced here by **BT25-084 Titamon** (aegiomon-2 slice, 2026-06-06); the canonical entry now tracks it alongside BT25-080 / BT25-029 (same `EffectTiming.OnDiscardHand` ActivateClass per DCGO `BT25_084.cs`), plus the related `played_by_effect` predicate gap and the suggested `Timing::OnDiscardHand` API shape.
+- **BT25-084 verdict:** PARTIAL — clauses 1+2 (mass highest-DP delete + leave-prevention) ship; clause 3 (`[All Turns] When your hand is trashed from, delete 1 opp lowest-DP Digimon`) omitted pending the canonical gap.
 
 ## G-ENGINE-SECURITY-ZONE-SOURCED-FIELD-AURA — a face-down Option in the security zone cannot grant a continuous aura to battle-area Digimon
 - **Discovered by:** BT25-102 Factorial Area (link-finish-aura slice), 2026-06-07. (This is the *residual* BT25-102 blocker after G-ENGINE-AURA-GRANT-LINK-MAX was resolved — the Link+1 value-carry is now fine; the security-zone sourcing is the wall.)

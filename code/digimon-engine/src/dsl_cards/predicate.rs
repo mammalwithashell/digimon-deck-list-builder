@@ -393,6 +393,18 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(want) = pred.is_source_permanent {
+        // `target: self` — true when the subject permanent IS the effect's
+        // source permanent (the carrier in face_up scope, the host in inherited
+        // scope). Lets flood_gate/aura install a modifier on the carrier itself.
+        let is_src = match (subject, rctx.source_permanent) {
+            (PredicateSubject::Permanent(h), Some(src)) => h == src,
+            _ => false,
+        };
+        if is_src != want {
+            return false;
+        }
+    }
     if let Some(ref needle) = pred.self_digivolution_contains_name {
         let Some(perm) = subject_or_source_permanent(subject, rctx) else {
             return false;

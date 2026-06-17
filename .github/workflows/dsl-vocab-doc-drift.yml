@@ -1,0 +1,58 @@
+name: DSL Vocab Doc Drift
+
+# Verifies that the generated "DSL Vocabulary Reference" block in
+# docs/RUST_DSL_AGENT_GUIDE.md is in sync with the digimon-dsl enums
+# (StepSpec / PredicateSpec / Timing / DeclarativeKind). Mirrors the
+# action-space-codegen-drift gate (CLAUDE.md rule 27).
+#
+# If this fails, regenerate and commit the diff:
+#   cargo run -q -p dsl-schema-export \
+#     | python code/tools/dsl-doc-export/emit_markdown.py
+#
+# Only the structural signature (keys, families, arg shapes, docs) gates the
+# build — usage counts / fixture paths churn freely without failing CI.
+
+on:
+  pull_request:
+    paths:
+      - 'code/digimon-dsl/src/**'
+      - 'code/tools/dsl-doc-export/**'
+      - 'code/tools/dsl-schema-export/**'
+      - 'docs/RUST_DSL_AGENT_GUIDE.md'
+      - '.github/workflows/dsl-vocab-doc-drift.yml'
+  push:
+    branches: ["main"]
+    paths:
+      - 'code/digimon-dsl/src/**'
+      - 'code/tools/dsl-doc-export/**'
+      - 'code/tools/dsl-schema-export/**'
+      - 'docs/RUST_DSL_AGENT_GUIDE.md'
+
+jobs:
+  check-dsl-vocab-drift:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-dsl-vocab-${{ hashFiles('Cargo.toml', 'Cargo.lock', 'code/digimon-dsl/Cargo.toml', 'code/tools/dsl-schema-export/Cargo.toml') }}
+
+      - name: Drift check — compare guide's vocab signature to current enums
+        run: |
+          cargo run -q -p dsl-schema-export \
+            | python code/tools/dsl-doc-export/emit_markdown.py --check
