@@ -1,0 +1,2330 @@
+{
+  "total": 95,
+  "differ_count": 84,
+  "by_confidence": {
+    "high": 84,
+    "medium": 11,
+    "low": 0
+  },
+  "cards": [
+    {
+      "card_id": "BT23-064",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 3,
+          "cost": 2,
+          "color": "Purple"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 6,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Bakemon is Level 4 Purple. The digivolve circle is clearly visible below the Play Cost: shows Lv.3 with cost 2 in a purple-filled circle. Current record has empty evo_costs but should have the Purple Lv.3 Cost 2 circle. The finding's claim is correct."
+    },
+    {
+      "card_id": "BT20-037",
+      "image_readable": true,
+      "circles": [],
+      "proposed_evo_costs": [],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Chaosmon: Valdur Arm is a Level 7 card with DNA Digivolve only (Yellow Lv.6 + Green/Black Lv.6: Cost 0). There are NO standard digivolve circles visible below the Play Cost circle. Current record incorrectly lists [Yellow Lv.6 Cost 5]. The finding's claim is correct—evo_costs should be empty."
+    },
+    {
+      "card_id": "BT13-020",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Red",
+          "level": 6,
+          "cost": 5
+        },
+        {
+          "color": "Yellow",
+          "level": 5,
+          "cost": 5
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 6,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 5
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current data only includes Red Lv.6 cost 5. Card image clearly shows TWO digivolution circles: Red Lv.6/5 and Yellow Lv.5/5. The Yellow circle (cost 2) was missing from current_evo_costs."
+    },
+    {
+      "card_id": "BT13-112",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Blue",
+          "level": 4,
+          "cost": 4
+        },
+        {
+          "color": "White",
+          "level": 4,
+          "cost": 2
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 4,
+          "level": 4,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current data lists Red Lv.6 cost 4, which is incorrect. Card image shows TWO digivolution circles both at Lv.4: Blue circle (cost 4) and White circle (cost 2). The current entry is completely wrong on both color (Red vs Blue/White) and level (6 vs 4)."
+    },
+    {
+      "card_id": "BT19-012",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Red",
+          "level": 4,
+          "cost": 4
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "differs_from_current": false,
+      "confidence": "high",
+      "notes": "Clear single red circle at Lv.4 Cost 4. The findings claim a Yellow Lv.4 Cost 3 variant should exist, but only one circle is visible on the card image. The red circle is crisp and unambiguous."
+    },
+    {
+      "card_id": "BT20-016",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Red",
+          "level": 4,
+          "cost": 4
+        },
+        {
+          "color": "Purple",
+          "level": 4,
+          "cost": 0
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 6,
+          "level": 4,
+          "memory_cost": 0
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Two digivolve cost circles visible: red Lv.4 Cost 4 (standard) and purple Lv.4 Cost 0 (DNA digivolve). Current record only lists the red cost; the purple circle must be added. Both colours are crisp and clearly distinguishable."
+    },
+    {
+      "card_id": "BT21-011",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 2,
+          "color": "red",
+          "cost": 1
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 2,
+          "memory_cost": 1
+        }
+      ],
+      "differs_from_current": false,
+      "confidence": "high",
+      "notes": "Single red circle at Lv.2 Cost 1 is crisp and unambiguous. Matches current_evo_costs exactly."
+    },
+    {
+      "card_id": "BT21-021",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 4,
+          "color": "red",
+          "cost": 4
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "differs_from_current": false,
+      "confidence": "high",
+      "notes": "Only one red circle visible at Lv.4 Cost 4. The card text mentions a yellow Xros Heart/Hero trait digivolution path with Cost 3, but no yellow circle is printed in the digivolve cost area on the card image. Matches current_evo_costs; the findings claim should cite the missing yellow circle as a CARD PRINTING issue, not a database issue."
+    },
+    {
+      "card_id": "BT23-102",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "yellow",
+          "level": 5,
+          "cost": 5
+        },
+        {
+          "color": "purple",
+          "level": 5,
+          "cost": 0
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 6,
+          "level": 5,
+          "memory_cost": 0
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card shows two clear digivolve circles: Yellow Lv.5 Cost 5 (standard digivolve) and Purple Lv.5 Cost 0 (DNA Digivolve). The current data only includes the Yellow entry; Purple is missing. Both circles are crisp and unambiguous."
+    },
+    {
+      "card_id": "BT25-037",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "yellow",
+          "level": 3,
+          "cost": 2
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card image shows ONE yellow Lv.3 circle with cost 2. The current data shows Yellow Lv.3 Cost 3, which is incorrect — the card clearly displays Cost 2. The findings claim a Blue Lv.3 Cost 2 circle exists, but no second circle is visible on the card. The single yellow circle is crisp and unambiguous."
+    },
+    {
+      "card_id": "BT25-044",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "blue",
+          "level": 5,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "medium",
+      "notes": "Card text shows 'Digivolve: Lv.5 w/[Angel]/[Archangel]/[TS] trait; Cost 3' in a blue circle/indicator. Current records list only Yellow Lv.5 Cost 4. Image shows the blue Lv.5 Cost 3 as the primary digivolve circle indicator in the top-left area. Prior findings correctly identified the missing Blue Lv.5 Cost 3 alternate path."
+    },
+    {
+      "card_id": "BT25-059",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "blue",
+          "level": 5,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "medium",
+      "notes": "Card text shows 'Digivolve: Lv.5 w/[Vegetation]/[TS] trait; Cost 3' indicated in the digivolve area. Current records list only Green Lv.5 Cost 4. The image shows a blue circle indicator for Lv.5 Cost 3. Prior findings claimed Yellow Lv.4 Cost 4 should be included, but the image shows the blue Lv.5 Cost 3 variant."
+    },
+    {
+      "card_id": "BT9-112",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Purple",
+          "level": 6,
+          "cost": 6
+        },
+        {
+          "color": "Black",
+          "level": 6,
+          "cost": 6
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 6,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 5,
+          "level": 6,
+          "memory_cost": 6
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card image clearly shows two stacked digivolve circles: purple (Lv.6 Cost 6) above, black (Lv.6 Cost 6) below. Current record has only the purple circle. The black circle is clearly visible and unambiguous in the image."
+    },
+    {
+      "card_id": "EX8-022",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Blue",
+          "level": 3,
+          "cost": 3
+        },
+        {
+          "color": "Yellow",
+          "level": 3,
+          "cost": 2
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 3,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card image clearly shows two digivolve circles: blue (Lv.3 Cost 3) above, yellow (Lv.3 Cost 2) below. Current record has only the blue circle. Both circles are crisp and their colors are unambiguous."
+    },
+    {
+      "card_id": "EX8-023",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Yellow",
+          "level": 4,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "medium",
+      "notes": "Card image shows one yellow (Ice-Snow trait conditional) digivolve circle at Lv.4 cost 3. Current record has only Blue Lv.4 cost 4. Image shows Yellow circle clearly; no blue circle visible in digivolve cost area. The findings claim both Blue and Yellow should be present, but only Yellow is visible on the card."
+    },
+    {
+      "card_id": "EX8-074",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Red",
+          "level": 5,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "medium",
+      "notes": "Card image shows one red digivolve circle at Lv.5 cost 3. Current record has only Green Lv.5 cost 3. Image shows Red circle clearly; no green circle visible in digivolve cost area. The findings claim both Green and Red should be present, but only Red is visible on the card. Cost is 3, not 4 as claimed in findings for Red."
+    },
+    {
+      "card_id": "BT13-012",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 3,
+          "cost": 3,
+          "color": "blue"
+        },
+        {
+          "level": 3,
+          "cost": 3,
+          "color": "yellow"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 3,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card image clearly shows two digivolve cost circles in the top-left: blue (Lv.3, cost 3) and yellow (Lv.3, cost 3). Current record only contains Red Lv.3 cost 3, missing both the Blue and Yellow circles. The red circle mentioned in findings is not visible on the card."
+    },
+    {
+      "card_id": "BT13-040",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 4,
+          "cost": 4,
+          "color": "yellow"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "medium",
+      "notes": "Card image shows one clear yellow digivolve cost circle (Lv.4, cost 4) in the top-left area. The findings claim a blue Lv.3 cost 4 circle should also be present, but the image only shows the yellow Lv.4 circle. Current record shows Yellow Lv.3 cost 4, but the actual circle shows Lv.4 cost 4. Cannot confirm a blue circle from the image provided."
+    },
+    {
+      "card_id": "BT19-038",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 4,
+          "cost": 3,
+          "color": "green"
+        },
+        {
+          "level": 5,
+          "cost": 4,
+          "color": "yellow"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 3,
+          "level": 4,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "medium",
+      "notes": "Found TWO digivolve circles, not one. Current records only list Yellow Lv.4 Cost 4, but image shows: Green Lv.4 Cost 3 (new) and Yellow Lv.5 Cost 4. The findings claimed Yellow Lv.4 Cost 3 but image clearly shows Lv.5 for the yellow circle. Green circle is Lv.4 Cost 3."
+    },
+    {
+      "card_id": "BT19-072",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 5,
+          "cost": 3,
+          "color": "red"
+        },
+        {
+          "level": 5,
+          "cost": 3,
+          "color": "purple"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 5,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 6,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Found TWO digivolve circles stacked vertically, both Lv.5 Cost 3: one Red and one Purple. Current records only list Purple Lv.5 Cost 3. The findings correctly identified the need for both Red (card_color 5 in findings, but correct code is 0) and Purple (card_color 6). Red is actually card_color 0 (not 5 as claimed in findings)."
+    },
+    {
+      "card_id": "BT21-023",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 4,
+          "color": "Yellow",
+          "cost": 4
+        },
+        {
+          "level": 4,
+          "color": "Yellow",
+          "cost": 4
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card shows two digivolve circles: primary Lv.4 Yellow Cost 4, plus Sup. trait-based Yellow Lv.4 Cost 4. Current data only includes the first. Both are clearly yellow fills."
+    },
+    {
+      "card_id": "BT21-073",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 4,
+          "color": "Purple",
+          "cost": 4
+        },
+        {
+          "level": 4,
+          "color": "Green",
+          "cost": 4
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 6,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 3,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card shows two digivolve circles: primary Lv.4 Purple Cost 4, plus Sup. trait-based Lv.4 Green Cost 4 (cross-colour alternative). Current data only includes purple. Purple and green fills are clearly distinct."
+    },
+    {
+      "card_id": "BT21-101",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Red",
+          "level": 5,
+          "cost": 5
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 5,
+          "memory_cost": 5
+        }
+      ],
+      "differs_from_current": false,
+      "confidence": "high",
+      "notes": "Single red digivolve cost circle is clearly visible below the memory cost. Lv.5, Cost 5. The current record shows this correctly."
+    },
+    {
+      "card_id": "BT22-015",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Blue",
+          "level": 6,
+          "cost": 5
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 6,
+          "memory_cost": 5
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "medium",
+      "notes": "Blue digivolve cost circle clearly visible (Lv.6, Cost 5). The current record incorrectly shows Red Lv.6 Cost 6. The findings suggest a second Yellow circle should be present, but due to the SAMPLE watermark and image resolution, I can only definitively see one blue circle. Recommend manual verification for potential second circle."
+    },
+    {
+      "card_id": "BT25-060",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Green",
+          "level": 5,
+          "cost": 4
+        },
+        {
+          "color": "Blue",
+          "level": 4,
+          "cost": 4
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 3,
+          "level": 5,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 1,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card clearly shows TWO digivolve circles: Green Lv.5 Cost 4 and Blue Lv.4 Cost 4. Current records only include the Green circle. The Blue circle (card_color code 1) is missing from current_evo_costs."
+    },
+    {
+      "card_id": "EX10-034",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Black",
+          "level": 5,
+          "cost": 5
+        },
+        {
+          "color": "Purple",
+          "level": 5,
+          "cost": 5
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 5,
+          "level": 5,
+          "memory_cost": 5
+        },
+        {
+          "card_color": 6,
+          "level": 5,
+          "memory_cost": 5
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "medium",
+      "notes": "Card shows two digivolve circles stacked vertically, both at Lv.5 Cost 5. Top circle is Black (dark fill), bottom circle is Purple. Current records only include the Black entry; Purple entry is missing. Confidence is medium because the two circles have very similar positioning and the color distinction between Black and Purple requires careful observation of the exact fill shade."
+    },
+    {
+      "card_id": "EX4-005",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 2,
+          "cost": 1,
+          "color": "red"
+        },
+        {
+          "level": 3,
+          "cost": 1,
+          "color": "yellow"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 2,
+          "memory_cost": 1
+        },
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 1
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card image shows two digivolve-cost circles stacked vertically: red Lv.2 Cost 1 and bright yellow Lv.3 Cost 1. Current data only includes the red circle; the yellow Lv.3 circle is missing."
+    },
+    {
+      "card_id": "EX4-006",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 2,
+          "cost": 1,
+          "color": "red"
+        },
+        {
+          "level": 3,
+          "cost": 1,
+          "color": "purple"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 2,
+          "memory_cost": 1
+        },
+        {
+          "card_color": 6,
+          "level": 3,
+          "memory_cost": 1
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card image shows two digivolve-cost circles stacked vertically: red Lv.2 Cost 1 and purple Lv.3 Cost 1. Current data only includes the red circle; the purple Lv.3 circle is missing."
+    },
+    {
+      "card_id": "P-101",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Cyan",
+          "level": 3,
+          "cost": 3
+        },
+        {
+          "color": "Purple",
+          "level": 3,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 3,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 6,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current record has only one entry (Black Lv.3 Cost 3). Image shows TWO circles: Cyan/Light Blue Lv.3 Cost 3 and Purple Lv.3 Cost 3. The finding's claim about a third 'Cyan Lv.? cost 4' is not visible on the card. The card shows two circles only."
+    },
+    {
+      "card_id": "BT11-042",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Yellow",
+          "level": 4,
+          "cost": 3
+        },
+        {
+          "color": "Purple",
+          "level": 3,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 6,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current record has only one entry (Yellow Lv.4 Cost 3). Image clearly shows TWO circles: Yellow Lv.4 Cost 3 and Purple Lv.3 Cost 3. The finding correctly identified the missing Purple Lv.3 Cost 3 entry."
+    },
+    {
+      "card_id": "AD1-002",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 3,
+          "cost": 3,
+          "color": "red"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card shows ONE digivolve circle: Lv.3 Red Cost 3. Current record lists only this one circle, but the finding claims a second circle (Lv.8 Red Cost 8) should exist. Image inspection shows only the Lv.3 Red Cost 3 circle in the digivolve area. The finding may be referring to an alternate digivolution path via Takuya Kanbara interaction, but visually on this card face only the standard Lv.3 Red Cost 3 is printed."
+    },
+    {
+      "card_id": "AD1-010",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 3,
+          "cost": 2,
+          "color": "blue"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card shows ONE digivolve circle: Lv.3 Blue Cost 2. Current record has empty evo_costs array, but the finding correctly identifies that this circle should be recorded. Circle is clearly BLUE (matching the card's blue identity and the digivolve circle fill)."
+    },
+    {
+      "card_id": "BT12-021",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 2,
+          "cost": 0,
+          "color": "blue"
+        },
+        {
+          "level": 2,
+          "cost": 0,
+          "color": "green"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 2,
+          "memory_cost": 0
+        },
+        {
+          "card_color": 3,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current data has only Blue Lv.2 Cost 0. Image clearly shows two distinct circles: blue and green, both Lv.2 Cost 0. The green circle fill is distinct from the card's green frame — this is a cross-colour digivolve."
+    },
+    {
+      "card_id": "BT12-057",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 6,
+          "cost": 6,
+          "color": "yellow"
+        },
+        {
+          "level": 6,
+          "cost": 6,
+          "color": "green"
+        },
+        {
+          "level": 6,
+          "cost": 6,
+          "color": "green"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 3,
+          "level": 6,
+          "memory_cost": 6
+        },
+        {
+          "card_color": 3,
+          "level": 6,
+          "memory_cost": 6
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image shows three distinct digivolve circles arranged vertically: Yellow Lv.6 Cost 6 at top, then two Green Lv.6 Cost 6 circles below. Current data only contains one Green Lv.6 Cost 6 entry and is missing the Yellow circle entirely."
+    },
+    {
+      "card_id": "BT13-088",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 3,
+          "cost": 3,
+          "color": "purple"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 6,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card image shows one purple digivolve circle: Lv.3 cost 3. Current record lists Lv.5 cost 3. The image clearly shows Lv.3, not Lv.5. This is a significant discrepancy. The findings claim a second path should exist (Lv.5), but the image only shows the Lv.3 circle."
+    },
+    {
+      "card_id": "BT21-043",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 2,
+          "cost": 2,
+          "color": "yellow"
+        },
+        {
+          "level": 3,
+          "cost": 2,
+          "color": "yellow"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 2,
+          "memory_cost": 2
+        },
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card image shows two yellow digivolve circles: Lv.2 cost 2 and Lv.3 cost 2. Current record only lists Lv.3 cost 2, missing the Lv.2 cost 2 circle. The findings correctly identified this missing circle."
+    },
+    {
+      "card_id": "BT21-055",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Black",
+          "level": 3,
+          "cost": 0
+        },
+        {
+          "color": "Black",
+          "level": 2,
+          "cost": 0
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 5,
+          "level": 3,
+          "memory_cost": 0
+        },
+        {
+          "card_color": 5,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Sunarizamon is a Lv.3 Digimon with two digivolve circles visible: Lv.3 Black Cost 0 and Lv.2 Black Cost 0. Current data has empty evo_costs, which is incorrect. Both circles are crisp and clearly black."
+    },
+    {
+      "card_id": "BT21-070",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Purple",
+          "level": 4,
+          "cost": 2
+        },
+        {
+          "color": "Purple",
+          "level": 3,
+          "cost": 2
+        },
+        {
+          "color": "Green",
+          "level": 2,
+          "cost": 2
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 6,
+          "level": 4,
+          "memory_cost": 2
+        },
+        {
+          "card_color": 6,
+          "level": 3,
+          "memory_cost": 2
+        },
+        {
+          "card_color": 3,
+          "level": 2,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Gossipmon is a Lv.4 Digimon with three digivolve circles: Lv.4 Purple Cost 2, Lv.3 Purple Cost 2, and Lv.2 Green Cost 2. Current data only includes the Lv.3 entry. All three circles are crisp and colours are distinct—the Lv.2 circle is clearly green (different from the purple Lv.4/Lv.3 circles). This represents cross-colour digivolution."
+    },
+    {
+      "card_id": "BT22-009",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 4,
+          "color": "Red",
+          "cost": 4
+        },
+        {
+          "level": 3,
+          "color": "Red",
+          "cost": 2
+        },
+        {
+          "level": 2,
+          "color": "Green",
+          "cost": 2
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 0,
+          "level": 3,
+          "memory_cost": 2
+        },
+        {
+          "card_color": 3,
+          "level": 2,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Three clear digivolve circles visible in top-left. Current record only includes Lv.3 Red cost 2, missing the Lv.4 Red cost 4 (standard play cost) and Lv.2 Green cost 2 digivolutions."
+    },
+    {
+      "card_id": "BT22-017",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 3,
+          "color": "Blue",
+          "cost": 3
+        },
+        {
+          "level": 2,
+          "color": "Blue",
+          "cost": 0
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 3,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 1,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Two clear digivolve circles visible in top-left, both blue. Current record only includes Lv.2 Blue cost 0, missing the Lv.3 Blue cost 3 digivolution."
+    },
+    {
+      "card_id": "BT23-013",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "red",
+          "level": 4,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image shows ONE red circle at Lv.4 with cost 3. Current data lists Red Lv.5 Cost 4, which does not match the circle visible on the card. The circle is crisp and unambiguous."
+    },
+    {
+      "card_id": "BT24-012",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "red",
+          "level": 3,
+          "cost": 2
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image shows ONE red circle at Lv.3 with cost 2. Current data lists empty evo_costs [], which does not match the circle visible on the card. The circle is crisp and unambiguous."
+    },
+    {
+      "card_id": "BT25-047",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "green",
+          "level": 2,
+          "cost": 0
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 3,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Clear green circle with Lv.2 and cost 0. Current record has empty evo_costs array but the finding correctly identified a Green Lv.2 cost 0 circle."
+    },
+    {
+      "card_id": "EX10-020",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "green",
+          "level": 5,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 3,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Clear green circle with Lv.5 and cost 3. Current record has empty evo_costs array but the finding correctly identified a Green Lv.5 cost 3 circle. The circle is a darker/forest green, consistent with the card's green identity."
+    },
+    {
+      "card_id": "ST3-10",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Yellow",
+          "level": 5,
+          "cost": 10
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 10
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image shows ONE digivolve cost circle: Yellow Lv.5 Cost 10. The current_evo_costs incorrectly lists Yellow Lv.5 Cost 2. The prior finding claiming a 'Blue Lv.2 Cost 0' circle is not visible on the card image. Only the yellow circle is present."
+    },
+    {
+      "card_id": "ST4-04",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Green",
+          "level": 2,
+          "cost": 0
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 3,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "differs_from_current": false,
+      "confidence": "high",
+      "notes": "Image shows ONE digivolve cost circle: Green Lv.2 Cost 0. This matches the current_evo_costs exactly. The prior finding claiming a second 'Lv.3 green circle' is not visible on the card image."
+    },
+    {
+      "card_id": "ST5-06",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "blue",
+          "level": 2,
+          "cost": 2
+        },
+        {
+          "color": "purple",
+          "level": 3,
+          "cost": 2
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 2,
+          "memory_cost": 2
+        },
+        {
+          "card_color": 6,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current record shows only Black Lv.3 Cost 2. Image clearly shows two digivolve circles: blue Lv.2 Cost 2 and purple Lv.3 Cost 2. The card frame is black but the digivolve circles are distinct colors — blue and purple (not black)."
+    },
+    {
+      "card_id": "ST5-09",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "blue",
+          "level": 3,
+          "cost": 3
+        },
+        {
+          "color": "black",
+          "level": 4,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 3,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 5,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current record shows only Black Lv.4 Cost 3. Image clearly shows two digivolve circles: blue Lv.3 Cost 3 and black Lv.4 Cost 3. Both circles are crisp and unambiguous."
+    },
+    {
+      "card_id": "BT18-102",
+      "image_readable": true,
+      "circles": [],
+      "proposed_evo_costs": [],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card has NO standard level-based digivolution cost circles. The card uses XRos assembly condition (special digivolution mechanic) instead. Current_evo_costs claiming Red Lv.6 cost 6 is incorrect."
+    },
+    {
+      "card_id": "BT16-040",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Yellow",
+          "level": 2,
+          "cost": 1
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 2,
+          "memory_cost": 1
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card has one digivolve cost circle at Lv.2 with cost 1, filled with YELLOW (not Red). Current record incorrectly lists this as Red Lv.2 cost 1. The digivolve circle colour is Yellow (card_color code 2), not Red (0)."
+    },
+    {
+      "card_id": "BT16-082",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 1,
+          "cost": 1,
+          "color": "White"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 4,
+          "level": 1,
+          "memory_cost": 1
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card shows a single WHITE Lv.1 Cost 1 digivolve circle. Current record incorrectly lists Red Lv.2 Cost 1. The level is 1 (not 2) and the colour is definitely white (not red). Circle is crisp and unambiguous."
+    },
+    {
+      "card_id": "BT25-027",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 4,
+          "cost": 3,
+          "color": "Blue"
+        },
+        {
+          "level": 3,
+          "cost": 3,
+          "color": "Orange"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 4,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card shows TWO digivolve circles. Current record only lists Blue Lv.4 Cost 3 and the second circle is incomplete in the findings text. Image clearly shows: (1) Blue/navy Lv.4 Cost 3 and (2) Orange/yellow Lv.3 Cost 3. Both circles are crisp and colours are unambiguous."
+    },
+    {
+      "card_id": "BT25-070",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 3,
+          "cost": 2,
+          "color": "Purple"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 6,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "The digivolve cost circle is clearly PURPLE/VIOLET filled with Lv.3 and cost 2. Current record shows Black Lv.3 cost 3, which is incorrect. The image shows Purple Lv.3 cost 2."
+    },
+    {
+      "card_id": "P-123",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 2,
+          "cost": 0,
+          "color": "Multicolour (Rainbow pie-chart)"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 4,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "medium",
+      "notes": "The Lv.2 digivolve cost circle shows a rainbow/multicolour pie-chart pattern (red, yellow, green, blue sections visible), not a solid White or Red colour. The cost is clearly 0. Current record shows Red Lv.2 cost 0. The rainbow pattern typically represents 'any colour' digivolve, but the findings suggest White (4). Image clarity on exact circle representation is slightly ambiguous - appears to be 'any colour' format rather than solid White, but proposing White (4) per findings as the most likely intended colour."
+    },
+    {
+      "card_id": "ST9-09",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "green",
+          "level": 3,
+          "cost": 2
+        },
+        {
+          "color": "blue",
+          "level": 3,
+          "cost": 2
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 3,
+          "level": 3,
+          "memory_cost": 2
+        },
+        {
+          "card_color": 1,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": false,
+      "confidence": "high",
+      "notes": "Two digivolve circles clearly visible in top-left. Green circle (top) Lv.3 Cost 2, Blue circle (bottom) Lv.3 Cost 2. Matches current_evo_costs exactly: Green (3) and Blue (1) both Lv.3 Cost 2."
+    },
+    {
+      "card_id": "BT23-054",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "blue",
+          "level": 3,
+          "cost": 4
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 3,
+          "memory_cost": 4
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Single blue digivolve circle visible in top-left showing Lv.3 Cost 4. Current record shows Black Lv.3 Cost 4, but the actual circle fill is BLUE, not black. The card frame is black/blue but the circle itself is clearly blue. Cost is 4, not 3 as suggested in findings."
+    },
+    {
+      "card_id": "BT24-051",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Blue",
+          "level": 5,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image shows a single BLUE Lv.5 digivolve circle with cost 3. Current record incorrectly lists Green Lv.5 Cost 4. The circle is clearly blue, not green."
+    },
+    {
+      "card_id": "BT12-047",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Blue",
+          "level": 2,
+          "cost": 0
+        },
+        {
+          "color": "Yellow",
+          "level": 2,
+          "cost": 0
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 2,
+          "memory_cost": 0
+        },
+        {
+          "card_color": 2,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image shows TWO digivolve cost circles: BLUE Lv.2 Cost 0 (top) and YELLOW Lv.2 Cost 0 (bottom). Current record incorrectly lists only Green Lv.2 Cost 0. The card has dual-colour digivolve requirements, not single-colour Green."
+    },
+    {
+      "card_id": "BT13-075",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 5,
+          "cost": 4,
+          "color": "yellow"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image clearly shows one digivolve circle: Lv.5 Cost 4 in YELLOW. Current data incorrectly lists this as Black (5). Should be Yellow (2)."
+    },
+    {
+      "card_id": "EX10-032",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 4,
+          "cost": 3,
+          "color": "magenta"
+        },
+        {
+          "level": 3,
+          "cost": 2,
+          "color": "magenta"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 6,
+          "level": 4,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 6,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image shows TWO digivolve circles stacked vertically, both in pink/magenta color. Top: Lv.4 Cost 3 (magenta). Bottom: Lv.3 Cost 2 (magenta). Current data only lists one evolution cost and incorrectly as Black. Both should be Purple/Magenta (6)."
+    },
+    {
+      "card_id": "EX4-038",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 2,
+          "cost": 0,
+          "color": "Blue"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current record has Black, but the printed digivolve cost circle is clearly BLUE (Lv.2 cost 0). The card's own color identity is Black, but the digivolve circle fill is unmistakably blue. Image is crisp and unambiguous."
+    },
+    {
+      "card_id": "ST3-05",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 3,
+          "cost": 2,
+          "color": "Yellow"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": false,
+      "confidence": "high",
+      "notes": "Current record is CORRECT: Yellow Lv.3 cost 2. The finding claims it should be Lv.2, but the printed circle clearly shows Lv.3. The current_evo_costs in the record matches the image exactly."
+    },
+    {
+      "card_id": "ST3-06",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 3,
+          "color": "purple",
+          "cost": 2
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 6,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image clearly shows ONE digivolve circle with Lv.3 label, purple fill, cost 2. Current record shows Yellow Lv.3 cost 2. The prior finding claiming Purple Lv.2 cost 4 is incorrect—the image shows Lv.3 cost 2 with purple fill, not cost 4."
+    },
+    {
+      "card_id": "ST3-08",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 4,
+          "color": "purple",
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 6,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image clearly shows ONE digivolve circle with Lv.4 label, purple fill, cost 3. Current record shows Yellow Lv.4 cost 3. The prior finding claiming Yellow Lv.3 cost 3 is incorrect—the image shows Lv.4 (not Lv.3) with purple fill (not yellow)."
+    },
+    {
+      "card_id": "ST5-03",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "blue",
+          "level": 2,
+          "cost": 0
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card image clearly shows a blue-filled Lv.2 digivolve circle with 0 cost in the top-left area. Current record incorrectly lists this as Black. The circle is unmistakably blue."
+    },
+    {
+      "card_id": "ST5-04",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "blue",
+          "level": 2,
+          "cost": 0
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card image clearly shows a blue-filled Lv.2 digivolve circle with 0 cost in the top-left area. Current record incorrectly lists this as Black. The circle is unmistakably blue."
+    },
+    {
+      "card_id": "ST5-13",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Red",
+          "level": 5,
+          "cost": 4
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "The digivolve circle is clearly RED, not Black. Current record incorrectly lists Black (5), but the image shows a bright red fill. Card color is Black but the evo circle is Red — cross-color digivolution."
+    },
+    {
+      "card_id": "P-215",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Blue",
+          "level": 3,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": false,
+      "confidence": "high",
+      "notes": "The digivolve circle is Blue Lv.3 Cost 3. The finding claims cost should be 2, but the image clearly shows cost 3. Current record is correct; the prior finding was incorrect."
+    },
+    {
+      "card_id": "BT21-042",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "blue",
+          "level": 3,
+          "cost": 3
+        },
+        {
+          "color": "red",
+          "level": 3,
+          "cost": 2
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 3,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 0,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image shows two distinct digivolve circles: blue Lv.3 cost 3 (standard) and red Lv.3 cost 2 (alternate digivolve via [Agumon] in name and [Dinosaur] trait). Current_evo_costs only lists the first; the second red-cost circle was missing from the database."
+    },
+    {
+      "card_id": "BT21-044",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "yellow",
+          "level": 4,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image shows one yellow Lv.4 circle with cost 3. Current_evo_costs lists cost as 4, which is incorrect. Card text confirms '[GeoGreymon]: Cost 3' digivolve condition."
+    },
+    {
+      "card_id": "BT24-037",
+      "image_readable": true,
+      "circles": [],
+      "proposed_evo_costs": [],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card image shows NO standard digivolve circles in the typical digivolve cost area. The card has DNA Digivolution only (shown as text: 'Lv.4+O/Lv.4 Cost 0'), not a regular digivolution circle. The current_evo_costs record incorrectly lists Yellow Lv.4 Cost 4 which does not appear on the card face."
+    },
+    {
+      "card_id": "BT25-012",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Red",
+          "level": 3,
+          "cost": 2
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Card clearly shows one digivolve circle: Lv.3 Cost 2 with RED fill colour. The current_evo_costs incorrectly lists Cost 3 instead of Cost 2. The circle colour (Red) matches the card's red identity."
+    },
+    {
+      "card_id": "BT25-016",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Red",
+          "level": 4,
+          "cost": 4
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "differs_from_current": false,
+      "confidence": "medium",
+      "notes": "Card shows one red Lv.4 Cost 4 circle in the digivolve cost area. The card text mentions alternative [TS] trait path with Cost 3, but no separate printed circle is visible for that alternative - only the standard Cost 4 circle is printed."
+    },
+    {
+      "card_id": "BT25-018",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Red",
+          "level": 5,
+          "cost": 4
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "differs_from_current": false,
+      "confidence": "medium",
+      "notes": "Card shows one red Lv.5 Cost 4 circle in the digivolve cost area. The card text mentions alternative [TS] trait path with Cost 3, but no separate printed circle is visible for that alternative - only the standard Cost 4 circle is printed."
+    },
+    {
+      "card_id": "BT25-058",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 5,
+          "cost": 4,
+          "color": "Green"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 3,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image shows GREEN Lv.5 circle with cost 4. Current record states cost 5 — this is WRONG. The card image is clear and unambiguous."
+    },
+    {
+      "card_id": "EX11-044",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 5,
+          "cost": 3,
+          "color": "Black"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 5,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": false,
+      "confidence": "high",
+      "notes": "Image shows BLACK Lv.5 circle with cost 3. Current record is correct. Circle is crisp and clearly visible."
+    },
+    {
+      "card_id": "BT25-008",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "red",
+          "level": 2,
+          "cost": 0
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "BT25-008 Coronamon shows a single red Lv.2 digivolve cost circle in the top-left. The circle is clearly visible and displays a '0' inside it, confirming a zero-cost evolution. Current record claims cost 1, but the printed card image clearly shows cost 0."
+    },
+    {
+      "card_id": "BT25-043",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "yellow",
+          "level": 5,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "BT25-043 Habakirimon shows a single yellow Lv.5 digivolve cost circle in the top-left. The circle clearly displays a '3' inside it. Current record claims cost 4, but the printed card image clearly shows cost 3."
+    },
+    {
+      "card_id": "AD1-014",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "blue",
+          "level": 5,
+          "cost": 4
+        },
+        {
+          "color": "blue",
+          "level": 5,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 5,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 1,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current record has only one entry (Blue Lv.5 Cost 4). Image clearly shows TWO blue circles: Lv.5 Cost 4 (standard) and Lv.5 Cost 3 (alternative digivolve cost). The second cost matches the finding's claim about the alternative when digivolving from specific sources."
+    },
+    {
+      "card_id": "AD1-016",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "blue",
+          "level": 5,
+          "cost": 4
+        },
+        {
+          "color": "blue",
+          "level": 5,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 5,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 1,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current record has only one entry (Yellow Lv.5 Cost 4). Image clearly shows TWO blue circles: Lv.5 Cost 4 (standard) and Lv.5 Cost 3 (alternative when digivolving from RizeGreymon or with DATA SQUAD trait). Note: circles are blue, not yellow, despite card's yellow/red identity."
+    },
+    {
+      "card_id": "BT16-101",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "yellow",
+          "level": 5,
+          "cost": 4
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image shows Lv.5 Yellow cost 4, not cost 3 as recorded. The finding's claim about Lv.6 is incorrect — the card clearly shows Lv.5. Circle is crisp and unambiguous."
+    },
+    {
+      "card_id": "BT17-077",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "blue",
+          "level": 6,
+          "cost": 5
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 6,
+          "memory_cost": 5
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image shows Lv.6 Blue cost 5, not cost 6 as recorded. The finding claim is correct. Circle is crisp and unambiguous."
+    },
+    {
+      "card_id": "BT19-035",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "yellow",
+          "level": 3,
+          "cost": 2
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current record shows cost 3 for Lv.3 yellow circle. Image clearly shows cost 2 in both the circle and the printed text 'Digivolve Lv.3 w/[Xros Heart] trait: Cost 2'. Circle is crisp yellow."
+    },
+    {
+      "card_id": "BT23-035",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "yellow",
+          "level": 5,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current record shows cost 4 for Lv.5 yellow circle. Image clearly shows cost 3 in both the circle and the printed text 'Digivolve Lv.5 w/[Witchelny] [S] trait: Cost 3'. Circle is crisp yellow."
+    },
+    {
+      "card_id": "BT24-040",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "yellow",
+          "level": 5,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current record shows Yellow Lv.5 Cost 4, but the card image clearly shows a yellow digivolve circle with Lv.5 Cost 3. The effect text also confirms 'Cost 3'. The current_evo_costs array is incorrect."
+    },
+    {
+      "card_id": "BT24-041",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "yellow",
+          "level": 5,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current record shows Yellow Lv.5 Cost 4, but the card image clearly shows a yellow digivolve circle with Lv.5 Cost 3. The effect text confirms 'Cost 3'. The current_evo_costs array is incorrect."
+    },
+    {
+      "card_id": "BT24-046",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "green",
+          "level": 3,
+          "cost": 2
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 3,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current record shows Green Lv.3 cost 3, but printed card clearly displays Green Lv.3 digivolve circle with cost 2. Text confirms '[Gabumon] in name...Cost 2'. Image is crisp and unambiguous."
+    },
+    {
+      "card_id": "BT24-059",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "orange",
+          "level": 4,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Current record shows Black Lv.4 cost 4, but printed card displays Orange/Red-Orange Lv.4 digivolve circle with cost 3. Text confirms 'Cost 3'. The orange/red fill is distinct from black. Colour code 0 (Red) is closest match for the orange-tinted red circle observed."
+    },
+    {
+      "card_id": "BT25-025",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 4,
+          "cost": 3,
+          "color": "Blue"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 1,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image clearly shows a single blue digivolve circle with Lv.4 and cost 3. The current record lists cost as 4, which is incorrect. The printed card confirms cost should be 3."
+    },
+    {
+      "card_id": "BT25-042",
+      "image_readable": true,
+      "circles": [
+        {
+          "level": 5,
+          "cost": 3,
+          "color": "Yellow"
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image clearly shows a single yellow digivolve circle with Lv.5 and cost 3. The current record lists cost as 4, which is incorrect. The printed card confirms cost should be 3."
+    },
+    {
+      "card_id": "BT25-053",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Red",
+          "level": 4,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image clearly shows a red Lv.4 circle with cost 3. Current record has cost 4, which is incorrect. The digivolve circle is crisp and unambiguous."
+    },
+    {
+      "card_id": "BT22-052",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "Green",
+          "level": 5,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 3,
+          "level": 5,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image clearly shows a green Lv.5 circle with cost 3. Current record has cost 4, which is incorrect. The digivolve circle is crisp and unambiguous."
+    },
+    {
+      "card_id": "BT25-036",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "yellow",
+          "level": 2,
+          "cost": 2
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 2,
+          "memory_cost": 2
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image clearly shows a single yellow digivolve-cost circle at Lv.2 cost 2. Current data records Lv.3 cost 2, which is incorrect. The findings claim correctly that this should be Lv.2 cost 2 (Yellow=2 in integer encoding)."
+    },
+    {
+      "card_id": "ST19-11",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "yellow",
+          "level": 3,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image clearly shows a single yellow digivolve-cost circle at Lv.3 cost 3. Current data records Lv.4 cost 3, which is incorrect. The findings claim correctly that this should be Lv.3 cost 3 (Yellow=2 in integer encoding)."
+    },
+    {
+      "card_id": "ST19-12",
+      "image_readable": true,
+      "circles": [
+        {
+          "color": "yellow",
+          "level": 3,
+          "cost": 3
+        }
+      ],
+      "proposed_evo_costs": [
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "differs_from_current": true,
+      "confidence": "high",
+      "notes": "Image clearly shows Yellow Lv.3 cost 3. Current record incorrectly lists Lv.5. The findings claim in the record is correct — the level should be 3, not 5."
+    }
+  ]
+}

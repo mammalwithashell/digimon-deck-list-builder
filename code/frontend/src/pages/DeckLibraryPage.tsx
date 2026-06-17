@@ -4,6 +4,7 @@ import * as library from '@/api/deckLibraryAdapter';
 import { getCardById } from '@/api/digimonCardApi';
 import type { DigimonCardData } from '@/types/cards';
 import type { DeckFolder, DeckResponse, DeckSummary } from '@/types/deck';
+import { getCardImageUrl } from '@/utils/cardImages';
 import { COLOR_HEX } from '@/utils/constants';
 import {
   buildDeckAnalytics,
@@ -32,6 +33,10 @@ function DeckSleeve({
   cards?: Map<string, DigimonCardData>;
   large?: boolean;
 }) {
+  const iconCardId =
+    ('deck_icon_card_id' in deck ? deck.deck_icon_card_id : null) ??
+    ('commander_id' in deck ? deck.commander_id : null);
+  const [iconFailed, setIconFailed] = useState(false);
   const colors = useMemo(() => {
     if (cards && 'main_deck' in deck) {
       const found = new Set<string>();
@@ -46,8 +51,22 @@ function DeckSleeve({
     return FALLBACK_COLORS.slice(0, 1 + (deck.name.length % 3));
   }, [cards, deck]);
 
+  useEffect(() => {
+    setIconFailed(false);
+  }, [iconCardId]);
+
   return (
     <div className={`library-sleeve ${large ? 'large' : ''}`}>
+      {iconCardId && !iconFailed ? (
+        <img
+          className="library-sleeve-image"
+          src={getCardImageUrl(iconCardId)}
+          alt=""
+          loading="lazy"
+          draggable={false}
+          onError={() => setIconFailed(true)}
+        />
+      ) : null}
       <div className="library-sleeve-split">
         {colors.map((color, index) => (
           <span key={`${color}-${index}`} style={{ background: color }} />

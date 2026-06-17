@@ -1860,7 +1860,12 @@ fn install_select_any_permanent(
     ctx.game.current_phase = GamePhase::SelectTarget;
     ctx.game.pending_selection = Some(PendingSelection {
         zone_owner: None,
-        kind: SelectionKind::Target,
+        // AnyField (not Target): candidates span BOTH battle areas and are
+        // encoded `encode_attack(player, index)`, so the UI decodes the side
+        // from the id. Routing this as `Target` left the board unable to map
+        // clicks (its field helpers only handle OwnField/OppField) — the
+        // EX8-028 "place 1 Digimon as bottom security" softlock.
+        kind: SelectionKind::AnyField,
         selecting_player,
         previous_phase,
         valid_action_ids,
@@ -1952,7 +1957,10 @@ fn install_select_dna_pair(
     ctx.game.current_phase = GamePhase::SelectTarget;
     ctx.game.pending_selection = Some(PendingSelection {
         zone_owner: None,
-        kind: SelectionKind::Target,
+        // AnyField: the DNA-pair left pick spans both battle areas, same
+        // `encode_attack(player, index)` encoding as select_any_permanent (the
+        // right pick chains into install_select_any_permanent, also AnyField).
+        kind: SelectionKind::AnyField,
         selecting_player,
         previous_phase,
         valid_action_ids,

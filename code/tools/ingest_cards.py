@@ -200,11 +200,12 @@ def _parse_xros_costs(xros_req):
 
     Returns `(dna_costs_json, digixros_costs_json)` — each a list of dicts
     ready for cards.json, or empty when the string has no matching block.
-    Imports are deferred because the runtime engine pulls heavy deps.
+    The parsers were relocated to a standalone pure-Python tool module
+    (`tools.xros_cost_parser`) off the sunset Python engine (rule 22).
     """
     if not xros_req:
         return [], []
-    from engine_py_legacy.engine.data.card_database import parse_xros_req, parse_digixros_req  # noqa: E402
+    from tools.xros_cost_parser import parse_xros_req, parse_digixros_req
     dna_costs = parse_xros_req(xros_req)
     digixros_costs = parse_digixros_req(xros_req)
     return (

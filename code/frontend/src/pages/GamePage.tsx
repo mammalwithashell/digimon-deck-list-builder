@@ -49,8 +49,11 @@ import {
   SELECTION,
 } from '@/utils/constants';
 import {
+  anyFieldSelectionActionId,
+  anyFieldSelectionHighlights,
   fieldSelectionActionId,
   fieldSelectionHighlights,
+  isAnyFieldSelectionKind,
   isFieldSelectionKind,
 } from '@/utils/selectionTargets';
 import {
@@ -241,6 +244,40 @@ export function GamePage() {
       cancelled = true;
     };
   }, []);
+
+  // Refresh the engine-decoded action list whenever the legal-action set
+  // changes. The action bar renders activatable effects (card + effect name)
+  // from this instead of re-deriving labels from raw mask ranges. Cleared
+  // while the agent is acting or the game is over. WebSocket modes (PvP /
+  // vs-AI-online / spectator) drive state through their own channel and the
+  // /games decoded-actions endpoint may not back them — they fall back to the
+  // action bar's mask-based rendering, so we skip the fetch there.
+  useEffect(() => {
+    const gid = store.gameId;
+    if (!gid || useWebSocket || store.agentPending || store.isGameOver) {
+      store.setDecodedActions([]);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      try {
+        const actions = await gameApi.getDecodedActions(gid);
+        if (!cancelled) store.setDecodedActions(actions);
+      } catch {
+        if (!cancelled) store.setDecodedActions([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    store.gameId,
+    store.actionMask,
+    store.agentPending,
+    store.isGameOver,
+    useWebSocket,
+  ]);
 
   // Hydrate store from URL param when navigating to /game/:id
   useEffect(() => {
@@ -676,6 +713,26 @@ export function GamePage() {
         }
       }
 
+      // `AnyField` selections (`select_any_permanent` / `select_dna_pair`) span
+      // BOTH battle areas and encode the engine player in the action id
+      // (`encode_attack(player, index)`), so route by decoding the id rather
+      // than the single-side `OwnField`/`OppField` kind. Without this branch,
+      // "place 1 Digimon as the bottom security card"-style prompts (EX8-028
+      // Skadimon) swallowed every click — the softlock.
+      if (isAnyFieldSelectionKind(store.pendingSelection?.kind)) {
+        const selIdx = anyFieldSelectionActionId(
+          store.pendingSelection?.kind,
+          isOpponent,
+          slotIndex,
+          parsedMask.validSelections,
+          store.pendingSelection?.selectingPlayer,
+        );
+        if (selIdx !== null) {
+          handleAction(selIdx);
+          return;
+        }
+      }
+
       // During BlockTiming, slots 100-111 select a blocker
       if (phase === GamePhase.BlockTiming && !isOpponent) {
         const blockAction = SELECTION.OWN_FIELD_START + slotIndex;
@@ -964,6 +1021,15 @@ export function GamePage() {
     );
     for (const slot of fieldHighlights.own) highlightedOwnSlots.add(slot);
     for (const slot of fieldHighlights.enemy) highlightedEnemySlots.add(slot);
+
+    // `AnyField` (both-battle-area) selections decode the side from each id.
+    const anyHighlights = anyFieldSelectionHighlights(
+      store.pendingSelection?.kind,
+      parsedMask.validSelections,
+      store.pendingSelection?.selectingPlayer,
+    );
+    for (const slot of anyHighlights.own) highlightedOwnSlots.add(slot);
+    for (const slot of anyHighlights.enemy) highlightedEnemySlots.add(slot);
   }
 
   // DNA material selection highlights its own-field candidates by RAW
@@ -1262,6 +1328,7 @@ export function GamePage() {
           onSurrender={handleSurrender}
           isGameOver={store.isGameOver}
           canActivateEffect={parsedMask.canActivateEffect}
+          decodedActions={store.agentPending ? [] : store.decodedActions}
         />
       </div>
 

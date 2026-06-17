@@ -9,6 +9,7 @@ use crate::action::space::{
     PLAY_HAND_END, PLAY_HAND_START, SECURITY_TARGET, SOURCE_SELECT_END, SOURCE_SELECT_START,
     TRASH_EFFECT_END, TRASH_EFFECT_START,
 };
+use crate::action::main_effect_select;
 use crate::card_source::CardSource;
 use crate::enums::{GamePhase, PlayerId};
 use crate::game::Game;
@@ -57,6 +58,12 @@ pub struct ActionExplanation {
     pub target_index: Option<u16>,
     pub card_id: Option<String>,
     pub card_name: Option<String>,
+    /// For `[Main]`-activated effects (field, hand, trash, breeding
+    /// `<Training>`), the name of the *matched* effect (e.g. `"Digiburst"`),
+    /// resolved by mirroring the mask builder's first-match-wins selection via
+    /// [`crate::action::main_effect_select`]. `None` for non-effect actions or
+    /// when the matched effect carries no printed name.
+    pub effect_name: Option<String>,
 }
 
 pub fn explain_action(game: &Game, player_id: PlayerId, action_id: u16) -> ActionExplanation {
@@ -120,6 +127,44 @@ fn base(
         target_index: None,
         card_id: None,
         card_name: None,
+        effect_name: None,
+    }
+}
+
+/// Fold a resolved `[Main]` effect name into an explanation: stamps
+/// `effect_name` and rewrites the label to `"Activate {card}: {effect}"` when a
+/// name is present (the spec requires the label to include the effect name).
+/// When `name` is `None` the explanation is returned unchanged, preserving the
+/// zone-based fallback label.
+fn finalize_main_effect(mut e: ActionExplanation, name: Option<String>) -> ActionExplanation {
+    if let Some(eff) = name {
+        e.label = match &e.card_name {
+            Some(card) => format!("Activate {card}: {eff}"),
+            None => format!("Activate {eff}"),
+        };
+        e.effect_name = Some(eff);
+    }
+    e
+}
+
+/// Resolve the matched effect name for a `FIELD_EFFECT` action, but only for the
+/// `[Main]` sub-slot (`FIELD_EFFECT_SLOT_FOR_MAIN`). Other sub-slots (DigiLink,
+/// Overclock) and delayed-Option activations are not card-`[Main]` effects, so
+/// they return `None` and fall back to the source-card label.
+fn resolve_field_main_name(
+    game: &Game,
+    player_id: PlayerId,
+    perm: u16,
+    effect: u16,
+) -> Option<String> {
+    if effect != FIELD_EFFECT_SLOT_FOR_MAIN {
+        return None;
+    }
+    if perm == BREEDING_TARGET {
+        main_effect_select::breeding_training_match(game, player_id).and_then(|m| m.name_opt())
+    } else {
+        main_effect_select::field_main_match(game, player_id, perm as usize)
+            .and_then(|m| m.name_opt())
     }
 }
 
@@ -236,7 +281,10 @@ fn explain_main(game: &Game, player_id: PlayerId, action_id: u16) -> ActionExpla
         );
         e.source_zone = Some(ActionZone::Hand);
         e.source_index = Some(hand_idx as u16);
-        return with_hand_card(e, game, player_id, hand_idx);
+        let e = with_hand_card(e, game, player_id, hand_idx);
+        let name =
+            main_effect_select::hand_main_match(game, player_id, hand_idx).and_then(|m| m.name_opt());
+        return finalize_main_effect(e, name);
     }
 
     if action_id == PASS {
@@ -286,7 +334,9 @@ fn explain_main(game: &Game, player_id: PlayerId, action_id: u16) -> ActionExpla
             ActionKind::FieldEffect,
             field_effect_label("Activate field effect", perm, effect),
         );
-        return apply_field_effect_context(e, game, player_id, perm, effect);
+        let e = apply_field_effect_context(e, game, player_id, perm, effect);
+        let name = resolve_field_main_name(game, player_id, perm, effect);
+        return finalize_main_effect(e, name);
     }
 
     if (TRASH_EFFECT_START..TRASH_EFFECT_END).contains(&action_id) {
@@ -300,7 +350,10 @@ fn explain_main(game: &Game, player_id: PlayerId, action_id: u16) -> ActionExpla
         );
         e.source_zone = Some(ActionZone::Trash);
         e.source_index = Some(trash_idx);
-        return with_trash_card(e, game, player_id, trash_idx);
+        let e = with_trash_card(e, game, player_id, trash_idx);
+        let name = main_effect_select::trash_main_match(game, player_id, trash_idx as usize)
+            .and_then(|m| m.name_opt());
+        return finalize_main_effect(e, name);
     }
 
     base(

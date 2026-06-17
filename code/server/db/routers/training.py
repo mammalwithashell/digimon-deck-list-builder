@@ -44,7 +44,7 @@ from server.db.schemas import (
     TrainingJobResponse,
 )
 from digimon_gym.agents.deck_pool import analyze_core, generate_variants
-from engine_py_legacy.engine.data.deck_loader import summarize_deck
+from digimon_engine import summarize_deck
 
 router = APIRouter(prefix="/admin/training", tags=["training"])
 
