@@ -217,24 +217,50 @@ alt_paths:
     from: { level_eq: 5 }
     cost: 4
 
-  # [Hand][Main] activated digivolve from own Gabumon at cost 6, ignoring
-  # digivolution requirements. Printed: "If you have [Nokia Shiramine],
-  # 1 of your [Gabumon] digivolves into this card for a digivolution cost
-  # of 6, ignoring digivolution requirements."
-  #
-  # G-ALT-PATH-CONDITION: the Nokia Shiramine precondition cannot be
-  # expressed on AltPathSpec today. The Gabumon `from:` filter IS enforced;
-  # the Nokia gate is not. See header.
-  - kind: activated_digivolve
-    from:
-      of: you
-      zone: [battle_area]
-      name_contains: "Gabumon"
-    cost: 6
-    ignore_requirements: true
-
 effects:
-  # ─── Clause 3 — [When Digivolving] branch-choice ─────────────────────────
+  # ─── Clause 1 — [Hand][Main] Nokia jump (main_from_hand) ──────────────────
+  #
+  # Printed: "[Hand][Main] If you have [Nokia Shiramine], 1 of your [Gabumon]
+  # digivolves into this card for a digivolution cost of 6, ignoring
+  # digivolution requirements."
+  #
+  # Re-modelled (gap-closure plan) from the retired `kind: activated_digivolve`
+  # alt-path onto a `main_from_hand` triggered clause (mirrors BT24-016
+  # Lamiamon clause 1 / BT22-013). The engine masks a Hand [Main] action for any
+  # hand card with a `MainFromHand` effect whose `condition:` passes;
+  # `activate_hand_main` runs it. The Nokia "If you have [Nokia Shiramine]"
+  # precondition — which the alt-path `condition:` could not enforce — is the
+  # `condition:` gate here, so the action is offered ONLY when Nokia Shiramine is
+  # on your battle area AND a [Gabumon] target exists.
+  - when: main_from_hand
+    summary: "[Hand][Main] If you have Nokia Shiramine: 1 of your Gabumon digivolves into this card for cost 6, ignoring reqs"
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            name_is: "Nokia Shiramine"
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            name_contains: "Gabumon"
+    process:
+      - select_own_permanent:
+          bind_as: base
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Gabumon"
+          prompt: "Choose a Gabumon to digivolve into MetalGarurumon (cost 6, ignore reqs)"
+      - effect_initiated_digivolve:
+          target: base
+          from_hand: self
+          cost: 6
+          ignore_requirements: true
+
+  # ─── Clause 2 — [When Digivolving] branch-choice ─────────────────────────
   #
   # Printed: "[When Digivolving] Activate 1 of the effects below:
   #   ・1 of your [Agumon] may digivolve into [WarGreymon] in the hand,
