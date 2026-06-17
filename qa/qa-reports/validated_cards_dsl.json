@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-06-15",
+  "last_updated": "2026-06-16",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -6555,23 +6555,14 @@
     },
     "BT25-104": {
       "card_name": "ShineGreymon: Burst Mode",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
-      "archetype": "thomas-data-squad",
-      "notes": "BLOCKED: DUAL/Burst card. (a) '[WD][WA] Activate 1 [Main] effect on this card's Option side' needs cross-side Option-Main activation (Option play-flow gap, RUST_ENGINE_GAPS line ~572 'activate_own_main_effects'); (b) '[Your Turn] all your [Marcus Damon] are treated as 12000DP Digimon + gain Rush' needs treated-as-Digimon player-aura on named Tamers (name-overlay PARTIAL gap). Keywords Raid/Piercing/SA+1/Blocker/Barrier + alt/burst-digivolve are expressible.",
-      "patterns": [
-        "dual-card",
-        "burst-digivolve",
-        "raid",
-        "piercing",
-        "barrier",
-        "blocker",
-        "security-attack",
-        "activate-option-main-BLOCKED",
-        "treat-as-digimon-aura-BLOCKED"
-      ]
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-104.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_104.rs",
+      "notes": "Mass treat-as-Digimon aura clause omitted (G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH); other clauses IMPLEMENTED."
     },
     "BT25-055": {
       "card_name": "Deramon",
@@ -9594,6 +9585,171 @@
       "yaml_path": "code/digimon-engine/cards/st23/ST23-14.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st23/st23_14.rs",
       "notes": "Reconciled IMPLEMENTED — every printed clause authored + green in the full cards_behavioral regression (5413 passed). Entry rebuilt after a multi-agent integration metadata race dropped the original; behaviour verified by the per-card behavioral tests."
+    },
+    "ST24-01": {
+      "card_name": "Koromon",
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/st24/ST24-01.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_01.rs",
+      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+    },
+    "ST24-02": {
+      "card_name": "Gaomon",
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/st24/ST24-02.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_02.rs",
+      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+    },
+    "ST24-03": {
+      "card_name": "Gaogamon",
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/st24/ST24-03.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_03.rs",
+      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+    },
+    "ST24-04": {
+      "card_name": "Agumon",
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/st24/ST24-04.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_04.rs",
+      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+    },
+    "ST24-05": {
+      "card_name": "GeoGreymon",
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/st24/ST24-05.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_05.rs",
+      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+    },
+    "ST24-07": {
+      "card_name": "ShineGreymon",
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/st24/ST24-07.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_07.rs",
+      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+    },
+    "ST24-08": {
+      "card_name": "Lalamon",
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/st24/ST24-08.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_08.rs",
+      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+    },
+    "ST24-09": {
+      "card_name": "Sunflowmon",
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/st24/ST24-09.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_09.rs",
+      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+    },
+    "ST24-10": {
+      "card_name": "Lilamon",
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/st24/ST24-10.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_10.rs",
+      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+    },
+    "ST24-12": {
+      "card_name": "Falcomon",
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/st24/ST24-12.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_12.rs",
+      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+    },
+    "ST24-13": {
+      "card_name": "Marcus Damon & Thomas H. Norstein",
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/st24/ST24-13.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_13.rs",
+      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+    },
+    "ST24-14": {
+      "card_name": "Yoshino Fujieda & Keenan Crier",
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/st24/ST24-14.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_14.rs",
+      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+    },
+    "ST24-15": {
+      "card_name": "DNA Charge",
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/st24/ST24-15.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_15.rs",
+      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+    },
+    "P-235": {
+      "card_name": "Digital Accident Tactics Squad",
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/p/P-235.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_235.rs",
+      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+    },
+    "AD1-021": {
+      "card_name": "Marcus Damon & Agumon",
+      "validated_date": "2026-06-16",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/ad1/AD1-021.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_021.rs",
+      "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
     }
   }
 }
