@@ -2774,26 +2774,48 @@ with `link_cost.is_some()` reclassified the whole card as `OptionSubtype::Link`.
   Unblocks **ST22-08** (gained a `kind: link_requirement` clause, cost 2,
   `filter: { level_gte: 3 }`; 34 behavioral tests, 0 ignored).
 
-### G-ACTIVATED-DIGIVOLVE-EXECUTION — BT24-016 unblocked via re-model (no engine code)
+### G-ACTIVATED-DIGIVOLVE-EXECUTION — fully closed via re-model (no engine code)
 
 The `kind: activated_digivolve` alt-path kind has no engine execution route, and
 the task-1.1 investigation found `extra_cost` is unimplemented engine-wide (3
 sites, all exclusions). Rather than build a from-scratch parking `extra_cost`
-runner, **BT24-016 clause 1 was re-modelled** (design.md D1-REVISED) from a
-`kind: activated_digivolve` alt-path to a `when: main_from_hand` triggered clause
-(select Elizamon → select Dimetromon from trash → `place_as_bottom_source` →
-`effect_initiated_digivolve` cost 3, `ignore_requirements`). This is faithful to
-the printed `[Hand][Main]` text, uses only working machinery, and adds **zero
-engine code**. BT24-016 is `IMPLEMENTED` (24/24 tests).
+runner, **every affected card was re-modelled** off the unreachable
+`kind: activated_digivolve` alt-path onto working machinery, with **zero engine
+code**:
 
-This entry is **not fully closed**: the `CompiledAltPathKind::ActivatedDigivolve`
-execution route is still genuinely missing for the 3 out-of-scope cards
-(BT22-013/026, BT16-027) — see the residual entry in
-[qa/archetype-qa/engine-gaps.md](archetype-qa/engine-gaps.md).
+- **BT24-016 Lamiamon** (design.md D1-REVISED) — clause 1 re-modelled to a
+  `when: main_from_hand` triggered clause (select Elizamon → select Dimetromon
+  from trash → `place_as_bottom_source` → `effect_initiated_digivolve` cost 3,
+  `ignore_requirements`). `IMPLEMENTED` (24/24 tests).
+- **BT22-013 WarGreymon** / **BT22-026** (gap-closure Tasks A1–A2) — the
+  `[Hand][Main]` "If you have [Nokia Shiramine], 1 of your [Agumon] digivolves
+  into this card for cost 6, ignoring requirements" jump re-modelled to a
+  `when: main_from_hand` clause whose `condition:` enforces BOTH the Nokia
+  precondition AND the Agumon-target existence (mirrors BT24-016 clause 1);
+  body `select_own_permanent { Agumon } → effect_initiated_digivolve
+  { from_hand: self, cost: 6, ignore_requirements: true }`. Driven through the
+  real ability via `activate_hand_main`.
+- **BT16-027** (gap-closure Task A3) — re-modelled onto a static `digivolve`
+  add-source alt-path.
 
-- **Closed by:** `unblock-medusamon-tier3-cards` OpenSpec change, 2026-05-22.
-  Full engine suite green (`cards_behavioral` 2722 passed / 129 ignored / 0 failed;
-  `option_flow` 93; `mask_and_tensor` 157).
+Because the action layer already masks a Hand `[Main]` action for any hand card
+with a `MainFromHand` effect whose `condition:` passes, the re-modelled jumps are
+both playable and behaviorally driveable — the `CompiledAltPathKind::Activated
+Digivolve` execution route is **no longer needed by any card**, so the gap is
+fully closed.
+
+- **Per-card coverage:** `tests/cards_behavioral/bt22/bt22_013.rs::bt22_013_hand_main_jump_*`
+  (cost-6 jump fires with Nokia + Agumon; gated off without Nokia).
+- **Interaction coverage (gap-closure Task A4):** DNA Omnimon combo E —
+  `tests/archetypes/dna_omnimon.rs::combo_e_nokia_cost6_lv6_jump` (REAL Nokia
+  Shiramine BT22-084 + REAL Agumon BT22-008 stack → cost-6 jump → BT22-013's
+  `[When Digivolving]` branch-choice fires; 6-memory delta proves the cost) and
+  `combo_e_nokia_jump_gated_on_nokia_precondition` (the Nokia-absent gate). The
+  previously-`#[ignore]`'d combo E placeholder is now a real passing test.
+- **Closed by:** `unblock-medusamon-tier3-cards` (BT24-016, 2026-05-22) +
+  DNA Omnimon gap-closure plan Tasks A1–A4 (BT22-013/026, BT16-027, combo E;
+  2026-06-16). Engine suite green: `archetypes` (DNA Omnimon 10/10, 0 ignored),
+  `cards_behavioral` (bt22_013 jump tests pass).
 
 ## DSL Gap: Card-level "also treated as [Name]" identity alias — RESOLVED 2026-05-21
 

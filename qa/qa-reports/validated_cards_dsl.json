@@ -2035,7 +2035,7 @@
         "E1",
         "G2"
       ],
-      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust."
+      "notes": "DNA Omnimon completion 2026-05-20: faithfully implemented in DSL YAML; behavioral tests pass; no ignored tests; no raw_rust. Gap-closure 2026-06-16: [Hand][Main] Nokia cost-6 jump re-modelled off the unreachable activated_digivolve alt-path onto a main_from_hand clause (G-ACTIVATED-DIGIVOLVE-EXECUTION RESOLVED, qa/resolved-gaps.md); driven through the real ability in DNA Omnimon combo E (tests/archetypes/dna_omnimon.rs::combo_e_nokia_cost6_lv6_jump)."
     },
     "BT22-015": {
       "card_name": "Omnimon",

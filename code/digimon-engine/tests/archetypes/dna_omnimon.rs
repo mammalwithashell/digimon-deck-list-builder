@@ -28,7 +28,7 @@
 //! - B — BT17-095 Delay → reactive DNA (leaving Lv.6 consumed into an Omnimon). [AUTHORED]
 //! - C — BT17-078 Blast DNA Counter (same-level bottom-deck + delete).          [AUTHORED]
 //! - D — free cross-tribe Lv.6 assembly (BT17-015 free Gabumon→MetalGarurumon). [AUTHORED]
-//! - E — Nokia cost-6 Lv.6 jump (BT22-013 [Hand][Main]).                        [#[ignore] — G-ACTIVATED-DIGIVOLVE-EXECUTION]
+//! - E — Nokia cost-6 Lv.6 jump (BT22-013 [Hand][Main]).                        [AUTHORED]
 
 #![allow(dead_code)]
 
@@ -688,37 +688,199 @@ fn combo_d_no_gabumon_yields_no_second_lv6() {
 // Combo E — Nokia accel into cheap Lv.6 (BT22-013 cost-6 jump)
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// Cards (model Combo E): BT22-084 Nokia Shiramine + BT22-013 WarGreymon + a
-//   field [Agumon]. Claimed outcome: with Nokia in play, BT22-013's [Hand][Main]
-//   lets an [Agumon] digivolve into BT22-013 for digivolution cost 6, ignoring
-//   requirements.
+// Cards (model Combo E): BT22-084 Nokia Shiramine (Tamer) + BT22-013 WarGreymon
+//   (hand) + a real [Agumon] (BT22-008) on field. Claimed outcome: with Nokia in
+//   play, BT22-013's [Hand][Main] lets an [Agumon] digivolve into BT22-013 for a
+//   digivolution cost of 6, ignoring requirements — and the resulting digivolve
+//   fires BT22-013's [When Digivolving] branch-choice.
 //
-// BLOCKED — `#[ignore]`'d on G-ACTIVATED-DIGIVOLVE-EXECUTION
-//   (`qa/archetype-qa/engine-gaps.md`). BT22-013's [Hand][Main] cost-6 jump is
-//   encoded only as a `kind: activated_digivolve` alt-path, which has NO engine
-//   execution route: `dna_digivolve.rs` matches only Digivolve / DnaDigivolve /
-//   BlastDnaDigivolve, and the action layer offers no action ID for an
-//   activated-digivolve alt-path. The gap entry lists BT22-013 as a residual
-//   card. The named cost-6 jump therefore cannot be played or behaviorally
-//   driven — its board diff cannot be produced faithfully. (Separately, the
-//   Nokia precondition is unenforced because BT22-013.yaml does not yet populate
-//   the now-RESOLVED `AltPathSpec.condition:` — a card-local authoring follow-up,
-//   distinct from this execution gap.) The executable BT22-013 components (the
-//   [When Digivolving] delete / free-digivolve branches) are covered by
-//   `tests/cards_behavioral/bt22/bt22_013.rs`; no faithful interaction test can
-//   be authored for the named jump until the execution route lands.
+// AUTHORED — G-ACTIVATED-DIGIVOLVE-EXECUTION is RESOLVED (qa/resolved-gaps.md).
+//   The jump was re-modelled (gap-closure Tasks A1–A3) off the unreachable
+//   `kind: activated_digivolve` alt-path onto a `when: main_from_hand` triggered
+//   clause whose `condition:` enforces BOTH the Nokia "If you have [Nokia
+//   Shiramine]" precondition AND the [Agumon]-target existence; its body runs
+//   `select_own_permanent { Agumon } → effect_initiated_digivolve { from_hand:
+//   self, cost: 6, ignore_requirements: true }` (mirrors BT24-016 Lamiamon
+//   clause 1). The engine now offers a Hand [Main] action for the card whose
+//   gate passes; `activate_hand_main` runs it. So the named combo IS driveable
+//   through the card's REAL ability — no `activated_digivolve` execution route
+//   is needed, and zero engine code changed. The per-card mechanism is pinned by
+//   `tests/cards_behavioral/bt22/bt22_013.rs::bt22_013_hand_main_jump_*`; this
+//   interaction test pins the combined-system outcome (REAL Nokia + REAL Agumon
+//   stack → cost-6 jump → [When Digivolving] branch-choice fires) plus the
+//   Nokia-absent gate that a per-card test can isolate but the combo relies on.
+//
+// Driven through the REAL ability (`activate_hand_main` → resolve the Agumon
+// select), not a low-level digivolve helper — so the cost-6 deduction and the
+// [When Digivolving] branch-choice both run as in play.
 
+/// Hand index of `card_id` in `player`'s hand (local helper — the archetype
+/// harness does not export one).
+fn hand_index_of_e(runner: &DebugRunner, player: u8, card_id: &str) -> usize {
+    runner.game.players[player as usize]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == card_id)
+        .unwrap_or_else(|| panic!("{card_id} must be in player {player}'s hand"))
+}
+
+/// Happy path: REAL Nokia Shiramine (BT22-084) + a REAL [Agumon] (BT22-008) on
+/// P0's field + BT22-013 WarGreymon in hand. Activating BT22-013's [Hand][Main]
+/// jump digivolves the Agumon into WarGreymon at digivolution cost 6, ignoring
+/// requirements — the Agumon stack is now topped by BT22-013, exactly 6 memory
+/// was paid, and BT22-013's [When Digivolving] branch-choice fired as a result.
 #[test]
-#[ignore = "G-ACTIVATED-DIGIVOLVE-EXECUTION: BT22-013 [Hand][Main] cost-6 jump is a \
-            kind: activated_digivolve alt-path with no engine execution route \
-            (qa/archetype-qa/engine-gaps.md); the named combo outcome cannot be \
-            produced faithfully. Un-ignore when the execution route lands."]
 fn combo_e_nokia_cost6_lv6_jump() {
-    // Intentionally empty: there is no faithful way to drive BT22-013's
-    // activated_digivolve [Hand][Main] until G-ACTIVATED-DIGIVOLVE-EXECUTION is
-    // resolved. Authoring a body now would either bypass the real ability
-    // (violating the no-approximations / real-ability rule) or assert a no-op.
-    unimplemented!(
-        "blocked on G-ACTIVATED-DIGIVOLVE-EXECUTION — see the module-level Combo E note"
+    use digimon_engine::selection::SelectionKind;
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT22-013") // WarGreymon — the [Hand][Main] cost-6 jump payoff
+        .expect("BT22-013 (WarGreymon) in embedded DSL pack")
+        .dsl_card("BT22-084") // Nokia Shiramine — the real Tamer precondition
+        .expect("BT22-084 (Nokia Shiramine) in embedded DSL pack")
+        .dsl_card("BT22-008") // Agumon — the real digivolve base
+        .expect("BT22-008 (Agumon) in embedded DSL pack")
+        .dsl_card("ST1-04") // Dracomon — vanilla deck filler
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .hand(0, &["BT22-013"])
+        .deck(0, &["ST1-04"; 5])
+        .deck(1, &["ST1-04"; 5])
+        .memory(15)
+        .start();
+    runner.game.turn_count = 1;
+
+    // REAL Nokia Shiramine (Tamer) + REAL Agumon (BT22-008) on player 0's field.
+    // `place_on_field` does NOT fire On Play, so Nokia's [On Play] free-play and
+    // the Agumon's own clauses stay dormant — only the static gate matters here.
+    runner.place_on_field(0, "BT22-084", Some(0));
+    runner.place_on_field(0, "BT22-008", Some(0));
+
+    let mem_before = runner.memory();
+    let bt22_013_idx = hand_index_of_e(&runner, 0, "BT22-013");
+
+    // Drive the REAL [Hand][Main] Nokia jump.
+    assert!(
+        runner.game.activate_hand_main(0, bt22_013_idx),
+        "the [Hand][Main] Nokia jump must fire (real Nokia Shiramine + real Agumon present)"
+    );
+
+    // The jump body asks which Agumon to digivolve into; pick the (only) one.
+    let view = runner
+        .pending_selection_view()
+        .expect("the Agumon select prompt must install");
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("select the Agumon");
+
+    // System-level fact: completing the digivolve fires BT22-013's
+    // [When Digivolving] branch-choice (a 2-way EffectChoice). With no opp
+    // Digimon and no own Gabumon, both sub-branches no-op, but the choice
+    // prompt itself MUST install — proving the jump was a real digivolve, not a
+    // board mutation.
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::EffectChoice),
+        "the cost-6 jump must be a real digivolve → BT22-013's [When Digivolving] \
+         branch-choice fires as a result"
+    );
+    runner.auto_resolve().expect("branch-choice + follow-ups resolve");
+
+    // The Agumon stack is now topped by WarGreymon (BT22-013).
+    let agumon_perm = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|p| {
+            p.card_sources
+                .iter()
+                .any(|s| s.card_id(&runner.game.card_data) == "BT22-008")
+        })
+        .expect("the Agumon permanent must still be on the field");
+    assert_eq!(
+        agumon_perm.top_card().card_id(&runner.game.card_data),
+        "BT22-013",
+        "WarGreymon must be the top card of the Agumon stack after the [Hand][Main] jump"
+    );
+
+    // WarGreymon left the hand.
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "WarGreymon must leave the hand after digivolving onto the Agumon"
+    );
+
+    // The cost-6 digivolve actually deducted 6 memory — the memory delta proves
+    // the cost was paid (a silently-ignored cost would leave the delta at 0).
+    assert_eq!(
+        mem_before - runner.memory(),
+        6,
+        "the [Hand][Main] jump must pay digivolution cost 6 (before={}, after={})",
+        mem_before,
+        runner.memory(),
+    );
+}
+
+/// Unhappy path (Nokia precondition gate): with the REAL [Agumon] (BT22-008) on
+/// field but NO Nokia Shiramine, the masked [Hand][Main] action is NOT offered —
+/// `activate_hand_main` returns false, no selection installs, and no digivolve
+/// happens. The whole jump is gated on the Nokia precondition; this is the
+/// system fact the combo depends on but a per-card test isolates.
+#[test]
+fn combo_e_nokia_jump_gated_on_nokia_precondition() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT22-013")
+        .expect("BT22-013 (WarGreymon) in embedded DSL pack")
+        .dsl_card("BT22-008") // Agumon present — but no Nokia
+        .expect("BT22-008 (Agumon) in embedded DSL pack")
+        .dsl_card("ST1-04")
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .hand(0, &["BT22-013"])
+        .deck(0, &["ST1-04"; 5])
+        .deck(1, &["ST1-04"; 5])
+        .memory(15)
+        .start();
+    runner.game.turn_count = 1;
+
+    // Agumon on field, but NO Nokia Shiramine — the Nokia gate must block the jump.
+    runner.place_on_field(0, "BT22-008", Some(0));
+
+    let before = snapshot(&runner);
+    let bt22_013_idx = hand_index_of_e(&runner, 0, "BT22-013");
+
+    assert!(
+        !runner.game.activate_hand_main(0, bt22_013_idx),
+        "without Nokia Shiramine the [Hand][Main] condition fails — the jump must not fire"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "no selection installs when the Nokia-gated [Hand][Main] jump is not offered"
+    );
+
+    // The Agumon stack is untouched (WarGreymon never digivolved onto it).
+    let agumon_perm = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|p| {
+            p.card_sources
+                .iter()
+                .any(|s| s.card_id(&runner.game.card_data) == "BT22-008")
+        })
+        .expect("the Agumon permanent must still be on the field");
+    assert_eq!(
+        agumon_perm.top_card().card_id(&runner.game.card_data),
+        "BT22-008",
+        "no digivolve — the Agumon must still be the top card of its own stack"
+    );
+    let after = snapshot(&runner);
+    assert_eq!(
+        after.hand[0], before.hand[0],
+        "WarGreymon must remain in hand — the jump was not offered"
+    );
+    assert_eq!(
+        after.memory, before.memory,
+        "no cost is paid when the Nokia-gated jump is not offered"
     );
 }
