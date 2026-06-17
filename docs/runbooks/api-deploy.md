@@ -155,7 +155,7 @@ curl -sf https://inbetweentheatre.duckdns.org/health
 ```
 
 This runbook MUST be exercised end-to-end once before alpha opens. See Task 9 in
-`docs/superpowers/plans/2026-04-19-alpha-readiness.md`.
+`docs/superpowers/archive/plans/2026-04-19-alpha-readiness.md`.
 
 ## Spaces lifecycle rule (one-time)
 

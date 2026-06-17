@@ -606,7 +606,7 @@ an hour of your time.
 
 ## TensorBoard watcher sidecar
 
-The watcher is the **observation** layer for a cloud training host. The trainer
+This sidecar is for **Path B** (Hetzner / DO CPU droplets with a host Docker daemon); Path A (RunPod) runs TensorBoard inline inside the pod instead. The watcher is the **observation** layer for a cloud training host. The trainer
 container is a one-shot `docker run` (it exits loudly on completion — we do *not*
 want a 13-hour job silently restart-looping on a transient failure). The watcher
 is the opposite shape: long-lived and declarative, so it is a Compose service.
