@@ -33,7 +33,7 @@ artifacts will be persisted (see the **ephemeral storage** gotcha).
    ```bash
    rsync -az data/ <host>:~/digimon-training/data/
    rsync -az training_jobs/ <host>:~/digimon-training/training_jobs/
-   rsync -az docker-compose.watch.yml <host>:~/digimon-training/
+   rsync -az docker-compose.watch.yml <host>:~/digimon-training/   # watch compose lives at the repo root
    # on the host, once:
    docker compose -f docker-compose.watch.yml up -d   # TensorBoard on :6006 (tailnet only)
    ```
@@ -62,7 +62,7 @@ python -m digimon_gym.agents.pilot_training --archetypes rocks,ts-olympos --time
 The in-run / mirror eval win rate is **not a cross-mode learning signal** and is
 degenerate under self-play. Rank a model only with **anchored evaluation** —
 against fixed references (greedy floor + frozen champions), seat-balanced:
-`python code/tools/anchored_eval_cli.py --deck-pool-snapshot <run>/deck_pool_snapshot.json --n <adequate-n>`
+`python code/tools/anchored_eval_cli.py --candidate <run-dir-or-checkpoint.zip> --deck-pool-snapshot <run>/deck_pool_snapshot.json --n <adequate-n>` (`--candidate` is required)
 (see `docs/MODEL_EVALUATION.md`). Training runs also log an in-training anchored
 panel (`pilot/anchored/*`), but promotion decisions come from the post-hoc frame.
 

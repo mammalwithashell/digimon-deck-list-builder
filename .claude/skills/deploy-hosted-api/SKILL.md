@@ -55,8 +55,9 @@ stack, and runs a post-deploy healthcheck.
 curl -sf https://inbetweentheatre.duckdns.org/health && echo " <- API up"
 ```
 
-Expected: a healthy response. The deploy job already polls `/health` for ~2 min,
-so a green run usually means this passes; verify anyway.
+Expected: a healthy response. The `deploy` job itself gates on `/health` (it
+polls for ~2 min and fails the run if the API never comes up), so a green run
+already means this passed — this curl is a belt-and-suspenders external check.
 
 ## Rollback
 
