@@ -190,6 +190,14 @@ pub struct PredicateSpec {
     pub source_is_tamer: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_is_unsuspended: Option<bool>,
+    /// True when the subject permanent IS the effect's source permanent (the
+    /// carrier/host). Lets `kind: flood_gate` / `kind: aura` target `self` —
+    /// install a modifier on the carrier itself instead of scanning the whole
+    /// board with an aux self-identity predicate. Pair with `scope: both` so
+    /// the carrier resolves to the active top (face_up) AND the host of the
+    /// digivolution stack (inherited). (BT24-062 attack-target lock.)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub is_source_permanent: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_name_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]

@@ -702,6 +702,7 @@ fn compile_predicate(
         }),
         source_is_tamer: p.source_is_tamer,
         source_is_unsuspended: p.source_is_unsuspended,
+        is_source_permanent: p.is_source_permanent,
         source_name_contains: p.source_name_contains.clone(),
         source_permanent_trait_has: p.source_permanent_trait_has.clone(),
         is_face_down: p.is_face_down,

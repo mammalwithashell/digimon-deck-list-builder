@@ -1,0 +1,43 @@
+name: Resolved Gap Citation Drift
+
+# Flags card YAML headers that cite an ALREADY-RESOLVED gap (a `## … [G-X]`
+# header in qa/resolved-gaps.md) as still-blocking ("pending/BLOCKED on G-X").
+# Stale "blocked by <resolved gap>" notes mislead authors into believing a
+# working capability is still missing. See dsl-substrate-integrity
+# (fix-dsl-substrate-rot-and-bugs §7).
+#
+# Phase 1 rollout: `continue-on-error: true` (warn-only), matching the
+# action-space-codegen-drift precedent. It surfaces the existing stale
+# citations without blocking PRs. PROMOTE to required (remove
+# `continue-on-error`) once the flagged headers are scrubbed and the check is
+# green — the dsl-substrate-integrity spec calls for a hard failure.
+
+on:
+  pull_request:
+    paths:
+      - 'code/digimon-engine/cards/**'
+      - 'qa/resolved-gaps.md'
+      - 'code/tools/check_resolved_gap_citations.py'
+      - '.github/workflows/resolved-gap-citation-drift.yml'
+  push:
+    branches: ["main"]
+    paths:
+      - 'code/digimon-engine/cards/**'
+      - 'qa/resolved-gaps.md'
+      - 'code/tools/check_resolved_gap_citations.py'
+
+jobs:
+  check-resolved-gap-citations:
+    runs-on: ubuntu-latest
+    continue-on-error: true  # Phase 1: warn only. Promote to required once scrubbed.
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.11"
+
+      - name: Flag stale resolved-gap citations in card headers
+        run: python code/tools/check_resolved_gap_citations.py
