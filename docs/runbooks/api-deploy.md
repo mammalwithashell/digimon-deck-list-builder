@@ -1,5 +1,10 @@
 # Deploying the hosted API
 
+> **Procedural runbook** (bootstrap / deploy / rollback / restore). For the
+> hosted-API topology, required env vars, and provider choices, see
+> [`docs/DEPLOYMENT.md`](../DEPLOYMENT.md). The happy-path deploy recipe is the
+> `deploy-hosted-api` skill.
+
 Prod host: `inbetweentheatre.duckdns.org` → DO droplet in NYC3.
 Image registry: `ghcr.io/mammalwithashell/digimon-api`.
 
@@ -69,7 +74,7 @@ Copy deploy files from your laptop:
 scp -i ~/.ssh/digimon_deploy \
   docker-compose.prod.yml Caddyfile \
   deploy@<droplet-ip>:/opt/digimon/
-scp -i ~/.ssh/digimon_deploy -r ops/ \
+scp -i ~/.ssh/digimon_deploy -r scripts/ \
   deploy@<droplet-ip>:/opt/digimon/
 ```
 
