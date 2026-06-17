@@ -1,0 +1,86 @@
+# ST24-01 Koromon — Digi-Egg, Lv.2, Yellow, Cost 0.
+# Traits: Lesser, DATA SQUAD.
+#
+# Printed card text (data/cards.json — verbatim):
+#   The FACE has NO effect.
+#   Inherited Effect [When Attacking] [Once Per Turn] By trashing the bottom
+#     face-down card from under any of your Tamers, this Digimon may digivolve
+#     into a [DATA SQUAD] trait Digimon card in the hand with the cost reduced
+#     by 2.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST24/Yellow/ST24_01.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Inherited OnAllyAttack ActivateClass (maxPerTurn 1, optional):
+#   - CanActivate: a Tamer with a face-down digivolution source exists. The verb
+#     trash_bottom_face_down_source_under_tamer installs that exact Tamer pick
+#     and trashes the chosen Tamer's bottom face-down source.
+#   - Payoff: DigivolveIntoHandOrTrashCard(this permanent, payCost: true,
+#     reduceCost 2, isHand: true) over a hand card EqualsTraits("DATA SQUAD"). →
+#     effect-initiated digivolve of THIS permanent (target: source) into a hand
+#     [DATA SQUAD] card with cost: { reduce: 2 }, requirements honored.
+#   - "may digivolve" optionality is carried by the optional select_hand:
+#     declining (PASS) leaves the binding unset → the trash cost is NOT paid. The
+#     clause is gated on BOTH a Tamer-with-face-down-source AND a [DATA SQUAD]
+#     card in hand, so the trash cost is never paid for nothing.
+#
+# Sister card: ST23-01 Kekkomon (trait-swapped Glowing Dawn → DATA SQUAD).
+
+card: ST24-01
+name: "Koromon"
+kind: digi_egg
+level: 2
+color: [yellow]
+cost: 0
+traits: [Lesser, DATA SQUAD]
+form: In-Training
+
+effects:
+  # ─── Inherited [When Attacking][OPT] trash bottom FD under a Tamer → may
+  #     digivolve into a [DATA SQUAD] hand card with the cost reduced by 2 ───────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    # Gate on a payable cost (a Tamer with a face-down source) AND a valid payoff
+    # (a [DATA SQUAD] card in hand). The trash cost is never paid for nothing.
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            has_face_down_source: true
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              all_of:
+                - kind: digimon
+                - trait_has: "DATA SQUAD"
+            n: 1
+    summary: "Inherited [When Attacking][OPT] By trashing the bottom face-down card under a Tamer, may digivolve into a [DATA SQUAD] hand card with the cost reduced by 2"
+    process:
+      # "may digivolve into a [DATA SQUAD] trait Digimon card in the hand" — the
+      # optional select_hand carries the "may". Declining (PASS) leaves the
+      # binding unset → the trash cost below is NOT paid.
+      - select_hand:
+          of: you
+          bind_as: ds_evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "DATA SQUAD"
+          prompt: "Digivolve into a [DATA SQUAD] trait Digimon card in your hand with the cost reduced by 2"
+      - if:
+          condition: { binding_present: ds_evo }
+          then:
+            # "By trashing the bottom face-down card from under any of your
+            # Tamers" — the activation cost (multi-Tamer pick surfaced).
+            - trash_bottom_face_down_source_under_tamer: { of: you }
+            # "with the cost reduced by 2" — paid, requirements honored.
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: ds_evo
+                cost: { reduce: 2 }

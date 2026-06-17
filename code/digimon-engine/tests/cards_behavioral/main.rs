@@ -71,6 +71,7 @@ mod st20;
 mod st21;
 mod st22;
 mod st23;
+mod st24;
 mod st3;
 mod st4;
 mod st5;
