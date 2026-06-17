@@ -2,11 +2,16 @@ import { invoke } from '@tauri-apps/api/core';
 import client from '@/api/client';
 import * as deckLibrary from '@/api/deckLibraryAdapter';
 import * as gameApi from '@/api/gameApi';
+import type { PlayerKind } from '@/api/gameApi';
 import * as lobbyApi from '@/api/lobbyApi';
 import * as matchmaking from '@/api/matchmaking';
 import type { DeckResponse } from '@/types/deck';
 import type { PlayFormat, PlayFormatId } from './formatCatalog';
 import { PLAY_FORMATS, formatToQueueType } from './formatCatalog';
+import { resolveStarterModel } from '@/api/desktopModelsApi';
+import { STARTER_DECKS } from './starterDecks.generated';
+
+const MANIFEST_BASE = (import.meta.env.VITE_MODELS_MANIFEST_URL as string | undefined) ?? '';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 
@@ -152,4 +157,67 @@ export async function createBotGame(params: {
     seed: params.seed,
   });
   return { game_id: response.game_id, seed: response.seed };
+}
+
+/** The 6 bundled starter decks (same data in desktop + browser builds). */
+export async function listStarterDecks(): Promise<DeckResponse[]> {
+  return STARTER_DECKS;
+}
+
+/** Deterministic-from-seed index in [0, count). FNV-1a so a given shuffle
+ *  seed reproduces the same AI deck; random when no seed is set. */
+export function starterIndexFromSeed(seed: string | null, count: number): number {
+  if (!seed) return Math.floor(Math.random() * count);
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i += 1) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return Math.abs(h) % count;
+}
+
+/** Start a game vs the AI: player pilots `deck`, the AI pilots a random
+ *  starter deck (seed-derived). Uses the released starter model on desktop
+ *  when one is published; otherwise the greedy CPU. */
+export async function createAiStarterGame(params: {
+  deck: DeckResponse;
+  starterDecks: DeckResponse[];
+  seed?: string | null;
+}): Promise<{ game_id: string; seed?: string; aiDeckName: string }> {
+  const seed = params.seed ?? null;
+  const aiDeck = params.starterDecks[starterIndexFromSeed(seed, params.starterDecks.length)]!;
+  const deck1 = [...params.deck.egg_deck, ...params.deck.main_deck];
+  const deck2 = [...aiDeck.egg_deck, ...aiDeck.main_deck];
+
+  // Resolve the released model (desktop only); any failure -> greedy CPU.
+  let modelId: string | null = null;
+  if (IS_DESKTOP && MANIFEST_BASE) {
+    try {
+      modelId = await resolveStarterModel(MANIFEST_BASE);
+    } catch {
+      modelId = null;
+    }
+  }
+
+  if (!hasTauriBridge()) {
+    const { data } = await client.post<{ game_id: string; seed?: string }>('/games', {
+      deck1,
+      deck2,
+      player1_type: 'human',
+      player2_type: 'agent',
+      player2_policy: 'greedy',
+      seed,
+    });
+    return { game_id: data.game_id, seed: data.seed, aiDeckName: aiDeck.name };
+  }
+
+  const kinds: PlayerKind[] = ['human', modelId ? 'trained' : 'greedy'];
+  const response = await gameApi.createGame({
+    deck1,
+    deck2,
+    player_kinds: kinds,
+    player_model_ids: [null, modelId],
+    seed,
+  });
+  return { game_id: response.game_id, seed: response.seed, aiDeckName: aiDeck.name };
 }

@@ -72,3 +72,11 @@ export function isCompatible(model: ManifestModel, contract: EngineContract): bo
     model.action_space_size === contract.action_space_size
   );
 }
+
+/// Resolve + load the released "starter AI" model flagged in the hosted
+/// manifest (`starter_ai_model_id`). Returns the loaded model id, or `null`
+/// when no model is published / it's incompatible / the fetch fails — callers
+/// fall back to the greedy CPU.
+export async function resolveStarterModel(baseUrl: string): Promise<string | null> {
+  return invoke<string | null>('models_resolve_starter', { baseUrl });
+}
