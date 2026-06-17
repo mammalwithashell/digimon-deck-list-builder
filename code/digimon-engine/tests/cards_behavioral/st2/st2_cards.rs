@@ -313,6 +313,37 @@ fn st2_03_and_st2_06_trash_bottom_sources_without_source_prompt() {
 }
 
 #[test]
+fn st2_06_targets_sourceless_opponent_digimon() {
+    // ST2-06 Garurumon inherited [When Attacking]: "Trash the digivolution card at
+    // the bottom of 1 of your opponent's Digimon." DCGO ST2_06.cs's
+    // CanSelectPermanentCondition checks ONLY that the target is an opponent
+    // battle-area Digimon (NO source-count requirement) — unlike ST2-03/ST2-09,
+    // whose DCGO sources DO require a digivolution card. So a sourceless opponent
+    // Digimon is a legal target (the trash is simply a no-op). The effect must
+    // still activate and surface the choice.
+    let mut runner = st2_builder().add_card(digimon("OPP-NOSRC", 5, 5000)).start();
+    let attacker = runner.place_stack(0, &["ST2-06", "ST2-08"]);
+    // Opponent has exactly one Digimon, with NO digivolution cards.
+    runner.place_on_field(1, "OPP-NOSRC", Some(0));
+
+    fire(&mut runner, EffectTiming::WhenAttacking, attacker);
+
+    let pending = runner.pending_selection().expect(
+        "ST2-06 must activate and surface a target selection even when the only \
+         opponent Digimon has no digivolution cards (matches DCGO ST2_06.cs)",
+    );
+    assert_eq!(pending.selecting_player, 0);
+
+    choose_first_pending(&mut runner);
+
+    // Trashing the bottom source of a sourceless Digimon is a clean no-op:
+    // the Digimon stays on the field and nothing enters trash.
+    assert_eq!(top_ids(&runner, 1), vec!["OPP-NOSRC"]);
+    assert!(trash_ids(&runner, 1).is_empty());
+    assert!(runner.pending_selection().is_none());
+}
+
+#[test]
 fn st2_07_grizzlymon_has_blocker_and_loses_two_memory_when_attacking() {
     let mut runner = st2_builder().memory(5).start();
     let grizzlymon = runner.place_on_field(0, "ST2-07", Some(0));

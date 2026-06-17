@@ -3653,6 +3653,16 @@ BT25-075's observer sub-clause.
 ## RESOLVED 2026-06-13 — `app_fuse` step (effect-initiated App Fuse)  [G-DSL-APP-FUSE]
 **Status: RESOLVED 2026-06-13.** New DSL step `app_fuse: { from: hand|trash, result_filter?, optional }` for the printed "1 of your Digimon may app fuse into a Digimon card in the hand/trash" rider. Lowers to `CompiledStep::AppFuse` → `EffectContext::initiate_effect_app_fuse`. Added to `body_first_step_is_declinable` (installs its own PASS-able selections). First users: BT21-084, BT23-079, P-241, BT24-087, BT25-089. See `docs/RUST_ENGINE_GAPS.md` "Effect-initiated App Fuse — RESOLVED 2026-06-13".
 
+## OPEN 2026-06-14 — starter-deck (ST1-6) audit action-space-fidelity divergences  [G-AUDIT-ST1-6]
+**Status: OPEN, deferred.** Surfaced by the `battle-test-starter-decks-st1-6` faithfulness re-audit (see `openspec/changes/battle-test-starter-decks-st1-6/notes/phase1-audit-findings.md`). All are minor action-space-fidelity divergences (no wrong outcomes / crashes / soft-locks); none block training-readiness.
+
+1. **Suspend-target over-restriction (`is_unsuspended: true`)** — ST4-13 HerculesKabuterimon `<Digi-Burst 2>` suspend, ST4-15 Needle Spray suspend (and ~46 other cards repo-wide) filter the suspend target to `is_unsuspended: true`. DCGO (`ST4_13.cs`/`ST4_15.cs`: plain `IsPermanentExistsOnOpponentBattleAreaDigimon`) and rule 15-15-6-3 permit choosing ANY opponent Digimon, including an already-suspended one (the suspend is then a no-op). No new vocab needed — fix is to drop the filter — but it is a **cross-cutting bulk card-data change (~46 cards + action-space)**, out of scope for an ST1-6-only change. Best handled as its own change with a shared smoke/soft-lock test.
+
+2. **ST2-15 Kaiser Nail — missing "playable-as-new-permanent" source filter predicate.** The card plays a selected digivolution-card source "as another Digimon". DCGO `ST2_15.cs` gates the source pick with `CanPlayAsNewPermanent(payCost:false)` (field not full / no play-lock); the YAML's `select_material { kind: digimon }` exposes any Digimon source and the play silently fizzles if unplayable. Genuine **DSL-vocab gap**: a source/card filter predicate meaning "can legally be played as a new permanent right now". Behavior converges (you can't play it either way); cosmetic for outcomes, real for RL action-mask fidelity.
+
+3. **ST6-13 CresGarurumon — `<Digi-Burst 2>` over-gated activation.** YAML's `[Main]` `condition` requires a valid Lv3 purple Digimon already in trash before Digi-Burst can be activated; DCGO `ST6_13.cs` gates activation only on `CanDigiBurst()` (≥2 sources) and plays nothing if no target. Removing the trash-target gate would restore the (never-correct) "pay Digi-Burst with no play" line, but the mandatory inner `select_trash` would then need a skip-if-empty path to avoid a soft-lock. Deferred: current behavior is strictly safe and the removed line is never optimal play.
+
+ST6-12 VenomMyotismon was flagged by the auditor (`optional_zero` vs DCGO force-≥1) but is a **false positive** — "up to N" permits 0 per rule 15-10-2-2 (PDF outranks DCGO's UI quirk), consistent with ST5-12/ST5-15 and the `reference_dsl_optional_mandatory_selection_pitfall` convention. No change.
 
 ## OPEN 2026-06-14 — Royal Knights re-audit pass: newly surfaced gaps
 

@@ -586,7 +586,7 @@
         }
       ],
       "findings": [],
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st5_machine_black.rs",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st5.rs",
       "model_doc": "qa/archetype-qa/st5-machine-black-model.md",
       "static_tests": {
         "combo_presence": {
@@ -1320,7 +1320,7 @@
           "tracker": "docs/RUST_ENGINE_GAPS.md"
         }
       ],
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st1_gaia_red.rs",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st1.rs",
       "model_doc": "qa/archetype-qa/st1-gaia-red-model.md",
       "static_tests": {
         "combo_presence": {
@@ -1394,7 +1394,7 @@
         }
       ],
       "findings": [],
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st2_cocytus_blue.rs",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st2.rs",
       "model_doc": "qa/archetype-qa/st2-cocytus-blue-model.md",
       "static_tests": {
         "combo_presence": {
@@ -1481,7 +1481,7 @@
           "tracker": "docs/RUST_ENGINE_GAPS.md"
         }
       ],
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st3_heavens_yellow.rs",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st3.rs",
       "model_doc": "qa/archetype-qa/st3-heavens-yellow-model.md",
       "static_tests": {
         "combo_presence": {
@@ -1557,7 +1557,7 @@
         }
       ],
       "findings": [],
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st4_giga_green.rs",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st4.rs",
       "model_doc": "qa/archetype-qa/st4-giga-green-model.md",
       "static_tests": {
         "combo_presence": {
@@ -1632,7 +1632,7 @@
         }
       ],
       "findings": [],
-      "interaction_test_file": "code/digimon-engine/tests/archetypes/st6_venomous_violet.rs",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/st6.rs",
       "model_doc": "qa/archetype-qa/st6-venomous-violet-model.md",
       "static_tests": {
         "combo_presence": {
