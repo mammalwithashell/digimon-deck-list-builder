@@ -1506,6 +1506,30 @@ fn eval_event_fields(
             return false;
         }
     }
+    if let Some(want) = pred.event_host_is_own_tamer {
+        // G-SHARED-OPT-HETEROGENEOUS-TIMING: the trash event's host permanent is
+        // a Tamer owned by the observer ("effects trash cards from under YOUR
+        // Tamers"). The host handle's `player` is its controller; its top card's
+        // kind must be Tamer.
+        let host = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.event_host_permanent);
+        let is_own_tamer = host
+            .filter(|h| h.player == rctx.player)
+            .and_then(|h| {
+                rctx.game
+                    .player(h.player)
+                    .battle_area
+                    .get(h.index as usize)
+            })
+            .map(|perm| perm.top_card().card_kind(rctx.card_data()) == CardKind::Tamer)
+            .unwrap_or(false);
+        if is_own_tamer != want {
+            return false;
+        }
+    }
     if let Some(want) = pred.event_is_effect_initiated {
         let Some(trigger) = rctx.game.current_trigger_context.as_ref() else {
             return false;

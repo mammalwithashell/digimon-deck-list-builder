@@ -56,6 +56,19 @@ pub struct TriggeredClause {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub condition: Option<PredicateSpec>,
 
+    /// Per-timing condition overrides (G-SHARED-OPT-HETEROGENEOUS-TIMING). For a
+    /// clause whose `when:` lists MULTIPLE heterogeneous timings sharing ONE
+    /// once-per-turn counter but each gated by a *different* condition, list one
+    /// entry per timing here. When a clause fires from timing `T`, the
+    /// matching entry's `condition` is AND-ed onto the clause-level `condition`
+    /// / `active_when`; a timing with no entry uses only the clause-level gates.
+    /// Mirrors DCGO's pattern of two `ActivateClass` instances sharing a
+    /// `SetHashString` but each carrying its own `CanUseCondition`
+    /// (ST24-11 Rosemon clause 2: OnSuspend + OnDigivolutionCardTrashed;
+    /// BT25-029 MirageGaogamon clause 2: OnAddToHand + OnDigivolutionCardTrashed).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub timing_conditions: Vec<TimingCondition>,
+
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
 
@@ -77,6 +90,16 @@ pub struct TriggeredClause {
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub process: Vec<StepSpec>,
+}
+
+/// One entry of `timing_conditions:` (G-SHARED-OPT-HETEROGENEOUS-TIMING): a
+/// condition predicate that gates ONLY the named timing of a shared-OPT
+/// multi-timing clause.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TimingCondition {
+    pub when: Timing,
+    pub condition: PredicateSpec,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

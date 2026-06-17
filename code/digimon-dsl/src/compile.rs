@@ -874,6 +874,7 @@ fn compile_predicate(
         event_permanent_is_source: p.event_permanent_is_source,
         source_deleted_battle_opponent: p.source_deleted_battle_opponent,
         event_host_permanent_is_source: p.event_host_permanent_is_source,
+        event_host_is_own_tamer: p.event_host_is_own_tamer,
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
@@ -1319,6 +1320,20 @@ fn compile_triggered(
             .condition
             .as_ref()
             .map(|p| compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)),
+        timing_conditions: t
+            .timing_conditions
+            .iter()
+            .enumerate()
+            .map(|(i, tc)| crate::compiled::CompiledTimingCondition {
+                when: compile_timing(tc.when),
+                condition: compile_predicate(
+                    &tc.condition,
+                    &format!("{prefix}.timing_conditions[{i}].condition"),
+                    card_id,
+                    errors,
+                ),
+            })
+            .collect(),
         optional: t.optional,
         outer_prompt: t.outer_prompt,
         once_per_turn: t.once_per_turn,

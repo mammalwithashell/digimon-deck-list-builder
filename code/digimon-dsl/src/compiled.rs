@@ -420,6 +420,8 @@ pub struct CompiledPredicate {
     pub event_permanent_is_source: Option<bool>,
     pub source_deleted_battle_opponent: Option<bool>,
     pub event_host_permanent_is_source: Option<bool>,
+    /// G-SHARED-OPT-HETEROGENEOUS-TIMING: trash-event host is an own Tamer.
+    pub event_host_is_own_tamer: Option<bool>,
     pub event_is_effect_initiated: Option<bool>,
     pub event_target_same_level_as_previous: Option<bool>,
     pub event_cause: Option<CompiledEventCause>,
@@ -719,6 +721,12 @@ pub struct CompiledTriggeredClause {
     pub scope: CompiledScope,
     pub active_when: Option<CompiledPredicate>,
     pub condition: Option<CompiledPredicate>,
+    /// Per-timing condition overrides (G-SHARED-OPT-HETEROGENEOUS-TIMING).
+    /// When this clause fires from timing `T`, the matching entry's condition
+    /// is AND-ed onto the clause-level gates; timings with no entry use only
+    /// the clause-level gates. Empty for the common single-condition case.
+    #[serde(default)]
+    pub timing_conditions: Vec<CompiledTimingCondition>,
     pub optional: bool,
     /// Force the explicit outer accept/decline confirm even when the first
     /// body step is declinable (DCGO's always-shown initial Yes/No). Declining
@@ -731,6 +739,13 @@ pub struct CompiledTriggeredClause {
     pub process: Vec<CompiledStep>,
     pub summary: Option<String>,
     pub summary_key: Option<String>,
+}
+
+/// Compiled `timing_conditions:` entry (G-SHARED-OPT-HETEROGENEOUS-TIMING).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledTimingCondition {
+    pub when: CompiledTiming,
+    pub condition: CompiledPredicate,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -2122,6 +2137,7 @@ mod tests {
                 scope: CompiledScope::FaceUp,
                 active_when: None,
                 condition: None,
+                timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,
                 once_per_turn: false,
@@ -2181,6 +2197,7 @@ mod tests {
                 scope: CompiledScope::FaceUp,
                 active_when: None,
                 condition: Some(pred),
+                timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,
                 once_per_turn: false,

@@ -372,6 +372,15 @@ pub struct PredicateSpec {
     /// stack.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_host_permanent_is_source: Option<bool>,
+    /// `OnDigivolutionCardTrashed` observer gate: true when the trashing event's
+    /// host permanent is a **Tamer owned by the observer** — i.e. "effects trash
+    /// cards from under YOUR Tamers". Distinct from `event_host_permanent_is_source`
+    /// (host == this exact permanent): this matches ANY of the controller's
+    /// Tamers, which is what a Digimon-borne "trash from under your Tamers"
+    /// observer needs (ST24-11 Rosemon clause 2, BT25-029 MirageGaogamon clause
+    /// 2; DCGO `CanTriggerOnTrashDigivolutionCard(IsPermanentExistsOnOwnerBattleAreaTamer)`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_host_is_own_tamer: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_is_effect_initiated: Option<bool>,
     /// For `OnAddToHand` observers: the player whose hand gained cards
