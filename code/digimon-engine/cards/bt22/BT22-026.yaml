@@ -71,14 +71,14 @@
 #       [Main] entry, the resolution is not declinable mid-flow), failure
 #       OnFail = trash this card.
 #
-#       In DSL terms this is `alt_paths: - kind: activated_digivolve`
-#       with `from: { name_contains: "Gabumon" }`, `cost: 6`,
-#       `ignore_requirements: true`, plus a `condition:` saying Nokia
-#       Shiramine is on field. **G-ALT-PATH-CONDITION** — AltPathSpec has
-#       no `condition:` field today (per BT22-013 / BT24-016 header notes).
-#       The Nokia gate cannot be enforced; the alt-path will be offered
-#       whenever Gabumon is on field, regardless of Nokia presence. The
-#       Gabumon-on-field filter IS enforced via the `from:` clause.
+#       In DSL terms this is now modelled as the `effects:` clause
+#       `when: main_from_hand` (NOT an `activated_digivolve` alt-path —
+#       that alt-path kind had no engine execution route,
+#       G-ACTIVATED-DIGIVOLVE-EXECUTION). The `condition:` enforces BOTH
+#       the Nokia "If you have [Nokia Shiramine]" precondition AND the
+#       Gabumon-target existence; the body selects the Gabumon and calls
+#       `effect_initiated_digivolve { from_hand: self, cost: 6,
+#       ignore_requirements: true }`. Mirrors BT24-016 Lamiamon clause 1.
 #
 #   (3) `EffectTiming.OnEnterFieldAnyone` activate — the [When Digivolving]
 #       branch-choice. `CanUseCondition` =
@@ -139,27 +139,15 @@
 # implementation alt-source; it's not a printed text element so we do NOT
 # encode it in YAML. (Same treatment as BT22-013.)
 #
-# ─── DSL-GAP — `condition:` on AltPathSpec (Clause 2)  [G-ALT-PATH-CONDITION] ─
+# ─── [Hand][Main] Nokia jump — modelled as a `main_from_hand` clause ─────────
 #
-# Same gap as BT22-013 / BT24-016. Printed Clause 2 has TWO sequential gates:
-# (a) "If you have [Nokia Shiramine]" (precondition on field state) and
-# (b) "1 of your [Gabumon] digivolves into this card" (target filter for
-# the digivolve source). The DSL `activated_digivolve` alt_path supports
-# (b) via `from:` but has no `condition:` field for the (a) precondition.
-#
-# Net effect: the alt-path is offered whenever Gabumon is on field, even
-# if Nokia is NOT on field — over-permissive on the Nokia precondition
-# axis. When G-ALT-PATH-CONDITION closes, append:
-#     condition:
-#       any_permanent:
-#         of: you
-#         zone: [battle_area]
-#         name_eq: "Nokia Shiramine"
-# to the activated_digivolve alt-path.
-#
-# Tests for the Nokia precondition are #[ignore = "BLOCKED:
-# G-ALT-PATH-CONDITION"]. Tests for the Gabumon `from:` filter (which IS
-# enforced) and the cost / ignore_requirements semantics pass.
+# The printed "[Hand][Main] If you have [Nokia Shiramine], 1 of your [Gabumon]
+# digivolves into this card for cost 6, ignoring reqs" is the `effects:` clause
+# `when: main_from_hand` (clause 1), NOT an `activated_digivolve` alt-path —
+# that alt-path kind had no engine execution route (G-ACTIVATED-DIGIVOLVE-
+# EXECUTION). Its `condition:` enforces the Nokia gate (which an alt-path
+# `condition:` could not), mirroring BT24-016 Lamiamon clause 1. The Nokia
+# precondition test is active and green (0 ignored).
 #
 # ─── Branch 0: chained perm→hand→effect_initiated_digivolve (Clause 3) ──────
 #                    [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET — RESOLVED]
