@@ -200,10 +200,6 @@ fn delay_option_present(runner: &DebugRunner, player: u8, card_id: &str) -> bool
 /// real path, so this is `#[ignore]`d pending the engine fix rather than weakened
 /// or routed through the bypass. This body is retained as the gap's repro.
 #[test]
-#[ignore = "BLOCKED: G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH — place_self_as_delay_option \
-            no-ops on the real play_option_from_hand path (card is in pending_option, not \
-            hand/trash); dispose_option then trashes the Standard Option. See \
-            docs/RUST_ENGINE_GAPS.md."]
 fn combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay() {
     // ST1-04 Dracomon — a real Red Lv3 colour anchor (satisfies BT17-095's
     // Red+Blue colour requirement at Option-play time). ST1-02 Biyomon — vanilla
@@ -306,9 +302,6 @@ fn combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay() {
 /// pending the engine fix; body retained as the gap's repro. See
 /// docs/RUST_ENGINE_GAPS.md.
 #[test]
-#[ignore = "BLOCKED: G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH — on the real play path the \
-            mandatory place-self tail no-ops and the Standard Option is trashed (trash +1) \
-            instead of seated as a Delay. See docs/RUST_ENGINE_GAPS.md."]
 fn combo1_mega_knight_declining_recursion_still_seats_delay() {
     // ST1-04 Dracomon colour anchor + ST1-02 Biyomon deck filler (both real).
     let mut runner = DebugRunner::builder()
