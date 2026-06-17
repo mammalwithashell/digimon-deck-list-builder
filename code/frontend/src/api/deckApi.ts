@@ -31,6 +31,7 @@ interface CreateDeckParams {
   /** Optional parallel bool arrays marking which slots are alt-art. */
   main_deck_alt_arts?: boolean[];
   egg_deck_alt_arts?: boolean[];
+  commander_id?: string | null;
   is_public?: boolean;
   tags?: string[];
 }

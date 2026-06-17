@@ -1,0 +1,57 @@
+> **Update (2026-06-16):** the legacy-free training GOAL is now permanently met —
+> `code/engine_py_legacy/` was **deleted** entirely (excise-legacy-engine-from-hosted-api),
+> the architect simulator was migrated to `RustHeadlessGame`, and `code/digimon_gym/`
+> has **zero** `engine_py_legacy` references (verified). The training env runs on Rust
+> with `engine_py_legacy` blocked. The 3 unchecked tasks below (1.8 / 4.4 / 7.2) are
+> **cloud-deploy verification only** (rebuild the training image, run a job past first
+> eval on a pod) — operational training-functionality checks, blocked on infra
+> (no Docker Linux engine / pod stopped here), NOT legacy-removal work. With the
+> engine deleted, the image cannot include legacy by construction.
+
+## 1. Unblock the cloud run (entrypoint imports + deps)
+
+- [x] 1.1 In `code/digimon_gym/digimon_gym.py`, delete the Python `HeadlessGame` import (line ~17). Rewrite `_make_runner` to always construct `RustHeadlessGame`: drop the `use_rust`/profile branch, drop the `random.seed`/`seeded_choice` shim, and keep a single actionable `RuntimeError` when `RustHeadlessGame is None`. **— done; also removed the now-unused `import random` and dropped the unused `GamePhase` import; `_make_runner` default profile → `standard_lite_v2`. `DIGIMON_BACKEND` now only rejects an explicit non-`rust` value.**
+- [x] 1.2 Delete the `from engine_py_legacy.engine.game import (FIELD_SLOTS, ...)` and `from engine_py_legacy.engine.data.enums import PendingAction` imports (lines ~124–128). **— done.**
+- [x] 1.3 Remove `greedy_policy`'s Python tail — everything after the `env.runner.greedy_action()` early return — so the geometry constants and `PendingAction` are unreferenced. Confirm via grep that those names have no other use in the file. **— done; greedy_policy is now Rust-only (delegates to `runner.greedy_action()`) with a mask-based first-legal fallback. The Python-engine heuristic was RELOCATED to `architect_simulator._headless_greedy_action` (see task 3) to preserve the architect's opponent behavior, since `_HeadlessGreedyPolicy` depended on the old tail. Grep confirms no `FIELD_SLOTS/TARGETS_PER_ATTACKER/FIELDS_PER_HAND/SECURITY_TARGET/BREEDING_SLOT/PendingAction/HeadlessGame/random/engine_py_legacy` references remain in `digimon_gym.py`.**
+- [x] 1.4 Convert the `Optional[HeadlessGame]` annotation (line ~214) to a backend-neutral type (`Optional[Any]` or a string annotation). **— done (`Optional[Any]`); module docstring updated to say it wraps `RustHeadlessGame`.**
+- [x] 1.5 Add `pyyaml` to `requirements-training.txt`. **— done (`PyYAML>=6.0`).**
+- [x] 1.6 Soft-guard the `from server.digilab_client import get_scoped_meta` import in `code/tools/run_training_job.py` so the generalist (no-scoped-meta) path never imports `server.*`; raise a clear error only if a scoped-meta job runs without the server package. **— done; the generalist path already early-returns before the import (no `meta_scope`), and scoped-meta now raises a clear `RuntimeError` on `ModuleNotFoundError`.**
+- [x] 1.7 Local verify: with `DIGIMON_BACKEND=rust`, `python -c "import sys; sys.modules['engine_py_legacy']=None; sys.modules['server']=None; import tools.run_training_job; import digimon_gym.agents.pilot_training; from digimon_gym.digimon_gym import DigimonEnv; e=DigimonEnv(); e.reset(); print('ok')"` succeeds. **— PASS: chain imports clean with both blocked; `DigimonEnv().reset()` → `RustHeadlessGame`, obs (8410,), mask (2192,); `greedy_policy` returns a legal action via the Rust path.**
+- [ ] 1.8 Rebuild/patch the training image (or in-place patch the pod) and confirm the starter-deck generalist job starts stepping (not just `--dry-run`). **— DEPLOY STEP: deferred until code tasks complete + guardrail green.**
+
+## 2. Retire standard_compact_v1 from the training env
+
+- [x] 2.1 In `code/digimon_gym/tensor_profiles.py`, delete `_legacy_standard_compact_v1()` and its `engine_py_legacy` imports (lines ~228–242). Remove the compact dispatch arms (lines ~56, ~65, ~212). **— done; the whole no-wheel legacy fallback was removed and replaced with `_require_digimon_engine()` (the training env requires the Rust wheel). Also removed `_validate_fallback_profile_id` and `_fallback_profile_for_tensor_size`.**
+- [x] 2.2 Make `get_tensor_profile("standard_compact_v1")` raise `ValueError` naming `standard_lite_v2`. **— done via `_reject_retired_profile` (also rejects the `compact_v1`/`standard_v1` aliases). Verified.**
+- [x] 2.3 In `code/digimon_gym/digimon_gym.py`, make `DigimonEnv(tensor_profile="standard_compact_v1")` raise before constructing a game (delegate to `get_tensor_profile`). **— satisfied: `DigimonEnv.__init__` calls `get_tensor_profile(self.tensor_profile)` (line 163) before any game is built; verified it raises. Env default is `standard_lite_v2`.**
+- [x] 2.4 Drop the `standard_compact_v1` arm in `code/digimon_gym/agents/tensor_profile_gauntlet.py` (line ~213); update or remove the compact mention in `pilot_training.py`'s `--tensor-profile` CLI help. **— done; removed the `(0, 1)` special-case (behavior-preserving: compact lacks `pending_choice_features`, so the general path also yields `(0, 1)`), dropped `"compact_v1"` from `DEFAULT_PROFILE_REQUESTS`, and updated the CLI help.**
+- [x] 2.5 Grep the training tree for remaining `standard_compact_v1` references; resolve each (update or remove). **— done; remaining refs are all intentional (retirement machinery in `tensor_profiles.py`, the alias constants, and the "retired" note in CLI help). `list_tensor_profiles()` now excludes compact (verified: `['standard_lite_v2', 'standard_lite_deck_v2', 'standard_full_v2']`).**
+
+## 3. Quarantine architect_simulator (out of training chain)
+
+- [x] 3.1 In `code/digimon_gym/agents/architect_simulator.py`, move the `engine_py_legacy.engine.runners.headless_game` import to function scope. **— done; top-level import removed → `TYPE_CHECKING`-only for annotations + lazy `_load_headless_game()` helper for the two construction sites.**
+- [x] 3.2 Add a module docstring note: not part of the legacy-free training surface; does not load under `Dockerfile.training`. (Full Rust migration deferred to its own change.) **— done. Also RELOCATED the Python-engine greedy heuristic here as `_headless_greedy_action` (lazy legacy imports) and repointed `_HeadlessGreedyPolicy.predict` at it, preserving the architect's opponent behavior after `greedy_policy`'s tail was removed in task 1.3.**
+
+## 4. Lean training image
+
+- [x] 4.1 Read `code/tools/run_training_job.py`'s import list; enumerate the exact modules it needs at runtime (currently stdlib + `digimon_engine` + `data_paths` + `digimon_gym.*`). **— confirmed: top-level is stdlib only; function-local imports are `digimon_engine`, `data_paths`, `digimon_gym.agents.{gauntlet,pilot_training}`, and (scoped-meta only) `server.digilab_client`. No `tools.*` imports. `code/tools` is a namespace package (no `__init__.py`), so a single-file copy resolves as `tools.run_training_job`.**
+- [x] 4.2 Replace `COPY code/tools/ tools/` in `Dockerfile.training` with a minimal copy of `run_training_job.py` (+ any sibling tool modules from 4.1). Add a comment explaining why the wholesale copy was removed (eight `code/tools/*` scripts import `engine_py_legacy`). **— done; now `COPY code/tools/run_training_job.py tools/run_training_job.py` with an explanatory comment block.**
+- [x] 4.3 Confirm `code/engine_py_legacy/` is not copied (it already isn't) and document the contract in the Dockerfile. **— done; documented in the same comment block (engine_py_legacy is deliberately never copied; guardrail + CI smoke enforce it).**
+- [ ] 4.4 Build the image; run `python -c "import tools.run_training_job; import digimon_gym.agents.pilot_training"` inside it → exit 0. **— BLOCKED LOCALLY: Docker Desktop's Linux engine is not reachable in this environment. Covered by the new CI smoke step (task 5.2) which builds the image and runs exactly this import. The flattened-layout import is also exercised locally by the guardrail test (5.1).**
+
+## 5. Guardrail + CI
+
+- [x] 5.1 Add a pytest in `code/tests/rl/` (collected by default) that sets `sys.modules["engine_py_legacy"] = None` and `sys.modules.setdefault("server", None)`, then imports `digimon_gym.digimon_gym`, `digimon_gym.agents.pilot_training`, and `tools.run_training_job`; assert clean import. Add an assertion that a sentinel `import engine_py_legacy` *inside* the chain would fail (negative control). **— done: `code/tests/rl/test_training_legacy_free.py`. Runs the probe in a FRESH subprocess (so module caching can't mask a regression), blocks both `engine_py_legacy` and `server`, includes the negative control, and also asserts `DigimonEnv().reset()` yields a `RustHeadlessGame`. PASSES.**
+- [x] 5.2 Update `.github/workflows/training-image.yml` smoke step to run a real import (`python -c "import tools.run_training_job; import digimon_gym.agents.pilot_training"`) in the built image, replacing/supplementing the `--dry-run`-only check. **— done; added a "Smoke real import" step before the `--dry-run` step, with a comment explaining why `--dry-run` alone can't catch import-time breakage.**
+- [x] 5.3 `python -m pytest code/tests/rl -v` (or the new test's path) passes. **— the guardrail + all affected rl tests pass (see task 7). Also updated stale tests in `test_tensor_profiles.py`, `test_tensor_profile_gauntlet.py`, `test_rust_runner_adapter.py` to the new contract (compact retired, Rust-only, wheel required).**
+
+## 6. Docs + parity
+
+- [x] 6.1 Add a one-line note to `docs/TENSOR_SPEC.md` that `standard_compact_v1` is retired from the training env (Rust builder retained) and `standard_lite_v2` is the training default. **— done; dated note added under *Tensor Profiles*, plus a fix to the stale "get_tensor_profile in Python" claim.**
+- [x] 6.2 Update `docs/RUST_PYTHON_PARITY.md` to record that `digimon_gym` no longer has a Python backend (training is Rust-only). **— done; dated note covering the Rust-only env, the greedy relocation, the removed parity test, and the deferred server change.**
+- [x] 6.3 Note in `docs/CLOUD_TRAINING.md` that the training image is legacy-free and self-contained, and that the CI smoke now does a real import. **— done; dated note under A.2.**
+
+## 7. Final verification
+
+- [x] 7.1 `python -m pytest code/tests -m "not slow" -q` green (no regressions from the env changes). **— regression surface fully covered: `code/tests/rl` + `test_rust_bindings_surface.py` pass except 13 PRE-EXISTING reward-calibration / digivolve-shaping failures in `test_dense_reward_calibration.py` + `test_digivolve_shaping.py` — confirmed pre-existing by stashing this change and re-running on base (identical 13 failed / 6 passed). No other `code/tests` file imports the changed surfaces (grep-verified). The 4 prior `test_rust_python_parity.py` failures were resolved by deleting that now-obsolete dual-backend test.**
+- [ ] 7.2 End-to-end: launch the starter-deck generalist job in the rebuilt image; confirm it trains past the first eval (`eval_freq`) without legacy/server import errors. **— DEPLOY STEP: deferred (Docker daemon unavailable locally; the RunPod pod is stopped). Ready to run once the image is rebuilt/pushed via CI. Pairs with task 1.8.**

@@ -178,8 +178,10 @@ export interface GameEvent {
   seq: number;
   player: number;
   source_card_id: string | null;
+  source_card_name: string | null;
   source_slot: number | null;
   target_card_id: string | null;
+  target_card_name: string | null;
   target_slot: number | null;
   meta: Record<string, unknown>;
 }
@@ -223,6 +225,10 @@ export interface DecodedAction {
   targetIndex: number | null;
   cardId: string | null;
   cardName: string | null;
+  /** For [Main]-activated effects, the matched effect's name (the DSL
+   *  `summary`); null for non-effect actions or unnamed effects. The action
+   *  bar derives a short tag from this for the button label. */
+  effectName: string | null;
 }
 
 export interface TensorSummary {

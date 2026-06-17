@@ -2479,7 +2479,7 @@ def train(total_timesteps: int = 100_000,
     # Load autoencoder embeddings for warm-start (if available)
     pretrained_embeddings = None
     emb_path = os.path.join(
-        os.path.dirname(__file__), '..', 'engine', 'data', 'card_embeddings.npy'
+        os.path.dirname(__file__), '..', '..', '..', 'models', 'card_embeddings.npy'
     )
     if os.path.exists(emb_path):
         pretrained_embeddings = np.load(emb_path)

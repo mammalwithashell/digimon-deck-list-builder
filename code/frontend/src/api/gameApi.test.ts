@@ -68,6 +68,7 @@ describe('engine trace types', () => {
         targetIndex: null,
         cardId: null,
         cardName: null,
+        effectName: null,
       },
       tensorSummary: summary,
     };
@@ -226,8 +227,10 @@ describe('createGame', () => {
               seq: 1,
               player: 2,
               source_card_id: null,
+              source_card_name: null,
               source_slot: null,
               target_card_id: null,
+              target_card_name: null,
               target_slot: null,
               meta: { delta: -3, total: 0 },
             },

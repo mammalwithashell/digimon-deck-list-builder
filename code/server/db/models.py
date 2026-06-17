@@ -100,11 +100,6 @@ class Deck(Base):
             name="ck_decks_game_mode",
         ),
         CheckConstraint(
-            "(game_mode = 'edh_commander' AND commander_id IS NOT NULL) "
-            "OR (game_mode != 'edh_commander' AND commander_id IS NULL)",
-            name="ck_decks_commander",
-        ),
-        CheckConstraint(
             "(game_mode = 'titan' AND titan_role IS NOT NULL) "
             "OR (game_mode != 'titan' AND titan_role IS NULL)",
             name="ck_decks_titan_role",

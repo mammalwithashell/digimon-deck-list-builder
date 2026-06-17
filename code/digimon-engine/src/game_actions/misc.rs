@@ -834,12 +834,14 @@ impl Game {
 
         let top_card = self.players[player_id as usize].battle_area[entered_index].top_card();
         let emitted_card_id = top_card.card_id(&self.card_data).to_string();
+        let emitted_card_name = top_card.card_name(&self.card_data).to_string();
         let cost_printed = self.card_data[top_card.data_index].play_cost as i16;
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::Play {
             seq,
             player: player_id,
             card_id: emitted_card_id,
+            card_name: emitted_card_name,
             field_index: entered.index,
             // Standard PLAY-from-hand path: `effective_cost` is the
             // post-discount memory actually paid (after tamer / other

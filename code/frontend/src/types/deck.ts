@@ -41,6 +41,8 @@ export interface DeckSummary {
   main_count: number;
   egg_count: number;
   tags: string[];
+  commander_id?: string | null;
+  deck_icon_card_id?: string | null;
   meta_tier?: string | null;
   meta_archetype?: string | null;
   colors?: string[];

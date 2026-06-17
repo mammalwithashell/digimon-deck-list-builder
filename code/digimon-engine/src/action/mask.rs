@@ -8,6 +8,7 @@
 //! AllianceTiming) and effect-driven actions (effect activations, [Hand][Main],
 //! DNA Digivolve, blast, etc.) are filled in later phases.
 
+use crate::action::main_effect_select;
 use crate::action::space::*;
 use crate::card_data::CardData;
 use crate::effect_context::{AttackTargetRestriction, EffectReadContext};
@@ -330,25 +331,13 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
 
             // Hand [Main] (bits 30-59). One bit per hand slot, mirroring
             // Python's `action_mask.py:176-185`. First-match-wins per slot.
+            // Selection is shared with the decoder via `main_effect_select` so
+            // the emitted bit and `explain_action`'s label never disagree on
+            // which effect this activation is.
             let hand_limit = me.hand.len().min(HAND_MAIN_LIMIT);
             for h in 0..hand_limit {
-                let card = &me.hand[h];
-                let card_id = card.card_id(&game.card_data);
-                let Some(effects) = game.effects_for_card(card_id, card.handle()) else {
-                    continue;
-                };
-                for effect in &effects {
-                    if effect.timing != EffectTiming::MainFromHand {
-                        continue;
-                    }
-                    if let Some(cond) = &effect.condition {
-                        let ctx = EffectReadContext::new(game, card.handle(), None, player_id);
-                        if !cond(&ctx) {
-                            continue;
-                        }
-                    }
+                if main_effect_select::hand_main_match(game, player_id, h).is_some() {
                     mask[(HAND_EFFECT_START + h as u16) as usize] = 1.0;
-                    break;
                 }
             }
 
@@ -367,7 +356,9 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 if main_effects_blocked {
                     continue;
                 }
-                let perm = &me.battle_area[i];
+                // The standard field [Main] selection now lives in
+                // `main_effect_select::field_main_match`; only `perm_handle` is
+                // needed here for the DigiLink / delayed-Option emitters.
                 let perm_handle = PermanentHandle {
                     player: player_id,
                     index: i as u8,
@@ -407,51 +398,15 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     continue;
                 }
 
-                let stack_size = perm.card_sources.len();
-                let mut emitted = false;
-                for (source_index, source) in perm.card_sources.iter().enumerate() {
-                    if emitted {
-                        break;
-                    }
-                    let is_under = source_index + 1 < stack_size;
-                    let card_id = source.card_id(&game.card_data);
-                    let Some(effects) = game.effects_for_card(card_id, source.handle()) else {
-                        continue;
-                    };
-                    for (slot, effect) in effects.iter().enumerate() {
-                        if effect.timing != EffectTiming::MainOnField {
-                            continue;
-                        }
-                        if is_under != effect.inherited {
-                            continue;
-                        }
-                        // G-OPT-MULTI-TIMING-SHARED-LOCKOUT: a multi-timing
-                        // OPT cluster shares one counter via `shared_opt_group`.
-                        let opt_key = effect.shared_opt_group.unwrap_or(slot as u8);
-                        if effect.max_per_turn > 0
-                            && perm.activation_count(source.handle(), opt_key)
-                                >= effect.max_per_turn
-                        {
-                            continue;
-                        }
-                        if let Some(cond) = &effect.condition {
-                            let ctx = EffectReadContext::new(
-                                game,
-                                source.handle(),
-                                Some(perm_handle),
-                                player_id,
-                            );
-                            if !cond(&ctx) {
-                                continue;
-                            }
-                        }
-                        let bit = FIELD_EFFECT_START
-                            + i as u16 * EFFECTS_PER_PERMANENT
-                            + FIELD_EFFECT_SLOT_FOR_MAIN;
-                        mask[bit as usize] = 1.0;
-                        emitted = true;
-                        break;
-                    }
+                // Standard field [Main] selection is shared with the decoder
+                // (first-match-wins across the stack, inherited/OPT/condition
+                // gates) so the emitted bit and `explain_action`'s label always
+                // refer to the same effect.
+                if main_effect_select::field_main_match(game, player_id, i).is_some() {
+                    let bit = FIELD_EFFECT_START
+                        + i as u16 * EFFECTS_PER_PERMANENT
+                        + FIELD_EFFECT_SLOT_FOR_MAIN;
+                    mask[bit as usize] = 1.0;
                 }
             }
 
@@ -474,52 +429,29 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
             // under a non-Training top) is intentionally not surfaced —
             // matches DCGO `Training.cs:21` `card.PermanentOfThisCard()`
             // which scopes to the top card's effect.
-            if !main_effects_blocked {
-                if let Some(ref breeding) = me.breeding_area {
-                    let top = breeding.top_card();
-                    // Read printed keyword directly from card_data — note that
-                    // `Game::has_keyword` would short-circuit on a `battle_area`
-                    // lookup and never reach the breeding-area permanent.
-                    let top_data = &game.card_data[top.data_index];
-                    if top_data.keywords.contains(&Keyword::Training) && !breeding.is_suspended {
-                        // Gate the bit ONLY on the printed keyword + suspension
-                        // — we deliberately don't run the `<Training>` effect's
-                        // own `condition` closure here because
-                        // `EffectReadContext::source_permanent()` resolves
-                        // via `battle_area`, which would silently return None
-                        // for a breeding-area carrier and short-circuit the
-                        // gate to false. The on-field condition
-                        // (`!perm.is_suspended`) is faithfully represented by
-                        // the inline check above.
-                        let bit = FIELD_EFFECT_START
-                            + BREEDING_TARGET * EFFECTS_PER_PERMANENT
-                            + FIELD_EFFECT_SLOT_FOR_MAIN;
-                        mask[bit as usize] = 1.0;
-                    }
-                }
+            // Gate is the printed `Keyword::Training` + non-suspension of the
+            // breeding-area top card (see `main_effect_select::breeding_training_match`).
+            // Shared with the decoder so action 1142's label names the
+            // `<Training>` effect. We deliberately don't run the effect's own
+            // condition closure (it resolves via `battle_area` and would
+            // short-circuit for a breeding-area carrier); the on-field
+            // condition (`!is_suspended`) is represented by the gate.
+            if !main_effects_blocked
+                && main_effect_select::breeding_training_match(game, player_id).is_some()
+            {
+                let bit = FIELD_EFFECT_START
+                    + BREEDING_TARGET * EFFECTS_PER_PERMANENT
+                    + FIELD_EFFECT_SLOT_FOR_MAIN;
+                mask[bit as usize] = 1.0;
             }
 
             // Trash [Main] (bits 1150-1194). One bit per trash slot,
-            // first-match-wins, mirroring `action_mask.py:216-225`.
+            // first-match-wins, mirroring `action_mask.py:216-225`. Selection
+            // shared with the decoder via `main_effect_select`.
             let trash_limit = me.trash.len().min(TRASH_MAIN_LIMIT);
             for t in 0..trash_limit {
-                let card = &me.trash[t];
-                let card_id = card.card_id(&game.card_data);
-                let Some(effects) = game.effects_for_card(card_id, card.handle()) else {
-                    continue;
-                };
-                for effect in &effects {
-                    if effect.timing != EffectTiming::MainFromTrash {
-                        continue;
-                    }
-                    if let Some(cond) = &effect.condition {
-                        let ctx = EffectReadContext::new(game, card.handle(), None, player_id);
-                        if !cond(&ctx) {
-                            continue;
-                        }
-                    }
+                if main_effect_select::trash_main_match(game, player_id, t).is_some() {
                     mask[(TRASH_EFFECT_START + t as u16) as usize] = 1.0;
-                    break;
                 }
             }
 

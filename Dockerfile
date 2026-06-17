@@ -42,11 +42,10 @@ COPY --from=py-builder /wheels /wheels
 RUN pip install --no-cache-dir /wheels/*.whl && rm -rf /wheels
 COPY code/server/ server/
 COPY code/digimon_gym/ digimon_gym/
-# Transitional: server.api's import graph still reaches engine_py_legacy
-# (see openspec change excise-legacy-engine-from-hosted-api) and
-# tools.decklist_analysis (server.classifier.meta_tier). Remove these COPYs
-# once the excise change lands.
-COPY code/engine_py_legacy/ engine_py_legacy/
+# Transitional: server.classifier.meta_tier still reaches tools.decklist_analysis.
+# (The engine_py_legacy COPY was removed — server.api no longer imports the sunset
+# Python engine after excise-legacy-engine-from-hosted-api landed; the hosted-API
+# image is now Python-legacy-free.)
 COPY code/tools/decklist_analysis.py tools/decklist_analysis.py
 # Ops one-shot: lets the runbook's CI-user provisioning run in-container
 # (postgres is not exposed outside the compose network).

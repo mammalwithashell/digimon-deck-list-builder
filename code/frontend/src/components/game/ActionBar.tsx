@@ -1,5 +1,11 @@
 import { ACTION, PHASE_NAMES, EFFECTS_PER_SOURCE } from '@/utils/constants';
-import { GamePhase } from '@/types/game';
+import { GamePhase, type DecodedAction } from '@/types/game';
+import {
+  isActivatableEffect,
+  activatableEffectLabel,
+  effectTooltip,
+  effectNameCounts,
+} from '@/utils/effectLabel';
 
 interface ActionBarProps {
   phase: GamePhase;
@@ -7,12 +13,26 @@ interface ActionBarProps {
   onAction: (actionId: number) => void;
   onSurrender?: () => void;
   isGameOver: boolean;
-  /** Map<sourceSlot, Set<effectIdx>> from useActionMask */
+  /** Map<sourceSlot, Set<effectIdx>> from useActionMask — legacy mask-derived
+   *  fallback used only when the engine-decoded list is unavailable. */
   canActivateEffect?: Map<number, Set<number>>;
+  /** Engine-decoded legal actions for the current decision player. The action
+   *  bar names activatable effects by source card + effect from this. */
+  decodedActions?: DecodedAction[];
 }
 
-export function ActionBar({ phase, actionMask, onAction, onSurrender, isGameOver, canActivateEffect }: ActionBarProps) {
+export function ActionBar({ phase, actionMask, onAction, onSurrender, isGameOver, canActivateEffect, decodedActions }: ActionBarProps) {
   if (isGameOver) return null;
+
+  // When the engine-decoded list is available (non-empty for any active
+  // decision), it is the source of truth for activatable effects — every
+  // category (field/Digiburst/Training/trash/hand [Main]) decoded correctly,
+  // named by source card + effect. The raw mask-derived `canActivateEffect`
+  // is only a fallback for surfaces that don't fetch the decoded list (e.g.
+  // WebSocket PvP/online).
+  const hasDecoded = (decodedActions?.length ?? 0) > 0;
+  const decodedEffects = (decodedActions ?? []).filter(isActivatableEffect);
+  const effectNameDupes = effectNameCounts(decodedEffects);
 
   const canPass = actionMask[ACTION.PASS] === 1;
   const canHatch = actionMask[ACTION.HATCH] === 1;
@@ -82,24 +102,44 @@ export function ActionBar({ phase, actionMask, onAction, onSurrender, isGameOver
         </button>
       )}
 
-      {/* Effect activations */}
-      {canActivateEffect && canActivateEffect.size > 0 && (
-        <>
-          <span className="w-px h-5 bg-gray-600" />
-          {[...canActivateEffect.entries()].map(([source, effects]) =>
-            [...effects].map((effectIdx) => (
-              <button
-                key={`eff-${source}-${effectIdx}`}
-                data-testid={`action-effect-${source}-${effectIdx}`}
-                onClick={() => onAction(ACTION.EFFECT_START + source * EFFECTS_PER_SOURCE + effectIdx)}
-                className="px-3 py-1 bg-cyan-700 hover:bg-cyan-600 text-white text-sm rounded"
-              >
-                Effect {source}:{effectIdx}
-              </button>
-            ))
+      {/* Activatable [Main] effects — engine-decoded (card + effect name). */}
+      {hasDecoded
+        ? decodedEffects.length > 0 && (
+            <>
+              <span className="w-px h-5 bg-gray-600" />
+              {decodedEffects.map((a) => (
+                <button
+                  key={`eff-${a.actionId}`}
+                  data-testid={`action-effect-${a.actionId}`}
+                  title={effectTooltip(a)}
+                  onClick={() => onAction(a.actionId)}
+                  className="px-3 py-1 bg-cyan-700 hover:bg-cyan-600 text-white text-sm rounded"
+                >
+                  {activatableEffectLabel(
+                    a,
+                    (effectNameDupes.get(a.cardName ?? '') ?? 0) > 1,
+                  )}
+                </button>
+              ))}
+            </>
+          )
+        : canActivateEffect && canActivateEffect.size > 0 && (
+            <>
+              <span className="w-px h-5 bg-gray-600" />
+              {[...canActivateEffect.entries()].map(([source, effects]) =>
+                [...effects].map((effectIdx) => (
+                  <button
+                    key={`eff-${source}-${effectIdx}`}
+                    data-testid={`action-effect-${source}-${effectIdx}`}
+                    onClick={() => onAction(ACTION.EFFECT_START + source * EFFECTS_PER_SOURCE + effectIdx)}
+                    className="px-3 py-1 bg-cyan-700 hover:bg-cyan-600 text-white text-sm rounded"
+                  >
+                    Effect {source}:{effectIdx}
+                  </button>
+                ))
+              )}
+            </>
           )}
-        </>
-      )}
 
       {/* Spacer + Surrender */}
       {onSurrender && (

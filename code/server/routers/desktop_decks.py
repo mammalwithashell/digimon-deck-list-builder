@@ -99,6 +99,17 @@ def _summarize(deck: dict[str, Any]) -> dict[str, Any]:
     listing UI expects. Mirrors `DeckSummary` in `deck_storage.rs`."""
     main = deck.get("main_deck") or []
     eggs = deck.get("egg_deck") or []
+    commander_id = deck.get("commander_id")
+    all_ids = set(main) | set(eggs)
+    deck_icon_card_id = (
+        commander_id
+        if commander_id and commander_id in all_ids
+        else sorted(main)[0]
+        if main
+        else sorted(eggs)[0]
+        if eggs
+        else None
+    )
     return {
         "id": deck["id"],
         "name": deck.get("name", "Untitled"),
@@ -112,6 +123,8 @@ def _summarize(deck: dict[str, Any]) -> dict[str, Any]:
         "main_count": len(main),
         "egg_count": len(eggs),
         "tags": deck.get("tags", []),
+        "commander_id": commander_id,
+        "deck_icon_card_id": deck_icon_card_id,
         "meta_tier": deck.get("meta_tier"),
         "meta_archetype": deck.get("meta_archetype"),
         # The desktop's summary computes `colors` / `highest_level` from
@@ -192,6 +205,9 @@ def save_desktop_deck(deck: dict[str, Any] = Body(...)) -> dict[str, Any]:
         raise HTTPException(status_code=400, detail="Deck name is required")
     if not main_deck:
         raise HTTPException(status_code=400, detail="main_deck cannot be empty")
+    commander_id = deck.get("commander_id")
+    if commander_id and commander_id not in (set(main_deck) | set(egg_deck)):
+        raise HTTPException(status_code=400, detail="commander_id must reference a card in the deck")
 
     # Always re-validate. The desktop client does this in deckStore.ts;
     # the server must do the same so the saved file's `is_valid` flag
@@ -217,7 +233,7 @@ def save_desktop_deck(deck: dict[str, Any] = Body(...)) -> dict[str, Any]:
         "egg_deck": egg_deck,
         "main_deck_alt_arts": list(deck.get("main_deck_alt_arts") or []),
         "egg_deck_alt_arts": list(deck.get("egg_deck_alt_arts") or []),
-        "commander_id": deck.get("commander_id"),
+        "commander_id": commander_id,
         "is_valid": is_valid,
         "validation_errors": errors,
         "is_public": bool(deck.get("is_public", False)),

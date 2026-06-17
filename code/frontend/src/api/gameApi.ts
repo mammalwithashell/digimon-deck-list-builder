@@ -81,6 +81,7 @@ interface DecodedActionDto {
   target_index: number | null;
   card_id: string | null;
   card_name: string | null;
+  effect_name: string | null;
 }
 
 interface TensorSummaryDto {
@@ -483,6 +484,7 @@ export function toDecodedAction(action: DecodedActionDto): DecodedAction {
     targetIndex: action.target_index,
     cardId: action.card_id,
     cardName: action.card_name,
+    effectName: action.effect_name ?? null,
   };
 }
 
@@ -730,6 +732,26 @@ export async function getMask(gameId: string): Promise<number[]> {
     return resp.action_mask;
   }
   return invoke<number[]>('rust_get_mask');
+}
+
+/**
+ * Decoded list of every currently-legal action for the current decision
+ * player, each carrying source-card and effect identity. The action bar
+ * renders activatable effects from this instead of re-deriving action
+ * semantics from raw mask bit-ranges (which mis-decodes trash/hand [Main]
+ * effects). Parallel to {@link getMask}: dedicated call on both wires.
+ */
+export async function getDecodedActions(
+  gameId: string,
+): Promise<DecodedAction[]> {
+  if (!isInTauriRuntime()) {
+    const resp = await httpJson<{ decoded_actions: DecodedActionDto[] }>(
+      `/games/${gameId}/decoded-actions`,
+    );
+    return resp.decoded_actions.map(toDecodedAction);
+  }
+  const dtos = await invoke<DecodedActionDto[]>('rust_get_decoded_actions');
+  return dtos.map(toDecodedAction);
 }
 
 export async function getLog(_gameId: string): Promise<string[]> {
