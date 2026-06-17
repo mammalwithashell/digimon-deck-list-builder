@@ -5,10 +5,12 @@
 //! when compiled in, the server starts ONLY if the runtime env var
 //! `DIGIMON_DEBUG_BRIDGE=1` is set, and it binds `127.0.0.1` exclusively.
 //!
-//! It shares the same `Arc<Mutex<Option<Game>>>` as the Tauri `rust_*`
-//! commands, so staging/inspection here is reflected live in the window.
-//! After any external mutation it emits a `debug:state-changed` window
-//! event so the React frontend re-fetches and re-renders the board.
+//! It dispatches its reads/stages through the same engine worker
+//! ([`EngineHandle`]) as the Tauri `rust_*` commands, so staging/inspection
+//! here is reflected live in the window — the worker is the single owner of
+//! the game state, there is no shared `Arc<Mutex<Game>>`. After any external
+//! mutation it emits a `debug:state-changed` window event so the React
+//! frontend re-fetches and re-renders the board.
 //!
 //! The staging/inspection verbs delegate to the same engine primitives the
 //! browser `/debug` path uses (`Game::apply_scenario`, `stage_inject_card`,
@@ -18,7 +20,6 @@
 #![cfg(feature = "debug-bridge")]
 
 use std::net::SocketAddr;
-use std::sync::{Arc, Mutex};
 
 use axum::extract::State;
 use axum::http::StatusCode;
@@ -33,13 +34,13 @@ use digimon_engine::game::Game;
 use digimon_engine::rules::Rules;
 
 use crate::engine_commands::{
-    action_mask_bytes, current_decision_player, game_state_dto, GameSession, PlayerKind,
+    action_mask_bytes, current_decision_player, game_state_dto, EngineHandle, EngineWorld,
+    GameSession, PlayerKind,
 };
 
 #[derive(Clone)]
 struct BridgeState {
-    game: Arc<Mutex<Option<Game>>>,
-    session: Arc<Mutex<GameSession>>,
+    engine: EngineHandle,
     app: AppHandle,
 }
 
@@ -56,12 +57,19 @@ fn no_game() -> (StatusCode, String) {
     )
 }
 
+/// Map an inner worker-closure error string to an HTTP response. The
+/// sentinel `"no_game"` (returned when `world.game` is `None`) becomes the
+/// canonical [`no_game`] 400; anything else is a plain [`bad`] request.
+fn map_game_err(e: String) -> (StatusCode, String) {
+    if e == "no_game" {
+        no_game()
+    } else {
+        bad(e)
+    }
+}
+
 /// Start the bridge if `DIGIMON_DEBUG_BRIDGE=1`. No-op otherwise.
-pub fn maybe_spawn(
-    app: &AppHandle,
-    game: Arc<Mutex<Option<Game>>>,
-    session: Arc<Mutex<GameSession>>,
-) {
+pub fn maybe_spawn(app: &AppHandle, engine: EngineHandle) {
     if std::env::var("DIGIMON_DEBUG_BRIDGE").ok().as_deref() != Some("1") {
         return;
     }
@@ -71,8 +79,7 @@ pub fn maybe_spawn(
         .unwrap_or(5174);
 
     let state = BridgeState {
-        game,
-        session,
+        engine,
         app: app.clone(),
     };
     let router = Router::new()
@@ -120,30 +127,58 @@ fn notify(s: &BridgeState) {
 // ─── Read endpoints ──────────────────────────────────────────────────────
 
 async fn internal_state(State(s): State<BridgeState>) -> BridgeResult {
-    let guard = s.game.lock().map_err(bad)?;
-    let game = guard.as_ref().ok_or_else(no_game)?;
-    Ok(Json(game.to_scenario()))
+    let value = s
+        .engine
+        .run(|world| -> Result<Value, String> {
+            let game = world.game.as_ref().ok_or("no_game")?;
+            Ok(game.to_scenario())
+        })
+        .await
+        .map_err(bad)?
+        .map_err(map_game_err)?;
+    Ok(Json(value))
 }
 
 async fn ui_state(State(s): State<BridgeState>) -> BridgeResult {
-    let guard = s.game.lock().map_err(bad)?;
-    let game = guard.as_ref().ok_or_else(no_game)?;
-    Ok(Json(json!({
-        "state": game_state_dto(game),
-        "action_mask": action_mask_bytes(game),
-    })))
+    let value = s
+        .engine
+        .run(|world| -> Result<Value, String> {
+            let game = world.game.as_ref().ok_or("no_game")?;
+            Ok(json!({
+                "state": game_state_dto(game),
+                "action_mask": action_mask_bytes(game),
+            }))
+        })
+        .await
+        .map_err(bad)?
+        .map_err(map_game_err)?;
+    Ok(Json(value))
 }
 
 async fn mask(State(s): State<BridgeState>) -> BridgeResult {
-    let guard = s.game.lock().map_err(bad)?;
-    let game = guard.as_ref().ok_or_else(no_game)?;
-    Ok(Json(json!({ "action_mask": action_mask_bytes(game) })))
+    let value = s
+        .engine
+        .run(|world| -> Result<Value, String> {
+            let game = world.game.as_ref().ok_or("no_game")?;
+            Ok(json!({ "action_mask": action_mask_bytes(game) }))
+        })
+        .await
+        .map_err(bad)?
+        .map_err(map_game_err)?;
+    Ok(Json(value))
 }
 
 async fn export_scenario(State(s): State<BridgeState>) -> BridgeResult {
-    let guard = s.game.lock().map_err(bad)?;
-    let game = guard.as_ref().ok_or_else(no_game)?;
-    Ok(Json(game.to_scenario()))
+    let value = s
+        .engine
+        .run(|world| -> Result<Value, String> {
+            let game = world.game.as_ref().ok_or("no_game")?;
+            Ok(game.to_scenario())
+        })
+        .await
+        .map_err(bad)?
+        .map_err(map_game_err)?;
+    Ok(Json(value))
 }
 
 // ─── Mutating endpoints ──────────────────────────────────────────────────
@@ -152,20 +187,21 @@ async fn export_scenario(State(s): State<BridgeState>) -> BridgeResult {
 /// fixture, and install it as the live desktop game. The whole stage→test
 /// loop's "set up a board without playing" entry point.
 async fn stage(State(s): State<BridgeState>, Json(fixture): Json<Value>) -> BridgeResult {
-    let dto = stage_into(&s.game, &s.session, &fixture).map_err(bad)?;
+    let dto = s
+        .engine
+        .run(move |world| stage_into(world, &fixture))
+        .await
+        .map_err(bad)?
+        .map_err(bad)?;
     notify(&s);
     Ok(Json(json!({ "state": dto })))
 }
 
 /// Pure core of `/stage` (no `AppHandle`), so it is unit-testable without a
 /// Tauri runtime. Builds a game from the fixture's decks, stages the
-/// fixture onto it, and installs it into the shared state. Returns the
-/// desktop `GameStateDto` as a `Value`.
-pub(crate) fn stage_into(
-    game_arc: &Arc<Mutex<Option<Game>>>,
-    session_arc: &Arc<Mutex<GameSession>>,
-    fixture: &Value,
-) -> Result<Value, String> {
+/// fixture onto it, and installs it into the worker's [`EngineWorld`].
+/// Returns the desktop `GameStateDto` as a `Value`.
+pub(crate) fn stage_into(world: &mut EngineWorld, fixture: &Value) -> Result<Value, String> {
     let decks = fixture
         .get("decks")
         .and_then(Value::as_object)
@@ -191,10 +227,8 @@ pub(crate) fn stage_into(
     let registry = CardRegistry::from_cards(&db);
     let dto = serde_json::to_value(game_state_dto(&game)).map_err(|e| e.to_string())?;
 
-    let mut g = game_arc.lock().map_err(|e| e.to_string())?;
-    let mut sess = session_arc.lock().map_err(|e| e.to_string())?;
-    *g = Some(game);
-    *sess = GameSession {
+    world.game = Some(game);
+    world.session = GameSession {
         registry: Some(registry),
         // Both seats human so the desktop agent loop doesn't auto-step a
         // staged board out from under inspection.
@@ -207,11 +241,16 @@ pub(crate) fn stage_into(
 /// Re-stage the fixture onto the EXISTING game (its card pool must already
 /// contain the referenced ids).
 async fn apply(State(s): State<BridgeState>, Json(fixture): Json<Value>) -> BridgeResult {
-    let mut guard = s.game.lock().map_err(bad)?;
-    let game = guard.as_mut().ok_or_else(no_game)?;
-    game.apply_scenario(&fixture).map_err(bad)?;
-    let dto = game_state_dto(game);
-    drop(guard);
+    let dto = s
+        .engine
+        .run(move |world| -> Result<Value, String> {
+            let game = world.game.as_mut().ok_or("no_game")?;
+            game.apply_scenario(&fixture)?;
+            serde_json::to_value(game_state_dto(game)).map_err(|e| e.to_string())
+        })
+        .await
+        .map_err(bad)?
+        .map_err(map_game_err)?;
     notify(&s);
     Ok(Json(json!({ "state": dto })))
 }
@@ -225,11 +264,16 @@ struct InjectCardBody {
 
 async fn inject_card(State(s): State<BridgeState>, Json(b): Json<InjectCardBody>) -> BridgeResult {
     let pid = b.player_id.checked_sub(1).ok_or_else(|| bad("player_id must be 1/2"))?;
-    let mut guard = s.game.lock().map_err(bad)?;
-    let game = guard.as_mut().ok_or_else(no_game)?;
-    game.stage_inject_card(pid, &b.card_id, &b.zone).map_err(bad)?;
-    let dto = game_state_dto(game);
-    drop(guard);
+    let dto = s
+        .engine
+        .run(move |world| -> Result<Value, String> {
+            let game = world.game.as_mut().ok_or("no_game")?;
+            game.stage_inject_card(pid, &b.card_id, &b.zone)?;
+            serde_json::to_value(game_state_dto(game)).map_err(|e| e.to_string())
+        })
+        .await
+        .map_err(bad)?
+        .map_err(map_game_err)?;
     notify(&s);
     Ok(Json(json!({ "state": dto })))
 }
@@ -240,11 +284,16 @@ struct SetMemoryBody {
 }
 
 async fn set_memory(State(s): State<BridgeState>, Json(b): Json<SetMemoryBody>) -> BridgeResult {
-    let mut guard = s.game.lock().map_err(bad)?;
-    let game = guard.as_mut().ok_or_else(no_game)?;
-    game.set_memory(b.memory);
-    let dto = game_state_dto(game);
-    drop(guard);
+    let dto = s
+        .engine
+        .run(move |world| -> Result<Value, String> {
+            let game = world.game.as_mut().ok_or("no_game")?;
+            game.set_memory(b.memory);
+            serde_json::to_value(game_state_dto(game)).map_err(|e| e.to_string())
+        })
+        .await
+        .map_err(bad)?
+        .map_err(map_game_err)?;
     notify(&s);
     Ok(Json(json!({ "state": dto })))
 }
@@ -256,19 +305,26 @@ struct StepBody {
 }
 
 async fn step(State(s): State<BridgeState>, Json(b): Json<StepBody>) -> BridgeResult {
-    let mut guard = s.game.lock().map_err(bad)?;
-    let game = guard.as_mut().ok_or_else(no_game)?;
-    let pid = match b.player_id {
-        Some(p) => p.checked_sub(1).ok_or_else(|| bad("player_id must be 1/2"))?,
-        None => current_decision_player(game),
-    };
-    let mask = action_mask_bytes(game);
-    if (b.action as usize) >= mask.len() || mask[b.action as usize] != 1 {
-        return Err(bad(format!("action {} is not legal", b.action)));
-    }
-    game.decode_action(b.action, pid);
-    let dto = game_state_dto(game);
-    drop(guard);
+    let dto = s
+        .engine
+        .run(move |world| -> Result<Value, String> {
+            let game = world.game.as_mut().ok_or("no_game")?;
+            let pid = match b.player_id {
+                Some(p) => p
+                    .checked_sub(1)
+                    .ok_or_else(|| "player_id must be 1/2".to_string())?,
+                None => current_decision_player(game),
+            };
+            let mask = action_mask_bytes(game);
+            if (b.action as usize) >= mask.len() || mask[b.action as usize] != 1 {
+                return Err(format!("action {} is not legal", b.action));
+            }
+            game.decode_action(b.action, pid);
+            serde_json::to_value(game_state_dto(game)).map_err(|e| e.to_string())
+        })
+        .await
+        .map_err(bad)?
+        .map_err(map_game_err)?;
     notify(&s);
     Ok(Json(json!({ "state": dto })))
 }
@@ -278,13 +334,6 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    fn empty_state() -> (Arc<Mutex<Option<Game>>>, Arc<Mutex<GameSession>>) {
-        (
-            Arc::new(Mutex::new(None)),
-            Arc::new(Mutex::new(GameSession::default())),
-        )
-    }
-
     fn starter_deck() -> Vec<String> {
         let mut d: Vec<String> = vec!["ST1-01".to_string(); 5];
         d.extend(std::iter::repeat("ST1-03".to_string()).take(45));
@@ -293,7 +342,7 @@ mod tests {
 
     #[test]
     fn stage_into_installs_a_board_that_round_trips() {
-        let (g, s) = empty_state();
+        let mut world = EngineWorld::default();
         let fixture = json!({
             "schema_version": 1,
             "decks": { "1": starter_deck(), "2": starter_deck() },
@@ -305,11 +354,10 @@ mod tests {
             "assertions": { "engine": [], "ui": [] }
         });
 
-        let dto = stage_into(&g, &s, &fixture).expect("staging must succeed");
+        let dto = stage_into(&mut world, &fixture).expect("staging must succeed");
         assert!(dto.get("players").is_some(), "DTO must carry the desktop players shape");
 
-        let guard = g.lock().unwrap();
-        let game = guard.as_ref().expect("a game must be installed");
+        let game = world.game.as_ref().expect("a game must be installed");
         let snap = game.to_scenario();
         assert_eq!(snap["state"]["memory"], 2);
         assert_eq!(snap["state"]["turn"], 4);
@@ -321,28 +369,28 @@ mod tests {
 
     #[test]
     fn stage_into_rejects_an_illegal_board_without_installing() {
-        let (g, s) = empty_state();
+        let mut world = EngineWorld::default();
         let fixture = json!({
             "decks": { "1": starter_deck(), "2": starter_deck() },
             "state": { "memory": 0, "phase": "Main", "turn": 1, "first_player": 1 },
             // An empty field stack is rule-illegal.
             "zones": { "1": { "field": [ { "stack": [], "is_suspended": false, "turn_played": 0 } ] } }
         });
-        let err = stage_into(&g, &s, &fixture).unwrap_err();
+        let err = stage_into(&mut world, &fixture).unwrap_err();
         assert!(
             err.to_lowercase().contains("empty"),
             "expected an empty-stack diagnostic, got: {err}"
         );
         assert!(
-            g.lock().unwrap().is_none(),
+            world.game.is_none(),
             "an illegal stage must not install a game"
         );
     }
 
     #[test]
     fn stage_into_rejects_a_fixture_without_decks() {
-        let (g, s) = empty_state();
-        let err = stage_into(&g, &s, &json!({ "zones": {} })).unwrap_err();
+        let mut world = EngineWorld::default();
+        let err = stage_into(&mut world, &json!({ "zones": {} })).unwrap_err();
         assert!(err.contains("decks"), "expected a decks diagnostic, got: {err}");
     }
 }
