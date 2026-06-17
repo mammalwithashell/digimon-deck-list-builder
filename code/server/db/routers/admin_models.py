@@ -387,6 +387,7 @@ async def get_manifest(
     return ManifestResponse(
         generated_at=_utcnow(),
         models=manifest_models,
+        starter_ai_model_id=os.environ.get("STARTER_AI_MODEL_ID") or None,
     )
 
 
