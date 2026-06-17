@@ -22,7 +22,34 @@ effects:
     process:
       - play_from_security: {}
 
-  # Omitted:
-  # [All Turns] When an opponent plays a Digimon, by suspending this Tamer, gain
-  # 1 memory if that Digimon is level 4 or higher, and Draw 1 if it is level 3.
-  # This needs event-card level predicates and source-bound suspend-cost gating.
+  # [All Turns] When an opponent plays a Digimon, by suspending this Tamer,
+  # gain 1 memory if that Digimon is level 4 or higher, and Draw 1 if it is
+  # level 3.
+  #
+  # DCGO RB1_035.cs (EffectTiming.OnEnterFieldAnyone) crosscheck:
+  #   - IsPermanentExistsOnOpponentBattleAreaDigimon → opponent-owned Digimon
+  #     filter (event_target_owner: opponent + event_target_kind: digimon).
+  #   - SetUpActivateClass(..., true, ...) → the suspend effect is declinable
+  #     (optional: true → TriggerOrder PASS exposed before the cost).
+  #   - SuspendPermanentsClass(this).Tap() paid ONCE, then both branches
+  #     evaluated independently: Level>=4 → AddMemory(1); Level==3 → Draw().
+  #     A single played Digimon has one level, so exactly one branch fires —
+  #     the two-`if` shape is faithful.
+  - when: on_any_digimon_played
+    active_when: { all_turns: true }
+    optional: true
+    summary: "[All Turns] When opponent plays a Digimon, by suspending this Tamer: gain 1 memory if Lv>=4, Draw 1 if Lv==3"
+    condition:
+      all_of:
+        - event_target_owner: opponent
+        - event_target_kind: digimon
+    process:
+      - activation_cost: { suspend_self: true }
+      - if:
+          condition: { event_target_level_gte: 4 }
+          then:
+            - gain_memory: 1
+      - if:
+          condition: { event_target_level_eq: 3 }
+          then:
+            - draw: { of: you, count: 1 }

@@ -40,6 +40,8 @@ fn select_union_zone_picks_from_hand_or_trash() {
             zones: vec![CompiledZone::Hand, CompiledZone::Trash],
             material_of: None,
             filter: CompiledPredicate::default(),
+            zone_filters: Default::default(),
+            material_carrier_filter: None,
             bind_as: Some("union_pick".to_string()),
             prompt: "Pick from hand or trash".to_string(),
             prompt_key: None,

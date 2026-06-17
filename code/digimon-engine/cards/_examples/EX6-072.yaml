@@ -1,25 +1,85 @@
 card: EX6-072
-name: Mega Digimon Assembly!
+name: "Mega Digimon Assembly!"
 kind: option
 color: [white]
 cost: 4
 
+# Color bypass — DCGO IgnoreColorConditionClass (CardCondition = only this card;
+# CanUseCondition = opponent has a L6+ Digimon). Card-scoped + conditional;
+# consumed by mask.rs::option_use_requirement_or_color_available for BOTH the
+# action mask and the actual option play execution (game_actions/options.rs).
+# This fully replaces the over-broad/non-functional flood_gate; no flood_gate
+# clause is needed (verified: use_requirement alone satisfies both gates).
+use_requirement:
+  any_permanent:
+    of: opponent
+    zone: [battle_area]
+    kind: digimon
+    level_gte: 6
+
 effects:
-  - kind: flood_gate
-    active_when:
-      any_permanent:
-        of: opponent
-        kind: digimon
-        level_gte: 6
-    modifier: IgnoreColorRequirement
-    target: { owner: you }
-    summary: "Ignore color requirements while opponent has level 6+"
+  # ─── [Main] DNA digivolve a L6 field Digimon + 1 hand card into a L7 hand card
+  # Printed: "[Main] 1 of your level 6 Digimon and 1 card in the hand may DNA
+  # digivolve into a level 7 Digimon card in your hand."
+  #
+  # BLOCKED-ON-SUBSTRATE (recipe + cost): see substrate gaps. This YAML is the
+  # faithful-as-possible expression given current vocabulary; it (a) does not pay
+  # the result card's printed DNA digivolution cost (cost: printed clamps to 0 in
+  # play_digivolve.rs), and (b) does not validate the two chosen materials against
+  # the result card's printed DNA recipe (dna_digivolve_hand_partner_inner merges
+  # unconditionally), so an illegal pairing would currently be accepted. Both are
+  # pre-existing engine gaps shared by EX3-008 / BT17-095.
+  - when: main_from_hand
+    optional: true
+    summary: "[Main] You may DNA digivolve 1 of your L6 Digimon + 1 hand card into a L7 Digimon card in hand"
+    process:
+      # Result card — a level-7 Digimon card in hand (DCGO IsLevel7Card).
+      # Declining here aborts the whole DNA (DCGO: dnaTarget==null -> yield break).
+      - select_hand:
+          of: you
+          bind_as: dna_result
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 7
+          prompt: "Select a level 7 Digimon card in hand to DNA digivolve into"
+      # First DNA material — a level-6 Digimon permanent on your field
+      # (DCGO IsLevel6Permanent; recipe restriction unexpressible statically).
+      - select_own_permanent:
+          bind_as: dna_field_material
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 6
+          prompt: "Select 1 of your level 6 Digimon as a DNA digivolution material"
+      # Second DNA material — any 1 card in hand (DCGO IsCardInHand = always true;
+      # recipe restriction is the substrate gap, not expressible here).
+      - select_hand:
+          of: you
+          bind_as: dna_hand_material
+          optional: true
+          filter: {}
+          prompt: "Select 1 card in hand as the other DNA digivolution material"
+      # Merge: field material + hand material, topped by the level-7 result.
+      # cost: printed records intent to pay the DNA cost (currently lowers to 0 —
+      # substrate gap #1). ignore_requirements: false (normal DNA).
+      - effect_initiated_dna_digivolve_hand_partner:
+          target: dna_field_material
+          hand_partner: dna_hand_material
+          from_hand: dna_result
+          cost: printed
+          ignore_requirements: false
 
-  - kind: raw_rust
-    fn: ex6_072_main_dna_digivolve_from_field_and_hand
-    triggers: [main_from_hand]
-
-  - when: on_security
+  # ─── [Security] (inherited) return a L6+ Digimon from trash, then add self ──
+  # Printed: "[Security] Return 1 level 6 or higher Digimon card from your trash
+  # to the hand. Then, add this card to the hand."
+  # select_trash is NON-optional (DCGO canNoSelect: () => false); it auto-skips
+  # when no eligible card exists, so add_this_option_to_hand always fires.
+  - scope: inherited
+    when: on_security
+    summary: "[Security][Inherited] Return 1 L6+ Digimon from trash to hand, then add this card to hand"
     process:
       - select_trash:
           of: you
@@ -30,4 +90,4 @@ effects:
               - level_gte: 6
           prompt: "Return a level 6 or higher Digimon"
       - add_to_hand_from_trash: { of: you, card: pick }
-      - raw_rust: { fn: ex6_072_add_self_to_hand }
+      - add_this_option_to_hand: {}

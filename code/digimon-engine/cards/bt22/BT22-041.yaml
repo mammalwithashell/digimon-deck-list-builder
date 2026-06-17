@@ -14,6 +14,25 @@ alt_paths:
     cost: 4
 
 effects:
+  # ─── Cost reduction: -6 when total security in BOTH stacks <= 6 ──────────────
+  # own_count + opp_count <= 6  ⟺  own_count <= 6 - opp_count, encoded as
+  # security_count_lte (own) <= (6 - card_count_in_zone(opponent, security)).
+  # BT25-044 Junomon idiom.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    amount: 6
+    condition:
+      security_count_lte:
+        formula:
+          base: 6
+          per:
+            card_count_in_zone:
+              of: opponent
+              zone: security
+          delta: -1
+    summary: "When played, if both players' security stacks total 6 or fewer, reduce play cost by 6"
+
   - kind: grant_keyword
     keyword: Blocker
   - kind: grant_keyword
@@ -35,8 +54,27 @@ effects:
           position: top
           face_up: false
 
-# Stubbed:
-# - Play-cost reduction by 6 when total security count is 6 or fewer needs a
-#   before-pay-cost condition over both players' security stacks.
-# - [All Turns][Once Per Turn] when this Digimon suspends, trash top security
-#   to unsuspend needs self-suspend event gating plus security-trash cost.
+  # ─── [All Turns][Once Per Turn] self-suspend → trash top security → unsuspend ─
+  #
+  # "When this Digimon suspends, by trashing your top security card, it
+  # unsuspends."
+  #
+  # event_permanent_is_source gates the OnSuspend observer to THIS exact
+  # Kentaurosmon being suspended (the BT23-077 Sistermon Ciel pattern); another
+  # permanent suspending does not over-fire it. optional: true → "by trashing"
+  # is an opt-in cost, surfaced as an accept/decline prompt (the AD1-014 "may
+  # unsuspend" idiom). security_count_gte: 1 suppresses the prompt when there is
+  # no top security card to pay the cost. On accept: trash the top security card
+  # (the cost), then unsuspend this Digimon.
+  - when: on_suspend
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    condition:
+      all_of:
+        - event_permanent_is_source: true
+        - security_count_gte: 1
+    summary: "[All Turns][Once Per Turn] When this Digimon suspends, by trashing your top security card, it unsuspends"
+    process:
+      - trash_top_security: { of: you }
+      - unsuspend: { target: source }

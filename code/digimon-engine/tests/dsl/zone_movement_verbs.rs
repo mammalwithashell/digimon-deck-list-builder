@@ -876,3 +876,181 @@ fn return_selected_sources_to_hand_routes_to_source_owner_not_controller() {
         "P1's hand holds the returned foreign source"
     );
 }
+
+// ─── G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM ────────────────────────────────
+//
+// `return_selected_sources_to_deck` is the deck-routing sibling of
+// `return_selected_sources_to_hand`: it removes each `select_own_sources`-bound
+// digivolution source card from its host stack and routes it to its OWNER's
+// deck (top or bottom; `move_card_to_deck` inserts at index 0 for the bottom).
+// Like the to-hand verb it is a return, NOT a trash, so it fires no
+// `OnDigivolutionCardTrashed`.
+
+/// POSITIVE: a selected own digivolution source routes to the BOTTOM of the
+/// owner's deck (index 0), leaving the host permanent's top card and remaining
+/// stack intact, and never touching trash.
+#[test]
+fn return_selected_sources_to_deck_routes_picked_source_to_owner_deck_bottom() {
+    use digimon_dsl::compiled::{CompiledPredicate, CompiledStackPosition};
+    use digimon_engine::action::space::encode_source_select;
+    use digimon_engine::dsl_cards::step::RunOutcome;
+    use digimon_engine::selection::SelectionKind;
+
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC-LOW", "Bottom Source"))
+        .add_card(make_test_card("SRC-MID", "Dragon Mode"))
+        .add_card(make_test_card("TOP", "Host Top"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    // Host stack owned entirely by P0: [SRC-LOW, SRC-MID, TOP] bottom→top.
+    let host = runner.place_stack(0, &["SRC-LOW", "SRC-MID", "TOP"]);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    let deck_before = runner.game.players[0].deck.len();
+
+    let mut name_filter = CompiledPredicate::default();
+    name_filter.name_contains = Some("Dragon Mode".to_string());
+
+    let steps = vec![CompiledStep::SelectOwnSources {
+        target: None,
+        filter: name_filter,
+        min: 1,
+        max: 1,
+        bind_as: Some("picked".to_string()),
+        prompt: "Choose Dragon Mode source".to_string(),
+        then: vec![CompiledStep::ReturnSelectedSourcesToDeck {
+            source_refs: "picked".to_string(),
+            position: CompiledStackPosition::Bottom,
+        }],
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+    assert_eq!(outcome, RunOutcome::Parked);
+    assert_eq!(
+        runner.game.pending_selection.as_ref().map(|s| s.kind),
+        Some(SelectionKind::SourceMulti {
+            min: 1,
+            max: 1,
+            picked: 0,
+        }),
+        "the source choice must surface as a player selection (no auto-select)"
+    );
+
+    // SRC-MID is the digivolution source at source_index 1 (just under TOP).
+    let pick = encode_source_select(host.index as u16, 1).expect("Dragon Mode source action");
+    runner.execute_action(0, pick).expect("pick Dragon Mode");
+
+    assert!(runner.game.pending_selection.is_none());
+
+    // Host top card and the remaining below-top source are untouched.
+    let host_perm = &runner.game.players[0].battle_area[host.index as usize];
+    assert_eq!(
+        host_perm.card_sources.len(),
+        2,
+        "host stack shrinks by exactly the one returned source"
+    );
+    assert_eq!(
+        host_perm.top_card().card_id(&runner.game.card_data),
+        "TOP",
+        "host top card preserved"
+    );
+    assert!(
+        host_perm
+            .card_sources
+            .iter()
+            .all(|c| c.card_id(&runner.game.card_data) != "SRC-MID"),
+        "the picked source is GONE from the host's digivolution stack"
+    );
+
+    // The picked source becomes the BOTTOM card of P0's (its owner's) deck:
+    // bottom == index 0 per move_card_to_deck.
+    assert_eq!(
+        runner.game.players[0].deck.len(),
+        deck_before + 1,
+        "owner's deck grows by 1 (the returned Dragon Mode source)"
+    );
+    assert_eq!(
+        runner.game.players[0].deck[0].card_id(&runner.game.card_data),
+        "SRC-MID",
+        "the returned source sits at the BOTTOM of the owner's deck (index 0)"
+    );
+    assert!(
+        runner.game.players[0].trash.is_empty(),
+        "return-to-deck must NOT route the source to trash"
+    );
+}
+
+/// OWNER-ROUTING + TOP position: a P1-owned source under a P0-controlled host
+/// returns to the TOP of P1's deck (the source's `CardSource.owner`), not P0's,
+/// proving the destination is owner- and position-aware.
+#[test]
+fn return_selected_sources_to_deck_routes_to_source_owner_deck_top() {
+    use digimon_dsl::compiled::CompiledStackPosition;
+    use digimon_engine::action::space::encode_source_select;
+    use digimon_engine::dsl_cards::step::RunOutcome;
+
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC-OWNED-BY-P1", "Foreign Source"))
+        .add_card(make_test_card("TOP", "Host Top"))
+        .add_card(make_test_card("EFFECT", "Effect"))
+        .hand(0, &["EFFECT"])
+        .start();
+
+    // P0 controls host [TOP]; push a P1-owned digivolution source under it.
+    let host = runner.place_stack(0, &["TOP"]);
+    runner.push_source_owned(host, "SRC-OWNED-BY-P1", 1);
+    let source_card = runner.game.players[0].hand[0].handle();
+
+    let p0_deck_before = runner.game.players[0].deck.len();
+    let p1_deck_before = runner.game.players[1].deck.len();
+
+    let steps = vec![CompiledStep::SelectOwnSources {
+        target: None,
+        filter: digimon_dsl::compiled::CompiledPredicate::default(),
+        min: 1,
+        max: 1,
+        bind_as: Some("picked".to_string()),
+        prompt: "Choose source".to_string(),
+        then: vec![CompiledStep::ReturnSelectedSourcesToDeck {
+            source_refs: "picked".to_string(),
+            position: CompiledStackPosition::Top,
+        }],
+    }];
+
+    let mut bindings = Bindings::new();
+    let outcome = {
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 0);
+        run_steps(&steps, &mut ctx, &mut bindings)
+    };
+    assert_eq!(outcome, RunOutcome::Parked);
+
+    // The P1-owned source is at source_index 0 (below TOP).
+    let pick = encode_source_select(host.index as u16, 0).expect("foreign source action");
+    runner.execute_action(0, pick).expect("pick foreign source");
+
+    assert!(runner.game.pending_selection.is_none());
+    assert_eq!(
+        runner.game.players[0].deck.len(),
+        p0_deck_before,
+        "controller P0's deck must NOT receive a source it does not own"
+    );
+    assert_eq!(
+        runner.game.players[1].deck.len(),
+        p1_deck_before + 1,
+        "the source returns to its OWNER P1's deck"
+    );
+    assert_eq!(
+        runner.game.players[1]
+            .deck
+            .last()
+            .map(|c| c.card_id(&runner.game.card_data)),
+        Some("SRC-OWNED-BY-P1"),
+        "TOP position == Vec end == P1's deck top"
+    );
+}

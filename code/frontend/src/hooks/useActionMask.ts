@@ -64,10 +64,12 @@ export function useActionMask(mask: number[]): ParsedMask {
       if (mask[i] === 1) canPlayFromHand.add(i);
     }
 
-    // Trash from hand (30-59)
-    for (let i = ACTION.TRASH_START; i <= ACTION.TRASH_END; i++) {
-      if (mask[i] === 1) canTrashFromHand.add(i - ACTION.TRASH_START);
-    }
+    // Action ids 30-59 are HAND_EFFECT (hand [Main] activations) in the Rust
+    // engine — NOT "trash from hand". They are surfaced as named buttons via
+    // the engine-decoded action list (ActionBar `decodedActions`), so we no
+    // longer route them into `canTrashFromHand` (which would mislabel a
+    // hand [Main] effect as a discard). The field is retained empty for
+    // interface compatibility; nothing renders it.
 
     // DNA Digivolve (63-92)
     for (let i = ACTION.DNA_START; i <= ACTION.DNA_END; i++) {
@@ -133,8 +135,17 @@ export function useActionMask(mask: number[]): ParsedMask {
     for (let i = SELECTION.OWN_FIELD_START; i <= SELECTION.OWN_FIELD_END; i++) {
       if (mask[i] === 1) validSelections.add(i);
     }
-    // Enemy field
-    for (let i = SELECTION.ENEMY_FIELD_START; i <= SELECTION.ENEMY_FIELD_END; i++) {
+    // Enemy field. Mixed-side `AnyField` prompts (select_any_permanent, e.g.
+    // EX8-028 Skadimon "place 1 Digimon as the bottom security card") encode
+    // opponent slots as `OWN_FIELD_START + ATTACK_TARGETS_PER_SLOT + slot`
+    // (= `encode_attack(1, slot)`, 115-128). The legacy `ENEMY_FIELD_END` (127,
+    // stride-14) dropped opponent slot 13 (id 128), so an AnyField pick on the
+    // 14th opposing Digimon was unclickable. Widen the upper bound to 128; the
+    // ids past `ENEMY_FIELD_END` are only ever set for these mixed-side prompts,
+    // so this is purely additive.
+    const enemyFieldEnd =
+      SELECTION.OWN_FIELD_START + ATTACK_TARGETS_PER_SLOT + MAX_BATTLE_AREA_SLOTS - 1;
+    for (let i = SELECTION.ENEMY_FIELD_START; i <= enemyFieldEnd; i++) {
       if (mask[i] === 1) validSelections.add(i);
     }
     // Trash

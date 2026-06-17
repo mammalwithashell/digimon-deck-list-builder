@@ -3,7 +3,7 @@ use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledClause, CompiledPlayerRef, CompiledStackPosition, CompiledStep,
 };
 use digimon_dsl::spec::CardSpec;
-use digimon_dsl::step::{SecurityFace, StepSpec};
+use digimon_dsl::step::{SecurityFace, StackPosition, StepSpec};
 
 fn compile_steps(yaml_steps: &str) -> Vec<CompiledStep> {
     let yaml = format!(
@@ -443,5 +443,93 @@ effects:
     assert!(
         serde_yml::from_str::<CardSpec>(bad).is_err(),
         "return_selected_sources_to_hand must reject the unknown `count` field"
+    );
+}
+
+// ─── G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM ────────────────────────────────
+//
+// `return_selected_sources_to_deck` is the deck-routing sibling of
+// `return_selected_sources_to_hand`: it carries a `position: top | bottom` and
+// routes each `select_own_sources`-bound source to its owner's deck rather than
+// hand (BT13-075 Alphamon would-leave self-protection cost).
+
+#[test]
+fn return_selected_sources_to_deck_parses_as_step_spec() {
+    let step = parse_first_step(
+        "      - return_selected_sources_to_deck:\n          source_refs: returned_source\n          position: bottom\n",
+    );
+    match step {
+        StepSpec::ReturnSelectedSourcesToDeck(args) => {
+            assert_eq!(args.source_refs, "returned_source");
+            assert_eq!(args.position, StackPosition::Bottom);
+        }
+        other => panic!("expected ReturnSelectedSourcesToDeck, got {other:?}"),
+    }
+}
+
+#[test]
+fn return_selected_sources_to_deck_lowers_inside_select_own_sources() {
+    let yaml = r#"
+card: X-RET-SRC-DECK
+name: Return Source To Deck Picker
+kind: digimon
+level: 6
+color: [black]
+cost: 12
+dp: 12000
+effects:
+  - when: when_digivolving
+    process:
+      - select_own_sources:
+          from: source
+          min: 0
+          max: 1
+          bind_as: picked_sources
+          then:
+            - return_selected_sources_to_deck:
+                source_refs: picked_sources
+                position: bottom
+"#;
+    let spec: CardSpec = serde_yml::from_str(yaml).expect("card YAML parses");
+    let compiled = compile(&spec).expect("card compiles");
+    let process = match &compiled.effects[0] {
+        CompiledClause::Triggered(t) => &t.process,
+        other => panic!("expected triggered clause, got {other:?}"),
+    };
+    match &process[0] {
+        CompiledStep::SelectOwnSources { then, .. } => {
+            assert_eq!(
+                then,
+                &vec![CompiledStep::ReturnSelectedSourcesToDeck {
+                    source_refs: "picked_sources".to_string(),
+                    position: CompiledStackPosition::Bottom,
+                }]
+            );
+        }
+        other => panic!("expected SelectOwnSources, got {other:?}"),
+    }
+}
+
+#[test]
+fn return_selected_sources_to_deck_rejects_unknown_field() {
+    let bad = r#"
+card: BAD-RET-SRC-DECK
+name: Bad
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: main_on_field
+    process:
+      - return_selected_sources_to_deck:
+          source_refs: picked
+          position: bottom
+          count: 1
+"#;
+    assert!(
+        serde_yml::from_str::<CardSpec>(bad).is_err(),
+        "return_selected_sources_to_deck must reject the unknown `count` field"
     );
 }

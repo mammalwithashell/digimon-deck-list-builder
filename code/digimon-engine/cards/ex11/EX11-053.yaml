@@ -48,7 +48,37 @@ effects:
           target: king_drasil
       - draw: { of: you, count: 1 }
 
-# Stubbed:
-# - [On Deletion] at 1 or fewer security, play Omnimon (X Antibody) from hand
-#   or under fielded King Drasil_7D6, then place this card under it. Needs union
-#   hand/source play plus binding the played Digimon for source placement.
+  # [On Deletion] If you have 1 or fewer security cards, you may play 1
+  # [Omnimon (X Antibody)] from your hand OR from under your [King Drasil_7D6]s
+  # on the field without paying the cost. Then, place this card as the played
+  # Digimon's bottom digivolution card.
+  #
+  # Modeled as ONE optional union selection over {hand} ∪ {field-carrier
+  # digivolution sources}, where the material scan is restricted to fielded
+  # [King Drasil_7D6] carriers via `material_carrier_filter`
+  # (G-UNION-HAND-SOURCE-PLAY). Both halves filter candidates to
+  # [Omnimon (X Antibody)]. The chosen card is played free from its origin zone,
+  # then this Omekamon (now in trash post-deletion) is tucked as the played
+  # Digimon's bottom digivolution source. DCGO EX11_053.cs splits this into a
+  # hand/field/decline int prompt then a card pick; we expose the full candidate
+  # union directly so the RL action space sees every option (CLAUDE.md §17).
+  - when: on_deletion
+    optional: true
+    condition: { security_count_lte: 1 }
+    summary: "[On Deletion] At <=1 security, may free-play [Omnimon (X Antibody)] from hand or under a fielded King Drasil_7D6, then attach this card under it"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, material]
+          # material_of omitted → scan all field permanents, NOW restricted to
+          # [King Drasil_7D6] carriers by the carrier filter:
+          material_carrier_filter: { name_is: "King Drasil_7D6" }
+          optional: true
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: "Omnimon (X Antibody)"
+          prompt: "You may play 1 [Omnimon (X Antibody)] from your hand or under a fielded King Drasil_7D6, without paying the cost"
+      - play_union_bound_free: { binding: pick, bind_as: played }
+      - place_as_bottom_source: { source: self, target: played }

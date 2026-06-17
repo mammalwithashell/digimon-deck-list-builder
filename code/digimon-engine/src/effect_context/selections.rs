@@ -1213,17 +1213,35 @@ impl<'a> EffectContext<'a> {
     /// came from, so a downstream consumer can act on the card's true origin
     /// (e.g. play it back from hand, trash, or source materials). The origin is
     /// recovered from the encoded `action_id` range.
+    /// **Filter signature (per-zone aware):** the filter receives the
+    /// candidate's origin zone as a single-bit [`UnionZoneSet`]
+    /// (`UnionZoneSet::HAND` / `TRASH` / `MATERIAL`) so a consumer can apply a
+    /// *different* predicate per zone — e.g. "1 [Sistermon] from trash OR 1
+    /// [Royal Knight] from breeding sources" in one prompt
+    /// (G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY). A uniform filter simply
+    /// ignores the third argument.
+    /// **Carrier filter (per-carrier material restriction):** when
+    /// `material_of` is `None` (scan all my field permanents) and
+    /// `material_carrier_filter` is `Some`, each candidate carrier is evaluated
+    /// against the predicate (its top card / permanent subject) BEFORE its
+    /// sources are enumerated — non-matching carriers contribute no source
+    /// candidates. Lets one prompt offer "1 X from hand OR 1 X from under a
+    /// fielded [King Drasil_7D6]" (G-UNION-HAND-SOURCE-PLAY). `None` → every
+    /// field carrier is scanned. Ignored when `material_of` pins a carrier.
     pub fn select_union_zone<F, C>(
         &mut self,
         of_player: PlayerId,
         zones: crate::selection::UnionZoneSet,
         material_of: Option<crate::permanent::PermanentHandle>,
+        material_carrier_filter: Option<
+            Box<dyn Fn(&Game, crate::permanent::PermanentHandle) -> bool + Send + Sync>,
+        >,
         prompt: &str,
         is_optional: bool,
         filter: F,
         callback: C,
     ) where
-        F: Fn(&Game, &CardSource) -> bool,
+        F: Fn(&Game, &CardSource, crate::selection::UnionZoneSet) -> bool,
         C: FnOnce(
                 &mut EffectContext<'_>,
                 crate::card_source::CardHandle,
@@ -1251,7 +1269,7 @@ impl<'a> EffectContext<'a> {
                 // Clone the CardSource so we can release the borrow on
                 // `self.game` before passing `&Game` to the filter.
                 let card_clone = self.game.player(of_player).hand[i].clone();
-                if filter(self.game, &card_clone) {
+                if filter(self.game, &card_clone, UnionZoneSet::HAND) {
                     valid_action_ids.push(PLAY_HAND_START + i as u16);
                 }
             }
@@ -1263,7 +1281,7 @@ impl<'a> EffectContext<'a> {
             let cap = trash_len.min(TRASH_MAIN_LIMIT);
             for i in 0..cap {
                 let card_clone = self.game.player(of_player).trash[i].clone();
-                if filter(self.game, &card_clone) {
+                if filter(self.game, &card_clone, UnionZoneSet::TRASH) {
                     valid_action_ids.push(TRASH_EFFECT_START + i as u16);
                 }
             }
@@ -1287,6 +1305,17 @@ impl<'a> EffectContext<'a> {
                                     index: index as u8,
                                 })
                         })
+                        // G-UNION-HAND-SOURCE-PLAY: restrict the field carrier
+                        // scan to carriers matching `material_carrier_filter`
+                        // (e.g. a [King Drasil_7D6] top card). Only applies to
+                        // the broad `material_of: None` scan; a pinned carrier
+                        // above bypasses this.
+                        .filter(|handle| {
+                            material_carrier_filter
+                                .as_ref()
+                                .map(|f| f(self.game, *handle))
+                                .unwrap_or(true)
+                        })
                         .collect()
                 };
             for carrier in material_carriers {
@@ -1302,7 +1331,7 @@ impl<'a> EffectContext<'a> {
                         })
                         .unwrap_or_default();
                 for (source_index, card_clone) in candidates {
-                    if !filter(self.game, &card_clone) {
+                    if !filter(self.game, &card_clone, UnionZoneSet::MATERIAL) {
                         continue;
                     }
                     let action = if carrier.index == crate::action::space::BREEDING_TARGET as u8 {
@@ -2124,17 +2153,25 @@ impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
 
     /// Install a union-zone selection where `self.selecting_player` picks.
     /// Forwards to `EffectContext::select_union_zone`.
+    #[allow(clippy::too_many_arguments)]
     pub fn select_union_zone<F, C>(
         &mut self,
         of_player: crate::enums::PlayerId,
         zones: crate::selection::UnionZoneSet,
         material_of: Option<crate::permanent::PermanentHandle>,
+        material_carrier_filter: Option<
+            Box<dyn Fn(&Game, crate::permanent::PermanentHandle) -> bool + Send + Sync>,
+        >,
         prompt: &str,
         is_optional: bool,
         filter: F,
         callback: C,
     ) where
-        F: Fn(&crate::game::Game, &crate::card_source::CardSource) -> bool,
+        F: Fn(
+            &crate::game::Game,
+            &crate::card_source::CardSource,
+            crate::selection::UnionZoneSet,
+        ) -> bool,
         C: FnOnce(
                 &mut EffectContext<'_>,
                 crate::card_source::CardHandle,
@@ -2149,6 +2186,7 @@ impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
             of_player,
             zones,
             material_of,
+            material_carrier_filter,
             prompt,
             is_optional,
             filter,

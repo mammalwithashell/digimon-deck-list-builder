@@ -83,7 +83,7 @@
 # (+ linked_cards + Training inserts) for triggered effects. Inherited
 # clauses on cards in lower digivolution-stack slots (where Tsumemon lives
 # at runtime) are not enqueued today. Tests that require the clause to
-# actually fire are gated `#[ignore = "BLOCKED: G-INHERITED-DISPATCH ..."]`.
+# actually fire were gated on G-INHERITED-DISPATCH (now RESOLVED, qa/resolved-gaps.md).
 # Same caveat as BT14-001 / BT21-001 / BT24-001 (sister DigiEgg DSL cards).
 #
 # G-OPT-TRIGGERED: `once_per_turn: true` compiles to `Effect::max_per_turn=1`

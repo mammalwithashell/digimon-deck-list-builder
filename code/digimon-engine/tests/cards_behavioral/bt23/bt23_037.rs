@@ -372,13 +372,41 @@ fn bt23_037_digivolves_from_cs_lv2_for_cost_zero() {
     let hand_idx = push_to_hand(&mut runner, 0, "BT23-037");
 
     let memory_before = runner.game.memory;
-    let ok = runner
+    // A GREEN [CS] Lv.2 base satisfies BOTH of Tentomon's digivolution paths:
+    // the printed green Lv.2 (cost 1) AND the [CS] Lv.2 xros_req (cost 0). Rule
+    // 17: the engine prompts for WHICH cost to pay rather than auto-picking the
+    // cheaper. Pick the cost-0 [CS] route.
+    let started = runner
         .game
         .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByHand);
-    assert!(ok, "Tentomon must digivolve from a Lv.2 [CS] base (cost 0)");
+    assert!(
+        !started,
+        "two costs (0 and 1) apply — the engine must prompt, not auto-pick the cheaper"
+    );
+    let options = runner
+        .pending_selection()
+        .expect("a cost-choice selection must be pending")
+        .valid_action_ids
+        .clone();
+    assert_eq!(
+        options.len(),
+        2,
+        "both the cost-0 [CS] and cost-1 green Lv.2 paths must be offered"
+    );
+    // Options are cheapest-first — index 0 is the cost-0 [CS] path.
+    runner
+        .execute_action(0, options[0])
+        .expect("pick the cost-0 [CS] route");
     assert_eq!(
         runner.game.memory, memory_before,
-        "the Lv.2 [CS] xros_req path costs 0 — memory unchanged"
+        "the chosen Lv.2 [CS] xros_req path costs 0 — memory unchanged"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[base.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "BT23-037",
+        "Tentomon is stacked on top after the digivolve"
     );
 }
 

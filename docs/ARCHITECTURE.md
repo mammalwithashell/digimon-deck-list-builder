@@ -39,7 +39,7 @@ Detailed architecture documentation extracted from CLAUDE.md. For project overvi
 - `code/tools/train_card_autoencoder.py`: warm-start embedding generator
 - `code/tools/ingest_pinecone.py` / `code/tools/verify_pinecone.py`: Pinecone vector DB management
 - `code/tools/meta_loader.py`: meta deck data loader
-- `code/tools/check_frozen_integrity.py`: AI-pipeline frozen-script hash guard (run by `code/server/ai/autofix_apply.py` after each script edit; sunset alongside the Python engine)
+- _(removed 2026-06-14)_ `code/tools/check_frozen_integrity.py` — the frozen-Python-script hash guard was deleted with the script-promotion lane (shrink-legacy-engine-surface); card scripting is Rust DSL-first.
 - `qa/archetype-qa/`: archetype QA reports, engine API reference, engine gaps
 - `qa/qa-reports/`: gameplay QA test reports, validated cards index
 - `DCGO/`: git submodule — DCGO C# source (reference implementation)

@@ -321,6 +321,24 @@ pub fn try_run(
             true
         }
 
+        // G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM — deck-routing sibling of
+        // `ReturnSelectedSourcesToHand`: return each selected digivolution
+        // source card to its OWNER's deck (top or bottom). A return, not a
+        // trash: fires no `OnDigivolutionCardTrashed`.
+        CompiledStep::ReturnSelectedSourcesToDeck {
+            source_refs,
+            position,
+        } => {
+            let to_bottom =
+                super::map_stack_position(*position) == crate::enums::StackPosition::Bottom;
+            if let Some(source_refs) = bindings.get_source_refs(source_refs) {
+                for source_ref in source_refs {
+                    ctx.return_card_source_to_deck(source_ref.permanent, source_ref.card, to_bottom);
+                }
+            }
+            true
+        }
+
         CompiledStep::PlaySelectedSourcesFree { source_refs } => {
             if let Some(source_refs) = bindings.get_source_refs(source_refs) {
                 ctx.play_selected_sources_without_cost(source_refs);

@@ -73,6 +73,7 @@ def test_new_event_variants_serialize_through_pyo3_with_expected_keys() -> None:
         "Trash",          # newly emitted
         "Mill",
         "SecurityReveal", # newly emitted
+        "Reveal",         # non-security reveal sites (RevealZone)
         "GameOver",
         "Concede",
         "EffectFizzled",
@@ -82,3 +83,54 @@ def test_new_event_variants_serialize_through_pyo3_with_expected_keys() -> None:
         assert ev["type"] in known_types, (
             f"unexpected event type {ev['type']!r}; binding may be stale"
         )
+
+
+def test_turnstart_and_phasechange_are_emitted() -> None:
+    """`TurnStart` + `PhaseChange` are now wired in the turn machine
+    (`game_phases.rs`). Drive a game past mulligan and into a turn and assert
+    both variants actually fire (not just that they're known type tags)."""
+    deck1, deck2 = _starter_decks()
+    game = RustHeadlessGame(deck1, deck2, seed=1)
+
+    seen: set[str] = set(_drained_event_types(game))  # construction-time events
+    steps = 0
+    target = {"TurnStart", "PhaseChange"}
+    while not game.is_game_over and steps < 300 and not target <= seen:
+        mask = game.get_action_mask().tolist()
+        action = next((i for i, v in enumerate(mask) if v > 0.5), None)
+        if action is None:
+            break
+        game.step(action)
+        seen.update(_drained_event_types(game))
+        steps += 1
+
+    assert "TurnStart" in seen, f"TurnStart was never emitted; saw {sorted(seen)}"
+    assert "PhaseChange" in seen, f"PhaseChange was never emitted; saw {sorted(seen)}"
+
+
+def test_phasechange_meta_carries_a_turn_phase() -> None:
+    """A `PhaseChange` event's meta names a main turn phase (Unsuspend/Draw/
+    Breeding/Main/EndTurn) — NOT a transient selection sub-phase."""
+    deck1, deck2 = _starter_decks()
+    game = RustHeadlessGame(deck1, deck2, seed=1)
+    main_phases = {"Unsuspend", "Draw", "Breeding", "Main", "EndTurn"}
+
+    found = False
+    steps = 0
+    while not game.is_game_over and steps < 300 and not found:
+        for ev in game.get_events_since_last_step():
+            if ev["type"] == "PhaseChange":
+                assert ev["meta"]["phase"] in main_phases, (
+                    f"PhaseChange named a non-turn phase: {ev['meta']['phase']!r}"
+                )
+                found = True
+        if found:
+            break
+        mask = game.get_action_mask().tolist()
+        action = next((i for i, v in enumerate(mask) if v > 0.5), None)
+        if action is None:
+            break
+        game.step(action)
+        steps += 1
+
+    assert found, "no PhaseChange event observed within the step budget"

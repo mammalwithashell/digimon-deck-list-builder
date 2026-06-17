@@ -1,0 +1,3991 @@
+{
+  "count": 438,
+  "failed": [],
+  "evo_costs": {
+    "BT24-062": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT12-112": [],
+    "BT20-083": [],
+    "BT13-093": [],
+    "BT19-014": [],
+    "BT20-021": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "BT20-045": [
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "BT20-076": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT20-081": [
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 2,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "BT23-047": [
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "BT23-064": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT23-077": [],
+    "BT24-068": [
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT6-082": [],
+    "BT6-084": [],
+    "EX11-053": [],
+    "EX6-029": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "ST12-12": [],
+    "BT18-102": [],
+    "AD1-025": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "BT18-019": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 4
+      }
+    ],
+    "BT16-040": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "BT20-037": [
+      {
+        "card_color": 2,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "BT12-028": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT12-031": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "BT15-101": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT16-082": [],
+    "BT25-069": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "P-215": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "EX11-027": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "AD1-005": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "AD1-009": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "AD1-012": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "AD1-024": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "BT12-022": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT12-050": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT13-020": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 2,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "BT13-112": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 4
+      }
+    ],
+    "BT16-025": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT17-078": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "BT17-102": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT19-012": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT20-016": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT21-011": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "BT21-021": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT21-037": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT21-042": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT21-044": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT21-072": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT23-102": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "BT24-037": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-010": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "BT25-011": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT25-012": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT25-015": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-016": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-018": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-027": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "BT25-028": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-037": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT25-038": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-044": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-051": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT25-052": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT25-054": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-056": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-058": [
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "BT25-059": [
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-067": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT25-070": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT25-072": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-077": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-082": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT25-084": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "BT5-112": [
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 3
+      }
+    ],
+    "BT9-112": [
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "EX11-015": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "EX11-016": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "EX11-017": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "EX11-023": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "EX1-014": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "EX4-060": [
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "EX8-022": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "EX8-023": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "EX8-028": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "EX8-074": [
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "EX9-021": [
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "EX9-032": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "EX9-033": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "P-123": [],
+    "P-137": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "ST9-09": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "EX10-033": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "EX10-036": [
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 4
+      }
+    ],
+    "EX11-044": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT13-060": [
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "BT17-015": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT15-037": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT17-027": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT21-007": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT21-008": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT21-009": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT21-013": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT21-015": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT21-017": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT21-024": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "BT21-025": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "BT21-026": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT21-029": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT21-047": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT21-071": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT22-013": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT22-026": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT23-005": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT23-014": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT23-058": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT23-059": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT24-011": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT24-016": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "BT24-017": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT24-047": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT24-067": [
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-007": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-008": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-009": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-013": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT25-014": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT25-017": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "BT25-021": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-023": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT25-024": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT25-026": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "BT25-034": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT25-040": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "BT25-043": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-045": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-048": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-061": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-062": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-066": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT25-068": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT25-071": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "EX11-008": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "EX11-012": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "EX11-074": [
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 4
+      }
+    ],
+    "EX9-008": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "P-189": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST1-02": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST1-03": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST1-04": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST1-05": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST1-06": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST1-07": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST1-08": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST1-09": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST1-10": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 2
+      }
+    ],
+    "ST1-11": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "AD1-004": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "AD1-006": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "AD1-013": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "AD1-014": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "AD1-016": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "AD1-017": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "AD1-018": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT10-009": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT10-013": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT12-059": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "BT13-012": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT13-019": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "BT13-040": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 4
+      }
+    ],
+    "BT16-027": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "BT16-028": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT16-077": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT16-101": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT16-102": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT17-077": [
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "BT19-008": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "BT19-026": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT19-033": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT19-035": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT19-038": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT19-047": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT19-051": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT19-057": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "BT19-061": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT19-072": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT19-073": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT20-020": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "BT20-036": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT20-055": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT20-056": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT20-060": [
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 2,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "BT20-102": [
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "BT21-018": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT21-023": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT21-073": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT21-101": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "BT22-015": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 1,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "BT23-035": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT23-037": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "BT23-054": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 4
+      }
+    ],
+    "BT23-101": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 5
+      }
+    ],
+    "BT24-030": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT24-040": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT24-041": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT24-046": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT24-051": [
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT24-059": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-019": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "BT25-025": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-042": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-053": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-060": [
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT25-063": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "EX10-010": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "EX10-031": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "EX10-034": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "EX10-059": [
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "EX11-014": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "EX11-020": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "EX11-021": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "EX11-022": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "EX3-057": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "EX3-063": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "EX4-005": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "EX4-006": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "EX4-074": [
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 2,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "EX5-015": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "EX6-011": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "EX8-019": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "EX8-073": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "EX9-012": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "EX9-013": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "EX9-019": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "EX9-024": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "EX9-027": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "LM-020": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "P-101": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "P-186": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "ST17-07": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "ST19-04": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "ST19-05": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
+      },
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "ST19-10": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "ST20-11": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "ST22-12": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 3
+      }
+    ],
+    "BT11-042": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "AD1-001": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "AD1-002": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "AD1-010": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT10-029": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT10-042": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT10-111": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT11-033": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT12-016": [
+      {
+        "card_color": 0,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "BT12-021": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT12-047": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT12-057": [
+      {
+        "card_color": 3,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 6
+      },
+      {
+        "card_color": 4,
+        "level": 6,
+        "memory_cost": 6
+      }
+    ],
+    "BT13-030": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT13-075": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT13-087": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT13-088": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT13-111": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "BT14-009": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT15-020": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT16-055": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT17-007": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT17-009": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT17-016": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT17-018": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "BT17-019": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT18-064": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT19-075": [
+      {
+        "card_color": 6,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "BT20-017": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT20-059": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "BT20-084": [],
+    "BT21-027": [],
+    "BT21-030": [],
+    "BT21-043": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT21-055": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT21-059": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT21-070": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT22-008": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT22-009": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT22-017": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT22-025": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT22-029": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT22-032": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT22-036": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "BT22-040": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT22-041": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT22-042": [
+      {
+        "card_color": 2,
+        "level": 6,
+        "memory_cost": 4
+      }
+    ],
+    "BT22-052": [
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT23-008": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT23-013": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "BT23-018": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT23-057": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "BT24-008": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT24-012": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT24-018": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 4
+      }
+    ],
+    "BT24-020": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT24-031": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT24-034": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT24-035": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT24-043": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT24-101": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "BT25-022": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-030": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-031": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-033": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT25-035": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT25-036": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT25-041": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "BT25-047": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-049": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT25-050": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT25-055": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "BT25-064": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-065": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-078": [
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT25-081": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT2-069": [
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT2-076": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "BT4-072": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "BT5-008": [
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT5-033": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "BT7-069": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "BT9-033": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "EX10-020": [],
+    "EX10-025": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "EX10-028": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "EX10-032": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "EX10-039": [
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "EX10-044": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "EX10-056": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "EX11-019": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "EX11-024": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "EX11-038": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "EX1-021": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "EX3-008": [
+      {
+        "card_color": 0,
+        "level": 3,
+        "memory_cost": 2
+      },
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "EX3-014": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "EX4-038": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "EX4-039": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "EX4-073": [
+      {
+        "card_color": 5,
+        "level": 6,
+        "memory_cost": 5
+      }
+    ],
+    "EX5-060": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "EX6-057": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "EX7-016": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "EX7-020": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "EX7-021": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "EX7-023": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "EX7-024": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "EX7-025": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "EX7-027": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "EX7-030": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "EX7-049": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 5
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 5
+      }
+    ],
+    "EX8-030": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "EX8-046": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "EX8-047": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "EX8-048": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "EX8-050": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "EX8-051": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "EX8-055": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "LM-021": [
+      {
+        "card_color": 0,
+        "level": 6,
+        "memory_cost": 3
+      }
+    ],
+    "P-117": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "P-134": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "P-165": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "P-167": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "P-182": [
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "P-194": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "P-196": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "P-197": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "P-198": [
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST13-08": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST19-03": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST19-06": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST19-07": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST19-08": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST19-09": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST19-11": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST19-12": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "ST20-10": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      },
+      {
+        "card_color": 0,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST2-02": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST2-03": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST2-04": [
+      {
+        "card_color": 1,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST2-05": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST2-06": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST2-07": [
+      {
+        "card_color": 1,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST2-08": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST2-09": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST2-10": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 2
+      }
+    ],
+    "ST2-11": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "ST3-02": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST3-03": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST3-04": [
+      {
+        "card_color": 2,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST3-05": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST3-06": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST3-07": [
+      {
+        "card_color": 2,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST3-08": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST3-09": [
+      {
+        "card_color": 2,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST3-10": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 2
+      }
+    ],
+    "ST3-11": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "ST4-02": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "ST4-03": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST4-04": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST4-05": [
+      {
+        "card_color": 3,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST4-06": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST4-07": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST4-08": [
+      {
+        "card_color": 3,
+        "level": 3,
+        "memory_cost": 1
+      }
+    ],
+    "ST4-09": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 2
+      }
+    ],
+    "ST4-10": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST4-11": [
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST4-12": [
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "ST4-13": [
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "ST5-02": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "ST5-03": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST5-04": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST5-05": [
+      {
+        "card_color": 5,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST5-06": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST5-07": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST5-08": [
+      {
+        "card_color": 5,
+        "level": 3,
+        "memory_cost": 1
+      }
+    ],
+    "ST5-09": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST5-10": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST5-11": [
+      {
+        "card_color": 5,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST5-12": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "ST5-13": [
+      {
+        "card_color": 5,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "ST6-02": [
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 1
+      }
+    ],
+    "ST6-03": [
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST6-04": [
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST6-05": [
+      {
+        "card_color": 6,
+        "level": 2,
+        "memory_cost": 0
+      }
+    ],
+    "ST6-06": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST6-07": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 2
+      }
+    ],
+    "ST6-08": [
+      {
+        "card_color": 6,
+        "level": 3,
+        "memory_cost": 1
+      }
+    ],
+    "ST6-09": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST6-10": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST6-11": [
+      {
+        "card_color": 6,
+        "level": 4,
+        "memory_cost": 3
+      }
+    ],
+    "ST6-12": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 3
+      }
+    ],
+    "ST6-13": [
+      {
+        "card_color": 6,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ],
+    "ST9-05": [
+      {
+        "card_color": 1,
+        "level": 4,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 4,
+        "memory_cost": 4
+      }
+    ],
+    "ST9-06": [
+      {
+        "card_color": 1,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 3,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ]
+  }
+}

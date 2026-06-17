@@ -18,7 +18,49 @@ effects:
   - kind: grant_keyword
     keyword: Blocker
 
-# Stubbed:
-# - [On Play][When Digivolving] may play Sistermon from trash or a Royal Knight
-#   from breeding sources, excluding Gankoomon and Omnimon. This needs a reusable
-#   union selection over trash plus breeding sources with name-exclusion filters.
+  # [On Play][When Digivolving] Without paying the cost, you may play 1 Digimon
+  # card with [Sistermon] in its name from your trash OR 1 Digimon card with the
+  # [Royal Knight] trait from the digivolution cards of your Digimon in the
+  # breeding area. This effect can't play [Omnimon] or [Gankoomon].
+  #
+  # Modeled as ONE union selection over {trash} ∪ {own breeding-area digivolution
+  # sources}, with a DIFFERENT per-zone filter — trash candidates must be named
+  # [Sistermon]; breeding-source candidates must have the [Royal Knight] trait —
+  # and a fixed name exclusion (Omnimon / Gankoomon) on both halves. Every legal
+  # candidate from both zones surfaces in a single optional prompt; the chosen
+  # card is played free from whichever zone it came from
+  # (G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY). DCGO BT13_019.cs splits this into a
+  # zone sub-choice then a card pick; we expose the full candidate union directly
+  # so the RL action space sees every option (no-approximations, CLAUDE.md §17).
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[On Play/Digivolving] Play 1 [Sistermon] from trash or 1 [Royal Knight] from breeding sources, free; not Omnimon/Gankoomon"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [trash, material]
+          material_of: { own_breeding: true }
+          optional: true
+          bind_as: pick
+          prompt: "Play 1 [Sistermon] from your trash or 1 [Royal Knight] from your breeding-area Digimon's sources (not Omnimon/Gankoomon)"
+          # Fallback filter (digimon + name exclusion) applies to any zone
+          # without a per-zone override. zone_filters narrow each half:
+          filter:
+            all_of:
+              - kind: digimon
+              - none_of:
+                  - name_in: ["Omnimon", "Gankoomon"]
+          zone_filters:
+            trash:
+              all_of:
+                - kind: digimon
+                - name_contains: "Sistermon"
+                - none_of:
+                    - name_in: ["Omnimon", "Gankoomon"]
+            material:
+              all_of:
+                - kind: digimon
+                - trait_has: "Royal Knight"
+                - none_of:
+                    - name_in: ["Omnimon", "Gankoomon"]
+      - play_union_bound_free: { binding: pick }

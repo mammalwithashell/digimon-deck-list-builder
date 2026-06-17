@@ -73,9 +73,28 @@ pub fn build_registry() -> CardEffectRegistry {
     // Registered AFTER hand-written sets so DSL overrides on collision.
     #[cfg(feature = "dsl-yaml-loader")]
     {
-        match crate::dsl_registry::from_embedded() {
-            Ok(pack) => {
-                let raw = Arc::new(raw_rust::build_registry());
+        let raw = Arc::new(raw_rust::build_registry());
+        // Validate raw_rust references in the embedded pack. An unregistered ref
+        // (step, declarative, OR formula `amount_fn: { raw_rust }`) is a silent
+        // no-op at runtime (the BT13-007 class) — surface it loudly.
+        //
+        // WARN-MODE for now: the only remaining offender is EX11-027 Maquinamon,
+        // whose link clauses need substrate that does not exist yet (filed as
+        // G-DSL-LINK-* in qa/dsl-vocab-gaps.md). PROMOTE this to a hard error
+        // (panic) once EX11-027 migrates off test-only raw_rust and the pack has
+        // zero unregistered refs. See fix-dsl-substrate-rot-and-bugs §1.
+        let pack = match crate::dsl_registry::from_embedded_with_raw_registry(raw.as_ref()) {
+            Ok(p) => Some(p),
+            Err(msg) => {
+                eprintln!(
+                    "WARNING: {msg} — loading WITHOUT raw_rust validation (promote to a hard \
+                     error once EX11-027's link clauses migrate off raw_rust)"
+                );
+                crate::dsl_registry::from_embedded().ok()
+            }
+        };
+        match pack {
+            Some(pack) => {
                 if let Err(msg) =
                     raw_rust::raw_rust_budget_status(raw.registered_fn_count(), pack.len())
                 {
@@ -83,7 +102,7 @@ pub fn build_registry() -> CardEffectRegistry {
                 }
                 crate::dsl_cards::register_dsl_cards_with_raw(&mut registry, &pack, raw);
             }
-            Err(e) => eprintln!("DSL embedded pack failed to load: {e}"),
+            None => eprintln!("DSL embedded pack failed to load"),
         }
     }
 
