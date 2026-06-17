@@ -108,6 +108,18 @@
       "singleton": true,
       "default_max_copies": 1,
       "playable": true
+    },
+    {
+      "id": "starter",
+      "name": "Starter",
+      "description": "The six official starter decks (ST-1..ST-6), played with no banlist so the as-printed ST-2 deck (ST2-13 x4) is legal.",
+      "deck_size": 50,
+      "egg_max": 5,
+      "rarity_policy": "all",
+      "banlist": null,
+      "singleton": false,
+      "default_max_copies": 4,
+      "playable": false
     }
   ]
 }
