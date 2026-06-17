@@ -52,6 +52,40 @@ def _make_reward_event_bus() -> _RewardEventBusType:
     return _RewardEventBusType(card_data_lookup=lookup)
 
 
+# ── No-op loop tripwire ─────────────────────────────────────────────────────
+# When the action mask offers an action the engine's execution path refuses,
+# applying it changes nothing — and a deterministic policy re-picks it every
+# step, burning the whole episode to the step limit (observed: a CannotAttack'd
+# Digimon "attacking" 890x; BlitzGreymon's unusable [Main]; an attack issued
+# while a mandatory selection is pending). Rather than a paper-thin guard that
+# silently absorbs such bugs, FAIL LOUDLY: detect the stuck action and raise so
+# the offending action + card surface immediately.
+NOOP_LOOP_THRESHOLD = 8
+
+
+class NoOpLoopError(RuntimeError):
+    """An action was applied `NOOP_LOOP_THRESHOLD`+ times with zero change to the
+    observation — a mask/execution mismatch (the mask is offering an action the
+    engine refuses to perform). Raised from `DigimonEnv.step` so it is caught by
+    the panic rail (`TrainingRecordingWrapper`): the episode terminates, the game
+    is recorded for triage, and `crash_count` increments — the run survives, but
+    the bug is impossible to miss."""
+
+
+def _noop_action_kind(action: int) -> str:
+    if action == 93: return "CONCEDE"
+    if action == 62: return "PASS"
+    if 0 <= action < 30: return "PLAY"
+    if 30 <= action < 60: return "SELECT"
+    if 63 <= action < 93: return "DNA-DIGIVOLVE"
+    if 100 <= action < 400: return "ATTACK"
+    if 400 <= action < 1000: return "DIGIVOLVE"
+    if 1000 <= action < 1150: return "FIELD-EFFECT"
+    if 1150 <= action < 1195: return "TRASH-EFFECT"
+    if action >= 2000: return "SOURCE-SELECT"
+    return f"action {action}"
+
+
 def _make_runner(
     deck1: List[str],
     deck2: List[str],
@@ -377,6 +411,21 @@ class DigimonEnv(gymnasium.Env):
                 obs = self.runner.get_board_tensor(1)
             terminated = True
 
+        # ── No-op loop tripwire ──────────────────────────────────────────────
+        # If the SAME action is applied repeatedly with zero change to the
+        # observation (and the game isn't over), the mask offered something the
+        # engine refuses to execute. Fail loudly instead of looping to the limit.
+        if not terminated:
+            sig = (int(action), hash(obs.tobytes()))
+            if getattr(self, "_noop_sig", None) == sig:
+                self._noop_repeat = getattr(self, "_noop_repeat", 0) + 1
+            else:
+                self._noop_repeat, self._noop_sig = 0, sig
+            if self._noop_repeat >= NOOP_LOOP_THRESHOLD:
+                raise NoOpLoopError(self._describe_noop(int(action)))
+        else:
+            self._noop_sig, self._noop_repeat = None, 0
+
         # Legacy reward path (preserved when `legacy_reward=True` — the
         # default). When False (set by `RewardProfileWrapper`), the
         # wrapper replaces the scalar so we skip the wasted work.
@@ -403,6 +452,32 @@ class DigimonEnv(gymnasium.Env):
             )
 
         return obs, reward, terminated, truncated, info
+
+    def _describe_noop(self, action: int) -> str:
+        """Loud, triagable context for a no-op loop: the action, the board (where
+        the offending card + its modifiers live), and selection state."""
+        try:
+            ui = self.runner.to_ui_json()
+        except Exception:
+            ui = {}
+        board = []
+        for pid in (1, 2):
+            area = (ui.get(f"player{pid}", {}) or {}).get("battleArea", []) or []
+            for i, s in enumerate(area):
+                mods = [m.get("type") for m in (s.get("modifiers") or [])]
+                board.append(
+                    f"P{pid}s{i}={s.get('topCardName')}"
+                    + (f"+{','.join(mods)}" if mods else "")
+                )
+        pend = ui.get("pendingSelection")
+        return (
+            f"NO-OP LOOP: action {action} ({_noop_action_kind(action)}) applied "
+            f"{NOOP_LOOP_THRESHOLD}x with no state change "
+            f"(turn={ui.get('turnCount')} currentPlayer={ui.get('currentPlayer')} "
+            f"pendingSelection={'yes' if pend else 'no'}). board=[{'; '.join(board)}]. "
+            f"The action mask offered something execution refuses — a mask/"
+            f"execution mismatch; the recorded game has the repro."
+        )
 
     def _tensor_info(self) -> Dict[str, Any]:
         return {
