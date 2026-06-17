@@ -169,7 +169,7 @@
 # effect_initiated_digivolve. The chain terminates after the permanent pick;
 # the hand-pick prompt never installs and the digivolve verb never executes.
 # Behavioral test for branch 0 is
-# #[ignore = "BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET"].
+# was #[ignore]'d on G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET (now RESOLVED, qa/resolved-gaps.md).
 #
 # ─── DSL-GAP — `source_name_contains` predicate (Inherited)  [G-DSL-SOURCE-NAME-CONTAINS] ─
 #

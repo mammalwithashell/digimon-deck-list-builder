@@ -31,7 +31,7 @@
 #     `install_select_own_permanent`'s empty-candidates early return).
 #   * `grant_keyword` here is the procedural step (lives inside a process),
 #     not the `kind: grant_keyword` declarative variant which is currently
-#     blocked by G-DECLARATIVE-KEYWORD.
+#     formerly blocked by G-DECLARATIVE-KEYWORD (now RESOLVED, qa/resolved-gaps.md).
 
 card: BT15-020
 name: Gabumon
