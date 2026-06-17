@@ -100,7 +100,7 @@ export function StarterDeckSelectPage() {
 
         <div className="deck-confirm-bar">
           <div className="deck-confirm-info">
-            <span>{selected ? 'DECK READY' : 'NO DECK SELECTED'}</span>
+            <span>{selected ? selected.name : 'NO DECK SELECTED'}</span>
             <label className="deck-seed-control">
               <span>SHUFFLE SEED</span>
               <input

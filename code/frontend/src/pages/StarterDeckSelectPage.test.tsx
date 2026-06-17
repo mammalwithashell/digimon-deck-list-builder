@@ -34,8 +34,13 @@ describe('StarterDeckSelectPage', () => {
         <StarterDeckSelectPage />
       </MemoryRouter>,
     );
-    await waitFor(() => expect(screen.getByText('Starter Deck Gaia Red')).toBeInTheDocument());
-    expect(screen.getByText('Starter Deck Cocytus Blue')).toBeInTheDocument();
+    // The default-selected deck's name also appears in the confirm bar, so
+    // query the grid buttons by their exact accessible name (unique) rather
+    // than getByText (which would double-match the selected deck).
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Starter Deck Gaia Red' })).toBeInTheDocument(),
+    );
+    expect(screen.getByRole('button', { name: 'Starter Deck Cocytus Blue' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Starter Deck/ })).toHaveLength(6);
   });
 
