@@ -181,7 +181,8 @@ TB panel. To diagnose:
   below that, treat it as a **regression**, not an MLP ceiling. Prime suspects:
   the `--floor-envs N` SubprocVecEnv path (the known-good baseline used
   `n_envs=1`), an engine behavioral change since the baseline, or reward-profile
-  drift. Re-run with `--floor-envs 1` to isolate the parallelism variable.
+  drift. Run an isolated control with `--floor-only --floor-envs 1` (phase-1 only,
+  single env, no champions needed) to test the parallelism variable cheaply.
 
 ## Future cleanup (would simplify steps 3–4)
 

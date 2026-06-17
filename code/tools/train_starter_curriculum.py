@@ -206,6 +206,10 @@ def main() -> None:
     p.add_argument("--skip-floor", action="store_true",
                    help="Skip phase 1 and go straight to phase 2 "
                         "(phase 1 outputs must already exist).")
+    p.add_argument("--floor-only", action="store_true",
+                   help="Run ONLY phase 1 (vs greedy), skip the champion phase. "
+                        "For floor-isolation / control experiments "
+                        "(e.g. --floor-only --floor-envs 1 to test the subproc path).")
     p.add_argument("--dry-run", action="store_true",
                    help="Print both phase commands and exit without training.")
     args = p.parse_args()
@@ -241,9 +245,21 @@ def main() -> None:
         print("# Phase 1 — fresh MLP vs greedy "
               f"({spec.floor_steps:,} steps) -> {spec.floor_final()}")
         print(" ".join(phase1))
-        print("\n# Phase 2 — warm-start + swap to champion pool "
-              f"({spec.pool_steps:,} steps) -> {spec.pool_final()}")
-        print(" ".join(phase2))
+        if not args.floor_only:
+            print("\n# Phase 2 — warm-start + swap to champion pool "
+                  f"({spec.pool_steps:,} steps) -> {spec.pool_final()}")
+            print(" ".join(phase2))
+        return
+
+    if args.floor_only:
+        # Floor-isolation / control experiments: train ONLY phase 1, no champions.
+        if spec.floor_final().is_file() and not args.force_floor:
+            print(f"[floor-only] already trained: {spec.floor_final()}")
+        else:
+            print(f"[floor-only] fresh MLP vs greedy, {spec.floor_steps:,} steps "
+                  "(no champion phase)")
+            _run(phase1, cwd)
+        print(f"\nDone (floor only). Model: {spec.floor_final()}")
         return
 
     if not Path(spec.pool_manifest).is_file():
