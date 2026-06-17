@@ -69,18 +69,19 @@ test.describe('In Between play flow', () => {
         json: { id: 'guest_abc', username: 'Guest-ABCD', email: null, roles: [] },
       }),
     );
-    await page.route('**/formats', (route) =>
+    await page.route('**/decks/formats', (route) =>
       route.fulfill({
         json: [
           {
             id: 'standard',
-            name: 'STANDARD',
-            tagline: 'The official ruleset',
+            name: 'Standard',
             description: '50-card decks, current banlist, mirrored memory gauge.',
-            deck_label: '50 cards',
-            population_pct: 84,
-            enabled: true,
-            disabled_reason: null,
+            deck_size: 50,
+            egg_max: 5,
+            rarity_policy: 'all',
+            singleton: false,
+            default_max_copies: 4,
+            playable: true,
           },
         ],
       }),
@@ -174,8 +175,10 @@ test.describe('In Between play flow', () => {
 
   test('bot match starts local game route from deck selection', async ({ page }) => {
     await mockDeckLibrary(page);
-    await page.route('**/games', (route) =>
-      route.fulfill({
+    let createPayload: Record<string, unknown> | null = null;
+    await page.route('**/games', (route) => {
+      createPayload = route.request().postDataJSON();
+      return route.fulfill({
         json: {
           game_id: 'game-bot',
           state: {
@@ -188,8 +191,8 @@ test.describe('In Between play flow', () => {
           },
           action_mask: [],
         },
-      }),
-    );
+      });
+    });
     await page.goto('/play');
     await page.getByRole('button', { name: /BOT MATCH/i }).click();
     await page.getByRole('button', { name: /STANDARD/i }).click();
@@ -197,5 +200,12 @@ test.describe('In Between play flow', () => {
     await page.getByRole('button', { name: /EMBER VANGUARD/i }).click();
     await page.getByRole('button', { name: /USE THIS DECK/i }).click();
     await expect(page).toHaveURL(/\/game\/game-bot/);
+    await expect.poll(() => createPayload).not.toBeNull();
+    const deck1 = (createPayload?.deck1 as string[]) ?? [];
+    const deck2 = (createPayload?.deck2 as string[]) ?? [];
+    expect(deck1).toContain('BT1-001');
+    expect(deck2).toHaveLength(54);
+    expect(deck2).not.toEqual(deck1);
+    expect(deck2.some((cardId) => /^ST[1-6]-/.test(cardId))).toBe(true);
   });
 });

@@ -1,4 +1,3 @@
-import { invoke } from '@tauri-apps/api/core';
 import client from '@/api/client';
 import * as deckLibrary from '@/api/deckLibraryAdapter';
 import * as gameApi from '@/api/gameApi';
@@ -6,52 +5,14 @@ import * as lobbyApi from '@/api/lobbyApi';
 import * as matchmaking from '@/api/matchmaking';
 import type { DeckResponse } from '@/types/deck';
 import type { PlayFormat, PlayFormatId } from './formatCatalog';
-import { PLAY_FORMATS, formatToQueueType } from './formatCatalog';
-
-const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
+import { formatToQueueType, loadPlayFormats } from './formatCatalog';
 
 function hasTauriBridge(): boolean {
   return Boolean((globalThis as { isTauri?: boolean }).isTauri);
 }
 
-interface FormatDto {
-  id: PlayFormatId;
-  name: string;
-  tagline: string;
-  description: string;
-  deck_label: string;
-  population_pct: number;
-  enabled: boolean;
-  disabled_reason?: string | null;
-}
-
-function fromDto(dto: FormatDto): PlayFormat {
-  return {
-    id: dto.id,
-    name: dto.name,
-    tagline: dto.tagline,
-    description: dto.description,
-    deckLabel: dto.deck_label,
-    populationPct: dto.population_pct,
-    enabled: dto.enabled,
-    disabledReason: dto.disabled_reason ?? undefined,
-  };
-}
-
 export async function listFormats(): Promise<PlayFormat[]> {
-  if (IS_DESKTOP) {
-    try {
-      return (await invoke<FormatDto[]>('formats_list')).map(fromDto);
-    } catch {
-      return PLAY_FORMATS;
-    }
-  }
-  try {
-    const { data } = await client.get<FormatDto[]>('/formats');
-    return data.map(fromDto);
-  } catch {
-    return PLAY_FORMATS;
-  }
+  return loadPlayFormats();
 }
 
 export async function getDeck(deckId: string): Promise<DeckResponse> {

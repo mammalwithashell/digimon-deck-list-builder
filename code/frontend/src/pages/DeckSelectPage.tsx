@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import * as library from '@/api/deckLibraryAdapter';
 import { normalizeSeedInput } from '@/api/gameApi';
+import { chooseBotOpponentDeck } from '@/features/play/botOpponentDeckPool';
 import { InBetweenShell } from '@/features/play/InBetweenShell';
 import { canUseDeckForFormat, getPlayFormat } from '@/features/play/formatCatalog';
 import { createBotGame } from '@/features/play/playApi';
@@ -74,9 +75,15 @@ export function DeckSelectPage() {
         return;
       }
       const deck = await library.getDeck(selected.id);
+      const opponentDeck = await chooseBotOpponentDeck({
+        savedDecks: decks,
+        selectedDeckId: selected.id,
+        formatId,
+        getDeck: library.getDeck,
+      });
       const response = await createBotGame({
         deck,
-        opponentDeck: deck,
+        opponentDeck,
         seed: normalizedSeed,
       });
       setQueue({ gameId: response.game_id, seed: response.seed ?? normalizedSeed });
