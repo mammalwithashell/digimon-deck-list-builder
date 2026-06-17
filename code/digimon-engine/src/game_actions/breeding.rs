@@ -384,6 +384,9 @@ impl Game {
         let removed_card_id = self.player(player_id).hand[hand_index]
             .card_id(&self.card_data)
             .to_string();
+        let removed_card_name = self.player(player_id).hand[hand_index]
+            .card_name(&self.card_data)
+            .to_string();
         let from_stack_top = self
             .player(player_id)
             .breeding_area
@@ -409,6 +412,7 @@ impl Game {
             seq,
             player: player_id,
             top_card_id: removed_card_id,
+            card_name: removed_card_name,
             field_index: crate::action::space::BREEDING_TARGET as u8,
             from_stack_top,
             was_dna: false,

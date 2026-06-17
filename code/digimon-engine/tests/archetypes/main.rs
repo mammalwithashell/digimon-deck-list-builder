@@ -48,6 +48,7 @@ mod callismon_dark_animal_bt25;
 mod dna_omnimon;
 mod flaremon_beastkin;
 mod gaogamon_beast_bt25;
+mod ice_snow;
 mod machine_bt25;
 mod magneticdra;
 mod mammal_bt25;

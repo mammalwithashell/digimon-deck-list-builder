@@ -5,7 +5,7 @@ import { MemoryGauge } from './MemoryGauge';
 import { RevealedCardsZone } from './RevealedCardsZone';
 import { ActionTraceTicker } from './ActionTraceTicker';
 import { TensorDebugBadge } from './TensorDebugBadge';
-import { fieldSelectionHighlights } from '@/utils/selectionTargets';
+import { anyFieldSelectionHighlights, fieldSelectionHighlights } from '@/utils/selectionTargets';
 import { GamePhase, type ActionTrace, type TensorSummary } from '@/types/game';
 
 interface GameBoardProps {
@@ -105,9 +105,24 @@ export function GameBoard({
     pendingSelection?.kind,
     pendingSelection?.validIndices ?? [],
   );
+  // `AnyField` selections (`select_any_permanent`) span both battle areas and
+  // decode the side from each action id — see `utils/selectionTargets.ts`.
+  const anyFieldHighlights = anyFieldSelectionHighlights(
+    pendingSelection?.kind,
+    pendingSelection?.validIndices ?? [],
+    pendingSelection?.selectingPlayer,
+  );
 
-  const ownSlots = new Set([...(highlightedOwnSlots ?? []), ...fieldHighlights.own]);
-  const enemySlots = new Set([...(highlightedEnemySlots ?? []), ...fieldHighlights.enemy]);
+  const ownSlots = new Set([
+    ...(highlightedOwnSlots ?? []),
+    ...fieldHighlights.own,
+    ...anyFieldHighlights.own,
+  ]);
+  const enemySlots = new Set([
+    ...(highlightedEnemySlots ?? []),
+    ...fieldHighlights.enemy,
+    ...anyFieldHighlights.enemy,
+  ]);
   const latestActionLabel = (actionTraces as unknown as { at(index: number): ActionTrace | undefined }).at(-1)?.decoded.label ?? null;
 
   return (

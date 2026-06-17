@@ -528,13 +528,18 @@ fn imperialdramon_dm_st9_06_standard_digivolve_is_blue_lv5_cost_4() {
 // (`st9_05.rs::make_lv4_regular_base` sets `evo_costs` the same way). This is the
 // faithful way to test the *rule* the question is about; it is NOT an engine bug.
 //
-// Real printed evo-costs mirrored below (data/cards.json `evo_costs`):
+// Real printed evo-costs mirrored below (data/cards.json `evo_costs`). The
+// "dual colour" cards show TWO digivolve circles on the printed face (the
+// authoritative source); the digimoncard.io ingest dropped the off-colour
+// circle for several of them — fixed 2026-06-15 (see the
+// `imperial_line_cards_carry_both_digivolve_colours_in_cards_json` regression
+// test below; only BT12-022/BT12-050 had been patched before then):
 //   BT12-002 DemiVeemon  Lv.2 Blue   (egg — base only)
 //   BT12-021 Veemon      Lv.3 Blue   ← Blue Lv.2
-//   EX1-014  ExVeemon    Lv.4 Blue   ← Blue Lv.3               (single colour)
+//   EX1-014  ExVeemon    Lv.4 Blue   ← Blue Lv.3 OR Green Lv.3 (dual colour — face shows BOTH circles)
 //   BT12-022 ExVeemon    Lv.4 Blue   ← Blue Lv.3 OR Green Lv.3 (dual colour)
 //   BT12-047 Wormmon     Lv.3 Green  ← Green Lv.2
-//   ST9-09   Stingmon    Lv.4 Green  ← Green Lv.3              (single colour)
+//   ST9-09   Stingmon    Lv.4 Green  ← Green Lv.3 OR Blue Lv.3 (dual colour — face shows BOTH circles)
 //   BT12-050 Stingmon    Lv.4 Green  ← Green Lv.3 OR Blue Lv.3 (dual colour)
 //
 // Evo-cost colour codes (action/mask.rs::evo_color): Red=0, Blue=1, Green=3.
@@ -631,47 +636,57 @@ fn wormmon_digivolves_over_green_egg() {
     );
 }
 
-/// ExVeemon (EX1-014, single Blue evo) takes a blue Lv.3 (Veemon) but NOT a
-/// green Lv.3 — the blue DNA leg is colour-locked to blue.
+/// EX1-014 ExVeemon's printed face shows TWO digivolve circles — Blue Lv.3 AND
+/// Green Lv.3 (cost 2 each). So it digivolves from EITHER a blue Lv.3 (Veemon)
+/// OR a green Lv.3 (Wormmon) — the blue↔green flexibility that lets the deck
+/// build the ExVeemon DNA leg off a shared green base. (cards.json carried only
+/// the Blue path until the 2026-06-15 evo-colour data fix; the synthetic evolver
+/// here mirrors the corrected dual evo_costs, and
+/// `imperial_line_cards_carry_both_digivolve_colours_in_cards_json` pins the
+/// real data.)
 #[test]
-fn single_colour_exveemon_takes_blue_lv3_not_green() {
-    let blue_lv3 = base_digimon("VEEMON-B3", 3, CardColor::Blue);
-    let green_lv3 = base_digimon("GREEN-LV3", 3, CardColor::Green);
+fn dual_colour_exveemon_ex1_014_takes_blue_or_green_lv3() {
+    let exv = || {
+        evolver(
+            "EX1-014",
+            "ExVeemon",
+            4,
+            CardColor::Blue,
+            &[(EVO_BLUE, 3), (EVO_GREEN, 3)],
+        )
+    };
     assert!(
-        colour_gate_allows(
-            evolver("EX1-014", "ExVeemon", 4, CardColor::Blue, &[(EVO_BLUE, 3)]),
-            blue_lv3
-        ),
-        "EX1-014 ExVeemon (evo Blue Lv.3) must digivolve from a blue Lv.3"
+        colour_gate_allows(exv(), base_digimon("VEEMON-B3", 3, CardColor::Blue)),
+        "EX1-014 ExVeemon must digivolve from a blue Lv.3"
     );
     assert!(
-        !colour_gate_allows(
-            evolver("EX1-014", "ExVeemon", 4, CardColor::Blue, &[(EVO_BLUE, 3)]),
-            green_lv3
-        ),
-        "EX1-014 ExVeemon must NOT digivolve from a green Lv.3 — single-colour evo gate"
+        colour_gate_allows(exv(), base_digimon("WORMMON-G3", 3, CardColor::Green)),
+        "EX1-014 ExVeemon must ALSO digivolve from a green Lv.3 — its face shows a Green Lv.3 circle"
     );
 }
 
-/// Stingmon (ST9-09, single Green evo) takes a green Lv.3 (Wormmon) but NOT a
-/// blue Lv.3 — the green DNA leg is colour-locked to green.
+/// ST9-09 Stingmon's printed face shows TWO digivolve circles — Green Lv.3 AND
+/// Blue Lv.3 (cost 2 each). So a GREEN Stingmon digivolves over a BLUE Lv.3
+/// (Veemon) — the exact "green card over a blue card" the deck relies on.
+/// (cards.json carried only the Green path until the 2026-06-15 data fix.)
 #[test]
-fn single_colour_stingmon_takes_green_lv3_not_blue() {
-    let green_lv3 = base_digimon("WORMMON-G3", 3, CardColor::Green);
-    let blue_lv3 = base_digimon("VEEMON-B3", 3, CardColor::Blue);
+fn dual_colour_stingmon_st9_09_takes_green_or_blue_lv3() {
+    let sting = || {
+        evolver(
+            "ST9-09",
+            "Stingmon",
+            4,
+            CardColor::Green,
+            &[(EVO_GREEN, 3), (EVO_BLUE, 3)],
+        )
+    };
     assert!(
-        colour_gate_allows(
-            evolver("ST9-09", "Stingmon", 4, CardColor::Green, &[(EVO_GREEN, 3)]),
-            green_lv3
-        ),
-        "ST9-09 Stingmon (evo Green Lv.3) must digivolve from a green Lv.3"
+        colour_gate_allows(sting(), base_digimon("WORMMON-G3", 3, CardColor::Green)),
+        "ST9-09 Stingmon must digivolve from a green Lv.3"
     );
     assert!(
-        !colour_gate_allows(
-            evolver("ST9-09", "Stingmon", 4, CardColor::Green, &[(EVO_GREEN, 3)]),
-            blue_lv3
-        ),
-        "ST9-09 Stingmon must NOT digivolve from a blue Lv.3 — single-colour evo gate"
+        colour_gate_allows(sting(), base_digimon("VEEMON-B3", 3, CardColor::Blue)),
+        "ST9-09 Stingmon must ALSO digivolve from a blue Lv.3 — green-over-blue; its face shows a Blue Lv.3 circle"
     );
 }
 
@@ -707,6 +722,71 @@ fn dual_colour_exveemon_and_stingmon_accept_the_off_colour_lv3() {
         ),
         "BT12-050 Stingmon (evo Green OR Blue Lv.3) must accept a blue Lv.3"
     );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Combo 6b — "Real-data digivolve-colour regression" (user-reported 2026-06-15)
+//
+// The synthetic gate tests above prove the engine's colour/level rule. THIS test
+// proves the production card DATA is correct: every blue+green Imperialdramon-line
+// card whose printed face shows TWO digivolve circles must carry BOTH colours in
+// `data/cards.json`. The digimoncard.io ingest dropped the off-colour circle on
+// import; only BT12-022/BT12-050 had been patched (via card_overrides.json), so
+// the rest were single-colour and the engine's gate (correctly) rejected the legal
+// off-colour digivolve (e.g. green ST9-09 Stingmon over a blue Lv.3 Veemon).
+//
+// Expected circles are read off the authoritative card images (printed text >
+// cards.json). Colour codes (action/mask.rs::evo_color): Blue=1, Green=3.
+// Mirrors the per-card precedent `bt12_022_data_cards_json_has_blue_and_green_evo_paths`.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+#[test]
+fn imperial_line_cards_carry_both_digivolve_colours_in_cards_json() {
+    use digimon_engine::card_data::CardData;
+    use std::path::PathBuf;
+
+    // CARGO_MANIFEST_DIR = code/digimon-engine; data/cards.json is two up.
+    let cards_json = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("data")
+        .join("cards.json");
+    if !cards_json.exists() {
+        eprintln!(
+            "Skipping: data/cards.json not found at {} — only runs in a full repo checkout",
+            cards_json.display()
+        );
+        return;
+    }
+    let cards = CardData::load_from_file(&cards_json).expect("load data/cards.json");
+
+    // (card_id, [(colour_code, level, memory_cost), ...]) — the FULL set of
+    // printed digivolve circles per card, verified against the card image.
+    let expected: &[(&str, &[(u8, u8, u16)])] = &[
+        ("EX1-014", &[(1, 3, 2), (3, 3, 2)]),  // ExVeemon: Blue L3 + Green L3
+        ("ST9-09", &[(3, 3, 2), (1, 3, 2)]),   // Stingmon: Green L3 + Blue L3
+        ("ST9-05", &[(1, 4, 4), (3, 4, 4)]),   // Paildramon: Blue L4 + Green L4
+        ("ST9-06", &[(1, 5, 4), (3, 5, 4)]),   // Imperialdramon DM: Blue L5 + Green L5
+        ("BT12-028", &[(1, 4, 4), (3, 4, 4)]), // Paildramon: Blue L4 + Green L4
+        ("BT12-030", &[(1, 5, 4), (3, 5, 4)]), // Imperialdramon DM: Blue L5 + Green L5
+        ("BT12-031", &[(1, 5, 5), (3, 5, 5)]), // Imperialdramon FM: Blue L5 + Green L5 (cost 5)
+    ];
+
+    for (id, circles) in expected {
+        let card = cards
+            .get(*id)
+            .unwrap_or_else(|| panic!("{id} must be in data/cards.json"));
+        for &(colour, level, cost) in *circles {
+            assert!(
+                card.evo_costs.iter().any(|ec| ec.card_color == colour
+                    && ec.level == level
+                    && ec.memory_cost == cost),
+                "{id} must carry digivolve circle (colour={colour}, Lv.{level}, cost {cost}) — \
+                 printed on the card face; got evo_costs={:?}",
+                card.evo_costs
+            );
+        }
+    }
 }
 
 // ─── Local helpers ───────────────────────────────────────────────────────────

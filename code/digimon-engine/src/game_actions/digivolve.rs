@@ -84,6 +84,11 @@ impl Game {
         field_index: usize,
         source: PlaySource,
     ) -> bool {
+        // Fresh user-initiated attempt: drop any stale cost-choice. The
+        // cost-choice `EffectChoice` callback re-enters `digivolve_from_hand_inner`
+        // DIRECTLY (not through here), so the player's pick is preserved across
+        // the reducer / replacement re-entries.
+        self.pending_digivolve_route_choice = None;
         self.digivolve_from_hand_inner(player_id, hand_index, field_index, source, false)
     }
 
@@ -142,7 +147,10 @@ impl Game {
 
         let card = player.hand[hand_index].clone();
         let perm = &player.battle_area[field_index];
-        let Some(route) = self.normal_digivolve_route_for_hand_card(player_id, hand_index, handle)
+        // Validity gate (cheapest route). The action mask and the Blast counter
+        // path consult the same `normal_digivolve_route_for_hand_card`.
+        let Some(min_route) =
+            self.normal_digivolve_route_for_hand_card(player_id, hand_index, handle)
         else {
             self.logger.log(&format!(
                 "[Rejected] digivolve_from_hand: card {} cannot digivolve onto {} (evo-cost mismatch)",
@@ -151,6 +159,32 @@ impl Game {
             ));
             return false;
         };
+
+        // Rule 17 — when the base satisfies MORE THAN ONE distinct-cost route
+        // (e.g. BT16-040 Wormmon over Minomon: "[Minomon]: Cost 0" vs "any Lv.2:
+        // Cost 1") and the player has not yet chosen, prompt for WHICH cost to
+        // pay rather than auto-selecting the cheapest. The cost-choice callback
+        // re-enters this function with `pending_digivolve_route_choice` set. DCGO
+        // registers each requirement with its own `digivolutionCost`
+        // (`AddSelfDigivolutionRequirementStaticEffect`).
+        if self.pending_digivolve_route_choice.is_none() {
+            let routes =
+                self.distinct_digivolve_routes_for_hand_card(player_id, hand_index, handle);
+            if routes.len() > 1 {
+                self.install_digivolve_cost_choice_prompt(
+                    player_id,
+                    hand_index,
+                    field_index,
+                    source,
+                    routes,
+                );
+                return false;
+            }
+        }
+        // The route the player chose (peeked here; the choice field is consumed
+        // when the resume is built below) or, when no choice was needed, the
+        // cheapest. `route` carries both the printed cost and app-fusion-ness.
+        let route = self.pending_digivolve_route_choice.unwrap_or(min_route);
         let printed_cost = route.memory_cost;
 
         // G-COST-REDUCE-ALLY-DIGIVOLVE — player-scoped one-shot future-digivolve
@@ -196,11 +230,16 @@ impl Game {
         self.scan_before_pay_cost_observers(player_id, Some(target));
         let effective_cost = (printed_cost as i32 - total_reduction).max(0) as u16;
 
+        // Consume the cost choice now — past this point the resume carries the
+        // route's app-fusion-ness, so the choice field is no longer needed and
+        // must be cleared before the replacement resume / next attempt.
+        self.pending_digivolve_route_choice = None;
         self.pending_would_digivolve_resume = Some(PendingWouldDigivolveResume {
             player: player_id,
             permanent: handle,
             card: card.handle(),
             effective_cost,
+            app_fusion: route.app_fusion,
         });
         let cause = match source {
             PlaySource::ByEffect => crate::replacement::ReplacementCause::OwnEffect,
@@ -238,7 +277,83 @@ impl Game {
             permanent: handle,
             card: card.handle(),
             effective_cost,
+            app_fusion: route.app_fusion,
         })
+    }
+
+    /// Install the `EffectChoice` "which digivolution cost do you pay?" prompt
+    /// (rule 17 — no auto-selection). One option per distinct route (sorted
+    /// cheapest-first), action IDs `HAND_EFFECT_START + i`. The single callback
+    /// maps the chosen action id back to its route, stores it in
+    /// `pending_digivolve_route_choice`, and re-enters
+    /// `digivolve_from_hand_inner` (reducer NOT yet resolved → `false`) so the
+    /// digivolution proceeds at the chosen base cost. Mandatory (no PASS): the
+    /// player already committed to the digivolve action by reaching here.
+    pub(crate) fn install_digivolve_cost_choice_prompt(
+        &mut self,
+        acting_player: PlayerId,
+        hand_index: usize,
+        field_index: usize,
+        source: PlaySource,
+        routes: Vec<crate::dna_digivolve::DigivolveRouteMatch>,
+    ) {
+        use crate::action::space::HAND_EFFECT_START;
+        use crate::selection::{EffectChoiceEntry, PendingSelection, SelectionKind};
+
+        // Cheapest-first, stable so the option order is deterministic.
+        let mut routes = routes;
+        routes.sort_by_key(|r| (r.memory_cost, r.app_fusion));
+
+        let source_card = self
+            .player(acting_player)
+            .hand
+            .get(hand_index)
+            .map(|c| c.handle())
+            .unwrap_or(crate::card_source::CardHandle(0));
+        let source_kind = EffectSourceKind::Digimon;
+
+        let entries: Vec<EffectChoiceEntry> = routes
+            .iter()
+            .enumerate()
+            .map(|(i, r)| EffectChoiceEntry {
+                label: if r.app_fusion {
+                    format!("Digivolve for cost {} (App Fusion)", r.memory_cost)
+                } else {
+                    format!("Digivolve for cost {}", r.memory_cost)
+                },
+                action_id: HAND_EFFECT_START + i as u16,
+                source_card: Some(source_card),
+                source_kind: Some(source_kind),
+                timing: None,
+                is_optional: false,
+                observation_metadata: Default::default(),
+            })
+            .collect();
+        let valid_action_ids: Vec<u16> = entries.iter().map(|e| e.action_id).collect();
+
+        let previous_phase = self.current_phase;
+        self.current_phase = GamePhase::EffectChoice;
+        self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
+            kind: SelectionKind::EffectChoice,
+            selecting_player: acting_player,
+            previous_phase,
+            valid_action_ids,
+            is_optional: false,
+            prompt: "Choose which digivolution cost to pay".to_string(),
+            effect_choices: Some(entries),
+            source_card,
+            source_permanent: None,
+            source_kind,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let idx = action_id.saturating_sub(HAND_EFFECT_START) as usize;
+                if let Some(chosen) = routes.get(idx).copied() {
+                    game.pending_digivolve_route_choice = Some(chosen);
+                }
+                game.digivolve_from_hand_inner(acting_player, hand_index, field_index, source, false);
+            }),
+            on_decline: None,
+        });
     }
 
     /// Install the accept/decline `PendingSelection` for a player-scoped
@@ -461,12 +576,17 @@ impl Game {
         else {
             return false;
         };
-        let Some(route) =
-            self.normal_digivolve_route_for_hand_card(resume.player, hand_index, resume.permanent)
-        else {
+        // Re-validate that SOME route still applies (the board may have shifted
+        // since the resume was built), but use the player's CHOSEN route's
+        // app-fusion-ness — not the re-derived min — so the commit honors the
+        // cost choice.
+        if self
+            .normal_digivolve_route_for_hand_card(resume.player, hand_index, resume.permanent)
+            .is_none()
+        {
             return false;
-        };
-        let is_app_fusion = route.app_fusion;
+        }
+        let is_app_fusion = resume.app_fusion;
 
         let (from_stack_top, top_card_id) = {
             let player = self.player(resume.player);
@@ -510,12 +630,19 @@ impl Game {
             .get(field_index)
             .map(|perm| perm.top_card().handle())
             .expect("digivolve target remains in battle area after stack mutation");
+        let top_card_name = self
+            .player(resume.player)
+            .battle_area
+            .get(field_index)
+            .map(|perm| perm.top_card().card_name(&self.card_data).to_string())
+            .unwrap_or_default();
 
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::Digivolve {
             seq,
             player: resume.player,
             top_card_id,
+            card_name: top_card_name,
             field_index: field_index as u8,
             from_stack_top,
             // Regular evo-cost path from hand — not DNA, not Blast DNA.
@@ -652,12 +779,19 @@ impl Game {
             .get(field_index)
             .map(|perm| perm.top_card().handle())
             .expect("app-fuse host remains in battle area after stack mutation");
+        let top_card_name = self
+            .player(host.player)
+            .battle_area
+            .get(field_index)
+            .map(|perm| perm.top_card().card_name(&self.card_data).to_string())
+            .unwrap_or_default();
 
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::Digivolve {
             seq,
             player: player_id,
             top_card_id,
+            card_name: top_card_name,
             field_index: field_index as u8,
             from_stack_top,
             was_dna: false,

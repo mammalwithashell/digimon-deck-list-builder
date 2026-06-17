@@ -12,6 +12,7 @@ import {
   filterBuilderCards,
   getBuilderCounts,
   groupDeckEntriesForBuilder,
+  selectDeckIconCardId,
   slotArraysToDeckEntries,
   type BuilderCardFilters,
 } from '@/features/deck-builder/deckBuilderView';
@@ -138,6 +139,7 @@ export function DeckBuilderPage() {
     clearDeck,
     mainDeck,
     eggDeck,
+    deckIconCardId,
     isDirty,
     setIsDirty,
     validationResult,
@@ -146,6 +148,7 @@ export function DeckBuilderPage() {
     setTestedCardIds,
     addCardToDeck,
     removeCardFromDeck,
+    setDeckIconCardId,
   } = useDeckBuilderStore();
 
   const [formats, setFormats] = useState<DeckFormat[]>([]);
@@ -234,7 +237,7 @@ export function DeckBuilderPage() {
         );
         const eggEntries = slotArraysToDeckEntries(deck.egg_deck, deck.egg_deck_alt_arts, cardMap);
         if (!cancelled) {
-          loadDeck(deck.id, deck.name, mainEntries, eggEntries, deck.game_mode);
+          loadDeck(deck.id, deck.name, mainEntries, eggEntries, deck.game_mode, deck.commander_id);
           const loadedCards = Array.from(cardMap.values());
           setCardPool((current) => uniqueCards([...loadedCards, ...current]));
           setPreviewCard(loadedCards[0] ?? null);
@@ -310,6 +313,17 @@ export function DeckBuilderPage() {
   const activeCards = activeSection === 'egg' ? eggDeck : mainDeck;
   const visibleSections = useMemo(() => groupDeckEntriesForBuilder(activeCards), [activeCards]);
   const activeExpected = activeSection === 'egg' ? 5 : 50;
+  const resolvedDeckIconCardId = useMemo(
+    () => selectDeckIconCardId(mainDeck, eggDeck, deckIconCardId),
+    [deckIconCardId, eggDeck, mainDeck],
+  );
+  const selectedDeckIconEntry = useMemo(
+    () => [...mainDeck, ...eggDeck].find((entry) => entry.cardId === resolvedDeckIconCardId),
+    [eggDeck, mainDeck, resolvedDeckIconCardId],
+  );
+  const explicitIconStillPresent = Boolean(
+    deckIconCardId && [...mainDeck, ...eggDeck].some((entry) => entry.cardId === deckIconCardId && entry.count > 0),
+  );
 
   const handleSave = async () => {
     setSaving(true);
@@ -317,6 +331,7 @@ export function DeckBuilderPage() {
     try {
       const mainSlots = deckEntriesToSlotArrays(mainDeck);
       const eggSlots = deckEntriesToSlotArrays(eggDeck);
+      const savedIconCardId = explicitIconStillPresent ? deckIconCardId : null;
       const saved = await saveBuilderDeck({
         deckId,
         name: deckName,
@@ -324,6 +339,7 @@ export function DeckBuilderPage() {
         egg_deck: eggSlots.ids,
         main_deck_alt_arts: mainSlots.altArts,
         egg_deck_alt_arts: eggSlots.altArts,
+        commander_id: savedIconCardId,
         game_mode: gameMode,
       });
       setDeckId(saved.id);
@@ -596,6 +612,22 @@ export function DeckBuilderPage() {
 
             <aside className="bld-deck">
               <div className="bld-deck-head"><span>DECK CONTENTS</span><span className="v">{counts.total}/55</span></div>
+              <div className={`bld-deck-icon ${explicitIconStillPresent ? 'selected' : 'auto'}`}>
+                <div className={`bld-deck-icon-art ${builderCardColorClass(selectedDeckIconEntry?.cardData)}`}>
+                  {selectedDeckIconEntry?.cardData ? (
+                    <BuilderCardImage
+                      card={{ ...selectedDeckIconEntry.cardData, isAltArt: selectedDeckIconEntry.isAltArt }}
+                    />
+                  ) : (
+                    <span>ICON</span>
+                  )}
+                </div>
+                <div className="bld-deck-icon-copy">
+                  <span>DECK ICON</span>
+                  <strong>{selectedDeckIconEntry?.cardData?.name ?? resolvedDeckIconCardId ?? 'None'}</strong>
+                  <small>{explicitIconStillPresent ? 'SELECTED' : resolvedDeckIconCardId ? 'AUTO' : 'EMPTY'}</small>
+                </div>
+              </div>
               <div className="bld-deck-tabs">
                 <button type="button" className={activeSection === 'main' ? 'on' : ''} onClick={() => setActiveSection('main')}>MAIN <span className="ct">{counts.main}</span></button>
                 <button type="button" className={activeSection === 'egg' ? 'on' : ''} onClick={() => setActiveSection('egg')}>EGG <span className="ct">{counts.egg}</span></button>
@@ -612,13 +644,33 @@ export function DeckBuilderPage() {
                         <div className="bld-subsection-head">{section.label} <span>{section.total}</span></div>
                         {section.entries.map((entry) => {
                           const totalCount = cardCount([...mainDeck, ...eggDeck], entry.cardId);
+                          const isDeckIcon = resolvedDeckIconCardId === entry.cardId;
                           return (
-                            <div key={`${entry.cardId}-${entry.isAltArt ? 'alt' : 'base'}`} className="bld-row" onMouseEnter={() => entry.cardData && setPreviewCard(entry.cardData)}>
+                            <div
+                              key={`${entry.cardId}-${entry.isAltArt ? 'alt' : 'base'}`}
+                              className={`bld-row ${isDeckIcon ? 'deck-icon-row' : ''}`}
+                              onMouseEnter={() => entry.cardData && setPreviewCard(entry.cardData)}
+                            >
                               <span className="ct">x{entry.count}</span>
-                              <span className={`swatch ${builderCardColorClass(entry.cardData)}`} />
+                              <span className={`bld-row-thumb ${builderCardColorClass(entry.cardData)}`}>
+                                {entry.cardData ? (
+                                  <BuilderCardImage card={{ ...entry.cardData, isAltArt: entry.isAltArt }} />
+                                ) : (
+                                  <span>{entry.cardId}</span>
+                                )}
+                              </span>
                               <div className="nm">{entry.cardData?.name ?? entry.cardId}<small>{entry.cardId} · {entry.cardData?.type?.toUpperCase() ?? 'CARD'}</small></div>
                               <span className="cost">{entry.cardData?.play_cost ? `C${entry.cardData.play_cost}` : '-'}</span>
                               <span className="lvl">{entry.cardData?.level ? `L${entry.cardData.level}` : entry.cardData?.type === 'Option' ? 'OPT' : 'TMR'}</span>
+                              <button
+                                type="button"
+                                className={`icon-pick ${isDeckIcon ? 'on' : ''}`}
+                                title={isDeckIcon ? 'Deck icon' : 'Use as deck icon'}
+                                aria-label={isDeckIcon ? `${entry.cardData?.name ?? entry.cardId} is the deck icon` : `Use ${entry.cardData?.name ?? entry.cardId} as deck icon`}
+                                onClick={() => setDeckIconCardId(entry.cardId)}
+                              >
+                                ◆
+                              </button>
                               <div className="actions">
                                 <button type="button" onClick={() => removeCardFromDeck(entry.cardId, entry.isAltArt)}>-</button>
                                 <button type="button" disabled={totalCount >= 4} onClick={() => entry.cardData && addCardToDeck(entry.cardId, entry.cardData, entry.isAltArt)}>+</button>

@@ -1,0 +1,683 @@
+[
+  {
+    "card_id": "BT24-062",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should have entry: { \"condition\": \"Lv.4 w/[Machine]/[Cyborg]/[TS]\", \"cost\": 3 }. Currently evo_costs is empty and the condition text is in xros_req field instead of being properly structured in digivolution data.",
+        "note": "Card image clearly shows black-text alt-digivolution: [Digivolve] Lv.4 w/[Machine]/[Cyborg]/[TS]: Cost 3. C# implementation in BT24_062.cs lines 19-27 confirms this logic. The condition text exists in cards.json xros_req field but lacks a dedicated alt_paths structure. evo_costs array is indeed empt"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt24/BT24-062.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT20-021",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "yaml_alt_paths should include DNA Digivolve entry: [DNA Digivolve] Lv.6 w/Jesmon + Lv.6 w/Gankoomon, Cost 0. The card face clearly prints this condition in the effect box, and the C# implementation at BT20_021.cs lines 15-61 confirms the DNA Digivolution is implemented with two level 6 sources (Jesmon and Gankoomon) and cost 0.",
+        "note": "Card image shows printed text confirming DNA Digivolve condition. C# code implements the exact same condition. The missing DNA Digivolve alt_path is a legitimate data gap."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt20/BT20-021.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT16-040",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_path for level_eq: 2 should include colour constraint Blue. Current YAML line 11-12 should read: `from: { level_eq: 2, colour_is: [blue] }` with `cost: 1`. The printed card shows a single blue Lv.2 digivolve circle; the YAML's current `level_eq: 2` without colour filter permits digivolution from any colour Lv.2, which is incorrect.",
+        "note": "Card image BT16-040.webp confirms single blue Lv.2 circle. YAML alt_paths has two entries: (1) level_eq:2 cost:1 with NO colour constraint — this permits any Lv.2, contradicting the blue-only circle; (2) name_is:Minomon cost:0 — correct. C# code (BT16_040.cs lines 19-26) only implements Minomon alt-"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt16/BT16-040.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT12-031",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "YAML alt_paths should include: alt_paths: [ { from: { name_is: \"Imperialdramon: Dragon Mode\" }, cost: 2 } ] — This named-source alternative digivolution condition is printed on the card face in the black-text ability box and implemented in DCGO C# (BT12_031.cs lines 16-22) but completely absent from the current YAML data structure.",
+        "note": "Card image BT12-031.webp clearly displays the black-text alt-digivolve condition '[Digivolve] [Imperialdramon: Dragon Mode]: Cost 2' in the ability box. DCGO implementation confirms this with AddSelfDigivolutionRequirementStaticEffect(permanentCondition: TopCard.ContainsCardName(\"Imperialdramon: Dra"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt12/BT12-031.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT25-069",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should include: { level: 3, trait_requirement: TS, cost: 2 }. The card image clearly shows \"[Digivolve] Lv.3 w/[TS] trait: Cost 2\" and the C# code (line 18-21) implements exactly this condition with permanentCondition checking for TS trait and digivolutionCost of 2. Current YAML has no alt_paths field at all.",
+        "note": "Card image verified. Printed digivolve text confirms \"Lv.3 w/[TS] trait: Cost 2\". C# source (BT25_069.cs line 21) encodes AddSelfDigivolutionRequirementStaticEffect with level 3, permanentCondition checking TS trait, cost 2. YAML (BT25-069.yaml) contains no alt_paths section to represent this altern"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt25/BT25-069.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT23-059",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should contain TWO entries: (1) kind: digivolve, from: { name_in: [\"Justimon: Accel Arm\", \"Justimon: Critical Arm\"] }, cost: 1; (2) kind: digivolve, from: { level_eq: 5, trait_has: CS }, cost: 3. Current YAML has only entry (2) and is missing entry (1) entirely.",
+        "note": "Card image (BT23-059.webp) clearly shows both digivolve conditions in black text. Digivolve Cost circles and conditions transcribed: (1) Name-based: \"Justimon: Accel Arm/Justimon: Critical Arm: Cost 1\"; (2) Level-trait-based: \"Lv.5 w/[CS] trait: Cost 3\". C# code at BT23_059.cs confirms both paths ar"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt23/BT23-059.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "EX11-074",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should include a second digivolution path: Cost 6 digivolution from Lv.6 with condition requirement: While you have [Shoto Kazama], [GrandGalemon]. Current YAML only lists the standard green Lv.6/Cost 4 route. The printed card text clearly shows this conditional alt-digivolve in black text in the effect box, and it is already documented (commented out) in the YAML at line 17-18.",
+        "note": "Confirmed via card image EX11-074 showing printed black-text condition \"[Digivolve] While you have [Shoto Kazama], [GrandGalemon]: Cost 6\" in effect box. YAML file confirms this is a known gap (documented in comments at lines 17-18 but not yet implemented in alt_paths section). Severity is HIGH—this"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/ex11/EX11-074.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "AD1-004",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "yaml_alt_paths should include: (1) Lv.5 digimon with [Greymon] in name: Cost 3, and (2) Lv.5 digimon with [ADVENTURE] or [HERO] trait: Cost 3. C# code at lines 27-48 implements this correctly as a combined condition: level_eq: 5, permanentCondition: ContainsCardName(\"Greymon\") OR EqualsTraits(\"ADVENTURE\") OR EqualsTraits(\"HERO\"), cost: 3. The card image clearly shows printed black-text effect: \"[Digivolve] Lv.5 w/[Greymon] in name or w/[ADVENTURE]/[Hero] trait: Cost 3\"",
+        "note": "Card image (AD1-004.webp) is authoritative source. Printed text in effect box explicitly states the alternative digivolution conditions. YAML currently only specifies Lv.5 red color Cost 4, missing both Lv.5 Greymon/ADVENTURE/Hero trait Cost 3 conditions. C# implementation correctly models these alt"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/ad1/AD1-004.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT16-028",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "yaml_alt_paths should include: alt_path for digivolve from [Paildramon]/[Dinobeemon] at cost 3. Card image shows this in black text in the effect box: \"[Digivolve] [Paildramon]/[Dinobeemon]: Cost 3\". This is corroborated by the C# implementation at BT16_028.cs lines 22-28 which adds this alternate digivolution requirement.",
+        "note": "Card image BT16-028.webp clearly displays the alternative digivolution condition in printed black text. Standard Lv.5 blue cost-4 digivolution is shown in the cost circle at top left (blue circle with \"Lv.5\" and \"4\"). The alt-path to Paildramon/Dinobeemon cost 3 is explicitly in the effect text and "
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt16/BT16-028.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT16-102",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should include: kind: digivolve, from: { level_eq: 5, color_count: 2, name_contains: \"Magnamon\" }, cost: 5. Current YAML has only the standard Yellow Lv.5 cost 4 path; the 2-color Magnamon cost 5 alt-path is missing but printed on card and implemented in C# (BT16_102.cs line 33 checks CardColors.Count == 2 with cost 5 at line 42).",
+        "note": "Card image BT16-102 printed text shows yellow cost-4 circle (standard) and black text \"[Digivolve] 2-color w/[Magnamon] in name: Cost 5\" (alt-path). C# implementation at line 31-46 confirms: PermanentCondition checks ContainsCardName(\"Magnamon\") AND CardColors.Count == 2, adds digivolution requireme"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt16/BT16-102.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT20-102",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "evo_costs must include standard digivolution paths: Blue Lv.6 cost 6, Red Lv.6 cost 6 (both visible as numbered circles on the card image). These are baseline requirements, not alt-paths; they should be declared in a separate `evo_costs` field, not in `alt_paths`. The current YAML is missing the `evo_costs` section entirely. The `alt_paths` entry (Omnimon-specific cost 2) is correctly placed and should remain.",
+        "note": "Card image BT20-102 clearly shows Blue and Red circles marked \"6\" in the cost area, confirming dual-color standard digivolution requirements at Lv.6 cost 6. C# code defines only the Omnimon alt-path (cost 2). YAML alt_paths correctly holds the Omnimon case but lacks the baseline evo_costs section. C"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt20/BT20-102.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT25-025",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "evo_costs should include: (1) standard path [Blue Lv.4 cost 4], (2) Aegiomon-named alt-path [any level, Aegiomon source required, cost 3]. The YAML alt_paths section is missing the Aegiomon cost-3 entry. Add: `- kind: digivolve` / `from: { card_name: \"Aegiomon\" }` / `cost: 3` to the alt_paths list.",
+        "note": "Card image clearly shows printed black-text alt-digivolve condition \"Digivolve: [Aegiomon] Cost 3\" below the standard Blue Lv.4 cost 4 circles. DCGO C# correctly implements this (BT25_025.cs line 23: AddSelfDigivolutionRequirementStaticEffect with Aegiomon check and cost 3). YAML file missing this a"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt25/BT25-025.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT25-042",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "evo_costs should be [{ color: yellow, level: 5, cost: 4 }]. The current YAML lacks the standard color-restricted digivolution path. Only the trait-based alt-path (Lv.5 with [Angel]/[Archangel]/[TS], cost 3) is present. The card image clearly shows a filled Yellow circle at Lv.5 with cost 4, which is the standard yellow-only digivolution path that must be added to evo_costs, separate from alt_paths.",
+        "note": "Card image verified: Lv.5 Yellow circle (cost 4) printed standard path + Lv.5 trait-based alt (cost 3) in black text. YAML evo_costs field is entirely absent; only alt_paths defined. C# confirms only alt-path implemented (cost 3). Missing standard yellow path is a high-severity discrepancy."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt25/BT25-042.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT25-053",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should include: { kind: digivolve, from: { name_contains: \"Aegiomon\" }, cost: 3 } — this Aegiomon-named cost-3 alt-digivolution is printed on the card face (shown as \"Digivolve: [Aegiomon] Cost 3\" in black text) and also implemented in DCGO C# (BT25_053.cs line 23 AddSelfDigivolutionRequirementStaticEffect with cost 3). Currently YAML only has the standard Lv.4 Green / cost 4 path.",
+        "note": "Card image verified: Aegiomon-named cost-3 digivolution is printed text. DCGO C# verified: AddSelfDigivolutionRequirementStaticEffect(EqualsCardName('Aegiomon'), 3). YAML missing this alt-path despite existing comment acknowledging the DCGO source. Claim is correct — the YAML lacks a printed card co"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt25/BT25-053.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "EX9-019",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should contain three digivolve paths, not one:\n  - kind: digivolve\n    from: { level_eq: 4, color_is: blue }\n    cost: 4\n  - kind: digivolve\n    from: { name_contains: \"WereGarurumon\" }\n    cost: 1\n  - kind: digivolve\n    from: { level_eq: 4, any_of: [{ name_contains: \"Garurumon\" }, { trait_has: \"ADVENTURE\" }] }\n    cost: 3",
+        "note": "Card image EX9-019.webp clearly shows TWO black-text alt-digivolve conditions printed below the standard Lv.4 Blue cost circle. These are NOT unprinted DCGO-only conditions—they are on the card face and must be encoded in alt_paths per source-priority rules (printed text governs). The C# implementat"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/ex9/EX9-019.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "ST19-10",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "yaml_alt_paths should include TWO entries:\n1. Standard: kind: digivolve, from: { level_eq: 4, color_is: yellow }, cost: 4\n2. Alternate (MISSING): kind: digivolve, from: { level_eq: 4, name_contains_any: [Tyrannomon, Raremon] }, cost: 3\n\nThe card image shows two digivolution circles: Yellow Lv.4 cost 4 (printed circle) and a black-text condition \"[Digivolve] Lv.4 w/[Tyrannomon]/[Raremon] in name: Cost 3\". The C# implementation (ST19_10.cs lines 14-29) confirms the cost-3 alternate digivolution path with the name requirement.",
+        "note": "Claim verified via card image (authoritative printed text), JSON xros_req field, and C# implementation. The YAML alt_paths is incomplete and omits the cost-3 alternate digivolution requirement."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/st19/ST19-10.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT17-007",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should include both: (1) the existing name-based path [from: {name_is: Koromon}, cost: 0] AND (2) a standard level-color path [level_eq: 2, color_is: red, cost: 0]. The card image shows a distinct Red Lv.2 Cost 0 digivolution circle in the top-left that is currently missing from yaml_alt_paths.",
+        "note": "Card image clearly shows two digivolution cost circles: (1) Blue Lv.3 Cost 0 at top, (2) Red Lv.2 Cost 0 at bottom. Printed text reads \"Digivolve [Koromon]: Cost 0\" confirming the name-based alt-path. YAML alt_paths omits the standard Red Lv.2 Cost 0 path entirely. DCGO C# also only implements the K"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt17/BT17-007.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT18-064",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "yaml_alt_paths should include: alt_path with name_contains \"Sephirothmon\" and cost 0. Card face prints '[Digivolve] [Sephirothmon]: Cost 0' in the effect box, and C# code at BT18_064.cs lines 26-28 confirms digivolutionCost: 0 with PermanentCondition requiring Sephirothmon top card.",
+        "note": "Card image BT18-064.webp clearly shows the alt-digivolve text '[Digivolve] [Sephirothmon]: Cost 0'. Standard digivolve paths are Lv.3 Blue Cost 2 and Lv.3 Green Cost 2. The Sephirothmon Cost 0 path is missing from current YAML alt_paths."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt18/BT18-064.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT19-075",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_path entry missing: {name_contains: 'Millenniummon', cost: 2} — Card face prints '[Digivolve] [Millenniummon]: Cost 2' in effect box; C# implementation confirms AddSelfDigivolutionRequirementStaticEffect with digivolutionCost=2 and permanentCondition checking for Millenniummon",
+        "note": "Card image verified. Standard digivolve: Lv.6 Cost 5 (purple circles). Alternate path confirmed by both printed text and C# code: Millenniummon Cost 2. YAML yaml_alt_paths should include this entry."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt19/BT19-075.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT22-041",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should include TWO digivolution conditions:\n1) Standard: kind=digivolve, from={level_eq: 5, color_is: yellow}, cost: 4\n2) Alt-digivolve: kind=digivolve, from={level_eq: 5, color_is: any, name: Chirinmon, traits_include: CS}, cost: 3\n\nThe card image clearly shows \"[Digivolve] Chirinmon]/Lv.5 w/[CS] trait: Cost 3\" in the effect text, and the C# code (lines 19-26) explicitly implements this alternative with:\n- targetPermanent.TopCard.EqualsCardName(\"Chirinmon\")\n- targetPermanent.TopCard.IsLevel5 && targetPermanent.TopCard.HasCSTraits\n- digivolutionCost: 3\n\nCurrent YAML only lists the standard yellow Lv.5 cost 4 path and is missing the Chirinmon alternative entirely.",
+        "note": "Card image verified - yellow circle (Lv.5, Cost 4) is standard path; black text \"[Digivolve] Chirinmon]/Lv.5 w/[CS] trait: Cost 3\" is the missing alt-digivolve condition. Cross-check with C# BT22_041.cs confirms implementation of both paths with exact costs matching card face and C# code."
+      },
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "evo_costs should be: [{\"card_color\": 2, \"level\": 4, \"memory_cost\": 4}]. The card face clearly shows a yellow digivolve cost circle marked \"Lv.4\" with cost \"4\" in the circle, not Lv.5.",
+        "note": "Card image BT22-041 displays yellow-filled digivolve cost circle with \"Lv.4\" and memory cost \"4\". Current data incorrectly specifies level: 5. The C# implementation (line 22 of BT22_041.cs) also incorrectly checks for IsLevel5, which should be corrected to IsLevel4."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt22/BT22-041.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT24-018",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should contain two entries: (1) existing \"kind: digivolve, from: { level_eq: 6, color_is: red }, cost: 4\", and (2) NEW alternate digivolve with condition \"While you have [Owen Dreadnought], [Lamiamon]\" at cost 6. In DSL form: add alt_path entry with permanent requirements for Owen Dreadnought and Lamiamon, digivolution cost 6.",
+        "note": "Card image unambiguously prints \"[Digivolve] While you have [Owen Dreadnought], [Lamiamon]: Cost 6\" in effect text. C# implementation at BT24_018.cs lines 16-42 correctly implements this alt-digivolve (checks Owen Dreadnought permanent, Lamiamon condition, cost 6). JSON field xros_req already contai"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt24/BT24-018.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "ST9-06",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths must include: { kind: digivolve, from: { level_eq: 4, color_is: green }, cost: 4 } in addition to the existing Blue Lv.5 Cost 4 path. Also, cards.json evo_costs must add { card_color: 3 (Green), level: 4, memory_cost: 4 } to match the printed card circles.",
+        "note": "Card image clearly shows both Blue (Lv.5 Cost 4) and Green (Lv.4 Cost 4) digivolve circles. DCGO C# code explicitly supports green Lv.4 card selection in CanSelectCardCondition1. Current YAML alt_paths completely omits the Green path, and cards.json evo_costs only lists Blue. Both must be corrected "
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/st9/ST9-06.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT20-037",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "No correction needed - DNA alt_path already correct: cost 0, materials Yellow Lv.6 and Green/Black Lv.6, matching printed text exactly.",
+        "note": "Card image BT20-037 confirms: DNA Digivolve text reads 'Lv.6+Yellow, Lv.6+Green/Black Cost 0'. YAML alt_path correctly encodes cost: 0 with two materials (Yellow Lv.6 and Green/Black Lv.6). C# implementation (lines 33-46) matches: PermanentCondition1 for Yellow Lv.6, PermanentCondition2 for Green/Bl"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt20/BT20-037.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT16-082",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "alt_paths should change from: { level_eq: 2 } to from: { level_eq: 2, color_is: white } — the card image shows a single White circle, not an unrestricted Level 2 digivolution",
+        "note": "Image clearly shows single white-filled digivolution circle. YAML currently lacks color filter. C# implements the card's activated effect (on_move hatch/reveal), not the digivolution path. Claim is valid: color_is: white must be added to match the card face."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt16/BT16-082.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT25-054",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "No correction needed. Current YAML alt_paths are accurate: (1) Lv.4 Green cost 4; (2) Lv.4 with TS trait cost 3. Both paths match printed card image exactly.",
+        "note": "CLAIM REJECTED. Card image confirms two separate alt_paths are CORRECT. Image shows: (1) Green circle Lv.4 cost 4 (printed standard evo block); (2) Black text alt-digivolve condition 'Lv.4 w/[TS] trait Cost 3'. YAML alt_paths structure accurately reflects printed card: path 1 = {level_eq: 4, color_i"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt25/BT25-054.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "EX8-074",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "yaml_alt_paths should specify: { kind: digivolve, from: { level_eq: 5, color_is: 'red' }, cost: 4 }. The card face clearly displays a red-filled Lv.5 Cost 4 digivolution circle, which requires color_is field to enforce the red-color restriction on the predecessor Digimon.",
+        "note": "Card image verified. Lv.5 circle at top-left is distinctly RED-FILLED (not yellow/blue/green/purple), matching the printed red digivolution requirement. Current YAML omits the color_is field, allowing any-colored Lv.5 to digivolve for cost 4. C# code EX8_074.cs contains no alt-path definitions, so Y"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/ex8/EX8-074.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "EX10-033",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "alt_paths: Black Lv.5 cost should be 3 (not 4). Current YAML line 84 \"cost: 4\" should be \"cost: 3\" to match the card image and cards.json memory_cost value.",
+        "note": "Card image EX10-033.webp clearly shows secondary evolution circles including Black Lv.5 with cost 3 in the top-left area. JSON evo_costs confirms Black level 5 memory_cost: 3. YAML alt_paths entry incorrectly lists cost: 4 for the same from condition {level_eq: 5, color_is: black}. Image and JSON ag"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/ex10/EX10-033.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT21-017",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "evo_costs should be corrected: alt_paths digivolve from level_eq 3 should declare cost 2 (not cost 0). The printed circles on the card show Red Lv.3 Cost 2 and Blue Lv.3 Cost 2; the YAML currently declares cost 0 for a single Lv.3 alt_path, which mismatches both the cost value and likely omits the Blue variant.",
+        "note": "Card image BT21-017.webp definitively shows two digivolve circles: top (Red) and bottom (Blue), both Lv.3 Cost 2. YAML alt_paths line 12 declares cost 0, contradicting the printed circle. C# code (BT21_017.cs) does not override this. The claim is verified as correct—the cost should be 2, not 0."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt21/BT21-017.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT24-011",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "alt_paths should contain only ONE entry: kind=digivolve, from={level_eq: 3, trait_has: TS}, cost: 2, ignore_requirements: true. Remove the first alt_path entry at lines 13-15 which incorrectly allows any Lv.3 without trait constraint.",
+        "note": "Card image shows \"[Digivolve] Lv.3 w/[TS] trait: Cost 2\" in black text, explicitly requiring the TS trait. Current YAML has two alt_path entries; the first (lines 13-15) allows ANY Lv.3 with cost 2, violating the card text. The second entry correctly requires Lv.3 WITH [TS] trait. C# implementation "
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt24/BT24-011.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT21-018",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "alt_paths digivolve should include level_eq: 3 alongside trait_has: \"Stnd.\" — the printed card clearly shows a red/maroon Lv.3 cost 3 circle. Current: {from: {trait_has: \"Stnd.\"}, cost: 3}. Corrected: {from: {level_eq: 3, trait_has: \"Stnd.\"}, cost: 3}",
+        "note": "Card image (BT21-018.webp) confirms Lv.3 evolution requirement displayed as red circle with \"Lv.3\" label and cost 3. YAML currently omits level_eq predicate even though C# trait-only check matches DCGO implementation. Adding level_eq: 3 to YAML alt_paths.from aligns data with printed card face (the "
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt21/BT21-018.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "AD1-002",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "alt_paths.yaml_alt_paths[0] should enforce TWO conditions: (1) top card name_contains \"Takuya Kanbara\" AND (2) 2 or more [Hybrid] trait cards in digivolution sources (cost 3, ignore_requirements: false). Current YAML only checks condition (1). Corrected value: yaml_alt_paths should include a predicate like 'digivolution_sources_trait_count_gte: {trait: \"Hybrid\", count: 2}' once DSL-vocab gap G-DSL-DIGISOURCE-TRAIT-COUNT-GTE is resolved. Card image text: '[Digivolve] [Takuya Kanbara] w/2 or more [Hybrid] trait cards under: Cost 3'. C# AD1_002.cs confirms: TopCard 'Takuya Kanbara' AND DigivolutionCards.Count(Hybrid) >= 2.",
+        "note": "Card image (AD1-002.webp) transcribed: Standard digivolution shown as Red Lv.4 Cost 3 in upper-left circle. Alt-digivolve in black text below reads '[Digivolve] [Takuya Kanbara] w/2 or more [Hybrid] trait cards under: Cost 3'. C# implementation at AD1_002.cs lines 17-20 verifies BOTH conditions via "
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/ad1/AD1-002.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT12-047",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "alt_paths should have TWO digivolve paths: (1) from: { level_eq: 2, color_is: blue }, cost: 0; (2) from: { level_eq: 2, color_is: red }, cost: 0. The card image clearly shows a blue Lv.2 circle and a red/magenta Lv.2 circle, NOT green. The current single-path green entry is factually incorrect per the printed circles.",
+        "note": "Card image confirms the claim is CORRECT in substance (current green is wrong) but PARTIALLY INACCURATE in detail: the claim mentions \"blue OR yellow\" but the actual card shows Blue and Red/Magenta, not Yellow. Transcribed printed circles: Blue Lv.2/Cost-0 and Red Lv.2/Cost-0. C# code (BT12_047.cs) "
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt12/BT12-047.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT13-075",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "yaml_alt_paths should use color_is: yellow (not color_is: black). The digivolution cost circle on the card is printed as a Yellow Lv.5 cost 4 circle, clearly visible in the top-left area of the card.",
+        "note": "Card image at C:/Users/james/Documents/DCGO_Application/Assets/Textures/Card/BT13-075.webp clearly shows a yellow/gold-filled Level 5 circle (not black). Current YAML incorrectly uses color_is: black. C# file contains no alternate digivolution definitions, only card ability effects."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt13/BT13-075.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT22-025",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "alt_paths should include: kind: digivolve, from: { level_eq: 5, trait_contains: CS }, cost: 3 (the alt-digivolve with [CS] trait requirement is missing from current YAML; the standard blue Lv.5 cost 4 path should remain as the first entry)",
+        "note": "Card image BT22-025.webp clearly shows printed text \"[Digivolve] Lv.5 w/[CS] trait: Cost 3\" in the effect box. C# implementation (BT22_025.cs lines 20-24) confirms this: checks IsLevel5 AND HasCSTraits with digivolutionCost 3. Current YAML alt_paths lists only the standard blue Lv.5 cost 4 path; the"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt22/BT22-025.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT22-032",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "alt_paths should be: kind: digivolve, from: { level_eq: 2, color_is: yellow }, cost: 2 (Light Blue Lv.2 circle with cost 2 shown on card face)",
+        "note": "Card image clearly displays a light-blue-filled circle marked \"Lv 2\" with cost 2 as the alternative digivolution path. Current YAML specifies level_eq: 3, which contradicts the printed card text. The C# effect code matches the card text correctly (searches for level 3 Puppet cards in the \"On Deletio"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt22/BT22-032.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT22-036",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "alt_paths[0].from.level_eq should be 3 (not 4). Card image shows Lv.3 circle in yellow with digivolution cost 3.",
+        "note": "Card image BT22-036 clearly displays a yellow Lv.3 circle for the alternative digivolution source. Current YAML specifies level_eq: 4, but image evidence definitively shows Lv.3. C# code (line 142) also confirms cost of 3 via ignoreDigivolutionRequirementFixedCost: 3."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt22/BT22-036.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT22-040",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "alt_paths[0].from.level_eq should be 3 (not 5). Card image shows yellow Lv.3 cost circle with cost 3. Full corrected line: from: { level_eq: 3, color_is: yellow }",
+        "note": "Card image BT22-040.webp clearly shows digivolution cost circle with Lv.3 printed inside yellow circle. Current YAML at code/digimon-engine/cards/bt22/BT22-040.yaml line 11 incorrectly specifies level_eq: 5. This is a genuine discrepancy requiring correction."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt22/BT22-040.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT24-101",
+    "tier": "dcgo",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "alt_paths[1] (trait_has: TS digivolution): cost should be 5, not 3",
+        "note": "Card image shows \"Digivolve Lv.5 w/[TS] Trait Cost 5\". C# code at line 26 confirms digivolutionCost: 5 for TS trait path. YAML currently shows cost: 3 at line 21 for trait_has: TS alt_path. This is a genuine YAML data error requiring correction."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt24/BT24-101.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT25-051",
+    "tier": "image",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should include TWO digivolution paths: (1) standard Green Lv.3 Cost 3 [no additional requirements]; (2) Green Lv.3 Cost 2 with trait_has: TS requirement. Current YAML only has the TS-gated cost 2 path and is missing the standard cost 3 path from printed card data.",
+        "note": "Card image shows the TS-trait alt-path text. The printed card's evo_costs in cards.json clearly lists Green Lv.3 Cost 3 as a standard digivolution option. The YAML alt_paths is incomplete—it should list both the standard path and the alternative TS-gated path to match the printed card face and cards"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt25/BT25-051.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "EX4-005",
+    "tier": "image",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "evo_costs (standard paths) should be: [Red Lv.3 Cost 0, Blue Lv.2 Cost 1, Yellow Lv.1 (cost unlabeled in image)]. These are the three colored cost circles printed on the card. The YAML currently omits all three standard digivolution paths and only lists the alt_path (Koromon Cost 0).",
+        "note": "Card image clearly shows three distinct colored digivolution cost circles on the left: RED circle Lv.3 Cost 0 (top), BLUE circle Lv.2 Cost 1 (middle), YELLOW circle Lv.1 (bottom). The black-text alt condition \"Digivolve: 0 from [Koromon]\" is a separate alt-path mechanism. YAML is missing all three s"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/ex4/EX4-005.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "EX9-012",
+    "tier": "image",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should contain three digivolve paths:\n1. kind: digivolve, from: { level_eq: 4, color_is: red }, cost: 4\n2. kind: digivolve, from: { card_name_contains: \"MetalGreymon\" }, cost: 1\n3. kind: digivolve, from: { level_eq: 4, any_of: [ { name_contains: \"Greymon\" }, { has_trait: \"ADVENTURE\" } ] }, cost: 3\n\nThe card image clearly shows two additional printed black-text digivolve conditions:\n- \"Digivolve [MetalGreymon]: Cost 1\"\n- \"Digivolve Lv.4 w/[Greymon] in name or w/[ADVENTURE] trait: Cost 3\"\n\nThese ARE printed on the card face (not unprinted DCGO-only conditions as claimed in the YAML header comment). The current YAML only encodes the standard Lv.4 Red / Cost 4 path and incorrectly treats the other two as unprinted static effects.",
+        "note": "Confirmed as HIGH severity. The claim is correct. Card image (authoritative source) clearly shows both alt-digivolve conditions in black printed text in the main effect area. YAML header incorrectly labels these as \"unprinted alt-paths added via static effect\" when they are actually printed on the c"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/ex9/EX9-012.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "ST19-07",
+    "tier": "image",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "yaml_alt_paths is missing an entry. Card image shows: Lv.5 yellow digimon Cost 2 circle in upper-left area. Current YAML only accounts for Lv.3 yellow Cost 2. Correction needed: add alt_paths entry for Lv.5 digimon with cost 2 (or clarify if this is the same path, not an additional alt path). Note: claim said \"Lv.5 Cost 5\" but image shows \"Lv.5 Cost 2\"",
+        "note": "Card image clearly shows two circles in upper-left: blue circle marked \"Lv.5\" and yellow circle marked \"2\" (cost). This represents a digivolution path to a Lv.5 digimon costing 2. The YAML currently only has alt_paths entry for Lv.3 yellow Cost 2, missing this Lv.5 Cost 2 entry. Claim accuracy note:"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/st19/ST19-07.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "ST19-09",
+    "tier": "image",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "yaml_alt_paths should include: kind: digivolve, from: { level_eq: 6, color_is: yellow }, cost: 6 (in addition to the existing Lv.4 cost 3 entry). The card image shows a yellow Lv.6 circle in the upper-left, indicating an alternative digivolution path not currently recorded in the YAML.",
+        "note": "Card image clearly shows a yellow \"6\" circle and white \"3\" circle in the upper-left corner, representing digivolution-from requirements. Current YAML alt_paths only account for Yellow Lv.4 cost 3, missing the Yellow Lv.6 entry shown on the card face. This is a confirmed missing alt-path data discrep"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/st19/ST19-09.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "ST19-11",
+    "tier": "image",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should include a second digivolution entry: from level 7 (likely blue/non-yellow color) with cost 7, in addition to the existing level 4 yellow cost 3 path. The card face shows two digivolution circles: the upper circle is blue-tinted with Lv.7 cost 7; the lower circle is yellow with Lv.3/4 cost 3.",
+        "note": "Card image clearly shows Lv.7 Cost 7 circle in blue tint (upper left), separate from the Lv.3/4 Cost 3 yellow circle (lower left). Current YAML alt_paths only accounts for one digivolution path (Lv.4 Yellow cost 3), missing the Lv.7 path entirely. This is a confirmed missing alt_path on a high-level"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/st19/ST19-11.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "ST19-12",
+    "tier": "image",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should include: - kind: digivolve, from: { level_eq: 11, color_is: yellow }, cost: 11. The yellow Lv.11 cost 11 circle is clearly visible in the upper left of the card image but missing from the YAML alt_paths (which currently only records the Lv.5 yellow cost 3 path).",
+        "note": "Card image confirms the claim. The card shows two digivolution input circles: (1) yellow Lv.11 cost 11 [MISSING from data], (2) light blue Lv.3 cost 3 [appears to correspond to non-yellow color, not in current alt_paths]. The Lv.11 cost 11 yellow path is unambiguously displayed on the card face but "
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/st19/ST19-12.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "ST5-06",
+    "tier": "image",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should contain: kind: digivolve, from: { level_eq: 2, color_is: blue }, cost: 2. The card image clearly shows a BLUE Lv.2 Cost 2 digivolution circle, but the current YAML entry is black Lv.3 Cost 2.",
+        "note": "Card image verified at C:/Users/james/Documents/DCGO_Application/Assets/Textures/Card/ST5-06.webp. The digivolution circles visible in the upper left clearly display blue background with Lv.2 and cost 2. Current YAML has black Lv.3 Cost 2, which does not match the printed card face."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/st5/ST5-06.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "ST5-09",
+    "tier": "image",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "alt_paths should include two digivolution routes: (1) black Lv.4 Cost 3 [existing], AND (2) blue Lv.3 Cost 3 [missing]. In YAML: add second alt_path entry with `from: { level_eq: 3, color_is: blue }` and `cost: 3`. In JSON evo_costs: add second entry with `\"card_color\": 1, \"level\": 3, \"memory_cost\": 3`",
+        "note": "Card image clearly shows blue-filled Lv.3 digivolution circle. Current YAML has only black Lv.4 Cost 3. Claim is CONFIRMED - the blue Lv.3 Cost 3 alt_path is missing from both YAML and JSON data files. Card color 5=black, color 1=blue per standard encoding."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/st5/ST5-09.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "ST6-11",
+    "tier": "image",
+    "findings": [
+      {
+        "class": "MISSING_ALT_PATH",
+        "claim": "evo_costs should include two paths: [Purple Lv.4 Cost 3 (currently present), Purple Lv.3 Cost 7 (currently missing)]. In YAML alt_paths format: add a second entry with level_eq: 3, cost: 7, and color_is: purple. In cards.json evo_costs, add a second object: {\"card_color\": 6, \"level\": 3, \"memory_cost\": 7}",
+        "note": "Card image verified. Two purple digivolve circles clearly visible: top circle shows Lv.3 Cost 7; bottom circle shows Lv.4 Cost 3. Current data only documents the Lv.4 Cost 3 path. The Lv.3 Cost 7 alternative digivolve is missing from both YAML and cards.json."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/st6/ST6-11.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "ST1-07",
+    "tier": "image",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "alt_paths[0].from should be { level_eq: 3, color_is: red } instead of { level_eq: 3 }. The card image clearly shows a RED digivolution cost circle for Lv.3 Cost 2, and the JSON evo_costs already specifies card_color: 0 (red); the YAML must match this constraint.",
+        "note": "Card image shows red circle (verified on card face). YAML lacks color_is constraint. JSON has card_color: 0 (red). Claim confirmed: YAML alt_paths is incomplete and must include color_is: red to match the printed card and JSON data."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/st1/ST1-07.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "ST1-09",
+    "tier": "image",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "alt_paths should be: {kind: digivolve, from: {level_eq: 3, color_is: red}, cost: 3}. The card image shows a red-filled Lv.3 digivolution cost circle. Current YAML has level_eq: 4 (incorrect; card shows Lv.3) and lacks color_is: red constraint.",
+        "note": "Card image verified: MetalGreymon ST1-09 displays a RED digivolution cost circle marked \"Lv.3 Cost 3\" in the top-left. The claim to add color_is: red is supported by the red circle indicator. Additionally, the level constraint should be corrected from level_eq: 4 to level_eq: 3 to match the card fac"
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/st1/ST1-09.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT20-056",
+    "tier": "image",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "evo_costs should be: [{ card_color: \"purple\" (not 5), level: 5, memory_cost: 3 }]. The printed evolution circle on the card image shows a PURPLE/DARK circle, not BLUE. The YAML alt_paths correctly declares \"color_is: purple\" but JSON incorrectly lists \"card_color: 5\" (Blue). The color 5 encoding in JSON does not match the visually printed purple evolution circle on the card face.",
+        "note": "Image clearly shows a purple-toned evolution circle (Lv.5, cost 3). YAML is accurate; JSON evo_costs has the wrong color code. The card's headline colors are Blue/Yellow, but the actual evolution requirement circle printed on the card is purple-colored."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt20/BT20-056.yaml",
+    "has_yaml": true
+  },
+  {
+    "card_id": "BT22-029",
+    "tier": "image",
+    "findings": [
+      {
+        "class": "WRONG_ALT_PATH",
+        "claim": "evo_costs[0].level should be 0 (not 2). Card image shows yellow circle with Lv.0 cost 0 as alternative digivolution path.",
+        "note": "Card image verified: Shoemon BT22-029 displays two digivolution circles - blue (main Lv.3) and yellow (alt Lv.0 with memory cost 0). Current data incorrectly specifies level: 2 for the yellow path. This is a HIGH severity bug affecting deck legality validation."
+      }
+    ],
+    "yaml_path": "code/digimon-engine/cards/bt22/BT22-029.yaml",
+    "has_yaml": true
+  }
+]

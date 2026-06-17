@@ -92,6 +92,7 @@ fn main() {
             engine_commands::rust_submit_action,
             engine_commands::rust_step_game,
             engine_commands::rust_get_mask,
+            engine_commands::rust_get_decoded_actions,
             engine_commands::rust_get_board_tensor_summary,
             engine_commands::rust_get_log,
             engine_commands::rust_surrender,

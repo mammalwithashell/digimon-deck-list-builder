@@ -223,6 +223,7 @@ impl Game {
             pending_would_digivolve_resume: None,
             player_digivolve_cost_reducers: Vec::new(),
             pending_player_digivolve_reduction: 0,
+            pending_digivolve_route_choice: None,
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
             effect_source_player: None,

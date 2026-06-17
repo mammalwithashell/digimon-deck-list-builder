@@ -877,6 +877,21 @@ impl RustHeadlessGame {
         json_to_pyobject(py, &value)
     }
 
+    /// Decoded list of every currently-legal action for the current decision
+    /// player, each carrying source-card and effect identity (`card_id`,
+    /// `card_name`, `effect_name`, `source_zone`, `source_index`, `label`).
+    /// Mirrors the desktop `rust_get_decoded_actions` Tauri command byte-for-byte
+    /// (same `ActionExplanation` serialization) so the React action bar renders
+    /// activatable effects identically on both surfaces. Returns an empty list
+    /// when the queried player is not the current decision player.
+    fn legal_decoded_actions(&self, py: Python) -> PyResult<PyObject> {
+        let pid = self.inner.current_decision_player();
+        let actions = ::digimon_engine::action::explain::legal_decoded_actions(&self.inner.game, pid);
+        let value = serde_json::to_value(&actions)
+            .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
+        json_to_pyobject(py, &value)
+    }
+
     /// Capture the current full-information game as a scenario fixture
     /// (`qa/scenarios/` schema, empty assertions). The inverse of the
     /// staging importer — re-staging the result reproduces this board.
@@ -1336,6 +1351,115 @@ impl RustDebugGame {
     }
 }
 
+/// PyO3 wrapper over the Rust replay core for the hosted API. Drives a
+/// persisted native `GameRecorder` recording (the JSON string stored in
+/// `game_recordings.recording_json`) through the engine, exposing a per-step
+/// UI state via `to_ui_json` so the server's replay routes run on Rust
+/// instead of the legacy Python `ReplayRunner` (rule 22).
+///
+/// Step indexing is 0-based here (matches the Rust core: step 0 = no actions
+/// applied yet). The server wrapper translates to its 1-based convention.
+#[pyclass(module = "digimon_engine", name = "RustReplayRunner")]
+pub struct RustReplayRunner {
+    inner: ::digimon_engine::runners::ReplayRunner,
+}
+
+#[pymethods]
+impl RustReplayRunner {
+    /// Build from the recording JSON string (the value of the DB
+    /// `recording_json` column). `verify=True` enables divergence checking
+    /// against the recorded per-step values.
+    #[new]
+    #[pyo3(signature = (recording_json, verify = false))]
+    fn new(recording_json: &str, verify: bool) -> PyResult<Self> {
+        let value: Value = serde_json::from_str(recording_json)
+            .map_err(|e| PyValueError::new_err(format!("invalid recording JSON: {e}")))?;
+        let db = card_db()?;
+        let inner = ::digimon_engine::runners::ReplayRunner::new(value, db, verify)
+            .map_err(|e| PyValueError::new_err(format!("{e:?}")))?;
+        Ok(Self { inner })
+    }
+
+    /// Number of replayable (non-mulligan) actions in the recording.
+    #[getter]
+    fn total_steps(&self) -> u32 {
+        self.inner.total_steps()
+    }
+
+    /// Current 0-based step cursor — 0 means no actions applied yet.
+    #[getter]
+    fn current_step(&self) -> u32 {
+        self.inner.current_step()
+    }
+
+    #[getter]
+    fn is_complete(&self) -> bool {
+        self.inner.is_complete()
+    }
+
+    #[getter]
+    fn is_game_over(&self) -> bool {
+        self.inner.is_game_over()
+    }
+
+    /// Winner as Python player_id (1 or 2), or `None` if no winner yet.
+    #[getter]
+    fn winner_id(&self) -> Option<u8> {
+        self.inner.winner_id().and_then(to_python_pid)
+    }
+
+    /// Full UI-state dict for the current replay position. Same shape as
+    /// `RustHeadlessGame.to_ui_json` — consumed by `state_filter` + the
+    /// React frontend.
+    fn get_state(&self, py: Python) -> PyResult<PyObject> {
+        let value = ::digimon_engine::serialization::to_ui_json(&self.inner.game);
+        json_to_pyobject(py, &value)
+    }
+
+    /// Apply exactly one replayable action; returns a dict with the step
+    /// result fields (Python 1/2 player-id convention) plus the post-step UI
+    /// `state`. No-op past completion.
+    fn step(&mut self, py: Python) -> PyResult<PyObject> {
+        let r = self.inner.step();
+        let d = PyDict::new_bound(py);
+        d.set_item("step_number", r.step_number)?;
+        d.set_item("player_id", to_python_pid(r.player_id))?;
+        d.set_item("action_id", r.action_id)?;
+        d.set_item("phase_before", r.phase_before)?;
+        d.set_item("phase_after", r.phase_after)?;
+        d.set_item("memory_before", r.memory_before)?;
+        d.set_item("memory_after", r.memory_after)?;
+        d.set_item("turn_number", r.turn_number)?;
+        d.set_item("is_game_over", r.is_game_over)?;
+        d.set_item("winner_id", r.winner_id.and_then(to_python_pid))?;
+        // Per-step divergences (populated only when verify=True). Each entry
+        // is {step, field, recorded, replayed} — the server maps these into
+        // verification_ok / verification_errors.
+        let divs = PyList::empty_bound(py);
+        for dr in &r.divergences {
+            let dd = PyDict::new_bound(py);
+            dd.set_item("step", dr.step)?;
+            dd.set_item("field", dr.field)?;
+            dd.set_item("recorded", dr.recorded.as_str())?;
+            dd.set_item("replayed", dr.replayed.as_str())?;
+            divs.append(dd)?;
+        }
+        d.set_item("divergences", divs)?;
+        let state = ::digimon_engine::serialization::to_ui_json(&self.inner.game);
+        d.set_item("state", json_to_pyobject(py, &state)?)?;
+        Ok(d.into_py(py))
+    }
+
+    /// Seek to an absolute 0-based step index (reset-and-replay under the
+    /// hood). Raises `ValueError` if the target is out of range. Read the
+    /// post-seek board via `get_state()`.
+    fn seek(&mut self, target_step: u32) -> PyResult<()> {
+        self.inner
+            .seek(target_step)
+            .map_err(|e| PyValueError::new_err(format!("{e:?}")))
+    }
+}
+
 fn to_rust_pid(py_pid: u8) -> PyResult<u8> {
     match py_pid {
         1 | 2 => Ok(py_pid - 1),
@@ -1396,8 +1520,10 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
     d.set_item("meta", PyDict::new_bound(py))?;
     // defaults
     d.set_item("source_card_id", py.None())?;
+    d.set_item("source_card_name", py.None())?;
     d.set_item("source_slot", py.None())?;
     d.set_item("target_card_id", py.None())?;
+    d.set_item("target_card_name", py.None())?;
     d.set_item("target_slot", py.None())?;
     d.set_item("player", 0)?;
 
@@ -1408,9 +1534,17 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             player,
             delta,
             total,
+            source_card_id,
+            source_card_name,
             ..
         } => {
             d.set_item("player", py_pid(*player))?;
+            if let Some(id) = source_card_id {
+                d.set_item("source_card_id", id.as_str())?;
+            }
+            if let Some(name) = source_card_name {
+                d.set_item("source_card_name", name.as_str())?;
+            }
             let meta = PyDict::new_bound(py);
             meta.set_item("delta", *delta)?;
             meta.set_item("total", *total)?;
@@ -1433,6 +1567,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
         GameEvent::Play {
             player,
             card_id,
+            card_name,
             field_index,
             cost_paid,
             cost_printed,
@@ -1441,6 +1576,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
             d.set_item("source_slot", *field_index)?;
             // New per-play payload from the `add-reward-profiles` change
             // (capability `engine-event-emission`). Surfaces in meta so
@@ -1461,6 +1597,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
         GameEvent::Digivolve {
             player,
             top_card_id,
+            card_name,
             field_index,
             from_stack_top,
             was_dna,
@@ -1470,6 +1607,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", top_card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
             d.set_item("source_slot", *field_index)?;
             // New payload from the `add-reward-profiles` change
             // (capability `engine-event-emission`). Surfaces in `meta`
@@ -1488,34 +1626,97 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
             attacker_field_index,
             target_field_index,
             target_player,
+            attacker_card_id,
+            attacker_card_name,
+            target_card_id,
+            target_card_name,
+            attacker_dp,
+            target_dp,
             ..
         } => {
             d.set_item("player", py_pid(*player))?;
+            d.set_item("source_card_id", attacker_card_id.as_str())?;
+            d.set_item("source_card_name", attacker_card_name.as_str())?;
             d.set_item("source_slot", *attacker_field_index)?;
             if let Some(t) = target_field_index {
                 d.set_item("target_slot", *t)?;
             }
+            if let Some(id) = target_card_id {
+                d.set_item("target_card_id", id.as_str())?;
+            }
+            if let Some(name) = target_card_name {
+                d.set_item("target_card_name", name.as_str())?;
+            }
             let meta = PyDict::new_bound(py);
             meta.set_item("target_player", target_player.map(|p| py_pid(p)))?;
+            meta.set_item("attacker_dp", *attacker_dp)?;
+            meta.set_item("target_dp", *target_dp)?;
             d.set_item("meta", meta)?;
         }
         GameEvent::Trash {
-            player, card_id, ..
+            player,
+            card_id,
+            card_name,
+            ..
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
         }
         GameEvent::Mill {
-            player, card_id, ..
+            player,
+            card_id,
+            card_name,
+            ..
         } => {
             d.set_item("player", py_pid(*player))?;
             d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
         }
         GameEvent::SecurityReveal {
-            defender, card_id, ..
+            defender,
+            card_id,
+            card_name,
+            ..
         } => {
             d.set_item("player", py_pid(*defender))?;
             d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
+        }
+        GameEvent::EffectTarget {
+            player,
+            source_card_id,
+            source_card_name,
+            targets,
+            ..
+        } => {
+            d.set_item("player", py_pid(*player))?;
+            d.set_item("source_card_id", source_card_id.as_str())?;
+            d.set_item("source_card_name", source_card_name.as_str())?;
+            let targets_list = pyo3::types::PyList::empty_bound(py);
+            for t in targets {
+                let entry = PyDict::new_bound(py);
+                entry.set_item("card_id", t.card_id.as_str())?;
+                entry.set_item("card_name", t.card_name.as_str())?;
+                targets_list.append(entry)?;
+            }
+            let meta = PyDict::new_bound(py);
+            meta.set_item("targets", targets_list)?;
+            d.set_item("meta", meta)?;
+        }
+        GameEvent::Reveal {
+            player,
+            card_id,
+            card_name,
+            source_zone,
+            ..
+        } => {
+            d.set_item("player", py_pid(*player))?;
+            d.set_item("source_card_id", card_id.as_str())?;
+            d.set_item("source_card_name", card_name.as_str())?;
+            let meta = PyDict::new_bound(py);
+            meta.set_item("source_zone", format!("{:?}", source_zone))?;
+            d.set_item("meta", meta)?;
         }
         GameEvent::GameOver { winner, reason, .. } => {
             let meta = PyDict::new_bound(py);
@@ -1535,6 +1736,7 @@ fn event_to_pydict<'py>(py: Python<'py>, ev: &GameEvent) -> PyResult<Bound<'py, 
 fn digimon_engine(_py: Python, m: &Bound<PyModule>) -> PyResult<()> {
     m.add_class::<RustHeadlessGame>()?;
     m.add_class::<RustDebugGame>()?;
+    m.add_class::<RustReplayRunner>()?;
     m.add_class::<CardDatabase>()?;
     m.add_class::<PyCard>()?;
     m.add_class::<PyEvoCost>()?;

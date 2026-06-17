@@ -18,6 +18,7 @@ interface DeckBuilderStore {
   gameMode: string;
   mainDeck: DeckEntry[];
   eggDeck: DeckEntry[];
+  deckIconCardId: string | null;
   isDirty: boolean;
   validationResult: DeckValidationResult | null;
 
@@ -43,12 +44,14 @@ interface DeckBuilderStore {
   setDeckName: (name: string) => void;
   setDeckId: (id: string | null) => void;
   setGameMode: (mode: string) => void;
+  setDeckIconCardId: (id: string | null) => void;
   loadDeck: (
     id: string | null,
     name: string,
     main: DeckEntry[],
     egg: DeckEntry[],
     gameMode?: string,
+    deckIconCardId?: string | null,
   ) => void;
   clearDeck: () => void;
   setValidationResult: (result: DeckValidationResult | null) => void;
@@ -69,6 +72,7 @@ export const useDeckBuilderStore = create<DeckBuilderStore>((set) => ({
   gameMode: 'standard',
   mainDeck: [],
   eggDeck: [],
+  deckIconCardId: null,
   isDirty: false,
   validationResult: null,
 
@@ -139,23 +143,42 @@ export const useDeckBuilderStore = create<DeckBuilderStore>((set) => ({
           }
         }
       }
-      return { mainDeck, eggDeck, isDirty: true };
+      const iconStillPresent =
+        s.deckIconCardId &&
+        [...mainDeck, ...eggDeck].some((entry) => entry.cardId === s.deckIconCardId && entry.count > 0);
+      return {
+        mainDeck,
+        eggDeck,
+        deckIconCardId: iconStillPresent ? s.deckIconCardId : null,
+        isDirty: true,
+      };
     }),
 
   setDeckName: (name) => set({ deckName: name, isDirty: true }),
   setDeckId: (id) => set({ deckId: id }),
   setGameMode: (mode) => set({ gameMode: mode, isDirty: true }),
-  loadDeck: (id, name, main, egg, gameMode) =>
+  setDeckIconCardId: (id) => set({ deckIconCardId: id, isDirty: true }),
+  loadDeck: (id, name, main, egg, gameMode, deckIconCardId = null) =>
     set((s) => ({
       deckId: id,
       deckName: name,
       mainDeck: main,
       eggDeck: egg,
       gameMode: gameMode ?? s.gameMode,
+      deckIconCardId,
       isDirty: false,
     })),
   clearDeck: () =>
-    set({ deckId: null, deckName: 'New Deck', gameMode: 'standard', mainDeck: [], eggDeck: [], isDirty: false, validationResult: null }),
+    set({
+      deckId: null,
+      deckName: 'New Deck',
+      gameMode: 'standard',
+      mainDeck: [],
+      eggDeck: [],
+      deckIconCardId: null,
+      isDirty: false,
+      validationResult: null,
+    }),
   setValidationResult: (result) => set({ validationResult: result }),
   setSavedDecks: (decks) => set({ savedDecks: decks }),
   setIsDirty: (dirty) => set({ isDirty: dirty }),

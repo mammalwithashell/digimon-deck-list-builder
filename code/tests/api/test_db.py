@@ -370,14 +370,15 @@ class TestDeckEndpoints:
         resp = await client.get(f"/decks/{deck_id}", headers=headers)
         assert resp.status_code == 404
 
-    async def test_edh_requires_commander(self, client: AsyncClient):
-        token = await self._register_and_login(client, "edhuser")
+    async def test_commander_id_must_reference_card_in_deck(self, client: AsyncClient):
+        token = await self._register_and_login(client, "iconuser")
         headers = {"Authorization": f"Bearer {token}"}
 
         resp = await client.post("/decks", json={
-            "name": "Bad EDH Deck",
-            "game_mode": "edh_commander",
-            "main_deck": ["BT14-001"] * 70,
+            "name": "Bad Icon Deck",
+            "game_mode": "standard",
+            "main_deck": ["BT14-001"] * 50,
+            "commander_id": "BT99-999",
         }, headers=headers)
         assert resp.status_code == 400
         assert "commander_id" in resp.json()["detail"]

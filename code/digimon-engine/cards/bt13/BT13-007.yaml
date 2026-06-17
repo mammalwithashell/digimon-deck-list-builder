@@ -16,7 +16,11 @@ effects:
     optional: true
     once_per_turn: true
     when_any_ally_played: { trait_has: "Royal Knight" }
-    amount_fn: { raw_rust: bt13_007_royal_knight_cost_reduction }
+    # Reduce the Royal Knight's play cost by 4, plus 1 per digivolution card
+    # under this Digimon (King Drasil). `per: material_count` resolves against
+    # the cost-reduction source permanent (= this card), so this equals the
+    # former raw_rust `4 + source_stack_source_count()` without an escape hatch.
+    amount_fn: { base: 4, per: material_count, delta: 1 }
 
   - when: start_of_your_main_phase
     scope: face_up
