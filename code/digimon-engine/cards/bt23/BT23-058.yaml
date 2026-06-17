@@ -46,7 +46,39 @@ effects:
       - suspend: { target: source }
       - cancel_replacement: {}
 
-  # [All Turns][OPT] when this Digimon suspends, delete all opponent Digimon
-  # with the lowest play cost is omitted: current DSL cannot both gate the
-  # on_suspend event to this exact permanent and express aggregate lowest
-  # play-cost delete-all.
+  # ─── [All Turns][Once Per Turn] self-suspend lowest-play-cost delete-all ─────
+  #
+  # "When this Digimon is suspended, delete all of your opponent's Digimon with
+  # the lowest play cost."
+  #
+  # event_permanent_is_source gates the OnSuspend observer to THIS exact
+  # Craniamon being suspended (the BT23-077 Sistermon Ciel pattern); another
+  # permanent suspending does not over-fire it. The delete-all is the verbatim
+  # BT9-112 DeathXmon Clause C idiom: a for_each over opponent Digimon whose
+  # play cost is <= the lowest play cost among the opponent's Digimon (the
+  # `lowest_play_cost` aggregate scoped to the opponent), deleting each. This
+  # is a deterministic sweep with no player choice, so no selection installs.
+  - when: on_suspend
+    active_when: { all_turns: true }
+    once_per_turn: true
+    condition:
+      all_of:
+        - event_permanent_is_source: true
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+    summary: "[All Turns][Once Per Turn] When this Digimon suspends, delete all opponent Digimon with the lowest play cost"
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            play_cost_lte:
+              aggregate:
+                selector: lowest_play_cost
+                scope: opponent
+          bind_as: victim
+          body:
+            - delete_permanent: { target: victim }

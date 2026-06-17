@@ -67,7 +67,15 @@ pub struct EffectResultLog {
     pub suspended: Vec<PermanentHandle>,
     pub returned_cards: Vec<CardHandle>,
     pub returned_to_deck: Vec<CardHandle>,
-    pub deleted: Vec<PermanentHandle>,
+    /// Permanents deleted by THIS effect, each tagged with the pre-removal
+    /// effective DP snapshot captured at the delete-step call site (the
+    /// carrier is live in `battle_area` at that moment; after deletion it has
+    /// moved to trash and a live DP read is unavailable — rule 25). `None`
+    /// only when the deleted permanent had no DP (non-Digimon). Consumers that
+    /// only need owner-side membership read the handle component (so existing
+    /// `effect_deleted_any_*` consumers are unaffected); the DP component
+    /// powers the `effect_deleted_opponent_digimon_dp_gte` result predicate.
+    pub deleted: Vec<(PermanentHandle, Option<i32>)>,
     pub played: Vec<PermanentHandle>,
     pub digivolved: Vec<PermanentHandle>,
     pub added_to_hand: Vec<CardHandle>,
@@ -147,8 +155,11 @@ impl Bindings {
         self.result_log.returned_cards.push(card);
     }
 
-    pub fn record_deleted(&mut self, handle: PermanentHandle) {
-        self.result_log.deleted.push(handle);
+    /// Record a permanent deleted by this effect alongside its pre-removal
+    /// effective DP (captured by the caller BEFORE the carrier moves to trash;
+    /// `None` when the deleted permanent had no DP). See `EffectResultLog::deleted`.
+    pub fn record_deleted(&mut self, handle: PermanentHandle, dp: Option<i32>) {
+        self.result_log.deleted.push((handle, dp));
     }
 
     pub fn record_played(&mut self, handle: PermanentHandle) {

@@ -27,10 +27,98 @@ effects:
     keyword: SecurityAttackPlus
     value: 1
 
-# Stubbed:
-# - [On Play][When Digivolving] suspend 5 opponent Digimon/Tamers, prevent all
-#   opponent Digimon unsuspend next phase, then may attack. Needs N-target
-#   suspend, next-unsuspend-phase blanket lock, and in-effect attack.
-# - [Your Turn][Once Per Turn] when opponent security removed, trash an Option
-#   in their battle area then delete a suspended Digimon/Tamer. Needs security-
-#   removed observer and Option-permanent trash.
+  # ─── [On Play][When Digivolving]: suspend 5, lock unsuspend, may attack ──────
+  #
+  # "Suspend 5 of your opponent's Digimon or Tamers. None of your opponent's
+  #  Digimon can unsuspend in their next unsuspend phase. Then, this Digimon may
+  #  attack."
+  #
+  # DCGO (BT23_047.cs SharedActivateCoroutine):
+  #   - SelectPermanentEffect over opponent Digimon/Tamers, maxCount min(5, n),
+  #     canNoSelect false, canEndNotMax false, Mode Tap → `select_count_capped_multi`
+  #     with `max: 5, clamp_to_available: true, optional_zero: false` then suspend each
+  #     (the "Suspend 5" mandatory-affect-min(5,available) idiom — BT24-051 precedent).
+  #   - GainCanNotUnsuspendPlayerEffect over opponent **Digimon only**
+  #     (SharedCanSelectOpponentsDigimon = IsOpponentBattleAreaDigimon),
+  #     UntilOwnerActivePhase. The printed "next unsuspend phase" is modeled as a
+  #     CannotUnsuspend modifier with `end_of_opponents_turn` expiry: the modifier
+  #     is present during the opponent's next unsuspend phase (start of their turn)
+  #     and the engine's bulk unsuspend honors it (game_phases.rs). Precedent:
+  #     BT16-025 / BT24-095. (No `UntilNextUnsuspend` Expiry exists for modifiers;
+  #     the `end_of_opponents_turn` form is the established faithful pattern.)
+  #   - "Then, this Digimon may attack" → `may_attack_now { attacker: source,
+  #     optional: true }` (PASS exposed).
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Suspend up to 5 opp Digimon/Tamers; opp Digimon can't unsuspend next phase; then this Digimon may attack"
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 5
+          clamp_to_available: true
+          optional_zero: false
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: suspended_targets
+          prompt: "Suspend 5 of your opponent's Digimon or Tamers"
+      - per_selected:
+          selection: suspended_targets
+          bind_as: suspended_target
+          body:
+            - suspend: { target: suspended_target }
+      # "None of your opponent's Digimon can unsuspend in their next unsuspend
+      # phase." — Digimon-only lock (DCGO SharedCanSelectOpponentsDigimon).
+      - add_modifier:
+          target:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+          modifier: CannotUnsuspend
+          value: 1
+          expiry: end_of_opponents_turn
+      # "Then, this Digimon may attack."
+      - may_attack_now:
+          attacker: source
+          targets: any
+          optional: true
+          prompt: "Have this Examon attack?"
+
+  # ─── [Your Turn][OPT] opponent-security-removed → Option trash + delete ─────
+  #
+  # "When your opponent's security stack is removed from, trash 1 of their
+  #  Option cards in the battle area. Then, delete 1 of their suspended Digimon
+  #  or Tamers."
+  #
+  # DCGO (BT23_047.cs OnLoseSecurity, max-per-turn 1, gated by IsOwnerTurn +
+  # CanTriggerWhenLoseSecurity(player == Enemy)):
+  #   - SelectPermanentEffect over opponent Option permanents, maxCount 1,
+  #     canNoSelect false, Mode Destroy → `select_opponent_permanent { kind: option }`
+  #     + `delete_permanent` (the engine routes delete on an Option permanent to
+  #     the trash path; AD1-025 precedent for opponent Option trash).
+  #   - SelectPermanentEffect over opponent suspended Digimon/Tamers, maxCount 1,
+  #     canNoSelect false, Mode Destroy → `select_opponent_permanent` with
+  #     `is_suspended: true` over Digimon/Tamer + `delete_permanent`.
+  #   Both picks are mandatory-when-present (no opt-out) and silently no-op when
+  #   no candidate exists.
+  - when: on_opponent_security_removed
+    active_when: { your_turn: true }
+    once_per_turn: true
+    summary: "[Your Turn][OPT] When opp security removed, trash 1 opp Option then delete 1 suspended opp Digimon/Tamer"
+    process:
+      - select_opponent_permanent:
+          bind_as: opt_target
+          filter: { kind: option }
+          prompt: "Trash 1 of your opponent's Option cards in the battle area"
+      - delete_permanent: { target: opt_target }
+      - select_opponent_permanent:
+          bind_as: del_target
+          filter:
+            all_of:
+              - is_suspended: true
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+          prompt: "Delete 1 of your opponent's suspended Digimon or Tamers"
+      - delete_permanent: { target: del_target }

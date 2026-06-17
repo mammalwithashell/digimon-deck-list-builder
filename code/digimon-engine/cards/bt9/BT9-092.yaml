@@ -36,8 +36,40 @@ effects:
     process:
       - play_from_security: {}
 
-  # Omitted:
-  # [All Turns] When one of your Digimon would digivolve into a same-level
-  # Digimon with [X Antibody] in traits, this Tamer may suspend to draw 1 and
-  # gain 1 memory. Current DSL cannot observe/gate that exact same-level
-  # X-Antibody digivolution event with a suspend-self cost.
+  # ─── Clause 2: [Your Turn] same-level [X Antibody] digivolve observer ─────
+  #
+  # Printed text (image-authoritative — Card/BT9-092.webp):
+  #   "[Your Turn] When one of your Digimon digivolves into a same-level
+  #   Digimon with [X Antibody] in its traits, you may suspend this Tamer to
+  #   gain 1 memory and <Draw 1>."
+  #
+  # DCGO BT9_092.cs clause 2 (EffectTiming.OnEnterFieldAnyone):
+  #   PermanentCondition = IsPermanentExistsOnOwnerBattleAreaDigimon &&
+  #     TopCard.HasXAntibodyTraits && IsDigivolvedFromSameLevelFromEnterField;
+  #   CanUseCondition    = IsExistOnBattleArea && IsOwnerTurn(card) &&
+  #     CanTriggerWhenPermanentDigivolving(PermanentCondition);
+  #   CanActivateCondition = CanActivateSuspendCostEffect(card) — the Tamer
+  #     must be UNSUSPENDED to pay the cost;
+  #   body = SuspendPermanents(this Tamer).Tap() → Draw 1 → AddMemory(1).
+  #
+  # Maps verbatim onto AD1-019 clause 2 (on_digivolve + suspend-self + trait
+  # gate) with (a) the trait gate "X Antibody" instead of ADVENTURE, (b) one
+  # extra leaf `event_target_same_level_as_previous: true` (proven live by
+  # tests/dsl/phase3d_event_context.rs `digivolve_event_can_match_same_level
+  # _x_antibody_transition`), and (c) a simpler body (gain_memory + draw).
+  # The optional `optional: true` is the printed "you may".
+  - when: on_digivolve
+    active_when: { your_turn: true }
+    optional: true
+    summary: "[Your Turn] When your Digimon digivolves into a same-level [X Antibody] Digimon, by suspending this Tamer gain 1 memory and draw 1"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_trait_has: "X Antibody"
+        - event_target_same_level_as_previous: true
+        - source_is_unsuspended: true
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+      - draw: { of: you, count: 1 }

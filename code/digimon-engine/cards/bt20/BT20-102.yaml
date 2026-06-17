@@ -25,7 +25,7 @@ effects:
   # Declarative keyword grant.
   # GAP G-DECLARATIVE-KEYWORD: `EffectTiming::Declarative` is compiled but never
   # enqueued/fired. The grant_keyword modifier is not installed at runtime. Tests
-  # for keyword-grant modifier presence are #[ignore = "pending: G-DECLARATIVE-KEYWORD"].
+  # for keyword-grant modifier presence were #[ignore]'d on G-DECLARATIVE-KEYWORD (now RESOLVED, qa/resolved-gaps.md).
   - kind: grant_keyword
     keyword: Raid
 

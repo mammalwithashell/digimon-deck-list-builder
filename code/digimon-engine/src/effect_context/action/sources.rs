@@ -838,4 +838,73 @@ impl<'a> EffectContext<'a> {
         }
         all_ok
     }
+
+    /// Mirror of [`Self::return_card_source_to_hand`], but routes the removed
+    /// digivolution source to its OWNER's deck (top or bottom) instead of the
+    /// hand.
+    ///
+    /// Used by card effects that say "By returning N [card] from this Digimon's
+    /// digivolution cards to the bottom of your deck" (e.g. BT13-075 Alphamon's
+    /// would-leave self-protection cost). Reuses [`Self::move_card_to_deck`],
+    /// which already routes Digi-Egg sources to the digitama deck and inserts at
+    /// index 0 for the bottom of the deck.
+    ///
+    /// Owner-routing, stack invariant, and observer dispatch match
+    /// `return_card_source_to_hand`: the card is routed to `removed.owner`'s
+    /// deck (not the controller's); the source is removed by `position(...)`
+    /// anywhere in the stack, preserving the host permanent's top card and the
+    /// ordering of the remaining sources; and this is a *return*, NOT a trash,
+    /// so it does **not** fire `OnDigivolutionCardTrashed`.
+    ///
+    /// Returns `true` when the source handle was found and moved; `false` if the
+    /// permanent slot is gone or the card is not in its stack.
+    pub fn return_card_source_to_deck(
+        &mut self,
+        perm: PermanentHandle,
+        card: CardHandle,
+        to_bottom: bool,
+    ) -> bool {
+        let removed = {
+            let permanent = match self
+                .game
+                .player_mut(perm.player)
+                .battle_area
+                .get_mut(perm.index as usize)
+            {
+                Some(p) => p,
+                None => return false,
+            };
+            let pos = match permanent
+                .card_sources
+                .iter()
+                .position(|c| c.handle() == card)
+            {
+                Some(pos) => pos,
+                None => return false,
+            };
+            permanent.card_sources.remove(pos)
+        };
+        self.move_card_to_deck(removed, to_bottom);
+        let _ = self.cleanup_exposed_battle_area_digi_egg(perm);
+        true
+    }
+
+    /// `Vec`-taking convenience wrapper over `return_card_source_to_deck`,
+    /// the deck-routing sibling of `return_selected_sources_to_hand`. Each
+    /// selected source ref is returned to its owner's deck (`to_bottom` selects
+    /// the bottom vs the top). Returns `true` if every ref was successfully
+    /// moved.
+    pub fn return_selected_sources_to_deck(
+        &mut self,
+        selected: Vec<SourceSelectionRef>,
+        to_bottom: bool,
+    ) -> bool {
+        let mut all_ok = true;
+        for source_ref in selected {
+            if !self.return_card_source_to_deck(source_ref.permanent, source_ref.card, to_bottom) {
+                all_ok = false;
+            }
+        }
+        all_ok
+    }
 }

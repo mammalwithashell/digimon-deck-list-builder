@@ -35,8 +35,46 @@ effects:
     process:
       - play_from_security: {}
 
-  # Omitted:
-  # [All Turns][Once Per Turn] When this Tamer suspends, 1 of your Digimon gains
-  # Piercing and +3000 DP for the turn; then 1 opponent Digimon gets -3000 DP.
-  # Current DSL cannot gate on the on_suspend event target being this exact
-  # source Tamer without over-firing on other permanents suspending.
+  # ─── [All Turns][Once Per Turn] self-suspend buff own + debuff opponent ──────
+  #
+  # "When this Tamer suspends, 1 of your Digimon gains <Piercing> and +3000 DP
+  # for the turn. Then, 1 of your opponent's Digimon gets -3000 DP for the turn."
+  #
+  # event_permanent_is_source gates the OnSuspend observer to THIS exact Marcus
+  # being suspended (the BT23-077 Sistermon Ciel pattern); another permanent
+  # suspending does not over-fire it. once_per_turn → printed [Once Per Turn].
+  # The first (buff) target is mandatory "1 of your Digimon"; the condition
+  # gates on having an own Digimon so no prompt installs when there is none.
+  # The turn-scoped Piercing grant is the BT20-016 idiom.
+  - when: on_suspend
+    active_when: { all_turns: true }
+    once_per_turn: true
+    condition:
+      all_of:
+        - event_permanent_is_source: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+    summary: "[All Turns][OPT] When this Tamer suspends, 1 own Digimon gains Piercing and +3000 DP; then 1 opponent Digimon gets -3000 DP"
+    process:
+      - select_own_permanent:
+          bind_as: buff_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to gain Piercing and +3000 DP for the turn"
+      - grant_keyword:
+          target: buff_target
+          keyword: Piercing
+          expiry: end_of_turn
+      - add_dp_modifier:
+          target: buff_target
+          value: 3000
+          expiry: end_of_turn
+      - select_opponent_permanent:
+          bind_as: debuff_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -3000 DP for the turn"
+      - add_dp_modifier:
+          target: debuff_target
+          value: -3000
+          expiry: end_of_turn

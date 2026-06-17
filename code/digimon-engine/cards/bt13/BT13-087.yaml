@@ -55,7 +55,44 @@ effects:
                 of: you
                 card: rest
 
-# Stubbed:
-# - [All Turns] when another Lucemon/Royal Knight is played, delete all opposing
-#   level 4 or lower Digimon. This needs an event observer for another matching
-#   Digimon being played plus a delete-all filtered board operation.
+  # ─── Clause 2 — [Your Turn] another Lucemon/Royal Knight Digimon played →
+  #               delete all opponent level 4 or lower Digimon ─────────────────
+  #
+  # Printed text (card image BT13-087.webp): "[Your Turn] When you play another
+  # Digimon with [Lucemon] in its name or the [Royal Knight] trait, delete all
+  # of your opponent's level 4 or lower Digimon."
+  #
+  # DCGO BT13_087.cs Clause C (OnEnterFieldAnyone):
+  #   CanUseCondition = IsExistOnBattleAreaDigimon(card) && IsOwnerTurn(card)
+  #                     && CanTriggerOnPermanentPlay(PermanentCondition)
+  #   PermanentCondition = IsPermanentExistsOnOwnerBattleAreaDigimon(p, card)   (event_target_owner: you, kind digimon)
+  #                        && p != card.PermanentOfThisCard()                   (event_target_is_source: false — "another")
+  #                        && (TopCard.ContainsCardName("Lucemon")
+  #                            || TopCard.HasRoyalKnightTraits)                  (name OR trait filter)
+  #   ActivateCoroutine = Enemy.GetBattleAreaDigimons().Filter(Level <= 4
+  #                        && TopCard.HasLevel) → DestroyPermanentsClass         (delete all opp ≤Lv4; HasLevel guard)
+  #
+  # level_lte: 4 rejects None-level cards (predicate excludes cards without a
+  # printed level), mirroring DCGO's TopCard.HasLevel guard. The delete is a
+  # for_each (no player choice — "delete ALL"), so it installs no selection.
+  - when: on_ally_played
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When you play another Lucemon/Royal Knight Digimon, delete all opponent level 4 or lower Digimon"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_is_source: false
+        - any_of:
+            - event_card_name_contains: Lucemon
+            - event_card_trait_has: Royal Knight
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            level_lte: 4
+          bind_as: victim
+          body:
+            - delete_permanent: { target: victim }

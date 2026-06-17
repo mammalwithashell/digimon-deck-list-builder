@@ -118,7 +118,7 @@ effects:
   # ─── Clause 3 — Inherited <Raid> ─────────────────────────────────────────────
   #
   # Printed inherited keyword. DCGO: RaidSelfEffect(isInheritedEffect: true).
-  # Declarative grant_keyword. Pending G-DECLARATIVE-KEYWORD: declarative
+  # Declarative grant_keyword. G-DECLARATIVE-KEYWORD RESOLVED (qa/resolved-gaps.md); declarative
   # clauses are compiled but not yet enqueued at runtime, so the modifier
   # is not installed. Documented for future activation.
   - scope: inherited

@@ -43,6 +43,15 @@ pub struct PredicateSpec {
     pub color_matches_any_field_digimon: Option<PlayerRefSelector>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_matches_binding: Option<String>,
+    /// True when the candidate card shares ≥1 color with ANY card recorded in
+    /// this effect's `returned_to_deck` result log (the cards a preceding
+    /// `return_trash_list_to_deck_bottom` / `return_all_trash_to_deck_bottom`
+    /// moved). The returned card never becomes a permanent, so it cannot be a
+    /// permanent binding — this leaf reads the result log directly rather than a
+    /// binding name. Candidate side is kind-aware exactly like
+    /// `color_matches_binding`. G-RETURNED-CARD-COLOR-BINDING (driver EX10-068).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color_matches_returned_card: Option<bool>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         alias = "trait",
@@ -384,6 +393,13 @@ pub struct PredicateSpec {
     pub event_card_trait_has: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_name_contains: Option<String>,
+    /// Case-insensitive substring scan against the triggering event card's
+    /// PRINTED text (effect / inherited / security). Sibling of
+    /// `event_card_name_contains` (which matches the NAME) and the event-side
+    /// analogue of the static `effect_text_contains`. Gates observers on
+    /// "when you play a card with <X> in its text". G-DSL-EVENT-CARD-TEXT-CONTAINS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_text_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_level_eq: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -478,6 +494,16 @@ pub struct PredicateSpec {
     pub effect_deleted_any_own_digimon: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub effect_deleted_any_opponent_digimon: Option<bool>,
+    /// True iff at least one OPPONENT Digimon deleted by THIS effect had
+    /// pre-removal effective DP `>= N`. The DP-threshold sibling of
+    /// `effect_deleted_any_opponent_digimon`; reads the per-deletion DP
+    /// snapshot recorded in the effect-result log (the carrier is in trash by
+    /// the time a rider evaluates, so the snapshot is the only faithful DP
+    /// source). Driver: EX4-065 Trident Gaia
+    /// ("If a Digimon with 13000 DP or more is deleted by this effect, trash
+    /// the opponent's top security card"). G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub effect_deleted_opponent_digimon_dp_gte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub effect_played_any_digimon: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]

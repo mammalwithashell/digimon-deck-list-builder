@@ -14,6 +14,31 @@ alt_paths:
     cost: 3
 
 effects:
+  # ─── Cost reduction: own field Digimon named [Knightmon]/[Lucemon] → -5 ─────
+  #
+  # Printed (card face is authoritative, CLAUDE.md source priority): "When this
+  # card would be played, if you have a Digimon with [Knightmon] or [Lucemon] in
+  # its NAME, reduce the play cost by 5." Presence check (>=1) over own
+  # battle-area Digimon whose NAME contains Knightmon OR Lucemon — matches DCGO
+  # AD1_018.cs (HasMatchConditionOwnersPermanent on field TopCard name).
+  # CORRECTED 2026-06-15: the prior trash-text-count reading came from an
+  # inaccurate cards.json effect string and contradicted the printed card image.
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [battle_area]
+          kind: digimon
+          any_of:
+            - name_contains: "Knightmon"
+            - name_contains: "Lucemon"
+        n: 1
+    amount: 5
+    summary: "-5 play cost if you have a [Knightmon]/[Lucemon]-named Digimon in play"
+
   - when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Opponent Digimon effects don't affect 1 of your Digimon"
     process:
@@ -52,7 +77,25 @@ effects:
           prompt: "Delete 1 opponent Digimon with play cost 3 or less"
       - delete_permanent: { target: victim }
 
-  # Omitted:
-  # Play-cost reduction based on text in trash and the All Turns observer for
-  # Knightmon/Lucemon-text Digimon being played are blocked by text-search count
-  # predicates and event-card text predicates.
+  # [All Turns][Once Per Turn] "When any of your Digimon with [Knightmon] or
+  # [Lucemon] in their texts are played, <De-Digivolve 2> 1 of your opponent's
+  # Digimon." Keys on the TRIGGERING (played) card's printed TEXT via the
+  # event_card_text_contains leaf (G-DSL-EVENT-CARD-TEXT-CONTAINS, closed
+  # 2026-06-15). Mandatory (printed has no "you may"); Once Per Turn; All Turns.
+  - when: on_any_digimon_played
+    once_per_turn: true
+    summary: "[All Turns][OPT] When you play a [Knightmon]/[Lucemon]-text Digimon, De-Digivolve 2 an opponent Digimon"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - any_of:
+            - event_card_text_contains: "Knightmon"
+            - event_card_text_contains: "Lucemon"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 2"
+      - de_digivolve:
+          target: target
+          amount: 2

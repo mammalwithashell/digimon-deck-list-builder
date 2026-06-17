@@ -174,7 +174,7 @@ effects:
           filter:
             all_of:
               - kind: digimon
-              # G-PRED-DP-LTE: dp_lte not yet evaluated for permanents.
+              # G-PRED-DP-LTE RESOLVED (qa/resolved-gaps.md): dp_lte is evaluated for permanents.
               - dp_lte:
                   aggregate:
                     selector: lowest_dp

@@ -51,7 +51,7 @@ alt_paths:
 # Trigger gating in DSL:
 #   - active_when: { your_turn: true }            → [Your Turn]
 #   - once_per_turn: true                         → [Once Per Turn] (best-effort;
-#     blocked at runtime by G-OPT-TRIGGERED until that gap closes)
+#     formerly blocked at runtime by G-OPT-TRIGGERED (now RESOLVED, qa/resolved-gaps.md))
 #   - condition: any_permanent of:you, zone:battle_area, card_number_is "P-123"
 #                                                 → Ukkomon must be on the field
 #   - condition: event_target_owner: you, event_target_kind: digimon

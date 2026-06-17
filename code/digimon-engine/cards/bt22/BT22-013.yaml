@@ -155,7 +155,7 @@
 # Branch 0 here will exhibit the same observable: picking branch 0 then the
 # Gabumon permanent will not install the MetalGarurumon hand prompt, and
 # the digivolve never happens. Behavioral test for branch 0 is
-# #[ignore = "BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET"].
+# was #[ignore]'d on G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET (now RESOLVED, qa/resolved-gaps.md).
 #
 # ─── DSL-GAP — `source_name_contains` predicate (Inherited)  [G-DSL-SOURCE-NAME-CONTAINS] ─
 #
@@ -174,13 +174,13 @@
 # the same `dp_lte: { aggregate: { selector: lowest_dp, scope: opponent } }`
 # pattern that BT24-017 (Medusamon) [When Digivolving] uses. BT24-017's
 # header notes the engine predicate evaluator has a related gap
-# (G-PRED-DP-LTE) where `dp_lte` on permanents is parsed but not yet
+# (G-PRED-DP-LTE — RESOLVED, qa/resolved-gaps.md; dp_lte now evaluated) where `dp_lte` on permanents is
 # evaluated. The select prompt may show all opponent Digimon rather than
 # only the lowest-DP one. The YAML is correct against the spec; the engine
 # gap is shared with BT24-017 and BT24-040.
 #
 # We encode the predicate faithfully and structure the test to ASSERT the
-# lowest-DP-only behavior. The test is #[ignore = "BLOCKED: G-PRED-DP-LTE"]
+# lowest-DP-only behavior. The test was #[ignore]'d on G-PRED-DP-LTE (now RESOLVED, qa/resolved-gaps.md)
 # until the evaluator gap closes; a positive-only test (single low-DP
 # Digimon — only legal target) DOES pass.
 #
@@ -241,7 +241,7 @@ effects:
   # WITH-PERMANENT-TARGET (the chained hand-pick prompt never installs).
   #
   # Inner branch 1 uses dp_lte: { aggregate: lowest_dp } — same pattern as
-  # BT24-017 / BT24-040, blocked by G-PRED-DP-LTE on the lowest-DP filter
+  # BT24-017 / BT24-040, formerly blocked by G-PRED-DP-LTE (now RESOLVED, qa/resolved-gaps.md) on the lowest-DP filter
   # being honored.
   - when: when_digivolving
     summary: "[When Digivolving] Choose: digivolve Gabumon→MetalGarurumon free OR delete opp's lowest-DP Digimon"

@@ -246,12 +246,32 @@ impl Game {
         };
         let reducer = self.player_digivolve_cost_reducers[reducer_idx].clone();
 
+        // G-DELAY-NEXT-DIGIVOLVE-COST-REDUCTION — a FREE reducer
+        // (`suspend_cost == false`) carries no player choice: the rules apply
+        // the reduction unconditionally (DCGO ST12_15.cs installs an
+        // unconditional `Cost -= 1` with no accept/decline gate). Auto-apply
+        // it synchronously instead of parking a spurious optional prompt
+        // (which would over-expose an illegal PASS — see
+        // reference_dsl_optional_mandatory_selection_pitfall). Consume it if
+        // single-fire, stage the reduction, and return `false` so the caller's
+        // existing cost math (`digivolve_from_hand_inner` consumes
+        // `pending_player_digivolve_reduction`) applies the -N with no parked
+        // selection. The paid path (`suspend_cost == true`, BT3-103) is
+        // unchanged below.
+        if !reducer.suspend_cost {
+            let amount = reducer.amount;
+            self.consume_player_digivolve_reducer(reducer_idx, &reducer, reducer.single_fire);
+            self.pending_player_digivolve_reduction = amount;
+            let _ = (hand_index, field_index, source);
+            return false;
+        }
+
         // Verify the suspend cost is payable: the player must have at least
         // one unsuspended Digimon to suspend. If not, the reducer cannot
         // fire — leave it armed (per the gap's single-fire rule: a
         // cost-impossible attempt does NOT consume the reducer) and let the
         // digivolution proceed at the unreduced cost.
-        if reducer.suspend_cost && self.suspendable_own_digimon(acting_player).is_empty() {
+        if self.suspendable_own_digimon(acting_player).is_empty() {
             return false;
         }
 

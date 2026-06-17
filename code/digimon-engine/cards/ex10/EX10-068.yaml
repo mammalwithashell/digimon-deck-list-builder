@@ -4,9 +4,49 @@ kind: tamer
 color: [black]
 cost: 5
 
+# Printed card text (cards.json / card image — verbatim):
+#   [Start of Your Main Phase] For every 2 colors your opponent's Digimon and
+#     Tamers have, gain 1 memory.
+#   [On Play] Delete 1 of your opponent's play cost 5 or lower Digimon. Then, by
+#     returning 1 Digimon card from your opponent's trash to the bottom of the
+#     deck, from your hand or trash and without paying the cost, you may play 1
+#     level 4 or lower Digimon card with the same color as the card this effect
+#     returned.
+#   [Security] Play this card without paying the cost.
+#   Rule: Name — Also treated as [Ken Ichijoji].
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX10/White/EX10_068.cs
+#   - Start of Your Main Phase: memoryGain = GetUniqueColourCountOnOpponents
+#     BattleArea(IsOpponentDigimon || IsOpponentTamer) / 2 (C# int div = floor).
+#   - On Play: mandatory delete (canNoSelect:false, cost<=5), then OPTIONAL
+#     return of one opponent-trash Digimon to deck bottom (canNoSelect:()=>true);
+#     if a card was returned, OPTIONAL play of a Lv<=4 Digimon from hand OR trash
+#     whose CardColors intersect the returned card's colors (CanSelectCard
+#     Condition: cardSource.CardColors.Any(x => returned.HasCardColor(x))).
+
 effects:
+  # ─── [Start of Your Main Phase] distinct-color memory ──────────────────────
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] Gain 1 memory per 2 colors across opponent's Digimon and Tamers"
+    process:
+      - gain_memory_fn:
+          formula:
+            floor_div:
+              - base: 0
+                per:
+                  distinct_colors_count:
+                    of: opponent
+                    zone: battle_area
+                    filter:
+                      any_of:
+                        - kind: digimon
+                        - kind: tamer
+                delta: 1
+              - 2
+
+  # ─── [On Play] delete → return opp-trash Digimon → play same-color Lv<=4 ────
   - when: on_play
-    summary: "[On Play] Delete 1 opponent play cost 5 or lower Digimon"
+    summary: "[On Play] Delete 1 opp play-cost-5-or-lower Digimon; then return 1 opp-trash Digimon to deck bottom and may play a same-color Lv.4-or-lower Digimon free from hand/trash"
     process:
       - select_opponent_permanent:
           bind_as: victim
@@ -16,15 +56,38 @@ effects:
               - play_cost_lte: 5
           prompt: "Delete 1 opponent Digimon with play cost 5 or lower"
       - delete_permanent: { target: victim }
+      # The return is optional ("by returning ... you may play"); declining it
+      # aborts the play tail (cost: true short-circuits the body) — matching
+      # DCGO's canNoSelect:()=>true on the return select.
+      - select_trash:
+          of: opponent
+          bind_as: returned
+          optional: true
+          cost: true
+          filter:
+            kind: digimon
+          prompt: "You may return 1 Digimon from your opponent's trash to the bottom of their deck"
+      - return_trash_list_to_deck_bottom:
+          of: opponent
+          cards: returned
+      # Play 1 Lv.4-or-lower Digimon from hand OR trash, free, sharing >=1 color
+      # with the card this effect returned (G-RETURNED-CARD-COLOR-BINDING).
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: play_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - color_matches_returned_card: true
+          prompt: "You may play 1 level 4 or lower Digimon with the same color as the returned card, from hand or trash, without paying the cost"
+      - play_union_bound_free:
+          binding: play_pick
 
+  # ─── [Security] play self without paying the cost ──────────────────────────
   - when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:
       - play_from_security: {}
-
-# Stubbed:
-# - [Start of Your Main Phase] gain memory for every 2 colors among opponent
-#   Digimon and Tamers needs distinct-color counting across opponent permanents.
-# - The On Play tail returns one opponent trash Digimon to deck bottom, then
-#   may play a level 4 or lower Digimon from hand/trash with the same color.
-#   Needs returned-card color binding plus union hand/trash play.

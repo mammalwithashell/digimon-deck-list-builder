@@ -15,7 +15,7 @@ traits: [Cyborg]
 #    card in your hand for a digivolution cost of 4, ignoring its digivolution
 #    requirements."
 #
-# OMITTED — pending DSL gap [G-ALT-PATH-CONDITION] (qa/dsl-vocab-gaps.md):
+# OMITTED — authorable-now: [G-ALT-PATH-CONDITION] RESOLVED (qa/resolved-gaps.md):
 #   `AltPathSpec` has `#[serde(deny_unknown_fields)]` and no `condition:`
 #   field. The "[Matt Ishida] tamer present AND opponent has a 10000 DP+ Digimon"
 #   activation gate cannot be expressed today. Authoring the alt-path WITHOUT
