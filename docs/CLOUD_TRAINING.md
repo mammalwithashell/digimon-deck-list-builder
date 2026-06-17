@@ -506,7 +506,7 @@ curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER && newgrp docker
 
 # Workspace
-mkdir -p ~/digimon-training/{runs,models,data,training_jobs,ops/training}
+mkdir -p ~/digimon-training/{runs,models,data,training_jobs}
 cd ~/digimon-training
 ```
 
@@ -516,13 +516,13 @@ cd ~/digimon-training
 # From your LAPTOP
 rsync -az data/ digimon-train:~/digimon-training/data/
 rsync -az training_jobs/ digimon-train:~/digimon-training/training_jobs/
-rsync -az ops/training/ digimon-train:~/digimon-training/ops/training/
+rsync -az docker-compose.watch.yml digimon-train:~/digimon-training/
 
 # On the DROPLET
 docker pull ghcr.io/<your-handle-lowercase>/digimon-trainer:training-v0.1
 
 cd ~/digimon-training
-docker compose -f ops/training/docker-compose.watch.yml up -d
+docker compose -f docker-compose.watch.yml up -d
 # TB now at http://digimon-train:6006 from any tailnet member
 ```
 
@@ -603,3 +603,21 @@ an hour of your time.
 - **Weights & Biases** or any external experiment-tracking SaaS integration.
 - **Tailscale inside the RunPod image** for stable cross-pod URLs. Possible
   (bake into `Dockerfile.training`), deferred until cadence justifies it.
+
+## TensorBoard watcher sidecar
+
+This sidecar is for **Path B** (Hetzner / DO CPU droplets with a host Docker daemon); Path A (RunPod) runs TensorBoard inline inside the pod instead. The watcher is the **observation** layer for a cloud training host. The trainer
+container is a one-shot `docker run` (it exits loudly on completion — we do *not*
+want a 13-hour job silently restart-looping on a transient failure). The watcher
+is the opposite shape: long-lived and declarative, so it is a Compose service.
+
+`docker-compose.watch.yml` (repo root) defines a single `tensorboard` service:
+upstream `tensorflow/tensorflow:latest`, `tensorboard --logdir /runs --bind_all
+--port 6006`, mounting `./runs:/runs:ro` (read-only — the watcher cannot corrupt
+trainer output) with `restart: unless-stopped`. Bring it up once per host at
+provisioning time (`docker compose -f docker-compose.watch.yml up -d`); it
+survives trainer restarts.
+
+**Reach:** port 6006 must only be reachable over Tailscale. The cloud-provider
+firewall (Hetzner / DO Cloud Firewall) blocks inbound `:6006` from the public
+internet; the WireGuard tunnel is the only legitimate path.

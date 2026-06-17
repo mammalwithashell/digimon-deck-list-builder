@@ -1,5 +1,10 @@
 # Deploying the hosted API
 
+> **Procedural runbook** (bootstrap / deploy / rollback / restore). For the
+> hosted-API topology, required env vars, and provider choices, see
+> [`docs/DEPLOYMENT.md`](../DEPLOYMENT.md). The happy-path deploy recipe is the
+> `deploy-hosted-api` skill.
+
 Prod host: `inbetweentheatre.duckdns.org` → DO droplet in NYC3.
 Image registry: `ghcr.io/mammalwithashell/digimon-api`.
 
@@ -69,7 +74,7 @@ Copy deploy files from your laptop:
 scp -i ~/.ssh/digimon_deploy \
   docker-compose.prod.yml Caddyfile \
   deploy@<droplet-ip>:/opt/digimon/
-scp -i ~/.ssh/digimon_deploy -r ops/ \
+scp -i ~/.ssh/digimon_deploy -r scripts/ \
   deploy@<droplet-ip>:/opt/digimon/
 ```
 
@@ -150,7 +155,7 @@ curl -sf https://inbetweentheatre.duckdns.org/health
 ```
 
 This runbook MUST be exercised end-to-end once before alpha opens. See Task 9 in
-`docs/superpowers/plans/2026-04-19-alpha-readiness.md`.
+`docs/superpowers/archive/plans/2026-04-19-alpha-readiness.md`.
 
 ## Spaces lifecycle rule (one-time)
 
