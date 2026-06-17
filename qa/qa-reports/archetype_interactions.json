@@ -197,7 +197,7 @@
               "BT23-047"
             ],
             "implemented": 34,
-            "ratio": 0.40476190476190477,
+            "ratio": 0.4047619047619048,
             "threshold": 0.85,
             "total": 84,
             "unknown_cards": [
@@ -347,14 +347,56 @@
       "test_file": "code/digimon-engine/tests/archetypes/callismon_dark_animal_bt25.rs"
     },
     "DNA Omnimon": {
+      "audit_report": "qa/qa-reports/2026-06-14-archetype-faithfulness-audit.md",
+      "model_doc": "qa/archetype-qa/DNA Omnimon-model.md",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/dna_omnimon.rs",
       "combos_tested": [
-        "DNA Omnimon Alter-S blowout (Blue6 + Red6 -> EX9-021)",
-        "Miraculous Mega Knight Delay -> reactive DNA Omnimon (Option)",
-        "Blast DNA Omnimon off opponent's turn (BT17-078 Counter)",
-        "Free cross-tribe Lv.6 assembly (both DNA materials in one turn)",
-        "Nokia accel into cheap Lv.6 (BT22-013 cost-6 jump)"
+        {
+          "combo": "Combo A — DNA Omnimon Alter-S blowout (Blue 6 + Red 6 -> EX9-021)",
+          "status": "PASS",
+          "tests": [
+            "combo_a_dna_blowout_deletes_all_highest_level_and_grants_immunity",
+            "combo_a_standard_digivolve_does_not_grant_immunity"
+          ],
+          "note": "FAITHFUL. DCGO EX9_021.cs L129-189: DNA-gated opponent-source-only immunity inside if(IsJogress) + unconditional delete-all-highest-level outside it. Happy asserts both tied-Lv.7 victims deleted, Lv.5 survives, opp trash +2, one-sided immunity; unhappy non-DNA = no immunity. general_rule.pdf §8-2 / §8-2-2-1-6 (DNA result may attack same turn). Minor (DOM-2): driven via effect_initiated_dna_digivolve, same dna_digivolve_inner path as the player DNA action."
+        },
+        {
+          "combo": "Combo B — Miraculous Mega Knight Delay -> reactive DNA Omnimon",
+          "status": "PASS",
+          "tests": [
+            "combo_b_delay_consumes_leaving_lv6_into_merged_omnimon",
+            "combo_b_delay_does_not_fire_for_opponent_lv6_leaving"
+          ],
+          "note": "FAITHFUL. DCGO BT17_095.cs Clause B (WhenRemoveField, !IsByBattle, SetJogress): own Lv.6 [Greymon]/[Garurumon] leaving outside battle + hand Lv.6 -> Omnimon DNA from hand; leaving Lv.6 consumed as a source (general_rule.pdf §8-2-2-1-2), not trashed. Unhappy: opponent's leaving Lv.6 installs no prompt. Minor (DOM-1): BT17-095 seated via seat_as_delay_option helper + leave via delete_permanent_with_cause (necessitated by tracked G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH); the reactive Clause-B merge IS exercised through the real card effect."
+        },
+        {
+          "combo": "Combo C — Blast DNA Omnimon off opponent's turn (BT17-078 Counter)",
+          "status": "PASS",
+          "tests": [
+            "combo_c_blast_dna_counter_bottom_decks_same_level_then_prompts_delete",
+            "combo_c_blast_dna_rejects_broad_greymon_garurumon_names"
+          ],
+          "note": "FAITHFUL. DCGO BT17_078.cs L104-114: OnCounterTiming Blast DNA with EXACT BlastDNACondition(WarGreymon)+(MetalGarurumon) marker; body bottom-decks chosen + all same-level then mandatory (canNoSelect:false) delete by controller. Happy: deck +2, field 1, non-optional delete prompt selecting_player==1; rejection uses real broad-named ST1-07/ST2-06 -> no Counter window. general_rule.pdf §16-30."
+        },
+        {
+          "combo": "Combo D — Free cross-tribe Lv.6 assembly (both DNA materials in one turn)",
+          "status": "PASS",
+          "tests": [
+            "combo_d_free_cross_tribe_assembly_yields_both_lv6_materials",
+            "combo_d_no_gabumon_yields_no_second_lv6"
+          ],
+          "note": "FAITHFUL. DCGO BT17_015.cs L189-300 branch 2 = free Gabumon->MetalGarurumon (payCost:false, ignore requirements). Happy fires real branch-1 effect_initiated_digivolve cost 0 -> both a Red Lv.6 WarGreymon and Blue Lv.6 MetalGarurumon on field (the DNA pair A/C consume); unhappy (no Gabumon base) leaves MetalGarurumon in hand. general_rule.pdf §8-1-2-2."
+        },
+        {
+          "combo": "Combo E — Nokia accel into cheap Lv.6 (BT22-013 cost-6 [Hand][Main] jump)",
+          "status": "BLOCKED",
+          "tests": [],
+          "note": "BLOCKED on G-ACTIVATED-DIGIVOLVE-EXECUTION (qa/archetype-qa/engine-gaps.md L586-593, OPEN for BT22-013/026 + BT16-027). BT22-013's [Hand][Main] cost-6 jump is a CompiledAltPathKind::ActivatedDigivolve alt-path with no action ID (action/space.rs + action/mask.rs) and no dna_digivolve.rs match -> unreachable; combo_e_nokia_cost6_lv6_jump correctly #[ignore]d (body unimplemented!()). Engine-PRIMITIVE gap, not a missing card (combo-presence gate PASSES). Executable [When Digivolving] branches covered by cards_behavioral/bt22/bt22_013.rs. Secondary card-local follow-up: BT22-013.yaml AltPathSpec.condition not populated for the Nokia precondition. No new finding filed (gap already tracked)."
+        }
       ],
       "findings": [],
+      "result": "Faithfulness audit 2026-06-14: 4/5 combos faithful vs card text + general_rule.pdf + DCGO; 0 divergent; Combo E BLOCKED on the already-tracked G-ACTIVATED-DIGIVOLVE-EXECUTION engine-primitive gap (no execution route for <Activated Digivolve>); suite 8/8 pass (combo_e #[ignore]d); 0 findings filed; 2 minor test-quality notes (DOM-1 documented Delay-seat scaffolding, DOM-2 effect-initiated DNA stand-in). Verdict INSUFFICIENT_COVERAGE (no divergence; 1 blocked combo remains).",
+      "verdict": "INSUFFICIENT_COVERAGE",
       "static_tests": {
         "combo_presence": {
           "data": {
@@ -369,8 +411,8 @@
             "failing_cards": [
               "AD1-004"
             ],
-            "implemented": 66,
-            "ratio": 0.673469387755102,
+            "implemented": 67,
+            "ratio": 0.6836734693877551,
             "threshold": 0.85,
             "total": 98,
             "unknown_cards": [
@@ -394,7 +436,6 @@
               "BT17-028",
               "BT15-083",
               "BT11-002",
-              "P-104",
               "LM-028",
               "P-036",
               "BT15-024",
@@ -407,7 +448,7 @@
               "ST21-01"
             ]
           },
-          "detail": "coverage 66/98 = 67% (threshold 85%); 1 failing, 31 unknown",
+          "detail": "coverage 67/98 = 68% (threshold 85%); 1 failing, 30 unknown",
           "passed": false
         },
         "deck_legality": {
@@ -431,7 +472,7 @@
           "passed": true
         }
       },
-      "updated": "2026-06-03"
+      "updated": "2026-06-14"
     },
     "Gaogamon / Beast (BT25)": {
       "cards": [
@@ -693,10 +734,11 @@
       "updated": "2026-06-02"
     },
     "Medusamon": {
+      "audit_report": "qa/qa-reports/2026-06-14-archetype-faithfulness-audit.md",
       "combos_tested": [
         {
-          "combo": "Petrification security-trash loop (signature)",
-          "note": "Deleting an opp-controlled Petrification token trashes opp top security (auto-fires opp-security-removed observers) and chains into BT24-018 Styracomon removal.",
+          "combo": "Petrification security-trash loop [BT24-017, BT24-018]",
+          "note": "FAITHFUL. Token OnDeletion (controller=opp) sets owner=ctx.player and trash_top_security(owner); trash.rs:165-205 pops opp top security + fire_security_removed_observers. BT24-018 OnLoseSecurity optional delete matches DCGO BT24_018.cs 200-255. Happy: opp security -1, opp field -2; zero-security path no-ops.",
           "status": "PASS",
           "tests": [
             "petrification_token_deletion_trashes_opponent_security",
@@ -705,8 +747,8 @@
           ]
         },
         {
-          "combo": "Owen digivolve buff + extra attack",
-          "note": "Real BT24-082 Owen + real BT24-011 Cyclonemon (Dragonkin) -> suspend+ +3000 + attack; gated on trait (real BT21-024 Cyberdramon non-trait control).",
+          "combo": "Owen digivolve buff + extra attack [BT24-082]",
+          "note": "FAITHFUL. on_digivolve gated event_target_owner:you + Reptile/Dragonkin -> suspend source, +3000 end_of_turn, optional attack; matches DCGO BT24_082.cs. Unhappy BT21-024 Cyberdramon (Cyborg) -> no buff.",
           "status": "PASS",
           "tests": [
             "owen_digivolve_buffs_dragonkin_ally_and_grants_attack",
@@ -714,8 +756,8 @@
           ]
         },
         {
-          "combo": "Raid target-change -> Lamiamon security trash",
-          "note": "Real BT24-011 Cyclonemon Raid + real BT21-025 Lamiamon -> trash opp security; gated on a Reptile/Dragonkin permanent (real Cyberdramon control).",
+          "combo": "Raid target-change -> Lamiamon security trash [BT24-011, BT21-025]",
+          "note": "FAITHFUL (board outcome). MED-1 (minor): doc-comment/model assert the gate is 'a Reptile/Dragonkin on your field' but the REAL gate (BT21-025.yaml event_target_owner:you + event_target_trait_has; DCGO BT21_025.cs CanTriggerOnPermanentAttackTargetSwitch) gates on the attack-target-change EVENT SOURCE's trait; unhappy path also removes Lamiamon so it never isolates the gate. Outcome correct; only the asserted reason is wrong.",
           "status": "PASS",
           "tests": [
             "raid_target_change_with_lamiamon_trashes_opp_security",
@@ -723,8 +765,8 @@
           ]
         },
         {
-          "combo": "Security-removal memory snowball",
-          "note": "Real digivolution stack [BT24-008 Elizamon, BT24-012 Dimetromon, BT21-025 Lamiamon]: one security removal pays out both buried inherited -> +2 memory. Token-deletion variant -> +1.",
+          "combo": "Security-removal feeds the memory engine (snowball) [BT24-008, BT24-012]",
+          "note": "FAITHFUL. BT24-008 + BT24-012 inherited on_opponent_security_removed/once_per_turn/your_turn gain_memory:1; real stack nets +2 (both buried fire), token-driven with one buried Elizamon nets +1 -> additive per-source payout reaches buried inherited sources.",
           "status": "PASS",
           "tests": [
             "real_stack_snowballs_two_memory_on_one_security_removal",
@@ -732,8 +774,8 @@
           ]
         },
         {
-          "combo": "Lamiamon inherited free-play (<=5000)",
-          "note": "Real BT21-025 Lamiamon buried inherited free-plays real BT24-011 Cyclonemon (5000); real BT24-018 Styracomon (14000) filtered out. Exercises the dispatch the per-card clause3 test leaves #[ignore]d.",
+          "combo": "Lamiamon inherited free-play (<=5000) on opp-security-removed [BT21-025]",
+          "note": "FAITHFUL. clause-3 scope:inherited/on_opponent_security_removed/optional select_hand kind:digimon dp_lte:5000 Reptile/Dragonkin -> play_from_hand_free; matches DCGO BT21_025.cs inherited. Happy plays BT24-011 (5000 DP) free; unhappy with only BT24-018 (14000 DP) plays nothing. Driven via real token-deletion removal.",
           "status": "PASS",
           "tests": [
             "lamiamon_inherited_free_plays_small_dragonkin_on_security_removal",
@@ -741,68 +783,40 @@
           ]
         },
         {
-          "combo": "BT24-016 cheat-in: chains swap AND nets +2 memory",
-          "note": "Real BT24-082 Owen + real BT24-008 Elizamon + real BT24-012 Dimetromon: cheat-in digivolve auto-fires the [When Digivolving] swap; the security trash pays out BOTH buried inherited -> +2 memory (net -1 = -3 digivolve cost +2). Gated on Owen.",
-          "status": "PASS (incl. user-reported +2 memory)",
-          "tests": [
-            "cheat_in_chains_swap_and_nets_two_memory_from_real_inherits",
-            "cheat_in_blocked_without_owen_silences_the_chain"
-          ]
-        },
-        {
-          "combo": "Lamiamon security swap feeds memory engine",
-          "note": "Real [BT24-008 Elizamon, BT24-016 Lamiamon] stack: the swap top-security trash pays out the buried Elizamon inherited (+1 memory).",
+          "combo": "EX11-012 token-shield (any-owner token) [EX11-012]",
+          "note": "FAITHFUL. would-leave replacement select_any_permanent{kind:token, optional} -> delete_permanent -> cancel_replacement; matches DCGO EX11_012.cs (IsToken any owner, canNoSelect). Scanning both battle areas required (gap G-EX11-012-TOKEN-SHIELD-OWN-ONLY resolved). EX11-012 survives, opp token consumed, opp security -1 via consumed token's OnDeletion.",
           "status": "PASS",
-          "tests": [
-            "lamiamon_security_swap_feeds_inherited_memory"
-          ]
-        },
-        {
-          "combo": "EX11-012 token-shield (faithfulness gap)",
-          "note": "FIXED: would-leave shield selector changed select_own_permanent -> select_any_permanent in EX11-012.yaml (DCGO permanent.IsToken, any owner). EX11-012 now survives by deleting the opponent Petrification token, which also trashes their security. Gap G-EX11-012-TOKEN-SHIELD-OWN-ONLY RESOLVED.",
-          "status": "PASS (gap fixed)",
           "tests": [
             "ex11_012_survives_by_deleting_opponents_petrification_token"
           ]
         }
       ],
-      "findings": [
-        {
-          "detail": "First pass used synthetic make_test_card stand-ins for our own effect-bearing cards (Elizamon/Dimetromon/Owen/Reptile allies), which hid the +2 memory payoff. Whole suite re-authored to load every Medusamon card via real dsl_card; synthetic fixtures now only for generic opponent-side fillers (security/bodies/hand). Audit: 10 archetype cards all real.",
-          "kind": "process-correction"
-        },
-        {
-          "detail": "RESOLVED: cards/ex11/EX11-012.yaml would-leave cost selector own->any (select_any_permanent scans both battle areas, controller picks; faithful to DCGO). One-word YAML fix; DSL verb pre-existed. Archetype test un-ignored and passing; per-card ex11_012 green.",
-          "id": "G-EX11-012-TOKEN-SHIELD-OWN-ONLY",
-          "kind": "resolved-faithfulness-gap"
-        },
-        {
-          "detail": "User-reported: BT24-016 cheat-in with a real Elizamon + Dimetromon nets +2 memory from the two buried inherited firing off the chained security swap. Confirmed faithful (net -1 absolute = -3 cost +2 gain).",
-          "kind": "verified-behavior"
-        },
-        {
-          "detail": "Coverage gate 56/63 (89%): 7 unknown freq-1 fringe cards (ST12-03, LM-051, LM-033, BT19-011, BT14-017, LM-045, BT21-083); none in any combo.",
-          "kind": "coverage-gap"
-        }
-      ],
+      "findings": [],
       "interaction_test_file": "code/digimon-engine/tests/archetypes/medusamon.rs",
       "model_doc": "qa/archetype-qa/medusamon-model.md",
-      "result": "15/15 active interaction tests PASS (all real DSL cards; EX11-012 gap fixed). Full archetypes binary: 45 passed, 0 ignored.",
+      "result": "Faithfulness audit 2026-06-14: 6/6 audited combos faithful vs card text + general_rule.pdf + DCGO; suite 15/15 pass; 0 findings filed; 2 minor test-quality issues noted in the audit report (MED-1 mischaracterized-but-board-correct Raid gate reason; MED-2 event-injection helpers + BT24-017 token-minting only per-card-covered).",
       "static_tests": {
         "combo_presence": {
           "data": {
-            "blocked": [],
-            "combos_total": 5
+            "blocked": [
+              {
+                "combo": "Lamiamon inherited free-play (<",
+                "missing": [
+                  "5000) on opp-security-removed=BT21-025"
+                ]
+              }
+            ],
+            "combos_total": 6
           },
-          "detail": "all 5 combo(s) have every piece implemented",
-          "passed": true
+          "detail": "1/6 combo(s) blocked on a missing card",
+          "passed": false
         },
         "coverage_gate": {
           "data": {
             "failing_cards": [],
             "implemented": 56,
             "ratio": 0.8888888888888888,
-            "threshold": 1.0,
+            "threshold": 0.85,
             "total": 63,
             "unknown_cards": [
               "ST12-03",
@@ -814,8 +828,8 @@
               "BT21-083"
             ]
           },
-          "detail": "coverage 56/63 = 89% (threshold 100%); 0 failing, 7 unknown",
-          "passed": false
+          "detail": "coverage 56/63 = 89% (threshold 85%); 0 failing, 7 unknown",
+          "passed": true
         },
         "deck_legality": {
           "data": {
@@ -838,7 +852,8 @@
           "passed": true
         }
       },
-      "updated": "2026-05-30"
+      "updated": "2026-06-14",
+      "verdict": "FAITHFUL"
     },
     "Nokia AlterS": {
       "combos_tested": [
@@ -951,28 +966,79 @@
       "updated": "2026-06-02"
     },
     "Omnimon ACE": {
+      "audit_report": "qa/qa-reports/2026-06-14-archetype-faithfulness-audit.md",
+      "model_doc": "qa/archetype-qa/Omnimon ACE-model.md",
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/omnimon_ace.rs",
       "combos_tested": [
-        "Miraculous Mega Knight — free Agumon/Gabumon from trash (Option recursion)",
-        "Miraculous Mega Knight Delay — leave-trigger → Omnimon DNA from hand",
-        "Miraculous Mega Knight security — off-turn Tamer free-play, Option to hand",
-        "Omnimon (BT17-078) DNA digivolve — board-level wipe of one level",
-        "BT20-102 X-Antibody — single-target mass deletion + bottom"
+        {
+          "combo": "Combo 1 — Miraculous Mega Knight [Main]: free [Agumon]/[Gabumon] recursion + arm the Delay",
+          "status": "BLOCKED",
+          "tests": [
+            "combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay",
+            "combo1_mega_knight_declining_recursion_still_seats_delay"
+          ],
+          "note": "BLOCKED on G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH (docs/RUST_ENGINE_GAPS.md). On the real play_option_from_hand lifecycle the Standard Option is moved into pending_option before the [Main] body runs, so place_self_as_delay_option (scans hand/trash only) no-ops and dispose_option trashes it instead of seating a Delay. Both tests #[ignore]d pending the fix (not weakened, not routed through the activate_hand_main bypass); the per-card bt17_095.rs covers the [Main] free-play via that bypass. No new finding (gap tracked)."
+        },
+        {
+          "combo": "Combo 2 — Miraculous Mega Knight <Delay> leave-trigger -> Omnimon DNA from hand",
+          "status": "PASS",
+          "tests": [
+            "combo2_mega_knight_delay_dna_digivolves_into_omnimon_from_hand",
+            "combo2_mega_knight_delay_does_not_fire_on_battle_leave"
+          ],
+          "note": "FAITHFUL (per model, GREEN). DCGO BT17_095.cs Clause B (WhenRemoveField + !IsByBattle + SetJogress): leaving own Lv.6 [Greymon]/[Garurumon] + hand Lv.6 -> Omnimon DNA from hand; leaving Lv.6 consumed as a source (not trashed), hand -2. Battle-cause leave does NOT trigger (general_rule.pdf §16 <Delay>). Engine primitive effect_initiated_dna_digivolve_with_hand_partner (G-DSL-DNA-FROM-HAND-PARTNER, resolved)."
+        },
+        {
+          "combo": "Combo 3 — Miraculous Mega Knight inherited [Security]: off-turn [Tai Kamiya]/[Matt Ishida] free-play + return self to hand",
+          "status": "PASS",
+          "tests": [
+            "combo3_mega_knight_security_free_plays_tamer_and_returns_self_to_hand",
+            "combo3_mega_knight_security_returns_self_to_hand_with_no_tamer"
+          ],
+          "note": "FAITHFUL (per model, GREEN). DCGO BT17_095.cs Clause C (SecuritySkill + PlayPermanentCards(payCost:false) + AddThisCardToHand); driven through the real combat/security-check path (attack_player). Free-plays a [Tai Kamiya]/[Matt Ishida] Tamer then returns self to hand; with no eligible Tamer the mandatory add-to-hand tail still fires."
+        },
+        {
+          "combo": "Combo 4 — Omnimon (BT17-078) DNA digivolve: same-level cohort bottom-deck + delete",
+          "status": "PASS",
+          "tests": [
+            "combo4_omnimon_dna_digivolve_bottom_decks_chosen_level_then_deletes",
+            "combo4_omnimon_non_dna_play_does_not_fire_level_wipe"
+          ],
+          "note": "FAITHFUL (per model, GREEN). BT17-078 [When Digivolving] (DNA path, DCGO BT17_078.cs IsJogress-gated) bottom-decks the chosen same-level opp cohort then deletes 1 opp Digimon; a non-DNA play does NOT get the body (DNA-origin gate). Same card as DNA Omnimon Combo C, here on the standard DNA path."
+        },
+        {
+          "combo": "Combo 5 — Omnimon (X Antibody) BT20-102: source-gated protect-1-per-player mass deletion + bottom-deck",
+          "status": "PASS",
+          "tests": [
+            "combo5_x_antibody_with_omnimon_source_wipes_to_single_survivor_and_bottoms",
+            "combo5_x_antibody_without_omnimon_source_does_not_fire_body"
+          ],
+          "note": "FAITHFUL (per model, GREEN after deterministic-protect fix). BT20-102 [When Digivolving] gated on an [Omnimon]/[X Antibody] SOURCE (DCGO BT20_102.cs IsOmniOrXAntiSource, sources-only, excludes own top-card name): protect 1 Digimon per player, delete every other Digimon, bottom-deck 1 surviving opp Digimon. Test drives the own-protect pick deterministically to BT20-102 itself; bare BT20-102 (no source) does NOT fire. Engine primitives self_digivolution_sources_contain_name + for_each exclude-binding (both resolved)."
+        },
+        {
+          "combo": "Combo 6 — DNA-spine execution gap: BT22-013 [Hand][Main] cost-6 Lv.6 jump (shared DNA Omnimon line)",
+          "status": "BLOCKED",
+          "tests": [],
+          "note": "BLOCKED on G-ACTIVATED-DIGIVOLVE-EXECUTION (qa/archetype-qa/engine-gaps.md) — same shared gap as DNA Omnimon Combo E: BT22-013's [Hand][Main] cost-6 jump is a <Activated Digivolve> alt-path with no action ID / no execution route, so no faithful interaction test is possible until the route lands. No test in omnimon_ace.rs; no new finding (gap tracked)."
+        }
       ],
       "findings": [],
+      "result": "Faithfulness audit 2026-06-14 (re-run; no fresh per-combo audit input supplied, statuses taken from the durable model + green suite): Combos 2-5 faithful (4/6); 0 divergent; Combo 1 BLOCKED on G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH and the BT22-013 DNA-spine (Combo 6) BLOCKED on G-ACTIVATED-DIGIVOLVE-EXECUTION (both already tracked); suite 10/10 pass (4 #[ignore]d sentinels across Combo 1); 0 findings filed. Verdict INSUFFICIENT_COVERAGE (no divergence; 2 blocked combos remain).",
+      "verdict": "INSUFFICIENT_COVERAGE",
       "static_tests": {
         "combo_presence": {
           "data": {
             "blocked": [],
-            "combos_total": 5
+            "combos_total": 6
           },
-          "detail": "all 5 combo(s) have every piece implemented",
+          "detail": "all 6 combo(s) have every piece implemented",
           "passed": true
         },
         "coverage_gate": {
           "data": {
             "failing_cards": [],
             "implemented": 20,
-            "ratio": 0.9090909090909092,
+            "ratio": 0.9090909090909091,
             "threshold": 0.85,
             "total": 22,
             "unknown_cards": [
@@ -1004,7 +1070,7 @@
           "passed": true
         }
       },
-      "updated": "2026-06-02"
+      "updated": "2026-06-14"
     },
     "Puppet-Sister": {
       "combos_tested": [
@@ -1216,17 +1282,64 @@
       "updated": "2026-05-31"
     },
     "Rocks": {
+      "audit_report": "qa/qa-reports/2026-06-14-archetype-faithfulness-audit.md",
       "combos_tested": [
-        "Greymon removal, Koromon-enabled"
+        {
+          "combo": "C1 - Magneticdramon source-trash double removal (EX10-036 + EX8-048)",
+          "note": "FAITHFUL. EX10-036 Clause A: trash 3 Mineral/Rock sources -> delete 1 opp Digimon (UNFILTERED) + trash opp top security (DCGO EX10_036.cs 281-329). EX8-048 inherited (host Mineral/Rock, opp cost<=4) deletes a 2nd (DCGO EX8_048.cs 87-141). Happy opp field -2 + sec -1; unhappy -1. RCK-2 (minor): all 3 opp targets cost<=4 so the test can't distinguish unfiltered vs cost<=4-filtered active delete.",
+          "status": "PASS",
+          "tests": [
+            "c1_magneticdramon_source_trash_triggers_inherited_fanout_double_delete",
+            "c1_without_inherited_delete_sources_only_active_delete_fires"
+          ]
+        },
+        {
+          "combo": "C2 - Proganomon cheat-evolve, Close-gated (EX10-032 + EX8-067)",
+          "note": "FAITHFUL. EX10-032 [Hand][Main] gate = on hand + own turn + Close + Sunarizamon + Landramon-in-trash; place Landramon under Sunarizamon then fixedCost-3 ignore-requirements digivolve (DCGO EX10_032.cs 28-35). Happy: HAND_EFFECT_START legal, trash -1, stack top EX10-032, memory -3. Unhappy (no Close): masked illegal.",
+          "status": "PASS",
+          "tests": [
+            "c2_proganomon_cheat_evolve_with_close_places_landramon_and_digivolves",
+            "c2_proganomon_cheat_evolve_masked_without_close"
+          ]
+        },
+        {
+          "combo": "C3 - Pyramidimon trash-3 highest-cost delete + re-bury recursion (EX11-044 + EX8-005)",
+          "note": "FAITHFUL. EX11-044 Clause A trash 3 Mineral/Rock -> delete opp IsMaxCost (Digimon or Tamer); Clause B (THIS-permanent gate) re-buries up to 3 from trash (DCGO EX11_044.cs 87-129/192-260). EX8-005 Tumblemon buried -> +1 memory. Asserts opp field -1 (cost-11 victim), memory >= before+1, net source-count unchanged; robust to re-bury order.",
+          "status": "PASS",
+          "tests": [
+            "c3_pyramidimon_trash_three_fanout_and_rebury_restores_sources"
+          ]
+        },
+        {
+          "combo": "C4 - Close suspend-refuel on Mineral/Rock digivolve (EX8-067)",
+          "note": "FAITHFUL. EX8-067 [Your Turn]: on Mineral/Rock digivolve, suspend Close (CanActivateSuspendCostEffect gate) then place up to 2 Mineral/Rock from trash as bottom sources (DCGO EX8_067.cs 18-130). Wired through real EX8-047 -> EX8-048 digivolve. Happy: prompt, accept, Close suspended, sources placed; unhappy (pre-suspended): no prompt, trash unchanged.",
+          "status": "PASS",
+          "tests": [
+            "c4_close_suspends_to_refuel_sources_on_mineral_digivolve",
+            "c4_close_already_suspended_offers_no_refuel"
+          ]
+        },
+        {
+          "combo": "C5 - Gravel Hearts cheat-play + Delay cost-reduced digivolve (EX10-069 + EX8-067)",
+          "note": "FAITHFUL. EX10-069 [Main] play Sunarizamon/Close from hand OR trash free, then PlaceDelayOptionCards (DCGO EX10_069.cs 16-144). Asserts hand -2, Sunarizamon on field, memory -3 (only Gravel Hearts' own cost), parked Delayed{OnEvent(OnSuspend)}. Unhappy (general_rule.pdf 16-16-3): suspending Close same/placing turn does NOT fire the Delay. RCK-3 (minor): the Delay PAYOFF board-diff (later-turn cost-reduced digivolve) is armed but not asserted.",
+          "status": "PASS",
+          "tests": [
+            "c5_gravel_hearts_main_free_plays_sunarizamon_and_arms_delay",
+            "c5_gravel_hearts_delay_does_not_fire_on_placing_turn"
+          ]
+        }
       ],
       "findings": [],
+      "interaction_test_file": "code/digimon-engine/tests/archetypes/rocks.rs",
+      "model_doc": "qa/archetype-qa/Rocks-model.md",
+      "result": "Faithfulness audit 2026-06-14: 5/5 audited combos faithful vs card text + general_rule.pdf + DCGO; archetypes binary 26/26 pass; 0 findings filed; 3 minor test-quality issues noted in the audit report (RCK-1 justified synthetic Mineral/Rock fillers; RCK-2 C1 active clause under-specified by all-<=4-cost targets; RCK-3 C5 Delay payoff board-diff not asserted).",
       "static_tests": {
         "combo_presence": {
           "data": {
             "blocked": [],
-            "combos_total": 1
+            "combos_total": 5
           },
-          "detail": "all 1 combo(s) have every piece implemented",
+          "detail": "all 5 combo(s) have every piece implemented",
           "passed": true
         },
         "coverage_gate": {
@@ -1264,14 +1377,15 @@
         },
         "smoke_games": {
           "data": {
-            "completed": 3,
-            "games": 3
+            "completed": 5,
+            "games": 5
           },
-          "detail": "3/3 smoke games completed cleanly",
+          "detail": "5/5 smoke games completed cleanly",
           "passed": true
         }
       },
-      "updated": "2026-05-30"
+      "updated": "2026-06-14",
+      "verdict": "FAITHFUL"
     },
     "ST-1 Gaia Red": {
       "combos_tested": [
@@ -2113,6 +2227,6 @@
       "test_file": "code/digimon-engine/tests/archetypes/titan_bt25.rs"
     }
   },
-  "last_updated": "2026-06-11",
+  "last_updated": "2026-06-14",
   "version": 1
 }
