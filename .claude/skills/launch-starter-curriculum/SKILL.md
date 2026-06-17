@@ -157,6 +157,32 @@ python code/tools/anchored_eval_cli.py --candidate models/starter_pool_v1/final.
 doctl compute droplet delete digimon-train --force
 ```
 
+## Investigating a low / odd win rate
+
+The driver records **eval games by default** (`--record-games eval`,
+`--record-games-max 300`) → `models/<run>/recordings/*.json` (each holds the
+initial state + the full action sequence). Plus `eval_game_log.jsonl` (one row
+per inner game: result, length, digivolves) and the in-training `pilot/anchored/*`
+TB panel. To diagnose:
+
+- **Read the real step / curve from TB, not `docker logs`** (stdout is
+  block-buffered in the container and shows nothing useful). Use the
+  `docker exec … EventAccumulator` one-liner.
+- **Concede check (action 93):** grep the recordings' action lists for `93`.
+  Do NOT infer concedes from short games alone — a smooth/unimodal loss-length
+  distribution (peak ~13–16 steps, no short-end spike) means concedes are
+  negligible even if a few 2-step losses exist.
+- **Suspiciously fast wins/losses (≤8–12 steps):** open those recordings and
+  replay via `digimon-engine-mcp` / `dcgo-replay` — confirm the terminal
+  (deck-out? security? concede? mis-scored?).
+- **Sanity baseline:** a fresh MLP-vs-greedy run on these starters with
+  `starter1_6_flat` has historically reached **~70–85% vs greedy**
+  (TRAINING_RUNBOOK §14, `starter1_6_flat_control_v1`). If a run plateaus far
+  below that, treat it as a **regression**, not an MLP ceiling. Prime suspects:
+  the `--floor-envs N` SubprocVecEnv path (the known-good baseline used
+  `n_envs=1`), an engine behavioral change since the baseline, or reward-profile
+  drift. Re-run with `--floor-envs 1` to isolate the parallelism variable.
+
 ## Future cleanup (would simplify steps 3–4)
 
 Folding these into `Dockerfile.training` makes the image self-contained, dropping

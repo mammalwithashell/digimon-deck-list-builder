@@ -97,6 +97,13 @@ def test_distinct_learning_rates_and_log_dirs(spec):
     assert _val(p2, "--log-dir") == "runs/starter_pool_v1"
 
 
+def test_eval_games_recorded_by_default_both_phases(spec):
+    """Future runs must log eval games (with action sequences) for investigation."""
+    for argv in (build_phase1_argv(spec), build_phase2_argv(spec)):
+        assert _val(argv, "--record-games") == "eval"
+        assert int(_val(argv, "--record-games-max")) >= 100
+
+
 def test_floor_envs_default_adds_no_parallelism(spec):
     """Default (floor_envs=1) must not inject n_envs/backend into either phase."""
     assert "n_envs" not in _sets(build_phase1_argv(spec))

@@ -77,7 +77,11 @@ class CurriculumSpec:
     tensor_profile: str = "standard_lite_deck_v2"
     reward_profile: str = "starter1_6_flat"
     match_format: str = "bo3"
-    record_games: str = "anomalies"
+    # Record eval games (full action sequences) by default so a low/odd win
+    # rate is investigable post-hoc — e.g. confirm/deny concedes (action 93),
+    # check suspiciously fast wins/losses. Capped to keep disk bounded.
+    record_games: str = "eval"
+    record_games_max: int = 300
     # Phase-1-only parallelism. The engine restricts n_envs>1 to greedy/random
     # opponents, so this speeds the floor phase (e.g. set to vCPU count on a
     # cloud box) but CANNOT apply to the pool phase, which stays single-env.
@@ -113,6 +117,7 @@ def _common_argv(spec: CurriculumSpec, name: str, steps: int, lr: float) -> List
         "--save-dir", spec.save_dir,
         "--log-dir", f"{spec.log_dir}/{name}",
         "--record-games", spec.record_games,
+        "--record-games-max", str(spec.record_games_max),
         "--set", f"run_name={name}",
         "--set", f"tensor_profile={spec.tensor_profile}",
         "--set", f"reward_profile_override={spec.reward_profile}",
@@ -186,7 +191,12 @@ def main() -> None:
     p.add_argument("--tensor-profile", default="standard_lite_deck_v2")
     p.add_argument("--reward-profile", default="starter1_6_flat")
     p.add_argument("--match-format", default="bo3", choices=["bo3", "single"])
-    p.add_argument("--record-games", default="anomalies")
+    p.add_argument("--record-games", default="eval",
+                   help="Which games to persist as recordings (default: eval — "
+                        "logs eval games with full action sequences for "
+                        "investigation). One of off/all/sampled/draws/anomalies/eval.")
+    p.add_argument("--record-games-max", type=int, default=300,
+                   help="Cap on recorded-game artifacts (bounds disk).")
     p.add_argument("--python", default=sys.executable,
                    help="Python interpreter for the phase subprocesses.")
     p.add_argument("--cwd", default=None,
@@ -218,6 +228,7 @@ def main() -> None:
         reward_profile=args.reward_profile,
         match_format=args.match_format,
         record_games=args.record_games,
+        record_games_max=args.record_games_max,
         floor_envs=args.floor_envs,
         python=args.python,
     )
