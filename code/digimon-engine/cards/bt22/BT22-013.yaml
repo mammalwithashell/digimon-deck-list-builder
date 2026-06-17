@@ -214,6 +214,7 @@ effects:
         - any_permanent:
             of: you
             zone: [battle_area]
+            kind: tamer
             name_is: "Nokia Shiramine"
         - any_permanent:
             of: you
@@ -234,7 +235,7 @@ effects:
           cost: 6
           ignore_requirements: true
 
-  # ─── Clause 3 — [When Digivolving] branch-choice ─────────────────────────
+  # ─── Clause 2 — [When Digivolving] branch-choice ─────────────────────────
   #
   # Printed: "[When Digivolving] Activate 1 of the effects below:
   #   ・1 of your [Gabumon] may digivolve into [MetalGarurumon] in the hand,

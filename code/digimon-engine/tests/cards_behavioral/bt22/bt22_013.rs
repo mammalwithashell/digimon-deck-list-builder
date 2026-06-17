@@ -643,6 +643,7 @@ fn bt22_013_hand_main_jump_digivolves_agumon_at_cost6_with_nokia() {
     runner.place_on_field(0, "MY-NOKIA", Some(0));
     runner.place_on_field(0, "BT22-008", Some(0));
 
+    let mem_before = runner.memory();
     assert!(
         runner.game.activate_hand_main(0, 0),
         "the [Hand][Main] Nokia jump must fire (Nokia + Agumon present)"
@@ -678,6 +679,16 @@ fn bt22_013_hand_main_jump_digivolves_agumon_at_cost6_with_nokia() {
         runner.hand_size(0),
         0,
         "WarGreymon must leave the hand after digivolving onto the Agumon"
+    );
+    // The cost-6 digivolve must actually deduct 6 memory — assert the delta so
+    // the test is robust to any starting-memory clamp. A silently-ignored cost
+    // would leave the delta at 0.
+    assert_eq!(
+        mem_before - runner.memory(),
+        6,
+        "the [Hand][Main] jump must pay digivolution cost 6 (before={}, after={})",
+        mem_before,
+        runner.memory(),
     );
 }
 
