@@ -603,3 +603,21 @@ an hour of your time.
 - **Weights & Biases** or any external experiment-tracking SaaS integration.
 - **Tailscale inside the RunPod image** for stable cross-pod URLs. Possible
   (bake into `Dockerfile.training`), deferred until cadence justifies it.
+
+## TensorBoard watcher sidecar
+
+The watcher is the **observation** layer for a cloud training host. The trainer
+container is a one-shot `docker run` (it exits loudly on completion — we do *not*
+want a 13-hour job silently restart-looping on a transient failure). The watcher
+is the opposite shape: long-lived and declarative, so it is a Compose service.
+
+`docker-compose.watch.yml` (repo root) defines a single `tensorboard` service:
+upstream `tensorflow/tensorflow:latest`, `tensorboard --logdir /runs --bind_all
+--port 6006`, mounting `./runs:/runs:ro` (read-only — the watcher cannot corrupt
+trainer output) with `restart: unless-stopped`. Bring it up once per host at
+provisioning time (`docker compose -f docker-compose.watch.yml up -d`); it
+survives trainer restarts.
+
+**Reach:** port 6006 must only be reachable over Tailscale. The cloud-provider
+firewall (Hetzner / DO Cloud Firewall) blocks inbound `:6006` from the public
+internet; the WireGuard tunnel is the only legitimate path.
