@@ -90,7 +90,7 @@ agent config, runtime data, and project-level configs.
 ├── qa/
 │   ├── archetype-qa/              # Per-archetype QA, engine API ref, engine gaps
 │   └── qa-reports/                # Gameplay QA reports, validated cards index
-├── ops/, scripts/                 # Deploy + operational scripts
+├── scripts/                       # Deploy + operational scripts
 ├── training_jobs/                 # On-disk RL training run artifacts
 ├── models/                        # Trained-model output dir (gitignored, scanned by /models/manifest.json)
 └── code/                          # All source lives here
@@ -252,7 +252,7 @@ python -m digimon_gym.agents.pilot_training --gauntlet --timesteps 500000
 python -m digimon_gym.agents.pilot_training --archetypes rocks,ts-olympos --timesteps 500000  # scope the deck pool
 
 # Cloud training (see docs/CLOUD_TRAINING.md) — image is built/pushed by CI on tag push
-docker compose -f ops/training/docker-compose.watch.yml up -d   # TensorBoard sidecar over ./runs
+docker compose -f docker-compose.watch.yml up -d   # TensorBoard sidecar over ./runs
 scripts/sync_cloud_runs.sh                                       # mirror remote runs/ back locally for the MCP
 
 # Env smoke check
@@ -344,7 +344,7 @@ Key references:
 - **Tools**: `docs/TOOLS.md` — card pipeline, transpiler, Pinecone, model export, new-set workflow
 - **Training**: `docs/TRAINING_RUNBOOK.md` + `AGENTS.md` (wrapper chain, gauntlet, pipeline)
 - **Model evaluation**: `docs/MODEL_EVALUATION.md` — why the in-run win rate lies (degenerate under self-play), the anchored reference frame (greedy + frozen champions, seat-balanced), the layered eval stack, the Elo ladder + champion registry + exploiter tools, gated self-play, and the equilibrium-methods horizon (depends on `make-engine-cloneable`). See rule 30.
-- **Cloud training**: `docs/CLOUD_TRAINING.md` — Path A (RunPod GPU, LSTM/self-play) vs Path B (Hetzner/DO CPU, MLP-vs-greedy); published `Dockerfile.training` image, the `ops/training/docker-compose.watch.yml` TensorBoard sidecar, and the `scripts/sync_cloud_runs.sh` run-mirror; local VRAM mitigations
+- **Cloud training**: `docs/CLOUD_TRAINING.md` — Path A (RunPod GPU, LSTM/self-play) vs Path B (Hetzner/DO CPU, MLP-vs-greedy); published `Dockerfile.training` image, the `docker-compose.watch.yml` TensorBoard sidecar, and the `scripts/sync_cloud_runs.sh` run-mirror; local VRAM mitigations
 - **Rules**: `Digimon TCG resources/general_rule.pdf` — **canonical** rules source of truth (+ `glossary.pdf` for keywords); base-repo only (rule 32). Verified, committed derivations live in `docs/digimon-rules/` (`keyword-semantics.md`, `rules-index.json`, `digest.md`) and are surfaced by the `/digimon-rules` skill + the SessionStart/UserPromptSubmit rules hooks. These **replace** the retired `docs/RULES_CONTEXT.md` (now a pointer). See "Source priority" + rule 32.
 - **Hosted-API deployment**: `docs/DEPLOYMENT.md` — DigitalOcean topology, env vars, bootstrap
 - **Model catalog**: `docs/MODEL_CATALOG.md` — ONNX upload/download pipeline, storage backends, desktop cache

@@ -506,7 +506,7 @@ curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER && newgrp docker
 
 # Workspace
-mkdir -p ~/digimon-training/{runs,models,data,training_jobs,ops/training}
+mkdir -p ~/digimon-training/{runs,models,data,training_jobs}
 cd ~/digimon-training
 ```
 
@@ -516,13 +516,13 @@ cd ~/digimon-training
 # From your LAPTOP
 rsync -az data/ digimon-train:~/digimon-training/data/
 rsync -az training_jobs/ digimon-train:~/digimon-training/training_jobs/
-rsync -az ops/training/ digimon-train:~/digimon-training/ops/training/
+rsync -az docker-compose.watch.yml digimon-train:~/digimon-training/
 
 # On the DROPLET
 docker pull ghcr.io/<your-handle-lowercase>/digimon-trainer:training-v0.1
 
 cd ~/digimon-training
-docker compose -f ops/training/docker-compose.watch.yml up -d
+docker compose -f docker-compose.watch.yml up -d
 # TB now at http://digimon-train:6006 from any tailnet member
 ```
 
