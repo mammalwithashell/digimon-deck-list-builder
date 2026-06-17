@@ -142,29 +142,58 @@ export function GameBoard({
         <HandZone cardIds={player2.handIds} isOpponent />
       </div>
 
-      <div className="ib-board__side ib-board__side--opp">
-        <PlayerHalf
-          player={player2}
-          isOpponent
-          highlightedSlots={enemySlots}
-          onTrashClick={onOpponentTrashClick}
-          targetedSlots={targetedSlots}
-          onSlotClick={(i) => onSlotClick?.(true, i)}
-          onSlotInspect={(i) => onSlotInspect?.(true, i)}
-          onBreedingInspect={() => onBreedingInspect?.(true)}
-        />
+      {/* Flow stage: opponent field / memory gauge / player field share the
+          vertical space as a flex column (see .ib-board__stage). The two
+          fields are flex:1 (equal), so neither half is smushed. */}
+      <div className="ib-board__stage">
+        <div className="ib-board__side ib-board__side--opp">
+          <PlayerHalf
+            player={player2}
+            isOpponent
+            highlightedSlots={enemySlots}
+            onTrashClick={onOpponentTrashClick}
+            targetedSlots={targetedSlots}
+            onSlotClick={(i) => onSlotClick?.(true, i)}
+            onSlotInspect={(i) => onSlotInspect?.(true, i)}
+            onBreedingInspect={() => onBreedingInspect?.(true)}
+          />
+        </div>
+
+        <div className="ib-board__gauge">
+          <MemoryGauge
+            value={memoryGauge}
+            localPlayer={1}
+            currentPhase={currentPhase}
+            previewCost={previewCost}
+            latestActionLabel={latestActionLabel}
+          />
+        </div>
+
+        <div className="ib-board__side ib-board__side--player">
+          <PlayerHalf
+            player={player1}
+            isOpponent={false}
+            highlightedSlots={ownSlots}
+            canHatch={canHatch}
+            canMove={canMove}
+            canDigivolveBreeding={canDigivolveBreeding}
+            highlightBreeding={highlightBreeding}
+            onSlotClick={(i) => onSlotClick?.(false, i)}
+            onSlotInspect={(i) => onSlotInspect?.(false, i)}
+            onBreedingInspect={() => onBreedingInspect?.(false)}
+            onHatch={onHatch}
+            onMove={onMove}
+            onBreedingClick={onBreedingClick}
+            onTrashClick={onOwnTrashClick}
+            dragValidDropSlots={dragValidDropSlots}
+            isDraggingHandCard={isDraggingHandCard}
+            canPlayDragged={canPlayDragged}
+          />
+        </div>
       </div>
 
-      <div className="ib-board__gauge">
-        <MemoryGauge
-          value={memoryGauge}
-          localPlayer={1}
-          currentPhase={currentPhase}
-          previewCost={previewCost}
-          latestActionLabel={latestActionLabel}
-        />
-      </div>
-
+      {/* Revealed-cards zone overlays the gauge area (absolute), so it lives
+          outside the flow stage. */}
       {revealedCards.length > 0 && (
         <div className="ib-board__revealed">
           <RevealedCardsZone
@@ -180,28 +209,6 @@ export function GameBoard({
         </div>
       )}
 
-      <div className="ib-board__side ib-board__side--player">
-        <PlayerHalf
-          player={player1}
-          isOpponent={false}
-          highlightedSlots={ownSlots}
-          canHatch={canHatch}
-          canMove={canMove}
-          canDigivolveBreeding={canDigivolveBreeding}
-          highlightBreeding={highlightBreeding}
-          onSlotClick={(i) => onSlotClick?.(false, i)}
-          onSlotInspect={(i) => onSlotInspect?.(false, i)}
-          onBreedingInspect={() => onBreedingInspect?.(false)}
-          onHatch={onHatch}
-          onMove={onMove}
-          onBreedingClick={onBreedingClick}
-          onTrashClick={onOwnTrashClick}
-          dragValidDropSlots={dragValidDropSlots}
-          isDraggingHandCard={isDraggingHandCard}
-          canPlayDragged={canPlayDragged}
-        />
-      </div>
-
       <div className="ib-board__hand">
         <HandZone
           cardIds={player1.handIds}
@@ -214,7 +221,9 @@ export function GameBoard({
         />
       </div>
 
-      <TensorDebugBadge summary={latestTensorSummary} />
+      {/* Dev-only tensor telemetry — gated to dev builds so it never ships,
+          and anchored bottom-left so it can't overlap the hand-count chip. */}
+      {import.meta.env.DEV && <TensorDebugBadge summary={latestTensorSummary} />}
       <div className="ib-hand-count-chip" aria-label={`${player1.handCount} cards in your hand`}>
         <span className="ib-hand-count-chip__label">YOUR HAND</span>
         <span className="ib-hand-count-chip__value">{player1.handCount}</span>

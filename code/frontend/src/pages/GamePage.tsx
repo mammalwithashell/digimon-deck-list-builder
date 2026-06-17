@@ -1112,7 +1112,7 @@ export function GamePage() {
         <DigivolveBanner />
         <BattleEffect />
 
-        <div className="flex-1 overflow-hidden relative" ref={boardContainerRef}>
+        <div className="flex-1 min-h-0 overflow-hidden relative" ref={boardContainerRef}>
           <CardOverlay
             permanent={inspectedPerm}
             onClose={() => setInspectedPerm(null)}
@@ -1183,7 +1183,7 @@ export function GamePage() {
 
         {/* Action choice dialog (Play / Digivolve / DNA Digivolve) */}
         {actionChoice && (
-          <div className="flex items-center justify-center gap-3 py-2 bg-gray-800 border-t border-gray-600">
+          <div className="shrink-0 flex items-center justify-center gap-3 py-2 bg-gray-800 border-t border-gray-600">
             <span className="text-sm text-gray-300">Choose action:</span>
             {actionChoice.canPlay && (
               <button
@@ -1221,7 +1221,7 @@ export function GamePage() {
 
         {/* Digivolve target mode indicator */}
         {digivolvingHandIndex !== null && (
-          <div className="flex items-center justify-center gap-3 py-2 bg-purple-900/50 border-t border-purple-600">
+          <div className="shrink-0 flex items-center justify-center gap-3 py-2 bg-purple-900/50 border-t border-purple-600">
             <span className="text-sm text-purple-200">Select a digivolve target on the field</span>
             <button
               onClick={() => setDigivolvingHandIndex(null)}
@@ -1235,12 +1235,12 @@ export function GamePage() {
         {/* Bot speed selector — only meaningful for locally-paced bot
             games; hidden for server-paced WebSocket games. */}
         {!useWebSocket && (
-          <div className="flex justify-end px-3 py-1">
+          <div className="shrink-0 flex justify-end px-3 py-1">
             <BotSpeedControl />
           </div>
         )}
         {(store.gameSeed ?? flowSeed) && (
-          <div className="flex items-center justify-end gap-2 px-3 py-1 text-xs text-gray-300">
+          <div className="shrink-0 flex items-center justify-end gap-2 px-3 py-1 text-xs text-gray-300">
             <span className="uppercase tracking-widest text-gray-500">Seed</span>
             <code className="max-w-[260px] truncate rounded border border-white/10 bg-black/30 px-2 py-1">
               {store.gameSeed ?? flowSeed}
@@ -1255,14 +1255,16 @@ export function GamePage() {
             </button>
           </div>
         )}
-        <ActionBar
-          phase={store.currentPhase}
-          actionMask={store.agentPending ? EMPTY_MASK : store.actionMask}
-          onAction={handleAction}
-          onSurrender={handleSurrender}
-          isGameOver={store.isGameOver}
-          canActivateEffect={parsedMask.canActivateEffect}
-        />
+        <div className="shrink-0">
+          <ActionBar
+            phase={store.currentPhase}
+            actionMask={store.agentPending ? EMPTY_MASK : store.actionMask}
+            onAction={handleAction}
+            onSurrender={handleSurrender}
+            isGameOver={store.isGameOver}
+            canActivateEffect={parsedMask.canActivateEffect}
+          />
+        </div>
       </div>
 
       {/* Win/Loss result overlay */}
