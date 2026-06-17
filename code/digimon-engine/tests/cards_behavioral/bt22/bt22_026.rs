@@ -34,17 +34,19 @@
 //!   lowest_level, of: opponent }` — same shape as AD1-012 / BT24-040).
 //!   This predicate IS evaluated by the engine — NOT blocked.
 //! - Effect-initiated digivolve from hand (Agumon → WarGreymon)
-//!   — same shape as BT17-015 branch 1 / BT22-013 branch 0
-//!   (BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET).
+//!   — same shape as BT17-015 branch 1 / BT22-013 branch 0.
+//!   G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET is RESOLVED:
+//!   the full chain runs, test is active and green.
 //! - Inherited [When Attacking][OPT] gated on top-card name ("Omnimon")
 //!   unsuspending self — same shape as BT22-013 / BT17-015 inherited but
-//!   body swapped from trash-security to unsuspend-self. (BLOCKED:
-//!   G-DSL-SOURCE-NAME-CONTAINS for the name-gate negative case.)
+//!   body swapped from trash-security to unsuspend-self.
+//!   G-DSL-SOURCE-NAME-CONTAINS is RESOLVED: name-gate negative case
+//!   exercised, test is active and green.
 //!
 //! # Sister cards (cross-reference)
 //! - BT22-013 WarGreymon — direct Red mirror; same overall layout, different
 //!   color/trait/name swaps. Branch 1 differs: BT22-013 deletes lowest DP
-//!   (BLOCKED on G-PRED-DP-LTE), BT22-026 bounces lowest level (UNBLOCKED).
+//!   (G-PRED-DP-LTE RESOLVED), BT22-026 bounces lowest level (also active).
 //!   Inherited body differs: BT22-013 trashes opp top security; BT22-026
 //!   unsuspends self.
 //! - BT17-015 WarGreymon (the "old" WarGreymon DSL test) — same branch-choice
@@ -68,11 +70,11 @@
 //! | "Standard Lv.5 Blue digivolve cost 4"                                  | `alt_paths: { kind: digivolve, from: { level_eq: 5 }, cost: 4 }`                       | OK             |
 //! | "[Hand][Main] if Nokia Shiramine, 1 Gabumon digivolves at cost 6, ignore reqs" | `when: main_from_hand` + `condition: { Nokia on field, Gabumon target }` + `select_own_permanent { name_contains: "Gabumon" }` + `effect_initiated_digivolve { from_hand: self, cost: 6, ignore_requirements: true }` | OK (re-modelled off retired activated_digivolve — G-ACTIVATED-DIGIVOLVE-EXECUTION) |
 //! | "[When Digivolving] Activate 1 of the effects below: …"               | `when: when_digivolving` + `select_effect_choice { 2 labels }`                         | OK             |
-//! | "1 of your [Agumon] may digivolve into [WarGreymon] in hand free, ignore reqs" | `select_own_permanent { name_contains: "Agumon" }` + `select_hand { name_contains: "WarGreymon" }` + `effect_initiated_digivolve { ignore_requirements, cost: 0 }` | DSL-GAP * (G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET) |
+//! | "1 of your [Agumon] may digivolve into [WarGreymon] in hand free, ignore reqs" | `select_own_permanent { name_contains: "Agumon" }` + `select_hand { name_contains: "WarGreymon" }` + `effect_initiated_digivolve { ignore_requirements, cost: 0 }` | OK (G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET RESOLVED) |
 //! | "Return 1 of your opponent's Digimon with the lowest level to the hand" | `select_opponent_permanent { kind: digimon, level_matches_aggregate { lowest_level/opponent } }` + `return_to_hand` | OK |
-//! | Inherited "[When Attacking][OPT] If [Omnimon] in name, it unsuspends" | `scope: inherited`, `when: when_attacking`, `once_per_turn: true`, `condition: { source_name_contains: "Omnimon" }`, `unsuspend { target: source }` | DSL-GAP * (G-DSL-SOURCE-NAME-CONTAINS — over-permissive on name gate) |
+//! | Inherited "[When Attacking][OPT] If [Omnimon] in name, it unsuspends" | `scope: inherited`, `when: when_attacking`, `once_per_turn: true`, `condition: { source_name_contains: "Omnimon" }`, `unsuspend { target: source }` | OK (G-DSL-SOURCE-NAME-CONTAINS RESOLVED — name gate enforced) |
 //!
-//! # Known gaps that affect this card
+//! # Gap status for this card (all resolved)
 //!
 //! - **G-ACTIVATED-DIGIVOLVE-EXECUTION** — CLOSED for this card by re-model.
 //!   The `kind: activated_digivolve` alt-path had no engine execution route,
@@ -80,14 +82,17 @@
 //!   (see §4). The Nokia precondition — which an alt-path `condition:` could
 //!   not enforce on the mask — is now the clause `condition:` (Nokia Shiramine
 //!   on field AND a [Gabumon] target present).
-//! - **G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET** — the
-//!   `select_own_permanent → select_hand → effect_initiated_digivolve` chain
-//!   terminates after the permanent pick; the hand-pick prompt never installs.
-//!   First flagged on BT17-015 (the "old" WarGreymon).
-//! - **G-DSL-SOURCE-NAME-CONTAINS** — `source_name_contains` predicate parses
-//!   + compiles but the engine evaluator never inspects it. The inherited
-//!   [When Attacking] clause's "[Omnimon] in name" gate degenerates to true.
-//!   First flagged on BT17-015.
+//! - **G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET** —
+//!   RESOLVED (qa/resolved-gaps.md). The `select_own_permanent → select_hand
+//!   → effect_initiated_digivolve` chain now runs to completion; the hand-pick
+//!   prompt installs after the permanent pick and the digivolve executes.
+//!   Branch 0 test is active and green. First flagged on BT17-015.
+//! - **G-DSL-SOURCE-NAME-CONTAINS** — RESOLVED (qa/resolved-gaps.md).
+//!   `source_name_contains` is evaluated by the engine predicate path
+//!   (predicate.rs, via subject_or_source_permanent). The inherited [When
+//!   Attacking] clause's "[Omnimon] in name" gate correctly blocks when the
+//!   top card is not Omnimon-named. Negative test is active and green. First
+//!   flagged on BT17-015.
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -432,14 +437,12 @@ fn bt22_026_when_digivolving_branch_1_only_lowest_level_is_a_legal_target() {
     );
 }
 
-/// Branch 0 (Digivolve Agumon → WarGreymon free): selecting branch 0
-/// should chain through select_own_permanent → select_hand →
-/// effect_initiated_digivolve. **BLOCKED**: G-EFFECT-INITIATED-DIGIVOLVE-
-/// FROM-HAND-WITH-PERMANENT-TARGET. Same gap as BT17-015 branch 1 /
-/// BT22-013 branch 0.
+/// Branch 0 (Digivolve Agumon → WarGreymon free): selecting branch 0 chains
+/// through select_own_permanent → select_hand → effect_initiated_digivolve.
+/// G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET is RESOLVED
+/// (qa/resolved-gaps.md): the full chain runs to completion. Same gap pattern
+/// as BT17-015 branch 1 / BT22-013 branch 0.
 #[test]
-// Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-
-// WITH-PERMANENT-TARGET resolved as phantom (see BT17-015 sister test).
 fn bt22_026_when_digivolving_branch_0_digivolves_agumon_into_wargreymon_free() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)

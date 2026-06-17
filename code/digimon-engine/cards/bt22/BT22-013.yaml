@@ -122,48 +122,37 @@
 # EXECUTION). Its `condition:` enforces the Nokia gate (which an alt-path
 # `condition:` could not), mirroring BT24-016 Lamiamon clause 1.
 #
-# ─── DSL-GAP — chained perm→hand→effect_initiated_digivolve (Clause 3) ───────
-#                                  [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET]
+# ─── Branch 0: chained perm→hand→effect_initiated_digivolve (Clause 3) ──────
+#                    [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET — RESOLVED]
 #
 # Branch 0 of [When Digivolving] mirrors BT17-015 branch 1 exactly: select
 # own Gabumon permanent → select MetalGarurumon in hand → effect_initiated_
-# digivolve. BT17-015's behavioral test for this branch (`bt17_015_on_play_
-# branch_1_digivolves_gabumon_into_metalgarurumon_free`) is `#[ignore]`'d
-# under the gap: "select_own_permanent + select_hand + effect_initiated_
-# digivolve(target: <binding>) chain terminates after the permanent pick;
-# the hand-pick prompt never installs and the digivolve verb never executes."
+# digivolve. G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET is
+# RESOLVED (qa/resolved-gaps.md): the `select_own_permanent + select_hand +
+# effect_initiated_digivolve(target: <binding>)` chain now runs to completion —
+# the hand-pick prompt installs after the permanent pick, and the digivolve
+# executes. Branch 0 behavioral test is active and green (0 ignored).
 #
-# Branch 0 here will exhibit the same observable: picking branch 0 then the
-# Gabumon permanent will not install the MetalGarurumon hand prompt, and
-# the digivolve never happens. Behavioral test for branch 0 is
-# was #[ignore]'d on G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET (now RESOLVED, qa/resolved-gaps.md).
-#
-# ─── DSL-GAP — `source_name_contains` predicate (Inherited)  [G-DSL-SOURCE-NAME-CONTAINS] ─
+# ─── `source_name_contains` predicate (Inherited)  [G-DSL-SOURCE-NAME-CONTAINS — RESOLVED] ─
 #
 # Same as BT17-015 inherited [When Attacking][OPT]: the
-# `source_name_contains: "Omnimon"` predicate parses + compiles but the
-# engine evaluator never inspects it (`code/digimon-engine/src/dsl_cards/
-# predicate.rs`). The gate degenerates to true and the inherited fires
-# regardless of the carrier's top-card name. Negative-case test (BT22-013
-# alone at top — not buried under Omnimon) is #[ignore = "BLOCKED:
-# G-DSL-SOURCE-NAME-CONTAINS"]. Positive-case test (Omnimon on top of
-# BT22-013) passes either way and serves as the wiring regression.
+# `source_name_contains: "Omnimon"` predicate is evaluated by the engine at
+# `code/digimon-engine/src/dsl_cards/predicate.rs` (via
+# `subject_or_source_permanent` falling back to `rctx.source_permanent()`).
+# G-DSL-SOURCE-NAME-CONTAINS is RESOLVED (qa/resolved-gaps.md): the gate
+# correctly blocks the inherited when the top-card name does NOT contain
+# "Omnimon". Negative-case test (BT22-013 alone at top) and positive-case
+# test (Omnimon on top of BT22-013) are both active and green (0 ignored).
 #
-# ─── Branch 2 sub-pick: `dp_lte: { aggregate: { selector: lowest_dp } }` ────
+# ─── Branch 1 sub-pick: `dp_lte: { aggregate: { selector: lowest_dp } }` ────
 #
 # Branch 1 ("Delete 1 of your opponent's Digimon with the lowest DP") uses
 # the same `dp_lte: { aggregate: { selector: lowest_dp, scope: opponent } }`
-# pattern that BT24-017 (Medusamon) [When Digivolving] uses. BT24-017's
-# header notes the engine predicate evaluator has a related gap
-# (G-PRED-DP-LTE — RESOLVED, qa/resolved-gaps.md; dp_lte now evaluated) where `dp_lte` on permanents is
-# evaluated. The select prompt may show all opponent Digimon rather than
-# only the lowest-DP one. The YAML is correct against the spec; the engine
-# gap is shared with BT24-017 and BT24-040.
-#
-# We encode the predicate faithfully and structure the test to ASSERT the
-# lowest-DP-only behavior. The test was #[ignore]'d on G-PRED-DP-LTE (now RESOLVED, qa/resolved-gaps.md)
-# until the evaluator gap closes; a positive-only test (single low-DP
-# Digimon — only legal target) DOES pass.
+# pattern that BT24-017 (Medusamon) [When Digivolving] uses. G-PRED-DP-LTE is
+# RESOLVED (qa/resolved-gaps.md): `dp_lte` on permanents IS now evaluated by
+# the engine predicate evaluator. The select prompt correctly filters to only
+# the lowest-DP opponent Digimon. The YAML is correct against the spec, and the
+# behavioral test asserting lowest-DP-only behavior is active and green.
 #
 # ─── No-approximations note: branch 0 inner optionality ──────────────────────
 #
@@ -244,12 +233,13 @@ effects:
   #
   # Mandatory (not optional) clause. Inner branch 0 chains a permanent pick
   # then a hand pick into effect_initiated_digivolve — same shape as
-  # BT17-015 branch 1, blocked by G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-
-  # WITH-PERMANENT-TARGET (the chained hand-pick prompt never installs).
+  # BT17-015 branch 1. G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-
+  # TARGET is RESOLVED: the full chain runs to completion and branch 0 is
+  # exercised by the active behavioral test.
   #
   # Inner branch 1 uses dp_lte: { aggregate: lowest_dp } — same pattern as
-  # BT24-017 / BT24-040, formerly blocked by G-PRED-DP-LTE (now RESOLVED, qa/resolved-gaps.md) on the lowest-DP filter
-  # being honored.
+  # BT24-017 / BT24-040. G-PRED-DP-LTE is RESOLVED: dp_lte is now evaluated,
+  # lowest-DP filter honored, and the behavioral test asserts this directly.
   - when: when_digivolving
     summary: "[When Digivolving] Choose: digivolve Gabumon→MetalGarurumon free OR delete opp's lowest-DP Digimon"
     process:
@@ -297,8 +287,10 @@ effects:
   # in its name, trash your opponent's top security card."
   #
   # Same shape as BT17-015 inherited clause. `source_name_contains: "Omnimon"`
-  # parses + compiles but the engine evaluator never inspects it (G-DSL-SOURCE-
-  # NAME-CONTAINS); the gate degenerates to true. Negative test is #[ignore]'d.
+  # is evaluated by the engine predicate path (predicate.rs, via
+  # subject_or_source_permanent). G-DSL-SOURCE-NAME-CONTAINS is RESOLVED:
+  # the gate correctly blocks the inherited when the top card is not
+  # Omnimon-named. Negative test is active and green (0 ignored).
   - scope: inherited
     when: when_attacking
     once_per_turn: true

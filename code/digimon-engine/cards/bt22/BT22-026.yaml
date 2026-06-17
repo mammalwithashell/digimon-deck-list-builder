@@ -38,8 +38,8 @@
 #   2. Inherited [When Attacking][OPT] body is `unsuspend: { target: source }`
 #      (not `trash_top_security`). Faithful to printed text "it unsuspends".
 #      The Omnimon-name gate uses `source_name_contains: "Omnimon"`, same
-#      as BT22-013 and BT17-015 — still BLOCKED on G-DSL-SOURCE-NAME-CONTAINS
-#      (parses + compiles, but evaluator never inspects the predicate).
+#      as BT22-013 and BT17-015. G-DSL-SOURCE-NAME-CONTAINS is RESOLVED:
+#      the engine predicate evaluator now inspects the predicate correctly.
 #
 # ─── DCGO crosscheck ─────────────────────────────────────────────────────────
 #
@@ -161,26 +161,27 @@
 # G-ALT-PATH-CONDITION"]. Tests for the Gabumon `from:` filter (which IS
 # enforced) and the cost / ignore_requirements semantics pass.
 #
-# ─── DSL-GAP — chained perm→hand→effect_initiated_digivolve (Clause 3) ───────
-#                                  [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET]
+# ─── Branch 0: chained perm→hand→effect_initiated_digivolve (Clause 3) ──────
+#                    [G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET — RESOLVED]
 #
 # Branch 0 of [When Digivolving] mirrors BT17-015 branch 1 / BT22-013 branch 0
 # exactly: select own Agumon permanent → select WarGreymon in hand →
-# effect_initiated_digivolve. The chain terminates after the permanent pick;
-# the hand-pick prompt never installs and the digivolve verb never executes.
-# Behavioral test for branch 0 is
-# was #[ignore]'d on G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET (now RESOLVED, qa/resolved-gaps.md).
+# effect_initiated_digivolve. G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-
+# PERMANENT-TARGET is RESOLVED (qa/resolved-gaps.md): the full chain now runs
+# to completion — the hand-pick prompt installs after the permanent pick, and
+# the digivolve executes. Branch 0 behavioral test is active and green
+# (0 ignored).
 #
-# ─── DSL-GAP — `source_name_contains` predicate (Inherited)  [G-DSL-SOURCE-NAME-CONTAINS] ─
+# ─── `source_name_contains` predicate (Inherited)  [G-DSL-SOURCE-NAME-CONTAINS — RESOLVED] ─
 #
 # Same as BT22-013 / BT17-015 inherited [When Attacking][OPT]: the
-# `source_name_contains: "Omnimon"` predicate parses + compiles but the
-# engine evaluator never inspects it (`code/digimon-engine/src/dsl_cards/
-# predicate.rs`). The gate degenerates to true and the inherited fires
-# regardless of the carrier's top-card name. Negative-case test (BT22-026
-# alone at top — not buried under Omnimon) is #[ignore = "BLOCKED:
-# G-DSL-SOURCE-NAME-CONTAINS"]. Positive-case test (Omnimon on top of
-# BT22-026) passes either way and serves as the wiring regression.
+# `source_name_contains: "Omnimon"` predicate is evaluated by the engine at
+# `code/digimon-engine/src/dsl_cards/predicate.rs` (via
+# `subject_or_source_permanent` falling back to `rctx.source_permanent()`).
+# G-DSL-SOURCE-NAME-CONTAINS is RESOLVED (qa/resolved-gaps.md): the gate
+# correctly blocks the inherited when the top-card name does NOT contain
+# "Omnimon". Negative-case test (BT22-026 alone at top) and positive-case
+# test (Omnimon on top of BT22-026) are both active and green (0 ignored).
 #
 # ─── Branch 1 sub-pick: `level_matches_aggregate { selector: lowest_level }` ─
 #
@@ -269,13 +270,13 @@ effects:
   #
   # Mandatory (not optional) clause. Inner branch 0 chains a permanent pick
   # then a hand pick into effect_initiated_digivolve — same shape as
-  # BT17-015 branch 1 / BT22-013 branch 0, blocked by
-  # G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET (the
-  # chained hand-pick prompt never installs).
+  # BT17-015 branch 1 / BT22-013 branch 0. G-EFFECT-INITIATED-DIGIVOLVE-
+  # FROM-HAND-WITH-PERMANENT-TARGET is RESOLVED: the full chain runs to
+  # completion and branch 0 is exercised by the active behavioral test.
   #
   # Inner branch 1 uses `level_matches_aggregate { selector: lowest_level,
   # of: opponent }` — same pattern as AD1-012 (CresGarurumon) and BT24-040
-  # (Karatenmon); the engine DOES evaluate this predicate.
+  # (Karatenmon); the engine evaluates this predicate (not blocked).
   - when: when_digivolving
     summary: "[When Digivolving] Choose: digivolve Agumon→WarGreymon free OR return opp's lowest-level Digimon to hand"
     process:
@@ -323,9 +324,10 @@ effects:
   #
   # Same shape as BT22-013 / BT17-015 inherited clause modulo body
   # (unsuspend self vs trash top opp security). `source_name_contains:
-  # "Omnimon"` parses + compiles but the engine evaluator never inspects
-  # it (G-DSL-SOURCE-NAME-CONTAINS); the gate degenerates to true. Negative
-  # test is #[ignore]'d.
+  # "Omnimon"` is evaluated by the engine predicate path (predicate.rs, via
+  # subject_or_source_permanent). G-DSL-SOURCE-NAME-CONTAINS is RESOLVED:
+  # the gate correctly blocks the inherited when the top card is not
+  # Omnimon-named. Negative test is active and green (0 ignored).
   #
   # NOTE: `target: source` (NOT `self`) — Unsuspend dispatches on
   # ResolvedBinding::Permanent; SelfRef resolves to Card while Source

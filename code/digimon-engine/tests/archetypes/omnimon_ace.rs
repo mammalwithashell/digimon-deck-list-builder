@@ -17,15 +17,14 @@
 //! When-Digivolving body) and asserts the claimed mechanical outcome via a
 //! before/after [`BoardSnapshot`] diff.
 //!
-//! Status (2026-06-02): Combos 2–5 are GREEN. **Combo 1** (the BT17-095 [Main]
-//! free-play + Delay-seat) is `#[ignore]`d and BLOCKED on the engine gap
-//! **G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH** (docs/RUST_ENGINE_GAPS.md): the
-//! DSL `place_self_as_delay_option` step does not compose with the real
-//! `play_option_from_hand` disposal lifecycle, so on the real play path BT17-095
-//! is trashed as a Standard Option instead of seated as a Delay. The two Combo-1
-//! tests are retained as the gap's repro; they are NOT routed through the
-//! `activate_hand_main` bypass the per-card test uses (that skips the Option
-//! lifecycle entirely). Combo 5 drives the BT20-102 own-protect pick
+//! Status (2026-06-02, updated): All Combos 1–5 are GREEN.
+//! **G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH** is RESOLVED
+//! (docs/RUST_ENGINE_GAPS.md): the DSL `place_self_as_delay_option` step now
+//! composes correctly with the real `play_option_from_hand` disposal lifecycle,
+//! so BT17-095 seats itself as a Delay-Option permanent on the real play path
+//! instead of being trashed. Combo 1 tests run on the real play path
+//! (`play_option_from_hand`) and are active and green (the `#[ignore]` attributes
+//! have been removed). Combo 5 drives the BT20-102 own-protect pick
 //! deterministically to BT20-102 itself (`drive_protecting_own_slot`) so the
 //! "ally deleted, BT20-102 survives" outcome is faithful to "choose 1 of your
 //! Digimon" rather than over-specified.
@@ -188,17 +187,11 @@ fn delay_option_present(runner: &DebugRunner, player: u8, card_id: &str) -> bool
 /// card recurred from trash for 0 memory while the Option pays only its own
 /// cost — the net memory swing is exactly the Option cost, not Option + body.
 ///
-/// BLOCKED — G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH (filed 2026-06-02,
-/// docs/RUST_ENGINE_GAPS.md). On the REAL `play_option_from_hand` lifecycle the
-/// Option is moved into the single-occupancy `pending_option` slot BEFORE the
-/// [Main] body runs, so the body's `place_self_as_delay_option` step (which only
-/// scans the controller's hand/trash) no-ops; `dispose_option` then trashes the
-/// Standard Option. Reproducible: P0 trash does not decrease and no `Delayed`
-/// BT17-095 is seated. The per-card test sidesteps this by driving the [Main]
-/// via `activate_hand_main` (card stays in hand, no Option disposal lifecycle) —
-/// a harness shortcut, not the real play path. An interaction test MUST use the
-/// real path, so this is `#[ignore]`d pending the engine fix rather than weakened
-/// or routed through the bypass. This body is retained as the gap's repro.
+/// G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH is RESOLVED (docs/RUST_ENGINE_GAPS.md,
+/// filed 2026-06-02). The `place_self_as_delay_option` step now composes correctly
+/// with the real `play_option_from_hand` disposal lifecycle: BT17-095 seats itself
+/// as a Delay-Option permanent rather than being trashed by `dispose_option`. This
+/// test runs on the REAL play path (`play_option_from_hand`) and is active and green.
 #[test]
 fn combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay() {
     // ST1-04 Dracomon — a real Red Lv3 colour anchor (satisfies BT17-095's
@@ -295,12 +288,10 @@ fn combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay() {
 /// The system-level fact: the Delay arm is set up regardless of whether the
 /// free recursion happens.
 ///
-/// BLOCKED — G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH (same root cause as the
-/// happy-path test above). On the real play path the place-self tail no-ops and
-/// `dispose_option` trashes the Standard Option, so BT17-095 ends in TRASH
-/// (trash +1) instead of seated as a Delay — reproducible here. `#[ignore]`d
-/// pending the engine fix; body retained as the gap's repro. See
-/// docs/RUST_ENGINE_GAPS.md.
+/// G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH is RESOLVED (docs/RUST_ENGINE_GAPS.md).
+/// The mandatory "Then, place this card in the battle area" tail now correctly
+/// seats BT17-095 as a Delay-Option on the real play path even when the optional
+/// [Agumon]/[Gabumon] union pick is declined. This test is active and green.
 #[test]
 fn combo1_mega_knight_declining_recursion_still_seats_delay() {
     // ST1-04 Dracomon colour anchor + ST1-02 Biyomon deck filler (both real).

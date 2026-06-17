@@ -34,11 +34,12 @@
 //! - F1-adjacent Lowest-DP delete branch (`dp_lte: { aggregate: { selector:
 //!   lowest_dp, scope: opponent } }` — same shape as BT24-017 / BT24-040).
 //! - F2 Effect-initiated DNA-free digivolve from hand (Gabumon → MetalGarurumon)
-//!   — same shape as BT17-015 branch 1 (BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-
-//!   FROM-HAND-WITH-PERMANENT-TARGET).
+//!   — same shape as BT17-015 branch 1. G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-
+//!   WITH-PERMANENT-TARGET is RESOLVED: the full chain runs, test is active and green.
 //! - G4 Inherited [When Attacking][OPT] gated on top-card name ("Omnimon")
-//!   trashing top opp security — same shape as BT17-015 inherited (BLOCKED:
-//!   G-DSL-SOURCE-NAME-CONTAINS for the name-gate negative case).
+//!   trashing top opp security — same shape as BT17-015 inherited.
+//!   G-DSL-SOURCE-NAME-CONTAINS is RESOLVED: name-gate negative case exercised,
+//!   test is active and green.
 //!
 //! # Sister cards (cross-reference)
 //! - BT17-015 WarGreymon (the "old" WarGreymon DSL test) — same branch-choice
@@ -64,31 +65,33 @@
 //! | "Standard Lv.5 Red digivolve cost 4"                                  | `alt_paths: { kind: digivolve, from: { level_eq: 5 }, cost: 4 }`                       | OK             |
 //! | "[Hand][Main] if Nokia Shiramine, 1 Agumon digivolves at cost 6, ignore reqs" | `when: main_from_hand` + `condition: { Nokia on field, Agumon target }` + `select_own_permanent { name_contains: "Agumon" }` + `effect_initiated_digivolve { from_hand: self, cost: 6, ignore_requirements: true }` | OK (re-modelled off retired activated_digivolve — G-ACTIVATED-DIGIVOLVE-EXECUTION) |
 //! | "[When Digivolving] Activate 1 of the effects below: …"               | `when: when_digivolving` + `select_effect_choice { 2 labels }`                         | OK             |
-//! | "1 of your [Gabumon] may digivolve into [MetalGarurumon] in hand free, ignore reqs" | `select_own_permanent { name_contains: "Gabumon" }` + `select_hand { name_contains: "MetalGarurumon" }` + `effect_initiated_digivolve { ignore_requirements, cost: 0 }` | DSL-GAP * (G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET) |
-//! | "Delete 1 of your opponent's Digimon with the lowest DP"              | `select_opponent_permanent { kind: digimon, dp_lte: { aggregate: lowest_dp/opponent } }` + `delete_permanent` | DSL-GAP * (G-PRED-DP-LTE — over-permissive on lowest-DP gate) |
-//! | Inherited "[When Attacking][OPT] If [Omnimon] in name, trash top opp sec" | `scope: inherited`, `when: when_attacking`, `once_per_turn: true`, `condition: { source_name_contains: "Omnimon" }`, `trash_top_security { of: opponent }` | DSL-GAP * (G-DSL-SOURCE-NAME-CONTAINS — over-permissive on name gate) |
+//! | "1 of your [Gabumon] may digivolve into [MetalGarurumon] in hand free, ignore reqs" | `select_own_permanent { name_contains: "Gabumon" }` + `select_hand { name_contains: "MetalGarurumon" }` + `effect_initiated_digivolve { ignore_requirements, cost: 0 }` | OK (G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET RESOLVED) |
+//! | "Delete 1 of your opponent's Digimon with the lowest DP"              | `select_opponent_permanent { kind: digimon, dp_lte: { aggregate: lowest_dp/opponent } }` + `delete_permanent` | OK (G-PRED-DP-LTE RESOLVED — lowest-DP filter honored) |
+//! | Inherited "[When Attacking][OPT] If [Omnimon] in name, trash top opp sec" | `scope: inherited`, `when: when_attacking`, `once_per_turn: true`, `condition: { source_name_contains: "Omnimon" }`, `trash_top_security { of: opponent }` | OK (G-DSL-SOURCE-NAME-CONTAINS RESOLVED — name gate enforced) |
 //!
-//! # Known gaps that affect this card
+//! # Gap status for this card (all resolved)
 //!
 //! - **G-ACTIVATED-DIGIVOLVE-EXECUTION** — CLOSED for this card by re-model.
 //!   The `kind: activated_digivolve` alt-path had no engine execution route,
 //!   so the [Hand][Main] Nokia jump is now a `when: main_from_hand` clause
 //!   (see §5). The Nokia precondition — which an alt-path `condition:` could
 //!   not enforce on the mask — is now the clause `condition:`.
-//! - **G-PRED-DP-LTE** — `dp_lte` predicate parses + compiles but the engine
-//!   predicate evaluator does not yet evaluate it for permanents. The
-//!   "lowest DP" filter on branch 1's delete will offer ALL opp Digimon, not
-//!   only the lowest-DP one. First flagged on BT24-017 (Medusamon).
-//! - **G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET** — the
-//!   `select_own_permanent → select_hand → effect_initiated_digivolve` chain
-//!   terminates after the permanent pick; the hand-pick prompt never installs.
-//!   First flagged on BT17-015 (the "old" WarGreymon) for the identical
-//!   Gabumon → MetalGarurumon branch.
-//! - **G-DSL-SOURCE-NAME-CONTAINS** — `source_name_contains` predicate parses
-//!   + compiles but the engine evaluator never inspects it. The inherited
-//!   [When Attacking] clause's "[Omnimon] in name" gate degenerates to true.
-//!   First flagged on BT17-015 (the "old" WarGreymon) for the identical
-//!   inherited [When Attacking][OPT] clause.
+//! - **G-PRED-DP-LTE** — RESOLVED (qa/resolved-gaps.md). `dp_lte` on
+//!   permanents is now evaluated by the engine predicate evaluator. The
+//!   branch 1 delete filters to only the lowest-DP opponent Digimon, and the
+//!   test asserting this behavior is active and green. First flagged on
+//!   BT24-017 (Medusamon).
+//! - **G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET** —
+//!   RESOLVED (qa/resolved-gaps.md). The `select_own_permanent → select_hand
+//!   → effect_initiated_digivolve` chain now runs to completion; the hand-pick
+//!   prompt installs after the permanent pick and the digivolve executes.
+//!   Branch 0 test is active and green. First flagged on BT17-015.
+//! - **G-DSL-SOURCE-NAME-CONTAINS** — RESOLVED (qa/resolved-gaps.md).
+//!   `source_name_contains` is evaluated by the engine predicate path
+//!   (predicate.rs, via subject_or_source_permanent). The inherited [When
+//!   Attacking] clause's "[Omnimon] in name" gate correctly blocks when the
+//!   top card is not Omnimon-named. Negative test is active and green. First
+//!   flagged on BT17-015.
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -395,10 +398,10 @@ fn bt22_013_when_digivolving_branch_1_deletes_opp_digimon() {
     );
 }
 
-/// Branch 1 with multiple opp Digimon: only the LOWEST-DP one should be a
-/// valid delete target. **BLOCKED**: G-PRED-DP-LTE — the predicate evaluator
-/// does not yet honor `dp_lte` on permanents, so the prompt offers ALL opp
-/// Digimon. Same gap as BT24-017's `bt24_017_delete_targets_only_lowest_dp_digimon`.
+/// Branch 1 with multiple opp Digimon: only the LOWEST-DP one is a valid
+/// delete target. G-PRED-DP-LTE is RESOLVED (qa/resolved-gaps.md): `dp_lte`
+/// is now evaluated by the engine, so the prompt correctly filters to only the
+/// lowest-DP Digimon. Same gap pattern as BT24-017's lowest-DP delete test.
 #[test]
 fn bt22_013_when_digivolving_branch_1_only_lowest_dp_is_a_legal_target() {
     let mut runner = DebugRunner::builder()
@@ -427,12 +430,11 @@ fn bt22_013_when_digivolving_branch_1_only_lowest_dp_is_a_legal_target() {
 }
 
 /// Branch 0 (Digivolve Gabumon → MetalGarurumon free): selecting branch 0
-/// should chain through select_own_permanent → select_hand →
-/// effect_initiated_digivolve. **BLOCKED**: G-EFFECT-INITIATED-DIGIVOLVE-
-/// FROM-HAND-WITH-PERMANENT-TARGET. Same gap as BT17-015 branch 1.
+/// chains through select_own_permanent → select_hand →
+/// effect_initiated_digivolve. G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-
+/// PERMANENT-TARGET is RESOLVED (qa/resolved-gaps.md): the full chain runs to
+/// completion. Same gap pattern as BT17-015 branch 1.
 #[test]
-// Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-
-// WITH-PERMANENT-TARGET resolved as phantom (see BT17-015 sister test).
 fn bt22_013_when_digivolving_branch_0_digivolves_gabumon_into_metalgarurumon_free() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
