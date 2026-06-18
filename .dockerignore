@@ -10,13 +10,17 @@
 !code/engine_py_legacy/
 !code/tools/decklist_analysis.py
 !code/tools/provision_ci_release_user.py
+!code/tools/run_training_job.py
 !code/data_paths.py
 !data/
+!training_jobs/
+!docker/runpod-start.sh
 !alembic/
 !alembic.ini
 !Cargo.toml
 !Cargo.lock
 !requirements-server.txt
+!requirements-training.txt
 # Re-excludes inside the allowed trees
 code/engine_py_legacy/tests/
 **/target/

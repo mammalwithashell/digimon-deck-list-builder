@@ -16,6 +16,16 @@ pub fn from_embedded() -> Result<CardRegistry, String> {
     CardRegistry::from_pack_bytes(CARDS_PACK)
 }
 
+/// Process-cached `from_embedded()`. The embedded pack is static, so parse it
+/// (~4000 cards) once and share a `&'static` reference instead of re-parsing on
+/// every `Game::new` — a per-episode construction cost that dominated training
+/// wall-time (training games are short, so the engine is rebuilt constantly).
+/// Read-only after parse (callers only enrich/iterate), so sharing is safe.
+pub fn from_embedded_cached() -> Result<&'static CardRegistry, String> {
+    static CACHE: std::sync::OnceLock<Result<CardRegistry, String>> = std::sync::OnceLock::new();
+    CACHE.get_or_init(from_embedded).as_ref().map_err(Clone::clone)
+}
+
 /// Load the card registry from embedded bytes and reject packs whose manifest
 /// names raw_rust functions that are absent from the provided registry.
 pub fn from_embedded_with_raw_registry(

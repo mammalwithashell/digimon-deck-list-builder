@@ -45,10 +45,10 @@ impl Game {
             Vec<digimon_dsl::compiled::CompiledAltPath>,
         > = HashMap::new();
         #[cfg(feature = "dsl-yaml-loader")]
-        if let Ok(dsl_registry) = crate::dsl_registry::from_embedded() {
+        if let Ok(dsl_registry) = crate::dsl_registry::from_embedded_cached() {
             crate::dsl_bridge::enrich_card_data_with_dsl_alt_paths(
                 &mut effective_card_data,
-                &dsl_registry,
+                dsl_registry,
             );
             alt_path_registry = dsl_registry
                 .iter()
@@ -182,7 +182,11 @@ impl Game {
             alt_path_registry,
             modifiers: ModifierRegistry::new(),
             floating_mass_modifiers: Vec::new(),
-            effect_registry: build_registry(),
+            // Process-cached: the ~4000-card DSL pack is lowered once, not per
+            // game. `Game::new` runs per episode in training, so the uncached
+            // `build_registry()` (~190 ms) dominated wall-time. See
+            // `cards::build_registry_cached`.
+            effect_registry: crate::cards::build_registry_cached(),
             formula_extensions: FormulaExtensionRegistry::empty(),
             token_registry,
             rng,
@@ -258,6 +262,7 @@ impl Game {
             until_condition_reevaluation_cycles: 0,
             reveal_source: None,
             opaque_data_index_map: None,
+            card_id_index: data_index_map.clone(),
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it

@@ -19,6 +19,8 @@ from __future__ import annotations
 import math
 from typing import List
 
+import numpy as np
+
 import pytest
 
 pytest.importorskip("digimon_engine")
@@ -242,18 +244,19 @@ def test_integration_decks_persist_across_match() -> None:
     """Snapshot the deck pair at match start; assert it's unchanged after
     multiple games complete."""
     env = _make_match_env_with_greedy_opponent(seed=11)
-    env.reset()
+    _, info = env.reset()
     deck1_snapshot = list(env._deck1)
     deck2_snapshot = list(env._deck2)
 
-    # Drive a few opponent concedes — the agent only needs to act between
-    # games (no real choices, the opponent's auto-concede ends each game).
-    # Each `MatchEnv.step` triggers OpponentWrapper autoplay, which
-    # invokes the conceding opponent.
-    #
-    # We pass action PASS (62) which is always-legal in many phases.
+    # Step with a mask-LEGAL action each turn (what a real agent does). A
+    # hardcoded action can be illegal at the current phase (e.g. PASS/Concede
+    # are gated out during Mulligan / SelectPlayOrder), which the engine refuses
+    # and the no-op tripwire correctly rejects — so always pick from the mask.
     for _ in range(10):
-        obs, reward, terminated, truncated, info = env.step(62)
+        legal = np.nonzero(np.asarray(info["action_mask"]))[0]
+        if len(legal) == 0:
+            break
+        obs, reward, terminated, truncated, info = env.step(int(legal[0]))
         if terminated:
             break
 
