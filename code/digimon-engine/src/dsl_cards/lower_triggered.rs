@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use digimon_dsl::compiled::{
     CompiledActivationCostKind, CompiledCardKind, CompiledPlayerRef, CompiledPredicate,
-    CompiledScope, CompiledStep, CompiledTriggeredClause,
+    CompiledBindingRef, CompiledScope, CompiledStep, CompiledTriggeredClause,
 };
 
 use crate::card_source::CardHandle;
@@ -160,6 +160,10 @@ pub fn lower_for_kind_with_clause_index(
         } else {
             None
         };
+        // Captured before `body_steps` is moved — used to gate [Main]/activated
+        // abilities on first-step actionability even when the clause isn't
+        // "optional" (activating IS the player's opt-in).
+        let activation_first_step = body_steps.first().cloned();
         let process_steps = Arc::new(body_steps);
         let active_when = clause.active_when.clone().map(Arc::new);
         let condition = clause.condition.clone().map(Arc::new);
@@ -222,6 +226,18 @@ pub fn lower_for_kind_with_clause_index(
                 {
                     builder = builder.outer_optional_guard(guard);
                 }
+            }
+        }
+        // [Main] activated field abilities: the action mask (`field_main_match`)
+        // and the effect-queue both consult `outer_optional_guard` to suppress
+        // an activation whose leading selection/cost has no candidate — e.g.
+        // <Digi-Burst N> with too few sources to trash. Install it from the
+        // first body step for `MainOnField` even when the clause isn't
+        // "optional" (activating the [Main] IS the opt-in). `!optional` avoids
+        // double-installing over the optional path above.
+        if !optional && matches!(engine_timing, EffectTiming::MainOnField) {
+            if let Some(guard) = digi_burst_main_activation_guard(activation_first_step.as_ref()) {
+                builder = builder.outer_optional_guard(guard);
             }
         }
         if steps_provide_resource_flow(&clause.process) {
@@ -468,6 +484,35 @@ fn players_for_compiled_ref(
 /// single-pick selection steps are covered — they are the ones that drive
 /// the `G-OUTER-OPTIONAL-NOT-INSTALLED` failure mode (a useless prompt for
 /// a body that would silently no-op).
+/// For a [Main]-activated field ability whose leading step is a ＜Digi-Burst N＞
+/// self-cost (`SelectOwnSources` over THIS Digimon's own sources), return a
+/// guard requiring N digivolution cards under the top to trash
+/// (`card_sources.len() > N`). Used ONLY in the `MainOnField` branch to keep the
+/// action mask from offering a [Main] activation that can't pay its cost —
+/// execution would refuse it, a no-op the deterministic policy loops on to the
+/// step limit. Returns None for any other first step (no [Main]-side gate). This
+/// is deliberately separate from `first_step_candidate_guard` (which serves the
+/// optional-TRIGGERED path, where the same step instead silently skips).
+fn digi_burst_main_activation_guard(
+    step: Option<&CompiledStep>,
+) -> Option<Box<dyn Fn(&crate::effect_context::EffectReadContext<'_>) -> bool + Send + Sync>> {
+    if let Some(CompiledStep::SelectOwnSources {
+        target: Some(CompiledBindingRef::Source),
+        min,
+        ..
+    }) = step
+    {
+        let need = *min as usize;
+        Some(Box::new(move |rctx| {
+            rctx.source_permanent
+                .and_then(|h| rctx.game.player(h.player).battle_area.get(h.index as usize))
+                .is_some_and(|perm| perm.card_sources.len() > need)
+        }))
+    } else {
+        None
+    }
+}
+
 fn first_step_candidate_guard(
     step: &CompiledStep,
 ) -> Option<Box<dyn Fn(&crate::effect_context::EffectReadContext<'_>) -> bool + Send + Sync>> {
@@ -514,6 +559,15 @@ fn first_step_candidate_guard(
                     .any(|p| permanent_zone_has_match(rctx, p, &filter))
             }))
         }
+        // NOTE: `SelectOwnSources` is intentionally NOT handled here. A
+        // "by trashing N sources" cost lowers to it, but for an OPTIONAL
+        // TRIGGERED ability (e.g. EX10-034's [All Turns] when-attacking) the
+        // designed behavior is to fire and SILENTLY SKIP the trash when fewer
+        // than N sources exist — it triggers on an event, so it can't loop.
+        // The [Main]-activated digi_burst case (BlitzGreymon) IS gated, but
+        // only in the `MainOnField` branch of `lower` (mask-offered, so it
+        // would loop) — see `digi_burst_main_activation_guard`.
+        //
         // Other first-step kinds (suspend, select_effect_choice, budget
         // selects, etc.) are not pre-evaluated — the outer prompt installs
         // unconditionally for them.
