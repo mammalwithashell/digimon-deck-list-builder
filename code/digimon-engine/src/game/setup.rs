@@ -45,10 +45,10 @@ impl Game {
             Vec<digimon_dsl::compiled::CompiledAltPath>,
         > = HashMap::new();
         #[cfg(feature = "dsl-yaml-loader")]
-        if let Ok(dsl_registry) = crate::dsl_registry::from_embedded() {
+        if let Ok(dsl_registry) = crate::dsl_registry::from_embedded_cached() {
             crate::dsl_bridge::enrich_card_data_with_dsl_alt_paths(
                 &mut effective_card_data,
-                &dsl_registry,
+                dsl_registry,
             );
             alt_path_registry = dsl_registry
                 .iter()
