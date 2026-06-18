@@ -3730,3 +3730,15 @@ BT25-075's observer sub-clause.
 
 ## RESOLVED 2026-06-13 — `app_fuse` step (effect-initiated App Fuse)  [G-DSL-APP-FUSE]
 **Status: RESOLVED 2026-06-13.** New DSL step `app_fuse: { from: hand|trash, result_filter?, optional }` for the printed "1 of your Digimon may app fuse into a Digimon card in the hand/trash" rider. Lowers to `CompiledStep::AppFuse` → `EffectContext::initiate_effect_app_fuse`. Added to `body_first_step_is_declinable` (installs its own PASS-able selections). First users: BT21-084, BT23-079, P-241, BT24-087, BT25-089. See `docs/RUST_ENGINE_GAPS.md` "Effect-initiated App Fuse — RESOLVED 2026-06-13".
+
+
+## G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH — continuous mass "treat as a <DP> Digimon" aura with a synth identity (DATA SQUAD)
+- **Card(s):** BT25-104 ShineGreymon: Burst Mode (Option face), clause "[Your Turn] All of your [Marcus Damon]s are also treated as 12000 DP Digimon and gain <Rush>". Generalizes to any "treat your Tamer(s) as a Digimon with DP X" continuous effect.
+- **Status:** OPEN. BT25-104 ships PARTIAL with this clause OMITTED (not approximated, rule 17) — the other faces/clauses are IMPLEMENTED + green.
+- **What's missing:** A continuous mass `TreatAsDigimon` aura that grants a *synth Digimon identity* (a DP value + keyword) to every permanent matching a name/trait filter. The `aura` body has no `synth_identity` field, and the continuous mass path (`add_floating_mass_modifier`) drops the `ModifierPayload` carrying the DP/identity. A one-shot single-target pick would under-cover "ALL of your Marcus Damons" and isn't continuous.
+- **Fix shape:** add a `synth_identity { dp, keywords }` axis to the aura body + thread the `ModifierPayload` through `add_floating_mass_modifier`, and have combat/zone code read the synth DP + treat the Tamer as a Digimon while the aura is active (mirror the existing hybrid-Tamer / treat-as profile machinery — see `hybrid_tamer_digivolve` tests).
+
+## G-DSL-FIELD-SELECTOR-LOWEST-LEVEL — `selector: lowest_level` for select_* clauses (field selector, not just aggregate)
+- **Card(s):** BT25-029 MirageGaogamon ("return 1 of your opponent's lowest level Digimon to the hand"); AD1-012 Omnimon Alter-S (same wording). 
+- **Status:** OPEN. The `CompiledAggregateSelector` already has `LowestLevel`, but the `FieldSelector` enum used by `select_opponent_permanent { selector: ... }` only has `LowestDp / HighestDp / LowestPlayCost / HighestPlayCost / LowestMaterialCount` — there is no `lowest_level`/`highest_level` field selector, so the YAML fails to parse.
+- **Fix shape:** add `LowestLevel` (+ `HighestLevel`) to `FieldSelector` (code/digimon-dsl/src/step.rs) with serde rename `lowest_level`, mirror into the `compile.rs` FieldSelector->CompiledFieldSelector map, and add the eval arm to `field_value` + `selected_field_extreme` in code/digimon-engine/src/dsl_cards/step/selections.rs (read `perm.top_card().level(&card_data)`). NOTE: `CompiledFieldSelector` already lists `LowestLevel/HighestLevel` but they are unevaluated — wire the source enum + eval. Small, mirrors the LowestPlayCost closure (G-PLAY-COST-AGGREGATE).
