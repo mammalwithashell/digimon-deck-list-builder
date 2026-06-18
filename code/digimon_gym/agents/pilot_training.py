@@ -2161,7 +2161,9 @@ def make_vec_env(
         return _init
 
     factories = [_factory(rank) for rank in range(cfg.n_envs)]
-    if getattr(cfg, "vec_env_backend", "dummy") == "subproc" and cfg.n_envs > 1:
+    if cfg.vec_env_backend == "subproc" and cfg.n_envs > 1:
+        # Thread management for the subproc path lives in _SubprocThreadPhaseCallback
+        # (per-phase toggle), not here — see train().
         return SubprocVecEnv(factories, start_method="spawn")
     return DummyVecEnv(factories)
 
@@ -2731,6 +2733,35 @@ def train(total_timesteps: int = 100_000,
     )
     action_validity_cb = ActionValidityCallback()
     callbacks: list[BaseCallback] = [win_rate_cb, action_validity_cb]
+
+    # SubprocVecEnv torch-thread phase toggle.
+    #
+    # The rollout and update phases want OPPOSITE thread counts, and a global
+    # OMP_NUM_THREADS can't satisfy both (verified by py-spy on an 8-core box):
+    #   * Rollout collection — the main process does a TINY per-vec-step forward
+    #     (n_envs samples). Multi-threaded, it pegs every core on contention
+    #     overhead and the env workers starve (blocked in unix_stream_data_wait),
+    #     dragging one rollout out to ~10 min. Wants 1 thread so the workers get
+    #     the cores.
+    #   * PPO update — big-batch backprop over the whole rollout buffer while the
+    #     workers idle. Wants ALL cores.
+    # So pin to 1 thread for rollout, restore to the box core count for the
+    # update. No-op for DummyVecEnv (no workers to starve) and honored only when
+    # the operator hasn't pinned OMP_NUM_THREADS themselves.
+    if cfg.vec_env_backend == "subproc" and cfg.n_envs > 1 and "OMP_NUM_THREADS" not in os.environ:
+        _update_threads = os.cpu_count() or cfg.n_envs
+
+        class _SubprocThreadPhaseCallback(BaseCallback):
+            def _on_rollout_start(self) -> None:
+                _torch.set_num_threads(1)
+
+            def _on_rollout_end(self) -> None:
+                _torch.set_num_threads(_update_threads)
+
+            def _on_step(self) -> bool:
+                return True
+
+        callbacks.append(_SubprocThreadPhaseCallback())
 
     # In-training anchored panel (`harden-training-pipeline` D2).
     # freq == 0 means the callback is never attached — no anchored
