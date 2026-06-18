@@ -28,7 +28,7 @@
 //! - B — BT17-095 Delay → reactive DNA (leaving Lv.6 consumed into an Omnimon). [AUTHORED]
 //! - C — BT17-078 Blast DNA Counter (same-level bottom-deck + delete).          [AUTHORED]
 //! - D — free cross-tribe Lv.6 assembly (BT17-015 free Gabumon→MetalGarurumon). [AUTHORED]
-//! - E — Nokia cost-6 Lv.6 jump (BT22-013 [Hand][Main]).                        [#[ignore] — G-ACTIVATED-DIGIVOLVE-EXECUTION]
+//! - E — Nokia cost-6 Lv.6 jump (BT22-013 [Hand][Main]).                        [AUTHORED]
 
 #![allow(dead_code)]
 
@@ -37,9 +37,9 @@ use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::{CardColor, EffectSourceKind, EffectTiming};
-use digimon_engine::permanent::{OptionState, PermanentHandle};
+use digimon_engine::permanent::OptionState;
 use digimon_engine::replacement::ReplacementCause;
-use digimon_engine::selection::{AttackTarget, TriggerSource};
+use digimon_engine::selection::{AttackTarget, OptionPlayResult, TriggerSource};
 
 use super::support::snapshot;
 
@@ -222,33 +222,83 @@ fn combo_a_standard_digivolve_does_not_grant_immunity() {
 // Combo B — Miraculous Mega Knight Delay → reactive DNA Omnimon (BT17-095)
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// Cards: BT17-095 (Option, seated as a Delay) + an own Lv.6 [Greymon]
-//   (ST1-11 WarGreymon) on field + an [Omnimon]-name Lv.7 (EX4-060 Omnimon
-//   Alter-S) in hand + a Lv.6 DNA partner (ST2-10 Plesiomon) in hand.
-// Expected outcome (model Combo B): when an own Lv.6 [Greymon]/[Garurumon]
-//   *would leave the battle area outside of battle*, the Delay fires: that
-//   leaving Lv.6 + a hand card DNA digivolve into an [Omnimon]-name Lv.7 in hand.
-//   The leaving Lv.6 is CONSUMED as a DNA material under the merged Omnimon —
-//   it does NOT go to trash.
+// Cards: BT17-095 (Option, played from hand → seats itself as a Delay) + an own
+//   Lv.6 [Greymon] (ST1-11 WarGreymon) on field + an [Omnimon]-name Lv.7
+//   (EX4-060 Omnimon Alter-S) in hand + a Lv.6 DNA partner (ST2-10 Plesiomon)
+//   in hand + a Red colour anchor (ST1-04 Dracomon) on field for the
+//   Option-play colour requirement.
+// Expected outcome (model Combo B): BT17-095's [Main] (Clause A) plays no body
+//   here (no [Agumon]/[Gabumon] is eligible to recur — the optional union pick
+//   declines) and runs its mandatory "Then, place this card in the battle area"
+//   tail, seating BT17-095 as a Delay-Option. Then, when an own Lv.6
+//   [Greymon]/[Garurumon] *would leave the battle area outside of battle*, the
+//   Delay (Clause B) fires: that leaving Lv.6 + a hand card DNA digivolve into
+//   an [Omnimon]-name Lv.7 in hand. The leaving Lv.6 is CONSUMED as a DNA
+//   material under the merged Omnimon — it does NOT go to trash.
 // Rules basis: §8-2 (DNA digivolution); §16 <Delay>. DCGO
-//   `BT17/Red/BT17_095.cs` (WhenRemoveField Delay). Engine: cards/bt17/BT17-095.yaml.
+//   `BT17/Red/BT17_095.cs` (Clause A place-as-Delay; Clause B WhenRemoveField).
+//   Engine: cards/bt17/BT17-095.yaml.
 //   The DNA-into-Omnimon body uses `effect_initiated_dna_digivolve_hand_partner`
 //   (G-DSL-DNA-FROM-HAND-PARTNER CLOSED 2026-05-20) — a hand card is the 2nd material.
 //   The merge runs with ignore_requirements, so any real [Omnimon]-name Lv.7
 //   result is a faithful DNA target for ST1-11 WarGreymon + a Lv.6 hand partner.
+//
+// REAL play path (B3, 2026-06-16): BT17-095 is seated as a Delay through its
+//   REAL Option-play lifecycle — `play_option_from_hand` → Clause A [Main] body
+//   → `place_self_as_delay_option`. This was previously scaffolded by directly
+//   stamping `OptionState::Delayed` (the `seat_as_delay_option` helper, removed)
+//   because the engine's `place_self_as_delay_option_permanent` did not claim
+//   the in-flight Option from `pending_option` on the real play path
+//   (G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH). That gap is now RESOLVED
+//   (qa/resolved-gaps.md) — the same fix that greens
+//   `omnimon_ace::combo1_mega_knight_*` — so the Option-seating scaffold is gone
+//   and BT17-095 seats itself through its true [Main] body. The Lv.6 "leaving"
+//   trigger is still driven by `delete_permanent_with_cause(_, OwnEffect)` — the
+//   ability UNDER TEST (BT17-095's Clause-B reaction) still fires through its
+//   real replacement-observer trigger path; only the Option-seating scaffold is
+//   removed in B3.
 
-/// Seat a placed BT17-095 Option permanent as a Delay-Option so its [All Turns]
-/// `when_would_leave_battle_area` replacement can fire (Clause B is gated on
-/// `source_is_delayed_option`). Mirrors `place_self_as_delay_option_permanent`.
-fn seat_as_delay_option(runner: &mut DebugRunner, handle: PermanentHandle) {
-    let turn = runner.game.turn_count;
-    let perm = &mut runner.game.players[handle.player as usize].battle_area[handle.index as usize];
-    perm.option_state = OptionState::Delayed {
-        owner: handle.player,
-        trash_on_turn: turn + 2,
-        trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
-        placed_on_turn: turn,
-    };
+/// True if any of `player`'s battle-area permanents tops with `card_id` and is
+/// currently a seated Delay-Option. Used to confirm BT17-095 seated itself as a
+/// Delay through its REAL [Main] body (Clause A `place_self_as_delay_option`).
+fn delay_option_present(runner: &DebugRunner, player: u8, card_id: &str) -> bool {
+    runner.game.players[player as usize].battle_area.iter().any(|p| {
+        p.top_card().card_id(&runner.game.card_data) == card_id
+            && matches!(p.option_state, OptionState::Delayed { .. })
+    })
+}
+
+/// Play BT17-095 from `player`'s hand through its REAL Option-play path and let
+/// it seat itself as a Delay-Option via Clause A's `place_self_as_delay_option`
+/// tail. The optional [Agumon]/[Gabumon] union recursion has no eligible target
+/// in the Combo B fixtures, so every installed prompt is driven to its first
+/// valid action (which, for the empty optional union pick, is PASS) — leaving
+/// the mandatory place-self tail to run. Asserts the Delay actually seated.
+fn play_and_seat_bt17_095_as_delay(runner: &mut DebugRunner, player: u8) {
+    let gh_idx = runner.game.players[player as usize]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "BT17-095")
+        .expect("BT17-095 must be in hand to play it via the real Option-play path");
+    // Real Option-play lifecycle: pays BT17-095's own cost (2), runs Clause A's
+    // [Main] body, and seats it as a Delay via place_self_as_delay_option. The
+    // optional union pick parks a `Pending` selection (it offers PASS even with
+    // no eligible Agumon/Gabumon); a fully-synchronous seat would return
+    // `Delayed`. Either is a legal entry — only `Invalid` is a failure.
+    let res = runner.game.play_option_from_hand(player, gh_idx);
+    assert_ne!(
+        res,
+        OptionPlayResult::Invalid,
+        "BT17-095 must enter its real Option-play lifecycle (got {res:?})"
+    );
+    // Drain Clause A's optional union pick (declines — no eligible Agumon/Gabumon)
+    // so the mandatory place-self tail runs.
+    drive_first_valid(runner, 20);
+    assert!(
+        delay_option_present(runner, player, "BT17-095"),
+        "BT17-095 must seat itself as a Delay-Option through its REAL [Main] body \
+         (Clause A place_self_as_delay_option on the real play path)"
+    );
 }
 
 /// Drive every installed selection by picking its first non-PASS valid action,
@@ -290,17 +340,25 @@ fn combo_b_delay_consumes_leaving_lv6_into_merged_omnimon() {
         .expect("EX4-060 (Omnimon Alter-S) in embedded DSL pack")
         .dsl_card("ST2-10") // Plesiomon — Lv.6 hand DNA partner
         .expect("ST2-10 (Plesiomon) in embedded DSL pack")
-        .dsl_card("ST1-04") // Dracomon — vanilla deck filler
+        .dsl_card("ST1-04") // Dracomon — Red Lv.3 colour anchor + deck filler
         .expect("ST1-04 (Dracomon) in embedded DSL pack")
-        .hand(0, &["EX4-060", "ST2-10"])
+        // BT17-095 is in HAND so it is played through its real Option-play path.
+        .hand(0, &["BT17-095", "EX4-060", "ST2-10"])
         .deck(0, &["ST1-04"; 5])
         .deck(1, &["ST1-04"; 5])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
-    let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
-    seat_as_delay_option(&mut runner, bt17_095);
+    // Red colour anchor on field (satisfies BT17-095's Red+Blue colour
+    // requirement at Option-play time, mirroring omnimon_ace combo 1).
+    runner.place_on_field(0, "ST1-04", Some(0));
+    runner.game.enter_main_phase();
+
+    // Seat BT17-095 as a Delay through its REAL Option-play [Main] body (Clause A
+    // `place_self_as_delay_option`) — no `OptionState::Delayed` scaffold.
+    play_and_seat_bt17_095_as_delay(&mut runner, 0);
+
     let greymon_handle = runner.place_on_field(0, "ST1-11", None);
     let greymon_card = runner.top_card(greymon_handle);
 
@@ -365,20 +423,29 @@ fn combo_b_delay_does_not_fire_for_opponent_lv6_leaving() {
         .expect("EX4-060 (Omnimon Alter-S) in embedded DSL pack")
         .dsl_card("ST2-10") // Plesiomon — DNA partner that must stay in hand
         .expect("ST2-10 (Plesiomon) in embedded DSL pack")
-        .dsl_card("ST1-04") // Dracomon — vanilla deck filler
+        .dsl_card("ST1-04") // Dracomon — Red Lv.3 colour anchor + deck filler
         .expect("ST1-04 (Dracomon) in embedded DSL pack")
-        .hand(0, &["EX4-060", "ST2-10"])
+        // BT17-095 is in HAND so it is played through its real Option-play path.
+        .hand(0, &["BT17-095", "EX4-060", "ST2-10"])
         .deck(0, &["ST1-04"; 5])
         .deck(1, &["ST1-04"; 5])
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
-    let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
-    seat_as_delay_option(&mut runner, bt17_095);
+    // Red colour anchor on field for BT17-095's Option-play colour requirement.
+    runner.place_on_field(0, "ST1-04", Some(0));
+    runner.game.enter_main_phase();
+
+    // Seat BT17-095 as a Delay through its REAL Option-play [Main] body, arming
+    // Clause B's leave-observer — no `OptionState::Delayed` scaffold.
+    play_and_seat_bt17_095_as_delay(&mut runner, 0);
+
     // The leaving Lv.6 WarGreymon belongs to the OPPONENT (player 1).
     let opp_greymon = runner.place_on_field(1, "ST1-11", None);
 
+    // Snapshot AFTER the play+seat: P0's hand now holds only the result + partner
+    // (EX4-060, ST2-10); the assertions below verify the Delay does NOT fire.
     let before = snapshot(&runner);
     runner
         .game
@@ -688,37 +755,199 @@ fn combo_d_no_gabumon_yields_no_second_lv6() {
 // Combo E — Nokia accel into cheap Lv.6 (BT22-013 cost-6 jump)
 // ═══════════════════════════════════════════════════════════════════════════
 //
-// Cards (model Combo E): BT22-084 Nokia Shiramine + BT22-013 WarGreymon + a
-//   field [Agumon]. Claimed outcome: with Nokia in play, BT22-013's [Hand][Main]
-//   lets an [Agumon] digivolve into BT22-013 for digivolution cost 6, ignoring
-//   requirements.
+// Cards (model Combo E): BT22-084 Nokia Shiramine (Tamer) + BT22-013 WarGreymon
+//   (hand) + a real [Agumon] (BT22-008) on field. Claimed outcome: with Nokia in
+//   play, BT22-013's [Hand][Main] lets an [Agumon] digivolve into BT22-013 for a
+//   digivolution cost of 6, ignoring requirements — and the resulting digivolve
+//   fires BT22-013's [When Digivolving] branch-choice.
 //
-// BLOCKED — `#[ignore]`'d on G-ACTIVATED-DIGIVOLVE-EXECUTION
-//   (`qa/archetype-qa/engine-gaps.md`). BT22-013's [Hand][Main] cost-6 jump is
-//   encoded only as a `kind: activated_digivolve` alt-path, which has NO engine
-//   execution route: `dna_digivolve.rs` matches only Digivolve / DnaDigivolve /
-//   BlastDnaDigivolve, and the action layer offers no action ID for an
-//   activated-digivolve alt-path. The gap entry lists BT22-013 as a residual
-//   card. The named cost-6 jump therefore cannot be played or behaviorally
-//   driven — its board diff cannot be produced faithfully. (Separately, the
-//   Nokia precondition is unenforced because BT22-013.yaml does not yet populate
-//   the now-RESOLVED `AltPathSpec.condition:` — a card-local authoring follow-up,
-//   distinct from this execution gap.) The executable BT22-013 components (the
-//   [When Digivolving] delete / free-digivolve branches) are covered by
-//   `tests/cards_behavioral/bt22/bt22_013.rs`; no faithful interaction test can
-//   be authored for the named jump until the execution route lands.
+// AUTHORED — G-ACTIVATED-DIGIVOLVE-EXECUTION is RESOLVED (qa/resolved-gaps.md).
+//   The jump was re-modelled (gap-closure Tasks A1–A3) off the unreachable
+//   `kind: activated_digivolve` alt-path onto a `when: main_from_hand` triggered
+//   clause whose `condition:` enforces BOTH the Nokia "If you have [Nokia
+//   Shiramine]" precondition AND the [Agumon]-target existence; its body runs
+//   `select_own_permanent { Agumon } → effect_initiated_digivolve { from_hand:
+//   self, cost: 6, ignore_requirements: true }` (mirrors BT24-016 Lamiamon
+//   clause 1). The engine now offers a Hand [Main] action for the card whose
+//   gate passes; `activate_hand_main` runs it. So the named combo IS driveable
+//   through the card's REAL ability — no `activated_digivolve` execution route
+//   is needed, and zero engine code changed. The per-card mechanism is pinned by
+//   `tests/cards_behavioral/bt22/bt22_013.rs::bt22_013_hand_main_jump_*`; this
+//   interaction test pins the combined-system outcome (REAL Nokia + REAL Agumon
+//   stack → cost-6 jump → [When Digivolving] branch-choice fires) plus the
+//   Nokia-absent gate that a per-card test can isolate but the combo relies on.
+//
+// Driven through the REAL ability (`activate_hand_main` → resolve the Agumon
+// select), not a low-level digivolve helper — so the cost-6 deduction and the
+// [When Digivolving] branch-choice both run as in play.
 
+/// Hand index of `card_id` in `player`'s hand (local helper — the archetype
+/// harness does not export one).
+fn hand_index_of_e(runner: &DebugRunner, player: u8, card_id: &str) -> usize {
+    runner.game.players[player as usize]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == card_id)
+        .unwrap_or_else(|| panic!("{card_id} must be in player {player}'s hand"))
+}
+
+/// Happy path: REAL Nokia Shiramine (BT22-084) + a REAL [Agumon] (BT22-008) on
+/// P0's field + BT22-013 WarGreymon in hand. Activating BT22-013's [Hand][Main]
+/// jump digivolves the Agumon into WarGreymon at digivolution cost 6, ignoring
+/// requirements — the Agumon stack is now topped by BT22-013, exactly 6 memory
+/// was paid, and BT22-013's [When Digivolving] branch-choice fired as a result.
 #[test]
-#[ignore = "G-ACTIVATED-DIGIVOLVE-EXECUTION: BT22-013 [Hand][Main] cost-6 jump is a \
-            kind: activated_digivolve alt-path with no engine execution route \
-            (qa/archetype-qa/engine-gaps.md); the named combo outcome cannot be \
-            produced faithfully. Un-ignore when the execution route lands."]
 fn combo_e_nokia_cost6_lv6_jump() {
-    // Intentionally empty: there is no faithful way to drive BT22-013's
-    // activated_digivolve [Hand][Main] until G-ACTIVATED-DIGIVOLVE-EXECUTION is
-    // resolved. Authoring a body now would either bypass the real ability
-    // (violating the no-approximations / real-ability rule) or assert a no-op.
-    unimplemented!(
-        "blocked on G-ACTIVATED-DIGIVOLVE-EXECUTION — see the module-level Combo E note"
+    use digimon_engine::selection::SelectionKind;
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT22-013") // WarGreymon — the [Hand][Main] cost-6 jump payoff
+        .expect("BT22-013 (WarGreymon) in embedded DSL pack")
+        .dsl_card("BT22-084") // Nokia Shiramine — the real Tamer precondition
+        .expect("BT22-084 (Nokia Shiramine) in embedded DSL pack")
+        .dsl_card("BT22-008") // Agumon — the real digivolve base
+        .expect("BT22-008 (Agumon) in embedded DSL pack")
+        .dsl_card("ST1-04") // Dracomon — vanilla deck filler
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .hand(0, &["BT22-013"])
+        .deck(0, &["ST1-04"; 5])
+        .deck(1, &["ST1-04"; 5])
+        .memory(15)
+        .start();
+    runner.game.turn_count = 1;
+
+    // REAL Nokia Shiramine (Tamer) + REAL Agumon (BT22-008) on player 0's field.
+    // `place_on_field` does NOT fire On Play, so Nokia's [On Play] free-play and
+    // the Agumon's own clauses stay dormant — only the static gate matters here.
+    runner.place_on_field(0, "BT22-084", Some(0));
+    runner.place_on_field(0, "BT22-008", Some(0));
+
+    let mem_before = runner.memory();
+    let bt22_013_idx = hand_index_of_e(&runner, 0, "BT22-013");
+
+    // Drive the REAL [Hand][Main] Nokia jump.
+    assert!(
+        runner.game.activate_hand_main(0, bt22_013_idx),
+        "the [Hand][Main] Nokia jump must fire (real Nokia Shiramine + real Agumon present)"
+    );
+
+    // The jump body asks which Agumon to digivolve into; pick the (only) one.
+    let view = runner
+        .pending_selection_view()
+        .expect("the Agumon select prompt must install");
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("select the Agumon");
+
+    // System-level fact: completing the digivolve fires BT22-013's
+    // [When Digivolving] branch-choice (a 2-way EffectChoice). With no opp
+    // Digimon and no own Gabumon, both sub-branches no-op, but the choice
+    // prompt itself MUST install — proving the jump was a real digivolve, not a
+    // board mutation.
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::EffectChoice),
+        "the cost-6 jump must be a real digivolve → BT22-013's [When Digivolving] \
+         branch-choice fires as a result"
+    );
+    runner.auto_resolve().expect("branch-choice + follow-ups resolve");
+
+    // The Agumon stack is now topped by WarGreymon (BT22-013).
+    let agumon_perm = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|p| {
+            p.card_sources
+                .iter()
+                .any(|s| s.card_id(&runner.game.card_data) == "BT22-008")
+        })
+        .expect("the Agumon permanent must still be on the field");
+    assert_eq!(
+        agumon_perm.top_card().card_id(&runner.game.card_data),
+        "BT22-013",
+        "WarGreymon must be the top card of the Agumon stack after the [Hand][Main] jump"
+    );
+
+    // WarGreymon left the hand.
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "WarGreymon must leave the hand after digivolving onto the Agumon"
+    );
+
+    // The cost-6 digivolve actually deducted 6 memory — the memory delta proves
+    // the cost was paid (a silently-ignored cost would leave the delta at 0).
+    assert_eq!(
+        mem_before - runner.memory(),
+        6,
+        "the [Hand][Main] jump must pay digivolution cost 6 (before={}, after={})",
+        mem_before,
+        runner.memory(),
+    );
+}
+
+/// Unhappy path (Nokia precondition gate): with the REAL [Agumon] (BT22-008) on
+/// field but NO Nokia Shiramine, the masked [Hand][Main] action is NOT offered —
+/// `activate_hand_main` returns false, no selection installs, and no digivolve
+/// happens. The whole jump is gated on the Nokia precondition; this is the
+/// system fact the combo depends on but a per-card test isolates.
+#[test]
+fn combo_e_nokia_jump_gated_on_nokia_precondition() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT22-013")
+        .expect("BT22-013 (WarGreymon) in embedded DSL pack")
+        .dsl_card("BT22-008") // Agumon present — but no Nokia
+        .expect("BT22-008 (Agumon) in embedded DSL pack")
+        .dsl_card("ST1-04")
+        .expect("ST1-04 (Dracomon) in embedded DSL pack")
+        .hand(0, &["BT22-013"])
+        .deck(0, &["ST1-04"; 5])
+        .deck(1, &["ST1-04"; 5])
+        .memory(15)
+        .start();
+    runner.game.turn_count = 1;
+
+    // Agumon on field, but NO Nokia Shiramine — the Nokia gate must block the jump.
+    runner.place_on_field(0, "BT22-008", Some(0));
+
+    let before = snapshot(&runner);
+    let bt22_013_idx = hand_index_of_e(&runner, 0, "BT22-013");
+
+    assert!(
+        !runner.game.activate_hand_main(0, bt22_013_idx),
+        "without Nokia Shiramine the [Hand][Main] condition fails — the jump must not fire"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "no selection installs when the Nokia-gated [Hand][Main] jump is not offered"
+    );
+
+    // The Agumon stack is untouched (WarGreymon never digivolved onto it).
+    let agumon_perm = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|p| {
+            p.card_sources
+                .iter()
+                .any(|s| s.card_id(&runner.game.card_data) == "BT22-008")
+        })
+        .expect("the Agumon permanent must still be on the field");
+    assert_eq!(
+        agumon_perm.top_card().card_id(&runner.game.card_data),
+        "BT22-008",
+        "no digivolve — the Agumon must still be the top card of its own stack"
+    );
+    let after = snapshot(&runner);
+    assert_eq!(
+        after.hand[0], before.hand[0],
+        "WarGreymon must remain in hand — the jump was not offered"
+    );
+    assert_eq!(
+        after.memory, before.memory,
+        "no cost is paid when the Nokia-gated jump is not offered"
     );
 }
