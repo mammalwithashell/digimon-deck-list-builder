@@ -1382,6 +1382,28 @@ fn ensure_game(game: &mut Option<Game>) -> Result<&mut Game, String> {
     game.as_mut().ok_or_else(|| "No active game".to_string())
 }
 
+/// Build the initial game for a new session, left ready for the opening
+/// mulligan. `Game::new` starts a standard game in the `Mulligan` phase; we
+/// hand it back in that phase so the opening keep/redraw decision is exposed
+/// to the human (via the frontend) and to the AI (via the agent loop's
+/// `current_decision_player`, which returns the mulligan decider). The final
+/// `accept_mulligan` triggers `finalize_mulligan`, which begins turn 1. Only
+/// when the ruleset leaves no mulligan pending (defensive) do we start turn 1
+/// directly via `start_game`.
+fn new_session_game(
+    decks: &[Vec<String>],
+    db: &std::collections::HashMap<String, CardData>,
+    rules: Rules,
+    seed: u64,
+) -> Result<Game, String> {
+    let mut game =
+        Game::new(decks, db, rules, Some(seed)).map_err(|e| format!("Game::new failed: {}", e))?;
+    if game.mulligan_current_player().is_none() {
+        game.start_game();
+    }
+    Ok(game)
+}
+
 /// Create a new local game. When `deck1`/`deck2` are provided by the
 /// caller, the real `data/cards.json`-derived card pool is used so any
 /// production card ID resolves. When both are absent, falls back to the
@@ -1424,9 +1446,12 @@ pub async fn rust_create_game(
             ];
             let player_count = decks.len();
             let effective_seed = parsed_seed.unwrap_or_else(rand::random::<u64>);
-            let mut game = Game::new(&decks, &db, Rules::standard(), Some(effective_seed))
-                .map_err(|e| format!("Game::new failed: {}", e))?;
-            game.start_game();
+            // Leave the game in the Mulligan phase so BOTH players make their
+            // opening keep/redraw decision: the frontend drives the human's, and
+            // the agent loop drives the AI's. Auto-resolving mulligan here was
+            // the bug that skipped it entirely and dropped the going-second human
+            // into a Hatch prompt before the opponent moved.
+            let game = new_session_game(&decks, &db, Rules::standard(), effective_seed)?;
 
             let kinds = normalize_player_kinds(player_kinds, player_count)?;
             let model_ids = normalize_player_model_ids(player_model_ids, player_count, &kinds)?;
@@ -1928,6 +1953,39 @@ pub async fn rust_list_loaded_models(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ─── new-session mulligan (mulligan must NOT be auto-skipped) ────────
+
+    #[test]
+    fn new_session_game_starts_in_mulligan_awaiting_a_decision() {
+        let db = test_card_db();
+        let decks = vec![test_deck(), test_deck()];
+        let game = new_session_game(&decks, &db, Rules::standard(), 42).unwrap();
+        // Regression: rust_create_game used to call start_game(), which auto-kept
+        // every mulligan — skipping the opening decision and dropping the
+        // going-second human straight into a Hatch prompt. The session game must
+        // now be handed over in the Mulligan phase with a pending decider.
+        assert_eq!(game.current_phase, GamePhase::Mulligan);
+        assert!(
+            game.mulligan_current_player().is_some(),
+            "a fresh session game must await an opening mulligan decision"
+        );
+    }
+
+    #[test]
+    fn new_session_game_finalizes_to_turn_one_once_mulligans_resolve() {
+        let db = test_card_db();
+        let decks = vec![test_deck(), test_deck()];
+        let mut game = new_session_game(&decks, &db, Rules::standard(), 42).unwrap();
+        // Resolving both players' mulligans (keep) must finalize into turn 1 —
+        // i.e. the game is playable, not stuck in Mulligan.
+        while let Some(p) = game.mulligan_current_player() {
+            game.accept_mulligan(p, /* keep */ true).unwrap();
+        }
+        assert!(game.mulligan_current_player().is_none());
+        assert_eq!(game.turn_count, 1, "the last accept_mulligan begins turn 1");
+        assert_ne!(game.current_phase, GamePhase::Mulligan);
+    }
 
     // ─── engine worker thread (desktop-engine-worker-thread) ────────────
 
