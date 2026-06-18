@@ -82,10 +82,16 @@ class CurriculumSpec:
     # check suspiciously fast wins/losses. Capped to keep disk bounded.
     record_games: str = "eval"
     record_games_max: int = 300
-    # Phase-1-only parallelism. The engine restricts n_envs>1 to greedy/random
-    # opponents, so this speeds the floor phase (e.g. set to vCPU count on a
-    # cloud box) but CANNOT apply to the pool phase, which stays single-env.
+    # Per-phase subproc parallelism (set to ~vCPU count on a CPU box to use all
+    # cores; requires vec_env_backend=subproc, which only began working after the
+    # 2026-06-18 fix — it was a silently-dropped config field before). BOTH phases
+    # parallelize: the pool opponent samples frozen champions and lazy-loads them
+    # inside each spawn worker (verified spawn-safe), so n_envs>1 works for the
+    # pool phase too. The old "pool is greedy/random-only" belief was an artifact
+    # of the silently-serial backend — the pool path never hit the greedy-only
+    # guard (it routes through make_vec_env first).
     floor_envs: int = 1
+    pool_envs: int = 1
     vec_env_backend: str = "subproc"
     python: str = sys.executable
 
@@ -153,6 +159,15 @@ def build_phase2_argv(spec: CurriculumSpec) -> List[str]:
         "--init-from", str(spec.floor_final()),
         "--curriculum-pool", str(spec.floor_snapshot()),
     ]
+    if spec.pool_envs > 1:
+        # Pool-phase parallelism — the frozen-champion opponent is spawn-safe
+        # (lazy per-worker model load), so this multiplies pool throughput too.
+        # Each env independently samples a champion per game, which also widens
+        # PFSP opponent coverage per rollout.
+        argv += [
+            "--set", f"n_envs={spec.pool_envs}",
+            "--set", f"vec_env_backend={spec.vec_env_backend}",
+        ]
     return argv
 
 
@@ -181,9 +196,12 @@ def main() -> None:
     p.add_argument("--floor-lr", type=float, default=3e-4)
     p.add_argument("--pool-lr", type=float, default=1e-4)
     p.add_argument("--floor-envs", type=int, default=1,
-                   help="Parallel envs for the floor (vs-greedy) phase only; "
-                        "set to ~vCPU count on a cloud box. The pool phase is "
-                        "single-env regardless (engine limits n_envs>1 to greedy).")
+                   help="Parallel subproc envs for the floor (vs-greedy) phase; "
+                        "set to ~vCPU count on a CPU box.")
+    p.add_argument("--pool-envs", type=int, default=1,
+                   help="Parallel subproc envs for the pool (vs-champions) phase; "
+                        "the frozen-champion opponent is spawn-safe, so set this "
+                        "to ~vCPU count on a CPU box to parallelize the 5M phase.")
     p.add_argument("--eval-freq", type=int, default=50_000)
     p.add_argument("--eval-episodes", type=int, default=20)
     p.add_argument("--curriculum-seed", type=int, default=123)
@@ -234,6 +252,7 @@ def main() -> None:
         record_games=args.record_games,
         record_games_max=args.record_games_max,
         floor_envs=args.floor_envs,
+        pool_envs=args.pool_envs,
         python=args.python,
     )
     cwd = Path(args.cwd).resolve() if args.cwd else Path.cwd()
