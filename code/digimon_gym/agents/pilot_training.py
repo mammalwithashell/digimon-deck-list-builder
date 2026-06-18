@@ -90,6 +90,18 @@ from digimon_gym.agents.training_recording import (
 from digimon_gym.agents.mulligan_log import MulliganLogWrapper, MulliganLogWriter
 from digimon_gym.agents.game_log import GameLogWriter
 
+import torch as _torch
+
+# Disable torch.distributions argument validation process-wide. The policy's
+# (masked) Categorical is constructed every action with logits that are valid by
+# construction — illegal actions are -inf masked, legal ones finite — and
+# `sb3_contrib`'s MaskableCategorical re-inits without passing `validate_args`,
+# so torch re-runs the constraint checks on every action. Full-loop profiling
+# (pilot_training cProfile) showed this distribution __init__ + constraint
+# checking was ~13% of the training loop. Validation is a debugging aid we do
+# not need in training; turning it off is a standard RL throughput win.
+_torch.distributions.Distribution.set_default_validate_args(False)
+
 
 # ─── Helpers ─────────────────────────────────────────────────────────
 
