@@ -182,7 +182,11 @@ impl Game {
             alt_path_registry,
             modifiers: ModifierRegistry::new(),
             floating_mass_modifiers: Vec::new(),
-            effect_registry: build_registry(),
+            // Process-cached: the ~4000-card DSL pack is lowered once, not per
+            // game. `Game::new` runs per episode in training, so the uncached
+            // `build_registry()` (~190 ms) dominated wall-time. See
+            // `cards::build_registry_cached`.
+            effect_registry: crate::cards::build_registry_cached(),
             formula_extensions: FormulaExtensionRegistry::empty(),
             token_registry,
             rng,
