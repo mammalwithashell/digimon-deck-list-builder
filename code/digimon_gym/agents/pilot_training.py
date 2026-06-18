@@ -46,6 +46,8 @@ from digimon_gym.digimon_gym import (
     ACTION_BREEDING_SOURCE_START,
     ACTION_PASS_TURN,
     DigimonEnv,
+    MAX_OPPONENT_TURN_ACTIONS,
+    NoOpLoopError,
     SOURCE_SELECT_END,
     greedy_policy,
 )
@@ -505,16 +507,33 @@ class OpponentWrapper(gymnasium.Wrapper):
         return obs, reward, terminated, truncated, info
 
     def _advance_opponent(self, obs, info):
-        """Play opponent turns after reset until Player 1 acts."""
-        if self._unwrapped_env.is_game_over:
+        """Play opponent turns after reset until Player 1 acts.
+
+        Same obs-skip optimization as `_play_opponent`: skip the per-step
+        observation build during the opponent's turn and build the real one
+        once at the end.
+        """
+        env = self._unwrapped_env
+        if env.is_game_over or env.current_player_id == 1:
             return obs, info
 
-        while self._unwrapped_env.current_player_id != 1 and not self._unwrapped_env.is_game_over:
-            opp_action = self.opponent_fn(self._unwrapped_env)
-            obs, _, terminated, truncated, info = self.env.step(int(opp_action))
-            if terminated or truncated:
-                break
+        stepped = False
+        env._skip_obs_build = True
+        try:
+            while env.current_player_id != 1 and not env.is_game_over:
+                opp_action = self.opponent_fn(env)
+                _, _, terminated, truncated, _ = self.env.step(int(opp_action))
+                stepped = True
+                if terminated or truncated:
+                    break
+        finally:
+            env._skip_obs_build = False
 
+        if stepped:
+            env._noop_sig = None
+            env._noop_repeat = 0
+            obs = env.runner.get_board_tensor(1)
+            info = {"action_mask": env.action_mask(), **env._tensor_info()}
         return obs, info
 
     def reset_inner_only(self, **kwargs):
@@ -547,20 +566,60 @@ class OpponentWrapper(gymnasium.Wrapper):
         sees dense feedback from opponent actions — primarily own-security
         losses when opp attacks succeed. Required by the event-based
         reward shape (digimon_gym.py `_compute_reward`).
+
+        Perf: every intermediate opponent observation is discarded (only the
+        final one, after control returns to the agent, is used), so we set
+        `_skip_obs_build` to skip the ~8850-float tensor build on each opponent
+        step and build the real observation exactly once at the end. Rewards,
+        the reward-occurrence bus, and the no-op tripwire (mask-based) all still
+        run per opponent step.
         """
         accumulated_reward = 0.0
+        env = self._unwrapped_env
+        terminated = False
+        truncated = False
+        stepped = False
 
-        while (
-            not self._unwrapped_env.is_game_over
-            and self._unwrapped_env.current_player_id != 1
-        ):
-            opp_action = self.opponent_fn(self._unwrapped_env)
-            obs, reward, terminated, truncated, info = self.env.step(int(opp_action))
-            accumulated_reward += float(reward)
-            if terminated or truncated:
-                return obs, info, accumulated_reward, terminated, truncated
+        env._skip_obs_build = True
+        try:
+            opp_actions = 0
+            while not env.is_game_over and env.current_player_id != 1:
+                opp_action = self.opponent_fn(env)
+                # Opponent-turn no-op guard: a stuck opponent (mask offers an
+                # action the engine refuses) loops here forever without ever
+                # yielding control back to the agent, so the agent-side obs
+                # tripwire can't see it. Fail loudly instead (caught by the
+                # panic rail, like the agent tripwire) with the same board dump.
+                if opp_actions >= MAX_OPPONENT_TURN_ACTIONS:
+                    raise NoOpLoopError(env._describe_noop(int(opp_action)))
+                opp_actions += 1
+                _, reward, terminated, truncated, _ = self.env.step(int(opp_action))
+                accumulated_reward += float(reward)
+                stepped = True
+                if terminated or truncated:
+                    break
+        finally:
+            env._skip_obs_build = False
 
-        return obs, info, accumulated_reward, self._unwrapped_env.is_game_over, False
+        if stepped:
+            # The opponent took a turn, so the agent's next decision is not a
+            # tight no-op loop (its own action wasn't re-applied with control
+            # immediately back). Reset the agent-side tripwire so an alternating
+            # agent/opponent stalemate (e.g. both pass) isn't mistaken for a
+            # mask/execution mismatch — that streak is broken by the opponent's
+            # turn. (A real agent no-op keeps control without an opponent turn.)
+            env._noop_sig = None
+            env._noop_repeat = 0
+            # Build the real observation once, now that the opponent's turn is
+            # over (intermediate ones were skipped above).
+            obs = env.runner.get_board_tensor(1)
+            info = {"action_mask": env.action_mask(), **env._tensor_info()}
+            done = terminated or env.is_game_over
+            return obs, info, accumulated_reward, done, bool(truncated)
+
+        # No opponent step happened (already the agent's turn) — the passed-in
+        # obs/info from the agent's own step are still current.
+        return obs, info, accumulated_reward, env.is_game_over, False
 
 
 # ─── Callbacks ───────────────────────────────────────────────────────
