@@ -39,6 +39,14 @@ class TrainingConfig:
     timesteps: int = 500_000
     seed: int = 0
     n_envs: int = 1
+    # Vectorized-env backend. "subproc" spawns one OS process per env
+    # (true multi-core rollout collection via SubprocVecEnv); "dummy" steps
+    # all envs serially in the training process (DummyVecEnv). MUST be a
+    # declared field — pilot_training.make_vec_env reads it via getattr, and
+    # from_yaml drops any override key that isn't a dataclass field, so an
+    # undeclared value silently falls back to "dummy" (the historical bug:
+    # `--set vec_env_backend=subproc` never engaged → every run ran serial).
+    vec_env_backend: str = "dummy"
     learning_rate: float = 3e-4
     n_steps: int = 2048
     batch_size: int = 64
@@ -154,6 +162,10 @@ class TrainingConfig:
             raise ValueError("timesteps must be > 0")
         if self.n_envs < 1:
             raise ValueError("n_envs must be >= 1")
+        if self.vec_env_backend not in {"dummy", "subproc"}:
+            raise ValueError(
+                f"vec_env_backend must be 'dummy' or 'subproc', got {self.vec_env_backend!r}"
+            )
         if self.n_steps <= 0:
             raise ValueError("n_steps must be > 0")
         if self.batch_size <= 0:

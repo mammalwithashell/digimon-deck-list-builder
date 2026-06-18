@@ -177,6 +177,9 @@ class TrainingRecordingWrapper(gymnasium.Wrapper):
         self.env_index = env_index
         self.game_index = 0
         self.episode_steps = 0
+        # The wrapper chain is fixed after construction, so resolve the inner
+        # DigimonEnv once instead of walking it every step.
+        self._digimon_env = unwrap_to_digimon_env(env)
         # Cached last-good observation, used as the terminal observation
         # when the engine panics mid-step. The post-crash Rust state may
         # be poisoned, so we cannot safely query the engine for a fresh
@@ -197,10 +200,18 @@ class TrainingRecordingWrapper(gymnasium.Wrapper):
         return obs, info
 
     def step(self, action):
-        digimon_env = unwrap_to_digimon_env(self.env)
-        mask = digimon_env.action_mask()
-        action_id = int(action)
-        invalid_action = bool(action_id < 0 or action_id >= len(mask) or mask[action_id] <= 0)
+        digimon_env = self._digimon_env
+        # `invalid_action` is only ever consumed by `recorder.write(...)`, so
+        # only pay for the pre-step mask query when a recorder is attached
+        # (eval envs). Training envs run with recorder=None and skip it.
+        if self.recorder is not None:
+            mask = digimon_env.action_mask()
+            action_id = int(action)
+            invalid_action = bool(
+                action_id < 0 or action_id >= len(mask) or mask[action_id] <= 0
+            )
+        else:
+            invalid_action = False
         try:
             obs, reward, terminated, truncated, info = self.env.step(action)
         except (KeyboardInterrupt, SystemExit):

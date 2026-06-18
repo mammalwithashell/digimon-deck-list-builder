@@ -232,6 +232,13 @@ impl Game {
         if self.modifiers.has(handle, ModifierType::CannotSuspend) {
             return false;
         }
+        // NOTE: a permanent-scoped `CannotAttack` modifier is intentionally NOT
+        // consulted here. CannotAttack is modeled as a `WhenWouldAttack` cancel
+        // replacement (`passive_modifier_to_would`, replacement.rs) so a forced
+        // declaration is gracefully *Cancelled*, not rejected `Invalid`. The
+        // action mask suppresses the offer separately (`can_basic_attack` +
+        // the end-of-turn / granted-attack gates) so a deterministic policy is
+        // never handed the guaranteed-cancel no-op.
         // Summoning sickness: can't attack on the turn it was played unless
         // Rush is present (native printed OR modifier-granted) or this is a
         // Vortex end-of-turn attack (§2.1b parity fix).
@@ -285,6 +292,8 @@ impl Game {
         if self.modifiers.has(handle, ModifierType::CannotSuspend) {
             return false;
         }
+        // CannotAttack is a `WhenWouldAttack` cancel replacement, not a
+        // can_attack rejection — see `can_attack`.
         let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
         if is_fresh
             && !ignore_summoning_sickness
@@ -322,6 +331,8 @@ impl Game {
         if self.modifiers.has(handle, ModifierType::CannotSuspend) {
             return false;
         }
+        // CannotAttack is a `WhenWouldAttack` cancel replacement, not a
+        // can_attack rejection — see `can_attack`.
         // "Without suspending" bypasses only the suspend cost/unsuspended
         // requirement. Summoning sickness still requires Rush or Vortex.
         let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;

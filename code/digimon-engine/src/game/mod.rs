@@ -799,6 +799,10 @@ pub struct Game {
     /// games (the standard constructor uses an in-scope `data_index_map`
     /// directly without caching it on the Game).
     pub(crate) opaque_data_index_map: Option<std::collections::HashMap<String, usize>>,
+
+    /// Card-id → `card_data` index, materialized once at construction. O(1)
+    /// replacement for the per-step `card_data.iter().find(...)` linear scan.
+    pub(crate) card_id_index: std::collections::HashMap<String, usize>,
 }
 
 // Tier-1 impl Game mechanic clusters (see docs/RUST_ENGINE_API.md §3).
@@ -2428,16 +2432,12 @@ impl Game {
         // but is only hit once per effect query, and `effects_for_card` is
         // typically called at state-change fire-sites, not in the mask hot
         // loop — so the cost is acceptable for v1.
-        let native_keywords = self
-            .card_data
-            .iter()
-            .find(|cd| cd.card_id == card_id)
-            .map(|cd| cd.keywords.clone())
-            .unwrap_or_default();
-        let mut auto_effects: Vec<crate::effect::Effect> = self
-            .card_data
-            .iter()
-            .find(|cd| cd.card_id == card_id)
+        // One O(1) lookup, reused for both keyword reads (was two O(~4000)
+        // linear scans for the same card — the per-step hot path: ~793
+        // effects_for_card calls/step, 94% of step time).
+        let cd_opt = self.card_data_by_id(card_id);
+        let native_keywords = cd_opt.map(|cd| cd.keywords.clone()).unwrap_or_default();
+        let mut auto_effects: Vec<crate::effect::Effect> = cd_opt
             .map(|cd| {
                 let mut effects: Vec<crate::effect::Effect> = cd
                     .keywords
