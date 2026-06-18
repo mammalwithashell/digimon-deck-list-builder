@@ -262,6 +262,7 @@ impl Game {
             until_condition_reevaluation_cycles: 0,
             reveal_source: None,
             opaque_data_index_map: None,
+            card_id_index: data_index_map.clone(),
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it
