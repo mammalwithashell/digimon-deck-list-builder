@@ -147,15 +147,6 @@ fn sorrow_blue_locks_only_the_bare_opponent_digimon() {
     let bare = runner.place_on_field(1, "ST2-02", Some(0)); // 0-source: legal target
     let sourced = runner.place_stack(1, &["ST2-02", "ST2-05"]); // 1-source: illegal
 
-    // Baseline: the bare Digimon (placed turn_played=0 -> not summoning-sick,
-    // unsuspended) IS attack-capable before the lock. This makes the post-lock
-    // regression assertion below meaningful rather than passing for an
-    // unrelated reason (summoning sickness / suspension).
-    assert!(
-        runner.game.can_attack(bare, false),
-        "bare Digimon is attack-capable before Sorrow Blue's lock"
-    );
-
     assert!(
         runner.game.activate_hand_main(0, 0),
         "Sorrow Blue [Main] should activate from hand"
@@ -176,15 +167,13 @@ fn sorrow_blue_locks_only_the_bare_opponent_digimon() {
         runner.game.modifiers.has(bare, ModifierType::CannotAttack),
         "the locked bare Digimon can't attack"
     );
-    // Regression (eval-recording attack loop): `Game::can_attack` must HONOR the
-    // permanent-scoped CannotAttack modifier so the attack leaves the legal
-    // action mask. Previously the mask still offered the attack while execution
-    // refused it -> a no-op a deterministic policy looped on until the step
-    // limit (combat/mod.rs `can_attack*` missing the CannotAttack consult).
-    assert!(
-        !runner.game.can_attack(bare, false),
-        "CannotAttack must make the attack illegal (mask/execution parity)"
-    );
+    // The mask-suppression contract for a permanent-scoped CannotAttack (the
+    // eval-recording attack-loop regression) is enforced at the mask layer and
+    // covered generically by
+    // `combat::cannot_suspend_enforcement::cannot_attack_zeroes_attack_bits_for_locked_attacker_only`.
+    // Here we only assert Sorrow Blue applies the lock modifiers; `can_attack`
+    // itself intentionally does NOT consult CannotAttack (it is a
+    // `WhenWouldAttack` cancel replacement — see combat/mod.rs `can_attack`).
     assert!(
         runner.game.modifiers.has(bare, ModifierType::CannotBlock),
         "the locked bare Digimon can't block"

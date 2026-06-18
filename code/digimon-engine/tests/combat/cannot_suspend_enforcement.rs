@@ -130,6 +130,62 @@ fn cannot_suspend_zeroes_attack_bits_for_locked_attacker_only() {
     );
 }
 
+/// A permanent-scoped `CannotAttack`-locked attacker must lose ALL of its
+/// attack bits in the Main-phase mask; an unlocked sibling keeps its bits.
+///
+/// Regression: `can_basic_attack` (the Main-phase mask gate) once checked
+/// only the player-scoped CannotAttack short-circuit and `CannotSuspend`, so
+/// a permanent-scoped `CannotAttack` (e.g. a Tamer locking one opposing
+/// Digimon) still emitted attack bits. The engine's `can_attack` consult then
+/// refused the declaration, leaving a no-op the mask still offered — a
+/// deterministic policy re-picked it forever (the no-op attack loop the
+/// training tripwire caught: `Grizzlymon+CannotAttack` offered action 114).
+#[test]
+fn cannot_attack_zeroes_attack_bits_for_locked_attacker_only() {
+    let mut r = base_runner();
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+
+    let locked = r.place_on_field(tp, "ATK", Some(0));
+    let free = r.place_on_field(tp, "ATK2", Some(0));
+    // A suspended defender so Digimon-target attack bits exist too.
+    let def = r.place_on_field(opp, "DEF", Some(0));
+    r.game.players[opp as usize].battle_area[def.index as usize].is_suspended = true;
+
+    r.game.enter_main_phase();
+
+    let before = build_action_mask(&r.game, tp);
+    assert_eq!(
+        before[encode_attack(locked.index as u16, SECURITY_TARGET) as usize],
+        1.0,
+        "sanity: security-attack bit lit before the lock"
+    );
+    assert_eq!(
+        before[encode_attack(locked.index as u16, def.index as u16) as usize],
+        1.0,
+        "sanity: digimon-attack bit lit before the lock"
+    );
+
+    lock(&mut r, locked, ModifierType::CannotAttack, Expiry::Permanent);
+
+    let after = build_action_mask(&r.game, tp);
+    for target in 0..=SECURITY_TARGET {
+        let bit = encode_attack(locked.index as u16, target);
+        if (bit as usize) < ATTACK_END as usize && bit >= ATTACK_START {
+            assert_eq!(
+                after[bit as usize], 0.0,
+                "CannotAttack-locked attacker must expose NO attack bit (target {})",
+                target
+            );
+        }
+    }
+    assert_eq!(
+        after[encode_attack(free.index as u16, SECURITY_TARGET) as usize],
+        1.0,
+        "the unlocked sibling keeps its security-attack bit"
+    );
+}
+
 // ─── Attack declaration — engine API (11-2-5) ───────────────────────────────
 
 /// The combat API itself must reject the declaration (mask and engine must
