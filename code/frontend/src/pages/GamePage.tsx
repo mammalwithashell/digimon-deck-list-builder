@@ -1359,6 +1359,7 @@ export function GamePage() {
             ? (store.playerLabels[trashViewerPlayer] ?? `Player ${trashViewerPlayer}`)
             : ''
         }
+        onInspect={setInspectedCardId}
       />
 
       {/* Selection panel modal for hand/security/effect-choice selections */}
