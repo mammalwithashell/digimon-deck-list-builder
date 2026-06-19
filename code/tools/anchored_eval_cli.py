@@ -27,6 +27,22 @@ from digimon_gym.agents.anchored_eval import (
 from digimon_gym.agents.champion_registry import ChampionRegistry
 from digimon_gym.agents.gauntlet import GeneralistDeckPool, load_generalist_deck_pool
 from digimon_gym.agents.pilot_training import MaskableRecurrentPPO
+from sb3_contrib import MaskablePPO
+
+
+def _load_candidate(cand_zip: str, device: str):
+    """Load a candidate checkpoint regardless of algorithm. The starter
+    curriculum produces MLP (MaskablePPO) floors while champions are LSTM
+    (MaskableRecurrentPPO); the recurrent loader raises on an MLP zip
+    (use_sde kwarg), so fall back to the MLP loader."""
+    try:
+        m = MaskableRecurrentPPO.load(cand_zip, device=device)
+        print("candidate algo: lstm (MaskableRecurrentPPO)")
+        return m
+    except Exception:
+        m = MaskablePPO.load(cand_zip, device=device)
+        print("candidate algo: mlp (MaskablePPO)")
+        return m
 
 DEFAULT_STARTERS = [
     "ST-1 Gaia Red", "ST-2 Cocytus Blue", "ST-3 Heaven's Yellow",
@@ -106,7 +122,7 @@ def main() -> None:
           f"{ChampionRegistry.load(args.champions).names()}")
     print(f"games/anchor: {args.n} (seat-balanced)  seed={args.seed}\n", flush=True)
 
-    candidate = MaskableRecurrentPPO.load(cand_zip, device=args.device)
+    candidate = _load_candidate(cand_zip, args.device)
     registry = ChampionRegistry.load(args.champions)
 
     results = evaluate_against_anchors(
