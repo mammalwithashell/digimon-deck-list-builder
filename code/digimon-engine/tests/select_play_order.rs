@@ -9,8 +9,10 @@
 //!   prompt with `selecting_player = loser_id`, `valid_action_ids = [94, 95]`,
 //!   `is_optional = false`, and switches `current_phase` to `SelectPlayOrder`.
 //! - The action mask reports 94 and 95 legal for the chooser, and NO other
-//!   actions legal except those (no PASS, no concede — wait, concede is
-//!   always legal; tested in `concede_primitive.rs`).
+//!   actions legal except those (no PASS, no concede — CONCEDE_GAME (93) is
+//!   disabled in the action mask in all phases/formats as of 2026-06-19; the
+//!   `Game::concede` primitive itself is still tested in `concede_primitive.rs`
+//!   and backs human PvP surrender).
 //! - Resolution via the action interface (94 → First, 95 → Second) or via
 //!   `Game::resolve_play_order_selection(picked)` both write to
 //!   `last_play_order_choice`.
@@ -139,6 +141,29 @@ fn mask_does_not_expose_concede_during_mulligan() {
     assert!(
         mask[0] > 0.0 || mask[1] > 0.0,
         "Mulligan decider should have keep (0) or mulligan (1) legal",
+    );
+}
+
+#[test]
+fn mask_never_exposes_concede_in_main() {
+    // CONCEDE_GAME (93) is disabled in the action mask in ALL phases/formats
+    // (2026-06-19) — including Main, the agent's primary decision point with
+    // real actions legal. Conceding is a strictly-dominated "give up" with no
+    // strategic value (single forfeits the episode; BO3 games can always be
+    // played out), and RL policies abused it as premature surrender. Human PvP
+    // surrender uses `Game::concede` directly, bypassing this mask.
+    use digimon_engine::debug_runner::make_test_card_with_level;
+    let atk = make_test_card_with_level("ATK-LV3", "Attacker", 3);
+    let mut runner = DebugRunner::builder().add_card(atk).start();
+    runner.place_on_field(0, "ATK-LV3", None);
+    runner.game.current_phase = GamePhase::Main;
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[CONCEDE_GAME as usize], 0.0,
+        "CONCEDE_GAME (93) must never be legal in Main — concede is disabled \
+         in all formats; the mulligan test above proves concede stays 0 even \
+         when other actions are legal.",
     );
 }
 
