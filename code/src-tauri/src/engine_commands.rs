@@ -1646,6 +1646,13 @@ pub async fn rust_step_game(
             // repeats while `agent_pending` is true.
             let max_agent_actions = if paced.unwrap_or(false) { Some(1) } else { None };
             let action_traces = run_agent_steps(game, session, inference, max_agent_actions)?;
+            // Drain the events the agent's action(s) produced this beat so the
+            // frontend streams them live (security-reveal overlay + the
+            // event-derived game log). Previously this was `Vec::new()`, so the
+            // AI's events piled up in the engine queue and only flushed on the
+            // human's NEXT submit — the attack's security reveal and the log
+            // appeared a turn late (after the player's breeding action).
+            let events = drain_events(game);
             let mask = action_mask_bytes(game);
             let pid = current_decision_player(game);
             let is_human_turn =
@@ -1656,7 +1663,7 @@ pub async fn rust_step_game(
                 state: game_state_dto(game),
                 action_mask: mask,
                 logs: Vec::new(),
-                events: Vec::new(),
+                events,
                 is_human_turn,
                 is_game_over: is_over,
                 action_traces,
