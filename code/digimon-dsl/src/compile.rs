@@ -309,6 +309,7 @@ fn compile_stack_position(p: crate::step::StackPosition) -> CompiledStackPositio
         S::Top => CompiledStackPosition::Top,
         S::Bottom => CompiledStackPosition::Bottom,
         S::Random => CompiledStackPosition::Random,
+        S::Choice => CompiledStackPosition::Choice,
     }
 }
 
@@ -2252,6 +2253,7 @@ fn compile_step(
                 remainder: match a.remainder {
                     RevealRemainder::Top => CompiledRevealRemainder::Top,
                     RevealRemainder::Bottom => CompiledRevealRemainder::Bottom,
+                    RevealRemainder::Choose => CompiledRevealRemainder::Choose,
                 },
             }
         }

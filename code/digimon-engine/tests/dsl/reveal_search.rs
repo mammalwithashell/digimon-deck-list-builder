@@ -290,3 +290,68 @@ fn reveal_search_two_buckets_dedup_routes_distinctly() {
     assert_ne!(hand[0], trash[0], "de-dup: the two buckets get DISTINCT cards");
     assert_eq!(runner.game.players[0].deck.len(), 2, "the 2 fillers return to deck");
 }
+
+const CHOOSE_REMAINDER_SEARCHER: &str = r#"
+card: RS-004
+name: Choose Searcher
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 2000
+effects:
+  - when: on_play
+    process:
+      - reveal_search:
+          of: you
+          count: 4
+          buckets:
+            - filter: { name_contains: "Garurumon" }
+              to: hand
+              max: 1
+              optional: true
+          remainder: choose
+"#;
+
+/// §3.1 — `remainder: choose` (lowering through `StackPosition::Choice`) offers
+/// the player a binary top/bottom placement for the remainder. With no matching
+/// card, the bucket adds nothing and the FIRST pending is that 2-option pick
+/// (RL-visible, not auto-resolved); resolving it returns all 4 cards to the deck.
+#[test]
+fn reveal_search_remainder_choose_is_player_elected() {
+    let compiled = compile(CHOOSE_REMAINDER_SEARCHER);
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("RS-004", "Choose Searcher"))
+        .add_card(make_test_card("F1", "Filler"))
+        .add_card(make_test_card("F2", "Filler"))
+        .add_card(make_test_card("F3", "Filler"))
+        .add_card(make_test_card("F4", "Filler"))
+        .hand(0, &["RS-004"])
+        .deck(0, &["F1", "F2", "F3", "F4"])
+        .build();
+
+    let card = runner.game.players[0].hand[0].handle();
+    run_on_play(&mut runner, compiled, card);
+
+    // No Garurumon → the optional bucket installs nothing; the remainder
+    // placement is the first pick, and it is a player-elected binary choice.
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("remainder: choose installs a binary top/bottom pick");
+    assert_eq!(
+        pending.valid_action_ids.len(),
+        2,
+        "player elects exactly top OR bottom: {:?}",
+        pending.valid_action_ids
+    );
+
+    resolve_all_picks(&mut runner);
+    assert_eq!(
+        runner.game.players[0].deck.len(),
+        4,
+        "all 4 revealed cards return to the deck at the chosen end"
+    );
+    assert!(runner.game.revealed_cards.is_empty(), "reveal pool emptied");
+}

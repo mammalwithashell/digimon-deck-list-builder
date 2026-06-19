@@ -1559,6 +1559,12 @@ pub enum StackPosition {
     Top,
     Bottom,
     Random,
+    /// collapse §3.1 — player-elected top/bottom. The executor installs a
+    /// binary top/bottom `pending_selection` and places at the chosen end.
+    /// Only valid on steps whose executor intercepts `Choice` before placement
+    /// (currently `place_remainder_on_deck` and the place-on-security verb); on
+    /// any other step `map_stack_position` hard-panics by design.
+    Choice,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1649,13 +1655,14 @@ pub enum RevealSearchDest {
     Deck,
 }
 
-/// Where the un-picked remainder of the reveal pool goes. `choose` (a
-/// player-elected top/bottom) is deferred to §3's `StackPosition::Choice`.
+/// Where the un-picked remainder of the reveal pool goes. `choose` is a
+/// player-elected top/bottom (lowers through §3.1's `StackPosition::Choice`).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum RevealRemainder {
     Top,
     Bottom,
+    Choose,
 }
 
 /// Phase 2 Track E (2026-05-17): args for `choose_from_reveal`.

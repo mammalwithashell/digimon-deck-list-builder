@@ -2183,6 +2183,9 @@ pub enum CompiledRevealSearchDest {
 pub enum CompiledRevealRemainder {
     Top,
     Bottom,
+    /// Player-elected top/bottom — lowers the remainder placement through
+    /// `CompiledStackPosition::Choice`.
+    Choose,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -2234,6 +2237,9 @@ pub enum CompiledStackPosition {
     Top,
     Bottom,
     Random,
+    /// collapse §3.1 — player-elected top/bottom (binary pick at run time).
+    /// Only steps that intercept it before placement may carry it.
+    Choice,
 }
 
 /// Phase 2 Track E (2026-05-17): compiled form of `RevealDestination` — the

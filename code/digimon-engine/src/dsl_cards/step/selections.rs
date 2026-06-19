@@ -595,6 +595,42 @@ pub fn try_install(
                 InstallResult::Continue
             };
         }
+        // collapse §3.1 — `place_remainder_on_deck` with `position: choice`.
+        // Install a binary top/bottom pick; the chosen branch re-runs
+        // place_remainder at the concrete end THROUGH run_steps, so the
+        // remainder-ordering selection it installs and the outer tail are both
+        // captured/parked correctly. Non-Choice positions are NOT matched here
+        // and fall through to the synchronous runner unchanged.
+        CompiledStep::PlaceRemainderOnDeck {
+            of,
+            position: CompiledStackPosition::Choice,
+        } => {
+            let mut branch = |pos: CompiledStackPosition| {
+                let mut t = vec![CompiledStep::PlaceRemainderOnDeck { of: *of, position: pos }];
+                t.extend_from_slice(tail);
+                Arc::new(t)
+            };
+            let tail_top = branch(CompiledStackPosition::Top);
+            let tail_bottom = branch(CompiledStackPosition::Bottom);
+            let trigger_context = ctx.game.current_trigger_context.clone();
+            let runtime = runtime.clone();
+            ctx.select_effect_choice(
+                "Place the remaining cards on the top or bottom of the deck",
+                vec!["Top of deck".to_string(), "Bottom of deck".to_string()],
+                move |cb_ctx, idx| {
+                    let branch = if idx == 0 { &tail_top } else { &tail_bottom };
+                    let mut b = bindings.clone();
+                    run_tail_preserving_trigger_context(
+                        cb_ctx,
+                        trigger_context,
+                        branch,
+                        &mut b,
+                        &runtime,
+                    );
+                },
+            );
+            selection_result(ctx)
+        }
         CompiledStep::SelectRevealBuckets {
             from,
             buckets,
@@ -676,6 +712,7 @@ pub fn try_install(
                 position: match remainder {
                     CompiledRevealRemainder::Top => CompiledStackPosition::Top,
                     CompiledRevealRemainder::Bottom => CompiledStackPosition::Bottom,
+                    CompiledRevealRemainder::Choose => CompiledStackPosition::Choice,
                 },
             });
             inner_tail.extend_from_slice(tail);
