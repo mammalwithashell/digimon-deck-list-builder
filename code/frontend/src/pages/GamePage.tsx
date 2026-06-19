@@ -304,8 +304,20 @@ export function GamePage() {
               1: 'YOU',
               2: opponentMode === 'bot' ? 'GREEDY BOT' : 'OPPONENT',
             });
+            // Lock human input and drive any opening agent decision (e.g. the
+            // AI's mulligan when the human goes second) before handing control
+            // back. Games created via createBotGame/createAiStarterGame land
+            // here in the Mulligan phase; without this step the human lands on
+            // the AI's mulligan prompt and their first click is consumed
+            // resolving the AI's decision — the "mulligan twice" bug. Setting
+            // agentPending first blanks the mask so no click slips through the
+            // load window.
+            store.setAgentPending(true);
+            const stepResult = await gameApi.stepGame(urlGameId, { paced });
+            applyGameResponse(stepResult);
           } catch (err) {
             console.error('Failed to load game:', err);
+            store.setAgentPending(false);
           }
         })();
       }
