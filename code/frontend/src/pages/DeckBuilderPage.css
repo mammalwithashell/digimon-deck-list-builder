@@ -1,29 +1,31 @@
 .deck-builder-page,
 .deck-builder-app {
-  --bld-bg-0: #07080b;
-  --bld-bg-1: #0c0e13;
-  --bld-bg-2: #11141b;
-  --bld-bg-3: #181c25;
-  --bld-bg-4: #1f2430;
-  --bld-line: #1f2330;
-  --bld-line-2: #2a3040;
-  --bld-line-3: #353c50;
-  --bld-ink-0: #f1f3f7;
-  --bld-ink-1: #c4c9d4;
-  --bld-ink-2: #858c9d;
-  --bld-ink-3: #555c6d;
-  --bld-ink-4: #353b4a;
-  --bld-player: #ff7a18;
-  --bld-player-2: #ffb05a;
-  --bld-player-glow: rgba(255, 122, 24, 0.55);
-  --bld-opp: #3aa6ff;
-  --bld-opp-2: #7fc8ff;
-  --bld-good: #4cd497;
-  --bld-warn: #ffd34a;
-  --bld-bad: #ff5b5b;
-  --bld-display: "Bebas Neue", Impact, sans-serif;
-  --bld-body: "Geist", Inter, system-ui, sans-serif;
-  --bld-mono: "JetBrains Mono", ui-monospace, monospace;
+  /* Mapped onto design-system role tokens (add-desktop-design-system) so the
+     deck builder inherits the active theme instead of the legacy navy palette. */
+  --bld-bg-0: var(--surface-bg);
+  --bld-bg-1: var(--surface);
+  --bld-bg-2: var(--surface-raised);
+  --bld-bg-3: var(--surface-raised);
+  --bld-bg-4: var(--surface-raised);
+  --bld-line: var(--line-0);
+  --bld-line-2: var(--line-1);
+  --bld-line-3: var(--line-strong);
+  --bld-ink-0: var(--ink-0);
+  --bld-ink-1: var(--ink-1);
+  --bld-ink-2: var(--ink-2);
+  --bld-ink-3: var(--ink-3);
+  --bld-ink-4: var(--ink-3);
+  --bld-player: var(--player);
+  --bld-player-2: var(--player-2);
+  --bld-player-glow: var(--player-soft);
+  --bld-opp: var(--opp);
+  --bld-opp-2: var(--opp-2);
+  --bld-good: var(--good);
+  --bld-warn: var(--warn);
+  --bld-bad: var(--danger);
+  --bld-display: var(--font-display);
+  --bld-body: var(--font-ui);
+  --bld-mono: var(--font-mono);
   /* Definite height (not min-height): the pool grid scrolls internally
      via overflow-y, which only engages when its ancestors are
      height-constrained. With min-height the .bld 1fr row sizes to the

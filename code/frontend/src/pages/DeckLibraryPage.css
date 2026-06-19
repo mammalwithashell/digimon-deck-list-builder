@@ -1,17 +1,18 @@
 .deck-library-page {
-  --lib-bg: #07080b;
-  --lib-panel: #0c0f15;
-  --lib-panel-2: #111621;
-  --lib-line: #242a36;
-  --lib-line-2: #374052;
-  --lib-text: #eef2f7;
-  --lib-muted: #8992a5;
-  --lib-dim: #596273;
-  --lib-accent: #ff7a18;
-  --lib-blue: #38a5ff;
-  --lib-good: #4cd497;
-  --lib-warn: #ffd34a;
-  --lib-danger: #ff5b5b;
+  /* Mapped onto design-system role tokens (add-desktop-design-system). */
+  --lib-bg: var(--surface-bg);
+  --lib-panel: var(--surface);
+  --lib-panel-2: var(--surface-raised);
+  --lib-line: var(--line-1);
+  --lib-line-2: var(--line-strong);
+  --lib-text: var(--ink-0);
+  --lib-muted: var(--ink-2);
+  --lib-dim: var(--ink-3);
+  --lib-accent: var(--player);
+  --lib-blue: var(--opp);
+  --lib-good: var(--good);
+  --lib-warn: var(--warn);
+  --lib-danger: var(--danger);
   min-height: calc(var(--app-vh100, 100vh) - 56px);
   background:
     radial-gradient(ellipse at 48% 0%, rgba(56, 165, 255, 0.12), transparent 44%),
