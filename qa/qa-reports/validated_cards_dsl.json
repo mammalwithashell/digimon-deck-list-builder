@@ -6614,15 +6614,15 @@
       "notes": "TDD-first. Reboot/Blocker/Evade; WD/WA may-bounce opp Lv<=5 then independently-optional trash-FD -> mandatory bounce opp lowest-level (level_matches_aggregate lowest_level, already wired). Shared-OPT All-Turns (opp-hand-gain-by-effect OR own-Tamer-source-trash) -> may unsuspend self. NO engine change needed (the logged G-DSL-FIELD-SELECTOR-LOWEST-LEVEL was a misdiagnosis - the AggregateSelector path covers it); uses the new optional-trash + continue_on_decline. 8/8 green."
     },
     "BT25-104": {
-      "card_name": "ShineGreymon: Burst Mode",
-      "validated_date": "2026-06-16",
+      "card_name": "ShineGreymon: Burst Mode // Final Shining Burst",
+      "validated_date": "2026-06-18",
       "report": "data-squad-archetype",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
       "archetype": "DATA SQUAD",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-104.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_104.rs",
-      "notes": "Mass treat-as-Digimon aura clause omitted (G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH); other clauses IMPLEMENTED."
+      "notes": "DUAL. Was PARTIAL (the [Your Turn] mass-Marcus aura omitted); now FULLY IMPLEMENTED by closing G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH: the declarative kind:aura path now carries a synth_identity ModifierPayload, so all your [Marcus Damon]s are continuously treated as 12000 DP Digimon + gain Rush while your turn. (The add_modifier continuous floating-mass path was also taught the payload, symmetric fix.) 13/13 green."
     },
     "BT25-055": {
       "card_name": "Deramon",

@@ -783,6 +783,13 @@ pub enum CompiledDeclarativeClause {
         /// `ModifierPayload::Name { value, base: false }`. Used by
         /// `CanOnlyDigivolveInto` (judge-quiz Q3, EX10-020).
         modifier_name: Option<String>,
+        /// Structured `TreatAsDigimon` SynthIdentity payload for a mass aura
+        /// ("all of your [Marcus Damon]s are also treated as a 12000 DP
+        /// Digimon" — BT25-104). No `skip_serializing_if`: the embedded pack
+        /// round-trips `CompiledClause` through bincode (non-self-describing),
+        /// so the field must always be written. G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH.
+        #[serde(default)]
+        synth_identity: Option<CompiledSynthIdentity>,
         /// Track H §4 — install-once continuous gate. When present, the
         /// lowered `Effect` installs its modifier(s) with
         /// `Expiry::UntilCondition` carrying this predicate. Eviction is

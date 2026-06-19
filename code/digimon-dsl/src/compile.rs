@@ -1557,6 +1557,7 @@ fn compile_declarative(
             modifier: a.modifier,
             modifier_value: a.modifier_value,
             modifier_name: a.modifier_name,
+            synth_identity: a.synth_identity.as_ref().map(compile_synth_identity),
             while_condition: a.while_condition.as_ref().map(|p| {
                 compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
             }),

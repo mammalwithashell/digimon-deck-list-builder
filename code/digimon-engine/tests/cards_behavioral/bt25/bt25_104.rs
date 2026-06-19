@@ -322,18 +322,71 @@ fn bt25_104_option_main_tamer_play_is_optional() {
 // Section 3 — GAP documentation
 // ════════════════════════════════════════════════════════════════════════════
 
-/// The [Your Turn] aura that treats ALL of your [Marcus Damon]s as 12000 DP
-/// Digimon with <Rush> is OMITTED — the DSL/engine cannot express a continuous
-/// mass TreatAsDigimon-with-synth-identity aura.
-///
-/// GAP G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH (qa/dsl-vocab-gaps.md).
+/// A [Marcus Damon] Tamer (name-matched by the aura).
+fn make_marcus(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Marcus Damon");
+    c.card_kind = CardKind::Tamer;
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 3;
+    c.colors = vec![CardColor::Yellow];
+    c
+}
+
+/// [Your Turn] All of your [Marcus Damon]s are treated as 12000 DP Digimon and
+/// gain <Rush> — the continuous mass TreatAsDigimon+synth aura
+/// (G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH, now closed via the floating-mass payload).
 #[test]
-#[ignore = "G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH: continuous mass TreatAsDigimon+synth aura not expressible (see qa/dsl-vocab-gaps.md)"]
-fn bt25_104_your_turn_marcus_aura_pending_gap() {
-    // When the substrate is widened (aura / continuous-mass TreatAsDigimon
-    // carrying a SynthIdentity payload + Rush, gated active_when: your_turn), this
-    // test should assert: every own [Marcus Damon] on the field — including any
-    // played mid-turn — is treated as a 12000 DP Digimon with Rush while it is the
-    // controller's turn, reverting at end of turn.
-    panic!("pending G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH");
+fn bt25_104_your_turn_marcus_treated_as_12000_digimon_with_rush() {
+    use digimon_engine::enums::ModifierType;
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-104")
+        .expect("BT25-104 in pack")
+        .add_card(make_marcus("MARCUS"))
+        .add_card(make_tamer("OTHER")) // a non-Marcus Tamer (negative control)
+        .add_card(make_filler("FILL"))
+        .hand(0, &["FILL"])
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+    runner.set_first_player(0);
+
+    let shine = runner.place_on_field(0, "BT25-104", Some(0));
+    let marcus = runner.place_on_field(0, "MARCUS", Some(0));
+    let other = runner.place_on_field(0, "OTHER", Some(0));
+
+    // The [Your Turn] aura installs on the digivolve that brings the Burst Mode
+    // face in (and re-installs at each start_of_your_turn).
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(shine));
+    runner.game.drain_effect_queue();
+    runner.game.tick_declarative_effects();
+
+    // The Marcus Damon is treated as a 12000 DP Digimon and gains <Rush>.
+    assert_eq!(
+        runner.effective_dp(marcus),
+        Some(12000),
+        "the Marcus Damon is treated as a 12000 DP Digimon"
+    );
+    assert!(
+        runner.modifiers().has(marcus, ModifierType::TreatAsDigimon),
+        "the Marcus Damon carries the TreatAsDigimon (synth identity) modifier"
+    );
+    assert!(
+        runner.game.has_keyword(marcus, Keyword::Rush),
+        "the Marcus Damon gains <Rush>"
+    );
+
+    // A non-Marcus Tamer is unaffected (the aura is name-filtered).
+    assert!(
+        !runner.modifiers().has(other, ModifierType::TreatAsDigimon),
+        "a non-Marcus Tamer is NOT treated as a Digimon"
+    );
+    assert!(
+        !runner.game.has_keyword(other, Keyword::Rush),
+        "a non-Marcus Tamer does NOT gain <Rush>"
+    );
 }

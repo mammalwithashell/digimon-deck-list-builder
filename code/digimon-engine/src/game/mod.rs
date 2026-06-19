@@ -2140,6 +2140,7 @@ impl Game {
         source_player: PlayerId,
         expiry: Expiry,
         effect_immunity: Option<crate::modifiers::EffectImmunityFilter>,
+        payload: Option<crate::modifiers::ModifierPayload>,
     ) {
         let pending_skips = crate::modifiers::pending_skips_for_install(
             expiry,
@@ -2156,6 +2157,7 @@ impl Game {
                 expiry,
                 pending_skips,
                 effect_immunity,
+                payload,
             });
         self.tick_declarative_effects();
     }

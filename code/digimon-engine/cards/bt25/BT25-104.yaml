@@ -55,20 +55,17 @@
 # | Burst Digivolve from ShineGreymon (return Marcus) / cost 0 | IMPLEMENTED |
 # | [WD][WA][OPT] Activate Option [Main] inline                | IMPLEMENTED |
 # | Option face <Use Req.> + [Main] -15000 + play Tamer + Arts | IMPLEMENTED |
-# | [Your Turn] all Marcus Damon -> 12000 DP Digimon + <Rush>  | OMITTED — gap |
+# | [Your Turn] all Marcus Damon -> 12000 DP Digimon + <Rush>  | IMPLEMENTED |
 #
-# GAP — G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH (logged qa/dsl-vocab-gaps.md):
-#   The [Your Turn] clause is a CONTINUOUS aura that treats ALL of your
-#   [Marcus Damon]s (including any played mid-turn) as 12000 DP Digimon with
-#   <Rush>. The shipped `TreatAsDigimon` + `synth_identity` substrate only
-#   exists as a ONE-SHOT triggered `add_modifier` over a SINGLE selected
-#   permanent (BT13-020/BT21-044/AD1-021). Neither the declarative `aura`
-#   substrate (AuraBody has no `synth_identity` field) nor the `add_modifier`
-#   `continuous: true` mass path (add_floating_mass_modifier drops the
-#   ModifierPayload) can install the synthetic 12000-DP identity over a live
-#   FILTER of Marcus Damons. A one-shot single-Marcus pick would be an
-#   approximation of "ALL of your [Marcus Damon]s" (rule 17), so the clause is
-#   OMITTED until the substrate is widened. → PARTIAL.
+# G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH — CLOSED (2026-06-18). The [Your Turn] clause
+#   is a CONTINUOUS aura treating ALL of your [Marcus Damon]s (including any
+#   played mid-turn) as 12000 DP Digimon with <Rush>. The substrate was widened
+#   so the declarative `kind: aura` path carries a structured `synth_identity`
+#   payload: `AuraBody.synth_identity` lowers (via `add_declarative_modifier_with
+#   _payload`) to `ModifierPayload::SynthIdentity` on every live match, re-applied
+#   each tick (covers Marcus Damons played mid-turn, reverts end of your turn).
+#   (The `add_modifier { continuous: true }` floating-mass path was also taught to
+#   carry the payload, as a symmetric fix to a latent drop.) → FULLY IMPLEMENTED.
 
 card: BT25-104
 name: "ShineGreymon: Burst Mode // Final Shining Burst"
@@ -183,11 +180,25 @@ effects:
           of: you
           hand_index: tamer_pick
 
-  # ─── [Your Turn] aura — OMITTED (G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH) ──────────
-  # "[Your Turn] All of your [Marcus Damon]s are also treated as 12000 DP
-  # Digimon and gain <Rush>." See the GAP NOTE in the header. Not authored —
-  # omitting is faithful (rule 17); a one-shot single-Marcus pick would
-  # under-cover "ALL of your [Marcus Damon]s".
+  # ─── [Your Turn] all your [Marcus Damon]s are treated as 12000 DP Digimon
+  #     + gain <Rush> (G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH — now closed) ───────────
+  #
+  # One declarative `kind: aura`, gated to your turn, over a live FILTER of your
+  # [Marcus Damon] Tamers — always re-evaluated, so Marcus Damons played mid-turn
+  # are covered and the effect reverts at end of your turn. The aura applies BOTH
+  # grants to each match:
+  #  - `modifier: TreatAsDigimon` + `synth_identity { dp: 12000 }` → the
+  #    structured SynthIdentity payload "treated as a 12000 DP Digimon" (the aura
+  #    path now carries SynthIdentity — previously it dropped the payload).
+  #  - `grant_keyword: { keyword: Rush }` → "<Rush>".
+  - kind: aura
+    target: { of: you, kind: tamer, name_is: "Marcus Damon" }
+    active_when: { your_turn: true }
+    modifier: TreatAsDigimon
+    modifier_value: 0
+    synth_identity: { dp: 12000 }
+    grant_keyword: { keyword: Rush }
+    summary: "[Your Turn] All of your [Marcus Damon]s are treated as 12000 DP Digimon and gain <Rush>"
 
   # ─── Option-face [Main] (Final Shining Burst) ───────────────────────────────
   #

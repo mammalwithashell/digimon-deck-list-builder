@@ -394,6 +394,12 @@ pub struct AuraBody {
     /// by scalar/flag modifiers.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modifier_name: Option<String>,
+    /// Structured `synth_identity` payload for a `modifier: TreatAsDigimon`
+    /// aura — "all of your [Marcus Damon]s are also treated as a 12000 DP
+    /// Digimon" (BT25-104). Lowers to `ModifierPayload::SynthIdentity` on each
+    /// matching target. G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub synth_identity: Option<crate::step::SynthIdentitySpec>,
     /// Track H §4 — install-once continuous gate. When set, the aura's
     /// modifier installs with `Expiry::UntilCondition` carrying this
     /// predicate. The UntilCondition controller (PR #458) evicts the
