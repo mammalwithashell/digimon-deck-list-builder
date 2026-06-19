@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { ThemeSwitch } from '@/design/components/ThemeSwitch';
 
 interface LauncherShellProps {
   buildVersion: string;
@@ -56,6 +57,7 @@ export function LauncherShell({
               <div><span>00</span><b> Launcher</b></div>
               <div className="launcher-topbar-meta">
                 <div className="launcher-user">Signed in as {username}</div>
+                <ThemeSwitch />
               </div>
             </div>
             <div className="launcher-content">{children}</div>

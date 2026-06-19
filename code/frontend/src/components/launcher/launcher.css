@@ -1,23 +1,19 @@
+/* Local launcher var names are mapped onto the design-system role tokens
+   (add-desktop-design-system). Names that collide with role tokens
+   (--ink-0..3, --player, --player-2, --good, --warn) are intentionally NOT
+   redefined here so they inherit the active theme's tokens directly. */
 .launcher-screen {
-  --bg-0: #07080b;
-  --bg-1: #0c0e13;
-  --bg-2: #11141b;
-  --bg-3: #181c25;
-  --line: #1f2330;
-  --line-2: #2a3040;
-  --line-3: #353c50;
-  --ink-0: #f1f3f7;
-  --ink-1: #c4c9d4;
-  --ink-2: #858c9d;
-  --ink-3: #555c6d;
-  --player: #ff7a18;
-  --player-2: #ffb05a;
-  --player-glow: rgba(255, 122, 24, 0.55);
-  --good: #4cd497;
-  --warn: #ffb05a;
-  --display: 'Bebas Neue', Impact, sans-serif;
-  --body: 'Geist', system-ui, sans-serif;
-  --mono: 'JetBrains Mono', ui-monospace, monospace;
+  --bg-0: var(--surface-bg);
+  --bg-1: var(--surface);
+  --bg-2: var(--surface-raised);
+  --bg-3: var(--surface-raised);
+  --line: var(--line-0);
+  --line-2: var(--line-1);
+  --line-3: var(--line-strong);
+  --player-glow: var(--player-soft);
+  --display: var(--font-display);
+  --body: var(--font-ui);
+  --mono: var(--font-mono);
 }
 
 .launcher-screen,
@@ -287,7 +283,7 @@
   color: inherit;
   position: relative;
   transition: all 0.15s;
-  clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  clip-path: polygon(var(--frame-cut) 0, 100% 0, 100% calc(100% - var(--frame-cut)), calc(100% - var(--frame-cut)) 100%, 0 100%, 0 var(--frame-cut));
 }
 
 .launcher-action:hover {
@@ -388,7 +384,7 @@
   border: 1px solid var(--line-2);
   background: var(--bg-1);
   position: relative;
-  clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  clip-path: polygon(var(--frame-cut) 0, 100% 0, 100% calc(100% - var(--frame-cut)), calc(100% - var(--frame-cut)) 100%, 0 100%, 0 var(--frame-cut));
 }
 
 .launcher-panel-head {
@@ -443,8 +439,8 @@
   width: 36px;
   height: 50px;
   position: relative;
-  border: 1px solid #20355a;
-  background: linear-gradient(160deg, #14243a, #060d1d);
+  border: 1px solid var(--line-2);
+  background: var(--surface-sunken);
 }
 
 .launcher-deck-color img {
@@ -809,4 +805,31 @@
   .launcher-title {
     font-size: 64px;
   }
+}
+
+/* ── Light "Adventure '99" chrome (add-desktop-design-system) ──────────────
+   In light the angular clip-path collapses to square (--frame-cut: 0); swap the
+   thin glowing borders for chunky Win95 bevels on the framed surfaces. */
+[data-theme="light"] .launcher-side {
+  box-shadow: inset -2px 0 0 var(--bevel-lo);
+}
+[data-theme="light"] .launcher-action,
+[data-theme="light"] .launcher-deck-panel,
+[data-theme="light"] .launcher-btn,
+[data-theme="light"] .launcher-quick a,
+[data-theme="light"] .launcher-news,
+[data-theme="light"] .launcher-deck-color {
+  border-color: transparent;
+  box-shadow: var(--bevel-shadow);
+}
+[data-theme="light"] .launcher-action.primary {
+  box-shadow: inset 1.5px 1.5px 0 var(--bevel-hi), inset -2px -2px 0 var(--bevel-lo);
+}
+[data-theme="light"] .launcher-nav-item.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-left-color: transparent;
+}
+[data-theme="light"] .launcher-brand-mark {
+  box-shadow: inset 1px 1px 0 var(--player-2);
 }

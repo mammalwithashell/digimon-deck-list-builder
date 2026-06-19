@@ -48,8 +48,8 @@
 
 ## 8. Apply to the launcher
 
-- [ ] 8.1 Rebuild the launcher (`LauncherPage` + `launcher.css`) on the primitives (NavRail, Window/Panel, Button, deck list using `CardSleeve` tiles), consuming tokens; remove the bespoke `--bg-*` palette.
-- [ ] 8.2 Place the `ThemeSwitch` in the launcher top bar; verify a live switch updates launcher chrome without navigation.
+- [x] 8.1 Rebuild the launcher (`LauncherPage` + `launcher.css`) on the primitives (NavRail, Window/Panel, Button, deck list using `CardSleeve` tiles), consuming tokens; remove the bespoke `--bg-*` palette. [retokenized launcher.css onto design tokens + theme-aware chrome (--frame-cut + light bevels), de-navy'd deck tiles; existing structure now consumes tokens rather than a literal primitive-component swap]
+- [x] 8.2 Place the `ThemeSwitch` in the launcher top bar; verify a live switch updates launcher chrome without navigation. [verified in browser: one click reskins the whole launcher dark↔light]
 
 ## 9. Apply to the game board
 
