@@ -836,3 +836,11 @@
 [data-theme="light"] .launcher-brand-mark {
   box-shadow: inset 1px 1px 0 var(--player-2);
 }
+/* The hero sits directly on the teal desktop — its faded-terminal greys
+   (ink-3/ink-2, tuned for the dark CRT) wash out there, so darken them. */
+[data-theme="light"] .launcher-welcome {
+  color: var(--ink-1);
+}
+[data-theme="light"] .launcher-tagline {
+  color: var(--ink-0);
+}

@@ -85,7 +85,7 @@ export function LauncherPage() {
           PICK UP<br />WHERE YOU<br /><em>LEFT OFF.</em>
         </h1>
         <div className="launcher-tagline">PLAY ANONYMOUSLY · NO ACCOUNT REQUIRED</div>
-        <LauncherActions hasDecks={state.decks.length > 0} />
+        <LauncherActions />
       </section>
       <aside className="launcher-right-column" aria-label="Launcher details">
         <LauncherDeckPanel decks={deckRows} loaded={state.loaded} />
