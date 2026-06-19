@@ -338,20 +338,22 @@ pub struct AuraBody {
     pub target: Option<PredicateSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target_player: Option<crate::common::PlayerRef>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub dp_modifier: Option<i32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub dp_modifier_fn: Option<crate::formula::FormulaSpec>,
+    /// DP grant added to each matching target. A `FormulaSpec`
+    /// (unify-dsl-scalar-and-comparators): a bare int `dp_modifier: 3000` is a
+    /// literal, a map is a runtime formula over board state. The retired
+    /// `dp_modifier_fn` key survives as a deserialize alias. At compile time a
+    /// literal routes to the compiled `dp_modifier` integer and any other
+    /// formula to `dp_modifier_fn`, byte-identical to the pre-unification form.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "dp_modifier_fn")]
+    pub dp_modifier: Option<crate::formula::FormulaSpec>,
     /// Flat `Security A. ±N` grant. Track H §1 — `AuraGrant::SecurityAttack(i32)`.
-    /// Installs `ModifierType::SecurityAttackChange` carrying the literal
-    /// delta on each matching target. Use this for printed text like
-    /// "your Olympos XII Digimon get Security Attack +1"; use
-    /// `security_attack_fn` only when the value is computed dynamically
-    /// (formula over board state).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub security_attack: Option<i32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub security_attack_fn: Option<crate::formula::FormulaSpec>,
+    /// Installs `ModifierType::SecurityAttackChange` carrying the delta on each
+    /// matching target. A `FormulaSpec`: a bare int is a literal grant
+    /// ("your Olympos XII Digimon get Security Attack +1"); a map is computed
+    /// dynamically over board state. The retired `security_attack_fn` key
+    /// survives as a deserialize alias.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "security_attack_fn")]
+    pub security_attack: Option<crate::formula::FormulaSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grant_keyword: Option<GrantKeywordValue>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -468,10 +470,14 @@ pub struct CostReductionBody {
     pub optional: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub once_per_turn: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub amount: Option<i32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub amount_fn: Option<crate::formula::FormulaSpec>,
+    /// Cost-reduction magnitude. A `FormulaSpec`
+    /// (unify-dsl-scalar-and-comparators): a bare int `amount: 2` is a literal,
+    /// a map (e.g. `{ base: 4, per: material_count, delta: 1 }`) is a runtime
+    /// formula. The retired `amount_fn` key survives as a deserialize alias.
+    /// At compile time a literal routes to the compiled `amount` integer and
+    /// any other formula to `amount_fn`, byte-identical to the prior form.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "amount_fn")]
+    pub amount: Option<crate::formula::FormulaSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pay_cost: Option<Vec<StepSpec>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]

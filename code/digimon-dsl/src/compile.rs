@@ -399,6 +399,45 @@ fn compile_aggregate_selector(a: crate::formula::AggregateSelector) -> CompiledA
     }
 }
 
+/// Split a `FormulaSpec` magnitude into the existing literal-vs-formula
+/// compiled encoding (unify-dsl-scalar-and-comparators). A pure `Literal(n)`
+/// keeps the integer fast-path; any other formula compiles to a
+/// `CompiledFormula`. Returns `Ok(n)` for the literal case and
+/// `Err(compiled_formula)` otherwise, so callers route to whichever compiled
+/// variant they own (e.g. `CompiledCostDelta::{Reduce,ReduceFn}`,
+/// `CompiledStep::{GainMemory,GainMemoryFn}`). This keeps the compiled output
+/// byte-identical to the pre-unification encoding for every existing card.
+fn split_scalar_formula(
+    f: &crate::formula::FormulaSpec,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> Result<i32, CompiledFormula> {
+    match f {
+        crate::formula::FormulaSpec::Literal(n) => Ok(*n),
+        other => Err(compile_formula(other, prefix, card_id, errors)),
+    }
+}
+
+/// `Option` form of [`split_scalar_formula`] for struct fields that carry the
+/// literal in one compiled field and the formula in a sibling `_fn` field
+/// (`aura.dp_modifier`/`dp_modifier_fn`, `cost_reduction.amount`/`amount_fn`,
+/// …). Returns `(literal, formula)` with at most one populated.
+fn split_opt_scalar_formula(
+    f: &Option<crate::formula::FormulaSpec>,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> (Option<i32>, Option<CompiledFormula>) {
+    match f {
+        None => (None, None),
+        Some(spec) => match split_scalar_formula(spec, prefix, card_id, errors) {
+            Ok(n) => (Some(n), None),
+            Err(formula) => (None, Some(formula)),
+        },
+    }
+}
+
 fn compile_cost_delta(
     c: &crate::step::CostDelta,
     prefix: &str,
@@ -410,13 +449,13 @@ fn compile_cost_delta(
         CostDelta::Keyword(CostDeltaKeyword::Free) => CompiledCostDelta::Free,
         CostDelta::Keyword(CostDeltaKeyword::Printed) => CompiledCostDelta::Printed,
         CostDelta::Literal(n) => CompiledCostDelta::Literal(*n),
-        CostDelta::Reduce { reduce } => CompiledCostDelta::Reduce(*reduce),
-        CostDelta::ReduceFn { reduce_fn } => CompiledCostDelta::ReduceFn(compile_formula(
-            reduce_fn,
-            &format!("{prefix}.cost_delta.reduce_fn"),
-            card_id,
-            errors,
-        )),
+        CostDelta::Reduce { reduce } => {
+            match split_scalar_formula(reduce, &format!("{prefix}.cost_delta.reduce"), card_id, errors)
+            {
+                Ok(n) => CompiledCostDelta::Reduce(n),
+                Err(formula) => CompiledCostDelta::ReduceFn(formula),
+            }
+        }
     }
 }
 
@@ -573,28 +612,217 @@ fn compile_count_bound(
 
 // ── Predicate ───────────────────────────────────────────────────────
 
+/// Merge a metric's legacy flat keys (`<m>_eq`/`_lte`/`_gte`) with its canonical
+/// `MetricComparators` field (unify-dsl-scalar-and-comparators §2) into the
+/// effective `(eq, lte, gte)` compiled constraints. Canonical comparators take
+/// precedence over the matching legacy op. Each value compiles to a
+/// `CompiledDpConstraint` via the same literal/formula split the legacy path
+/// uses, so the compiled output is byte-identical to the legacy flat-key form.
+/// A `MetricComparators` whose `value` is a formula resolves read-safely at eval
+/// (no game mutation) — required for action-mask + future search contexts.
+#[allow(clippy::type_complexity)]
+fn resolve_metric_comparators(
+    legacy_eq: &Option<crate::predicate::DpConstraint>,
+    legacy_lte: &Option<crate::predicate::DpConstraint>,
+    legacy_gte: &Option<crate::predicate::DpConstraint>,
+    canonical: &Option<crate::predicate::MetricComparators>,
+    prefix: &str,
+    metric: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> (
+    Option<CompiledDpConstraint>,
+    Option<CompiledDpConstraint>,
+    Option<CompiledDpConstraint>,
+) {
+    let mut compile_leg = |d: &crate::predicate::DpConstraint, op: &str| {
+        compile_dp_constraint(d, &format!("{prefix}.{metric}_{op}"), card_id, errors)
+    };
+    let mut eq = legacy_eq.as_ref().map(|d| compile_leg(d, "eq"));
+    let mut lte = legacy_lte.as_ref().map(|d| compile_leg(d, "lte"));
+    let mut gte = legacy_gte.as_ref().map(|d| compile_leg(d, "gte"));
+    if let Some(crate::predicate::MetricComparators(cmps)) = canonical {
+        use crate::predicate::ComparatorOp;
+        for c in cmps {
+            let dc = match &c.value {
+                crate::formula::FormulaSpec::Literal(n) => CompiledDpConstraint::Literal(*n),
+                other => CompiledDpConstraint::Formula(compile_formula(
+                    other,
+                    &format!("{prefix}.{metric}"),
+                    card_id,
+                    errors,
+                )),
+            };
+            match c.op {
+                ComparatorOp::Eq => eq = Some(dc),
+                ComparatorOp::Lte => lte = Some(dc),
+                ComparatorOp::Gte => gte = Some(dc),
+            }
+        }
+    }
+    (eq, lte, gte)
+}
+
+/// `resolve_metric_comparators` variant for the level metrics whose `_eq`
+/// compiled field is a bare `u8` (unify-dsl-scalar-and-comparators §2 — `level`,
+/// `event_target_level`). The canonical `eq` is therefore literal-only; a
+/// formula `eq` is rejected (printed level is always a small literal — the
+/// cloneable design's documented gap). `lte`/`gte` stay formula-capable.
+#[allow(clippy::type_complexity)]
+fn resolve_level_comparators(
+    legacy_eq: &Option<u8>,
+    legacy_lte: &Option<crate::predicate::DpConstraint>,
+    legacy_gte: &Option<crate::predicate::DpConstraint>,
+    canonical: &Option<crate::predicate::MetricComparators>,
+    prefix: &str,
+    metric: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> (
+    Option<u8>,
+    Option<CompiledDpConstraint>,
+    Option<CompiledDpConstraint>,
+) {
+    let mut eq = *legacy_eq;
+    let mut lte = legacy_lte
+        .as_ref()
+        .map(|d| compile_dp_constraint(d, &format!("{prefix}.{metric}_lte"), card_id, errors));
+    let mut gte = legacy_gte
+        .as_ref()
+        .map(|d| compile_dp_constraint(d, &format!("{prefix}.{metric}_gte"), card_id, errors));
+    if let Some(crate::predicate::MetricComparators(cmps)) = canonical {
+        use crate::formula::FormulaSpec;
+        use crate::predicate::ComparatorOp;
+        for c in cmps {
+            match c.op {
+                ComparatorOp::Eq => match &c.value {
+                    FormulaSpec::Literal(n) => eq = Some((*n).max(0) as u8),
+                    _ => errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{prefix}.{metric}"),
+                        message: format!(
+                            "{metric} eq must be a literal integer ({metric}_eq has no formula compiled variant)"
+                        ),
+                    }),
+                },
+                ComparatorOp::Lte => {
+                    lte = Some(match &c.value {
+                        FormulaSpec::Literal(n) => CompiledDpConstraint::Literal(*n),
+                        other => CompiledDpConstraint::Formula(compile_formula(
+                            other,
+                            &format!("{prefix}.{metric}"),
+                            card_id,
+                            errors,
+                        )),
+                    });
+                }
+                ComparatorOp::Gte => {
+                    gte = Some(match &c.value {
+                        FormulaSpec::Literal(n) => CompiledDpConstraint::Literal(*n),
+                        other => CompiledDpConstraint::Formula(compile_formula(
+                            other,
+                            &format!("{prefix}.{metric}"),
+                            card_id,
+                            errors,
+                        )),
+                    });
+                }
+            }
+        }
+    }
+    (eq, lte, gte)
+}
+
 fn compile_predicate(
     p: &crate::predicate::PredicateSpec,
     prefix: &str,
     card_id: &str,
     errors: &mut Vec<ValidationError>,
 ) -> CompiledPredicate {
+    // §2 — level metrics fold through the u8-eq variant.
+    let (level_eq, level_lte, level_gte) = resolve_level_comparators(
+        &p.level_eq, &p.level_lte, &p.level_gte, &p.level, prefix, "level", card_id, errors,
+    );
+    let (event_target_level_eq, event_target_level_lte, event_target_level_gte) =
+        resolve_level_comparators(
+            &p.event_target_level_eq,
+            &p.event_target_level_lte,
+            &p.event_target_level_gte,
+            &p.event_target_level,
+            prefix,
+            "event_target_level",
+            card_id,
+            errors,
+        );
+    // unify-dsl-scalar-and-comparators §2 — fold the canonical `MetricComparators`
+    // fields into the legacy `_eq`/`_lte`/`_gte` compiled slots (byte-identical).
+    let (dp_eq, dp_lte, dp_gte) = resolve_metric_comparators(
+        &p.dp_eq, &p.dp_lte, &p.dp_gte, &p.dp, prefix, "dp", card_id, errors,
+    );
+    let (event_target_dp_eq, event_target_dp_lte, event_target_dp_gte) =
+        resolve_metric_comparators(
+            &p.event_target_dp_eq,
+            &p.event_target_dp_lte,
+            &p.event_target_dp_gte,
+            &p.event_target_dp,
+            prefix,
+            "event_target_dp",
+            card_id,
+            errors,
+        );
+    // Metrics whose legacy flat surface lacked `_eq` — the canonical comparator
+    // supplies it (§2.4); there is no legacy `_eq` field, so pass `&None`.
+    let (play_cost_eq, play_cost_lte, play_cost_gte) = resolve_metric_comparators(
+        &None,
+        &p.play_cost_lte,
+        &p.play_cost_gte,
+        &p.play_cost,
+        prefix,
+        "play_cost",
+        card_id,
+        errors,
+    );
+    let (stack_size_eq, stack_size_lte, stack_size_gte) = resolve_metric_comparators(
+        &None,
+        &p.stack_size_lte,
+        &p.stack_size_gte,
+        &p.stack_size,
+        prefix,
+        "stack_size",
+        card_id,
+        errors,
+    );
+    let (materials_count_eq, materials_count_lte, materials_count_gte) =
+        resolve_metric_comparators(
+            &None,
+            &p.materials_count_lte,
+            &p.materials_count_gte,
+            &p.materials_count,
+            prefix,
+            "materials_count",
+            card_id,
+            errors,
+        );
+    let (security_count_eq, security_count_lte, security_count_gte) = resolve_metric_comparators(
+        &None,
+        &p.security_count_lte,
+        &p.security_count_gte,
+        &p.security_count,
+        prefix,
+        "security_count",
+        card_id,
+        errors,
+    );
     // Unknown fields in `extra` are silently dropped here — they are absorbed
     // by serde's flatten+unknown-fields mechanism and flagged by the semantic
     // validator (Task 12), not by the compiler.
 
     CompiledPredicate {
         kind: p.kind.map(compile_card_kind),
-        level_eq: p.level_eq,
+        level_eq,
         level_eq_binding: p.level_eq_binding.clone(),
-        level_lte: p
-            .level_lte
-            .as_ref()
-            .map(|d| compile_dp_constraint(d, &format!("{prefix}.level_lte"), card_id, errors)),
-        level_gte: p
-            .level_gte
-            .as_ref()
-            .map(|d| compile_dp_constraint(d, &format!("{prefix}.level_gte"), card_id, errors)),
+        level_lte,
+        level_gte,
         level_matches_aggregate: p.level_matches_aggregate.map(|m| {
             (
                 compile_aggregate_selector(m.selector),
@@ -632,39 +860,19 @@ fn compile_predicate(
             .name_not_shared_by_field_tamer
             .map(|s| compile_player_ref(s.player())),
         card_number_is: p.card_number_is.clone(),
-        play_cost_lte: p
-            .play_cost_lte
-            .as_ref()
-            .map(|d| compile_dp_constraint(d, &format!("{prefix}.play_cost_lte"), card_id, errors)),
-        play_cost_gte: p
-            .play_cost_gte
-            .as_ref()
-            .map(|d| compile_dp_constraint(d, &format!("{prefix}.play_cost_gte"), card_id, errors)),
+        play_cost_lte,
+        play_cost_gte,
+        play_cost_eq,
         can_digivolve_from_source: p.can_digivolve_from_source,
-        dp_eq: p
-            .dp_eq
-            .as_ref()
-            .map(|d| compile_dp_constraint(d, &format!("{prefix}.dp_eq"), card_id, errors)),
-        dp_lte: p
-            .dp_lte
-            .as_ref()
-            .map(|d| compile_dp_constraint(d, &format!("{prefix}.dp_lte"), card_id, errors)),
-        dp_gte: p
-            .dp_gte
-            .as_ref()
-            .map(|d| compile_dp_constraint(d, &format!("{prefix}.dp_gte"), card_id, errors)),
-        stack_size_lte: p.stack_size_lte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.stack_size_lte"), card_id, errors)
-        }),
-        stack_size_gte: p.stack_size_gte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.stack_size_gte"), card_id, errors)
-        }),
-        materials_count_lte: p.materials_count_lte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.materials_count_lte"), card_id, errors)
-        }),
-        materials_count_gte: p.materials_count_gte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.materials_count_gte"), card_id, errors)
-        }),
+        dp_eq,
+        dp_lte,
+        dp_gte,
+        stack_size_lte,
+        stack_size_gte,
+        stack_size_eq,
+        materials_count_lte,
+        materials_count_gte,
+        materials_count_eq,
         has_inherited: p.has_inherited.as_ref().map(|b| {
             Box::new(compile_predicate(
                 b,
@@ -727,12 +935,9 @@ fn compile_predicate(
         own_memory_gte: p.own_memory_gte.as_ref().map(|d| {
             compile_dp_constraint(d, &format!("{prefix}.own_memory_gte"), card_id, errors)
         }),
-        security_count_lte: p.security_count_lte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.security_count_lte"), card_id, errors)
-        }),
-        security_count_gte: p.security_count_gte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.security_count_gte"), card_id, errors)
-        }),
+        security_count_lte,
+        security_count_gte,
+        security_count_eq,
         opponent_security_count_lte: p.opponent_security_count_lte.as_ref().map(|d| {
             compile_dp_constraint(
                 d,
@@ -803,32 +1008,12 @@ fn compile_predicate(
         dna_origin: p.dna_origin,
         event_target_kind: p.event_target_kind.map(compile_card_kind),
         event_target_trait_has: p.event_target_trait_has.clone(),
-        event_target_level_eq: p.event_target_level_eq,
-        event_target_level_lte: p.event_target_level_lte.as_ref().map(|d| {
-            compile_dp_constraint(
-                d,
-                &format!("{prefix}.event_target_level_lte"),
-                card_id,
-                errors,
-            )
-        }),
-        event_target_level_gte: p.event_target_level_gte.as_ref().map(|d| {
-            compile_dp_constraint(
-                d,
-                &format!("{prefix}.event_target_level_gte"),
-                card_id,
-                errors,
-            )
-        }),
-        event_target_dp_eq: p.event_target_dp_eq.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.event_target_dp_eq"), card_id, errors)
-        }),
-        event_target_dp_lte: p.event_target_dp_lte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.event_target_dp_lte"), card_id, errors)
-        }),
-        event_target_dp_gte: p.event_target_dp_gte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.event_target_dp_gte"), card_id, errors)
-        }),
+        event_target_level_eq,
+        event_target_level_lte,
+        event_target_level_gte,
+        event_target_dp_eq,
+        event_target_dp_lte,
+        event_target_dp_gte,
         event_target_name_contains: p.event_target_name_contains.clone(),
         event_target_is_player: p.event_target_is_player,
         event_target_is_source: p.event_target_is_source,
@@ -1483,7 +1668,16 @@ fn compile_declarative(
     let summary_key = d.summary_key.clone();
 
     match body {
-        B::Aura(a) => CompiledDeclarativeClause::Aura {
+        B::Aura(a) => {
+        let (dp_modifier, dp_modifier_fn) =
+            split_opt_scalar_formula(&a.dp_modifier, &format!("{prefix}.dp_modifier"), card_id, errors);
+        let (security_attack, security_attack_fn) = split_opt_scalar_formula(
+            &a.security_attack,
+            &format!("{prefix}.security_attack"),
+            card_id,
+            errors,
+        );
+        CompiledDeclarativeClause::Aura {
             scope,
             active_when,
             target: a
@@ -1494,15 +1688,10 @@ fn compile_declarative(
                 })
                 .unwrap_or_default(),
             target_player: a.target_player.map(compile_player_ref),
-            dp_modifier: a.dp_modifier,
-            dp_modifier_fn: a
-                .dp_modifier_fn
-                .as_ref()
-                .map(|f| compile_formula(f, &format!("{prefix}.dp_modifier_fn"), card_id, errors)),
-            security_attack: a.security_attack,
-            security_attack_fn: a.security_attack_fn.as_ref().map(|f| {
-                compile_formula(f, &format!("{prefix}.security_attack_fn"), card_id, errors)
-            }),
+            dp_modifier,
+            dp_modifier_fn,
+            security_attack,
+            security_attack_fn,
             grant_keyword: a.grant_keyword.map(|gk| CompiledGrantKeywordValue {
                 keyword: gk.keyword,
                 value: gk.value,
@@ -1521,8 +1710,12 @@ fn compile_declarative(
             }),
             summary,
             summary_key,
-        },
-        B::CostReduction(c) => CompiledDeclarativeClause::CostReduction {
+        }
+        }
+        B::CostReduction(c) => {
+        let (amount, amount_fn) =
+            split_opt_scalar_formula(&c.amount, &format!("{prefix}.amount"), card_id, errors);
+        CompiledDeclarativeClause::CostReduction {
             scope,
             active_when,
             reduction_timing: c.reduction_timing,
@@ -1549,11 +1742,8 @@ fn compile_declarative(
                 .map(|p| compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)),
             optional: c.optional,
             once_per_turn: c.once_per_turn,
-            amount: c.amount,
-            amount_fn: c
-                .amount_fn
-                .as_ref()
-                .map(|f| compile_formula(f, &format!("{prefix}.amount_fn"), card_id, errors)),
+            amount,
+            amount_fn,
             pay_cost: c
                 .pay_cost
                 .as_ref()
@@ -1568,7 +1758,8 @@ fn compile_declarative(
                 .unwrap_or_default(),
             summary,
             summary_key,
-        },
+        }
+        }
         B::Replacement(r) => {
             let trigger = compile_replacement_trigger(&r, prefix, card_id, errors);
             CompiledDeclarativeClause::Replacement {
@@ -1790,17 +1981,18 @@ fn compile_effect_controller(
 }
 
 fn compile_modifier_value(
-    v: &crate::step::ModifierValueSpec,
+    v: &crate::formula::FormulaSpec,
     prefix: &str,
     card_id: &str,
     errors: &mut Vec<ValidationError>,
 ) -> CompiledModifierValue {
-    use crate::step::ModifierValueSpec as S;
-    match v {
-        S::Literal(n) => CompiledModifierValue::Literal(*n),
-        S::Formula(fc) => {
-            CompiledModifierValue::Formula(compile_formula(&fc.formula, prefix, card_id, errors))
-        }
+    // unify-dsl-scalar-and-comparators: a `Literal` keeps the integer
+    // fast-path (`CompiledModifierValue::Literal`); any other formula compiles
+    // to `CompiledModifierValue::Formula` — byte-identical to the encoding the
+    // retired `ModifierValueSpec::{Literal,Formula}` produced.
+    match split_scalar_formula(v, prefix, card_id, errors) {
+        Ok(n) => CompiledModifierValue::Literal(n),
+        Err(formula) => CompiledModifierValue::Formula(formula),
     }
 }
 
@@ -1850,25 +2042,41 @@ fn compile_step(
 ) -> CompiledStep {
     use crate::step::StepSpec as S;
     match s {
-        S::GainMemory(n) => CompiledStep::GainMemory(*n),
-        S::LoseMemory(n) => CompiledStep::LoseMemory(*n),
-        S::SetMemory(n) => CompiledStep::SetMemory(*n),
-        S::GainMemoryFn(a) => CompiledStep::GainMemoryFn {
-            formula: compile_formula(
-                &a.formula,
-                &format!("{prefix}.gain_memory_fn"),
-                card_id,
-                errors,
-            ),
-        },
-        S::LoseMemoryFn(a) => CompiledStep::LoseMemoryFn {
-            formula: compile_formula(
-                &a.formula,
-                &format!("{prefix}.lose_memory_fn"),
-                card_id,
-                errors,
-            ),
-        },
+        S::GainMemory(f) => {
+            match split_scalar_formula(f, &format!("{prefix}.gain_memory"), card_id, errors) {
+                Ok(n) => CompiledStep::GainMemory(n),
+                Err(formula) => CompiledStep::GainMemoryFn { formula },
+            }
+        }
+        S::LoseMemory(f) => {
+            match split_scalar_formula(f, &format!("{prefix}.lose_memory"), card_id, errors) {
+                Ok(n) => CompiledStep::LoseMemory(n),
+                Err(formula) => CompiledStep::LoseMemoryFn { formula },
+            }
+        }
+        S::SetMemory(f) => {
+            match split_scalar_formula(f, &format!("{prefix}.set_memory"), card_id, errors) {
+                // `set_memory` has no formula compiled variant (literal-only in
+                // practice); a formula value would have been rejected before
+                // unification. Keep literal fast-path; a non-literal here means
+                // the author wrote a formula for set_memory — fold it to the
+                // literal 0 fallback only if eval is impossible. In practice
+                // `SetMemory` always carried a literal, so `Err` cannot occur
+                // for any existing card; route a future formula through the
+                // gain/lose fn machinery would require a `SetMemoryFn` variant.
+                Ok(n) => CompiledStep::SetMemory(n),
+                Err(_) => {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{prefix}.set_memory"),
+                        message:
+                            "set_memory accepts only a literal integer (no formula compiled variant)"
+                                .to_string(),
+                    });
+                    CompiledStep::SetMemory(0)
+                }
+            }
+        }
 
         S::Draw(a) => CompiledStep::Draw {
             of: compile_player_ref(a.of),
@@ -2010,15 +2218,16 @@ fn compile_step(
         S::Unsuspend(a) => CompiledStep::Unsuspend {
             target: compile_binding_ref(&a.target),
         },
-        S::DeDigivolve(a) => CompiledStep::DeDigivolve {
-            target: compile_binding_ref(&a.target),
-            amount: a.amount,
-            amount_fn: a
-                .amount_fn
-                .as_ref()
-                .map(|f| compile_formula(f, &format!("{prefix}.amount_fn"), card_id, errors)),
-            stop_at_level: a.stop_at_level.or(Some(3)),
-        },
+        S::DeDigivolve(a) => {
+            let (amount_lit, amount_fn) =
+                split_opt_scalar_formula(&a.amount, &format!("{prefix}.amount"), card_id, errors);
+            CompiledStep::DeDigivolve {
+                target: compile_binding_ref(&a.target),
+                amount: amount_lit.map(|n| n.max(0) as u8),
+                amount_fn,
+                stop_at_level: a.stop_at_level.or(Some(3)),
+            }
+        }
         S::PlaceOnSecurity(a) => CompiledStep::PlaceOnSecurity {
             of: compile_player_ref(a.of),
             source: compile_binding_ref(&a.source),

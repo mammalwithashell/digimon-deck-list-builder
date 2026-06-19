@@ -196,6 +196,13 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(want) = &pred.security_count_eq {
+        if (rctx.security_count(rctx.player) as i32)
+            != eval_int_constraint_read(want, rctx, None, bindings)
+        {
+            return false;
+        }
+    }
     if let Some(cap) = &pred.opponent_security_count_lte {
         if (rctx.security_count(rctx.opponent_id()) as i32)
             > eval_int_constraint_read(cap, rctx, None, bindings)
@@ -1156,6 +1163,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.card_number_is.is_none()
         && pred.play_cost_lte.is_none()
         && pred.play_cost_gte.is_none()
+        && pred.play_cost_eq.is_none()
         && pred.self_color_count_gte.is_none()
         && pred.dp_eq.is_none()
         && pred.dp_lte.is_none()
@@ -2182,6 +2190,11 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(want) = &pred.play_cost_eq {
+        if i32::from(data.play_cost) != eval_int_constraint(want, rctx, formula_target, bindings) {
+            return false;
+        }
+    }
     // Card-subject DP filter. Cards in trash/hand/security carry their printed
     // DP via `CardData.dp`; permanents on the field route through
     // `eval_dp_constraints` against `effective_dp`. Options and other
@@ -2708,6 +2721,11 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    if let Some(want) = &pred.stack_size_eq {
+        if perm.card_sources.len() as i32 != eval_int_constraint(want, rctx, Some(handle), bindings) {
+            return false;
+        }
+    }
     let materials_count = perm.card_sources.len().saturating_sub(1) as i32;
     if let Some(cap) = &pred.materials_count_lte {
         if materials_count > eval_int_constraint(cap, rctx, Some(handle), bindings) {
@@ -2716,6 +2734,11 @@ fn eval_permanent_fields(
     }
     if let Some(floor) = &pred.materials_count_gte {
         if materials_count < eval_int_constraint(floor, rctx, Some(handle), bindings) {
+            return false;
+        }
+    }
+    if let Some(want) = &pred.materials_count_eq {
+        if materials_count != eval_int_constraint(want, rctx, Some(handle), bindings) {
             return false;
         }
     }
@@ -2964,6 +2987,11 @@ fn eval_breeding_permanent_fields(
             return false;
         }
     }
+    if let Some(want) = &pred.stack_size_eq {
+        if perm.card_sources.len() as i32 != eval_int_constraint(want, rctx, Some(handle), bindings) {
+            return false;
+        }
+    }
     let materials_count = perm.card_sources.len().saturating_sub(1) as i32;
     if let Some(cap) = &pred.materials_count_lte {
         if materials_count > eval_int_constraint(cap, rctx, Some(handle), bindings) {
@@ -2972,6 +3000,11 @@ fn eval_breeding_permanent_fields(
     }
     if let Some(floor) = &pred.materials_count_gte {
         if materials_count < eval_int_constraint(floor, rctx, Some(handle), bindings) {
+            return false;
+        }
+    }
+    if let Some(want) = &pred.materials_count_eq {
+        if materials_count != eval_int_constraint(want, rctx, Some(handle), bindings) {
             return false;
         }
     }

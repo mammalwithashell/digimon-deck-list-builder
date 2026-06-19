@@ -65,20 +65,19 @@ use crate::predicate::{PredicateSpec, Zone};
 #[derive(Debug, Clone, PartialEq, schemars::JsonSchema)]
 pub enum StepSpec {
     // Memory / turn
-    GainMemory(i32),
-    LoseMemory(i32),
-    SetMemory(i32),
-    /// Phase 2 Track F (G-DSL-GAIN-MEMORY-FN) — formula-valued gain.
-    /// Mirrors the literal `gain_memory: N` shape but accepts a
-    /// `FormulaSpec` evaluated at resolution time. Use for printed text
-    /// like "[When Digivolving] Gain 1 memory for every 4 cards in your
-    /// hand." (EX1-021 MetalGarurumon).
-    GainMemoryFn(FormulaStepArgs),
-    /// Symmetric of `GainMemoryFn` — kept for completeness so author-facing
-    /// API doesn't surprise (literal `lose_memory: N` has a `lose_memory_fn`
-    /// sibling). No known card uses it as of 2026-05-17 but adding both
-    /// halves at once keeps the eval-arm coverage matrix uniform.
-    LoseMemoryFn(FormulaStepArgs),
+    //
+    // The magnitude is a `FormulaSpec` (unify-dsl-scalar-and-comparators): a
+    // bare int `gain_memory: 1` deserializes to `FormulaSpec::Literal(1)`, a
+    // map `gain_memory: { base: 0, per: ally_count, delta: 1 }` to the formula.
+    // The retired `gain_memory_fn`/`lose_memory_fn` twin verbs survive only as
+    // deserialize aliases (see `visit_map`) so existing card YAML keeps
+    // parsing; they are absent from the advertised vocabulary. At compile time
+    // a `Literal` routes to `CompiledStep::GainMemory(i32)` and any other
+    // formula to `CompiledStep::GainMemoryFn { formula }`, so the compiled
+    // output is byte-identical to the pre-unification encoding.
+    GainMemory(FormulaSpec),
+    LoseMemory(FormulaSpec),
+    SetMemory(FormulaSpec),
 
     // Draw / deck / hand / trash
     Draw(DrawArgs),
@@ -381,8 +380,6 @@ impl Serialize for StepSpec {
             StepSpec::GainMemory(v) => kv!(s, "gain_memory", v),
             StepSpec::LoseMemory(v) => kv!(s, "lose_memory", v),
             StepSpec::SetMemory(v) => kv!(s, "set_memory", v),
-            StepSpec::GainMemoryFn(v) => kv!(s, "gain_memory_fn", v),
-            StepSpec::LoseMemoryFn(v) => kv!(s, "lose_memory_fn", v),
             // Draw / deck / hand / trash
             StepSpec::Draw(v) => kv!(s, "draw", v),
             StepSpec::TrashFromTop(v) => kv!(s, "trash_from_top", v),
@@ -639,8 +636,16 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "gain_memory" => StepSpec::GainMemory(map.next_value()?),
             "lose_memory" => StepSpec::LoseMemory(map.next_value()?),
             "set_memory" => StepSpec::SetMemory(map.next_value()?),
-            "gain_memory_fn" => StepSpec::GainMemoryFn(map.next_value()?),
-            "lose_memory_fn" => StepSpec::LoseMemoryFn(map.next_value()?),
+            // Deserialize-only back-compat aliases for the retired `_fn` twins.
+            // The old YAML wrapped the formula in `{ formula: <FormulaSpec> }`
+            // (FormulaStepArgs); the new canonical shape takes the formula
+            // directly, so unwrap the legacy wrapper here.
+            "gain_memory_fn" => {
+                StepSpec::GainMemory(map.next_value::<FormulaStepArgs>()?.formula)
+            }
+            "lose_memory_fn" => {
+                StepSpec::LoseMemory(map.next_value::<FormulaStepArgs>()?.formula)
+            }
 
             // Draw / deck / hand / trash
             "draw" => StepSpec::Draw(map.next_value()?),
@@ -871,8 +876,6 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "gain_memory",
                         "lose_memory",
                         "set_memory",
-                        "gain_memory_fn",
-                        "lose_memory_fn",
                         "draw",
                         "trash_from_top",
                         "add_to_hand_from_deck",
@@ -1587,10 +1590,14 @@ pub enum RemainderDestination {
 #[serde(deny_unknown_fields)]
 pub struct DeDigivolveArgs {
     pub target: BindingRef,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub amount: Option<u8>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub amount_fn: Option<FormulaSpec>,
+    /// De-Digivolve magnitude (how many digivolution cards to trash). A
+    /// `FormulaSpec` (unify-dsl-scalar-and-comparators): a bare int
+    /// `amount: 2` is a literal, a map is a runtime formula. The retired
+    /// `amount_fn` key survives as a deserialize alias. At compile time a
+    /// literal routes to the compiled `amount` integer and any other formula to
+    /// `amount_fn`, byte-identical to the pre-unification form.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "amount_fn")]
+    pub amount: Option<FormulaSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stop_at_level: Option<u8>,
 }
@@ -1871,17 +1878,18 @@ pub struct UseOptionFromHandArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum CostDelta {
+    /// Cost REDUCTION subtracted from the printed play cost (clamped at 0).
+    /// `reduce` is a `FormulaSpec` (unify-dsl-scalar-and-comparators): a bare
+    /// int `{ reduce: 2 }` is `FormulaSpec::Literal(2)`; a map
+    /// `{ reduce: { floor_div: [...] } }` is a runtime formula (e.g. AD1-019's
+    /// "reduce by 1 for every 2 of your Tamers' colors"). The retired
+    /// `reduce_fn` key survives as a deserialize alias so existing YAML keeps
+    /// parsing. At compile time a `Literal` routes to `CompiledCostDelta::Reduce`
+    /// and any other formula to `CompiledCostDelta::ReduceFn`, byte-identical to
+    /// the pre-unification encoding. G-FORMULA-COST-DELTA.
     Reduce {
-        reduce: i32,
-    },
-    /// Formula-valued cost REDUCTION evaluated at resolution time. YAML form:
-    /// `cost_delta: { reduce_fn: { floor_div: [ ... ] } }`. The evaluated
-    /// integer is subtracted from the printed play cost (clamped at 0), the
-    /// same semantics as `Reduce { reduce }` but with a runtime value. Used
-    /// by AD1-019 clause 2 ("reduce this effect's play cost by 1 for every 2
-    /// of your Tamers' colors"). G-FORMULA-COST-DELTA.
-    ReduceFn {
-        reduce_fn: crate::formula::FormulaSpec,
+        #[serde(alias = "reduce_fn")]
+        reduce: crate::formula::FormulaSpec,
     },
     Keyword(CostDeltaKeyword),
     Literal(i32),
@@ -2050,7 +2058,8 @@ pub struct MarkSecurityArgs {
 #[serde(deny_unknown_fields)]
 pub struct AddDpModifierArgs {
     pub target: BindingRef,
-    pub value: ModifierValueSpec,
+    #[serde(deserialize_with = "deserialize_modifier_value")]
+    pub value: FormulaSpec,
     pub expiry: String, // parsed as enum in Task 12 validation
 }
 
@@ -2059,7 +2068,8 @@ pub struct AddDpModifierArgs {
 pub struct AddModifierArgs {
     pub target: ModifierTarget,
     pub modifier: String,
-    pub value: ModifierValueSpec,
+    #[serde(deserialize_with = "deserialize_modifier_value")]
+    pub value: FormulaSpec,
     pub expiry: String,
     /// Structured payload for payload-bearing modifiers. Required for
     /// `modifier: TreatAsDigimon` ("treat this permanent as a [DP] DP
@@ -2108,26 +2118,47 @@ fn synth_identity_default_kind() -> crate::spec::CardKind {
 pub struct AddPlayerModifierArgs {
     pub target_player: PlayerRef,
     pub modifier: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub value: Option<ModifierValueSpec>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_modifier_value_opt"
+    )]
+    pub value: Option<FormulaSpec>,
     pub expiry: String,
 }
 
-/// Value carried by `add_dp_modifier` / `add_modifier`. Accepts either a
-/// bare integer (`value: 3000`) or a `formula:`-wrapped block
-/// (`value: { formula: { base: 0, per: stack_size, delta: 1000 } }`).
-///
-/// The wrapper key mirrors `alt_path::CostSpec` / `alt_path::FormulaCost` so
-/// authors see one consistent shape across cost and modifier formulas.
-///
-/// Untagged: serde tries `Literal(i32)` first (a YAML scalar int), falling
-/// through to `Formula` (a YAML mapping with a `formula:` key) when the
-/// scalar match fails.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
-pub enum ModifierValueSpec {
-    Literal(i32),
-    Formula(crate::alt_path::FormulaCost),
+/// Deserialize a modifier `value:` field (unify-dsl-scalar-and-comparators).
+/// Accepts the canonical `FormulaSpec` — a bare int `value: 3000`
+/// (`FormulaSpec::Literal`) or a formula map directly
+/// (`value: { base: 0, per: stack_size, delta: 1000 }`) — and, for
+/// back-compat, the retired `ModifierValueSpec::Formula` wrapper
+/// `value: { formula: <FormulaSpec> }`. The wrapper is unwrapped to the inner
+/// formula so the authored vocabulary is uniformly `FormulaSpec`.
+pub(crate) fn deserialize_modifier_value<'de, D>(de: D) -> Result<FormulaSpec, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Compat {
+        /// Legacy `{ formula: <FormulaSpec> }` wrapper (retired ModifierValueSpec::Formula).
+        Wrapped { formula: FormulaSpec },
+        /// Canonical: a bare int or a formula map.
+        Direct(FormulaSpec),
+    }
+    Ok(match Compat::deserialize(de)? {
+        Compat::Wrapped { formula } => formula,
+        Compat::Direct(f) => f,
+    })
+}
+
+/// `Option` form of [`deserialize_modifier_value`] for optional `value:` fields.
+/// Only invoked when the key is present (absence is handled by `#[serde(default)]`).
+pub(crate) fn deserialize_modifier_value_opt<'de, D>(de: D) -> Result<Option<FormulaSpec>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    deserialize_modifier_value(de).map(Some)
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

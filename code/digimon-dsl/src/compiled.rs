@@ -297,14 +297,24 @@ pub struct CompiledPredicate {
     pub card_number_is: Option<String>,
     pub play_cost_lte: Option<CompiledDpConstraint>,
     pub play_cost_gte: Option<CompiledDpConstraint>,
+    /// `_eq` completions for the uniform comparator (unify-dsl-scalar-and-comparators
+    /// §2.4) — the legacy flat surface lacked `_eq` for these metrics; the
+    /// canonical `<metric>: { op: eq, value }` lowers here. `#[serde(default)]`
+    /// keeps older serialized packs deserializable.
+    #[serde(default)]
+    pub play_cost_eq: Option<CompiledDpConstraint>,
     pub can_digivolve_from_source: Option<bool>,
     pub dp_eq: Option<CompiledDpConstraint>,
     pub dp_lte: Option<CompiledDpConstraint>,
     pub dp_gte: Option<CompiledDpConstraint>,
     pub stack_size_lte: Option<CompiledDpConstraint>,
     pub stack_size_gte: Option<CompiledDpConstraint>,
+    #[serde(default)]
+    pub stack_size_eq: Option<CompiledDpConstraint>,
     pub materials_count_lte: Option<CompiledDpConstraint>,
     pub materials_count_gte: Option<CompiledDpConstraint>,
+    #[serde(default)]
+    pub materials_count_eq: Option<CompiledDpConstraint>,
     pub has_inherited: Option<Box<CompiledPredicate>>,
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
@@ -359,6 +369,8 @@ pub struct CompiledPredicate {
     pub own_memory_gte: Option<CompiledDpConstraint>,
     pub security_count_lte: Option<CompiledDpConstraint>,
     pub security_count_gte: Option<CompiledDpConstraint>,
+    #[serde(default)]
+    pub security_count_eq: Option<CompiledDpConstraint>,
     pub opponent_security_count_lte: Option<CompiledDpConstraint>,
     pub opponent_security_count_gte: Option<CompiledDpConstraint>,
     pub face_up_security_count_lte: Option<CompiledDpConstraint>,

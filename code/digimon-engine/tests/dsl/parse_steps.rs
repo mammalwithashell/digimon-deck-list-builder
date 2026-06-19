@@ -25,7 +25,10 @@ effects:
 #[test]
 fn parse_gain_memory() {
     let step = parse_single_step("gain_memory: 1");
-    assert!(matches!(step, StepSpec::GainMemory(1)));
+    assert!(matches!(
+        step,
+        StepSpec::GainMemory(digimon_engine::dsl::formula::FormulaSpec::Literal(1))
+    ));
 }
 
 #[test]

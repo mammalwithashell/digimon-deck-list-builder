@@ -145,6 +145,12 @@ fn gain_memory_fn_parses_and_compiles() {
     // EX1-021 shape — "Gain 1 memory for every 4 cards in your hand."
     // The DSL formula uses BasePerDelta (base/per/delta) wrapped in
     // `floor_div` to express N / 4.
+    //
+    // unify-dsl-scalar-and-comparators: the `gain_memory_fn` verb is retired;
+    // it survives only as a deserialize alias for the unified `gain_memory`
+    // (FormulaSpec) verb. The legacy `{ formula: <FormulaSpec> }` wrapper is
+    // unwrapped. A real (non-literal) formula still compiles to the
+    // `CompiledStep::GainMemoryFn` fast-path.
     let yaml = r#"      - gain_memory_fn:
           formula:
             floor_div:
@@ -158,17 +164,34 @@ fn gain_memory_fn_parses_and_compiles() {
     assert!(matches!(&steps[0], CompiledStep::GainMemoryFn { .. }));
 
     let spec = parse_first_step(yaml);
-    assert!(matches!(spec, StepSpec::GainMemoryFn(_)));
+    assert!(matches!(spec, StepSpec::GainMemory(_)));
 }
 
 #[test]
-fn lose_memory_fn_parses_and_compiles() {
+fn lose_memory_fn_alias_with_literal_normalizes_to_literal_step() {
+    // unify-dsl-scalar-and-comparators: `lose_memory_fn: { formula: 3 }` is the
+    // legacy wrapper carrying a literal. The alias deserializes to
+    // `StepSpec::LoseMemory(FormulaSpec::Literal(3))`, which the compiler
+    // normalizes to the integer fast-path `CompiledStep::LoseMemory(3)` — the
+    // formula compiled variant is reserved for genuine runtime formulas.
     let steps = compile_steps(
         r#"      - lose_memory_fn:
           formula: 3
 "#,
     );
-    assert!(matches!(&steps[0], CompiledStep::LoseMemoryFn { .. }));
+    assert!(matches!(&steps[0], CompiledStep::LoseMemory(3)));
+
+    // And a genuine formula via the alias still reaches the LoseMemoryFn path.
+    let formula_steps = compile_steps(
+        r#"      - lose_memory_fn:
+          formula:
+            base: 0
+            per:
+              card_count_in_zone: { of: you, zone: hand }
+            delta: 1
+"#,
+    );
+    assert!(matches!(&formula_steps[0], CompiledStep::LoseMemoryFn { .. }));
 }
 
 #[test]
