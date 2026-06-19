@@ -872,3 +872,13 @@
 [data-theme="light"] .library-pills .library-format-pill {
   border-radius: 0;
 }
+
+/* The grid's section headers sit directly on the teal desktop, where the
+   CRT-dim grey (--lib-dim) washes out — use dark ink. Likewise nudge the
+   tile meta up one ink step so it reads on the parchment tile body. */
+[data-theme="light"] .library-section-title {
+  color: var(--lib-text);
+}
+[data-theme="light"] .library-card-meta {
+  color: var(--lib-muted);
+}
