@@ -282,6 +282,9 @@ pub struct CompiledPredicate {
     pub color_only: Option<Vec<CompiledColor>>,
     pub color_matches_any_field_digimon: Option<CompiledPlayerRef>,
     pub color_matches_binding: Option<String>,
+    /// G-RETURNED-CARD-COLOR-BINDING — true when the candidate shares a color
+    /// with a card this effect returned to deck (`returned_to_deck` log).
+    pub color_matches_returned_card: Option<bool>,
     pub trait_has: Option<String>,
     /// Substring sibling of `trait_has` — matches when any subject trait
     /// CONTAINS this token (case-insensitive). Mirrors DCGO
@@ -353,6 +356,7 @@ pub struct CompiledPredicate {
     pub binding_card_kind: Option<CompiledBindingCardKindPredicate>,
     pub source_is_tamer: Option<bool>,
     pub source_is_unsuspended: Option<bool>,
+    pub is_source_permanent: Option<bool>,
     pub source_name_contains: Option<String>,
     pub source_permanent_trait_has: Option<String>,
     pub is_face_down: Option<bool>,
@@ -408,6 +412,9 @@ pub struct CompiledPredicate {
     pub attacker_trait_has: Option<String>,
     pub event_card_trait_has: Option<String>,
     pub event_card_name_contains: Option<String>,
+    /// Case-insensitive substring scan against the triggering event card's
+    /// printed text (effect / inherited / security). G-DSL-EVENT-CARD-TEXT-CONTAINS.
+    pub event_card_text_contains: Option<String>,
     pub event_card_level_eq: Option<u8>,
     pub event_card_level_gte: Option<CompiledDpConstraint>,
     /// Every color of the triggering event card must be within this set.
@@ -445,6 +452,10 @@ pub struct CompiledPredicate {
     pub returned_card_matching: Option<Box<CompiledPredicate>>,
     pub effect_deleted_any_own_digimon: Option<bool>,
     pub effect_deleted_any_opponent_digimon: Option<bool>,
+    /// DP-threshold sibling of `effect_deleted_any_opponent_digimon`: true iff
+    /// an opponent Digimon with pre-removal effective DP `>= N` was deleted by
+    /// this effect. G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD (EX4-065).
+    pub effect_deleted_opponent_digimon_dp_gte: Option<CompiledDpConstraint>,
     pub effect_played_any_digimon: Option<bool>,
     pub effect_digivolved_any_digimon: Option<bool>,
     pub effect_added_any_card_to_hand: Option<bool>,
@@ -1754,6 +1765,14 @@ pub enum CompiledStep {
     ReturnSelectedSourcesToHand {
         source_refs: String,
     },
+    /// G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM — deck-routing sibling of
+    /// `ReturnSelectedSourcesToHand`. Return each `SelectOwnSources`-bound
+    /// digivolution source card to its owner's deck at `position` (top or
+    /// bottom). A return, not a trash — fires no `OnDigivolutionCardTrashed`.
+    ReturnSelectedSourcesToDeck {
+        source_refs: String,
+        position: CompiledStackPosition,
+    },
     BindPermanentProperty {
         from: CompiledBindingRef,
         property: CompiledPermanentProperty,
@@ -1786,6 +1805,22 @@ pub enum CompiledStep {
         zones: Vec<CompiledZone>,
         material_of: Option<CompiledBindingRef>,
         filter: CompiledPredicate,
+        /// Per-zone filter overrides (hand / trash / material). When a zone's
+        /// override is `Some`, it replaces `filter` for candidates from that
+        /// origin zone; `None` falls back to `filter`.
+        /// G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY. NOTE: no
+        /// `skip_serializing_if` — the embedded pack round-trips through
+        /// bincode, which is not self-describing and cannot skip fields.
+        #[serde(default)]
+        zone_filters: CompiledUnionZoneFilters,
+        /// Restricts the `material_of: None` carrier scan to field permanents
+        /// whose top card matches this predicate (filters the CARRIER, not the
+        /// candidate source cards). `None` → scan every field permanent's
+        /// sources. G-UNION-HAND-SOURCE-PLAY. NOTE: no `skip_serializing_if` —
+        /// the embedded pack round-trips through bincode (non-self-describing),
+        /// so the field must always be encoded.
+        #[serde(default)]
+        material_carrier_filter: Option<CompiledPredicate>,
         bind_as: Option<String>,
         prompt: String,
         prompt_key: Option<String>,
@@ -2015,6 +2050,29 @@ pub enum CompiledStep {
     },
 }
 
+/// Compiled per-zone filter overrides for `select_union_zone`. Each `Some`
+/// predicate replaces the step's shared `filter` for candidates from that
+/// origin zone. G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY.
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+pub struct CompiledUnionZoneFilters {
+    // NOTE: no `skip_serializing_if` — the embedded pack round-trips through
+    // bincode (non-self-describing), so every field must always be encoded.
+    #[serde(default)]
+    pub hand: Option<CompiledPredicate>,
+    #[serde(default)]
+    pub trash: Option<CompiledPredicate>,
+    #[serde(default)]
+    pub material: Option<CompiledPredicate>,
+}
+
+impl CompiledUnionZoneFilters {
+    /// True when no per-zone override is present (the shared `filter` applies
+    /// uniformly). Lets serialization skip the field for legacy union steps.
+    pub fn is_empty(&self) -> bool {
+        self.hand.is_none() && self.trash.is_none() && self.material.is_none()
+    }
+}
+
 /// Concrete activation-cost shapes recognized by the DSL. Extensible —
 /// new printed cost shapes (return-self-to-trash, return-self-to-hand)
 /// can be added without changing the queue-side dispatch.
@@ -2064,6 +2122,10 @@ pub enum CompiledBindingRef {
     /// Top card of a player's deck — resolves to `CardSourceRef::DeckTop`.
     /// Card-source binding only (never a permanent/card handle).
     DeckTop(CompiledPlayerRef),
+    /// The controller's own breeding-area permanent (the single breeding
+    /// carrier), resolved directly with no selection prompt.
+    /// G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY.
+    OwnBreeding,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

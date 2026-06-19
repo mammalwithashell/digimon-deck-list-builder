@@ -13,17 +13,64 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: blue }
     cost: 4
+  - kind: burst_digivolve
+    marker: true
+    cost: 0
 
 effects:
+  # [Hand][Counter] <Blast Digivolve> — alt-path marker + keyword grant.
+  # PRECEDENT: BT22-052.
+  - kind: grant_keyword
+    keyword: BlastDigivolve
+
+  # [On Play][When Digivolving] Activate 1 of the effects below:
+  # ・Return 1 of your opponent's lowest level Digimon to the bottom of the deck.
+  # ・You may play 1 play cost 4 or lower blue Tamer card from your hand free.
+  #
+  # The modal "Activate 1" is mandatory (player must pick a branch). Branch 0
+  # bottom-decks the opponent's lowest-LEVEL Digimon (level_matches_aggregate,
+  # same evaluated pattern as BT22-026 / AD1-012). Branch 1 is "you may play",
+  # so the inner hand pick is optional (PASS surfaces a faithful decline).
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Choose: bottom-deck opp's lowest-level Digimon OR play a blue Tamer cost <=4 from hand free"
+    process:
+      - select_effect_choice:
+          bind_as: mode
+          labels:
+            - "Return opponent's lowest-level Digimon to the bottom of the deck"
+            - "Play 1 blue Tamer with play cost 4 or lower from hand for free"
+          prompt: "Choose effect"
+      - if:
+          condition: { equals: [mode, 0] }
+          then:
+            - select_opponent_permanent:
+                bind_as: bounce_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_matches_aggregate:
+                        selector: lowest_level
+                        of: opponent
+                prompt: "Return opponent's lowest-level Digimon to the bottom of the deck"
+            - return_to_deck: { target: bounce_target, position: bottom }
+      - if:
+          condition: { equals: [mode, 1] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: tamer_pick
+                optional: true
+                filter:
+                  all_of:
+                    - kind: tamer
+                    - color_is: blue
+                    - play_cost_lte: 4
+                prompt: "You may play 1 blue Tamer with play cost 4 or lower from your hand"
+            - play_from_hand_free: { of: you, hand_index: tamer_pick }
+
   - when: when_attacking
     optional: true
     once_per_turn: true
     summary: "[When Attacking][Once Per Turn] This Digimon may unsuspend"
     process:
       - unsuspend: { target: source }
-
-# Stubbed:
-# - [Hand][Counter] Blast Digivolve is not modeled in this card entry.
-# - [On Play][When Digivolving] activate one of two modes: bottom-deck the
-#   opponent's lowest-level Digimon OR play a blue Tamer cost 4 or lower from
-#   hand. Needs modal choice plus lowest-level aggregate bottom-deck.

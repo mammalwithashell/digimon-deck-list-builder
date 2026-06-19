@@ -140,6 +140,22 @@ impl<'a> EffectContext<'a> {
                     return;
                 }
                 pending.card
+            } else if let Some(pending) = self.game.pending_option.take() {
+                // Real Option-play lifecycle: play_option_core moved the Option
+                // into the single-occupancy `pending_option` slot BEFORE running
+                // the [Main] body, so it is no longer in hand/trash. Claim it for
+                // self-placement when it is OUR source Option. Taking it here
+                // leaves `pending_option` empty, so the subsequent
+                // `dispose_option` (play_option_core step 8) finds nothing and
+                // skips the Standard trash — exactly the desired end state.
+                // Fixes G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH.
+                if pending.card.handle() != self.source_card
+                    || pending.card.card_kind(&self.game.card_data) != CardKind::Option
+                {
+                    self.game.pending_option = Some(pending);
+                    return;
+                }
+                pending.card
             } else {
                 let Some(source_card) = self.remove_source_option_from_controller_zones() else {
                     return;
@@ -267,7 +283,19 @@ impl<'a> EffectContext<'a> {
                 return;
             }
         }
-        self.game.gain_memory_for_player(target, amount);
+        let source = self.effect_memory_source();
+        self.game
+            .gain_memory_for_player_sourced(target, amount, source);
+    }
+
+    /// Resolve the current effect's source card identity `(card_id, name)`
+    /// for memory-change attribution. Reads the installing `source_card`
+    /// (covers tamers, options, and Digimon effects); `None` if it can't be
+    /// resolved (the resulting `MemoryChange` is then unattributed).
+    fn effect_memory_source(&self) -> Option<(String, String)> {
+        self.game
+            .card_data_for_handle(self.source_card)
+            .map(|cd| (cd.card_id.clone(), cd.card_name.clone()))
     }
 
     pub fn lose_memory(&mut self, amount: i16) {
@@ -280,7 +308,12 @@ impl<'a> EffectContext<'a> {
         // Memory-GAIN restrictions (CannotGainMemoryByEffect etc.) do not
         // apply to losses — DCGO only consults CanAddMemory for gains.
         let target = self.player;
-        self.game.lose_memory_for_player(target, amount);
+        let source = self.effect_memory_source();
+        // Loss is a controller-relative negative gain (mirrors
+        // `lose_memory_for_player`), routed through the sourced path so the
+        // emitted `MemoryChange` carries the effect's source identity.
+        self.game
+            .gain_memory_for_player_sourced(target, -amount, source);
     }
 
     pub fn set_memory(&mut self, value: i16) {

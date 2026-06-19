@@ -57,7 +57,7 @@
 //! - Free play from hand (EX11-015 play_from_hand_free idiom), decline legal.
 //! - By-cost optional clause (BT17-077 grammar) with outer accept/decline
 //!   prompt + mandatory inner select over BOTH battle areas
-//!   (select_any_permanent → SelectionKind::Target).
+//!   (select_any_permanent → SelectionKind::AnyField).
 //! - place_permanent_on_security bottom, destination = target OWNER's stack
 //!   (binding_owner branch; DCGO topCard.Owner.SecurityCards).
 //! - OPT shared across [When Digivolving] and [When Attacking] (one clause,
@@ -851,7 +851,13 @@ fn ex8_028_pay_unsuspend_offers_sourceless_digimon_on_both_sides() {
     let view = runner
         .pending_selection_view()
         .expect("the pay-target selection must install");
-    assert_eq!(view.kind, SelectionKind::Target);
+    // AnyField (NOT Target): the pick spans BOTH battle areas and encodes the
+    // engine player in each id (encode_attack(player, index)). The UI's
+    // board-click router recognizes AnyField and decodes the side; routing this
+    // as `Target` left every target unclickable AND — the inner pick being
+    // mandatory — uncancellable: the EX8-028 "place 1 Digimon as the bottom
+    // security card" softlock. This assertion is the engine-side regression guard.
+    assert_eq!(view.kind, SelectionKind::AnyField);
     assert!(
         !runner.pending_is_optional(),
         "once activated, the pick is mandatory (DCGO canNoSelect: false)"
@@ -907,7 +913,7 @@ fn ex8_028_pay_own_digimon_goes_to_own_security_bottom_and_unsuspends() {
         .execute_action(0, REPLACEMENT_ACCEPT)
         .expect("accept the pay-unsuspend clause");
 
-    drive_to_kind(&mut runner, 0, SelectionKind::Target);
+    drive_to_kind(&mut runner, 0, SelectionKind::AnyField);
     let view = runner.pending_selection_view().unwrap();
     let ally_action = encode_attack(u16::from(ally.player), u16::from(ally.index));
     assert!(view.valid_action_ids.contains(&ally_action));
@@ -980,7 +986,7 @@ fn ex8_028_pay_opponent_digimon_goes_to_opponent_security_bottom() {
         .execute_action(0, REPLACEMENT_ACCEPT)
         .expect("accept the pay-unsuspend clause");
 
-    drive_to_kind(&mut runner, 0, SelectionKind::Target);
+    drive_to_kind(&mut runner, 0, SelectionKind::AnyField);
     let opp_action = encode_attack(u16::from(opp_bare.player), u16::from(opp_bare.index));
     runner
         .execute_action(0, opp_action)
@@ -1035,7 +1041,7 @@ fn ex8_028_pay_can_place_self_when_sourceless() {
         .execute_action(0, REPLACEMENT_ACCEPT)
         .expect("accept the pay-unsuspend clause");
 
-    drive_to_kind(&mut runner, 0, SelectionKind::Target);
+    drive_to_kind(&mut runner, 0, SelectionKind::AnyField);
     let view = runner.pending_selection_view().unwrap();
     let self_action = encode_attack(u16::from(skadimon.player), u16::from(skadimon.index));
     assert_eq!(
@@ -1090,7 +1096,7 @@ fn ex8_028_pay_unsuspend_opt_shared_across_wd_and_wa() {
     runner
         .execute_action(0, REPLACEMENT_ACCEPT)
         .expect("accept at [When Digivolving]");
-    drive_to_kind(&mut runner, 0, SelectionKind::Target);
+    drive_to_kind(&mut runner, 0, SelectionKind::AnyField);
     let pay_action = encode_attack(u16::from(ally_a.player), u16::from(ally_a.index));
     runner
         .execute_action(0, pay_action)

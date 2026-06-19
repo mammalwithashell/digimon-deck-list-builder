@@ -1,5 +1,61 @@
 # Royal Knights Rust DSL/Engine Gap Rollup
 
+> **Royal Knights COMPLETION — 2026-06-15:** After closing the engine gaps,
+> all 16 remaining PARTIAL/BLOCKED cards were authored in a parallel
+> isolated-worktree wave, integrated, and faithfulness-verified against their
+> card images (a read-only re-audit caught + fixed 3 digivolve-path bugs:
+> BT20-045 missing standard DNA path, BT22-009 missing "Stnd." digivolve circle,
+> BT20-060 name-gated-instead-of-level/color DNA route). **Royal Knights is now
+> 69 IMPLEMENTED / 3 PARTIAL / 0 BLOCKED of 72.** The only 3 remaining residual
+> gaps (one clause each): `G-BREEDING-DIGIVOLVE-UNION-ZONES` (BT20-056),
+> `G-SUSPEND-SELF-COST-ON-OPPONENTS-TURN` (BT13-102), `G-OPTION-PERSIST-AS-FIELD-CARRIER`
+> + `G-OPTION-SELF-TRASH-TRIGGER` (BT19-093) — all filed in `qa/dsl-vocab-gaps.md`
+> ("OPEN 2026-06-15 — Royal Knights final-3 residual gaps"). Of the original
+> ~30 "blockers", only 7 were real engine gaps (all closed); the other ~21 were
+> authorable with shipped vocabulary. Report: `royal-knights-author-remaining-2026-06-15`.
+>
+> **Royal Knights engine-gap closure pass — 2026-06-15:** Adversarial scoping
+> of the ~30 RK-"blocking" gaps (one scout each) found that **14 were NOT real
+> gaps** — composable from shipped vocabulary today, needing only card authoring
+> — and **6 genuine small/medium gaps were closed via TDD**, each making its
+> consumer card fully faithful: `event_card_text_contains` (AD1-018, `19be5a16`),
+> `return_selected_sources_to_deck` (BT13-075, `a83d2827`), `color_matches_returned_card`
+> (EX10-068, `78c84132`), Delay free-reducer auto-apply (ST12-15, `b414917f`),
+> deleted-DP effect payload + `effect_deleted_opponent_digimon_dp_gte` (EX4-065,
+> `ba9afcee`), and `select_union_zone` material/breeding-source union (BT13-019,
+> `59eb5994`). RK verdicts now **IMPLEMENTED 55 / PARTIAL 14 / BLOCKED 3**.
+> Closures + the 14 reclassifications are itemized in `qa/dsl-vocab-gaps.md`
+> ("RESOLVED / RECLASSIFIED 2026-06-15"). Still genuinely open (deferred):
+> the large frameworks — G-OPTION-BATTLE-AREA-CARRIER (BT19-093),
+> G-ONDECLINE-CALLBACK + G-WAS-PLAYED-BY-EFFECT-OBSERVER (BT13-102),
+> G-BREEDING-DIGIVOLVE-UNION-ZONES (BT20-056), G-UNION-HAND-SOURCE-PLAY
+> (EX11-053), G-OPPONENT-PLAYED-DIGIMON-LEVEL-BRANCH (RB1-035),
+> G-SECURITY-END-OF-BATTLE-PLAY (BT22-009), G-OWN-SECURITY-ADDED-OBSERVER
+> (BT8-090). Report: `royal-knights-engine-gaps-2026-06-15`.
+>
+> **Royal Knights re-audit + implementation pass — 2026-06-14:** A full
+> 72-card re-audit (vs printed text + YAML + tests, 8 parallel auditors) found
+> the verdict tracker `validated_cards_dsl.json` was **badly stale** — most
+> "BLOCKED"/ignored-test gap markers cited substrate that had already shipped,
+> and several cards (BT13-112, BT20-017, BT23-072, BT20-083, BT13-110, BT23-013,
+> BT23-054, …) were fully FAITHFUL but still labelled BLOCKED/PARTIAL. The pass:
+> (1) **implemented ~17 authorable-now clauses** via TDD — headline fix:
+> **BT13-007 King Drasil's Royal-Knight cost reduction was a silent no-op in
+> production** (its `amount_fn` was registered only in a test file → `formula_eval`
+> returned 0); replaced with a native `base_per_delta(4 + material_count)` formula.
+> Also closed: AD1-004, AD1-017 (was `effects:[]`), AD1-018, BT22-009 (dropped
+> inherited delete), BT23-057 (was `effects:[]`), BT23-035, BT23-047, BT13-095,
+> BT21-086, BT22-041, BT23-058, BT22-025, BT15-084, BT20-021 (Blast Digivolve),
+> BT13-030. (2) **Reconciled all 72 verdicts** → IMPLEMENTED 49 / PARTIAL 19 /
+> BLOCKED 4 (was reported 25/36/11). (3) **Filed 6 new gaps** in
+> `qa/dsl-vocab-gaps.md` (G-DSL-EVENT-CARD-TEXT-CONTAINS,
+> G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM, G-PLAY-COST-GTE-MODIFIER-AURA,
+> G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD, G-FOR-EACH-COUNTED-FIELD-OBJECTS,
+> G-SOURCE-COUNT-SECURITY-TRASH). BT13-075 remains the only fully-BLOCKED RK
+> body (needs the latter two-ish gaps); BT13-102/BT15-092/BT19-093 stay BLOCKED
+> on engine-level gaps (on-decline callback, discard-from-security trigger,
+> Option-battle-area carrier). Report: `royal-knights-audit-2026-06-14`.
+>
 > **Royal Knights reconciliation — 2026-05-22:** The current
 > `qa/archetype-qa/royal-knights/deck_pool.json` resolves to **72** cards;
 > all 72 have Rust YAML under `code/digimon-engine/cards/` and a behavioral

@@ -30,7 +30,11 @@ body {
   position: relative;
   isolation: isolate;
   height: 100%;
-  min-height: 620px;
+  /* min-height removed: the board must be free to shrink with its flex-1
+     container so the surrounding column (header/prompt/footer/action bar)
+     always fits the canvas. A floor here forced overflow and pushed the
+     action bar below the viewport when the container was short. */
+  min-height: 0;
   overflow: hidden;
   color: var(--ib-bone);
   background: var(--ib-obsidian);
@@ -274,28 +278,37 @@ body {
   transform-origin: top center;
 }
 
-.ib-board__side {
+/* Flow stage: the three layout bands (opponent field, memory gauge, player
+   field) share the vertical space between the opponent hand (top) and the
+   player hand (bottom) via a flex column. Replaces the previous absolute
+   offsets (opp top:78 / player bottom:154 / gauge top:50%) which gave the two
+   fields unequal slices and smushed the player half on shorter boards. The
+   two fields are flex:1 (equal), the gauge is auto-height between them. */
+.ib-board__stage {
   position: absolute;
   left: 16px;
   right: 16px;
+  top: 74px;     /* clears the top chrome + opponent hand */
+  bottom: 146px; /* reserves room for the player hand */
   z-index: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.ib-board__side--opp {
-  top: 78px;
-}
-
-.ib-board__side--player {
-  bottom: 154px;
+.ib-board__side {
+  flex: 1 1 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .ib-board__gauge {
-  position: absolute;
+  flex: 0 0 auto;
   z-index: 9;
-  top: 50%;
-  left: 50%;
   width: min(96%, 1220px);
-  transform: translate(-50%, -50%);
+  margin: 0 auto;
 }
 
 .ib-board__revealed {
@@ -329,13 +342,12 @@ body {
 .ib-player-half--opp .ib-player-half__battle { grid-column: 2; grid-row: 1; }
 .ib-player-half--opp .ib-player-half__resources { grid-column: 1; grid-row: 1; }
 
-/* DCGO-parity layout: player's raising area sits at the bottom-left,
-   below the central memory gauge, instead of vertically-centered next to
-   the battle row (which would overlap the gauge). Opponent's raise keeps
-   its top-row position. */
+/* DCGO-parity layout: player's raising area sits at the bottom-left of the
+   player field band. The gauge is now a separate flex band above the player
+   field (not a centered overlay), so the previous translateY(56px) nudge that
+   dodged the gauge overlap is no longer needed. */
 .ib-player-half--you .ib-player-half__raise {
   align-self: end;
-  transform: translateY(56px);
 }
 
 .ib-player-half__raise,
@@ -908,10 +920,13 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* Dev-only debug overlay (mounted behind import.meta.env.DEV). Anchored
+   bottom-LEFT so it never overlaps the bottom-right hand-count chip or the
+   centered hand. See the ingame-dev-overlays capability. */
 .ib-tensor-badge {
   position: absolute;
-  right: 18px;
-  bottom: 54px;
+  left: 18px;
+  bottom: 8px;
   z-index: 13;
   display: inline-flex;
   max-width: min(54vw, 440px);

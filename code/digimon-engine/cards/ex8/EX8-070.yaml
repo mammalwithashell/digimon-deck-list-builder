@@ -131,18 +131,18 @@ effects:
 
   # ─── Clause 2: [Security] Delete 1 of opponent's Digimon with lowest play cost ─
   #
-  # GAP G-PLAY-COST-AGGREGATE: DSL has no aggregate minimum-play-cost formula for
-  # use as a `play_cost_lte` RHS value. Uses raw_rust workaround per BT9-112 pattern.
-  # When G-PLAY-COST-AGGREGATE closes, replace with:
-  #   - select_opponent_permanent:
-  #       bind_as: target
-  #       filter:
-  #         all_of:
-  #           - kind: digimon
-  #           - play_cost_lte: { formula: { agg: min_opponent_digimon_play_cost } }
-  #       prompt: "Delete 1 of your opponent's Digimon with the lowest play cost"
-  #   - delete_permanent: { target: target }
+  # The `lowest_play_cost` field-selector constrains the legal target set to the
+  # opponent Digimon at the minimum play cost, then the controller chooses among
+  # ties through `pending_selection` (no-approximations: "Delete 1 of" requires a
+  # player choice when several tie). Replaces the former raw_rust auto-pick
+  # (ex8_070_delete_lowest_cost_digimon) which deleted the lowest battle-area
+  # index — a rule-17 violation. (fix-dsl-substrate-rot-and-bugs)
   - when: on_security
-    summary: "[Security] Delete 1 opponent Digimon with lowest play cost (raw_rust G-PLAY-COST-AGGREGATE)"
+    summary: "[Security] Delete 1 of your opponent's Digimon with the lowest play cost"
     process:
-      - raw_rust: { fn: ex8_070_delete_lowest_cost_digimon }
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          selector: lowest_play_cost
+          prompt: "Delete 1 of your opponent's Digimon with the lowest play cost"
+      - delete_permanent: { target: target }

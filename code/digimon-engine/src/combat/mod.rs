@@ -232,6 +232,13 @@ impl Game {
         if self.modifiers.has(handle, ModifierType::CannotSuspend) {
             return false;
         }
+        // NOTE: a permanent-scoped `CannotAttack` modifier is intentionally NOT
+        // consulted here. CannotAttack is modeled as a `WhenWouldAttack` cancel
+        // replacement (`passive_modifier_to_would`, replacement.rs) so a forced
+        // declaration is gracefully *Cancelled*, not rejected `Invalid`. The
+        // action mask suppresses the offer separately (`can_basic_attack` +
+        // the end-of-turn / granted-attack gates) so a deterministic policy is
+        // never handed the guaranteed-cancel no-op.
         // Summoning sickness: can't attack on the turn it was played unless
         // Rush is present (native printed OR modifier-granted) or this is a
         // Vortex end-of-turn attack (§2.1b parity fix).
@@ -285,6 +292,8 @@ impl Game {
         if self.modifiers.has(handle, ModifierType::CannotSuspend) {
             return false;
         }
+        // CannotAttack is a `WhenWouldAttack` cancel replacement, not a
+        // can_attack rejection — see `can_attack`.
         let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
         if is_fresh
             && !ignore_summoning_sickness
@@ -322,6 +331,8 @@ impl Game {
         if self.modifiers.has(handle, ModifierType::CannotSuspend) {
             return false;
         }
+        // CannotAttack is a `WhenWouldAttack` cancel replacement, not a
+        // can_attack rejection — see `can_attack`.
         // "Without suspending" bypasses only the suspend cost/unsuspended
         // requirement. Summoning sickness still requires Rush or Vortex.
         let is_fresh = perm.turn_played == self.turn_count && perm.turn_digivolved == 0;
@@ -555,6 +566,38 @@ impl Game {
             AttackTarget::Digimon(d) => (Some(d.index), Some(d.player)),
             AttackTarget::Player(p) => (None, Some(p)),
         };
+        let (attacker_card_id, attacker_card_name) = self
+            .player(attacker.player)
+            .battle_area
+            .get(attacker.index as usize)
+            .map(|p| {
+                let top = p.top_card();
+                (
+                    top.card_id(&self.card_data).to_string(),
+                    top.card_name(&self.card_data).to_string(),
+                )
+            })
+            .unwrap_or_default();
+        let (target_card_id, target_card_name) = match target {
+            AttackTarget::Digimon(d) => self
+                .player(d.player)
+                .battle_area
+                .get(d.index as usize)
+                .map(|p| {
+                    let top = p.top_card();
+                    (
+                        Some(top.card_id(&self.card_data).to_string()),
+                        Some(top.card_name(&self.card_data).to_string()),
+                    )
+                })
+                .unwrap_or((None, None)),
+            AttackTarget::Player(_) => (None, None),
+        };
+        let attacker_dp = self.effective_dp(attacker);
+        let target_dp = match target {
+            AttackTarget::Digimon(d) => self.effective_dp(d),
+            AttackTarget::Player(_) => None,
+        };
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::Attack {
             seq,
@@ -562,6 +605,12 @@ impl Game {
             attacker_field_index: attacker.index,
             target_field_index: attack_target_field_index,
             target_player: attack_target_player,
+            attacker_card_id,
+            attacker_card_name,
+            target_card_id,
+            target_card_name,
+            attacker_dp,
+            target_dp,
         });
 
         // Phase 9: WhenWouldAttack fires on the attacker BEFORE any
@@ -2702,11 +2751,13 @@ impl Game {
         // `GameEvent::Trash` that fires when the dispose phase trashes
         // the revealed card.
         let revealed_card_id = sec_card.card_id(&self.card_data).to_string();
+        let revealed_card_name = sec_card.card_name(&self.card_data).to_string();
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::SecurityReveal {
             seq,
             defender,
             card_id: revealed_card_id,
+            card_name: revealed_card_name,
         });
 
         // Park the revealed card for the duration of the check.
@@ -3355,13 +3406,18 @@ impl Game {
             return;
         }
 
-        // WhenAttacking: observer timing — fires for every permanent in the
-        // attacker's battle area right after OnAttack. Distinct from OnAttack
-        // (which is scoped to the single attacker). Both fire before the
-        // Alliance window opens.
+        // WhenAttacking: the `[When Attacking]` keyword is carrier-scoped
+        // ("when THIS Digimon attacks") — it must fire ONLY for the attacker's
+        // own stack (its top card + inherited digivolution sources), exactly
+        // like OnAttack. Cross-Digimon "when one of your (other) Digimon
+        // attacks" observers are a DIFFERENT timing (OnAllyAttack, fanned out
+        // below). Scoping to the attacker via `Permanent(handle)` (not the
+        // battle-area-wide `PlayerBattleArea`) prevents a non-attacking stack's
+        // inherited `[When Attacking]` from firing on a different Digimon's
+        // attack. Fires before the Alliance window opens.
         self.enqueue_triggered(
             crate::enums::EffectTiming::WhenAttacking,
-            crate::selection::TriggerSource::PlayerBattleArea(handle.player),
+            crate::selection::TriggerSource::Permanent(handle),
         );
         self.maybe_drain_effect_queue();
         if self.pending_selection.is_some() || !self.handle_still_attacking(handle) {

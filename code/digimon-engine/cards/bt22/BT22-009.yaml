@@ -12,8 +12,20 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 3, color_is: red }
     cost: 2
+  # Second digivolve circle on the card face: "Stnd. 2" — digivolve onto a
+  # Digimon with the [Stnd.] form-trait for cost 2 (DCGO BT22_009.cs
+  # AddSelfDigivolutionRequirementStaticEffect EqualsTraits("Stnd.")). Sibling
+  # ST22-12 models the same "Stnd." circle this way.
+  - kind: digivolve
+    from: { trait_has: "Stnd." }
+    cost: 2
 
 effects:
+  - when: on_security
+    summary: "[Security] At the end of the battle, play this card without paying the cost"
+    process:
+      - play_from_security: {}
+
   - when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] Delete 1 opponent Digimon with 4000 DP or less"
     condition:
@@ -33,8 +45,6 @@ effects:
       - delete_permanent: { target: target }
 
   # Omitted:
-  # [Security] At the end of the battle, play this card without paying the cost.
-  # This needs a security end-of-battle delayed play hook instead of immediate
-  # on_security resolution.
-  #
-  # Link Requirements are omitted pending Link/plug-in action support.
+  # [Link] [Appmon] trait: Cost 2 / [When Linking] Delete 1 opponent Digimon with
+  # 4000 DP or less. Link Requirements are omitted pending Link/plug-in action
+  # support (attachment lifecycle + WhenLinked timing). See # Gap: G-LINK-REQUIREMENTS.

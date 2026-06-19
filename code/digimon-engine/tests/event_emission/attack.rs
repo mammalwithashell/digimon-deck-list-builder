@@ -12,6 +12,12 @@ fn fighter(id: &str, dp: i32) -> CardData {
     card
 }
 
+fn named_fighter(id: &str, name: &str, dp: i32) -> CardData {
+    let mut card = make_test_card(id, name);
+    card.dp = Some(dp);
+    card
+}
+
 /// Drain events and return only `Attack` variants for assertion convenience.
 fn drained_attacks(r: &mut DebugRunner) -> Vec<GameEvent> {
     r.game
@@ -102,4 +108,69 @@ fn attack_on_security_emits_attack_event_with_none_target_field_index() {
         "security target carries None field_index"
     );
     assert_eq!(target_player, Some(1), "target_player is P2 (Rust 1)");
+}
+
+#[test]
+fn attack_on_digimon_carries_attacker_and_target_identity() {
+    // Scenario: Attack on a Digimon carries attacker and target identity.
+    let mut r = DebugRunner::builder()
+        .add_card(named_fighter("ATK", "Greymon", 5000))
+        .add_card(named_fighter("DEF", "Tyrannomon", 3000))
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+    r.game.drain_events();
+
+    let _ = r.attack_digimon(atk, def, false);
+
+    let attacks = drained_attacks(&mut r);
+    let GameEvent::Attack {
+        attacker_card_id,
+        attacker_card_name,
+        target_card_id,
+        target_card_name,
+        attacker_dp,
+        target_dp,
+        ..
+    } = attacks[0].clone()
+    else {
+        unreachable!()
+    };
+    assert_eq!(attacker_card_id, "ATK");
+    assert_eq!(attacker_card_name, "Greymon");
+    assert_eq!(target_card_id.as_deref(), Some("DEF"));
+    assert_eq!(target_card_name.as_deref(), Some("Tyrannomon"));
+    assert_eq!(attacker_dp, Some(5000), "attacker effective DP carried for battle");
+    assert_eq!(target_dp, Some(3000), "target effective DP carried for battle");
+}
+
+#[test]
+fn attack_on_security_has_no_target_identity() {
+    let mut r = DebugRunner::builder()
+        .add_card(named_fighter("ATK", "Greymon", 5000))
+        .add_card(make_test_card("SEC", "Security"))
+        .security(1, &["SEC", "SEC"])
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    r.game.drain_events();
+
+    let _ = r.attack_player(atk, 1, false);
+
+    let attacks = drained_attacks(&mut r);
+    let GameEvent::Attack {
+        attacker_card_id,
+        target_card_id,
+        target_card_name,
+        target_dp,
+        ..
+    } = attacks[0].clone()
+    else {
+        unreachable!()
+    };
+    assert_eq!(attacker_card_id, "ATK", "attacker identity present");
+    assert_eq!(target_card_id, None, "security attack has no target card id");
+    assert_eq!(target_card_name, None, "security attack has no target card name");
+    assert_eq!(target_dp, None, "security attack has no target DP");
 }

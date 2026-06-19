@@ -121,7 +121,7 @@
 # EffectTiming::Declarative. The runtime modifier installation pathway is
 # documented as a known broader DSL/engine gap (see BT21-029, AD1-014 notes).
 # Tests for runtime KEYWORD INSTALLATION on the field are
-# `#[ignore = "pending: G-DECLARATIVE-KEYWORD"]`. STRUCTURAL assertions
+# formerly #[ignore]'d on G-DECLARATIVE-KEYWORD (now RESOLVED, qa/resolved-gaps.md). STRUCTURAL assertions
 # (compiled clauses present, correct keyword names) are NOT ignored.
 
 card: P-182

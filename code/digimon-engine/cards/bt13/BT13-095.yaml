@@ -31,8 +31,44 @@ effects:
     process:
       - play_from_security: {}
 
-  # Omitted:
-  # [All Turns] When this Tamer suspends, 1 opponent Digimon gets -3000 DP for
-  # the turn; if you have a Digimon with [Agumon] or [Greymon] in name, gain 1
-  # memory. Current DSL cannot gate on the on_suspend event target being this
-  # exact source Tamer without over-firing when another permanent suspends.
+  # ─── [All Turns] self-suspend debuff + conditional memory gain ──────────────
+  #
+  # "When this Tamer becomes suspended, 1 of your opponent's Digimon gets -3000
+  # DP for the turn. Then, if one of your Digimon has [Agumon] or [Greymon] in
+  # its name, gain 1 memory."
+  #
+  # event_permanent_is_source gates the OnSuspend observer to THIS exact Marcus
+  # being the suspended permanent (the BT23-077 Sistermon Ciel pattern); another
+  # permanent suspending does not over-fire it. active_when all_turns → fires on
+  # either player's turn. any_permanent opponent-Digimon condition suppresses the
+  # mandatory -3000 selection when the opponent controls no Digimon.
+  - when: on_suspend
+    active_when: { all_turns: true }
+    summary: "[All Turns] When this Tamer suspends, 1 opponent Digimon gets -3000 DP; if you have an [Agumon]/[Greymon] Digimon, gain 1 memory"
+    condition:
+      all_of:
+        - event_permanent_is_source: true
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -3000 DP for the turn"
+      - add_dp_modifier:
+          target: target
+          value: -3000
+          expiry: end_of_turn
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+              any_of:
+                - name_contains: "Agumon"
+                - name_contains: "Greymon"
+          then:
+            - gain_memory: 1

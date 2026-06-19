@@ -273,10 +273,28 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
         | CompiledStep::SelectMaterial { filter, .. }
         | CompiledStep::SelectReveal { filter, .. }
         | CompiledStep::SelectSecurity { filter, .. }
-        | CompiledStep::SelectUnionZone { filter, .. }
         | CompiledStep::SelectCountCappedMulti { filter, .. }
         | CompiledStep::LinkToOwnDigimon { filter, .. } => {
             collect_predicate_raw_rust_fns(filter, names);
+        }
+        CompiledStep::SelectUnionZone {
+            filter,
+            zone_filters,
+            material_carrier_filter,
+            ..
+        } => {
+            collect_predicate_raw_rust_fns(filter, names);
+            for pred in [
+                &zone_filters.hand,
+                &zone_filters.trash,
+                &zone_filters.material,
+                material_carrier_filter,
+            ]
+            .into_iter()
+            .flatten()
+            {
+                collect_predicate_raw_rust_fns(pred, names);
+            }
         }
         CompiledStep::SelectRevealBuckets { buckets, .. } => {
             for bucket in buckets {
@@ -364,6 +382,7 @@ fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTr
         &predicate.security_count_gte,
         &predicate.face_up_security_count_lte,
         &predicate.face_up_security_count_gte,
+        &predicate.effect_deleted_opponent_digimon_dp_gte,
     ]
     .into_iter()
     .flatten()

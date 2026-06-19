@@ -1,4 +1,13 @@
-# Rust ↔ Python Engine Parity Tracker
+# Rust ↔ Python Engine Parity Tracker — RETIRED (2026-06-15)
+
+> **RETIRED.** The Python legacy engine (`code/engine_py_legacy/`) has been
+> **deleted** — every surface (RL training, hosted-API PvP, desktop, tools) now
+> runs on the Rust engine. There is no longer a second engine to be in parity
+> with, so this cross-engine tracker is closed. It is kept only as a historical
+> record of the migration; do **not** treat its "open divergence" / "pending"
+> entries as live work. Rust-engine faithfulness is now tracked by the DCGO
+> recording parity harness, the per-card behavioral tests, the judge-quiz suite,
+> and the archetype interaction tests. The original tracker text follows.
 
 **Role:** Rust is the target engine; Python is retained only until card-script migration completes. This tracker exists to catalog divergences during the transition and will be retired when the Python engine is. Always consult this file before editing engine code in either language — it is the authoritative source for known behavioral differences and per-phase progress.
 
@@ -1268,12 +1277,32 @@ The sole exception was `engine.onnx_policy.load_onnx_policy`, which now
 lives at `digimon_gym.inference.onnx_policy.load_onnx_policy` (Phase 5
 relocation completed).
 
+> **Update (2026-06-14, shrink-legacy-engine-surface):** the non-PvP hosted-API
+> support surfaces and most `code/tools` are now legacy-free. Deck legality
+> (`simulations`/`training`/`decks`/`lobby` `parse_deck`), replay + recordings
+> (`replays`/`recordings`/`state` via the new PyO3 `RustReplayRunner`), and state
+> redaction (relocated to `server/state_filter.py`) all run on the Rust engine;
+> the `script_promotion` lane is retired. Tools: `promote_script` /
+> `check_frozen_integrity` / `run_qa_batch` / `archive/bootstrap_frozen_manifest`
+> deleted; `meta_loader` inlines `RE_CARD_ID`; `resolve_deck` dropped its legacy
+> fallback; `train_card_autoencoder` uses the relocated `tools/card_features.py`;
+> `ingest_cards` uses the relocated `tools/xros_cost_parser.py` (byte-identical
+> over all 745 `cards.json` `xros_req` strings).
+> **Still legacy-coupled (by design):** the PvP/WebSocket runtime
+> (`ws_games`/`ws_manager`/`lobby` via `InteractiveGame`, which keeps
+> `PlayerType`) — tracked by excise. `code/tools/` is now FULLY legacy-free:
+> `run_scenario.py` was relocated into `code/engine_py_legacy/` (it is the
+> legacy `ScenarioRunner` CLI and dies with the engine). The legacy YAML
+> scenario lane is sunset — author new scenarios as `qa/scenarios/*.json` via
+> `digimon-scenario-mcp` (the Rust `digimon-engine-cli scenario` subcommand is a
+> deliberate v1 stub). Rows below may predate this update.
+
 | Surface | Caller(s) | Rust counterpart? |
 |---|---|---|
-| `engine.runners.headless_game.HeadlessGame` (Python class) | `routers/state.py`, `routers/recordings.py`, `routers/games.py`, `digimon_gym.py` (Python fallback path), `agents/architect_simulator.py` | `RustHeadlessGame` exists but has a different state-shape; per-caller migration is non-trivial. |
+| `engine.runners.headless_game.HeadlessGame` (Python class) | `routers/games.py` (now `RustHeadlessGame`); `agents/architect_simulator.py` | `RustHeadlessGame` is the production path; `recordings.py`/`state.py` migrated (2026-06-14). |
 | `engine.runners.interactive_game.InteractiveGame` | `routers/games.py`, `routers/debug_games.py`, `routers/matchmaking.py` (`# noqa: F401` re-export) | Pending — covered by the PvP bindings plan (`docs/superpowers/plans/2026-04-18-pyo3-pvp-bindings.md`). |
 | `engine.runners.replay_runner.ReplayRunner` | `routers/recordings.py` | ✅ Ported as `digimon_engine::runners::replay::ReplayRunner` (Phase 3 of `add-engine-debug-mcp`). Step / seek / run-to-completion / verify-mode all implemented. See `docs/DEBUG_MCP.md`. |
-| `engine.runners.scenario_runner.ScenarioRunner` | `tools/run_scenario.py`, `tools/run_qa_batch.py`, behavioral test infrastructure | Not planned (DebugRunner is the Rust-side parallel). |
+| `engine.runners.scenario_runner.ScenarioRunner` | `code/engine_py_legacy/run_scenario.py` (relocated out of `code/tools/`; `run_qa_batch.py` deleted), legacy behavioral test infra | Not planned (DebugRunner + `qa/scenarios/` JSON via `digimon-scenario-mcp` are the Rust-side parallel; `digimon-engine-cli scenario` is a v1 stub). |
 | `engine.data.tensor_layout.*` | `agents/features_extractor.py` | Not planned in scope. Add later if RL trainer survives. |
 | `engine.data.enums.PendingAction` | `digimon_gym.py` (Python fallback path) | Vestigial. Remove when the Python backend is retired. |
 | `engine.data.enums.PlayerType` | `routers/games.py`, `routers/debug_games.py` | Server orchestration concept, not engine. Stays Python-side. |

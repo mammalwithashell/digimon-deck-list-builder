@@ -19,7 +19,7 @@ When questioning *what a card or keyword should do* — for instance, "is Fragme
 2. **DCGO C# source** (`<base-repo>/DCGO/Assets/Scripts/CardEffect/<SET>/<COLOR>/<CARD_ID>.cs`) — the community-curated, battle-tested behavioral implementation. It is the authority for **how a specific card actually resolves** (processing order, interaction edges, multi-pick UI flow) and **outranks the card-text JSON for what a card does**. **DCGO lives in the base repo, not per-worktree (see rule 29). From a worktree, the local `./DCGO` is an intentionally-empty placeholder — do NOT `git submodule update --init` it (that clones a multi-GB Unity checkout per worktree and bloats disk). Resolve the populated copy in the base repo: `BASE_DCGO="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")/DCGO"` and read from there. Do NOT skip DCGO and fall back to lower-trust sources because the worktree copy looks empty.** (C# filenames use underscores: `BT17-001` → `BT17_001.cs`.)
 3. **`data/card_overrides.json`** then **`data/cards.json`** — the printed card text (`effect_text`, `inherited_text`, `security_text`). `cards.json` is ingested from the digimoncard.io API and is **not always accurate**; `card_overrides.json` holds our hand-maintained corrections and is trusted over raw `cards.json` (overrides survive re-ingestion). Use the text as the no-approximations *target*, but when it conflicts with DCGO's behavior, DCGO wins for now.
 4. **Fandom wiki** — `https://digimoncardgame.fandom.com/wiki/<CARD-ID>` for card-specific text + community-curated ruling notes (quirky interactions, errata). Useful when the printed text is terse.
-5. **`docs/RULES_CONTEXT.md`** — an **LLM-generated decomposition** of `general_rule.pdf`. Treat it as a convenience index / starting pointer only; it has been wrong. Anything it asserts is overridden by the official PDF (#1) and DCGO (#2) — verify against those before relying on it.
+5. **`docs/digimon-rules/`** (committed, **verified** PDF derivations) — `keyword-semantics.md` (per-keyword optional/mandatory table), `digest.md` (deep cited digest), `rules-index.json` (keyword/topic/rule-# → exact PDF pages). Read directly from the actual PDF with each claim citing a rule §, so they are a trustworthy *cheap first stop* and a set of page-pointers into the canonical PDF (#1). They **replace** the retired LLM-generated `docs/RULES_CONTEXT.md`. Surfaced automatically (SessionStart keyword baseline + a conservative prompt-time hint hook) and on demand via the `/digimon-rules` skill (rule 32). Still verify anything load-bearing against the PDF (#1) and DCGO (#2).
 
 When DCGO and the official PDF disagree on a rules question, the PDF governs; when DCGO and the card-text JSON disagree on what a card does, DCGO governs. The retired guidance ("do not skip ahead to DCGO", "RULES_CONTEXT.md is canonical") is intentionally reversed here.
 
@@ -32,7 +32,7 @@ The project is migrating to a **Rust engine as the source of truth** (`code/digi
 ## Tech Stack
 
 - **Engine (target)**: Rust — `code/digimon-engine/` library crate, `code/digimon-engine-py/` PyO3 bindings
-- **Engine (sunset)**: Python 3.11+, `code/engine_py_legacy/engine/` — reference material only; not importable from production code
+- **Engine (removed)**: the Python engine (`code/engine_py_legacy/`) was deleted (2026-06-15) — all gameplay (RL training, hosted-API PvP, desktop, tools) now runs on the Rust engine
 - **Backend**: FastAPI + Uvicorn, SQLAlchemy + PostgreSQL (hosted API only); binds to Rust engine via PyO3
 - **Frontend**: React 18 + TypeScript + Vite, Zustand state management
 - **Desktop**: Tauri v2 (Rust shell) — Python-free; gameplay + inference + deck tools run entirely in the embedded `digimon-engine` crate, and AI models are fetched at runtime from the hosted API's manifest
@@ -51,7 +51,7 @@ The codebase is split into three deployable services:
 Underlying surfaces:
 
 1. **Rust engine** (`code/digimon-engine/`) — rules implementation (target source of truth); exposed to Python via `code/digimon-engine-py/` (PyO3) as `RustHeadlessGame`. Swapped into `DigimonEnv` behind `DIGIMON_BACKEND=rust`.
-2. Python legacy engine (`code/engine_py_legacy/engine/`) — sunset reference; not importable from production code, retired once Rust card-script migration completes
+2. _(removed 2026-06-15)_ the Python legacy engine was deleted; every surface runs on the Rust engine (excise-legacy-engine-from-hosted-api)
 3. RL environment and pilot training (`code/digimon_gym/digimon_gym.py`, `code/digimon_gym/agents/`)
 4. React frontend (`code/frontend/src/`) — desktop build excludes admin/training UI via `VITE_BUILD_TARGET`
 5. Tauri v2 desktop shell (`code/src-tauri/`) — depends on `digimon-engine` directly (no Python) for gameplay, ONNX inference, deck tools, and the model cache/downloader
@@ -90,7 +90,7 @@ agent config, runtime data, and project-level configs.
 ├── qa/
 │   ├── archetype-qa/              # Per-archetype QA, engine API ref, engine gaps
 │   └── qa-reports/                # Gameplay QA reports, validated cards index
-├── ops/, scripts/                 # Deploy + operational scripts
+├── scripts/                       # Deploy + operational scripts
 ├── training_jobs/                 # On-disk RL training run artifacts
 ├── models/                        # Trained-model output dir (gitignored, scanned by /models/manifest.json)
 └── code/                          # All source lives here
@@ -125,10 +125,6 @@ agent config, runtime data, and project-level configs.
     │   ├── pyproject.toml         # maturin build backend, module name "digimon_engine"
     │   └── src/lib.rs             # RustHeadlessGame class; Python player-ID convention (1/2 ↔ 0/1)
     ├── digimon-dsl/               # Card-scripting DSL crate (lowering to Effect/CardEffect)
-    ├── engine_py_legacy/          # Sunset Python engine — reference material only
-    │   ├── engine/                # Headless engine: game/, core/, data/, runners/, validation/, ...
-    │   │   └── data/scripts/      # Frozen Python card scripts (one-direction migration to Rust)
-    │   └── tests/                 # Legacy Python tests (excluded from default pytest collection)
     ├── digimon_gym/               # RL only — no FastAPI, no DB
     │   ├── digimon_gym.py         # DigimonEnv (Gymnasium)
     │   ├── agents/                # RL training modules
@@ -256,7 +252,7 @@ python -m digimon_gym.agents.pilot_training --gauntlet --timesteps 500000
 python -m digimon_gym.agents.pilot_training --archetypes rocks,ts-olympos --timesteps 500000  # scope the deck pool
 
 # Cloud training (see docs/CLOUD_TRAINING.md) — image is built/pushed by CI on tag push
-docker compose -f ops/training/docker-compose.watch.yml up -d   # TensorBoard sidecar over ./runs
+docker compose -f docker-compose.watch.yml up -d   # TensorBoard sidecar over ./runs
 scripts/sync_cloud_runs.sh                                       # mirror remote runs/ back locally for the MCP
 
 # Env smoke check
@@ -296,8 +292,9 @@ python -m digimon_training_mcp --runs-dir ./runs --models-dir ./models
 # PyO3 bindings (build + install into active Python env)
 cd code/digimon-engine-py && maturin develop
 
-# Python-side Rust-backend parity test (uses Rust engine via env var)
-DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_rust_backend_parity.py -v
+# (The Python-vs-Rust backend parity test was removed with the Python engine;
+#  Rust engine/binding coverage lives in code/tests/test_rust_bindings_surface.py
+#  and code/digimon-engine/tests/.)
 ```
 
 ## Working Rules
@@ -323,7 +320,7 @@ DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_ru
 19. Before editing engine code in either language, check `docs/RUST_PYTHON_PARITY.md` for known divergences in the area — it's the authoritative cross-engine state.
 20. `code/digimon-engine-py/src/lib.rs` must preserve the Python player-ID convention (Python 1/2 ↔ Rust 0/1 translation at the binding boundary); callers on both sides depend on it.
 21. Do not author new Python-side card scripts for cards already implemented in Rust — cards migrate one direction only (Python → Rust) and are then owned by Rust.
-22. `code/engine_py_legacy/` is sunset reference material. Production code (`code/server/`, `code/digimon_gym/`, `code/digimon-engine/`, `code/digimon-engine-py/`) must not import from `engine_py_legacy.*`. Tests in `code/engine_py_legacy/tests/` are excluded from default pytest collection.
+22. **The Python legacy engine has been removed (2026-06-15).** `code/engine_py_legacy/` was deleted (`excise-legacy-engine-from-hosted-api`); all gameplay — RL training, hosted-API PvP, desktop, and tools — runs on the Rust engine. No code imports `engine_py_legacy.*`; the guardrail `code/tests/api/test_legacy_free_support_surfaces.py` (plus the training guardrail) enforces it. If you need the old Python card scripts or engine for reference, read them from git history.
 23. Trained model artifacts go to `<repo_root>/models/<run_id>/`. Training entrypoints (`pilot_training`, `architect_training`) default to this location. The hosted API's `/models/manifest.json` scans this directory.
 24. All source lives under `code/`. The repo root holds docs, infra (`Dockerfile*`, CI workflows), agent config (`.claude/`), runtime data (`data/`, `qa/`, `DCGO/`), and project-level configs (`Cargo.toml`, `pyproject.toml`, `requirements*.txt`). Do not add new top-level source dirs — extend `code/` instead.
 25. **OnDeletion handlers fire post-trash (2026-05-23).** Permanent deletion runs through the batched flow at `Game::delete_permanents_batch` — `OnDeletion` handlers execute AFTER the carrier has moved to trash. Read pre-removal state via `ctx.deleted_self_dp()` / `_level()` / `_cost()` / `_names()` / `_traits()` / `_source_count()` / `_digisources()` (or `ctx.deleted_object_snapshot()`), NOT via live `ctx.game.player(handle.player).battle_area.get(handle.index)`. New keywords needing post-trash work must do it inline in the OnDeletion handler — do not reintroduce side-channel slots like the retired `pending_post_deletion_replays`. See `docs/RUST_ENGINE_API.md` §"Deletion lifecycle — batched flow" for the contract.
@@ -335,6 +332,8 @@ DIGIMON_BACKEND=rust python -m pytest code/engine_py_legacy/tests/engine/test_ru
 
 31. **Rust build isolation — per-worktree `CARGO_TARGET_DIR` (2026-06-13).** Rust artifacts are isolated per git worktree under `D:\cargo-target\<worktree-name>` (D: has ~1.7 TB free; C: was the original disk squeeze). A **single shared** `CARGO_TARGET_DIR` across worktrees causes cargo to link one worktree's crate `.rmeta` into another's build → **phantom compile errors in files you never edited** (classic tell: `non-exhaustive patterns: …OnAnyLink not covered` in `dsl_cards/timing_map.rs` while your own `cargo check --lib` passes — that variant only exists in another worktree's in-flight edit). The isolation is wired via User env vars: `BASH_ENV=C:/Users/james/.bashrc` (makes the harness's non-interactive bash source `~/.bashrc`, which derives the per-worktree dir from cwd), `CARGO_TARGET_BASE=D:\cargo-target`, no global `CARGO_TARGET_DIR`, plus shared sccache (`RUSTC_WRAPPER`, `SCCACHE_DIR=D:\sccache`, `SCCACHE_CACHE_SIZE=40G`). **These activate only after the Claude app restarts** (the running harness captured its env at launch); within a pre-restart session the old shared `D:\cargo-target` is still inherited, so prefix cargo commands with an explicit `CARGO_TARGET_DIR='D:\cargo-target-wt\<name>'` to build/verify in isolation. If you hit a compile error in code you didn't touch, suspect contamination before debugging your own change. See memory `reference-cargo-target-per-worktree`.
 
+32. **Rules manual lives in the base repo; worktrees read verified derivations + resolve the PDF from base (2026-06-16).** The official rules PDFs (`Digimon TCG resources/general_rule.pdf` = Comprehensive Rules Manual Ver.3.6, `glossary.pdf`, `manual.pdf`) are git-ignored and exist **only in the base repo** (like DCGO, rule 29) — they are NOT in worktrees, so the documented relative path won't resolve there. Resolve them via `BASE="$(dirname "$(git rev-parse --path-format=absolute --git-common-dir)")"` then `Read "$BASE/Digimon TCG resources/<file>.pdf"` (the Read tool renders PDFs via its `pages` arg). Routing: `general_rule.pdf` for timing/keyword/effect/engine work, `glossary.pdf` for keyword definitions, `manual.pdf` for visual/UI reference. **Cheap first stop:** the **committed** verified derivations in `docs/digimon-rules/` (`keyword-semantics.md`, `rules-index.json`, `digest.md`) — present in every worktree — then drill into the PDF for ground truth. A SessionStart hook (`.claude/hooks/digimon_rules_baseline.py`) injects the compact keyword table each session; a conservative UserPromptSubmit hook (`.claude/hooks/digimon_rules_hint.py`) points at the exact PDF pages when a prompt names a keyword or rule number; the `/digimon-rules` skill does targeted lookups + a deep thinking-partner load. Hooks are wired in the **committed** `.claude/settings.json` (so they fire in every worktree) and merge with the base-only `.claude/settings.local.json`. None of this uses Pinecone.
+
 ## Documentation
 
 Detailed reference docs live in `docs/` — see [docs/INDEX.md](docs/INDEX.md) for the full list.
@@ -345,8 +344,8 @@ Key references:
 - **Tools**: `docs/TOOLS.md` — card pipeline, transpiler, Pinecone, model export, new-set workflow
 - **Training**: `docs/TRAINING_RUNBOOK.md` + `AGENTS.md` (wrapper chain, gauntlet, pipeline)
 - **Model evaluation**: `docs/MODEL_EVALUATION.md` — why the in-run win rate lies (degenerate under self-play), the anchored reference frame (greedy + frozen champions, seat-balanced), the layered eval stack, the Elo ladder + champion registry + exploiter tools, gated self-play, and the equilibrium-methods horizon (depends on `make-engine-cloneable`). See rule 30.
-- **Cloud training**: `docs/CLOUD_TRAINING.md` — Path A (RunPod GPU, LSTM/self-play) vs Path B (Hetzner/DO CPU, MLP-vs-greedy); published `Dockerfile.training` image, the `ops/training/docker-compose.watch.yml` TensorBoard sidecar, and the `scripts/sync_cloud_runs.sh` run-mirror; local VRAM mitigations
-- **Rules**: `Digimon TCG resources/general_rule.pdf` — **canonical** rules source of truth (+ `glossary.pdf` for keywords). `docs/RULES_CONTEXT.md` is an LLM-generated decomposition — convenience index only, lower trust than the PDF and DCGO (see "Source priority")
+- **Cloud training**: `docs/CLOUD_TRAINING.md` — Path A (RunPod GPU, LSTM/self-play) vs Path B (Hetzner/DO CPU, MLP-vs-greedy); published `Dockerfile.training` image, the `docker-compose.watch.yml` TensorBoard sidecar, and the `scripts/sync_cloud_runs.sh` run-mirror; local VRAM mitigations
+- **Rules**: `Digimon TCG resources/general_rule.pdf` — **canonical** rules source of truth (+ `glossary.pdf` for keywords); base-repo only (rule 32). Verified, committed derivations live in `docs/digimon-rules/` (`keyword-semantics.md`, `rules-index.json`, `digest.md`) and are surfaced by the `/digimon-rules` skill + the SessionStart/UserPromptSubmit rules hooks. These **replace** the retired `docs/RULES_CONTEXT.md` (now a pointer). See "Source priority" + rule 32.
 - **Hosted-API deployment**: `docs/DEPLOYMENT.md` — DigitalOcean topology, env vars, bootstrap
 - **Model catalog**: `docs/MODEL_CATALOG.md` — ONNX upload/download pipeline, storage backends, desktop cache
 - **DCGO recording pipeline**: `docs/DCGO_BUILD.md` (build the mod) + `docs/DCGO_RECORDING_SCHEMA.md` (JSONL format) — modded DCGO client that records games as 2192-action-space JSONL, consumed by `code/tools/dcgo-replay/` as an additional Rust-engine faithfulness oracle

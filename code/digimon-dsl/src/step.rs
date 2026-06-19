@@ -165,6 +165,14 @@ pub enum StepSpec {
     /// (this is a return, not a trash). Closes BT12-031's Imperialdramon:
     /// Dragon Mode alt-cost.
     ReturnSelectedSourcesToHand(TrashSelectedSourcesArgs),
+    /// G-RETURN-SELECTED-SOURCE-TO-DECK-BOTTOM (2026-06-14) — deck-routing
+    /// sibling of `ReturnSelectedSourcesToHand`. Return each
+    /// `select_own_sources`-bound digivolution source card to its owner's deck
+    /// (`position: top | bottom`). Like the to-hand verb this is a return, NOT
+    /// a trash, so it fires no `OnDigivolutionCardTrashed`. Closes BT13-075
+    /// Alphamon's would-leave self-protection cost (return 1 [X Antibody]/[Royal
+    /// Knight] source to the BOTTOM OF YOUR DECK to prevent leaving).
+    ReturnSelectedSourcesToDeck(ReturnSelectedSourcesToDeckArgs),
     TrashBottomFaceDownSourceUnderTamer(TrashBottomFaceDownSourceUnderTamerArgs),
     /// G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER (2026-06-15) — the multi-count /
     /// multi-Tamer sibling of `TrashBottomFaceDownSourceUnderTamer`. Pays a
@@ -454,6 +462,9 @@ impl Serialize for StepSpec {
             StepSpec::ReturnSelectedSourcesToHand(v) => {
                 kv!(s, "return_selected_sources_to_hand", v)
             }
+            StepSpec::ReturnSelectedSourcesToDeck(v) => {
+                kv!(s, "return_selected_sources_to_deck", v)
+            }
             StepSpec::TrashBottomFaceDownSourceUnderTamer(v) => {
                 kv!(s, "trash_bottom_face_down_source_under_tamer", v)
             }
@@ -718,6 +729,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "return_selected_sources_to_hand" => {
                 StepSpec::ReturnSelectedSourcesToHand(map.next_value()?)
             }
+            "return_selected_sources_to_deck" => {
+                StepSpec::ReturnSelectedSourcesToDeck(map.next_value()?)
+            }
             "trash_bottom_face_down_source_under_tamer" => {
                 StepSpec::TrashBottomFaceDownSourceUnderTamer(map.next_value()?)
             }
@@ -938,6 +952,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "return_selected_sources_to_hand",
                         "trash_bottom_face_down_source_under_tamer",
                         "trash_bottom_face_down_sources_under_tamers",
+                        "return_selected_sources_to_deck",
                         "bind_permanent_property",
                         "hatch",
                         "play_from_hand",
@@ -1165,6 +1180,14 @@ pub struct StructuredBindingRef {
     /// the deck top under a Tamer. YAML: `{ deck_top: you }`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub deck_top: Option<PlayerRef>,
+    /// The controller's own breeding-area permanent, resolved directly to the
+    /// breeding carrier handle (`index = BREEDING_TARGET`) with NO selection
+    /// prompt — the breeding area holds at most one Digimon. Used by
+    /// `select_union_zone`'s `material_of` to scan breeding-area digivolution
+    /// sources without a degenerate carrier pick. YAML: `{ own_breeding: true }`.
+    /// G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub own_breeding: Option<bool>,
 }
 
 // ── Argument structs (one per verb family) ──────────────────────────
@@ -1789,6 +1812,17 @@ pub struct PlaceAsBottomSourceArgs {
 #[serde(deny_unknown_fields)]
 pub struct TrashSelectedSourcesArgs {
     pub source_refs: String,
+}
+
+/// Args for `return_selected_sources_to_deck` — return each
+/// `select_own_sources`-bound digivolution source card to its owner's deck at
+/// `position` (top or bottom). Sibling of `TrashSelectedSourcesArgs` with a
+/// destination position, like the `position`-carrying source/reveal verbs.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnSelectedSourcesToDeckArgs {
+    pub source_refs: String,
+    pub position: StackPosition,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -2649,6 +2683,21 @@ pub struct SelectOwnBreedingPermanentArgs {
     pub then: Vec<StepSpec>,
 }
 
+/// Per-zone predicate overrides for `select_union_zone`. Each field, when
+/// present, supplies the predicate applied to candidates from that origin
+/// zone, **overriding** the step's shared `filter`. Absent fields fall back
+/// to `filter`. G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct UnionZoneFilters {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub hand: Option<PredicateSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub trash: Option<PredicateSpec>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub material: Option<PredicateSpec>,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectUnionArgs {
@@ -2659,6 +2708,27 @@ pub struct SelectUnionArgs {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub material_of: Option<BindingRef>,
     pub filter: PredicateSpec,
+    /// Per-zone filter overrides. When present, the predicate for a given
+    /// origin zone (hand / trash / material) **replaces** the shared `filter`
+    /// for candidates from that zone; zones without an override fall back to
+    /// `filter`. This lets one union prompt offer "1 X from trash OR 1 Y from
+    /// breeding sources" where X and Y carry different predicates
+    /// (G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY, BT13-019). Omitted → the
+    /// shared `filter` applies uniformly to every zone (legacy behavior).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub zone_filters: Option<UnionZoneFilters>,
+    /// Restricts the `material` zone scan (when `material_of` is omitted, i.e.
+    /// "scan all my field permanents") to carriers whose top card matches this
+    /// predicate. Each candidate carrier's TOP CARD is evaluated against the
+    /// predicate before its digivolution sources are enumerated; non-matching
+    /// carriers contribute no source candidates. This is distinct from
+    /// `filter`/`zone_filters.material`, which filter the candidate SOURCE
+    /// CARDS — this filters the CARRIER. Lets one prompt offer "1 X from hand
+    /// OR 1 X from under a fielded [King Drasil_7D6]" (G-UNION-HAND-SOURCE-PLAY,
+    /// EX11-053). Omitted → every field permanent's sources are scanned (legacy
+    /// behavior). Has no effect when `material_of` pins a specific carrier.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub material_carrier_filter: Option<PredicateSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
     pub prompt: String,

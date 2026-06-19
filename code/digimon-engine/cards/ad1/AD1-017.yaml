@@ -13,15 +13,128 @@ alt_paths:
     from: { level_eq: 5, color_is: yellow }
     cost: 3
 
-effects: []
+effects:
+  # ─── Cost reduction: 4+ [Lucemon]/[Witchelny]-text cards in trash → -5 ──────
+  #
+  # "When this card would be played, if you have 4 or more cards with [Lucemon]
+  # or [Witchelny] in its text in your trash, reduce the play cost by 5."
+  # `count_gte` over own trash cards whose printed text contains Lucemon OR
+  # Witchelny (BT24-088 idiom: `effect_text_contains` inside a count filter).
+  # `when_playing_this: true` scopes the reduction to playing THIS card
+  # (BT17-015 / BT24-040 idiom).
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          any_of:
+            - effect_text_contains: "Lucemon"
+            - effect_text_contains: "Witchelny"
+        n: 4
+    amount: 5
+    summary: "-5 play cost if 4+ [Lucemon]/[Witchelny]-text cards are in your trash"
 
-# Stubbed:
-# - Play-cost reduction based on 4+ trash cards whose text mentions Lucemon or
-#   Witchelny needs text-search count formulas.
-# - [On Play][When Digivolving] has a top-or-bottom security trash cost before
-#   applying -6000 DP to all opponent Digimon; current DSL can trash top
-#   security only, so implementing just that would be an approximation.
-# - [All Turns][Once Per Turn] security-removed observer needs an own-security
-#   removed event payload plus lowest-DP aggregate deletion.
-# - Inherited [Security] debuff needs inherited security timing coverage for
-#   SecurityAttackMinus and a follow-up -3000 DP lasting until your turn ends.
+  # ─── [On Play][When Digivolving] top/bottom security trash → board -6000 ────
+  #
+  # "By trashing your top or bottom security card, all of your opponent's
+  # Digimon get -6000 DP for the turn." DCGO AD1_017.cs SharedActivateCoroutine
+  # offers a THREE-way SetIntSelection ("From top" / "From bottom" / "Do not
+  # trash"): the trash is OPTIONAL (a 'you may' cost). Only when the player
+  # trashes does the coroutine run IDestroySecurity then the board-wide -6000 DP
+  # (EffectDuration.UntilEachTurnEnd = "for the turn"). The third branch does
+  # nothing. The -6000 mass debuff is authored BEFORE the trash step so the
+  # main effect fully applies before trashing security fires the separate
+  # OnLoseSecurity observer (faithful to DCGO running the debuff inside the
+  # same coroutine as the trash, and to general_rule.pdf §triggered-effects
+  # queuing after the current effect resolves).
+  - when: [on_play, when_digivolving]
+    condition:
+      all_of:
+        - security_count_gte: 1
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+    summary: "[On Play][When Digivolving] May trash top or bottom security; all opponent Digimon get -6000 DP for the turn"
+    process:
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Trash top security"
+            - "Trash bottom security"
+            - "Do not trash"
+          prompt: "Trash your top or bottom security card (or decline)"
+      # When trashing (branch 0 or 1), apply the board-wide -6000 DP FIRST so the
+      # On Play effect fully resolves, THEN pay the trash cost (which fires the
+      # separate own-security-removed observer afterward). Mass snapshot debuff
+      # over the opponent's battle-area Digimon (EX4-074 idiom).
+      - if:
+          condition: { not: { equals: [branch, 2] } }
+          then:
+            - add_modifier:
+                target: { of: opponent, kind: digimon }
+                modifier: ChangeDp
+                value: -6000
+                expiry: end_of_turn
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - trash_top_security: { of: you }
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - trash_bottom_security: { of: you }
+
+  # ─── [All Turns][OPT] own-security removed → may delete lowest-DP opp ───────
+  #
+  # "When your security stack is removed from, you may delete 1 of your
+  # opponent's lowest DP Digimon." `on_own_security_removed` observer
+  # (BT20-083 idiom), `[All Turns]` scope, optional ("you may delete"),
+  # [Once Per Turn]. `selector: lowest_dp` (AD1-024 idiom) restricts the pick
+  # to the opponent's lowest-DP Digimon.
+  - when: on_own_security_removed
+    active_when: { all_turns: true }
+    once_per_turn: true
+    optional: true
+    summary: "[All Turns][OPT] When your security is removed from, may delete 1 opp lowest-DP Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: lowest
+          optional: true
+          selector: lowest_dp
+          filter: { kind: digimon }
+          prompt: "You may delete 1 of your opponent's lowest DP Digimon"
+      - delete_permanent: { target: lowest }
+
+  # ─── Inherited [Security]: Security A. -1 + -3000 DP debuffs ────────────────
+  #
+  # "Give 1 of your opponent's Digimon <Security A. -1> for the turn. Then, 1 of
+  # their Digimon gets -3000 DP until your turn ends." Two separate picks
+  # (BT19-035 idiom): SecurityAttackChange -1 (expiry end_of_turn = "for the
+  # turn") on the first, then -3000 DP (expiry end_of_your_turn = "until your
+  # turn ends") on the second. From the security owner's perspective, "your
+  # opponent" is resolved by `select_opponent_permanent`.
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Give 1 opp Digimon Security A. -1; then 1 opp Digimon gets -3000 DP until your turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: sec_target
+          filter: { kind: digimon }
+          prompt: "Give 1 of your opponent's Digimon <Security A. -1> for the turn"
+      - add_modifier:
+          target: sec_target
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_turn
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -3000 DP until your turn ends"
+      - add_dp_modifier:
+          target: dp_target
+          value: -3000
+          expiry: end_of_your_turn

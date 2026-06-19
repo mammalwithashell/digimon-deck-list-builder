@@ -52,6 +52,48 @@ def _make_reward_event_bus() -> _RewardEventBusType:
     return _RewardEventBusType(card_data_lookup=lookup)
 
 
+# ── No-op loop tripwire ─────────────────────────────────────────────────────
+# When the action mask offers an action the engine's execution path refuses,
+# applying it changes nothing — and a deterministic policy re-picks it every
+# step, burning the whole episode to the step limit (observed: a CannotAttack'd
+# Digimon "attacking" 890x; BlitzGreymon's unusable [Main]; an attack issued
+# while a mandatory selection is pending). Rather than a paper-thin guard that
+# silently absorbs such bugs, FAIL LOUDLY: detect the stuck action and raise so
+# the offending action + card surface immediately.
+NOOP_LOOP_THRESHOLD = 8
+
+# Upper bound on engine actions in a single opponent auto-play turn. A stuck
+# opponent (mask offers an action the engine refuses) never yields control back
+# to the agent, so the agent-side observation tripwire above can't catch it;
+# OpponentWrapper bounds the opponent's turn at this many actions and raises
+# NoOpLoopError instead. Far above any legal turn (~tens of actions even for
+# combo decks) so it only fires on a genuine loop.
+MAX_OPPONENT_TURN_ACTIONS = 200
+
+
+class NoOpLoopError(RuntimeError):
+    """An action was applied `NOOP_LOOP_THRESHOLD`+ times with zero change to the
+    observation — a mask/execution mismatch (the mask is offering an action the
+    engine refuses to perform). Raised from `DigimonEnv.step` so it is caught by
+    the panic rail (`TrainingRecordingWrapper`): the episode terminates, the game
+    is recorded for triage, and `crash_count` increments — the run survives, but
+    the bug is impossible to miss."""
+
+
+def _noop_action_kind(action: int) -> str:
+    if action == 93: return "CONCEDE"
+    if action == 62: return "PASS"
+    if 0 <= action < 30: return "PLAY"
+    if 30 <= action < 60: return "SELECT"
+    if 63 <= action < 93: return "DNA-DIGIVOLVE"
+    if 100 <= action < 400: return "ATTACK"
+    if 400 <= action < 1000: return "DIGIVOLVE"
+    if 1000 <= action < 1150: return "FIELD-EFFECT"
+    if 1150 <= action < 1195: return "TRASH-EFFECT"
+    if action >= 2000: return "SOURCE-SELECT"
+    return f"action {action}"
+
+
 def _make_runner(
     deck1: List[str],
     deck2: List[str],
@@ -335,6 +377,12 @@ class DigimonEnv(gymnasium.Env):
             record_tensors=self.record_tensors,
         )
         self._step_count = 0
+        # Reset the no-op tripwire across episode/game boundaries: a fresh game
+        # legitimately reproduces an identical early observation (e.g. turn 1,
+        # empty board), which must not be mistaken for a stuck-action loop
+        # carried over from the prior episode.
+        self._noop_sig = None
+        self._noop_repeat = 0
         # Reset event-based reward tracking: deltas computed from the first
         # post-reset step onward, no carryover from prior episode.
         self._prev_p1_security = None
@@ -366,7 +414,6 @@ class DigimonEnv(gymnasium.Env):
         self.runner.step(action)
         self._step_count += 1
 
-        obs = self.runner.get_board_tensor(1)
         terminated = self.is_game_over
         truncated = self._step_count >= self.max_turns * 10  # safety limit
 
@@ -374,8 +421,50 @@ class DigimonEnv(gymnasium.Env):
             force_winner = getattr(self.runner, "force_step_limit_winner", None)
             if force_winner is not None:
                 force_winner()
-                obs = self.runner.get_board_tensor(1)
             terminated = True
+
+        # Observation build is the hot per-step cost (~8850 floats). During the
+        # opponent's auto-played turn (OpponentWrapper sets `_skip_obs_build`)
+        # every intermediate observation is discarded — only the final one,
+        # built once when control returns to the agent, is used — so skip it.
+        # Build it on agent steps and on any terminal step (SB3 needs the real
+        # terminal observation for value bootstrapping).
+        skip_obs = bool(getattr(self, "_skip_obs_build", False)) and not terminated
+        if skip_obs:
+            obs = self._skip_obs_value()
+        else:
+            obs = self.runner.get_board_tensor(1)
+
+        # The mask is built every step for `info` (and the tripwire's legality
+        # gate below). Cheap (~2 KB) relative to the observation tensor.
+        mask = self.action_mask()
+
+        # ── No-op loop tripwire ──────────────────────────────────────────────
+        # If the SAME action is applied repeatedly with zero change to the
+        # observation (and the game isn't over), it's a mask/execution mismatch:
+        # the mask OFFERED an action the engine refuses to execute (e.g. a
+        # CannotAttack'd Digimon "attacking"). Fail loudly instead of looping to
+        # the limit. Gated on the action being mask-legal — an *illegal* action
+        # the engine correctly refuses is expected behavior, not a bug (test/
+        # eval harnesses sometimes send a fixed "skip" action that is illegal in
+        # the current phase). Runs only at agent decision points (where the
+        # observation is built); opponent-turn loops can't reach here (a stuck
+        # opponent never yields control back) and are bounded by
+        # OpponentWrapper's per-turn action cap instead.
+        action_offered = 0 <= int(action) < len(mask) and bool(mask[int(action)])
+        if skip_obs or terminated:
+            self._noop_sig, self._noop_repeat = None, 0
+        elif action_offered:
+            sig = (int(action), hash(obs.tobytes()))
+            if getattr(self, "_noop_sig", None) == sig:
+                self._noop_repeat = getattr(self, "_noop_repeat", 0) + 1
+            else:
+                self._noop_repeat, self._noop_sig = 0, sig
+            if self._noop_repeat >= NOOP_LOOP_THRESHOLD:
+                raise NoOpLoopError(self._describe_noop(int(action)))
+        else:
+            # Illegal action correctly refused — not a no-op-loop bug.
+            self._noop_sig, self._noop_repeat = None, 0
 
         # Legacy reward path (preserved when `legacy_reward=True` — the
         # default). When False (set by `RewardProfileWrapper`), the
@@ -385,7 +474,7 @@ class DigimonEnv(gymnasium.Env):
         else:
             reward = 0.0
 
-        info = {"action_mask": self.action_mask(), **self._tensor_info()}
+        info = {"action_mask": mask, **self._tensor_info()}
 
         # Reward-profiles occurrence emission. Activated by
         # `emit_reward_occurrences=True` (set by `RewardProfileWrapper`
@@ -403,6 +492,42 @@ class DigimonEnv(gymnasium.Env):
             )
 
         return obs, reward, terminated, truncated, info
+
+    def _describe_noop(self, action: int) -> str:
+        """Loud, triagable context for a no-op loop: the action, the board (where
+        the offending card + its modifiers live), and selection state."""
+        try:
+            ui = self.runner.to_ui_json()
+        except Exception:
+            ui = {}
+        board = []
+        for pid in (1, 2):
+            area = (ui.get(f"player{pid}", {}) or {}).get("battleArea", []) or []
+            for i, s in enumerate(area):
+                mods = [m.get("type") for m in (s.get("modifiers") or [])]
+                board.append(
+                    f"P{pid}s{i}={s.get('topCardName')}"
+                    + (f"+{','.join(mods)}" if mods else "")
+                )
+        pend = ui.get("pendingSelection")
+        return (
+            f"NO-OP LOOP: action {action} ({_noop_action_kind(action)}) applied "
+            f"{NOOP_LOOP_THRESHOLD}x with no state change "
+            f"(turn={ui.get('turnCount')} currentPlayer={ui.get('currentPlayer')} "
+            f"pendingSelection={'yes' if pend else 'no'}). board=[{'; '.join(board)}]. "
+            f"The action mask offered something execution refuses — a mask/"
+            f"execution mismatch; the recorded game has the repro."
+        )
+
+    def _skip_obs_value(self) -> np.ndarray:
+        """Cheap placeholder returned in place of the real observation on
+        opponent auto-play steps (whose obs is always discarded). Cached so it
+        costs nothing per step; never read by the agent."""
+        ph = getattr(self, "_skip_obs_placeholder", None)
+        if ph is None:
+            ph = np.zeros(self.observation_layout.tensor_size, dtype=np.float32)
+            self._skip_obs_placeholder = ph
+        return ph
 
     def _tensor_info(self) -> Dict[str, Any]:
         return {

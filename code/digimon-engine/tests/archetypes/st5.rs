@@ -487,6 +487,81 @@ fn blitzgreymon_digi_burst_buffs_an_agumon_blocker() {
     );
 }
 
+/// Regression (no-op loop): BlitzGreymon's `[Main] ＜Digi-Burst 2＞` must be
+/// offered ONLY when it can be paid — i.e. the Digimon has ≥2 digivolution cards
+/// under its top to trash. With too few sources the mask previously offered it
+/// anyway; execution then refused the unpayable cost, leaving state unchanged —
+/// a no-op the deterministic eval policy looped on to the step limit (observed:
+/// action 1002 fired 883× on a 1-source BlitzGreymon, game decided by step_limit).
+///
+/// Fix: `first_step_candidate_guard` builds an `outer_optional_guard` for a
+/// `SelectOwnSources` (digi_burst) leading step, and `field_main_match` now
+/// honors that guard. Sources: ST5-13 text; `general_rule.pdf` §16-13 ＜Digi-Burst＞.
+#[test]
+fn blitzgreymon_digi_burst_main_gated_on_source_count() {
+    use digimon_engine::action::build_action_mask;
+    // FIELD_EFFECT_START(1000) + slot 0 * EFFECTS_PER_PERMANENT(10) + FIELD_EFFECT_SLOT_FOR_MAIN(2).
+    const MAIN_BIT_SLOT0: usize = 1002;
+
+    // Enough sources (top + 2 under) → ＜Digi-Burst 2＞ payable → the [Main] is
+    // OFFERED. Also proves the bit CAN be set, so the masked-out case below is
+    // the fix, not an unrelated unavailability.
+    let mut ok = DebugRunner::builder()
+        .dsl_card("ST5-13")
+        .expect("ST5-13 (BlitzGreymon) in embedded DSL pack")
+        .dsl_card("ST5-02")
+        .expect("ST5-02 in embedded DSL pack")
+        .dsl_card("ST5-07")
+        .expect("ST5-07 in embedded DSL pack")
+        .memory(0)
+        .start();
+    ok.game.turn_count = 1;
+    ok.game.turn_player_idx = 0;
+    ok.place_stack(0, &["ST5-02", "ST5-07", "ST5-13"]);
+    ok.game.tick_declarative_effects();
+    assert_eq!(
+        build_action_mask(&ok.game, 0)[MAIN_BIT_SLOT0],
+        1.0,
+        "with 2 sources under, ＜Digi-Burst 2＞ is payable → [Main] offered"
+    );
+
+    // Too few sources: BlitzGreymon played directly (0 under) → unpayable →
+    // the [Main] must be MASKED OUT (the no-op-loop fix).
+    let mut bare = DebugRunner::builder()
+        .dsl_card("ST5-13")
+        .expect("ST5-13 (BlitzGreymon) in embedded DSL pack")
+        .memory(0)
+        .start();
+    bare.game.turn_count = 1;
+    bare.game.turn_player_idx = 0;
+    bare.place_on_field(0, "ST5-13", Some(0));
+    bare.game.tick_declarative_effects();
+    assert_eq!(
+        build_action_mask(&bare.game, 0)[MAIN_BIT_SLOT0],
+        0.0,
+        "[Main] ＜Digi-Burst 2＞ must be masked OUT with no sources to trash"
+    );
+
+    // Boundary: exactly 1 source under the top is STILL insufficient for
+    // ＜Digi-Burst 2＞ (needs to trash 2) → must be MASKED OUT.
+    let mut one = DebugRunner::builder()
+        .dsl_card("ST5-13")
+        .expect("ST5-13 (BlitzGreymon) in embedded DSL pack")
+        .dsl_card("ST5-02")
+        .expect("ST5-02 in embedded DSL pack")
+        .memory(0)
+        .start();
+    one.game.turn_count = 1;
+    one.game.turn_player_idx = 0;
+    one.place_stack(0, &["ST5-02", "ST5-13"]); // 1 card under the top
+    one.game.tick_declarative_effects();
+    assert_eq!(
+        build_action_mask(&one.game, 0)[MAIN_BIT_SLOT0],
+        0.0,
+        "[Main] ＜Digi-Burst 2＞ must be masked OUT with only 1 source to trash"
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Combo 5 — Laser Eye De-Digivolve + Dark Side Attack removal package
 // ═══════════════════════════════════════════════════════════════════════════

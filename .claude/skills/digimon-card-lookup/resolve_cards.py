@@ -245,6 +245,7 @@ def build_manifest(args) -> list[dict]:
 
 def print_human(results: list[dict]) -> None:
     all_paths: list[str] = []
+    bundle_dir = repo_root() / "data" / "card_bundles"
     for entry in results:
         q, rtype = entry["query"], entry["resolved_type"]
         n = len(entry["cards"])
@@ -267,6 +268,11 @@ def print_human(results: list[dict]) -> None:
                 print(f"    security  : {t['security']}")
             if t.get("_overrides"):
                 print(f"    overrides : {t['_overrides']}")
+            bundle = bundle_dir / f"{c['id']}.md"
+            if bundle.exists():
+                print(f"    bundle    : {bundle}")
+                print("                ^ AUTHORITATIVE digivolve costs (official Bandai DB) + "
+                      "special/DNA conditions + official text. Read this for digivolution data.")
             all_paths.extend(img["paths"])
 
     if all_paths:

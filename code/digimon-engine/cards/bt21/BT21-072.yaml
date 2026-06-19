@@ -59,7 +59,7 @@ alt_paths:
 # DCGO: CardEffectFactory.ChangeSelfDPStaticEffect(changeValue: 2000, isInheritedEffect: true, ...)
 #   condition: IsExistOnBattleArea(card) && IsOwnerTurn(card).
 # Standard inherited self-aura with your_turn gate — BT23-005 pattern.
-# NOTE (G-INHERITED-DISPATCH): DSL `scope: inherited` triggered clauses are not yet
+# NOTE: G-INHERITED-DISPATCH RESOLVED (qa/resolved-gaps.md); formerly DSL `scope: inherited` triggered clauses were not
 # dispatched by enqueue_from_permanent (only the top card is scanned). However, this is a
 # DECLARATIVE aura (not a triggered clause), so inherited declarative effects must still
 # be verified to dispatch. The static DP path (`lower_aura.rs`) sets Effect.dp_modifier

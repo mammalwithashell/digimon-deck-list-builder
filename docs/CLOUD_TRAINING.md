@@ -465,31 +465,53 @@ tailscale up   # signs you in via browser
 ## B.2 Provision the droplet
 
 ```bash
-# Install hcloud CLI: brew install hcloud
-hcloud context create digimon
-hcloud ssh-key create --name laptop --public-key-from-file ~/.ssh/id_ed25519.pub
+# Install hcloud CLI:
+#   macOS:   brew install hcloud
+#   Windows: download hcloud-windows-amd64.zip from
+#            github.com/hetznercloud/cli/releases and put hcloud.exe on PATH
+#            (winget has NO Hetzner.hcloud package as of 2026-06).
+hcloud context create digimon          # paste the project API token (Read&Write)
+hcloud ssh-key create --name digimon-deploy --public-key-from-file ~/.ssh/digimon_deploy.pub
 
-# 8 vCPU, 32 GB, dedicated-vCPU — ~$0.04/hr.
+# Current dedicated-vCPU (CCX, AMD) line — verify live: `hcloud server-type list`.
+#   ccx13  2 vCPU / 8 GB   ~$0.13/hr
+#   ccx23  4 vCPU / 16 GB  ~$0.26/hr   ← NOTE: ccx23 is 4 vCPU now, not 8.
+#   ccx33  8 vCPU / 32 GB  ~$0.26/hr   ← the old "ccx23 = 8 vCPU @ $0.04" was stale.
+#   ccx43 16 vCPU / 64 GB  ~$0.52/hr
+#   ccx53 32 vCPU / 128 GB ~$1.01/hr
+# US locations: ash (Ashburn), hil (Hillsboro). EU: nbg1/fsn1/hel1 (marginally cheaper).
 hcloud server create \
   --name digimon-train \
-  --type ccx23 \
+  --type ccx33 \
   --image ubuntu-24.04 \
-  --location nbg1 \
-  --ssh-key laptop
+  --location ash \
+  --ssh-key digimon-deploy \
+  --firewall digimon-train     # attach at create time (see firewall block below)
 
 # Block public inbound except SSH.
 hcloud firewall create --name digimon-train
 hcloud firewall add-rule digimon-train \
   --direction in --protocol tcp --port 22 --source-ips 0.0.0.0/0 --source-ips ::/0
-hcloud firewall apply-to-resource digimon-train \
-  --type server --server digimon-train
 ```
+
+> **GOTCHA — new-account dedicated-core quota (2026-06-18).** A brand-new
+> Hetzner Cloud project ships with an **8 dedicated-core** limit (anti-fraud, not
+> a billing tier — you cannot "pay to unlock" it self-serve). Creating anything
+> larger than 8 CCX cores total returns `resource_limit_exceeded` (even a single
+> ccx43). One ccx33 (8 cores) is the ceiling until you **request an increase**:
+> Cloud Console → project → Support, or email `support@hetzner.com` from the
+> account address ("please raise the dedicated vCPU/CCX limit on project X to N
+> cores; CPU-bound RL training"). Granted in minutes-to-hours once billing is
+> verified. Ask for headroom (e.g. 48) so you can run 2× ccx43.
 
 ### DigitalOcean (fallback)
 
 ```bash
+# NOTE: a low-tier / unverified DO account is capped at 4 vCPU per droplet —
+# `doctl compute size list` simply won't offer c-8/g-8 etc. Check first; if
+# 8-vCPU sizes are absent, that's the cap (a support-ticket limit, not billing).
 doctl compute droplet create digimon-train \
-  --region nyc3 --image ubuntu-24-04-x64 --size c-8 \
+  --region nyc3 --image ubuntu-24-04-x64 --size g-4vcpu-16gb \
   --ssh-keys "$(doctl compute ssh-key list --format ID --no-header | head -1)" \
   --wait
 ```
@@ -506,7 +528,7 @@ curl -fsSL https://get.docker.com | sh
 sudo usermod -aG docker $USER && newgrp docker
 
 # Workspace
-mkdir -p ~/digimon-training/{runs,models,data,training_jobs,ops/training}
+mkdir -p ~/digimon-training/{runs,models,data,training_jobs}
 cd ~/digimon-training
 ```
 
@@ -516,29 +538,53 @@ cd ~/digimon-training
 # From your LAPTOP
 rsync -az data/ digimon-train:~/digimon-training/data/
 rsync -az training_jobs/ digimon-train:~/digimon-training/training_jobs/
-rsync -az ops/training/ digimon-train:~/digimon-training/ops/training/
+rsync -az docker-compose.watch.yml digimon-train:~/digimon-training/
 
 # On the DROPLET
 docker pull ghcr.io/<your-handle-lowercase>/digimon-trainer:training-v0.1
 
 cd ~/digimon-training
-docker compose -f ops/training/docker-compose.watch.yml up -d
+docker compose -f docker-compose.watch.yml up -d
 # TB now at http://digimon-train:6006 from any tailnet member
 ```
 
 ## B.5 Run the trainer
 
+> **CRITICAL — multi-core requires `vec_env_backend=subproc` (2026-06-18).**
+> A CPU box only earns its cores if rollout collection is parallel. Pass
+> **`--set n_envs=<cores> --set vec_env_backend=subproc`** (or `vec_env_backend:
+> subproc` in YAML). With `dummy` (the default) all envs step **serially in one
+> process** — the box's extra cores sit idle and fps is flat no matter how many
+> cores you buy. This silently bit every prior run: `vec_env_backend` used to be
+> read via `getattr` but was **not a declared `TrainingConfig` field**, so
+> `from_yaml` dropped the override and forced `dummy`. It is now a real field
+> (`training_config.py`) with validation. Confirm it engaged: the container
+> should show ~`n_envs` extra `python` worker processes (`docker exec <c> ps -e |
+> grep -c python`), not just one trainer process. Note: with `start_method=spawn`
+> each worker re-parses the ~4000-card pack once at startup (slow first rollout),
+> and the large `standard_lite_deck_v2` obs (8850 floats) makes per-step IPC the
+> practical scaling ceiling (~4 effective cores on an 8-core box, not 8).
+
 ```bash
 # On the DROPLET (CPU-only: no --gpus flag)
 # The image has no ENTRYPOINT — invoke the trainer explicitly so the same
 # image also serves Path A (`sleep infinity` + interactive SSH).
-docker run --rm \
+# PYTHONUNBUFFERED=1 so fps/eval lines flush to `docker logs` live (Python
+# block-buffers stdout to a pipe otherwise — the run looks "stalled" for minutes).
+docker run -d --name digimon-train --restart=no -e PYTHONUNBUFFERED=1 \
   -v ~/digimon-training/runs:/app/runs \
   -v ~/digimon-training/models:/app/models \
   -v ~/digimon-training/data:/app/data \
-  -v ~/digimon-training/training_jobs:/app/jobs:ro \
-  ghcr.io/<owner>/digimon-trainer:training-v0.1 \
-  python tools/run_training_job.py /app/jobs/cloud_mlp_run.json
+  -v ~/digimon-training/configs:/app/configs \
+  -v ~/digimon-training/qa:/app/qa \
+  ghcr.io/<owner>/digimon-trainer:training-vX.Y \
+  python -m digimon_gym.agents.pilot_training --generalist --timesteps 1000000 \
+    --match-format single --opponent greedy \
+    --archetypes 'ST-1 Gaia Red' 'ST-2 Cocytus Blue' "ST-3 Heaven's Yellow" \
+    'ST-4 Giga Green' 'ST-5 Machine Black' 'ST-6 Venomous Violet' \
+    --set n_envs=8 --set vec_env_backend=subproc \
+    --set tensor_profile=standard_lite_deck_v2 --set run_name=floor_v1 \
+    --log-dir /app/runs/floor_v1 --save-dir /app/models
 ```
 
 If you ever do put a GPU on a Hetzner/DO host (Hetzner does sell GPU instances
@@ -603,3 +649,21 @@ an hour of your time.
 - **Weights & Biases** or any external experiment-tracking SaaS integration.
 - **Tailscale inside the RunPod image** for stable cross-pod URLs. Possible
   (bake into `Dockerfile.training`), deferred until cadence justifies it.
+
+## TensorBoard watcher sidecar
+
+This sidecar is for **Path B** (Hetzner / DO CPU droplets with a host Docker daemon); Path A (RunPod) runs TensorBoard inline inside the pod instead. The watcher is the **observation** layer for a cloud training host. The trainer
+container is a one-shot `docker run` (it exits loudly on completion — we do *not*
+want a 13-hour job silently restart-looping on a transient failure). The watcher
+is the opposite shape: long-lived and declarative, so it is a Compose service.
+
+`docker-compose.watch.yml` (repo root) defines a single `tensorboard` service:
+upstream `tensorflow/tensorflow:latest`, `tensorboard --logdir /runs --bind_all
+--port 6006`, mounting `./runs:/runs:ro` (read-only — the watcher cannot corrupt
+trainer output) with `restart: unless-stopped`. Bring it up once per host at
+provisioning time (`docker compose -f docker-compose.watch.yml up -d`); it
+survives trainer restarts.
+
+**Reach:** port 6006 must only be reachable over Tailscale. The cloud-provider
+firewall (Hetzner / DO Cloud Firewall) blocks inbound `:6006` from the public
+internet; the WireGuard tunnel is the only legitimate path.

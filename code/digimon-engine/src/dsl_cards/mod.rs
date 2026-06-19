@@ -67,7 +67,7 @@ impl DslCardEffect {
 impl CardEffect for DslCardEffect {
     fn effects(&self, card: CardHandle) -> Vec<Effect> {
         use digimon_dsl::compiled::{
-            CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause,
+            CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope,
         };
 
         let mut out = Vec::new();
@@ -293,16 +293,30 @@ impl CardEffect for DslCardEffect {
                         expiry,
                         ..
                     } => {
-                        if let Some(e) = lower_flood_gate::lower(
-                            card,
-                            *scope,
-                            active_when.clone(),
-                            modifier,
-                            target.clone(),
-                            *target_player,
-                            expiry.as_deref(),
-                        ) {
-                            out.push(e);
+                        // `scope: both` installs the flood gate from BOTH the
+                        // active-top (face_up) and digivolution-source
+                        // (inherited) positions — required for `target: self`
+                        // locks that must hold whether the carrier is the top
+                        // card or a source beneath a later digivolution
+                        // (BT24-062 attack-target lock).
+                        let scopes: &[CompiledScope] = match scope {
+                            CompiledScope::Both => {
+                                &[CompiledScope::FaceUp, CompiledScope::Inherited]
+                            }
+                            other => std::slice::from_ref(other),
+                        };
+                        for sc in scopes {
+                            if let Some(e) = lower_flood_gate::lower(
+                                card,
+                                *sc,
+                                active_when.clone(),
+                                modifier,
+                                target.clone(),
+                                *target_player,
+                                expiry.as_deref(),
+                            ) {
+                                out.push(e);
+                            }
                         }
                     }
                     CompiledDeclarativeClause::Replacement {

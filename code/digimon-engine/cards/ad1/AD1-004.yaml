@@ -20,6 +20,73 @@ effects:
   - kind: grant_keyword
     keyword: Piercing
 
+  # ─── [On Play][When Digivolving] delete opp Digimon with DP <= this Digimon ──
+  #
+  # "Delete 1 of your opponent's Digimon with as much or less DP as this
+  # Digimon." G-FORMULA-SOURCE-DP shipped — `dp_lte: { formula: { source_dp:
+  # {} } }` reads the acting WarGreymon's effective DP (AD1-002 / AD1-005 /
+  # P-182 idiom). DCGO AD1_004.cs gates on a matching opponent Digimon existing
+  # (HasMatchConditionOpponentsPermanent) and uses canNoSelect: false → the
+  # select is mandatory when an eligible target exists.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 opponent Digimon with DP <= this Digimon"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        dp_lte: { formula: { source_dp: {} } }
+    process:
+      - select_opponent_permanent:
+          bind_as: del_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: { formula: { source_dp: {} } }
+          prompt: "Delete 1 opponent Digimon with DP equal to or less than this Digimon's DP"
+      - delete_permanent: { target: del_target }
+
+  # ─── [All Turns] +1000 DP per distinct Tamer color ──────────────────────────
+  #
+  # "This Digimon gets +1000 DP for each of your Tamers' colors." Self-aura with
+  # a continuously-recomputed formula closure (P-182 / AD1-013 idiom):
+  # `distinct_colors_count { of: you, zone: battle_area, filter: { kind: tamer } }`
+  # collapses duplicate colors across your battle-area Tamers, then ×1000 DP.
+  - kind: aura
+    target: {}
+    active_when: { all_turns: true }
+    dp_modifier_fn:
+      base: 0
+      per:
+        distinct_colors_count:
+          of: you
+          zone: battle_area
+          filter: { kind: tamer }
+      delta: 1000
+    summary: "[All Turns] +1000 DP per distinct color across your Tamers"
+
+  # ─── [All Turns] <Security A. +1> for every 3 distinct Tamer colors ─────────
+  #
+  # "Gains <Security A. +1> for every 3 of those colors." `security_attack_fn`
+  # is BASE-INCLUSIVE (it returns the TOTAL check count, replacing the default
+  # base-1 while active), so the formula folds in the base: floor((3 + colors)/3)
+  # == 1 + floor(colors/3) (ST1-11 base-inclusive idiom). At 0 colors this
+  # yields 1 (base check); at 3 colors it yields 2 (base + 1).
+  - kind: aura
+    target: {}
+    active_when: { all_turns: true }
+    security_attack_fn:
+      floor_div:
+        - base: 3
+          per:
+            distinct_colors_count:
+              of: you
+              zone: battle_area
+              filter: { kind: tamer }
+          delta: 1
+        - 3
+    summary: "[All Turns] base-inclusive 1 + floor(distinct Tamer colors / 3) security checks"
+
   - when: end_of_your_turn
     summary: "[End of Your Turn] 1 of your Digimon may attack"
     process:
@@ -35,7 +102,35 @@ effects:
               windowed: true
               prompt: "Have the selected Digimon attack now?"
 
-  # Omitted:
-  # [On Play][When Digivolving] delete opponent Digimon with DP <= this Digimon
-  # needs G-FORMULA-SOURCE-DP. Dynamic DP and SecurityAttackPlus from your
-  # Tamers' color count also need a field-color-count formula/aura.
+  # ─── Inherited: [When Attacking][OPT] name-gated delete (Greymon/Omnimon) ────
+  #
+  # "[When Attacking] [Once Per Turn] If this Digimon has [Greymon] or [Omnimon]
+  # in its name, delete 1 of your opponent's Digimon with as much or less DP as
+  # this Digimon." `source_name_contains` (AD1-014 inherited idiom) reads the
+  # carrier permanent's TOP-card name; the delete reuses dp_lte source_dp
+  # (reads the carrier's effective DP). DCGO AD1_004.cs ESS clause gates on the
+  # carrier name + a matching opponent Digimon, optional "you may delete".
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: true
+    summary: "[Inherited][When Attacking][OPT] If carrier name has Greymon/Omnimon, delete 1 opp Digimon with DP <= this Digimon"
+    condition:
+      all_of:
+        - any_of:
+            - source_name_contains: "Greymon"
+            - source_name_contains: "Omnimon"
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            dp_lte: { formula: { source_dp: {} } }
+    process:
+      - select_opponent_permanent:
+          bind_as: inh_del
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: { formula: { source_dp: {} } }
+          prompt: "Delete 1 opponent Digimon with DP equal to or less than this Digimon's DP"
+      - delete_permanent: { target: inh_del }

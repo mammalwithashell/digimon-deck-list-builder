@@ -1,3 +1,50 @@
+# BT23-057 Gankoomon — Digimon, Lv.6, Purple, DP 11000, Cost 11.
+# Traits: Holy Warrior, Royal Knight, CS. Attribute: Data.
+# Evo: Lv.5 with [CS] trait / Cost 3.
+#
+# Printed card text (image + cards.json — verbatim):
+#
+#   When this card would be played, by returning 3 cards with [Huckmon],
+#   [Sistermon] or [Jesmon] in their names from your trash to the top or
+#   bottom of the deck, reduce the play cost by 5.
+#   [On Play] [When Digivolving] You may play 1 [Hinukamuy] Token.
+#   (Digimon/White/6000 DP/<Alliance> <Reboot> <Blocker>) Then, delete 1 of
+#   your opponent's Digimon with a play cost of 6 or less. For each of your
+#   other Digimon, add 3 to this effect's play cost maximum.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT23/Black/BT23_057.cs
+#
+# ─── Clause notes ────────────────────────────────────────────────────────────
+#
+# Cost reduction (BeforePayCost):
+#   DCGO: SelectCardEffect over trash, CanSelect = ContainsCardName Huckmon /
+#   Sistermon / Jesmon, maxCount 3, canEndNotMax false (must select 3), gated by
+#   CanActivateCondition `MatchConditionOwnersCardCountInTrash >= 3`. The cost
+#   is unpayable with fewer than 3 eligible cards. DCGO places the picked cards
+#   to the deck TOP; printed text says "top or bottom of the deck" — the player
+#   chooses. We expose that printed choice with a `select_effect_choice` modal,
+#   then route the bound list to the chosen end with
+#   `return_trash_list_to_deck_bottom { destination: top|bottom }`.
+#   `min: 3, max: 3` makes the multi-select the cost gate (G-SELECT-MULTI-MIN):
+#   with fewer than 3 candidates the step silently no-ops and the reduction does
+#   not apply. The leading multi-select self-gates the reduction (the pick IS
+#   the opt-in), so no redundant "use X to reduce?" confirmation is added.
+#
+# [On Play] / [When Digivolving] shared clause:
+#   DCGO SharedActivateCoroutine: PlayHinukamuyToken, then SelectPermanentEffect
+#   (opp Digimon, play cost <= 6 + 3 * (count of own battle-area Digimon other
+#   than this card's permanent), canNoSelect false, Mode Destroy). Printed text
+#   says "You may play 1 [Hinukamuy] Token" (optional) but the delete is
+#   mandatory. We surface the token may/decline with a `select_effect_choice`
+#   ("Play token" / "Don't play token") so PASS is exposed to the RL action
+#   space, then run the mandatory delete regardless.
+#   The dynamic cap is `play_cost_lte` with a base+per*delta formula:
+#   6 + 3 * (own battle_area Digimon, OTHER than the source). `card_count_in_zone`
+#   with `filter: { kind: digimon, other: true }` counts own Digimon excluding
+#   the effect carrier — `other: true` excludes the source permanent
+#   (`predicate.rs`: subject == source_permanent → false). Precedent for the
+#   dynamic delete cap: BT23-014.
+
 card: BT23-057
 name: Gankoomon
 kind: digimon
@@ -13,12 +60,84 @@ alt_paths:
     from: { level_eq: 5, color_is: purple }
     cost: 3
 
-effects: []
+effects:
+  # ─── Cost reduction: return 3 named trash cards to deck top/bottom, −5 ───────
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    amount: 5
+    summary: "By returning 3 [Huckmon]/[Sistermon]/[Jesmon] cards from trash to deck top or bottom, reduce play cost by 5"
+    pay_cost:
+      # Cost gate: must return exactly 3 eligible named cards (min == max == 3).
+      # With fewer than 3 candidates the step no-ops and the reduction does not
+      # apply (DCGO CanActivateCondition `>= 3`).
+      - select_count_capped_multi:
+          of: you
+          zone: trash
+          min: 3
+          max: 3
+          optional_zero: false
+          filter:
+            any_of:
+              - name_contains: "Huckmon"
+              - name_contains: "Sistermon"
+              - name_contains: "Jesmon"
+          bind_as: returned_cards
+          prompt: "Return 3 [Huckmon]/[Sistermon]/[Jesmon] cards from your trash to your deck"
+      # Player chooses deck top or bottom (printed "top or bottom of the deck").
+      - select_effect_choice:
+          bind_as: end_choice
+          labels: ["Top of deck", "Bottom of deck"]
+          prompt: "Return the 3 cards to the top or bottom of your deck"
+      - if:
+          condition: { equals: [end_choice, 0] }
+          then:
+            - return_trash_list_to_deck_bottom:
+                of: you
+                cards: returned_cards
+                destination: top
+      - if:
+          condition: { equals: [end_choice, 1] }
+          then:
+            - return_trash_list_to_deck_bottom:
+                of: you
+                cards: returned_cards
+                destination: bottom
 
-# Stubbed:
-# - Play-cost reduction by returning 3 Huckmon/Sistermon/Jesmon cards from
-#   trash to top or bottom of deck needs multi-card trash-to-deck placement
-#   with top/bottom choice.
-# - [On Play][When Digivolving] may play Hinukamuy token, then delete by play
-#   cost 6 plus 3 per other Digimon. Needs token registration and dynamic
-#   play-cost-threshold formula.
+  # ─── [On Play][When Digivolving]: may play Hinukamuy token, then delete ──────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may play 1 Hinukamuy Token; then delete 1 opp Digimon (cost <= 6 + 3 per other own Digimon)"
+    process:
+      # "You may play 1 [Hinukamuy] Token" — surface the may/decline so PASS is
+      # exposed. The delete below is mandatory regardless of this choice.
+      - select_effect_choice:
+          bind_as: token_choice
+          labels: ["Play Hinukamuy Token", "Don't play token"]
+          prompt: "You may play 1 Hinukamuy Token"
+      - if:
+          condition: { equals: [token_choice, 0] }
+          then:
+            - play_token:
+                controller: you
+                token_name: hinukamuy
+      # "Then, delete 1 of your opponent's Digimon with a play cost of 6 or less.
+      #  For each of your other Digimon, add 3 to this effect's play cost
+      #  maximum." Cap = 6 + 3 * (own battle-area Digimon other than this card).
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - play_cost_lte:
+                  base: 6
+                  per:
+                    card_count_in_zone:
+                      of: you
+                      zone: battle_area
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - other: true
+                  delta: 3
+          prompt: "Delete 1 opponent Digimon (play cost <= 6 + 3 per other own Digimon)"
+      - delete_permanent: { target: victim }

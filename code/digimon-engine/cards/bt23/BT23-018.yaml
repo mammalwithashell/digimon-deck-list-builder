@@ -38,7 +38,7 @@
 #   alt-path 2: Alt digivolve Lv.3 [Gabumon]/[CS] / Cost 2,         IMPLEMENTED
 #               ignoring color requirement
 #   Clause 1:  ＜Jamming＞                                           IMPLEMENTED via grant_keyword
-#   Clause 2:  [Main][OPT] cost (place top stacked → bottom) +      BLOCKED — see G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM
+#   Clause 2:  [Main][OPT] cost (place top stacked → bottom) +      authorable-now: G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM RESOLVED (qa/resolved-gaps.md)
 #               optional play Agumon/Nokia from hand at -2 cost
 #   Clause 3:  [Inherited][Opponent's Turn] +2000 DP self-aura      IMPLEMENTED
 #

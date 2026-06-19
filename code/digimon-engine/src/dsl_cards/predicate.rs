@@ -409,6 +409,18 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(want) = pred.is_source_permanent {
+        // `target: self` — true when the subject permanent IS the effect's
+        // source permanent (the carrier in face_up scope, the host in inherited
+        // scope). Lets flood_gate/aura install a modifier on the carrier itself.
+        let is_src = match (subject, rctx.source_permanent) {
+            (PredicateSubject::Permanent(h), Some(src)) => h == src,
+            _ => false,
+        };
+        if is_src != want {
+            return false;
+        }
+    }
     if let Some(ref needle) = pred.self_digivolution_contains_name {
         let Some(perm) = subject_or_source_permanent(subject, rctx) else {
             return false;
@@ -742,6 +754,7 @@ fn eval_result_bound_fields(
             && pred.returned_card_matching.is_none()
             && pred.effect_deleted_any_own_digimon != Some(true)
             && pred.effect_deleted_any_opponent_digimon != Some(true)
+            && pred.effect_deleted_opponent_digimon_dp_gte.is_none()
             && pred.effect_played_any_digimon != Some(true)
             && pred.effect_digivolved_any_digimon != Some(true)
             && pred.effect_added_any_card_to_hand != Some(true);
@@ -788,14 +801,29 @@ fn eval_result_bound_fields(
         }
     }
     if let Some(want) = pred.effect_deleted_any_own_digimon {
-        let actual = log.deleted.iter().any(|h| h.player == rctx.player);
+        let actual = log.deleted.iter().any(|(h, _)| h.player == rctx.player);
         if actual != want {
             return false;
         }
     }
     if let Some(want) = pred.effect_deleted_any_opponent_digimon {
-        let actual = log.deleted.iter().any(|h| h.player != rctx.player);
+        let actual = log.deleted.iter().any(|(h, _)| h.player != rctx.player);
         if actual != want {
+            return false;
+        }
+    }
+    // G-HIGHEST-DP-DELETE-WITH-EFFECT-PAYLOAD — true iff at least one OPPONENT
+    // Digimon deleted by THIS effect had pre-removal effective DP >= N. The DP
+    // was snapshotted at the delete-step call site (the carrier is in trash by
+    // now, so the log's captured DP is the only faithful source). DCGO
+    // EX4_065.cs:71 uses the identical `DPJustBeforeRemoveField >= 13000`.
+    if let Some(floor) = &pred.effect_deleted_opponent_digimon_dp_gte {
+        let n = eval_int_constraint_read(floor, rctx, rctx.source_permanent, Some(bindings));
+        let actual = log
+            .deleted
+            .iter()
+            .any(|(h, dp)| h.player != rctx.player && dp.is_some_and(|d| d >= n));
+        if !actual {
             return false;
         }
     }
@@ -1130,6 +1158,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.color_only.is_none()
         && pred.color_matches_any_field_digimon.is_none()
         && pred.color_matches_binding.is_none()
+        && pred.color_matches_returned_card.is_none()
         && pred.trait_has.is_none()
         && pred.trait_contains.is_none()
         && pred.form_is.is_none()
@@ -1572,6 +1601,11 @@ fn eval_event_fields(
     }
     if let Some(ref needle) = pred.event_card_name_contains {
         if !rctx.event_card_name_contains(needle) {
+            return false;
+        }
+    }
+    if let Some(ref needle) = pred.event_card_text_contains {
+        if !rctx.event_card_text_contains(needle) {
             return false;
         }
     }
@@ -2063,6 +2097,11 @@ fn eval_card_fields(
             return false;
         }
     }
+    if pred.color_matches_returned_card == Some(true)
+        && !card_shares_color_with_returned_card(rctx, bindings, data)
+    {
+        return false;
+    }
     if let Some(ref t) = pred.trait_has {
         if !data.traits.iter().any(|x| x.eq_ignore_ascii_case(t)) {
             return false;
@@ -2455,6 +2494,48 @@ fn card_shares_color_with_bound_permanent(
     candidate_colors
         .iter()
         .any(|candidate| bound_colors.iter().any(|bound| candidate == bound))
+}
+
+/// G-RETURNED-CARD-COLOR-BINDING — true when the candidate card `data` shares
+/// ≥1 color with ANY card recorded in this effect's `returned_to_deck` result
+/// log. Unlike `color_matches_binding`, the returned card is never a permanent
+/// (it moved trash → deck bottom), so the comparison set is sourced from the
+/// result log's stable `CardHandle`s resolved via `card_data_for_handle`, not a
+/// permanent binding. The candidate side is kind-aware exactly like
+/// `color_matches_binding`. Driver: EX10-068 Digimon Emperor On Play tail.
+fn card_shares_color_with_returned_card(
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+    data: &crate::card_data::CardData,
+) -> bool {
+    let Some(bindings) = bindings else {
+        return false;
+    };
+    let returned = &bindings.result_log().returned_to_deck;
+    if returned.is_empty() {
+        return false;
+    }
+
+    let candidate_colors = if kind_matches_card_search(CompiledCardKind::Digimon, data) {
+        data.digimon_colors()
+    } else if kind_matches_card_search(CompiledCardKind::Option, data) {
+        data.option_colors()
+    } else {
+        data.colors.as_slice()
+    };
+    if candidate_colors.is_empty() {
+        return false;
+    }
+
+    returned.iter().any(|&handle| {
+        let Some(returned_data) = rctx.game.card_data_for_handle(handle) else {
+            return false;
+        };
+        returned_data
+            .colors
+            .iter()
+            .any(|returned_color| candidate_colors.iter().any(|c| c == returned_color))
+    })
 }
 
 fn eval_permanent_fields(

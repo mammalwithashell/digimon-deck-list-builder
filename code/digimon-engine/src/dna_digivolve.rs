@@ -74,7 +74,9 @@ impl DigivolveRouteMatch {
 
 impl Game {
     pub fn card_data_by_id(&self, card_id: &str) -> Option<&CardData> {
-        self.card_data.iter().find(|card| card.card_id == card_id)
+        self.card_id_index
+            .get(card_id)
+            .and_then(|&idx| self.card_data.get(idx))
     }
 
     pub fn card_can_satisfy_digixros_name(&self, card_id: &str, required_name: &str) -> bool {
@@ -194,56 +196,102 @@ impl Game {
         card: &CardSource,
         base_handle: PermanentHandle,
     ) -> Option<DigivolveRouteMatch> {
-        // Q3 (G-DIGIVOLVE-TARGET-RESTRICTION): a base carrying a
-        // `CanOnlyDigivolveInto` restriction (e.g. EX10-020 "can only digivolve
-        // into [Apocalymon]") offers NO digivolve route into a non-matching card.
-        // This is the single consult point for the digivolve action mask, the
-        // Blast counter path, and hand-digivolve execution (all route through
-        // here). No-op when no restriction is installed (the common case).
-        if self.digivolve_target_blocked_by_restriction(base_handle, card) {
-            return None;
-        }
-        let base = self
-            .players
-            .get(base_handle.player as usize)?
-            .battle_area
-            .get(base_handle.index as usize)?;
-
-        [
-            self.rules_digivolve_memory_cost(card, base_handle, base)
-                .map(DigivolveRouteMatch::digivolve),
-            self.dsl_alt_digivolve_route_for_card(card, base_handle),
-            // App Fusion is a named-card-driven alt-play (cost 0, ignores
-            // evo-cost / level / colour). It is folded into the digivolve
-            // route funnel so it surfaces through the existing digivolve
-            // action + mask + commit path. The commit path checks
-            // `route.app_fusion` to also consume the host's linked cards.
-            self.app_fusion_digivolve_route_for_card(card, base_handle),
-        ]
-        .into_iter()
-        .flatten()
-        .min_by_key(|route| route.memory_cost)
+        // The cheapest applicable route. The mask, the Blast counter path, and
+        // the digivolve-execution validity check all consult this (they only
+        // need "is there a route, and the floor cost"). The *interactive*
+        // player-action path (`digivolve_from_hand_inner`) instead consults
+        // `all_digivolve_routes_for_card` so the player can CHOOSE among
+        // distinct costs (rule 17) rather than have the min auto-selected.
+        self.all_digivolve_routes_for_card(card, base_handle)
+            .into_iter()
+            .min_by_key(|route| route.memory_cost)
     }
 
-    fn dsl_alt_digivolve_route_for_card(
+    /// Every applicable normal-digivolve route for `card` onto `base_handle`,
+    /// deduplicated by `(memory_cost, app_fusion)`. Unlike
+    /// `normal_digivolve_route_for_card` (which collapses to the cheapest), this
+    /// enumerates each distinct way the base satisfies the card's digivolution
+    /// requirements — printed evo-cost circles, DSL alt-digivolve paths, and App
+    /// Fusion — so the player can be offered the choice of which cost to pay when
+    /// more than one applies (e.g. BT16-040 Wormmon over Minomon: "[Minomon]:
+    /// Cost 0" vs "any Lv.2: Cost 1"). DNA digivolve is NOT included (it is a
+    /// separate action). DCGO registers each requirement with its own
+    /// `digivolutionCost` (`AddSelfDigivolutionRequirementStaticEffect`).
+    pub(crate) fn all_digivolve_routes_for_card(
         &self,
         card: &CardSource,
         base_handle: PermanentHandle,
-    ) -> Option<DigivolveRouteMatch> {
+    ) -> Vec<DigivolveRouteMatch> {
+        // Q3 (G-DIGIVOLVE-TARGET-RESTRICTION): a base carrying a
+        // `CanOnlyDigivolveInto` restriction (e.g. EX10-020 "can only digivolve
+        // into [Apocalymon]") offers NO digivolve route into a non-matching card.
+        if self.digivolve_target_blocked_by_restriction(base_handle, card) {
+            return Vec::new();
+        }
+        let Some(base) = self
+            .players
+            .get(base_handle.player as usize)
+            .and_then(|p| p.battle_area.get(base_handle.index as usize))
+        else {
+            return Vec::new();
+        };
+
+        let mut routes = self.collect_rules_digivolve_routes(card, base_handle, base);
+        // App Fusion (cost 0, ignores evo-cost/level/colour) and the DSL
+        // alt-digivolve paths are folded in so they surface through the same
+        // digivolve action + mask + commit path; the commit path checks
+        // `route.app_fusion` to also consume the host's linked cards.
+        routes.extend(self.collect_dsl_alt_digivolve_routes(card, base_handle));
+        routes.extend(self.collect_app_fusion_routes(card, base_handle));
+        routes.sort_by_key(|r| (r.memory_cost, r.app_fusion));
+        routes.dedup();
+        routes
+    }
+
+    /// `all_digivolve_routes_for_card` for a hand card by index — the entry the
+    /// interactive digivolve path uses to decide whether to prompt for a cost
+    /// choice. Returns empty if the base isn't the acting player's or indices
+    /// are out of range.
+    pub(crate) fn distinct_digivolve_routes_for_hand_card(
+        &self,
+        player: PlayerId,
+        hand_index: usize,
+        base_handle: PermanentHandle,
+    ) -> Vec<DigivolveRouteMatch> {
+        if base_handle.player != player {
+            return Vec::new();
+        }
+        let Some(card) = self
+            .players
+            .get(player as usize)
+            .and_then(|p| p.hand.get(hand_index))
+        else {
+            return Vec::new();
+        };
+        self.all_digivolve_routes_for_card(card, base_handle)
+    }
+
+    fn collect_dsl_alt_digivolve_routes(
+        &self,
+        card: &CardSource,
+        base_handle: PermanentHandle,
+    ) -> Vec<DigivolveRouteMatch> {
         #[cfg(feature = "dsl-yaml-loader")]
         {
             let card_id = card.card_id(&self.card_data);
             let rctx = EffectReadContext::new(self, card.handle(), Some(base_handle), card.owner);
-            let base = self
+            let Some(base) = self
                 .players
-                .get(base_handle.player as usize)?
-                .battle_area
-                .get(base_handle.index as usize)?;
+                .get(base_handle.player as usize)
+                .and_then(|p| p.battle_area.get(base_handle.index as usize))
+            else {
+                return Vec::new();
+            };
             let base_top = base.top_card();
             let base_meta = &self.card_data[base_top.data_index];
             let base_requires_treated_as = !base_top.is_digimon_card_for_search(&self.card_data)
                 && base_meta.card_kind != CardKind::DigiEgg;
-            let mut best: Option<DigivolveRouteMatch> = None;
+            let mut routes: Vec<DigivolveRouteMatch> = Vec::new();
 
             // Lookup-side direction: tracks where the path is registered.
             // From-side paths live on the HAND card; Into-side paths live
@@ -373,16 +421,14 @@ impl Game {
                         memory_cost
                     }
                 };
-                let route = DigivolveRouteMatch::digivolve(memory_cost);
-                if best.is_none_or(|current| route.memory_cost < current.memory_cost) {
-                    best = Some(route);
-                }
+                routes.push(DigivolveRouteMatch::digivolve(memory_cost));
             }
-            return best;
+            routes
         }
         #[cfg(not(feature = "dsl-yaml-loader"))]
         {
-            None
+            let _ = (card, base_handle);
+            Vec::new()
         }
     }
 
@@ -401,25 +447,29 @@ impl Game {
     /// The cost is the path's `cost` (App Fusion is printed `Cost 0`).
     /// App Fusion ignores printed evo-cost / level / colour requirements,
     /// so — unlike a normal digivolve — there is no evo-cost gate here.
-    fn app_fusion_digivolve_route_for_card(
+    fn collect_app_fusion_routes(
         &self,
         card: &CardSource,
         base_handle: PermanentHandle,
-    ) -> Option<DigivolveRouteMatch> {
+    ) -> Vec<DigivolveRouteMatch> {
         #[cfg(feature = "dsl-yaml-loader")]
         {
             if base_handle.player != card.owner {
-                return None;
+                return Vec::new();
             }
             let card_id = card.card_id(&self.card_data);
-            let paths = self.alt_path_registry.get(card_id)?;
-            let base = self
+            let Some(paths) = self.alt_path_registry.get(card_id) else {
+                return Vec::new();
+            };
+            let Some(base) = self
                 .players
-                .get(base_handle.player as usize)?
-                .battle_area
-                .get(base_handle.index as usize)?;
+                .get(base_handle.player as usize)
+                .and_then(|p| p.battle_area.get(base_handle.index as usize))
+            else {
+                return Vec::new();
+            };
 
-            let mut best: Option<DigivolveRouteMatch> = None;
+            let mut routes: Vec<DigivolveRouteMatch> = Vec::new();
             for path in paths
                 .iter()
                 .filter(|path| matches!(path.kind, CompiledAltPathKind::AppFusion))
@@ -428,25 +478,37 @@ impl Game {
                     continue;
                 }
                 let memory_cost = match &path.cost {
-                    Some(CompiledCost::Literal(n)) => u16::try_from(*n).ok()?,
+                    Some(CompiledCost::Literal(n)) => match u16::try_from(*n).ok() {
+                        Some(c) => c,
+                        None => continue,
+                    },
                     // App Fusion is printed Cost 0; non-literal costs are
                     // not defined for the mechanic. Treat a missing cost as
                     // 0 (the printed value for every App-Fusion card).
                     None => 0,
                     Some(CompiledCost::Formula(_)) => continue,
                 };
-                let route = DigivolveRouteMatch::app_fusion(memory_cost);
-                if best.is_none_or(|current| route.memory_cost < current.memory_cost) {
-                    best = Some(route);
-                }
+                routes.push(DigivolveRouteMatch::app_fusion(memory_cost));
             }
-            best
+            routes
         }
         #[cfg(not(feature = "dsl-yaml-loader"))]
         {
             let _ = (card, base_handle);
-            None
+            Vec::new()
         }
+    }
+
+    /// Cheapest App-Fusion route, if any — the `is_some()` gate behind
+    /// `can_app_fuse_onto`.
+    fn app_fusion_digivolve_route_for_card(
+        &self,
+        card: &CardSource,
+        base_handle: PermanentHandle,
+    ) -> Option<DigivolveRouteMatch> {
+        self.collect_app_fusion_routes(card, base_handle)
+            .into_iter()
+            .min_by_key(|route| route.memory_cost)
     }
 
     /// Whether `result` (a Digimon card in hand/trash) can App-Fuse onto `host`
@@ -807,21 +869,34 @@ impl Game {
         None
     }
 
-    fn rules_digivolve_memory_cost(
+    /// Every printed standard-digivolve (evo-cost) route the base satisfies, as
+    /// `DigivolveRouteMatch`es. Unlike the old `rules_digivolve_memory_cost`
+    /// (which returned only the cheapest matching cost), this enumerates each
+    /// distinct printed cost so the player can be offered the choice.
+    fn collect_rules_digivolve_routes(
         &self,
         card: &CardSource,
         base_handle: PermanentHandle,
         base: &Permanent,
-    ) -> Option<u16> {
+    ) -> Vec<DigivolveRouteMatch> {
         let identity = base.synth_identity(&self.card_data, &self.modifiers, base_handle);
         if !matches!(
             identity.kind,
             CardKind::Digimon | CardKind::Dual | CardKind::DigiEgg
         ) {
-            return None;
+            return Vec::new();
         }
-        let base_level = identity.level?;
-        matching_evo_cost(card, base_level, &identity.colors, &self.card_data)
+        let Some(base_level) = identity.level else {
+            return Vec::new();
+        };
+        all_matching_evo_costs(
+            card.digivolution_costs(&self.card_data),
+            base_level,
+            &identity.colors,
+        )
+        .into_iter()
+        .map(DigivolveRouteMatch::digivolve)
+        .collect()
     }
 }
 
@@ -866,6 +941,33 @@ fn matching_evo_cost_from_evo_costs(
         })
         .map(|ec| ec.memory_cost)
         .min()
+}
+
+/// All DISTINCT memory costs among `evo_costs` entries that match the base's
+/// level + colours (sorted ascending). Unlike `matching_evo_cost_from_evo_costs`
+/// (cheapest only), this enumerates every printed standard-digivolve cost the
+/// base satisfies — the basis for the player's cost choice (rule 17). In
+/// practice a card's two printed circles are usually different colours at the
+/// same cost (deduped to one here); distinct costs arise when an evo-cost and a
+/// DSL alt-path overlap on the same base.
+fn all_matching_evo_costs(
+    evo_costs: &[crate::card_data::EvoCost],
+    base_level: u8,
+    base_colors: &[CardColor],
+) -> Vec<u16> {
+    let mut costs: Vec<u16> = evo_costs
+        .iter()
+        .filter(|ec| {
+            ec.level == base_level
+                && crate::action::mask::evo_color(ec.card_color)
+                    .map(|c| base_colors.contains(&c))
+                    .unwrap_or(false)
+        })
+        .map(|ec| ec.memory_cost)
+        .collect();
+    costs.sort_unstable();
+    costs.dedup();
+    costs
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

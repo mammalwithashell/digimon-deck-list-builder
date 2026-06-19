@@ -98,6 +98,19 @@ pub fn resolve_binding_ref(
         // (permanent / card-handle) form. Card-source steps resolve it
         // directly via `resolve_card_source_ref`; here it resolves to nothing.
         CompiledBindingRef::DeckTop(_) => None,
+        // The controller's own breeding-area carrier (the single breeding
+        // Digimon). Resolves to the `BREEDING_TARGET`-indexed sentinel handle
+        // only when a breeding permanent actually exists, so `material_of`
+        // scans of an empty breeding area yield no candidates (trash-only
+        // union). G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY.
+        CompiledBindingRef::OwnBreeding => {
+            ctx.game.player(ctx.player).breeding_area.as_ref().map(|_| {
+                ResolvedBinding::Permanent(PermanentHandle {
+                    player: ctx.player,
+                    index: crate::action::space::BREEDING_TARGET as u8,
+                })
+            })
+        }
     }
 }
 

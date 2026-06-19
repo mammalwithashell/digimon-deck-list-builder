@@ -709,14 +709,23 @@ fn ex8_070_buffs_expire_after_opponents_turn_ends() {
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 5 — Security clause: delete 1 opponent Digimon with lowest play cost
 //
-// NOTE: The security delete uses raw_rust: ex8_070_delete_lowest_cost_digimon
-// which auto-deletes the first opponent Digimon with the minimum play cost.
-// When multiple Digimon tie for lowest play cost, the tie is broken by
-// battle-area index (auto-select; faithful tie-breaking selection is pending
-// G-PLAY-COST-AGGREGATE from qa/dsl-vocab-gaps.md).
+// The security delete uses `select_opponent_permanent { selector: lowest_play_cost }`
+// + `delete_permanent`. The selector constrains the legal target set to the
+// minimum-play-cost opponent Digimon; when several tie, the controller chooses
+// among them through `pending_selection` (no-approximations — "Delete 1 of"
+// requires a player choice). This replaced the former raw_rust auto-pick which
+// deleted the lowest battle-area index (a rule-17 violation).
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// Security effect deletes 1 opponent Digimon with the lowest play cost.
+fn opponent_card_ids(runner: &DebugRunner) -> Vec<String> {
+    runner.game.players[1]
+        .battle_area
+        .iter()
+        .map(|perm| perm.top_card().card_id(&runner.game.card_data).to_string())
+        .collect()
+}
+
+/// Security effect deletes the (unique) opponent Digimon with the lowest play cost.
 #[test]
 fn ex8_070_security_deletes_lowest_cost_digimon() {
     use digimon_engine::enums::EffectTiming;
@@ -751,16 +760,73 @@ fn ex8_070_security_deletes_lowest_cost_digimon() {
     );
     runner.game.drain_effect_queue();
 
-    assert!(
-        runner.game.pending_selection.is_none(),
-        "security delete should not install a pending selection"
-    );
+    // Only the cheap Digimon is at the minimum play cost, so it is the sole legal
+    // target. Resolve the selection (whether the engine exposes a 1-option
+    // pending selection or auto-resolves the forced target).
+    if runner.game.pending_selection.is_some() {
+        runner.auto_resolve().expect("resolve lowest-cost target");
+    }
 
-    // The cheap Digimon (cost 2) should be deleted; expensive (cost 8) survives.
+    // The cheap Digimon (cost 2) is deleted; expensive (cost 8) survives.
     assert_eq!(
         runner.battle_area_size(1),
         1,
-        "security delete must remove 1 Digimon with the lowest play cost"
+        "security delete must remove the lowest-play-cost Digimon"
+    );
+    assert_eq!(
+        opponent_card_ids(&runner),
+        vec!["EXPEN-S".to_string()],
+        "the surviving Digimon must be the higher-cost one (cheap was deleted, not auto-index)"
+    );
+}
+
+/// When multiple opponent Digimon tie for the lowest play cost, the controller
+/// must be offered a CHOICE (pending_selection) rather than an auto-pick.
+#[test]
+fn ex8_070_security_tie_exposes_player_choice() {
+    use digimon_engine::enums::EffectTiming;
+    use digimon_engine::selection::TriggerSource;
+
+    let mut a = make_test_card("TIE-A", "Tie Target A");
+    a.play_cost = 3;
+    a.level = Some(4);
+    let mut b = make_test_card("TIE-B", "Tie Target B");
+    b.play_cost = 3;
+    b.level = Some(4);
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX8-070")
+        .expect("EX8-070 YAML parses and compiles")
+        .add_card(a)
+        .add_card(b)
+        .memory(10)
+        .start();
+
+    let security_handle = runner.place_on_field(0, "EX8-070", None);
+    runner.place_on_field(1, "TIE-A", Some(0));
+    runner.place_on_field(1, "TIE-B", Some(0));
+    assert_eq!(runner.battle_area_size(1), 2);
+
+    runner.game.enqueue_triggered(
+        EffectTiming::SecuritySkill,
+        TriggerSource::Permanent(security_handle),
+    );
+    runner.game.drain_effect_queue();
+
+    // Both Digimon share the lowest play cost → the choice MUST be surfaced.
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "a tie at the lowest play cost must surface a player choice, not auto-pick"
+    );
+
+    // Resolve the choice; exactly one of the tied Digimon is deleted.
+    runner
+        .auto_resolve()
+        .expect("resolve the tied lowest-cost target selection");
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "exactly one tied Digimon is deleted after the player chooses"
     );
 }
 

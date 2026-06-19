@@ -394,6 +394,22 @@ impl<'a> EffectReadContext<'a> {
             .contains(&needle.to_lowercase())
     }
 
+    /// Case-insensitive substring scan against the triggering event card's
+    /// PRINTED text (effect / inherited / security). Event-side analogue of the
+    /// static `effect_text_contains`. G-DSL-EVENT-CARD-TEXT-CONTAINS.
+    pub fn event_card_text_contains(&self, needle: &str) -> bool {
+        let Some(card) = self.event_card() else {
+            return false;
+        };
+        let Some(data) = self.game.card_data_for_handle(card) else {
+            return false;
+        };
+        let needle = needle.to_lowercase();
+        data.effect_text.to_lowercase().contains(&needle)
+            || data.inherited_text.to_lowercase().contains(&needle)
+            || data.security_text.to_lowercase().contains(&needle)
+    }
+
     pub fn event_source_card(&self) -> Option<CardHandle> {
         self.game
             .current_trigger_context
@@ -1103,6 +1119,10 @@ impl<'a> EffectContext<'a> {
 
     pub fn event_card_name_contains(&self, needle: &str) -> bool {
         self.as_read().event_card_name_contains(needle)
+    }
+
+    pub fn event_card_text_contains(&self, needle: &str) -> bool {
+        self.as_read().event_card_text_contains(needle)
     }
 
     pub fn event_source_card(&self) -> Option<CardHandle> {

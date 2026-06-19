@@ -40,6 +40,8 @@ impl Game {
             player,
             delta,
             total: self.memory,
+            source_card_id: None,
+            source_card_name: None,
         });
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
@@ -55,6 +57,20 @@ impl Game {
     /// the current turn player's perspective, so non-turn-player gains move
     /// the counter toward the opponent's side.
     pub fn gain_memory_for_player(&mut self, player: PlayerId, amount: i16) {
+        self.gain_memory_for_player_sourced(player, amount, None);
+    }
+
+    /// Gain memory for a specific player, attributing the change to an effect
+    /// source `(card_id, card_name)`. Used by `EffectContext::gain_memory` /
+    /// `lose_memory` so the emitted `MemoryChange` names the responsible card
+    /// (e.g. a tamer's start-of-turn `+memory`). Structural / cost-payment
+    /// paths call `gain_memory_for_player` (source `None`).
+    pub fn gain_memory_for_player_sourced(
+        &mut self,
+        player: PlayerId,
+        amount: i16,
+        source: Option<(String, String)>,
+    ) {
         let before = self.memory;
         let signed_amount = if player == self.turn_player() {
             amount
@@ -64,12 +80,18 @@ impl Game {
         self.memory = (self.memory + signed_amount)
             .clamp(self.rules.memory_range.0, self.rules.memory_range.1);
         let delta = self.memory - before;
+        let (source_card_id, source_card_name) = match source {
+            Some((id, name)) => (Some(id), Some(name)),
+            None => (None, None),
+        };
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::MemoryChange {
             seq,
             player,
             delta,
             total: self.memory,
+            source_card_id,
+            source_card_name,
         });
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
@@ -95,6 +117,8 @@ impl Game {
             player,
             delta,
             total: self.memory,
+            source_card_id: None,
+            source_card_name: None,
         });
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();

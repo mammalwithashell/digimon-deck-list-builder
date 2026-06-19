@@ -33,7 +33,7 @@ cost: 2
 # The engine infers Delay placement from the presence of the Delay clause
 # (Clause B) together with main_from_hand timing, but the placement is not
 # modelled as an explicit step. Tests asserting the option lands in battle area
-# are #[ignore = "pending: G-PLACE-SELF-AS-OPTION-PERMANENT"].
+# were #[ignore]'d on G-PLACE-SELF-AS-OPTION-PERMANENT (now RESOLVED, qa/resolved-gaps.md).
 #
 # ─── Clause B: [Start of Your Turn] <Delay> ──────────────────────────────────
 #

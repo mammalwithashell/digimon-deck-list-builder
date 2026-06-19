@@ -46,6 +46,8 @@ from digimon_gym.digimon_gym import (
     ACTION_BREEDING_SOURCE_START,
     ACTION_PASS_TURN,
     DigimonEnv,
+    MAX_OPPONENT_TURN_ACTIONS,
+    NoOpLoopError,
     SOURCE_SELECT_END,
     greedy_policy,
 )
@@ -87,6 +89,18 @@ from digimon_gym.agents.training_recording import (
 )
 from digimon_gym.agents.mulligan_log import MulliganLogWrapper, MulliganLogWriter
 from digimon_gym.agents.game_log import GameLogWriter
+
+import torch as _torch
+
+# Disable torch.distributions argument validation process-wide. The policy's
+# (masked) Categorical is constructed every action with logits that are valid by
+# construction — illegal actions are -inf masked, legal ones finite — and
+# `sb3_contrib`'s MaskableCategorical re-inits without passing `validate_args`,
+# so torch re-runs the constraint checks on every action. Full-loop profiling
+# (pilot_training cProfile) showed this distribution __init__ + constraint
+# checking was ~13% of the training loop. Validation is a debugging aid we do
+# not need in training; turning it off is a standard RL throughput win.
+_torch.distributions.Distribution.set_default_validate_args(False)
 
 
 # ─── Helpers ─────────────────────────────────────────────────────────
@@ -505,16 +519,33 @@ class OpponentWrapper(gymnasium.Wrapper):
         return obs, reward, terminated, truncated, info
 
     def _advance_opponent(self, obs, info):
-        """Play opponent turns after reset until Player 1 acts."""
-        if self._unwrapped_env.is_game_over:
+        """Play opponent turns after reset until Player 1 acts.
+
+        Same obs-skip optimization as `_play_opponent`: skip the per-step
+        observation build during the opponent's turn and build the real one
+        once at the end.
+        """
+        env = self._unwrapped_env
+        if env.is_game_over or env.current_player_id == 1:
             return obs, info
 
-        while self._unwrapped_env.current_player_id != 1 and not self._unwrapped_env.is_game_over:
-            opp_action = self.opponent_fn(self._unwrapped_env)
-            obs, _, terminated, truncated, info = self.env.step(int(opp_action))
-            if terminated or truncated:
-                break
+        stepped = False
+        env._skip_obs_build = True
+        try:
+            while env.current_player_id != 1 and not env.is_game_over:
+                opp_action = self.opponent_fn(env)
+                _, _, terminated, truncated, _ = self.env.step(int(opp_action))
+                stepped = True
+                if terminated or truncated:
+                    break
+        finally:
+            env._skip_obs_build = False
 
+        if stepped:
+            env._noop_sig = None
+            env._noop_repeat = 0
+            obs = env.runner.get_board_tensor(1)
+            info = {"action_mask": env.action_mask(), **env._tensor_info()}
         return obs, info
 
     def reset_inner_only(self, **kwargs):
@@ -547,20 +578,60 @@ class OpponentWrapper(gymnasium.Wrapper):
         sees dense feedback from opponent actions — primarily own-security
         losses when opp attacks succeed. Required by the event-based
         reward shape (digimon_gym.py `_compute_reward`).
+
+        Perf: every intermediate opponent observation is discarded (only the
+        final one, after control returns to the agent, is used), so we set
+        `_skip_obs_build` to skip the ~8850-float tensor build on each opponent
+        step and build the real observation exactly once at the end. Rewards,
+        the reward-occurrence bus, and the no-op tripwire (mask-based) all still
+        run per opponent step.
         """
         accumulated_reward = 0.0
+        env = self._unwrapped_env
+        terminated = False
+        truncated = False
+        stepped = False
 
-        while (
-            not self._unwrapped_env.is_game_over
-            and self._unwrapped_env.current_player_id != 1
-        ):
-            opp_action = self.opponent_fn(self._unwrapped_env)
-            obs, reward, terminated, truncated, info = self.env.step(int(opp_action))
-            accumulated_reward += float(reward)
-            if terminated or truncated:
-                return obs, info, accumulated_reward, terminated, truncated
+        env._skip_obs_build = True
+        try:
+            opp_actions = 0
+            while not env.is_game_over and env.current_player_id != 1:
+                opp_action = self.opponent_fn(env)
+                # Opponent-turn no-op guard: a stuck opponent (mask offers an
+                # action the engine refuses) loops here forever without ever
+                # yielding control back to the agent, so the agent-side obs
+                # tripwire can't see it. Fail loudly instead (caught by the
+                # panic rail, like the agent tripwire) with the same board dump.
+                if opp_actions >= MAX_OPPONENT_TURN_ACTIONS:
+                    raise NoOpLoopError(env._describe_noop(int(opp_action)))
+                opp_actions += 1
+                _, reward, terminated, truncated, _ = self.env.step(int(opp_action))
+                accumulated_reward += float(reward)
+                stepped = True
+                if terminated or truncated:
+                    break
+        finally:
+            env._skip_obs_build = False
 
-        return obs, info, accumulated_reward, self._unwrapped_env.is_game_over, False
+        if stepped:
+            # The opponent took a turn, so the agent's next decision is not a
+            # tight no-op loop (its own action wasn't re-applied with control
+            # immediately back). Reset the agent-side tripwire so an alternating
+            # agent/opponent stalemate (e.g. both pass) isn't mistaken for a
+            # mask/execution mismatch — that streak is broken by the opponent's
+            # turn. (A real agent no-op keeps control without an opponent turn.)
+            env._noop_sig = None
+            env._noop_repeat = 0
+            # Build the real observation once, now that the opponent's turn is
+            # over (intermediate ones were skipped above).
+            obs = env.runner.get_board_tensor(1)
+            info = {"action_mask": env.action_mask(), **env._tensor_info()}
+            done = terminated or env.is_game_over
+            return obs, info, accumulated_reward, done, bool(truncated)
+
+        # No opponent step happened (already the agent's turn) — the passed-in
+        # obs/info from the agent's own step are still current.
+        return obs, info, accumulated_reward, env.is_game_over, False
 
 
 # ─── Callbacks ───────────────────────────────────────────────────────
@@ -2090,7 +2161,9 @@ def make_vec_env(
         return _init
 
     factories = [_factory(rank) for rank in range(cfg.n_envs)]
-    if getattr(cfg, "vec_env_backend", "dummy") == "subproc" and cfg.n_envs > 1:
+    if cfg.vec_env_backend == "subproc" and cfg.n_envs > 1:
+        # Thread management for the subproc path lives in _SubprocThreadPhaseCallback
+        # (per-phase toggle), not here — see train().
         return SubprocVecEnv(factories, start_method="spawn")
     return DummyVecEnv(factories)
 
@@ -2479,7 +2552,7 @@ def train(total_timesteps: int = 100_000,
     # Load autoencoder embeddings for warm-start (if available)
     pretrained_embeddings = None
     emb_path = os.path.join(
-        os.path.dirname(__file__), '..', 'engine', 'data', 'card_embeddings.npy'
+        os.path.dirname(__file__), '..', '..', '..', 'models', 'card_embeddings.npy'
     )
     if os.path.exists(emb_path):
         pretrained_embeddings = np.load(emb_path)
@@ -2660,6 +2733,35 @@ def train(total_timesteps: int = 100_000,
     )
     action_validity_cb = ActionValidityCallback()
     callbacks: list[BaseCallback] = [win_rate_cb, action_validity_cb]
+
+    # SubprocVecEnv torch-thread phase toggle.
+    #
+    # The rollout and update phases want OPPOSITE thread counts, and a global
+    # OMP_NUM_THREADS can't satisfy both (verified by py-spy on an 8-core box):
+    #   * Rollout collection — the main process does a TINY per-vec-step forward
+    #     (n_envs samples). Multi-threaded, it pegs every core on contention
+    #     overhead and the env workers starve (blocked in unix_stream_data_wait),
+    #     dragging one rollout out to ~10 min. Wants 1 thread so the workers get
+    #     the cores.
+    #   * PPO update — big-batch backprop over the whole rollout buffer while the
+    #     workers idle. Wants ALL cores.
+    # So pin to 1 thread for rollout, restore to the box core count for the
+    # update. No-op for DummyVecEnv (no workers to starve) and honored only when
+    # the operator hasn't pinned OMP_NUM_THREADS themselves.
+    if cfg.vec_env_backend == "subproc" and cfg.n_envs > 1 and "OMP_NUM_THREADS" not in os.environ:
+        _update_threads = os.cpu_count() or cfg.n_envs
+
+        class _SubprocThreadPhaseCallback(BaseCallback):
+            def _on_rollout_start(self) -> None:
+                _torch.set_num_threads(1)
+
+            def _on_rollout_end(self) -> None:
+                _torch.set_num_threads(_update_threads)
+
+            def _on_step(self) -> bool:
+                return True
+
+        callbacks.append(_SubprocThreadPhaseCallback())
 
     # In-training anchored panel (`harden-training-pipeline` D2).
     # freq == 0 means the callback is never attached — no anchored

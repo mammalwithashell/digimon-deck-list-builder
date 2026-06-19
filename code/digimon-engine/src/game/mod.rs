@@ -201,6 +201,11 @@ pub(crate) struct PendingWouldDigivolveResume {
     pub(crate) permanent: PermanentHandle,
     pub(crate) card: crate::card_source::CardHandle,
     pub(crate) effective_cost: u16,
+    /// Whether the player chose an App-Fusion route for this digivolution. The
+    /// commit path consumes the host's linked cards only when this is set.
+    /// Threaded from the chosen route so the commit honors the player's pick
+    /// (`pending_digivolve_route_choice`) rather than re-deriving the min route.
+    pub(crate) app_fusion: bool,
 }
 
 /// The core game state. Drives the turn state machine.
@@ -543,6 +548,16 @@ pub struct Game {
     /// path's `player_reducer_resolved` flag. Reset once consumed.
     /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
     pub(crate) interactive_option_use_reducer_prompted: bool,
+    /// The digivolution route (cost + app-fusion-ness) the player CHOSE when a
+    /// hand card offered more than one distinct-cost route over the target base
+    /// (rule 17 — no auto-selection of the cheapest). Set by the cost-choice
+    /// `EffectChoice` callback, which re-enters `digivolve_from_hand_inner`;
+    /// peeked there to pin the printed cost; consumed (`take`) when the
+    /// `PendingWouldDigivolveResume` is built. Cleared at the public
+    /// `digivolve_from_hand` entry so each fresh user attempt starts clean (the
+    /// cost-choice callback bypasses that entry, preserving the pick across the
+    /// reducer/replacement re-entries). `None` means "no pending choice".
+    pub(crate) pending_digivolve_route_choice: Option<crate::dna_digivolve::DigivolveRouteMatch>,
 
     /// Spec §7.5 once-per-event guard. Records `(timing, subject)` pairs that
     /// have already fired within the current `try_replace` call chain so a
@@ -831,6 +846,10 @@ pub struct Game {
     /// games (the standard constructor uses an in-scope `data_index_map`
     /// directly without caching it on the Game).
     pub(crate) opaque_data_index_map: Option<std::collections::HashMap<String, usize>>,
+
+    /// Card-id → `card_data` index, materialized once at construction. O(1)
+    /// replacement for the per-step `card_data.iter().find(...)` linear scan.
+    pub(crate) card_id_index: std::collections::HashMap<String, usize>,
 }
 
 // Tier-1 impl Game mechanic clusters (see docs/RUST_ENGINE_API.md §3).
@@ -1193,12 +1212,14 @@ impl Game {
         };
         let top_card = self.players[player_id as usize].battle_area[field_index].top_card();
         let emitted_card_id = top_card.card_id(&self.card_data).to_string();
+        let emitted_card_name = top_card.card_name(&self.card_data).to_string();
         let cost_printed = self.card_data[top_card.data_index].play_cost as i16;
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::Play {
             seq,
             player: player_id,
             card_id: emitted_card_id,
+            card_name: emitted_card_name,
             field_index: field_index as u8,
             // Effect-initiated free play — no memory paid.
             cost_paid: 0,
@@ -1282,6 +1303,7 @@ impl Game {
         for (player_id, card_source) in removed {
             let card = card_source.handle();
             let emitted_card_id = card_source.card_id(&self.card_data).to_string();
+            let emitted_card_name = card_source.card_name(&self.card_data).to_string();
             let cost_printed = self.card_data[card_source.data_index].play_cost as i16;
             let player = self.player_mut(player_id);
             player
@@ -1297,6 +1319,7 @@ impl Game {
                 seq,
                 player: player_id,
                 card_id: emitted_card_id,
+                card_name: emitted_card_name,
                 field_index: field_index as u8,
                 // Effect-initiated multi-source free play — no memory paid.
                 cost_paid: 0,
@@ -1554,11 +1577,13 @@ impl Game {
             return;
         }
         let card_id = card.card_id(&self.card_data).to_string();
+        let card_name = card.card_name(&self.card_data).to_string();
         let seq = self.next_event_seq();
         self.events.push(crate::events::GameEvent::Trash {
             seq,
             player,
             card_id,
+            card_name,
         });
         self.player_mut(player).trash.push(card);
     }
@@ -1587,11 +1612,13 @@ impl Game {
                 // Linked cards on an empty stack are still real cards —
                 // emit per-card.
                 let card_id = card.card_id(&self.card_data).to_string();
+                let card_name = card.card_name(&self.card_data).to_string();
                 let seq = self.next_event_seq();
                 self.events.push(crate::events::GameEvent::Trash {
                     seq,
                     player,
                     card_id,
+                    card_name,
                 });
                 self.player_mut(player).trash.push(card);
             }
@@ -1609,21 +1636,25 @@ impl Game {
         // `card_sources` is stack-top-first per the spec ordering invariant.
         for card in perm.card_sources {
             let card_id = card.card_id(&self.card_data).to_string();
+            let card_name = card.card_name(&self.card_data).to_string();
             let seq = self.next_event_seq();
             self.events.push(crate::events::GameEvent::Trash {
                 seq,
                 player,
                 card_id,
+                card_name,
             });
             self.player_mut(player).trash.push(card);
         }
         for card in perm.linked_cards {
             let card_id = card.card_id(&self.card_data).to_string();
+            let card_name = card.card_name(&self.card_data).to_string();
             let seq = self.next_event_seq();
             self.events.push(crate::events::GameEvent::Trash {
                 seq,
                 player,
                 card_id,
+                card_name,
             });
             self.player_mut(player).trash.push(card);
         }
@@ -1657,6 +1688,8 @@ impl Game {
             player,
             delta,
             total: self.memory,
+            source_card_id: None,
+            source_card_name: None,
         });
         self.mark_until_condition_dirty();
         self.reevaluate_until_condition_modifiers_if_dirty();
@@ -1818,6 +1851,7 @@ impl Game {
         // Capture top_card_id from the removed-hand source before it moves
         // into the merged permanent's stack.
         let top_card_id = new_top.card_id(&self.card_data).to_string();
+        let top_card_name = new_top.card_name(&self.card_data).to_string();
 
         let turn = self.turn_count;
         {
@@ -1844,6 +1878,7 @@ impl Game {
             seq,
             player: merged_handle.player,
             top_card_id,
+            card_name: top_card_name,
             field_index: merged_handle.index,
             from_stack_top,
             was_dna: true,
@@ -1991,6 +2026,7 @@ impl Game {
         };
         // Capture top_card_id from the result source before it moves.
         let top_card_id = result_source.card_id(&self.card_data).to_string();
+        let top_card_name = result_source.card_name(&self.card_data).to_string();
 
         let turn = self.turn_count;
         {
@@ -2010,6 +2046,7 @@ impl Game {
             seq,
             player: merged_handle.player,
             top_card_id,
+            card_name: top_card_name,
             field_index: merged_handle.index,
             from_stack_top,
             was_dna: true,
@@ -2442,16 +2479,12 @@ impl Game {
         // but is only hit once per effect query, and `effects_for_card` is
         // typically called at state-change fire-sites, not in the mask hot
         // loop — so the cost is acceptable for v1.
-        let native_keywords = self
-            .card_data
-            .iter()
-            .find(|cd| cd.card_id == card_id)
-            .map(|cd| cd.keywords.clone())
-            .unwrap_or_default();
-        let mut auto_effects: Vec<crate::effect::Effect> = self
-            .card_data
-            .iter()
-            .find(|cd| cd.card_id == card_id)
+        // One O(1) lookup, reused for both keyword reads (was two O(~4000)
+        // linear scans for the same card — the per-step hot path: ~793
+        // effects_for_card calls/step, 94% of step time).
+        let cd_opt = self.card_data_by_id(card_id);
+        let native_keywords = cd_opt.map(|cd| cd.keywords.clone()).unwrap_or_default();
+        let mut auto_effects: Vec<crate::effect::Effect> = cd_opt
             .map(|cd| {
                 let mut effects: Vec<crate::effect::Effect> = cd
                     .keywords

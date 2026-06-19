@@ -20,6 +20,7 @@ const makeTrace = (overrides: Partial<ActionTrace> = {}): ActionTrace => ({
     targetIndex: 0,
     cardId: 'BT1-010',
     cardName: 'Agumon',
+    effectName: null,
   },
   tensorSummary: null,
   ...overrides,

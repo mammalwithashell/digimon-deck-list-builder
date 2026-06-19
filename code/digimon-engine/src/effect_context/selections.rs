@@ -31,6 +31,88 @@ use crate::selection::{
     SourceSelectionRef,
 };
 
+/// Emit a `GameEvent::EffectTarget` for a committed target selection, naming
+/// the effect's source card and the chosen target card. Resolves the source
+/// identity from `source_card`; if it can't be resolved the event is skipped
+/// (an unattributed target line is worse than none). Called from selection
+/// callbacks at commit time, before the effect's own callback runs, so the
+/// "X's effect targeted Y" line precedes the consequence (Y trashed, etc.).
+pub(crate) fn push_effect_target(
+    game: &mut Game,
+    controller: PlayerId,
+    source_card: CardHandle,
+    target_id: String,
+    target_name: String,
+) {
+    let Some((source_card_id, source_card_name)) = game
+        .card_data_for_handle(source_card)
+        .map(|cd| (cd.card_id.clone(), cd.card_name.clone()))
+    else {
+        return;
+    };
+    let seq = game.next_event_seq();
+    game.events.push(crate::events::GameEvent::EffectTarget {
+        seq,
+        player: controller,
+        source_card_id,
+        source_card_name,
+        targets: vec![crate::events::EventCardRef {
+            card_id: target_id,
+            card_name: target_name,
+        }],
+    });
+}
+
+/// Multi-target variant of [`push_effect_target`]: emit one `EffectTarget`
+/// naming all chosen targets at once (for multi-select effects). No-op if
+/// `targets` is empty or the source can't be resolved.
+pub(crate) fn push_effect_target_multi(
+    game: &mut Game,
+    controller: PlayerId,
+    source_card: CardHandle,
+    targets: Vec<crate::events::EventCardRef>,
+) {
+    if targets.is_empty() {
+        return;
+    }
+    let Some((source_card_id, source_card_name)) = game
+        .card_data_for_handle(source_card)
+        .map(|cd| (cd.card_id.clone(), cd.card_name.clone()))
+    else {
+        return;
+    };
+    let seq = game.next_event_seq();
+    game.events.push(crate::events::GameEvent::EffectTarget {
+        seq,
+        player: controller,
+        source_card_id,
+        source_card_name,
+        targets,
+    });
+}
+
+/// Resolve a list of permanents to their top-card `EventCardRef`s.
+fn permanents_to_refs(
+    game: &Game,
+    handles: &[PermanentHandle],
+) -> Vec<crate::events::EventCardRef> {
+    handles
+        .iter()
+        .filter_map(|h| {
+            game.player(h.player)
+                .battle_area
+                .get(h.index as usize)
+                .map(|p| {
+                    let top = p.top_card();
+                    crate::events::EventCardRef {
+                        card_id: top.card_id(&game.card_data).to_string(),
+                        card_name: top.card_name(&game.card_data).to_string(),
+                    }
+                })
+        })
+        .collect()
+}
+
 /// Identifies which zone `select_count_capped_multi` draws candidates from.
 ///
 /// - `Hand`  — action IDs map to `PLAY_HAND_START + i` (range 0–29)
@@ -243,6 +325,11 @@ impl<'a> EffectContext<'a> {
             source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let hand_index = action_id.saturating_sub(PLAY_HAND_START) as usize;
+                if let Some(card) = game.player(of_player).hand.get(hand_index) {
+                    let tid = card.card_id(&game.card_data).to_string();
+                    let tname = card.card_name(&game.card_data).to_string();
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -310,6 +397,11 @@ impl<'a> EffectContext<'a> {
             source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let trash_index = action_id.saturating_sub(TRASH_EFFECT_START) as usize;
+                if let Some(card) = game.player(of_player).trash.get(trash_index) {
+                    let tid = card.card_id(&game.card_data).to_string();
+                    let tname = card.card_name(&game.card_data).to_string();
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -396,6 +488,16 @@ impl<'a> EffectContext<'a> {
                 // `decode_source_select`, so a breeding-carrier action ID
                 // (in the BREEDING_SOURCE_SELECT range) decodes correctly.
                 let source_idx = action_id.saturating_sub(range_start) as usize;
+                if let Some(card) = game
+                    .player(of_permanent.player)
+                    .battle_area
+                    .get(of_permanent.index as usize)
+                    .and_then(|p| p.card_sources.get(source_idx))
+                {
+                    let tid = card.card_id(&game.card_data).to_string();
+                    let tname = card.card_name(&game.card_data).to_string();
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -655,6 +757,8 @@ impl<'a> EffectContext<'a> {
             source_kind,
             previous_phase,
             Box::new(move |game, picked| {
+                let refs = permanents_to_refs(game, &picked);
+                push_effect_target_multi(game, controller, source_card, refs);
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -709,6 +813,8 @@ impl<'a> EffectContext<'a> {
             source_kind,
             previous_phase,
             Box::new(move |game, picked| {
+                let refs = permanents_to_refs(game, &picked);
+                push_effect_target_multi(game, controller, source_card, refs);
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -774,6 +880,10 @@ impl<'a> EffectContext<'a> {
             source_permanent,
             source_kind,
             callback: Box::new(move |game, _| {
+                if let Some(cd) = game.card_data_for_handle(selection_ref.card) {
+                    let (tid, tname) = (cd.card_id.clone(), cd.card_name.clone());
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -917,6 +1027,11 @@ impl<'a> EffectContext<'a> {
             source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let index = action_id.saturating_sub(SEL_REVEAL_START) as usize;
+                if let Some(card) = game.revealed_cards.get(index) {
+                    let tid = card.card_id(&game.card_data).to_string();
+                    let tname = card.card_name(&game.card_data).to_string();
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -1054,6 +1169,11 @@ impl<'a> EffectContext<'a> {
             source_kind,
             callback: Box::new(move |game: &mut Game, action_id: u16| {
                 let index = action_id.saturating_sub(base) as usize;
+                if let Some(card) = game.player(of_player).security.get(index) {
+                    let tid = card.card_id(&game.card_data).to_string();
+                    let tname = card.card_name(&game.card_data).to_string();
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -1093,17 +1213,35 @@ impl<'a> EffectContext<'a> {
     /// came from, so a downstream consumer can act on the card's true origin
     /// (e.g. play it back from hand, trash, or source materials). The origin is
     /// recovered from the encoded `action_id` range.
+    /// **Filter signature (per-zone aware):** the filter receives the
+    /// candidate's origin zone as a single-bit [`UnionZoneSet`]
+    /// (`UnionZoneSet::HAND` / `TRASH` / `MATERIAL`) so a consumer can apply a
+    /// *different* predicate per zone — e.g. "1 [Sistermon] from trash OR 1
+    /// [Royal Knight] from breeding sources" in one prompt
+    /// (G-UNION-TRASH-OR-BREEDING-SOURCES-PLAY). A uniform filter simply
+    /// ignores the third argument.
+    /// **Carrier filter (per-carrier material restriction):** when
+    /// `material_of` is `None` (scan all my field permanents) and
+    /// `material_carrier_filter` is `Some`, each candidate carrier is evaluated
+    /// against the predicate (its top card / permanent subject) BEFORE its
+    /// sources are enumerated — non-matching carriers contribute no source
+    /// candidates. Lets one prompt offer "1 X from hand OR 1 X from under a
+    /// fielded [King Drasil_7D6]" (G-UNION-HAND-SOURCE-PLAY). `None` → every
+    /// field carrier is scanned. Ignored when `material_of` pins a carrier.
     pub fn select_union_zone<F, C>(
         &mut self,
         of_player: PlayerId,
         zones: crate::selection::UnionZoneSet,
         material_of: Option<crate::permanent::PermanentHandle>,
+        material_carrier_filter: Option<
+            Box<dyn Fn(&Game, crate::permanent::PermanentHandle) -> bool + Send + Sync>,
+        >,
         prompt: &str,
         is_optional: bool,
         filter: F,
         callback: C,
     ) where
-        F: Fn(&Game, &CardSource) -> bool,
+        F: Fn(&Game, &CardSource, crate::selection::UnionZoneSet) -> bool,
         C: FnOnce(
                 &mut EffectContext<'_>,
                 crate::card_source::CardHandle,
@@ -1131,7 +1269,7 @@ impl<'a> EffectContext<'a> {
                 // Clone the CardSource so we can release the borrow on
                 // `self.game` before passing `&Game` to the filter.
                 let card_clone = self.game.player(of_player).hand[i].clone();
-                if filter(self.game, &card_clone) {
+                if filter(self.game, &card_clone, UnionZoneSet::HAND) {
                     valid_action_ids.push(PLAY_HAND_START + i as u16);
                 }
             }
@@ -1143,7 +1281,7 @@ impl<'a> EffectContext<'a> {
             let cap = trash_len.min(TRASH_MAIN_LIMIT);
             for i in 0..cap {
                 let card_clone = self.game.player(of_player).trash[i].clone();
-                if filter(self.game, &card_clone) {
+                if filter(self.game, &card_clone, UnionZoneSet::TRASH) {
                     valid_action_ids.push(TRASH_EFFECT_START + i as u16);
                 }
             }
@@ -1167,6 +1305,17 @@ impl<'a> EffectContext<'a> {
                                     index: index as u8,
                                 })
                         })
+                        // G-UNION-HAND-SOURCE-PLAY: restrict the field carrier
+                        // scan to carriers matching `material_carrier_filter`
+                        // (e.g. a [King Drasil_7D6] top card). Only applies to
+                        // the broad `material_of: None` scan; a pinned carrier
+                        // above bypasses this.
+                        .filter(|handle| {
+                            material_carrier_filter
+                                .as_ref()
+                                .map(|f| f(self.game, *handle))
+                                .unwrap_or(true)
+                        })
                         .collect()
                 };
             for carrier in material_carriers {
@@ -1182,7 +1331,7 @@ impl<'a> EffectContext<'a> {
                         })
                         .unwrap_or_default();
                 for (source_index, card_clone) in candidates {
-                    if !filter(self.game, &card_clone) {
+                    if !filter(self.game, &card_clone, UnionZoneSet::MATERIAL) {
                         continue;
                     }
                     let action = if carrier.index == crate::action::space::BREEDING_TARGET as u8 {
@@ -1307,6 +1456,10 @@ impl<'a> EffectContext<'a> {
                         crate::selection::UnionZoneOrigin::Hand,
                     )
                 };
+                if let Some(cd) = game.card_data_for_handle(handle) {
+                    let (tid, tname) = (cd.card_id.clone(), cd.card_name.clone());
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -1566,6 +1719,18 @@ impl<'a> EffectContext<'a> {
             dyn FnOnce(&mut Game, Vec<crate::card_source::CardHandle>) + Send + Sync,
         > = Box::new(
             move |game: &mut Game, picks: Vec<crate::card_source::CardHandle>| {
+                let refs: Vec<crate::events::EventCardRef> = picks
+                    .iter()
+                    .filter_map(|h| {
+                        game.card_data_for_handle(*h).map(|cd| {
+                            crate::events::EventCardRef {
+                                card_id: cd.card_id.clone(),
+                                card_name: cd.card_name.clone(),
+                            }
+                        })
+                    })
+                    .collect();
+                push_effect_target_multi(game, controller, source_card, refs);
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
                     game,
                     source_card,
@@ -1810,6 +1975,18 @@ impl<'a> EffectContext<'a> {
                     player: target_player,
                     index: target_index,
                 };
+                // Emit EffectTarget BEFORE the effect runs so the log reads
+                // "[source] targeted [target]" ahead of the consequence.
+                if let Some(perm) = game
+                    .player(target_player)
+                    .battle_area
+                    .get(target_index as usize)
+                {
+                    let top = perm.top_card();
+                    let tid = top.card_id(&game.card_data).to_string();
+                    let tname = top.card_name(&game.card_data).to_string();
+                    push_effect_target(game, controller, source_card, tid, tname);
+                }
                 let previous_effect_source = game.effect_source_player;
                 game.effect_source_player = Some(controller);
                 let mut ctx = EffectContext::new_with_source_kind_and_override(
@@ -1976,17 +2153,25 @@ impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
 
     /// Install a union-zone selection where `self.selecting_player` picks.
     /// Forwards to `EffectContext::select_union_zone`.
+    #[allow(clippy::too_many_arguments)]
     pub fn select_union_zone<F, C>(
         &mut self,
         of_player: crate::enums::PlayerId,
         zones: crate::selection::UnionZoneSet,
         material_of: Option<crate::permanent::PermanentHandle>,
+        material_carrier_filter: Option<
+            Box<dyn Fn(&Game, crate::permanent::PermanentHandle) -> bool + Send + Sync>,
+        >,
         prompt: &str,
         is_optional: bool,
         filter: F,
         callback: C,
     ) where
-        F: Fn(&crate::game::Game, &crate::card_source::CardSource) -> bool,
+        F: Fn(
+            &crate::game::Game,
+            &crate::card_source::CardSource,
+            crate::selection::UnionZoneSet,
+        ) -> bool,
         C: FnOnce(
                 &mut EffectContext<'_>,
                 crate::card_source::CardHandle,
@@ -2001,6 +2186,7 @@ impl<'scope, 'g> EffectContextSelectorScope<'scope, 'g> {
             of_player,
             zones,
             material_of,
+            material_carrier_filter,
             prompt,
             is_optional,
             filter,

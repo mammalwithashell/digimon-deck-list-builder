@@ -11,8 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from server.db.database import get_db
 from server.db.models import GameRecording, GameRecordingReport
 from server.db.schemas import BugReportRequest, BugReportResponse, RecordingResponse, RecordingSaveResponse
-from engine_py_legacy.engine.runners.headless_game import HeadlessGame
-from engine_py_legacy.engine.runners.replay_runner import ReplayRunner
+from digimon_engine import RustHeadlessGame, RustReplayRunner
 from server.routers.state import active_games
 
 router = APIRouter(tags=["recordings"])
@@ -63,7 +62,7 @@ async def get_recording_state_at_step(
     recording_data = json.loads(record.recording_json)
 
     try:
-        runner = ReplayRunner(recording_data)
+        runner = RustReplayRunner(json.dumps(recording_data))
     except (ValueError, KeyError) as exc:
         raise HTTPException(status_code=500, detail=f"Failed to load recording: {exc}")
 
@@ -77,11 +76,11 @@ async def get_recording_state_at_step(
         )
 
     try:
-        replay_result = runner.seek(step)
+        runner.seek(step)
     except (ValueError, IndexError) as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    return replay_result.state
+    return runner.get_state()
 
 
 @router.post("/games/{game_id}/recordings", response_model=RecordingSaveResponse)
@@ -91,7 +90,7 @@ async def save_game_recording(game_id: str, db: AsyncSession = Depends(get_db)):
     runner = active_games.get(game_id)
     if not runner:
         raise HTTPException(status_code=404, detail="Game not found")
-    if not isinstance(runner, HeadlessGame):
+    if not isinstance(runner, RustHeadlessGame):
         raise HTTPException(status_code=400, detail="Only headless game recordings can be saved server-side.")
 
     recording_data = runner.get_recording()

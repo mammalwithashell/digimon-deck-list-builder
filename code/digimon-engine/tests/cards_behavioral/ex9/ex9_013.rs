@@ -525,7 +525,7 @@ fn ex9_013_eot_after_dna_one_digimon_may_attack() {
     let first_dna = runner
         .pending_selection_view()
         .expect("first DNA material selection should install");
-    assert_eq!(first_dna.kind, SelectionKind::Target);
+    assert_eq!(first_dna.kind, SelectionKind::AnyField);
     let blitz_pick = first_dna
         .valid_action_ids
         .iter()
@@ -540,7 +540,7 @@ fn ex9_013_eot_after_dna_one_digimon_may_attack() {
     let second_dna = runner
         .pending_selection_view()
         .expect("second DNA material selection should install");
-    assert_eq!(second_dna.kind, SelectionKind::Target);
+    assert_eq!(second_dna.kind, SelectionKind::AnyField);
     let blue_pick = second_dna
         .valid_action_ids
         .iter()

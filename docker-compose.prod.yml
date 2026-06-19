@@ -50,7 +50,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
       PGPASSWORD: ${POSTGRES_PASSWORD}
     volumes:
-      - ./ops/backup/pg_backup.sh:/usr/local/bin/pg_backup.sh:ro
+      - ./scripts/pg_backup.sh:/usr/local/bin/pg_backup.sh:ro
     entrypoint:
       - sh
       - -c

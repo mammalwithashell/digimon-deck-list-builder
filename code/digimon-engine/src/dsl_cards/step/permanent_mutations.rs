@@ -24,9 +24,15 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     .battle_area
                     .get(h.index as usize)
                     .is_some();
+                // Capture the pre-removal effective DP while the carrier is
+                // still live in battle_area; after deletion it has moved to
+                // trash (rule 25) and a live DP read is unavailable. Same
+                // modifier-aware read `build_snapshot_for_handle` uses for
+                // `dp_just_before`.
+                let dp = if existed { ctx.game.effective_dp(h) } else { None };
                 ctx.delete_permanent(h);
                 if existed {
-                    bindings.record_deleted(h);
+                    bindings.record_deleted(h, dp);
                 }
             }
             true
@@ -42,9 +48,14 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                         .battle_area
                         .get(handle.index as usize)
                         .is_some();
+                    let dp = if existed {
+                        ctx.game.effective_dp(handle)
+                    } else {
+                        None
+                    };
                     ctx.delete_permanent(handle);
                     if existed {
-                        bindings.record_deleted(handle);
+                        bindings.record_deleted(handle, dp);
                     }
                 }
             }

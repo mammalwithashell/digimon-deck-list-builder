@@ -34,6 +34,7 @@ effects:
           prompt: "Return another purple Digimon"
       - add_to_hand_from_trash: { of: you, card: second }
 
-  - kind: raw_rust
-    fn: bt7_107_security_add_self_to_hand
-    triggers: [on_security]
+  - when: on_security
+    summary: "[Security] Add this card to its owner's hand"
+    process:
+      - add_this_option_to_hand: {}
