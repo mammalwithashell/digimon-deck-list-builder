@@ -1,16 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { listFormats } from '@/api/deckApi';
 import * as library from '@/api/deckLibraryAdapter';
 import { getCardById } from '@/api/digimonCardApi';
 import type { DigimonCardData } from '@/types/cards';
-import type { DeckFolder, DeckResponse, DeckSummary } from '@/types/deck';
+import type { DeckFolder, DeckFormat, DeckResponse, DeckSummary } from '@/types/deck';
 import { getCardImageUrl } from '@/utils/cardImages';
 import { COLOR_HEX } from '@/utils/constants';
 import {
   buildDeckAnalytics,
   deckInitials,
   deckToExportText,
+  deriveFormatBuckets,
   filterAndSortDecks,
+  formatLabel,
   formatRelativeTime,
   type DeckSortKey,
 } from '@/utils/deckLibrary';
@@ -84,12 +87,14 @@ function DeckTile({
   deck,
   selected,
   view,
+  formats,
   onSelect,
   onTogglePin,
 }: {
   deck: DeckSummary;
   selected: boolean;
   view: ViewMode;
+  formats: DeckFormat[];
   onSelect: (id: string) => void;
   onTogglePin: (deck: DeckSummary) => void;
 }) {
@@ -125,6 +130,9 @@ function DeckTile({
           <span>{deck.meta_archetype ?? deck.meta_tier ?? 'Unclassified'}</span>
           <span>{edited}</span>
         </div>
+        <div className="library-card-meta">
+          <span className="library-format-pill">{formatLabel(deck.game_mode, formats)}</span>
+        </div>
       </div>
     </button>
   );
@@ -134,10 +142,12 @@ export function DeckLibraryPage() {
   const navigate = useNavigate();
   const [decks, setDecks] = useState<DeckSummary[]>([]);
   const [folders, setFolders] = useState<DeckFolder[]>([]);
+  const [formats, setFormats] = useState<DeckFormat[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedDeck, setSelectedDeck] = useState<DeckResponse | null>(null);
   const [selectedCards, setSelectedCards] = useState(new Map<string, DigimonCardData>());
   const [activeFolder, setActiveFolder] = useState('all');
+  const [activeFormat, setActiveFormat] = useState('all');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<DeckSortKey>('recent');
   const [view, setView] = useState<ViewMode>('grid');
@@ -162,6 +172,20 @@ export function DeckLibraryPage() {
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    listFormats()
+      .then(setFormats)
+      .catch(() => setFormats([]));
+  }, []);
+
+  // If the active format has no decks left (e.g. the last one was deleted),
+  // fall back to "All formats" so we never strand the user on an empty view.
+  useEffect(() => {
+    if (activeFormat !== 'all' && !decks.some((deck) => deck.game_mode === activeFormat)) {
+      setActiveFormat('all');
+    }
+  }, [activeFormat, decks]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -201,9 +225,10 @@ export function DeckLibraryPage() {
   }, [selectedId]);
 
   const filtered = useMemo(
-    () => filterAndSortDecks(decks, { activeFolder, search, sort }),
-    [activeFolder, decks, search, sort],
+    () => filterAndSortDecks(decks, { activeFolder, search, sort, format: activeFormat }),
+    [activeFolder, activeFormat, decks, search, sort],
   );
+  const formatBuckets = useMemo(() => deriveFormatBuckets(decks, formats), [decks, formats]);
   const pinned = filtered.filter((deck) => deck.is_pinned);
   const others = activeFolder === 'pinned' ? [] : filtered.filter((deck) => !deck.is_pinned);
   const selectedSummary = decks.find((deck) => deck.id === selectedId) ?? filtered[0] ?? null;
@@ -349,6 +374,29 @@ export function DeckLibraryPage() {
             </button>
           ))}
 
+          <div className="library-group-title">
+            <span>Formats</span>
+          </div>
+          <button
+            type="button"
+            className={`library-folder ${activeFormat === 'all' ? 'active' : ''}`}
+            onClick={() => setActiveFormat('all')}
+          >
+            <span>All formats</span>
+            <b>{decks.length}</b>
+          </button>
+          {formatBuckets.map((bucket) => (
+            <button
+              type="button"
+              key={bucket.id}
+              className={`library-folder ${activeFormat === bucket.id ? 'active' : ''}`}
+              onClick={() => setActiveFormat(bucket.id)}
+            >
+              <span>{bucket.label}</span>
+              <b>{bucket.count}</b>
+            </button>
+          ))}
+
           <div className="library-stats-box">
             <div><span>Total</span><b>{decks.length}</b></div>
             <div><span>Pinned</span><b>{decks.filter((deck) => deck.is_pinned).length}</b></div>
@@ -366,6 +414,7 @@ export function DeckLibraryPage() {
                 <div className="library-pills">
                   {selectedIsBuiltin && <span className="library-builtin-badge">BUILT-IN</span>}
                   <span>{selectedSummary.is_valid ? 'Legal' : 'Draft'}</span>
+                  <span className="library-format-pill">{formatLabel(selectedSummary.game_mode, formats)}</span>
                   <span>{selectedSummary.main_count}/50 main</span>
                   <span>{selectedSummary.egg_count}/5 eggs</span>
                   <span>{selectedSummary.meta_archetype ?? selectedSummary.meta_tier ?? 'Unclassified'}</span>
@@ -422,6 +471,18 @@ export function DeckLibraryPage() {
               <button type="button" className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')}>Grid</button>
               <button type="button" className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}>List</button>
             </div>
+            <select
+              value={activeFormat}
+              onChange={(event) => setActiveFormat(event.target.value)}
+              aria-label="Filter by format"
+            >
+              <option value="all">All formats</option>
+              {formatBuckets.map((bucket) => (
+                <option key={bucket.id} value={bucket.id}>
+                  {bucket.label} ({bucket.count})
+                </option>
+              ))}
+            </select>
             <select value={sort} onChange={(event) => setSort(event.target.value as DeckSortKey)}>
               <option value="recent">Recent</option>
               <option value="name">A to Z</option>
@@ -441,6 +502,7 @@ export function DeckLibraryPage() {
                       deck={deck}
                       selected={deck.id === selectedSummary?.id}
                       view={view}
+                      formats={formats}
                       onSelect={setSelectedId}
                       onTogglePin={togglePin}
                     />
@@ -460,6 +522,7 @@ export function DeckLibraryPage() {
                   deck={deck}
                   selected={deck.id === selectedSummary?.id}
                   view={view}
+                  formats={formats}
                   onSelect={setSelectedId}
                   onTogglePin={togglePin}
                 />

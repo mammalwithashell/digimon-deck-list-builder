@@ -1,5 +1,5 @@
 import type { DigimonCardData } from '@/types/cards';
-import type { DeckResponse, DeckSummary } from '@/types/deck';
+import type { DeckFormat, DeckResponse, DeckSummary } from '@/types/deck';
 
 export type DeckSortKey = 'recent' | 'name' | 'validity' | 'count';
 
@@ -7,6 +7,16 @@ export interface LibraryFilters {
   activeFolder: string;
   search: string;
   sort: DeckSortKey;
+  /** Selected format (`game_mode`) to narrow to, or `'all'` / undefined for no
+   *  format filtering. */
+  format?: string;
+}
+
+/** One entry in the library's format filter (sidebar + toolbar). */
+export interface FormatBucket {
+  id: string;
+  label: string;
+  count: number;
 }
 
 export interface DeckAnalytics {
@@ -18,12 +28,17 @@ export interface DeckAnalytics {
 
 export function filterAndSortDecks(decks: DeckSummary[], filters: LibraryFilters): DeckSummary[] {
   const search = filters.search.trim().toLowerCase();
+  const format = filters.format ?? 'all';
   let out = decks;
 
   if (filters.activeFolder === 'pinned') {
     out = out.filter((deck) => deck.is_pinned);
   } else if (filters.activeFolder !== 'all') {
     out = out.filter((deck) => deck.folder_id === filters.activeFolder);
+  }
+
+  if (format !== 'all') {
+    out = out.filter((deck) => deck.game_mode === format);
   }
 
   if (search) {
@@ -33,6 +48,7 @@ export function filterAndSortDecks(decks: DeckSummary[], filters: LibraryFilters
         deck.description,
         deck.meta_archetype,
         deck.meta_tier,
+        deck.game_mode,
         ...(deck.tags ?? []),
       ]
         .filter(Boolean)
@@ -63,6 +79,44 @@ export function formatRelativeTime(value: string): string {
   if (days < 30) return `${days}d`;
   const months = Math.floor(days / 30);
   return `${months}mo`;
+}
+
+/** Whole-library deck counts keyed by `game_mode` (folder-independent). */
+export function countByFormat(decks: DeckSummary[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const deck of decks) {
+    counts.set(deck.game_mode, (counts.get(deck.game_mode) ?? 0) + 1);
+  }
+  return counts;
+}
+
+/** Resolve a `game_mode` to its engine-registry display name, falling back to
+ *  the raw id (uppercased) for legacy/unknown modes. */
+export function formatLabel(gameMode: string, formats: DeckFormat[]): string {
+  return formats.find((format) => format.id === gameMode)?.name ?? gameMode.toUpperCase();
+}
+
+/** Ordered format buckets for the library filter: registry formats that have at
+ *  least one deck (in registry order) first, then any non-registry `game_mode`
+ *  present among the decks (sorted). Each carries its display label and count. */
+export function deriveFormatBuckets(decks: DeckSummary[], formats: DeckFormat[]): FormatBucket[] {
+  const counts = countByFormat(decks);
+  const buckets: FormatBucket[] = [];
+  const seen = new Set<string>();
+
+  for (const format of formats) {
+    const count = counts.get(format.id) ?? 0;
+    if (count > 0) {
+      buckets.push({ id: format.id, label: format.name, count });
+      seen.add(format.id);
+    }
+  }
+
+  for (const id of Array.from(counts.keys()).filter((mode) => !seen.has(mode)).sort()) {
+    buckets.push({ id, label: formatLabel(id, formats), count: counts.get(id) ?? 0 });
+  }
+
+  return buckets;
 }
 
 export function groupCardIds(ids: string[], altArts: boolean[] = []): Map<string, number> {
