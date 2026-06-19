@@ -611,8 +611,12 @@
 
 .deck-builder-page .bld-preview-meta .row .k,
 .deck-builder-app .bld-preview-meta .row .k {
-  color: var(--bld-ink-2);
+  align-self: center;
+  background: #1a1813;
+  color: #f4c81f;
+  padding: 1px 6px;
   font-size: 9px;
+  font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
