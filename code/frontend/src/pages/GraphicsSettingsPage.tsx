@@ -1,4 +1,5 @@
 import { useUiStore } from '@/stores/uiStore';
+import { ThemeSwitch } from '@/design/components/ThemeSwitch';
 import {
   RESOLUTION_PRESETS,
   type ResolutionPreset,
@@ -73,6 +74,16 @@ export function GraphicsSettingsPage() {
         selected window. Ultrawide presets letterbox the canvas with
         side bars.
       </p>
+
+      <div className="mb-4 flex items-center justify-between rounded-lg border border-gray-700 bg-gray-800/60 px-4 py-3">
+        <div>
+          <div className="text-sm font-medium text-gray-200">Theme</div>
+          <div className="text-xs text-gray-500">
+            Switch between the dark “Digi-OS” and light “Adventure ’99” looks.
+          </div>
+        </div>
+        <ThemeSwitch />
+      </div>
 
       <div className="mb-8 flex items-center justify-between rounded-lg border border-gray-700 bg-gray-800/60 px-4 py-3">
         <div>

@@ -64,8 +64,8 @@
 
 ## 11. Landing footer + settings
 
-- [ ] 11.1 Reword the `code/landing/index.html` footer so it no longer claims "no proprietary assets" and instead acknowledges bundled community art + references the credits.
-- [ ] 11.2 Add a `ThemeSwitch` row to the settings area.
+- [x] 11.1 Reword the `code/landing/index.html` footer so it no longer claims "no proprietary assets" and instead acknowledges bundled community art + references the credits.
+- [x] 11.2 Add a `ThemeSwitch` row to the settings area. [added to GraphicsSettingsPage]
 
 ## 12. Verification & QA
 
