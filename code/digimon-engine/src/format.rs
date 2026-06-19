@@ -314,7 +314,7 @@ mod tests {
         let ids: Vec<&str> = list_formats().iter().map(|f| f.id.as_str()).collect();
         assert_eq!(
             ids,
-            ["standard", "no_restriction", "pauper", "eden", "eden_singleton"]
+            ["standard", "no_restriction", "pauper", "eden", "eden_singleton", "starter"]
         );
     }
 

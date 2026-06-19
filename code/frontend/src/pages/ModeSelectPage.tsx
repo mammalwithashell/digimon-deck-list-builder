@@ -10,6 +10,7 @@ const OPPONENTS: Array<{ id: OpponentMode; name: string; sub: string; meta: stri
   { id: 'quick', name: 'QUICK MATCH', sub: 'Auto-paired ladder', meta: 'MATCHMAKING' },
   { id: 'room', name: 'ROOM MATCH', sub: 'Private code and friends', meta: 'PRIVATE CODE' },
   { id: 'bot', name: 'BOT MATCH', sub: 'CPU practice', meta: 'LOCAL ENGINE' },
+  { id: 'ai_starter', name: 'AI STARTER DECK', sub: 'Pick a starter, face the AI', meta: 'AI OPPONENT' },
 ];
 
 export function ModeSelectPage() {
@@ -18,7 +19,9 @@ export function ModeSelectPage() {
   const { formatId, opponentMode, selectFormat, selectOpponentMode, clearLaunchState } =
     usePlayFlowStore();
   const fallback = getPlayFormat(formatId);
-  const visibleFormats = formats.length > 0 ? formats : [fallback];
+  const visibleFormats = (formats.length > 0 ? formats : [fallback]).filter(
+    (format) => format.id !== 'starter',
+  );
   const selected = useMemo(
     () => visibleFormats.find((format) => format.id === formatId) ?? fallback,
     [fallback, formatId, visibleFormats],
@@ -62,37 +65,48 @@ export function ModeSelectPage() {
           ))}
         </section>
 
-        <section className="mode-grid" aria-label="Formats">
-          {visibleFormats.map((format, index) => (
-            <button
-              key={format.id}
-              type="button"
-              aria-label={format.name}
-              className={`mode-card ${format.id === formatId ? 'selected' : ''}`}
-              onClick={() => selectFormat(format.id)}
-              disabled={!format.enabled}
-            >
-              <span className="num">{String(index + 1).padStart(2, '0')} / 06</span>
-              <span className="tag">{format.enabled ? '// READY' : '// LOCKED'}</span>
-              <span className="sub">{format.tagline}</span>
-              <span className="name">{format.name}</span>
-              <span className="desc">{format.enabled ? format.description : format.disabledReason}</span>
-              <span className="stats">
-                <b>{format.deckLabel}</b>
-                <i>POPULATION {format.populationPct}%</i>
-              </span>
-            </button>
-          ))}
-        </section>
+        {opponentMode !== 'ai_starter' && (
+          <section className="mode-grid" aria-label="Formats">
+            {visibleFormats.map((format, index) => (
+              <button
+                key={format.id}
+                type="button"
+                aria-label={format.name}
+                className={`mode-card ${format.id === formatId ? 'selected' : ''}`}
+                onClick={() => selectFormat(format.id)}
+                disabled={!format.enabled}
+              >
+                <span className="num">{String(index + 1).padStart(2, '0')} / 06</span>
+                <span className="tag">{format.enabled ? '// READY' : '// LOCKED'}</span>
+                <span className="sub">{format.tagline}</span>
+                <span className="name">{format.name}</span>
+                <span className="desc">{format.enabled ? format.description : format.disabledReason}</span>
+                <span className="stats">
+                  <b>{format.deckLabel}</b>
+                  <i>POPULATION {format.populationPct}%</i>
+                </span>
+              </button>
+            ))}
+          </section>
+        )}
 
         <div className="mode-action-bar">
           <span>
-            {selected.name} / {opponentMode.toUpperCase()}
+            {opponentMode === 'ai_starter' ? 'STARTER DECKS' : selected.name} /{' '}
+            {opponentMode.toUpperCase()}
           </span>
           <button
             type="button"
-            onClick={() => navigate(opponentMode === 'room' ? '/play/room' : '/play/deck')}
-            disabled={!selected.enabled}
+            onClick={() =>
+              navigate(
+                opponentMode === 'room'
+                  ? '/play/room'
+                  : opponentMode === 'ai_starter'
+                    ? '/play/ai-starter'
+                    : '/play/deck',
+              )
+            }
+            disabled={opponentMode !== 'ai_starter' && !selected.enabled}
           >
             ENTER FORMAT
           </button>

@@ -11,11 +11,12 @@ export type PlayFormatId =
   | 'pauper'
   | 'eden'
   | 'eden_singleton'
+  | 'starter'
   | 'titan'
   | 'edh_commander'
   | 'draft'
   | 'tutorial';
-export type OpponentMode = 'quick' | 'room' | 'bot';
+export type OpponentMode = 'quick' | 'room' | 'bot' | 'ai_starter';
 
 export interface PlayFormat {
   id: PlayFormatId;
@@ -39,6 +40,7 @@ const PRESENTATION: Record<PlayFormatId, { tagline: string; populationPct: numbe
   pauper: { tagline: 'Commons and uncommons only', populationPct: 18 },
   eden: { tagline: 'Rotation-light, anomaly-gated', populationPct: 27 },
   eden_singleton: { tagline: 'EDEN, highlander', populationPct: 12 },
+  starter: { tagline: 'Six official starter decks', populationPct: 0 },
   titan: { tagline: 'Bigger gauges. Bigger threats.', populationPct: 42 },
   edh_commander: { tagline: 'One herald, one of each, four players', populationPct: 67 },
   draft: { tagline: 'Build from a pod', populationPct: 12 },

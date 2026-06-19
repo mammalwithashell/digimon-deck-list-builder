@@ -6,9 +6,11 @@ interface TrashViewerProps {
   onClose: () => void;
   trashIds: string[];
   ownerLabel: string;
+  /** Right-click a trash card to inspect it at full size. */
+  onInspect?: (cardId: string) => void;
 }
 
-export function TrashViewer({ isOpen, onClose, trashIds, ownerLabel }: TrashViewerProps) {
+export function TrashViewer({ isOpen, onClose, trashIds, ownerLabel, onInspect }: TrashViewerProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`${ownerLabel}'s Trash (${trashIds.length})`}>
       {trashIds.length === 0 ? (
@@ -20,6 +22,14 @@ export function TrashViewer({ isOpen, onClose, trashIds, ownerLabel }: TrashView
               key={`${cardId}-${i}`}
               cardId={cardId}
               size="md"
+              onContextMenu={
+                onInspect
+                  ? (e) => {
+                      e.preventDefault();
+                      onInspect(cardId);
+                    }
+                  : undefined
+              }
             />
           ))}
         </div>

@@ -86,6 +86,10 @@ export async function duplicateDeck(deckId: string): Promise<DeckResponse> {
       ...source,
       id: '',
       name,
+      // A duplicate is always an editable, user-owned copy — never a built-in,
+      // even when duplicating a read-only starter deck. Clear the flag
+      // explicitly so the desktop `decks_put` guard doesn't reject the save.
+      is_builtin: false,
       is_pinned: false,
       created_at: '',
       updated_at: '',

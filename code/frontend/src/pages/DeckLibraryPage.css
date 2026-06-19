@@ -271,6 +271,12 @@
   font-size: 10px;
 }
 
+.library-pills span.library-builtin-badge {
+  border-color: var(--lib-accent);
+  color: var(--lib-accent);
+  font-weight: 700;
+}
+
 .library-banner-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;

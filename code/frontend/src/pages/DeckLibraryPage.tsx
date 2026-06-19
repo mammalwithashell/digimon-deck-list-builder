@@ -207,6 +207,7 @@ export function DeckLibraryPage() {
   const pinned = filtered.filter((deck) => deck.is_pinned);
   const others = activeFolder === 'pinned' ? [] : filtered.filter((deck) => !deck.is_pinned);
   const selectedSummary = decks.find((deck) => deck.id === selectedId) ?? filtered[0] ?? null;
+  const selectedIsBuiltin = Boolean(selectedSummary?.is_builtin);
   const analytics = useMemo(
     () => buildDeckAnalytics(selectedDeck, selectedCards),
     [selectedCards, selectedDeck],
@@ -269,7 +270,7 @@ export function DeckLibraryPage() {
   };
 
   const deleteSelected = async () => {
-    if (!selectedSummary) return;
+    if (!selectedSummary || selectedSummary.is_builtin) return;
     if (!window.confirm(`Delete ${selectedSummary.name}?`)) return;
     await library.deleteDeck(selectedSummary.id);
     setDecks((current) => current.filter((deck) => deck.id !== selectedSummary.id));
@@ -363,6 +364,7 @@ export function DeckLibraryPage() {
               <div className="library-banner-copy">
                 <h1>{selectedSummary.name}</h1>
                 <div className="library-pills">
+                  {selectedIsBuiltin && <span className="library-builtin-badge">BUILT-IN</span>}
                   <span>{selectedSummary.is_valid ? 'Legal' : 'Draft'}</span>
                   <span>{selectedSummary.main_count}/50 main</span>
                   <span>{selectedSummary.egg_count}/5 eggs</span>
@@ -376,7 +378,15 @@ export function DeckLibraryPage() {
                 <button type="button" onClick={exportSelected}>Export</button>
                 <button type="button" onClick={duplicateSelected}>Duplicate</button>
                 <button type="button" onClick={() => navigate(`/game?deckId=${selectedSummary.id}`)}>Test Draw</button>
-                <button type="button" className="danger" onClick={deleteSelected}>Delete</button>
+                <button
+                  type="button"
+                  className="danger"
+                  onClick={deleteSelected}
+                  disabled={selectedIsBuiltin}
+                  title={selectedIsBuiltin ? 'Starter decks are built-in' : undefined}
+                >
+                  Delete
+                </button>
               </div>
             </section>
           ) : (
