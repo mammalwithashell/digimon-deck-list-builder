@@ -893,11 +893,11 @@ export function GamePage() {
   if (!store.gameId) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] p-8 gap-6">
-        <h1 className="text-2xl font-bold text-gray-100">Start a Game</h1>
+        <h1 className="text-2xl font-bold text-[var(--ink-0)]">Start a Game</h1>
 
         <div className="flex flex-wrap gap-3 items-end justify-center">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Your Deck</label>
+            <label className="block text-sm text-[var(--ink-1)] mb-1">Your Deck</label>
             <select
               value={selectedDeckId}
               onChange={(e) => {
@@ -906,7 +906,7 @@ export function GamePage() {
                   autoSelectOpponentDeck(e.target.value);
                 }
               }}
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
+              className="px-3 py-2 bg-[var(--surface-raised)] border border-[var(--line-1)] rounded text-[var(--ink-0)]"
             >
               <option value="">Select a deck...</option>
               {savedDecks.map((d) => (
@@ -916,11 +916,11 @@ export function GamePage() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Opponent Deck</label>
+            <label className="block text-sm text-[var(--ink-1)] mb-1">Opponent Deck</label>
             <select
               value={opponentDeckId}
               onChange={(e) => setOpponentDeckId(e.target.value)}
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
+              className="px-3 py-2 bg-[var(--surface-raised)] border border-[var(--line-1)] rounded text-[var(--ink-0)]"
             >
               <option value="">Select a deck...</option>
               {savedDecks.map((d) => (
@@ -930,11 +930,11 @@ export function GamePage() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Agent Type</label>
+            <label className="block text-sm text-[var(--ink-1)] mb-1">Agent Type</label>
             <select
               value={agentType}
               onChange={(e) => setAgentType(e.target.value)}
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
+              className="px-3 py-2 bg-[var(--surface-raised)] border border-[var(--line-1)] rounded text-[var(--ink-0)]"
             >
               <option value="greedy">Greedy Agent</option>
               <option value="random">Random Agent</option>
@@ -948,11 +948,11 @@ export function GamePage() {
 
           {IS_DESKTOP && agentType === 'trained' && (
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Model</label>
+              <label className="block text-sm text-[var(--ink-1)] mb-1">Model</label>
               <select
                 value={selectedModelId}
                 onChange={(e) => setSelectedModelId(e.target.value)}
-                className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
+                className="px-3 py-2 bg-[var(--surface-raised)] border border-[var(--line-1)] rounded text-[var(--ink-0)]"
               >
                 <option value="">Select a model…</option>
                 {localModels.map((m) => (
@@ -965,7 +965,7 @@ export function GamePage() {
           )}
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Shuffle Seed</label>
+            <label className="block text-sm text-[var(--ink-1)] mb-1">Shuffle Seed</label>
             <input
               value={startSeedInput}
               onChange={(e) => {
@@ -974,10 +974,10 @@ export function GamePage() {
               }}
               placeholder="Random"
               inputMode="numeric"
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
+              className="px-3 py-2 bg-[var(--surface-raised)] border border-[var(--line-1)] rounded text-[var(--ink-0)]"
             />
             {startSeedError && (
-              <p className="mt-1 max-w-[220px] text-xs text-yellow-300">{startSeedError}</p>
+              <p className="mt-1 max-w-[220px] text-xs text-[var(--warn)]">{startSeedError}</p>
             )}
           </div>
 
@@ -989,7 +989,7 @@ export function GamePage() {
               || starting
               || (agentType === 'trained' && !selectedModelId)
             }
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:opacity-50 text-white font-medium rounded"
+            className="px-6 py-2 bg-[var(--accent)] hover:opacity-90 disabled:opacity-50 text-[var(--accent-ink)] font-medium rounded"
           >
             {starting ? 'Starting...' : 'Start Game'}
           </button>

@@ -19,7 +19,7 @@ export function BotSpeedControl() {
       data-testid="bot-speed-control"
       className="flex items-center gap-1 text-xs"
     >
-      <span className="text-gray-500 mr-1">Bot speed</span>
+      <span className="text-[var(--ib-bone-dd)] mr-1">Bot speed</span>
       {SPEEDS.map(({ value, label, title }) => (
         <button
           key={value}
@@ -29,7 +29,7 @@ export function BotSpeedControl() {
           className={`px-2 py-0.5 rounded border transition-colors ${
             botSpeed === value
               ? 'bg-cyan-700/60 border-cyan-500 text-cyan-100'
-              : 'bg-gray-800/60 border-gray-700 text-gray-400 hover:text-gray-200'
+              : 'bg-[var(--ib-panel)] border-[var(--ib-line)] text-[var(--ib-bone-dd)] hover:text-[var(--ib-bone)]'
           }`}
         >
           {label}

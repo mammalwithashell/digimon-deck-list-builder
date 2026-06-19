@@ -65,23 +65,23 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
   };
 
   return (
-    <div className="absolute bottom-4 left-4 z-30 w-[340px] max-h-[calc(100%-32px)] overflow-hidden bg-gray-900/95 border border-gray-600 rounded-lg shadow-2xl backdrop-blur-sm animate-overlay-open flex flex-col">
+    <div className="absolute bottom-4 left-4 z-30 w-[340px] max-h-[calc(100%-32px)] overflow-hidden bg-[var(--ib-graphite)] border border-[var(--ib-line)] rounded-lg shadow-2xl backdrop-blur-sm animate-overlay-open flex flex-col">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700 shrink-0">
-        <span className="text-sm font-semibold text-gray-100 truncate">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--ib-line)] shrink-0">
+        <span className="text-sm font-semibold text-[var(--ib-bone)] truncate">
           {permanent.topCardName ?? 'Unknown'}
         </span>
         <button
           data-testid="card-overlay-close"
           onClick={onClose}
-          className="text-gray-500 hover:text-gray-300 text-lg leading-none"
+          className="text-[var(--ib-bone-dd)] hover:text-[var(--ib-bone-d)] text-lg leading-none"
         >
           &times;
         </button>
       </div>
 
       {/* ── Stats & Effects Summary ── */}
-      <div className="px-3 py-2 border-b border-gray-700/50 shrink-0 space-y-1.5">
+      <div className="px-3 py-2 border-b border-[var(--ib-line)] shrink-0 space-y-1.5">
         {/* Stat badges */}
         <div className="flex flex-wrap gap-1.5">
           {permanent.level != null && (
@@ -90,7 +90,7 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
             </span>
           )}
           {permanent.dp != null && (
-            <span className="px-2 py-0.5 bg-gray-700 text-white text-xs font-bold rounded">
+            <span className="px-2 py-0.5 bg-[var(--ib-panel-2)] text-[var(--ib-bone)] text-xs font-bold rounded">
               {permanent.dp.toLocaleString()} DP
             </span>
           )}
@@ -102,8 +102,8 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
         </div>
 
         {/* Security Attack line (DCGO style) */}
-        <div className="text-[11px] text-gray-400">
-          Security Attack: <span className="text-gray-200 font-medium">{saValue}</span>
+        <div className="text-[11px] text-[var(--ib-bone-dd)]">
+          Security Attack: <span className="text-[var(--ib-bone)] font-medium">{saValue}</span>
         </div>
 
         {/* Keywords */}
@@ -113,14 +113,14 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
 
         {/* Active effects summary (DCGO bulleted list) */}
         {permanent.keywords.length > 0 && (
-          <div className="text-[11px] text-gray-400 space-y-0.5">
+          <div className="text-[11px] text-[var(--ib-bone-dd)] space-y-0.5">
             {permanent.keywords.map((kw) => {
               const isGained = permanent.keywordBreakdown.gained.includes(kw);
               return (
                 <div key={kw}>
-                  <span className="text-gray-500">-</span>{' '}
-                  <span className={isGained ? 'text-cyan-300' : 'text-gray-300'}>{kw}</span>
-                  {isGained && <span className="text-gray-600 text-[9px] ml-1">(granted)</span>}
+                  <span className="text-[var(--ib-bone-dd)]">-</span>{' '}
+                  <span className={isGained ? 'text-cyan-300' : 'text-[var(--ib-bone-d)]'}>{kw}</span>
+                  {isGained && <span className="text-[var(--ib-bone-dd)] text-[9px] ml-1">(granted)</span>}
                 </div>
               );
             })}
@@ -129,8 +129,8 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
 
         {/* Active modifiers (immunities, restrictions, stat changes) — DCGO-style */}
         {modifierGroups.length > 0 && (
-          <div data-testid="active-modifiers" className="pt-1 mt-1 border-t border-gray-700/40 space-y-1">
-            <div className="text-[9px] text-gray-500 font-bold uppercase tracking-wide">
+          <div data-testid="active-modifiers" className="pt-1 mt-1 border-t border-[var(--ib-line)] space-y-1">
+            <div className="text-[9px] text-[var(--ib-bone-dd)] font-bold uppercase tracking-wide">
               Active Modifiers
             </div>
             {modifierGroups.map((grp) => (
@@ -138,9 +138,9 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
                 {grp.items.map((item, i) => (
                   <div key={`${grp.group}-${i}`} className="text-[11px] flex items-baseline gap-1">
                     <span style={{ color: grp.color }}>•</span>
-                    <span className="text-gray-200">{item.label}</span>
+                    <span className="text-[var(--ib-bone)]">{item.label}</span>
                     {item.expiryHint && (
-                      <span className="text-gray-500 text-[9px]">({item.expiryHint})</span>
+                      <span className="text-[var(--ib-bone-dd)] text-[9px]">({item.expiryHint})</span>
                     )}
                   </div>
                 ))}
@@ -158,7 +158,7 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
             className="rounded-lg overflow-hidden"
             style={{ borderLeft: `3px solid ${colorBorder(permanent.colors)}` }}
           >
-            <div className="p-2 bg-gray-800/40">
+            <div className="p-2 bg-[var(--ib-panel)]">
               <Card
                 cardId={permanent.topCardId}
                 size="inspector"
@@ -207,25 +207,25 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
 
       {/* ── DP Breakdown (bottom) ── */}
       {hasDpBreakdown && (
-        <div className="px-3 py-2 border-t border-gray-700/50 shrink-0">
-          <div className="text-[10px] text-gray-500 mb-0.5">DP Breakdown</div>
+        <div className="px-3 py-2 border-t border-[var(--ib-line)] shrink-0">
+          <div className="text-[10px] text-[var(--ib-bone-dd)] mb-0.5">DP Breakdown</div>
           <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px]">
-            <span className="text-gray-400">
-              Base: <span className="text-gray-200">{permanent.dpBreakdown.base ?? 0}</span>
+            <span className="text-[var(--ib-bone-dd)]">
+              Base: <span className="text-[var(--ib-bone)]">{permanent.dpBreakdown.base ?? 0}</span>
             </span>
             {nonZeroSourceDp.map((src, i) => (
-              <span key={`${src.cardId}-${i}`} className="text-gray-400">
+              <span key={`${src.cardId}-${i}`} className="text-[var(--ib-bone-dd)]">
                 {src.cardName ?? src.cardId}: <span className="text-cyan-300">{src.value > 0 ? `+${src.value}` : src.value}</span>
               </span>
             ))}
             {permanent.dpBreakdown.temporary !== 0 && (
-              <span className="text-gray-400">
+              <span className="text-[var(--ib-bone-dd)]">
                 Temp: <span className="text-amber-300">
                   {permanent.dpBreakdown.temporary > 0 ? `+${permanent.dpBreakdown.temporary}` : permanent.dpBreakdown.temporary}
                 </span>
               </span>
             )}
-            <span className="text-gray-300 font-medium">
+            <span className="text-[var(--ib-bone-d)] font-medium">
               = {permanent.dpBreakdown.total?.toLocaleString()}
             </span>
           </div>
@@ -253,7 +253,7 @@ function StackCardEntry({
         className="rounded-lg overflow-hidden"
         style={{ borderLeft: '3px solid #6b7280' }}
       >
-        <div className="p-2 bg-gray-800/40 text-center text-gray-500 text-sm py-6">
+        <div className="p-2 bg-[var(--ib-panel)] text-center text-[var(--ib-bone-dd)] text-sm py-6">
           ???
         </div>
       </div>
@@ -265,7 +265,7 @@ function StackCardEntry({
       className="rounded-lg overflow-hidden"
       style={{ borderLeft: `3px solid ${borderColor}` }}
     >
-      <div className="p-2 bg-gray-800/40">
+      <div className="p-2 bg-[var(--ib-panel)]">
         <div className="flex items-start gap-2">
           <Card
             cardId={source.cardId}
@@ -285,7 +285,7 @@ function StackCardEntry({
           )}
         </div>
         {source.cardName && (
-          <div className="text-[10px] text-gray-500 mt-1 truncate">{source.cardName}</div>
+          <div className="text-[10px] text-[var(--ib-bone-dd)] mt-1 truncate">{source.cardName}</div>
         )}
       </div>
     </div>

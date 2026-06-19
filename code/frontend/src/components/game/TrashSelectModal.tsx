@@ -178,23 +178,23 @@ export function TrashSelectModal({
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
-      <div className="relative bg-slate-800/95 rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[85vh] flex flex-col border border-purple-700/40">
+      <div className="relative bg-[var(--ib-graphite)] rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[85vh] flex flex-col border border-[var(--ib-line)]">
         {/* Header */}
-        <div className="bg-gradient-to-b from-slate-700/80 to-transparent px-5 py-4 border-b border-slate-600/50">
+        <div className="bg-gradient-to-b from-[var(--ib-panel-2)] to-transparent px-5 py-4 border-b border-[var(--ib-line)]">
           <div className="flex items-center justify-between gap-4">
             <div>
-              <div className="text-[11px] uppercase tracking-wider text-purple-300/80 font-semibold">
+              <div className="text-[11px] uppercase tracking-wider text-[var(--ib-bone-dd)] font-semibold">
                 {ownerLabel}
               </div>
-              <h2 className="text-base font-semibold text-gray-100">{title}</h2>
+              <h2 className="text-base font-semibold text-[var(--ib-bone)]">{title}</h2>
               {mode === 'multi' && cc ? (
-                <span data-testid="trash-select-counter" className="text-xs text-slate-400 mt-0.5">
+                <span data-testid="trash-select-counter" className="text-xs text-[var(--ib-bone-dd)] mt-0.5">
                   {selectedCount} / {cc.max} selected
                   {cc.min > 0 && selectedCount < cc.min ? ` — select at least ${cc.min}` : ''}
                 </span>
               ) : (
                 legalSelectable > 0 && (
-                  <span className="text-xs text-slate-400 mt-0.5">
+                  <span className="text-xs text-[var(--ib-bone-dd)] mt-0.5">
                     {legalSelectable} of {cards.length} selectable
                   </span>
                 )
@@ -209,7 +209,7 @@ export function TrashSelectModal({
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                     doneEnabled && !committing
                       ? 'bg-purple-600 hover:bg-purple-500 text-white'
-                      : 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                      : 'bg-[var(--ib-panel)] text-[var(--ib-bone-dd)] cursor-not-allowed'
                   }`}
                 >
                   {committing ? 'Resolving…' : 'Done'}
@@ -219,7 +219,7 @@ export function TrashSelectModal({
                 <button
                   data-testid="trash-select-decline"
                   onClick={() => onAction(SELECTION.DECLINE)}
-                  className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="px-4 py-2 bg-[var(--ib-panel-2)] hover:opacity-90 text-[var(--ib-bone)] text-sm font-medium rounded-lg border border-[var(--ib-line)] transition-colors"
                 >
                   Decline
                 </button>
@@ -231,7 +231,7 @@ export function TrashSelectModal({
         {/* Card grid */}
         <div className="overflow-y-auto p-5">
           {cards.length === 0 ? (
-            <div className="text-center text-gray-400 py-8">No cards in trash</div>
+            <div className="text-center text-[var(--ib-bone-dd)] py-8">No cards in trash</div>
           ) : (
             <div className="grid grid-cols-5 gap-3 justify-items-center">
               {cards.map((card) => {

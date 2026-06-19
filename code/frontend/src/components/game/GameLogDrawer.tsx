@@ -30,7 +30,7 @@ export function GameLogDrawer({ logs }: GameLogDrawerProps) {
       {/* Toggle button (always visible, top-right area) */}
       <button
         onClick={isOpen ? handleClose : handleOpen}
-        className="absolute top-2 right-2 z-20 flex items-center gap-1.5 px-2.5 py-1.5 bg-gray-800/90 border border-gray-600 rounded text-xs text-gray-300 hover:text-white hover:bg-gray-700/90 transition-colors"
+        className="absolute top-2 right-2 z-20 flex items-center gap-1.5 px-2.5 py-1.5 bg-[var(--ib-graphite)] border border-[var(--ib-line)] rounded text-xs text-[var(--ib-bone-d)] hover:text-[var(--ib-bone)] hover:bg-[var(--ib-panel-2)] transition-colors"
       >
         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
@@ -52,12 +52,12 @@ export function GameLogDrawer({ logs }: GameLogDrawerProps) {
             onClick={handleClose}
           />
           {/* Panel */}
-          <div className="absolute top-0 right-0 z-40 w-[300px] h-full bg-gray-900/95 border-l border-gray-700 backdrop-blur-sm shadow-2xl flex flex-col">
-            <div className="flex items-center justify-between px-3 py-2 border-b border-gray-700">
-              <span className="text-sm font-medium text-gray-200">Game Log</span>
+          <div className="absolute top-0 right-0 z-40 w-[300px] h-full bg-[var(--ib-graphite)] border-l border-[var(--ib-line)] backdrop-blur-sm shadow-2xl flex flex-col">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-[var(--ib-line)]">
+              <span className="text-sm font-medium text-[var(--ib-bone)]">Game Log</span>
               <button
                 onClick={handleClose}
-                className="text-gray-500 hover:text-gray-300 text-lg leading-none"
+                className="text-[var(--ib-bone-dd)] hover:text-[var(--ib-bone-d)] text-lg leading-none"
               >
                 &times;
               </button>
