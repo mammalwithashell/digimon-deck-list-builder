@@ -12,6 +12,14 @@ body {
   --ib-obsidian: oklch(0.10 0.012 250);
   --ib-graphite: oklch(0.16 0.012 250);
   --ib-graphite-2: oklch(0.21 0.012 250);
+  /* Furniture surfaces (slots, tags, gauge, piles) by depth band. Dark = the
+     obsidian/graphite values the board rules used to hardcode; light re-points
+     them to parchment (see the [data-theme="light"] block). The literals are
+     converted to `oklch(from var(--ib-panel*) l c h / A)` so each keeps its
+     own alpha while the L/C/H follow the theme. */
+  --ib-panel: oklch(0.11 0.012 250);
+  --ib-panel-2: oklch(0.17 0.012 250);
+  --ib-panel-3: oklch(0.21 0.012 250);
   --ib-line: oklch(0.40 0.012 250 / 0.72);
   --ib-bone: oklch(0.96 0.012 230);
   --ib-bone-d: oklch(0.72 0.012 230);
@@ -35,6 +43,9 @@ body {
   --ib-obsidian: oklch(0.53 0.055 200);
   --ib-graphite: oklch(0.86 0.014 95);
   --ib-graphite-2: oklch(0.79 0.018 95);
+  --ib-panel: oklch(0.83 0.016 95);
+  --ib-panel-2: oklch(0.88 0.014 95);
+  --ib-panel-3: oklch(0.92 0.012 95);
   --ib-line: oklch(0.32 0.012 250 / 0.6);
   --ib-bone: oklch(0.22 0.01 250);
   --ib-bone-d: oklch(0.34 0.01 250);
@@ -197,7 +208,7 @@ body {
   height: 24px;
   padding: 0 10px;
   border: 1px solid var(--ib-line);
-  background: oklch(0.10 0.012 250 / 0.72);
+  background: oklch(from var(--ib-panel) l c h / 0.72);
   color: var(--ib-bone-d);
   font-family: var(--ib-font-mono);
   font-size: 10px;
@@ -214,7 +225,7 @@ body {
   height: 24px;
   padding: 0 10px;
   border: 1px solid var(--ib-line);
-  background: oklch(0.10 0.012 250 / 0.82);
+  background: oklch(from var(--ib-panel) l c h / 0.82);
   color: var(--ib-bone);
   font-family: var(--ib-font-mono);
   font-size: 10px;
@@ -266,7 +277,7 @@ body {
   min-width: 178px;
   padding: 8px 10px;
   border: 1px solid var(--ib-line);
-  background: linear-gradient(180deg, oklch(0.17 0.012 250 / 0.85), oklch(0.10 0.012 250 / 0.82));
+  background: linear-gradient(180deg, oklch(from var(--ib-panel-2) l c h / 0.85), oklch(from var(--ib-panel) l c h / 0.82));
   backdrop-filter: blur(8px);
   pointer-events: none;
 }
@@ -289,7 +300,7 @@ body {
   height: 34px;
   place-items: center;
   border: 1px solid currentColor;
-  background: oklch(0.12 0.012 250 / 0.8);
+  background: oklch(from var(--ib-panel) l c h / 0.8);
   font-family: var(--ib-font-display);
   font-weight: 700;
 }
@@ -455,8 +466,8 @@ body {
 .ib-battle-slot--empty {
   border: 1px dashed oklch(0.42 0.012 250 / 0.42);
   background:
-    linear-gradient(135deg, transparent 0 12px, oklch(0.13 0.012 250 / 0.46) 12px),
-    oklch(0.10 0.012 250 / 0.28);
+    linear-gradient(135deg, transparent 0 12px, oklch(from var(--ib-panel) l c h / 0.46) 12px),
+    oklch(from var(--ib-panel) l c h / 0.28);
 }
 
 .ib-battle-slot--empty::before,
@@ -544,7 +555,7 @@ body {
   height: 84px;
   place-items: center;
   border: 1.5px solid var(--ib-line);
-  background: oklch(0.10 0.012 250 / 0.48);
+  background: oklch(from var(--ib-panel) l c h / 0.48);
 }
 
 .ib-zone__body::before,
@@ -588,7 +599,7 @@ body {
 }
 
 .ib-zone__body--deck {
-  background: linear-gradient(145deg, oklch(0.22 0.012 250 / 0.82), oklch(0.10 0.012 250 / 0.75));
+  background: linear-gradient(145deg, oklch(from var(--ib-panel-3) l c h / 0.82), oklch(from var(--ib-panel) l c h / 0.75));
 }
 
 .ib-zone__body--trash {
@@ -660,7 +671,7 @@ body {
   width: 5px;
   height: 18px;
   border: 1px solid currentColor;
-  background: oklch(0.10 0.012 250 / 0.7);
+  background: oklch(from var(--ib-panel) l c h / 0.7);
   opacity: 0.66;
 }
 
@@ -745,7 +756,7 @@ body {
   height: clamp(36px, 4.9vw, 56px);
   place-items: center;
   border: 1px solid var(--ib-line);
-  background: oklch(0.10 0.012 250 / 0.86);
+  background: oklch(from var(--ib-panel) l c h / 0.86);
   color: var(--ib-bone-dd);
   clip-path: polygon(14% 0, 86% 0, 100% 50%, 86% 100%, 14% 100%, 0 50%);
   font-family: var(--ib-font-mono);
@@ -826,7 +837,7 @@ body {
   place-items: center;
   border: 0;
   color: var(--ib-bone);
-  background: oklch(0.10 0.012 250 / 0.88);
+  background: oklch(from var(--ib-panel) l c h / 0.88);
   clip-path: polygon(8% 0, 100% 0, 100% 100%, 0 100%, 0 30%);
   font-family: var(--ib-font-display);
   font-size: 14px;
@@ -954,7 +965,7 @@ body {
   gap: 8px;
   padding: 6px 12px;
   border: 1px solid var(--ib-line);
-  background: oklch(0.10 0.012 250 / 0.9);
+  background: oklch(from var(--ib-panel) l c h / 0.9);
   font-family: var(--ib-font-mono);
   text-transform: uppercase;
   pointer-events: none;
@@ -987,7 +998,7 @@ body {
   gap: 6px;
   padding: 5px 9px;
   border: 1px solid var(--ib-line);
-  background: oklch(0.10 0.012 250 / 0.88);
+  background: oklch(from var(--ib-panel) l c h / 0.88);
   color: var(--ib-bone-dd);
   font-family: var(--ib-font-mono);
   font-size: 10px;
