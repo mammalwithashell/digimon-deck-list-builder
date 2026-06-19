@@ -6593,18 +6593,14 @@
     },
     "BT25-096": {
       "card_name": "Mirage Beast Knight",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
-      "archetype": "thomas-data-squad",
-      "notes": "BLOCKED: clause 1 (use cost -2 by trashing FD under any Tamer) hits the BeforePayCost selection-bearing pay_cost Parked-drop gap (multi-Tamer choice -> reduction silently dropped). Main alt-digivolve placing trash sources + Security play-self/add-to-hand are otherwise expressible. See docs/RUST_ENGINE_GAPS.md (BeforePayCost Parked).",
-      "patterns": [
-        "use-cost-reduction",
-        "BeforePayCost-Parked-BLOCKED",
-        "tamer-facedown-stash",
-        "alt-digivolve-into-hand"
-      ]
+      "validated_date": "2026-06-18",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-096.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_096.rs",
+      "notes": "TDD-first Option, 3 regions. [Main] place Gaogamon+MachGaogamon from trash as bottom sources under a Gaomon -> free-digivolve into MirageGaogamon (ignore_requirements) — exact name_is matching. [Security] union-zone (hand|trash) free play of Gaomon/Thomas + add_this_option_to_hand. Self interactive use-cost reducer (-2 by trash FD, when_playing_this+pay_cost). NO engine change. Authoring note: select_trash binds a TRASH INDEX so each trash card is placed immediately after selecting it (avoids index-shift staleness); minor documented edge vs DCGOs atomic both-or-neither place (dominated line). 4/4 green (Main behavioral; security+reducer structural)."
     },
     "BT25-029": {
       "card_name": "MirageGaogamon",

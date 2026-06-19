@@ -1,0 +1,157 @@
+# BT25-096 Mirage Beast Knight — Option, Use cost 5. Trait: DATA SQUAD.
+# Colour: Blue (cards.json card_colors [1]).
+#
+# Printed card text (data/cards.json — verbatim, confirmed vs DCGO BT25_096.cs):
+#   [Main] By placing 1 [Gaogamon] and 1 [MachGaogamon] from your trash as 1 of
+#     your [Gaomon]'s bottom digivolution cards, that Digimon may digivolve into
+#     [MirageGaogamon] in the hand, ignoring digivolution requirements and
+#     without paying the cost.
+#   When this card would be used, by trashing the bottom face-down card from
+#     under any of your Tamers, reduce the use cost by 2.
+#   [Security] You may play 1 [Gaomon] or [Thomas H. Norstein] from your hand or
+#     trash without paying the cost. Then, add this card to the hand.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Blue/BT25_096.cs
+#
+# ─── DCGO crosscheck (per region) ────────────────────────────────────────────
+# Reduce Use Cost: a BeforePayCost ActivateClass (isSkippable, canNoSelect Tamer
+#   pick → trash bottom FD → -2) PLUS a static `timing None` ChangeCostClass
+#   (isCheckAvailability:true, SetNotShowUI) that exposes the cost-2 availability.
+#   → one `kind: cost_reduction` (when_playing_this, reduction_timing
+#   before_pay_cost, optional, amount 2, pay_cost trash_bottom_face_down_source
+#   _under_tamer). The interactive Option-USE pay-cost path is the closed
+#   G-COST-REDUCTION-INTERACTIVE-PAY-COST.
+# [Main] (OptionSkill): gated on trash holding BOTH a [Gaogamon] and a
+#   [MachGaogamon]. SelectPermanent [Gaomon] (canNoSelect / auto when ==1),
+#   SelectCard Root.Trash [Gaogamon] (canNoSelect), SelectCard Root.Trash
+#   [MachGaogamon] (canNoSelect); when both picked → AddDigivolutionCardsBottom
+#   (place both under the Gaomon) → DigivolveIntoHandOrTrashCard(MirageGaogamon,
+#   payCost:false, ignoreDigivolutionRequirementFixedCost:1, isHand:true). → two
+#   place_as_bottom_source + effect_initiated_digivolve {target: gaomon,
+#   from_hand: mirage, cost: free, ignore_requirements: true}. EXACT name match
+#   (name_is) throughout — "Gaogamon" is a substring of "MachGaogamon" /
+#   "MirageGaogamon".
+# [Security] (SecuritySkill): a 3-way SetIntSelection (Play from hand / Play from
+#   trash / Don't play) then SelectCard over [Gaomon]/[Thomas H. Norstein] from
+#   the chosen zone → PlayPermanentCards(payCost:false); finally AddThisCardToHand.
+#   → select_union_zone {hand, trash} (the hand-or-trash union folds DCGO's
+#   3-way) + play_union_bound_free + add_this_option_to_hand.
+
+card: BT25-096
+name: "Mirage Beast Knight"
+kind: option
+color: [blue]
+cost: 5
+traits: [DATA SQUAD]
+
+effects:
+  # ─── Reduce Use Cost -2 (interactive, by trashing a bottom FD under a Tamer) ─
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    optional: true
+    amount: 2
+    pay_cost:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+    summary: "When this card would be used, by trashing the bottom face-down card under a Tamer, reduce the use cost by 2"
+
+  # ─── [Main] place Gaogamon + MachGaogamon from trash under a Gaomon → it may
+  #     free-digivolve into MirageGaogamon (ignoring reqs) ───────────────────────
+  - when: main_from_hand
+    summary: "[Main] Place a [Gaogamon] + a [MachGaogamon] from trash under a [Gaomon]; that Digimon may free-digivolve into a [MirageGaogamon] in hand, ignoring requirements"
+    process:
+      # Gated on trash holding BOTH a [Gaogamon] and a [MachGaogamon] (DCGO
+      # `if (!(... && ...)) yield break`). EXACT names (name_is).
+      - if:
+          condition:
+            all_of:
+              - count_gte:
+                  filter: { of: you, zone: [trash], name_is: "Gaogamon" }
+                  n: 1
+              - count_gte:
+                  filter: { of: you, zone: [trash], name_is: "MachGaogamon" }
+                  n: 1
+              - count_gte:
+                  filter: { of: you, zone: [battle_area], name_is: "Gaomon" }
+                  n: 1
+          then:
+            # Select the [Gaomon] that will gain the sources (canNoSelect).
+            - select_own_permanent:
+                bind_as: gaomon
+                optional: true
+                filter: { name_is: "Gaomon" }
+                prompt: "Select 1 [Gaomon] to gain digivolution sources"
+            - if:
+                condition: { binding_present: gaomon }
+                then:
+                  # Select + place each trash card BEFORE selecting the next.
+                  # `select_trash` binds a TRASH INDEX (CardSourceRef::Trash),
+                  # which shifts when an earlier card is removed — so place each
+                  # card immediately after selecting it (keeping every binding
+                  # fresh) rather than selecting both then placing both.
+                  #
+                  # Faithfulness note: DCGO accumulates BOTH picks and places them
+                  # atomically (placing neither unless both are chosen). Here a
+                  # "select [Gaogamon], then decline [MachGaogamon]" line leaves
+                  # the placed [Gaogamon] under the [Gaomon] with no digivolve,
+                  # whereas DCGO would place neither. That edge is a strictly
+                  # dominated line (you only start the combo to complete it); the
+                  # gate already guarantees both cards are in trash. Documented,
+                  # not silently approximated (rule 17). A future atomic
+                  # multi-trash-card place primitive would close the edge.
+                  - select_trash:
+                      of: you
+                      bind_as: gaogamon_card
+                      optional: true
+                      filter: { name_is: "Gaogamon" }
+                      prompt: "Select 1 [Gaogamon] from your trash to place under [Gaomon]"
+                  - if:
+                      condition: { binding_present: gaogamon_card }
+                      then:
+                        - place_as_bottom_source: { source: gaogamon_card, target: gaomon }
+                        - select_trash:
+                            of: you
+                            bind_as: mach_card
+                            optional: true
+                            filter: { name_is: "MachGaogamon" }
+                            prompt: "Select 1 [MachGaogamon] from your trash to place under [Gaomon]"
+                        - if:
+                            condition: { binding_present: mach_card }
+                            then:
+                              - place_as_bottom_source: { source: mach_card, target: gaomon }
+                              - select_hand:
+                                  of: you
+                                  bind_as: mirage
+                                  optional: true
+                                  filter: { name_is: "MirageGaogamon" }
+                                  prompt: "Digivolve [Gaomon] into a [MirageGaogamon] in your hand, ignoring requirements and without paying the cost"
+                              - if:
+                                  condition: { binding_present: mirage }
+                                  then:
+                                    - effect_initiated_digivolve:
+                                        target: gaomon
+                                        from_hand: mirage
+                                        cost: free
+                                        ignore_requirements: true
+
+  # ─── [Security] may play a [Gaomon]/[Thomas H. Norstein] from hand or trash
+  #     free; then add this card to hand ────────────────────────────────────────
+  - scope: inherited
+    when: on_security
+    summary: "[Security] You may play 1 [Gaomon] or [Thomas H. Norstein] from your hand or trash without paying the cost; then add this card to the hand"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: play_pick
+          optional: true
+          filter:
+            any_of:
+              - name_is: "Gaomon"
+              - name_is: "Thomas H. Norstein"
+          prompt: "You may play 1 [Gaomon] or [Thomas H. Norstein] from your hand or trash without paying the cost"
+      # No-op when the union pick is declined (PASS leaves play_pick unbound).
+      - play_union_bound_free: { binding: play_pick }
+      # "Then, add this card to the hand." (Mandatory — runs whether or not a
+      # card was played.)
+      - add_this_option_to_hand: {}
