@@ -114,6 +114,13 @@ pub enum StepSpec {
     ShuffleSecurity(PlayerArg),
     RevealTopDeck(RevealArgs),
     PlaceRemainderOnDeck(PlaceRemainderArgs),
+    /// collapse-dsl-step-idioms §2 — the reveal-search idiom as one composite
+    /// verb. Lowers to the existing sequence (reveal_top_deck → a single
+    /// `select_reveal_buckets` over all buckets → per-bucket reveal-move →
+    /// place_remainder_on_deck); each bucket is an RL-visible pick honoring its
+    /// `optional`. Cross-bucket de-dup is always on (a revealed card lands in
+    /// at most one bucket). See `RevealSearchArgs`.
+    RevealSearch(RevealSearchArgs),
     /// Phase 2 Track E (2026-05-17): pick one card from the current reveal
     /// pool and route it to a single typed destination. Ergonomic combo of
     /// `select_reveal` + `{add_to_hand_from_reveal,return_to_deck_from_reveal,
@@ -427,6 +434,7 @@ impl Serialize for StepSpec {
             StepSpec::ShuffleSecurity(v) => kv!(s, "shuffle_security", v),
             StepSpec::RevealTopDeck(v) => kv!(s, "reveal_top_deck", v),
             StepSpec::PlaceRemainderOnDeck(v) => kv!(s, "place_remainder_on_deck", v),
+            StepSpec::RevealSearch(v) => kv!(s, "reveal_search", v),
             StepSpec::ChooseFromReveal(v) => kv!(s, "choose_from_reveal", v),
             StepSpec::OrderRemainder(v) => kv!(s, "order_remainder", v),
             // Field / permanent
@@ -701,6 +709,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "shuffle_security" => StepSpec::ShuffleSecurity(map.next_value()?),
             "reveal_top_deck" => StepSpec::RevealTopDeck(map.next_value()?),
             "place_remainder_on_deck" => StepSpec::PlaceRemainderOnDeck(map.next_value()?),
+            "reveal_search" => StepSpec::RevealSearch(map.next_value()?),
             "choose_from_reveal" => StepSpec::ChooseFromReveal(map.next_value()?),
             "order_remainder" => StepSpec::OrderRemainder(map.next_value()?),
 
@@ -934,6 +943,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "shuffle_security",
                         "reveal_top_deck",
                         "place_remainder_on_deck",
+                        "reveal_search",
                         "choose_from_reveal",
                         "order_remainder",
                         "delete_permanent",
@@ -1587,6 +1597,65 @@ pub struct RevealArgs {
 pub struct PlaceRemainderArgs {
     pub of: PlayerRef,
     pub position: StackPosition,
+}
+
+/// collapse-dsl-step-idioms §2 — args for the `reveal_search` composite.
+///
+/// ```yaml
+/// - reveal_search:
+///     of: you
+///     count: 4
+///     buckets:
+///       - { filter: { any_of: [{ name_contains: "Garurumon" }, { trait_has: "X Antibody" }] },
+///           to: hand, max: 2, prompt: "Add 2 [Garurumon]/[X Antibody] cards to hand" }
+///     remainder: bottom
+/// ```
+///
+/// Lowers to `reveal_top_deck { count } → select_reveal_buckets { buckets } →
+/// per-bucket reveal-move → place_remainder_on_deck { position }`. A bucket's
+/// `to` routes its picks (hand → `add_to_hand_from_reveal`, trash →
+/// `trash_from_reveal`, deck → `return_to_deck_from_reveal` at the deck
+/// bottom). A non-`optional` bucket forces picking `max` cards (or all matching
+/// if fewer); `optional` lets the player pick 0..=max.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RevealSearchArgs {
+    pub of: PlayerRef,
+    pub count: u8,
+    pub buckets: Vec<RevealSearchBucket>,
+    pub remainder: RevealRemainder,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RevealSearchBucket {
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
+    pub to: RevealSearchDest,
+    pub max: u8,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+}
+
+/// Destination zone for a `reveal_search` bucket's picks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RevealSearchDest {
+    Hand,
+    Trash,
+    /// Bottom of the owner's deck.
+    Deck,
+}
+
+/// Where the un-picked remainder of the reveal pool goes. `choose` (a
+/// player-elected top/bottom) is deferred to §3's `StackPosition::Choice`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RevealRemainder {
+    Top,
+    Bottom,
 }
 
 /// Phase 2 Track E (2026-05-17): args for `choose_from_reveal`.

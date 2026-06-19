@@ -2215,6 +2215,46 @@ fn compile_step(
             of: compile_player_ref(a.of),
             position: compile_stack_position(a.position),
         },
+        S::RevealSearch(a) => {
+            use crate::compiled::{CompiledRevealRemainder, CompiledRevealSearchBucket, CompiledRevealSearchDest};
+            use crate::step::{RevealRemainder, RevealSearchDest};
+            if a.buckets.is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.reveal_search.buckets"),
+                    message: "reveal_search requires at least one bucket".to_string(),
+                });
+            }
+            CompiledStep::RevealSearch {
+                of: compile_player_ref(a.of),
+                count: a.count,
+                buckets: a
+                    .buckets
+                    .iter()
+                    .enumerate()
+                    .map(|(i, b)| CompiledRevealSearchBucket {
+                        filter: compile_predicate(
+                            &b.filter,
+                            &format!("{prefix}.buckets[{i}].filter"),
+                            card_id,
+                            errors,
+                        ),
+                        to: match b.to {
+                            RevealSearchDest::Hand => CompiledRevealSearchDest::Hand,
+                            RevealSearchDest::Trash => CompiledRevealSearchDest::Trash,
+                            RevealSearchDest::Deck => CompiledRevealSearchDest::Deck,
+                        },
+                        max: b.max,
+                        optional: b.optional,
+                        prompt: b.prompt.clone(),
+                    })
+                    .collect(),
+                remainder: match a.remainder {
+                    RevealRemainder::Top => CompiledRevealRemainder::Top,
+                    RevealRemainder::Bottom => CompiledRevealRemainder::Bottom,
+                },
+            }
+        }
         S::ChooseFromReveal(a) => CompiledStep::ChooseFromReveal {
             of: compile_player_ref(a.of),
             filter: compile_predicate(

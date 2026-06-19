@@ -1181,6 +1181,17 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         position: CompiledStackPosition,
     },
+    /// collapse §2 `reveal_search` composite. The executor expands this into
+    /// the existing sequence at run time (reveal_top_deck → a single
+    /// `select_reveal_buckets` over all buckets → per-bucket reveal-move →
+    /// place_remainder_on_deck). Pure data → deterministic expansion
+    /// (cloneable-aligned; reuses the existing reveal-bucket selection).
+    RevealSearch {
+        of: CompiledPlayerRef,
+        count: u8,
+        buckets: Vec<CompiledRevealSearchBucket>,
+        remainder: CompiledRevealRemainder,
+    },
     /// Phase 2 Track E (2026-05-17): pick one revealed card matching `filter`
     /// and route it to `destination`. Lowers as a single selection install
     /// whose callback routes the picked card to the typed destination. The
@@ -2148,6 +2159,30 @@ pub struct CompiledRevealBucket {
     pub filter: Option<CompiledPredicate>,
     pub min: u8,
     pub max: u8,
+}
+
+/// collapse §2 — a `reveal_search` bucket in compiled form.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledRevealSearchBucket {
+    pub filter: CompiledPredicate,
+    pub to: CompiledRevealSearchDest,
+    pub max: u8,
+    pub optional: bool,
+    pub prompt: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledRevealSearchDest {
+    Hand,
+    Trash,
+    /// Bottom of the owner's deck.
+    Deck,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledRevealRemainder {
+    Top,
+    Bottom,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
