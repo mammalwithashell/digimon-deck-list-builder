@@ -16,6 +16,9 @@
   justify-content: space-between;
   padding: 0 22px;
   border-bottom: 1px solid var(--line-1);
+  /* A defined header bar (parchment in light) so the breadcrumb + step text
+     don't sit on the mid-tone teal desktop, where they wash out. */
+  background: var(--surface);
   font-family: var(--font-mono);
   font-size: 12px;
 }

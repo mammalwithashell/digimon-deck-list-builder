@@ -224,3 +224,10 @@
   font: inherit;
   cursor: pointer;
 }
+
+/* Light theme: the format/mode callout uses a faint orange tint that reads as
+   teal-on-teal on the Adventure '99 desktop. Make it an opaque parchment panel
+   so its description + CHANGE link contrast. (Dark keeps the tinted glow.) */
+[data-theme="light"] .deck-select-banner {
+  background: var(--surface-raised);
+}

@@ -139,6 +139,15 @@
   font-weight: 800;
 }
 
+/* Light theme: the hero sits on the mid-tone teal desktop where the warm
+   accent (kicker) and dim grey (subtitle) wash out — use dark ink instead. */
+[data-theme="light"] .mode-select-kicker {
+  color: var(--ink-1);
+}
+[data-theme="light"] .mode-select-header p {
+  color: var(--ink-0);
+}
+
 @media (max-width: 760px) {
   .mode-select-main {
     padding: 24px 18px;
