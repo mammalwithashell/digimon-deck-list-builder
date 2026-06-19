@@ -1,6 +1,6 @@
 import type { HTMLAttributes, ReactNode } from 'react';
 
-export interface WindowProps extends HTMLAttributes<HTMLDivElement> {
+export interface WindowProps extends Omit<HTMLAttributes<HTMLDivElement>, 'title'> {
   title: ReactNode;
   /** When provided, renders a close affordance (× / beveled close box). */
   onClose?: () => void;

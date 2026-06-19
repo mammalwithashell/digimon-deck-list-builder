@@ -1,24 +1,27 @@
 import { describe, it, expect } from 'vitest';
+// @ts-expect-error @types/node is intentionally absent from the frontend tsconfig
+// (browser target); `fs` is available in the vitest Node runtime. CSS file
+// contents aren't exposed via Vite's `?raw` under vitest, so we read from disk.
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 
 /**
  * Token-completeness guardrail (add-desktop-design-system): every role token
  * defined in the dark theme block MUST also be defined in the light block, and
- * vice versa, so no token resolves empty when a theme is active.
+ * vice versa, so no token resolves empty when a theme is active. The path is
+ * relative to the package root, where `npm test` runs vitest.
  */
-const css = readFileSync(fileURLToPath(new URL('./tokens.css', import.meta.url)), 'utf8');
+const tokensCss: string = readFileSync('src/design/tokens/tokens.css', 'utf8');
 
 function rolesBetween(start: string, end: string): string[] {
-  const s = css.indexOf(start);
-  const e = css.indexOf(end);
+  const s = tokensCss.indexOf(start);
+  const e = tokensCss.indexOf(end);
   if (s === -1 || e === -1) {
     throw new Error(`tokens.css sentinel markers not found: ${start} / ${end}`);
   }
-  const block = css.slice(s + start.length, e);
+  const block = tokensCss.slice(s + start.length, e);
   // Match declared custom-property names (followed by a colon), not var() refs.
-  const names = block.match(/--[\w-]+(?=\s*:)/g) ?? [];
-  return [...new Set(names)].sort();
+  const names: string[] = block.match(/--[\w-]+(?=\s*:)/g) ?? [];
+  return [...new Set<string>(names)].sort();
 }
 
 const dark = rolesBetween('/* @tokens:dark:start */', '/* @tokens:dark:end */');
