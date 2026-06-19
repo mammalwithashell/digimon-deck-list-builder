@@ -62,18 +62,18 @@ export function GameLog({ logs }: GameLogProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gray-900/50 border border-gray-700 rounded overflow-hidden">
-      <div className="px-2 py-1 bg-gray-800 text-xs text-gray-400 border-b border-gray-700">
+    <div className="flex flex-col h-full bg-transparent border border-[var(--ib-line)] rounded overflow-hidden">
+      <div className="px-2 py-1 bg-[var(--ib-panel-2)] text-xs text-[var(--ib-bone-dd)] border-b border-[var(--ib-line)]">
         Game Log
       </div>
       <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
         {logs.map((log, i) => (
-          <div key={i} className="text-[11px] text-gray-400 leading-relaxed">
+          <div key={i} className="text-[11px] text-[var(--ib-bone-dd)] leading-relaxed">
             {parseLogLine(log, handleCardClick)}
           </div>
         ))}
         {logs.length === 0 && (
-          <div className="text-xs text-gray-600">No log entries yet</div>
+          <div className="text-xs text-[var(--ib-bone-dd)]">No log entries yet</div>
         )}
         <div ref={endRef} />
       </div>

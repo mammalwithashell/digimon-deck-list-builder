@@ -2,6 +2,7 @@ import { Card } from '@/components/shared/Card';
 import { GamePhase, type PendingSelection, type PermanentInfo } from '@/types/game';
 import { SELECTION } from '@/utils/constants';
 import { isSourceSelectAction, sourceSelectionCards } from '@/utils/sourceSelection';
+import { usePeekStore } from '@/stores/peekStore';
 
 interface SelectionPanelProps {
   currentPhase: GamePhase;
@@ -54,6 +55,7 @@ export function SelectionPanel({
   localPlayer,
   onInspectCard,
 }: SelectionPanelProps) {
+  const peeking = usePeekStore((s) => s.peeking);
   // Only show for specific selection phases where the local player is selecting
   if (!pendingSelection) return null;
   if (pendingSelection.selectingPlayer !== localPlayer) return null;
@@ -152,20 +154,20 @@ export function SelectionPanel({
   return (
     <div
       data-testid="selection-panel"
-      className="fixed inset-0 z-40 flex items-center justify-center"
+      className={`fixed inset-0 z-40 flex items-center justify-center transition-opacity duration-150 ${peeking ? 'pointer-events-none opacity-0' : ''}`}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
       {/* Modal */}
-      <div className="relative bg-slate-800/95 rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[85vh] flex flex-col border border-slate-600/50">
+      <div className="relative bg-[var(--ib-graphite)] rounded-xl shadow-2xl max-w-4xl w-full mx-4 max-h-[85vh] flex flex-col border border-[var(--ib-line)]">
         {/* Header with gradient */}
-        <div className="bg-gradient-to-b from-slate-700/80 to-transparent px-5 py-4 border-b border-slate-600/50">
+        <div className="bg-gradient-to-b from-[var(--ib-panel-2)] to-transparent px-5 py-4 border-b border-[var(--ib-line)]">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold text-gray-100">{title}</h2>
+              <h2 className="text-base font-semibold text-[var(--ib-bone)]">{title}</h2>
               {!isEffectChoice && validCount > 0 && (
-                <span className="text-xs text-slate-400 mt-0.5">
+                <span className="text-xs text-[var(--ib-bone-dd)] mt-0.5">
                   {validCount} of {cards.length} selectable
                 </span>
               )}
@@ -174,7 +176,7 @@ export function SelectionPanel({
               <button
                 data-testid="selection-decline"
                 onClick={() => onAction(SELECTION.DECLINE)}
-                className="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white text-sm font-medium rounded-lg transition-colors"
+                className="px-4 py-2 bg-[var(--ib-panel-2)] hover:opacity-90 text-[var(--ib-bone)] text-sm font-medium rounded-lg border border-[var(--ib-line)] transition-colors"
               >
                 Decline
               </button>
@@ -193,8 +195,8 @@ export function SelectionPanel({
                   onClick={() => entry.isValid ? onAction(entry.actionId) : undefined}
                   className={`flex flex-col items-center gap-2 p-3 rounded-lg border-2 transition-all ${
                     entry.isValid
-                      ? 'border-cyan-500/50 hover:border-cyan-400 hover:shadow-[0_0_16px_rgba(34,211,238,0.3)] cursor-pointer bg-slate-700/50 hover:bg-slate-600/50'
-                      : 'border-slate-700 opacity-40 cursor-not-allowed'
+                      ? 'border-[var(--ib-opp)] hover:border-[var(--ib-opp)] hover:shadow-[0_0_16px_var(--ib-opp-soft)] cursor-pointer bg-[var(--ib-panel-2)]'
+                      : 'border-[var(--ib-line)] opacity-40 cursor-not-allowed'
                   }`}
                 >
                   <Card
@@ -203,7 +205,7 @@ export function SelectionPanel({
                     onContextMenu={inspectOnRightClick(entry.cardId)}
                   />
                   {entry.label && (
-                    <span className="text-xs text-slate-200 text-center max-w-[120px] leading-tight">
+                    <span className="text-xs text-[var(--ib-bone-d)] text-center max-w-[120px] leading-tight">
                       {entry.label}
                     </span>
                   )}

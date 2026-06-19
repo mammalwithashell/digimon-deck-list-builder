@@ -31,6 +31,7 @@ import { GameLogDrawer } from '@/components/game/GameLogDrawer';
 import { SecurityRevealOverlay } from '@/components/board/SecurityRevealOverlay';
 import { EffectPopup } from '@/components/game/EffectPopup';
 import { KeywordPromptDialog } from '@/components/game/KeywordPromptDialog';
+import { PeekButton } from '@/components/game/PeekButton';
 import { DragOverlayCard } from '@/components/game/DragOverlayCard';
 import { useWebSocketGame, type UseWebSocketGameOptions } from '@/hooks/useWebSocketGame';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
@@ -893,11 +894,11 @@ export function GamePage() {
   if (!store.gameId) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] p-8 gap-6">
-        <h1 className="text-2xl font-bold text-gray-100">Start a Game</h1>
+        <h1 className="text-2xl font-bold text-[var(--ink-0)]">Start a Game</h1>
 
         <div className="flex flex-wrap gap-3 items-end justify-center">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Your Deck</label>
+            <label className="block text-sm text-[var(--ink-1)] mb-1">Your Deck</label>
             <select
               value={selectedDeckId}
               onChange={(e) => {
@@ -906,7 +907,7 @@ export function GamePage() {
                   autoSelectOpponentDeck(e.target.value);
                 }
               }}
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
+              className="px-3 py-2 bg-[var(--surface-raised)] border border-[var(--line-1)] rounded text-[var(--ink-0)]"
             >
               <option value="">Select a deck...</option>
               {savedDecks.map((d) => (
@@ -916,11 +917,11 @@ export function GamePage() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Opponent Deck</label>
+            <label className="block text-sm text-[var(--ink-1)] mb-1">Opponent Deck</label>
             <select
               value={opponentDeckId}
               onChange={(e) => setOpponentDeckId(e.target.value)}
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
+              className="px-3 py-2 bg-[var(--surface-raised)] border border-[var(--line-1)] rounded text-[var(--ink-0)]"
             >
               <option value="">Select a deck...</option>
               {savedDecks.map((d) => (
@@ -930,11 +931,11 @@ export function GamePage() {
           </div>
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Agent Type</label>
+            <label className="block text-sm text-[var(--ink-1)] mb-1">Agent Type</label>
             <select
               value={agentType}
               onChange={(e) => setAgentType(e.target.value)}
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
+              className="px-3 py-2 bg-[var(--surface-raised)] border border-[var(--line-1)] rounded text-[var(--ink-0)]"
             >
               <option value="greedy">Greedy Agent</option>
               <option value="random">Random Agent</option>
@@ -948,11 +949,11 @@ export function GamePage() {
 
           {IS_DESKTOP && agentType === 'trained' && (
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Model</label>
+              <label className="block text-sm text-[var(--ink-1)] mb-1">Model</label>
               <select
                 value={selectedModelId}
                 onChange={(e) => setSelectedModelId(e.target.value)}
-                className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
+                className="px-3 py-2 bg-[var(--surface-raised)] border border-[var(--line-1)] rounded text-[var(--ink-0)]"
               >
                 <option value="">Select a model…</option>
                 {localModels.map((m) => (
@@ -965,7 +966,7 @@ export function GamePage() {
           )}
 
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Shuffle Seed</label>
+            <label className="block text-sm text-[var(--ink-1)] mb-1">Shuffle Seed</label>
             <input
               value={startSeedInput}
               onChange={(e) => {
@@ -974,10 +975,10 @@ export function GamePage() {
               }}
               placeholder="Random"
               inputMode="numeric"
-              className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-gray-200"
+              className="px-3 py-2 bg-[var(--surface-raised)] border border-[var(--line-1)] rounded text-[var(--ink-0)]"
             />
             {startSeedError && (
-              <p className="mt-1 max-w-[220px] text-xs text-yellow-300">{startSeedError}</p>
+              <p className="mt-1 max-w-[220px] text-xs text-[var(--warn)]">{startSeedError}</p>
             )}
           </div>
 
@@ -989,7 +990,7 @@ export function GamePage() {
               || starting
               || (agentType === 'trained' && !selectedModelId)
             }
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 disabled:opacity-50 text-white font-medium rounded"
+            className="px-6 py-2 bg-[var(--accent)] hover:opacity-90 disabled:opacity-50 text-[var(--accent-ink)] font-medium rounded"
           >
             {starting ? 'Starting...' : 'Start Game'}
           </button>
@@ -1267,8 +1268,8 @@ export function GamePage() {
 
         {/* Action choice dialog (Play / Digivolve / DNA Digivolve) */}
         {actionChoice && (
-          <div className="shrink-0 flex items-center justify-center gap-3 py-2 bg-gray-800 border-t border-gray-600">
-            <span className="text-sm text-gray-300">Choose action:</span>
+          <div className="shrink-0 flex items-center justify-center gap-3 py-2 bg-[var(--ib-graphite)] border-t border-[var(--ib-line)]">
+            <span className="text-sm text-[var(--ib-bone-d)]">Choose action:</span>
             {actionChoice.canPlay && (
               <button
                 onClick={handleActionChoicePlay}
@@ -1414,6 +1415,10 @@ export function GamePage() {
         onAction={handleAction}
         localPlayer={1}
       />
+
+      {/* Peek toggle — hides the blocking decision overlays so the player can
+          read the board before committing to a choice. */}
+      {store.pendingSelection?.selectingPlayer === 1 && !store.isGameOver && <PeekButton />}
     </div>
   );
 }

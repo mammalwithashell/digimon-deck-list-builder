@@ -12,6 +12,14 @@ body {
   --ib-obsidian: oklch(0.10 0.012 250);
   --ib-graphite: oklch(0.16 0.012 250);
   --ib-graphite-2: oklch(0.21 0.012 250);
+  /* Furniture surfaces (slots, tags, gauge, piles) by depth band. Dark = the
+     obsidian/graphite values the board rules used to hardcode; light re-points
+     them to parchment (see the [data-theme="light"] block). The literals are
+     converted to `oklch(from var(--ib-panel*) l c h / A)` so each keeps its
+     own alpha while the L/C/H follow the theme. */
+  --ib-panel: oklch(0.11 0.012 250);
+  --ib-panel-2: oklch(0.17 0.012 250);
+  --ib-panel-3: oklch(0.21 0.012 250);
   --ib-line: oklch(0.40 0.012 250 / 0.72);
   --ib-bone: oklch(0.96 0.012 230);
   --ib-bone-d: oklch(0.72 0.012 230);
@@ -23,6 +31,91 @@ body {
   --ib-horizon: oklch(0.97 0.02 220);
   --ib-horizon-soft: oklch(0.97 0.02 220 / 0.44);
   --ib-warn: oklch(0.82 0.17 90);
+}
+
+/* ── Light "Adventure '99" board palette ──────────────────────────────────
+   The whole board is driven by the --ib-* vars above (fixed dark in :root for
+   the "Digi-OS" look). Re-point them for light theme — muted-teal felt,
+   parchment panels, dark ink, deepened orange/blue accents — then fix the few
+   hardcoded overlays (white grid / black scanlines+vignette / white binary /
+   bright horizon glow) that a var swap alone can't reach. Dark is untouched. */
+[data-theme="light"] {
+  --ib-obsidian: oklch(0.53 0.055 200);
+  --ib-graphite: oklch(0.86 0.014 95);
+  --ib-graphite-2: oklch(0.79 0.018 95);
+  --ib-panel: oklch(0.83 0.016 95);
+  --ib-panel-2: oklch(0.88 0.014 95);
+  --ib-panel-3: oklch(0.92 0.012 95);
+  --ib-line: oklch(0.32 0.012 250 / 0.6);
+  --ib-bone: oklch(0.22 0.01 250);
+  --ib-bone-d: oklch(0.34 0.01 250);
+  --ib-bone-dd: oklch(0.46 0.01 250);
+  --ib-player: oklch(0.58 0.17 45);
+  --ib-player-soft: oklch(0.58 0.17 45 / 0.18);
+  --ib-opp: oklch(0.50 0.13 250);
+  --ib-opp-soft: oklch(0.50 0.13 250 / 0.16);
+  --ib-horizon: oklch(0.34 0.02 220);
+  --ib-horizon-soft: oklch(0.34 0.02 220 / 0.32);
+  --ib-warn: oklch(0.55 0.15 70);
+}
+
+[data-theme="light"] .ib-board__mat {
+  background:
+    radial-gradient(120% 12% at 50% 50%, var(--ib-horizon-soft), transparent 62%),
+    radial-gradient(56% 48% at 50% 20%, var(--ib-opp-soft), transparent 72%),
+    radial-gradient(56% 48% at 50% 82%, var(--ib-player-soft), transparent 72%),
+    linear-gradient(to right, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.05) 1px, transparent 1px),
+    var(--ib-obsidian);
+  background-size: auto, auto, auto, 32px 32px, 32px 32px, auto;
+}
+[data-theme="light"] .ib-board__mat::after {
+  opacity: 0;
+}
+[data-theme="light"] .ib-board__scanlines {
+  background: none;
+}
+[data-theme="light"] .ib-board__vignette {
+  background: radial-gradient(ellipse 88% 92% at 50% 50%, transparent 64%, rgba(0, 0, 0, 0.16) 100%);
+}
+[data-theme="light"] .ib-board__binary {
+  color: rgba(0, 0, 0, 0.05);
+}
+[data-theme="light"] .ib-board__horizon {
+  background: linear-gradient(to right, transparent, var(--ib-horizon-soft), var(--ib-horizon), var(--ib-horizon-soft), transparent);
+}
+[data-theme="light"] .ib-board__horizon::before {
+  background: linear-gradient(to right, transparent, var(--ib-horizon-soft), var(--ib-horizon-soft), var(--ib-horizon-soft), transparent);
+  opacity: 0.5;
+}
+
+/* Shared card-effect text — Mono Body highlighting for the in-game card
+   inspector (CardEffectText). The deck-builder analyzer renders the same chips
+   via formatEffect scoped under .bld-preview-effect; this is its inspector
+   counterpart, sized for the dark floating overlay. */
+.card-effect-text {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: #cdd6e2;
+}
+.card-effect-text .tm {
+  background: #1a1813;
+  color: #f4c81f;
+  font-weight: 700;
+  padding: 0 5px;
+}
+.card-effect-text .rf {
+  color: #9b8cff;
+}
+.card-effect-text .kw {
+  display: inline-block;
+  background: var(--ib-player);
+  color: #1a0d02;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 2px;
 }
 
 /* In Between board redesign */
@@ -144,7 +237,7 @@ body {
   height: 24px;
   padding: 0 10px;
   border: 1px solid var(--ib-line);
-  background: oklch(0.10 0.012 250 / 0.72);
+  background: oklch(from var(--ib-panel) l c h / 0.72);
   color: var(--ib-bone-d);
   font-family: var(--ib-font-mono);
   font-size: 10px;
@@ -161,7 +254,7 @@ body {
   height: 24px;
   padding: 0 10px;
   border: 1px solid var(--ib-line);
-  background: oklch(0.10 0.012 250 / 0.82);
+  background: oklch(from var(--ib-panel) l c h / 0.82);
   color: var(--ib-bone);
   font-family: var(--ib-font-mono);
   font-size: 10px;
@@ -213,7 +306,7 @@ body {
   min-width: 178px;
   padding: 8px 10px;
   border: 1px solid var(--ib-line);
-  background: linear-gradient(180deg, oklch(0.17 0.012 250 / 0.85), oklch(0.10 0.012 250 / 0.82));
+  background: linear-gradient(180deg, oklch(from var(--ib-panel-2) l c h / 0.85), oklch(from var(--ib-panel) l c h / 0.82));
   backdrop-filter: blur(8px);
   pointer-events: none;
 }
@@ -236,7 +329,7 @@ body {
   height: 34px;
   place-items: center;
   border: 1px solid currentColor;
-  background: oklch(0.12 0.012 250 / 0.8);
+  background: oklch(from var(--ib-panel) l c h / 0.8);
   font-family: var(--ib-font-display);
   font-weight: 700;
 }
@@ -402,8 +495,8 @@ body {
 .ib-battle-slot--empty {
   border: 1px dashed oklch(0.42 0.012 250 / 0.42);
   background:
-    linear-gradient(135deg, transparent 0 12px, oklch(0.13 0.012 250 / 0.46) 12px),
-    oklch(0.10 0.012 250 / 0.28);
+    linear-gradient(135deg, transparent 0 12px, oklch(from var(--ib-panel) l c h / 0.46) 12px),
+    oklch(from var(--ib-panel) l c h / 0.28);
 }
 
 .ib-battle-slot--empty::before,
@@ -491,7 +584,7 @@ body {
   height: 84px;
   place-items: center;
   border: 1.5px solid var(--ib-line);
-  background: oklch(0.10 0.012 250 / 0.48);
+  background: oklch(from var(--ib-panel) l c h / 0.48);
 }
 
 .ib-zone__body::before,
@@ -535,7 +628,7 @@ body {
 }
 
 .ib-zone__body--deck {
-  background: linear-gradient(145deg, oklch(0.22 0.012 250 / 0.82), oklch(0.10 0.012 250 / 0.75));
+  background: linear-gradient(145deg, oklch(from var(--ib-panel-3) l c h / 0.82), oklch(from var(--ib-panel) l c h / 0.75));
 }
 
 .ib-zone__body--trash {
@@ -607,7 +700,7 @@ body {
   width: 5px;
   height: 18px;
   border: 1px solid currentColor;
-  background: oklch(0.10 0.012 250 / 0.7);
+  background: oklch(from var(--ib-panel) l c h / 0.7);
   opacity: 0.66;
 }
 
@@ -692,7 +785,7 @@ body {
   height: clamp(36px, 4.9vw, 56px);
   place-items: center;
   border: 1px solid var(--ib-line);
-  background: oklch(0.10 0.012 250 / 0.86);
+  background: oklch(from var(--ib-panel) l c h / 0.86);
   color: var(--ib-bone-dd);
   clip-path: polygon(14% 0, 86% 0, 100% 50%, 86% 100%, 14% 100%, 0 50%);
   font-family: var(--ib-font-mono);
@@ -773,7 +866,7 @@ body {
   place-items: center;
   border: 0;
   color: var(--ib-bone);
-  background: oklch(0.10 0.012 250 / 0.88);
+  background: oklch(from var(--ib-panel) l c h / 0.88);
   clip-path: polygon(8% 0, 100% 0, 100% 100%, 0 100%, 0 30%);
   font-family: var(--ib-font-display);
   font-size: 14px;
@@ -901,7 +994,7 @@ body {
   gap: 8px;
   padding: 6px 12px;
   border: 1px solid var(--ib-line);
-  background: oklch(0.10 0.012 250 / 0.9);
+  background: oklch(from var(--ib-panel) l c h / 0.9);
   font-family: var(--ib-font-mono);
   text-transform: uppercase;
   pointer-events: none;
@@ -934,7 +1027,7 @@ body {
   gap: 6px;
   padding: 5px 9px;
   border: 1px solid var(--ib-line);
-  background: oklch(0.10 0.012 250 / 0.88);
+  background: oklch(from var(--ib-panel) l c h / 0.88);
   color: var(--ib-bone-dd);
   font-family: var(--ib-font-mono);
   font-size: 10px;

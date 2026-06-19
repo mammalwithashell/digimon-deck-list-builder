@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import { useMatchmaking } from '@/hooks/useMatchmaking';
 import * as lobbyApi from '@/api/lobbyApi';
@@ -11,6 +11,14 @@ import type { DeckSummary } from '@/types/deck';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 const decks = IS_DESKTOP ? deckStore : deckApiMod;
+
+// Shared token-based control styles (Adventure '99 / Digi-OS theming).
+const FIELD =
+  'border border-[var(--line-1)] bg-[var(--surface-raised)] px-3 py-2 text-[var(--ink-0)] shadow-[inset_1.5px_1.5px_0_var(--bevel-lo),inset_-1px_-1px_0_var(--bevel-hi)]';
+const PRIMARY_BTN =
+  'bg-[var(--accent)] text-[var(--accent-ink)] shadow-[var(--bevel-shadow)] hover:opacity-90 disabled:opacity-50';
+const DANGER_BTN =
+  'bg-[var(--danger)] text-white shadow-[var(--bevel-shadow)] hover:opacity-90 disabled:opacity-50';
 
 export function LobbyPage() {
   const navigate = useNavigate();
@@ -155,7 +163,7 @@ export function LobbyPage() {
     <select
       value={value}
       onChange={(e) => onChange(e.target.value)}
-      className="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 text-white"
+      className={`w-full ${FIELD}`}
     >
       <option value="">Select a deck...</option>
       {savedDecks.map((d) => (
@@ -168,155 +176,163 @@ export function LobbyPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
-      <h1 className="mb-6 text-2xl font-bold text-white">Multiplayer Lobby</h1>
+      <Link
+        to="/"
+        className="mb-4 inline-flex items-center gap-2 border border-[var(--line-1)] bg-[var(--surface)] px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-[var(--ink-1)] shadow-[var(--bevel-shadow)] transition-colors hover:text-[var(--ink-0)]"
+      >
+        ← Back to Launcher
+      </Link>
 
-      {/* Tabs */}
-      <div className="mb-6 flex gap-2">
-        {(['play', 'create', 'join'] as const).map((t) => (
-          <button
-            key={t}
-            onClick={() => setTab(t)}
-            className={`rounded px-4 py-2 text-sm font-medium ${
-              tab === t
-                ? 'bg-blue-600 text-white'
-                : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-            }`}
-          >
-            {t === 'play' ? 'Play' : t === 'create' ? 'Create Game' : 'Join Game'}
-          </button>
-        ))}
-      </div>
+      <div className="border border-[var(--line-1)] bg-[var(--surface)] p-6 shadow-[var(--bevel-shadow)]">
+        <h1 className="mb-6 text-2xl font-bold text-[var(--ink-0)]">Multiplayer Lobby</h1>
 
-      {/* Play (matchmaking queue) Tab */}
-      {tab === 'play' && (
-        <PlayTab
-          decks={savedDecks}
-          queueType={playQueueType}
-          onQueueType={setPlayQueueType}
-          availableQueues={availableQueues}
-          deckId={playDeckId}
-          onDeckId={setPlayDeckId}
-          onQueue={handleQueue}
-          onCancel={() => void matchmaking.cancel()}
-          status={matchmaking.status}
-          match={matchmaking.match}
-          waitedSeconds={localWaited}
-          ratingWindow={matchmaking.ratingWindow}
-          errorMsg={matchmaking.error}
-        />
-      )}
+        {/* Tabs */}
+        <div className="mb-6 flex gap-2">
+          {(['play', 'create', 'join'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`px-4 py-2 text-sm font-medium shadow-[var(--bevel-shadow)] ${
+                tab === t
+                  ? 'bg-[var(--accent)] text-[var(--accent-ink)]'
+                  : 'bg-[var(--surface-raised)] text-[var(--ink-1)] hover:text-[var(--ink-0)]'
+              }`}
+            >
+              {t === 'play' ? 'Play' : t === 'create' ? 'Create Game' : 'Join Game'}
+            </button>
+          ))}
+        </div>
 
-      {/* Create Tab */}
-      {tab === 'create' && (
-        <div className="space-y-4">
-          {createdCode ? (
-            <div className="rounded border border-green-600 bg-green-900/30 p-6 text-center">
-              <p className="mb-2 text-sm text-gray-300">Share this code with your opponent:</p>
-              <p className="mb-4 font-mono text-4xl font-bold tracking-widest text-green-400">
-                {createdCode}
-              </p>
-              <p className="mb-4 text-sm text-gray-400">
-                {opponentJoined
-                  ? 'Opponent joined! Redirecting to game...'
-                  : 'Waiting for opponent to join...'}
-              </p>
-              <div className="flex justify-center gap-3">
-                <button
-                  onClick={handleCancel}
-                  disabled={opponentJoined}
-                  className="rounded bg-red-700 px-4 py-2 text-white hover:bg-red-600 disabled:opacity-50"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div>
-                <label className="mb-1 block text-sm text-gray-300">Your Deck</label>
-                <DeckSelect value={selectedDeckId} onChange={setSelectedDeckId} />
-              </div>
-              <div className="flex items-center gap-4">
-                <label className="flex items-center gap-2 text-sm text-gray-300">
-                  <input
-                    type="checkbox"
-                    checked={isPublic}
-                    onChange={(e) => setIsPublic(e.target.checked)}
-                  />
-                  List in public lobby
-                </label>
-                <label className="flex items-center gap-2 text-sm text-gray-300">
-                  <input
-                    type="checkbox"
-                    checked={allowSpectators}
-                    onChange={(e) => setAllowSpectators(e.target.checked)}
-                  />
-                  Allow spectators
-                </label>
-              </div>
-              {allowSpectators && (
-                <div>
-                  <label className="mb-1 block text-sm text-gray-300">Spectator Mode</label>
-                  <select
-                    value={spectatorMode}
-                    onChange={(e) => setSpectatorMode(e.target.value as 'hidden' | 'open')}
-                    className="rounded border border-gray-600 bg-gray-700 px-3 py-2 text-white"
+        {/* Play (matchmaking queue) Tab */}
+        {tab === 'play' && (
+          <PlayTab
+            decks={savedDecks}
+            queueType={playQueueType}
+            onQueueType={setPlayQueueType}
+            availableQueues={availableQueues}
+            deckId={playDeckId}
+            onDeckId={setPlayDeckId}
+            onQueue={handleQueue}
+            onCancel={() => void matchmaking.cancel()}
+            status={matchmaking.status}
+            match={matchmaking.match}
+            waitedSeconds={localWaited}
+            ratingWindow={matchmaking.ratingWindow}
+            errorMsg={matchmaking.error}
+          />
+        )}
+
+        {/* Create Tab */}
+        {tab === 'create' && (
+          <div className="space-y-4">
+            {createdCode ? (
+              <div className="border border-[var(--good)] bg-[var(--surface-raised)] p-6 text-center">
+                <p className="mb-2 text-sm text-[var(--ink-1)]">Share this code with your opponent:</p>
+                <p className="mb-4 font-mono text-4xl font-bold tracking-widest text-[var(--good)]">
+                  {createdCode}
+                </p>
+                <p className="mb-4 text-sm text-[var(--ink-2)]">
+                  {opponentJoined
+                    ? 'Opponent joined! Redirecting to game...'
+                    : 'Waiting for opponent to join...'}
+                </p>
+                <div className="flex justify-center gap-3">
+                  <button
+                    onClick={handleCancel}
+                    disabled={opponentJoined}
+                    className={`px-4 py-2 ${DANGER_BTN}`}
                   >
-                    <option value="hidden">Hidden (hands/security hidden)</option>
-                    <option value="open">Open (full visibility)</option>
-                  </select>
+                    Cancel
+                  </button>
                 </div>
-              )}
-              <button
-                onClick={handleCreate}
-                disabled={!selectedDeckId || creating}
-                className="rounded bg-blue-600 px-6 py-2 text-white hover:bg-blue-500 disabled:opacity-50"
-              >
-                {creating ? 'Creating...' : 'Create Game'}
-              </button>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* Join Tab */}
-      {tab === 'join' && (
-        <div className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm text-gray-300">Join Code</label>
-            <input
-              type="text"
-              value={joinCode}
-              onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-              placeholder="ABC123"
-              maxLength={6}
-              className="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 font-mono text-lg tracking-widest text-white placeholder-gray-500"
-            />
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="mb-1 block text-sm text-[var(--ink-1)]">Your Deck</label>
+                  <DeckSelect value={selectedDeckId} onChange={setSelectedDeckId} />
+                </div>
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm text-[var(--ink-1)]">
+                    <input
+                      type="checkbox"
+                      checked={isPublic}
+                      onChange={(e) => setIsPublic(e.target.checked)}
+                    />
+                    List in public lobby
+                  </label>
+                  <label className="flex items-center gap-2 text-sm text-[var(--ink-1)]">
+                    <input
+                      type="checkbox"
+                      checked={allowSpectators}
+                      onChange={(e) => setAllowSpectators(e.target.checked)}
+                    />
+                    Allow spectators
+                  </label>
+                </div>
+                {allowSpectators && (
+                  <div>
+                    <label className="mb-1 block text-sm text-[var(--ink-1)]">Spectator Mode</label>
+                    <select
+                      value={spectatorMode}
+                      onChange={(e) => setSpectatorMode(e.target.value as 'hidden' | 'open')}
+                      className={FIELD}
+                    >
+                      <option value="hidden">Hidden (hands/security hidden)</option>
+                      <option value="open">Open (full visibility)</option>
+                    </select>
+                  </div>
+                )}
+                <button
+                  onClick={handleCreate}
+                  disabled={!selectedDeckId || creating}
+                  className={`px-6 py-2 ${PRIMARY_BTN}`}
+                >
+                  {creating ? 'Creating...' : 'Create Game'}
+                </button>
+              </>
+            )}
           </div>
-          <div>
-            <label className="mb-1 block text-sm text-gray-300">Your Deck</label>
-            <DeckSelect value={joinDeckId} onChange={setJoinDeckId} />
-          </div>
-          <button
-            onClick={() => handleJoin(joinCode, joinDeckId)}
-            disabled={!joinCode || !joinDeckId || joining}
-            className="rounded bg-green-600 px-6 py-2 text-white hover:bg-green-500 disabled:opacity-50"
-          >
-            {joining ? 'Joining...' : 'Join Game'}
-          </button>
-        </div>
-      )}
+        )}
 
+        {/* Join Tab */}
+        {tab === 'join' && (
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-sm text-[var(--ink-1)]">Join Code</label>
+              <input
+                type="text"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                placeholder="ABC123"
+                maxLength={6}
+                className={`w-full font-mono text-lg tracking-widest placeholder-[var(--ink-3)] ${FIELD}`}
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-sm text-[var(--ink-1)]">Your Deck</label>
+              <DeckSelect value={joinDeckId} onChange={setJoinDeckId} />
+            </div>
+            <button
+              onClick={() => handleJoin(joinCode, joinDeckId)}
+              disabled={!joinCode || !joinDeckId || joining}
+              className={`px-6 py-2 ${PRIMARY_BTN}`}
+            >
+              {joining ? 'Joining...' : 'Join Game'}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 
 function tierBadge(tier: string | null | undefined): { label: string; className: string } {
-  if (tier === 'meta') return { label: 'meta', className: 'bg-red-700 text-red-100' };
-  if (tier === 'rogue') return { label: 'rogue', className: 'bg-amber-700 text-amber-100' };
-  if (tier === 'jank') return { label: 'jank', className: 'bg-emerald-700 text-emerald-100' };
-  return { label: 'unclassified', className: 'bg-gray-700 text-gray-300' };
+  if (tier === 'meta') return { label: 'meta', className: 'border border-[var(--danger)] text-[var(--danger)]' };
+  if (tier === 'rogue') return { label: 'rogue', className: 'border border-[var(--warn)] text-[var(--warn)]' };
+  if (tier === 'jank') return { label: 'jank', className: 'border border-[var(--good)] text-[var(--good)]' };
+  return { label: 'unclassified', className: 'border border-[var(--line-1)] text-[var(--ink-2)]' };
 }
 
 
@@ -365,14 +381,14 @@ function PlayTab(props: PlayTabProps) {
       ? `Searching ranked — window ±${ratingWindow ?? 50}`
       : `Searching ${QUEUE_LABELS[queueType].toLowerCase()}...`;
     return (
-      <div className="rounded border border-blue-600 bg-blue-900/20 p-8 text-center">
-        <div className="mb-2 text-lg font-medium text-white">{label}</div>
-        <div className="mb-4 font-mono text-3xl text-blue-300">
+      <div className="border border-[var(--accent)] bg-[var(--surface-raised)] p-8 text-center">
+        <div className="mb-2 text-lg font-medium text-[var(--ink-0)]">{label}</div>
+        <div className="mb-4 font-mono text-3xl text-[var(--accent)]">
           {Math.floor(waitedSeconds / 60)}:{String(waitedSeconds % 60).padStart(2, '0')}
         </div>
         <button
           onClick={onCancel}
-          className="rounded bg-red-700 px-4 py-2 text-white hover:bg-red-600"
+          className={`px-4 py-2 ${DANGER_BTN}`}
         >
           Cancel
         </button>
@@ -382,12 +398,12 @@ function PlayTab(props: PlayTabProps) {
 
   if (status === 'matched' && match) {
     return (
-      <div className="rounded border border-green-600 bg-green-900/20 p-8 text-center">
-        <div className="mb-2 text-lg font-medium text-white">Match found!</div>
+      <div className="border border-[var(--good)] bg-[var(--surface-raised)] p-8 text-center">
+        <div className="mb-2 text-lg font-medium text-[var(--ink-0)]">Match found!</div>
         {match.opponent.display_name ? (
-          <p className="mb-2 text-gray-300">vs {match.opponent.display_name}</p>
+          <p className="mb-2 text-[var(--ink-1)]">vs {match.opponent.display_name}</p>
         ) : null}
-        <p className="text-sm text-gray-400">Connecting to game…</p>
+        <p className="text-sm text-[var(--ink-2)]">Connecting to game…</p>
       </div>
     );
   }
@@ -395,39 +411,39 @@ function PlayTab(props: PlayTabProps) {
   return (
     <div className="space-y-4">
       {isTerminal && errorMsg ? (
-        <div className="rounded border border-red-600 bg-red-900/20 p-3 text-sm text-red-200">
+        <div className="border border-[var(--danger)] bg-[var(--surface-raised)] p-3 text-sm text-[var(--danger)]">
           {errorMsg}
         </div>
       ) : null}
 
       <div>
-        <label className="mb-1 block text-sm text-gray-300">Queue</label>
+        <label className="mb-1 block text-sm text-[var(--ink-1)]">Queue</label>
         <div className="flex gap-2">
           {availableQueues.map((q) => (
             <button
               key={q}
               onClick={() => onQueueType(q)}
-              className={`flex-1 rounded px-4 py-2 text-sm font-medium ${
+              className={`flex-1 px-4 py-2 text-sm font-medium shadow-[var(--bevel-shadow)] ${
                 queueType === q
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  ? 'bg-[var(--accent)] text-[var(--accent-ink)]'
+                  : 'bg-[var(--surface-raised)] text-[var(--ink-1)] hover:text-[var(--ink-0)]'
               }`}
             >
               {QUEUE_LABELS[q]}
             </button>
           ))}
         </div>
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-[var(--ink-3)]">
           {QUEUE_DESCRIPTIONS[queueType]}
         </p>
       </div>
 
       <div>
-        <label className="mb-1 block text-sm text-gray-300">Your Deck</label>
+        <label className="mb-1 block text-sm text-[var(--ink-1)]">Your Deck</label>
         <select
           value={deckId}
           onChange={(e) => onDeckId(e.target.value)}
-          className="w-full rounded border border-gray-600 bg-gray-700 px-3 py-2 text-white"
+          className={`w-full ${FIELD}`}
         >
           <option value="">Select a deck...</option>
           {decks.map((d) => (
@@ -438,13 +454,13 @@ function PlayTab(props: PlayTabProps) {
         </select>
         {selectedDeck && badge ? (
           <div className="mt-2 flex items-center gap-2 text-xs">
-            <span className={`rounded px-2 py-0.5 font-medium ${badge.className}`}>
+            <span className={`px-2 py-0.5 font-medium ${badge.className}`}>
               {badge.label}
             </span>
             {selectedDeck.meta_archetype ? (
-              <span className="text-gray-400">→ {selectedDeck.meta_archetype}</span>
+              <span className="text-[var(--ink-2)]">→ {selectedDeck.meta_archetype}</span>
             ) : null}
-            <span className="text-gray-500">· format: {selectedDeck.game_mode}</span>
+            <span className="text-[var(--ink-3)]">· format: {selectedDeck.game_mode}</span>
           </div>
         ) : null}
       </div>
@@ -452,7 +468,7 @@ function PlayTab(props: PlayTabProps) {
       <button
         onClick={onQueue}
         disabled={!deckId}
-        className="w-full rounded bg-blue-600 px-6 py-3 text-base font-medium text-white hover:bg-blue-500 disabled:opacity-50"
+        className={`w-full px-6 py-3 text-base font-medium ${PRIMARY_BTN}`}
       >
         Find Match
       </button>

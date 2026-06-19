@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import type { ReactNode } from 'react';
+import { ThemeSwitch } from '@/design/components/ThemeSwitch';
 
 interface LauncherShellProps {
   buildVersion: string;
@@ -39,10 +40,7 @@ export function LauncherShell({
             </nav>
             <nav className="launcher-side-section" aria-label="Tools">
               <h5>Tools</h5>
-              <Link className="launcher-nav-item" to="/models">AI Models</Link>
-              <Link className="launcher-nav-item" to="/lobby">Online Lobby</Link>
               <Link className="launcher-nav-item" to="/deckbuilder/new?import=1">Import</Link>
-              <Link className="launcher-nav-item" to="/game">Sandbox</Link>
               <Link className="launcher-nav-item" to="/settings/graphics">Graphics</Link>
             </nav>
             <div className="launcher-side-foot">
@@ -56,6 +54,7 @@ export function LauncherShell({
               <div><span>00</span><b> Launcher</b></div>
               <div className="launcher-topbar-meta">
                 <div className="launcher-user">Signed in as {username}</div>
+                <ThemeSwitch />
               </div>
             </div>
             <div className="launcher-content">{children}</div>

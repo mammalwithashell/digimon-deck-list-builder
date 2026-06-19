@@ -4,6 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Digimon TCG Simulator</title>
+    <!-- Pre-paint theme bootstrap (add-desktop-design-system): set data-theme
+         before first paint so there's no flash of the wrong theme. The storage
+         key MUST match THEME_STORAGE_KEY in src/design/theme/themeStore.ts. -->
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem('desktop.theme');
+          if (t !== 'dark' && t !== 'light') {
+            t = 'dark';
+            localStorage.setItem('desktop.theme', t);
+          }
+          document.documentElement.setAttribute('data-theme', t);
+        } catch (e) {
+          document.documentElement.setAttribute('data-theme', 'dark');
+        }
+      })();
+    </script>
   </head>
   <body class="bg-gray-900 text-gray-100">
     <div id="root"></div>

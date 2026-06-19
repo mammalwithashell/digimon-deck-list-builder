@@ -1,34 +1,39 @@
 .deck-builder-page,
 .deck-builder-app {
-  --bld-bg-0: #07080b;
-  --bld-bg-1: #0c0e13;
-  --bld-bg-2: #11141b;
-  --bld-bg-3: #181c25;
-  --bld-bg-4: #1f2430;
-  --bld-line: #1f2330;
-  --bld-line-2: #2a3040;
-  --bld-line-3: #353c50;
-  --bld-ink-0: #f1f3f7;
-  --bld-ink-1: #c4c9d4;
-  --bld-ink-2: #858c9d;
-  --bld-ink-3: #555c6d;
-  --bld-ink-4: #353b4a;
-  --bld-player: #ff7a18;
-  --bld-player-2: #ffb05a;
-  --bld-player-glow: rgba(255, 122, 24, 0.55);
-  --bld-opp: #3aa6ff;
-  --bld-opp-2: #7fc8ff;
-  --bld-good: #4cd497;
-  --bld-warn: #ffd34a;
-  --bld-bad: #ff5b5b;
-  --bld-display: "Bebas Neue", Impact, sans-serif;
-  --bld-body: "Geist", Inter, system-ui, sans-serif;
-  --bld-mono: "JetBrains Mono", ui-monospace, monospace;
+  /* Mapped onto design-system role tokens (add-desktop-design-system) so the
+     deck builder inherits the active theme instead of the legacy navy palette. */
+  --bld-bg-0: var(--surface-bg);
+  --bld-bg-1: var(--surface);
+  --bld-bg-2: var(--surface-raised);
+  --bld-bg-3: var(--surface-raised);
+  --bld-bg-4: var(--surface-raised);
+  --bld-line: var(--line-0);
+  --bld-line-2: var(--line-1);
+  --bld-line-3: var(--line-strong);
+  --bld-ink-0: var(--ink-0);
+  --bld-ink-1: var(--ink-1);
+  --bld-ink-2: var(--ink-2);
+  --bld-ink-3: var(--ink-3);
+  --bld-ink-4: var(--ink-3);
+  --bld-player: var(--player);
+  --bld-player-2: var(--player-2);
+  --bld-player-glow: var(--player-soft);
+  --bld-opp: var(--opp);
+  --bld-opp-2: var(--opp-2);
+  --bld-good: var(--good);
+  --bld-warn: var(--warn);
+  --bld-bad: var(--danger);
+  --bld-display: var(--font-display);
+  --bld-body: var(--font-ui);
+  --bld-mono: var(--font-mono);
   /* Definite height (not min-height): the pool grid scrolls internally
      via overflow-y, which only engages when its ancestors are
      height-constrained. With min-height the .bld 1fr row sizes to the
      full card-pool content and overflow:hidden clips it unscrollably. */
-  height: calc(var(--app-vh100, 100vh) - 56px);
+  /* Fill the Layout main. (Was `--app-vh100 - 56px` for the legacy top nav,
+     which is removed on desktop — that left a strip of the teal desktop
+     showing below the builder.) */
+  height: 100%;
   background:
     radial-gradient(ellipse at 50% 0%, rgba(58, 166, 255, 0.08), transparent 50%),
     var(--bld-bg-0);
@@ -73,7 +78,7 @@
   text-decoration: none;
   text-transform: uppercase;
   transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
-  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  clip-path: polygon(var(--frame-cut) 0, 100% 0, 100% calc(100% - var(--frame-cut)), calc(100% - var(--frame-cut)) 100%, 0 100%, 0 var(--frame-cut));
 }
 
 .deck-builder-page .btn:hover {
@@ -204,7 +209,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 18px;
+  gap: 12px;
   padding: 0 18px;
   border-bottom: 1px solid var(--bld-line);
   background: var(--bld-bg-1);
@@ -225,11 +230,28 @@
   justify-content: flex-end;
 }
 
+/* Transient status notice — single-line + truncate so it never wraps into
+   the counts block. */
+.deck-builder-page .bld-notice,
+.deck-builder-app .bld-notice {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--bld-warn);
+  font-family: var(--bld-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
 .deck-builder-page .bld-top .back,
 .deck-builder-app .bld-top .back {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 5px 10px;
   color: var(--bld-ink-2);
   cursor: pointer;
   font-family: var(--bld-mono);
@@ -298,10 +320,10 @@
 
 .deck-builder-page .bld-count,
 .deck-builder-app .bld-count {
-  min-width: 60px;
-  padding: 6px 12px;
+  min-width: 44px;
+  padding: 4px 7px;
   border-right: 1px solid var(--bld-line-2);
-  color: var(--bld-ink-3);
+  color: var(--bld-ink-2);
   font-family: var(--bld-mono);
   font-size: 9px;
   letter-spacing: 0.14em;
@@ -381,9 +403,9 @@
   background: var(--bld-bg-0);
   color: var(--bld-ink-1);
   outline: none;
-  padding: 6px 8px;
+  padding: 7px 10px;
   font-family: var(--bld-mono);
-  font-size: 10px;
+  font-size: 13px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -424,13 +446,14 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border: 1px solid var(--bld-line-2);
   color: rgba(255, 255, 255, 0.62);
   cursor: pointer;
   font-family: var(--bld-mono);
-  font-size: 8px;
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .deck-builder-page .bld-colors .chip.on,
@@ -444,6 +467,22 @@
   background: var(--bld-bg-2);
   color: var(--bld-ink-2);
 }
+
+/* Each color chip wears its actual color identity. */
+.deck-builder-page .bld-colors .chip.red,
+.deck-builder-app .bld-colors .chip.red { background: #c2362a; border-color: #e0584a; color: #fff; }
+.deck-builder-page .bld-colors .chip.blue,
+.deck-builder-app .bld-colors .chip.blue { background: #2563a8; border-color: #4a8ad0; color: #fff; }
+.deck-builder-page .bld-colors .chip.yellow,
+.deck-builder-app .bld-colors .chip.yellow { background: #e0b41e; border-color: #f0cc4a; color: #1a1208; }
+.deck-builder-page .bld-colors .chip.green,
+.deck-builder-app .bld-colors .chip.green { background: #2f9e44; border-color: #52c068; color: #fff; }
+.deck-builder-page .bld-colors .chip.purple,
+.deck-builder-app .bld-colors .chip.purple { background: #7d3fc0; border-color: #a06fe0; color: #fff; }
+.deck-builder-page .bld-colors .chip.black,
+.deck-builder-app .bld-colors .chip.black { background: #1c1c22; border-color: #55555f; color: #e8e8ee; }
+.deck-builder-page .bld-colors .chip.white,
+.deck-builder-app .bld-colors .chip.white { background: #e8e6df; border-color: #ffffff; color: #1a1a14; }
 
 .deck-builder-page .bld-main,
 .deck-builder-app .bld-main {
@@ -606,8 +645,12 @@
 
 .deck-builder-page .bld-preview-meta .row .k,
 .deck-builder-app .bld-preview-meta .row .k {
-  color: var(--bld-ink-3);
+  align-self: center;
+  background: #1a1813;
+  color: #f4c81f;
+  padding: 1px 6px;
   font-size: 9px;
+  font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -615,6 +658,35 @@
 .deck-builder-page .bld-preview-meta .row .v,
 .deck-builder-app .bld-preview-meta .row .v {
   color: var(--bld-ink-0);
+}
+
+.deck-builder-page .bld-preview-title,
+.deck-builder-app .bld-preview-title {
+  padding: 10px 14px 2px;
+}
+.deck-builder-page .bld-preview-title .nm,
+.deck-builder-app .bld-preview-title .nm {
+  margin: 0;
+  color: var(--bld-ink-0);
+  font-family: var(--bld-display);
+  font-size: 20px;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+}
+.deck-builder-page .bld-preview-title .sub,
+.deck-builder-app .bld-preview-title .sub {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 3px;
+  color: var(--bld-ink-2);
+  font-family: var(--bld-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+.deck-builder-page .bld-preview-title .id,
+.deck-builder-app .bld-preview-title .id {
+  color: var(--bld-player);
 }
 
 .deck-builder-page .bld-preview-effect,
@@ -645,8 +717,31 @@
 .deck-builder-app .bld-preview-effect p {
   margin: 0 0 8px;
   color: var(--bld-ink-1);
+  font-family: "JetBrains Mono", var(--bld-mono);
   font-size: 11px;
-  line-height: 1.5;
+  line-height: 1.6;
+}
+
+/* Mono Body card-text tokens — gold-on-black timings + violet name refs. */
+.deck-builder-page .bld-preview-effect .tm,
+.deck-builder-app .bld-preview-effect .tm {
+  background: #1a1813;
+  color: #f4c81f;
+  font-weight: 700;
+  padding: 0 5px;
+}
+.deck-builder-page .bld-preview-effect .rf,
+.deck-builder-app .bld-preview-effect .rf {
+  color: #7d6bd6;
+}
+.deck-builder-page .bld-preview-effect .kw,
+.deck-builder-app .bld-preview-effect .kw {
+  display: inline-block;
+  background: var(--bld-player);
+  color: #1a0d02;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 2px;
 }
 
 .deck-builder-page .bld-pool,
@@ -1535,4 +1630,76 @@
 .deck-builder-page .bld-legal.limit {
   background: rgba(0, 0, 0, 0.6);
   color: #ffd166;
+}
+
+/* Format selector (add-deck-format-registry) — onto design tokens. */
+.deck-builder-page .deck-format-select,
+.deck-builder-app .deck-format-select {
+  background: var(--surface-raised);
+  border-color: var(--line-1);
+  color: var(--ink-0);
+}
+
+/* ── Light "Adventure '99" Win95 chrome (add-desktop-design-system) ──────────
+   Match the light launcher: beveled buttons, raised parchment windows, sunken
+   inputs. The teal desktop shows behind these parchment panels. */
+[data-theme="light"] .deck-builder-page .btn,
+[data-theme="light"] .deck-builder-app .btn,
+[data-theme="light"] .deck-builder-page .bld-top .back,
+[data-theme="light"] .deck-builder-app .bld-top .back,
+[data-theme="light"] .deck-builder-page .bld-colors .chip.all,
+[data-theme="light"] .deck-builder-app .bld-colors .chip.all,
+[data-theme="light"] .deck-builder-page .bld-deck-tabs button,
+[data-theme="light"] .deck-builder-app .bld-deck-tabs button {
+  border-color: transparent;
+  background: var(--surface);
+  box-shadow: var(--bevel-shadow);
+}
+[data-theme="light"] .deck-builder-page .btn:active,
+[data-theme="light"] .deck-builder-app .btn:active,
+[data-theme="light"] .deck-builder-page .bld-colors .chip.on,
+[data-theme="light"] .deck-builder-app .bld-colors .chip.on,
+[data-theme="light"] .deck-builder-page .bld-deck-tabs button.on,
+[data-theme="light"] .deck-builder-app .bld-deck-tabs button.on {
+  box-shadow: inset 1.5px 1.5px 0 var(--bevel-lo), inset -1.5px -1.5px 0 var(--bevel-hi);
+}
+[data-theme="light"] .deck-builder-page .bld-counts,
+[data-theme="light"] .deck-builder-app .bld-counts,
+[data-theme="light"] .deck-builder-page .bld-filters,
+[data-theme="light"] .deck-builder-app .bld-filters,
+[data-theme="light"] .deck-builder-page .bld-preview,
+[data-theme="light"] .deck-builder-app .bld-preview,
+[data-theme="light"] .deck-builder-page .bld-deck,
+[data-theme="light"] .deck-builder-app .bld-deck {
+  border-color: transparent;
+  background: var(--surface);
+  box-shadow: var(--bevel-shadow);
+}
+
+/* Page + bottom read as beige; only the card browser keeps the teal desktop. */
+[data-theme="light"] .deck-builder-page,
+[data-theme="light"] .deck-builder-app {
+  --bld-bg-0: var(--surface);
+}
+[data-theme="light"] .deck-builder-page .bld-pool,
+[data-theme="light"] .deck-builder-app .bld-pool {
+  border-color: transparent;
+  background: var(--surface-bg);
+  box-shadow: var(--bevel-shadow);
+}
+[data-theme="light"] .deck-builder-page select,
+[data-theme="light"] .deck-builder-app select,
+[data-theme="light"] .deck-builder-page .bld-filter input,
+[data-theme="light"] .deck-builder-app .bld-filter input,
+[data-theme="light"] .deck-builder-page .bld-filter select,
+[data-theme="light"] .deck-builder-app .bld-filter select,
+[data-theme="light"] .deck-builder-page .deck-format-select,
+[data-theme="light"] .deck-builder-app .deck-format-select,
+[data-theme="light"] .deck-builder-page .deck-name-input,
+[data-theme="light"] .deck-builder-app .deck-name-input,
+[data-theme="light"] .deck-builder-page .bld-top .pill,
+[data-theme="light"] .deck-builder-app .bld-top .pill {
+  border-color: transparent;
+  background: var(--surface-raised);
+  box-shadow: inset 1.5px 1.5px 0 var(--bevel-lo), inset -1.5px -1.5px 0 var(--bevel-hi);
 }

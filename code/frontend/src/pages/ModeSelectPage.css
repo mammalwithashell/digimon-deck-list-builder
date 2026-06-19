@@ -8,28 +8,28 @@
 }
 
 .mode-select-kicker {
-  color: #ffb05a;
-  font-family: var(--ib-font-mono);
+  color: var(--player-2);
+  font-family: var(--font-mono);
   letter-spacing: 0.18em;
   font-size: 12px;
 }
 
 .mode-select-header h1 {
   margin: 8px 0;
-  font-family: var(--ib-font-display);
+  font-family: var(--font-display);
   font-size: clamp(44px, 8vw, 96px);
   line-height: 0.88;
   letter-spacing: 0;
 }
 
 .mode-select-header em {
-  color: #ff7a18;
+  color: var(--player);
   font-style: normal;
 }
 
 .mode-select-header p {
-  color: rgba(245, 241, 232, 0.62);
-  font-family: var(--ib-font-mono);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
   letter-spacing: 0.14em;
 }
 
@@ -43,9 +43,9 @@
 .mode-opponent-strip button,
 .mode-card {
   text-align: left;
-  background: rgba(255, 255, 255, 0.045);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  color: #f5f1e8;
+  background: var(--surface-raised);
+  border: 1px solid var(--line-1);
+  color: var(--ink-0);
 }
 
 .mode-opponent-strip button {
@@ -57,13 +57,13 @@
 
 .mode-opponent-strip button.on,
 .mode-card.selected {
-  border-color: #ff7a18;
+  border-color: var(--player);
   box-shadow: 0 0 0 1px rgba(255, 122, 24, 0.55), 0 0 28px rgba(255, 122, 24, 0.14);
 }
 
 .mode-opponent-strip .name,
 .mode-card .name {
-  font-family: var(--ib-font-mono);
+  font-family: var(--font-mono);
   font-weight: 700;
   letter-spacing: 0.08em;
 }
@@ -73,7 +73,7 @@
 .mode-card .sub,
 .mode-card .desc,
 .mode-card .stats {
-  color: rgba(245, 241, 232, 0.6);
+  color: var(--ink-2);
 }
 
 .mode-grid {
@@ -96,14 +96,14 @@
 
 .mode-card .tag,
 .mode-card .num {
-  font-family: var(--ib-font-mono);
-  color: #ffb05a;
+  font-family: var(--font-mono);
+  color: var(--player-2);
   font-size: 12px;
 }
 
 .mode-card .name {
   font-size: 32px;
-  color: #f5f1e8;
+  color: var(--ink-0);
 }
 
 .mode-card .stats {
@@ -123,20 +123,29 @@
   gap: 16px;
   padding: 14px 18px;
   border: 1px solid rgba(255, 122, 24, 0.4);
-  background: rgba(5, 6, 8, 0.92);
+  background: var(--surface);
 }
 
 .mode-action-bar span {
-  font-family: var(--ib-font-mono);
-  color: rgba(245, 241, 232, 0.72);
+  font-family: var(--font-mono);
+  color: var(--ink-2);
 }
 
 .mode-action-bar button {
-  background: #ff7a18;
+  background: var(--player);
   color: #090604;
   border: 0;
   padding: 12px 18px;
   font-weight: 800;
+}
+
+/* Light theme: the hero sits on the mid-tone teal desktop where the warm
+   accent (kicker) and dim grey (subtitle) wash out — use dark ink instead. */
+[data-theme="light"] .mode-select-kicker {
+  color: var(--ink-1);
+}
+[data-theme="light"] .mode-select-header p {
+  color: var(--ink-0);
 }
 
 @media (max-width: 760px) {

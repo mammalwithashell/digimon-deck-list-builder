@@ -118,13 +118,13 @@ export function ImportExport({ isOpen, onClose }: ImportExportProps) {
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Paste deck list here (TTS JSON or text format)..."
-          className="w-full h-48 px-3 py-2 bg-gray-700 border border-gray-600 rounded text-sm text-gray-100 font-mono resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full h-48 px-3 py-2 bg-[var(--surface-sunken)] border border-[var(--line-1)] rounded text-sm text-[var(--ink-0)] font-mono resize-none focus:outline-none focus:ring-2 focus:ring-[var(--accent)]"
         />
-        {error && <p className="text-red-400 text-sm">{error}</p>}
+        {error && <p className="text-[var(--danger)] text-sm">{error}</p>}
         {importSuccess && warnings.length > 0 && (
           <div className="space-y-1">
-            <p className="text-green-400 text-sm font-medium">Deck imported successfully!</p>
-            <div className="text-amber-400 text-xs space-y-0.5">
+            <p className="text-[var(--good)] text-sm font-medium">Deck imported successfully!</p>
+            <div className="text-[var(--warn)] text-xs space-y-0.5">
               {warnings.map((w, i) => (
                 <p key={i}>{w}</p>
               ))}
@@ -135,7 +135,7 @@ export function ImportExport({ isOpen, onClose }: ImportExportProps) {
           {importSuccess ? (
             <button
               onClick={onClose}
-              className="px-4 py-2 bg-green-600 hover:bg-green-500 text-white rounded text-sm"
+              className="px-4 py-2 bg-[var(--good)] hover:opacity-90 text-[var(--surface-bg)] rounded text-sm"
             >
               Done
             </button>
@@ -144,13 +144,13 @@ export function ImportExport({ isOpen, onClose }: ImportExportProps) {
               <button
                 onClick={handleImport}
                 disabled={isImporting || !text.trim()}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-blue-800 text-white rounded text-sm"
+                className="px-4 py-2 bg-[var(--accent)] hover:opacity-90 disabled:opacity-50 text-[var(--accent-ink)] rounded text-sm"
               >
                 {isImporting ? 'Importing...' : 'Import'}
               </button>
               <button
                 onClick={handleExport}
-                className="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded text-sm"
+                className="px-4 py-2 bg-[var(--surface-raised)] hover:opacity-90 text-[var(--ink-0)] border border-[var(--line-1)] rounded text-sm"
               >
                 Export to Clipboard
               </button>

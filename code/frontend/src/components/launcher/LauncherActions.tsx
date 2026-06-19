@@ -1,10 +1,6 @@
 import { Link } from 'react-router-dom';
 
-interface LauncherActionsProps {
-  hasDecks: boolean;
-}
-
-export function LauncherActions({ hasDecks }: LauncherActionsProps) {
+export function LauncherActions() {
   return (
     <>
       <div className="launcher-actions">
@@ -14,7 +10,7 @@ export function LauncherActions({ hasDecks }: LauncherActionsProps) {
           <span className="launcher-action-desc">Choose format, deck, and opponent.</span>
           <span className="launcher-action-meta">ENTER</span>
         </Link>
-        <Link className="launcher-action" to={hasDecks ? '/deckbuilder' : '/deckbuilder/new?import=1'}>
+        <Link className="launcher-action" to="/deckbuilder">
           <span className="launcher-action-label">// LIBRARY</span>
           <span className="launcher-action-name">MY DECKS</span>
           <span className="launcher-action-desc">Saved locally for desktop play.</span>
@@ -23,7 +19,7 @@ export function LauncherActions({ hasDecks }: LauncherActionsProps) {
       </div>
       <div className="launcher-quick">
         <Link to="/patch-notes"><span>// Updates</span><b>Patch notes</b></Link>
-        <Link to="/lobby"><span>// Online</span><b>Lobby</b></Link>
+        <Link to="/deckbuilder"><span>// Library</span><b>My decks</b></Link>
         <Link to="/deckbuilder/new"><span>// Build</span><b>Deck builder</b></Link>
       </div>
     </>

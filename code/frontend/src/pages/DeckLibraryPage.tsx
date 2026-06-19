@@ -452,8 +452,6 @@ export function DeckLibraryPage() {
               <p>Organize folders, inspect legality, pin tournament lists, and open the builder.</p>
             </div>
             <div className="library-hero-actions">
-              <Link to="/" className="library-command">Home</Link>
-              <Link to="/deckbuilder/new" className="library-command primary">New Deck</Link>
               <Link to="/deckbuilder/new?import=1" className="library-command">Import</Link>
             </div>
           </header>
@@ -512,10 +510,12 @@ export function DeckLibraryPage() {
             )}
             <div className="library-section-title"><span>{activeFolder === 'pinned' ? 'Other Decks' : 'All'}</span><b>{others.length}</b></div>
             <div className={`library-card-grid ${view}`}>
-              <button type="button" className="library-new-card" onClick={() => navigate('/deckbuilder/new')}>
-                <span>+</span>
-                <b>New Deck</b>
-              </button>
+              {decks.length > 0 && (
+                <button type="button" className="library-new-card" onClick={() => navigate('/deckbuilder/new')}>
+                  <span>+</span>
+                  <b>New Deck</b>
+                </button>
+              )}
               {others.map((deck) => (
                 <DeckTile
                   key={deck.id}

@@ -56,7 +56,7 @@ export function CardDetailOverlay({ cardId, onClose }: CardDetailOverlayProps) {
             className="h-[75vh] max-h-[680px] w-auto rounded-xl shadow-2xl select-none"
           />
         ) : (
-          <div className="h-[75vh] max-h-[680px] aspect-[430/600] rounded-xl bg-gray-800 border border-gray-600 flex items-center justify-center text-gray-400 text-sm">
+          <div className="h-[75vh] max-h-[680px] aspect-[430/600] rounded-xl bg-[var(--ib-graphite)] border border-[var(--ib-line)] flex items-center justify-center text-[var(--ib-bone-dd)] text-sm">
             {cardId}
           </div>
         )}

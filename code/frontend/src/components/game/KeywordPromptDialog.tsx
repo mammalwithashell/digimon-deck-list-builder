@@ -1,6 +1,7 @@
 import { Card } from '@/components/shared/Card';
 import { GamePhase, type PendingSelection } from '@/types/game';
 import { SELECTION } from '@/utils/constants';
+import { usePeekStore } from '@/stores/peekStore';
 
 interface KeywordPromptDialogProps {
   currentPhase: GamePhase;
@@ -21,6 +22,7 @@ export function KeywordPromptDialog({
   onAction,
   localPlayer,
 }: KeywordPromptDialogProps) {
+  const peeking = usePeekStore((s) => s.peeking);
   if (!pendingSelection) return null;
   if (pendingSelection.selectingPlayer !== localPlayer) return null;
 
@@ -76,15 +78,15 @@ export function KeywordPromptDialog({
   const cardName = kw?.cardName;
 
   return (
-    <div className="fixed bottom-24 left-4 z-40 w-[280px]">
-      <div className="bg-slate-800/95 border border-slate-600 rounded-xl shadow-2xl backdrop-blur-sm overflow-hidden">
+    <div className={`fixed bottom-24 left-4 z-40 w-[280px] transition-opacity duration-150 ${peeking ? 'pointer-events-none opacity-0' : ''}`}>
+      <div className="bg-[var(--ib-graphite)] border border-[var(--ib-line)] rounded-xl shadow-2xl backdrop-blur-sm overflow-hidden">
         {/* Header */}
-        <div className="bg-gradient-to-r from-slate-700 to-slate-800 px-4 py-2.5 border-b border-slate-600/50">
-          <h3 className="text-sm font-semibold text-slate-100">
-            Will you use <span className="text-amber-300">{keywordName}</span>?
+        <div className="bg-gradient-to-r from-[var(--ib-panel-2)] to-transparent px-4 py-2.5 border-b border-[var(--ib-line)]">
+          <h3 className="text-sm font-semibold text-[var(--ib-bone)]">
+            Will you use <span className="text-[var(--ib-player)]">{keywordName}</span>?
           </h3>
           {cardName && (
-            <span className="text-[11px] text-slate-400">{cardName}</span>
+            <span className="text-[11px] text-[var(--ib-bone-dd)]">{cardName}</span>
           )}
         </div>
 
