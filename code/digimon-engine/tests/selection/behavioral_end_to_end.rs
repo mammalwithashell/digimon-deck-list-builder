@@ -364,8 +364,8 @@ fn permutation_then_opponent_union_zone_tech_flow() {
     //
     // While the union-zone selection is pending and routed to p1:
     // - p0 mask must have zero selection-action bits
-    // - p1 mask must expose exactly the 4 union-zone action IDs (plus
-    //   CONCEDE_GAME, legal at every agent decision point)
+    // - p1 mask must expose exactly the 4 union-zone action IDs (CONCEDE_GAME
+    //   is disabled in the action mask in all formats — 2026-06-19)
 
     let mask_p0 = build_action_mask(&r.game, p0);
     let legal_p0: Vec<usize> = mask_p0
@@ -387,13 +387,13 @@ fn permutation_then_opponent_union_zone_tech_flow() {
         .collect();
     assert_eq!(
         legal_p1.len(),
-        5,
-        "p1 must see exactly 5 legal actions (2 hand + 2 trash + concede); got {:?}",
+        4,
+        "p1 must see exactly 4 legal actions (2 hand + 2 trash); got {:?}",
         legal_p1
     );
     assert!(
-        legal_p1.contains(&(CONCEDE_GAME as usize)),
-        "concede is legal at every agent decision point"
+        !legal_p1.contains(&(CONCEDE_GAME as usize)),
+        "concede is disabled in the action mask in all formats (2026-06-19)"
     );
     assert!(
         legal_p1.contains(&(PLAY_HAND_START as usize)),

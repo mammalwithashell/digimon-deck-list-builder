@@ -76,11 +76,11 @@ fn mask_emits_only_valid_targets_plus_pass() {
         "optional selection must expose PASS"
     );
     assert!(
-        legal.contains(&(CONCEDE_GAME as usize)),
-        "concede is legal at every agent decision point"
+        !legal.contains(&(CONCEDE_GAME as usize)),
+        "concede is disabled in the action mask in all formats (2026-06-19)"
     );
-    // Exactly those four (2 targets + PASS + CONCEDE).
-    assert_eq!(legal.len(), 4, "got legal bits: {:?}", legal);
+    // Exactly those three (2 targets + PASS); concede is no longer exposed.
+    assert_eq!(legal.len(), 3, "got legal bits: {:?}", legal);
 }
 
 #[test]
