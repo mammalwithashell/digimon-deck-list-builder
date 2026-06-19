@@ -31,6 +31,7 @@ import { GameLogDrawer } from '@/components/game/GameLogDrawer';
 import { SecurityRevealOverlay } from '@/components/board/SecurityRevealOverlay';
 import { EffectPopup } from '@/components/game/EffectPopup';
 import { KeywordPromptDialog } from '@/components/game/KeywordPromptDialog';
+import { PeekButton } from '@/components/game/PeekButton';
 import { DragOverlayCard } from '@/components/game/DragOverlayCard';
 import { useWebSocketGame, type UseWebSocketGameOptions } from '@/hooks/useWebSocketGame';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
@@ -1414,6 +1415,10 @@ export function GamePage() {
         onAction={handleAction}
         localPlayer={1}
       />
+
+      {/* Peek toggle — hides the blocking decision overlays so the player can
+          read the board before committing to a choice. */}
+      {store.pendingSelection?.selectingPlayer === 1 && !store.isGameOver && <PeekButton />}
     </div>
   );
 }

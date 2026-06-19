@@ -2,6 +2,7 @@ import { Card } from '@/components/shared/Card';
 import { GamePhase, type PendingSelection, type PermanentInfo } from '@/types/game';
 import { SELECTION } from '@/utils/constants';
 import { isSourceSelectAction, sourceSelectionCards } from '@/utils/sourceSelection';
+import { usePeekStore } from '@/stores/peekStore';
 
 interface SelectionPanelProps {
   currentPhase: GamePhase;
@@ -54,6 +55,7 @@ export function SelectionPanel({
   localPlayer,
   onInspectCard,
 }: SelectionPanelProps) {
+  const peeking = usePeekStore((s) => s.peeking);
   // Only show for specific selection phases where the local player is selecting
   if (!pendingSelection) return null;
   if (pendingSelection.selectingPlayer !== localPlayer) return null;
@@ -152,7 +154,7 @@ export function SelectionPanel({
   return (
     <div
       data-testid="selection-panel"
-      className="fixed inset-0 z-40 flex items-center justify-center"
+      className={`fixed inset-0 z-40 flex items-center justify-center transition-opacity duration-150 ${peeking ? 'pointer-events-none opacity-0' : ''}`}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />

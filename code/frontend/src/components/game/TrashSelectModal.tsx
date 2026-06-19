@@ -7,6 +7,7 @@ import {
   trashSelectionMode,
   type CountCappedKind,
 } from '@/utils/trashSelection';
+import { usePeekStore } from '@/stores/peekStore';
 
 interface TrashSelectModalProps {
   pendingSelection: PendingSelection | null;
@@ -51,6 +52,7 @@ export function TrashSelectModal({
   onAction,
   onInspectCard,
 }: TrashSelectModalProps) {
+  const peeking = usePeekStore((s) => s.peeking);
   // Local, ordered selection for deferred-toggle multi-select. Action ids.
   const [picked, setPicked] = useState<number[]>([]);
   // While draining the deferred picks to the engine, freeze the grid.
@@ -174,7 +176,7 @@ export function TrashSelectModal({
   return (
     <div
       data-testid="trash-select-modal"
-      className="fixed inset-0 z-40 flex items-center justify-center"
+      className={`fixed inset-0 z-40 flex items-center justify-center transition-opacity duration-150 ${peeking ? 'pointer-events-none opacity-0' : ''}`}
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
 
