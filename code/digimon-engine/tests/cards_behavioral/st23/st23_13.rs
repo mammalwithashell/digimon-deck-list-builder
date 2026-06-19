@@ -1,0 +1,380 @@
+//! ST23-13 Tomoro Tenma & Kyo Sawashiro — Tamer, Cost 4. Colors: Green, Yellow.
+//! Traits: Glowing Dawn, BEATBREAK.
+//!
+//! # Card text (data/cards.json — verbatim)
+//! [Start of Your Main Phase] [On Play] You may place the top card of your deck
+//! face down under this Tamer. Then, if your opponent has a Digimon, gain 1
+//! memory.
+//! [All Turns] When effects trash cards from under this Tamer, by suspending
+//! this Tamer, 1 of your [Glowing Dawn] trait Digimon gets +3000 DP until your
+//! opponent's turn ends. (DCGO gates this trigger to your turn — IsOwnerTurn.)
+//! Inherited: [Security] Play this card without paying the cost.
+//!
+//! # DCGO C# reference
+//! DCGO/Assets/Scripts/CardEffect/ST23/Green/ST23_13.cs
+//!
+//! # Patterns (RUST_DSL_TEST_API §4.3)
+//! - B1 SOMP/On-Play place-top-deck-FD-under-self + conditional memory gain
+//! - on_digivolution_card_trashed host-scoped trigger (event_host_permanent_is_source)
+//! - suspend-self activation cost → DP modifier until opponent's turn ends
+//! - Tamer [Security] play-self
+
+#![allow(dead_code, unused_imports)]
+
+use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledTiming};
+use digimon_engine::card_data::CardData;
+use digimon_engine::card_source::CardSource;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
+use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::TriggerSource;
+use digimon_engine::trigger_context::EventCause;
+
+use crate::dsl_card_data::{card_data_from_compiled, compiled};
+
+const CARD_ID: &str = "ST23-13";
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+fn tamer_data() -> CardData {
+    card_data_from_compiled(CARD_ID)
+}
+
+fn gd_digimon(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.colors = vec![CardColor::Green];
+    c.level = Some(4);
+    c.dp = Some(4000);
+    c.play_cost = 5;
+    c.traits = vec!["Glowing Dawn".to_string()];
+    c
+}
+
+fn plain_digimon(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.colors = vec![CardColor::Green];
+    c.level = Some(4);
+    c.dp = Some(4000);
+    c.play_cost = 5;
+    c.traits = vec!["Beast".to_string()];
+    c
+}
+
+fn filler(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.colors = vec![CardColor::Green];
+    c.level = Some(3);
+    c.dp = Some(2000);
+    c.play_cost = 3;
+    c
+}
+
+// ─── Section 1 — Structural ──────────────────────────────────────────────────
+
+#[test]
+fn st23_13_compiles_as_dual_color_tamer() {
+    let card = compiled(CARD_ID);
+    assert_eq!(card.card, CARD_ID);
+    assert_eq!(card.kind, CompiledCardKind::Tamer);
+    assert_eq!(card.cost, Some(4));
+    assert!(card.traits.iter().any(|t| t == "Glowing Dawn"));
+    assert!(card.traits.iter().any(|t| t == "BEATBREAK"));
+    assert_eq!(card.color.len(), 2, "dual-color (green + yellow)");
+}
+
+#[test]
+fn st23_13_has_somp_onplay_trash_trigger_and_security_clauses() {
+    let card = compiled(CARD_ID);
+    let triggered: Vec<_> = card
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .collect();
+
+    assert!(
+        triggered.iter().any(|t| t.when.contains(&CompiledTiming::OnPlay)
+            && t.when.contains(&CompiledTiming::StartOfYourMainPhase)),
+        "[SOMP][On Play] shared clause present"
+    );
+    assert!(
+        triggered
+            .iter()
+            .any(|t| t.when == vec![CompiledTiming::OnDigivolutionCardTrashed]),
+        "on_digivolution_card_trashed clause present"
+    );
+    assert!(
+        triggered
+            .iter()
+            .any(|t| t.when == vec![CompiledTiming::OnSecurity]),
+        "[Security] play-self clause present"
+    );
+}
+
+// ─── Section 2 — [SOMP][On Play] place top deck FD + conditional memory ──────
+
+/// POSITIVE: with an opponent Digimon on field, On Play offers the place and
+/// then gains 1 memory. Accepting the place puts the top deck card face-down
+/// under the Tamer.
+#[test]
+fn st23_13_on_play_places_and_gains_memory_when_opp_has_digimon() {
+    let mut runner = DebugRunner::builder()
+        .add_card(tamer_data())
+        .add_card(plain_digimon("OPP"))
+        .add_card(filler("DECKTOP"))
+        .deck(0, &["DECKTOP"; 3])
+        .deck(1, &["DECKTOP"; 3])
+        .memory(3)
+        .start();
+    runner.set_first_player(0);
+    runner.place_on_field(1, "OPP", Some(0));
+    let tamer = runner.place_on_field(0, CARD_ID, Some(0));
+
+    let mem_before = runner.memory();
+    let deck_before = runner.deck_size(0);
+    let sources_before = runner.game.players[0].battle_area[tamer.index as usize]
+        .card_sources
+        .len();
+
+    runner.fire_on_play(0, tamer.index as usize);
+    // Internal Yes/No place choice — accept (branch 0).
+    let v = runner.pending_selection_view().expect("place Yes/No installs");
+    runner.execute_branch(0).expect("accept the place");
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.game.players[0].battle_area[tamer.index as usize]
+            .card_sources
+            .len(),
+        sources_before + 1,
+        "top deck card placed face-down under the Tamer"
+    );
+    assert!(
+        runner.game.players[0].battle_area[tamer.index as usize].card_sources[0].face_down,
+        "the placed source is face-down"
+    );
+    assert_eq!(runner.deck_size(0), deck_before - 1, "1 card left the deck");
+    assert_eq!(runner.memory(), mem_before + 1, "gained 1 memory (opp has a Digimon)");
+}
+
+/// Memory gain fires even when the place is DECLINED (the place is the only
+/// optional part; the memory gain is unconditional-after).
+#[test]
+fn st23_13_memory_gain_fires_even_when_place_declined() {
+    let mut runner = DebugRunner::builder()
+        .add_card(tamer_data())
+        .add_card(plain_digimon("OPP"))
+        .add_card(filler("DECKTOP"))
+        .deck(0, &["DECKTOP"; 3])
+        .deck(1, &["DECKTOP"; 3])
+        .memory(3)
+        .start();
+    runner.set_first_player(0);
+    runner.place_on_field(1, "OPP", Some(0));
+    let tamer = runner.place_on_field(0, CARD_ID, Some(0));
+    let mem_before = runner.memory();
+    let deck_before = runner.deck_size(0);
+
+    runner.fire_on_play(0, tamer.index as usize);
+    let v = runner.pending_selection_view().expect("place Yes/No installs");
+    let last = v.effect_choices.as_ref().unwrap().len() - 1;
+    runner.execute_branch(last).expect("decline the place");
+    let _ = runner.auto_resolve();
+
+    assert_eq!(runner.deck_size(0), deck_before, "declined ⇒ nothing placed");
+    assert_eq!(
+        runner.memory(),
+        mem_before + 1,
+        "memory still gained (opp has a Digimon) even when the place is declined"
+    );
+}
+
+/// NEGATIVE (memory gate): with NO opponent Digimon, no memory is gained.
+#[test]
+fn st23_13_no_memory_when_opponent_has_no_digimon() {
+    let mut runner = DebugRunner::builder()
+        .add_card(tamer_data())
+        .add_card(filler("DECKTOP"))
+        .deck(0, &["DECKTOP"; 3])
+        .deck(1, &["DECKTOP"; 3])
+        .memory(3)
+        .start();
+    runner.set_first_player(0);
+    let tamer = runner.place_on_field(0, CARD_ID, Some(0));
+    let mem_before = runner.memory();
+
+    runner.fire_on_play(0, tamer.index as usize);
+    // Accept/decline the place — either way no memory should be gained.
+    if runner.pending_selection().is_some() {
+        let v = runner.pending_selection_view().unwrap();
+        let last = v.effect_choices.as_ref().map(|c| c.len() - 1).unwrap_or(0);
+        let _ = runner.execute_branch(last);
+    }
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.memory(),
+        mem_before,
+        "no opponent Digimon ⇒ no memory gained"
+    );
+}
+
+// ─── Section 3 — trash-from-under-this-Tamer trigger → suspend → +3000 DP ────
+
+/// POSITIVE: a trash event on a source under THIS Tamer (on your turn) offers
+/// the optional suspend-self → grant a chosen [Glowing Dawn] Digimon +3000 DP.
+#[test]
+fn st23_13_trash_under_tamer_suspends_self_and_buffs_glowing_dawn() {
+    let mut runner = DebugRunner::builder()
+        .add_card(tamer_data())
+        .add_card(gd_digimon("GD"))
+        .add_card(filler("STASH"))
+        .deck(0, &["STASH"; 5])
+        .deck(1, &["STASH"; 5])
+        .memory(8)
+        .start();
+    runner.set_first_player(0);
+
+    // Tamer with a stash source beneath it; a [Glowing Dawn] Digimon on field.
+    let tamer = runner.place_stack(0, &["STASH", CARD_ID]);
+    let gd = runner.place_on_field(0, "GD", Some(0));
+    let dp_before = runner.effective_dp(gd).expect("gd dp");
+
+    let host_card = runner.game.players[0].battle_area[tamer.index as usize]
+        .top_card()
+        .handle();
+    let trashed_card = runner.game.players[0].battle_area[tamer.index as usize].card_sources[0]
+        .handle();
+
+    runner.game.enqueue_triggered(
+        EffectTiming::OnDigivolutionCardTrashed,
+        TriggerSource::SourceTrashedFromStack {
+            player: 0,
+            host: tamer,
+            host_card,
+            card: trashed_card,
+            cause: EventCause::OwnEffect,
+        },
+    );
+    runner.game.drain_effect_queue();
+
+    // Optional trigger: accept it.
+    assert!(
+        runner.pending_selection().is_some(),
+        "the host-scoped trash trigger installs an optional accept prompt"
+    );
+    runner.accept_optional_trigger().expect("accept suspend+buff");
+    // Then the [Glowing Dawn] target pick.
+    let v = runner.pending_selection_view().expect("target pick installs");
+    runner.execute_action(0, v.valid_action_ids[0]).unwrap();
+    let _ = runner.auto_resolve();
+
+    assert!(
+        runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
+        "the Tamer is suspended (activation cost paid)"
+    );
+    assert_eq!(
+        runner.effective_dp(gd).expect("gd dp"),
+        dp_before + 3000,
+        "the chosen [Glowing Dawn] Digimon gets +3000 DP"
+    );
+}
+
+/// The DP buff expires at the end of the opponent's turn.
+#[test]
+fn st23_13_dp_buff_uses_until_opponents_turn_end_expiry() {
+    let card = compiled(CARD_ID);
+    // Structural: the modifier carries the end_of_opponents_turn expiry. We assert
+    // it behaviorally — drive the buff, rotate through to the opponent's turn end,
+    // and confirm the buff is gone.
+    let mut runner = DebugRunner::builder()
+        .add_card(tamer_data())
+        .add_card(gd_digimon("GD"))
+        .add_card(filler("STASH"))
+        .deck(0, &["STASH"; 5])
+        .deck(1, &["STASH"; 5])
+        .memory(8)
+        .start();
+    runner.set_first_player(0);
+    let tamer = runner.place_stack(0, &["STASH", CARD_ID]);
+    let gd = runner.place_on_field(0, "GD", Some(0));
+    let base_dp = runner.effective_dp(gd).expect("gd dp");
+
+    let host_card = runner.game.players[0].battle_area[tamer.index as usize]
+        .top_card()
+        .handle();
+    let trashed_card = runner.game.players[0].battle_area[tamer.index as usize].card_sources[0]
+        .handle();
+    runner.game.enqueue_triggered(
+        EffectTiming::OnDigivolutionCardTrashed,
+        TriggerSource::SourceTrashedFromStack {
+            player: 0,
+            host: tamer,
+            host_card,
+            card: trashed_card,
+            cause: EventCause::OwnEffect,
+        },
+    );
+    runner.game.drain_effect_queue();
+    runner.accept_optional_trigger().expect("accept");
+    let v = runner.pending_selection_view().expect("target pick");
+    runner.execute_action(0, v.valid_action_ids[0]).unwrap();
+    let _ = runner.auto_resolve();
+    assert_eq!(runner.effective_dp(gd).expect("gd dp"), base_dp + 3000, "buff active");
+
+    // End your turn → opponent's turn → end opponent's turn → buff should clear.
+    runner.end_turn(); // now opponent's turn
+    runner.end_turn(); // end of opponent's turn → back to you
+    let _ = runner.auto_resolve();
+    assert_eq!(
+        runner.effective_dp(gd).expect("gd dp"),
+        base_dp,
+        "the +3000 DP expires at the end of the opponent's turn"
+    );
+}
+
+/// NEGATIVE (host gate): a trash event on a DIFFERENT permanent's stack does NOT
+/// trigger this Tamer's clause.
+#[test]
+fn st23_13_trash_under_other_permanent_does_not_trigger() {
+    let mut runner = DebugRunner::builder()
+        .add_card(tamer_data())
+        .add_card(gd_digimon("GD"))
+        .add_card(filler("STASH"))
+        .deck(0, &["STASH"; 5])
+        .deck(1, &["STASH"; 5])
+        .memory(8)
+        .start();
+    runner.set_first_player(0);
+    let tamer = runner.place_on_field(0, CARD_ID, Some(0));
+    // A different Digimon stack with a source.
+    let other = runner.place_stack(0, &["STASH", "GD"]);
+
+    let host_card = runner.game.players[0].battle_area[other.index as usize]
+        .top_card()
+        .handle();
+    let trashed_card = runner.game.players[0].battle_area[other.index as usize].card_sources[0]
+        .handle();
+    runner.game.enqueue_triggered(
+        EffectTiming::OnDigivolutionCardTrashed,
+        TriggerSource::SourceTrashedFromStack {
+            player: 0,
+            host: other,
+            host_card,
+            card: trashed_card,
+            cause: EventCause::OwnEffect,
+        },
+    );
+    runner.game.drain_effect_queue();
+    let _ = runner.auto_resolve();
+
+    assert!(
+        !runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
+        "a trash on a different permanent's stack must NOT suspend this Tamer"
+    );
+}

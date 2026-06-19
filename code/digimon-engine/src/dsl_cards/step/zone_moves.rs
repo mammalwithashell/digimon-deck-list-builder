@@ -248,6 +248,22 @@ pub fn try_run(
             true
         }
 
+        CompiledStep::MoveSelfOptionUnderPermanent { target, face_down } => {
+            // G-MOVE-SELF-OPTION-UNDER-PERMANENT: relocate THIS effect's source
+            // Option (an in-battle-area field Option) face-down under the chosen
+            // own permanent. Fires neither OnOptionTrashed nor
+            // OnDigivolutionCardTrashed. No-op (silent) when the target binding
+            // is unset / not a permanent — the caller's tail (draw + memory)
+            // must NOT run unless the relocate succeeded, so the YAML gates the
+            // draw/memory on this step via the engine's success here.
+            if let Some(ResolvedBinding::Permanent(target_handle)) =
+                resolve_binding_ref(target, ctx, bindings)
+            {
+                let _ = ctx.move_self_option_under_permanent(target_handle, *face_down);
+            }
+            true
+        }
+
         CompiledStep::PlaceSelectedSourcesUnderTamer {
             source_refs,
             tamer,
@@ -692,14 +708,19 @@ fn place_selected_card_under_tamer(
         }
     }
 
-    match resolve_binding_ref(card_ref, ctx, bindings)? {
+    let resolved = resolve_binding_ref(card_ref, ctx, bindings)?;
+    match resolved {
         ResolvedBinding::HandIndex(owner, index) if owner == ctx.player => {
             ctx.place_hand_card_under_tamer(index as usize, tamer, face_down)
         }
         ResolvedBinding::TrashIndex(owner, index) if owner == ctx.player => {
             ctx.place_trash_card_under_tamer(index as usize, tamer, face_down)
         }
-        ResolvedBinding::Card(card) => {
+        // A single bound card handle, OR a singleton card-LIST (a
+        // `select_reveal` / `select_reveal_buckets` `bind_as` stores its pick as
+        // a one-element list — G-DSL-PLACE-REVEALED-CARD-UNDER-TAMER).
+        other @ (ResolvedBinding::Card(_) | ResolvedBinding::CardList(_)) => {
+            let card = singleton_card(other)?;
             if let Some(index) = ctx
                 .game
                 .player(ctx.player)
@@ -717,6 +738,19 @@ fn place_selected_card_under_tamer(
                 .position(|candidate| candidate.handle() == card)
             {
                 return ctx.place_trash_card_under_tamer(index, tamer, face_down);
+            }
+            // Reveal-pool source (G-DSL-PLACE-REVEALED-CARD-UNDER-TAMER): the
+            // card was bound by a `select_reveal` / `select_reveal_buckets`
+            // pick and still lives in the transient reveal pool. ST23-06
+            // Gekkomon "place 1 such card face down under any of your [Glowing
+            // Dawn] trait Tamers".
+            if ctx
+                .game
+                .revealed_cards
+                .iter()
+                .any(|candidate| candidate.handle() == card)
+            {
+                return ctx.place_revealed_card_under_tamer(card, tamer, face_down);
             }
             None
         }

@@ -1,0 +1,83 @@
+# P-235 Digital Accident Tactics Squad — Option, Cost 3, Yellow.
+# Traits: DATA SQUAD.
+#
+# Printed card text (card image P-235 — authoritative; cards.json accurate):
+#
+#   ＜Use Req. ([DATA SQUAD] trait)＞ (Specified cards let you ignore color
+#     requirements.)
+#   [Main] Reveal the top 3 cards of your deck. Add 1 card with the [DATA SQUAD]
+#     trait among them to the hand. Return the rest to the bottom of the deck.
+#     Then, place this card in the battle area.
+#   [Main] ＜Delay＞ (By trashing this card after the placing turn, activate the
+#     effect below.)
+#     ・Gain 2 memory.
+#   Inherited: [Security] Place this card in the battle area.
+#
+# DCGO C# reference (READ-ONLY):
+#   DCGO/Assets/Scripts/CardEffect/P/Yellow/P_235.cs
+#     - EffectTiming.None: UseRequirements(card, CardCondition =
+#       cardSource.EqualsTraits("DATA SQUAD")) → color-ignore.
+#     - EffectTiming.OptionSkill: SimplifiedRevealDeckTopCardsAndSelect(
+#       revealCount: 3, canTargetCondition: EqualsTraits("DATA SQUAD"),
+#       maxCount: 1, mode AddHand, remainingCardsPlace DeckBottom),
+#       then PlaceDelayOptionCards.
+#     - EffectTiming.OnDeclaration: Gain2MemoryOptionDelayEffect.
+#     - EffectTiming.SecuritySkill: PlaceSelfDelayOptionSecurityEffect.
+#
+# Clause map (mirrors P-103 / BT21-097 reveal-delay-option idiom):
+#   use_requirement: DATA SQUAD board predicate (color-ignore).
+#   Clause 0 [Main]: reveal top 3 → add 1 [DATA SQUAD] to hand → return rest to
+#     deck bottom → place self as Delay option in battle area.
+#   Clause 1 [Main] <Delay>: gain 2 memory (player-initiated <Delay>).
+#   Clause 2 [Security] (inherited): place self as Delay option.
+
+card: P-235
+name: "Digital Accident Tactics Squad"
+kind: option
+color: [yellow]
+cost: 3
+traits: ["DATA SQUAD"]
+
+# ─── <Use Req. ([DATA SQUAD] trait)> — color-ignore ───────────────────────────
+# DCGO UseRequirements gated on an own permanent (Digimon or Tamer) whose card
+# satisfies EqualsTraits("DATA SQUAD"). Standard shipped Option use_requirement
+# board predicate (same shape as BT21-097's Appmon use_requirement).
+use_requirement:
+  any_field_permanent:
+    of: you
+    trait_has: "DATA SQUAD"
+
+effects:
+  # ─── Clause 0: [Main] reveal 3, add 1 [DATA SQUAD], bottom rest, place self ──
+  - when: main_from_hand
+    summary: "[Main] Reveal top 3; add 1 [DATA SQUAD] card to hand; return the rest to deck bottom; place self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      # optional: true allows the fizzle case (no DATA SQUAD card among the 3) —
+      # mirrors P-103 / BT21-097 reveal-select; the printed text has no "may".
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: true
+          filter: { trait_has: "DATA SQUAD" }
+          prompt: "Add 1 card with the [DATA SQUAD] trait to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}
+
+  # ─── Clause 1: [Main] <Delay> — gain 2 memory ───────────────────────────────
+  # DCGO Gain2MemoryOptionDelayEffect. Standard player-initiated <Delay>: the
+  # engine's Delay machinery trashes the placed Option card as the activation
+  # cost, then this body runs.
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  # ─── Clause 2: [Security] (inherited) place self in battle area ──────────────
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

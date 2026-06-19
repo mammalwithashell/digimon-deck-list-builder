@@ -3,19 +3,15 @@ import { listFormats } from '@/api/deckApi';
 import type { DeckSummary } from '@/types/deck';
 
 // Format ids match the engine's `game_mode` registry ids (see
-// data/deck_formats.json). Concept formats not yet in the registry
-// (titan / edh_commander / draft / tutorial) remain disabled placeholders.
+// data/deck_formats.json). The play catalog mirrors exactly the registry's
+// playable formats — no concept placeholders.
 export type PlayFormatId =
   | 'standard'
   | 'no_restriction'
   | 'pauper'
   | 'eden'
   | 'eden_singleton'
-  | 'starter'
-  | 'titan'
-  | 'edh_commander'
-  | 'draft'
-  | 'tutorial';
+  | 'starter';
 export type OpponentMode = 'quick' | 'room' | 'bot' | 'ai_starter';
 
 export interface PlayFormat {
@@ -41,10 +37,6 @@ const PRESENTATION: Record<PlayFormatId, { tagline: string; populationPct: numbe
   eden: { tagline: 'Rotation-light, anomaly-gated', populationPct: 27 },
   eden_singleton: { tagline: 'EDEN, highlander', populationPct: 12 },
   starter: { tagline: 'Six official starter decks', populationPct: 0 },
-  titan: { tagline: 'Bigger gauges. Bigger threats.', populationPct: 42 },
-  edh_commander: { tagline: 'One herald, one of each, four players', populationPct: 67 },
-  draft: { tagline: 'Build from a pod', populationPct: 12 },
-  tutorial: { tagline: 'Practice the board', populationPct: 9 },
 };
 
 // Static fallback used before the engine list resolves (and in environments
@@ -98,58 +90,17 @@ export const PLAY_FORMATS: PlayFormat[] = [
     populationPct: PRESENTATION.eden_singleton.populationPct,
     enabled: true,
   },
-  {
-    id: 'titan',
-    name: 'TITAN',
-    tagline: PRESENTATION.titan.tagline,
-    description: '75-card deck concept; disabled until Rules support lands.',
-    deckLabel: '75 cards',
-    populationPct: PRESENTATION.titan.populationPct,
-    enabled: false,
-    disabledReason: ENGINE_STANDARD_ONLY_REASON,
-  },
-  {
-    id: 'edh_commander',
-    name: 'EDH',
-    tagline: PRESENTATION.edh_commander.tagline,
-    description: '100-card singleton concept; disabled until multiplayer Rules support lands.',
-    deckLabel: '100 singleton',
-    populationPct: PRESENTATION.edh_commander.populationPct,
-    enabled: false,
-    disabledReason: ENGINE_STANDARD_ONLY_REASON,
-  },
-  {
-    id: 'draft',
-    name: 'DRAFT',
-    tagline: PRESENTATION.draft.tagline,
-    description: 'Limited mode concept; disabled until draft pool support lands.',
-    deckLabel: '40 cards',
-    populationPct: PRESENTATION.draft.populationPct,
-    enabled: false,
-    disabledReason: ENGINE_STANDARD_ONLY_REASON,
-  },
-  {
-    id: 'tutorial',
-    name: 'TUTORIAL',
-    tagline: PRESENTATION.tutorial.tagline,
-    description: 'Guided game concept; disabled until scripted tutorial support lands.',
-    deckLabel: 'Starter',
-    populationPct: PRESENTATION.tutorial.populationPct,
-    enabled: false,
-    disabledReason: ENGINE_STANDARD_ONLY_REASON,
-  },
 ];
 
-const CONCEPT_ONLY: PlayFormat[] = PLAY_FORMATS.filter((f) => !f.enabled);
-
-/** Live play-format catalog sourced from the engine registry (`list_formats()`):
- *  every registry format is playable; presentational flavour is overlaid from
- *  `PRESENTATION`. The disabled concept formats (titan/edh/draft/tutorial) are
- *  appended. Falls back to the static `PLAY_FORMATS` if the engine call fails. */
+/** Live play-format catalog sourced from the engine registry (`list_formats()`)
+ *  — the same source the deck builder uses. Every registry format is playable;
+ *  presentational flavour (tagline / population) is overlaid from `PRESENTATION`.
+ *  No concept placeholders are appended. Falls back to the static `PLAY_FORMATS`
+ *  if the engine call fails. */
 export async function loadPlayFormats(): Promise<PlayFormat[]> {
   try {
     const engine = await listFormats();
-    const fromEngine: PlayFormat[] = engine.map((f) => ({
+    return engine.map((f) => ({
       id: f.id as PlayFormatId,
       name: f.name.toUpperCase(),
       tagline: PRESENTATION[f.id as PlayFormatId]?.tagline ?? '',
@@ -158,7 +109,6 @@ export async function loadPlayFormats(): Promise<PlayFormat[]> {
       populationPct: PRESENTATION[f.id as PlayFormatId]?.populationPct ?? 0,
       enabled: f.playable,
     }));
-    return [...fromEngine, ...CONCEPT_ONLY];
   } catch {
     return PLAY_FORMATS;
   }

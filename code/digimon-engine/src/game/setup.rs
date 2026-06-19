@@ -227,6 +227,9 @@ impl Game {
             pending_would_digivolve_resume: None,
             player_digivolve_cost_reducers: Vec::new(),
             pending_player_digivolve_reduction: 0,
+            pending_interactive_digivolve_reduction: 0,
+            pending_interactive_option_use_reduction: 0,
+            interactive_option_use_reducer_prompted: false,
             pending_digivolve_route_choice: None,
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
@@ -242,6 +245,7 @@ impl Game {
             parked_replacement: None,
             dsl_replacement_outcome: None,
             in_counter_window: false,
+            effect_driven_option_use: false,
             active_deletion_batch: None,
             dsl_outer_tail: None,
             dsl_resolved_tail_bindings: None,
@@ -358,6 +362,9 @@ impl Game {
         self.pending_would_digivolve_resume = None;
         self.player_digivolve_cost_reducers = Vec::new();
         self.pending_player_digivolve_reduction = 0;
+        self.pending_interactive_digivolve_reduction = 0;
+        self.pending_interactive_option_use_reduction = 0;
+        self.interactive_option_use_reducer_prompted = false;
         self.replacement_fired = std::collections::HashSet::new();
         self.in_replacement_commit = false;
         self.effect_source_player = None;

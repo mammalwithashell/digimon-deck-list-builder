@@ -1,0 +1,145 @@
+# ST23-05 Habakirimon — Digimon (BEATBREAK), Lv.6, Yellow, DP 12000, Cost 11.
+# Traits: Shaman, Glowing Dawn, BEATBREAK. Attribute: Virus.
+# Standard digivolution: Lv.5 Yellow / cost (printed evo_costs — Lv.5 [Glowing
+#   Dawn] / cost 3 is the printed xros_req; cards.json evo_costs lists Lv.5
+#   yellow / cost 3). Author both as alt_paths.
+#
+# Printed card text (data/cards.json — verbatim):
+#   [When Digivolving] [When Attacking] [Once Per Turn] Place 1 of your
+#     opponent's lowest DP Digimon as the top security card. Then, by trashing
+#     the top security card of 1 player with the most security cards,
+#     ＜Recovery +1＞ (Place the top card of your deck as your top security card.)
+#   [All Turns] [Once Per Turn] When any of your [Glowing Dawn] trait Digimon
+#     would leave the battle area, by trashing your top security card, they
+#     don't leave.
+#   Inherited: (none — cards.json inherited field is a wiki artifact "|applinkdp")
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST23/Yellow/ST23_05.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Digivolution Condition (timing None): AddSelfDigivolutionRequirementStaticEffect
+#   (level 5, TopCard EqualsTraits("Glowing Dawn"), cost 3). → alt_paths
+#   digivolve from level 5 + Glowing Dawn trait, cost 3. The printed Lv.5 Yellow
+#   / cost 3 standard route is added as a second alt_path (mirroring BT25-043).
+# Shared WD/WA (ActivateClassesForSharedEffects, maxCountPerTurn 1, hash
+#   ST23_05_WD_WA):
+#   - Step A (MANDATORY, gated on CanAddSecurity): place 1 opponent lowest-DP
+#     Digimon (IsMinDP over the enemy) as the TOP security card. validTargets>1
+#     → SelectPermanentEffect (Mode.PutSecurityTop, canNoSelect false) → a
+#     multi-target pick. → select_opponent_permanent { kind: digimon,
+#     selector: lowest_dp } + place_permanent_on_security { of: opponent,
+#     position: top }. The opponent's Digimon goes to the OPPONENT's security
+#     (PutSecurity adds to topCard.Owner's stack).
+#   - Step B ("Then, …"): 3-way SetIntSelection gated by the "most security"
+#     formula — own qualifies iff own>0 && own>=opp; opp qualifies iff opp>0 &&
+#     opp>=own; plus a "Don't trash" option. On a real trash → TrashSecurity then
+#     IRecovery(card.Owner, 1) — Recovery ALWAYS goes to the OWNER even when the
+#     opponent's security is trashed. → select_effect_choice (BT25-043 idiom) +
+#     symmetric security_count gates + trash_top_security + recover { of: you }.
+# All-Turns Protect (WhenRemoveField ActivateClass, maxPerTurn 1, optional,
+#   hash ST23_15_AT_Protect): when a controlled [Glowing Dawn] Digimon would
+#   leave, gated on own SecurityCards.Count>0, by trashing own top security →
+#   willBeRemoveField=false + Hide*Effect (cancel the leave). → kind: replacement,
+#   when_would_leave_battle_area, optional, once_per_turn, active_when subject is
+#   mine + Glowing Dawn + own security exists; process trash_top_security +
+#   cancel_replacement. Byte-for-byte the BT25-043 leave-replacement clause.
+
+card: ST23-05
+name: "Habakirimon"
+kind: digimon
+level: 6
+color: [yellow]
+cost: 11
+dp: 12000
+traits: [Shaman, Glowing Dawn, BEATBREAK]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: "Glowing Dawn" }
+    cost: 3
+
+effects:
+  # ─── [WD][WA][OPT] place opp lowest-DP on top security; then most-security
+  #     trash → Recovery +1 (to the owner) ─────────────────────────────────────
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[WD][WA][OPT] Place 1 opponent's lowest-DP Digimon as the top security card; then by trashing the most-security player's top security, <Recovery +1>"
+    process:
+      # Step A — place the opponent's lowest-DP Digimon as the top security card.
+      # (Mandatory; selector lowest_dp surfaces a multi-target pick on a tie.)
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          selector: lowest_dp
+          prompt: "Place 1 of your opponent's lowest DP Digimon as the top security card"
+      - place_permanent_on_security:
+          of: opponent
+          target: victim
+          position: top
+          face_up: false
+      # Step B — "Then, by trashing the top security card of 1 player with the
+      # most security cards, <Recovery +1>". 3-way choice gated by the symmetric
+      # "most security" formula (BT25-043 idiom). Recovery always goes to the
+      # OWNER (card.Owner) regardless of whose security is trashed.
+      - select_effect_choice:
+          bind_as: who
+          labels:
+            - "Trash your own top security card"
+            - "Trash your opponent's top security card"
+            - "Don't trash security"
+          prompt: "Trash 1 player's top security card to <Recover +1>?"
+      - if:
+          condition:
+            all_of:
+              - equals: [who, 0]
+              - security_count_gte: 1
+              - security_count_gte:
+                  formula:
+                    base: 0
+                    per:
+                      card_count_in_zone:
+                        of: opponent
+                        zone: security
+                    delta: 1
+          then:
+            - trash_top_security: { of: you }
+            - recover: { of: you, count: 1 }
+      - if:
+          condition:
+            all_of:
+              - equals: [who, 1]
+              - opponent_security_count_gte: 1
+              - opponent_security_count_gte:
+                  formula:
+                    base: 0
+                    per:
+                      card_count_in_zone:
+                        of: you
+                        zone: security
+                    delta: 1
+          then:
+            - trash_top_security: { of: opponent }
+            - recover: { of: you, count: 1 }
+
+  # ─── [All Turns][OPT] Glowing Dawn would-leave → trash own top security → stay
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - trait_has: "Glowing Dawn"
+        - any_permanent:
+            of: you
+            zone: [security]
+    summary: "[All Turns][OPT] When your [Glowing Dawn] Digimon would leave, by trashing your top security card, they don't leave"
+    process:
+      - trash_top_security: { of: you }
+      - cancel_replacement: {}

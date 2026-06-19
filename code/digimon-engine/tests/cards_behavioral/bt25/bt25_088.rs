@@ -19,14 +19,15 @@
 //! - face-down tamer-stash substrate (place_as_bottom_source deck_top x2)
 //! - Tamer [Security] play-self
 //!
-//! # Verdict — PARTIAL
+//! # Verdict — IMPLEMENTED (2026-06-14)
 //! Clause 3 ("[Your Turn][OPT] when a [Glowing Dawn] card would be played, by
 //! trashing the bottom face-down card under a Tamer, reduce the cost by 1") is
-//! BLOCKED on engine gap G-COST-REDUCTION-INTERACTIVE-PAY-COST
-//! (docs/RUST_ENGINE_GAPS.md): a `kind: cost_reduction` `pay_cost` that installs
-//! an interactive selection (the Tamer pick) parks, so the engine drops the
-//! reduction credit while still paying the cost. The clause is OMITTED from the
-//! YAML rather than shipping an over-charge. Clauses 1, 2, 4 are IMPLEMENTED.
+//! now IMPLEMENTED for the PLAY-FROM-HAND path. Engine gap
+//! G-COST-REDUCTION-INTERACTIVE-PAY-COST is closed for that path:
+//! `apply_cost_reduction_candidate(..., allow_interactive_pay_cost = true)`
+//! defers the reduction credit to the parked pay_cost's success continuation
+//! (`game_actions/cost.rs`), so the interactive Tamer pick parks, resolves, and
+//! the -1 reduction is applied. Clauses 1, 2, 4 already IMPLEMENTED.
 
 #![allow(dead_code)]
 
@@ -64,6 +65,19 @@ fn make_security_filler(id: &str) -> CardData {
     c.level = None;
     c.dp = None;
     c.play_cost = 3;
+    c
+}
+
+/// A vanilla Lv.3 [Glowing Dawn] Digimon of cost 3 — the played card whose cost
+/// Kyo's clause 3 reduces.
+fn make_glowing_dawn_digimon(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.colors = vec![CardColor::Yellow];
+    c.level = Some(3);
+    c.dp = Some(3000);
+    c.play_cost = 3;
+    c.traits = vec!["Glowing Dawn".to_string(), "BEATBREAK".to_string()];
     c
 }
 
@@ -128,11 +142,11 @@ fn bt25_088_lose_security_clause_is_optional() {
     assert!(clause.optional, "'you may place' → optional clause");
 }
 
-/// The BLOCKED cost-reduction clause (clause 3) is intentionally NOT in the
-/// YAML — there is no `CostReduction` declarative clause to assert.
-/// G-COST-REDUCTION-INTERACTIVE-PAY-COST.
+/// Clause 3 (the interactive-pay_cost cost reducer) now compiles as a
+/// `CostReduction` declarative clause. G-COST-REDUCTION-INTERACTIVE-PAY-COST
+/// is closed for the play-from-hand path.
 #[test]
-fn bt25_088_blocked_cost_reduction_clause_is_omitted() {
+fn bt25_088_cost_reduction_clause_present() {
     let card = compiled(CARD_ID);
     let has_cr = card.effects.iter().any(|c| {
         matches!(
@@ -141,8 +155,8 @@ fn bt25_088_blocked_cost_reduction_clause_is_omitted() {
         )
     });
     assert!(
-        !has_cr,
-        "the interactive-pay_cost cost-reduction clause must stay omitted (BLOCKED)"
+        has_cr,
+        "the Glowing-Dawn-played cost-reduction clause must now compile"
     );
 }
 
@@ -296,4 +310,97 @@ fn bt25_088_clause_on_security_present() {
         matches!(c, CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::OnSecurity])
     });
     assert!(on_sec, "[Security] play-self clause must compile");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 5 — [Your Turn][OPT] Glowing-Dawn-played cost -1 via trashing a bottom
+// face-down card under a Tamer (G-COST-REDUCTION-INTERACTIVE-PAY-COST, play path)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Kyo on field (with one face-down stash beneath) reduces the cost of a played
+/// [Glowing Dawn] Digimon by 1 — the interactive Tamer-pick pay_cost parks,
+/// resolves, the face-down stash is trashed, AND the -1 reduction is credited.
+#[test]
+fn bt25_088_reduces_glowing_dawn_play_cost_by_trashing_face_down() {
+    let mut runner = DebugRunner::builder()
+        .add_card(kyo())
+        .add_card(make_glowing_dawn_digimon("GD"))
+        .add_card(make_filler("STASH"))
+        .hand(0, &["GD"])
+        .deck(0, &["STASH"; 5])
+        .deck(1, &["STASH"; 5])
+        .memory(5)
+        .start();
+
+    // Kyo (top of [STASH, Kyo]) with one face-down stash source beneath it.
+    let kyo_perm = runner.place_stack(0, &["STASH", CARD_ID]);
+    runner.game.players[0].battle_area[kyo_perm.index as usize].card_sources[0].face_down = true;
+
+    let mem_before = runner.memory();
+    let trash_before = runner.trash_size(0);
+    assert_eq!(mem_before, 5);
+
+    // Play the cost-3 Glowing Dawn Digimon from hand → installs the
+    // "Use ... to reduce play cost?" optional accept/decline prompt.
+    runner.play(0, 0);
+    assert!(
+        runner.pending_selection().is_some(),
+        "playing a [Glowing Dawn] card installs the cost-reduction accept prompt"
+    );
+    assert!(runner.pending_is_optional(), "the -1 reducer is optional");
+    runner
+        .accept_optional_trigger()
+        .expect("accept the -1 cost reduction");
+    // The pay_cost parks on the single-eligible-Tamer pick — resolve it.
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before + 1,
+        "the bottom face-down stash source was trashed as the cost"
+    );
+    assert_eq!(
+        runner.memory(),
+        mem_before - 2,
+        "cost 3 reduced by 1 → paid 2 memory (NOT 3): the reduction is credited \
+         even though the pay_cost parked on the Tamer pick"
+    );
+}
+
+/// Control: with NO face-down stash beneath any Tamer the pay_cost is unpayable,
+/// so accepting the prompt yields no reduction — the card is played at full cost
+/// and nothing is trashed. Guards against crediting a reduction that was never
+/// paid for.
+#[test]
+fn bt25_088_no_reduction_when_no_face_down_stash() {
+    let mut runner = DebugRunner::builder()
+        .add_card(kyo())
+        .add_card(make_glowing_dawn_digimon("GD"))
+        .add_card(make_filler("STASH"))
+        .hand(0, &["GD"])
+        .deck(0, &["STASH"; 5])
+        .deck(1, &["STASH"; 5])
+        .memory(5)
+        .start();
+
+    // Kyo on field with NO face-down stash.
+    runner.place_on_field(0, CARD_ID, Some(0));
+
+    let mem_before = runner.memory();
+    let trash_before = runner.trash_size(0);
+
+    runner.play(0, 0);
+    // The reducer may still offer its prompt; accepting cannot pay (no stash).
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before,
+        "no face-down stash → nothing trashed"
+    );
+    assert_eq!(
+        runner.memory(),
+        mem_before - 3,
+        "no stash → cost paid in full (3), no reduction credited"
+    );
 }

@@ -1,0 +1,97 @@
+# BT25-003 Frimon — Digi-Egg, Lv.2, Yellow, Cost 0.
+# Traits: Lesser, Glowing Dawn, BEATBREAK. Form: In-Training.
+#
+# Printed card text (data/cards.json — verbatim):
+#   The FACE has NO effect.
+#   Inherited Effect [When Attacking] [Once Per Turn] By trashing your top
+#     security card, this Digimon may digivolve into a [Glowing Dawn] trait card
+#     in the hand with the cost reduced by 1.
+#
+#   (cards.json surfaces the same line under `effect_description` with an
+#    "Inherited Effect" prefix and under `inherited_effect_description`; it is
+#    authored as a single inherited-scope clause — the egg face is blank.)
+#
+# DCGO C# reference: NOT implemented in the DCGO submodule (no BT25_003.cs).
+#   Behavior is taken from the printed text + general_rule.pdf, cross-checked
+#   against the closest implemented analogues:
+#   - the trash-top-security activation cost is the Nyaromon BT15-003 idiom
+#     (trash_top_security: { of: you }, gated so the cost is payable);
+#   - the effect-initiated digivolve into a HAND card at a PAID reduced cost
+#     ("with the cost reduced by 1", digivolution requirements HONORED) is the
+#     WarGrowlmon BT12-016 shape: select_hand (Glowing Dawn trait) →
+#     effect_initiated_digivolve { target: source, cost: { reduce: 1 } } with
+#     ignore_requirements: false (default). target: source = the carrier of the
+#     inherited effect (the working BT12-016 target shape, NOT the blocked
+#     select-own-permanent target shape of BT17-027).
+#
+# ─── Clause crosscheck ───────────────────────────────────────────────────────
+#
+# Inherited [When Attacking][Once Per Turn]:
+#   - "By trashing your top security card" — activation cost. The clause is
+#     gated (condition) on BOTH (a) security_count_gte: 1 so the trash cost is
+#     payable, AND (b) a [Glowing Dawn] card in hand so the cost buys a real
+#     digivolve. This is the BT25-014 idiom: gate activation on a payable cost
+#     AND a valid payoff, so the trash is NEVER paid for nothing (an empty
+#     mandatory select would otherwise skip the digivolve yet still run the
+#     trash → an unfaithful free security-trash). DCGO enforces this via its
+#     own cost/target preflight.
+#   - "this Digimon may digivolve into a [Glowing Dawn] trait card in the hand"
+#     — optional ("may"); select_hand filter trait_has "Glowing Dawn". The
+#     inner optional select_hand carries the "may" (BT12-016 idiom): the player
+#     may still decline even when a [Glowing Dawn] card is in hand.
+#   - "with the cost reduced by 1" — paid digivolution cost minus 1; honors
+#     digivolution requirements (level/color gate), so cost: { reduce: 1 } and
+#     ignore_requirements stays false.
+#   - target: source — the carrier the egg sits beneath digivolves in place.
+
+card: BT25-003
+name: "Frimon"
+kind: digi_egg
+level: 2
+color: [yellow]
+cost: 0
+traits: [Lesser, Glowing Dawn, BEATBREAK]
+form: In-Training
+
+effects:
+  # ─── Inherited [When Attacking][OPT] trash top security → may digivolve into
+  #     a [Glowing Dawn] hand card with the cost reduced by 1 ──────────────────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    # Gate on a payable cost (top security to trash) AND a valid payoff
+    # (a [Glowing Dawn] card in hand). BT25-014 idiom — the trash cost is never
+    # paid for nothing.
+    condition:
+      all_of:
+        - security_count_gte: 1
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              trait_has: "Glowing Dawn"
+            n: 1
+    summary: "Inherited [When Attacking][OPT] By trashing your top security card, may digivolve into a [Glowing Dawn] hand card with the cost reduced by 1"
+    process:
+      # "may digivolve into a [Glowing Dawn] trait card in the hand" — the
+      # optional select_hand carries the "may" (BT12-016 idiom). Declining
+      # (PASS) leaves the binding unset → the trash cost is NOT paid.
+      - select_hand:
+          of: you
+          bind_as: gd_evo
+          optional: true
+          filter: { trait_has: "Glowing Dawn" }
+          prompt: "Digivolve into a [Glowing Dawn] trait card in your hand with the cost reduced by 1"
+      # The trash + digivolve only happen on a real pick — "by trashing your
+      # top security card" is the COST of the chosen digivolve, gated on the
+      # selection actually being made (AD1-002 binding_present idiom).
+      - if:
+          condition: { binding_present: gd_evo }
+          then:
+            # "By trashing your top security card" — activation cost.
+            - trash_top_security: { of: you }
+            # "with the cost reduced by 1" — paid, requirements honored.
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: gd_evo
+                cost: { reduce: 1 }

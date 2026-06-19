@@ -167,6 +167,15 @@ pub fn lower_for_kind_with_clause_index(
         let process_steps = Arc::new(body_steps);
         let active_when = clause.active_when.clone().map(Arc::new);
         let condition = clause.condition.clone().map(Arc::new);
+        // G-SHARED-OPT-HETEROGENEOUS-TIMING: per-timing condition override for
+        // THIS timing, if the clause declares one. AND-ed onto the clause-level
+        // gates inside the condition closure so each timing of a shared-OPT
+        // multi-timing clause can carry its own gate while sharing the counter.
+        let timing_condition = clause
+            .timing_conditions
+            .iter()
+            .find(|tc| tc.when == *t)
+            .map(|tc| Arc::new(tc.condition.clone()));
         let scope = clause.scope;
         let optional = clause.optional;
         let once_per_turn = clause.once_per_turn;
@@ -256,12 +265,14 @@ pub fn lower_for_kind_with_clause_index(
 
         if active_when.is_some()
             || condition.is_some()
+            || timing_condition.is_some()
             || is_when_linked
             || is_host_linked
             || is_would_link_to_this
         {
             let aw = active_when.clone();
             let cc = condition.clone();
+            let tc = timing_condition.clone();
             builder = builder.condition(move |rctx| {
                 // DigiLink Shape-B self-filter: a `when_linked` effect fires
                 // only when THIS card is the just-linked card.
@@ -286,6 +297,12 @@ pub fn lower_for_kind_with_clause_index(
                     }
                 }
                 if let Some(p) = &cc {
+                    if !eval_predicate(p, rctx, subject) {
+                        return false;
+                    }
+                }
+                // G-SHARED-OPT-HETEROGENEOUS-TIMING: this timing's own gate.
+                if let Some(p) = &tc {
                     if !eval_predicate(p, rctx, subject) {
                         return false;
                     }
@@ -461,6 +478,35 @@ pub(crate) fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
         // can only be honored via an outer accept/decline prompt.
         _ => false,
     }
+}
+
+/// True when a cost-reduction `pay_cost` body's FIRST step INSTALLS A SELECTION
+/// (parks on a `pending_selection`) rather than completing synchronously. Such
+/// a reducer cannot be resolved by the synchronous digivolve / Option-use cost
+/// scan; the engine routes it through a dedicated interactive prompt instead
+/// (`Effect::pay_cost_interactive`). `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+///
+/// Conservative: lists the selection-installing steps actually used as cost
+/// payments today. The self-suspend / synchronous-trash idioms are NOT here, so
+/// they keep their synchronous scan handling.
+pub(crate) fn body_first_step_installs_selection(body: &[CompiledStep]) -> bool {
+    let Some(first) = body.first() else {
+        return false;
+    };
+    matches!(
+        first,
+        CompiledStep::TrashBottomFaceDownSourceUnderTamer { .. }
+            | CompiledStep::SelectHand { .. }
+            | CompiledStep::SelectTrash { .. }
+            | CompiledStep::SelectReveal { .. }
+            | CompiledStep::SelectSecurity { .. }
+            | CompiledStep::SelectOwnPermanent { .. }
+            | CompiledStep::SelectOpponentPermanent { .. }
+            | CompiledStep::SelectAnyPermanent { .. }
+            | CompiledStep::SelectMaterial { .. }
+            | CompiledStep::SelectOwnSources { .. }
+            | CompiledStep::SelectCountCappedMulti { .. }
+    )
 }
 
 /// Resolve a `CompiledPlayerRef` against a read context to concrete player
