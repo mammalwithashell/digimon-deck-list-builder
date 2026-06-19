@@ -358,6 +358,10 @@ pub struct RevealedCardDto {
 pub struct GameStateDto {
     pub turn_count: u16,
     pub turn_player: PlayerId,
+    /// The seat that takes the first turn (`turn_order[0]`). Stable from game
+    /// creation, so the mulligan UI can tell the player whether they go first
+    /// or second. The local human is always seat 0 in a desktop game.
+    pub first_player: PlayerId,
     pub current_phase: String,
     pub memory: i16,
     pub game_over: bool,
@@ -755,6 +759,7 @@ pub fn game_state_dto(game: &Game) -> GameStateDto {
     GameStateDto {
         turn_count: game.turn_count,
         turn_player: game.turn_player(),
+        first_player: game.turn_order.first().copied().unwrap_or(0),
         current_phase: phase_str(game.current_phase).to_string(),
         memory: game.memory,
         game_over: game.game_over,
@@ -1104,6 +1109,13 @@ pub struct CreateGameResponseDto {
     pub seed: String,
     pub state: GameStateDto,
     pub action_mask: Vec<u8>,
+    /// Whether the next decision belongs to an agent (so the frontend locks the
+    /// human's controls and the paced driver advances it). True when the AI
+    /// acts first — e.g. it mulligans first when the human goes second. Without
+    /// this the frontend defaulted to `false` and presented the AI's pending
+    /// mulligan to the human as a clickable prompt. Mirrors
+    /// `ActionResponseDto.agent_pending`.
+    pub agent_pending: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1464,21 +1476,27 @@ pub async fn rust_create_game(
             }
 
             let registry = CardRegistry::from_cards(&db);
-            let mask = action_mask_bytes(&game);
-            let dto = game_state_dto(&game);
-
-            world.game = Some(game);
-            world.session = GameSession {
+            let session = GameSession {
                 registry: Some(registry),
                 player_kinds: kinds,
                 player_model_ids: model_ids,
             };
+            let mask = action_mask_bytes(&game);
+            let dto = game_state_dto(&game);
+            // Compute BEFORE moving game/session into `world` so the frontend
+            // knows up-front whether the opening decision (e.g. the first
+            // mulligan when the human goes second) belongs to the AI.
+            let pending = agent_pending(&game, &session);
+
+            world.game = Some(game);
+            world.session = session;
 
             Ok(CreateGameResponseDto {
                 game_id: "rust-local".to_string(),
                 seed: effective_seed.to_string(),
                 state: dto,
                 action_mask: mask,
+                agent_pending: pending,
             })
         })
         .await?

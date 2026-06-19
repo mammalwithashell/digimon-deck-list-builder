@@ -528,6 +528,7 @@ export function GamePage() {
         turnCount: store.turnCount,
         currentPhase: store.currentPhase,
         currentPlayer: store.currentPlayer,
+        firstPlayer: store.firstPlayer,
         memoryGauge: store.memoryGauge,
         isGameOver: store.isGameOver,
         winner: store.winner,
@@ -1148,7 +1149,12 @@ export function GamePage() {
         </div>
         {store.currentPhase === GamePhase.Mulligan && (
           <div className="px-3 pb-1 text-xs text-amber-300" data-testid="mulligan-banner">
-            Opening Mulligan: choose <span className="font-semibold">Keep Hand</span> or <span className="font-semibold">Mulligan</span>.
+            Opening Mulligan —{' '}
+            <span className="font-semibold">
+              {store.firstPlayer === 0 ? 'you go first' : 'you go second'}
+            </span>
+            : choose <span className="font-semibold">Keep Hand</span> or{' '}
+            <span className="font-semibold">Mulligan</span>.
           </div>
         )}
 

@@ -36,6 +36,7 @@ interface CreateGameCommandResponse {
   seed: string;
   state: GameStateDto;
   action_mask: number[];
+  agent_pending: boolean;
 }
 
 interface ActionCommandResponse {
@@ -390,6 +391,9 @@ export function dtoToGameState(dto: GameStateDto): GameState {
     turnCount: dto.turn_count,
     currentPhase: mapPhase(dto.current_phase),
     currentPlayer: dto.turn_player,
+    // Raw engine seat (0/1), same convention as currentPlayer. 0 = the local
+    // human (player1), so the mulligan UI shows "you go first" when this is 0.
+    firstPlayer: dto.first_player,
     // Engine `memory` is from the TURN PLAYER's perspective; the UI contract
     // (MemoryGauge, and the browser wire's `to_ui_json` memoryGauge) is
     // player-1's perspective. Without this flip, the opponent's memory
@@ -574,6 +578,11 @@ export async function createGame(
     action_mask: resp.action_mask,
     logs: [],
     events: [],
+    // Without this the frontend defaulted agent_pending to false, so when the
+    // AI goes first (e.g. it mulligans first while the human goes second) the
+    // human's controls weren't locked and the paced driver didn't advance the
+    // AI — the human had to click their mulligan twice.
+    agent_pending: resp.agent_pending,
   };
 }
 

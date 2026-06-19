@@ -42,6 +42,7 @@ const state: GameState = {
   turnCount: 1,
   currentPhase: 3,
   currentPlayer: 0,
+  firstPlayer: 0,
   memoryGauge: 0,
   isGameOver: false,
   winner: null,
