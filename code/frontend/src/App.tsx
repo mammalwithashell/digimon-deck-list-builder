@@ -19,6 +19,7 @@ import { PatchNotesPage } from '@/pages/PatchNotesPage';
 import { RoomChooserPage } from '@/pages/RoomChooserPage';
 import { RoomLobbyPage } from '@/pages/RoomLobbyPage';
 import { UpdaterBridge } from '@/updater/UpdaterBridge';
+import { ThemeProvider } from '@/design/theme/ThemeProvider';
 import { useAuthStore } from '@/stores/authStore';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
@@ -32,6 +33,9 @@ const GraphicsSettingsPage = lazy(() =>
 );
 
 const LauncherPage = lazy(() => import('@/components/launcher/LauncherPage').then(m => ({ default: m.LauncherPage })));
+
+// Desktop-only in-app design-system kitchen sink (add-desktop-design-system).
+const StyleGuidePage = lazy(() => import('@/design/StyleGuidePage').then(m => ({ default: m.StyleGuidePage })));
 
 // Lazy-load admin/training pages so they're tree-shaken out of desktop builds
 const AdminIssuesPage = lazy(() => import('@/pages/AdminIssuesPage').then(m => ({ default: m.AdminIssuesPage })));
@@ -66,10 +70,12 @@ export function App() {
 
   return (
     <BrowserRouter>
-      <UpdaterBridge />
-      <CanvasScaler>
+      <ThemeProvider>
+        <UpdaterBridge />
+        <CanvasScaler>
         <Routes>
           {IS_DESKTOP && <Route path="/" element={suspended(LauncherPage)} />}
+          {IS_DESKTOP && <Route path="/style-guide" element={suspended(StyleGuidePage)} />}
           <Route element={<Layout />}>
             {!IS_DESKTOP && <Route path="/" element={<HomePage />} />}
             <Route path="/patch-notes" element={<PatchNotesPage />} />
@@ -112,7 +118,8 @@ export function App() {
             )}
           </Route>
         </Routes>
-      </CanvasScaler>
+        </CanvasScaler>
+      </ThemeProvider>
     </BrowserRouter>
   );
 }

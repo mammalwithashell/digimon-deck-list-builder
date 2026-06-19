@@ -1,0 +1,149 @@
+/*
+ * Desktop design-system token layer (add-desktop-design-system).
+ *
+ * Role-based tokens are the single source of visual truth. Components consume
+ * ONLY these role tokens — never raw hex or page-local palettes (--ib-*,
+ * --bld-*, --bg-*). Each theme supplies a complete value set for every role.
+ *
+ * Theme is selected by the `data-theme` attribute on <html>. Dark is the
+ * default (also applied to bare :root so the tokens exist before any attribute
+ * is set). The light block overrides every theme-dependent role.
+ *
+ * The two sentinel-wrapped blocks below MUST define the exact same set of role
+ * names — tokens.test.ts enforces that parity.
+ */
+
+/* Shared, theme-independent scale tokens (not duplicated per theme). */
+:root {
+  --text-xs: 11px;
+  --text-sm: 12px;
+  --text-md: 14px;
+  --text-lg: 18px;
+  --text-xl: 24px;
+  --text-2xl: 32px;
+  --text-3xl: 48px;
+  --text-display: 64px;
+
+  --track-tight: 0.02em;
+  --track-wide: 0.14em;
+  --track-wider: 0.2em;
+
+  --radius: 0px;
+}
+
+/* @tokens:dark:start */
+:root,
+[data-theme="dark"] {
+  /* surfaces */
+  --surface-bg: #070b09;
+  --surface: #0c1410;
+  --surface-raised: #11201a;
+  --surface-sunken: #050807;
+  --screen-bg: #050807;
+  --screen-line: rgba(57, 255, 136, 0.14);
+
+  /* ink */
+  --ink-0: #c8e6d4;
+  --ink-1: #9fc4b0;
+  --ink-2: #6f9482;
+  --ink-3: #4a6457;
+
+  /* lines */
+  --line-0: rgba(57, 255, 136, 0.12);
+  --line-1: rgba(57, 255, 136, 0.25);
+  --line-strong: rgba(57, 255, 136, 0.5);
+  --border-w: 1px;
+
+  /* accent / signal / status */
+  --accent: #39ff88;
+  --accent-2: #1d8a4c;
+  --accent-ink: #070b09;
+  --accent-glow: rgba(57, 255, 136, 0.45);
+  --signal: #ff8a2a;
+  --signal-ink: #1a0d02;
+  --good: #39ff88;
+  --warn: #ffb05a;
+  --danger: #ff4d5e;
+
+  /* game identity — orange (player) / blue (opponent), theme-stable hue */
+  --player: #ff7a18;
+  --player-2: #ffb05a;
+  --player-soft: rgba(255, 122, 24, 0.15);
+  --opp: #3aa6ff;
+  --opp-2: #8fd0ff;
+  --opp-soft: rgba(58, 166, 255, 0.15);
+
+  /* chrome treatment */
+  --frame-cut: 10px;
+  --bevel-hi: transparent;
+  --bevel-lo: transparent;
+  --bevel-shadow: none;
+  --scanline-opacity: 0.22;
+  --grid-line: rgba(57, 255, 136, 0.1);
+  --shadow-glow: 0 0 16px var(--accent-glow);
+
+  /* fonts (families defined in fonts.css) */
+  --font-display: var(--ff-vt323);
+  --font-ui: var(--ff-plex-mono);
+  --font-mono: var(--ff-plex-mono);
+  --font-pixel: var(--ff-plex-mono);
+}
+/* @tokens:dark:end */
+
+/* @tokens:light:start */
+[data-theme="light"] {
+  /* surfaces */
+  --surface-bg: #d9d0b4;
+  --surface: #cbc6af;
+  --surface-raised: #e6e1c9;
+  --surface-sunken: #bdb89f;
+  --screen-bg: #0a0a0a;
+  --screen-line: rgba(0, 190, 210, 0.16);
+
+  /* ink */
+  --ink-0: #1a1a14;
+  --ink-1: #3a382c;
+  --ink-2: #5f5b48;
+  --ink-3: #857f66;
+
+  /* lines */
+  --line-0: #b3ad92;
+  --line-1: #7a7560;
+  --line-strong: #4a4636;
+  --border-w: 2px;
+
+  /* accent / signal / status */
+  --accent: #2b2f7a;
+  --accent-2: #1b1f5a;
+  --accent-ink: #ffffff;
+  --accent-glow: transparent;
+  --signal: #d61f26;
+  --signal-ink: #ffffff;
+  --good: #2f6d2c;
+  --warn: #b5660f;
+  --danger: #c1272d;
+
+  /* game identity — deepened for contrast on beige */
+  --player: #e0631a;
+  --player-2: #b5470c;
+  --player-soft: rgba(224, 99, 26, 0.18);
+  --opp: #2f6db5;
+  --opp-2: #1b4a85;
+  --opp-soft: rgba(47, 109, 181, 0.18);
+
+  /* chrome treatment */
+  --frame-cut: 0px;
+  --bevel-hi: #efebd6;
+  --bevel-lo: #7a7560;
+  --bevel-shadow: inset 1.5px 1.5px 0 var(--bevel-hi), inset -2px -2px 0 var(--bevel-lo);
+  --scanline-opacity: 0;
+  --grid-line: rgba(0, 0, 0, 0.045);
+  --shadow-glow: none;
+
+  /* fonts */
+  --font-display: var(--ff-silkscreen);
+  --font-ui: var(--ff-sans);
+  --font-mono: var(--ff-plex-mono);
+  --font-pixel: var(--ff-silkscreen);
+}
+/* @tokens:light:end */
