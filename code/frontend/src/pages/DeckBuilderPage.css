@@ -235,6 +235,7 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  padding: 5px 10px;
   color: var(--bld-ink-2);
   cursor: pointer;
   font-family: var(--bld-mono);
