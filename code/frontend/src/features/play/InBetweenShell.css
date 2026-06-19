@@ -1,8 +1,8 @@
 .ib-flow-frame {
   min-height: var(--app-vh100, 100vh);
-  background: #050608;
-  color: #f5f1e8;
-  font-family: Geist, Inter, system-ui, sans-serif;
+  background: var(--surface-bg);
+  color: var(--ink-0);
+  font-family: var(--font-ui);
 }
 
 .ib-flow-body {
@@ -15,8 +15,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 22px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  font-family: "JetBrains Mono", monospace;
+  border-bottom: 1px solid var(--line-1);
+  font-family: var(--font-mono);
   font-size: 12px;
 }
 
@@ -24,27 +24,27 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: rgba(245, 241, 232, 0.55);
+  color: var(--ink-2);
 }
 
 .ib-flow-crumb .idx {
-  border: 1px solid rgba(255, 122, 24, 0.6);
-  color: #ff7a18;
+  border: 1px solid var(--player);
+  color: var(--player);
   padding: 2px 6px;
 }
 
 .ib-flow-crumb a {
-  color: rgba(245, 241, 232, 0.72);
+  color: var(--ink-2);
   text-decoration: none;
 }
 
 .ib-flow-crumb .crumb-part:last-child span:last-child {
-  color: #f5f1e8;
+  color: var(--ink-0);
 }
 
 .ib-flow-topbar-right {
   display: flex;
   align-items: center;
   gap: 10px;
-  color: rgba(245, 241, 232, 0.64);
+  color: var(--ink-2);
 }

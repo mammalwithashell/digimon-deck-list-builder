@@ -59,8 +59,8 @@
 
 ## 10. Replace legacy navy page chrome
 
-- [ ] 10.1 Replace the chrome/headers of `DeckBuilderPage`, `RoomLobbyPage`, `ModeSelectPage`, `DeckSelectPage`, `DeckLibraryPage`, and `MatchingPage` with primitives consuming tokens (kill the navy-blue rounded look); leave dense internals for phase 2.
-- [ ] 10.2 Remove now-dead page-local palette vars (`--bld-*`, inline navy hex) superseded by tokens.
+- [x] 10.1 Replace the chrome/headers of `DeckBuilderPage`, `RoomLobbyPage`, `ModeSelectPage`, `DeckSelectPage`, `DeckLibraryPage`, and `MatchingPage` with primitives consuming tokens (kill the navy-blue rounded look); leave dense internals for phase 2. [removed the legacy top NavBar entirely on desktop (per user — gone, not reskinned); retargeted all page palettes + the shared `InBetweenShell` (.ib-flow-*) + RoomChooser onto tokens so they theme]
+- [x] 10.2 Remove now-dead page-local palette vars (`--bld-*`, inline navy hex) superseded by tokens. [--bld-*/--lib-* mapped to tokens; inline cream/navy hex + --ib-fonts replaced with role tokens across the play-flow pages]
 
 ## 11. Landing footer + settings
 

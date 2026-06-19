@@ -9,25 +9,25 @@
 .room-choose-card input,
 .room-choose-card button,
 .room-choose-actions button {
-  font-family: var(--ib-font-mono);
+  font-family: var(--font-mono);
 }
 
 .room-choose-kicker {
-  color: rgba(245, 241, 232, 0.48);
+  color: var(--ink-2);
   font-size: 10px;
   letter-spacing: 0.14em;
 }
 
 .room-choose-header h1 {
   margin: 10px 0 0;
-  color: #f5f1e8;
-  font-family: var(--ib-font-display);
+  color: var(--ink-0);
+  font-family: var(--font-display);
   font-size: 44px;
   line-height: 1.02;
 }
 
 .room-choose-header em {
-  color: #ff7a18;
+  color: var(--player);
   font-style: normal;
 }
 
@@ -39,8 +39,8 @@
 }
 
 .room-choose-card {
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--line-1);
+  background: var(--surface-raised);
   padding: 26px;
   display: grid;
   gap: 14px;
@@ -51,29 +51,29 @@
 .room-choose-card.guest { border-color: rgba(58, 166, 255, 0.45); }
 
 .room-choose-card .tag {
-  color: rgba(245, 241, 232, 0.48);
+  color: var(--ink-2);
   font-size: 10px;
   letter-spacing: 0.14em;
 }
 
 .room-choose-card h2 {
   margin: 0;
-  font-family: var(--ib-font-display);
-  color: #f5f1e8;
+  font-family: var(--font-display);
+  color: var(--ink-0);
   font-size: 28px;
 }
 
 .room-choose-card p {
   margin: 0;
-  color: rgba(245, 241, 232, 0.64);
+  color: var(--ink-2);
   font-size: 11px;
   letter-spacing: 0.06em;
 }
 
 .room-choose-card input {
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--line-1);
   background: rgba(0, 0, 0, 0.35);
-  color: #3aa6ff;
+  color: var(--opp);
   font-size: 34px;
   letter-spacing: 0.5em;
   text-align: center;
@@ -82,9 +82,9 @@
 
 .room-choose-card button,
 .room-choose-actions button {
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.05);
-  color: #f5f1e8;
+  border: 1px solid var(--line-1);
+  background: var(--surface-raised);
+  color: var(--ink-0);
   padding: 12px;
   cursor: pointer;
 }
@@ -92,13 +92,13 @@
 .room-choose-card.host button {
   border-color: rgba(255, 122, 24, 0.72);
   background: rgba(255, 122, 24, 0.12);
-  color: #ff9a3d;
+  color: var(--player-2);
 }
 
 .room-choose-card.guest button {
   border-color: rgba(58, 166, 255, 0.6);
   background: rgba(58, 166, 255, 0.1);
-  color: #3aa6ff;
+  color: var(--opp);
 }
 
 .room-choose-card button:disabled {
@@ -108,8 +108,8 @@
 
 .room-notice {
   margin: 8px 0 0;
-  color: #ffcc4a;
-  font-family: var(--ib-font-mono);
+  color: var(--warn);
+  font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
