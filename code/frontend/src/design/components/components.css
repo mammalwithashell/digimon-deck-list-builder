@@ -257,8 +257,8 @@
 .ds-screen {
   background-color: var(--screen-bg);
   background-image:
-    repeating-linear-gradient(0deg, var(--screen-line) 0 1px, transparent 1px 11px),
-    repeating-linear-gradient(90deg, var(--screen-line) 0 1px, transparent 1px 11px);
+    repeating-linear-gradient(0deg, var(--screen-line) 0 1px, transparent 1px 14px),
+    repeating-linear-gradient(90deg, var(--screen-line) 0 1px, transparent 1px 14px);
   color: var(--screen-ink);
   padding: 8px;
 }
