@@ -693,6 +693,15 @@
 .deck-builder-app .bld-preview-effect .rf {
   color: #7d6bd6;
 }
+.deck-builder-page .bld-preview-effect .kw,
+.deck-builder-app .bld-preview-effect .kw {
+  display: inline-block;
+  background: var(--bld-player);
+  color: #1a0d02;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 2px;
+}
 
 .deck-builder-page .bld-pool,
 .deck-builder-app .bld-pool {

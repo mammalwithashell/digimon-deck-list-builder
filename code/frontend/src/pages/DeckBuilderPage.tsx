@@ -50,11 +50,14 @@ const EFFECT_TIMINGS = new Set([
 ]);
 
 /**
- * Render card effect text with Mono Body highlighting: known timing phrases as
- * gold-on-black pills, other [bracketed] names/keywords as violet refs.
+ * Render card effect text with Mono Body highlighting: <keywords> as sharp
+ * orange chips, known [timing] phrases as gold-on-black pills, and other
+ * [bracketed] names as violet refs — mirroring how they print on the card.
  */
 function formatEffect(text: string): ReactNode {
-  return text.split(/(\[[^\]]+\])/g).map((part, i) => {
+  return text.split(/(\[[^\]]+\]|<[^>]+>)/g).map((part, i) => {
+    const keyword = part.match(/^<(.+)>$/);
+    if (keyword) return <span key={i} className="kw">{keyword[1] ?? ''}</span>;
     const match = part.match(/^\[(.+)\]$/);
     if (!match) return part;
     const inner = match[1] ?? '';
