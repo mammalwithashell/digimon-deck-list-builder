@@ -2005,6 +2005,41 @@ mod tests {
         assert_ne!(game.current_phase, GamePhase::Mulligan);
     }
 
+    #[test]
+    fn new_session_game_first_player_follows_seed_parity() {
+        let db = test_card_db();
+        let decks = vec![test_deck(), test_deck()];
+        // Deterministic: even seed → seat 0 (local human) goes first; odd → AI.
+        for seed in 0u64..8 {
+            let game = new_session_game(&decks, &db, Rules::standard(), seed).unwrap();
+            assert_eq!(
+                game.turn_order[0],
+                (seed % 2) as PlayerId,
+                "seed {seed}: first player must follow seed parity"
+            );
+        }
+    }
+
+    #[test]
+    fn new_session_game_first_player_is_balanced_over_random_seeds() {
+        let db = test_card_db();
+        let decks = vec![test_deck(), test_deck()];
+        let (mut p0, mut p1) = (0u32, 0u32);
+        for _ in 0..400 {
+            let seed = rand::random::<u64>();
+            let game = new_session_game(&decks, &db, Rules::standard(), seed).unwrap();
+            if game.turn_order[0] == 0 {
+                p0 += 1;
+            } else {
+                p1 += 1;
+            }
+        }
+        println!("FIRST_PLAYER_DIST p0={p0} p1={p1}");
+        // A correct random first-player split is ~50/50; generous slack guards
+        // against a regression to "always the same seat goes first".
+        assert!(p0 > 120 && p1 > 120, "first player should vary: p0={p0} p1={p1}");
+    }
+
     // ─── engine worker thread (desktop-engine-worker-thread) ────────────
 
     /// `EngineHandle::run` must dispatch the closure to the worker thread —
