@@ -1567,3 +1567,65 @@
   background: rgba(0, 0, 0, 0.6);
   color: #ffd166;
 }
+
+/* Format selector (add-deck-format-registry) — onto design tokens. */
+.deck-builder-page .deck-format-select,
+.deck-builder-app .deck-format-select {
+  background: var(--surface-raised);
+  border-color: var(--line-1);
+  color: var(--ink-0);
+}
+
+/* ── Light "Adventure '99" Win95 chrome (add-desktop-design-system) ──────────
+   Match the light launcher: beveled buttons, raised parchment windows, sunken
+   inputs. The teal desktop shows behind these parchment panels. */
+[data-theme="light"] .deck-builder-page .btn,
+[data-theme="light"] .deck-builder-app .btn,
+[data-theme="light"] .deck-builder-page .bld-top .back,
+[data-theme="light"] .deck-builder-app .bld-top .back,
+[data-theme="light"] .deck-builder-page .bld-colors .chip,
+[data-theme="light"] .deck-builder-app .bld-colors .chip,
+[data-theme="light"] .deck-builder-page .bld-deck-tabs button,
+[data-theme="light"] .deck-builder-app .bld-deck-tabs button {
+  border-color: transparent;
+  background: var(--surface);
+  box-shadow: var(--bevel-shadow);
+}
+[data-theme="light"] .deck-builder-page .btn:active,
+[data-theme="light"] .deck-builder-app .btn:active,
+[data-theme="light"] .deck-builder-page .bld-colors .chip.on,
+[data-theme="light"] .deck-builder-app .bld-colors .chip.on,
+[data-theme="light"] .deck-builder-page .bld-deck-tabs button.on,
+[data-theme="light"] .deck-builder-app .bld-deck-tabs button.on {
+  box-shadow: inset 1.5px 1.5px 0 var(--bevel-lo), inset -1.5px -1.5px 0 var(--bevel-hi);
+}
+[data-theme="light"] .deck-builder-page .bld-counts,
+[data-theme="light"] .deck-builder-app .bld-counts,
+[data-theme="light"] .deck-builder-page .bld-filters,
+[data-theme="light"] .deck-builder-app .bld-filters,
+[data-theme="light"] .deck-builder-page .bld-preview,
+[data-theme="light"] .deck-builder-app .bld-preview,
+[data-theme="light"] .deck-builder-page .bld-pool,
+[data-theme="light"] .deck-builder-app .bld-pool,
+[data-theme="light"] .deck-builder-page .bld-deck,
+[data-theme="light"] .deck-builder-app .bld-deck {
+  border-color: transparent;
+  background: var(--surface);
+  box-shadow: var(--bevel-shadow);
+}
+[data-theme="light"] .deck-builder-page select,
+[data-theme="light"] .deck-builder-app select,
+[data-theme="light"] .deck-builder-page .bld-filter input,
+[data-theme="light"] .deck-builder-app .bld-filter input,
+[data-theme="light"] .deck-builder-page .bld-filter select,
+[data-theme="light"] .deck-builder-app .bld-filter select,
+[data-theme="light"] .deck-builder-page .deck-format-select,
+[data-theme="light"] .deck-builder-app .deck-format-select,
+[data-theme="light"] .deck-builder-page .deck-name-input,
+[data-theme="light"] .deck-builder-app .deck-name-input,
+[data-theme="light"] .deck-builder-page .bld-top .pill,
+[data-theme="light"] .deck-builder-app .bld-top .pill {
+  border-color: transparent;
+  background: var(--surface-raised);
+  box-shadow: inset 1.5px 1.5px 0 var(--bevel-lo), inset -1.5px -1.5px 0 var(--bevel-hi);
+}
