@@ -403,9 +403,9 @@
   background: var(--bld-bg-0);
   color: var(--bld-ink-1);
   outline: none;
-  padding: 6px 8px;
+  padding: 7px 10px;
   font-family: var(--bld-mono);
-  font-size: 10px;
+  font-size: 13px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -446,13 +446,14 @@
   position: relative;
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   border: 1px solid var(--bld-line-2);
   color: rgba(255, 255, 255, 0.62);
   cursor: pointer;
   font-family: var(--bld-mono);
-  font-size: 8px;
+  font-size: 10px;
+  font-weight: 700;
 }
 
 .deck-builder-page .bld-colors .chip.on,
@@ -466,6 +467,22 @@
   background: var(--bld-bg-2);
   color: var(--bld-ink-2);
 }
+
+/* Each color chip wears its actual color identity. */
+.deck-builder-page .bld-colors .chip.red,
+.deck-builder-app .bld-colors .chip.red { background: #c2362a; border-color: #e0584a; color: #fff; }
+.deck-builder-page .bld-colors .chip.blue,
+.deck-builder-app .bld-colors .chip.blue { background: #2563a8; border-color: #4a8ad0; color: #fff; }
+.deck-builder-page .bld-colors .chip.yellow,
+.deck-builder-app .bld-colors .chip.yellow { background: #e0b41e; border-color: #f0cc4a; color: #1a1208; }
+.deck-builder-page .bld-colors .chip.green,
+.deck-builder-app .bld-colors .chip.green { background: #2f9e44; border-color: #52c068; color: #fff; }
+.deck-builder-page .bld-colors .chip.purple,
+.deck-builder-app .bld-colors .chip.purple { background: #7d3fc0; border-color: #a06fe0; color: #fff; }
+.deck-builder-page .bld-colors .chip.black,
+.deck-builder-app .bld-colors .chip.black { background: #1c1c22; border-color: #55555f; color: #e8e8ee; }
+.deck-builder-page .bld-colors .chip.white,
+.deck-builder-app .bld-colors .chip.white { background: #e8e6df; border-color: #ffffff; color: #1a1a14; }
 
 .deck-builder-page .bld-main,
 .deck-builder-app .bld-main {
@@ -1630,8 +1647,8 @@
 [data-theme="light"] .deck-builder-app .btn,
 [data-theme="light"] .deck-builder-page .bld-top .back,
 [data-theme="light"] .deck-builder-app .bld-top .back,
-[data-theme="light"] .deck-builder-page .bld-colors .chip,
-[data-theme="light"] .deck-builder-app .bld-colors .chip,
+[data-theme="light"] .deck-builder-page .bld-colors .chip.all,
+[data-theme="light"] .deck-builder-app .bld-colors .chip.all,
 [data-theme="light"] .deck-builder-page .bld-deck-tabs button,
 [data-theme="light"] .deck-builder-app .bld-deck-tabs button {
   border-color: transparent;

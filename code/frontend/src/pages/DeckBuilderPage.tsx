@@ -24,6 +24,10 @@ import type { CardLegality, DeckEntry, DeckFormat, DeckValidationResult } from '
 import './DeckBuilderPage.css';
 
 const COLORS = ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Black', 'White'];
+// Single-letter codes — U for bl(U)e so it doesn't clash with B for black.
+const COLOR_CODE: Record<string, string> = {
+  Red: 'R', Blue: 'U', Yellow: 'Y', Green: 'G', Purple: 'P', Black: 'B', White: 'W',
+};
 const TYPES = ['all', 'Digimon', 'Digi-Egg', 'Tamer', 'Option'];
 const LEVELS = ['all', '2', '3', '4', '5', '6', '7'];
 const RARITIES = ['all', 'C', 'U', 'R', 'SR', 'SEC', 'P'];
@@ -507,7 +511,7 @@ export function DeckBuilderPage() {
                         : [...current.colors, color],
                     }))}
                   >
-                    {color[0]}
+                    {COLOR_CODE[color] ?? color[0]}
                   </button>
                 ))}
               </div>
