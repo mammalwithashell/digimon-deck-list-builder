@@ -185,6 +185,36 @@ impl<'a> EffectContext<'a> {
         self.place_trash_card_under_tamer(trash_index, tamer, face_down)
     }
 
+    /// Move a card currently in the transient reveal pool
+    /// (`Game::revealed_cards`) to the bottom of `tamer`'s digivolution stack,
+    /// optionally face-down. The reveal-pool analog of
+    /// `place_hand_card_under_tamer` / `place_trash_card_under_tamer`. Returns
+    /// the moved `CardHandle` on success, or `None` if `tamer` is not a legal
+    /// own-Tamer target or the card is not in the reveal pool.
+    ///
+    /// Used by the BEATBREAK / DATA SQUAD reveal-pool stash family — ST23-06
+    /// Gekkomon ("place 1 such card face down under any of your [Glowing Dawn]
+    /// trait Tamers"). G-DSL-PLACE-REVEALED-CARD-UNDER-TAMER.
+    pub fn place_revealed_card_under_tamer(
+        &mut self,
+        card: CardHandle,
+        tamer: PermanentHandle,
+        face_down: bool,
+    ) -> Option<CardHandle> {
+        if !self.own_tamer_target(tamer) {
+            return None;
+        }
+        if !self.game.revealed_cards.iter().any(|c| c.handle() == card) {
+            return None;
+        }
+        let moved = self.place_as_bottom_source(
+            crate::enums::CardSourceRef::Reveal(card),
+            tamer,
+            face_down,
+        );
+        moved.then_some(card)
+    }
+
     pub fn place_union_card_under_tamer(
         &mut self,
         card: CardHandle,

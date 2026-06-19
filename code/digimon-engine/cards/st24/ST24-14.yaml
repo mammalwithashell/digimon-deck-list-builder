@@ -1,0 +1,94 @@
+# ST24-14 Yoshino Fujieda & Keenan Crier — Tamer, Cost 4. Colors: Green, Purple.
+# Traits: DATA SQUAD.
+#
+# Printed card text (data/cards.json — verbatim):
+#   [Start of Your Main Phase] [On Play] You may place the top card of your deck
+#     face down under this Tamer. Then, if your opponent has a Digimon, gain 1
+#     memory.
+#   [All Turns] When effects trash cards from under this Tamer, by suspending
+#     this Tamer, suspend 1 of your opponent's Digimon.
+#   Inherited: [Security] Play this card without paying the cost.
+#
+# (DCGO carries a [Rule] name-alias — also treated as "Yoshino Fujieda"/"Keenan
+#  Crier" — metadata-only, NOT authored, exactly as ST23-13/14 omit theirs.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST24/Green/ST24_14.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Shared OP/SOMP — IDENTICAL to ST24-13 / ST23-13/14: internal Yes/No place top
+#   deck card FD under self (gated on deck non-empty), then unconditional gain 1
+#   memory if the opponent has a battle-area Digimon.
+# [All Turns] trash trigger (OnDigivolutionCardDiscarded): CanUse =
+#   IsExistOnBattleArea && host == this Tamer (NO IsOwnerTurn gate — [All Turns]);
+#   CanActivate = this Tamer unsuspended. → suspend self → SelectPermanent over an
+#   opponent Digimon (maxCount min(1,count), canNoSelect:false, Mode.Tap) →
+#   suspend. → when on_digivolution_card_trashed, active_when
+#   event_host_permanent_is_source (NO your_turn); activation_cost suspend_self +
+#   select_opponent_permanent { kind: digimon } + suspend.
+# [Security] (PlaySelfTamerSecurityEffect) → on_security + play_from_security.
+#
+# Sister card: ST23-14 (trash-trigger shape), but [All Turns] + suspend-opponent.
+
+card: ST24-14
+name: "Yoshino Fujieda & Keenan Crier"
+kind: tamer
+color: [green, purple]
+cost: 4
+traits: [DATA SQUAD]
+
+effects:
+  # ─── [SOMP][On Play] may place top deck card FD under self; then if opp has a
+  #     Digimon, gain 1 memory ─────────────────────────────────────────────────
+  - when: [on_play, start_of_your_main_phase]
+    summary: "[SOMP][On Play] You may place the top deck card face down under this Tamer; then if your opponent has a Digimon, gain 1 memory"
+    process:
+      - if:
+          condition:
+            count_gte:
+              filter: { of: you, zone: [deck] }
+              n: 1
+          then:
+            - select_effect_choice:
+                bind_as: place_choice
+                labels:
+                  - "Place the top card of your deck face down under this Tamer"
+                  - "Don't place"
+                prompt: "Place the top card of your deck face down under this Tamer?"
+            - if:
+                condition: { equals: [place_choice, 0] }
+                then:
+                  - place_as_bottom_source:
+                      source: { deck_top: you }
+                      target: source
+                      face_down: true
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - gain_memory: 1
+
+  # ─── [All Turns] on trash from under this Tamer → suspend self → suspend 1 opp
+  #     Digimon ─────────────────────────────────────────────────────────────────
+  # active_when omits your_turn — DCGO ST24_14.cs has NO IsOwnerTurn gate.
+  - when: on_digivolution_card_trashed
+    optional: true
+    active_when:
+      event_host_permanent_is_source: true
+    summary: "[All Turns] When effects trash cards from under this Tamer, by suspending this Tamer, suspend 1 of your opponent's Digimon"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          prompt: "Suspend 1 of your opponent's Digimon"
+      - suspend: { target: tgt }
+
+  # ─── Inherited [Security] Play this card without paying the cost ───────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

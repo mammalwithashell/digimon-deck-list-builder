@@ -113,6 +113,7 @@ mod place_as_bottom_source_face_down;
 mod play_cost_budget;
 mod play_token_bind_as;
 mod predicate_face_down_stack_position;
+mod predicate_play_or_use_cost_lte;
 mod pretty;
 mod provenance_turn_end_delete;
 mod raw_rust_registry;

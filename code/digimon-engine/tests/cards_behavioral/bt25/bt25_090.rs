@@ -6,7 +6,7 @@
 //!   the top 2 cards of your deck face down under this Tamer.
 //! [Your Turn] [Once Per Turn] When you would use [Glowing Dawn] trait Option
 //!   cards, by trashing the bottom face-down card under any of your Tamers,
-//!   reduce the cost by 1.                              <-- BLOCKED (omitted)
+//!   reduce the cost by 1.
 //! Inherited: [Security] Play this card without paying the cost.
 //!
 //! # DCGO C# reference
@@ -16,13 +16,17 @@
 //! - B1 start-of-turn tamer (memory swing — set to 3)
 //! - on-suspend (any Digimon) self-suspend cost → place top 2 face down (stash substrate)
 //! - Tamer [Security] play-self
+//! - D2 — BeforePayCost Option-USE cost reduction with an INTERACTIVE
+//!   `trash_bottom_face_down_source_under_tamer` pay_cost
+//!   (G-COST-REDUCTION-INTERACTIVE-PAY-COST, Option-use half).
 //!
-//! # Verdict — PARTIAL
+//! # Verdict — IMPLEMENTED (2026-06-15)
 //! Clause 3 (Glowing Dawn Option-USE cost reduction by trashing a face-down card
-//! under a Tamer) is BLOCKED on engine gap G-COST-REDUCTION-INTERACTIVE-PAY-COST
-//! (docs/RUST_ENGINE_GAPS.md): the interactive Tamer-pick pay_cost parks, so the
-//! reduction credit is dropped while still paying the cost. Clause omitted from
-//! the YAML rather than shipping an over-charge. Clauses 1, 2, 4 IMPLEMENTED.
+//! under a Tamer, -1) is now IMPLEMENTED: engine gap
+//! G-COST-REDUCTION-INTERACTIVE-PAY-COST is closed for the Option-use path, so
+//! the interactive Tamer-pick pay_cost parks, resolves, the bottom face-down
+//! stash is trashed, AND the -1 reduction is credited. Clauses 1, 2, 4 already
+//! IMPLEMENTED.
 
 #![allow(dead_code)]
 
@@ -31,6 +35,7 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::enums::{CardColor, CardKind};
 
 use crate::dsl_card_data::{card_data_from_compiled, compiled};
@@ -95,19 +100,42 @@ fn bt25_090_has_start_of_turn_suspend_and_security_clauses() {
     );
 }
 
+/// Clause 3 (the interactive Option-use cost reducer) now compiles as a
+/// `CostReduction` declarative clause keyed on `when_any_ally_played` (Option +
+/// Glowing Dawn). G-COST-REDUCTION-INTERACTIVE-PAY-COST is closed for the
+/// Option-use path.
 #[test]
-fn bt25_090_blocked_cost_reduction_clause_is_omitted() {
+fn bt25_090_cost_reduction_clause_present_with_pay_cost() {
     let card = compiled(CARD_ID);
-    let has_cr = card.effects.iter().any(|c| {
-        matches!(
-            c,
-            CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction { .. })
-        )
+    let cr = card.effects.iter().find_map(|c| match c {
+        CompiledClause::Declarative(cr @ CompiledDeclarativeClause::CostReduction { .. }) => {
+            Some(cr)
+        }
+        _ => None,
     });
+    let CompiledDeclarativeClause::CostReduction {
+        when_any_ally_played,
+        when_any_ally_digivolves_into,
+        pay_cost,
+        once_per_turn,
+        ..
+    } = cr.expect("interactive Option-use cost-reduction clause must compile")
+    else {
+        unreachable!()
+    };
     assert!(
-        !has_cr,
-        "the interactive-pay_cost cost-reduction clause must stay omitted (BLOCKED)"
+        when_any_ally_played.is_some(),
+        "the reducer must be keyed on using an Option (when_any_ally_played)"
     );
+    assert!(
+        when_any_ally_digivolves_into.is_none(),
+        "the Option-use reducer must NOT be a digivolve-into reducer"
+    );
+    assert!(
+        !pay_cost.is_empty(),
+        "the reducer must carry an interactive pay_cost (trash FD under Tamer)"
+    );
+    assert!(*once_per_turn, "[Once Per Turn] reducer");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -265,4 +293,211 @@ fn bt25_090_clause_on_security_present() {
         matches!(c, CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::OnSecurity])
     });
     assert!(on_sec, "[Security] play-self clause must compile");
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 5 — [Your Turn][Once Per Turn] Glowing-Dawn Option-USE cost -1 via
+// trashing a bottom face-down card under a Tamer
+// (G-COST-REDUCTION-INTERACTIVE-PAY-COST, Option-use path)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const AMOUNT: i16 = 1;
+
+/// A cost-3 [Glowing Dawn] Option with a benign [Main] body (gains 0 memory).
+fn make_glowing_dawn_option(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Option;
+    c.colors = vec![CardColor::Green];
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 3;
+    c.traits = vec!["Glowing Dawn".to_string()];
+    c
+}
+
+/// A cost-3 plain (non-Glowing-Dawn) Option with a benign [Main] body.
+fn make_plain_option(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Option;
+    c.colors = vec![CardColor::Green];
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 3;
+    c
+}
+
+/// A vanilla Tamer that can host a face-down stash.
+fn make_plain_tamer(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Tamer;
+    c.colors = vec![CardColor::Green];
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 3;
+    c
+}
+
+/// Benign [Main] body so a synthetic Option is playable (gains 0 memory).
+struct OptionMainNoop;
+impl CardEffect for OptionMainNoop {
+    fn effects(&self, card: digimon_engine::card_source::CardHandle) -> Vec<Effect> {
+        vec![Effect::on_play(card)
+            .option_main()
+            .name("noop option main")
+            .process(|_ctx| {})
+            .build()]
+    }
+}
+
+/// Build a runner: BT25-090 (Tomoro) on field (reducer host), a separate Tamer
+/// with one face-down stash, and an Option (cost 3) in hand at index 0.
+fn option_runner(option_id: &str, glowing_dawn: bool) -> DebugRunner {
+    let option = if glowing_dawn {
+        make_glowing_dawn_option(option_id)
+    } else {
+        make_plain_option(option_id)
+    };
+    let mut runner = DebugRunner::builder()
+        .add_card(tomoro())
+        .add_card(option)
+        .add_card(make_plain_tamer("TAMER"))
+        .add_card(make_filler("STASH"))
+        .add_card(make_filler("FILLER-DECK"))
+        .hand(0, &[option_id])
+        .deck(0, &["FILLER-DECK"; 5])
+        .deck(1, &["FILLER-DECK"; 5])
+        .memory(10)
+        .start();
+    runner.game.turn_count = 1;
+    runner.register_effect(option_id, std::sync::Arc::new(OptionMainNoop));
+
+    runner.place_on_field(0, CARD_ID, Some(0));
+    let tamer_perm = runner.place_stack(0, &["STASH", "TAMER"]);
+    runner.game.players[0].battle_area[tamer_perm.index as usize].card_sources[0].face_down = true;
+    runner
+}
+
+/// POSITIVE: using the [Glowing Dawn] Option (cost 3) with one eligible Tamer
+/// installs the optional accept gate; accepting parks on the Tamer pick,
+/// resolving it trashes the face-down source AND credits the -1 reduction
+/// (cost 3 → effective 2; +1 trash for the FD stash, +1 for the resolved Option).
+#[test]
+fn bt25_090_option_use_reducer_credits_minus_one_on_paid_park() {
+    let mut runner = option_runner("GD-OPT", true);
+
+    let mem_before = runner.memory();
+    let trash_before = runner.trash_size(0);
+
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert!(
+        matches!(result, digimon_engine::selection::OptionPlayResult::Pending),
+        "using the Glowing Dawn Option installs the cost-reduction prompt"
+    );
+    assert!(runner.pending_is_optional(), "the -1 reducer is optional (decline allowed)");
+    assert_eq!(runner.memory(), mem_before, "no cost paid before the gate resolves");
+
+    runner
+        .accept_optional_trigger()
+        .expect("accept the -1 cost reduction");
+    let _ = runner.auto_resolve();
+    assert!(runner.game.pending_selection.is_none(), "the Option resolves");
+
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before + 2,
+        "the FD stash source was trashed as the cost (+1) and the resolved Option \
+         went to trash (+1)"
+    );
+    assert_eq!(
+        mem_before - runner.memory(),
+        3 - AMOUNT,
+        "Option use cost 3 reduced by 1 → paid 2 memory (reduction credited behind the park)"
+    );
+}
+
+/// CONTROL: with NO face-down stash the pay_cost is unpayable, so the Option is
+/// used at FULL cost (3) and only the Option itself is trashed.
+#[test]
+fn bt25_090_option_use_reducer_no_reduction_when_unpayable() {
+    let mut runner = option_runner("GD-OPT", true);
+    let tamer_idx = runner.game.players[0]
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == "TAMER")
+        .expect("Tamer on field");
+    runner.game.players[0].battle_area[tamer_idx].card_sources[0].face_down = false;
+
+    let mem_before = runner.memory();
+    let trash_before = runner.trash_size(0);
+
+    let _ = runner.game.play_option_from_hand(0, 0);
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before + 1,
+        "no FD stash → only the resolved Option is trashed (no FD trash)"
+    );
+    assert_eq!(
+        mem_before - runner.memory(),
+        3,
+        "unpayable reducer → full Option use cost 3 paid, no reduction credited"
+    );
+}
+
+/// DECLINE: with an eligible Tamer present, DECLINING the optional reducer must
+/// let the Option play complete at FULL cost (3) — FD stash untouched.
+#[test]
+fn bt25_090_option_use_reducer_decline_pays_full_cost() {
+    let mut runner = option_runner("GD-OPT", true);
+
+    let mem_before = runner.memory();
+    let trash_before = runner.trash_size(0);
+
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert!(matches!(
+        result,
+        digimon_engine::selection::OptionPlayResult::Pending
+    ));
+    assert!(runner.pending_is_optional(), "an accept/decline gate installs");
+    runner
+        .decline_optional_trigger()
+        .expect("decline the optional reducer");
+    let _ = runner.auto_resolve();
+
+    assert!(runner.game.pending_selection.is_none(), "the Option play completes");
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before + 1,
+        "declined → FD stash untouched; only the resolved Option is trashed"
+    );
+    assert_eq!(
+        mem_before - runner.memory(),
+        3,
+        "declined reducer → full Option use cost 3 paid, no reduction credited"
+    );
+}
+
+/// NEGATIVE: using a NON-[Glowing Dawn] Option never fires the reducer
+/// (condition fails) — full cost 3, FD stash untouched, no reducer prompt.
+#[test]
+fn bt25_090_option_use_reducer_inactive_on_non_glowing_dawn_option() {
+    let mut runner = option_runner("PLAIN-OPT", false);
+
+    let mem_before = runner.memory();
+    let trash_before = runner.trash_size(0);
+
+    let _ = runner.game.play_option_from_hand(0, 0);
+    let _ = runner.auto_resolve();
+
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before + 1,
+        "non-Glowing-Dawn Option → FD stash untouched; only the Option is trashed"
+    );
+    assert_eq!(
+        mem_before - runner.memory(),
+        3,
+        "non-[Glowing Dawn] Option pays the full use cost 3 (no reduction)"
+    );
 }

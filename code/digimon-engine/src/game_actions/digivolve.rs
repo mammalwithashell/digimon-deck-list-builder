@@ -220,11 +220,41 @@ impl Game {
             is_digivolve: true,
             target_permanents: [Some(handle), None],
         };
+
+        // G-COST-REDUCTION-INTERACTIVE-PAY-COST (digivolve half) — a
+        // field-hosted reducer whose `pay_cost` INSTALLS A SELECTION (the
+        // interactive `trash_bottom_face_down_source_under_tamer` Tamer pick,
+        // ST23-03 / ST23-11) cannot be resolved by the synchronous scan below
+        // (a park would leave a dangling `pending_selection` mid-digivolve).
+        // Handle it through a dedicated interactive prompt FIRST: it runs the
+        // parking pay_cost, credits the reduction into
+        // `pending_interactive_digivolve_reduction` on resolution, and
+        // re-enters with `player_reducer_resolved = true`. The synchronous scan
+        // skips `pay_cost_interactive` reducers so they are never
+        // double-applied. Runs only on the first attempt
+        // (`!player_reducer_resolved`).
+        if !player_reducer_resolved
+            && self.try_prompt_interactive_digivolve_cost_reducer(
+                player_id,
+                target,
+                hand_index,
+                field_index,
+                source,
+            )
+        {
+            return false;
+        }
+        // Pre-resolved interactive field reduction (set by the prompt's parked
+        // pay_cost success continuation, 0 otherwise). Consumed once here.
+        let interactive_reduction =
+            std::mem::take(&mut self.pending_interactive_digivolve_reduction);
+
         let total_reduction = self.scan_before_pay_cost_reduction_with_target(
             player_id,
             CostReductionKind::Digivolve,
             Some(target),
-        ) + player_reduction;
+        ) + player_reduction
+            + interactive_reduction;
         // Fire BeforePayCost observers (e.g. gain_memory) AFTER reduction
         // is computed but BEFORE pay_memory — G-BEFORE-PAY-COST-GAIN-MEMORY.
         self.scan_before_pay_cost_observers(player_id, Some(target));

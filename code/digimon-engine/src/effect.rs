@@ -334,6 +334,22 @@ pub struct Effect {
     /// mandatory leading steps leave this `false`. See `game_actions::cost`
     /// `continue_play_from_hand_cost_reduction_chain` and BT12-112.
     pub pay_cost_self_gated: bool,
+
+    /// `BeforePayCost` cost reducers only: when `true`, this reducer's
+    /// `pay_cost_fn` INSTALLS A SELECTION (parks on a `pending_selection`)
+    /// rather than completing synchronously — e.g. the interactive
+    /// `trash_bottom_face_down_source_under_tamer` Tamer pick (ST23-03 /
+    /// BT25-088 / BT25-049). The play-from-hand chain handles a parking
+    /// pay_cost natively (it wraps the play continuation behind the park),
+    /// but the SYNCHRONOUS digivolve / Option-use cost scan
+    /// (`scan_before_pay_cost_reduction_with_target`) cannot host a park, so
+    /// it routes such a reducer through a dedicated pre-scan interactive
+    /// prompt instead (`try_prompt_interactive_digivolve_cost_reducer` /
+    /// the Option-use sibling). Set by the DSL cost-reduction lowering from
+    /// `body_first_step_installs_selection(pay_cost)`; the self-suspend and
+    /// synchronous trash idioms leave this `false`.
+    /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+    pub pay_cost_interactive: bool,
 }
 
 impl std::fmt::Debug for Effect {
@@ -714,6 +730,7 @@ impl EffectBuilder {
                 needs_outer_optional_prompt: false,
                 outer_optional_guard: None,
                 pay_cost_self_gated: false,
+                pay_cost_interactive: false,
             },
         }
     }
@@ -863,6 +880,15 @@ impl EffectBuilder {
     /// confirmation gate. See `Effect::pay_cost_self_gated`.
     pub fn pay_cost_self_gated(mut self, v: bool) -> Self {
         self.inner.pay_cost_self_gated = v;
+        self
+    }
+
+    /// Mark a `BeforePayCost` cost reducer whose `pay_cost_fn` installs a
+    /// selection (parks). The digivolve / Option-use synchronous cost scan
+    /// routes such a reducer through a dedicated interactive prompt instead
+    /// of the scan. See `Effect::pay_cost_interactive`.
+    pub fn pay_cost_interactive(mut self, v: bool) -> Self {
+        self.inner.pay_cost_interactive = v;
         self
     }
 

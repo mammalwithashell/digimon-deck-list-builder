@@ -19,8 +19,35 @@ pub struct ValidationContext<'a> {
 pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<ValidationError>> {
     let mut errors = Vec::new();
 
-    for (i, clause) in spec.effects.iter().enumerate() {
-        let prefix = format!("effects[{i}]");
+    // Validate the card's top-level clauses plus the per-face clauses of a
+    // DUAL card (`dual.digimon.effects` / `dual.option.effects`,
+    // `G-DSL-DUAL-PER-FACE-EFFECTS`). All three lists share the exact same
+    // per-clause semantic checks; only the error-path prefix differs.
+    let mut all_clauses: Vec<(String, &ClauseSpec)> = spec
+        .effects
+        .iter()
+        .enumerate()
+        .map(|(i, c)| (format!("effects[{i}]"), c))
+        .collect();
+    if let Some(dual) = &spec.dual {
+        all_clauses.extend(
+            dual.digimon
+                .effects
+                .iter()
+                .enumerate()
+                .map(|(i, c)| (format!("dual.digimon.effects[{i}]"), c)),
+        );
+        all_clauses.extend(
+            dual.option
+                .effects
+                .iter()
+                .enumerate()
+                .map(|(i, c)| (format!("dual.option.effects[{i}]"), c)),
+        );
+    }
+
+    for (prefix, clause) in &all_clauses {
+        let prefix = prefix.clone();
         match clause {
             ClauseSpec::Triggered(t) => {
                 validate_triggered(t, &prefix, &spec.card, ctx, &mut errors)
@@ -444,6 +471,7 @@ fn validate_predicate(
         ("level_lte", &pred.level_lte),
         ("level_gte", &pred.level_gte),
         ("play_cost_lte", &pred.play_cost_lte),
+        ("play_or_use_cost_lte", &pred.play_or_use_cost_lte),
         ("dp_eq", &pred.dp_eq),
         ("dp_lte", &pred.dp_lte),
         ("dp_gte", &pred.dp_gte),
@@ -1616,6 +1644,7 @@ fn validate_predicate_binding_scope(
         ("level_lte", &pred.level_lte),
         ("level_gte", &pred.level_gte),
         ("play_cost_lte", &pred.play_cost_lte),
+        ("play_or_use_cost_lte", &pred.play_or_use_cost_lte),
         ("dp_eq", &pred.dp_eq),
         ("dp_lte", &pred.dp_lte),
         ("dp_gte", &pred.dp_gte),
