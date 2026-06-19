@@ -234,8 +234,6 @@ pub enum StepSpec {
     AddBottomSecurityToHand(PlayerArg),
     TrashTopSecurityAndCancelReplacement(PlayerArg),
     BounceSelf(EmptyArgs),
-    PlaceSelfAtSecurity(SelfSecurityPlacementArgs),
-    PlaceSelfOptionAtSecurity(SelfSecurityPlacementArgs),
     /// Relocate THIS effect's source Option (an in-battle-area field Option)
     /// face-down under a chosen own permanent — a new Option-lifecycle exit
     /// distinct from trashing. Fires neither `OnOptionTrashed` nor
@@ -243,10 +241,6 @@ pub enum StepSpec {
     /// "By placing this card from the battle area face down under any of your
     /// [BEATBREAK]/[DATA SQUAD] trait Tamers, …". G-MOVE-SELF-OPTION-UNDER-PERMANENT.
     MoveSelfOptionUnderPermanent(MoveSelfOptionUnderPermanentArgs),
-    PlacePermanentBottomSecurityAndCancelReplacement(PlacePermanentSecurityReplacementArgs),
-    PlacePermanentOnSecurity(PlacePermanentOnSecurityReplacementArgs),
-    PlacePermanentOnSecurityAndHandleReplacement(PlacePermanentOnSecurityReplacementArgs),
-    PlacePermanentOnSecurityObserved(PlacePermanentOnSecurityObservedArgs),
     SecurityPlaceStackedCard(SecurityPlaceStackedCardArgs),
     SecurityPlaceTopStackedCard(SecurityPlaceTopStackedCardArgs),
     ReturnAllTrashToDeckBottom(PlayerArg),
@@ -506,26 +500,8 @@ impl Serialize for StepSpec {
                 kv!(s, "trash_top_security_and_cancel_replacement", v)
             }
             StepSpec::BounceSelf(v) => kv!(s, "bounce_self", v),
-            StepSpec::PlaceSelfAtSecurity(v) => kv!(s, "place_self_at_security", v),
-            StepSpec::PlaceSelfOptionAtSecurity(v) => {
-                kv!(s, "place_self_option_at_security", v)
-            }
             StepSpec::MoveSelfOptionUnderPermanent(v) => {
                 kv!(s, "move_self_option_under_permanent", v)
-            }
-            StepSpec::PlacePermanentBottomSecurityAndCancelReplacement(v) => {
-                kv!(
-                    s,
-                    "place_permanent_bottom_security_and_cancel_replacement",
-                    v
-                )
-            }
-            StepSpec::PlacePermanentOnSecurity(v) => kv!(s, "place_permanent_on_security", v),
-            StepSpec::PlacePermanentOnSecurityAndHandleReplacement(v) => {
-                kv!(s, "place_permanent_on_security_and_handle_replacement", v)
-            }
-            StepSpec::PlacePermanentOnSecurityObserved(v) => {
-                kv!(s, "place_permanent_on_security_observed", v)
             }
             StepSpec::SecurityPlaceStackedCard(v) => kv!(s, "security_place_stacked_card", v),
             StepSpec::SecurityPlaceTopStackedCard(v) => {
@@ -786,22 +762,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                 StepSpec::TrashTopSecurityAndCancelReplacement(map.next_value()?)
             }
             "bounce_self" => StepSpec::BounceSelf(map.next_value()?),
-            "place_self_at_security" => StepSpec::PlaceSelfAtSecurity(map.next_value()?),
-            "place_self_option_at_security" => {
-                StepSpec::PlaceSelfOptionAtSecurity(map.next_value()?)
-            }
             "move_self_option_under_permanent" => {
                 StepSpec::MoveSelfOptionUnderPermanent(map.next_value()?)
-            }
-            "place_permanent_bottom_security_and_cancel_replacement" => {
-                StepSpec::PlacePermanentBottomSecurityAndCancelReplacement(map.next_value()?)
-            }
-            "place_permanent_on_security" => StepSpec::PlacePermanentOnSecurity(map.next_value()?),
-            "place_permanent_on_security_and_handle_replacement" => {
-                StepSpec::PlacePermanentOnSecurityAndHandleReplacement(map.next_value()?)
-            }
-            "place_permanent_on_security_observed" => {
-                StepSpec::PlacePermanentOnSecurityObserved(map.next_value()?)
             }
             "security_place_stacked_card" => StepSpec::SecurityPlaceStackedCard(map.next_value()?),
             "security_place_top_stacked_card" => {
@@ -988,13 +950,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "add_bottom_security_to_hand",
                         "trash_top_security_and_cancel_replacement",
                         "bounce_self",
-                        "place_self_at_security",
-                        "place_self_option_at_security",
                         "move_self_option_under_permanent",
-                        "place_permanent_bottom_security_and_cancel_replacement",
-                        "place_permanent_on_security",
-                        "place_permanent_on_security_and_handle_replacement",
-                        "place_permanent_on_security_observed",
                         "security_place_stacked_card",
                         "security_place_top_stacked_card",
                         "return_all_trash_to_deck_bottom",
@@ -1582,13 +1538,6 @@ impl SecurityFace {
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
-pub struct SelfSecurityPlacementArgs {
-    pub position: StackPosition,
-    pub face: SecurityFace,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(deny_unknown_fields)]
 pub struct RevealArgs {
     pub of: PlayerRef,
     pub count: u8,
@@ -1778,45 +1727,89 @@ pub struct FormulaStepArgs {
     pub formula: crate::formula::FormulaSpec,
 }
 
+/// collapse §3.3 — the single source-polymorphic place-on-security verb. It
+/// supersedes the former family (`place_on_security` hand-only,
+/// `place_self_at_security`, `place_self_option_at_security`,
+/// `place_permanent_on_security`, `…_and_handle_replacement`,
+/// `…_bottom_…_and_cancel_replacement`, `…_observed`). The `source` chooses
+/// what is placed; `disposition` selects the replacement-system interaction for
+/// a permanent leaving the field (only meaningful when `source: permanent`).
+/// It lowers to the EXISTING compiled variants (byte-identical behavior).
+///
+/// ```yaml
+/// - place_on_security: { source: { card: chosen }, of: you, position: choice }
+/// - place_on_security: { source: self_option, position: bottom, face_up: false }
+/// - place_on_security: { source: { permanent: subj }, position: bottom, disposition: handle }
+/// - place_on_security: { source: { permanent: subj }, position: bottom, disposition: cancel }
+/// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlaceOnSecurityArgs {
+    pub source: SecuritySource,
+    #[serde(default = "default_player_ref_you")]
     pub of: PlayerRef,
-    pub source: BindingRef,
     pub position: StackPosition,
     #[serde(default)]
     pub face_up: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct PlacePermanentSecurityReplacementArgs {
-    #[serde(default = "default_player_ref_you")]
-    pub of: PlayerRef,
-    pub target: BindingRef,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct PlacePermanentOnSecurityReplacementArgs {
-    #[serde(default = "default_player_ref_you")]
-    pub of: PlayerRef,
-    pub target: BindingRef,
-    pub position: StackPosition,
-    #[serde(default)]
-    pub face_up: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct PlacePermanentOnSecurityObservedArgs {
-    #[serde(default = "default_player_ref_you")]
-    pub of: PlayerRef,
-    pub target: BindingRef,
-    pub position: StackPosition,
-    pub face: SecurityFace,
-    #[serde(default)]
+    /// Replacement-system interaction (permanent sources only). `cancel`
+    /// requires `position: bottom` (the engine cancel-via-security tuck is
+    /// bottom-only); `observed` may set `include_sources`.
+    #[serde(default, skip_serializing_if = "SecurityReplacementDisposition::is_none")]
+    pub disposition: SecurityReplacementDisposition,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub include_sources: bool,
+}
+
+/// What `place_on_security` puts onto the security stack.
+///
+/// NOTE: `#[serde(untagged)]` (with struct/marker variants), NOT externally
+/// tagged — externally-tagged newtype variants serialize as `Value::Tagged`
+/// (`!variant value`), which breaks the `serde_yml::from_value(Value::Mapping)`
+/// round-trip in `DeclarativeClause::typed_body()` used by `kind: replacement`
+/// bodies (the same constraint documented on `LinkCardsCount`). Untagged
+/// struct variants are plain maps `{ card: … }` / `{ permanent: … }` that work
+/// on both the streaming and from_value paths; the self markers are strings.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(untagged)]
+pub enum SecuritySource {
+    /// A bound card from hand or trash (`{ card: <binding> }`); the binding's
+    /// own `zone` selects hand vs trash, exactly as the former hand-only
+    /// `place_on_security` did.
+    Card { card: BindingRef },
+    /// A battle-area permanent bound by name (`{ permanent: <binding> }`).
+    Permanent { permanent: BindingRef },
+    /// `self` (own source permanent) / `self_option` (own source Option).
+    Marker(SecuritySelfMarker),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SecuritySelfMarker {
+    #[serde(rename = "self")]
+    SelfPermanent,
+    SelfOption,
+}
+
+/// Replacement-system disposition for a permanent placed on security as it
+/// leaves the field. Only legal with `source: permanent` (validated at compile).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SecurityReplacementDisposition {
+    /// Plain placement; no replacement interaction.
+    #[default]
+    None,
+    /// Place at the security bottom to CANCEL the in-flight leave replacement.
+    Cancel,
+    /// Place on security as the custom-handled outcome of the replacement.
+    Handle,
+    /// Place on security as an observed (non-replacement-consuming) move.
+    Observed,
+}
+
+impl SecurityReplacementDisposition {
+    fn is_none(&self) -> bool {
+        matches!(self, SecurityReplacementDisposition::None)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

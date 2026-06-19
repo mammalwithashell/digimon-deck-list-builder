@@ -807,8 +807,23 @@ fn validate_step(
                 });
             }
         }
-        StepSpec::PlacePermanentOnSecurityObserved(args) => {
-            validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
+        StepSpec::PlaceOnSecurity(args) => {
+            // collapse §3.3 — validate the source binding (card / permanent).
+            // `self`/`self_option` markers carry no binding to check.
+            match &args.source {
+                crate::step::SecuritySource::Card { card } => {
+                    validate_binding_ref(card, &format!("{prefix}.source.card"), card_id, errors);
+                }
+                crate::step::SecuritySource::Permanent { permanent } => {
+                    validate_binding_ref(
+                        permanent,
+                        &format!("{prefix}.source.permanent"),
+                        card_id,
+                        errors,
+                    );
+                }
+                crate::step::SecuritySource::Marker(_) => {}
+            }
         }
         StepSpec::SecurityPlaceStackedCard(args) => {
             validate_binding_ref(&args.carrier, &format!("{prefix}.carrier"), card_id, errors);

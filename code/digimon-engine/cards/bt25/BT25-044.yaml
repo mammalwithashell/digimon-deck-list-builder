@@ -104,9 +104,9 @@ effects:
       - if:
           condition: { binding_present: placed }
           then:
-            - place_permanent_on_security:
+            - place_on_security:
+                source: { permanent: placed }
                 of: you
-                target: placed
                 position: top
                 face_up: false
             - trash_top_security: { of: opponent }

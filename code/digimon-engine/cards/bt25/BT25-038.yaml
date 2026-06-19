@@ -146,7 +146,7 @@ effects:
                       then:
                         - place_on_security:
                             of: you
-                            source: { binding: hpick, zone: hand }
+                            source: { card: { binding: hpick, zone: hand } }
                             position: top
                             face_up: false
                   - if:
@@ -154,7 +154,7 @@ effects:
                       then:
                         - place_on_security:
                             of: you
-                            source: { binding: hpick, zone: hand }
+                            source: { card: { binding: hpick, zone: hand } }
                             position: bottom
                             face_up: false
       # ── From your Digimon's digivolution cards ──

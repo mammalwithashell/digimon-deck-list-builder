@@ -222,15 +222,15 @@ effects:
           condition:
             binding_owner: { binding: pay, of: you }
           then:
-            - place_permanent_on_security:
+            - place_on_security:
+                source: { permanent: pay }
                 of: you
-                target: pay
                 position: bottom
                 face_up: false
           else:
-            - place_permanent_on_security:
+            - place_on_security:
+                source: { permanent: pay }
                 of: opponent
-                target: pay
                 position: bottom
                 face_up: false
       - unsuspend: { target: source }

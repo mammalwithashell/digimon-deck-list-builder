@@ -2334,12 +2334,86 @@ fn compile_step(
                 stop_at_level: a.stop_at_level.or(Some(3)),
             }
         }
-        S::PlaceOnSecurity(a) => CompiledStep::PlaceOnSecurity {
-            of: compile_player_ref(a.of),
-            source: compile_binding_ref(&a.source),
-            position: compile_stack_position(a.position),
-            face_up: a.face_up,
-        },
+        S::PlaceOnSecurity(a) => {
+            use crate::step::{
+                SecurityReplacementDisposition as D, SecuritySelfMarker, SecuritySource,
+                StackPosition,
+            };
+            let position = compile_stack_position(a.position);
+            let is_permanent = matches!(a.source, SecuritySource::Permanent { .. });
+            if !matches!(a.disposition, D::None) && !is_permanent {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.place_on_security.disposition"),
+                    message: "a replacement disposition (cancel/handle/observed) requires source: permanent".to_string(),
+                });
+            }
+            if a.include_sources && !matches!(a.disposition, D::Observed) {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.place_on_security.include_sources"),
+                    message: "include_sources is only valid with disposition: observed".to_string(),
+                });
+            }
+            match &a.source {
+                SecuritySource::Card { card } => CompiledStep::PlaceOnSecurity {
+                    of: compile_player_ref(a.of),
+                    source: compile_binding_ref(card),
+                    position,
+                    face_up: a.face_up,
+                },
+                SecuritySource::Marker(SecuritySelfMarker::SelfPermanent) => {
+                    CompiledStep::PlaceSelfAtSecurity {
+                        position,
+                        face_up: a.face_up,
+                    }
+                }
+                SecuritySource::Marker(SecuritySelfMarker::SelfOption) => {
+                    CompiledStep::PlaceSelfOptionAtSecurity {
+                        position,
+                        face_up: a.face_up,
+                    }
+                }
+                SecuritySource::Permanent { permanent } => {
+                    let of = compile_player_ref(a.of);
+                    let target = compile_binding_ref(permanent);
+                    match a.disposition {
+                        D::None => CompiledStep::PlacePermanentOnSecurity {
+                            of,
+                            target,
+                            position,
+                            face_up: a.face_up,
+                        },
+                        D::Handle => CompiledStep::PlacePermanentOnSecurityAndHandleReplacement {
+                            of,
+                            target,
+                            position,
+                            face_up: a.face_up,
+                        },
+                        D::Cancel => {
+                            if a.position != StackPosition::Bottom {
+                                errors.push(ValidationError {
+                                    card_id: card_id.to_string(),
+                                    path: format!("{prefix}.place_on_security.position"),
+                                    message: "disposition: cancel requires position: bottom (the engine cancel-via-security tuck is bottom-only)".to_string(),
+                                });
+                            }
+                            CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement {
+                                of,
+                                target,
+                            }
+                        }
+                        D::Observed => CompiledStep::PlacePermanentOnSecurityObserved {
+                            of,
+                            target,
+                            position,
+                            face_up: a.face_up,
+                            include_sources: a.include_sources,
+                        },
+                    }
+                }
+            }
+        }
         S::PlayToken(a) => CompiledStep::PlayToken {
             controller: compile_player_ref(a.controller),
             token_name: a.token_name.clone(),
@@ -2598,41 +2672,6 @@ fn compile_step(
             }
         }
         S::BounceSelf(_) => CompiledStep::BounceSelf,
-        S::PlaceSelfAtSecurity(a) => CompiledStep::PlaceSelfAtSecurity {
-            position: compile_stack_position(a.position),
-            face_up: a.face.is_up(),
-        },
-        S::PlaceSelfOptionAtSecurity(a) => CompiledStep::PlaceSelfOptionAtSecurity {
-            position: compile_stack_position(a.position),
-            face_up: a.face.is_up(),
-        },
-        S::PlacePermanentBottomSecurityAndCancelReplacement(a) => {
-            CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement {
-                of: compile_player_ref(a.of),
-                target: compile_binding_ref(&a.target),
-            }
-        }
-        S::PlacePermanentOnSecurity(a) => CompiledStep::PlacePermanentOnSecurity {
-            of: compile_player_ref(a.of),
-            target: compile_binding_ref(&a.target),
-            position: compile_stack_position(a.position),
-            face_up: a.face_up,
-        },
-        S::PlacePermanentOnSecurityAndHandleReplacement(a) => {
-            CompiledStep::PlacePermanentOnSecurityAndHandleReplacement {
-                of: compile_player_ref(a.of),
-                target: compile_binding_ref(&a.target),
-                position: compile_stack_position(a.position),
-                face_up: a.face_up,
-            }
-        }
-        S::PlacePermanentOnSecurityObserved(a) => CompiledStep::PlacePermanentOnSecurityObserved {
-            of: compile_player_ref(a.of),
-            target: compile_binding_ref(&a.target),
-            position: compile_stack_position(a.position),
-            face_up: a.face.is_up(),
-            include_sources: a.include_sources,
-        },
         S::SecurityPlaceStackedCard(a) => {
             if a.source.is_none() && a.source_index_from_top.is_none() {
                 errors.push(ValidationError {

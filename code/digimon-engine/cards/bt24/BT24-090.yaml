@@ -57,9 +57,10 @@ effects:
     summary: "[Main] Add bottom security to hand, place this face-up as bottom security, then may play a blue/yellow TS Digimon for -3"
     process:
       - add_bottom_security_to_hand: { of: you }
-      - place_self_option_at_security:
+      - place_on_security:
+          source: self_option
           position: bottom
-          face: up
+          face_up: true
       - select_hand:
           of: you
           bind_as: picked_digimon

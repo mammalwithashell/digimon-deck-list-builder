@@ -211,8 +211,9 @@ effects:
           target: replacement_subject
           source_index: cres_source
           cost_delta: free
-      - place_permanent_on_security_and_handle_replacement:
+      - place_on_security:
+          source: { permanent: replacement_subject }
           of: you
-          target: replacement_subject
           position: bottom
           face_up: false
+          disposition: handle

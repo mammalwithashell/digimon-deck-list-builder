@@ -103,9 +103,10 @@ effects:
                   - name_contains: "Kari Kamiya"
               n: 1
           then:
-            - place_self_option_at_security:
+            - place_on_security:
+                source: self_option
                 position: top
-                face: up
+                face_up: true
 
   # ─── [Security] -5000 DP to all opponent Digimon AND opponent security
   #     Digimon until the end of your turn. ────────────────────────────────────

@@ -175,7 +175,7 @@ effects:
           then:
             - place_on_security:
                 of: you
-                source: { binding: marcus_in_trash, zone: trash }
+                source: { card: { binding: marcus_in_trash, zone: trash } }
                 position: top
                 face_up: true
 
@@ -206,6 +206,6 @@ effects:
           then:
             - place_on_security:
                 of: you
-                source: { binding: marcus_in_trash, zone: trash }
+                source: { card: { binding: marcus_in_trash, zone: trash } }
                 position: top
                 face_up: true

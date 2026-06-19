@@ -228,16 +228,16 @@ effects:
             - if:
                 condition: { equals: [sec_pos, 0] }
                 then:
-                  - place_permanent_on_security:
+                  - place_on_security:
+                      source: { permanent: place_target }
                       of: opponent
-                      target: place_target
                       position: top
             - if:
                 condition: { equals: [sec_pos, 1] }
                 then:
-                  - place_permanent_on_security:
+                  - place_on_security:
+                      source: { permanent: place_target }
                       of: opponent
-                      target: place_target
                       position: bottom
 
   # ─── Clause 3: Inherited [Your Turn] Piercing + Security A. +1 ───────────────

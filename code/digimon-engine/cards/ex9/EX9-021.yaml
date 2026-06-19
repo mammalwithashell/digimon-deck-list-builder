@@ -252,8 +252,8 @@ effects:
                     - binding_exists: greymon_played
                     - binding_exists: garurumon_played
                 then:
-                  - place_permanent_on_security:
+                  - place_on_security:
+                      source: { permanent: source }
                       of: you
-                      target: source
                       position: top
                       face_up: true
