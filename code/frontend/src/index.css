@@ -89,6 +89,35 @@ body {
   opacity: 0.5;
 }
 
+/* Shared card-effect text — Mono Body highlighting for the in-game card
+   inspector (CardEffectText). The deck-builder analyzer renders the same chips
+   via formatEffect scoped under .bld-preview-effect; this is its inspector
+   counterpart, sized for the dark floating overlay. */
+.card-effect-text {
+  font-family: "JetBrains Mono", ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  color: #cdd6e2;
+}
+.card-effect-text .tm {
+  background: #1a1813;
+  color: #f4c81f;
+  font-weight: 700;
+  padding: 0 5px;
+}
+.card-effect-text .rf {
+  color: #9b8cff;
+}
+.card-effect-text .kw {
+  display: inline-block;
+  background: var(--ib-player);
+  color: #1a0d02;
+  font-weight: 700;
+  padding: 0 5px;
+  border-radius: 2px;
+}
+
 /* In Between board redesign */
 .ib-board {
   position: relative;

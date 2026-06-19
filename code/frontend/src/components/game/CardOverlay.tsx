@@ -5,6 +5,7 @@ import type { PermanentInfo, SourceInfo } from '@/types/game';
 import { useGameStore } from '@/stores/gameStore';
 import { COLOR_HEX, COLOR_NAMES } from '@/utils/constants';
 import { groupModifiers } from '@/utils/modifierDisplay';
+import { CardEffectText } from '@/utils/formatCardText';
 
 interface CardOverlayProps {
   permanent: PermanentInfo | null;
@@ -164,9 +165,7 @@ export function CardOverlay({ permanent, onClose, onInspectCard }: CardOverlayPr
                 onContextMenu={inspectOnRightClick(permanent.topCardId)}
               />
               {permanent.mainEffectText && (
-                <div className="mt-2 text-[11px] text-gray-300 whitespace-pre-wrap leading-relaxed">
-                  {permanent.mainEffectText}
-                </div>
+                <CardEffectText text={permanent.mainEffectText} className="mt-2" />
               )}
             </div>
           </div>
@@ -281,9 +280,7 @@ function StackCardEntry({
               <div className="text-[9px] text-amber-500 font-bold uppercase mb-0.5">
                 Inherited Effect
               </div>
-              <div className="text-[11px] text-gray-300 whitespace-pre-wrap leading-relaxed">
-                {source.inheritedEffectText}
-              </div>
+              <CardEffectText text={source.inheritedEffectText} />
             </div>
           )}
         </div>

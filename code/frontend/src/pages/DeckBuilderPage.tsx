@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ImportExport } from '@/components/deckbuilder/ImportExport';
 import {
@@ -6,6 +6,7 @@ import {
   saveBuilderDeck,
 } from '@/features/deck-builder/deckBuilderAdapter';
 import { getCardImageUrl } from '@/utils/cardImages';
+import { formatEffect } from '@/utils/formatCardText';
 import {
   builderCardColorClass,
   deckEntriesToSlotArrays,
@@ -45,35 +46,6 @@ const DEFAULT_FILTERS: BuilderCardFilters = {
 
 // Bracketed timing/trigger phrases that render as gold-on-black pills in the
 // analyzer (Mono Body styling). Other [bracketed] tokens are name/keyword refs.
-const EFFECT_TIMINGS = new Set([
-  'when digivolving', 'on play', 'on deletion', 'when attacking', 'end of attack',
-  'start of your main phase', 'end of your main phase', 'start of your turn',
-  'end of your turn', "start of opponent's turn", "end of opponent's turn",
-  'all turns', 'your turn', "opponent's turn", 'main', 'security', 'counter',
-  'when destroyed', 'once per turn', 'start of main phase', 'end of all turns',
-]);
-
-/**
- * Render card effect text with Mono Body highlighting: <keywords> as sharp
- * orange chips, known [timing] phrases as gold-on-black pills, and other
- * [bracketed] names as violet refs — mirroring how they print on the card.
- */
-function formatEffect(text: string): ReactNode {
-  return text.split(/(\[[^\]]+\]|[<＜][^>＞]+[>＞])/g).map((part, i) => {
-    const keyword = part.match(/^[<＜](.+)[>＞]$/);
-    if (keyword) return <span key={i} className="kw">{keyword[1] ?? ''}</span>;
-    const match = part.match(/^\[(.+)\]$/);
-    if (!match) return part;
-    const inner = match[1] ?? '';
-    const norm = inner.trim().toLowerCase().replace(/[‘’]/g, "'");
-    return EFFECT_TIMINGS.has(norm) ? (
-      <span key={i} className="tm">{inner}</span>
-    ) : (
-      <span key={i} className="rf">[{inner}]</span>
-    );
-  });
-}
-
 function cardButtonName(card: DigimonCardData): string {
   return `${card.name} ${card.cardnumber}${card.isAltArt ? ' alt art' : ''}`;
 }
