@@ -1267,8 +1267,8 @@ export function GamePage() {
 
         {/* Action choice dialog (Play / Digivolve / DNA Digivolve) */}
         {actionChoice && (
-          <div className="shrink-0 flex items-center justify-center gap-3 py-2 bg-gray-800 border-t border-gray-600">
-            <span className="text-sm text-gray-300">Choose action:</span>
+          <div className="shrink-0 flex items-center justify-center gap-3 py-2 bg-[var(--ib-graphite)] border-t border-[var(--ib-line)]">
+            <span className="text-sm text-[var(--ib-bone-d)]">Choose action:</span>
             {actionChoice.canPlay && (
               <button
                 onClick={handleActionChoicePlay}
