@@ -2098,6 +2098,7 @@ fn compile_step(
         S::TrashBottomFaceDownSourceUnderTamer(a) => {
             CompiledStep::TrashBottomFaceDownSourceUnderTamer {
                 of: compile_player_ref(a.of),
+                optional: a.optional,
             }
         }
         S::TrashBottomFaceDownSourcesUnderTamers(a) => {

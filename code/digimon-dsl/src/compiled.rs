@@ -1256,6 +1256,12 @@ pub enum CompiledStep {
     /// cost by BEATBREAK / DATA SQUAD cards.
     TrashBottomFaceDownSourceUnderTamer {
         of: CompiledPlayerRef,
+        /// Declinable Tamer pick (PASS skips the trash AND the tail) — DCGO
+        /// `canNoSelect:true`. `G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER`. Plain
+        /// (no `skip_serializing_if`): the compiled pack is bincode-serialized
+        /// (non-self-describing), so every field must occupy a fixed slot.
+        #[serde(default)]
+        optional: bool,
     },
     /// Multi-count / multi-Tamer sibling of
     /// `TrashBottomFaceDownSourceUnderTamer`. Trash `count` bottom-face-down

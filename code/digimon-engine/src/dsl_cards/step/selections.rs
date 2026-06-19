@@ -330,7 +330,7 @@ pub fn try_install(
             );
             selection_result(ctx)
         }
-        CompiledStep::TrashBottomFaceDownSourceUnderTamer { of } => {
+        CompiledStep::TrashBottomFaceDownSourceUnderTamer { of, optional } => {
             // Bundled activation cost: "pick one of `of`'s Tamers that carries
             // a face-down stash → trash its bottom face-down source". Pre-filter
             // the controller's permanents with the fixed predicate
@@ -359,13 +359,16 @@ pub fn try_install(
             install_trash_bottom_face_down_source_under_tamer(
                 ctx,
                 filter,
+                *optional,
                 tail.to_vec(),
                 bindings,
                 runtime.clone(),
             );
             // With ≥1 candidate, `select_own_permanent` always installs a
             // pending selection (even a single candidate is exposed as a
-            // 1-option selection — no auto-resolve), so this parks.
+            // 1-option selection — no auto-resolve; `optional` adds a PASS), so
+            // this parks. On a PASS decline (`optional`), the callback never
+            // runs, so nothing is trashed and the tail is skipped.
             selection_result(ctx)
         }
         CompiledStep::TrashBottomFaceDownSourcesUnderTamers { of, count } => {
@@ -1708,6 +1711,7 @@ fn install_select_own_permanent(
 fn install_trash_bottom_face_down_source_under_tamer(
     ctx: &mut EffectContext<'_>,
     filter: CompiledPredicate,
+    optional: bool,
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
@@ -1721,7 +1725,7 @@ fn install_trash_bottom_face_down_source_under_tamer(
     let filter_bindings = bindings.clone();
     ctx.select_own_permanent(
         "Choose a Tamer to trash a face-down card from under",
-        false,
+        optional,
         move |game, handle| {
             let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
                 game,

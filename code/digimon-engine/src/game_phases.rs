@@ -86,10 +86,12 @@ impl Game {
         // Unsuspend phase. The bulk turn-start unsuspend honors the
         // `CannotUnsuspend` modifier ("[All Turns] … don't unsuspend" —
         // BT12-057 Quartzmon; surfaced by judge-quiz Q3 authoring): a locked
-        // permanent stays suspended. Like `Player::unsuspend_all`, this
-        // directly mutates `is_suspended` without firing `OnUnsuspend`
-        // observers (phase-start unsuspension is not a trigger-carrying
-        // event per the rules).
+        // permanent stays suspended. `cannot_unsuspend` also honors the
+        // PLAYER-scoped mass lock ("none of their Digimon can unsuspend until
+        // their turn ends" — ST24-11 Rosemon, G-PLAYER-MASS-CANNOT-UNSUSPEND).
+        // Like `Player::unsuspend_all`, this directly mutates `is_suspended`
+        // without firing `OnUnsuspend` observers (phase-start unsuspension is
+        // not a trigger-carrying event per the rules).
         self.set_turn_phase(GamePhase::Unsuspend);
         {
             let n = self.player(tp).battle_area.len();
@@ -99,7 +101,7 @@ impl Game {
                     player: tp,
                     index: i as u8,
                 };
-                if !self.modifiers.has(h, ModifierType::CannotUnsuspend) {
+                if !self.cannot_unsuspend(h) {
                     unlocked.push(i as u8);
                 }
             }
@@ -107,9 +109,7 @@ impl Game {
                 player: tp,
                 index: crate::action::space::BREEDING_TARGET as u8,
             };
-            let breeding_unlocked = !self
-                .modifiers
-                .has(breeding_handle, ModifierType::CannotUnsuspend);
+            let breeding_unlocked = !self.cannot_unsuspend(breeding_handle);
             let player = self.player_mut(tp);
             for i in unlocked {
                 if let Some(perm) = player.battle_area.get_mut(i as usize) {
@@ -161,7 +161,9 @@ impl Game {
                 if !self.has_keyword(h, Keyword::Reboot) {
                     continue;
                 }
-                if self.modifiers.has(h, ModifierType::CannotUnsuspend) {
+                // Reboot respects both the permanent-scoped and the player-scoped
+                // mass `CannotUnsuspend` lock (G-PLAYER-MASS-CANNOT-UNSUSPEND).
+                if self.cannot_unsuspend(h) {
                     continue;
                 }
                 reboot_handles.push(h);

@@ -1218,6 +1218,18 @@ pub struct TrashTopSecurityArgs {
 #[serde(deny_unknown_fields)]
 pub struct TrashBottomFaceDownSourceUnderTamerArgs {
     pub of: PlayerRef,
+    /// When `true`, the Tamer pick is DECLINABLE (offers PASS) — modelling
+    /// DCGO's `canNoSelect:true` Tamer selection for a "by trashing the bottom
+    /// face-down card …, [effect]" that is one of several INDEPENDENT optional
+    /// sub-choices inside a non-optional clause (so a clause-level `optional`
+    /// can't carry its decline). On decline NOTHING is trashed and the step's
+    /// tail does not run. Default `false` keeps the established mandatory-when-
+    /// payable behavior (the decline is carried by a clause-level `optional`).
+    /// ST24-11 Rosemon: "you may suspend up to 2 … then, by trashing … none of
+    /// their Digimon can unsuspend" — the trash+lock is declinable apart from
+    /// the suspend. `G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
 }
 
 /// Args for `trash_bottom_face_down_sources_under_tamers` — the multi-count /

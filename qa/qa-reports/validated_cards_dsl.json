@@ -9832,6 +9832,17 @@
       "yaml_path": "code/digimon-engine/cards/st24/ST24-06.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_06.rs",
       "notes": "TDD-first on the BEATBREAK/Tamer-FD-stash substrate. -5000 DP + trash-2-FD -> play_or_use a DATA SQUAD card (play_or_use_cost_lte 5) for free; two alt-digivolve boxes (GeoGreymon name + Lv.4 DATA SQUAD); inherited ShineGreymon/DATA SQUAD doesnt-leave. 7/7 green."
+    },
+    "ST24-11": {
+      "card_name": "Rosemon",
+      "validated_date": "2026-06-18",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/st24/ST24-11.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_11.rs",
+      "notes": "TDD-first. Suspend up to 2 opp + INDEPENDENTLY-optional trash-FD -> player-scope mass CannotUnsuspend (none of their Digimon unsuspend until their turn ends). Shared-OPT clause2 (opp-suspend OR own-Tamer-source-trash) -> trash opp top security. Closed 2 substrate gaps: G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER (declinable trash verb) + G-PLAYER-MASS-CANNOT-UNSUSPEND (engine honors player-scoped CannotUnsuspend at both unsuspend chokepoints, Digimon-only). 8/8 green."
     }
   }
 }
