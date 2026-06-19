@@ -37,6 +37,7 @@ fn as_selecting_player_routes_prompt_to_opponent() {
     let src_card = runner.game.players[0].hand[0].handle();
 
     let body = vec![CompiledStep::SelectOwnPermanent {
+        then: vec![],
         filter: CompiledPredicate::default(),
         bind_as: None,
         selector: None,
@@ -91,6 +92,7 @@ fn as_selecting_player_chained_selects_all_route_to_override() {
 
     let body = vec![
         CompiledStep::SelectOwnPermanent {
+            then: vec![],
             filter: CompiledPredicate::default(),
             bind_as: None,
             selector: None,
@@ -100,6 +102,7 @@ fn as_selecting_player_chained_selects_all_route_to_override() {
             continue_on_decline: false,
         },
         CompiledStep::SelectHand {
+            then: vec![],
             of: CompiledPlayerRef::Opponent,
             filter: CompiledPredicate::default(),
             bind_as: None,
@@ -190,6 +193,7 @@ fn as_selecting_player_with_self_as_of_routes_to_controller() {
     let src_card = runner.game.players[0].hand[0].handle();
 
     let body = vec![CompiledStep::SelectOwnPermanent {
+        then: vec![],
         filter: CompiledPredicate::default(),
         bind_as: None,
         selector: None,
@@ -231,6 +235,7 @@ fn as_selecting_player_parked_body_drains_outer_tail() {
     let memory_before = runner.game.memory;
 
     let body = vec![CompiledStep::SelectOwnPermanent {
+        then: vec![],
         filter: CompiledPredicate::default(),
         bind_as: None,
         selector: None,
@@ -294,6 +299,7 @@ fn as_selecting_player_outer_tail_select_does_not_inherit_override() {
     let src_card = runner.game.players[0].hand[0].handle();
 
     let body = vec![CompiledStep::SelectOwnPermanent {
+        then: vec![],
         filter: CompiledPredicate::default(),
         bind_as: None,
         selector: None,
@@ -308,6 +314,7 @@ fn as_selecting_player_outer_tail_select_does_not_inherit_override() {
             body,
         },
         CompiledStep::SelectOwnPermanent {
+            then: vec![],
             filter: CompiledPredicate::default(),
             bind_as: None,
             selector: None,

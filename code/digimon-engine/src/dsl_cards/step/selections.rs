@@ -227,6 +227,21 @@ fn selection_result(ctx: &EffectContext<'_>) -> InstallResult {
     }
 }
 
+/// collapse §1 — compose a select step's explicit scoped `then` action-tail
+/// with the implicit dispatcher `tail` into the single tail the install helper
+/// captures: `then ++ tail`. `then` runs first (on accept, binding in scope),
+/// then the rest of the process body. The install helper either parks (running
+/// the composed tail via its callback on resolve) or no-ops when there are no
+/// candidates (the outer loop then runs `tail` alone via `Continue`) — so the
+/// implicit `tail` runs exactly once and `then` runs only on a pick. This
+/// mirrors the `SelectOwnSources` exemplar and is closure-free (cloneable VM
+/// `ResumeFrame::RunTail` data).
+fn compose_then_tail(then: &[CompiledStep], tail: &[CompiledStep]) -> Vec<CompiledStep> {
+    let mut inner = then.to_vec();
+    inner.extend_from_slice(tail);
+    inner
+}
+
 /// Installs a selection step or reports how the dispatcher should advance.
 ///
 /// Most selection steps park by installing the remainder as their callback.
@@ -248,6 +263,7 @@ pub fn try_install(
             prompt,
             optional,
             cost,
+            then,
             ..
         } => {
             install_select_hand(
@@ -258,7 +274,7 @@ pub fn try_install(
                 prompt.clone(),
                 *optional,
                 *cost,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
@@ -271,6 +287,7 @@ pub fn try_install(
             prompt,
             optional,
             cost,
+            then,
             ..
         } => {
             install_select_trash(
@@ -281,7 +298,7 @@ pub fn try_install(
                 prompt.clone(),
                 *optional,
                 *cost,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
@@ -314,6 +331,7 @@ pub fn try_install(
             prompt,
             optional,
             continue_on_decline,
+            then,
             ..
         } => {
             install_select_own_permanent(
@@ -324,7 +342,7 @@ pub fn try_install(
                 prompt.clone(),
                 *optional,
                 *continue_on_decline,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
@@ -412,6 +430,7 @@ pub fn try_install(
             prompt,
             optional,
             continue_on_decline,
+            then,
             ..
         } => {
             install_select_opponent_permanent(
@@ -422,7 +441,7 @@ pub fn try_install(
                 prompt.clone(),
                 *optional,
                 *continue_on_decline,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
@@ -434,6 +453,7 @@ pub fn try_install(
             selector,
             prompt,
             optional,
+            then,
             ..
         } => {
             install_select_any_permanent(
@@ -444,7 +464,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
@@ -555,6 +575,7 @@ pub fn try_install(
             bind_as,
             prompt,
             optional,
+            then,
             ..
         } => {
             return if install_select_reveal(
@@ -564,7 +585,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             ) {
@@ -596,6 +617,7 @@ pub fn try_install(
             bind_as,
             prompt,
             optional,
+            then,
             ..
         } => {
             install_select_security(
@@ -605,7 +627,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );

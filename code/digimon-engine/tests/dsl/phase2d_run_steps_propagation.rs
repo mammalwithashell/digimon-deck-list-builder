@@ -32,6 +32,7 @@ fn outer_steps_wait_for_inner_park() {
             },
             then: vec![
                 CompiledStep::SelectOpponentPermanent {
+                    then: vec![],
                     filter: CompiledPredicate::default(),
                     bind_as: Some("tgt".to_string()),
                     selector: None,

@@ -1643,6 +1643,11 @@ pub enum CompiledStep {
         /// dropping it. G-OPT-REFUND-ON-DECLINE.
         #[serde(default)]
         continue_on_decline: bool,
+        /// collapse §1 explicit scoped action-tail — run on accept with the
+        /// selection binding in scope, prepended to the implicit dispatcher
+        /// tail. `#[serde(default)]` for bincode-pack back-compat.
+        #[serde(default)]
+        then: Vec<CompiledStep>,
     },
     SelectOpponentPermanent {
         filter: CompiledPredicate,
@@ -1655,6 +1660,9 @@ pub enum CompiledStep {
         /// dropping it. G-OPT-REFUND-ON-DECLINE.
         #[serde(default)]
         continue_on_decline: bool,
+        /// collapse §1 explicit scoped action-tail. See `SelectOwnPermanent::then`.
+        #[serde(default)]
+        then: Vec<CompiledStep>,
     },
     SelectAnyPermanent {
         filter: CompiledPredicate,
@@ -1663,6 +1671,9 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
+        /// collapse §1 explicit scoped action-tail. See `SelectOwnPermanent::then`.
+        #[serde(default)]
+        then: Vec<CompiledStep>,
     },
     SelectDnaPair {
         left_filter: CompiledPredicate,
@@ -1687,6 +1698,9 @@ pub enum CompiledStep {
         /// behavior for non-cost optional picks.
         #[serde(default)]
         cost: bool,
+        /// collapse §1 explicit scoped action-tail. See `SelectOwnPermanent::then`.
+        #[serde(default)]
+        then: Vec<CompiledStep>,
     },
     SelectTrash {
         of: CompiledPlayerRef,
@@ -1698,6 +1712,9 @@ pub enum CompiledStep {
         /// See `SelectHand::cost`.
         #[serde(default)]
         cost: bool,
+        /// collapse §1 explicit scoped action-tail. See `SelectOwnPermanent::then`.
+        #[serde(default)]
+        then: Vec<CompiledStep>,
     },
     SelectMaterial {
         of_permanent: CompiledBindingRef,
@@ -1811,6 +1828,9 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
+        /// collapse §1 explicit scoped action-tail. See `SelectOwnPermanent::then`.
+        #[serde(default)]
+        then: Vec<CompiledStep>,
     },
     SelectRevealBuckets {
         from: String,
@@ -1825,6 +1845,9 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
+        /// collapse §1 explicit scoped action-tail. See `SelectOwnPermanent::then`.
+        #[serde(default)]
+        then: Vec<CompiledStep>,
     },
     SelectUnionZone {
         of: CompiledPlayerRef,

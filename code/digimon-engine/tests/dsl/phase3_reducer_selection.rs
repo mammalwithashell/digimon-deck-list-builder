@@ -61,6 +61,7 @@ fn select_any_permanent_can_bind_either_players_field() {
     let src_card = runner.game.players[0].hand[0].handle();
     let steps = vec![
         CompiledStep::SelectAnyPermanent {
+            then: vec![],
             filter: CompiledPredicate::default(),
             bind_as: Some("target".to_string()),
             selector: None,

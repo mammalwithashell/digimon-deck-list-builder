@@ -60,6 +60,7 @@ fn select_reveal_binds_picked_card_handle() {
 
     let steps = vec![
         CompiledStep::SelectReveal {
+            then: vec![],
             of: CompiledPlayerRef::You,
             filter: CompiledPredicate::default(),
             bind_as: Some("picked".to_string()),
@@ -114,6 +115,7 @@ fn revealed_card_overlay_affects_reveal_predicates_only() {
     let src_card = runner.game.players[0].hand[0].handle();
 
     let steps = vec![CompiledStep::SelectReveal {
+        then: vec![],
         of: CompiledPlayerRef::You,
         filter: CompiledPredicate {
             name_is: Some("Overlaymon".to_string()),
@@ -174,6 +176,7 @@ fn reveal_overlay_survives_select_reveal_until_destination_move() {
 
     let steps = vec![
         CompiledStep::SelectReveal {
+            then: vec![],
             of: CompiledPlayerRef::You,
             filter: CompiledPredicate {
                 name_is: Some("Overlaymon".to_string()),

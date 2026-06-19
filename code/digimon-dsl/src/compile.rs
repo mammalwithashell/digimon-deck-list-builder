@@ -1613,6 +1613,7 @@ fn compile_replacement_process(
             prompt_key: None,
             optional: true,
             cost: false,
+            then: Vec::new(),
         });
     }
 
@@ -2080,6 +2081,21 @@ fn compile_if_condition(
             CompiledPredicate::default()
         }
     }
+}
+
+/// Lower a collapse §1 explicit `then:` action-tail (`Vec<StepSpec>` →
+/// `Vec<CompiledStep>`), pathing each step as `<prefix>.then[i]`. Shared by the
+/// field/zone select arms; mirrors the inline lowering of `SelectOwnSources::then`.
+fn compile_then_tail(
+    then: &[crate::step::StepSpec],
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> Vec<CompiledStep> {
+    then.iter()
+        .enumerate()
+        .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
+        .collect()
 }
 
 fn compile_step(
@@ -2791,6 +2807,7 @@ fn compile_step(
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
             continue_on_decline: a.continue_on_decline,
+            then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectOpponentPermanent(a) => CompiledStep::SelectOpponentPermanent {
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
@@ -2800,6 +2817,7 @@ fn compile_step(
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
             continue_on_decline: a.continue_on_decline,
+            then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectAnyPermanent(a) => CompiledStep::SelectAnyPermanent {
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
@@ -2808,6 +2826,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+            then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectDnaPair(a) => CompiledStep::SelectDnaPair {
             left_filter: compile_predicate(
@@ -2836,6 +2855,7 @@ fn compile_step(
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
             cost: a.cost,
+            then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectTrash(a) => CompiledStep::SelectTrash {
             of: compile_player_ref(a.of),
@@ -2845,6 +2865,7 @@ fn compile_step(
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
             cost: a.cost,
+            then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectMaterial(a) => CompiledStep::SelectMaterial {
             of_permanent: compile_binding_ref(&a.of_permanent),
@@ -3004,6 +3025,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+            then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectRevealBuckets(a) => CompiledStep::SelectRevealBuckets {
             from: a.from.clone(),
@@ -3035,6 +3057,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+            then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectUnionZone(a) => CompiledStep::SelectUnionZone {
             of: compile_player_ref(a.of),

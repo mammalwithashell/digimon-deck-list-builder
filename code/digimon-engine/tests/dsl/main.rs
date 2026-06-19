@@ -5,6 +5,7 @@ mod activation_cost;
 mod attack_history_predicate;
 mod also_treated_as;
 mod assembly_play;
+mod collapse_then_tail;
 mod cross_check;
 mod delay;
 mod digixros_aliases;

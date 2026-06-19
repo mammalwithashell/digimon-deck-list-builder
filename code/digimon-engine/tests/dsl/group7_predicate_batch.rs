@@ -588,6 +588,7 @@ fn select_hand_uses_play_cost_lte_for_valid_actions() {
     let mut runner = runner_with_dp_cards();
     let source = src_card(&runner);
     let steps = vec![CompiledStep::SelectHand {
+        then: vec![],
         of: digimon_dsl::compiled::CompiledPlayerRef::You,
         filter: CompiledPredicate {
             kind: Some(CompiledCardKind::Digimon),
@@ -892,6 +893,7 @@ fn select_hand_play_cost_lte_formula_reads_bound_permanent_play_cost() {
     let source_card = runner.game.players[0].hand[0].handle();
     let bound_permanent = runner.place_on_field(0, "BOUND", None);
     let steps = vec![CompiledStep::SelectHand {
+        then: vec![],
         of: CompiledPlayerRef::You,
         filter: CompiledPredicate {
             kind: Some(CompiledCardKind::Digimon),
@@ -1094,6 +1096,7 @@ fn select_hand_color_matches_any_field_digimon_filters_by_live_board_colors() {
     runner.place_on_field(0, "RED-DIGI", None);
 
     let steps = vec![CompiledStep::SelectHand {
+        then: vec![],
         of: CompiledPlayerRef::You,
         filter: CompiledPredicate {
             kind: Some(CompiledCardKind::Tamer),
@@ -1136,6 +1139,7 @@ fn select_hand_color_matches_binding_filters_against_bound_tamer_colors() {
     let tamer = runner.place_on_field(0, "YELLOW-TAMER", Some(0));
 
     let steps = vec![CompiledStep::SelectHand {
+        then: vec![],
         of: CompiledPlayerRef::You,
         filter: CompiledPredicate {
             kind: Some(CompiledCardKind::Digimon),
@@ -1198,6 +1202,7 @@ fn color_matches_any_field_digimon_uses_dual_digimon_face_colors() {
     runner.place_on_field(0, "DUAL-FIELD", None);
 
     let steps = vec![CompiledStep::SelectHand {
+        then: vec![],
         of: CompiledPlayerRef::You,
         filter: CompiledPredicate {
             kind: Some(CompiledCardKind::Tamer),
@@ -1227,6 +1232,7 @@ fn select_trash_uses_play_cost_lte_for_valid_actions() {
     runner.game.players[0].trash.push(low);
     runner.game.players[0].trash.push(high);
     let steps = vec![CompiledStep::SelectTrash {
+        then: vec![],
         of: digimon_dsl::compiled::CompiledPlayerRef::You,
         filter: CompiledPredicate {
             kind: Some(CompiledCardKind::Digimon),

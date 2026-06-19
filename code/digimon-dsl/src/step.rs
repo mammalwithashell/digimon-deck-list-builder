@@ -2457,6 +2457,14 @@ pub struct SelectFieldArgs {
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_key: Option<String>,
+    /// collapse-dsl-step-idioms §1 — explicit scoped action-tail run on accept
+    /// with the selection binding in scope. Composed with the implicit
+    /// dispatcher tail (the rest of the process body) without double-running:
+    /// `then` runs only when a pick is made, whereas steps placed after this
+    /// select in the process body run regardless. Closure-free — this is the
+    /// cloneable VM's `ResumeFrame::RunTail` data (mirrors `SelectOwnSourcesArgs`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub then: Vec<StepSpec>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -2496,6 +2504,14 @@ pub struct SelectZoneArgs {
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_key: Option<String>,
+    /// collapse-dsl-step-idioms §1 — explicit scoped action-tail run on accept
+    /// with the selection binding in scope. Composed with the implicit
+    /// dispatcher tail without double-running: `then` runs only when a pick is
+    /// made (for a non-cost optional decline it runs scoped to the empty
+    /// binding = no-op); steps after this select in the process body run
+    /// regardless. Closure-free — the cloneable VM's `ResumeFrame::RunTail`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub then: Vec<StepSpec>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
