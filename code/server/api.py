@@ -34,7 +34,6 @@ from server.db.routers import admin_releases as admin_releases_router
 from server.routers import debug_games
 from server.routers import deck_tools
 from server.routers import desktop_decks
-from server.routers import formats
 from server.routers import games
 from server.routers import health
 from server.routers import lobby
@@ -124,7 +123,6 @@ app.include_router(simulations.router)
 app.include_router(games.router)
 app.include_router(recordings.router)
 app.include_router(replays.router)
-app.include_router(formats.router)
 app.include_router(lobby.router)
 app.include_router(matchmaking.router)
 app.include_router(ws_games.router)

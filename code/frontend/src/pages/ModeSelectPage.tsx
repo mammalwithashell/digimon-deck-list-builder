@@ -1,8 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { InBetweenShell } from '@/features/play/InBetweenShell';
-import { getPlayFormat, type OpponentMode, type PlayFormat } from '@/features/play/formatCatalog';
-import { listFormats } from '@/features/play/playApi';
+import {
+  getPlayFormat,
+  loadPlayFormats,
+  type OpponentMode,
+  type PlayFormat,
+} from '@/features/play/formatCatalog';
 import { usePlayFlowStore } from '@/features/play/playFlowStore';
 import './ModeSelectPage.css';
 
@@ -26,7 +30,7 @@ export function ModeSelectPage() {
 
   useEffect(() => {
     clearLaunchState();
-    listFormats().then(setFormats).catch(() => setFormats([]));
+    loadPlayFormats().then(setFormats).catch(() => setFormats([]));
   }, [clearLaunchState]);
 
   return (
@@ -44,7 +48,7 @@ export function ModeSelectPage() {
             <br />
             <em>FORMAT.</em>
           </h1>
-          <p>SIX RULESETS - DIFFERENT BANLISTS - DIFFERENT DECK SHAPES - ONE THEATER</p>
+          <p>{visibleFormats.length} RULESETS - DIFFERENT BANLISTS - DIFFERENT DECK SHAPES - ONE THEATER</p>
         </header>
 
         <section className="mode-opponent-strip" aria-label="Opponent">
@@ -72,7 +76,9 @@ export function ModeSelectPage() {
               onClick={() => selectFormat(format.id)}
               disabled={!format.enabled}
             >
-              <span className="num">{String(index + 1).padStart(2, '0')} / 06</span>
+              <span className="num">
+                {String(index + 1).padStart(2, '0')} / {String(visibleFormats.length).padStart(2, '0')}
+              </span>
               <span className="tag">{format.enabled ? '// READY' : '// LOCKED'}</span>
               <span className="sub">{format.tagline}</span>
               <span className="name">{format.name}</span>
