@@ -10,8 +10,9 @@ export type PlayFormatId =
   | 'no_restriction'
   | 'pauper'
   | 'eden'
-  | 'eden_singleton';
-export type OpponentMode = 'quick' | 'room' | 'bot';
+  | 'eden_singleton'
+  | 'starter';
+export type OpponentMode = 'quick' | 'room' | 'bot' | 'ai_starter';
 
 export interface PlayFormat {
   id: PlayFormatId;
@@ -35,6 +36,7 @@ const PRESENTATION: Record<PlayFormatId, { tagline: string; populationPct: numbe
   pauper: { tagline: 'Commons and uncommons only', populationPct: 18 },
   eden: { tagline: 'Rotation-light, anomaly-gated', populationPct: 27 },
   eden_singleton: { tagline: 'EDEN, highlander', populationPct: 12 },
+  starter: { tagline: 'Six official starter decks', populationPct: 0 },
 };
 
 // Static fallback used before the engine list resolves (and in environments

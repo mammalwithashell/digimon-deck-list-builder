@@ -1,0 +1,183 @@
+# AD1-021 Marcus Damon & Agumon — Tamer, Yellow+Red, Cost 5.
+# Traits: DATA SQUAD.
+#
+# Printed card text (card image AD1-021 — authoritative; cards.json accurate):
+#
+#   [Your Turn] When this Tamer suspends, ＜Draw 1＞ (Draw 1 card from your deck.)
+#     Then, 1 of your Digimon may digivolve into a yellow Digimon card with
+#     [Greymon] in its name in the hand with the digivolution cost reduced by 3.
+#   [End of Your Turn] [Once Per Turn] If you have a yellow Digimon with [Agumon]
+#     or [Greymon] in its name, for the turn, 1 of your [Marcus Damon]s is also
+#     treated as a 6000 DP Digimon, gains ＜Rush＞ and can't digivolve. Then, 1 of
+#     your Digimon may attack.
+#   [Rule] Name: Also treated as [Marcus Damon].
+#   Inherited: Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference (READ-ONLY):
+#   DCGO/Assets/Scripts/CardEffect/AD1/Yellow/AD1_021.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Name Rule — EffectTiming.None: ChangeCardNamesClass adds "Marcus Damon" to
+#   this card's names (the printed [Rule] alias). DSL: top-level
+#   `also_treated_as: ["Marcus Damon"]` (BT23-077 idiom).
+#
+# Clause 1 — EffectTiming.OnTappedAnyone [Your Turn]: CanUseCondition =
+#   IsExistOnBattleArea(card) && IsOwnerTurn(card) &&
+#   CanTriggerWhenSelfPermanentSuspends(hashtable, card). Body: DrawClass(1),
+#   then IF an own battle-area Digimon can be a target whose hand holds a
+#   Yellow + ContainsCardName("Greymon") card it can digivolve into, optional
+#   (canNoSelect:true) SelectPermanentEffect → DigivolveIntoHandOrTrashCard
+#   (cardCondition: Yellow + "Greymon", payCost:true, reduceCostTuple:(3,null),
+#   isHand:true). → on_suspend gated by event_permanent_is_source (this card),
+#   active_when your_turn; draw 1; then optional select own Digimon + select hand
+#   Greymon → effect_initiated_digivolve cost { reduce: 3 }.
+#
+# Clause 2 — EffectTiming.OnEndTurn [End of Your Turn][Once Per Turn]: gated by
+#   IsExistOnBattleArea(card) && IsOwnerTurn(card); IsSkippable when there is NO
+#   own battle-area Digimon whose TopCard is Yellow && (ContainsCardName("Agumon")
+#   || ContainsCardName("Greymon")). Body: IF a Marcus Damon exists, MANDATORY
+#   (canNoSelect:false) select 1 → BecomeDigimonThatCantDigivolve(6000,
+#   UntilEachTurnEnd) (= TreatAsDigimon synth 6000 DP + CannotDigivolve) +
+#   GainRush(UntilEachTurnEnd); THEN, independently, IF an own attack-capable
+#   Digimon exists, optional (canNoSelect:true) select 1 → SelectAttack.
+#   → end_of_your_turn OPT; condition = any own yellow Agumon/Greymon Digimon;
+#   if-any-Marcus mandatory select + treat-as 6000 + Rush + CannotDigivolve
+#   (end_of_turn); then optional may_attack_now. Mirrors BT21-044 clause 1.
+#
+# Clause 3 — EffectTiming.SecuritySkill: PlaySelfTamerSecurityEffect → play self
+#   free (AD1-019 idiom).
+
+card: AD1-021
+name: "Marcus Damon & Agumon"
+kind: tamer
+color: [yellow, red]
+cost: 5
+traits: ["DATA SQUAD"]
+
+# [Rule] Name: Also treated as [Marcus Damon] (DCGO ChangeCardNamesClass).
+also_treated_as: ["Marcus Damon"]
+
+effects:
+  # ─── Clause 1: [Your Turn] When this Tamer suspends, draw 1; may digivolve ───
+  #
+  # "When this Tamer suspends, <Draw 1>. Then, 1 of your Digimon may digivolve
+  # into a yellow Digimon card with [Greymon] in its name in the hand with the
+  # digivolution cost reduced by 3."
+  #
+  # - `when: on_suspend` + condition `event_permanent_is_source: true` — the
+  #   suspended permanent must be THIS card (DCGO CanTriggerWhenSelfPermanent
+  #   Suspends). BT13-095 / BT15-101 idiom.
+  # - `active_when: { your_turn: true }` for [Your Turn] (DCGO IsOwnerTurn).
+  # - Draw 1 is MANDATORY (<Draw 1> is not "you may").
+  # - The digivolve sub-step is optional ("1 of your Digimon MAY digivolve"):
+  #   select an own Digimon target + a yellow [Greymon] hand card, then
+  #   effect_initiated_digivolve with cost { reduce: 3 } (DCGO reduceCostTuple
+  #   (3, null), payCost true, isHand true). BT12-016 idiom (target + from_hand
+  #   + cost reduce).
+  - when: on_suspend
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When this Tamer suspends, Draw 1; then 1 of your Digimon may digivolve into a yellow [Greymon] hand card with cost reduced by 3"
+    condition:
+      event_permanent_is_source: true
+    process:
+      - draw: { of: you, count: 1 }
+      - select_own_permanent:
+          bind_as: base
+          filter: { kind: digimon }
+          optional: true
+          prompt: "Select 1 of your Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: greymon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: yellow
+              - name_contains: "Greymon"
+          prompt: "Digivolve into a yellow Digimon with [Greymon] in its name for the cost reduced by 3"
+      - effect_initiated_digivolve:
+          target: base
+          from_hand: greymon
+          cost: { reduce: 3 }
+
+  # ─── Clause 2: [End of Your Turn] [Once Per Turn] ───────────────────────────
+  #
+  # "If you have a yellow Digimon with [Agumon] or [Greymon] in its name, for the
+  # turn, 1 of your [Marcus Damon]s is also treated as a 6000 DP Digimon, gains
+  # <Rush> and can't digivolve. Then, 1 of your Digimon may attack."
+  #
+  # - `when: end_of_your_turn` + `once_per_turn: true` ([End of Your Turn][OPT]).
+  # - condition (DCGO IsSkippable inverse): an own yellow Digimon whose name
+  #   contains Agumon OR Greymon — gates the WHOLE clause.
+  # - (a) IF an own [Marcus Damon] exists, MANDATORY select 1 (DCGO
+  #   canNoSelect:false) → TreatAsDigimon synth 6000 DP + CannotDigivolve + Rush
+  #   for the turn (DCGO BecomeDigimonThatCantDigivolve(6000) + GainRush,
+  #   UntilEachTurnEnd). The `if` gate makes the select install only when a Marcus
+  #   exists, faithful to DCGO's HasMatchConditionOwnersPermanent guard.
+  # - (b) THEN, independently, "1 of your Digimon may attack" — optional
+  #   may_attack_now (DCGO second canNoSelect:true SelectAttack). BT21-044 idiom.
+  - when: end_of_your_turn
+    once_per_turn: true
+    summary: "[End of Your Turn][OPT] If you have a yellow Agumon/Greymon Digimon, treat a Marcus Damon as a 6000 DP Digimon (Rush + can't digivolve, for turn); then 1 Digimon may attack"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        color_is: yellow
+        any_of:
+          - name_contains: "Agumon"
+          - name_contains: "Greymon"
+    process:
+      # (a) Marcus Damon treat-as block (gated on a Marcus being present).
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: tamer
+              name_contains: "Marcus Damon"
+          then:
+            - select_own_permanent:
+                bind_as: marcus
+                filter:
+                  all_of:
+                    - kind: tamer
+                    - name_contains: "Marcus Damon"
+                prompt: "Select 1 of your [Marcus Damon]s to treat as a 6000 DP Digimon"
+            - add_modifier:
+                target: marcus
+                modifier: TreatAsDigimon
+                value: 0
+                expiry: end_of_turn
+                synth_identity:
+                  dp: 6000
+            - add_modifier:
+                target: marcus
+                modifier: CannotDigivolve
+                value: 0
+                expiry: end_of_turn
+            - grant_keyword:
+                target: marcus
+                keyword: Rush
+                expiry: end_of_turn
+      # (b) "Then, 1 of your Digimon may attack."
+      - optional:
+          - select_own_permanent:
+              bind_as: atk
+              filter: { kind: digimon }
+              optional: true
+              prompt: "Select 1 of your Digimon that may attack"
+          - may_attack_now:
+              attacker: atk
+              targets: any
+              optional: true
+              prompt: "Have the selected Digimon attack now?"
+
+  # ─── Clause 3: [Security] play self without paying the cost ─────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

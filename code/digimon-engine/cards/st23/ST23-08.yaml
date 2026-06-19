@@ -1,0 +1,107 @@
+# ST23-08 Monarchlizamon — Digimon, Lv.5, Green, DP 7000, Cost 7.
+# Traits: Cyborg, Glowing Dawn, BEATBREAK. Attribute: Data.
+# Printed digivolve box: [Digivolve] Lv.4 w/[Glowing Dawn] trait: Cost 3
+# (plus the standard Lv.4 green / cost 3 corner cost).
+#
+# Printed card text (data/cards.json — verbatim, confirmed vs DCGO):
+#   <Alliance> (When this Digimon attacks, by suspending 1 of your other
+#     Digimon, add the suspended Digimon's DP to this Digimon and it gains
+#     <Security A. +1> for the attack.)
+#   [On Play] [When Digivolving] This Digimon gets +3000 DP until your
+#     opponent's turn ends. Then, if it's your turn, by trashing the bottom
+#     face-down card from under any of your Tamers, you may play or use 1
+#     [Glowing Dawn] trait card from your hand with the cost reduced by 3.
+#   Inherited: [End of Attack] [Once Per Turn] By trashing the bottom face-down
+#     card from under any of your Tamers, this [Glowing Dawn] trait Digimon
+#     unsuspends.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST23/Green/ST23_08.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (timing None): AddSelfDigivolutionRequirementStaticEffect(
+#   level: 4, TopCard.EqualsTraits("Glowing Dawn"), digivolutionCost: 3).
+#   → alt_paths digivolve from level 4 + Glowing Dawn trait, cost 3.
+# Alliance (OnAllyAttack): AllianceSelfEffect → grant_keyword Alliance.
+# Shared OP/WD (ActivateClassesForSharedEffects, optional: false, onPlay +
+#   whenDigivolving) — SharedActivateCoroutine (mirrors ST23-04 except the
+#   first step buffs SELF instead of debuffing an opponent):
+#   1. This Digimon +3000 DP UntilOpponentTurnEnd (mandatory, no selection).
+#   2. THEN if IsOwnerTurn(card) AND a Tamer carries a face-down source: a
+#      `canNoSelect:true` Tamer pick (the "may") → trash bottom face-down. If
+#      trashed, a `canNoSelect:true` SelectHandEffect over [Glowing Dawn] cards
+#      → ChangeCostClass -3 → PlayOptionCards / PlayPermanentCards (payCost).
+#   → Modelled as two clauses on the same trigger:
+#     Clause A (mandatory): add_dp_modifier +3000 to self, expiry
+#       end_of_opponents_turn.
+#     Clause B (optional, your-turn): the OUTER optional accept/decline gate IS
+#       DCGO's trash-pick canNoSelect (decline = don't trash / don't play). On
+#       accept: trash_bottom_face_down_source_under_tamer (process cost — aborts
+#       if no eligible Tamer), then an OPTIONAL select_hand over [Glowing Dawn]
+#       cards (the hand-pick canNoSelect), then play_or_use_from_hand cost_delta
+#       reduce 3 (kind-routing unified verb — G-PLAY-OR-USE-FROM-HAND).
+# Inherited [End of Attack][OPT]: trash bottom FD under a Tamer (process
+#   activation cost), then if this Digimon has [Glowing Dawn], unsuspend self.
+
+card: ST23-08
+name: "Monarchlizamon"
+kind: digimon
+level: 5
+color: [green]
+cost: 7
+dp: 7000
+traits: [Cyborg, Glowing Dawn, BEATBREAK]
+attribute: Data
+
+# Alt-digivolve: Lv.4 with the [Glowing Dawn] trait / cost 3.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: "Glowing Dawn" }
+    cost: 3
+
+effects:
+  # ─── <Alliance> ────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Alliance
+    summary: "<Alliance>"
+
+  # ─── [On Play][When Digivolving] (A) this Digimon +3000 DP until opp turn end
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] This Digimon gets +3000 DP until your opponent's turn ends"
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 3000
+          expiry: end_of_opponents_turn
+
+  # ─── [On Play][When Digivolving] (B) if your turn, by trashing a bottom
+  #     face-down card under a Tamer, you may play or use 1 [Glowing Dawn] card
+  #     from hand with the cost reduced by 3 ────────────────────────────────────
+  - when: [on_play, when_digivolving]
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[On Play][When Digivolving] If your turn, by trashing a bottom face-down card under a Tamer, you may play or use 1 [Glowing Dawn] card from hand with the cost reduced by 3"
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - select_hand:
+          of: you
+          bind_as: gd_pick
+          optional: true
+          filter: { trait_has: "Glowing Dawn" }
+          prompt: "You may play or use 1 [Glowing Dawn] card from your hand with the cost reduced by 3"
+      - play_or_use_from_hand:
+          of: you
+          hand_index: gd_pick
+          cost_delta: { reduce: 3 }
+
+  # ─── Inherited [End of Attack][OPT] trash FD under Tamer → unsuspend self ──
+  - scope: inherited
+    when: end_of_attack
+    once_per_turn: true
+    optional: true
+    active_when:
+      source_permanent_trait_has: "Glowing Dawn"
+    summary: "[Inherited][End of Attack][OPT] By trashing a bottom face-down card under a Tamer, this [Glowing Dawn] Digimon unsuspends"
+    process:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      - unsuspend: { target: source }

@@ -38,6 +38,8 @@ pub struct Deck {
     #[serde(default)]
     pub is_pinned: bool,
     #[serde(default)]
+    pub is_builtin: bool,
+    #[serde(default)]
     pub tags: Vec<String>,
     #[serde(default)]
     pub meta_tier: Option<String>,
@@ -58,6 +60,8 @@ pub struct DeckSummary {
     pub is_public: bool,
     #[serde(default)]
     pub is_pinned: bool,
+    #[serde(default)]
+    pub is_builtin: bool,
     #[serde(default)]
     pub folder_id: Option<String>,
     pub card_count: usize,
@@ -97,6 +101,57 @@ struct LibraryMetadata {
 }
 
 const DEFAULT_FOLDER_NAMES: [&str; 3] = ["Tournament", "Experimental", "Casual"];
+
+/// The 6 official starter decks bundled into the binary (generated from
+/// `data/deck_library.json` by `code/tools/gen_starter_decks.py`). These are
+/// read-only: they always appear in the library and can't be edited/deleted.
+const STARTER_DECKS_JSON: &str = include_str!("../../../data/starter_decks.json");
+
+pub fn builtin_starter_decks() -> Vec<Deck> {
+    #[derive(serde::Deserialize)]
+    struct File {
+        starter_decks: Vec<Raw>,
+    }
+    #[derive(serde::Deserialize)]
+    struct Raw {
+        id: String,
+        name: String,
+        egg_deck: Vec<String>,
+        main_deck: Vec<String>,
+    }
+    let file: File =
+        serde_json::from_str(STARTER_DECKS_JSON).expect("starter_decks.json is malformed");
+    file.starter_decks
+        .into_iter()
+        .map(|r| Deck {
+            id: r.id,
+            owner_id: "builtin".into(),
+            folder_id: None,
+            name: r.name,
+            description: "Official starter deck.".into(),
+            game_mode: "starter".into(),
+            main_deck: r.main_deck,
+            egg_deck: r.egg_deck,
+            main_deck_alt_arts: vec![],
+            egg_deck_alt_arts: vec![],
+            commander_id: None,
+            is_valid: true,
+            validation_errors: vec![],
+            is_public: false,
+            is_pinned: false,
+            is_builtin: true,
+            tags: vec!["starter".into()],
+            meta_tier: None,
+            meta_archetype: None,
+            created_at: "2024-01-01T00:00:00Z".into(),
+            updated_at: "2024-01-01T00:00:00Z".into(),
+        })
+        .collect()
+}
+
+fn is_builtin_id(id: &str) -> bool {
+    builtin_starter_decks().iter().any(|d| d.id == id)
+}
 
 fn decks_dir(app: &AppHandle) -> Result<PathBuf, String> {
     let base = app
@@ -173,6 +228,7 @@ fn deck_summary(deck: Deck) -> DeckSummary {
         is_valid: deck.is_valid,
         is_public: deck.is_public,
         is_pinned: deck.is_pinned,
+        is_builtin: deck.is_builtin,
         folder_id: deck.folder_id,
         card_count: deck.main_deck.len() + deck.egg_deck.len(),
         main_count: deck.main_deck.len(),
@@ -228,12 +284,18 @@ pub fn decks_list(app: AppHandle) -> Result<Vec<DeckSummary>, String> {
             }
         }
     }
+    for deck in builtin_starter_decks() {
+        out.push(deck_summary(deck));
+    }
     out.sort_by(|a, b| b.updated_at.cmp(&a.updated_at));
     Ok(out)
 }
 
 #[tauri::command]
 pub fn decks_get(app: AppHandle, deck_id: String) -> Result<Deck, String> {
+    if let Some(deck) = builtin_starter_decks().into_iter().find(|d| d.id == deck_id) {
+        return Ok(deck);
+    }
     let path = decks_dir(&app)?.join(format!("{deck_id}.json"));
     read_deck_file(&path).ok_or_else(|| format!("deck not found: {deck_id}"))
 }
@@ -243,6 +305,9 @@ pub fn decks_put(app: AppHandle, deck: Deck) -> Result<Deck, String> {
     let dir = decks_dir(&app)?;
     // Assign an ID for new decks.
     let mut deck = deck;
+    if deck.is_builtin || is_builtin_id(&deck.id) {
+        return Err("Starter decks are built-in and can't be modified".into());
+    }
     if deck.id.is_empty() {
         deck.id = Uuid::new_v4().to_string();
     }
@@ -265,6 +330,9 @@ pub fn decks_put(app: AppHandle, deck: Deck) -> Result<Deck, String> {
 
 #[tauri::command]
 pub fn decks_delete(app: AppHandle, deck_id: String) -> Result<bool, String> {
+    if is_builtin_id(&deck_id) {
+        return Err("Starter decks are built-in and can't be deleted".into());
+    }
     let path = decks_dir(&app)?.join(format!("{deck_id}.json"));
     match fs::remove_file(&path) {
         Ok(()) => Ok(true),
@@ -385,6 +453,9 @@ pub fn decks_update_library(
     clear_folder: Option<bool>,
     is_pinned: Option<bool>,
 ) -> Result<Deck, String> {
+    if is_builtin_id(&deck_id) {
+        return Err("Starter decks are built-in and can't be modified".into());
+    }
     let mut deck = decks_get(app.clone(), deck_id)?;
     if clear_folder.unwrap_or(false) {
         deck.folder_id = None;
@@ -395,6 +466,15 @@ pub fn decks_update_library(
         deck.is_pinned = is_pinned;
     }
     decks_put(app, deck)
+}
+
+/// The 6 bundled read-only starter decks, exposed as a Tauri command for a
+/// future "starter only" library view / external tooling. (The AI-Starter
+/// picker itself reads the bundled `starterDecks.generated.ts`, so it needs no
+/// round-trip; this command is the desktop runtime equivalent of that data.)
+#[tauri::command]
+pub fn rust_list_starter_decks() -> Vec<Deck> {
+    builtin_starter_decks()
 }
 
 #[cfg(test)]
@@ -425,12 +505,27 @@ mod tests {
             validation_errors: vec![],
             is_public: false,
             is_pinned: false,
+            is_builtin: false,
             tags: vec![],
             meta_tier: None,
             meta_archetype: None,
             created_at: "2026-04-18T00:00:00Z".into(),
             updated_at: "2026-04-18T00:00:00Z".into(),
         }
+    }
+
+    #[test]
+    fn builtin_starter_decks_are_six_and_starter_mode() {
+        let decks = builtin_starter_decks();
+        assert_eq!(decks.len(), 6, "ship all 6 starter decks");
+        for d in &decks {
+            assert!(d.is_builtin, "{} must be flagged built-in", d.id);
+            assert_eq!(d.game_mode, "starter");
+            assert_eq!(d.main_deck.len(), 50, "{} main", d.id);
+            assert!(d.egg_deck.len() <= 5, "{} egg <= 5", d.id);
+            assert!(d.id.starts_with("starter_st"), "{} id prefix", d.id);
+        }
+        assert!(decks.iter().any(|d| d.id == "starter_st2_cocytus_blue"));
     }
 
     #[test]

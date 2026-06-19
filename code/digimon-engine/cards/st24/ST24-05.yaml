@@ -1,0 +1,93 @@
+# ST24-05 GeoGreymon — Digimon, Lv.4, Yellow/Red, DP 6000, Cost 5.
+# Traits: Dinosaur, DATA SQUAD. Attribute: Vaccine.
+#
+# Printed card text (data/cards.json — verbatim, matches DCGO):
+#   [On Play] [When Digivolving] If you have 1 or fewer Tamers, you may play 1
+#     Tamer card with the [DATA SQUAD] trait from your hand without paying the
+#     cost.
+#   Inherited [Your Turn]: This Digimon gets +2000 DP.
+#
+# Printed digivolve box (image / DCGO — cards.json digivolve_cost null):
+#   [Digivolve] Lv.3 w/[Agumon] in name and [Dinosaur] trait: Cost 2
+#   [Digivolve] Lv.3 w/[DATA SQUAD] trait: Cost 2
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST24/Yellow/ST24_05.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (timing None): AddSelfDigivolutionRequirementStaticEffect(
+#   level 3, cost 2, permanentCondition = (CardNames.Contains("Agumon") &&
+#   EqualsTraits("Dinosaur")) || EqualsTraits("DATA SQUAD")). → a single
+#   composite alt_path: from level 3 + any_of[ all_of[name Agumon, trait
+#   Dinosaur], trait DATA SQUAD ], cost 2.
+# Shared OP/WD (optional false at activate level, AdditionalActivateCondition:
+#   own Tamer count <= 1): "If you have 1 or fewer Tamers, you may play 1 Tamer
+#   card with the [DATA SQUAD] trait from your hand without paying the cost." The
+#   SelectHandEffect is canNoSelect:true (Mode.PlayForFree) over DATA SQUAD
+#   Tamers — the "may" is the optional select_hand. → when [on_play,
+#   when_digivolving], active_when count_lte own battle-area Tamers 1, optional
+#   select_hand { kind: tamer, trait_has: DATA SQUAD } + play_from_hand_free.
+# Inherited (timing None, ChangeSelfDPStaticEffect +2000, isInheritedEffect,
+#   IsExistOnBattleAreaDigimon && IsOwnerTurn). → scope: inherited aura dp +2000
+#   active_when your_turn.
+#
+# Sister card: ST23-07 Armalizamon (conditional free-Tamer-play, trait-swapped).
+
+card: ST24-05
+name: "GeoGreymon"
+kind: digimon
+level: 4
+color: [yellow, red]
+cost: 5
+dp: 6000
+traits: [Dinosaur, DATA SQUAD]
+attribute: Vaccine
+
+# Alt-digivolve: Lv.3 from (Agumon-in-name AND Dinosaur) OR [DATA SQUAD], cost 2.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - all_of:
+                - name_contains: "Agumon"
+                - trait_has: "Dinosaur"
+            - trait_has: "DATA SQUAD"
+    cost: 2
+
+effects:
+  # ─── [On Play][When Digivolving] if <=1 Tamer, may play 1 [DATA SQUAD] Tamer
+  #     from hand without paying the cost ──────────────────────────────────────
+  - when: [on_play, when_digivolving]
+    active_when:
+      count_lte:
+        filter:
+          of: you
+          zone: [battle_area]
+          kind: tamer
+        n: 1
+    summary: "[On Play][When Digivolving] If you have 1 or fewer Tamers, you may play 1 [DATA SQUAD] Tamer from your hand without paying the cost"
+    process:
+      # "you may play" — optional select_hand carries the "may"; declining
+      # (PASS) leaves the binding unset so play_from_hand_free is a no-op.
+      - select_hand:
+          of: you
+          bind_as: tamer_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: "DATA SQUAD"
+          prompt: "You may play 1 [DATA SQUAD] Tamer from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: tamer_pick
+
+  # ─── Inherited [Your Turn] +2000 DP ──────────────────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "Inherited [Your Turn] This Digimon gets +2000 DP"

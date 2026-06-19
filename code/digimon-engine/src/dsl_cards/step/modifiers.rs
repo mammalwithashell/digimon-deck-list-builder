@@ -163,7 +163,7 @@ fn compiled_color_to_card_color(c: CompiledColor) -> crate::enums::CardColor {
 /// Lower a compiled `synth_identity:` block to the engine's
 /// `ModifierPayload::SynthIdentity` (the data a `TreatAsDigimon` target is
 /// treated as while the modifier is live).
-fn build_synth_payload(s: &CompiledSynthIdentity) -> crate::modifiers::ModifierPayload {
+pub(crate) fn build_synth_payload(s: &CompiledSynthIdentity) -> crate::modifiers::ModifierPayload {
     crate::modifiers::ModifierPayload::SynthIdentity {
         kind: compiled_kind_to_card_kind(s.kind),
         level: s.level,
@@ -253,6 +253,10 @@ pub fn try_run(
                             ctx.player,
                             expiry,
                             None,
+                            // Carry the TreatAsDigimon SynthIdentity into the
+                            // continuous mass path (was dropped) — closes
+                            // G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH (BT25-104).
+                            payload.clone(),
                         );
                     } else {
                         // Phase 2d Task 8: scan battle-area, apply modifier to every match.
@@ -345,6 +349,7 @@ pub fn try_run(
                     ctx.player,
                     expiry,
                     Some(immunity),
+                    None,
                 );
                 return true;
             }

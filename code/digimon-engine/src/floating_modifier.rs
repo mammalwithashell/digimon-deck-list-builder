@@ -64,4 +64,11 @@ pub struct FloatingMassModifier {
     /// Q28 / BT20-059): the live re-scan covers permanents played later in
     /// the window.
     pub effect_immunity: Option<crate::modifiers::EffectImmunityFilter>,
+    /// When `Some`, each materialized per-permanent entry installs with this
+    /// structured `ModifierPayload` (e.g. `TreatAsDigimon`'s `SynthIdentity`)
+    /// instead of a bare scalar. Carries the continuous mass "all of your
+    /// [Marcus Damon]s are also treated as 12000 DP Digimon" aura
+    /// (G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH / BT25-104) — the live re-scan
+    /// re-applies the synth identity to permanents that enter the window.
+    pub payload: Option<crate::modifiers::ModifierPayload>,
 }

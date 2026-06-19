@@ -86,8 +86,25 @@ enum CostReductionKind {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum OptionCostPolicy {
+    /// Pay the printed use cost (less any field-hosted `BeforePayCost`
+    /// `OptionUse` reductions). Ordinary "use this Option" path.
     Pay,
+    /// Effect-driven "use 1 Option without paying its cost" — pay 0 memory
+    /// regardless of printed cost, while preserving the full Option lifecycle.
     Free,
+    /// Effect-driven "use 1 Option with the cost reduced by N" — pay
+    /// `max(0, printed_use_cost - field_reductions - N)`. The flat reduction
+    /// `N` STACKS on top of the field-hosted `BeforePayCost` reductions the
+    /// `Pay` path already consults (same precedent as `CostDelta::Reduce` on
+    /// the play half). Used by the unified `play_or_use_from_hand_with_cost`
+    /// helper for "play or use … with the cost reduced by 3" wording
+    /// (ST23-04 / ST23-08 / BT25-041). `G-PLAY-OR-USE-FROM-HAND`.
+    Reduce(i16),
+    /// Effect-driven "use 1 Option for exactly N memory" — pay `max(0, N)`,
+    /// ignoring the printed use cost and field reductions. Mirrors
+    /// `CostDelta::Fixed` on the play half. No shipped card needs it yet; it
+    /// exists so the unified helper can route every `CostDelta` variant.
+    Fixed(i16),
 }
 
 impl OptionSource {
@@ -162,6 +179,11 @@ struct CostReductionCandidate {
     /// own opt-in/opt-out and can be auto-applied without the redundant
     /// acceptance gate. Mirrors `Effect::pay_cost_self_gated`.
     pay_cost_self_gated: bool,
+    /// The `pay_cost` installs a selection (parks). Mirrors
+    /// `Effect::pay_cost_interactive`. The digivolve / Option-use synchronous
+    /// scan routes such a reducer through a dedicated interactive prompt.
+    /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+    pay_cost_interactive: bool,
 }
 
 struct BeforePayCostSourceInfo {

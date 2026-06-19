@@ -108,15 +108,59 @@ impl CardEffect for DslCardEffect {
             }
         }
         let option_use_requirement = option_use_requirement_for_card(&self.compiled);
-        'clause: for (clause_index, clause) in self.compiled.effects.iter().enumerate() {
+        // Assemble the full clause list. For a DUAL card this is the top-level
+        // `effects:` PLUS the per-face `dual.digimon.effects` /
+        // `dual.option.effects` (`G-DSL-DUAL-PER-FACE-EFFECTS`). Each entry
+        // carries its own lowering identity so face routing is unambiguous:
+        //
+        //   * Digimon-face clauses lower as a plain Digimon (no `MainFromHand →
+        //     OptionMain` rewrite, no Option use-requirement bypass) — they
+        //     fire when the card is in play as a Digimon.
+        //   * Option-face clauses lower with the `Dual` identity, so a
+        //     `when: main` body becomes `OptionMain` and the
+        //     `dual.option.use_requirement` color bypass applies — they fire
+        //     only when the card is *used as an Option*.
+        //
+        // `clause_index` seeds the shared-OPT-group key for multi-timing
+        // once-per-turn clauses; each face is offset into a disjoint band so a
+        // Digimon-face WD/WA OPT can never collide with an Option-face one.
+        let mut clauses: Vec<(usize, &CompiledClause, CompiledCardKind, Option<Arc<CompiledPredicate>>)> =
+            Vec::new();
+        for (i, clause) in self.compiled.effects.iter().enumerate() {
+            clauses.push((i, clause, self.compiled.kind, option_use_requirement.clone()));
+        }
+        if let Some(dual) = self.compiled.dual.as_ref() {
+            const FACE_OFFSET: usize = 64;
+            for (i, clause) in dual.digimon.effects.iter().enumerate() {
+                // Digimon face: lower as a Digimon, never as an Option — no
+                // use-requirement bypass and no Main→OptionMain rewrite.
+                clauses.push((
+                    FACE_OFFSET + i,
+                    clause,
+                    CompiledCardKind::Digimon,
+                    None,
+                ));
+            }
+            for (i, clause) in dual.option.effects.iter().enumerate() {
+                // Option face: lower with the Dual identity so `when: main`
+                // routes to OptionMain and the option color bypass applies.
+                clauses.push((
+                    2 * FACE_OFFSET + i,
+                    clause,
+                    CompiledCardKind::Dual,
+                    option_use_requirement.clone(),
+                ));
+            }
+        }
+        'clause: for (clause_index, clause, clause_kind, clause_use_req) in clauses.into_iter() {
             match clause {
                 CompiledClause::Triggered(clause) => {
                     out.extend(lower_triggered::lower_for_kind_with_clause_index(
                         card,
                         clause,
                         self.raw.clone(),
-                        option_use_requirement.clone(),
-                        Some(self.compiled.kind),
+                        clause_use_req.clone(),
+                        Some(clause_kind),
                         clause_index,
                     ));
                 }
@@ -153,6 +197,7 @@ impl CardEffect for DslCardEffect {
                         modifier,
                         modifier_value,
                         modifier_name,
+                        synth_identity,
                         while_condition,
                         applies_to_opponent_security_dp,
                         applies_to_own_security_dp,
@@ -173,6 +218,7 @@ impl CardEffect for DslCardEffect {
                             modifier.clone(),
                             *modifier_value,
                             modifier_name.clone(),
+                            synth_identity.clone(),
                             while_condition.clone(),
                             *applies_to_opponent_security_dp,
                             *applies_to_own_security_dp,

@@ -121,6 +121,8 @@ export interface RevealedCardDto {
 export interface GameStateDto {
   turn_count: number;
   turn_player: number;
+  /** Engine seat that takes the first turn (0 = local human / player1). */
+  first_player: number;
   current_phase: string;
   memory: number;
   game_over: boolean;

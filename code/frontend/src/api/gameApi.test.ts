@@ -84,6 +84,7 @@ describe('dtoToGameState', () => {
     const state = dtoToGameState({
       turn_count: 1,
       turn_player: 0,
+      first_player: 0,
       current_phase: 'Main',
       memory: 0,
       game_over: false,
@@ -146,6 +147,7 @@ describe('dtoToGameState', () => {
     const dto = (winner: number | null) => ({
       turn_count: 1,
       turn_player: 0,
+      first_player: 0,
       current_phase: 'Main',
       memory: 0,
       game_over: winner !== null,
@@ -179,6 +181,7 @@ describe('dtoToGameState', () => {
     const dto = (turnPlayer: number, memory: number) => ({
       turn_count: 2,
       turn_player: turnPlayer,
+      first_player: turnPlayer,
       current_phase: 'Main',
       memory,
       game_over: false,

@@ -91,6 +91,32 @@ fn compile_dual(
     card_id: &str,
     errors: &mut Vec<ValidationError>,
 ) -> CompiledDual {
+    let digimon_effects = dual
+        .digimon
+        .effects
+        .iter()
+        .enumerate()
+        .map(|(i, c)| compile_clause(c, &format!("dual.digimon.effects[{i}]"), card_id, errors))
+        .collect();
+    let option_effects = dual
+        .option
+        .effects
+        .iter()
+        .enumerate()
+        .map(|(i, c)| compile_clause(c, &format!("dual.option.effects[{i}]"), card_id, errors))
+        .collect();
+    // Fold the `arts_digivolve: true` shorthand into the option-face keyword
+    // list — `pending_option_can_arts_digivolve` reads `ArtsDigivolve` from
+    // `dual.option.keywords`, so the shorthand and the explicit keyword form
+    // are equivalent at the engine boundary (`G-DSL-ARTS-DIGIVOLVE`).
+    let mut option_keywords = dual.option.keywords.clone();
+    if dual.option.arts_digivolve
+        && !option_keywords.iter().any(|k| {
+            matches!(k.as_str(), "ArtsDigivolve" | "Arts Digivolve" | "arts_digivolve")
+        })
+    {
+        option_keywords.push("ArtsDigivolve".to_string());
+    }
     CompiledDual {
         digimon: CompiledDualDigimon {
             level: dual.digimon.level,
@@ -104,6 +130,7 @@ fn compile_dual(
             traits: dual.digimon.traits.clone(),
             effect_text: dual.digimon.effect_text.clone(),
             inherited_text: dual.digimon.inherited_text.clone(),
+            effects: digimon_effects,
         },
         option: CompiledDualOption {
             use_cost: dual.option.use_cost,
@@ -115,7 +142,7 @@ fn compile_dual(
                 .collect(),
             effect_text: dual.option.effect_text.clone(),
             security_text: dual.option.security_text.clone(),
-            keywords: dual.option.keywords.clone(),
+            keywords: option_keywords,
             use_requirement: dual.option.use_requirement.as_ref().map(|p| {
                 Box::new(compile_predicate(
                     p,
@@ -124,6 +151,7 @@ fn compile_dual(
                     errors,
                 ))
             }),
+            effects: option_effects,
         },
     }
 }
@@ -640,6 +668,9 @@ fn compile_predicate(
             .play_cost_gte
             .as_ref()
             .map(|d| compile_dp_constraint(d, &format!("{prefix}.play_cost_gte"), card_id, errors)),
+        play_or_use_cost_lte: p.play_or_use_cost_lte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.play_or_use_cost_lte"), card_id, errors)
+        }),
         can_digivolve_from_source: p.can_digivolve_from_source,
         dp_eq: p
             .dp_eq
@@ -681,6 +712,7 @@ fn compile_predicate(
         self_color_count_gte: p.self_color_count_gte,
         has_face_down_source: p.has_face_down_source,
         distinct_tamer_colors_gte: p.distinct_tamer_colors_gte,
+        face_down_sources_under_tamers_gte: p.face_down_sources_under_tamers_gte,
         battle_opponent_no_sources: p.battle_opponent_no_sources,
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
@@ -844,6 +876,7 @@ fn compile_predicate(
         event_permanent_is_source: p.event_permanent_is_source,
         source_deleted_battle_opponent: p.source_deleted_battle_opponent,
         event_host_permanent_is_source: p.event_host_permanent_is_source,
+        event_host_is_own_tamer: p.event_host_is_own_tamer,
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
@@ -1301,6 +1334,20 @@ fn compile_triggered(
             .condition
             .as_ref()
             .map(|p| compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)),
+        timing_conditions: t
+            .timing_conditions
+            .iter()
+            .enumerate()
+            .map(|(i, tc)| crate::compiled::CompiledTimingCondition {
+                when: compile_timing(tc.when),
+                condition: compile_predicate(
+                    &tc.condition,
+                    &format!("{prefix}.timing_conditions[{i}].condition"),
+                    card_id,
+                    errors,
+                ),
+            })
+            .collect(),
         optional: t.optional,
         outer_prompt: t.outer_prompt,
         once_per_turn: t.once_per_turn,
@@ -1510,6 +1557,7 @@ fn compile_declarative(
             modifier: a.modifier,
             modifier_value: a.modifier_value,
             modifier_name: a.modifier_name,
+            synth_identity: a.synth_identity.as_ref().map(compile_synth_identity),
             while_condition: a.while_condition.as_ref().map(|p| {
                 compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
             }),
@@ -2051,6 +2099,13 @@ fn compile_step(
         S::TrashBottomFaceDownSourceUnderTamer(a) => {
             CompiledStep::TrashBottomFaceDownSourceUnderTamer {
                 of: compile_player_ref(a.of),
+                optional: a.optional,
+            }
+        }
+        S::TrashBottomFaceDownSourcesUnderTamers(a) => {
+            CompiledStep::TrashBottomFaceDownSourcesUnderTamers {
+                of: compile_player_ref(a.of),
+                count: a.count,
             }
         }
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
@@ -2061,6 +2116,10 @@ fn compile_step(
             tamer: compile_binding_ref(&a.tamer),
             face_down: a.face_down,
             bind_as: a.bind_as.clone(),
+        },
+        S::MoveSelfOptionUnderPermanent(a) => CompiledStep::MoveSelfOptionUnderPermanent {
+            target: compile_binding_ref(&a.target),
+            face_down: a.face_down,
         },
         S::PlaceSelectedSourcesUnderTamer(a) => CompiledStep::PlaceSelectedSourcesUnderTamer {
             source_refs: a.source_refs.clone(),
@@ -2136,6 +2195,14 @@ fn compile_step(
             use_cost_lte_opponent_memory: a.use_cost_lte_opponent_memory,
             optional: a.optional,
             prompt: a.prompt.clone(),
+        },
+        S::PlayOrUseFromHand(a) => CompiledStep::PlayOrUseFromHand {
+            of: compile_player_ref(a.of),
+            hand_index: compile_binding_ref(&a.hand_index),
+            cost_delta: a
+                .cost_delta
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
         },
         S::PlayFromRevealedFree(a) => CompiledStep::PlayFromRevealedFree {
             of: compile_player_ref(a.of),

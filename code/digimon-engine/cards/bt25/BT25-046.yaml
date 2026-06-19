@@ -1,0 +1,81 @@
+# BT25-046 Gekkomon — Digimon, Lv.3, Green, DP 2000, Cost 3.
+# Traits: Reptile, Glowing Dawn, BEATBREAK. Attribute: Data.
+#
+# Printed card text (data/cards.json — verbatim, confirmed vs DCGO):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 card with the
+#     [Glowing Dawn] trait and 1 green card with the [BEATBREAK] trait among
+#     them to the hand. Return the rest to the bottom of the deck.
+#   Inherited: <Piercing> (When this Digimon attacks and deletes an opponent's
+#     Digimon in battle, it checks security before the attack ends.)
+#   xros_req: [Digivolve] Lv.2 w/[Glowing Dawn] trait: Cost 0
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_046.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (timing None): AddSelfDigivolutionRequirementStaticEffect(
+#   level 2, permanentCondition TopCard.EqualsTraits("Glowing Dawn"),
+#   digivolutionCost 0). → alt_paths digivolve from level 2 + Glowing Dawn
+#   trait, cost 0.
+# On Play (OnEnterFieldAnyone): SimplifiedRevealDeckTopCardsAndSelect(
+#   revealCount 3,
+#     bucket0 canTarget EqualsTraits("Glowing Dawn"), maxCount 1, AddHand;
+#     bucket1 canTarget EqualsTraits("BEATBREAK") && HasCardColor(Green),
+#       maxCount 1, AddHand;
+#     remainingCardsPlace DeckBottom, mutualConditions: true).
+#   → reveal_top_deck 3 + two-bucket select_reveal_buckets (Glowing Dawn;
+#     green BEATBREAK) with no_duplicate_cards: true (mutualConditions),
+#     add both, place_remainder_on_deck bottom. Mandatory (no "may").
+# Inherited (OnDetermineDoSecurityCheck): PierceSelfEffect(isInheritedEffect)
+#   → scope: inherited + grant_keyword Piercing.
+
+card: BT25-046
+name: "Gekkomon"
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 2000
+traits: [Reptile, Glowing Dawn, BEATBREAK]
+attribute: Data
+
+# Alt-digivolve: Lv.2 with the [Glowing Dawn] trait / cost 0.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - trait_has: "Glowing Dawn"
+    cost: 0
+
+effects:
+  # ─── [On Play] Reveal 3; add 1 Glowing Dawn + 1 green BEATBREAK; rest bottom ──
+  - when: on_play
+    summary: "[On Play] Reveal 3; add one [Glowing Dawn] and one green [BEATBREAK] card to hand; rest to bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: gd_pick
+              min: 1
+              max: 1
+              filter: { trait_has: "Glowing Dawn" }
+            - bind_as: bb_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - trait_has: BEATBREAK
+                  - color_is: green
+          no_duplicate_cards: true
+          prompt: "Add 1 [Glowing Dawn] and 1 green [BEATBREAK] trait card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: gd_pick }
+      - add_to_hand_from_reveal: { of: you, card: bb_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Inherited <Piercing> ──────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Piercing
+    summary: "Inherited <Piercing>"
