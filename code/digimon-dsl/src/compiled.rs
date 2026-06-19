@@ -71,6 +71,10 @@ pub struct CompiledDualDigimon {
     pub traits: Vec<String>,
     pub effect_text: String,
     pub inherited_text: String,
+    /// Digimon-face behavioral clauses (`G-DSL-DUAL-PER-FACE-EFFECTS`).
+    /// Lowered with the Digimon identity — natural timings.
+    #[serde(default)]
+    pub effects: Vec<CompiledClause>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -79,8 +83,16 @@ pub struct CompiledDualOption {
     pub colors: Vec<CompiledColor>,
     pub effect_text: String,
     pub security_text: String,
+    /// Option-face keywords. `arts_digivolve: true` on the spec compiles into
+    /// an `ArtsDigivolve` entry here, so the engine's existing keyword check
+    /// (`pending_option_can_arts_digivolve`) needs no extra wiring.
     pub keywords: Vec<String>,
     pub use_requirement: Option<Box<CompiledPredicate>>,
+    /// Option-face behavioral clauses — the BEATBREAK `[Main]` body. Lowered
+    /// with the Dual identity so `when: main` → `OptionMain`
+    /// (`G-DSL-DUAL-PER-FACE-EFFECTS`).
+    #[serde(default)]
+    pub effects: Vec<CompiledClause>,
 }
 
 // ── Identity ────────────────────────────────────────────────────────
@@ -303,6 +315,9 @@ pub struct CompiledPredicate {
     /// keeps older serialized packs deserializable.
     #[serde(default)]
     pub play_cost_eq: Option<CompiledDpConstraint>,
+    /// G-PLAY-OR-USE-COST-LTE: max(play_cost, option_use_cost) <= N.
+    #[serde(default)]
+    pub play_or_use_cost_lte: Option<CompiledDpConstraint>,
     pub can_digivolve_from_source: Option<bool>,
     pub dp_eq: Option<CompiledDpConstraint>,
     pub dp_lte: Option<CompiledDpConstraint>,
@@ -334,6 +349,9 @@ pub struct CompiledPredicate {
     /// True when the observer's battle-area Tamers collectively have at
     /// least N distinct colors. G-DSL-DISTINCT-TAMER-COLORS.
     pub distinct_tamer_colors_gte: Option<u8>,
+    /// True when the observer's battle-area Tamers collectively carry at least
+    /// N face-down digivolution sources. G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER.
+    pub face_down_sources_under_tamers_gte: Option<u8>,
     /// Battle-context leaf: true when the effect's carrier is battling an
     /// opposing Digimon with zero digivolution source cards.
     pub battle_opponent_no_sources: Option<bool>,
@@ -422,6 +440,8 @@ pub struct CompiledPredicate {
     pub event_permanent_is_source: Option<bool>,
     pub source_deleted_battle_opponent: Option<bool>,
     pub event_host_permanent_is_source: Option<bool>,
+    /// G-SHARED-OPT-HETEROGENEOUS-TIMING: trash-event host is an own Tamer.
+    pub event_host_is_own_tamer: Option<bool>,
     pub event_is_effect_initiated: Option<bool>,
     pub event_target_same_level_as_previous: Option<bool>,
     pub event_cause: Option<CompiledEventCause>,
@@ -725,6 +745,12 @@ pub struct CompiledTriggeredClause {
     pub scope: CompiledScope,
     pub active_when: Option<CompiledPredicate>,
     pub condition: Option<CompiledPredicate>,
+    /// Per-timing condition overrides (G-SHARED-OPT-HETEROGENEOUS-TIMING).
+    /// When this clause fires from timing `T`, the matching entry's condition
+    /// is AND-ed onto the clause-level gates; timings with no entry use only
+    /// the clause-level gates. Empty for the common single-condition case.
+    #[serde(default)]
+    pub timing_conditions: Vec<CompiledTimingCondition>,
     pub optional: bool,
     /// Force the explicit outer accept/decline confirm even when the first
     /// body step is declinable (DCGO's always-shown initial Yes/No). Declining
@@ -737,6 +763,13 @@ pub struct CompiledTriggeredClause {
     pub process: Vec<CompiledStep>,
     pub summary: Option<String>,
     pub summary_key: Option<String>,
+}
+
+/// Compiled `timing_conditions:` entry (G-SHARED-OPT-HETEROGENEOUS-TIMING).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledTimingCondition {
+    pub when: CompiledTiming,
+    pub condition: CompiledPredicate,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -763,6 +796,13 @@ pub enum CompiledDeclarativeClause {
         /// `ModifierPayload::Name { value, base: false }`. Used by
         /// `CanOnlyDigivolveInto` (judge-quiz Q3, EX10-020).
         modifier_name: Option<String>,
+        /// Structured `TreatAsDigimon` SynthIdentity payload for a mass aura
+        /// ("all of your [Marcus Damon]s are also treated as a 12000 DP
+        /// Digimon" — BT25-104). No `skip_serializing_if`: the embedded pack
+        /// round-trips `CompiledClause` through bincode (non-self-describing),
+        /// so the field must always be written. G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH.
+        #[serde(default)]
+        synth_identity: Option<CompiledSynthIdentity>,
         /// Track H §4 — install-once continuous gate. When present, the
         /// lowered `Effect` installs its modifier(s) with
         /// `Expiry::UntilCondition` carrying this predicate. Eviction is
@@ -1236,12 +1276,36 @@ pub enum CompiledStep {
     /// cost by BEATBREAK / DATA SQUAD cards.
     TrashBottomFaceDownSourceUnderTamer {
         of: CompiledPlayerRef,
+        /// Declinable Tamer pick (PASS skips the trash AND the tail) — DCGO
+        /// `canNoSelect:true`. `G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER`. Plain
+        /// (no `skip_serializing_if`): the compiled pack is bincode-serialized
+        /// (non-self-describing), so every field must occupy a fixed slot.
+        #[serde(default)]
+        optional: bool,
+    },
+    /// Multi-count / multi-Tamer sibling of
+    /// `TrashBottomFaceDownSourceUnderTamer`. Trash `count` bottom-face-down
+    /// digivolution sources total, distributed across `of`'s Tamers, each pick
+    /// surfaced as a real selection. Compiled from
+    /// `trash_bottom_face_down_sources_under_tamers`; used as an activation cost
+    /// by BT25-035 Cougarmon. `G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER`.
+    TrashBottomFaceDownSourcesUnderTamers {
+        of: CompiledPlayerRef,
+        count: u8,
     },
     PlaceSelectedCardUnderTamer {
         card: CompiledBindingRef,
         tamer: CompiledBindingRef,
         face_down: bool,
         bind_as: Option<String>,
+    },
+    /// Relocate THIS effect's source Option (an in-battle-area field Option)
+    /// face-down under a chosen own permanent — a new Option-lifecycle exit
+    /// distinct from trashing. Compiled from `move_self_option_under_permanent`.
+    /// G-MOVE-SELF-OPTION-UNDER-PERMANENT.
+    MoveSelfOptionUnderPermanent {
+        target: CompiledBindingRef,
+        face_down: bool,
     },
     PlaceSelectedSourcesUnderTamer {
         source_refs: String,
@@ -1283,6 +1347,13 @@ pub enum CompiledStep {
         use_cost_lte_opponent_memory: bool,
         optional: bool,
         prompt: Option<String>,
+    },
+    /// Unified play-or-use of a `select_hand`-bound card with a cost
+    /// adjustment. `G-PLAY-OR-USE-FROM-HAND`.
+    PlayOrUseFromHand {
+        of: CompiledPlayerRef,
+        hand_index: CompiledBindingRef,
+        cost_delta: Option<CompiledCostDelta>,
     },
     PlayFromRevealedFree {
         of: CompiledPlayerRef,
@@ -2154,6 +2225,7 @@ mod tests {
                 scope: CompiledScope::FaceUp,
                 active_when: None,
                 condition: None,
+                timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,
                 once_per_turn: false,
@@ -2213,6 +2285,7 @@ mod tests {
                 scope: CompiledScope::FaceUp,
                 active_when: None,
                 condition: Some(pred),
+                timing_conditions: Vec::new(),
                 optional: false,
                 outer_prompt: false,
                 once_per_turn: false,

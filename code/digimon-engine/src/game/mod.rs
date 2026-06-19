@@ -514,6 +514,40 @@ pub struct Game {
     /// decline outcome).
     pub(crate) pending_player_digivolve_reduction: i32,
 
+    /// Reduction (in memory) granted by an already-resolved FIELD-HOSTED
+    /// INTERACTIVE digivolve cost reducer (its `pay_cost` installs a selection
+    /// — e.g. ST23-03 Cougarmon's "by trashing the bottom face-down card under
+    /// a Tamer, reduce the cost by 2"). Set by the interactive reducer prompt's
+    /// parked-selection success continuation
+    /// (`try_prompt_interactive_digivolve_cost_reducer`), read by the digivolve
+    /// cost calculation on re-entry and cleared once consumed. `0` means "no
+    /// interactive field reduction". Distinct from
+    /// `pending_player_digivolve_reduction` (the player-scoped BT3-103 store) so
+    /// the two can both contribute to a single digivolution without colliding.
+    /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+    pub(crate) pending_interactive_digivolve_reduction: i32,
+
+    /// Reduction (in memory) granted by an already-resolved FIELD-HOSTED
+    /// INTERACTIVE Option-use cost reducer (its `pay_cost` installs a selection
+    /// — e.g. BT25-049 Armalizamon's "by trashing the bottom face-down card
+    /// under a Tamer, reduce the cost by 3"). Set by the interactive reducer
+    /// prompt's parked-selection success continuation
+    /// (`try_prompt_interactive_option_use_cost_reducer`), read by
+    /// `play_option_core` on re-entry and cleared once consumed. `0` means "no
+    /// interactive Option-use reduction".
+    /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+    pub(crate) pending_interactive_option_use_reduction: i32,
+
+    /// True once `play_option_core` has installed the interactive Option-use
+    /// cost-reducer prompt for the in-flight Option play, so the re-entry (after
+    /// the accept/decline gate OR the parked Tamer-pick resolves) does NOT
+    /// re-offer the same reducer. A decline-surviving re-entry signal — unlike a
+    /// `pending_interactive_option_use_reduction == 0` check, a 0-credit DECLINE
+    /// (or a 0-amount paid reducer) still clears the prompt, preventing the
+    /// accept/decline gate from re-prompting forever. Mirrors the digivolve
+    /// path's `player_reducer_resolved` flag. Reset once consumed.
+    /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+    pub(crate) interactive_option_use_reducer_prompted: bool,
     /// The digivolution route (cost + app-fusion-ness) the player CHOSE when a
     /// hand card offered more than one distinct-cost route over the target base
     /// (rule 17 — no auto-selection of the cheapest). Set by the cost-choice
@@ -637,6 +671,19 @@ pub struct Game {
     /// resolver finishes the Option play. Spec §5.2.
     #[doc(hidden)]
     pub(crate) in_counter_window: bool,
+
+    /// Set to `true` while an effect-driven Option USE is resolving from a
+    /// triggered/effect body (the unified `play_or_use_from_hand_with_cost`
+    /// helper). `play_option_core`'s Main-phase gate is LIFTED while this is
+    /// set, because the effect text ("you may play or use 1 … card") grants the
+    /// use regardless of phase — e.g. BT25-041 fires from `[When Attacking]`,
+    /// which is not the Main phase, yet must still be able to use an Option.
+    /// Counter-window Option plays use the separate `in_counter_window` bypass;
+    /// this flag is the effect-body analogue. Set/cleared around the
+    /// `play_option_core` call inside `EffectContext::use_option_from_hand_with_cost`.
+    /// `G-PLAY-OR-USE-FROM-HAND`.
+    #[doc(hidden)]
+    pub(crate) effect_driven_option_use: bool,
 
     /// Active multi-target deletion batch (DCGO `DestroyPermanentsClass`
     /// equivalent). `Some(batch)` while `delete_permanents_batch` is in
@@ -799,6 +846,10 @@ pub struct Game {
     /// games (the standard constructor uses an in-scope `data_index_map`
     /// directly without caching it on the Game).
     pub(crate) opaque_data_index_map: Option<std::collections::HashMap<String, usize>>,
+
+    /// Card-id → `card_data` index, materialized once at construction. O(1)
+    /// replacement for the per-step `card_data.iter().find(...)` linear scan.
+    pub(crate) card_id_index: std::collections::HashMap<String, usize>,
 }
 
 // Tier-1 impl Game mechanic clusters (see docs/RUST_ENGINE_API.md §3).
@@ -2089,6 +2140,7 @@ impl Game {
         source_player: PlayerId,
         expiry: Expiry,
         effect_immunity: Option<crate::modifiers::EffectImmunityFilter>,
+        payload: Option<crate::modifiers::ModifierPayload>,
     ) {
         let pending_skips = crate::modifiers::pending_skips_for_install(
             expiry,
@@ -2105,6 +2157,7 @@ impl Game {
                 expiry,
                 pending_skips,
                 effect_immunity,
+                payload,
             });
         self.tick_declarative_effects();
     }
@@ -2428,16 +2481,12 @@ impl Game {
         // but is only hit once per effect query, and `effects_for_card` is
         // typically called at state-change fire-sites, not in the mask hot
         // loop — so the cost is acceptable for v1.
-        let native_keywords = self
-            .card_data
-            .iter()
-            .find(|cd| cd.card_id == card_id)
-            .map(|cd| cd.keywords.clone())
-            .unwrap_or_default();
-        let mut auto_effects: Vec<crate::effect::Effect> = self
-            .card_data
-            .iter()
-            .find(|cd| cd.card_id == card_id)
+        // One O(1) lookup, reused for both keyword reads (was two O(~4000)
+        // linear scans for the same card — the per-step hot path: ~793
+        // effects_for_card calls/step, 94% of step time).
+        let cd_opt = self.card_data_by_id(card_id);
+        let native_keywords = cd_opt.map(|cd| cd.keywords.clone()).unwrap_or_default();
+        let mut auto_effects: Vec<crate::effect::Effect> = cd_opt
             .map(|cd| {
                 let mut effects: Vec<crate::effect::Effect> = cd
                     .keywords

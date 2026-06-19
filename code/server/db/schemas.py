@@ -1062,6 +1062,7 @@ class ManifestModel(BaseModel):
 class ManifestResponse(BaseModel):
     generated_at: datetime
     models: List[ManifestModel]
+    starter_ai_model_id: Optional[str] = None
 
 
 class PrepareModelResponse(BaseModel):

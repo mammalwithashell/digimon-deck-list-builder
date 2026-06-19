@@ -22,30 +22,36 @@
 //! DCGO/Assets/Scripts/CardEffect/BT22/Red/BT22_013.cs
 //!
 //! # Patterns this test covers
-//! - Structural: 2 alt_paths (Digivolve Lv.5/cost-4 + ActivatedDigivolve from
-//!   Agumon at cost 6, ignore_requirements) + 2 triggered clauses
-//!   ([When Digivolving] branch-choice + inherited [When Attacking][OPT]).
+//! - Structural: 1 alt_path (Digivolve Lv.5/cost-4) + 3 triggered clauses
+//!   (main_from_hand Nokia jump + [When Digivolving] branch-choice + inherited
+//!   [When Attacking][OPT]).
+//! - [Hand][Main] Nokia jump (`when: main_from_hand`): the Nokia Shiramine +
+//!   Agumon-target `condition:` gate → select Agumon → effect_initiated_
+//!   digivolve (cost 6, ignore reqs). Re-modelled off the retired
+//!   `activated_digivolve` alt-path (G-ACTIVATED-DIGIVOLVE-EXECUTION). Mirrors
+//!   BT24-016 Lamiamon clause 1. Driven through `activate_hand_main`.
 //! - E1 Branch-choice [When Digivolving] (2-way EffectChoice, mandatory).
 //! - F1-adjacent Lowest-DP delete branch (`dp_lte: { aggregate: { selector:
 //!   lowest_dp, scope: opponent } }` — same shape as BT24-017 / BT24-040).
 //! - F2 Effect-initiated DNA-free digivolve from hand (Gabumon → MetalGarurumon)
-//!   — same shape as BT17-015 branch 1 (BLOCKED: G-EFFECT-INITIATED-DIGIVOLVE-
-//!   FROM-HAND-WITH-PERMANENT-TARGET).
+//!   — same shape as BT17-015 branch 1. G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-
+//!   WITH-PERMANENT-TARGET is RESOLVED: the full chain runs, test is active and green.
 //! - G4 Inherited [When Attacking][OPT] gated on top-card name ("Omnimon")
-//!   trashing top opp security — same shape as BT17-015 inherited (BLOCKED:
-//!   G-DSL-SOURCE-NAME-CONTAINS for the name-gate negative case).
+//!   trashing top opp security — same shape as BT17-015 inherited.
+//!   G-DSL-SOURCE-NAME-CONTAINS is RESOLVED: name-gate negative case exercised,
+//!   test is active and green.
 //!
 //! # Sister cards (cross-reference)
 //! - BT17-015 WarGreymon (the "old" WarGreymon DSL test) — same branch-choice
 //!   shape, same inherited shape; differs in the cost reduction (Tai Kamiya
 //!   tamer, -3 cost) vs the activated_digivolve from Agumon at cost 6.
-//! - BT24-016 Lamiamon — first/canonical user of `activated_digivolve` from
-//!   field with `extra_cost`. Header for that card established
-//!   G-ALT-PATH-CONDITION as a DSL vocab gap; the gap was RESOLVED at the
-//!   substrate level on 2026-05-15 (`AltPathSpec.condition` field +
-//!   consumer wiring in `dna_digivolve.rs`). BT22-013's YAML does not yet
-//!   populate `condition:` to gate on Nokia Shiramine; card-local
-//!   authoring follow-up.
+//! - BT24-016 Lamiamon — the canonical precedent for re-modelling a
+//!   `[Hand][Main]` "If you have <Tamer>, … digivolves into this card"
+//!   jump as a `when: main_from_hand` clause whose `condition:` enforces the
+//!   tamer precondition (Owen Dreadnought there; Nokia Shiramine here) and
+//!   whose body runs `select_own_permanent → effect_initiated_digivolve
+//!   { from_hand: self, ignore_requirements }`. BT22-013's [Hand][Main] Nokia
+//!   jump is modelled identically.
 //! - BT24-017 Medusamon — first/canonical user of `dp_lte: { aggregate:
 //!   { selector: lowest_dp, scope: opponent } }`. Header for that card
 //!   established G-PRED-DP-LTE as an engine gap (predicate parses + compiles
@@ -57,34 +63,35 @@
 //! | Card-text element                                                    | YAML clause                                                                          | Status         |
 //! |----------------------------------------------------------------------|--------------------------------------------------------------------------------------|----------------|
 //! | "Standard Lv.5 Red digivolve cost 4"                                  | `alt_paths: { kind: digivolve, from: { level_eq: 5 }, cost: 4 }`                       | OK             |
-//! | "[Hand][Main] if Nokia Shiramine, 1 Agumon digivolves at cost 6, ignore reqs" | `alt_paths: { kind: activated_digivolve, from: { name_contains: "Agumon" }, cost: 6, ignore_requirements: true }` | DSL-GAP — see below (G-ALT-PATH-CONDITION) |
+//! | "[Hand][Main] if Nokia Shiramine, 1 Agumon digivolves at cost 6, ignore reqs" | `when: main_from_hand` + `condition: { Nokia on field, Agumon target }` + `select_own_permanent { name_contains: "Agumon" }` + `effect_initiated_digivolve { from_hand: self, cost: 6, ignore_requirements: true }` | OK (re-modelled off retired activated_digivolve — G-ACTIVATED-DIGIVOLVE-EXECUTION) |
 //! | "[When Digivolving] Activate 1 of the effects below: …"               | `when: when_digivolving` + `select_effect_choice { 2 labels }`                         | OK             |
-//! | "1 of your [Gabumon] may digivolve into [MetalGarurumon] in hand free, ignore reqs" | `select_own_permanent { name_contains: "Gabumon" }` + `select_hand { name_contains: "MetalGarurumon" }` + `effect_initiated_digivolve { ignore_requirements, cost: 0 }` | DSL-GAP * (G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET) |
-//! | "Delete 1 of your opponent's Digimon with the lowest DP"              | `select_opponent_permanent { kind: digimon, dp_lte: { aggregate: lowest_dp/opponent } }` + `delete_permanent` | DSL-GAP * (G-PRED-DP-LTE — over-permissive on lowest-DP gate) |
-//! | Inherited "[When Attacking][OPT] If [Omnimon] in name, trash top opp sec" | `scope: inherited`, `when: when_attacking`, `once_per_turn: true`, `condition: { source_name_contains: "Omnimon" }`, `trash_top_security { of: opponent }` | DSL-GAP * (G-DSL-SOURCE-NAME-CONTAINS — over-permissive on name gate) |
+//! | "1 of your [Gabumon] may digivolve into [MetalGarurumon] in hand free, ignore reqs" | `select_own_permanent { name_contains: "Gabumon" }` + `select_hand { name_contains: "MetalGarurumon" }` + `effect_initiated_digivolve { ignore_requirements, cost: 0 }` | OK (G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET RESOLVED) |
+//! | "Delete 1 of your opponent's Digimon with the lowest DP"              | `select_opponent_permanent { kind: digimon, dp_lte: { aggregate: lowest_dp/opponent } }` + `delete_permanent` | OK (G-PRED-DP-LTE RESOLVED — lowest-DP filter honored) |
+//! | Inherited "[When Attacking][OPT] If [Omnimon] in name, trash top opp sec" | `scope: inherited`, `when: when_attacking`, `once_per_turn: true`, `condition: { source_name_contains: "Omnimon" }`, `trash_top_security { of: opponent }` | OK (G-DSL-SOURCE-NAME-CONTAINS RESOLVED — name gate enforced) |
 //!
-//! # Known gaps that affect this card
+//! # Gap status for this card (all resolved)
 //!
-//! - **G-ALT-PATH-CONDITION** — RESOLVED 2026-05-15 at the substrate
-//!   level (`AltPathSpec.condition` field exists, consumed by the
-//!   Digivolve route in `dna_digivolve.rs`). BT22-013's YAML does not
-//!   yet populate `condition:` to gate on Nokia Shiramine; the
-//!   Agumon-on-field filter IS enforced via `from:` but Nokia presence
-//!   is not checked. Card-local authoring follow-up.
-//! - **G-PRED-DP-LTE** — `dp_lte` predicate parses + compiles but the engine
-//!   predicate evaluator does not yet evaluate it for permanents. The
-//!   "lowest DP" filter on branch 1's delete will offer ALL opp Digimon, not
-//!   only the lowest-DP one. First flagged on BT24-017 (Medusamon).
-//! - **G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET** — the
-//!   `select_own_permanent → select_hand → effect_initiated_digivolve` chain
-//!   terminates after the permanent pick; the hand-pick prompt never installs.
-//!   First flagged on BT17-015 (the "old" WarGreymon) for the identical
-//!   Gabumon → MetalGarurumon branch.
-//! - **G-DSL-SOURCE-NAME-CONTAINS** — `source_name_contains` predicate parses
-//!   + compiles but the engine evaluator never inspects it. The inherited
-//!   [When Attacking] clause's "[Omnimon] in name" gate degenerates to true.
-//!   First flagged on BT17-015 (the "old" WarGreymon) for the identical
-//!   inherited [When Attacking][OPT] clause.
+//! - **G-ACTIVATED-DIGIVOLVE-EXECUTION** — CLOSED for this card by re-model.
+//!   The `kind: activated_digivolve` alt-path had no engine execution route,
+//!   so the [Hand][Main] Nokia jump is now a `when: main_from_hand` clause
+//!   (see §5). The Nokia precondition — which an alt-path `condition:` could
+//!   not enforce on the mask — is now the clause `condition:`.
+//! - **G-PRED-DP-LTE** — RESOLVED (qa/resolved-gaps.md). `dp_lte` on
+//!   permanents is now evaluated by the engine predicate evaluator. The
+//!   branch 1 delete filters to only the lowest-DP opponent Digimon, and the
+//!   test asserting this behavior is active and green. First flagged on
+//!   BT24-017 (Medusamon).
+//! - **G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-TARGET** —
+//!   RESOLVED (qa/resolved-gaps.md). The `select_own_permanent → select_hand
+//!   → effect_initiated_digivolve` chain now runs to completion; the hand-pick
+//!   prompt installs after the permanent pick and the digivolve executes.
+//!   Branch 0 test is active and green. First flagged on BT17-015.
+//! - **G-DSL-SOURCE-NAME-CONTAINS** — RESOLVED (qa/resolved-gaps.md).
+//!   `source_name_contains` is evaluated by the engine predicate path
+//!   (predicate.rs, via subject_or_source_permanent). The inherited [When
+//!   Attacking] clause's "[Omnimon] in name" gate correctly blocks when the
+//!   top card is not Omnimon-named. Negative test is active and green. First
+//!   flagged on BT17-015.
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -182,13 +189,16 @@ fn make_omnimon_top(id: &str) -> CardData {
 // ─── Section 1 — Structural assertions ──────────────────────────────────────
 
 #[test]
-fn bt22_013_compiles_with_two_alt_paths_and_two_triggered_clauses() {
+fn bt22_013_compiles_with_one_alt_path_and_three_triggered_clauses() {
     let card = compiled_bt22_013();
 
+    // The [Hand][Main] Nokia jump is now a `main_from_hand` triggered clause
+    // (re-modelled off the retired `activated_digivolve` alt-path), so only the
+    // standard Lv.5/cost-4 Digivolve remains as an alt-path.
     assert_eq!(
         card.alt_paths.len(),
-        2,
-        "expected exactly 2 alt_paths (Digivolve + ActivatedDigivolve), got {}",
+        1,
+        "expected exactly 1 alt_path (standard Digivolve), got {}",
         card.alt_paths.len()
     );
 
@@ -202,8 +212,8 @@ fn bt22_013_compiles_with_two_alt_paths_and_two_triggered_clauses() {
         .collect();
     assert_eq!(
         triggered.len(),
-        2,
-        "expected exactly 2 triggered clauses ([When Digivolving] branch-choice + inherited [When Attacking])"
+        3,
+        "expected exactly 3 triggered clauses (main_from_hand Nokia jump + [When Digivolving] branch-choice + inherited [When Attacking])"
     );
 }
 
@@ -223,29 +233,41 @@ fn bt22_013_first_alt_path_is_digivolve_lv5_cost4() {
     );
 }
 
+/// The [Hand][Main] Nokia jump is now a `main_from_hand` triggered clause (NOT
+/// an `activated_digivolve` alt-path — that kind had no engine execution route,
+/// G-ACTIVATED-DIGIVOLVE-EXECUTION). It carries a `condition:` (the Nokia
+/// Shiramine + Agumon-target gate) and is a face-up own effect. Mirrors
+/// BT24-016 Lamiamon clause 1.
 #[test]
-fn bt22_013_second_alt_path_is_activated_digivolve_from_agumon_cost6() {
+fn bt22_013_has_main_from_hand_nokia_jump_clause() {
     let card = compiled_bt22_013();
-    let path = &card.alt_paths[1];
-    assert_eq!(path.kind, CompiledAltPathKind::ActivatedDigivolve);
+    let clause = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::MainFromHand) => {
+                Some(t)
+            }
+            _ => None,
+        })
+        .expect("must have a main_from_hand Nokia jump clause");
     assert_eq!(
-        path.cost,
-        Some(digimon_dsl::compiled::CompiledCost::Literal(6)),
-        "activated_digivolve from Agumon must be cost 6 (printed)"
+        clause.scope,
+        CompiledScope::FaceUp,
+        "the Nokia jump is a face-up own effect"
     );
     assert!(
-        path.ignore_requirements,
-        "activated_digivolve must ignore digivolution requirements (printed)"
+        clause.condition.is_some(),
+        "the Nokia jump must carry a condition (the Nokia Shiramine + Agumon gate)"
     );
 
-    let from_pred = path
-        .from
-        .as_ref()
-        .expect("activated_digivolve must carry a `from:` predicate");
-    assert_eq!(
-        from_pred.name_contains.as_deref(),
-        Some("Agumon"),
-        "from filter must target name_contains: Agumon (printed)"
+    // The retired `activated_digivolve` alt-path must be gone — only the
+    // standard Digivolve alt-path remains.
+    assert!(
+        card.alt_paths
+            .iter()
+            .all(|p| p.kind == CompiledAltPathKind::Digivolve),
+        "no ActivatedDigivolve alt-path may remain after the re-model"
     );
 }
 
@@ -376,10 +398,10 @@ fn bt22_013_when_digivolving_branch_1_deletes_opp_digimon() {
     );
 }
 
-/// Branch 1 with multiple opp Digimon: only the LOWEST-DP one should be a
-/// valid delete target. **BLOCKED**: G-PRED-DP-LTE — the predicate evaluator
-/// does not yet honor `dp_lte` on permanents, so the prompt offers ALL opp
-/// Digimon. Same gap as BT24-017's `bt24_017_delete_targets_only_lowest_dp_digimon`.
+/// Branch 1 with multiple opp Digimon: only the LOWEST-DP one is a valid
+/// delete target. G-PRED-DP-LTE is RESOLVED (qa/resolved-gaps.md): `dp_lte`
+/// is now evaluated by the engine, so the prompt correctly filters to only the
+/// lowest-DP Digimon. Same gap pattern as BT24-017's lowest-DP delete test.
 #[test]
 fn bt22_013_when_digivolving_branch_1_only_lowest_dp_is_a_legal_target() {
     let mut runner = DebugRunner::builder()
@@ -408,12 +430,11 @@ fn bt22_013_when_digivolving_branch_1_only_lowest_dp_is_a_legal_target() {
 }
 
 /// Branch 0 (Digivolve Gabumon → MetalGarurumon free): selecting branch 0
-/// should chain through select_own_permanent → select_hand →
-/// effect_initiated_digivolve. **BLOCKED**: G-EFFECT-INITIATED-DIGIVOLVE-
-/// FROM-HAND-WITH-PERMANENT-TARGET. Same gap as BT17-015 branch 1.
+/// chains through select_own_permanent → select_hand →
+/// effect_initiated_digivolve. G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-
+/// PERMANENT-TARGET is RESOLVED (qa/resolved-gaps.md): the full chain runs to
+/// completion. Same gap pattern as BT17-015 branch 1.
 #[test]
-// Phase 2 Track F (2026-05-17): G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-
-// WITH-PERMANENT-TARGET resolved as phantom (see BT17-015 sister test).
 fn bt22_013_when_digivolving_branch_0_digivolves_gabumon_into_metalgarurumon_free() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
@@ -580,84 +601,149 @@ fn bt22_013_inherited_when_attacking_opt_blocks_second_activation() {
     );
 }
 
-// ─── Section 4 — Activated digivolve [Hand][Main] precondition gating ───────
+// ─── Section 4 — [Hand][Main] Nokia jump (main_from_hand) behavioral ─────────
 //
 // Printed Clause 1: "[Hand][Main] If you have [Nokia Shiramine], 1 of your
 // [Agumon] digivolves into this card for a digivolution cost of 6, ignoring
 // digivolution requirements."
 //
-// The Nokia Shiramine precondition cannot be expressed today (G-ALT-PATH-
-// CONDITION). The Agumon `from:` filter IS enforced, but the Nokia gate is
-// not. The negative test (alt-path must NOT be offered when Nokia is absent)
-// is BLOCKED until the gap closes.
+// Re-modelled (Task A1, gap-closure plan) from the retired `kind:
+// activated_digivolve` alt-path (which had no engine execution route —
+// G-ACTIVATED-DIGIVOLVE-EXECUTION) onto a `when: main_from_hand` triggered
+// clause, EXACTLY mirroring BT24-016 Lamiamon clause 1. The engine masks a
+// Hand [Main] action for any hand card with a `MainFromHand` effect whose
+// `condition:` passes; `activate_hand_main` runs it. The Nokia "If you have
+// [Nokia Shiramine]" precondition — which could NOT be expressed on an
+// alt-path — IS expressible as the `main_from_hand` `condition:` gate.
 //
-// We DO assert the structural shape of the alt-path (cost 6, ignore_reqs,
-// from filter targets Agumon) in Section 1 — that part IS faithfully encoded
-// and verifiable.
+// Uses a REAL implemented Agumon (BT22-008, same set/color) as the digivolve
+// base so the body exercises `effect_initiated_digivolve { from_hand: self }`
+// against a production card, not a synthetic stand-in. (BT22-008's own
+// `[On Play]` / inherited clauses do not fire here — the Agumon is placed
+// directly on the field, not played, so neither interferes.)
 
-/// Negative: with Agumon on field but NO Nokia Shiramine tamer, the
-/// activated_digivolve alt-path should NOT be available. **PENDING**
-/// card-local authoring of `condition:` on the BT22-013.yaml
-/// activated_digivolve path. Substrate is ready (G-ALT-PATH-CONDITION
-/// RESOLVED 2026-05-15); same authoring gap as BT22-026 / BT24-016.
+/// Positive: Nokia Shiramine + a real [Agumon] (BT22-008) on field, BT22-013
+/// in hand → activating the [Hand][Main] effect digivolves WarGreymon onto the
+/// Agumon at cost 6, ignoring requirements. The Agumon stack's top card becomes
+/// BT22-013 and WarGreymon leaves the hand.
 #[test]
-fn bt22_013_activated_digivolve_blocked_without_nokia_tamer() {
-    // Setup: Agumon on field, BT22-013 in hand, NO Nokia Shiramine tamer.
-    // The activated_digivolve alt-path MUST NOT be offered as a play option.
-    //
-    // Verifying this requires checking `valid_actions` for the absence of an
-    // "activate digivolve from hand" action targeting BT22-013 with Agumon as
-    // the source. The exact action shape depends on engine wiring of
-    // ActivatedDigivolve alt-paths, which is itself a moving target.
-    //
-    // Asserting non-availability requires the Nokia gate to be honored — i.e.
-    // requires G-ALT-PATH-CONDITION to be closed. Until then, the alt-path
-    // would be offered, making the negative assertion fail.
+fn bt22_013_hand_main_jump_digivolves_agumon_at_cost6_with_nokia() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("BT22-013 YAML loads")
-        .add_card(make_agumon("MY-AGU"))
+        .dsl_card("BT22-008")
+        .expect("BT22-008 Agumon in embedded DSL pack")
+        .add_card(make_nokia_tamer("MY-NOKIA"))
+        .add_card(make_filler_digimon("FILL"))
         .hand(0, &["BT22-013"])
+        .deck(0, &["FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL", "FILL"])
         .memory(15)
         .start();
 
-    runner.place_on_field(0, "MY-AGU", None);
+    // Nokia Shiramine (Tamer) + a real Agumon (BT22-008) on player 0's field.
+    runner.place_on_field(0, "MY-NOKIA", Some(0));
+    runner.place_on_field(0, "BT22-008", Some(0));
 
-    // Probe valid_actions for an activated digivolve targeting BT22-013.
-    // Under the gap, this probe will return at least one such action even
-    // though Nokia is absent — so the assertion below would fail until the
-    // gap closes. The test serves as the regression once G-ALT-PATH-CONDITION
-    // lands.
-    //
-    // Detailed action-introspection scaffolding is left as a TODO for
-    // when the gap closes; the test body is a placeholder that captures the
-    // intended assertion shape.
-    //
-    // assert!(
-    //     !runner.has_activated_digivolve_action_for("BT22-013"),
-    //     "without Nokia, the activated_digivolve alt-path must NOT be offered"
-    // );
-    let _ = runner;
+    let mem_before = runner.memory();
+    assert!(
+        runner.game.activate_hand_main(0, 0),
+        "the [Hand][Main] Nokia jump must fire (Nokia + Agumon present)"
+    );
+
+    // The body selects which Agumon to digivolve into.
+    let view = runner
+        .pending_selection_view()
+        .expect("the Agumon select prompt must install");
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .expect("select the Agumon");
+    let _ = runner.auto_resolve();
+
+    // WarGreymon (BT22-013) digivolved onto the Agumon permanent.
+    let agumon_perm = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|p| {
+            p.card_sources
+                .iter()
+                .any(|s| s.card_id(&runner.game.card_data) == "BT22-008")
+        })
+        .expect("the Agumon permanent must still be on the field");
+    assert_eq!(
+        agumon_perm.top_card().card_id(&runner.game.card_data),
+        "BT22-013",
+        "WarGreymon must be the top card of the Agumon stack after the [Hand][Main] jump"
+    );
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "WarGreymon must leave the hand after digivolving onto the Agumon"
+    );
+    // The cost-6 digivolve must actually deduct 6 memory — assert the delta so
+    // the test is robust to any starting-memory clamp. A silently-ignored cost
+    // would leave the delta at 0.
+    assert_eq!(
+        mem_before - runner.memory(),
+        6,
+        "the [Hand][Main] jump must pay digivolution cost 6 (before={}, after={})",
+        mem_before,
+        runner.memory(),
+    );
 }
 
-/// Positive: with Agumon on field AND Nokia Shiramine tamer on field, the
-/// activated_digivolve alt-path IS available. Without G-ALT-PATH-CONDITION
-/// the result is the same as the negative case (alt-path always available
-/// with Agumon present), so this is a sanity scaffold rather than an active
-/// gate test. Once the gap closes, this becomes the positive sister of the
-/// negative test above.
+/// Condition gate (Nokia absent): with a real [Agumon] on field but NO Nokia
+/// Shiramine, the masked [Hand][Main] action is NOT offered —
+/// `activate_hand_main` does not fire, and no digivolve happens.
 #[test]
-fn bt22_013_activated_digivolve_available_with_nokia_and_agumon() {
+fn bt22_013_hand_main_jump_not_offered_without_nokia() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("BT22-013 YAML loads")
-        .add_card(make_agumon("MY-AGU"))
-        .add_card(make_nokia_tamer("MY-NOKIA"))
+        .dsl_card("BT22-008")
+        .expect("BT22-008 Agumon in embedded DSL pack")
+        .add_card(make_filler_digimon("FILL"))
         .hand(0, &["BT22-013"])
+        .deck(0, &["FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL", "FILL", "FILL"])
         .memory(15)
         .start();
 
-    runner.place_on_field(0, "MY-NOKIA", None);
-    runner.place_on_field(0, "MY-AGU", None);
-    let _ = runner;
+    // Agumon on field, but NO Nokia Shiramine — the Nokia gate must block the
+    // masked Hand [Main] action.
+    runner.place_on_field(0, "BT22-008", Some(0));
+
+    assert!(
+        !runner.game.activate_hand_main(0, 0),
+        "without Nokia Shiramine the [Hand][Main] condition fails — the jump must not fire"
+    );
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no selection installs when the Nokia-gated [Hand][Main] jump is not offered"
+    );
+
+    // The Agumon stack must be untouched (WarGreymon never digivolved onto it).
+    let agumon_perm = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|p| {
+            p.card_sources
+                .iter()
+                .any(|s| s.card_id(&runner.game.card_data) == "BT22-008")
+        })
+        .expect("the Agumon permanent must still be on the field");
+    assert_eq!(
+        agumon_perm.top_card().card_id(&runner.game.card_data),
+        "BT22-008",
+        "no digivolve — the Agumon must still be the top card of its own stack"
+    );
+    assert_eq!(
+        runner.hand_size(0),
+        1,
+        "WarGreymon must remain in hand — the jump was not offered"
+    );
 }

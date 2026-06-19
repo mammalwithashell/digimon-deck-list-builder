@@ -1,0 +1,143 @@
+# BT25-029 MirageGaogamon — Digimon, Lv.6, Blue/Purple, DP 12000, Cost 12.
+# Traits: Beast Knight, DATA SQUAD. Attribute: Data.
+#
+# Colour note: cards.json card_colors [1, 5] = Blue + (code 5). Code 5 is the
+# black/purple ingest ambiguity — committed cards split both ways for code 5
+# (AD1-006/AD1-013 → purple; AD1-004/AD1-012 → black), so cards.json is NOT
+# authoritative for it. Taken as Blue/Purple (MirageGaogamon's canonical second
+# colour; matches the human-reviewed parallel implementation). No local image
+# mirror for BT25 to override.
+#
+# Printed card text (data/cards.json — verbatim, confirmed vs DCGO BT25_029.cs):
+#   <Reboot> <Blocker> <Evade>
+#   [When Digivolving] [When Attacking] [Once Per Turn] You may return 1 of your
+#     opponent's level 5 or lower Digimon to the hand. Then, by trashing the
+#     bottom face-down card under any of your Tamers, return 1 of your opponent's
+#     lowest level Digimon to the hand.
+#   [All Turns] [Once Per Turn] When effects add cards to your opponent's hand or
+#     trash cards from under your Tamers, this Digimon may unsuspend.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Blue/BT25_029.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (EffectTiming.None): ONE AddSelfDigivolutionRequirementStaticEffect
+#   — PermanentCondition (ContainsCardName "Gaogamon" OR EqualsTraits "DATA SQUAD"),
+#   level 5, cost 3. → one alt_path { level_eq 5, any_of[name Gaogamon | trait
+#   DATA SQUAD] }, cost 3.
+# Static keywords: Reboot, Blocker, Evade → grant_keyword ×3.
+# Shared WD/WA (ActivateClassesForSharedEffects, hash "BT25_029_WD_WA",
+#   optional:false, isSkippable, OPT; RemoveUse if nothing happened):
+#   1. IF opp has a Lv.5-or-lower Digimon: SelectPermanent (canNoSelect:true,
+#      Bounce) → return it to hand. → select_opponent_permanent {digimon,
+#      level_lte 5} optional + return_to_hand (guarded).
+#   2. IF own Tamer has a face-down source: SelectPermanent (canNoSelect:true) →
+#      trash bottom FD → SuccessProcess: IF opp has a lowest-level Digimon,
+#      MANDATORY (canNoSelect:false) SelectPermanent (Bounce) → return it. The
+#      trash is INDEPENDENTLY optional (DCGO canNoSelect:true), so
+#      trash_bottom_face_down_source_under_tamer {optional:true}; the lowest-
+#      level bounce is its TAIL (runs only on a real trash). The lowest-level
+#      target is found via level_matches_aggregate {selector: lowest_level, of:
+#      opponent} (= DCGO IsMinLevel over the enemy).
+# Shared All Turns (two ActivateClass sharing hash, OPT → G-SHARED-OPT-
+#   HETEROGENEOUS-TIMING): OnAddHand (the OPPONENT's hand gained cards BY AN
+#   EFFECT) AND OnDigivolutionCardDiscarded (a source under one of YOUR Tamers
+#   trashed) → this Digimon MAY unsuspend. → one clause, both timings, each with
+#   its own timing_conditions; unsuspend self (optional).
+
+card: BT25-029
+name: MirageGaogamon
+kind: digimon
+level: 6
+color: [blue, purple]
+cost: 12
+dp: 12000
+traits: [Beast Knight, DATA SQUAD]
+attribute: Data
+
+# Alt-digivolve box (DCGO AddSelfDigivolutionRequirementStaticEffect, level 5).
+alt_paths:
+  - kind: digivolve
+    from:
+      level_eq: 5
+      any_of:
+        - name_contains: "Gaogamon"
+        - trait_has: "DATA SQUAD"
+    cost: 3
+
+effects:
+  # ─── <Reboot> / <Blocker> / <Evade> ────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+  - kind: grant_keyword
+    keyword: Evade
+    summary: "<Evade>"
+
+  # ─── [WD][WA][OPT] may bounce opp Lv≤5; then (optionally) trash FD → bounce
+  #     opp lowest-level ────────────────────────────────────────────────────────
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[WD][WA][OPT] May return an opp Lv≤5 Digimon to hand; then may trash a bottom FD under a Tamer → return an opp lowest-level Digimon to hand"
+    process:
+      # "You may return 1 of your opponent's level 5 or lower Digimon to the
+      # hand." continue_on_decline: declining this FIRST bounce must NOT abort
+      # the clause — the trash+lowest-level bounce is an independent sub-choice
+      # (DCGO's two sequential canNoSelect picks).
+      - select_opponent_permanent:
+          bind_as: bounce_target
+          optional: true
+          continue_on_decline: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+          prompt: "You may return 1 of your opponent's level 5 or lower Digimon to the hand"
+      - if:
+          condition: { binding_present: bounce_target }
+          then:
+            - return_to_hand: { target: bounce_target }
+      # "Then, by trashing the bottom face-down card under any of your Tamers,
+      # return 1 of your opponent's lowest level Digimon to the hand." The trash
+      # is INDEPENDENTLY optional (DCGO canNoSelect:true); the lowest-level bounce
+      # is its TAIL (runs only if a face-down source was actually trashed). The
+      # lowest-level target is the Digimon whose level == the opponent's minimum
+      # (level_matches_aggregate lowest_level) — DCGO MANDATORY when one exists.
+      - trash_bottom_face_down_source_under_tamer: { of: you, optional: true }
+      - select_opponent_permanent:
+          bind_as: lowest_target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_matches_aggregate: { selector: lowest_level, of: opponent }
+          prompt: "Return 1 of your opponent's lowest level Digimon to the hand"
+      - if:
+          condition: { binding_present: lowest_target }
+          then:
+            - return_to_hand: { target: lowest_target }
+
+  # ─── [All Turns][OPT] shared-OPT heterogeneous timing → may unsuspend self ──
+  #
+  # G-SHARED-OPT-HETEROGENEOUS-TIMING: one clause, two timings sharing ONE OPT
+  # counter, each gated by its own per-timing condition:
+  #   - on_add_to_hand: the OPPONENT's hand gained cards BY AN EFFECT.
+  #   - on_digivolution_card_trashed: a source under one of YOUR Tamers trashed.
+  - when: [on_add_to_hand, on_digivolution_card_trashed]
+    optional: true
+    once_per_turn: true
+    active_when: { all_turns: true }
+    timing_conditions:
+      - when: on_add_to_hand
+        condition:
+          all_of:
+            - event_add_to_hand_player: opponent
+            - event_is_effect_initiated: true
+      - when: on_digivolution_card_trashed
+        condition:
+          event_host_is_own_tamer: true
+    summary: "[All Turns][OPT] When the opponent's hand gains cards by an effect OR a source under your Tamer is trashed, this Digimon may unsuspend"
+    process:
+      - unsuspend: { target: source }

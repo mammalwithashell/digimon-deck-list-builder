@@ -25,8 +25,11 @@
 //! # Clause analysis
 //!
 //! - Clause 0 (Blast Digivolve): Supported via `kind: burst_digivolve` alt-path
-//!   + `kind: grant_keyword, keyword: BlastDigivolve`. The activated digivolve from
-//!   [Imperialdramon: Dragon Mode] is modelled as `kind: activated_digivolve`.
+//!   + `kind: grant_keyword, keyword: BlastDigivolve`. The Dragon Mode add-source
+//!   (DCGO `AddSelfDigivolutionRequirementStaticEffect` at `EffectTiming.None`)
+//!   is modelled as a plain static `kind: digivolve` add-source with a
+//!   `name_contains: "Imperialdramon: Dragon Mode"` source filter at cost 2 — an
+//!   ADDITIONAL standard digivolution route, NOT an activated [Hand][Main] effect.
 //!
 //! - Clause 1 ([On Play][When Digivolving] return-to-bottom):
 //!   IMPLEMENTED — `select_opponent_permanent` filtered by
@@ -55,7 +58,7 @@ use digimon_dsl::compiled::{
 use digimon_engine::action::build_action_mask;
 use digimon_engine::action::space::encode_attack;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::EffectTiming;
+use digimon_engine::enums::{EffectTiming, PlaySource};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
@@ -121,19 +124,36 @@ fn bt16_027_has_standard_lv5_blue_digivolve_path() {
     );
 }
 
-/// Verify the activated digivolve path (from Dragon Mode on own field / Cost 2).
+/// Verify the static digivolve add-source path (from a permanent whose top card
+/// is [Imperialdramon: Dragon Mode] on own field / Cost 2). DCGO models this as
+/// `AddSelfDigivolutionRequirementStaticEffect` at `EffectTiming.None` — an
+/// ADDITIONAL standard digivolution source, NOT an activated [Hand][Main]
+/// effect — so it is a plain `kind: digivolve` add-source with a name filter.
 #[test]
-fn bt16_027_has_activated_digivolve_from_dragon_mode() {
+fn bt16_027_has_dragon_mode_add_source_digivolve_path() {
     let runner = fighter_mode_runner().start();
     let compiled = runner.compiled_card("BT16-027").expect("BT16-027 compiles");
 
-    let has_activated = compiled.alt_paths.iter().any(|p| {
-        p.kind == CompiledAltPathKind::ActivatedDigivolve
+    let has_add_source = compiled.alt_paths.iter().any(|p| {
+        p.kind == CompiledAltPathKind::Digivolve
             && p.cost == Some(CompiledCost::Literal(2))
+            && p.from
+                .as_ref()
+                .is_some_and(|f| f.name_contains.as_deref() == Some("Imperialdramon: Dragon Mode"))
     });
     assert!(
-        has_activated,
-        "must have ActivatedDigivolve path with cost 2 for Imperialdramon: Dragon Mode; alt_paths={:?}",
+        has_add_source,
+        "must have a Digivolve add-source path with cost 2 filtered by name 'Imperialdramon: Dragon Mode'; alt_paths={:?}",
+        compiled.alt_paths
+    );
+
+    // The retired mis-model: there must be NO ActivatedDigivolve alt-path.
+    assert!(
+        !compiled
+            .alt_paths
+            .iter()
+            .any(|p| p.kind == CompiledAltPathKind::ActivatedDigivolve),
+        "the activated_digivolve mis-model must be retired; alt_paths={:?}",
         compiled.alt_paths
     );
 }
@@ -151,6 +171,89 @@ fn bt16_027_has_burst_digivolve_alt_path() {
         has_burst,
         "must have BurstDigivolve path with cost 0; alt_paths={:?}",
         compiled.alt_paths
+    );
+}
+
+// ─── Dragon Mode add-source digivolve (behavioral) ───────────────────────────
+
+/// Find a card's index in a player's hand by card_id.
+fn find_hand_index(runner: &DebugRunner, player: u8, card_id: &str) -> Option<usize> {
+    let data = &runner.game.card_data;
+    runner.game.players[player as usize]
+        .hand
+        .iter()
+        .position(|c| c.card_id(data) == card_id)
+}
+
+/// Behavioral: BT16-027 may digivolve from a real [Imperialdramon: Dragon Mode]
+/// permanent at cost 2 (DCGO `AddSelfDigivolutionRequirementStaticEffect`
+/// modelled as a static `kind: digivolve` add-source).
+///
+/// A genuine Dragon Mode DSL card (BT16-028) is placed on the field as the base;
+/// BT16-027 is digivolved onto it. The base stack's top card must become
+/// BT16-027 and exactly the cost-2 memory must be paid (`mem_before - after == 2`).
+/// The opponent field is left empty so the [On Play][When Digivolving] return
+/// clause finds no target and no follow-up selection installs.
+#[test]
+fn bt16_027_digivolves_from_dragon_mode_at_cost_2() {
+    let mut runner = fighter_mode_runner()
+        .dsl_card("BT16-028")
+        .expect("BT16-028 (Imperialdramon: Dragon Mode) YAML loads")
+        .hand(0, &["BT16-027"])
+        .deck(0, &["BT16-028", "BT16-028"]) // rule draw on digivolve needs a non-empty deck
+        .memory(10)
+        .start();
+
+    // Real Imperialdramon: Dragon Mode on the field as the digivolution base.
+    let base = runner.place_on_field(0, "BT16-028", Some(0));
+    assert_eq!(
+        runner.game.players[0].battle_area[base.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "BT16-028",
+        "base must start as Imperialdramon: Dragon Mode"
+    );
+
+    let hand_idx = find_hand_index(&runner, 0, "BT16-027").expect("BT16-027 in hand");
+    let mem_before = runner.memory();
+
+    let ok = runner.game.digivolve_from_hand(
+        0,
+        hand_idx,
+        base.index as usize,
+        PlaySource::ByDigivolve,
+    );
+    assert!(
+        ok,
+        "BT16-027 must digivolve from the Dragon Mode base (cost-2 add-source path)"
+    );
+    runner.game.drain_effect_queue();
+
+    // No opponent Digimon → the [On Play][When Digivolving] return clause finds
+    // no legal target and installs no selection.
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no opponent target → no follow-up selection should install; got {:?}",
+        runner.game.pending_selection.as_ref().map(|s| s.kind)
+    );
+
+    // Stack top is now BT16-027, with Dragon Mode beneath it as a source.
+    let stack = &runner.game.players[0].battle_area[base.index as usize];
+    assert_eq!(
+        stack.top_card().card_id(&runner.game.card_data),
+        "BT16-027",
+        "stack top must become BT16-027 after digivolving"
+    );
+    assert!(
+        stack.card_sources.len() >= 2,
+        "Dragon Mode must remain under BT16-027 as a digivolution source"
+    );
+
+    // Exactly the cost-2 add-source cost was paid (seesaw drops by 2).
+    assert_eq!(
+        mem_before - runner.memory(),
+        2,
+        "the Dragon Mode add-source digivolve must cost exactly 2 memory"
     );
 }
 

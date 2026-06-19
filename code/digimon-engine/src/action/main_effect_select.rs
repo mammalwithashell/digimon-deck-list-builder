@@ -110,6 +110,19 @@ pub(crate) fn field_main_match(
                     continue;
                 }
             }
+            // Honor the effect's first-step actionability guard, set for
+            // optional [Main] abilities whose leading selection/cost may have no
+            // candidate — e.g. a <Digi-Burst N> with too few sources to trash.
+            // The triggered path consults this guard; the [Main] mask must too,
+            // or it offers an action execution refuses -> a no-op the policy
+            // loops on to the step limit.
+            if let Some(guard) = &effect.outer_optional_guard {
+                let ctx =
+                    EffectReadContext::new(game, source.handle(), Some(perm_handle), player_id);
+                if !guard(&ctx) {
+                    continue;
+                }
+            }
             return Some(MainEffectMatch {
                 name: effect.name.clone(),
             });

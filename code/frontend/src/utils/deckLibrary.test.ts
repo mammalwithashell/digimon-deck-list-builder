@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import type { DigimonCardData } from '@/types/cards';
-import type { DeckResponse, DeckSummary } from '@/types/deck';
+import type { DeckFormat, DeckResponse, DeckSummary } from '@/types/deck';
 import {
   buildDeckAnalytics,
+  countByFormat,
+  deriveFormatBuckets,
   filterAndSortDecks,
+  formatLabel,
   formatRelativeTime,
 } from './deckLibrary';
 
@@ -12,7 +15,7 @@ function summary(overrides: Partial<DeckSummary>): DeckSummary {
     id: overrides.id ?? 'deck-1',
     name: overrides.name ?? 'Alpha Deck',
     description: overrides.description ?? '',
-    game_mode: 'standard',
+    game_mode: overrides.game_mode ?? 'standard',
     is_valid: overrides.is_valid ?? true,
     is_public: false,
     is_pinned: overrides.is_pinned ?? false,
@@ -27,6 +30,20 @@ function summary(overrides: Partial<DeckSummary>): DeckSummary {
     highest_level: null,
     created_at: overrides.created_at ?? '2026-04-20T00:00:00Z',
     updated_at: overrides.updated_at ?? '2026-04-20T00:00:00Z',
+  };
+}
+
+function fmt(id: string, name: string): DeckFormat {
+  return {
+    id,
+    name,
+    description: '',
+    deck_size: 50,
+    egg_max: 5,
+    rarity_policy: 'all',
+    singleton: false,
+    default_max_copies: 4,
+    playable: true,
   };
 }
 
@@ -118,5 +135,74 @@ describe('deck library helpers', () => {
     expect(analytics.levelCurve[6]).toBe(2);
     expect(analytics.averagePlayCost).toBe('6.3');
     expect(analytics.highestLevel).toBe(6);
+  });
+});
+
+describe('deck library format filtering', () => {
+  const decks = [
+    summary({ id: 's1', game_mode: 'standard' }),
+    summary({ id: 's2', game_mode: 'standard' }),
+    summary({ id: 'e1', game_mode: 'eden' }),
+    summary({ id: 't1', game_mode: 'titan' }), // legacy / not in registry
+  ];
+  const formats = [fmt('standard', 'STANDARD'), fmt('eden', 'EDEN')];
+
+  it('narrows decks to the selected format', () => {
+    const out = filterAndSortDecks(decks, { activeFolder: 'all', search: '', sort: 'name', format: 'eden' });
+    expect(out.map((d) => d.id)).toEqual(['e1']);
+  });
+
+  it("treats 'all' and undefined format as a no-op", () => {
+    const all = filterAndSortDecks(decks, { activeFolder: 'all', search: '', sort: 'name', format: 'all' });
+    const undef = filterAndSortDecks(decks, { activeFolder: 'all', search: '', sort: 'name' });
+    expect(all).toHaveLength(4);
+    expect(undef).toHaveLength(4);
+  });
+
+  it('composes the format filter with folder and search', () => {
+    const scoped = [
+      summary({ id: 'a', game_mode: 'standard', folder_id: 'f1', name: 'Red Hybrid' }),
+      summary({ id: 'b', game_mode: 'eden', folder_id: 'f1', name: 'Red Hybrid' }),
+      summary({ id: 'c', game_mode: 'standard', folder_id: 'f2', name: 'Red Hybrid' }),
+    ];
+    const out = filterAndSortDecks(scoped, {
+      activeFolder: 'f1',
+      search: 'hybrid',
+      sort: 'name',
+      format: 'standard',
+    });
+    expect(out.map((d) => d.id)).toEqual(['a']);
+  });
+
+  it('matches game_mode in search', () => {
+    const out = filterAndSortDecks(decks, { activeFolder: 'all', search: 'eden', sort: 'name' });
+    expect(out.map((d) => d.id)).toEqual(['e1']);
+  });
+
+  it('counts decks per format across the whole library', () => {
+    const counts = countByFormat(decks);
+    expect(counts.get('standard')).toBe(2);
+    expect(counts.get('eden')).toBe(1);
+    expect(counts.get('titan')).toBe(1);
+  });
+
+  it('derives buckets in registry order, then appends unknown ids, skipping empties', () => {
+    const buckets = deriveFormatBuckets(decks, formats);
+    expect(buckets).toEqual([
+      { id: 'standard', label: 'STANDARD', count: 2 },
+      { id: 'eden', label: 'EDEN', count: 1 },
+      { id: 'titan', label: 'TITAN', count: 1 },
+    ]);
+  });
+
+  it('omits registry formats that have no decks', () => {
+    const withPauper = [...formats, fmt('pauper', 'PAUPER')];
+    const buckets = deriveFormatBuckets(decks, withPauper);
+    expect(buckets.map((b) => b.id)).not.toContain('pauper');
+  });
+
+  it('labels a format by registry name and falls back to the raw id', () => {
+    expect(formatLabel('eden', formats)).toBe('EDEN');
+    expect(formatLabel('mystery_mode', formats)).toBe('MYSTERY_MODE');
   });
 });

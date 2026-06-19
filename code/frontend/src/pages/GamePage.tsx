@@ -304,8 +304,20 @@ export function GamePage() {
               1: 'YOU',
               2: opponentMode === 'bot' ? 'GREEDY BOT' : 'OPPONENT',
             });
+            // Lock human input and drive any opening agent decision (e.g. the
+            // AI's mulligan when the human goes second) before handing control
+            // back. Games created via createBotGame/createAiStarterGame land
+            // here in the Mulligan phase; without this step the human lands on
+            // the AI's mulligan prompt and their first click is consumed
+            // resolving the AI's decision — the "mulligan twice" bug. Setting
+            // agentPending first blanks the mask so no click slips through the
+            // load window.
+            store.setAgentPending(true);
+            const stepResult = await gameApi.stepGame(urlGameId, { paced });
+            applyGameResponse(stepResult);
           } catch (err) {
             console.error('Failed to load game:', err);
+            store.setAgentPending(false);
           }
         })();
       }
@@ -528,6 +540,7 @@ export function GamePage() {
         turnCount: store.turnCount,
         currentPhase: store.currentPhase,
         currentPlayer: store.currentPlayer,
+        firstPlayer: store.firstPlayer,
         memoryGauge: store.memoryGauge,
         isGameOver: store.isGameOver,
         winner: store.winner,
@@ -1148,7 +1161,12 @@ export function GamePage() {
         </div>
         {store.currentPhase === GamePhase.Mulligan && (
           <div className="px-3 pb-1 text-xs text-amber-300" data-testid="mulligan-banner">
-            Opening Mulligan: choose <span className="font-semibold">Keep Hand</span> or <span className="font-semibold">Mulligan</span>.
+            Opening Mulligan —{' '}
+            <span className="font-semibold">
+              {store.firstPlayer === 0 ? 'you go first' : 'you go second'}
+            </span>
+            : choose <span className="font-semibold">Keep Hand</span> or{' '}
+            <span className="font-semibold">Mulligan</span>.
           </div>
         )}
 
@@ -1359,6 +1377,7 @@ export function GamePage() {
             ? (store.playerLabels[trashViewerPlayer] ?? `Player ${trashViewerPlayer}`)
             : ''
         }
+        onInspect={setInspectedCardId}
       />
 
       {/* Selection panel modal for hand/security/effect-choice selections */}

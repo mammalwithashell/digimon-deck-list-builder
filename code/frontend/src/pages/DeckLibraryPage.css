@@ -271,6 +271,12 @@
   font-size: 10px;
 }
 
+.library-pills span.library-builtin-badge {
+  border-color: var(--lib-accent);
+  color: var(--lib-accent);
+  font-weight: 700;
+}
+
 .library-banner-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -534,6 +540,24 @@
 
 .library-card-meta .warn {
   color: var(--lib-warn);
+}
+
+/* Format marker pill — shown on deck tiles and the detail banner. The
+   `.library-pills` variant raises specificity to override the generic
+   `.library-pills span` chrome with the accent treatment. */
+.library-format-pill,
+.library-pills .library-format-pill {
+  align-self: flex-start;
+  border: 1px solid var(--lib-accent);
+  border-radius: 999px;
+  background: var(--lib-bg);
+  color: var(--lib-accent);
+  padding: 3px 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .library-new-card {

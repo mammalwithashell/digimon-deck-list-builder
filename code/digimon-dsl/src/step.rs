@@ -173,6 +173,19 @@ pub enum StepSpec {
     /// Knight] source to the BOTTOM OF YOUR DECK to prevent leaving).
     ReturnSelectedSourcesToDeck(ReturnSelectedSourcesToDeckArgs),
     TrashBottomFaceDownSourceUnderTamer(TrashBottomFaceDownSourceUnderTamerArgs),
+    /// G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER (2026-06-15) — the multi-count /
+    /// multi-Tamer sibling of `TrashBottomFaceDownSourceUnderTamer`. Pays a
+    /// `count`-total bottom-face-down trash cost distributed across the
+    /// controller's Tamers: each pick installs a real `select_own_permanent`
+    /// over `{ kind: tamer, has_face_down_source: true }` and trashes that
+    /// Tamer's bottom face-down source, re-evaluating eligibility before the
+    /// next pick — so "2 from one Tamer" and "1 from each of two Tamers" are
+    /// both reachable, every pick surfaced (no auto-resolve). When fewer than
+    /// `count` face-down sources exist across all Tamers the cost is unpayable
+    /// and the clause's remaining steps are skipped (`TailAlreadyRan`). Drives
+    /// BT25-035 Cougarmon's "by trashing 2 bottom face-down cards from under any
+    /// of your Tamers" cost.
+    TrashBottomFaceDownSourcesUnderTamers(TrashBottomFaceDownSourcesUnderTamersArgs),
     BindPermanentProperty(BindPermanentProperty),
     Hatch(PlayerArg),
     /// Move the specified player's eligible breeding-area Digimon to the
@@ -185,6 +198,11 @@ pub enum StepSpec {
     PlayFromHand(PlayFromHandArgs),
     PlayFromHandFree(PlayFromHandFreeArgs),
     UseOptionFromHand(UseOptionFromHandArgs),
+    /// Unified "play OR use 1 card from hand" — inspects the bound hand card's
+    /// kind and routes Digimon/Tamer → play and Option → use (a DUAL card
+    /// surfaces a "Play as Digimon / Use as Option" face choice). The card is
+    /// bound by an upstream `select_hand` step. `G-PLAY-OR-USE-FROM-HAND`.
+    PlayOrUseFromHand(PlayOrUseFromHandArgs),
     PlayFromRevealedFree(PlayFromRevealedFreeArgs),
     PlayFromTrash(PlayFromHandArgs),
     PlayFromTrashFree(PlayFromHandArgs),
@@ -211,6 +229,13 @@ pub enum StepSpec {
     BounceSelf(EmptyArgs),
     PlaceSelfAtSecurity(SelfSecurityPlacementArgs),
     PlaceSelfOptionAtSecurity(SelfSecurityPlacementArgs),
+    /// Relocate THIS effect's source Option (an in-battle-area field Option)
+    /// face-down under a chosen own permanent — a new Option-lifecycle exit
+    /// distinct from trashing. Fires neither `OnOptionTrashed` nor
+    /// `OnDigivolutionCardTrashed`. Drives ST23-15 e-Pulse / ST24-15 DNA Charge
+    /// "By placing this card from the battle area face down under any of your
+    /// [BEATBREAK]/[DATA SQUAD] trait Tamers, …". G-MOVE-SELF-OPTION-UNDER-PERMANENT.
+    MoveSelfOptionUnderPermanent(MoveSelfOptionUnderPermanentArgs),
     PlacePermanentBottomSecurityAndCancelReplacement(PlacePermanentSecurityReplacementArgs),
     PlacePermanentOnSecurity(PlacePermanentOnSecurityReplacementArgs),
     PlacePermanentOnSecurityAndHandleReplacement(PlacePermanentOnSecurityReplacementArgs),
@@ -440,6 +465,9 @@ impl Serialize for StepSpec {
             StepSpec::TrashBottomFaceDownSourceUnderTamer(v) => {
                 kv!(s, "trash_bottom_face_down_source_under_tamer", v)
             }
+            StepSpec::TrashBottomFaceDownSourcesUnderTamers(v) => {
+                kv!(s, "trash_bottom_face_down_sources_under_tamers", v)
+            }
             StepSpec::BindPermanentProperty(v) => kv!(s, "bind_permanent_property", v),
             StepSpec::Hatch(v) => kv!(s, "hatch", v),
             StepSpec::MoveFromBreeding(v) => kv!(s, "move_from_breeding", v),
@@ -447,6 +475,7 @@ impl Serialize for StepSpec {
             StepSpec::PlayFromHand(v) => kv!(s, "play_from_hand", v),
             StepSpec::PlayFromHandFree(v) => kv!(s, "play_from_hand_free", v),
             StepSpec::UseOptionFromHand(v) => kv!(s, "use_option_from_hand", v),
+            StepSpec::PlayOrUseFromHand(v) => kv!(s, "play_or_use_from_hand", v),
             StepSpec::PlayFromRevealedFree(v) => kv!(s, "play_from_revealed_free", v),
             StepSpec::PlayFromTrash(v) => kv!(s, "play_from_trash", v),
             StepSpec::PlayFromTrashFree(v) => kv!(s, "play_from_trash_free", v),
@@ -472,6 +501,9 @@ impl Serialize for StepSpec {
             StepSpec::PlaceSelfAtSecurity(v) => kv!(s, "place_self_at_security", v),
             StepSpec::PlaceSelfOptionAtSecurity(v) => {
                 kv!(s, "place_self_option_at_security", v)
+            }
+            StepSpec::MoveSelfOptionUnderPermanent(v) => {
+                kv!(s, "move_self_option_under_permanent", v)
             }
             StepSpec::PlacePermanentBottomSecurityAndCancelReplacement(v) => {
                 kv!(
@@ -708,6 +740,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "trash_bottom_face_down_source_under_tamer" => {
                 StepSpec::TrashBottomFaceDownSourceUnderTamer(map.next_value()?)
             }
+            "trash_bottom_face_down_sources_under_tamers" => {
+                StepSpec::TrashBottomFaceDownSourcesUnderTamers(map.next_value()?)
+            }
             "bind_permanent_property" => StepSpec::BindPermanentProperty(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
             "move_from_breeding" => StepSpec::MoveFromBreeding(map.next_value()?),
@@ -716,6 +751,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_hand" => StepSpec::PlayFromHand(map.next_value()?),
             "play_from_hand_free" => StepSpec::PlayFromHandFree(map.next_value()?),
             "use_option_from_hand" => StepSpec::UseOptionFromHand(map.next_value()?),
+            "play_or_use_from_hand" => StepSpec::PlayOrUseFromHand(map.next_value()?),
             "play_from_revealed_free" => StepSpec::PlayFromRevealedFree(map.next_value()?),
             "play_from_trash" => StepSpec::PlayFromTrash(map.next_value()?),
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
@@ -744,6 +780,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "place_self_at_security" => StepSpec::PlaceSelfAtSecurity(map.next_value()?),
             "place_self_option_at_security" => {
                 StepSpec::PlaceSelfOptionAtSecurity(map.next_value()?)
+            }
+            "move_self_option_under_permanent" => {
+                StepSpec::MoveSelfOptionUnderPermanent(map.next_value()?)
             }
             "place_permanent_bottom_security_and_cancel_replacement" => {
                 StepSpec::PlacePermanentBottomSecurityAndCancelReplacement(map.next_value()?)
@@ -914,12 +953,15 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "trash_all_sources",
                         "trash_selected_sources",
                         "return_selected_sources_to_hand",
+                        "trash_bottom_face_down_source_under_tamer",
+                        "trash_bottom_face_down_sources_under_tamers",
                         "return_selected_sources_to_deck",
                         "bind_permanent_property",
                         "hatch",
                         "play_from_hand",
                         "play_from_hand_free",
                         "use_option_from_hand",
+                        "play_or_use_from_hand",
                         "play_from_revealed_free",
                         "play_from_trash",
                         "play_from_trash_free",
@@ -938,6 +980,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "bounce_self",
                         "place_self_at_security",
                         "place_self_option_at_security",
+                        "move_self_option_under_permanent",
                         "place_permanent_bottom_security_and_cancel_replacement",
                         "place_permanent_on_security",
                         "place_permanent_on_security_and_handle_replacement",
@@ -1178,6 +1221,51 @@ pub struct TrashTopSecurityArgs {
 #[serde(deny_unknown_fields)]
 pub struct TrashBottomFaceDownSourceUnderTamerArgs {
     pub of: PlayerRef,
+    /// When `true`, the Tamer pick is DECLINABLE (offers PASS) — modelling
+    /// DCGO's `canNoSelect:true` Tamer selection for a "by trashing the bottom
+    /// face-down card …, [effect]" that is one of several INDEPENDENT optional
+    /// sub-choices inside a non-optional clause (so a clause-level `optional`
+    /// can't carry its decline). On decline NOTHING is trashed and the step's
+    /// tail does not run. Default `false` keeps the established mandatory-when-
+    /// payable behavior (the decline is carried by a clause-level `optional`).
+    /// ST24-11 Rosemon: "you may suspend up to 2 … then, by trashing … none of
+    /// their Digimon can unsuspend" — the trash+lock is declinable apart from
+    /// the suspend. `G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+}
+
+/// Args for `trash_bottom_face_down_sources_under_tamers` — the multi-count /
+/// multi-Tamer sibling. Trashes `count` bottom-face-down digivolution sources
+/// total, distributed across `of`'s Tamers (each Tamer must carry >=1 face-down
+/// source). A single Tamer with >=`count` face-down sources may satisfy it
+/// alone; otherwise the cost spreads across multiple Tamers. Each Tamer pick is
+/// surfaced as a real `PendingSelection`. Used as an activation cost by
+/// BT25-035 Cougarmon (`count: 2`). `G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashBottomFaceDownSourcesUnderTamersArgs {
+    pub of: PlayerRef,
+    /// Total number of bottom-face-down sources to trash across Tamers.
+    pub count: u8,
+}
+
+/// Args for `move_self_option_under_permanent` — relocate THIS effect's source
+/// Option (an in-battle-area field Option) face-down under a chosen own
+/// permanent. `target` names a binding (typically a prior `select_own_permanent`
+/// Tamer pick); `face_down` marks the placed source face-down (default `true`,
+/// matching the BEATBREAK / DATA SQUAD "face down under" wording).
+/// G-MOVE-SELF-OPTION-UNDER-PERMANENT.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct MoveSelfOptionUnderPermanentArgs {
+    pub target: BindingRef,
+    #[serde(default = "default_true")]
+    pub face_down: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema, Default)]
@@ -1835,6 +1923,30 @@ pub struct PlayFromHandFreeArgs {
     /// same body. None (the default) preserves prior behavior.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
+}
+
+/// `play_or_use_from_hand:` args — the unified "play OR use 1 card from hand
+/// with the cost reduced by N" verb (Aces / BEATBREAK printed wording). The
+/// hand card is bound by an upstream `select_hand` step (whose filter scopes
+/// the candidate set — e.g. `[Glowing Dawn]` trait — and whose `kind`/predicate
+/// allows Digimon / Tamer / Option / Dual picks). At resolution the verb
+/// inspects the bound card's kind: Digimon / Tamer are PLAYED, an Option is
+/// USED, and a DUAL card surfaces a "Play as Digimon / Use as Option" face
+/// choice (no auto-selection — §17). `cost_delta` applies to the appropriate
+/// face cost (play cost for the play path, use cost for the use path).
+///
+/// ST23-04 / ST23-08 / BT25-041 shape. `G-PLAY-OR-USE-FROM-HAND`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlayOrUseFromHandArgs {
+    pub of: PlayerRef,
+    /// Names the `select_hand` binding (a `bind_as` from that step) carrying
+    /// the chosen hand index.
+    pub hand_index: BindingRef,
+    /// Cost adjustment applied to the played/used card's face cost. `None`
+    /// plays/uses at full printed cost; `{ reduce: 3 }` is the shipped shape.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_delta: Option<CostDelta>,
 }
 
 /// Play a card currently in the transient reveal pool without paying its

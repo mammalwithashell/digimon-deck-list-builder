@@ -107,6 +107,15 @@ pub struct PredicateSpec {
     pub play_cost_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub play_cost_gte: Option<DpConstraint>,
+    /// Card-subject leaf (G-PLAY-OR-USE-COST-LTE): true when the larger of the
+    /// candidate's *play* cost (Digimon / Tamer) and *use* cost (Option / the
+    /// Option face of a Dual) is at most this threshold. Mirrors DCGO
+    /// `CardSource.GetCostItself <= N` over a "play or use 1 ... card with a
+    /// play or use cost of N or less" hand filter (ST24-06 RizeGreymon). For a
+    /// pure Option the play and use costs coincide; for a Dual it compares the
+    /// max of both faces; for a Digimon / Tamer it is exactly `play_cost`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub play_or_use_cost_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_digivolve_from_source: Option<bool>,
 
@@ -161,6 +170,14 @@ pub struct PredicateSpec {
     /// have 3 or more total colors"). G-DSL-DISTINCT-TAMER-COLORS.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub distinct_tamer_colors_gte: Option<u8>,
+    /// True when the observer's battle-area Tamer permanents collectively
+    /// carry at least N face-down digivolution sources. A no-subject global
+    /// predicate — does not inspect the candidate. Gates the `[Then]` clause of
+    /// BT25-035 Cougarmon ("by trashing 2 bottom face-down cards from under any
+    /// of your Tamers") so the optional digivolve is only offered when the
+    /// trash-2 cost is actually payable. G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub face_down_sources_under_tamers_gte: Option<u8>,
     /// True when this effect's carrier is currently battling an opposing
     /// Digimon with zero digivolution source cards. Used by inherited
     /// battle-only auras such as ST2-01 Tsunomon.
@@ -372,6 +389,15 @@ pub struct PredicateSpec {
     /// stack.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_host_permanent_is_source: Option<bool>,
+    /// `OnDigivolutionCardTrashed` observer gate: true when the trashing event's
+    /// host permanent is a **Tamer owned by the observer** — i.e. "effects trash
+    /// cards from under YOUR Tamers". Distinct from `event_host_permanent_is_source`
+    /// (host == this exact permanent): this matches ANY of the controller's
+    /// Tamers, which is what a Digimon-borne "trash from under your Tamers"
+    /// observer needs (ST24-11 Rosemon clause 2, BT25-029 MirageGaogamon clause
+    /// 2; DCGO `CanTriggerOnTrashDigivolutionCard(IsPermanentExistsOnOwnerBattleAreaTamer)`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_host_is_own_tamer: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_is_effect_initiated: Option<bool>,
     /// For `OnAddToHand` observers: the player whose hand gained cards

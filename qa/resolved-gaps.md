@@ -1,6 +1,6 @@
 # Resolved Engine and DSL Gaps
 
-Last updated: 2026-06-13
+Last updated: 2026-06-16
 
 This file is the archive for reusable engine and DSL gap entries that have been resolved. Active gap trackers should keep only open gaps or partial slices with remaining implementation work:
 
@@ -8,6 +8,17 @@ This file is the archive for reusable engine and DSL gap entries that have been 
 - [qa/dsl-vocab-gaps.md](dsl-vocab-gaps.md)
 
 When a reusable gap closes, move the full entry here and leave any card-specific migration/test cleanup in the active tracker only if there is still real follow-up work.
+
+## `place_self_as_delay_option` does not compose with the real Option-play disposal lifecycle (G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH) — RESOLVED 2026-06-16
+
+- **Severity (at close):** was 🟠 BLOCKER for the affected combo path (per-card coverage already existed via the `activate_hand_main` bypass).
+- **Discovered in:** Omnimon ACE interaction tests (2026-06-02, `/archetype-interaction-test-author`).
+- **Card(s):** BT17-095 Miraculous Mega Knight (a **Standard** Option whose [Main] body ends with the DSL step `place_self_as_delay_option`). Any future Standard Option that seats *itself* on the field from within its own play body.
+- **Effect text:** "[Main] You may play 1 [Agumon]/[Gabumon] … . **Then, place this card in the battle area.**"
+- **What was missing:** On the real `Game::play_option_from_hand` / `play_option_from_trash` lifecycle, `play_option_core` removes the Option from hand/trash into the single-occupancy `pending_option` slot **before** firing the [Main] body. When the body then ran `place_self_as_delay_option`, `EffectContext::place_self_as_delay_option_permanent` (non-security branch) only scanned the controller's `hand`/`trash` for the source card — the card was in `pending_option`, so the scan found nothing and the step **no-op'd**. `play_option_core` then called `dispose_option`, which trashed the Standard Option. Net: the Option ended in trash, never seated as a Delay-Option permanent — the printed "place this card in the battle area" was silently dropped on the path the game actually uses. The per-card test sidestepped this by driving the [Main] via `Game::activate_hand_main` (card stays in hand, no Option disposal lifecycle), a harness shortcut, not the real play path.
+- **Resolution (engine fix, B2):** `place_self_as_delay_option_permanent` (`src/effect_context/action/lifecycle.rs`) now, when `source_permanent`/`pending_security`/hand/trash all miss, **claims the in-flight Option from `self.game.pending_option.take()`** when the pending Option's card matches `self.source_card` and is an Option (else it restores `pending_option` and returns). Taking it leaves `pending_option` empty, so the subsequent `dispose_option` (`play_option_core` step 8) finds nothing and **skips** the Standard trash — reaching the same seated-Delay end state as a `kind: delay` Option. Mirrors the existing security-path special-case (`add_this_option_to_hand` already consumed `pending_security`). Zero card-script / DSL change.
+- **Gate / coverage:** `tests/archetypes/omnimon_ace.rs::combo1_mega_knight_free_plays_agumon_from_trash_and_seats_as_delay` and `…_declining_recursion_still_seats_delay` (both un-ignored and green on the real `play_option_from_hand` path), plus DNA Omnimon Combo B on the real play path — `tests/archetypes/dna_omnimon.rs::combo_b_delay_consumes_leaving_lv6_into_merged_omnimon` and `…_delay_does_not_fire_for_opponent_lv6_leaving`, which now seat BT17-095 via `play_option_from_hand` (the `seat_as_delay_option` scaffold that stamped `OptionState::Delayed` directly is removed). Per-card mechanism still pinned by `tests/cards_behavioral/bt17/bt17_095.rs`.
+- **Related:** `G-PLACE-SELF-AS-OPTION-PERMANENT` (the step itself; previously closed for the `activate_hand_main` path only). DCGO `BT17_095.cs` Clause A `CardEffectCommons.PlaceDelayOptionCards`.
 
 ## Formula-valued count on cross-permanent source selections (G-DSL-SELECT-SOURCES-FORMULA-COUNT) — RESOLVED 2026-06-13
 
@@ -2774,26 +2785,48 @@ with `link_cost.is_some()` reclassified the whole card as `OptionSubtype::Link`.
   Unblocks **ST22-08** (gained a `kind: link_requirement` clause, cost 2,
   `filter: { level_gte: 3 }`; 34 behavioral tests, 0 ignored).
 
-### G-ACTIVATED-DIGIVOLVE-EXECUTION — BT24-016 unblocked via re-model (no engine code)
+### G-ACTIVATED-DIGIVOLVE-EXECUTION — fully closed via re-model (no engine code)
 
 The `kind: activated_digivolve` alt-path kind has no engine execution route, and
 the task-1.1 investigation found `extra_cost` is unimplemented engine-wide (3
 sites, all exclusions). Rather than build a from-scratch parking `extra_cost`
-runner, **BT24-016 clause 1 was re-modelled** (design.md D1-REVISED) from a
-`kind: activated_digivolve` alt-path to a `when: main_from_hand` triggered clause
-(select Elizamon → select Dimetromon from trash → `place_as_bottom_source` →
-`effect_initiated_digivolve` cost 3, `ignore_requirements`). This is faithful to
-the printed `[Hand][Main]` text, uses only working machinery, and adds **zero
-engine code**. BT24-016 is `IMPLEMENTED` (24/24 tests).
+runner, **every affected card was re-modelled** off the unreachable
+`kind: activated_digivolve` alt-path onto working machinery, with **zero engine
+code**:
 
-This entry is **not fully closed**: the `CompiledAltPathKind::ActivatedDigivolve`
-execution route is still genuinely missing for the 3 out-of-scope cards
-(BT22-013/026, BT16-027) — see the residual entry in
-[qa/archetype-qa/engine-gaps.md](archetype-qa/engine-gaps.md).
+- **BT24-016 Lamiamon** (design.md D1-REVISED) — clause 1 re-modelled to a
+  `when: main_from_hand` triggered clause (select Elizamon → select Dimetromon
+  from trash → `place_as_bottom_source` → `effect_initiated_digivolve` cost 3,
+  `ignore_requirements`). `IMPLEMENTED` (24/24 tests).
+- **BT22-013 WarGreymon** / **BT22-026** (gap-closure Tasks A1–A2) — the
+  `[Hand][Main]` "If you have [Nokia Shiramine], 1 of your [Agumon] digivolves
+  into this card for cost 6, ignoring requirements" jump re-modelled to a
+  `when: main_from_hand` clause whose `condition:` enforces BOTH the Nokia
+  precondition AND the Agumon-target existence (mirrors BT24-016 clause 1);
+  body `select_own_permanent { Agumon } → effect_initiated_digivolve
+  { from_hand: self, cost: 6, ignore_requirements: true }`. Driven through the
+  real ability via `activate_hand_main`.
+- **BT16-027** (gap-closure Task A3) — re-modelled onto a static `digivolve`
+  add-source alt-path.
 
-- **Closed by:** `unblock-medusamon-tier3-cards` OpenSpec change, 2026-05-22.
-  Full engine suite green (`cards_behavioral` 2722 passed / 129 ignored / 0 failed;
-  `option_flow` 93; `mask_and_tensor` 157).
+Because the action layer already masks a Hand `[Main]` action for any hand card
+with a `MainFromHand` effect whose `condition:` passes, the re-modelled jumps are
+both playable and behaviorally driveable — the `CompiledAltPathKind::Activated
+Digivolve` execution route is **no longer needed by any card**, so the gap is
+fully closed.
+
+- **Per-card coverage:** `tests/cards_behavioral/bt22/bt22_013.rs::bt22_013_hand_main_jump_*`
+  (cost-6 jump fires with Nokia + Agumon; gated off without Nokia).
+- **Interaction coverage (gap-closure Task A4):** DNA Omnimon combo E —
+  `tests/archetypes/dna_omnimon.rs::combo_e_nokia_cost6_lv6_jump` (REAL Nokia
+  Shiramine BT22-084 + REAL Agumon BT22-008 stack → cost-6 jump → BT22-013's
+  `[When Digivolving]` branch-choice fires; 6-memory delta proves the cost) and
+  `combo_e_nokia_jump_gated_on_nokia_precondition` (the Nokia-absent gate). The
+  previously-`#[ignore]`'d combo E placeholder is now a real passing test.
+- **Closed by:** `unblock-medusamon-tier3-cards` (BT24-016, 2026-05-22) +
+  DNA Omnimon gap-closure plan Tasks A1–A4 (BT22-013/026, BT16-027, combo E;
+  2026-06-16). Engine suite green: `archetypes` (DNA Omnimon 10/10, 0 ignored),
+  `cards_behavioral` (bt22_013 jump tests pass).
 
 ## DSL Gap: Card-level "also treated as [Name]" identity alias — RESOLVED 2026-05-21
 

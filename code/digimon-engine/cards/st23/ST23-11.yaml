@@ -1,0 +1,83 @@
+# ST23-11 Wolvermon — Digimon, Lv.4, Black, DP 4000, Cost 4.
+# Traits: Cyborg, Glowing Dawn, BEATBREAK. Attribute: Vaccine.
+# Printed digivolve box (corner): Lv.3 / cost 2 (standard; from cards.json
+# evo_costs). Plus the text box: [Digivolve] Lv.3 w/[Glowing Dawn] trait: Cost 2.
+#
+# Printed card text (CARD IMAGE — authoritative):
+#   <Blocker> (This Digimon can block in the blocker timing.)
+#   [Your Turn] When this Digimon would digivolve into a [Glowing Dawn] trait
+#     Digimon card, by trashing the bottom face-down card from under any of your
+#     Tamers, reduce the cost by 2.
+#   Inherited: <Blocker>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST23/Black/ST23_11.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (timing None): AddSelfDigivolutionRequirementStaticEffect(
+#   level: 3, TopCard.EqualsTraits("Glowing Dawn"), digivolutionCost: 2).
+#   → alt_paths digivolve from level 3 + Glowing Dawn trait, cost 2.
+# <Blocker> (timing None, isInheritedEffect: false): BlockerSelfStaticEffect.
+#   → scope: face_up + grant_keyword Blocker.
+# Clause "Your Turn" (BeforePayCost) — NOW IMPLEMENTED (2026-06-15):
+#   ActivateClass keyed on CanTriggerWhenPermanentWouldDigivolve(permanent ==
+#   this, target = Digimon & "Glowing Dawn"), gated IsOwnerTurn + a Tamer with a
+#   face-down digivolution source. The Tamer pick is `canNoSelect: true` (decline
+#   allowed → no reduction), so the reducer is modelled `optional: true` (the
+#   accept gate IS DCGO's can-no-select decline, exposed to the RL action space).
+#   Payoff ChangeCost -2 over the Glowing-Dawn digivolve target.
+#   → kind: cost_reduction + when_any_ally_digivolves_into { kind: digimon,
+#     trait_has: Glowing Dawn } + active_when { your_turn,
+#     source_is_cost_target_permanent } + optional + amount 2 + pay_cost
+#     [trash_bottom_face_down_source_under_tamer]. The interactive pay_cost parks;
+#     the engine credits the -2 behind the parked pay_cost on the digivolve path
+#     (G-COST-REDUCTION-INTERACTIVE-PAY-COST closed for the digivolve path).
+# Inherited <Blocker> (timing None, isInheritedEffect: true):
+#   BlockerSelfStaticEffect → scope: inherited + grant_keyword Blocker.
+
+card: ST23-11
+name: "Wolvermon"
+kind: digimon
+level: 4
+color: [black]
+cost: 4
+dp: 4000
+traits: [Cyborg, Glowing Dawn, BEATBREAK]
+attribute: Vaccine
+
+# Alt-digivolve: Lv.3 with the [Glowing Dawn] trait / cost 2.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: "Glowing Dawn" }
+    cost: 2
+
+effects:
+  # ─── <Blocker> (face-up) ───────────────────────────────────────────────────
+  - scope: face_up
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── [Your Turn] digivolve INTO a [Glowing Dawn] Digimon, by trashing the
+  #     bottom face-down card under a Tamer → reduce the cost by 2 ──────────────
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+    when_any_ally_digivolves_into:
+      all_of:
+        - kind: digimon
+        - trait_has: "Glowing Dawn"
+    optional: true
+    amount: 2
+    pay_cost:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+    summary: "[Your Turn] When this Digimon would digivolve into a [Glowing Dawn] Digimon card, by trashing a bottom face-down card under a Tamer, reduce the cost by 2"
+
+  # ─── Inherited <Blocker> ───────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "Inherited <Blocker>"

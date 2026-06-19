@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useCardImage } from '@/hooks/useCardImage';
 
 interface CardDetailOverlayProps {
@@ -31,12 +32,14 @@ export function CardDetailOverlay({ cardId, onClose }: CardDetailOverlayProps) {
 
   if (!cardId) return null;
 
-  return (
+  // Portal to <body> at z-[60] so the enlarged detail is the top-most layer
+  // even above other portaled modals (e.g. the TrashViewer Modal at z-50,
+  // which is also portaled to body — an inline `absolute z-50` would render
+  // BEHIND it). Right-click zoom from the trash must appear OVER the trash.
+  return createPortal(
     <div
       data-testid="card-detail-overlay"
-      // z-50: above the stack inspector (z-30) AND the fixed selection panel
-      // (z-40) — the enlarged detail is always the top-most layer.
-      className="absolute inset-0 z-50 cursor-pointer"
+      className="fixed inset-0 z-[60] cursor-pointer"
       onClick={onClose}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -58,6 +61,7 @@ export function CardDetailOverlay({ cardId, onClose }: CardDetailOverlayProps) {
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

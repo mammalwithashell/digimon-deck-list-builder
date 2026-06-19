@@ -154,6 +154,7 @@ fn fixture_on_play_gain_memory(n: i32) -> CompiledCard {
             scope: CompiledScope::FaceUp,
             active_when: None,
             condition: None,
+            timing_conditions: Vec::new(),
             optional: false,
             outer_prompt: false,
             once_per_turn: false,

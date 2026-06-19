@@ -1,32 +1,46 @@
-# BT25-043 Habakirimon — Digimon (BEATBREAK), Lv.6, Yellow, DP 12000, Cost 6.
-# Traits: Shaman, Glowing Dawn, BEATBREAK. Attribute: Virus.
-# Standard digivolution: Lv.5 Yellow / cost 4 (printed evo_costs).
+# BT25-043 Habakirimon / "Habakiri" — DUAL card (Digimon + Option).
+# Lv.6 Yellow, Shaman / Glowing Dawn / BEATBREAK, DP 12000, Attribute Virus.
 #
-# Printed card text (card image BT25-043 — authoritative for printed text):
+# Printed card text (card image BT25-043 — DIGIMON / OPTION "DUAL"):
+#   DIGIMON FACE
+#   <Digivolve> Lv.5 w/ [Glowing Dawn] trait: Cost 3.
 #   [When Digivolving] [When Attacking] [Once Per Turn] <Recovery +1> (Place the
-#   top card of your deck as your top security card.) Then, by trashing the top
-#   security card of 1 player with the most security cards, this Digimon
-#   unsuspends.
+#     top card of your deck as your top security card.) Then, by trashing the top
+#     security card of 1 player with the most security cards, this Digimon
+#     unsuspends.
 #   [All Turns] [Once Per Turn] When any of your [Glowing Dawn] trait Digimon
-#   would leave the battle area, by trashing your top security card, they don't
-#   leave.
-# Option side (Habakiri): Use Req [Glowing Dawn]; [Main] 1 opp Digimon -8000 DP,
-#   then by trashing your top security all opp Digimon -5000 DP; Arts Digivolve.
-#   → BEATBREAK Option side OMITTED (PARTIAL), see G-DSL-BEATBREAK-ARTS-OPTION.
-# Printed evo box (xros_req): "[Digivolve] Lv.5 w/[Glowing Dawn] trait: Cost 3".
+#     would leave the battle area, by trashing your top security card, they
+#     don't leave.
+#   OPTION FACE — "Habakiri", Use 6
+#   Use Req. [Glowing Dawn] trait (ignore color requirements).
+#   [Main] 1 of your opponent's Digimon gets -8000 DP for the turn. Then, by
+#     trashing your top security card, all of your opponent's Digimon get -5000
+#     DP for the turn.
+#   <Arts Digivolve>.
+#
 # DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_043.cs
 #
-# Implementation status (faithfulness diff):
-# | Std digivolve Lv.5 Yellow / Cost 4                  | IMPLEMENTED (evo_costs) |
-# | Alt-source Lv.5 [Glowing Dawn] / Cost 3            | IMPLEMENTED (alt_paths) |
-# | [WD][WA][OPT] Recovery +1                           | IMPLEMENTED (recover) |
-# | [WD][WA][OPT] trash most-sec player's top → unsuspend | IMPLEMENTED (gated 3-way choice) |
-# | [All Turns][OPT] GlowingDawn would-leave → trash sec → stay | IMPLEMENTED (replacement) |
-# | Option [Main] DP debuffs + Arts Digivolve          | OMITTED — G-DSL-BEATBREAK-ARTS-OPTION → PARTIAL |
+# HISTORY: previously shipped `kind: digimon` with the Digimon side only and the
+# Option side OMITTED (PARTIAL, G-DSL-BEATBREAK-ARTS-OPTION). The per-face
+# effects + Arts-digivolve gap is now closed (G-DSL-DUAL-PER-FACE-EFFECTS +
+# G-DSL-ARTS-DIGIVOLVE), so this is upgraded to a full DUAL card and the Option
+# side ships. Standard digivolution box: Lv.5 Yellow / cost 4 (color form, the
+# cards.json evo table — backfills the static evo_cost) plus the printed trait
+# form (Lv.5 [Glowing Dawn] / cost 3).
+#
+# ── DCGO crosscheck (Option side, newly added) ───────────────────────────────
+# Use Req — UseRequirements(HasGlowingDawnTraits).
+# Main (OptionSkill) — select 1 opp Digimon → ChangeDigimonDP(-8000,
+#   UntilEachTurnEnd); then, if own SecurityCards.Count >= 1, a Yes/No to trash
+#   own top security (IDestroySecurity fromTop) → ChangeDigimonDPPlayerEffect
+#   over IsPermanentExistsOnOpponentBattleAreaDigimon(-5000, UntilEachTurnEnd):
+#   ALL opponent Digimon get -5000 DP for the turn.
+# Arts Digivolve — ArtsDigivolveEffect(card).
 
 card: BT25-043
 name: Habakirimon
-kind: digimon
+kind: dual
+
 level: 6
 color: [yellow]
 cost: 6
@@ -42,65 +56,115 @@ alt_paths:
     from: { level_eq: 5, trait_has: "Glowing Dawn" }
     cost: 3
 
-effects:
-  - when: [when_digivolving, when_attacking]
-    once_per_turn: true
-    summary: "[WD][WA][OPT] <Recovery +1>; then by trashing the top security of the player with the most security, this Digimon unsuspends"
-    process:
-      - recover: { of: you, count: 1 }
-      - select_effect_choice:
-          bind_as: who
-          labels:
-            - "Trash your own top security card"
-            - "Trash your opponent's top security card"
-            - "Don't trash security"
-          prompt: "Trash 1 player's top security card to unsuspend this Digimon?"
-      - if:
-          condition:
-            all_of:
-              - equals: [who, 0]
-              - security_count_gte: 1
-              - security_count_gte:
-                  formula:
-                    base: 0
-                    per:
-                      card_count_in_zone:
-                        of: opponent
-                        zone: security
-                    delta: 1
-          then:
-            - trash_top_security: { of: you }
-            - unsuspend: { target: self }
-      - if:
-          condition:
-            all_of:
-              - equals: [who, 1]
-              - opponent_security_count_gte: 1
-              - opponent_security_count_gte:
-                  formula:
-                    base: 0
-                    per:
-                      card_count_in_zone:
-                        of: you
-                        zone: security
-                    delta: 1
-          then:
-            - trash_top_security: { of: opponent }
-            - unsuspend: { target: self }
+dual:
+  digimon:
+    level: 6
+    dp: 12000
+    colors: [yellow]
+    traits: [Shaman, Glowing Dawn, BEATBREAK]
+    effect_text: |
+      [When Digivolving] [When Attacking] [Once Per Turn] <Recovery +1> Then, by trashing the top security card of 1 player with the most security cards, this Digimon unsuspends.
+      [All Turns] [Once Per Turn] When any of your [Glowing Dawn] trait Digimon would leave the battle area, by trashing your top security card, they don't leave.
+    effects:
+      - when: [when_digivolving, when_attacking]
+        once_per_turn: true
+        summary: "[WD][WA][OPT] <Recovery +1>; then by trashing the top security of the player with the most security, this Digimon unsuspends"
+        process:
+          - recover: { of: you, count: 1 }
+          - select_effect_choice:
+              bind_as: who
+              labels:
+                - "Trash your own top security card"
+                - "Trash your opponent's top security card"
+                - "Don't trash security"
+              prompt: "Trash 1 player's top security card to unsuspend this Digimon?"
+          - if:
+              condition:
+                all_of:
+                  - equals: [who, 0]
+                  - security_count_gte: 1
+                  - security_count_gte:
+                      formula:
+                        base: 0
+                        per:
+                          card_count_in_zone:
+                            of: opponent
+                            zone: security
+                        delta: 1
+              then:
+                - trash_top_security: { of: you }
+                - unsuspend: { target: source }
+          - if:
+              condition:
+                all_of:
+                  - equals: [who, 1]
+                  - opponent_security_count_gte: 1
+                  - opponent_security_count_gte:
+                      formula:
+                        base: 0
+                        per:
+                          card_count_in_zone:
+                            of: you
+                            zone: security
+                        delta: 1
+              then:
+                - trash_top_security: { of: opponent }
+                - unsuspend: { target: source }
 
-  - kind: replacement
-    trigger: when_would_leave_battle_area
-    optional: true
-    once_per_turn: true
-    active_when:
-      all_of:
-        - replacement_subject_is_mine: true
-        - kind: digimon
-        - trait_has: "Glowing Dawn"
-        - any_permanent:
-            of: you
-            zone: [security]
-    summary: "[All Turns][OPT] When your [Glowing Dawn] Digimon would leave, by trashing your top security card, they don't leave"
-    process:
-      - trash_top_security: { of: you }
-      - cancel_replacement: {}
+      - kind: replacement
+        trigger: when_would_leave_battle_area
+        optional: true
+        once_per_turn: true
+        active_when:
+          all_of:
+            - replacement_subject_is_mine: true
+            - kind: digimon
+            - trait_has: "Glowing Dawn"
+            - any_permanent:
+                of: you
+                zone: [security]
+        summary: "[All Turns][OPT] When your [Glowing Dawn] Digimon would leave, by trashing your top security card, they don't leave"
+        process:
+          - trash_top_security: { of: you }
+          - cancel_replacement: {}
+  option:
+    use_cost: 6
+    colors: [yellow]
+    effect_text: |
+      [Main] 1 of your opponent's Digimon gets -8000 DP for the turn. Then, by trashing your top security card, all of your opponent's Digimon get -5000 DP for the turn.
+    use_requirement:
+      any_field_permanent:
+        of: you
+        trait_has: "Glowing Dawn"
+    arts_digivolve: true
+    effects:
+      - when: main
+        summary: "[Main] 1 opp Digimon -8000 DP; then by trashing your top security, all opp Digimon -5000 DP for the turn"
+        process:
+          - select_opponent_permanent:
+              bind_as: dp_target
+              filter: { kind: digimon }
+              prompt: "Choose 1 of your opponent's Digimon to get -8000 DP for the turn"
+          - add_dp_modifier: { target: dp_target, value: -8000, expiry: end_of_turn }
+          # Then, "by trashing your top security card" is a player choice
+          # (DCGO SetBoolSelection Yes/No), gated on having >=1 security. Surface
+          # it as a 2-way EffectChoice so the decline is in the action space.
+          - if:
+              condition: { security_count_gte: 1 }
+              then:
+                - select_effect_choice:
+                    bind_as: pay_for_mass
+                    labels:
+                      - "Trash your top security card (all opponent Digimon -5000 DP)"
+                      - "Don't trash security"
+                    prompt: "Trash your top security card to give all opponent Digimon -5000 DP for the turn?"
+                - if:
+                    condition: { equals: [pay_for_mass, 0] }
+                    then:
+                      - trash_top_security: { of: you }
+                      - add_modifier:
+                          continuous: true
+                          target: { of: opponent, kind: digimon }
+                          modifier: ChangeDp
+                          value: -5000
+                          expiry: end_of_turn

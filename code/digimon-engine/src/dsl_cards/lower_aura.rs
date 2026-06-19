@@ -27,7 +27,7 @@ use std::sync::Arc;
 
 use digimon_dsl::compiled::{
     CompiledAuraEffectImmunity, CompiledFormula, CompiledGrantKeywordValue, CompiledPlayerRef,
-    CompiledPredicate, CompiledScope,
+    CompiledPredicate, CompiledScope, CompiledSynthIdentity,
 };
 
 use crate::card_source::CardHandle;
@@ -64,6 +64,7 @@ pub fn lower_all(
     modifier: Option<String>,
     modifier_value: Option<i32>,
     modifier_name: Option<String>,
+    synth_identity: Option<CompiledSynthIdentity>,
     while_condition: Option<CompiledPredicate>,
     applies_to_opponent_security_dp: bool,
     applies_to_own_security_dp: bool,
@@ -134,6 +135,7 @@ pub fn lower_all(
         modifier,
         modifier_value,
         modifier_name,
+        synth_identity,
         effect_immunity,
         raw,
     ) {
@@ -262,6 +264,7 @@ pub fn lower(
     modifier: Option<String>,
     modifier_value: Option<i32>,
     modifier_name: Option<String>,
+    synth_identity: Option<CompiledSynthIdentity>,
     effect_immunity: Option<CompiledAuraEffectImmunity>,
     raw: Arc<EngineRawRustRegistry>,
 ) -> Option<Effect> {
@@ -333,6 +336,13 @@ pub fn lower(
     let modifier = modifier.as_deref().and_then(lookup_modifier_type);
     // Name payload for name-carrying modifiers (CanOnlyDigivolveInto — Q3).
     let modifier_name = modifier_name.map(Arc::new);
+    // Structured SynthIdentity payload for a `TreatAsDigimon` mass aura
+    // (BT25-104 "all of your [Marcus Damon]s are also treated as a 12000 DP
+    // Digimon"). G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH.
+    let synth_payload = synth_identity
+        .as_ref()
+        .map(crate::dsl_cards::step::modifiers::build_synth_payload)
+        .map(Arc::new);
 
     if is_self_aura && target_player.is_none() {
         let self_modifier_name = modifier_name.clone();
@@ -462,7 +472,17 @@ pub fn lower(
                     ctx.grant_declarative_keyword(h, kw, Expiry::Permanent);
                 }
                 if let Some(modifier) = modifier {
-                    if let Some(name) = &modifier_name {
+                    if let Some(synth) = &synth_payload {
+                        // Structured SynthIdentity payload (TreatAsDigimon mass
+                        // aura — BT25-104). G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH.
+                        ctx.add_declarative_modifier_with_payload(
+                            h,
+                            modifier,
+                            modifier_value,
+                            Expiry::Permanent,
+                            (**synth).clone(),
+                        );
+                    } else if let Some(name) = &modifier_name {
                         // Name-payload modifier (CanOnlyDigivolveInto — Q3).
                         ctx.add_declarative_modifier_with_payload(
                             h,

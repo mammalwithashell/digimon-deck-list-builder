@@ -36,6 +36,7 @@ export interface DeckSummary {
   is_valid: boolean;
   is_public: boolean;
   is_pinned: boolean;
+  is_builtin?: boolean;
   folder_id: string | null;
   card_count: number;
   main_count: number;
@@ -67,6 +68,7 @@ export interface DeckResponse {
   validation_errors: string[];
   is_public: boolean;
   is_pinned: boolean;
+  is_builtin?: boolean;
   tags: string[];
   meta_tier?: string | null;
   meta_archetype?: string | null;

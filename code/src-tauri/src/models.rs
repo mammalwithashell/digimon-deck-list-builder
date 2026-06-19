@@ -58,6 +58,8 @@ pub struct ManifestModel {
 struct ManifestResponse {
     generated_at: Option<String>,
     models: Vec<ManifestModel>,
+    #[serde(default)]
+    starter_ai_model_id: Option<String>,
 }
 
 /// What we persist alongside each downloaded `.onnx` in the cache. Extends
@@ -198,14 +200,21 @@ impl ModelsManager {
         Ok(Some(serde_json::from_str(&s)?))
     }
 
+    pub async fn fetch_manifest_full(
+        &self,
+        base_url: &str,
+    ) -> Result<(Vec<ManifestModel>, Option<String>), ModelManagerError> {
+        let url = format!("{}/models/manifest.json", base_url.trim_end_matches('/'));
+        let resp = self.http.get(&url).send().await?.error_for_status()?;
+        let parsed: ManifestResponse = resp.json().await?;
+        Ok((parsed.models, parsed.starter_ai_model_id))
+    }
+
     pub async fn fetch_manifest(
         &self,
         base_url: &str,
     ) -> Result<Vec<ManifestModel>, ModelManagerError> {
-        let url = format!("{}/models/manifest.json", base_url.trim_end_matches('/'));
-        let resp = self.http.get(&url).send().await?.error_for_status()?;
-        let parsed: ManifestResponse = resp.json().await?;
-        Ok(parsed.models)
+        Ok(self.fetch_manifest_full(base_url).await?.0)
     }
 
     /// Download a manifest entry. Rejects upfront on shape mismatch, streams
@@ -424,6 +433,54 @@ pub async fn models_load_cached(
         .await?
 }
 
+/// Resolve the released "starter AI" model the hosted manifest points at via
+/// `starter_ai_model_id`: download it (if not cached) and load it into the
+/// inference cache, returning its id. Returns `Ok(None)` — so the caller falls
+/// back to the greedy CPU — when there's no pointer, the model is missing /
+/// incompatible, or the manifest can't be fetched (offline).
+#[tauri::command]
+pub async fn models_resolve_starter(
+    manager: tauri::State<'_, Arc<ModelsManager>>,
+    engine: tauri::State<'_, EngineHandle>,
+    base_url: String,
+) -> Result<Option<String>, String> {
+    let (models, starter_id) = match manager.fetch_manifest_full(&base_url).await {
+        Ok(v) => v,
+        Err(_) => return Ok(None),
+    };
+    let Some(starter_id) = starter_id else {
+        return Ok(None);
+    };
+    let Some(model) = models.into_iter().find(|m| m.id == starter_id) else {
+        return Ok(None);
+    };
+    // Shape gate: skip incompatible models rather than erroring the game start.
+    if model.tensor_size != TENSOR_SIZE || model.action_space_size != ACTION_SPACE_SIZE {
+        return Ok(None);
+    }
+    // Download if not already cached.
+    if manager.local_meta(&model.id).map_err(|e| e.to_string())?.is_none() {
+        if manager.download(&model).await.is_err() {
+            return Ok(None);
+        }
+    }
+    // Load into the inference cache on the engine worker (owns the session).
+    let manager_arc: Arc<ModelsManager> = Arc::clone(&manager);
+    let id = model.id.clone();
+    let load: Result<(), String> = engine
+        .run(move |world| -> Result<(), String> {
+            manager_arc
+                .load_cached(&id, &world.inference)
+                .map(|_| ())
+                .map_err(|e| e.to_string())
+        })
+        .await?;
+    match load {
+        Ok(()) => Ok(Some(model.id)),
+        Err(_) => Ok(None),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -549,6 +606,21 @@ mod tests {
         assert_eq!(parsed.models.len(), 1);
         assert_eq!(parsed.models[0].model_type, "lstm");
         assert_eq!(parsed.models[0].tensor_size, TENSOR_SIZE);
+    }
+
+    #[test]
+    fn manifest_response_parses_starter_pointer_and_defaults_none() {
+        let with = serde_json::json!({
+            "generated_at": "2026-06-16T00:00:00Z",
+            "models": [],
+            "starter_ai_model_id": "abc-123"
+        });
+        let parsed: ManifestResponse = serde_json::from_value(with).unwrap();
+        assert_eq!(parsed.starter_ai_model_id.as_deref(), Some("abc-123"));
+
+        let without = serde_json::json!({ "generated_at": "x", "models": [] });
+        let parsed: ManifestResponse = serde_json::from_value(without).unwrap();
+        assert_eq!(parsed.starter_ai_model_id, None);
     }
 
     #[test]

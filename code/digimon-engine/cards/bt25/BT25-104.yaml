@@ -1,0 +1,231 @@
+# BT25-104 ShineGreymon: Burst Mode // Final Shining Burst — DUAL card.
+# Digimon face: Lv.7, Red+Yellow, DP 15000. Traits: Light Dragon, DATA SQUAD.
+# Option face: Use 6, Yellow. Traits: DATA SQUAD.
+#
+# cards.json MISLABELS this as a plain Digimon (card_kind: 0) and crams the
+# Option [Main] text into inherited_effect_description_eng. DCGO BT25_104.cs is
+# unambiguously DUAL (a #region Option Effects with UseRequirements + OptionSkill
+# + ArtsDigivolveEffect; the comment even reads "If this were not a dual card").
+# The "//" in the name is the DUAL face separator. Authored as `kind: dual` per
+# the DUAL-card design spec (docs/superpowers/specs/2026-04-28-arts-digivolve-
+# dual-cards-design.md) and the docs/examples/ST23-09-dual-card.yaml template.
+#
+# Printed card text (card image BT25-104 — authoritative for printed text):
+#   Digimon face:
+#     ＜Raid＞ ＜Piercing＞ ＜Security A. +1＞ ＜Blocker＞ ＜Barrier＞
+#     [When Digivolving] [When Attacking] [Once Per Turn] Activate 1 [Main]
+#       effect on this card's Option side.
+#     [Your Turn] All of your [Marcus Damon]s are also treated as 12000 DP
+#       Digimon and gain ＜Rush＞.
+#   Option face (Final Shining Burst):
+#     ＜Use Req. ([DATA SQUAD] trait)＞ (ignore color requirements)
+#     [Main] 1 of your opponent's Digimon gets -15000 DP for the turn. Then, you
+#       may play 1 Tamer card from your hand without paying the cost.
+#     ＜Arts Digivolve＞
+#
+# DCGO C# reference (READ-ONLY):
+#   DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_104.cs
+#
+# ─── DCGO crosscheck (per region) ────────────────────────────────────────────
+# Digimon face:
+#   - Alt Digivolution: AddSelfDigivolutionRequirementStaticEffect(
+#       PermanentCondition: TopCard.EqualsTraits("DATA SQUAD"), 5, level: 6).
+#   - Burst Digivolution: AddBurstDigivolutionConditionClass — digimonCondition
+#       EqualsCardName("ShineGreymon") on owner field, tamerCondition a Marcus
+#       Damon returnable to hand, cost 0.
+#   - Raid (OnAllyAttack), Piercing (OnDetermineDoSecurityCheck), Security A. +1
+#       (None / ChangeSelfSAttackStaticEffect +1), Blocker (None), Barrier
+#       (WhenPermanentWouldBeDeleted) — all SELF static keywords.
+#   - Shared WD/WA [OPT]: ActivateMainOfOptionSide — runs the Option [Main] body
+#       inline, maxCountPerTurn 1 across both timings (shared hash).
+#   - [Your Turn]: TreatAsDigimonStaticEffect + ChangeBaseDPGlobalEffect(12000) +
+#       RushStaticEffect over IsMarcusDamon, gated MakeDigimonCondition
+#       (IsExistOnBattleArea && IsOwnerTurn). → SEE GAP NOTE BELOW.
+# Option face:
+#   - UseRequirements(EqualsTraits "DATA SQUAD") color-ignore.
+#   - [Main] OptionSkill: select 1 opp battle-area Digimon (canNoSelect:false,
+#       fires only if HasMatchCondition) → -15000 DP UntilEachTurnEnd; then IF a
+#       playable Tamer in hand, optional (canNoSelect:true) SelectHandEffect
+#       Mode.PlayForFree → play 1 Tamer from hand free.
+#   - ArtsDigivolveEffect (dual.option.keywords: [ArtsDigivolve]).
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+# | Digimon face <Raid>/<Piercing>/<SA+1>/<Blocker>/<Barrier> | IMPLEMENTED |
+# | Alt-digivolve Lv.6 [DATA SQUAD] / cost 5                   | IMPLEMENTED |
+# | Burst Digivolve from ShineGreymon (return Marcus) / cost 0 | IMPLEMENTED |
+# | [WD][WA][OPT] Activate Option [Main] inline                | IMPLEMENTED |
+# | Option face <Use Req.> + [Main] -15000 + play Tamer + Arts | IMPLEMENTED |
+# | [Your Turn] all Marcus Damon -> 12000 DP Digimon + <Rush>  | IMPLEMENTED |
+#
+# G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH — CLOSED (2026-06-18). The [Your Turn] clause
+#   is a CONTINUOUS aura treating ALL of your [Marcus Damon]s (including any
+#   played mid-turn) as 12000 DP Digimon with <Rush>. The substrate was widened
+#   so the declarative `kind: aura` path carries a structured `synth_identity`
+#   payload: `AuraBody.synth_identity` lowers (via `add_declarative_modifier_with
+#   _payload`) to `ModifierPayload::SynthIdentity` on every live match, re-applied
+#   each tick (covers Marcus Damons played mid-turn, reverts end of your turn).
+#   (The `add_modifier { continuous: true }` floating-mass path was also taught to
+#   carry the payload, as a symmetric fix to a latent drop.) → FULLY IMPLEMENTED.
+
+card: BT25-104
+name: "ShineGreymon: Burst Mode // Final Shining Burst"
+kind: dual
+
+# Compatibility mirrors for the Digimon face. DUAL cards have no Digimon play
+# cost — the Option use cost lives at dual.option.use_cost.
+level: 7
+color: [red, yellow]
+dp: 15000
+traits: ["Light Dragon", "DATA SQUAD"]
+form: Mega
+attribute: Vaccine
+
+dual:
+  digimon:
+    level: 7
+    dp: 15000
+    colors: [red, yellow]
+    traits: ["Light Dragon", "DATA SQUAD"]
+    effect_text: "<Raid> <Piercing> <Security A. +1> <Blocker> <Barrier>. [WD][WA][OPT] Activate 1 [Main] effect on this card's Option side. [Your Turn] All of your [Marcus Damon]s are also treated as 12000 DP Digimon and gain <Rush>."
+    inherited_text: ""
+  option:
+    use_cost: 6
+    colors: [yellow]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        trait_has: "DATA SQUAD"
+    effect_text: "Use Req. ([DATA SQUAD] trait). [Main] 1 of your opponent's Digimon gets -15000 DP for the turn. Then, you may play 1 Tamer card from your hand without paying the cost. Arts Digivolve."
+    security_text: ""
+    keywords: [ArtsDigivolve]
+
+# ─── Alternate Digivolution Paths ────────────────────────────────────────────
+#
+# DCGO: standard alt-digivolve from Lv.6 [DATA SQUAD] at cost 5 (DUAL cards have
+# no printed evo_costs in the DSL pack — the digivolve paths live here). Plus the
+# Burst Digivolution from a named ShineGreymon host by returning 1 Marcus Damon to
+# hand, cost 0; the Burst-Mode teardown trashes this Digimon's top card at the end
+# of the burst turn (on_burst_turn_end). Modeled on BT13-020 (the BT13 ShineGreymon:
+# Burst Mode predecessor — same burst shape).
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - trait_has: "DATA SQUAD"
+    cost: 5
+  - kind: burst_digivolve
+    from: { name_is: "ShineGreymon" }
+    cost: 0
+    extra_cost:
+      - select_own_permanent:
+          bind_as: marcus
+          filter: { kind: tamer, name_is: "Marcus Damon" }
+          prompt: "Return Marcus Damon to hand"
+      - return_to_hand: { target: marcus }
+    on_burst_turn_end:
+      - trash_top_source: { target: self }
+
+effects:
+  # ─── Digimon-face static keywords ───────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - kind: grant_keyword
+    keyword: Barrier
+    summary: "<Barrier>"
+
+  # ─── Digimon-face [When Digivolving][When Attacking][Once Per Turn] ─────────
+  #
+  # "Activate 1 [Main] effect on this card's Option side."
+  #
+  # DCGO ActivateMainOfOptionSide runs the Option [Main] body inline, shared
+  # across both timings via one OPT hash (maxCountPerTurn 1). The faithful DSL
+  # approach (per the audit) is to INLINE the same Option [Main] body here as a
+  # single multi-timing OPT clause — the Option [Main] body is also authored as
+  # the option-face `when: main_from_hand` clause below; both run the same steps.
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[WD][WA][OPT] Activate this card's Option [Main]: 1 opp Digimon -15000 DP; then you may play 1 Tamer from hand free"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -15000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -15000
+          expiry: end_of_turn
+      - select_hand:
+          of: you
+          bind_as: tamer_pick
+          optional: true
+          filter: { kind: tamer }
+          prompt: "You may play 1 Tamer card from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: tamer_pick
+
+  # ─── [Your Turn] all your [Marcus Damon]s are treated as 12000 DP Digimon
+  #     + gain <Rush> (G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH — now closed) ───────────
+  #
+  # One declarative `kind: aura`, gated to your turn, over a live FILTER of your
+  # [Marcus Damon] Tamers — always re-evaluated, so Marcus Damons played mid-turn
+  # are covered and the effect reverts at end of your turn. The aura applies BOTH
+  # grants to each match:
+  #  - `modifier: TreatAsDigimon` + `synth_identity { dp: 12000 }` → the
+  #    structured SynthIdentity payload "treated as a 12000 DP Digimon" (the aura
+  #    path now carries SynthIdentity — previously it dropped the payload).
+  #  - `grant_keyword: { keyword: Rush }` → "<Rush>".
+  - kind: aura
+    target: { of: you, kind: tamer, name_is: "Marcus Damon" }
+    active_when: { your_turn: true }
+    modifier: TreatAsDigimon
+    modifier_value: 0
+    synth_identity: { dp: 12000 }
+    grant_keyword: { keyword: Rush }
+    summary: "[Your Turn] All of your [Marcus Damon]s are treated as 12000 DP Digimon and gain <Rush>"
+
+  # ─── Option-face [Main] (Final Shining Burst) ───────────────────────────────
+  #
+  # "1 of your opponent's Digimon gets -15000 DP for the turn. Then, you may
+  # play 1 Tamer card from your hand without paying the cost."
+  #
+  # DCGO OptionSkill: select 1 opp battle-area Digimon (only when one exists,
+  # canNoSelect:false) → -15000 DP UntilEachTurnEnd; THEN if a playable Tamer is
+  # in hand, optional (canNoSelect:true) Mode.PlayForFree. After this resolves,
+  # the DUAL/Arts substrate offers <Arts Digivolve> (dual.option.keywords).
+  - when: main_from_hand
+    summary: "[Main] 1 opp Digimon -15000 DP for the turn; then you may play 1 Tamer from hand free"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -15000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -15000
+          expiry: end_of_turn
+      - select_hand:
+          of: you
+          bind_as: tamer_pick
+          optional: true
+          filter: { kind: tamer }
+          prompt: "You may play 1 Tamer card from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: tamer_pick

@@ -1,0 +1,131 @@
+# ST24-15 DNA Charge — Option, White, Use cost 3.
+# Traits: DATA SQUAD.
+#
+# Printed card text (data/cards.json — verbatim, matches DCGO):
+#   <Use Req. ([DATA SQUAD] trait)> (Specified cards let you ignore color
+#     requirements.)
+#   [Main] You may play 1 [DATA SQUAD] trait card with a play cost of 4 or less
+#     from your hand or trash without paying the cost. Then, place this card in
+#     the battle area.
+#   [Start of Your Main Phase] By placing this card from the battle area face
+#     down under any of your [DATA SQUAD] trait Tamers, <Draw 1> and gain 1 memory.
+#   Inherited [Security]: Activate this card's [Main] effects.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST24/White/ST24_15.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Use Req — UseRequirements(card, EqualsTraits("DATA SQUAD")) → use_requirement
+#   over a battle-area DATA SQUAD Digimon/Tamer (ignore color).
+# [Main] (OptionSkill) — Hand/Trash/Don't-play SetIntSelection, then
+#   SelectHand/SelectCard(PlayForFree) over IsDigimon||IsTamer, DATA SQUAD,
+#   GetCostItself<=4. → select_union_zone { zones: [hand, trash] } (optional —
+#   the "You may") + play_union_bound_free. Then PlaceDelayOptionCards keeps the
+#   Option on the battle area: the `kind: delay` marker (BT21-093 idiom).
+# [Start of Your Main Phase] (OnStartMainPhase) — CanUse = IsOwnerTurn;
+#   CanActivate gated on a DATA SQUAD Tamer existing; SelectPermanent over own
+#   DATA SQUAD Tamers (canNoSelect: true → optional), then
+#   AddDigivolutionCardsBottom({this}, isFacedown:true) → Draw 1 → AddMemory(1).
+#   The relocate is move_self_option_under_permanent (G-MOVE-SELF-OPTION-UNDER-
+#   PERMANENT): pops the field Option's top CardSource and pushes it face-down
+#   under the chosen Tamer, firing NEITHER OnOptionTrashed NOR
+#   OnDigivolutionCardTrashed. Draw + memory run only after a successful relocate.
+# [Security] (AddActivateMainOptionSecurityEffect) — re-run the [Main] body from
+#   security: same play-or-use-free clause.
+#
+# Sister card: ST23-15 e-Pulse (trait-swapped BEATBREAK → DATA SQUAD).
+
+card: ST24-15
+name: "DNA Charge"
+kind: option
+color: [white]
+cost: 3
+traits: [DATA SQUAD]
+
+# Use Req. [DATA SQUAD] trait — a DATA SQUAD Digimon/Tamer on the field satisfies
+# the Option's color requirement (ignore color).
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    any_of:
+      - all_of:
+          - kind: digimon
+          - trait_has: "DATA SQUAD"
+      - all_of:
+          - kind: tamer
+          - trait_has: "DATA SQUAD"
+
+effects:
+  # ─── [Main] play 1 [DATA SQUAD] cost<=4 from hand/trash free; place self in BA ─
+  - when: main_from_hand
+    summary: "[Main] You may play 1 [DATA SQUAD] cost<=4 card from hand/trash free; then place this card in the battle area"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: ds_pick
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - trait_has: "DATA SQUAD"
+              - play_cost_lte: 4
+          prompt: "You may play 1 [DATA SQUAD] cost 4 or less card from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: ds_pick }
+      # "Then, place this card in the battle area." — persistence handled by the
+      # `kind: delay` marker below (dispose_option → field Delay permanent).
+
+  # ─── [Start of Your Main Phase] relocate self face down under a [DATA SQUAD]
+  #     Tamer → <Draw 1> and gain 1 memory ────────────────────────────────────
+  - when: start_of_your_main_phase
+    optional: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        trait_has: "DATA SQUAD"
+    summary: "[Start of Your Main Phase] By placing this card face down under a [DATA SQUAD] Tamer, <Draw 1> and gain 1 memory"
+    process:
+      - select_own_permanent:
+          bind_as: ds_tamer
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - trait_has: "DATA SQUAD"
+          prompt: "Place this card face down under a [DATA SQUAD] Tamer to draw 1 and gain 1 memory"
+      - if:
+          condition: { binding_present: ds_tamer }
+          then:
+            - move_self_option_under_permanent: { target: ds_tamer, face_down: true }
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  # ─── kind: delay marker — keeps the Option on the battle area after [Main] ──
+  - kind: delay
+    trigger: end_of_your_next_turn
+    summary: "[Delay marker] DNA Charge persists in the battle area"
+    process: []
+
+  # ─── [Security] Activate this card's [Main] effects ──────────────────────────
+  - when: on_security
+    summary: "[Security] Activate this card's [Main] effects"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: ds_pick_sec
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - trait_has: "DATA SQUAD"
+              - play_cost_lte: 4
+          prompt: "You may play 1 [DATA SQUAD] cost 4 or less card from your hand or trash without paying the cost"
+      - play_union_bound_free: { binding: ds_pick_sec }

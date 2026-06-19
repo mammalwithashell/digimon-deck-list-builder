@@ -534,6 +534,14 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 if attack_blocked {
                     continue;
                 }
+                // Permanent-scoped CannotAttack: a declaration would be
+                // Cancelled by the `WhenWouldAttack` replacement, so never
+                // offer it (mirror of `can_basic_attack`'s Main-phase gate).
+                // Without this the end-of-turn (Vortex / MayAttack /
+                // ForceAttack) range could surface a guaranteed-cancel no-op.
+                if game.modifiers.has(handle, ModifierType::CannotAttack) {
+                    continue;
+                }
 
                 // §4.6 attack bits: Vortex / MayAttack / ForceAttack all
                 // share the 100-399 attack range and the same target loop
@@ -841,6 +849,16 @@ fn can_basic_attack(
     if game.modifiers.has(handle, ModifierType::CannotSuspend) {
         return false;
     }
+    // Permanent-scoped CannotAttack: a Digimon carrying the CannotAttack
+    // modifier can't declare an attack. The player-scoped form is zeroed
+    // before the per-attacker loop (the `attack_blocked` short-circuit);
+    // this covers the permanent-scoped form that the loop would otherwise
+    // miss. Mask-side mirror of the `Game::can_attack*` consult — without
+    // it the mask offers an attack the engine refuses, and a deterministic
+    // policy re-picks it forever (the no-op attack loop).
+    if game.modifiers.has(handle, ModifierType::CannotAttack) {
+        return false;
+    }
     // Summoning sickness: can't attack the turn it was played unless Rush
     // is present (native printed OR modifier-granted) — §2.1b.
     let is_fresh = perm.turn_played == turn && perm.turn_digivolved != turn;
@@ -881,6 +899,12 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
         .modifiers
         .player_has(attacker.player, ModifierType::CannotAttack)
     {
+        return Vec::new();
+    }
+    // Permanent-scoped CannotAttack: a declaration would be Cancelled by the
+    // `WhenWouldAttack` replacement, so a granted attack must offer no target
+    // bits (mirror of the Main-phase / end-of-turn mask gates).
+    if game.modifiers.has(attacker, ModifierType::CannotAttack) {
         return Vec::new();
     }
     let attacker_can_attack = if ignore_summoning_sickness && without_suspending {

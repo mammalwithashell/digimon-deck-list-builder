@@ -74,7 +74,9 @@ impl DigivolveRouteMatch {
 
 impl Game {
     pub fn card_data_by_id(&self, card_id: &str) -> Option<&CardData> {
-        self.card_data.iter().find(|card| card.card_id == card_id)
+        self.card_id_index
+            .get(card_id)
+            .and_then(|&idx| self.card_data.get(idx))
     }
 
     pub fn card_can_satisfy_digixros_name(&self, card_id: &str, required_name: &str) -> bool {

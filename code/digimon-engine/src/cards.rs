@@ -16,7 +16,13 @@ pub mod test;
 pub mod tokens;
 
 /// Registry of card_id -> CardEffect implementation.
-#[derive(Default)]
+///
+/// Cheaply `Clone`: entries are `Arc<dyn CardEffect>` (stateless, shared), so a
+/// clone duplicates only the `HashMap` of string keys + Arc handles — not the
+/// ~4000-card DSL parse/lowering that `build_registry()` performs. This is what
+/// lets `build_registry_cached()` build the pack once and hand each game a cheap
+/// clone (see that fn).
+#[derive(Default, Clone)]
 pub struct CardEffectRegistry {
     effects: HashMap<String, Arc<dyn CardEffect>>,
 }
@@ -107,4 +113,50 @@ pub fn build_registry() -> CardEffectRegistry {
     }
 
     registry
+}
+
+/// Process-cached `build_registry()`.
+///
+/// `build_registry()` parses and lowers the entire embedded DSL pack (~4000
+/// cards) — ~190 ms. The production game path (`Game::new`) builds a registry
+/// per game, and `DigimonEnv.reset()` constructs a fresh game **per episode**,
+/// so rebuilding here once dominated training wall-time (and flooded the log
+/// with the EX11-027 raw_rust warning once per episode).
+///
+/// The built registry is read-only on the production path (only `get()` is
+/// called after construction; the only mutators are DebugRunner test helpers,
+/// which keep using the uncached `build_registry()`). Effects are stateless
+/// `Arc<dyn CardEffect>`, so handing each game a cheap *clone* of a
+/// process-built template (~1 ms: clone the key/Arc HashMap) is correct and
+/// ~100× cheaper than re-lowering the pack. The expensive build — and its
+/// one-time warning — now runs once per process instead of once per episode.
+pub fn build_registry_cached() -> CardEffectRegistry {
+    static CACHE: std::sync::OnceLock<CardEffectRegistry> = std::sync::OnceLock::new();
+    CACHE.get_or_init(build_registry).clone()
+}
+
+#[cfg(test)]
+mod cache_tests {
+    use super::*;
+
+    /// `build_registry_cached()` must hand back the SAME underlying effect Arcs
+    /// across calls — proving it reuses the process-built template rather than
+    /// re-lowering the ~4000-card pack each time (the per-episode cost that
+    /// dominated training wall-time). A fresh `build_registry()` would allocate
+    /// distinct Arcs, so `Arc::ptr_eq` is the discriminating assertion.
+    #[test]
+    fn build_registry_cached_shares_effect_arcs_across_calls() {
+        let a = build_registry_cached();
+        let b = build_registry_cached();
+        let ids = a.registered_card_ids();
+        assert!(!ids.is_empty(), "registry should have registered effects");
+        let id = &ids[0];
+        let ea = a.get(id).expect("effect present in registry a");
+        let eb = b.get(id).expect("effect present in registry b");
+        assert!(
+            Arc::ptr_eq(&ea, &eb),
+            "build_registry_cached must reuse the cached registry (shared Arc), \
+             not re-lower the pack per call"
+        );
+    }
 }

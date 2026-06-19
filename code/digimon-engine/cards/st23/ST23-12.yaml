@@ -1,0 +1,78 @@
+# ST23-12 Chiropmon — Digimon, Lv.3, Purple, DP 2000, Cost 3.
+# Traits: Mammal, Glowing Dawn, BEATBREAK. Attribute: Virus.
+# Printed digivolve box: [Digivolve] Lv.2 w/[Glowing Dawn] trait: Cost 0.
+#
+# Printed card text (data/cards.json — verbatim):
+#   [On Play] By trashing the bottom face-down card from under any of your
+#     Tamers, you may return 1 Digimon card with the [Glowing Dawn] trait from
+#     your trash to the hand.
+#   Inherited: ＜Retaliation＞ (When only this Digimon is deleted in battle,
+#     delete the Digimon it battled.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST23/Purple/ST23_12.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (timing None): AddSelfDigivolutionRequirementStaticEffect(
+#   level 2, TopCard EqualsTraits("Glowing Dawn"), cost 0). → alt_paths
+#   digivolve from level 2 + Glowing Dawn trait, cost 0.
+# On Play (OnEnterFieldAnyone): CanActivate gated on a Tamer with a face-down
+#   source existing (TamerWithOneFaceDownSource). The cost is "by trashing the
+#   bottom face-down card from under any of your Tamers":
+#   SelectPermanentEffect maxCount 1, canNoSelect:true → optional Tamer pick;
+#   AfterSelect: TrashDigivolutionCardsFromTopOrBottom(isFromTop:false). → the
+#   trash_bottom_face_down_source_under_tamer cost verb (clause optional: true
+#   carries the canNoSelect "may decline the whole effect").
+#   If trashed: SelectCardEffect Root.Trash AddHand over Digimon EqualsTraits
+#   ("Glowing Dawn"), maxCount min(1, eligible), canNoSelect:true → optional
+#   return. → tail (runs only if the FD card was trashed): optional select_trash
+#   { kind: digimon, trait_has: Glowing Dawn } + add_to_hand_from_trash.
+# Inherited Retaliation (OnDestroyedAnyone): RetaliationSelfEffect(isInherited)
+#   → scope: inherited + grant_keyword Retaliation.
+
+card: ST23-12
+name: "Chiropmon"
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 2000
+traits: [Mammal, Glowing Dawn, BEATBREAK]
+attribute: Virus
+
+# Alt-digivolve: Lv.2 with the [Glowing Dawn] trait / cost 0.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: "Glowing Dawn" }
+    cost: 0
+
+effects:
+  # ─── [On Play] trash bottom FD under a Tamer → may return 1 [Glowing Dawn]
+  #     Digimon from trash to hand ─────────────────────────────────────────────
+  # optional: true carries the DCGO Tamer-pick canNoSelect (the player may
+  # decline the whole effect rather than pay the cost).
+  - when: on_play
+    optional: true
+    summary: "[On Play] By trashing a bottom face-down card under a Tamer, you may return 1 [Glowing Dawn] Digimon from your trash to the hand"
+    process:
+      # "By trashing the bottom face-down card from under any of your Tamers" —
+      # the activation cost. Its tail runs ONLY if a face-down source was
+      # actually trashed (BT25-027/041 if-trashed idiom).
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      # "you may return 1 [Glowing Dawn] Digimon from your trash" — optional pick.
+      - select_trash:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Glowing Dawn"
+          prompt: "You may return 1 [Glowing Dawn] Digimon from your trash to the hand"
+      - add_to_hand_from_trash: { of: you, card: pick }
+
+  # ─── Inherited <Retaliation> ───────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Retaliation
+    summary: "Inherited <Retaliation>"
