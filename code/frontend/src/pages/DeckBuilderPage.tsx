@@ -55,8 +55,8 @@ const EFFECT_TIMINGS = new Set([
  * [bracketed] names as violet refs — mirroring how they print on the card.
  */
 function formatEffect(text: string): ReactNode {
-  return text.split(/(\[[^\]]+\]|<[^>]+>)/g).map((part, i) => {
-    const keyword = part.match(/^<(.+)>$/);
+  return text.split(/(\[[^\]]+\]|[<＜][^>＞]+[>＞])/g).map((part, i) => {
+    const keyword = part.match(/^[<＜](.+)[>＞]$/);
     if (keyword) return <span key={i} className="kw">{keyword[1] ?? ''}</span>;
     const match = part.match(/^\[(.+)\]$/);
     if (!match) return part;

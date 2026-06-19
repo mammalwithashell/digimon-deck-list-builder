@@ -30,7 +30,10 @@
      via overflow-y, which only engages when its ancestors are
      height-constrained. With min-height the .bld 1fr row sizes to the
      full card-pool content and overflow:hidden clips it unscrollably. */
-  height: calc(var(--app-vh100, 100vh) - 56px);
+  /* Fill the Layout main. (Was `--app-vh100 - 56px` for the legacy top nav,
+     which is removed on desktop — that left a strip of the teal desktop
+     showing below the builder.) */
+  height: 100%;
   background:
     radial-gradient(ellipse at 50% 0%, rgba(58, 166, 255, 0.08), transparent 50%),
     var(--bld-bg-0);
@@ -1628,12 +1631,22 @@
 [data-theme="light"] .deck-builder-app .bld-filters,
 [data-theme="light"] .deck-builder-page .bld-preview,
 [data-theme="light"] .deck-builder-app .bld-preview,
-[data-theme="light"] .deck-builder-page .bld-pool,
-[data-theme="light"] .deck-builder-app .bld-pool,
 [data-theme="light"] .deck-builder-page .bld-deck,
 [data-theme="light"] .deck-builder-app .bld-deck {
   border-color: transparent;
   background: var(--surface);
+  box-shadow: var(--bevel-shadow);
+}
+
+/* Page + bottom read as beige; only the card browser keeps the teal desktop. */
+[data-theme="light"] .deck-builder-page,
+[data-theme="light"] .deck-builder-app {
+  --bld-bg-0: var(--surface);
+}
+[data-theme="light"] .deck-builder-page .bld-pool,
+[data-theme="light"] .deck-builder-app .bld-pool {
+  border-color: transparent;
+  background: var(--surface-bg);
   box-shadow: var(--bevel-shadow);
 }
 [data-theme="light"] .deck-builder-page select,
