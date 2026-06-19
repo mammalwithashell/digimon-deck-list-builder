@@ -13,7 +13,7 @@
   --lib-good: var(--good);
   --lib-warn: var(--warn);
   --lib-danger: var(--danger);
-  min-height: calc(var(--app-vh100, 100vh) - 56px);
+  height: 100%;
   background:
     radial-gradient(ellipse at 48% 0%, rgba(56, 165, 255, 0.12), transparent 44%),
     linear-gradient(180deg, #080a0e, #07080b);
@@ -125,7 +125,7 @@
 }
 
 .library-shell {
-  height: calc(var(--app-vh100, 100vh) - 114px);
+  height: calc(100% - 58px);
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr) 320px;
   min-height: 0;
@@ -300,7 +300,7 @@
 }
 
 .library-kicker {
-  color: #ffb05a;
+  color: var(--lib-accent);
   font-family: "JetBrains Mono", monospace;
   letter-spacing: 0.18em;
   font-size: 12px;
@@ -314,7 +314,7 @@
 
 .library-hero p {
   margin: 0;
-  color: rgba(245, 241, 232, 0.62);
+  color: var(--lib-muted);
 }
 
 .library-hero-actions {
@@ -323,7 +323,7 @@
 }
 
 .library-command {
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--lib-line-2);
   color: var(--lib-text);
   text-decoration: none;
   padding: 10px 12px;
@@ -816,4 +816,59 @@
     margin-top: 14px;
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Light "Adventure '99" — parchment Win95 chrome on the teal desktop.
+   Dark "Digi-OS" is the base style above; here we only re-skin for light.
+   The page itself stays teal; field/pill fills flip to parchment by
+   redefining the local --lib-bg (used only for fills, not the page bg).
+   ────────────────────────────────────────────────────────────────────── */
+[data-theme="light"] .deck-library-page {
+  --lib-bg: var(--surface-raised);
+  background: var(--surface-bg);
+}
+
+/* Chrome bars become opaque parchment panels (the card grid keeps the
+   teal desktop showing through, matching the launcher / deck builder). */
+[data-theme="light"] .library-topbar,
+[data-theme="light"] .library-sidebar,
+[data-theme="light"] .library-detail,
+[data-theme="light"] .library-banner,
+[data-theme="light"] .library-empty-banner,
+[data-theme="light"] .library-hero,
+[data-theme="light"] .library-toolbar {
+  background: var(--lib-panel);
+}
+
+/* Buttons, segmented control, and deck tiles get the raised Win95 bevel. */
+[data-theme="light"] .library-actions button,
+[data-theme="light"] .library-banner-actions button,
+[data-theme="light"] .library-empty-banner button,
+[data-theme="light"] .library-quick button,
+[data-theme="light"] .library-command,
+[data-theme="light"] .library-segment,
+[data-theme="light"] .library-card {
+  border-color: transparent;
+  box-shadow: var(--bevel-shadow);
+}
+
+/* Selected tile keeps its bevel but gains an accent ring so selection
+   still reads (the base orange glow is invisible on parchment). */
+[data-theme="light"] .library-card.selected {
+  box-shadow: var(--bevel-shadow), 0 0 0 2px var(--lib-accent);
+}
+
+/* Search + selects read as inset/sunken parchment fields. */
+[data-theme="light"] .library-search input,
+[data-theme="light"] .library-toolbar select,
+[data-theme="light"] .library-quick select {
+  border-color: var(--lib-line);
+  box-shadow: inset 1.5px 1.5px 0 var(--bevel-lo), inset -1px -1px 0 var(--bevel-hi);
+}
+
+/* Square off the rounded format pill to match the angular chrome. */
+[data-theme="light"] .library-format-pill,
+[data-theme="light"] .library-pills .library-format-pill {
+  border-radius: 0;
 }
