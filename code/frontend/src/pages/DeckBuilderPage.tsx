@@ -542,15 +542,16 @@ export function DeckBuilderPage() {
                       <BuilderCardImage card={previewCard} />
                       {previewCard.play_cost && <span className="cost">{previewCard.play_cost}</span>}
                       {previewCard.level && <span className="lvl">L{previewCard.level}</span>}
-                      <span className="nm">{previewCard.name}</span>
-                      <span className="id">{previewCard.cardnumber}</span>
                     </div>
                   </div>
                   <div className="bld-preview-meta">
-                    <div className="row"><span className="k">SET</span><span className="v">{previewCard.set_name || '-'}</span></div>
                     <div className="row"><span className="k">RARITY</span><span className="v">{previewCard.cardrarity || '-'}</span></div>
                     <div className="row"><span className="k">TYPE</span><span className="v">{previewCard.type}</span></div>
                     <div className="row"><span className="k">IN DECK</span><span className="v">x{cardCount([...mainDeck, ...eggDeck], previewCard.cardnumber)}</span></div>
+                  </div>
+                  <div className="bld-preview-title">
+                    <h5 className="nm">{previewCard.name}</h5>
+                    <div className="sub"><span className="set">{previewCard.set_name || '-'}</span><span className="id">{previewCard.cardnumber}</span></div>
                   </div>
                   <div className="bld-preview-effect"><h6>MAIN EFFECT</h6><p>{previewCard.maineffect || 'No main effect text loaded.'}</p></div>
                   {previewCard.soureeffect && <div className="bld-preview-effect"><h6 className="opp">INHERITED EFFECT</h6><p>{previewCard.soureeffect}</p></div>}

@@ -93,20 +93,20 @@
 
 /* @tokens:light:start */
 [data-theme="light"] {
-  /* surfaces */
-  --surface-bg: #d9d0b4;
+  /* surfaces — teal "digital world" desktop, parchment windows (Win95 ref) */
+  --surface-bg: #1c8a8a;
   --surface: #cbc6af;
-  --surface-raised: #e6e1c9;
+  --surface-raised: #e7e2d2;
   --surface-sunken: #bdb89f;
   --screen-bg: #0a0a0a;
-  --screen-line: rgba(0, 190, 210, 0.16);
+  --screen-line: rgba(28, 138, 138, 0.32);
   --screen-ink: #e6efe8;
 
-  /* ink */
-  --ink-0: #1a1a14;
+  /* ink — darkened for contrast on parchment (Win95 ref) */
+  --ink-0: #1b1a14;
   --ink-1: #3a382c;
-  --ink-2: #5f5b48;
-  --ink-3: #857f66;
+  --ink-2: #54513f;
+  --ink-3: #6f6a52;
 
   /* lines */
   --line-0: #b3ad92;
@@ -139,7 +139,7 @@
   --bevel-lo: #7a7560;
   --bevel-shadow: inset 1.5px 1.5px 0 var(--bevel-hi), inset -2px -2px 0 var(--bevel-lo);
   --scanline-opacity: 0;
-  --grid-line: rgba(0, 0, 0, 0.045);
+  --grid-line: rgba(0, 0, 0, 0.08);
   --shadow-glow: none;
 
   /* fonts */

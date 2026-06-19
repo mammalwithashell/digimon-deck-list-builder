@@ -75,7 +75,7 @@
   text-decoration: none;
   text-transform: uppercase;
   transition: background 0.15s, border-color 0.15s, color 0.15s, opacity 0.15s;
-  clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+  clip-path: polygon(var(--frame-cut) 0, 100% 0, 100% calc(100% - var(--frame-cut)), calc(100% - var(--frame-cut)) 100%, 0 100%, 0 var(--frame-cut));
 }
 
 .deck-builder-page .btn:hover {
@@ -303,7 +303,7 @@
   min-width: 60px;
   padding: 6px 12px;
   border-right: 1px solid var(--bld-line-2);
-  color: var(--bld-ink-3);
+  color: var(--bld-ink-2);
   font-family: var(--bld-mono);
   font-size: 9px;
   letter-spacing: 0.14em;
@@ -608,7 +608,7 @@
 
 .deck-builder-page .bld-preview-meta .row .k,
 .deck-builder-app .bld-preview-meta .row .k {
-  color: var(--bld-ink-3);
+  color: var(--bld-ink-2);
   font-size: 9px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -617,6 +617,35 @@
 .deck-builder-page .bld-preview-meta .row .v,
 .deck-builder-app .bld-preview-meta .row .v {
   color: var(--bld-ink-0);
+}
+
+.deck-builder-page .bld-preview-title,
+.deck-builder-app .bld-preview-title {
+  padding: 10px 14px 2px;
+}
+.deck-builder-page .bld-preview-title .nm,
+.deck-builder-app .bld-preview-title .nm {
+  margin: 0;
+  color: var(--bld-ink-0);
+  font-family: var(--bld-display);
+  font-size: 20px;
+  line-height: 1.05;
+  letter-spacing: 0.02em;
+}
+.deck-builder-page .bld-preview-title .sub,
+.deck-builder-app .bld-preview-title .sub {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 3px;
+  color: var(--bld-ink-2);
+  font-family: var(--bld-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+}
+.deck-builder-page .bld-preview-title .id,
+.deck-builder-app .bld-preview-title .id {
+  color: var(--bld-player);
 }
 
 .deck-builder-page .bld-preview-effect,
