@@ -137,26 +137,14 @@ effects:
             - if:
                 condition: { binding_present: hpick }
                 then:
-                  - select_effect_choice:
-                      bind_as: hpos
-                      labels: ["Top of security", "Bottom of security"]
-                      prompt: "Place as top or bottom security card?"
-                  - if:
-                      condition: { equals: [hpos, 0] }
-                      then:
-                        - place_on_security:
-                            of: you
-                            source: { card: { binding: hpick, zone: hand } }
-                            position: top
-                            face_up: false
-                  - if:
-                      condition: { equals: [hpos, 1] }
-                      then:
-                        - place_on_security:
-                            of: you
-                            source: { card: { binding: hpick, zone: hand } }
-                            position: bottom
-                            face_up: false
+                  # collapse §3.2 — the top/bottom choice is the verb's own
+                  # `position: choice` (one step instead of select_effect_choice
+                  # + two position-gated branches).
+                  - place_on_security:
+                      of: you
+                      source: { card: { binding: hpick, zone: hand } }
+                      position: choice
+                      face_up: false
       # ── From your Digimon's digivolution cards ──
       - if:
           condition: { equals: [zone, 1] }

@@ -631,6 +631,53 @@ pub fn try_install(
             );
             selection_result(ctx)
         }
+        // collapse §3.1/§3.2 — `place_on_security` (card source) with
+        // `position: choice`. Same binary-pick pattern as place_remainder:
+        // install a top/bottom EffectChoice, then re-run the placement at the
+        // concrete end through run_steps so the tail parks correctly. Drives
+        // BT25-038's hand path (collapsing its manual select_effect_choice +
+        // two branches into one step). Non-Choice positions fall through to the
+        // synchronous runner.
+        CompiledStep::PlaceOnSecurity {
+            of,
+            source,
+            position: CompiledStackPosition::Choice,
+            face_up,
+        } => {
+            let mut branch = |pos: CompiledStackPosition| {
+                let mut t = vec![CompiledStep::PlaceOnSecurity {
+                    of: *of,
+                    source: source.clone(),
+                    position: pos,
+                    face_up: *face_up,
+                }];
+                t.extend_from_slice(tail);
+                Arc::new(t)
+            };
+            let tail_top = branch(CompiledStackPosition::Top);
+            let tail_bottom = branch(CompiledStackPosition::Bottom);
+            let trigger_context = ctx.game.current_trigger_context.clone();
+            let runtime = runtime.clone();
+            ctx.select_effect_choice(
+                "Place as the top or bottom security card",
+                vec![
+                    "Top of security".to_string(),
+                    "Bottom of security".to_string(),
+                ],
+                move |cb_ctx, idx| {
+                    let branch = if idx == 0 { &tail_top } else { &tail_bottom };
+                    let mut b = bindings.clone();
+                    run_tail_preserving_trigger_context(
+                        cb_ctx,
+                        trigger_context,
+                        branch,
+                        &mut b,
+                        &runtime,
+                    );
+                },
+            );
+            selection_result(ctx)
+        }
         CompiledStep::SelectRevealBuckets {
             from,
             buckets,
