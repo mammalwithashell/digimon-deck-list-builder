@@ -252,3 +252,124 @@
 }
 [data-theme="dark"] .ds-themeswitch__knob { left: 1px; background: var(--accent); box-shadow: 0 0 6px var(--accent-glow); }
 [data-theme="light"] .ds-themeswitch__knob { left: 16px; background: var(--accent); }
+
+/* ── Screen (inset LCD/CRT surface) ────────────────────────────────────── */
+.ds-screen {
+  background-color: var(--screen-bg);
+  background-image:
+    repeating-linear-gradient(0deg, var(--screen-line) 0 1px, transparent 1px 11px),
+    repeating-linear-gradient(90deg, var(--screen-line) 0 1px, transparent 1px 11px);
+  color: var(--screen-ink);
+  padding: 8px;
+}
+
+/* ── NavRail ───────────────────────────────────────────────────────────── */
+.ds-navrail { display: flex; flex-direction: column; background: var(--surface); }
+.ds-navrail__item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 8px 12px; border: 0; background: transparent; text-align: left;
+  font-family: var(--font-mono); font-size: var(--text-xs);
+  letter-spacing: var(--track-wide); text-transform: uppercase;
+  color: var(--ink-2); cursor: pointer; text-decoration: none;
+}
+.ds-navrail__item:hover { color: var(--ink-0); background: var(--surface-raised); }
+.ds-navrail__item--active { color: var(--ink-0); background: var(--surface-raised); }
+[data-theme="dark"] .ds-navrail { border-right: var(--border-w) solid var(--line-1); }
+[data-theme="dark"] .ds-navrail__item--active { box-shadow: inset 2px 0 0 var(--accent); }
+[data-theme="light"] .ds-navrail { box-shadow: inset -2px 0 0 var(--bevel-lo); }
+[data-theme="light"] .ds-navrail__item--active { background: var(--accent); color: var(--accent-ink); }
+
+/* ── StatChip ──────────────────────────────────────────────────────────── */
+.ds-statchip {
+  display: inline-flex; flex-direction: column; gap: 2px; padding: 5px 8px;
+  font-family: var(--font-pixel); font-size: var(--text-xs); color: var(--ink-0);
+}
+.ds-statchip__label { color: var(--ink-3); letter-spacing: var(--track-wide); }
+.ds-statchip--signal .ds-statchip__value { color: var(--signal); }
+[data-theme="dark"] .ds-statchip { border: 1px solid var(--line-1); background: rgba(57, 255, 136, 0.04); }
+[data-theme="light"] .ds-statchip { box-shadow: var(--bevel-shadow); background: var(--surface-raised); }
+
+/* ── Badge ─────────────────────────────────────────────────────────────── */
+.ds-badge {
+  display: inline-block; padding: 2px 7px;
+  font-family: var(--font-mono); font-size: var(--text-xs);
+  letter-spacing: var(--track-tight); text-transform: uppercase; color: var(--ink-1);
+}
+.ds-badge--player { color: var(--player-2); }
+.ds-badge--opp { color: var(--opp-2); }
+.ds-badge--good { color: var(--good); }
+.ds-badge--warn { color: var(--warn); }
+.ds-badge--danger { color: var(--danger); }
+[data-theme="dark"] .ds-badge { border: 1px solid var(--line-1); }
+[data-theme="dark"] .ds-badge--player { border-color: var(--player); background: var(--player-soft); }
+[data-theme="dark"] .ds-badge--opp { border-color: var(--opp); background: var(--opp-soft); }
+[data-theme="light"] .ds-badge { box-shadow: var(--bevel-shadow); background: var(--surface-raised); color: var(--ink-0); }
+[data-theme="light"] .ds-badge--player { background: var(--player); color: #3a1402; box-shadow: none; }
+[data-theme="light"] .ds-badge--opp { background: var(--opp); color: #ffffff; box-shadow: none; }
+
+/* ── DeckColorBadge ────────────────────────────────────────────────────── */
+.ds-deckcolor { position: relative; width: 36px; height: 50px; overflow: hidden; background: var(--surface-sunken); display: block; }
+.ds-deckcolor__letter {
+  position: absolute; bottom: 1px; right: 2px; z-index: 1;
+  font-family: var(--font-mono); font-size: var(--text-xs);
+  color: #fff; background: rgba(0, 0, 0, 0.7); padding: 0 3px;
+}
+[data-theme="dark"] .ds-deckcolor { border: 1px solid var(--line-1); }
+[data-theme="light"] .ds-deckcolor { box-shadow: var(--bevel-shadow); }
+
+/* ── Card sleeve / Digimon sprite assets (theme-stable) ────────────────── */
+.ds-sleeve { display: block; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; }
+.ds-sleeve--fallback { background: var(--surface-sunken); background-image: repeating-linear-gradient(45deg, var(--line-1) 0 3px, transparent 3px 7px); }
+.ds-sprite { display: block; image-rendering: pixelated; object-fit: contain; }
+.ds-sprite--fallback {
+  background: var(--surface-sunken);
+  background-image:
+    repeating-linear-gradient(0deg, var(--line-0) 0 1px, transparent 1px 6px),
+    repeating-linear-gradient(90deg, var(--line-0) 0 1px, transparent 1px 6px);
+}
+
+/* ── CardBack / CardTile ───────────────────────────────────────────────── */
+.ds-cardback { position: relative; aspect-ratio: 5 / 7; overflow: hidden; background: var(--surface-sunken); }
+[data-theme="dark"] .ds-cardback { border: 1px solid var(--line-1); }
+[data-theme="light"] .ds-cardback { box-shadow: var(--bevel-shadow); }
+.ds-cardtile { position: relative; aspect-ratio: 5 / 7; overflow: hidden; background: var(--surface-raised); display: flex; flex-direction: column; }
+[data-theme="dark"] .ds-cardtile { border: 1px solid var(--line-1); }
+[data-theme="light"] .ds-cardtile { box-shadow: var(--bevel-shadow); }
+.ds-cardtile__art { flex: 1; display: grid; place-items: center; min-height: 0; }
+.ds-cardtile__name {
+  font-family: var(--font-pixel); font-size: var(--text-xs); padding: 3px 5px;
+  color: var(--ink-0); background: var(--surface);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* ── AnalyzerFrame ─────────────────────────────────────────────────────── */
+.ds-analyzer { min-width: 0; padding: 7px; }
+.ds-analyzer__brand { display: block; text-align: center; font-family: var(--font-pixel); font-size: var(--text-sm); padding: 4px; letter-spacing: var(--track-tight); }
+.ds-analyzer__brand .ds-b-light { display: none; }
+[data-theme="dark"] .ds-analyzer__brand { color: var(--accent); text-align: left; }
+[data-theme="light"] .ds-analyzer__brand {
+  /* DIGITALMONSTER signature gradient — intentional fixed brand element. */
+  background: linear-gradient(90deg, #f4d11e, #d61f26);
+  color: #1a1208;
+}
+[data-theme="light"] .ds-analyzer__brand .ds-b-dark { display: none; }
+[data-theme="light"] .ds-analyzer__brand .ds-b-light { display: inline; }
+.ds-analyzer__name { display: block; text-align: center; font-family: var(--font-pixel); font-size: var(--text-xs); padding: 2px; margin-top: 2px; color: var(--screen-ink); }
+[data-theme="light"] .ds-analyzer__name { background: #dfdfe4; color: #111; }
+.ds-analyzer__row { display: flex; gap: 8px; margin-top: 6px; }
+.ds-analyzer__art { width: 88px; min-height: 60px; display: grid; place-items: center; background: rgba(0, 0, 0, 0.28); }
+.ds-analyzer__stats { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+/* ── MemoryGauge ───────────────────────────────────────────────────────── */
+.ds-memgauge { display: inline-flex; align-items: center; gap: 6px; font-family: var(--font-mono); }
+.ds-memgauge__label { font-size: var(--text-xs); letter-spacing: var(--track-wide); }
+.ds-memgauge__pips { display: inline-flex; gap: 3px; }
+.ds-memgauge__pip { width: 12px; height: 16px; background: var(--surface-sunken); }
+[data-theme="dark"] .ds-memgauge__pip { border: 1px solid var(--line-0); }
+[data-theme="light"] .ds-memgauge__pip { box-shadow: inset 1px 1px 0 var(--bevel-lo), inset -1px -1px 0 var(--bevel-hi); }
+.ds-memgauge__pip--player { background: var(--player); }
+.ds-memgauge__pip--opp { background: var(--opp); }
+[data-theme="dark"] .ds-memgauge__pip--player { border-color: var(--player); }
+[data-theme="dark"] .ds-memgauge__pip--opp { border-color: var(--opp); }
+[data-theme="light"] .ds-memgauge__pip--player { box-shadow: inset 1px 1px 0 var(--player-2); }
+[data-theme="light"] .ds-memgauge__pip--opp { box-shadow: inset 1px 1px 0 var(--opp-2); }

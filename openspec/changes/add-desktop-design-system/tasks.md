@@ -22,28 +22,28 @@
 - [x] 4.1 Implement `Backdrop` (dark: scanlines + grid-floor + vignette; light: beige desktop + dot/grid), driven by `[data-theme]` CSS over tokens.
 - [x] 4.2 Implement `Frame`/`Panel` (dark: glow border + `clip-path` cut; light: raised box-shadow bevel + square corners).
 - [x] 4.3 Implement `TitleBar`, `Window` (= TitleBar + body), and `StatusBar`.
-- [ ] 4.4 Implement `NavRail` and `Screen` (inset LCD/CRT surface).
+- [x] 4.4 Implement `NavRail` and `Screen` (inset LCD/CRT surface).
 - [x] 4.5 Implement `Button` with `primary` / `ghost` / `accent` / `danger` variants.
-- [ ] 4.6 Confirm all structural primitives reference only role tokens and contain no theme-conditional chrome at the call site.
+- [x] 4.6 Confirm all structural primitives reference only role tokens and contain no theme-conditional chrome at the call site.
 
 ## 5. Primitive component library — domain
 
-- [ ] 5.1 Implement `AnalyzerFrame` with a Digimon-sprite art slot + stat-chip stats (dark: phosphor terminal readout; light: DIGITALMONSTER frame).
-- [ ] 5.2 Implement `StatChip`, `Badge`, and `DeckColorBadge`.
-- [ ] 5.3 Implement `CardTile`, `CardBack`, and `ThemeSwitch` (CRT power-toggle in dark, Win95 checkbox in light). [ThemeSwitch done; CardTile/CardBack pending]
-- [ ] 5.4 Restyle the existing `MemoryGauge` to consume tokens and render in both themes with theme-stable player/opponent colors.
+- [x] 5.1 Implement `AnalyzerFrame` with a Digimon-sprite art slot + stat-chip stats (dark: phosphor terminal readout; light: DIGITALMONSTER frame).
+- [x] 5.2 Implement `StatChip`, `Badge`, and `DeckColorBadge`.
+- [x] 5.3 Implement `CardTile`, `CardBack`, and `ThemeSwitch` (CRT power-toggle in dark, Win95 checkbox in light).
+- [ ] 5.4 Restyle the existing `MemoryGauge` to consume tokens and render in both themes with theme-stable player/opponent colors. [token-based MemoryGauge primitive built; board adoption happens in group 9]
 
 ## 6. Vendored asset layer
 
-- [ ] 6.1 Vendor the card sleeves (from WE-Kaito's digimon-tcg-simulator) and Digimon pixel sprites (from Project Drasil) under `design/assets/{sleeves,sprites}/`, compressed; vet the subset against the bundle-size budget.
-- [ ] 6.2 Author `design/assets/manifest.ts` mapping logical id → asset reference + name + source/credit; expose typed lookups.
-- [ ] 6.3 Implement `CardSleeve` and `DigimonSprite` slot components that resolve from the manifest, render with `image-rendering: pixelated`, and fall back procedurally on unknown ids (no broken images).
-- [ ] 6.4 Verify assets are theme-stable (identical pixels across a theme switch).
-- [ ] 6.5 Add `CREDITS` (in-app credits surface + repo `CREDITS.md`) attributing WE-Kaito and Project Drasil; make the surface reachable in-app.
+- [x] 6.1 Vendor the card sleeves (from WE-Kaito's digimon-tcg-simulator) and Digimon pixel sprites (from Project Drasil) under `design/assets/{sleeves,sprites}/`, compressed; vet the subset against the bundle-size budget. [starter pack: 9 sleeves of 97 upstream + 1 sprite; bulk-add later]
+- [x] 6.2 Author `design/assets/manifest.ts` mapping logical id → asset reference + name + source/credit; expose typed lookups.
+- [x] 6.3 Implement `CardSleeve` and `DigimonSprite` slot components that resolve from the manifest, render with `image-rendering: pixelated`, and fall back procedurally on unknown ids (no broken images).
+- [x] 6.4 Verify assets are theme-stable (identical pixels across a theme switch). [rendered as `<img>` with no theme filter; visual QA in 12.x]
+- [x] 6.5 Add `CREDITS` (in-app credits surface + repo `CREDITS.md`) attributing WE-Kaito and Project Drasil; make the surface reachable in-app.
 
 ## 7. In-app style guide
 
-- [ ] 7.1 Add `design/StyleGuidePage.tsx` rendering every primitive in both dark and light themes side by side. [scaffolded with current primitives; grows as 4.4/5.x land]
+- [x] 7.1 Add `design/StyleGuidePage.tsx` rendering every primitive in both dark and light themes side by side.
 - [x] 7.2 Register the `/style-guide` route gated by `VITE_BUILD_TARGET === 'desktop'` (lazy-loaded; absent from non-desktop builds).
 
 ## 8. Apply to the launcher
