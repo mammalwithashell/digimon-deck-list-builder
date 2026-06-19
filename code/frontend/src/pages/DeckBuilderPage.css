@@ -209,7 +209,7 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   align-items: center;
-  gap: 18px;
+  gap: 12px;
   padding: 0 18px;
   border-bottom: 1px solid var(--bld-line);
   background: var(--bld-bg-1);
@@ -228,6 +228,22 @@
 .deck-builder-page .bld-top .right,
 .deck-builder-app .bld-top .right {
   justify-content: flex-end;
+}
+
+/* Transient status notice — single-line + truncate so it never wraps into
+   the counts block. */
+.deck-builder-page .bld-notice,
+.deck-builder-app .bld-notice {
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--bld-warn);
+  font-family: var(--bld-mono);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .deck-builder-page .bld-top .back,
@@ -304,8 +320,8 @@
 
 .deck-builder-page .bld-count,
 .deck-builder-app .bld-count {
-  min-width: 60px;
-  padding: 6px 12px;
+  min-width: 44px;
+  padding: 4px 7px;
   border-right: 1px solid var(--bld-line-2);
   color: var(--bld-ink-2);
   font-family: var(--bld-mono);
