@@ -89,7 +89,7 @@ export function App() {
               <Route path="/play/matching" element={<MatchingPage />} />
               <Route path="/play/room" element={<RoomChooserPage />} />
               <Route path="/play/room/:gameId" element={<RoomLobbyPage />} />
-              <Route path="/game/:id?" element={<GamePage />} />
+              <Route path="/game/:id" element={<GamePage />} />
               <Route path="/deckbuilder" element={<DeckLibraryPage />} />
               <Route path="/deckbuilder/new" element={<DeckBuilderPage />} />
               <Route path="/deckbuilder/:id" element={<DeckBuilderPage />} />

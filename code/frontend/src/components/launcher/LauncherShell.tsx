@@ -43,7 +43,6 @@ export function LauncherShell({
               <Link className="launcher-nav-item" to="/models">AI Models</Link>
               <Link className="launcher-nav-item" to="/lobby">Online Lobby</Link>
               <Link className="launcher-nav-item" to="/deckbuilder/new?import=1">Import</Link>
-              <Link className="launcher-nav-item" to="/game">Sandbox</Link>
               <Link className="launcher-nav-item" to="/settings/graphics">Graphics</Link>
             </nav>
             <div className="launcher-side-foot">
