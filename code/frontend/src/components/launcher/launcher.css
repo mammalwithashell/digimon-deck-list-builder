@@ -200,6 +200,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 24px;
+  background: var(--bg-1);
   border-bottom: 1px solid var(--line);
   font-family: var(--mono);
   font-size: 10px;
@@ -293,7 +294,9 @@
 }
 
 .launcher-action.primary {
-  background: linear-gradient(180deg, rgba(255, 122, 24, 0.1), rgba(255, 122, 24, 0.02));
+  /* Layer the warm tint over an OPAQUE surface so the desktop (teal in light)
+     doesn't bleed through — the primary action reads as beige, not teal. */
+  background: linear-gradient(180deg, rgba(255, 122, 24, 0.1), rgba(255, 122, 24, 0.02)), var(--bg-1);
   border-color: var(--player);
   box-shadow: 0 0 0 1px var(--player), 0 0 24px rgba(255, 122, 24, 0.18);
 }

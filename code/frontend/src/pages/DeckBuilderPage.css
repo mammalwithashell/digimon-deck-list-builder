@@ -676,8 +676,22 @@
 .deck-builder-app .bld-preview-effect p {
   margin: 0 0 8px;
   color: var(--bld-ink-1);
+  font-family: "JetBrains Mono", var(--bld-mono);
   font-size: 11px;
-  line-height: 1.5;
+  line-height: 1.6;
+}
+
+/* Mono Body card-text tokens — gold-on-black timings + violet name refs. */
+.deck-builder-page .bld-preview-effect .tm,
+.deck-builder-app .bld-preview-effect .tm {
+  background: #1a1813;
+  color: #f4c81f;
+  font-weight: 700;
+  padding: 0 5px;
+}
+.deck-builder-page .bld-preview-effect .rf,
+.deck-builder-app .bld-preview-effect .rf {
+  color: #7d6bd6;
 }
 
 .deck-builder-page .bld-pool,

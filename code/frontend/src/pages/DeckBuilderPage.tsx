@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { ImportExport } from '@/components/deckbuilder/ImportExport';
 import {
@@ -38,6 +38,34 @@ const DEFAULT_FILTERS: BuilderCardFilters = {
   securityOnly: false,
   legalOnly: false,
 };
+
+// Bracketed timing/trigger phrases that render as gold-on-black pills in the
+// analyzer (Mono Body styling). Other [bracketed] tokens are name/keyword refs.
+const EFFECT_TIMINGS = new Set([
+  'when digivolving', 'on play', 'on deletion', 'when attacking', 'end of attack',
+  'start of your main phase', 'end of your main phase', 'start of your turn',
+  'end of your turn', "start of opponent's turn", "end of opponent's turn",
+  'all turns', 'your turn', "opponent's turn", 'main', 'security', 'counter',
+  'when destroyed', 'once per turn', 'start of main phase', 'end of all turns',
+]);
+
+/**
+ * Render card effect text with Mono Body highlighting: known timing phrases as
+ * gold-on-black pills, other [bracketed] names/keywords as violet refs.
+ */
+function formatEffect(text: string): ReactNode {
+  return text.split(/(\[[^\]]+\])/g).map((part, i) => {
+    const match = part.match(/^\[(.+)\]$/);
+    if (!match) return part;
+    const inner = match[1] ?? '';
+    const norm = inner.trim().toLowerCase().replace(/[‘’]/g, "'");
+    return EFFECT_TIMINGS.has(norm) ? (
+      <span key={i} className="tm">{inner}</span>
+    ) : (
+      <span key={i} className="rf">[{inner}]</span>
+    );
+  });
+}
 
 function cardButtonName(card: DigimonCardData): string {
   return `${card.name} ${card.cardnumber}${card.isAltArt ? ' alt art' : ''}`;
@@ -553,8 +581,8 @@ export function DeckBuilderPage() {
                     <h5 className="nm">{previewCard.name}</h5>
                     <div className="sub"><span className="set">{previewCard.set_name || '-'}</span><span className="id">{previewCard.cardnumber}</span></div>
                   </div>
-                  <div className="bld-preview-effect"><h6>MAIN EFFECT</h6><p>{previewCard.maineffect || 'No main effect text loaded.'}</p></div>
-                  {previewCard.soureeffect && <div className="bld-preview-effect"><h6 className="opp">INHERITED EFFECT</h6><p>{previewCard.soureeffect}</p></div>}
+                  <div className="bld-preview-effect"><h6>MAIN EFFECT</h6><p>{formatEffect(previewCard.maineffect || 'No main effect text loaded.')}</p></div>
+                  {previewCard.soureeffect && <div className="bld-preview-effect"><h6 className="opp">INHERITED EFFECT</h6><p>{formatEffect(previewCard.soureeffect)}</p></div>}
                 </>
               ) : (
                 <div className="bld-empty">SEARCH OR SELECT A CARD</div>
