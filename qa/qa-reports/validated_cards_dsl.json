@@ -6608,21 +6608,14 @@
     },
     "BT25-029": {
       "card_name": "MirageGaogamon",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
-      "archetype": "thomas-data-squad",
-      "notes": "BLOCKED: clause 'When effects add cards to your opponent's hand OR trash cards from under your Tamers, unsuspend' — the OnAddToHand half is inert (engine timing never enqueued). Reboot/Blocker/Evade + alt-digivolve + WD/WA bounce-then-trash-FD-return-lowest are expressible. See docs/RUST_ENGINE_GAPS.md (OnAddToHand inert).",
-      "patterns": [
-        "reboot",
-        "blocker",
-        "evade",
-        "alt-digivolve",
-        "WD/WA-shared",
-        "tamer-facedown-stash",
-        "OnAddToHand-BLOCKED"
-      ]
+      "validated_date": "2026-06-18",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-029.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_029.rs",
+      "notes": "TDD-first. Reboot/Blocker/Evade; WD/WA may-bounce opp Lv<=5 then independently-optional trash-FD -> mandatory bounce opp lowest-level (level_matches_aggregate lowest_level, already wired). Shared-OPT All-Turns (opp-hand-gain-by-effect OR own-Tamer-source-trash) -> may unsuspend self. NO engine change needed (the logged G-DSL-FIELD-SELECTOR-LOWEST-LEVEL was a misdiagnosis - the AggregateSelector path covers it); uses the new optional-trash + continue_on_decline. 8/8 green."
     },
     "BT25-104": {
       "card_name": "ShineGreymon: Burst Mode",
