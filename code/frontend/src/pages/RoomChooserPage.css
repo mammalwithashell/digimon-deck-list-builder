@@ -121,6 +121,16 @@
   gap: 12px;
 }
 
+/* Light theme: the kicker washes out on the teal desktop, and the room-code
+   field's black fill clashes with the parchment card — use dark ink + a
+   sunken parchment field. */
+[data-theme="light"] .room-choose-kicker {
+  color: var(--ink-1);
+}
+[data-theme="light"] .room-choose-card input {
+  background: var(--surface-sunken);
+}
+
 @media (max-width: 780px) {
   .room-choose-main {
     padding: 24px 18px;

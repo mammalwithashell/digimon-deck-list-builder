@@ -334,6 +334,12 @@
   min-height: 60px;
 }
 
+/* Light theme: the room-code callout's faint orange tint reads teal-on-teal;
+   make it an opaque parchment panel so the code + label contrast. */
+[data-theme="light"] .room-code-card {
+  background: var(--surface-raised);
+}
+
 @media (max-width: 780px) {
   .room-main {
     padding: 24px 18px;
