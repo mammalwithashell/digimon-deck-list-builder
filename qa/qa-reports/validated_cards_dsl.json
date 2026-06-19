@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-06-16",
+  "last_updated": "2026-06-18",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -9821,6 +9821,17 @@
       "yaml_path": "code/digimon-engine/cards/ad1/AD1-021.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ad1/ad1_021.rs",
       "notes": "Authored TDD-first on the shared BEATBREAK substrate (#644); green in the full cards_behavioral regression."
+    },
+    "ST24-06": {
+      "card_name": "RizeGreymon",
+      "validated_date": "2026-06-18",
+      "report": "data-squad-archetype",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "DATA SQUAD",
+      "yaml_path": "code/digimon-engine/cards/st24/ST24-06.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st24/st24_06.rs",
+      "notes": "TDD-first on the BEATBREAK/Tamer-FD-stash substrate. -5000 DP + trash-2-FD -> play_or_use a DATA SQUAD card (play_or_use_cost_lte 5) for free; two alt-digivolve boxes (GeoGreymon name + Lv.4 DATA SQUAD); inherited ShineGreymon/DATA SQUAD doesnt-leave. 7/7 green."
     }
   }
 }

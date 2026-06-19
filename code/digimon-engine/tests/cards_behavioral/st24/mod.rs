@@ -6,6 +6,7 @@ mod st24_02;
 mod st24_03;
 mod st24_04;
 mod st24_05;
+mod st24_06;
 mod st24_07;
 mod st24_08;
 mod st24_09;
