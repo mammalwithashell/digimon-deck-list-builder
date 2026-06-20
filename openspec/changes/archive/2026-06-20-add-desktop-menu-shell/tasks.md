@@ -12,9 +12,9 @@
 
 ## 3. Routing
 
-- [ ] 3.1 In `App.tsx`, group the desktop menu routes (`/`, `/play*`, `/deckbuilder*`, `/patch-notes`, `/settings/graphics`, `/models`) under one `<Route element={<MenuShell/>}>`; keep `/game/:id` outside the group (full-bleed).
-- [ ] 3.2 Move the launcher's shell chrome out of `LauncherShell` into `MenuShell`; `LauncherPage` renders only its home content into the shell `<Outlet>` (content unchanged).
-- [ ] 3.3 Confirm the hosted-web (`!IS_DESKTOP`) routing and `NavBar` path are untouched.
+- [x] 3.1 In `App.tsx`, group the desktop menu routes (`/`, `/play*`, `/deckbuilder*`, `/patch-notes`, `/settings/graphics`, `/models`) under one `<Route element={<MenuShell/>}>`; keep `/game/:id` outside the group (full-bleed). (Split into `DesktopRoutes`/`WebRoutes`.)
+- [x] 3.2 Move the launcher's shell chrome out of `LauncherShell` into `MenuShell`; `LauncherPage` renders only its home content into the shell `<Outlet>` (content unchanged). `LauncherShell` deleted.
+- [x] 3.3 Confirm the hosted-web (`!IS_DESKTOP`) routing and `NavBar` path are untouched (web tree kept byte-for-byte).
 
 ## 4. Deck-library contextual sub-nav
 
