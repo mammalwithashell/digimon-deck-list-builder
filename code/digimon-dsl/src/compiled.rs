@@ -1991,6 +1991,16 @@ pub enum CompiledStep {
         /// bincode pack layout fixed — see reference_dsl_substrate_authoring_gotchas.
         #[serde(default)]
         bind_as: Option<String>,
+        /// Optional host predicate (`to: own_digimon` only) — the link card's
+        /// link requirement, so the host select never offers an illegal host
+        /// (EX11-027). `None` ⇒ any standing own Digimon. `#[serde(default)]`
+        /// for bincode-pack layout stability.
+        #[serde(default)]
+        host_filter: Option<CompiledPredicate>,
+        /// Exclude the effect's source permanent from host candidates ("1 of
+        /// your OTHER Digimon", EX11-027). `#[serde(default)]` for pack layout.
+        #[serde(default)]
+        exclude_source: bool,
     },
     Optional(Vec<CompiledStep>),
     Battle {

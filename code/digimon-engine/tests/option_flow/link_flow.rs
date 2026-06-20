@@ -2016,6 +2016,86 @@ effects:
     );
 }
 
+/// §4.5.2 — `link_cards { to: own_digimon }` honors `host_filter` (the link
+/// requirement) AND `exclude_source` ("1 of your OTHER Digimon"): the host
+/// select offers only own Digimon matching the predicate, never the effect's
+/// own source permanent — even when the source itself matches the filter.
+#[test]
+fn link_cards_host_filter_and_exclude_source() {
+    use digimon_engine::action::space::encode_attack;
+    let yaml = r#"
+card: HOSTFILT
+name: HostFilter
+kind: digimon
+effects:
+  - when: on_play
+    summary: "link 1 [Appmon] from hand to a [Marked] OTHER Digimon"
+    process:
+      - link_cards:
+          from: [hand]
+          filter: { trait_has: Appmon }
+          to: own_digimon
+          count: { up_to: 1 }
+          cost: free
+          host_filter: { trait_has: Marked }
+          exclude_source: true
+"#;
+    let mut r = DebugRunner::builder()
+        // The effect source ALSO carries [Marked], so only `exclude_source`
+        // (not `host_filter`) can drop it — proving the exclusion fires.
+        .add_card(traited_digimon("HOSTFILT", CardColor::Red, &["Marked"]))
+        .add_card(traited_digimon("HOST-OK", CardColor::Red, &["Marked"]))
+        .add_card(traited_digimon("HOST-NO", CardColor::Red, &[]))
+        .add_card(appmon_card("APPMON", CardColor::Red))
+        .hand(0, &["APPMON"])
+        .memory(5)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let src = r.place_on_field(0, "HOSTFILT", Some(0));
+    let host_ok = r.place_on_field(0, "HOST-OK", Some(0));
+    let _host_no = r.place_on_field(0, "HOST-NO", Some(0));
+    advance_to_main(&mut r);
+
+    r.game.fire_on_play(0, src.index as usize);
+
+    // Single source zone (hand) → straight to the card select; pick APPMON.
+    let card_action = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("hand card select installed")
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != digimon_engine::action::space::PASS)
+        .expect("APPMON candidate");
+    r.game.resolve_selection(0, card_action).expect("pick card");
+
+    // Host select: only HOST-OK is eligible (HOST-NO lacks [Marked]; HOSTFILT is
+    // the excluded source even though it carries [Marked]).
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("host select installed");
+    assert_eq!(
+        pending.valid_action_ids,
+        vec![encode_attack(0, host_ok.index as u16)],
+        "only the [Marked] OTHER Digimon (HOST-OK) is offered as a host"
+    );
+    r.game
+        .resolve_selection(0, encode_attack(0, host_ok.index as u16))
+        .expect("pick host");
+
+    assert_eq!(
+        r.game.player(0).battle_area[host_ok.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "APPMON linked onto HOST-OK"
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Gap 5 — predicated host-side `WhenWouldLink` cost reduction.
 //

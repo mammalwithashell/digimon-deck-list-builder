@@ -3151,6 +3151,22 @@ pub struct LinkCardsArgs {
     /// gate). Absent ⇒ no binding is recorded (the common terminal-link case).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bind_as: Option<String>,
+
+    /// Optional predicate restricting which own Digimon may HOST the link
+    /// (`to: own_digimon` only). The author encodes the link card's link
+    /// requirement here (e.g. `effect_text_contains: Maquinamon` for EX11-027,
+    /// whose `[Link]` condition is "host has [Maquinamon] in text") so the host
+    /// select never offers an illegal host. Absent ⇒ any standing own Digimon.
+    /// Mirrors DCGO `CanLinkToTargetPermanent`'s host-condition check.
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub host_filter: PredicateSpec,
+
+    /// When true (`to: own_digimon` only), the effect's own source permanent is
+    /// excluded from the host candidates — "link … to 1 of your OTHER Digimon"
+    /// (EX11-027). Mirrors DCGO `CanSelectLinkTarget`'s `permanent !=
+    /// card.PermanentOfThisCard()`. Default false ("1 of your Digimon").
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub exclude_source: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

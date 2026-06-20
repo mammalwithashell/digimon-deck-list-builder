@@ -57,6 +57,8 @@ pub fn try_install(
         cost,
         prompt,
         bind_as,
+        host_filter,
+        exclude_source,
     } = step
     else {
         return false;
@@ -70,6 +72,8 @@ pub fn try_install(
         cost: *cost,
         prompt: prompt.clone(),
         bind_as: bind_as.clone(),
+        host_filter: host_filter.clone(),
+        exclude_source: *exclude_source,
     });
 
     install_pick(ctx, spec, 0, Arc::new(tail.to_vec()), bindings, runtime.clone());
@@ -88,6 +92,13 @@ struct LinkCardsSpec {
     /// link in `attach_and_continue` (created lazily, so it stays absent after a
     /// full decline). `None` ⇒ no capture.
     bind_as: Option<String>,
+    /// Optional host predicate (`to: own_digimon`) — the link card's link
+    /// requirement, applied in `install_host_select` on top of the base
+    /// Digimon/Standard gate. `None` ⇒ any standing own Digimon.
+    host_filter: Option<CompiledPredicate>,
+    /// Exclude the effect's source permanent from host candidates ("other
+    /// Digimon", EX11-027).
+    exclude_source: bool,
 }
 
 impl LinkCardsSpec {
@@ -535,15 +546,51 @@ fn install_host_select(
     runtime: StepRuntime,
 ) {
     let player = ctx.player;
+    // §4.5.2 — the optional author host predicate (the link card's link
+    // requirement, e.g. EX11-027 "host has [Maquinamon] in text"). Evaluated
+    // against each candidate host on top of the base Digimon/Standard gate, so
+    // the select never offers an illegal host. `None` ⇒ any standing Digimon.
+    let auth_host_filter = spec.host_filter.clone();
+    let exclude_source = spec.exclude_source;
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let filter_bindings = bindings.clone();
     let host_filter = move |game: &crate::game::Game, handle: PermanentHandle| -> bool {
-        game.player(handle.player)
+        // "1 of your OTHER Digimon" — drop the effect's own source permanent.
+        if exclude_source && source_permanent == Some(handle) {
+            return false;
+        }
+        let base_ok = game
+            .player(handle.player)
             .battle_area
             .get(handle.index as usize)
             .map(|p| {
                 game.permanent_is_digimon_for_rules(handle)
                     && matches!(p.option_state, OptionState::Standard)
             })
-            .unwrap_or(false)
+            .unwrap_or(false);
+        if !base_ok {
+            return false;
+        }
+        match &auth_host_filter {
+            None => true,
+            Some(pred) => {
+                let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    player,
+                );
+                eval_predicate_with_bindings(
+                    pred,
+                    &read,
+                    PredicateSubject::Permanent(handle),
+                    Some(&filter_bindings),
+                )
+            }
+        }
     };
 
     // No eligible host → cannot attach this pick; end the loop. (The card was

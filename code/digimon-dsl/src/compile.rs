@@ -3369,6 +3369,17 @@ fn compile_step(
                 LinkCardsCost::Reduce(n) => 0u8.saturating_sub(n),
             };
 
+            let host_filter = if a.host_filter.is_empty() {
+                None
+            } else {
+                Some(compile_predicate(
+                    &a.host_filter,
+                    &format!("{prefix}.host_filter"),
+                    card_id,
+                    errors,
+                ))
+            };
+
             CompiledStep::LinkCards {
                 from,
                 filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
@@ -3377,6 +3388,8 @@ fn compile_step(
                 cost,
                 prompt: a.prompt.clone(),
                 bind_as: a.bind_as.clone(),
+                host_filter,
+                exclude_source: a.exclude_source,
             }
         }
         // OptionalStep is a newtype wrapping Vec<StepSpec> — access via .0
