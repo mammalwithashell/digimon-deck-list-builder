@@ -11,6 +11,8 @@
 !code/tools/decklist_analysis.py
 !code/tools/provision_ci_release_user.py
 !code/tools/run_training_job.py
+!code/tools/train_specialist_league.py
+!code/tools/anchored_eval_cli.py
 !code/data_paths.py
 !data/
 !training_jobs/

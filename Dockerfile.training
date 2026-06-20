@@ -105,6 +105,12 @@ RUN pip install --no-cache-dir -r requirements-training.txt
 # import) enforce that the training chain stays legacy-free.
 COPY code/digimon_gym/ digimon_gym/
 COPY code/tools/run_training_job.py tools/run_training_job.py
+# Deck-specialist league (add-deck-specialist-league): the round-based driver and
+# the anchored-eval CLI it loads as a sibling (for the matchup matrix + the
+# promotion gate). Both import only digimon_gym.* + digimon_engine, so the image
+# stays lean + legacy-free.
+COPY code/tools/train_specialist_league.py tools/train_specialist_league.py
+COPY code/tools/anchored_eval_cli.py tools/anchored_eval_cli.py
 COPY code/data_paths.py .
 COPY training_jobs/ training_jobs/
 
