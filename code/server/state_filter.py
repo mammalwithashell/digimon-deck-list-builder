@@ -36,8 +36,15 @@ def _redact_player(player_data: dict) -> dict:
     return out
 
 
+def _swap_pid(pid: Any) -> Any:
+    """Map an absolute player id (1 ↔ 2) to the opposite seat; pass ``None`` through."""
+    if pid is None:
+        return None
+    return 2 if pid == 1 else 1
+
+
 def filter_state_for_player(full_state: Dict[str, Any], player_id: int) -> Dict[str, Any]:
-    """Return a copy of the game state filtered for a specific player.
+    """Return a copy of the game state filtered + perspective-normalized for a player.
 
     The player sees:
       - Their own hand card IDs and hand count.
@@ -46,19 +53,60 @@ def filter_state_for_player(full_state: Dict[str, Any], player_id: int) -> Dict[
       - Opponent's security *count* but NOT card IDs.
       - All public zones for both players (battle area, trash, breeding).
       - Revealed cards, pending selection/attack context.
+
+    **Perspective normalization (add-room-match-pvp seat-2 fix):** the viewer is
+    always returned in the ``player1`` slot, because the frontend renders
+    ``player1`` at the bottom/self position and the action mask is
+    perspective-relative (``OWN``/``ENEMY``). For seat 1 this is the identity. For
+    seat 2 the players are swapped and every ABSOLUTE player reference is remapped
+    (``currentPlayer`` / ``winner`` / ``revealedCards[].owner`` /
+    ``pendingSelection.selectingPlayer`` / ``zoneOwner`` / each player's ``id``)
+    and ``memoryGauge`` — which ``to_ui_json`` emits from player1's perspective —
+    is negated. Relative encodings (mask ranges, ``pendingAttack`` slots,
+    ``pendingSelection.kind``/``validIndices``) are intentionally left untouched.
+    Without this, the joiner (seat 2) sees the host's board on the bottom and
+    their own board flipped to the top.
     """
     state = copy.copy(full_state)
 
     my_key = "player1" if player_id == 1 else "player2"
     opp_key = "player2" if player_id == 1 else "player1"
 
-    # My data: keep hand IDs, redact security IDs
+    # My data: keep hand IDs, redact security IDs. Opponent: redact both.
     my_data = dict(full_state[my_key])
     my_data["securityIds"] = []
-    state[my_key] = my_data
+    opp_data = _redact_player(full_state[opp_key])
 
-    # Opponent data: redact both hand and security IDs
-    state[opp_key] = _redact_player(full_state[opp_key])
+    if player_id == 1:
+        # Identity perspective — the viewer is already player1.
+        state["player1"] = my_data
+        state["player2"] = opp_data
+        return state
+
+    # Seat 2: normalize so the viewer becomes player1 (self/bottom).
+    my_data["id"] = 1
+    opp_data["id"] = 2
+    state["player1"] = my_data
+    state["player2"] = opp_data
+
+    if "currentPlayer" in full_state:
+        state["currentPlayer"] = _swap_pid(full_state["currentPlayer"])
+    if "winner" in full_state:
+        state["winner"] = _swap_pid(full_state["winner"])
+    if full_state.get("memoryGauge") is not None:
+        state["memoryGauge"] = -full_state["memoryGauge"]
+    if "revealedCards" in full_state:
+        state["revealedCards"] = [
+            {**rc, "owner": _swap_pid(rc.get("owner"))} for rc in full_state["revealedCards"]
+        ]
+    pending = full_state.get("pendingSelection")
+    if pending:
+        pending = dict(pending)
+        if pending.get("selectingPlayer") is not None:
+            pending["selectingPlayer"] = _swap_pid(pending["selectingPlayer"])
+        if pending.get("zoneOwner") is not None:
+            pending["zoneOwner"] = _swap_pid(pending["zoneOwner"])
+        state["pendingSelection"] = pending
 
     return state
 

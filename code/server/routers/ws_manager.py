@@ -189,13 +189,17 @@ class ConnectionManager:
         for pid, ws in list(conn.players.items()):
             filtered = filter_state_for_player(full_state, pid)
             player_mask = mask if current_pid == pid else []
+            # `filter_state_for_player` normalizes each recipient to the
+            # `player1` slot, so from the client's perspective they are always
+            # player 1; `currentPlayer` is normalized inside `filtered`. Keep
+            # the top-level ids consistent with that normalized view.
             payload: Dict[str, Any] = {
                 "type": "state_update",
                 "state": filtered,
                 "action_mask": player_mask,
-                "current_player_id": current_pid,
+                "current_player_id": filtered["currentPlayer"],
                 "is_game_over": is_game_over,
-                "your_player_id": pid,
+                "your_player_id": 1,
             }
             if conn.settings.seed is not None:
                 payload["seed"] = conn.settings.seed
@@ -204,7 +208,8 @@ class ConnectionManager:
             if events:
                 payload["events"] = events
             if is_game_over:
-                payload["winner_id"] = runner.winner_id
+                # Normalized to the recipient's perspective (1 = this viewer).
+                payload["winner_id"] = filtered.get("winner")
             tasks.append(asyncio.create_task(self._safe_send(ws, payload)))
 
         # Spectators get redacted state, no mask
