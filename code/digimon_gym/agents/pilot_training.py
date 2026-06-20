@@ -487,6 +487,30 @@ def _resolve_learning_rate(cfg: TrainingConfig):
     return base
 
 
+def _resolve_league_entry_decks(entries: List) -> None:
+    """Resolve league opponent decks from archetype NAMES to card-ID lists, in
+    place. The round-pool manifest stores each opponent's deck as its archetype
+    name (human-readable, registry-keyed), but the env needs card IDs for deck2.
+    Entries already holding a card-ID list (tests / direct construction) are left
+    as-is. Mirrors the deck1 archetype resolution in ``main``."""
+    names = sorted({e.deck for e in entries if isinstance(e.deck, str)})
+    if not names:
+        return
+    pool = load_generalist_deck_pool(allowed_archetypes=set(names))
+    by_canon: Dict[str, List[str]] = {}
+    for arch in pool.archetype_names:
+        decks = sorted(pool.archetypes[arch], key=lambda d: d.deck_id)
+        by_canon[canonicalize_archetype(arch)] = list(decks[0].card_ids)
+    for e in entries:
+        if isinstance(e.deck, str):
+            cards = by_canon.get(canonicalize_archetype(e.deck))
+            if not cards:
+                raise ValueError(
+                    f"league opponent deck {e.deck!r} resolved to no implemented decks"
+                )
+            e.deck = cards
+
+
 # ─── Opponent Wrapper ────────────────────────────────────────────────
 
 class OpponentWrapper(gymnasium.Wrapper):
@@ -2578,6 +2602,8 @@ def train(total_timesteps: int = 100_000,
             raise ValueError(
                 f"league_pool_manifest {cfg.league_pool_manifest} is empty"
             )
+        # Manifest stores opponent decks as archetype names; the env needs cards.
+        _resolve_league_entry_decks(league_entries)
 
     # Create training environment
     if league_entries is not None:

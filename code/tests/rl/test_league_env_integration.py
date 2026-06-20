@@ -83,3 +83,24 @@ def test_make_env_league_requires_entries():
     with pytest.raises(ValueError, match="requires league_entries"):
         P.make_env(opponent="league", deck1=None, league_entries=None,
                    tensor_profile=PROFILE)
+
+
+def test_resolve_league_entry_decks_names_to_cards():
+    # The orchestrator writes opponent decks as archetype NAMES; pilot_training
+    # must resolve them to card IDs before the env sees deck2.
+    try:
+        from digimon_gym.agents.gauntlet import load_generalist_deck_pool
+        load_generalist_deck_pool(allowed_archetypes={"ST-1 Gaia Red"})
+    except FileNotFoundError:
+        pytest.skip("deck_library.json not available")
+    entries = [LeaguePoolEntry(name="st-1@r0", weights_path="x.zip",
+                               algorithm="mlp", deck="ST-1 Gaia Red")]
+    P._resolve_league_entry_decks(entries)
+    assert isinstance(entries[0].deck, list) and entries[0].deck
+    assert all(isinstance(c, str) for c in entries[0].deck)
+
+    # entries already holding card-ID lists are left untouched
+    pre = ["BT1-001", "BT1-002"]
+    e2 = [LeaguePoolEntry(name="x", weights_path="y", algorithm="mlp", deck=pre)]
+    P._resolve_league_entry_decks(e2)
+    assert e2[0].deck == pre
