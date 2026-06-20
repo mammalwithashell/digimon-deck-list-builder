@@ -56,6 +56,7 @@ pub fn try_install(
         count,
         cost,
         prompt,
+        bind_as,
     } = step
     else {
         return false;
@@ -68,6 +69,7 @@ pub fn try_install(
         count: *count,
         cost: *cost,
         prompt: prompt.clone(),
+        bind_as: bind_as.clone(),
     });
 
     install_pick(ctx, spec, 0, Arc::new(tail.to_vec()), bindings, runtime.clone());
@@ -82,6 +84,10 @@ struct LinkCardsSpec {
     count: CompiledLinkCount,
     cost: u8,
     prompt: Option<String>,
+    /// Optional binding capturing the linked card(s); appended to on each real
+    /// link in `attach_and_continue` (created lazily, so it stays absent after a
+    /// full decline). `None` ⇒ no capture.
+    bind_as: Option<String>,
 }
 
 impl LinkCardsSpec {
@@ -580,7 +586,7 @@ fn attach_and_continue(
     card: CardHandle,
     source: LinkCardSource,
     tail: Arc<Vec<CompiledStep>>,
-    bindings: Bindings,
+    mut bindings: Bindings,
     runtime: StepRuntime,
 ) {
     // Pay the per-card cost (currently always 0 for the cards this serves; the
@@ -591,6 +597,16 @@ fn attach_and_continue(
     }
 
     let _ = ctx.link_chosen_card_into_host(host, card, source);
+
+    // Capture the just-linked card into the optional `bind_as` CardList. The
+    // slot is created only here (on a real link), so it stays absent after a
+    // full decline — a downstream `if { binding_present }` then runs the
+    // follow-up exclusively when ≥1 card was linked (BT25-060's `if (linked)`).
+    if let Some(name) = &spec.bind_as {
+        let mut list = bindings.get_card_list(name).unwrap_or_default();
+        list.push(card);
+        bindings.insert_card_list(name, list);
+    }
 
     install_pick(ctx, spec, pick_index + 1, tail, bindings, runtime);
 }

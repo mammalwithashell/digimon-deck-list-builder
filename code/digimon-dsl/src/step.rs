@@ -310,15 +310,6 @@ pub enum StepSpec {
     ScheduleDeletePlayedAtTurnEnd(ScheduleDeletePlayedAtTurnEndArgs),
     PlaceSelfAsDelayOption(EmptyArgs),
     LinkToOwnDigimon(LinkToOwnDigimonArgs),
-    /// Facet #9 authoring verb (G-DSL-LINK-CARD-FROM-ZONE) — the effect's own
-    /// permanent links 1 chosen card matching `filter` out of one of the
-    /// `from` zones (hand / trash / this Digimon's digivolution sources) onto
-    /// itself, paying the printed link cost reduced by any `ChangeLinkCost`.
-    /// Distinct from `LinkToOwnDigimon` (the Plug-In Option self-link tied to
-    /// `pending_option`). Mirrors DCGO `ILinkCard.LinkCard` with `root != None`.
-    /// NOTE (2026-06-07): superseded by the more general `LinkCards` below;
-    /// retained until the 5 cards using it migrate. See dsl-vocab-gaps.md.
-    LinkCardToSelf(LinkCardToSelfArgs),
     /// `app_fuse:` — effect-initiated App Fuse (see [`AppFuseArgs`]).
     AppFuse(AppFuseArgs),
     /// Gap 5 — reduce the cost of the link about to resolve in the active
@@ -585,7 +576,6 @@ impl Serialize for StepSpec {
             }
             StepSpec::PlaceSelfAsDelayOption(v) => kv!(s, "place_self_as_delay_option", v),
             StepSpec::LinkToOwnDigimon(v) => kv!(s, "link_to_own_digimon", v),
-            StepSpec::LinkCardToSelf(v) => kv!(s, "link_card_to_self", v),
             StepSpec::AppFuse(v) => kv!(s, "app_fuse", v),
             StepSpec::ReduceLinkCost(v) => kv!(s, "reduce_link_cost", v),
             StepSpec::LinkCards(v) => kv!(s, "link_cards", v),
@@ -846,7 +836,6 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             }
             "place_self_as_delay_option" => StepSpec::PlaceSelfAsDelayOption(map.next_value()?),
             "link_to_own_digimon" => StepSpec::LinkToOwnDigimon(map.next_value()?),
-            "link_card_to_self" => StepSpec::LinkCardToSelf(map.next_value()?),
             "app_fuse" => StepSpec::AppFuse(map.next_value()?),
             "reduce_link_cost" => StepSpec::ReduceLinkCost(map.next_value()?),
             "link_cards" => StepSpec::LinkCards(map.next_value()?),
@@ -995,7 +984,6 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "schedule_delayed",
                         "place_self_as_delay_option",
                         "link_to_own_digimon",
-                        "link_card_to_self",
                         "reduce_link_cost",
                         "link_cards",
                         "optional",
@@ -3060,64 +3048,6 @@ pub struct LinkToOwnDigimonArgs {
     pub filter: PredicateSpec,
 }
 
-/// Source zone a `link_card_to_self` candidate may be lifted from. Lowers to
-/// `crate::enums::LinkCardSource` at resolution: `Hand` → `Hand(owner)`,
-/// `Trash` → `Trash(owner)`, `DigivolutionSources` → `DigivolutionSource(self)`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum LinkFromZone {
-    Hand,
-    Trash,
-    DigivolutionSources,
-}
-
-/// Host the chosen card is linked onto. `SelfPermanent` (default) links onto
-/// the effect's own permanent ("to this Digimon"). `ChosenOwnDigimon` installs
-/// a second RL-visible selection over the controller's standing Digimon
-/// ("to 1 of your Digimon"). Mirrors DCGO `ILinkCard.LinkCard` /
-/// `selectedPermanent.AddLinkCard` with a `SelectPermanentEffect` for the host.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum LinkToHost {
-    SelfPermanent,
-    ChosenOwnDigimon,
-}
-
-fn default_link_to_host() -> LinkToHost {
-    LinkToHost::SelfPermanent
-}
-
-/// Args for the `link_card_to_self` step (facet #9). Links 1 chosen card
-/// matching `filter` out of one of `from` (defaults to all three zones) onto a
-/// host (`to`, defaulting to the effect's own permanent), paying `cost` reduced
-/// by any `ChangeLinkCost`. `optional` adds an RL-visible decline.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct LinkCardToSelfArgs {
-    /// Zones the chosen card may come from. Defaults to all three.
-    #[serde(default = "default_link_from_zones")]
-    pub from: Vec<LinkFromZone>,
-    /// Card predicate the candidate must satisfy.
-    pub filter: PredicateSpec,
-    /// Host the card is linked onto. Defaults to the effect's own permanent.
-    #[serde(default = "default_link_to_host")]
-    pub to: LinkToHost,
-    /// Printed link cost N (memory). Defaults to 0 (free link).
-    #[serde(default)]
-    pub cost: u16,
-    /// Whether the player may decline ("you may link").
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub optional: bool,
-}
-
-fn default_link_from_zones() -> Vec<LinkFromZone> {
-    vec![
-        LinkFromZone::Hand,
-        LinkFromZone::Trash,
-        LinkFromZone::DigivolutionSources,
-    ]
-}
-
 /// A source zone the `link_cards` step may draw a card from.
 ///
 /// - `hand` / `trash`: the controller's hand / trash.
@@ -3213,6 +3143,14 @@ pub struct LinkCardsArgs {
     /// Optional prompt override for the card-select step.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
+    /// Optional binding that captures the card(s) actually linked by this step
+    /// (a `CardList`). The slot is created ONLY when ≥1 card is linked, so a
+    /// downstream `if { binding_present: … }` runs the follow-up exclusively
+    /// when a link occurred — the data-driven way to model "By linking 1 …, do
+    /// Y" where Y is gated on the link (BT25-060 Rebootmon's DCGO `if (linked)`
+    /// gate). Absent ⇒ no binding is recorded (the common terminal-link case).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

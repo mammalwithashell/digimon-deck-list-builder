@@ -44,15 +44,15 @@ effects:
     summary: "[Main] By suspending this Tamer, link 1 [Appmon] Digimon card from hand to 1 of your Digimon (-2)"
     process:
       - activation_cost: { suspend_self: true }
-      - link_card_to_self:
+      - link_cards:
           from: [hand]
           filter:
             all_of:
               - kind: digimon
               - trait_has: Appmon
-          to: chosen_own_digimon
-          cost: 0
-          optional: true
+          to: own_digimon
+          count: { up_to: 1 }
+          cost: free
 
   # ─── [End of Your Turn][OPT] 1 of your Digimon may app fuse into a hand card ─
   - when: end_of_your_turn

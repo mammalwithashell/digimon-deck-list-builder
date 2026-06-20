@@ -239,7 +239,7 @@ fn bt25_060_has_wd_wa_link_then_unsuspend_clause() {
         let links = t
             .process
             .iter()
-            .any(|s| matches!(s, CompiledStep::LinkCardToSelf { .. }));
+            .any(|s| matches!(s, CompiledStep::LinkCards { .. }));
         let unsuspends = step_tree_has_unsuspend(&t.process);
         wd && wa && t.once_per_turn && links && unsuspends
     });

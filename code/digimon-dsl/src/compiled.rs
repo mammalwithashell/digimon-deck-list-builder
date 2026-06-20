@@ -1961,15 +1961,6 @@ pub enum CompiledStep {
         free: bool,
         filter: CompiledPredicate,
     },
-    /// Facet #9 — link 1 chosen card from `from` zones onto the effect's own
-    /// permanent (G-DSL-LINK-CARD-FROM-ZONE).
-    LinkCardToSelf {
-        from: Vec<crate::step::LinkFromZone>,
-        filter: CompiledPredicate,
-        to: crate::step::LinkToHost,
-        cost: u16,
-        optional: bool,
-    },
     /// Gap 5 — reduce the in-flight `WhenWouldLink` link cost by `amount`.
     /// Compiled form of `StepSpec::ReduceLinkCost`; the engine lowering calls
     /// `EffectContext::reduce_pending_link_cost(amount)`.
@@ -1993,6 +1984,13 @@ pub enum CompiledStep {
         /// lowering without a schema change.
         cost: u8,
         prompt: Option<String>,
+        /// Optional binding capturing the linked card(s) as a `CardList`, set
+        /// ONLY when ≥1 card is linked (so `binding_present` is false on a full
+        /// decline). Enables gating a follow-up step on a link having occurred
+        /// (BT25-060). `#[serde(default)]` (NOT `skip_serializing_if`) keeps the
+        /// bincode pack layout fixed — see reference_dsl_substrate_authoring_gotchas.
+        #[serde(default)]
+        bind_as: Option<String>,
     },
     Optional(Vec<CompiledStep>),
     Battle {

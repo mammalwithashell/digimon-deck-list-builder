@@ -12,7 +12,6 @@ pub mod draw;
 pub mod effects;
 pub mod grant_triggered;
 pub mod iteration;
-pub mod link_card;
 pub mod link_cards;
 pub mod memory;
 pub mod modifiers;
@@ -577,9 +576,6 @@ pub fn run_step_with_runtime(
         return;
     }
     if try_run_link_step(step, ctx) {
-        return;
-    }
-    if link_card::try_run(step, ctx) {
         return;
     }
     if combat::try_run(step, ctx, bindings) {

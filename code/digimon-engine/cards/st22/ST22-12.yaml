@@ -110,8 +110,8 @@ effects:
     optional: true
     summary: "[When Attacking][Once Per Turn] You may link 1 [Social]/[Navi]/[Tool] Digimon card from your hand or this Digimon's digivolution cards (link cost -2)"
     process:
-      - link_card_to_self:
-          from: [hand, digivolution_sources]
+      - link_cards:
+          from: [hand, self_sources]
           filter:
             all_of:
               - kind: digimon
@@ -119,8 +119,9 @@ effects:
                   - trait_has: Social
                   - trait_has: Navi
                   - trait_has: Tool
-          cost: 0
-          optional: true
+          to: self
+          count: { up_to: 1 }
+          cost: free
 
   # ─── [When Linking] return opp ≤5000 DP Digimon to bottom of deck ───────────
   # DCGO: ActivateClass SetIsLinkedEffect(true), WhenLinked timing,
