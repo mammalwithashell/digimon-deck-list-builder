@@ -3392,6 +3392,22 @@ fn compile_step(
                 exclude_source: a.exclude_source,
             }
         }
+        S::RelinkSelfToOwnDigimon(a) => {
+            let host_filter = if a.host_filter.is_empty() {
+                None
+            } else {
+                Some(compile_predicate(
+                    &a.host_filter,
+                    &format!("{prefix}.host_filter"),
+                    card_id,
+                    errors,
+                ))
+            };
+            CompiledStep::RelinkSelfToOwnDigimon {
+                host_filter,
+                prompt: a.prompt.clone(),
+            }
+        }
         // OptionalStep is a newtype wrapping Vec<StepSpec> — access via .0
         S::Optional(o) => CompiledStep::Optional(
             o.0.iter()

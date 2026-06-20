@@ -2002,6 +2002,17 @@ pub enum CompiledStep {
         #[serde(default)]
         exclude_source: bool,
     },
+    /// G-DSL-LINK-RELINK-STANDING-PERMANENT — move the effect's own standing
+    /// permanent to become a link card on a chosen OTHER own Digimon (EX11-027).
+    /// Compiled form of `StepSpec::RelinkSelfToOwnDigimon`; the engine executor
+    /// installs a host select (excluding self, matching `host_filter`) then calls
+    /// `Game::absorb_standing_digimon_as_link`.
+    RelinkSelfToOwnDigimon {
+        #[serde(default)]
+        host_filter: Option<CompiledPredicate>,
+        #[serde(default)]
+        prompt: Option<String>,
+    },
     Optional(Vec<CompiledStep>),
     Battle {
         attacker: CompiledBindingRef,

@@ -274,7 +274,11 @@ impl Game {
     /// Follows the canonical removal sequence (`clear_permanent_full` →
     /// `delete slot` → `shift_after_battle_area_remove`) and fixes the host
     /// handle with `shift_handle_after_soft_remove` before attaching.
-    fn absorb_standing_digimon_as_link(&mut self, source: PermanentHandle, host: PermanentHandle) {
+    pub(crate) fn absorb_standing_digimon_as_link(
+        &mut self,
+        source: PermanentHandle,
+        host: PermanentHandle,
+    ) {
         // Pre-clear modifiers + granted bodies for the leaving permanent.
         self.clear_permanent_full(source);
         self.modifiers.expire_player_on_permanent_leave(source);

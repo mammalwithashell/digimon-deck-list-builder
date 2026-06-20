@@ -2096,6 +2096,75 @@ effects:
     );
 }
 
+/// §4.5.1 — `relink_self_to_own_digimon` moves the effect's own standing
+/// permanent to become a link card on a chosen OTHER own Digimon, honoring the
+/// host_filter (link requirement) and always excluding self.
+#[test]
+fn relink_self_to_own_digimon_absorbs_self_onto_filtered_other_host() {
+    let yaml = r#"
+card: RELINKER
+name: Relinker
+kind: digimon
+effects:
+  - when: on_play
+    summary: "link this Digimon to a [Marked] OTHER Digimon"
+    process:
+      - relink_self_to_own_digimon:
+          host_filter: { trait_has: Marked }
+"#;
+    let mut r = DebugRunner::builder()
+        // RELINKER itself carries [Marked], so only the exclude-self rule (not
+        // host_filter) can drop it from the host candidates.
+        .add_card(traited_digimon("RELINKER", CardColor::Red, &["Marked"]))
+        .add_card(traited_digimon("HOST-OK", CardColor::Red, &["Marked"]))
+        .add_card(traited_digimon("HOST-NO", CardColor::Red, &[]))
+        .memory(5)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let src = r.place_on_field(0, "RELINKER", Some(0));
+    let _ok = r.place_on_field(0, "HOST-OK", Some(0));
+    let _no = r.place_on_field(0, "HOST-NO", Some(0));
+    advance_to_main(&mut r);
+
+    let self_card = r.game.player(0).battle_area[src.index as usize]
+        .top_card()
+        .handle();
+    r.game.fire_on_play(0, src.index as usize);
+
+    // Host select: only HOST-OK (Marked, not self). RELINKER is excluded despite
+    // carrying [Marked]; HOST-NO lacks it.
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("relink host select installed");
+    assert_eq!(
+        pending.valid_action_ids.len(),
+        1,
+        "only the [Marked] OTHER Digimon is offered as a relink host"
+    );
+    let action = pending.valid_action_ids[0];
+    r.game.resolve_selection(0, action).expect("pick host");
+
+    // RELINKER absorbed: the battle area shrank by 1 and some permanent now
+    // hosts RELINKER's top card as a link card.
+    assert_eq!(
+        r.battle_area_size(0),
+        2,
+        "RELINKER left the battle area (absorbed as a link card)"
+    );
+    let hosted = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .any(|p| p.linked_cards.iter().any(|c| c.handle() == self_card));
+    assert!(
+        hosted,
+        "RELINKER's top card is now a link card on the chosen host"
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Gap 5 — predicated host-side `WhenWouldLink` cost reduction.
 //

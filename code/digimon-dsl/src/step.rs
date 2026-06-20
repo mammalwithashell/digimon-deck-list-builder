@@ -325,6 +325,10 @@ pub enum StepSpec {
     /// parity), a single-zone card select, then (for `to: own_digimon`) a host
     /// select, then attaches the card and fires `OnLink`.
     LinkCards(LinkCardsArgs),
+    /// `relink_self_to_own_digimon:` — move the effect's own standing permanent
+    /// to become a link card on a chosen OTHER own Digimon (EX11-027 "link this
+    /// Digimon to 1 of your other Digimon"). Over `absorb_standing_digimon_as_link`.
+    RelinkSelfToOwnDigimon(RelinkSelfToOwnDigimonArgs),
     Optional(OptionalStep),
 
     // Combat / replacement process outcomes
@@ -579,6 +583,7 @@ impl Serialize for StepSpec {
             StepSpec::AppFuse(v) => kv!(s, "app_fuse", v),
             StepSpec::ReduceLinkCost(v) => kv!(s, "reduce_link_cost", v),
             StepSpec::LinkCards(v) => kv!(s, "link_cards", v),
+            StepSpec::RelinkSelfToOwnDigimon(v) => kv!(s, "relink_self_to_own_digimon", v),
             StepSpec::Optional(v) => kv!(s, "optional", v),
             // Combat / replacement process outcomes
             StepSpec::Battle(v) => kv!(s, "battle", v),
@@ -839,6 +844,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "app_fuse" => StepSpec::AppFuse(map.next_value()?),
             "reduce_link_cost" => StepSpec::ReduceLinkCost(map.next_value()?),
             "link_cards" => StepSpec::LinkCards(map.next_value()?),
+            "relink_self_to_own_digimon" => {
+                StepSpec::RelinkSelfToOwnDigimon(map.next_value()?)
+            }
             "optional" => StepSpec::Optional(map.next_value()?),
 
             // Combat / replacement process outcomes
@@ -986,6 +994,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "link_to_own_digimon",
                         "reduce_link_cost",
                         "link_cards",
+                        "relink_self_to_own_digimon",
                         "optional",
                         "battle",
                         "may_attack_now",
@@ -3167,6 +3176,26 @@ pub struct LinkCardsArgs {
     /// card.PermanentOfThisCard()`. Default false ("1 of your Digimon").
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub exclude_source: bool,
+}
+
+/// Args for `relink_self_to_own_digimon` (G-DSL-LINK-RELINK-STANDING-PERMANENT).
+/// Moves the effect's own standing permanent to become a link card on a chosen
+/// OTHER own Digimon (EX11-027 Maquinamon "link this Digimon to 1 of your other
+/// Digimon"). The host select always excludes self and applies `host_filter`
+/// (the link requirement, e.g. `effect_text_contains: Maquinamon`). Backed by
+/// the engine's `absorb_standing_digimon_as_link` (DCGO `IPlacePermanentToLinkCards`):
+/// the permanent's digivolution sources are trashed and its top card becomes a
+/// single link card on the host, firing `OnLink`.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RelinkSelfToOwnDigimonArgs {
+    /// Host predicate — the link requirement the chosen host must satisfy.
+    /// Absent ⇒ any standing own Digimon (other than self).
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub host_filter: PredicateSpec,
+    /// Optional host-select prompt override.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

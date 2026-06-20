@@ -674,3 +674,97 @@ fn run_captured_tail(
     crate::dsl_cards::step::drain_dsl_outer_tail(ctx);
     ctx.game.current_trigger_context = previous;
 }
+
+/// G-DSL-LINK-RELINK-STANDING-PERMANENT (§4.5.1) — move the effect's own
+/// standing permanent to become a link card on a chosen OTHER own Digimon
+/// (EX11-027 Maquinamon "link this Digimon to 1 of your other Digimon").
+///
+/// Installs a host select (always excluding self, applying the optional
+/// `host_filter` link requirement on top of the base Digimon/Standard gate);
+/// the pick calls `Game::absorb_standing_digimon_as_link` (DCGO
+/// `IPlacePermanentToLinkCards`): the source's digivolution sources are trashed,
+/// its top card becomes a single link card on the host, and `OnLink` fires.
+///
+/// Returns `true` when `step` is a `RelinkSelfToOwnDigimon` (handled here). A
+/// no-op (no selection installed) when the source isn't a live standing Digimon
+/// or no eligible OTHER host exists — the dispatcher then advances to the tail.
+pub fn try_run_relink(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bindings) -> bool {
+    let CompiledStep::RelinkSelfToOwnDigimon { host_filter, prompt } = step else {
+        return false;
+    };
+    let Some(source) = ctx.source_permanent else {
+        return true;
+    };
+    // The source must be a live standing Digimon to be relinked.
+    let source_standing = ctx
+        .game
+        .player(source.player)
+        .battle_area
+        .get(source.index as usize)
+        .map(|p| {
+            ctx.game.permanent_is_digimon_for_rules(source)
+                && matches!(p.option_state, OptionState::Standard)
+        })
+        .unwrap_or(false);
+    if !source_standing {
+        return true;
+    }
+
+    let player = ctx.player;
+    let auth = host_filter.clone();
+    let source_card = ctx.source_card;
+    let source_kind = ctx.source_kind;
+    let fbinds = bindings.clone();
+    let host_filter_fn = move |game: &crate::game::Game, handle: PermanentHandle| -> bool {
+        // "1 of your OTHER Digimon" — never the source itself.
+        if handle == source {
+            return false;
+        }
+        let base_ok = game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|p| {
+                game.permanent_is_digimon_for_rules(handle)
+                    && matches!(p.option_state, OptionState::Standard)
+            })
+            .unwrap_or(false);
+        if !base_ok {
+            return false;
+        }
+        match &auth {
+            None => true,
+            Some(pred) => {
+                let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+                    game,
+                    source_card,
+                    Some(source),
+                    source_kind,
+                    player,
+                );
+                eval_predicate_with_bindings(
+                    pred,
+                    &read,
+                    PredicateSubject::Permanent(handle),
+                    Some(&fbinds),
+                )
+            }
+        }
+    };
+
+    // No eligible OTHER host → no-op (the heterogeneous-choice gate normally
+    // prevents offering this branch with no valid host, but be defensive).
+    let any_host = (0..ctx.game.player(player).battle_area.len())
+        .any(|i| host_filter_fn(ctx.game, PermanentHandle { player, index: i as u8 }));
+    if !any_host {
+        return true;
+    }
+
+    let prompt_str = prompt
+        .clone()
+        .unwrap_or_else(|| "Choose 1 of your Digimon to link this Digimon to".to_string());
+    ctx.select_own_permanent(&prompt_str, false, host_filter_fn, move |cb_ctx, host| {
+        cb_ctx.game.absorb_standing_digimon_as_link(source, host);
+    });
+    true
+}

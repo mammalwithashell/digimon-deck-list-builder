@@ -578,6 +578,9 @@ pub fn run_step_with_runtime(
     if try_run_link_step(step, ctx) {
         return;
     }
+    if link_cards::try_run_relink(step, ctx, bindings) {
+        return;
+    }
     if combat::try_run(step, ctx, bindings) {
         return;
     }
