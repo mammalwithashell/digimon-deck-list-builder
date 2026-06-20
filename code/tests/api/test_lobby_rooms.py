@@ -359,15 +359,19 @@ class TestRule14Redaction:
         # Sanity: the raw payload really contains hidden info to redact
         assert full["player1"]["handIds"] or full["player2"]["handIds"]
 
-        for me, opp in ((1, "player2"), (2, "player1")):
+        # Each viewer is perspective-normalized into the player1 (self) slot, so
+        # the opponent is ALWAYS the redacted player2 slot (add-room-match-pvp
+        # seat-2 fix). The viewer keeps their own hand but never sees their own
+        # face-down security.
+        for me in (1, 2):
             filtered = filter_state_for_player(full, me)
-            assert filtered[opp]["handIds"] == []
-            assert filtered[opp]["handCards"] == []
+            assert filtered["player2"]["handIds"] == []
+            assert filtered["player2"]["handCards"] == []
             assert filtered["player1"]["securityIds"] == []
             assert filtered["player2"]["securityIds"] == []
-            # Own hand survives
-            mine = "player1" if me == 1 else "player2"
-            assert filtered[mine]["handIds"] == full[mine]["handIds"]
+            # The viewer's own hand survives, now in the player1 slot.
+            src = "player1" if me == 1 else "player2"
+            assert filtered["player1"]["handIds"] == full[src]["handIds"]
 
     def test_spectator_filter_redacts_both_hands(self):
         from server.state_filter import filter_state_for_spectator
