@@ -8,9 +8,17 @@ vi.mock('react-router-dom', async () => {
   return { ...actual, useNavigate: () => navigate };
 });
 vi.mock('@/features/play/playApi', () => ({ listFormats: async () => [] }));
+// loadPlayFormats() pulls listFormats from @/api/deckApi — mock the real source
+// so the page never fires a network XHR (which jsdom can't complete, leaving a
+// dangling socket that hangs worker teardown).
+vi.mock('@/api/deckApi', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/api/deckApi')>()),
+  listFormats: async () => [],
+}));
 
 import { ModeSelectPage } from './ModeSelectPage';
 import { usePlayFlowStore } from '@/features/play/playFlowStore';
+import { useThemeStore, type Theme } from '@/design/theme/themeStore';
 
 beforeEach(() => {
   navigate.mockClear();
@@ -32,4 +40,23 @@ describe('ModeSelectPage', () => {
     fireEvent.click(screen.getByRole('button', { name: /ENTER/i }));
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/play/ai-starter'));
   });
+
+  it.each<Theme>(['dark', 'light'])(
+    'frames the opponent and format choosers as titled windows (%s)',
+    async (theme) => {
+      useThemeStore.getState().setTheme(theme);
+      render(
+        <MemoryRouter>
+          <ModeSelectPage />
+        </MemoryRouter>,
+      );
+      // Wait for the page (and its default format) to settle.
+      await screen.findByRole('region', { name: 'Formats' });
+      const titles = Array.from(
+        document.querySelectorAll('.ds-window__title-text'),
+      ).map((el) => el.textContent);
+      expect(titles).toContain('OPPONENT');
+      expect(titles).toContain('FORMAT');
+    },
+  );
 });

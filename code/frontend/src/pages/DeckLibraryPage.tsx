@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { listFormats } from '@/api/deckApi';
 import * as library from '@/api/deckLibraryAdapter';
+import { useRailSection } from '@/components/layout/RailContext';
 import { getCardById } from '@/api/digimonCardApi';
 import type { DigimonCardData } from '@/types/cards';
 import type { DeckFolder, DeckFormat, DeckResponse, DeckSummary } from '@/types/deck';
@@ -256,13 +257,81 @@ export function DeckLibraryPage() {
     );
   };
 
-  const createFolder = async () => {
+  const createFolder = useCallback(async () => {
     const name = window.prompt('Folder name');
     if (!name?.trim()) return;
     const folder = await library.createDeckFolder(name.trim());
     setFolders((current) => [...current, folder].sort((a, b) => a.sort_order - b.sort_order));
     setActiveFolder(folder.id);
-  };
+  }, []);
+
+  // Contribute Folders + Formats into the MenuShell rail (under Decks) instead
+  // of a separate in-page sidebar (add-desktop-menu-shell). Memoized so the
+  // rail only re-publishes when the rendered sub-nav actually changes.
+  const pinnedCount = decks.filter((deck) => deck.is_pinned).length;
+  const railSection = useMemo(
+    () => (
+      <>
+        <div className="rail-subnav__head">
+          <span>Folders</span>
+          <button type="button" onClick={createFolder} title="New folder" aria-label="New folder">
+            +
+          </button>
+        </div>
+        <button
+          type="button"
+          className={`rail-subnav__item ${activeFolder === 'all' ? 'rail-subnav__item--active' : ''}`}
+          onClick={() => setActiveFolder('all')}
+        >
+          <span>All decks</span>
+          <b>{decks.length}</b>
+        </button>
+        <button
+          type="button"
+          className={`rail-subnav__item ${activeFolder === 'pinned' ? 'rail-subnav__item--active' : ''}`}
+          onClick={() => setActiveFolder('pinned')}
+        >
+          <span>Pinned</span>
+          <b>{pinnedCount}</b>
+        </button>
+        {folders.map((folder) => (
+          <button
+            type="button"
+            key={folder.id}
+            className={`rail-subnav__item ${activeFolder === folder.id ? 'rail-subnav__item--active' : ''}`}
+            onClick={() => setActiveFolder(folder.id)}
+          >
+            <span>{folder.name}</span>
+            <b>{folderCounts.get(folder.id) ?? 0}</b>
+          </button>
+        ))}
+        <div className="rail-subnav__head">
+          <span>Formats</span>
+        </div>
+        <button
+          type="button"
+          className={`rail-subnav__item ${activeFormat === 'all' ? 'rail-subnav__item--active' : ''}`}
+          onClick={() => setActiveFormat('all')}
+        >
+          <span>All formats</span>
+          <b>{decks.length}</b>
+        </button>
+        {formatBuckets.map((bucket) => (
+          <button
+            type="button"
+            key={bucket.id}
+            className={`rail-subnav__item ${activeFormat === bucket.id ? 'rail-subnav__item--active' : ''}`}
+            onClick={() => setActiveFormat(bucket.id)}
+          >
+            <span>{bucket.label}</span>
+            <b>{bucket.count}</b>
+          </button>
+        ))}
+      </>
+    ),
+    [activeFolder, activeFormat, decks.length, pinnedCount, folders, folderCounts, formatBuckets, createFolder],
+  );
+  useRailSection(railSection);
 
   const renameSelected = async () => {
     if (!selectedSummary) return;
@@ -341,70 +410,6 @@ export function DeckLibraryPage() {
       </div>
 
       <div className="library-shell">
-        <aside className="library-sidebar">
-          <div className="library-group-title">
-            <span>Folders</span>
-            <button type="button" onClick={createFolder} title="New folder">+</button>
-          </div>
-          <button
-            type="button"
-            className={`library-folder ${activeFolder === 'all' ? 'active' : ''}`}
-            onClick={() => setActiveFolder('all')}
-          >
-            <span>All Decks</span>
-            <b>{decks.length}</b>
-          </button>
-          <button
-            type="button"
-            className={`library-folder ${activeFolder === 'pinned' ? 'active' : ''}`}
-            onClick={() => setActiveFolder('pinned')}
-          >
-            <span>Pinned</span>
-            <b>{decks.filter((deck) => deck.is_pinned).length}</b>
-          </button>
-          {folders.map((folder) => (
-            <button
-              type="button"
-              key={folder.id}
-              className={`library-folder ${activeFolder === folder.id ? 'active' : ''}`}
-              onClick={() => setActiveFolder(folder.id)}
-            >
-              <span>{folder.name}</span>
-              <b>{folderCounts.get(folder.id) ?? 0}</b>
-            </button>
-          ))}
-
-          <div className="library-group-title">
-            <span>Formats</span>
-          </div>
-          <button
-            type="button"
-            className={`library-folder ${activeFormat === 'all' ? 'active' : ''}`}
-            onClick={() => setActiveFormat('all')}
-          >
-            <span>All formats</span>
-            <b>{decks.length}</b>
-          </button>
-          {formatBuckets.map((bucket) => (
-            <button
-              type="button"
-              key={bucket.id}
-              className={`library-folder ${activeFormat === bucket.id ? 'active' : ''}`}
-              onClick={() => setActiveFormat(bucket.id)}
-            >
-              <span>{bucket.label}</span>
-              <b>{bucket.count}</b>
-            </button>
-          ))}
-
-          <div className="library-stats-box">
-            <div><span>Total</span><b>{decks.length}</b></div>
-            <div><span>Pinned</span><b>{decks.filter((deck) => deck.is_pinned).length}</b></div>
-            <div><span>Legal</span><b>{decks.filter((deck) => deck.is_valid).length}</b></div>
-            <div><span>Drafts</span><b>{decks.filter((deck) => !deck.is_valid).length}</b></div>
-          </div>
-        </aside>
-
         <main className="library-main">
           {selectedSummary ? (
             <section className="library-banner">

@@ -106,16 +106,19 @@ export function GraphicsSettingsPage() {
             data-testid="graphics-fullscreen-toggle"
             onClick={() => void applyFullscreen(!fullscreen)}
             aria-pressed={fullscreen}
-            className={`relative h-7 w-14 rounded-full border transition-colors ${
+            className={`relative h-7 w-14 shrink-0 rounded-full border transition-colors ${
               fullscreen
                 ? 'border-[var(--accent)] bg-[var(--accent)]'
                 : 'border-[var(--line-1)] bg-[var(--surface-sunken)]'
             }`}
           >
+            {/* 20px knob anchored 4px from the left, vertically centered, slides
+                26px so it always stays inside the 56px track (both themes). */}
             <span
-              className={`absolute top-0.5 h-6 w-6 rounded-full bg-[var(--ink-0)] transition-transform ${
-                fullscreen ? 'translate-x-7' : 'translate-x-0.5'
-              }`}
+              className="absolute left-1 top-1/2 h-5 w-5 rounded-full bg-[var(--ink-0)] transition-transform"
+              style={{
+                transform: `translateY(-50%) translateX(${fullscreen ? '26px' : '0px'})`,
+              }}
             />
           </button>
         </div>

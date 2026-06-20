@@ -1,7 +1,17 @@
 import '@testing-library/jest-dom/vitest';
 import { render, screen, act } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GraphicsSettingsPage } from './GraphicsSettingsPage';
+
+// The page renders a <Link> ("Back to Launcher"), so it needs a router context.
+function renderPage() {
+  return render(
+    <MemoryRouter>
+      <GraphicsSettingsPage />
+    </MemoryRouter>,
+  );
+}
 import { DEFAULT_PRESET, RESOLUTION_PRESETS } from '@/utils/constants';
 import { useUiStore } from '@/stores/uiStore';
 
@@ -37,7 +47,7 @@ describe('GraphicsSettingsPage', () => {
   });
 
   it('renders all 8 resolution preset buttons in order', () => {
-    render(<GraphicsSettingsPage />);
+    renderPage();
     for (const preset of RESOLUTION_PRESETS) {
       const btn = screen.getByTestId(
         `graphics-preset-${preset.width}x${preset.height}`,
@@ -48,7 +58,7 @@ describe('GraphicsSettingsPage', () => {
   });
 
   it('clicking a preset updates the store, persists to localStorage, and calls setSize', async () => {
-    render(<GraphicsSettingsPage />);
+    renderPage();
     const preset = RESOLUTION_PRESETS[4]!; // 2560x1440
     const btn = screen.getByTestId(
       `graphics-preset-${preset.width}x${preset.height}`,
@@ -72,7 +82,7 @@ describe('GraphicsSettingsPage', () => {
   });
 
   it('clicking the fullscreen toggle flips state and calls setFullscreen', async () => {
-    render(<GraphicsSettingsPage />);
+    renderPage();
     const toggle = screen.getByTestId('graphics-fullscreen-toggle');
 
     await act(async () => {
@@ -87,7 +97,7 @@ describe('GraphicsSettingsPage', () => {
 
   it('disables preset buttons while fullscreen is active', () => {
     useUiStore.setState({ fullscreen: true });
-    render(<GraphicsSettingsPage />);
+    renderPage();
     const preset = RESOLUTION_PRESETS[0]!;
     const btn = screen.getByTestId(
       `graphics-preset-${preset.width}x${preset.height}`,

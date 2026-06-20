@@ -4,10 +4,12 @@ import { DESIGN_CANVAS, TITLEBAR_HEIGHT } from '@/utils/constants';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 
-/** Vertical space (real window pixels) the custom title bar occupies at
- *  the top of the window. Reserved on desktop builds only — web builds
- *  have no custom chrome, so the canvas fills the full viewport. */
-const RESERVED_TOP = IS_DESKTOP ? TITLEBAR_HEIGHT : 0;
+/** Vertical space (real window pixels) the custom title bar occupies at the
+ *  top of the window, in WINDOWED mode. Reserved on desktop builds only — web
+ *  builds have no custom chrome. In fullscreen the title bar is hidden
+ *  (App.tsx), so the effective reservation drops to 0 and the canvas fills the
+ *  whole display. */
+const TITLEBAR_RESERVED = IS_DESKTOP ? TITLEBAR_HEIGHT : 0;
 
 /**
  * Set CSS custom properties on `<html>` so any descendant of the canvas
@@ -60,7 +62,10 @@ export function CanvasScaler({ children }: CanvasScalerProps) {
   const graphicsPreset = useUiStore((s) => s.graphicsPreset);
   const fullscreen = useUiStore((s) => s.fullscreen);
   const setCanvasScale = useUiStore((s) => s.setCanvasScale);
-  const [scale, setScale] = useState<number>(() => computeScale(RESERVED_TOP));
+  // In fullscreen the title bar is hidden, so reserve no top space — the
+  // scaled canvas fills the entire display.
+  const reservedTop = fullscreen ? 0 : TITLEBAR_RESERVED;
+  const [scale, setScale] = useState<number>(() => computeScale(reservedTop));
 
   // Install canvas-viewport CSS variables on `<html>` so descendants
   // that use `100vh` / `min-h-screen` size to the canvas (1080px) and
@@ -109,7 +114,7 @@ export function CanvasScaler({ children }: CanvasScalerProps) {
   // asynchronously after the Tauri API call lands).
   useEffect(() => {
     if (!IS_DESKTOP) return;
-    const handler = () => setScale(computeScale(RESERVED_TOP));
+    const handler = () => setScale(computeScale(reservedTop));
     window.addEventListener('resize', handler);
     // Also recompute on next tick after preset changes — Tauri resize
     // doesn't fire 'resize' immediately under some conditions.
@@ -138,18 +143,18 @@ export function CanvasScaler({ children }: CanvasScalerProps) {
           await w.setFullscreen(false);
           // The preset is the *canvas* size (16:9). Grow the window by the
           // title-bar height so the area BELOW the custom title bar equals
-          // the preset exactly — otherwise reserving RESERVED_TOP from a
+          // the preset exactly — otherwise reserving reservedTop from a
           // 16:9 window leaves the canvas height-constrained and pillarboxes
           // it with black side bars.
           await w.setSize(
             new LogicalSize(
               graphicsPreset.width,
-              graphicsPreset.height + RESERVED_TOP,
+              graphicsPreset.height + reservedTop,
             ),
           );
         }
         // Recompute one more time after Tauri reports the new size.
-        if (!cancelled) setScale(computeScale(RESERVED_TOP));
+        if (!cancelled) setScale(computeScale(reservedTop));
       } catch {
         // Either not running under Tauri or window API failed — fall back
         // to whatever scale the current window produces.
@@ -169,9 +174,9 @@ export function CanvasScaler({ children }: CanvasScalerProps) {
       data-testid="canvas-scaler"
       style={{
         position: 'fixed',
-        // Start below the custom title bar (RESERVED_TOP) so the scaled
+        // Start below the custom title bar (reservedTop) so the scaled
         // canvas sits under the chrome instead of behind it.
-        top: RESERVED_TOP,
+        top: reservedTop,
         left: 0,
         right: 0,
         bottom: 0,
