@@ -1,0 +1,226 @@
+/*
+ * Custom desktop title bar (replaces native window decorations).
+ *
+ * Two stacked rows — a draggable caption + a menu strip — themed entirely
+ * here keyed on `[data-theme]`, the same pattern the design-system
+ * primitives use (components.css). Everything references role tokens; the
+ * only raw hex is the Windows-95 active-title gradient, which is an
+ * intentional fixed brand element (like the analyzer's DIGITALMONSTER bar).
+ *
+ * Heights: 26px caption + 22px menu = 48px. This MUST equal TITLEBAR_HEIGHT
+ * in src/utils/constants.ts (the CanvasScaler reserves that space).
+ */
+
+.ds-titlebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  display: flex;
+  flex-direction: column;
+  z-index: 1000;
+  user-select: none;
+  -webkit-user-select: none;
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+}
+
+/* ── Caption row ───────────────────────────────────────────────────────── */
+.ds-titlebar__caption {
+  display: flex;
+  align-items: center;
+  flex: 0 0 26px;
+  height: 26px;
+  padding-left: 9px;
+}
+.ds-titlebar__brand {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding-right: 12px;
+  font-weight: 700;
+  letter-spacing: var(--track-tight);
+  white-space: nowrap;
+}
+/* Draggable filler between the title and the window controls. */
+.ds-titlebar__drag {
+  flex: 1 1 auto;
+  height: 100%;
+}
+.ds-titlebar__controls {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  gap: 2px;
+  padding-right: 5px;
+}
+.ds-titlebar__ctl {
+  width: 30px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  line-height: 1;
+}
+/* Minimize is a short underline, the Win95 way. */
+.ds-titlebar__glyph-min {
+  display: block;
+  width: 10px;
+  height: 2px;
+  background: currentColor;
+  margin-top: 6px;
+}
+
+/* ── Menu strip ────────────────────────────────────────────────────────── */
+.ds-titlebar__menubar {
+  display: flex;
+  align-items: stretch;
+  flex: 0 0 22px;
+  height: 22px;
+  padding: 0 2px;
+}
+.ds-menu {
+  position: relative;
+  display: flex;
+}
+.ds-menu__btn {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0 9px;
+  display: flex;
+  align-items: center;
+}
+.ds-menu__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 188px;
+  margin: 0;
+  padding: 3px;
+  list-style: none;
+  z-index: 1001;
+}
+.ds-menu__item {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  padding: 5px 16px 5px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 28px;
+  white-space: nowrap;
+}
+.ds-menu__accel {
+  font-size: var(--text-xs);
+  opacity: 0.55;
+}
+.ds-menu__sep {
+  height: 0;
+  margin: 4px 6px;
+  padding: 0;
+}
+
+/* ── Light theme — Windows 95 ──────────────────────────────────────────── */
+[data-theme="light"] .ds-titlebar__caption {
+  /* Win95 active-title gradient — intentional fixed brand element. */
+  background: linear-gradient(90deg, #000080 0%, #1084d0 100%);
+  color: #ffffff;
+}
+[data-theme="light"] .ds-titlebar__brand {
+  color: #ffffff;
+  text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.4);
+}
+[data-theme="light"] .ds-titlebar__ctl {
+  background: var(--surface);
+  color: var(--ink-0);
+  box-shadow: inset 1.5px 1.5px 0 var(--bevel-hi), inset -2px -2px 0 var(--bevel-lo);
+}
+[data-theme="light"] .ds-titlebar__ctl:active {
+  box-shadow: inset 1.5px 1.5px 0 var(--bevel-lo), inset -2px -2px 0 var(--bevel-hi);
+}
+
+[data-theme="light"] .ds-titlebar__menubar {
+  background: var(--surface);
+  color: var(--ink-0);
+  box-shadow: inset 0 1.5px 0 var(--bevel-hi), inset 0 -2px 0 var(--bevel-lo);
+}
+[data-theme="light"] .ds-menu__btn.is-open,
+[data-theme="light"] .ds-menu__btn:hover {
+  background: var(--accent); /* Win95 navy menu highlight */
+  color: var(--accent-ink);
+}
+[data-theme="light"] .ds-menu__dropdown {
+  background: var(--surface);
+  color: var(--ink-0);
+  box-shadow: var(--bevel-shadow), 3px 3px 6px rgba(0, 0, 0, 0.4);
+}
+[data-theme="light"] .ds-menu__item:hover {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+[data-theme="light"] .ds-menu__sep {
+  border-top: 1px solid var(--bevel-lo);
+  border-bottom: 1px solid var(--bevel-hi);
+}
+
+/* ── Dark theme — neon-green terminal accent ───────────────────────────── */
+[data-theme="dark"] .ds-titlebar__caption {
+  background: var(--surface-raised);
+  color: var(--accent);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--accent);
+  box-shadow: 0 3px 10px -2px var(--accent-glow); /* green underglow */
+}
+[data-theme="dark"] .ds-titlebar__brand {
+  color: var(--accent);
+  text-shadow: 0 0 8px var(--accent-glow);
+}
+[data-theme="dark"] .ds-titlebar__ctl {
+  color: var(--ink-1);
+}
+[data-theme="dark"] .ds-titlebar__ctl:hover {
+  color: var(--accent);
+  text-shadow: 0 0 8px var(--accent-glow);
+}
+[data-theme="dark"] .ds-titlebar__ctl--close:hover {
+  color: var(--danger);
+  text-shadow: 0 0 8px rgba(255, 77, 94, 0.6);
+}
+
+[data-theme="dark"] .ds-titlebar__menubar {
+  background: var(--surface);
+  color: var(--ink-1);
+  border-bottom: 1px solid var(--line-1);
+}
+[data-theme="dark"] .ds-menu__btn.is-open,
+[data-theme="dark"] .ds-menu__btn:hover {
+  background: var(--surface-raised);
+  color: var(--accent);
+}
+[data-theme="dark"] .ds-menu__dropdown {
+  background: var(--surface-raised);
+  color: var(--ink-0);
+  border: 1px solid var(--line-strong);
+  box-shadow: 0 0 14px var(--accent-glow);
+}
+[data-theme="dark"] .ds-menu__item:hover {
+  background: rgba(57, 255, 136, 0.12);
+  color: var(--accent);
+}
+[data-theme="dark"] .ds-menu__sep {
+  border-top: 1px solid var(--line-1);
+}

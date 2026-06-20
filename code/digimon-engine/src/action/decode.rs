@@ -50,7 +50,7 @@ impl Game {
             return;
         }
         match self.current_phase {
-            GamePhase::Mulligan => self.decode_mulligan(action_id),
+            GamePhase::Mulligan => self.decode_mulligan(action_id, player_id),
             GamePhase::Main => self.decode_main(action_id),
             GamePhase::Breeding => self.decode_breeding(action_id),
             GamePhase::SelectTarget
@@ -86,16 +86,20 @@ impl Game {
         self.tick_declarative_effects();
     }
 
-    fn decode_mulligan(&mut self, action_id: u16) {
-        let Some(current) = self.mulligan_current_player() else {
+    fn decode_mulligan(&mut self, action_id: u16, player_id: PlayerId) {
+        // Only the player whose mulligan is pending may resolve it. A stray
+        // action from the other seat (e.g. an out-of-turn submit while the
+        // opponent is still mulliganing) is ignored rather than mis-applied to
+        // the current decider's decision.
+        if self.mulligan_current_player() != Some(player_id) {
             return;
-        };
+        }
         match action_id {
             0 => {
-                let _ = self.accept_mulligan(current, /* keep */ true);
+                let _ = self.accept_mulligan(player_id, /* keep */ true);
             }
             1 => {
-                let _ = self.accept_mulligan(current, /* keep */ false);
+                let _ = self.accept_mulligan(player_id, /* keep */ false);
             }
             _ => {}
         }

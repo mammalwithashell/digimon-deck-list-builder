@@ -192,6 +192,14 @@ pub fn lower_with_formula(
         builder = builder.pay_cost_self_gated(
             crate::dsl_cards::lower_triggered::body_first_step_is_declinable(pay_cost.as_ref()),
         );
+        // An INTERACTIVE pay_cost (its first step installs a selection — e.g.
+        // `trash_bottom_face_down_source_under_tamer`) parks. The synchronous
+        // digivolve / Option-use cost scan cannot host a park, so the engine
+        // routes such a reducer through a dedicated interactive prompt.
+        // `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+        builder = builder.pay_cost_interactive(
+            crate::dsl_cards::lower_triggered::body_first_step_installs_selection(pay_cost.as_ref()),
+        );
         // Special-case the "by suspending this Tamer" idiom: a `pay_cost` of
         // a single self-targeted `suspend` must FAIL when the source is
         // already suspended (the cost is unpayable → reduction does not
@@ -203,11 +211,20 @@ pub fn lower_with_formula(
             builder = builder.pay_cost_fn(move |ctx| ctx.suspend_self_as_cost());
         } else {
             builder = builder.pay_cost_fn(move |ctx| {
+                ctx.cost_unpayable = false;
                 let mut bindings = crate::dsl_cards::bindings::Bindings::new();
-                matches!(
-                    run_steps_with_runtime(pay_cost.as_ref(), ctx, &mut bindings, &runtime),
-                    RunOutcome::Synchronous
-                )
+                let outcome =
+                    run_steps_with_runtime(pay_cost.as_ref(), ctx, &mut bindings, &runtime);
+                // A PARKED pay_cost (an interactive step like
+                // `trash_bottom_face_down_source_under_tamer`'s Tamer pick) will
+                // be paid when its selection resolves; it returns `false` here
+                // and `apply_cost_reduction_candidate` credits the deferred
+                // amount behind the park (play-from-hand path only). A
+                // SYNCHRONOUS outcome means the cost completed — UNLESS a step
+                // signalled it was unpayable (`cost_unpayable`), in which case
+                // nothing was paid and the reduction must not be credited.
+                // `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+                matches!(outcome, RunOutcome::Synchronous) && !ctx.cost_unpayable
             });
         }
     }

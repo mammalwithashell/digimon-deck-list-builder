@@ -1,0 +1,106 @@
+# P-236 Glowing Dawn — Option, Green, Cost 3.
+# Traits: Glowing Dawn, BEATBREAK.
+#
+# Printed card text (data/cards.json — verbatim, confirmed vs DCGO):
+#   <Use Req. ([Glowing Dawn] trait)> (Specified cards let you ignore color
+#     requirements.)
+#   [Main] Reveal the top 3 cards of your deck. Add 1 card with the [Glowing
+#     Dawn] trait among them to the hand. Return the rest to the bottom of the
+#     deck. Then, place this card in the battle area.
+#   [Main] <Delay> (By trashing this card after the placing turn, activate the
+#     effect below.)
+#     ・Gain 2 memory.
+#   Inherited: [Security] Place this card in the battle area.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Green/P_236.cs
+#   Structurally identical to BT24-100 In-Between Theater (cards/bt24/BT24-100.yaml)
+#   except trait/color and the single-trait reveal bucket.
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# <Use Req.> (timing None): UseRequirements(card, cardSource =>
+#   cardSource.EqualsTraits("Glowing Dawn")). The CardCondition is checked on
+#   THIS card, and P-236 IS a [Glowing Dawn] card, so the predicate is
+#   UNCONDITIONALLY true → color requirements are always ignorable. This is the
+#   DCGO `IgnoreColorConditionClass(cardCondition: cardSource == card)` shape,
+#   i.e. the SAME unconditional-self-bypass as P-206 "Digital Gate Open".
+#   G-IGNORE-COLOR-MASK (P-206 / ST20-15): the action mask consults the
+#   `option_color_requirement_bypass` condition, which is carried by the
+#   card-level `use_requirement` field (lowered onto the [Main] clause) — NOT by
+#   a `flood_gate`, which only fires from BATTLE AREAS and never for a card
+#   sitting in HAND where the play-time color check happens. So the from-hand
+#   bypass is `use_requirement: { all_turns: true }` (unconditional self-bypass),
+#   and the `flood_gate` is retained only for the battle-area / face-up scope.
+# [Main] (OptionSkill): SimplifiedRevealDeckTopCardsAndSelect(revealCount 3,
+#   single bucket EqualsTraits("Glowing Dawn"), maxCount 1, AddHand,
+#   remainingCardsPlace DeckBottom); then PlaceDelayOptionCards (place self in
+#   the battle area as a standard <Delay> Option).
+#   → reveal_top_deck 3, select_reveal (Glowing Dawn), add_to_hand_from_reveal,
+#     place_remainder_on_deck bottom, place_self_as_delay_option.
+#   The "Add 1 ... among them" pick is MANDATORY when a [Glowing Dawn] card is
+#   revealed (no "may"; DCGO maxCount 1 with no canNoSelect). When none is
+#   revealed the select finds no candidate and auto-skips. (optional: true is
+#   used only to model that fizzle path — the BT25-098 / BT24-100 idiom.)
+# [Main] <Delay> (OnDeclaration): Gain2MemoryOptionDelayEffect → a STANDARD
+#   manual <Delay> ("By trashing this card after the placing turn") gaining 2
+#   memory. → kind: delay, trigger: delayed (DelayTrigger::MainPhaseActivated),
+#   gain_memory: 2. The standard-Delay self-trash is the engine's activation
+#   cost (no explicit trash_self step needed).
+# [Security] (SecuritySkill): PlaceSelfDelayOptionSecurityEffect → scope:
+#   inherited, when: on_security, place_self_as_delay_option.
+
+card: P-236
+name: "Glowing Dawn"
+kind: option
+color: [green]
+cost: 3
+traits: [Glowing Dawn, BEATBREAK]
+
+# <Use Req. ([Glowing Dawn] trait)> — P-236 IS a [Glowing Dawn] card, so the
+# self-trait Use Req. is UNCONDITIONALLY satisfied. The card-level
+# use_requirement carries the FROM-HAND color-bypass (lowered onto the [Main]
+# clause's option_color_requirement_bypass). `all_turns: true` is the explicit
+# always-true marker (the P-206 idiom).
+use_requirement:
+  all_turns: true
+
+effects:
+  # ─── <Use Req. ([Glowing Dawn] trait)> — battle-area / face-up scope ───────
+  # The from-hand bypass is carried by `use_requirement` above; this flood_gate
+  # only covers the battle-area / face-up scope (it never fires from hand). Kept
+  # for parity with P-206 (harmless declarative). Self-targeted, unconditional.
+  - kind: flood_gate
+    scope: face_up
+    active_when: { your_turn: true }
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "P-236" }
+    summary: "<Use Req. ([Glowing Dawn] trait)> — ignore this card's color requirements"
+
+  # ─── [Main] Reveal 3; add 1 [Glowing Dawn]; rest to bottom; place self ─────
+  - when: main_from_hand
+    summary: "[Main] Reveal top 3; add 1 [Glowing Dawn] card to hand; rest to bottom; place self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: gd_pick
+          optional: true
+          filter: { trait_has: "Glowing Dawn" }
+          prompt: "Add 1 card with the [Glowing Dawn] trait to your hand"
+      - add_to_hand_from_reveal: { of: you, card: gd_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}
+
+  # ─── [Main] <Delay> Gain 2 memory ──────────────────────────────────────────
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  # ─── Inherited [Security] Place this card in the battle area ───────────────
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

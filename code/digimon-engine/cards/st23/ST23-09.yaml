@@ -1,0 +1,123 @@
+# ST23-09 Atratusmon / "Eclipse Impact" — DUAL card (Digimon + Option).
+# Lv.6 Green/Black, Mutant / Glowing Dawn / BEATBREAK, DP 12000.
+#
+# Printed text (card image ST23-09 + DCGO ST23_09.cs — authoritative; the card
+# is a DIGIMON / OPTION "DUAL" card):
+#   DIGIMON FACE
+#   <Digivolve> Lv.5 w/ [Glowing Dawn] trait: Cost 3.
+#   <Security A. +1> <Reboot> <Blocker>
+#   [When Digivolving] [When Attacking] [Once Per Turn] Your opponent's Digimon
+#     effects don't affect this Digimon until their turn ends. Then, delete 1 of
+#     your opponent's Digimon with the lowest DP.
+#   OPTION FACE — "Eclipse Impact", Use 5
+#   Use Req. [BEATBREAK] trait (ignore color requirements).
+#   [Main] Suspend 1 of your opponent's Digimon. Then, return 1 of your
+#     opponent's suspended Digimon with the highest DP to the bottom of the deck.
+#   <Arts Digivolve>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST23/Green/ST23_09.cs
+#
+# ── DCGO crosscheck (per clause) ─────────────────────────────────────────────
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect(level 5,
+#   HasGlowingDawnTraits, cost 3). Color form (green Lv.5) authored alongside so
+#   the static evo_cost backfills (engine basic-digivolve is color+level only).
+# Static keywords — ChangeSelfSAttack(+1) + Blocker + Reboot self static effects.
+# Digimon WD/WA OPT (hash ST23_09_WD_WA) — give self DigimonEffectImmunity
+#   (UntilOpponentTurnEnd), then delete 1 lowest-DP opponent Digimon (mandatory,
+#   Mode.Destroy, IsMinDP). No activation cost → the OPT body always runs.
+# Option [Main] (OptionSkill) — suspend 1 opponent Digimon (Mode.Tap), then
+#   bounce 1 of the opponent's SUSPENDED Digimon with the highest DP to the deck
+#   bottom (Mode.PutLibraryBottom, IsMaxDP over IsSuspended).
+# Arts Digivolve — CardEffectFactory.ArtsDigivolveEffect(card).
+
+card: ST23-09
+name: "Atratusmon"
+kind: dual
+
+level: 6
+color: [green, black]
+cost: 5
+dp: 12000
+traits: [Mutant, Glowing Dawn, BEATBREAK]
+
+# Digimon-face digivolution. Color form (green Lv.5 — the cards.json evo table)
+# backfills the static evo_cost; the trait form expresses the printed
+# [Glowing Dawn] restriction. (Trait-gated `can_digivolve` is a separate
+# pre-existing engine limitation; see BT25-057.yaml note.)
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - trait_has: "Glowing Dawn"
+    cost: 3
+
+dual:
+  digimon:
+    level: 6
+    dp: 12000
+    colors: [green, black]
+    traits: [Mutant, Glowing Dawn, BEATBREAK]
+    effect_text: |
+      <Security A. +1> <Reboot> <Blocker>
+      [When Digivolving] [When Attacking] [Once Per Turn] Your opponent's Digimon effects don't affect this Digimon until their turn ends. Then, delete 1 of your opponent's Digimon with the lowest DP.
+    effects:
+      # Static printed keywords on the Digimon face.
+      - kind: grant_keyword
+        keyword: SecurityAttackPlus
+        value: 1
+        summary: "<Security A. +1>"
+      - kind: grant_keyword
+        keyword: Reboot
+        summary: "<Reboot>"
+      - kind: grant_keyword
+        keyword: Blocker
+        summary: "<Blocker>"
+
+      # [WD][WA][OPT] self effect-immunity (opp Digimon effects don't affect this
+      # until their turn ends), then delete 1 lowest-DP opponent Digimon.
+      - when: [when_digivolving, when_attacking]
+        once_per_turn: true
+        summary: "[WD][WA][OPT] Opp Digimon effects don't affect this until their turn ends; delete 1 lowest-DP opp Digimon"
+        process:
+          - grant_effect_immunity:
+              target: self
+              source_kind: digimon
+              source_controller: opponent
+              expiry: end_of_opponents_turn
+          - select_opponent_permanent:
+              bind_as: lowest
+              selector: lowest_dp
+              filter: { kind: digimon }
+              prompt: "Delete 1 of your opponent's Digimon with the lowest DP"
+          - delete_permanent: { target: lowest }
+  option:
+    use_cost: 5
+    colors: [green, black]
+    effect_text: |
+      [Main] Suspend 1 of your opponent's Digimon. Then, return 1 of your opponent's suspended Digimon with the highest DP to the bottom of the deck.
+    # Use Req. [BEATBREAK] trait — a BEATBREAK Digimon on the field satisfies
+    # the Option's color requirement (ignore color).
+    use_requirement:
+      any_field_permanent:
+        of: you
+        trait_has: "BEATBREAK"
+    arts_digivolve: true
+    effects:
+      - when: main
+        summary: "[Main] Suspend 1 opp Digimon, then bounce 1 highest-DP suspended opp Digimon to deck bottom"
+        process:
+          - select_opponent_permanent:
+              bind_as: to_suspend
+              filter: { kind: digimon }
+              prompt: "Suspend 1 of your opponent's Digimon"
+          - suspend: { target: to_suspend }
+          - select_opponent_permanent:
+              bind_as: to_bounce
+              selector: highest_dp
+              filter: { kind: digimon, is_suspended: true }
+              prompt: "Return 1 of your opponent's suspended Digimon with the highest DP to the bottom of the deck"
+          - return_to_deck: { target: to_bounce, position: bottom }

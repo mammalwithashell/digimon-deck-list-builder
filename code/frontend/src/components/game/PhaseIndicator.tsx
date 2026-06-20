@@ -22,8 +22,8 @@ export function PhaseIndicator({
 
   if (isGameOver) {
     return (
-      <div data-testid="phase-indicator" className="flex items-center gap-3 px-3 py-1.5 bg-yellow-900/30 border border-yellow-700/50 rounded">
-        <span className="text-sm font-bold text-yellow-300">
+      <div data-testid="phase-indicator" className="flex items-center gap-3 px-3 py-1.5 bg-[var(--ib-graphite)] border border-[var(--ib-warn)] rounded">
+        <span className="text-sm font-bold text-[var(--ib-warn)]">
           Game Over — {getLabel(winner!)} wins!
         </span>
       </div>
@@ -31,12 +31,12 @@ export function PhaseIndicator({
   }
 
   return (
-    <div data-testid="phase-indicator" className="flex items-center gap-3 px-3 py-1.5 bg-gray-800/50 rounded">
-      <span data-testid="turn-count" className="text-xs text-gray-500">Turn {turnCount}</span>
-      <span className="text-xs text-gray-400">
+    <div data-testid="phase-indicator" className="flex items-center gap-3 px-3 py-1.5 bg-[var(--ib-graphite)] border border-[var(--ib-line)] rounded">
+      <span data-testid="turn-count" className="text-xs text-[var(--ib-bone-dd)]">Turn {turnCount}</span>
+      <span className="text-xs text-[var(--ib-bone-d)]">
         {getLabel(currentPlayer)}'s turn
       </span>
-      <span data-testid="current-phase" className="text-xs font-medium text-blue-400">
+      <span data-testid="current-phase" className="text-xs font-medium text-[var(--ib-opp)]">
         {PHASE_NAMES[phase] ?? `Phase ${phase}`}
       </span>
     </div>

@@ -232,6 +232,72 @@ fn st1_07_top_card_inherited_security_attack_plus_does_not_apply_to_itself() {
     );
 }
 
+/// Regression: the inherited `<Security A. +1>` must grant the carrier a NET
+/// security-attack bonus of exactly **+1** — not +2.
+///
+/// The embedded DSL pack leaves `card_data.inherited_text` EMPTY, but the real
+/// game loads it from `data/cards.json`, where ST1-07's text lives in
+/// `inherited_effect_description_eng` = "＜Security A. +1＞ (...)". With the
+/// printed inherited text present, the keyword was double-counted:
+///   1. `security_attack_keyword_bonus` reads the buried source's
+///      `inherited_keywords(card_data)` text-parse → +1, AND
+///   2. `tick_declarative_effects` materializes the `scope: inherited`
+///      `grant_keyword` onto the carrier → +1.
+/// => +2. The de-dup in `tick_declarative_effects` only ran for face-up
+/// (`!inherited_source`) grants; inherited grants escaped it.
+///
+/// This test mirrors production by injecting the printed inherited text, so it
+/// exercises the path the embedded-pack tests above cannot.
+#[test]
+fn st1_07_inherited_security_attack_plus_not_double_counted_with_printed_text() {
+    let lv5_card = make_test_card("PLAIN-LV5", "PlainLv5");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST1-07")
+        .expect("ST1-07 in pack")
+        .add_card(lv5_card)
+        .memory(10)
+        .start();
+
+    // Mirror production cards.json: ST1-07's inherited text carries the
+    // printed <Security A. +1> keyword (fullwidth brackets, as ingested).
+    {
+        let game = runner.game_mut();
+        for cd in game.card_data.iter_mut() {
+            if cd.card_id == "ST1-07" {
+                cd.inherited_text =
+                    "＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+                        .to_string();
+            }
+        }
+    }
+
+    // Build a digivolve stack: ST1-07 buried under PLAIN-LV5 (the carrier).
+    let _greymon = runner.place_on_field(0, "ST1-07", Some(0));
+    let greymon_source = {
+        let game = runner.game_mut();
+        game.players[0].battle_area[0].top_card().clone()
+    };
+    let carrier = runner.place_on_field(0, "PLAIN-LV5", Some(0));
+    {
+        let game = runner.game_mut();
+        game.players[0].battle_area[carrier.index as usize]
+            .card_sources
+            .insert(0, greymon_source);
+    }
+
+    // Install declarative grants (materializes the inherited grant onto the carrier).
+    runner.game_mut().tick_declarative_effects();
+
+    let bonus = runner.game.security_attack_keyword_bonus(carrier);
+    assert_eq!(
+        bonus, 1,
+        "carrier with ST1-07 buried must check exactly +1 additional security card \
+         (got {bonus}); the inherited <Security A. +1> must not be double-counted by \
+         both the printed-text path and the materialized grant_keyword"
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 3 — Runtime modifier installation (pending G-DECLARATIVE-KEYWORD)
 // ═══════════════════════════════════════════════════════════════════════════════

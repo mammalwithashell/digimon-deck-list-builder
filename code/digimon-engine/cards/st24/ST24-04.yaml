@@ -1,0 +1,125 @@
+# ST24-04 Agumon — Digimon, Lv.3, Yellow/Red, DP 4000, Cost 0.
+# Traits: Dinosaur, DATA SQUAD. Attribute: Vaccine.
+#
+# ─── cards.json TRAP ─────────────────────────────────────────────────────────
+# data/cards.json files ST24-04's effect_description_eng as the ST24-05
+# GeoGreymon text ("If you have 1 or fewer Tamers, play a Tamer…"). That is a
+# DUPLICATION bug — it does NOT belong to this card. The REAL effect (card image
+# + DCGO ST24_04.cs) is the [On Play] [When Moving] reveal-3 effect below.
+# Authored from DCGO + image, NOT cards.json. (DP is null in cards.json; the
+# printed face is DP 4000.)
+#
+# Real card text (card image / DCGO — authoritative):
+#   [On Play] [When Moving] Reveal the top 3 cards of your deck. Among them, add
+#     1 [DATA SQUAD] trait card to the hand and place 1 such card face down under
+#     any of your [DATA SQUAD] trait Tamers. Return the rest to the bottom of the
+#     deck.
+#   Inherited [Your Turn]: This Digimon gets +2000 DP.
+#   <Digivolve> Koromon: Cost 0.  <Digivolve> Lv.2 w/[DATA SQUAD]: Cost 0.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST24/Yellow/ST24_04.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (timing None):
+#   - AddSelfDigivolutionRequirementStaticEffect(EqualsCardName("Koromon"),
+#     cost 0). → alt_paths digivolve from a Koromon (name) at cost 0.
+#   - AddSelfDigivolutionRequirementStaticEffect(level 2,
+#     TopCard EqualsTraits("DATA SQUAD"), cost 0). → alt_paths digivolve from
+#     Lv.2 + DATA SQUAD trait at cost 0.
+# Shared WM/OP (OnMove + OnEnterFieldAnyone, optional: false): CanActivate gated
+#   on a battle-area Digimon existing && LibraryCards.Count >= 1.
+#   - IF a [DATA SQUAD] Tamer exists: SimplifiedRevealDeckTopCardsAndSelect(3)
+#     with TWO buckets — Bucket 1 (AddHand, maxCount 1, [DATA SQUAD]); Bucket 2
+#     (Custom, maxCount 1, [DATA SQUAD]) captured by PlaceUnderTamer → a
+#     SelectPermanent over the DATA SQUAD Tamers (canNoSelect:false) →
+#     AddDigivolutionCardsBottom(isFacedown true). remainingCardsPlace DeckBottom.
+#   - ELSE (no DATA SQUAD Tamer): reveal 3 with only Bucket 1 (AddHand);
+#     remainder DeckBottom.
+#   → reveal_top_deck + select_reveal_buckets (add + place) over DATA SQUAD +
+#     place_selected_card_under_tamer face_down + place_remainder_on_deck bottom.
+#   Sister template: ST23-06 Gekkomon (reveal-and-stash, trait-swapped).
+# Inherited (timing None, ChangeSelfDPStaticEffect +2000, isInheritedEffect,
+#   IsOwnerTurn gate). → scope: inherited, kind: aura, dp +2000,
+#   active_when your_turn.
+
+card: ST24-04
+name: "Agumon"
+kind: digimon
+level: 3
+color: [yellow, red]
+cost: 0
+dp: 4000
+traits: [Dinosaur, DATA SQUAD]
+attribute: Vaccine
+
+# Alt-digivolve: from Koromon (cost 0); from Lv.2 [DATA SQUAD] (cost 0).
+alt_paths:
+  - kind: digivolve
+    from: { name_contains: "Koromon" }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: "DATA SQUAD" }
+    cost: 0
+
+effects:
+  # ─── [On Play][When Moving] Reveal 3; add 1 [DATA SQUAD] to hand + place 1
+  #     such card face down under a [DATA SQUAD] Tamer; rest to deck bottom ──────
+  - when: [on_play, on_move]
+    summary: "[On Play][When Moving] Reveal 3; add 1 [DATA SQUAD] to hand + place 1 face down under a [DATA SQUAD] Tamer; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      # With a DATA SQUAD Tamer: add-to-hand bucket + place-under-tamer bucket.
+      # Without: only the add-to-hand bucket.
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: tamer
+              trait_has: "DATA SQUAD"
+          then:
+            - select_reveal_buckets:
+                from: revealed
+                no_duplicate_cards: true
+                buckets:
+                  - bind_as: add_pick
+                    min: 1
+                    max: 1
+                    filter: { trait_has: "DATA SQUAD" }
+                  - bind_as: place_pick
+                    min: 1
+                    max: 1
+                    filter: { trait_has: "DATA SQUAD" }
+                prompt: "Add 1 [DATA SQUAD] card to hand and place 1 under a [DATA SQUAD] Tamer"
+            - add_to_hand_from_reveal: { of: you, card: add_pick }
+            - if:
+                condition: { binding_present: place_pick }
+                then:
+                  - select_own_permanent:
+                      bind_as: ds_tamer
+                      filter:
+                        all_of:
+                          - kind: tamer
+                          - trait_has: "DATA SQUAD"
+                      prompt: "Choose a [DATA SQUAD] Tamer to place a card face down under"
+                  - place_selected_card_under_tamer:
+                      card: place_pick
+                      tamer: ds_tamer
+                      face_down: true
+          else:
+            - select_reveal:
+                of: you
+                bind_as: add_pick
+                filter: { trait_has: "DATA SQUAD" }
+                prompt: "Add 1 [DATA SQUAD] card to the hand"
+            - add_to_hand_from_reveal: { of: you, card: add_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Inherited [Your Turn] +2000 DP ──────────────────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "Inherited [Your Turn] This Digimon gets +2000 DP"

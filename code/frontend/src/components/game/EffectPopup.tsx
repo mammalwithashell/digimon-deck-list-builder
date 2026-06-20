@@ -82,7 +82,7 @@ function EffectBadge({ event }: { event: GameEvent }) {
   const displayText = effectText.length > 80 ? effectText.slice(0, 77) + '...' : effectText;
 
   return (
-    <div className="animate-effect-popup bg-gray-900/90 border border-amber-600/40 rounded-lg px-3 py-1.5 max-w-sm shadow-lg">
+    <div className="animate-effect-popup bg-[var(--ib-graphite)] border border-amber-600/40 rounded-lg px-3 py-1.5 max-w-sm shadow-lg">
       <div className="flex items-center gap-2 text-[11px]">
         <span className="text-amber-400 font-semibold shrink-0">{cardName}</span>
         {isInherited && (
@@ -91,11 +91,11 @@ function EffectBadge({ event }: { event: GameEvent }) {
           </span>
         )}
         {timing && (
-          <span className="text-gray-500 text-[9px] shrink-0">{formatTiming(timing)}</span>
+          <span className="text-[var(--ib-bone-dd)] text-[9px] shrink-0">{formatTiming(timing)}</span>
         )}
       </div>
       {displayText && (
-        <div className="text-gray-300 text-[10px] leading-snug mt-0.5">{displayText}</div>
+        <div className="text-[var(--ib-bone-d)] text-[10px] leading-snug mt-0.5">{displayText}</div>
       )}
     </div>
   );

@@ -358,6 +358,10 @@ pub struct RevealedCardDto {
 pub struct GameStateDto {
     pub turn_count: u16,
     pub turn_player: PlayerId,
+    /// The seat that takes the first turn (`turn_order[0]`). Stable from game
+    /// creation, so the mulligan UI can tell the player whether they go first
+    /// or second. The local human is always seat 0 in a desktop game.
+    pub first_player: PlayerId,
     pub current_phase: String,
     pub memory: i16,
     pub game_over: bool,
@@ -755,6 +759,7 @@ pub fn game_state_dto(game: &Game) -> GameStateDto {
     GameStateDto {
         turn_count: game.turn_count,
         turn_player: game.turn_player(),
+        first_player: game.turn_order.first().copied().unwrap_or(0),
         current_phase: phase_str(game.current_phase).to_string(),
         memory: game.memory,
         game_over: game.game_over,
@@ -1104,6 +1109,13 @@ pub struct CreateGameResponseDto {
     pub seed: String,
     pub state: GameStateDto,
     pub action_mask: Vec<u8>,
+    /// Whether the next decision belongs to an agent (so the frontend locks the
+    /// human's controls and the paced driver advances it). True when the AI
+    /// acts first — e.g. it mulligans first when the human goes second. Without
+    /// this the frontend defaulted to `false` and presented the AI's pending
+    /// mulligan to the human as a clickable prompt. Mirrors
+    /// `ActionResponseDto.agent_pending`.
+    pub agent_pending: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -1382,6 +1394,28 @@ fn ensure_game(game: &mut Option<Game>) -> Result<&mut Game, String> {
     game.as_mut().ok_or_else(|| "No active game".to_string())
 }
 
+/// Build the initial game for a new session, left ready for the opening
+/// mulligan. `Game::new` starts a standard game in the `Mulligan` phase; we
+/// hand it back in that phase so the opening keep/redraw decision is exposed
+/// to the human (via the frontend) and to the AI (via the agent loop's
+/// `current_decision_player`, which returns the mulligan decider). The final
+/// `accept_mulligan` triggers `finalize_mulligan`, which begins turn 1. Only
+/// when the ruleset leaves no mulligan pending (defensive) do we start turn 1
+/// directly via `start_game`.
+fn new_session_game(
+    decks: &[Vec<String>],
+    db: &std::collections::HashMap<String, CardData>,
+    rules: Rules,
+    seed: u64,
+) -> Result<Game, String> {
+    let mut game =
+        Game::new(decks, db, rules, Some(seed)).map_err(|e| format!("Game::new failed: {}", e))?;
+    if game.mulligan_current_player().is_none() {
+        game.start_game();
+    }
+    Ok(game)
+}
+
 /// Create a new local game. When `deck1`/`deck2` are provided by the
 /// caller, the real `data/cards.json`-derived card pool is used so any
 /// production card ID resolves. When both are absent, falls back to the
@@ -1424,9 +1458,12 @@ pub async fn rust_create_game(
             ];
             let player_count = decks.len();
             let effective_seed = parsed_seed.unwrap_or_else(rand::random::<u64>);
-            let mut game = Game::new(&decks, &db, Rules::standard(), Some(effective_seed))
-                .map_err(|e| format!("Game::new failed: {}", e))?;
-            game.start_game();
+            // Leave the game in the Mulligan phase so BOTH players make their
+            // opening keep/redraw decision: the frontend drives the human's, and
+            // the agent loop drives the AI's. Auto-resolving mulligan here was
+            // the bug that skipped it entirely and dropped the going-second human
+            // into a Hatch prompt before the opponent moved.
+            let game = new_session_game(&decks, &db, Rules::standard(), effective_seed)?;
 
             let kinds = normalize_player_kinds(player_kinds, player_count)?;
             let model_ids = normalize_player_model_ids(player_model_ids, player_count, &kinds)?;
@@ -1439,21 +1476,27 @@ pub async fn rust_create_game(
             }
 
             let registry = CardRegistry::from_cards(&db);
-            let mask = action_mask_bytes(&game);
-            let dto = game_state_dto(&game);
-
-            world.game = Some(game);
-            world.session = GameSession {
+            let session = GameSession {
                 registry: Some(registry),
                 player_kinds: kinds,
                 player_model_ids: model_ids,
             };
+            let mask = action_mask_bytes(&game);
+            let dto = game_state_dto(&game);
+            // Compute BEFORE moving game/session into `world` so the frontend
+            // knows up-front whether the opening decision (e.g. the first
+            // mulligan when the human goes second) belongs to the AI.
+            let pending = agent_pending(&game, &session);
+
+            world.game = Some(game);
+            world.session = session;
 
             Ok(CreateGameResponseDto {
                 game_id: "rust-local".to_string(),
                 seed: effective_seed.to_string(),
                 state: dto,
                 action_mask: mask,
+                agent_pending: pending,
             })
         })
         .await?
@@ -1603,6 +1646,13 @@ pub async fn rust_step_game(
             // repeats while `agent_pending` is true.
             let max_agent_actions = if paced.unwrap_or(false) { Some(1) } else { None };
             let action_traces = run_agent_steps(game, session, inference, max_agent_actions)?;
+            // Drain the events the agent's action(s) produced this beat so the
+            // frontend streams them live (security-reveal overlay + the
+            // event-derived game log). Previously this was `Vec::new()`, so the
+            // AI's events piled up in the engine queue and only flushed on the
+            // human's NEXT submit — the attack's security reveal and the log
+            // appeared a turn late (after the player's breeding action).
+            let events = drain_events(game);
             let mask = action_mask_bytes(game);
             let pid = current_decision_player(game);
             let is_human_turn =
@@ -1613,7 +1663,7 @@ pub async fn rust_step_game(
                 state: game_state_dto(game),
                 action_mask: mask,
                 logs: Vec::new(),
-                events: Vec::new(),
+                events,
                 is_human_turn,
                 is_game_over: is_over,
                 action_traces,
@@ -1928,6 +1978,74 @@ pub async fn rust_list_loaded_models(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // ─── new-session mulligan (mulligan must NOT be auto-skipped) ────────
+
+    #[test]
+    fn new_session_game_starts_in_mulligan_awaiting_a_decision() {
+        let db = test_card_db();
+        let decks = vec![test_deck(), test_deck()];
+        let game = new_session_game(&decks, &db, Rules::standard(), 42).unwrap();
+        // Regression: rust_create_game used to call start_game(), which auto-kept
+        // every mulligan — skipping the opening decision and dropping the
+        // going-second human straight into a Hatch prompt. The session game must
+        // now be handed over in the Mulligan phase with a pending decider.
+        assert_eq!(game.current_phase, GamePhase::Mulligan);
+        assert!(
+            game.mulligan_current_player().is_some(),
+            "a fresh session game must await an opening mulligan decision"
+        );
+    }
+
+    #[test]
+    fn new_session_game_finalizes_to_turn_one_once_mulligans_resolve() {
+        let db = test_card_db();
+        let decks = vec![test_deck(), test_deck()];
+        let mut game = new_session_game(&decks, &db, Rules::standard(), 42).unwrap();
+        // Resolving both players' mulligans (keep) must finalize into turn 1 —
+        // i.e. the game is playable, not stuck in Mulligan.
+        while let Some(p) = game.mulligan_current_player() {
+            game.accept_mulligan(p, /* keep */ true).unwrap();
+        }
+        assert!(game.mulligan_current_player().is_none());
+        assert_eq!(game.turn_count, 1, "the last accept_mulligan begins turn 1");
+        assert_ne!(game.current_phase, GamePhase::Mulligan);
+    }
+
+    #[test]
+    fn new_session_game_first_player_follows_seed_parity() {
+        let db = test_card_db();
+        let decks = vec![test_deck(), test_deck()];
+        // Deterministic: even seed → seat 0 (local human) goes first; odd → AI.
+        for seed in 0u64..8 {
+            let game = new_session_game(&decks, &db, Rules::standard(), seed).unwrap();
+            assert_eq!(
+                game.turn_order[0],
+                (seed % 2) as PlayerId,
+                "seed {seed}: first player must follow seed parity"
+            );
+        }
+    }
+
+    #[test]
+    fn new_session_game_first_player_is_balanced_over_random_seeds() {
+        let db = test_card_db();
+        let decks = vec![test_deck(), test_deck()];
+        let (mut p0, mut p1) = (0u32, 0u32);
+        for _ in 0..400 {
+            let seed = rand::random::<u64>();
+            let game = new_session_game(&decks, &db, Rules::standard(), seed).unwrap();
+            if game.turn_order[0] == 0 {
+                p0 += 1;
+            } else {
+                p1 += 1;
+            }
+        }
+        println!("FIRST_PLAYER_DIST p0={p0} p1={p1}");
+        // A correct random first-player split is ~50/50; generous slack guards
+        // against a regression to "always the same seat goes first".
+        assert!(p0 > 120 && p1 > 120, "first player should vary: p0={p0} p1={p1}");
+    }
 
     // ─── engine worker thread (desktop-engine-worker-thread) ────────────
 

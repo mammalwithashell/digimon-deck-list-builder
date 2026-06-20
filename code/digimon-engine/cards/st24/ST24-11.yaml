@@ -1,0 +1,124 @@
+# ST24-11 Rosemon — Digimon, Lv.6, Green/Red, DP 12000, Cost 11.
+# Traits: Fairy, DATA SQUAD. Attribute: Data.
+#
+# Printed card text (data/cards.json — verbatim, confirmed vs DCGO ST24_11.cs):
+#   [When Digivolving] [When Attacking] [Once Per Turn] You may suspend up to 2
+#     of your opponent's Digimon or Tamers. Then, by trashing the bottom
+#     face-down card from under any of your Tamers, none of their Digimon can
+#     unsuspend until their turn ends.
+#   [All Turns] [Once Per Turn] When any of your opponent's Digimon or Tamers
+#     suspend, or effects trash cards from under your Tamers, trash your
+#     opponent's top security card.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST24/Green/ST24_11.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (EffectTiming.None): TWO AddSelfDigivolutionRequirementStaticEffect
+#   — EqualsCardName("Lilamon") cost 3 (NO level), and level 5 + EqualsTraits
+#   ("DATA SQUAD") cost 3. → two alt_paths (faithful to the two printed boxes).
+# Shared WD/WA (ActivateClassesForSharedEffects, hash "ST24_11_SharedEffect",
+#   optional:false, maxCountPerTurn 1 → OPT across WD+WA):
+#   1. IF opp has a Digimon/Tamer: SelectPermanentEffect (Mode.Tap, canNoSelect,
+#      canEndNotMax, maxCount min(2,count)) → suspend up to 2 opp Digimon/Tamers.
+#      → select_count_capped_multi {max:2, optional_zero} + per_selected suspend.
+#   2. SelectPermanentEffect1 over TamerWithOneFaceDownSource — canNoSelect:true,
+#      maxCount 1: the "by trashing …" cost is INDEPENDENTLY optional (you may
+#      suspend WITHOUT trashing/locking). On a pick → trash 1 bottom FD →
+#      `trashed=true`. → trash_bottom_face_down_source_under_tamer {optional:true}
+#      (G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER: the declinable Tamer pick; PASS
+#      skips the trash AND its tail).
+#   3. if (trashed): GainCanNotUnsuspendPlayerEffect (PermanentCondition = opp
+#      Digimon, UntilOpponentTurnEnd) → the PLAYER-SCOPE mass CannotUnsuspend on
+#      the opponent: "none of their Digimon can unsuspend until their turn ends."
+#      → add_player_modifier {opponent, CannotUnsuspend, end_of_opponents_turn} as
+#      the trash's TAIL (runs only if the FD card was actually trashed).
+# Shared All Turns (two ActivateClass sharing hash "ST24_11_AT", maxPerTurn 1 →
+#   ONE OPT counter across two heterogeneous timings — G-SHARED-OPT-HETEROGENEOUS
+#   -TIMING): OnTappedAnyone (an OPPONENT Digimon-or-Tamer suspends) AND
+#   OnDigivolutionCardDiscarded (a source under one of YOUR Tamers is trashed) →
+#   IDestroySecurity(enemy, 1, fromTop) = trash opp top security. → one clause,
+#   `when:` lists both timings, each gated by its own `timing_conditions`.
+# Inherited: NONE (cards.json "|applinkdp =" is an ingest artifact, not text).
+
+card: ST24-11
+name: Rosemon
+kind: digimon
+level: 6
+color: [green, red]
+cost: 11
+dp: 12000
+traits: [Fairy, DATA SQUAD]
+attribute: Data
+
+# Two alt-digivolve boxes (DCGO AddSelfDigivolutionRequirementStaticEffect ×2).
+alt_paths:
+  # [Digivolve] from [Lilamon] (any level): cost 3.
+  - kind: digivolve
+    from: { name_contains: "Lilamon" }
+    cost: 3
+  # [Digivolve] Lv.5 with the [DATA SQUAD] trait: cost 3.
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: "DATA SQUAD" }
+    cost: 3
+
+effects:
+  # ─── [WD][WA][OPT] suspend up to 2 opp; then (optionally) trash FD → mass
+  #     CannotUnsuspend on the opponent ─────────────────────────────────────────
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[WD][WA][OPT] May suspend up to 2 opp Digimon/Tamers; then may trash a bottom FD under a Tamer → none of the opponent's Digimon can unsuspend until their turn ends"
+    process:
+      # "You may suspend up to 2 of your opponent's Digimon or Tamers."
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max: 2
+          optional_zero: true
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: to_suspend
+          prompt: "You may suspend up to 2 of your opponent's Digimon or Tamers"
+      - per_selected:
+          selection: to_suspend
+          bind_as: susp
+          body:
+            - suspend: { target: susp }
+      # "Then, by trashing the bottom face-down card from under any of your
+      # Tamers, none of their Digimon can unsuspend until their turn ends." The
+      # trash+lock is INDEPENDENTLY optional (DCGO canNoSelect Tamer pick): you
+      # may suspend without paying it. `optional: true` → PASS declines the trash
+      # AND its tail (the lock). The lock applies ONLY if a FD card was actually
+      # trashed (DCGO `if (trashed)`), modelled as the trash step's tail.
+      - trash_bottom_face_down_source_under_tamer: { of: you, optional: true }
+      - add_player_modifier:
+          target_player: opponent
+          modifier: CannotUnsuspend
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # ─── [All Turns][OPT] shared-OPT heterogeneous timing → trash opp top security ─
+  #
+  # G-SHARED-OPT-HETEROGENEOUS-TIMING: one clause, two timings sharing ONE OPT
+  # counter, each gated by its own per-timing condition:
+  #   - on_suspend: an OPPONENT Digimon OR Tamer suspended.
+  #   - on_digivolution_card_trashed: a source under one of YOUR Tamers trashed.
+  - when: [on_suspend, on_digivolution_card_trashed]
+    once_per_turn: true
+    active_when: { all_turns: true }
+    timing_conditions:
+      - when: on_suspend
+        condition:
+          all_of:
+            - event_target_owner: opponent
+            - any_of:
+                - event_target_kind: digimon
+                - event_target_kind: tamer
+      - when: on_digivolution_card_trashed
+        condition:
+          event_host_is_own_tamer: true
+    summary: "[All Turns][OPT] When an opp Digimon/Tamer suspends OR a source under your Tamer is trashed, trash the opponent's top security card"
+    process:
+      - trash_top_security: { of: opponent }

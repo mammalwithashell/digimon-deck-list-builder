@@ -1,0 +1,112 @@
+# ST24-09 Sunflowmon — Digimon, Lv.4, Green, DP 5000, Cost 4.
+# Traits: Vegetation, DATA SQUAD.
+#
+# ─── cards.json TRAPs ────────────────────────────────────────────────────────
+# 1. effect_description_eng says "suspend 1 of your opponent's Digimon" but the
+#    card IMAGE + DCGO ST24_09.cs say "Digimon OR Tamers" (IsDigimon || IsTamer).
+#    Authored "Digimon or Tamers" from DCGO/image.
+# 2. xros_req reads "[Digivolve] Lv.2 w/[DATA SQUAD] trait: Cost 0" which is
+#    STALE/wrong for a Lv.4 — evo_costs (Lv.3, memory 2) and DCGO
+#    (AddSelfDigivolutionRequirementStaticEffect level 3, DATA SQUAD, cost 2)
+#    both say Lv.3 DATA-SQUAD-gated cost 2. Authored Lv.3 / cost 2.
+#
+# Real card text (card image / DCGO — authoritative):
+#   [On Play] [When Digivolving] You may suspend 1 of your opponent's Digimon or
+#     Tamers. Then, you may place the top card of your deck face down under any of
+#     your [DATA SQUAD] trait Tamers.
+#   Inherited [All Turns]: This Digimon gets +1000 DP.
+#   [Digivolve] Lv.3 w/[DATA SQUAD] trait: Cost 2.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST24/Green/ST24_09.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (timing None): AddSelfDigivolutionRequirementStaticEffect(
+#   level 3, TopCard EqualsTraits("DATA SQUAD"), cost 2). → alt_paths.
+# Shared OP/WD (optional: false):
+#   1. Optional (canNoSelect:true, Mode.Tap) suspend 1 opponent Digimon or Tamer
+#      (IsDigimon || IsTamer). → select_opponent_permanent { any_of[kind:digimon,
+#      kind:tamer], optional, continue_on_decline } + suspend.
+#   2. THEN, INDEPENDENT of the suspend: if deck non-empty AND a DATA SQUAD Tamer
+#      exists, optional (canNoSelect:true) pick a DATA SQUAD Tamer → place
+#      deck-top face-down under it. (DCGO gates the place on LibraryCards.Count
+#      > 1, a DCGO off-by-one quirk; faithful card text is "top card of your
+#      deck" whenever the deck is non-empty — we gate deck non-empty.)
+# Inherited (timing None, ChangeSelfDPStaticEffect +1000, isInheritedEffect,
+#   IsExistOnBattleArea — [All Turns], NO IsOwnerTurn gate). → scope: inherited
+#   aura dp +1000 (no active_when).
+
+card: ST24-09
+name: "Sunflowmon"
+kind: digimon
+level: 4
+color: [green]
+cost: 4
+dp: 5000
+traits: [Vegetation, DATA SQUAD]
+
+# Alt-digivolve: Lv.3 with the [DATA SQUAD] trait / cost 2.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: "DATA SQUAD" }
+    cost: 2
+
+effects:
+  # ─── [On Play][When Digivolving] (A) optional suspend 1 opp Digimon/Tamer,
+  #     then (B) optional place deck-top FD under a [DATA SQUAD] Tamer (indep) ───
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may suspend 1 opp Digimon or Tamer; then you may place the deck-top face down under a [DATA SQUAD] Tamer"
+    process:
+      # "You may suspend 1 of your opponent's Digimon or Tamers." — the optional
+      # pick carries the "may". continue_on_decline keeps the clause running on
+      # a PASS so the INDEPENDENT place leg still fires.
+      - select_opponent_permanent:
+          bind_as: suspend_target
+          optional: true
+          continue_on_decline: true
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "You may suspend 1 of your opponent's Digimon or Tamers"
+      - if:
+          condition: { binding_present: suspend_target }
+          then:
+            - suspend: { target: suspend_target }
+      # "Then, you may place the top card of your deck face down under any of
+      # your [DATA SQUAD] trait Tamers." — INDEPENDENT of the suspend. Gated on
+      # deck non-empty AND a DATA SQUAD Tamer existing.
+      - if:
+          condition:
+            all_of:
+              - count_gte:
+                  filter: { of: you, zone: [deck] }
+                  n: 1
+              - any_permanent:
+                  of: you
+                  zone: [battle_area]
+                  kind: tamer
+                  trait_has: "DATA SQUAD"
+          then:
+            - select_own_permanent:
+                bind_as: ds_tamer
+                optional: true
+                filter:
+                  all_of:
+                    - kind: tamer
+                    - trait_has: "DATA SQUAD"
+                prompt: "You may place the top card of your deck face down under a [DATA SQUAD] Tamer"
+            - if:
+                condition: { binding_present: ds_tamer }
+                then:
+                  - place_as_bottom_source:
+                      source: { deck_top: you }
+                      target: ds_tamer
+                      face_down: true
+
+  # ─── Inherited [All Turns] +1000 DP ──────────────────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    dp_modifier: 1000
+    summary: "Inherited [All Turns] This Digimon gets +1000 DP"

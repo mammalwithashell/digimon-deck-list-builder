@@ -15,19 +15,19 @@
 .room-player .role,
 .room-player .ready,
 .room-actions button {
-  font-family: var(--ib-font-mono);
+  font-family: var(--font-mono);
 }
 
 .room-header h1 {
   margin: 6px 0;
-  color: #ff7a18;
-  font-family: var(--ib-font-display);
+  color: var(--player);
+  font-family: var(--font-display);
 }
 
 .room-notice {
   margin: 0;
-  color: rgba(245, 241, 232, 0.64);
-  font-family: var(--ib-font-mono);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -37,14 +37,14 @@
   display: grid;
   gap: 6px;
   min-width: 240px;
-  border: 1px solid #ff7a18;
+  border: 1px solid var(--player);
   padding: 14px;
   background: rgba(255, 122, 24, 0.06);
 }
 
 .room-code-card strong {
   font-size: 38px;
-  color: #ff7a18;
+  color: var(--player);
   letter-spacing: 0.16em;
 }
 
@@ -52,9 +52,9 @@
 .room-actions button,
 .room-deck-picker a,
 .room-deck-option {
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.05);
-  color: #f5f1e8;
+  border: 1px solid var(--line-1);
+  background: var(--surface-raised);
+  color: var(--ink-0);
   padding: 10px 12px;
 }
 
@@ -73,8 +73,8 @@
 
 .room-player {
   min-height: 320px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid var(--line-1);
+  background: var(--surface-raised);
   padding: 18px;
   display: grid;
   gap: 18px;
@@ -87,7 +87,7 @@
 
 .deck-slot {
   min-height: 120px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid var(--line-1);
   display: grid;
   gap: 8px;
   align-content: center;
@@ -95,14 +95,14 @@
 }
 
 .deck-slot em {
-  color: #ffcc4a;
+  color: var(--warn);
   font-style: normal;
-  font-family: var(--ib-font-mono);
+  font-family: var(--font-mono);
   font-size: 10px;
 }
 
-.ready.on { color: #4cd497; }
-.ready.waiting { color: #ffcc4a; }
+.ready.on { color: var(--good); }
+.ready.waiting { color: var(--warn); }
 
 .room-setup-row {
   margin-top: 22px;
@@ -114,8 +114,8 @@
 .room-seed-panel {
   align-items: center;
   gap: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--line-1);
+  background: var(--surface-raised);
   padding: 12px 16px;
 }
 
@@ -129,25 +129,25 @@
 }
 
 .room-first-player-label {
-  color: rgba(245, 241, 232, 0.48);
-  font-family: var(--ib-font-mono);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
   font-size: 10px;
   letter-spacing: 0.14em;
   margin-right: 6px;
 }
 
 .room-first-player button {
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.05);
-  color: #f5f1e8;
-  font-family: var(--ib-font-mono);
+  border: 1px solid var(--line-1);
+  background: var(--surface-raised);
+  color: var(--ink-0);
+  font-family: var(--font-mono);
   padding: 8px 18px;
   cursor: pointer;
 }
 
 .room-first-player em {
-  color: #ffcc4a;
-  font-family: var(--ib-font-mono);
+  color: var(--warn);
+  font-family: var(--font-mono);
   font-size: 10px;
   font-style: normal;
   letter-spacing: 0.08em;
@@ -156,25 +156,25 @@
 .room-seed-panel input {
   min-width: 0;
   flex: 1;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.06);
-  color: #f5f1e8;
-  font-family: var(--ib-font-mono);
+  border: 1px solid var(--line-1);
+  background: var(--surface-raised);
+  color: var(--ink-0);
+  font-family: var(--font-mono);
   padding: 8px 10px;
 }
 
 .room-seed-panel button {
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.05);
-  color: #f5f1e8;
-  font-family: var(--ib-font-mono);
+  border: 1px solid var(--line-1);
+  background: var(--surface-raised);
+  color: var(--ink-0);
+  font-family: var(--font-mono);
   padding: 8px 12px;
 }
 
 .room-first-player button.on {
   border-color: rgba(255, 122, 24, 0.72);
   background: rgba(255, 122, 24, 0.12);
-  color: #ff9a3d;
+  color: var(--player-2);
 }
 
 .room-first-player button:disabled {
@@ -185,15 +185,15 @@
 .room-actions .ready {
   align-self: center;
   padding: 10px 12px;
-  font-family: var(--ib-font-mono);
+  font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: 0.08em;
 }
 
 .room-deck-picker {
   margin-top: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--line-1);
+  background: var(--surface-raised);
 }
 
 .room-deck-picker-head {
@@ -202,33 +202,33 @@
   gap: 16px;
   align-items: center;
   padding: 14px 16px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--line-1);
 }
 
 .room-deck-picker-head span,
 .room-deck-option span,
 .room-deck-option b,
 .room-empty {
-  font-family: var(--ib-font-mono);
+  font-family: var(--font-mono);
 }
 
 .room-deck-picker-head span {
   display: block;
-  color: rgba(245, 241, 232, 0.48);
+  color: var(--ink-2);
   font-size: 10px;
   letter-spacing: 0.14em;
 }
 
 .room-deck-picker-head strong {
   display: block;
-  color: #f5f1e8;
+  color: var(--ink-0);
   margin-top: 4px;
 }
 
 .room-deck-picker a {
-  color: #ffb05a;
+  color: var(--player-2);
   text-decoration: none;
-  font-family: var(--ib-font-mono);
+  font-family: var(--font-mono);
   font-size: 11px;
 }
 
@@ -257,28 +257,28 @@
 }
 
 .room-deck-option .name {
-  color: #f5f1e8;
-  font-family: var(--ib-font-display);
+  color: var(--ink-0);
+  font-family: var(--font-display);
   font-size: 20px;
 }
 
 .room-deck-option span {
-  color: rgba(245, 241, 232, 0.55);
+  color: var(--ink-2);
   font-size: 10px;
 }
 
 .room-deck-option b {
-  color: #4cd497;
+  color: var(--good);
   font-size: 10px;
   font-weight: 500;
 }
 
 .room-deck-option.illegal b {
-  color: #ffcc4a;
+  color: var(--warn);
 }
 
 .room-empty {
-  color: rgba(245, 241, 232, 0.46);
+  color: var(--ink-2);
   letter-spacing: 0.12em;
 }
 
@@ -332,6 +332,12 @@
   flex: 1 1 auto;
   max-height: none;
   min-height: 60px;
+}
+
+/* Light theme: the room-code callout's faint orange tint reads teal-on-teal;
+   make it an opaque parchment panel so the code + label contrast. */
+[data-theme="light"] .room-code-card {
+  background: var(--surface-raised);
 }
 
 @media (max-width: 780px) {

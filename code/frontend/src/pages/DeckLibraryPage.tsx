@@ -1,16 +1,20 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { listFormats } from '@/api/deckApi';
 import * as library from '@/api/deckLibraryAdapter';
+import { useRailSection } from '@/components/layout/RailContext';
 import { getCardById } from '@/api/digimonCardApi';
 import type { DigimonCardData } from '@/types/cards';
-import type { DeckFolder, DeckResponse, DeckSummary } from '@/types/deck';
+import type { DeckFolder, DeckFormat, DeckResponse, DeckSummary } from '@/types/deck';
 import { getCardImageUrl } from '@/utils/cardImages';
 import { COLOR_HEX } from '@/utils/constants';
 import {
   buildDeckAnalytics,
   deckInitials,
   deckToExportText,
+  deriveFormatBuckets,
   filterAndSortDecks,
+  formatLabel,
   formatRelativeTime,
   type DeckSortKey,
 } from '@/utils/deckLibrary';
@@ -84,12 +88,14 @@ function DeckTile({
   deck,
   selected,
   view,
+  formats,
   onSelect,
   onTogglePin,
 }: {
   deck: DeckSummary;
   selected: boolean;
   view: ViewMode;
+  formats: DeckFormat[];
   onSelect: (id: string) => void;
   onTogglePin: (deck: DeckSummary) => void;
 }) {
@@ -125,6 +131,9 @@ function DeckTile({
           <span>{deck.meta_archetype ?? deck.meta_tier ?? 'Unclassified'}</span>
           <span>{edited}</span>
         </div>
+        <div className="library-card-meta">
+          <span className="library-format-pill">{formatLabel(deck.game_mode, formats)}</span>
+        </div>
       </div>
     </button>
   );
@@ -134,10 +143,12 @@ export function DeckLibraryPage() {
   const navigate = useNavigate();
   const [decks, setDecks] = useState<DeckSummary[]>([]);
   const [folders, setFolders] = useState<DeckFolder[]>([]);
+  const [formats, setFormats] = useState<DeckFormat[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [selectedDeck, setSelectedDeck] = useState<DeckResponse | null>(null);
   const [selectedCards, setSelectedCards] = useState(new Map<string, DigimonCardData>());
   const [activeFolder, setActiveFolder] = useState('all');
+  const [activeFormat, setActiveFormat] = useState('all');
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState<DeckSortKey>('recent');
   const [view, setView] = useState<ViewMode>('grid');
@@ -162,6 +173,20 @@ export function DeckLibraryPage() {
   useEffect(() => {
     void refresh();
   }, []);
+
+  useEffect(() => {
+    listFormats()
+      .then(setFormats)
+      .catch(() => setFormats([]));
+  }, []);
+
+  // If the active format has no decks left (e.g. the last one was deleted),
+  // fall back to "All formats" so we never strand the user on an empty view.
+  useEffect(() => {
+    if (activeFormat !== 'all' && !decks.some((deck) => deck.game_mode === activeFormat)) {
+      setActiveFormat('all');
+    }
+  }, [activeFormat, decks]);
 
   useEffect(() => {
     if (!selectedId) {
@@ -201,12 +226,14 @@ export function DeckLibraryPage() {
   }, [selectedId]);
 
   const filtered = useMemo(
-    () => filterAndSortDecks(decks, { activeFolder, search, sort }),
-    [activeFolder, decks, search, sort],
+    () => filterAndSortDecks(decks, { activeFolder, search, sort, format: activeFormat }),
+    [activeFolder, activeFormat, decks, search, sort],
   );
+  const formatBuckets = useMemo(() => deriveFormatBuckets(decks, formats), [decks, formats]);
   const pinned = filtered.filter((deck) => deck.is_pinned);
   const others = activeFolder === 'pinned' ? [] : filtered.filter((deck) => !deck.is_pinned);
   const selectedSummary = decks.find((deck) => deck.id === selectedId) ?? filtered[0] ?? null;
+  const selectedIsBuiltin = Boolean(selectedSummary?.is_builtin);
   const analytics = useMemo(
     () => buildDeckAnalytics(selectedDeck, selectedCards),
     [selectedCards, selectedDeck],
@@ -230,13 +257,81 @@ export function DeckLibraryPage() {
     );
   };
 
-  const createFolder = async () => {
+  const createFolder = useCallback(async () => {
     const name = window.prompt('Folder name');
     if (!name?.trim()) return;
     const folder = await library.createDeckFolder(name.trim());
     setFolders((current) => [...current, folder].sort((a, b) => a.sort_order - b.sort_order));
     setActiveFolder(folder.id);
-  };
+  }, []);
+
+  // Contribute Folders + Formats into the MenuShell rail (under Decks) instead
+  // of a separate in-page sidebar (add-desktop-menu-shell). Memoized so the
+  // rail only re-publishes when the rendered sub-nav actually changes.
+  const pinnedCount = decks.filter((deck) => deck.is_pinned).length;
+  const railSection = useMemo(
+    () => (
+      <>
+        <div className="rail-subnav__head">
+          <span>Folders</span>
+          <button type="button" onClick={createFolder} title="New folder" aria-label="New folder">
+            +
+          </button>
+        </div>
+        <button
+          type="button"
+          className={`rail-subnav__item ${activeFolder === 'all' ? 'rail-subnav__item--active' : ''}`}
+          onClick={() => setActiveFolder('all')}
+        >
+          <span>All decks</span>
+          <b>{decks.length}</b>
+        </button>
+        <button
+          type="button"
+          className={`rail-subnav__item ${activeFolder === 'pinned' ? 'rail-subnav__item--active' : ''}`}
+          onClick={() => setActiveFolder('pinned')}
+        >
+          <span>Pinned</span>
+          <b>{pinnedCount}</b>
+        </button>
+        {folders.map((folder) => (
+          <button
+            type="button"
+            key={folder.id}
+            className={`rail-subnav__item ${activeFolder === folder.id ? 'rail-subnav__item--active' : ''}`}
+            onClick={() => setActiveFolder(folder.id)}
+          >
+            <span>{folder.name}</span>
+            <b>{folderCounts.get(folder.id) ?? 0}</b>
+          </button>
+        ))}
+        <div className="rail-subnav__head">
+          <span>Formats</span>
+        </div>
+        <button
+          type="button"
+          className={`rail-subnav__item ${activeFormat === 'all' ? 'rail-subnav__item--active' : ''}`}
+          onClick={() => setActiveFormat('all')}
+        >
+          <span>All formats</span>
+          <b>{decks.length}</b>
+        </button>
+        {formatBuckets.map((bucket) => (
+          <button
+            type="button"
+            key={bucket.id}
+            className={`rail-subnav__item ${activeFormat === bucket.id ? 'rail-subnav__item--active' : ''}`}
+            onClick={() => setActiveFormat(bucket.id)}
+          >
+            <span>{bucket.label}</span>
+            <b>{bucket.count}</b>
+          </button>
+        ))}
+      </>
+    ),
+    [activeFolder, activeFormat, decks.length, pinnedCount, folders, folderCounts, formatBuckets, createFolder],
+  );
+  useRailSection(railSection);
 
   const renameSelected = async () => {
     if (!selectedSummary) return;
@@ -269,7 +364,7 @@ export function DeckLibraryPage() {
   };
 
   const deleteSelected = async () => {
-    if (!selectedSummary) return;
+    if (!selectedSummary || selectedSummary.is_builtin) return;
     if (!window.confirm(`Delete ${selectedSummary.name}?`)) return;
     await library.deleteDeck(selectedSummary.id);
     setDecks((current) => current.filter((deck) => deck.id !== selectedSummary.id));
@@ -315,47 +410,6 @@ export function DeckLibraryPage() {
       </div>
 
       <div className="library-shell">
-        <aside className="library-sidebar">
-          <div className="library-group-title">
-            <span>Folders</span>
-            <button type="button" onClick={createFolder} title="New folder">+</button>
-          </div>
-          <button
-            type="button"
-            className={`library-folder ${activeFolder === 'all' ? 'active' : ''}`}
-            onClick={() => setActiveFolder('all')}
-          >
-            <span>All Decks</span>
-            <b>{decks.length}</b>
-          </button>
-          <button
-            type="button"
-            className={`library-folder ${activeFolder === 'pinned' ? 'active' : ''}`}
-            onClick={() => setActiveFolder('pinned')}
-          >
-            <span>Pinned</span>
-            <b>{decks.filter((deck) => deck.is_pinned).length}</b>
-          </button>
-          {folders.map((folder) => (
-            <button
-              type="button"
-              key={folder.id}
-              className={`library-folder ${activeFolder === folder.id ? 'active' : ''}`}
-              onClick={() => setActiveFolder(folder.id)}
-            >
-              <span>{folder.name}</span>
-              <b>{folderCounts.get(folder.id) ?? 0}</b>
-            </button>
-          ))}
-
-          <div className="library-stats-box">
-            <div><span>Total</span><b>{decks.length}</b></div>
-            <div><span>Pinned</span><b>{decks.filter((deck) => deck.is_pinned).length}</b></div>
-            <div><span>Legal</span><b>{decks.filter((deck) => deck.is_valid).length}</b></div>
-            <div><span>Drafts</span><b>{decks.filter((deck) => !deck.is_valid).length}</b></div>
-          </div>
-        </aside>
-
         <main className="library-main">
           {selectedSummary ? (
             <section className="library-banner">
@@ -363,7 +417,9 @@ export function DeckLibraryPage() {
               <div className="library-banner-copy">
                 <h1>{selectedSummary.name}</h1>
                 <div className="library-pills">
+                  {selectedIsBuiltin && <span className="library-builtin-badge">BUILT-IN</span>}
                   <span>{selectedSummary.is_valid ? 'Legal' : 'Draft'}</span>
+                  <span className="library-format-pill">{formatLabel(selectedSummary.game_mode, formats)}</span>
                   <span>{selectedSummary.main_count}/50 main</span>
                   <span>{selectedSummary.egg_count}/5 eggs</span>
                   <span>{selectedSummary.meta_archetype ?? selectedSummary.meta_tier ?? 'Unclassified'}</span>
@@ -376,7 +432,15 @@ export function DeckLibraryPage() {
                 <button type="button" onClick={exportSelected}>Export</button>
                 <button type="button" onClick={duplicateSelected}>Duplicate</button>
                 <button type="button" onClick={() => navigate(`/game?deckId=${selectedSummary.id}`)}>Test Draw</button>
-                <button type="button" className="danger" onClick={deleteSelected}>Delete</button>
+                <button
+                  type="button"
+                  className="danger"
+                  onClick={deleteSelected}
+                  disabled={selectedIsBuiltin}
+                  title={selectedIsBuiltin ? 'Starter decks are built-in' : undefined}
+                >
+                  Delete
+                </button>
               </div>
             </section>
           ) : (
@@ -393,8 +457,6 @@ export function DeckLibraryPage() {
               <p>Organize folders, inspect legality, pin tournament lists, and open the builder.</p>
             </div>
             <div className="library-hero-actions">
-              <Link to="/" className="library-command">Home</Link>
-              <Link to="/deckbuilder/new" className="library-command primary">New Deck</Link>
               <Link to="/deckbuilder/new?import=1" className="library-command">Import</Link>
             </div>
           </header>
@@ -412,6 +474,18 @@ export function DeckLibraryPage() {
               <button type="button" className={view === 'grid' ? 'on' : ''} onClick={() => setView('grid')}>Grid</button>
               <button type="button" className={view === 'list' ? 'on' : ''} onClick={() => setView('list')}>List</button>
             </div>
+            <select
+              value={activeFormat}
+              onChange={(event) => setActiveFormat(event.target.value)}
+              aria-label="Filter by format"
+            >
+              <option value="all">All formats</option>
+              {formatBuckets.map((bucket) => (
+                <option key={bucket.id} value={bucket.id}>
+                  {bucket.label} ({bucket.count})
+                </option>
+              ))}
+            </select>
             <select value={sort} onChange={(event) => setSort(event.target.value as DeckSortKey)}>
               <option value="recent">Recent</option>
               <option value="name">A to Z</option>
@@ -431,6 +505,7 @@ export function DeckLibraryPage() {
                       deck={deck}
                       selected={deck.id === selectedSummary?.id}
                       view={view}
+                      formats={formats}
                       onSelect={setSelectedId}
                       onTogglePin={togglePin}
                     />
@@ -440,16 +515,19 @@ export function DeckLibraryPage() {
             )}
             <div className="library-section-title"><span>{activeFolder === 'pinned' ? 'Other Decks' : 'All'}</span><b>{others.length}</b></div>
             <div className={`library-card-grid ${view}`}>
-              <button type="button" className="library-new-card" onClick={() => navigate('/deckbuilder/new')}>
-                <span>+</span>
-                <b>New Deck</b>
-              </button>
+              {decks.length > 0 && (
+                <button type="button" className="library-new-card" onClick={() => navigate('/deckbuilder/new')}>
+                  <span>+</span>
+                  <b>New Deck</b>
+                </button>
+              )}
               {others.map((deck) => (
                 <DeckTile
                   key={deck.id}
                   deck={deck}
                   selected={deck.id === selectedSummary?.id}
                   view={view}
+                  formats={formats}
                   onSelect={setSelectedId}
                   onTogglePin={togglePin}
                 />

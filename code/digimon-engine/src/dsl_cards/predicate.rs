@@ -340,6 +340,22 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(floor) = pred.face_down_sources_under_tamers_gte {
+        // G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER: total face-down digivolution
+        // sources across the observer's battle-area Tamers. Gates BT25-035's
+        // optional free-digivolve on the trash-2 cost actually being payable.
+        let total: usize = rctx
+            .game
+            .player(rctx.player)
+            .battle_area
+            .iter()
+            .filter(|perm| perm.top_card().card_kind(rctx.card_data()) == CardKind::Tamer)
+            .map(|perm| perm.card_sources.iter().filter(|s| s.face_down).count())
+            .sum();
+        if total < usize::from(floor) {
+            return false;
+        }
+    }
     if let Some(want) = pred.battle_opponent_no_sources {
         let Some(source) = rctx.source_permanent else {
             return false;
@@ -1156,6 +1172,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.card_number_is.is_none()
         && pred.play_cost_lte.is_none()
         && pred.play_cost_gte.is_none()
+        && pred.play_or_use_cost_lte.is_none()
         && pred.self_color_count_gte.is_none()
         && pred.dp_eq.is_none()
         && pred.dp_lte.is_none()
@@ -1515,6 +1532,30 @@ fn eval_event_fields(
             return false;
         };
         if (event_host_permanent == source_permanent) != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_host_is_own_tamer {
+        // G-SHARED-OPT-HETEROGENEOUS-TIMING: the trash event's host permanent is
+        // a Tamer owned by the observer ("effects trash cards from under YOUR
+        // Tamers"). The host handle's `player` is its controller; its top card's
+        // kind must be Tamer.
+        let host = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|t| t.event_host_permanent);
+        let is_own_tamer = host
+            .filter(|h| h.player == rctx.player)
+            .and_then(|h| {
+                rctx.game
+                    .player(h.player)
+                    .battle_area
+                    .get(h.index as usize)
+            })
+            .map(|perm| perm.top_card().card_kind(rctx.card_data()) == CardKind::Tamer)
+            .unwrap_or(false);
+        if is_own_tamer != want {
             return false;
         }
     }
@@ -2179,6 +2220,20 @@ fn eval_card_fields(
     }
     if let Some(floor) = &pred.play_cost_gte {
         if i32::from(data.play_cost) < eval_int_constraint(floor, rctx, formula_target, bindings) {
+            return false;
+        }
+    }
+    if let Some(cap) = &pred.play_or_use_cost_lte {
+        // G-PLAY-OR-USE-COST-LTE: the larger of the candidate's play cost and
+        // its Option-use cost must be at most the threshold. Mirrors DCGO
+        // `CardSource.GetCostItself <= N` for "play or use 1 ... card with a
+        // play or use cost of N or less". For a Digimon / Tamer
+        // `option_use_cost()` is `None` so the bound is `play_cost`; for a pure
+        // Option both coincide; for a Dual it is the max of the two faces.
+        let play = i32::from(data.play_cost);
+        let use_cost = data.option_use_cost().map(i32::from).unwrap_or(play);
+        let cost = play.max(use_cost);
+        if cost > eval_int_constraint(cap, rctx, formula_target, bindings) {
             return false;
         }
     }

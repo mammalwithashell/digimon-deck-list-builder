@@ -1,0 +1,99 @@
+# ST23-14 Reina Sakuya & Makoto Kuonji — Tamer, Cost 4. Colors: Purple, Black.
+# Traits: Glowing Dawn, BEATBREAK.
+#
+# Printed card text (data/cards.json — verbatim):
+#   [Start of Your Main Phase] [On Play] You may place the top card of your deck
+#     face down under this Tamer. Then, if your opponent has a Digimon, gain 1
+#     memory.
+#   [Your Turn] When effects trash cards from under this Tamer, by suspending
+#     this Tamer, 1 of your [Glowing Dawn] trait Digimon gains ＜Jamming＞ (This
+#     Digimon can't be deleted in battles against Security Digimon.) for the turn.
+#   Inherited: [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST23/Black/ST23_14.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Shared OP/SOMP — IDENTICAL to ST23-13: internal Yes/No place top deck card FD
+#   under self (gated on deck non-empty), then unconditional gain 1 memory if the
+#   opponent has a battle-area Digimon.
+# [Your Turn] trash trigger (OnDigivolutionCardDiscarded): CanUse = IsOwnerTurn
+#   && CanTriggerOnTrashDigivolutionCard(host == this Tamer); CanActivate =
+#   CanActivateSuspendCostEffect. → suspend self → SelectPermanent over own
+#   [Glowing Dawn] Digimon → GainJamming UntilEachTurnEnd. → when
+#   on_digivolution_card_trashed, active_when your_turn +
+#   event_host_permanent_is_source; process activation_cost suspend_self +
+#   select_own_permanent { kind: digimon, trait_has: Glowing Dawn } +
+#   grant_keyword { target: tgt, keyword: Jamming, expiry: end_of_turn }.
+# [Security] (SecuritySkill): PlaySelfTamerSecurityEffect → on_security +
+#   play_from_security.
+
+card: ST23-14
+name: "Reina Sakuya & Makoto Kuonji"
+kind: tamer
+color: [purple, black]
+cost: 4
+traits: [Glowing Dawn, BEATBREAK]
+
+effects:
+  # ─── [SOMP][On Play] may place top deck card FD under self; then if opp has a
+  #     Digimon, gain 1 memory ─────────────────────────────────────────────────
+  - when: [on_play, start_of_your_main_phase]
+    summary: "[SOMP][On Play] You may place the top deck card face down under this Tamer; then if your opponent has a Digimon, gain 1 memory"
+    process:
+      - if:
+          condition:
+            count_gte:
+              filter: { of: you, zone: [deck] }
+              n: 1
+          then:
+            - select_effect_choice:
+                bind_as: place_choice
+                labels:
+                  - "Place the top card of your deck face down under this Tamer"
+                  - "Don't place"
+                prompt: "Place the top card of your deck face down under this Tamer?"
+            - if:
+                condition: { equals: [place_choice, 0] }
+                then:
+                  - place_as_bottom_source:
+                      source: { deck_top: you }
+                      target: source
+                      face_down: true
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - gain_memory: 1
+
+  # ─── [Your Turn] on trash from under this Tamer → suspend self → 1 [Glowing
+  #     Dawn] Digimon gains <Jamming> for the turn ─────────────────────────────
+  - when: on_digivolution_card_trashed
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_host_permanent_is_source: true
+    summary: "[Your Turn] When effects trash cards from under this Tamer, by suspending this Tamer, 1 [Glowing Dawn] Digimon gains <Jamming> for the turn"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_own_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Glowing Dawn"
+          prompt: "1 of your [Glowing Dawn] Digimon gains <Jamming> for the turn"
+      - grant_keyword:
+          target: tgt
+          keyword: Jamming
+          expiry: end_of_turn
+
+  # ─── Inherited [Security] Play this card without paying the cost ───────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

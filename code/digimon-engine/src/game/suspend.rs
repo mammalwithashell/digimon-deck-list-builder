@@ -117,14 +117,44 @@ impl Game {
         self.unsuspend_with_cause(handle, false);
     }
 
+    /// True when `handle` may NOT unsuspend — either it carries a
+    /// permanent-scoped `CannotUnsuspend` modifier, OR its controller carries
+    /// the PLAYER-scoped `CannotUnsuspend` and the permanent is a Digimon in the
+    /// battle area ("none of their Digimon can unsuspend" — ST24-11 Rosemon,
+    /// G-PLAYER-MASS-CANNOT-UNSUSPEND). The player-scoped form is Digimon-only
+    /// and battle-area-only, mirroring DCGO `GainCanNotUnsuspendPlayerEffect`
+    /// with an `IsPermanentExistsOnOpponentBattleAreaDigimon` PermanentCondition
+    /// (Tamers and breeding-area Digimon are unaffected). Used by both the
+    /// effect-unsuspend gate (below) and the turn-start unsuspend-phase gate
+    /// (`game_phases.rs`).
+    pub(crate) fn cannot_unsuspend(&self, handle: PermanentHandle) -> bool {
+        if self.modifiers.has(handle, ModifierType::CannotUnsuspend) {
+            return true;
+        }
+        if self
+            .modifiers
+            .player_has(handle.player, ModifierType::CannotUnsuspend)
+        {
+            if let Some(perm) = self
+                .players
+                .get(handle.player as usize)
+                .and_then(|p| p.battle_area.get(handle.index as usize))
+            {
+                return perm.is_digimon(&self.card_data);
+            }
+        }
+        false
+    }
+
     /// See [`Self::suspend_with_cause`] — the unsuspend twin.
     pub fn unsuspend_with_cause(&mut self, handle: PermanentHandle, effect_initiated: bool) {
         // Sibling prohibition gate — `CannotUnsuspend` stops EFFECT
         // unsuspension at the same chokepoint (DCGO `CardController.
         // IUnsuspendPermanents.Unsuspend()`, CardController.cs:5716, filters
         // out `!CanUnsuspend` permanents). The unsuspend-phase and Reboot
-        // gates live separately in `game_phases.rs`.
-        if self.modifiers.has(handle, ModifierType::CannotUnsuspend) {
+        // gates live separately in `game_phases.rs`. Honors both the
+        // permanent-scoped lock and the player-scoped mass lock.
+        if self.cannot_unsuspend(handle) {
             return;
         }
         let event_card = self

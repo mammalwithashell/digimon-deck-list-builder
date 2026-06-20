@@ -6,13 +6,15 @@ interface TrashViewerProps {
   onClose: () => void;
   trashIds: string[];
   ownerLabel: string;
+  /** Right-click a trash card to inspect it at full size. */
+  onInspect?: (cardId: string) => void;
 }
 
-export function TrashViewer({ isOpen, onClose, trashIds, ownerLabel }: TrashViewerProps) {
+export function TrashViewer({ isOpen, onClose, trashIds, ownerLabel, onInspect }: TrashViewerProps) {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={`${ownerLabel}'s Trash (${trashIds.length})`}>
       {trashIds.length === 0 ? (
-        <div className="text-center text-gray-400 py-8">No cards in trash</div>
+        <div className="text-center text-[var(--ib-bone-dd)] py-8">No cards in trash</div>
       ) : (
         <div className="grid grid-cols-5 gap-2">
           {trashIds.map((cardId, i) => (
@@ -20,6 +22,14 @@ export function TrashViewer({ isOpen, onClose, trashIds, ownerLabel }: TrashView
               key={`${cardId}-${i}`}
               cardId={cardId}
               size="md"
+              onContextMenu={
+                onInspect
+                  ? (e) => {
+                      e.preventDefault();
+                      onInspect(cardId);
+                    }
+                  : undefined
+              }
             />
           ))}
         </div>

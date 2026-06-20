@@ -1,8 +1,9 @@
-//! BT25-043 Habakirimon — Digimon (BEATBREAK), Lv.6, Yellow, DP 12000, Cost 6.
-//! Traits: Shaman, Glowing Dawn, BEATBREAK. Attribute: Virus.
+//! BT25-043 Habakirimon / "Habakiri" — DUAL card (Digimon + Option).
+//! Lv.6 Yellow, Shaman / Glowing Dawn / BEATBREAK, DP 12000, Cost 6, Virus.
 //!
-//! # Card text (card image BT25-043 — authoritative for printed text)
+//! # Card text (card image BT25-043 — DIGIMON / OPTION "DUAL")
 //!
+//! DIGIMON FACE
 //! [When Digivolving] [When Attacking] [Once Per Turn] <Recovery +1> (Place the
 //! top card of your deck as your top security card.) Then, by trashing the top
 //! security card of 1 player with the most security cards, this Digimon
@@ -10,28 +11,38 @@
 //! [All Turns] [Once Per Turn] When any of your [Glowing Dawn] trait Digimon
 //! would leave the battle area, by trashing your top security card, they don't
 //! leave.
-//!
-//! Option side (Habakiri): [Main] DP debuffs + Arts Digivolve — BEATBREAK
-//! Option identity, unsupported by the DSL/engine (G-DSL-BEATBREAK-ARTS-OPTION).
-//! Omitted per the BT25-041 precedent → verdict PARTIAL.
+//! OPTION FACE — "Habakiri", Use 6
+//! Use Req. [Glowing Dawn] trait.
+//! [Main] 1 of your opponent's Digimon gets -8000 DP for the turn. Then, by
+//! trashing your top security card, all of your opponent's Digimon get -5000 DP
+//! for the turn.
+//! <Arts Digivolve>.
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_043.cs
 //!
 //! # Patterns this test covers (RUST_DSL_TEST_API §4.3)
+//! - G-DSL-DUAL-PER-FACE-EFFECTS: Digimon-face + Option-face clauses.
+//! - G-DSL-ARTS-DIGIVOLVE: Arts digivolve from the Option face.
 //! - A2-adjacent Recovery +1; E1 3-way EffectChoice gated by security count
 //! - F3 leave-prevention replacement (trash top security -> cancel)
 //! - E2 OPT (both triggered clauses are once_per_turn)
+//!
+//! # Verdict — IMPLEMENTED (upgraded from PARTIAL: Option side now ships).
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
+    CompiledCardKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep,
+    CompiledTiming,
 };
-use digimon_engine::debug_runner::DebugRunner;
+use digimon_engine::action::space::{encode_attack, PASS};
+use digimon_engine::card_data::CardData;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{CardColor, CardKind, Keyword};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::replacement::ReplacementCause;
-use digimon_engine::selection::SelectionKind;
+use digimon_engine::selection::{OptionPlayResult, SelectionKind};
 
 const CARD_ID: &str = "BT25-043";
 
@@ -62,19 +73,29 @@ fn bt25_043_metadata() {
     let runner = base();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
     assert_eq!(card.name, "Habakirimon");
+    assert_eq!(card.kind, CompiledCardKind::Dual, "now a DUAL card");
     assert_eq!(card.level, Some(6));
     assert_eq!(card.cost, Some(6));
     assert_eq!(card.dp, Some(12000));
     for t in ["Shaman", "Glowing Dawn", "BEATBREAK"] {
         assert!(card.traits.contains(&t.to_string()), "trait {t}");
     }
+    let dual = card.dual.as_ref().expect("dual block present");
+    assert_eq!(dual.digimon.level, 6);
+    assert_eq!(dual.option.use_cost, 6);
+    assert!(
+        dual.option.keywords.iter().any(|k| k == "ArtsDigivolve"),
+        "Option face has Arts Digivolve"
+    );
 }
 
 #[test]
 fn bt25_043_has_recovery_clause_on_wd_wa_opt() {
     let runner = base();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
-    let clause = card
+    let dual = card.dual.as_ref().expect("dual");
+    let clause = dual
+        .digimon
         .effects
         .iter()
         .find_map(|c| match c {
@@ -86,7 +107,7 @@ fn bt25_043_has_recovery_clause_on_wd_wa_opt() {
             }
             _ => None,
         })
-        .expect("WD/WA Recovery clause present");
+        .expect("WD/WA Recovery clause present on Digimon face");
     assert!(clause.once_per_turn, "[Once Per Turn]");
     assert_eq!(clause.scope, CompiledScope::FaceUp);
     let has_recover = clause
@@ -100,13 +121,26 @@ fn bt25_043_has_recovery_clause_on_wd_wa_opt() {
 fn bt25_043_has_glowing_dawn_leave_replacement() {
     let runner = base();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
-    let has_repl = card.effects.iter().any(|c| {
+    let dual = card.dual.as_ref().expect("dual");
+    let has_repl = dual.digimon.effects.iter().any(|c| {
         matches!(
             c,
             CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { .. })
         )
     });
-    assert!(has_repl, "leave-prevention replacement present");
+    assert!(has_repl, "leave-prevention replacement present on Digimon face");
+}
+
+#[test]
+fn bt25_043_option_face_has_main_and_arts() {
+    let runner = base();
+    let card = runner.compiled_card(CARD_ID).expect("compiled present");
+    let dual = card.dual.as_ref().expect("dual");
+    assert_eq!(dual.option.effects.len(), 1, "Option face [Main] clause");
+    assert!(
+        dual.option.keywords.contains(&"ArtsDigivolve".to_string()),
+        "arts_digivolve folds into the option keyword"
+    );
 }
 
 #[test]
@@ -263,4 +297,169 @@ fn bt25_043_glowing_dawn_leave_prevention_installs() {
             // long as the clause is wired (structural test guards presence).
         }
     }
+}
+
+// ─── Section 5 — Option face: [Main] DP debuffs + Arts Digivolve ─────────────
+
+fn glowing_dawn_digimon(id: &str, dp: i32) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(6);
+    c.dp = Some(dp);
+    c.play_cost = 6;
+    c.colors = vec![CardColor::Yellow];
+    c.traits = vec!["Glowing Dawn".to_string()];
+    c
+}
+
+fn opp_digimon(id: &str, dp: i32) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(5);
+    c.dp = Some(dp);
+    c.play_cost = 5;
+    c.colors = vec![CardColor::Blue];
+    c
+}
+
+/// Yellow Lv.5 [Glowing Dawn] base for the Arts gate.
+fn yellow_base(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(5);
+    c.dp = Some(6000);
+    c.play_cost = 5;
+    c.colors = vec![CardColor::Yellow];
+    c.traits = vec!["Glowing Dawn".to_string()];
+    c
+}
+
+#[test]
+fn bt25_043_option_main_minus_8000_then_minus_5000_all_with_security_trash() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("compiles")
+        .add_card(glowing_dawn_digimon("GD-DIGI", 9000))
+        // DPs high enough that the -8000 / -5000 debuffs keep both alive (a
+        // Digimon at <=0 DP is deleted by the state-based rule), so the DP
+        // deltas are observable.
+        .add_card(opp_digimon("OPP-A", 16000))
+        .add_card(opp_digimon("OPP-B", 12000))
+        .hand(0, &[CARD_ID])
+        .security(0, &["BT25-043"; 3])
+        .memory(8)
+        .start();
+    // A Glowing Dawn Digimon satisfies the Use Req.
+    runner.place_on_field(0, "GD-DIGI", Some(0));
+    let opp_a = runner.place_on_field(1, "OPP-A", Some(0)); // 16000
+    let opp_b = runner.place_on_field(1, "OPP-B", Some(0)); // 12000
+    runner.game.enter_main_phase();
+
+    let a_before = runner.dp_of(opp_a).unwrap();
+    let b_before = runner.dp_of(opp_b).unwrap();
+    let sec_before = runner.security_count(0);
+
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    // Step 1: pick the -8000 target (OPP-A).
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
+    runner
+        .execute_action(0, encode_attack(0, opp_a.index as u16))
+        .expect("pick -8000 target");
+    assert_eq!(
+        runner.dp_of(opp_a).unwrap(),
+        a_before - 8000,
+        "single target gets -8000 DP"
+    );
+
+    // Step 2: optional "by trashing your top security, all opp -5000". Accept.
+    // The optional gate surfaces as a yes/no (the inner trash/mass-debuff).
+    while runner.game.pending_selection.is_some() {
+        let sel = runner.game.pending_selection.as_ref().unwrap();
+        // Accept the optional security-trash branch (first non-PASS action).
+        let action = sel
+            .valid_action_ids
+            .first()
+            .copied()
+            .unwrap_or(PASS);
+        runner.execute_action(0, action).expect("accept mass debuff");
+    }
+
+    assert_eq!(
+        runner.security_count(0),
+        sec_before - 1,
+        "trashed own top security to pay the mass-debuff cost"
+    );
+    assert_eq!(
+        runner.dp_of(opp_a).unwrap(),
+        a_before - 8000 - 5000,
+        "the -8000 target ALSO gets the board-wide -5000"
+    );
+    assert_eq!(
+        runner.dp_of(opp_b).unwrap(),
+        b_before - 5000,
+        "every opponent Digimon gets -5000 DP"
+    );
+}
+
+#[test]
+fn bt25_043_arts_digivolve_arms_and_stacks() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("compiles")
+        .add_card(glowing_dawn_digimon("GD-DIGI", 9000))
+        .add_card(yellow_base("Y-BASE"))
+        .deck(0, &["BT25-043"; 5])
+        .hand(0, &[CARD_ID])
+        .security(0, &["BT25-043"; 1])
+        .memory(8)
+        .start();
+    // A yellow Lv.5 Glowing Dawn base: legal Arts target AND satisfies Use Req.
+    let base = runner.place_on_field(0, "Y-BASE", Some(0));
+    // No opponent Digimon → the [Main] DP steps no-op; resolution reaches Arts.
+    runner.game.enter_main_phase();
+
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    // Drive past the optional [Main] tail (no targets → may park nothing or an
+    // optional gate) until the Arts OwnField prompt with `base` legal.
+    loop {
+        let sel = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("selection parked before Arts");
+        let is_arts = sel.kind == SelectionKind::OwnField
+            && sel.is_optional
+            && sel
+                .valid_action_ids
+                .contains(&encode_attack(0, base.index as u16));
+        if is_arts {
+            break;
+        }
+        let action = if sel.is_optional {
+            PASS
+        } else {
+            sel.valid_action_ids[0]
+        };
+        runner.execute_action(0, action).expect("drive to Arts");
+    }
+
+    let trash_before = runner.trash_size(0);
+    runner
+        .execute_action(0, encode_attack(0, base.index as u16))
+        .expect("accept Arts");
+    let perm = &runner.game.player(0).battle_area[base.index as usize];
+    assert_eq!(perm.stack_size(), 2, "Arts stacked the DUAL onto the base");
+    assert_eq!(perm.top_card().card_id(&runner.game.card_data), CARD_ID);
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before,
+        "Arts prevented the normal Option trash"
+    );
+    let _ = Keyword::Rush;
 }

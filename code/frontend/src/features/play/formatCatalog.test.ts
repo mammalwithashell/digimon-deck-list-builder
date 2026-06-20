@@ -1,6 +1,14 @@
-import { describe, expect, it } from 'vitest';
-import { canUseDeckForFormat, formatToQueueType, PLAY_FORMATS } from './formatCatalog';
-import type { DeckSummary } from '@/types/deck';
+import { describe, expect, it, vi } from 'vitest';
+import { listFormats } from '@/api/deckApi';
+import type { DeckFormat, DeckSummary } from '@/types/deck';
+import {
+  canUseDeckForFormat,
+  formatToQueueType,
+  loadPlayFormats,
+  PLAY_FORMATS,
+} from './formatCatalog';
+
+vi.mock('@/api/deckApi', () => ({ listFormats: vi.fn() }));
 
 const deck = (overrides: Partial<DeckSummary>): DeckSummary => ({
   id: 'd1',
@@ -25,17 +33,18 @@ const deck = (overrides: Partial<DeckSummary>): DeckSummary => ({
 });
 
 describe('formatCatalog', () => {
-  it('enables every engine-registry format and keeps concept formats disabled', () => {
+  it('lists exactly the engine-registry playable formats and no concept placeholders', () => {
     expect(PLAY_FORMATS.find((f) => f.id === 'standard')?.enabled).toBe(true);
-    expect(PLAY_FORMATS.filter((f) => f.enabled).map((f) => f.id)).toEqual([
+    expect(PLAY_FORMATS.map((f) => f.id)).toEqual([
       'standard',
       'no_restriction',
       'pauper',
       'eden',
       'eden_singleton',
     ]);
-    expect(PLAY_FORMATS.find((f) => f.id === 'titan')?.enabled).toBe(false);
-    expect(PLAY_FORMATS.find((f) => f.id === 'edh_commander')?.enabled).toBe(false);
+    expect(PLAY_FORMATS.every((f) => f.enabled)).toBe(true);
+    // The exact-list assertion above already proves no concept placeholders
+    // (titan / edh_commander / draft / tutorial) are present.
   });
 
   it('accepts a 50 plus 4 deck for an enabled format', () => {
@@ -61,12 +70,42 @@ describe('formatCatalog', () => {
     });
   });
 
-  it('rejects decks for disabled concept formats', () => {
-    expect(canUseDeckForFormat(deck({}), 'titan').ok).toBe(false);
-  });
-
   it('maps quick match to casual queue', () => {
     expect(formatToQueueType('standard')).toBe('casual');
     expect(formatToQueueType('eden_singleton')).toBe('casual');
+  });
+
+  it('loadPlayFormats returns registry formats only, with no concept placeholders', async () => {
+    const registry: DeckFormat[] = [
+      {
+        id: 'standard',
+        name: 'Standard',
+        description: '50-card decks.',
+        deck_size: 50,
+        egg_max: 5,
+        rarity_policy: 'all',
+        singleton: false,
+        default_max_copies: 4,
+        playable: true,
+      },
+      {
+        id: 'eden_singleton',
+        name: 'EDEN Singleton',
+        description: 'Highlander EDEN.',
+        deck_size: 50,
+        egg_max: 5,
+        rarity_policy: 'eden_anomaly',
+        singleton: true,
+        default_max_copies: 1,
+        playable: true,
+      },
+    ];
+    vi.mocked(listFormats).mockResolvedValue(registry);
+
+    const formats = await loadPlayFormats();
+
+    expect(formats.map((f) => f.id)).toEqual(['standard', 'eden_singleton']);
+    expect(formats.every((f) => f.enabled)).toBe(true);
+    expect(formats.find((f) => f.id === 'eden_singleton')?.deckLabel).toBe('50 singleton');
   });
 });

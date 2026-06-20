@@ -127,22 +127,32 @@ impl Game {
                 if !effect.materializes_declarative_state || effect.process.is_none() {
                     continue;
                 }
-                // De-dup: a NON-inherited `grant_keyword` whose keyword is already
-                // a PRINTED (metadata) keyword on this source is redundant with
-                // `card_data` — `face_keywords` (consulted by both
-                // `security_attack_keyword_bonus` and `has_keyword`) already counts
-                // it, so materializing it too would double-count (e.g. BT21-029's
-                // `<Security A. +1>` is both a printed keyword and a `grant_keyword`
-                // clause). Inherited grants are NOT in `card_data`, so they must
-                // still materialize.
-                if !inherited_source {
-                    if let Some(kw) = effect.granted_keyword {
-                        let already_printed = self
-                            .card_data_by_id(&card_id)
-                            .is_some_and(|cd| face_keywords(cd).contains(&kw));
-                        if already_printed {
-                            continue;
-                        }
+                // De-dup: a `grant_keyword` whose keyword is already a PRINTED
+                // (metadata) keyword on this source is redundant with `card_data`,
+                // which `security_attack_keyword_bonus` (and `has_keyword`) already
+                // count from the printed-text parse — materializing it too would
+                // double-count. This applies to BOTH scopes, keyed to the matching
+                // printed-text field:
+                //   * face-up source  → `face_keywords`      (`effect_text`)
+                //     e.g. BT21-029's `<Security A. +1>` is both a printed keyword
+                //     and a face-up `grant_keyword` clause.
+                //   * inherited source → `inherited_keywords` (`inherited_text`)
+                //     e.g. ST1-07's inherited `<Security A. +1>` is both a printed
+                //     inherited keyword and a `scope: inherited` `grant_keyword`.
+                // The embedded DSL pack leaves these text fields empty (so the
+                // grant still materializes there), but the real game loads them
+                // from `cards.json`, where the double-count would otherwise show.
+                if let Some(kw) = effect.granted_keyword {
+                    let already_printed =
+                        self.card_data_by_id(&card_id).is_some_and(|cd| {
+                            if inherited_source {
+                                inherited_keywords(cd).contains(&kw)
+                            } else {
+                                face_keywords(cd).contains(&kw)
+                            }
+                        });
+                    if already_printed {
+                        continue;
                     }
                 }
                 if let Some(condition) = &effect.condition {
@@ -259,7 +269,20 @@ impl Game {
                     // is the sole lifetime authority. Using `fm.expiry` here would
                     // expire the entry one turn-end early relative to the descriptor
                     // (`*NextTurn` skips live on the descriptor, not the entry).
-                    if let Some(imm) = fm.effect_immunity {
+                    if let Some(payload) = &fm.payload {
+                        // Continuous mass structured-payload aura (BT25-104:
+                        // "all of your [Marcus Damon]s are also treated as 12000
+                        // DP Digimon"): the materialized entry carries the
+                        // `TreatAsDigimon` SynthIdentity. G-DSL-AURA-TREAT-AS-
+                        // DIGIMON-SYNTH.
+                        ctx.add_declarative_modifier_with_payload(
+                            h,
+                            fm.modifier,
+                            fm.value,
+                            Expiry::Permanent,
+                            payload.clone(),
+                        );
+                    } else if let Some(imm) = fm.effect_immunity {
                         // Continuous controlled immunity (Q28 / BT20-059):
                         // the materialized entry carries the immunity filter.
                         ctx.add_declarative_modifier_with_immunity(

@@ -6,6 +6,7 @@ import {
   saveBuilderDeck,
 } from '@/features/deck-builder/deckBuilderAdapter';
 import { getCardImageUrl } from '@/utils/cardImages';
+import { formatEffect } from '@/utils/formatCardText';
 import {
   builderCardColorClass,
   deckEntriesToSlotArrays,
@@ -24,6 +25,10 @@ import type { CardLegality, DeckEntry, DeckFormat, DeckValidationResult } from '
 import './DeckBuilderPage.css';
 
 const COLORS = ['Red', 'Blue', 'Yellow', 'Green', 'Purple', 'Black', 'White'];
+// Single-letter codes — U for bl(U)e so it doesn't clash with B for black.
+const COLOR_CODE: Record<string, string> = {
+  Red: 'R', Blue: 'U', Yellow: 'Y', Green: 'G', Purple: 'P', Black: 'B', White: 'W',
+};
 const TYPES = ['all', 'Digimon', 'Digi-Egg', 'Tamer', 'Option'];
 const LEVELS = ['all', '2', '3', '4', '5', '6', '7'];
 const RARITIES = ['all', 'C', 'U', 'R', 'SR', 'SEC', 'P'];
@@ -39,6 +44,8 @@ const DEFAULT_FILTERS: BuilderCardFilters = {
   legalOnly: false,
 };
 
+// Bracketed timing/trigger phrases that render as gold-on-black pills in the
+// analyzer (Mono Body styling). Other [bracketed] tokens are name/keyword refs.
 function cardButtonName(card: DigimonCardData): string {
   return `${card.name} ${card.cardnumber}${card.isAltArt ? ' alt art' : ''}`;
 }
@@ -476,7 +483,7 @@ export function DeckBuilderPage() {
                         : [...current.colors, color],
                     }))}
                   >
-                    {color[0]}
+                    {COLOR_CODE[color] ?? color[0]}
                   </button>
                 ))}
               </div>
@@ -542,18 +549,19 @@ export function DeckBuilderPage() {
                       <BuilderCardImage card={previewCard} />
                       {previewCard.play_cost && <span className="cost">{previewCard.play_cost}</span>}
                       {previewCard.level && <span className="lvl">L{previewCard.level}</span>}
-                      <span className="nm">{previewCard.name}</span>
-                      <span className="id">{previewCard.cardnumber}</span>
                     </div>
                   </div>
                   <div className="bld-preview-meta">
-                    <div className="row"><span className="k">SET</span><span className="v">{previewCard.set_name || '-'}</span></div>
                     <div className="row"><span className="k">RARITY</span><span className="v">{previewCard.cardrarity || '-'}</span></div>
                     <div className="row"><span className="k">TYPE</span><span className="v">{previewCard.type}</span></div>
                     <div className="row"><span className="k">IN DECK</span><span className="v">x{cardCount([...mainDeck, ...eggDeck], previewCard.cardnumber)}</span></div>
                   </div>
-                  <div className="bld-preview-effect"><h6>MAIN EFFECT</h6><p>{previewCard.maineffect || 'No main effect text loaded.'}</p></div>
-                  {previewCard.soureeffect && <div className="bld-preview-effect"><h6 className="opp">INHERITED EFFECT</h6><p>{previewCard.soureeffect}</p></div>}
+                  <div className="bld-preview-title">
+                    <h5 className="nm">{previewCard.name}</h5>
+                    <div className="sub"><span className="set">{previewCard.set_name || '-'}</span><span className="id">{previewCard.cardnumber}</span></div>
+                  </div>
+                  <div className="bld-preview-effect"><h6>MAIN EFFECT</h6><p>{formatEffect(previewCard.maineffect || 'No main effect text loaded.')}</p></div>
+                  {previewCard.soureeffect && <div className="bld-preview-effect"><h6 className="opp">INHERITED EFFECT</h6><p>{formatEffect(previewCard.soureeffect)}</p></div>}
                 </>
               ) : (
                 <div className="bld-empty">SEARCH OR SELECT A CARD</div>

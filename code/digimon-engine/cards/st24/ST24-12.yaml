@@ -1,0 +1,85 @@
+# ST24-12 Falcomon — Digimon, Lv.3, Purple, DP 2000, Cost 3.
+# Traits: Avian, DATA SQUAD.
+# Printed digivolve box: [Digivolve] Lv.2 w/[DATA SQUAD] trait: Cost 0.
+#
+# Printed card text (data/cards.json — verbatim):
+#   [On Play] By trashing the bottom face-down card from under any of your
+#     Tamers, you may return 1 Digimon card with the [DATA SQUAD] trait from your
+#     trash to the hand.
+#   Inherited: [When Attacking] [Once Per Turn] Delete 1 of your opponent's
+#     level 3 Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST24/Purple/ST24_12.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (timing None): AddSelfDigivolutionRequirementStaticEffect(
+#   level 2, TopCard EqualsTraits("DATA SQUAD"), cost 0). → alt_paths.
+# On Play (OnEnterFieldAnyone): CanActivate gated on a Tamer with a face-down
+#   source existing. The cost is "by trashing the bottom face-down card from
+#   under any of your Tamers": a canNoSelect:true Tamer pick → trash bottom FD.
+#   If trashed: a canNoSelect:true SelectCard Root.Trash AddHand over Digimon
+#   EqualsTraits("DATA SQUAD"). → optional clause: trash_bottom_face_down_source_
+#   under_tamer + optional select_trash { kind: digimon, trait_has: DATA SQUAD }
+#   + add_to_hand_from_trash. (ST23-12 idiom, trait-swapped.)
+# Inherited (OnAllyAttack, maxPerTurn 1, isInheritedEffect): CanUse =
+#   CanTriggerOnAttack && IsExistOnBattleAreaDigimon (NO IsOwnerTurn gate);
+#   maxCount min(1, count) over opponent Lv.3 Digimon, canNoSelect:false
+#   (mandatory). → scope: inherited, when_attacking, once_per_turn,
+#   select_opponent_permanent { kind: digimon, level_eq: 3 } + delete_permanent.
+#
+# Sister card (On Play): ST23-12 Chiropmon (trash-return, trait-swapped).
+
+card: ST24-12
+name: "Falcomon"
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 2000
+traits: [Avian, DATA SQUAD]
+
+# Alt-digivolve: Lv.2 with the [DATA SQUAD] trait / cost 0.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: "DATA SQUAD" }
+    cost: 0
+
+effects:
+  # ─── [On Play] trash bottom FD under a Tamer → may return 1 [DATA SQUAD]
+  #     Digimon from trash to hand ─────────────────────────────────────────────
+  # optional: true carries the DCGO Tamer-pick canNoSelect (decline the whole
+  # effect rather than pay the cost).
+  - when: on_play
+    optional: true
+    summary: "[On Play] By trashing a bottom face-down card under a Tamer, you may return 1 [DATA SQUAD] Digimon from your trash to the hand"
+    process:
+      # "By trashing the bottom face-down card from under any of your Tamers" —
+      # the activation cost. Its tail runs ONLY if a face-down source was trashed.
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+      # "you may return 1 [DATA SQUAD] Digimon from your trash" — optional pick.
+      - select_trash:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "DATA SQUAD"
+          prompt: "You may return 1 [DATA SQUAD] Digimon from your trash to the hand"
+      - add_to_hand_from_trash: { of: you, card: pick }
+
+  # ─── Inherited [When Attacking][OPT] delete 1 opp Lv.3 Digimon (mandatory) ──
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "Inherited [When Attacking][OPT] Delete 1 of your opponent's level 3 Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+          prompt: "Delete 1 of your opponent's level 3 Digimon"
+      - delete_permanent: { target: tgt }
