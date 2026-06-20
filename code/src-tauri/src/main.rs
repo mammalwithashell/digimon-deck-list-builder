@@ -51,10 +51,17 @@ fn main() {
         )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
-        // Restores window position (NOT size — preset selection is the
-        // source of truth for size) across launches so multi-monitor
-        // users find the window where they left it.
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        // Restores window POSITION ONLY across launches so multi-monitor
+        // users find the window where they left it. We must NOT restore
+        // SIZE (preset selection is the source of truth — see CanvasScaler)
+        // or DECORATIONS (`tauri.conf.json` sets `decorations: false` for
+        // the custom title bar; restoring a stale `true` from an earlier
+        // build re-adds the native caption on top of our bar).
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(tauri_plugin_window_state::StateFlags::POSITION)
+                .build(),
+        )
         .setup({
             let engine = engine.clone();
             move |app| {

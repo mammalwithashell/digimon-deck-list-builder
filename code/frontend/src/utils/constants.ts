@@ -312,3 +312,11 @@ export const DEFAULT_PRESET: ResolutionPreset = { width: 1280, height: 720 };
  *  this size scaled uniformly by `min(w/1920, h/1080)`. Do NOT change
  *  without re-auditing every fixed-pixel size in the game board CSS. */
 export const DESIGN_CANVAS: ResolutionPreset = { width: 1920, height: 1080 };
+
+/** Height (real, unscaled window pixels) of the custom desktop title bar
+ *  that replaces the native window caption (decorations are off in
+ *  tauri.conf.json). The CanvasScaler reserves this much vertical space at
+ *  the top so the scaled game canvas sits *below* the bar rather than
+ *  behind it. MUST match the `--titlebar-h` value in TitleBar.css
+ *  (26px caption + 22px menu strip). */
+export const TITLEBAR_HEIGHT = 48;
