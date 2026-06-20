@@ -3858,22 +3858,11 @@ one clause each on a genuine residual gap (RK is now 69 IMPLEMENTED / 3 PARTIAL 
 - **Consumer:** BT19-093 Queen Device. "[Main] … then, place this card in the battle area" (a persistent Option carrier), and "When this card is trashed from the battle area, …".
 - **Missing:** an Option self-placing into the battle area as a persistent carrier, plus a `when_trashed_from_battle_area` trigger on that Option carrier. The color-bypass + [Main]/[Security] debuff clauses are authored; the self-place/persist + trash-from-battle trigger remain.
 - **First test:** resolve BT19-093 [Main] → assert this Option is now a battle-area permanent; trash it from battle → assert the trash-from-battle clause fires.
-## EX11-027 Maquinamon — relink a STANDING permanent as a link card  [G-DSL-LINK-RELINK-STANDING-PERMANENT]
-Surfaced by: EX11-027 `[On Play]` "you may link this Digimon ... to 1 of your other Digimon" (migrate-examples-to-dsl, 2026-06-14).
-Missing: no DSL link verb takes a live battle-area permanent and moves it to become a link card on another own Digimon. `link_cards`/`link_card_to_self` lift a CARD from hand/trash/digivolution-sources; `link_to_own_digimon` links the pending Option. Engine has only `link_chosen_card_into_host` (card from a zone).
-Lower to: a new engine primitive analogous to DCGO `IPlacePermanentToLinkCards`.
-Status: open (blocks EX11-027 full pure-DSL migration).
-
-## EX11-027 Maquinamon — heterogeneous mutually-exclusive link CHOICE  [G-DSL-LINK-HETEROGENEOUS-CHOICE]
-Surfaced by: EX11-027 on_play — "Link this Digimon" vs "Link a [Maquinamon] from hand" (hand branch offered only when a linkable card is in hand), as one RL selection.
-Missing: `link_cards` links N cards from ONE declared source-set; it cannot model a top-level either/or between two distinct link primitives (self-permanent relink vs hand-card link) surfaced as a single choice.
-Status: open (blocks EX11-027).
-
-## EX11-027 Maquinamon — host filter + link-requirement on link_card_to_self ChosenOwnDigimon  [G-DSL-LINK-HOST-FILTER]
-Surfaced by: EX11-027. `link_card_to_self { to: ChosenOwnDigimon }` installs a host selection over ALL of the controller's standing Digimon; it accepts no host filter, does not exclude the source permanent, and does not enforce the host's link requirement (DCGO `CanSelectLinkTarget` excludes `PermanentOfThisCard()` + checks `CanLinkToTargetPermanent`).
-Status: open.
-
-## EX11-027 Maquinamon — leave-prevention by placing a link card as bottom digivolution card  [G-DSL-REPLACEMENT-LINK-CARD-TO-BOTTOM-SOURCE]
-Surfaced by: EX11-027 "When this would leave, you may place 1 of its link cards as its bottom digivolution card instead." `ReplacementCostBody` supports only `delay_self` + `trash_own_link_card`; engine has `trash_own_link_card_and_cancel_leave` (TRASHES the link card) but no primitive to MOVE a chosen link card into the carrier's digivolution sources to cancel the leave.
-Lower to: a replacement cost (e.g. `place_link_card_as_bottom_digivolution: true`) backed by an engine fn like `trash_own_link_card_and_cancel_leave` but calling `AddDigivolutionCardsBottom`.
-Status: open.
+## EX11-027 Maquinamon link substrate — RESOLVED 2026-06-20 (collapse-dsl-step-idioms §4.5)
+The four EX11-027 link gaps are CLOSED and moved to [qa/resolved-gaps.md](resolved-gaps.md):
+`G-DSL-LINK-RELINK-STANDING-PERMANENT` (the `relink_self_to_own_digimon` verb),
+`G-DSL-LINK-HOST-FILTER` (`link_cards` `host_filter` + `exclude_source`),
+`G-DSL-LINK-HETEROGENEOUS-CHOICE` (if-gated `select_effect_choice`, no new vocab), and
+`G-DSL-REPLACEMENT-LINK-CARD-TO-BOTTOM-SOURCE` (the `place_link_card_as_bottom_digivolution`
+replacement cost). EX11-027 Maquinamon is now pure DSL (off test-only raw_rust); the
+`dsl-substrate-integrity` loader guard is promoted to a hard error.

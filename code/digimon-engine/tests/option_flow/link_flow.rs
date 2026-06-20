@@ -10,6 +10,7 @@
 
 use std::sync::{Arc, Mutex};
 
+use digimon_dsl::compiled::CompiledStep;
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_source::CardHandle;
@@ -2162,6 +2163,124 @@ effects:
     assert!(
         hosted,
         "RELINKER's top card is now a link card on the chosen host"
+    );
+}
+
+/// Recursive scan for a step matching `pred` anywhere in a (possibly nested)
+/// step tree — descends If/Optional/ForEach bodies.
+fn ex11_step_tree_has(steps: &[CompiledStep], pred: &dyn Fn(&CompiledStep) -> bool) -> bool {
+    steps.iter().any(|s| {
+        pred(s)
+            || match s {
+                CompiledStep::If {
+                    then, else_branch, ..
+                } => ex11_step_tree_has(then, pred) || ex11_step_tree_has(else_branch, pred),
+                CompiledStep::Optional(b) => ex11_step_tree_has(b, pred),
+                CompiledStep::ForEach { body, .. } => ex11_step_tree_has(body, pred),
+                _ => false,
+            }
+    })
+}
+
+/// §4.5.5 — EX11-027 Maquinamon loads as PURE DSL (off raw_rust) and its
+/// on_play wires the new link substrate: the heterogeneous choice routes to
+/// `relink_self_to_own_digimon` (link this) and `link_cards` (link from hand).
+#[test]
+fn ex11_027_pure_dsl_on_play_wires_relink_and_linkcards() {
+    use digimon_dsl::compiled::{
+        CompiledClause, CompiledDeclarativeClause, CompiledStep, CompiledTiming,
+    };
+    let r = DebugRunner::builder()
+        .dsl_card("EX11-027")
+        .expect("EX11-027 loads from the pack as pure DSL")
+        .start();
+    let card = r.compiled_card("EX11-027").expect("present in pack");
+    assert_eq!(card.name, "Maquinamon");
+
+    // [Link] [Maquinamon] in text: Cost 2.
+    assert!(
+        card.effects.iter().any(|c| matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition { cost, .. })
+                if *cost == 2
+        )),
+        "EX11-027 declares a [Link] condition with cost 2"
+    );
+
+    // [On Play] clause whose tree uses BOTH new link verbs.
+    let on_play = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnPlay) => Some(t),
+            _ => None,
+        })
+        .expect("on_play clause present");
+    assert!(
+        ex11_step_tree_has(&on_play.process, &|s| matches!(
+            s,
+            CompiledStep::RelinkSelfToOwnDigimon { .. }
+        )),
+        "on_play uses relink_self_to_own_digimon (Link this Maquinamon)"
+    );
+    assert!(
+        ex11_step_tree_has(&on_play.process, &|s| matches!(s, CompiledStep::LinkCards { .. })),
+        "on_play uses link_cards (Link a Maquinamon from hand)"
+    );
+}
+
+/// §4.5.5 — EX11-027's link-ESS leave-prevention: when the host this Maquinamon
+/// is linked to would leave, placing a link card as the host's bottom
+/// digivolution card keeps it on the field (the §4.5.4 cost wired into a card).
+#[test]
+fn ex11_027_linked_leave_prevention_places_link_card_as_bottom_source() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX11-027")
+        .expect("EX11-027 loads")
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .memory(0)
+        .start();
+    let host = r.place_on_field(0, "HOST", Some(0));
+    // Maquinamon attached onto HOST as a link card → its scope:linked ESS is active.
+    let maq = r.push_linked_owned(host, "EX11-027", 0);
+    advance_to_main(&mut r);
+
+    let trash_before = r.trash_size(0);
+    let sources_before = r.game.player(0).battle_area[host.index as usize]
+        .card_sources
+        .len();
+
+    r.game.delete_permanent_with_effects(host);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "EX11-027 link-ESS offers the optional leave-prevention prompt"
+    );
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the leave-prevention");
+    let pick = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("which-link-card selection installed")
+        .valid_action_ids[0];
+    r.game.resolve_selection(0, pick).expect("pick the link card");
+
+    let host_ref = &r.game.player(0).battle_area[host.index as usize];
+    assert_eq!(r.battle_area_size(0), 1, "HOST did not leave the battle area");
+    assert!(
+        host_ref.card_sources.iter().any(|c| c.handle() == maq),
+        "Maquinamon was placed as a digivolution source under HOST"
+    );
+    assert_eq!(
+        host_ref.card_sources.len(),
+        sources_before + 1,
+        "exactly one link card moved into the digivolution sources"
+    );
+    assert_eq!(
+        r.trash_size(0),
+        trash_before,
+        "the link card was NOT trashed (it was placed under the carrier)"
     );
 }
 
