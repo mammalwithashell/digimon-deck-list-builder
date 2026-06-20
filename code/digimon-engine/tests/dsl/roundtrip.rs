@@ -21,8 +21,6 @@ fn registry_for_examples() -> StubRegistry {
         "bt11_042_your_turn_ladydevimon_or_mirei",
         "ex6_072_main_dna_digivolve_from_field_and_hand",
         "ex6_072_add_self_to_hand",
-        "ex11_027_optional_link_maquinamon",
-        "ex11_027_link_requirements",
     ])
 }
 

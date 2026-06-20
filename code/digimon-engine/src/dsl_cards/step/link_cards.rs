@@ -56,6 +56,9 @@ pub fn try_install(
         count,
         cost,
         prompt,
+        bind_as,
+        host_filter,
+        exclude_source,
     } = step
     else {
         return false;
@@ -68,6 +71,9 @@ pub fn try_install(
         count: *count,
         cost: *cost,
         prompt: prompt.clone(),
+        bind_as: bind_as.clone(),
+        host_filter: host_filter.clone(),
+        exclude_source: *exclude_source,
     });
 
     install_pick(ctx, spec, 0, Arc::new(tail.to_vec()), bindings, runtime.clone());
@@ -82,6 +88,17 @@ struct LinkCardsSpec {
     count: CompiledLinkCount,
     cost: u8,
     prompt: Option<String>,
+    /// Optional binding capturing the linked card(s); appended to on each real
+    /// link in `attach_and_continue` (created lazily, so it stays absent after a
+    /// full decline). `None` ⇒ no capture.
+    bind_as: Option<String>,
+    /// Optional host predicate (`to: own_digimon`) — the link card's link
+    /// requirement, applied in `install_host_select` on top of the base
+    /// Digimon/Standard gate. `None` ⇒ any standing own Digimon.
+    host_filter: Option<CompiledPredicate>,
+    /// Exclude the effect's source permanent from host candidates ("other
+    /// Digimon", EX11-027).
+    exclude_source: bool,
 }
 
 impl LinkCardsSpec {
@@ -529,15 +546,51 @@ fn install_host_select(
     runtime: StepRuntime,
 ) {
     let player = ctx.player;
+    // §4.5.2 — the optional author host predicate (the link card's link
+    // requirement, e.g. EX11-027 "host has [Maquinamon] in text"). Evaluated
+    // against each candidate host on top of the base Digimon/Standard gate, so
+    // the select never offers an illegal host. `None` ⇒ any standing Digimon.
+    let auth_host_filter = spec.host_filter.clone();
+    let exclude_source = spec.exclude_source;
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let filter_bindings = bindings.clone();
     let host_filter = move |game: &crate::game::Game, handle: PermanentHandle| -> bool {
-        game.player(handle.player)
+        // "1 of your OTHER Digimon" — drop the effect's own source permanent.
+        if exclude_source && source_permanent == Some(handle) {
+            return false;
+        }
+        let base_ok = game
+            .player(handle.player)
             .battle_area
             .get(handle.index as usize)
             .map(|p| {
                 game.permanent_is_digimon_for_rules(handle)
                     && matches!(p.option_state, OptionState::Standard)
             })
-            .unwrap_or(false)
+            .unwrap_or(false);
+        if !base_ok {
+            return false;
+        }
+        match &auth_host_filter {
+            None => true,
+            Some(pred) => {
+                let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+                    game,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    player,
+                );
+                eval_predicate_with_bindings(
+                    pred,
+                    &read,
+                    PredicateSubject::Permanent(handle),
+                    Some(&filter_bindings),
+                )
+            }
+        }
     };
 
     // No eligible host → cannot attach this pick; end the loop. (The card was
@@ -580,7 +633,7 @@ fn attach_and_continue(
     card: CardHandle,
     source: LinkCardSource,
     tail: Arc<Vec<CompiledStep>>,
-    bindings: Bindings,
+    mut bindings: Bindings,
     runtime: StepRuntime,
 ) {
     // Pay the per-card cost (currently always 0 for the cards this serves; the
@@ -591,6 +644,16 @@ fn attach_and_continue(
     }
 
     let _ = ctx.link_chosen_card_into_host(host, card, source);
+
+    // Capture the just-linked card into the optional `bind_as` CardList. The
+    // slot is created only here (on a real link), so it stays absent after a
+    // full decline — a downstream `if { binding_present }` then runs the
+    // follow-up exclusively when ≥1 card was linked (BT25-060's `if (linked)`).
+    if let Some(name) = &spec.bind_as {
+        let mut list = bindings.get_card_list(name).unwrap_or_default();
+        list.push(card);
+        bindings.insert_card_list(name, list);
+    }
 
     install_pick(ctx, spec, pick_index + 1, tail, bindings, runtime);
 }
@@ -610,4 +673,98 @@ fn run_captured_tail(
     run_steps_with_runtime(tail, ctx, &mut bindings, runtime);
     crate::dsl_cards::step::drain_dsl_outer_tail(ctx);
     ctx.game.current_trigger_context = previous;
+}
+
+/// G-DSL-LINK-RELINK-STANDING-PERMANENT (§4.5.1) — move the effect's own
+/// standing permanent to become a link card on a chosen OTHER own Digimon
+/// (EX11-027 Maquinamon "link this Digimon to 1 of your other Digimon").
+///
+/// Installs a host select (always excluding self, applying the optional
+/// `host_filter` link requirement on top of the base Digimon/Standard gate);
+/// the pick calls `Game::absorb_standing_digimon_as_link` (DCGO
+/// `IPlacePermanentToLinkCards`): the source's digivolution sources are trashed,
+/// its top card becomes a single link card on the host, and `OnLink` fires.
+///
+/// Returns `true` when `step` is a `RelinkSelfToOwnDigimon` (handled here). A
+/// no-op (no selection installed) when the source isn't a live standing Digimon
+/// or no eligible OTHER host exists — the dispatcher then advances to the tail.
+pub fn try_run_relink(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bindings) -> bool {
+    let CompiledStep::RelinkSelfToOwnDigimon { host_filter, prompt } = step else {
+        return false;
+    };
+    let Some(source) = ctx.source_permanent else {
+        return true;
+    };
+    // The source must be a live standing Digimon to be relinked.
+    let source_standing = ctx
+        .game
+        .player(source.player)
+        .battle_area
+        .get(source.index as usize)
+        .map(|p| {
+            ctx.game.permanent_is_digimon_for_rules(source)
+                && matches!(p.option_state, OptionState::Standard)
+        })
+        .unwrap_or(false);
+    if !source_standing {
+        return true;
+    }
+
+    let player = ctx.player;
+    let auth = host_filter.clone();
+    let source_card = ctx.source_card;
+    let source_kind = ctx.source_kind;
+    let fbinds = bindings.clone();
+    let host_filter_fn = move |game: &crate::game::Game, handle: PermanentHandle| -> bool {
+        // "1 of your OTHER Digimon" — never the source itself.
+        if handle == source {
+            return false;
+        }
+        let base_ok = game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|p| {
+                game.permanent_is_digimon_for_rules(handle)
+                    && matches!(p.option_state, OptionState::Standard)
+            })
+            .unwrap_or(false);
+        if !base_ok {
+            return false;
+        }
+        match &auth {
+            None => true,
+            Some(pred) => {
+                let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+                    game,
+                    source_card,
+                    Some(source),
+                    source_kind,
+                    player,
+                );
+                eval_predicate_with_bindings(
+                    pred,
+                    &read,
+                    PredicateSubject::Permanent(handle),
+                    Some(&fbinds),
+                )
+            }
+        }
+    };
+
+    // No eligible OTHER host → no-op (the heterogeneous-choice gate normally
+    // prevents offering this branch with no valid host, but be defensive).
+    let any_host = (0..ctx.game.player(player).battle_area.len())
+        .any(|i| host_filter_fn(ctx.game, PermanentHandle { player, index: i as u8 }));
+    if !any_host {
+        return true;
+    }
+
+    let prompt_str = prompt
+        .clone()
+        .unwrap_or_else(|| "Choose 1 of your Digimon to link this Digimon to".to_string());
+    ctx.select_own_permanent(&prompt_str, false, host_filter_fn, move |cb_ctx, host| {
+        cb_ctx.game.absorb_standing_digimon_as_link(source, host);
+    });
+    true
 }

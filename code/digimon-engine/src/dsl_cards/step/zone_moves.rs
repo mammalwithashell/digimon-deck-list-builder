@@ -25,6 +25,19 @@ fn singleton_card(resolved: ResolvedBinding) -> Option<crate::card_source::CardH
     }
 }
 
+/// collapse §2.1 — flatten a binding into all its card handles (a single
+/// `Card` → one handle; a `CardList` → every handle, in pick order). Used by
+/// the reveal-pool move verbs so an "add/trash/return up to N" bucket bound to
+/// a multi-card list moves ALL its cards, not just the first (fixes EX5-015's
+/// single-card cap and is the multi-card half of `reveal_search`).
+fn resolved_cards(resolved: ResolvedBinding) -> Vec<crate::card_source::CardHandle> {
+    match resolved {
+        ResolvedBinding::Card(h) => vec![h],
+        ResolvedBinding::CardList(cards) => cards,
+        _ => Vec::new(),
+    }
+}
+
 fn install_may_add_top_security_to_hand(ctx: &mut EffectContext<'_>, target_player: PlayerId) {
     use crate::action::space::{MAX_SECURITY, SEL_MY_SECURITY_START, SEL_OPP_SECURITY_START};
 
@@ -181,7 +194,7 @@ pub fn try_run(
                 return true;
             };
             let p = resolve_player(ctx, *of);
-            if let Some(h) = singleton_card(resolved) {
+            for h in resolved_cards(resolved) {
                 if ctx.add_to_hand_from_reveal(p, h) {
                     bindings.record_added_to_hand(h);
                 }
@@ -205,7 +218,7 @@ pub fn try_run(
                 return true;
             };
             let p = resolve_player(ctx, *of);
-            if let Some(h) = singleton_card(resolved) {
+            for h in resolved_cards(resolved) {
                 ctx.trash_from_reveal(p, h);
             }
             true
@@ -367,7 +380,7 @@ pub fn try_run(
                 return true;
             };
             let p = resolve_player(ctx, *of);
-            if let Some(h) = singleton_card(resolved) {
+            for h in resolved_cards(resolved) {
                 if ctx.return_to_deck_from_reveal(p, h, super::map_stack_position(*position)) {
                     bindings.record_returned_to_deck(h);
                 }

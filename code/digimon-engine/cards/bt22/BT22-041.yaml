@@ -50,7 +50,7 @@ effects:
           prompt: "Place 1 yellow card from your hand as your top security card"
       - place_on_security:
           of: you
-          source: { binding: pick, zone: hand }
+          source: { card: { binding: pick, zone: hand } }
           position: top
           face_up: false
 

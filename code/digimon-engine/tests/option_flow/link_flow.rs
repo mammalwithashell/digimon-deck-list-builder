@@ -10,6 +10,7 @@
 
 use std::sync::{Arc, Mutex};
 
+use digimon_dsl::compiled::CompiledStep;
 use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_source::CardHandle;
@@ -1744,174 +1745,6 @@ fn linked_card_dp_formula_and_static_ess_reach_host() {
     );
 }
 
-// ─── Facet #9 DSL authoring verb: `link_card_to_self` ────────────────────────
-
-/// A test digimon trait-tagged with `Tool` so the `link_card_to_self` filter
-/// (`trait_has: Tool`) can match it.
-fn tool_digimon(card_id: &str) -> digimon_engine::CardData {
-    let mut cd = make_test_card(card_id, card_id);
-    cd.colors = vec![CardColor::Red];
-    cd.traits = vec!["Tool".to_string()];
-    cd
-}
-
-/// The `link_card_to_self` host: a Lv4 Digimon whose [On Play] links 1 [Tool]
-/// card from the controller's hand onto itself for the printed link cost 1,
-/// then a [When Linking] clause gains 5 memory (proving the step's call to the
-/// engine primitive fires `OnLink` through the host's own when-linked clause).
-const LINK_SELF_YAML: &str = r#"
-card: LINK-SELF
-name: LinkSelf
-kind: digimon
-level: 4
-color: [red]
-cost: 4
-dp: 5000
-traits: [Tester]
-effects:
-  - when: on_play
-    summary: "[On Play] link 1 [Tool] card from hand to this Digimon (cost 1)"
-    process:
-      - link_card_to_self:
-          from: [hand]
-          filter: { trait_has: Tool }
-          cost: 1
-  - when: when_card_linked_to_this
-    summary: "[When this Digimon gets linked] gain 5 memory"
-    process:
-      - gain_memory: 5
-"#;
-
-/// A variant of `LINK-SELF` with no host-side reaction, so memory deltas are
-/// purely the paid link cost (isolates the cost-reduction assertion).
-const LINK_SELF_NO_REACTION_YAML: &str = r#"
-card: LINK-SELF
-name: LinkSelf
-kind: digimon
-level: 4
-color: [red]
-cost: 4
-dp: 5000
-traits: [Tester]
-effects:
-  - when: on_play
-    summary: "[On Play] link 1 [Tool] card from hand to this Digimon (cost 1)"
-    process:
-      - link_card_to_self:
-          from: [hand]
-          filter: { trait_has: Tool }
-          cost: 1
-"#;
-
-/// TDD pin for G-DSL-LINK-CARD-FROM-ZONE — the `link_card_to_self` step
-/// surfaces a real selection over the matching hand card (no auto-pick),
-/// pays the printed link cost minus any reduction, then calls
-/// `Game::link_chosen_card_into_host` so the card moves into the host's
-/// `linked_cards` and `OnLink` fires.
-#[test]
-fn link_card_to_self_links_chosen_hand_card_pays_cost_and_fires_onlink() {
-    let mut r = DebugRunner::builder()
-        .add_card({
-            let mut cd = make_test_card("LINK-SELF", "LinkSelf");
-            cd.level = Some(4);
-            cd.dp = Some(5000);
-            cd.play_cost = 4;
-            cd.colors = vec![CardColor::Red];
-            cd
-        })
-        .add_card(tool_digimon("TOOL-LINKEE"))
-        .add_card(digimon_card("NON-TOOL", CardColor::Red))
-        .hand(0, &["LINK-SELF", "TOOL-LINKEE", "NON-TOOL"])
-        .memory(10)
-        .start();
-    register_dsl_yaml(&mut r, LINK_SELF_YAML);
-    advance_to_main(&mut r);
-
-    // TOOL-LINKEE sits at hand index 1 before the play.
-    let linkee = r.game.player(0).hand[1].handle();
-
-    // Play LINK-SELF (hand index 0). On Play installs the link selection.
-    let host_idx = r.play(0, 0).expect("LINK-SELF played");
-    let memory_after_play = r.game.memory;
-
-    assert!(
-        r.game.pending_selection.is_some(),
-        "link_card_to_self installs a real selection (no auto-pick)"
-    );
-    // Only the [Tool] card is a legal candidate; the non-Tool card is excluded.
-    assert_eq!(
-        r.game.pending_selection.as_ref().unwrap().valid_action_ids.len(),
-        1,
-        "exactly one Tool candidate is offered"
-    );
-
-    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
-    let _ = r.game.resolve_selection(0, action);
-
-    // The chosen Tool card left the hand and attached to the host.
-    let linked = &r.game.player(0).battle_area[host_idx].linked_cards;
-    assert_eq!(linked.len(), 1, "Tool card attached as a linked card");
-    assert_eq!(linked[0].handle(), linkee, "the attached card is TOOL-LINKEE");
-    assert!(
-        !r.game.player(0).hand.iter().any(|c| c.handle() == linkee),
-        "TOOL-LINKEE left the hand"
-    );
-
-    // Cost paid: link cost 1 deducted at resolution. Plus +5 from When Linking.
-    assert_eq!(
-        r.game.memory,
-        memory_after_play - 1 + 5,
-        "paid the printed link cost 1, then When Linking gained 5"
-    );
-}
-
-/// `ChangeLinkCost` reduction lowers the cost paid by `link_card_to_self`,
-/// confirming the step consults `link_cost_delta_for_player` (facet #10).
-#[test]
-fn link_card_to_self_applies_change_link_cost_reduction() {
-    use digimon_engine::enums::{Expiry, ModifierType};
-    use digimon_engine::modifiers::PlayerModifierEntry;
-
-    let mut r = DebugRunner::builder()
-        .add_card({
-            let mut cd = make_test_card("LINK-SELF", "LinkSelf");
-            cd.level = Some(4);
-            cd.dp = Some(5000);
-            cd.play_cost = 4;
-            cd.colors = vec![CardColor::Red];
-            cd
-        })
-        .add_card(tool_digimon("TOOL-LINKEE"))
-        .hand(0, &["LINK-SELF", "TOOL-LINKEE"])
-        .memory(10)
-        .start();
-    register_dsl_yaml(&mut r, LINK_SELF_NO_REACTION_YAML);
-    advance_to_main(&mut r);
-
-    let host_idx = r.play(0, 0).expect("LINK-SELF played");
-    // Flat -1 link-cost reduction for player 0.
-    r.game.modifiers.add_player_modifier(
-        0,
-        PlayerModifierEntry::simple(ModifierType::ChangeLinkCost, -1, Expiry::EndOfTurn, None, 0),
-    );
-    let memory_before = r.game.memory;
-
-    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
-    let _ = r.game.resolve_selection(0, action);
-
-    assert_eq!(
-        r.game.player(0).battle_area[host_idx]
-            .linked_cards
-            .len(),
-        1,
-        "Tool card attached"
-    );
-    // Printed cost 1, reduced by 1 → 0 paid: memory unchanged by the link.
-    assert_eq!(
-        r.game.memory, memory_before,
-        "ChangeLinkCost -1 made the cost-1 link free (no memory paid)"
-    );
-}
 // ─── Gap 2: `link_cards` DSL step ────────────────────────────────────────
 //
 // The authoring verb over the shipped `link_chosen_card_into_host` primitive.
@@ -2181,6 +2014,273 @@ effects:
         pending.valid_action_ids.len(),
         2,
         "two zone options offered (hand / digivolution sources)"
+    );
+}
+
+/// §4.5.2 — `link_cards { to: own_digimon }` honors `host_filter` (the link
+/// requirement) AND `exclude_source` ("1 of your OTHER Digimon"): the host
+/// select offers only own Digimon matching the predicate, never the effect's
+/// own source permanent — even when the source itself matches the filter.
+#[test]
+fn link_cards_host_filter_and_exclude_source() {
+    use digimon_engine::action::space::encode_attack;
+    let yaml = r#"
+card: HOSTFILT
+name: HostFilter
+kind: digimon
+effects:
+  - when: on_play
+    summary: "link 1 [Appmon] from hand to a [Marked] OTHER Digimon"
+    process:
+      - link_cards:
+          from: [hand]
+          filter: { trait_has: Appmon }
+          to: own_digimon
+          count: { up_to: 1 }
+          cost: free
+          host_filter: { trait_has: Marked }
+          exclude_source: true
+"#;
+    let mut r = DebugRunner::builder()
+        // The effect source ALSO carries [Marked], so only `exclude_source`
+        // (not `host_filter`) can drop it — proving the exclusion fires.
+        .add_card(traited_digimon("HOSTFILT", CardColor::Red, &["Marked"]))
+        .add_card(traited_digimon("HOST-OK", CardColor::Red, &["Marked"]))
+        .add_card(traited_digimon("HOST-NO", CardColor::Red, &[]))
+        .add_card(appmon_card("APPMON", CardColor::Red))
+        .hand(0, &["APPMON"])
+        .memory(5)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let src = r.place_on_field(0, "HOSTFILT", Some(0));
+    let host_ok = r.place_on_field(0, "HOST-OK", Some(0));
+    let _host_no = r.place_on_field(0, "HOST-NO", Some(0));
+    advance_to_main(&mut r);
+
+    r.game.fire_on_play(0, src.index as usize);
+
+    // Single source zone (hand) → straight to the card select; pick APPMON.
+    let card_action = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("hand card select installed")
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != digimon_engine::action::space::PASS)
+        .expect("APPMON candidate");
+    r.game.resolve_selection(0, card_action).expect("pick card");
+
+    // Host select: only HOST-OK is eligible (HOST-NO lacks [Marked]; HOSTFILT is
+    // the excluded source even though it carries [Marked]).
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("host select installed");
+    assert_eq!(
+        pending.valid_action_ids,
+        vec![encode_attack(0, host_ok.index as u16)],
+        "only the [Marked] OTHER Digimon (HOST-OK) is offered as a host"
+    );
+    r.game
+        .resolve_selection(0, encode_attack(0, host_ok.index as u16))
+        .expect("pick host");
+
+    assert_eq!(
+        r.game.player(0).battle_area[host_ok.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "APPMON linked onto HOST-OK"
+    );
+}
+
+/// §4.5.1 — `relink_self_to_own_digimon` moves the effect's own standing
+/// permanent to become a link card on a chosen OTHER own Digimon, honoring the
+/// host_filter (link requirement) and always excluding self.
+#[test]
+fn relink_self_to_own_digimon_absorbs_self_onto_filtered_other_host() {
+    let yaml = r#"
+card: RELINKER
+name: Relinker
+kind: digimon
+effects:
+  - when: on_play
+    summary: "link this Digimon to a [Marked] OTHER Digimon"
+    process:
+      - relink_self_to_own_digimon:
+          host_filter: { trait_has: Marked }
+"#;
+    let mut r = DebugRunner::builder()
+        // RELINKER itself carries [Marked], so only the exclude-self rule (not
+        // host_filter) can drop it from the host candidates.
+        .add_card(traited_digimon("RELINKER", CardColor::Red, &["Marked"]))
+        .add_card(traited_digimon("HOST-OK", CardColor::Red, &["Marked"]))
+        .add_card(traited_digimon("HOST-NO", CardColor::Red, &[]))
+        .memory(5)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let src = r.place_on_field(0, "RELINKER", Some(0));
+    let _ok = r.place_on_field(0, "HOST-OK", Some(0));
+    let _no = r.place_on_field(0, "HOST-NO", Some(0));
+    advance_to_main(&mut r);
+
+    let self_card = r.game.player(0).battle_area[src.index as usize]
+        .top_card()
+        .handle();
+    r.game.fire_on_play(0, src.index as usize);
+
+    // Host select: only HOST-OK (Marked, not self). RELINKER is excluded despite
+    // carrying [Marked]; HOST-NO lacks it.
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("relink host select installed");
+    assert_eq!(
+        pending.valid_action_ids.len(),
+        1,
+        "only the [Marked] OTHER Digimon is offered as a relink host"
+    );
+    let action = pending.valid_action_ids[0];
+    r.game.resolve_selection(0, action).expect("pick host");
+
+    // RELINKER absorbed: the battle area shrank by 1 and some permanent now
+    // hosts RELINKER's top card as a link card.
+    assert_eq!(
+        r.battle_area_size(0),
+        2,
+        "RELINKER left the battle area (absorbed as a link card)"
+    );
+    let hosted = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .any(|p| p.linked_cards.iter().any(|c| c.handle() == self_card));
+    assert!(
+        hosted,
+        "RELINKER's top card is now a link card on the chosen host"
+    );
+}
+
+/// Recursive scan for a step matching `pred` anywhere in a (possibly nested)
+/// step tree — descends If/Optional/ForEach bodies.
+fn ex11_step_tree_has(steps: &[CompiledStep], pred: &dyn Fn(&CompiledStep) -> bool) -> bool {
+    steps.iter().any(|s| {
+        pred(s)
+            || match s {
+                CompiledStep::If {
+                    then, else_branch, ..
+                } => ex11_step_tree_has(then, pred) || ex11_step_tree_has(else_branch, pred),
+                CompiledStep::Optional(b) => ex11_step_tree_has(b, pred),
+                CompiledStep::ForEach { body, .. } => ex11_step_tree_has(body, pred),
+                _ => false,
+            }
+    })
+}
+
+/// §4.5.5 — EX11-027 Maquinamon loads as PURE DSL (off raw_rust) and its
+/// on_play wires the new link substrate: the heterogeneous choice routes to
+/// `relink_self_to_own_digimon` (link this) and `link_cards` (link from hand).
+#[test]
+fn ex11_027_pure_dsl_on_play_wires_relink_and_linkcards() {
+    use digimon_dsl::compiled::{
+        CompiledClause, CompiledDeclarativeClause, CompiledStep, CompiledTiming,
+    };
+    let r = DebugRunner::builder()
+        .dsl_card("EX11-027")
+        .expect("EX11-027 loads from the pack as pure DSL")
+        .start();
+    let card = r.compiled_card("EX11-027").expect("present in pack");
+    assert_eq!(card.name, "Maquinamon");
+
+    // [Link] [Maquinamon] in text: Cost 2.
+    assert!(
+        card.effects.iter().any(|c| matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition { cost, .. })
+                if *cost == 2
+        )),
+        "EX11-027 declares a [Link] condition with cost 2"
+    );
+
+    // [On Play] clause whose tree uses BOTH new link verbs.
+    let on_play = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnPlay) => Some(t),
+            _ => None,
+        })
+        .expect("on_play clause present");
+    assert!(
+        ex11_step_tree_has(&on_play.process, &|s| matches!(
+            s,
+            CompiledStep::RelinkSelfToOwnDigimon { .. }
+        )),
+        "on_play uses relink_self_to_own_digimon (Link this Maquinamon)"
+    );
+    assert!(
+        ex11_step_tree_has(&on_play.process, &|s| matches!(s, CompiledStep::LinkCards { .. })),
+        "on_play uses link_cards (Link a Maquinamon from hand)"
+    );
+}
+
+/// §4.5.5 — EX11-027's link-ESS leave-prevention: when the host this Maquinamon
+/// is linked to would leave, placing a link card as the host's bottom
+/// digivolution card keeps it on the field (the §4.5.4 cost wired into a card).
+#[test]
+fn ex11_027_linked_leave_prevention_places_link_card_as_bottom_source() {
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX11-027")
+        .expect("EX11-027 loads")
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .memory(0)
+        .start();
+    let host = r.place_on_field(0, "HOST", Some(0));
+    // Maquinamon attached onto HOST as a link card → its scope:linked ESS is active.
+    let maq = r.push_linked_owned(host, "EX11-027", 0);
+    advance_to_main(&mut r);
+
+    let trash_before = r.trash_size(0);
+    let sources_before = r.game.player(0).battle_area[host.index as usize]
+        .card_sources
+        .len();
+
+    r.game.delete_permanent_with_effects(host);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "EX11-027 link-ESS offers the optional leave-prevention prompt"
+    );
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the leave-prevention");
+    let pick = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("which-link-card selection installed")
+        .valid_action_ids[0];
+    r.game.resolve_selection(0, pick).expect("pick the link card");
+
+    let host_ref = &r.game.player(0).battle_area[host.index as usize];
+    assert_eq!(r.battle_area_size(0), 1, "HOST did not leave the battle area");
+    assert!(
+        host_ref.card_sources.iter().any(|c| c.handle() == maq),
+        "Maquinamon was placed as a digivolution source under HOST"
+    );
+    assert_eq!(
+        host_ref.card_sources.len(),
+        sources_before + 1,
+        "exactly one link card moved into the digivolution sources"
+    );
+    assert_eq!(
+        r.trash_size(0),
+        trash_before,
+        "the link card was NOT trashed (it was placed under the carrier)"
     );
 }
 
@@ -2819,6 +2919,74 @@ effects:
         "DSL: no link cards → no replacement prompt"
     );
     assert_eq!(r.battle_area_size(0), 0, "the Digimon leaves normally");
+}
+
+/// §4.5.4 (EX11-027) — leave-replacement that PLACES a chosen link card as the
+/// carrier's BOTTOM digivolution card instead of trashing it: the Digimon
+/// stays, the link card relocates under it, and nothing is trashed.
+#[test]
+fn place_link_card_as_bottom_source_leave_replacement() {
+    let yaml = r#"
+card: EX11-027-PLACE
+name: Place-Stayer
+kind: digimon
+effects:
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    cost: { place_link_card_as_bottom_digivolution: true }
+    outcome: prevent
+"#;
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("EX11-027-PLACE", CardColor::Red))
+        .add_card(digimon_card("LINKEE", CardColor::Red))
+        .memory(0)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let perm = r.place_on_field(0, "EX11-027-PLACE", Some(0));
+    let linkee = r.push_linked_owned(perm, "LINKEE", 0);
+    advance_to_main(&mut r);
+
+    let trash_before = r.trash_size(0);
+    let sources_before =
+        r.game.player(0).battle_area[perm.index as usize].card_sources.len();
+
+    r.game.delete_permanent_with_effects(perm);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "place-as-bottom leave-replacement offers the optional accept prompt"
+    );
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept");
+
+    // Surface + resolve the which-link-card choice (one card here).
+    let pick = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("link-card selection installed")
+        .valid_action_ids[0];
+    r.game.resolve_selection(0, pick).expect("pick link card");
+
+    let perm_ref = &r.game.player(0).battle_area[perm.index as usize];
+    assert_eq!(r.battle_area_size(0), 1, "the Digimon did NOT leave");
+    assert_eq!(perm_ref.linked_cards.len(), 0, "the link card left linked_cards");
+    assert_eq!(
+        perm_ref.card_sources.len(),
+        sources_before + 1,
+        "the link card became a digivolution source under the carrier"
+    );
+    assert_eq!(
+        perm_ref.card_sources[0].handle(),
+        linkee,
+        "the chosen link card is now the BOTTOM digivolution source"
+    );
+    assert_eq!(
+        r.trash_size(0),
+        trash_before,
+        "the link card was NOT trashed (it was placed under the carrier)"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

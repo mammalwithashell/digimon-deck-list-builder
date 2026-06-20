@@ -77,9 +77,9 @@ effects:
           filter: { kind: digimon }
           selector: lowest_dp
           prompt: "Place 1 of your opponent's lowest DP Digimon as the top security card"
-      - place_permanent_on_security:
+      - place_on_security:
+          source: { permanent: victim }
           of: opponent
-          target: victim
           position: top
           face_up: false
       # Step B — "Then, by trashing the top security card of 1 player with the

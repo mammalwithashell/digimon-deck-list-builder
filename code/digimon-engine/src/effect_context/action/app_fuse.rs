@@ -9,8 +9,8 @@
 //! then commit via `Game::commit_effect_app_fuse` (stack on top, consume links).
 //!
 //! Eligibility reuses `Game::can_app_fuse_onto` (the alt-play app-fusion route);
-//! the chained-selection install mirrors `link_card_to_self`'s
-//! `to: chosen_own_digimon` flow (`dsl_cards/step/link_card.rs`).
+//! the chained-selection install mirrors `link_cards`'s `to: own_digimon`
+//! host-select flow (`dsl_cards/step/link_cards.rs`).
 
 use digimon_dsl::compiled::{CompiledAppFuseZone, CompiledPredicate};
 

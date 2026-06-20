@@ -89,7 +89,7 @@ effects:
                 then:
                   - place_on_security:
                       of: you
-                      source: { binding: pick, zone: hand }
+                      source: { card: { binding: pick, zone: hand } }
                       position: top
                       face_up: false
             - if:
@@ -97,6 +97,6 @@ effects:
                 then:
                   - place_on_security:
                       of: you
-                      source: { binding: pick, zone: hand }
+                      source: { card: { binding: pick, zone: hand } }
                       position: bottom
                       face_up: false

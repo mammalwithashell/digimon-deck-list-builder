@@ -40,6 +40,7 @@ fn select_reveal_then_effect_choice_then_gain_memory() {
 
     let steps = vec![
         CompiledStep::SelectReveal {
+            then: vec![],
             of: CompiledPlayerRef::You,
             filter: CompiledPredicate::default(),
             bind_as: Some("picked".to_string()),

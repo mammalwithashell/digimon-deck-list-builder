@@ -118,25 +118,35 @@ effects:
     once_per_turn: true
     summary: "[WD][WA][OPT] Link 1 [Appmon] Digimon from hand or digivolution cards to self (free), then 1 of your Digimon may unsuspend"
     process:
-      - link_card_to_self:
-          from: [hand, digivolution_sources]
+      # The link is the COST ("By linking 1 [Appmon]..."). `bind_as` captures the
+      # linked card only when one is actually linked, so the unsuspend benefit
+      # below is gated on a link having occurred (DCGO `if (linked)` — declining
+      # the link must NOT offer the unsuspend). collapse §4: migrated off the
+      # retired `link_card_to_self` (whose decline-drops-tail behavior this
+      # bind_as + if{binding_present} now models explicitly).
+      - link_cards:
+          from: [hand, self_sources]
           filter:
             all_of:
               - kind: digimon
               - trait_has: Appmon
-          cost: 0
-          optional: true
-      # "1 of your Digimon may unsuspend" — optional select (DCGO canNoSelect:true),
-      # only reached when a card was linked (the line above did not decline).
-      - select_own_permanent:
-          bind_as: unsuspend_target
-          optional: true
-          filter: { kind: digimon }
-          prompt: "1 of your Digimon may unsuspend"
+          to: self
+          count: { up_to: 1 }
+          cost: free
+          bind_as: linked_appmon
       - if:
-          condition: { binding_present: unsuspend_target }
+          condition: { binding_present: linked_appmon }
           then:
-            - unsuspend: { target: unsuspend_target }
+            # "1 of your Digimon may unsuspend" — optional select (DCGO canNoSelect:true).
+            - select_own_permanent:
+                bind_as: unsuspend_target
+                optional: true
+                filter: { kind: digimon }
+                prompt: "1 of your Digimon may unsuspend"
+            - if:
+                condition: { binding_present: unsuspend_target }
+                then:
+                  - unsuspend: { target: unsuspend_target }
 
   # ─── [All Turns][OPT] when this gets linked OR unsuspends → gain keywords + immunity ─
   # Dual-timing: when_card_linked_to_this (host-side: a card links TO Rebootmon)
