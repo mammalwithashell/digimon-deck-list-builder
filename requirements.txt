@@ -5,7 +5,9 @@ stable-baselines3>=2.0
 sb3-contrib>=2.0
 fastapi>=0.100
 httpx>=0.24
-uvicorn>=0.20
+# [standard] pulls the `websockets` ASGI backend — without it uvicorn 404s on
+# every WS upgrade (PvP rooms, matchmaking, spectating, vs-AI-online).
+uvicorn[standard]>=0.20
 pytest>=7.0
 # Database & auth
 sqlalchemy[asyncio]>=2.0
