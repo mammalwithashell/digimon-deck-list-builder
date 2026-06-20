@@ -104,9 +104,12 @@ fn predicate_field_names() -> Vec<String> {
         .find(needle)
         .expect("compiled.rs must contain `pub struct CompiledPredicate`");
     let body_start = start + needle.len();
-    // Find the matching closing brace of the struct body (no nested braces).
+    // Find the struct's closing brace. CompiledPredicate is a top-level item,
+    // so its `}` sits at column 0 — match `"\n}"` rather than the first `}`,
+    // which would wrongly stop at a brace inside a field's doc comment (e.g. the
+    // `<metric>: { op: eq, value }` comparator note added by the scalar-unify).
     let body_end = COMPILED_SRC[body_start..]
-        .find('}')
+        .find("\n}")
         .expect("compiled.rs CompiledPredicate body must be terminated by `}`");
     let body = &COMPILED_SRC[body_start..body_start + body_end];
     let mut names = Vec::new();

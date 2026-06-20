@@ -420,10 +420,8 @@ pub fn eval_predicate_with_bindings(
         // `target: self` — true when the subject permanent IS the effect's
         // source permanent (the carrier in face_up scope, the host in inherited
         // scope). Lets flood_gate/aura install a modifier on the carrier itself.
-        let is_src = match (subject, rctx.source_permanent) {
-            (PredicateSubject::Permanent(h), Some(src)) => h == src,
-            _ => false,
-        };
+        let is_src =
+            matches!(subject, PredicateSubject::Permanent(h) if rctx.source_permanent == Some(h));
         if is_src != want {
             return false;
         }
