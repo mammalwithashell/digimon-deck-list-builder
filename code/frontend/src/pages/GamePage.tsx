@@ -515,6 +515,16 @@ export function GamePage() {
 
   const handleSurrender = useCallback(async () => {
     if (!store.gameId || store.isGameOver) return;
+    // PvP / vs-AI-online run over the WebSocket: concede there (the REST
+    // surrenderGame path only drives local games and would never reach the
+    // live game's server-side runner). The server broadcasts the resulting
+    // game-over state through the normal state_update path. The viewer is
+    // perspective-normalized to player 1, so they surrendered as "you" (1).
+    if (useWebSocket) {
+      ws.sendSurrender();
+      setSurrenderedBy(1);
+      return;
+    }
     try {
       const res = await gameApi.surrenderGame(store.gameId, 1);
       store.setGameState(res.state);
@@ -526,7 +536,7 @@ export function GamePage() {
     } catch {
       // Ignore errors (e.g. game already over)
     }
-  }, [appendResponseActionTraces, store]);
+  }, [appendResponseActionTraces, store, useWebSocket, ws]);
 
   const handleReturnToLauncher = useCallback(() => {
     store.reset();
