@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import hashlib
+import hmac
+import os
 import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Sequence, Set
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, Header, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 import bcrypt
 from jose import JWTError, jwt
@@ -201,3 +203,54 @@ async def get_optional_user(
         return await get_current_user(token=token, db=db)
     except HTTPException:
         return None
+
+
+def admin_api_key() -> Optional[str]:
+    """The operator release key (``ADMIN_API_KEY`` env), or None if unset.
+
+    Lets the model-catalog admin routes be driven without a user login — see
+    ``require_admin_or_api_key``. Read at request time (not import) so it can be
+    set/rotated without a code reload and monkeypatched in tests."""
+    key = os.getenv("ADMIN_API_KEY")
+    return key or None
+
+
+def _bearer_token(authorization: Optional[str]) -> Optional[str]:
+    if authorization and authorization[:7].lower() == "bearer ":
+        return authorization[7:].strip() or None
+    return None
+
+
+async def require_admin_or_api_key(
+    x_admin_key: Optional[str] = Header(default=None, alias="X-Admin-Key"),
+    authorization: Optional[str] = Header(default=None),
+    db: AsyncSession = Depends(get_db),
+) -> Optional[User]:
+    """Admin gate for operator routes (model catalog release workflow).
+
+    Accepts a static ``ADMIN_API_KEY`` — via the ``X-Admin-Key`` header or
+    ``Authorization: Bearer <key>`` — so model uploads/publishing need no user
+    login; otherwise falls back to an admin-role JWT (unchanged behaviour).
+    Returns the admin ``User`` for the JWT path, or ``None`` for the key path
+    (routes recording an uploader must tolerate a null user).
+
+    The key is a single operator secret, NOT open access: the catalog is
+    downloaded + executed by every desktop client, so the endpoint stays gated.
+    """
+    key = admin_api_key()
+    bearer = _bearer_token(authorization)
+    if key is not None:
+        for candidate in (x_admin_key, bearer):
+            if candidate and hmac.compare_digest(candidate, key):
+                return None  # authenticated via the operator API key
+    # Fall back to an admin-role JWT.
+    if not bearer:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Admin auth required: send X-Admin-Key (ADMIN_API_KEY) or an admin bearer token.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    user = await get_current_user(token=bearer, db=db)
+    if not await user_has_any_role(user.id, db, [ROLE_ADMIN]):
+        raise HTTPException(status_code=403, detail="Insufficient role permissions")
+    return user

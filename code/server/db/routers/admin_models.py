@@ -14,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.db.auth import ROLE_ADMIN, get_current_user, require_roles
+from server.db.auth import get_current_user, require_admin_or_api_key
 from server.db.database import get_db
 from server.db.models import AIModel, Deck, User
 from server.db.schemas import (
@@ -78,7 +78,7 @@ def _to_admin_response(
 )
 async def create_model(
     request: AIModelCreateRequest,
-    current_user: User = Depends(require_roles(ROLE_ADMIN)),
+    current_user: Optional[User] = Depends(require_admin_or_api_key),
     db: AsyncSession = Depends(get_db),
 ) -> AIModelCreateResponse:
     """Create an AIModel row in pending state and return a presigned PUT URL."""
@@ -96,7 +96,7 @@ async def create_model(
         notes=request.notes,
         state="pending",
         published=False,
-        uploaded_by=current_user.id,
+        uploaded_by=current_user.id if current_user else None,
         spaces_key=spaces_key,
     )
     db.add(row)
@@ -120,7 +120,7 @@ async def create_model(
 )
 async def confirm_model(
     model_id: str,
-    _: User = Depends(require_roles(ROLE_ADMIN)),
+    _: Optional[User] = Depends(require_admin_or_api_key),
     db: AsyncSession = Depends(get_db),
 ) -> AIModelConfirmResponse:
     """Confirm upload: stream sha256, inspect ONNX, populate model fields."""
@@ -213,7 +213,7 @@ async def confirm_model(
 async def update_model(
     model_id: str,
     request: AIModelUpdateRequest,
-    _: User = Depends(require_roles(ROLE_ADMIN)),
+    _: Optional[User] = Depends(require_admin_or_api_key),
     db: AsyncSession = Depends(get_db),
 ) -> AIModelResponse:
     """Update editable model fields. Publishing requires state='uploaded'."""
@@ -266,7 +266,7 @@ async def update_model(
 @admin_router.delete("/{model_id}", status_code=status.HTTP_204_NO_CONTENT, response_model=None)
 async def delete_model(
     model_id: str,
-    _: User = Depends(require_roles(ROLE_ADMIN)),
+    _: Optional[User] = Depends(require_admin_or_api_key),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Delete a model row and best-effort remove the Spaces object."""
@@ -291,7 +291,7 @@ async def list_models(
     published: Optional[bool] = Query(None),
     model_type: Optional[str] = Query(None),
     deck_id: Optional[str] = Query(None),
-    _: User = Depends(require_roles(ROLE_ADMIN)),
+    _: Optional[User] = Depends(require_admin_or_api_key),
     db: AsyncSession = Depends(get_db),
 ) -> ListAIModelsResponse:
     """List models with optional filters. Results ordered newest first."""
