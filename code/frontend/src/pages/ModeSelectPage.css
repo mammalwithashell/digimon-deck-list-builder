@@ -33,6 +33,18 @@
   letter-spacing: 0.14em;
 }
 
+/* Sections wrapped in the design-system Window (add-desktop-menu-shell):
+   the Window supplies the outer frame + accent header, so the inner grids
+   drop their own outer margins. */
+.mode-window {
+  margin: 24px 0;
+}
+
+.mode-window .mode-opponent-strip,
+.mode-window .mode-grid {
+  margin: 0;
+}
+
 .mode-opponent-strip {
   margin: 28px 0;
   display: grid;

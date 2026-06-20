@@ -7,6 +7,7 @@ import {
 
 const PRESET_STORAGE_KEY = 'desktop.graphicsPreset';
 const FULLSCREEN_STORAGE_KEY = 'desktop.fullscreen';
+const RAIL_COLLAPSED_STORAGE_KEY = 'desktop.railCollapsed';
 const BOT_SPEED_STORAGE_KEY = 'gameplay.botSpeed';
 
 /** Bot action pacing (add-bot-action-pacing). Non-instant speeds make
@@ -80,6 +81,24 @@ function loadPersistedFullscreen(): boolean {
   }
 }
 
+function loadPersistedRailCollapsed(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(RAIL_COLLAPSED_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function persistRailCollapsed(value: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(RAIL_COLLAPSED_STORAGE_KEY, String(value));
+  } catch {
+    // Best-effort persistence.
+  }
+}
+
 function persistPreset(preset: ResolutionPreset): void {
   if (typeof window === 'undefined') return;
   try {
@@ -122,6 +141,10 @@ interface UiStore {
    *  changes apply from the next agent beat without restarting. */
   botSpeed: BotSpeed;
 
+  /** Whether the desktop `MenuShell` nav rail is collapsed to an icon-only
+   *  strip. Persisted so the choice survives relaunch. */
+  railCollapsed: boolean;
+
   setHoveredCard: (cardId: string | null) => void;
   openModal: (modal: string) => void;
   closeModal: () => void;
@@ -131,6 +154,8 @@ interface UiStore {
   setFullscreen: (value: boolean) => void;
   setCanvasScale: (value: number) => void;
   setBotSpeed: (value: BotSpeed) => void;
+  setRailCollapsed: (value: boolean) => void;
+  toggleRail: () => void;
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -141,6 +166,7 @@ export const useUiStore = create<UiStore>((set) => ({
   fullscreen: loadPersistedFullscreen(),
   canvasScale: 1,
   botSpeed: loadPersistedBotSpeed(),
+  railCollapsed: loadPersistedRailCollapsed(),
 
   setHoveredCard: (cardId) => set({ hoveredCard: cardId }),
   openModal: (modal) => set({ activeModal: modal }),
@@ -160,14 +186,26 @@ export const useUiStore = create<UiStore>((set) => ({
     persistBotSpeed(value);
     set({ botSpeed: value });
   },
+  setRailCollapsed: (value) => {
+    persistRailCollapsed(value);
+    set({ railCollapsed: value });
+  },
+  toggleRail: () =>
+    set((s) => {
+      const next = !s.railCollapsed;
+      persistRailCollapsed(next);
+      return { railCollapsed: next };
+    }),
 }));
 
 // Exported for tests and direct CanvasScaler reads pre-mount.
 export const __uiStoreInternals = {
   PRESET_STORAGE_KEY,
   FULLSCREEN_STORAGE_KEY,
+  RAIL_COLLAPSED_STORAGE_KEY,
   BOT_SPEED_STORAGE_KEY,
   loadPersistedPreset,
   loadPersistedFullscreen,
+  loadPersistedRailCollapsed,
   loadPersistedBotSpeed,
 };

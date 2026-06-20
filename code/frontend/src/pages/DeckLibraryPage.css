@@ -127,7 +127,9 @@
 .library-shell {
   height: calc(100% - 58px);
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 320px;
+  /* Folders/Formats moved into the MenuShell rail (add-desktop-menu-shell);
+     the page is now main content + the analytics detail column. */
+  grid-template-columns: minmax(0, 1fr) 320px;
   min-height: 0;
 }
 
@@ -671,6 +673,30 @@
   color: var(--lib-accent);
 }
 
+/* Analytics panel reads as a themed window — accent title bar matching the
+   design-system `Window` chrome (add-desktop-menu-shell): green terminal
+   header in dark, navy bar in light. Applied as a header treatment (not the
+   full Window component) because this page still carries hardcoded dark
+   surfaces and a parchment panel would clash in light theme. */
+[data-theme='dark'] .library-detail-head {
+  color: var(--accent);
+  background: var(--surface);
+}
+
+[data-theme='dark'] .library-detail-head b {
+  color: var(--accent);
+}
+
+[data-theme='light'] .library-detail-head {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-bottom-color: transparent;
+}
+
+[data-theme='light'] .library-detail-head b {
+  color: var(--accent-ink);
+}
+
 .library-detail h2 {
   margin: 0 0 10px;
 }
@@ -760,7 +786,7 @@
 
 @media (max-width: 1120px) {
   .library-shell {
-    grid-template-columns: 190px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .library-detail {

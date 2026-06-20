@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Window } from '@/design/components/Window';
 import { getCardImageUrl } from '@/utils/cardImages';
 import type { LauncherDeckRow } from './launcherData';
 
@@ -7,13 +8,15 @@ interface LauncherDeckPanelProps {
   loaded: boolean;
 }
 
+/** Recent saved decks, framed in the design-system `Window` so the panel
+ *  carries the themed title bar (add-desktop-menu-shell). */
 export function LauncherDeckPanel({ decks, loaded }: LauncherDeckPanelProps) {
   return (
-    <section className="launcher-deck-panel" aria-labelledby="launcher-decks-heading">
-      <div className="launcher-panel-head">
-        <h2 id="launcher-decks-heading">Saved Decks</h2>
-        <span>{String(decks.length).padStart(2, '0')} RECENT</span>
-      </div>
+    <Window
+      className="launcher-deck-window"
+      bodyClassName="launcher-deck-window-body"
+      title={`SAVED DECKS · ${String(decks.length).padStart(2, '0')}`}
+    >
       <div className="launcher-deck-list">
         {decks.map((deck) => (
           <Link className="launcher-deck-row" to={deck.href} key={deck.id}>
@@ -51,6 +54,6 @@ export function LauncherDeckPanel({ decks, loaded }: LauncherDeckPanelProps) {
         <Link className="launcher-btn" to="/deckbuilder/new?import=1">Import</Link>
         <Link className="launcher-btn" to="/deckbuilder">View All →</Link>
       </div>
-    </section>
+    </Window>
   );
 }

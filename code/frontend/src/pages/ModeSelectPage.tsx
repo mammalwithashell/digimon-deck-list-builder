@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Window } from '@/design/components/Window';
 import { InBetweenShell } from '@/features/play/InBetweenShell';
 import {
   getPlayFormat,
@@ -54,46 +55,50 @@ export function ModeSelectPage() {
           <p>{visibleFormats.length} RULESETS - DIFFERENT BANLISTS - DIFFERENT DECK SHAPES - ONE THEATER</p>
         </header>
 
-        <section className="mode-opponent-strip" aria-label="Opponent">
-          {OPPONENTS.map((opponent) => (
-            <button
-              key={opponent.id}
-              type="button"
-              className={opponentMode === opponent.id ? 'on' : ''}
-              onClick={() => selectOpponentMode(opponent.id)}
-            >
-              <span className="name">{opponent.name}</span>
-              <span className="sub">{opponent.sub}</span>
-              <span className="meta">{opponent.meta}</span>
-            </button>
-          ))}
-        </section>
-
-        {opponentMode !== 'ai_starter' && (
-          <section className="mode-grid" aria-label="Formats">
-            {visibleFormats.map((format, index) => (
+        <Window title="OPPONENT" className="mode-window">
+          <section className="mode-opponent-strip" aria-label="Opponent">
+            {OPPONENTS.map((opponent) => (
               <button
-                key={format.id}
+                key={opponent.id}
                 type="button"
-                aria-label={format.name}
-                className={`mode-card ${format.id === formatId ? 'selected' : ''}`}
-                onClick={() => selectFormat(format.id)}
-                disabled={!format.enabled}
+                className={opponentMode === opponent.id ? 'on' : ''}
+                onClick={() => selectOpponentMode(opponent.id)}
               >
-                <span className="num">
-                  {String(index + 1).padStart(2, '0')} / {String(visibleFormats.length).padStart(2, '0')}
-                </span>
-                <span className="tag">{format.enabled ? '// READY' : '// LOCKED'}</span>
-                <span className="sub">{format.tagline}</span>
-                <span className="name">{format.name}</span>
-                <span className="desc">{format.enabled ? format.description : format.disabledReason}</span>
-                <span className="stats">
-                  <b>{format.deckLabel}</b>
-                  <i>POPULATION {format.populationPct}%</i>
-                </span>
+                <span className="name">{opponent.name}</span>
+                <span className="sub">{opponent.sub}</span>
+                <span className="meta">{opponent.meta}</span>
               </button>
             ))}
           </section>
+        </Window>
+
+        {opponentMode !== 'ai_starter' && (
+          <Window title="FORMAT" className="mode-window">
+            <section className="mode-grid" aria-label="Formats">
+              {visibleFormats.map((format, index) => (
+                <button
+                  key={format.id}
+                  type="button"
+                  aria-label={format.name}
+                  className={`mode-card ${format.id === formatId ? 'selected' : ''}`}
+                  onClick={() => selectFormat(format.id)}
+                  disabled={!format.enabled}
+                >
+                  <span className="num">
+                    {String(index + 1).padStart(2, '0')} / {String(visibleFormats.length).padStart(2, '0')}
+                  </span>
+                  <span className="tag">{format.enabled ? '// READY' : '// LOCKED'}</span>
+                  <span className="sub">{format.tagline}</span>
+                  <span className="name">{format.name}</span>
+                  <span className="desc">{format.enabled ? format.description : format.disabledReason}</span>
+                  <span className="stats">
+                    <b>{format.deckLabel}</b>
+                    <i>POPULATION {format.populationPct}%</i>
+                  </span>
+                </button>
+              ))}
+            </section>
+          </Window>
         )}
 
         <div className="mode-action-bar">

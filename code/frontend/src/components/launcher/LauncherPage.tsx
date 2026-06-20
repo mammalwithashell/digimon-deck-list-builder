@@ -1,60 +1,48 @@
 import { useEffect, useMemo, useState } from 'react';
 import { fetchPatchNotes, type PatchNotesResponse } from '@/api/patchNotesApi';
-import { listTestedCards } from '@/api/deckApi';
-import { isServerHealthy } from '@/api/systemApi';
-import { useAppVersion } from '@/hooks/useAppVersion';
 import { useAuthStore } from '@/stores/authStore';
 import * as deckStore from '@/storage/deckStore';
 import type { DeckSummary } from '@/types/deck';
 import { LauncherActions } from './LauncherActions';
 import { LauncherDeckPanel } from './LauncherDeckPanel';
 import { LauncherNewsPanel } from './LauncherNewsPanel';
-import { LauncherShell } from './LauncherShell';
 import { UpdaterStatusCard } from './UpdaterStatusCard';
-import {
-  buildDeckRows,
-  countDraftDecks,
-  formatCardCount,
-  summarizeLatestRelease,
-} from './launcherData';
+import { buildDeckRows, summarizeLatestRelease } from './launcherData';
 import './launcher.css';
 
 interface LauncherState {
   decks: DeckSummary[];
   patchNotes: PatchNotesResponse | null;
-  testedCardCount: number | null;
-  serverHealthy: boolean;
   loaded: boolean;
 }
 
 const initialState: LauncherState = {
   decks: [],
   patchNotes: null,
-  testedCardCount: null,
-  serverHealthy: false,
   loaded: false,
 };
 
+/**
+ * Launcher home content. The surrounding chrome (nav rail, topbar, status
+ * bar) is now provided by the shared `MenuShell` (add-desktop-menu-shell);
+ * this component renders only the hero + side panels into the shell's
+ * content area.
+ */
 export function LauncherPage() {
   const user = useAuthStore((state) => state.user);
-  const appVersion = useAppVersion();
   const [state, setState] = useState<LauncherState>(initialState);
 
   useEffect(() => {
     let active = true;
     async function load() {
-      const [decksResult, patchResult, cardsResult, healthResult] = await Promise.allSettled([
+      const [decksResult, patchResult] = await Promise.allSettled([
         deckStore.listDecks(),
         fetchPatchNotes(),
-        listTestedCards(),
-        isServerHealthy(),
       ]);
       if (!active) return;
       setState({
         decks: decksResult.status === 'fulfilled' ? decksResult.value : [],
         patchNotes: patchResult.status === 'fulfilled' ? patchResult.value : null,
-        testedCardCount: cardsResult.status === 'fulfilled' ? cardsResult.value.length : null,
-        serverHealthy: healthResult.status === 'fulfilled' ? healthResult.value : false,
         loaded: true,
       });
     }
@@ -71,14 +59,7 @@ export function LauncherPage() {
   );
 
   return (
-    <LauncherShell
-      buildVersion={appVersion}
-      cardCountLabel={formatCardCount(state.testedCardCount)}
-      deckCount={state.decks.length}
-      draftCount={countDraftDecks(state.decks)}
-      serverHealthy={state.serverHealthy}
-      username={user?.username ?? 'Guest'}
-    >
+    <div className="launcher-home">
       <section className="launcher-hero" aria-labelledby="launcher-heading">
         <div className="launcher-welcome">// WELCOME BACK, {(user?.username ?? 'GUEST').toUpperCase()}</div>
         <h1 id="launcher-heading" className="launcher-title">
@@ -92,6 +73,6 @@ export function LauncherPage() {
         <UpdaterStatusCard />
         <LauncherNewsPanel release={releaseSummary} />
       </aside>
-    </LauncherShell>
+    </div>
   );
 }
