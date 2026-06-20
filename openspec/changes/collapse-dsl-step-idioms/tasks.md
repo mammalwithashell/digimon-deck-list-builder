@@ -36,7 +36,7 @@
 - [x] 4.5.7 Moved the four `G-DSL-LINK-*` entries from `qa/dsl-vocab-gaps.md` (now a one-line resolved pointer) to `qa/resolved-gaps.md`.
 
 ## 5. Docs + verification
-- [ ] 5.1 Regenerate the vocab block; confirm removed verbs drop out + new verbs appear; `dsl-vocab-doc-drift --check` green.
-- [ ] 5.2 Update `RUST_DSL_AGENT_GUIDE.md` §5 (searcher pattern, `then:`-tail idiom, security placement).
-- [ ] 5.3 RL guard: action-mask/tensor for a representative collapsed card matches its longhand equivalent (no action-space/tensor size change).
-- [ ] 5.4 Full DSL + behavioral + action-mask suites green.
+- [x] 5.1 Vocab block regenerated across all phases (final: 149 steps — `link_card_to_self` dropped, `relink_self_to_own_digimon` added; `link_cards`/`place_on_security`/`reveal_search` arg-shapes current). `dsl-vocab-doc-drift --check` green ("DSL vocab reference is in sync").
+- [x] 5.2 Updated `RUST_DSL_AGENT_GUIDE.md` §5: fixed the Security verb list (removed the deleted `place_self_at_security` / `place_self_option_at_security` / `place_permanent_on_security[_and_handle_replacement|…]` — now the single source-polymorphic `place_on_security { source, position, face_up, disposition }`); documented the `reveal_search` composite shorthand and the `then:`-tail action-tail idiom; the link prose was updated in §4 (`link_cards` + `bind_as`).
+- [x] 5.3 Action-mask/tensor unchanged: the collapse is byte-identical-compiled (spec-layer routing to existing compiled IR) or purely additive (new compiled steps install existing selection kinds — no new action-space slots). `mask_and_tensor` suite 175/0 (action-space size 2192 + tensor unchanged) and the 5824/0 behavioral suite (collapsed cards expose identical RL choices) jointly verify it; no new guard test needed.
+- [x] 5.4 Full suites green: DSL target 781/0, `cards_behavioral` 5824/0, `mask_and_tensor` 175/0, `option_flow` (link substrate) green, `dsl_eval_arm_coverage` 8/8.
