@@ -3,7 +3,7 @@ use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledClause, CompiledPlayerRef, CompiledStackPosition, CompiledStep,
 };
 use digimon_dsl::spec::CardSpec;
-use digimon_dsl::step::{SecurityFace, StackPosition, StepSpec};
+use digimon_dsl::step::{StackPosition, StepSpec};
 
 fn compile_steps(yaml_steps: &str) -> Vec<CompiledStep> {
     let yaml = format!(
@@ -66,15 +66,16 @@ fn bounce_self_parses_and_compiles() {
 
 #[test]
 fn place_self_security_verbs_parse_face_axis_and_compile() {
+    // collapse §3.3 — the unified `place_on_security` verb with a `self` /
+    // `self_option` source lowers to the same compiled self-placement variants.
     assert!(matches!(
-        parse_first_step("      - place_self_at_security:\n          position: top\n          face: up\n"),
-        StepSpec::PlaceSelfAtSecurity(args)
-            if args.position == digimon_dsl::step::StackPosition::Top
-                && args.face == SecurityFace::Up
+        parse_first_step("      - place_on_security:\n          source: self\n          position: top\n          face_up: true\n"),
+        StepSpec::PlaceOnSecurity(args)
+            if args.position == digimon_dsl::step::StackPosition::Top && args.face_up
     ));
     assert_eq!(
         compile_steps(
-            "      - place_self_at_security:\n          position: top\n          face: up\n"
+            "      - place_on_security:\n          source: self\n          position: top\n          face_up: true\n"
         )[0],
         CompiledStep::PlaceSelfAtSecurity {
             position: CompiledStackPosition::Top,
@@ -82,7 +83,7 @@ fn place_self_security_verbs_parse_face_axis_and_compile() {
         }
     );
     assert_eq!(
-        compile_steps("      - place_self_option_at_security:\n          position: bottom\n          face: down\n")[0],
+        compile_steps("      - place_on_security:\n          source: self_option\n          position: bottom\n          face_up: false\n")[0],
         CompiledStep::PlaceSelfOptionAtSecurity {
             position: CompiledStackPosition::Bottom,
             face_up: false,
@@ -93,10 +94,11 @@ fn place_self_security_verbs_parse_face_axis_and_compile() {
 #[test]
 fn permanent_and_stacked_security_verbs_compile() {
     let steps = compile_steps(
-        r#"      - place_permanent_on_security_observed:
-          target: source
+        r#"      - place_on_security:
+          source: { permanent: source }
           position: random
-          face: up
+          face_up: true
+          disposition: observed
           include_sources: true
       - security_place_stacked_card:
           carrier: source
@@ -145,6 +147,12 @@ fn gain_memory_fn_parses_and_compiles() {
     // EX1-021 shape — "Gain 1 memory for every 4 cards in your hand."
     // The DSL formula uses BasePerDelta (base/per/delta) wrapped in
     // `floor_div` to express N / 4.
+    //
+    // unify-dsl-scalar-and-comparators: the `gain_memory_fn` verb is retired;
+    // it survives only as a deserialize alias for the unified `gain_memory`
+    // (FormulaSpec) verb. The legacy `{ formula: <FormulaSpec> }` wrapper is
+    // unwrapped. A real (non-literal) formula still compiles to the
+    // `CompiledStep::GainMemoryFn` fast-path.
     let yaml = r#"      - gain_memory_fn:
           formula:
             floor_div:
@@ -158,17 +166,34 @@ fn gain_memory_fn_parses_and_compiles() {
     assert!(matches!(&steps[0], CompiledStep::GainMemoryFn { .. }));
 
     let spec = parse_first_step(yaml);
-    assert!(matches!(spec, StepSpec::GainMemoryFn(_)));
+    assert!(matches!(spec, StepSpec::GainMemory(_)));
 }
 
 #[test]
-fn lose_memory_fn_parses_and_compiles() {
+fn lose_memory_fn_alias_with_literal_normalizes_to_literal_step() {
+    // unify-dsl-scalar-and-comparators: `lose_memory_fn: { formula: 3 }` is the
+    // legacy wrapper carrying a literal. The alias deserializes to
+    // `StepSpec::LoseMemory(FormulaSpec::Literal(3))`, which the compiler
+    // normalizes to the integer fast-path `CompiledStep::LoseMemory(3)` — the
+    // formula compiled variant is reserved for genuine runtime formulas.
     let steps = compile_steps(
         r#"      - lose_memory_fn:
           formula: 3
 "#,
     );
-    assert!(matches!(&steps[0], CompiledStep::LoseMemoryFn { .. }));
+    assert!(matches!(&steps[0], CompiledStep::LoseMemory(3)));
+
+    // And a genuine formula via the alias still reaches the LoseMemoryFn path.
+    let formula_steps = compile_steps(
+        r#"      - lose_memory_fn:
+          formula:
+            base: 0
+            per:
+              card_count_in_zone: { of: you, zone: hand }
+            delta: 1
+"#,
+    );
+    assert!(matches!(&formula_steps[0], CompiledStep::LoseMemoryFn { .. }));
 }
 
 #[test]

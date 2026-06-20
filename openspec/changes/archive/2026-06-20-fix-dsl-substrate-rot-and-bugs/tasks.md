@@ -10,7 +10,7 @@
 
 ## 1. Loader integrity guard
 - [x] 1.1 Shipped in WARN mode (`cards.rs`): the engine load path validates raw_rust refs via `from_embedded_with_raw_registry`, logs a `WARNING` naming any unregistered refs, and falls back to a full load (no regression). Verified the pack loads and warns about EXACTLY the 2 remaining refs (`ex11_027_link_requirements`, `ex11_027_optional_link_maquinamon`). **Promote to hard-error (panic) once EX11-027 migrates** — that's the only remaining offender (BT13-007/EX8-070/BT7-107/BT11-042/EX6-072 are all cleared).
-- [ ] 1.2 Engine test: a card referencing an unregistered `raw_rust` formula/step fails load with a message naming the card + reference. (The dsl-crate `registry.rs` tests already cover the validator; add an engine-level test once the guard is promoted.)
+- [x] 1.2 Engine test: a card referencing an unregistered `raw_rust` formula/step fails load. DONE via collapse-dsl-step-idioms §4.5.6 — the guard was promoted to a hard error there once EX11-027 migrated off raw_rust: `code/digimon-engine/src/cards.rs` `substrate_integrity_tests::unregistered_raw_rust_ref_fails_load` (synthetic pack + empty registry → rejected, error names the missing fn) + `production_registry_loads_pack_cleanly`.
 - [x] 1.3 Confirmed the guard catches the real case: it listed 8 unregistered refs across 5 cards (BT13-007 + the 4 `_examples` cards) before fixes.
 
 ## 2. Fix BT13-007 (silent no-op cost reduction) — DONE
@@ -30,7 +30,7 @@
 ## 3. Fix EX8-070 (no-approximations tie auto-pick) — DONE (cleanup pending)
 - [x] 3.1 Replaced the `[Security]` raw_rust step with `select_opponent_permanent { filter: { kind: digimon }, selector: lowest_play_cost }` + `delete_permanent`.
 - [x] 3.2 Reworked `ex8_070_security_deletes_lowest_cost_digimon` (asserts the correct target dies, not auto-index) + added `ex8_070_security_tie_exposes_player_choice` (tie surfaces a `pending_selection`). All 22 ex8_070 tests pass.
-- [ ] 3.3 Remove `ex8_070_delete_lowest_cost_digimon` from `raw_rust/mod.rs` `build_registry` (deferred to the §4/§5 cleanup pass to avoid editing files the migration workflow is reading).
+- [x] 3.3 Remove `ex8_070_delete_lowest_cost_digimon` from `raw_rust/mod.rs` `build_registry` (done together with the §4.3 BT24-062 removal — `build_registry` now registers neither `ex8_070_*` nor `bt24_062_*`; verified `mod.rs:209-213`).
 
 ## 4. Retire BT24-062 raw_rust — DONE (substrate widened, not routed around)
 - [x] 4.1 Added the `is_source_permanent` predicate (DSL spec + compiled + compile + engine eval) — a reusable `target: self` filter (audit theme 10), and taught the flood_gate dispatch to expand `scope: both` into face_up + inherited emissions. No board scan / aux predicate needed: in face_up the carrier resolves to self, in inherited to the host — both top-level permanents the gate's scan covers.

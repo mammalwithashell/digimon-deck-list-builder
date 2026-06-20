@@ -309,7 +309,14 @@ pub struct CompiledPredicate {
     pub card_number_is: Option<String>,
     pub play_cost_lte: Option<CompiledDpConstraint>,
     pub play_cost_gte: Option<CompiledDpConstraint>,
+    /// `_eq` completions for the uniform comparator (unify-dsl-scalar-and-comparators
+    /// §2.4) — the legacy flat surface lacked `_eq` for these metrics; the
+    /// canonical `<metric>: { op: eq, value }` lowers here. `#[serde(default)]`
+    /// keeps older serialized packs deserializable.
+    #[serde(default)]
+    pub play_cost_eq: Option<CompiledDpConstraint>,
     /// G-PLAY-OR-USE-COST-LTE: max(play_cost, option_use_cost) <= N.
+    #[serde(default)]
     pub play_or_use_cost_lte: Option<CompiledDpConstraint>,
     pub can_digivolve_from_source: Option<bool>,
     pub dp_eq: Option<CompiledDpConstraint>,
@@ -317,8 +324,12 @@ pub struct CompiledPredicate {
     pub dp_gte: Option<CompiledDpConstraint>,
     pub stack_size_lte: Option<CompiledDpConstraint>,
     pub stack_size_gte: Option<CompiledDpConstraint>,
+    #[serde(default)]
+    pub stack_size_eq: Option<CompiledDpConstraint>,
     pub materials_count_lte: Option<CompiledDpConstraint>,
     pub materials_count_gte: Option<CompiledDpConstraint>,
+    #[serde(default)]
+    pub materials_count_eq: Option<CompiledDpConstraint>,
     pub has_inherited: Option<Box<CompiledPredicate>>,
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
@@ -376,6 +387,8 @@ pub struct CompiledPredicate {
     pub own_memory_gte: Option<CompiledDpConstraint>,
     pub security_count_lte: Option<CompiledDpConstraint>,
     pub security_count_gte: Option<CompiledDpConstraint>,
+    #[serde(default)]
+    pub security_count_eq: Option<CompiledDpConstraint>,
     pub opponent_security_count_lte: Option<CompiledDpConstraint>,
     pub opponent_security_count_gte: Option<CompiledDpConstraint>,
     pub face_up_security_count_lte: Option<CompiledDpConstraint>,
@@ -1168,6 +1181,17 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         position: CompiledStackPosition,
     },
+    /// collapse §2 `reveal_search` composite. The executor expands this into
+    /// the existing sequence at run time (reveal_top_deck → a single
+    /// `select_reveal_buckets` over all buckets → per-bucket reveal-move →
+    /// place_remainder_on_deck). Pure data → deterministic expansion
+    /// (cloneable-aligned; reuses the existing reveal-bucket selection).
+    RevealSearch {
+        of: CompiledPlayerRef,
+        count: u8,
+        buckets: Vec<CompiledRevealSearchBucket>,
+        remainder: CompiledRevealRemainder,
+    },
     /// Phase 2 Track E (2026-05-17): pick one revealed card matching `filter`
     /// and route it to `destination`. Lowers as a single selection install
     /// whose callback routes the picked card to the typed destination. The
@@ -1630,6 +1654,11 @@ pub enum CompiledStep {
         /// dropping it. G-OPT-REFUND-ON-DECLINE.
         #[serde(default)]
         continue_on_decline: bool,
+        /// collapse §1 explicit scoped action-tail — run on accept with the
+        /// selection binding in scope, prepended to the implicit dispatcher
+        /// tail. `#[serde(default)]` for bincode-pack back-compat.
+        #[serde(default)]
+        then: Vec<CompiledStep>,
     },
     SelectOpponentPermanent {
         filter: CompiledPredicate,
@@ -1642,6 +1671,9 @@ pub enum CompiledStep {
         /// dropping it. G-OPT-REFUND-ON-DECLINE.
         #[serde(default)]
         continue_on_decline: bool,
+        /// collapse §1 explicit scoped action-tail. See `SelectOwnPermanent::then`.
+        #[serde(default)]
+        then: Vec<CompiledStep>,
     },
     SelectAnyPermanent {
         filter: CompiledPredicate,
@@ -1650,6 +1682,9 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
+        /// collapse §1 explicit scoped action-tail. See `SelectOwnPermanent::then`.
+        #[serde(default)]
+        then: Vec<CompiledStep>,
     },
     SelectDnaPair {
         left_filter: CompiledPredicate,
@@ -1674,6 +1709,9 @@ pub enum CompiledStep {
         /// behavior for non-cost optional picks.
         #[serde(default)]
         cost: bool,
+        /// collapse §1 explicit scoped action-tail. See `SelectOwnPermanent::then`.
+        #[serde(default)]
+        then: Vec<CompiledStep>,
     },
     SelectTrash {
         of: CompiledPlayerRef,
@@ -1685,6 +1723,9 @@ pub enum CompiledStep {
         /// See `SelectHand::cost`.
         #[serde(default)]
         cost: bool,
+        /// collapse §1 explicit scoped action-tail. See `SelectOwnPermanent::then`.
+        #[serde(default)]
+        then: Vec<CompiledStep>,
     },
     SelectMaterial {
         of_permanent: CompiledBindingRef,
@@ -1798,6 +1839,9 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
+        /// collapse §1 explicit scoped action-tail. See `SelectOwnPermanent::then`.
+        #[serde(default)]
+        then: Vec<CompiledStep>,
     },
     SelectRevealBuckets {
         from: String,
@@ -1812,6 +1856,9 @@ pub enum CompiledStep {
         prompt: String,
         prompt_key: Option<String>,
         optional: bool,
+        /// collapse §1 explicit scoped action-tail. See `SelectOwnPermanent::then`.
+        #[serde(default)]
+        then: Vec<CompiledStep>,
     },
     SelectUnionZone {
         of: CompiledPlayerRef,
@@ -1914,15 +1961,6 @@ pub enum CompiledStep {
         free: bool,
         filter: CompiledPredicate,
     },
-    /// Facet #9 — link 1 chosen card from `from` zones onto the effect's own
-    /// permanent (G-DSL-LINK-CARD-FROM-ZONE).
-    LinkCardToSelf {
-        from: Vec<crate::step::LinkFromZone>,
-        filter: CompiledPredicate,
-        to: crate::step::LinkToHost,
-        cost: u16,
-        optional: bool,
-    },
     /// Gap 5 — reduce the in-flight `WhenWouldLink` link cost by `amount`.
     /// Compiled form of `StepSpec::ReduceLinkCost`; the engine lowering calls
     /// `EffectContext::reduce_pending_link_cost(amount)`.
@@ -1945,6 +1983,34 @@ pub enum CompiledStep {
         /// cost of 0). Threaded so a future non-zero base cost extends the
         /// lowering without a schema change.
         cost: u8,
+        prompt: Option<String>,
+        /// Optional binding capturing the linked card(s) as a `CardList`, set
+        /// ONLY when ≥1 card is linked (so `binding_present` is false on a full
+        /// decline). Enables gating a follow-up step on a link having occurred
+        /// (BT25-060). `#[serde(default)]` (NOT `skip_serializing_if`) keeps the
+        /// bincode pack layout fixed — see reference_dsl_substrate_authoring_gotchas.
+        #[serde(default)]
+        bind_as: Option<String>,
+        /// Optional host predicate (`to: own_digimon` only) — the link card's
+        /// link requirement, so the host select never offers an illegal host
+        /// (EX11-027). `None` ⇒ any standing own Digimon. `#[serde(default)]`
+        /// for bincode-pack layout stability.
+        #[serde(default)]
+        host_filter: Option<CompiledPredicate>,
+        /// Exclude the effect's source permanent from host candidates ("1 of
+        /// your OTHER Digimon", EX11-027). `#[serde(default)]` for pack layout.
+        #[serde(default)]
+        exclude_source: bool,
+    },
+    /// G-DSL-LINK-RELINK-STANDING-PERMANENT — move the effect's own standing
+    /// permanent to become a link card on a chosen OTHER own Digimon (EX11-027).
+    /// Compiled form of `StepSpec::RelinkSelfToOwnDigimon`; the engine executor
+    /// installs a host select (excluding self, matching `host_filter`) then calls
+    /// `Game::absorb_standing_digimon_as_link`.
+    RelinkSelfToOwnDigimon {
+        #[serde(default)]
+        host_filter: Option<CompiledPredicate>,
+        #[serde(default)]
         prompt: Option<String>,
     },
     Optional(Vec<CompiledStep>),
@@ -1997,6 +2063,12 @@ pub enum CompiledStep {
     /// prevent`; it owns both the cost-payment (player-chosen which link card)
     /// and the cancel, so no separate `CancelReplacement` follows it.
     TrashOwnLinkCardAndCancelLeave,
+    /// EX11-027 Maquinamon leave-prevention. Synthesized from
+    /// `cost: { place_link_card_as_bottom_digivolution: true }` + `outcome:
+    /// prevent`. Like `TrashOwnLinkCardAndCancelLeave` but the player-chosen
+    /// link card is placed as the carrier's bottom digivolution card (not
+    /// trashed); owns both the cost and the cancel.
+    PlaceLinkCardAsBottomSourceAndCancelLeave,
     HandleReplacement,
     RedirectReplacement {
         zone: CompiledZone,
@@ -2114,6 +2186,33 @@ pub struct CompiledRevealBucket {
     pub max: u8,
 }
 
+/// collapse §2 — a `reveal_search` bucket in compiled form.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledRevealSearchBucket {
+    pub filter: CompiledPredicate,
+    pub to: CompiledRevealSearchDest,
+    pub max: u8,
+    pub optional: bool,
+    pub prompt: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledRevealSearchDest {
+    Hand,
+    Trash,
+    /// Bottom of the owner's deck.
+    Deck,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledRevealRemainder {
+    Top,
+    Bottom,
+    /// Player-elected top/bottom — lowers the remainder placement through
+    /// `CompiledStackPosition::Choice`.
+    Choose,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CompiledAttackTargetSpec {
     Any,
@@ -2163,6 +2262,9 @@ pub enum CompiledStackPosition {
     Top,
     Bottom,
     Random,
+    /// collapse §3.1 — player-elected top/bottom (binary pick at run time).
+    /// Only steps that intercept it before placement may carry it.
+    Choice,
 }
 
 /// Phase 2 Track E (2026-05-17): compiled form of `RevealDestination` — the

@@ -161,14 +161,15 @@ effects:
   - when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost"
     process:
-      - link_card_to_self:
-          from: [trash, digivolution_sources]
+      - link_cards:
+          from: [trash, self_sources]
           filter:
             all_of:
               - kind: digimon
               - level_lte: 4
-          cost: 0
-          optional: true
+          to: self
+          count: { up_to: 1 }
+          cost: free
 
   # ─── [Your Turn][Once Per Turn] when_card_linked_to_this: taunt 1 opp Digimon ─
   # DCGO: Region "Your Turn" (WhenLinked), OPT maxCount 1.

@@ -31,6 +31,15 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::PlaceLinkCardAsBottomSourceAndCancelLeave => {
+            // EX11-027 — sibling of the trash cost: place a chosen link card of
+            // the leaving permanent (the `replacement_subject`) under it as the
+            // bottom digivolution card and cancel the leave.
+            if let Some(host) = bindings.get_permanent("replacement_subject") {
+                ctx.place_link_card_as_bottom_source_and_cancel_leave(host);
+            }
+            true
+        }
         CompiledStep::TrashTopSecurityAndCancelReplacement { of } => {
             let player = crate::dsl_cards::step::resolve_player(ctx, *of);
             if ctx.trash_top_security_and_cancel_current_replacement(player) {

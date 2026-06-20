@@ -393,7 +393,7 @@ effects:
     let reg = StubRegistry::empty();
     let errs = validate(&spec, &ctx(&reg)).unwrap_err();
     assert!(
-        errs.iter().any(|e| e.path.contains("dp_modifier_fn")
+        errs.iter().any(|e| e.path.contains("dp_modifier")
             && e.message.contains("DP-dependent target")),
         "expected dynamic DP aura DP-dependent target rejection, got: {errs:?}"
     );
@@ -424,7 +424,7 @@ effects:
     let errs = validate(&spec, &ctx(&reg)).unwrap_err();
     assert!(
         errs.iter()
-            .any(|e| e.path.contains("dp_modifier_fn")
+            .any(|e| e.path.contains("dp_modifier")
                 && e.message.contains("DP-dependent active_when")),
         "expected dynamic DP aura DP-dependent active_when rejection, got: {errs:?}"
     );
@@ -452,7 +452,7 @@ effects:
     let errs = validate(&spec, &ctx(&reg)).unwrap_err();
     assert!(
         errs.iter()
-            .any(|e| e.path.contains("dp_modifier_fn") && e.message.contains("DP aggregate")),
+            .any(|e| e.path.contains("dp_modifier") && e.message.contains("DP aggregate")),
         "expected dynamic DP aura DP aggregate rejection, got: {errs:?}"
     );
 }

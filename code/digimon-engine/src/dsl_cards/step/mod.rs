@@ -12,7 +12,6 @@ pub mod draw;
 pub mod effects;
 pub mod grant_triggered;
 pub mod iteration;
-pub mod link_card;
 pub mod link_cards;
 pub mod memory;
 pub mod modifiers;
@@ -48,6 +47,14 @@ pub(super) fn map_stack_position(p: CompiledStackPosition) -> StackPosition {
         CompiledStackPosition::Top => StackPosition::Top,
         CompiledStackPosition::Bottom => StackPosition::Bottom,
         CompiledStackPosition::Random => StackPosition::Random,
+        // collapse §3.1 — `Choice` is a player-elected position that the
+        // supporting step's executor must resolve to a concrete Top/Bottom via
+        // a binary pick BEFORE any placement. Reaching here means a step that
+        // doesn't support `position: choice` was given it — a card-authoring
+        // error, surfaced loudly rather than silently approximated.
+        CompiledStackPosition::Choice => {
+            panic!("position: choice reached map_stack_position — only place_remainder_on_deck and the place-on-security verb support it; the step must intercept Choice before placing")
+        }
     }
 }
 
@@ -571,7 +578,7 @@ pub fn run_step_with_runtime(
     if try_run_link_step(step, ctx) {
         return;
     }
-    if link_card::try_run(step, ctx) {
+    if link_cards::try_run_relink(step, ctx, bindings) {
         return;
     }
     if combat::try_run(step, ctx, bindings) {

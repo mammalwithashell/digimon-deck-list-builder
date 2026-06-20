@@ -54,7 +54,7 @@ effects:
           body:
             - place_on_security:
                 of: you
-                source: { binding: m }
+                source: { card: { binding: m } }
                 position: bottom
                 face_up: false
             - trash_top_security: { of: opponent }

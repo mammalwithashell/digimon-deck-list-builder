@@ -115,6 +115,56 @@ impl<'a> EffectContext<'a> {
         );
     }
 
+    /// EX11-027 Maquinamon — pay a `WhenWouldLeaveBattleArea` replacement by
+    /// placing 1 of `host`'s link cards as its BOTTOM digivolution card ("by
+    /// placing 1 of its link cards as its bottom digivolution card, it doesn't
+    /// leave"). Sibling of [`Self::trash_own_link_card_and_cancel_leave`]: same
+    /// player-chosen-which-link-card selection (exposed to the RL action space,
+    /// never auto-selected), but the chosen card is MOVED under the carrier via
+    /// `Game::place_specific_link_card_as_bottom_source` (no trash, no
+    /// `OnLinkedCardTrashed`) before the parked leave is cancelled.
+    ///
+    /// Caller MUST gate on `host.linked_cards.len() >= 1` (the replacement
+    /// preflight does). With exactly one link card a single-option selection
+    /// still installs (faithful to DCGO's `SelectCardEffect` flow).
+    pub fn place_link_card_as_bottom_source_and_cancel_leave(&mut self, host: PermanentHandle) {
+        let Some(perm) = self
+            .game
+            .player(host.player)
+            .battle_area
+            .get(host.index as usize)
+        else {
+            return;
+        };
+        if perm.linked_cards.is_empty() {
+            return;
+        }
+        let cards: Vec<crate::card_source::CardHandle> =
+            perm.linked_cards.iter().map(|c| c.handle()).collect();
+        let labels: Vec<String> = cards
+            .iter()
+            .map(|h| {
+                self.game
+                    .card_data_for_handle(*h)
+                    .map(|d| d.card_name.clone())
+                    .unwrap_or_else(|| "Link card".to_string())
+            })
+            .collect();
+
+        self.select_effect_choice(
+            "Choose 1 link card to place as the bottom digivolution card (it doesn't leave)",
+            labels,
+            move |cb_ctx, idx| {
+                let Some(card) = cards.get(idx).copied() else {
+                    return;
+                };
+                if cb_ctx.game.place_specific_link_card_as_bottom_source(host, card) {
+                    cb_ctx.cancel_leave();
+                }
+            },
+        );
+    }
+
     /// Facet #9 — link a chosen card from a non-battle-area zone (hand /
     /// trash / a permanent's digivolution sources) onto `host`'s linked cards
     /// (DCGO `ILinkCard.LinkCard` with `root != None`). The card is lifted out

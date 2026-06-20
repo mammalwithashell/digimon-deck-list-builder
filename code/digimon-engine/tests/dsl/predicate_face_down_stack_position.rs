@@ -772,6 +772,7 @@ fn select_own_permanent_has_face_down_source_offers_only_tamer_with_face_down_st
     filter.has_face_down_source = Some(true);
 
     let steps = vec![CompiledStep::SelectOwnPermanent {
+        then: vec![],
         filter,
         bind_as: Some("chosen".to_string()),
         selector: None,
@@ -840,6 +841,7 @@ fn select_own_permanent_has_face_down_source_excludes_tamer_with_only_face_up_so
     filter.has_face_down_source = Some(true);
 
     let steps = vec![CompiledStep::SelectOwnPermanent {
+        then: vec![],
         filter,
         bind_as: Some("chosen".to_string()),
         selector: None,
@@ -902,6 +904,7 @@ fn select_own_permanent_has_face_down_source_false_offers_only_tamer_without_sta
     filter.has_face_down_source = Some(false);
 
     let steps = vec![CompiledStep::SelectOwnPermanent {
+        then: vec![],
         filter,
         bind_as: Some("chosen".to_string()),
         selector: None,

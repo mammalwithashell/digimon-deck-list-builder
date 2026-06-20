@@ -279,9 +279,10 @@ effects:
     summary: "[Main] Add top security to hand; then place self face up as top security"
     process:
       - add_top_security_to_hand: { of: you }
-      - place_self_option_at_security:
+      - place_on_security:
+          source: self_option
           position: top
-          face: up
+          face_up: true
 
   # ─── Clause 3: [Security] (inherited) optional play 1 Tamer from hand free ────
   #

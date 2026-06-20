@@ -1,4 +1,5 @@
 use digimon_engine::dsl::clause::TypedDeclarativeBody;
+use digimon_engine::dsl::formula::FormulaSpec;
 use digimon_engine::dsl::spec::CardSpec;
 
 fn parse(yaml: &str) -> CardSpec {
@@ -32,7 +33,9 @@ effects:
 "#;
     let spec = parse(yaml);
     match typed_body(&spec, 0) {
-        TypedDeclarativeBody::Aura(a) => assert_eq!(a.dp_modifier, Some(1000)),
+        TypedDeclarativeBody::Aura(a) => {
+            assert_eq!(a.dp_modifier, Some(FormulaSpec::Literal(1000)))
+        }
         _ => panic!("expected Aura"),
     }
 }
@@ -61,7 +64,7 @@ effects:
     let spec = parse(yaml);
     match typed_body(&spec, 0) {
         TypedDeclarativeBody::CostReduction(c) => {
-            assert_eq!(c.amount, Some(3));
+            assert_eq!(c.amount, Some(FormulaSpec::Literal(3)));
             assert!(c.when_playing_this);
         }
         _ => panic!("expected CostReduction"),

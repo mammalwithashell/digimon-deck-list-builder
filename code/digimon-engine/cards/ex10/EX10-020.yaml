@@ -134,6 +134,6 @@ effects:
     process:
       - place_on_security:
           of: you
-          source: event_card
+          source: { card: event_card }
           position: bottom
           face_up: true

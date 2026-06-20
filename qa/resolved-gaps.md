@@ -2887,3 +2887,37 @@ fully closed.
   3. **Predicate `is_source: true`** — mirror of `other: true`; filters a select to "this Digimon" so DCGO's standalone "Will you unsuspend this card?" Yes/No stays RL-visible as an optional self-select.
   4. **"Decline runs the tail" for permanent selects + binding-freshness propagation** — `install_select_own_permanent` / `install_select_opponent_permanent` now wire `on_decline` to run the captured tail with the binding unresolved (the semantic the hand/trash selects already had; DCGO's declined `SelectPermanentEffect` continues the coroutine with an empty list). Parked/wrapped outer tails additionally receive the inner resolution's bindings via `Bindings::merge_slots_from` + the `Game::dsl_resolved_tail_bindings` channel, so a sibling `binding_exists`/`binding_absent` after a nested select no longer reads a stale absence.
 - **Coverage:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- ad1_024 --nocapture` (16 tests: outer-confirm decline refund, accept-then-decline-all refund, declined-pick independence + OPT consumption, coupling, standalone unsuspend, by-effect leg).
+
+## G-DSL-LINK-RELINK-STANDING-PERMANENT — RESOLVED 2026-06-20
+
+- **Severity:** 🟡 DSL link-verb gap (no permanent → link-card relink).
+- **Discovered in:** EX11-027 Maquinamon (migrate-examples-to-dsl); closed in collapse-dsl-step-idioms §4.5.1.
+- **Card(s):** `EX11-027` Maquinamon.
+- **Effect text:** "[On Play] … you may link this Digimon … to 1 of your other Digimon without paying the cost."
+- **Resolution:** Added the `relink_self_to_own_digimon { host_filter?, prompt? }` step over the (now `pub(crate)`) engine primitive `Game::absorb_standing_digimon_as_link` (DCGO `IPlacePermanentToLinkCards`): it moves the effect's own standing permanent to a link card on a chosen OTHER own Digimon (always excludes self, applies the optional host_filter, trashes the source's digivolution sources, top card becomes the link card, fires `OnLink`). Executor `link_cards.rs::try_run_relink`, dispatched in `run_step_with_runtime`.
+- **Coverage:** `--test option_flow -- relink_self_to_own_digimon_absorbs_self_onto_filtered_other_host ex11_027_pure_dsl_on_play_wires_relink_and_linkcards`.
+
+## G-DSL-LINK-HOST-FILTER — RESOLVED 2026-06-20
+
+- **Severity:** 🟡 DSL link host-eligibility gap (host select over-exposed illegal hosts + the source itself).
+- **Discovered in:** EX11-027 Maquinamon; closed in collapse-dsl-step-idioms §4.5.2.
+- **Card(s):** `EX11-027`.
+- **Resolution:** Added `host_filter: PredicateSpec` + `exclude_source: bool` to `link_cards` (`to: own_digimon`). `host_filter` encodes the link requirement (EX11-027: `effect_text_contains: Maquinamon`) so the host select never offers an illegal host; `exclude_source` drops the effect's own source permanent ("1 of your OTHER Digimon"). Applied in `install_host_select` on top of the base Digimon/Standard gate. Mirrors DCGO `CanLinkToTargetPermanent` + `permanent != PermanentOfThisCard()`.
+- **Coverage:** `--test option_flow -- link_cards_host_filter_and_exclude_source`.
+
+## G-DSL-LINK-HETEROGENEOUS-CHOICE — RESOLVED 2026-06-20 (existing vocab)
+
+- **Severity:** 🟡 DSL control-flow gap (an either/or between two distinct link operations as one RL selection).
+- **Discovered in:** EX11-027 Maquinamon ("Link this Digimon" vs "Link a [Maquinamon] from hand", the hand branch offered only when a hand [Maquinamon] exists); closed in collapse-dsl-step-idioms §4.5.3/§4.5.5.
+- **Card(s):** `EX11-027`.
+- **Resolution:** No new substrate — modeled with existing vocab as if-gated `select_effect_choice`. An outer `if { count_gte … effect_text_contains: Maquinamon, n: 2 }` (≥1 OTHER eligible host — self also has Maquinamon text, so n:2 = self + ≥1 other) wraps an inner `if { count_gte hand name_is: Maquinamon, n: 1 }` that picks a 3-way (this / hand / don't) vs 2-way (this / don't) `select_effect_choice`; the `equals` branches route to `relink_self_to_own_digimon` / `link_cards` / no-op.
+- **Coverage:** `--test option_flow -- ex11_027_pure_dsl_on_play_wires_relink_and_linkcards`.
+
+## G-DSL-REPLACEMENT-LINK-CARD-TO-BOTTOM-SOURCE — RESOLVED 2026-06-20
+
+- **Severity:** 🟡 DSL replacement-cost gap (place vs trash a link card to cancel a leave).
+- **Discovered in:** EX11-027 Maquinamon; closed in collapse-dsl-step-idioms §4.5.4.
+- **Card(s):** `EX11-027`.
+- **Effect text:** "[Link][All Turns] When this Digimon would leave the battle area, by placing 1 of its link cards as its bottom digivolution card, it doesn't leave."
+- **Resolution:** Added `cost: { place_link_card_as_bottom_digivolution: true }` (clause.rs) → `CompiledStep::PlaceLinkCardAsBottomSourceAndCancelLeave` → `EffectContext::place_link_card_as_bottom_source_and_cancel_leave` (player-chosen which link card via `select_effect_choice`, then `Game::place_specific_link_card_as_bottom_source` = remove from `linked_cards` → `Permanent::push_under`, no trash / no `OnLinkedCardTrashed`) + `cancel_leave`. Sibling of `trash_own_link_card`; same ≥1-link-card preflight gate (DCGO `Permanent.AddDigivolutionCardsBottom`).
+- **Coverage:** `--test option_flow -- place_link_card_as_bottom_source_leave_replacement ex11_027_linked_leave_prevention_places_link_card_as_bottom_source`.

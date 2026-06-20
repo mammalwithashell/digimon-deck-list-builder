@@ -54,7 +54,6 @@ const STEP_DRAW: &str = include_str!("../src/dsl_cards/step/draw.rs");
 const STEP_EFFECTS: &str = include_str!("../src/dsl_cards/step/effects.rs");
 const STEP_GRANT_TRIGGERED: &str = include_str!("../src/dsl_cards/step/grant_triggered.rs");
 const STEP_ITERATION: &str = include_str!("../src/dsl_cards/step/iteration.rs");
-const STEP_LINK_CARD: &str = include_str!("../src/dsl_cards/step/link_card.rs");
 const STEP_LINK_CARDS: &str = include_str!("../src/dsl_cards/step/link_cards.rs");
 const STEP_MEMORY: &str = include_str!("../src/dsl_cards/step/memory.rs");
 const STEP_MODIFIERS: &str = include_str!("../src/dsl_cards/step/modifiers.rs");
@@ -79,7 +78,6 @@ fn step_corpus() -> String {
         STEP_EFFECTS,
         STEP_GRANT_TRIGGERED,
         STEP_ITERATION,
-        STEP_LINK_CARD,
         STEP_LINK_CARDS,
         STEP_MEMORY,
         STEP_MODIFIERS,
@@ -106,9 +104,12 @@ fn predicate_field_names() -> Vec<String> {
         .find(needle)
         .expect("compiled.rs must contain `pub struct CompiledPredicate`");
     let body_start = start + needle.len();
-    // Find the matching closing brace of the struct body (no nested braces).
+    // Find the struct's closing brace. CompiledPredicate is a top-level item,
+    // so its `}` sits at column 0 — match `"\n}"` rather than the first `}`,
+    // which would wrongly stop at a brace inside a field's doc comment (e.g. the
+    // `<metric>: { op: eq, value }` comparator note added by the scalar-unify).
     let body_end = COMPILED_SRC[body_start..]
-        .find('}')
+        .find("\n}")
         .expect("compiled.rs CompiledPredicate body must be terminated by `}`");
     let body = &COMPILED_SRC[body_start..body_start + body_end];
     let mut names = Vec::new();

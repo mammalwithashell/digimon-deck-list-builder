@@ -60,6 +60,7 @@ fn select_then_if_your_turn_deletes_opponent_permanent() {
     };
     let steps = vec![
         CompiledStep::SelectOpponentPermanent {
+            then: vec![],
             filter: CompiledPredicate::default(),
             bind_as: Some("tgt".to_string()),
             selector: None,
@@ -165,6 +166,7 @@ fn select_then_if_opponents_turn_buffs_opponent_permanent() {
 
     let steps = vec![
         CompiledStep::SelectOpponentPermanent {
+            then: vec![],
             filter: CompiledPredicate::default(),
             bind_as: Some("tgt".to_string()),
             selector: None,

@@ -14,8 +14,9 @@ use std::sync::Arc;
 
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledCountBound, CompiledFieldSelector, CompiledPlayerRef,
-    CompiledPredicate, CompiledRemainderDestination, CompiledRevealDestination, CompiledStep,
-    CompiledZone,
+    CompiledPredicate, CompiledRemainderDestination, CompiledRevealBucket,
+    CompiledRevealDestination, CompiledRevealRemainder, CompiledRevealSearchDest,
+    CompiledStackPosition, CompiledStep, CompiledZone,
 };
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
@@ -227,6 +228,21 @@ fn selection_result(ctx: &EffectContext<'_>) -> InstallResult {
     }
 }
 
+/// collapse §1 — compose a select step's explicit scoped `then` action-tail
+/// with the implicit dispatcher `tail` into the single tail the install helper
+/// captures: `then ++ tail`. `then` runs first (on accept, binding in scope),
+/// then the rest of the process body. The install helper either parks (running
+/// the composed tail via its callback on resolve) or no-ops when there are no
+/// candidates (the outer loop then runs `tail` alone via `Continue`) — so the
+/// implicit `tail` runs exactly once and `then` runs only on a pick. This
+/// mirrors the `SelectOwnSources` exemplar and is closure-free (cloneable VM
+/// `ResumeFrame::RunTail` data).
+fn compose_then_tail(then: &[CompiledStep], tail: &[CompiledStep]) -> Vec<CompiledStep> {
+    let mut inner = then.to_vec();
+    inner.extend_from_slice(tail);
+    inner
+}
+
 /// Installs a selection step or reports how the dispatcher should advance.
 ///
 /// Most selection steps park by installing the remainder as their callback.
@@ -248,6 +264,7 @@ pub fn try_install(
             prompt,
             optional,
             cost,
+            then,
             ..
         } => {
             install_select_hand(
@@ -258,7 +275,7 @@ pub fn try_install(
                 prompt.clone(),
                 *optional,
                 *cost,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
@@ -271,6 +288,7 @@ pub fn try_install(
             prompt,
             optional,
             cost,
+            then,
             ..
         } => {
             install_select_trash(
@@ -281,7 +299,7 @@ pub fn try_install(
                 prompt.clone(),
                 *optional,
                 *cost,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
@@ -314,6 +332,7 @@ pub fn try_install(
             prompt,
             optional,
             continue_on_decline,
+            then,
             ..
         } => {
             install_select_own_permanent(
@@ -324,7 +343,7 @@ pub fn try_install(
                 prompt.clone(),
                 *optional,
                 *continue_on_decline,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
@@ -412,6 +431,7 @@ pub fn try_install(
             prompt,
             optional,
             continue_on_decline,
+            then,
             ..
         } => {
             install_select_opponent_permanent(
@@ -422,7 +442,7 @@ pub fn try_install(
                 prompt.clone(),
                 *optional,
                 *continue_on_decline,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
@@ -434,6 +454,7 @@ pub fn try_install(
             selector,
             prompt,
             optional,
+            then,
             ..
         } => {
             install_select_any_permanent(
@@ -444,7 +465,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
@@ -555,6 +576,7 @@ pub fn try_install(
             bind_as,
             prompt,
             optional,
+            then,
             ..
         } => {
             return if install_select_reveal(
@@ -564,7 +586,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             ) {
@@ -572,6 +594,89 @@ pub fn try_install(
             } else {
                 InstallResult::Continue
             };
+        }
+        // collapse §3.1 — `place_remainder_on_deck` with `position: choice`.
+        // Install a binary top/bottom pick; the chosen branch re-runs
+        // place_remainder at the concrete end THROUGH run_steps, so the
+        // remainder-ordering selection it installs and the outer tail are both
+        // captured/parked correctly. Non-Choice positions are NOT matched here
+        // and fall through to the synchronous runner unchanged.
+        CompiledStep::PlaceRemainderOnDeck {
+            of,
+            position: CompiledStackPosition::Choice,
+        } => {
+            let mut branch = |pos: CompiledStackPosition| {
+                let mut t = vec![CompiledStep::PlaceRemainderOnDeck { of: *of, position: pos }];
+                t.extend_from_slice(tail);
+                Arc::new(t)
+            };
+            let tail_top = branch(CompiledStackPosition::Top);
+            let tail_bottom = branch(CompiledStackPosition::Bottom);
+            let trigger_context = ctx.game.current_trigger_context.clone();
+            let runtime = runtime.clone();
+            ctx.select_effect_choice(
+                "Place the remaining cards on the top or bottom of the deck",
+                vec!["Top of deck".to_string(), "Bottom of deck".to_string()],
+                move |cb_ctx, idx| {
+                    let branch = if idx == 0 { &tail_top } else { &tail_bottom };
+                    let mut b = bindings.clone();
+                    run_tail_preserving_trigger_context(
+                        cb_ctx,
+                        trigger_context,
+                        branch,
+                        &mut b,
+                        &runtime,
+                    );
+                },
+            );
+            selection_result(ctx)
+        }
+        // collapse §3.1/§3.2 — `place_on_security` (card source) with
+        // `position: choice`. Same binary-pick pattern as place_remainder:
+        // install a top/bottom EffectChoice, then re-run the placement at the
+        // concrete end through run_steps so the tail parks correctly. Drives
+        // BT25-038's hand path (collapsing its manual select_effect_choice +
+        // two branches into one step). Non-Choice positions fall through to the
+        // synchronous runner.
+        CompiledStep::PlaceOnSecurity {
+            of,
+            source,
+            position: CompiledStackPosition::Choice,
+            face_up,
+        } => {
+            let mut branch = |pos: CompiledStackPosition| {
+                let mut t = vec![CompiledStep::PlaceOnSecurity {
+                    of: *of,
+                    source: source.clone(),
+                    position: pos,
+                    face_up: *face_up,
+                }];
+                t.extend_from_slice(tail);
+                Arc::new(t)
+            };
+            let tail_top = branch(CompiledStackPosition::Top);
+            let tail_bottom = branch(CompiledStackPosition::Bottom);
+            let trigger_context = ctx.game.current_trigger_context.clone();
+            let runtime = runtime.clone();
+            ctx.select_effect_choice(
+                "Place as the top or bottom security card",
+                vec![
+                    "Top of security".to_string(),
+                    "Bottom of security".to_string(),
+                ],
+                move |cb_ctx, idx| {
+                    let branch = if idx == 0 { &tail_top } else { &tail_bottom };
+                    let mut b = bindings.clone();
+                    run_tail_preserving_trigger_context(
+                        cb_ctx,
+                        trigger_context,
+                        branch,
+                        &mut b,
+                        &runtime,
+                    );
+                },
+            );
+            selection_result(ctx)
         }
         CompiledStep::SelectRevealBuckets {
             from,
@@ -590,12 +695,94 @@ pub fn try_install(
                 runtime.clone(),
             );
         }
+        // collapse §2 — `reveal_search` composite. Expand into the existing
+        // sequence at run time: reveal the top `count`, run ONE
+        // `select_reveal_buckets` over all buckets (cross-bucket de-dup on), then
+        // a per-bucket reveal-move + `place_remainder_on_deck` as the captured
+        // tail. Reuses `install_select_reveal_buckets` wholesale, so it parks /
+        // resumes exactly like the longhand idiom. Pure data → deterministic
+        // expansion (cloneable-aligned, reset-and-replay safe).
+        CompiledStep::RevealSearch {
+            of,
+            count,
+            buckets,
+            remainder,
+        } => {
+            const POOL: &str = "__reveal_search_pool";
+            let bucket_binding = |i: usize| format!("__reveal_search_bucket_{i}");
+
+            let player = resolve_player(ctx, *of);
+            // 1. Reveal the top `count` (populates `ctx.game.revealed_cards`).
+            let pool = ctx.reveal_top_deck(player, *count);
+
+            // 2. Bind the revealed pool for `select_reveal_buckets`' `from`.
+            let mut bindings = bindings;
+            bindings.insert_card_list(POOL, pool);
+
+            // 3. One reveal-bucket selection over all buckets. A non-optional
+            //    bucket forces `min == max` (the install advances when the
+            //    candidate pool is exhausted, so this never soft-locks);
+            //    `optional` keeps `min == 0`.
+            let engine_buckets: Vec<CompiledRevealBucket> = buckets
+                .iter()
+                .enumerate()
+                .map(|(i, bk)| CompiledRevealBucket {
+                    bind_as: bucket_binding(i),
+                    filter: Some(bk.filter.clone()),
+                    min: if bk.optional { 0 } else { bk.max },
+                    max: bk.max,
+                })
+                .collect();
+
+            // 4. Captured tail: per-bucket reveal-move (consumes the bucket's
+            //    bound CardList via the §2.1 multi-card move verbs), then place
+            //    the remainder, then the outer dispatcher tail.
+            let mut inner_tail: Vec<CompiledStep> = Vec::with_capacity(buckets.len() + 1 + tail.len());
+            for (i, bk) in buckets.iter().enumerate() {
+                let card = CompiledBindingRef::Named(bucket_binding(i));
+                inner_tail.push(match bk.to {
+                    CompiledRevealSearchDest::Hand => {
+                        CompiledStep::AddToHandFromReveal { of: *of, card }
+                    }
+                    CompiledRevealSearchDest::Trash => {
+                        CompiledStep::TrashFromReveal { of: *of, card }
+                    }
+                    CompiledRevealSearchDest::Deck => CompiledStep::ReturnToDeckFromReveal {
+                        of: *of,
+                        card,
+                        position: CompiledStackPosition::Bottom,
+                    },
+                });
+            }
+            inner_tail.push(CompiledStep::PlaceRemainderOnDeck {
+                of: *of,
+                position: match remainder {
+                    CompiledRevealRemainder::Top => CompiledStackPosition::Top,
+                    CompiledRevealRemainder::Bottom => CompiledStackPosition::Bottom,
+                    CompiledRevealRemainder::Choose => CompiledStackPosition::Choice,
+                },
+            });
+            inner_tail.extend_from_slice(tail);
+
+            let prompt = buckets.iter().find_map(|bk| bk.prompt.clone());
+            return install_select_reveal_buckets(
+                ctx,
+                POOL,
+                &engine_buckets,
+                true,
+                prompt,
+                inner_tail,
+                bindings,
+                runtime.clone(),
+            );
+        }
         CompiledStep::SelectSecurity {
             of,
             filter,
             bind_as,
             prompt,
             optional,
+            then,
             ..
         } => {
             install_select_security(
@@ -605,7 +792,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );

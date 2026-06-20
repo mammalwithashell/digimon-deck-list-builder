@@ -48,6 +48,7 @@ fn select_trash_then_add_to_hand_from_trash_round_trip() {
         let mut bindings = Bindings::new();
         let steps = vec![
             CompiledStep::SelectTrash {
+                then: vec![],
                 of: CompiledPlayerRef::You,
                 filter: CompiledPredicate::default(),
                 bind_as: Some("pick".to_string()),
@@ -119,6 +120,7 @@ fn select_hand_parks_selection_and_fires_callback() {
         let mut ctx = EffectContext::new(&mut runner.game, src_handle, None, 0);
         let mut bindings = Bindings::new();
         let steps = vec![CompiledStep::SelectHand {
+            then: vec![],
             of: CompiledPlayerRef::You,
             filter: CompiledPredicate::default(),
             bind_as: Some("chosen".to_string()),
@@ -174,6 +176,7 @@ fn select_own_permanent_parks_selection() {
         let mut ctx = EffectContext::new(&mut runner.game, card, None, 0);
         let mut bindings = Bindings::new();
         let steps = vec![CompiledStep::SelectOwnPermanent {
+            then: vec![],
             filter: CompiledPredicate::default(),
             bind_as: Some("tgt".to_string()),
             selector: None,
@@ -219,6 +222,7 @@ fn select_opponent_permanent_parks_selection() {
         let mut ctx = EffectContext::new(&mut runner.game, card, None, 0);
         let mut bindings = Bindings::new();
         let steps = vec![CompiledStep::SelectOpponentPermanent {
+            then: vec![],
             filter: CompiledPredicate::default(),
             bind_as: Some("tgt".to_string()),
             selector: None,

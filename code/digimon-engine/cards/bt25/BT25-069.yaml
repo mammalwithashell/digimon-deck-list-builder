@@ -29,15 +29,15 @@ effects:
   - when: [on_play, when_digivolving]
     summary: "[On Play][When Digivolving] You may link 1 [TS] trait card from your trash to 1 of your Digimon without paying the cost"
     process:
-      - link_card_to_self:
+      - link_cards:
           from: [trash]
           filter:
             all_of:
               - kind: digimon
               - trait_has: TS
-          to: chosen_own_digimon
-          cost: 0
-          optional: true
+          to: own_digimon
+          count: { up_to: 1 }
+          cost: free
 
   # ─── Inherited [All Turns] +1000 DP ────────────────────────────────────────
   - scope: inherited
