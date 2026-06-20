@@ -89,3 +89,21 @@ def test_promotion_gate_keeps_regressing_deck(tmp_path, monkeypatch):
 
     assert reg.get("ST-1 Gaia Red").round == 1   # 0.75 >= 0.6 -> promoted
     assert reg.get("ST-4 Giga Green").round == 0  # 0.375 < 0.6 -> kept at round 0
+
+
+def test_run_parallel_caps_concurrency(monkeypatch):
+    state = {"running": 0, "peak": 0}
+
+    class FakePopen:
+        def __init__(self, argv, cwd=None, env=None):
+            self.args = argv
+            state["running"] += 1
+            state["peak"] = max(state["peak"], state["running"])
+
+        def wait(self):
+            state["running"] -= 1
+            return 0
+
+    monkeypatch.setattr(L.subprocess, "Popen", FakePopen)
+    L._run_parallel([["a"], ["b"], ["c"], ["d"], ["e"]], Path("."), max_parallel=2)
+    assert state["peak"] <= 2  # never more than 2 specialists at once

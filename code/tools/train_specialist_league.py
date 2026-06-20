@@ -85,6 +85,9 @@ class LeagueSpec:
     include_mirror: bool = True
     opponent_pool_mode: str = "pfsp"
     topology: str = "sequential"  # "sequential" | "parallel"
+    max_parallel: int = 0  # parallel topology: max specialists running at once
+                           # (0 = all decks at once). On a 16-core box use 2 with
+                           # n_envs=8 each (the loop is update-bound past ~8 cores).
     n_envs: int = 1
     vec_env_backend: str = "subproc"
     eval_freq: int = 50_000
@@ -266,14 +269,29 @@ def _run(argv: List[str], cwd: Path) -> None:
     subprocess.run(argv, cwd=str(cwd), env=env, check=True)
 
 
-def _run_parallel(argvs: List[List[str]], cwd: Path) -> None:
+def _run_parallel(argvs: List[List[str]], cwd: Path, max_parallel: int = 0) -> None:
+    """Run specialist subprocesses with at most ``max_parallel`` concurrent
+    (0 = all at once). Bounds oversubscription on a fixed-core box — e.g. 2 with
+    ``--n-envs 8`` saturates 16 cores without contention (update-bound past ~8)."""
     env = dict(os.environ)
     env["PYTHONPATH"] = str((cwd / "code").resolve()) + os.pathsep + env.get("PYTHONPATH", "")
-    procs = []
-    for argv in argvs:
-        print("\n$ (bg) " + " ".join(argv), flush=True)
-        procs.append(subprocess.Popen(argv, cwd=str(cwd), env=env))
-    failed = [p.args for p in procs if p.wait() != 0]
+    cap = max_parallel if (max_parallel and max_parallel > 0) else len(argvs)
+    pending = list(argvs)
+    running: List[subprocess.Popen] = []
+    failed: List = []
+
+    def _fill() -> None:
+        while pending and len(running) < cap:
+            argv = pending.pop(0)
+            print("\n$ (bg) " + " ".join(argv), flush=True)
+            running.append(subprocess.Popen(argv, cwd=str(cwd), env=env))
+
+    _fill()
+    while running:
+        proc = running.pop(0)          # wait on the oldest, then refill the slot
+        if proc.wait() != 0:
+            failed.append(proc.args)
+        _fill()
     if failed:
         raise RuntimeError(f"{len(failed)} specialist run(s) failed this round")
 
@@ -301,7 +319,7 @@ def run_round(spec: LeagueSpec, reg: SpecialistRegistry, rnd: int, cwd: Path,
         return
 
     if spec.topology == "parallel":
-        _run_parallel(argvs, cwd)
+        _run_parallel(argvs, cwd, max_parallel=spec.max_parallel)
     else:
         for argv in argvs:
             _run(argv, cwd)
@@ -378,6 +396,9 @@ def main() -> None:
     p.add_argument("--keep-last-per-deck", type=int, default=2)
     p.add_argument("--no-mirror", action="store_true", help="Exclude own-deck snapshots from pools.")
     p.add_argument("--topology", choices=["sequential", "parallel"], default="sequential")
+    p.add_argument("--max-parallel", type=int, default=0,
+                   help="parallel topology: max specialists running at once "
+                        "(0 = all). On a 16-core box use 2 with --n-envs 8.")
     p.add_argument("--n-envs", type=int, default=1)
     p.add_argument("--vec-env-backend", default="subproc")
     p.add_argument("--tensor-profile", default="standard_lite_deck_v2")
@@ -423,6 +444,7 @@ def main() -> None:
         keep_last_per_deck=args.keep_last_per_deck,
         include_mirror=not args.no_mirror,
         topology=args.topology,
+        max_parallel=args.max_parallel,
         n_envs=args.n_envs,
         vec_env_backend=args.vec_env_backend,
         tensor_profile=args.tensor_profile,
