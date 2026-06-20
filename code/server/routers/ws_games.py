@@ -144,13 +144,15 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
     filtered = filter_state_for_player(full_state, player_id)
     mask = runner.get_action_mask().tolist()
     current_pid = runner.current_player_id
+    # `filtered` is perspective-normalized so the viewer is always player1;
+    # report the normalized ids to match (see filter_state_for_player).
     await websocket.send_json({
         "type": "state_update",
         "state": filtered,
         "action_mask": mask if current_pid == player_id else [],
-        "current_player_id": current_pid,
+        "current_player_id": filtered["currentPlayer"],
         "is_game_over": runner.is_game_over,
-        "your_player_id": player_id,
+        "your_player_id": 1,
         "engine_version": settings.engine_version,
         "seed": manager.get_settings(game_id).seed,
     })
