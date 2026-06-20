@@ -10,7 +10,7 @@
 
 ## 1. Loader integrity guard
 - [x] 1.1 Shipped in WARN mode (`cards.rs`): the engine load path validates raw_rust refs via `from_embedded_with_raw_registry`, logs a `WARNING` naming any unregistered refs, and falls back to a full load (no regression). Verified the pack loads and warns about EXACTLY the 2 remaining refs (`ex11_027_link_requirements`, `ex11_027_optional_link_maquinamon`). **Promote to hard-error (panic) once EX11-027 migrates** — that's the only remaining offender (BT13-007/EX8-070/BT7-107/BT11-042/EX6-072 are all cleared).
-- [ ] 1.2 Engine test: a card referencing an unregistered `raw_rust` formula/step fails load with a message naming the card + reference. (The dsl-crate `registry.rs` tests already cover the validator; add an engine-level test once the guard is promoted.)
+- [x] 1.2 Engine test: a card referencing an unregistered `raw_rust` formula/step fails load. DONE via collapse-dsl-step-idioms §4.5.6 — the guard was promoted to a hard error there once EX11-027 migrated off raw_rust: `code/digimon-engine/src/cards.rs` `substrate_integrity_tests::unregistered_raw_rust_ref_fails_load` (synthetic pack + empty registry → rejected, error names the missing fn) + `production_registry_loads_pack_cleanly`.
 - [x] 1.3 Confirmed the guard catches the real case: it listed 8 unregistered refs across 5 cards (BT13-007 + the 4 `_examples` cards) before fixes.
 
 ## 2. Fix BT13-007 (silent no-op cost reduction) — DONE

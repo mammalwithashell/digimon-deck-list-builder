@@ -25,5 +25,5 @@
 ## 4. Docs + verification
 - [x] 4.1 Regenerated the vocab block (`cargo run -q -p dsl-schema-export | …emit_markdown.py`); 157 predicates incl. the 8 canonical `MetricComparators` fields + `Comparator`/`ComparatorOp` types; `--check` drift gate **green** (structural-sha bumped). No verbs/predicates were removed (the `_fn` twins were already absent from the generated set; they're deser-only aliases).
 - [x] 4.2 Added `RUST_DSL_AGENT_GUIDE.md` §6 "Uniform comparator (preferred)" prose (canonical `Comparator { op, value: FormulaSpec }`, single|list/range, eq-completion, read-safe eval, legacy back-compat, the level u8-eq exception) — outside the generated block, drift gate still green.
-- [~] 4.3 DSL target green (768/768, `RUST_MIN_STACK=256M`); full `cards_behavioral` suite running (byte-identical-by-construction → expected green). action-mask: unaffected (§2 is predicate-only, no action-space change; §3 budget merge deferred).
-- [ ] 4.4 Optional mechanical YAML sweep to canonical forms — NOT required (back-compat covers it); skip to avoid churn.
+- [x] 4.3 DSL target green; full `cards_behavioral` suite confirmed green (5824/0, identical to baseline) in the collapse follow-up session. action-mask: unaffected (§2 is predicate-only, no action-space change; §3 budget merge deferred).
+- [x] 4.4 Optional mechanical YAML sweep to canonical forms — SKIPPED (deliberate): back-compat covers the legacy forms, so a sweep would only add churn.
