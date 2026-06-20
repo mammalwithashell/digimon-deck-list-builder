@@ -1586,6 +1586,27 @@ fn compile_replacement_process(
         return process;
     }
 
+    // EX11-027 — `cost: { place_link_card_as_bottom_digivolution: true }` is the
+    // place-link-as-bottom-source sibling of `trash_own_link_card`: a single
+    // self-contained step that places a chosen link card under the carrier AND
+    // cancels the leave (so it owns the `outcome: prevent`).
+    let place_link_card_as_bottom = r
+        .cost
+        .as_ref()
+        .is_some_and(|cost| cost.place_link_card_as_bottom_digivolution);
+    if place_link_card_as_bottom {
+        if !matches!(r.outcome, Some(crate::clause::ReplacementOutcome::Prevent)) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { place_link_card_as_bottom_digivolution } requires outcome: prevent"
+                    .into(),
+            });
+        }
+        process.push(CompiledStep::PlaceLinkCardAsBottomSourceAndCancelLeave);
+        return process;
+    }
+
     if r.cost.as_ref().is_some_and(|cost| cost.delay_self) {
         process.push(CompiledStep::DeletePermanent {
             target: CompiledBindingRef::Source,

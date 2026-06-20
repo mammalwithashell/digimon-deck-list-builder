@@ -2653,6 +2653,74 @@ effects:
     assert_eq!(r.battle_area_size(0), 0, "the Digimon leaves normally");
 }
 
+/// §4.5.4 (EX11-027) — leave-replacement that PLACES a chosen link card as the
+/// carrier's BOTTOM digivolution card instead of trashing it: the Digimon
+/// stays, the link card relocates under it, and nothing is trashed.
+#[test]
+fn place_link_card_as_bottom_source_leave_replacement() {
+    let yaml = r#"
+card: EX11-027-PLACE
+name: Place-Stayer
+kind: digimon
+effects:
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    cost: { place_link_card_as_bottom_digivolution: true }
+    outcome: prevent
+"#;
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("EX11-027-PLACE", CardColor::Red))
+        .add_card(digimon_card("LINKEE", CardColor::Red))
+        .memory(0)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let perm = r.place_on_field(0, "EX11-027-PLACE", Some(0));
+    let linkee = r.push_linked_owned(perm, "LINKEE", 0);
+    advance_to_main(&mut r);
+
+    let trash_before = r.trash_size(0);
+    let sources_before =
+        r.game.player(0).battle_area[perm.index as usize].card_sources.len();
+
+    r.game.delete_permanent_with_effects(perm);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "place-as-bottom leave-replacement offers the optional accept prompt"
+    );
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept");
+
+    // Surface + resolve the which-link-card choice (one card here).
+    let pick = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("link-card selection installed")
+        .valid_action_ids[0];
+    r.game.resolve_selection(0, pick).expect("pick link card");
+
+    let perm_ref = &r.game.player(0).battle_area[perm.index as usize];
+    assert_eq!(r.battle_area_size(0), 1, "the Digimon did NOT leave");
+    assert_eq!(perm_ref.linked_cards.len(), 0, "the link card left linked_cards");
+    assert_eq!(
+        perm_ref.card_sources.len(),
+        sources_before + 1,
+        "the link card became a digivolution source under the carrier"
+    );
+    assert_eq!(
+        perm_ref.card_sources[0].handle(),
+        linkee,
+        "the chosen link card is now the BOTTOM digivolution source"
+    );
+    assert_eq!(
+        r.trash_size(0),
+        trash_before,
+        "the link card was NOT trashed (it was placed under the carrier)"
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Gap 3b — Option self-as-link-source (BT25-101 Divine Arms Version Ω).
 //

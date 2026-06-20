@@ -2042,6 +2042,12 @@ pub enum CompiledStep {
     /// prevent`; it owns both the cost-payment (player-chosen which link card)
     /// and the cancel, so no separate `CancelReplacement` follows it.
     TrashOwnLinkCardAndCancelLeave,
+    /// EX11-027 Maquinamon leave-prevention. Synthesized from
+    /// `cost: { place_link_card_as_bottom_digivolution: true }` + `outcome:
+    /// prevent`. Like `TrashOwnLinkCardAndCancelLeave` but the player-chosen
+    /// link card is placed as the carrier's bottom digivolution card (not
+    /// trashed); owns both the cost and the cancel.
+    PlaceLinkCardAsBottomSourceAndCancelLeave,
     HandleReplacement,
     RedirectReplacement {
         zone: CompiledZone,

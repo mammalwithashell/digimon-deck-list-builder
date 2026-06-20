@@ -557,6 +557,18 @@ pub struct ReplacementCostBody {
     /// `cancel_replacement` is emitted).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub trash_own_link_card: bool,
+
+    /// EX11-027 Maquinamon — pay the leave by placing 1 of the LEAVING
+    /// permanent's own link cards as its BOTTOM digivolution card ("by placing
+    /// 1 of its link cards as its bottom digivolution card, it doesn't leave").
+    /// Identical gating to `trash_own_link_card` (only on
+    /// `when_would_leave_battle_area`, clause `optional: true`, requires ≥1 link
+    /// card, owns `outcome: prevent`) — but the chosen link card is MOVED under
+    /// the carrier (DCGO `Permanent.AddDigivolutionCardsBottom`) instead of
+    /// trashed, so it is NOT a trash and fires no `OnLinkedCardTrashed`. Lowers
+    /// to a single `PlaceLinkCardAsBottomSourceAndCancelLeave` step.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub place_link_card_as_bottom_digivolution: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
