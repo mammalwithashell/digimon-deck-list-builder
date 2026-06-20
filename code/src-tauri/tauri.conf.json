@@ -20,9 +20,10 @@
       {
         "title": "Digimon TCG",
         "width": 1280,
-        "height": 720,
+        "height": 768,
         "resizable": false,
-        "fullscreen": false
+        "fullscreen": false,
+        "decorations": false
       }
     ]
   },

@@ -4,6 +4,7 @@ import { Layout } from '@/components/layout/Layout';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { RoleGuard } from '@/components/auth/RoleGuard';
 import { CanvasScaler } from '@/components/desktop/CanvasScaler';
+import { TitleBar } from '@/components/desktop/TitleBar';
 import { HomePage } from '@/pages/HomePage';
 import { LoginPage } from '@/pages/LoginPage';
 import { RegisterPage } from '@/pages/RegisterPage';
@@ -72,6 +73,7 @@ export function App() {
     <BrowserRouter>
       <ThemeProvider>
         <UpdaterBridge />
+        {IS_DESKTOP && <TitleBar />}
         <CanvasScaler>
         <Routes>
           {IS_DESKTOP && <Route path="/" element={suspended(LauncherPage)} />}
