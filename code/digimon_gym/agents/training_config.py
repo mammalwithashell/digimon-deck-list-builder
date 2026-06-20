@@ -10,7 +10,7 @@ import yaml
 
 
 VALID_ALGORITHMS = {"mlp", "lstm"}
-VALID_OPPONENTS = {"greedy", "random", "agent", "pool"}
+VALID_OPPONENTS = {"greedy", "random", "agent", "pool", "league"}
 
 # `harden-training-pipeline` D1: opponent="self-play" is retired. DigimonEnv
 # builds observations from Player 1's perspective only, so the old mode (which
@@ -48,6 +48,9 @@ class TrainingConfig:
     # `--set vec_env_backend=subproc` never engaged → every run ran serial).
     vec_env_backend: str = "dummy"
     learning_rate: float = 3e-4
+    # Learning-rate schedule: "constant" (default) or "linear" (decay base LR to 0
+    # over the run). Used by the deck-specialist league's per-round decay.
+    lr_schedule: str = "constant"
     n_steps: int = 2048
     batch_size: int = 64
     n_epochs: int = 10
@@ -61,6 +64,11 @@ class TrainingConfig:
     opponent: str = "greedy"
     opponent_pool_manifest: Optional[str] = None
     opponent_pool_mode: str = "pfsp"
+    # Deck-specialist league (`add-deck-specialist-league`): round-pool manifest
+    # for `opponent="league"`, carrying coupled (policy, deck) opponents. The
+    # opponent's deck AND policy are both taken from each entry (unlike the pool
+    # path, where the deck comes from the deck-pool wrapper).
+    league_pool_manifest: Optional[str] = None
     deck_pool_variants: bool = False
     gauntlet_path: Optional[str] = None
     eval_freq: int = 25_000
@@ -184,6 +192,12 @@ class TrainingConfig:
             raise ValueError("keep_last_checkpoints must be >= 1")
         if self.opponent == "pool" and not self.opponent_pool_manifest:
             raise ValueError("opponent=pool requires opponent_pool_manifest")
+        if self.opponent == "league" and not self.league_pool_manifest:
+            raise ValueError("opponent=league requires league_pool_manifest")
+        if self.lr_schedule not in {"constant", "linear"}:
+            raise ValueError(
+                f"lr_schedule must be 'constant' or 'linear', got {self.lr_schedule!r}"
+            )
         if not isinstance(self.tensor_profile, str) or not self.tensor_profile.strip():
             raise ValueError("tensor_profile must be a non-blank string")
         if self.record_games not in VALID_RECORD_GAME_MODES:

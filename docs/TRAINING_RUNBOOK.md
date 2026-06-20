@@ -148,6 +148,11 @@ python -m digimon_gym.agents.pilot_training --generalist --curriculum-pool model
 # Fine-tune an archetype pilot from a compatible generalist base checkpoint
 python -m digimon_gym.agents.pilot_training --init-from models/generalist_a/final.zip --deck1 path/to/deck.txt --gauntlet --gauntlet-sampling meta --lr 0.00005 --timesteps 1000000
 
+# Deck-specialist league: turn one generalist into six per-deck specialists
+# (add-deck-specialist-league). Round-based PFSP against frozen snapshots.
+python code/tools/train_specialist_league.py --generalist models/starter_pool_v1/final.zip --rounds 3 --dry-run
+python code/tools/train_specialist_league.py --generalist models/starter_pool_v1/final.zip --rounds 3 --steps-per-round 1000000 --eval-n 24
+
 # With custom deck
 python -m digimon_gym.agents.pilot_training --deck1 path/to/deck.txt --timesteps 500000
 

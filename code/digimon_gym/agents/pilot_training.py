@@ -470,6 +470,23 @@ def make_pool_opponent_fn(
     return _opponent
 
 
+def _league_policy_loader(weights_path: str, algorithm: str) -> Callable[[DigimonEnv], int]:
+    """Module-level (so it is spawn-safe for SubprocVecEnv) policy loader for the
+    deck-specialist league. Adapts ``make_agent_opponent_fn`` to the
+    ``LeaguePoolWrapper`` ``policy_loader(weights_path, algorithm)`` signature."""
+    return make_agent_opponent_fn(weights_path, algorithm=algorithm)
+
+
+def _resolve_learning_rate(cfg: TrainingConfig):
+    """Return the learning rate to hand SB3: a float for ``lr_schedule="constant"``,
+    or a ``progress_remaining -> lr`` callable for ``"linear"`` (decays the base LR
+    to 0 over the run, avoiding the constant-LR drift seen on the floor/bo3 runs)."""
+    base = cfg.learning_rate
+    if getattr(cfg, "lr_schedule", "constant") == "linear":
+        return lambda progress_remaining: base * progress_remaining
+    return base
+
+
 # ─── Opponent Wrapper ────────────────────────────────────────────────
 
 class OpponentWrapper(gymnasium.Wrapper):
@@ -1934,7 +1951,9 @@ def make_env(opponent: str = "greedy",
              dna_digivolve_bonus: float = 3.9,
              match_format: str = "single",
              match_env_seed: Optional[int] = None,
-             reward_profile_factory: Optional[Callable] = None) -> gymnasium.Env:
+             reward_profile_factory: Optional[Callable] = None,
+             league_entries: Optional[List] = None,
+             league_sampling_mode: str = "pfsp") -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:
@@ -1994,18 +2013,29 @@ def make_env(opponent: str = "greedy",
 
     if opponent == "self-play":
         raise ValueError(SELF_PLAY_RETIRED_MSG)
-    opponent_policies = {
-        "greedy": greedy_policy,
-        "random": random_policy,
-    }
-    try:
-        opponent_fn = opponent_policies[opponent]
-    except KeyError:
-        valid_opponents = list(opponent_policies.keys())
-        raise ValueError(
-            f"Unknown opponent {opponent!r}. "
-            f"Expected one of {valid_opponents}."
-        )
+    # Deck-specialist league: the opponent is a settable controller whose policy
+    # the LeaguePoolWrapper (applied below, outside MatchEnv) repoints per match
+    # from the same entry that sets deck2 — coupled (policy, deck) sampling.
+    league_controller = None
+    if opponent == "league":
+        if not league_entries:
+            raise ValueError("opponent='league' requires league_entries")
+        from digimon_gym.agents.league_opponent import LeagueOpponentController
+        league_controller = LeagueOpponentController()
+        opponent_fn = league_controller
+    else:
+        opponent_policies = {
+            "greedy": greedy_policy,
+            "random": random_policy,
+        }
+        try:
+            opponent_fn = opponent_policies[opponent]
+        except KeyError:
+            valid_opponents = list(opponent_policies.keys()) + ["pool", "league"]
+            raise ValueError(
+                f"Unknown opponent {opponent!r}. "
+                f"Expected one of {valid_opponents}."
+            )
     env = OpponentWrapper(base_env, opponent_fn=opponent_fn)
 
     # BO3 match wrapper sits between OpponentWrapper and any deck-pool
@@ -2035,6 +2065,21 @@ def make_env(opponent: str = "greedy",
             deck_pool=generalist_deck_pool,
             seed=curriculum_seed,
             opponent_pool=generalist_opponent_pool,
+        )
+
+    # League pool wrapper: samples a coupled (policy, deck) opponent per match.
+    # Outside MatchEnv (above) so one sample spans a BO3 match.
+    if league_controller is not None:
+        from digimon_gym.agents.league_opponent import LeaguePoolWrapper
+        player_deck = deck1 if deck1 else base_env._deck1
+        env = LeaguePoolWrapper(
+            env,
+            entries=league_entries,
+            player_deck=player_deck,
+            controller=league_controller,
+            policy_loader=_league_policy_loader,
+            sampling_mode=league_sampling_mode,
+            seed=curriculum_seed,
         )
 
     # Gauntlet wrapper for meta-weighted opponent sampling
@@ -2083,7 +2128,7 @@ def make_env(opponent: str = "greedy",
 
 def make_vec_env(
     cfg: TrainingConfig,
-    opponent_fn: Callable[[DigimonEnv], int],
+    opponent_fn: Optional[Callable[[DigimonEnv], int]] = None,
     deck1: Optional[List[str]] = None,
     deck2: Optional[List[str]] = None,
     generalist_deck_pool: Optional[GeneralistDeckPool] = None,
@@ -2092,8 +2137,15 @@ def make_vec_env(
     recording_writer: Optional[TrainingGameRecorder] = None,
     mulligan_log_cfg: Optional[_MulliganLogConfig] = None,
     reward_profile_factory: Optional[Callable] = None,
+    league_entries: Optional[List] = None,
+    league_sampling_mode: str = "pfsp",
 ):
-    """Build ActionMasker-wrapped vector environments from TrainingConfig."""
+    """Build ActionMasker-wrapped vector environments from TrainingConfig.
+
+    For ``league_entries`` (deck-specialist league), each env builds its own
+    ``LeagueOpponentController`` + ``LeaguePoolWrapper`` inside ``_init`` (so the
+    coupling is per-worker and spawn-safe); ``opponent_fn`` is then ignored.
+    """
 
     def _factory(rank: int):
         def _init():
@@ -2115,12 +2167,34 @@ def make_vec_env(
             # `add-reward-profiles` Group 8: wrap before OpponentWrapper.
             if reward_profile_factory is not None:
                 base_env = reward_profile_factory(base_env)
-            wrapped = OpponentWrapper(base_env, opponent_fn=opponent_fn)
+            # Deck-specialist league: per-worker controller, repointed per match
+            # by the LeaguePoolWrapper applied below (outside MatchEnv).
+            league_controller = None
+            if league_entries:
+                from digimon_gym.agents.league_opponent import LeagueOpponentController
+                league_controller = LeagueOpponentController()
+                opp_fn = league_controller
+            else:
+                opp_fn = opponent_fn
+            wrapped = OpponentWrapper(base_env, opponent_fn=opp_fn)
             # BO3 match wrapper between OpponentWrapper and deck-pool wrappers.
             if cfg.match_format == "bo3":
                 from digimon_gym.agents.match_env import MatchEnv
                 match_seed = None if cfg.seed is None else cfg.seed + rank
                 wrapped = MatchEnv(wrapped, seed=match_seed)
+            if league_controller is not None:
+                from digimon_gym.agents.league_opponent import LeaguePoolWrapper
+                player_deck = deck1 if deck1 else base_env._deck1
+                league_seed = None if curriculum_seed is None else curriculum_seed + rank
+                wrapped = LeaguePoolWrapper(
+                    wrapped,
+                    entries=league_entries,
+                    player_deck=player_deck,
+                    controller=league_controller,
+                    policy_loader=_league_policy_loader,
+                    sampling_mode=league_sampling_mode,
+                    seed=league_seed,
+                )
             if generalist_deck_pool is not None:
                 seed = None if curriculum_seed is None else curriculum_seed + rank
                 wrapped = GeneralistDeckPoolWrapper(
@@ -2223,6 +2297,7 @@ def train(total_timesteps: int = 100_000,
           init_from: Optional[str] = None,
           opponent_pool_manifest: Optional[str] = None,
           opponent_pool_mode: Optional[str] = None,
+          league_pool_manifest: Optional[str] = None,
           cfg: Optional[TrainingConfig] = None,
           reward_profiles_override_mismatch: bool = False,
           ) -> Union[MaskablePPO, MaskableRecurrentPPO]:
@@ -2276,6 +2351,8 @@ def train(total_timesteps: int = 100_000,
             _cfg_overrides["opponent_pool_manifest"] = opponent_pool_manifest
         if opponent_pool_mode is not None:
             _cfg_overrides["opponent_pool_mode"] = opponent_pool_mode
+        if league_pool_manifest is not None:
+            _cfg_overrides["league_pool_manifest"] = league_pool_manifest
         cfg = TrainingConfig(
             algorithm="lstm" if use_lstm else "mlp",
             timesteps=total_timesteps,
@@ -2300,7 +2377,7 @@ def train(total_timesteps: int = 100_000,
         opponent = cfg.opponent
         eval_freq = cfg.eval_freq
         n_eval_episodes = cfg.eval_episodes
-        learning_rate = cfg.learning_rate
+        learning_rate = _resolve_learning_rate(cfg)
         n_steps = cfg.n_steps
         batch_size = cfg.batch_size
         n_epochs = cfg.n_epochs
@@ -2447,7 +2524,7 @@ def train(total_timesteps: int = 100_000,
             print(f"  LSTM hidden:    {lstm_hidden_size}")
         print(f"  Opponent:       {opponent}")
         print(f"  Total steps:    {total_timesteps:,}")
-        print(f"  Learning rate:  {learning_rate}")
+        print(f"  Learning rate:  {cfg.learning_rate} ({getattr(cfg, 'lr_schedule', 'constant')})")
         print(f"  Batch size:     {batch_size}")
         print(f"  Rollout steps:  {n_steps}")
         print(f"  Eval freq:      every {eval_freq:,} steps")
@@ -2492,8 +2569,30 @@ def train(total_timesteps: int = 100_000,
             mode=cfg.opponent_pool_mode,
         )
 
+    # Deck-specialist league: load the round pool (coupled (policy, deck) entries).
+    league_entries = None
+    if opponent == "league":
+        from digimon_gym.agents.league_opponent import load_league_pool
+        league_entries = load_league_pool(cfg.league_pool_manifest or "")
+        if not league_entries:
+            raise ValueError(
+                f"league_pool_manifest {cfg.league_pool_manifest} is empty"
+            )
+
     # Create training environment
-    if pool_opponent_fn is not None:
+    if league_entries is not None:
+        env = make_vec_env(
+            cfg,
+            deck1=deck1,
+            deck2=deck2,
+            curriculum_seed=curriculum_seed,
+            recording_writer=recording_writer,
+            mulligan_log_cfg=mulligan_log_cfg,
+            reward_profile_factory=reward_profile_factory,
+            league_entries=league_entries,
+            league_sampling_mode=cfg.opponent_pool_mode,
+        )
+    elif pool_opponent_fn is not None:
         env = make_vec_env(
             cfg,
             opponent_fn=pool_opponent_fn,
@@ -2709,6 +2808,8 @@ def train(total_timesteps: int = 100_000,
             match_format=cfg.match_format,
             match_env_seed=cfg.eval_seed,
             reward_profile_factory=reward_profile_factory,
+            league_entries=league_entries,
+            league_sampling_mode=cfg.opponent_pool_mode,
         )
     eval_suite = None
     if cfg.eval_suite:
@@ -2987,10 +3088,12 @@ def _build_argparser() -> argparse.ArgumentParser:
     )
     opponent_group = parser.add_mutually_exclusive_group()
     opponent_group.add_argument(
-        "--opponent", choices=["greedy", "random", "pool"],
+        "--opponent", choices=["greedy", "random", "pool", "league"],
         default=None,
         help="Opponent policy. 'pool' samples frozen opponents from "
-             "--opponent-pool-manifest (pool-based fictitious self-play)."
+             "--opponent-pool-manifest (pool-based fictitious self-play). "
+             "'league' samples coupled (policy, deck) opponents from "
+             "--league-pool-manifest (deck-specialist league)."
     )
     opponent_group.add_argument(
         "--self-play", action="store_true",
@@ -3004,8 +3107,19 @@ def _build_argparser() -> argparse.ArgumentParser:
              "champion_admin.py emit-pool)."
     )
     parser.add_argument(
+        "--league-pool-manifest", type=str, default=None,
+        help="League round-pool manifest JSON for --opponent league, carrying "
+             "coupled (policy, deck) opponents (emit one via "
+             "SpecialistRegistry.write_round_pool / train_specialist_league.py)."
+    )
+    parser.add_argument(
         "--lr", type=float, default=None,
         help="Learning rate."
+    )
+    parser.add_argument(
+        "--lr-schedule", choices=["constant", "linear"], default=None,
+        help="LR schedule: 'constant' (default) or 'linear' (decay base LR to 0 "
+             "over the run; used by the deck-specialist league for per-round decay)."
     )
     parser.add_argument(
         "--batch-size", type=int, default=None,
@@ -3206,6 +3320,7 @@ def main():
     legacy_overrides = {
         "timesteps": args.timesteps,
         "learning_rate": args.lr,
+        "lr_schedule": args.lr_schedule,
         "batch_size": args.batch_size,
         "n_steps": args.n_steps,
         "eval_freq": args.eval_freq,
@@ -3239,6 +3354,8 @@ def main():
         overrides["opponent"] = args.opponent
     if args.opponent_pool_manifest is not None:
         overrides["opponent_pool_manifest"] = args.opponent_pool_manifest
+    if args.league_pool_manifest is not None:
+        overrides["league_pool_manifest"] = args.league_pool_manifest
     if args.lstm:
         overrides["algorithm"] = "lstm"
     if args.resume:
@@ -3320,6 +3437,27 @@ def main():
         with open(args.deck2_json, "r") as f:
             deck2 = json.load(f)
         print(f"  Opponent deck: {len(deck2)} cards from {args.deck2_json}")
+
+    # Deck-specialist league: pin the agent deck (deck1) to the single scoped
+    # archetype when not given explicitly. The opponent deck (deck2) is set
+    # per-match by the LeaguePoolWrapper, so it stays unset here.
+    if cfg.opponent == "league" and deck1 is None:
+        archs = list(cfg.allowed_archetypes or [])
+        if len(archs) != 1:
+            parser.error(
+                "--opponent league pins the agent deck to a single archetype: "
+                "pass exactly one --archetypes (or an explicit --deck1/--deck-json)"
+            )
+        league_pool = load_generalist_deck_pool(allowed_archetypes={archs[0]})
+        names = league_pool.archetype_names
+        if not names:
+            parser.error(
+                f"--opponent league: archetype {archs[0]!r} resolved to no "
+                "implemented decks"
+            )
+        first = sorted(league_pool.archetypes[names[0]], key=lambda d: d.deck_id)[0]
+        deck1 = list(first.card_ids)
+        print(f"  League agent deck: {len(deck1)} cards ({names[0]})")
 
     try:
         implemented_ids = load_implemented_card_ids()
