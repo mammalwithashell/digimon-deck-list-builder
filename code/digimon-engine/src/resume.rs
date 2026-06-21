@@ -28,7 +28,7 @@ use digimon_dsl::compiled::{CompiledPredicate, CompiledStep};
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
-use crate::enums::PlayerId;
+use crate::enums::{EffectSourceKind, PlayerId};
 use crate::permanent::PermanentHandle;
 use crate::trigger_context::TriggerContext;
 
@@ -63,7 +63,20 @@ impl ResumeStack {
 pub struct ResumeProvenance {
     pub source_card: CardHandle,
     pub source_permanent: Option<PermanentHandle>,
+    pub source_kind: EffectSourceKind,
     pub controller: PlayerId,
+    /// `override_selecting_player` at install time (mirrors
+    /// `EffectContext::new_with_source_kind_and_override`).
+    pub override_pin: Option<PlayerId>,
+}
+
+/// Which zone/kind a `RunTail` frame decodes the resolving `action_id` against
+/// in order to bind the chosen value. Mirrors the `SelectionKind`-specific
+/// decode each legacy install closure performed inline. Spike scope: `Hand`.
+#[derive(Debug, Clone, Copy)]
+pub enum ResumeSelectKind {
+    /// `action_id - PLAY_HAND_START` → hand index of `of_player`.
+    Hand { of_player: PlayerId },
 }
 
 /// One resumable continuation frame. Each variant corresponds to a former
@@ -77,6 +90,8 @@ pub enum ResumeFrame {
     /// do Y" semantics.
     RunTail {
         prov: ResumeProvenance,
+        /// How to decode the resolving `action_id` into the bound value.
+        select_kind: ResumeSelectKind,
         /// Binding slot the chosen value is written into (`bind_as`), if any.
         bind_as: Option<String>,
         /// Steps after the select within the same effect body.
@@ -103,4 +118,122 @@ pub enum ResumeFrame {
         /// Runs once the pick count is satisfied (or candidates exhausted).
         then: Box<ResumeFrame>,
     },
+}
+
+#[cfg(test)]
+mod tests {
+    //! Spike (make-engine-cloneable task 0.2): prove a paused selection whose
+    //! continuation is carried as plain DATA resumes faithfully — the data
+    //! path runs the inner tail exactly as the legacy closure callback would.
+
+    use super::*;
+    use crate::debug_runner::{make_test_card, DebugRunner};
+    use crate::dsl_cards::step::StepRuntime;
+    use crate::enums::EffectSourceKind;
+    use crate::selection::{PendingSelection, SelectionKind};
+    use digimon_dsl::compiled::CompiledStep;
+
+    #[test]
+    fn runtail_hand_runs_inner_tail_as_data() {
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TEST-RESUME", "Resume Tester"))
+            .hand(0, &["TEST-RESUME"])
+            .memory(0)
+            .start();
+
+        let source_card;
+        let prev_phase;
+        {
+            let game = runner.game_mut();
+            source_card = game.player(0).hand[0].handle();
+            prev_phase = game.current_phase;
+
+            // A Hand selection whose CONTINUATION is data: gain 5 memory. The
+            // legacy closure is rigged to panic, so if the test passes it can
+            // only be because `run_resume` (the data path) executed.
+            game.pending_selection = Some(PendingSelection {
+                kind: SelectionKind::Hand,
+                selecting_player: 0,
+                previous_phase: prev_phase,
+                valid_action_ids: vec![crate::action::space::PLAY_HAND_START],
+                is_optional: false,
+                prompt: "spike".to_string(),
+                effect_choices: None,
+                source_card,
+                source_permanent: None,
+                source_kind: EffectSourceKind::Digimon,
+                callback: Box::new(|_g, _a| {
+                    panic!("closure path must NOT run when pending_selection_resume is set")
+                }),
+                on_decline: None,
+                zone_owner: Some(0),
+            });
+            game.pending_selection_resume = Some(ResumeStack {
+                frames: vec![ResumeFrame::RunTail {
+                    prov: ResumeProvenance {
+                        source_card,
+                        source_permanent: None,
+                        source_kind: EffectSourceKind::Digimon,
+                        controller: 0,
+                        override_pin: None,
+                    },
+                    select_kind: ResumeSelectKind::Hand { of_player: 0 },
+                    bind_as: None,
+                    inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
+                    outer_tail: None,
+                    bindings: Bindings::new(),
+                    runtime: StepRuntime::default(),
+                    trigger_context: None,
+                    decline_aborts_clause: false,
+                }],
+            });
+        }
+
+        let before = runner.memory();
+        runner
+            .game_mut()
+            .resolve_selection(0, crate::action::space::PLAY_HAND_START)
+            .expect("resolve_selection should succeed");
+        let after = runner.memory();
+
+        assert_eq!(
+            (after - before).abs(),
+            5,
+            "RunTail inner tail (GainMemory 5) must execute via the data path"
+        );
+        assert!(
+            runner.game_mut().pending_selection.is_none(),
+            "the selection must be consumed on resolve"
+        );
+        assert!(
+            runner.game_mut().pending_selection_resume.is_none(),
+            "the resume stack must be consumed on resolve"
+        );
+    }
+
+    #[test]
+    fn resume_stack_is_clone() {
+        // The whole point: a paused continuation is Clone data.
+        let stack = ResumeStack {
+            frames: vec![ResumeFrame::RunTail {
+                prov: ResumeProvenance {
+                    source_card: crate::card_source::CardHandle(0),
+                    source_permanent: None,
+                    source_kind: EffectSourceKind::Digimon,
+                    controller: 0,
+                    override_pin: None,
+                },
+                select_kind: ResumeSelectKind::Hand { of_player: 0 },
+                bind_as: Some("x".to_string()),
+                inner_tail: Arc::new(vec![CompiledStep::GainMemory(1)]),
+                outer_tail: None,
+                bindings: Bindings::new(),
+                runtime: StepRuntime::default(),
+                trigger_context: None,
+                decline_aborts_clause: false,
+            }],
+        };
+        let cloned = stack.clone();
+        assert_eq!(cloned.frames.len(), stack.frames.len());
+    }
 }

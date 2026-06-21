@@ -13,7 +13,7 @@
 //! Core mutations (memory, draw, trash, suspend, modifier grants) stay here.
 
 mod action;
-mod selections;
+pub(crate) mod selections;
 
 pub use selections::{
     CountCappedZone, DistinctByMode, EffectContextSelectorScope, RevealBucketSelection,

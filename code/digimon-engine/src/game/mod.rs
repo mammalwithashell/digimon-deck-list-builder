@@ -310,6 +310,13 @@ pub struct Game {
     /// `Game::resolve_selection`. See `selection.rs` for the design.
     /// Always `None` until the selection subsystem lands (PR2/PR3).
     pub pending_selection: Option<PendingSelection>,
+    /// Coexistence-phase data continuation paired with `pending_selection`
+    /// (make-engine-cloneable Phase 2). When `Some`, `resolve_generic_selection`
+    /// runs the data-frame VM (`crate::resume::run_resume`) instead of the
+    /// legacy `pending_selection.callback`. Set and cleared in lock-step with
+    /// `pending_selection`; parallels `dsl_outer_tail` (continuation-as-data).
+    /// Always `None` today — populated as cards are ported onto the VM.
+    pub pending_selection_resume: Option<crate::resume::ResumeStack>,
     /// Triggered effects waiting to resolve at the current timing window.
     /// Populated by `enqueue_triggered` and drained by `drain_effect_queue`.
     /// Empty until the drainer lands (PR2).

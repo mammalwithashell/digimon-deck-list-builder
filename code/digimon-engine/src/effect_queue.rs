@@ -3574,6 +3574,7 @@ impl Game {
 
         // Take the selection, restore phase, invoke the appropriate callback.
         let sel = self.pending_selection.take().expect("checked Some above");
+        let resume = self.pending_selection_resume.take();
         self.current_phase = sel.previous_phase;
         // Wrap the callback in a deferred-drain scope (post-2026-05-23
         // G-DSL-OUTER-TAIL-NESTED-PARK fix). While the callback runs,
@@ -3582,7 +3583,15 @@ impl Game {
         // Matches DCGO's pattern of deferring trigger drains until after
         // the resolving coroutine returns to its caller.
         self.enter_deferred_drain();
-        if is_pass {
+        if let Some(stack) = resume {
+            // Coexistence switch (make-engine-cloneable Phase 2): a card ported
+            // to the resumable VM carries its continuation as data — run it
+            // instead of the legacy `sel.callback`. The abort-flag scoping
+            // mirrors the on_decline path below.
+            let prev_aborted = std::mem::replace(&mut self.dsl_clause_aborted, false);
+            crate::dsl_cards::step::selections::run_resume(self, stack, action_id, is_pass);
+            self.dsl_clause_aborted = prev_aborted;
+        } else if is_pass {
             if let Some(on_decline) = sel.on_decline {
                 // Scope the cost-pay abort flag to this on_decline. Save
                 // and clear on entry, restore on exit — so a NESTED decline

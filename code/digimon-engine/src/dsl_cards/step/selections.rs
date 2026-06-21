@@ -190,7 +190,7 @@ fn matches_selected_field(
     }
 }
 
-fn run_tail_preserving_trigger_context(
+pub(crate) fn run_tail_preserving_trigger_context(
     cb_ctx: &mut EffectContext<'_>,
     trigger_context: Option<TriggerContext>,
     tail: &[CompiledStep],
@@ -210,6 +210,106 @@ fn run_tail_preserving_trigger_context(
     // after, so the value never leaks across resolutions.
     cb_ctx.game.dsl_resolved_tail_bindings = Some(bindings.clone());
     cb_ctx.game.current_trigger_context = previous;
+}
+
+/// Coexistence-phase resumable-VM executor (make-engine-cloneable spike,
+/// task 0.2). Runs a `ResumeStack` of plain-data frames in place of the legacy
+/// `PendingSelection.callback`. Each arm mirrors the corresponding install
+/// closure body exactly and reuses `run_tail_preserving_trigger_context`, so a
+/// resolved data frame is behaviorally identical to the closure path. Invoked
+/// by `resolve_generic_selection` when `Game::pending_selection_resume` is set.
+pub(crate) fn run_resume(
+    game: &mut crate::game::Game,
+    mut stack: crate::resume::ResumeStack,
+    action_id: u16,
+    is_pass: bool,
+) {
+    use crate::resume::{ResumeFrame, ResumeSelectKind};
+    let Some(frame) = stack.frames.pop() else {
+        return;
+    };
+    match frame {
+        ResumeFrame::RunTail {
+            prov,
+            select_kind,
+            bind_as,
+            inner_tail,
+            outer_tail: _,
+            bindings,
+            runtime,
+            trigger_context,
+            decline_aborts_clause,
+        } => {
+            if is_pass {
+                // Decline path: optional-cost selects abort the clause so the
+                // tail short-circuits (G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE);
+                // non-cost optional picks still run the tail.
+                if decline_aborts_clause {
+                    game.dsl_clause_aborted = true;
+                }
+                let mut ctx = EffectContext::new_with_source_kind_and_override(
+                    game,
+                    prov.source_card,
+                    prov.source_permanent,
+                    prov.source_kind,
+                    prov.controller,
+                    prov.override_pin,
+                );
+                let mut b = bindings.clone();
+                run_tail_preserving_trigger_context(
+                    &mut ctx,
+                    trigger_context,
+                    &inner_tail,
+                    &mut b,
+                    &runtime,
+                );
+                return;
+            }
+            match select_kind {
+                ResumeSelectKind::Hand { of_player } => {
+                    let hand_index = action_id
+                        .saturating_sub(crate::action::space::PLAY_HAND_START)
+                        as usize;
+                    // Target tracking (mirrors `ctx.select_hand`'s wrapper).
+                    if let Some(card) = game.player(of_player).hand.get(hand_index) {
+                        let tid = card.card_id(&game.card_data).to_string();
+                        let tname = card.card_name(&game.card_data).to_string();
+                        crate::effect_context::selections::push_effect_target(
+                            game,
+                            prov.controller,
+                            prov.source_card,
+                            tid,
+                            tname,
+                        );
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_hand_index(name, of_player, hand_index as u16);
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
+            }
+        }
+        ResumeFrame::MultiPickStep { .. } => {
+            // Ported alongside count_capped (the recursive accumulator) — the
+            // next spike step. Never constructed yet, so never reached.
+            unimplemented!("ResumeFrame::MultiPickStep executor — count_capped port pending");
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

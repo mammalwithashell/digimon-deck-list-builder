@@ -195,6 +195,7 @@ impl Game {
             mulligan_used,
             revealed_cards: Vec::new(),
             pending_selection: None,
+            pending_selection_resume: None,
             effect_queue: EffectQueue::new(),
             pending_granted_fires: Vec::new(),
             granted_effect_bodies: crate::modifiers::GrantedEffectBodyRegistry::default(),
