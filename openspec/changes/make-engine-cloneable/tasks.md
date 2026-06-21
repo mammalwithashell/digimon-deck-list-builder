@@ -9,9 +9,9 @@ Incremental, parity-guarded. The data-VM and legacy closure executor coexist beh
 
 ## 1. Foundations (no behavior change)
 
-- [ ] 1.1 `Arc`-share the immutable registries on the clone path: `card_data`, `effect_registry`, `formula_extensions`, `token_registry`, `alt_path_registry`, `rules`, `logger` (matches `reset_for_replay`'s immutable set).
+- [x] 1.1 `Arc`-share the immutable registries on the clone path. *(Verified 2026-06-18: `effect_registry`, `formula_extensions`, `token_registry`, `rules`, `alt_path_registry` ALREADY derive `Clone` — effects are internally `Arc`-shared — so they do NOT block `Game: Clone`. `card_data` is `Vec<CardData>` (`Clone`); wrapping it in `Arc` for cheap clone is the D5 optimization, deferred to 4.3. `logger` is NOT `Arc`-shareable — its trait methods take `&mut self` — so it is handled by the manual `impl Clone` instead (see 4.1), not by Arc-sharing.)*
 - [x] 1.2 Convert Category-A behavior closures (modifier predicates/effects) to `Arc<dyn Fn>` shareable handles. *(Done 2026-06-18: modifier predicates + granted bodies were already `Arc`; converted the last straggler `replacement::ReplacementConditionFn` from `Box<dyn Fn>` → `Arc<dyn Fn>`.)*
-- [ ] 1.3 `derive(Clone)`/ensure `Clone` on all plain per-game data (`Player`, zones, `ModifierRegistry` data, `EffectQueue` data, counters, `rng`).
+- [x] 1.3 `derive(Clone)`/ensure `Clone` on all plain per-game data. *(Done 2026-06-18: `Player`, zones, `EffectQueue` (`= VecDeque<QueuedEffect>`, effects stored by `card_id`+slot), counters, and `rng: StdRng` were already `Clone`; added `Clone` to the `ModifierRegistry` family (1.2) and `ParkedReplacement`. A throwaway `derive(Clone)` on `Game` confirms ALL plain per-game data is now `Clone` — the only residual blockers are the 3 non-data fields in 4.1.)*
 - [ ] 1.4 Add a migration tracker doc and a CI job that runs both execution paths during the transition.
 
 ## 2. Resumable effect VM
@@ -30,7 +30,7 @@ Incremental, parity-guarded. The data-VM and legacy closure executor coexist beh
 
 ## 4. Make Game cloneable
 
-- [ ] 4.1 Once all parked slots are data and the pool is on the VM, `derive(Clone)` on `Game`; share immutables via `Arc`, deep-copy mutable data.
+- [ ] 4.1 Once all parked slots are data and the pool is on the VM, implement `Clone` on `Game`; share immutables via `Arc`, deep-copy mutable data. **MILESTONE (verified 2026-06-18 via a throwaway `derive(Clone)` on `Game`):** after Phase-1 foundations, exactly THREE fields block `Game: Clone` — (1) `pending_selection: Option<PendingSelection>` (the `Box<dyn FnOnce>` callbacks — gated on the VM/spike), (2) `logger: Box<dyn GameLogger>`, (3) `reveal_source: Option<Box<dyn RevealSource>>`. Use a **manual `impl Clone`** (not `derive`): clone all data fields, and on the clone set `logger = Box::new(SilentLogger)` and `reveal_source = None` (both are external/diagnostic state a forked search node should not inherit). So once `pending_selection` is data, `Game: Clone` is a small manual impl away.
 - [ ] 4.2 Add the clone-independence and clone-replays-identically guard tests (clone at a decision point, drive both with identical inputs, assert identical outcome; assert mutating the clone leaves the original unchanged).
 - [ ] 4.3 (Optional, profiled) introduce structural sharing / COW for zones to keep clone near-O(1) for untouched state.
 - [ ] 4.4 (Optional) add `Serialize`/`Deserialize` for game state if save/load is in scope (resolve Open Question).

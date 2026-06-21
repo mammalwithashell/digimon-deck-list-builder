@@ -135,7 +135,7 @@ impl<'g> ReplacementContext<'g> {
 ///
 /// Phase C §4.1.
 #[doc(hidden)]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct ParkedReplacement {
     pub subject: ReplacementSubject,
     pub cause: ReplacementCause,
