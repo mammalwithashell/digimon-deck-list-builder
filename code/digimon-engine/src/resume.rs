@@ -105,6 +105,10 @@ pub enum ResumeSelectKind {
     /// builds `valid_action_ids`), so the arm just binds the revealed
     /// `CardHandle`; a stale index skips the bind.
     Reveal,
+    /// `action_id - material_zone_geometry(perm).range_start` → digivolution
+    /// source index under carrier `perm` (battle- or breeding-area). Binds the
+    /// resolved source `CardHandle` via `material_carrier_permanent`.
+    Material { perm: PermanentHandle },
 }
 
 /// What an optional selection does when declined (PASS). Mandatory selects never
@@ -744,6 +748,72 @@ mod tests {
             (runner.memory() - before).abs(),
             5,
             "Reveal RunTail inner tail (GainMemory 5) must execute via the data path"
+        );
+        assert!(runner.game_mut().pending_selection.is_none());
+    }
+
+    #[test]
+    fn runtail_material_resolves_via_data_path() {
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TEST-RESUME", "Resume Tester"))
+            .hand(0, &["TEST-RESUME"])
+            .memory(0)
+            .start();
+        // A 2-card stack: top card + 1 digivolution source (the selectable material).
+        let carrier = runner.place_stack(0, &["TEST-RESUME", "TEST-RESUME"]);
+        let range_start =
+            crate::effect_context::selections::material_zone_geometry(runner.game_mut(), carrier)
+                .expect("carrier has selectable material")
+                .1;
+        let source_card;
+        {
+            let game = runner.game_mut();
+            source_card = game.player(0).hand[0].handle();
+            let prev_phase = game.current_phase;
+            game.pending_selection = Some(PendingSelection {
+                kind: SelectionKind::Material,
+                selecting_player: 0,
+                previous_phase: prev_phase,
+                valid_action_ids: vec![range_start],
+                is_optional: false,
+                prompt: "spike-material".to_string(),
+                effect_choices: None,
+                source_card,
+                source_permanent: None,
+                source_kind: EffectSourceKind::Digimon,
+                callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
+                on_decline: None,
+                zone_owner: None,
+            });
+            game.pending_selection_resume = Some(ResumeStack {
+                frames: vec![ResumeFrame::RunTail {
+                    prov: ResumeProvenance {
+                        source_card,
+                        source_permanent: None,
+                        source_kind: EffectSourceKind::Digimon,
+                        controller: 0,
+                        override_pin: None,
+                    },
+                    select_kind: ResumeSelectKind::Material { perm: carrier },
+                    bind_as: None,
+                    inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
+                    outer_tail: None,
+                    bindings: Bindings::new(),
+                    runtime: StepRuntime::default(),
+                    trigger_context: None,
+                    decline: ResumeDecline::None,
+                }],
+            });
+        }
+        let before = runner.memory();
+        runner
+            .game_mut()
+            .resolve_selection(0, range_start)
+            .expect("resolve_selection should succeed");
+        assert_eq!(
+            (runner.memory() - before).abs(),
+            5,
+            "Material RunTail inner tail (GainMemory 5) must execute via the data path"
         );
         assert!(runner.game_mut().pending_selection.is_none());
     }

@@ -544,6 +544,58 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
+                ResumeSelectKind::Material { perm } => {
+                    let Some((_, range_start)) =
+                        crate::effect_context::selections::material_zone_geometry(game, perm)
+                    else {
+                        return;
+                    };
+                    let source_idx = action_id.saturating_sub(range_start) as usize;
+                    // Target tracking (mirrors ctx.select_material's battle-area lookup).
+                    if let Some(card) = game
+                        .player(perm.player)
+                        .battle_area
+                        .get(perm.index as usize)
+                        .and_then(|p| p.card_sources.get(source_idx))
+                    {
+                        let tid = card.card_id(&game.card_data).to_string();
+                        let tname = card.card_name(&game.card_data).to_string();
+                        crate::effect_context::selections::push_effect_target(
+                            game,
+                            prov.controller,
+                            prov.source_card,
+                            tid,
+                            tname,
+                        );
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        // material_carrier_permanent branches battle vs breeding.
+                        if let Some(card) =
+                            crate::effect_context::selections::material_carrier_permanent(
+                                ctx.game, perm,
+                            )
+                            .and_then(|p| p.card_sources.get(source_idx))
+                        {
+                            b.insert_card(name, card.handle());
+                        }
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
             }
         }
         ResumeFrame::MultiPickStep { .. } => {
