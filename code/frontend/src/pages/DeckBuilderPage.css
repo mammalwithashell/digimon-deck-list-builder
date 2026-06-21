@@ -34,9 +34,13 @@
      which is removed on desktop — that left a strip of the teal desktop
      showing below the builder.) */
   height: 100%;
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(58, 166, 255, 0.08), transparent 50%),
-    var(--bld-bg-0);
+  /* Transparent base so the menu-shell live atmosphere (rain/idle desktop)
+     shows behind the builder; the subtle top tint stays as an overlay. */
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    rgba(58, 166, 255, 0.08),
+    transparent 50%
+  );
   color: var(--bld-ink-1);
   font-family: var(--bld-body);
   font-size: 13px;

@@ -28,6 +28,14 @@ const GLYPHS = '01ｱｲｳｴｵｶｷｸｹｺﾊﾐﾋｰﾂDIGIMON$+*=';
 
 export type AtmosphereSurface = 'menu' | 'board';
 
+// Persisted rain column state per surface. The dark-rain canvas unmounts when
+// the theme switches to light; saving the drop positions here lets it RESUME
+// continuously when you switch back to dark, instead of restarting at the top.
+const RAIN_STATE: Record<
+  string,
+  { drops: number[]; active: boolean[]; w: number; h: number }
+> = {};
+
 function hexA(hex: string, a: number): string {
   const m = hex.trim().replace('#', '');
   if (m.length === 6) {
@@ -53,10 +61,11 @@ function DarkRain({ live, surface }: { live: boolean; surface: AtmosphereSurface
     const head = cs.getPropertyValue('--player') || '#ff7a18';
     const density = surface === 'board' ? RAIN_DENSITY * BOARD_SCALE : RAIN_DENSITY;
 
-    let drops: number[] = [];
-    let active: boolean[] = [];
-    let w = 0;
-    let h = 0;
+    const persisted = RAIN_STATE[surface];
+    let drops: number[] = persisted ? persisted.drops : [];
+    let active: boolean[] = persisted ? persisted.active : [];
+    let w = persisted ? persisted.w : 0;
+    let h = persisted ? persisted.h : 0;
 
     const seedColumns = (cols: number) => {
       // Preserve existing drop positions so the rain stays CONTINUOUS across
@@ -89,6 +98,9 @@ function DarkRain({ live, surface }: { live: boolean; surface: AtmosphereSurface
       canvas.height = h;
       seedColumns(Math.max(1, Math.floor(w / RAIN_FONT)));
       ctx.font = `${RAIN_FONT}px monospace`;
+      // Persist so a theme switch resumes from these positions (the loop then
+      // mutates these same arrays in place, keeping the store current).
+      RAIN_STATE[surface] = { drops, active, w, h };
     };
 
     const drawFrame = () => {
