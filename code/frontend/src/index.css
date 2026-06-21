@@ -1356,3 +1356,153 @@ body {
   from { background-position: 0 0; }
   to { background-position: 48px 28px; }
 }
+
+/* ─── Digivolution cut-in (upgrade-digivolve-cutin) ──────────────────────────
+   Multi-phase anime-style cut-in used at motion `full`: a wireframe sweep over
+   the card art → an orbiting (atom) ring → a flash reveal with a slash beam.
+   Tinted by the digivolving card's colour via --cut-color. (Reduced motion
+   uses the simpler legacy banner; off shows a static reveal — both selected in
+   DigivolveBanner.tsx, so these classes only ever render at full motion.) */
+.dgv-cutin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.dgv-cutin__stage {
+  position: relative;
+  width: 200px;
+  height: 280px;
+  display: grid;
+  place-items: center;
+}
+
+.dgv-cutin__art {
+  position: relative;
+  z-index: 2;
+  animation: dgvArtReveal 1.6s ease-out forwards;
+}
+
+.dgv-cutin__wire {
+  position: absolute;
+  inset: -8%;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(to right, var(--cut-color) 0 1px, transparent 1px 16px),
+    repeating-linear-gradient(to bottom, var(--cut-color) 0 1px, transparent 1px 16px);
+  opacity: 0;
+  mix-blend-mode: screen;
+  animation: dgvWireSweep 1.6s ease-out forwards;
+}
+
+.dgv-cutin__ring {
+  position: absolute;
+  width: 230px;
+  height: 230px;
+  z-index: 1;
+  opacity: 0;
+  animation: dgvRing 1.6s ease-out forwards;
+}
+
+.dgv-cutin__ring::before,
+.dgv-cutin__ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--cut-color);
+  border-radius: 50%;
+  box-shadow: 0 0 16px var(--cut-color);
+}
+
+.dgv-cutin__ring::before { transform: scaleY(0.38); }
+.dgv-cutin__ring::after { transform: scaleY(0.38) rotate(60deg); }
+
+.dgv-cutin__flash {
+  position: absolute;
+  inset: -30%;
+  z-index: 4;
+  pointer-events: none;
+  background: radial-gradient(circle, #fff, var(--cut-color) 35%, transparent 70%);
+  opacity: 0;
+  mix-blend-mode: screen;
+  animation: dgvFlash 1.6s ease-out forwards;
+}
+
+.dgv-cutin__beam {
+  position: absolute;
+  top: 50%;
+  left: -20%;
+  width: 140%;
+  height: 5px;
+  z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, #fff, transparent);
+  box-shadow: 0 0 18px 4px var(--cut-color);
+  opacity: 0;
+  transform: translateX(-120%) rotate(-18deg);
+  animation: dgvBeam 1.6s ease-out forwards;
+}
+
+.dgv-cutin__label {
+  font-family: var(--ib-font-display, "Space Grotesk", sans-serif);
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--cut-color);
+  text-shadow: 0 0 18px var(--cut-color);
+  animation: dgvName 1.6s ease-out forwards;
+}
+
+.dgv-cutin__name {
+  font-family: var(--ib-font-mono, ui-monospace, monospace);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.85);
+  opacity: 0;
+  animation: dgvName 1.6s ease-out forwards;
+}
+
+@keyframes dgvWireSweep {
+  0% { opacity: 0; clip-path: inset(0 0 100% 0); }
+  8% { opacity: 0.9; }
+  34% { clip-path: inset(0 0 0 0); opacity: 0.9; }
+  50% { opacity: 0; }
+  100% { opacity: 0; clip-path: inset(0 0 0 0); }
+}
+
+@keyframes dgvRing {
+  0% { opacity: 0; transform: rotate(0deg) scale(0.6); }
+  22% { opacity: 1; }
+  58% { opacity: 1; transform: rotate(230deg) scale(1); }
+  78% { opacity: 0; transform: rotate(320deg) scale(1.12); }
+  100% { opacity: 0; }
+}
+
+@keyframes dgvFlash {
+  0%, 54% { opacity: 0; }
+  62% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes dgvArtReveal {
+  0% { opacity: 0; transform: scale(0.7); }
+  54% { opacity: 0; transform: scale(0.7); }
+  64% { opacity: 1; transform: scale(1.07); }
+  80% { transform: scale(1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes dgvBeam {
+  0%, 57% { opacity: 0; transform: translateX(-120%) rotate(-18deg); }
+  63% { opacity: 1; }
+  71% { transform: translateX(120%) rotate(-18deg); opacity: 0; }
+  100% { opacity: 0; }
+}
+
+@keyframes dgvName {
+  0%, 66% { opacity: 0; transform: translateY(6px); }
+  78% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 1; }
+}
