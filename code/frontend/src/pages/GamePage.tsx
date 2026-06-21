@@ -36,6 +36,7 @@ import { DragOverlayCard } from '@/components/game/DragOverlayCard';
 import { ConnectionStatusScreen } from '@/components/game/ConnectionStatusScreen';
 import { useWebSocketGame, type UseWebSocketGameOptions } from '@/hooks/useWebSocketGame';
 import { connectionScreenState } from '@/utils/connectionScreen';
+import { pickAlias, liveGameLabels } from '@/features/play/botNames';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import * as gameApi from '@/api/gameApi';
 import * as deckApiMod from '@/api/deckApi';
@@ -96,7 +97,7 @@ export function GamePage() {
 
 
   const store = useGameStore();
-  const { opponentMode, seed: flowSeed, clearLaunchState } = usePlayFlowStore();
+  const { seed: flowSeed, clearLaunchState } = usePlayFlowStore();
   useEffectHighlight();
   // Bot action pacing (add-bot-action-pacing): non-instant speeds advance
   // local bot games one agent action per request, paced by the driver
@@ -121,12 +122,11 @@ export function GamePage() {
           store.setGameSeed(payload.seed ?? null);
         }
         if (payload.events) store.appendEvents(payload.events);
-        if (payload.your_player_id != null) {
-          store.setPlayerLabels({
-            [payload.your_player_id]: 'You',
-            [payload.your_player_id === 1 ? 2 : 1]: isVsAiOnline ? 'AI' : 'Opponent',
-          });
-        }
+        // Opponent shown under a cosmetic Digimon alias, seeded by game id so
+        // it stays constant across state updates / reloads and is identical on
+        // both clients and for spectators. The local player keeps "You";
+        // spectators (no seat) see both seats aliased. (anonymize-opponent-names)
+        store.setPlayerLabels(liveGameLabels(urlGameId, payload.your_player_id));
       },
       onGameOver: () => {},
       onError: (msg) => console.error('WebSocket error:', msg),
@@ -305,7 +305,7 @@ export function GamePage() {
             store.clearActionTraces();
             store.setPlayerLabels({
               1: 'YOU',
-              2: opponentMode === 'bot' ? 'GREEDY BOT' : 'OPPONENT',
+              2: pickAlias(`${urlGameId}:2`),
             });
             // Lock human input and drive any opening agent decision (e.g. the
             // AI's mulligan when the human goes second) before handing control
@@ -460,14 +460,13 @@ export function GamePage() {
       store.setGameState(result.state);
       store.setActionMask(result.action_mask);
       store.setGameSeed(result.seed ?? normalizedSeed);
-      if (result.player_labels) {
-        store.setPlayerLabels(result.player_labels);
-      } else {
-        store.setPlayerLabels({
-          1: 'YOU',
-          2: agentType === 'greedy' ? 'GREEDY BOT' : 'OPPONENT',
-        });
-      }
+      // Client owns opponent naming: alias the AI seat (seeded by game id so it
+      // is stable for the game) and keep "YOU" for the human, ignoring any
+      // backend-provided opponent label. (anonymize-opponent-names)
+      store.setPlayerLabels({
+        1: 'YOU',
+        2: pickAlias(`${result.game_id}:2`),
+      });
       store.clearEvents();
       store.clearActionTraces();
       if (result.events) store.appendEvents(result.events);
@@ -517,6 +516,16 @@ export function GamePage() {
 
   const handleSurrender = useCallback(async () => {
     if (!store.gameId || store.isGameOver) return;
+    // PvP / vs-AI-online run over the WebSocket: concede there (the REST
+    // surrenderGame path only drives local games and would never reach the
+    // live game's server-side runner). The server broadcasts the resulting
+    // game-over state through the normal state_update path. The viewer is
+    // perspective-normalized to player 1, so they surrendered as "you" (1).
+    if (useWebSocket) {
+      ws.sendSurrender();
+      setSurrenderedBy(1);
+      return;
+    }
     try {
       const res = await gameApi.surrenderGame(store.gameId, 1);
       store.setGameState(res.state);
@@ -528,7 +537,7 @@ export function GamePage() {
     } catch {
       // Ignore errors (e.g. game already over)
     }
-  }, [appendResponseActionTraces, store]);
+  }, [appendResponseActionTraces, store, useWebSocket, ws]);
 
   const handleReturnToLauncher = useCallback(() => {
     store.reset();
