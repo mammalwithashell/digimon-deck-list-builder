@@ -238,31 +238,34 @@ pub(crate) fn run_resume(
             bindings,
             runtime,
             trigger_context,
-            decline_aborts_clause,
+            decline,
         } => {
             if is_pass {
-                // Decline path: optional-cost selects abort the clause so the
-                // tail short-circuits (G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE);
-                // non-cost optional picks still run the tail.
-                if decline_aborts_clause {
-                    game.dsl_clause_aborted = true;
+                // Decline mirrors each installer's on_decline:
+                //   None       → no on_decline installed (e.g. select_security): do nothing.
+                //   RunTail{..} → run the decline tail; aborts_clause first sets
+                //                 dsl_clause_aborted (G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE).
+                if let crate::resume::ResumeDecline::RunTail { tail, aborts_clause } = decline {
+                    if aborts_clause {
+                        game.dsl_clause_aborted = true;
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings.clone();
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &tail,
+                        &mut b,
+                        &runtime,
+                    );
                 }
-                let mut ctx = EffectContext::new_with_source_kind_and_override(
-                    game,
-                    prov.source_card,
-                    prov.source_permanent,
-                    prov.source_kind,
-                    prov.controller,
-                    prov.override_pin,
-                );
-                let mut b = bindings.clone();
-                run_tail_preserving_trigger_context(
-                    &mut ctx,
-                    trigger_context,
-                    &inner_tail,
-                    &mut b,
-                    &runtime,
-                );
                 return;
             }
             match select_kind {
@@ -385,6 +388,47 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                     ctx.game.effect_source_player = previous_effect_source;
+                }
+                ResumeSelectKind::Security { of_player } => {
+                    let base = if of_player == prov.controller {
+                        crate::action::space::SEL_MY_SECURITY_START
+                    } else {
+                        crate::action::space::SEL_OPP_SECURITY_START
+                    };
+                    let index = action_id.saturating_sub(base) as usize;
+                    // Target tracking (mirrors `ctx.select_security`'s wrapper).
+                    if let Some(card) = game.player(of_player).security.get(index) {
+                        let tid = card.card_id(&game.card_data).to_string();
+                        let tname = card.card_name(&game.card_data).to_string();
+                        crate::effect_context::selections::push_effect_target(
+                            game,
+                            prov.controller,
+                            prov.source_card,
+                            tid,
+                            tname,
+                        );
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        if let Some(card) = ctx.game.player(of_player).security.get(index) {
+                            b.insert_card(name, card.handle());
+                        }
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
                 }
             }
         }

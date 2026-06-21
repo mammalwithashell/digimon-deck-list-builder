@@ -84,6 +84,27 @@ pub enum ResumeSelectKind {
     /// `install_field_selection` decode); the resume arm mirrors that wrapper's
     /// `effect_source_player` scoping.
     FieldPermanent { of_player: PlayerId },
+    /// `action_id - (SEL_MY_SECURITY_START | SEL_OPP_SECURITY_START)` → security
+    /// index of `of_player` (base chosen by whether `of_player` is the
+    /// controller). Binds the resolved security `CardHandle`.
+    Security { of_player: PlayerId },
+}
+
+/// What an optional selection does when declined (PASS). Mandatory selects never
+/// reach this — PASS is rejected by `resolve_generic_selection`.
+#[derive(Debug, Clone)]
+pub enum ResumeDecline {
+    /// No `on_decline` was installed (e.g. `select_security`): PASS resolves to
+    /// nothing.
+    None,
+    /// Run a decline tail — may equal the success tail (optional `select_trash`)
+    /// or differ (`select_own_breeding_permanent`'s `decline_tail`).
+    /// `aborts_clause` first sets `dsl_clause_aborted`: the optional-cost
+    /// "By trashing X, do Y" path where the cost was declined.
+    RunTail {
+        tail: Arc<Vec<CompiledStep>>,
+        aborts_clause: bool,
+    },
 }
 
 /// One resumable continuation frame. Each variant corresponds to a former
@@ -92,9 +113,8 @@ pub enum ResumeSelectKind {
 #[derive(Debug, Clone)]
 pub enum ResumeFrame {
     /// ~95% of DSL selection sites (Shapes A+B): bind the chosen value into a
-    /// slot, run the inner step tail, then drain the outer tail. The
-    /// `decline_aborts_clause` flag carries the optional-cost "By trashing X,
-    /// do Y" semantics.
+    /// slot, run the inner step tail, then drain the outer tail. `decline`
+    /// carries the optional-decline behavior (none / run-a-tail / cost-abort).
     RunTail {
         prov: ResumeProvenance,
         /// How to decode the resolving `action_id` into the bound value.
@@ -108,7 +128,7 @@ pub enum ResumeFrame {
         bindings: Bindings,
         runtime: StepRuntime,
         trigger_context: Option<TriggerContext>,
-        decline_aborts_clause: bool,
+        decline: ResumeDecline,
     },
     /// Recursive multi-pick accumulator — the `count_capped` / source-multi /
     /// dp-budget / play-cost-budget / reveal-bucket / permutation /
@@ -191,7 +211,7 @@ mod tests {
                     bindings: Bindings::new(),
                     runtime: StepRuntime::default(),
                     trigger_context: None,
-                    decline_aborts_clause: false,
+                    decline: ResumeDecline::None,
                 }],
             });
         }
@@ -261,7 +281,7 @@ mod tests {
                     bindings: Bindings::new(),
                     runtime: StepRuntime::default(),
                     trigger_context: None,
-                    decline_aborts_clause: false,
+                    decline: ResumeDecline::None,
                 }],
             });
         }
@@ -321,7 +341,7 @@ mod tests {
                     bindings: Bindings::new(),
                     runtime: StepRuntime::default(),
                     trigger_context: None,
-                    decline_aborts_clause: false,
+                    decline: ResumeDecline::None,
                 }],
             });
         }
@@ -334,6 +354,128 @@ mod tests {
             (runner.memory() - before).abs(),
             5,
             "FieldPermanent RunTail inner tail (GainMemory 5) must execute via the data path"
+        );
+        assert!(runner.game_mut().pending_selection.is_none());
+    }
+
+    #[test]
+    fn runtail_security_resolves_via_data_path() {
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TEST-RESUME", "Resume Tester"))
+            .hand(0, &["TEST-RESUME"])
+            .memory(0)
+            .start();
+        let source_card;
+        {
+            let game = runner.game_mut();
+            source_card = game.player(0).hand[0].handle();
+            let prev_phase = game.current_phase;
+            game.pending_selection = Some(PendingSelection {
+                kind: SelectionKind::Security,
+                selecting_player: 0,
+                previous_phase: prev_phase,
+                valid_action_ids: vec![crate::action::space::SEL_MY_SECURITY_START],
+                is_optional: false,
+                prompt: "spike-security".to_string(),
+                effect_choices: None,
+                source_card,
+                source_permanent: None,
+                source_kind: EffectSourceKind::Digimon,
+                callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
+                on_decline: None,
+                zone_owner: Some(0),
+            });
+            game.pending_selection_resume = Some(ResumeStack {
+                frames: vec![ResumeFrame::RunTail {
+                    prov: ResumeProvenance {
+                        source_card,
+                        source_permanent: None,
+                        source_kind: EffectSourceKind::Digimon,
+                        controller: 0,
+                        override_pin: None,
+                    },
+                    select_kind: ResumeSelectKind::Security { of_player: 0 },
+                    bind_as: None,
+                    inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
+                    outer_tail: None,
+                    bindings: Bindings::new(),
+                    runtime: StepRuntime::default(),
+                    trigger_context: None,
+                    decline: ResumeDecline::None,
+                }],
+            });
+        }
+        let before = runner.memory();
+        runner
+            .game_mut()
+            .resolve_selection(0, crate::action::space::SEL_MY_SECURITY_START)
+            .expect("resolve_selection should succeed");
+        assert_eq!(
+            (runner.memory() - before).abs(),
+            5,
+            "Security RunTail inner tail (GainMemory 5) must execute via the data path"
+        );
+        assert!(runner.game_mut().pending_selection.is_none());
+    }
+
+    #[test]
+    fn runtail_decline_none_runs_no_tail() {
+        // An optional select with ResumeDecline::None (e.g. select_security)
+        // resolves PASS to NOTHING — the inner tail must NOT run.
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TEST-RESUME", "Resume Tester"))
+            .hand(0, &["TEST-RESUME"])
+            .memory(0)
+            .start();
+        let source_card;
+        {
+            let game = runner.game_mut();
+            source_card = game.player(0).hand[0].handle();
+            let prev_phase = game.current_phase;
+            game.pending_selection = Some(PendingSelection {
+                kind: SelectionKind::Security,
+                selecting_player: 0,
+                previous_phase: prev_phase,
+                valid_action_ids: vec![crate::action::space::SEL_MY_SECURITY_START],
+                is_optional: true,
+                prompt: "spike-decline".to_string(),
+                effect_choices: None,
+                source_card,
+                source_permanent: None,
+                source_kind: EffectSourceKind::Digimon,
+                callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
+                on_decline: None,
+                zone_owner: Some(0),
+            });
+            game.pending_selection_resume = Some(ResumeStack {
+                frames: vec![ResumeFrame::RunTail {
+                    prov: ResumeProvenance {
+                        source_card,
+                        source_permanent: None,
+                        source_kind: EffectSourceKind::Digimon,
+                        controller: 0,
+                        override_pin: None,
+                    },
+                    select_kind: ResumeSelectKind::Security { of_player: 0 },
+                    bind_as: None,
+                    inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
+                    outer_tail: None,
+                    bindings: Bindings::new(),
+                    runtime: StepRuntime::default(),
+                    trigger_context: None,
+                    decline: ResumeDecline::None,
+                }],
+            });
+        }
+        let before = runner.memory();
+        runner
+            .game_mut()
+            .resolve_selection(0, crate::action::space::PASS)
+            .expect("PASS on an optional selection should succeed");
+        assert_eq!(
+            runner.memory(),
+            before,
+            "ResumeDecline::None must run NO tail on PASS"
         );
         assert!(runner.game_mut().pending_selection.is_none());
     }
@@ -357,7 +499,7 @@ mod tests {
                 bindings: Bindings::new(),
                 runtime: StepRuntime::default(),
                 trigger_context: None,
-                decline_aborts_clause: false,
+                decline: ResumeDecline::None,
             }],
         };
         let cloned = stack.clone();
@@ -411,7 +553,7 @@ mod tests {
                         bindings: Bindings::new(),
                         runtime: StepRuntime::default(),
                         trigger_context: None,
-                        decline_aborts_clause: false,
+                        decline: ResumeDecline::None,
                     }],
                 });
             }
