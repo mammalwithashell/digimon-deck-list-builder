@@ -390,6 +390,86 @@ def random_policy(env: DigimonEnv) -> int:
     return int(np.random.choice(valid))
 
 
+# ── ONNX opponent inference (throughput lever) ──────────────────────────────
+# A frozen league/pool opponent runs a policy forward pass on EVERY env step,
+# which dominates the league's per-step cost (the loop is ~3x slower than the
+# no-neural-opponent floor). ONNX Runtime evaluates these small MLP policies
+# markedly faster than torch eager on CPU. Because the opponent plays
+# DETERMINISTICALLY (argmax over masked logits), the swap is behaviour-preserving
+# — identical logits -> identical argmax — so it changes speed, not play.
+# Gated by DIGIMON_ONNX_OPPONENT (default off -> torch); MLP-only (LSTM opponents
+# keep the torch path). Any failure falls back to torch so a run never aborts.
+_ONNX_OPPONENT_ENV = "DIGIMON_ONNX_OPPONENT"
+
+
+def _onnx_opponent_enabled() -> bool:
+    return os.environ.get(_ONNX_OPPONENT_ENV, "0").strip().lower() not in ("0", "", "false", "no")
+
+
+def _export_mlp_policy_onnx(model, onnx_path: str) -> None:
+    """Trace a loaded MaskablePPO policy's actor path (obs -> action logits) to
+    ONNX. Mirrors tools/export_onnx.py's MlpActorWrapper so the graph matches the
+    proven catalog export (input 'obs', output 'logits')."""
+    import torch
+    import torch.nn as nn
+
+    class _MlpActorWrapper(nn.Module):
+        def __init__(self, policy):
+            super().__init__()
+            self.features_extractor = policy.features_extractor
+            self.pi_features_extractor = getattr(policy, "pi_features_extractor", None)
+            self.mlp_extractor_policy = policy.mlp_extractor.policy_net
+            self.action_net = policy.action_net
+
+        def forward(self, obs):
+            extractor = self.pi_features_extractor or self.features_extractor
+            return self.action_net(self.mlp_extractor_policy(extractor(obs)))
+
+    policy = model.policy.cpu()
+    policy.train(False)                 # inference mode (== Module.eval(), no flagged builtin)
+    wrapper = _MlpActorWrapper(policy)
+    wrapper.train(False)
+    tensor_size = int(model.observation_space.shape[-1])
+    dummy = torch.zeros((1, tensor_size), dtype=torch.float32)
+    tmp = f"{onnx_path}.tmp"
+    with torch.no_grad():
+        torch.onnx.export(
+            wrapper, dummy, tmp,
+            input_names=["obs"], output_names=["logits"],
+            dynamic_axes={"obs": {0: "batch"}, "logits": {0: "batch"}},
+            opset_version=17,
+        )
+    os.replace(tmp, onnx_path)  # atomic: concurrent subprocs never read a partial file
+
+
+def _make_onnx_mlp_opponent(weights_path: str) -> Callable[[DigimonEnv], int]:
+    """ONNX-backed MLP opponent: obs -> logits via ORT (1 thread/subproc), masked
+    argmax. Exports the .zip to a sibling .onnx once (atomically, cached on disk),
+    then every subproc reuses it. Behaviourally identical to the torch path's
+    ``predict(deterministic=True)`` with action masks."""
+    import re
+    import onnxruntime as ort
+
+    onnx_path = re.sub(r"\.zip$", "", str(weights_path)) + ".opponent.onnx"
+    if not os.path.isfile(onnx_path):
+        model = MaskablePPO.load(weights_path, device="cpu")
+        _export_mlp_policy_onnx(model, onnx_path)
+        del model
+    so = ort.SessionOptions()
+    so.intra_op_num_threads = 1   # one ORT thread per subproc -> no Nx oversubscription
+    so.inter_op_num_threads = 1
+    sess = ort.InferenceSession(onnx_path, sess_options=so, providers=["CPUExecutionProvider"])
+
+    def _onnx_mlp_policy(env: DigimonEnv) -> int:
+        mask = np.asarray(env.action_mask())
+        obs = np.asarray(env.runner.get_board_tensor(2), dtype=np.float32).reshape(1, -1)
+        logits = sess.run(["logits"], {"obs": obs})[0][0]
+        masked = np.where(mask > 0, logits, -np.inf)
+        return int(np.argmax(masked))
+
+    return _onnx_mlp_policy
+
+
 def make_agent_opponent_fn(
     weights_path: str,
     algorithm: str = "mlp",
@@ -428,6 +508,14 @@ def make_agent_opponent_fn(
         _lstm_policy.reset_state = lambda: lstm_states.__setitem__(0, None)  # type: ignore[attr-defined]
         return _lstm_policy
     else:
+        if _onnx_opponent_enabled():
+            try:
+                return _make_onnx_mlp_opponent(weights_path)
+            except Exception as exc:  # robustness: never abort a run over this optimisation
+                logger.warning(
+                    "ONNX opponent for %s failed (%s); falling back to torch.",
+                    weights_path, exc,
+                )
         model = MaskablePPO.load(weights_path)
 
         def _mlp_policy(env: DigimonEnv) -> int:
