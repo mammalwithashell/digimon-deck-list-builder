@@ -8,7 +8,7 @@
 #   [When Digivolving] [When Attacking] [Once Per Turn] If it's your turn, by
 #     adding your top security card to the hand or trashing the bottom face-down
 #     card under any of your Tamers, you may play or use 1 card with the [Glowing
-#     Dawn] trait from your hand with the cost reduced by 3.   <-- BLOCKED, omitted
+#     Dawn] trait from your hand with the cost reduced by 3.
 #   Inherited: [End of Attack] [Once Per Turn] By trashing the bottom face-down
 #     card from under any of your Tamers, this Digimon with the [Glowing Dawn]
 #     trait unsuspends.
@@ -21,16 +21,26 @@
 #   HasGlowingDawnTraits, cost 3) → alt_paths digivolve from level 4 + Glowing
 #   Dawn trait, cost 3.
 # Alliance — AllianceSelfEffect (OnAllyAttack) → kind: grant_keyword Alliance.
-# Main WD/WA clause — BLOCKED (hybrid):
+# Main WD/WA clause — NOW IMPLEMENTED (2026-06-15, G-PLAY-OR-USE-FROM-HAND):
 #   "[WD][WA][OPT] If your turn, by adding your top security card to hand OR
 #   trashing the bottom face-down card under any Tamer, you may play or use 1
-#   [Glowing Dawn] card from hand with cost reduced by 3." This needs (a) a
-#   3-way pay-cost CHOICE (add-top-security-to-hand | trash-FD-under-Tamer |
-#   don't pay) and (b) play-OR-use a hand card at a -3 cost reduction. The
-#   trash-FD half is interactive (parks) and the resulting cost-reduced
-#   play/use is the same family as G-COST-REDUCTION-INTERACTIVE-PAY-COST plus a
-#   "pay one of two alternative costs to unlock a reduced play/use" composite
-#   the DSL has no verb for. Omitted; verdict PARTIAL.
+#   [Glowing Dawn] card from hand with cost reduced by 3."
+#   DCGO (BT25_041.cs SharedActivateCoroutine): a SetIntSelection 3-way pay-cost
+#   menu — value 1 "Add top security card to hand" (offered iff SecurityCards
+#   non-empty), value 2 "Trash bottom face-down card from 1 tamer" (offered iff
+#   a Tamer has a face-down source), value 3 "Don't pay the cost". Only if a cost
+#   was paid (hasPaidCost) does a canNoSelect SelectHandEffect over [Glowing
+#   Dawn] cards run → ChangeCostClass -3 → PlayOptionCards / PlayPermanentCards.
+#   → clause: when [when_digivolving, when_attacking], once_per_turn, optional
+#   (the outer accept = DCGO "value != 3"; declining = "Don't pay"),
+#   active_when your_turn. process: select_effect_choice between the two pay
+#   options (ST23-05 / BT25-043 gated-branch idiom — each branch's pay step is
+#   gated by its resource so an unpayable pick resolves to nothing), then INSIDE
+#   each branch's then: an OPTIONAL select_hand over [Glowing Dawn] cards
+#   (canNoSelect — trashed/added-to-hand but may still decline the play/use) →
+#   play_or_use_from_hand cost_delta reduce 3 (kind-routing unified verb).
+#   The play/use is duplicated per branch so it runs ONLY when that branch's
+#   pay cost was actually paid (no "cost-paid" flag is exposed cross-branch).
 # Inherited [End of Attack][OPT]: trash bottom FD under a Tamer (process
 #   activation cost — works as a tail-bearing step) → if this Digimon has
 #   [Glowing Dawn], unsuspend self. → scope: inherited, when: end_of_attack,
@@ -61,8 +71,58 @@ effects:
     keyword: Alliance
     summary: "<Alliance>"
 
-  # ─── [WD][WA][OPT] pay-cost → play/use Glowing Dawn -3 — BLOCKED, omitted
-  #     (G-COST-REDUCTION-INTERACTIVE-PAY-COST + composite pay-one-of-two cost).
+  # ─── [WD][WA][OPT] if your turn, pay one of two costs (add top security to
+  #     hand | trash bottom FD under a Tamer) → may play or use 1 [Glowing Dawn]
+  #     card from hand with the cost reduced by 3 (G-PLAY-OR-USE-FROM-HAND) ──────
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[WD][WA][OPT] If your turn, by adding your top security card to the hand or trashing a bottom face-down card under a Tamer, you may play or use 1 [Glowing Dawn] card from hand with the cost reduced by 3"
+    process:
+      # 2-way pay-cost choice + decline (DCGO SetIntSelection value 1/2/3).
+      - select_effect_choice:
+          bind_as: pay_choice
+          labels:
+            - "Add your top security card to the hand"
+            - "Trash a bottom face-down card under a Tamer"
+            - "Don't pay the cost"
+          prompt: "Will you pay the cost to play or use a [Glowing Dawn] card?"
+      # Branch 0 — Add top security to hand (gated on having security).
+      - if:
+          condition:
+            all_of:
+              - equals: [pay_choice, 0]
+              - security_count_gte: 1
+          then:
+            - add_top_security_to_hand: { of: you }
+            - select_hand:
+                of: you
+                bind_as: gd_pick_sec
+                optional: true
+                filter: { trait_has: "Glowing Dawn" }
+                prompt: "You may play or use 1 [Glowing Dawn] card from your hand with the cost reduced by 3"
+            - play_or_use_from_hand:
+                of: you
+                hand_index: gd_pick_sec
+                cost_delta: { reduce: 3 }
+      # Branch 1 — Trash a bottom face-down card under a Tamer. The trash step
+      # is a process cost: it aborts (no play/use) if no eligible Tamer exists,
+      # so the select_hand + play_or_use only run after a successful trash.
+      - if:
+          condition: { equals: [pay_choice, 1] }
+          then:
+            - trash_bottom_face_down_source_under_tamer: { of: you }
+            - select_hand:
+                of: you
+                bind_as: gd_pick_fd
+                optional: true
+                filter: { trait_has: "Glowing Dawn" }
+                prompt: "You may play or use 1 [Glowing Dawn] card from your hand with the cost reduced by 3"
+            - play_or_use_from_hand:
+                of: you
+                hand_index: gd_pick_fd
+                cost_delta: { reduce: 3 }
 
   # ─── Inherited [End of Attack][OPT] trash FD under Tamer → unsuspend self ──
   - scope: inherited

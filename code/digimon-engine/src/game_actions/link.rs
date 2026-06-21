@@ -274,7 +274,11 @@ impl Game {
     /// Follows the canonical removal sequence (`clear_permanent_full` →
     /// `delete slot` → `shift_after_battle_area_remove`) and fixes the host
     /// handle with `shift_handle_after_soft_remove` before attaching.
-    fn absorb_standing_digimon_as_link(&mut self, source: PermanentHandle, host: PermanentHandle) {
+    pub(crate) fn absorb_standing_digimon_as_link(
+        &mut self,
+        source: PermanentHandle,
+        host: PermanentHandle,
+    ) {
         // Pre-clear modifiers + granted bodies for the leaving permanent.
         self.clear_permanent_full(source);
         self.modifiers.expire_player_on_permanent_leave(source);
@@ -523,6 +527,39 @@ impl Game {
             );
         }
         self.maybe_drain_effect_queue();
+        true
+    }
+
+    /// Move one specific link card off `host` (addressed by `card` handle) into
+    /// `host`'s digivolution sources as its BOTTOM card (DCGO
+    /// `Permanent.AddDigivolutionCardsBottom`). Unlike `trash_specific_link_card`
+    /// the card is NOT trashed — it leaves `linked_cards` and becomes a
+    /// digivolution source under the carrier — so no `OnLinkedCardTrashed`
+    /// fires. Returns `true` if the card was found among `host.linked_cards` and
+    /// moved; `false` otherwise (host gone / card not linked there).
+    ///
+    /// Used by the EX11-027 leave-replacement cost ("by placing 1 of its link
+    /// cards as its bottom digivolution card, it doesn't leave"). The host
+    /// itself stays — only the single chosen link card relocates.
+    /// DCGO ref: `EX11_027.cs` Link-Effect region (`AddDigivolutionCardsBottom`).
+    pub fn place_specific_link_card_as_bottom_source(
+        &mut self,
+        host: PermanentHandle,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        let Some(perm) = self
+            .player_mut(host.player)
+            .battle_area
+            .get_mut(host.index as usize)
+        else {
+            return false;
+        };
+        let Some(pos) = perm.linked_cards.iter().position(|c| c.handle() == card) else {
+            return false;
+        };
+        let moved = perm.linked_cards.remove(pos);
+        // Place it as the carrier's bottom digivolution source (under the stack).
+        perm.push_under(moved);
         true
     }
 }

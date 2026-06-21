@@ -21,6 +21,7 @@ interface GameStore {
   turnCount: number;
   currentPhase: GamePhase;
   currentPlayer: number;
+  firstPlayer: number;
   memoryGauge: number;
   isGameOver: boolean;
   winner: number | null;
@@ -75,6 +76,7 @@ const initialState = {
   turnCount: 0,
   currentPhase: 0 as GamePhase,
   currentPlayer: 0,
+  firstPlayer: 0,
   memoryGauge: 0,
   isGameOver: false,
   winner: null,
@@ -107,6 +109,7 @@ export const useGameStore = create<GameStore>((set) => ({
       turnCount: state.turnCount,
       currentPhase: state.currentPhase,
       currentPlayer: state.currentPlayer,
+      firstPlayer: state.firstPlayer,
       memoryGauge: state.memoryGauge,
       isGameOver: state.isGameOver,
       winner: state.winner,

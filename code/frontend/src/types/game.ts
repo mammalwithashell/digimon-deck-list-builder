@@ -258,6 +258,8 @@ export interface GameState {
   turnCount: number;
   currentPhase: GamePhase;
   currentPlayer: number;
+  /** Engine seat that goes first (0 = local human / player1). */
+  firstPlayer: number;
   memoryGauge: number;
   isGameOver: boolean;
   winner: number | null;

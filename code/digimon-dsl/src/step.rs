@@ -65,20 +65,19 @@ use crate::predicate::{PredicateSpec, Zone};
 #[derive(Debug, Clone, PartialEq, schemars::JsonSchema)]
 pub enum StepSpec {
     // Memory / turn
-    GainMemory(i32),
-    LoseMemory(i32),
-    SetMemory(i32),
-    /// Phase 2 Track F (G-DSL-GAIN-MEMORY-FN) — formula-valued gain.
-    /// Mirrors the literal `gain_memory: N` shape but accepts a
-    /// `FormulaSpec` evaluated at resolution time. Use for printed text
-    /// like "[When Digivolving] Gain 1 memory for every 4 cards in your
-    /// hand." (EX1-021 MetalGarurumon).
-    GainMemoryFn(FormulaStepArgs),
-    /// Symmetric of `GainMemoryFn` — kept for completeness so author-facing
-    /// API doesn't surprise (literal `lose_memory: N` has a `lose_memory_fn`
-    /// sibling). No known card uses it as of 2026-05-17 but adding both
-    /// halves at once keeps the eval-arm coverage matrix uniform.
-    LoseMemoryFn(FormulaStepArgs),
+    //
+    // The magnitude is a `FormulaSpec` (unify-dsl-scalar-and-comparators): a
+    // bare int `gain_memory: 1` deserializes to `FormulaSpec::Literal(1)`, a
+    // map `gain_memory: { base: 0, per: ally_count, delta: 1 }` to the formula.
+    // The retired `gain_memory_fn`/`lose_memory_fn` twin verbs survive only as
+    // deserialize aliases (see `visit_map`) so existing card YAML keeps
+    // parsing; they are absent from the advertised vocabulary. At compile time
+    // a `Literal` routes to `CompiledStep::GainMemory(i32)` and any other
+    // formula to `CompiledStep::GainMemoryFn { formula }`, so the compiled
+    // output is byte-identical to the pre-unification encoding.
+    GainMemory(FormulaSpec),
+    LoseMemory(FormulaSpec),
+    SetMemory(FormulaSpec),
 
     // Draw / deck / hand / trash
     Draw(DrawArgs),
@@ -115,6 +114,13 @@ pub enum StepSpec {
     ShuffleSecurity(PlayerArg),
     RevealTopDeck(RevealArgs),
     PlaceRemainderOnDeck(PlaceRemainderArgs),
+    /// collapse-dsl-step-idioms §2 — the reveal-search idiom as one composite
+    /// verb. Lowers to the existing sequence (reveal_top_deck → a single
+    /// `select_reveal_buckets` over all buckets → per-bucket reveal-move →
+    /// place_remainder_on_deck); each bucket is an RL-visible pick honoring its
+    /// `optional`. Cross-bucket de-dup is always on (a revealed card lands in
+    /// at most one bucket). See `RevealSearchArgs`.
+    RevealSearch(RevealSearchArgs),
     /// Phase 2 Track E (2026-05-17): pick one card from the current reveal
     /// pool and route it to a single typed destination. Ergonomic combo of
     /// `select_reveal` + `{add_to_hand_from_reveal,return_to_deck_from_reveal,
@@ -174,6 +180,19 @@ pub enum StepSpec {
     /// Knight] source to the BOTTOM OF YOUR DECK to prevent leaving).
     ReturnSelectedSourcesToDeck(ReturnSelectedSourcesToDeckArgs),
     TrashBottomFaceDownSourceUnderTamer(TrashBottomFaceDownSourceUnderTamerArgs),
+    /// G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER (2026-06-15) — the multi-count /
+    /// multi-Tamer sibling of `TrashBottomFaceDownSourceUnderTamer`. Pays a
+    /// `count`-total bottom-face-down trash cost distributed across the
+    /// controller's Tamers: each pick installs a real `select_own_permanent`
+    /// over `{ kind: tamer, has_face_down_source: true }` and trashes that
+    /// Tamer's bottom face-down source, re-evaluating eligibility before the
+    /// next pick — so "2 from one Tamer" and "1 from each of two Tamers" are
+    /// both reachable, every pick surfaced (no auto-resolve). When fewer than
+    /// `count` face-down sources exist across all Tamers the cost is unpayable
+    /// and the clause's remaining steps are skipped (`TailAlreadyRan`). Drives
+    /// BT25-035 Cougarmon's "by trashing 2 bottom face-down cards from under any
+    /// of your Tamers" cost.
+    TrashBottomFaceDownSourcesUnderTamers(TrashBottomFaceDownSourcesUnderTamersArgs),
     BindPermanentProperty(BindPermanentProperty),
     Hatch(PlayerArg),
     /// Move the specified player's eligible breeding-area Digimon to the
@@ -186,6 +205,11 @@ pub enum StepSpec {
     PlayFromHand(PlayFromHandArgs),
     PlayFromHandFree(PlayFromHandFreeArgs),
     UseOptionFromHand(UseOptionFromHandArgs),
+    /// Unified "play OR use 1 card from hand" — inspects the bound hand card's
+    /// kind and routes Digimon/Tamer → play and Option → use (a DUAL card
+    /// surfaces a "Play as Digimon / Use as Option" face choice). The card is
+    /// bound by an upstream `select_hand` step. `G-PLAY-OR-USE-FROM-HAND`.
+    PlayOrUseFromHand(PlayOrUseFromHandArgs),
     PlayFromRevealedFree(PlayFromRevealedFreeArgs),
     PlayFromTrash(PlayFromHandArgs),
     PlayFromTrashFree(PlayFromHandArgs),
@@ -210,12 +234,13 @@ pub enum StepSpec {
     AddBottomSecurityToHand(PlayerArg),
     TrashTopSecurityAndCancelReplacement(PlayerArg),
     BounceSelf(EmptyArgs),
-    PlaceSelfAtSecurity(SelfSecurityPlacementArgs),
-    PlaceSelfOptionAtSecurity(SelfSecurityPlacementArgs),
-    PlacePermanentBottomSecurityAndCancelReplacement(PlacePermanentSecurityReplacementArgs),
-    PlacePermanentOnSecurity(PlacePermanentOnSecurityReplacementArgs),
-    PlacePermanentOnSecurityAndHandleReplacement(PlacePermanentOnSecurityReplacementArgs),
-    PlacePermanentOnSecurityObserved(PlacePermanentOnSecurityObservedArgs),
+    /// Relocate THIS effect's source Option (an in-battle-area field Option)
+    /// face-down under a chosen own permanent — a new Option-lifecycle exit
+    /// distinct from trashing. Fires neither `OnOptionTrashed` nor
+    /// `OnDigivolutionCardTrashed`. Drives ST23-15 e-Pulse / ST24-15 DNA Charge
+    /// "By placing this card from the battle area face down under any of your
+    /// [BEATBREAK]/[DATA SQUAD] trait Tamers, …". G-MOVE-SELF-OPTION-UNDER-PERMANENT.
+    MoveSelfOptionUnderPermanent(MoveSelfOptionUnderPermanentArgs),
     SecurityPlaceStackedCard(SecurityPlaceStackedCardArgs),
     SecurityPlaceTopStackedCard(SecurityPlaceTopStackedCardArgs),
     ReturnAllTrashToDeckBottom(PlayerArg),
@@ -285,15 +310,6 @@ pub enum StepSpec {
     ScheduleDeletePlayedAtTurnEnd(ScheduleDeletePlayedAtTurnEndArgs),
     PlaceSelfAsDelayOption(EmptyArgs),
     LinkToOwnDigimon(LinkToOwnDigimonArgs),
-    /// Facet #9 authoring verb (G-DSL-LINK-CARD-FROM-ZONE) — the effect's own
-    /// permanent links 1 chosen card matching `filter` out of one of the
-    /// `from` zones (hand / trash / this Digimon's digivolution sources) onto
-    /// itself, paying the printed link cost reduced by any `ChangeLinkCost`.
-    /// Distinct from `LinkToOwnDigimon` (the Plug-In Option self-link tied to
-    /// `pending_option`). Mirrors DCGO `ILinkCard.LinkCard` with `root != None`.
-    /// NOTE (2026-06-07): superseded by the more general `LinkCards` below;
-    /// retained until the 5 cards using it migrate. See dsl-vocab-gaps.md.
-    LinkCardToSelf(LinkCardToSelfArgs),
     /// `app_fuse:` — effect-initiated App Fuse (see [`AppFuseArgs`]).
     AppFuse(AppFuseArgs),
     /// Gap 5 — reduce the cost of the link about to resolve in the active
@@ -309,6 +325,10 @@ pub enum StepSpec {
     /// parity), a single-zone card select, then (for `to: own_digimon`) a host
     /// select, then attaches the card and fires `OnLink`.
     LinkCards(LinkCardsArgs),
+    /// `relink_self_to_own_digimon:` — move the effect's own standing permanent
+    /// to become a link card on a chosen OTHER own Digimon (EX11-027 "link this
+    /// Digimon to 1 of your other Digimon"). Over `absorb_standing_digimon_as_link`.
+    RelinkSelfToOwnDigimon(RelinkSelfToOwnDigimonArgs),
     Optional(OptionalStep),
 
     // Combat / replacement process outcomes
@@ -381,8 +401,6 @@ impl Serialize for StepSpec {
             StepSpec::GainMemory(v) => kv!(s, "gain_memory", v),
             StepSpec::LoseMemory(v) => kv!(s, "lose_memory", v),
             StepSpec::SetMemory(v) => kv!(s, "set_memory", v),
-            StepSpec::GainMemoryFn(v) => kv!(s, "gain_memory_fn", v),
-            StepSpec::LoseMemoryFn(v) => kv!(s, "lose_memory_fn", v),
             // Draw / deck / hand / trash
             StepSpec::Draw(v) => kv!(s, "draw", v),
             StepSpec::TrashFromTop(v) => kv!(s, "trash_from_top", v),
@@ -405,6 +423,7 @@ impl Serialize for StepSpec {
             StepSpec::ShuffleSecurity(v) => kv!(s, "shuffle_security", v),
             StepSpec::RevealTopDeck(v) => kv!(s, "reveal_top_deck", v),
             StepSpec::PlaceRemainderOnDeck(v) => kv!(s, "place_remainder_on_deck", v),
+            StepSpec::RevealSearch(v) => kv!(s, "reveal_search", v),
             StepSpec::ChooseFromReveal(v) => kv!(s, "choose_from_reveal", v),
             StepSpec::OrderRemainder(v) => kv!(s, "order_remainder", v),
             // Field / permanent
@@ -443,6 +462,9 @@ impl Serialize for StepSpec {
             StepSpec::TrashBottomFaceDownSourceUnderTamer(v) => {
                 kv!(s, "trash_bottom_face_down_source_under_tamer", v)
             }
+            StepSpec::TrashBottomFaceDownSourcesUnderTamers(v) => {
+                kv!(s, "trash_bottom_face_down_sources_under_tamers", v)
+            }
             StepSpec::BindPermanentProperty(v) => kv!(s, "bind_permanent_property", v),
             StepSpec::Hatch(v) => kv!(s, "hatch", v),
             StepSpec::MoveFromBreeding(v) => kv!(s, "move_from_breeding", v),
@@ -450,6 +472,7 @@ impl Serialize for StepSpec {
             StepSpec::PlayFromHand(v) => kv!(s, "play_from_hand", v),
             StepSpec::PlayFromHandFree(v) => kv!(s, "play_from_hand_free", v),
             StepSpec::UseOptionFromHand(v) => kv!(s, "use_option_from_hand", v),
+            StepSpec::PlayOrUseFromHand(v) => kv!(s, "play_or_use_from_hand", v),
             StepSpec::PlayFromRevealedFree(v) => kv!(s, "play_from_revealed_free", v),
             StepSpec::PlayFromTrash(v) => kv!(s, "play_from_trash", v),
             StepSpec::PlayFromTrashFree(v) => kv!(s, "play_from_trash_free", v),
@@ -472,23 +495,8 @@ impl Serialize for StepSpec {
                 kv!(s, "trash_top_security_and_cancel_replacement", v)
             }
             StepSpec::BounceSelf(v) => kv!(s, "bounce_self", v),
-            StepSpec::PlaceSelfAtSecurity(v) => kv!(s, "place_self_at_security", v),
-            StepSpec::PlaceSelfOptionAtSecurity(v) => {
-                kv!(s, "place_self_option_at_security", v)
-            }
-            StepSpec::PlacePermanentBottomSecurityAndCancelReplacement(v) => {
-                kv!(
-                    s,
-                    "place_permanent_bottom_security_and_cancel_replacement",
-                    v
-                )
-            }
-            StepSpec::PlacePermanentOnSecurity(v) => kv!(s, "place_permanent_on_security", v),
-            StepSpec::PlacePermanentOnSecurityAndHandleReplacement(v) => {
-                kv!(s, "place_permanent_on_security_and_handle_replacement", v)
-            }
-            StepSpec::PlacePermanentOnSecurityObserved(v) => {
-                kv!(s, "place_permanent_on_security_observed", v)
+            StepSpec::MoveSelfOptionUnderPermanent(v) => {
+                kv!(s, "move_self_option_under_permanent", v)
             }
             StepSpec::SecurityPlaceStackedCard(v) => kv!(s, "security_place_stacked_card", v),
             StepSpec::SecurityPlaceTopStackedCard(v) => {
@@ -572,10 +580,10 @@ impl Serialize for StepSpec {
             }
             StepSpec::PlaceSelfAsDelayOption(v) => kv!(s, "place_self_as_delay_option", v),
             StepSpec::LinkToOwnDigimon(v) => kv!(s, "link_to_own_digimon", v),
-            StepSpec::LinkCardToSelf(v) => kv!(s, "link_card_to_self", v),
             StepSpec::AppFuse(v) => kv!(s, "app_fuse", v),
             StepSpec::ReduceLinkCost(v) => kv!(s, "reduce_link_cost", v),
             StepSpec::LinkCards(v) => kv!(s, "link_cards", v),
+            StepSpec::RelinkSelfToOwnDigimon(v) => kv!(s, "relink_self_to_own_digimon", v),
             StepSpec::Optional(v) => kv!(s, "optional", v),
             // Combat / replacement process outcomes
             StepSpec::Battle(v) => kv!(s, "battle", v),
@@ -639,8 +647,16 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "gain_memory" => StepSpec::GainMemory(map.next_value()?),
             "lose_memory" => StepSpec::LoseMemory(map.next_value()?),
             "set_memory" => StepSpec::SetMemory(map.next_value()?),
-            "gain_memory_fn" => StepSpec::GainMemoryFn(map.next_value()?),
-            "lose_memory_fn" => StepSpec::LoseMemoryFn(map.next_value()?),
+            // Deserialize-only back-compat aliases for the retired `_fn` twins.
+            // The old YAML wrapped the formula in `{ formula: <FormulaSpec> }`
+            // (FormulaStepArgs); the new canonical shape takes the formula
+            // directly, so unwrap the legacy wrapper here.
+            "gain_memory_fn" => {
+                StepSpec::GainMemory(map.next_value::<FormulaStepArgs>()?.formula)
+            }
+            "lose_memory_fn" => {
+                StepSpec::LoseMemory(map.next_value::<FormulaStepArgs>()?.formula)
+            }
 
             // Draw / deck / hand / trash
             "draw" => StepSpec::Draw(map.next_value()?),
@@ -664,6 +680,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "shuffle_security" => StepSpec::ShuffleSecurity(map.next_value()?),
             "reveal_top_deck" => StepSpec::RevealTopDeck(map.next_value()?),
             "place_remainder_on_deck" => StepSpec::PlaceRemainderOnDeck(map.next_value()?),
+            "reveal_search" => StepSpec::RevealSearch(map.next_value()?),
             "choose_from_reveal" => StepSpec::ChooseFromReveal(map.next_value()?),
             "order_remainder" => StepSpec::OrderRemainder(map.next_value()?),
 
@@ -703,6 +720,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "trash_bottom_face_down_source_under_tamer" => {
                 StepSpec::TrashBottomFaceDownSourceUnderTamer(map.next_value()?)
             }
+            "trash_bottom_face_down_sources_under_tamers" => {
+                StepSpec::TrashBottomFaceDownSourcesUnderTamers(map.next_value()?)
+            }
             "bind_permanent_property" => StepSpec::BindPermanentProperty(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
             "move_from_breeding" => StepSpec::MoveFromBreeding(map.next_value()?),
@@ -711,6 +731,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_hand" => StepSpec::PlayFromHand(map.next_value()?),
             "play_from_hand_free" => StepSpec::PlayFromHandFree(map.next_value()?),
             "use_option_from_hand" => StepSpec::UseOptionFromHand(map.next_value()?),
+            "play_or_use_from_hand" => StepSpec::PlayOrUseFromHand(map.next_value()?),
             "play_from_revealed_free" => StepSpec::PlayFromRevealedFree(map.next_value()?),
             "play_from_trash" => StepSpec::PlayFromTrash(map.next_value()?),
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
@@ -736,19 +757,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                 StepSpec::TrashTopSecurityAndCancelReplacement(map.next_value()?)
             }
             "bounce_self" => StepSpec::BounceSelf(map.next_value()?),
-            "place_self_at_security" => StepSpec::PlaceSelfAtSecurity(map.next_value()?),
-            "place_self_option_at_security" => {
-                StepSpec::PlaceSelfOptionAtSecurity(map.next_value()?)
-            }
-            "place_permanent_bottom_security_and_cancel_replacement" => {
-                StepSpec::PlacePermanentBottomSecurityAndCancelReplacement(map.next_value()?)
-            }
-            "place_permanent_on_security" => StepSpec::PlacePermanentOnSecurity(map.next_value()?),
-            "place_permanent_on_security_and_handle_replacement" => {
-                StepSpec::PlacePermanentOnSecurityAndHandleReplacement(map.next_value()?)
-            }
-            "place_permanent_on_security_observed" => {
-                StepSpec::PlacePermanentOnSecurityObserved(map.next_value()?)
+            "move_self_option_under_permanent" => {
+                StepSpec::MoveSelfOptionUnderPermanent(map.next_value()?)
             }
             "security_place_stacked_card" => StepSpec::SecurityPlaceStackedCard(map.next_value()?),
             "security_place_top_stacked_card" => {
@@ -831,10 +841,12 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             }
             "place_self_as_delay_option" => StepSpec::PlaceSelfAsDelayOption(map.next_value()?),
             "link_to_own_digimon" => StepSpec::LinkToOwnDigimon(map.next_value()?),
-            "link_card_to_self" => StepSpec::LinkCardToSelf(map.next_value()?),
             "app_fuse" => StepSpec::AppFuse(map.next_value()?),
             "reduce_link_cost" => StepSpec::ReduceLinkCost(map.next_value()?),
             "link_cards" => StepSpec::LinkCards(map.next_value()?),
+            "relink_self_to_own_digimon" => {
+                StepSpec::RelinkSelfToOwnDigimon(map.next_value()?)
+            }
             "optional" => StepSpec::Optional(map.next_value()?),
 
             // Combat / replacement process outcomes
@@ -871,8 +883,6 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "gain_memory",
                         "lose_memory",
                         "set_memory",
-                        "gain_memory_fn",
-                        "lose_memory_fn",
                         "draw",
                         "trash_from_top",
                         "add_to_hand_from_deck",
@@ -892,6 +902,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "shuffle_security",
                         "reveal_top_deck",
                         "place_remainder_on_deck",
+                        "reveal_search",
                         "choose_from_reveal",
                         "order_remainder",
                         "delete_permanent",
@@ -911,12 +922,15 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "trash_all_sources",
                         "trash_selected_sources",
                         "return_selected_sources_to_hand",
+                        "trash_bottom_face_down_source_under_tamer",
+                        "trash_bottom_face_down_sources_under_tamers",
                         "return_selected_sources_to_deck",
                         "bind_permanent_property",
                         "hatch",
                         "play_from_hand",
                         "play_from_hand_free",
                         "use_option_from_hand",
+                        "play_or_use_from_hand",
                         "play_from_revealed_free",
                         "play_from_trash",
                         "play_from_trash_free",
@@ -933,12 +947,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "add_bottom_security_to_hand",
                         "trash_top_security_and_cancel_replacement",
                         "bounce_self",
-                        "place_self_at_security",
-                        "place_self_option_at_security",
-                        "place_permanent_bottom_security_and_cancel_replacement",
-                        "place_permanent_on_security",
-                        "place_permanent_on_security_and_handle_replacement",
-                        "place_permanent_on_security_observed",
+                        "move_self_option_under_permanent",
                         "security_place_stacked_card",
                         "security_place_top_stacked_card",
                         "return_all_trash_to_deck_bottom",
@@ -983,9 +992,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "schedule_delayed",
                         "place_self_as_delay_option",
                         "link_to_own_digimon",
-                        "link_card_to_self",
                         "reduce_link_cost",
                         "link_cards",
+                        "relink_self_to_own_digimon",
                         "optional",
                         "battle",
                         "may_attack_now",
@@ -1175,6 +1184,51 @@ pub struct TrashTopSecurityArgs {
 #[serde(deny_unknown_fields)]
 pub struct TrashBottomFaceDownSourceUnderTamerArgs {
     pub of: PlayerRef,
+    /// When `true`, the Tamer pick is DECLINABLE (offers PASS) — modelling
+    /// DCGO's `canNoSelect:true` Tamer selection for a "by trashing the bottom
+    /// face-down card …, [effect]" that is one of several INDEPENDENT optional
+    /// sub-choices inside a non-optional clause (so a clause-level `optional`
+    /// can't carry its decline). On decline NOTHING is trashed and the step's
+    /// tail does not run. Default `false` keeps the established mandatory-when-
+    /// payable behavior (the decline is carried by a clause-level `optional`).
+    /// ST24-11 Rosemon: "you may suspend up to 2 … then, by trashing … none of
+    /// their Digimon can unsuspend" — the trash+lock is declinable apart from
+    /// the suspend. `G-OPTIONAL-TRASH-FACE-DOWN-UNDER-TAMER`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+}
+
+/// Args for `trash_bottom_face_down_sources_under_tamers` — the multi-count /
+/// multi-Tamer sibling. Trashes `count` bottom-face-down digivolution sources
+/// total, distributed across `of`'s Tamers (each Tamer must carry >=1 face-down
+/// source). A single Tamer with >=`count` face-down sources may satisfy it
+/// alone; otherwise the cost spreads across multiple Tamers. Each Tamer pick is
+/// surfaced as a real `PendingSelection`. Used as an activation cost by
+/// BT25-035 Cougarmon (`count: 2`). `G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashBottomFaceDownSourcesUnderTamersArgs {
+    pub of: PlayerRef,
+    /// Total number of bottom-face-down sources to trash across Tamers.
+    pub count: u8,
+}
+
+/// Args for `move_self_option_under_permanent` — relocate THIS effect's source
+/// Option (an in-battle-area field Option) face-down under a chosen own
+/// permanent. `target` names a binding (typically a prior `select_own_permanent`
+/// Tamer pick); `face_down` marks the placed source face-down (default `true`,
+/// matching the BEATBREAK / DATA SQUAD "face down under" wording).
+/// G-MOVE-SELF-OPTION-UNDER-PERMANENT.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct MoveSelfOptionUnderPermanentArgs {
+    pub target: BindingRef,
+    #[serde(default = "default_true")]
+    pub face_down: bool,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema, Default)]
@@ -1458,6 +1512,12 @@ pub enum StackPosition {
     Top,
     Bottom,
     Random,
+    /// collapse §3.1 — player-elected top/bottom. The executor installs a
+    /// binary top/bottom `pending_selection` and places at the chosen end.
+    /// Only valid on steps whose executor intercepts `Choice` before placement
+    /// (currently `place_remainder_on_deck` and the place-on-security verb); on
+    /// any other step `map_stack_position` hard-panics by design.
+    Choice,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1471,13 +1531,6 @@ impl SecurityFace {
     pub fn is_up(self) -> bool {
         matches!(self, Self::Up)
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct SelfSecurityPlacementArgs {
-    pub position: StackPosition,
-    pub face: SecurityFace,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1496,6 +1549,66 @@ pub struct RevealArgs {
 pub struct PlaceRemainderArgs {
     pub of: PlayerRef,
     pub position: StackPosition,
+}
+
+/// collapse-dsl-step-idioms §2 — args for the `reveal_search` composite.
+///
+/// ```yaml
+/// - reveal_search:
+///     of: you
+///     count: 4
+///     buckets:
+///       - { filter: { any_of: [{ name_contains: "Garurumon" }, { trait_has: "X Antibody" }] },
+///           to: hand, max: 2, prompt: "Add 2 [Garurumon]/[X Antibody] cards to hand" }
+///     remainder: bottom
+/// ```
+///
+/// Lowers to `reveal_top_deck { count } → select_reveal_buckets { buckets } →
+/// per-bucket reveal-move → place_remainder_on_deck { position }`. A bucket's
+/// `to` routes its picks (hand → `add_to_hand_from_reveal`, trash →
+/// `trash_from_reveal`, deck → `return_to_deck_from_reveal` at the deck
+/// bottom). A non-`optional` bucket forces picking `max` cards (or all matching
+/// if fewer); `optional` lets the player pick 0..=max.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RevealSearchArgs {
+    pub of: PlayerRef,
+    pub count: u8,
+    pub buckets: Vec<RevealSearchBucket>,
+    pub remainder: RevealRemainder,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RevealSearchBucket {
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
+    pub to: RevealSearchDest,
+    pub max: u8,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+}
+
+/// Destination zone for a `reveal_search` bucket's picks.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RevealSearchDest {
+    Hand,
+    Trash,
+    /// Bottom of the owner's deck.
+    Deck,
+}
+
+/// Where the un-picked remainder of the reveal pool goes. `choose` is a
+/// player-elected top/bottom (lowers through §3.1's `StackPosition::Choice`).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum RevealRemainder {
+    Top,
+    Bottom,
+    Choose,
 }
 
 /// Phase 2 Track E (2026-05-17): args for `choose_from_reveal`.
@@ -1587,10 +1700,14 @@ pub enum RemainderDestination {
 #[serde(deny_unknown_fields)]
 pub struct DeDigivolveArgs {
     pub target: BindingRef,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub amount: Option<u8>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub amount_fn: Option<FormulaSpec>,
+    /// De-Digivolve magnitude (how many digivolution cards to trash). A
+    /// `FormulaSpec` (unify-dsl-scalar-and-comparators): a bare int
+    /// `amount: 2` is a literal, a map is a runtime formula. The retired
+    /// `amount_fn` key survives as a deserialize alias. At compile time a
+    /// literal routes to the compiled `amount` integer and any other formula to
+    /// `amount_fn`, byte-identical to the pre-unification form.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "amount_fn")]
+    pub amount: Option<FormulaSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub stop_at_level: Option<u8>,
 }
@@ -1607,45 +1724,89 @@ pub struct FormulaStepArgs {
     pub formula: crate::formula::FormulaSpec,
 }
 
+/// collapse §3.3 — the single source-polymorphic place-on-security verb. It
+/// supersedes the former family (`place_on_security` hand-only,
+/// `place_self_at_security`, `place_self_option_at_security`,
+/// `place_permanent_on_security`, `…_and_handle_replacement`,
+/// `…_bottom_…_and_cancel_replacement`, `…_observed`). The `source` chooses
+/// what is placed; `disposition` selects the replacement-system interaction for
+/// a permanent leaving the field (only meaningful when `source: permanent`).
+/// It lowers to the EXISTING compiled variants (byte-identical behavior).
+///
+/// ```yaml
+/// - place_on_security: { source: { card: chosen }, of: you, position: choice }
+/// - place_on_security: { source: self_option, position: bottom, face_up: false }
+/// - place_on_security: { source: { permanent: subj }, position: bottom, disposition: handle }
+/// - place_on_security: { source: { permanent: subj }, position: bottom, disposition: cancel }
+/// ```
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct PlaceOnSecurityArgs {
+    pub source: SecuritySource,
+    #[serde(default = "default_player_ref_you")]
     pub of: PlayerRef,
-    pub source: BindingRef,
     pub position: StackPosition,
     #[serde(default)]
     pub face_up: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct PlacePermanentSecurityReplacementArgs {
-    #[serde(default = "default_player_ref_you")]
-    pub of: PlayerRef,
-    pub target: BindingRef,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct PlacePermanentOnSecurityReplacementArgs {
-    #[serde(default = "default_player_ref_you")]
-    pub of: PlayerRef,
-    pub target: BindingRef,
-    pub position: StackPosition,
-    #[serde(default)]
-    pub face_up: bool,
-}
-
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct PlacePermanentOnSecurityObservedArgs {
-    #[serde(default = "default_player_ref_you")]
-    pub of: PlayerRef,
-    pub target: BindingRef,
-    pub position: StackPosition,
-    pub face: SecurityFace,
-    #[serde(default)]
+    /// Replacement-system interaction (permanent sources only). `cancel`
+    /// requires `position: bottom` (the engine cancel-via-security tuck is
+    /// bottom-only); `observed` may set `include_sources`.
+    #[serde(default, skip_serializing_if = "SecurityReplacementDisposition::is_none")]
+    pub disposition: SecurityReplacementDisposition,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub include_sources: bool,
+}
+
+/// What `place_on_security` puts onto the security stack.
+///
+/// NOTE: `#[serde(untagged)]` (with struct/marker variants), NOT externally
+/// tagged — externally-tagged newtype variants serialize as `Value::Tagged`
+/// (`!variant value`), which breaks the `serde_yml::from_value(Value::Mapping)`
+/// round-trip in `DeclarativeClause::typed_body()` used by `kind: replacement`
+/// bodies (the same constraint documented on `LinkCardsCount`). Untagged
+/// struct variants are plain maps `{ card: … }` / `{ permanent: … }` that work
+/// on both the streaming and from_value paths; the self markers are strings.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(untagged)]
+pub enum SecuritySource {
+    /// A bound card from hand or trash (`{ card: <binding> }`); the binding's
+    /// own `zone` selects hand vs trash, exactly as the former hand-only
+    /// `place_on_security` did.
+    Card { card: BindingRef },
+    /// A battle-area permanent bound by name (`{ permanent: <binding> }`).
+    Permanent { permanent: BindingRef },
+    /// `self` (own source permanent) / `self_option` (own source Option).
+    Marker(SecuritySelfMarker),
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SecuritySelfMarker {
+    #[serde(rename = "self")]
+    SelfPermanent,
+    SelfOption,
+}
+
+/// Replacement-system disposition for a permanent placed on security as it
+/// leaves the field. Only legal with `source: permanent` (validated at compile).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SecurityReplacementDisposition {
+    /// Plain placement; no replacement interaction.
+    #[default]
+    None,
+    /// Place at the security bottom to CANCEL the in-flight leave replacement.
+    Cancel,
+    /// Place on security as the custom-handled outcome of the replacement.
+    Handle,
+    /// Place on security as an observed (non-replacement-consuming) move.
+    Observed,
+}
+
+impl SecurityReplacementDisposition {
+    fn is_none(&self) -> bool {
+        matches!(self, SecurityReplacementDisposition::None)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1830,6 +1991,30 @@ pub struct PlayFromHandFreeArgs {
     pub bind_as: Option<String>,
 }
 
+/// `play_or_use_from_hand:` args — the unified "play OR use 1 card from hand
+/// with the cost reduced by N" verb (Aces / BEATBREAK printed wording). The
+/// hand card is bound by an upstream `select_hand` step (whose filter scopes
+/// the candidate set — e.g. `[Glowing Dawn]` trait — and whose `kind`/predicate
+/// allows Digimon / Tamer / Option / Dual picks). At resolution the verb
+/// inspects the bound card's kind: Digimon / Tamer are PLAYED, an Option is
+/// USED, and a DUAL card surfaces a "Play as Digimon / Use as Option" face
+/// choice (no auto-selection — §17). `cost_delta` applies to the appropriate
+/// face cost (play cost for the play path, use cost for the use path).
+///
+/// ST23-04 / ST23-08 / BT25-041 shape. `G-PLAY-OR-USE-FROM-HAND`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlayOrUseFromHandArgs {
+    pub of: PlayerRef,
+    /// Names the `select_hand` binding (a `bind_as` from that step) carrying
+    /// the chosen hand index.
+    pub hand_index: BindingRef,
+    /// Cost adjustment applied to the played/used card's face cost. `None`
+    /// plays/uses at full printed cost; `{ reduce: 3 }` is the shipped shape.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost_delta: Option<CostDelta>,
+}
+
 /// Play a card currently in the transient reveal pool without paying its
 /// memory cost. `card` is normally bound by `select_reveal` or
 /// `select_reveal_buckets`.
@@ -1871,17 +2056,18 @@ pub struct UseOptionFromHandArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum CostDelta {
+    /// Cost REDUCTION subtracted from the printed play cost (clamped at 0).
+    /// `reduce` is a `FormulaSpec` (unify-dsl-scalar-and-comparators): a bare
+    /// int `{ reduce: 2 }` is `FormulaSpec::Literal(2)`; a map
+    /// `{ reduce: { floor_div: [...] } }` is a runtime formula (e.g. AD1-019's
+    /// "reduce by 1 for every 2 of your Tamers' colors"). The retired
+    /// `reduce_fn` key survives as a deserialize alias so existing YAML keeps
+    /// parsing. At compile time a `Literal` routes to `CompiledCostDelta::Reduce`
+    /// and any other formula to `CompiledCostDelta::ReduceFn`, byte-identical to
+    /// the pre-unification encoding. G-FORMULA-COST-DELTA.
     Reduce {
-        reduce: i32,
-    },
-    /// Formula-valued cost REDUCTION evaluated at resolution time. YAML form:
-    /// `cost_delta: { reduce_fn: { floor_div: [ ... ] } }`. The evaluated
-    /// integer is subtracted from the printed play cost (clamped at 0), the
-    /// same semantics as `Reduce { reduce }` but with a runtime value. Used
-    /// by AD1-019 clause 2 ("reduce this effect's play cost by 1 for every 2
-    /// of your Tamers' colors"). G-FORMULA-COST-DELTA.
-    ReduceFn {
-        reduce_fn: crate::formula::FormulaSpec,
+        #[serde(alias = "reduce_fn")]
+        reduce: crate::formula::FormulaSpec,
     },
     Keyword(CostDeltaKeyword),
     Literal(i32),
@@ -2050,7 +2236,8 @@ pub struct MarkSecurityArgs {
 #[serde(deny_unknown_fields)]
 pub struct AddDpModifierArgs {
     pub target: BindingRef,
-    pub value: ModifierValueSpec,
+    #[serde(deserialize_with = "deserialize_modifier_value")]
+    pub value: FormulaSpec,
     pub expiry: String, // parsed as enum in Task 12 validation
 }
 
@@ -2059,7 +2246,8 @@ pub struct AddDpModifierArgs {
 pub struct AddModifierArgs {
     pub target: ModifierTarget,
     pub modifier: String,
-    pub value: ModifierValueSpec,
+    #[serde(deserialize_with = "deserialize_modifier_value")]
+    pub value: FormulaSpec,
     pub expiry: String,
     /// Structured payload for payload-bearing modifiers. Required for
     /// `modifier: TreatAsDigimon` ("treat this permanent as a [DP] DP
@@ -2108,26 +2296,47 @@ fn synth_identity_default_kind() -> crate::spec::CardKind {
 pub struct AddPlayerModifierArgs {
     pub target_player: PlayerRef,
     pub modifier: String,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub value: Option<ModifierValueSpec>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "deserialize_modifier_value_opt"
+    )]
+    pub value: Option<FormulaSpec>,
     pub expiry: String,
 }
 
-/// Value carried by `add_dp_modifier` / `add_modifier`. Accepts either a
-/// bare integer (`value: 3000`) or a `formula:`-wrapped block
-/// (`value: { formula: { base: 0, per: stack_size, delta: 1000 } }`).
-///
-/// The wrapper key mirrors `alt_path::CostSpec` / `alt_path::FormulaCost` so
-/// authors see one consistent shape across cost and modifier formulas.
-///
-/// Untagged: serde tries `Literal(i32)` first (a YAML scalar int), falling
-/// through to `Formula` (a YAML mapping with a `formula:` key) when the
-/// scalar match fails.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(untagged)]
-pub enum ModifierValueSpec {
-    Literal(i32),
-    Formula(crate::alt_path::FormulaCost),
+/// Deserialize a modifier `value:` field (unify-dsl-scalar-and-comparators).
+/// Accepts the canonical `FormulaSpec` — a bare int `value: 3000`
+/// (`FormulaSpec::Literal`) or a formula map directly
+/// (`value: { base: 0, per: stack_size, delta: 1000 }`) — and, for
+/// back-compat, the retired `ModifierValueSpec::Formula` wrapper
+/// `value: { formula: <FormulaSpec> }`. The wrapper is unwrapped to the inner
+/// formula so the authored vocabulary is uniformly `FormulaSpec`.
+pub(crate) fn deserialize_modifier_value<'de, D>(de: D) -> Result<FormulaSpec, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Compat {
+        /// Legacy `{ formula: <FormulaSpec> }` wrapper (retired ModifierValueSpec::Formula).
+        Wrapped { formula: FormulaSpec },
+        /// Canonical: a bare int or a formula map.
+        Direct(FormulaSpec),
+    }
+    Ok(match Compat::deserialize(de)? {
+        Compat::Wrapped { formula } => formula,
+        Compat::Direct(f) => f,
+    })
+}
+
+/// `Option` form of [`deserialize_modifier_value`] for optional `value:` fields.
+/// Only invoked when the key is present (absence is handled by `#[serde(default)]`).
+pub(crate) fn deserialize_modifier_value_opt<'de, D>(de: D) -> Result<Option<FormulaSpec>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    deserialize_modifier_value(de).map(Some)
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -2314,6 +2523,14 @@ pub struct SelectFieldArgs {
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_key: Option<String>,
+    /// collapse-dsl-step-idioms §1 — explicit scoped action-tail run on accept
+    /// with the selection binding in scope. Composed with the implicit
+    /// dispatcher tail (the rest of the process body) without double-running:
+    /// `then` runs only when a pick is made, whereas steps placed after this
+    /// select in the process body run regardless. Closure-free — this is the
+    /// cloneable VM's `ResumeFrame::RunTail` data (mirrors `SelectOwnSourcesArgs`).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub then: Vec<StepSpec>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -2353,6 +2570,14 @@ pub struct SelectZoneArgs {
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_key: Option<String>,
+    /// collapse-dsl-step-idioms §1 — explicit scoped action-tail run on accept
+    /// with the selection binding in scope. Composed with the implicit
+    /// dispatcher tail without double-running: `then` runs only when a pick is
+    /// made (for a non-cost optional decline it runs scoped to the empty
+    /// binding = no-op); steps after this select in the process body run
+    /// regardless. Closure-free — the cloneable VM's `ResumeFrame::RunTail`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub then: Vec<StepSpec>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -2832,64 +3057,6 @@ pub struct LinkToOwnDigimonArgs {
     pub filter: PredicateSpec,
 }
 
-/// Source zone a `link_card_to_self` candidate may be lifted from. Lowers to
-/// `crate::enums::LinkCardSource` at resolution: `Hand` → `Hand(owner)`,
-/// `Trash` → `Trash(owner)`, `DigivolutionSources` → `DigivolutionSource(self)`.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum LinkFromZone {
-    Hand,
-    Trash,
-    DigivolutionSources,
-}
-
-/// Host the chosen card is linked onto. `SelfPermanent` (default) links onto
-/// the effect's own permanent ("to this Digimon"). `ChosenOwnDigimon` installs
-/// a second RL-visible selection over the controller's standing Digimon
-/// ("to 1 of your Digimon"). Mirrors DCGO `ILinkCard.LinkCard` /
-/// `selectedPermanent.AddLinkCard` with a `SelectPermanentEffect` for the host.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(rename_all = "snake_case")]
-pub enum LinkToHost {
-    SelfPermanent,
-    ChosenOwnDigimon,
-}
-
-fn default_link_to_host() -> LinkToHost {
-    LinkToHost::SelfPermanent
-}
-
-/// Args for the `link_card_to_self` step (facet #9). Links 1 chosen card
-/// matching `filter` out of one of `from` (defaults to all three zones) onto a
-/// host (`to`, defaulting to the effect's own permanent), paying `cost` reduced
-/// by any `ChangeLinkCost`. `optional` adds an RL-visible decline.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
-#[serde(deny_unknown_fields)]
-pub struct LinkCardToSelfArgs {
-    /// Zones the chosen card may come from. Defaults to all three.
-    #[serde(default = "default_link_from_zones")]
-    pub from: Vec<LinkFromZone>,
-    /// Card predicate the candidate must satisfy.
-    pub filter: PredicateSpec,
-    /// Host the card is linked onto. Defaults to the effect's own permanent.
-    #[serde(default = "default_link_to_host")]
-    pub to: LinkToHost,
-    /// Printed link cost N (memory). Defaults to 0 (free link).
-    #[serde(default)]
-    pub cost: u16,
-    /// Whether the player may decline ("you may link").
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub optional: bool,
-}
-
-fn default_link_from_zones() -> Vec<LinkFromZone> {
-    vec![
-        LinkFromZone::Hand,
-        LinkFromZone::Trash,
-        LinkFromZone::DigivolutionSources,
-    ]
-}
-
 /// A source zone the `link_cards` step may draw a card from.
 ///
 /// - `hand` / `trash`: the controller's hand / trash.
@@ -2983,6 +3150,50 @@ pub struct LinkCardsArgs {
     #[serde(default)]
     pub cost: LinkCardsCost,
     /// Optional prompt override for the card-select step.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+    /// Optional binding that captures the card(s) actually linked by this step
+    /// (a `CardList`). The slot is created ONLY when ≥1 card is linked, so a
+    /// downstream `if { binding_present: … }` runs the follow-up exclusively
+    /// when a link occurred — the data-driven way to model "By linking 1 …, do
+    /// Y" where Y is gated on the link (BT25-060 Rebootmon's DCGO `if (linked)`
+    /// gate). Absent ⇒ no binding is recorded (the common terminal-link case).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+
+    /// Optional predicate restricting which own Digimon may HOST the link
+    /// (`to: own_digimon` only). The author encodes the link card's link
+    /// requirement here (e.g. `effect_text_contains: Maquinamon` for EX11-027,
+    /// whose `[Link]` condition is "host has [Maquinamon] in text") so the host
+    /// select never offers an illegal host. Absent ⇒ any standing own Digimon.
+    /// Mirrors DCGO `CanLinkToTargetPermanent`'s host-condition check.
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub host_filter: PredicateSpec,
+
+    /// When true (`to: own_digimon` only), the effect's own source permanent is
+    /// excluded from the host candidates — "link … to 1 of your OTHER Digimon"
+    /// (EX11-027). Mirrors DCGO `CanSelectLinkTarget`'s `permanent !=
+    /// card.PermanentOfThisCard()`. Default false ("1 of your Digimon").
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub exclude_source: bool,
+}
+
+/// Args for `relink_self_to_own_digimon` (G-DSL-LINK-RELINK-STANDING-PERMANENT).
+/// Moves the effect's own standing permanent to become a link card on a chosen
+/// OTHER own Digimon (EX11-027 Maquinamon "link this Digimon to 1 of your other
+/// Digimon"). The host select always excludes self and applies `host_filter`
+/// (the link requirement, e.g. `effect_text_contains: Maquinamon`). Backed by
+/// the engine's `absorb_standing_digimon_as_link` (DCGO `IPlacePermanentToLinkCards`):
+/// the permanent's digivolution sources are trashed and its top card becomes a
+/// single link card on the host, firing `OnLink`.
+#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RelinkSelfToOwnDigimonArgs {
+    /// Host predicate — the link requirement the chosen host must satisfy.
+    /// Absent ⇒ any standing own Digimon (other than self).
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub host_filter: PredicateSpec,
+    /// Optional host-select prompt override.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
 }

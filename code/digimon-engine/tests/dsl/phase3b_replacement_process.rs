@@ -233,9 +233,11 @@ effects:
               - materials_count_lte: 0
               - not_in_binding: replacement_subject
           prompt: "Place another sourceless Digimon as bottom security"
-      - place_permanent_bottom_security_and_cancel_replacement:
+      - place_on_security:
+          source: { permanent: cost_body }
           of: you
-          target: cost_body
+          position: bottom
+          disposition: cancel
 "#;
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(yaml)

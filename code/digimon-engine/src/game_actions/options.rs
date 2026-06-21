@@ -42,6 +42,13 @@ impl Game {
         player_id: PlayerId,
         hand_index: usize,
     ) -> OptionPlayResult {
+        // Defensive reset: a manual top-level Option play must never inherit a
+        // stuck `effect_driven_option_use` lift from a previously-parked
+        // effect-driven use (which keeps the flag set across `Pending` so its
+        // own re-entries see the lifted gate). Clearing it here guarantees the
+        // manual Main-phase gate is enforced for player-initiated Option plays.
+        // `G-PLAY-OR-USE-FROM-HAND`.
+        self.effect_driven_option_use = false;
         self.play_option_core(
             player_id,
             OptionSource::Hand(hand_index),
@@ -64,6 +71,42 @@ impl Game {
             None,
             OptionCostPolicy::Free,
         )
+    }
+
+    /// Use an Option from `player`'s hand with `cost_delta` applied to its
+    /// printed use cost, preserving the full Option lifecycle (OnUseOption,
+    /// OptionMain / mode selection, subtype disposal). The unified
+    /// `play_or_use_from_hand_with_cost` helper routes Option-kind hand cards
+    /// here for "play or use 1 … card with the cost reduced by N" effects
+    /// (ST23-04 / ST23-08 / BT25-041). `G-PLAY-OR-USE-FROM-HAND`.
+    ///
+    /// The Main-phase gate is LIFTED for this call — the granting effect may
+    /// fire from any timing (e.g. BT25-041's `[When Attacking]`) — via the
+    /// transient `effect_driven_option_use` flag, restored on every exit path.
+    pub fn use_option_from_hand_with_cost(
+        &mut self,
+        player_id: PlayerId,
+        hand_index: usize,
+        cost_delta: crate::enums::CostDelta,
+    ) -> OptionPlayResult {
+        let policy = match cost_delta {
+            crate::enums::CostDelta::Free => OptionCostPolicy::Free,
+            crate::enums::CostDelta::Reduce(n) => OptionCostPolicy::Reduce(n),
+            crate::enums::CostDelta::Fixed(n) => OptionCostPolicy::Fixed(n),
+        };
+        let prev = self.effect_driven_option_use;
+        self.effect_driven_option_use = true;
+        let result =
+            self.play_option_core(player_id, OptionSource::Hand(hand_index), None, policy);
+        // Restore the flag UNLESS the play parked a selection — a parked
+        // Option play re-enters `play_option_core` from the selection callback
+        // (mode-select / OptionMain selection), which must still see the gate
+        // lifted. The flag is cleared when the Option fully resolves
+        // (`Trashed` / `Delayed` / `Linked` / `Training` / `Invalid`).
+        if !matches!(result, OptionPlayResult::Pending) {
+            self.effect_driven_option_use = prev;
+        }
+        result
     }
 
     /// Play an Option card from `player`'s trash (effect-driven).
@@ -145,7 +188,14 @@ impl Game {
         // 1. Phase gate. Counter-window Option plays bypass the Main-phase
         // gate — they fire during the defender's Counter window, which
         // can be any phase the turn player attacked from. Spec §5.2.
-        if !self.in_counter_window && self.current_phase != GamePhase::Main {
+        // An effect-driven Option USE ("you may play or use 1 … card") also
+        // bypasses the gate: the granting effect may fire from any timing
+        // (e.g. BT25-041's `[When Attacking]`), so the use must be legal
+        // outside the Main phase. `G-PLAY-OR-USE-FROM-HAND`.
+        if !self.in_counter_window
+            && !self.effect_driven_option_use
+            && self.current_phase != GamePhase::Main
+        {
             return OptionPlayResult::Invalid;
         }
 
@@ -250,11 +300,53 @@ impl Game {
             is_digivolve: false,
             target_permanents: [None, None],
         };
+
+        // G-COST-REDUCTION-INTERACTIVE-PAY-COST (Option-use half) — a
+        // field-hosted OptionUse reducer whose `pay_cost` INSTALLS A SELECTION
+        // (the interactive `trash_bottom_face_down_source_under_tamer` Tamer
+        // pick, BT25-049 / BT25-090) cannot be resolved by the synchronous scan
+        // below. Handle it through a dedicated interactive prompt FIRST: it runs
+        // the parking pay_cost, credits the reduction into
+        // `pending_interactive_option_use_reduction` on resolution, and
+        // re-enters `play_option_core` with the same `(source, mode,
+        // cost_policy)`. The interactive reducer is irrelevant to a Link play
+        // (its use cost is the flat link cost) or a Free (effect-driven)
+        // play. The reducer's flood-gates / once-per-turn / activation count are
+        // honored by the shared cost-reduction machinery. Runs only when there
+        // is no pre-credited reduction pending (the re-entry sets it).
+        if cost_policy == OptionCostPolicy::Pay
+            && !mode.is_link()
+            && !self.interactive_option_use_reducer_prompted
+            && self.try_prompt_interactive_option_use_cost_reducer(
+                player_id,
+                cost_target_ctx,
+                source,
+                mode,
+                cost_policy,
+            )
+        {
+            // Mark the reducer as prompted so the re-entry (after the
+            // accept/decline gate OR the parked Tamer-pick resolves) does NOT
+            // re-offer it. A decline-surviving signal: unlike the old
+            // `pending_interactive_option_use_reduction == 0` guard, this clears
+            // the prompt on a 0-credit DECLINE too (no infinite re-prompt).
+            // `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+            self.interactive_option_use_reducer_prompted = true;
+            return OptionPlayResult::Pending;
+        }
+        // Pre-resolved interactive Option-use reduction (set by the prompt's
+        // parked pay_cost success continuation, 0 otherwise). Consumed here.
+        // Reset the prompted flag in lock-step so the NEXT independent Option
+        // play re-offers its reducer.
+        let interactive_reduction =
+            std::mem::take(&mut self.pending_interactive_option_use_reduction);
+        self.interactive_option_use_reducer_prompted = false;
+
         let total_reduction = self.scan_before_pay_cost_reduction_with_target(
             player_id,
             CostReductionKind::OptionUse,
             Some(cost_target_ctx),
-        );
+        ) + interactive_reduction;
         // Observer dispatch — G-BEFORE-PAY-COST-GAIN-MEMORY.
         self.scan_before_pay_cost_observers(player_id, Some(cost_target_ctx));
         let effective_cost = match mode {
@@ -268,6 +360,32 @@ impl Game {
             // Standard / Delay / Training: effect-driven "without paying"
             // uses preserve the lifecycle but bypass the use-cost payment.
             _ if cost_policy == OptionCostPolicy::Free => 0,
+            // Effect-driven "use … for exactly N memory" — ignore the printed
+            // use cost and field reductions. `G-PLAY-OR-USE-FROM-HAND`.
+            OptionPlayMode::Standard
+            | OptionPlayMode::Delay(_)
+            | OptionPlayMode::Training
+                if matches!(cost_policy, OptionCostPolicy::Fixed(_)) =>
+            {
+                let OptionCostPolicy::Fixed(n) = cost_policy else {
+                    unreachable!()
+                };
+                n.max(0) as u16
+            }
+            // Effect-driven "use … with the cost reduced by N" — the flat N
+            // stacks on top of the field-hosted BeforePayCost reductions, same
+            // precedent as `CostDelta::Reduce` on the play half.
+            // `G-PLAY-OR-USE-FROM-HAND`.
+            OptionPlayMode::Standard
+            | OptionPlayMode::Delay(_)
+            | OptionPlayMode::Training
+                if matches!(cost_policy, OptionCostPolicy::Reduce(_)) =>
+            {
+                let OptionCostPolicy::Reduce(n) = cost_policy else {
+                    unreachable!()
+                };
+                ((printed_cost as i32) - total_reduction - n as i32).max(0) as u16
+            }
             // Standard / Delay / Training: ordinary play pays the printed
             // use cost, less any BeforePayCost reduction.
             _ => ((printed_cost as i32) - total_reduction).max(0) as u16,
@@ -346,6 +464,250 @@ impl Game {
         }
         self.check_turn_end();
         OptionPlayResult::Trashed
+    }
+
+    /// G-COST-REDUCTION-INTERACTIVE-PAY-COST (Option-use half) — consult the
+    /// field-hosted `BeforePayCost` reducers for the Option-use of
+    /// `cost_target` for one whose `pay_cost` is INTERACTIVE (installs a
+    /// selection — e.g. BT25-049 Armalizamon's
+    /// `trash_bottom_face_down_source_under_tamer`). The synchronous scan
+    /// cannot host a parking pay_cost, so such a reducer is handled here BEFORE
+    /// the scan in `play_option_core`: run its pay_cost (which parks), wrap the
+    /// parked selection's resolution to credit the reduction into
+    /// `Game::pending_interactive_option_use_reduction`, and re-enter
+    /// `play_option_core` with the same `(source, mode, cost_policy)`. Returns
+    /// `true` (caller aborts; the callbacks re-enter) when such a reducer was
+    /// offered; `false` when none qualifies (the synchronous scan then handles
+    /// the rest as before).
+    ///
+    /// Mirrors `try_prompt_interactive_digivolve_cost_reducer`. Only the FIRST
+    /// qualifying interactive reducer is handled per call (real cards —
+    /// BT25-049 / BT25-090 — print a single `[Once Per Turn]` reducer, and the
+    /// activation count dedups re-entry).
+    pub(super) fn try_prompt_interactive_option_use_cost_reducer(
+        &mut self,
+        player_id: PlayerId,
+        cost_target: CostTargetContext,
+        source: OptionSource,
+        mode: OptionPlayMode,
+        cost_policy: OptionCostPolicy,
+    ) -> bool {
+        let candidates = self.collect_before_pay_cost_reducers(
+            player_id,
+            Some(cost_target),
+            &[],
+            CostReductionKind::OptionUse,
+        );
+        let Some(candidate) = candidates
+            .into_iter()
+            .find(|c| c.pay_cost_interactive && c.has_pay_cost)
+        else {
+            return false;
+        };
+
+        let key = candidate.key.clone();
+        let source_kind = self.effect_source_kind_for_handle(key.source_card);
+
+        if candidate.optional {
+            // Optional reducer → accept/decline gate first.
+            let accept_key = key.clone();
+            let previous_phase = self.current_phase;
+            self.current_phase = GamePhase::EffectChoice;
+            let label = candidate.label.clone();
+            let amount = candidate.amount;
+            self.pending_selection = Some(PendingSelection {
+                zone_owner: None,
+                kind: SelectionKind::EffectChoice,
+                selecting_player: player_id,
+                previous_phase,
+                valid_action_ids: vec![crate::action::space::HAND_EFFECT_START],
+                is_optional: true,
+                prompt: format!("Use {} to reduce Option-use cost?", label),
+                effect_choices: Some(vec![crate::selection::EffectChoiceEntry {
+                    label: format!("{} (-{})", label, amount),
+                    action_id: crate::action::space::HAND_EFFECT_START,
+                    source_card: Some(key.source_card),
+                    source_kind: Some(source_kind),
+                    timing: Some(crate::enums::EffectTiming::BeforePayCost),
+                    is_optional: true,
+                    observation_metadata: Default::default(),
+                }]),
+                source_card: key.source_card,
+                source_permanent: key.source_permanent,
+                source_kind,
+                callback: Box::new(move |game: &mut Game, _action_id: u16| {
+                    let parked = game.run_interactive_option_use_reducer_pay_cost(
+                        accept_key,
+                        cost_target,
+                        player_id,
+                        source,
+                        mode,
+                        cost_policy,
+                    );
+                    if !parked {
+                        let _ = game.play_option_core(player_id, source, Some(mode), cost_policy);
+                    }
+                }),
+                on_decline: Some(Box::new(move |game: &mut Game| {
+                    let _ = game.play_option_core(player_id, source, Some(mode), cost_policy);
+                })),
+            });
+            return true;
+        }
+
+        // Mandatory reducer — run the pay_cost directly; its own (parking)
+        // selection IS the first prompt. If it PARKS, the continuation re-enters
+        // `play_option_core` → abort here (return true). If it resolves
+        // synchronously, the reduction was credited inline and the ORIGINAL
+        // `play_option_core` frame continues — return false.
+        self.run_interactive_option_use_reducer_pay_cost(
+            key,
+            cost_target,
+            player_id,
+            source,
+            mode,
+            cost_policy,
+        )
+    }
+
+    /// Run a field-hosted interactive Option-use reducer's `pay_cost`. Returns
+    /// `true` if it PARKED (the continuation that credits the reduction +
+    /// re-enters `play_option_core` is wired behind the park), `false` if it
+    /// resolved synchronously (the reduction was credited into
+    /// `pending_interactive_option_use_reduction` iff actually paid; the CALLER
+    /// drives the play — this does NOT re-enter on the synchronous path).
+    /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+    #[allow(clippy::too_many_arguments)]
+    fn run_interactive_option_use_reducer_pay_cost(
+        &mut self,
+        key: CostReductionKey,
+        cost_target: CostTargetContext,
+        player_id: PlayerId,
+        source: OptionSource,
+        mode: OptionPlayMode,
+        cost_policy: OptionCostPolicy,
+    ) -> bool {
+        let amount = self
+            .inspect_cost_reduction_candidate(&key, Some(cost_target))
+            .unwrap_or(0);
+        // `effects_for_card` returns an OWNED Vec rebuilt each call, so move the
+        // (non-`Clone`) boxed `pay_cost_fn` out of it.
+        let Some(mut effects) = self.effects_for_card(&key.card_id, key.source_card) else {
+            return false;
+        };
+        let Some(effect) = effects.get_mut(key.effect_slot as usize) else {
+            return false;
+        };
+        let max_per_turn = effect.max_per_turn;
+        let Some(pay_cost_fn) = effect.pay_cost_fn.take() else {
+            return false;
+        };
+
+        let pending_before = self.pending_selection.is_some();
+        let (synchronous_ok, cost_unpayable) = {
+            let mut ctx = EffectContext::new_with_cost_target(
+                self,
+                key.source_card,
+                key.source_permanent,
+                key.controller,
+                cost_target.card,
+                cost_target.from_hand,
+            );
+            ctx.cost_is_digivolve = cost_target.is_digivolve;
+            let ok = pay_cost_fn(&mut ctx);
+            (ok, ctx.cost_unpayable)
+        };
+        let parked = !pending_before && self.pending_selection.is_some();
+
+        if parked {
+            if max_per_turn > 0 {
+                self.record_cost_reducer_activation(&key);
+            }
+            self.wrap_interactive_option_use_reducer_continuation(
+                amount,
+                player_id,
+                source,
+                mode,
+                cost_policy,
+            );
+            return true;
+        }
+
+        if synchronous_ok && !cost_unpayable {
+            if max_per_turn > 0 {
+                self.record_cost_reducer_activation(&key);
+            }
+            self.pending_interactive_option_use_reduction += amount;
+        }
+        false
+    }
+
+    /// Wrap the parked pay_cost selection so its resolution credits `amount`
+    /// into `pending_interactive_option_use_reduction` and re-enters
+    /// `play_option_core`. `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+    fn wrap_interactive_option_use_reducer_continuation(
+        &mut self,
+        amount: i32,
+        player_id: PlayerId,
+        source: OptionSource,
+        mode: OptionPlayMode,
+        cost_policy: OptionCostPolicy,
+    ) {
+        let Some(mut pending) = self.pending_selection.take() else {
+            return;
+        };
+        let original_callback = pending.callback;
+        pending.callback = Box::new(move |game: &mut Game, action_id: u16| {
+            original_callback(game, action_id);
+            game.resume_interactive_option_use_reducer_after_pending(
+                amount,
+                player_id,
+                source,
+                mode,
+                cost_policy,
+            );
+        });
+        let original_decline = pending.on_decline.take();
+        pending.on_decline = original_decline.map(|orig| {
+            Box::new(move |game: &mut Game| {
+                orig(game);
+                game.resume_interactive_option_use_reducer_after_pending(
+                    amount,
+                    player_id,
+                    source,
+                    mode,
+                    cost_policy,
+                );
+            }) as crate::selection::DeclineCallback
+        });
+        self.pending_selection = Some(pending);
+    }
+
+    /// Resume the Option-use play after the interactive reducer's parked
+    /// pay_cost resolves. If it installed a FURTHER selection, re-wrap; else
+    /// credit the reduction and re-enter `play_option_core`.
+    /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+    fn resume_interactive_option_use_reducer_after_pending(
+        &mut self,
+        amount: i32,
+        player_id: PlayerId,
+        source: OptionSource,
+        mode: OptionPlayMode,
+        cost_policy: OptionCostPolicy,
+    ) {
+        if self.pending_selection.is_some() {
+            self.wrap_interactive_option_use_reducer_continuation(
+                amount,
+                player_id,
+                source,
+                mode,
+                cost_policy,
+            );
+            return;
+        }
+        // The parked pay_cost resolved (the mandatory Tamer pick paid the cost).
+        self.pending_interactive_option_use_reduction += amount;
+        let _ = self.play_option_core(player_id, source, Some(mode), cost_policy);
     }
 
     /// Install the dual-mode mode-select prompt for a Plug-In Option that

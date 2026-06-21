@@ -123,6 +123,24 @@ describe('deck builder view helpers', () => {
     expect(filterBuilderCards([target], filters({ type: 'all', level: 'all', rarity: 'all' }))).toEqual([target]);
   });
 
+  it('matches the intersection (AND) of selected colors across primary and secondary', () => {
+    const monoGreen = card({ cardnumber: 'BT1-100', name: 'Mono Green', color: 'Green' });
+    const monoBlue = card({ cardnumber: 'BT1-101', name: 'Mono Blue', color: 'Blue' });
+    const greenBlue = card({ cardnumber: 'BT1-102', name: 'Green/Blue', color: 'Green', color2: 'Blue' });
+    const blueGreen = card({ cardnumber: 'BT1-103', name: 'Blue/Green', color: 'Blue', color2: 'Green' });
+    const greenRed = card({ cardnumber: 'BT1-104', name: 'Green/Red', color: 'Green', color2: 'Red' });
+    const pool = [monoGreen, monoBlue, greenBlue, blueGreen, greenRed];
+
+    // Two colors → only cards containing BOTH (order-independent); mono cards excluded.
+    expect(filterBuilderCards(pool, filters({ colors: ['Green', 'Blue'] }))).toEqual([greenBlue, blueGreen]);
+    // One color → every card containing it (mono + dual).
+    expect(filterBuilderCards(pool, filters({ colors: ['Green'] }))).toEqual([monoGreen, greenBlue, blueGreen, greenRed]);
+    // No color → no color restriction.
+    expect(filterBuilderCards(pool, filters({ colors: [] }))).toEqual(pool);
+    // Three colors → nothing (no card has three colors).
+    expect(filterBuilderCards(pool, filters({ colors: ['Green', 'Blue', 'Red'] }))).toEqual([]);
+  });
+
   it('hides format-illegal cards only when legalOnly is set and a legality map is given', () => {
     const legal = card({ cardnumber: 'BT1-010', name: 'Legal Mon' });
     const banned = card({ cardnumber: 'BT1-011', name: 'Banned Mon' });
@@ -214,6 +232,17 @@ describe('deck builder view helpers', () => {
       label: 'LV2 / DIGI-EGG',
       total: 2,
     });
+  });
+
+  it('groups Lv6 and Lv7 into separate sections (Lv7 pulled out of the old Lv6+ bucket)', () => {
+    const lv6 = card({ cardnumber: 'BT1-006', name: 'Imperialdramon', type: 'Digimon', level: '6' });
+    const lv7 = card({ cardnumber: 'BT1-007', name: 'Omnimon', type: 'Digimon', level: '7' });
+
+    const sections = groupDeckEntriesForBuilder([entry(lv6, 2), entry(lv7, 1)]);
+
+    expect(sections.map((section) => section.label)).toEqual(['LV6 / MEGA', 'LV7 / ULTRA']);
+    expect(sections.find((section) => section.label === 'LV6 / MEGA')?.total).toBe(2);
+    expect(sections.find((section) => section.label === 'LV7 / ULTRA')?.total).toBe(1);
   });
 
   it('selects an explicit deck icon only while that card is still present', () => {

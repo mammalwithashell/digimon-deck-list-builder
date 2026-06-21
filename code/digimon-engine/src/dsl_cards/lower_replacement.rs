@@ -502,7 +502,12 @@ fn required_selection_step_has_candidate(
         // leaving permanent (the `replacement_subject` binding) has ≥1 link
         // card. Gates the optional accept prompt so it is not offered with 0
         // link cards.
-        CompiledStep::TrashOwnLinkCardAndCancelLeave => bindings
+        // Both link-card leave-replacement costs (trash, or place-as-bottom-
+        // source for EX11-027) are payable only when the leaving permanent has
+        // ≥1 link card. Gates the optional accept prompt so it is not offered
+        // with 0 link cards.
+        CompiledStep::TrashOwnLinkCardAndCancelLeave
+        | CompiledStep::PlaceLinkCardAsBottomSourceAndCancelLeave => bindings
             .get_permanent("replacement_subject")
             .and_then(|h| {
                 ctx.game

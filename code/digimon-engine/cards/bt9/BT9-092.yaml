@@ -8,28 +8,31 @@ effects:
   - when: on_play
     summary: "[On Play] Reveal 3; add 1 X Antibody Digimon and 1 X Antibody Option"
     process:
-      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
-      - select_reveal:
+      # collapse §2.4 parity fixture — the reveal→pick→bottom searcher idiom as
+      # one `reveal_search`. Disjoint digimon/option bucket filters make the
+      # cross-bucket de-dup a no-op, so this is behaviorally identical to the
+      # former two-`select_reveal` longhand. Each bucket stays an optional pick.
+      - reveal_search:
           of: you
-          bind_as: digimon
-          optional: true
-          filter:
-            all_of:
-              - kind: digimon
-              - trait_has: "X Antibody"
-          prompt: "Add 1 X Antibody Digimon card"
-      - add_to_hand_from_reveal: { of: you, card: digimon }
-      - select_reveal:
-          of: you
-          bind_as: option
-          optional: true
-          filter:
-            all_of:
-              - kind: option
-              - trait_has: "X Antibody"
-          prompt: "Add 1 X Antibody Option card"
-      - add_to_hand_from_reveal: { of: you, card: option }
-      - place_remainder_on_deck: { of: you, position: bottom }
+          count: 3
+          buckets:
+            - filter:
+                all_of:
+                  - kind: digimon
+                  - trait_has: "X Antibody"
+              to: hand
+              max: 1
+              optional: true
+              prompt: "Add 1 X Antibody Digimon card"
+            - filter:
+                all_of:
+                  - kind: option
+                  - trait_has: "X Antibody"
+              to: hand
+              max: 1
+              optional: true
+              prompt: "Add 1 X Antibody Option card"
+          remainder: bottom
 
   - when: on_security
     summary: "[Security] Play this card without paying the cost"

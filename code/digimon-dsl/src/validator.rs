@@ -19,8 +19,35 @@ pub struct ValidationContext<'a> {
 pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<ValidationError>> {
     let mut errors = Vec::new();
 
-    for (i, clause) in spec.effects.iter().enumerate() {
-        let prefix = format!("effects[{i}]");
+    // Validate the card's top-level clauses plus the per-face clauses of a
+    // DUAL card (`dual.digimon.effects` / `dual.option.effects`,
+    // `G-DSL-DUAL-PER-FACE-EFFECTS`). All three lists share the exact same
+    // per-clause semantic checks; only the error-path prefix differs.
+    let mut all_clauses: Vec<(String, &ClauseSpec)> = spec
+        .effects
+        .iter()
+        .enumerate()
+        .map(|(i, c)| (format!("effects[{i}]"), c))
+        .collect();
+    if let Some(dual) = &spec.dual {
+        all_clauses.extend(
+            dual.digimon
+                .effects
+                .iter()
+                .enumerate()
+                .map(|(i, c)| (format!("dual.digimon.effects[{i}]"), c)),
+        );
+        all_clauses.extend(
+            dual.option
+                .effects
+                .iter()
+                .enumerate()
+                .map(|(i, c)| (format!("dual.option.effects[{i}]"), c)),
+        );
+    }
+
+    for (prefix, clause) in &all_clauses {
+        let prefix = prefix.clone();
         match clause {
             ClauseSpec::Triggered(t) => {
                 validate_triggered(t, &prefix, &spec.card, ctx, &mut errors)
@@ -76,10 +103,10 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                         &mut errors,
                                     );
                                 }
-                                if let Some(formula) = &b.amount_fn {
+                                if let Some(formula) = &b.amount {
                                     validate_formula(
                                         formula,
-                                        &format!("{prefix}.amount_fn"),
+                                        &format!("{prefix}.amount"),
                                         &spec.card,
                                         ctx,
                                         &mut errors,
@@ -208,9 +235,7 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                     });
                                 }
                                 if b.dp_modifier.is_none()
-                                    && b.dp_modifier_fn.is_none()
                                     && b.security_attack.is_none()
-                                    && b.security_attack_fn.is_none()
                                     && b.grant_keyword.is_none()
                                     && b.modifier.is_none()
                                     && b.effect_immunity.is_none()
@@ -218,7 +243,7 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                     errors.push(ValidationError {
                                         card_id: spec.card.clone(),
                                         path: prefix.clone(),
-                                        message: "aura requires a payload: dp_modifier, dp_modifier_fn, security_attack, security_attack_fn, grant_keyword, modifier, or effect_immunity"
+                                        message: "aura requires a payload: dp_modifier, security_attack, grant_keyword, modifier, or effect_immunity"
                                             .to_string(),
                                     });
                                 }
@@ -250,10 +275,15 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                         });
                                     }
                                 }
-                                if let Some(formula) = &b.dp_modifier_fn {
+                                // unify-dsl-scalar-and-comparators: `dp_modifier`
+                                // is now a `FormulaSpec`. A bare `Literal` is a
+                                // static grant and needs no validation; the
+                                // dynamic-DP-aura restrictions apply only when
+                                // the value is a real (non-literal) formula.
+                                if let Some(formula) = dynamic_aura_formula(&b.dp_modifier) {
                                     validate_formula(
                                         formula,
-                                        &format!("{prefix}.dp_modifier_fn"),
+                                        &format!("{prefix}.dp_modifier"),
                                         &spec.card,
                                         ctx,
                                         &mut errors,
@@ -262,7 +292,7 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                         if predicate_depends_on_dp(target) {
                                             errors.push(ValidationError {
                                                 card_id: spec.card.clone(),
-                                                path: format!("{prefix}.dp_modifier_fn"),
+                                                path: format!("{prefix}.dp_modifier"),
                                                 message: "dynamic DP aura cannot use a DP-dependent target predicate"
                                                     .to_string(),
                                             });
@@ -272,7 +302,7 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                         if predicate_depends_on_dp(active_when) {
                                             errors.push(ValidationError {
                                                 card_id: spec.card.clone(),
-                                                path: format!("{prefix}.dp_modifier_fn"),
+                                                path: format!("{prefix}.dp_modifier"),
                                                 message: "dynamic DP aura cannot use a DP-dependent active_when predicate"
                                                     .to_string(),
                                             });
@@ -281,17 +311,17 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                     if formula_uses_dp_aggregate(formula) {
                                         errors.push(ValidationError {
                                             card_id: spec.card.clone(),
-                                            path: format!("{prefix}.dp_modifier_fn"),
+                                            path: format!("{prefix}.dp_modifier"),
                                             message:
                                                 "dynamic DP aura cannot use a DP aggregate formula"
                                                     .to_string(),
                                         });
                                     }
                                 }
-                                if let Some(formula) = &b.security_attack_fn {
+                                if let Some(formula) = dynamic_aura_formula(&b.security_attack) {
                                     validate_formula(
                                         formula,
-                                        &format!("{prefix}.security_attack_fn"),
+                                        &format!("{prefix}.security_attack"),
                                         &spec.card,
                                         ctx,
                                         &mut errors,
@@ -365,6 +395,19 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
         Ok(())
     } else {
         Err(errors)
+    }
+}
+
+/// Extract the dynamic (non-literal) formula from a unified magnitude field
+/// (unify-dsl-scalar-and-comparators). Returns `None` for an absent value or a
+/// bare `Literal` (a static grant), so the dynamic-aura validation rules fire
+/// only for true runtime formulas.
+fn dynamic_aura_formula(
+    f: &Option<crate::formula::FormulaSpec>,
+) -> Option<&crate::formula::FormulaSpec> {
+    match f {
+        Some(spec) if !matches!(spec, crate::formula::FormulaSpec::Literal(_)) => Some(spec),
+        _ => None,
     }
 }
 
@@ -444,6 +487,7 @@ fn validate_predicate(
         ("level_lte", &pred.level_lte),
         ("level_gte", &pred.level_gte),
         ("play_cost_lte", &pred.play_cost_lte),
+        ("play_or_use_cost_lte", &pred.play_or_use_cost_lte),
         ("dp_eq", &pred.dp_eq),
         ("dp_lte", &pred.dp_lte),
         ("dp_gte", &pred.dp_gte),
@@ -763,8 +807,23 @@ fn validate_step(
                 });
             }
         }
-        StepSpec::PlacePermanentOnSecurityObserved(args) => {
-            validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
+        StepSpec::PlaceOnSecurity(args) => {
+            // collapse §3.3 — validate the source binding (card / permanent).
+            // `self`/`self_option` markers carry no binding to check.
+            match &args.source {
+                crate::step::SecuritySource::Card { card } => {
+                    validate_binding_ref(card, &format!("{prefix}.source.card"), card_id, errors);
+                }
+                crate::step::SecuritySource::Permanent { permanent } => {
+                    validate_binding_ref(
+                        permanent,
+                        &format!("{prefix}.source.permanent"),
+                        card_id,
+                        errors,
+                    );
+                }
+                crate::step::SecuritySource::Marker(_) => {}
+            }
         }
         StepSpec::SecurityPlaceStackedCard(args) => {
             validate_binding_ref(&args.carrier, &format!("{prefix}.carrier"), card_id, errors);
@@ -797,21 +856,11 @@ fn validate_step(
         }
         StepSpec::DeDigivolve(args) => {
             validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
-            if args.amount.is_some() && args.amount_fn.is_some() {
-                errors.push(ValidationError {
-                    card_id: card_id.into(),
-                    path: prefix.into(),
-                    message: "de_digivolve supports either amount or amount_fn, not both".into(),
-                });
-            }
-            if let Some(formula) = &args.amount_fn {
-                validate_formula(
-                    formula,
-                    &format!("{prefix}.amount_fn"),
-                    card_id,
-                    ctx,
-                    errors,
-                );
+            // unify-dsl-scalar-and-comparators: `amount` is one `FormulaSpec`
+            // field (a bare int or a formula); the old "amount vs amount_fn,
+            // not both" mutual-exclusion check no longer applies.
+            if let Some(formula) = &args.amount {
+                validate_formula(formula, &format!("{prefix}.amount"), card_id, ctx, errors);
             }
         }
         StepSpec::SearchOwnSecurityStack(args) => {
@@ -1131,10 +1180,10 @@ fn validate_step_binding_scope(
         }
         StepSpec::DeDigivolve(args) => {
             validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);
-            if let Some(formula) = &args.amount_fn {
+            if let Some(formula) = &args.amount {
                 validate_formula_binding_scope(
                     formula,
-                    &format!("{prefix}.amount_fn"),
+                    &format!("{prefix}.amount"),
                     card_id,
                     scope,
                     errors,
@@ -1594,15 +1643,15 @@ fn declare_optional_binding(scope: &mut BTreeSet<String>, binding: &Option<Strin
 }
 
 fn validate_modifier_value_binding_scope(
-    value: &crate::step::ModifierValueSpec,
+    value: &crate::formula::FormulaSpec,
     prefix: &str,
     card_id: &str,
     scope: &BTreeSet<String>,
     errors: &mut Vec<ValidationError>,
 ) {
-    if let crate::step::ModifierValueSpec::Formula(formula) = value {
-        validate_formula_binding_scope(&formula.formula, prefix, card_id, scope, errors);
-    }
+    // unify-dsl-scalar-and-comparators: `value` is a `FormulaSpec`; a bare
+    // `Literal` has no bindings, so validating it directly is a no-op.
+    validate_formula_binding_scope(value, prefix, card_id, scope, errors);
 }
 
 fn validate_predicate_binding_scope(
@@ -1616,6 +1665,7 @@ fn validate_predicate_binding_scope(
         ("level_lte", &pred.level_lte),
         ("level_gte", &pred.level_gte),
         ("play_cost_lte", &pred.play_cost_lte),
+        ("play_or_use_cost_lte", &pred.play_or_use_cost_lte),
         ("dp_eq", &pred.dp_eq),
         ("dp_lte", &pred.dp_lte),
         ("dp_gte", &pred.dp_gte),
@@ -1951,15 +2001,15 @@ fn validate_binding_ref(
 }
 
 fn validate_modifier_value(
-    value: &crate::step::ModifierValueSpec,
+    value: &crate::formula::FormulaSpec,
     prefix: &str,
     card_id: &str,
     ctx: &ValidationContext<'_>,
     errors: &mut Vec<ValidationError>,
 ) {
-    if let crate::step::ModifierValueSpec::Formula(formula) = value {
-        validate_formula(&formula.formula, prefix, card_id, ctx, errors);
-    }
+    // unify-dsl-scalar-and-comparators: `value` is a `FormulaSpec`; validating
+    // a bare `Literal` is a no-op, so call the formula validator directly.
+    validate_formula(value, prefix, card_id, ctx, errors);
 }
 
 fn validate_formula(

@@ -56,6 +56,19 @@ pub struct TriggeredClause {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub condition: Option<PredicateSpec>,
 
+    /// Per-timing condition overrides (G-SHARED-OPT-HETEROGENEOUS-TIMING). For a
+    /// clause whose `when:` lists MULTIPLE heterogeneous timings sharing ONE
+    /// once-per-turn counter but each gated by a *different* condition, list one
+    /// entry per timing here. When a clause fires from timing `T`, the
+    /// matching entry's `condition` is AND-ed onto the clause-level `condition`
+    /// / `active_when`; a timing with no entry uses only the clause-level gates.
+    /// Mirrors DCGO's pattern of two `ActivateClass` instances sharing a
+    /// `SetHashString` but each carrying its own `CanUseCondition`
+    /// (ST24-11 Rosemon clause 2: OnSuspend + OnDigivolutionCardTrashed;
+    /// BT25-029 MirageGaogamon clause 2: OnAddToHand + OnDigivolutionCardTrashed).
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub timing_conditions: Vec<TimingCondition>,
+
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
 
@@ -77,6 +90,16 @@ pub struct TriggeredClause {
 
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub process: Vec<StepSpec>,
+}
+
+/// One entry of `timing_conditions:` (G-SHARED-OPT-HETEROGENEOUS-TIMING): a
+/// condition predicate that gates ONLY the named timing of a shared-OPT
+/// multi-timing clause.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TimingCondition {
+    pub when: Timing,
+    pub condition: PredicateSpec,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -338,20 +361,22 @@ pub struct AuraBody {
     pub target: Option<PredicateSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target_player: Option<crate::common::PlayerRef>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub dp_modifier: Option<i32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub dp_modifier_fn: Option<crate::formula::FormulaSpec>,
+    /// DP grant added to each matching target. A `FormulaSpec`
+    /// (unify-dsl-scalar-and-comparators): a bare int `dp_modifier: 3000` is a
+    /// literal, a map is a runtime formula over board state. The retired
+    /// `dp_modifier_fn` key survives as a deserialize alias. At compile time a
+    /// literal routes to the compiled `dp_modifier` integer and any other
+    /// formula to `dp_modifier_fn`, byte-identical to the pre-unification form.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "dp_modifier_fn")]
+    pub dp_modifier: Option<crate::formula::FormulaSpec>,
     /// Flat `Security A. ±N` grant. Track H §1 — `AuraGrant::SecurityAttack(i32)`.
-    /// Installs `ModifierType::SecurityAttackChange` carrying the literal
-    /// delta on each matching target. Use this for printed text like
-    /// "your Olympos XII Digimon get Security Attack +1"; use
-    /// `security_attack_fn` only when the value is computed dynamically
-    /// (formula over board state).
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub security_attack: Option<i32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub security_attack_fn: Option<crate::formula::FormulaSpec>,
+    /// Installs `ModifierType::SecurityAttackChange` carrying the delta on each
+    /// matching target. A `FormulaSpec`: a bare int is a literal grant
+    /// ("your Olympos XII Digimon get Security Attack +1"); a map is computed
+    /// dynamically over board state. The retired `security_attack_fn` key
+    /// survives as a deserialize alias.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "security_attack_fn")]
+    pub security_attack: Option<crate::formula::FormulaSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grant_keyword: Option<GrantKeywordValue>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -371,6 +396,12 @@ pub struct AuraBody {
     /// by scalar/flag modifiers.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub modifier_name: Option<String>,
+    /// Structured `synth_identity` payload for a `modifier: TreatAsDigimon`
+    /// aura — "all of your [Marcus Damon]s are also treated as a 12000 DP
+    /// Digimon" (BT25-104). Lowers to `ModifierPayload::SynthIdentity` on each
+    /// matching target. G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub synth_identity: Option<crate::step::SynthIdentitySpec>,
     /// Track H §4 — install-once continuous gate. When set, the aura's
     /// modifier installs with `Expiry::UntilCondition` carrying this
     /// predicate. The UntilCondition controller (PR #458) evicts the
@@ -468,10 +499,14 @@ pub struct CostReductionBody {
     pub optional: bool,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub once_per_turn: bool,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub amount: Option<i32>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub amount_fn: Option<crate::formula::FormulaSpec>,
+    /// Cost-reduction magnitude. A `FormulaSpec`
+    /// (unify-dsl-scalar-and-comparators): a bare int `amount: 2` is a literal,
+    /// a map (e.g. `{ base: 4, per: material_count, delta: 1 }`) is a runtime
+    /// formula. The retired `amount_fn` key survives as a deserialize alias.
+    /// At compile time a literal routes to the compiled `amount` integer and
+    /// any other formula to `amount_fn`, byte-identical to the prior form.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "amount_fn")]
+    pub amount: Option<crate::formula::FormulaSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pay_cost: Option<Vec<StepSpec>>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
@@ -522,6 +557,18 @@ pub struct ReplacementCostBody {
     /// `cancel_replacement` is emitted).
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub trash_own_link_card: bool,
+
+    /// EX11-027 Maquinamon — pay the leave by placing 1 of the LEAVING
+    /// permanent's own link cards as its BOTTOM digivolution card ("by placing
+    /// 1 of its link cards as its bottom digivolution card, it doesn't leave").
+    /// Identical gating to `trash_own_link_card` (only on
+    /// `when_would_leave_battle_area`, clause `optional: true`, requires ≥1 link
+    /// card, owns `outcome: prevent`) — but the chosen link card is MOVED under
+    /// the carrier (DCGO `Permanent.AddDigivolutionCardsBottom`) instead of
+    /// trashed, so it is NOT a trash and fires no `OnLinkedCardTrashed`. Lowers
+    /// to a single `PlaceLinkCardAsBottomSourceAndCancelLeave` step.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub place_link_card_as_bottom_digivolution: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

@@ -49,8 +49,8 @@ export function ActionBar({ phase, actionMask, onAction, onSurrender, isGameOver
   };
 
   return (
-    <div data-testid="action-bar" className="flex items-center gap-2 px-3 py-2 bg-gray-800 border-t border-gray-700">
-      <span className="text-xs text-gray-500">{phaseName}:</span>
+    <div data-testid="action-bar" className="flex items-center gap-2 px-3 py-2 bg-[var(--ib-graphite)] border-t border-[var(--ib-line)]">
+      <span className="text-xs text-[var(--ib-bone-dd)]">{phaseName}:</span>
 
       {phase === GamePhase.Mulligan && canKeepHand && (
         <button
@@ -96,7 +96,7 @@ export function ActionBar({ phase, actionMask, onAction, onSurrender, isGameOver
         <button
           data-testid="action-pass"
           onClick={() => onAction(ACTION.PASS)}
-          className="px-3 py-1 bg-gray-600 hover:bg-gray-500 text-white text-sm rounded"
+          className="px-3 py-1 bg-[var(--ib-panel-2)] hover:opacity-90 text-[var(--ib-bone)] text-sm rounded border border-[var(--ib-line)]"
         >
           {phase === 2 ? 'Skip Breeding' : phase >= 5 ? 'Decline' : 'Pass'}
         </button>
@@ -106,7 +106,7 @@ export function ActionBar({ phase, actionMask, onAction, onSurrender, isGameOver
       {hasDecoded
         ? decodedEffects.length > 0 && (
             <>
-              <span className="w-px h-5 bg-gray-600" />
+              <span className="w-px h-5 bg-[var(--ib-line)]" />
               {decodedEffects.map((a) => (
                 <button
                   key={`eff-${a.actionId}`}
@@ -125,7 +125,7 @@ export function ActionBar({ phase, actionMask, onAction, onSurrender, isGameOver
           )
         : canActivateEffect && canActivateEffect.size > 0 && (
             <>
-              <span className="w-px h-5 bg-gray-600" />
+              <span className="w-px h-5 bg-[var(--ib-line)]" />
               {[...canActivateEffect.entries()].map(([source, effects]) =>
                 [...effects].map((effectIdx) => (
                   <button
@@ -148,7 +148,7 @@ export function ActionBar({ phase, actionMask, onAction, onSurrender, isGameOver
           <button
             data-testid="action-surrender"
             onClick={handleSurrender}
-            className="px-3 py-1 bg-red-900/60 hover:bg-red-800 text-red-300 text-xs rounded border border-red-700/50"
+            className="px-3 py-1 bg-transparent hover:bg-[var(--danger)] hover:text-white text-[var(--danger)] text-xs rounded border border-[var(--danger)]"
           >
             Surrender
           </button>

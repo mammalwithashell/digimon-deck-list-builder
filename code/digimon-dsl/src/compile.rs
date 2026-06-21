@@ -91,6 +91,32 @@ fn compile_dual(
     card_id: &str,
     errors: &mut Vec<ValidationError>,
 ) -> CompiledDual {
+    let digimon_effects = dual
+        .digimon
+        .effects
+        .iter()
+        .enumerate()
+        .map(|(i, c)| compile_clause(c, &format!("dual.digimon.effects[{i}]"), card_id, errors))
+        .collect();
+    let option_effects = dual
+        .option
+        .effects
+        .iter()
+        .enumerate()
+        .map(|(i, c)| compile_clause(c, &format!("dual.option.effects[{i}]"), card_id, errors))
+        .collect();
+    // Fold the `arts_digivolve: true` shorthand into the option-face keyword
+    // list — `pending_option_can_arts_digivolve` reads `ArtsDigivolve` from
+    // `dual.option.keywords`, so the shorthand and the explicit keyword form
+    // are equivalent at the engine boundary (`G-DSL-ARTS-DIGIVOLVE`).
+    let mut option_keywords = dual.option.keywords.clone();
+    if dual.option.arts_digivolve
+        && !option_keywords.iter().any(|k| {
+            matches!(k.as_str(), "ArtsDigivolve" | "Arts Digivolve" | "arts_digivolve")
+        })
+    {
+        option_keywords.push("ArtsDigivolve".to_string());
+    }
     CompiledDual {
         digimon: CompiledDualDigimon {
             level: dual.digimon.level,
@@ -104,6 +130,7 @@ fn compile_dual(
             traits: dual.digimon.traits.clone(),
             effect_text: dual.digimon.effect_text.clone(),
             inherited_text: dual.digimon.inherited_text.clone(),
+            effects: digimon_effects,
         },
         option: CompiledDualOption {
             use_cost: dual.option.use_cost,
@@ -115,7 +142,7 @@ fn compile_dual(
                 .collect(),
             effect_text: dual.option.effect_text.clone(),
             security_text: dual.option.security_text.clone(),
-            keywords: dual.option.keywords.clone(),
+            keywords: option_keywords,
             use_requirement: dual.option.use_requirement.as_ref().map(|p| {
                 Box::new(compile_predicate(
                     p,
@@ -124,6 +151,7 @@ fn compile_dual(
                     errors,
                 ))
             }),
+            effects: option_effects,
         },
     }
 }
@@ -281,6 +309,7 @@ fn compile_stack_position(p: crate::step::StackPosition) -> CompiledStackPositio
         S::Top => CompiledStackPosition::Top,
         S::Bottom => CompiledStackPosition::Bottom,
         S::Random => CompiledStackPosition::Random,
+        S::Choice => CompiledStackPosition::Choice,
     }
 }
 
@@ -399,6 +428,45 @@ fn compile_aggregate_selector(a: crate::formula::AggregateSelector) -> CompiledA
     }
 }
 
+/// Split a `FormulaSpec` magnitude into the existing literal-vs-formula
+/// compiled encoding (unify-dsl-scalar-and-comparators). A pure `Literal(n)`
+/// keeps the integer fast-path; any other formula compiles to a
+/// `CompiledFormula`. Returns `Ok(n)` for the literal case and
+/// `Err(compiled_formula)` otherwise, so callers route to whichever compiled
+/// variant they own (e.g. `CompiledCostDelta::{Reduce,ReduceFn}`,
+/// `CompiledStep::{GainMemory,GainMemoryFn}`). This keeps the compiled output
+/// byte-identical to the pre-unification encoding for every existing card.
+fn split_scalar_formula(
+    f: &crate::formula::FormulaSpec,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> Result<i32, CompiledFormula> {
+    match f {
+        crate::formula::FormulaSpec::Literal(n) => Ok(*n),
+        other => Err(compile_formula(other, prefix, card_id, errors)),
+    }
+}
+
+/// `Option` form of [`split_scalar_formula`] for struct fields that carry the
+/// literal in one compiled field and the formula in a sibling `_fn` field
+/// (`aura.dp_modifier`/`dp_modifier_fn`, `cost_reduction.amount`/`amount_fn`,
+/// …). Returns `(literal, formula)` with at most one populated.
+fn split_opt_scalar_formula(
+    f: &Option<crate::formula::FormulaSpec>,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> (Option<i32>, Option<CompiledFormula>) {
+    match f {
+        None => (None, None),
+        Some(spec) => match split_scalar_formula(spec, prefix, card_id, errors) {
+            Ok(n) => (Some(n), None),
+            Err(formula) => (None, Some(formula)),
+        },
+    }
+}
+
 fn compile_cost_delta(
     c: &crate::step::CostDelta,
     prefix: &str,
@@ -410,13 +478,13 @@ fn compile_cost_delta(
         CostDelta::Keyword(CostDeltaKeyword::Free) => CompiledCostDelta::Free,
         CostDelta::Keyword(CostDeltaKeyword::Printed) => CompiledCostDelta::Printed,
         CostDelta::Literal(n) => CompiledCostDelta::Literal(*n),
-        CostDelta::Reduce { reduce } => CompiledCostDelta::Reduce(*reduce),
-        CostDelta::ReduceFn { reduce_fn } => CompiledCostDelta::ReduceFn(compile_formula(
-            reduce_fn,
-            &format!("{prefix}.cost_delta.reduce_fn"),
-            card_id,
-            errors,
-        )),
+        CostDelta::Reduce { reduce } => {
+            match split_scalar_formula(reduce, &format!("{prefix}.cost_delta.reduce"), card_id, errors)
+            {
+                Ok(n) => CompiledCostDelta::Reduce(n),
+                Err(formula) => CompiledCostDelta::ReduceFn(formula),
+            }
+        }
     }
 }
 
@@ -573,28 +641,217 @@ fn compile_count_bound(
 
 // ── Predicate ───────────────────────────────────────────────────────
 
+/// Merge a metric's legacy flat keys (`<m>_eq`/`_lte`/`_gte`) with its canonical
+/// `MetricComparators` field (unify-dsl-scalar-and-comparators §2) into the
+/// effective `(eq, lte, gte)` compiled constraints. Canonical comparators take
+/// precedence over the matching legacy op. Each value compiles to a
+/// `CompiledDpConstraint` via the same literal/formula split the legacy path
+/// uses, so the compiled output is byte-identical to the legacy flat-key form.
+/// A `MetricComparators` whose `value` is a formula resolves read-safely at eval
+/// (no game mutation) — required for action-mask + future search contexts.
+#[allow(clippy::type_complexity)]
+fn resolve_metric_comparators(
+    legacy_eq: &Option<crate::predicate::DpConstraint>,
+    legacy_lte: &Option<crate::predicate::DpConstraint>,
+    legacy_gte: &Option<crate::predicate::DpConstraint>,
+    canonical: &Option<crate::predicate::MetricComparators>,
+    prefix: &str,
+    metric: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> (
+    Option<CompiledDpConstraint>,
+    Option<CompiledDpConstraint>,
+    Option<CompiledDpConstraint>,
+) {
+    let mut compile_leg = |d: &crate::predicate::DpConstraint, op: &str| {
+        compile_dp_constraint(d, &format!("{prefix}.{metric}_{op}"), card_id, errors)
+    };
+    let mut eq = legacy_eq.as_ref().map(|d| compile_leg(d, "eq"));
+    let mut lte = legacy_lte.as_ref().map(|d| compile_leg(d, "lte"));
+    let mut gte = legacy_gte.as_ref().map(|d| compile_leg(d, "gte"));
+    if let Some(crate::predicate::MetricComparators(cmps)) = canonical {
+        use crate::predicate::ComparatorOp;
+        for c in cmps {
+            let dc = match &c.value {
+                crate::formula::FormulaSpec::Literal(n) => CompiledDpConstraint::Literal(*n),
+                other => CompiledDpConstraint::Formula(compile_formula(
+                    other,
+                    &format!("{prefix}.{metric}"),
+                    card_id,
+                    errors,
+                )),
+            };
+            match c.op {
+                ComparatorOp::Eq => eq = Some(dc),
+                ComparatorOp::Lte => lte = Some(dc),
+                ComparatorOp::Gte => gte = Some(dc),
+            }
+        }
+    }
+    (eq, lte, gte)
+}
+
+/// `resolve_metric_comparators` variant for the level metrics whose `_eq`
+/// compiled field is a bare `u8` (unify-dsl-scalar-and-comparators §2 — `level`,
+/// `event_target_level`). The canonical `eq` is therefore literal-only; a
+/// formula `eq` is rejected (printed level is always a small literal — the
+/// cloneable design's documented gap). `lte`/`gte` stay formula-capable.
+#[allow(clippy::type_complexity)]
+fn resolve_level_comparators(
+    legacy_eq: &Option<u8>,
+    legacy_lte: &Option<crate::predicate::DpConstraint>,
+    legacy_gte: &Option<crate::predicate::DpConstraint>,
+    canonical: &Option<crate::predicate::MetricComparators>,
+    prefix: &str,
+    metric: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> (
+    Option<u8>,
+    Option<CompiledDpConstraint>,
+    Option<CompiledDpConstraint>,
+) {
+    let mut eq = *legacy_eq;
+    let mut lte = legacy_lte
+        .as_ref()
+        .map(|d| compile_dp_constraint(d, &format!("{prefix}.{metric}_lte"), card_id, errors));
+    let mut gte = legacy_gte
+        .as_ref()
+        .map(|d| compile_dp_constraint(d, &format!("{prefix}.{metric}_gte"), card_id, errors));
+    if let Some(crate::predicate::MetricComparators(cmps)) = canonical {
+        use crate::formula::FormulaSpec;
+        use crate::predicate::ComparatorOp;
+        for c in cmps {
+            match c.op {
+                ComparatorOp::Eq => match &c.value {
+                    FormulaSpec::Literal(n) => eq = Some((*n).max(0) as u8),
+                    _ => errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{prefix}.{metric}"),
+                        message: format!(
+                            "{metric} eq must be a literal integer ({metric}_eq has no formula compiled variant)"
+                        ),
+                    }),
+                },
+                ComparatorOp::Lte => {
+                    lte = Some(match &c.value {
+                        FormulaSpec::Literal(n) => CompiledDpConstraint::Literal(*n),
+                        other => CompiledDpConstraint::Formula(compile_formula(
+                            other,
+                            &format!("{prefix}.{metric}"),
+                            card_id,
+                            errors,
+                        )),
+                    });
+                }
+                ComparatorOp::Gte => {
+                    gte = Some(match &c.value {
+                        FormulaSpec::Literal(n) => CompiledDpConstraint::Literal(*n),
+                        other => CompiledDpConstraint::Formula(compile_formula(
+                            other,
+                            &format!("{prefix}.{metric}"),
+                            card_id,
+                            errors,
+                        )),
+                    });
+                }
+            }
+        }
+    }
+    (eq, lte, gte)
+}
+
 fn compile_predicate(
     p: &crate::predicate::PredicateSpec,
     prefix: &str,
     card_id: &str,
     errors: &mut Vec<ValidationError>,
 ) -> CompiledPredicate {
+    // §2 — level metrics fold through the u8-eq variant.
+    let (level_eq, level_lte, level_gte) = resolve_level_comparators(
+        &p.level_eq, &p.level_lte, &p.level_gte, &p.level, prefix, "level", card_id, errors,
+    );
+    let (event_target_level_eq, event_target_level_lte, event_target_level_gte) =
+        resolve_level_comparators(
+            &p.event_target_level_eq,
+            &p.event_target_level_lte,
+            &p.event_target_level_gte,
+            &p.event_target_level,
+            prefix,
+            "event_target_level",
+            card_id,
+            errors,
+        );
+    // unify-dsl-scalar-and-comparators §2 — fold the canonical `MetricComparators`
+    // fields into the legacy `_eq`/`_lte`/`_gte` compiled slots (byte-identical).
+    let (dp_eq, dp_lte, dp_gte) = resolve_metric_comparators(
+        &p.dp_eq, &p.dp_lte, &p.dp_gte, &p.dp, prefix, "dp", card_id, errors,
+    );
+    let (event_target_dp_eq, event_target_dp_lte, event_target_dp_gte) =
+        resolve_metric_comparators(
+            &p.event_target_dp_eq,
+            &p.event_target_dp_lte,
+            &p.event_target_dp_gte,
+            &p.event_target_dp,
+            prefix,
+            "event_target_dp",
+            card_id,
+            errors,
+        );
+    // Metrics whose legacy flat surface lacked `_eq` — the canonical comparator
+    // supplies it (§2.4); there is no legacy `_eq` field, so pass `&None`.
+    let (play_cost_eq, play_cost_lte, play_cost_gte) = resolve_metric_comparators(
+        &None,
+        &p.play_cost_lte,
+        &p.play_cost_gte,
+        &p.play_cost,
+        prefix,
+        "play_cost",
+        card_id,
+        errors,
+    );
+    let (stack_size_eq, stack_size_lte, stack_size_gte) = resolve_metric_comparators(
+        &None,
+        &p.stack_size_lte,
+        &p.stack_size_gte,
+        &p.stack_size,
+        prefix,
+        "stack_size",
+        card_id,
+        errors,
+    );
+    let (materials_count_eq, materials_count_lte, materials_count_gte) =
+        resolve_metric_comparators(
+            &None,
+            &p.materials_count_lte,
+            &p.materials_count_gte,
+            &p.materials_count,
+            prefix,
+            "materials_count",
+            card_id,
+            errors,
+        );
+    let (security_count_eq, security_count_lte, security_count_gte) = resolve_metric_comparators(
+        &None,
+        &p.security_count_lte,
+        &p.security_count_gte,
+        &p.security_count,
+        prefix,
+        "security_count",
+        card_id,
+        errors,
+    );
     // Unknown fields in `extra` are silently dropped here — they are absorbed
     // by serde's flatten+unknown-fields mechanism and flagged by the semantic
     // validator (Task 12), not by the compiler.
 
     CompiledPredicate {
         kind: p.kind.map(compile_card_kind),
-        level_eq: p.level_eq,
+        level_eq,
         level_eq_binding: p.level_eq_binding.clone(),
-        level_lte: p
-            .level_lte
-            .as_ref()
-            .map(|d| compile_dp_constraint(d, &format!("{prefix}.level_lte"), card_id, errors)),
-        level_gte: p
-            .level_gte
-            .as_ref()
-            .map(|d| compile_dp_constraint(d, &format!("{prefix}.level_gte"), card_id, errors)),
+        level_lte,
+        level_gte,
         level_matches_aggregate: p.level_matches_aggregate.map(|m| {
             (
                 compile_aggregate_selector(m.selector),
@@ -632,39 +889,22 @@ fn compile_predicate(
             .name_not_shared_by_field_tamer
             .map(|s| compile_player_ref(s.player())),
         card_number_is: p.card_number_is.clone(),
-        play_cost_lte: p
-            .play_cost_lte
-            .as_ref()
-            .map(|d| compile_dp_constraint(d, &format!("{prefix}.play_cost_lte"), card_id, errors)),
-        play_cost_gte: p
-            .play_cost_gte
-            .as_ref()
-            .map(|d| compile_dp_constraint(d, &format!("{prefix}.play_cost_gte"), card_id, errors)),
+        play_cost_lte,
+        play_cost_gte,
+        play_cost_eq,
+        play_or_use_cost_lte: p.play_or_use_cost_lte.as_ref().map(|d| {
+            compile_dp_constraint(d, &format!("{prefix}.play_or_use_cost_lte"), card_id, errors)
+        }),
         can_digivolve_from_source: p.can_digivolve_from_source,
-        dp_eq: p
-            .dp_eq
-            .as_ref()
-            .map(|d| compile_dp_constraint(d, &format!("{prefix}.dp_eq"), card_id, errors)),
-        dp_lte: p
-            .dp_lte
-            .as_ref()
-            .map(|d| compile_dp_constraint(d, &format!("{prefix}.dp_lte"), card_id, errors)),
-        dp_gte: p
-            .dp_gte
-            .as_ref()
-            .map(|d| compile_dp_constraint(d, &format!("{prefix}.dp_gte"), card_id, errors)),
-        stack_size_lte: p.stack_size_lte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.stack_size_lte"), card_id, errors)
-        }),
-        stack_size_gte: p.stack_size_gte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.stack_size_gte"), card_id, errors)
-        }),
-        materials_count_lte: p.materials_count_lte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.materials_count_lte"), card_id, errors)
-        }),
-        materials_count_gte: p.materials_count_gte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.materials_count_gte"), card_id, errors)
-        }),
+        dp_eq,
+        dp_lte,
+        dp_gte,
+        stack_size_lte,
+        stack_size_gte,
+        stack_size_eq,
+        materials_count_lte,
+        materials_count_gte,
+        materials_count_eq,
         has_inherited: p.has_inherited.as_ref().map(|b| {
             Box::new(compile_predicate(
                 b,
@@ -681,6 +921,7 @@ fn compile_predicate(
         self_color_count_gte: p.self_color_count_gte,
         has_face_down_source: p.has_face_down_source,
         distinct_tamer_colors_gte: p.distinct_tamer_colors_gte,
+        face_down_sources_under_tamers_gte: p.face_down_sources_under_tamers_gte,
         battle_opponent_no_sources: p.battle_opponent_no_sources,
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
@@ -727,12 +968,9 @@ fn compile_predicate(
         own_memory_gte: p.own_memory_gte.as_ref().map(|d| {
             compile_dp_constraint(d, &format!("{prefix}.own_memory_gte"), card_id, errors)
         }),
-        security_count_lte: p.security_count_lte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.security_count_lte"), card_id, errors)
-        }),
-        security_count_gte: p.security_count_gte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.security_count_gte"), card_id, errors)
-        }),
+        security_count_lte,
+        security_count_gte,
+        security_count_eq,
         opponent_security_count_lte: p.opponent_security_count_lte.as_ref().map(|d| {
             compile_dp_constraint(
                 d,
@@ -803,32 +1041,12 @@ fn compile_predicate(
         dna_origin: p.dna_origin,
         event_target_kind: p.event_target_kind.map(compile_card_kind),
         event_target_trait_has: p.event_target_trait_has.clone(),
-        event_target_level_eq: p.event_target_level_eq,
-        event_target_level_lte: p.event_target_level_lte.as_ref().map(|d| {
-            compile_dp_constraint(
-                d,
-                &format!("{prefix}.event_target_level_lte"),
-                card_id,
-                errors,
-            )
-        }),
-        event_target_level_gte: p.event_target_level_gte.as_ref().map(|d| {
-            compile_dp_constraint(
-                d,
-                &format!("{prefix}.event_target_level_gte"),
-                card_id,
-                errors,
-            )
-        }),
-        event_target_dp_eq: p.event_target_dp_eq.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.event_target_dp_eq"), card_id, errors)
-        }),
-        event_target_dp_lte: p.event_target_dp_lte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.event_target_dp_lte"), card_id, errors)
-        }),
-        event_target_dp_gte: p.event_target_dp_gte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.event_target_dp_gte"), card_id, errors)
-        }),
+        event_target_level_eq,
+        event_target_level_lte,
+        event_target_level_gte,
+        event_target_dp_eq,
+        event_target_dp_lte,
+        event_target_dp_gte,
         event_target_name_contains: p.event_target_name_contains.clone(),
         event_target_is_player: p.event_target_is_player,
         event_target_is_source: p.event_target_is_source,
@@ -844,6 +1062,7 @@ fn compile_predicate(
         event_permanent_is_source: p.event_permanent_is_source,
         source_deleted_battle_opponent: p.source_deleted_battle_opponent,
         event_host_permanent_is_source: p.event_host_permanent_is_source,
+        event_host_is_own_tamer: p.event_host_is_own_tamer,
         event_is_effect_initiated: p.event_is_effect_initiated,
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
@@ -1301,6 +1520,20 @@ fn compile_triggered(
             .condition
             .as_ref()
             .map(|p| compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)),
+        timing_conditions: t
+            .timing_conditions
+            .iter()
+            .enumerate()
+            .map(|(i, tc)| crate::compiled::CompiledTimingCondition {
+                when: compile_timing(tc.when),
+                condition: compile_predicate(
+                    &tc.condition,
+                    &format!("{prefix}.timing_conditions[{i}].condition"),
+                    card_id,
+                    errors,
+                ),
+            })
+            .collect(),
         optional: t.optional,
         outer_prompt: t.outer_prompt,
         once_per_turn: t.once_per_turn,
@@ -1353,6 +1586,27 @@ fn compile_replacement_process(
         return process;
     }
 
+    // EX11-027 — `cost: { place_link_card_as_bottom_digivolution: true }` is the
+    // place-link-as-bottom-source sibling of `trash_own_link_card`: a single
+    // self-contained step that places a chosen link card under the carrier AND
+    // cancels the leave (so it owns the `outcome: prevent`).
+    let place_link_card_as_bottom = r
+        .cost
+        .as_ref()
+        .is_some_and(|cost| cost.place_link_card_as_bottom_digivolution);
+    if place_link_card_as_bottom {
+        if !matches!(r.outcome, Some(crate::clause::ReplacementOutcome::Prevent)) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { place_link_card_as_bottom_digivolution } requires outcome: prevent"
+                    .into(),
+            });
+        }
+        process.push(CompiledStep::PlaceLinkCardAsBottomSourceAndCancelLeave);
+        return process;
+    }
+
     if r.cost.as_ref().is_some_and(|cost| cost.delay_self) {
         process.push(CompiledStep::DeletePermanent {
             target: CompiledBindingRef::Source,
@@ -1381,6 +1635,7 @@ fn compile_replacement_process(
             prompt_key: None,
             optional: true,
             cost: false,
+            then: Vec::new(),
         });
     }
 
@@ -1483,7 +1738,16 @@ fn compile_declarative(
     let summary_key = d.summary_key.clone();
 
     match body {
-        B::Aura(a) => CompiledDeclarativeClause::Aura {
+        B::Aura(a) => {
+        let (dp_modifier, dp_modifier_fn) =
+            split_opt_scalar_formula(&a.dp_modifier, &format!("{prefix}.dp_modifier"), card_id, errors);
+        let (security_attack, security_attack_fn) = split_opt_scalar_formula(
+            &a.security_attack,
+            &format!("{prefix}.security_attack"),
+            card_id,
+            errors,
+        );
+        CompiledDeclarativeClause::Aura {
             scope,
             active_when,
             target: a
@@ -1494,15 +1758,10 @@ fn compile_declarative(
                 })
                 .unwrap_or_default(),
             target_player: a.target_player.map(compile_player_ref),
-            dp_modifier: a.dp_modifier,
-            dp_modifier_fn: a
-                .dp_modifier_fn
-                .as_ref()
-                .map(|f| compile_formula(f, &format!("{prefix}.dp_modifier_fn"), card_id, errors)),
-            security_attack: a.security_attack,
-            security_attack_fn: a.security_attack_fn.as_ref().map(|f| {
-                compile_formula(f, &format!("{prefix}.security_attack_fn"), card_id, errors)
-            }),
+            dp_modifier,
+            dp_modifier_fn,
+            security_attack,
+            security_attack_fn,
             grant_keyword: a.grant_keyword.map(|gk| CompiledGrantKeywordValue {
                 keyword: gk.keyword,
                 value: gk.value,
@@ -1510,6 +1769,7 @@ fn compile_declarative(
             modifier: a.modifier,
             modifier_value: a.modifier_value,
             modifier_name: a.modifier_name,
+            synth_identity: a.synth_identity.as_ref().map(compile_synth_identity),
             while_condition: a.while_condition.as_ref().map(|p| {
                 compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
             }),
@@ -1521,8 +1781,12 @@ fn compile_declarative(
             }),
             summary,
             summary_key,
-        },
-        B::CostReduction(c) => CompiledDeclarativeClause::CostReduction {
+        }
+        }
+        B::CostReduction(c) => {
+        let (amount, amount_fn) =
+            split_opt_scalar_formula(&c.amount, &format!("{prefix}.amount"), card_id, errors);
+        CompiledDeclarativeClause::CostReduction {
             scope,
             active_when,
             reduction_timing: c.reduction_timing,
@@ -1549,11 +1813,8 @@ fn compile_declarative(
                 .map(|p| compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)),
             optional: c.optional,
             once_per_turn: c.once_per_turn,
-            amount: c.amount,
-            amount_fn: c
-                .amount_fn
-                .as_ref()
-                .map(|f| compile_formula(f, &format!("{prefix}.amount_fn"), card_id, errors)),
+            amount,
+            amount_fn,
             pay_cost: c
                 .pay_cost
                 .as_ref()
@@ -1568,7 +1829,8 @@ fn compile_declarative(
                 .unwrap_or_default(),
             summary,
             summary_key,
-        },
+        }
+        }
         B::Replacement(r) => {
             let trigger = compile_replacement_trigger(&r, prefix, card_id, errors);
             CompiledDeclarativeClause::Replacement {
@@ -1790,17 +2052,18 @@ fn compile_effect_controller(
 }
 
 fn compile_modifier_value(
-    v: &crate::step::ModifierValueSpec,
+    v: &crate::formula::FormulaSpec,
     prefix: &str,
     card_id: &str,
     errors: &mut Vec<ValidationError>,
 ) -> CompiledModifierValue {
-    use crate::step::ModifierValueSpec as S;
-    match v {
-        S::Literal(n) => CompiledModifierValue::Literal(*n),
-        S::Formula(fc) => {
-            CompiledModifierValue::Formula(compile_formula(&fc.formula, prefix, card_id, errors))
-        }
+    // unify-dsl-scalar-and-comparators: a `Literal` keeps the integer
+    // fast-path (`CompiledModifierValue::Literal`); any other formula compiles
+    // to `CompiledModifierValue::Formula` — byte-identical to the encoding the
+    // retired `ModifierValueSpec::{Literal,Formula}` produced.
+    match split_scalar_formula(v, prefix, card_id, errors) {
+        Ok(n) => CompiledModifierValue::Literal(n),
+        Err(formula) => CompiledModifierValue::Formula(formula),
     }
 }
 
@@ -1842,6 +2105,21 @@ fn compile_if_condition(
     }
 }
 
+/// Lower a collapse §1 explicit `then:` action-tail (`Vec<StepSpec>` →
+/// `Vec<CompiledStep>`), pathing each step as `<prefix>.then[i]`. Shared by the
+/// field/zone select arms; mirrors the inline lowering of `SelectOwnSources::then`.
+fn compile_then_tail(
+    then: &[crate::step::StepSpec],
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) -> Vec<CompiledStep> {
+    then.iter()
+        .enumerate()
+        .map(|(i, s)| compile_step(s, &format!("{prefix}.then[{i}]"), card_id, errors))
+        .collect()
+}
+
 fn compile_step(
     s: &crate::step::StepSpec,
     prefix: &str,
@@ -1850,25 +2128,41 @@ fn compile_step(
 ) -> CompiledStep {
     use crate::step::StepSpec as S;
     match s {
-        S::GainMemory(n) => CompiledStep::GainMemory(*n),
-        S::LoseMemory(n) => CompiledStep::LoseMemory(*n),
-        S::SetMemory(n) => CompiledStep::SetMemory(*n),
-        S::GainMemoryFn(a) => CompiledStep::GainMemoryFn {
-            formula: compile_formula(
-                &a.formula,
-                &format!("{prefix}.gain_memory_fn"),
-                card_id,
-                errors,
-            ),
-        },
-        S::LoseMemoryFn(a) => CompiledStep::LoseMemoryFn {
-            formula: compile_formula(
-                &a.formula,
-                &format!("{prefix}.lose_memory_fn"),
-                card_id,
-                errors,
-            ),
-        },
+        S::GainMemory(f) => {
+            match split_scalar_formula(f, &format!("{prefix}.gain_memory"), card_id, errors) {
+                Ok(n) => CompiledStep::GainMemory(n),
+                Err(formula) => CompiledStep::GainMemoryFn { formula },
+            }
+        }
+        S::LoseMemory(f) => {
+            match split_scalar_formula(f, &format!("{prefix}.lose_memory"), card_id, errors) {
+                Ok(n) => CompiledStep::LoseMemory(n),
+                Err(formula) => CompiledStep::LoseMemoryFn { formula },
+            }
+        }
+        S::SetMemory(f) => {
+            match split_scalar_formula(f, &format!("{prefix}.set_memory"), card_id, errors) {
+                // `set_memory` has no formula compiled variant (literal-only in
+                // practice); a formula value would have been rejected before
+                // unification. Keep literal fast-path; a non-literal here means
+                // the author wrote a formula for set_memory — fold it to the
+                // literal 0 fallback only if eval is impossible. In practice
+                // `SetMemory` always carried a literal, so `Err` cannot occur
+                // for any existing card; route a future formula through the
+                // gain/lose fn machinery would require a `SetMemoryFn` variant.
+                Ok(n) => CompiledStep::SetMemory(n),
+                Err(_) => {
+                    errors.push(ValidationError {
+                        card_id: card_id.to_string(),
+                        path: format!("{prefix}.set_memory"),
+                        message:
+                            "set_memory accepts only a literal integer (no formula compiled variant)"
+                                .to_string(),
+                    });
+                    CompiledStep::SetMemory(0)
+                }
+            }
+        }
 
         S::Draw(a) => CompiledStep::Draw {
             of: compile_player_ref(a.of),
@@ -1943,6 +2237,47 @@ fn compile_step(
             of: compile_player_ref(a.of),
             position: compile_stack_position(a.position),
         },
+        S::RevealSearch(a) => {
+            use crate::compiled::{CompiledRevealRemainder, CompiledRevealSearchBucket, CompiledRevealSearchDest};
+            use crate::step::{RevealRemainder, RevealSearchDest};
+            if a.buckets.is_empty() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.reveal_search.buckets"),
+                    message: "reveal_search requires at least one bucket".to_string(),
+                });
+            }
+            CompiledStep::RevealSearch {
+                of: compile_player_ref(a.of),
+                count: a.count,
+                buckets: a
+                    .buckets
+                    .iter()
+                    .enumerate()
+                    .map(|(i, b)| CompiledRevealSearchBucket {
+                        filter: compile_predicate(
+                            &b.filter,
+                            &format!("{prefix}.buckets[{i}].filter"),
+                            card_id,
+                            errors,
+                        ),
+                        to: match b.to {
+                            RevealSearchDest::Hand => CompiledRevealSearchDest::Hand,
+                            RevealSearchDest::Trash => CompiledRevealSearchDest::Trash,
+                            RevealSearchDest::Deck => CompiledRevealSearchDest::Deck,
+                        },
+                        max: b.max,
+                        optional: b.optional,
+                        prompt: b.prompt.clone(),
+                    })
+                    .collect(),
+                remainder: match a.remainder {
+                    RevealRemainder::Top => CompiledRevealRemainder::Top,
+                    RevealRemainder::Bottom => CompiledRevealRemainder::Bottom,
+                    RevealRemainder::Choose => CompiledRevealRemainder::Choose,
+                },
+            }
+        }
         S::ChooseFromReveal(a) => CompiledStep::ChooseFromReveal {
             of: compile_player_ref(a.of),
             filter: compile_predicate(
@@ -2010,21 +2345,96 @@ fn compile_step(
         S::Unsuspend(a) => CompiledStep::Unsuspend {
             target: compile_binding_ref(&a.target),
         },
-        S::DeDigivolve(a) => CompiledStep::DeDigivolve {
-            target: compile_binding_ref(&a.target),
-            amount: a.amount,
-            amount_fn: a
-                .amount_fn
-                .as_ref()
-                .map(|f| compile_formula(f, &format!("{prefix}.amount_fn"), card_id, errors)),
-            stop_at_level: a.stop_at_level.or(Some(3)),
-        },
-        S::PlaceOnSecurity(a) => CompiledStep::PlaceOnSecurity {
-            of: compile_player_ref(a.of),
-            source: compile_binding_ref(&a.source),
-            position: compile_stack_position(a.position),
-            face_up: a.face_up,
-        },
+        S::DeDigivolve(a) => {
+            let (amount_lit, amount_fn) =
+                split_opt_scalar_formula(&a.amount, &format!("{prefix}.amount"), card_id, errors);
+            CompiledStep::DeDigivolve {
+                target: compile_binding_ref(&a.target),
+                amount: amount_lit.map(|n| n.max(0) as u8),
+                amount_fn,
+                stop_at_level: a.stop_at_level.or(Some(3)),
+            }
+        }
+        S::PlaceOnSecurity(a) => {
+            use crate::step::{
+                SecurityReplacementDisposition as D, SecuritySelfMarker, SecuritySource,
+                StackPosition,
+            };
+            let position = compile_stack_position(a.position);
+            let is_permanent = matches!(a.source, SecuritySource::Permanent { .. });
+            if !matches!(a.disposition, D::None) && !is_permanent {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.place_on_security.disposition"),
+                    message: "a replacement disposition (cancel/handle/observed) requires source: permanent".to_string(),
+                });
+            }
+            if a.include_sources && !matches!(a.disposition, D::Observed) {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.place_on_security.include_sources"),
+                    message: "include_sources is only valid with disposition: observed".to_string(),
+                });
+            }
+            match &a.source {
+                SecuritySource::Card { card } => CompiledStep::PlaceOnSecurity {
+                    of: compile_player_ref(a.of),
+                    source: compile_binding_ref(card),
+                    position,
+                    face_up: a.face_up,
+                },
+                SecuritySource::Marker(SecuritySelfMarker::SelfPermanent) => {
+                    CompiledStep::PlaceSelfAtSecurity {
+                        position,
+                        face_up: a.face_up,
+                    }
+                }
+                SecuritySource::Marker(SecuritySelfMarker::SelfOption) => {
+                    CompiledStep::PlaceSelfOptionAtSecurity {
+                        position,
+                        face_up: a.face_up,
+                    }
+                }
+                SecuritySource::Permanent { permanent } => {
+                    let of = compile_player_ref(a.of);
+                    let target = compile_binding_ref(permanent);
+                    match a.disposition {
+                        D::None => CompiledStep::PlacePermanentOnSecurity {
+                            of,
+                            target,
+                            position,
+                            face_up: a.face_up,
+                        },
+                        D::Handle => CompiledStep::PlacePermanentOnSecurityAndHandleReplacement {
+                            of,
+                            target,
+                            position,
+                            face_up: a.face_up,
+                        },
+                        D::Cancel => {
+                            if a.position != StackPosition::Bottom {
+                                errors.push(ValidationError {
+                                    card_id: card_id.to_string(),
+                                    path: format!("{prefix}.place_on_security.position"),
+                                    message: "disposition: cancel requires position: bottom (the engine cancel-via-security tuck is bottom-only)".to_string(),
+                                });
+                            }
+                            CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement {
+                                of,
+                                target,
+                            }
+                        }
+                        D::Observed => CompiledStep::PlacePermanentOnSecurityObserved {
+                            of,
+                            target,
+                            position,
+                            face_up: a.face_up,
+                            include_sources: a.include_sources,
+                        },
+                    }
+                }
+            }
+        }
         S::PlayToken(a) => CompiledStep::PlayToken {
             controller: compile_player_ref(a.controller),
             token_name: a.token_name.clone(),
@@ -2051,6 +2461,13 @@ fn compile_step(
         S::TrashBottomFaceDownSourceUnderTamer(a) => {
             CompiledStep::TrashBottomFaceDownSourceUnderTamer {
                 of: compile_player_ref(a.of),
+                optional: a.optional,
+            }
+        }
+        S::TrashBottomFaceDownSourcesUnderTamers(a) => {
+            CompiledStep::TrashBottomFaceDownSourcesUnderTamers {
+                of: compile_player_ref(a.of),
+                count: a.count,
             }
         }
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
@@ -2061,6 +2478,10 @@ fn compile_step(
             tamer: compile_binding_ref(&a.tamer),
             face_down: a.face_down,
             bind_as: a.bind_as.clone(),
+        },
+        S::MoveSelfOptionUnderPermanent(a) => CompiledStep::MoveSelfOptionUnderPermanent {
+            target: compile_binding_ref(&a.target),
+            face_down: a.face_down,
         },
         S::PlaceSelectedSourcesUnderTamer(a) => CompiledStep::PlaceSelectedSourcesUnderTamer {
             source_refs: a.source_refs.clone(),
@@ -2136,6 +2557,14 @@ fn compile_step(
             use_cost_lte_opponent_memory: a.use_cost_lte_opponent_memory,
             optional: a.optional,
             prompt: a.prompt.clone(),
+        },
+        S::PlayOrUseFromHand(a) => CompiledStep::PlayOrUseFromHand {
+            of: compile_player_ref(a.of),
+            hand_index: compile_binding_ref(&a.hand_index),
+            cost_delta: a
+                .cost_delta
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
         },
         S::PlayFromRevealedFree(a) => CompiledStep::PlayFromRevealedFree {
             of: compile_player_ref(a.of),
@@ -2264,41 +2693,6 @@ fn compile_step(
             }
         }
         S::BounceSelf(_) => CompiledStep::BounceSelf,
-        S::PlaceSelfAtSecurity(a) => CompiledStep::PlaceSelfAtSecurity {
-            position: compile_stack_position(a.position),
-            face_up: a.face.is_up(),
-        },
-        S::PlaceSelfOptionAtSecurity(a) => CompiledStep::PlaceSelfOptionAtSecurity {
-            position: compile_stack_position(a.position),
-            face_up: a.face.is_up(),
-        },
-        S::PlacePermanentBottomSecurityAndCancelReplacement(a) => {
-            CompiledStep::PlacePermanentBottomSecurityAndCancelReplacement {
-                of: compile_player_ref(a.of),
-                target: compile_binding_ref(&a.target),
-            }
-        }
-        S::PlacePermanentOnSecurity(a) => CompiledStep::PlacePermanentOnSecurity {
-            of: compile_player_ref(a.of),
-            target: compile_binding_ref(&a.target),
-            position: compile_stack_position(a.position),
-            face_up: a.face_up,
-        },
-        S::PlacePermanentOnSecurityAndHandleReplacement(a) => {
-            CompiledStep::PlacePermanentOnSecurityAndHandleReplacement {
-                of: compile_player_ref(a.of),
-                target: compile_binding_ref(&a.target),
-                position: compile_stack_position(a.position),
-                face_up: a.face_up,
-            }
-        }
-        S::PlacePermanentOnSecurityObserved(a) => CompiledStep::PlacePermanentOnSecurityObserved {
-            of: compile_player_ref(a.of),
-            target: compile_binding_ref(&a.target),
-            position: compile_stack_position(a.position),
-            face_up: a.face.is_up(),
-            include_sources: a.include_sources,
-        },
         S::SecurityPlaceStackedCard(a) => {
             if a.source.is_none() && a.source_index_from_top.is_none() {
                 errors.push(ValidationError {
@@ -2515,6 +2909,7 @@ fn compile_step(
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
             continue_on_decline: a.continue_on_decline,
+            then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectOpponentPermanent(a) => CompiledStep::SelectOpponentPermanent {
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
@@ -2524,6 +2919,7 @@ fn compile_step(
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
             continue_on_decline: a.continue_on_decline,
+            then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectAnyPermanent(a) => CompiledStep::SelectAnyPermanent {
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
@@ -2532,6 +2928,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+            then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectDnaPair(a) => CompiledStep::SelectDnaPair {
             left_filter: compile_predicate(
@@ -2560,6 +2957,7 @@ fn compile_step(
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
             cost: a.cost,
+            then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectTrash(a) => CompiledStep::SelectTrash {
             of: compile_player_ref(a.of),
@@ -2569,6 +2967,7 @@ fn compile_step(
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
             cost: a.cost,
+            then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectMaterial(a) => CompiledStep::SelectMaterial {
             of_permanent: compile_binding_ref(&a.of_permanent),
@@ -2728,6 +3127,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+            then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectRevealBuckets(a) => CompiledStep::SelectRevealBuckets {
             from: a.from.clone(),
@@ -2759,6 +3159,7 @@ fn compile_step(
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
             optional: a.optional,
+            then: compile_then_tail(&a.then, prefix, card_id, errors),
         },
         S::SelectUnionZone(a) => CompiledStep::SelectUnionZone {
             of: compile_player_ref(a.of),
@@ -2920,22 +3321,6 @@ fn compile_step(
                 filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             }
         }
-        S::LinkCardToSelf(a) => {
-            if a.from.is_empty() {
-                errors.push(ValidationError {
-                    card_id: card_id.to_string(),
-                    path: format!("{prefix}.link_card_to_self.from"),
-                    message: "link_card_to_self requires at least one source zone".to_string(),
-                });
-            }
-            CompiledStep::LinkCardToSelf {
-                from: a.from.clone(),
-                filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
-                to: a.to,
-                cost: a.cost,
-                optional: a.optional,
-            }
-        }
         S::ReduceLinkCost(a) => CompiledStep::ReduceLinkCost { amount: a.amount },
         S::LinkCards(a) => {
             use crate::compiled::{
@@ -2984,12 +3369,42 @@ fn compile_step(
                 LinkCardsCost::Reduce(n) => 0u8.saturating_sub(n),
             };
 
+            let host_filter = if a.host_filter.is_empty() {
+                None
+            } else {
+                Some(compile_predicate(
+                    &a.host_filter,
+                    &format!("{prefix}.host_filter"),
+                    card_id,
+                    errors,
+                ))
+            };
+
             CompiledStep::LinkCards {
                 from,
                 filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
                 to,
                 count,
                 cost,
+                prompt: a.prompt.clone(),
+                bind_as: a.bind_as.clone(),
+                host_filter,
+                exclude_source: a.exclude_source,
+            }
+        }
+        S::RelinkSelfToOwnDigimon(a) => {
+            let host_filter = if a.host_filter.is_empty() {
+                None
+            } else {
+                Some(compile_predicate(
+                    &a.host_filter,
+                    &format!("{prefix}.host_filter"),
+                    card_id,
+                    errors,
+                ))
+            };
+            CompiledStep::RelinkSelfToOwnDigimon {
+                host_filter,
                 prompt: a.prompt.clone(),
             }
         }

@@ -244,8 +244,8 @@ effects:
           bind_as: digi
           filter: { kind: digimon }
           prompt: "Place 1 Digimon as the bottom security card"
-      - place_permanent_on_security:
+      - place_on_security:
+          source: { permanent: digi }
           of: you
-          target: digi
           position: bottom
           face_up: false

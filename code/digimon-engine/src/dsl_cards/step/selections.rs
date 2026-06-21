@@ -14,8 +14,9 @@ use std::sync::Arc;
 
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledCountBound, CompiledFieldSelector, CompiledPlayerRef,
-    CompiledPredicate, CompiledRemainderDestination, CompiledRevealDestination, CompiledStep,
-    CompiledZone,
+    CompiledPredicate, CompiledRemainderDestination, CompiledRevealBucket,
+    CompiledRevealDestination, CompiledRevealRemainder, CompiledRevealSearchDest,
+    CompiledStackPosition, CompiledStep, CompiledZone,
 };
 
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
@@ -227,6 +228,21 @@ fn selection_result(ctx: &EffectContext<'_>) -> InstallResult {
     }
 }
 
+/// collapse §1 — compose a select step's explicit scoped `then` action-tail
+/// with the implicit dispatcher `tail` into the single tail the install helper
+/// captures: `then ++ tail`. `then` runs first (on accept, binding in scope),
+/// then the rest of the process body. The install helper either parks (running
+/// the composed tail via its callback on resolve) or no-ops when there are no
+/// candidates (the outer loop then runs `tail` alone via `Continue`) — so the
+/// implicit `tail` runs exactly once and `then` runs only on a pick. This
+/// mirrors the `SelectOwnSources` exemplar and is closure-free (cloneable VM
+/// `ResumeFrame::RunTail` data).
+fn compose_then_tail(then: &[CompiledStep], tail: &[CompiledStep]) -> Vec<CompiledStep> {
+    let mut inner = then.to_vec();
+    inner.extend_from_slice(tail);
+    inner
+}
+
 /// Installs a selection step or reports how the dispatcher should advance.
 ///
 /// Most selection steps park by installing the remainder as their callback.
@@ -248,6 +264,7 @@ pub fn try_install(
             prompt,
             optional,
             cost,
+            then,
             ..
         } => {
             install_select_hand(
@@ -258,7 +275,7 @@ pub fn try_install(
                 prompt.clone(),
                 *optional,
                 *cost,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
@@ -271,6 +288,7 @@ pub fn try_install(
             prompt,
             optional,
             cost,
+            then,
             ..
         } => {
             install_select_trash(
@@ -281,7 +299,7 @@ pub fn try_install(
                 prompt.clone(),
                 *optional,
                 *cost,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
@@ -314,6 +332,7 @@ pub fn try_install(
             prompt,
             optional,
             continue_on_decline,
+            then,
             ..
         } => {
             install_select_own_permanent(
@@ -324,13 +343,13 @@ pub fn try_install(
                 prompt.clone(),
                 *optional,
                 *continue_on_decline,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
             selection_result(ctx)
         }
-        CompiledStep::TrashBottomFaceDownSourceUnderTamer { of } => {
+        CompiledStep::TrashBottomFaceDownSourceUnderTamer { of, optional } => {
             // Bundled activation cost: "pick one of `of`'s Tamers that carries
             // a face-down stash → trash its bottom face-down source". Pre-filter
             // the controller's permanents with the fixed predicate
@@ -347,18 +366,62 @@ pub fn try_install(
                 // the clause — the dispatcher must stop and the tail (the rest
                 // of the process) must NOT run. `TailAlreadyRan` here means
                 // "dispatcher, stop; do not run the remaining steps".
+                //
+                // Flag the unpayable abort so the `cost_reduction` `pay_cost_fn`
+                // lowering does NOT credit a reduction that was never paid for
+                // (this clean abort maps to `RunOutcome::Synchronous`, otherwise
+                // indistinguishable from a genuinely-paid synchronous cost).
+                // `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+                ctx.cost_unpayable = true;
                 return InstallResult::TailAlreadyRan;
             }
             install_trash_bottom_face_down_source_under_tamer(
                 ctx,
                 filter,
+                *optional,
                 tail.to_vec(),
                 bindings,
                 runtime.clone(),
             );
             // With ≥1 candidate, `select_own_permanent` always installs a
             // pending selection (even a single candidate is exposed as a
-            // 1-option selection — no auto-resolve), so this parks.
+            // 1-option selection — no auto-resolve; `optional` adds a PASS), so
+            // this parks. On a PASS decline (`optional`), the callback never
+            // runs, so nothing is trashed and the tail is skipped.
+            selection_result(ctx)
+        }
+        CompiledStep::TrashBottomFaceDownSourcesUnderTamers { of, count } => {
+            // Multi-count / multi-Tamer activation cost: trash `count` bottom
+            // face-down sources total, distributed across `of`'s Tamers. The
+            // cost is unpayable (abort the clause) when fewer than `count`
+            // face-down sources exist across all the controller's Tamers.
+            // G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER.
+            let player = resolve_player(ctx, *of);
+            let available = total_face_down_sources_under_tamers(ctx, player, &bindings);
+            if (*count as usize) == 0 {
+                // Degenerate count: nothing to pay, run the tail directly.
+                let mut b = bindings.clone();
+                let trigger_context = ctx.game.current_trigger_context.clone();
+                run_tail_preserving_trigger_context(ctx, trigger_context, tail, &mut b, runtime);
+                return InstallResult::TailAlreadyRan;
+            }
+            if available < *count as usize {
+                // Fewer than `count` face-down sources ⇒ unpayable cost. Abort
+                // the clause: stop the dispatcher and do NOT run the tail
+                // (the digivolve). Mirrors the single-trash unpayable abort.
+                ctx.cost_unpayable = true;
+                return InstallResult::TailAlreadyRan;
+            }
+            install_trash_n_bottom_face_down_sources_under_tamers(
+                ctx,
+                player,
+                *count,
+                tail.to_vec(),
+                bindings,
+                runtime.clone(),
+            );
+            // The first Tamer pick always installs (≥`count`≥1 face-down source
+            // exists ⇒ ≥1 eligible Tamer), so this parks.
             selection_result(ctx)
         }
         CompiledStep::SelectOpponentPermanent {
@@ -368,6 +431,7 @@ pub fn try_install(
             prompt,
             optional,
             continue_on_decline,
+            then,
             ..
         } => {
             install_select_opponent_permanent(
@@ -378,7 +442,7 @@ pub fn try_install(
                 prompt.clone(),
                 *optional,
                 *continue_on_decline,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
@@ -390,6 +454,7 @@ pub fn try_install(
             selector,
             prompt,
             optional,
+            then,
             ..
         } => {
             install_select_any_permanent(
@@ -400,7 +465,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
@@ -511,6 +576,7 @@ pub fn try_install(
             bind_as,
             prompt,
             optional,
+            then,
             ..
         } => {
             return if install_select_reveal(
@@ -520,7 +586,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             ) {
@@ -528,6 +594,89 @@ pub fn try_install(
             } else {
                 InstallResult::Continue
             };
+        }
+        // collapse §3.1 — `place_remainder_on_deck` with `position: choice`.
+        // Install a binary top/bottom pick; the chosen branch re-runs
+        // place_remainder at the concrete end THROUGH run_steps, so the
+        // remainder-ordering selection it installs and the outer tail are both
+        // captured/parked correctly. Non-Choice positions are NOT matched here
+        // and fall through to the synchronous runner unchanged.
+        CompiledStep::PlaceRemainderOnDeck {
+            of,
+            position: CompiledStackPosition::Choice,
+        } => {
+            let mut branch = |pos: CompiledStackPosition| {
+                let mut t = vec![CompiledStep::PlaceRemainderOnDeck { of: *of, position: pos }];
+                t.extend_from_slice(tail);
+                Arc::new(t)
+            };
+            let tail_top = branch(CompiledStackPosition::Top);
+            let tail_bottom = branch(CompiledStackPosition::Bottom);
+            let trigger_context = ctx.game.current_trigger_context.clone();
+            let runtime = runtime.clone();
+            ctx.select_effect_choice(
+                "Place the remaining cards on the top or bottom of the deck",
+                vec!["Top of deck".to_string(), "Bottom of deck".to_string()],
+                move |cb_ctx, idx| {
+                    let branch = if idx == 0 { &tail_top } else { &tail_bottom };
+                    let mut b = bindings.clone();
+                    run_tail_preserving_trigger_context(
+                        cb_ctx,
+                        trigger_context,
+                        branch,
+                        &mut b,
+                        &runtime,
+                    );
+                },
+            );
+            selection_result(ctx)
+        }
+        // collapse §3.1/§3.2 — `place_on_security` (card source) with
+        // `position: choice`. Same binary-pick pattern as place_remainder:
+        // install a top/bottom EffectChoice, then re-run the placement at the
+        // concrete end through run_steps so the tail parks correctly. Drives
+        // BT25-038's hand path (collapsing its manual select_effect_choice +
+        // two branches into one step). Non-Choice positions fall through to the
+        // synchronous runner.
+        CompiledStep::PlaceOnSecurity {
+            of,
+            source,
+            position: CompiledStackPosition::Choice,
+            face_up,
+        } => {
+            let mut branch = |pos: CompiledStackPosition| {
+                let mut t = vec![CompiledStep::PlaceOnSecurity {
+                    of: *of,
+                    source: source.clone(),
+                    position: pos,
+                    face_up: *face_up,
+                }];
+                t.extend_from_slice(tail);
+                Arc::new(t)
+            };
+            let tail_top = branch(CompiledStackPosition::Top);
+            let tail_bottom = branch(CompiledStackPosition::Bottom);
+            let trigger_context = ctx.game.current_trigger_context.clone();
+            let runtime = runtime.clone();
+            ctx.select_effect_choice(
+                "Place as the top or bottom security card",
+                vec![
+                    "Top of security".to_string(),
+                    "Bottom of security".to_string(),
+                ],
+                move |cb_ctx, idx| {
+                    let branch = if idx == 0 { &tail_top } else { &tail_bottom };
+                    let mut b = bindings.clone();
+                    run_tail_preserving_trigger_context(
+                        cb_ctx,
+                        trigger_context,
+                        branch,
+                        &mut b,
+                        &runtime,
+                    );
+                },
+            );
+            selection_result(ctx)
         }
         CompiledStep::SelectRevealBuckets {
             from,
@@ -546,12 +695,94 @@ pub fn try_install(
                 runtime.clone(),
             );
         }
+        // collapse §2 — `reveal_search` composite. Expand into the existing
+        // sequence at run time: reveal the top `count`, run ONE
+        // `select_reveal_buckets` over all buckets (cross-bucket de-dup on), then
+        // a per-bucket reveal-move + `place_remainder_on_deck` as the captured
+        // tail. Reuses `install_select_reveal_buckets` wholesale, so it parks /
+        // resumes exactly like the longhand idiom. Pure data → deterministic
+        // expansion (cloneable-aligned, reset-and-replay safe).
+        CompiledStep::RevealSearch {
+            of,
+            count,
+            buckets,
+            remainder,
+        } => {
+            const POOL: &str = "__reveal_search_pool";
+            let bucket_binding = |i: usize| format!("__reveal_search_bucket_{i}");
+
+            let player = resolve_player(ctx, *of);
+            // 1. Reveal the top `count` (populates `ctx.game.revealed_cards`).
+            let pool = ctx.reveal_top_deck(player, *count);
+
+            // 2. Bind the revealed pool for `select_reveal_buckets`' `from`.
+            let mut bindings = bindings;
+            bindings.insert_card_list(POOL, pool);
+
+            // 3. One reveal-bucket selection over all buckets. A non-optional
+            //    bucket forces `min == max` (the install advances when the
+            //    candidate pool is exhausted, so this never soft-locks);
+            //    `optional` keeps `min == 0`.
+            let engine_buckets: Vec<CompiledRevealBucket> = buckets
+                .iter()
+                .enumerate()
+                .map(|(i, bk)| CompiledRevealBucket {
+                    bind_as: bucket_binding(i),
+                    filter: Some(bk.filter.clone()),
+                    min: if bk.optional { 0 } else { bk.max },
+                    max: bk.max,
+                })
+                .collect();
+
+            // 4. Captured tail: per-bucket reveal-move (consumes the bucket's
+            //    bound CardList via the §2.1 multi-card move verbs), then place
+            //    the remainder, then the outer dispatcher tail.
+            let mut inner_tail: Vec<CompiledStep> = Vec::with_capacity(buckets.len() + 1 + tail.len());
+            for (i, bk) in buckets.iter().enumerate() {
+                let card = CompiledBindingRef::Named(bucket_binding(i));
+                inner_tail.push(match bk.to {
+                    CompiledRevealSearchDest::Hand => {
+                        CompiledStep::AddToHandFromReveal { of: *of, card }
+                    }
+                    CompiledRevealSearchDest::Trash => {
+                        CompiledStep::TrashFromReveal { of: *of, card }
+                    }
+                    CompiledRevealSearchDest::Deck => CompiledStep::ReturnToDeckFromReveal {
+                        of: *of,
+                        card,
+                        position: CompiledStackPosition::Bottom,
+                    },
+                });
+            }
+            inner_tail.push(CompiledStep::PlaceRemainderOnDeck {
+                of: *of,
+                position: match remainder {
+                    CompiledRevealRemainder::Top => CompiledStackPosition::Top,
+                    CompiledRevealRemainder::Bottom => CompiledStackPosition::Bottom,
+                    CompiledRevealRemainder::Choose => CompiledStackPosition::Choice,
+                },
+            });
+            inner_tail.extend_from_slice(tail);
+
+            let prompt = buckets.iter().find_map(|bk| bk.prompt.clone());
+            return install_select_reveal_buckets(
+                ctx,
+                POOL,
+                &engine_buckets,
+                true,
+                prompt,
+                inner_tail,
+                bindings,
+                runtime.clone(),
+            );
+        }
         CompiledStep::SelectSecurity {
             of,
             filter,
             bind_as,
             prompt,
             optional,
+            then,
             ..
         } => {
             install_select_security(
@@ -561,7 +792,7 @@ pub fn try_install(
                 bind_as.clone(),
                 prompt.clone(),
                 *optional,
-                tail.to_vec(),
+                compose_then_tail(then, tail),
                 bindings,
                 runtime.clone(),
             );
@@ -1667,6 +1898,7 @@ fn install_select_own_permanent(
 fn install_trash_bottom_face_down_source_under_tamer(
     ctx: &mut EffectContext<'_>,
     filter: CompiledPredicate,
+    optional: bool,
     tail: Vec<CompiledStep>,
     bindings: Bindings,
     runtime: StepRuntime,
@@ -1680,7 +1912,7 @@ fn install_trash_bottom_face_down_source_under_tamer(
     let filter_bindings = bindings.clone();
     ctx.select_own_permanent(
         "Choose a Tamer to trash a face-down card from under",
-        false,
+        optional,
         move |game, handle| {
             let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
                 game,
@@ -1715,6 +1947,129 @@ fn install_trash_bottom_face_down_source_under_tamer(
                     &tail,
                     &mut b,
                     &runtime,
+                );
+            }
+        },
+    );
+}
+
+/// Total bottom-reachable face-down digivolution sources across `player`'s
+/// Tamers — the eligibility gate for the multi-count trash cost. A "face-down
+/// source" is any `CardSource` marked `face_down`; in the BEATBREAK / DATA
+/// SQUAD stash family these always sit contiguously from the bottom of the
+/// stack (stashes insert at index 0), so the count equals the number of
+/// reachable bottom-trash picks.
+fn total_face_down_sources_under_tamers(
+    ctx: &EffectContext<'_>,
+    player: PlayerId,
+    bindings: &Bindings,
+) -> usize {
+    let filter = CompiledPredicate {
+        kind: Some(digimon_dsl::compiled::CompiledCardKind::Tamer),
+        has_face_down_source: Some(true),
+        ..CompiledPredicate::default()
+    };
+    let tamers = collect_matching_permanents(ctx, player, &filter, Some(bindings));
+    tamers
+        .iter()
+        .map(|handle| {
+            ctx.game
+                .player(handle.player)
+                .battle_area
+                .get(handle.index as usize)
+                .map(|perm| perm.card_sources.iter().filter(|s| s.face_down).count())
+                .unwrap_or(0)
+        })
+        .sum()
+}
+
+/// Install the next Tamer pick for the multi-count
+/// `trash_bottom_face_down_sources_under_tamers` cost. `remaining` is the
+/// number of bottom-face-down sources still to trash. Each pick trashes ONE
+/// bottom face-down source from the chosen Tamer; the callback then either
+/// re-installs the next pick (`remaining - 1 > 0`) or runs the captured `tail`
+/// (the rest of the clause — the free digivolve). Eligible Tamers are
+/// re-evaluated before every pick, so a single Tamer holding ≥`remaining`
+/// face-down sources can be re-picked to satisfy the whole cost, and the "1
+/// from each of two Tamers" distribution is equally reachable. The caller
+/// (`try_install`) has already verified `remaining` total face-down sources
+/// exist, so each install finds ≥1 eligible Tamer and always parks.
+fn install_trash_n_bottom_face_down_sources_under_tamers(
+    ctx: &mut EffectContext<'_>,
+    player: PlayerId,
+    remaining: u8,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    let filter = CompiledPredicate {
+        kind: Some(digimon_dsl::compiled::CompiledCardKind::Tamer),
+        has_face_down_source: Some(true),
+        ..CompiledPredicate::default()
+    };
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player_for_filter = ctx.player;
+    let filter_for_pred = filter.clone();
+    let filter_bindings = bindings.clone();
+    ctx.select_own_permanent(
+        "Choose a Tamer to trash a face-down card from under",
+        false,
+        move |game, handle| {
+            let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player_for_filter,
+            );
+            eval_predicate_with_bindings(
+                &filter_for_pred,
+                &read_ctx,
+                PredicateSubject::Permanent(handle),
+                Some(&filter_bindings),
+            )
+        },
+        move |cb_ctx, handle: PermanentHandle| {
+            let trashed = cb_ctx.trash_bottom_face_down_source(handle);
+            debug_assert!(
+                trashed,
+                "trash_bottom_face_down_sources_under_tamers: eligibility filter \
+                 (has_face_down_source) offered a Tamer whose bottom source is not \
+                 face-down — filter and action have desynced"
+            );
+            if !trashed {
+                // No-approximations: a desync means nothing was paid; do NOT run
+                // the tail and do NOT re-install (which would offer a free
+                // digivolve for an unpaid cost).
+                return;
+            }
+            let now_remaining = remaining.saturating_sub(1);
+            if now_remaining == 0 {
+                // Cost fully paid: run the captured tail (the free digivolve).
+                let mut b = bindings.clone();
+                run_tail_preserving_trigger_context(
+                    cb_ctx,
+                    trigger_context.clone(),
+                    &tail,
+                    &mut b,
+                    &runtime,
+                );
+            } else {
+                // More to trash: re-install the next Tamer pick. Eligibility is
+                // re-evaluated (the just-trashed Tamer may have dropped below 1
+                // face-down source). The earlier total-source gate guarantees
+                // enough sources remain.
+                install_trash_n_bottom_face_down_sources_under_tamers(
+                    cb_ctx,
+                    player,
+                    now_remaining,
+                    tail.as_ref().clone(),
+                    bindings.clone(),
+                    runtime.clone(),
                 );
             }
         },

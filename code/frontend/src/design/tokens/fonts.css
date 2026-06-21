@@ -1,0 +1,26 @@
+/*
+ * Design-system font faces + raw family custom properties
+ * (add-desktop-design-system).
+ *
+ * Loads the webfonts and exposes raw `--ff-*` family stacks. tokens.css maps
+ * the theme-dependent font ROLE tokens (--font-display / --font-ui /
+ * --font-mono / --font-pixel) onto these families per theme:
+ *
+ *   dark : display = VT323,      ui = IBM Plex Mono, dense text = mono
+ *   light: display = Silkscreen, ui = readable sans, dense text = sans
+ *
+ * Pixel/display faces (VT323, Silkscreen) are never used for dense body copy —
+ * dense text uses IBM Plex Mono (dark) or the system sans stack (light) for
+ * legibility.
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=VT323&family=IBM+Plex+Mono:wght@400;500;700&family=Silkscreen:wght@400;700&display=swap");
+
+:root {
+  --ff-vt323: "VT323", ui-monospace, monospace;
+  --ff-plex-mono: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ff-silkscreen: "Silkscreen", "IBM Plex Mono", ui-monospace, monospace;
+  /* Readable light-theme body face — Win95-era system sans, zero-download.
+     (Open question in design.md: could swap for a bundled W95FA-style face.) */
+  --ff-sans: "Segoe UI", Tahoma, system-ui, -apple-system, sans-serif;
+}

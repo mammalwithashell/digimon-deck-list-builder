@@ -1,18 +1,19 @@
 .deck-library-page {
-  --lib-bg: #07080b;
-  --lib-panel: #0c0f15;
-  --lib-panel-2: #111621;
-  --lib-line: #242a36;
-  --lib-line-2: #374052;
-  --lib-text: #eef2f7;
-  --lib-muted: #8992a5;
-  --lib-dim: #596273;
-  --lib-accent: #ff7a18;
-  --lib-blue: #38a5ff;
-  --lib-good: #4cd497;
-  --lib-warn: #ffd34a;
-  --lib-danger: #ff5b5b;
-  min-height: calc(var(--app-vh100, 100vh) - 56px);
+  /* Mapped onto design-system role tokens (add-desktop-design-system). */
+  --lib-bg: var(--surface-bg);
+  --lib-panel: var(--surface);
+  --lib-panel-2: var(--surface-raised);
+  --lib-line: var(--line-1);
+  --lib-line-2: var(--line-strong);
+  --lib-text: var(--ink-0);
+  --lib-muted: var(--ink-2);
+  --lib-dim: var(--ink-3);
+  --lib-accent: var(--player);
+  --lib-blue: var(--opp);
+  --lib-good: var(--good);
+  --lib-warn: var(--warn);
+  --lib-danger: var(--danger);
+  height: 100%;
   background:
     radial-gradient(ellipse at 48% 0%, rgba(56, 165, 255, 0.12), transparent 44%),
     linear-gradient(180deg, #080a0e, #07080b);
@@ -124,9 +125,11 @@
 }
 
 .library-shell {
-  height: calc(var(--app-vh100, 100vh) - 114px);
+  height: calc(100% - 58px);
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr) 320px;
+  /* Folders/Formats moved into the MenuShell rail (add-desktop-menu-shell);
+     the page is now main content + the analytics detail column. */
+  grid-template-columns: minmax(0, 1fr) 320px;
   min-height: 0;
 }
 
@@ -271,6 +274,12 @@
   font-size: 10px;
 }
 
+.library-pills span.library-builtin-badge {
+  border-color: var(--lib-accent);
+  color: var(--lib-accent);
+  font-weight: 700;
+}
+
 .library-banner-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -293,7 +302,7 @@
 }
 
 .library-kicker {
-  color: #ffb05a;
+  color: var(--lib-accent);
   font-family: "JetBrains Mono", monospace;
   letter-spacing: 0.18em;
   font-size: 12px;
@@ -307,7 +316,7 @@
 
 .library-hero p {
   margin: 0;
-  color: rgba(245, 241, 232, 0.62);
+  color: var(--lib-muted);
 }
 
 .library-hero-actions {
@@ -316,7 +325,7 @@
 }
 
 .library-command {
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid var(--lib-line-2);
   color: var(--lib-text);
   text-decoration: none;
   padding: 10px 12px;
@@ -536,6 +545,24 @@
   color: var(--lib-warn);
 }
 
+/* Format marker pill — shown on deck tiles and the detail banner. The
+   `.library-pills` variant raises specificity to override the generic
+   `.library-pills span` chrome with the accent treatment. */
+.library-format-pill,
+.library-pills .library-format-pill {
+  align-self: flex-start;
+  border: 1px solid var(--lib-accent);
+  border-radius: 999px;
+  background: var(--lib-bg);
+  color: var(--lib-accent);
+  padding: 3px 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 9px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
 .library-new-card {
   min-height: 210px;
   display: grid;
@@ -646,6 +673,30 @@
   color: var(--lib-accent);
 }
 
+/* Analytics panel reads as a themed window — accent title bar matching the
+   design-system `Window` chrome (add-desktop-menu-shell): green terminal
+   header in dark, navy bar in light. Applied as a header treatment (not the
+   full Window component) because this page still carries hardcoded dark
+   surfaces and a parchment panel would clash in light theme. */
+[data-theme='dark'] .library-detail-head {
+  color: var(--accent);
+  background: var(--surface);
+}
+
+[data-theme='dark'] .library-detail-head b {
+  color: var(--accent);
+}
+
+[data-theme='light'] .library-detail-head {
+  color: var(--accent-ink);
+  background: var(--accent);
+  border-bottom-color: transparent;
+}
+
+[data-theme='light'] .library-detail-head b {
+  color: var(--accent-ink);
+}
+
 .library-detail h2 {
   margin: 0 0 10px;
 }
@@ -735,7 +786,7 @@
 
 @media (max-width: 1120px) {
   .library-shell {
-    grid-template-columns: 190px minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .library-detail {
@@ -791,4 +842,69 @@
     margin-top: 14px;
     grid-template-columns: 1fr 1fr;
   }
+}
+
+/* ──────────────────────────────────────────────────────────────────────
+   Light "Adventure '99" — parchment Win95 chrome on the teal desktop.
+   Dark "Digi-OS" is the base style above; here we only re-skin for light.
+   The page itself stays teal; field/pill fills flip to parchment by
+   redefining the local --lib-bg (used only for fills, not the page bg).
+   ────────────────────────────────────────────────────────────────────── */
+[data-theme="light"] .deck-library-page {
+  --lib-bg: var(--surface-raised);
+  background: var(--surface-bg);
+}
+
+/* Chrome bars become opaque parchment panels (the card grid keeps the
+   teal desktop showing through, matching the launcher / deck builder). */
+[data-theme="light"] .library-topbar,
+[data-theme="light"] .library-sidebar,
+[data-theme="light"] .library-detail,
+[data-theme="light"] .library-banner,
+[data-theme="light"] .library-empty-banner,
+[data-theme="light"] .library-hero,
+[data-theme="light"] .library-toolbar {
+  background: var(--lib-panel);
+}
+
+/* Buttons, segmented control, and deck tiles get the raised Win95 bevel. */
+[data-theme="light"] .library-actions button,
+[data-theme="light"] .library-banner-actions button,
+[data-theme="light"] .library-empty-banner button,
+[data-theme="light"] .library-quick button,
+[data-theme="light"] .library-command,
+[data-theme="light"] .library-segment,
+[data-theme="light"] .library-card {
+  border-color: transparent;
+  box-shadow: var(--bevel-shadow);
+}
+
+/* Selected tile keeps its bevel but gains an accent ring so selection
+   still reads (the base orange glow is invisible on parchment). */
+[data-theme="light"] .library-card.selected {
+  box-shadow: var(--bevel-shadow), 0 0 0 2px var(--lib-accent);
+}
+
+/* Search + selects read as inset/sunken parchment fields. */
+[data-theme="light"] .library-search input,
+[data-theme="light"] .library-toolbar select,
+[data-theme="light"] .library-quick select {
+  border-color: var(--lib-line);
+  box-shadow: inset 1.5px 1.5px 0 var(--bevel-lo), inset -1px -1px 0 var(--bevel-hi);
+}
+
+/* Square off the rounded format pill to match the angular chrome. */
+[data-theme="light"] .library-format-pill,
+[data-theme="light"] .library-pills .library-format-pill {
+  border-radius: 0;
+}
+
+/* The grid's section headers sit directly on the teal desktop, where the
+   CRT-dim grey (--lib-dim) washes out — use dark ink. Likewise nudge the
+   tile meta up one ink step so it reads on the parchment tile body. */
+[data-theme="light"] .library-section-title {
+  color: var(--lib-text);
+}
+[data-theme="light"] .library-card-meta {
+  color: var(--lib-muted);
 }

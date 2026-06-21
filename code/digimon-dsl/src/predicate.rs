@@ -107,6 +107,15 @@ pub struct PredicateSpec {
     pub play_cost_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub play_cost_gte: Option<DpConstraint>,
+    /// Card-subject leaf (G-PLAY-OR-USE-COST-LTE): true when the larger of the
+    /// candidate's *play* cost (Digimon / Tamer) and *use* cost (Option / the
+    /// Option face of a Dual) is at most this threshold. Mirrors DCGO
+    /// `CardSource.GetCostItself <= N` over a "play or use 1 ... card with a
+    /// play or use cost of N or less" hand filter (ST24-06 RizeGreymon). For a
+    /// pure Option the play and use costs coincide; for a Dual it compares the
+    /// max of both faces; for a Digimon / Tamer it is exactly `play_cost`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub play_or_use_cost_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub can_digivolve_from_source: Option<bool>,
 
@@ -161,6 +170,14 @@ pub struct PredicateSpec {
     /// have 3 or more total colors"). G-DSL-DISTINCT-TAMER-COLORS.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub distinct_tamer_colors_gte: Option<u8>,
+    /// True when the observer's battle-area Tamer permanents collectively
+    /// carry at least N face-down digivolution sources. A no-subject global
+    /// predicate — does not inspect the candidate. Gates the `[Then]` clause of
+    /// BT25-035 Cougarmon ("by trashing 2 bottom face-down cards from under any
+    /// of your Tamers") so the optional digivolve is only offered when the
+    /// trash-2 cost is actually payable. G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub face_down_sources_under_tamers_gte: Option<u8>,
     /// True when this effect's carrier is currently battling an opposing
     /// Digimon with zero digivolution source cards. Used by inherited
     /// battle-only auras such as ST2-01 Tsunomon.
@@ -372,6 +389,15 @@ pub struct PredicateSpec {
     /// stack.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_host_permanent_is_source: Option<bool>,
+    /// `OnDigivolutionCardTrashed` observer gate: true when the trashing event's
+    /// host permanent is a **Tamer owned by the observer** — i.e. "effects trash
+    /// cards from under YOUR Tamers". Distinct from `event_host_permanent_is_source`
+    /// (host == this exact permanent): this matches ANY of the controller's
+    /// Tamers, which is what a Digimon-borne "trash from under your Tamers"
+    /// observer needs (ST24-11 Rosemon clause 2, BT25-029 MirageGaogamon clause
+    /// 2; DCGO `CanTriggerOnTrashDigivolutionCard(IsPermanentExistsOnOwnerBattleAreaTamer)`).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_host_is_own_tamer: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_is_effect_initiated: Option<bool>,
     /// For `OnAddToHand` observers: the player whose hand gained cards
@@ -574,6 +600,48 @@ pub struct PredicateSpec {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub source_is_cost_target_permanent: Option<bool>,
 
+    /// Canonical uniform DP comparator (unify-dsl-scalar-and-comparators §2).
+    /// `dp: { op: lte, value: 5000 }` or `dp: [{op: gte, value: 3000}, {op:
+    /// lte, value: 8000}]` (a list expresses a range). Lowered at compile time
+    /// into the same `dp_eq`/`dp_lte`/`dp_gte` compiled fields the legacy flat
+    /// keys produce, so the compiled IR is byte-identical and engine eval is
+    /// unchanged. The legacy `dp_eq`/`dp_lte`/`dp_gte` keys still parse (a
+    /// predicate carrying both the canonical field and a legacy flat key is
+    /// rejected by the lint, since they would silently merge).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub dp: Option<MetricComparators>,
+
+    /// Canonical uniform comparator for the trigger EVENT card's DP
+    /// (unify-dsl-scalar-and-comparators §2 Stage A). Same single|list shape as
+    /// `dp`, lowered byte-identically into `event_target_dp_eq`/`_lte`/`_gte`.
+    /// Legacy `event_target_dp_{eq,lte,gte}` keys still parse.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event_target_dp: Option<MetricComparators>,
+
+    /// Canonical uniform comparators for the identity metrics that the legacy
+    /// flat surface left without an `_eq` operator (unify-dsl-scalar-and-comparators
+    /// §2.4). `play_cost: { op: eq, value: 3 }`, ranges via a list, etc. Lowered
+    /// byte-identically into the `<metric>_eq`/`_lte`/`_gte` compiled fields
+    /// (the `_eq` compiled slots are new). Legacy `<metric>_lte`/`_gte` keys
+    /// still parse.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub play_cost: Option<MetricComparators>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub stack_size: Option<MetricComparators>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub materials_count: Option<MetricComparators>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub security_count: Option<MetricComparators>,
+    /// Canonical uniform comparator for level (unify-dsl-scalar-and-comparators
+    /// §2.4) and the trigger-event card's level (§2.2). NOTE: `eq` is
+    /// literal-only here (the compiled `_eq` is `u8`); `lte`/`gte` are
+    /// formula-capable. Lowered byte-identically into `level_*` /
+    /// `event_target_level_*`. Legacy flat keys still parse.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub level: Option<MetricComparators>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub event_target_level: Option<MetricComparators>,
+
     /// Captures unrecognized fields for controlled extension. Validator
     /// (Task 12) checks this for typos in inline predicate positions.
     #[serde(flatten)]
@@ -627,6 +695,106 @@ impl<'de> Deserialize<'de> for DpConstraint {
             DpConstraintDeserialize::WrappedFormula { formula }
             | DpConstraintDeserialize::Formula(formula) => Self::Formula(formula),
         })
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Uniform numeric comparator (unify-dsl-scalar-and-comparators §2)
+// ---------------------------------------------------------------------------
+
+/// Comparison operator for a [`Comparator`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum ComparatorOp {
+    Eq,
+    Gte,
+    Lte,
+}
+
+/// One numeric comparison: `{ op: lte, value: <FormulaSpec> }`. `value` is a
+/// `FormulaSpec`, so a bare int (`value: 5000`) is a literal threshold and a
+/// map is a runtime formula — uniformly formula-capable for every metric.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct Comparator {
+    pub op: ComparatorOp,
+    pub value: FormulaSpec,
+}
+
+/// Canonical per-metric comparator surface. The uniform replacement for the
+/// per-metric `_eq`/`_lte`/`_gte` flat-key triples (which survive as legacy
+/// deserialize aliases). Accepts EITHER a single comparator map or a list (a
+/// list expresses a range, e.g. gte AND lte):
+///
+/// ```yaml
+/// dp: { op: lte, value: 5000 }
+/// dp: [{ op: gte, value: 3000 }, { op: lte, value: 8000 }]
+/// ```
+///
+/// Lowered at compile time INTO the existing compiled `_eq`/`_lte`/`_gte`
+/// fields, so the compiled IR (and therefore engine behavior) is byte-identical
+/// to the legacy flat-key encoding. A metric carrying the canonical field AND a
+/// legacy flat key is rejected by the linter (the two would silently merge).
+#[derive(Debug, Clone, PartialEq)]
+pub struct MetricComparators(pub Vec<Comparator>);
+
+/// Untagged helper: a metric value is one comparator OR a list of them. A named
+/// helper enum (not a field-level `deserialize_with`) is required because
+/// `PredicateSpec` is itself `#[serde(flatten)]`'d — under flatten, serde
+/// invokes a named type's `Deserialize` on buffered content, but field-level
+/// `deserialize_with` is unreliable. This mirrors the `DpConstraint` helper.
+#[derive(Deserialize)]
+#[serde(untagged)]
+enum MetricComparatorsDeserialize {
+    Single(Comparator),
+    Many(Vec<Comparator>),
+}
+
+impl<'de> Deserialize<'de> for MetricComparators {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        Ok(match MetricComparatorsDeserialize::deserialize(deserializer)? {
+            MetricComparatorsDeserialize::Single(c) => MetricComparators(vec![c]),
+            MetricComparatorsDeserialize::Many(v) => MetricComparators(v),
+        })
+    }
+}
+
+impl Serialize for MetricComparators {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        // Symmetric with deserialize: a single comparator serializes as a map,
+        // multiple as a list, so round-trips are stable.
+        if self.0.len() == 1 {
+            self.0[0].serialize(serializer)
+        } else {
+            self.0.serialize(serializer)
+        }
+    }
+}
+
+impl schemars::JsonSchema for MetricComparators {
+    fn schema_name() -> String {
+        "MetricComparators".to_string()
+    }
+
+    fn json_schema(gen: &mut schemars::gen::SchemaGenerator) -> schemars::schema::Schema {
+        // oneOf: a single Comparator, or an array of Comparators (schemars
+        // can't derive over the custom single|list Deserialize above).
+        let single = gen.subschema_for::<Comparator>();
+        let many = gen.subschema_for::<Vec<Comparator>>();
+        schemars::schema::SchemaObject {
+            subschemas: Some(Box::new(schemars::schema::SubschemaValidation {
+                one_of: Some(vec![single, many]),
+                ..Default::default()
+            })),
+            ..Default::default()
+        }
+        .into()
     }
 }
 

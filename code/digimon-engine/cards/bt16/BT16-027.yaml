@@ -24,9 +24,12 @@
 #
 # Clause layout:
 #   Alt-path 1: Standard digivolve (Lv.5 Blue / Cost 5, per evo_costs in cards.json).
-#   Alt-path 2: Activated digivolve from [Imperialdramon: Dragon Mode] on field / Cost 2.
+#   Alt-path 2: Static digivolve add-source from a permanent whose top card is
+#               [Imperialdramon: Dragon Mode] on own field / Cost 2 — a plain
+#               `kind: digivolve` add-source (NOT an activated [Hand][Main] effect).
 #               DCGO: AddSelfDigivolutionRequirementStaticEffect (permanentCondition: TopCard
-#               EqualsCardName("Imperialdramon: Dragon Mode"), digivolutionCost: 2).
+#               EqualsCardName("Imperialdramon: Dragon Mode"), digivolutionCost: 2) at
+#               EffectTiming.None. Modelled with zero engine code via the alt-path registry.
 #   Alt-path 3: Burst digivolve (Blast Digivolve keyword — [Hand][Counter], cost 0).
 #               DCGO: BlastDigivolveEffect at OnCounterTiming.
 #   Clause 1:   <Blast Digivolve> keyword grant (face-up declarative).
@@ -82,10 +85,17 @@ ace_overflow: -4
 
 # ─── Alt-paths ────────────────────────────────────────────────────────────────
 # 1) Standard digivolve: Lv.5 Blue / Cost 5 (per evo_costs in cards.json).
-# 2) Activated digivolve: from [Imperialdramon: Dragon Mode] on own field / Cost 2.
-#    DCGO: AddSelfDigivolutionRequirementStaticEffect at EffectTiming.None,
-#    permanentCondition: TopCard.EqualsCardName("Imperialdramon: Dragon Mode"),
-#    digivolutionCost: 2, ignoreDigivolutionRequirement: false.
+# 2) Static digivolve add-source: from a permanent whose top card is
+#    [Imperialdramon: Dragon Mode] on own field / Cost 2. This is NOT an
+#    activated [Hand][Main] effect — DCGO models it as a STATIC additional
+#    digivolution requirement registered at EffectTiming.None:
+#    AddSelfDigivolutionRequirementStaticEffect(
+#      permanentCondition: TopCard.EqualsCardName("Imperialdramon: Dragon Mode"),
+#      digivolutionCost: 2, ignoreDigivolutionRequirement: false).
+#    A plain `kind: digivolve` alt-path with a `name_contains` source filter and
+#    a literal cost is exactly this: an extra standard digivolution route folded
+#    into the normal digivolve action + mask via the alt-path registry
+#    (`collect_dsl_alt_digivolve_routes`). No engine code is required.
 # 3) Burst digivolve: Blast Digivolve ([Hand][Counter], cost 0, any own Digimon).
 #    DCGO: BlastDigivolveEffect at EffectTiming.OnCounterTiming.
 alt_paths:
@@ -93,7 +103,7 @@ alt_paths:
     from: { level_eq: 5, color_is: blue }
     cost: 5
 
-  - kind: activated_digivolve
+  - kind: digivolve
     from:
       of: you
       zone: [battle_area]

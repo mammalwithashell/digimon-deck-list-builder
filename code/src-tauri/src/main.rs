@@ -6,7 +6,6 @@
 use digimon_tcg::deck_commands;
 use digimon_tcg::deck_storage;
 use digimon_tcg::engine_commands;
-use digimon_tcg::format_commands;
 use digimon_tcg::models;
 use digimon_tcg::updater;
 
@@ -52,10 +51,17 @@ fn main() {
         )
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
-        // Restores window position (NOT size — preset selection is the
-        // source of truth for size) across launches so multi-monitor
-        // users find the window where they left it.
-        .plugin(tauri_plugin_window_state::Builder::default().build())
+        // Restores window POSITION ONLY across launches so multi-monitor
+        // users find the window where they left it. We must NOT restore
+        // SIZE (preset selection is the source of truth — see CanvasScaler)
+        // or DECORATIONS (`tauri.conf.json` sets `decorations: false` for
+        // the custom title bar; restoring a stale `true` from an earlier
+        // build re-adds the native caption on top of our bar).
+        .plugin(
+            tauri_plugin_window_state::Builder::default()
+                .with_state_flags(tauri_plugin_window_state::StateFlags::POSITION)
+                .build(),
+        )
         .setup({
             let engine = engine.clone();
             move |app| {
@@ -106,6 +112,7 @@ fn main() {
             models::models_download,
             models::models_delete,
             models::models_load_cached,
+            models::models_resolve_starter,
             deck_commands::rust_parse_deck,
             deck_commands::rust_validate_deck_raw,
             deck_commands::rust_list_tested_cards,
@@ -118,11 +125,11 @@ fn main() {
             deck_storage::decks_put,
             deck_storage::decks_delete,
             deck_storage::decks_update_library,
+            deck_storage::rust_list_starter_decks,
             deck_storage::deck_folders_list,
             deck_storage::deck_folders_create,
             deck_storage::deck_folders_update,
             deck_storage::deck_folders_delete,
-            format_commands::formats_list,
             updater::updater_check_info,
             updater::updater_open_download_page,
         ])

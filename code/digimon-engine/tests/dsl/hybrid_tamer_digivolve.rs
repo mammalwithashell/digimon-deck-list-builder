@@ -1,7 +1,9 @@
+use digimon_engine::action::space::HAND_EFFECT_START;
 use digimon_engine::action::{build_action_mask, encode_digivolve};
 use digimon_engine::card_data::EvoCost;
 use digimon_engine::debug_runner::DebugRunner;
 use digimon_engine::enums::{CardKind, GamePhase};
+use digimon_engine::selection::SelectionKind;
 
 const TAMER_YAML: &str = r#"
 card: T5-TAMER
@@ -212,12 +214,34 @@ fn unsupported_alt_path_cost_shape_does_not_block_later_supported_path() {
     let mask = build_action_mask(&runner.game, 0);
     let action = encode_digivolve(0, tamer.index as u16);
     assert_eq!(mask[action as usize], 1.0);
-    assert!(runner.game.digivolve_from_hand(
+
+    // The card has TWO alt-digivolve routes from the Tamer base: the
+    // formula-cost path (`base 7 + material_count` = 7 with 0 materials) and
+    // the literal cost-2 path. Both are payable (memory may go negative), so
+    // rule 17 surfaces a cost-choice prompt rather than auto-picking — the
+    // first attempt installs the EffectChoice and returns false. The formula
+    // ("unsupported"-shape) path does NOT block: it produces a valid route
+    // ALONGSIDE the literal cost-2 path, which remains selectable.
+    assert!(!runner.game.digivolve_from_hand(
         0,
         0,
         tamer.index as usize,
         digimon_engine::enums::PlaySource::ByDigivolve
     ));
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::EffectChoice),
+        "two distinct payable digivolve costs must surface a rule-17 cost choice"
+    );
+    assert_eq!(
+        runner.pending_action_count(),
+        2,
+        "both the formula-cost and the literal cost-2 routes must be offered"
+    );
+    // Entries are cheapest-first, so index 0 is the literal cost-2 route.
+    runner
+        .execute_action(0, HAND_EFFECT_START)
+        .expect("choose the cost-2 route");
     assert_eq!(runner.game.memory, 3);
 }
 
@@ -236,12 +260,30 @@ fn dsl_alt_path_can_choose_cheaper_route_than_printed_evo_cost() {
     let rookie = runner.place_on_field(0, "T5-ROOKIE", Some(0));
     runner.game.current_phase = GamePhase::Main;
 
-    assert!(runner.game.digivolve_from_hand(
+    // Two distinct payable routes from Red Rookie: the printed evo-cost (3) and
+    // the DSL alt-path (1). Rule 17 prompts for which cost to pay (cheapest
+    // first) rather than auto-picking, so the first attempt installs the
+    // EffectChoice and returns false.
+    assert!(!runner.game.digivolve_from_hand(
         0,
         0,
         rookie.index as usize,
         digimon_engine::enums::PlaySource::ByDigivolve
     ));
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::EffectChoice),
+        "printed-vs-alt distinct costs must surface a rule-17 cost choice"
+    );
+    assert_eq!(
+        runner.pending_action_count(),
+        2,
+        "both the printed cost-3 and the alt cost-1 routes must be offered"
+    );
+    // Index 0 is the cheaper alt-path route (cost 1).
+    runner
+        .execute_action(0, HAND_EFFECT_START)
+        .expect("choose the cheaper alt-path route");
     assert_eq!(
         runner.game.memory, 4,
         "execution should use the cheaper legal DSL alt-path cost"

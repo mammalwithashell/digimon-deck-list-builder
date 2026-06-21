@@ -5,7 +5,10 @@ numpy>=1.24
 gymnasium>=0.29
 fastapi>=0.100
 httpx>=0.24
-uvicorn>=0.20
+# [standard] pulls the `websockets` ASGI backend — WITHOUT it uvicorn returns
+# 404 to every WS upgrade, breaking all realtime features (PvP rooms,
+# matchmaking, spectating, vs-AI-online). See ws_games.py / lobby.py.
+uvicorn[standard]>=0.20
 # App config / middleware / logging (all on the server.api startup path)
 pydantic-settings>=2.0
 slowapi>=0.1.9

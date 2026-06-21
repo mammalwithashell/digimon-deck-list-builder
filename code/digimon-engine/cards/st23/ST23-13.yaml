@@ -1,0 +1,119 @@
+# ST23-13 Tomoro Tenma & Kyo Sawashiro — Tamer, Cost 4. Colors: Green, Yellow.
+# Traits: Glowing Dawn, BEATBREAK.
+#
+# Printed card text (data/cards.json — verbatim):
+#   [Start of Your Main Phase] [On Play] You may place the top card of your deck
+#     face down under this Tamer. Then, if your opponent has a Digimon, gain 1
+#     memory.
+#   [All Turns] When effects trash cards from under this Tamer, by suspending
+#     this Tamer, 1 of your [Glowing Dawn] trait Digimon gets +3000 DP until your
+#     opponent's turn ends.
+#   Inherited: [Security] Play this card without paying the cost.
+#
+# (cards.json files the [All Turns] line under effect_description but it is
+#  actually a [Your Turn]-scoped trigger in DCGO — CanUseCondition checks
+#  IsOwnerTurn. The printed text on this STARTER promo reads "[All Turns]" yet
+#  DCGO gates it to your turn; both DCGO C# and the no-approximations rule make
+#  the faithful gate "your turn".)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST23/Green/ST23_13.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Shared OP/SOMP (ActivateClassesForSharedEffects, optional:false, onPlay +
+#   startOfYourMainPhase): SharedActivateCoroutine —
+#   - if LibraryCards.Count >= 1: an internal Yes/No SetIntSelection. On "Yes":
+#     AddDigivolutionCardsBottom([LibraryCards[0]], isFacedown:true) under THIS
+#     Tamer. → an internal Yes/No (select_effect_choice gated on deck non-empty)
+#     then place_as_bottom_source { deck_top: you, target: source, face_down }.
+#   - THEN, unconditionally (regardless of the Yes/No): if Enemy has >=1
+#     battle-area Digimon, AddMemory(1). → memory gain runs after the place,
+#     gated only on the opponent having a Digimon. NOT clause-level optional
+#     (the memory must fire even when the place is declined) — the "may" is the
+#     internal Yes/No, not the whole clause.
+# [Your Turn] trash trigger (OnDigivolutionCardDiscarded): CanUse = IsOwnerTurn
+#   && CanTriggerOnTrashDigivolutionCard(host == this Tamer). CanActivate =
+#   CanActivateSuspendCostEffect (this Tamer unsuspended). → suspend self →
+#   SelectPermanent over own [Glowing Dawn] Digimon (maxCount min(1,count),
+#   canNoSelect:false) → ChangeDigimonDP +3000 UntilOpponentTurnEnd. → when
+#   on_digivolution_card_trashed, active_when your_turn + event_host_permanent_is
+#   _source; process activation_cost suspend_self + select_own_permanent
+#   { kind: digimon, trait_has: Glowing Dawn } + add_dp_modifier value 3000
+#   expiry end_of_opponents_turn.
+# [Security] (SecuritySkill): PlaySelfTamerSecurityEffect → on_security +
+#   play_from_security.
+
+card: ST23-13
+name: "Tomoro Tenma & Kyo Sawashiro"
+kind: tamer
+color: [green, yellow]
+cost: 4
+traits: [Glowing Dawn, BEATBREAK]
+
+effects:
+  # ─── [SOMP][On Play] may place top deck card FD under self; then if opp has a
+  #     Digimon, gain 1 memory ─────────────────────────────────────────────────
+  - when: [on_play, start_of_your_main_phase]
+    summary: "[SOMP][On Play] You may place the top deck card face down under this Tamer; then if your opponent has a Digimon, gain 1 memory"
+    process:
+      # "You may place the top card of your deck face down under this Tamer" —
+      # internal Yes/No (only offered when the deck has >=1 card). The memory
+      # gain below runs regardless, so this is NOT a clause-level optional.
+      - if:
+          condition:
+            count_gte:
+              filter: { of: you, zone: [deck] }
+              n: 1
+          then:
+            - select_effect_choice:
+                bind_as: place_choice
+                labels:
+                  - "Place the top card of your deck face down under this Tamer"
+                  - "Don't place"
+                prompt: "Place the top card of your deck face down under this Tamer?"
+            - if:
+                condition: { equals: [place_choice, 0] }
+                then:
+                  - place_as_bottom_source:
+                      source: { deck_top: you }
+                      target: source
+                      face_down: true
+      # "Then, if your opponent has a Digimon, gain 1 memory." — unconditional
+      # after the place (fires even if the place was declined).
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - gain_memory: 1
+
+  # ─── [Your Turn] on trash from under this Tamer → suspend self → 1 [Glowing
+  #     Dawn] Digimon +3000 DP until opponent's turn ends ──────────────────────
+  - when: on_digivolution_card_trashed
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_host_permanent_is_source: true
+    summary: "[Your Turn] When effects trash cards from under this Tamer, by suspending this Tamer, 1 [Glowing Dawn] Digimon gets +3000 DP until your opponent's turn ends"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_own_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Glowing Dawn"
+          prompt: "1 of your [Glowing Dawn] Digimon gets +3000 DP until your opponent's turn ends"
+      - add_dp_modifier:
+          target: tgt
+          value: 3000
+          expiry: end_of_opponents_turn
+
+  # ─── Inherited [Security] Play this card without paying the cost ───────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -550,6 +550,7 @@ mod tests {
                     traits: vec![],
                     effect_text: String::new(),
                     inherited_text: String::new(),
+                    effects: vec![],
                 },
                 option: CompiledDualOption {
                     use_cost: 3,
@@ -571,6 +572,7 @@ mod tests {
                         })),
                         ..Default::default()
                     })),
+                    effects: vec![],
                 },
             }),
             use_requirement: Some(CompiledPredicate {
@@ -593,6 +595,7 @@ mod tests {
                     scope: CompiledScope::FaceUp,
                     active_when: None,
                     condition: None,
+                    timing_conditions: Vec::new(),
                     optional: false,
                     outer_prompt: false,
                     once_per_turn: false,

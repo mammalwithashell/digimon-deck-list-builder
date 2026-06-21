@@ -7,7 +7,41 @@ import {
 
 const PRESET_STORAGE_KEY = 'desktop.graphicsPreset';
 const FULLSCREEN_STORAGE_KEY = 'desktop.fullscreen';
+const RAIL_COLLAPSED_STORAGE_KEY = 'desktop.railCollapsed';
 const BOT_SPEED_STORAGE_KEY = 'gameplay.botSpeed';
+const DECK_BUILDER_VIEW_STORAGE_KEY = 'deckBuilder.viewMode';
+
+/** Deck builder card-pool layout emphasis. `browse` is the dense grid that
+ *  emphasizes the card search; `inspect` emphasizes the selected card and its
+ *  effect text (DCGO-style); `decklist` emphasizes the deck contents as a
+ *  two-column list with the pool reduced to a compact add strip. The toggle
+ *  only re-proportions the layout — it does not change which cards are shown
+ *  or any filter state. */
+export type DeckBuilderView = 'browse' | 'inspect' | 'decklist';
+
+const DECK_BUILDER_VIEWS: DeckBuilderView[] = ['browse', 'inspect', 'decklist'];
+const DEFAULT_DECK_BUILDER_VIEW: DeckBuilderView = 'browse';
+
+function loadPersistedDeckBuilderView(): DeckBuilderView {
+  if (typeof window === 'undefined') return DEFAULT_DECK_BUILDER_VIEW;
+  try {
+    const raw = window.localStorage.getItem(DECK_BUILDER_VIEW_STORAGE_KEY);
+    return DECK_BUILDER_VIEWS.includes(raw as DeckBuilderView)
+      ? (raw as DeckBuilderView)
+      : DEFAULT_DECK_BUILDER_VIEW;
+  } catch {
+    return DEFAULT_DECK_BUILDER_VIEW;
+  }
+}
+
+function persistDeckBuilderView(value: DeckBuilderView): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(DECK_BUILDER_VIEW_STORAGE_KEY, value);
+  } catch {
+    // Best-effort persistence.
+  }
+}
 
 /** Bot action pacing (add-bot-action-pacing). Non-instant speeds make
  *  local bot games advance one agent action per request, with this
@@ -80,6 +114,24 @@ function loadPersistedFullscreen(): boolean {
   }
 }
 
+function loadPersistedRailCollapsed(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return window.localStorage.getItem(RAIL_COLLAPSED_STORAGE_KEY) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+function persistRailCollapsed(value: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(RAIL_COLLAPSED_STORAGE_KEY, String(value));
+  } catch {
+    // Best-effort persistence.
+  }
+}
+
 function persistPreset(preset: ResolutionPreset): void {
   if (typeof window === 'undefined') return;
   try {
@@ -122,6 +174,14 @@ interface UiStore {
    *  changes apply from the next agent beat without restarting. */
   botSpeed: BotSpeed;
 
+  /** Whether the desktop `MenuShell` nav rail is collapsed to an icon-only
+   *  strip. Persisted so the choice survives relaunch. */
+  railCollapsed: boolean;
+
+  /** Deck builder card-pool view emphasis. Persisted so the choice survives
+   *  relaunch. */
+  deckBuilderView: DeckBuilderView;
+
   setHoveredCard: (cardId: string | null) => void;
   openModal: (modal: string) => void;
   closeModal: () => void;
@@ -131,6 +191,10 @@ interface UiStore {
   setFullscreen: (value: boolean) => void;
   setCanvasScale: (value: number) => void;
   setBotSpeed: (value: BotSpeed) => void;
+  setRailCollapsed: (value: boolean) => void;
+  toggleRail: () => void;
+  setDeckBuilderView: (value: DeckBuilderView) => void;
+  toggleDeckBuilderView: () => void;
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -141,6 +205,8 @@ export const useUiStore = create<UiStore>((set) => ({
   fullscreen: loadPersistedFullscreen(),
   canvasScale: 1,
   botSpeed: loadPersistedBotSpeed(),
+  railCollapsed: loadPersistedRailCollapsed(),
+  deckBuilderView: loadPersistedDeckBuilderView(),
 
   setHoveredCard: (cardId) => set({ hoveredCard: cardId }),
   openModal: (modal) => set({ activeModal: modal }),
@@ -160,14 +226,39 @@ export const useUiStore = create<UiStore>((set) => ({
     persistBotSpeed(value);
     set({ botSpeed: value });
   },
+  setRailCollapsed: (value) => {
+    persistRailCollapsed(value);
+    set({ railCollapsed: value });
+  },
+  toggleRail: () =>
+    set((s) => {
+      const next = !s.railCollapsed;
+      persistRailCollapsed(next);
+      return { railCollapsed: next };
+    }),
+  setDeckBuilderView: (value) => {
+    persistDeckBuilderView(value);
+    set({ deckBuilderView: value });
+  },
+  toggleDeckBuilderView: () =>
+    set((s) => {
+      const index = DECK_BUILDER_VIEWS.indexOf(s.deckBuilderView);
+      const next = DECK_BUILDER_VIEWS[(index + 1) % DECK_BUILDER_VIEWS.length]!;
+      persistDeckBuilderView(next);
+      return { deckBuilderView: next };
+    }),
 }));
 
 // Exported for tests and direct CanvasScaler reads pre-mount.
 export const __uiStoreInternals = {
   PRESET_STORAGE_KEY,
   FULLSCREEN_STORAGE_KEY,
+  RAIL_COLLAPSED_STORAGE_KEY,
   BOT_SPEED_STORAGE_KEY,
+  DECK_BUILDER_VIEW_STORAGE_KEY,
   loadPersistedPreset,
   loadPersistedFullscreen,
+  loadPersistedRailCollapsed,
   loadPersistedBotSpeed,
+  loadPersistedDeckBuilderView,
 };

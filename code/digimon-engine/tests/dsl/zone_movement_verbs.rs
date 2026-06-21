@@ -124,7 +124,7 @@ fn bounce_self_and_place_self_at_security_lower_into_self_helpers() {
         source_card,
         Some(source),
         compile_steps(
-            "      - place_self_at_security:\n          position: top\n          face: up\n",
+            "      - place_on_security:\n          source: self\n          position: top\n          face_up: true\n",
         ),
     );
 
@@ -162,7 +162,7 @@ fn place_self_option_at_security_consumes_pending_option() {
         handle,
         None,
         compile_steps(
-            "      - place_self_option_at_security:\n          position: top\n          face: up\n",
+            "      - place_on_security:\n          source: self_option\n          position: top\n          face_up: true\n",
         ),
     );
 
@@ -189,7 +189,7 @@ fn permanent_and_stacked_card_security_verbs_move_expected_cards() {
         source_card,
         Some(target),
         compile_steps(
-            "      - place_permanent_on_security_observed:\n          target: source\n          position: top\n          face: down\n          include_sources: true\n",
+            "      - place_on_security:\n          source: { permanent: source }\n          position: top\n          face_up: false\n          disposition: observed\n          include_sources: true\n",
         ),
     );
     assert_eq!(runner.battle_area_size(0), 0);

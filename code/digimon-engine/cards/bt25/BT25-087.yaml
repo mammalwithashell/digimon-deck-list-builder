@@ -1,0 +1,75 @@
+# BT25-087 Thomas H. Norstein — Tamer, Blue, Cost 4. Traits: DATA SQUAD.
+#
+# Printed card text (data/cards.json, confirmed vs DCGO BT25/Blue/BT25_087.cs):
+#   [Start of Your Turn] If you have 2 or less memory, set it to 3.
+#   [All Turns] When effects add cards to your opponent's hand, by suspending
+#     this Tamer, you may place the top 2 cards of your deck face down under
+#     this Tamer.
+#   [Your Turn] [Once Per Turn] When any of your Digimon would digivolve into a
+#     [DATA SQUAD] trait Digimon card, by trashing the bottom face-down card
+#     from under any of your Tamers, reduce the cost by 1.
+#   [Security] Play this card without paying the cost.
+#
+# Near-clone of BT25-088 Kyo Sawashiro (set-memory, place-2-FD trigger, an
+# interactive FD-trash cost reducer, [Security] play-self). Differences:
+#   - clause 2 trigger is "effect adds to OPPONENT's hand" (on_add_to_hand
+#     gated event_add_to_hand_player: opponent + event_is_effect_initiated),
+#     vs BT25-088's on_lose_security.
+#   - clause 3 reduces a DIGIVOLVE into [DATA SQUAD] (when_any_ally_digivolves_into),
+#     using the digivolve interactive cost-reduction path closed in #644
+#     (ST23-03/11 sisters). The FD-trash pay_cost parks and the engine defers
+#     the −1 credit to the parked Tamer-pick's success continuation.
+
+card: BT25-087
+name: "Thomas H. Norstein"
+kind: tamer
+color: [blue]
+cost: 4
+traits: [DATA SQUAD]
+
+effects:
+  # ─── [Start of Your Turn] If memory <= 2, set it to 3 ──────────────────────
+  - when: start_of_your_turn
+    condition: { memory_lte: 2 }
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    process:
+      - set_memory: 3
+
+  # ─── [All Turns] When effects add to opponent's hand: may suspend self →
+  #     place top 2 deck cards face down under this Tamer ───────────────────────
+  - when: on_add_to_hand
+    optional: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_add_to_hand_player: opponent
+        - event_is_effect_initiated: true
+    summary: "[All Turns] When effects add cards to your opponent's hand, by suspending this Tamer you may place the top 2 deck cards face down under this Tamer"
+    process:
+      - activation_cost: { suspend_self: true }
+      - place_as_bottom_source:
+          source: { deck_top: you }
+          target: source
+          face_down: true
+      - place_as_bottom_source:
+          source: { deck_top: you }
+          target: source
+          face_down: true
+
+  # ─── [Your Turn][OPT] When any ally would digivolve into a [DATA SQUAD]
+  #     Digimon card, by trashing a bottom FD card under a Tamer, reduce -1 ─────
+  - kind: cost_reduction
+    active_when: { your_turn: true }
+    when_any_ally_digivolves_into: { trait_has: "DATA SQUAD" }
+    optional: true
+    once_per_turn: true
+    amount: 1
+    pay_cost:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+    summary: "[Your Turn][OPT] When any of your Digimon would digivolve into a [DATA SQUAD] Digimon card, by trashing a bottom face-down card under a Tamer, reduce the cost by 1"
+
+  # ─── [Security] Play this card without paying the cost ─────────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

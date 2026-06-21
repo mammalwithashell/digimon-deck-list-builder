@@ -1,0 +1,91 @@
+# ST23-01 Kekkomon — Digi-Egg, Lv.2, Green, Cost 0.
+# Traits: Lesser, Glowing Dawn, BEATBREAK.
+#
+# Printed card text (data/cards.json — verbatim):
+#   The FACE has NO effect.
+#   Inherited Effect [When Attacking] [Once Per Turn] By trashing the bottom
+#     face-down card from under any of your Tamers, this Digimon may digivolve
+#     into a [Glowing Dawn] trait Digimon card in the hand with the cost reduced
+#     by 2.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST23/Green/ST23_01.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Inherited OnAllyAttack ActivateClass (maxPerTurn 1, optional, hash ST23_01_WA):
+#   - CanActivate: a Tamer with a face-down digivolution source exists
+#     (HasFaceDownDigivolutionCards). The verb
+#     trash_bottom_face_down_source_under_tamer installs that exact Tamer pick
+#     (select_own_permanent { kind: tamer, has_face_down_source: true }, multi-
+#     Tamer surfaced) and trashes the chosen Tamer's bottom face-down source; if
+#     no eligible Tamer exists the cost is unpayable and the remaining steps are
+#     skipped.
+#   - Payoff: DigivolveIntoHandOrTrashCard(card.PermanentOfThisCard(),
+#     payCost: true, reduceCost 2, isHand: true) over a hand card EqualsTraits
+#     ("Glowing Dawn"), gated on HasMatchConditionOwnersHand. → effect-initiated
+#     digivolve of THIS permanent (target: source) into a hand [Glowing Dawn]
+#     card with cost: { reduce: 2 }, requirements honored (ignore_requirements
+#     stays false).
+#   - "may digivolve" optionality is carried by the optional select_hand
+#     (BT25-003 / BT12-016 idiom): declining (PASS) leaves the binding unset →
+#     the trash cost is NOT paid. The clause is gated (condition) on BOTH a
+#     Tamer-with-face-down-source existing AND a [Glowing Dawn] card in hand, so
+#     the trash cost is never paid for nothing.
+
+card: ST23-01
+name: "Kekkomon"
+kind: digi_egg
+level: 2
+color: [green]
+cost: 0
+traits: [Lesser, Glowing Dawn, BEATBREAK]
+form: In-Training
+
+effects:
+  # ─── Inherited [When Attacking][OPT] trash bottom FD under a Tamer → may
+  #     digivolve into a [Glowing Dawn] hand card with the cost reduced by 2 ───
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    # Gate on a payable cost (a Tamer with a face-down source) AND a valid payoff
+    # (a [Glowing Dawn] card in hand). The trash cost is never paid for nothing.
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: tamer
+            has_face_down_source: true
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              all_of:
+                - kind: digimon
+                - trait_has: "Glowing Dawn"
+            n: 1
+    summary: "Inherited [When Attacking][OPT] By trashing the bottom face-down card under a Tamer, may digivolve into a [Glowing Dawn] hand card with the cost reduced by 2"
+    process:
+      # "may digivolve into a [Glowing Dawn] trait Digimon card in the hand" —
+      # the optional select_hand carries the "may". Declining (PASS) leaves the
+      # binding unset → the trash cost below is NOT paid.
+      - select_hand:
+          of: you
+          bind_as: gd_evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Glowing Dawn"
+          prompt: "Digivolve into a [Glowing Dawn] trait Digimon card in your hand with the cost reduced by 2"
+      - if:
+          condition: { binding_present: gd_evo }
+          then:
+            # "By trashing the bottom face-down card from under any of your
+            # Tamers" — the activation cost (multi-Tamer pick surfaced).
+            - trash_bottom_face_down_source_under_tamer: { of: you }
+            # "with the cost reduced by 2" — paid, requirements honored.
+            - effect_initiated_digivolve:
+                target: source
+                from_hand: gd_evo
+                cost: { reduce: 2 }

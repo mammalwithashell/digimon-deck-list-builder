@@ -140,6 +140,22 @@ impl<'a> EffectContext<'a> {
                     return;
                 }
                 pending.card
+            } else if let Some(pending) = self.game.pending_option.take() {
+                // Real Option-play lifecycle: play_option_core moved the Option
+                // into the single-occupancy `pending_option` slot BEFORE running
+                // the [Main] body, so it is no longer in hand/trash. Claim it for
+                // self-placement when it is OUR source Option. Taking it here
+                // leaves `pending_option` empty, so the subsequent
+                // `dispose_option` (play_option_core step 8) finds nothing and
+                // skips the Standard trash — exactly the desired end state.
+                // Fixes G-OPTION-PLACE-SELF-AS-DELAY-ON-PLAY-PATH.
+                if pending.card.handle() != self.source_card
+                    || pending.card.card_kind(&self.game.card_data) != CardKind::Option
+                {
+                    self.game.pending_option = Some(pending);
+                    return;
+                }
+                pending.card
             } else {
                 let Some(source_card) = self.remove_source_option_from_controller_zones() else {
                     return;
@@ -183,6 +199,45 @@ impl<'a> EffectContext<'a> {
             },
         );
         self.game.drain_effect_queue();
+    }
+
+    /// Relocate THIS effect's source Option (an in-battle-area field Option)
+    /// face-down under `target`, a chosen own permanent. The Option leaves the
+    /// battle area and its card becomes the bottom-most digivolution source of
+    /// `target`. Distinct from a trash: fires neither `OnOptionTrashed` nor
+    /// `OnDigivolutionCardTrashed` (the card MOVES, it is not trashed).
+    ///
+    /// Used by ST23-15 e-Pulse / ST24-15 DNA Charge's
+    /// `[Start of Your Main Phase] By placing this card from the battle area
+    /// face down under any of your [BEATBREAK]/[DATA SQUAD] trait Tamers, …`.
+    /// The caller runs the `<Draw 1>` + memory gain after a `true` return.
+    /// G-MOVE-SELF-OPTION-UNDER-PERMANENT.
+    ///
+    /// Returns `false` (no mutation) when there is no source permanent (the
+    /// Option is not on the field) or `target` is not a legal own permanent.
+    pub fn move_self_option_under_permanent(
+        &mut self,
+        target: PermanentHandle,
+        face_down: bool,
+    ) -> bool {
+        let Some(option_handle) = self.source_permanent else {
+            return false;
+        };
+        // The target must be a battle-area permanent the controller owns.
+        if target.player != self.player {
+            return false;
+        }
+        if self
+            .game
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .is_none()
+        {
+            return false;
+        }
+        self.game
+            .move_field_option_under_permanent(option_handle, target, face_down)
     }
 
     /// Decline the pay cost for a queued triggered effect that parked during

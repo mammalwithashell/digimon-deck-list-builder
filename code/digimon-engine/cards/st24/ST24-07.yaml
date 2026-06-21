@@ -1,0 +1,170 @@
+# ST24-07 ShineGreymon / "GeoGrey Sword" — DUAL card (Digimon + Option).
+# Lv.6 Yellow, Light Dragon / DATA SQUAD, DP 12000.
+#
+# ─── cards.json TRAP ─────────────────────────────────────────────────────────
+# cards.json mislabels this as a plain Digimon (card_kind 0) and files the
+# Option-face "Use Requirement / [Main]" text in the INHERITED slot. The real
+# ShineGreymon Digimon has NO inherited effect — that text is the Option face
+# (GeoGrey Sword). The card IMAGE (DIGIMON / OPTION DUAL spine) + DCGO
+# ST24_07.cs are authoritative. Authored as kind: dual with per-face effects.
+#
+# Printed text (card image / DCGO — authoritative, verbatim):
+#   DIGIMON FACE — ShineGreymon, Lv.6, DP 12000, Yellow.
+#     <Raid> <Piercing> <Security A. +1>
+#     <Digivolve> Lv.5 w/ [RizeGreymon] in name or [DATA SQUAD] trait: Cost 3
+#       (ignore digivolution requirement).
+#     [When Digivolving] [When Attacking] [Once Per Turn] You may play 1 Tamer
+#       card with a play cost of 5 or less from your hand or trash without paying
+#       the cost. Then, 1 of your opponent's Digimon gets -9000 DP for the turn.
+#   OPTION FACE — "GeoGrey Sword", Use 5.
+#     Use Req. [DATA SQUAD] trait (ignore color requirements).
+#     [Main] 1 of your opponent's Digimon gets -6000 DP for the turn. Then, delete
+#       1 of your opponent's Digimon with 7000 DP or less.
+#     <Arts Digivolve>.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST24/Yellow/ST24_07.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (timing None): AddSelfDigivolutionRequirementStaticEffect(
+#   level 5, permanentCondition = EqualsTraits("DATA SQUAD") ||
+#   ContainsCardName("RizeGreymon"), cost 3, ignoreDigivolutionRequirement:true).
+#   → alt_paths: from level 5 + any_of[name RizeGreymon, trait DATA SQUAD],
+#     cost 3, ignore_requirements: true.
+# Static keywords (Digimon face): RaidSelfEffect + PierceSelfEffect +
+#   ChangeSelfSAttack(+1). → grant_keyword Raid / Piercing / SecurityAttackPlus 1.
+# Shared WD/WA (maxPerTurn 1, hash ST24_07_WD_WA): optional Yes/No → play 1 Tamer
+#   (HasPlayCost && GetCostItself<=5, CanPlayAsNewPermanent) from hand OR trash
+#   for free (Mode.PlayForFree). THEN, if opponent has a Digimon (canNoSelect:
+#   false, mandatory), ChangeDigimonDP -9000 UntilEachTurnEnd. → select_union_zone
+#   { zones: [hand, trash], kind: tamer, play_cost_lte: 5, optional } +
+#   play_union_bound_free; then select_opponent_permanent { kind: digimon } +
+#   add_dp_modifier -9000 expiry end_of_turn (runs unconditionally after the play).
+# Option Use Req — UseRequirements(EqualsTraits("DATA SQUAD")) →
+#   dual.option.use_requirement over a battle-area DATA SQUAD Digimon/Tamer.
+# Option [Main] (OptionSkill): if opponent has a Digimon (canNoSelect:false),
+#   ChangeDigimonDP -6000 UntilEachTurnEnd; then if opponent has a Digimon with
+#   DP<=7000 (canNoSelect:true, Mode.Destroy), delete it. → dual.option.effects
+#   when: main: select_opponent_permanent { kind: digimon } + add_dp_modifier
+#   -6000 expiry end_of_turn; then select_opponent_permanent { kind: digimon,
+#   dp_lte: 7000, optional } + delete_permanent.
+# Arts Digivolve — CardEffectFactory.ArtsDigivolveEffect(card). → arts_digivolve.
+#
+# Templates: ST23-09 / BT25-057 (dual per-face effects + arts digivolve).
+
+card: ST24-07
+name: "ShineGreymon"
+kind: dual
+
+# Top-level metadata mirrors the Digimon face (so deck-legality / search see a
+# Lv.6 Yellow Light Dragon). The engine reads face-specific stats from `dual`.
+level: 6
+color: [yellow]
+cost: 5
+dp: 12000
+traits: [Light Dragon, DATA SQUAD]
+
+# Digimon-face digivolution box: Lv.5 with [RizeGreymon] in name OR [DATA SQUAD]
+# trait, cost 3, IGNORING the digivolution requirement.
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - name_contains: "RizeGreymon"
+            - trait_has: "DATA SQUAD"
+    cost: 3
+    ignore_requirements: true
+
+dual:
+  digimon:
+    level: 6
+    dp: 12000
+    colors: [yellow]
+    traits: [Light Dragon, DATA SQUAD]
+    effect_text: |
+      <Raid> <Piercing> <Security A. +1>
+      [When Digivolving] [When Attacking] [Once Per Turn] You may play 1 Tamer card with a play cost of 5 or less from your hand or trash without paying the cost. Then, 1 of your opponent's Digimon gets -9000 DP for the turn.
+    effects:
+      # Static printed keywords on the Digimon face.
+      - kind: grant_keyword
+        keyword: Raid
+        summary: "<Raid>"
+      - kind: grant_keyword
+        keyword: Piercing
+        summary: "<Piercing>"
+      - kind: grant_keyword
+        keyword: SecurityAttackPlus
+        value: 1
+        summary: "<Security A. +1>"
+
+      # [WD][WA][OPT] may play 1 Tamer (cost<=5) from hand/trash free; then 1 opp
+      # Digimon gets -9000 DP for the turn (mandatory, runs after the play).
+      - when: [when_digivolving, when_attacking]
+        once_per_turn: true
+        summary: "[WD][WA][OPT] You may play 1 Tamer (cost<=5) from hand/trash free; then 1 opp Digimon gets -9000 DP for the turn"
+        process:
+          # "You may play 1 Tamer card with a play cost of 5 or less from your
+          # hand or trash without paying the cost." — optional union-zone pick.
+          - select_union_zone:
+              of: you
+              zones: [hand, trash]
+              bind_as: tamer_pick
+              optional: true
+              filter:
+                all_of:
+                  - kind: tamer
+                  - play_cost_lte: 5
+              prompt: "You may play 1 Tamer with a play cost of 5 or less from your hand or trash without paying the cost"
+          - play_union_bound_free: { binding: tamer_pick }
+          # "Then, 1 of your opponent's Digimon gets -9000 DP for the turn." —
+          # DCGO canNoSelect:false (mandatory when an opponent Digimon exists).
+          - select_opponent_permanent:
+              bind_as: dp_target
+              filter: { kind: digimon }
+              prompt: "1 of your opponent's Digimon gets -9000 DP for the turn"
+          - add_dp_modifier:
+              target: dp_target
+              value: -9000
+              expiry: end_of_turn
+  option:
+    use_cost: 5
+    colors: [yellow]
+    effect_text: |
+      [Main] 1 of your opponent's Digimon gets -6000 DP for the turn. Then, delete 1 of your opponent's Digimon with 7000 DP or less.
+    # Use Req. [DATA SQUAD] trait — a DATA SQUAD Digimon/Tamer on the field
+    # satisfies the Option's color requirement (ignore color).
+    use_requirement:
+      any_field_permanent:
+        of: you
+        trait_has: "DATA SQUAD"
+    arts_digivolve: true
+    effects:
+      - when: main
+        summary: "[Main] -6000 DP to 1 opp Digimon, then delete 1 opp Digimon with 7000 DP or less"
+        process:
+          # "1 of your opponent's Digimon gets -6000 DP for the turn." —
+          # mandatory (canNoSelect:false when an opponent Digimon exists).
+          - select_opponent_permanent:
+              bind_as: dp_target
+              filter: { kind: digimon }
+              prompt: "1 of your opponent's Digimon gets -6000 DP for the turn"
+          - add_dp_modifier:
+              target: dp_target
+              value: -6000
+              expiry: end_of_turn
+          # "Then, delete 1 of your opponent's Digimon with 7000 DP or less." —
+          # optional (DCGO canNoSelect:true).
+          - select_opponent_permanent:
+              bind_as: delete_target
+              optional: true
+              filter:
+                all_of:
+                  - kind: digimon
+                  - dp_lte: 7000
+              prompt: "Delete 1 of your opponent's Digimon with 7000 DP or less"
+          - if:
+              condition: { binding_present: delete_target }
+              then:
+                - delete_permanent: { target: delete_target }

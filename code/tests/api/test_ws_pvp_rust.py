@@ -152,6 +152,38 @@ def _first_legal(mask: list) -> int:
     raise AssertionError("Empty action mask for the decision player")
 
 
+def _mirror_pid(pid):
+    """Absolute seat id as seat 1 sees it (identity) vs. as seat 2 sees it."""
+    if pid == 1:
+        return 2
+    if pid == 2:
+        return 1
+    return pid
+
+
+def _assert_event_perspectives_mirror(upd1: dict, upd2: dict) -> int:
+    """Both seats receive the SAME engine events, normalized to opposite
+    perspectives: seat 1 is the absolute identity, seat 2 has every player id
+    swapped (1↔2; non-seat values like the GameOver `player=0` default and a
+    null winner pass through). For each shared event `seq`, seat 2's player
+    refs must be the mirror of seat 1's. Returns the number of events compared.
+    """
+    e1 = {e["seq"]: e for e in upd1.get("events", [])}
+    e2 = {e["seq"]: e for e in upd2.get("events", [])}
+    # Both seats see the same event set (only the perspective differs).
+    assert set(e1) == set(e2), "seats received different event seqs"
+    for seq in e1:
+        a, b = e1[seq], e2[seq]
+        assert b["player"] == _mirror_pid(a["player"])
+        # Relative field indices are NOT remapped — identical on both seats.
+        assert b["source_slot"] == a["source_slot"]
+        assert b["target_slot"] == a["target_slot"]
+        for key in ("target_player", "winner"):
+            if key in a.get("meta", {}):
+                assert b["meta"][key] == _mirror_pid(a["meta"][key])
+    return len(e1)
+
+
 def test_full_pvp_game_over_websocket_on_rust():
     client, teardown = _setup()
     try:
@@ -165,58 +197,79 @@ def test_full_pvp_game_over_websocket_on_rust():
 
             ws2 = stack.enter_context(client.websocket_connect(_ws_url(game_id, tok_join)))
             first2 = _recv_state(ws2)
-            assert first2["your_player_id"] == 2
+            # Every player is perspective-normalized into the player1 slot, so
+            # `your_player_id` is 1 for BOTH seats (add-room-match-pvp seat-2 fix).
+            assert first2["your_player_id"] == 1
             _assert_redacted(first2)
 
+            # `sockets` is keyed by ABSOLUTE seat (1 = host, 2 = joiner). Since
+            # the wire ids are now normalized per-recipient, identify the
+            # decision player by which seat holds the (non-empty) mask — the
+            # mask only ever reaches the decision player.
             sockets = {1: ws1, 2: ws2}
-            # Track latest known mask/decision-player per seat
-            current_pid = first2["current_player_id"]
             masks = {1: first1["action_mask"], 2: first2["action_mask"]}
 
+            def decision_seat() -> int:
+                return 1 if masks[1] else 2
+
             # Decision routing probe: the non-decision player is rejected.
-            other = 2 if current_pid == 1 else 1
-            sockets[other].send_json({"type": "action", "action_id": 0})
-            rejection = _recv_until(sockets[other], "error")
+            non_decider = 2 if decision_seat() == 1 else 1
+            sockets[non_decider].send_json({"type": "action", "action_id": 0})
+            rejection = _recv_until(sockets[non_decider], "error")
             assert "turn" in rejection["message"].lower()
 
-            # Play through mulligans + a stretch of real turns. Each step:
-            # the decision player picks its first legal action; both seats
-            # receive a redacted broadcast; the mask follows the decision
-            # player.
+            # Play through mulligans + a stretch of real turns. Each step: the
+            # decision seat picks its first legal action; both seats receive a
+            # redacted broadcast normalized to their own perspective; the mask
+            # follows the decision seat.
             game_over = False
+            events_compared = 0
             for _ in range(60):
-                mask = masks[current_pid]
-                assert mask, f"decision player {current_pid} got an empty mask"
-                sockets[current_pid].send_json({
+                actor = decision_seat()
+                mask = masks[actor]
+                assert mask, f"decision seat {actor} got an empty mask"
+                sockets[actor].send_json({
                     "type": "action",
                     "action_id": _first_legal(mask),
                 })
                 upd = {pid: _recv_state(sockets[pid]) for pid in (1, 2)}
                 for pid in (1, 2):
                     _assert_redacted(upd[pid])
+                    # Every recipient sees themselves as player1.
+                    assert upd[pid]["your_player_id"] == 1
+                # The event stream is perspective-normalized to match the state:
+                # seat 2's event player ids mirror seat 1's (the wiring of
+                # normalize_events_for_player through broadcast_state).
+                events_compared += _assert_event_perspectives_mirror(upd[1], upd[2])
                 if upd[1]["is_game_over"]:
                     game_over = True
                     break
-                current_pid = upd[1]["current_player_id"]
                 masks = {pid: upd[pid]["action_mask"] for pid in (1, 2)}
-                # Mask only reaches the decision player
-                non_decider = 2 if current_pid == 1 else 1
-                assert masks[non_decider] == []
+                # Mask only reaches the single decision seat.
+                assert (masks[1] == []) != (masks[2] == []), (
+                    "exactly one seat should hold the action mask"
+                )
+
+            # The mirror invariant must have actually run over real events.
+            assert events_compared > 0, "no events were broadcast to compare"
 
             if not game_over:
-                # Concede from the current decision player's opponent —
-                # concede is legal regardless of whose decision it is.
-                conceder = 2 if current_pid == 1 else 1
+                # Concede from one seat — legal regardless of whose decision it is.
+                conceder = decision_seat()
                 sockets[conceder].send_json({"type": "surrender"})
-                # Both sockets get the final state then game_over
+                # Both sockets get the final state then game_over.
                 finals = {pid: _recv_state(sockets[pid]) for pid in (1, 2)}
+                winner_seat = 1 if conceder == 2 else 2
                 for pid in (1, 2):
                     assert finals[pid]["is_game_over"]
+                    # State winner is normalized: 1 = "you won" from each view.
+                    assert finals[pid]["state"]["winner"] == (1 if pid == winner_seat else 2)
+                # The game_over EVENT carries absolute ids (broadcast to all).
                 over1 = _recv_until(ws1, "game_over")
                 over2 = _recv_until(ws2, "game_over")
                 for over in (over1, over2):
                     assert over["surrendered_by"] == conceder
-                    assert over["winner_id"] == (1 if conceder == 2 else 2)
+                    assert over["winner_id"] == winner_seat
     finally:
         teardown()
 

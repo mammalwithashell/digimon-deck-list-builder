@@ -167,6 +167,13 @@ fn sorrow_blue_locks_only_the_bare_opponent_digimon() {
         runner.game.modifiers.has(bare, ModifierType::CannotAttack),
         "the locked bare Digimon can't attack"
     );
+    // The mask-suppression contract for a permanent-scoped CannotAttack (the
+    // eval-recording attack-loop regression) is enforced at the mask layer and
+    // covered generically by
+    // `combat::cannot_suspend_enforcement::cannot_attack_zeroes_attack_bits_for_locked_attacker_only`.
+    // Here we only assert Sorrow Blue applies the lock modifiers; `can_attack`
+    // itself intentionally does NOT consult CannotAttack (it is a
+    // `WhenWouldAttack` cancel replacement — see combat/mod.rs `can_attack`).
     assert!(
         runner.game.modifiers.has(bare, ModifierType::CannotBlock),
         "the locked bare Digimon can't block"

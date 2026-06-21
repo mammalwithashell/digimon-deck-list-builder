@@ -141,9 +141,9 @@ effects:
           bind_as: sac_digimon
           filter: { kind: digimon }
           prompt: "Place 1 of your Digimon on top of your security stack (cost)."
-      - place_permanent_on_security:
+      - place_on_security:
+          source: { permanent: sac_digimon }
           of: you
-          target: sac_digimon
           position: top
           face_up: false
       - select_security:

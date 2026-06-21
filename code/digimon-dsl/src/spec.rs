@@ -109,6 +109,14 @@ pub struct DualDigimonSpec {
     pub effect_text: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub inherited_text: String,
+    /// Behavioral clauses that fire when this DUAL card is in play as a
+    /// Digimon (played / digivolved / attacking / in a stack). Lowered with
+    /// the Digimon face identity, so timings keep their natural meaning
+    /// (`on_play`, `when_digivolving`, `when_attacking`, inherited, …).
+    /// Distinct from `dual.option.effects`, which fire only when the card is
+    /// *used as an Option*. See `G-DSL-DUAL-PER-FACE-EFFECTS`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub effects: Vec<crate::clause::ClauseSpec>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -125,6 +133,22 @@ pub struct DualOptionSpec {
     pub keywords: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub use_requirement: Option<crate::predicate::PredicateSpec>,
+    /// Behavioral clauses that fire when this DUAL card is *used as an
+    /// Option* (the BEATBREAK `[Main]` / `OptionMain` body). A `when: main`
+    /// clause here lowers to `EffectTiming::OptionMain` so it fires only on
+    /// Option use, never when the card is in play as a Digimon. See
+    /// `G-DSL-DUAL-PER-FACE-EFFECTS`.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub effects: Vec<crate::clause::ClauseSpec>,
+    /// `<Arts Digivolve>` shorthand — "instead of trashing after use, your
+    /// cards may digivolve into this card without paying the cost." When
+    /// `true`, the lowering injects `Keyword::ArtsDigivolve` onto the Option
+    /// face so the engine's arts-digivolve selection arms after the Option
+    /// `[Main]` body resolves (equivalent to authoring
+    /// `keywords: [ArtsDigivolve]`, but reads as the printed keyword).
+    /// See `G-DSL-ARTS-DIGIVOLVE` / `G-DSL-BEATBREAK-ARTS-OPTION`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub arts_digivolve: bool,
 }
 
 #[derive(

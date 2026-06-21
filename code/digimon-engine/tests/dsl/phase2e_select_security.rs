@@ -37,6 +37,7 @@ fn select_security_opponent_binds_picked_handle() {
 
     let steps = vec![
         CompiledStep::SelectSecurity {
+            then: vec![],
             of: CompiledPlayerRef::Opponent,
             filter: CompiledPredicate::default(),
             bind_as: Some("sec_pick".to_string()),

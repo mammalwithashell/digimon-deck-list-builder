@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 use digimon_dsl::compiled::{
     CompiledActivationCostKind, CompiledCardKind, CompiledPlayerRef, CompiledPredicate,
-    CompiledScope, CompiledStep, CompiledTriggeredClause,
+    CompiledBindingRef, CompiledScope, CompiledStep, CompiledTriggeredClause,
 };
 
 use crate::card_source::CardHandle;
@@ -160,9 +160,22 @@ pub fn lower_for_kind_with_clause_index(
         } else {
             None
         };
+        // Captured before `body_steps` is moved — used to gate [Main]/activated
+        // abilities on first-step actionability even when the clause isn't
+        // "optional" (activating IS the player's opt-in).
+        let activation_first_step = body_steps.first().cloned();
         let process_steps = Arc::new(body_steps);
         let active_when = clause.active_when.clone().map(Arc::new);
         let condition = clause.condition.clone().map(Arc::new);
+        // G-SHARED-OPT-HETEROGENEOUS-TIMING: per-timing condition override for
+        // THIS timing, if the clause declares one. AND-ed onto the clause-level
+        // gates inside the condition closure so each timing of a shared-OPT
+        // multi-timing clause can carry its own gate while sharing the counter.
+        let timing_condition = clause
+            .timing_conditions
+            .iter()
+            .find(|tc| tc.when == *t)
+            .map(|tc| Arc::new(tc.condition.clone()));
         let scope = clause.scope;
         let optional = clause.optional;
         let once_per_turn = clause.once_per_turn;
@@ -224,6 +237,18 @@ pub fn lower_for_kind_with_clause_index(
                 }
             }
         }
+        // [Main] activated field abilities: the action mask (`field_main_match`)
+        // and the effect-queue both consult `outer_optional_guard` to suppress
+        // an activation whose leading selection/cost has no candidate — e.g.
+        // <Digi-Burst N> with too few sources to trash. Install it from the
+        // first body step for `MainOnField` even when the clause isn't
+        // "optional" (activating the [Main] IS the opt-in). `!optional` avoids
+        // double-installing over the optional path above.
+        if !optional && matches!(engine_timing, EffectTiming::MainOnField) {
+            if let Some(guard) = digi_burst_main_activation_guard(activation_first_step.as_ref()) {
+                builder = builder.outer_optional_guard(guard);
+            }
+        }
         if steps_provide_resource_flow(&clause.process) {
             builder = builder.resource_flow();
         }
@@ -240,12 +265,14 @@ pub fn lower_for_kind_with_clause_index(
 
         if active_when.is_some()
             || condition.is_some()
+            || timing_condition.is_some()
             || is_when_linked
             || is_host_linked
             || is_would_link_to_this
         {
             let aw = active_when.clone();
             let cc = condition.clone();
+            let tc = timing_condition.clone();
             builder = builder.condition(move |rctx| {
                 // DigiLink Shape-B self-filter: a `when_linked` effect fires
                 // only when THIS card is the just-linked card.
@@ -270,6 +297,12 @@ pub fn lower_for_kind_with_clause_index(
                     }
                 }
                 if let Some(p) = &cc {
+                    if !eval_predicate(p, rctx, subject) {
+                        return false;
+                    }
+                }
+                // G-SHARED-OPT-HETEROGENEOUS-TIMING: this timing's own gate.
+                if let Some(p) = &tc {
                     if !eval_predicate(p, rctx, subject) {
                         return false;
                     }
@@ -419,13 +452,10 @@ pub(crate) fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
         | CompiledStep::MayAttackNow { optional, .. }
         | CompiledStep::RedirectAttackTarget { optional, .. }
         | CompiledStep::RefireEffect { optional, .. }
-        // `link_card_to_self` with `optional: true` installs a PASS-able
-        // card-pick selection on its own — the inner PASS is the decline
-        // path, so no outer accept/decline prompt is needed.
+        // `app_fuse` with `optional: true` installs PASS-able permanent/card
+        // selections itself (effect-initiated App Fuse), so the inner PASS is
+        // the decline path — no outer accept/decline prompt is needed.
         // `G-OUTER-OPTIONAL-NOT-INSTALLED`
-        | CompiledStep::LinkCardToSelf { optional, .. }
-        // `app_fuse` with `optional: true` likewise installs PASS-able
-        // permanent/card selections itself (effect-initiated App Fuse).
         | CompiledStep::AppFuse { optional, .. } => *optional,
         // Multi-pick selections are declinable when their minimum is zero
         // (the player may pick nothing — PASS at `picked >= min`).
@@ -445,6 +475,35 @@ pub(crate) fn body_first_step_is_declinable(body: &[CompiledStep]) -> bool {
         // can only be honored via an outer accept/decline prompt.
         _ => false,
     }
+}
+
+/// True when a cost-reduction `pay_cost` body's FIRST step INSTALLS A SELECTION
+/// (parks on a `pending_selection`) rather than completing synchronously. Such
+/// a reducer cannot be resolved by the synchronous digivolve / Option-use cost
+/// scan; the engine routes it through a dedicated interactive prompt instead
+/// (`Effect::pay_cost_interactive`). `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+///
+/// Conservative: lists the selection-installing steps actually used as cost
+/// payments today. The self-suspend / synchronous-trash idioms are NOT here, so
+/// they keep their synchronous scan handling.
+pub(crate) fn body_first_step_installs_selection(body: &[CompiledStep]) -> bool {
+    let Some(first) = body.first() else {
+        return false;
+    };
+    matches!(
+        first,
+        CompiledStep::TrashBottomFaceDownSourceUnderTamer { .. }
+            | CompiledStep::SelectHand { .. }
+            | CompiledStep::SelectTrash { .. }
+            | CompiledStep::SelectReveal { .. }
+            | CompiledStep::SelectSecurity { .. }
+            | CompiledStep::SelectOwnPermanent { .. }
+            | CompiledStep::SelectOpponentPermanent { .. }
+            | CompiledStep::SelectAnyPermanent { .. }
+            | CompiledStep::SelectMaterial { .. }
+            | CompiledStep::SelectOwnSources { .. }
+            | CompiledStep::SelectCountCappedMulti { .. }
+    )
 }
 
 /// Resolve a `CompiledPlayerRef` against a read context to concrete player
@@ -468,6 +527,35 @@ fn players_for_compiled_ref(
 /// single-pick selection steps are covered — they are the ones that drive
 /// the `G-OUTER-OPTIONAL-NOT-INSTALLED` failure mode (a useless prompt for
 /// a body that would silently no-op).
+/// For a [Main]-activated field ability whose leading step is a ＜Digi-Burst N＞
+/// self-cost (`SelectOwnSources` over THIS Digimon's own sources), return a
+/// guard requiring N digivolution cards under the top to trash
+/// (`card_sources.len() > N`). Used ONLY in the `MainOnField` branch to keep the
+/// action mask from offering a [Main] activation that can't pay its cost —
+/// execution would refuse it, a no-op the deterministic policy loops on to the
+/// step limit. Returns None for any other first step (no [Main]-side gate). This
+/// is deliberately separate from `first_step_candidate_guard` (which serves the
+/// optional-TRIGGERED path, where the same step instead silently skips).
+fn digi_burst_main_activation_guard(
+    step: Option<&CompiledStep>,
+) -> Option<Box<dyn Fn(&crate::effect_context::EffectReadContext<'_>) -> bool + Send + Sync>> {
+    if let Some(CompiledStep::SelectOwnSources {
+        target: Some(CompiledBindingRef::Source),
+        min,
+        ..
+    }) = step
+    {
+        let need = *min as usize;
+        Some(Box::new(move |rctx| {
+            rctx.source_permanent
+                .and_then(|h| rctx.game.player(h.player).battle_area.get(h.index as usize))
+                .is_some_and(|perm| perm.card_sources.len() > need)
+        }))
+    } else {
+        None
+    }
+}
+
 fn first_step_candidate_guard(
     step: &CompiledStep,
 ) -> Option<Box<dyn Fn(&crate::effect_context::EffectReadContext<'_>) -> bool + Send + Sync>> {
@@ -514,6 +602,15 @@ fn first_step_candidate_guard(
                     .any(|p| permanent_zone_has_match(rctx, p, &filter))
             }))
         }
+        // NOTE: `SelectOwnSources` is intentionally NOT handled here. A
+        // "by trashing N sources" cost lowers to it, but for an OPTIONAL
+        // TRIGGERED ability (e.g. EX10-034's [All Turns] when-attacking) the
+        // designed behavior is to fire and SILENTLY SKIP the trash when fewer
+        // than N sources exist — it triggers on an event, so it can't loop.
+        // The [Main]-activated digi_burst case (BlitzGreymon) IS gated, but
+        // only in the `MainOnField` branch of `lower` (mask-offered, so it
+        // would loop) — see `digi_burst_main_activation_guard`.
+        //
         // Other first-step kinds (suspend, select_effect_choice, budget
         // selects, etc.) are not pre-evaluated — the outer prompt installs
         // unconditionally for them.

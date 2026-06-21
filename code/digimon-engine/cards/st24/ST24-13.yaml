@@ -1,0 +1,108 @@
+# ST24-13 Marcus Damon & Thomas H. Norstein — Tamer, Cost 4. Colors: Yellow, Blue.
+# Traits: DATA SQUAD.
+#
+# Printed card text (data/cards.json — verbatim):
+#   [Start of Your Main Phase] [On Play] You may place the top card of your deck
+#     face down under this Tamer. Then, if your opponent has a Digimon, gain 1
+#     memory.
+#   [Your Turn] When effects trash cards from under this Tamer, by suspending
+#     this Tamer, 1 of your [DATA SQUAD] trait Digimon gains ＜Jamming＞ for the
+#     turn.
+#   Inherited: [Security] Play this card without paying the cost.
+#
+# (DCGO carries a [Rule] name-alias — also treated as "Marcus Damon"/"Thomas H.
+#  Norstein" — which is metadata-only and is NOT authored, exactly as the sister
+#  ST23-13/14 omit theirs. Does not block.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST24/Yellow/ST24_13.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Shared OP/SOMP (ActivateClassesForSharedEffects, optional:false, onPlay +
+#   startOfYourMainPhase): if LibraryCards.Count >= 1 → internal Yes/No
+#   SetIntSelection; on Yes, AddDigivolutionCardsBottom(deck top, isFacedown:true)
+#   under THIS Tamer. THEN unconditionally: if Enemy has >=1 battle-area Digimon,
+#   AddMemory(1). → internal Yes/No (select_effect_choice gated on deck non-empty)
+#   then place_as_bottom_source { deck_top: you, target: source, face_down }; then
+#   gain_memory 1 if opponent has a Digimon (fires even if the place is declined).
+# [Your Turn] trash trigger (OnDigivolutionCardDiscarded): CanUse = IsOwnerTurn
+#   && host == this Tamer. CanActivate = this Tamer unsuspended. → suspend self →
+#   SelectPermanent over own [DATA SQUAD] Digimon (maxCount min(1,count),
+#   canNoSelect:false) → GainJamming UntilEachTurnEnd. → when
+#   on_digivolution_card_trashed, active_when your_turn +
+#   event_host_permanent_is_source; activation_cost suspend_self +
+#   select_own_permanent { kind: digimon, trait_has: DATA SQUAD } + grant_keyword
+#   Jamming expiry end_of_turn.
+# [Security] (PlaySelfTamerSecurityEffect) → on_security + play_from_security.
+#
+# Sister card: ST23-14 (Jamming trash-trigger) + ST23-13 ([Your Turn] gate).
+
+card: ST24-13
+name: "Marcus Damon & Thomas H. Norstein"
+kind: tamer
+color: [yellow, blue]
+cost: 4
+traits: [DATA SQUAD]
+
+effects:
+  # ─── [SOMP][On Play] may place top deck card FD under self; then if opp has a
+  #     Digimon, gain 1 memory ─────────────────────────────────────────────────
+  - when: [on_play, start_of_your_main_phase]
+    summary: "[SOMP][On Play] You may place the top deck card face down under this Tamer; then if your opponent has a Digimon, gain 1 memory"
+    process:
+      - if:
+          condition:
+            count_gte:
+              filter: { of: you, zone: [deck] }
+              n: 1
+          then:
+            - select_effect_choice:
+                bind_as: place_choice
+                labels:
+                  - "Place the top card of your deck face down under this Tamer"
+                  - "Don't place"
+                prompt: "Place the top card of your deck face down under this Tamer?"
+            - if:
+                condition: { equals: [place_choice, 0] }
+                then:
+                  - place_as_bottom_source:
+                      source: { deck_top: you }
+                      target: source
+                      face_down: true
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - gain_memory: 1
+
+  # ─── [Your Turn] on trash from under this Tamer → suspend self → 1 [DATA SQUAD]
+  #     Digimon gains <Jamming> for the turn ───────────────────────────────────
+  - when: on_digivolution_card_trashed
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_host_permanent_is_source: true
+    summary: "[Your Turn] When effects trash cards from under this Tamer, by suspending this Tamer, 1 [DATA SQUAD] Digimon gains <Jamming> for the turn"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_own_permanent:
+          bind_as: tgt
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "DATA SQUAD"
+          prompt: "1 of your [DATA SQUAD] Digimon gains <Jamming> for the turn"
+      - grant_keyword:
+          target: tgt
+          keyword: Jamming
+          expiry: end_of_turn
+
+  # ─── Inherited [Security] Play this card without paying the cost ───────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

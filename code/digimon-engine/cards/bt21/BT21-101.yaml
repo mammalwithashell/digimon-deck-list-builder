@@ -127,15 +127,15 @@ effects:
     optional: true
     summary: "[WD][WA] You may link 1 [Appmon] Digimon from hand or digivolution cards to 1 of your Digimon free"
     process:
-      - link_card_to_self:
-          from: [hand, digivolution_sources]
+      - link_cards:
+          from: [hand, self_sources]
           filter:
             all_of:
               - kind: digimon
               - trait_has: Appmon
-          to: chosen_own_digimon
-          cost: 0
-          optional: true
+          to: own_digimon
+          count: { up_to: 1 }
+          cost: free
 
   # ─── Clause (d): [Your Turn][OPT] on_any_link observer ───────────────────────
   # Board-wide OnLink observer (no self/host filter). Fires when ANY link attaches

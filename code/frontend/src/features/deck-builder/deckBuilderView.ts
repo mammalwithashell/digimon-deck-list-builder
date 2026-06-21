@@ -43,20 +43,21 @@ interface SectionDefinition {
   expected: number;
 }
 
-type SectionKey = 'lv2' | 'lv3' | 'lv4' | 'lv5' | 'lv6' | 'tamer' | 'option' | 'other';
+type SectionKey = 'lv2' | 'lv3' | 'lv4' | 'lv5' | 'lv6' | 'lv7' | 'tamer' | 'option' | 'other';
 
 const SECTION_DEFINITIONS: Record<SectionKey, SectionDefinition> = {
   lv2: { label: 'LV2 / DIGI-EGG', expected: 5 },
   lv3: { label: 'LV3 / ROOKIE', expected: 0 },
   lv4: { label: 'LV4 / CHAMPION', expected: 0 },
   lv5: { label: 'LV5 / ULTIMATE', expected: 0 },
-  lv6: { label: 'LV6+ / MEGA', expected: 0 },
+  lv6: { label: 'LV6 / MEGA', expected: 0 },
+  lv7: { label: 'LV7 / ULTRA', expected: 0 },
   tamer: { label: 'TAMER', expected: 0 },
   option: { label: 'OPTION', expected: 0 },
   other: { label: 'OTHER', expected: 0 },
 };
 
-const SECTION_ORDER: readonly SectionKey[] = ['lv2', 'lv3', 'lv4', 'lv5', 'lv6', 'tamer', 'option', 'other'];
+const SECTION_ORDER: readonly SectionKey[] = ['lv2', 'lv3', 'lv4', 'lv5', 'lv6', 'lv7', 'tamer', 'option', 'other'];
 const DECK_ICON_COLOR_ORDER = ['red', 'blue', 'yellow', 'green', 'black', 'purple', 'white'];
 
 function normalize(value: string | undefined): string {
@@ -90,7 +91,8 @@ function sectionKeyForEntry(entry: DeckEntry): SectionKey {
   if (level === 3) return 'lv3';
   if (level === 4) return 'lv4';
   if (level === 5) return 'lv5';
-  if (level >= 6) return 'lv6';
+  if (level === 6) return 'lv6';
+  if (level >= 7) return 'lv7';
   return 'other';
 }
 
@@ -206,9 +208,18 @@ export function filterBuilderCards(
     }
 
     if (colorSet.size > 0) {
+      // Intersection (AND): the card's colour identity must contain every
+      // selected colour. Selecting one colour matches any card containing it;
+      // selecting two matches only dual-colour cards with both; selecting
+      // three matches nothing (no card has three colours).
+      const cardColors = new Set<string>();
       const primary = normalize(card.color);
       const secondary = normalize(card.color2);
-      if (!colorSet.has(primary) && (!secondary || !colorSet.has(secondary))) return false;
+      if (primary) cardColors.add(primary);
+      if (secondary) cardColors.add(secondary);
+      for (const wanted of colorSet) {
+        if (!cardColors.has(wanted)) return false;
+      }
     }
 
     if (type && type !== 'all' && normalize(card.type) !== type) return false;

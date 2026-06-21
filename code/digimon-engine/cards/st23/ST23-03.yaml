@@ -1,0 +1,89 @@
+# ST23-03 Cougarmon — Digimon, Lv.4, Yellow, DP 4000, Cost 4.
+# Traits: Mammal, Glowing Dawn, BEATBREAK. Attribute: Virus.
+# Printed digivolve box (corner): Lv.3 / cost 2 (standard; from cards.json
+# evo_costs). Plus the text box: [Digivolve] Lv.3 w/[Glowing Dawn] trait: Cost 2.
+#
+# Printed card text (CARD IMAGE — authoritative):
+#   [On Play] [When Digivolving] Add your top security card to the hand. Then,
+#     <Recovery +1> (Place the top card of your deck as your top security card.)
+#   [Your Turn] When this Digimon would digivolve into a [Glowing Dawn] trait
+#     Digimon card, by trashing the bottom face-down card from under any of your
+#     Tamers, reduce the cost by 2.
+#   Inherited: <Barrier> (When this Digimon would be deleted in battle, by
+#     trashing your top security card, it isn't deleted.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST23/Yellow/ST23_03.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (timing None): AddSelfDigivolutionRequirementStaticEffect(
+#   level: 3, TopCard.EqualsTraits("Glowing Dawn"), digivolutionCost: 2).
+#   → alt_paths digivolve from level 3 + Glowing Dawn trait, cost 2.
+# Shared OP/WD (optional: false): add top security to hand (IReduceSecurity) +
+#   IRecovery(1). → on_play/when_digivolving: add_top_security_to_hand + recover.
+# Clause "Your Turn" (BeforePayCost) — NOW IMPLEMENTED (2026-06-15):
+#   ActivateClass keyed on CanTriggerWhenPermanentWouldDigivolve(permanent ==
+#   this, target HasProperTrait = Digimon & "Glowing Dawn"), gated IsOwnerTurn +
+#   a Tamer carrying a face-down digivolution source. The Tamer pick is
+#   `canNoSelect: true` (the player may decline to pay → no reduction), so the
+#   reducer is modelled `optional: true`: the accept gate IS DCGO's can-no-select
+#   decline, exposed to the RL action space. Payoff ChangeCost -2 over the
+#   Glowing-Dawn digivolve target.
+#   → kind: cost_reduction + when_any_ally_digivolves_into { kind: digimon,
+#     trait_has: Glowing Dawn } + active_when { your_turn,
+#     source_is_cost_target_permanent } (= "when THIS digivolves") + optional +
+#     amount 2 + pay_cost [trash_bottom_face_down_source_under_tamer]. The
+#     pay_cost is INTERACTIVE (installs the 1-option Tamer pick) and PARKS; the
+#     engine credits the -2 behind the parked pay_cost on the digivolve path
+#     (game_actions/digivolve.rs::try_prompt_interactive_digivolve_cost_reducer,
+#     G-COST-REDUCTION-INTERACTIVE-PAY-COST closed for the digivolve path).
+# Inherited (WhenPermanentWouldBeDeleted): BarrierSelfEffect(isInheritedEffect)
+#   → scope: inherited + grant_keyword Barrier.
+
+card: ST23-03
+name: "Cougarmon"
+kind: digimon
+level: 4
+color: [yellow]
+cost: 4
+dp: 4000
+traits: [Mammal, Glowing Dawn, BEATBREAK]
+attribute: Virus
+
+# Alt-digivolve: Lv.3 with the [Glowing Dawn] trait / cost 2.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: "Glowing Dawn" }
+    cost: 2
+
+effects:
+  # ─── [On Play][When Digivolving] add top security to hand, then <Recovery +1> ─
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Add your top security card to the hand; then <Recovery +1>"
+    process:
+      - add_top_security_to_hand: { of: you }
+      - recover: { of: you, count: 1 }
+
+  # ─── [Your Turn] digivolve INTO a [Glowing Dawn] Digimon, by trashing the
+  #     bottom face-down card under a Tamer → reduce the cost by 2 ──────────────
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+    when_any_ally_digivolves_into:
+      all_of:
+        - kind: digimon
+        - trait_has: "Glowing Dawn"
+    optional: true
+    amount: 2
+    pay_cost:
+      - trash_bottom_face_down_source_under_tamer: { of: you }
+    summary: "[Your Turn] When this Digimon would digivolve into a [Glowing Dawn] Digimon card, by trashing a bottom face-down card under a Tamer, reduce the cost by 2"
+
+  # ─── Inherited <Barrier> ───────────────────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier
+    summary: "Inherited <Barrier>"

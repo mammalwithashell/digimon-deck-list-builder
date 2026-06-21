@@ -844,6 +844,14 @@ pub struct EffectContext<'a> {
     /// True when the cost currently being resolved is a digivolve cost.
     /// `G-COST-REDUCTION-DIGIVOLVE-INTO`.
     pub cost_is_digivolve: bool,
+    /// Set by a `pay_cost` step that aborts because the cost is UNPAYABLE (e.g.
+    /// `trash_bottom_face_down_source_under_tamer` with no eligible Tamer). Such
+    /// a step returns `RunOutcome::Synchronous` (a clean abort, not a park), which
+    /// is otherwise indistinguishable from a cost that was genuinely paid
+    /// synchronously. The generic `cost_reduction` `pay_cost_fn` lowering reads
+    /// this flag so it does NOT credit the reduction for an unpaid cost.
+    /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
+    pub cost_unpayable: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -886,6 +894,7 @@ impl<'a> EffectContext<'a> {
             cost_target_card: None,
             cost_target_from_hand: false,
             cost_is_digivolve: false,
+            cost_unpayable: false,
         }
     }
 

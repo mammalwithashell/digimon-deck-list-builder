@@ -2847,6 +2847,20 @@ Historical note:
 
 ## G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER — multi-card / multi-Tamer face-down trash cost (BT25 BEATBREAK)
 
+- **Status:** ✅ CLOSED (2026-06-15). New DSL verb
+  `trash_bottom_face_down_sources_under_tamers: { of, count }` (step.rs
+  `TrashBottomFaceDownSourcesUnderTamersArgs` → `CompiledStep` →
+  `dsl_cards/step/selections.rs::install_trash_n_bottom_face_down_sources_under_tamers`).
+  It trashes `count` bottom face-down sources total, distributed across the
+  controller's Tamers — "N from one Tamer" or "1 from each of N Tamers" — by
+  installing one single-Tamer bottom-trash `select_own_permanent` pick per
+  source, re-evaluating eligibility each time, so every Tamer pick surfaces as a
+  real `PendingSelection` (no auto-resolve, DCGO `CanEndSelectCondition`
+  reachable). Unpayable (fewer than `count` total face-down sources) ⇒
+  `cost_unpayable` + clause abort, like the single-trash verb. Paired with a new
+  no-subject predicate `face_down_sources_under_tamers_gte: <N>` that gates the
+  optional digivolve on the cost being payable. Driver BT25-035 ships
+  IMPLEMENTED (`cards/bt25/BT25-035.yaml`, `tests/cards_behavioral/bt25/bt25_035.rs` 12/12).
 - **Cards:** BT25-035 Cougarmon (`[On Play][When Digivolving] ... by trashing 2 bottom face-down cards from under any of your Tamers, this Digimon may digivolve into a [Glowing Dawn] Digimon for free`). Likely also BT25-019 / other BEATBREAK "trash N" cost cards.
 - **What's missing:** The shipping verb `trash_bottom_face_down_source_under_tamer: { of }` trashes exactly **one** bottom face-down source from **one** chosen Tamer (it installs a single `select_own_permanent` over `{ kind: tamer, has_face_down_source: true }` and trashes that Tamer's bottom face-down card, then runs the tail). It has no `count:` parameter and no support for distributing the cost across multiple Tamers (DCGO BT25_035: `maxCount: 2`, `canEndNotMax: true`, `CanEndSelectCondition = (picked==2) || (picked==1 && that Tamer has >=2 face-down sources)` — i.e. "trash 2 total: either 2 from one Tamer, or 1 from each of two Tamers"). Chaining the single-trash verb twice does NOT work: each invocation installs a selection and runs the *captured tail* on resolution, so two sequential invocations cannot share one continuation cleanly, and the "2 from one Tamer OR 1+1 from two Tamers" choice is not expressible.
 - **Lowers to engine API:** the engine already has the per-Tamer bottom-face-down trash primitive (`install_trash_bottom_face_down_source_under_tamer` in `dsl_cards/step/selections.rs`, and DCGO mirrors it with `TrashDigivolutionCardsFromTopOrBottom(trashCount: N, isFromTop: false, CanTrashCard)`). The missing piece is a DSL step that drives an N-total multi-pick over Tamers with the DCGO end-condition.
@@ -2855,7 +2869,17 @@ Historical note:
   - trash_bottom_face_down_sources_under_tamers: { of: you, count: 2 }
   ```
   with semantics: pick Tamers (each must carry >=1 face-down source) until `count` face-down sources are trashed total; a single Tamer with >=`count` face-down sources may satisfy it alone (DCGO `CanEndSelectCondition`). The whole step is the activation cost: if fewer than `count` face-down sources exist across all Tamers, the cost is unpayable → abort the clause (`TailAlreadyRan`), matching the single-card verb's unpayable behavior.
-- **Workaround:** None faithful for BT25-035. The single-trash verb under-charges (trashes 1 instead of 2) — a no-approximations violation. BT25-035 BLOCKED (dsl) on this gap. (Its [On Play][When Digivolving] -3000 DP rider IS expressible; the free-digivolve-by-2-trash cost is the blocked part.)
+- **Workaround:** None faithful for BT25-035. The single-trash verb under-charges (trashes 1 instead of 2) — a no-approximations violation. BT25-035 BLOCKED (dsl) on this gap. (Its [On Play][When Digivolving] -3000 DP rider IS expressible; the free-digivolve-by-2-trash cost is the blocked part.) **[RESOLVED — see Status above.]**
+
+---
+
+## G-DSL-PLACE-REVEALED-CARD-UNDER-TAMER — place a revealed card face-down under a chosen Tamer (BEATBREAK reveal-pool stash)
+
+- **Status:** ✅ CLOSED (2026-06-15). The existing `place_selected_card_under_tamer` DSL step now resolves a **reveal-pool**-bound card (in addition to hand / trash / union-zone): its `ResolvedBinding::Card` / singleton-`CardList` arm scans `Game::revealed_cards` and calls the new `EffectContext::place_revealed_card_under_tamer` (engine helper that places a `CardSourceRef::Reveal` card as the bottom-most, optionally face-down, source of a chosen own Tamer). Driver ST23-06 Gekkomon ships IMPLEMENTED (`cards/st23/ST23-06.yaml`, `tests/cards_behavioral/st23/st23_06.rs` 7/7).
+- **Cards:** ST23-06 Gekkomon (`[When Moving][On Play] Reveal the top 3 cards of your deck. Among them, add 1 [Glowing Dawn] card to the hand AND place 1 [Glowing Dawn] card face down under any of your [Glowing Dawn] trait Tamers. Return the rest to the bottom of the deck`). Likely also ST24 / other BEATBREAK reveal-and-stash cards.
+- **What was missing:** `place_selected_card_under_tamer` resolved only hand / trash / union-zone card bindings; a `select_reveal_buckets` / `select_reveal` pick (which still lives in the transient reveal pool, stored as a one-element `CardList`) fell through to the `_ => None` arm, so the second revealed card was never tucked under the Tamer (it leaked into the deck-bottom remainder).
+- **Lowers to engine API:** the placement substrate (`place_as_bottom_source` honoring `CardSourceRef::Reveal` + `face_down`) already existed; the gap was a DSL-lowering reveal-pool branch + a thin `place_revealed_card_under_tamer` helper.
+- **Note:** when no [Glowing Dawn] Tamer exists, only the add-to-hand bucket runs (DCGO `HasMatchConditionOwnersPermanent` gate) — modelled with an `if any_permanent { tamer + Glowing Dawn }` / `else` two-path reveal.
 
 ---
 
@@ -3037,7 +3061,45 @@ controlling engine gap for the cost-reduction clauses is
   trash) plus an effect-driven free-digivolve-into-a-hand-card. Omitted; the
   -3000 DP, inherited Barrier, and Glowing Dawn alt-digivolve ship (PARTIAL).
 
-### BT25-057 Monarchlizamon / "Final Judgment" — DUAL card — BLOCKED (hybrid)  [G-DSL-DUAL-PER-FACE-EFFECTS + G-DSL-ARTS-DIGIVOLVE]
+### BT25-057 Monarchlizamon / "Final Judgment" — DUAL card — RESOLVED 2026-06-15  [G-DSL-DUAL-PER-FACE-EFFECTS + G-DSL-ARTS-DIGIVOLVE]
+
+> **RESOLVED 2026-06-15 (`gap/dual-per-face-arts`).** Both gaps closed. The DUAL
+> faces now carry their own `effects:` and the Option face an `arts_digivolve:`
+> shorthand:
+> - **Per-face effects sink (G-DSL-DUAL-PER-FACE-EFFECTS):** `DualDigimonSpec`
+>   and `DualOptionSpec` gained an `effects: Vec<ClauseSpec>` field (`spec.rs`),
+>   compiled onto `CompiledDualDigimon.effects` / `CompiledDualOption.effects`
+>   (`compiled.rs` + `compile.rs`), validated per-face (`validator.rs`), and
+>   lowered by `DslCardEffect::effects()` (`dsl_cards/mod.rs`): Digimon-face
+>   clauses lower with the Digimon identity (natural timings), Option-face
+>   clauses with the Dual identity so `when: main` → `EffectTiming::OptionMain`
+>   and the `dual.option.use_requirement` color bypass applies. `clause_index`
+>   is offset per face so multi-timing OPT keys never collide. Digimon-face
+>   `grant_keyword` declaratives are also scanned into the top-card native
+>   `keywords` (`card_data_from_compiled`) so static keywords (Security A.+1 /
+>   Reboot / Blocker) are live on field.
+> - **Arts Digivolve (G-DSL-ARTS-DIGIVOLVE):** `dual.option.arts_digivolve: true`
+>   compiles into the `ArtsDigivolve` option-face keyword, which the existing
+>   engine path (`pending_option_can_arts_digivolve` →
+>   `install_arts_digivolve_selection`) reads — no engine change needed. The
+>   Digimon-face evo table is backfilled from the alt-digivolve box
+>   (`compiled_dual_to_engine` now threads the computed `evo_costs`) so the Arts
+>   `can_digivolve` gate works for DSL-loaded dual cards.
+> - **Cards shipped:** ST23-09 Atratusmon (IMPLEMENTED), BT25-057 Monarchlizamon
+>   (IMPLEMENTED — cards.json mislabel corrected via the DUAL YAML), BT25-043
+>   Habakirimon (upgraded PARTIAL → IMPLEMENTED, Option side now ships). Tests:
+>   `tests/cards_behavioral/{st23/st23_09,bt25/bt25_057,bt25/bt25_043}.rs` (26
+>   tests, all green).
+> - **Residual (separate pre-existing limitation, NOT this gap):** the engine
+>   `can_digivolve` / `can_basic_digivolve` gate is color+level only — a
+>   trait-gated digivolution box ("Lv.N w/ [Glowing Dawn]: Cost C") is not
+>   enforceable as a static `EvoCost` row. These cards author BOTH a color-form
+>   alt-digivolve (the cards.json evo table — backfills the static evo_cost) and
+>   the printed trait-form alt-path, matching every other DSL card's
+>   digivolution authoring. A faithful trait-gated `can_digivolve` is a
+>   standalone engine gap.
+
+### Original entry (history)
 - **Note:** `data/cards.json` mislabels this as a plain Digimon (`card_kind: 0`).
   The card IMAGE + DCGO `BT25_057.cs` confirm it is a **DUAL** card: a Lv.5
   Cyborg/Glowing Dawn/BEATBREAK Digimon face AND an Option face "Final
@@ -3167,7 +3229,24 @@ controlling engine gap for the cost-reduction clauses is
   ```
 - **Verdict:** contributes to BT25-039 BLOCKED (gap_kind: dsl).
 
-## G-DSL-BEATBREAK-ARTS-OPTION — no dual Digimon+Option (BEATBREAK / Arts Digivolve) identity
+## G-DSL-BEATBREAK-ARTS-OPTION — no dual Digimon+Option (BEATBREAK / Arts Digivolve) identity — RESOLVED 2026-06-15
+
+> **RESOLVED 2026-06-15 (`gap/dual-per-face-arts`).** Folded into the
+> per-face-effects + Arts-digivolve close (see the BT25-057 entry above).
+> A BEATBREAK card is authored as `kind: dual` with the Digimon clauses on
+> `dual.digimon.effects` and the Option `[Main]` body on `dual.option.effects`
+> (`when: main` → `OptionMain`); `dual.option.arts_digivolve: true` arms the
+> engine arts-digivolve selection. The old "Option side OMITTED per the BT25-041
+> precedent" workaround is retired. BT25-043 Habakirimon is upgraded from
+> PARTIAL to IMPLEMENTED (Option side ships): `[Main]` -8000 single target →
+> by-trashing-top-security (player Yes/No) → all opp -5000 for the turn, plus
+> Arts Digivolve. NOTE: BT25-041 Murasamemon remains Digimon-side-only for an
+> UNRELATED reason (its [WD/WA] pay-one-of-two-costs → cost-reduced play/use is
+> a different open gap, G-COST-REDUCTION-INTERACTIVE-PAY-COST); its Option side
+> (if any) can now be authored with this substrate.
+> Tests: `tests/cards_behavioral/bt25/bt25_043.rs` (11, green).
+
+### Original entry (history)
 - **Discovered by:** BT25-043 Habakirimon (aegiomon-2 slice), 2026-06-06. (Same family blocks the Option side of every BEATBREAK card; cf. BT25-041 Murasamemon, which shipped Digimon-side-only.)
 - **Clause (Option side):** "Use Req: [Glowing Dawn] trait. [Main] 1 of your opponent's Digimon gets -8000 DP for the turn. Then, by trashing your top security card, all of your opponent's Digimon get -5000 DP for the turn. Arts Digivolve."
 - **DCGO (BT25_043.cs):** the card is BOTH a Digimon and an Option — `EffectTiming.OptionSkill` (the [Main] play body) plus `CardEffectFactory.ArtsDigivolveEffect` and `UseRequirements`. A BEATBREAK card can be played as a Digimon OR used as an Option (Arts Digivolve).
@@ -3241,8 +3320,9 @@ not yet wired"). All six slice cards remain BLOCKED on that same residual. Five 
 - **Scope:** DSL. Plumbing: `Timing::WhenCardLinkedToThis` (clause.rs) → `CompiledTiming::WhenCardLinkedToThis` (compiled.rs / compile.rs) → `timing_map.rs` (→ `OnLink`) + `lower_triggered.rs` (`is_host_linked` forces the host self-filter).
 - **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- dsl_host_side_when_card_linked_to_this_fires_on_attach host_side_when_linked_fires_for_receiving_host_only`.
 
-## LANDED: `link_card_to_self` step (facet #9 authoring verb)  [G-DSL-LINK-CARD-FROM-ZONE]
-- **Status:** LANDED 2026-06-07. DSL step `link_card_to_self` authored: `{ from: [hand|trash|digivolution_sources], filter: PredicateSpec, to: self|chosen_own_digimon (default self), cost: u16 (default 0), optional: bool }`. Lowering in `code/digimon-engine/src/dsl_cards/step/link_card.rs` gathers candidates across the requested zones into ONE RL-visible `SelectionKind::Target` prompt (no auto-pick — disjoint per-zone action ranges so the union is unambiguous), and on resolution computes effective cost (`cost + link_cost_delta_for_player`).max(0), pays it, and calls the primitive `Game::link_chosen_card_into_host(host, chosen, source_zone)`. With `to: chosen_own_digimon` a SECOND RL-visible selection over the controller's standing Digimon picks the host ("link to 1 of your Digimon" — e.g. BT25-069/089). DSL surface: `StepSpec::LinkCardToSelf` / `LinkCardToSelfArgs` / `LinkFromZone` / `LinkToHost` in `code/digimon-dsl/src/step.rs`; `CompiledStep::LinkCardToSelf` in `compiled.rs`; lowering in `compile.rs`. **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- link_card_to_self_links_chosen_hand_card_pays_cost_and_fires_onlink link_card_to_self_applies_change_link_cost_reduction` (both green; first pins selection + cost + OnLink propagation via a host-side `when_card_linked_to_this` reaction, second pins the `ChangeLinkCost` reduction path). Chosen-host path pinned by `bt25_069_on_play_links_ts_from_trash_to_chosen_own_digimon` + `bt25_089_main_links_appmon_from_hand_to_chosen_digimon`. Cards authored on it: BT25-052/056/070/072 (self-host), BT25-069/089 (chosen-host). Pairs with facet #10's flat `ChangeLinkCost`.
+## RETIRED → folded into `link_cards`: `link_card_to_self` step (facet #9 authoring verb)  [G-DSL-LINK-CARD-FROM-ZONE]
+- **RETIRED 2026-06-19 (collapse-dsl-step-idioms §4).** `link_card_to_self` is DELETED — the `StepSpec`/`CompiledStep::LinkCardToSelf` variants, `LinkCardToSelfArgs`/`LinkFromZone`/`LinkToHost` types, the `compile.rs` arm, the `lower_triggered` outer-optional arm, and the whole `src/dsl_cards/step/link_card.rs` lowering are gone. All 11 users (ST22-12, BT21-023/073/101, BT25-052/056/060/069/070/072/089) migrated to the more general `link_cards { from, filter, to: self|own_digimon, count: { up_to: 1 }, cost: free }` (zone-name map `digivolution_sources → self_sources`, `chosen_own_digimon → own_digimon`). This was also a **faithfulness improvement**: `link_card_to_self` presented a single union-of-zones selection, whereas `link_cards` (and DCGO's actual `SetBoolSelection`) present a zone-choice-first flow. BT25-060's "By linking 1 …, 1 of your Digimon may unsuspend" `if (linked)` gate is now modeled by the new `link_cards` **`bind_as`** field (captures the linked card only on a real link) + `if { binding_present }`. The dropped `link_cost_delta_for_player` application was a no-op for every real user (all `cost: 0`). 121 behavioral tests across the 11 cards stay green. Historical detail below.
+- **Status (historical):** LANDED 2026-06-07. DSL step `link_card_to_self` authored: `{ from: [hand|trash|digivolution_sources], filter: PredicateSpec, to: self|chosen_own_digimon (default self), cost: u16 (default 0), optional: bool }`. Lowering in `code/digimon-engine/src/dsl_cards/step/link_card.rs` gathers candidates across the requested zones into ONE RL-visible `SelectionKind::Target` prompt (no auto-pick — disjoint per-zone action ranges so the union is unambiguous), and on resolution computes effective cost (`cost + link_cost_delta_for_player`).max(0), pays it, and calls the primitive `Game::link_chosen_card_into_host(host, chosen, source_zone)`. With `to: chosen_own_digimon` a SECOND RL-visible selection over the controller's standing Digimon picks the host ("link to 1 of your Digimon" — e.g. BT25-069/089). DSL surface: `StepSpec::LinkCardToSelf` / `LinkCardToSelfArgs` / `LinkFromZone` / `LinkToHost` in `code/digimon-dsl/src/step.rs`; `CompiledStep::LinkCardToSelf` in `compiled.rs`; lowering in `compile.rs`. **Evidence:** `cargo test --manifest-path code/digimon-engine/Cargo.toml --test option_flow -- link_card_to_self_links_chosen_hand_card_pays_cost_and_fires_onlink link_card_to_self_applies_change_link_cost_reduction` (both green; first pins selection + cost + OnLink propagation via a host-side `when_card_linked_to_this` reaction, second pins the `ChangeLinkCost` reduction path). Chosen-host path pinned by `bt25_069_on_play_links_ts_from_trash_to_chosen_own_digimon` + `bt25_089_main_links_appmon_from_hand_to_chosen_digimon`. Cards authored on it: BT25-052/056/070/072 (self-host), BT25-069/089 (chosen-host). Pairs with facet #10's flat `ChangeLinkCost`.
 - **Cost-modeling note:** the printed "with the cost reduced by N" is a reduction on the LINKED card's own link cost. DSL card fixtures carry no engine-side link cost on the linked candidate, so cards author `cost: 0` (the reduction makes the typical 1–2 link free in practice); the flat `ChangeLinkCost` path covers any nonzero residual. Faithful for the no-engine-link-cost fixtures; revisit if a linked candidate carries a nonzero engine link cost.
 - **Residual (NOT yet authored — separate gaps):**
   - `G-DSL-LINK-N-CARDS-PER-HOST` (BT25-075): "link up to 2 cards from hand/trash, each to a *separately chosen* Digimon" — the single-card step does not loop with per-card host selection. Needs a `count: N` extension that repeats the (card → host) pair selection. **NOT done — BT25-075 left BLOCKED.**
@@ -3653,6 +3733,18 @@ BT25-075's observer sub-clause.
 ## RESOLVED 2026-06-13 — `app_fuse` step (effect-initiated App Fuse)  [G-DSL-APP-FUSE]
 **Status: RESOLVED 2026-06-13.** New DSL step `app_fuse: { from: hand|trash, result_filter?, optional }` for the printed "1 of your Digimon may app fuse into a Digimon card in the hand/trash" rider. Lowers to `CompiledStep::AppFuse` → `EffectContext::initiate_effect_app_fuse`. Added to `body_first_step_is_declinable` (installs its own PASS-able selections). First users: BT21-084, BT23-079, P-241, BT24-087, BT25-089. See `docs/RUST_ENGINE_GAPS.md` "Effect-initiated App Fuse — RESOLVED 2026-06-13".
 
+
+## G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH — continuous mass "treat as a <DP> Digimon" aura with a synth identity (DATA SQUAD)
+- **Card(s):** BT25-104 ShineGreymon: Burst Mode (Option face), clause "[Your Turn] All of your [Marcus Damon]s are also treated as 12000 DP Digimon and gain <Rush>". Generalizes to any "treat your Tamer(s) as a Digimon with DP X" continuous effect.
+- **Status:** RESOLVED 2026-06-18. BT25-104 now ships FULLY IMPLEMENTED (the [Your Turn] aura is green — `bt25_104_your_turn_marcus_treated_as_12000_digimon_with_rush`). The substrate was widened along BOTH paths that previously dropped the payload.
+- **What was done:**
+  - **Declarative `kind: aura` path (the one BT25-104 uses):** added a `synth_identity` axis to `AuraBody` (`code/digimon-dsl/src/clause.rs`) → `CompiledDeclarativeClause::Aura.synth_identity` (`compiled.rs`) → compiled via `compile_synth_identity` (`compile.rs`) → threaded through `lower_aura::lower_all`/`lower` to the filter-install site, which now calls `add_declarative_modifier_with_payload` with the `ModifierPayload::SynthIdentity` (built by the now-`pub(crate)` `build_synth_payload`). Re-applied each tick over the live filter, so Marcus Damons played mid-turn are covered and it reverts at end of your turn. Authoring shape: `kind: aura` with `target: { of: you, kind: tamer, name_is: "Marcus Damon" }` (fold ownership into the FILTER — a `target_player: you` + filter combo routes to the wrong branch), `modifier: TreatAsDigimon`, `synth_identity: { dp: 12000 }`, `grant_keyword: { keyword: Rush }`.
+  - **`add_modifier { continuous: true }` floating-mass path:** `FloatingMassModifier` gained a `payload` field threaded through `add_floating_mass_modifier` + the per-tick materialization in `game/triggers.rs` (symmetric fix to the latent drop; the lowering at `dsl_cards/step/modifiers.rs` now passes the computed payload instead of `None`).
+  - `effective_dp` and the treat-as-Digimon machinery already read the synth DP (proven by the single-target cards BT13-020/BT21-044/AD1-021), so no combat/zone changes were needed.
+
+## G-DSL-FIELD-SELECTOR-LOWEST-LEVEL — `selector: lowest_level` for select_* clauses (field selector, not just aggregate)
+- **Card(s):** BT25-029 MirageGaogamon ("return 1 of your opponent's lowest level Digimon to the hand"); AD1-012 Omnimon Alter-S (same wording). 
+- **Status:** RESOLVED 2026-06-18 — NOT actually needed (was a misdiagnosis). These cards are better served by the **AggregateSelector FILTER** path, which is already wired: `filter: { level_matches_aggregate: { selector: lowest_level, of: opponent } }` inside a `select_opponent_permanent`. That path is *more faithful* than a `FieldSelector` auto-pick: DCGO's `LowestLevelPermanentCondition` (`IsMinLevel`) is a target FILTER + a `SelectPermanent`, so the player chooses among tied lowest-level Digimon (rule 17), whereas a `FieldSelector { selector: lowest_level }` would auto-select the extreme and hide that choice. BT25-029 ships IMPLEMENTED on this path (8/8 green); AD1-012 should use the same shape. No new `FieldSelector` vocabulary required — the unevaluated `CompiledFieldSelector::LowestLevel/HighestLevel` can stay dormant until a card genuinely needs a field auto-pick by level (none known).
 ## OPEN 2026-06-14 — starter-deck (ST1-6) audit action-space-fidelity divergences  [G-AUDIT-ST1-6]
 **Status: OPEN, deferred.** Surfaced by the `battle-test-starter-decks-st1-6` faithfulness re-audit (see `openspec/changes/battle-test-starter-decks-st1-6/notes/phase1-audit-findings.md`). All are minor action-space-fidelity divergences (no wrong outcomes / crashes / soft-locks); none block training-readiness.
 
@@ -3766,22 +3858,11 @@ one clause each on a genuine residual gap (RK is now 69 IMPLEMENTED / 3 PARTIAL 
 - **Consumer:** BT19-093 Queen Device. "[Main] … then, place this card in the battle area" (a persistent Option carrier), and "When this card is trashed from the battle area, …".
 - **Missing:** an Option self-placing into the battle area as a persistent carrier, plus a `when_trashed_from_battle_area` trigger on that Option carrier. The color-bypass + [Main]/[Security] debuff clauses are authored; the self-place/persist + trash-from-battle trigger remain.
 - **First test:** resolve BT19-093 [Main] → assert this Option is now a battle-area permanent; trash it from battle → assert the trash-from-battle clause fires.
-## EX11-027 Maquinamon — relink a STANDING permanent as a link card  [G-DSL-LINK-RELINK-STANDING-PERMANENT]
-Surfaced by: EX11-027 `[On Play]` "you may link this Digimon ... to 1 of your other Digimon" (migrate-examples-to-dsl, 2026-06-14).
-Missing: no DSL link verb takes a live battle-area permanent and moves it to become a link card on another own Digimon. `link_cards`/`link_card_to_self` lift a CARD from hand/trash/digivolution-sources; `link_to_own_digimon` links the pending Option. Engine has only `link_chosen_card_into_host` (card from a zone).
-Lower to: a new engine primitive analogous to DCGO `IPlacePermanentToLinkCards`.
-Status: open (blocks EX11-027 full pure-DSL migration).
-
-## EX11-027 Maquinamon — heterogeneous mutually-exclusive link CHOICE  [G-DSL-LINK-HETEROGENEOUS-CHOICE]
-Surfaced by: EX11-027 on_play — "Link this Digimon" vs "Link a [Maquinamon] from hand" (hand branch offered only when a linkable card is in hand), as one RL selection.
-Missing: `link_cards` links N cards from ONE declared source-set; it cannot model a top-level either/or between two distinct link primitives (self-permanent relink vs hand-card link) surfaced as a single choice.
-Status: open (blocks EX11-027).
-
-## EX11-027 Maquinamon — host filter + link-requirement on link_card_to_self ChosenOwnDigimon  [G-DSL-LINK-HOST-FILTER]
-Surfaced by: EX11-027. `link_card_to_self { to: ChosenOwnDigimon }` installs a host selection over ALL of the controller's standing Digimon; it accepts no host filter, does not exclude the source permanent, and does not enforce the host's link requirement (DCGO `CanSelectLinkTarget` excludes `PermanentOfThisCard()` + checks `CanLinkToTargetPermanent`).
-Status: open.
-
-## EX11-027 Maquinamon — leave-prevention by placing a link card as bottom digivolution card  [G-DSL-REPLACEMENT-LINK-CARD-TO-BOTTOM-SOURCE]
-Surfaced by: EX11-027 "When this would leave, you may place 1 of its link cards as its bottom digivolution card instead." `ReplacementCostBody` supports only `delay_self` + `trash_own_link_card`; engine has `trash_own_link_card_and_cancel_leave` (TRASHES the link card) but no primitive to MOVE a chosen link card into the carrier's digivolution sources to cancel the leave.
-Lower to: a replacement cost (e.g. `place_link_card_as_bottom_digivolution: true`) backed by an engine fn like `trash_own_link_card_and_cancel_leave` but calling `AddDigivolutionCardsBottom`.
-Status: open.
+## EX11-027 Maquinamon link substrate — RESOLVED 2026-06-20 (collapse-dsl-step-idioms §4.5)
+The four EX11-027 link gaps are CLOSED and moved to [qa/resolved-gaps.md](resolved-gaps.md):
+`G-DSL-LINK-RELINK-STANDING-PERMANENT` (the `relink_self_to_own_digimon` verb),
+`G-DSL-LINK-HOST-FILTER` (`link_cards` `host_filter` + `exclude_source`),
+`G-DSL-LINK-HETEROGENEOUS-CHOICE` (if-gated `select_effect_choice`, no new vocab), and
+`G-DSL-REPLACEMENT-LINK-CARD-TO-BOTTOM-SOURCE` (the `place_link_card_as_bottom_digivolution`
+replacement cost). EX11-027 Maquinamon is now pure DSL (off test-only raw_rust); the
+`dsl-substrate-integrity` loader guard is promoted to a hard error.

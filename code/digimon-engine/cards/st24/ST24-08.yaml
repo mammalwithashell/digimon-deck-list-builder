@@ -1,0 +1,64 @@
+# ST24-08 Lalamon — Digimon, Lv.3, Green, DP 1000, Cost 3.
+# Traits: Vegetation, DATA SQUAD.
+# Printed digivolve box: [Digivolve] Lv.2 w/[DATA SQUAD] trait: Cost 0.
+#
+# Printed card text (data/cards.json — verbatim):
+#   [Your Turn] When this Digimon would digivolve into a Digimon card with the
+#     [DATA SQUAD] trait, reduce the cost by 1.
+#   Inherited: [All Turns] This Digimon gets +1000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST24/Green/ST24_08.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (timing None): AddSelfDigivolutionRequirementStaticEffect(
+#   level 2, TopCard EqualsTraits("DATA SQUAD"), cost 0). → alt_paths.
+# Clause 1 (timing None, ChangeDigivolutionCostStaticEffect changeValue -1):
+#   PermanentCondition = (targetPermanent == this) [THIS permanent is the one
+#   being digivolved INTO]; CardSourceCondition = digivolve-target card
+#   EqualsTraits("DATA SQUAD"); Condition = IsOwnerTurn. setFixedCost: false →
+#   a flat -1. → kind: cost_reduction, before_pay_cost, active_when your_turn +
+#   source_is_cost_target_permanent + cost_target { kind: digimon, trait_has:
+#   DATA SQUAD }, amount 1. (ST23-02 idiom, trait-swapped.)
+# Inherited (timing None, ChangeSelfDPStaticEffect +1000, isInheritedEffect,
+#   IsExistOnBattleArea — [All Turns], NO IsOwnerTurn gate). → scope: inherited
+#   aura dp +1000 (no active_when).
+#
+# Sister card: ST23-02 Liollmon (cost-reduction, trait-swapped).
+
+card: ST24-08
+name: "Lalamon"
+kind: digimon
+level: 3
+color: [green]
+cost: 3
+dp: 1000
+traits: [Vegetation, DATA SQUAD]
+
+# Alt-digivolve: Lv.2 with the [DATA SQUAD] trait / cost 0.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: "DATA SQUAD" }
+    cost: 0
+
+effects:
+  # ─── [Your Turn] digivolve INTO a [DATA SQUAD] Digimon → cost -1 ────────────
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            all_of:
+              - kind: digimon
+              - trait_has: "DATA SQUAD"
+    amount: 1
+    summary: "[Your Turn] When this Digimon would digivolve into a [DATA SQUAD] Digimon card, reduce the cost by 1"
+
+  # ─── Inherited [All Turns] +1000 DP ──────────────────────────────────────────
+  - scope: inherited
+    kind: aura
+    target: {}
+    dp_modifier: 1000
+    summary: "Inherited [All Turns] This Digimon gets +1000 DP"

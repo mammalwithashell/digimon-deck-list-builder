@@ -121,7 +121,7 @@ effects:
                 prompt: "Place a card from your hand as your bottom security card"
             - place_on_security:
                 of: opponent
-                source: { binding: pick, zone: hand }
+                source: { card: { binding: pick, zone: hand } }
                 position: bottom
                 face_up: false
       - trash_top_security: { of: opponent }

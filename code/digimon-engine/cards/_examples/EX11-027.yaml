@@ -1,3 +1,54 @@
+# EX11-027 Maquinamon — Digimon, Lv.3, Green/Black, DP 1000, Cost 3.
+# Traits: Composite, LIBERATOR.  Attribute: Data.
+#
+# Printed text (card image / cards.json effect_description_eng):
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 [Maquinamon] and 1
+#     card with [Maquinamon] in its text among them to the hand. Return the
+#     rest to the bottom of the deck. Then, you may link this Digimon or 1
+#     [Maquinamon] in your hand to 1 of your other Digimon without paying the
+#     cost.
+#   Inherited [Link] [Maquinamon] in text: Cost 2.
+#   (Plus the link-ESS leave-prevention from DCGO region 5, omitted by the
+#    API-ingested cards.json text — see DCGO crosscheck.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX11/Green/EX11_027.cs
+#
+# ─── DCGO crosscheck (per region) ─────────────────────────────────────────────
+# 1. Alt-digivolution (None): AddSelfDigivolutionRequirementStaticEffect(
+#    TopCard.IsLevel2 && HasText("Maquinamon"), cost 0). → alt_paths digivolve
+#    from { level_eq: 2, effect_text_contains: Maquinamon } cost 0.
+# 2. On Play (OnEnterFieldAnyone): SimplifiedRevealDeckTopCardsAndSelect(3) — add
+#    1 IsMaquinamon (EqualsCardName) + 1 HasMaquinamonText (HasText), rest to deck
+#    bottom. THEN, iff HasMatchConditionOwnersPermanent(CanMaybeLinkPermanent)
+#    (an own OTHER Digimon a linkable Maquinamon can host), a SetIntSelection:
+#    "Link this Maquinamon"(1) / "Link from Hand"(2, iff hand has a CanLink
+#    Maquinamon) / "Don't link"(3). Branch 1 → IPlacePermanentToLinkCards(self →
+#    host); branch 2 → SelectHand(Maquinamon) → host.AddLinkCard(handCard). Both
+#    host selects use CanSelectLinkTarget: own Digimon, != self, CanLinkToTarget.
+# 3. Link Condition (None): AddSelfLinkConditionStaticEffect(host HasText(
+#    "Maquinamon"), linkCost 2). → kind: link_condition cost 2.
+# 4. Link (OnDeclaration): LinkEffect(card) — the standard link declaration,
+#    handled by the engine link system (no DSL clause needed).
+# 5. Link Effect (WhenRemoveField, SetIsLinkedEffect(true)): "[All Turns] When
+#    this Digimon would leave the battle area, by placing 1 of its link cards as
+#    its bottom digivolution card, it doesn't leave." → scope: linked replacement,
+#    cost place_link_card_as_bottom_digivolution, outcome prevent.
+#
+# ─── Migration note (collapse §4.5.5) ────────────────────────────────────────
+# Migrated off test-only raw_rust (ex11_027_optional_link_maquinamon /
+# ex11_027_link_requirements) to pure DSL using the §4.5.1/2/4 link substrate:
+#   - relink_self_to_own_digimon (G-DSL-LINK-RELINK-STANDING-PERMANENT),
+#   - link_cards host_filter + exclude_source (G-DSL-LINK-HOST-FILTER),
+#   - place_link_card_as_bottom_digivolution replacement cost
+#     (G-DSL-REPLACEMENT-LINK-CARD-TO-BOTTOM-SOURCE),
+#   - the heterogeneous link choice (G-DSL-LINK-HETEROGENEOUS-CHOICE) as if-gated
+#     select_effect_choice (existing vocab).
+# Host eligibility ("host has [Maquinamon] in text") is encoded via host_filter;
+# "1 of your OTHER Digimon" via exclude_source. The on-play prompt gate uses
+# count >= 2 of own Maquinamon-text Digimon: self ALSO has Maquinamon in its
+# text, so >= 2 means self + >= 1 OTHER eligible host (the real host selects
+# exclude self regardless, so this is only the "should we prompt" heuristic).
+
 card: EX11-027
 name: Maquinamon
 kind: digimon
@@ -7,36 +58,102 @@ cost: 3
 dp: 1000
 traits: [Composite, LIBERATOR]
 attribute: Data
+
 alt_paths:
+  # Lv.2 with [Maquinamon] in text → Cost 0 (DCGO HasText("Maquinamon")).
   - kind: digivolve
-    from: { level_eq: 2, name_contains: "Maquinamon" }
+    from: { level_eq: 2, effect_text_contains: "Maquinamon" }
     cost: 0
 
 effects:
+  # ─── [Link] [Maquinamon] in text: Cost 2 (self link-condition) ───────────────
+  - kind: link_condition
+    cost: 2
+    filter: { effect_text_contains: "Maquinamon" }
+    summary: "[Link] [Maquinamon] in text: Cost 2"
+
+  # ─── [On Play] reveal 3 → add Maquinamon + Maquinamon-text → heterogeneous link ─
   - when: on_play
-    summary: "Reveal 3; add Maquinamon cards, then link"
+    summary: "[On Play] Reveal top 3; add 1 [Maquinamon] + 1 [Maquinamon]-text card; return rest to deck bottom; then you may link this Digimon or 1 [Maquinamon] from hand to 1 of your other Digimon free"
     process:
       - reveal_top_deck: { of: you, count: 3 }
       - select_reveal:
           of: you
-          bind_as: maquinamon
+          bind_as: maq
           optional: true
-          filter: { name_contains: "Maquinamon" }
-          prompt: "Add Maquinamon"
-      - add_to_hand_from_reveal: { of: you, card: maquinamon }
+          filter: { name_is: "Maquinamon" }
+          prompt: "Add 1 [Maquinamon] to your hand"
+      - add_to_hand_from_reveal: { of: you, card: maq }
       - select_reveal:
           of: you
-          bind_as: text_card
+          bind_as: txt
           optional: true
-          filter:
-            any_of:
-              - name_contains: "Maquinamon"
-              - trait_has: Composite
-          prompt: "Add a Maquinamon-text card"
-      - add_to_hand_from_reveal: { of: you, card: text_card }
+          filter: { effect_text_contains: "Maquinamon" }
+          prompt: "Add 1 card with [Maquinamon] in its text to your hand"
+      - add_to_hand_from_reveal: { of: you, card: txt }
       - place_remainder_on_deck: { of: you, position: bottom }
-      - raw_rust: { fn: ex11_027_optional_link_maquinamon }
+      # Heterogeneous link choice (DCGO SetIntSelection 1/2/3), offered only when
+      # a valid OTHER host exists (>= 2 own Maquinamon-text Digimon = self + >=1).
+      - if:
+          condition:
+            count_gte:
+              filter: { owner: you, zone: [battle_area], kind: digimon, effect_text_contains: "Maquinamon" }
+              n: 2
+          then:
+            # "Link from Hand" only when a [Maquinamon] is in hand.
+            - if:
+                condition:
+                  count_gte:
+                    filter: { owner: you, zone: [hand], name_is: "Maquinamon" }
+                    n: 1
+                then:
+                  - select_effect_choice:
+                      bind_as: link_mode
+                      labels:
+                        - "Link this Maquinamon"
+                        - "Link a [Maquinamon] from your hand"
+                        - "Don't link"
+                      prompt: "From which area will you link a Maquinamon?"
+                  - if:
+                      condition: { equals: [link_mode, 0] }
+                      then:
+                        - relink_self_to_own_digimon:
+                            host_filter: { effect_text_contains: "Maquinamon" }
+                            prompt: "Link this Maquinamon to 1 of your other Digimon"
+                  - if:
+                      condition: { equals: [link_mode, 1] }
+                      then:
+                        - link_cards:
+                            from: [hand]
+                            filter: { name_is: "Maquinamon" }
+                            to: own_digimon
+                            count: { up_to: 1 }
+                            cost: free
+                            host_filter: { effect_text_contains: "Maquinamon" }
+                            exclude_source: true
+                            prompt: "Link 1 [Maquinamon] from your hand to 1 of your other Digimon"
+                  # link_mode == 2 → "Don't link" (no-op)
+                else:
+                  - select_effect_choice:
+                      bind_as: link_mode_self
+                      labels:
+                        - "Link this Maquinamon"
+                        - "Don't link"
+                      prompt: "Will you link your Maquinamon to another Digimon?"
+                  - if:
+                      condition: { equals: [link_mode_self, 0] }
+                      then:
+                        - relink_self_to_own_digimon:
+                            host_filter: { effect_text_contains: "Maquinamon" }
+                            prompt: "Link this Maquinamon to 1 of your other Digimon"
 
-  - kind: raw_rust
-    fn: ex11_027_link_requirements
-    triggers: [main_from_hand, main_on_field]
+  # ─── [Link][All Turns] leave-prevention (link-ESS, SetIsLinkedEffect) ────────
+  # When the host this Maquinamon is linked to would leave, place 1 of the host's
+  # link cards as its bottom digivolution card → it doesn't leave (§4.5.4 cost).
+  - scope: linked
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    cost: { place_link_card_as_bottom_digivolution: true }
+    outcome: prevent
+    summary: "[Link][All Turns] When this Digimon would leave the battle area, by placing 1 of its link cards as its bottom digivolution card, it doesn't leave"
