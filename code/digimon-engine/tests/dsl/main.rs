@@ -16,6 +16,7 @@ mod effect_immunity_step;
 mod effect_refiring;
 mod embedded_registry;
 mod event_context_bindings;
+mod trait_parity;
 mod face_up_security_lifecycle;
 mod group4_zone_movement;
 mod group6_auras;

@@ -5,7 +5,7 @@ level: 3
 color: [yellow]
 cost: 3
 dp: 1000
-traits: [Lesser, Xros Heart]
+traits: [Major, Xros Heart]  # official Bandai DB: type "Major/Xros Heart" (was mis-authored "Lesser")
 attribute: Data
 
 alt_paths:

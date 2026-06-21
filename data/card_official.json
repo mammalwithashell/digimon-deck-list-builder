@@ -1,5 +1,5 @@
 {
-  "count": 438,
+  "count": 490,
   "failed": [],
   "cards": {
     "BT24-062": {
@@ -13725,6 +13725,1850 @@
           "text": "[When Digivolving] You may play 1 level 4 or lower blue Digimon card and/or 1 level 4 or lower green Digimon card from this Digimon's digivolution cards without paying their memory costs."
         }
       ]
+    },
+    "BT10-003": {
+      "card_id": "BT10-003",
+      "digivolve_costs": [],
+      "colors": "Yellow",
+      "form": "In-Training",
+      "type": "Minor/Xros Heart",
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[When Attacking] If this Digimon has [Xros Heart] in its traits, ＜Draw 1＞. (Draw 1 card from your deck.)"
+        }
+      ]
+    },
+    "BT13-095": {
+      "card_id": "BT13-095",
+      "digivolve_costs": [],
+      "colors": "Red Yellow",
+      "play_cost": "5",
+      "qa": [
+        "Yes, you can."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Start of Your Turn] If you have 2 or less memory, set it to 3. [On Play] You may suspend this Tamer. [All Turns] When this Tamer suspends, 1 of your opponent's Digimon gets -3000 DP for the turn. Then, if you have a Digimon with [Agumon] or [Greymon] in its name, gain 1 memory."
+        },
+        {
+          "label": "Security Effect",
+          "text": "[Security] Play this card without paying the cost."
+        }
+      ]
+    },
+    "BT21-005": {
+      "card_id": "BT21-005",
+      "digivolve_costs": [],
+      "colors": "Green",
+      "form": "Appmon",
+      "attribute": "Social",
+      "type": "Swipe",
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] [Once Per Turn] When this Digimon gets linked, ＜Draw 1＞."
+        }
+      ]
+    },
+    "BT21-041": {
+      "card_id": "BT21-041",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Yellow",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Stnd./Appmon",
+      "attribute": "Tool",
+      "type": "Calendar",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[Security] At the end of the battle, play this card without paying the cost."
+        },
+        {
+          "label": "Special Rule",
+          "text": "+2000 DP"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.) [Your Turn] All of your opponent's Security Digimon get -3000 DP."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    },
+    "BT21-053": {
+      "card_id": "BT21-053",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Stnd./Appmon",
+      "attribute": "Tool",
+      "type": "Clock",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] Until your opponent's turn ends, 1 of their Digimon can't attack players."
+        },
+        {
+          "label": "Special Rule",
+          "text": "+2000 DP"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.) [When Linking] Until your opponent's turn ends, 1 of their Digimon can't attack players."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    },
+    "BT21-054": {
+      "card_id": "BT21-054",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Stnd./Appmon",
+      "attribute": "Game",
+      "type": "Shooting",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements. For example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Three Musketeers] in text or w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from any of your Digimon's digivolution cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+        },
+        {
+          "label": "Special Rule",
+          "text": "+2000 DP"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.) [When Linking] Delete 1 of your opponent's Digimon with a play cost of 3 or less."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Three Musketeers] in text or w/[Appmon] trait: Cost 0"
+    },
+    "BT21-074": {
+      "card_id": "BT21-074",
+      "digivolve_costs": [
+        {
+          "card_color": 6,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 5,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Purple Black",
+      "play_cost": "7",
+      "dp": "7000",
+      "form": "Ult./Appmon",
+      "attribute": "Navi",
+      "type": "GPS",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements. For example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.4 w/[Three Musketeers] in text: Cost 3"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] By placing 1 [Appmon] or [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution card, until your opponent's turn ends, their effects can't return that Digimon to hands or decks or affect it with ＜De-Digivolve＞ effects. [When Digivolving] [When Attacking] [Once Per Turn] By trashing 1 card with the [Appmon] or [Three Musketeers] trait from your Digimon's digivolution cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+        },
+        {
+          "label": "Special Rule",
+          "text": "+4000 DP"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.) [When Linking] Delete 1 of your opponent's level 4 or lower Digimon."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.4 w/[Three Musketeers] in text: Cost 3"
+    },
+    "BT22-003": {
+      "card_id": "BT22-003",
+      "digivolve_costs": [],
+      "colors": "Yellow",
+      "form": "Appmon",
+      "attribute": "Entertainment",
+      "type": "Tap",
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] [Once Per Turn] When this Digimon gets linked, 1 of your opponent's Digimon gets -2000 DP for the turn."
+        }
+      ]
+    },
+    "BT22-016": {
+      "card_id": "BT22-016",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Blue",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Stnd./Appmon",
+      "attribute": "Navi",
+      "type": "Broadcasting",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [Entertainment] or [Awakening] trait among them to the hand. Return the rest to the bottom of the deck."
+        },
+        {
+          "label": "Link DP",
+          "text": "+2000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] Trash any 1 digivolution card of 1 of your opponent's Digimon."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    },
+    "BT22-030": {
+      "card_id": "BT22-030",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Yellow",
+      "play_cost": "3",
+      "dp": "2000",
+      "form": "Stnd./Appmon",
+      "attribute": "Entertainment",
+      "type": "Music",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Torajiro Asuka] from your hand without paying the cost."
+        },
+        {
+          "label": "Link DP",
+          "text": "+2000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Attacking] [Once Per Turn] 1 of your opponent's Digimon gets -2000 DP for the turn."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    },
+    "BT22-033": {
+      "card_id": "BT22-033",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 1,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Yellow Blue",
+      "play_cost": "6",
+      "dp": "6000",
+      "form": "Sup./Appmon",
+      "attribute": "Entertainment",
+      "type": "Media Player",
+      "qa": [
+        "App Fusion is possible with the following combinations. ●[Musimon] with [Recomon] link card ●[Musimon] with [Mcmon] link card ●[Recomon] with [Musimon] link card ●[Recomon] with [Mcmon] link card ●[Mcmon] with [Musimon] link card ●[Mcmon] with [Recomon] link card"
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Musimon] & [Recomon] & [Mcmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] 1 of your opponent's Digimon gets -4000 DP for the turn. [Your Turn] [Once Per Turn] When this Digimon gets linked, you may play 1 level 3 Digimon card with the [Appmon] trait from your hand without paying the cost."
+        },
+        {
+          "label": "Link DP",
+          "text": "+3000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Attacking] You may play 1 level 3 Digimon card with the [Appmon] trait from your hand without paying the cost."
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Musimon] & [Recomon] & [Mcmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve"
+    },
+    "BT22-035": {
+      "card_id": "BT22-035",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 5,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Yellow Black",
+      "play_cost": "8",
+      "dp": "8000",
+      "form": "Ult./Appmon",
+      "attribute": "Entertainment",
+      "type": "Entertainment",
+      "qa": [
+        "No, you can't."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Mediamon] & [Dreammon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Alliance＞ [On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost. [Your Turn] [Once Per Turn] When this Digimon gets linked, you may play 1 play cost 4 or lower card with the [Appmon] trait from your hand without paying the cost."
+        },
+        {
+          "label": "Link DP",
+          "text": "+4000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] To 1 of your opponent's Digimon, give -4000 DP for the turn for each of your Digimon with the [Appmon] trait."
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Mediamon] & [Dreammon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve"
+    },
+    "BT22-039": {
+      "card_id": "BT22-039",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Yellow White",
+      "play_cost": "12",
+      "dp": "12000",
+      "form": "God/Appmon",
+      "attribute": "God",
+      "type": "Awakening",
+      "qa": [
+        "No, you can't."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Entermon] & [Fakemon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Alliance＞ ＜Link +1＞ (Add 1 to this Digimon's maximum links.) [When Digivolving] [When Attacking] [Once Per Turn] You may play 1 level 4 or lower [Appmon] trait Digimon card from your hand without paying the cost. [All Turns] [Once Per Turn] When any of your Digimon are played, you may link 1 [Appmon] trait Digimon card from this Digimon's digivolution cards to 1 of your Digimon without paying the cost."
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Entermon] & [Fakemon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve"
+    },
+    "BT22-050": {
+      "card_id": "BT22-050",
+      "digivolve_costs": [
+        {
+          "card_color": 3,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Green",
+      "play_cost": "4",
+      "dp": "4000",
+      "form": "Sup./Appmon",
+      "attribute": "Tool",
+      "type": "Voice Change",
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Security] At the end of the battle, play this card without paying the cost. [On Play] [When Digivolving] Suspend 1 of your opponent's Digimon."
+        },
+        {
+          "label": "Link DP",
+          "text": "+3000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] Suspend 1 of your opponent's Digimon."
+        }
+      ]
+    },
+    "BT22-055": {
+      "card_id": "BT22-055",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Stnd./Appmon",
+      "attribute": "Tool",
+      "type": "Recording",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] By trashing 1 Digimon card with the [Appmon] trait from your hand, ＜Draw 2＞."
+        },
+        {
+          "label": "Link DP",
+          "text": "+2000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    },
+    "BT22-058": {
+      "card_id": "BT22-058",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "4",
+      "dp": "4000",
+      "form": "Sup./Appmon",
+      "attribute": "Entertainment",
+      "type": "Dream",
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[All Turns] [Once Per Turn] When this Digimon gets linked, your opponent's effects can't return 1 of your Digimon to hands or decks until their turn ends."
+        },
+        {
+          "label": "Link DP",
+          "text": "+3000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+        }
+      ]
+    },
+    "BT22-075": {
+      "card_id": "BT22-075",
+      "digivolve_costs": [
+        {
+          "card_color": 6,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 3,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Purple Green",
+      "play_cost": "8",
+      "dp": "8000",
+      "form": "Ult./Appmon",
+      "attribute": "Tool",
+      "type": "Camouflage",
+      "qa": [
+        "No, you can't."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Roamon] & [Effecmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Retaliation＞ [On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost. [All Turns] [Once Per Turn] When this Digimon would leave the battle area, you may play 1 of this Digimon's link cards without paying the cost."
+        },
+        {
+          "label": "Link DP",
+          "text": "+4000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "＜Scapegoat＞ (When this Digimon would be deleted other than by your effects, by deleting 1 of your other Digimon, it isn't deleted.)"
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Roamon] & [Effecmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve"
+    },
+    "BT23-001": {
+      "card_id": "BT23-001",
+      "digivolve_costs": [],
+      "colors": "Blue",
+      "form": "Appmon",
+      "attribute": "Game",
+      "type": "Flick",
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[When Attacking] [Once Per Turn] If this Digimon has the [Appmon] trait, ＜Draw 1＞."
+        }
+      ]
+    },
+    "BT23-007": {
+      "card_id": "BT23-007",
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Red",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Stnd./Appmon",
+      "attribute": "Life",
+      "type": "Muscle Training",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[Security] At the end of the battle, play this card without paying the cost."
+        },
+        {
+          "label": "Link DP",
+          "text": "+2000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "＜Piercing＞ (When this Digimon attacks and deletes your opponent's Digimon in battle, it checks security before the attack ends.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    },
+    "BT23-009": {
+      "card_id": "BT23-009",
+      "digivolve_costs": [
+        {
+          "card_color": 0,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Red",
+      "play_cost": "4",
+      "dp": "4000",
+      "form": "Sup./Appmon",
+      "attribute": "Game",
+      "type": "Training/Leviathan",
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Your Turn] [Once Per Turn] When this Digimon gets linked, 1 of your Digimon gets +4000 DP for the turn."
+        },
+        {
+          "label": "Link DP",
+          "text": "+3000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[End of Your Turn] [Once Per Turn] This Digimon may attack a player."
+        }
+      ]
+    },
+    "BT23-016": {
+      "card_id": "BT23-016",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Blue",
+      "play_cost": "3",
+      "dp": "2000",
+      "form": "Stnd./Appmon",
+      "attribute": "Game",
+      "type": "Action",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 [Eri Karan] from your hand without paying the cost."
+        },
+        {
+          "label": "Link DP",
+          "text": "+2000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] ＜Draw 1＞ (Draw 1 card from your deck.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    },
+    "BT23-021": {
+      "card_id": "BT23-021",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 3,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 3,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Blue Green",
+      "play_cost": "6",
+      "dp": "6000",
+      "form": "Sup./Appmon",
+      "attribute": "Game",
+      "type": "Fighting",
+      "qa": [
+        "App Fusion is possible with the following combinations. ●[Dokamon] with [Perorimon] link card ●[Dokamon] with [Musclemon] link card ●[Perorimon] with [Dokamon] link card ●[Perorimon] with [Musclemon] link card ●[Musclemon] with [Dokamon] link card ●[Musclemon] with [Perorimon] link card"
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Dokamon] & [Perorimon] & [Musclemon] : Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+        },
+        {
+          "label": "Effect",
+          "text": "[When Digivolving] [When Attacking] [Once Per Turn] You may link 1 level 3 Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost. [Your Turn] [Once Per Turn] When this Digimon gets linked, it can't be deleted in battle until your opponent's turn ends."
+        },
+        {
+          "label": "Link DP",
+          "text": "+3000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] This Digimon can't be deleted in battle until your opponent's turn ends."
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Dokamon] & [Perorimon] & [Musclemon] : Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+    },
+    "BT23-022": {
+      "card_id": "BT23-022",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Blue Red",
+      "play_cost": "9",
+      "dp": "9000",
+      "form": "Ult./Appmon",
+      "attribute": "Game",
+      "type": "Battle",
+      "qa": [
+        "No, you can't."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Dosukomon] & [Coachmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+        },
+        {
+          "label": "Effect",
+          "text": "＜Raid＞ [When Digivolving] [When Attacking] [Once Per Turn] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost. [All Turns] [Once Per Turn] When this Digimon gets linked, it may unsuspend."
+        },
+        {
+          "label": "Link DP",
+          "text": "+4000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Dosukomon] & [Coachmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+    },
+    "BT23-024": {
+      "card_id": "BT23-024",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Blue White",
+      "play_cost": "12",
+      "dp": "12000",
+      "form": "God/Appmon",
+      "attribute": "God",
+      "type": "Invincible",
+      "qa": [
+        "No, you can't."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Oujamon] & [Beautymon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+        },
+        {
+          "label": "Effect",
+          "text": "＜Evade＞ ＜Link +1＞ (Add 1 to this Digimon's maximum links.) [When Digivolving] [When Attacking] You may link 1 Digimon card with the [Appmon] trait from your hand or this Digimon's digivolution cards to this Digimon without paying the cost. [All Turns] [Once Per Turn] When this Digimon gets linked, by unsuspending it, other than their highest play cost Digimon, none of your opponent's Digimon can suspend until their turn ends."
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Oujamon] & [Beautymon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+    },
+    "BT23-028": {
+      "card_id": "BT23-028",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Yellow",
+      "play_cost": "4",
+      "dp": "4000",
+      "form": "Sup./Appmon",
+      "attribute": "Entertainment",
+      "type": "Coordinate",
+      "qa": [
+        "This effect prevents [When Digivolving] effects on cards from activating. [When Digivolving] effects can no longer activate by triggering or when effects such as \"activate that card's [When Digivolving]\" effect\" activate."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Security] At the end of the battle, play this card without paying the cost. [On Play] [When Digivolving] 1 of your opponent's Digimon gets -3000 DP for the turn."
+        },
+        {
+          "label": "Link DP",
+          "text": "+3000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] Until your opponent's turn ends, 1 of their Digimon can't activate [When Digivolving] effects."
+        }
+      ]
+    },
+    "BT23-033": {
+      "card_id": "BT23-033",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 5,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Yellow Black",
+      "play_cost": "8",
+      "dp": "8000",
+      "form": "Ult./Appmon",
+      "attribute": "Life",
+      "type": "Beauty",
+      "qa": [
+        "No, you can't."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Coordemon] & [Consulmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+        },
+        {
+          "label": "Effect",
+          "text": "＜Barrier＞ [On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost. [Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 5 or fewer security cards, ＜Recovery +1 ≪Deck≫＞. Then, to 1 of your opponent's Digimon, give -1000 DP until their turn ends for each of your security cards."
+        },
+        {
+          "label": "Link DP",
+          "text": "+4000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] Until your opponent's turn ends, their effects can't return this Digimon to hands or decks or affect it with ＜De-Digivolve＞ effects."
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Coordemon] & [Consulmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+    },
+    "BT23-039": {
+      "card_id": "BT23-039",
+      "digivolve_costs": [
+        {
+          "card_color": 3,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Green",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Stnd./Appmon",
+      "attribute": "Entertainment",
+      "type": "Gourmet",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [Game] or [Invincible] trait among them to the hand. Return the rest to the bottom of the deck."
+        },
+        {
+          "label": "Link DP",
+          "text": "+2000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] You may suspend 1 of your opponent's Digimon."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    },
+    "BT23-052": {
+      "card_id": "BT23-052",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "4",
+      "dp": "4000",
+      "form": "Sup./Appmon",
+      "attribute": "Life",
+      "type": "Saving",
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Security] At the end of the battle, play this card without paying the cost. [On Play] [When Digivolving] 1 of your opponent's Digimon can't attack players until their turn ends."
+        },
+        {
+          "label": "Link DP",
+          "text": "+3000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] This Digimon gains ＜Reboot＞ and ＜Blocker＞ until your opponent's turn ends."
+        }
+      ]
+    },
+    "BT24-006": {
+      "card_id": "BT24-006",
+      "digivolve_costs": [],
+      "colors": "Purple",
+      "form": "Appmon",
+      "attribute": "System",
+      "type": "Tap",
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] [Once Per Turn] When this Digimon gets linked, ＜Draw 1＞ and trash 1 card in your hand."
+        }
+      ]
+    },
+    "BT24-032": {
+      "card_id": "BT24-032",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Yellow",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Stnd./Appmon",
+      "attribute": "System",
+      "type": "Warning/Leviathan",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [System] or [Transmutation] trait among them to the hand. Return the rest to the bottom of the deck."
+        },
+        {
+          "label": "Link DP",
+          "text": "DP+2000"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] 1 of your opponent's Digimon gets -2000 DP for the turn."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    },
+    "BT24-036": {
+      "card_id": "BT24-036",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Yellow",
+      "play_cost": "4",
+      "dp": "4000",
+      "form": "Sup./Appmon",
+      "attribute": "Life",
+      "type": "Medical",
+      "qa": [
+        "No, you can't activate it. If a Digimon is deleted and an [On Deletion] link effect is triggered, it will only be pending activation for the Digimon card with that link card. If a card with an effect that's pending activation leaves that area before the effect activates, the effect can no longer be activated. In this case, if this card and the linked Digimon are deleted and an [On Deletion] link effect is triggered, the effect will only be pending activation for the linked Digimon card. If the deleted Digimon card with the effect that's pending activation leaves the trash, the [On Deletion] link effect that was pending activation can no longer be activated. Related Cards"
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Security] At the end of the battle, play this card without paying the cost. [On Play] [On Deletion] 1 of your opponent's Digimon gets -3000 DP for the turn."
+        },
+        {
+          "label": "Link DP",
+          "text": "DP+3000"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[On Deletion] 1 of your opponent's Digimon gets -5000 DP for the turn."
+        }
+      ]
+    },
+    "BT24-038": {
+      "card_id": "BT24-038",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 3,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Yellow Green",
+      "play_cost": "8",
+      "dp": "8000",
+      "form": "Ult./Appmon",
+      "attribute": "Life",
+      "type": "Life",
+      "qa": [
+        "No, you can't."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Docmon] & [Medicmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+        },
+        {
+          "label": "Effect",
+          "text": "＜Fortitude＞ [On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost. [All Turns] [Once Per Turn] When this Digimon gets linked, 1 of your opponent's Digimon gets -7000 DP for the turn."
+        },
+        {
+          "label": "Link DP",
+          "text": "DP+4000"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] 1 of your opponent's Digimon gets -7000 DP for the turn."
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Docmon] & [Medicmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+    },
+    "BT24-053": {
+      "card_id": "BT24-053",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "3",
+      "dp": "2000",
+      "form": "Stnd./Appmon",
+      "attribute": "System",
+      "type": "Security",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+        },
+        {
+          "label": "Link DP",
+          "text": "DP+2000"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "＜Blocker＞ (This Digimon can block in the blocker timing.)"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    },
+    "BT24-056": {
+      "card_id": "BT24-056",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "5",
+      "dp": "5000",
+      "form": "Sup./Appmon",
+      "attribute": "System",
+      "type": "Zip/Unzip",
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "＜Blocker＞ [On Play] [When Digivolving] Until your opponent's turn ends, their effects can't return 1 of your Digimon with the [System], [Life] or [Transmutation] trait to hands or decks."
+        },
+        {
+          "label": "Link DP",
+          "text": "DP+3000"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] Delete 1 of your opponent's play cost 5 or lower Digimon."
+        }
+      ]
+    },
+    "BT24-057": {
+      "card_id": "BT24-057",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "4",
+      "dp": "4000",
+      "form": "Sup./Appmon",
+      "attribute": "Life",
+      "type": "Doctor",
+      "qa": [
+        "No, you can't activate it. If a Digimon is deleted and an [On Deletion] link effect is triggered, it will only be pending activation for the Digimon card with that link card. If a card with an effect that's pending activation leaves that area before the effect activates, the effect can no longer be activated. In this case, if this card and the linked Digimon are deleted and an [On Deletion] link effect is triggered, the effect will only be pending activation for the linked Digimon card. If the deleted Digimon card with the effect that's pending activation leaves the trash, the [On Deletion] link effect that was pending activation can no longer be activated. Related Cards"
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Security] At the end of the battle, play this card without paying the cost. [On Play] [On Deletion] Until your opponent's turn ends, 1 of their Digimon can't attack players."
+        },
+        {
+          "label": "Link DP",
+          "text": "DP+3000"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[On Deletion] ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+        }
+      ]
+    },
+    "BT24-071": {
+      "card_id": "BT24-071",
+      "digivolve_costs": [
+        {
+          "card_color": 6,
+          "level": 3,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 0,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Purple Red",
+      "play_cost": "6",
+      "dp": "6000",
+      "form": "Sup./Appmon",
+      "attribute": "System",
+      "type": "Super Hacking",
+      "qa": [
+        "App Fusion is possible with the following combinations. ●[Hackmon] with [Protecmon] link card ●[Hackmon] with [Pipomon] link card ●[Protecmon] with [Hackmon] link card ●[Protecmon] with [Pipomon] link card ●[Pipomon] with [Hackmon] link card ●[Pipomon] with [Protecmon] link card"
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Hackmon] & [Protecmon] & [Pipomon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] 1 of your Digimon with the [System], [Life] or [Transmutation] trait gains ＜Security A. +1＞ for the turn. [On Deletion] You may play 1 level 3 Digimon card with the [Appmon] trait from your trash without paying the cost."
+        },
+        {
+          "label": "Link DP",
+          "text": "DP+3000"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[On Deletion] You may play 1 level 3 [Appmon] trait Digimon card from your trash without paying the cost."
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Hackmon] & [Protecmon] & [Pipomon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+    },
+    "BT24-077": {
+      "card_id": "BT24-077",
+      "digivolve_costs": [
+        {
+          "card_color": 6,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 0,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Purple Red",
+      "play_cost": "9",
+      "dp": "9000",
+      "form": "Ult./Appmon",
+      "attribute": "System",
+      "type": "Restoration",
+      "qa": [
+        "No, you can't."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Raidramon] & [Dezipmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+        },
+        {
+          "label": "Effect",
+          "text": "＜Blocker＞ [When Digivolving] [On Deletion] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to 1 of your Digimon without paying the cost. [On Deletion] You may play 1 level 4 or lower [Appmon] trait Digimon card from your trash without paying the cost."
+        },
+        {
+          "label": "Link DP",
+          "text": "DP+4000"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] Delete 1 of your opponent's Digimon with the lowest DP."
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Raidramon] & [Dezipmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+    },
+    "BT24-079": {
+      "card_id": "BT24-079",
+      "digivolve_costs": [
+        {
+          "card_color": 6,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Purple White",
+      "play_cost": "12",
+      "dp": "12000",
+      "form": "God/Appmon",
+      "attribute": "God",
+      "type": "Transmutation",
+      "qa": [
+        "No, you can't."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Revivemon] & [Biomon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+        },
+        {
+          "label": "Effect",
+          "text": "＜Overclock ([Appmon] Trait)＞ ＜Link +1＞ [When Digivolving] You may play 1 level 4 or lower [System] or [Life] trait Digimon card from your trash without paying the cost. Then, you may link 1 [Appmon] trait Digimon card from your hand or this Digimon's digivolution cards to 1 of your Digimon without paying the cost. [All Turns] [Once Per Turn] When other Digimon are deleted, you may activate 1 of this Digimon's [When Digivolving] effects."
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Revivemon] & [Biomon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+    },
+    "BT25-004": {
+      "card_id": "BT25-004",
+      "digivolve_costs": [],
+      "colors": "Green",
+      "form": "Appmon",
+      "attribute": "Tool",
+      "type": "Tap",
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] [Once Per Turn] When a [Social], [Tool] or [Game] trait card would link to this Digimon, you may reduce the cost by 1."
+        }
+      ]
+    },
+    "EX10-001": {
+      "card_id": "EX10-001",
+      "digivolve_costs": [],
+      "colors": "Green",
+      "form": "Appmon",
+      "attribute": "System",
+      "type": "Flick",
+      "qa": [
+        "No, it doesn't trigger."
+      ],
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[Your Turn] [Once Per Turn] When effects trash any of this Digimon's link cards, gain 1 memory."
+        }
+      ]
+    },
+    "EX10-014": {
+      "card_id": "EX10-014",
+      "digivolve_costs": [
+        {
+          "card_color": 2,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Yellow",
+      "play_cost": "4",
+      "dp": "4000",
+      "form": "Sup./Appmon",
+      "attribute": "Navi",
+      "type": "Weather",
+      "qa": [
+        "Yes, you can."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Security] At the end of the battle, play this card without paying the cost. [On Play] [When Digivolving] Give 2 of your opponent's Digimon ＜Security A. -1＞ until their turn ends."
+        },
+        {
+          "label": "Link DP",
+          "text": "+3000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Attacking] By trashing 1 of this Digimon's link cards, 1 of your opponent's Digimon gets -6000 DP for the turn."
+        }
+      ]
+    },
+    "EX10-016": {
+      "card_id": "EX10-016",
+      "digivolve_costs": [
+        {
+          "card_color": 3,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Green",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Stnd./Appmon",
+      "attribute": "Tool",
+      "type": "Mirror",
+      "qa": [
+        "Yes, you can."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[Your Turn] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon."
+        },
+        {
+          "label": "Link DP",
+          "text": "+3000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Attacking] By trashing 1 of this Digimon's link cards, 1 of your opponent's Digimon gets -6000 DP for the turn."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    },
+    "EX10-017": {
+      "card_id": "EX10-017",
+      "digivolve_costs": [
+        {
+          "card_color": 3,
+          "level": 3,
+          "memory_cost": 3
+        },
+        {
+          "card_color": 6,
+          "level": 3,
+          "memory_cost": 3
+        }
+      ],
+      "colors": "Green Purple",
+      "play_cost": "6",
+      "dp": "6000",
+      "form": "Sup./Appmon",
+      "attribute": "System",
+      "type": "Stealth/Leviathan",
+      "qa": [
+        "Yes, you can."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Mirrormon] & [Kabemon] & [Copipemon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+        },
+        {
+          "label": "Effect",
+          "text": "＜Jamming＞ ＜Retaliation＞ [Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or fewer Tamers, you may play 1 Tamer card with the [Leviathan] trait from your hand without paying the cost."
+        },
+        {
+          "label": "Link DP",
+          "text": "+3000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[All Turns] When any of your opponent's Digimon suspend, by trashing 1 of this Digimon's link cards, ＜Draw 1＞ and gain 1 memory."
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Mirrormon] & [Kabemon] & [Copipemon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+    },
+    "EX10-019": {
+      "card_id": "EX10-019",
+      "digivolve_costs": [
+        {
+          "card_color": 3,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 6,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Green Purple",
+      "play_cost": "8",
+      "dp": "8000",
+      "form": "Ult./Appmon",
+      "attribute": "System",
+      "type": "Strategy/Leviathan",
+      "qa": [
+        "Yes, you can."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Mienumon] & [Sakusimon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+        },
+        {
+          "label": "Effect",
+          "text": "＜Fortitude＞ [On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your trash or this Digimon's digivolution cards to this Digimon without paying the cost. [All Turns] [Once Per Turn] When this Digimon gets linked, you may suspend 1 of your opponent's Digimon or Tamers. It can't unsuspend in their next unsuspend phase."
+        },
+        {
+          "label": "Link DP",
+          "text": "+4000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[All Turns] When any of your opponent's Digimon suspend, by trashing 1 of this Digimon's link cards, trash your opponent's top security card."
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Mienumon] & [Sakusimon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+    },
+    "EX10-024": {
+      "card_id": "EX10-024",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Stnd./Appmon",
+      "attribute": "System",
+      "type": "Wallpaper",
+      "qa": [
+        "Yes, you can."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[Security] At the end of the battle, play this card without paying the cost."
+        },
+        {
+          "label": "Link DP",
+          "text": "+2000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Attacking] By trashing 1 of this Digimon's link cards, ＜De-Digivolve 1＞ 1 of your opponent's Digimon."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    },
+    "EX10-029": {
+      "card_id": "EX10-029",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Black",
+      "play_cost": "4",
+      "dp": "4000",
+      "form": "Sup./Appmon",
+      "attribute": "System",
+      "type": "Transmission",
+      "qa": [
+        "Yes, you can."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[Security] At the end of the battle, play this card without paying the cost. ＜Blocker＞"
+        },
+        {
+          "label": "Link DP",
+          "text": "+3000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] By trashing 1 of this Digimon's link cards, ＜De-Digivolve＞ effects don't affect 1 of your Digimon until your opponent's turn ends."
+        }
+      ]
+    },
+    "EX10-030": {
+      "card_id": "EX10-030",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 4,
+          "memory_cost": 4
+        },
+        {
+          "card_color": 2,
+          "level": 4,
+          "memory_cost": 4
+        }
+      ],
+      "colors": "Black Yellow",
+      "play_cost": "8",
+      "dp": "8000",
+      "form": "Ult./Appmon",
+      "attribute": "Navi",
+      "type": "Astronomy/Leviathan",
+      "qa": [
+        "Yes, you can."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Warpmon] & [Weatherdramon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+        },
+        {
+          "label": "Effect",
+          "text": "＜Collision＞ [On Play] [When Digivolving] You may link 1 level 4 or lower Digimon card from your hand or this Digimon's digivolution cards to this Digimon without paying the cost. [All Turns] [Once Per Turn] When effects trash any of this Digimon's link cards, 1 of your opponent's Digimon gets -8000 DP for the turn."
+        },
+        {
+          "label": "Link DP",
+          "text": "+4000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 3 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[All Turns] [Once Per Turn] When this Digimon would leave the battle area, by trashing 1 of its link cards, it doesn't leave."
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Warpmon] & [Weatherdramon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+    },
+    "EX10-038": {
+      "card_id": "EX10-038",
+      "digivolve_costs": [
+        {
+          "card_color": 6,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Purple",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Stnd./Appmon",
+      "attribute": "System",
+      "type": "Copy &amp; Paste/Leviathan",
+      "qa": [
+        "Yes, you can."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Appmon] trait and 1 card with the [Leviathan] trait among them to the hand. Return the rest to the bottom of the deck."
+        },
+        {
+          "label": "Link DP",
+          "text": "+2000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Attacking] By trashing 1 of this Digimon's link cards, you may return 1 [Appmon] trait Digimon card from your trash to the hand."
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+    },
+    "EX10-043": {
+      "card_id": "EX10-043",
+      "digivolve_costs": [
+        {
+          "card_color": 6,
+          "level": 3,
+          "memory_cost": 2
+        }
+      ],
+      "colors": "Purple",
+      "play_cost": "5",
+      "dp": "5000",
+      "form": "Sup./Appmon",
+      "attribute": "Game",
+      "type": "Simulation/Leviathan",
+      "qa": [
+        "Yes, you can."
+      ],
+      "text_sections": [
+        {
+          "label": "Effect",
+          "text": "[On Play] [When Digivolving] Delete 1 of your opponent's level 3 Digimon. [All Turns] [Once Per Turn] When effects trash any of this Digimon's link cards, gain 1 memory."
+        },
+        {
+          "label": "Link DP",
+          "text": "+3000 DP"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 2 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Attacking] By trashing 1 of this Digimon's link cards, delete 1 of your opponent's level 4 or lower Digimon."
+        }
+      ]
+    },
+    "EX10-073": {
+      "card_id": "EX10-073",
+      "digivolve_costs": [
+        {
+          "card_color": 5,
+          "level": 5,
+          "memory_cost": 5
+        }
+      ],
+      "colors": "Black White",
+      "play_cost": "13",
+      "dp": "13000",
+      "form": "God/Appmon",
+      "attribute": "God",
+      "type": "Omnipotence/Leviathan",
+      "qa": [
+        "No, it doesn't trigger."
+      ],
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[App Fusion] [Warudamon] & [Cometmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+        },
+        {
+          "label": "Effect",
+          "text": "＜Security A. +1＞ ＜Link +1＞ (Add 1 to this Digimon's maximum links.) [When Digivolving] [End of Opponent’s Turn] You may link 1 Digimon card from your hand to this Digimon without paying the cost. Then, you may link 1 Digimon card from this Digimon's digivolution cards to this Digimon without paying the cost. [All Turns] [Once Per Turn] When effects trash any of this Digimon's link cards, delete 1 of your opponent’s Digimon with the lowest play cost."
+        }
+      ],
+      "special_digivolution_condition": "[App Fusion] [Warudamon] & [Cometmon]: Cost 0 If 2 such cards are linked together, stack the link card on top and digivolve."
+    },
+    "EX11-006": {
+      "card_id": "EX11-006",
+      "digivolve_costs": [],
+      "colors": "White",
+      "form": "Appmon",
+      "attribute": "Tool",
+      "type": "Flick/LIBERATOR",
+      "qa": [
+        "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements. For example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects."
+      ],
+      "text_sections": [
+        {
+          "label": "Inherited Effect",
+          "text": "[When Attacking] [Once Per Turn] This Digimon linked with [Maquinamon] may digivolve into a Digimon card with [Maquinamon] in its text in the hand with the digivolution cost reduced by 2."
+        }
+      ]
+    },
+    "P-190": {
+      "card_id": "P-190",
+      "digivolve_costs": [
+        {
+          "card_color": 1,
+          "level": 2,
+          "memory_cost": 0
+        }
+      ],
+      "colors": "Blue",
+      "play_cost": "3",
+      "dp": "1000",
+      "form": "Stnd./Appmon",
+      "attribute": "Social",
+      "type": "Tweet",
+      "text_sections": [
+        {
+          "label": "Special Digivolution Condition",
+          "text": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+        },
+        {
+          "label": "Effect",
+          "text": "[On Play] ＜Draw 1＞"
+        },
+        {
+          "label": "Link DP",
+          "text": "DP+2000"
+        },
+        {
+          "label": "Link Condition",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.)"
+        },
+        {
+          "label": "Link Effect",
+          "text": "[When Linking] ＜Draw 1＞"
+        },
+        {
+          "label": "Inherited Effect",
+          "text": "＜Link＞ [Appmon] trait: Cost 1 (Plug this card from the hand or battle area sideways into the specified Digimon in the battle area.) [When Linking] ＜Draw 1＞"
+        }
+      ],
+      "special_digivolution_condition": "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
     }
   }
 }
