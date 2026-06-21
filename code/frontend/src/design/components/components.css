@@ -51,8 +51,14 @@
   from { background-position: 0 0; }
   to { background-position: 0 100%; }
 }
-@media (prefers-reduced-motion: reduce) {
-  [data-theme="dark"] .ds-backdrop::after { animation: none; }
+/* Motion gating (add-effects-and-motion-settings): the CRT scan is an ambient
+   loop — stop it as soon as motion is dialed back to `reduced` or `off`. The OS
+   prefers-reduced-motion setting now seeds the default motion level in the store
+   (uiStore.deriveDefaultMotion) instead of gating at runtime, so there is one
+   mechanism, keyed on the `data-motion` attribute set pre-paint in index.html. */
+[data-motion="reduced"] .ds-backdrop::after,
+[data-motion="off"] .ds-backdrop::after {
+  animation: none;
 }
 
 /* ── Panel / Frame ─────────────────────────────────────────────────────── */

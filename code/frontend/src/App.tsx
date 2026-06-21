@@ -23,7 +23,7 @@ import { RoomLobbyPage } from '@/pages/RoomLobbyPage';
 import { UpdaterBridge } from '@/updater/UpdaterBridge';
 import { ThemeProvider } from '@/design/theme/ThemeProvider';
 import { useAuthStore } from '@/stores/authStore';
-import { useUiStore } from '@/stores/uiStore';
+import { useUiStore, applyMotionAttribute } from '@/stores/uiStore';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 
@@ -153,10 +153,18 @@ export function App() {
   // Hide the custom title bar in fullscreen so the canvas fills the whole
   // display (CanvasScaler reserves no top space when fullscreen).
   const fullscreen = useUiStore((s) => s.fullscreen);
+  // Re-assert the motion attribute from the store (the index.html bootstrap
+  // sets it pre-paint; this keeps it in sync if the store hydrated to a value
+  // the bootstrap didn't apply, and on every runtime change).
+  const motion = useUiStore((s) => s.motion);
 
   useEffect(() => {
     void hydrate();
   }, [hydrate]);
+
+  useEffect(() => {
+    applyMotionAttribute(motion);
+  }, [motion]);
 
   return (
     <BrowserRouter>

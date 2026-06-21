@@ -1291,3 +1291,43 @@ body {
     transform: scaleX(0.8) scaleY(0.4);
   }
 }
+
+/* ─── Motion gating (add-effects-and-motion-settings) ───────────────────────
+   One gate for the whole animation library, keyed on the `data-motion`
+   attribute (set pre-paint in index.html, re-asserted from uiStore). The OS
+   prefers-reduced-motion setting only seeds the first-run default in the store
+   (uiStore.deriveDefaultMotion) — it is no longer a runtime gate.
+
+   Classification of the animations in this file:
+   - Ambient / looping → stop at `reduced` AND `off`:
+       trailPulse (.ib-gauge-seg.is-trail).  (ds-crt-scan is gated in components.css.)
+   - Functional one-shot feedback → kept at `reduced`, neutralized at `off`:
+       every .animate-* class below. */
+
+/* Ambient/looping — off the moment motion is dialed back. */
+[data-motion="reduced"] .ib-gauge-seg.is-trail,
+[data-motion="off"] .ib-gauge-seg.is-trail {
+  animation: none;
+}
+
+/* Functional one-shot feedback — removed only at `off`. The attribute+class
+   selector outspecifies the bare `.animate-*` rule, so the element collapses to
+   its base/instant state with no !important needed. */
+[data-motion="off"] .animate-fade-in,
+[data-motion="off"] .animate-security-reveal,
+[data-motion="off"] .animate-card-enter,
+[data-motion="off"] .animate-card-play-in,
+[data-motion="off"] .animate-card-exit,
+[data-motion="off"] .animate-card-trash-out,
+[data-motion="off"] .animate-digivolve-banner,
+[data-motion="off"] .animate-digivolve-card-drop,
+[data-motion="off"] .animate-battle-slash,
+[data-motion="off"] .animate-battle-shake,
+[data-motion="off"] .animate-effect-pulse,
+[data-motion="off"] .animate-effect-popup,
+[data-motion="off"] .animate-overlay-open,
+[data-motion="off"] .animate-card-detail-open,
+[data-motion="off"] .animate-security-break,
+[data-motion="off"] .animate-security-shatter {
+  animation: none;
+}

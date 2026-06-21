@@ -1,10 +1,16 @@
 import { Link } from 'react-router-dom';
-import { useUiStore } from '@/stores/uiStore';
+import { useUiStore, type Motion } from '@/stores/uiStore';
 import { ThemeSwitch } from '@/design/components/ThemeSwitch';
 import {
   RESOLUTION_PRESETS,
   type ResolutionPreset,
 } from '@/utils/constants';
+
+const MOTION_OPTIONS: { value: Motion; label: string }[] = [
+  { value: 'full', label: 'Full' },
+  { value: 'reduced', label: 'Reduced' },
+  { value: 'off', label: 'Off' },
+];
 
 /**
  * Desktop Graphics Settings page.
@@ -23,6 +29,10 @@ export function GraphicsSettingsPage() {
   const fullscreen = useUiStore((s) => s.fullscreen);
   const setGraphicsPreset = useUiStore((s) => s.setGraphicsPreset);
   const setFullscreen = useUiStore((s) => s.setFullscreen);
+  const motion = useUiStore((s) => s.motion);
+  const setMotion = useUiStore((s) => s.setMotion);
+  const liveBackground = useUiStore((s) => s.liveBackground);
+  const setLiveBackground = useUiStore((s) => s.setLiveBackground);
 
   const applyPreset = async (preset: ResolutionPreset) => {
     setGraphicsPreset(preset);
@@ -92,6 +102,64 @@ export function GraphicsSettingsPage() {
             </div>
           </div>
           <ThemeSwitch />
+        </div>
+
+        <div className="mb-4 flex items-center justify-between border border-[var(--line-1)] bg-[var(--surface-raised)] px-4 py-3">
+          <div>
+            <div className="text-sm font-medium text-[var(--ink-0)]">Motion</div>
+            <div className="text-xs text-[var(--ink-2)]">
+              How much animation the app plays. Reduced keeps essential feedback;
+              Off stops non-essential motion.
+            </div>
+          </div>
+          <div className="flex gap-1" role="group" aria-label="Motion level">
+            {MOTION_OPTIONS.map((opt) => {
+              const active = motion === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  data-testid={`graphics-motion-${opt.value}`}
+                  onClick={() => setMotion(opt.value)}
+                  aria-pressed={active}
+                  className={`border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                    active
+                      ? 'border-[var(--accent)] bg-[var(--surface-raised)] text-[var(--ink-0)]'
+                      : 'border-[var(--line-1)] bg-[var(--surface-sunken)] text-[var(--ink-1)] hover:border-[var(--accent)] hover:text-[var(--ink-0)]'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mb-8 flex items-center justify-between border border-[var(--line-1)] bg-[var(--surface-raised)] px-4 py-3">
+          <div>
+            <div className="text-sm font-medium text-[var(--ink-0)]">Live background</div>
+            <div className="text-xs text-[var(--ink-2)]">
+              Animated theme background. Only active when Motion is Full.
+            </div>
+          </div>
+          <button
+            type="button"
+            data-testid="graphics-livebg-toggle"
+            onClick={() => setLiveBackground(!liveBackground)}
+            aria-pressed={liveBackground}
+            className={`relative h-7 w-14 shrink-0 rounded-full border transition-colors ${
+              liveBackground
+                ? 'border-[var(--accent)] bg-[var(--accent)]'
+                : 'border-[var(--line-1)] bg-[var(--surface-sunken)]'
+            }`}
+          >
+            <span
+              className="absolute left-1 top-1/2 h-5 w-5 rounded-full bg-[var(--ink-0)] transition-transform"
+              style={{
+                transform: `translateY(-50%) translateX(${liveBackground ? '26px' : '0px'})`,
+              }}
+            />
+          </button>
         </div>
 
         <div className="mb-8 flex items-center justify-between border border-[var(--line-1)] bg-[var(--surface-raised)] px-4 py-3">

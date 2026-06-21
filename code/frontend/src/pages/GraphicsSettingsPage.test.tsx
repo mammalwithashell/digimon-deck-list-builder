@@ -105,3 +105,47 @@ describe('GraphicsSettingsPage', () => {
     expect(btn).toBeDisabled();
   });
 });
+
+describe('GraphicsSettingsPage motion + live background', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    useUiStore.setState({ motion: 'full', liveBackground: true });
+  });
+
+  it('renders the three motion options and the live-background toggle', () => {
+    renderPage();
+    expect(screen.getByTestId('graphics-motion-full')).toBeInTheDocument();
+    expect(screen.getByTestId('graphics-motion-reduced')).toBeInTheDocument();
+    expect(screen.getByTestId('graphics-motion-off')).toBeInTheDocument();
+    expect(screen.getByTestId('graphics-livebg-toggle')).toBeInTheDocument();
+  });
+
+  it('changes the motion level via the store on click', () => {
+    renderPage();
+    act(() => {
+      screen.getByTestId('graphics-motion-reduced').click();
+    });
+    expect(useUiStore.getState().motion).toBe('reduced');
+  });
+
+  it('toggles the live background via the store on click', () => {
+    renderPage();
+    act(() => {
+      screen.getByTestId('graphics-livebg-toggle').click();
+    });
+    expect(useUiStore.getState().liveBackground).toBe(false);
+  });
+
+  it('reflects the active motion level with aria-pressed', () => {
+    useUiStore.setState({ motion: 'off' });
+    renderPage();
+    expect(screen.getByTestId('graphics-motion-off')).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByTestId('graphics-motion-full')).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+  });
+});
