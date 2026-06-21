@@ -6,6 +6,8 @@
 //! `try_replace` dispatcher, candidate collection/layering, and the
 //! `PendingSelection::Replacement` installer for optional replacements.
 
+use std::sync::Arc;
+
 use crate::action::space::{BREEDING_TARGET, REPLACEMENT_ACCEPT};
 use crate::card_source::CardHandle;
 use crate::effect_context::{EffectContext, EffectReadContext};
@@ -84,7 +86,7 @@ pub enum ReplacementOutcome {
 /// permanent-scoped passives points at the *target* permanent, and for
 /// player-scoped passives points at the installer permanent (if any).
 pub type ReplacementConditionFn =
-    Box<dyn Fn(&EffectReadContext, &ReplacementSubject) -> bool + Send + Sync + 'static>;
+    Arc<dyn Fn(&EffectReadContext, &ReplacementSubject) -> bool + Send + Sync + 'static>;
 
 /// Closure type for replacement effect processes. Receives a
 /// ReplacementContext so the process can mutate state AND set the outcome.

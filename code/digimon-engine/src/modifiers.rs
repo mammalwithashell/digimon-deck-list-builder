@@ -84,9 +84,11 @@ impl Default for ModifierPayload {
 
 /// A single modifier entry.
 ///
-/// Not `Clone` — `replacement_condition` is a `Box<dyn Fn + Send + Sync>`,
-/// which cannot be cloned in general. Consumers should share via reference
-/// or rebuild via `ModifierEntry::simple(...)` / literal construction.
+/// `Clone` since 2026-06-18 (make-engine-cloneable task 1.2): the only
+/// closure-valued fields — `replacement_condition` and `until_condition` —
+/// are `Arc<dyn Fn>` shareable handles (Category-A behavior), so the entry
+/// clones cheaply (shared behavior, copied data).
+#[derive(Clone)]
 pub struct ModifierEntry {
     pub modifier: ModifierType,
     pub value: i32,
@@ -353,6 +355,7 @@ impl ModifierEntry {
 /// NOTE: no closure-valued condition in v1. Card scripts gate WHEN they install
 /// the modifier via the Effect's `.condition` closure. Phase 7 may add a
 /// `condition` field.
+#[derive(Clone)]
 pub struct PlayerModifierEntry {
     pub modifier: ModifierType,
     /// For future parametric variants; ignored for boolean flags.
@@ -664,7 +667,7 @@ pub type GrantedEffectBody =
 /// Phase 4i — `Debug`-friendly wrapper around the granted-effect body
 /// registry. The body closures are `Arc<dyn Fn ...>` which don't
 /// implement `Debug`; the wrapper hides them behind a count.
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct GrantedEffectBodyRegistry {
     pub bodies: std::collections::HashMap<u64, GrantedEffectBody>,
 }
@@ -694,6 +697,7 @@ impl GrantedEffectBodyRegistry {
 /// carrier's matching `timing` event drains. Cleanup happens via the
 /// existing `clear_permanent` path when the carrier leaves the field, or
 /// via `expire_end_of_turn` when the entry's `expiry` ticks out.
+#[derive(Clone)]
 pub struct GrantedTriggeredEffect {
     /// Timing on the CARRIER that triggers this granted body. v1 dispatch
     /// hook is wired through `enqueue_from_permanent` /
@@ -730,7 +734,7 @@ impl std::fmt::Debug for GrantedTriggeredEffect {
 }
 
 /// Tracks all active modifiers in the game.
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct ModifierRegistry {
     /// Modifiers attached to specific permanents.
     permanent_modifiers: HashMap<PermanentHandle, Vec<ModifierEntry>>,
