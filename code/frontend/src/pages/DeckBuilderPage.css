@@ -211,7 +211,11 @@
 .deck-builder-page .bld-top,
 .deck-builder-app .bld-top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  /* Counts column is shrinkable (minmax(0, max-content)) so it compresses and
+     scrolls internally instead of forcing the header to overflow when the area
+     narrows (e.g. the side nav is expanded); the actions column stays at content
+     width so SAVE/VALIDATE/etc. never get pushed off-screen. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, max-content) auto;
   align-items: center;
   gap: 12px;
   padding: 0 18px;
