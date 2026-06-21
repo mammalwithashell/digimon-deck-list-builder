@@ -635,19 +635,19 @@ export function DeckBuilderWorkbench({
                   <div className="bld-view-toggle" role="group" aria-label="Card pool view">
                     <button
                       type="button"
-                      className={deckBuilderView === 'browse' ? 'on' : ''}
-                      aria-pressed={deckBuilderView === 'browse'}
-                      onClick={() => setDeckBuilderView('browse')}
-                    >
-                      GRID
-                    </button>
-                    <button
-                      type="button"
                       className={deckBuilderView === 'inspect' ? 'on' : ''}
                       aria-pressed={deckBuilderView === 'inspect'}
                       onClick={() => setDeckBuilderView('inspect')}
                     >
                       DETAIL
+                    </button>
+                    <button
+                      type="button"
+                      className={deckBuilderView === 'browse' ? 'on' : ''}
+                      aria-pressed={deckBuilderView === 'browse'}
+                      onClick={() => setDeckBuilderView('browse')}
+                    >
+                      GRID
                     </button>
                     <button
                       type="button"

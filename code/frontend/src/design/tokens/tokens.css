@@ -88,11 +88,13 @@
   --grid-line: rgba(57, 255, 136, 0.1);
   --shadow-glow: 0 0 16px var(--accent-glow);
 
-  /* fonts (families defined in fonts.css) */
-  --font-display: var(--ff-vt323);
-  --font-ui: var(--ff-plex-mono);
+  /* fonts (families defined in fonts.css). Unified with the light theme's
+     "Adventure '99" choices so fonts no longer swap between themes — Silkscreen
+     for display/pixel headings, sans for UI, Plex Mono for monospace. */
+  --font-display: var(--ff-silkscreen);
+  --font-ui: var(--ff-sans);
   --font-mono: var(--ff-plex-mono);
-  --font-pixel: var(--ff-plex-mono);
+  --font-pixel: var(--ff-silkscreen);
 }
 /* @tokens:dark:end */
 

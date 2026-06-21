@@ -1021,7 +1021,7 @@
   border-bottom: 1px solid var(--bld-line);
   color: var(--bld-ink-3);
   font-family: var(--bld-mono);
-  font-size: 10px;
+  font-size: var(--text-xs);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -1189,7 +1189,7 @@
   background: var(--bld-bg-2);
   color: var(--bld-ink-3);
   font-family: var(--bld-mono);
-  font-size: 9px;
+  font-size: var(--text-xs);
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -1198,7 +1198,7 @@
 .deck-builder-app .bld-section-head .ct {
   color: var(--bld-player);
   font-family: var(--bld-mono);
-  font-size: 9px;
+  font-size: var(--text-xs);
 }
 
 .deck-builder-page .bld-row,
@@ -1232,7 +1232,7 @@
 .deck-builder-app .bld-row .ct {
   color: var(--bld-player);
   font-family: var(--bld-mono);
-  font-size: 12px;
+  font-size: var(--text-sm);
   font-weight: 700;
   text-align: center;
 }
@@ -1261,7 +1261,7 @@
   height: 100%;
   color: var(--bld-ink-4);
   font-family: var(--bld-mono);
-  font-size: 6px;
+  font-size: var(--text-xs);
   text-align: center;
 }
 
@@ -1276,7 +1276,7 @@
   overflow: hidden;
   color: var(--bld-ink-0);
   font-family: var(--bld-mono);
-  font-size: 10px;
+  font-size: var(--text-sm);
   letter-spacing: 0.06em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1287,7 +1287,7 @@
   display: block;
   margin-top: 1px;
   color: var(--bld-ink-3);
-  font-size: 8px;
+  font-size: var(--text-xs);
   letter-spacing: 0.1em;
 }
 
