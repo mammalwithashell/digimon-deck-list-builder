@@ -912,6 +912,22 @@ export function GamePage() {
 
   // No game — show setup screen
   if (!store.gameId) {
+    // A game id in the URL means a game is being created/loaded for this route.
+    // Show a neutral loading screen instead of the legacy manual-start form,
+    // which otherwise flashed for a moment on every launch before the board
+    // hydrated. The form below is kept only for the (route-less) no-id case.
+    if (urlGameId) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] gap-3">
+          <div
+            className="text-sm uppercase tracking-[0.2em] text-[var(--ink-2)]"
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >
+            Loading game…
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] p-8 gap-6">
         <h1 className="text-2xl font-bold text-[var(--ink-0)]">Start a Game</h1>
