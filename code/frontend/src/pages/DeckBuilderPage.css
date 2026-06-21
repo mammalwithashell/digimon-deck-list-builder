@@ -318,12 +318,18 @@
 .deck-builder-app .bld-counts {
   display: flex;
   align-items: stretch;
+  /* Contain + scroll instead of overflowing other top-bar content when the
+     deck-builder area narrows (e.g. the side nav is expanded — a canvas-internal
+     change a viewport media query can't catch). */
+  min-width: 0;
+  overflow-x: auto;
   border: 1px solid var(--bld-line-2);
   background: var(--bld-bg-0);
 }
 
 .deck-builder-page .bld-count,
 .deck-builder-app .bld-count {
+  flex: 0 0 auto;
   min-width: 44px;
   padding: 4px 7px;
   border-right: 1px solid var(--bld-line-2);
@@ -1293,6 +1299,20 @@
   color: var(--bld-ink-3);
   font-size: var(--text-xs);
   letter-spacing: 0.1em;
+}
+
+/* DECK (decklist) view: the deck panel is the wide column, so enlarge the
+   card-image thumbnails for a readable at-a-glance deck list (scroll as needed). */
+.deck-builder-page .bld-main.view-decklist .bld-row,
+.deck-builder-app .bld-main.view-decklist .bld-row {
+  grid-template-columns: 28px 52px minmax(0, 1fr) auto auto 22px 42px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+.deck-builder-page .bld-main.view-decklist .bld-row-thumb,
+.deck-builder-app .bld-main.view-decklist .bld-row-thumb {
+  width: 50px;
 }
 
 .deck-builder-page .bld-row .cost,
