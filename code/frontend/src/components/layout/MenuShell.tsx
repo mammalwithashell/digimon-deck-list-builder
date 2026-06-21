@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { NavRail, NavRailItem } from '@/design/components/NavRail';
 import { ThemeSwitch } from '@/design/components/ThemeSwitch';
+import { CursorLight } from './CursorLight';
 import { useAppVersion } from '@/hooks/useAppVersion';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
@@ -193,6 +194,7 @@ function MenuShellInner() {
       </NavRail>
 
       <main className="menu-shell__main">
+        <CursorLight />
         <div className="menu-shell__content">
           <Outlet />
         </div>
