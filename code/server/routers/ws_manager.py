@@ -18,6 +18,7 @@ from digimon_engine import RustHeadlessGame
 from server.state_filter import (
     filter_state_for_player,
     filter_state_for_spectator,
+    normalize_events_for_player,
 )
 
 logger = logging.getLogger(__name__)
@@ -206,7 +207,11 @@ class ConnectionManager:
             if logs:
                 payload["logs"] = logs
             if events:
-                payload["events"] = events
+                # Events carry ABSOLUTE player ids; normalize them to the same
+                # perspective as `filtered` (seat 2 → viewer is player1) so the
+                # game log labels the recipient's own moves "You" and animations
+                # render on the correct side.
+                payload["events"] = normalize_events_for_player(events, pid)
             if is_game_over:
                 # Normalized to the recipient's perspective (1 = this viewer).
                 payload["winner_id"] = filtered.get("winner")
@@ -226,6 +231,8 @@ class ConnectionManager:
             if logs:
                 spec_payload["logs"] = logs
             if events:
+                # Spectators keep the absolute (player1/player2) perspective for
+                # both state and events — no per-recipient normalization.
                 spec_payload["events"] = events
             if is_game_over:
                 spec_payload["winner_id"] = runner.winner_id

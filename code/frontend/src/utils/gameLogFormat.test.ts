@@ -311,3 +311,41 @@ describe('formatEvent', () => {
     expect(formatEvent(event({ type: 'debug_internal' }), { state })).toEqual([]);
   });
 });
+
+describe('formatEvent — PvP perspective (joiner / seat 2)', () => {
+  // After the perspective fix the server sends `your_player_id == 1` to BOTH
+  // seats, so the joiner's labels are `{1:'You', 2:'Opponent'}`, and the event
+  // stream is perspective-normalized (the joiner's own action arrives with
+  // `player: 1`, the opponent's with `player: 2`). Together these must label
+  // the joiner's own moves "You" — the bug this whole change fixes was that the
+  // un-normalized event carried the joiner's absolute id (2) → "Opponent".
+  const joinerLabels = { 1: 'You', 2: 'Opponent' };
+
+  it("labels the joiner's own (normalized player:1) action as 'You'", () => {
+    const lines = formatEvent(
+      event({
+        type: 'play',
+        player: 1,
+        source_card_id: 'BT1-001',
+        source_card_name: 'Agumon',
+        meta: { cost_paid: 3 },
+      }),
+      { state, playerLabels: joinerLabels },
+    );
+    expect(lines).toEqual(['You played [BT1-001: Agumon] for 3 memory.']);
+  });
+
+  it("labels the opponent's (normalized player:2) action as 'Opponent'", () => {
+    const lines = formatEvent(
+      event({
+        type: 'play',
+        player: 2,
+        source_card_id: 'BT1-001',
+        source_card_name: 'Agumon',
+        meta: { cost_paid: 3 },
+      }),
+      { state, playerLabels: joinerLabels },
+    );
+    expect(lines).toEqual(['Opponent played [BT1-001: Agumon] for 3 memory.']);
+  });
+});

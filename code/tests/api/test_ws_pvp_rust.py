@@ -152,6 +152,38 @@ def _first_legal(mask: list) -> int:
     raise AssertionError("Empty action mask for the decision player")
 
 
+def _mirror_pid(pid):
+    """Absolute seat id as seat 1 sees it (identity) vs. as seat 2 sees it."""
+    if pid == 1:
+        return 2
+    if pid == 2:
+        return 1
+    return pid
+
+
+def _assert_event_perspectives_mirror(upd1: dict, upd2: dict) -> int:
+    """Both seats receive the SAME engine events, normalized to opposite
+    perspectives: seat 1 is the absolute identity, seat 2 has every player id
+    swapped (1↔2; non-seat values like the GameOver `player=0` default and a
+    null winner pass through). For each shared event `seq`, seat 2's player
+    refs must be the mirror of seat 1's. Returns the number of events compared.
+    """
+    e1 = {e["seq"]: e for e in upd1.get("events", [])}
+    e2 = {e["seq"]: e for e in upd2.get("events", [])}
+    # Both seats see the same event set (only the perspective differs).
+    assert set(e1) == set(e2), "seats received different event seqs"
+    for seq in e1:
+        a, b = e1[seq], e2[seq]
+        assert b["player"] == _mirror_pid(a["player"])
+        # Relative field indices are NOT remapped — identical on both seats.
+        assert b["source_slot"] == a["source_slot"]
+        assert b["target_slot"] == a["target_slot"]
+        for key in ("target_player", "winner"):
+            if key in a.get("meta", {}):
+                assert b["meta"][key] == _mirror_pid(a["meta"][key])
+    return len(e1)
+
+
 def test_full_pvp_game_over_websocket_on_rust():
     client, teardown = _setup()
     try:
@@ -191,6 +223,7 @@ def test_full_pvp_game_over_websocket_on_rust():
             # redacted broadcast normalized to their own perspective; the mask
             # follows the decision seat.
             game_over = False
+            events_compared = 0
             for _ in range(60):
                 actor = decision_seat()
                 mask = masks[actor]
@@ -204,6 +237,10 @@ def test_full_pvp_game_over_websocket_on_rust():
                     _assert_redacted(upd[pid])
                     # Every recipient sees themselves as player1.
                     assert upd[pid]["your_player_id"] == 1
+                # The event stream is perspective-normalized to match the state:
+                # seat 2's event player ids mirror seat 1's (the wiring of
+                # normalize_events_for_player through broadcast_state).
+                events_compared += _assert_event_perspectives_mirror(upd[1], upd[2])
                 if upd[1]["is_game_over"]:
                     game_over = True
                     break
@@ -212,6 +249,9 @@ def test_full_pvp_game_over_websocket_on_rust():
                 assert (masks[1] == []) != (masks[2] == []), (
                     "exactly one seat should hold the action mask"
                 )
+
+            # The mirror invariant must have actually run over real events.
+            assert events_compared > 0, "no events were broadcast to compare"
 
             if not game_over:
                 # Concede from one seat — legal regardless of whose decision it is.

@@ -24,7 +24,7 @@ Hidden zones:
 from __future__ import annotations
 
 import copy
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 
 def _redact_player(player_data: dict) -> dict:
@@ -109,6 +109,68 @@ def filter_state_for_player(full_state: Dict[str, Any], player_id: int) -> Dict[
         state["pendingSelection"] = pending
 
     return state
+
+
+def _swap_event_pid(pid: Any) -> Any:
+    """Swap an absolute seat id (1 ↔ 2); pass everything else through unchanged.
+
+    Unlike :func:`_swap_pid`, non-seat values are left as-is: GameOver events
+    carry the engine's ``player`` default of ``0`` (no acting player), and a
+    null ``winner``/``target_player`` means draw / hit-security. Neither should
+    be coerced into a seat.
+    """
+    if pid == 1:
+        return 2
+    if pid == 2:
+        return 1
+    return pid
+
+
+# The only ``meta`` keys that hold an ABSOLUTE player id, per the authoritative
+# event shape in ``code/digimon-engine-py/src/lib.rs::event_to_pydict``:
+#   - ``target_player`` (Attack)   - ``winner`` (GameOver)
+# Every other meta value (delta/total/turn_count/dp/cost/…) is numeric data that
+# must NOT be swapped. If the engine adds a new player-id meta key, add it here.
+_EVENT_META_PID_KEYS = ("target_player", "winner")
+
+
+def normalize_events_for_player(
+    events: List[Dict[str, Any]], player_id: int
+) -> List[Dict[str, Any]]:
+    """Perspective-normalize an event batch for one recipient (companion to
+    :func:`filter_state_for_player`).
+
+    ``GameEvent``s carry ABSOLUTE player ids — top-level ``player`` plus the
+    ``meta`` keys in :data:`_EVENT_META_PID_KEYS`. The per-recipient STATE is
+    normalized so the viewer is always ``player1``; the event stream must match
+    or the joiner (seat 2) sees their own moves labelled "Opponent" in the game
+    log and event-driven animations (DigivolveBanner / BattleEffect) render on
+    the wrong side.
+
+    Seat 1 is the identity (the input list is returned untouched). Seat 2 swaps
+    every absolute player id (1 ↔ 2) into fresh dicts — the input events are not
+    mutated, because the same batch is fanned out to the other seat and to
+    spectators (who keep the absolute perspective). RELATIVE encodings —
+    ``source_slot`` / ``target_slot`` (field indices, like ``pendingAttack``
+    slots) and all non-player meta — are left untouched.
+    """
+    if player_id == 1:
+        # Identity perspective — the viewer is already player1.
+        return events
+
+    normalized: List[Dict[str, Any]] = []
+    for ev in events:
+        out = dict(ev)
+        out["player"] = _swap_event_pid(ev.get("player"))
+        meta = ev.get("meta")
+        if isinstance(meta, dict) and any(k in meta for k in _EVENT_META_PID_KEYS):
+            new_meta = dict(meta)
+            for key in _EVENT_META_PID_KEYS:
+                if key in new_meta:
+                    new_meta[key] = _swap_event_pid(new_meta[key])
+            out["meta"] = new_meta
+        normalized.append(out)
+    return normalized
 
 
 def filter_state_for_spectator(
