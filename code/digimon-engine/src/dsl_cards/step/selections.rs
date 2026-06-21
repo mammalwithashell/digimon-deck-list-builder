@@ -505,6 +505,45 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
+                ResumeSelectKind::Reveal => {
+                    let index =
+                        action_id.saturating_sub(crate::action::space::SEL_REVEAL_START) as usize;
+                    // Target tracking (mirrors ctx.select_reveal's wrapper).
+                    if let Some(card) = game.revealed_cards.get(index) {
+                        let tid = card.card_id(&game.card_data).to_string();
+                        let tname = card.card_name(&game.card_data).to_string();
+                        crate::effect_context::selections::push_effect_target(
+                            game,
+                            prov.controller,
+                            prov.source_card,
+                            tid,
+                            tname,
+                        );
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        // Stale index (reveal pile mutated mid-resolution) skips
+                        // the bind, matching the legacy callback's convention.
+                        if let Some(card) = ctx.game.revealed_cards.get(index) {
+                            b.insert_card(name, card.handle());
+                        }
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
             }
         }
         ResumeFrame::MultiPickStep { .. } => {
