@@ -632,12 +632,180 @@ pub(crate) fn run_resume(
                 }
             }
         }
-        ResumeFrame::MultiPickStep { .. } => {
-            // Ported alongside count_capped (the recursive accumulator) — the
-            // next spike step. Never constructed yet, so never reached.
-            unimplemented!("ResumeFrame::MultiPickStep executor — count_capped port pending");
+        ResumeFrame::MultiPickStep(state) => {
+            run_multipick_step(game, state, action_id, is_pass);
         }
     }
+}
+
+/// Data terminal for a count_capped multi-pick: bind the accumulated handles as
+/// a card list, then run the inner tail (the data form of the trampoline's
+/// `final_callback`).
+fn run_multipick_terminal(game: &mut crate::game::Game, state: crate::resume::MultiPickState) {
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let mut b = state.bindings;
+    if let Some(name) = &state.bind_as {
+        b.insert_card_list(name, state.accum);
+    }
+    run_tail_preserving_trigger_context(
+        &mut ctx,
+        state.trigger_context,
+        &state.inner_tail,
+        &mut b,
+        &state.runtime,
+    );
+}
+
+/// Install (or re-park) a count_capped multi-pick step: build the
+/// `PendingSelection` over the remaining candidates and stash the data frame so
+/// `resolve_generic_selection` resumes through `run_resume`. Mirrors
+/// `install_count_capped_step`'s PendingSelection (phase, kind, is_optional).
+pub(crate) fn install_multipick_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::MultiPickState,
+) {
+    use crate::selection::{PendingSelection, SelectionKind};
+    let picked = state.accum.len() as u8;
+    let effective_min = state.min.max(if state.is_optional_zero { 0 } else { 1 });
+    let is_optional = picked >= effective_min;
+    let valid_action_ids: Vec<u16> = state
+        .candidate_indices
+        .iter()
+        .map(|&i| state.range_start + i as u16)
+        .collect();
+    game.current_phase = crate::enums::GamePhase::SelectBudgeted;
+    game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
+        kind: SelectionKind::CountCappedMultiSelect {
+            min: effective_min,
+            max: state.max,
+            picked,
+            distinct: state.distinct_by.is_some(),
+        },
+        selecting_player: state.selecting_player,
+        previous_phase: state.previous_phase,
+        valid_action_ids,
+        is_optional,
+        prompt: String::new(),
+        effect_choices: None,
+        source_card: state.prov.source_card,
+        source_permanent: state.prov.source_permanent,
+        source_kind: state.prov.source_kind,
+        // Vestigial during coexistence: the resume data path is authoritative,
+        // so this closure is never invoked (resolve_generic_selection dispatches
+        // to run_resume whenever pending_selection_resume is set).
+        callback: Box::new(|_g, _a| {}),
+        on_decline: None,
+    });
+    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::MultiPickStep(state)],
+    });
+}
+
+/// Executor for one count_capped pick (or PASS). Mirrors
+/// `install_count_capped_step`'s per-pick logic as data: decode → accumulate →
+/// auto-commit at `max` or when candidates are exhausted, else re-park; PASS
+/// commits with whatever is accumulated (gated at/above the floor upstream).
+fn run_multipick_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::MultiPickState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    use crate::effect_context::selections::{material_zone_slice, CountCappedZone, DistinctByMode};
+    if is_pass {
+        run_multipick_terminal(game, state);
+        return;
+    }
+    let pick_zone_idx = action_id.saturating_sub(state.range_start) as usize;
+    let card_handle = match state.zone {
+        CountCappedZone::Hand => game
+            .player(state.of_player)
+            .hand
+            .get(pick_zone_idx)
+            .map(|c| c.handle()),
+        CountCappedZone::Trash => game
+            .player(state.of_player)
+            .trash
+            .get(pick_zone_idx)
+            .map(|c| c.handle()),
+        CountCappedZone::Material(ph) => material_zone_slice(game, ph)
+            .and_then(|s| s.get(pick_zone_idx))
+            .map(|c| c.handle()),
+    };
+    let Some(card_handle) = card_handle else {
+        return; // stale/invalid pick (defensive)
+    };
+    state.accum.push(card_handle);
+    // Auto-commit when max reached.
+    if state.accum.len() == state.max as usize {
+        run_multipick_terminal(game, state);
+        return;
+    }
+    // Recompute candidates: drop the picked index; with distinct_by, also drop
+    // any remaining index sharing the constrained attribute with a pick.
+    let old_candidates = std::mem::take(&mut state.candidate_indices);
+    let new_candidates: Vec<usize> = if let Some(mode) = state.distinct_by {
+        let accum_data_indices: Vec<usize> = state
+            .accum
+            .iter()
+            .filter_map(|&h| {
+                let slice: &[crate::card_source::CardSource] = match state.zone {
+                    CountCappedZone::Hand => &game.player(state.of_player).hand,
+                    CountCappedZone::Trash => &game.player(state.of_player).trash,
+                    CountCappedZone::Material(ph) => match material_zone_slice(game, ph) {
+                        Some(s) => s,
+                        None => return None,
+                    },
+                };
+                slice.iter().find(|c| c.handle() == h).map(|c| c.data_index)
+            })
+            .collect();
+        old_candidates
+            .into_iter()
+            .filter(|&i| i != pick_zone_idx)
+            .filter(|&i| {
+                let cand_data_idx = match state.zone {
+                    CountCappedZone::Hand => game.player(state.of_player).hand[i].data_index,
+                    CountCappedZone::Trash => game.player(state.of_player).trash[i].data_index,
+                    CountCappedZone::Material(ph) => match material_zone_slice(game, ph) {
+                        Some(s) => s[i].data_index,
+                        None => return false,
+                    },
+                };
+                let cand_data = &game.card_data[cand_data_idx];
+                !accum_data_indices.iter().any(|&pdi| {
+                    let pd = &game.card_data[pdi];
+                    match mode {
+                        DistinctByMode::CardNumber => pd.card_id == cand_data.card_id,
+                        DistinctByMode::Level => {
+                            matches!((pd.level, cand_data.level), (Some(p), Some(c)) if p == c)
+                        }
+                        DistinctByMode::Name => pd.card_name == cand_data.card_name,
+                    }
+                })
+            })
+            .collect()
+    } else {
+        old_candidates
+            .into_iter()
+            .filter(|&i| i != pick_zone_idx)
+            .collect()
+    };
+    // No candidates left → commit with what we have.
+    if new_candidates.is_empty() {
+        run_multipick_terminal(game, state);
+        return;
+    }
+    state.candidate_indices = new_candidates;
+    install_multipick_step(game, state);
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

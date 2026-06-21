@@ -23,12 +23,13 @@
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::{CompiledPredicate, CompiledStep};
+use digimon_dsl::compiled::CompiledStep;
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
-use crate::enums::{EffectSourceKind, PlayerId};
+use crate::effect_context::selections::{CountCappedZone, DistinctByMode};
+use crate::enums::{EffectSourceKind, GamePhase, PlayerId};
 use crate::permanent::PermanentHandle;
 use crate::selection::UnionZoneOrigin;
 use crate::trigger_context::TriggerContext;
@@ -161,21 +162,40 @@ pub enum ResumeFrame {
         trigger_context: Option<TriggerContext>,
         decline: ResumeDecline,
     },
-    /// Recursive multi-pick accumulator — the `count_capped` / source-multi /
-    /// dp-budget / play-cost-budget / reveal-bucket / permutation /
-    /// partition trampolines. The former `Arc<Mutex<Option<Box<dyn
-    /// FnOnce>>>>` threading collapses into plain `accum`/`candidates` data
-    /// plus the `then` continuation frame.
-    MultiPickStep {
-        prov: ResumeProvenance,
-        accum: Vec<CardHandle>,
-        candidates: Vec<(u16, CardHandle)>,
-        min: u8,
-        max: u8,
-        filter: Option<CompiledPredicate>,
-        /// Runs once the pick count is satisfied (or candidates exhausted).
-        then: Box<ResumeFrame>,
-    },
+    /// Recursive multi-pick accumulator (the `count_capped` family). Carries the
+    /// full pick state plus the data terminal (bind the accumulated list, then
+    /// run the tail) — see [`MultiPickState`]. The former
+    /// `Arc<Mutex<Option<Box<dyn FnOnce>>>>` final-callback threading collapses
+    /// into re-parking this frame until the pick count is satisfied.
+    MultiPickStep(MultiPickState),
+}
+
+/// In-flight state of a `count_capped`-family multi-pick selection, as data.
+/// Re-parked once per pick; the data terminal fires when the count is satisfied
+/// (or candidates exhausted, or the player passes at/above the floor).
+#[derive(Debug, Clone)]
+pub struct MultiPickState {
+    pub prov: ResumeProvenance,
+    pub of_player: PlayerId,
+    pub selecting_player: PlayerId,
+    pub previous_phase: GamePhase,
+    /// Zone the picks index into (decode base + carrier branch).
+    pub zone: CountCappedZone,
+    pub range_start: u16,
+    pub min: u8,
+    pub max: u8,
+    pub is_optional_zero: bool,
+    pub distinct_by: Option<DistinctByMode>,
+    /// Zone indices still eligible to pick.
+    pub candidate_indices: Vec<usize>,
+    /// Handles picked so far, in order.
+    pub accum: Vec<CardHandle>,
+    // ── data terminal (count_capped binds the accumulated list, then runs the tail) ──
+    pub bind_as: Option<String>,
+    pub inner_tail: Arc<Vec<CompiledStep>>,
+    pub bindings: Bindings,
+    pub runtime: StepRuntime,
+    pub trigger_context: Option<TriggerContext>,
 }
 
 #[cfg(test)]
@@ -890,6 +910,79 @@ mod tests {
             "UnionZone RunTail inner tail (GainMemory 5) must execute via the data path"
         );
         assert!(runner.game_mut().pending_selection.is_none());
+    }
+
+    #[test]
+    fn multipick_step_accumulates_then_terminates() {
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TEST-RESUME", "Resume Tester"))
+            .hand(0, &["TEST-RESUME", "TEST-RESUME", "TEST-RESUME"])
+            .memory(0)
+            .start();
+        let source_card = runner.game_mut().player(0).hand[0].handle();
+        let prev_phase = runner.game_mut().current_phase;
+        // Install the initial count_capped step: min 0, max 2, Hand zone, 3 candidates.
+        let state = MultiPickState {
+            prov: ResumeProvenance {
+                source_card,
+                source_permanent: None,
+                source_kind: EffectSourceKind::Digimon,
+                controller: 0,
+                override_pin: None,
+            },
+            of_player: 0,
+            selecting_player: 0,
+            previous_phase: prev_phase,
+            zone: CountCappedZone::Hand,
+            range_start: crate::action::space::PLAY_HAND_START,
+            min: 0,
+            max: 2,
+            is_optional_zero: true,
+            distinct_by: None,
+            candidate_indices: vec![0, 1, 2],
+            accum: vec![],
+            bind_as: Some("picks".to_string()),
+            inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
+            bindings: Bindings::new(),
+            runtime: StepRuntime::default(),
+            trigger_context: None,
+        };
+        crate::dsl_cards::step::selections::install_multipick_step(runner.game_mut(), state);
+
+        // Pick 1 (hand index 0): accumulates one, re-parks for pick 2.
+        runner
+            .game_mut()
+            .resolve_selection(0, crate::action::space::PLAY_HAND_START)
+            .expect("pick 1 resolves");
+        {
+            let g = runner.game_mut();
+            assert!(g.pending_selection.is_some(), "must re-park for pick 2");
+            match g.pending_selection_resume.as_ref().expect("re-parked frame") {
+                ResumeStack { frames } => match &frames[0] {
+                    ResumeFrame::MultiPickStep(s) => {
+                        assert_eq!(s.accum.len(), 1, "exactly one pick accumulated");
+                        assert_eq!(s.candidate_indices, vec![1, 2], "picked index removed");
+                    }
+                    _ => panic!("expected a MultiPickStep frame"),
+                },
+            }
+        }
+
+        // Pick 2 (hand index 1): reaches max → terminal binds the list + runs the tail.
+        let before = runner.memory();
+        runner
+            .game_mut()
+            .resolve_selection(0, crate::action::space::PLAY_HAND_START + 1)
+            .expect("pick 2 resolves");
+        assert_eq!(
+            (runner.memory() - before).abs(),
+            5,
+            "reaching max must run the terminal inner tail (GainMemory 5)"
+        );
+        assert!(
+            runner.game_mut().pending_selection.is_none(),
+            "multi-pick complete"
+        );
     }
 
     #[test]
