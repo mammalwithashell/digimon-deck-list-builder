@@ -442,6 +442,8 @@ def _export_mlp_policy_onnx(model, onnx_path: str) -> None:
             input_names=["obs"], output_names=["logits"],
             dynamic_axes={"obs": {0: "batch"}, "logits": {0: "batch"}},
             opset_version=17,
+            dynamo=False,  # legacy TorchScript exporter (needs `onnx`, not `onnxscript`);
+                           # torch>=2.x defaults dynamo=True which requires onnxscript.
         )
     os.replace(tmp, onnx_path)  # atomic publish; readers never see a partial file
 
