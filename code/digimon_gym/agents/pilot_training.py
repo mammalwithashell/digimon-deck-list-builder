@@ -431,7 +431,11 @@ def _export_mlp_policy_onnx(model, onnx_path: str) -> None:
     wrapper.train(False)
     tensor_size = int(model.observation_space.shape[-1])
     dummy = torch.zeros((1, tensor_size), dtype=torch.float32)
-    tmp = f"{onnx_path}.tmp"
+    # pid-unique temp so the 8 subprocs that race to export the SAME opponent at
+    # startup each write their own file; os.replace then atomically publishes a
+    # complete export (last writer wins; content is identical). A shared temp path
+    # would let concurrent writers interleave bytes -> corrupt .onnx.
+    tmp = f"{onnx_path}.{os.getpid()}.tmp"
     with torch.no_grad():
         torch.onnx.export(
             wrapper, dummy, tmp,
@@ -439,7 +443,7 @@ def _export_mlp_policy_onnx(model, onnx_path: str) -> None:
             dynamic_axes={"obs": {0: "batch"}, "logits": {0: "batch"}},
             opset_version=17,
         )
-    os.replace(tmp, onnx_path)  # atomic: concurrent subprocs never read a partial file
+    os.replace(tmp, onnx_path)  # atomic publish; readers never see a partial file
 
 
 def _make_onnx_mlp_opponent(weights_path: str) -> Callable[[DigimonEnv], int]:
