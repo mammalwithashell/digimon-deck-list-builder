@@ -24,6 +24,18 @@ pub trait GameLogger: Send + Sync + std::fmt::Debug {
 
     /// Drop all buffered messages.
     fn clear(&mut self);
+
+    /// Clone into a fresh boxed logger, preserving buffered state. Enables
+    /// `Game: Clone` (make-engine-cloneable) without making the trait `Clone`.
+    fn clone_box(&self) -> Box<dyn GameLogger>;
+}
+
+/// `Box<dyn GameLogger>` is `Clone` via `clone_box`, so `Game` can derive
+/// `Clone`. (Allowed under the orphan rule: `GameLogger` is a local trait.)
+impl Clone for Box<dyn GameLogger> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
 }
 
 /// Zero-overhead logger used by default. Drops every message.
@@ -37,10 +49,13 @@ impl GameLogger for SilentLogger {
         Vec::new()
     }
     fn clear(&mut self) {}
+    fn clone_box(&self) -> Box<dyn GameLogger> {
+        Box::new(SilentLogger)
+    }
 }
 
 /// Buffers every log message. Used by tests and interactive runners.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct VerboseLogger {
     logs: Vec<String>,
 }
@@ -69,5 +84,8 @@ impl GameLogger for VerboseLogger {
     }
     fn clear(&mut self) {
         self.logs.clear();
+    }
+    fn clone_box(&self) -> Box<dyn GameLogger> {
+        Box::new(self.clone())
     }
 }

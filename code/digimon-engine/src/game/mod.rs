@@ -220,7 +220,7 @@ pub(crate) struct PendingWouldDigivolveResume {
 /// - `game_actions.rs` — player mutators: `play_from_hand`,
 ///   `digivolve_from_hand`, `move_from_breeding`, `activate_*_main`,
 ///   `initiate_dna_digivolve`.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Game {
     pub rules: Rules,
     pub players: Vec<Player>,

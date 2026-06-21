@@ -296,6 +296,37 @@ impl std::fmt::Debug for PendingSelection {
     }
 }
 
+impl Clone for PendingSelection {
+    /// Clones the DATA of a pending selection. The `Box<dyn FnOnce>` callbacks
+    /// (`callback` / `on_decline`) cannot be cloned, so the clone carries a
+    /// panic-stub callback and `on_decline: None`. A cloned selection MUST be
+    /// driven via the resumable-VM data path (`Game::pending_selection_resume`)
+    /// — that is the whole point of make-engine-cloneable. Resolving a cloned
+    /// closure-only selection panics loudly rather than silently mis-resolving.
+    fn clone(&self) -> Self {
+        PendingSelection {
+            kind: self.kind,
+            selecting_player: self.selecting_player,
+            previous_phase: self.previous_phase,
+            valid_action_ids: self.valid_action_ids.clone(),
+            is_optional: self.is_optional,
+            prompt: self.prompt.clone(),
+            effect_choices: self.effect_choices.clone(),
+            source_card: self.source_card,
+            source_permanent: self.source_permanent,
+            source_kind: self.source_kind,
+            callback: Box::new(|_, _| {
+                panic!(
+                    "cloned PendingSelection has no closure callback; drive it via \
+                     the resumable VM (Game::pending_selection_resume)"
+                )
+            }),
+            on_decline: None,
+            zone_owner: self.zone_owner,
+        }
+    }
+}
+
 /// Pure-data subset of `PendingSelection` — excludes the non-serializable
 /// `callback` / `on_decline` closures so this type is `Clone` + `Send` and
 /// can cross the FFI boundary. Matches the Python `pendingSelection` dict

@@ -236,4 +236,96 @@ mod tests {
         let cloned = stack.clone();
         assert_eq!(cloned.frames.len(), stack.frames.len());
     }
+
+    /// The capstone: `Game` is `Clone`, and a clone taken at a (resume-path)
+    /// decision point is INDEPENDENT of the original and REPLAYS IDENTICALLY.
+    /// This is make-engine-cloneable task 4.2's guard — the property MCTS needs.
+    #[test]
+    fn game_clone_is_independent_and_replays_identically() {
+        fn setup() -> DebugRunner {
+            let mut runner = DebugRunner::builder()
+                .add_card(make_test_card("TEST-RESUME", "Resume Tester"))
+                .hand(0, &["TEST-RESUME"])
+                .memory(0)
+                .start();
+            let source_card;
+            {
+                let game = runner.game_mut();
+                source_card = game.player(0).hand[0].handle();
+                let prev_phase = game.current_phase;
+                game.pending_selection = Some(PendingSelection {
+                    kind: SelectionKind::Hand,
+                    selecting_player: 0,
+                    previous_phase: prev_phase,
+                    valid_action_ids: vec![crate::action::space::PLAY_HAND_START],
+                    is_optional: false,
+                    prompt: "clone".to_string(),
+                    effect_choices: None,
+                    source_card,
+                    source_permanent: None,
+                    source_kind: EffectSourceKind::Digimon,
+                    callback: Box::new(|_g, _a| unreachable!("resume path drives this")),
+                    on_decline: None,
+                    zone_owner: Some(0),
+                });
+                game.pending_selection_resume = Some(ResumeStack {
+                    frames: vec![ResumeFrame::RunTail {
+                        prov: ResumeProvenance {
+                            source_card,
+                            source_permanent: None,
+                            source_kind: EffectSourceKind::Digimon,
+                            controller: 0,
+                            override_pin: None,
+                        },
+                        select_kind: ResumeSelectKind::Hand { of_player: 0 },
+                        bind_as: None,
+                        inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
+                        outer_tail: None,
+                        bindings: Bindings::new(),
+                        runtime: StepRuntime::default(),
+                        trigger_context: None,
+                        decline_aborts_clause: false,
+                    }],
+                });
+            }
+            runner
+        }
+
+        let mut runner = setup();
+        let original_memory_before = runner.game_mut().memory;
+
+        // Clone at the decision point (the operation MCTS performs).
+        let mut clone = runner.game_mut().clone();
+
+        // Resolve on the CLONE only.
+        clone
+            .resolve_selection(0, crate::action::space::PLAY_HAND_START)
+            .expect("clone resolves");
+
+        // INDEPENDENCE: the original is untouched by mutating the clone.
+        assert!(
+            runner.game_mut().pending_selection.is_some(),
+            "original's pending selection must survive cloning + resolving the clone"
+        );
+        assert_eq!(
+            runner.game_mut().memory,
+            original_memory_before,
+            "original memory must be unchanged by the clone's resolution"
+        );
+
+        // The clone advanced (GainMemory(5) ran via the cloned resume frame).
+        assert_eq!((clone.memory - original_memory_before).abs(), 5);
+
+        // REPLAYS IDENTICALLY: driving the original with the same input reaches
+        // the same state the clone did.
+        runner
+            .game_mut()
+            .resolve_selection(0, crate::action::space::PLAY_HAND_START)
+            .expect("original resolves");
+        assert_eq!(
+            runner.game_mut().memory,
+            clone.memory,
+            "original and clone must reach identical state from identical input"
+        );
+    }
 }
