@@ -152,6 +152,15 @@ python -m digimon_gym.agents.pilot_training --init-from models/generalist_a/fina
 # (add-deck-specialist-league). Round-based PFSP against frozen snapshots.
 python code/tools/train_specialist_league.py --generalist models/starter_pool_v1/final.zip --rounds 3 --dry-run
 python code/tools/train_specialist_league.py --generalist models/starter_pool_v1/final.zip --rounds 3 --steps-per-round 1000000 --eval-n 24
+# Throughput-tuned launch (the league is OPPONENT-INFERENCE-bound — see
+# "Throughput levers for neural-opponent runs"). FIRST register the generalist
+# as a champion, or the in-training anchored panel degrades to greedy-only:
+#   python code/tools/champion_admin.py promote --candidate models/starter_pool_v1/final.zip --name generalist-v1 --force
+DIGIMON_ONNX_OPPONENT=1 python code/tools/train_specialist_league.py \
+  --generalist models/starter_pool_v1/final.zip --rounds 3 --steps-per-round 500000 \
+  --n-envs 8 --eval-n 24 --promote-min-wr 0.55 \
+  --batch-size 256 --anchored-eval-freq 50000 --anchored-eval-games 48 \
+  --eval-freq 100000 --eval-episodes 8        # ONNX opponent + tuned cadence ≈ 2x steps/sec
 
 # With custom deck
 python -m digimon_gym.agents.pilot_training --deck1 path/to/deck.txt --timesteps 500000
@@ -416,6 +425,39 @@ variants = generate_variants(
 - Uniform sampling until 5+ games per opponent.
 - After 5 games: `weight = max(0.01, 1.0 - win_rate)`.
 - Effect: focuses training on matchups the agent loses.
+
+---
+
+## 6.5 Throughput levers for neural-opponent runs
+
+**Diagnosis first.** A `--opponent league`/`pool` run runs the frozen opponent's
+policy forward pass on EVERY env step, which dominates per-step cost: such runs
+are **~3× slower than the no-neural-opponent greedy floor** (e.g. cpx62: ~22
+steps/sec league vs ~59 floor) and are **inference-bound, not core-bound** — more
+cores past `n_envs` won't help (contrast the update-bound ceiling of vs-greedy
+runs). Confirm which regime you're in: if the
+rollout games/sec doesn't move when you change `batch_size`/eval cadence, you're
+inference-bound and the ONNX opponent is the real lever.
+
+Levers, in order of impact for an inference-bound run — **none require more
+compute**:
+
+| Lever | How | Effect |
+|---|---|---|
+| **ONNX opponent** | `DIGIMON_ONNX_OPPONENT=1` | frozen MLP opponent runs via ORT (1 intra-op thread/subproc) instead of torch eager → **~2× games/sec**. Parity-safe: opponent plays deterministic argmax, so identical logits → identical action. MLP-only; torch fallback on failure. |
+| Update phase | `--batch-size 256` (default 64), optionally `--n-epochs` ↓ | fewer, bigger PPO minibatches. Helps when update-bound; harmless otherwise. `n_epochs`↓ trades sample reuse — be conservative. |
+| Eval overhead | `--eval-freq 100000 --eval-episodes 8` (from 50k/20) | the in-run win rate is **degenerate** (rule 30 — see §14); minimise time spent computing a number you don't trust. |
+| Logging / hot-reload | mulligan log off; `reward_profiles_hot_reload=False` | trims per-game JSON I/O + per-step file stat. Minor. |
+
+**ONNX-opponent gotchas** (each cost an image rebuild before it worked): the
+export needs `dynamo=False` (the
+legacy TorchScript exporter; torch≥2.x defaults to the dynamo path which needs
+`onnxscript`, absent from the training image) **and** `onnx` in
+`requirements-training.txt` (the image shipped only `onnxruntime`). The lazy
+export uses a **pid-unique temp** because N subprocs race to export the same
+opponent at startup. Tell-tale that it silently fell back: `ONNX opponent for ...
+failed (...); falling back to torch.` in `docker logs`, and no `*.opponent.onnx`
+appearing next to the `.zip`.
 
 ---
 
@@ -796,6 +838,19 @@ any mirror metric are never promotion evidence — CLAUDE.md rule 30. The
 `pilot/anchored/*` scalars exist precisely so a collapsing run is visible
 mid-run; they are still in-run conveniences, and the gate panel is the
 decision of record.
+
+> **The anchored panel needs anchors.** It plays vs greedy + *every
+> layout-compatible champion in the registry* (`models/champions/registry.json`).
+> If the registry is empty — common on a fresh cloud box — the panel silently
+> degrades to `vs ['greedy']` only, a single noisy anchor (the startup log line
+> reads `Anchored eval: ... vs ['greedy']`). Before a warm-started run (e.g. the
+> deck-specialist league), **register the seed as a champion** so the panel
+> answers the question that matters — "is this beating what it was seeded from?":
+> `champion_admin.py promote --candidate <seed>.zip --name <name> --force`
+> (`--force` skips the gate; the seed must be layout-compatible — same
+> `tensor_layout_hash`). The callback builds its anchor list lazily at the first
+> panel, so register **before** launch, not mid-run. Raise `--anchored-eval-games`
+> (default 24) to cut the per-panel noise.
 
 **Recorded promotion decisions:**
 
