@@ -302,6 +302,42 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
+                ResumeSelectKind::Trash { of_player } => {
+                    let trash_index = action_id
+                        .saturating_sub(crate::action::space::TRASH_EFFECT_START)
+                        as usize;
+                    // Target tracking (mirrors `ctx.select_trash`'s wrapper).
+                    if let Some(card) = game.player(of_player).trash.get(trash_index) {
+                        let tid = card.card_id(&game.card_data).to_string();
+                        let tname = card.card_name(&game.card_data).to_string();
+                        crate::effect_context::selections::push_effect_target(
+                            game,
+                            prov.controller,
+                            prov.source_card,
+                            tid,
+                            tname,
+                        );
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_trash_index(name, of_player, trash_index as u16);
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
             }
         }
         ResumeFrame::MultiPickStep { .. } => {

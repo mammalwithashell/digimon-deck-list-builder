@@ -77,6 +77,8 @@ pub struct ResumeProvenance {
 pub enum ResumeSelectKind {
     /// `action_id - PLAY_HAND_START` → hand index of `of_player`.
     Hand { of_player: PlayerId },
+    /// `action_id - TRASH_EFFECT_START` → trash index of `of_player`.
+    Trash { of_player: PlayerId },
 }
 
 /// One resumable continuation frame. Each variant corresponds to a former
@@ -209,6 +211,66 @@ mod tests {
             runner.game_mut().pending_selection_resume.is_none(),
             "the resume stack must be consumed on resolve"
         );
+    }
+
+    #[test]
+    fn runtail_trash_resolves_via_data_path() {
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TEST-RESUME", "Resume Tester"))
+            .hand(0, &["TEST-RESUME"])
+            .memory(0)
+            .start();
+        let source_card;
+        {
+            let game = runner.game_mut();
+            source_card = game.player(0).hand[0].handle();
+            let prev_phase = game.current_phase;
+            game.pending_selection = Some(PendingSelection {
+                kind: SelectionKind::Trash,
+                selecting_player: 0,
+                previous_phase: prev_phase,
+                valid_action_ids: vec![crate::action::space::TRASH_EFFECT_START],
+                is_optional: false,
+                prompt: "spike-trash".to_string(),
+                effect_choices: None,
+                source_card,
+                source_permanent: None,
+                source_kind: EffectSourceKind::Digimon,
+                callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
+                on_decline: None,
+                zone_owner: Some(0),
+            });
+            game.pending_selection_resume = Some(ResumeStack {
+                frames: vec![ResumeFrame::RunTail {
+                    prov: ResumeProvenance {
+                        source_card,
+                        source_permanent: None,
+                        source_kind: EffectSourceKind::Digimon,
+                        controller: 0,
+                        override_pin: None,
+                    },
+                    select_kind: ResumeSelectKind::Trash { of_player: 0 },
+                    bind_as: None,
+                    inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
+                    outer_tail: None,
+                    bindings: Bindings::new(),
+                    runtime: StepRuntime::default(),
+                    trigger_context: None,
+                    decline_aborts_clause: false,
+                }],
+            });
+        }
+        let before = runner.memory();
+        runner
+            .game_mut()
+            .resolve_selection(0, crate::action::space::TRASH_EFFECT_START)
+            .expect("resolve_selection should succeed");
+        assert_eq!(
+            (runner.memory() - before).abs(),
+            5,
+            "Trash RunTail inner tail (GainMemory 5) must execute via the data path"
+        );
+        assert!(runner.game_mut().pending_selection.is_none());
     }
 
     #[test]
