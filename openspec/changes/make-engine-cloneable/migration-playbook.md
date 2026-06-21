@@ -6,10 +6,13 @@
 > ordered plan to extend *faithful* clone from the resume path to **every** decision
 > point by porting the remaining ~16 installers onto the resumable VM.
 
-## Current state (verified)
-- `resume.rs`: `ResumeSelectKind` has **only** `Hand`. `ResumeFrame::RunTail` + `MultiPickStep` defined; the latter's executor is `unimplemented!()` at `selections.rs:307-310`.
-- `run_resume` (`selections.rs:221`): `RunTail`/`Hand` works; the `is_pass` decline gate (~`243`) and `RunTail` dispatch (~`232`) are live; `MultiPickStep` arm is a todo.
-- Exemplar `install_select_hand` (~`1555-1644`) is the only flipped installer. 12 RunTail-shaped + 7 MultiPickStep-shaped installers remain.
+## Current state (updated 2026-06-18 — Batch 0 substrate COMPLETE)
+- **Batch 0a/0b DONE:** `ResumeSelectKind` has all 9 RunTail kinds — `Hand`, `Trash`, `FieldPermanent` (own+opp), `Security`, `BreedingPermanent`, `AnyPermanent`, `Reveal`, `Material`, `UnionZone` — each with a source-verified `run_resume` decode arm.
+- **Decline model DONE:** `ResumeDecline {None, RunTail{tail, aborts_clause}}` — the 3-way optional-decline semantics (no-decline / run-a-tail / cost-abort), incl. dual-tail (breeding/union_zone).
+- **Batch 0c DONE (count_capped keystone):** `ResumeFrame::MultiPickStep(MultiPickState)` + `run_multipick_step` + `install_multipick_step` (re-park) + the data terminal (binds the accumulated list, runs the tail — the former `Arc<Mutex<Box<dyn FnOnce>>>` final-callback as data). distinct_by ported. The "post-stack final-callback channel" blocker is resolved by making the terminal plain data.
+- **14 resume unit tests pass.** No installer is flipped yet (coexistence: legacy closures still run); Batch 0 is pure additive substrate.
+
+**Remaining:** Batches 1-3 (flip the RunTail installers to emit frames, parity-gated by `cards_behavioral`); Batch 4 (port the other 6 trampolines — source-multi/dp-budget/play-cost-budget/reveal-bucket/permutation/partition — reusing the MultiPickStep executor pattern with their own terminal binds + candidate types); then delete the legacy closures + the whole-Game clone-replay capstone (task 4.2).
 
 ---
 
