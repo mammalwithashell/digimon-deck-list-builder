@@ -77,3 +77,52 @@ describe('uiStore graphics state', () => {
     expect(useUiStore.getState().graphicsPreset).toEqual(DEFAULT_PRESET);
   });
 });
+
+const DECK_BUILDER_VIEW_KEY = __uiStoreInternals.DECK_BUILDER_VIEW_STORAGE_KEY;
+
+describe('uiStore deck builder view preference', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    useUiStore.setState({ deckBuilderView: 'browse' });
+  });
+
+  it('defaults to browse when localStorage is empty', () => {
+    expect(__uiStoreInternals.loadPersistedDeckBuilderView()).toBe('browse');
+  });
+
+  it('hydrates a valid persisted view', () => {
+    window.localStorage.setItem(DECK_BUILDER_VIEW_KEY, 'inspect');
+    expect(__uiStoreInternals.loadPersistedDeckBuilderView()).toBe('inspect');
+  });
+
+  it('falls back to browse on a stale/invalid persisted value', () => {
+    window.localStorage.setItem(DECK_BUILDER_VIEW_KEY, 'zoomed-out');
+    expect(__uiStoreInternals.loadPersistedDeckBuilderView()).toBe('browse');
+  });
+
+  it('persists the view on setDeckBuilderView', () => {
+    useUiStore.getState().setDeckBuilderView('inspect');
+    expect(useUiStore.getState().deckBuilderView).toBe('inspect');
+    expect(window.localStorage.getItem(DECK_BUILDER_VIEW_KEY)).toBe('inspect');
+  });
+
+  it('hydrates the decklist view', () => {
+    window.localStorage.setItem(DECK_BUILDER_VIEW_KEY, 'decklist');
+    expect(__uiStoreInternals.loadPersistedDeckBuilderView()).toBe('decklist');
+  });
+
+  it('persists the decklist view on setDeckBuilderView', () => {
+    useUiStore.getState().setDeckBuilderView('decklist');
+    expect(useUiStore.getState().deckBuilderView).toBe('decklist');
+    expect(window.localStorage.getItem(DECK_BUILDER_VIEW_KEY)).toBe('decklist');
+  });
+
+  it('cycles browse -> inspect -> decklist -> browse and persists each flip', () => {
+    const order = ['inspect', 'decklist', 'browse'];
+    for (const expected of order) {
+      useUiStore.getState().toggleDeckBuilderView();
+      expect(useUiStore.getState().deckBuilderView).toBe(expected);
+      expect(window.localStorage.getItem(DECK_BUILDER_VIEW_KEY)).toBe(expected);
+    }
+  });
+});

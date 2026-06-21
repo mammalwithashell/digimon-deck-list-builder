@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import * as library from '@/api/deckLibraryAdapter';
 import { normalizeSeedInput } from '@/api/gameApi';
+import { DeckEditOverlay } from '@/components/deckbuilder/DeckEditOverlay';
 import { InBetweenShell } from '@/features/play/InBetweenShell';
 import { canUseDeckForFormat, getPlayFormat } from '@/features/play/formatCatalog';
 import { createBotGame } from '@/features/play/playApi';
@@ -27,6 +28,7 @@ export function DeckSelectPage() {
   const [launching, setLaunching] = useState(false);
   const [seedInput, setSeedInput] = useState('');
   const [seedError, setSeedError] = useState('');
+  const [editingDeckId, setEditingDeckId] = useState<string | null>(null);
   const format = getPlayFormat(formatId);
 
   // Decks visible in this queue: by default only those built for the current
@@ -94,6 +96,24 @@ export function DeckSelectPage() {
       setLaunching(false);
     }
   };
+
+  // After an in-overlay save: refresh the deck list so counts/legality update,
+  // keep the edited deck selected, and close the overlay.
+  const handleDeckSaved = useCallback(
+    (savedId: string) => {
+      setEditingDeckId(null);
+      library
+        .listDecks()
+        .then((items) => {
+          setDecks(items);
+          selectDeck(savedId);
+        })
+        .catch(() => {
+          /* keep the prior list on a refresh failure */
+        });
+    },
+    [selectDeck],
+  );
 
   return (
     <InBetweenShell
@@ -212,14 +232,31 @@ export function DeckSelectPage() {
               </label>
             )}
           </div>
-          <button
-            type="button"
-            disabled={!selected || !selectedLegality?.ok || launching}
-            onClick={handleConfirm}
-          >
-            {launching ? 'LAUNCHING...' : 'USE THIS DECK'}
-          </button>
+          <div className="deck-confirm-actions">
+            <button
+              type="button"
+              className="deck-edit-button"
+              disabled={!selected}
+              onClick={() => selected && setEditingDeckId(selected.id)}
+            >
+              EDIT
+            </button>
+            <button
+              type="button"
+              disabled={!selected || !selectedLegality?.ok || launching}
+              onClick={handleConfirm}
+            >
+              {launching ? 'LAUNCHING...' : 'USE THIS DECK'}
+            </button>
+          </div>
         </div>
+
+        <DeckEditOverlay
+          isOpen={editingDeckId !== null}
+          deckId={editingDeckId}
+          onClose={() => setEditingDeckId(null)}
+          onSaved={handleDeckSaved}
+        />
       </main>
     </InBetweenShell>
   );
