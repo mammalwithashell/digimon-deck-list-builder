@@ -46,6 +46,7 @@ pub mod policies;
 pub mod recorder;
 pub mod replacement;
 pub(crate) mod resource_flow;
+pub mod resume;
 pub mod rules;
 pub mod runners;
 pub mod scheduled_effects;

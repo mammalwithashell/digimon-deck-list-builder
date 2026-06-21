@@ -16,7 +16,7 @@ Incremental, parity-guarded. The data-VM and legacy closure executor coexist beh
 
 ## 2. Resumable effect VM
 
-- [ ] 2.1 Design the interpreter state: instruction pointer, binding/value stack, typed frame stack; decide bytecode vs tree-walking (resolve design Open Question).
+- [x] 2.1 Design the interpreter state: typed frame stack. *(Done 2026-06-18: `code/digimon-engine/src/resume.rs` defines `ResumeStack` + `ResumeFrame` {`RunTail`, `MultiPickStep`} + `ResumeProvenance` — all `Clone`, compiling against the real engine types (`CompiledStep`/`Bindings`/`StepRuntime`/`CompiledPredicate`/`TriggerContext`). Bytecode-vs-tree-walking Open Question resolved to **tree-walking**: the executor is already a tree-walking interpreter over `CompiledStep`, so we defunctionalize the continuation rather than rewrite to bytecode. Wiring this into `PendingSelection` (coexistence `resume` field) + porting `count_capped` is the 0.2 spike — next.)*
 - [ ] 2.2 Implement the interpreter over the compiled DSL AST (`digimon-dsl` `compiled.rs`/`step.rs`) behind a per-effect switch, alongside the legacy closure path.
 - [ ] 2.3 Convert the ~30 `select_*` helpers (`effect_context/selections.rs`) into data yields: halt with a `PendingSelection` record; resume pushes the choice and continues at the saved IP.
 - [ ] 2.4 Represent pay-cost continuations, parked replacements, granted-effect bodies, and the effect queue as typed VM frames (replace the `Box<dyn FnOnce>` slots on `Game`).
