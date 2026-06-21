@@ -338,6 +338,54 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
+                ResumeSelectKind::FieldPermanent { of_player } => {
+                    let offset =
+                        action_id.saturating_sub(crate::action::space::ATTACK_START);
+                    let target_index =
+                        (offset % crate::action::space::TARGETS_PER_ATTACKER) as u8;
+                    let h = crate::permanent::PermanentHandle {
+                        player: of_player,
+                        index: target_index,
+                    };
+                    // Target tracking (mirrors install_field_selection's wrapper).
+                    if let Some(perm) =
+                        game.player(of_player).battle_area.get(target_index as usize)
+                    {
+                        let top = perm.top_card();
+                        let tid = top.card_id(&game.card_data).to_string();
+                        let tname = top.card_name(&game.card_data).to_string();
+                        crate::effect_context::selections::push_effect_target(
+                            game,
+                            prov.controller,
+                            prov.source_card,
+                            tid,
+                            tname,
+                        );
+                    }
+                    // Mirror install_field_selection's effect_source_player scoping.
+                    let previous_effect_source = game.effect_source_player;
+                    game.effect_source_player = Some(prov.controller);
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_permanent(name, h);
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                    ctx.game.effect_source_player = previous_effect_source;
+                }
             }
         }
         ResumeFrame::MultiPickStep { .. } => {
