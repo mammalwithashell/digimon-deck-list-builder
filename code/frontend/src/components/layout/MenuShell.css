@@ -12,6 +12,10 @@
   color: var(--ink-1);
   font-family: var(--font-ui);
   overflow: hidden;
+  /* Smoothly animate the rail open/close (and keep the theme cross-fade).
+     Disabled at motion=off by the global rule in components.css. */
+  transition: grid-template-columns 0.22s ease, background-color 0.25s ease,
+    color 0.25s ease;
 }
 
 .menu-shell[data-collapsed='true'] {

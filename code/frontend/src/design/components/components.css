@@ -107,7 +107,6 @@
    pre-paint, so these only animate on an actual change, never on first load. */
 body,
 .ds-backdrop,
-.menu-shell,
 .menu-shell__rail,
 .menu-shell__main,
 .menu-shell__content,
