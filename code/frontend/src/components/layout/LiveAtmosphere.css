@@ -1,0 +1,150 @@
+/* Live theme atmosphere (add-live-theme-atmosphere).
+   A non-interactive layer behind menu content. Animations run only under
+   `.is-live` (added when effective live-background is on — i.e. motion `full`
+   AND the Live-background toggle on); otherwise the same scene renders static.
+   The `.is-live` gate inherently respects the motion preference, since it is
+   never present at reduced/off motion. */
+
+.live-atmosphere {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* ── Dark "Digi-OS": rain + drifting grid ─────────────────────────────────── */
+.live-atmosphere__rain {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+[data-theme='dark'] .live-atmosphere::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(to right, rgba(57, 255, 136, 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(57, 255, 136, 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+[data-theme='dark'] .live-atmosphere.is-live::before {
+  animation: la-grid-drift 24s linear infinite;
+}
+
+@keyframes la-grid-drift {
+  from {
+    background-position: 0 0, 0 0;
+  }
+  to {
+    background-position: 32px 32px, 32px 32px;
+  }
+}
+
+/* ── Light "Adventure '99": idle laptop desktop ───────────────────────────── */
+.live-atmosphere__teal,
+.live-atmosphere__dots,
+.live-atmosphere__sweep,
+.live-atmosphere__cursor {
+  position: absolute;
+}
+
+.live-atmosphere__teal {
+  inset: -10%;
+  background:
+    radial-gradient(60% 60% at 50% 40%, rgba(255, 255, 255, 0.1), transparent 70%),
+    var(--surface-bg);
+}
+
+.live-atmosphere.is-live .live-atmosphere__teal {
+  animation: la-breathe 14s ease-in-out infinite;
+}
+
+@keyframes la-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+}
+
+.live-atmosphere__dots {
+  inset: 0;
+  background-image: radial-gradient(circle, rgba(0, 0, 0, 0.08) 1px, transparent 1px);
+  background-size: 7px 7px;
+}
+
+.live-atmosphere.is-live .live-atmosphere__dots {
+  animation: la-dot-parallax 40s linear infinite;
+}
+
+@keyframes la-dot-parallax {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 70px 35px;
+  }
+}
+
+.live-atmosphere__sweep {
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 140px;
+  background: linear-gradient(transparent, rgba(255, 255, 255, 0.18), transparent);
+  opacity: 0;
+}
+
+.live-atmosphere.is-live .live-atmosphere__sweep {
+  animation: la-sweep 9s ease-in-out infinite;
+}
+
+@keyframes la-sweep {
+  0% {
+    transform: translateY(-160px);
+    opacity: 0;
+  }
+  6% {
+    opacity: 1;
+  }
+  18% {
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(120vh);
+    opacity: 0;
+  }
+}
+
+.live-atmosphere__cursor {
+  left: 24px;
+  bottom: 24px;
+  width: 9px;
+  height: 16px;
+  background: var(--accent);
+  opacity: 0.55;
+}
+
+.live-atmosphere.is-live .live-atmosphere__cursor {
+  animation: la-blink 1.1s steps(1) infinite;
+}
+
+@keyframes la-blink {
+  0%,
+  50% {
+    opacity: 0.6;
+  }
+  50.01%,
+  100% {
+    opacity: 0;
+  }
+}

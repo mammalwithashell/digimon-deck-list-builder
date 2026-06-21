@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { NavRail, NavRailItem } from '@/design/components/NavRail';
 import { ThemeSwitch } from '@/design/components/ThemeSwitch';
 import { CursorLight } from './CursorLight';
+import { LiveAtmosphere } from './LiveAtmosphere';
 import { useAppVersion } from '@/hooks/useAppVersion';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
@@ -194,6 +195,10 @@ function MenuShellInner() {
       </NavRail>
 
       <main className="menu-shell__main">
+        {/* Backmost: live theme atmosphere, then the cursor light, then content.
+            (The static .ds-backdrop atmosphere is only used by the style guide,
+            so the menu shell has a single source of background atmosphere.) */}
+        <LiveAtmosphere surface="menu" />
         <CursorLight />
         <div className="menu-shell__content">
           <Outlet />
