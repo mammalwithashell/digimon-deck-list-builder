@@ -385,13 +385,50 @@
 
 .deck-builder-page .bld-filters,
 .deck-builder-app .bld-filters {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr)) auto auto;
-  align-items: center;
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   padding: 12px 18px;
   border-bottom: 1px solid var(--bld-line);
   background: var(--bld-bg-1);
+}
+
+/* Row 1: the field filters (color/type/level/rarity/search). */
+.deck-builder-page .bld-filters-fields,
+.deck-builder-app .bld-filters-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.deck-builder-page .bld-filters-fields .bld-filter,
+.deck-builder-app .bld-filters-fields .bld-filter {
+  flex: 1 1 150px;
+}
+
+.deck-builder-page .bld-filters-fields .bld-filter.color-filter,
+.deck-builder-app .bld-filters-fields .bld-filter.color-filter {
+  flex: 1 1 auto;
+}
+
+.deck-builder-page .bld-filters-fields .bld-filter.search,
+.deck-builder-app .bld-filters-fields .bld-filter.search {
+  flex: 2 1 240px;
+}
+
+/* Row 2: all the toggle checkboxes, with RESET pushed to the right. */
+.deck-builder-page .bld-filters-actions,
+.deck-builder-app .bld-filters-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.deck-builder-page .bld-filters-actions .bld-filter-reset,
+.deck-builder-app .bld-filters-actions .bld-filter-reset {
+  margin-left: auto;
 }
 
 .deck-builder-page .bld-filter,
@@ -404,9 +441,10 @@
 
 .deck-builder-page .bld-filter .l,
 .deck-builder-app .bld-filter .l {
-  color: var(--bld-ink-3);
+  color: var(--bld-ink-2);
   font-family: var(--bld-mono);
-  font-size: 9px;
+  font-size: var(--text-xs);
+  font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
@@ -439,10 +477,11 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--bld-ink-2);
+  color: var(--bld-ink-1);
   cursor: pointer;
   font-family: var(--bld-mono);
-  font-size: 9px;
+  font-size: var(--text-xs);
+  font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -723,7 +762,8 @@
   border-left: 2px solid var(--bld-player);
   color: var(--bld-player);
   font-family: var(--bld-mono);
-  font-size: 10px;
+  font-size: var(--text-xs);
+  font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -1092,7 +1132,8 @@
   display: block;
   margin-bottom: 3px;
   color: var(--bld-player);
-  font-size: 8px;
+  font-size: var(--text-xs);
+  font-weight: 700;
   letter-spacing: 0.16em;
 }
 
@@ -1101,7 +1142,7 @@
   display: block;
   overflow: hidden;
   color: var(--bld-ink-0);
-  font-size: 10px;
+  font-size: var(--text-sm);
   letter-spacing: 0.04em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1112,7 +1153,7 @@
   display: block;
   margin-top: 3px;
   color: var(--bld-ink-3);
-  font-size: 8px;
+  font-size: var(--text-xs);
   letter-spacing: 0.12em;
 }
 

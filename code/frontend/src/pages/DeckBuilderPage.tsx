@@ -514,6 +514,7 @@ export function DeckBuilderWorkbench({
           </header>
 
           <section className="bld-filters" aria-label="Builder filters">
+            <div className="bld-filters-fields">
             <div className="bld-filter color-filter">
               <span className="l">COLOR</span>
               <div className="bld-colors">
@@ -567,6 +568,8 @@ export function DeckBuilderWorkbench({
                 onChange={(event) => setBuilderFilters((current) => ({ ...current, search: event.target.value }))}
               />
             </label>
+            </div>
+            <div className="bld-filters-actions">
             <label className="check">
               <input
                 type="checkbox"
@@ -598,6 +601,7 @@ export function DeckBuilderWorkbench({
             >
               RESET
             </button>
+            </div>
           </section>
 
           <main className={`bld-main view-${deckBuilderView}`}>

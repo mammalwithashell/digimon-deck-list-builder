@@ -552,13 +552,14 @@
 .library-pills .library-format-pill {
   align-self: flex-start;
   border: 1px solid var(--lib-accent);
-  border-radius: 999px;
+  /* Square "box" marker in both themes (the Adventure '99 look). */
+  border-radius: 0;
   background: var(--lib-bg);
   color: var(--lib-accent);
   padding: 3px 9px;
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  font-size: 9px;
+  font-size: var(--text-xs);
   font-weight: 600;
   white-space: nowrap;
 }
