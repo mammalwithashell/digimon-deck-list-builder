@@ -24,7 +24,7 @@ Incremental, parity-guarded. The data-VM and legacy closure executor coexist beh
 
 ## 3. Card-pool migration (parity-gated)
 
-- [ ] 3.1 Migrate cards to the VM in batches by set/archetype; gate each batch on `cards_behavioral`, archetype interaction tests, and DCGO parity.
+- [ ] 3.1 Migrate the remaining ~16 selection **installers** onto the resumable VM (each installer ported migrates every card that uses it — NOT 470 card rewrites), per **`migration-playbook.md`** (produced 2026-06-18 by the `cloneable-installer-migration-playbook` Workflow — 16 read-only analysis agents + synthesis): **Batch 0** = shared core (8 new RunTail `ResumeSelectKind` variants + their `run_resume` decode arms + the `MultiPickStep` executor + a post-stack final-callback channel + unit tests); **Batch 1** = 3 mechanical RunTail flips (trash / security / breeding); **Batch 2** = 4 moderate RunTail flips; **Batch 3** = `union_zone` (dual-tail, tri-range); **Batch 4** = the 7 `MultiPickStep` trampolines (permutation → count_capped → dp-budget → play-cost-budget → reveal-bucket → source-multi → partition). Gate each batch on `cards_behavioral` + DCGO parity (`RUST_MIN_STACK=268435456`; isolated `CARGO_TARGET_DIR`).
 - [ ] 3.2 Migrate the nastiest multi-pick / pay-cost / replacement archetypes early to validate the frame-stack design (or simplest-first per the resolved Open Question).
 - [ ] 3.3 Port or constrain the remaining `raw_rust` effects to be clone-safe (4 as of 2026-06-18: `bt24_012`/`lm_027`/`bt21_093`/`bt13_040`; `bt24_012` is already a no-op placeholder).
 
