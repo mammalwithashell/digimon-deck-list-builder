@@ -21,19 +21,12 @@ import { PatchNotesPage } from '@/pages/PatchNotesPage';
 import { RoomChooserPage } from '@/pages/RoomChooserPage';
 import { RoomLobbyPage } from '@/pages/RoomLobbyPage';
 import { UpdaterBridge } from '@/updater/UpdaterBridge';
+import { GraphicsSettingsModal } from '@/components/settings/GraphicsSettingsModal';
 import { ThemeProvider } from '@/design/theme/ThemeProvider';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore, applyMotionAttribute, applyTextScaleVar } from '@/stores/uiStore';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
-
-// Lazy-loaded so the page is tree-shaken from the web bundle — graphics
-// presets only make sense in a windowed shell.
-const GraphicsSettingsPage = lazy(() =>
-  import('@/pages/GraphicsSettingsPage').then((m) => ({
-    default: m.GraphicsSettingsPage,
-  })),
-);
 
 const LauncherPage = lazy(() => import('@/components/launcher/LauncherPage').then(m => ({ default: m.LauncherPage })));
 
@@ -87,7 +80,6 @@ function DesktopRoutes() {
         <Route path="/" element={suspended(LauncherPage)} />
         <Route path="/patch-notes" element={<PatchNotesPage />} />
         <Route path="/models" element={suspended(ModelsPage)} />
-        <Route path="/settings/graphics" element={suspended(GraphicsSettingsPage)} />
         <Route element={<AuthGuard />}>
           <Route path="/lobby" element={<LobbyPage />} />
           <Route path="/play" element={<ModeSelectPage />} />
@@ -179,6 +171,9 @@ export function App() {
         <CanvasScaler>
           {IS_DESKTOP ? <DesktopRoutes /> : <WebRoutes />}
         </CanvasScaler>
+        {/* Mounted outside CanvasScaler so its fixed positioning is in real
+            viewport pixels, not the scaled canvas space. */}
+        {IS_DESKTOP && <GraphicsSettingsModal />}
       </ThemeProvider>
     </BrowserRouter>
   );
