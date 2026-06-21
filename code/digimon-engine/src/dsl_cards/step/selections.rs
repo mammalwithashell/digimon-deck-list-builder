@@ -596,6 +596,40 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
+                ResumeSelectKind::UnionZone {
+                    of_player,
+                    candidates,
+                } => {
+                    // Tri-range (hand/trash/material) decode is captured at
+                    // install as candidates; resolve by linear search and bind
+                    // via insert_union_card (mirrors install_select_union_zone).
+                    let Some((_, handle, origin)) = candidates
+                        .iter()
+                        .find(|(candidate_action, _, _)| *candidate_action == action_id)
+                        .copied()
+                    else {
+                        return;
+                    };
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_union_card(name, handle, origin, of_player);
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
             }
         }
         ResumeFrame::MultiPickStep { .. } => {

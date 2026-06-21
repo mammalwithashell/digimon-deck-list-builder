@@ -30,6 +30,7 @@ use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
 use crate::enums::{EffectSourceKind, PlayerId};
 use crate::permanent::PermanentHandle;
+use crate::selection::UnionZoneOrigin;
 use crate::trigger_context::TriggerContext;
 
 /// A paused continuation, as data. Frames run inner→outer on selection
@@ -109,6 +110,15 @@ pub enum ResumeSelectKind {
     /// source index under carrier `perm` (battle- or breeding-area). Binds the
     /// resolved source `CardHandle` via `material_carrier_permanent`.
     Material { perm: PermanentHandle },
+    /// Union-zone select spanning hand ∪ trash ∪ material. The tri-range decode
+    /// is captured at install as `(action_id, handle, origin)` candidates (the
+    /// decode runs once), so the arm linear-searches and binds via
+    /// `insert_union_card` (recording the origin zone for downstream replay).
+    /// Dual-tail: success uses `inner_tail`; decline uses the frame's `decline`.
+    UnionZone {
+        of_player: PlayerId,
+        candidates: Vec<(u16, CardHandle, UnionZoneOrigin)>,
+    },
 }
 
 /// What an optional selection does when declined (PASS). Mandatory selects never
@@ -814,6 +824,70 @@ mod tests {
             (runner.memory() - before).abs(),
             5,
             "Material RunTail inner tail (GainMemory 5) must execute via the data path"
+        );
+        assert!(runner.game_mut().pending_selection.is_none());
+    }
+
+    #[test]
+    fn runtail_union_zone_resolves_via_data_path() {
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TEST-RESUME", "Resume Tester"))
+            .hand(0, &["TEST-RESUME"])
+            .memory(0)
+            .start();
+        let action = crate::action::space::PLAY_HAND_START;
+        let hand_card;
+        {
+            let game = runner.game_mut();
+            hand_card = game.player(0).hand[0].handle();
+            let prev_phase = game.current_phase;
+            game.pending_selection = Some(PendingSelection {
+                kind: SelectionKind::Hand,
+                selecting_player: 0,
+                previous_phase: prev_phase,
+                valid_action_ids: vec![action],
+                is_optional: false,
+                prompt: "spike-union".to_string(),
+                effect_choices: None,
+                source_card: hand_card,
+                source_permanent: None,
+                source_kind: EffectSourceKind::Digimon,
+                callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
+                on_decline: None,
+                zone_owner: Some(0),
+            });
+            game.pending_selection_resume = Some(ResumeStack {
+                frames: vec![ResumeFrame::RunTail {
+                    prov: ResumeProvenance {
+                        source_card: hand_card,
+                        source_permanent: None,
+                        source_kind: EffectSourceKind::Digimon,
+                        controller: 0,
+                        override_pin: None,
+                    },
+                    select_kind: ResumeSelectKind::UnionZone {
+                        of_player: 0,
+                        candidates: vec![(action, hand_card, UnionZoneOrigin::Hand)],
+                    },
+                    bind_as: None,
+                    inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
+                    outer_tail: None,
+                    bindings: Bindings::new(),
+                    runtime: StepRuntime::default(),
+                    trigger_context: None,
+                    decline: ResumeDecline::None,
+                }],
+            });
+        }
+        let before = runner.memory();
+        runner
+            .game_mut()
+            .resolve_selection(0, action)
+            .expect("resolve_selection should succeed");
+        assert_eq!(
+            (runner.memory() - before).abs(),
+            5,
+            "UnionZone RunTail inner tail (GainMemory 5) must execute via the data path"
         );
         assert!(runner.game_mut().pending_selection.is_none());
     }
