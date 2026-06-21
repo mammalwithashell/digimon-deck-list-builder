@@ -118,6 +118,15 @@ body {
   border-radius: 2px;
 }
 
+/* Light "Adventure '99": the default light-grey body color is unreadable on the
+   parchment stack inspector — use dark ink, and darken the reference-purple. */
+[data-theme="light"] .card-effect-text {
+  color: var(--ink-1);
+}
+[data-theme="light"] .card-effect-text .rf {
+  color: #5a4fbf;
+}
+
 /* In Between board redesign */
 .ib-board {
   position: relative;

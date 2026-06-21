@@ -102,6 +102,31 @@
   border-color: var(--accent);
 }
 
+/* ── Theme-swap transition ─────────────────────────────────────────────────
+   Fade the major themed surfaces when toggling light <-> dark. Theme is applied
+   pre-paint, so these only animate on an actual change, never on first load. */
+body,
+.ds-backdrop,
+.menu-shell,
+.menu-shell__rail,
+.menu-shell__main,
+.menu-shell__content,
+.menu-shell__statusbar,
+.ds-navrail__item,
+.ds-titlebar,
+.ds-titlebar__menubar,
+.ds-modal,
+.ds-panel,
+.deck-builder-page {
+  transition: background-color 0.25s ease, color 0.25s ease,
+    border-color 0.25s ease;
+}
+
+/* Motion "off" — no non-essential motion, including theme/hover fades. */
+[data-motion="off"] * {
+  transition: none !important;
+}
+
 /* ── Panel / Frame ─────────────────────────────────────────────────────── */
 .ds-panel {
   background: var(--surface);

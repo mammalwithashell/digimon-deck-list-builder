@@ -25,6 +25,13 @@
   overflow-y: auto;
 }
 
+/* Light theme draws the rail's right edge as a 2px inset bevel
+   (.ds-navrail box-shadow). Inset the rail content by the same 2px so the
+   full-width section dividers stop at the bevel instead of crossing over it. */
+[data-theme='light'] .menu-shell__rail {
+  padding-right: 2px;
+}
+
 .menu-shell__railtop {
   display: flex;
   align-items: center;
@@ -369,6 +376,13 @@
 }
 
 [data-theme='light'] .cursor-light__glow {
+  /* Smaller, tighter sheen in light mode — the full-size glow read as too much. */
+  width: 320px;
+  height: 320px;
+  transform: translate(
+    calc(var(--cursor-x, -9999px) - 160px),
+    calc(var(--cursor-y, -9999px) - 160px)
+  );
   background: radial-gradient(
     circle,
     rgba(255, 255, 255, 0.5),
