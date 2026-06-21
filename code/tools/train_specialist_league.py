@@ -92,6 +92,10 @@ class LeagueSpec:
     vec_env_backend: str = "subproc"
     eval_freq: int = 50_000
     eval_episodes: int = 20
+    batch_size: int = 64       # PPO minibatch; larger => fewer, bigger update steps (faster wall-clock)
+    n_epochs: int = 10         # PPO epochs/update; lower => cheaper update, less sample reuse
+    anchored_eval_freq: int = 100_000   # in-training anchored panel cadence (the trustworthy signal)
+    anchored_eval_games: int = 24       # seat-balanced games/anchor/panel (raise to cut n=24 noise)
     eval_n: int = 0  # >0: after each round barrier, play the seat-balanced matchup matrix
     promote_min_wr: float = 0.0  # >0: gate promotion — a round-r specialist replaces
                                  # round-(r-1) only if it wins >= this share of a
@@ -244,6 +248,8 @@ def build_specialist_argv(
         "--match-format", spec.match_format,
         "--eval-freq", str(spec.eval_freq),
         "--eval-episodes", str(spec.eval_episodes),
+        "--anchored-eval-freq", str(spec.anchored_eval_freq),
+        "--anchored-eval-games", str(spec.anchored_eval_games),
         "--curriculum-seed", str(spec.seed + rnd),
         "--eval-seed", str(spec.eval_seed),
         "--save-dir", str(spec.run_dir(deck, rnd).parent),
@@ -252,6 +258,8 @@ def build_specialist_argv(
         "--set", f"tensor_profile={spec.tensor_profile}",
         "--set", f"reward_profile_override={spec.reward_profile}",
         "--set", f"opponent_pool_mode={spec.opponent_pool_mode}",
+        "--set", f"batch_size={spec.batch_size}",
+        "--set", f"n_epochs={spec.n_epochs}",
         "--lr-schedule", spec.lr_schedule,
     ]
     if spec.n_envs > 1:
@@ -408,6 +416,18 @@ def main() -> None:
     p.add_argument("--opponent-pool-mode", default="pfsp", choices=["pfsp", "uniform"])
     p.add_argument("--eval-freq", type=int, default=50_000)
     p.add_argument("--eval-episodes", type=int, default=20)
+    p.add_argument("--batch-size", type=int, default=64,
+                   help="PPO minibatch size per specialist. Larger (e.g. 256/512) "
+                        "means fewer, bigger gradient steps -> faster update phase.")
+    p.add_argument("--n-epochs", type=int, default=10,
+                   help="PPO epochs per update. Lower trades sample reuse for a "
+                        "cheaper update phase.")
+    p.add_argument("--anchored-eval-freq", type=int, default=100_000,
+                   help="Steps between in-training anchored panels (the trustworthy "
+                        "signal vs greedy + registered champions; rule 30).")
+    p.add_argument("--anchored-eval-games", type=int, default=24,
+                   help="Seat-balanced games per anchor per panel. Raise to cut the "
+                        "n=24 noise on the anchored signal.")
     p.add_argument("--eval-n", type=int, default=0,
                    help="Seat-balanced games per matchup-matrix cell after each "
                         "round barrier (0 = skip). 24 gives ~+/-20%% CI per cell.")
@@ -454,6 +474,10 @@ def main() -> None:
         opponent_pool_mode=args.opponent_pool_mode,
         eval_freq=args.eval_freq,
         eval_episodes=args.eval_episodes,
+        batch_size=args.batch_size,
+        n_epochs=args.n_epochs,
+        anchored_eval_freq=args.anchored_eval_freq,
+        anchored_eval_games=args.anchored_eval_games,
         eval_n=args.eval_n,
         promote_min_wr=args.promote_min_wr,
         lr_schedule=args.lr_schedule,
