@@ -148,4 +148,15 @@ describe('GraphicsSettingsPage motion + live background', () => {
       'false',
     );
   });
+
+  it('renders the text-size options and changes the scale via the store', () => {
+    useUiStore.setState({ textScale: 'md' });
+    renderPage();
+    expect(screen.getByTestId('graphics-textscale-sm')).toBeInTheDocument();
+    expect(screen.getByTestId('graphics-textscale-xl')).toBeInTheDocument();
+    act(() => {
+      screen.getByTestId('graphics-textscale-lg').click();
+    });
+    expect(useUiStore.getState().textScale).toBe('lg');
+  });
 });

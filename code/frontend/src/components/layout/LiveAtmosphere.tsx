@@ -58,18 +58,36 @@ function DarkRain({ live, surface }: { live: boolean; surface: AtmosphereSurface
     let w = 0;
     let h = 0;
 
+    const seedColumns = (cols: number) => {
+      // Preserve existing drop positions so the rain stays CONTINUOUS across
+      // board re-layouts (action bar appearing, prompts, played cards) — those
+      // resize the canvas and previously re-seeded every column back to the
+      // top. Only fill newly added columns; drop removed ones.
+      const nextDrops: number[] = [];
+      const nextActive: boolean[] = [];
+      for (let i = 0; i < cols; i++) {
+        if (i < drops.length) {
+          nextDrops[i] = drops[i]!;
+          nextActive[i] = active[i]!;
+        } else {
+          nextDrops[i] = Math.random() * -40;
+          nextActive[i] = Math.random() < density;
+        }
+      }
+      drops = nextDrops;
+      active = nextActive;
+    };
+
     const size = () => {
-      w = canvas.clientWidth;
-      h = canvas.clientHeight;
+      const nextW = canvas.clientWidth;
+      const nextH = canvas.clientHeight;
+      // Ignore no-op resize callbacks so the rain doesn't restart needlessly.
+      if (nextW === w && nextH === h) return;
+      w = nextW;
+      h = nextH;
       canvas.width = w;
       canvas.height = h;
-      const cols = Math.max(1, Math.floor(w / RAIN_FONT));
-      drops = [];
-      active = [];
-      for (let i = 0; i < cols; i++) {
-        drops[i] = Math.random() * -40;
-        active[i] = Math.random() < density;
-      }
+      seedColumns(Math.max(1, Math.floor(w / RAIN_FONT)));
       ctx.font = `${RAIN_FONT}px monospace`;
     };
 

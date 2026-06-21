@@ -525,10 +525,10 @@
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  color: var(--lib-dim);
+  color: var(--lib-muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-size: 10px;
+  font-size: var(--text-xs);
 }
 
 .library-card-meta span {

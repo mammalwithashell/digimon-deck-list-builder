@@ -215,6 +215,38 @@ describe('uiStore live background preference', () => {
   });
 });
 
+const TEXT_SCALE_KEY = __uiStoreInternals.TEXT_SCALE_STORAGE_KEY;
+
+describe('uiStore text scale preference', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    useUiStore.setState({ textScale: 'md' });
+  });
+
+  it('defaults to md when nothing is persisted', () => {
+    expect(__uiStoreInternals.loadPersistedTextScale()).toBe('md');
+  });
+
+  it('hydrates a valid persisted scale', () => {
+    window.localStorage.setItem(TEXT_SCALE_KEY, 'lg');
+    expect(__uiStoreInternals.loadPersistedTextScale()).toBe('lg');
+  });
+
+  it('falls back to md on an invalid persisted value', () => {
+    window.localStorage.setItem(TEXT_SCALE_KEY, 'gigantic');
+    expect(__uiStoreInternals.loadPersistedTextScale()).toBe('md');
+  });
+
+  it('persists and projects --font-scale on setTextScale', () => {
+    useUiStore.getState().setTextScale('xl');
+    expect(useUiStore.getState().textScale).toBe('xl');
+    expect(window.localStorage.getItem(TEXT_SCALE_KEY)).toBe('xl');
+    expect(document.documentElement.style.getPropertyValue('--font-scale')).toBe(
+      String(__uiStoreInternals.TEXT_SCALE_VALUES.xl),
+    );
+  });
+});
+
 describe('selectEffectiveLiveBackground', () => {
   it('is true only when motion is full and the toggle is on', () => {
     useUiStore.setState({ motion: 'full', liveBackground: true });

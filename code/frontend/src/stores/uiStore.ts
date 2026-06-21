@@ -12,6 +12,7 @@ const BOT_SPEED_STORAGE_KEY = 'gameplay.botSpeed';
 const DECK_BUILDER_VIEW_STORAGE_KEY = 'deckBuilder.viewMode';
 const MOTION_STORAGE_KEY = 'desktop.motion';
 const LIVE_BG_STORAGE_KEY = 'desktop.liveBackground';
+const TEXT_SCALE_STORAGE_KEY = 'desktop.textScale';
 
 /** Deck builder card-pool layout emphasis. `browse` is the dense grid that
  *  emphasizes the card search; `inspect` emphasizes the selected card and its
@@ -156,6 +157,52 @@ function persistLiveBackground(value: boolean): void {
   }
 }
 
+/** User-adjustable interface text size (add-desktop-ui-polish). A multiplier
+ *  projected onto the `--font-scale` CSS variable, which the shared `--text-*`
+ *  scale tokens consume via calc(). Lets players pick a comfortable size for
+ *  menus / readable surfaces. The fixed-canvas board scales via the resolution
+ *  preset, so it is unaffected. */
+export type TextScale = 'sm' | 'md' | 'lg' | 'xl';
+
+const TEXT_SCALES: TextScale[] = ['sm', 'md', 'lg', 'xl'];
+const DEFAULT_TEXT_SCALE: TextScale = 'md';
+const TEXT_SCALE_VALUES: Record<TextScale, number> = {
+  sm: 0.9,
+  md: 1,
+  lg: 1.15,
+  xl: 1.3,
+};
+
+function loadPersistedTextScale(): TextScale {
+  if (typeof window === 'undefined') return DEFAULT_TEXT_SCALE;
+  try {
+    const raw = window.localStorage.getItem(TEXT_SCALE_STORAGE_KEY);
+    return TEXT_SCALES.includes(raw as TextScale)
+      ? (raw as TextScale)
+      : DEFAULT_TEXT_SCALE;
+  } catch {
+    return DEFAULT_TEXT_SCALE;
+  }
+}
+
+function persistTextScale(value: TextScale): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(TEXT_SCALE_STORAGE_KEY, value);
+  } catch {
+    // Best-effort persistence.
+  }
+}
+
+/** Project the text scale onto `--font-scale` so the `--text-*` tokens scale. */
+export function applyTextScaleVar(value: TextScale): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.style.setProperty(
+    '--font-scale',
+    String(TEXT_SCALE_VALUES[value]),
+  );
+}
+
 /** Read a persisted preset from localStorage, falling back to the
  *  default. Validates that the persisted dimensions match one of the
  *  known presets — if a stale or hand-edited value is present, drops
@@ -267,6 +314,9 @@ interface UiStore {
    *  `motion === 'full'` (see `selectEffectiveLiveBackground`). Persisted. */
   liveBackground: boolean;
 
+  /** User-adjustable interface text size; projected onto `--font-scale`. */
+  textScale: TextScale;
+
   setHoveredCard: (cardId: string | null) => void;
   openModal: (modal: string) => void;
   closeModal: () => void;
@@ -282,6 +332,7 @@ interface UiStore {
   toggleDeckBuilderView: () => void;
   setMotion: (value: Motion) => void;
   setLiveBackground: (value: boolean) => void;
+  setTextScale: (value: TextScale) => void;
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -296,6 +347,7 @@ export const useUiStore = create<UiStore>((set) => ({
   deckBuilderView: loadPersistedDeckBuilderView(),
   motion: loadPersistedMotion(),
   liveBackground: loadPersistedLiveBackground(),
+  textScale: loadPersistedTextScale(),
 
   setHoveredCard: (cardId) => set({ hoveredCard: cardId }),
   openModal: (modal) => set({ activeModal: modal }),
@@ -345,6 +397,11 @@ export const useUiStore = create<UiStore>((set) => ({
     persistLiveBackground(value);
     set({ liveBackground: value });
   },
+  setTextScale: (value) => {
+    persistTextScale(value);
+    applyTextScaleVar(value);
+    set({ textScale: value });
+  },
 }));
 
 /** Effective live-background: animated atmosphere renders only when motion is
@@ -368,6 +425,8 @@ export const __uiStoreInternals = {
   DECK_BUILDER_VIEW_STORAGE_KEY,
   MOTION_STORAGE_KEY,
   LIVE_BG_STORAGE_KEY,
+  TEXT_SCALE_STORAGE_KEY,
+  TEXT_SCALE_VALUES,
   loadPersistedPreset,
   loadPersistedFullscreen,
   loadPersistedRailCollapsed,
@@ -376,4 +435,5 @@ export const __uiStoreInternals = {
   loadPersistedMotion,
   deriveDefaultMotion,
   loadPersistedLiveBackground,
+  loadPersistedTextScale,
 };

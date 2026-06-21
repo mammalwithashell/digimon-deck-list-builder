@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { useUiStore, type Motion } from '@/stores/uiStore';
+import { useUiStore, type Motion, type TextScale } from '@/stores/uiStore';
 import { ThemeSwitch } from '@/design/components/ThemeSwitch';
 import {
   RESOLUTION_PRESETS,
@@ -10,6 +10,13 @@ const MOTION_OPTIONS: { value: Motion; label: string }[] = [
   { value: 'full', label: 'Full' },
   { value: 'reduced', label: 'Reduced' },
   { value: 'off', label: 'Off' },
+];
+
+const TEXT_SCALE_OPTIONS: { value: TextScale; label: string }[] = [
+  { value: 'sm', label: 'Small' },
+  { value: 'md', label: 'Default' },
+  { value: 'lg', label: 'Large' },
+  { value: 'xl', label: 'X-Large' },
 ];
 
 /**
@@ -33,6 +40,8 @@ export function GraphicsSettingsPage() {
   const setMotion = useUiStore((s) => s.setMotion);
   const liveBackground = useUiStore((s) => s.liveBackground);
   const setLiveBackground = useUiStore((s) => s.setLiveBackground);
+  const textScale = useUiStore((s) => s.textScale);
+  const setTextScale = useUiStore((s) => s.setTextScale);
 
   const applyPreset = async (preset: ResolutionPreset) => {
     setGraphicsPreset(preset);
@@ -102,6 +111,36 @@ export function GraphicsSettingsPage() {
             </div>
           </div>
           <ThemeSwitch />
+        </div>
+
+        <div className="mb-4 flex items-center justify-between border border-[var(--line-1)] bg-[var(--surface-raised)] px-4 py-3">
+          <div>
+            <div className="text-sm font-medium text-[var(--ink-0)]">Text size</div>
+            <div className="text-xs text-[var(--ink-2)]">
+              Scales interface text in menus. Pick what’s comfortable to read.
+            </div>
+          </div>
+          <div className="flex gap-1" role="group" aria-label="Text size">
+            {TEXT_SCALE_OPTIONS.map((opt) => {
+              const active = textScale === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  data-testid={`graphics-textscale-${opt.value}`}
+                  onClick={() => setTextScale(opt.value)}
+                  aria-pressed={active}
+                  className={`border px-3 py-1.5 text-xs font-semibold uppercase tracking-wider transition-colors ${
+                    active
+                      ? 'border-[var(--accent)] bg-[var(--surface-raised)] text-[var(--ink-0)]'
+                      : 'border-[var(--line-1)] bg-[var(--surface-sunken)] text-[var(--ink-1)] hover:border-[var(--accent)] hover:text-[var(--ink-0)]'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="mb-4 flex items-center justify-between border border-[var(--line-1)] bg-[var(--surface-raised)] px-4 py-3">

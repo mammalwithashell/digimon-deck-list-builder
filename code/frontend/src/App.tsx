@@ -23,7 +23,7 @@ import { RoomLobbyPage } from '@/pages/RoomLobbyPage';
 import { UpdaterBridge } from '@/updater/UpdaterBridge';
 import { ThemeProvider } from '@/design/theme/ThemeProvider';
 import { useAuthStore } from '@/stores/authStore';
-import { useUiStore, applyMotionAttribute } from '@/stores/uiStore';
+import { useUiStore, applyMotionAttribute, applyTextScaleVar } from '@/stores/uiStore';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
 
@@ -157,6 +157,7 @@ export function App() {
   // sets it pre-paint; this keeps it in sync if the store hydrated to a value
   // the bootstrap didn't apply, and on every runtime change).
   const motion = useUiStore((s) => s.motion);
+  const textScale = useUiStore((s) => s.textScale);
 
   useEffect(() => {
     void hydrate();
@@ -165,6 +166,10 @@ export function App() {
   useEffect(() => {
     applyMotionAttribute(motion);
   }, [motion]);
+
+  useEffect(() => {
+    applyTextScaleVar(textScale);
+  }, [textScale]);
 
   return (
     <BrowserRouter>

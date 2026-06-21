@@ -44,6 +44,18 @@
         }
       })();
     </script>
+    <!-- Pre-paint text-scale bootstrap (add-desktop-ui-polish): set
+         --font-scale before first paint so token-based text sizes don't jump.
+         The storage key + multipliers MUST match uiStore.ts. -->
+    <script>
+      (function () {
+        try {
+          var s = localStorage.getItem('desktop.textScale');
+          var mult = { sm: 0.9, md: 1, lg: 1.15, xl: 1.3 }[s] || 1;
+          document.documentElement.style.setProperty('--font-scale', String(mult));
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body class="bg-gray-900 text-gray-100">
     <div id="root"></div>
