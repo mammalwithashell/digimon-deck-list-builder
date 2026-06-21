@@ -33,7 +33,9 @@ import { EffectPopup } from '@/components/game/EffectPopup';
 import { KeywordPromptDialog } from '@/components/game/KeywordPromptDialog';
 import { PeekButton } from '@/components/game/PeekButton';
 import { DragOverlayCard } from '@/components/game/DragOverlayCard';
+import { ConnectionStatusScreen } from '@/components/game/ConnectionStatusScreen';
 import { useWebSocketGame, type UseWebSocketGameOptions } from '@/hooks/useWebSocketGame';
+import { connectionScreenState } from '@/utils/connectionScreen';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import * as gameApi from '@/api/gameApi';
 import * as deckApiMod from '@/api/deckApi';
@@ -534,6 +536,15 @@ export function GamePage() {
     navigate('/');
   }, [clearLaunchState, navigate, store]);
 
+  // Bail out of a WebSocket game whose connection never came up. Clears the
+  // game state so we don't re-enter the dead board, then returns to the play
+  // screen (the natural retry point for PvP / vs-AI-online / spectator).
+  const handleLeaveConnection = useCallback(() => {
+    store.reset();
+    clearLaunchState();
+    navigate('/play');
+  }, [clearLaunchState, navigate, store]);
+
   const gameLogLines = useMemo(() => {
     if (!store.player1 || !store.player2) return [];
     return formatEvents(store.events, {
@@ -996,6 +1007,31 @@ export function GamePage() {
           </button>
         </div>
       </div>
+    );
+  }
+
+  // WebSocket connection gate (PvP / vs-AI-online / spectator). These modes
+  // stream state over the socket; `store.gameId` is set immediately, so the
+  // board would otherwise render and sit on "Loading game..." forever if the
+  // socket never delivers state. Show a connection-status screen until the
+  // first state_update hydrates the board, or surface a failure UI (with a
+  // retry + a way back) if the socket errors — so a dead socket (e.g. the
+  // server returning HTTP 404 on every /ws/games/... upgrade) no longer hangs
+  // both players indefinitely. Local games always resolve to 'ready'.
+  const connState = connectionScreenState({
+    useWebSocket,
+    status: ws.status,
+    retryCount: ws.retryCount,
+    boardHydrated: Boolean(store.player1 && store.player2),
+  });
+  if (connState !== 'ready') {
+    return (
+      <ConnectionStatusScreen
+        state={connState}
+        error={ws.error}
+        onRetry={ws.reconnect}
+        onLeave={handleLeaveConnection}
+      />
     );
   }
 
