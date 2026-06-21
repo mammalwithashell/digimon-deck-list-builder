@@ -88,6 +88,10 @@ pub enum ResumeSelectKind {
     /// index of `of_player` (base chosen by whether `of_player` is the
     /// controller). Binds the resolved security `CardHandle`.
     Security { of_player: PlayerId },
+    /// Own breeding-area permanent select. The single breeding permanent is
+    /// reconstructed from game state (not decoded from `action_id`); binds a
+    /// `BreedingPermanentSelectionRef`.
+    BreedingPermanent { of_player: PlayerId },
 }
 
 /// What an optional selection does when declined (PASS). Mandatory selects never
@@ -478,6 +482,133 @@ mod tests {
             "ResumeDecline::None must run NO tail on PASS"
         );
         assert!(runner.game_mut().pending_selection.is_none());
+    }
+
+    #[test]
+    fn runtail_breeding_permanent_resolves_via_data_path() {
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TEST-RESUME", "Resume Tester"))
+            .hand(0, &["TEST-RESUME"])
+            .memory(0)
+            .start();
+        runner.place_in_breeding(0, "TEST-RESUME");
+        let action_id =
+            crate::action::space::encode_breeding_select(0).expect("breeding select action id");
+        let source_card;
+        {
+            let game = runner.game_mut();
+            source_card = game.player(0).hand[0].handle();
+            let prev_phase = game.current_phase;
+            game.pending_selection = Some(PendingSelection {
+                kind: SelectionKind::BreedingPermanent,
+                selecting_player: 0,
+                previous_phase: prev_phase,
+                valid_action_ids: vec![action_id],
+                is_optional: false,
+                prompt: "spike-breeding".to_string(),
+                effect_choices: None,
+                source_card,
+                source_permanent: None,
+                source_kind: EffectSourceKind::Digimon,
+                callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
+                on_decline: None,
+                zone_owner: None,
+            });
+            game.pending_selection_resume = Some(ResumeStack {
+                frames: vec![ResumeFrame::RunTail {
+                    prov: ResumeProvenance {
+                        source_card,
+                        source_permanent: None,
+                        source_kind: EffectSourceKind::Digimon,
+                        controller: 0,
+                        override_pin: None,
+                    },
+                    select_kind: ResumeSelectKind::BreedingPermanent { of_player: 0 },
+                    bind_as: None,
+                    inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
+                    outer_tail: None,
+                    bindings: Bindings::new(),
+                    runtime: StepRuntime::default(),
+                    trigger_context: None,
+                    decline: ResumeDecline::None,
+                }],
+            });
+        }
+        let before = runner.memory();
+        runner
+            .game_mut()
+            .resolve_selection(0, action_id)
+            .expect("resolve_selection should succeed");
+        assert_eq!(
+            (runner.memory() - before).abs(),
+            5,
+            "BreedingPermanent RunTail inner tail (GainMemory 5) must execute via the data path"
+        );
+        assert!(runner.game_mut().pending_selection.is_none());
+    }
+
+    #[test]
+    fn runtail_decline_runs_decline_tail_not_inner() {
+        // ResumeDecline::RunTail runs the DECLINE tail (3), never inner_tail (5),
+        // on PASS — the dual-tail behavior breeding/union_zone rely on.
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TEST-RESUME", "Resume Tester"))
+            .hand(0, &["TEST-RESUME"])
+            .memory(0)
+            .start();
+        let source_card;
+        {
+            let game = runner.game_mut();
+            source_card = game.player(0).hand[0].handle();
+            let prev_phase = game.current_phase;
+            game.pending_selection = Some(PendingSelection {
+                kind: SelectionKind::Trash,
+                selecting_player: 0,
+                previous_phase: prev_phase,
+                valid_action_ids: vec![crate::action::space::TRASH_EFFECT_START],
+                is_optional: true,
+                prompt: "spike-dual-tail".to_string(),
+                effect_choices: None,
+                source_card,
+                source_permanent: None,
+                source_kind: EffectSourceKind::Digimon,
+                callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
+                on_decline: None,
+                zone_owner: Some(0),
+            });
+            game.pending_selection_resume = Some(ResumeStack {
+                frames: vec![ResumeFrame::RunTail {
+                    prov: ResumeProvenance {
+                        source_card,
+                        source_permanent: None,
+                        source_kind: EffectSourceKind::Digimon,
+                        controller: 0,
+                        override_pin: None,
+                    },
+                    select_kind: ResumeSelectKind::Trash { of_player: 0 },
+                    bind_as: None,
+                    inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
+                    outer_tail: None,
+                    bindings: Bindings::new(),
+                    runtime: StepRuntime::default(),
+                    trigger_context: None,
+                    decline: ResumeDecline::RunTail {
+                        tail: Arc::new(vec![CompiledStep::GainMemory(3)]),
+                        aborts_clause: false,
+                    },
+                }],
+            });
+        }
+        let before = runner.memory();
+        runner
+            .game_mut()
+            .resolve_selection(0, crate::action::space::PASS)
+            .expect("PASS should succeed");
+        assert_eq!(
+            (runner.memory() - before).abs(),
+            3,
+            "decline must run the DECLINE tail (GainMemory 3), not inner_tail (5)"
+        );
     }
 
     #[test]

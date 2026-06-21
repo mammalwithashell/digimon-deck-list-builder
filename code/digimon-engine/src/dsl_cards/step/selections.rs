@@ -430,6 +430,51 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
+                ResumeSelectKind::BreedingPermanent { of_player } => {
+                    // The single breeding permanent is reconstructed from state
+                    // (mirrors ctx.select_own_breeding_permanent), not decoded.
+                    let Some(card) = game
+                        .player(of_player)
+                        .breeding_area
+                        .as_ref()
+                        .map(|p| p.top_card().handle())
+                    else {
+                        return;
+                    };
+                    let selection_ref = crate::selection::BreedingPermanentSelectionRef {
+                        player: of_player,
+                        card,
+                    };
+                    if let Some(cd) = game.card_data_for_handle(card) {
+                        let (tid, tname) = (cd.card_id.clone(), cd.card_name.clone());
+                        crate::effect_context::selections::push_effect_target(
+                            game,
+                            prov.controller,
+                            prov.source_card,
+                            tid,
+                            tname,
+                        );
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_breeding_permanent_ref(name, selection_ref);
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
             }
         }
         ResumeFrame::MultiPickStep { .. } => {
