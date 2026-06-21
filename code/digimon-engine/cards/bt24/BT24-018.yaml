@@ -10,6 +10,12 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 6, color_is: red }
     cost: 4
+  - kind: digivolve
+    from: { name_contains: "Owen Dreadnought" }
+    cost: 6
+  - kind: digivolve
+    from: { name_contains: "Lamiamon" }
+    cost: 6
 
 effects:
   # Clause (a) — Progress keyword

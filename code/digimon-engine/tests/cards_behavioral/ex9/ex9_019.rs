@@ -60,8 +60,8 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
-    CompiledTriggeredClause,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledDeclarativeClause, CompiledScope,
+    CompiledTiming, CompiledTriggeredClause,
 };
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
@@ -138,7 +138,12 @@ fn ex9_019_compiles() {
 }
 
 #[test]
-fn ex9_019_has_one_digivolve_alt_path_lv4_blue_cost4() {
+fn ex9_019_has_five_printed_digivolve_alt_paths() {
+    // The card image + official Bandai DB (promote-official-bandai-card-source) show the
+    // two cheaper alts ARE printed: "[Digivolve] [WereGarurumon]: Cost 1" and "[Digivolve]
+    // Lv.4 w/[Garurumon] in name or w/[ADVENTURE] trait: Cost 3". The earlier "two unprinted
+    // alt-sources" note was the lossy-cards.json error this change corrects. Standard circles
+    // are Lv.4 Blue / Cost 4 + Lv.4 Black / Cost 4.
     let compiled = compiled_ex9_019();
     let digi_paths: Vec<_> = compiled
         .alt_paths
@@ -147,16 +152,25 @@ fn ex9_019_has_one_digivolve_alt_path_lv4_blue_cost4() {
         .collect();
     assert_eq!(
         digi_paths.len(),
-        1,
-        "Should have exactly the printed Lv.4 Blue / Cost 4 path \
-         (DCGO's two unprinted alt-sources are not encoded)"
+        5,
+        "expected 5 printed digivolve routes (blue/black standard cost-4, WereGarurumon \
+         name cost-1, Garurumon-name cost-3, ADVENTURE-trait cost-3), got {}",
+        digi_paths.len()
     );
-    let p = digi_paths[0];
-    assert!(matches!(
-        p.cost,
-        Some(digimon_dsl::compiled::CompiledCost::Literal(4))
-    ));
-    assert!(!p.ignore_requirements);
+    use digimon_dsl::compiled::CompiledCost::Literal;
+    // The printed Lv.4 Blue / Cost 4 standard route is still present.
+    assert!(
+        digi_paths.iter().any(|p| matches!(p.cost, Some(Literal(4)))
+            && p.from.as_ref().is_some_and(|f| f.level_eq == Some(4)
+                && f.color_is == Some(CompiledColor::Blue))),
+        "the printed Lv.4 Blue / Cost 4 standard route must remain"
+    );
+    // The cheaper [WereGarurumon] cost-1 route is now encoded.
+    assert!(
+        digi_paths.iter().any(|p| matches!(p.cost, Some(Literal(1)))
+            && p.from.as_ref().is_some_and(|f| f.name_contains.as_deref() == Some("WereGarurumon"))),
+        "the printed [WereGarurumon] cost-1 route must be encoded"
+    );
 }
 
 #[test]

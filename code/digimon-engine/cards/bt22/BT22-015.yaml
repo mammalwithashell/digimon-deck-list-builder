@@ -160,6 +160,13 @@ alt_paths:
     from: { level_eq: 6, color_is: red }
     cost: 6
 
+  # Printed alt digivolve: Lv.6 w/[CS] trait / Cost 5.
+  # From official Bandai DB (data/card_bundles/BT22-015.md) and printed card image.
+  # This is a cheaper route than the standard Lv.6 Red / Cost 6.
+  - kind: digivolve
+    from: { level_eq: 6, trait_has: CS }
+    cost: 5
+
   # DNA digivolve: Lv.6 Greymon-named + Lv.6 Garurumon-named / Cost 0.
   # Per cards.json `dna_costs` and DCGO BT22_015.cs lines 51-99 GetJogress.
   # `stacks_unsuspended: true` per DNA-digivolve convention (BT17-078 idiom).

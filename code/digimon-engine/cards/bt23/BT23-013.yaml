@@ -12,6 +12,9 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: red }
     cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: CS }
+    cost: 3
 
 effects:
   - kind: grant_keyword
