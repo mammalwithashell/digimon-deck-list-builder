@@ -10,6 +10,9 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 6, color_is: purple }
     cost: 5
+  - kind: digivolve
+    from: { name_contains: "Millenniummon" }
+    cost: 2
 
 # Printed text:
 # [On Play] [When Digivolving] Your opponent trashes cards in their hand until

@@ -70,6 +70,12 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 4, color_is: green }
     cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { name_contains: "Aegiomon" }
+    cost: 3
 
 effects:
   # ─── <Vortex> ────────────────────────────────────────────────────────────

@@ -141,13 +141,15 @@ fn place_bt22_on_field(runner: &mut DebugRunner, player: PlayerId) -> PermanentH
 // ═══════════════════════════════════════════════════════════════════════════════
 
 #[test]
-fn bt22_015_compiles_with_two_alt_paths_and_grant_keyword_and_two_triggered() {
+fn bt22_015_compiles_with_three_alt_paths_and_grant_keyword_and_two_triggered() {
     let card = compiled_bt22_015();
 
+    // Standard Lv.6/Red Digivolve (0) + printed "Lv.6 w/[CS] trait: Cost 5" alt (1,
+    // added under promote-official-bandai-card-source) + DnaDigivolve (2).
     assert_eq!(
         card.alt_paths.len(),
-        2,
-        "expected exactly 2 alt_paths (Digivolve + DnaDigivolve), got {}",
+        3,
+        "expected 3 alt_paths (Digivolve + CS-trait Digivolve + DnaDigivolve), got {}",
         card.alt_paths.len()
     );
 
@@ -201,9 +203,11 @@ fn bt22_015_first_alt_path_is_digivolve_lv6_red_cost6() {
 }
 
 #[test]
-fn bt22_015_second_alt_path_is_dna_digivolve_greymon_garurumon_cost0() {
+fn bt22_015_third_alt_path_is_dna_digivolve_greymon_garurumon_cost0() {
     let card = compiled_bt22_015();
-    let path = &card.alt_paths[1];
+    // Index 2: the CS-trait alt (index 1) was inserted between the standard route (0)
+    // and the DNA route under promote-official-bandai-card-source.
+    let path = &card.alt_paths[2];
     assert_eq!(path.kind, CompiledAltPathKind::DnaDigivolve);
     assert_eq!(
         path.cost,

@@ -10,6 +10,9 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 3, color_is: black }
     cost: 2
+  - kind: digivolve
+    from: { name_contains: "Sephirothmon" }
+    cost: 0
 
 effects:
   - when: [on_play, when_digivolving]

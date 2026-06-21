@@ -1,0 +1,25 @@
+# ParitySynthPlaySelf  (TEST-021)
+
+> Authoritative resource. Digivolution data + text are from the OFFICIAL Bandai
+> card DB (world.digimoncard.com). Stats/level from data/cards.json. Image is the
+> local mirror. Prefer this over cards.json (lossy API ingest) and over reading the
+> card image (unreliable for small digivolve circles).
+
+## Identity
+- Colors: [0]
+- Level: None
+- DP: None
+- Play cost: 2
+- Type/Traits: 
+- Form:    Attribute: 
+
+## Digivolution requirements (AUTHORITATIVE — official Bandai DB)
+### Standard digivolve cost circles
+  - (none — DigiEgg / Lv.2 base, or DNA/special only)
+
+## Printed text (official)
+
+## Image
+- C:\Users\james\Documents\DCGO_Application\Assets\Textures\Card\TEST-021.webp  (NOT in local mirror)
+
+_Source: https://world.digimoncard.com/cardlist/?search=true&card_no=TEST-021_

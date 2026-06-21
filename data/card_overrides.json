@@ -22,6 +22,10 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "attribute_eng": [
+      "Vaccine",
+      "Free"
     ]
   },
   "BT20-060": {
@@ -381,6 +385,10 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Ice-Snow",
+      "Mineral"
     ]
   },
   "EX11-027": {
@@ -783,6 +791,12 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Mutant",
+      "Iliad",
+      "TS",
+      "Angel"
     ]
   },
   "BT25-044": {
@@ -825,6 +839,14 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Login (App Name)",
+      "Login"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
     ]
   },
   "BT25-054": {
@@ -853,6 +875,14 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Super Boot (App Name)",
+      "Super Boot"
+    ],
+    "form_eng": [
+      "Ult.",
+      "Appmon"
     ]
   },
   "BT25-058": {
@@ -881,6 +911,13 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Shaman",
+      "Olympos XII",
+      "Iliad",
+      "TS",
+      "Vegetation"
     ]
   },
   "BT25-067": {
@@ -909,6 +946,14 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Logoff (App Name)",
+      "Logoff"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
     ]
   },
   "BT25-072": {
@@ -923,6 +968,14 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Forced Termination (App Name)",
+      "Forced Termination"
+    ],
+    "form_eng": [
+      "Ult.",
+      "Appmon"
     ]
   },
   "BT25-077": {
@@ -1549,6 +1602,10 @@
         "level": 6,
         "memory_cost": 6
       }
+    ],
+    "attribute_eng": [
+      "Vaccine",
+      "Free"
     ]
   },
   "BT19-008": {
@@ -1787,6 +1844,15 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Super Search (App Name)",
+      "Hero",
+      "Super Search"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
     ]
   },
   "BT21-023": {
@@ -1801,6 +1867,15 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Global (App Name)",
+      "Hero",
+      "Global"
+    ],
+    "form_eng": [
+      "Ult.",
+      "Appmon"
     ]
   },
   "BT21-073": {
@@ -1815,6 +1890,14 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Mind Control (App Name)",
+      "Mind Control"
+    ],
+    "form_eng": [
+      "Ult.",
+      "Appmon"
     ]
   },
   "BT22-015": {
@@ -1899,6 +1982,13 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Shaman",
+      "Olympos XII",
+      "Iliad",
+      "TS",
+      "Aquatic"
     ]
   },
   "BT24-040": {
@@ -1969,6 +2059,12 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "Titan",
+      "TS",
+      "Aquatic"
     ]
   },
   "BT25-019": {
@@ -1983,6 +2079,13 @@
         "level": 5,
         "memory_cost": 5
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Titan",
+      "TS",
+      "Dinosaur"
     ]
   },
   "BT25-025": {
@@ -1997,6 +2100,12 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Shaman",
+      "Iliad",
+      "TS",
+      "Cyborg"
     ]
   },
   "BT25-042": {
@@ -2011,6 +2120,12 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Virtue",
+      "Iliad",
+      "TS",
+      "Angel"
     ]
   },
   "BT25-053": {
@@ -2025,6 +2140,12 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Shaman",
+      "Iliad",
+      "TS",
+      "Vegetation"
     ]
   },
   "BT25-063": {
@@ -2109,6 +2230,11 @@
         "level": 2,
         "memory_cost": 1
       }
+    ],
+    "type_eng": [
+      "Avian",
+      "LIBERATOR",
+      "Ice-Snow"
     ]
   },
   "EX11-020": {
@@ -2249,6 +2375,11 @@
         "level": 2,
         "memory_cost": 1
       }
+    ],
+    "type_eng": [
+      "Avian",
+      "LIBERATOR",
+      "Ice-Snow"
     ]
   },
   "EX8-073": {
@@ -2464,6 +2595,14 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Super Search (App Name)",
+      "Super Search"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
     ]
   },
   "BT11-042": {
@@ -2622,6 +2761,11 @@
         "level": 2,
         "memory_cost": 0
       }
+    ],
+    "type_eng": [
+      "Reptile",
+      "LIBERATOR",
+      "Mineral"
     ]
   },
   "BT22-008": {
@@ -2747,6 +2891,12 @@
         "level": 3,
         "memory_cost": 2
       }
+    ],
+    "type_eng": [
+      "Vegetation",
+      "Iliad",
+      "TS",
+      "Ancient Bird"
     ]
   },
   "EX3-008": {
@@ -2831,6 +2981,710 @@
         "level": 2,
         "memory_cost": 0
       }
+    ]
+  },
+  "BT25-069": {
+    "type_eng": [
+      "Undead",
+      "Titan",
+      "TS",
+      "Cyborg"
+    ]
+  },
+  "AD1-005": {
+    "form_eng": [
+      "God",
+      "Appmon"
+    ]
+  },
+  "EX10-036": {
+    "type_eng": [
+      "Rock Dragon",
+      "LIBERATOR",
+      "Mineral"
+    ]
+  },
+  "BT21-009": {
+    "type_eng": [
+      "Search (App Name)",
+      "Hero",
+      "Search"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT21-024": {
+    "type_eng": [
+      "Cyborg",
+      "Dragonkin"
+    ]
+  },
+  "BT21-047": {
+    "type_eng": [
+      "Navi (App Name)",
+      "Navi"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT21-071": {
+    "type_eng": [
+      "Monitoring (App Name)",
+      "Monitoring"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT24-067": {
+    "type_eng": [
+      "Hacking (App Name)",
+      "Hacking"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT25-007": {
+    "type_eng": [
+      "Search (App Name)",
+      "Search"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT25-045": {
+    "type_eng": [
+      "Online (App Name)",
+      "Online"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT25-061": {
+    "type_eng": [
+      "Offline (App Name)",
+      "Offline"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT21-101": {
+    "type_eng": [
+      "Creation (App Name)",
+      "Creation"
+    ],
+    "form_eng": [
+      "God",
+      "Appmon"
+    ]
+  },
+  "BT25-060": {
+    "type_eng": [
+      "Reboot (App Name)",
+      "Reboot"
+    ],
+    "form_eng": [
+      "God",
+      "Appmon"
+    ]
+  },
+  "BT21-043": {
+    "type_eng": [
+      "SNS (App Name)",
+      "SNS"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT21-059": {
+    "type_eng": [
+      "Time Slip (App Name)",
+      "Time Slip"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT21-070": {
+    "type_eng": [
+      "Gossip (App Name)",
+      "Gossip"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT22-009": {
+    "type_eng": [
+      "Effect (App Name)",
+      "Effect"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT25-036": {
+    "type_eng": [
+      "Design (App Name)",
+      "Design"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT25-055": {
+    "type_eng": [
+      "Avian",
+      "Iliad",
+      "TS",
+      "Vegetation"
+    ]
+  },
+  "EX10-025": {
+    "type_eng": [
+      "Reptile",
+      "LIBERATOR",
+      "Mineral"
+    ]
+  },
+  "EX11-038": {
+    "type_eng": [
+      "Reptile",
+      "LIBERATOR",
+      "Mineral"
+    ]
+  },
+  "EX7-016": {
+    "type_eng": [
+      "Mini Dragon",
+      "Ice-Snow"
+    ]
+  },
+  "EX7-020": {
+    "type_eng": [
+      "Dragon",
+      "Ice-Snow"
+    ]
+  },
+  "EX7-021": {
+    "type_eng": [
+      "Dragonkin",
+      "Ice-Snow"
+    ]
+  },
+  "EX7-023": {
+    "type_eng": [
+      "Magic Knight",
+      "Witchelny",
+      "Ice-Snow"
+    ]
+  },
+  "EX8-047": {
+    "type_eng": [
+      "Reptile",
+      "LIBERATOR",
+      "Mineral"
+    ]
+  },
+  "BT21-005": {
+    "type_eng": [
+      "Swipe (App Name)",
+      "Swipe"
+    ]
+  },
+  "BT21-041": {
+    "type_eng": [
+      "Calendar (App Name)",
+      "Calendar"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT21-053": {
+    "type_eng": [
+      "Clock (App Name)",
+      "Clock"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT21-054": {
+    "type_eng": [
+      "Shooting (App Name)",
+      "Shooting"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT21-074": {
+    "type_eng": [
+      "GPS (App Name)",
+      "GPS"
+    ],
+    "form_eng": [
+      "Ult.",
+      "Appmon"
+    ]
+  },
+  "BT22-003": {
+    "type_eng": [
+      "Tap (App Name)",
+      "Tap"
+    ]
+  },
+  "BT22-016": {
+    "type_eng": [
+      "Broadcasting (App Name)",
+      "Broadcasting"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT22-030": {
+    "type_eng": [
+      "Music (App Name)",
+      "Music"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT22-033": {
+    "type_eng": [
+      "Media Player (App Name)",
+      "Media Player"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT22-035": {
+    "type_eng": [
+      "Entertainment (App Name)",
+      "Entertainment"
+    ],
+    "form_eng": [
+      "Ult.",
+      "Appmon"
+    ]
+  },
+  "BT22-039": {
+    "type_eng": [
+      "Awakening (App Name)",
+      "Awakening"
+    ],
+    "form_eng": [
+      "God",
+      "Appmon"
+    ]
+  },
+  "BT22-050": {
+    "type_eng": [
+      "Voice Change (App Name)",
+      "Voice Change"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT22-055": {
+    "type_eng": [
+      "Recording (App Name)",
+      "Recording"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT22-058": {
+    "type_eng": [
+      "Dream (App Name)",
+      "Dream"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT22-075": {
+    "type_eng": [
+      "Camouflage (App Name)",
+      "Camouflage"
+    ],
+    "form_eng": [
+      "Ult.",
+      "Appmon"
+    ]
+  },
+  "BT23-001": {
+    "type_eng": [
+      "Flick (App Name)",
+      "Flick"
+    ]
+  },
+  "BT23-007": {
+    "type_eng": [
+      "Muscle Training (App Name)",
+      "Muscle Training"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT23-009": {
+    "type_eng": [
+      "Training (App Name)",
+      "Leviathan",
+      "Training"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT23-016": {
+    "type_eng": [
+      "Action (App Name)",
+      "Action"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT23-021": {
+    "type_eng": [
+      "Fighting (App Name)",
+      "Fighting"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT23-022": {
+    "type_eng": [
+      "Battle (App Name)",
+      "Battle"
+    ],
+    "form_eng": [
+      "Ult.",
+      "Appmon"
+    ]
+  },
+  "BT23-024": {
+    "type_eng": [
+      "Invincible (App Name)",
+      "Invincible"
+    ],
+    "form_eng": [
+      "God",
+      "Appmon"
+    ]
+  },
+  "BT23-028": {
+    "type_eng": [
+      "Coordinate (App Name)",
+      "Coordinate"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT23-033": {
+    "type_eng": [
+      "Beauty (App Name)",
+      "Beauty"
+    ],
+    "form_eng": [
+      "Ult.",
+      "Appmon"
+    ]
+  },
+  "BT23-039": {
+    "type_eng": [
+      "Gourmet (App Name)",
+      "Gourmet"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT23-052": {
+    "type_eng": [
+      "Saving (App Name)",
+      "Saving"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT24-006": {
+    "type_eng": [
+      "Tap (App Name)",
+      "Tap"
+    ]
+  },
+  "BT24-032": {
+    "type_eng": [
+      "Warning (App Name)",
+      "Leviathan",
+      "Warning"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT24-036": {
+    "type_eng": [
+      "Medical (App Name)",
+      "Medical"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT24-038": {
+    "type_eng": [
+      "Life (App Name)",
+      "Life"
+    ],
+    "form_eng": [
+      "Ult.",
+      "Appmon"
+    ]
+  },
+  "BT24-053": {
+    "type_eng": [
+      "Security (App Name)",
+      "Security"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "BT24-056": {
+    "type_eng": [
+      "Zip/Unzip (App Name)",
+      "Zip",
+      "Unzip"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT24-057": {
+    "type_eng": [
+      "Doctor (App Name)",
+      "Doctor"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT24-071": {
+    "type_eng": [
+      "Super Hacking (App Name)",
+      "Super Hacking"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "BT24-077": {
+    "type_eng": [
+      "Restoration (App Name)",
+      "Restoration"
+    ],
+    "form_eng": [
+      "Ult.",
+      "Appmon"
+    ]
+  },
+  "BT24-079": {
+    "type_eng": [
+      "Transmutation (App Name)",
+      "Transmutation"
+    ],
+    "form_eng": [
+      "God",
+      "Appmon"
+    ]
+  },
+  "BT25-004": {
+    "type_eng": [
+      "Tap (App Name)",
+      "Tap"
+    ]
+  },
+  "EX10-001": {
+    "type_eng": [
+      "Flick (App Name)",
+      "Flick"
+    ]
+  },
+  "EX10-014": {
+    "type_eng": [
+      "Weather (App Name)",
+      "Weather"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "EX10-016": {
+    "type_eng": [
+      "Mirror (App Name)",
+      "Mirror"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "EX10-017": {
+    "type_eng": [
+      "Stealth (App Name)",
+      "Leviathan",
+      "Stealth"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "EX10-019": {
+    "type_eng": [
+      "Strategy (App Name)",
+      "Leviathan",
+      "Strategy"
+    ],
+    "form_eng": [
+      "Ult.",
+      "Appmon"
+    ]
+  },
+  "EX10-024": {
+    "type_eng": [
+      "Wallpaper (App Name)",
+      "Wallpaper"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "EX10-029": {
+    "type_eng": [
+      "Transmission (App Name)",
+      "Transmission"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "EX10-030": {
+    "type_eng": [
+      "Astronomy (App Name)",
+      "Leviathan",
+      "Astronomy"
+    ],
+    "form_eng": [
+      "Ult.",
+      "Appmon"
+    ]
+  },
+  "EX10-038": {
+    "type_eng": [
+      "Copy & Paste (App Name)",
+      "Leviathan",
+      "Copy &amp; Paste"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
+    ]
+  },
+  "EX10-043": {
+    "type_eng": [
+      "Simulation (App Name)",
+      "Leviathan",
+      "Simulation"
+    ],
+    "form_eng": [
+      "Sup.",
+      "Appmon"
+    ]
+  },
+  "EX10-073": {
+    "type_eng": [
+      "Omnipotence (App Name)",
+      "Leviathan",
+      "Omnipotence"
+    ],
+    "form_eng": [
+      "God",
+      "Appmon"
+    ]
+  },
+  "EX11-006": {
+    "type_eng": [
+      "Flick (App Name)",
+      "LIBERATOR",
+      "Flick"
+    ]
+  },
+  "P-190": {
+    "type_eng": [
+      "Tweet (App Name)",
+      "Tweet"
+    ],
+    "form_eng": [
+      "Stnd.",
+      "Appmon"
     ]
   }
 }

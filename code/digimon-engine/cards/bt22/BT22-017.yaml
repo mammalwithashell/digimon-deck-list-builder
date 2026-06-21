@@ -121,6 +121,17 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 2, color_is: blue }
     cost: 0
+  # Standard printed digivolve: Lv.2 Red / cost 0 (per bundle).
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  # Printed alt evo box: "[Digivolve] [Tsunomon]/Lv.2 w/[CS] trait: Cost 0".
+  # TRAIT-gated alt — same cost as standard routes; the base must carry [CS] trait.
+  # Per EX11-017/P-215 idiom: one alt_path with trait_has predicate, no color restriction.
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: CS }
+    cost: 0
+
 
 effects:
   # ─── Clause (B) — [On Play] Reveal 3 + two-bucket selection ────────────────

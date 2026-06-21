@@ -57,8 +57,15 @@ attribute: Data
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 5, color_is: purple }
+    from: { level_eq: 5, color_is: black }
     cost: 3
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: CS }
+    cost: 3
+
 
 effects:
   # ─── Cost reduction: return 3 named trash cards to deck top/bottom, −5 ───────

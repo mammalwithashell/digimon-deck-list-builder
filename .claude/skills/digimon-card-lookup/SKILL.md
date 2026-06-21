@@ -56,24 +56,43 @@ A card missing from the local mirror is auto-downloaded from the digimoncard.io 
   machine-readable **`data/card_official.json`**). `resolve_cards.py` prints the bundle
   path when one exists — `Read` it for digivolve costs. To (re)generate a bundle for a
   card not yet covered: `python code/tools/build_card_bundles.py --ids <ID>`.
+- **Traits / type / attribute** — **use the official bundle, NOT cards.json alone.** Some
+  cards grant themselves an extra trait via a printed **`(Rule) Trait: Has [X] Type.`** /
+  **`Has [X] attribute.`** clause that is *not in the trait line under the name* — the
+  digimoncard.io API drops it entirely, so `cards.json` `type_eng`/`attribute_eng` is
+  missing it (e.g. the Ice-Snow dragons EX7-016/020/021/023, EX11-014/EX8-019; the
+  Mineral/Rock LIBERATOR line; the Iliad/TS cards; `[Free]`-attribute Royal Knights). The
+  API also drops the **`form` field**, so the Appmon mechanic trait (printed in form as
+  `<grade>/Appmon`, required by ~37 cards) is missing too. The official bundle preserves
+  both. Reconcile into `card_overrides.json` with
+  `code/tools/audit_digivolve/reconcile_traits.py`.
 - **Printed text** ("what does it say"): the **card image** is authoritative → the bundle's
   official text → `data/card_overrides.json` → `data/cards.json`.
 - **Behavior** ("how does it resolve"): keep following the project's source-priority
   chain — DCGO C# → `general_rule.pdf` → fandom wiki. The image tells you the text;
   DCGO/rules tell you how that text actually plays out.
 
-### Authoritative digivolution data — tooling
+### Authoritative card data — tooling
 
-The flaky-API problem (cards.json drops off-colour digivolve circles; vision misreads
-them) is solved by sourcing from the **official Bandai card DB** (`world.digimoncard.com`):
+The flaky-API problem (cards.json drops off-colour digivolve circles, AND the
+`(Rule) Trait: Has [X] Type/attribute.` grants entirely; vision misreads small print) is
+solved by sourcing from the **official Bandai card DB** (`world.digimoncard.com`) — the
+publisher's ground truth for printed data, which outranks both cards.json and DCGO for
+*what a card prints* (traits, costs, text, official Q&A):
 
 - `code/tools/scrape_official_evo_costs.py` — scrape authoritative `evo_costs` per card.
 - `code/tools/build_card_bundles.py` — build the full `data/card_bundles/<ID>.md` resource
-  (standard cost circles + Special Digivolution Condition + official text + image path) and
-  the `data/card_official.json` index.
+  (standard cost circles + Special Digivolution Condition + official text + traits + image
+  path) and the `data/card_official.json` index.
+- `code/tools/audit_digivolve/reconcile_traits.py` — reconcile traits the API drops
+  (`(Rule) Trait: Has [X]` grants + the dropped `form` field, e.g. Appmon) out of
+  `card_official.json` into `type_eng`/`form_eng`/`attribute_eng` corrections in
+  `card_overrides.json` (`--apply`); each emitted field is a superset of the current one
+  (no dropped traits), and DSL specs declaring a trait the official DB lacks are reported
+  for a YAML fix.
 
 When implementing a card or writing a real-card test/scenario, prefer the bundle's
-`evo_costs` over cards.json — they are the publisher's ground truth.
+`evo_costs` and traits over cards.json — they are the publisher's ground truth.
 
 ## Useful flags
 

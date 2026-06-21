@@ -166,7 +166,8 @@
       "Creation"
     ],
     "form_eng": [
-      "God"
+      "God",
+      "Appmon"
     ],
     "attribute_eng": [
       "God"
@@ -932,7 +933,7 @@
     "attribute_eng": [
       "Vaccine"
     ],
-    "effect_description_eng": "＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Partition ([WarGreymon] & [MetalGarurumon])＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)\r\n[On Play] [When Digivolving] Return all of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck. Then, delete 1 of your opponent's Digimon.\r\n[All Turns] [Once Per Turn] When any of your opponent's Digimon leave the battle area, trash 1 of their Option cards in the battle area and trash their top security card.",
+    "effect_description_eng": "[Assembly] -6 [WarGreymon] x [MetalGarurumon]\n(You may play this card by placing the specified cards from your trash under it as its digivolution cards, reducing the play cost by the specified amount.)\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Partition ([WarGreymon] & [MetalGarurumon])＞ (When this Digimon with each of the specified digivolution cards would leave the battle area other than by your own effects or by battle, you may play 1 each of the specified cards without paying the costs.)\r\n[On Play] [When Digivolving] Return all of your opponent's Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck. Then, delete 1 of your opponent's Digimon.\r\n[All Turns] [Once Per Turn] When any of your opponent's Digimon leave the battle area, trash 1 of their Option cards in the battle area and trash their top security card.",
     "inherited_effect_description_eng": "",
     "security_effect_description_eng": "",
     "evo_costs": [
@@ -61455,7 +61456,8 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Vaccine"
+      "Vaccine",
+      "Free"
     ],
     "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n＜Armor Purge＞ (When this Digimon would be deleted, you may trash the top card of this Digimon to prevent that deletion.)\r\n[When Digivolving] If [Magnamon (X Antibody)] or an [Armor Form] trait card is in this Digimon's digivolution cards, until the end of your opponent's turn, this Digimon gets +3000 DP and isn't affected by your opponent's effects. Then, unsuspend it.\r\n[All Turns] [Once Per Turn] When a card is removed from a security stack, you may activate 1 of this Digimon's [When Digivolving] effects.",
     "inherited_effect_description_eng": "",
@@ -64261,7 +64263,8 @@
     ],
     "form_eng": [],
     "attribute_eng": [
-      "Vaccine"
+      "Vaccine",
+      "Free"
     ],
     "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n[On Play] [When Digivolving] Trash all digivolution cards of all of your opponent's Digimon. Then, return all cards from your or your opponent's trash to the bottom of the deck. If this effect returned a white level 7 card, gain 3 memory.\r\n[When Attacking] By returning 1 of your opponent's Digimon with no digivolution cards to the bottom of the deck, unsuspend this Digimon.",
     "inherited_effect_description_eng": "Ace Overflow ＜-5＞ (As this card moves from the field or under a card to an area other than those, lose 5 memory.)",
@@ -76494,7 +76497,8 @@
       3
     ],
     "type_eng": [
-      "Swipe (App Name)"
+      "Swipe (App Name)",
+      "Swipe"
     ],
     "form_eng": [
       "Appmon"
@@ -76625,10 +76629,12 @@
     ],
     "type_eng": [
       "Search (App Name)",
-      "Hero"
+      "Hero",
+      "Search"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Social"
@@ -76965,10 +76971,12 @@
     ],
     "type_eng": [
       "Super Search (App Name)",
-      "Hero"
+      "Hero",
+      "Super Search"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Social"
@@ -77159,10 +77167,12 @@
     ],
     "type_eng": [
       "Global (App Name)",
-      "Hero"
+      "Hero",
+      "Global"
     ],
     "form_eng": [
-      "Ult."
+      "Ult.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Social"
@@ -77201,7 +77211,8 @@
       0
     ],
     "type_eng": [
-      "Cyborg"
+      "Cyborg",
+      "Dragonkin"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -77843,10 +77854,12 @@
       2
     ],
     "type_eng": [
-      "Calendar (App Name)"
+      "Calendar (App Name)",
+      "Calendar"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Tool"
@@ -77921,10 +77934,12 @@
       2
     ],
     "type_eng": [
-      "SNS (App Name)"
+      "SNS (App Name)",
+      "SNS"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Social"
@@ -78073,10 +78088,12 @@
       3
     ],
     "type_eng": [
-      "Navi (App Name)"
+      "Navi (App Name)",
+      "Navi"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Navi"
@@ -78293,10 +78310,12 @@
       5
     ],
     "type_eng": [
-      "Clock (App Name)"
+      "Clock (App Name)",
+      "Clock"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Tool"
@@ -78330,10 +78349,12 @@
       5
     ],
     "type_eng": [
-      "Shooting (App Name)"
+      "Shooting (App Name)",
+      "Shooting"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Game"
@@ -78368,7 +78389,8 @@
     ],
     "type_eng": [
       "Reptile",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Mineral"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -78511,10 +78533,12 @@
       5
     ],
     "type_eng": [
-      "Time Slip (App Name)"
+      "Time Slip (App Name)",
+      "Time Slip"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Tool"
@@ -78911,10 +78935,12 @@
       6
     ],
     "type_eng": [
-      "Gossip (App Name)"
+      "Gossip (App Name)",
+      "Gossip"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Social"
@@ -78948,10 +78974,12 @@
       6
     ],
     "type_eng": [
-      "Monitoring (App Name)"
+      "Monitoring (App Name)",
+      "Monitoring"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Tool"
@@ -79028,10 +79056,12 @@
       5
     ],
     "type_eng": [
-      "Mind Control (App Name)"
+      "Mind Control (App Name)",
+      "Mind Control"
     ],
     "form_eng": [
-      "Ult."
+      "Ult.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Social"
@@ -79071,10 +79101,12 @@
       5
     ],
     "type_eng": [
-      "GPS (App Name)"
+      "GPS (App Name)",
+      "GPS"
     ],
     "form_eng": [
-      "Ult."
+      "Ult.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Navi"
@@ -79862,10 +79894,12 @@
       0
     ],
     "type_eng": [
-      "Creation (App Name)"
+      "Creation (App Name)",
+      "Creation"
     ],
     "form_eng": [
-      "God"
+      "God",
+      "Appmon"
     ],
     "attribute_eng": [
       "God"
@@ -79983,7 +80017,8 @@
       2
     ],
     "type_eng": [
-      "Tap (App Name)"
+      "Tap (App Name)",
+      "Tap"
     ],
     "form_eng": [
       "Appmon"
@@ -80168,10 +80203,12 @@
       0
     ],
     "type_eng": [
-      "Effect (App Name)"
+      "Effect (App Name)",
+      "Effect"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Entertainment"
@@ -80455,10 +80492,12 @@
       1
     ],
     "type_eng": [
-      "Broadcasting (App Name)"
+      "Broadcasting (App Name)",
+      "Broadcasting"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Navi"
@@ -80970,10 +81009,12 @@
       2
     ],
     "type_eng": [
-      "Music (App Name)"
+      "Music (App Name)",
+      "Music"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Entertainment"
@@ -81081,10 +81122,12 @@
       1
     ],
     "type_eng": [
-      "Media Player (App Name)"
+      "Media Player (App Name)",
+      "Media Player"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Entertainment"
@@ -81155,10 +81198,12 @@
       5
     ],
     "type_eng": [
-      "Entertainment (App Name)"
+      "Entertainment (App Name)",
+      "Entertainment"
     ],
     "form_eng": [
-      "Ult."
+      "Ult.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Entertainment"
@@ -81302,10 +81347,12 @@
       4
     ],
     "type_eng": [
-      "Awakening (App Name)"
+      "Awakening (App Name)",
+      "Awakening"
     ],
     "form_eng": [
-      "God"
+      "God",
+      "Appmon"
     ],
     "attribute_eng": [
       "God"
@@ -81704,10 +81751,12 @@
       3
     ],
     "type_eng": [
-      "Voice Change (App Name)"
+      "Voice Change (App Name)",
+      "Voice Change"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Tool"
@@ -81887,10 +81936,12 @@
       5
     ],
     "type_eng": [
-      "Recording (App Name)"
+      "Recording (App Name)",
+      "Recording"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Tool"
@@ -81997,10 +82048,12 @@
       5
     ],
     "type_eng": [
-      "Dream (App Name)"
+      "Dream (App Name)",
+      "Dream"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Entertainment"
@@ -82626,10 +82679,12 @@
       3
     ],
     "type_eng": [
-      "Camouflage (App Name)"
+      "Camouflage (App Name)",
+      "Camouflage"
     ],
     "form_eng": [
-      "Ult."
+      "Ult.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Tool"
@@ -83441,7 +83496,8 @@
       1
     ],
     "type_eng": [
-      "Flick (App Name)"
+      "Flick (App Name)",
+      "Flick"
     ],
     "form_eng": [
       "Appmon"
@@ -83628,10 +83684,12 @@
       0
     ],
     "type_eng": [
-      "Muscle Training (App Name)"
+      "Muscle Training (App Name)",
+      "Muscle Training"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Life"
@@ -83707,10 +83765,12 @@
     ],
     "type_eng": [
       "Training (App Name)",
-      "Leviathan"
+      "Leviathan",
+      "Training"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Game"
@@ -83964,10 +84024,12 @@
       1
     ],
     "type_eng": [
-      "Action (App Name)"
+      "Action (App Name)",
+      "Action"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Game"
@@ -84155,10 +84217,12 @@
       3
     ],
     "type_eng": [
-      "Fighting (App Name)"
+      "Fighting (App Name)",
+      "Fighting"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Game"
@@ -84193,10 +84257,12 @@
       0
     ],
     "type_eng": [
-      "Battle (App Name)"
+      "Battle (App Name)",
+      "Battle"
     ],
     "form_eng": [
-      "Ult."
+      "Ult.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Game"
@@ -84267,10 +84333,12 @@
       4
     ],
     "type_eng": [
-      "Invincible (App Name)"
+      "Invincible (App Name)",
+      "Invincible"
     ],
     "form_eng": [
-      "God"
+      "God",
+      "Appmon"
     ],
     "attribute_eng": [
       "God"
@@ -84410,10 +84478,12 @@
       2
     ],
     "type_eng": [
-      "Coordinate (App Name)"
+      "Coordinate (App Name)",
+      "Coordinate"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Entertainment"
@@ -84619,10 +84689,12 @@
       5
     ],
     "type_eng": [
-      "Beauty (App Name)"
+      "Beauty (App Name)",
+      "Beauty"
     ],
     "form_eng": [
-      "Ult."
+      "Ult.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Life"
@@ -84856,10 +84928,12 @@
       3
     ],
     "type_eng": [
-      "Gourmet (App Name)"
+      "Gourmet (App Name)",
+      "Gourmet"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Entertainment"
@@ -85376,10 +85450,12 @@
       5
     ],
     "type_eng": [
-      "Saving (App Name)"
+      "Saving (App Name)",
+      "Saving"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Life"
@@ -87175,7 +87251,8 @@
       6
     ],
     "type_eng": [
-      "Tap (App Name)"
+      "Tap (App Name)",
+      "Tap"
     ],
     "form_eng": [
       "Appmon"
@@ -88053,7 +88130,8 @@
       "Shaman",
       "Olympos XII",
       "Iliad",
-      "TS"
+      "TS",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -88131,10 +88209,12 @@
     ],
     "type_eng": [
       "Warning (App Name)",
-      "Leviathan"
+      "Leviathan",
+      "Warning"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "System"
@@ -88284,10 +88364,12 @@
       2
     ],
     "type_eng": [
-      "Medical (App Name)"
+      "Medical (App Name)",
+      "Medical"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Life"
@@ -88387,10 +88469,12 @@
       3
     ],
     "type_eng": [
-      "Life (App Name)"
+      "Life (App Name)",
+      "Life"
     ],
     "form_eng": [
-      "Ult."
+      "Ult.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Life"
@@ -88965,10 +89049,12 @@
       5
     ],
     "type_eng": [
-      "Security (App Name)"
+      "Security (App Name)",
+      "Security"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "System"
@@ -89080,10 +89166,13 @@
       5
     ],
     "type_eng": [
-      "Zip/Unzip (App Name)"
+      "Zip/Unzip (App Name)",
+      "Zip",
+      "Unzip"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "System"
@@ -89117,10 +89206,12 @@
       5
     ],
     "type_eng": [
-      "Doctor (App Name)"
+      "Doctor (App Name)",
+      "Doctor"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Life"
@@ -89194,7 +89285,8 @@
     "type_eng": [
       "Cyborg",
       "Titan",
-      "TS"
+      "TS",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -89494,10 +89586,12 @@
       6
     ],
     "type_eng": [
-      "Hacking (App Name)"
+      "Hacking (App Name)",
+      "Hacking"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "System"
@@ -89637,10 +89731,12 @@
       0
     ],
     "type_eng": [
-      "Super Hacking (App Name)"
+      "Super Hacking (App Name)",
+      "Super Hacking"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "System"
@@ -89858,10 +89954,12 @@
       0
     ],
     "type_eng": [
-      "Restoration (App Name)"
+      "Restoration (App Name)",
+      "Restoration"
     ],
     "form_eng": [
-      "Ult."
+      "Ult.",
+      "Appmon"
     ],
     "attribute_eng": [
       "System"
@@ -89927,10 +90025,12 @@
       4
     ],
     "type_eng": [
-      "Transmutation (App Name)"
+      "Transmutation (App Name)",
+      "Transmutation"
     ],
     "form_eng": [
-      "God"
+      "God",
+      "Appmon"
     ],
     "attribute_eng": [
       "God"
@@ -90745,7 +90845,8 @@
       3
     ],
     "type_eng": [
-      "Tap (App Name)"
+      "Tap (App Name)",
+      "Tap"
     ],
     "form_eng": [
       "Appmon"
@@ -90835,10 +90936,12 @@
       0
     ],
     "type_eng": [
-      "Search (App Name)"
+      "Search (App Name)",
+      "Search"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Social"
@@ -91340,7 +91443,8 @@
       "Cyborg",
       "X Antibody",
       "Titan",
-      "TS"
+      "TS",
+      "Dinosaur"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -91578,7 +91682,8 @@
     "type_eng": [
       "Shaman",
       "Iliad",
-      "TS"
+      "TS",
+      "Cyborg"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -92001,10 +92106,12 @@
       2
     ],
     "type_eng": [
-      "Design (App Name)"
+      "Design (App Name)",
+      "Design"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Tool"
@@ -92086,7 +92193,8 @@
     "type_eng": [
       "Mutant",
       "Iliad",
-      "TS"
+      "TS",
+      "Angel"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -92263,7 +92371,8 @@
     "type_eng": [
       "Virtue",
       "Iliad",
-      "TS"
+      "TS",
+      "Angel"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -92384,10 +92493,12 @@
       3
     ],
     "type_eng": [
-      "Online (App Name)"
+      "Online (App Name)",
+      "Online"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Game"
@@ -92576,7 +92687,8 @@
     "type_eng": [
       "Vegetation",
       "Iliad",
-      "TS"
+      "TS",
+      "Ancient Bird"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -92655,10 +92767,12 @@
       0
     ],
     "type_eng": [
-      "Login (App Name)"
+      "Login (App Name)",
+      "Login"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Social"
@@ -92700,7 +92814,8 @@
     "type_eng": [
       "Shaman",
       "Iliad",
-      "TS"
+      "TS",
+      "Vegetation"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -92785,7 +92900,8 @@
     "type_eng": [
       "Avian",
       "Iliad",
-      "TS"
+      "TS",
+      "Vegetation"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -92821,10 +92937,12 @@
       2
     ],
     "type_eng": [
-      "Super Boot (App Name)"
+      "Super Boot (App Name)",
+      "Super Boot"
     ],
     "form_eng": [
-      "Ult."
+      "Ult.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Tool"
@@ -92948,7 +93066,8 @@
       "Shaman",
       "Olympos XII",
       "Iliad",
-      "TS"
+      "TS",
+      "Vegetation"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -92989,10 +93108,12 @@
       4
     ],
     "type_eng": [
-      "Reboot (App Name)"
+      "Reboot (App Name)",
+      "Reboot"
     ],
     "form_eng": [
-      "God"
+      "God",
+      "Appmon"
     ],
     "attribute_eng": [
       "God"
@@ -93026,10 +93147,12 @@
       5
     ],
     "type_eng": [
-      "Offline (App Name)"
+      "Offline (App Name)",
+      "Offline"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Game"
@@ -93336,7 +93459,8 @@
     "type_eng": [
       "Undead",
       "Titan",
-      "TS"
+      "TS",
+      "Cyborg"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -93372,10 +93496,12 @@
       6
     ],
     "type_eng": [
-      "Logoff (App Name)"
+      "Logoff (App Name)",
+      "Logoff"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Social"
@@ -93452,10 +93578,12 @@
       6
     ],
     "type_eng": [
-      "Forced Termination (App Name)"
+      "Forced Termination (App Name)",
+      "Forced Termination"
     ],
     "form_eng": [
-      "Ult."
+      "Ult.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Tool"
@@ -110275,7 +110403,8 @@
       1
     ],
     "type_eng": [
-      "Mini Dragon"
+      "Mini Dragon",
+      "Ice-Snow"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -110411,7 +110540,8 @@
       1
     ],
     "type_eng": [
-      "Dragon"
+      "Dragon",
+      "Ice-Snow"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -110446,7 +110576,8 @@
       1
     ],
     "type_eng": [
-      "Dragonkin"
+      "Dragonkin",
+      "Ice-Snow"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -110518,7 +110649,8 @@
     ],
     "type_eng": [
       "Magic Knight",
-      "Witchelny"
+      "Witchelny",
+      "Ice-Snow"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -112927,7 +113059,8 @@
     ],
     "type_eng": [
       "Avian",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Ice-Snow"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -114073,7 +114206,8 @@
     ],
     "type_eng": [
       "Reptile",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Mineral"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -117815,7 +117949,8 @@
       3
     ],
     "type_eng": [
-      "Flick (App Name)"
+      "Flick (App Name)",
+      "Flick"
     ],
     "form_eng": [
       "Appmon"
@@ -118236,10 +118371,12 @@
       2
     ],
     "type_eng": [
-      "Weather (App Name)"
+      "Weather (App Name)",
+      "Weather"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Navi"
@@ -118333,10 +118470,12 @@
       3
     ],
     "type_eng": [
-      "Mirror (App Name)"
+      "Mirror (App Name)",
+      "Mirror"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Tool"
@@ -118372,10 +118511,12 @@
     ],
     "type_eng": [
       "Stealth (App Name)",
-      "Leviathan"
+      "Leviathan",
+      "Stealth"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "System"
@@ -118447,10 +118588,12 @@
     ],
     "type_eng": [
       "Strategy (App Name)",
-      "Leviathan"
+      "Leviathan",
+      "Strategy"
     ],
     "form_eng": [
-      "Ult."
+      "Ult.",
+      "Appmon"
     ],
     "attribute_eng": [
       "System"
@@ -118624,10 +118767,12 @@
       5
     ],
     "type_eng": [
-      "Wallpaper (App Name)"
+      "Wallpaper (App Name)",
+      "Wallpaper"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "System"
@@ -118662,7 +118807,8 @@
     ],
     "type_eng": [
       "Reptile",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Mineral"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -118809,10 +118955,12 @@
       5
     ],
     "type_eng": [
-      "Transmission (App Name)"
+      "Transmission (App Name)",
+      "Transmission"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "System"
@@ -118848,10 +118996,12 @@
     ],
     "type_eng": [
       "Astronomy (App Name)",
-      "Leviathan"
+      "Leviathan",
+      "Astronomy"
     ],
     "form_eng": [
-      "Ult."
+      "Ult.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Navi"
@@ -119097,7 +119247,8 @@
     ],
     "type_eng": [
       "Rock Dragon",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Mineral"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -119168,10 +119319,12 @@
     ],
     "type_eng": [
       "Copy & Paste (App Name)",
-      "Leviathan"
+      "Leviathan",
+      "Copy &amp; Paste"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "System"
@@ -119350,10 +119503,12 @@
     ],
     "type_eng": [
       "Simulation (App Name)",
-      "Leviathan"
+      "Leviathan",
+      "Simulation"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Game"
@@ -120431,10 +120586,12 @@
     ],
     "type_eng": [
       "Omnipotence (App Name)",
-      "Leviathan"
+      "Leviathan",
+      "Omnipotence"
     ],
     "form_eng": [
-      "God"
+      "God",
+      "Appmon"
     ],
     "attribute_eng": [
       "God"
@@ -120648,7 +120805,8 @@
     ],
     "type_eng": [
       "Flick (App Name)",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Flick"
     ],
     "form_eng": [
       "Appmon"
@@ -120936,7 +121094,8 @@
     ],
     "type_eng": [
       "Avian",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Ice-Snow"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -121868,7 +122027,8 @@
     ],
     "type_eng": [
       "Reptile",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Mineral"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -131774,10 +131934,12 @@
       1
     ],
     "type_eng": [
-      "Tweet (App Name)"
+      "Tweet (App Name)",
+      "Tweet"
     ],
     "form_eng": [
-      "Stnd."
+      "Stnd.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Social"
@@ -132596,7 +132758,8 @@
       5
     ],
     "type_eng": [
-      "Ice-Snow"
+      "Ice-Snow",
+      "Mineral"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -145248,10 +145411,12 @@
       1
     ],
     "type_eng": [
-      "Super Search (App Name)"
+      "Super Search (App Name)",
+      "Super Search"
     ],
     "form_eng": [
-      "Sup."
+      "Sup.",
+      "Appmon"
     ],
     "attribute_eng": [
       "Social"

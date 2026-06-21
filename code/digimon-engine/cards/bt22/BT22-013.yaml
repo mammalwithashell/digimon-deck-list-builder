@@ -99,19 +99,17 @@
 #       on this card's own printed name. So the inherited only fires when
 #       BT22-013 is buried under an Omnimon-named top card.
 #
-# ─── Printed cost vs DCGO `digivolutionCost: 3` divergence (Clause 1) ────────
+# ─── Printed digivolution routes (Clause 1) ─────────────────────────────────
 #
-# Printed cards.json `evo_costs` for BT22-013 shows `{ level: 5, color: red,
-# memory_cost: 4 }` — the published Lv.5/Red digivolution cost is 4. DCGO's
-# `AddSelfDigivolutionRequirementStaticEffect(... digivolutionCost: 3 ...)`
-# adds a Lv.5 + (CS-trait || Greymon-name) source at cost 3, narrower than
-# the printed cost block. Per source priority (printed text wins over DCGO),
-# we encode the printed standard alt-path: `from: { level_eq: 5 }` at cost 4.
-#
-# The DCGO Lv.5 + CS/Greymon source-at-cost-3 is treated as an unprinted
-# implementation alt-source; it's not a printed text element so we do NOT
-# encode it in YAML. If a future erratum aligns printed and DCGO costs, the
-# alt-path can be tightened to `from: { level_eq: 5, any_of: [...] }`.
+# CORRECTED 2026-06-21 (promote-official-bandai-card-source): the card image and the
+# official Bandai DB both PRINT a cost-3 alt box — "[Digivolve] Lv.5 w/[Greymon] in
+# name or w/[CS] trait: Cost 3" — in ADDITION to the standard Lv.5/Red cost-4 circle.
+# An earlier note here wrongly treated the cost-3 route as "unprinted DCGO-only",
+# reasoning from `cards.json` evo_costs (which carries only the cost-4 standard row —
+# the digimoncard.io API drops the printed special-digivolution box). That was exactly
+# the lossy-cards.json error this change fixes: the official DB outranks cards.json for
+# printed data. Both routes are now encoded below: the standard `from: { level_eq: 5 }`
+# at cost 4, plus the printed Greymon-name and CS-trait routes at cost 3.
 #
 # ─── [Hand][Main] Nokia jump — modelled as a `main_from_hand` clause ─────────
 #
@@ -180,6 +178,15 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5 }
     cost: 4
+  # Printed alt evo box: "[Digivolve] Lv.5 w/[Greymon] in name or w/[CS] trait: Cost 3".
+  # DCGO gates on (CS-trait || Greymon-name) && Lv.5 — no color restriction.
+  # Encoded as two alt_paths (one per branch of the disjunction), matching P-215 idiom.
+  - kind: digivolve
+    from: { level_eq: 5, name_contains: "Greymon" }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: CS }
+    cost: 3
 
 effects:
   # ─── Clause 1 — [Hand][Main] Nokia jump (main_from_hand) ──────────────────
