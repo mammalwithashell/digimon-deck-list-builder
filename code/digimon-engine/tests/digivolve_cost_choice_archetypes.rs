@@ -297,11 +297,23 @@ fn ex8_028_skadimon_blue_ice_snow_base_prompts_4_vs_3() {
     assert_cost_choice("EX8-028", base("B", 5, CardColor::Blue, true), 3, 4);
 }
 
-// NOTE: Icemon (P-215) is intentionally NOT covered here. Its printed alt
-// "[Digivolve] Lv.3 w/[Ice-Snow]/[Mineral]/[Rock] trait: Cost 2" is authored in the YAML
-// as COLOUR-gated (`from: { color_is: blue/black }`) rather than TRAIT-gated, so the
-// trait-based cost choice does not surface as printed — a separate authoring bug flagged
-// for follow-up, not exercised by this suite.
+// ─── Icemon (P-215) — standard Lv.3 (cost 3) vs Lv.3 w/[Ice-Snow/Mineral/Rock] (cost 2) ─
+// The alt is now TRAIT-gated (fixed: was mis-authored colour-gated). A blue Lv.3 base
+// with one of the three traits satisfies both routes → {3,2}; without the trait, only
+// the standard cost 3 (the over-permissive colour-gated cost 2 is gone).
+
+#[test]
+fn p_215_icemon_blue_ice_snow_base_prompts_3_vs_2() {
+    assert_cost_choice("P-215", base("B", 3, CardColor::Blue, true), 2, 3);
+}
+#[test]
+fn p_215_icemon_blue_non_trait_no_prompt_cost_3() {
+    assert_no_prompt("P-215", base("B", 3, CardColor::Blue, false), 3);
+}
+#[test]
+fn p_215_icemon_offcolour_ice_snow_no_prompt_cost_2() {
+    assert_no_prompt("P-215", base("B", 3, CardColor::Red, true), 2);
+}
 
 // ─── Capstone: production-data base (the trait-recovery end-to-end proof) ──────
 
