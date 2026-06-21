@@ -2,6 +2,11 @@
 
 Incremental, parity-guarded. The data-VM and legacy closure executor coexist behind a per-effect switch until the pool is fully migrated; every batch stays green against `cards_behavioral` + archetype interaction tests + the DCGO recording parity harness before proceeding.
 
+## 0. Prerequisites & de-risking spike
+
+- [ ] 0.1 **Sequence after the in-flight DSL consolidations** (`collapse-dsl-step-idioms`, `unify-dsl-scalar-and-comparators`, `fix-dsl-substrate-rot-and-bugs`). They reshape the exact selection-installer / trampoline / verb surface this change defunctionalizes — landing them first shrinks the conversion (fewer callback shapes, one fewer budget trampoline) and drives **active `raw_rust` to zero** (so D7's clone-safety constraint has nothing to constrain). Starting concurrently risks merge conflicts on `dsl_cards/step/` and the rule-31 shared-target contamination class.
+- [ ] 0.2 **De-risking spike:** defunctionalize ONE recursive trampoline (`count_capped` — exercises the multi-pick accumulator, composition, and the decline path) plus one composition site, behind the coexistence switch (`callback: Option<Box<dyn FnOnce>>` AND `resume: Option<ResumeStack>`, run whichever is set). Assert clone-then-replay-equals-original against the DCGO parity oracle on a card that uses it. Validates the frame-stack design before committing to the full-pool migration.
+
 ## 1. Foundations (no behavior change)
 
 - [ ] 1.1 `Arc`-share the immutable registries on the clone path: `card_data`, `effect_registry`, `formula_extensions`, `token_registry`, `alt_path_registry`, `rules`, `logger` (matches `reset_for_replay`'s immutable set).

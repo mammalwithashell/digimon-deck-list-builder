@@ -1,0 +1,34 @@
+## Why
+
+The current pilot is **model-free PPO (SB3)**: no forward model, no test-time search. The `add-model-evaluation-harness` change already concluded that the principled treatments of hidden-information play (Deep CFR / ReBeL / Player of Games) and AlphaZero-style search are **gated on a cloneable engine** (`make-engine-cloneable`). This proposal captures the layer that sits on top of that gate: **determinized neural Monte-Carlo Tree Search** for materially stronger play, a measurable robustness signal, and — riding the same value network — a **chess-style game-review annotator** (brilliant / blunder / inaccuracy).
+
+Digimon TCG is **not** an AlphaZero-shaped game: it has hidden information (opponent hand, both decks' order, face-down security) and stochasticity (shuffles, draws, security checks). Pointing vanilla MCTS at the true `Game` would let the search see hidden cards and learn an invalid X-ray-vision policy. The correct family is **determinized / Information-Set MCTS**: sample worlds consistent with the searching player's *infoset*, search each as a perfect-information game, aggregate. The engine already anticipates the seam — `opaque_deck::RevealSource` is documented as *"a sampler over the multiset (for RL inference)"* — and `server/state_filter.py` already computes the infoset boundary for PvP (what one player may observe of the other). This change turns those into a determinization layer, a search core, a self-play training loop, and a review tool.
+
+## What Changes
+
+- **Game-state determinization** — extract an `Infoset` for a viewing player (the inverse of `state_filter`'s redaction), then materialize a concrete, fully-known, **cloneable** `Game` by sampling hidden zones consistent with hard constraints + a deck prior. Reuses `OpaqueDeckState` (the Clone multiset) and a new sampler implementation of `RevealSource`. Chance collapses into *which world was sampled*, so the search subtree is perfect-information.
+- **Neural MCTS search core** — PUCT-MCTS over a determinized world: node = a decision point (`current_player_id()` + the action mask), edge = an `action_id` from the 2192-action mask, expansion clones-and-steps the `Game`, leaf evaluation is a policy+value network over the existing observation tensor. PIMC (independent worlds) and IS-MCTS (per-iteration re-determinization) both supported behind one knob.
+- **AlphaZero self-play training** — self-play games driven by MCTS produce `(infoset-obs, search-policy π, game-outcome z)` targets; train the policy+value net; iterate. Reuses the engineering skeleton of AlphaZero-General-style loops (replay buffer, Dirichlet root noise, temperature schedule) but with chance/hidden-info handling that those skeletons lack.
+- **Game-review annotations** — for a recorded game, grade each decision by the win-probability delta between the move played and the search's preferred move, mapped to brilliant / great / best / inaccuracy / mistake / blunder. Two grades: a **decision-time** grade (belief-aware, averaged over sampled worlds — the *fair* grade) and a **hindsight** grade (the single true recorded world — free, no prior needed).
+- **Opponent deck prior** — the world sampler needs a distribution over the opponent's unrevealed cards. In **self-play/training** this is the exact training-pool decklist (trivial). In **PvP review** the opponent's decklist is unknown a priori and must be inferred from revealed cards + a meta prior (a deck classifier). Captured here as a distinct, gated capability; detailed design continues in exploration.
+
+## Capabilities
+
+### New Capabilities
+- `game-state-determinization`: extract a viewer `Infoset` and sample consistent, materialized, cloneable worlds for search.
+- `neural-mcts-search`: determinized PUCT-MCTS with a policy+value evaluator over the existing action mask + observation tensor; PIMC and IS-MCTS modes.
+- `alphazero-self-play-training`: self-play data generation and policy+value training loop using MCTS-improved targets.
+- `game-review-annotations`: chess-style per-move quality annotation (decision-time belief-aware + hindsight) over recorded games.
+- `opponent-deck-prior`: a deck-composition prior over an opponent's hidden cards (exact in self-play; inferred classifier in PvP review).
+
+### Modified Capabilities
+<!-- None. This change consumes make-engine-cloneable (Clone + the resumable VM) but does not modify card authoring or the existing PPO pipeline; PPO remains the baseline and the exploiter remains the robustness oracle. -->
+
+## Impact
+
+- **Hard dependency**: `make-engine-cloneable`. Nothing here is implementable until `Game: Clone` lands. Tier-0 representability is de-risked (every selection callback reduces to Copy/Clone data; the one `raw_rust` effect is governed by rule 28), but the cutover is a precondition.
+- **Code (new)**: a determinization module (`Infoset` + `SamplingRevealSource` + world materializer) in `code/digimon-engine/`; a search crate/module (PUCT-MCTS); a policy+value evaluator (ONNX in Rust, mirroring `src-tauri/inference_state.rs`, or a Python evaluator for prototyping); a self-play driver + training loop on the Python side (`code/digimon_gym/`); a review annotator + recording-format extension; a deck classifier.
+- **Reuses**: `opaque_deck.rs` (`OpaqueDeckState`, `RevealSource`), `server/state_filter.py` (infoset boundary), the 2192 action mask + observation tensor, the recording/replay machinery, the champion registry + `exploiter.py` (robustness measurement), and the DCGO parity oracle (search correctness checks).
+- **Performance**: MCTS is orders of magnitude more expensive per game than PPO (hundreds of NN-evaluated sims per decision over long games). Throughput hinges on cheap clone (structural sharing, the `make-engine-cloneable` D5 optimization) and batched NN evaluation. This is GPU-hungry; expectations set accordingly.
+- **Robustness (honest scope)**: determinized MCTS yields *much stronger* play and a *better, measurable* robustness number, but is **not** a robustness certificate — it is subject to strategy fusion and belief staleness. Certified low-exploitability remains the Deep CFR / ReBeL / Player of Games horizon, which may be infeasible at a 50-card belief scale. `exploiter.py` quantifies the gap for any agent produced here.
+- **Risk surface**: a large multi-phase program (determinize → search → self-play → review), each phase independently testable. Could be split into separate changes; kept as one to capture the coherent arc. The genuinely novel correctness risk is the constraint-respecting world sampler; search correctness is checkable against perfect-information unit games.
