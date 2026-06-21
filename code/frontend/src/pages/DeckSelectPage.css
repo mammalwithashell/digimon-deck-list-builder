@@ -164,12 +164,29 @@
   font-style: normal;
 }
 
+.deck-confirm-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .deck-confirm-bar button {
   background: var(--player);
   border: 0;
   color: #090604;
   font-weight: 800;
   padding: 12px 18px;
+}
+
+/* EDIT is the secondary action — outline so USE THIS DECK stays the primary CTA. */
+.deck-confirm-bar .deck-edit-button {
+  background: transparent;
+  border: 1px solid rgba(255, 122, 24, 0.6);
+  color: var(--player);
+}
+
+.deck-confirm-bar .deck-edit-button:hover:not(:disabled) {
+  background: rgba(255, 122, 24, 0.1);
 }
 
 .deck-confirm-bar button:disabled {

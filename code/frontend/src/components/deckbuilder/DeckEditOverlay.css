@@ -1,0 +1,34 @@
+.deck-edit-overlay-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2vh 2vw;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(2px);
+}
+
+/* The builder relies on a definite height for its internal scrolling, so the
+   frame supplies one (and a definite width) rather than letting it size to
+   content. The embedded `.deck-builder-app` fills this frame at height:100%. */
+.deck-edit-overlay-frame {
+  position: relative;
+  width: 100%;
+  max-width: 1680px;
+  height: 96vh;
+  overflow: hidden;
+  border: 1px solid var(--line-strong, rgba(255, 255, 255, 0.2));
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
+}
+
+.deck-edit-overlay-frame .deck-builder-app {
+  height: 100%;
+}
+
+/* Light Win95 chrome: a raised parchment frame to match the deck builder. */
+[data-theme="light"] .deck-edit-overlay-frame {
+  border-color: transparent;
+  box-shadow: var(--bevel-shadow), 0 24px 80px rgba(0, 0, 0, 0.4);
+}
