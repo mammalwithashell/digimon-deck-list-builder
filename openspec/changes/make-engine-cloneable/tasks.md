@@ -4,7 +4,7 @@ Incremental, parity-guarded. The data-VM and legacy closure executor coexist beh
 
 ## 0. Prerequisites & de-risking spike
 
-- [ ] 0.1 **Sequence after the in-flight DSL consolidations** (`collapse-dsl-step-idioms`, `unify-dsl-scalar-and-comparators`, `fix-dsl-substrate-rot-and-bugs`). They reshape the exact selection-installer / trampoline / verb surface this change defunctionalizes — landing them first shrinks the conversion (fewer callback shapes, one fewer budget trampoline) and drives **active `raw_rust` to zero** (so D7's clone-safety constraint has nothing to constrain). Starting concurrently risks merge conflicts on `dsl_cards/step/` and the rule-31 shared-target contamination class.
+- [x] 0.1 **Sequence after the in-flight DSL consolidations — LANDED (archived 2026-06-20).** `collapse-dsl-step-idioms`, `unify-dsl-scalar-and-comparators`, and `fix-dsl-substrate-rot-and-bugs` have all merged to main, so the `dsl_cards/step/` surface is now stable to start on (no concurrent-rewrite / rule-31 contamination risk). **Caveat (verified post-merge 2026-06-18):** the two Tier-0-relevant simplifications those proposals described did **not** materialize — the dp/play-cost budget verbs were NOT merged (still **7** trampolines), and active `raw_rust` is **4**, not 0 (capped at <3% of the pool by `raw_rust_budget_status`). So Tier-0 scope is essentially unchanged from the inventory; the win is a stable, conflict-free surface, not a smaller one.
 - [ ] 0.2 **De-risking spike:** defunctionalize ONE recursive trampoline (`count_capped` — exercises the multi-pick accumulator, composition, and the decline path) plus one composition site, behind the coexistence switch (`callback: Option<Box<dyn FnOnce>>` AND `resume: Option<ResumeStack>`, run whichever is set). Assert clone-then-replay-equals-original against the DCGO parity oracle on a card that uses it. Validates the frame-stack design before committing to the full-pool migration.
 
 ## 1. Foundations (no behavior change)
@@ -26,7 +26,7 @@ Incremental, parity-guarded. The data-VM and legacy closure executor coexist beh
 
 - [ ] 3.1 Migrate cards to the VM in batches by set/archetype; gate each batch on `cards_behavioral`, archetype interaction tests, and DCGO parity.
 - [ ] 3.2 Migrate the nastiest multi-pick / pay-cost / replacement archetypes early to validate the frame-stack design (or simplest-first per the resolved Open Question).
-- [ ] 3.3 Port or constrain the single `raw_rust` effect to be clone-safe.
+- [ ] 3.3 Port or constrain the remaining `raw_rust` effects to be clone-safe (4 as of 2026-06-18: `bt24_012`/`lm_027`/`bt21_093`/`bt13_040`; `bt24_012` is already a no-op placeholder).
 
 ## 4. Make Game cloneable
 

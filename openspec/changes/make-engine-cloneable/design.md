@@ -5,7 +5,7 @@
 - **Category A — behavior closures (`Fn`):** `ConditionFn`, `ProcessFn`, `PayCostFn`, modifier predicates. Created from card definitions, immutable "code." `effect_registry` is built once (`build_registry()`) and treated as immutable by `reset_for_replay`. Some are already `Arc<dyn Fn>`. Fix is mechanical (Arc-share, don't deep-clone).
 - **Category B — continuation closures (`FnOnce`):** `SelectionCallback = Box<dyn FnOnce(&mut Game, choice)>` and ~30 `select_*` sites in `effect_context/selections.rs`, plus pay-cost continuations, parked replacements (`parked_replacement`), and granted-effect bodies. These capture "the rest of this effect after the player picks" — a paused call stack. **This is the real blocker**; a `FnOnce` cannot be `Arc`-shared and represents unique mid-computation state.
 
-Everything else in `Game` (zones, memory, counters, `rng: StdRng`, `card_data`) is plain data that is trivially `Clone`. The card pool is 477 DSL YAML specs vs 1 `raw_rust` effect, and `digimon-dsl` already produces a compiled data AST (`compiled.rs`/`step.rs`) — today wrapped into closures at registry-build time. The DSL-first migration (rule 28) has already done the hard part: the cards are data; only the executor is closures.
+Everything else in `Game` (zones, memory, counters, `rng: StdRng`, `card_data`) is plain data that is trivially `Clone`. The card pool is overwhelmingly DSL YAML specs vs 4 `raw_rust` effects (capped by a <3%-of-pool budget guard), and `digimon-dsl` already produces a compiled data AST (`compiled.rs`/`step.rs`) — today wrapped into closures at registry-build time. The DSL-first migration (rule 28) has already done the hard part: the cards are data; only the executor is closures.
 
 ## Goals / Non-Goals
 
@@ -35,7 +35,7 @@ Everything else in `Game` (zones, memory, counters, `rng: StdRng`, `card_data`) 
 
 **D6 — Incremental, parity-guarded cutover.** The VM and the legacy closure path coexist behind a per-effect switch; cards move over in batches, each batch kept green against `cards_behavioral`, the archetype interaction tests, and the **DCGO recording parity harness** (differential oracle). The legacy path is deleted only when the pool is fully migrated. Alternative (big-bang switch) rejected: unacceptable parity risk for the engine's core.
 
-**D7 — raw_rust becomes clone-safe by policy.** A `raw_rust` effect must be either atomic (no mid-effect `select_*`) or provide an explicit, `Clone`-able resume-state implementing the VM frame contract. Enforced by a guard test / lint and CLAUDE.md rule 28. Trivial today (n=1); standing constraint going forward.
+**D7 — raw_rust becomes clone-safe by policy.** A `raw_rust` effect must be either atomic (no mid-effect `select_*`) or provide an explicit, `Clone`-able resume-state implementing the VM frame contract. Enforced by a guard test / lint and CLAUDE.md rule 28. n=4 today (`bt24_012`/`lm_027`/`bt21_093`/`bt13_040`, capped by the `raw_rust_budget_status` <3%-of-pool guard); standing constraint going forward.
 
 **D8 — `reset_for_replay` stays, and gains a sibling.** Once `Game: Clone`, snapshot back-step becomes possible, but converting the replay stepper is out of scope; `reset_for_replay` remains the supported path and the new `Clone` is validated by a "clone-then-replay-equals-original" guard test.
 
@@ -47,7 +47,7 @@ A direct read of the executor (post-DSL-first) shows the "deepest rewrite of the
 - **Almost every parked slot on `Game` is already typed data** — `pending_pay_cost_stack`, `parked_replacement`, `pending_delayed_option_lifecycle_stack`, `scheduled_effects`, and `dsl_outer_tail: (Vec<CompiledStep>, Bindings, StepRuntime)`. Continuations have been getting defunctionalized card-by-card already.
 - **The ONE remaining boxed-closure blocker is `pending_selection.{callback, on_decline}`** (`Box<dyn FnOnce>`). Its data-only target already exists as `PendingSelectionView` (= `PendingSelection` minus the two callbacks).
 - **Category-A behavior closures are mostly already `Arc`.** Modifier predicates and `granted_effect_bodies` are `Arc<dyn Fn>`; the only stragglers are `logger`, `formula_extensions`, and the one `replacement_condition: Box<dyn Fn>`.
-- **No capture is un-data-able.** Across all ~50 callback sites + the 7 recursive multi-pick trampolines, every captured value is `Copy`/`Clone`, every filter is a `CompiledPredicate` (the `Arc<dyn Fn>` filters are built by the DSL as a closure that evaluates a captured `CompiledPredicate`), and every continuation is either already-data or a nestable frame. The `Arc<Mutex<Option<Box<dyn FnOnce>>>>` trampoline plumbing **vanishes** in the frame model (it only existed because a closure can't be re-entered; a data frame can). Confirmed clean for 100% of the DSL pool; the `raw_rust` escape hatch is governed by D7 (and is heading to n=0 — see tasks 0.1).
+- **No capture is un-data-able.** Across all ~50 callback sites + the 7 recursive multi-pick trampolines, every captured value is `Copy`/`Clone`, every filter is a `CompiledPredicate` (the `Arc<dyn Fn>` filters are built by the DSL as a closure that evaluates a captured `CompiledPredicate`), and every continuation is either already-data or a nestable frame. The `Arc<Mutex<Option<Box<dyn FnOnce>>>>` trampoline plumbing **vanishes** in the frame model (it only existed because a closure can't be re-entered; a data frame can). Confirmed clean for 100% of the DSL pool; the `raw_rust` escape hatch is governed by D7/rule 28. (Verified post-merge 2026-06-18: **4** raw_rust card fns remain — `bt24_012`, `lm_027`, `bt21_093`, `bt13_040` — capped by the `raw_rust_budget_status` <3%-of-DSL-cards guard, **not** driven to zero; each must be made clone-safe per D7.)
 
 ### `SelectionResume` shape
 
@@ -62,7 +62,7 @@ enum ResumeFrame {
               decline_aborts_clause: bool },
     // ~4 bespoke pre-tail mutations (link_card, zone_moves) — all Copy/Clone today
     LinkPayAndLink { /* … */ }, AddRevealedToHand { /* … */ },
-    // the 5 recursive multi-pick trampolines: accumulator carried as data
+    // the 7 recursive multi-pick trampolines: accumulator carried as data
     MultiPickStep { accum: Vec<CardHandle>, candidates: Vec<(u16, CardHandle)>,
                     min: u8, max: u8, distinct_by: Option<DistinctByMode>,
                     filter: CompiledPredicate, then: Box<ResumeFrame> },
@@ -94,4 +94,4 @@ The genuine risk concentrates **not** in representability (proven) but in **fram
 - Serialization format and stability guarantees — is on-disk save/load in scope, or only in-memory `Clone`?
 - Do we adopt a persistent-data-structure crate (`im`) for zones, or hand-roll `Arc`-backed COW? (Optimization per D5 — gated on profiling.)
 - ~~Does `formula_extensions` need the same clone-safety treatment as raw_rust?~~ **RESOLVED (2026-06-18):** no — they are Category-A read-only `Arc<dyn Fn>`; Arc-share, no resume-state.
-- ~~Migration ordering: simplest-first or nastiest-first?~~ **RESOLVED (2026-06-18):** nastiest composition/multi-pick first (replacement windows, pay-cost chains, the 5 trampolines) — they are the only sites exercising the new frame stack, so they validate the design earliest.
+- ~~Migration ordering: simplest-first or nastiest-first?~~ **RESOLVED (2026-06-18):** nastiest composition/multi-pick first (replacement windows, pay-cost chains, the 7 trampolines) — they are the only sites exercising the new frame stack, so they validate the design earliest.
