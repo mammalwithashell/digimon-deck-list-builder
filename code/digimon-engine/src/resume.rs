@@ -73,7 +73,8 @@ pub struct ResumeProvenance {
 /// Which zone/kind a `RunTail` frame decodes the resolving `action_id` against
 /// in order to bind the chosen value. Mirrors the `SelectionKind`-specific
 /// decode each legacy install closure performed inline. Spike scope: `Hand`.
-#[derive(Debug, Clone, Copy)]
+// Not `Copy`: `AnyPermanent` carries a `Vec` of candidates.
+#[derive(Debug, Clone)]
 pub enum ResumeSelectKind {
     /// `action_id - PLAY_HAND_START` → hand index of `of_player`.
     Hand { of_player: PlayerId },
@@ -92,6 +93,13 @@ pub enum ResumeSelectKind {
     /// reconstructed from game state (not decoded from `action_id`); binds a
     /// `BreedingPermanentSelectionRef`.
     BreedingPermanent { of_player: PlayerId },
+    /// Both-battle-area permanent select (`select_any_permanent`). The
+    /// candidate `(action_id, handle)` pairs are captured at install time
+    /// (heterogeneous player domain), so the resume arm resolves by linear
+    /// search rather than arithmetic decode. Binds the matched `PermanentHandle`.
+    AnyPermanent {
+        candidates: Vec<(u16, PermanentHandle)>,
+    },
 }
 
 /// What an optional selection does when declined (PASS). Mandatory selects never
@@ -609,6 +617,69 @@ mod tests {
             3,
             "decline must run the DECLINE tail (GainMemory 3), not inner_tail (5)"
         );
+    }
+
+    #[test]
+    fn runtail_any_permanent_resolves_via_data_path() {
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TEST-RESUME", "Resume Tester"))
+            .hand(0, &["TEST-RESUME"])
+            .memory(0)
+            .start();
+        let action = crate::action::space::ATTACK_START;
+        let source_card;
+        {
+            let game = runner.game_mut();
+            source_card = game.player(0).hand[0].handle();
+            let prev_phase = game.current_phase;
+            game.pending_selection = Some(PendingSelection {
+                kind: SelectionKind::AnyField,
+                selecting_player: 0,
+                previous_phase: prev_phase,
+                valid_action_ids: vec![action],
+                is_optional: false,
+                prompt: "spike-any".to_string(),
+                effect_choices: None,
+                source_card,
+                source_permanent: None,
+                source_kind: EffectSourceKind::Digimon,
+                callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
+                on_decline: None,
+                zone_owner: None,
+            });
+            game.pending_selection_resume = Some(ResumeStack {
+                frames: vec![ResumeFrame::RunTail {
+                    prov: ResumeProvenance {
+                        source_card,
+                        source_permanent: None,
+                        source_kind: EffectSourceKind::Digimon,
+                        controller: 0,
+                        override_pin: None,
+                    },
+                    select_kind: ResumeSelectKind::AnyPermanent {
+                        candidates: vec![(action, PermanentHandle { player: 0, index: 0 })],
+                    },
+                    bind_as: None,
+                    inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
+                    outer_tail: None,
+                    bindings: Bindings::new(),
+                    runtime: StepRuntime::default(),
+                    trigger_context: None,
+                    decline: ResumeDecline::None,
+                }],
+            });
+        }
+        let before = runner.memory();
+        runner
+            .game_mut()
+            .resolve_selection(0, action)
+            .expect("resolve_selection should succeed");
+        assert_eq!(
+            (runner.memory() - before).abs(),
+            5,
+            "AnyPermanent RunTail inner tail (GainMemory 5) must execute via the data path"
+        );
+        assert!(runner.game_mut().pending_selection.is_none());
     }
 
     #[test]

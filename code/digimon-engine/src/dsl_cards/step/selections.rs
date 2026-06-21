@@ -475,6 +475,36 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
+                ResumeSelectKind::AnyPermanent { candidates } => {
+                    // Both-battle-area domain: resolve by linear search over the
+                    // captured candidates (mirrors install_select_any_permanent).
+                    let Some((_, handle)) = candidates
+                        .iter()
+                        .find(|(candidate_action, _)| *candidate_action == action_id)
+                        .copied()
+                    else {
+                        return;
+                    };
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_permanent(name, handle);
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
             }
         }
         ResumeFrame::MultiPickStep { .. } => {
