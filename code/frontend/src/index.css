@@ -1331,3 +1331,28 @@ body {
 [data-motion="off"] .animate-security-shatter {
   animation: none;
 }
+
+/* ─── Board atmosphere animation (animate-board-atmosphere) ──────────────────
+   The board's existing static atmosphere layers come alive only when effective
+   live-background is on. GameBoard adds `is-live` to `.ib-board` from the
+   effective-live-background selector (motion `full` + the Live-background
+   toggle), so these are inherently off at reduced/off motion — no extra gate.
+   Kept subtler than the menu atmosphere (slower, smaller amplitude): the board
+   rain itself is the reused LiveAtmosphere engine at board intensity. */
+.ib-board.is-live .ib-board__scanlines {
+  animation: ib-scanline-roll 8s linear infinite;
+}
+
+@keyframes ib-scanline-roll {
+  from { background-position: 0 0; }
+  to { background-position: 0 4px; }
+}
+
+.ib-board.is-live .ib-board__mat::after {
+  animation: ib-mat-drift 60s linear infinite;
+}
+
+@keyframes ib-mat-drift {
+  from { background-position: 0 0; }
+  to { background-position: 48px 28px; }
+}

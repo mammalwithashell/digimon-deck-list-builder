@@ -13,6 +13,12 @@
   overflow: hidden;
 }
 
+/* Board surface (animate-board-atmosphere): sit in the board's negative
+   background band so all gameplay layers and event VFX render above it. */
+.live-atmosphere[data-surface='board'] {
+  z-index: -1;
+}
+
 /* ── Dark "Digi-OS": rain + drifting grid ─────────────────────────────────── */
 .live-atmosphere__rain {
   position: absolute;

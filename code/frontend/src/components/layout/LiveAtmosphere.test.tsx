@@ -68,6 +68,14 @@ describe('LiveAtmosphere', () => {
     expect(container.querySelector('.live-atmosphere__rain')).toBeNull();
   });
 
+  it('reuses the engine for the board surface', () => {
+    useThemeStore.setState({ theme: 'dark' });
+    const { container } = render(<LiveAtmosphere surface="board" />);
+    const layer = container.querySelector('.live-atmosphere');
+    expect(layer).toHaveAttribute('data-surface', 'board');
+    expect(container.querySelector('.live-atmosphere__rain')).toBeInTheDocument();
+  });
+
   it('handles visibility changes and unmounts cleanly (dark + live)', () => {
     useThemeStore.setState({ theme: 'dark' });
     const { unmount } = render(<LiveAtmosphere />);
