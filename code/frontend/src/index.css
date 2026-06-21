@@ -6,6 +6,23 @@ body {
   font-family: "Inter", system-ui, -apple-system, sans-serif;
 }
 
+/* Desktop-app feel (data-desktop is set by App on the desktop build): no
+   stray text selection or native image dragging. Text fields keep selection
+   so typing/editing works normally. */
+[data-desktop] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+[data-desktop] input,
+[data-desktop] textarea,
+[data-desktop] [contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+[data-desktop] img {
+  -webkit-user-drag: none;
+}
+
 :root {
   --ib-font-display: "Space Grotesk", system-ui, sans-serif;
   --ib-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;

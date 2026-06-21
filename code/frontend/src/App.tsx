@@ -163,6 +163,29 @@ export function App() {
     applyTextScaleVar(textScale);
   }, [textScale]);
 
+  // Desktop-app feel: suppress the browser context menu (the native
+  // right-click "Inspect/Back/Reload" menu) and disable text selection /
+  // image dragging — except inside text fields, which keep their edit menu
+  // and selection. The app's own onContextMenu actions (remove card, inspect
+  // permanent) still fire; this only stops the native menu. Web build is
+  // untouched so browser users keep normal selection/menus.
+  useEffect(() => {
+    if (!IS_DESKTOP) return;
+    const root = document.documentElement;
+    root.setAttribute('data-desktop', '');
+    const isEditable = (el: EventTarget | null): boolean =>
+      el instanceof Element &&
+      !!el.closest('input, textarea, [contenteditable="true"]');
+    const onContextMenu = (e: MouseEvent) => {
+      if (!isEditable(e.target)) e.preventDefault();
+    };
+    document.addEventListener('contextmenu', onContextMenu);
+    return () => {
+      document.removeEventListener('contextmenu', onContextMenu);
+      root.removeAttribute('data-desktop');
+    };
+  }, []);
+
   return (
     <BrowserRouter>
       <ThemeProvider>
