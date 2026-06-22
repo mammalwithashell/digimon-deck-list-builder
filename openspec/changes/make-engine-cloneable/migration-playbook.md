@@ -6,13 +6,14 @@
 > ordered plan to extend *faithful* clone from the resume path to **every** decision
 > point by porting the remaining ~16 installers onto the resumable VM.
 
-## Current state (updated 2026-06-18 — Batch 0 substrate COMPLETE)
+## Current state (updated 2026-06-22 — Batch 0 substrate + Batch 1 flips COMPLETE)
 - **Batch 0a/0b DONE:** `ResumeSelectKind` has all 9 RunTail kinds — `Hand`, `Trash`, `FieldPermanent` (own+opp), `Security`, `BreedingPermanent`, `AnyPermanent`, `Reveal`, `Material`, `UnionZone` — each with a source-verified `run_resume` decode arm.
 - **Decline model DONE:** `ResumeDecline {None, RunTail{tail, aborts_clause}}` — the 3-way optional-decline semantics (no-decline / run-a-tail / cost-abort), incl. dual-tail (breeding/union_zone).
 - **Batch 0c DONE (count_capped keystone):** `ResumeFrame::MultiPickStep(MultiPickState)` + `run_multipick_step` + `install_multipick_step` (re-park) + the data terminal (binds the accumulated list, runs the tail — the former `Arc<Mutex<Box<dyn FnOnce>>>` final-callback as data). distinct_by ported. The "post-stack final-callback channel" blocker is resolved by making the terminal plain data.
-- **14 resume unit tests pass.** No installer is flipped yet (coexistence: legacy closures still run); Batch 0 is pure additive substrate.
+- **Batch 1 DONE (commit 6aaccd265):** the 3 mechanical installers (`install_select_trash` / `install_select_security` / `install_select_own_breeding_permanent`) now park a `RunTail` frame alongside the legacy closure. Gated GREEN on the full pool: `cards_behavioral` **5825/5825** (0 failed), `dsl` 781/781, `lib`+resume units 250/250 (15 resume units, incl. a nested-composition guard).
+- **NESTED-RESUME OUTER-TAIL COMPOSITION DONE (the big Batch-1 learning):** flipping ANY installer needs this shared substrate — the playbook mis-rated Batch 1 as "mechanical." EX11-044 proved it: clause_a trashes its own sources → fires clause_b's `on_digivolution_card_trashed` interrupt (a flipped `select_trash`) → clause_a's pending tail got `wrap_pending_selection_with_tail`-wrapped onto the **bypassed** closure and silently dropped (a loud tripwire surfaced it). **Fix:** `wrap_pending_selection_with_tail` is now resume-aware — it composes the outer tail as **data** (`resume::OuterContinuation` pushed onto the frame's `outer_conts`) instead of onto the closure; `run_resume` runs the conts after the inner/decline tail via the **same** `drain_or_rewrap_pending_tail` path, so a deeper nested select re-composes recursively. `dsl_clause_aborted` scoping + the `dsl_resolved_tail_bindings` freshness channel are preserved (byte-for-byte parity with the closure wrapper). A `MultiPickStep` frame reaching a wrap still panics loudly (Batch 4 extends it).
 
-**Remaining:** Batches 1-3 (flip the RunTail installers to emit frames, parity-gated by `cards_behavioral`); Batch 4 (port the other 6 trampolines — source-multi/dp-budget/play-cost-budget/reveal-bucket/permutation/partition — reusing the MultiPickStep executor pattern with their own terminal binds + candidate types); then delete the legacy closures + the whole-Game clone-replay capstone (task 4.2).
+**Remaining:** Batches 2-3 (flip the remaining RunTail installers to emit frames — **now ride on the nested-composition substrate, so they really are mechanical**; parity-gated by `cards_behavioral`); Batch 4 (port the other 6 trampolines — source-multi/dp-budget/play-cost-budget/reveal-bucket/permutation/partition — reusing the MultiPickStep executor pattern with their own terminal binds + candidate types, **plus** extend `outer_conts` composition to `MultiPickStep` frames); then delete the legacy closures + the whole-Game clone-replay capstone (task 4.2).
 
 ---
 
@@ -61,9 +62,9 @@ Add an `OwnPermanent` (or `Trash`) RunTail unit test and one `MultiPickStep` uni
 
 ---
 
-## Batch 1 — Mechanical RunTail flips (lowest risk; can parallelize)
+## Batch 1 — Mechanical RunTail flips (DONE 2026-06-22, commit 6aaccd265)
 
-These 3 are rated **mechanical** — closure body maps 1:1 to a decode arm, no selector/candidate state:
+> **Re-rating:** these 3 were rated "mechanical" but flipping the first one exposed a shared blocker the playbook missed — **nested-resume outer-tail composition** (an interrupt's flipped select being wrapped by an outer clause's tail). That substrate was built here (see "Current state") and now all RunTail flips ride on it, so Batches 2-3 are genuinely mechanical. Closure body still maps 1:1 to a decode arm, no selector/candidate state:
 
 1. **`install_select_trash`** (`1794-1888`) — Trash kind. Carries `decline_aborts_clause: cost` (the only one here with a real cost-abort path). Parity: `BT13-075, BT13-088, BT16-040, BT17-007, BT17-019, BT17-095, BT17-097, BT19-072, BT21-007, EX10-036, EX10-069, EX11-023` + all `CompiledStep::SelectTrash`.
 2. **`install_select_security`** (~`2960`) — Security kind. `decline_aborts_clause: false`. Parity: cards with `CompiledStep::SelectSecurity`.
@@ -114,6 +115,7 @@ All 7 depend on the **Batch-0c executor + final-callback channel**. Convert `Arc
 - **B3 — `install_reveal_bucket_step`** (~2180 lines): its `then` advances to the *next bucket*, a nested state machine — not a flat accumulator. Budget extra time; its cross-bucket dedup is the subtle correctness trap.
 - **B4 — `install_select_union_zone`** is RunTail-shaped but tri-range + dual-tail; gate it behind the simpler RunTail decode arms.
 - **Coexistence invariant (all batches):** `resolve_generic_selection` runs `run_resume` when `pending_selection_resume.is_some()`, else the legacy closure. Keep the legacy closure installed (as a panic-guard where tests assert the data path) until the whole migration is green, then a final cleanup PR can delete the closure paths.
+- **B0 — nested-resume outer-tail composition (SOLVED in Batch 1).** When a flipped select is installed as an interrupt nested inside another clause, that outer clause's remaining tail is composed via `wrap_pending_selection_with_tail`, which historically wrapped the **closure** — bypassed by `run_resume`, so the tail was silently dropped. This is shared substrate every RunTail flip needs (not per-installer). Now handled: wrap composes the tail as data (`resume::OuterContinuation` on the frame's `outer_conts`), run after the inner/decline tail via `drain_or_rewrap_pending_tail`. **Batch 4 must extend `outer_conts` to `MultiPickStep` frames** (they currently panic loudly on a wrap).
 - **Parity-test infra risk:** the `cards_behavioral` binary (~5800 tests) has two known env failure modes — non-deterministic stack-overflow abort (set `RUST_MIN_STACK=268435456`) and `LNK1104` from a hung prior run (kill the holding PID). Per memory `reference_cards_behavioral_flaky_crash`; neither is a regression, don't chase them as parity failures.
 - **Build isolation:** verify in an isolated `CARGO_TARGET_DIR='D:\cargo-target-wt\elated-hopper-9f42c2'` to avoid phantom cross-worktree compile errors (memory `reference_cargo_target_per_worktree`).
 
