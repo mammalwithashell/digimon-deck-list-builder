@@ -34,9 +34,13 @@
      which is removed on desktop — that left a strip of the teal desktop
      showing below the builder.) */
   height: 100%;
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(58, 166, 255, 0.08), transparent 50%),
-    var(--bld-bg-0);
+  /* Transparent base so the menu-shell live atmosphere (rain/idle desktop)
+     shows behind the builder; the subtle top tint stays as an overlay. */
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    rgba(58, 166, 255, 0.08),
+    transparent 50%
+  );
   color: var(--bld-ink-1);
   font-family: var(--bld-body);
   font-size: 13px;
@@ -207,7 +211,11 @@
 .deck-builder-page .bld-top,
 .deck-builder-app .bld-top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  /* Counts column is shrinkable (minmax(0, max-content)) so it compresses and
+     scrolls internally instead of forcing the header to overflow when the area
+     narrows (e.g. the side nav is expanded); the actions column stays at content
+     width so SAVE/VALIDATE/etc. never get pushed off-screen. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, max-content) auto;
   align-items: center;
   gap: 12px;
   padding: 0 18px;
@@ -314,12 +322,18 @@
 .deck-builder-app .bld-counts {
   display: flex;
   align-items: stretch;
+  /* Contain + scroll instead of overflowing other top-bar content when the
+     deck-builder area narrows (e.g. the side nav is expanded — a canvas-internal
+     change a viewport media query can't catch). */
+  min-width: 0;
+  overflow-x: auto;
   border: 1px solid var(--bld-line-2);
   background: var(--bld-bg-0);
 }
 
 .deck-builder-page .bld-count,
 .deck-builder-app .bld-count {
+  flex: 0 0 auto;
   min-width: 44px;
   padding: 4px 7px;
   border-right: 1px solid var(--bld-line-2);
@@ -375,13 +389,50 @@
 
 .deck-builder-page .bld-filters,
 .deck-builder-app .bld-filters {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr)) auto auto;
-  align-items: center;
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   padding: 12px 18px;
   border-bottom: 1px solid var(--bld-line);
   background: var(--bld-bg-1);
+}
+
+/* Row 1: the field filters (color/type/level/rarity/search). */
+.deck-builder-page .bld-filters-fields,
+.deck-builder-app .bld-filters-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.deck-builder-page .bld-filters-fields .bld-filter,
+.deck-builder-app .bld-filters-fields .bld-filter {
+  flex: 1 1 150px;
+}
+
+.deck-builder-page .bld-filters-fields .bld-filter.color-filter,
+.deck-builder-app .bld-filters-fields .bld-filter.color-filter {
+  flex: 1 1 auto;
+}
+
+.deck-builder-page .bld-filters-fields .bld-filter.search,
+.deck-builder-app .bld-filters-fields .bld-filter.search {
+  flex: 2 1 240px;
+}
+
+/* Row 2: all the toggle checkboxes, with RESET pushed to the right. */
+.deck-builder-page .bld-filters-actions,
+.deck-builder-app .bld-filters-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.deck-builder-page .bld-filters-actions .bld-filter-reset,
+.deck-builder-app .bld-filters-actions .bld-filter-reset {
+  margin-left: auto;
 }
 
 .deck-builder-page .bld-filter,
@@ -394,9 +445,10 @@
 
 .deck-builder-page .bld-filter .l,
 .deck-builder-app .bld-filter .l {
-  color: var(--bld-ink-3);
+  color: var(--bld-ink-2);
   font-family: var(--bld-mono);
-  font-size: 9px;
+  font-size: var(--text-xs);
+  font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
@@ -429,10 +481,11 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--bld-ink-2);
+  color: var(--bld-ink-1);
   cursor: pointer;
   font-family: var(--bld-mono);
-  font-size: 9px;
+  font-size: var(--text-xs);
+  font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -713,7 +766,8 @@
   border-left: 2px solid var(--bld-player);
   color: var(--bld-player);
   font-family: var(--bld-mono);
-  font-size: 10px;
+  font-size: var(--text-xs);
+  font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -1021,7 +1075,7 @@
   border-bottom: 1px solid var(--bld-line);
   color: var(--bld-ink-3);
   font-family: var(--bld-mono);
-  font-size: 10px;
+  font-size: var(--text-xs);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -1082,7 +1136,8 @@
   display: block;
   margin-bottom: 3px;
   color: var(--bld-player);
-  font-size: 8px;
+  font-size: var(--text-xs);
+  font-weight: 700;
   letter-spacing: 0.16em;
 }
 
@@ -1091,7 +1146,7 @@
   display: block;
   overflow: hidden;
   color: var(--bld-ink-0);
-  font-size: 10px;
+  font-size: var(--text-sm);
   letter-spacing: 0.04em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1102,7 +1157,7 @@
   display: block;
   margin-top: 3px;
   color: var(--bld-ink-3);
-  font-size: 8px;
+  font-size: var(--text-xs);
   letter-spacing: 0.12em;
 }
 
@@ -1189,7 +1244,7 @@
   background: var(--bld-bg-2);
   color: var(--bld-ink-3);
   font-family: var(--bld-mono);
-  font-size: 9px;
+  font-size: var(--text-xs);
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -1198,7 +1253,7 @@
 .deck-builder-app .bld-section-head .ct {
   color: var(--bld-player);
   font-family: var(--bld-mono);
-  font-size: 9px;
+  font-size: var(--text-xs);
 }
 
 .deck-builder-page .bld-row,
@@ -1232,7 +1287,7 @@
 .deck-builder-app .bld-row .ct {
   color: var(--bld-player);
   font-family: var(--bld-mono);
-  font-size: 12px;
+  font-size: var(--text-sm);
   font-weight: 700;
   text-align: center;
 }
@@ -1261,7 +1316,7 @@
   height: 100%;
   color: var(--bld-ink-4);
   font-family: var(--bld-mono);
-  font-size: 6px;
+  font-size: var(--text-xs);
   text-align: center;
 }
 
@@ -1276,7 +1331,7 @@
   overflow: hidden;
   color: var(--bld-ink-0);
   font-family: var(--bld-mono);
-  font-size: 10px;
+  font-size: var(--text-sm);
   letter-spacing: 0.06em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1287,8 +1342,22 @@
   display: block;
   margin-top: 1px;
   color: var(--bld-ink-3);
-  font-size: 8px;
+  font-size: var(--text-xs);
   letter-spacing: 0.1em;
+}
+
+/* DECK (decklist) view: the deck panel is the wide column, so enlarge the
+   card-image thumbnails for a readable at-a-glance deck list (scroll as needed). */
+.deck-builder-page .bld-main.view-decklist .bld-row,
+.deck-builder-app .bld-main.view-decklist .bld-row {
+  grid-template-columns: 28px 52px minmax(0, 1fr) auto auto 22px 42px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+.deck-builder-page .bld-main.view-decklist .bld-row-thumb,
+.deck-builder-app .bld-main.view-decklist .bld-row-thumb {
+  width: 50px;
 }
 
 .deck-builder-page .bld-row .cost,

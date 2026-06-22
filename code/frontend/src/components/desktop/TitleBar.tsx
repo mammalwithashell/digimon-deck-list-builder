@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useTheme } from '@/design/theme/ThemeProvider';
 import { useUiStore } from '@/stores/uiStore';
+import { GRAPHICS_MODAL_ID } from '@/components/settings/GraphicsSettingsModal';
 
 /**
  * Custom desktop window chrome (replaces the native OS title bar, which is
@@ -53,9 +54,24 @@ interface Menu {
 
 export function TitleBar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { theme, toggle } = useTheme();
   const fullscreen = useUiStore((s) => s.fullscreen);
   const setFullscreen = useUiStore((s) => s.setFullscreen);
+  const openModal = useUiStore((s) => s.openModal);
+
+  // Back/forward availability from React Router's history index (stored on
+  // `window.history.state.idx`). Recomputed on every navigation.
+  const [nav, setNav] = useState({ back: false, forward: false });
+  useEffect(() => {
+    const idx =
+      typeof window !== 'undefined' &&
+      typeof window.history.state?.idx === 'number'
+        ? (window.history.state.idx as number)
+        : 0;
+    const len = typeof window !== 'undefined' ? window.history.length : 0;
+    setNav({ back: idx > 0, forward: idx < len - 1 });
+  }, [location]);
 
   const menus: Menu[] = [
     {
@@ -91,7 +107,7 @@ export function TitleBar() {
         {
           kind: 'item',
           label: 'Graphics Settings…',
-          onSelect: () => navigate('/settings/graphics'),
+          onSelect: () => openModal(GRAPHICS_MODAL_ID),
         },
       ],
     },
@@ -112,6 +128,31 @@ export function TitleBar() {
       ],
     },
   ];
+
+  const navButtons = (
+    <div className="ds-titlebar__nav" role="group" aria-label="History navigation">
+      <button
+        type="button"
+        className="ds-titlebar__navbtn"
+        aria-label="Back"
+        title="Back"
+        disabled={!nav.back}
+        onClick={() => navigate(-1)}
+      >
+        ←
+      </button>
+      <button
+        type="button"
+        className="ds-titlebar__navbtn"
+        aria-label="Forward"
+        title="Forward"
+        disabled={!nav.forward}
+        onClick={() => navigate(1)}
+      >
+        →
+      </button>
+    </div>
+  );
 
   return (
     <header className="ds-titlebar" data-testid="titlebar">
@@ -141,12 +182,12 @@ export function TitleBar() {
           </button>
         </div>
       </div>
-      <MenuBar menus={menus} />
+      <MenuBar menus={menus} leading={navButtons} />
     </header>
   );
 }
 
-function MenuBar({ menus }: { menus: Menu[] }) {
+function MenuBar({ menus, leading }: { menus: Menu[]; leading?: ReactNode }) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const navRef = useRef<HTMLElement>(null);
 
@@ -176,6 +217,7 @@ function MenuBar({ menus }: { menus: Menu[] }) {
 
   return (
     <nav className="ds-titlebar__menubar" ref={navRef} role="menubar">
+      {leading}
       {menus.map((menu, i) => {
         const open = openIndex === i;
         return (

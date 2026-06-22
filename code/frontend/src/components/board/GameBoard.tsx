@@ -1,4 +1,6 @@
 import { useGameStore } from '@/stores/gameStore';
+import { useEffectiveLiveBackground } from '@/stores/uiStore';
+import { LiveAtmosphere } from '@/components/layout/LiveAtmosphere';
 import { PlayerHalf } from './PlayerHalf';
 import { HandZone } from './HandZone';
 import { MemoryGauge } from './MemoryGauge';
@@ -87,6 +89,11 @@ export function GameBoard({
     playerLabels,
   } = useGameStore();
 
+  // Board atmosphere animates only when effective live-background is on
+  // (motion full + toggle). Drives the `is-live` gate on the board's
+  // scanline-roll / grid-drift CSS (animate-board-atmosphere).
+  const liveBg = useEffectiveLiveBackground();
+
   if (!player1 || !player2) {
     return (
       <div data-testid="game-board" className="flex items-center justify-center h-full text-gray-400">
@@ -126,9 +133,9 @@ export function GameBoard({
   const latestActionLabel = (actionTraces as unknown as { at(index: number): ActionTrace | undefined }).at(-1)?.decoded.label ?? null;
 
   return (
-    <div data-testid="game-board" className="ib-board">
+    <div data-testid="game-board" className={`ib-board${liveBg ? ' is-live' : ''}`}>
       <div className="ib-board__mat" />
-      <BinaryWallpaper />
+      <LiveAtmosphere surface="board" />
       <div className="ib-board__horizon" />
       <div className="ib-board__scanlines" />
       <div className="ib-board__vignette" />
@@ -269,24 +276,3 @@ function PlayerTag({
   );
 }
 
-function BinaryWallpaper() {
-  const lines = [
-    '011010110010101001101001',
-    '100101001011010010010110',
-    '001101101001011001011010',
-    '110010010110100101101001',
-    '010110100110101001011001',
-    '101001011001001011010110',
-    '011001101001011010010101',
-    '100110010110101001011010',
-  ];
-
-  return (
-    <div className="ib-board__binary" aria-hidden="true">
-      <div>{lines.map((line) => <span key={`lt-${line}`}>{line}</span>)}</div>
-      <div>{lines.slice().reverse().map((line) => <span key={`rt-${line}`}>{line}</span>)}</div>
-      <div>{lines.slice(2).concat(lines.slice(0, 2)).map((line) => <span key={`lb-${line}`}>{line}</span>)}</div>
-      <div>{lines.slice(4).concat(lines.slice(0, 4)).map((line) => <span key={`rb-${line}`}>{line}</span>)}</div>
-    </div>
-  );
-}

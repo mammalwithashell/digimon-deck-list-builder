@@ -6,6 +6,23 @@ body {
   font-family: "Inter", system-ui, -apple-system, sans-serif;
 }
 
+/* Desktop-app feel (data-desktop is set by App on the desktop build): no
+   stray text selection or native image dragging. Text fields keep selection
+   so typing/editing works normally. */
+[data-desktop] {
+  user-select: none;
+  -webkit-user-select: none;
+}
+[data-desktop] input,
+[data-desktop] textarea,
+[data-desktop] [contenteditable="true"] {
+  user-select: text;
+  -webkit-user-select: text;
+}
+[data-desktop] img {
+  -webkit-user-drag: none;
+}
+
 :root {
   --ib-font-display: "Space Grotesk", system-ui, sans-serif;
   --ib-font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -116,6 +133,15 @@ body {
   font-weight: 700;
   padding: 0 5px;
   border-radius: 2px;
+}
+
+/* Light "Adventure '99": the default light-grey body color is unreadable on the
+   parchment stack inspector — use dark ink, and darken the reference-purple. */
+[data-theme="light"] .card-effect-text {
+  color: var(--ink-1);
+}
+[data-theme="light"] .card-effect-text .rf {
+  color: #5a4fbf;
 }
 
 /* In Between board redesign */
@@ -1290,4 +1316,219 @@ body {
     opacity: 0;
     transform: scaleX(0.8) scaleY(0.4);
   }
+}
+
+/* ─── Motion gating (add-effects-and-motion-settings) ───────────────────────
+   One gate for the whole animation library, keyed on the `data-motion`
+   attribute (set pre-paint in index.html, re-asserted from uiStore). The OS
+   prefers-reduced-motion setting only seeds the first-run default in the store
+   (uiStore.deriveDefaultMotion) — it is no longer a runtime gate.
+
+   Classification of the animations in this file:
+   - Ambient / looping → stop at `reduced` AND `off`:
+       trailPulse (.ib-gauge-seg.is-trail).  (ds-crt-scan is gated in components.css.)
+   - Functional one-shot feedback → kept at `reduced`, neutralized at `off`:
+       every .animate-* class below. */
+
+/* Ambient/looping — off the moment motion is dialed back. */
+[data-motion="reduced"] .ib-gauge-seg.is-trail,
+[data-motion="off"] .ib-gauge-seg.is-trail {
+  animation: none;
+}
+
+/* Functional one-shot feedback — removed only at `off`. The attribute+class
+   selector outspecifies the bare `.animate-*` rule, so the element collapses to
+   its base/instant state with no !important needed. */
+[data-motion="off"] .animate-fade-in,
+[data-motion="off"] .animate-security-reveal,
+[data-motion="off"] .animate-card-enter,
+[data-motion="off"] .animate-card-play-in,
+[data-motion="off"] .animate-card-exit,
+[data-motion="off"] .animate-card-trash-out,
+[data-motion="off"] .animate-digivolve-banner,
+[data-motion="off"] .animate-digivolve-card-drop,
+[data-motion="off"] .animate-battle-slash,
+[data-motion="off"] .animate-battle-shake,
+[data-motion="off"] .animate-effect-pulse,
+[data-motion="off"] .animate-effect-popup,
+[data-motion="off"] .animate-overlay-open,
+[data-motion="off"] .animate-card-detail-open,
+[data-motion="off"] .animate-security-break,
+[data-motion="off"] .animate-security-shatter {
+  animation: none;
+}
+
+/* ─── Board atmosphere animation (animate-board-atmosphere) ──────────────────
+   The board's existing static atmosphere layers come alive only when effective
+   live-background is on. GameBoard adds `is-live` to `.ib-board` from the
+   effective-live-background selector (motion `full` + the Live-background
+   toggle), so these are inherently off at reduced/off motion — no extra gate.
+   Kept subtler than the menu atmosphere (slower, smaller amplitude): the board
+   rain itself is the reused LiveAtmosphere engine at board intensity. */
+.ib-board.is-live .ib-board__scanlines {
+  animation: ib-scanline-roll 8s linear infinite;
+}
+
+@keyframes ib-scanline-roll {
+  from { background-position: 0 0; }
+  to { background-position: 0 4px; }
+}
+
+.ib-board.is-live .ib-board__mat::after {
+  animation: ib-mat-drift 60s linear infinite;
+}
+
+@keyframes ib-mat-drift {
+  from { background-position: 0 0; }
+  to { background-position: 48px 28px; }
+}
+
+/* ─── Digivolution cut-in (upgrade-digivolve-cutin) ──────────────────────────
+   Multi-phase anime-style cut-in used at motion `full`: a wireframe sweep over
+   the card art → an orbiting (atom) ring → a flash reveal with a slash beam.
+   Tinted by the digivolving card's colour via --cut-color. (Reduced motion
+   uses the simpler legacy banner; off shows a static reveal — both selected in
+   DigivolveBanner.tsx, so these classes only ever render at full motion.) */
+.dgv-cutin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.dgv-cutin__stage {
+  position: relative;
+  width: 200px;
+  height: 280px;
+  display: grid;
+  place-items: center;
+}
+
+.dgv-cutin__art {
+  position: relative;
+  z-index: 2;
+  animation: dgvArtReveal 1.6s ease-out forwards;
+}
+
+.dgv-cutin__wire {
+  position: absolute;
+  inset: -8%;
+  z-index: 3;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(to right, var(--cut-color) 0 1px, transparent 1px 16px),
+    repeating-linear-gradient(to bottom, var(--cut-color) 0 1px, transparent 1px 16px);
+  opacity: 0;
+  mix-blend-mode: screen;
+  animation: dgvWireSweep 1.6s ease-out forwards;
+}
+
+.dgv-cutin__ring {
+  position: absolute;
+  width: 230px;
+  height: 230px;
+  z-index: 1;
+  opacity: 0;
+  animation: dgvRing 1.6s ease-out forwards;
+}
+
+.dgv-cutin__ring::before,
+.dgv-cutin__ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--cut-color);
+  border-radius: 50%;
+  box-shadow: 0 0 16px var(--cut-color);
+}
+
+.dgv-cutin__ring::before { transform: scaleY(0.38); }
+.dgv-cutin__ring::after { transform: scaleY(0.38) rotate(60deg); }
+
+.dgv-cutin__flash {
+  position: absolute;
+  inset: -30%;
+  z-index: 4;
+  pointer-events: none;
+  background: radial-gradient(circle, #fff, var(--cut-color) 35%, transparent 70%);
+  opacity: 0;
+  mix-blend-mode: screen;
+  animation: dgvFlash 1.6s ease-out forwards;
+}
+
+.dgv-cutin__beam {
+  position: absolute;
+  top: 50%;
+  left: -20%;
+  width: 140%;
+  height: 5px;
+  z-index: 5;
+  pointer-events: none;
+  background: linear-gradient(to right, transparent, #fff, transparent);
+  box-shadow: 0 0 18px 4px var(--cut-color);
+  opacity: 0;
+  transform: translateX(-120%) rotate(-18deg);
+  animation: dgvBeam 1.6s ease-out forwards;
+}
+
+.dgv-cutin__label {
+  font-family: var(--ib-font-display, "Space Grotesk", sans-serif);
+  font-weight: 800;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--cut-color);
+  text-shadow: 0 0 18px var(--cut-color);
+  animation: dgvName 1.6s ease-out forwards;
+}
+
+.dgv-cutin__name {
+  font-family: var(--ib-font-mono, ui-monospace, monospace);
+  font-size: 13px;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.85);
+  opacity: 0;
+  animation: dgvName 1.6s ease-out forwards;
+}
+
+@keyframes dgvWireSweep {
+  0% { opacity: 0; clip-path: inset(0 0 100% 0); }
+  8% { opacity: 0.9; }
+  34% { clip-path: inset(0 0 0 0); opacity: 0.9; }
+  50% { opacity: 0; }
+  100% { opacity: 0; clip-path: inset(0 0 0 0); }
+}
+
+@keyframes dgvRing {
+  0% { opacity: 0; transform: rotate(0deg) scale(0.6); }
+  22% { opacity: 1; }
+  58% { opacity: 1; transform: rotate(230deg) scale(1); }
+  78% { opacity: 0; transform: rotate(320deg) scale(1.12); }
+  100% { opacity: 0; }
+}
+
+@keyframes dgvFlash {
+  0%, 54% { opacity: 0; }
+  62% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes dgvArtReveal {
+  0% { opacity: 0; transform: scale(0.7); }
+  54% { opacity: 0; transform: scale(0.7); }
+  64% { opacity: 1; transform: scale(1.07); }
+  80% { transform: scale(1); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes dgvBeam {
+  0%, 57% { opacity: 0; transform: translateX(-120%) rotate(-18deg); }
+  63% { opacity: 1; }
+  71% { transform: translateX(120%) rotate(-18deg); opacity: 0; }
+  100% { opacity: 0; }
+}
+
+@keyframes dgvName {
+  0%, 66% { opacity: 0; transform: translateY(6px); }
+  78% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 1; }
 }
