@@ -2499,6 +2499,16 @@ fn install_select_own_permanent(
     let bindings_for_decline = bindings.clone();
     let runtime_for_decline = runtime.clone();
     let trigger_for_decline = trigger_context.clone();
+    // Resumable-VM (Batch 2): capture for the data frame before the closures
+    // consume them. selector/selected_field are NOT carried — the filter already
+    // baked the matching slots into valid_action_ids, so the FieldPermanent
+    // decode arm just maps the resolved action_id → handle.
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_own_permanent(
         &prompt,
         optional,
@@ -2551,6 +2561,40 @@ fn install_select_own_permanent(
                 );
             }));
         }
+    }
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s FieldPermanent arm. Decline mirrors the on_decline above —
+    // `continue_on_decline` runs the same tail (no bind, no cost-abort).
+    if ctx.game.pending_selection.is_some() {
+        let decline = if optional && continue_on_decline {
+            crate::resume::ResumeDecline::RunTail {
+                tail: Arc::clone(&tail_for_resume),
+                aborts_clause: false,
+            }
+        } else {
+            crate::resume::ResumeDecline::None
+        };
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
+                    of_player: target_player,
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline,
+            }],
+        });
     }
 }
 
@@ -2790,6 +2834,14 @@ fn install_select_opponent_permanent(
     let bindings_for_decline = bindings.clone();
     let runtime_for_decline = runtime.clone();
     let trigger_for_decline = trigger_context.clone();
+    // Resumable-VM (Batch 2): capture for the data frame; `of_player` is the
+    // already-computed `opponent` (= next_clockwise(player)).
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_opponent_permanent(
         &prompt,
         optional,
@@ -2846,6 +2898,39 @@ fn install_select_opponent_permanent(
             }));
         }
     }
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s FieldPermanent arm with `of_player: opponent`.
+    if ctx.game.pending_selection.is_some() {
+        let decline = if optional && continue_on_decline {
+            crate::resume::ResumeDecline::RunTail {
+                tail: Arc::clone(&tail_for_resume),
+                aborts_clause: false,
+            }
+        } else {
+            crate::resume::ResumeDecline::None
+        };
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
+                    of_player: opponent,
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline,
+            }],
+        });
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2889,6 +2974,15 @@ fn install_select_any_permanent(
     let source_kind = ctx.source_kind;
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    // Resumable-VM (Batch 2): clone for the data frame before the closure
+    // consumes them. The AnyPermanent arm linear-searches the captured
+    // candidates (heterogeneous both-player domain), so it carries the full vec.
+    let candidates_for_resume = candidates.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
 
     let previous_phase = ctx.game.current_phase;
     ctx.game.current_phase = GamePhase::SelectTarget;
@@ -2940,6 +3034,31 @@ fn install_select_any_permanent(
         }),
         on_decline: None,
     });
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s AnyPermanent arm (linear search over the candidates).
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::AnyPermanent {
+                    candidates: candidates_for_resume,
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -3400,7 +3519,16 @@ fn install_select_reveal(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
-    ctx.select_reveal(
+    // Resumable-VM (Batch 2): capture for the data frame. Ownership is enforced
+    // in the install filter (revealed_owner_matches), so valid_action_ids is
+    // already restricted; the Reveal arm just decodes + binds (stale → skip).
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
+    let parked = ctx.select_reveal(
         &prompt,
         optional,
         move |game, idx| {
@@ -3438,7 +3566,31 @@ fn install_select_reveal(
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
-    )
+    );
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s Reveal arm. No on_decline → decline None.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::Reveal,
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
+    parked
 }
 
 fn install_select_reveal_buckets(
@@ -3638,6 +3790,14 @@ fn install_select_material(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (Batch 2): capture for the data frame. The Material arm
+    // decodes via material_zone_geometry(perm) (battle-vs-breeding carrier).
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     // Top-card exclusion is enforced by EffectContext::select_material itself
     // (matches CountCappedZone::Material).
     ctx.select_material(
@@ -3679,6 +3839,29 @@ fn install_select_material(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s Material arm (material_zone_geometry decode). Decline None.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::Material { perm },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
 }
 
 /// Install a count-capped / name-unique multi-pick over `perm`'s

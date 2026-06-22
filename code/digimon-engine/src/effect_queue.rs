@@ -768,6 +768,19 @@ impl Game {
             hook(self);
             return;
         };
+        // Resume-aware (make-engine-cloneable Batch 2): a resume-driven select's
+        // closure is bypassed, so defer the re-arm onto the resume channel.
+        // After the resume resolution it re-calls run_after_selections_drain,
+        // which fires the hook if the chain drained or re-composes otherwise.
+        if self.pending_selection_resume.is_some() {
+            self.pending_selection = Some(pending);
+            self.after_selection_resume_hooks.0.push(Box::new(
+                move |game: &mut crate::game::Game| {
+                    game.run_after_selections_drain(hook);
+                },
+            ));
+            return;
+        }
         let original = pending.callback;
         // One-shot shared slot so the accept and decline paths can both
         // re-arm without ever double-firing the hook.
@@ -3591,6 +3604,16 @@ impl Game {
             let prev_aborted = std::mem::replace(&mut self.dsl_clause_aborted, false);
             crate::dsl_cards::step::selections::run_resume(self, stack, action_id, is_pass);
             self.dsl_clause_aborted = prev_aborted;
+            // Coexistence: run continuations that callback-wrappers (play-cost /
+            // reducer / digixros-leave / after-selections-drain) deferred because
+            // this selection was resume-driven — their closure was bypassed by
+            // run_resume. Mirrors the wrapped callback's post-`original` step;
+            // a hook that installs another resume-driven selection re-arms by
+            // pushing onto the (now-drained) channel for the next resolution.
+            let hooks = std::mem::take(&mut self.after_selection_resume_hooks.0);
+            for hook in hooks {
+                hook(self);
+            }
         } else if is_pass {
             if let Some(on_decline) = sel.on_decline {
                 // Scope the cost-pay abort flag to this on_decline. Save

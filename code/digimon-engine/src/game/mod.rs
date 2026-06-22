@@ -317,6 +317,14 @@ pub struct Game {
     /// `pending_selection`; parallels `dsl_outer_tail` (continuation-as-data).
     /// Always `None` today — populated as cards are ported onto the VM.
     pub pending_selection_resume: Option<crate::resume::ResumeStack>,
+    /// Coexistence-phase resume-side continuation channel (make-engine-cloneable
+    /// Phase 2). Callback-wrappers (play-cost / digivolve-reducer / option-reducer
+    /// continuations, the DigiXros leave-window resume, `run_after_selections_drain`)
+    /// compose their continuation onto a selection's CLOSURE callback; when that
+    /// selection is resume-driven the closure is bypassed, so they defer the
+    /// continuation here and `resolve_generic_selection` drains it after the
+    /// resume resolution. See [`crate::resume::ResumeContinuationHooks`].
+    pub after_selection_resume_hooks: crate::resume::ResumeContinuationHooks,
     /// Triggered effects waiting to resolve at the current timing window.
     /// Populated by `enqueue_triggered` and drained by `drain_effect_queue`.
     /// Empty until the drainer lands (PR2).

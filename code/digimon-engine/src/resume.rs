@@ -34,6 +34,36 @@ use crate::permanent::PermanentHandle;
 use crate::selection::UnionZoneOrigin;
 use crate::trigger_context::TriggerContext;
 
+/// Coexistence-only resume-side continuation hooks (make-engine-cloneable
+/// Phase 2). Several callback-wrappers — the play-cost / digivolve-reducer /
+/// option-reducer continuations, the DigiXros leave-window resume, and
+/// `run_after_selections_drain` — compose their continuation onto a selection's
+/// CLOSURE `callback`/`on_decline`. When the selection is resume-driven the
+/// closure is BYPASSED by [`run_resume`](crate::dsl_cards::step::selections::run_resume),
+/// so those wrappers instead defer their continuation here, and
+/// `resolve_generic_selection` drains it right after the resume resolution (for
+/// both accept and decline — every current wrapper runs the same continuation
+/// either way).
+///
+/// Like the closure callbacks they stand in for, these are **not**
+/// clone-faithful: a clone yields an EMPTY list (a forked search node must not
+/// inherit live closure continuations). Faithful clone of a mid-continuation
+/// state arrives only once the wrappers themselves are ported to data.
+#[derive(Default)]
+pub struct ResumeContinuationHooks(pub Vec<Box<dyn FnOnce(&mut crate::game::Game) + Send + Sync>>);
+
+impl Clone for ResumeContinuationHooks {
+    fn clone(&self) -> Self {
+        Self(Vec::new())
+    }
+}
+
+impl std::fmt::Debug for ResumeContinuationHooks {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "ResumeContinuationHooks({} pending)", self.0.len())
+    }
+}
+
 /// A paused continuation, as data. Frames run inner→outer on selection
 /// resolution; this replaces the closure-nesting performed today by
 /// `wrap_pending_selection_with_tail` and the `effect_queue` / `game_actions`

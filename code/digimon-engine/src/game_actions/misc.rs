@@ -304,6 +304,18 @@ impl Game {
             return;
         };
 
+        // Resume-aware (make-engine-cloneable Batch 2): defer onto the resume
+        // channel when the parked select is data-driven (closure bypassed).
+        if self.pending_selection_resume.is_some() {
+            self.pending_selection = Some(selection);
+            self.after_selection_resume_hooks
+                .0
+                .push(Box::new(move |game: &mut Game| {
+                    game.continue_digixros_after_parked_leave(cont);
+                }));
+            return;
+        }
+
         let original_callback = selection.callback;
         let cont_cb = cont.clone();
         selection.callback = Box::new(move |game, action_id| {
@@ -451,6 +463,30 @@ impl Game {
         let Some(mut pending) = self.pending_selection.take() else {
             return;
         };
+
+        // Resume-aware (make-engine-cloneable Batch 2): a resume-driven select's
+        // closure callback is bypassed by `run_resume`, so defer the play-cost
+        // continuation onto the resume channel (runs after the resume resolution
+        // for accept AND decline — both branches below run the same call).
+        if self.pending_selection_resume.is_some() {
+            self.pending_selection = Some(pending);
+            self.after_selection_resume_hooks
+                .0
+                .push(Box::new(move |game: &mut Game| {
+                    game.resume_play_cost_continuation_after_pending(
+                        player_id,
+                        hand_index,
+                        target,
+                        cost_delta,
+                        source,
+                        origin,
+                        suppress_on_play,
+                        accumulated_reduction,
+                        processed,
+                    );
+                }));
+            return;
+        }
 
         let original_callback = pending.callback;
         let accept_processed = processed.clone();
