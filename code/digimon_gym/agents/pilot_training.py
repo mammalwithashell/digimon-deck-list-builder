@@ -3186,7 +3186,12 @@ def train(total_timesteps: int = 100_000,
         archetype_results=win_rate_cb.get_archetype_results(),
         hyperparameters={
             **cfg.to_dict(),
-            "learning_rate": learning_rate,
+            # Record the float base LR, NOT the resolved value — for
+            # lr_schedule="linear", _resolve_learning_rate returns a callable
+            # (progress->lr) which is not JSON-serializable and crashes the
+            # metadata sidecar write post-training. The schedule itself is
+            # already captured by cfg.to_dict()["lr_schedule"].
+            "learning_rate": float(cfg.learning_rate),
             "n_steps": n_steps,
             "batch_size": batch_size,
             "n_epochs": n_epochs,
