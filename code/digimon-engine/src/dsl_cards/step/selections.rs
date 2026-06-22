@@ -234,7 +234,7 @@ pub(crate) fn run_resume(
             select_kind,
             bind_as,
             inner_tail,
-            outer_tail: _,
+            outer_conts,
             bindings,
             runtime,
             trigger_context,
@@ -265,7 +265,15 @@ pub(crate) fn run_resume(
                         &mut b,
                         &runtime,
                     );
+                    // Nested-composition: an interrupt's outer clause may have
+                    // wrapped its tail onto this (resume-driven) select. Run it
+                    // after the decline tail, exactly as the wrapped on_decline
+                    // closure did (cost-declined → dsl_clause_aborted is set, so
+                    // drain_or_rewrap's run_steps short-circuits the outer tail).
+                    run_outer_conts(ctx.game, outer_conts);
                 }
+                // ResumeDecline::None mirrors a select with no on_decline: PASS
+                // runs nothing, so the outer conts are dropped (parity).
                 return;
             }
             match select_kind {
@@ -631,10 +639,40 @@ pub(crate) fn run_resume(
                     );
                 }
             }
+            // Nested-composition: run any outer-clause tails that were wrapped
+            // onto this resume-driven select (see `OuterContinuation`). Runs
+            // after the inner tail, mirroring the wrapped accept closure.
+            run_outer_conts(game, outer_conts);
         }
         ResumeFrame::MultiPickStep(state) => {
             run_multipick_step(game, state, action_id, is_pass);
         }
+    }
+}
+
+/// Run the outer-tail continuations composed onto a resume-driven selection by
+/// `wrap_pending_selection_with_tail` (the data analog of the wrapped
+/// callback). Each is run via `drain_or_rewrap_pending_tail` — so a cont that
+/// itself parks a further select re-wraps onto it (threading deep nesting) —
+/// after merging the bindings the just-run tail published (the
+/// `dsl_resolved_tail_bindings` freshness channel, exactly as the closure
+/// wrapper did). Conts run in push order.
+fn run_outer_conts(game: &mut crate::game::Game, conts: Vec<crate::resume::OuterContinuation>) {
+    for cont in conts {
+        let mut merged = cont.bindings;
+        if let Some(fresh) = game.dsl_resolved_tail_bindings.take() {
+            merged.merge_slots_from(&fresh);
+        }
+        drain_or_rewrap_pending_tail(
+            game,
+            cont.source_card,
+            cont.source_permanent,
+            cont.player,
+            (*cont.tail).clone(),
+            merged,
+            cont.runtime,
+            cont.trigger_context,
+        );
     }
 }
 
@@ -2315,6 +2353,16 @@ fn install_select_trash(
     let bindings_for_decline = bindings.clone();
     let runtime_for_decline = runtime.clone();
     let trigger_for_decline = trigger_context.clone();
+    // Resumable-VM (make-engine-cloneable Batch 1): capture the same state the
+    // success/decline closures close over so we can ALSO park a data frame. The
+    // closures move `tail`/`bindings`/`runtime`/`trigger_context`/`bind_as`, so
+    // clone first. `override_pin` mirrors `select_trash`'s captured value.
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_trash(
         target_player,
         &prompt,
@@ -2380,6 +2428,41 @@ fn install_select_trash(
                 );
             }));
         }
+    }
+    // Park the data frame alongside the closure (coexistence): if a selection
+    // was installed, `resolve_generic_selection` will drive it via `run_resume`
+    // (the Trash decode arm), bypassing the closure. The `ResumeDecline` mirrors
+    // the optional on_decline above — same tail, `aborts_clause = cost`.
+    if ctx.game.pending_selection.is_some() {
+        let decline = if optional {
+            crate::resume::ResumeDecline::RunTail {
+                tail: Arc::clone(&tail_for_resume),
+                aborts_clause: cost,
+            }
+        } else {
+            crate::resume::ResumeDecline::None
+        };
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::Trash {
+                    of_player: target_player,
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline,
+            }],
+        });
     }
 }
 
@@ -3469,6 +3552,15 @@ fn install_select_security(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (make-engine-cloneable Batch 1): capture for the data frame
+    // before the success closure consumes them. `select_security` installs no
+    // on_decline, so the data-frame decline is always `None`.
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_security(
         target_player,
         &prompt,
@@ -3501,6 +3593,31 @@ fn install_select_security(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s Security decode arm. Decline is `None` (no on_decline).
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::Security {
+                    of_player: target_player,
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
 }
 
 fn install_select_material(
@@ -3903,6 +4020,16 @@ fn install_select_own_breeding_permanent(
     let bindings_for_decline = bindings.clone();
     let runtime_for_decline = runtime.clone();
     let trigger_for_decline = trigger_context.clone();
+    // Resumable-VM (make-engine-cloneable Batch 1): capture for the dual-tail
+    // data frame. success → `inner_tail`, decline → `ResumeDecline::RunTail`
+    // over `decline_tail` (no cost, so `aborts_clause = false`).
+    let bind_as_for_resume = bind_as.clone();
+    let success_tail_for_resume = Arc::clone(&success_tail);
+    let decline_tail_for_resume = Arc::clone(&decline_tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_own_breeding_permanent(
         &prompt,
         optional,
@@ -3955,6 +4082,40 @@ fn install_select_own_breeding_permanent(
                 );
             }));
         }
+    }
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s BreedingPermanent arm. Dual-tail — decline runs the
+    // separate `decline_tail` (only when optional; no cost → no clause abort).
+    if ctx.game.pending_selection.is_some() {
+        let decline = if optional {
+            crate::resume::ResumeDecline::RunTail {
+                tail: decline_tail_for_resume,
+                aborts_clause: false,
+            }
+        } else {
+            crate::resume::ResumeDecline::None
+        };
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::BreedingPermanent {
+                    of_player: player,
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: success_tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline,
+            }],
+        });
     }
 }
 

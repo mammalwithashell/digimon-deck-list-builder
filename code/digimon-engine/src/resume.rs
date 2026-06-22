@@ -139,6 +139,26 @@ pub enum ResumeDecline {
     },
 }
 
+/// An outer-tail continuation composed onto a resume-driven selection by
+/// `wrap_pending_selection_with_tail` when a flipped (resumable-VM) select is
+/// nested inside another clause (e.g. an interrupt trigger's `select_trash`
+/// firing mid-clause, while the outer clause still has steps after the point it
+/// parked). In the closure world this was a `move` closure wrapping the
+/// selection's callback; as data it is the tail plus the snapshot needed to run
+/// it via `drain_or_rewrap_pending_tail` (which re-composes onto any further
+/// nested select, so deep chains thread correctly). Runs AFTER the frame's
+/// `inner_tail` (success) or decline tail; multiple conts run in push order.
+#[derive(Debug, Clone)]
+pub struct OuterContinuation {
+    pub tail: Arc<Vec<CompiledStep>>,
+    pub bindings: Bindings,
+    pub runtime: StepRuntime,
+    pub trigger_context: Option<TriggerContext>,
+    pub source_card: CardHandle,
+    pub source_permanent: Option<PermanentHandle>,
+    pub player: PlayerId,
+}
+
 /// One resumable continuation frame. Each variant corresponds to a former
 /// `Box::new(move |game, action_id| …)` closure body; all captured fields are
 /// `Copy`/`Clone` data.
@@ -155,8 +175,11 @@ pub enum ResumeFrame {
         bind_as: Option<String>,
         /// Steps after the select within the same effect body.
         inner_tail: Arc<Vec<CompiledStep>>,
-        /// The `dsl_outer_tail` continuation (already data on `Game` today).
-        outer_tail: Option<Arc<Vec<CompiledStep>>>,
+        /// Outer-tail continuations composed by `wrap_pending_selection_with_tail`
+        /// when this resume-driven select is nested inside another clause. Run
+        /// (in push order) after `inner_tail` on success / after the decline tail
+        /// on decline. Empty for a top-level (un-nested) select.
+        outer_conts: Vec<OuterContinuation>,
         bindings: Bindings,
         runtime: StepRuntime,
         trigger_context: Option<TriggerContext>,
@@ -258,7 +281,7 @@ mod tests {
                     select_kind: ResumeSelectKind::Hand { of_player: 0 },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
-                    outer_tail: None,
+                    outer_conts: Vec::new(),
                     bindings: Bindings::new(),
                     runtime: StepRuntime::default(),
                     trigger_context: None,
@@ -328,7 +351,7 @@ mod tests {
                     select_kind: ResumeSelectKind::Trash { of_player: 0 },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
-                    outer_tail: None,
+                    outer_conts: Vec::new(),
                     bindings: Bindings::new(),
                     runtime: StepRuntime::default(),
                     trigger_context: None,
@@ -388,7 +411,7 @@ mod tests {
                     select_kind: ResumeSelectKind::FieldPermanent { of_player: 0 },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
-                    outer_tail: None,
+                    outer_conts: Vec::new(),
                     bindings: Bindings::new(),
                     runtime: StepRuntime::default(),
                     trigger_context: None,
@@ -448,7 +471,7 @@ mod tests {
                     select_kind: ResumeSelectKind::Security { of_player: 0 },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
-                    outer_tail: None,
+                    outer_conts: Vec::new(),
                     bindings: Bindings::new(),
                     runtime: StepRuntime::default(),
                     trigger_context: None,
@@ -510,7 +533,7 @@ mod tests {
                     select_kind: ResumeSelectKind::Security { of_player: 0 },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
-                    outer_tail: None,
+                    outer_conts: Vec::new(),
                     bindings: Bindings::new(),
                     runtime: StepRuntime::default(),
                     trigger_context: None,
@@ -573,7 +596,7 @@ mod tests {
                     select_kind: ResumeSelectKind::BreedingPermanent { of_player: 0 },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
-                    outer_tail: None,
+                    outer_conts: Vec::new(),
                     bindings: Bindings::new(),
                     runtime: StepRuntime::default(),
                     trigger_context: None,
@@ -635,7 +658,7 @@ mod tests {
                     select_kind: ResumeSelectKind::Trash { of_player: 0 },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
-                    outer_tail: None,
+                    outer_conts: Vec::new(),
                     bindings: Bindings::new(),
                     runtime: StepRuntime::default(),
                     trigger_context: None,
@@ -700,7 +723,7 @@ mod tests {
                     },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
-                    outer_tail: None,
+                    outer_conts: Vec::new(),
                     bindings: Bindings::new(),
                     runtime: StepRuntime::default(),
                     trigger_context: None,
@@ -761,7 +784,7 @@ mod tests {
                     select_kind: ResumeSelectKind::Reveal,
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
-                    outer_tail: None,
+                    outer_conts: Vec::new(),
                     bindings: Bindings::new(),
                     runtime: StepRuntime::default(),
                     trigger_context: None,
@@ -827,7 +850,7 @@ mod tests {
                     select_kind: ResumeSelectKind::Material { perm: carrier },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
-                    outer_tail: None,
+                    outer_conts: Vec::new(),
                     bindings: Bindings::new(),
                     runtime: StepRuntime::default(),
                     trigger_context: None,
@@ -891,7 +914,7 @@ mod tests {
                     },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
-                    outer_tail: None,
+                    outer_conts: Vec::new(),
                     bindings: Bindings::new(),
                     runtime: StepRuntime::default(),
                     trigger_context: None,
@@ -986,6 +1009,79 @@ mod tests {
     }
 
     #[test]
+    fn runtail_runs_outer_continuation_after_inner_tail() {
+        // Nested-resume composition (the EX11-044 shape): a flipped (resume-
+        // driven) select carries an OuterContinuation wrapped on by an outer
+        // clause. On resolution, BOTH the inner tail (5) and the outer cont (3)
+        // must run — total 8 — exactly as the closure wrapper would have.
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TEST-RESUME", "Resume Tester"))
+            .hand(0, &["TEST-RESUME"])
+            .memory(0)
+            .start();
+        let source_card;
+        {
+            let game = runner.game_mut();
+            source_card = game.player(0).hand[0].handle();
+            let prev_phase = game.current_phase;
+            game.pending_selection = Some(PendingSelection {
+                kind: SelectionKind::Hand,
+                selecting_player: 0,
+                previous_phase: prev_phase,
+                valid_action_ids: vec![crate::action::space::PLAY_HAND_START],
+                is_optional: false,
+                prompt: "nested".to_string(),
+                effect_choices: None,
+                source_card,
+                source_permanent: None,
+                source_kind: EffectSourceKind::Digimon,
+                callback: Box::new(|_g, _a| panic!("closure path must NOT run")),
+                on_decline: None,
+                zone_owner: Some(0),
+            });
+            game.pending_selection_resume = Some(ResumeStack {
+                frames: vec![ResumeFrame::RunTail {
+                    prov: ResumeProvenance {
+                        source_card,
+                        source_permanent: None,
+                        source_kind: EffectSourceKind::Digimon,
+                        controller: 0,
+                        override_pin: None,
+                    },
+                    select_kind: ResumeSelectKind::Hand { of_player: 0 },
+                    bind_as: None,
+                    inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
+                    outer_conts: vec![OuterContinuation {
+                        tail: Arc::new(vec![CompiledStep::GainMemory(3)]),
+                        bindings: Bindings::new(),
+                        runtime: StepRuntime::default(),
+                        trigger_context: None,
+                        source_card,
+                        source_permanent: None,
+                        player: 0,
+                    }],
+                    bindings: Bindings::new(),
+                    runtime: StepRuntime::default(),
+                    trigger_context: None,
+                    decline: ResumeDecline::None,
+                }],
+            });
+        }
+        let before = runner.memory();
+        runner
+            .game_mut()
+            .resolve_selection(0, crate::action::space::PLAY_HAND_START)
+            .expect("resolve_selection should succeed");
+        assert_eq!(
+            (runner.memory() - before).abs(),
+            8,
+            "inner tail (5) AND the outer continuation (3) must both run"
+        );
+        assert!(runner.game_mut().pending_selection.is_none());
+        assert!(runner.game_mut().pending_selection_resume.is_none());
+    }
+
+    #[test]
     fn resume_stack_is_clone() {
         // The whole point: a paused continuation is Clone data.
         let stack = ResumeStack {
@@ -1000,7 +1096,7 @@ mod tests {
                 select_kind: ResumeSelectKind::Hand { of_player: 0 },
                 bind_as: Some("x".to_string()),
                 inner_tail: Arc::new(vec![CompiledStep::GainMemory(1)]),
-                outer_tail: None,
+                outer_conts: Vec::new(),
                 bindings: Bindings::new(),
                 runtime: StepRuntime::default(),
                 trigger_context: None,
@@ -1054,7 +1150,7 @@ mod tests {
                         select_kind: ResumeSelectKind::Hand { of_player: 0 },
                         bind_as: None,
                         inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
-                        outer_tail: None,
+                        outer_conts: Vec::new(),
                         bindings: Bindings::new(),
                         runtime: StepRuntime::default(),
                         trigger_context: None,

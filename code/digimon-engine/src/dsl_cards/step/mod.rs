@@ -238,6 +238,50 @@ fn wrap_pending_selection_with_tail(
         return;
     };
 
+    // make-engine-cloneable coexistence (Batch 1). This helper composes an outer
+    // tail onto the selection's CLOSURE callback/on_decline. A selection ported to
+    // the resumable VM is driven by `run_resume` (the closure is bypassed), so
+    // wrapping the closure would silently DROP the outer tail. Instead, compose
+    // the tail as DATA onto the resume frame: `run_resume` runs it after the
+    // inner/decline tail via the same `drain_or_rewrap_pending_tail` path, so a
+    // further nested select re-composes here recursively (deep chains thread).
+    if game.pending_selection_resume.is_some() {
+        let frame = game
+            .pending_selection_resume
+            .as_mut()
+            .and_then(|s| s.frames.last_mut());
+        match frame {
+            Some(crate::resume::ResumeFrame::RunTail { outer_conts, .. }) => {
+                outer_conts.push(crate::resume::OuterContinuation {
+                    tail: std::sync::Arc::new(outer_tail),
+                    bindings,
+                    runtime,
+                    trigger_context: tail_trigger_context,
+                    source_card,
+                    source_permanent,
+                    player,
+                });
+                game.pending_selection = Some(pending);
+                return;
+            }
+            _ => {
+                // MultiPickStep (Batch 4) frames don't yet carry outer conts.
+                // Fail loud rather than drop the tail — keeps the migration honest.
+                let source_card_id = game
+                    .card_data_for_handle(source_card)
+                    .map(|cd| cd.card_id.clone())
+                    .unwrap_or_else(|| format!("handle:{}", source_card.0));
+                panic!(
+                    "wrap_pending_selection_with_tail over a resume MultiPickStep \
+                     frame: card={source_card_id} player={player:?} \
+                     outer_tail_len={} — nested outer-tail composition onto a \
+                     MultiPickStep is not yet supported (Batch 4)",
+                    outer_tail.len(),
+                );
+            }
+        }
+    }
+
     let original_callback = pending.callback;
     let accept_tail = outer_tail.clone();
     let accept_bindings = bindings.clone();
