@@ -161,6 +161,24 @@ DIGIMON_ONNX_OPPONENT=1 python code/tools/train_specialist_league.py \
   --n-envs 8 --eval-n 24 --promote-min-wr 0.55 \
   --batch-size 256 --anchored-eval-freq 50000 --anchored-eval-games 48 \
   --eval-freq 100000 --eval-episodes 8        # ONNX opponent + tuned cadence ≈ 2x steps/sec
+# Warm-start is DECOUPLED from the gate (decouple-league-warmstart-from-gate):
+#   --warmstart accumulate  (DEFAULT) each round continues the deck's OWN latest
+#                           round checkpoint (round 1 from the generalist), so a
+#                           deck that fails the gate ("kept") compounds experience
+#                           instead of re-rolling from the generalist. The gate still
+#                           governs only the opponent pool + registry (keep-best),
+#                           so the pool stays the gated champions.
+#   --warmstart champion    legacy/gate-coupled — warm-start from the registry
+#                           champion; pass this to reproduce the pre-decoupling run.
+# Experiment tracking: add --wandb (+ --wandb-project / --wandb-group / --wandb-mode)
+# to log every specialist to Weights & Biases. It uses wandb.init(sync_tensorboard=True),
+# so ALL existing TensorBoard scalars (eval win rate, anchored panels, reward curves)
+# mirror to W&B with no extra instrumentation; runs are grouped (default group
+# "specialist-league") with per-deck/round names "<deck>_r<rnd>". The API key is read
+# from WANDB_API_KEY in the env (pass -e WANDB_API_KEY=... to the container; never bake
+# it into the image). Online mode auto-downgrades to offline if the key is missing
+# (buffer locally, `wandb sync` later). Flag is OFF by default — runs are byte-identical
+# without it. Same --wandb flag works on a bare `pilot_training` run.
 
 # With custom deck
 python -m digimon_gym.agents.pilot_training --deck1 path/to/deck.txt --timesteps 500000

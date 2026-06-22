@@ -138,6 +138,21 @@ class TrainingConfig:
     reward_gameplay_path: str = "code/digimon_gym/agents/reward/gameplay.yaml"
     reward_profile_override: Optional[str] = None
     reward_profiles_hot_reload: bool = True
+    # Weights & Biases experiment tracking (`--wandb`; optional, flag-gated, OFF
+    # by default so existing runs are byte-identical). When `wandb=True`,
+    # pilot_training calls `wandb.init(sync_tensorboard=True)` so every existing
+    # TensorBoard scalar mirrors to W&B with no extra instrumentation. The API
+    # key is read from the `WANDB_API_KEY` env var (NEVER committed). `wandb_mode`:
+    # "online" | "offline" (buffer locally for a later `wandb sync`) | "disabled"
+    # (no-op). `wandb_group` ties all league specialists/rounds under one group;
+    # `wandb_run_name` overrides the per-run name (else the run_name is used).
+    wandb: bool = False
+    wandb_project: str = "digimon-rl"
+    wandb_entity: Optional[str] = None
+    wandb_group: Optional[str] = None
+    wandb_run_name: Optional[str] = None
+    wandb_mode: str = "online"
+    wandb_tags: Optional[List[str]] = None
 
     def __post_init__(self) -> None:
         self._validate()
@@ -256,6 +271,11 @@ class TrainingConfig:
             raise ValueError(
                 f"match_format must be one of {sorted(VALID_MATCH_FORMATS)}, "
                 f"got {self.match_format}"
+            )
+        if self.wandb_mode not in {"online", "offline", "disabled"}:
+            raise ValueError(
+                "wandb_mode must be one of 'online', 'offline', 'disabled', "
+                f"got {self.wandb_mode!r}"
             )
 
     def to_dict(self) -> Dict[str, Any]:

@@ -69,6 +69,91 @@ def test_cli_tensor_profile_override_reaches_training_config(monkeypatch, tmp_pa
     assert captured["cfg"].tensor_profile == "standard_lite_v2"
 
 
+def test_cli_wandb_flags_reach_training_config(monkeypatch, tmp_path):
+    from digimon_gym.agents import pilot_training
+
+    config_path = tmp_path / "training.yaml"
+    config_path.write_text("timesteps: 1\neval_freq: 0\neval_episodes: 1\n")
+    captured = {}
+
+    def fake_train(*_a, cfg, **_k):
+        captured["cfg"] = cfg
+
+    monkeypatch.setattr(pilot_training, "train", fake_train)
+    monkeypatch.setattr("sys.argv", [
+        "pilot_training", "--config", str(config_path),
+        "--wandb", "--wandb-project", "digimon-rl",
+        "--wandb-group", "specialist-league",
+        "--wandb-run-name", "st-1_r1", "--wandb-mode", "offline",
+    ])
+    pilot_training.main()
+    c = captured["cfg"]
+    assert c.wandb is True
+    assert c.wandb_project == "digimon-rl"
+    assert c.wandb_group == "specialist-league"
+    assert c.wandb_run_name == "st-1_r1"
+    assert c.wandb_mode == "offline"
+
+
+def test_wandb_off_by_default_no_init(monkeypatch):
+    from digimon_gym.agents import pilot_training
+
+    cfg = TrainingConfig(timesteps=1, eval_freq=0, eval_episodes=1)
+    assert cfg.wandb is False
+    # disabled config never imports/inits wandb
+    assert pilot_training._maybe_init_wandb(cfg, run_name="x") is None
+    # _finish_wandb(None) is a no-op
+    pilot_training._finish_wandb(None)
+
+
+def test_maybe_init_wandb_inits_with_sync_tensorboard(monkeypatch):
+    import sys
+    import types
+
+    from digimon_gym.agents import pilot_training
+
+    calls = {}
+    fake = types.ModuleType("wandb")
+    fake.init = lambda **kw: (calls.update(kw)
+                              or types.SimpleNamespace(project="digimon-rl", name="st-1_r1"))
+    fake.finish = lambda: calls.update(finished=True)
+    monkeypatch.setitem(sys.modules, "wandb", fake)
+    monkeypatch.setenv("WANDB_API_KEY", "dummy-key")
+
+    cfg = TrainingConfig(timesteps=1, eval_freq=0, eval_episodes=1, wandb=True,
+                         wandb_project="digimon-rl", wandb_group="specialist-league",
+                         wandb_mode="online")
+    run = pilot_training._maybe_init_wandb(cfg, run_name="st-1_r1")
+    assert run is not None
+    assert calls["sync_tensorboard"] is True       # the whole point: mirror TB scalars
+    assert calls["project"] == "digimon-rl"
+    assert calls["group"] == "specialist-league"
+    assert calls["name"] == "st-1_r1"
+    assert calls["mode"] == "online"
+    pilot_training._finish_wandb(run)
+    assert calls.get("finished") is True
+
+
+def test_maybe_init_wandb_offline_fallback_without_api_key(monkeypatch):
+    import sys
+    import types
+
+    from digimon_gym.agents import pilot_training
+
+    calls = {}
+    fake = types.ModuleType("wandb")
+    fake.init = lambda **kw: (calls.update(kw)
+                              or types.SimpleNamespace(project="p", name="n"))
+    fake.finish = lambda: None
+    monkeypatch.setitem(sys.modules, "wandb", fake)
+    monkeypatch.delenv("WANDB_API_KEY", raising=False)
+
+    cfg = TrainingConfig(timesteps=1, eval_freq=0, eval_episodes=1,
+                         wandb=True, wandb_mode="online")
+    pilot_training._maybe_init_wandb(cfg, run_name="r")
+    assert calls["mode"] == "offline"   # online auto-downgrades when key is missing
+
+
 def test_cli_deck2_json_reaches_train(monkeypatch, tmp_path):
     from digimon_gym.agents import pilot_training
 

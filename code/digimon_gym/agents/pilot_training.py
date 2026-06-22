@@ -2382,6 +2382,65 @@ def save_model(model: Union[MaskablePPO, MaskableRecurrentPPO],
     return path
 
 
+# ─── Weights & Biases (optional experiment tracking) ─────────────────────
+
+def _maybe_init_wandb(cfg: TrainingConfig, run_name: Optional[str] = None):
+    """Start a W&B run when ``cfg.wandb`` is set; return the run handle (or None).
+
+    Uses ``sync_tensorboard=True`` so every existing TensorBoard scalar (eval win
+    rate, the anchored panels, reward curves) mirrors to W&B with no extra
+    instrumentation. The API key is read from ``WANDB_API_KEY`` (never committed);
+    if it's missing in online mode we downgrade to offline (buffer for a later
+    ``wandb sync``) rather than aborting the run. ``wandb`` is imported lazily so a
+    run without ``--wandb`` never needs the package installed, and any telemetry
+    failure is swallowed — tracking must never kill a training run."""
+    if not getattr(cfg, "wandb", False):
+        return None
+    mode = getattr(cfg, "wandb_mode", "online") or "online"
+    if mode == "disabled":
+        return None
+    try:
+        import wandb  # noqa: PLC0415  (lazy: only when --wandb is set)
+    except ImportError:
+        print("[wandb] --wandb set but the 'wandb' package is not installed; "
+              "skipping W&B logging (it's in requirements-training.txt).",
+              flush=True)
+        return None
+    if mode == "online" and not os.environ.get("WANDB_API_KEY"):
+        print("[wandb] WANDB_API_KEY not set — using offline mode "
+              "(run `wandb sync` later to upload).", flush=True)
+        mode = "offline"
+    try:
+        run = wandb.init(
+            project=getattr(cfg, "wandb_project", None) or "digimon-rl",
+            entity=getattr(cfg, "wandb_entity", None) or None,
+            group=getattr(cfg, "wandb_group", None) or None,
+            name=getattr(cfg, "wandb_run_name", None) or run_name or None,
+            tags=getattr(cfg, "wandb_tags", None) or None,
+            config=cfg.to_dict(),
+            sync_tensorboard=True,
+            mode=mode,
+            reinit=True,
+        )
+    except Exception as exc:  # telemetry must never abort a training run
+        print(f"[wandb] init failed (non-fatal): {exc}", flush=True)
+        return None
+    print(f"[wandb] logging to project={run.project} name={run.name} "
+          f"(mode={mode}, sync_tensorboard=True)", flush=True)
+    return run
+
+
+def _finish_wandb(run) -> None:
+    """Finish a W&B run if one was started (no-op for None). Never raises."""
+    if run is None:
+        return
+    try:
+        import wandb
+        wandb.finish()
+    except Exception as exc:
+        print(f"[wandb] finish failed (non-fatal): {exc}", flush=True)
+
+
 def train(total_timesteps: int = 100_000,
           opponent: str = "greedy",
           eval_freq: int = 10_000,
@@ -3027,6 +3086,7 @@ def train(total_timesteps: int = 100_000,
         callbacks.append(checkpoint_cb)
 
     # Train
+    wandb_run = _maybe_init_wandb(cfg, run_name)
     start = time.time()
     try:
         model.learn(
@@ -3036,6 +3096,7 @@ def train(total_timesteps: int = 100_000,
         )
     finally:
         win_rate_cb.close()
+        _finish_wandb(wandb_run)
     elapsed = time.time() - start
 
     if verbose:
@@ -3275,6 +3336,34 @@ def _build_argparser() -> argparse.ArgumentParser:
         help="Model save directory."
     )
     parser.add_argument(
+        "--wandb", action="store_true",
+        help="Log this run to Weights & Biases. sync_tensorboard mirrors all "
+             "TensorBoard scalars to W&B with no extra instrumentation. Reads "
+             "WANDB_API_KEY from the environment (auto-downgrades to offline if unset)."
+    )
+    parser.add_argument(
+        "--wandb-project", type=str, default=None,
+        help="W&B project name (default: digimon-rl)."
+    )
+    parser.add_argument(
+        "--wandb-entity", type=str, default=None,
+        help="W&B entity / team (default: your account's default entity)."
+    )
+    parser.add_argument(
+        "--wandb-group", type=str, default=None,
+        help="W&B group — ties related runs (e.g. all league specialists/rounds) "
+             "under one group in the dashboard."
+    )
+    parser.add_argument(
+        "--wandb-run-name", type=str, default=None,
+        help="W&B run name (default: the run_name / log dir name)."
+    )
+    parser.add_argument(
+        "--wandb-mode", choices=["online", "offline", "disabled"], default=None,
+        help="W&B mode (default: online; auto-downgrades to offline if "
+             "WANDB_API_KEY is unset)."
+    )
+    parser.add_argument(
         "--gauntlet", action="store_true",
         help="Enable MetaGauntlet opponent sampling from deck_library.json"
     )
@@ -3476,6 +3565,18 @@ def main():
         overrides["opponent_pool_manifest"] = args.opponent_pool_manifest
     if args.league_pool_manifest is not None:
         overrides["league_pool_manifest"] = args.league_pool_manifest
+    if args.wandb:
+        overrides["wandb"] = True
+    for _arg, _field in (
+        ("wandb_project", "wandb_project"),
+        ("wandb_entity", "wandb_entity"),
+        ("wandb_group", "wandb_group"),
+        ("wandb_run_name", "wandb_run_name"),
+        ("wandb_mode", "wandb_mode"),
+    ):
+        _val = getattr(args, _arg)
+        if _val is not None:
+            overrides[_field] = _val
     if args.lstm:
         overrides["algorithm"] = "lstm"
     if args.resume:

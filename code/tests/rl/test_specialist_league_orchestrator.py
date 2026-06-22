@@ -91,6 +91,116 @@ def test_promotion_gate_keeps_regressing_deck(tmp_path, monkeypatch):
     assert reg.get("ST-4 Giga Green").round == 0  # 0.375 < 0.6 -> kept at round 0
 
 
+def test_warmstart_accumulate_round1_is_generalist(tmp_path):
+    """Round 1 has no prior round, so accumulate (default) seeds from the generalist."""
+    spec = _spec(tmp_path)
+    reg = L.seed_registry(spec)
+    for d in DECKS:
+        assert L._resolve_warmstart(spec, reg, d, 1) == spec.generalist
+
+
+def test_warmstart_accumulate_round_k_uses_own_prior_checkpoint(tmp_path):
+    """A kept (non-promoting) deck still warm-starts round k from its OWN r{k-1}
+    checkpoint on disk — NOT from the registry champion (which stays the generalist)."""
+    spec = _spec(tmp_path)
+    reg = L.seed_registry(spec)
+    f = spec.final_zip("ST-1 Gaia Red", 1)
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("r1")
+    # registry champion for ST-1 is still the generalist (the deck was "kept")
+    assert str(reg.get("ST-1 Gaia Red").weights_path) == spec.generalist
+    # accumulate continues the deck's own chain from r1, decoupled from the gate
+    assert L._resolve_warmstart(spec, reg, "ST-1 Gaia Red", 2) == str(f)
+
+
+def test_warmstart_champion_uses_registry_champion(tmp_path):
+    """Legacy --warmstart champion reproduces the gate-coupled behavior: it warm-starts
+    from the registry champion and ignores the deck's on-disk r{k-1} checkpoint."""
+    spec = _spec(tmp_path, warmstart="champion")
+    reg = L.seed_registry(spec)
+    f = spec.final_zip("ST-1 Gaia Red", 1)
+    f.parent.mkdir(parents=True, exist_ok=True)
+    f.write_text("r1")
+    champ = str(reg.get("ST-1 Gaia Red").weights_path)
+    assert L._resolve_warmstart(spec, reg, "ST-1 Gaia Red", 2) == champ
+    assert champ != str(f)  # ignores the accumulated checkpoint
+
+
+def test_warmstart_accumulate_missing_prior_falls_back_to_registry(tmp_path, capsys):
+    """If round k>1 can't find the deck's r{k-1} checkpoint (e.g. --from-round resume),
+    accumulate falls back to the registry champion with a warning — never aborts."""
+    spec = _spec(tmp_path)
+    reg = L.seed_registry(spec)
+    out = L._resolve_warmstart(spec, reg, "ST-1 Gaia Red", 2)  # no r1 on disk
+    assert out == str(reg.get("ST-1 Gaia Red").weights_path)
+    assert "falling back to registry champion" in capsys.readouterr().out.lower()
+
+
+def test_accumulate_chain_link_survives_gate_and_pool_excludes_ungated(tmp_path, monkeypatch):
+    """3.1 + 4.1: a kept deck's r1 final.zip survives on disk (the warm-start chain
+    link is preserved — no league-level pruning), AND that ungated r1 snapshot never
+    enters the opponent pool (the pool stays the gated registry champions)."""
+    spec = _spec(tmp_path, promote_min_wr=0.6, eval_n=10, warmstart="accumulate")
+    reg = SpecialistRegistry(spec.registry_path)
+    for d in DECKS:
+        reg.set_current(Specialist(
+            deck=d, weights_path=str(tmp_path / "gen.zip"), algorithm="mlp",
+            observation_profile="p", tensor_layout_hash=spec.layout_hash, round=0,
+            source="generalist-seed"))
+    reg.save()
+    for d in DECKS:
+        f = spec.final_zip(d, 1); f.parent.mkdir(parents=True, exist_ok=True); f.write_text("m")
+
+    # ST-1 regresses (kept at r0), ST-4 improves (promoted to r1)
+    import digimon_gym.agents.league_eval as LE
+    monkeypatch.setattr(L, "_candidate_loader", lambda: (lambda wp: ("model", wp)))
+    monkeypatch.setattr(L, "_policy_loader", lambda: (lambda wp, algo: ("pol", wp)))
+    monkeypatch.setattr(L, "_resolve_deck_cards",
+                        lambda decks: {"ST-1 Gaia Red": ["A"], "ST-4 Giga Green": ["B"]})
+
+    def fake_h2h(cand, prev, deck_cards, n, base_seed, tensor_profile):
+        # ST-1 (["A"]) regresses -> kept; ST-4 (["B"]) improves -> promoted
+        return MatchRecord(wins=9, losses=15) if deck_cards == ["A"] else MatchRecord(wins=18, losses=6)
+    monkeypatch.setattr(LE, "anchored_head_to_head", fake_h2h)
+
+    L._barrier(spec, reg, 1)
+    assert reg.get("ST-1 Gaia Red").round == 0   # kept (0.375 < 0.6)
+    assert reg.get("ST-4 Giga Green").round == 1  # promoted (0.75 >= 0.6)
+
+    # 3.1: the kept deck's r1 final.zip still exists and is its r2 warm-start
+    assert spec.final_zip("ST-1 Gaia Red", 1).is_file()
+    assert L._resolve_warmstart(spec, reg, "ST-1 Gaia Red", 2) == str(spec.final_zip("ST-1 Gaia Red", 1))
+
+    # 4.1: the ungated st-1@r1 snapshot is NOT in the round-2 opponent pool
+    pool = json.loads(reg.write_round_pool(
+        spec.pool_manifest("ST-4 Giga Green", 2), for_deck="ST-4 Giga Green",
+        tensor_layout_hash=spec.layout_hash,
+        keep_last_per_deck=spec.keep_last_per_deck, include_mirror=spec.include_mirror,
+    ).read_text())
+    names = {e["name"] for e in pool["entries"]}
+    assert "st-1@r1" not in names          # ungated snapshot excluded
+    assert "st-1@r0" in names              # gated (kept) champion present
+
+
+def test_wandb_flags_plumb_into_specialist_argv(tmp_path):
+    """--wandb on the league flows into each specialist subprocess: grouped, with a
+    per-deck/round run name, and OFF by default (no wandb flags when disabled)."""
+    spec = _spec(tmp_path, wandb=True, wandb_project="digimon-rl",
+                 wandb_group="specialist-league", wandb_mode="offline")
+    argv = L.build_specialist_argv(spec, "ST-1 Gaia Red", 2, "/seed.zip",
+                                   tmp_path / "pool.json")
+    assert "--wandb" in argv
+    assert argv[argv.index("--wandb-project") + 1] == "digimon-rl"
+    assert argv[argv.index("--wandb-group") + 1] == "specialist-league"
+    assert argv[argv.index("--wandb-run-name") + 1] == "st-1_r2"
+    assert argv[argv.index("--wandb-mode") + 1] == "offline"
+
+    # default: no W&B flags leak into the argv
+    off = L.build_specialist_argv(_spec(tmp_path), "ST-1 Gaia Red", 1, "/seed.zip",
+                                  tmp_path / "pool.json")
+    assert "--wandb" not in off
+
+
 def test_run_parallel_caps_concurrency(monkeypatch):
     state = {"running": 0, "peak": 0}
 

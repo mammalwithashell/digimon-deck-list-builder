@@ -7,9 +7,21 @@ Turns one generalist into six per-deck specialists via a round-based PFSP league
                    round 1's frozen pool is "the generalist piloting each deck"
                    (plus each deck's own copy = the mirror).
   Round k        — each deck's specialist trains, scoped to its deck, warm-started
-                   from its round-(k-1) checkpoint, against a FROZEN pool emitted
-                   from the registry (latest snapshot of every deck incl. its own).
-                   At the round barrier all six snapshot back into the registry.
+                   from its OWN round-(k-1) checkpoint (round 1 from the generalist),
+                   against a FROZEN pool emitted from the registry (latest snapshot
+                   of every deck incl. its own). At the round barrier all six
+                   snapshot back into the registry.
+
+**Warm-start is decoupled from the promotion gate** (``--warmstart``, default
+``accumulate``): a round always continues the deck's own latest round checkpoint,
+so a deck that fails the gate ("kept") still compounds its experience across
+rounds instead of re-rolling from the generalist. The gate governs only the
+opponent pool + registry (keep-best), so the pool stays the *gated* champions
+(best-known per deck) — accumulating the warm-start never injects in-progress
+weights into anyone's opponent set. Pass ``--warmstart champion`` to reproduce the
+legacy gate-coupled behavior (warm-start from the registry champion) for A/B
+comparison. Non-promoting decks' accumulated checkpoints are retained on disk for
+post-hoc anchored eval; the per-deck *deliverable* stays the gated champion.
 
 Each specialist is the tested ``pilot_training`` CLI run as a subprocess (so deck
 validation, reward-profile resolution, callbacks, and the in-training anchored
@@ -101,7 +113,20 @@ class LeagueSpec:
                                  # round-(r-1) only if it wins >= this share of a
                                  # seat-balanced mirror head-to-head (else keep the
                                  # prior, so a regressing round can't poison the pool)
+    warmstart: str = "accumulate"  # "accumulate" (default) | "champion".
+                                   # accumulate: each round continues the deck's OWN
+                                   # latest round checkpoint (decoupled from the gate),
+                                   # so a kept deck compounds experience instead of
+                                   # re-rolling from the generalist. champion: legacy —
+                                   # warm-start from the registry champion (gate-coupled).
     lr_schedule: str = "constant"  # "constant" | "linear" (within-round LR decay)
+    # Weights & Biases (optional; flag-gated). When wandb=True each specialist
+    # subprocess logs to W&B with sync_tensorboard, grouped under wandb_group so
+    # all 6 decks × N rounds appear together; the per-run name is "<deck>_r<rnd>".
+    wandb: bool = False
+    wandb_project: str = "digimon-rl"
+    wandb_group: str = "specialist-league"
+    wandb_mode: str = "online"
     seed: int = 123
     eval_seed: int = 999
     python: str = sys.executable
@@ -230,6 +255,57 @@ def seed_registry(spec: LeagueSpec, created_at: str = "") -> SpecialistRegistry:
     return reg
 
 
+def _latest_round_checkpoint(spec: "LeagueSpec", deck: str, rnd: int) -> Optional[Path]:
+    """The deck's round-``rnd`` warm-start checkpoint: prefer ``final.zip``, else the
+    highest-step ``*.zip`` in the round dir. ``None`` if the round produced nothing.
+
+    There is no league-level disk pruning — each round writes to a distinct
+    ``<deck>/r{rnd}/`` dir and ``final.zip`` is never deleted — so a kept deck's
+    round chain stays intact for the next round's warm-start (and for post-hoc
+    anchored eval)."""
+    final = spec.final_zip(deck, rnd)
+    if final.is_file():
+        return final
+    run_dir = spec.run_dir(deck, rnd)
+    if run_dir.is_dir():
+        def _step(p: Path) -> int:
+            digits = "".join(ch for ch in p.stem if ch.isdigit())
+            return int(digits) if digits else -1
+        ckpts = sorted(run_dir.glob("*.zip"), key=_step)
+        if ckpts:
+            return ckpts[-1]
+    return None
+
+
+def _resolve_warmstart(
+    spec: "LeagueSpec", reg: SpecialistRegistry, deck: str, rnd: int
+) -> str:
+    """Resolve the ``--init-from`` checkpoint for ``deck``'s round ``rnd``, decoupled
+    from the promotion gate.
+
+    ``accumulate`` (default): continue the deck's OWN training chain — round 1 →
+    the generalist seed (no prior round); round k>1 → the deck's r{k-1} checkpoint
+    on disk. Falls back to the registry champion (with a warning) if that
+    checkpoint can't be found (e.g. a ``--from-round`` resume), so accumulation is
+    best-effort and never aborts.
+
+    ``champion`` (legacy): the registry champion for the deck — gate-coupled, the
+    pre-decoupling behavior, kept for A/B comparison."""
+    if spec.warmstart == "champion":
+        return str(reg.get(deck).weights_path)
+    # accumulate
+    if rnd <= 1:
+        return spec.generalist
+    prior = _latest_round_checkpoint(spec, deck, rnd - 1)
+    if prior is not None:
+        return str(prior)
+    fallback = str(reg.get(deck).weights_path)
+    print(f"[warn] {spec.slug(deck)} r{rnd}: no r{rnd - 1} checkpoint on disk; "
+          f"falling back to registry champion {fallback} "
+          f"(accumulation is best-effort)", flush=True)
+    return fallback
+
+
 def build_specialist_argv(
     spec: LeagueSpec, deck: str, rnd: int, init_from: str, pool_manifest: Path
 ) -> List[str]:
@@ -262,6 +338,14 @@ def build_specialist_argv(
         "--set", f"n_epochs={spec.n_epochs}",
         "--lr-schedule", spec.lr_schedule,
     ]
+    if spec.wandb:
+        argv += [
+            "--wandb",
+            "--wandb-project", spec.wandb_project,
+            "--wandb-group", spec.wandb_group,
+            "--wandb-run-name", name,         # "<deck-slug>_r<rnd>"
+            "--wandb-mode", spec.wandb_mode,
+        ]
     if spec.n_envs > 1:
         argv += [
             "--set", f"n_envs={spec.n_envs}",
@@ -317,8 +401,12 @@ def run_round(spec: LeagueSpec, reg: SpecialistRegistry, rnd: int, cwd: Path,
             keep_last_per_deck=spec.keep_last_per_deck,
             include_mirror=spec.include_mirror,
         )
-        # Warm-start from this deck's previous round (generalist at round 0).
-        init_from = str(reg.get(deck).weights_path)
+        # Warm-start is decoupled from the promotion gate: under "accumulate"
+        # (default) each round continues the deck's OWN latest checkpoint (round 1
+        # → the generalist), so a kept deck compounds experience instead of
+        # re-rolling from the registry champion. "champion" reproduces the legacy
+        # gate-coupled behavior. The pool/registry emission above is untouched.
+        init_from = _resolve_warmstart(spec, reg, deck, rnd)
         argvs.append(build_specialist_argv(spec, deck, rnd, init_from, pool_path))
 
     if dry_run:
@@ -435,9 +523,26 @@ def main() -> None:
                    help="Gate promotion: a round-r specialist replaces its prior "
                         "only if it wins >= this share of a seat-balanced mirror "
                         "head-to-head (0 = always promote). 0.55 is the registry rule.")
+    p.add_argument("--warmstart", choices=["accumulate", "champion"], default="accumulate",
+                   help="Per-round warm-start source, decoupled from the gate. "
+                        "accumulate (default): continue the deck's OWN latest round "
+                        "checkpoint (round 1 from the generalist), so a kept deck "
+                        "compounds experience. champion: legacy — warm-start from the "
+                        "registry champion (gate-coupled); pass this to reproduce the "
+                        "pre-decoupling behavior for A/B comparison.")
     p.add_argument("--lr-schedule", choices=["constant", "linear"], default="constant",
                    help="Within-round LR schedule passed to each specialist run "
                         "(linear = decay to 0 over the round, avoids constant-LR drift).")
+    p.add_argument("--wandb", action="store_true",
+                   help="Log every specialist to Weights & Biases (sync_tensorboard), "
+                        "grouped so all decks/rounds appear together. Each subprocess "
+                        "reads WANDB_API_KEY from the environment.")
+    p.add_argument("--wandb-project", default="digimon-rl", help="W&B project (default: digimon-rl).")
+    p.add_argument("--wandb-group", default="specialist-league",
+                   help="W&B group tying all specialists/rounds together "
+                        "(default: specialist-league).")
+    p.add_argument("--wandb-mode", choices=["online", "offline", "disabled"], default="online",
+                   help="W&B mode for the specialist runs (default: online).")
     p.add_argument("--seed", type=int, default=123)
     p.add_argument("--eval-seed", type=int, default=999)
     p.add_argument("--from-round", type=int, default=1,
@@ -480,7 +585,12 @@ def main() -> None:
         anchored_eval_games=args.anchored_eval_games,
         eval_n=args.eval_n,
         promote_min_wr=args.promote_min_wr,
+        warmstart=args.warmstart,
         lr_schedule=args.lr_schedule,
+        wandb=args.wandb,
+        wandb_project=args.wandb_project,
+        wandb_group=args.wandb_group,
+        wandb_mode=args.wandb_mode,
         seed=args.seed,
         eval_seed=args.eval_seed,
     )

@@ -31,13 +31,18 @@
 - [x] 5.2 Assemble and persist the per-round deck-by-deck matchup matrix (each cell with sample count) — `write_matchup_matrix`; wired into the orchestrator behind `--eval-n` after each barrier
 - [x] 5.3 Make promotion decisions from the anchored frame only (never the in-run win rate) — DONE: gated barrier (`_barrier`, `--promote-min-wr`) promotes a deck only if its round-r checkpoint clears a seat-balanced anchored mirror head-to-head vs its prior, else keeps the prior (a regressing round can't poison the pool); offline e2e tested
 
-## (Code-complete: 21/24. Remaining 6.1–6.3 ARE the league runs — need a box + the generalist seed)
+## (Code-complete: 21/24. 6.1–6.3 fulfilled by the campaign's real league runs — see note.)
 
 ## 6. Bring-up: skeleton → scale
 
-- [ ] 6.1 Walking skeleton on two decks (e.g. ST-4 vs ST-1), one round, parallel: verify snapshot→pool→PFSP→eval loop and that matrix cells move sensibly
-- [ ] 6.2 Scale to all six starter decks, one round; verify both parallel and sequential paths emit the 6×6 matrix and a consistent registry
-- [ ] 6.3 Multi-round league with LR decay + the plateau stop rule; confirm the matchup matrix is the driving signal
+> Fulfilled empirically by the starter-specialist-league campaign (2026-06): the
+> generalist seed (`starter_pool_single_v1`) drove the full skeleton→scale→multi-round
+> bring-up on the cpx62 box (49.12.220.89), emitting the 6×6 matchup matrix and a
+> durable registry. Closed at archive time of `decouple-league-warmstart-from-gate`.
+
+- [x] 6.1 Walking skeleton on two decks (e.g. ST-4 vs ST-1), one round, parallel: verify snapshot→pool→PFSP→eval loop and that matrix cells move sensibly
+- [x] 6.2 Scale to all six starter decks, one round; verify both parallel and sequential paths emit the 6×6 matrix and a consistent registry
+- [x] 6.3 Multi-round league with LR decay + the plateau stop rule; confirm the matchup matrix is the driving signal
 
 ## 7. Tests + docs
 
