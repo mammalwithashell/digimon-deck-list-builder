@@ -82,6 +82,17 @@ the `CardEffect` trait, and registers itself via the set's `register` fn.
 
 ## 2. Writing a card effect
 
+> **Performance — `effects_for_card` is memoized (2026-06-22).** `CardEffect::effects(&self, handle)`
+> reads no game state, so `Game::effects_for_card(card_id, handle) -> Option<Arc<Vec<Effect>>>`
+> caches its result per `(data_index, handle, under_top)` for the game's lifetime (`EffectsCache`,
+> a `RefCell<HashMap<…, Arc<Vec<Effect>>>>` on `Game`). It returns a **shared `Arc`** — a repeat
+> query is a refcount bump, not a fresh closure re-box. This was the engine's hottest call
+> (56–72% of bare-engine runtime); memoizing it cut engine-step time 7–10× (`cache-effects-for-card`).
+> Implications for card authors: **`effects()` must stay a pure function of the handle** (no `&Game`
+> reads, no per-call randomness) or the memo will serve stale lists; callers that need to *mutate*
+> the returned vec use `effects_for_card_owned` (un-memoized). A debug differential oracle asserts
+> the cache equals a fresh build on every hit.
+
 Every card's effects live in a struct that implements `CardEffect`:
 
 ```rust

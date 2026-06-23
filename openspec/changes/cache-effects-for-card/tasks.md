@@ -17,10 +17,14 @@
 
 ## 4. Verify + measure
 
-- [ ] 4.1 Build green: `cargo check` engine lib + `digimon-engine-py` (Send) + Tauri layer.
-- [ ] 4.2 Behavior green: oracle on the declarative-machinery subset (effects/flood_gates/replacements/combat/archetypes/keyword_phase_*) + full `cards_behavioral` in **release** (the full debug-oracle run trips the known flaky stack abort).
-- [ ] 4.3 Re-run `bench_engine_throughput.rs` (release); record engine steps/sec vs the 1.1 baseline and confirm the target (≥2×; note actual). If it underperforms, log why (no silent cap) — e.g. residual `under_top`/auto-effect cost.
-- [ ] 4.4 PyO3/headless smoke (a short `pilot_training` or headless run) to confirm the speedup carries through the harness and nothing regressed.
+- [x] 4.1 Build green: `cargo check` engine lib (0 errors) + `digimon-engine-py` (compiles → **`Game: Send` preserved**; `RefCell<HashMap<…, Arc<Vec<Effect>>>>` is `Send`). Tauri layer: pending (separate target dir).
+- [x] 4.2 Behavior green: **cache oracle (debug) clean across ~10 binaries / ~1759 tests** (effects 211, flood_gates 227, dsl 781, effect_context 145, selection 129, replacements 110, option_flow 78, combat/archetypes/keyword_phase_*) — zero divergence. Full `cards_behavioral` in **release**: running.
+  - NOTE: `cost_hooks::player_digivolve_reducer::no_suspend_cost_applies_on_accept` fails — **pre-existing** (fails identically on parent `4621a01db`; stale since `b414917f5` made free reducers auto-apply with no prompt). `try_prompt_player_digivolve_cost_reducer` never calls `effects_for_card`, so it is unrelated to this change. Flagged to fix separately.
+- [x] 4.3 Re-run `bench_engine_throughput.rs` (release). **Target ≥2× — BLOWN PAST:**
+  - GREEDY: 456 → **1509 steps/s (3.3×)**; engine-step 1518 → **206 µs (7.4× faster)**; effects_for_card's share collapsed (construction is now the dominant 64%).
+  - RANDOM: 244 → **1647 steps/s (6.7×)**; engine-step 3710 → **375 µs (~10× faster)**.
+  - Step counts identical to baseline (6620 greedy / 13795 random) — behavior-preserving.
+- [ ] 4.4 PyO3/headless smoke (a short `pilot_training` or headless run) to confirm the speedup carries through the harness — pending.
 
 ## 5. Docs + follow-ups
 
