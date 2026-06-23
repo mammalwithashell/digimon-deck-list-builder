@@ -4323,6 +4323,90 @@ fn install_select_ordered_permutation(
 }
 
 #[allow(clippy::too_many_arguments)]
+/// Reconstruct the `(action_id, handle, origin)` candidates of a parked
+/// union-zone selection, mirroring `select_union_zone`'s callback decode across
+/// the four ranges (breeding-source / field-source / trash / hand). Built at
+/// install time — the selection is parked, so handles are stable — for the
+/// resumable-VM `UnionZone` frame, which linear-searches rather than decodes.
+fn union_zone_candidates(
+    game: &crate::game::Game,
+    of_player: PlayerId,
+    valid_action_ids: &[u16],
+) -> Vec<(
+    u16,
+    crate::card_source::CardHandle,
+    crate::selection::UnionZoneOrigin,
+)> {
+    use crate::action::space::{
+        decode_breeding_source_select, decode_source_select, BREEDING_SOURCE_SELECT_END,
+        BREEDING_SOURCE_SELECT_START, BREEDING_TARGET, PLAY_HAND_START, SOURCE_SELECT_END,
+        SOURCE_SELECT_START, TRASH_EFFECT_END, TRASH_EFFECT_START,
+    };
+    use crate::selection::UnionZoneOrigin;
+    let mut out = Vec::with_capacity(valid_action_ids.len());
+    for &action in valid_action_ids {
+        let resolved = if (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END)
+            .contains(&action)
+        {
+            let (player, source_index) = decode_breeding_source_select(action);
+            let (player, source_index) = (player as u8, source_index as u8);
+            let carrier = PermanentHandle {
+                player,
+                index: BREEDING_TARGET as u8,
+            };
+            game.player(player)
+                .breeding_area
+                .as_ref()
+                .and_then(|p| p.card_sources.get(source_index as usize))
+                .map(|c| {
+                    (
+                        c.handle(),
+                        UnionZoneOrigin::Material {
+                            carrier,
+                            source_index,
+                        },
+                    )
+                })
+        } else if (SOURCE_SELECT_START..SOURCE_SELECT_END).contains(&action) {
+            let (field_index, source_index) = decode_source_select(action);
+            let (field_index, source_index) = (field_index as u8, source_index as u8);
+            let carrier = PermanentHandle {
+                player: of_player,
+                index: field_index,
+            };
+            game.player(of_player)
+                .battle_area
+                .get(field_index as usize)
+                .and_then(|p| p.card_sources.get(source_index as usize))
+                .map(|c| {
+                    (
+                        c.handle(),
+                        UnionZoneOrigin::Material {
+                            carrier,
+                            source_index,
+                        },
+                    )
+                })
+        } else if (TRASH_EFFECT_START..TRASH_EFFECT_END).contains(&action) {
+            let idx = (action - TRASH_EFFECT_START) as usize;
+            game.player(of_player)
+                .trash
+                .get(idx)
+                .map(|c| (c.handle(), UnionZoneOrigin::Trash))
+        } else {
+            let idx = action.saturating_sub(PLAY_HAND_START) as usize;
+            game.player(of_player)
+                .hand
+                .get(idx)
+                .map(|c| (c.handle(), UnionZoneOrigin::Hand))
+        };
+        if let Some((handle, origin)) = resolved {
+            out.push((action, handle, origin));
+        }
+    }
+    out
+}
+
 fn install_select_union_zone(
     ctx: &mut EffectContext<'_>,
     of: CompiledPlayerRef,
@@ -4392,6 +4476,17 @@ fn install_select_union_zone(
     let bindings_for_decline = bindings.clone();
     let runtime_for_decline = runtime.clone();
     let trigger_for_decline = trigger_context.clone();
+    // Resumable-VM (Batch 3): capture for the dual-tail data frame. success →
+    // `inner_tail` (success_tail), decline → `ResumeDecline::RunTail` over
+    // decline_tail with `aborts_clause = cost`. Candidates are reconstructed
+    // from the parked selection's valid_action_ids below (tri-range decode).
+    let bind_as_for_resume = bind_as.clone();
+    let success_tail_for_resume = Arc::clone(&success_tail);
+    let decline_tail_for_resume = Arc::clone(&decline_tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_union_zone(
         target_player,
         zoneset,
@@ -4478,6 +4573,49 @@ fn install_select_union_zone(
                 );
             }));
         }
+    }
+    // Park the dual-tail data frame alongside the closure (coexistence): driven
+    // by `run_resume`'s UnionZone arm (linear search over the reconstructed
+    // tri-range candidates). Decline runs the separate decline_tail with
+    // `aborts_clause = cost`, mirroring the on_decline above.
+    if ctx.game.pending_selection.is_some() {
+        let valid = ctx
+            .game
+            .pending_selection
+            .as_ref()
+            .map(|p| p.valid_action_ids.clone())
+            .unwrap_or_default();
+        let candidates = union_zone_candidates(ctx.game, target_player, &valid);
+        let decline = if optional {
+            crate::resume::ResumeDecline::RunTail {
+                tail: decline_tail_for_resume,
+                aborts_clause: cost,
+            }
+        } else {
+            crate::resume::ResumeDecline::None
+        };
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::UnionZone {
+                    of_player: target_player,
+                    candidates,
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: success_tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline,
+            }],
+        });
     }
 }
 
