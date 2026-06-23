@@ -75,3 +75,8 @@ code/frontend/playwright-report/
 
 # Per-worktree isolated cargo target scratch dirs (build contention workaround)
 .cargo-target-*/
+
+# Brainstorm visual-companion + screenshot-trial scratch (session-local)
+.superpowers/
+.trial/
+/playwright-launcher.png
