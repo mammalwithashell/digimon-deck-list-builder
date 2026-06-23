@@ -49,8 +49,8 @@ Incremental, parity-guarded. The data-VM and legacy closure executor coexist beh
 ## 6. Cutover & docs
 
 - [ ] 6.1 Delete the legacy closure executor once the pool is fully migrated and both-path CI is green.
-- [ ] 6.2 Update `docs/RUST_ENGINE_API.md`: the VM execution model and that the reset-and-replay contract now has a snapshot alternative (note replay-stepper conversion is a separate follow-on).
-- [ ] 6.3 Note in `add-model-evaluation-harness` that the equilibrium-methods horizon (Deep CFR / ReBeL / Player of Games) is now unblocked.
+- [x] 6.2 Update `docs/RUST_ENGINE_API.md` — **DONE 2026-06-23**: added a "Snapshot alternative now exists" note to the reset-and-replay contract §, documenting the resumable data VM (`pending_selection` + `pending_selection_resume`, `run_resume`) and that a mid-selection `Game` clones faithfully at every production decision point; flagged the replay-stepper conversion as a separate follow-on (back-step contract unchanged).
+- [x] 6.3 Note the equilibrium-methods horizon is now unblocked — **DONE 2026-06-23**: updated `docs/MODEL_EVALUATION.md` §6 — the forking precondition (`Game: Clone`) is MET at 100% of the production surface; what remains for Deep CFR / ReBeL / Player of Games is the infoset/belief structure + determinization seam (the `add-determinized-search` change).
 
 ## 7. Validation
 
