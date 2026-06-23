@@ -141,6 +141,10 @@ pub enum ResumeSelectKind {
     /// source index under carrier `perm` (battle- or breeding-area). Binds the
     /// resolved source `CardHandle` via `material_carrier_permanent`.
     Material { perm: PermanentHandle },
+    /// `action_id - HAND_EFFECT_START` → 0-based label index of a "choose one"
+    /// prompt (`select_effect_choice`). Binds the index as a literal
+    /// (`insert_literal`). Not optional (a branch must be picked).
+    EffectChoice,
     /// Union-zone select spanning hand ∪ trash ∪ material. The tri-range decode
     /// is captured at install as `(action_id, handle, origin)` candidates (the
     /// decode runs once), so the arm linear-searches and binds via

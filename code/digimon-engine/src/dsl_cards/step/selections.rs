@@ -604,6 +604,32 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
+                ResumeSelectKind::EffectChoice => {
+                    // "choose one": action_id - HAND_EFFECT_START → label index,
+                    // bound as a literal (mirrors ctx.select_effect_choice).
+                    let choice_index = action_id
+                        .saturating_sub(crate::action::space::HAND_EFFECT_START)
+                        as usize;
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_literal(name, choice_index as i64);
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
                 ResumeSelectKind::UnionZone {
                     of_player,
                     candidates,
@@ -4405,6 +4431,17 @@ fn install_select_effect_choice(
 ) {
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    // Resumable-VM (post-Batch-4): capture for the RunTail/EffectChoice frame.
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let override_pin = ctx.override_selecting_player();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
     ctx.select_effect_choice(&prompt, labels, move |cb_ctx, idx| {
         let mut b = bindings.clone();
         if let Some(name) = &bind_as {
@@ -4412,6 +4449,29 @@ fn install_select_effect_choice(
         }
         run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
     });
+    // Park the data frame (coexistence): driven by run_resume's EffectChoice arm.
+    // Not optional (a branch must be picked) → decline None.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::EffectChoice,
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
 }
 
 fn install_select_reveal(
