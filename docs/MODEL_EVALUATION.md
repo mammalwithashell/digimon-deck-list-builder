@@ -127,17 +127,22 @@ All three require **cheap forking of game state** to traverse the tree, plus
 explicit infoset / public-belief structure, plus a tractable belief space (a
 50-card deck dwarfs poker's hidden info).
 
-> **Forking precondition now MET (`make-engine-cloneable`, 2026-06-23).** `Game:
-> Clone` is live and faithful at **100% of the production decision surface** — the
-> selection surface is a resumable data VM (`src/resume.rs`), so a mid-selection
-> `Game` forks cleanly at every production node. The hard blocker named here
-> ("`Game` is non-`Clone`, closure-bearing") is **resolved**. So the *forkability*
-> requirement of Deep CFR / ReBeL / Player of Games is satisfied; what remains for
-> each is the **infoset / public-belief structure + the determinization seam** —
-> the program tracked in the **`add-determinized-search`** change (determinized /
-> IS-MCTS over `RevealSource`-sampled worlds, reusing the existing 2192-action
-> mask as the edge enumerator and the observation tensor at leaves). The
-> forward-only exploiter remains the cheap robustness number in the meantime.
+> **Forking precondition PARTIALLY met (`make-engine-cloneable`, 2026-06-23).**
+> `Game: Clone` is live and faithful at the **DSL card-effect selection-step
+> surface** (the flipped installers — hand/trash/permanent/reveal/material/union +
+> the multi-pick trampolines), via a resumable data VM (`src/resume.rs`). So a
+> `Game` paused at those select kinds forks cleanly. **It is NOT yet faithful at
+> the broader engine surface**: combat/keyword interrupts, digivolve cost-choice,
+> BO3 play-order, Overclock, TriggerOrder, replacement-accept, `select_effect_choice`,
+> and several other selections are still closure-based and would panic on a forked
+> resolve. So the *forkability* requirement of Deep CFR / ReBeL / Player of Games
+> is met **only on the flipped subset** — full-game search must wait for the rest
+> of the selection surface to flip + the closure executor to be deleted (remaining
+> `make-engine-cloneable` work). What each method ALSO needs is the **infoset /
+> public-belief structure + the determinization seam** — the **`add-determinized-search`**
+> change (determinized / IS-MCTS over `RevealSource`-sampled worlds, reusing the
+> 2192-action mask + the observation tensor). The forward-only exploiter remains
+> the cheap robustness number meanwhile.
 
 ## 7. Recommended workflow
 

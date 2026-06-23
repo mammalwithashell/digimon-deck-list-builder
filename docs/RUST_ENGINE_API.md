@@ -836,22 +836,28 @@ Implication for callers: a `PermanentHandle` / index obtained before a backward
 seek is invalid after it (the same rule as across deletions — see the anti-pattern
 below). Re-read indices from the post-seek state.
 
-> **Snapshot alternative now exists (`make-engine-cloneable`, 2026-06-23).** The
-> premise above ("no state snapshot; a full-state snapshot would require an
-> engine-wide serializability refactor") is **superseded for the production pool**.
-> `Game: Clone` is live: `ModifierEntry` predicates/effects are `Arc`-shared, and
-> the **selection surface is now a resumable data VM** — `pending_selection` is
-> paired with `Game::pending_selection_resume` (a `Vec<ResumeFrame>` of plain
-> data; see `src/resume.rs`), and `resolve_generic_selection` drives the data
-> frames via `run_resume` instead of the legacy `Box<dyn FnOnce>` callback. So a
-> mid-selection `Game` **clones faithfully** at every production decision point
-> (the precondition for MCTS / AlphaZero / Deep-CFR search — `add-determinized-search`).
-> A clone of an *un-migrated* closure selection (only `partition`, which is
-> test-only) clones to a panic-stub that fails loudly on resolution rather than
-> mis-resolving. NOTE: the **replay-stepper still uses reset-and-replay** above —
-> converting it to clone-based snapshots is a separate follow-on (the back-step
-> contract is unchanged for now); `make-engine-cloneable` only established that
-> snapshots are *possible*, it did not rewire the stepper.
+> **Snapshot alternative is PARTIAL (`make-engine-cloneable`, 2026-06-23).** The
+> premise above ("no state snapshot; closure-bearing `Game`") is **partly lifted**:
+> `Game: Clone` is now live (`ModifierEntry` predicates/effects are `Arc`-shared),
+> and the **DSL card-effect selection-step surface is a resumable data VM** —
+> `pending_selection` is paired with `Game::pending_selection_resume` (a
+> `Vec<ResumeFrame>` of plain data; see `src/resume.rs`), and
+> `resolve_generic_selection` drives those data frames via `run_resume` instead of
+> the legacy `Box<dyn FnOnce>` callback. So a `Game` paused at a flipped DSL select
+> (hand/trash/security/breeding/own+opp/any permanent/reveal/material/union_zone +
+> the permutation/budget/source-multi/count_capped/reveal-bucket multi-picks)
+> **clones faithfully**. **It is NOT yet faithful everywhere** — a large selection
+> surface is still closure-based and clones to a panic-stub that fails on resolve:
+> `select_effect_choice` (the common "choose one" prompt) and several other DSL
+> installers (`use_option`, `choose_from_reveal`, `dna_pair`, `order_remainder`,
+> tamer-cost), plus the **non-DSL** surface — combat/keyword interrupts (Alliance,
+> Counter, Block, Fragment, Save, Decode, …), digivolve cost-choice / reducers,
+> BO3 play-order, Overclock, TriggerOrder / optional-trigger, replacement-accept,
+> Delay. So clone-based **search is usable only on games paused at (or between) the
+> flipped DSL select kinds**, not at a combat/digivolve/play-order node. Flipping
+> the rest + deleting the legacy closure executor is the remaining
+> `make-engine-cloneable` work. NOTE: the replay-stepper still uses reset-and-replay
+> above; converting it to clone-based snapshots is a separate follow-on.
 
 ### Replacement-process outcome-setters
 
