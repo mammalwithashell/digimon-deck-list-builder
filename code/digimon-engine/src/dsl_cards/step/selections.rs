@@ -1152,6 +1152,25 @@ fn run_outer_conts(game: &mut crate::game::Game, conts: Vec<crate::resume::Outer
 /// a card list, then run the inner tail (the data form of the trampoline's
 /// `final_callback`).
 fn run_multipick_terminal(game: &mut crate::game::Game, state: crate::resume::MultiPickState) {
+    // Mirror select_count_capped_multi_min's final_callback: emit EffectTarget for
+    // the picked cards before the body runs.
+    let refs: Vec<crate::events::EventCardRef> = state
+        .accum
+        .iter()
+        .filter_map(|h| {
+            game.card_data_for_handle(*h)
+                .map(|cd| crate::events::EventCardRef {
+                    card_id: cd.card_id.clone(),
+                    card_name: cd.card_name.clone(),
+                })
+        })
+        .collect();
+    crate::effect_context::selections::push_effect_target_multi(
+        game,
+        state.prov.controller,
+        state.prov.source_card,
+        refs,
+    );
     let mut ctx = EffectContext::new_with_source_kind_and_override(
         game,
         state.prov.source_card,
@@ -3703,6 +3722,16 @@ fn install_select_count_capped_multi(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (Batch 4): capture for the MultiPickStep frame (Hand/Trash
+    // card-based count_capped). filter carried as a CompiledPredicate (data-pure).
+    let filter_for_resume = filter.clone();
+    let filter_bindings_for_resume = bindings.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_count_capped_multi_min(
         target_player,
         engine_zone,
@@ -3734,6 +3763,125 @@ fn install_select_count_capped_multi(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // Park the MultiPickStep data frame. Clobber guard: only park when OUR
+    // candidate set is non-empty (empty ⇒ the closure ran the tail inline; and a
+    // `candidates < min` short-circuit installs no pending so the `Some(pending)`
+    // guard skips it too).
+    let candidate_indices = count_capped_card_candidate_indices(
+        ctx.game,
+        target_player,
+        engine_zone,
+        &filter_for_resume,
+        &filter_bindings_for_resume,
+        source_card,
+        source_permanent,
+        source_kind,
+        player,
+    );
+    if !candidate_indices.is_empty() {
+        if let Some(pending) = ctx.game.pending_selection.as_ref() {
+            let selecting_player = pending.selecting_player;
+            let previous_phase = pending.previous_phase;
+            let range_start = match engine_zone {
+                CountCappedZone::Hand => crate::action::space::PLAY_HAND_START,
+                CountCappedZone::Trash => crate::action::space::TRASH_EFFECT_START,
+                CountCappedZone::Material(ph) => {
+                    crate::effect_context::selections::material_zone_geometry(ctx.game, ph)
+                        .map(|(_, rs)| rs)
+                        .unwrap_or(0)
+                }
+            };
+            ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![crate::resume::ResumeFrame::MultiPickStep(
+                    crate::resume::MultiPickState {
+                        prov: crate::resume::ResumeProvenance {
+                            source_card,
+                            source_permanent,
+                            source_kind,
+                            controller: player,
+                            override_pin,
+                        },
+                        of_player: target_player,
+                        selecting_player,
+                        previous_phase,
+                        zone: engine_zone,
+                        range_start,
+                        min,
+                        max,
+                        is_optional_zero: optional_zero,
+                        distinct_by,
+                        candidate_indices,
+                        accum: Vec::new(),
+                        bind_as: bind_as_for_resume,
+                        inner_tail: tail_for_resume,
+                        bindings: bindings_for_resume,
+                        runtime: runtime_for_resume,
+                        trigger_context: trigger_for_resume,
+                        outer_conts: Vec::new(),
+                    },
+                )],
+            });
+        }
+    }
+}
+
+/// Re-derive the filter-passing zone indices for a card-based count_capped
+/// (Hand/Trash/Material), mirroring `select_count_capped_multi_min`'s install-time
+/// candidate scan with the `CompiledPredicate` on `PredicateSubject::Card`.
+/// Data-pure. `distinct_by` is NOT applied here (the executor applies it on
+/// re-park, matching the closure).
+#[allow(clippy::too_many_arguments)]
+fn count_capped_card_candidate_indices(
+    game: &crate::game::Game,
+    of_player: PlayerId,
+    zone: CountCappedZone,
+    filter: &CompiledPredicate,
+    filter_bindings: &Bindings,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    source_kind: crate::enums::EffectSourceKind,
+    player: PlayerId,
+) -> Vec<usize> {
+    use crate::action::space::{HAND_MAIN_LIMIT, TRASH_MAIN_LIMIT};
+    let zone_len = match zone {
+        CountCappedZone::Hand => game.player(of_player).hand.len().min(HAND_MAIN_LIMIT),
+        CountCappedZone::Trash => game.player(of_player).trash.len().min(TRASH_MAIN_LIMIT),
+        CountCappedZone::Material(ph) => crate::effect_context::selections::material_zone_slice(
+            game, ph,
+        )
+        .map(|s| s.len().saturating_sub(1))
+        .unwrap_or(0),
+    };
+    // Collect handles first (release the zone borrow before the read context).
+    let mut handles: Vec<crate::card_source::CardHandle> = Vec::with_capacity(zone_len);
+    for i in 0..zone_len {
+        let h = match zone {
+            CountCappedZone::Hand => game.player(of_player).hand[i].handle(),
+            CountCappedZone::Trash => game.player(of_player).trash[i].handle(),
+            CountCappedZone::Material(ph) => {
+                match crate::effect_context::selections::material_zone_slice(game, ph) {
+                    Some(s) => s[i].handle(),
+                    None => continue,
+                }
+            }
+        };
+        handles.push(h);
+    }
+    let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+        game,
+        source_card,
+        source_permanent,
+        source_kind,
+        player,
+    );
+    let mut out = Vec::new();
+    for (i, h) in handles.into_iter().enumerate() {
+        if eval_predicate_with_bindings(filter, &read, PredicateSubject::Card(h), Some(filter_bindings))
+        {
+            out.push(i);
+        }
+    }
+    out
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -4389,6 +4537,17 @@ fn install_select_materials(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (Batch 4): capture for the MultiPickStep frame (Material-source
+    // count_capped — same MultiPickState as Hand/Trash, zone = Material(perm),
+    // of_player = perm.player, min = 0).
+    let filter_for_resume = filter.clone();
+    let filter_bindings_for_resume = bindings.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_count_capped_multi(
         // The carrier's owner — `Material` candidates come from
         // `perm.player`'s battle area regardless of `of_player`.
@@ -4421,6 +4580,60 @@ fn install_select_materials(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // Park the MultiPickStep frame (clobber guard: park only if our candidate set
+    // is non-empty).
+    let candidate_indices = count_capped_card_candidate_indices(
+        ctx.game,
+        perm.player,
+        CountCappedZone::Material(perm),
+        &filter_for_resume,
+        &filter_bindings_for_resume,
+        source_card,
+        source_permanent,
+        source_kind,
+        player,
+    );
+    if !candidate_indices.is_empty() {
+        if let Some(pending) = ctx.game.pending_selection.as_ref() {
+            let selecting_player = pending.selecting_player;
+            let previous_phase = pending.previous_phase;
+            let range_start = crate::effect_context::selections::material_zone_geometry(
+                ctx.game, perm,
+            )
+            .map(|(_, rs)| rs)
+            .unwrap_or(0);
+            ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![crate::resume::ResumeFrame::MultiPickStep(
+                    crate::resume::MultiPickState {
+                        prov: crate::resume::ResumeProvenance {
+                            source_card,
+                            source_permanent,
+                            source_kind,
+                            controller: player,
+                            override_pin,
+                        },
+                        of_player: perm.player,
+                        selecting_player,
+                        previous_phase,
+                        zone: CountCappedZone::Material(perm),
+                        range_start,
+                        min: 0,
+                        max,
+                        is_optional_zero: optional_zero,
+                        distinct_by: uniqueness,
+                        candidate_indices,
+                        accum: Vec::new(),
+                        bind_as: bind_as_for_resume,
+                        inner_tail: tail_for_resume,
+                        bindings: bindings_for_resume,
+                        runtime: runtime_for_resume,
+                        trigger_context: trigger_for_resume,
+                        outer_conts: Vec::new(),
+                    },
+                )],
+            });
+        }
+    }
 }
 
 fn install_select_own_sources(
