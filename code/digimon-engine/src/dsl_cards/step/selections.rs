@@ -513,9 +513,13 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
-                ResumeSelectKind::Reveal => {
+                ResumeSelectKind::Reveal { route } => {
                     let index =
                         action_id.saturating_sub(crate::action::space::SEL_REVEAL_START) as usize;
+                    // Resolve the picked handle BEFORE routing moves it out of the
+                    // reveal pool (choose_from_reveal). Stale index → skip bind +
+                    // route, matching the legacy callbacks' 2b/2c convention.
+                    let picked = game.revealed_cards.get(index).map(|c| c.handle());
                     // Target tracking (mirrors ctx.select_reveal's wrapper).
                     if let Some(card) = game.revealed_cards.get(index) {
                         let tid = card.card_id(&game.card_data).to_string();
@@ -537,11 +541,20 @@ pub(crate) fn run_resume(
                         prov.override_pin,
                     );
                     let mut b = bindings;
-                    if let Some(name) = &bind_as {
-                        // Stale index (reveal pile mutated mid-resolution) skips
-                        // the bind, matching the legacy callback's convention.
-                        if let Some(card) = ctx.game.revealed_cards.get(index) {
-                            b.insert_card(name, card.handle());
+                    if let Some(handle) = picked {
+                        if let Some(name) = &bind_as {
+                            b.insert_card(name, handle);
+                        }
+                        // choose_from_reveal: route the picked card to its
+                        // destination (mirrors the closure's route_chosen_reveal).
+                        if let Some(route) = &route {
+                            route_chosen_reveal(
+                                &mut ctx,
+                                route.target_player,
+                                handle,
+                                &route.destination,
+                                route.target_permanent,
+                            );
                         }
                     }
                     run_tail_preserving_trigger_context(
@@ -1321,7 +1334,11 @@ fn run_permutation_terminal(game: &mut crate::game::Game, state: crate::resume::
         state.prov.override_pin,
     );
     let mut b = state.bindings;
-    if let Some(name) = &state.bind_as {
+    if let Some(placement) = &state.placement {
+        // order_remainder / remainder_permutation: place the ordered list back on
+        // the deck (mirrors place_remainder_in_order); does NOT bind.
+        place_remainder_in_order(&mut ctx, placement.player, &state.accum, placement.position);
+    } else if let Some(name) = &state.bind_as {
         b.insert_card_list(name, state.accum);
     }
     run_tail_preserving_trigger_context(
@@ -1332,8 +1349,8 @@ fn run_permutation_terminal(game: &mut crate::game::Game, state: crate::resume::
         &state.runtime,
     );
     // Nested multi-pick: run any outer-clause tails wrapped onto this frame, now
-    // that the accumulated list is bound + the inner tail ran (the multi-pick has
-    // terminated). Empty for a top-level (un-nested) multi-pick.
+    // that the accumulated list is bound/placed + the inner tail ran (the
+    // multi-pick has terminated). Empty for a top-level (un-nested) multi-pick.
     run_outer_conts(game, state.outer_conts);
 }
 
@@ -4552,7 +4569,7 @@ fn install_select_reveal(
                     controller: player,
                     override_pin,
                 },
-                select_kind: crate::resume::ResumeSelectKind::Reveal,
+                select_kind: crate::resume::ResumeSelectKind::Reveal { route: None },
                 bind_as: bind_as_for_resume,
                 inner_tail: tail_for_resume,
                 outer_conts: Vec::new(),
@@ -5674,6 +5691,7 @@ fn install_select_ordered_permutation(
                         bindings: bindings_for_resume,
                         runtime: runtime_for_resume,
                         trigger_context: trigger_for_resume,
+                        placement: None,
                         outer_conts: Vec::new(),
                     },
                 )],
@@ -6059,7 +6077,21 @@ fn install_choose_from_reveal(
     let player = ctx.player;
     let filter_bindings = bindings.clone();
     let destination_for_callback = destination;
-    ctx.select_reveal(
+    // Resumable-VM: capture for the Reveal{route:Some} data frame. The filter
+    // restricts valid_action_ids at install, so the resume arm just decodes +
+    // binds + routes (no re-eval of the filter).
+    let override_pin = ctx.override_selecting_player();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let route_for_resume = crate::resume::RevealRoute {
+        destination: destination_for_callback.clone(),
+        target_player,
+        target_permanent,
+    };
+    let parked = ctx.select_reveal(
         &prompt,
         optional,
         move |game, idx| {
@@ -6104,7 +6136,33 @@ fn install_choose_from_reveal(
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
-    )
+    );
+    // Park the data frame alongside the closure (coexistence): driven by
+    // run_resume's Reveal{route:Some} arm. No on_decline → decline None.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::Reveal {
+                    route: Some(route_for_resume),
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
+    parked
 }
 
 /// Route a single chosen revealed card to its destination. Pure dispatch —
@@ -6256,16 +6314,58 @@ fn install_remainder_permutation_with_tail(
     );
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
-    ctx.select_ordered_permutation(
-        remainder,
-        "Place remaining cards on deck in any order",
-        move |cb_ctx, ordered_vec| {
-            place_remainder_in_order(cb_ctx, player, &ordered_vec, position);
-            let mut b = bindings.clone();
-            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
-        },
-    );
+    // Resumable-VM: capture for the PermutationStep{placement:Some} data frame.
+    // The terminal places the ordered list back on the deck (no bind).
+    const PROMPT: &str = "Place remaining cards on deck in any order";
+    let remainder_for_resume = remainder.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let controller = ctx.player;
+    let override_pin = ctx.override_selecting_player();
+    ctx.select_ordered_permutation(remainder, PROMPT, move |cb_ctx, ordered_vec| {
+        place_remainder_in_order(cb_ctx, player, &ordered_vec, position);
+        let mut b = bindings.clone();
+        run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+    });
     if ctx.game.pending_selection.is_some() {
+        // Park the data frame: placement-terminal (no bind), driven by
+        // run_resume's PermutationStep arm. selecting_player/previous_phase read
+        // back from the installed selection so the re-park matches exactly.
+        let capped: Vec<_> = remainder_for_resume.into_iter().take(10).collect();
+        if let Some(pending) = ctx.game.pending_selection.as_ref() {
+            let selecting_player = pending.selecting_player;
+            let previous_phase = pending.previous_phase;
+            ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![crate::resume::ResumeFrame::PermutationStep(
+                    crate::resume::PermutationState {
+                        prov: crate::resume::ResumeProvenance {
+                            source_card,
+                            source_permanent,
+                            source_kind,
+                            controller,
+                            override_pin,
+                        },
+                        selecting_player,
+                        previous_phase,
+                        remaining: capped,
+                        accum: Vec::new(),
+                        prompt: PROMPT.to_string(),
+                        bind_as: None,
+                        inner_tail: tail_for_resume,
+                        bindings: bindings_for_resume,
+                        runtime: runtime_for_resume,
+                        trigger_context: trigger_for_resume,
+                        placement: Some(crate::resume::RemainderPlacement { player, position }),
+                        outer_conts: Vec::new(),
+                    },
+                )],
+            });
+        }
         InstallResult::Parked
     } else {
         // Empty / capped — selection completed synchronously; tail already ran.

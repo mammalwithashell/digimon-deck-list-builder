@@ -23,13 +23,13 @@
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::{CompiledPredicate, CompiledStep};
+use digimon_dsl::compiled::{CompiledPredicate, CompiledRevealDestination, CompiledStep};
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
 use crate::effect_context::selections::{CountCappedZone, DistinctByMode, RevealBucketSelection};
-use crate::enums::{EffectSourceKind, GamePhase, PlayerId};
+use crate::enums::{EffectSourceKind, GamePhase, PlayerId, StackPosition};
 use crate::permanent::PermanentHandle;
 use crate::selection::{SourceSelectionRef, UnionZoneOrigin};
 use crate::trigger_context::TriggerContext;
@@ -135,8 +135,11 @@ pub enum ResumeSelectKind {
     /// `action_id - SEL_REVEAL_START` → index into the shared
     /// `Game.revealed_cards`. Ownership is enforced at install time (the filter
     /// builds `valid_action_ids`), so the arm just binds the revealed
-    /// `CardHandle`; a stale index skips the bind.
-    Reveal,
+    /// `CardHandle`; a stale index skips the bind. `route: None` is a plain
+    /// `select_reveal` (bind only); `route: Some(..)` is `choose_from_reveal` —
+    /// after binding, the picked card is routed to its destination
+    /// (`route_chosen_reveal`) before `inner_tail` runs.
+    Reveal { route: Option<RevealRoute> },
     /// `action_id - material_zone_geometry(perm).range_start` → digivolution
     /// source index under carrier `perm` (battle- or breeding-area). Binds the
     /// resolved source `CardHandle` via `material_carrier_permanent`.
@@ -154,6 +157,17 @@ pub enum ResumeSelectKind {
         of_player: PlayerId,
         candidates: Vec<(u16, CardHandle, UnionZoneOrigin)>,
     },
+}
+
+/// Data for the `choose_from_reveal` routing performed after a `Reveal` pick
+/// resolves (mirrors `route_chosen_reveal`). `target_permanent` is resolved at
+/// install time for `BottomSourceOf` (and `None` otherwise), so the resume arm
+/// carries no closures — `destination` is plain compiled data.
+#[derive(Debug, Clone)]
+pub struct RevealRoute {
+    pub destination: CompiledRevealDestination,
+    pub target_player: PlayerId,
+    pub target_permanent: Option<PermanentHandle>,
 }
 
 /// What an optional selection does when declined (PASS). Mandatory selects never
@@ -409,11 +423,25 @@ pub struct PermutationState {
     pub bindings: Bindings,
     pub runtime: StepRuntime,
     pub trigger_context: Option<TriggerContext>,
+    /// `order_remainder` / `remainder_permutation`: instead of binding the
+    /// ordered list, place it back on `player`'s deck at `position` (mirrors
+    /// `place_remainder_in_order`). `None` for a plain `select_ordered_permutation`
+    /// (which binds via `bind_as`). When `Some`, `bind_as` is `None`.
+    pub placement: Option<RemainderPlacement>,
     /// Outer-tail continuations composed by `wrap_pending_selection_with_tail`
     /// when this multi-pick select is nested inside another clause. Run at the
     /// TERMINAL (after the accumulated list is bound + inner_tail runs), in push
     /// order — NOT on intermediate re-parks. Empty for a top-level select.
     pub outer_conts: Vec<OuterContinuation>,
+}
+
+/// Placement action for a permutation terminal that returns the ordered reveal
+/// pool to the deck (`order_remainder` / `remainder_permutation_with_tail`),
+/// mirroring `place_remainder_in_order`. Plain data — no closure.
+#[derive(Debug, Clone)]
+pub struct RemainderPlacement {
+    pub player: PlayerId,
+    pub position: StackPosition,
 }
 
 /// In-flight state of a `count_capped`-family multi-pick selection, as data.
@@ -1009,7 +1037,7 @@ mod tests {
                         controller: 0,
                         override_pin: None,
                     },
-                    select_kind: ResumeSelectKind::Reveal,
+                    select_kind: ResumeSelectKind::Reveal { route: None },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
                     outer_conts: Vec::new(),
@@ -1344,6 +1372,7 @@ mod tests {
             bindings: Bindings::new(),
             runtime: StepRuntime::default(),
             trigger_context: None,
+            placement: None,
             outer_conts: Vec::new(),
         };
         crate::dsl_cards::step::selections::install_permutation_resume_step(runner.game_mut(), state);
