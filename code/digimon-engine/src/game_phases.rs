@@ -622,7 +622,7 @@ impl Game {
                     continue;
                 }
             }
-            if let Some(filter) = effect.overclock_cost_filter {
+            if let Some(filter) = effect.overclock_cost_filter.as_ref() {
                 saw_filter = true;
                 if filter(&rctx, candidate) {
                     return Some(true);

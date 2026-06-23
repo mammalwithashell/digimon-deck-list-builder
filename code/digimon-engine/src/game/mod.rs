@@ -2542,8 +2542,8 @@ impl Game {
                     v.iter().map(|e| format!("{e:?}")).collect()
                 };
                 debug_assert_eq!(
-                    cached.as_deref().map(proj),
-                    fresh.as_deref().map(proj),
+                    cached.as_ref().map(|a| proj(&a[..])),
+                    fresh.as_ref().map(|v| proj(&v[..])),
                     "effects_for_card cache divergence: card_id={card_id} handle={handle:?} under_top={under_top}"
                 );
             }
