@@ -44,6 +44,17 @@ impl std::ops::Deref for CardStore {
     }
 }
 
+impl std::ops::DerefMut for CardStore {
+    /// Mutating the store **copy-on-writes** off the shared `Arc` (via
+    /// `Arc::make_mut`) so a per-game edit (test card injection, `force_base_dp`,
+    /// DebugRunner-staged cards) gives this game a private store and never
+    /// touches the shared cache. Production play never mutates `card_data`, so it
+    /// never forks — it keeps the shared `Arc`.
+    fn deref_mut(&mut self) -> &mut Vec<CardData> {
+        std::sync::Arc::make_mut(&mut self.0)
+    }
+}
+
 impl std::fmt::Debug for CardStore {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("CardStore")
