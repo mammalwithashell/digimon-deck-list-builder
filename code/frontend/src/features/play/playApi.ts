@@ -9,6 +9,7 @@ import type { PlayFormatId } from './formatCatalog';
 import { formatToQueueType } from './formatCatalog';
 import { resolveStarterModel } from '@/api/desktopModelsApi';
 import { STARTER_DECKS } from './starterDecks.generated';
+import { fnv1a } from './hash';
 
 const MANIFEST_BASE = (import.meta.env.VITE_MODELS_MANIFEST_URL as string | undefined) ?? '';
 
@@ -127,12 +128,7 @@ export async function listStarterDecks(): Promise<DeckResponse[]> {
  *  seed reproduces the same AI deck; random when no seed is set. */
 export function starterIndexFromSeed(seed: string | null, count: number): number {
   if (!seed) return Math.floor(Math.random() * count);
-  let h = 2166136261;
-  for (let i = 0; i < seed.length; i += 1) {
-    h ^= seed.charCodeAt(i);
-    h = Math.imul(h, 16777619);
-  }
-  return Math.abs(h) % count;
+  return fnv1a(seed) % count;
 }
 
 /** Start a game vs the AI: player pilots `deck`, the AI pilots a random

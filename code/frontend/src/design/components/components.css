@@ -51,8 +51,79 @@
   from { background-position: 0 0; }
   to { background-position: 0 100%; }
 }
-@media (prefers-reduced-motion: reduce) {
-  [data-theme="dark"] .ds-backdrop::after { animation: none; }
+/* Motion gating (add-effects-and-motion-settings): the CRT scan is an ambient
+   loop — stop it as soon as motion is dialed back to `reduced` or `off`. The OS
+   prefers-reduced-motion setting now seeds the default motion level in the store
+   (uiStore.deriveDefaultMotion) instead of gating at runtime, so there is one
+   mechanism, keyed on the `data-motion` attribute set pre-paint in index.html. */
+[data-motion="reduced"] .ds-backdrop::after,
+[data-motion="off"] .ds-backdrop::after {
+  animation: none;
+}
+
+/* ── Modal (centered overlay) ──────────────────────────────────────────── */
+.ds-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.6);
+}
+.ds-modal {
+  position: relative;
+  width: 100%;
+  max-width: 720px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 24px;
+  background: var(--surface);
+  color: var(--ink-0);
+  border: var(--border-w) solid var(--line-1);
+  box-shadow: var(--bevel-shadow), 0 12px 48px rgba(0, 0, 0, 0.5);
+}
+.ds-modal__close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border: var(--border-w) solid var(--line-1);
+  background: var(--surface-raised);
+  color: var(--ink-1);
+  cursor: pointer;
+}
+.ds-modal__close:hover {
+  color: var(--ink-0);
+  border-color: var(--accent);
+}
+
+/* ── Theme-swap transition ─────────────────────────────────────────────────
+   Fade the major themed surfaces when toggling light <-> dark. Theme is applied
+   pre-paint, so these only animate on an actual change, never on first load. */
+body,
+.ds-backdrop,
+.menu-shell__rail,
+.menu-shell__main,
+.menu-shell__content,
+.menu-shell__statusbar,
+.ds-navrail__item,
+.ds-titlebar,
+.ds-titlebar__menubar,
+.ds-modal,
+.ds-panel,
+.deck-builder-page {
+  transition: background-color 0.25s ease, color 0.25s ease,
+    border-color 0.25s ease;
+}
+
+/* Motion "off" — no non-essential motion, including theme/hover fades. */
+[data-motion="off"] * {
+  transition: none !important;
 }
 
 /* ── Panel / Frame ─────────────────────────────────────────────────────── */

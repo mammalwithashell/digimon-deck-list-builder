@@ -73,6 +73,12 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 4, color_is: blue }
     cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from: { name_contains: "Aegiomon" }
+    cost: 3
 
 effects:
   # ─── <Blocker> ───────────────────────────────────────────────────────────

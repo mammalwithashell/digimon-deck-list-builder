@@ -118,6 +118,12 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: blue }
     cost: 4
+  - kind: digivolve
+    from: { name_contains: "Paildramon" }
+    cost: 3
+  - kind: digivolve
+    from: { name_contains: "Dinobeemon" }
+    cost: 3
 
 effects:
   # ─── Clause 0a: [When Digivolving] Select 1 opp Digimon/Tamer → CannotUnsuspend ─

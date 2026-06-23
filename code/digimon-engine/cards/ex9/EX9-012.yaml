@@ -27,11 +27,14 @@
 #   - PermanentCondition: TopCard.EqualsCardName("MetalGreymon"), cost: 1.
 #   - PermanentCondition: (TopCard.HasGreymonName || TopCard.HasAdventureTraits)
 #     && TopCard.IsLevel4, cost: 3.
-#   These are unprinted alt-paths added via the static effect — the printed
-#   text shows only the Lv.4 Red / Cost 4 evo block. Per the BT22-026 / BT22-013
-#   precedent (header notes), unprinted DCGO alt-sources are NOT encoded in
-#   YAML (printed text wins). Only the printed Lv.4 Red / Cost 4 evo path is
-#   carried as a `kind: digivolve` alt_path.
+#   CORRECTED 2026-06-21 (promote-official-bandai-card-source): these ARE printed —
+#   the card image and official Bandai DB both show "[Digivolve] [MetalGreymon]: Cost 1"
+#   and "[Digivolve] Lv.4 w/[Greymon] in name or w/[ADVENTURE] trait: Cost 3" on the card
+#   face. An earlier note wrongly called them "unprinted DCGO-only" because `cards.json`
+#   evo_costs carries only the standard cost-4 row (the digimoncard.io API drops printed
+#   special-digivolution boxes). The official DB outranks cards.json for printed data, so
+#   all routes are now encoded: the standard Lv.4 Red / Cost 4 circle + the MetalGreymon
+#   cost-1 + the Greymon-name and ADVENTURE-trait cost-3 alts.
 #
 # Block 2 (DCGO OnEnterFieldAnyone × 2 — gated by CanTriggerOnPlay /
 #   CanTriggerWhenDigivolving): two ActivateClass entries with identical
@@ -111,13 +114,25 @@ dp: 8000
 traits: [Cyborg, ADVENTURE]
 
 # ─── Alt-paths ────────────────────────────────────────────────────────────────
-# Standard digivolve: Lv.4 Red / Cost 4 (per evo_costs in cards.json).
-# (DCGO's two unprinted alt-source entries — MetalGreymon-name @ cost 1 and
-# Lv4 [Greymon]/[ADVENTURE] @ cost 3 — are NOT encoded; printed text governs.)
+# Standard digivolve: Lv.4 Red / Cost 4 (per evo_costs in cards.json), PLUS the two
+# printed alt boxes confirmed on the card image / official Bandai DB: "[MetalGreymon]:
+# Cost 1" and "Lv.4 w/[Greymon] in name or w/[ADVENTURE] trait: Cost 3" (split into
+# separate name/trait routes). See the header note for the cards.json-drop correction.
 alt_paths:
   - kind: digivolve
     from: { level_eq: 4, color_is: red }
     cost: 4
+  # Printed alt: "[Digivolve] [MetalGreymon]: Cost 1" (name-gated, no level).
+  - kind: digivolve
+    from: { name_contains: "MetalGreymon" }
+    cost: 1
+  # Printed alt: "[Digivolve] Lv.4 w/[Greymon] in name or w/[ADVENTURE] trait: Cost 3".
+  - kind: digivolve
+    from: { level_eq: 4, name_contains: "Greymon" }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: ADVENTURE }
+    cost: 3
 
 effects:
   # ─── Clause 1 — [On Play] [When Digivolving] Delete opp DP<=8000 ───────────

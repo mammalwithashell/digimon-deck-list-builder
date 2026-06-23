@@ -3866,3 +3866,22 @@ The four EX11-027 link gaps are CLOSED and moved to [qa/resolved-gaps.md](resolv
 `G-DSL-REPLACEMENT-LINK-CARD-TO-BOTTOM-SOURCE` (the `place_link_card_as_bottom_digivolution`
 replacement cost). EX11-027 Maquinamon is now pure DSL (off test-only raw_rust); the
 `dsl-substrate-integrity` loader guard is promoted to a hard error.
+
+### `G-DSL-ALT-PATH-GATE-CONDITIONALS` — alt-digivolve `from:` predicate lacks board-state / compound / negative-colour gates
+Surfaced by: the pool-wide alt-path authoring audit (promote-official-bandai-card-source, 2026-06-20).
+The alt-digivolve `from:` predicate supports single level/colour/trait/name gates (+ `all_of`/`any_of`),
+but four implemented cards print special-digivolution conditions it can't express, so those routes are
+intentionally omitted (the cheaper standard/encoded routes ship; the conditional route does not):
+- **Board-state conditional name gate** — BT23-013 ("[Huckmon] while opponent has a 10000 DP or higher
+  Digimon: Cost 5") and BT15-101 (Tamer-presence + opponent-DP threshold). Needs a `from:` that can read
+  game/board state (opponent field DP, own Tamer presence) at digivolve-eligibility time.
+- **Compound multi-card gate** — EX11-074 ("While you have [Shoto Kazama], [GrandGalemon]: Cost 6"):
+  a conjunction of a controller-has-named-card condition AND a base-name gate.
+- **Negative tri-colour gate** — BT25-084 ("[Titamon] w/o 3 colors: Cost 2"): a name gate combined with
+  a NEGATIVE colour-count condition (base has fewer than 3 colours).
+These are tracked as allowlisted entries in `code/tests/test_alt_path_authoring_parity.py` (engine_gap
+reason) so the authoring-parity guard stays green while documenting the omission.
+- **Suggested API:** extend the alt-path `from:` predicate vocabulary with a board-state condition
+  (`controller_has_named`, `opponent_has_dp_gte`) and a colour-count predicate (`color_count_lt`).
+- **First test:** BT23-013 in hand over a Lv.5 base while the opponent has a 10000-DP Digimon → assert the
+  cost-5 [Huckmon] route is offered; with no such opponent Digimon → not offered.

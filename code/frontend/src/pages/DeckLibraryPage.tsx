@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { listFormats } from '@/api/deckApi';
 import * as library from '@/api/deckLibraryAdapter';
 import { useRailSection } from '@/components/layout/RailContext';
@@ -90,6 +90,7 @@ function DeckTile({
   view,
   formats,
   onSelect,
+  onOpen,
   onTogglePin,
 }: {
   deck: DeckSummary;
@@ -97,6 +98,7 @@ function DeckTile({
   view: ViewMode;
   formats: DeckFormat[];
   onSelect: (id: string) => void;
+  onOpen: (id: string) => void;
   onTogglePin: (deck: DeckSummary) => void;
 }) {
   const validity = deck.is_valid ? 'Legal' : 'Draft';
@@ -106,6 +108,8 @@ function DeckTile({
       type="button"
       className={`library-card ${selected ? 'selected' : ''} ${view === 'list' ? 'list' : ''}`}
       onClick={() => onSelect(deck.id)}
+      onDoubleClick={() => onOpen(deck.id)}
+      title="Click to select, double-click to edit"
     >
       <div className="library-card-thumb">
         <DeckSleeve deck={deck} />
@@ -116,6 +120,7 @@ function DeckTile({
             event.stopPropagation();
             onTogglePin(deck);
           }}
+          onDoubleClick={(event) => event.stopPropagation()}
           title={deck.is_pinned ? 'Unpin deck' : 'Pin deck'}
         >
           {deck.is_pinned ? '◆' : '◇'}
@@ -405,6 +410,7 @@ export function DeckLibraryPage() {
         <div className="library-actions">
           {notice && <span className="library-live">{notice}</span>}
           <button type="button" className="secondary" onClick={() => navigate('/')}>Home</button>
+          <button type="button" className="secondary" onClick={() => navigate('/deckbuilder/new?import=1')}>Import</button>
           <button type="button" onClick={() => navigate('/deckbuilder/new')}>New Deck</button>
         </div>
       </div>
@@ -449,17 +455,6 @@ export function DeckLibraryPage() {
               <button type="button" onClick={() => navigate('/deckbuilder/new')}>Create your first deck</button>
             </section>
           )}
-
-          <header className="library-hero">
-            <div>
-              <span className="library-kicker">// ARMORY</span>
-              <h1>DECK LIBRARY</h1>
-              <p>Organize folders, inspect legality, pin tournament lists, and open the builder.</p>
-            </div>
-            <div className="library-hero-actions">
-              <Link to="/deckbuilder/new?import=1" className="library-command">Import</Link>
-            </div>
-          </header>
 
           <section className="library-toolbar">
             <label className="library-search">
@@ -507,6 +502,7 @@ export function DeckLibraryPage() {
                       view={view}
                       formats={formats}
                       onSelect={setSelectedId}
+                      onOpen={(id) => navigate(`/deckbuilder/${id}`)}
                       onTogglePin={togglePin}
                     />
                   ))}
@@ -529,6 +525,7 @@ export function DeckLibraryPage() {
                   view={view}
                   formats={formats}
                   onSelect={setSelectedId}
+                  onOpen={(id) => navigate(`/deckbuilder/${id}`)}
                   onTogglePin={togglePin}
                 />
               ))}

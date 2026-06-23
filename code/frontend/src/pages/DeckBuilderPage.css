@@ -34,9 +34,13 @@
      which is removed on desktop — that left a strip of the teal desktop
      showing below the builder.) */
   height: 100%;
-  background:
-    radial-gradient(ellipse at 50% 0%, rgba(58, 166, 255, 0.08), transparent 50%),
-    var(--bld-bg-0);
+  /* Transparent base so the menu-shell live atmosphere (rain/idle desktop)
+     shows behind the builder; the subtle top tint stays as an overlay. */
+  background: radial-gradient(
+    ellipse at 50% 0%,
+    rgba(58, 166, 255, 0.08),
+    transparent 50%
+  );
   color: var(--bld-ink-1);
   font-family: var(--bld-body);
   font-size: 13px;
@@ -207,7 +211,11 @@
 .deck-builder-page .bld-top,
 .deck-builder-app .bld-top {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  /* Counts column is shrinkable (minmax(0, max-content)) so it compresses and
+     scrolls internally instead of forcing the header to overflow when the area
+     narrows (e.g. the side nav is expanded); the actions column stays at content
+     width so SAVE/VALIDATE/etc. never get pushed off-screen. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, max-content) auto;
   align-items: center;
   gap: 12px;
   padding: 0 18px;
@@ -314,12 +322,18 @@
 .deck-builder-app .bld-counts {
   display: flex;
   align-items: stretch;
+  /* Contain + scroll instead of overflowing other top-bar content when the
+     deck-builder area narrows (e.g. the side nav is expanded — a canvas-internal
+     change a viewport media query can't catch). */
+  min-width: 0;
+  overflow-x: auto;
   border: 1px solid var(--bld-line-2);
   background: var(--bld-bg-0);
 }
 
 .deck-builder-page .bld-count,
 .deck-builder-app .bld-count {
+  flex: 0 0 auto;
   min-width: 44px;
   padding: 4px 7px;
   border-right: 1px solid var(--bld-line-2);
@@ -334,6 +348,13 @@
 .deck-builder-page .bld-count:last-child,
 .deck-builder-app .bld-count:last-child {
   border-right: 0;
+}
+
+/* Separate the card-type counts (EGG/DIGIMON/TAMER/OPTION) from the per-level
+   counts (L2…L7+) with breathing room. Marked on the first level count (L2). */
+.deck-builder-page .bld-count.split,
+.deck-builder-app .bld-count.split {
+  margin-left: 12px;
 }
 
 .deck-builder-page .bld-count .v,
@@ -368,13 +389,50 @@
 
 .deck-builder-page .bld-filters,
 .deck-builder-app .bld-filters {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(120px, 1fr)) auto auto;
-  align-items: center;
-  gap: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
   padding: 12px 18px;
   border-bottom: 1px solid var(--bld-line);
   background: var(--bld-bg-1);
+}
+
+/* Row 1: the field filters (color/type/level/rarity/search). */
+.deck-builder-page .bld-filters-fields,
+.deck-builder-app .bld-filters-fields {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+}
+
+.deck-builder-page .bld-filters-fields .bld-filter,
+.deck-builder-app .bld-filters-fields .bld-filter {
+  flex: 1 1 150px;
+}
+
+.deck-builder-page .bld-filters-fields .bld-filter.color-filter,
+.deck-builder-app .bld-filters-fields .bld-filter.color-filter {
+  flex: 1 1 auto;
+}
+
+.deck-builder-page .bld-filters-fields .bld-filter.search,
+.deck-builder-app .bld-filters-fields .bld-filter.search {
+  flex: 2 1 240px;
+}
+
+/* Row 2: all the toggle checkboxes, with RESET pushed to the right. */
+.deck-builder-page .bld-filters-actions,
+.deck-builder-app .bld-filters-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.deck-builder-page .bld-filters-actions .bld-filter-reset,
+.deck-builder-app .bld-filters-actions .bld-filter-reset {
+  margin-left: auto;
 }
 
 .deck-builder-page .bld-filter,
@@ -387,9 +445,10 @@
 
 .deck-builder-page .bld-filter .l,
 .deck-builder-app .bld-filter .l {
-  color: var(--bld-ink-3);
+  color: var(--bld-ink-2);
   font-family: var(--bld-mono);
-  font-size: 9px;
+  font-size: var(--text-xs);
+  font-weight: 600;
   letter-spacing: 0.16em;
   text-transform: uppercase;
 }
@@ -422,10 +481,11 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  color: var(--bld-ink-2);
+  color: var(--bld-ink-1);
   cursor: pointer;
   font-family: var(--bld-mono);
-  font-size: 9px;
+  font-size: var(--text-xs);
+  font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -487,7 +547,11 @@
 .deck-builder-page .bld-main,
 .deck-builder-app .bld-main {
   display: grid;
-  grid-template-columns: 240px minmax(0, 1fr) 320px;
+  /* Browse (GRID) baseline: a roomier preview than the legacy 240px so the
+     selected card + effect read larger. DETAIL view widens it further (see
+     the .view-inspect rules below). The <=1120px media query overrides this
+     to a 2-column, preview-hidden layout by source order. */
+  grid-template-columns: 300px minmax(0, 1fr) 320px;
   height: 100%;
   min-height: 0;
 }
@@ -702,7 +766,8 @@
   border-left: 2px solid var(--bld-player);
   color: var(--bld-player);
   font-family: var(--bld-mono);
-  font-size: 9px;
+  font-size: var(--text-xs);
+  font-weight: 700;
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -718,7 +783,9 @@
   margin: 0 0 8px;
   color: var(--bld-ink-1);
   font-family: "JetBrains Mono", var(--bld-mono);
-  font-size: 11px;
+  /* Bumped from the cramped 11px so card text is readable in both views;
+     DETAIL view scales it up again (see .view-inspect rules). */
+  font-size: 13px;
   line-height: 1.6;
 }
 
@@ -1008,7 +1075,7 @@
   border-bottom: 1px solid var(--bld-line);
   color: var(--bld-ink-3);
   font-family: var(--bld-mono);
-  font-size: 10px;
+  font-size: var(--text-xs);
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
@@ -1069,7 +1136,8 @@
   display: block;
   margin-bottom: 3px;
   color: var(--bld-player);
-  font-size: 8px;
+  font-size: var(--text-xs);
+  font-weight: 700;
   letter-spacing: 0.16em;
 }
 
@@ -1078,7 +1146,7 @@
   display: block;
   overflow: hidden;
   color: var(--bld-ink-0);
-  font-size: 10px;
+  font-size: var(--text-sm);
   letter-spacing: 0.04em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1089,7 +1157,7 @@
   display: block;
   margin-top: 3px;
   color: var(--bld-ink-3);
-  font-size: 8px;
+  font-size: var(--text-xs);
   letter-spacing: 0.12em;
 }
 
@@ -1176,7 +1244,7 @@
   background: var(--bld-bg-2);
   color: var(--bld-ink-3);
   font-family: var(--bld-mono);
-  font-size: 9px;
+  font-size: var(--text-xs);
   letter-spacing: 0.18em;
   text-transform: uppercase;
 }
@@ -1185,7 +1253,7 @@
 .deck-builder-app .bld-section-head .ct {
   color: var(--bld-player);
   font-family: var(--bld-mono);
-  font-size: 9px;
+  font-size: var(--text-xs);
 }
 
 .deck-builder-page .bld-row,
@@ -1219,7 +1287,7 @@
 .deck-builder-app .bld-row .ct {
   color: var(--bld-player);
   font-family: var(--bld-mono);
-  font-size: 12px;
+  font-size: var(--text-sm);
   font-weight: 700;
   text-align: center;
 }
@@ -1248,7 +1316,7 @@
   height: 100%;
   color: var(--bld-ink-4);
   font-family: var(--bld-mono);
-  font-size: 6px;
+  font-size: var(--text-xs);
   text-align: center;
 }
 
@@ -1263,7 +1331,7 @@
   overflow: hidden;
   color: var(--bld-ink-0);
   font-family: var(--bld-mono);
-  font-size: 10px;
+  font-size: var(--text-sm);
   letter-spacing: 0.06em;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1274,8 +1342,22 @@
   display: block;
   margin-top: 1px;
   color: var(--bld-ink-3);
-  font-size: 8px;
+  font-size: var(--text-xs);
   letter-spacing: 0.1em;
+}
+
+/* DECK (decklist) view: the deck panel is the wide column, so enlarge the
+   card-image thumbnails for a readable at-a-glance deck list (scroll as needed). */
+.deck-builder-page .bld-main.view-decklist .bld-row,
+.deck-builder-app .bld-main.view-decklist .bld-row {
+  grid-template-columns: 28px 52px minmax(0, 1fr) auto auto 22px 42px;
+  padding-top: 7px;
+  padding-bottom: 7px;
+}
+
+.deck-builder-page .bld-main.view-decklist .bld-row-thumb,
+.deck-builder-app .bld-main.view-decklist .bld-row-thumb {
+  width: 50px;
 }
 
 .deck-builder-page .bld-row .cost,
@@ -1525,6 +1607,149 @@
   margin: 14px 18px;
 }
 
+/* ── Card-pool view modes + filter reset (improve-deck-builder-browsing) ─────
+   GRID (view-browse, default) keeps the dense pool grid; DETAIL (view-inspect)
+   widens the preview so the selected card + its effect dominate. The layout
+   swap is guarded by min-width so it never fights the <=1120px preview-hidden
+   layout below, where the toggle is a no-op. */
+
+.deck-builder-page .bld-pool-head-right,
+.deck-builder-app .bld-pool-head-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.deck-builder-page .bld-view-toggle,
+.deck-builder-app .bld-view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--bld-line-2);
+}
+
+.deck-builder-page .bld-view-toggle button,
+.deck-builder-app .bld-view-toggle button {
+  padding: 4px 10px;
+  border: 0;
+  border-right: 1px solid var(--bld-line-2);
+  background: transparent;
+  color: var(--bld-ink-3);
+  cursor: pointer;
+  font-family: var(--bld-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.deck-builder-page .bld-view-toggle button:last-child,
+.deck-builder-app .bld-view-toggle button:last-child {
+  border-right: 0;
+}
+
+.deck-builder-page .bld-view-toggle button:hover,
+.deck-builder-app .bld-view-toggle button:hover {
+  color: var(--bld-ink-1);
+}
+
+.deck-builder-page .bld-view-toggle button.on,
+.deck-builder-app .bld-view-toggle button.on {
+  background: var(--bld-bg-3);
+  color: var(--bld-ink-0);
+}
+
+.deck-builder-page .bld-filter-reset,
+.deck-builder-app .bld-filter-reset {
+  justify-self: end;
+  align-self: center;
+  padding: 7px 14px;
+  border: 1px solid rgba(255, 91, 91, 0.4);
+  background: transparent;
+  color: var(--bld-bad);
+  cursor: pointer;
+  font-family: var(--bld-mono);
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.deck-builder-page .bld-filter-reset:hover,
+.deck-builder-app .bld-filter-reset:hover {
+  background: rgba(255, 91, 91, 0.06);
+  border-color: var(--bld-bad);
+}
+
+@media (min-width: 1121px) {
+  .deck-builder-page .bld-main.view-inspect,
+  .deck-builder-app .bld-main.view-inspect {
+    grid-template-columns: 460px minmax(0, 1fr) 320px;
+  }
+
+  /* Keep the enlarged card from swallowing the effect text below it. */
+  .deck-builder-page .bld-main.view-inspect .bld-preview-card .frame,
+  .deck-builder-app .bld-main.view-inspect .bld-preview-card .frame {
+    max-width: 340px;
+    margin-inline: auto;
+  }
+
+  .deck-builder-page .bld-main.view-inspect .bld-preview-effect p,
+  .deck-builder-app .bld-main.view-inspect .bld-preview-effect p {
+    font-size: 15px;
+    line-height: 1.7;
+  }
+
+  .deck-builder-page .bld-main.view-inspect .bld-preview-title .nm,
+  .deck-builder-app .bld-main.view-inspect .bld-preview-title .nm {
+    font-size: 24px;
+  }
+
+  /* The pool column is narrower in DETAIL — slightly denser tiles fill it. */
+  .deck-builder-page .bld-main.view-inspect .bld-pool-grid,
+  .deck-builder-app .bld-main.view-inspect .bld-pool-grid {
+    grid-template-columns: repeat(auto-fill, minmax(74px, 1fr));
+  }
+
+  /* DECKLIST view: the deck contents take center stage as a two-column list;
+     the preview is hidden and the pool collapses to a compact add strip. */
+  .deck-builder-page .bld-main.view-decklist,
+  .deck-builder-app .bld-main.view-decklist {
+    grid-template-columns: 340px minmax(0, 1fr);
+  }
+
+  .deck-builder-page .bld-main.view-decklist .bld-preview,
+  .deck-builder-app .bld-main.view-decklist .bld-preview {
+    display: none;
+  }
+
+  /* Compact add strip — denser tiles, and drop the legend so the view
+     toggle + result count still fit the narrow pool header. */
+  .deck-builder-page .bld-main.view-decklist .bld-pool-grid,
+  .deck-builder-app .bld-main.view-decklist .bld-pool-grid {
+    grid-template-columns: repeat(auto-fill, minmax(68px, 1fr));
+  }
+
+  .deck-builder-page .bld-main.view-decklist .bld-pool-head .legend,
+  .deck-builder-app .bld-main.view-decklist .bld-pool-head .legend {
+    display: none;
+  }
+
+  /* Two-column deck list: flow the per-level subsections into two columns;
+     the MAIN/EGG heading spans both, and each subsection stays intact. */
+  .deck-builder-page .bld-main.view-decklist .bld-section,
+  .deck-builder-app .bld-main.view-decklist .bld-section {
+    column-count: 2;
+    column-gap: 14px;
+  }
+
+  .deck-builder-page .bld-main.view-decklist .bld-section-head,
+  .deck-builder-app .bld-main.view-decklist .bld-section-head {
+    column-span: all;
+  }
+
+  .deck-builder-page .bld-main.view-decklist .bld-subsection,
+  .deck-builder-app .bld-main.view-decklist .bld-subsection {
+    break-inside: avoid;
+  }
+}
+
 @media (max-width: 1120px) {
   .deck-builder-page,
   .deck-builder-app {
@@ -1701,5 +1926,20 @@
 [data-theme="light"] .deck-builder-app .bld-top .pill {
   border-color: transparent;
   background: var(--surface-raised);
+  box-shadow: inset 1.5px 1.5px 0 var(--bevel-lo), inset -1.5px -1.5px 0 var(--bevel-hi);
+}
+
+/* View toggle + reset button — match the light Win95 chrome. */
+[data-theme="light"] .deck-builder-page .bld-view-toggle,
+[data-theme="light"] .deck-builder-app .bld-view-toggle,
+[data-theme="light"] .deck-builder-page .bld-filter-reset,
+[data-theme="light"] .deck-builder-app .bld-filter-reset {
+  border-color: transparent;
+  background: var(--surface);
+  box-shadow: var(--bevel-shadow);
+}
+
+[data-theme="light"] .deck-builder-page .bld-view-toggle button.on,
+[data-theme="light"] .deck-builder-app .bld-view-toggle button.on {
   box-shadow: inset 1.5px 1.5px 0 var(--bevel-lo), inset -1.5px -1.5px 0 var(--bevel-hi);
 }

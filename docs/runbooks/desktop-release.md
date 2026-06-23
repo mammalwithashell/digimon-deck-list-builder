@@ -243,23 +243,28 @@ The hosted API itself must be running the release-admin code before the publish 
 ## Cut a new release
 
 1. Ensure `main` is green and the change you want to ship is merged.
-2. Bump the version in both files (they must stay in sync):
+2. Refresh the implemented-cards allowlist so cards implemented since the last release actually ship:
+   ```bash
+   python code/tools/build_tested_cards.py   # rewrites data/tested_cards.json from the live engine pool
+   ```
+   This snapshot is `include_str!`-baked into the desktop binary at compile time (`code/digimon-engine/src/deck_tools.rs`), so without this step the deck builder rejects newly-implemented cards as "not available in the alpha release." Commit the result together with the version bump (step 4) — the same committed file also feeds the hosted API and browser builds, so it must stay the single source of truth.
+3. Bump the version in both files (they must stay in sync):
    - `code/src-tauri/tauri.conf.json` — the `version` field at the top
    - `code/src-tauri/Cargo.toml` — the `[package].version` field
-3. Commit the version bump.
-4. Create an annotated tag with release notes in the body. The body becomes the update-modal text your testers see.
+4. Commit the version bump together with the refreshed `data/tested_cards.json`.
+5. Create an annotated tag with release notes in the body. The body becomes the update-modal text your testers see.
    ```bash
    git tag -a desktop-v0.2.0-alpha.3 -m "Fix: deckbuilder crash on whitespace import.
    Add: Beelzemon gauntlet preset."
    git push origin desktop-v0.2.0-alpha.3
    ```
-5. Watch CI: `gh run watch`. Both build jobs (Windows + Linux) must succeed, then the `publish` job calls the hosted API to create/upload/confirm/publish in sequence.
-6. Verify by refetching the manifest:
+6. Watch CI: `gh run watch`. Both build jobs (Windows + Linux) must succeed, then the `publish` job calls the hosted API to create/upload/confirm/publish in sequence.
+7. Verify by refetching the manifest:
    ```bash
    curl https://digimon-tcg-models.nyc3.cdn.digitaloceanspaces.com/updates/alpha/latest.json | jq
    ```
    Should show the new version, both `platforms` populated, and `pub_date` within the last few minutes. `Cache-Control: public, max-age=60` header is set; propagation ≤ 60 seconds.
-7. Verify a running tester sees the update. Easiest check: launch the previously-installed alpha on your own machine, confirm the "Update available" toast appears within ~5s of launch, click through to install.
+8. Verify a running tester sees the update. Easiest check: launch the previously-installed alpha on your own machine, confirm the "Update available" toast appears within ~5s of launch, click through to install.
 
 ---
 

@@ -173,15 +173,15 @@ export function ModelsPage() {
   };
 
   return (
-    <div className="p-6 text-gray-100">
+    <div className="p-6 text-[var(--ink-0)]">
       <h1 className="mb-2 text-2xl font-bold">AI Models</h1>
-      <p className="mb-4 text-sm text-gray-400">
+      <p className="mb-4 text-sm text-[var(--ink-2)]">
         Try models online, or download them for offline play. Models whose
         tensor/action shapes don&apos;t match this build are greyed out.
       </p>
 
       {contract && (
-        <div className="mb-6 text-xs text-gray-400">
+        <div className="mb-6 text-xs text-[var(--ink-2)]">
           Engine contract: tensor={contract.tensor_size}, actions=
           {contract.action_space_size}
           {contract.engine_commit
@@ -191,19 +191,19 @@ export function ModelsPage() {
       )}
 
       {error && (
-        <div className="mb-4 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-200">
+        <div className="mb-4 rounded border border-[var(--danger)] bg-[var(--surface-raised)] p-3 text-sm text-[var(--danger)]">
           {error}
         </div>
       )}
 
       <div className="mb-6 flex items-end gap-3">
         <div>
-          <label className="mb-1 block text-xs text-gray-400">Your deck</label>
+          <label className="mb-1 block text-xs text-[var(--ink-2)]">Your deck</label>
           <select
             value={playDeckId}
             onChange={(e) => setPlayDeckId(e.target.value)}
             disabled={decks.length === 0}
-            className="rounded border border-gray-600 bg-gray-700 px-3 py-2 text-sm text-white disabled:opacity-50"
+            className="rounded border border-[var(--line-1)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--ink-0)] disabled:opacity-50"
           >
             {decks.length === 0 ? (
               <option value="">No decks yet</option>
@@ -216,29 +216,29 @@ export function ModelsPage() {
             )}
           </select>
           {decks.length === 0 && (
-            <Link to="/deckbuilder" className="mt-1 block text-xs text-blue-400 hover:text-blue-300">
+            <Link to="/deckbuilder" className="mt-1 block text-xs text-[var(--opp)] hover:text-[var(--opp-2)]">
               Build your first deck →
             </Link>
           )}
         </div>
         <button
           onClick={() => void refresh()}
-          className="rounded bg-gray-700 px-3 py-2 text-sm hover:bg-gray-600"
+          className="rounded border border-[var(--line-1)] bg-[var(--surface-raised)] px-3 py-2 text-sm text-[var(--ink-0)] hover:border-[var(--accent)]"
         >
           Refresh
         </button>
       </div>
 
       {loading ? (
-        <p className="text-sm text-gray-400">Loading…</p>
+        <p className="text-sm text-[var(--ink-2)]">Loading…</p>
       ) : rows.length === 0 ? (
-        <p className="text-sm text-gray-500">
+        <p className="text-sm text-[var(--ink-3)]">
           No models available. Check that <code>VITE_MODELS_MANIFEST_URL</code> is set
           and the server is reachable.
         </p>
       ) : (
         <table className="w-full text-sm">
-          <thead className="text-xs uppercase text-gray-400">
+          <thead className="text-xs uppercase text-[var(--ink-2)]">
             <tr>
               <th className="py-2 pr-4 text-left">Name</th>
               <th className="py-2 pr-4 text-left">Type</th>
@@ -259,17 +259,17 @@ export function ModelsPage() {
               const type = (row.manifest?.model_type ?? row.local?.model_type ?? '').toUpperCase();
               const size = row.manifest?.file_size_bytes ?? row.local?.file_size_bytes ?? 0;
               return (
-                <tr key={row.id} className="border-t border-gray-700">
+                <tr key={row.id} className="border-t border-[var(--line-1)]">
                   <td className="py-2 pr-4">{name}</td>
                   <td className="py-2 pr-4">{type}</td>
-                  <td className="py-2 pr-4 text-gray-400">{formatBytes(size)}</td>
+                  <td className="py-2 pr-4 text-[var(--ink-2)]">{formatBytes(size)}</td>
                   <td className="py-2 pr-4">
                     {have ? (
-                      <span className="text-xs text-green-400">downloaded</span>
+                      <span className="text-xs text-[var(--good)]">downloaded</span>
                     ) : compatible ? (
-                      <span className="text-xs text-gray-400">online only</span>
+                      <span className="text-xs text-[var(--ink-2)]">online only</span>
                     ) : (
-                      <span className="text-xs text-red-400">incompatible</span>
+                      <span className="text-xs text-[var(--danger)]">incompatible</span>
                     )}
                   </td>
                   <td className="py-2 text-right">
@@ -278,7 +278,7 @@ export function ModelsPage() {
                         <button
                           disabled={busy || !playDeckId || !IS_DESKTOP || !have}
                           onClick={() => void handleTryOnline(row)}
-                          className="rounded bg-blue-600 px-2 py-1 text-xs hover:bg-blue-500 disabled:opacity-40"
+                          className="rounded bg-[var(--accent)] px-2 py-1 text-xs text-[var(--accent-ink)] hover:opacity-90 disabled:opacity-40"
                         >
                           {busy ? 'Preparing…' : 'Play'}
                         </button>
@@ -287,7 +287,7 @@ export function ModelsPage() {
                         <button
                           disabled={busy}
                           onClick={() => void handleDownload(row.manifest!)}
-                          className="rounded bg-gray-700 px-2 py-1 text-xs hover:bg-gray-600 disabled:opacity-40"
+                          className="rounded border border-[var(--line-1)] bg-[var(--surface-raised)] px-2 py-1 text-xs text-[var(--ink-0)] hover:border-[var(--accent)] disabled:opacity-40"
                         >
                           Download
                         </button>
@@ -297,14 +297,14 @@ export function ModelsPage() {
                           <button
                             disabled={busy}
                             onClick={() => void handleActivate(row.id)}
-                            className="rounded bg-green-700 px-2 py-1 text-xs hover:bg-green-600 disabled:opacity-40"
+                            className="rounded bg-[var(--good)] px-2 py-1 text-xs text-[var(--accent-ink)] hover:opacity-90 disabled:opacity-40"
                           >
                             Activate
                           </button>
                           <button
                             disabled={busy}
                             onClick={() => void handleDelete(row.id)}
-                            className="rounded bg-red-700 px-2 py-1 text-xs hover:bg-red-600 disabled:opacity-40"
+                            className="rounded bg-[var(--danger)] px-2 py-1 text-xs text-[var(--accent-ink)] hover:opacity-90 disabled:opacity-40"
                           >
                             Delete
                           </button>

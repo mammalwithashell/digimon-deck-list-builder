@@ -67,6 +67,9 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 3, color_is: yellow }
     cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: TS }
+    cost: 2
 
 effects:
   # ─── <Barrier> (own) ─────────────────────────────────────────────────────

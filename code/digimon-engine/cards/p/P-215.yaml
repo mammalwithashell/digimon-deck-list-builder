@@ -8,11 +8,29 @@ dp: 6000
 traits: [Ice-Snow]
 attribute: Data
 alt_paths:
+  # Printed standard evo box: Lv.3 from blue/black, cost 3 (the digivolve circle;
+  # encoded explicitly like the Ice-Snow siblings so DSL-only loads carry the printed
+  # cost table — cards.json evo_costs are not loaded on the DSL path).
   - kind: digivolve
     from: { level_eq: 3, color_is: blue }
-    cost: 2
+    cost: 3
   - kind: digivolve
     from: { level_eq: 3, color_is: black }
+    cost: 3
+  # Printed alt evo box: "[Digivolve] Lv.3 w/[Ice-Snow]/[Mineral]/[Rock] trait: Cost 2".
+  # TRAIT-gated (one alt_path per trait; same cost 2 so they dedup to one route) — NOT
+  # colour-gated. The cheaper route requires the BASE to carry one of the three traits,
+  # so a blue Lv.3 base that ALSO has the trait gets the {3,2} cost choice, while a
+  # blue/black Lv.3 base WITHOUT the trait gets only the standard cost 3 (no longer the
+  # over-permissive colour-gated cost 2).
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: Ice-Snow }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: Mineral }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: Rock }
     cost: 2
 
 # ─── Clause 0: [When Moving][On Play][When Digivolving] source-placement +

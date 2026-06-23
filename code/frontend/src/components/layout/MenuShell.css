@@ -12,6 +12,10 @@
   color: var(--ink-1);
   font-family: var(--font-ui);
   overflow: hidden;
+  /* Smoothly animate the rail open/close (and keep the theme cross-fade).
+     Disabled at motion=off by the global rule in components.css. */
+  transition: grid-template-columns 0.22s ease, background-color 0.25s ease,
+    color 0.25s ease;
 }
 
 .menu-shell[data-collapsed='true'] {
@@ -23,6 +27,13 @@
   /* .ds-navrail already sets background/border-right/flex-column */
   min-height: 0;
   overflow-y: auto;
+}
+
+/* Light theme draws the rail's right edge as a 2px inset bevel
+   (.ds-navrail box-shadow). Inset the rail content by the same 2px so the
+   full-width section dividers stop at the bevel instead of crossing over it. */
+[data-theme='light'] .menu-shell__rail {
+  padding-right: 2px;
 }
 
 .menu-shell__railtop {
@@ -292,10 +303,14 @@
   min-width: 0;
   min-height: 0;
   overflow: hidden;
+  /* Containing block + stacking context for the cursor-light layer, which sits
+     at z-index:0 behind the content/statusbar (z-index:1). */
+  position: relative;
 }
 
 .menu-shell__content {
   position: relative;
+  z-index: 1;
   min-width: 0;
   min-height: 0;
   overflow-y: auto;
@@ -321,4 +336,69 @@
   color: var(--ink-3);
   letter-spacing: var(--track-wide);
   text-transform: uppercase;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Cursor-follow light (add-cursor-follow-lighting) ──────────────────────
+   A non-interactive ambient glow that tracks the pointer, behind the menu
+   content. The pointer position arrives as the --cursor-x/--cursor-y custom
+   properties (set in a rAF-throttled handler); a fixed-size glow element is
+   moved with `transform` so only the compositor runs each frame. Tinted per
+   theme; painted only at motion `full`. */
+.cursor-light {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.cursor-light__glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 520px;
+  height: 520px;
+  border-radius: 50%;
+  /* Default far off-screen until the first pointer move positions it. */
+  transform: translate(
+    calc(var(--cursor-x, -9999px) - 260px),
+    calc(var(--cursor-y, -9999px) - 260px)
+  );
+  will-change: transform;
+}
+
+[data-theme='dark'] .cursor-light__glow {
+  background: radial-gradient(
+    circle,
+    rgba(57, 255, 136, 0.12),
+    rgba(255, 122, 24, 0.06) 42%,
+    transparent 70%
+  );
+  mix-blend-mode: screen;
+}
+
+[data-theme='light'] .cursor-light__glow {
+  /* Smaller, tighter sheen in light mode — the full-size glow read as too much. */
+  width: 320px;
+  height: 320px;
+  transform: translate(
+    calc(var(--cursor-x, -9999px) - 160px),
+    calc(var(--cursor-y, -9999px) - 160px)
+  );
+  background: radial-gradient(
+    circle,
+    rgba(255, 255, 255, 0.5),
+    rgba(255, 255, 255, 0.14) 45%,
+    transparent 68%
+  );
+  mix-blend-mode: soft-light;
+}
+
+/* Defense-in-depth: the component already unmounts below `full`, but make sure
+   the layer never paints if it somehow renders at reduced/off motion. */
+[data-motion='reduced'] .cursor-light,
+[data-motion='off'] .cursor-light {
+  display: none;
 }

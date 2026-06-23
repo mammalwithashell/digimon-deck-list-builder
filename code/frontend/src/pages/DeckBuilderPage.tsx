@@ -20,6 +20,7 @@ import {
 import { getCardById, searchCards } from '@/api/digimonCardApi';
 import * as deckApi from '@/api/deckApi';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
+import { useUiStore } from '@/stores/uiStore';
 import type { DigimonCardData } from '@/types/cards';
 import type { CardLegality, DeckEntry, DeckFormat, DeckValidationResult } from '@/types/deck';
 import './DeckBuilderPage.css';
@@ -129,12 +130,31 @@ function ValidationPanelInline({
   );
 }
 
-export function DeckBuilderPage() {
-  const { id: routeDeckId } = useParams();
+interface DeckBuilderWorkbenchProps {
+  /** When true, the builder renders inside an overlay (the deck-edit-before-queue
+   *  flow) instead of as a full page: the page-nav chrome is swapped for a CANCEL
+   *  control, the deck loads from `initialDeckId`, and SAVE returns via `onSaved`
+   *  instead of navigating away. */
+  embedded?: boolean;
+  initialDeckId?: string | null;
+  onSaved?: (deckId: string) => void;
+  onClose?: () => void;
+}
+
+export function DeckBuilderWorkbench({
+  embedded = false,
+  initialDeckId = null,
+  onSaved,
+  onClose,
+}: DeckBuilderWorkbenchProps = {}) {
+  const { id: routeParamDeckId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const params = new URLSearchParams(location.search);
-  const returnToPlay = params.get('returnTo') === 'play';
+  const returnToPlay = !embedded && params.get('returnTo') === 'play';
+  // Overlay mode edits the deck passed via props; page mode uses the route. The
+  // rest of the component reads `routeDeckId` uniformly.
+  const routeDeckId = embedded ? initialDeckId : routeParamDeckId;
   const {
     deckName,
     setDeckName,
@@ -158,18 +178,24 @@ export function DeckBuilderPage() {
     setDeckIconCardId,
   } = useDeckBuilderStore();
 
+  const deckBuilderView = useUiStore((state) => state.deckBuilderView);
+  const setDeckBuilderView = useUiStore((state) => state.setDeckBuilderView);
+
   const [formats, setFormats] = useState<DeckFormat[]>([]);
   const [legality, setLegality] = useState<Record<string, CardLegality>>({});
 
   const [showImport, setShowImport] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [activeSection, setActiveSection] = useState<'main' | 'egg' | 'side'>('main');
+  const [activeSection, setActiveSection] = useState<'main' | 'egg'>('main');
   const [builderFilters, setBuilderFilters] = useState<BuilderCardFilters>(DEFAULT_FILTERS);
   const [cardPool, setCardPool] = useState<DigimonCardData[]>([]);
   const [previewCard, setPreviewCard] = useState<DigimonCardData | null>(null);
   const [notice, setNotice] = useState('');
 
   useEffect(() => {
+    // Route/query-driven behavior is page-mode only; the overlay loads a
+    // specific deck via initialDeckId and never uses /new or import query params.
+    if (embedded) return;
     const nextParams = new URLSearchParams(location.search);
     if (location.pathname.endsWith('/new') || nextParams.get('new') === '1') {
       clearDeck();
@@ -182,7 +208,7 @@ export function DeckBuilderPage() {
     } else if (nextParams.get('import') === '1') {
       setShowImport(true);
     }
-  }, [location.pathname, location.search, clearDeck, setGameMode]);
+  }, [embedded, location.pathname, location.search, clearDeck, setGameMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -352,7 +378,11 @@ export function DeckBuilderPage() {
       setDeckId(saved.id);
       setIsDirty(false);
       setNotice('Deck saved');
-      if (returnToPlay) {
+      if (embedded) {
+        // Overlay mode: hand the saved id back to the play flow, which
+        // refreshes the selection and closes the overlay. No navigation.
+        onSaved?.(saved.id);
+      } else if (returnToPlay) {
         navigate('/play/deck', { replace: true });
       } else if (!deckId) {
         navigate(`/deckbuilder/${saved.id}`, { replace: true });
@@ -382,22 +412,42 @@ export function DeckBuilderPage() {
     setNotice('Deck cleared');
   };
 
-  return (
-    <div className="deck-builder-page">
-      <div className="deck-builder-app">
+  // Overlay close. The unsaved-changes guard lives in DeckEditOverlay (which
+  // also guards ESC/backdrop), so the buttons just hand off to onClose.
+  const requestClose = () => onClose?.();
+
+  // In overlay mode, clear the shared builder store when the overlay unmounts so
+  // a later visit to the full builder page starts clean.
+  useEffect(() => {
+    if (!embedded) return;
+    return () => {
+      clearDeck();
+    };
+  }, [embedded, clearDeck]);
+
+  const body = (
+    <>
         <div className="bld">
           <header className="bld-top">
             <div className="left">
-              <button type="button" className="back" onClick={() => navigate('/')}>
-                HOME
-              </button>
-              <button type="button" className="back" onClick={() => navigate('/deckbuilder')}>
-                LIBRARY
-              </button>
-              {returnToPlay && (
-                <button type="button" className="back" onClick={() => navigate('/play/deck')}>
-                  BACK TO PLAY
+              {embedded ? (
+                <button type="button" className="back" onClick={requestClose}>
+                  ← CANCEL
                 </button>
+              ) : (
+                <>
+                  <button type="button" className="back" onClick={() => navigate('/')}>
+                    HOME
+                  </button>
+                  <button type="button" className="back" onClick={() => navigate('/deckbuilder')}>
+                    LIBRARY
+                  </button>
+                  {returnToPlay && (
+                    <button type="button" className="back" onClick={() => navigate('/play/deck')}>
+                      BACK TO PLAY
+                    </button>
+                  )}
+                </>
               )}
               <input
                 className="deck-name-input"
@@ -424,7 +474,6 @@ export function DeckBuilderPage() {
               </select>
               <span className="pill"><span className="v">{counts.main}</span>/50</span>
               <span className="pill">EGG <span className="v">{counts.egg}</span>/5</span>
-              <span className="pill disabled">SIDE <span className="v">0</span>/15</span>
               {notice && <span className="bld-notice">{notice}</span>}
             </div>
 
@@ -456,11 +505,16 @@ export function DeckBuilderPage() {
               <button type="button" className="btn btn-opp" onClick={handleValidate}>VALIDATE</button>
               <button type="button" className="btn btn-ghost" onClick={() => setShowImport(true)}>IMPORT</button>
               <button type="button" className="btn btn-danger" onClick={handleClear}>CLEAR</button>
-              <button type="button" className="btn btn-ghost" onClick={() => navigate('/')}>QUIT</button>
+              {embedded ? (
+                <button type="button" className="btn btn-ghost" onClick={requestClose}>DONE</button>
+              ) : (
+                <button type="button" className="btn btn-ghost" onClick={() => navigate('/')}>QUIT</button>
+              )}
             </div>
           </header>
 
           <section className="bld-filters" aria-label="Builder filters">
+            <div className="bld-filters-fields">
             <div className="bld-filter color-filter">
               <span className="l">COLOR</span>
               <div className="bld-colors">
@@ -514,6 +568,8 @@ export function DeckBuilderPage() {
                 onChange={(event) => setBuilderFilters((current) => ({ ...current, search: event.target.value }))}
               />
             </label>
+            </div>
+            <div className="bld-filters-actions">
             <label className="check">
               <input
                 type="checkbox"
@@ -538,9 +594,17 @@ export function DeckBuilderPage() {
               />
               FORMAT-LEGAL ONLY
             </label>
+            <button
+              type="button"
+              className="bld-filter-reset"
+              onClick={() => setBuilderFilters(DEFAULT_FILTERS)}
+            >
+              RESET
+            </button>
+            </div>
           </section>
 
-          <main className="bld-main">
+          <main className={`bld-main view-${deckBuilderView}`}>
             <aside className="bld-preview">
               {previewCard ? (
                 <>
@@ -571,7 +635,35 @@ export function DeckBuilderPage() {
             <section className="bld-pool">
               <div className="bld-pool-head">
                 <span>CARD POOL · <span className="v">{visibleCards.length}</span> RESULTS</span>
-                <div className="legend"><span><i className="in"></i>IN DECK</span><span><i className="hover"></i>HOVER</span></div>
+                <div className="bld-pool-head-right">
+                  <div className="bld-view-toggle" role="group" aria-label="Card pool view">
+                    <button
+                      type="button"
+                      className={deckBuilderView === 'inspect' ? 'on' : ''}
+                      aria-pressed={deckBuilderView === 'inspect'}
+                      onClick={() => setDeckBuilderView('inspect')}
+                    >
+                      DETAIL
+                    </button>
+                    <button
+                      type="button"
+                      className={deckBuilderView === 'browse' ? 'on' : ''}
+                      aria-pressed={deckBuilderView === 'browse'}
+                      onClick={() => setDeckBuilderView('browse')}
+                    >
+                      GRID
+                    </button>
+                    <button
+                      type="button"
+                      className={deckBuilderView === 'decklist' ? 'on' : ''}
+                      aria-pressed={deckBuilderView === 'decklist'}
+                      onClick={() => setDeckBuilderView('decklist')}
+                    >
+                      DECK
+                    </button>
+                  </div>
+                  <div className="legend"><span><i className="in"></i>IN DECK</span><span><i className="hover"></i>HOVER</span></div>
+                </div>
               </div>
               <div className="bld-pool-grid">
                 {visibleCards.map((card) => {
@@ -639,12 +731,8 @@ export function DeckBuilderPage() {
               <div className="bld-deck-tabs">
                 <button type="button" className={activeSection === 'main' ? 'on' : ''} onClick={() => setActiveSection('main')}>MAIN <span className="ct">{counts.main}</span></button>
                 <button type="button" className={activeSection === 'egg' ? 'on' : ''} onClick={() => setActiveSection('egg')}>EGG <span className="ct">{counts.egg}</span></button>
-                <button type="button" className="disabled" disabled title="Sideboard is not supported in standard decks">SIDE <span className="ct">0</span></button>
               </div>
               <div className="bld-deck-list">
-                {activeSection === 'side' ? (
-                  <div className="bld-empty">SIDEBOARD NOT SUPPORTED IN STANDARD</div>
-                ) : (
                   <section className="bld-section">
                     <div className="bld-section-head"><span>{activeSection === 'egg' ? 'EGG DECK' : 'MAIN DECK'}</span><span className="ct">{activeCards.reduce((sum, entry) => sum + entry.count, 0)} / {activeExpected}</span></div>
                     {visibleSections.map((section) => (
@@ -690,14 +778,26 @@ export function DeckBuilderPage() {
                     ))}
                     {activeCards.length === 0 && <div className="bld-empty">EMPTY</div>}
                   </section>
-                )}
                 <ValidationPanelInline validationResult={validationResult} />
               </div>
             </aside>
           </main>
         </div>
         <ImportExport isOpen={showImport} onClose={() => setShowImport(false)} />
-      </div>
+    </>
+  );
+
+  if (embedded) {
+    return <div className="deck-builder-app bld-embedded">{body}</div>;
+  }
+
+  return (
+    <div className="deck-builder-page">
+      <div className="deck-builder-app">{body}</div>
     </div>
   );
+}
+
+export function DeckBuilderPage() {
+  return <DeckBuilderWorkbench />;
 }

@@ -15,14 +15,18 @@
 
 /* Shared, theme-independent scale tokens (not duplicated per theme). */
 :root {
-  --text-xs: 11px;
-  --text-sm: 12px;
-  --text-md: 14px;
-  --text-lg: 18px;
-  --text-xl: 24px;
-  --text-2xl: 32px;
-  --text-3xl: 48px;
-  --text-display: 64px;
+  /* User-adjustable text-size multiplier (Text size preference → uiStore →
+     `--font-scale` on <html>). Defaults to 1; the scale tokens below multiply
+     by it so all token-based text grows/shrinks together. */
+  --font-scale: 1;
+  --text-xs: calc(11px * var(--font-scale));
+  --text-sm: calc(12px * var(--font-scale));
+  --text-md: calc(14px * var(--font-scale));
+  --text-lg: calc(18px * var(--font-scale));
+  --text-xl: calc(24px * var(--font-scale));
+  --text-2xl: calc(32px * var(--font-scale));
+  --text-3xl: calc(48px * var(--font-scale));
+  --text-display: calc(64px * var(--font-scale));
 
   --track-tight: 0.02em;
   --track-wide: 0.14em;
@@ -43,11 +47,12 @@
   --screen-line: rgba(57, 255, 136, 0.26);
   --screen-ink: #c8e6d4;
 
-  /* ink */
+  /* ink — secondary/tertiary brightened for legibility on the dark surface
+     (the old --ink-2/--ink-3 washed out, e.g. deck-card classification/count) */
   --ink-0: #c8e6d4;
   --ink-1: #9fc4b0;
-  --ink-2: #6f9482;
-  --ink-3: #4a6457;
+  --ink-2: #88ad9b;
+  --ink-3: #6c8f80;
 
   /* lines */
   --line-0: rgba(57, 255, 136, 0.12);
@@ -83,11 +88,13 @@
   --grid-line: rgba(57, 255, 136, 0.1);
   --shadow-glow: 0 0 16px var(--accent-glow);
 
-  /* fonts (families defined in fonts.css) */
-  --font-display: var(--ff-vt323);
-  --font-ui: var(--ff-plex-mono);
+  /* fonts (families defined in fonts.css). Unified with the light theme's
+     "Adventure '99" choices so fonts no longer swap between themes — Silkscreen
+     for display/pixel headings, sans for UI, Plex Mono for monospace. */
+  --font-display: var(--ff-silkscreen);
+  --font-ui: var(--ff-sans);
   --font-mono: var(--ff-plex-mono);
-  --font-pixel: var(--ff-plex-mono);
+  --font-pixel: var(--ff-silkscreen);
 }
 /* @tokens:dark:end */
 

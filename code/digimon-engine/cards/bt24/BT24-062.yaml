@@ -16,6 +16,23 @@ traits: [Machine, Iliad, TS]
 # Inherited:
 #   [Your Turn] This Digimon's attack target can't change.
 
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: Machine }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: Cyborg }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: TS }
+    cost: 3
+
 effects:
   # ─── Inherited: target lock on the controller's turn ─────────────────────
   #

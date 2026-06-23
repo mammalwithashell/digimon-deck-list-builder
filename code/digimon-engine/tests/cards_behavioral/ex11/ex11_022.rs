@@ -118,15 +118,23 @@ fn ex11_022_has_printed_metadata_and_evolution_paths() {
         }),
         "printed yellow Lv.4 digivolution should cost 4"
     );
+    // Printed alt: "[Digivolve] Yellow/purple Lv.4 w/[Puppet] trait: Cost 3" (corrected
+    // from a mis-authored Lv.3/cost-2 under promote-official-bandai-card-source; the card
+    // image shows the gate is Lv.4 + [Puppet] + yellow/purple at cost 3). Encoded as a
+    // nested all_of predicate, so read the gate fields out of `from.all_of`.
     assert!(
         compiled.alt_paths.iter().any(|path| {
             path.kind == CompiledAltPathKind::Digivolve
-                && matches!(path.cost, Some(CompiledCost::Literal(2)))
+                && matches!(path.cost, Some(CompiledCost::Literal(3)))
                 && path.from.as_ref().is_some_and(|from| {
-                    from.level_eq == Some(3) && from.trait_has.as_deref() == Some("Puppet")
+                    from.all_of.iter().any(|p| p.level_eq == Some(4))
+                        && from
+                            .all_of
+                            .iter()
+                            .any(|p| p.trait_has.as_deref() == Some("Puppet"))
                 })
         }),
-        "alternate Lv.3 Puppet digivolution should cost 2"
+        "alternate yellow/purple Lv.4 [Puppet] digivolution should cost 3"
     );
 }
 
@@ -659,11 +667,13 @@ fn ex11_022_when_digivolving_uses_same_optional_play_and_cleanup_body() {
 }
 
 /// G-DSL-FIXTURE-EVO-COSTS: a DSL-loaded card's `CardData.evo_costs` is
-/// backfilled from its `kind: digivolve` alt-paths so it matches the printed
-/// table `data/cards.json` carries in production. EX11-022's only standard
-/// (color + level) digivolution row is yellow Lv.4 → 4 memory; the Lv.3
-/// Puppet-trait alt-path has no color and is resolved through alt-path
-/// registration, not as a static evo-cost row, so it must NOT appear here.
+/// backfilled from its `kind: digivolve` color+level alt-paths so it matches the
+/// printed table `data/cards.json` carries in production. EX11-022 is a YELLOW/PURPLE
+/// card, so the two printed standard digivolution rows are Yellow Lv.4 → 4 and Purple
+/// Lv.4 → 4 (the purple row was dropped by cards.json's multi-colour loss and restored
+/// here under promote-official-bandai-card-source). The Lv.4 [Puppet]-trait alt-path is
+/// resolved through alt-path registration, not as a static evo-cost row, so it must NOT
+/// appear here.
 #[test]
 fn ex11_022_dsl_fixture_backfills_printed_evo_cost_table() {
     let runner = load_runner();
@@ -676,14 +686,25 @@ fn ex11_022_dsl_fixture_backfills_printed_evo_cost_table() {
 
     assert_eq!(
         data.evo_costs.len(),
-        1,
-        "only the printed color+level digivolution row is a static evo cost; got {:?}",
+        2,
+        "the two printed color+level standard rows (Yellow Lv.4/4 + Purple Lv.4/4) backfill; \
+         the Lv.4 [Puppet] alt is registered via alt-path, not a static evo row; got {:?}",
         data.evo_costs
     );
-    let row = &data.evo_costs[0];
-    assert_eq!(row.card_color, 2, "yellow (card_color int 2)");
-    assert_eq!(row.level, 4);
-    assert_eq!(row.memory_cost, 4);
+    assert!(
+        data.evo_costs
+            .iter()
+            .any(|r| r.card_color == 2 && r.level == 4 && r.memory_cost == 4),
+        "yellow (card_color int 2) Lv.4 / cost 4 row present; got {:?}",
+        data.evo_costs
+    );
+    assert!(
+        data.evo_costs
+            .iter()
+            .any(|r| r.card_color == 6 && r.level == 4 && r.memory_cost == 4),
+        "purple (card_color int 6) Lv.4 / cost 4 row present; got {:?}",
+        data.evo_costs
+    );
 }
 
 /// G-DSL-FIXTURE-EVO-COSTS regression: an effect-initiated, cost-reduced

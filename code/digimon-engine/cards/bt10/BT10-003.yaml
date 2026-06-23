@@ -4,7 +4,7 @@ kind: digi_egg
 level: 2
 color: [red]
 cost: 0
-traits: [Mini Dragon, Xros Heart]
+traits: [Minor, Xros Heart]  # official Bandai DB: type "Minor/Xros Heart" (was mis-authored "Mini Dragon")
 
 effects:
   - scope: inherited

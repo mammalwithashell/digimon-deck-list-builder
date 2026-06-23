@@ -1,6 +1,25 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DEFAULT_PRESET, RESOLUTION_PRESETS } from '@/utils/constants';
-import { useUiStore, __uiStoreInternals } from './uiStore';
+import {
+  useUiStore,
+  __uiStoreInternals,
+  selectEffectiveLiveBackground,
+} from './uiStore';
+
+/** jsdom doesn't implement matchMedia; stub it so the OS reduced-motion
+ *  derivation is deterministic. */
+function mockMatchMedia(matches: boolean): void {
+  window.matchMedia = ((query: string) => ({
+    matches,
+    media: query,
+    onchange: null,
+    addListener: () => {},
+    removeListener: () => {},
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    dispatchEvent: () => false,
+  })) as unknown as typeof window.matchMedia;
+}
 
 const PRESET_KEY = __uiStoreInternals.PRESET_STORAGE_KEY;
 const FULLSCREEN_KEY = __uiStoreInternals.FULLSCREEN_STORAGE_KEY;
@@ -75,5 +94,168 @@ describe('uiStore graphics state', () => {
     window.localStorage.setItem(PRESET_KEY, 'not json');
     rehydrate();
     expect(useUiStore.getState().graphicsPreset).toEqual(DEFAULT_PRESET);
+  });
+});
+
+const DECK_BUILDER_VIEW_KEY = __uiStoreInternals.DECK_BUILDER_VIEW_STORAGE_KEY;
+
+describe('uiStore deck builder view preference', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    useUiStore.setState({ deckBuilderView: 'browse' });
+  });
+
+  it('defaults to browse when localStorage is empty', () => {
+    expect(__uiStoreInternals.loadPersistedDeckBuilderView()).toBe('browse');
+  });
+
+  it('hydrates a valid persisted view', () => {
+    window.localStorage.setItem(DECK_BUILDER_VIEW_KEY, 'inspect');
+    expect(__uiStoreInternals.loadPersistedDeckBuilderView()).toBe('inspect');
+  });
+
+  it('falls back to browse on a stale/invalid persisted value', () => {
+    window.localStorage.setItem(DECK_BUILDER_VIEW_KEY, 'zoomed-out');
+    expect(__uiStoreInternals.loadPersistedDeckBuilderView()).toBe('browse');
+  });
+
+  it('persists the view on setDeckBuilderView', () => {
+    useUiStore.getState().setDeckBuilderView('inspect');
+    expect(useUiStore.getState().deckBuilderView).toBe('inspect');
+    expect(window.localStorage.getItem(DECK_BUILDER_VIEW_KEY)).toBe('inspect');
+  });
+
+  it('hydrates the decklist view', () => {
+    window.localStorage.setItem(DECK_BUILDER_VIEW_KEY, 'decklist');
+    expect(__uiStoreInternals.loadPersistedDeckBuilderView()).toBe('decklist');
+  });
+
+  it('persists the decklist view on setDeckBuilderView', () => {
+    useUiStore.getState().setDeckBuilderView('decklist');
+    expect(useUiStore.getState().deckBuilderView).toBe('decklist');
+    expect(window.localStorage.getItem(DECK_BUILDER_VIEW_KEY)).toBe('decklist');
+  });
+
+  it('cycles browse -> inspect -> decklist -> browse and persists each flip', () => {
+    const order = ['inspect', 'decklist', 'browse'];
+    for (const expected of order) {
+      useUiStore.getState().toggleDeckBuilderView();
+      expect(useUiStore.getState().deckBuilderView).toBe(expected);
+      expect(window.localStorage.getItem(DECK_BUILDER_VIEW_KEY)).toBe(expected);
+    }
+  });
+});
+
+const MOTION_KEY = __uiStoreInternals.MOTION_STORAGE_KEY;
+const LIVE_BG_KEY = __uiStoreInternals.LIVE_BG_STORAGE_KEY;
+
+describe('uiStore motion preference', () => {
+  const realMatchMedia = window.matchMedia;
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+  afterEach(() => {
+    window.matchMedia = realMatchMedia;
+  });
+
+  it('derives reduced when the OS requests reduced motion', () => {
+    mockMatchMedia(true);
+    expect(__uiStoreInternals.deriveDefaultMotion()).toBe('reduced');
+  });
+
+  it('derives full when the OS does not request reduced motion', () => {
+    mockMatchMedia(false);
+    expect(__uiStoreInternals.deriveDefaultMotion()).toBe('full');
+  });
+
+  it('uses the OS default when nothing is persisted', () => {
+    mockMatchMedia(true);
+    expect(__uiStoreInternals.loadPersistedMotion()).toBe('reduced');
+  });
+
+  it('hydrates a valid persisted motion level', () => {
+    mockMatchMedia(false);
+    window.localStorage.setItem(MOTION_KEY, 'off');
+    expect(__uiStoreInternals.loadPersistedMotion()).toBe('off');
+  });
+
+  it('falls back to the OS default on an invalid persisted value', () => {
+    mockMatchMedia(true);
+    window.localStorage.setItem(MOTION_KEY, 'sideways');
+    expect(__uiStoreInternals.loadPersistedMotion()).toBe('reduced');
+  });
+
+  it('persists motion and projects the data-motion attribute on setMotion', () => {
+    useUiStore.getState().setMotion('reduced');
+    expect(useUiStore.getState().motion).toBe('reduced');
+    expect(window.localStorage.getItem(MOTION_KEY)).toBe('reduced');
+    expect(document.documentElement.dataset.motion).toBe('reduced');
+  });
+});
+
+describe('uiStore live background preference', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    useUiStore.setState({ liveBackground: true, motion: 'full' });
+  });
+
+  it('defaults to on when nothing is persisted', () => {
+    expect(__uiStoreInternals.loadPersistedLiveBackground()).toBe(true);
+  });
+
+  it('hydrates a persisted off value', () => {
+    window.localStorage.setItem(LIVE_BG_KEY, 'false');
+    expect(__uiStoreInternals.loadPersistedLiveBackground()).toBe(false);
+  });
+
+  it('persists on setLiveBackground', () => {
+    useUiStore.getState().setLiveBackground(false);
+    expect(useUiStore.getState().liveBackground).toBe(false);
+    expect(window.localStorage.getItem(LIVE_BG_KEY)).toBe('false');
+  });
+});
+
+const TEXT_SCALE_KEY = __uiStoreInternals.TEXT_SCALE_STORAGE_KEY;
+
+describe('uiStore text scale preference', () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+    useUiStore.setState({ textScale: 'md' });
+  });
+
+  it('defaults to md when nothing is persisted', () => {
+    expect(__uiStoreInternals.loadPersistedTextScale()).toBe('md');
+  });
+
+  it('hydrates a valid persisted scale', () => {
+    window.localStorage.setItem(TEXT_SCALE_KEY, 'lg');
+    expect(__uiStoreInternals.loadPersistedTextScale()).toBe('lg');
+  });
+
+  it('falls back to md on an invalid persisted value', () => {
+    window.localStorage.setItem(TEXT_SCALE_KEY, 'gigantic');
+    expect(__uiStoreInternals.loadPersistedTextScale()).toBe('md');
+  });
+
+  it('persists and projects --font-scale on setTextScale', () => {
+    useUiStore.getState().setTextScale('xl');
+    expect(useUiStore.getState().textScale).toBe('xl');
+    expect(window.localStorage.getItem(TEXT_SCALE_KEY)).toBe('xl');
+    expect(document.documentElement.style.getPropertyValue('--font-scale')).toBe(
+      String(__uiStoreInternals.TEXT_SCALE_VALUES.xl),
+    );
+  });
+});
+
+describe('selectEffectiveLiveBackground', () => {
+  it('is true only when motion is full and the toggle is on', () => {
+    useUiStore.setState({ motion: 'full', liveBackground: true });
+    expect(selectEffectiveLiveBackground(useUiStore.getState())).toBe(true);
+    useUiStore.setState({ motion: 'reduced', liveBackground: true });
+    expect(selectEffectiveLiveBackground(useUiStore.getState())).toBe(false);
+    useUiStore.setState({ motion: 'off', liveBackground: true });
+    expect(selectEffectiveLiveBackground(useUiStore.getState())).toBe(false);
+    useUiStore.setState({ motion: 'full', liveBackground: false });
+    expect(selectEffectiveLiveBackground(useUiStore.getState())).toBe(false);
   });
 });

@@ -144,13 +144,15 @@ async def game_websocket(websocket: WebSocket, game_id: str) -> None:
     filtered = filter_state_for_player(full_state, player_id)
     mask = runner.get_action_mask().tolist()
     current_pid = runner.current_player_id
+    # `filtered` is perspective-normalized so the viewer is always player1;
+    # report the normalized ids to match (see filter_state_for_player).
     await websocket.send_json({
         "type": "state_update",
         "state": filtered,
         "action_mask": mask if current_pid == player_id else [],
-        "current_player_id": current_pid,
+        "current_player_id": filtered["currentPlayer"],
         "is_game_over": runner.is_game_over,
-        "your_player_id": player_id,
+        "your_player_id": 1,
         "engine_version": settings.engine_version,
         "seed": manager.get_settings(game_id).seed,
     })
@@ -231,7 +233,12 @@ async def _handle_action(
     # Broadcast updated state to all
     await manager.broadcast_state(game_id, runner, logs=logs, events=events)
 
-    # If game is over, send game_over event and clean up connection tracking
+    # If game is over, send game_over event and clean up connection tracking.
+    # `winner_id` here is ABSOLUTE (single fan-out to players + spectators). The
+    # per-recipient NORMALIZED winner already rode the preceding broadcast_state
+    # (state_update.winner_id == filtered.winner), and the result overlay reads
+    # the normalized `state.winner`; the player frontend no-ops `onGameOver`. So
+    # this absolute id is intentionally left un-normalized.
     if runner.is_game_over:
         await manager.broadcast_event(game_id, {
             "type": "game_over",
@@ -260,6 +267,10 @@ async def _handle_surrender(
     # The WS-level game_over message (not an engine event) is what the
     # frontend consumes — emitted after the final state, carrying who
     # conceded (legacy `surrender` contract, rule 16 parity at the wire).
+    # `winner_id` / `surrendered_by` are ABSOLUTE: this is a single fan-out to
+    # players + spectators, the result overlay uses the normalized `state.winner`
+    # delivered by the preceding broadcast_state, and `onGameOver` is a no-op on
+    # the player client — so per-recipient normalization is intentionally skipped.
     await manager.broadcast_event(game_id, {
         "type": "game_over",
         "winner_id": runner.winner_id,

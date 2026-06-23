@@ -78,3 +78,7 @@ code/frontend/playwright-report/
 
 # Local Weights & Biases run artifacts (from local --wandb smoke tests)
 wandb/
+# Brainstorm visual-companion + screenshot-trial scratch (session-local)
+.superpowers/
+.trial/
+/playwright-launcher.png

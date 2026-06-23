@@ -33,7 +33,10 @@ import { EffectPopup } from '@/components/game/EffectPopup';
 import { KeywordPromptDialog } from '@/components/game/KeywordPromptDialog';
 import { PeekButton } from '@/components/game/PeekButton';
 import { DragOverlayCard } from '@/components/game/DragOverlayCard';
+import { ConnectionStatusScreen } from '@/components/game/ConnectionStatusScreen';
 import { useWebSocketGame, type UseWebSocketGameOptions } from '@/hooks/useWebSocketGame';
+import { connectionScreenState } from '@/utils/connectionScreen';
+import { pickAlias, liveGameLabels } from '@/features/play/botNames';
 import { useDeckBuilderStore } from '@/stores/deckBuilderStore';
 import * as gameApi from '@/api/gameApi';
 import * as deckApiMod from '@/api/deckApi';
@@ -94,7 +97,7 @@ export function GamePage() {
 
 
   const store = useGameStore();
-  const { opponentMode, seed: flowSeed, clearLaunchState } = usePlayFlowStore();
+  const { seed: flowSeed, clearLaunchState } = usePlayFlowStore();
   useEffectHighlight();
   // Bot action pacing (add-bot-action-pacing): non-instant speeds advance
   // local bot games one agent action per request, paced by the driver
@@ -119,12 +122,11 @@ export function GamePage() {
           store.setGameSeed(payload.seed ?? null);
         }
         if (payload.events) store.appendEvents(payload.events);
-        if (payload.your_player_id != null) {
-          store.setPlayerLabels({
-            [payload.your_player_id]: 'You',
-            [payload.your_player_id === 1 ? 2 : 1]: isVsAiOnline ? 'AI' : 'Opponent',
-          });
-        }
+        // Opponent shown under a cosmetic Digimon alias, seeded by game id so
+        // it stays constant across state updates / reloads and is identical on
+        // both clients and for spectators. The local player keeps "You";
+        // spectators (no seat) see both seats aliased. (anonymize-opponent-names)
+        store.setPlayerLabels(liveGameLabels(urlGameId, payload.your_player_id));
       },
       onGameOver: () => {},
       onError: (msg) => console.error('WebSocket error:', msg),
@@ -303,7 +305,7 @@ export function GamePage() {
             store.clearActionTraces();
             store.setPlayerLabels({
               1: 'YOU',
-              2: opponentMode === 'bot' ? 'GREEDY BOT' : 'OPPONENT',
+              2: pickAlias(`${urlGameId}:2`),
             });
             // Lock human input and drive any opening agent decision (e.g. the
             // AI's mulligan when the human goes second) before handing control
@@ -458,14 +460,13 @@ export function GamePage() {
       store.setGameState(result.state);
       store.setActionMask(result.action_mask);
       store.setGameSeed(result.seed ?? normalizedSeed);
-      if (result.player_labels) {
-        store.setPlayerLabels(result.player_labels);
-      } else {
-        store.setPlayerLabels({
-          1: 'YOU',
-          2: agentType === 'greedy' ? 'GREEDY BOT' : 'OPPONENT',
-        });
-      }
+      // Client owns opponent naming: alias the AI seat (seeded by game id so it
+      // is stable for the game) and keep "YOU" for the human, ignoring any
+      // backend-provided opponent label. (anonymize-opponent-names)
+      store.setPlayerLabels({
+        1: 'YOU',
+        2: pickAlias(`${result.game_id}:2`),
+      });
       store.clearEvents();
       store.clearActionTraces();
       if (result.events) store.appendEvents(result.events);
@@ -515,6 +516,16 @@ export function GamePage() {
 
   const handleSurrender = useCallback(async () => {
     if (!store.gameId || store.isGameOver) return;
+    // PvP / vs-AI-online run over the WebSocket: concede there (the REST
+    // surrenderGame path only drives local games and would never reach the
+    // live game's server-side runner). The server broadcasts the resulting
+    // game-over state through the normal state_update path. The viewer is
+    // perspective-normalized to player 1, so they surrendered as "you" (1).
+    if (useWebSocket) {
+      ws.sendSurrender();
+      setSurrenderedBy(1);
+      return;
+    }
     try {
       const res = await gameApi.surrenderGame(store.gameId, 1);
       store.setGameState(res.state);
@@ -526,12 +537,21 @@ export function GamePage() {
     } catch {
       // Ignore errors (e.g. game already over)
     }
-  }, [appendResponseActionTraces, store]);
+  }, [appendResponseActionTraces, store, useWebSocket, ws]);
 
   const handleReturnToLauncher = useCallback(() => {
     store.reset();
     clearLaunchState();
     navigate('/');
+  }, [clearLaunchState, navigate, store]);
+
+  // Bail out of a WebSocket game whose connection never came up. Clears the
+  // game state so we don't re-enter the dead board, then returns to the play
+  // screen (the natural retry point for PvP / vs-AI-online / spectator).
+  const handleLeaveConnection = useCallback(() => {
+    store.reset();
+    clearLaunchState();
+    navigate('/play');
   }, [clearLaunchState, navigate, store]);
 
   const gameLogLines = useMemo(() => {
@@ -892,6 +912,22 @@ export function GamePage() {
 
   // No game — show setup screen
   if (!store.gameId) {
+    // A game id in the URL means a game is being created/loaded for this route.
+    // Show a neutral loading screen instead of the legacy manual-start form,
+    // which otherwise flashed for a moment on every launch before the board
+    // hydrated. The form below is kept only for the (route-less) no-id case.
+    if (urlGameId) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] gap-3">
+          <div
+            className="text-sm uppercase tracking-[0.2em] text-[var(--ink-2)]"
+            style={{ fontFamily: 'var(--font-mono)' }}
+          >
+            Loading game…
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-56px)] p-8 gap-6">
         <h1 className="text-2xl font-bold text-[var(--ink-0)]">Start a Game</h1>
@@ -996,6 +1032,31 @@ export function GamePage() {
           </button>
         </div>
       </div>
+    );
+  }
+
+  // WebSocket connection gate (PvP / vs-AI-online / spectator). These modes
+  // stream state over the socket; `store.gameId` is set immediately, so the
+  // board would otherwise render and sit on "Loading game..." forever if the
+  // socket never delivers state. Show a connection-status screen until the
+  // first state_update hydrates the board, or surface a failure UI (with a
+  // retry + a way back) if the socket errors — so a dead socket (e.g. the
+  // server returning HTTP 404 on every /ws/games/... upgrade) no longer hangs
+  // both players indefinitely. Local games always resolve to 'ready'.
+  const connState = connectionScreenState({
+    useWebSocket,
+    status: ws.status,
+    retryCount: ws.retryCount,
+    boardHydrated: Boolean(store.player1 && store.player2),
+  });
+  if (connState !== 'ready') {
+    return (
+      <ConnectionStatusScreen
+        state={connState}
+        error={ws.error}
+        onRetry={ws.reconnect}
+        onLeave={handleLeaveConnection}
+      />
     );
   }
 

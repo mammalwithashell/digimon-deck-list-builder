@@ -189,16 +189,19 @@ fn make_omnimon_top(id: &str) -> CardData {
 // ─── Section 1 — Structural assertions ──────────────────────────────────────
 
 #[test]
-fn bt22_013_compiles_with_one_alt_path_and_three_triggered_clauses() {
+fn bt22_013_compiles_with_three_alt_paths_and_three_triggered_clauses() {
     let card = compiled_bt22_013();
 
-    // The [Hand][Main] Nokia jump is now a `main_from_hand` triggered clause
-    // (re-modelled off the retired `activated_digivolve` alt-path), so only the
-    // standard Lv.5/cost-4 Digivolve remains as an alt-path.
+    // Printed alt-digivolutions (confirmed on the card image + official Bandai DB,
+    // promote-official-bandai-card-source): the standard Lv.5/cost-4 Digivolve PLUS the
+    // printed "[Digivolve] Lv.5 w/[Greymon] in name or w/[CS] trait: Cost 3" alt, encoded
+    // as a name route + a trait route. (The earlier "cost-3 is unprinted DCGO-only"
+    // reasoning was the lossy-cards.json error this change corrects — the card face shows
+    // the cost-3 box.) The [Hand][Main] Nokia jump remains a separate main_from_hand clause.
     assert_eq!(
         card.alt_paths.len(),
-        1,
-        "expected exactly 1 alt_path (standard Digivolve), got {}",
+        3,
+        "expected 3 alt_paths (standard Digivolve + Greymon-name + CS-trait), got {}",
         card.alt_paths.len()
     );
 

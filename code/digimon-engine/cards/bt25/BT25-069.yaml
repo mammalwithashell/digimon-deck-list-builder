@@ -20,6 +20,18 @@ dp: 4000
 traits: [Undead, Titan, TS]
 attribute: Virus
 
+alt_paths:
+  # Printed standard evo box: Lv.3 from black, cost 2.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+  # Printed alt evo box: "[Digivolve] Lv.3 w/[TS] trait: Cost 2" — trait-gated,
+  # no color restriction. The cheaper-cost-route idiom applies (same cost 2,
+  # but trait-specific base rather than colour-specific).
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: TS }
+    cost: 2
+
 effects:
   # ─── <Jamming> (self) ───────────────────────────────────────────────────────
   - kind: grant_keyword
