@@ -265,17 +265,19 @@ fn wrap_pending_selection_with_tail(
                 return;
             }
             _ => {
-                // MultiPickStep (Batch 4) frames don't yet carry outer conts.
-                // Fail loud rather than drop the tail — keeps the migration honest.
+                // Multi-pick frames (MultiPickStep / PermutationStep, Batch 4)
+                // don't yet carry outer conts. Fail loud rather than drop the
+                // tail — keeps the migration honest.
                 let source_card_id = game
                     .card_data_for_handle(source_card)
                     .map(|cd| cd.card_id.clone())
                     .unwrap_or_else(|| format!("handle:{}", source_card.0));
                 panic!(
-                    "wrap_pending_selection_with_tail over a resume MultiPickStep \
+                    "wrap_pending_selection_with_tail over a resume multi-pick \
                      frame: card={source_card_id} player={player:?} \
                      outer_tail_len={} — nested outer-tail composition onto a \
-                     MultiPickStep is not yet supported (Batch 4)",
+                     multi-pick (MultiPickStep/PermutationStep) frame is not yet \
+                     supported (Batch 4)",
                     outer_tail.len(),
                 );
             }

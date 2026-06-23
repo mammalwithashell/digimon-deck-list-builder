@@ -221,6 +221,31 @@ pub enum ResumeFrame {
     /// `Arc<Mutex<Option<Box<dyn FnOnce>>>>` final-callback threading collapses
     /// into re-parking this frame until the pick count is satisfied.
     MultiPickStep(MultiPickState),
+    /// Ordered-permutation accumulator (`select_ordered_permutation`): the player
+    /// orders a fixed item list via sequential single picks (`SEL_REVEAL` range
+    /// into the REMAINING items). Mandatory until the list is exhausted; the data
+    /// terminal binds the ordered list and runs the tail. See [`PermutationState`].
+    PermutationStep(PermutationState),
+}
+
+/// In-flight state of an ordered-permutation selection, as data. Re-parked once
+/// per pick; the terminal fires when `remaining` is empty (every item placed).
+#[derive(Debug, Clone)]
+pub struct PermutationState {
+    pub prov: ResumeProvenance,
+    pub selecting_player: PlayerId,
+    pub previous_phase: GamePhase,
+    /// Items not yet placed; `action_id - SEL_REVEAL_START` indexes into this.
+    pub remaining: Vec<CardHandle>,
+    /// Items placed so far, in chosen order.
+    pub accum: Vec<CardHandle>,
+    pub prompt: String,
+    // ── data terminal (bind the ordered list, then run the tail) ──
+    pub bind_as: Option<String>,
+    pub inner_tail: Arc<Vec<CompiledStep>>,
+    pub bindings: Bindings,
+    pub runtime: StepRuntime,
+    pub trigger_context: Option<TriggerContext>,
 }
 
 /// In-flight state of a `count_capped`-family multi-pick selection, as data.
@@ -1106,6 +1131,75 @@ mod tests {
             (runner.memory() - before).abs(),
             8,
             "inner tail (5) AND the outer continuation (3) must both run"
+        );
+        assert!(runner.game_mut().pending_selection.is_none());
+        assert!(runner.game_mut().pending_selection_resume.is_none());
+    }
+
+    #[test]
+    fn permutation_step_accumulates_in_order_then_terminates() {
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TEST-RESUME", "Resume Tester"))
+            .hand(0, &["TEST-RESUME", "TEST-RESUME"])
+            .memory(0)
+            .start();
+        let (c0, c1, prev_phase) = {
+            let g = runner.game_mut();
+            (
+                g.player(0).hand[0].handle(),
+                g.player(0).hand[1].handle(),
+                g.current_phase,
+            )
+        };
+        let source_card = c0;
+        let state = PermutationState {
+            prov: ResumeProvenance {
+                source_card,
+                source_permanent: None,
+                source_kind: EffectSourceKind::Digimon,
+                controller: 0,
+                override_pin: None,
+            },
+            selecting_player: 0,
+            previous_phase: prev_phase,
+            remaining: vec![c0, c1],
+            accum: vec![],
+            prompt: "order".to_string(),
+            bind_as: Some("ordered".to_string()),
+            inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
+            bindings: Bindings::new(),
+            runtime: StepRuntime::default(),
+            trigger_context: None,
+        };
+        crate::dsl_cards::step::selections::install_permutation_resume_step(runner.game_mut(), state);
+
+        // Pick item 0: re-parks for the last item.
+        runner
+            .game_mut()
+            .resolve_selection(0, crate::action::space::SEL_REVEAL_START)
+            .expect("pick 1 resolves");
+        {
+            let g = runner.game_mut();
+            assert!(g.pending_selection.is_some(), "must re-park for the 2nd pick");
+            match &g.pending_selection_resume.as_ref().expect("re-parked").frames[0] {
+                ResumeFrame::PermutationStep(s) => {
+                    assert_eq!(s.accum, vec![c0], "first pick accumulated in order");
+                    assert_eq!(s.remaining, vec![c1], "picked item removed");
+                }
+                _ => panic!("expected a PermutationStep frame"),
+            }
+        }
+
+        // Pick the last item (index 0 of the remaining 1): terminal runs the tail.
+        let before = runner.memory();
+        runner
+            .game_mut()
+            .resolve_selection(0, crate::action::space::SEL_REVEAL_START)
+            .expect("pick 2 resolves");
+        assert_eq!(
+            (runner.memory() - before).abs(),
+            5,
+            "exhausting the list must run the terminal inner tail (GainMemory 5)"
         );
         assert!(runner.game_mut().pending_selection.is_none());
         assert!(runner.game_mut().pending_selection_resume.is_none());

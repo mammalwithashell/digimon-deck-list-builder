@@ -647,6 +647,91 @@ pub(crate) fn run_resume(
         ResumeFrame::MultiPickStep(state) => {
             run_multipick_step(game, state, action_id, is_pass);
         }
+        ResumeFrame::PermutationStep(state) => {
+            run_permutation_step(game, state, action_id);
+        }
+    }
+}
+
+/// Data terminal for an ordered permutation: bind the accumulated handles as an
+/// (ordered) card list, then run the inner tail. Mirrors the closure trampoline's
+/// `final_callback` (and `run_multipick_terminal`).
+fn run_permutation_terminal(game: &mut crate::game::Game, state: crate::resume::PermutationState) {
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let mut b = state.bindings;
+    if let Some(name) = &state.bind_as {
+        b.insert_card_list(name, state.accum);
+    }
+    run_tail_preserving_trigger_context(
+        &mut ctx,
+        state.trigger_context,
+        &state.inner_tail,
+        &mut b,
+        &state.runtime,
+    );
+}
+
+/// Install (or re-park) an ordered-permutation step: build the `PendingSelection`
+/// over the remaining items and stash the data frame so `resolve_generic_selection`
+/// resumes through `run_resume`. Mirrors `install_permutation_step`'s
+/// PendingSelection (phase, kind, mandatory).
+pub(crate) fn install_permutation_resume_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::PermutationState,
+) {
+    use crate::action::space::SEL_REVEAL_START;
+    use crate::selection::{PendingSelection, SelectionKind};
+    let n = state.remaining.len() as u8;
+    let valid_action_ids: Vec<u16> = (0..state.remaining.len())
+        .map(|i| SEL_REVEAL_START + i as u16)
+        .collect();
+    game.current_phase = crate::enums::GamePhase::SelectPermutation;
+    game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
+        kind: SelectionKind::OrderedPermutation { remaining: n },
+        selecting_player: state.selecting_player,
+        previous_phase: state.previous_phase,
+        valid_action_ids,
+        is_optional: false,
+        prompt: state.prompt.clone(),
+        effect_choices: None,
+        source_card: state.prov.source_card,
+        source_permanent: state.prov.source_permanent,
+        source_kind: state.prov.source_kind,
+        // Vestigial during coexistence: run_resume is authoritative.
+        callback: Box::new(|_g, _a| {}),
+        on_decline: None,
+    });
+    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::PermutationStep(state)],
+    });
+}
+
+/// Executor for one ordered-permutation pick. Mirrors `install_permutation_step`
+/// as data: decode the pick index into `remaining`, append to `accum`, then run
+/// the terminal (list exhausted) or re-park for the next pick.
+fn run_permutation_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::PermutationState,
+    action_id: u16,
+) {
+    let pick_idx = action_id.saturating_sub(crate::action::space::SEL_REVEAL_START) as usize;
+    if pick_idx >= state.remaining.len() {
+        return; // stale/invalid pick (defensive)
+    }
+    let picked = state.remaining.remove(pick_idx);
+    state.accum.push(picked);
+    if state.remaining.is_empty() {
+        run_permutation_terminal(game, state);
+    } else {
+        install_permutation_resume_step(game, state);
     }
 }
 
@@ -4313,6 +4398,21 @@ fn install_select_ordered_permutation(
 ) {
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    // Resumable-VM (Batch 4): capture for the PermutationStep data frame before
+    // the closure consumes them. The first `install_permutation_step` parks over
+    // the full `items` (accum empty); the frame mirrors that, then re-parks via
+    // the data path on each pick.
+    let items_for_resume = items.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let override_pin = ctx.override_selecting_player();
     ctx.select_ordered_permutation(items, &prompt, move |cb_ctx, ordered| {
         let mut b = bindings.clone();
         if let Some(name) = &bind_as {
@@ -4320,6 +4420,36 @@ fn install_select_ordered_permutation(
         }
         run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
     });
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s PermutationStep arm. `selecting_player`/`previous_phase` are
+    // read back from the installed selection so the re-park matches exactly.
+    if let Some(pending) = ctx.game.pending_selection.as_ref() {
+        let selecting_player = pending.selecting_player;
+        let previous_phase = pending.previous_phase;
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::PermutationStep(
+                crate::resume::PermutationState {
+                    prov: crate::resume::ResumeProvenance {
+                        source_card,
+                        source_permanent,
+                        source_kind,
+                        controller: player,
+                        override_pin,
+                    },
+                    selecting_player,
+                    previous_phase,
+                    remaining: items_for_resume,
+                    accum: Vec::new(),
+                    prompt,
+                    bind_as: bind_as_for_resume,
+                    inner_tail: tail_for_resume,
+                    bindings: bindings_for_resume,
+                    runtime: runtime_for_resume,
+                    trigger_context: trigger_for_resume,
+                },
+            )],
+        });
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
