@@ -92,6 +92,17 @@ the `CardEffect` trait, and registers itself via the set's `register` fn.
 > reads, no per-call randomness) or the memo will serve stale lists; callers that need to *mutate*
 > the returned vec use `effects_for_card_owned` (un-memoized). A debug differential oracle asserts
 > the cache equals a fresh build on every hit.
+>
+> **Performance — the card store is shared (`cache-construction`, 2026-06-22).** `Game.card_data`
+> is a `CardStore` newtype wrapping `Arc<Vec<CardData>>` (see `card_store`), memoized per a content
+> fingerprint of the card DB and shared across games — `Game::new` is an `Arc` clone, not a re-clone +
+> DSL-enrich of the ~4000-card store (was ~14 ms/game, 61% of the per-step training cost). `CardStore`
+> is `Deref`-transparent (reads unchanged) and `DerefMut`-copy-on-write (a per-game mutation — test
+> card injection, `force_base_dp` — forks a private copy; production never mutates). Two invariants
+> this relies on: **`data_index` is assigned in deterministic sorted-by-id order** (it's internal —
+> the obs tensor keys on the stable registry index — but any code re-deriving an index from the same
+> card DB must sort the same way, e.g. `DebugRunner`), and **the cache fingerprint hashes value fields
+> incl `dp`** (not just text lengths) so card sets that differ only in stats don't collide.
 
 Every card's effects live in a struct that implements `CardEffect`:
 
