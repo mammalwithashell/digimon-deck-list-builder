@@ -32,7 +32,7 @@ Incremental, parity-guarded. The data-VM and legacy closure executor coexist beh
   - **Batch 3 DONE** (commit 441df1ed1): `union_zone` flipped (last RunTail; dual-tail + tri-range). No new substrate; rode on both Batch-1/2 substrates, full pool green. **All single-pick selection kinds are now on the resumable VM.**
   - **Batch 4 COMPLETE for the production pool** (the multi-pick trampolines), all full-pool-green: **permutation** (9002566d), **dp-budget + play-cost-budget** (02a406b3, unified `BudgetStep`), **source-multi** (a0e66423), **count_capped** all 3 sub-paths (b7903656 card-based Hand/Trash + Material-sources, da7237012 BattleArea-permanents), **reveal-bucket** (5288511d, first fully-data-driven selection). Plus the **`outer_conts`-on-multi-pick extension** + the **clobber fix** (park only when our own candidates are non-empty). **partition is the one selection NOT flipped — correctly:** it's test-only (sole caller is `tests/replacements/partition.rs`; no production card/DSL verb/keyword), its requirements are raw `Box<dyn Fn>` closures (not `CompiledPredicate`s), and it never parks in a production game so it does not block `Game: Clone`. Data-port it if/when a DSL `<Partition>` card exists. **Net: 100% of the production selection surface is on the resumable VM.** See `migration-playbook.md` §"Batch 4".
 - [ ] 3.2 Migrate the nastiest multi-pick / pay-cost / replacement archetypes early to validate the frame-stack design (or simplest-first per the resolved Open Question).
-- [ ] 3.3 Port or constrain the remaining `raw_rust` effects to be clone-safe (4 as of 2026-06-18: `bt24_012`/`lm_027`/`bt21_093`/`bt13_040`; `bt24_012` is already a no-op placeholder).
+- [x] 3.3 Port or constrain the remaining `raw_rust` effects to be clone-safe — **DONE 2026-06-23** (commit 95aeef8a8). Audit: `bt24_012` (no-op), `lm_027` (atomic `add_pending_security_to_hand`), `bt21_093` (no-op stub) are clone-safe; `bt13_040_may_play_veemon_from_hand_or_source` installed a CLOSURE-based UnionZone `pending_selection` (the only clone-unsafe raw_rust) but was already DEAD (BT13-040.yaml uses pure-DSL `select_union_zone` + `play_union_bound_free`, now on the VM; no YAML/test referenced the fn) — deleted it + its registration. raw_rust 4→3, all clone-safe. **Net: `Game: Clone` is faithful at 100% of the production decision surface.**
 
 ## 4. Make Game cloneable
 
@@ -43,8 +43,8 @@ Incremental, parity-guarded. The data-VM and legacy closure executor coexist beh
 
 ## 5. raw_rust clone-safety enforcement
 
-- [ ] 5.1 Add a guard test/lint that fails if a `raw_rust` effect parks a non-`Clone` continuation on `Game`.
-- [ ] 5.2 Amend CLAUDE.md rule 28 with the clone-safety constraint (atomic or resume-state-providing); decide whether `formula_extensions` need the same treatment.
+- [x] 5.1 Guard against a `raw_rust` effect parking a non-`Clone` continuation — **covered by the runtime panic-stub** (`impl Clone for PendingSelection`, `selection.rs:299`): a closure-based selection clones to a callback that `panic!`s with a clear "drive it via the resumable VM" message when resolved, so a cloned clone-unsafe park fails loudly rather than silently mis-resolving. After 3.3 there are zero clone-unsafe raw_rust fns, so nothing trips it today. (A static source-scan lint was considered and rejected as brittle — self-match on its own needle, false positives — for marginal value over the panic-stub.)
+- [x] 5.2 Amend CLAUDE.md rule 28 with the clone-safety constraint — **DONE 2026-06-23**: rule 28 now states a `raw_rust` effect MUST be atomic OR drive selections through the resumable VM (`ResumeStack`/`ResumeFrame` + `pending_selection_resume`), never a bespoke closure `pending_selection`; cites the panic-stub + the `RevealBucketStep` fully-data-driven example. (`formula_extensions` are pure read-only formula evaluators — no parked continuation — so they need no clone-safety treatment.)
 
 ## 6. Cutover & docs
 
