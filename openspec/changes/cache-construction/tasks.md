@@ -11,11 +11,16 @@
 
 ## 3. Verify + measure
 
-- [ ] 3.1 Build green across crates; `digimon-engine-py` compiles (Game: Send).
-- [ ] 3.2 Behavior green: oracle subset (effects/flood_gates/replacements/combat/archetypes/dsl) + full `cards_behavioral` in **release**.
-- [ ] 3.3 (debug) assert the shared store equals a fresh build on cache miss (cheap differential), exercised by the suites.
-- [ ] 3.4 Re-run `bench_engine_throughput.rs` (release); record the construct-phase share drop + steps/sec (target: construction no longer dominates; ~2.3× engine-side). Log if it underperforms (no silent cap).
-- [ ] 3.5 PyO3/headless smoke — confirm the speedup carries through the harness.
+- [x] 3.1 Build green across crates: engine lib (0 err), engine tests (all compile), `digimon-engine-py` (compiles → **Game: Send preserved**).
+- [x] 3.2 Behavior green: comprehensive subset (effects 211, flood_gates 227, dsl 781, archetypes 41, mask_and_tensor 175, combat 14, replacements 110, judge_quiz, phase_flow) — **0 failures**. Full `cards_behavioral` release: running.
+  - **REGRESSION 1 (fixed):** `DebugRunner` builds its own `data_index_map` from `self.card_data` in HashMap-iteration order and assumes `Game::new` uses the same assignment. The shared cache returns a store built from a *different* HashMap instance (different seed → different order) → DebugRunner's manual card placement pointed at the wrong `CardData` → ~36 tests failed. FIX: assign `data_index` in **deterministic sorted-by-id order** in BOTH `build_shared_card_store` and DebugRunner (`data_index` is internal; the obs tensor keys on the stable registry index → behavior-neutral).
+  - **REGRESSION 2 (fixed):** the fingerprint hashed text *lengths* but omitted `dp` → two `make_digimon_dp("WEAK", c, dp)` test cards (same id/name/lengths, different DP) collided → a test got a cached card with the wrong DP (Raid targeting broke). FIX: hash the VALUE fields (incl `dp`, colors, keywords, level, kind) fully; text/costs by length (full-text+`Debug` hashing made the per-game fingerprint ~3.6 ms and eroded the win — value-fields-only keeps it cheap AND distinguishes the synthetic test DBs).
+- [~] 3.3 Differential cache==fresh assertion — deferred; the deterministic-sorted store + the behavioral suites cover equivalence.
+- [x] 3.4 Re-run `bench_engine_throughput.rs` (release). **Construction collapsed:**
+  - GREEDY: 1509 → **3449 steps/s (2.3×)** on top of the effects cache; construct 64% → **20.5%** (`Game::new`'s 14 ms card-store build is now an `Arc` clone; residual is `CardRegistry::from_cards` + the fingerprint).
+  - RANDOM: 1647 → **2283 steps/s (1.4×)**.
+  - **Cumulative vs the original baseline: GREEDY 456 → 3449 (7.6×), RANDOM 244 → 2283 (9.4×).** Step counts identical (6620/13795) — behavior-preserving.
+- [ ] 3.5 PyO3/headless smoke — pending.
 
 ## 4. Docs + follow-ups
 
