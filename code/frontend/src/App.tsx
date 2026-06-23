@@ -21,6 +21,7 @@ import { PatchNotesPage } from '@/pages/PatchNotesPage';
 import { RoomChooserPage } from '@/pages/RoomChooserPage';
 import { RoomLobbyPage } from '@/pages/RoomLobbyPage';
 import { UpdaterBridge } from '@/updater/UpdaterBridge';
+import { DebugBridgeNav } from '@/components/desktop/DebugBridgeNav';
 import { GraphicsSettingsModal } from '@/components/settings/GraphicsSettingsModal';
 import { ThemeProvider } from '@/design/theme/ThemeProvider';
 import { useAuthStore } from '@/stores/authStore';
@@ -190,6 +191,7 @@ export function App() {
     <BrowserRouter>
       <ThemeProvider>
         <UpdaterBridge />
+        {IS_DESKTOP && import.meta.env.DEV && <DebugBridgeNav />}
         {IS_DESKTOP && !fullscreen && <TitleBar />}
         <CanvasScaler>
           {IS_DESKTOP ? <DesktopRoutes /> : <WebRoutes />}
