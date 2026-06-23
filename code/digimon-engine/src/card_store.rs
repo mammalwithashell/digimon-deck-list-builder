@@ -75,17 +75,33 @@ fn cache() -> &'static Mutex<HashMap<u64, Arc<SharedCardStore>>> {
 fn fingerprint(all_card_data: &HashMap<String, CardData>) -> u64 {
     use std::hash::{Hash, Hasher};
     let mut sum: u64 = all_card_data.len() as u64;
-    for (id, data) in all_card_data {
+    for (id, d) in all_card_data {
         let mut h = std::collections::hash_map::DefaultHasher::new();
+        // Hash the FULL discriminating content (values, not lengths). Two card
+        // sets that differ in ANY behavioral field must produce different
+        // fingerprints — e.g. test cards built by `make_digimon_dp("WEAK", c, dp)`
+        // share id/name/text but differ in `dp`, so `dp` (and every other field)
+        // MUST be hashed, or a cache hit would serve the wrong card's stats.
+        // String/Vec hashing reads bytes in place (no allocation); only the few
+        // non-`Hash` structural fields go through one `Debug` per card.
         id.hash(&mut h);
-        data.card_name.hash(&mut h);
-        data.play_cost.hash(&mut h);
-        data.index.hash(&mut h);
-        data.effect_text.len().hash(&mut h);
-        data.inherited_text.len().hash(&mut h);
-        data.security_text.len().hash(&mut h);
-        data.traits.len().hash(&mut h);
-        data.evo_costs.len().hash(&mut h);
+        d.card_name.hash(&mut h);
+        d.card_kind.hash(&mut h);
+        d.level.hash(&mut h);
+        d.dp.hash(&mut h);
+        d.play_cost.hash(&mut h);
+        d.index.hash(&mut h);
+        d.colors.hash(&mut h);
+        d.traits.hash(&mut h);
+        d.keywords.hash(&mut h);
+        d.effect_text.hash(&mut h);
+        d.inherited_text.hash(&mut h);
+        d.security_text.hash(&mut h);
+        d.effect_class_name.hash(&mut h);
+        d.ace_overflow.hash(&mut h);
+        d.digixros_aliases.hash(&mut h);
+        d.also_treated_as.hash(&mut h);
+        format!("{:?}", (&d.evo_costs, &d.dna_costs, &d.dual)).hash(&mut h);
         sum = sum.wrapping_add(h.finish());
     }
     sum
