@@ -23,7 +23,7 @@
 
 use std::sync::Arc;
 
-use digimon_dsl::compiled::CompiledStep;
+use digimon_dsl::compiled::{CompiledPredicate, CompiledStep};
 
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
@@ -226,6 +226,49 @@ pub enum ResumeFrame {
     /// into the REMAINING items). Mandatory until the list is exhausted; the data
     /// terminal binds the ordered list and runs the tail. See [`PermutationState`].
     PermutationStep(PermutationState),
+    /// Cost-budget accumulator over opponent permanents (`..._by_dp_budget` /
+    /// `..._by_play_cost_budget`, unified). Each pick subtracts the target's cost
+    /// (DP or play cost per [`BudgetKind`]) from `remaining`; candidates are
+    /// re-derived each step from the carried `CompiledPredicate` (data-pure).
+    /// PASS commits at/above `min_picks`; terminal binds the permanent list. See
+    /// [`BudgetState`].
+    BudgetStep(BudgetState),
+}
+
+/// Which cost a [`BudgetState`] accumulator spends.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum BudgetKind {
+    /// `game.effective_dp(handle)` — `select_opponent_permanents_by_dp_budget`.
+    Dp,
+    /// `top_card().play_cost(card_data)` — `..._by_play_cost_budget`.
+    PlayCost,
+}
+
+/// In-flight state of a cost-budget multi-pick over opponent permanents, as data.
+/// Re-derives candidates from `filter` each step (the closure trampoline's filter
+/// is a `CompiledPredicate` here), so no runtime closure is parked.
+#[derive(Debug, Clone)]
+pub struct BudgetState {
+    pub prov: ResumeProvenance,
+    pub kind: BudgetKind,
+    pub opponent: PlayerId,
+    pub selecting_player: PlayerId,
+    pub previous_phase: GamePhase,
+    /// Cost budget left to spend.
+    pub remaining: i32,
+    pub min_picks: u8,
+    /// Permanents picked so far (subtracted from `remaining`).
+    pub picked: Vec<PermanentHandle>,
+    /// Candidate predicate, re-evaluated each step against a read context.
+    pub filter: CompiledPredicate,
+    pub filter_bindings: Bindings,
+    pub prompt: String,
+    // ── data terminal (bind the picked permanent list, then run the tail) ──
+    pub bind_as: Option<String>,
+    pub inner_tail: Arc<Vec<CompiledStep>>,
+    pub bindings: Bindings,
+    pub runtime: StepRuntime,
+    pub trigger_context: Option<TriggerContext>,
 }
 
 /// In-flight state of an ordered-permutation selection, as data. Re-parked once

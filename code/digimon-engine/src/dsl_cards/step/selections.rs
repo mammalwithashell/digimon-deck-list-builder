@@ -650,7 +650,181 @@ pub(crate) fn run_resume(
         ResumeFrame::PermutationStep(state) => {
             run_permutation_step(game, state, action_id);
         }
+        ResumeFrame::BudgetStep(state) => {
+            run_budget_step(game, state, action_id, is_pass);
+        }
     }
+}
+
+/// Re-derive the cost-budget candidates `(action_id, handle, cost)` for a
+/// `BudgetState`, mirroring `dp_budget_candidates` / `play_cost_budget_candidates`
+/// but evaluating the carried `CompiledPredicate` (data-pure). Cost is DP or
+/// printed play cost per the budget kind.
+fn budget_candidates_data(
+    game: &crate::game::Game,
+    state: &crate::resume::BudgetState,
+) -> Vec<(u16, PermanentHandle, i32)> {
+    use crate::action::space::encode_attack;
+    use crate::resume::BudgetKind;
+    let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+    );
+    let mut out = Vec::new();
+    for index in 0..game.player(state.opponent).battle_area.len() {
+        let handle = PermanentHandle {
+            player: state.opponent,
+            index: index as u8,
+        };
+        if state.picked.contains(&handle) {
+            continue;
+        }
+        if !eval_predicate_with_bindings(
+            &state.filter,
+            &read_ctx,
+            PredicateSubject::Permanent(handle),
+            Some(&state.filter_bindings),
+        ) {
+            continue;
+        }
+        let cost = match state.kind {
+            BudgetKind::Dp => game.effective_dp(handle).unwrap_or(0),
+            BudgetKind::PlayCost => i32::from(
+                game.player(state.opponent).battle_area[index]
+                    .top_card()
+                    .play_cost(&game.card_data),
+            ),
+        };
+        if cost <= state.remaining {
+            out.push((encode_attack(0, index as u16), handle, cost));
+        }
+    }
+    out
+}
+
+/// Data terminal for a cost-budget multi-pick: push effect targets for the
+/// picked permanents (mirrors the trampoline's `final_callback` wrapper), bind
+/// them as a permanent list, then run the inner tail.
+fn run_budget_terminal(game: &mut crate::game::Game, state: crate::resume::BudgetState) {
+    // Mirror select_opponent_permanents_by_*_budget's final_callback wrapper:
+    // emit EffectTarget for the picked permanents before the body runs.
+    let refs = crate::effect_context::selections::permanents_to_refs(game, &state.picked);
+    crate::effect_context::selections::push_effect_target_multi(
+        game,
+        state.prov.controller,
+        state.prov.source_card,
+        refs,
+    );
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let mut b = state.bindings;
+    if let Some(name) = &state.bind_as {
+        b.insert_permanent_list(name, state.picked);
+    }
+    run_tail_preserving_trigger_context(
+        &mut ctx,
+        state.trigger_context,
+        &state.inner_tail,
+        &mut b,
+        &state.runtime,
+    );
+}
+
+/// Install (or re-park) a cost-budget step: build the `PendingSelection` over the
+/// recomputed candidates and stash the data frame. Mirrors
+/// `install_dp_budget_selection` / `install_play_cost_budget_selection`
+/// (phase/kind/optional + PASS gating at/above `min_picks`).
+pub(crate) fn install_budget_resume_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::BudgetState,
+    candidates: Vec<(u16, PermanentHandle, i32)>,
+) {
+    use crate::action::space::PASS;
+    use crate::resume::BudgetKind;
+    use crate::selection::{PendingSelection, SelectionKind};
+    let picked = state.picked.len() as u8;
+    let is_optional = picked >= state.min_picks;
+    let mut valid_action_ids: Vec<u16> = candidates.iter().map(|(a, _, _)| *a).collect();
+    if is_optional {
+        valid_action_ids.push(PASS);
+    }
+    let kind = match state.kind {
+        BudgetKind::Dp => SelectionKind::DpBudget {
+            remaining_dp: state.remaining,
+            picked,
+        },
+        BudgetKind::PlayCost => SelectionKind::PlayCostBudget {
+            remaining_play_cost: state.remaining,
+            picked,
+        },
+    };
+    game.current_phase = crate::enums::GamePhase::SelectBudgeted;
+    game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
+        kind,
+        selecting_player: state.selecting_player,
+        previous_phase: state.previous_phase,
+        valid_action_ids,
+        is_optional,
+        prompt: state.prompt.clone(),
+        effect_choices: None,
+        source_card: state.prov.source_card,
+        source_permanent: state.prov.source_permanent,
+        source_kind: state.prov.source_kind,
+        callback: Box::new(|_g, _a| {}),
+        on_decline: None,
+    });
+    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::BudgetStep(state)],
+    });
+}
+
+/// Executor for one cost-budget pick (or PASS). Mirrors the recursive
+/// `install_dp_budget_selection` as data: decode -> subtract cost -> recompute
+/// candidates -> terminal (exhausted at/above min) or re-park; PASS commits.
+fn run_budget_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::BudgetState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        // PASS is only offered at/above min_picks (the install gates it), so the
+        // accumulated list is committable.
+        run_budget_terminal(game, state);
+        return;
+    }
+    let candidates = budget_candidates_data(game, &state);
+    let Some((_, chosen, cost)) = candidates
+        .iter()
+        .find(|(candidate_action, _, _)| *candidate_action == action_id)
+        .copied()
+    else {
+        return; // stale/invalid pick (defensive)
+    };
+    state.picked.push(chosen);
+    state.remaining -= cost;
+    // Recompute candidates with the new pick + reduced budget (the recursive
+    // install's candidate computation).
+    let next_candidates = budget_candidates_data(game, &state);
+    if next_candidates.is_empty() {
+        // Mirror install_dp_budget_selection's empty-candidates branch: terminal
+        // only if the floor is met; otherwise the clause fizzles (no bind/tail).
+        if state.picked.len() >= state.min_picks as usize {
+            run_budget_terminal(game, state);
+        }
+        return;
+    }
+    install_budget_resume_step(game, state, next_candidates);
 }
 
 /// Data terminal for an ordered permutation: bind the accumulated handles as an
@@ -4188,6 +4362,19 @@ fn install_select_opponent_dp_budget(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (Batch 4): capture for the BudgetStep frame. The filter is
+    // carried as a CompiledPredicate (re-evaluated each step — data-pure), not a
+    // closure. opponent = next_clockwise(player).
+    let opponent = ctx.game.next_clockwise(player);
+    let filter_for_resume = filter.clone();
+    let filter_bindings_for_resume = bindings.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let prompt_for_resume = prompt.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_opponent_permanents_by_dp_budget(
         &prompt,
         dp_budget,
@@ -4215,6 +4402,80 @@ fn install_select_opponent_dp_budget(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    park_budget_resume_frame(
+        ctx,
+        crate::resume::BudgetKind::Dp,
+        opponent,
+        dp_budget,
+        min_picks,
+        filter_for_resume,
+        filter_bindings_for_resume,
+        prompt_for_resume,
+        bind_as_for_resume,
+        tail_for_resume,
+        bindings_for_resume,
+        runtime_for_resume,
+        trigger_for_resume,
+        override_pin,
+    );
+}
+
+/// Shared resume-frame park for the dp/play-cost budget DSL installers: if the
+/// closure path installed a selection, park a `BudgetStep` frame mirroring it.
+#[allow(clippy::too_many_arguments)]
+fn park_budget_resume_frame(
+    ctx: &mut EffectContext<'_>,
+    kind: crate::resume::BudgetKind,
+    opponent: PlayerId,
+    remaining: i32,
+    min_picks: u8,
+    filter: CompiledPredicate,
+    filter_bindings: Bindings,
+    prompt: String,
+    bind_as: Option<String>,
+    inner_tail: Arc<Vec<CompiledStep>>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+    trigger_context: Option<TriggerContext>,
+    override_pin: Option<PlayerId>,
+) {
+    let player = ctx.player;
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let Some(pending) = ctx.game.pending_selection.as_ref() else {
+        return;
+    };
+    let selecting_player = pending.selecting_player;
+    let previous_phase = pending.previous_phase;
+    ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::BudgetStep(
+            crate::resume::BudgetState {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                kind,
+                opponent,
+                selecting_player,
+                previous_phase,
+                remaining,
+                min_picks,
+                picked: Vec::new(),
+                filter,
+                filter_bindings,
+                prompt,
+                bind_as,
+                inner_tail,
+                bindings,
+                runtime,
+                trigger_context,
+            },
+        )],
+    });
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -4236,6 +4497,17 @@ fn install_select_opponent_play_cost_budget(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (Batch 4): capture for the BudgetStep frame (play-cost kind).
+    let opponent = ctx.game.next_clockwise(player);
+    let filter_for_resume = filter.clone();
+    let filter_bindings_for_resume = bindings.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let prompt_for_resume = prompt.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_opponent_permanents_by_play_cost_budget(
         &prompt,
         play_cost_budget,
@@ -4262,6 +4534,22 @@ fn install_select_opponent_play_cost_budget(
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
+    );
+    park_budget_resume_frame(
+        ctx,
+        crate::resume::BudgetKind::PlayCost,
+        opponent,
+        play_cost_budget,
+        min_picks,
+        filter_for_resume,
+        filter_bindings_for_resume,
+        prompt_for_resume,
+        bind_as_for_resume,
+        tail_for_resume,
+        bindings_for_resume,
+        runtime_for_resume,
+        trigger_for_resume,
+        override_pin,
     );
 }
 
