@@ -113,6 +113,12 @@ Confirm `version` is the new one, both `platforms` are present, and `pub_date` i
 
 If a release is bad: cut a strictly-greater version from the last good commit (testers update forward), and `unpublish` the broken one; if it crashes before the updater runs, use the `min_version` kill-switch. Full procedures (with the exact `/admin/releases` curls) are in the runbook.
 
+## After publishing
+
+Consider running the `update-landing-screenshots` skill so the landing-page
+gallery reflects this build's UI. It launches the real desktop app, recaptures
+each mainstay page in both themes, and republishes the gallery.
+
 ## Reference
 
 `docs/runbooks/desktop-release.md` is the authoritative source — the tag/version/notes contracts, the manifest shape, CI secrets, rollback, and key rotation all live there. This skill is the happy-path recipe; consult the runbook for anything off the path.
