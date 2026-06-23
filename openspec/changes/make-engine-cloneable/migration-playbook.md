@@ -17,7 +17,22 @@
 
 - **Batch 3 DONE (commit 441df1ed1):** `install_select_union_zone` flipped — the last and hardest RunTail installer (dual-tail success/decline + tri-range hand/trash/material decode). Candidates reconstructed at install time from the parked `valid_action_ids` (the `UnionZone` arm linear-searches, doesn't decode). **No new substrate needed** — rode on both existing substrates, fast gates passed first try. Full pool green (`cards_behavioral` 5825/5825). **With this, EVERY single-pick selection kind is on the resumable VM.**
 
-**Remaining:** Batch 4 (port the 6 remaining trampolines — source-multi/dp-budget/play-cost-budget/reveal-bucket/permutation/partition — reusing the MultiPickStep executor pattern with their own terminal binds + candidate types, **plus** extend `outer_conts` composition to `MultiPickStep` frames so they compose like RunTail); then `raw_rust` clone-safety (task 3.3), delete the legacy closures, and the whole-Game clone-replay capstone (task 4.2).
+### Batch 4 progress (updated 2026-06-22)
+The MultiPickStep keystone pattern (Batch 0c) generalized cleanly. **Done & full-pool-green:**
+- **permutation** (commit 9002566d) — `PermutationStep`, ordered accumulate.
+- **dp-budget + play-cost-budget** (commit 02a406b3) — unified `BudgetStep{BudgetKind}`; first data-pure resume executor to re-eval a `CompiledPredicate` at resume time.
+- **source-multi** (commit a0e66423) — `SourceMultiStep` (own+opponent, `Source` vs `Card` subject, live-revalidation snapshot).
+- **`outer_conts`-on-multi-pick extension** (commit a0e66423) — all 4 multi-pick states carry `outer_conts`; `wrap_pending_selection_with_tail` composes onto them; each terminal runs them after the final pick. Multi-pick selects now nest like RunTail.
+- **CLOBBER FIX** (commit a0e66423, the big Batch-4-source learning) — when a multi-pick installer's candidates are empty, the closure SHORT-CIRCUITS and runs the tail INLINE, which can install a nested selection + frame; `park_*` was clobbering it. Fixed: park only when our OWN candidates are non-empty. Hardened budget + permutation too.
+
+**Correction:** **count_capped's DSL installer was NEVER flipped.** Batch 0c built the `MultiPickStep` executor + `install_multipick_step` + a unit test, but `install_select_count_capped_multi` still uses the pure closure path — real count_capped cards are NOT on the VM. Its flip is STILL PENDING and is **two** sub-paths: card-based (Hand/Trash/Material → reuses `MultiPickState`) and permanent-based (`BattleArea` → `install_select_count_capped_permanents`, binds `insert_permanent_list` — a distinct state).
+
+**Remaining Batch 4 (the hard tail):**
+- **count_capped** — 2 sub-paths (card-based reuses `MultiPickState`; permanent-based needs a new permanent-list state). Compute initial `candidate_indices` from the filter (like `source_multi_candidates_data`); honor `clamp_to_available`, `optional_zero`, `distinct_by`. Use the clobber guard.
+- **reveal-bucket** — the largest single function; a multi-*bucket* state machine (`bucket_index`, per-bucket min/max, cross-bucket `no_duplicate_cards` dedup, empty-bucket auto-advance; `then` is the NEXT bucket).
+- **partition** — the hardest; heterogeneous `PartitionRequirement`s gate each pick differently with `partition_can_extend` lookahead; candidates recomputed per recursion. Requirements are currently closures → need careful data-modeling (likely carry `Vec<CompiledPredicate>` + the match/extend logic). Spec notes it may need a new minimal 2-requirement test card.
+
+Then: `raw_rust` clone-safety (task 3.3), delete the legacy closures, and the whole-Game clone-replay capstone (task 4.2).
 
 ---
 
