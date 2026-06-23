@@ -18,6 +18,27 @@ every continuous-effect condition+process closure. The cost is O(board) (greedy'
 33-step games 1.4 ms/step vs random's fuller 69-step boards 3.5 ms/step),
 confirming this function is the hot path.
 
+## Measured outcome (post-implementation correction)
+
+The implementation is complete and behavior-preserving, but **measurement
+invalidated the premise above**. Instrumentation shows `tick_declarative_effects`
+is **~1.1–1.5% of total runtime**, NOT 73–92% — that figure conflated "the engine
+step is 70–90% of the run" (true) with "the declarative rebuild dominates the step"
+(false). A same-binary A/B (incremental skip ON vs `force_full` OFF, interleaved to
+cancel machine noise) shows **no measurable difference** (GREEDY 495–505 vs
+503–505 steps/s). So this change is **perf-neutral for linear play**.
+
+The real bottleneck is `effects_for_card` — **56–72% of total runtime**, of which
+**90% is `impl_.effects(handle)` re-boxing per-instance closures** (~742–1715
+calls/step, 100% registry hits). Because `CardEffect::effects(handle)` is a *pure*
+function of `(card_id, handle)`, it is memoizable; that is the real ≥2× lever and
+is scoped as a **separate** change, `cache-effects-for-card`.
+
+**This change is kept (not reverted)** as a down-payment on the cloneable-engine /
+DSL data-VM roadmap: incremental, allocation-light, byte-identical materialization
+plus the differential oracle are exactly what cheap tree-search clones need (see
+design.md §"Alignment upside"). It makes no throughput claim.
+
 ## What Changes
 
 - **Make declarative-effect materialization incremental/cheaper, preserving EXACT

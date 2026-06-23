@@ -118,34 +118,38 @@ impl Game {
         let can_skip = !force_full_declarative_rebuild()
             && self.modifiers.declarative_memo() == Some(fingerprint);
 
-        if !can_skip {
-            self.materialize_declaratives_full();
-            // The full rebuild only adds/clears *materialized* declaratives; it
-            // does not touch the board or the non-materialized inputs the
-            // fingerprint reads, so `fingerprint` still describes current state.
-            self.modifiers.set_declarative_memo(fingerprint);
+        if can_skip {
+            // Differential oracle (debug/test only): the SKIP is the only case
+            // where stale materialized state could ship — when the fast path
+            // rebuilds, its result *is* a full rebuild and needs no check. So
+            // verify exactly the skips: snapshot the preserved state, force a
+            // fresh full rebuild, and assert they match. A missed fingerprint
+            // input surfaces here as a failing assert across the
+            // behavioral/card/archetype suites rather than a silently-stale
+            // modifier shipping to release. Gating the oracle on skips (not
+            // every tick) also keeps its extra rebuild off the deep
+            // effect-resolution rebuild ticks, so it doesn't inflate peak
+            // stack depth.
+            #[cfg(debug_assertions)]
+            {
+                let skipped = self.modifiers.materialized_snapshot();
+                self.materialize_declaratives_full();
+                let rebuilt = self.modifiers.materialized_snapshot();
+                self.modifiers.set_declarative_memo(fingerprint);
+                debug_assert!(
+                    skipped == rebuilt,
+                    "declarative materialization divergence (incremental skip produced \
+                     stale state — a fingerprint input is missing):\n  skipped={skipped:#?}\n  rebuilt={rebuilt:#?}"
+                );
+            }
+            return;
         }
 
-        // Differential oracle (debug/test only): prove the (possibly skipped)
-        // fast-path materialized state equals a fresh full rebuild. A missed
-        // fingerprint input surfaces here as a failing assert across the
-        // behavioral/card/archetype suites, rather than a silently-stale
-        // modifier shipping to release.
-        #[cfg(debug_assertions)]
-        {
-            let fast = self.modifiers.materialized_snapshot();
-            self.materialize_declaratives_full();
-            let full = self.modifiers.materialized_snapshot();
-            // Keep the memo consistent with the rebuild just performed (the
-            // board / non-materialized inputs are unchanged, so the same
-            // fingerprint still applies).
-            self.modifiers.set_declarative_memo(fingerprint);
-            debug_assert!(
-                fast == full,
-                "declarative materialization divergence (incremental skip produced \
-                 stale state — a fingerprint input is missing):\n  fast(skip)={fast:#?}\n  full(rebuild)={full:#?}"
-            );
-        }
+        self.materialize_declaratives_full();
+        // The full rebuild only adds/clears *materialized* declaratives; it does
+        // not touch the board or the non-materialized inputs the fingerprint
+        // reads, so `fingerprint` still describes current state.
+        self.modifiers.set_declarative_memo(fingerprint);
     }
 
     /// Full clear-and-rebuild of the board's materialized declarative state.
