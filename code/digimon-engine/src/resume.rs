@@ -304,6 +304,36 @@ pub enum ResumeFrame {
     /// buckets done) binds each bucket's list by its `bind_as` and runs the tail.
     /// See [`RevealBucketState`].
     RevealBucketStep(RevealBucketState),
+    /// `use_option_from_hand` (play an Option/Dual from hand without paying its
+    /// cost, then run the effect tail). Unlike a `RunTail`, the post-pick action
+    /// (`use_option_from_hand_without_paying_cost`) can itself install a NESTED
+    /// selection (the option's own effect), so the tail is composed via
+    /// `drain_or_rewrap_pending_tail` (which threads it onto the nested frame)
+    /// rather than run inline. See [`UseOptionFromHandState`].
+    UseOptionFromHandStep(UseOptionFromHandState),
+}
+
+/// In-flight state of a `use_option_from_hand` selection, as data. The pick
+/// decodes a hand index (`PLAY_HAND_START` range); the accept arm plays the
+/// option (a parking post-action) then `drain_or_rewrap`s the tail; the decline
+/// arm (optional only) runs the SAME tail (continue-tail, no clause-abort).
+#[derive(Debug, Clone)]
+pub struct UseOptionFromHandState {
+    pub prov: ResumeProvenance,
+    /// Hand owner the option is played from (the installer's `target_player`).
+    pub of_player: PlayerId,
+    /// The effect tail (shared accept/decline — the closure used identical tails).
+    pub tail: Arc<Vec<CompiledStep>>,
+    pub bindings: Bindings,
+    pub runtime: StepRuntime,
+    pub trigger_context: Option<TriggerContext>,
+    /// Outer-tail continuations composed when this select is nested in another
+    /// clause. Run after the tail (success or decline), via the shared
+    /// `run_outer_conts`. Empty for a top-level select.
+    pub outer_conts: Vec<OuterContinuation>,
+    /// Whether the select was optional (PASS reaches the decline arm only then;
+    /// `resolve_generic_selection` rejects PASS on a non-optional select).
+    pub optional: bool,
 }
 
 /// In-flight state of a multi-bucket reveal selection, as data. The buckets'

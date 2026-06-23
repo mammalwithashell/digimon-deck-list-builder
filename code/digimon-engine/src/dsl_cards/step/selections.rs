@@ -777,7 +777,96 @@ pub(crate) fn run_resume(
         ResumeFrame::RevealBucketStep(state) => {
             run_reveal_bucket_step(game, state, action_id, is_pass);
         }
+        ResumeFrame::UseOptionFromHandStep(state) => {
+            run_use_option_from_hand_step(game, state, action_id, is_pass);
+        }
     }
+}
+
+/// Executor for a `use_option_from_hand` selection (mirrors
+/// `install_use_option_from_hand`'s accept/decline closures exactly).
+///
+/// ACCEPT: decode the hand index, emit the effect-target (as `select_hand`'s
+/// wrapper does), play the option under the authored trigger context, then —
+/// unless the play was Invalid — compose the tail via `drain_or_rewrap_pending_tail`
+/// (which threads it onto any selection the option's effect parked, rather than
+/// running it inline). DECLINE (optional only): run the SAME tail (continue-tail;
+/// no `dsl_clause_aborted`). `outer_conts` run after, via `run_outer_conts`.
+fn run_use_option_from_hand_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::UseOptionFromHandState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    let crate::resume::UseOptionFromHandState {
+        prov,
+        of_player,
+        tail,
+        bindings,
+        runtime,
+        trigger_context,
+        outer_conts,
+        optional: _optional,
+    } = state;
+
+    if is_pass {
+        // Optional decline (reachable only when optional — resolve_generic_selection
+        // rejects PASS otherwise): run the SAME tail. Mirrors the installer's
+        // on_decline: set the authored trigger context, drain_or_rewrap, restore.
+        let previous = game.current_trigger_context.clone();
+        game.current_trigger_context = trigger_context.clone();
+        drain_or_rewrap_pending_tail(
+            game,
+            prov.source_card,
+            prov.source_permanent,
+            prov.controller,
+            (*tail).clone(),
+            bindings,
+            runtime,
+            trigger_context,
+        );
+        game.current_trigger_context = previous;
+        run_outer_conts(game, outer_conts);
+        return;
+    }
+
+    let idx =
+        action_id.saturating_sub(crate::action::space::PLAY_HAND_START) as usize;
+    // Target tracking (mirrors ctx.select_hand's wrapper).
+    if let Some(card) = game.player(of_player).hand.get(idx) {
+        let tid = card.card_id(&game.card_data).to_string();
+        let tname = card.card_name(&game.card_data).to_string();
+        crate::effect_context::selections::push_effect_target(
+            game,
+            prov.controller,
+            prov.source_card,
+            tid,
+            tname,
+        );
+    }
+    // Play the option under the authored trigger context, then restore.
+    let previous = game.current_trigger_context.clone();
+    game.current_trigger_context = trigger_context.clone();
+    let result = game.use_option_from_hand_without_paying_cost(of_player, idx);
+    game.current_trigger_context = previous;
+    if matches!(result, crate::selection::OptionPlayResult::Invalid) {
+        // Parity with the closure's early-return: no tail, no outer_conts.
+        return;
+    }
+    // The option play may have parked a nested selection; drain_or_rewrap
+    // composes the tail onto it (else runs inline). tail_context = the authored
+    // trigger context.
+    drain_or_rewrap_pending_tail(
+        game,
+        prov.source_card,
+        prov.source_permanent,
+        prov.controller,
+        (*tail).clone(),
+        bindings,
+        runtime,
+        trigger_context,
+    );
+    run_outer_conts(game, outer_conts);
 }
 
 /// Data terminal for a multi-bucket reveal selection: bind each bucket's picked
@@ -3058,6 +3147,21 @@ fn install_use_option_from_hand(
 ) {
     let target_player = resolve_player(ctx, of);
     let prompt = prompt.unwrap_or_else(|| "Choose an Option card to use".to_string());
+    // Resumable-VM: capture for the UseOptionFromHandStep data frame before the
+    // accept/decline closures consume tail/runtime/trigger. of_player = the hand
+    // owner (target_player); the option play + tail run at resume time.
+    let of_player_for_resume = target_player;
+    let override_pin_for_resume = ctx.override_selecting_player();
+    let source_card_for_resume = ctx.source_card;
+    let source_permanent_for_resume = ctx.source_permanent;
+    let source_kind_for_resume = ctx.source_kind;
+    let controller_for_resume = ctx.player;
+    let tail_for_resume = Arc::new(tail.clone());
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = ctx.game.current_trigger_context.clone();
+    let optional_for_resume = optional;
+
     let tail_for_accept = tail.clone();
     let tail_for_decline = tail;
     let runtime_for_accept = runtime.clone();
@@ -3153,6 +3257,31 @@ fn install_use_option_from_hand(
                 game.current_trigger_context = previous;
             }));
         }
+    }
+    // Park the data frame alongside the closure (coexistence): driven by
+    // run_resume's UseOptionFromHandStep arm. select_hand returns WITHOUT
+    // installing when no eligible Option/Dual in hand, so guard on the install.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::UseOptionFromHandStep(
+                crate::resume::UseOptionFromHandState {
+                    prov: crate::resume::ResumeProvenance {
+                        source_card: source_card_for_resume,
+                        source_permanent: source_permanent_for_resume,
+                        source_kind: source_kind_for_resume,
+                        controller: controller_for_resume,
+                        override_pin: override_pin_for_resume,
+                    },
+                    of_player: of_player_for_resume,
+                    tail: tail_for_resume,
+                    bindings: bindings_for_resume,
+                    runtime: runtime_for_resume,
+                    trigger_context: trigger_for_resume,
+                    outer_conts: Vec::new(),
+                    optional: optional_for_resume,
+                },
+            )],
+        });
     }
 }
 
