@@ -836,6 +836,23 @@ Implication for callers: a `PermanentHandle` / index obtained before a backward
 seek is invalid after it (the same rule as across deletions — see the anti-pattern
 below). Re-read indices from the post-seek state.
 
+> **Snapshot alternative now exists (`make-engine-cloneable`, 2026-06-23).** The
+> premise above ("no state snapshot; a full-state snapshot would require an
+> engine-wide serializability refactor") is **superseded for the production pool**.
+> `Game: Clone` is live: `ModifierEntry` predicates/effects are `Arc`-shared, and
+> the **selection surface is now a resumable data VM** — `pending_selection` is
+> paired with `Game::pending_selection_resume` (a `Vec<ResumeFrame>` of plain
+> data; see `src/resume.rs`), and `resolve_generic_selection` drives the data
+> frames via `run_resume` instead of the legacy `Box<dyn FnOnce>` callback. So a
+> mid-selection `Game` **clones faithfully** at every production decision point
+> (the precondition for MCTS / AlphaZero / Deep-CFR search — `add-determinized-search`).
+> A clone of an *un-migrated* closure selection (only `partition`, which is
+> test-only) clones to a panic-stub that fails loudly on resolution rather than
+> mis-resolving. NOTE: the **replay-stepper still uses reset-and-replay** above —
+> converting it to clone-based snapshots is a separate follow-on (the back-step
+> contract is unchanged for now); `make-engine-cloneable` only established that
+> snapshots are *possible*, it did not rewire the stepper.
+
 ### Replacement-process outcome-setters
 
 Inside a `WhenWouldBe*` replacement-process closure, after installing a

@@ -125,10 +125,19 @@ hidden-information play live one tier up and are **not yet feasible here**:
 
 All three require **cheap forking of game state** to traverse the tree, plus
 explicit infoset / public-belief structure, plus a tractable belief space (a
-50-card deck dwarfs poker's hidden info). The engine's `Game` is non-`Clone`
-(closure-bearing), so **none are implementable until the engine is cloneable**
-— see the **`make-engine-cloneable`** change (resumable effect VM). Until then,
-the forward-only exploiter is the practical robustness signal.
+50-card deck dwarfs poker's hidden info).
+
+> **Forking precondition now MET (`make-engine-cloneable`, 2026-06-23).** `Game:
+> Clone` is live and faithful at **100% of the production decision surface** — the
+> selection surface is a resumable data VM (`src/resume.rs`), so a mid-selection
+> `Game` forks cleanly at every production node. The hard blocker named here
+> ("`Game` is non-`Clone`, closure-bearing") is **resolved**. So the *forkability*
+> requirement of Deep CFR / ReBeL / Player of Games is satisfied; what remains for
+> each is the **infoset / public-belief structure + the determinization seam** —
+> the program tracked in the **`add-determinized-search`** change (determinized /
+> IS-MCTS over `RevealSource`-sampled worlds, reusing the existing 2192-action
+> mask as the edge enumerator and the observation tensor at leaves). The
+> forward-only exploiter remains the cheap robustness number in the meantime.
 
 ## 7. Recommended workflow
 
