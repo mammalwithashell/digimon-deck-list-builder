@@ -6,7 +6,7 @@
 > ordered plan to extend *faithful* clone from the resume path to **every** decision
 > point by porting the remaining ~16 installers onto the resumable VM.
 
-## Current state (updated 2026-06-22 — Batch 0 substrate + Batches 1–3 flips COMPLETE; ALL RunTail kinds on the VM)
+## Current state (updated 2026-06-23 — Batches 0–4 COMPLETE for the production pool; 100% of the production selection surface is on the resumable VM)
 - **Batch 0a/0b DONE:** `ResumeSelectKind` has all 9 RunTail kinds — `Hand`, `Trash`, `FieldPermanent` (own+opp), `Security`, `BreedingPermanent`, `AnyPermanent`, `Reveal`, `Material`, `UnionZone` — each with a source-verified `run_resume` decode arm.
 - **Decline model DONE:** `ResumeDecline {None, RunTail{tail, aborts_clause}}` — the 3-way optional-decline semantics (no-decline / run-a-tail / cost-abort), incl. dual-tail (breeding/union_zone).
 - **Batch 0c DONE (count_capped keystone):** `ResumeFrame::MultiPickStep(MultiPickState)` + `run_multipick_step` + `install_multipick_step` (re-park) + the data terminal (binds the accumulated list, runs the tail — the former `Arc<Mutex<Box<dyn FnOnce>>>` final-callback as data). distinct_by ported. The "post-stack final-callback channel" blocker is resolved by making the terminal plain data.
@@ -27,12 +27,15 @@ The MultiPickStep keystone pattern (Batch 0c) generalized cleanly. **Done & full
 
 **Correction:** **count_capped's DSL installer was NEVER flipped.** Batch 0c built the `MultiPickStep` executor + `install_multipick_step` + a unit test, but `install_select_count_capped_multi` still uses the pure closure path — real count_capped cards are NOT on the VM. Its flip is STILL PENDING and is **two** sub-paths: card-based (Hand/Trash/Material → reuses `MultiPickState`) and permanent-based (`BattleArea` → `install_select_count_capped_permanents`, binds `insert_permanent_list` — a distinct state).
 
-**Remaining Batch 4 (the hard tail):**
-- **count_capped** — 2 sub-paths (card-based reuses `MultiPickState`; permanent-based needs a new permanent-list state). Compute initial `candidate_indices` from the filter (like `source_multi_candidates_data`); honor `clamp_to_available`, `optional_zero`, `distinct_by`. Use the clobber guard.
-- **reveal-bucket** — the largest single function; a multi-*bucket* state machine (`bucket_index`, per-bucket min/max, cross-bucket `no_duplicate_cards` dedup, empty-bucket auto-advance; `then` is the NEXT bucket).
-- **partition** — the hardest; heterogeneous `PartitionRequirement`s gate each pick differently with `partition_can_extend` lookahead; candidates recomputed per recursion. Requirements are currently closures → need careful data-modeling (likely carry `Vec<CompiledPredicate>` + the match/extend logic). Spec notes it may need a new minimal 2-requirement test card.
+**Batch 4 DONE for the production pool (2026-06-23):**
+- **count_capped** (commits b7903656 + da7237012) — all 3 sub-paths: card-based Hand/Trash + Material-sources (reuse `MultiPickState`) and BattleArea-permanents (`CountCappedPermanentsStep`, snapshot-minus-picked). NOTE: Batch 0c had built only the executor + unit test; these commits are the actual DSL-installer flips.
+- **reveal-bucket** (commit 5288511d) — `RevealBucketStep`, the multi-bucket state machine; **first FULLY data-driven selection** (no closure — `install_select_reveal_buckets` drives `install_reveal_bucket_resume_step` directly; the pending_selection callback is a vestigial no-op, so nothing to panic-stub on clone).
 
-Then: `raw_rust` clone-safety (task 3.3), delete the legacy closures, and the whole-Game clone-replay capstone (task 4.2).
+**partition — NOT flipped, and correctly so (test-only, 2026-06-23).** `select_partition_sources` / `install_partition_source_selection` have **NO production caller** — the only caller in the whole crate is a hand-written test `CardEffect` (`tests/replacements/partition.rs::PaildramonPartition`). No DSL verb, no `<Partition>` keyword wires to it. Its `PartitionRequirement`s are **raw `Box<dyn Fn>` closures the test builds inline**, NOT `CompiledPredicate`s — so a data-pure port is impossible without first authoring a real DSL `<Partition>` card (which would supply `CompiledPredicate` requirements). Since no production game parks a partition selection, it **never blocks `Game: Clone`** for the real pool. Decision: leave partition on the closure path; data-port it if/when a DSL `<Partition>` card is implemented. (Porting it now would either carry an `Arc<dyn Fn>` requirement in the frame — violating the no-runtime-closures data-VM principle — or require a speculative test card.)
+
+**Result: every selection trampoline a production DSL card can park is now on the resumable VM.** `Game: Clone` is faithful for 100% of the production selection surface.
+
+Then: `raw_rust` clone-safety (task 3.3 — a raw_rust card that calls a `select_*` method directly still uses the closure path; constrain or port those), delete the legacy closures (task 6.1; partition's closure or a future DSL `<Partition>` is the one exception to resolve at cutover), and the whole-Game clone-replay capstone (task 4.2 — the guard test already exists + passes).
 
 ---
 
