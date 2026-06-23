@@ -15,6 +15,62 @@ use crate::rules::*;
 use crate::selection::*;
 use crate::trigger_context::*;
 
+/// `true` when `DIGIMON_FORCE_FULL_DECLARATIVE_REBUILD` is set — forces
+/// `tick_declarative_effects` to always run the full clear-and-rebuild (the
+/// oracle baseline / a safety fallback that bypasses the fingerprint skip).
+/// Read once and cached so the per-tick cost is a single load.
+fn force_full_declarative_rebuild() -> bool {
+    static FORCE: std::sync::OnceLock<bool> = std::sync::OnceLock::new();
+    *FORCE.get_or_init(|| std::env::var("DIGIMON_FORCE_FULL_DECLARATIVE_REBUILD").is_ok())
+}
+
+/// Fold a `CardSource`'s declarative-relevant identity into the fingerprint:
+/// which card it is (`data_index`), token-ness, face-down-ness, and any
+/// effect-granted name aliases (read by name-matching declarative conditions).
+fn hash_card_source_decl(
+    cs: &crate::card_source::CardSource,
+    h: &mut std::collections::hash_map::DefaultHasher,
+) {
+    use std::hash::Hash;
+    cs.data_index.hash(h);
+    cs.is_token.hash(h);
+    cs.face_down.hash(h);
+    cs.also_treated_as.hash(h);
+}
+
+/// Fold a `Permanent`'s declarative-relevant dynamic state into the
+/// fingerprint: its full digivolution stack and linked cards, suspend/attack
+/// flags, turn-timing counters, the per-turn activation summary, and option
+/// state — i.e. everything a continuous-effect source-scan or condition can read.
+fn hash_permanent_decl(
+    perm: &crate::permanent::Permanent,
+    h: &mut std::collections::hash_map::DefaultHasher,
+) {
+    use std::hash::Hash;
+    perm.card_sources.len().hash(h);
+    for cs in &perm.card_sources {
+        hash_card_source_decl(cs, h);
+    }
+    perm.linked_cards.len().hash(h);
+    for cs in &perm.linked_cards {
+        hash_card_source_decl(cs, h);
+    }
+    perm.is_suspended.hash(h);
+    perm.is_attacking.hash(h);
+    perm.turn_played.hash(h);
+    perm.turn_digivolved.hash(h);
+    perm.attacks_this_turn.hash(h);
+    // `effect_activations` is a `HashMap` — fold an order-independent summary.
+    perm.effect_activations.len().hash(h);
+    let activations: u64 = perm
+        .effect_activations
+        .values()
+        .map(|&v| v as u64)
+        .fold(0u64, u64::wrapping_add);
+    activations.hash(h);
+    format!("{:?}", perm.option_state).hash(h);
+}
+
 impl Game {
     /// Allocate the next monotonic event sequence number.
     pub fn next_event_seq(&mut self) -> u64 {
@@ -36,11 +92,66 @@ impl Game {
         &self.events
     }
 
-    /// Re-install declarative process-backed effects from permanents currently
-    /// on the field. Static effect builders still expose pure fields directly;
-    /// this dispatcher is for declarative clauses lowered to process closures,
-    /// such as filtered auras and player-scoped flood gates.
+    /// Re-materialize declarative (continuous) effects, but only when the
+    /// declarative-relevant game state has changed since the last rebuild.
+    ///
+    /// `materialize_declaratives_full` clears and rebuilds the whole board's
+    /// materialized declarative state from scratch — scanning every permanent,
+    /// stack source, breeding, face-up security, linked card, and floating-mass
+    /// descriptor, then re-running every continuous-effect condition/process
+    /// closure. That is the engine's hottest per-step cost, and most actions
+    /// don't change which declarative sources exist (or any state their
+    /// conditions read). This wrapper fingerprints the declarative-relevant
+    /// inputs and skips the rebuild when the fingerprint is unchanged, so the
+    /// materialized modifier state is byte-identical to an always-rebuild while
+    /// the redundant rebuilds are elided.
+    ///
+    /// Correctness is guarded two ways: the fingerprint
+    /// ([`Game::declarative_fingerprint`]) reads *all* declarative-relevant
+    /// state (so it is location-independent — it doesn't matter which of the
+    /// ~14 call sites invoked the tick or who mutated state), and in debug
+    /// builds a differential oracle re-runs a full rebuild every tick and
+    /// asserts the materialized state matches. `DIGIMON_FORCE_FULL_DECLARATIVE_REBUILD`
+    /// forces the always-rebuild path (oracle baseline / fallback).
     pub fn tick_declarative_effects(&mut self) {
+        let fingerprint = self.declarative_fingerprint();
+        let can_skip = !force_full_declarative_rebuild()
+            && self.modifiers.declarative_memo() == Some(fingerprint);
+
+        if !can_skip {
+            self.materialize_declaratives_full();
+            // The full rebuild only adds/clears *materialized* declaratives; it
+            // does not touch the board or the non-materialized inputs the
+            // fingerprint reads, so `fingerprint` still describes current state.
+            self.modifiers.set_declarative_memo(fingerprint);
+        }
+
+        // Differential oracle (debug/test only): prove the (possibly skipped)
+        // fast-path materialized state equals a fresh full rebuild. A missed
+        // fingerprint input surfaces here as a failing assert across the
+        // behavioral/card/archetype suites, rather than a silently-stale
+        // modifier shipping to release.
+        #[cfg(debug_assertions)]
+        {
+            let fast = self.modifiers.materialized_snapshot();
+            self.materialize_declaratives_full();
+            let full = self.modifiers.materialized_snapshot();
+            // Keep the memo consistent with the rebuild just performed (the
+            // board / non-materialized inputs are unchanged, so the same
+            // fingerprint still applies).
+            self.modifiers.set_declarative_memo(fingerprint);
+            debug_assert!(
+                fast == full,
+                "declarative materialization divergence (incremental skip produced \
+                 stale state — a fingerprint input is missing):\n  fast(skip)={fast:#?}\n  full(rebuild)={full:#?}"
+            );
+        }
+    }
+
+    /// Full clear-and-rebuild of the board's materialized declarative state.
+    /// This is the always-correct reference path; [`Game::tick_declarative_effects`]
+    /// skips it when the declarative-relevant state is unchanged.
+    pub fn materialize_declaratives_full(&mut self) {
         self.modifiers.clear_materialized_declaratives();
 
         let mut sources = Vec::new();
@@ -53,7 +164,7 @@ impl Game {
                 };
                 let top = perm.top_card();
                 sources.push((
-                    top.card_id(&self.card_data).to_string(),
+                    top.data_index,
                     top.handle(),
                     Some(handle),
                     player_id,
@@ -66,7 +177,7 @@ impl Game {
                         continue;
                     }
                     sources.push((
-                        source.card_id(&self.card_data).to_string(),
+                        source.data_index,
                         source.handle(),
                         Some(handle),
                         player_id,
@@ -82,7 +193,7 @@ impl Game {
                 };
                 let top = perm.top_card();
                 sources.push((
-                    top.card_id(&self.card_data).to_string(),
+                    top.data_index,
                     top.handle(),
                     Some(handle),
                     player_id,
@@ -107,7 +218,7 @@ impl Game {
                     continue;
                 }
                 sources.push((
-                    card.card_id(&self.card_data).to_string(),
+                    card.data_index,
                     card.handle(),
                     None,
                     player_id,
@@ -116,8 +227,9 @@ impl Game {
             }
         }
 
-        for (card_id, source_card, source_permanent, controller, inherited_source) in sources {
-            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+        for (data_index, source_card, source_permanent, controller, inherited_source) in sources {
+            let Some(effects) = self.effects_for_card(&self.card_data[data_index].card_id, source_card)
+            else {
                 continue;
             };
             for effect in effects {
@@ -144,7 +256,7 @@ impl Game {
                 // from `cards.json`, where the double-count would otherwise show.
                 if let Some(kw) = effect.granted_keyword {
                     let already_printed =
-                        self.card_data_by_id(&card_id).is_some_and(|cd| {
+                        self.card_data_by_id(&self.card_data[data_index].card_id).is_some_and(|cd| {
                             if inherited_source {
                                 inherited_keywords(cd).contains(&kw)
                             } else {
@@ -188,7 +300,7 @@ impl Game {
         // grant through the same modifier registry as inherited ESS — so
         // `Game::has_keyword` (via `modifiers.has_keyword`) and DP math see it.
         let mut linked_sources: Vec<(
-            String,
+            usize,
             crate::card_source::CardHandle,
             PermanentHandle,
             crate::enums::PlayerId,
@@ -202,7 +314,7 @@ impl Game {
                 };
                 for linked in &perm.linked_cards {
                     linked_sources.push((
-                        linked.card_id(&self.card_data).to_string(),
+                        linked.data_index,
                         linked.handle(),
                         host,
                         player_id,
@@ -210,8 +322,9 @@ impl Game {
                 }
             }
         }
-        for (card_id, source_card, host, controller) in linked_sources {
-            let Some(effects) = self.effects_for_card(&card_id, source_card) else {
+        for (data_index, source_card, host, controller) in linked_sources {
+            let Some(effects) = self.effects_for_card(&self.card_data[data_index].card_id, source_card)
+            else {
                 continue;
             };
             for effect in effects {
@@ -298,6 +411,69 @@ impl Game {
                 }
             }
         }
+    }
+
+    /// A cheap fingerprint of *all* declarative-relevant game state. When it
+    /// is unchanged between two ticks, the materialized declarative modifier
+    /// state is guaranteed identical, so the expensive full rebuild can be
+    /// skipped. It deliberately over-captures (whole board + every zone's
+    /// contents + memory/phase/turn + the non-materialized modifier digest):
+    /// a false "changed" only costs an extra (correct) rebuild, while a missed
+    /// input would be a stale-state bug — which the debug oracle in
+    /// `tick_declarative_effects` catches across the test corpus.
+    ///
+    /// `HashSet`/`HashMap`-valued state (`face_up_security`,
+    /// `effect_activations`) is folded in via order-independent digests so the
+    /// fingerprint is stable across iteration-order changes; the modifier
+    /// registry is folded in via [`ModifierRegistry::nonmaterialized_digest`].
+    fn declarative_fingerprint(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        self.memory.hash(&mut h);
+        self.current_phase.hash(&mut h);
+        self.turn_player().hash(&mut h);
+        self.turn_count.hash(&mut h);
+        for player in &self.players {
+            for (tag, zone) in [
+                (0u8, &player.hand),
+                (1u8, &player.deck),
+                (2u8, &player.digitama_deck),
+                (3u8, &player.security),
+                (4u8, &player.trash),
+            ] {
+                tag.hash(&mut h);
+                zone.len().hash(&mut h);
+                for cs in zone {
+                    hash_card_source_decl(cs, &mut h);
+                }
+            }
+            // `face_up_security` is a `HashSet` — fold an order-independent
+            // digest (len + scrambled sum) rather than iterating it directly.
+            player.face_up_security.len().hash(&mut h);
+            let fus: u64 = player
+                .face_up_security
+                .iter()
+                .map(|&x| (x as u64).wrapping_mul(0x9E3779B97F4A7C15))
+                .fold(0u64, u64::wrapping_add);
+            fus.hash(&mut h);
+            player.battle_area.len().hash(&mut h);
+            for perm in &player.battle_area {
+                hash_permanent_decl(perm, &mut h);
+            }
+            match &player.breeding_area {
+                Some(perm) => {
+                    1u8.hash(&mut h);
+                    hash_permanent_decl(perm, &mut h);
+                }
+                None => 0u8.hash(&mut h),
+            }
+        }
+        self.floating_mass_modifiers.len().hash(&mut h);
+        for fm in &self.floating_mass_modifiers {
+            format!("{fm:?}").hash(&mut h);
+        }
+        self.modifiers.nonmaterialized_digest().hash(&mut h);
+        h.finish()
     }
 
     /// Track H Phase 4k — clear all per-permanent state when a

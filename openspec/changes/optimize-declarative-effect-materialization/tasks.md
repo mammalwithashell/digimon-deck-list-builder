@@ -1,6 +1,9 @@
 ## 1. Baseline + correctness oracle (do FIRST — the safety net)
 
-- [ ] 1.1 Record the pre-change benchmark baseline: run `bench_engine_throughput.rs` (release, greedy + random) and capture games/sec, steps/sec, and the construct/mask/policy/engine-step split as the regression reference.
+- [x] 1.1 Record the pre-change benchmark baseline: run `bench_engine_throughput.rs` (release, greedy + random) and capture games/sec, steps/sec, and the construct/mask/policy/engine-step split as the regression reference.
+  - BASELINE (release, unmodified `claude/mystifying-darwin-d11683` @ 1686ef5b0):
+    - GREEDY ST-1: 200 games, 6620 steps (33.1/game), 14.52s → **13.8 games/sec, 456 steps/sec**; construct 25.7%, mask 3.2%, policy 1.9%, **engine-step 69.2% (1518.6 µs/step)**.
+    - RANDOM:      200 games, 13795 steps (69.0/game), 56.62s → **3.5 games/sec, 244 steps/sec**; construct 6.8%, mask 2.7%, policy 0.0%, **engine-step 90.4% (3710.5 µs/step)**.
 - [ ] 1.2 Add a `force_full_rebuild` switch (config/env or const) that keeps the existing always-rebuild path selectable, so it survives as the oracle baseline + a fallback.
 - [ ] 1.3 Add the correctness oracle: under `cfg(debug_assertions)` (or a test feature), each `tick_declarative_effects` runs BOTH the (eventual) fast path and a fresh full rebuild and `debug_assert!`s the materialized modifier sets are identical. Wire it so the behavioral/card/archetype/parity suites exercise it.
 
