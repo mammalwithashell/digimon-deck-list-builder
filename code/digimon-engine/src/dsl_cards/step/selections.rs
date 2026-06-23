@@ -349,7 +349,7 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
-                ResumeSelectKind::FieldPermanent { of_player } => {
+                ResumeSelectKind::FieldPermanent { of_player, post } => {
                     let offset =
                         action_id.saturating_sub(crate::action::space::ATTACK_START);
                     let target_index =
@@ -388,13 +388,43 @@ pub(crate) fn run_resume(
                     if let Some(name) = &bind_as {
                         b.insert_permanent(name, h);
                     }
-                    run_tail_preserving_trigger_context(
-                        &mut ctx,
-                        trigger_context,
-                        &inner_tail,
-                        &mut b,
-                        &runtime,
-                    );
+                    match post {
+                        None => {
+                            run_tail_preserving_trigger_context(
+                                &mut ctx,
+                                trigger_context,
+                                &inner_tail,
+                                &mut b,
+                                &runtime,
+                            );
+                        }
+                        Some(crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSource) => {
+                            // Cost post-action (mirrors
+                            // install_trash_bottom_face_down_source_under_tamer's
+                            // callback): trash the picked Tamer's bottom face-down
+                            // source, then run the tail ONLY if the cost was paid.
+                            // The trash's synchronous drain may park a nested
+                            // selection; run_tail_preserving_trigger_context then
+                            // re-parks the remainder via park_pending_selection_tail
+                            // (identical to the closure path).
+                            let trashed = ctx.trash_bottom_face_down_source(h);
+                            debug_assert!(
+                                trashed,
+                                "trash_bottom_face_down_source_under_tamer: eligibility \
+                                 filter (has_face_down_source) offered a Tamer whose bottom \
+                                 source is not face-down — filter and action have desynced"
+                            );
+                            if trashed {
+                                run_tail_preserving_trigger_context(
+                                    &mut ctx,
+                                    trigger_context,
+                                    &inner_tail,
+                                    &mut b,
+                                    &runtime,
+                                );
+                            }
+                        }
+                    }
                     ctx.game.effect_source_player = previous_effect_source;
                 }
                 ResumeSelectKind::Security { of_player } => {
@@ -3369,6 +3399,7 @@ fn install_select_own_permanent(
                 },
                 select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
                     of_player: target_player,
+                    post: None,
                 },
                 bind_as: bind_as_for_resume,
                 inner_tail: tail_for_resume,
@@ -3417,6 +3448,14 @@ fn install_trash_bottom_face_down_source_under_tamer(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM: capture for the FieldPermanent{post:TrashBottomFaceDownSource}
+    // frame before the closures consume tail/bindings/runtime/trigger. of_player =
+    // ctx.player (select_own_permanent selects own field).
+    let override_pin = ctx.override_selecting_player();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
     ctx.select_own_permanent(
         "Choose a Tamer to trash a face-down card from under",
         optional,
@@ -3458,6 +3497,36 @@ fn install_trash_bottom_face_down_source_under_tamer(
             }
         },
     );
+    // Park the data frame alongside the closure (coexistence): driven by
+    // run_resume's FieldPermanent{post:Some(TrashBottomFaceDownSource)} arm
+    // (trash the picked Tamer's bottom face-down source, then cost-gated tail).
+    // install_field_selection sets on_decline:None → ResumeDecline::None.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
+                    of_player: player,
+                    post: Some(
+                        crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSource,
+                    ),
+                },
+                bind_as: None,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
 }
 
 /// Total bottom-reachable face-down digivolution sources across `player`'s
@@ -3704,6 +3773,7 @@ fn install_select_opponent_permanent(
                 },
                 select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
                     of_player: opponent,
+                    post: None,
                 },
                 bind_as: bind_as_for_resume,
                 inner_tail: tail_for_resume,

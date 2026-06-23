@@ -115,8 +115,15 @@ pub enum ResumeSelectKind {
     /// `(action_id - ATTACK_START) % TARGETS_PER_ATTACKER` → battle-area index
     /// of `of_player`. Covers own- and opponent-field permanent selects (the
     /// `install_field_selection` decode); the resume arm mirrors that wrapper's
-    /// `effect_source_player` scoping.
-    FieldPermanent { of_player: PlayerId },
+    /// `effect_source_player` scoping. `post` is `None` for a plain
+    /// `select_own/opponent_permanent` (bind then run `inner_tail`); `Some` runs
+    /// a cost post-action on the picked permanent before the tail (e.g.
+    /// `install_trash_bottom_face_down_source_under_tamer`), with the tail
+    /// cost-gated on the action succeeding.
+    FieldPermanent {
+        of_player: PlayerId,
+        post: Option<FieldPermanentPostAction>,
+    },
     /// `action_id - (SEL_MY_SECURITY_START | SEL_OPP_SECURITY_START)` → security
     /// index of `of_player` (base chosen by whether `of_player` is the
     /// controller). Binds the resolved security `CardHandle`.
@@ -157,6 +164,16 @@ pub enum ResumeSelectKind {
         of_player: PlayerId,
         candidates: Vec<(u16, CardHandle, UnionZoneOrigin)>,
     },
+}
+
+/// Cost post-action run on a picked field permanent after a `FieldPermanent`
+/// resolve, before the (cost-gated) `inner_tail`. Plain data — no closure.
+#[derive(Debug, Clone)]
+pub enum FieldPermanentPostAction {
+    /// `install_trash_bottom_face_down_source_under_tamer`: trash the picked
+    /// Tamer's bottom face-down digivolution source (`trash_bottom_face_down_source`);
+    /// the tail runs ONLY if the trash succeeded (no-approximations cost gate).
+    TrashBottomFaceDownSource,
 }
 
 /// Data for the `choose_from_reveal` routing performed after a `Reveal` pick
@@ -664,7 +681,10 @@ mod tests {
                         controller: 0,
                         override_pin: None,
                     },
-                    select_kind: ResumeSelectKind::FieldPermanent { of_player: 0 },
+                    select_kind: ResumeSelectKind::FieldPermanent {
+                        of_player: 0,
+                        post: None,
+                    },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
                     outer_conts: Vec::new(),
