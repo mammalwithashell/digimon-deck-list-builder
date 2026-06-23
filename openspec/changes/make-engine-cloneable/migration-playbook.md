@@ -6,7 +6,7 @@
 > ordered plan to extend *faithful* clone from the resume path to **every** decision
 > point by porting the remaining ~16 installers onto the resumable VM.
 
-## Current state (updated 2026-06-22 — Batch 0 substrate + Batch 1 + Batch 2 flips COMPLETE)
+## Current state (updated 2026-06-22 — Batch 0 substrate + Batches 1–3 flips COMPLETE; ALL RunTail kinds on the VM)
 - **Batch 0a/0b DONE:** `ResumeSelectKind` has all 9 RunTail kinds — `Hand`, `Trash`, `FieldPermanent` (own+opp), `Security`, `BreedingPermanent`, `AnyPermanent`, `Reveal`, `Material`, `UnionZone` — each with a source-verified `run_resume` decode arm.
 - **Decline model DONE:** `ResumeDecline {None, RunTail{tail, aborts_clause}}` — the 3-way optional-decline semantics (no-decline / run-a-tail / cost-abort), incl. dual-tail (breeding/union_zone).
 - **Batch 0c DONE (count_capped keystone):** `ResumeFrame::MultiPickStep(MultiPickState)` + `run_multipick_step` + `install_multipick_step` (re-park) + the data terminal (binds the accumulated list, runs the tail — the former `Arc<Mutex<Box<dyn FnOnce>>>` final-callback as data). distinct_by ported. The "post-stack final-callback channel" blocker is resolved by making the terminal plain data.
@@ -15,7 +15,9 @@
 - **Batch 2 DONE (commit 960d7dac2):** the 5 moderate installers (`own_permanent` / `opponent_permanent` / `any_permanent` / `reveal` / `material`) now park `RunTail` frames. Full pool green (`cards_behavioral` 5825/5825). `continue_on_decline` ported as `ResumeDecline::RunTail` (the playbook's "decline not ported here" note was over-conservative — it maps cleanly).
 - **RESUME-SIDE CONTINUATION CHANNEL DONE (the big Batch-2 learning — a SECOND general substrate):** beyond `wrap_pending_selection_with_tail`, there are **~5 callback-continuation WRAPPERS** that compose a continuation onto a selection's CLOSURE `callback`/`on_decline` — `wrap_pending_play_cost_continuation`, `wrap_interactive_digivolve_reducer_continuation`, `wrap_interactive_option_use_reducer_continuation`, `arm_digixros_resume_after_parked_leave`, `run_after_selections_drain`. All are bypassed by a resume-driven select. bt12_112 (Pyramidimon Superior Mode DigiXros) proved it: its play-cost continuation installs the DigiXros material select AFTER the preattach `select_own_permanent` resolves — that hook lived on the bypassed closure, so the material select never appeared. **Fix:** `resume::ResumeContinuationHooks` on `Game` (Clone-to-empty); each wrapper defers its continuation onto the channel when the parked select is resume-driven; `resolve_generic_selection` drains the channel right after `run_resume` (inside the deferred-drain scope, matching closure timing). Every wrapper runs the same continuation for accept+decline, so one hook suffices; `run_after_selections_drain` re-arms through it. **This unblocks every remaining batch** — any flipped select inside a pay-cost / reducer / DigiXros / partition continuation now resolves faithfully.
 
-**Remaining:** Batch 3 (`union_zone` — dual-tail, tri-range; now rides on BOTH substrates); Batch 4 (port the other 6 trampolines — source-multi/dp-budget/play-cost-budget/reveal-bucket/permutation/partition — reusing the MultiPickStep executor pattern with their own terminal binds + candidate types, **plus** extend `outer_conts` composition to `MultiPickStep` frames); then delete the legacy closures + the whole-Game clone-replay capstone (task 4.2).
+- **Batch 3 DONE (commit 441df1ed1):** `install_select_union_zone` flipped — the last and hardest RunTail installer (dual-tail success/decline + tri-range hand/trash/material decode). Candidates reconstructed at install time from the parked `valid_action_ids` (the `UnionZone` arm linear-searches, doesn't decode). **No new substrate needed** — rode on both existing substrates, fast gates passed first try. Full pool green (`cards_behavioral` 5825/5825). **With this, EVERY single-pick selection kind is on the resumable VM.**
+
+**Remaining:** Batch 4 (port the 6 remaining trampolines — source-multi/dp-budget/play-cost-budget/reveal-bucket/permutation/partition — reusing the MultiPickStep executor pattern with their own terminal binds + candidate types, **plus** extend `outer_conts` composition to `MultiPickStep` frames so they compose like RunTail); then `raw_rust` clone-safety (task 3.3), delete the legacy closures, and the whole-Game clone-replay capstone (task 4.2).
 
 ---
 
@@ -88,7 +90,9 @@ Add an `OwnPermanent` (or `Trash`) RunTail unit test and one `MultiPickStep` uni
 
 ---
 
-## Batch 3 — Hard RunTail (dual-tail)
+## Batch 3 — Hard RunTail (DONE 2026-06-22, commit 441df1ed1)
+
+> `union_zone` flipped — candidates reconstructed at install via `union_zone_candidates` (4-range decode of the parked `valid_action_ids`). Rode on both substrates with no new work; full pool green.
 
 9. **`install_select_union_zone`** (`3386-3542`) — rated **hard** despite RunTail shape: routes success vs decline to **different tails** (`success_tail` vs `decline_tail`) and decodes across **three action ranges** (Hand/Trash/Material, incl. breeding). Frame carries both tails; decline path runs via the `is_pass` branch with `decline_aborts_clause = cost`. **Do this only after Batches 1-2 prove the RunTail decode arms.** Parity: `BT24-029`/`BT24-031` (King Drasil union-bond), `Beelzemon_X02` (BT24); verify all 5 cases (hand-bind, trash-bind, material decode, cost-decline-aborts, non-cost-decline-runs-decline_tail).
 
