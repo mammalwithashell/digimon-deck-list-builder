@@ -84,8 +84,9 @@ fn fingerprint(all_card_data: &HashMap<String, CardData>) -> u64 {
         // MUST be hashed, or a cache hit would serve the wrong card's stats.
         // String/Vec hashing reads bytes in place (no allocation); only the few
         // non-`Hash` structural fields go through one `Debug` per card.
+        // VALUE fields hashed fully (cheap, fixed-size or short): these are what
+        // distinguishes test-card variations (e.g. `make_digimon_dp` varies `dp`).
         id.hash(&mut h);
-        d.card_name.hash(&mut h);
         d.card_kind.hash(&mut h);
         d.level.hash(&mut h);
         d.dp.hash(&mut h);
@@ -94,14 +95,23 @@ fn fingerprint(all_card_data: &HashMap<String, CardData>) -> u64 {
         d.colors.hash(&mut h);
         d.traits.hash(&mut h);
         d.keywords.hash(&mut h);
-        d.effect_text.hash(&mut h);
-        d.inherited_text.hash(&mut h);
-        d.security_text.hash(&mut h);
-        d.effect_class_name.hash(&mut h);
         d.ace_overflow.hash(&mut h);
-        d.digixros_aliases.hash(&mut h);
-        d.also_treated_as.hash(&mut h);
-        format!("{:?}", (&d.evo_costs, &d.dna_costs, &d.dual)).hash(&mut h);
+        // Long/variable text + structured costs by LENGTH only — hashing every
+        // card's full text + a `Debug` of its costs made the per-game fingerprint
+        // ~3.6 ms, eroding the construction win. Length is enough to distinguish
+        // sets in practice (card behavior on differing text lives in the effect
+        // registry, keyed by id; production loads one DB whose fingerprint is
+        // stable regardless of completeness, so this only needs to separate the
+        // small synthetic DBs that tests build).
+        d.card_name.len().hash(&mut h);
+        d.effect_text.len().hash(&mut h);
+        d.inherited_text.len().hash(&mut h);
+        d.security_text.len().hash(&mut h);
+        d.effect_class_name.len().hash(&mut h);
+        d.evo_costs.len().hash(&mut h);
+        d.dna_costs.len().hash(&mut h);
+        d.digixros_aliases.len().hash(&mut h);
+        d.also_treated_as.len().hash(&mut h);
         sum = sum.wrapping_add(h.finish());
     }
     sum
