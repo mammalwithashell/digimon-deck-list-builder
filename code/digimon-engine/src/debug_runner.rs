@@ -980,13 +980,19 @@ impl DebugRunnerBuilder {
         // determinism. Instead, build an empty Game with the shared card_data and
         // manually populate each player's zones.
 
-        // Build the card_data store and lookup map.
+        // Build the card_data store and lookup map. Assign `data_index` in the
+        // SAME deterministic (sorted-by-id) order as `card_store::build_shared_card_store`
+        // so this local map agrees with the `Game`'s shared (memoized) store —
+        // `HashMap` iteration order would otherwise differ per instance and
+        // mismatch the cached store's assignment.
         let mut card_data_store: Vec<CardData> = Vec::new();
         let mut data_index_map: HashMap<String, usize> = HashMap::new();
-        for (id, data) in &self.card_data {
+        let mut sorted_ids: Vec<&String> = self.card_data.keys().collect();
+        sorted_ids.sort();
+        for id in sorted_ids {
             let idx = card_data_store.len();
             data_index_map.insert(id.clone(), idx);
-            card_data_store.push(data.clone());
+            card_data_store.push(self.card_data[id].clone());
         }
 
         // Build empty decks (one per player) and pass through Game::new with

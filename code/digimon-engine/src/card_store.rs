@@ -127,12 +127,21 @@ pub fn build_shared_card_store(all_card_data: &HashMap<String, CardData>) -> Sha
             .collect();
     }
 
+    // Assign `data_index` in a DETERMINISTIC order (sorted by card_id), NOT
+    // `HashMap` iteration order. The store is memoized and shared across games, so
+    // the assignment must not depend on a particular `HashMap` instance's seed —
+    // otherwise a cache hit would return a different assignment than a caller that
+    // independently re-derives one (e.g. `DebugRunner`, which sorts identically).
+    // `data_index` is internal (the obs tensor keys on the stable registry index),
+    // so this is behavior-neutral.
+    let mut sorted_ids: Vec<&String> = effective_card_data.keys().collect();
+    sorted_ids.sort();
     let mut data: Vec<CardData> = Vec::with_capacity(effective_card_data.len());
     let mut index: HashMap<String, usize> = HashMap::with_capacity(effective_card_data.len());
-    for (card_id, card) in &effective_card_data {
+    for card_id in sorted_ids {
         let idx = data.len();
         index.insert(card_id.clone(), idx);
-        data.push(card.clone());
+        data.push(effective_card_data[card_id].clone());
     }
 
     // Absorb the global (deck-independent) token rows — appended to `data` only,
