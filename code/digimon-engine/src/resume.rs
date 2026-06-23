@@ -155,6 +155,22 @@ pub enum ResumeSelectKind {
     /// prompt (`select_effect_choice`). Binds the index as a literal
     /// (`insert_literal`). Not optional (a branch must be picked).
     EffectChoice,
+    /// LEFT pick of a `select_dna_pair` (heterogeneous two-pick). The
+    /// `candidates` are the left-filter matches (`encode_attack`-encoded, both
+    /// battle areas); the arm resolves the picked `left`, binds it via the
+    /// frame's `bind_as` (`bind_left_as`), then chains into the already-flipped
+    /// `install_select_any_permanent` for the RIGHT pick (excluding `left`,
+    /// re-deriving right candidates from `right_filter`), which parks its own
+    /// `AnyPermanent` frame. The frame's `inner_tail` is NOT run here — it
+    /// becomes the RIGHT pick's tail. `outer_conts` transfer to the right frame
+    /// via the shared post-match `run_outer_conts`.
+    DnaPairLeft {
+        candidates: Vec<(u16, PermanentHandle)>,
+        right_filter: CompiledPredicate,
+        bind_right_as: String,
+        right_prompt: String,
+        optional: bool,
+    },
     /// Union-zone select spanning hand ∪ trash ∪ material. The tri-range decode
     /// is captured at install as `(action_id, handle, origin)` candidates (the
     /// decode runs once), so the arm linear-searches and binds via
@@ -1544,6 +1560,133 @@ mod tests {
             runner.game_mut().memory,
             clone.memory,
             "original and clone must reach identical state from identical input"
+        );
+    }
+
+    /// DnaPairLeft (frame-installs-frame): resolving the LEFT pick must install
+    /// the RIGHT pick (AnyField, excluding the left handle) WITHOUT running the
+    /// tail; the tail runs only after the right pick resolves. A clone taken
+    /// BETWEEN the two picks (the MCTS operation) must be independent and replay
+    /// identically — the cloneability property for the two-pick chain.
+    #[test]
+    fn dna_pair_left_chains_to_right_and_clones_between_picks() {
+        use crate::action::space::encode_attack;
+        // Build a game with two Digimon on player 0's field (slots 0 + 1) and a
+        // parked DnaPairLeft frame whose right filter matches anything.
+        let mut runner = DebugRunner::builder()
+            .add_card(make_test_card("TEST-DNA-A", "Dna A"))
+            .add_card(make_test_card("TEST-DNA-B", "Dna B"))
+            .memory(0)
+            .start();
+        let h0 = runner.place_stack(0, &["TEST-DNA-A"]);
+        let h1 = runner.place_stack(0, &["TEST-DNA-B"]);
+        let a0 = encode_attack(h0.player as u16, h0.index as u16);
+        let a1 = encode_attack(h1.player as u16, h1.index as u16);
+        let source_card = runner.top_card(h0);
+        {
+            let game = runner.game_mut();
+            let prev_phase = game.current_phase;
+            game.pending_selection = Some(PendingSelection {
+                kind: SelectionKind::AnyField,
+                selecting_player: 0,
+                previous_phase: prev_phase,
+                valid_action_ids: vec![a0, a1],
+                is_optional: false,
+                prompt: "dna-left".to_string(),
+                effect_choices: None,
+                source_card,
+                source_permanent: None,
+                source_kind: EffectSourceKind::Digimon,
+                callback: Box::new(|_g, _a| unreachable!("resume path drives this")),
+                on_decline: None,
+                zone_owner: None,
+            });
+            game.pending_selection_resume = Some(ResumeStack {
+                frames: vec![ResumeFrame::RunTail {
+                    prov: ResumeProvenance {
+                        source_card,
+                        source_permanent: None,
+                        source_kind: EffectSourceKind::Digimon,
+                        controller: 0,
+                        override_pin: None,
+                    },
+                    select_kind: ResumeSelectKind::DnaPairLeft {
+                        candidates: vec![(a0, h0), (a1, h1)],
+                        right_filter: CompiledPredicate::default(),
+                        bind_right_as: "right".to_string(),
+                        right_prompt: "dna-right".to_string(),
+                        optional: false,
+                    },
+                    bind_as: Some("left".to_string()),
+                    inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
+                    outer_conts: Vec::new(),
+                    bindings: Bindings::new(),
+                    runtime: StepRuntime::default(),
+                    trigger_context: None,
+                    decline: ResumeDecline::None,
+                }],
+            });
+        }
+
+        // Resolve the LEFT pick → installs the RIGHT pick (excluding left), tail
+        // NOT yet run.
+        runner
+            .game_mut()
+            .resolve_selection(0, a0)
+            .expect("left pick resolves");
+        {
+            let g = runner.game_mut();
+            let pend = g
+                .pending_selection
+                .as_ref()
+                .expect("right pick must be installed after the left pick");
+            assert_eq!(
+                pend.kind,
+                SelectionKind::AnyField,
+                "right pick is an AnyField select"
+            );
+            assert_eq!(
+                pend.valid_action_ids,
+                vec![a1],
+                "right pick must exclude the left handle (only slot 1 remains)"
+            );
+            assert_eq!(g.memory, 0, "tail must NOT run until the right pick resolves");
+            assert!(
+                g.pending_selection_resume.is_some(),
+                "right pick must be resume-driven (data VM), not closure-only"
+            );
+        }
+
+        // Clone BETWEEN the two picks (the operation MCTS performs) and resolve
+        // the right pick on the clone only.
+        let mut clone = runner.game_mut().clone();
+        clone
+            .resolve_selection(0, a1)
+            .expect("clone's right pick resolves");
+        assert_eq!(
+            clone.memory.abs(),
+            5,
+            "clone: the DNA-pair tail (GainMemory 5) runs after the right pick"
+        );
+        // INDEPENDENCE: the original is untouched by resolving the clone.
+        assert!(
+            runner.game_mut().pending_selection.is_some(),
+            "original's right pick must survive cloning + resolving the clone"
+        );
+        assert_eq!(
+            runner.game_mut().memory,
+            0,
+            "original memory unchanged by the clone's resolution"
+        );
+        // REPLAYS IDENTICALLY.
+        runner
+            .game_mut()
+            .resolve_selection(0, a1)
+            .expect("original's right pick resolves");
+        assert_eq!(
+            runner.game_mut().memory,
+            clone.memory,
+            "original and clone reach identical state from the same right pick"
         );
     }
 }

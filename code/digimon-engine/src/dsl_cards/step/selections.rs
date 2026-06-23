@@ -673,6 +673,52 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
+                ResumeSelectKind::DnaPairLeft {
+                    candidates,
+                    right_filter,
+                    bind_right_as,
+                    right_prompt,
+                    optional,
+                } => {
+                    // Resolve the LEFT pick (mirrors install_select_dna_pair's
+                    // left callback), bind it, then chain into the already-flipped
+                    // install_select_any_permanent for the RIGHT pick (excluding
+                    // left). That parks an AnyPermanent frame whose tail is this
+                    // frame's inner_tail. We do NOT run inner_tail here. The shared
+                    // run_outer_conts after this match transfers any outer_conts
+                    // onto the right frame (via drain_or_rewrap_pending_tail).
+                    let Some((_, left)) = candidates
+                        .iter()
+                        .find(|(candidate_action, _)| *candidate_action == action_id)
+                        .copied()
+                    else {
+                        return;
+                    };
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_permanent(name, left);
+                    }
+                    install_select_any_permanent(
+                        &mut ctx,
+                        right_filter,
+                        Some(left),
+                        None,
+                        Some(bind_right_as),
+                        right_prompt,
+                        optional,
+                        (*inner_tail).clone(),
+                        b,
+                        runtime,
+                    );
+                }
                 ResumeSelectKind::UnionZone {
                     of_player,
                     candidates,
@@ -3961,6 +4007,19 @@ fn install_select_dna_pair(
     let source_kind = ctx.source_kind;
     let previous_phase = ctx.game.current_phase;
 
+    // Resumable-VM: capture for the RunTail{DnaPairLeft} data frame before the
+    // LEFT closure moves these. The right pick chains into the already-flipped
+    // install_select_any_permanent, so only the LEFT frame is new here.
+    let candidates_for_resume = candidates.clone();
+    let right_filter_for_resume = right_filter.clone();
+    let bind_left_as_for_resume = bind_left_as.clone();
+    let bind_right_as_for_resume = bind_right_as.clone();
+    let right_prompt_for_resume = prompt.clone();
+    let tail_for_resume = Arc::new(tail.clone());
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = ctx.game.current_trigger_context.clone();
+
     ctx.game.current_phase = GamePhase::SelectTarget;
     ctx.game.pending_selection = Some(PendingSelection {
         zone_owner: None,
@@ -4011,6 +4070,38 @@ fn install_select_dna_pair(
         }),
         on_decline: None,
     });
+    // Park the data frame alongside the closure (coexistence): driven by
+    // run_resume's DnaPairLeft arm (resolve left → bind via bind_as → chain into
+    // install_select_any_permanent for the right pick). The right pick parks its
+    // own AnyPermanent frame; this frame's inner_tail becomes the right tail.
+    // install_field_selection / the left install set on_decline:None → decline None.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::DnaPairLeft {
+                    candidates: candidates_for_resume,
+                    right_filter: right_filter_for_resume,
+                    bind_right_as: bind_right_as_for_resume,
+                    right_prompt: right_prompt_for_resume,
+                    optional,
+                },
+                bind_as: Some(bind_left_as_for_resume),
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
