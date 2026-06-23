@@ -28,7 +28,7 @@ use digimon_dsl::compiled::{CompiledPredicate, CompiledStep};
 use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
-use crate::effect_context::selections::{CountCappedZone, DistinctByMode};
+use crate::effect_context::selections::{CountCappedZone, DistinctByMode, RevealBucketSelection};
 use crate::enums::{EffectSourceKind, GamePhase, PlayerId};
 use crate::permanent::PermanentHandle;
 use crate::selection::{SourceSelectionRef, UnionZoneOrigin};
@@ -246,6 +246,37 @@ pub enum ResumeFrame {
     /// mirrors the closure). PASS commits at/above the floor; terminal binds the
     /// permanent list. See [`CountCappedPermanentsState`].
     CountCappedPermanentsStep(CountCappedPermanentsState),
+    /// Multi-bucket reveal selection (`select_reveal_buckets`): a sequence of
+    /// buckets, each picking `min..max` from its pre-resolved candidate handles
+    /// (∩ the live reveal pile, minus already-picked + cross-bucket dedup). A
+    /// completed/empty/`max==0` bucket advances `bucket_index`; the terminal (all
+    /// buckets done) binds each bucket's list by its `bind_as` and runs the tail.
+    /// See [`RevealBucketState`].
+    RevealBucketStep(RevealBucketState),
+}
+
+/// In-flight state of a multi-bucket reveal selection, as data. The buckets'
+/// candidates are concrete `CardHandle`s pre-resolved at install (the per-bucket
+/// `CompiledPredicate` is evaluated then), so no closure/predicate is parked.
+#[derive(Debug, Clone)]
+pub struct RevealBucketState {
+    pub prov: ResumeProvenance,
+    pub selecting_player: PlayerId,
+    pub previous_phase: GamePhase,
+    pub buckets: Vec<RevealBucketSelection>,
+    pub bucket_index: usize,
+    /// Completed buckets: `(bind_as, picked cards)`.
+    pub picked_buckets: Vec<(String, Vec<CardHandle>)>,
+    /// Picks accumulated for the current (in-progress) bucket.
+    pub current_bucket_picks: Vec<CardHandle>,
+    pub no_duplicate_cards: bool,
+    pub prompt: String,
+    // ── data terminal (bind each bucket's list by bind_as, then run the tail) ──
+    pub inner_tail: Arc<Vec<CompiledStep>>,
+    pub bindings: Bindings,
+    pub runtime: StepRuntime,
+    pub trigger_context: Option<TriggerContext>,
+    pub outer_conts: Vec<OuterContinuation>,
 }
 
 /// In-flight state of a battle-area permanent multi-pick, as data. The candidate

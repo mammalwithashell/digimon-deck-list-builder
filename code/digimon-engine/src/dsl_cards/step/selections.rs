@@ -659,7 +659,149 @@ pub(crate) fn run_resume(
         ResumeFrame::CountCappedPermanentsStep(state) => {
             run_count_capped_permanent_step(game, state, action_id, is_pass);
         }
+        ResumeFrame::RevealBucketStep(state) => {
+            run_reveal_bucket_step(game, state, action_id, is_pass);
+        }
     }
+}
+
+/// Data terminal for a multi-bucket reveal selection: bind each bucket's picked
+/// list by its `bind_as`, then run the inner tail. Mirrors `select_reveal_buckets`'
+/// final callback (no EffectTarget push).
+fn run_reveal_bucket_terminal(game: &mut crate::game::Game, state: crate::resume::RevealBucketState) {
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let mut b = state.bindings;
+    for (name, cards) in state.picked_buckets {
+        b.insert_card_list(&name, cards);
+    }
+    run_tail_preserving_trigger_context(
+        &mut ctx,
+        state.trigger_context,
+        &state.inner_tail,
+        &mut b,
+        &state.runtime,
+    );
+    run_outer_conts(game, state.outer_conts);
+}
+
+/// Drive the multi-bucket reveal state machine: advance past `max==0`/no-candidate
+/// buckets, park the first bucket that has candidates, or run the terminal when
+/// all buckets are done. Mirrors `install_reveal_bucket_step` exactly, as data.
+pub(crate) fn install_reveal_bucket_resume_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::RevealBucketState,
+) {
+    use crate::action::space::{MAX_REVEALED, SEL_REVEAL_START};
+    use crate::selection::{PendingSelection, SelectionKind};
+    loop {
+        let Some(bucket) = state.buckets.get(state.bucket_index).cloned() else {
+            // All buckets resolved → terminal.
+            run_reveal_bucket_terminal(game, state);
+            return;
+        };
+        if bucket.max == 0 {
+            state.picked_buckets.push((bucket.bind_as, Vec::new()));
+            state.bucket_index += 1;
+            state.current_bucket_picks = Vec::new();
+            continue;
+        }
+        let already_chosen: std::collections::HashSet<crate::card_source::CardHandle> = state
+            .picked_buckets
+            .iter()
+            .flat_map(|(_, cards)| cards.iter().copied())
+            .chain(state.current_bucket_picks.iter().copied())
+            .collect();
+        let cap = game.revealed_cards.len().min(MAX_REVEALED);
+        let mut valid_action_ids = Vec::new();
+        for idx in 0..cap {
+            let handle = game.revealed_cards[idx].handle();
+            if !bucket.candidates.contains(&handle) {
+                continue;
+            }
+            if state.current_bucket_picks.contains(&handle) {
+                continue;
+            }
+            if state.no_duplicate_cards && already_chosen.contains(&handle) {
+                continue;
+            }
+            valid_action_ids.push(SEL_REVEAL_START + idx as u16);
+        }
+        if valid_action_ids.is_empty() {
+            let current = std::mem::take(&mut state.current_bucket_picks);
+            state.picked_buckets.push((bucket.bind_as, current));
+            state.bucket_index += 1;
+            continue;
+        }
+        let picked = state.current_bucket_picks.len() as u8;
+        let is_optional = picked >= bucket.min;
+        game.current_phase = crate::enums::GamePhase::SelectReveal;
+        game.pending_selection = Some(PendingSelection {
+            zone_owner: None,
+            kind: SelectionKind::RevealBucket {
+                bucket_index: state.bucket_index as u8,
+                min: bucket.min,
+                max: bucket.max,
+                picked,
+            },
+            selecting_player: state.selecting_player,
+            previous_phase: state.previous_phase,
+            valid_action_ids,
+            is_optional,
+            prompt: state.prompt.clone(),
+            effect_choices: None,
+            source_card: state.prov.source_card,
+            source_permanent: state.prov.source_permanent,
+            source_kind: state.prov.source_kind,
+            callback: Box::new(|_g, _a| {}),
+            on_decline: None,
+        });
+        game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RevealBucketStep(state)],
+        });
+        return;
+    }
+}
+
+/// Executor for one reveal-bucket pick (or PASS). Mirrors the closure: a pick
+/// reaching the bucket `max` (or PASS) completes the bucket and advances; a
+/// sub-max pick re-parks the same bucket.
+fn run_reveal_bucket_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::RevealBucketState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    let Some(bucket) = state.buckets.get(state.bucket_index).cloned() else {
+        run_reveal_bucket_terminal(game, state);
+        return;
+    };
+    if is_pass {
+        let current = std::mem::take(&mut state.current_bucket_picks);
+        state.picked_buckets.push((bucket.bind_as, current));
+        state.bucket_index += 1;
+        install_reveal_bucket_resume_step(game, state);
+        return;
+    }
+    let reveal_index = action_id.saturating_sub(crate::action::space::SEL_REVEAL_START) as usize;
+    let Some(card) = game.revealed_cards.get(reveal_index) else {
+        return; // stale/invalid pick (defensive)
+    };
+    state.current_bucket_picks.push(card.handle());
+    if state.current_bucket_picks.len() >= bucket.max as usize {
+        let current = std::mem::take(&mut state.current_bucket_picks);
+        state.picked_buckets.push((bucket.bind_as, current));
+        state.bucket_index += 1;
+    }
+    // Re-enter the state machine: advance (bucket completed) or re-park the same
+    // bucket with the updated current picks.
+    install_reveal_bucket_resume_step(game, state);
 }
 
 /// Data terminal for a battle-area permanent multi-pick: bind the picked
@@ -4420,18 +4562,37 @@ fn install_select_reveal_buckets(
     let prompt = prompt.unwrap_or_else(|| "Choose revealed cards".to_string());
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
-    if ctx.select_reveal_buckets(
-        engine_buckets,
-        &prompt,
-        no_duplicate_cards,
-        move |cb_ctx, picked| {
-            let mut b = bindings.clone();
-            for (name, cards) in picked {
-                b.insert_card_list(&name, cards);
-            }
-            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+    // Resumable-VM (Batch 4): reveal-bucket is FULLY data-driven — no legacy
+    // closure. The bucket-advance state machine IS install_reveal_bucket_resume_step;
+    // it parks a RevealBucketStep frame (run by run_resume) or runs the terminal
+    // synchronously (all buckets max==0 / no candidates). Buckets carry concrete
+    // candidate handles (the per-bucket predicate was evaluated above), so the
+    // state is pure data — ideal for clone (no closure to panic-stub).
+    let selecting_player = ctx.override_selecting_player().unwrap_or(ctx.player);
+    let state = crate::resume::RevealBucketState {
+        prov: crate::resume::ResumeProvenance {
+            source_card: ctx.source_card,
+            source_permanent: ctx.source_permanent,
+            source_kind: ctx.source_kind,
+            controller: ctx.player,
+            override_pin: ctx.override_selecting_player(),
         },
-    ) {
+        selecting_player,
+        previous_phase: ctx.game.current_phase,
+        buckets: engine_buckets,
+        bucket_index: 0,
+        picked_buckets: Vec::new(),
+        current_bucket_picks: Vec::new(),
+        no_duplicate_cards,
+        prompt,
+        inner_tail: tail,
+        bindings,
+        runtime,
+        trigger_context,
+        outer_conts: Vec::new(),
+    };
+    install_reveal_bucket_resume_step(ctx.game, state);
+    if ctx.game.pending_selection.is_some() {
         InstallResult::Parked
     } else {
         InstallResult::TailAlreadyRan
