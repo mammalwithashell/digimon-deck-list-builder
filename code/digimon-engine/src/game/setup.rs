@@ -163,6 +163,7 @@ impl Game {
 
         let mut game = Self {
             rules,
+            effects_cache: super::EffectsCache::default(),
             players,
             turn_count: 0,
             n_digivolutions: [0u32, 0u32],

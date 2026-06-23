@@ -348,7 +348,7 @@ impl Game {
                     && timing == EffectTiming::OptionMain)
         };
 
-        for effect in &effects {
+        for effect in effects.iter() {
             if !main_timing_matches(effect.timing) {
                 continue;
             }
@@ -514,7 +514,7 @@ impl Game {
             None => return false,
         };
 
-        for effect in &effects {
+        for effect in effects.iter() {
             if effect.timing != EffectTiming::MainFromTrash {
                 continue;
             }

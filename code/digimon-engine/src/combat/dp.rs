@@ -111,7 +111,7 @@ impl Game {
             let Some(effects) = self.effects_for_card(card_id, source.handle()) else {
                 continue;
             };
-            for effect in &effects {
+            for effect in effects.iter() {
                 if !effect.applies_to_opponent_security_dp {
                     continue;
                 }
@@ -154,7 +154,7 @@ impl Game {
                 let Some(effects) = self.effects_for_card(card_id, source.handle()) else {
                     continue;
                 };
-                for effect in &effects {
+                for effect in effects.iter() {
                     if !effect.applies_to_own_security_dp {
                         continue;
                     }

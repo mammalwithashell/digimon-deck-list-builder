@@ -434,9 +434,10 @@ impl Game {
         let amount = self
             .inspect_cost_reduction_candidate(&key, Some(target))
             .unwrap_or(0);
-        // `effects_for_card` returns an OWNED Vec rebuilt each call, so move the
-        // (non-`Clone`) boxed `pay_cost_fn` out of it rather than borrowing.
-        let Some(mut effects) = self.effects_for_card(&key.card_id, key.source_card) else {
+        // `effects_for_card_owned` returns an OWNED Vec rebuilt each call, so move
+        // the (non-`Clone`) boxed `pay_cost_fn` out of it rather than borrowing
+        // (the memoized `effects_for_card` hands back a shared `Arc`).
+        let Some(mut effects) = self.effects_for_card_owned(&key.card_id, key.source_card) else {
             return false;
         };
         let Some(effect) = effects.get_mut(key.effect_slot as usize) else {

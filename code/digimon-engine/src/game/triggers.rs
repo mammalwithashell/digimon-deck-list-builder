@@ -236,7 +236,7 @@ impl Game {
             else {
                 continue;
             };
-            for effect in effects {
+            for effect in effects.iter() {
                 if !effect.declarative || effect.inherited != inherited_source {
                     continue;
                 }
@@ -331,7 +331,7 @@ impl Game {
             else {
                 continue;
             };
-            for effect in effects {
+            for effect in effects.iter() {
                 if !effect.linked || !effect.declarative {
                     continue;
                 }

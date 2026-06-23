@@ -834,7 +834,7 @@ impl Game {
             let Some(effects) = self.effects_for_card(&source_card_id, source_card) else {
                 continue;
             };
-            for effect in effects {
+            for effect in effects.iter() {
                 if effect.inherited != inherited_source
                     || effect.timing != EffectTiming::EndOfYourTurn
                 {

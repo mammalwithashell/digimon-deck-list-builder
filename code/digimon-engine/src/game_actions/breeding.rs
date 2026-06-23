@@ -261,7 +261,7 @@ impl Game {
             index: BREEDING_TARGET as u8,
         };
 
-        for effect in &effects {
+        for effect in effects.iter() {
             if effect.timing != EffectTiming::MainOnField {
                 continue;
             }

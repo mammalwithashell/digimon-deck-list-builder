@@ -611,7 +611,7 @@ impl Game {
         let effects = self.effects_for_card(&card_id, source_card.handle())?;
         let mut saw_filter = false;
 
-        for effect in effects {
+        for effect in effects.iter() {
             if !effect.declarative || effect.granted_keyword != Some(Keyword::Overclock) {
                 continue;
             }
