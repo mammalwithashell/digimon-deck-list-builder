@@ -484,9 +484,10 @@ impl DebugRunner {
     }
 
     pub fn force_base_dp(&mut self, card_id: &str, dp: i32) {
-        let card = self
-            .game
-            .card_data
+        // `card_data` is a shared `Arc` (see `card_store`); copy-on-write so this
+        // test-only override gives this game a private store, never mutating the
+        // shared cache.
+        let card = std::sync::Arc::make_mut(&mut self.game.card_data.0)
             .iter_mut()
             .find(|c| c.card_id == card_id)
             .unwrap_or_else(|| panic!("force_base_dp: unknown card_id {}", card_id));
@@ -1000,7 +1001,9 @@ impl DebugRunnerBuilder {
             .expect("DebugRunner: Game::new failed");
         #[cfg(feature = "dsl-yaml-loader")]
         {
-            game.alt_path_registry
+            // `alt_path_registry` is a shared `Arc` (see `card_store`); copy-on-write
+            // so a DebugRunner's injected cards extend a private copy.
+            std::sync::Arc::make_mut(&mut game.alt_path_registry)
                 .extend(
                     self.compiled_cards
                         .iter()

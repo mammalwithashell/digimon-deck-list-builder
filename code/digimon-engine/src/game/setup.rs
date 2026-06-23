@@ -38,40 +38,12 @@ impl Game {
             None => StdRng::from_entropy(),
         };
 
-        let mut effective_card_data = all_card_data.clone();
-        #[cfg(feature = "dsl-yaml-loader")]
-        let mut alt_path_registry: HashMap<
-            String,
-            Vec<digimon_dsl::compiled::CompiledAltPath>,
-        > = HashMap::new();
-        #[cfg(feature = "dsl-yaml-loader")]
-        if let Ok(dsl_registry) = crate::dsl_registry::from_embedded_cached() {
-            crate::dsl_bridge::enrich_card_data_with_dsl_alt_paths(
-                &mut effective_card_data,
-                dsl_registry,
-            );
-            alt_path_registry = dsl_registry
-                .iter()
-                .filter_map(|(card_id, compiled)| {
-                    if compiled.alt_paths.is_empty() {
-                        None
-                    } else {
-                        Some((card_id.clone(), compiled.alt_paths.clone()))
-                    }
-                })
-                .collect();
-        }
-
-        // Build card data store (flat vec, indexed by position)
-        let mut card_data_store: Vec<CardData> = Vec::new();
-        let mut data_index_map: std::collections::HashMap<String, usize> =
-            std::collections::HashMap::new();
-
-        for (card_id, data) in &effective_card_data {
-            let idx = card_data_store.len();
-            data_index_map.insert(card_id.clone(), idx);
-            card_data_store.push(data.clone());
-        }
+        // Build (or reuse) the shared, enriched, immutable card store. It is a
+        // pure function of `all_card_data` — memoized and `Arc`-shared across
+        // games, so each `Game::new` is an `Arc` clone + deck deal rather than a
+        // clone+enrich+index of the ~4000-card store (was ~14 ms/game, 61% of the
+        // per-step training cost). See `crate::card_store`.
+        let shared = crate::card_store::shared_card_store(all_card_data);
 
         let mut next_card_index: u16 = 0;
 
@@ -83,11 +55,12 @@ impl Game {
             let mut original_deck_counts: BTreeMap<String, (u16, bool)> = BTreeMap::new();
 
             for card_id in deck_ids {
-                let data_idx = data_index_map
+                let data_idx = shared
+                    .index
                     .get(card_id)
                     .ok_or_else(|| format!("Card {} not found in card database", card_id))?;
 
-                let card_data = &card_data_store[*data_idx];
+                let card_data = &shared.data[*data_idx];
                 let card = CardSource::new(*data_idx, player_id, next_card_index);
                 next_card_index += 1;
 
@@ -149,17 +122,11 @@ impl Game {
         let mulligan_pending = turn_order.clone();
         let mulligan_used = vec![false; player_count];
 
-        // Build the token registry and absorb synthetic CardData rows
-        // for each registered token. This extends `card_data_store` with
-        // rows whose `card_id` matches `TokenDef::card_id`
-        // (e.g. "TOKEN_PETRIFICATION") — `EffectContext::play_token`
-        // uses those card_ids to look up the data_index when spawning a
-        // token. Tokens never appear in a player's deck, so pushing here
-        // does not affect the data_index_map used during deck seeding.
+        // Token registry handle for the `Game.token_registry` field. The
+        // synthetic token `CardData` rows are now absorbed into the shared card
+        // store by `card_store::build_shared_card_store` (deck-independent), so
+        // the per-game absorption loop is gone.
         let token_registry = crate::token_registry::build_registry();
-        for def in token_registry.iter() {
-            card_data_store.push(def.to_card_data());
-        }
 
         let mut game = Self {
             rules,
@@ -178,9 +145,9 @@ impl Game {
             game_over: false,
             winner: None,
             terminal_outcome_reason: None,
-            card_data: card_data_store,
+            card_data: crate::card_store::CardStore(shared.data.clone()),
             #[cfg(feature = "dsl-yaml-loader")]
-            alt_path_registry,
+            alt_path_registry: shared.alt_paths.clone(),
             modifiers: ModifierRegistry::new(),
             floating_mass_modifiers: Vec::new(),
             // Process-cached: the ~4000-card DSL pack is lowered once, not per
@@ -267,7 +234,7 @@ impl Game {
             until_condition_reevaluation_cycles: 0,
             reveal_source: None,
             opaque_data_index_map: None,
-            card_id_index: data_index_map.clone(),
+            card_id_index: shared.index.clone(),
         };
 
         // Deal starting hands. Security is deliberately NOT laid here — it

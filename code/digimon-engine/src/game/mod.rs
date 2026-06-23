@@ -313,10 +313,14 @@ pub struct Game {
     pub winner: Option<PlayerId>,
     pub terminal_outcome_reason: Option<TerminalOutcomeReason>,
     /// Shared card data store (all cards in the game reference into this).
-    pub card_data: Vec<CardData>,
+    /// `CardStore` wraps an `Arc<Vec<CardData>>` shared across games (see
+    /// `card_store`); `Deref`-transparent so reads are unchanged.
+    pub card_data: crate::card_store::CardStore,
     /// Compiled DSL alternate digivolution paths keyed by result card id.
+    /// Shared via `Arc` (built once with the card store).
     #[cfg(feature = "dsl-yaml-loader")]
-    pub(crate) alt_path_registry: HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>>,
+    pub(crate) alt_path_registry:
+        std::sync::Arc<HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>>>,
     /// Active modifiers (DP buffs, granted keywords, etc.) attached to permanents.
     pub modifiers: ModifierRegistry,
     /// Source-independent continuous mass modifiers (e.g. "all opponent Digimon
@@ -896,7 +900,8 @@ pub struct Game {
 
     /// Card-id → `card_data` index, materialized once at construction. O(1)
     /// replacement for the per-step `card_data.iter().find(...)` linear scan.
-    pub(crate) card_id_index: std::collections::HashMap<String, usize>,
+    /// Shared via `Arc` with the card store (see `card_store`).
+    pub(crate) card_id_index: std::sync::Arc<std::collections::HashMap<String, usize>>,
 }
 
 // Tier-1 impl Game mechanic clusters (see docs/RUST_ENGINE_API.md §3).
