@@ -653,7 +653,212 @@ pub(crate) fn run_resume(
         ResumeFrame::BudgetStep(state) => {
             run_budget_step(game, state, action_id, is_pass);
         }
+        ResumeFrame::SourceMultiStep(state) => {
+            run_source_multi_step(game, state, action_id, is_pass);
+        }
     }
+}
+
+/// Re-derive the source-multi candidates `(action_id, source_ref)` for a
+/// `SourceMultiState`, mirroring `source_multi_candidates` + the DSL installers'
+/// filter (target restriction + `target_resolution_failed` + the
+/// `CompiledPredicate` on `Source`/`Card` per `eval_on_card`). Data-pure.
+pub(crate) fn source_multi_candidates_data(
+    game: &crate::game::Game,
+    state: &crate::resume::SourceMultiState,
+) -> Vec<(u16, crate::selection::SourceSelectionRef)> {
+    use crate::action::space::encode_source_select;
+    use crate::selection::SourceSelectionRef;
+    if state.target_resolution_failed {
+        return Vec::new();
+    }
+    // Phase 1: collect (field, source, card) tuples (releases battle_area borrow
+    // before the predicate read context borrows the game).
+    let mut raw: Vec<(u8, u8, crate::card_source::CardHandle)> = Vec::new();
+    for field_index in 0..game.player(state.of_player).battle_area.len() {
+        let n = game.player(state.of_player).battle_area[field_index]
+            .card_sources
+            .len();
+        if n <= 1 {
+            continue;
+        }
+        for source_index in 0..(n - 1) {
+            let card = game.player(state.of_player).battle_area[field_index].card_sources
+                [source_index]
+                .handle();
+            raw.push((field_index as u8, source_index as u8, card));
+        }
+    }
+    // Phase 2: filter + encode.
+    let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+    );
+    let mut out = Vec::new();
+    for (field_index, source_index, card) in raw {
+        if state.picked.iter().any(|p| p.card == card) {
+            continue;
+        }
+        let permanent = PermanentHandle {
+            player: state.of_player,
+            index: field_index,
+        };
+        let source = SourceSelectionRef {
+            permanent,
+            field_index,
+            source_index,
+            card,
+        };
+        if state
+            .target_permanent
+            .is_some_and(|handle| source.permanent != handle)
+        {
+            continue;
+        }
+        let passes = if state.eval_on_card {
+            eval_predicate_with_bindings(
+                &state.filter,
+                &read,
+                PredicateSubject::Card(source.card),
+                Some(&state.filter_bindings),
+            )
+        } else {
+            eval_predicate_with_bindings(
+                &state.filter,
+                &read,
+                PredicateSubject::Source(source),
+                Some(&state.filter_bindings),
+            )
+        };
+        if !passes {
+            continue;
+        }
+        if let Some(action) = encode_source_select(field_index as u16, source_index as u16) {
+            out.push((action, source));
+        }
+    }
+    out
+}
+
+/// Data terminal for a source multi-pick: bind the picked sources as a
+/// source-ref list, then run the inner tail (the trampoline's `final_callback`).
+fn run_source_multi_terminal(game: &mut crate::game::Game, state: crate::resume::SourceMultiState) {
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let mut b = state.bindings;
+    if let Some(name) = &state.bind_as {
+        b.insert_source_refs(name, state.picked);
+    }
+    run_tail_preserving_trigger_context(
+        &mut ctx,
+        state.trigger_context,
+        &state.inner_tail,
+        &mut b,
+        &state.runtime,
+    );
+    // Nested multi-pick: run any outer-clause tails wrapped onto this frame, now
+    // that the accumulated list is bound + the inner tail ran (the multi-pick has
+    // terminated). Empty for a top-level (un-nested) multi-pick.
+    run_outer_conts(game, state.outer_conts);
+}
+
+/// Install (or re-park) a source-multi step over the carried candidate snapshot.
+/// Mirrors `install_source_multi_selection`'s PendingSelection (phase, kind,
+/// optional + PASS gating at/above `min`).
+pub(crate) fn install_source_multi_resume_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::SourceMultiState,
+) {
+    use crate::action::space::PASS;
+    use crate::selection::{PendingSelection, SelectionKind};
+    let picked = state.picked.len() as u8;
+    let is_optional = picked >= state.min;
+    let mut valid_action_ids: Vec<u16> = state.candidates.iter().map(|(a, _)| *a).collect();
+    if is_optional {
+        valid_action_ids.push(PASS);
+    }
+    game.current_phase = crate::enums::GamePhase::SelectSource;
+    game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
+        kind: SelectionKind::SourceMulti {
+            min: state.min,
+            max: state.max,
+            picked,
+        },
+        selecting_player: state.selecting_player,
+        previous_phase: state.previous_phase,
+        valid_action_ids,
+        is_optional,
+        prompt: state.prompt.clone(),
+        effect_choices: None,
+        source_card: state.prov.source_card,
+        source_permanent: state.prov.source_permanent,
+        source_kind: state.prov.source_kind,
+        callback: Box::new(|_g, _a| {}),
+        on_decline: None,
+    });
+    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::SourceMultiStep(state)],
+    });
+}
+
+/// Executor for one source-multi pick (or PASS). Mirrors the recursive
+/// `install_source_multi_selection`: decode against the carried snapshot,
+/// live-revalidate the picked card, recompute candidates, then terminal
+/// (exhausted/max at/above min) or re-park; PASS commits.
+fn run_source_multi_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::SourceMultiState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        // PASS is only offered at/above min (the install gates it).
+        run_source_multi_terminal(game, state);
+        return;
+    }
+    let Some((_, source_ref)) = state
+        .candidates
+        .iter()
+        .find(|(candidate_action, _)| *candidate_action == action_id)
+        .copied()
+    else {
+        return; // stale/invalid pick (defensive)
+    };
+    // DCGO-parity live revalidation: only add if the snapshot card is still
+    // present under its carrier (an intervening observer may have removed it).
+    let still_present = game
+        .player(source_ref.permanent.player)
+        .battle_area
+        .get(source_ref.permanent.index as usize)
+        .map(|perm| {
+            perm.card_sources
+                .iter()
+                .any(|c| c.handle() == source_ref.card)
+        })
+        .unwrap_or(false);
+    if still_present {
+        state.picked.push(source_ref);
+    }
+    // Recompute candidates from live state (the recursive install's enumeration).
+    let next_candidates = source_multi_candidates_data(game, &state);
+    if next_candidates.is_empty() || state.picked.len() == state.max as usize {
+        if state.picked.len() >= state.min as usize {
+            run_source_multi_terminal(game, state);
+        }
+        return;
+    }
+    state.candidates = next_candidates;
+    install_source_multi_resume_step(game, state);
 }
 
 /// Re-derive the cost-budget candidates `(action_id, handle, cost)` for a
@@ -737,6 +942,10 @@ fn run_budget_terminal(game: &mut crate::game::Game, state: crate::resume::Budge
         &mut b,
         &state.runtime,
     );
+    // Nested multi-pick: run any outer-clause tails wrapped onto this frame, now
+    // that the accumulated list is bound + the inner tail ran (the multi-pick has
+    // terminated). Empty for a top-level (un-nested) multi-pick.
+    run_outer_conts(game, state.outer_conts);
 }
 
 /// Install (or re-park) a cost-budget step: build the `PendingSelection` over the
@@ -850,6 +1059,10 @@ fn run_permutation_terminal(game: &mut crate::game::Game, state: crate::resume::
         &mut b,
         &state.runtime,
     );
+    // Nested multi-pick: run any outer-clause tails wrapped onto this frame, now
+    // that the accumulated list is bound + the inner tail ran (the multi-pick has
+    // terminated). Empty for a top-level (un-nested) multi-pick.
+    run_outer_conts(game, state.outer_conts);
 }
 
 /// Install (or re-park) an ordered-permutation step: build the `PendingSelection`
@@ -958,6 +1171,10 @@ fn run_multipick_terminal(game: &mut crate::game::Game, state: crate::resume::Mu
         &mut b,
         &state.runtime,
     );
+    // Nested multi-pick: run any outer-clause tails wrapped onto this frame, now
+    // that the accumulated list is bound + the inner tail ran (the multi-pick has
+    // terminated). Empty for a top-level (un-nested) multi-pick.
+    run_outer_conts(game, state.outer_conts);
 }
 
 /// Install (or re-park) a count_capped multi-pick step: build the
@@ -4237,6 +4454,17 @@ fn install_select_own_sources(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (Batch 4): capture for the SourceMultiStep frame (own → eval
+    // on PredicateSubject::Source; of_player = you).
+    let filter_for_resume = filter.clone();
+    let filter_bindings_for_resume = bindings.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let prompt_for_resume = prompt.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_own_sources(
         &prompt,
         min,
@@ -4270,6 +4498,96 @@ fn install_select_own_sources(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    park_source_multi_resume_frame(
+        ctx,
+        player,
+        false,
+        min,
+        max,
+        target_permanent,
+        target_resolution_failed,
+        filter_for_resume,
+        filter_bindings_for_resume,
+        prompt_for_resume,
+        bind_as_for_resume,
+        tail_for_resume,
+        bindings_for_resume,
+        runtime_for_resume,
+        trigger_for_resume,
+        override_pin,
+    );
+}
+
+/// Shared resume-frame park for the own/opponent source-multi DSL installers.
+#[allow(clippy::too_many_arguments)]
+fn park_source_multi_resume_frame(
+    ctx: &mut EffectContext<'_>,
+    of_player: PlayerId,
+    eval_on_card: bool,
+    min: u8,
+    max: u8,
+    target_permanent: Option<PermanentHandle>,
+    target_resolution_failed: bool,
+    filter: CompiledPredicate,
+    filter_bindings: Bindings,
+    prompt: String,
+    bind_as: Option<String>,
+    inner_tail: Arc<Vec<CompiledStep>>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+    trigger_context: Option<TriggerContext>,
+    override_pin: Option<PlayerId>,
+) {
+    let player = ctx.player;
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let mut state = crate::resume::SourceMultiState {
+        prov: crate::resume::ResumeProvenance {
+            source_card,
+            source_permanent,
+            source_kind,
+            controller: player,
+            override_pin,
+        },
+        of_player,
+        // selecting_player / previous_phase are corrected from the parked
+        // selection below (placeholders; the candidate scan doesn't use them).
+        selecting_player: of_player,
+        previous_phase: crate::enums::GamePhase::Main,
+        min,
+        max,
+        picked: Vec::new(),
+        candidates: Vec::new(),
+        filter,
+        filter_bindings,
+        target_permanent,
+        target_resolution_failed,
+        eval_on_card,
+        prompt,
+        bind_as,
+        inner_tail,
+        bindings,
+        runtime,
+        trigger_context,
+        outer_conts: Vec::new(),
+    };
+    // Compute the initial snapshot (matches the closure install's candidates).
+    // If empty, the closure SHORT-CIRCUITED (it ran the tail inline, which may
+    // have installed a NESTED selection + its own resume frame) — do NOT clobber
+    // it. A non-empty snapshot means the closure parked OUR source-multi select.
+    state.candidates = source_multi_candidates_data(ctx.game, &state);
+    if state.candidates.is_empty() {
+        return;
+    }
+    let Some(pending) = ctx.game.pending_selection.as_ref() else {
+        return;
+    };
+    state.selecting_player = pending.selecting_player;
+    state.previous_phase = pending.previous_phase;
+    ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::SourceMultiStep(state)],
+    });
 }
 
 /// Opponent-side mirror of `install_select_own_sources`. The candidate set is
@@ -4308,6 +4626,18 @@ fn install_select_opponent_sources(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (Batch 4): capture for the SourceMultiStep frame (opponent →
+    // eval on PredicateSubject::Card; of_player = next_clockwise(player)).
+    let opponent = ctx.game.next_clockwise(player);
+    let filter_for_resume = filter.clone();
+    let filter_bindings_for_resume = bindings.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let prompt_for_resume = prompt.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_opponent_sources(
         &prompt,
         min,
@@ -4340,6 +4670,24 @@ fn install_select_opponent_sources(
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
+    );
+    park_source_multi_resume_frame(
+        ctx,
+        opponent,
+        true,
+        min,
+        max,
+        target_permanent,
+        target_resolution_failed,
+        filter_for_resume,
+        filter_bindings_for_resume,
+        prompt_for_resume,
+        bind_as_for_resume,
+        tail_for_resume,
+        bindings_for_resume,
+        runtime_for_resume,
+        trigger_for_resume,
+        override_pin,
     );
 }
 
@@ -4443,38 +4791,44 @@ fn park_budget_resume_frame(
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
+    let mut state = crate::resume::BudgetState {
+        prov: crate::resume::ResumeProvenance {
+            source_card,
+            source_permanent,
+            source_kind,
+            controller: player,
+            override_pin,
+        },
+        kind,
+        opponent,
+        // Corrected from the parked selection below (placeholders).
+        selecting_player: player,
+        previous_phase: crate::enums::GamePhase::Main,
+        remaining,
+        min_picks,
+        picked: Vec::new(),
+        filter,
+        filter_bindings,
+        prompt,
+        bind_as,
+        inner_tail,
+        bindings,
+        runtime,
+        trigger_context,
+        outer_conts: Vec::new(),
+    };
+    // If the closure found no candidates it SHORT-CIRCUITED (ran the tail inline,
+    // possibly installing a nested selection + frame) — don't clobber it.
+    if budget_candidates_data(ctx.game, &state).is_empty() {
+        return;
+    }
     let Some(pending) = ctx.game.pending_selection.as_ref() else {
         return;
     };
-    let selecting_player = pending.selecting_player;
-    let previous_phase = pending.previous_phase;
+    state.selecting_player = pending.selecting_player;
+    state.previous_phase = pending.previous_phase;
     ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
-        frames: vec![crate::resume::ResumeFrame::BudgetStep(
-            crate::resume::BudgetState {
-                prov: crate::resume::ResumeProvenance {
-                    source_card,
-                    source_permanent,
-                    source_kind,
-                    controller: player,
-                    override_pin,
-                },
-                kind,
-                opponent,
-                selecting_player,
-                previous_phase,
-                remaining,
-                min_picks,
-                picked: Vec::new(),
-                filter,
-                filter_bindings,
-                prompt,
-                bind_as,
-                inner_tail,
-                bindings,
-                runtime,
-                trigger_context,
-            },
-        )],
+        frames: vec![crate::resume::ResumeFrame::BudgetStep(state)],
     });
 }
 
@@ -4711,32 +5065,39 @@ fn install_select_ordered_permutation(
     // Park the data frame alongside the closure (coexistence): driven by
     // `run_resume`'s PermutationStep arm. `selecting_player`/`previous_phase` are
     // read back from the installed selection so the re-park matches exactly.
-    if let Some(pending) = ctx.game.pending_selection.as_ref() {
-        let selecting_player = pending.selecting_player;
-        let previous_phase = pending.previous_phase;
-        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
-            frames: vec![crate::resume::ResumeFrame::PermutationStep(
-                crate::resume::PermutationState {
-                    prov: crate::resume::ResumeProvenance {
-                        source_card,
-                        source_permanent,
-                        source_kind,
-                        controller: player,
-                        override_pin,
+    // EMPTY items → select_ordered_permutation ran the tail INLINE (which may have
+    // installed a nested selection + its own resume frame) — don't clobber it.
+    // Cap to 10 to match select_ordered_permutation's truncation.
+    let capped_items: Vec<_> = items_for_resume.into_iter().take(10).collect();
+    if !capped_items.is_empty() {
+        if let Some(pending) = ctx.game.pending_selection.as_ref() {
+            let selecting_player = pending.selecting_player;
+            let previous_phase = pending.previous_phase;
+            ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![crate::resume::ResumeFrame::PermutationStep(
+                    crate::resume::PermutationState {
+                        prov: crate::resume::ResumeProvenance {
+                            source_card,
+                            source_permanent,
+                            source_kind,
+                            controller: player,
+                            override_pin,
+                        },
+                        selecting_player,
+                        previous_phase,
+                        remaining: capped_items,
+                        accum: Vec::new(),
+                        prompt,
+                        bind_as: bind_as_for_resume,
+                        inner_tail: tail_for_resume,
+                        bindings: bindings_for_resume,
+                        runtime: runtime_for_resume,
+                        trigger_context: trigger_for_resume,
+                        outer_conts: Vec::new(),
                     },
-                    selecting_player,
-                    previous_phase,
-                    remaining: items_for_resume,
-                    accum: Vec::new(),
-                    prompt,
-                    bind_as: bind_as_for_resume,
-                    inner_tail: tail_for_resume,
-                    bindings: bindings_for_resume,
-                    runtime: runtime_for_resume,
-                    trigger_context: trigger_for_resume,
-                },
-            )],
-        });
+                )],
+            });
+        }
     }
 }
 

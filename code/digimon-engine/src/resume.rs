@@ -31,7 +31,7 @@ use crate::dsl_cards::step::StepRuntime;
 use crate::effect_context::selections::{CountCappedZone, DistinctByMode};
 use crate::enums::{EffectSourceKind, GamePhase, PlayerId};
 use crate::permanent::PermanentHandle;
-use crate::selection::UnionZoneOrigin;
+use crate::selection::{SourceSelectionRef, UnionZoneOrigin};
 use crate::trigger_context::TriggerContext;
 
 /// Coexistence-only resume-side continuation hooks (make-engine-cloneable
@@ -233,6 +233,54 @@ pub enum ResumeFrame {
     /// PASS commits at/above `min_picks`; terminal binds the permanent list. See
     /// [`BudgetState`].
     BudgetStep(BudgetState),
+    /// Cross-permanent digivolution-source multi-pick (`select_own_sources` /
+    /// `select_opponent_sources`). Picks `min..max` sources across `of_player`'s
+    /// battle-area stacks; candidates re-derived each step from the carried
+    /// `CompiledPredicate` (data-pure) with live revalidation (a picked source's
+    /// card may vanish mid-selection). PASS commits at/above `min`; terminal binds
+    /// the source-ref list. See [`SourceMultiState`].
+    SourceMultiStep(SourceMultiState),
+}
+
+/// In-flight state of a cross-permanent source multi-pick, as data. Re-derives
+/// candidates from `filter` each step (the closure trampoline's `SourceFilter`
+/// is a `CompiledPredicate` here), so no runtime closure is parked.
+#[derive(Debug, Clone)]
+pub struct SourceMultiState {
+    pub prov: ResumeProvenance,
+    pub of_player: PlayerId,
+    pub selecting_player: PlayerId,
+    pub previous_phase: GamePhase,
+    pub min: u8,
+    pub max: u8,
+    /// Sources picked so far (de-duplicated by card).
+    pub picked: Vec<SourceSelectionRef>,
+    /// This step's candidate snapshot `(action_id, source_ref)`. Carried (not
+    /// recomputed on resolve) so a pick decodes to the SAME `source_ref` the
+    /// install offered — the live-revalidation check then asks whether that
+    /// card is still present (mirrors the closure's `action_to_source` snapshot).
+    pub candidates: Vec<(u16, SourceSelectionRef)>,
+    pub filter: CompiledPredicate,
+    pub filter_bindings: Bindings,
+    /// `target` binding restriction: if `Some`, only sources under this permanent
+    /// are candidates. `target_resolution_failed` rejects all (binding missing).
+    pub target_permanent: Option<PermanentHandle>,
+    pub target_resolution_failed: bool,
+    /// `select_own_sources` evaluates the predicate on `PredicateSubject::Source`;
+    /// `select_opponent_sources` on `PredicateSubject::Card(source.card)`.
+    pub eval_on_card: bool,
+    pub prompt: String,
+    // ── data terminal (bind the picked source-ref list, then run the tail) ──
+    pub bind_as: Option<String>,
+    pub inner_tail: Arc<Vec<CompiledStep>>,
+    pub bindings: Bindings,
+    pub runtime: StepRuntime,
+    pub trigger_context: Option<TriggerContext>,
+    /// Outer-tail continuations composed by `wrap_pending_selection_with_tail`
+    /// when this multi-pick select is nested inside another clause. Run at the
+    /// TERMINAL (after the accumulated list is bound + inner_tail runs), in push
+    /// order — NOT on intermediate re-parks. Empty for a top-level select.
+    pub outer_conts: Vec<OuterContinuation>,
 }
 
 /// Which cost a [`BudgetState`] accumulator spends.
@@ -269,6 +317,11 @@ pub struct BudgetState {
     pub bindings: Bindings,
     pub runtime: StepRuntime,
     pub trigger_context: Option<TriggerContext>,
+    /// Outer-tail continuations composed by `wrap_pending_selection_with_tail`
+    /// when this multi-pick select is nested inside another clause. Run at the
+    /// TERMINAL (after the accumulated list is bound + inner_tail runs), in push
+    /// order — NOT on intermediate re-parks. Empty for a top-level select.
+    pub outer_conts: Vec<OuterContinuation>,
 }
 
 /// In-flight state of an ordered-permutation selection, as data. Re-parked once
@@ -289,6 +342,11 @@ pub struct PermutationState {
     pub bindings: Bindings,
     pub runtime: StepRuntime,
     pub trigger_context: Option<TriggerContext>,
+    /// Outer-tail continuations composed by `wrap_pending_selection_with_tail`
+    /// when this multi-pick select is nested inside another clause. Run at the
+    /// TERMINAL (after the accumulated list is bound + inner_tail runs), in push
+    /// order — NOT on intermediate re-parks. Empty for a top-level select.
+    pub outer_conts: Vec<OuterContinuation>,
 }
 
 /// In-flight state of a `count_capped`-family multi-pick selection, as data.
@@ -317,6 +375,11 @@ pub struct MultiPickState {
     pub bindings: Bindings,
     pub runtime: StepRuntime,
     pub trigger_context: Option<TriggerContext>,
+    /// Outer-tail continuations composed by `wrap_pending_selection_with_tail`
+    /// when this multi-pick select is nested inside another clause. Run at the
+    /// TERMINAL (after the accumulated list is bound + inner_tail runs), in push
+    /// order — NOT on intermediate re-parks. Empty for a top-level select.
+    pub outer_conts: Vec<OuterContinuation>,
 }
 
 #[cfg(test)]
@@ -1067,6 +1130,7 @@ mod tests {
             bindings: Bindings::new(),
             runtime: StepRuntime::default(),
             trigger_context: None,
+            outer_conts: Vec::new(),
         };
         crate::dsl_cards::step::selections::install_multipick_step(runner.game_mut(), state);
 
@@ -1213,6 +1277,7 @@ mod tests {
             bindings: Bindings::new(),
             runtime: StepRuntime::default(),
             trigger_context: None,
+            outer_conts: Vec::new(),
         };
         crate::dsl_cards::step::selections::install_permutation_resume_step(runner.game_mut(), state);
 
