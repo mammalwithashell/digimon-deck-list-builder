@@ -240,6 +240,38 @@ pub enum ResumeFrame {
     /// card may vanish mid-selection). PASS commits at/above `min`; terminal binds
     /// the source-ref list. See [`SourceMultiState`].
     SourceMultiStep(SourceMultiState),
+    /// Battle-area permanent multi-pick (`select_count_capped` over `BattleArea` →
+    /// `install_count_capped_permanent_step`). Picks `min..max` permanents from a
+    /// captured candidate snapshot (snapshot-minus-picked, NOT live-recomputed —
+    /// mirrors the closure). PASS commits at/above the floor; terminal binds the
+    /// permanent list. See [`CountCappedPermanentsState`].
+    CountCappedPermanentsStep(CountCappedPermanentsState),
+}
+
+/// In-flight state of a battle-area permanent multi-pick, as data. The candidate
+/// snapshot is captured at install and shrunk by removing the picked action each
+/// step (the closure's `candidates.filter(!= action)`), not re-derived — so no
+/// predicate/filter is carried.
+#[derive(Debug, Clone)]
+pub struct CountCappedPermanentsState {
+    pub prov: ResumeProvenance,
+    pub selecting_player: PlayerId,
+    pub previous_phase: GamePhase,
+    /// Drives the `OppField`/`OwnField` selection kind for the frontend router.
+    pub target_is_opponent: bool,
+    /// `min` is already clamped (`max.min(candidates)` when `clamp_to_available`).
+    pub min: u8,
+    pub max: u8,
+    pub optional_zero: bool,
+    pub candidates: Vec<(u16, PermanentHandle)>,
+    pub accum: Vec<PermanentHandle>,
+    pub prompt: String,
+    pub bind_as: Option<String>,
+    pub inner_tail: Arc<Vec<CompiledStep>>,
+    pub bindings: Bindings,
+    pub runtime: StepRuntime,
+    pub trigger_context: Option<TriggerContext>,
+    pub outer_conts: Vec<OuterContinuation>,
 }
 
 /// In-flight state of a cross-permanent source multi-pick, as data. Re-derives

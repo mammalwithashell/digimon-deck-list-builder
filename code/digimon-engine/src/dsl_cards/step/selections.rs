@@ -656,7 +656,111 @@ pub(crate) fn run_resume(
         ResumeFrame::SourceMultiStep(state) => {
             run_source_multi_step(game, state, action_id, is_pass);
         }
+        ResumeFrame::CountCappedPermanentsStep(state) => {
+            run_count_capped_permanent_step(game, state, action_id, is_pass);
+        }
     }
+}
+
+/// Data terminal for a battle-area permanent multi-pick: bind the picked
+/// permanents as a permanent list, then run the inner tail. (Mirrors the
+/// closure `final_callback` — which does NOT push EffectTargets here.)
+fn run_count_capped_permanent_terminal(
+    game: &mut crate::game::Game,
+    state: crate::resume::CountCappedPermanentsState,
+) {
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let mut b = state.bindings;
+    if let Some(name) = &state.bind_as {
+        b.insert_permanent_list(name, state.accum);
+    }
+    run_tail_preserving_trigger_context(
+        &mut ctx,
+        state.trigger_context,
+        &state.inner_tail,
+        &mut b,
+        &state.runtime,
+    );
+    run_outer_conts(game, state.outer_conts);
+}
+
+/// Install (or re-park) a battle-area permanent multi-pick step over the carried
+/// candidate snapshot. Mirrors `install_count_capped_permanent_step` (OppField/
+/// OwnField kind, PASS gating at/above the effective floor).
+pub(crate) fn install_count_capped_permanent_resume_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::CountCappedPermanentsState,
+) {
+    use crate::selection::{PendingSelection, SelectionKind};
+    let picked = state.accum.len() as u8;
+    let effective_min = state.min.max(if state.optional_zero { 0 } else { 1 });
+    let is_optional = picked >= effective_min;
+    let valid_action_ids: Vec<u16> = state.candidates.iter().map(|(a, _)| *a).collect();
+    game.current_phase = crate::enums::GamePhase::SelectBudgeted;
+    game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
+        kind: if state.target_is_opponent {
+            SelectionKind::OppField
+        } else {
+            SelectionKind::OwnField
+        },
+        selecting_player: state.selecting_player,
+        previous_phase: state.previous_phase,
+        valid_action_ids,
+        is_optional,
+        prompt: state.prompt.clone(),
+        effect_choices: None,
+        source_card: state.prov.source_card,
+        source_permanent: state.prov.source_permanent,
+        source_kind: state.prov.source_kind,
+        callback: Box::new(|_g, _a| {}),
+        on_decline: None,
+    });
+    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::CountCappedPermanentsStep(state)],
+    });
+}
+
+/// Executor for one battle-area permanent pick (or PASS). Mirrors
+/// `install_count_capped_permanent_step`: decode against the snapshot, append,
+/// shrink the snapshot (remove the picked action), then terminal (max / empty)
+/// or re-park; PASS commits.
+fn run_count_capped_permanent_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::CountCappedPermanentsState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        run_count_capped_permanent_terminal(game, state);
+        return;
+    }
+    let Some((_, handle)) = state
+        .candidates
+        .iter()
+        .find(|(candidate_action, _)| *candidate_action == action_id)
+        .copied()
+    else {
+        return; // stale/invalid pick (defensive)
+    };
+    state.accum.push(handle);
+    if state.accum.len() == state.max as usize {
+        run_count_capped_permanent_terminal(game, state);
+        return;
+    }
+    state.candidates.retain(|(a, _)| *a != action_id);
+    if state.candidates.is_empty() {
+        run_count_capped_permanent_terminal(game, state);
+        return;
+    }
+    install_count_capped_permanent_resume_step(game, state);
 }
 
 /// Re-derive the source-multi candidates `(action_id, source_ref)` for a
@@ -3954,6 +4058,17 @@ fn install_select_count_capped_permanents(
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
     let previous_phase = ctx.game.current_phase;
+    // Resumable-VM (Batch 4): capture for the CountCappedPermanentsStep frame
+    // (snapshot-minus-picked; `min` is already clamped). candidates non-empty here
+    // (the empty + `< min` cases returned above), so install always parks our
+    // permanent select — no clobber risk.
+    let candidates_for_resume = candidates.clone();
+    let prompt_for_resume = prompt.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
     let final_callback: Box<
         dyn FnOnce(&mut crate::game::Game, Vec<PermanentHandle>) + Send + Sync,
     > = Box::new(move |game, picks| {
@@ -3988,6 +4103,38 @@ fn install_select_count_capped_permanents(
         previous_phase,
         final_callback,
     );
+    if let Some(pending) = ctx.game.pending_selection.as_ref() {
+        let selecting_player = pending.selecting_player;
+        let previous_phase = pending.previous_phase;
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::CountCappedPermanentsStep(
+                crate::resume::CountCappedPermanentsState {
+                    prov: crate::resume::ResumeProvenance {
+                        source_card,
+                        source_permanent,
+                        source_kind,
+                        controller,
+                        override_pin,
+                    },
+                    selecting_player,
+                    previous_phase,
+                    target_is_opponent,
+                    min,
+                    max,
+                    optional_zero,
+                    candidates: candidates_for_resume,
+                    accum: Vec::new(),
+                    prompt: prompt_for_resume,
+                    bind_as: bind_as_for_resume,
+                    inner_tail: tail_for_resume,
+                    bindings: bindings_for_resume,
+                    runtime: runtime_for_resume,
+                    trigger_context: trigger_for_resume,
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
