@@ -93,6 +93,7 @@ pub fn maybe_spawn(app: &AppHandle, engine: EngineHandle) {
         .route("/inject-card", post(inject_card))
         .route("/set-memory", post(set_memory))
         .route("/step", post(step))
+        .route("/navigate", post(navigate))
         .with_state(state);
 
     tauri::async_runtime::spawn(async move {
@@ -329,10 +330,38 @@ async fn step(State(s): State<BridgeState>, Json(b): Json<StepBody>) -> BridgeRe
     Ok(Json(json!({ "state": dto })))
 }
 
+#[derive(Deserialize)]
+struct NavigateBody {
+    route: String,
+    theme: Option<String>,
+}
+
+/// Dev-only: drive the desktop window's client-side router (+ optional theme)
+/// for the screenshot skill. Emits a `debug:navigate` window event the React
+/// `DebugBridgeNav` listener consumes; the engine state is untouched.
+async fn navigate(State(s): State<BridgeState>, Json(b): Json<NavigateBody>) -> BridgeResult {
+    s.app
+        .emit("debug:navigate", json!({ "route": b.route, "theme": b.theme }))
+        .map_err(bad)?;
+    Ok(Json(json!({ "ok": true })))
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use serde_json::json;
+
+    #[test]
+    fn navigate_body_parses_route_and_optional_theme() {
+        let b: NavigateBody =
+            serde_json::from_value(json!({ "route": "/deckbuilder", "theme": "dark" })).unwrap();
+        assert_eq!(b.route, "/deckbuilder");
+        assert_eq!(b.theme.as_deref(), Some("dark"));
+
+        let b2: NavigateBody = serde_json::from_value(json!({ "route": "/" })).unwrap();
+        assert_eq!(b2.route, "/");
+        assert!(b2.theme.is_none(), "theme is optional");
+    }
 
     fn starter_deck() -> Vec<String> {
         let mut d: Vec<String> = vec!["ST1-01".to_string(); 5];
