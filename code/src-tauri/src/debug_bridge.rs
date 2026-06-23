@@ -363,6 +363,18 @@ mod tests {
         assert!(b2.theme.is_none(), "theme is optional");
     }
 
+    #[test]
+    fn hero_fixture_stages_into_a_legal_board() {
+        let raw = include_str!(
+            "../../../.claude/skills/update-landing-screenshots/fixtures/hero-board.json"
+        );
+        let fixture: serde_json::Value = serde_json::from_str(raw).expect("fixture is valid JSON");
+        let mut world = EngineWorld::default();
+        let dto = stage_into(&mut world, &fixture).expect("hero fixture must stage legally");
+        assert!(dto.get("players").is_some());
+        assert!(world.game.is_some(), "a game must be installed");
+    }
+
     fn starter_deck() -> Vec<String> {
         let mut d: Vec<String> = vec!["ST1-01".to_string(); 5];
         d.extend(std::iter::repeat("ST1-03".to_string()).take(45));
