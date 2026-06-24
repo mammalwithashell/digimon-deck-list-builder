@@ -220,9 +220,56 @@ pub(crate) struct PendingWouldDigivolveResume {
 /// - `game_actions.rs` — player mutators: `play_from_hand`,
 ///   `digivolve_from_hand`, `move_from_breeding`, `activate_*_main`,
 ///   `initiate_dna_digivolve`.
+/// Per-game memo of `effects_for_card` results, keyed by
+/// `(data_index, card_handle, under_top)`. The registry effect list a card
+/// derives is a pure function of those inputs (`CardEffect::effects(handle)`
+/// reads no game state; `under_top` is the only state input and is in the key),
+/// so entries are **never invalidated** for a game's lifetime. Stored behind a
+/// `RefCell` so the lazy fill works on the `&self` `effects_for_card` path;
+/// values are `Arc` so `Game` stays `Send` (`RustHeadlessGame` is a
+/// non-`unsendable` `#[pyclass]`) and a cache hit is a refcount bump — no vec or
+/// closure clone. See the `cache-effects-for-card` change.
+#[derive(Default)]
+pub struct EffectsCache(
+    std::cell::RefCell<
+        std::collections::HashMap<
+            (usize, crate::card_source::CardHandle, bool),
+            Option<std::sync::Arc<Vec<crate::effect::Effect>>>,
+        >,
+    >,
+);
+
+impl std::fmt::Debug for EffectsCache {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("EffectsCache")
+            .field("entries", &self.0.borrow().len())
+            .finish()
+    }
+}
+
+impl EffectsCache {
+    fn get(
+        &self,
+        key: &(usize, crate::card_source::CardHandle, bool),
+    ) -> Option<Option<std::sync::Arc<Vec<crate::effect::Effect>>>> {
+        self.0.borrow().get(key).cloned()
+    }
+
+    fn insert(
+        &self,
+        key: (usize, crate::card_source::CardHandle, bool),
+        value: Option<std::sync::Arc<Vec<crate::effect::Effect>>>,
+    ) {
+        self.0.borrow_mut().insert(key, value);
+    }
+}
+
 #[derive(Debug)]
 pub struct Game {
     pub rules: Rules,
+    /// Per-game memo for `effects_for_card` (see `EffectsCache`). Not part of
+    /// the observable game state — pure derived data, never snapshotted.
+    pub(crate) effects_cache: EffectsCache,
     pub players: Vec<Player>,
     pub turn_count: u16,
     /// Cumulative regular-digivolve count per player. Incremented on every
@@ -266,10 +313,14 @@ pub struct Game {
     pub winner: Option<PlayerId>,
     pub terminal_outcome_reason: Option<TerminalOutcomeReason>,
     /// Shared card data store (all cards in the game reference into this).
-    pub card_data: Vec<CardData>,
+    /// `CardStore` wraps an `Arc<Vec<CardData>>` shared across games (see
+    /// `card_store`); `Deref`-transparent so reads are unchanged.
+    pub card_data: crate::card_store::CardStore,
     /// Compiled DSL alternate digivolution paths keyed by result card id.
+    /// Shared via `Arc` (built once with the card store).
     #[cfg(feature = "dsl-yaml-loader")]
-    pub(crate) alt_path_registry: HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>>,
+    pub(crate) alt_path_registry:
+        std::sync::Arc<HashMap<String, Vec<digimon_dsl::compiled::CompiledAltPath>>>,
     /// Active modifiers (DP buffs, granted keywords, etc.) attached to permanents.
     pub modifiers: ModifierRegistry,
     /// Source-independent continuous mass modifiers (e.g. "all opponent Digimon
@@ -849,7 +900,8 @@ pub struct Game {
 
     /// Card-id → `card_data` index, materialized once at construction. O(1)
     /// replacement for the per-step `card_data.iter().find(...)` linear scan.
-    pub(crate) card_id_index: std::collections::HashMap<String, usize>,
+    /// Shared via `Arc` with the card store (see `card_store`).
+    pub(crate) card_id_index: std::sync::Arc<std::collections::HashMap<String, usize>>,
 }
 
 // Tier-1 impl Game mechanic clusters (see docs/RUST_ENGINE_API.md §3).
@@ -2355,7 +2407,7 @@ impl Game {
             let Some(effects) = self.effects_for_card(&card_id, source_card) else {
                 continue;
             };
-            for effect in effects {
+            for effect in effects.iter() {
                 if !effect.declarative || effect.inherited != inherited_source {
                     continue;
                 }
@@ -2414,7 +2466,7 @@ impl Game {
             let Some(effects) = self.effects_for_card(&card_id, source_card) else {
                 continue;
             };
-            for effect in effects {
+            for effect in effects.iter() {
                 if !effect.declarative || !effect.linked {
                     continue;
                 }
@@ -2460,10 +2512,77 @@ impl Game {
     /// The inner `Vec` allocation is driven by `CardEffect::effects(handle)`
     /// re-boxing per-instance closures and is unavoidable with the current
     /// trait shape. The helper does not add an extra empty-case allocation.
+    /// Memoized per-card effect derivation — the engine's hottest call
+    /// (56–72% of bare-engine runtime; ~742–1715 calls/step). The registry
+    /// effect list is a pure function of `(card_id, handle, under_top)`, so it
+    /// is cached on `Game` for the game's lifetime (see `EffectsCache`) and a
+    /// repeat query is a refcount bump rather than a fresh `impl_.effects(handle)`
+    /// closure re-box. Returns a shared `Arc<Vec<Effect>>`; callers that must
+    /// mutate the vec use `effects_for_card_owned`.
     pub fn effects_for_card(
         &self,
         card_id: &str,
         handle: crate::card_source::CardHandle,
+    ) -> Option<std::sync::Arc<Vec<crate::effect::Effect>>> {
+        let under_top = self.card_handle_is_under_top(handle);
+        // Key on the canonical data_index (Copy, no per-call String alloc) rather
+        // than the &str card_id. A handle maps 1:1 to a card instance, so this is
+        // also unique; data_index canonicalizes any duplicate card_id rows.
+        let Some(&data_index) = self.card_id_index.get(card_id) else {
+            // Unknown card_id (defensive — shouldn't happen): build uncached.
+            return self
+                .build_effects_for_card(card_id, handle, under_top)
+                .map(std::sync::Arc::new);
+        };
+        let key = (data_index, handle, under_top);
+
+        if let Some(cached) = self.effects_cache.get(&key) {
+            // Differential oracle (debug/test only): the cache is provably pure
+            // in (card_id, handle, under_top), so a hit must equal a fresh build;
+            // this catches a caller passing a card_id that doesn't match `handle`.
+            #[cfg(debug_assertions)]
+            {
+                let fresh = self.build_effects_for_card(card_id, handle, under_top);
+                let proj = |v: &[crate::effect::Effect]| -> Vec<String> {
+                    v.iter().map(|e| format!("{e:?}")).collect()
+                };
+                debug_assert_eq!(
+                    cached.as_ref().map(|a| proj(&a[..])),
+                    fresh.as_ref().map(|v| proj(&v[..])),
+                    "effects_for_card cache divergence: card_id={card_id} handle={handle:?} under_top={under_top}"
+                );
+            }
+            return cached;
+        }
+
+        let built = self
+            .build_effects_for_card(card_id, handle, under_top)
+            .map(std::sync::Arc::new);
+        self.effects_cache.insert(key, built.clone());
+        built
+    }
+
+    /// Owned, un-memoized variant of [`Game::effects_for_card`] for the few
+    /// callers that mutate the returned vec (`game_actions/cost.rs`,
+    /// `game_actions/options.rs`). Rebuilds every call — acceptable because
+    /// those sites are low-frequency (cost calc, not the per-step hot path).
+    pub(crate) fn effects_for_card_owned(
+        &self,
+        card_id: &str,
+        handle: crate::card_source::CardHandle,
+    ) -> Option<Vec<crate::effect::Effect>> {
+        let under_top = self.card_handle_is_under_top(handle);
+        self.build_effects_for_card(card_id, handle, under_top)
+    }
+
+    /// Build the per-card effect list from the registry + keyword synthesis.
+    /// Owned and un-memoized; `under_top` is threaded in so the memoized wrapper
+    /// keys on it without this body recomputing `card_handle_is_under_top`.
+    fn build_effects_for_card(
+        &self,
+        card_id: &str,
+        handle: crate::card_source::CardHandle,
+        under_top: bool,
     ) -> Option<Vec<crate::effect::Effect>> {
         // Registry effects come first — a hand-authored script owns its
         // slot order. Phase 7 Task 6 appends keyword-derived auto-install
@@ -2496,7 +2615,7 @@ impl Game {
                     })
                     .collect();
 
-                if self.card_handle_is_under_top(handle) {
+                if under_top {
                     for kw in inherited_keywords(cd) {
                         effects.extend(
                             crate::cards::keyword_effects::keyword_to_auto_effect(kw, handle)

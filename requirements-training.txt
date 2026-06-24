@@ -11,4 +11,6 @@ beautifulsoup4>=4.12
 requests>=2.28
 python-dotenv>=1.0
 Pillow>=10.0
+onnx>=1.15        # legacy torch.onnx exporter (dynamo=False) for ONNX league opponents
 onnxruntime>=1.16
+wandb>=0.16       # optional experiment tracking (--wandb); lazy-imported, reads WANDB_API_KEY

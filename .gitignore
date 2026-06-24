@@ -76,6 +76,8 @@ code/frontend/playwright-report/
 # Per-worktree isolated cargo target scratch dirs (build contention workaround)
 .cargo-target-*/
 
+# Local Weights & Biases run artifacts (from local --wandb smoke tests)
+wandb/
 # Brainstorm visual-companion + screenshot-trial scratch (session-local)
 .superpowers/
 .trial/

@@ -73,6 +73,20 @@ panel (`pilot/anchored/*`), but promotion decisions come from the post-hoc frame
   before terminating the pod**, or it is gone.
 - **`opponent="self-play"` is retired** and fails at startup. Use
   `opponent="pool"` with a `champion_admin.py emit-pool` manifest.
+- **Neural-opponent runs are inference-bound, not core-bound.** A
+  `--opponent league`/`pool` run pays an opponent forward pass every step (~3×
+  slower than the greedy floor); more cores past `n_envs` won't help. The lever
+  that does: `DIGIMON_ONNX_OPPONENT=1` (frozen MLP opponent via ORT, ~2× steps/sec,
+  parity-safe). Plus `--batch-size 256` and a leaner eval cadence. See the runbook
+  "Throughput levers for neural-opponent runs". Tell-tale it silently fell back to
+  torch: `ONNX opponent ... failed; falling back to torch` in the logs + no
+  `*.opponent.onnx` next to the `.zip`.
+- **The in-training anchored panel needs registered champions.** With an empty
+  `models/champions/registry.json` it degrades to `vs ['greedy']` only (one noisy
+  anchor). Before a warm-started run, register the seed:
+  `champion_admin.py promote --candidate <seed>.zip --name <name> --force`
+  (layout-compatible). Register **before** launch — the anchor set is built lazily
+  at the first panel.
 - **Resume-from-checkpoint:** `run_training_job.py` cannot continue from a
   checkpoint without a small `init_from` patch; the bare CLI also traps on a
   missing `default.yaml`. See the runbook before relying on resume.

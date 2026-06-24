@@ -91,7 +91,7 @@ fn registry(r: &DebugRunner) -> CardRegistry {
     // Build a CardRegistry from the game's card_data store. The same factory
     // runs inside build_tensor; we just need a shared instance here.
     let mut map = std::collections::HashMap::new();
-    for c in &r.game.card_data {
+    for c in r.game.card_data.iter() {
         map.insert(c.card_id.clone(), c.clone());
     }
     CardRegistry::from_cards(&map)
