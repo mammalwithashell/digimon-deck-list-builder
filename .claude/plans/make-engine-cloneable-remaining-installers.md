@@ -3,7 +3,7 @@
 Produced 2026-06-23 by the remaining-dsl-installer-flip-specs workflow (6 agents). Raw per-installer specs + full recipes: see workflow output (this is the synthesis).
 
 ## Recommended order
-- zone_moves.rs:66 MayAddTopSecurityToHand (atomic Security park â€” pending: confirm add_top_security_to_hand fires no draining trigger)
+- zone_moves.rs:66 MayAddTopSecurityToHand — **DONE 2026-06-24 (reused the existing `Security` kind, NO new frame — same `post:` pattern as slice #4)**: extended `ResumeSelectKind::Security` with `post: Option<SecurityPostAction>` + `SecurityPostAction::AddTopToHand`. The arm runs `add_top_security_to_hand(of_player)` (NOT atomic — drains a security-removed observer, can park nested) then the (empty) `inner_tail`; the clause's following steps (e.g. BT24-031's recovery) ride `outer_conts` (`run_outer_conts` → `drain_or_rewrap_pending_tail`, nested-park-safe). **Decline gotcha: the "may" decline is a NO-OP that CONTINUES the clause, so `ResumeDecline::RunTail{ empty, aborts_clause:false }` (which runs `run_outer_conts`), NOT `ResumeDecline::None` (which DROPS outer_conts).** Gate: bt24_031 (incl. new `bt24_031_security_to_hand_clones_faithfully_at_the_prompt`), bt25_030, p_137, st20_15 green.
 - combat.rs:152 select_redirect_attack_target (lands new AttackTarget variant; atomic substitution)
 - install_trash_bottom_face_down_source_under_tamer selections.rs:3405 (FieldPermanent post-action enum extension; nested-park threads via park_pending_selection_tail, no bespoke channel)
 - install_select_dna_pair selections.rs:3849 (new DnaPairRight left-frame; re-invokes already-flipped install_select_any_permanent for right)
