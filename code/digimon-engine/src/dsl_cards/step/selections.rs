@@ -1997,6 +1997,7 @@ pub fn try_install(
             }
             install_trash_n_bottom_face_down_sources_under_tamers(
                 ctx,
+                *of,
                 player,
                 *count,
                 tail.to_vec(),
@@ -3747,6 +3748,7 @@ fn total_face_down_sources_under_tamers(
 /// exist, so each install finds ≥1 eligible Tamer and always parks.
 fn install_trash_n_bottom_face_down_sources_under_tamers(
     ctx: &mut EffectContext<'_>,
+    of: CompiledPlayerRef,
     player: PlayerId,
     remaining: u8,
     tail: Vec<CompiledStep>,
@@ -3766,6 +3768,19 @@ fn install_trash_n_bottom_face_down_sources_under_tamers(
     let player_for_filter = ctx.player;
     let filter_for_pred = filter.clone();
     let filter_bindings = bindings.clone();
+    // Resumable-VM (make-engine-cloneable): capture for the data frame before
+    // the closures consume tail/bindings/runtime/trigger. The whole multi-pick
+    // cost is modeled as a single-pick FieldPermanent{post:TrashBottomFaceDownSource}
+    // frame (the slice #4 arm) whose continuation re-enters
+    // `TrashBottomFaceDownSourcesUnderTamers{count: remaining-1}` until the cost
+    // is fully paid — so a per-pick trash that parks a nested OnDigivolutionCard-
+    // Trashed observer threads via the SAME park_pending_selection_tail recursion
+    // the single-pick under-tamer trash uses, with no bespoke continuation channel.
+    let override_pin = ctx.override_selecting_player();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
     ctx.select_own_permanent(
         "Choose a Tamer to trash a face-down card from under",
         false,
@@ -3816,6 +3831,7 @@ fn install_trash_n_bottom_face_down_sources_under_tamers(
                 // enough sources remain.
                 install_trash_n_bottom_face_down_sources_under_tamers(
                     cb_ctx,
+                    of,
                     player,
                     now_remaining,
                     tail.as_ref().clone(),
@@ -3825,6 +3841,50 @@ fn install_trash_n_bottom_face_down_sources_under_tamers(
             }
         },
     );
+    // Park the data frame alongside the closure (coexistence): driven by
+    // run_resume's FieldPermanent{post:Some(TrashBottomFaceDownSource)} arm. The
+    // frame trashes ONE bottom face-down source from the picked Tamer, then runs
+    // the continuation: when `remaining > 1`, re-enter the multi-trash step for
+    // the next `remaining - 1` (which re-parks the next pick); at `remaining ==
+    // 1` run the real captured tail (the free digivolve). `select_own_permanent`
+    // installs a MANDATORY pick (the caller pre-gated ≥`remaining` sources exist,
+    // so ≥1 eligible Tamer), so on_decline is None ⇒ ResumeDecline::None. Whether
+    // to activate the whole cost at all is the clause's `optional`, one level up.
+    if ctx.game.pending_selection.is_some() {
+        let continuation_tail: Vec<CompiledStep> = if remaining <= 1 {
+            (*tail_for_resume).clone()
+        } else {
+            let mut v = Vec::with_capacity(1 + tail_for_resume.len());
+            v.push(CompiledStep::TrashBottomFaceDownSourcesUnderTamers {
+                of,
+                count: remaining - 1,
+            });
+            v.extend_from_slice(&tail_for_resume);
+            v
+        };
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
+                    of_player: player,
+                    post: Some(crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSource),
+                },
+                bind_as: None,
+                inner_tail: Arc::new(continuation_tail),
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
 }
 
 fn install_select_opponent_permanent(

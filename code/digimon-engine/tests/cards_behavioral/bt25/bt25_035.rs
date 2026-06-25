@@ -539,6 +539,109 @@ fn bt25_035_then_clause_blocked_when_fewer_than_2_face_down_sources() {
     assert_eq!(runner.memory(), mem_before);
 }
 
+/// CLONE-FAITHFULNESS (make-engine-cloneable): the multi-Tamer trash-2 cost is
+/// driven by the resumable data VM, so a `Game::clone` taken BETWEEN the first
+/// and second Tamer pick is faithful — resolving the clone's second pick runs
+/// the free digivolve on the clone without touching the original, and the
+/// original then replays to the identical state. This is the property MCTS /
+/// AlphaZero search relies on (cloning at a mid-cost decision point). Before the
+/// installer flip the first pick was closure-only, so the clone would hit the
+/// panic-stub `PendingSelection::clone`.
+#[test]
+fn bt25_035_trash_n_clones_faithfully_between_tamer_picks() {
+    let (mut runner, cougar, _tamers) = cougar_runner(&["GD5"], &[1, 1]);
+    assert_eq!(face_down_source_count(&runner, 0), 2, "1 face-down under each Tamer");
+    let mem_before = runner.memory();
+
+    runner.fire_on_play(0, cougar.index as usize);
+    let view = runner.pending_selection_view().expect("hand pick installs");
+    let pick = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&id| id != PASS)
+        .unwrap();
+    runner.execute_action(0, pick).expect("choose GD5");
+
+    // First Tamer pick → resolve it (trashes 1, re-parks the second pick).
+    let v1 = runner.pending_selection_view().expect("first Tamer pick installs");
+    let t1 = v1
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&id| id != PASS)
+        .unwrap();
+    runner.execute_action(0, t1).expect("pick first Tamer");
+
+    // BETWEEN picks: the second Tamer pick is installed AND resume-driven, so
+    // cloning here is faithful. The digivolve is deferred to the final pick.
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "second Tamer pick installed between picks"
+    );
+    assert!(
+        runner.game.pending_selection_resume.is_some(),
+        "the multi-pick trash must be resume-driven between picks (clone-safe)"
+    );
+    assert_eq!(
+        face_down_source_count(&runner, 0),
+        1,
+        "exactly one face-down source trashed after the first pick"
+    );
+    assert_eq!(
+        runner.game.player(0).battle_area[cougar.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        CARD_ID,
+        "still Cougarmon between picks (digivolve deferred to the final pick)"
+    );
+
+    // Clone, then resolve the second pick on the CLONE only.
+    let v2 = runner.pending_selection_view().expect("second Tamer pick installs");
+    let t2 = v2
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&id| id != PASS)
+        .unwrap();
+    let mut clone = runner.game.clone();
+    clone.resolve_selection(0, t2).expect("clone's second pick resolves");
+    assert_eq!(
+        clone.player(0).battle_area[cougar.index as usize]
+            .top_card()
+            .card_id(&clone.card_data),
+        "GD5",
+        "clone: Cougarmon digivolves into GD5 after the final pick"
+    );
+
+    // INDEPENDENCE: the original is untouched by resolving the clone.
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "original's second pick survives cloning + resolving the clone"
+    );
+    assert_eq!(
+        runner.game.player(0).battle_area[cougar.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        CARD_ID,
+        "original is still mid-cost (Cougarmon) after the clone resolves"
+    );
+
+    // REPLAYS IDENTICALLY: resolving the same pick on the original reaches the
+    // clone's state.
+    runner.execute_action(0, t2).expect("original's second pick resolves");
+    let _ = runner.auto_resolve();
+    assert_eq!(
+        runner.game.player(0).battle_area[cougar.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "GD5",
+        "original reaches the same GD5 digivolve as the clone"
+    );
+    assert_eq!(face_down_source_count(&runner, 0), 0, "both sources trashed");
+    assert_eq!(runner.memory(), mem_before, "free digivolve — no memory paid");
+}
+
 /// NEGATIVE (target filter): no [Glowing Dawn] Lv.5 in hand ⇒ clean no-op even
 /// with 2 face-down sources available.
 #[test]
