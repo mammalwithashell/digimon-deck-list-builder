@@ -195,6 +195,22 @@ pub enum ResumeSelectKind {
     /// `OnAttackTargetChange` + drains (NOT atomic), so a nested park threads via
     /// the empty `inner_tail` + `outer_conts` (`run_outer_conts`). No `bind_as`.
     AttackTarget { attacker: PermanentHandle },
+    /// Attack-open prompt (`may_attack_now_*` / `force_opponent_attack`). Carries
+    /// the `begin_attack_open` parameters captured at install; the target is
+    /// decoded from the resolving `action_id` like `AttackTarget`. The arm runs
+    /// `begin_attack_open` with `initiator: Effect{ source: prov.source_card,
+    /// optional }`, `suspend_attacker: !without_suspending`, `allow_cancel:
+    /// optional`. That STARTS the attack sub-machine (counter/block/alliance),
+    /// which may park a nested interrupt selection — threaded via the empty
+    /// `inner_tail` + `outer_conts` (`run_outer_conts` → `drain_or_rewrap`, which
+    /// composes onto a closure-based interrupt window too). No `bind_as`.
+    BeginAttack {
+        attacker: PermanentHandle,
+        without_suspending: bool,
+        ignore_summoning_sickness: bool,
+        optional: bool,
+        cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
+    },
 }
 
 /// Cost post-action run on a picked field permanent after a `FieldPermanent`

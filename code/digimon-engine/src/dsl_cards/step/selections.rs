@@ -817,6 +817,64 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
+                ResumeSelectKind::BeginAttack {
+                    attacker,
+                    without_suspending,
+                    ignore_summoning_sickness,
+                    optional,
+                    cost_upgrade,
+                } => {
+                    // Mirror may_attack_now_*'s callback: decode the chosen target,
+                    // then begin_attack_open. That STARTS the attack sub-machine
+                    // (counter/block/alliance interrupts), which may park a nested
+                    // selection — threaded via the empty inner_tail + run_outer_conts
+                    // (below), exactly as the wrapped accept closure did.
+                    let (decoded_attacker, decoded_target) =
+                        crate::action::space::decode_attack(action_id);
+                    if decoded_attacker as u8 == attacker.index {
+                        let opponent = game.next_clockwise(attacker.player);
+                        let target = if decoded_target
+                            == crate::action::space::SECURITY_TARGET
+                        {
+                            crate::selection::AttackTarget::Player(opponent)
+                        } else {
+                            crate::selection::AttackTarget::Digimon(
+                                crate::permanent::PermanentHandle {
+                                    player: opponent,
+                                    index: decoded_target as u8,
+                                },
+                            )
+                        };
+                        let _ = game.begin_attack_open(crate::combat::AttackOpen {
+                            attacker,
+                            initiator: crate::combat::AttackInitiator::Effect {
+                                source: Some(prov.source_card),
+                                optional,
+                            },
+                            suspend_attacker: !without_suspending,
+                            ignore_summoning_sickness,
+                            target_constraint: crate::combat::TargetConstraint::Forced(target),
+                            allow_cancel: optional,
+                            cost_upgrade,
+                        });
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
             }
             // Nested-composition: run any outer-clause tails that were wrapped
             // onto this resume-driven select (see `OuterContinuation`). Runs

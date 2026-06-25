@@ -354,6 +354,81 @@ fn bt16_101_when_digivolving_then_this_digimon_may_attack() {
     );
 }
 
+/// CLONE-FAITHFULNESS (make-engine-cloneable): the "this Digimon may attack"
+/// prompt (`may_attack_now`) is driven by the resumable data VM, so a
+/// `Game::clone` taken AT the prompt is faithful. Resolving the clone's attack
+/// runs `begin_attack_open` — Rapidmon (DP 11000) attacks the suspended OPP-A
+/// (DP 5000), deleting it and suspending itself — without touching the original;
+/// the original then replays identically. Before the flip the prompt was
+/// closure-only, so the clone would hit the panic-stub `PendingSelection::clone`.
+#[test]
+fn bt16_101_may_attack_clones_faithfully_at_the_prompt() {
+    let mut runner = rapidmon_runner();
+    let opp = runner.place_on_field(1, "OPP-A", Some(0));
+    let rapid = digivolve_rapidmon_over_plain(&mut runner);
+    runner.game.drain_effect_queue();
+
+    // At the optional "may attack" prompt — resume-driven (clone-safe).
+    assert!(runner.pending_is_optional(), "'may attack' is optional");
+    assert!(
+        runner.game.pending_selection_resume.is_some(),
+        "the may-attack prompt must be resume-driven (clone-safe)"
+    );
+    let attack_opp = digimon_engine::action::space::encode_attack(
+        rapid.index as u16,
+        opp.index as u16,
+    );
+    let view = runner.pending_selection_view().expect("may-attack prompt");
+    assert!(
+        view.valid_action_ids.contains(&attack_opp),
+        "the suspended OPP-A must be a legal attack target"
+    );
+    let sel_player = view.selecting_player;
+
+    // Clone, then resolve the attack on the CLONE only.
+    let mut clone = runner.game.clone();
+    clone
+        .resolve_selection(sel_player, attack_opp)
+        .expect("clone's attack resolves");
+    assert!(
+        clone.player(1).battle_area.is_empty(),
+        "clone: Rapidmon (11000) deletes the suspended OPP-A (5000)"
+    );
+    assert!(
+        clone.player(0).battle_area[rapid.index as usize].is_suspended,
+        "clone: Rapidmon suspended itself to attack"
+    );
+
+    // INDEPENDENCE: the original is still at the prompt, OPP-A alive, Rapidmon unsuspended.
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "original still at the may-attack prompt after cloning + resolving the clone"
+    );
+    assert_eq!(
+        runner.game.player(1).battle_area.len(),
+        1,
+        "original: OPP-A untouched by the clone's resolution"
+    );
+    assert!(
+        !runner.game.player(0).battle_area[rapid.index as usize].is_suspended,
+        "original: Rapidmon not yet suspended (attack not resolved on the original)"
+    );
+
+    // REPLAYS IDENTICALLY.
+    runner
+        .game
+        .resolve_selection(sel_player, attack_opp)
+        .expect("original's attack resolves");
+    assert!(
+        runner.game.player(1).battle_area.is_empty(),
+        "original reaches the same deletion as the clone"
+    );
+    assert!(
+        runner.game.player(0).battle_area[rapid.index as usize].is_suspended,
+        "original: Rapidmon suspended after the replayed attack"
+    );
+}
+
 /// NEGATIVE: with NO opponent Digimon, the suspend is a no-op and the attack is
 /// still offered (this Digimon can attack the opponent's player). The clause
 /// must not error or leave a stuck selection requiring an opponent target.
