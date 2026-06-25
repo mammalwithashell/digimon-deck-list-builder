@@ -149,11 +149,62 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
                 return true;
             }
             let prompt = prompt.as_deref().unwrap_or("Change the attack target?");
+            // Resumable-VM (make-engine-cloneable): capture the attacker before
+            // the primitive installs the closure selection (the redirect does not
+            // consume `pending_attack`), so the parked data frame can decode +
+            // substitute without it.
+            let attacker = ctx.game.pending_attack.as_ref().map(|pa| pa.attacker);
+            let trigger_context = ctx.game.current_trigger_context.clone();
+            let source_card = ctx.source_card;
+            let source_permanent = ctx.source_permanent;
+            let source_kind = ctx.source_kind;
+            let controller = ctx.player;
+            let override_pin = ctx.override_selecting_player();
             let _ = ctx.select_redirect_attack_target(
                 lower_attack_target_restriction(*targets),
                 *optional,
                 prompt,
             );
+            // Park the data frame alongside the closure (coexistence): driven by
+            // run_resume's AttackTarget arm (decode → validate → substitute).
+            // `inner_tail` is empty (a single-step effect — the redirect IS the
+            // effect); the clause's following steps ride `outer_conts`. The
+            // optional "may" decline is a NO-OP that CONTINUES the clause, so
+            // ResumeDecline::RunTail{ empty, false } (runs outer_conts), NOT
+            // ResumeDecline::None (drops them).
+            if let Some(attacker) = attacker {
+                if ctx.game.pending_selection.is_some() {
+                    let decline = if *optional {
+                        crate::resume::ResumeDecline::RunTail {
+                            tail: std::sync::Arc::new(Vec::new()),
+                            aborts_clause: false,
+                        }
+                    } else {
+                        crate::resume::ResumeDecline::None
+                    };
+                    ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                        frames: vec![crate::resume::ResumeFrame::RunTail {
+                            prov: crate::resume::ResumeProvenance {
+                                source_card,
+                                source_permanent,
+                                source_kind,
+                                controller,
+                                override_pin,
+                            },
+                            select_kind: crate::resume::ResumeSelectKind::AttackTarget {
+                                attacker,
+                            },
+                            bind_as: None,
+                            inner_tail: std::sync::Arc::new(Vec::new()),
+                            outer_conts: Vec::new(),
+                            bindings: bindings.clone(),
+                            runtime: crate::dsl_cards::step::StepRuntime::default(),
+                            trigger_context,
+                            decline,
+                        }],
+                    });
+                }
+            }
             true
         }
         CompiledStep::CancelAttack => {

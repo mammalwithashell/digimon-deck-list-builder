@@ -768,6 +768,55 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
+                ResumeSelectKind::AttackTarget { attacker } => {
+                    // Mirror select_redirect_attack_target's callback: decode the
+                    // chosen attack target, validate the redirect, and substitute
+                    // it (reason EffectRedirect(source_card)). The substitution
+                    // fires OnAttackTargetChange + drains (NOT atomic) — a nested
+                    // park threads via the empty inner_tail + run_outer_conts
+                    // (below), exactly as the wrapped accept closure did.
+                    let (decoded_attacker, decoded_target) =
+                        crate::action::space::decode_attack(action_id);
+                    if decoded_attacker as u8 == attacker.index {
+                        let opponent = game.next_clockwise(attacker.player);
+                        let target = if decoded_target
+                            == crate::action::space::SECURITY_TARGET
+                        {
+                            crate::selection::AttackTarget::Player(opponent)
+                        } else {
+                            crate::selection::AttackTarget::Digimon(
+                                crate::permanent::PermanentHandle {
+                                    player: opponent,
+                                    index: decoded_target as u8,
+                                },
+                            )
+                        };
+                        if game.validate_attack_redirect_target(attacker, target).is_ok() {
+                            game.apply_attack_target_substitution_with_reason(
+                                target,
+                                crate::trigger_context::AttackTargetChangeReason::EffectRedirect(
+                                    Some(prov.source_card),
+                                ),
+                            );
+                        }
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
             }
             // Nested-composition: run any outer-clause tails that were wrapped
             // onto this resume-driven select (see `OuterContinuation`). Runs

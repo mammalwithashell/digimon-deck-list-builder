@@ -186,6 +186,15 @@ pub enum ResumeSelectKind {
         of_player: PlayerId,
         candidates: Vec<(u16, CardHandle, UnionZoneOrigin)>,
     },
+    /// Attack-target redirect (`select_redirect_attack_target`). `attacker` is
+    /// captured at install (from the live `pending_attack`); the arm decodes the
+    /// chosen target via `decode_attack` (a `SECURITY_TARGET` index → the player,
+    /// else an opponent battle-area Digimon), validates it via
+    /// `validate_attack_redirect_target`, then substitutes it with reason
+    /// `EffectRedirect(Some(prov.source_card))`. The substitution fires
+    /// `OnAttackTargetChange` + drains (NOT atomic), so a nested park threads via
+    /// the empty `inner_tail` + `outer_conts` (`run_outer_conts`). No `bind_as`.
+    AttackTarget { attacker: PermanentHandle },
 }
 
 /// Cost post-action run on a picked field permanent after a `FieldPermanent`
