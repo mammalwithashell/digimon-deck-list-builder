@@ -427,7 +427,7 @@ pub(crate) fn run_resume(
                     }
                     ctx.game.effect_source_player = previous_effect_source;
                 }
-                ResumeSelectKind::Security { of_player } => {
+                ResumeSelectKind::Security { of_player, post } => {
                     let base = if of_player == prov.controller {
                         crate::action::space::SEL_MY_SECURITY_START
                     } else {
@@ -455,9 +455,24 @@ pub(crate) fn run_resume(
                         prov.override_pin,
                     );
                     let mut b = bindings;
-                    if let Some(name) = &bind_as {
-                        if let Some(card) = ctx.game.player(of_player).security.get(index) {
-                            b.insert_card(name, card.handle());
+                    match post {
+                        None => {
+                            if let Some(name) = &bind_as {
+                                if let Some(card) = ctx.game.player(of_player).security.get(index) {
+                                    b.insert_card(name, card.handle());
+                                }
+                            }
+                        }
+                        Some(crate::resume::SecurityPostAction::AddTopToHand) => {
+                            // Mirror install_may_add_top_security_to_hand's callback:
+                            // add the target player's TOP security to hand (the
+                            // pinned slot is the top; the action adds the top
+                            // regardless). No bind. The drain may park a nested
+                            // selection — the (empty) inner_tail is a no-op and the
+                            // outer conts compose onto it via `run_outer_conts`
+                            // (→ `drain_or_rewrap_pending_tail`), so a deep chain
+                            // threads exactly as the wrapped accept closure did.
+                            ctx.add_top_security_to_hand(of_player);
                         }
                     }
                     run_tail_preserving_trigger_context(
@@ -5118,6 +5133,7 @@ fn install_select_security(
                 },
                 select_kind: crate::resume::ResumeSelectKind::Security {
                     of_player: target_player,
+                    post: None,
                 },
                 bind_as: bind_as_for_resume,
                 inner_tail: tail_for_resume,

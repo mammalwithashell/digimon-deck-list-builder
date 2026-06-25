@@ -126,8 +126,14 @@ pub enum ResumeSelectKind {
     },
     /// `action_id - (SEL_MY_SECURITY_START | SEL_OPP_SECURITY_START)` → security
     /// index of `of_player` (base chosen by whether `of_player` is the
-    /// controller). Binds the resolved security `CardHandle`.
-    Security { of_player: PlayerId },
+    /// controller). `post: None` is a plain `select_security` (bind the resolved
+    /// security `CardHandle` then run `inner_tail`); `Some` runs a post-action
+    /// before the tail (e.g. `install_may_add_top_security_to_hand` adds the top
+    /// security to hand). Mirrors `FieldPermanent`'s `post`.
+    Security {
+        of_player: PlayerId,
+        post: Option<SecurityPostAction>,
+    },
     /// Own breeding-area permanent select. The single breeding permanent is
     /// reconstructed from game state (not decoded from `action_id`); binds a
     /// `BreedingPermanentSelectionRef`.
@@ -190,6 +196,20 @@ pub enum FieldPermanentPostAction {
     /// Tamer's bottom face-down digivolution source (`trash_bottom_face_down_source`);
     /// the tail runs ONLY if the trash succeeded (no-approximations cost gate).
     TrashBottomFaceDownSource,
+}
+
+/// Post-action run on a `Security` resolve before the `inner_tail`. Plain data —
+/// no closure. Mirrors `FieldPermanentPostAction`.
+#[derive(Debug, Clone)]
+pub enum SecurityPostAction {
+    /// `install_may_add_top_security_to_hand`: add the target player's TOP
+    /// security card to their hand (`add_top_security_to_hand`). The selection
+    /// pins the top slot but the action always adds the top regardless of the
+    /// decoded index; no `bind_as`. The "may" (optional) decline is encoded on
+    /// the frame's `ResumeDecline` (continue, no add). `add_top_security_to_hand`
+    /// drains a security-removed observer, so a nested park threads via the
+    /// frame's `outer_conts` (`run_outer_conts` → `drain_or_rewrap_pending_tail`).
+    AddTopToHand,
 }
 
 /// Data for the `choose_from_reveal` routing performed after a `Reveal` pick
@@ -790,7 +810,7 @@ mod tests {
                         controller: 0,
                         override_pin: None,
                     },
-                    select_kind: ResumeSelectKind::Security { of_player: 0 },
+                    select_kind: ResumeSelectKind::Security { of_player: 0, post: None },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
                     outer_conts: Vec::new(),
@@ -852,7 +872,7 @@ mod tests {
                         controller: 0,
                         override_pin: None,
                     },
-                    select_kind: ResumeSelectKind::Security { of_player: 0 },
+                    select_kind: ResumeSelectKind::Security { of_player: 0, post: None },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
                     outer_conts: Vec::new(),

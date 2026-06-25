@@ -61,6 +61,9 @@ fn install_may_add_top_security_to_hand(ctx: &mut EffectContext<'_>, target_play
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
     let previous_phase = ctx.game.current_phase;
+    // Resumable-VM (make-engine-cloneable): capture for the data frame parked
+    // alongside the closure below.
+    let trigger_context = ctx.game.current_trigger_context.clone();
 
     ctx.game.current_phase = GamePhase::SelectSecurity;
     ctx.game.pending_selection = Some(PendingSelection {
@@ -88,6 +91,41 @@ fn install_may_add_top_security_to_hand(ctx: &mut EffectContext<'_>, target_play
         }),
         on_decline: Some(Box::new(|_game| {})),
     });
+    // Park the data frame alongside the closure (coexistence): driven by
+    // run_resume's Security{post:Some(AddTopToHand)} arm. `inner_tail` is empty —
+    // this step has no tail of its own; the clause's following steps are composed
+    // onto the frame's `outer_conts` by the dispatcher's park_pending_selection_tail.
+    // The "may" decline is a NO-OP that CONTINUES the clause (matches the no-op
+    // on_decline above), so `ResumeDecline::RunTail{ empty, aborts_clause:false }`
+    // runs an empty decline tail then the outer conts (`ResumeDecline::None` would
+    // wrongly DROP the outer conts on decline).
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::Security {
+                    of_player: target_player,
+                    post: Some(crate::resume::SecurityPostAction::AddTopToHand),
+                },
+                bind_as: None,
+                inner_tail: Arc::new(Vec::new()),
+                outer_conts: Vec::new(),
+                bindings: Bindings::new(),
+                runtime: StepRuntime::default(),
+                trigger_context,
+                decline: crate::resume::ResumeDecline::RunTail {
+                    tail: Arc::new(Vec::new()),
+                    aborts_clause: false,
+                },
+            }],
+        });
+    }
 }
 
 /// Returns `true` if `step` is a zone-move family handled here. Unknown
