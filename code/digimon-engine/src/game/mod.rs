@@ -229,7 +229,12 @@ pub(crate) struct PendingWouldDigivolveResume {
 /// values are `Arc` so `Game` stays `Send` (`RustHeadlessGame` is a
 /// non-`unsendable` `#[pyclass]`) and a cache hit is a refcount bump — no vec or
 /// closure clone. See the `cache-effects-for-card` change.
-#[derive(Default)]
+///
+/// `Clone` (make-engine-cloneable): the memo is pure derived data keyed by pure
+/// inputs, valid for a cloned `Game` (same Arc-shared registry/card_data), so a
+/// forked search node may inherit it. Cloning deep-copies the map structure;
+/// the `Arc` values are refcount bumps. The clone's `RefCell` is independent.
+#[derive(Default, Clone)]
 pub struct EffectsCache(
     std::cell::RefCell<
         std::collections::HashMap<
@@ -264,7 +269,7 @@ impl EffectsCache {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Game {
     pub rules: Rules,
     /// Per-game memo for `effects_for_card` (see `EffectsCache`). Not part of
@@ -361,6 +366,21 @@ pub struct Game {
     /// `Game::resolve_selection`. See `selection.rs` for the design.
     /// Always `None` until the selection subsystem lands (PR2/PR3).
     pub pending_selection: Option<PendingSelection>,
+    /// Coexistence-phase data continuation paired with `pending_selection`
+    /// (make-engine-cloneable Phase 2). When `Some`, `resolve_generic_selection`
+    /// runs the data-frame VM (`crate::resume::run_resume`) instead of the
+    /// legacy `pending_selection.callback`. Set and cleared in lock-step with
+    /// `pending_selection`; parallels `dsl_outer_tail` (continuation-as-data).
+    /// Always `None` today — populated as cards are ported onto the VM.
+    pub pending_selection_resume: Option<crate::resume::ResumeStack>,
+    /// Coexistence-phase resume-side continuation channel (make-engine-cloneable
+    /// Phase 2). Callback-wrappers (play-cost / digivolve-reducer / option-reducer
+    /// continuations, the DigiXros leave-window resume, `run_after_selections_drain`)
+    /// compose their continuation onto a selection's CLOSURE callback; when that
+    /// selection is resume-driven the closure is bypassed, so they defer the
+    /// continuation here and `resolve_generic_selection` drains it after the
+    /// resume resolution. See [`crate::resume::ResumeContinuationHooks`].
+    pub after_selection_resume_hooks: crate::resume::ResumeContinuationHooks,
     /// Triggered effects waiting to resolve at the current timing window.
     /// Populated by `enqueue_triggered` and drained by `drain_effect_queue`.
     /// Empty until the drainer lands (PR2).

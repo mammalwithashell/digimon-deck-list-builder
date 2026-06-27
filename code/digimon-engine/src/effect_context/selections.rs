@@ -92,7 +92,7 @@ pub(crate) fn push_effect_target_multi(
 }
 
 /// Resolve a list of permanents to their top-card `EventCardRef`s.
-fn permanents_to_refs(
+pub(crate) fn permanents_to_refs(
     game: &Game,
     handles: &[PermanentHandle],
 ) -> Vec<crate::events::EventCardRef> {

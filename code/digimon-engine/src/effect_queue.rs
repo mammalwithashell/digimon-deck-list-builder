@@ -768,6 +768,19 @@ impl Game {
             hook(self);
             return;
         };
+        // Resume-aware (make-engine-cloneable Batch 2): a resume-driven select's
+        // closure is bypassed, so defer the re-arm onto the resume channel.
+        // After the resume resolution it re-calls run_after_selections_drain,
+        // which fires the hook if the chain drained or re-composes otherwise.
+        if self.pending_selection_resume.is_some() {
+            self.pending_selection = Some(pending);
+            self.after_selection_resume_hooks.0.push(Box::new(
+                move |game: &mut crate::game::Game| {
+                    game.run_after_selections_drain(hook);
+                },
+            ));
+            return;
+        }
         let original = pending.callback;
         // One-shot shared slot so the accept and decline paths can both
         // re-arm without ever double-firing the hook.
@@ -3574,6 +3587,7 @@ impl Game {
 
         // Take the selection, restore phase, invoke the appropriate callback.
         let sel = self.pending_selection.take().expect("checked Some above");
+        let resume = self.pending_selection_resume.take();
         self.current_phase = sel.previous_phase;
         // Wrap the callback in a deferred-drain scope (post-2026-05-23
         // G-DSL-OUTER-TAIL-NESTED-PARK fix). While the callback runs,
@@ -3582,7 +3596,25 @@ impl Game {
         // Matches DCGO's pattern of deferring trigger drains until after
         // the resolving coroutine returns to its caller.
         self.enter_deferred_drain();
-        if is_pass {
+        if let Some(stack) = resume {
+            // Coexistence switch (make-engine-cloneable Phase 2): a card ported
+            // to the resumable VM carries its continuation as data — run it
+            // instead of the legacy `sel.callback`. The abort-flag scoping
+            // mirrors the on_decline path below.
+            let prev_aborted = std::mem::replace(&mut self.dsl_clause_aborted, false);
+            crate::dsl_cards::step::selections::run_resume(self, stack, action_id, is_pass);
+            self.dsl_clause_aborted = prev_aborted;
+            // Coexistence: run continuations that callback-wrappers (play-cost /
+            // reducer / digixros-leave / after-selections-drain) deferred because
+            // this selection was resume-driven — their closure was bypassed by
+            // run_resume. Mirrors the wrapped callback's post-`original` step;
+            // a hook that installs another resume-driven selection re-arms by
+            // pushing onto the (now-drained) channel for the next resolution.
+            let hooks = std::mem::take(&mut self.after_selection_resume_hooks.0);
+            for hook in hooks {
+                hook(self);
+            }
+        } else if is_pass {
             if let Some(on_decline) = sel.on_decline {
                 // Scope the cost-pay abort flag to this on_decline. Save
                 // and clear on entry, restore on exit — so a NESTED decline

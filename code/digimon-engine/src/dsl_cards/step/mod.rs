@@ -238,6 +238,47 @@ fn wrap_pending_selection_with_tail(
         return;
     };
 
+    // make-engine-cloneable coexistence (Batch 1). This helper composes an outer
+    // tail onto the selection's CLOSURE callback/on_decline. A selection ported to
+    // the resumable VM is driven by `run_resume` (the closure is bypassed), so
+    // wrapping the closure would silently DROP the outer tail. Instead, compose
+    // the tail as DATA onto the resume frame: `run_resume` runs it after the
+    // inner/decline tail via the same `drain_or_rewrap_pending_tail` path, so a
+    // further nested select re-composes here recursively (deep chains thread).
+    if game.pending_selection_resume.is_some() {
+        use crate::resume::ResumeFrame;
+        let cont = crate::resume::OuterContinuation {
+            tail: std::sync::Arc::new(outer_tail),
+            bindings,
+            runtime,
+            trigger_context: tail_trigger_context,
+            source_card,
+            source_permanent,
+            player,
+        };
+        // Compose onto whatever frame is active. RunTail runs its conts after the
+        // inner/decline tail; multi-pick frames run theirs at the TERMINAL (after
+        // the final pick), so a wrap mid-accumulation still fires exactly once
+        // when the whole multi-pick completes.
+        match game
+            .pending_selection_resume
+            .as_mut()
+            .and_then(|s| s.frames.last_mut())
+        {
+            Some(ResumeFrame::RunTail { outer_conts, .. }) => outer_conts.push(cont),
+            Some(ResumeFrame::MultiPickStep(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::PermutationStep(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::BudgetStep(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::SourceMultiStep(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::CountCappedPermanentsStep(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::RevealBucketStep(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::UseOptionFromHandStep(s)) => s.outer_conts.push(cont),
+            None => unreachable!("pending_selection_resume set but frame stack empty"),
+        }
+        game.pending_selection = Some(pending);
+        return;
+    }
+
     let original_callback = pending.callback;
     let accept_tail = outer_tail.clone();
     let accept_bindings = bindings.clone();

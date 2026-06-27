@@ -151,6 +151,81 @@ fn st18_14_suspends_to_redirect_attack_to_player() {
     );
 }
 
+/// CLONE-FAITHFULNESS (make-engine-cloneable): the attack-target redirect prompt
+/// is driven by the resumable data VM, so a `Game::clone` taken AT the prompt —
+/// mid-attack, with `pending_attack` live — is faithful. Resolving the clone's
+/// redirect-to-player continues into the security check (−1 opponent security)
+/// without touching the original; the original then replays identically. Before
+/// the flip the redirect prompt was closure-only, so the clone would hit the
+/// panic-stub `PendingSelection::clone`.
+#[test]
+fn st18_14_redirect_target_clones_faithfully_at_the_prompt() {
+    let mut runner = shoto_runner();
+    runner.game.turn_count = 1;
+    let shoto = runner.place_on_field(0, "ST18-14", Some(0));
+    let attacker = runner.place_on_field(0, "ATK", Some(0));
+    let original = runner.place_on_field(1, "DEF-A", Some(0));
+    let _redirect = runner.place_on_field(1, "DEF-B", Some(0));
+    let security_before = runner.game.players[1].security.len();
+
+    let _ = runner.attack_digimon(attacker, original, false);
+
+    // Accept the outer optional-trigger prompt (a separate closure, not this flip).
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::Replacement));
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt");
+
+    // The redirect-target prompt — resume-driven after the flip (clone-safe).
+    let pending = runner
+        .pending_selection_view()
+        .expect("redirect target prompt");
+    assert_eq!(pending.kind, SelectionKind::Target);
+    assert!(
+        runner.game.pending_selection_resume.is_some(),
+        "redirect-target prompt must be resume-driven (clone-safe)"
+    );
+    let player_action = encode_attack(attacker.index as u16, SECURITY_TARGET);
+    assert!(pending.valid_action_ids.contains(&player_action));
+
+    // Clone, then resolve redirect-to-player on the CLONE only.
+    let mut clone = runner.game.clone();
+    clone
+        .resolve_selection(pending.selecting_player, player_action)
+        .expect("clone redirect resolves");
+    assert_eq!(
+        clone.players[1].security.len(),
+        security_before - 1,
+        "clone: redirect-to-player continued into the security check (−1 security)"
+    );
+    assert!(
+        clone.players[0].battle_area[shoto.index as usize].is_suspended,
+        "clone: Shoto paid the suspend cost"
+    );
+
+    // INDEPENDENCE: the original is still at the prompt, security unchanged.
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "original still at the redirect prompt after cloning + resolving the clone"
+    );
+    assert_eq!(
+        runner.game.players[1].security.len(),
+        security_before,
+        "original opponent security untouched by the clone's resolution"
+    );
+
+    // REPLAYS IDENTICALLY.
+    runner
+        .game
+        .resolve_selection(pending.selecting_player, player_action)
+        .expect("original redirect resolves");
+    assert_eq!(
+        runner.game.players[1].security.len(),
+        security_before - 1,
+        "original reaches the same −1 security as the clone"
+    );
+}
+
 #[test]
 fn st18_14_does_not_prompt_when_attack_already_targets_player() {
     let mut runner = shoto_runner();

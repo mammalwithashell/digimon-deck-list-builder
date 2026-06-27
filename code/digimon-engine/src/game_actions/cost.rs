@@ -508,6 +508,24 @@ impl Game {
         let Some(mut pending) = self.pending_selection.take() else {
             return;
         };
+        // Resume-aware (make-engine-cloneable Batch 2): defer the continuation
+        // onto the resume channel when the parked select is data-driven (its
+        // closure is bypassed by `run_resume`).
+        if self.pending_selection_resume.is_some() {
+            self.pending_selection = Some(pending);
+            self.after_selection_resume_hooks
+                .0
+                .push(Box::new(move |game: &mut Game| {
+                    game.resume_interactive_digivolve_reducer_after_pending(
+                        amount,
+                        acting_player,
+                        hand_index,
+                        field_index,
+                        source,
+                    );
+                }));
+            return;
+        }
         let original_callback = pending.callback;
         pending.callback = Box::new(move |game: &mut Game, action_id: u16| {
             // The pay_cost's own callback pays the cost (e.g. trashes the

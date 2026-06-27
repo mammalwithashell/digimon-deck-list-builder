@@ -147,6 +147,93 @@ fn bt24_031_inherited_when_attacking_adds_top_security_then_recovers_at_zero() {
     );
 }
 
+/// CLONE-FAITHFULNESS (make-engine-cloneable): the inherited When Attacking
+/// "may add top security to hand" prompt is driven by the resumable data VM, so
+/// a `Game::clone` taken AT the prompt is faithful — resolving the clone's accept
+/// adds the top security to hand AND runs the recovery outer-tail (the steps that
+/// follow `MayAddTopSecurityToHand` in the clause), without touching the
+/// original; the original then replays identically. Also exercises the
+/// outer-conts threading on the resume path (`add_top_security_to_hand` drains a
+/// security-removed observer before the recovery tail runs). Before the flip the
+/// prompt was closure-only, so the clone would hit the panic-stub.
+#[test]
+fn bt24_031_security_to_hand_clones_faithfully_at_the_prompt() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT24-031")
+        .expect("BT24-031 YAML loads")
+        .add_card(make_test_card("CARRIER", "Carrier"))
+        .add_card(make_test_card("SECURITY", "Security"))
+        .add_card(make_test_card("RECOVER", "Recover"))
+        .security(0, &["SECURITY"])
+        .deck(0, &["RECOVER"])
+        .memory(0)
+        .start();
+
+    let carrier = runner.place_stack(0, &["BT24-031", "CARRIER"]);
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(carrier),
+    );
+    runner.game.drain_effect_queue();
+
+    // At the optional "may add top security" prompt — resume-driven (clone-safe).
+    assert!(runner.pending_is_optional());
+    assert!(
+        runner.game.pending_selection_resume.is_some(),
+        "may-add-top-security must be resume-driven (clone-safe)"
+    );
+    assert_eq!(
+        runner.pending_selection_view().expect("prompt").valid_action_ids,
+        vec![SEL_MY_SECURITY_START]
+    );
+
+    // Clone, then resolve the accept on the CLONE only.
+    let mut clone = runner.game.clone();
+    clone
+        .resolve_selection(0, SEL_MY_SECURITY_START)
+        .expect("clone accepts the security add");
+    let clone_hand = zone_ids(&clone.players[0].hand, &clone.card_data);
+    assert!(
+        clone_hand.contains(&"SECURITY".to_string()),
+        "clone: top security added to hand"
+    );
+    assert_eq!(
+        clone.players[0].security.last().unwrap().card_id(&clone.card_data),
+        "RECOVER",
+        "clone: the recovery outer-tail ran (RECOVER now in security)"
+    );
+
+    // INDEPENDENCE: the original is still at the prompt, untouched.
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "original still at the prompt after cloning + resolving the clone"
+    );
+    assert!(
+        !zone_ids(&runner.game.players[0].hand, &runner.game.card_data)
+            .contains(&"SECURITY".to_string()),
+        "original hand untouched by the clone's resolution"
+    );
+
+    // REPLAYS IDENTICALLY: resolving the same accept on the original matches.
+    runner
+        .execute_action(0, SEL_MY_SECURITY_START)
+        .expect("original accepts");
+    assert!(
+        zone_ids(&runner.game.players[0].hand, &runner.game.card_data)
+            .contains(&"SECURITY".to_string()),
+        "original: top security added to hand"
+    );
+    assert_eq!(
+        runner.game.players[0]
+            .security
+            .last()
+            .unwrap()
+            .card_id(&runner.game.card_data),
+        "RECOVER",
+        "original reaches the same state as the clone"
+    );
+}
+
 #[test]
 fn bt24_031_inherited_when_attacking_decline_keeps_security_and_runs_tail() {
     let mut runner = DebugRunner::builder()

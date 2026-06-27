@@ -385,7 +385,7 @@ fn replacement_condition_gates_passive() {
     let victim = r.place_on_field(1, "VICTIM", Some(0));
     // Start with just ONE permanent on P1 — condition will return true.
     let cond: digimon_engine::replacement::ReplacementConditionFn =
-        Box::new(|read_ctx, subject| {
+        Arc::new(|read_ctx, subject| {
             use digimon_engine::replacement::ReplacementSubject;
             if let ReplacementSubject::Permanent(h) = subject {
                 read_ctx.battle_area(h.player).len() == 1

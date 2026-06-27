@@ -163,6 +163,8 @@ impl Game {
             mulligan_used,
             revealed_cards: Vec::new(),
             pending_selection: None,
+            pending_selection_resume: None,
+            after_selection_resume_hooks: crate::resume::ResumeContinuationHooks::default(),
             effect_queue: EffectQueue::new(),
             pending_granted_fires: Vec::new(),
             granted_effect_bodies: crate::modifiers::GrantedEffectBodyRegistry::default(),

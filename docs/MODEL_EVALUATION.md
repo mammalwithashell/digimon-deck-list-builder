@@ -137,10 +137,24 @@ hidden-information play live one tier up and are **not yet feasible here**:
 
 All three require **cheap forking of game state** to traverse the tree, plus
 explicit infoset / public-belief structure, plus a tractable belief space (a
-50-card deck dwarfs poker's hidden info). The engine's `Game` is non-`Clone`
-(closure-bearing), so **none are implementable until the engine is cloneable**
-— see the **`make-engine-cloneable`** change (resumable effect VM). Until then,
-the forward-only exploiter is the practical robustness signal.
+50-card deck dwarfs poker's hidden info).
+
+> **Forking precondition PARTIALLY met (`make-engine-cloneable`, 2026-06-23).**
+> `Game: Clone` is live and faithful at the **DSL card-effect selection-step
+> surface** (the flipped installers — hand/trash/permanent/reveal/material/union +
+> the multi-pick trampolines), via a resumable data VM (`src/resume.rs`). So a
+> `Game` paused at those select kinds forks cleanly. **It is NOT yet faithful at
+> the broader engine surface**: combat/keyword interrupts, digivolve cost-choice,
+> BO3 play-order, Overclock, TriggerOrder, replacement-accept, `select_effect_choice`,
+> and several other selections are still closure-based and would panic on a forked
+> resolve. So the *forkability* requirement of Deep CFR / ReBeL / Player of Games
+> is met **only on the flipped subset** — full-game search must wait for the rest
+> of the selection surface to flip + the closure executor to be deleted (remaining
+> `make-engine-cloneable` work). What each method ALSO needs is the **infoset /
+> public-belief structure + the determinization seam** — the **`add-determinized-search`**
+> change (determinized / IS-MCTS over `RevealSource`-sampled worlds, reusing the
+> 2192-action mask + the observation tensor). The forward-only exploiter remains
+> the cheap robustness number meanwhile.
 
 ## 7. Recommended workflow
 

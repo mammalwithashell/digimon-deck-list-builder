@@ -89,6 +89,18 @@ impl std::error::Error for RevealExhausted {}
 ///   - a sampler over the multiset (for RL inference)
 pub trait RevealSource: Send + std::fmt::Debug {
     fn next_reveal(&mut self, kind: RevealKind) -> Result<String, RevealExhausted>;
+
+    /// Clone into a fresh boxed source. Enables `Game: Clone`
+    /// (make-engine-cloneable) without making the trait `Clone`.
+    fn clone_box(&self) -> Box<dyn RevealSource>;
+}
+
+/// `Box<dyn RevealSource>` is `Clone` via `clone_box`, so `Game` (which holds
+/// `Option<Box<dyn RevealSource>>`) can derive `Clone`.
+impl Clone for Box<dyn RevealSource> {
+    fn clone(&self) -> Self {
+        self.clone_box()
+    }
 }
 
 /// A FIFO queue-backed [`RevealSource`]. The canonical implementation for
@@ -99,7 +111,7 @@ pub trait RevealSource: Send + std::fmt::Debug {
 /// `kind` that doesn't match the next queued entry's `kind` returns
 /// [`RevealExhausted`] with a descriptive message (helps catch
 /// engine-vs-recording divergence in the parity oracle).
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct RevealQueue {
     queue: VecDeque<(RevealKind, String)>,
     strict_kind_check: bool,
@@ -164,6 +176,10 @@ impl RevealSource for RevealQueue {
             });
         }
         Ok(card_id)
+    }
+
+    fn clone_box(&self) -> Box<dyn RevealSource> {
+        Box::new(self.clone())
     }
 }
 

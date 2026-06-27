@@ -190,7 +190,7 @@ fn matches_selected_field(
     }
 }
 
-fn run_tail_preserving_trigger_context(
+pub(crate) fn run_tail_preserving_trigger_context(
     cb_ctx: &mut EffectContext<'_>,
     trigger_context: Option<TriggerContext>,
     tail: &[CompiledStep],
@@ -210,6 +210,1711 @@ fn run_tail_preserving_trigger_context(
     // after, so the value never leaks across resolutions.
     cb_ctx.game.dsl_resolved_tail_bindings = Some(bindings.clone());
     cb_ctx.game.current_trigger_context = previous;
+}
+
+/// Coexistence-phase resumable-VM executor (make-engine-cloneable spike,
+/// task 0.2). Runs a `ResumeStack` of plain-data frames in place of the legacy
+/// `PendingSelection.callback`. Each arm mirrors the corresponding install
+/// closure body exactly and reuses `run_tail_preserving_trigger_context`, so a
+/// resolved data frame is behaviorally identical to the closure path. Invoked
+/// by `resolve_generic_selection` when `Game::pending_selection_resume` is set.
+pub(crate) fn run_resume(
+    game: &mut crate::game::Game,
+    mut stack: crate::resume::ResumeStack,
+    action_id: u16,
+    is_pass: bool,
+) {
+    use crate::resume::{ResumeFrame, ResumeSelectKind};
+    let Some(frame) = stack.frames.pop() else {
+        return;
+    };
+    match frame {
+        ResumeFrame::RunTail {
+            prov,
+            select_kind,
+            bind_as,
+            inner_tail,
+            outer_conts,
+            bindings,
+            runtime,
+            trigger_context,
+            decline,
+        } => {
+            if is_pass {
+                // Decline mirrors each installer's on_decline:
+                //   None       → no on_decline installed (e.g. select_security): do nothing.
+                //   RunTail{..} → run the decline tail; aborts_clause first sets
+                //                 dsl_clause_aborted (G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE).
+                if let crate::resume::ResumeDecline::RunTail { tail, aborts_clause } = decline {
+                    if aborts_clause {
+                        game.dsl_clause_aborted = true;
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings.clone();
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &tail,
+                        &mut b,
+                        &runtime,
+                    );
+                    // Nested-composition: an interrupt's outer clause may have
+                    // wrapped its tail onto this (resume-driven) select. Run it
+                    // after the decline tail, exactly as the wrapped on_decline
+                    // closure did (cost-declined → dsl_clause_aborted is set, so
+                    // drain_or_rewrap's run_steps short-circuits the outer tail).
+                    run_outer_conts(ctx.game, outer_conts);
+                }
+                // ResumeDecline::None mirrors a select with no on_decline: PASS
+                // runs nothing, so the outer conts are dropped (parity).
+                return;
+            }
+            match select_kind {
+                ResumeSelectKind::Hand { of_player } => {
+                    let hand_index = action_id
+                        .saturating_sub(crate::action::space::PLAY_HAND_START)
+                        as usize;
+                    // Target tracking (mirrors `ctx.select_hand`'s wrapper).
+                    if let Some(card) = game.player(of_player).hand.get(hand_index) {
+                        let tid = card.card_id(&game.card_data).to_string();
+                        let tname = card.card_name(&game.card_data).to_string();
+                        crate::effect_context::selections::push_effect_target(
+                            game,
+                            prov.controller,
+                            prov.source_card,
+                            tid,
+                            tname,
+                        );
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_hand_index(name, of_player, hand_index as u16);
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
+                ResumeSelectKind::Trash { of_player } => {
+                    let trash_index = action_id
+                        .saturating_sub(crate::action::space::TRASH_EFFECT_START)
+                        as usize;
+                    // Target tracking (mirrors `ctx.select_trash`'s wrapper).
+                    if let Some(card) = game.player(of_player).trash.get(trash_index) {
+                        let tid = card.card_id(&game.card_data).to_string();
+                        let tname = card.card_name(&game.card_data).to_string();
+                        crate::effect_context::selections::push_effect_target(
+                            game,
+                            prov.controller,
+                            prov.source_card,
+                            tid,
+                            tname,
+                        );
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_trash_index(name, of_player, trash_index as u16);
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
+                ResumeSelectKind::FieldPermanent { of_player, post } => {
+                    let offset =
+                        action_id.saturating_sub(crate::action::space::ATTACK_START);
+                    let target_index =
+                        (offset % crate::action::space::TARGETS_PER_ATTACKER) as u8;
+                    let h = crate::permanent::PermanentHandle {
+                        player: of_player,
+                        index: target_index,
+                    };
+                    // Target tracking (mirrors install_field_selection's wrapper).
+                    if let Some(perm) =
+                        game.player(of_player).battle_area.get(target_index as usize)
+                    {
+                        let top = perm.top_card();
+                        let tid = top.card_id(&game.card_data).to_string();
+                        let tname = top.card_name(&game.card_data).to_string();
+                        crate::effect_context::selections::push_effect_target(
+                            game,
+                            prov.controller,
+                            prov.source_card,
+                            tid,
+                            tname,
+                        );
+                    }
+                    // Mirror install_field_selection's effect_source_player scoping.
+                    let previous_effect_source = game.effect_source_player;
+                    game.effect_source_player = Some(prov.controller);
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_permanent(name, h);
+                    }
+                    match post {
+                        None => {
+                            run_tail_preserving_trigger_context(
+                                &mut ctx,
+                                trigger_context,
+                                &inner_tail,
+                                &mut b,
+                                &runtime,
+                            );
+                        }
+                        Some(crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSource) => {
+                            // Cost post-action (mirrors
+                            // install_trash_bottom_face_down_source_under_tamer's
+                            // callback): trash the picked Tamer's bottom face-down
+                            // source, then run the tail ONLY if the cost was paid.
+                            // The trash's synchronous drain may park a nested
+                            // selection; run_tail_preserving_trigger_context then
+                            // re-parks the remainder via park_pending_selection_tail
+                            // (identical to the closure path).
+                            let trashed = ctx.trash_bottom_face_down_source(h);
+                            debug_assert!(
+                                trashed,
+                                "trash_bottom_face_down_source_under_tamer: eligibility \
+                                 filter (has_face_down_source) offered a Tamer whose bottom \
+                                 source is not face-down — filter and action have desynced"
+                            );
+                            if trashed {
+                                run_tail_preserving_trigger_context(
+                                    &mut ctx,
+                                    trigger_context,
+                                    &inner_tail,
+                                    &mut b,
+                                    &runtime,
+                                );
+                            }
+                        }
+                    }
+                    ctx.game.effect_source_player = previous_effect_source;
+                }
+                ResumeSelectKind::Security { of_player, post } => {
+                    let base = if of_player == prov.controller {
+                        crate::action::space::SEL_MY_SECURITY_START
+                    } else {
+                        crate::action::space::SEL_OPP_SECURITY_START
+                    };
+                    let index = action_id.saturating_sub(base) as usize;
+                    // Target tracking (mirrors `ctx.select_security`'s wrapper).
+                    if let Some(card) = game.player(of_player).security.get(index) {
+                        let tid = card.card_id(&game.card_data).to_string();
+                        let tname = card.card_name(&game.card_data).to_string();
+                        crate::effect_context::selections::push_effect_target(
+                            game,
+                            prov.controller,
+                            prov.source_card,
+                            tid,
+                            tname,
+                        );
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    match post {
+                        None => {
+                            if let Some(name) = &bind_as {
+                                if let Some(card) = ctx.game.player(of_player).security.get(index) {
+                                    b.insert_card(name, card.handle());
+                                }
+                            }
+                        }
+                        Some(crate::resume::SecurityPostAction::AddTopToHand) => {
+                            // Mirror install_may_add_top_security_to_hand's callback:
+                            // add the target player's TOP security to hand (the
+                            // pinned slot is the top; the action adds the top
+                            // regardless). No bind. The drain may park a nested
+                            // selection — the (empty) inner_tail is a no-op and the
+                            // outer conts compose onto it via `run_outer_conts`
+                            // (→ `drain_or_rewrap_pending_tail`), so a deep chain
+                            // threads exactly as the wrapped accept closure did.
+                            ctx.add_top_security_to_hand(of_player);
+                        }
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
+                ResumeSelectKind::BreedingPermanent { of_player } => {
+                    // The single breeding permanent is reconstructed from state
+                    // (mirrors ctx.select_own_breeding_permanent), not decoded.
+                    let Some(card) = game
+                        .player(of_player)
+                        .breeding_area
+                        .as_ref()
+                        .map(|p| p.top_card().handle())
+                    else {
+                        return;
+                    };
+                    let selection_ref = crate::selection::BreedingPermanentSelectionRef {
+                        player: of_player,
+                        card,
+                    };
+                    if let Some(cd) = game.card_data_for_handle(card) {
+                        let (tid, tname) = (cd.card_id.clone(), cd.card_name.clone());
+                        crate::effect_context::selections::push_effect_target(
+                            game,
+                            prov.controller,
+                            prov.source_card,
+                            tid,
+                            tname,
+                        );
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_breeding_permanent_ref(name, selection_ref);
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
+                ResumeSelectKind::AnyPermanent { candidates } => {
+                    // Both-battle-area domain: resolve by linear search over the
+                    // captured candidates (mirrors install_select_any_permanent).
+                    let Some((_, handle)) = candidates
+                        .iter()
+                        .find(|(candidate_action, _)| *candidate_action == action_id)
+                        .copied()
+                    else {
+                        return;
+                    };
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_permanent(name, handle);
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
+                ResumeSelectKind::Reveal { route } => {
+                    let index =
+                        action_id.saturating_sub(crate::action::space::SEL_REVEAL_START) as usize;
+                    // Resolve the picked handle BEFORE routing moves it out of the
+                    // reveal pool (choose_from_reveal). Stale index → skip bind +
+                    // route, matching the legacy callbacks' 2b/2c convention.
+                    let picked = game.revealed_cards.get(index).map(|c| c.handle());
+                    // Target tracking (mirrors ctx.select_reveal's wrapper).
+                    if let Some(card) = game.revealed_cards.get(index) {
+                        let tid = card.card_id(&game.card_data).to_string();
+                        let tname = card.card_name(&game.card_data).to_string();
+                        crate::effect_context::selections::push_effect_target(
+                            game,
+                            prov.controller,
+                            prov.source_card,
+                            tid,
+                            tname,
+                        );
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(handle) = picked {
+                        if let Some(name) = &bind_as {
+                            b.insert_card(name, handle);
+                        }
+                        // choose_from_reveal: route the picked card to its
+                        // destination (mirrors the closure's route_chosen_reveal).
+                        if let Some(route) = &route {
+                            route_chosen_reveal(
+                                &mut ctx,
+                                route.target_player,
+                                handle,
+                                &route.destination,
+                                route.target_permanent,
+                            );
+                        }
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
+                ResumeSelectKind::Material { perm } => {
+                    let Some((_, range_start)) =
+                        crate::effect_context::selections::material_zone_geometry(game, perm)
+                    else {
+                        return;
+                    };
+                    let source_idx = action_id.saturating_sub(range_start) as usize;
+                    // Target tracking (mirrors ctx.select_material's battle-area lookup).
+                    if let Some(card) = game
+                        .player(perm.player)
+                        .battle_area
+                        .get(perm.index as usize)
+                        .and_then(|p| p.card_sources.get(source_idx))
+                    {
+                        let tid = card.card_id(&game.card_data).to_string();
+                        let tname = card.card_name(&game.card_data).to_string();
+                        crate::effect_context::selections::push_effect_target(
+                            game,
+                            prov.controller,
+                            prov.source_card,
+                            tid,
+                            tname,
+                        );
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        // material_carrier_permanent branches battle vs breeding.
+                        if let Some(card) =
+                            crate::effect_context::selections::material_carrier_permanent(
+                                ctx.game, perm,
+                            )
+                            .and_then(|p| p.card_sources.get(source_idx))
+                        {
+                            b.insert_card(name, card.handle());
+                        }
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
+                ResumeSelectKind::EffectChoice => {
+                    // "choose one": action_id - HAND_EFFECT_START → label index,
+                    // bound as a literal (mirrors ctx.select_effect_choice).
+                    let choice_index = action_id
+                        .saturating_sub(crate::action::space::HAND_EFFECT_START)
+                        as usize;
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_literal(name, choice_index as i64);
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
+                ResumeSelectKind::DnaPairLeft {
+                    candidates,
+                    right_filter,
+                    bind_right_as,
+                    right_prompt,
+                    optional,
+                } => {
+                    // Resolve the LEFT pick (mirrors install_select_dna_pair's
+                    // left callback), bind it, then chain into the already-flipped
+                    // install_select_any_permanent for the RIGHT pick (excluding
+                    // left). That parks an AnyPermanent frame whose tail is this
+                    // frame's inner_tail. We do NOT run inner_tail here. The shared
+                    // run_outer_conts after this match transfers any outer_conts
+                    // onto the right frame (via drain_or_rewrap_pending_tail).
+                    let Some((_, left)) = candidates
+                        .iter()
+                        .find(|(candidate_action, _)| *candidate_action == action_id)
+                        .copied()
+                    else {
+                        return;
+                    };
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_permanent(name, left);
+                    }
+                    install_select_any_permanent(
+                        &mut ctx,
+                        right_filter,
+                        Some(left),
+                        None,
+                        Some(bind_right_as),
+                        right_prompt,
+                        optional,
+                        (*inner_tail).clone(),
+                        b,
+                        runtime,
+                    );
+                }
+                ResumeSelectKind::UnionZone {
+                    of_player,
+                    candidates,
+                } => {
+                    // Tri-range (hand/trash/material) decode is captured at
+                    // install as candidates; resolve by linear search and bind
+                    // via insert_union_card (mirrors install_select_union_zone).
+                    let Some((_, handle, origin)) = candidates
+                        .iter()
+                        .find(|(candidate_action, _, _)| *candidate_action == action_id)
+                        .copied()
+                    else {
+                        return;
+                    };
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    if let Some(name) = &bind_as {
+                        b.insert_union_card(name, handle, origin, of_player);
+                    }
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
+                ResumeSelectKind::AttackTarget { attacker } => {
+                    // Mirror select_redirect_attack_target's callback: decode the
+                    // chosen attack target, validate the redirect, and substitute
+                    // it (reason EffectRedirect(source_card)). The substitution
+                    // fires OnAttackTargetChange + drains (NOT atomic) — a nested
+                    // park threads via the empty inner_tail + run_outer_conts
+                    // (below), exactly as the wrapped accept closure did.
+                    let (decoded_attacker, decoded_target) =
+                        crate::action::space::decode_attack(action_id);
+                    if decoded_attacker as u8 == attacker.index {
+                        let opponent = game.next_clockwise(attacker.player);
+                        let target = if decoded_target
+                            == crate::action::space::SECURITY_TARGET
+                        {
+                            crate::selection::AttackTarget::Player(opponent)
+                        } else {
+                            crate::selection::AttackTarget::Digimon(
+                                crate::permanent::PermanentHandle {
+                                    player: opponent,
+                                    index: decoded_target as u8,
+                                },
+                            )
+                        };
+                        if game.validate_attack_redirect_target(attacker, target).is_ok() {
+                            game.apply_attack_target_substitution_with_reason(
+                                target,
+                                crate::trigger_context::AttackTargetChangeReason::EffectRedirect(
+                                    Some(prov.source_card),
+                                ),
+                            );
+                        }
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
+                ResumeSelectKind::BeginAttack {
+                    attacker,
+                    without_suspending,
+                    ignore_summoning_sickness,
+                    optional,
+                    cost_upgrade,
+                } => {
+                    // Mirror may_attack_now_*'s callback: decode the chosen target,
+                    // then begin_attack_open. That STARTS the attack sub-machine
+                    // (counter/block/alliance interrupts), which may park a nested
+                    // selection — threaded via the empty inner_tail + run_outer_conts
+                    // (below), exactly as the wrapped accept closure did.
+                    let (decoded_attacker, decoded_target) =
+                        crate::action::space::decode_attack(action_id);
+                    if decoded_attacker as u8 == attacker.index {
+                        let opponent = game.next_clockwise(attacker.player);
+                        let target = if decoded_target
+                            == crate::action::space::SECURITY_TARGET
+                        {
+                            crate::selection::AttackTarget::Player(opponent)
+                        } else {
+                            crate::selection::AttackTarget::Digimon(
+                                crate::permanent::PermanentHandle {
+                                    player: opponent,
+                                    index: decoded_target as u8,
+                                },
+                            )
+                        };
+                        let _ = game.begin_attack_open(crate::combat::AttackOpen {
+                            attacker,
+                            initiator: crate::combat::AttackInitiator::Effect {
+                                source: Some(prov.source_card),
+                                optional,
+                            },
+                            suspend_attacker: !without_suspending,
+                            ignore_summoning_sickness,
+                            target_constraint: crate::combat::TargetConstraint::Forced(target),
+                            allow_cancel: optional,
+                            cost_upgrade,
+                        });
+                    }
+                    let mut ctx = EffectContext::new_with_source_kind_and_override(
+                        game,
+                        prov.source_card,
+                        prov.source_permanent,
+                        prov.source_kind,
+                        prov.controller,
+                        prov.override_pin,
+                    );
+                    let mut b = bindings;
+                    run_tail_preserving_trigger_context(
+                        &mut ctx,
+                        trigger_context,
+                        &inner_tail,
+                        &mut b,
+                        &runtime,
+                    );
+                }
+            }
+            // Nested-composition: run any outer-clause tails that were wrapped
+            // onto this resume-driven select (see `OuterContinuation`). Runs
+            // after the inner tail, mirroring the wrapped accept closure.
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::MultiPickStep(state) => {
+            run_multipick_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::PermutationStep(state) => {
+            run_permutation_step(game, state, action_id);
+        }
+        ResumeFrame::BudgetStep(state) => {
+            run_budget_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::SourceMultiStep(state) => {
+            run_source_multi_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::CountCappedPermanentsStep(state) => {
+            run_count_capped_permanent_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::RevealBucketStep(state) => {
+            run_reveal_bucket_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::UseOptionFromHandStep(state) => {
+            run_use_option_from_hand_step(game, state, action_id, is_pass);
+        }
+    }
+}
+
+/// Executor for a `use_option_from_hand` selection (mirrors
+/// `install_use_option_from_hand`'s accept/decline closures exactly).
+///
+/// ACCEPT: decode the hand index, emit the effect-target (as `select_hand`'s
+/// wrapper does), play the option under the authored trigger context, then —
+/// unless the play was Invalid — compose the tail via `drain_or_rewrap_pending_tail`
+/// (which threads it onto any selection the option's effect parked, rather than
+/// running it inline). DECLINE (optional only): run the SAME tail (continue-tail;
+/// no `dsl_clause_aborted`). `outer_conts` run after, via `run_outer_conts`.
+fn run_use_option_from_hand_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::UseOptionFromHandState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    let crate::resume::UseOptionFromHandState {
+        prov,
+        of_player,
+        tail,
+        bindings,
+        runtime,
+        trigger_context,
+        outer_conts,
+        optional: _optional,
+    } = state;
+
+    if is_pass {
+        // Optional decline (reachable only when optional — resolve_generic_selection
+        // rejects PASS otherwise): run the SAME tail. Mirrors the installer's
+        // on_decline: set the authored trigger context, drain_or_rewrap, restore.
+        let previous = game.current_trigger_context.clone();
+        game.current_trigger_context = trigger_context.clone();
+        drain_or_rewrap_pending_tail(
+            game,
+            prov.source_card,
+            prov.source_permanent,
+            prov.controller,
+            (*tail).clone(),
+            bindings,
+            runtime,
+            trigger_context,
+        );
+        game.current_trigger_context = previous;
+        run_outer_conts(game, outer_conts);
+        return;
+    }
+
+    let idx =
+        action_id.saturating_sub(crate::action::space::PLAY_HAND_START) as usize;
+    // Target tracking (mirrors ctx.select_hand's wrapper).
+    if let Some(card) = game.player(of_player).hand.get(idx) {
+        let tid = card.card_id(&game.card_data).to_string();
+        let tname = card.card_name(&game.card_data).to_string();
+        crate::effect_context::selections::push_effect_target(
+            game,
+            prov.controller,
+            prov.source_card,
+            tid,
+            tname,
+        );
+    }
+    // Play the option under the authored trigger context, then restore.
+    let previous = game.current_trigger_context.clone();
+    game.current_trigger_context = trigger_context.clone();
+    let result = game.use_option_from_hand_without_paying_cost(of_player, idx);
+    game.current_trigger_context = previous;
+    if matches!(result, crate::selection::OptionPlayResult::Invalid) {
+        // Parity with the closure's early-return: no tail, no outer_conts.
+        return;
+    }
+    // The option play may have parked a nested selection; drain_or_rewrap
+    // composes the tail onto it (else runs inline). tail_context = the authored
+    // trigger context.
+    drain_or_rewrap_pending_tail(
+        game,
+        prov.source_card,
+        prov.source_permanent,
+        prov.controller,
+        (*tail).clone(),
+        bindings,
+        runtime,
+        trigger_context,
+    );
+    run_outer_conts(game, outer_conts);
+}
+
+/// Data terminal for a multi-bucket reveal selection: bind each bucket's picked
+/// list by its `bind_as`, then run the inner tail. Mirrors `select_reveal_buckets`'
+/// final callback (no EffectTarget push).
+fn run_reveal_bucket_terminal(game: &mut crate::game::Game, state: crate::resume::RevealBucketState) {
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let mut b = state.bindings;
+    for (name, cards) in state.picked_buckets {
+        b.insert_card_list(&name, cards);
+    }
+    run_tail_preserving_trigger_context(
+        &mut ctx,
+        state.trigger_context,
+        &state.inner_tail,
+        &mut b,
+        &state.runtime,
+    );
+    run_outer_conts(game, state.outer_conts);
+}
+
+/// Drive the multi-bucket reveal state machine: advance past `max==0`/no-candidate
+/// buckets, park the first bucket that has candidates, or run the terminal when
+/// all buckets are done. Mirrors `install_reveal_bucket_step` exactly, as data.
+pub(crate) fn install_reveal_bucket_resume_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::RevealBucketState,
+) {
+    use crate::action::space::{MAX_REVEALED, SEL_REVEAL_START};
+    use crate::selection::{PendingSelection, SelectionKind};
+    loop {
+        let Some(bucket) = state.buckets.get(state.bucket_index).cloned() else {
+            // All buckets resolved → terminal.
+            run_reveal_bucket_terminal(game, state);
+            return;
+        };
+        if bucket.max == 0 {
+            state.picked_buckets.push((bucket.bind_as, Vec::new()));
+            state.bucket_index += 1;
+            state.current_bucket_picks = Vec::new();
+            continue;
+        }
+        let already_chosen: std::collections::HashSet<crate::card_source::CardHandle> = state
+            .picked_buckets
+            .iter()
+            .flat_map(|(_, cards)| cards.iter().copied())
+            .chain(state.current_bucket_picks.iter().copied())
+            .collect();
+        let cap = game.revealed_cards.len().min(MAX_REVEALED);
+        let mut valid_action_ids = Vec::new();
+        for idx in 0..cap {
+            let handle = game.revealed_cards[idx].handle();
+            if !bucket.candidates.contains(&handle) {
+                continue;
+            }
+            if state.current_bucket_picks.contains(&handle) {
+                continue;
+            }
+            if state.no_duplicate_cards && already_chosen.contains(&handle) {
+                continue;
+            }
+            valid_action_ids.push(SEL_REVEAL_START + idx as u16);
+        }
+        if valid_action_ids.is_empty() {
+            let current = std::mem::take(&mut state.current_bucket_picks);
+            state.picked_buckets.push((bucket.bind_as, current));
+            state.bucket_index += 1;
+            continue;
+        }
+        let picked = state.current_bucket_picks.len() as u8;
+        let is_optional = picked >= bucket.min;
+        game.current_phase = crate::enums::GamePhase::SelectReveal;
+        game.pending_selection = Some(PendingSelection {
+            zone_owner: None,
+            kind: SelectionKind::RevealBucket {
+                bucket_index: state.bucket_index as u8,
+                min: bucket.min,
+                max: bucket.max,
+                picked,
+            },
+            selecting_player: state.selecting_player,
+            previous_phase: state.previous_phase,
+            valid_action_ids,
+            is_optional,
+            prompt: state.prompt.clone(),
+            effect_choices: None,
+            source_card: state.prov.source_card,
+            source_permanent: state.prov.source_permanent,
+            source_kind: state.prov.source_kind,
+            callback: Box::new(|_g, _a| {}),
+            on_decline: None,
+        });
+        game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RevealBucketStep(state)],
+        });
+        return;
+    }
+}
+
+/// Executor for one reveal-bucket pick (or PASS). Mirrors the closure: a pick
+/// reaching the bucket `max` (or PASS) completes the bucket and advances; a
+/// sub-max pick re-parks the same bucket.
+fn run_reveal_bucket_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::RevealBucketState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    let Some(bucket) = state.buckets.get(state.bucket_index).cloned() else {
+        run_reveal_bucket_terminal(game, state);
+        return;
+    };
+    if is_pass {
+        let current = std::mem::take(&mut state.current_bucket_picks);
+        state.picked_buckets.push((bucket.bind_as, current));
+        state.bucket_index += 1;
+        install_reveal_bucket_resume_step(game, state);
+        return;
+    }
+    let reveal_index = action_id.saturating_sub(crate::action::space::SEL_REVEAL_START) as usize;
+    let Some(card) = game.revealed_cards.get(reveal_index) else {
+        return; // stale/invalid pick (defensive)
+    };
+    state.current_bucket_picks.push(card.handle());
+    if state.current_bucket_picks.len() >= bucket.max as usize {
+        let current = std::mem::take(&mut state.current_bucket_picks);
+        state.picked_buckets.push((bucket.bind_as, current));
+        state.bucket_index += 1;
+    }
+    // Re-enter the state machine: advance (bucket completed) or re-park the same
+    // bucket with the updated current picks.
+    install_reveal_bucket_resume_step(game, state);
+}
+
+/// Data terminal for a battle-area permanent multi-pick: bind the picked
+/// permanents as a permanent list, then run the inner tail. (Mirrors the
+/// closure `final_callback` — which does NOT push EffectTargets here.)
+fn run_count_capped_permanent_terminal(
+    game: &mut crate::game::Game,
+    state: crate::resume::CountCappedPermanentsState,
+) {
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let mut b = state.bindings;
+    if let Some(name) = &state.bind_as {
+        b.insert_permanent_list(name, state.accum);
+    }
+    run_tail_preserving_trigger_context(
+        &mut ctx,
+        state.trigger_context,
+        &state.inner_tail,
+        &mut b,
+        &state.runtime,
+    );
+    run_outer_conts(game, state.outer_conts);
+}
+
+/// Install (or re-park) a battle-area permanent multi-pick step over the carried
+/// candidate snapshot. Mirrors `install_count_capped_permanent_step` (OppField/
+/// OwnField kind, PASS gating at/above the effective floor).
+pub(crate) fn install_count_capped_permanent_resume_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::CountCappedPermanentsState,
+) {
+    use crate::selection::{PendingSelection, SelectionKind};
+    let picked = state.accum.len() as u8;
+    let effective_min = state.min.max(if state.optional_zero { 0 } else { 1 });
+    let is_optional = picked >= effective_min;
+    let valid_action_ids: Vec<u16> = state.candidates.iter().map(|(a, _)| *a).collect();
+    game.current_phase = crate::enums::GamePhase::SelectBudgeted;
+    game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
+        kind: if state.target_is_opponent {
+            SelectionKind::OppField
+        } else {
+            SelectionKind::OwnField
+        },
+        selecting_player: state.selecting_player,
+        previous_phase: state.previous_phase,
+        valid_action_ids,
+        is_optional,
+        prompt: state.prompt.clone(),
+        effect_choices: None,
+        source_card: state.prov.source_card,
+        source_permanent: state.prov.source_permanent,
+        source_kind: state.prov.source_kind,
+        callback: Box::new(|_g, _a| {}),
+        on_decline: None,
+    });
+    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::CountCappedPermanentsStep(state)],
+    });
+}
+
+/// Executor for one battle-area permanent pick (or PASS). Mirrors
+/// `install_count_capped_permanent_step`: decode against the snapshot, append,
+/// shrink the snapshot (remove the picked action), then terminal (max / empty)
+/// or re-park; PASS commits.
+fn run_count_capped_permanent_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::CountCappedPermanentsState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        run_count_capped_permanent_terminal(game, state);
+        return;
+    }
+    let Some((_, handle)) = state
+        .candidates
+        .iter()
+        .find(|(candidate_action, _)| *candidate_action == action_id)
+        .copied()
+    else {
+        return; // stale/invalid pick (defensive)
+    };
+    state.accum.push(handle);
+    if state.accum.len() == state.max as usize {
+        run_count_capped_permanent_terminal(game, state);
+        return;
+    }
+    state.candidates.retain(|(a, _)| *a != action_id);
+    if state.candidates.is_empty() {
+        run_count_capped_permanent_terminal(game, state);
+        return;
+    }
+    install_count_capped_permanent_resume_step(game, state);
+}
+
+/// Re-derive the source-multi candidates `(action_id, source_ref)` for a
+/// `SourceMultiState`, mirroring `source_multi_candidates` + the DSL installers'
+/// filter (target restriction + `target_resolution_failed` + the
+/// `CompiledPredicate` on `Source`/`Card` per `eval_on_card`). Data-pure.
+pub(crate) fn source_multi_candidates_data(
+    game: &crate::game::Game,
+    state: &crate::resume::SourceMultiState,
+) -> Vec<(u16, crate::selection::SourceSelectionRef)> {
+    use crate::action::space::encode_source_select;
+    use crate::selection::SourceSelectionRef;
+    if state.target_resolution_failed {
+        return Vec::new();
+    }
+    // Phase 1: collect (field, source, card) tuples (releases battle_area borrow
+    // before the predicate read context borrows the game).
+    let mut raw: Vec<(u8, u8, crate::card_source::CardHandle)> = Vec::new();
+    for field_index in 0..game.player(state.of_player).battle_area.len() {
+        let n = game.player(state.of_player).battle_area[field_index]
+            .card_sources
+            .len();
+        if n <= 1 {
+            continue;
+        }
+        for source_index in 0..(n - 1) {
+            let card = game.player(state.of_player).battle_area[field_index].card_sources
+                [source_index]
+                .handle();
+            raw.push((field_index as u8, source_index as u8, card));
+        }
+    }
+    // Phase 2: filter + encode.
+    let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+    );
+    let mut out = Vec::new();
+    for (field_index, source_index, card) in raw {
+        if state.picked.iter().any(|p| p.card == card) {
+            continue;
+        }
+        let permanent = PermanentHandle {
+            player: state.of_player,
+            index: field_index,
+        };
+        let source = SourceSelectionRef {
+            permanent,
+            field_index,
+            source_index,
+            card,
+        };
+        if state
+            .target_permanent
+            .is_some_and(|handle| source.permanent != handle)
+        {
+            continue;
+        }
+        let passes = if state.eval_on_card {
+            eval_predicate_with_bindings(
+                &state.filter,
+                &read,
+                PredicateSubject::Card(source.card),
+                Some(&state.filter_bindings),
+            )
+        } else {
+            eval_predicate_with_bindings(
+                &state.filter,
+                &read,
+                PredicateSubject::Source(source),
+                Some(&state.filter_bindings),
+            )
+        };
+        if !passes {
+            continue;
+        }
+        if let Some(action) = encode_source_select(field_index as u16, source_index as u16) {
+            out.push((action, source));
+        }
+    }
+    out
+}
+
+/// Data terminal for a source multi-pick: bind the picked sources as a
+/// source-ref list, then run the inner tail (the trampoline's `final_callback`).
+fn run_source_multi_terminal(game: &mut crate::game::Game, state: crate::resume::SourceMultiState) {
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let mut b = state.bindings;
+    if let Some(name) = &state.bind_as {
+        b.insert_source_refs(name, state.picked);
+    }
+    run_tail_preserving_trigger_context(
+        &mut ctx,
+        state.trigger_context,
+        &state.inner_tail,
+        &mut b,
+        &state.runtime,
+    );
+    // Nested multi-pick: run any outer-clause tails wrapped onto this frame, now
+    // that the accumulated list is bound + the inner tail ran (the multi-pick has
+    // terminated). Empty for a top-level (un-nested) multi-pick.
+    run_outer_conts(game, state.outer_conts);
+}
+
+/// Install (or re-park) a source-multi step over the carried candidate snapshot.
+/// Mirrors `install_source_multi_selection`'s PendingSelection (phase, kind,
+/// optional + PASS gating at/above `min`).
+pub(crate) fn install_source_multi_resume_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::SourceMultiState,
+) {
+    use crate::action::space::PASS;
+    use crate::selection::{PendingSelection, SelectionKind};
+    let picked = state.picked.len() as u8;
+    let is_optional = picked >= state.min;
+    let mut valid_action_ids: Vec<u16> = state.candidates.iter().map(|(a, _)| *a).collect();
+    if is_optional {
+        valid_action_ids.push(PASS);
+    }
+    game.current_phase = crate::enums::GamePhase::SelectSource;
+    game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
+        kind: SelectionKind::SourceMulti {
+            min: state.min,
+            max: state.max,
+            picked,
+        },
+        selecting_player: state.selecting_player,
+        previous_phase: state.previous_phase,
+        valid_action_ids,
+        is_optional,
+        prompt: state.prompt.clone(),
+        effect_choices: None,
+        source_card: state.prov.source_card,
+        source_permanent: state.prov.source_permanent,
+        source_kind: state.prov.source_kind,
+        callback: Box::new(|_g, _a| {}),
+        on_decline: None,
+    });
+    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::SourceMultiStep(state)],
+    });
+}
+
+/// Executor for one source-multi pick (or PASS). Mirrors the recursive
+/// `install_source_multi_selection`: decode against the carried snapshot,
+/// live-revalidate the picked card, recompute candidates, then terminal
+/// (exhausted/max at/above min) or re-park; PASS commits.
+fn run_source_multi_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::SourceMultiState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        // PASS is only offered at/above min (the install gates it).
+        run_source_multi_terminal(game, state);
+        return;
+    }
+    let Some((_, source_ref)) = state
+        .candidates
+        .iter()
+        .find(|(candidate_action, _)| *candidate_action == action_id)
+        .copied()
+    else {
+        return; // stale/invalid pick (defensive)
+    };
+    // DCGO-parity live revalidation: only add if the snapshot card is still
+    // present under its carrier (an intervening observer may have removed it).
+    let still_present = game
+        .player(source_ref.permanent.player)
+        .battle_area
+        .get(source_ref.permanent.index as usize)
+        .map(|perm| {
+            perm.card_sources
+                .iter()
+                .any(|c| c.handle() == source_ref.card)
+        })
+        .unwrap_or(false);
+    if still_present {
+        state.picked.push(source_ref);
+    }
+    // Recompute candidates from live state (the recursive install's enumeration).
+    let next_candidates = source_multi_candidates_data(game, &state);
+    if next_candidates.is_empty() || state.picked.len() == state.max as usize {
+        if state.picked.len() >= state.min as usize {
+            run_source_multi_terminal(game, state);
+        }
+        return;
+    }
+    state.candidates = next_candidates;
+    install_source_multi_resume_step(game, state);
+}
+
+/// Re-derive the cost-budget candidates `(action_id, handle, cost)` for a
+/// `BudgetState`, mirroring `dp_budget_candidates` / `play_cost_budget_candidates`
+/// but evaluating the carried `CompiledPredicate` (data-pure). Cost is DP or
+/// printed play cost per the budget kind.
+fn budget_candidates_data(
+    game: &crate::game::Game,
+    state: &crate::resume::BudgetState,
+) -> Vec<(u16, PermanentHandle, i32)> {
+    use crate::action::space::encode_attack;
+    use crate::resume::BudgetKind;
+    let read_ctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+    );
+    let mut out = Vec::new();
+    for index in 0..game.player(state.opponent).battle_area.len() {
+        let handle = PermanentHandle {
+            player: state.opponent,
+            index: index as u8,
+        };
+        if state.picked.contains(&handle) {
+            continue;
+        }
+        if !eval_predicate_with_bindings(
+            &state.filter,
+            &read_ctx,
+            PredicateSubject::Permanent(handle),
+            Some(&state.filter_bindings),
+        ) {
+            continue;
+        }
+        let cost = match state.kind {
+            BudgetKind::Dp => game.effective_dp(handle).unwrap_or(0),
+            BudgetKind::PlayCost => i32::from(
+                game.player(state.opponent).battle_area[index]
+                    .top_card()
+                    .play_cost(&game.card_data),
+            ),
+        };
+        if cost <= state.remaining {
+            out.push((encode_attack(0, index as u16), handle, cost));
+        }
+    }
+    out
+}
+
+/// Data terminal for a cost-budget multi-pick: push effect targets for the
+/// picked permanents (mirrors the trampoline's `final_callback` wrapper), bind
+/// them as a permanent list, then run the inner tail.
+fn run_budget_terminal(game: &mut crate::game::Game, state: crate::resume::BudgetState) {
+    // Mirror select_opponent_permanents_by_*_budget's final_callback wrapper:
+    // emit EffectTarget for the picked permanents before the body runs.
+    let refs = crate::effect_context::selections::permanents_to_refs(game, &state.picked);
+    crate::effect_context::selections::push_effect_target_multi(
+        game,
+        state.prov.controller,
+        state.prov.source_card,
+        refs,
+    );
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let mut b = state.bindings;
+    if let Some(name) = &state.bind_as {
+        b.insert_permanent_list(name, state.picked);
+    }
+    run_tail_preserving_trigger_context(
+        &mut ctx,
+        state.trigger_context,
+        &state.inner_tail,
+        &mut b,
+        &state.runtime,
+    );
+    // Nested multi-pick: run any outer-clause tails wrapped onto this frame, now
+    // that the accumulated list is bound + the inner tail ran (the multi-pick has
+    // terminated). Empty for a top-level (un-nested) multi-pick.
+    run_outer_conts(game, state.outer_conts);
+}
+
+/// Install (or re-park) a cost-budget step: build the `PendingSelection` over the
+/// recomputed candidates and stash the data frame. Mirrors
+/// `install_dp_budget_selection` / `install_play_cost_budget_selection`
+/// (phase/kind/optional + PASS gating at/above `min_picks`).
+pub(crate) fn install_budget_resume_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::BudgetState,
+    candidates: Vec<(u16, PermanentHandle, i32)>,
+) {
+    use crate::action::space::PASS;
+    use crate::resume::BudgetKind;
+    use crate::selection::{PendingSelection, SelectionKind};
+    let picked = state.picked.len() as u8;
+    let is_optional = picked >= state.min_picks;
+    let mut valid_action_ids: Vec<u16> = candidates.iter().map(|(a, _, _)| *a).collect();
+    if is_optional {
+        valid_action_ids.push(PASS);
+    }
+    let kind = match state.kind {
+        BudgetKind::Dp => SelectionKind::DpBudget {
+            remaining_dp: state.remaining,
+            picked,
+        },
+        BudgetKind::PlayCost => SelectionKind::PlayCostBudget {
+            remaining_play_cost: state.remaining,
+            picked,
+        },
+    };
+    game.current_phase = crate::enums::GamePhase::SelectBudgeted;
+    game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
+        kind,
+        selecting_player: state.selecting_player,
+        previous_phase: state.previous_phase,
+        valid_action_ids,
+        is_optional,
+        prompt: state.prompt.clone(),
+        effect_choices: None,
+        source_card: state.prov.source_card,
+        source_permanent: state.prov.source_permanent,
+        source_kind: state.prov.source_kind,
+        callback: Box::new(|_g, _a| {}),
+        on_decline: None,
+    });
+    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::BudgetStep(state)],
+    });
+}
+
+/// Executor for one cost-budget pick (or PASS). Mirrors the recursive
+/// `install_dp_budget_selection` as data: decode -> subtract cost -> recompute
+/// candidates -> terminal (exhausted at/above min) or re-park; PASS commits.
+fn run_budget_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::BudgetState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        // PASS is only offered at/above min_picks (the install gates it), so the
+        // accumulated list is committable.
+        run_budget_terminal(game, state);
+        return;
+    }
+    let candidates = budget_candidates_data(game, &state);
+    let Some((_, chosen, cost)) = candidates
+        .iter()
+        .find(|(candidate_action, _, _)| *candidate_action == action_id)
+        .copied()
+    else {
+        return; // stale/invalid pick (defensive)
+    };
+    state.picked.push(chosen);
+    state.remaining -= cost;
+    // Recompute candidates with the new pick + reduced budget (the recursive
+    // install's candidate computation).
+    let next_candidates = budget_candidates_data(game, &state);
+    if next_candidates.is_empty() {
+        // Mirror install_dp_budget_selection's empty-candidates branch: terminal
+        // only if the floor is met; otherwise the clause fizzles (no bind/tail).
+        if state.picked.len() >= state.min_picks as usize {
+            run_budget_terminal(game, state);
+        }
+        return;
+    }
+    install_budget_resume_step(game, state, next_candidates);
+}
+
+/// Data terminal for an ordered permutation: bind the accumulated handles as an
+/// (ordered) card list, then run the inner tail. Mirrors the closure trampoline's
+/// `final_callback` (and `run_multipick_terminal`).
+fn run_permutation_terminal(game: &mut crate::game::Game, state: crate::resume::PermutationState) {
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let mut b = state.bindings;
+    if let Some(placement) = &state.placement {
+        // order_remainder / remainder_permutation: place the ordered list back on
+        // the deck (mirrors place_remainder_in_order); does NOT bind.
+        place_remainder_in_order(&mut ctx, placement.player, &state.accum, placement.position);
+    } else if let Some(name) = &state.bind_as {
+        b.insert_card_list(name, state.accum);
+    }
+    run_tail_preserving_trigger_context(
+        &mut ctx,
+        state.trigger_context,
+        &state.inner_tail,
+        &mut b,
+        &state.runtime,
+    );
+    // Nested multi-pick: run any outer-clause tails wrapped onto this frame, now
+    // that the accumulated list is bound/placed + the inner tail ran (the
+    // multi-pick has terminated). Empty for a top-level (un-nested) multi-pick.
+    run_outer_conts(game, state.outer_conts);
+}
+
+/// Install (or re-park) an ordered-permutation step: build the `PendingSelection`
+/// over the remaining items and stash the data frame so `resolve_generic_selection`
+/// resumes through `run_resume`. Mirrors `install_permutation_step`'s
+/// PendingSelection (phase, kind, mandatory).
+pub(crate) fn install_permutation_resume_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::PermutationState,
+) {
+    use crate::action::space::SEL_REVEAL_START;
+    use crate::selection::{PendingSelection, SelectionKind};
+    let n = state.remaining.len() as u8;
+    let valid_action_ids: Vec<u16> = (0..state.remaining.len())
+        .map(|i| SEL_REVEAL_START + i as u16)
+        .collect();
+    game.current_phase = crate::enums::GamePhase::SelectPermutation;
+    game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
+        kind: SelectionKind::OrderedPermutation { remaining: n },
+        selecting_player: state.selecting_player,
+        previous_phase: state.previous_phase,
+        valid_action_ids,
+        is_optional: false,
+        prompt: state.prompt.clone(),
+        effect_choices: None,
+        source_card: state.prov.source_card,
+        source_permanent: state.prov.source_permanent,
+        source_kind: state.prov.source_kind,
+        // Vestigial during coexistence: run_resume is authoritative.
+        callback: Box::new(|_g, _a| {}),
+        on_decline: None,
+    });
+    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::PermutationStep(state)],
+    });
+}
+
+/// Executor for one ordered-permutation pick. Mirrors `install_permutation_step`
+/// as data: decode the pick index into `remaining`, append to `accum`, then run
+/// the terminal (list exhausted) or re-park for the next pick.
+fn run_permutation_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::PermutationState,
+    action_id: u16,
+) {
+    let pick_idx = action_id.saturating_sub(crate::action::space::SEL_REVEAL_START) as usize;
+    if pick_idx >= state.remaining.len() {
+        return; // stale/invalid pick (defensive)
+    }
+    let picked = state.remaining.remove(pick_idx);
+    state.accum.push(picked);
+    if state.remaining.is_empty() {
+        run_permutation_terminal(game, state);
+    } else {
+        install_permutation_resume_step(game, state);
+    }
+}
+
+/// Run the outer-tail continuations composed onto a resume-driven selection by
+/// `wrap_pending_selection_with_tail` (the data analog of the wrapped
+/// callback). Each is run via `drain_or_rewrap_pending_tail` — so a cont that
+/// itself parks a further select re-wraps onto it (threading deep nesting) —
+/// after merging the bindings the just-run tail published (the
+/// `dsl_resolved_tail_bindings` freshness channel, exactly as the closure
+/// wrapper did). Conts run in push order.
+fn run_outer_conts(game: &mut crate::game::Game, conts: Vec<crate::resume::OuterContinuation>) {
+    for cont in conts {
+        let mut merged = cont.bindings;
+        if let Some(fresh) = game.dsl_resolved_tail_bindings.take() {
+            merged.merge_slots_from(&fresh);
+        }
+        drain_or_rewrap_pending_tail(
+            game,
+            cont.source_card,
+            cont.source_permanent,
+            cont.player,
+            (*cont.tail).clone(),
+            merged,
+            cont.runtime,
+            cont.trigger_context,
+        );
+    }
+}
+
+/// Data terminal for a count_capped multi-pick: bind the accumulated handles as
+/// a card list, then run the inner tail (the data form of the trampoline's
+/// `final_callback`).
+fn run_multipick_terminal(game: &mut crate::game::Game, state: crate::resume::MultiPickState) {
+    // Mirror select_count_capped_multi_min's final_callback: emit EffectTarget for
+    // the picked cards before the body runs.
+    let refs: Vec<crate::events::EventCardRef> = state
+        .accum
+        .iter()
+        .filter_map(|h| {
+            game.card_data_for_handle(*h)
+                .map(|cd| crate::events::EventCardRef {
+                    card_id: cd.card_id.clone(),
+                    card_name: cd.card_name.clone(),
+                })
+        })
+        .collect();
+    crate::effect_context::selections::push_effect_target_multi(
+        game,
+        state.prov.controller,
+        state.prov.source_card,
+        refs,
+    );
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let mut b = state.bindings;
+    if let Some(name) = &state.bind_as {
+        b.insert_card_list(name, state.accum);
+    }
+    run_tail_preserving_trigger_context(
+        &mut ctx,
+        state.trigger_context,
+        &state.inner_tail,
+        &mut b,
+        &state.runtime,
+    );
+    // Nested multi-pick: run any outer-clause tails wrapped onto this frame, now
+    // that the accumulated list is bound + the inner tail ran (the multi-pick has
+    // terminated). Empty for a top-level (un-nested) multi-pick.
+    run_outer_conts(game, state.outer_conts);
+}
+
+/// Install (or re-park) a count_capped multi-pick step: build the
+/// `PendingSelection` over the remaining candidates and stash the data frame so
+/// `resolve_generic_selection` resumes through `run_resume`. Mirrors
+/// `install_count_capped_step`'s PendingSelection (phase, kind, is_optional).
+pub(crate) fn install_multipick_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::MultiPickState,
+) {
+    use crate::selection::{PendingSelection, SelectionKind};
+    let picked = state.accum.len() as u8;
+    let effective_min = state.min.max(if state.is_optional_zero { 0 } else { 1 });
+    let is_optional = picked >= effective_min;
+    let valid_action_ids: Vec<u16> = state
+        .candidate_indices
+        .iter()
+        .map(|&i| state.range_start + i as u16)
+        .collect();
+    game.current_phase = crate::enums::GamePhase::SelectBudgeted;
+    game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
+        kind: SelectionKind::CountCappedMultiSelect {
+            min: effective_min,
+            max: state.max,
+            picked,
+            distinct: state.distinct_by.is_some(),
+        },
+        selecting_player: state.selecting_player,
+        previous_phase: state.previous_phase,
+        valid_action_ids,
+        is_optional,
+        prompt: String::new(),
+        effect_choices: None,
+        source_card: state.prov.source_card,
+        source_permanent: state.prov.source_permanent,
+        source_kind: state.prov.source_kind,
+        // Vestigial during coexistence: the resume data path is authoritative,
+        // so this closure is never invoked (resolve_generic_selection dispatches
+        // to run_resume whenever pending_selection_resume is set).
+        callback: Box::new(|_g, _a| {}),
+        on_decline: None,
+    });
+    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::MultiPickStep(state)],
+    });
+}
+
+/// Executor for one count_capped pick (or PASS). Mirrors
+/// `install_count_capped_step`'s per-pick logic as data: decode → accumulate →
+/// auto-commit at `max` or when candidates are exhausted, else re-park; PASS
+/// commits with whatever is accumulated (gated at/above the floor upstream).
+fn run_multipick_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::MultiPickState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    use crate::effect_context::selections::{material_zone_slice, CountCappedZone, DistinctByMode};
+    if is_pass {
+        run_multipick_terminal(game, state);
+        return;
+    }
+    let pick_zone_idx = action_id.saturating_sub(state.range_start) as usize;
+    let card_handle = match state.zone {
+        CountCappedZone::Hand => game
+            .player(state.of_player)
+            .hand
+            .get(pick_zone_idx)
+            .map(|c| c.handle()),
+        CountCappedZone::Trash => game
+            .player(state.of_player)
+            .trash
+            .get(pick_zone_idx)
+            .map(|c| c.handle()),
+        CountCappedZone::Material(ph) => material_zone_slice(game, ph)
+            .and_then(|s| s.get(pick_zone_idx))
+            .map(|c| c.handle()),
+    };
+    let Some(card_handle) = card_handle else {
+        return; // stale/invalid pick (defensive)
+    };
+    state.accum.push(card_handle);
+    // Auto-commit when max reached.
+    if state.accum.len() == state.max as usize {
+        run_multipick_terminal(game, state);
+        return;
+    }
+    // Recompute candidates: drop the picked index; with distinct_by, also drop
+    // any remaining index sharing the constrained attribute with a pick.
+    let old_candidates = std::mem::take(&mut state.candidate_indices);
+    let new_candidates: Vec<usize> = if let Some(mode) = state.distinct_by {
+        let accum_data_indices: Vec<usize> = state
+            .accum
+            .iter()
+            .filter_map(|&h| {
+                let slice: &[crate::card_source::CardSource] = match state.zone {
+                    CountCappedZone::Hand => &game.player(state.of_player).hand,
+                    CountCappedZone::Trash => &game.player(state.of_player).trash,
+                    CountCappedZone::Material(ph) => match material_zone_slice(game, ph) {
+                        Some(s) => s,
+                        None => return None,
+                    },
+                };
+                slice.iter().find(|c| c.handle() == h).map(|c| c.data_index)
+            })
+            .collect();
+        old_candidates
+            .into_iter()
+            .filter(|&i| i != pick_zone_idx)
+            .filter(|&i| {
+                let cand_data_idx = match state.zone {
+                    CountCappedZone::Hand => game.player(state.of_player).hand[i].data_index,
+                    CountCappedZone::Trash => game.player(state.of_player).trash[i].data_index,
+                    CountCappedZone::Material(ph) => match material_zone_slice(game, ph) {
+                        Some(s) => s[i].data_index,
+                        None => return false,
+                    },
+                };
+                let cand_data = &game.card_data[cand_data_idx];
+                !accum_data_indices.iter().any(|&pdi| {
+                    let pd = &game.card_data[pdi];
+                    match mode {
+                        DistinctByMode::CardNumber => pd.card_id == cand_data.card_id,
+                        DistinctByMode::Level => {
+                            matches!((pd.level, cand_data.level), (Some(p), Some(c)) if p == c)
+                        }
+                        DistinctByMode::Name => pd.card_name == cand_data.card_name,
+                    }
+                })
+            })
+            .collect()
+    } else {
+        old_candidates
+            .into_iter()
+            .filter(|&i| i != pick_zone_idx)
+            .collect()
+    };
+    // No candidates left → commit with what we have.
+    if new_candidates.is_empty() {
+        run_multipick_terminal(game, state);
+        return;
+    }
+    state.candidate_indices = new_candidates;
+    install_multipick_step(game, state);
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -414,6 +2119,7 @@ pub fn try_install(
             }
             install_trash_n_bottom_face_down_sources_under_tamers(
                 ctx,
+                *of,
                 player,
                 *count,
                 tail.to_vec(),
@@ -1564,6 +3270,21 @@ fn install_use_option_from_hand(
 ) {
     let target_player = resolve_player(ctx, of);
     let prompt = prompt.unwrap_or_else(|| "Choose an Option card to use".to_string());
+    // Resumable-VM: capture for the UseOptionFromHandStep data frame before the
+    // accept/decline closures consume tail/runtime/trigger. of_player = the hand
+    // owner (target_player); the option play + tail run at resume time.
+    let of_player_for_resume = target_player;
+    let override_pin_for_resume = ctx.override_selecting_player();
+    let source_card_for_resume = ctx.source_card;
+    let source_permanent_for_resume = ctx.source_permanent;
+    let source_kind_for_resume = ctx.source_kind;
+    let controller_for_resume = ctx.player;
+    let tail_for_resume = Arc::new(tail.clone());
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = ctx.game.current_trigger_context.clone();
+    let optional_for_resume = optional;
+
     let tail_for_accept = tail.clone();
     let tail_for_decline = tail;
     let runtime_for_accept = runtime.clone();
@@ -1660,6 +3381,31 @@ fn install_use_option_from_hand(
             }));
         }
     }
+    // Park the data frame alongside the closure (coexistence): driven by
+    // run_resume's UseOptionFromHandStep arm. select_hand returns WITHOUT
+    // installing when no eligible Option/Dual in hand, so guard on the install.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::UseOptionFromHandStep(
+                crate::resume::UseOptionFromHandState {
+                    prov: crate::resume::ResumeProvenance {
+                        source_card: source_card_for_resume,
+                        source_permanent: source_permanent_for_resume,
+                        source_kind: source_kind_for_resume,
+                        controller: controller_for_resume,
+                        override_pin: override_pin_for_resume,
+                    },
+                    of_player: of_player_for_resume,
+                    tail: tail_for_resume,
+                    bindings: bindings_for_resume,
+                    runtime: runtime_for_resume,
+                    trigger_context: trigger_for_resume,
+                    outer_conts: Vec::new(),
+                    optional: optional_for_resume,
+                },
+            )],
+        });
+    }
 }
 
 /// Count how many hand cards of `of`'s player satisfy `filter` under the
@@ -1719,6 +3465,16 @@ fn install_select_trash(
     let bindings_for_decline = bindings.clone();
     let runtime_for_decline = runtime.clone();
     let trigger_for_decline = trigger_context.clone();
+    // Resumable-VM (make-engine-cloneable Batch 1): capture the same state the
+    // success/decline closures close over so we can ALSO park a data frame. The
+    // closures move `tail`/`bindings`/`runtime`/`trigger_context`/`bind_as`, so
+    // clone first. `override_pin` mirrors `select_trash`'s captured value.
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_trash(
         target_player,
         &prompt,
@@ -1785,6 +3541,41 @@ fn install_select_trash(
             }));
         }
     }
+    // Park the data frame alongside the closure (coexistence): if a selection
+    // was installed, `resolve_generic_selection` will drive it via `run_resume`
+    // (the Trash decode arm), bypassing the closure. The `ResumeDecline` mirrors
+    // the optional on_decline above — same tail, `aborts_clause = cost`.
+    if ctx.game.pending_selection.is_some() {
+        let decline = if optional {
+            crate::resume::ResumeDecline::RunTail {
+                tail: Arc::clone(&tail_for_resume),
+                aborts_clause: cost,
+            }
+        } else {
+            crate::resume::ResumeDecline::None
+        };
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::Trash {
+                    of_player: target_player,
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline,
+            }],
+        });
+    }
 }
 
 fn install_select_own_permanent(
@@ -1820,6 +3611,16 @@ fn install_select_own_permanent(
     let bindings_for_decline = bindings.clone();
     let runtime_for_decline = runtime.clone();
     let trigger_for_decline = trigger_context.clone();
+    // Resumable-VM (Batch 2): capture for the data frame before the closures
+    // consume them. selector/selected_field are NOT carried — the filter already
+    // baked the matching slots into valid_action_ids, so the FieldPermanent
+    // decode arm just maps the resolved action_id → handle.
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_own_permanent(
         &prompt,
         optional,
@@ -1873,6 +3674,41 @@ fn install_select_own_permanent(
             }));
         }
     }
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s FieldPermanent arm. Decline mirrors the on_decline above —
+    // `continue_on_decline` runs the same tail (no bind, no cost-abort).
+    if ctx.game.pending_selection.is_some() {
+        let decline = if optional && continue_on_decline {
+            crate::resume::ResumeDecline::RunTail {
+                tail: Arc::clone(&tail_for_resume),
+                aborts_clause: false,
+            }
+        } else {
+            crate::resume::ResumeDecline::None
+        };
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
+                    of_player: target_player,
+                    post: None,
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline,
+            }],
+        });
+    }
 }
 
 /// Install the Tamer pick for `trash_bottom_face_down_source_under_tamer`.
@@ -1910,6 +3746,14 @@ fn install_trash_bottom_face_down_source_under_tamer(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM: capture for the FieldPermanent{post:TrashBottomFaceDownSource}
+    // frame before the closures consume tail/bindings/runtime/trigger. of_player =
+    // ctx.player (select_own_permanent selects own field).
+    let override_pin = ctx.override_selecting_player();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
     ctx.select_own_permanent(
         "Choose a Tamer to trash a face-down card from under",
         optional,
@@ -1951,6 +3795,36 @@ fn install_trash_bottom_face_down_source_under_tamer(
             }
         },
     );
+    // Park the data frame alongside the closure (coexistence): driven by
+    // run_resume's FieldPermanent{post:Some(TrashBottomFaceDownSource)} arm
+    // (trash the picked Tamer's bottom face-down source, then cost-gated tail).
+    // install_field_selection sets on_decline:None → ResumeDecline::None.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
+                    of_player: player,
+                    post: Some(
+                        crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSource,
+                    ),
+                },
+                bind_as: None,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
 }
 
 /// Total bottom-reachable face-down digivolution sources across `player`'s
@@ -1996,6 +3870,7 @@ fn total_face_down_sources_under_tamers(
 /// exist, so each install finds ≥1 eligible Tamer and always parks.
 fn install_trash_n_bottom_face_down_sources_under_tamers(
     ctx: &mut EffectContext<'_>,
+    of: CompiledPlayerRef,
     player: PlayerId,
     remaining: u8,
     tail: Vec<CompiledStep>,
@@ -2015,6 +3890,19 @@ fn install_trash_n_bottom_face_down_sources_under_tamers(
     let player_for_filter = ctx.player;
     let filter_for_pred = filter.clone();
     let filter_bindings = bindings.clone();
+    // Resumable-VM (make-engine-cloneable): capture for the data frame before
+    // the closures consume tail/bindings/runtime/trigger. The whole multi-pick
+    // cost is modeled as a single-pick FieldPermanent{post:TrashBottomFaceDownSource}
+    // frame (the slice #4 arm) whose continuation re-enters
+    // `TrashBottomFaceDownSourcesUnderTamers{count: remaining-1}` until the cost
+    // is fully paid — so a per-pick trash that parks a nested OnDigivolutionCard-
+    // Trashed observer threads via the SAME park_pending_selection_tail recursion
+    // the single-pick under-tamer trash uses, with no bespoke continuation channel.
+    let override_pin = ctx.override_selecting_player();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
     ctx.select_own_permanent(
         "Choose a Tamer to trash a face-down card from under",
         false,
@@ -2065,6 +3953,7 @@ fn install_trash_n_bottom_face_down_sources_under_tamers(
                 // enough sources remain.
                 install_trash_n_bottom_face_down_sources_under_tamers(
                     cb_ctx,
+                    of,
                     player,
                     now_remaining,
                     tail.as_ref().clone(),
@@ -2074,6 +3963,50 @@ fn install_trash_n_bottom_face_down_sources_under_tamers(
             }
         },
     );
+    // Park the data frame alongside the closure (coexistence): driven by
+    // run_resume's FieldPermanent{post:Some(TrashBottomFaceDownSource)} arm. The
+    // frame trashes ONE bottom face-down source from the picked Tamer, then runs
+    // the continuation: when `remaining > 1`, re-enter the multi-trash step for
+    // the next `remaining - 1` (which re-parks the next pick); at `remaining ==
+    // 1` run the real captured tail (the free digivolve). `select_own_permanent`
+    // installs a MANDATORY pick (the caller pre-gated ≥`remaining` sources exist,
+    // so ≥1 eligible Tamer), so on_decline is None ⇒ ResumeDecline::None. Whether
+    // to activate the whole cost at all is the clause's `optional`, one level up.
+    if ctx.game.pending_selection.is_some() {
+        let continuation_tail: Vec<CompiledStep> = if remaining <= 1 {
+            (*tail_for_resume).clone()
+        } else {
+            let mut v = Vec::with_capacity(1 + tail_for_resume.len());
+            v.push(CompiledStep::TrashBottomFaceDownSourcesUnderTamers {
+                of,
+                count: remaining - 1,
+            });
+            v.extend_from_slice(&tail_for_resume);
+            v
+        };
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
+                    of_player: player,
+                    post: Some(crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSource),
+                },
+                bind_as: None,
+                inner_tail: Arc::new(continuation_tail),
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
 }
 
 fn install_select_opponent_permanent(
@@ -2111,6 +4044,14 @@ fn install_select_opponent_permanent(
     let bindings_for_decline = bindings.clone();
     let runtime_for_decline = runtime.clone();
     let trigger_for_decline = trigger_context.clone();
+    // Resumable-VM (Batch 2): capture for the data frame; `of_player` is the
+    // already-computed `opponent` (= next_clockwise(player)).
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_opponent_permanent(
         &prompt,
         optional,
@@ -2167,6 +4108,40 @@ fn install_select_opponent_permanent(
             }));
         }
     }
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s FieldPermanent arm with `of_player: opponent`.
+    if ctx.game.pending_selection.is_some() {
+        let decline = if optional && continue_on_decline {
+            crate::resume::ResumeDecline::RunTail {
+                tail: Arc::clone(&tail_for_resume),
+                aborts_clause: false,
+            }
+        } else {
+            crate::resume::ResumeDecline::None
+        };
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
+                    of_player: opponent,
+                    post: None,
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline,
+            }],
+        });
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2210,6 +4185,15 @@ fn install_select_any_permanent(
     let source_kind = ctx.source_kind;
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    // Resumable-VM (Batch 2): clone for the data frame before the closure
+    // consumes them. The AnyPermanent arm linear-searches the captured
+    // candidates (heterogeneous both-player domain), so it carries the full vec.
+    let candidates_for_resume = candidates.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
 
     let previous_phase = ctx.game.current_phase;
     ctx.game.current_phase = GamePhase::SelectTarget;
@@ -2261,6 +4245,31 @@ fn install_select_any_permanent(
         }),
         on_decline: None,
     });
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s AnyPermanent arm (linear search over the candidates).
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::AnyPermanent {
+                    candidates: candidates_for_resume,
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2308,6 +4317,19 @@ fn install_select_dna_pair(
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
     let previous_phase = ctx.game.current_phase;
+
+    // Resumable-VM: capture for the RunTail{DnaPairLeft} data frame before the
+    // LEFT closure moves these. The right pick chains into the already-flipped
+    // install_select_any_permanent, so only the LEFT frame is new here.
+    let candidates_for_resume = candidates.clone();
+    let right_filter_for_resume = right_filter.clone();
+    let bind_left_as_for_resume = bind_left_as.clone();
+    let bind_right_as_for_resume = bind_right_as.clone();
+    let right_prompt_for_resume = prompt.clone();
+    let tail_for_resume = Arc::new(tail.clone());
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = ctx.game.current_trigger_context.clone();
 
     ctx.game.current_phase = GamePhase::SelectTarget;
     ctx.game.pending_selection = Some(PendingSelection {
@@ -2359,6 +4381,38 @@ fn install_select_dna_pair(
         }),
         on_decline: None,
     });
+    // Park the data frame alongside the closure (coexistence): driven by
+    // run_resume's DnaPairLeft arm (resolve left → bind via bind_as → chain into
+    // install_select_any_permanent for the right pick). The right pick parks its
+    // own AnyPermanent frame; this frame's inner_tail becomes the right tail.
+    // install_field_selection / the left install set on_decline:None → decline None.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::DnaPairLeft {
+                    candidates: candidates_for_resume,
+                    right_filter: right_filter_for_resume,
+                    bind_right_as: bind_right_as_for_resume,
+                    right_prompt: right_prompt_for_resume,
+                    optional,
+                },
+                bind_as: Some(bind_left_as_for_resume),
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2429,6 +4483,16 @@ fn install_select_count_capped_multi(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (Batch 4): capture for the MultiPickStep frame (Hand/Trash
+    // card-based count_capped). filter carried as a CompiledPredicate (data-pure).
+    let filter_for_resume = filter.clone();
+    let filter_bindings_for_resume = bindings.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_count_capped_multi_min(
         target_player,
         engine_zone,
@@ -2460,6 +4524,125 @@ fn install_select_count_capped_multi(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // Park the MultiPickStep data frame. Clobber guard: only park when OUR
+    // candidate set is non-empty (empty ⇒ the closure ran the tail inline; and a
+    // `candidates < min` short-circuit installs no pending so the `Some(pending)`
+    // guard skips it too).
+    let candidate_indices = count_capped_card_candidate_indices(
+        ctx.game,
+        target_player,
+        engine_zone,
+        &filter_for_resume,
+        &filter_bindings_for_resume,
+        source_card,
+        source_permanent,
+        source_kind,
+        player,
+    );
+    if !candidate_indices.is_empty() {
+        if let Some(pending) = ctx.game.pending_selection.as_ref() {
+            let selecting_player = pending.selecting_player;
+            let previous_phase = pending.previous_phase;
+            let range_start = match engine_zone {
+                CountCappedZone::Hand => crate::action::space::PLAY_HAND_START,
+                CountCappedZone::Trash => crate::action::space::TRASH_EFFECT_START,
+                CountCappedZone::Material(ph) => {
+                    crate::effect_context::selections::material_zone_geometry(ctx.game, ph)
+                        .map(|(_, rs)| rs)
+                        .unwrap_or(0)
+                }
+            };
+            ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![crate::resume::ResumeFrame::MultiPickStep(
+                    crate::resume::MultiPickState {
+                        prov: crate::resume::ResumeProvenance {
+                            source_card,
+                            source_permanent,
+                            source_kind,
+                            controller: player,
+                            override_pin,
+                        },
+                        of_player: target_player,
+                        selecting_player,
+                        previous_phase,
+                        zone: engine_zone,
+                        range_start,
+                        min,
+                        max,
+                        is_optional_zero: optional_zero,
+                        distinct_by,
+                        candidate_indices,
+                        accum: Vec::new(),
+                        bind_as: bind_as_for_resume,
+                        inner_tail: tail_for_resume,
+                        bindings: bindings_for_resume,
+                        runtime: runtime_for_resume,
+                        trigger_context: trigger_for_resume,
+                        outer_conts: Vec::new(),
+                    },
+                )],
+            });
+        }
+    }
+}
+
+/// Re-derive the filter-passing zone indices for a card-based count_capped
+/// (Hand/Trash/Material), mirroring `select_count_capped_multi_min`'s install-time
+/// candidate scan with the `CompiledPredicate` on `PredicateSubject::Card`.
+/// Data-pure. `distinct_by` is NOT applied here (the executor applies it on
+/// re-park, matching the closure).
+#[allow(clippy::too_many_arguments)]
+fn count_capped_card_candidate_indices(
+    game: &crate::game::Game,
+    of_player: PlayerId,
+    zone: CountCappedZone,
+    filter: &CompiledPredicate,
+    filter_bindings: &Bindings,
+    source_card: crate::card_source::CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    source_kind: crate::enums::EffectSourceKind,
+    player: PlayerId,
+) -> Vec<usize> {
+    use crate::action::space::{HAND_MAIN_LIMIT, TRASH_MAIN_LIMIT};
+    let zone_len = match zone {
+        CountCappedZone::Hand => game.player(of_player).hand.len().min(HAND_MAIN_LIMIT),
+        CountCappedZone::Trash => game.player(of_player).trash.len().min(TRASH_MAIN_LIMIT),
+        CountCappedZone::Material(ph) => crate::effect_context::selections::material_zone_slice(
+            game, ph,
+        )
+        .map(|s| s.len().saturating_sub(1))
+        .unwrap_or(0),
+    };
+    // Collect handles first (release the zone borrow before the read context).
+    let mut handles: Vec<crate::card_source::CardHandle> = Vec::with_capacity(zone_len);
+    for i in 0..zone_len {
+        let h = match zone {
+            CountCappedZone::Hand => game.player(of_player).hand[i].handle(),
+            CountCappedZone::Trash => game.player(of_player).trash[i].handle(),
+            CountCappedZone::Material(ph) => {
+                match crate::effect_context::selections::material_zone_slice(game, ph) {
+                    Some(s) => s[i].handle(),
+                    None => continue,
+                }
+            }
+        };
+        handles.push(h);
+    }
+    let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+        game,
+        source_card,
+        source_permanent,
+        source_kind,
+        player,
+    );
+    let mut out = Vec::new();
+    for (i, h) in handles.into_iter().enumerate() {
+        if eval_predicate_with_bindings(filter, &read, PredicateSubject::Card(h), Some(filter_bindings))
+        {
+            out.push(i);
+        }
+    }
+    out
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2532,6 +4715,17 @@ fn install_select_count_capped_permanents(
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind;
     let previous_phase = ctx.game.current_phase;
+    // Resumable-VM (Batch 4): capture for the CountCappedPermanentsStep frame
+    // (snapshot-minus-picked; `min` is already clamped). candidates non-empty here
+    // (the empty + `< min` cases returned above), so install always parks our
+    // permanent select — no clobber risk.
+    let candidates_for_resume = candidates.clone();
+    let prompt_for_resume = prompt.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
     let final_callback: Box<
         dyn FnOnce(&mut crate::game::Game, Vec<PermanentHandle>) + Send + Sync,
     > = Box::new(move |game, picks| {
@@ -2566,6 +4760,38 @@ fn install_select_count_capped_permanents(
         previous_phase,
         final_callback,
     );
+    if let Some(pending) = ctx.game.pending_selection.as_ref() {
+        let selecting_player = pending.selecting_player;
+        let previous_phase = pending.previous_phase;
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::CountCappedPermanentsStep(
+                crate::resume::CountCappedPermanentsState {
+                    prov: crate::resume::ResumeProvenance {
+                        source_card,
+                        source_permanent,
+                        source_kind,
+                        controller,
+                        override_pin,
+                    },
+                    selecting_player,
+                    previous_phase,
+                    target_is_opponent,
+                    min,
+                    max,
+                    optional_zero,
+                    candidates: candidates_for_resume,
+                    accum: Vec::new(),
+                    prompt: prompt_for_resume,
+                    bind_as: bind_as_for_resume,
+                    inner_tail: tail_for_resume,
+                    bindings: bindings_for_resume,
+                    runtime: runtime_for_resume,
+                    trigger_context: trigger_for_resume,
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -2694,6 +4920,17 @@ fn install_select_effect_choice(
 ) {
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    // Resumable-VM (post-Batch-4): capture for the RunTail/EffectChoice frame.
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let override_pin = ctx.override_selecting_player();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
     ctx.select_effect_choice(&prompt, labels, move |cb_ctx, idx| {
         let mut b = bindings.clone();
         if let Some(name) = &bind_as {
@@ -2701,6 +4938,29 @@ fn install_select_effect_choice(
         }
         run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
     });
+    // Park the data frame (coexistence): driven by run_resume's EffectChoice arm.
+    // Not optional (a branch must be picked) → decline None.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::EffectChoice,
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
 }
 
 fn install_select_reveal(
@@ -2721,7 +4981,16 @@ fn install_select_reveal(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
-    ctx.select_reveal(
+    // Resumable-VM (Batch 2): capture for the data frame. Ownership is enforced
+    // in the install filter (revealed_owner_matches), so valid_action_ids is
+    // already restricted; the Reveal arm just decodes + binds (stale → skip).
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
+    let parked = ctx.select_reveal(
         &prompt,
         optional,
         move |game, idx| {
@@ -2759,7 +5028,31 @@ fn install_select_reveal(
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
-    )
+    );
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s Reveal arm. No on_decline → decline None.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::Reveal { route: None },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
+    parked
 }
 
 fn install_select_reveal_buckets(
@@ -2818,18 +5111,37 @@ fn install_select_reveal_buckets(
     let prompt = prompt.unwrap_or_else(|| "Choose revealed cards".to_string());
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
-    if ctx.select_reveal_buckets(
-        engine_buckets,
-        &prompt,
-        no_duplicate_cards,
-        move |cb_ctx, picked| {
-            let mut b = bindings.clone();
-            for (name, cards) in picked {
-                b.insert_card_list(&name, cards);
-            }
-            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+    // Resumable-VM (Batch 4): reveal-bucket is FULLY data-driven — no legacy
+    // closure. The bucket-advance state machine IS install_reveal_bucket_resume_step;
+    // it parks a RevealBucketStep frame (run by run_resume) or runs the terminal
+    // synchronously (all buckets max==0 / no candidates). Buckets carry concrete
+    // candidate handles (the per-bucket predicate was evaluated above), so the
+    // state is pure data — ideal for clone (no closure to panic-stub).
+    let selecting_player = ctx.override_selecting_player().unwrap_or(ctx.player);
+    let state = crate::resume::RevealBucketState {
+        prov: crate::resume::ResumeProvenance {
+            source_card: ctx.source_card,
+            source_permanent: ctx.source_permanent,
+            source_kind: ctx.source_kind,
+            controller: ctx.player,
+            override_pin: ctx.override_selecting_player(),
         },
-    ) {
+        selecting_player,
+        previous_phase: ctx.game.current_phase,
+        buckets: engine_buckets,
+        bucket_index: 0,
+        picked_buckets: Vec::new(),
+        current_bucket_picks: Vec::new(),
+        no_duplicate_cards,
+        prompt,
+        inner_tail: tail,
+        bindings,
+        runtime,
+        trigger_context,
+        outer_conts: Vec::new(),
+    };
+    install_reveal_bucket_resume_step(ctx.game, state);
+    if ctx.game.pending_selection.is_some() {
         InstallResult::Parked
     } else {
         InstallResult::TailAlreadyRan
@@ -2873,6 +5185,15 @@ fn install_select_security(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (make-engine-cloneable Batch 1): capture for the data frame
+    // before the success closure consumes them. `select_security` installs no
+    // on_decline, so the data-frame decline is always `None`.
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_security(
         target_player,
         &prompt,
@@ -2905,6 +5226,32 @@ fn install_select_security(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s Security decode arm. Decline is `None` (no on_decline).
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::Security {
+                    of_player: target_player,
+                    post: None,
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
 }
 
 fn install_select_material(
@@ -2925,6 +5272,14 @@ fn install_select_material(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (Batch 2): capture for the data frame. The Material arm
+    // decodes via material_zone_geometry(perm) (battle-vs-breeding carrier).
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     // Top-card exclusion is enforced by EffectContext::select_material itself
     // (matches CountCappedZone::Material).
     ctx.select_material(
@@ -2966,6 +5321,29 @@ fn install_select_material(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s Material arm (material_zone_geometry decode). Decline None.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::Material { perm },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
 }
 
 /// Install a count-capped / name-unique multi-pick over `perm`'s
@@ -3017,6 +5395,17 @@ fn install_select_materials(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (Batch 4): capture for the MultiPickStep frame (Material-source
+    // count_capped — same MultiPickState as Hand/Trash, zone = Material(perm),
+    // of_player = perm.player, min = 0).
+    let filter_for_resume = filter.clone();
+    let filter_bindings_for_resume = bindings.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_count_capped_multi(
         // The carrier's owner — `Material` candidates come from
         // `perm.player`'s battle area regardless of `of_player`.
@@ -3049,6 +5438,60 @@ fn install_select_materials(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    // Park the MultiPickStep frame (clobber guard: park only if our candidate set
+    // is non-empty).
+    let candidate_indices = count_capped_card_candidate_indices(
+        ctx.game,
+        perm.player,
+        CountCappedZone::Material(perm),
+        &filter_for_resume,
+        &filter_bindings_for_resume,
+        source_card,
+        source_permanent,
+        source_kind,
+        player,
+    );
+    if !candidate_indices.is_empty() {
+        if let Some(pending) = ctx.game.pending_selection.as_ref() {
+            let selecting_player = pending.selecting_player;
+            let previous_phase = pending.previous_phase;
+            let range_start = crate::effect_context::selections::material_zone_geometry(
+                ctx.game, perm,
+            )
+            .map(|(_, rs)| rs)
+            .unwrap_or(0);
+            ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![crate::resume::ResumeFrame::MultiPickStep(
+                    crate::resume::MultiPickState {
+                        prov: crate::resume::ResumeProvenance {
+                            source_card,
+                            source_permanent,
+                            source_kind,
+                            controller: player,
+                            override_pin,
+                        },
+                        of_player: perm.player,
+                        selecting_player,
+                        previous_phase,
+                        zone: CountCappedZone::Material(perm),
+                        range_start,
+                        min: 0,
+                        max,
+                        is_optional_zero: optional_zero,
+                        distinct_by: uniqueness,
+                        candidate_indices,
+                        accum: Vec::new(),
+                        bind_as: bind_as_for_resume,
+                        inner_tail: tail_for_resume,
+                        bindings: bindings_for_resume,
+                        runtime: runtime_for_resume,
+                        trigger_context: trigger_for_resume,
+                        outer_conts: Vec::new(),
+                    },
+                )],
+            });
+        }
+    }
 }
 
 fn install_select_own_sources(
@@ -3082,6 +5525,17 @@ fn install_select_own_sources(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (Batch 4): capture for the SourceMultiStep frame (own → eval
+    // on PredicateSubject::Source; of_player = you).
+    let filter_for_resume = filter.clone();
+    let filter_bindings_for_resume = bindings.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let prompt_for_resume = prompt.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_own_sources(
         &prompt,
         min,
@@ -3115,6 +5569,96 @@ fn install_select_own_sources(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    park_source_multi_resume_frame(
+        ctx,
+        player,
+        false,
+        min,
+        max,
+        target_permanent,
+        target_resolution_failed,
+        filter_for_resume,
+        filter_bindings_for_resume,
+        prompt_for_resume,
+        bind_as_for_resume,
+        tail_for_resume,
+        bindings_for_resume,
+        runtime_for_resume,
+        trigger_for_resume,
+        override_pin,
+    );
+}
+
+/// Shared resume-frame park for the own/opponent source-multi DSL installers.
+#[allow(clippy::too_many_arguments)]
+fn park_source_multi_resume_frame(
+    ctx: &mut EffectContext<'_>,
+    of_player: PlayerId,
+    eval_on_card: bool,
+    min: u8,
+    max: u8,
+    target_permanent: Option<PermanentHandle>,
+    target_resolution_failed: bool,
+    filter: CompiledPredicate,
+    filter_bindings: Bindings,
+    prompt: String,
+    bind_as: Option<String>,
+    inner_tail: Arc<Vec<CompiledStep>>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+    trigger_context: Option<TriggerContext>,
+    override_pin: Option<PlayerId>,
+) {
+    let player = ctx.player;
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let mut state = crate::resume::SourceMultiState {
+        prov: crate::resume::ResumeProvenance {
+            source_card,
+            source_permanent,
+            source_kind,
+            controller: player,
+            override_pin,
+        },
+        of_player,
+        // selecting_player / previous_phase are corrected from the parked
+        // selection below (placeholders; the candidate scan doesn't use them).
+        selecting_player: of_player,
+        previous_phase: crate::enums::GamePhase::Main,
+        min,
+        max,
+        picked: Vec::new(),
+        candidates: Vec::new(),
+        filter,
+        filter_bindings,
+        target_permanent,
+        target_resolution_failed,
+        eval_on_card,
+        prompt,
+        bind_as,
+        inner_tail,
+        bindings,
+        runtime,
+        trigger_context,
+        outer_conts: Vec::new(),
+    };
+    // Compute the initial snapshot (matches the closure install's candidates).
+    // If empty, the closure SHORT-CIRCUITED (it ran the tail inline, which may
+    // have installed a NESTED selection + its own resume frame) — do NOT clobber
+    // it. A non-empty snapshot means the closure parked OUR source-multi select.
+    state.candidates = source_multi_candidates_data(ctx.game, &state);
+    if state.candidates.is_empty() {
+        return;
+    }
+    let Some(pending) = ctx.game.pending_selection.as_ref() else {
+        return;
+    };
+    state.selecting_player = pending.selecting_player;
+    state.previous_phase = pending.previous_phase;
+    ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::SourceMultiStep(state)],
+    });
 }
 
 /// Opponent-side mirror of `install_select_own_sources`. The candidate set is
@@ -3153,6 +5697,18 @@ fn install_select_opponent_sources(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (Batch 4): capture for the SourceMultiStep frame (opponent →
+    // eval on PredicateSubject::Card; of_player = next_clockwise(player)).
+    let opponent = ctx.game.next_clockwise(player);
+    let filter_for_resume = filter.clone();
+    let filter_bindings_for_resume = bindings.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let prompt_for_resume = prompt.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_opponent_sources(
         &prompt,
         min,
@@ -3186,6 +5742,24 @@ fn install_select_opponent_sources(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    park_source_multi_resume_frame(
+        ctx,
+        opponent,
+        true,
+        min,
+        max,
+        target_permanent,
+        target_resolution_failed,
+        filter_for_resume,
+        filter_bindings_for_resume,
+        prompt_for_resume,
+        bind_as_for_resume,
+        tail_for_resume,
+        bindings_for_resume,
+        runtime_for_resume,
+        trigger_for_resume,
+        override_pin,
+    );
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -3207,6 +5781,19 @@ fn install_select_opponent_dp_budget(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (Batch 4): capture for the BudgetStep frame. The filter is
+    // carried as a CompiledPredicate (re-evaluated each step — data-pure), not a
+    // closure. opponent = next_clockwise(player).
+    let opponent = ctx.game.next_clockwise(player);
+    let filter_for_resume = filter.clone();
+    let filter_bindings_for_resume = bindings.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let prompt_for_resume = prompt.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_opponent_permanents_by_dp_budget(
         &prompt,
         dp_budget,
@@ -3234,6 +5821,86 @@ fn install_select_opponent_dp_budget(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    park_budget_resume_frame(
+        ctx,
+        crate::resume::BudgetKind::Dp,
+        opponent,
+        dp_budget,
+        min_picks,
+        filter_for_resume,
+        filter_bindings_for_resume,
+        prompt_for_resume,
+        bind_as_for_resume,
+        tail_for_resume,
+        bindings_for_resume,
+        runtime_for_resume,
+        trigger_for_resume,
+        override_pin,
+    );
+}
+
+/// Shared resume-frame park for the dp/play-cost budget DSL installers: if the
+/// closure path installed a selection, park a `BudgetStep` frame mirroring it.
+#[allow(clippy::too_many_arguments)]
+fn park_budget_resume_frame(
+    ctx: &mut EffectContext<'_>,
+    kind: crate::resume::BudgetKind,
+    opponent: PlayerId,
+    remaining: i32,
+    min_picks: u8,
+    filter: CompiledPredicate,
+    filter_bindings: Bindings,
+    prompt: String,
+    bind_as: Option<String>,
+    inner_tail: Arc<Vec<CompiledStep>>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+    trigger_context: Option<TriggerContext>,
+    override_pin: Option<PlayerId>,
+) {
+    let player = ctx.player;
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let mut state = crate::resume::BudgetState {
+        prov: crate::resume::ResumeProvenance {
+            source_card,
+            source_permanent,
+            source_kind,
+            controller: player,
+            override_pin,
+        },
+        kind,
+        opponent,
+        // Corrected from the parked selection below (placeholders).
+        selecting_player: player,
+        previous_phase: crate::enums::GamePhase::Main,
+        remaining,
+        min_picks,
+        picked: Vec::new(),
+        filter,
+        filter_bindings,
+        prompt,
+        bind_as,
+        inner_tail,
+        bindings,
+        runtime,
+        trigger_context,
+        outer_conts: Vec::new(),
+    };
+    // If the closure found no candidates it SHORT-CIRCUITED (ran the tail inline,
+    // possibly installing a nested selection + frame) — don't clobber it.
+    if budget_candidates_data(ctx.game, &state).is_empty() {
+        return;
+    }
+    let Some(pending) = ctx.game.pending_selection.as_ref() else {
+        return;
+    };
+    state.selecting_player = pending.selecting_player;
+    state.previous_phase = pending.previous_phase;
+    ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::BudgetStep(state)],
+    });
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -3255,6 +5922,17 @@ fn install_select_opponent_play_cost_budget(
     let source_kind = ctx.source_kind;
     let player = ctx.player;
     let filter_bindings = bindings.clone();
+    // Resumable-VM (Batch 4): capture for the BudgetStep frame (play-cost kind).
+    let opponent = ctx.game.next_clockwise(player);
+    let filter_for_resume = filter.clone();
+    let filter_bindings_for_resume = bindings.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let prompt_for_resume = prompt.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_opponent_permanents_by_play_cost_budget(
         &prompt,
         play_cost_budget,
@@ -3282,6 +5960,22 @@ fn install_select_opponent_play_cost_budget(
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
     );
+    park_budget_resume_frame(
+        ctx,
+        crate::resume::BudgetKind::PlayCost,
+        opponent,
+        play_cost_budget,
+        min_picks,
+        filter_for_resume,
+        filter_bindings_for_resume,
+        prompt_for_resume,
+        bind_as_for_resume,
+        tail_for_resume,
+        bindings_for_resume,
+        runtime_for_resume,
+        trigger_for_resume,
+        override_pin,
+    );
 }
 
 fn install_select_own_breeding_permanent(
@@ -3307,6 +6001,16 @@ fn install_select_own_breeding_permanent(
     let bindings_for_decline = bindings.clone();
     let runtime_for_decline = runtime.clone();
     let trigger_for_decline = trigger_context.clone();
+    // Resumable-VM (make-engine-cloneable Batch 1): capture for the dual-tail
+    // data frame. success → `inner_tail`, decline → `ResumeDecline::RunTail`
+    // over `decline_tail` (no cost, so `aborts_clause = false`).
+    let bind_as_for_resume = bind_as.clone();
+    let success_tail_for_resume = Arc::clone(&success_tail);
+    let decline_tail_for_resume = Arc::clone(&decline_tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_own_breeding_permanent(
         &prompt,
         optional,
@@ -3360,6 +6064,40 @@ fn install_select_own_breeding_permanent(
             }));
         }
     }
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s BreedingPermanent arm. Dual-tail — decline runs the
+    // separate `decline_tail` (only when optional; no cost → no clause abort).
+    if ctx.game.pending_selection.is_some() {
+        let decline = if optional {
+            crate::resume::ResumeDecline::RunTail {
+                tail: decline_tail_for_resume,
+                aborts_clause: false,
+            }
+        } else {
+            crate::resume::ResumeDecline::None
+        };
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::BreedingPermanent {
+                    of_player: player,
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: success_tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline,
+            }],
+        });
+    }
 }
 
 fn install_select_ordered_permutation(
@@ -3373,6 +6111,21 @@ fn install_select_ordered_permutation(
 ) {
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    // Resumable-VM (Batch 4): capture for the PermutationStep data frame before
+    // the closure consumes them. The first `install_permutation_step` parks over
+    // the full `items` (accum empty); the frame mirrors that, then re-parks via
+    // the data path on each pick.
+    let items_for_resume = items.clone();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let override_pin = ctx.override_selecting_player();
     ctx.select_ordered_permutation(items, &prompt, move |cb_ctx, ordered| {
         let mut b = bindings.clone();
         if let Some(name) = &bind_as {
@@ -3380,9 +6133,131 @@ fn install_select_ordered_permutation(
         }
         run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
     });
+    // Park the data frame alongside the closure (coexistence): driven by
+    // `run_resume`'s PermutationStep arm. `selecting_player`/`previous_phase` are
+    // read back from the installed selection so the re-park matches exactly.
+    // EMPTY items → select_ordered_permutation ran the tail INLINE (which may have
+    // installed a nested selection + its own resume frame) — don't clobber it.
+    // Cap to 10 to match select_ordered_permutation's truncation.
+    let capped_items: Vec<_> = items_for_resume.into_iter().take(10).collect();
+    if !capped_items.is_empty() {
+        if let Some(pending) = ctx.game.pending_selection.as_ref() {
+            let selecting_player = pending.selecting_player;
+            let previous_phase = pending.previous_phase;
+            ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![crate::resume::ResumeFrame::PermutationStep(
+                    crate::resume::PermutationState {
+                        prov: crate::resume::ResumeProvenance {
+                            source_card,
+                            source_permanent,
+                            source_kind,
+                            controller: player,
+                            override_pin,
+                        },
+                        selecting_player,
+                        previous_phase,
+                        remaining: capped_items,
+                        accum: Vec::new(),
+                        prompt,
+                        bind_as: bind_as_for_resume,
+                        inner_tail: tail_for_resume,
+                        bindings: bindings_for_resume,
+                        runtime: runtime_for_resume,
+                        trigger_context: trigger_for_resume,
+                        placement: None,
+                        outer_conts: Vec::new(),
+                    },
+                )],
+            });
+        }
+    }
 }
 
 #[allow(clippy::too_many_arguments)]
+/// Reconstruct the `(action_id, handle, origin)` candidates of a parked
+/// union-zone selection, mirroring `select_union_zone`'s callback decode across
+/// the four ranges (breeding-source / field-source / trash / hand). Built at
+/// install time — the selection is parked, so handles are stable — for the
+/// resumable-VM `UnionZone` frame, which linear-searches rather than decodes.
+fn union_zone_candidates(
+    game: &crate::game::Game,
+    of_player: PlayerId,
+    valid_action_ids: &[u16],
+) -> Vec<(
+    u16,
+    crate::card_source::CardHandle,
+    crate::selection::UnionZoneOrigin,
+)> {
+    use crate::action::space::{
+        decode_breeding_source_select, decode_source_select, BREEDING_SOURCE_SELECT_END,
+        BREEDING_SOURCE_SELECT_START, BREEDING_TARGET, PLAY_HAND_START, SOURCE_SELECT_END,
+        SOURCE_SELECT_START, TRASH_EFFECT_END, TRASH_EFFECT_START,
+    };
+    use crate::selection::UnionZoneOrigin;
+    let mut out = Vec::with_capacity(valid_action_ids.len());
+    for &action in valid_action_ids {
+        let resolved = if (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END)
+            .contains(&action)
+        {
+            let (player, source_index) = decode_breeding_source_select(action);
+            let (player, source_index) = (player as u8, source_index as u8);
+            let carrier = PermanentHandle {
+                player,
+                index: BREEDING_TARGET as u8,
+            };
+            game.player(player)
+                .breeding_area
+                .as_ref()
+                .and_then(|p| p.card_sources.get(source_index as usize))
+                .map(|c| {
+                    (
+                        c.handle(),
+                        UnionZoneOrigin::Material {
+                            carrier,
+                            source_index,
+                        },
+                    )
+                })
+        } else if (SOURCE_SELECT_START..SOURCE_SELECT_END).contains(&action) {
+            let (field_index, source_index) = decode_source_select(action);
+            let (field_index, source_index) = (field_index as u8, source_index as u8);
+            let carrier = PermanentHandle {
+                player: of_player,
+                index: field_index,
+            };
+            game.player(of_player)
+                .battle_area
+                .get(field_index as usize)
+                .and_then(|p| p.card_sources.get(source_index as usize))
+                .map(|c| {
+                    (
+                        c.handle(),
+                        UnionZoneOrigin::Material {
+                            carrier,
+                            source_index,
+                        },
+                    )
+                })
+        } else if (TRASH_EFFECT_START..TRASH_EFFECT_END).contains(&action) {
+            let idx = (action - TRASH_EFFECT_START) as usize;
+            game.player(of_player)
+                .trash
+                .get(idx)
+                .map(|c| (c.handle(), UnionZoneOrigin::Trash))
+        } else {
+            let idx = action.saturating_sub(PLAY_HAND_START) as usize;
+            game.player(of_player)
+                .hand
+                .get(idx)
+                .map(|c| (c.handle(), UnionZoneOrigin::Hand))
+        };
+        if let Some((handle, origin)) = resolved {
+            out.push((action, handle, origin));
+        }
+    }
+    out
+}
+
 fn install_select_union_zone(
     ctx: &mut EffectContext<'_>,
     of: CompiledPlayerRef,
@@ -3452,6 +6327,17 @@ fn install_select_union_zone(
     let bindings_for_decline = bindings.clone();
     let runtime_for_decline = runtime.clone();
     let trigger_for_decline = trigger_context.clone();
+    // Resumable-VM (Batch 3): capture for the dual-tail data frame. success →
+    // `inner_tail` (success_tail), decline → `ResumeDecline::RunTail` over
+    // decline_tail with `aborts_clause = cost`. Candidates are reconstructed
+    // from the parked selection's valid_action_ids below (tri-range decode).
+    let bind_as_for_resume = bind_as.clone();
+    let success_tail_for_resume = Arc::clone(&success_tail);
+    let decline_tail_for_resume = Arc::clone(&decline_tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_union_zone(
         target_player,
         zoneset,
@@ -3539,6 +6425,49 @@ fn install_select_union_zone(
             }));
         }
     }
+    // Park the dual-tail data frame alongside the closure (coexistence): driven
+    // by `run_resume`'s UnionZone arm (linear search over the reconstructed
+    // tri-range candidates). Decline runs the separate decline_tail with
+    // `aborts_clause = cost`, mirroring the on_decline above.
+    if ctx.game.pending_selection.is_some() {
+        let valid = ctx
+            .game
+            .pending_selection
+            .as_ref()
+            .map(|p| p.valid_action_ids.clone())
+            .unwrap_or_default();
+        let candidates = union_zone_candidates(ctx.game, target_player, &valid);
+        let decline = if optional {
+            crate::resume::ResumeDecline::RunTail {
+                tail: decline_tail_for_resume,
+                aborts_clause: cost,
+            }
+        } else {
+            crate::resume::ResumeDecline::None
+        };
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::UnionZone {
+                    of_player: target_player,
+                    candidates,
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: success_tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline,
+            }],
+        });
+    }
 }
 
 // ───────────────────────────────────────────────────────────────────────────
@@ -3621,7 +6550,21 @@ fn install_choose_from_reveal(
     let player = ctx.player;
     let filter_bindings = bindings.clone();
     let destination_for_callback = destination;
-    ctx.select_reveal(
+    // Resumable-VM: capture for the Reveal{route:Some} data frame. The filter
+    // restricts valid_action_ids at install, so the resume arm just decodes +
+    // binds + routes (no re-eval of the filter).
+    let override_pin = ctx.override_selecting_player();
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let route_for_resume = crate::resume::RevealRoute {
+        destination: destination_for_callback.clone(),
+        target_player,
+        target_permanent,
+    };
+    let parked = ctx.select_reveal(
         &prompt,
         optional,
         move |game, idx| {
@@ -3666,7 +6609,33 @@ fn install_choose_from_reveal(
             }
             run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
         },
-    )
+    );
+    // Park the data frame alongside the closure (coexistence): driven by
+    // run_resume's Reveal{route:Some} arm. No on_decline → decline None.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::Reveal {
+                    route: Some(route_for_resume),
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
+    parked
 }
 
 /// Route a single chosen revealed card to its destination. Pure dispatch —
@@ -3818,16 +6787,58 @@ fn install_remainder_permutation_with_tail(
     );
     let tail = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
-    ctx.select_ordered_permutation(
-        remainder,
-        "Place remaining cards on deck in any order",
-        move |cb_ctx, ordered_vec| {
-            place_remainder_in_order(cb_ctx, player, &ordered_vec, position);
-            let mut b = bindings.clone();
-            run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
-        },
-    );
+    // Resumable-VM: capture for the PermutationStep{placement:Some} data frame.
+    // The terminal places the ordered list back on the deck (no bind).
+    const PROMPT: &str = "Place remaining cards on deck in any order";
+    let remainder_for_resume = remainder.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let controller = ctx.player;
+    let override_pin = ctx.override_selecting_player();
+    ctx.select_ordered_permutation(remainder, PROMPT, move |cb_ctx, ordered_vec| {
+        place_remainder_in_order(cb_ctx, player, &ordered_vec, position);
+        let mut b = bindings.clone();
+        run_tail_preserving_trigger_context(cb_ctx, trigger_context, &tail, &mut b, &runtime);
+    });
     if ctx.game.pending_selection.is_some() {
+        // Park the data frame: placement-terminal (no bind), driven by
+        // run_resume's PermutationStep arm. selecting_player/previous_phase read
+        // back from the installed selection so the re-park matches exactly.
+        let capped: Vec<_> = remainder_for_resume.into_iter().take(10).collect();
+        if let Some(pending) = ctx.game.pending_selection.as_ref() {
+            let selecting_player = pending.selecting_player;
+            let previous_phase = pending.previous_phase;
+            ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![crate::resume::ResumeFrame::PermutationStep(
+                    crate::resume::PermutationState {
+                        prov: crate::resume::ResumeProvenance {
+                            source_card,
+                            source_permanent,
+                            source_kind,
+                            controller,
+                            override_pin,
+                        },
+                        selecting_player,
+                        previous_phase,
+                        remaining: capped,
+                        accum: Vec::new(),
+                        prompt: PROMPT.to_string(),
+                        bind_as: None,
+                        inner_tail: tail_for_resume,
+                        bindings: bindings_for_resume,
+                        runtime: runtime_for_resume,
+                        trigger_context: trigger_for_resume,
+                        placement: Some(crate::resume::RemainderPlacement { player, position }),
+                        outer_conts: Vec::new(),
+                    },
+                )],
+            });
+        }
         InstallResult::Parked
     } else {
         // Empty / capped — selection completed synchronously; tail already ran.
