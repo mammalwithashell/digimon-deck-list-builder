@@ -95,7 +95,7 @@ impl Game {
             let Some(effects) = self.effects_for_card(&src_id, src_handle) else {
                 continue;
             };
-            for effect in &effects {
+            for effect in effects.iter() {
                 if !effect.declarative || !effect.inherited {
                     continue;
                 }
@@ -280,7 +280,7 @@ impl Game {
             let Some(effects) = self.effects_for_card(&card_id, source.handle()) else {
                 continue;
             };
-            for effect in effects {
+            for effect in effects.iter() {
                 if !effect.declarative || effect.inherited != inherited_source {
                     continue;
                 }
@@ -320,7 +320,7 @@ impl Game {
             let Some(effects) = self.effects_for_card(&card_id, source_card) else {
                 continue;
             };
-            for effect in effects {
+            for effect in effects.iter() {
                 if !effect.declarative || !effect.linked {
                     continue;
                 }
@@ -418,7 +418,7 @@ impl Game {
         let effects = impl_.effects(source.handle());
 
         let mut total = 0i32;
-        for effect in &effects {
+        for effect in effects.iter() {
             if effect.dp_modifier == 0 && effect.dp_modifier_fn.is_none() {
                 continue;
             }

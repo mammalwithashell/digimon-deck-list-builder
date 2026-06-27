@@ -22,11 +22,12 @@ fn nokia_aura_grants_plus_1000_dp_to_own_greymon_name() {
     let source_card = runner.game.players[0].battle_area[nokia.index as usize]
         .top_card()
         .handle();
-    let aura = runner
+    let aura_effects = runner
         .game
         .effects_for_card("BT22-084", source_card)
-        .expect("Nokia DSL effects are registered")
-        .into_iter()
+        .expect("Nokia DSL effects are registered");
+    let aura = aura_effects
+        .iter()
         .find(|effect| effect.timing == EffectTiming::Declarative)
         .expect("Nokia has a declarative aura");
     let process = aura.process.as_ref().expect("aura has process");

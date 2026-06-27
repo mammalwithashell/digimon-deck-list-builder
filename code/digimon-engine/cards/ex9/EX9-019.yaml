@@ -35,11 +35,14 @@
 #   - PermanentCondition: TopCard.EqualsCardName("WereGarurumon"), cost: 1.
 #   - PermanentCondition: (TopCard.HasGarurumonName || TopCard.HasAdventureTraits)
 #     && TopCard.IsLevel4, cost: 3.
-#   These are unprinted alt-paths added via the static effect — the printed
-#   text shows only the Lv.4 Blue / Cost 4 evo block. Per the EX9-012 / BT22-026
-#   precedent, unprinted DCGO alt-sources are NOT encoded in YAML (printed
-#   text wins). Only the printed Lv.4 Blue / Cost 4 evo path is carried as a
-#   `kind: digivolve` alt_path.
+#   CORRECTED 2026-06-21 (promote-official-bandai-card-source): these ARE printed —
+#   the card image and official Bandai DB both show "[Digivolve] [WereGarurumon]: Cost 1"
+#   and "[Digivolve] Lv.4 w/[Garurumon] in name or w/[ADVENTURE] trait: Cost 3" on the
+#   card face. An earlier note wrongly called them "unprinted DCGO-only" because
+#   `cards.json` evo_costs carries only the standard cost-4 rows (the digimoncard.io API
+#   drops printed special-digivolution boxes). The official DB outranks cards.json for
+#   printed data, so all routes are now encoded: the standard Lv.4 Blue/Black cost-4
+#   circles + the WereGarurumon cost-1 + the Garurumon-name/ADVENTURE-trait cost-3 alts.
 #
 # Block 2 (DCGO OnEnterFieldAnyone × 2 — gated by CanTriggerOnPlay /
 #   CanTriggerWhenDigivolving): two ActivateClass entries with identical
@@ -132,6 +135,18 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 4, color_is: blue }
     cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { name_contains: "WereGarurumon" }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 4, name_contains: "Garurumon" }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: "ADVENTURE" }
+    cost: 3
 
 effects:
   # ─── Clause 1 — [On Play][When Digivolving] CannotSuspend opp Digimon/Tamer ─

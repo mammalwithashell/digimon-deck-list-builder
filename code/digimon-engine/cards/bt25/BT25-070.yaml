@@ -23,7 +23,7 @@ level: 4
 color: [purple]
 cost: 5
 dp: 6000
-traits: [Logging, Appmon]
+traits: [Logoff, Appmon]  # official Bandai DB: type "Logoff" (was mis-authored "Logging")
 
 alt_paths:
   - kind: digivolve

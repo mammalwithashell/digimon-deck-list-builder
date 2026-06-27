@@ -31,7 +31,17 @@ git tag --list 'desktop-v*' --sort=-creatordate | head -3   # see the latest rel
 
 Pick the next version by SemVer from the latest `desktop-v*` tag: **patch** (`0.3.2 → 0.3.3`) for bugfixes/small features, **minor** for larger features. Alpha prereleases use suffixes (`-alpha.N`, ordered correctly by the updater's semver check). Confirm the choice with the user.
 
-### 2. Bump the version in all three files (they must stay in sync)
+### 2. Refresh the implemented-cards allowlist (so newly-implemented cards actually ship)
+
+The deck builder's import gate rejects any card not in `data/tested_cards.json` ("not available in the alpha release"). That snapshot is **`include_str!`-baked into the desktop binary at compile time** (`code/digimon-engine/src/deck_tools.rs`), so any card implemented since the last snapshot stays import-blocked in the shipped build until the snapshot is regenerated **and committed** (the release builds from the tagged commit). Regenerate it from the live engine pool:
+
+```bash
+python code/tools/build_tested_cards.py   # queries the engine's registered-effect pool, rewrites data/tested_cards.json
+```
+
+This builds `digimon-engine-cli` once (a few minutes) and rewrites the file only if the pool changed — it prints `wrote data/tested_cards.json (N implemented cards)` if cards were added, or `no changes` if the snapshot was already fresh. Leave any change **staged**; it ships in the bump commit below (step 4). Don't regenerate it in CI-only — the same committed file feeds the hosted API and browser builds, so it must be the single committed source of truth.
+
+### 3. Bump the version in all three files (they must stay in sync)
 
 `code/src-tauri/tauri.conf.json`, `code/src-tauri/Cargo.toml`, and the root `Cargo.lock` (`digimon-tcg` entry) all carry the version. Use the helper so the `Cargo.lock` edit hits only the `digimon-tcg` package:
 
@@ -41,12 +51,12 @@ python .claude/skills/cut-desktop-release/scripts/bump_version.py X.Y.Z
 
 It prints the old→new change for each file. Verify with `git diff`.
 
-### 3. Commit the bump to main
+### 4. Commit the bump (+ refreshed allowlist) to main
 
-Use the established commit-message convention (matches prior bumps):
+Use the established commit-message convention (matches prior bumps). Stage the allowlist alongside the version files so the refreshed snapshot lands in the same tagged commit:
 
 ```bash
-git add code/src-tauri/tauri.conf.json code/src-tauri/Cargo.toml Cargo.lock
+git add code/src-tauri/tauri.conf.json code/src-tauri/Cargo.toml Cargo.lock data/tested_cards.json
 git commit -m "Bump desktop app version to X.Y.Z for the desktop-vX.Y.Z release
 
 Co-Authored-By: Claude Opus 4.8 (1M context) <noreply@anthropic.com>"
@@ -55,7 +65,7 @@ git push origin HEAD:main
 
 If the push is rejected by branch protection, push the branch and open a PR for just the bump, merge it, then continue from the merged commit.
 
-### 4. Create an annotated tag with plain-text release notes, and push it
+### 5. Create an annotated tag with plain-text release notes, and push it
 
 The tag **must be annotated** (`git tag -a`) — the publish job re-fetches the tag object and reads its body as the update-modal notes. A lightweight tag falls back to a template and can ship a merge-commit message as the notes (this actually happened on 0.1.0).
 
@@ -73,7 +83,7 @@ git push origin desktop-vX.Y.Z
 
 Derive the notes from what shipped since the last tag (`git log --oneline desktop-v<prev>..HEAD`), but phrase them for testers, not as commit subjects.
 
-### 5. Watch the build + publish
+### 6. Watch the build + publish
 
 ```bash
 gh run list --workflow=desktop-release.yml --limit 1
@@ -82,7 +92,7 @@ gh run watch <run-id>      # or open the Actions URL
 
 Both build legs (Windows + Linux) must go green, then the `publish` job creates → uploads → confirms → publishes to the hosted API. (`workflow_dispatch` and `desktop-ci-*` tags build but do NOT publish — only `desktop-v*` publishes.)
 
-### 6. Verify the release reached testers
+### 7. Verify the release reached testers
 
 ```bash
 curl -s https://digimon-tcg-models.nyc3.cdn.digitaloceanspaces.com/updates/alpha/latest.json | jq '{version, pub_date, platforms: (.platforms | keys)}'
@@ -92,6 +102,7 @@ Confirm `version` is the new one, both `platforms` are present, and `pub_date` i
 
 ## Gotchas (each looks minor, each breaks a release)
 
+- **Skipped the allowlist refresh (step 2)** → cards implemented since the last release are import-blocked in the shipped build ("not available in the alpha release"), because `data/tested_cards.json` is compiled into the binary. Always regenerate + commit it before tagging.
 - **Lightweight tag** → notes show a merge-commit message. Always `git tag -a`; verify `git cat-file -t` prints `tag`.
 - **Version files out of sync** (or `Cargo.lock` missed) → updater confusion / loop. The helper script keeps all three aligned.
 - **Markdown in notes** → renders literally. Plain text only.
@@ -101,6 +112,12 @@ Confirm `version` is the new one, both `platforms` are present, and `pub_date` i
 ## Rollback
 
 If a release is bad: cut a strictly-greater version from the last good commit (testers update forward), and `unpublish` the broken one; if it crashes before the updater runs, use the `min_version` kill-switch. Full procedures (with the exact `/admin/releases` curls) are in the runbook.
+
+## After publishing
+
+Consider running the `update-landing-screenshots` skill so the landing-page
+gallery reflects this build's UI. It launches the real desktop app, recaptures
+each mainstay page in both themes, and republishes the gallery.
 
 ## Reference
 

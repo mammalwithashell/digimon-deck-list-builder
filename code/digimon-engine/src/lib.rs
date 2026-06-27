@@ -7,6 +7,7 @@ pub mod aura;
 pub mod card_data;
 pub mod card_registry;
 pub mod card_source;
+pub mod card_store;
 pub mod cards;
 pub mod combat;
 pub mod dcgo_recording;

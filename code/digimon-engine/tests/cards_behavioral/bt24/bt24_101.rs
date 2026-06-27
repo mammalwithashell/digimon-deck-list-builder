@@ -33,11 +33,15 @@ fn bt24_101_has_standard_yellow_lv5_digivolve_cost_5() {
 }
 
 #[test]
-fn bt24_101_has_lv5_ts_alt_digivolve_cost_3() {
+fn bt24_101_has_lv5_ts_alt_digivolve_cost_5() {
+    // The official Bandai DB / card image print "[Digivolve] Lv.5 w/[TS] trait: Cost 5"
+    // — the same cost as the standard Yellow Lv.5 route, i.e. a gate-only alt (lets an
+    // off-colour [TS] base digivolve for 5), NOT a cheaper route. An earlier authoring
+    // of cost 3 was a transcription error, corrected under promote-official-bandai-card-source.
     let compiled = compiled_bt24_101();
     let path = compiled.alt_paths.iter().find(|path| {
         path.kind == CompiledAltPathKind::Digivolve
-            && matches!(path.cost, Some(CompiledCost::Literal(3)))
+            && matches!(path.cost, Some(CompiledCost::Literal(5)))
             && path.from.as_ref().is_some_and(|from| {
                 from.all_of.iter().any(|pred| pred.level_eq == Some(5))
                     && from
@@ -49,7 +53,7 @@ fn bt24_101_has_lv5_ts_alt_digivolve_cost_3() {
 
     assert!(
         path.is_some(),
-        "Jupitermon must have Lv5 [TS] alternate digivolution for cost 3"
+        "Jupitermon must have Lv5 [TS] alternate digivolution for cost 5 (official-DB value)"
     );
 }
 
@@ -177,7 +181,7 @@ fn bt24_101_aegiochusmon_alt_digivolve_recomputes_when_security_count_changes() 
 }
 
 #[test]
-fn bt24_101_aegiochusmon_ts_base_prompts_cost_choice_and_ts_route_costs_3() {
+fn bt24_101_aegiochusmon_ts_base_prompts_cost_choice_and_ts_route_costs_5() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT24-101")
         .expect("BT24-101 YAML loads")
@@ -192,9 +196,11 @@ fn bt24_101_aegiochusmon_ts_base_prompts_cost_choice_and_ts_route_costs_3() {
         .start();
     let base = runner.place_on_field(0, "Aegiochusmon-TS-LV5", Some(0));
 
-    // The base is BOTH a [TS] Lv.5 (cost 3) AND named Aegiochusmon (cost = 4,
-    // the security count). Rule 17: the engine PROMPTS for which cost to pay
-    // rather than auto-picking the cheaper TS route. Choose the cost-3 TS route.
+    // The base is BOTH a [TS] Lv.5 (cost 5 — the printed [TS] alt, same cost as the
+    // standard route per the card image; corrected from a mis-authored 3 under
+    // promote-official-bandai-card-source) AND named Aegiochusmon (cost = 4, the security
+    // count). Distinct costs {5, 4} → rule 17: the engine PROMPTS rather than auto-picking
+    // the cheaper Aegiochusmon route. Choose the cost-5 [TS] route.
     runner
         .game
         .decode_action(encode_digivolve(0, base.index as u16), 0);
@@ -210,16 +216,16 @@ fn bt24_101_aegiochusmon_ts_base_prompts_cost_choice_and_ts_route_costs_3() {
     );
     let ts = choices
         .iter()
-        .find(|c| c.label.contains('3'))
-        .expect("a cost-3 [TS] option");
+        .find(|c| c.label.contains('5'))
+        .expect("a cost-5 [TS] option");
     runner
         .execute_action(0, ts.action_id)
-        .expect("pick the cost-3 [TS] route");
+        .expect("pick the cost-5 [TS] route");
 
     assert_eq!(
         runner.memory(),
-        7,
-        "the chosen [TS] route costs 3 (10 - 3 = 7)"
+        5,
+        "the chosen [TS] route costs 5 (10 - 5 = 5)"
     );
     assert_eq!(
         runner.game.players[0].battle_area[base.index as usize]

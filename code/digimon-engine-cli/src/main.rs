@@ -109,6 +109,26 @@ enum Command {
 }
 
 fn main() -> ExitCode {
+    // Run the real work on a worker thread with a large stack. Building the
+    // engine's `CardEffectRegistry` (via `LiveGame::default_pool()`, reached
+    // by `Pool` and the game-constructing subcommands) recurses deeply enough
+    // to overflow the OS-default main-thread stack on Windows (~1 MB),
+    // aborting with STATUS_STACK_OVERFLOW. `RUST_MIN_STACK` only governs
+    // spawned threads, not `main`, so the fix is to spawn one explicitly.
+    let stack_size = std::env::var("RUST_MIN_STACK")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(256 * 1024 * 1024);
+    std::thread::Builder::new()
+        .stack_size(stack_size)
+        .spawn(run)
+        .expect("failed to spawn worker thread")
+        .join()
+        .expect("worker thread panicked")
+}
+
+fn run() -> ExitCode {
     let cli = Cli::parse();
 
     match cli.command {

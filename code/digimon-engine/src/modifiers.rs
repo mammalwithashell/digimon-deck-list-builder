@@ -750,11 +750,174 @@ pub struct ModifierRegistry {
     /// `Game::fire_granted_triggered_effects` without schema changes.
     granted_triggered: HashMap<PermanentHandle, Vec<GrantedTriggeredEffect>>,
     next_install_order: u64,
+    /// Memo for the incremental declarative-materialization skip
+    /// (`Game::tick_declarative_effects`). The tick computes a fingerprint
+    /// of the declarative-relevant game state; when it equals the stored
+    /// fingerprint, the materialized state is already current and the full
+    /// clear-and-rebuild is skipped. `decl_memo_valid == false` (derive
+    /// `Default`) forces a rebuild on the first tick.
+    decl_memo_valid: bool,
+    decl_last_fingerprint: u64,
 }
 
 impl ModifierRegistry {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    // ── Incremental declarative-materialization memo ─────────────────────
+    //
+    // `Game::tick_declarative_effects` clears and rebuilds the whole board's
+    // materialized declarative state on every call. Most calls don't change
+    // which declarative sources exist (or any state their conditions read),
+    // so the rebuild is wasted. The tick fingerprints the declarative-
+    // relevant inputs and skips the rebuild when the fingerprint is
+    // unchanged. These accessors hold the last-seen fingerprint.
+
+    /// The fingerprint stored after the last full rebuild, or `None` if the
+    /// memo is invalid (forces a rebuild).
+    pub fn declarative_memo(&self) -> Option<u64> {
+        self.decl_memo_valid.then_some(self.decl_last_fingerprint)
+    }
+
+    /// Record the fingerprint that the just-completed full rebuild reflects.
+    pub fn set_declarative_memo(&mut self, fingerprint: u64) {
+        self.decl_last_fingerprint = fingerprint;
+        self.decl_memo_valid = true;
+    }
+
+    /// Force the next tick to rebuild regardless of fingerprint (fallback /
+    /// `force_full_rebuild` path).
+    pub fn invalidate_declarative_memo(&mut self) {
+        self.decl_memo_valid = false;
+    }
+
+    /// Order-independent digest of all NON-materialized modifier / keyword /
+    /// player-scoped entries — the *inputs* a declarative condition can read
+    /// (e.g. a DP buff a "while this has 5000+ DP" condition checks). Used by
+    /// the tick fingerprint to notice modifier-state changes without
+    /// per-mutator bookkeeping. A wrapping-sum of per-entry hashes is
+    /// commutative (so the `HashMap` iteration order is irrelevant) and,
+    /// unlike XOR, does not cancel field-identical duplicate entries.
+    /// Materialized declaratives are the tick's *output* and are excluded.
+    pub fn nonmaterialized_digest(&self) -> u64 {
+        use std::hash::{Hash, Hasher};
+        let mut sum: u64 = 0;
+        for (handle, entries) in &self.permanent_modifiers {
+            for e in entries {
+                if e.materialized_declarative {
+                    continue;
+                }
+                let mut h = std::collections::hash_map::DefaultHasher::new();
+                handle.hash(&mut h);
+                e.modifier.hash(&mut h);
+                e.value.hash(&mut h);
+                format!("{:?}", e.payload).hash(&mut h);
+                e.expiry.hash(&mut h);
+                e.source_permanent.hash(&mut h);
+                e.source_player.hash(&mut h);
+                format!("{:?}", e.effect_immunity_filter).hash(&mut h);
+                format!("{:?}", e.disable_effect_timing).hash(&mut h);
+                e.install_order.hash(&mut h);
+                sum = sum.wrapping_add(h.finish());
+            }
+        }
+        for (handle, entries) in &self.permanent_keywords {
+            for e in entries {
+                if e.materialized_declarative {
+                    continue;
+                }
+                let mut h = std::collections::hash_map::DefaultHasher::new();
+                handle.hash(&mut h);
+                e.keyword.hash(&mut h);
+                e.expiry.hash(&mut h);
+                e.source_permanent.hash(&mut h);
+                e.source_player.hash(&mut h);
+                e.install_order.hash(&mut h);
+                sum = sum.wrapping_add(h.finish());
+            }
+        }
+        for (player, entries) in &self.player_modifiers {
+            for e in entries {
+                if e.materialized_declarative {
+                    continue;
+                }
+                let mut h = std::collections::hash_map::DefaultHasher::new();
+                player.hash(&mut h);
+                e.modifier.hash(&mut h);
+                e.value.hash(&mut h);
+                format!("{:?}", e.payload).hash(&mut h);
+                e.expiry.hash(&mut h);
+                e.source_permanent.hash(&mut h);
+                e.source_player.hash(&mut h);
+                format!("{:?}", e.effect_immunity_filter).hash(&mut h);
+                e.install_order.hash(&mut h);
+                sum = sum.wrapping_add(h.finish());
+            }
+        }
+        sum
+    }
+
+    /// Canonical, order-independent snapshot of all MATERIALIZED declarative
+    /// entries — the *output* of `tick_declarative_effects`. The debug-only
+    /// differential oracle uses it to assert the fingerprint-skip path yields
+    /// byte-identical materialized state to a full clear-and-rebuild. Sorted
+    /// strings make the comparison order-independent and deliberately exclude
+    /// `install_order` (an incidental monotonic counter that differs between
+    /// two otherwise-identical rebuilds).
+    #[cfg(debug_assertions)]
+    pub fn materialized_snapshot(&self) -> Vec<String> {
+        let mut out = Vec::new();
+        for (handle, entries) in &self.permanent_modifiers {
+            for e in entries {
+                if !e.materialized_declarative {
+                    continue;
+                }
+                out.push(format!(
+                    "M|{:?}|{:?}|{}|{:?}|{:?}|{}|{:?}|{:?}|{:?}",
+                    handle,
+                    e.modifier,
+                    e.value,
+                    e.payload,
+                    e.expiry,
+                    e.source_player,
+                    e.source_permanent,
+                    e.effect_immunity_filter,
+                    e.disable_effect_timing,
+                ));
+            }
+        }
+        for (handle, entries) in &self.permanent_keywords {
+            for e in entries {
+                if !e.materialized_declarative {
+                    continue;
+                }
+                out.push(format!(
+                    "K|{:?}|{:?}|{:?}|{}|{:?}",
+                    handle, e.keyword, e.expiry, e.source_player, e.source_permanent,
+                ));
+            }
+        }
+        for (player, entries) in &self.player_modifiers {
+            for e in entries {
+                if !e.materialized_declarative {
+                    continue;
+                }
+                out.push(format!(
+                    "P|{:?}|{:?}|{}|{:?}|{:?}|{}|{:?}|{:?}",
+                    player,
+                    e.modifier,
+                    e.value,
+                    e.payload,
+                    e.expiry,
+                    e.source_player,
+                    e.source_permanent,
+                    e.effect_immunity_filter,
+                ));
+            }
+        }
+        out.sort();
+        out
     }
 
     /// Add a modifier to a permanent.

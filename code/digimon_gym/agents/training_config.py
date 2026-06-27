@@ -10,7 +10,7 @@ import yaml
 
 
 VALID_ALGORITHMS = {"mlp", "lstm"}
-VALID_OPPONENTS = {"greedy", "random", "agent", "pool"}
+VALID_OPPONENTS = {"greedy", "random", "agent", "pool", "league"}
 
 # `harden-training-pipeline` D1: opponent="self-play" is retired. DigimonEnv
 # builds observations from Player 1's perspective only, so the old mode (which
@@ -48,6 +48,9 @@ class TrainingConfig:
     # `--set vec_env_backend=subproc` never engaged → every run ran serial).
     vec_env_backend: str = "dummy"
     learning_rate: float = 3e-4
+    # Learning-rate schedule: "constant" (default) or "linear" (decay base LR to 0
+    # over the run). Used by the deck-specialist league's per-round decay.
+    lr_schedule: str = "constant"
     n_steps: int = 2048
     batch_size: int = 64
     n_epochs: int = 10
@@ -58,9 +61,19 @@ class TrainingConfig:
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     lstm_hidden_size: int = 256
+    # Policy/value head architecture (hidden-layer sizes applied to BOTH the pi
+    # and vf MLP heads, on top of the 512-dim CardEmbeddingExtractor). None keeps
+    # the SB3 default ([64, 64] — the historical league net). e.g. [256, 256]
+    # widens the heads to test whether the 64-wide bottleneck caps skill.
+    net_arch: Optional[List[int]] = None
     opponent: str = "greedy"
     opponent_pool_manifest: Optional[str] = None
     opponent_pool_mode: str = "pfsp"
+    # Deck-specialist league (`add-deck-specialist-league`): round-pool manifest
+    # for `opponent="league"`, carrying coupled (policy, deck) opponents. The
+    # opponent's deck AND policy are both taken from each entry (unlike the pool
+    # path, where the deck comes from the deck-pool wrapper).
+    league_pool_manifest: Optional[str] = None
     deck_pool_variants: bool = False
     gauntlet_path: Optional[str] = None
     eval_freq: int = 25_000
@@ -77,6 +90,14 @@ class TrainingConfig:
     keep_last_checkpoints: int = 3
     resume_from: Optional[str] = None
     init_from: Optional[str] = None
+    # Partial warm-start: load ONLY the features-extractor weights (the
+    # CardEmbeddingExtractor — embeddings + projection) from this checkpoint into
+    # a freshly-built model, leaving the policy/value heads random. Unlike
+    # init_from (which requires an identical architecture), this transfers the
+    # learned representation across DIFFERENT net_arch, enabling a fair
+    # head-width comparison: both widths inherit the same extractor, only the
+    # heads differ. Mutually exclusive with init_from / resume_from.
+    init_extractor_from: Optional[str] = None
     generalist: bool = False
     curriculum_seed: Optional[int] = None
     eval_seed: Optional[int] = None
@@ -130,6 +151,21 @@ class TrainingConfig:
     reward_gameplay_path: str = "code/digimon_gym/agents/reward/gameplay.yaml"
     reward_profile_override: Optional[str] = None
     reward_profiles_hot_reload: bool = True
+    # Weights & Biases experiment tracking (`--wandb`; optional, flag-gated, OFF
+    # by default so existing runs are byte-identical). When `wandb=True`,
+    # pilot_training calls `wandb.init(sync_tensorboard=True)` so every existing
+    # TensorBoard scalar mirrors to W&B with no extra instrumentation. The API
+    # key is read from the `WANDB_API_KEY` env var (NEVER committed). `wandb_mode`:
+    # "online" | "offline" (buffer locally for a later `wandb sync`) | "disabled"
+    # (no-op). `wandb_group` ties all league specialists/rounds under one group;
+    # `wandb_run_name` overrides the per-run name (else the run_name is used).
+    wandb: bool = False
+    wandb_project: str = "digimon-rl"
+    wandb_entity: Optional[str] = None
+    wandb_group: Optional[str] = None
+    wandb_run_name: Optional[str] = None
+    wandb_mode: str = "online"
+    wandb_tags: Optional[List[str]] = None
 
     def __post_init__(self) -> None:
         self._validate()
@@ -184,6 +220,25 @@ class TrainingConfig:
             raise ValueError("keep_last_checkpoints must be >= 1")
         if self.opponent == "pool" and not self.opponent_pool_manifest:
             raise ValueError("opponent=pool requires opponent_pool_manifest")
+        if self.opponent == "league" and not self.league_pool_manifest:
+            raise ValueError("opponent=league requires league_pool_manifest")
+        if self.lr_schedule not in {"constant", "linear"}:
+            raise ValueError(
+                f"lr_schedule must be 'constant' or 'linear', got {self.lr_schedule!r}"
+            )
+        if self.net_arch is not None:
+            if (
+                not isinstance(self.net_arch, list)
+                or not self.net_arch
+                or not all(isinstance(n, int) and n > 0 for n in self.net_arch)
+            ):
+                raise ValueError(
+                    f"net_arch must be a non-empty list of positive ints, got {self.net_arch!r}"
+                )
+        if self.init_extractor_from and (self.init_from or self.resume_from):
+            raise ValueError(
+                "init_extractor_from is mutually exclusive with init_from / resume_from"
+            )
         if not isinstance(self.tensor_profile, str) or not self.tensor_profile.strip():
             raise ValueError("tensor_profile must be a non-blank string")
         if self.record_games not in VALID_RECORD_GAME_MODES:
@@ -242,6 +297,11 @@ class TrainingConfig:
             raise ValueError(
                 f"match_format must be one of {sorted(VALID_MATCH_FORMATS)}, "
                 f"got {self.match_format}"
+            )
+        if self.wandb_mode not in {"online", "offline", "disabled"}:
+            raise ValueError(
+                "wandb_mode must be one of 'online', 'offline', 'disabled', "
+                f"got {self.wandb_mode!r}"
             )
 
     def to_dict(self) -> Dict[str, Any]:

@@ -14,7 +14,7 @@ alt_paths:
       all_of:
         - level_eq: 6
         - trait_has: Hero
-    cost: 3
+    cost: 5
 
 effects:
   - when: [on_play, when_digivolving]

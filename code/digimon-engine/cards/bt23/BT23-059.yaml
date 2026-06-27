@@ -9,6 +9,12 @@ traits: [Cyborg, Hudie, CS]
 attribute: Vaccine
 alt_paths:
   - kind: digivolve
+    from: { name_contains: "Justimon: Accel Arm" }
+    cost: 1
+  - kind: digivolve
+    from: { name_contains: "Justimon: Critical Arm" }
+    cost: 1
+  - kind: digivolve
     from: { level_eq: 5, trait_has: CS }
     cost: 3
 

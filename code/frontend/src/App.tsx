@@ -21,19 +21,13 @@ import { PatchNotesPage } from '@/pages/PatchNotesPage';
 import { RoomChooserPage } from '@/pages/RoomChooserPage';
 import { RoomLobbyPage } from '@/pages/RoomLobbyPage';
 import { UpdaterBridge } from '@/updater/UpdaterBridge';
+import { DebugBridgeNav } from '@/components/desktop/DebugBridgeNav';
+import { GraphicsSettingsModal } from '@/components/settings/GraphicsSettingsModal';
 import { ThemeProvider } from '@/design/theme/ThemeProvider';
 import { useAuthStore } from '@/stores/authStore';
-import { useUiStore } from '@/stores/uiStore';
+import { useUiStore, applyMotionAttribute, applyTextScaleVar } from '@/stores/uiStore';
 
 const IS_DESKTOP = import.meta.env.VITE_BUILD_TARGET === 'desktop';
-
-// Lazy-loaded so the page is tree-shaken from the web bundle — graphics
-// presets only make sense in a windowed shell.
-const GraphicsSettingsPage = lazy(() =>
-  import('@/pages/GraphicsSettingsPage').then((m) => ({
-    default: m.GraphicsSettingsPage,
-  })),
-);
 
 const LauncherPage = lazy(() => import('@/components/launcher/LauncherPage').then(m => ({ default: m.LauncherPage })));
 
@@ -87,7 +81,6 @@ function DesktopRoutes() {
         <Route path="/" element={suspended(LauncherPage)} />
         <Route path="/patch-notes" element={<PatchNotesPage />} />
         <Route path="/models" element={suspended(ModelsPage)} />
-        <Route path="/settings/graphics" element={suspended(GraphicsSettingsPage)} />
         <Route element={<AuthGuard />}>
           <Route path="/lobby" element={<LobbyPage />} />
           <Route path="/play" element={<ModeSelectPage />} />
@@ -153,19 +146,59 @@ export function App() {
   // Hide the custom title bar in fullscreen so the canvas fills the whole
   // display (CanvasScaler reserves no top space when fullscreen).
   const fullscreen = useUiStore((s) => s.fullscreen);
+  // Re-assert the motion attribute from the store (the index.html bootstrap
+  // sets it pre-paint; this keeps it in sync if the store hydrated to a value
+  // the bootstrap didn't apply, and on every runtime change).
+  const motion = useUiStore((s) => s.motion);
+  const textScale = useUiStore((s) => s.textScale);
 
   useEffect(() => {
     void hydrate();
   }, [hydrate]);
 
+  useEffect(() => {
+    applyMotionAttribute(motion);
+  }, [motion]);
+
+  useEffect(() => {
+    applyTextScaleVar(textScale);
+  }, [textScale]);
+
+  // Desktop-app feel: suppress the browser context menu (the native
+  // right-click "Inspect/Back/Reload" menu) and disable text selection /
+  // image dragging — except inside text fields, which keep their edit menu
+  // and selection. The app's own onContextMenu actions (remove card, inspect
+  // permanent) still fire; this only stops the native menu. Web build is
+  // untouched so browser users keep normal selection/menus.
+  useEffect(() => {
+    if (!IS_DESKTOP) return;
+    const root = document.documentElement;
+    root.setAttribute('data-desktop', '');
+    const isEditable = (el: EventTarget | null): boolean =>
+      el instanceof Element &&
+      !!el.closest('input, textarea, [contenteditable="true"]');
+    const onContextMenu = (e: MouseEvent) => {
+      if (!isEditable(e.target)) e.preventDefault();
+    };
+    document.addEventListener('contextmenu', onContextMenu);
+    return () => {
+      document.removeEventListener('contextmenu', onContextMenu);
+      root.removeAttribute('data-desktop');
+    };
+  }, []);
+
   return (
     <BrowserRouter>
       <ThemeProvider>
         <UpdaterBridge />
+        {IS_DESKTOP && import.meta.env.DEV && <DebugBridgeNav />}
         {IS_DESKTOP && !fullscreen && <TitleBar />}
         <CanvasScaler>
           {IS_DESKTOP ? <DesktopRoutes /> : <WebRoutes />}
         </CanvasScaler>
+        {/* Mounted outside CanvasScaler so its fixed positioning is in real
+            viewport pixels, not the scaled canvas space. */}
+        {IS_DESKTOP && <GraphicsSettingsModal />}
       </ThemeProvider>
     </BrowserRouter>
   );

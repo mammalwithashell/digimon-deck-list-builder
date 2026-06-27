@@ -2,6 +2,9 @@ import { Fragment, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { NavRail, NavRailItem } from '@/design/components/NavRail';
 import { ThemeSwitch } from '@/design/components/ThemeSwitch';
+import { CursorLight } from './CursorLight';
+import { LiveAtmosphere } from './LiveAtmosphere';
+import { GRAPHICS_MODAL_ID } from '@/components/settings/GraphicsSettingsModal';
 import { useAppVersion } from '@/hooks/useAppVersion';
 import { useAuthStore } from '@/stores/authStore';
 import { useUiStore } from '@/stores/uiStore';
@@ -56,6 +59,8 @@ function MenuShellInner() {
   const username = useAuthStore((s) => s.user?.username ?? 'Guest');
   const collapsed = useUiStore((s) => s.railCollapsed);
   const toggleRail = useUiStore((s) => s.toggleRail);
+  const openModal = useUiStore((s) => s.openModal);
+  const activeModal = useUiStore((s) => s.activeModal);
   const railSection = useRailSectionSlot();
 
   const [decks, setDecks] = useState<DeckSummary[]>([]);
@@ -136,12 +141,21 @@ function MenuShellInner() {
             <div className="menu-shell__group" key={group.key}>
               {!collapsed && <h5>{group.title}</h5>}
               {group.items.map((item) => {
-                const active = isActivePath(location.pathname, item);
+                // Graphics opens a centered modal over the current screen
+                // instead of navigating to a standalone page.
+                const isGraphics = item.to === '/settings/graphics';
+                const active = isGraphics
+                  ? activeModal === GRAPHICS_MODAL_ID
+                  : isActivePath(location.pathname, item);
                 return (
                   <Fragment key={item.to}>
                     <NavRailItem
                       active={active}
-                      onClick={() => navigate(item.to)}
+                      onClick={() =>
+                        isGraphics
+                          ? openModal(GRAPHICS_MODAL_ID)
+                          : navigate(item.to)
+                      }
                       title={collapsed ? item.label : undefined}
                     >
                       <span className="menu-shell__glyph" aria-hidden="true">
@@ -193,6 +207,11 @@ function MenuShellInner() {
       </NavRail>
 
       <main className="menu-shell__main">
+        {/* Backmost: live theme atmosphere, then the cursor light, then content.
+            (The static .ds-backdrop atmosphere is only used by the style guide,
+            so the menu shell has a single source of background atmosphere.) */}
+        <LiveAtmosphere surface="menu" />
+        <CursorLight />
         <div className="menu-shell__content">
           <Outlet />
         </div>

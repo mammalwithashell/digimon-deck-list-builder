@@ -615,6 +615,30 @@ hcloud server delete digimon-train          # Hetzner
 doctl compute droplet delete digimon-train --force   # DO
 ```
 
+## B.7 Iterate the image in place (no re-provision)
+
+When you cut a new training image to fix/improve a *live* run, you don't need a
+fresh box — pull, archive the partial, relaunch onto the same volumes:
+
+```bash
+$SSH "docker pull \$IMG \
+  && docker stop digimon-train && docker rm digimon-train \
+  && mv ~/digimon-training/models/<run> ~/digimon-training/models/<run>_preNN   # preserve, don't lose
+  && docker run -d --name digimon-train ... \$IMG sh -c '...'"   # same mounts/flags
+```
+
+Then **verify it actually took**, not just that the container is Up: grep
+`docker logs` for the new behaviour and watch for *silent fallbacks* (e.g.
+`falling back to torch` for the ONNX opponent — see the runbook's "Throughput
+levers for neural-opponent runs"). A throughput optimisation can fail closed and
+the run keeps training, just slowly — so confirm the artifact appears (a
+`*.opponent.onnx`, a config line) and measure steps/sec, don't assume.
+
+> **Throughput on a neural-opponent (league/pool) run is inference-bound, not
+> core-bound.** Bigger boxes have limited headroom; the real levers are
+> `DIGIMON_ONNX_OPPONENT=1` (~2×, MLP opponents), `--batch-size`, and eval
+> cadence. Full menu + gotchas: `docs/TRAINING_RUNBOOK.md` §6.5.
+
 ---
 
 # Local mitigations for VRAM pressure

@@ -484,9 +484,10 @@ impl DebugRunner {
     }
 
     pub fn force_base_dp(&mut self, card_id: &str, dp: i32) {
-        let card = self
-            .game
-            .card_data
+        // `card_data` is a shared `Arc` (see `card_store`); copy-on-write so this
+        // test-only override gives this game a private store, never mutating the
+        // shared cache.
+        let card = std::sync::Arc::make_mut(&mut self.game.card_data.0)
             .iter_mut()
             .find(|c| c.card_id == card_id)
             .unwrap_or_else(|| panic!("force_base_dp: unknown card_id {}", card_id));
@@ -979,13 +980,19 @@ impl DebugRunnerBuilder {
         // determinism. Instead, build an empty Game with the shared card_data and
         // manually populate each player's zones.
 
-        // Build the card_data store and lookup map.
+        // Build the card_data store and lookup map. Assign `data_index` in the
+        // SAME deterministic (sorted-by-id) order as `card_store::build_shared_card_store`
+        // so this local map agrees with the `Game`'s shared (memoized) store —
+        // `HashMap` iteration order would otherwise differ per instance and
+        // mismatch the cached store's assignment.
         let mut card_data_store: Vec<CardData> = Vec::new();
         let mut data_index_map: HashMap<String, usize> = HashMap::new();
-        for (id, data) in &self.card_data {
+        let mut sorted_ids: Vec<&String> = self.card_data.keys().collect();
+        sorted_ids.sort();
+        for id in sorted_ids {
             let idx = card_data_store.len();
             data_index_map.insert(id.clone(), idx);
-            card_data_store.push(data.clone());
+            card_data_store.push(self.card_data[id].clone());
         }
 
         // Build empty decks (one per player) and pass through Game::new with
@@ -1000,7 +1007,9 @@ impl DebugRunnerBuilder {
             .expect("DebugRunner: Game::new failed");
         #[cfg(feature = "dsl-yaml-loader")]
         {
-            game.alt_path_registry
+            // `alt_path_registry` is a shared `Arc` (see `card_store`); copy-on-write
+            // so a DebugRunner's injected cards extend a private copy.
+            std::sync::Arc::make_mut(&mut game.alt_path_registry)
                 .extend(
                     self.compiled_cards
                         .iter()

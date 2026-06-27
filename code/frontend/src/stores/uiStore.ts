@@ -10,6 +10,9 @@ const FULLSCREEN_STORAGE_KEY = 'desktop.fullscreen';
 const RAIL_COLLAPSED_STORAGE_KEY = 'desktop.railCollapsed';
 const BOT_SPEED_STORAGE_KEY = 'gameplay.botSpeed';
 const DECK_BUILDER_VIEW_STORAGE_KEY = 'deckBuilder.viewMode';
+const MOTION_STORAGE_KEY = 'desktop.motion';
+const LIVE_BG_STORAGE_KEY = 'desktop.liveBackground';
+const TEXT_SCALE_STORAGE_KEY = 'desktop.textScale';
 
 /** Deck builder card-pool layout emphasis. `browse` is the dense grid that
  *  emphasizes the card search; `inspect` emphasizes the selected card and its
@@ -77,6 +80,127 @@ function persistBotSpeed(value: BotSpeed): void {
   } catch {
     // Best-effort persistence.
   }
+}
+
+/** How much animation the app renders (add-effects-and-motion-settings).
+ *  `full` = all motion; `reduced` = functional one-shot feedback only (no
+ *  ambient/looping/pointer effects); `off` = no non-essential animation.
+ *  This is the single gate every live effect (cursor lighting, live
+ *  atmosphere, the digivolve cut-in) reads from. It is projected onto a
+ *  `data-motion` attribute on <html> (set pre-paint in index.html, re-asserted
+ *  from the store on mount) so the bulk of gating is pure CSS. */
+export type Motion = 'full' | 'reduced' | 'off';
+
+const MOTIONS: Motion[] = ['full', 'reduced', 'off'];
+
+/** First-run default: honor the OS reduced-motion setting, else `full`.
+ *  Used only to DERIVE the default — once the user picks a level we keep their
+ *  explicit choice. Deliberately NOT persisted on derivation, so the OS hint
+ *  keeps driving the default across runs until an explicit choice is made. */
+export function deriveDefaultMotion(): Motion {
+  if (typeof window === 'undefined') return 'full';
+  try {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+      ? 'reduced'
+      : 'full';
+  } catch {
+    return 'full';
+  }
+}
+
+function loadPersistedMotion(): Motion {
+  if (typeof window === 'undefined') return deriveDefaultMotion();
+  try {
+    const raw = window.localStorage.getItem(MOTION_STORAGE_KEY);
+    return MOTIONS.includes(raw as Motion)
+      ? (raw as Motion)
+      : deriveDefaultMotion();
+  } catch {
+    return deriveDefaultMotion();
+  }
+}
+
+function persistMotion(value: Motion): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(MOTION_STORAGE_KEY, value);
+  } catch {
+    // Best-effort persistence.
+  }
+}
+
+/** Project the motion level onto the document root so CSS keyed on
+ *  `[data-motion]` resolves. Mirrors `applyThemeAttribute` for the theme. */
+export function applyMotionAttribute(motion: Motion): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.dataset.motion = motion;
+}
+
+/** Cosmetic switch for the live (animated) background. Effective only at
+ *  motion `full` — see `selectEffectiveLiveBackground`. Defaults on. */
+function loadPersistedLiveBackground(): boolean {
+  if (typeof window === 'undefined') return true;
+  try {
+    const raw = window.localStorage.getItem(LIVE_BG_STORAGE_KEY);
+    return raw === null ? true : raw === 'true';
+  } catch {
+    return true;
+  }
+}
+
+function persistLiveBackground(value: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(LIVE_BG_STORAGE_KEY, String(value));
+  } catch {
+    // Best-effort persistence.
+  }
+}
+
+/** User-adjustable interface text size (add-desktop-ui-polish). A multiplier
+ *  projected onto the `--font-scale` CSS variable, which the shared `--text-*`
+ *  scale tokens consume via calc(). Lets players pick a comfortable size for
+ *  menus / readable surfaces. The fixed-canvas board scales via the resolution
+ *  preset, so it is unaffected. */
+export type TextScale = 'sm' | 'md' | 'lg' | 'xl';
+
+const TEXT_SCALES: TextScale[] = ['sm', 'md', 'lg', 'xl'];
+const DEFAULT_TEXT_SCALE: TextScale = 'md';
+const TEXT_SCALE_VALUES: Record<TextScale, number> = {
+  sm: 0.9,
+  md: 1,
+  lg: 1.15,
+  xl: 1.3,
+};
+
+function loadPersistedTextScale(): TextScale {
+  if (typeof window === 'undefined') return DEFAULT_TEXT_SCALE;
+  try {
+    const raw = window.localStorage.getItem(TEXT_SCALE_STORAGE_KEY);
+    return TEXT_SCALES.includes(raw as TextScale)
+      ? (raw as TextScale)
+      : DEFAULT_TEXT_SCALE;
+  } catch {
+    return DEFAULT_TEXT_SCALE;
+  }
+}
+
+function persistTextScale(value: TextScale): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(TEXT_SCALE_STORAGE_KEY, value);
+  } catch {
+    // Best-effort persistence.
+  }
+}
+
+/** Project the text scale onto `--font-scale` so the `--text-*` tokens scale. */
+export function applyTextScaleVar(value: TextScale): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.style.setProperty(
+    '--font-scale',
+    String(TEXT_SCALE_VALUES[value]),
+  );
 }
 
 /** Read a persisted preset from localStorage, falling back to the
@@ -182,6 +306,17 @@ interface UiStore {
    *  relaunch. */
   deckBuilderView: DeckBuilderView;
 
+  /** How much animation the app renders. Persisted; projected onto the
+   *  `data-motion` attribute. The single gate every live effect reads. */
+  motion: Motion;
+
+  /** Cosmetic toggle for the live animated background. Effective only when
+   *  `motion === 'full'` (see `selectEffectiveLiveBackground`). Persisted. */
+  liveBackground: boolean;
+
+  /** User-adjustable interface text size; projected onto `--font-scale`. */
+  textScale: TextScale;
+
   setHoveredCard: (cardId: string | null) => void;
   openModal: (modal: string) => void;
   closeModal: () => void;
@@ -195,6 +330,9 @@ interface UiStore {
   toggleRail: () => void;
   setDeckBuilderView: (value: DeckBuilderView) => void;
   toggleDeckBuilderView: () => void;
+  setMotion: (value: Motion) => void;
+  setLiveBackground: (value: boolean) => void;
+  setTextScale: (value: TextScale) => void;
 }
 
 export const useUiStore = create<UiStore>((set) => ({
@@ -207,6 +345,9 @@ export const useUiStore = create<UiStore>((set) => ({
   botSpeed: loadPersistedBotSpeed(),
   railCollapsed: loadPersistedRailCollapsed(),
   deckBuilderView: loadPersistedDeckBuilderView(),
+  motion: loadPersistedMotion(),
+  liveBackground: loadPersistedLiveBackground(),
+  textScale: loadPersistedTextScale(),
 
   setHoveredCard: (cardId) => set({ hoveredCard: cardId }),
   openModal: (modal) => set({ activeModal: modal }),
@@ -247,7 +388,33 @@ export const useUiStore = create<UiStore>((set) => ({
       persistDeckBuilderView(next);
       return { deckBuilderView: next };
     }),
+  setMotion: (value) => {
+    persistMotion(value);
+    applyMotionAttribute(value);
+    set({ motion: value });
+  },
+  setLiveBackground: (value) => {
+    persistLiveBackground(value);
+    set({ liveBackground: value });
+  },
+  setTextScale: (value) => {
+    persistTextScale(value);
+    applyTextScaleVar(value);
+    set({ textScale: value });
+  },
 }));
+
+/** Effective live-background: animated atmosphere renders only when motion is
+ *  `full` AND the cosmetic toggle is on. Downstream live-effect features
+ *  (live atmosphere, board atmosphere) read this single resolved boolean. */
+export const selectEffectiveLiveBackground = (s: UiStore): boolean =>
+  s.motion === 'full' && s.liveBackground;
+
+/** Hook accessors so other features read one source of truth for motion
+ *  rather than re-deriving from the OS or the attribute. */
+export const useMotion = (): Motion => useUiStore((s) => s.motion);
+export const useEffectiveLiveBackground = (): boolean =>
+  useUiStore(selectEffectiveLiveBackground);
 
 // Exported for tests and direct CanvasScaler reads pre-mount.
 export const __uiStoreInternals = {
@@ -256,9 +423,17 @@ export const __uiStoreInternals = {
   RAIL_COLLAPSED_STORAGE_KEY,
   BOT_SPEED_STORAGE_KEY,
   DECK_BUILDER_VIEW_STORAGE_KEY,
+  MOTION_STORAGE_KEY,
+  LIVE_BG_STORAGE_KEY,
+  TEXT_SCALE_STORAGE_KEY,
+  TEXT_SCALE_VALUES,
   loadPersistedPreset,
   loadPersistedFullscreen,
   loadPersistedRailCollapsed,
   loadPersistedBotSpeed,
   loadPersistedDeckBuilderView,
+  loadPersistedMotion,
+  deriveDefaultMotion,
+  loadPersistedLiveBackground,
+  loadPersistedTextScale,
 };

@@ -126,18 +126,16 @@
 #       card.PermanentOfThisCard() }).Unsuspend()` — unsuspend the carrier
 #       permanent itself.
 #
-# ─── Printed cost vs DCGO `digivolutionCost: 3` divergence (Clause 1) ────────
+# ─── Printed digivolution routes (Clause 1) ─────────────────────────────────
 #
-# Printed cards.json `evo_costs` for BT22-026 shows `{ level: 5, color: blue,
-# memory_cost: 4 }` — the published Lv.5/Blue digivolution cost is 4. DCGO's
-# `AddSelfDigivolutionRequirementStaticEffect(... digivolutionCost: 3 ...)`
-# adds a Lv.5 + (CS-trait || Garurumon-name) source at cost 3, narrower than
-# the printed cost block. Per source priority (printed text wins over DCGO),
-# we encode the printed standard alt-path: `from: { level_eq: 5 }` at cost 4.
-#
-# The DCGO Lv.5 + CS/Garurumon source-at-cost-3 is treated as an unprinted
-# implementation alt-source; it's not a printed text element so we do NOT
-# encode it in YAML. (Same treatment as BT22-013.)
+# CORRECTED 2026-06-21 (promote-official-bandai-card-source): the card image and the
+# official Bandai DB both PRINT a cost-3 alt box — "[Digivolve] Lv.5 w/[Garurumon] in
+# name or w/[CS] trait: Cost 3" — alongside the standard Lv.5/Blue cost-4 circle. An
+# earlier note here wrongly treated the cost-3 route as "unprinted DCGO-only" because
+# `cards.json` evo_costs carries only the cost-4 standard row (the digimoncard.io API
+# drops the printed special-digivolution box). The official DB outranks cards.json for
+# printed data, so both routes are now encoded: standard `from: { level_eq: 5 }` cost 4
+# plus the printed Garurumon-name and CS-trait routes at cost 3. (Same as BT22-013.)
 #
 # ─── [Hand][Main] Nokia jump — modelled as a `main_from_hand` clause ─────────
 #
@@ -205,6 +203,14 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5 }
     cost: 4
+  # Printed alt: Lv.5 w/[Garurumon] in name: Cost 3 (printed special digivolution)
+  - kind: digivolve
+    from: { level_eq: 5, name_contains: "Garurumon" }
+    cost: 3
+  # Printed alt: Lv.5 w/[CS] trait: Cost 3 (printed special digivolution)
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: CS }
+    cost: 3
 
 effects:
   # ─── Clause 1 — [Hand][Main] Nokia jump (main_from_hand) ──────────────────

@@ -139,7 +139,23 @@ locally. The desktop cache code treats these uniformly.
 
 ## Admin upload flow
 
-Gated by `require_roles(ROLE_ADMIN)`. Two calls per model:
+Gated by `require_admin_or_api_key` — either an **admin-role JWT** *or* a static
+operator key. For solo operators who don't want to manage user logins, set
+`ADMIN_API_KEY` on the hosted API and send it on the admin calls:
+
+```bash
+# login-free release — no account, no JWT, no expiry
+curl -X POST {api}/admin/models \
+  -H "X-Admin-Key: $ADMIN_API_KEY" -H "Content-Type: application/json" \
+  -d '{"name":"Starter Generalist","model_type":"mlp", ...}'
+# (Authorization: Bearer $ADMIN_API_KEY is also accepted.)
+```
+
+This stays *gated* (one secret you hold) on purpose — the catalog is downloaded
+and executed by every desktop client, so an open upload endpoint would be a
+supply-chain hole. The admin-JWT path below is unchanged; use either.
+
+Two calls per model:
 
 ### 1. Create the record
 ```bash
@@ -272,6 +288,7 @@ Resolution order inside the sidecar (`resolve_model_path` in
 
 | Var | Where | Required | Notes |
 |---|---|---|---|
+| `ADMIN_API_KEY` | hosted API | optional | Static operator key for the `/admin/models*` routes — login-free model release. Sent via `X-Admin-Key` or `Authorization: Bearer`. Unset → admin-JWT only. Gated, not open (clients execute these models). |
 | `MODEL_STORAGE_BACKEND` | hosted API | yes | `local` or `spaces`. |
 | `MODEL_STORAGE_LOCAL_ROOT` | hosted API | local only | Filesystem root. Default `data/models_store`. |
 | `SPACES_ENDPOINT_URL` | hosted API | spaces | e.g. `https://nyc3.digitaloceanspaces.com`. |

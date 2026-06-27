@@ -119,6 +119,12 @@ defaults are repo-relative (`code/digimon_gym/agents/reward/*.yaml`). Prepend a
 `code/` symlink so they resolve. `--floor-envs` = the droplet's vCPU count
 (phase 1 parallelizes; phase 2 ignores it).
 
+> **Phase 2 is opponent-inference-bound** (a champion forward pass every step;
+> see the runbook's "Throughput levers for neural-opponent runs"). The
+> `DIGIMON_ONNX_OPPONENT=1` lever (~2× steps/sec) is **MLP-only** — the v022/v020
+> champions here are **LSTM**, so it is a no-op for this curriculum. It pays off
+> only once the champion pool is MLP. Don't bother enabling it with LSTM champions.
+
 ```bash
 IMG=ghcr.io/mammalwithashell/digimon-trainer:$NEXT
 $SSH "docker rm -f digimon-train 2>/dev/null; docker run -d --name digimon-train --restart no \

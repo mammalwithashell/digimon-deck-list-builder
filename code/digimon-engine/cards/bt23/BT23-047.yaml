@@ -12,6 +12,16 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 6, color_is: green }
     cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 5
+  # Printed alt: "[Digivolve] Lv.6 w/[CS] trait: Cost 5" (gate-only, same cost).
+  - kind: digivolve
+    from: { level_eq: 6, trait_has: CS }
+    cost: 5
 
 effects:
   - kind: partition

@@ -28,6 +28,7 @@ The eval opponent is whatever the run trained against
 | generalist | greedy, both decks sampled | skill, **deck-confounded** | high variance |
 | **self-play** | **a mirror of itself** | **≈50% + first-player edge** | **no learning signal** |
 | pool (frozen) | frozen snapshot(s) | best-response to that snapshot | overfits to the anchor |
+| **league** | coupled (policy,deck) from the round pool | best-response to the pool — **mirror-pinned ≈50%** at round 1, where the pool ≈ the generalist the specialist was seeded from | no absolute signal |
 
 Two structural problems: (1) self-play has no native progress signal, and
 (2) no two modes are comparable — you can't rank a self-play model against a
@@ -37,6 +38,17 @@ A subtle trap: a raw `DigimonEnv` driven without `OpponentWrapper` leaves player
 2 **passive**, so the first player always wins. That reads as a fake ~50%
 mirror (or 100%). Any evaluation MUST drive the opponent through
 `OpponentWrapper`.
+
+A second trap, specific to the in-training **anchored panel** (the trustworthy
+in-run signal, §3): it plays vs greedy + every layout-compatible champion in
+`models/champions/registry.json`. With an **empty registry** it silently
+degrades to greedy-only — one noisy anchor, not the absolute frame you wanted.
+For a warm-started run (e.g. a deck-specialist league), **register the seed as a
+champion before launch** (`champion_admin.py promote --candidate <seed>.zip
+--name <name> --force`, layout-compatible) so the panel reads `vs ['greedy',
+'<seed>']` and answers "is this beating what it was seeded from?". The panel
+builds its anchor set lazily at the first panel, so register before the run, not
+during it. See the runbook §6.5 / §14.
 
 ## 2. The fix: a fixed reference frame
 

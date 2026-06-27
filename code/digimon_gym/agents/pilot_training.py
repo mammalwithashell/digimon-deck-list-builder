@@ -390,6 +390,92 @@ def random_policy(env: DigimonEnv) -> int:
     return int(np.random.choice(valid))
 
 
+# ── ONNX opponent inference (throughput lever) ──────────────────────────────
+# A frozen league/pool opponent runs a policy forward pass on EVERY env step,
+# which dominates the league's per-step cost (the loop is ~3x slower than the
+# no-neural-opponent floor). ONNX Runtime evaluates these small MLP policies
+# markedly faster than torch eager on CPU. Because the opponent plays
+# DETERMINISTICALLY (argmax over masked logits), the swap is behaviour-preserving
+# — identical logits -> identical argmax — so it changes speed, not play.
+# Gated by DIGIMON_ONNX_OPPONENT (default off -> torch); MLP-only (LSTM opponents
+# keep the torch path). Any failure falls back to torch so a run never aborts.
+_ONNX_OPPONENT_ENV = "DIGIMON_ONNX_OPPONENT"
+
+
+def _onnx_opponent_enabled() -> bool:
+    return os.environ.get(_ONNX_OPPONENT_ENV, "0").strip().lower() not in ("0", "", "false", "no")
+
+
+def _export_mlp_policy_onnx(model, onnx_path: str) -> None:
+    """Trace a loaded MaskablePPO policy's actor path (obs -> action logits) to
+    ONNX. Mirrors tools/export_onnx.py's MlpActorWrapper so the graph matches the
+    proven catalog export (input 'obs', output 'logits')."""
+    import torch
+    import torch.nn as nn
+
+    class _MlpActorWrapper(nn.Module):
+        def __init__(self, policy):
+            super().__init__()
+            self.features_extractor = policy.features_extractor
+            self.pi_features_extractor = getattr(policy, "pi_features_extractor", None)
+            self.mlp_extractor_policy = policy.mlp_extractor.policy_net
+            self.action_net = policy.action_net
+
+        def forward(self, obs):
+            extractor = self.pi_features_extractor or self.features_extractor
+            return self.action_net(self.mlp_extractor_policy(extractor(obs)))
+
+    policy = model.policy.cpu()
+    policy.train(False)                 # inference mode (== Module.eval(), no flagged builtin)
+    wrapper = _MlpActorWrapper(policy)
+    wrapper.train(False)
+    tensor_size = int(model.observation_space.shape[-1])
+    dummy = torch.zeros((1, tensor_size), dtype=torch.float32)
+    # pid-unique temp so the 8 subprocs that race to export the SAME opponent at
+    # startup each write their own file; os.replace then atomically publishes a
+    # complete export (last writer wins; content is identical). A shared temp path
+    # would let concurrent writers interleave bytes -> corrupt .onnx.
+    tmp = f"{onnx_path}.{os.getpid()}.tmp"
+    with torch.no_grad():
+        torch.onnx.export(
+            wrapper, dummy, tmp,
+            input_names=["obs"], output_names=["logits"],
+            dynamic_axes={"obs": {0: "batch"}, "logits": {0: "batch"}},
+            opset_version=17,
+            dynamo=False,  # legacy TorchScript exporter (needs `onnx`, not `onnxscript`);
+                           # torch>=2.x defaults dynamo=True which requires onnxscript.
+        )
+    os.replace(tmp, onnx_path)  # atomic publish; readers never see a partial file
+
+
+def _make_onnx_mlp_opponent(weights_path: str) -> Callable[[DigimonEnv], int]:
+    """ONNX-backed MLP opponent: obs -> logits via ORT (1 thread/subproc), masked
+    argmax. Exports the .zip to a sibling .onnx once (atomically, cached on disk),
+    then every subproc reuses it. Behaviourally identical to the torch path's
+    ``predict(deterministic=True)`` with action masks."""
+    import re
+    import onnxruntime as ort
+
+    onnx_path = re.sub(r"\.zip$", "", str(weights_path)) + ".opponent.onnx"
+    if not os.path.isfile(onnx_path):
+        model = MaskablePPO.load(weights_path, device="cpu")
+        _export_mlp_policy_onnx(model, onnx_path)
+        del model
+    so = ort.SessionOptions()
+    so.intra_op_num_threads = 1   # one ORT thread per subproc -> no Nx oversubscription
+    so.inter_op_num_threads = 1
+    sess = ort.InferenceSession(onnx_path, sess_options=so, providers=["CPUExecutionProvider"])
+
+    def _onnx_mlp_policy(env: DigimonEnv) -> int:
+        mask = np.asarray(env.action_mask())
+        obs = np.asarray(env.runner.get_board_tensor(2), dtype=np.float32).reshape(1, -1)
+        logits = sess.run(["logits"], {"obs": obs})[0][0]
+        masked = np.where(mask > 0, logits, -np.inf)
+        return int(np.argmax(masked))
+
+    return _onnx_mlp_policy
+
+
 def make_agent_opponent_fn(
     weights_path: str,
     algorithm: str = "mlp",
@@ -428,6 +514,14 @@ def make_agent_opponent_fn(
         _lstm_policy.reset_state = lambda: lstm_states.__setitem__(0, None)  # type: ignore[attr-defined]
         return _lstm_policy
     else:
+        if _onnx_opponent_enabled():
+            try:
+                return _make_onnx_mlp_opponent(weights_path)
+            except Exception as exc:  # robustness: never abort a run over this optimisation
+                logger.warning(
+                    "ONNX opponent for %s failed (%s); falling back to torch.",
+                    weights_path, exc,
+                )
         model = MaskablePPO.load(weights_path)
 
         def _mlp_policy(env: DigimonEnv) -> int:
@@ -468,6 +562,47 @@ def make_pool_opponent_fn(
 
     _opponent.reset_state = _reset_state  # type: ignore[attr-defined]
     return _opponent
+
+
+def _league_policy_loader(weights_path: str, algorithm: str) -> Callable[[DigimonEnv], int]:
+    """Module-level (so it is spawn-safe for SubprocVecEnv) policy loader for the
+    deck-specialist league. Adapts ``make_agent_opponent_fn`` to the
+    ``LeaguePoolWrapper`` ``policy_loader(weights_path, algorithm)`` signature."""
+    return make_agent_opponent_fn(weights_path, algorithm=algorithm)
+
+
+def _resolve_learning_rate(cfg: TrainingConfig):
+    """Return the learning rate to hand SB3: a float for ``lr_schedule="constant"``,
+    or a ``progress_remaining -> lr`` callable for ``"linear"`` (decays the base LR
+    to 0 over the run, avoiding the constant-LR drift seen on the floor/bo3 runs)."""
+    base = cfg.learning_rate
+    if getattr(cfg, "lr_schedule", "constant") == "linear":
+        return lambda progress_remaining: base * progress_remaining
+    return base
+
+
+def _resolve_league_entry_decks(entries: List) -> None:
+    """Resolve league opponent decks from archetype NAMES to card-ID lists, in
+    place. The round-pool manifest stores each opponent's deck as its archetype
+    name (human-readable, registry-keyed), but the env needs card IDs for deck2.
+    Entries already holding a card-ID list (tests / direct construction) are left
+    as-is. Mirrors the deck1 archetype resolution in ``main``."""
+    names = sorted({e.deck for e in entries if isinstance(e.deck, str)})
+    if not names:
+        return
+    pool = load_generalist_deck_pool(allowed_archetypes=set(names))
+    by_canon: Dict[str, List[str]] = {}
+    for arch in pool.archetype_names:
+        decks = sorted(pool.archetypes[arch], key=lambda d: d.deck_id)
+        by_canon[canonicalize_archetype(arch)] = list(decks[0].card_ids)
+    for e in entries:
+        if isinstance(e.deck, str):
+            cards = by_canon.get(canonicalize_archetype(e.deck))
+            if not cards:
+                raise ValueError(
+                    f"league opponent deck {e.deck!r} resolved to no implemented decks"
+                )
+            e.deck = cards
 
 
 # ─── Opponent Wrapper ────────────────────────────────────────────────
@@ -1934,7 +2069,9 @@ def make_env(opponent: str = "greedy",
              dna_digivolve_bonus: float = 3.9,
              match_format: str = "single",
              match_env_seed: Optional[int] = None,
-             reward_profile_factory: Optional[Callable] = None) -> gymnasium.Env:
+             reward_profile_factory: Optional[Callable] = None,
+             league_entries: Optional[List] = None,
+             league_sampling_mode: str = "pfsp") -> gymnasium.Env:
     """Create a wrapped DigimonEnv for single-agent RL training.
 
     Args:
@@ -1994,18 +2131,29 @@ def make_env(opponent: str = "greedy",
 
     if opponent == "self-play":
         raise ValueError(SELF_PLAY_RETIRED_MSG)
-    opponent_policies = {
-        "greedy": greedy_policy,
-        "random": random_policy,
-    }
-    try:
-        opponent_fn = opponent_policies[opponent]
-    except KeyError:
-        valid_opponents = list(opponent_policies.keys())
-        raise ValueError(
-            f"Unknown opponent {opponent!r}. "
-            f"Expected one of {valid_opponents}."
-        )
+    # Deck-specialist league: the opponent is a settable controller whose policy
+    # the LeaguePoolWrapper (applied below, outside MatchEnv) repoints per match
+    # from the same entry that sets deck2 — coupled (policy, deck) sampling.
+    league_controller = None
+    if opponent == "league":
+        if not league_entries:
+            raise ValueError("opponent='league' requires league_entries")
+        from digimon_gym.agents.league_opponent import LeagueOpponentController
+        league_controller = LeagueOpponentController()
+        opponent_fn = league_controller
+    else:
+        opponent_policies = {
+            "greedy": greedy_policy,
+            "random": random_policy,
+        }
+        try:
+            opponent_fn = opponent_policies[opponent]
+        except KeyError:
+            valid_opponents = list(opponent_policies.keys()) + ["pool", "league"]
+            raise ValueError(
+                f"Unknown opponent {opponent!r}. "
+                f"Expected one of {valid_opponents}."
+            )
     env = OpponentWrapper(base_env, opponent_fn=opponent_fn)
 
     # BO3 match wrapper sits between OpponentWrapper and any deck-pool
@@ -2035,6 +2183,21 @@ def make_env(opponent: str = "greedy",
             deck_pool=generalist_deck_pool,
             seed=curriculum_seed,
             opponent_pool=generalist_opponent_pool,
+        )
+
+    # League pool wrapper: samples a coupled (policy, deck) opponent per match.
+    # Outside MatchEnv (above) so one sample spans a BO3 match.
+    if league_controller is not None:
+        from digimon_gym.agents.league_opponent import LeaguePoolWrapper
+        player_deck = deck1 if deck1 else base_env._deck1
+        env = LeaguePoolWrapper(
+            env,
+            entries=league_entries,
+            player_deck=player_deck,
+            controller=league_controller,
+            policy_loader=_league_policy_loader,
+            sampling_mode=league_sampling_mode,
+            seed=curriculum_seed,
         )
 
     # Gauntlet wrapper for meta-weighted opponent sampling
@@ -2083,7 +2246,7 @@ def make_env(opponent: str = "greedy",
 
 def make_vec_env(
     cfg: TrainingConfig,
-    opponent_fn: Callable[[DigimonEnv], int],
+    opponent_fn: Optional[Callable[[DigimonEnv], int]] = None,
     deck1: Optional[List[str]] = None,
     deck2: Optional[List[str]] = None,
     generalist_deck_pool: Optional[GeneralistDeckPool] = None,
@@ -2092,8 +2255,15 @@ def make_vec_env(
     recording_writer: Optional[TrainingGameRecorder] = None,
     mulligan_log_cfg: Optional[_MulliganLogConfig] = None,
     reward_profile_factory: Optional[Callable] = None,
+    league_entries: Optional[List] = None,
+    league_sampling_mode: str = "pfsp",
 ):
-    """Build ActionMasker-wrapped vector environments from TrainingConfig."""
+    """Build ActionMasker-wrapped vector environments from TrainingConfig.
+
+    For ``league_entries`` (deck-specialist league), each env builds its own
+    ``LeagueOpponentController`` + ``LeaguePoolWrapper`` inside ``_init`` (so the
+    coupling is per-worker and spawn-safe); ``opponent_fn`` is then ignored.
+    """
 
     def _factory(rank: int):
         def _init():
@@ -2115,12 +2285,34 @@ def make_vec_env(
             # `add-reward-profiles` Group 8: wrap before OpponentWrapper.
             if reward_profile_factory is not None:
                 base_env = reward_profile_factory(base_env)
-            wrapped = OpponentWrapper(base_env, opponent_fn=opponent_fn)
+            # Deck-specialist league: per-worker controller, repointed per match
+            # by the LeaguePoolWrapper applied below (outside MatchEnv).
+            league_controller = None
+            if league_entries:
+                from digimon_gym.agents.league_opponent import LeagueOpponentController
+                league_controller = LeagueOpponentController()
+                opp_fn = league_controller
+            else:
+                opp_fn = opponent_fn
+            wrapped = OpponentWrapper(base_env, opponent_fn=opp_fn)
             # BO3 match wrapper between OpponentWrapper and deck-pool wrappers.
             if cfg.match_format == "bo3":
                 from digimon_gym.agents.match_env import MatchEnv
                 match_seed = None if cfg.seed is None else cfg.seed + rank
                 wrapped = MatchEnv(wrapped, seed=match_seed)
+            if league_controller is not None:
+                from digimon_gym.agents.league_opponent import LeaguePoolWrapper
+                player_deck = deck1 if deck1 else base_env._deck1
+                league_seed = None if curriculum_seed is None else curriculum_seed + rank
+                wrapped = LeaguePoolWrapper(
+                    wrapped,
+                    entries=league_entries,
+                    player_deck=player_deck,
+                    controller=league_controller,
+                    policy_loader=_league_policy_loader,
+                    sampling_mode=league_sampling_mode,
+                    seed=league_seed,
+                )
             if generalist_deck_pool is not None:
                 seed = None if curriculum_seed is None else curriculum_seed + rank
                 wrapped = GeneralistDeckPoolWrapper(
@@ -2190,6 +2382,65 @@ def save_model(model: Union[MaskablePPO, MaskableRecurrentPPO],
     return path
 
 
+# ─── Weights & Biases (optional experiment tracking) ─────────────────────
+
+def _maybe_init_wandb(cfg: TrainingConfig, run_name: Optional[str] = None):
+    """Start a W&B run when ``cfg.wandb`` is set; return the run handle (or None).
+
+    Uses ``sync_tensorboard=True`` so every existing TensorBoard scalar (eval win
+    rate, the anchored panels, reward curves) mirrors to W&B with no extra
+    instrumentation. The API key is read from ``WANDB_API_KEY`` (never committed);
+    if it's missing in online mode we downgrade to offline (buffer for a later
+    ``wandb sync``) rather than aborting the run. ``wandb`` is imported lazily so a
+    run without ``--wandb`` never needs the package installed, and any telemetry
+    failure is swallowed — tracking must never kill a training run."""
+    if not getattr(cfg, "wandb", False):
+        return None
+    mode = getattr(cfg, "wandb_mode", "online") or "online"
+    if mode == "disabled":
+        return None
+    try:
+        import wandb  # noqa: PLC0415  (lazy: only when --wandb is set)
+    except ImportError:
+        print("[wandb] --wandb set but the 'wandb' package is not installed; "
+              "skipping W&B logging (it's in requirements-training.txt).",
+              flush=True)
+        return None
+    if mode == "online" and not os.environ.get("WANDB_API_KEY"):
+        print("[wandb] WANDB_API_KEY not set — using offline mode "
+              "(run `wandb sync` later to upload).", flush=True)
+        mode = "offline"
+    try:
+        run = wandb.init(
+            project=getattr(cfg, "wandb_project", None) or "digimon-rl",
+            entity=getattr(cfg, "wandb_entity", None) or None,
+            group=getattr(cfg, "wandb_group", None) or None,
+            name=getattr(cfg, "wandb_run_name", None) or run_name or None,
+            tags=getattr(cfg, "wandb_tags", None) or None,
+            config=cfg.to_dict(),
+            sync_tensorboard=True,
+            mode=mode,
+            reinit=True,
+        )
+    except Exception as exc:  # telemetry must never abort a training run
+        print(f"[wandb] init failed (non-fatal): {exc}", flush=True)
+        return None
+    print(f"[wandb] logging to project={run.project} name={run.name} "
+          f"(mode={mode}, sync_tensorboard=True)", flush=True)
+    return run
+
+
+def _finish_wandb(run) -> None:
+    """Finish a W&B run if one was started (no-op for None). Never raises."""
+    if run is None:
+        return
+    try:
+        import wandb
+        wandb.finish()
+    except Exception as exc:
+        print(f"[wandb] finish failed (non-fatal): {exc}", flush=True)
+
+
 def train(total_timesteps: int = 100_000,
           opponent: str = "greedy",
           eval_freq: int = 10_000,
@@ -2223,6 +2474,7 @@ def train(total_timesteps: int = 100_000,
           init_from: Optional[str] = None,
           opponent_pool_manifest: Optional[str] = None,
           opponent_pool_mode: Optional[str] = None,
+          league_pool_manifest: Optional[str] = None,
           cfg: Optional[TrainingConfig] = None,
           reward_profiles_override_mismatch: bool = False,
           ) -> Union[MaskablePPO, MaskableRecurrentPPO]:
@@ -2276,6 +2528,8 @@ def train(total_timesteps: int = 100_000,
             _cfg_overrides["opponent_pool_manifest"] = opponent_pool_manifest
         if opponent_pool_mode is not None:
             _cfg_overrides["opponent_pool_mode"] = opponent_pool_mode
+        if league_pool_manifest is not None:
+            _cfg_overrides["league_pool_manifest"] = league_pool_manifest
         cfg = TrainingConfig(
             algorithm="lstm" if use_lstm else "mlp",
             timesteps=total_timesteps,
@@ -2300,7 +2554,7 @@ def train(total_timesteps: int = 100_000,
         opponent = cfg.opponent
         eval_freq = cfg.eval_freq
         n_eval_episodes = cfg.eval_episodes
-        learning_rate = cfg.learning_rate
+        learning_rate = _resolve_learning_rate(cfg)
         n_steps = cfg.n_steps
         batch_size = cfg.batch_size
         n_epochs = cfg.n_epochs
@@ -2447,7 +2701,7 @@ def train(total_timesteps: int = 100_000,
             print(f"  LSTM hidden:    {lstm_hidden_size}")
         print(f"  Opponent:       {opponent}")
         print(f"  Total steps:    {total_timesteps:,}")
-        print(f"  Learning rate:  {learning_rate}")
+        print(f"  Learning rate:  {cfg.learning_rate} ({getattr(cfg, 'lr_schedule', 'constant')})")
         print(f"  Batch size:     {batch_size}")
         print(f"  Rollout steps:  {n_steps}")
         print(f"  Eval freq:      every {eval_freq:,} steps")
@@ -2492,8 +2746,32 @@ def train(total_timesteps: int = 100_000,
             mode=cfg.opponent_pool_mode,
         )
 
+    # Deck-specialist league: load the round pool (coupled (policy, deck) entries).
+    league_entries = None
+    if opponent == "league":
+        from digimon_gym.agents.league_opponent import load_league_pool
+        league_entries = load_league_pool(cfg.league_pool_manifest or "")
+        if not league_entries:
+            raise ValueError(
+                f"league_pool_manifest {cfg.league_pool_manifest} is empty"
+            )
+        # Manifest stores opponent decks as archetype names; the env needs cards.
+        _resolve_league_entry_decks(league_entries)
+
     # Create training environment
-    if pool_opponent_fn is not None:
+    if league_entries is not None:
+        env = make_vec_env(
+            cfg,
+            deck1=deck1,
+            deck2=deck2,
+            curriculum_seed=curriculum_seed,
+            recording_writer=recording_writer,
+            mulligan_log_cfg=mulligan_log_cfg,
+            reward_profile_factory=reward_profile_factory,
+            league_entries=league_entries,
+            league_sampling_mode=cfg.opponent_pool_mode,
+        )
+    elif pool_opponent_fn is not None:
         env = make_vec_env(
             cfg,
             opponent_fn=pool_opponent_fn,
@@ -2568,6 +2846,8 @@ def train(total_timesteps: int = 100_000,
             observation_layout=observation_layout,
         ),
     )
+    # Optional policy/value head-width override; None -> SB3 default ([64,64]).
+    _head_arch = dict(pi=cfg.net_arch, vf=cfg.net_arch) if cfg.net_arch else None
 
     if cfg.resume_from:
         if use_lstm:
@@ -2610,7 +2890,7 @@ def train(total_timesteps: int = 100_000,
                 lstm_hidden_size=lstm_hidden_size,
                 n_lstm_layers=1,
                 enable_critic_lstm=True,
-                net_arch=dict(pi=[64], vf=[64]),
+                net_arch=(_head_arch or dict(pi=[64], vf=[64])),
                 **extractor_kwargs,
             ),
         )
@@ -2632,8 +2912,35 @@ def train(total_timesteps: int = 100_000,
             verbose=0,
             device=device,
             seed=cfg.seed,
-            policy_kwargs=extractor_kwargs,
+            policy_kwargs={**extractor_kwargs, "net_arch": _head_arch},
         )
+
+    # Partial warm-start: transfer ONLY the features-extractor weights (the
+    # CardEmbeddingExtractor — embeddings + projection) from a checkpoint into
+    # this freshly-built model, leaving the policy/value heads random. Enables a
+    # fair head-width comparison across a DIFFERENT --net-arch (both widths
+    # inherit the same learned representation). Validated mutually exclusive with
+    # init_from / resume_from, so `model` here is always a fresh build.
+    if cfg.init_extractor_from:
+        _src_cls = MaskableRecurrentPPO if use_lstm else MaskablePPO
+        _src = _src_cls.load(cfg.init_extractor_from, device=device)
+        _src_sd = _src.policy.state_dict()
+        _dst_sd = model.policy.state_dict()
+        _fe = {
+            k: v for k, v in _src_sd.items()
+            if "features_extractor" in k and k in _dst_sd and _dst_sd[k].shape == v.shape
+        }
+        if not _fe:
+            raise ValueError(
+                f"--init-extractor-from {cfg.init_extractor_from}: no matching "
+                "features_extractor tensors found (incompatible extractor/profile?)"
+            )
+        _dst_sd.update(_fe)
+        model.policy.load_state_dict(_dst_sd)
+        del _src
+        if verbose:
+            print(f"  [init] warm-started {len(_fe)} features-extractor tensors "
+                  f"from {cfg.init_extractor_from}")
 
     # Create evaluation callback
     if pool_opponent_fn is not None:
@@ -2709,6 +3016,8 @@ def train(total_timesteps: int = 100_000,
             match_format=cfg.match_format,
             match_env_seed=cfg.eval_seed,
             reward_profile_factory=reward_profile_factory,
+            league_entries=league_entries,
+            league_sampling_mode=cfg.opponent_pool_mode,
         )
     eval_suite = None
     if cfg.eval_suite:
@@ -2806,6 +3115,7 @@ def train(total_timesteps: int = 100_000,
         callbacks.append(checkpoint_cb)
 
     # Train
+    wandb_run = _maybe_init_wandb(cfg, run_name)
     start = time.time()
     try:
         model.learn(
@@ -2815,6 +3125,7 @@ def train(total_timesteps: int = 100_000,
         )
     finally:
         win_rate_cb.close()
+        _finish_wandb(wandb_run)
     elapsed = time.time() - start
 
     if verbose:
@@ -2904,7 +3215,12 @@ def train(total_timesteps: int = 100_000,
         archetype_results=win_rate_cb.get_archetype_results(),
         hyperparameters={
             **cfg.to_dict(),
-            "learning_rate": learning_rate,
+            # Record the float base LR, NOT the resolved value — for
+            # lr_schedule="linear", _resolve_learning_rate returns a callable
+            # (progress->lr) which is not JSON-serializable and crashes the
+            # metadata sidecar write post-training. The schedule itself is
+            # already captured by cfg.to_dict()["lr_schedule"].
+            "learning_rate": float(cfg.learning_rate),
             "n_steps": n_steps,
             "batch_size": batch_size,
             "n_epochs": n_epochs,
@@ -2982,15 +3298,29 @@ def _build_argparser() -> argparse.ArgumentParser:
         help="Initialize a fine-tune run from a compatible base checkpoint .zip."
     )
     parser.add_argument(
+        "--init-extractor-from", type=str, default=None,
+        help="Warm-start ONLY the features extractor (CardEmbeddingExtractor) from "
+             "this checkpoint into a fresh model, leaving the policy/value heads "
+             "random. Transfers the learned representation across a DIFFERENT "
+             "--net-arch (fair head-width comparison). Excl. with --init-from."
+    )
+    parser.add_argument(
+        "--net-arch", type=str, default=None,
+        help="Policy/value head hidden sizes, comma-separated (e.g. '256,256'), "
+             "applied to both pi and vf. Default keeps the SB3 [64,64] league net."
+    )
+    parser.add_argument(
         "--timesteps", type=int, default=None,
         help="Total training timesteps."
     )
     opponent_group = parser.add_mutually_exclusive_group()
     opponent_group.add_argument(
-        "--opponent", choices=["greedy", "random", "pool"],
+        "--opponent", choices=["greedy", "random", "pool", "league"],
         default=None,
         help="Opponent policy. 'pool' samples frozen opponents from "
-             "--opponent-pool-manifest (pool-based fictitious self-play)."
+             "--opponent-pool-manifest (pool-based fictitious self-play). "
+             "'league' samples coupled (policy, deck) opponents from "
+             "--league-pool-manifest (deck-specialist league)."
     )
     opponent_group.add_argument(
         "--self-play", action="store_true",
@@ -3004,8 +3334,19 @@ def _build_argparser() -> argparse.ArgumentParser:
              "champion_admin.py emit-pool)."
     )
     parser.add_argument(
+        "--league-pool-manifest", type=str, default=None,
+        help="League round-pool manifest JSON for --opponent league, carrying "
+             "coupled (policy, deck) opponents (emit one via "
+             "SpecialistRegistry.write_round_pool / train_specialist_league.py)."
+    )
+    parser.add_argument(
         "--lr", type=float, default=None,
         help="Learning rate."
+    )
+    parser.add_argument(
+        "--lr-schedule", choices=["constant", "linear"], default=None,
+        help="LR schedule: 'constant' (default) or 'linear' (decay base LR to 0 "
+             "over the run; used by the deck-specialist league for per-round decay)."
     )
     parser.add_argument(
         "--batch-size", type=int, default=None,
@@ -3039,6 +3380,34 @@ def _build_argparser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--save-dir", type=str, default=None,
         help="Model save directory."
+    )
+    parser.add_argument(
+        "--wandb", action="store_true",
+        help="Log this run to Weights & Biases. sync_tensorboard mirrors all "
+             "TensorBoard scalars to W&B with no extra instrumentation. Reads "
+             "WANDB_API_KEY from the environment (auto-downgrades to offline if unset)."
+    )
+    parser.add_argument(
+        "--wandb-project", type=str, default=None,
+        help="W&B project name (default: digimon-rl)."
+    )
+    parser.add_argument(
+        "--wandb-entity", type=str, default=None,
+        help="W&B entity / team (default: your account's default entity)."
+    )
+    parser.add_argument(
+        "--wandb-group", type=str, default=None,
+        help="W&B group — ties related runs (e.g. all league specialists/rounds) "
+             "under one group in the dashboard."
+    )
+    parser.add_argument(
+        "--wandb-run-name", type=str, default=None,
+        help="W&B run name (default: the run_name / log dir name)."
+    )
+    parser.add_argument(
+        "--wandb-mode", choices=["online", "offline", "disabled"], default=None,
+        help="W&B mode (default: online; auto-downgrades to offline if "
+             "WANDB_API_KEY is unset)."
     )
     parser.add_argument(
         "--gauntlet", action="store_true",
@@ -3206,6 +3575,7 @@ def main():
     legacy_overrides = {
         "timesteps": args.timesteps,
         "learning_rate": args.lr,
+        "lr_schedule": args.lr_schedule,
         "batch_size": args.batch_size,
         "n_steps": args.n_steps,
         "eval_freq": args.eval_freq,
@@ -3221,6 +3591,11 @@ def main():
         "curriculum_pool": args.curriculum_pool,
         "curriculum_pool_out": args.curriculum_pool_out,
         "init_from": args.init_from,
+        "init_extractor_from": args.init_extractor_from,
+        "net_arch": (
+            [int(x) for x in args.net_arch.split(",") if x.strip()]
+            if args.net_arch else None
+        ),
         "record_games": args.record_games,
         "record_games_dir": args.record_games_dir,
         "record_games_max": args.record_games_max,
@@ -3239,6 +3614,20 @@ def main():
         overrides["opponent"] = args.opponent
     if args.opponent_pool_manifest is not None:
         overrides["opponent_pool_manifest"] = args.opponent_pool_manifest
+    if args.league_pool_manifest is not None:
+        overrides["league_pool_manifest"] = args.league_pool_manifest
+    if args.wandb:
+        overrides["wandb"] = True
+    for _arg, _field in (
+        ("wandb_project", "wandb_project"),
+        ("wandb_entity", "wandb_entity"),
+        ("wandb_group", "wandb_group"),
+        ("wandb_run_name", "wandb_run_name"),
+        ("wandb_mode", "wandb_mode"),
+    ):
+        _val = getattr(args, _arg)
+        if _val is not None:
+            overrides[_field] = _val
     if args.lstm:
         overrides["algorithm"] = "lstm"
     if args.resume:
@@ -3320,6 +3709,27 @@ def main():
         with open(args.deck2_json, "r") as f:
             deck2 = json.load(f)
         print(f"  Opponent deck: {len(deck2)} cards from {args.deck2_json}")
+
+    # Deck-specialist league: pin the agent deck (deck1) to the single scoped
+    # archetype when not given explicitly. The opponent deck (deck2) is set
+    # per-match by the LeaguePoolWrapper, so it stays unset here.
+    if cfg.opponent == "league" and deck1 is None:
+        archs = list(cfg.allowed_archetypes or [])
+        if len(archs) != 1:
+            parser.error(
+                "--opponent league pins the agent deck to a single archetype: "
+                "pass exactly one --archetypes (or an explicit --deck1/--deck-json)"
+            )
+        league_pool = load_generalist_deck_pool(allowed_archetypes={archs[0]})
+        names = league_pool.archetype_names
+        if not names:
+            parser.error(
+                f"--opponent league: archetype {archs[0]!r} resolved to no "
+                "implemented decks"
+            )
+        first = sorted(league_pool.archetypes[names[0]], key=lambda d: d.deck_id)[0]
+        deck1 = list(first.card_ids)
+        print(f"  League agent deck: {len(deck1)} cards ({names[0]})")
 
     try:
         implemented_ids = load_implemented_card_ids()

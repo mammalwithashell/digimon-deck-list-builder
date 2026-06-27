@@ -611,7 +611,7 @@ impl Game {
         let effects = self.effects_for_card(&card_id, source_card.handle())?;
         let mut saw_filter = false;
 
-        for effect in effects {
+        for effect in effects.iter() {
             if !effect.declarative || effect.granted_keyword != Some(Keyword::Overclock) {
                 continue;
             }
@@ -622,7 +622,7 @@ impl Game {
                     continue;
                 }
             }
-            if let Some(filter) = effect.overclock_cost_filter {
+            if let Some(filter) = effect.overclock_cost_filter.as_ref() {
                 saw_filter = true;
                 if filter(&rctx, candidate) {
                     return Some(true);

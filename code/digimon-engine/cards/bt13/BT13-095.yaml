@@ -3,7 +3,7 @@ name: Marcus Damon
 kind: tamer
 color: [red, yellow]
 cost: 5
-traits: [Hero]
+traits: []  # Tamer — no printed trait line (card image + official Bandai DB confirm; was mis-authored "Hero")
 
 effects:
   - when: start_of_your_turn

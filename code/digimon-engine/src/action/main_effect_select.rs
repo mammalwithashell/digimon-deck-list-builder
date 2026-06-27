@@ -48,7 +48,7 @@ pub(crate) fn hand_main_match(
     let card = game.player(player_id).hand.get(hand_idx)?;
     let card_id = card.card_id(&game.card_data);
     let effects = game.effects_for_card(card_id, card.handle())?;
-    for effect in &effects {
+    for effect in effects.iter() {
         if effect.timing != EffectTiming::MainFromHand {
             continue;
         }
@@ -170,7 +170,7 @@ pub(crate) fn trash_main_match(
     let card = game.player(player_id).trash.get(trash_idx)?;
     let card_id = card.card_id(&game.card_data);
     let effects = game.effects_for_card(card_id, card.handle())?;
-    for effect in &effects {
+    for effect in effects.iter() {
         if effect.timing != EffectTiming::MainFromTrash {
             continue;
         }
