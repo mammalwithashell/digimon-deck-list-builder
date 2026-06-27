@@ -61,6 +61,11 @@ class TrainingConfig:
     vf_coef: float = 0.5
     max_grad_norm: float = 0.5
     lstm_hidden_size: int = 256
+    # Policy/value head architecture (hidden-layer sizes applied to BOTH the pi
+    # and vf MLP heads, on top of the 512-dim CardEmbeddingExtractor). None keeps
+    # the SB3 default ([64, 64] — the historical league net). e.g. [256, 256]
+    # widens the heads to test whether the 64-wide bottleneck caps skill.
+    net_arch: Optional[List[int]] = None
     opponent: str = "greedy"
     opponent_pool_manifest: Optional[str] = None
     opponent_pool_mode: str = "pfsp"
@@ -85,6 +90,14 @@ class TrainingConfig:
     keep_last_checkpoints: int = 3
     resume_from: Optional[str] = None
     init_from: Optional[str] = None
+    # Partial warm-start: load ONLY the features-extractor weights (the
+    # CardEmbeddingExtractor — embeddings + projection) from this checkpoint into
+    # a freshly-built model, leaving the policy/value heads random. Unlike
+    # init_from (which requires an identical architecture), this transfers the
+    # learned representation across DIFFERENT net_arch, enabling a fair
+    # head-width comparison: both widths inherit the same extractor, only the
+    # heads differ. Mutually exclusive with init_from / resume_from.
+    init_extractor_from: Optional[str] = None
     generalist: bool = False
     curriculum_seed: Optional[int] = None
     eval_seed: Optional[int] = None
@@ -212,6 +225,19 @@ class TrainingConfig:
         if self.lr_schedule not in {"constant", "linear"}:
             raise ValueError(
                 f"lr_schedule must be 'constant' or 'linear', got {self.lr_schedule!r}"
+            )
+        if self.net_arch is not None:
+            if (
+                not isinstance(self.net_arch, list)
+                or not self.net_arch
+                or not all(isinstance(n, int) and n > 0 for n in self.net_arch)
+            ):
+                raise ValueError(
+                    f"net_arch must be a non-empty list of positive ints, got {self.net_arch!r}"
+                )
+        if self.init_extractor_from and (self.init_from or self.resume_from):
+            raise ValueError(
+                "init_extractor_from is mutually exclusive with init_from / resume_from"
             )
         if not isinstance(self.tensor_profile, str) or not self.tensor_profile.strip():
             raise ValueError("tensor_profile must be a non-blank string")

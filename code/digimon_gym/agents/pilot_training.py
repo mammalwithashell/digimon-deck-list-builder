@@ -2846,6 +2846,8 @@ def train(total_timesteps: int = 100_000,
             observation_layout=observation_layout,
         ),
     )
+    # Optional policy/value head-width override; None -> SB3 default ([64,64]).
+    _head_arch = dict(pi=cfg.net_arch, vf=cfg.net_arch) if cfg.net_arch else None
 
     if cfg.resume_from:
         if use_lstm:
@@ -2888,7 +2890,7 @@ def train(total_timesteps: int = 100_000,
                 lstm_hidden_size=lstm_hidden_size,
                 n_lstm_layers=1,
                 enable_critic_lstm=True,
-                net_arch=dict(pi=[64], vf=[64]),
+                net_arch=(_head_arch or dict(pi=[64], vf=[64])),
                 **extractor_kwargs,
             ),
         )
@@ -2910,8 +2912,35 @@ def train(total_timesteps: int = 100_000,
             verbose=0,
             device=device,
             seed=cfg.seed,
-            policy_kwargs=extractor_kwargs,
+            policy_kwargs={**extractor_kwargs, "net_arch": _head_arch},
         )
+
+    # Partial warm-start: transfer ONLY the features-extractor weights (the
+    # CardEmbeddingExtractor — embeddings + projection) from a checkpoint into
+    # this freshly-built model, leaving the policy/value heads random. Enables a
+    # fair head-width comparison across a DIFFERENT --net-arch (both widths
+    # inherit the same learned representation). Validated mutually exclusive with
+    # init_from / resume_from, so `model` here is always a fresh build.
+    if cfg.init_extractor_from:
+        _src_cls = MaskableRecurrentPPO if use_lstm else MaskablePPO
+        _src = _src_cls.load(cfg.init_extractor_from, device=device)
+        _src_sd = _src.policy.state_dict()
+        _dst_sd = model.policy.state_dict()
+        _fe = {
+            k: v for k, v in _src_sd.items()
+            if "features_extractor" in k and k in _dst_sd and _dst_sd[k].shape == v.shape
+        }
+        if not _fe:
+            raise ValueError(
+                f"--init-extractor-from {cfg.init_extractor_from}: no matching "
+                "features_extractor tensors found (incompatible extractor/profile?)"
+            )
+        _dst_sd.update(_fe)
+        model.policy.load_state_dict(_dst_sd)
+        del _src
+        if verbose:
+            print(f"  [init] warm-started {len(_fe)} features-extractor tensors "
+                  f"from {cfg.init_extractor_from}")
 
     # Create evaluation callback
     if pool_opponent_fn is not None:
@@ -3269,6 +3298,18 @@ def _build_argparser() -> argparse.ArgumentParser:
         help="Initialize a fine-tune run from a compatible base checkpoint .zip."
     )
     parser.add_argument(
+        "--init-extractor-from", type=str, default=None,
+        help="Warm-start ONLY the features extractor (CardEmbeddingExtractor) from "
+             "this checkpoint into a fresh model, leaving the policy/value heads "
+             "random. Transfers the learned representation across a DIFFERENT "
+             "--net-arch (fair head-width comparison). Excl. with --init-from."
+    )
+    parser.add_argument(
+        "--net-arch", type=str, default=None,
+        help="Policy/value head hidden sizes, comma-separated (e.g. '256,256'), "
+             "applied to both pi and vf. Default keeps the SB3 [64,64] league net."
+    )
+    parser.add_argument(
         "--timesteps", type=int, default=None,
         help="Total training timesteps."
     )
@@ -3550,6 +3591,11 @@ def main():
         "curriculum_pool": args.curriculum_pool,
         "curriculum_pool_out": args.curriculum_pool_out,
         "init_from": args.init_from,
+        "init_extractor_from": args.init_extractor_from,
+        "net_arch": (
+            [int(x) for x in args.net_arch.split(",") if x.strip()]
+            if args.net_arch else None
+        ),
         "record_games": args.record_games,
         "record_games_dir": args.record_games_dir,
         "record_games_max": args.record_games_max,
