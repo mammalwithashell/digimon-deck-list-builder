@@ -273,6 +273,7 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::CountCappedPermanentsStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::RevealBucketStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::UseOptionFromHandStep(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::LinkPickStep(s)) => s.outer_conts.push(cont),
             None => unreachable!("pending_selection_resume set but frame stack empty"),
         }
         game.pending_selection = Some(pending);

@@ -953,6 +953,9 @@ pub(crate) fn run_resume(
         ResumeFrame::UseOptionFromHandStep(state) => {
             run_use_option_from_hand_step(game, state, action_id, is_pass);
         }
+        ResumeFrame::LinkPickStep(state) => {
+            crate::dsl_cards::step::link_cards::run_link_pick_step(game, state, action_id, is_pass);
+        }
     }
 }
 
@@ -1756,7 +1759,10 @@ fn run_permutation_step(
 /// after merging the bindings the just-run tail published (the
 /// `dsl_resolved_tail_bindings` freshness channel, exactly as the closure
 /// wrapper did). Conts run in push order.
-fn run_outer_conts(game: &mut crate::game::Game, conts: Vec<crate::resume::OuterContinuation>) {
+pub(crate) fn run_outer_conts(
+    game: &mut crate::game::Game,
+    conts: Vec<crate::resume::OuterContinuation>,
+) {
     for cont in conts {
         let mut merged = cont.bindings;
         if let Some(fresh) = game.dsl_resolved_tail_bindings.take() {

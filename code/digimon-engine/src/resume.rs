@@ -391,6 +391,14 @@ pub enum ResumeFrame {
     /// `drain_or_rewrap_pending_tail` (which threads it onto the nested frame)
     /// rather than run inline. See [`UseOptionFromHandState`].
     UseOptionFromHandStep(UseOptionFromHandState),
+    /// One pick stage of the recursive `link_cards` loop (`link 1..N cards from
+    /// hand/trash/digivolution-sources to a Digimon`). The state carries the
+    /// loop's spec (Arc) + `pick_index` + a per-stage enum; `run_link_pick_step`
+    /// decodes the resolving action for that stage and advances the loop (re-park
+    /// the next stage, attach + recurse, or run the captured tail), mirroring the
+    /// closure callbacks. The post-attach `install_pick(K+1)` runs inline exactly
+    /// as the closure path does. See [`crate::dsl_cards::step::link_cards::LinkPickState`].
+    LinkPickStep(crate::dsl_cards::step::link_cards::LinkPickState),
 }
 
 /// In-flight state of a `use_option_from_hand` selection, as data. The pick
