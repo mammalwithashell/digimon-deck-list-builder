@@ -956,6 +956,9 @@ pub(crate) fn run_resume(
         ResumeFrame::LinkPickStep(state) => {
             crate::dsl_cards::step::link_cards::run_link_pick_step(game, state, action_id, is_pass);
         }
+        ResumeFrame::DigivolveCostChoice(state) => {
+            game.run_digivolve_cost_choice_step(state, action_id);
+        }
     }
 }
 

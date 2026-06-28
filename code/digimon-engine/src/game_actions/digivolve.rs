@@ -21,6 +21,46 @@ use crate::token_registry::*;
 use crate::trigger_context::*;
 use rand::seq::SliceRandom;
 
+/// make-engine-cloneable: resumable-VM frame state for the digivolve cost-choice
+/// prompt (rule 17 — when a base satisfies >1 of a hand card's digivolution
+/// requirements at different costs). Plain data mirroring
+/// `install_digivolve_cost_choice_prompt`'s closure captures, so a clone paused
+/// at the cost choice replays the chosen cost faithfully. The prompt is a
+/// top-level player action (dispatched from `action/decode.rs`), never nested in
+/// a DSL clause — so it needs no `outer_conts`.
+#[derive(Debug, Clone)]
+pub(crate) struct DigivolveCostChoiceState {
+    pub acting_player: PlayerId,
+    pub hand_index: usize,
+    pub field_index: usize,
+    pub source: PlaySource,
+    pub routes: Vec<crate::dna_digivolve::DigivolveRouteMatch>,
+}
+
+impl Game {
+    /// Resolve a parked digivolve cost-choice (resumable VM). Mirrors
+    /// `install_digivolve_cost_choice_prompt`'s callback exactly: decode the
+    /// chosen route index, pin it as `pending_digivolve_route_choice`, then
+    /// re-enter the digivolve.
+    pub(crate) fn run_digivolve_cost_choice_step(
+        &mut self,
+        state: DigivolveCostChoiceState,
+        action_id: u16,
+    ) {
+        let idx = action_id.saturating_sub(crate::action::space::HAND_EFFECT_START) as usize;
+        if let Some(chosen) = state.routes.get(idx).copied() {
+            self.pending_digivolve_route_choice = Some(chosen);
+        }
+        self.digivolve_from_hand_inner(
+            state.acting_player,
+            state.hand_index,
+            state.field_index,
+            state.source,
+            false,
+        );
+    }
+}
+
 impl Game {
     /// Digivolve: push a card onto a permanent's stack.
     pub fn digivolve_onto(
@@ -361,6 +401,10 @@ impl Game {
             .collect();
         let valid_action_ids: Vec<u16> = entries.iter().map(|e| e.action_id).collect();
 
+        // make-engine-cloneable: capture a copy of the routes for the data frame
+        // before the closure moves them (coexistence: both paths install).
+        let routes_for_resume = routes.clone();
+
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
         self.pending_selection = Some(PendingSelection {
@@ -383,6 +427,19 @@ impl Game {
                 game.digivolve_from_hand_inner(acting_player, hand_index, field_index, source, false);
             }),
             on_decline: None,
+        });
+        // Park the data frame alongside the closure. The cost-choice resolves via
+        // `run_digivolve_cost_choice_step` when driven through the resumable VM.
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::DigivolveCostChoice(
+                DigivolveCostChoiceState {
+                    acting_player,
+                    hand_index,
+                    field_index,
+                    source,
+                    routes: routes_for_resume,
+                },
+            )],
         });
     }
 

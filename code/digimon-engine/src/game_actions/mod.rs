@@ -28,7 +28,7 @@ use rand::seq::SliceRandom;
 // See docs/RUST_ENGINE_API.md §3.
 mod breeding;
 mod cost;
-mod digivolve;
+pub(crate) mod digivolve;
 mod helpers; // facade-decomposition Tier-2 primitives (trash_source_and_fire, would_replacement_*, …)
 mod link; // DigiLink Shape-B (Digimon-link) — activate/begin/commit/absorb + facet-#9 chosen-card link
 mod misc;
