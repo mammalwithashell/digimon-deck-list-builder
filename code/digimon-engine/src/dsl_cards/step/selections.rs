@@ -424,6 +424,25 @@ pub(crate) fn run_resume(
                                 );
                             }
                         }
+                        Some(crate::resume::FieldPermanentPostAction::AbsorbStandingAsLink {
+                            source,
+                        }) => {
+                            // Mirror try_run_relink's host callback: absorb the
+                            // effect's own standing source permanent onto the
+                            // picked host (`h`) as a link card. The absorb drains
+                            // (OnDigivolutionCardTrashed/OnLinkedCardTrashed/OnLink)
+                            // — NOT atomic; the empty inner_tail is a no-op and the
+                            // dispatcher tail (wrapped as outer_conts) composes onto
+                            // any nested park via run_outer_conts. No bind.
+                            ctx.game.absorb_standing_digimon_as_link(source, h);
+                            run_tail_preserving_trigger_context(
+                                &mut ctx,
+                                trigger_context,
+                                &inner_tail,
+                                &mut b,
+                                &runtime,
+                            );
+                        }
                     }
                     ctx.game.effect_source_player = previous_effect_source;
                 }

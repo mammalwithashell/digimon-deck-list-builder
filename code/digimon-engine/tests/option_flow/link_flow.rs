@@ -2166,6 +2166,101 @@ effects:
     );
 }
 
+/// make-engine-cloneable: `relink_self_to_own_digimon`'s host select is the
+/// resumable-VM `FieldPermanent { post: AbsorbStandingAsLink }`, so cloning the
+/// game AT the host prompt is faithful — the clone resolves to the absorb while
+/// the original is untouched and replays identically.
+#[test]
+fn relink_self_to_own_digimon_clones_faithfully_at_host_prompt() {
+    let yaml = r#"
+card: RELINKER
+name: Relinker
+kind: digimon
+effects:
+  - when: on_play
+    summary: "link this Digimon to a [Marked] OTHER Digimon"
+    process:
+      - relink_self_to_own_digimon:
+          host_filter: { trait_has: Marked }
+"#;
+    let mut r = DebugRunner::builder()
+        .add_card(traited_digimon("RELINKER", CardColor::Red, &["Marked"]))
+        .add_card(traited_digimon("HOST-OK", CardColor::Red, &["Marked"]))
+        .add_card(traited_digimon("HOST-NO", CardColor::Red, &[]))
+        .memory(5)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let src = r.place_on_field(0, "RELINKER", Some(0));
+    let _ok = r.place_on_field(0, "HOST-OK", Some(0));
+    let _no = r.place_on_field(0, "HOST-NO", Some(0));
+    advance_to_main(&mut r);
+
+    let self_card = r.game.player(0).battle_area[src.index as usize]
+        .top_card()
+        .handle();
+    r.game.fire_on_play(0, src.index as usize);
+
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("relink host select installed");
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "relink host select must be resume-driven (clone-safe)"
+    );
+    let action = pending.valid_action_ids[0];
+
+    // Clone AT the host prompt; resolve the absorb on the clone only.
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, action)
+        .expect("clone resolves host pick");
+    assert_eq!(
+        clone.player(0).battle_area.len(),
+        2,
+        "clone: RELINKER absorbed (battle area shrank by 1)"
+    );
+    assert!(
+        clone
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| p.linked_cards.iter().any(|c| c.handle() == self_card)),
+        "clone: RELINKER's top card is now a link card on the chosen host"
+    );
+
+    // INDEPENDENCE: the original is untouched by resolving the clone.
+    assert!(
+        r.game.pending_selection.is_some(),
+        "original's host select survives cloning + resolving the clone"
+    );
+    assert_eq!(
+        r.battle_area_size(0),
+        3,
+        "original still has all 3 permanents while the clone absorbed"
+    );
+
+    // REPLAYS IDENTICALLY: resolving the original the same way reaches the
+    // clone's state.
+    r.game
+        .resolve_selection(0, action)
+        .expect("original resolves host pick");
+    assert_eq!(
+        r.battle_area_size(0),
+        clone.player(0).battle_area.len(),
+        "original reaches the same battle-area size as the clone"
+    );
+    assert!(
+        r.game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| p.linked_cards.iter().any(|c| c.handle() == self_card)),
+        "original: RELINKER absorbed onto the chosen host"
+    );
+}
+
 /// Recursive scan for a step matching `pred` anywhere in a (possibly nested)
 /// step tree — descends If/Optional/ForEach bodies.
 fn ex11_step_tree_has(steps: &[CompiledStep], pred: &dyn Fn(&CompiledStep) -> bool) -> bool {

@@ -231,6 +231,15 @@ pub enum FieldPermanentPostAction {
     /// Tamer's bottom face-down digivolution source (`trash_bottom_face_down_source`);
     /// the tail runs ONLY if the trash succeeded (no-approximations cost gate).
     TrashBottomFaceDownSource,
+    /// `try_run_relink` (`relink_self_to_own_digimon`, EX11-027): the picked
+    /// permanent is the host; absorb the effect's own standing `source`
+    /// permanent onto it as a link card (`absorb_standing_digimon_as_link`).
+    /// No bind. The absorb fires `OnDigivolutionCardTrashed` / `OnLinkedCardTrashed`
+    /// / `OnLink` + drains (NOT atomic), so a nested park threads via the empty
+    /// `inner_tail` + `outer_conts` (`run_outer_conts` → `drain_or_rewrap`),
+    /// exactly like `AddTopToHand` / the redirect arm. Host pick is mandatory
+    /// (`select_own_permanent(.., false, ..)`) → decline `None`.
+    AbsorbStandingAsLink { source: PermanentHandle },
 }
 
 /// Post-action run on an `EffectChoice` resolve, keyed on the chosen label

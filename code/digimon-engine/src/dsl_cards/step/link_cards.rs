@@ -763,8 +763,44 @@ pub fn try_run_relink(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings
     let prompt_str = prompt
         .clone()
         .unwrap_or_else(|| "Choose 1 of your Digimon to link this Digimon to".to_string());
+    // Capture provenance for the resume frame BEFORE the closure borrows ctx.
+    let source_permanent = ctx.source_permanent;
+    let override_pin = ctx.override_selecting_player();
+    let trigger_context = ctx.game.current_trigger_context.clone();
     ctx.select_own_permanent(&prompt_str, false, host_filter_fn, move |cb_ctx, host| {
         cb_ctx.game.absorb_standing_digimon_as_link(source, host);
     });
+    // make-engine-cloneable: park a data frame alongside the closure (coexistence).
+    // `select_own_permanent` installs a FieldPermanent(OwnField) select over the
+    // controller's battle area, so the host decode is the existing FieldPermanent
+    // arm; the absorb is encoded as `AbsorbStandingAsLink { source }`. The host
+    // pick is mandatory (is_optional=false) → decline None. The dispatcher tail
+    // after this step is wrapped onto the frame's `outer_conts` by the step loop.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
+                    of_player: player,
+                    post: Some(crate::resume::FieldPermanentPostAction::AbsorbStandingAsLink {
+                        source,
+                    }),
+                },
+                bind_as: None,
+                inner_tail: Arc::new(Vec::new()),
+                outer_conts: Vec::new(),
+                bindings: bindings.clone(),
+                runtime: StepRuntime::default(),
+                trigger_context,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
     true
 }
