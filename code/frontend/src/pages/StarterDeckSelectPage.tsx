@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { normalizeSeedInput } from '@/api/gameApi';
 import { InBetweenShell } from '@/features/play/InBetweenShell';
-import { createAiStarterGame, listStarterDecks } from '@/features/play/playApi';
+import { AI_STARTER_RANDOM, createAiStarterGame, listStarterDecks } from '@/features/play/playApi';
 import type { DeckResponse } from '@/types/deck';
 import { getCardImageUrl } from '@/utils/cardImages';
 import './DeckSelectPage.css';
@@ -14,6 +14,9 @@ export function StarterDeckSelectPage() {
   const [seedInput, setSeedInput] = useState('');
   const [seedError, setSeedError] = useState('');
   const [launching, setLaunching] = useState(false);
+  // AI opponent: AI_STARTER_RANDOM (seed-derived deck) or a specific starter
+  // deck id the AI pilots with that deck's trained specialist.
+  const [opponent, setOpponent] = useState<string>(AI_STARTER_RANDOM);
 
   useEffect(() => {
     listStarterDecks()
@@ -45,6 +48,7 @@ export function StarterDeckSelectPage() {
         deck: selected,
         starterDecks: decks,
         seed: normalizedSeed,
+        opponent,
       });
       navigate(`/game/${response.game_id}`);
     } finally {
@@ -64,7 +68,7 @@ export function StarterDeckSelectPage() {
           <div>
             <span className="label">MODE //</span>
             <h1>AI STARTER DECK</h1>
-            <p>Pick a starter deck. The AI plays a random one of the six.</p>
+            <p>Pick your starter deck and your AI opponent — a random specialist, or a specific one of the six.</p>
           </div>
           <Link to="/play">CHANGE</Link>
         </section>
@@ -101,6 +105,21 @@ export function StarterDeckSelectPage() {
         <div className="deck-confirm-bar">
           <div className="deck-confirm-info">
             <span>{selected ? selected.name : 'NO DECK SELECTED'}</span>
+            <label className="deck-seed-control">
+              <span>AI OPPONENT</span>
+              <select
+                aria-label="AI opponent"
+                value={opponent}
+                onChange={(event) => setOpponent(event.target.value)}
+              >
+                <option value={AI_STARTER_RANDOM}>Random specialist</option>
+                {decks.map((deck) => (
+                  <option key={deck.id} value={deck.id}>
+                    {deck.name}
+                  </option>
+                ))}
+              </select>
+            </label>
             <label className="deck-seed-control">
               <span>SHUFFLE SEED</span>
               <input

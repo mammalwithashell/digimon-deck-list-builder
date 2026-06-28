@@ -36,6 +36,7 @@ fn make_manifest_entry(id: &str, url: String, sha: &str, size: u64) -> ManifestM
         url,
         deck_id: None,
         deck_name: None,
+        starter_deck: None,
         notes: None,
     }
 }

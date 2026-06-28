@@ -26,6 +26,11 @@ export interface ManifestModel {
   url: string;
   deck_id: string | null;
   deck_name: string | null;
+  /// Free-form slug linking this model to a *built-in* (non-DB) deck — e.g. an
+  /// AI-Starter built-in deck id like "starter_st3_heavens_yellow". Used to
+  /// route each starter deck to its trained specialist. Null for non-starter
+  /// models (older servers omit the field).
+  starter_deck: string | null;
   notes: string | null;
 }
 
@@ -79,4 +84,16 @@ export function isCompatible(model: ManifestModel, contract: EngineContract): bo
 /// fall back to the greedy CPU.
 export async function resolveStarterModel(baseUrl: string): Promise<string | null> {
   return invoke<string | null>('models_resolve_starter', { baseUrl });
+}
+
+/// Resolve + load the trained specialist for a specific built-in starter deck
+/// (matched against each manifest model's `starter_deck` slug). Downloads +
+/// loads it if needed and returns the loaded model id, or `null` when no
+/// matching/compatible specialist is published or the fetch fails — callers
+/// fall back to the greedy CPU.
+export async function resolveModelForDeck(
+  baseUrl: string,
+  deckId: string,
+): Promise<string | null> {
+  return invoke<string | null>('models_resolve_for_deck', { baseUrl, deckId });
 }
