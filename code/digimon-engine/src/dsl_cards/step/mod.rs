@@ -274,8 +274,10 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::RevealBucketStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::UseOptionFromHandStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::LinkPickStep(s)) => s.outer_conts.push(cont),
-            Some(ResumeFrame::DigivolveCostChoice(_)) => unreachable!(
-                "digivolve cost-choice is a top-level player action, never nested in a DSL clause"
+            Some(ResumeFrame::DigivolveCostChoice(_))
+            | Some(ResumeFrame::DigivolveReducerPrompt(_))
+            | Some(ResumeFrame::DigivolveReducerSuspend(_)) => unreachable!(
+                "digivolve cost prompts are a top-level player action, never nested in a DSL clause"
             ),
             None => unreachable!("pending_selection_resume set but frame stack empty"),
         }

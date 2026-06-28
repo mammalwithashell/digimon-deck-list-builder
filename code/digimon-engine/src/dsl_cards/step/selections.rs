@@ -959,6 +959,12 @@ pub(crate) fn run_resume(
         ResumeFrame::DigivolveCostChoice(state) => {
             game.run_digivolve_cost_choice_step(state, action_id);
         }
+        ResumeFrame::DigivolveReducerPrompt(state) => {
+            game.run_digivolve_reducer_prompt_step(state, is_pass);
+        }
+        ResumeFrame::DigivolveReducerSuspend(state) => {
+            game.run_digivolve_reducer_suspend_step(state, action_id);
+        }
     }
 }
 

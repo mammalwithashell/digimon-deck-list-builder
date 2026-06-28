@@ -405,6 +405,15 @@ pub enum ResumeFrame {
     /// `Game::run_digivolve_cost_choice_step` decodes the chosen route index,
     /// pins it, and re-enters the digivolve. See [`crate::game_actions::digivolve::DigivolveCostChoiceState`].
     DigivolveCostChoice(crate::game_actions::digivolve::DigivolveCostChoiceState),
+    /// Player-scoped digivolve cost-reducer accept/decline prompt
+    /// (`G-COST-REDUCE-ALLY-DIGIVOLVE`). PASS declines (re-enter at full cost),
+    /// accept runs `player_digivolve_reducer_accept`. A player-digivolve action,
+    /// never nested in a DSL clause. See [`crate::game_actions::digivolve::DigivolveReducerState`].
+    DigivolveReducerPrompt(crate::game_actions::digivolve::DigivolveReducerState),
+    /// The suspend-cost pick that the reducer accept path chains into: decode the
+    /// suspend target, suspend it, consume the reducer, credit the reduction,
+    /// re-enter the digivolve. Mandatory.
+    DigivolveReducerSuspend(crate::game_actions::digivolve::DigivolveReducerState),
 }
 
 /// In-flight state of a `use_option_from_hand` selection, as data. The pick
