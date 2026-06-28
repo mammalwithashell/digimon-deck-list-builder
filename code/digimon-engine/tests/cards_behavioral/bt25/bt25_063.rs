@@ -20,11 +20,33 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledRevealDestination,
     CompiledScope, CompiledStep, CompiledTiming,
 };
+use digimon_engine::action::space::PASS;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::run_steps;
 use digimon_engine::effect_context::EffectContext;
+use digimon_engine::game::Game;
+
+/// Drive a raw `Game` (e.g. a clone) through every parked selection by always
+/// taking the first non-PASS valid action, until no selection remains.
+/// Deterministic, so the original and a clone driven the same way reach the
+/// same state.
+fn drive_to_completion(game: &mut Game, player: u8) {
+    while game.pending_selection.is_some() {
+        let id = {
+            let pend = game.pending_selection.as_ref().unwrap();
+            pend.valid_action_ids
+                .iter()
+                .copied()
+                .find(|&a| a != PASS)
+                .or_else(|| pend.valid_action_ids.first().copied())
+                .expect("a resolvable action exists")
+        };
+        game.resolve_selection(player, id)
+            .expect("parked selection resolves");
+    }
+}
 
 fn runner() -> DebugRunner {
     DebugRunner::builder()
@@ -242,6 +264,101 @@ fn bt25_063_adds_chaosmon_name_card_to_hand() {
     assert!(
         hand_ids.contains(&"CHAOS-A"),
         "[Chaosmon]-in-name card added to hand: {hand_ids:?}"
+    );
+}
+
+// ── Section 4: Clone-safety (make-engine-cloneable) ────────────────────────
+
+/// The multi-destination `order_remainder` (deck top OR bottom) surfaces a
+/// destination effect-choice that then installs the ordered-permutation pick —
+/// a frame-installs-frame selection. Cloning the game AT the destination choice
+/// must be faithful: the choice is resume-driven (not a closure that clones to
+/// the panic-stub), and resolving the clone leaves the original untouched and
+/// reaches identical state on replay.
+#[test]
+fn bt25_063_order_remainder_dest_choice_clones_faithfully() {
+    let mut accel = make_test_card("ACCEL-CLN", "Accel Cln");
+    accel.traits.push("ACCEL".to_string());
+    let fa = make_test_card("F063-CLN-A", "f cln a");
+    let fb = make_test_card("F063-CLN-B", "f cln b");
+    let holder = make_test_card("BT25_063_HOLDER_CLN", "HolderCln");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-063")
+        .expect("BT25-063 compiles")
+        .add_card(accel)
+        .add_card(fa)
+        .add_card(fb)
+        .add_card(holder)
+        .build();
+
+    let holder_perm = runner.place_on_field(0, "BT25_063_HOLDER_CLN", None);
+    let src = runner.top_card(holder_perm);
+    let deck_before = runner.game.players[0].deck.len();
+    // Top of deck = ACCEL-CLN (the match → goes to hand); F063-CLN-A/B are the
+    // two-card remainder ordered back onto the deck.
+    stack_deck_top(&mut runner, &["F063-CLN-B", "F063-CLN-A", "ACCEL-CLN"]);
+
+    let process = shared_process(&runner);
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src, Some(holder_perm), 0);
+        run_steps(&process, &mut ctx, &mut Bindings::new());
+    }
+
+    // Resolve the reveal pick (ACCEL-CLN → hand). The next installed selection
+    // is the multi-dest order_remainder DESTINATION choice (top vs bottom).
+    let pick_view = runner.pending_selection_view().expect("reveal pick installs");
+    let pick = pick_view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&id| id != PASS)
+        .unwrap();
+    runner.execute_action(0, pick).expect("add ACCEL-CLN to hand");
+
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "multi-dest order_remainder installs a destination choice"
+    );
+    assert!(
+        runner.game.pending_selection_resume.is_some(),
+        "the destination choice must be resume-driven (clone-safe), not closure-only"
+    );
+    assert_eq!(
+        runner.game.players[0].deck.len(),
+        deck_before,
+        "remainder still in the reveal pool — not yet placed on the deck"
+    );
+
+    // Clone AT the destination choice (the operation MCTS/AlphaZero performs),
+    // and drive the clone to completion.
+    let mut clone = runner.game.clone();
+    drive_to_completion(&mut clone, 0);
+    assert!(clone.pending_selection.is_none(), "clone fully resolves");
+    assert_eq!(
+        clone.players[0].deck.len(),
+        deck_before + 2,
+        "clone: both remainder cards returned to the deck"
+    );
+
+    // INDEPENDENCE: the original is untouched by resolving the clone.
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "original survives cloning + resolving the clone"
+    );
+    assert_eq!(
+        runner.game.players[0].deck.len(),
+        deck_before,
+        "original deck unchanged while the clone resolved"
+    );
+
+    // REPLAYS IDENTICALLY: driving the original the same way reaches the clone's
+    // deck state.
+    drive_to_completion(&mut runner.game, 0);
+    assert_eq!(
+        runner.game.players[0].deck.len(),
+        clone.players[0].deck.len(),
+        "original reaches the same deck size as the clone"
     );
 }
 

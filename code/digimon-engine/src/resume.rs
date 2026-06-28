@@ -158,9 +158,19 @@ pub enum ResumeSelectKind {
     /// resolved source `CardHandle` via `material_carrier_permanent`.
     Material { perm: PermanentHandle },
     /// `action_id - HAND_EFFECT_START` → 0-based label index of a "choose one"
-    /// prompt (`select_effect_choice`). Binds the index as a literal
-    /// (`insert_literal`). Not optional (a branch must be picked).
-    EffectChoice,
+    /// prompt (`select_effect_choice`). Not optional (a branch must be picked).
+    /// `post: None` is a plain choice: bind the index as a literal
+    /// (`insert_literal`) then run `inner_tail`. `post: Some(..)` runs a data
+    /// post-action keyed on the chosen index INSTEAD of binding — e.g.
+    /// `OrderRemainder` (multi-destination `order_remainder`) maps the index to
+    /// a deck position and chains into the already-flipped
+    /// `install_remainder_permutation_with_tail` (frame-installs-frame, like
+    /// `DnaPairLeft`); `inner_tail` is NOT run here — it becomes the
+    /// permutation's tail. `outer_conts` transfer to the permutation frame via
+    /// the shared post-match `run_outer_conts`.
+    EffectChoice {
+        post: Option<EffectChoicePostAction>,
+    },
     /// LEFT pick of a `select_dna_pair` (heterogeneous two-pick). The
     /// `candidates` are the left-filter matches (`encode_attack`-encoded, both
     /// battle areas); the arm resolves the picked `left`, binds it via the
@@ -221,6 +231,22 @@ pub enum FieldPermanentPostAction {
     /// Tamer's bottom face-down digivolution source (`trash_bottom_face_down_source`);
     /// the tail runs ONLY if the trash succeeded (no-approximations cost gate).
     TrashBottomFaceDownSource,
+}
+
+/// Post-action run on an `EffectChoice` resolve, keyed on the chosen label
+/// index, INSTEAD of binding the index. Plain data — no closure.
+#[derive(Debug, Clone)]
+pub enum EffectChoicePostAction {
+    /// Multi-destination `order_remainder`: the choice picks deck top vs bottom
+    /// (`positions[index]`), then the picked position drives
+    /// `install_remainder_permutation_with_tail` over the reveal pool, which
+    /// parks its own `PermutationStep`. Frame-installs-frame: the `EffectChoice`
+    /// frame's `inner_tail` becomes the permutation's tail (not run in the
+    /// choice arm). `positions.len()` matches the prompt's label count.
+    OrderRemainder {
+        positions: Vec<crate::enums::StackPosition>,
+        player: PlayerId,
+    },
 }
 
 /// Post-action run on a `Security` resolve before the `inner_tail`. Plain data —
