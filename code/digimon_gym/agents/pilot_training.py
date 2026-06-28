@@ -2922,7 +2922,22 @@ def train(total_timesteps: int = 100_000,
     # inherit the same learned representation). Validated mutually exclusive with
     # init_from / resume_from, so `model` here is always a fresh build.
     if cfg.init_extractor_from:
-        _src_cls = MaskableRecurrentPPO if use_lstm else MaskablePPO
+        # Load the source with ITS OWN architecture, which may differ from this
+        # run's (e.g. warm-starting an LSTM from an MLP generalist): the shared
+        # CardEmbeddingExtractor transfers across architectures, but the source
+        # must be reconstructed with the class it was saved as — loading an MLP
+        # checkpoint as MaskableRecurrentPPO fails (policy-kwarg mismatch). The
+        # source's algorithm is read from its `.meta.json` sidecar ("mlp" default).
+        _src_meta = Path(cfg.init_extractor_from).with_suffix(".meta.json")
+        _src_algo = "mlp"
+        if _src_meta.is_file():
+            try:
+                _src_algo = str(
+                    json.loads(_src_meta.read_text(encoding="utf-8")).get("algorithm", "mlp")
+                ).lower()
+            except Exception:
+                pass
+        _src_cls = MaskableRecurrentPPO if _src_algo == "lstm" else MaskablePPO
         _src = _src_cls.load(cfg.init_extractor_from, device=device)
         _src_sd = _src.policy.state_dict()
         _dst_sd = model.policy.state_dict()
