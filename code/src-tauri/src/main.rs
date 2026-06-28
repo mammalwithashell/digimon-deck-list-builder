@@ -113,6 +113,7 @@ fn main() {
             models::models_delete,
             models::models_load_cached,
             models::models_resolve_starter,
+            models::models_resolve_for_deck,
             deck_commands::rust_parse_deck,
             deck_commands::rust_validate_deck_raw,
             deck_commands::rust_list_tested_cards,

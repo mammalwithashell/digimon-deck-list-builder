@@ -14,6 +14,7 @@ vi.mock('@/features/play/playApi', async () => {
     '@/features/play/starterDecks.generated',
   );
   return {
+    AI_STARTER_RANDOM: 'random',
     listStarterDecks: async () => STARTER_DECKS,
     createAiStarterGame: (arg: unknown) => createAiStarterGame(arg),
   };
@@ -50,8 +51,8 @@ describe('StarterDeckSelectPage', () => {
         <StarterDeckSelectPage />
       </MemoryRouter>,
     );
-    await waitFor(() => screen.getByText('Starter Deck Cocytus Blue'));
-    fireEvent.click(screen.getByRole('button', { name: /Cocytus Blue/ }));
+    // Name also appears as a <select> option now, so target the grid button.
+    fireEvent.click(await screen.findByRole('button', { name: 'Starter Deck Cocytus Blue' }));
     fireEvent.click(screen.getByRole('button', { name: /FACE THE AI/i }));
     await waitFor(() => expect(createAiStarterGame).toHaveBeenCalledTimes(1));
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
@@ -59,5 +60,35 @@ describe('StarterDeckSelectPage', () => {
       'Starter Deck Cocytus Blue',
     );
     await waitFor(() => expect(navigate).toHaveBeenCalledWith('/game/g99'));
+  });
+
+  it('offers an AI-opponent selector defaulting to a random specialist', async () => {
+    render(
+      <MemoryRouter>
+        <StarterDeckSelectPage />
+      </MemoryRouter>,
+    );
+    const select = (await screen.findByLabelText('AI opponent')) as HTMLSelectElement;
+    expect(select.value).toBe('random');
+    // Random + the 6 starter decks.
+    expect(select.querySelectorAll('option')).toHaveLength(7);
+  });
+
+  it('passes the chosen specific opponent to createAiStarterGame', async () => {
+    const { STARTER_DECKS } = await vi.importActual<
+      typeof import('@/features/play/starterDecks.generated')
+    >('@/features/play/starterDecks.generated');
+    render(
+      <MemoryRouter>
+        <StarterDeckSelectPage />
+      </MemoryRouter>,
+    );
+    const select = await screen.findByLabelText('AI opponent');
+    const pick = STARTER_DECKS[3]!;
+    fireEvent.change(select, { target: { value: pick.id } });
+    fireEvent.click(screen.getByRole('button', { name: /FACE THE AI/i }));
+    await waitFor(() => expect(createAiStarterGame).toHaveBeenCalledTimes(1));
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    expect((createAiStarterGame.mock.calls[0]![0] as { opponent: string }).opponent).toBe(pick.id);
   });
 });

@@ -50,4 +50,29 @@ describe('createAiStarterGame', () => {
     expect(arg.player_kinds).toEqual(['human', 'greedy']);
     expect(arg.player_model_ids).toEqual([null, null]);
   });
+
+  it('honors a specific opponent: AI plays the chosen starter deck', async () => {
+    const aiPick = STARTER_DECKS[2]!; // a specific specialist deck
+    const res = await createAiStarterGame({
+      deck: STARTER_DECKS[0]!,
+      starterDecks: STARTER_DECKS,
+      seed: '42',
+      opponent: aiPick.id,
+    });
+    expect(res.aiDeckName).toBe(aiPick.name);
+    const arg = (createGame.mock.calls[0]?.[0] as unknown) as { deck2: string[] };
+    // AI deck2 is the chosen deck, NOT the seed-derived one.
+    expect(arg.deck2).toEqual([...aiPick.egg_deck, ...aiPick.main_deck]);
+  });
+
+  it('falls back to seed-derived deck when opponent id is unknown', async () => {
+    const seedDeck = STARTER_DECKS[starterIndexFromSeed('42', STARTER_DECKS.length)]!;
+    const res = await createAiStarterGame({
+      deck: STARTER_DECKS[0]!,
+      starterDecks: STARTER_DECKS,
+      seed: '42',
+      opponent: 'not_a_real_deck_id',
+    });
+    expect(res.aiDeckName).toBe(seedDeck.name);
+  });
 });

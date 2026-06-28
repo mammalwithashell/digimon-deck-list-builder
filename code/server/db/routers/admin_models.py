@@ -57,6 +57,7 @@ def _to_admin_response(
         file_size_bytes=row.file_size_bytes,
         spaces_key=row.spaces_key,
         deck_id=row.deck_id,
+        starter_deck=row.starter_deck,
         uploaded_by=row.uploaded_by,
         published=row.published,
         state=row.state,
@@ -93,6 +94,7 @@ async def create_model(
         engine_commit=request.engine_commit,
         trained_at=request.trained_at,
         deck_id=request.deck_id,
+        starter_deck=request.starter_deck,
         notes=request.notes,
         state="pending",
         published=False,
@@ -232,6 +234,8 @@ async def update_model(
         row.name = request.name
     if request.deck_id is not None:
         row.deck_id = request.deck_id
+    if request.starter_deck is not None:
+        row.starter_deck = request.starter_deck
     if request.published is not None:
         row.published = request.published
     if request.notes is not None:
@@ -378,6 +382,7 @@ async def get_manifest(
             url=spaces.public_url(row.spaces_key),
             deck_id=row.deck_id,
             deck_name=deck_name_map.get(row.deck_id) if row.deck_id else None,
+            starter_deck=row.starter_deck,
             notes=row.notes,
         )
         for row in rows

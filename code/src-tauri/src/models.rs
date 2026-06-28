@@ -51,6 +51,12 @@ pub struct ManifestModel {
     pub url: String,
     pub deck_id: Option<String>,
     pub deck_name: Option<String>,
+    /// Free-form slug linking this model to a *built-in* (non-DB) deck — e.g.
+    /// an AI-Starter built-in deck id like "starter_st3_heavens_yellow". Lets
+    /// the AI-Starter mode route each starter deck to its trained specialist.
+    /// `None` for non-starter models (older servers omit the field entirely).
+    #[serde(default)]
+    pub starter_deck: Option<String>,
     pub notes: Option<String>,
 }
 
@@ -481,6 +487,54 @@ pub async fn models_resolve_starter(
     }
 }
 
+/// Resolve the trained specialist for a specific built-in starter deck: find
+/// the published, shape-compatible manifest model whose `starter_deck` slug
+/// equals `deck_id`, download it (if not cached), load it into the inference
+/// cache, and return its id. Returns `Ok(None)` — so the caller falls back to
+/// the greedy CPU — when no matching/compatible model is published or the
+/// manifest can't be fetched (offline). The manifest is ordered newest-first,
+/// so the most recently trained specialist for the deck wins.
+#[tauri::command]
+pub async fn models_resolve_for_deck(
+    manager: tauri::State<'_, Arc<ModelsManager>>,
+    engine: tauri::State<'_, EngineHandle>,
+    base_url: String,
+    deck_id: String,
+) -> Result<Option<String>, String> {
+    let models = match manager.fetch_manifest(&base_url).await {
+        Ok(v) => v,
+        Err(_) => return Ok(None),
+    };
+    let Some(model) = models.into_iter().find(|m| {
+        m.starter_deck.as_deref() == Some(deck_id.as_str())
+            && m.tensor_size == TENSOR_SIZE
+            && m.action_space_size == ACTION_SPACE_SIZE
+    }) else {
+        return Ok(None);
+    };
+    // Download if not already cached.
+    if manager.local_meta(&model.id).map_err(|e| e.to_string())?.is_none() {
+        if manager.download(&model).await.is_err() {
+            return Ok(None);
+        }
+    }
+    // Load into the inference cache on the engine worker (owns the session).
+    let manager_arc: Arc<ModelsManager> = Arc::clone(&manager);
+    let id = model.id.clone();
+    let load: Result<(), String> = engine
+        .run(move |world| -> Result<(), String> {
+            manager_arc
+                .load_cached(&id, &world.inference)
+                .map(|_| ())
+                .map_err(|e| e.to_string())
+        })
+        .await?;
+    match load {
+        Ok(()) => Ok(Some(model.id)),
+        Err(_) => Ok(None),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -499,8 +553,71 @@ mod tests {
             url: "http://example.invalid/".into(),
             deck_id: None,
             deck_name: None,
+            starter_deck: None,
             notes: None,
         }
+    }
+
+    /// A manifest entry tagged with a starter-deck slug (the per-deck
+    /// specialist routing key), shape-compatible with the current engine.
+    fn dummy_specialist(id: &str, starter_deck: &str) -> ManifestModel {
+        let mut m = dummy_manifest_entry(id, "deadbeef", 10);
+        m.starter_deck = Some(starter_deck.into());
+        m
+    }
+
+    /// Mirror of `models_resolve_for_deck`'s selection predicate (the async
+    /// command needs Tauri state, so the routing logic is unit-tested here).
+    fn pick_specialist<'a>(
+        models: &'a [ManifestModel],
+        deck_id: &str,
+    ) -> Option<&'a ManifestModel> {
+        models.iter().find(|m| {
+            m.starter_deck.as_deref() == Some(deck_id)
+                && m.tensor_size == TENSOR_SIZE
+                && m.action_space_size == ACTION_SPACE_SIZE
+        })
+    }
+
+    #[test]
+    fn manifest_model_parses_starter_deck_and_defaults_none() {
+        let with: ManifestModel = serde_json::from_value(serde_json::json!({
+            "id": "m1", "name": "ST-3 Specialist", "model_type": "mlp",
+            "tensor_size": TENSOR_SIZE, "action_space_size": ACTION_SPACE_SIZE,
+            "engine_commit": null, "trained_at": null,
+            "file_sha256": "ab", "file_size_bytes": 1, "url": "x",
+            "deck_id": null, "deck_name": null,
+            "starter_deck": "starter_st3_heavens_yellow", "notes": null,
+        }))
+        .unwrap();
+        assert_eq!(with.starter_deck.as_deref(), Some("starter_st3_heavens_yellow"));
+
+        // Older servers omit the field entirely.
+        let without: ManifestModel = serde_json::from_value(serde_json::json!({
+            "id": "m2", "name": "generalist", "model_type": "lstm",
+            "tensor_size": TENSOR_SIZE, "action_space_size": ACTION_SPACE_SIZE,
+            "engine_commit": null, "trained_at": null,
+            "file_sha256": "ab", "file_size_bytes": 1, "url": "x",
+            "deck_id": null, "deck_name": null, "notes": null,
+        }))
+        .unwrap();
+        assert_eq!(without.starter_deck, None);
+    }
+
+    #[test]
+    fn resolve_for_deck_matches_slug_and_skips_incompatible() {
+        let mut wrong_shape = dummy_specialist("bad", "starter_st1_gaia_red");
+        wrong_shape.tensor_size = TENSOR_SIZE + 1;
+        let models = vec![
+            wrong_shape,
+            dummy_specialist("st1", "starter_st1_gaia_red"),
+            dummy_specialist("st2", "starter_st2_cocytus_blue"),
+        ];
+        // Picks the compatible st1 specialist, not the shape-mismatched one.
+        assert_eq!(pick_specialist(&models, "starter_st1_gaia_red").unwrap().id, "st1");
+        assert_eq!(pick_specialist(&models, "starter_st2_cocytus_blue").unwrap().id, "st2");
+        // No specialist published for this deck -> greedy fallback (None).
+        assert!(pick_specialist(&models, "starter_st6_venomous_violet").is_none());
     }
 
     #[test]

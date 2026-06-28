@@ -1028,6 +1028,12 @@ class AIModel(Base):
     file_size_bytes = Column(Integer, nullable=True)
     spaces_key = Column(String, nullable=False)        # e.g. "models/<uuid>/policy.onnx"
     deck_id = Column(String, ForeignKey("decks.id", ondelete="SET NULL"), nullable=True)
+    # Free-form slug linking this model to a *built-in* (non-DB) deck, e.g. an
+    # AI-Starter built-in deck id like "starter_st3_heavens_yellow". Unlike
+    # `deck_id` (an FK to a real `decks` row) this is NOT an FK, so it can name
+    # bundled decks that have no DB row. Surfaced in the public manifest so the
+    # desktop AI-Starter mode can route each starter deck to its specialist.
+    starter_deck = Column(String, nullable=True)
     uploaded_by = Column(String, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     published = Column(Boolean, nullable=False, default=False)
     state = Column(String, nullable=False, default="pending")  # 'pending'|'uploaded'|'failed'

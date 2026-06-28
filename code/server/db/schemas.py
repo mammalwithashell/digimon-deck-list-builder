@@ -989,6 +989,7 @@ class AIModelCreateRequest(BaseModel):
     engine_commit: Optional[str] = None
     trained_at: Optional[datetime] = None
     deck_id: Optional[str] = None
+    starter_deck: Optional[str] = None
     notes: Optional[str] = None
 
 
@@ -1011,6 +1012,7 @@ class AIModelConfirmResponse(BaseModel):
 class AIModelUpdateRequest(BaseModel):
     name: Optional[str] = None
     deck_id: Optional[str] = None
+    starter_deck: Optional[str] = None
     published: Optional[bool] = None
     notes: Optional[str] = None
     engine_commit: Optional[str] = None
@@ -1029,6 +1031,7 @@ class AIModelResponse(BaseModel):
     file_size_bytes: Optional[int]
     spaces_key: str
     deck_id: Optional[str]
+    starter_deck: Optional[str] = None
     uploaded_by: Optional[str]
     published: bool
     state: str
@@ -1056,6 +1059,7 @@ class ManifestModel(BaseModel):
     url: str
     deck_id: Optional[str]
     deck_name: Optional[str]
+    starter_deck: Optional[str] = None
     notes: Optional[str]
 
 

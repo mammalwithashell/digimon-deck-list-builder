@@ -7,7 +7,7 @@ import * as matchmaking from '@/api/matchmaking';
 import type { DeckResponse } from '@/types/deck';
 import type { PlayFormatId } from './formatCatalog';
 import { formatToQueueType } from './formatCatalog';
-import { resolveStarterModel } from '@/api/desktopModelsApi';
+import { resolveModelForDeck } from '@/api/desktopModelsApi';
 import { STARTER_DECKS } from './starterDecks.generated';
 import { fnv1a } from './hash';
 
@@ -131,24 +131,40 @@ export function starterIndexFromSeed(seed: string | null, count: number): number
   return fnv1a(seed) % count;
 }
 
-/** Start a game vs the AI: player pilots `deck`, the AI pilots a random
- *  starter deck (seed-derived). Uses the released starter model on desktop
- *  when one is published; otherwise the greedy CPU. */
+/** Sentinel for "let the AI pick a random starter deck (seed-derived)". Any
+ *  other `opponent` value is a specific starter deck id the AI will pilot. */
+export const AI_STARTER_RANDOM = 'random';
+
+/** Start a game vs the AI: player pilots `deck`. The AI pilots either a
+ *  seed-derived random starter deck (`opponent` unset / `'random'`) or a
+ *  specific starter deck the player chose. Each starter deck is piloted by its
+ *  trained specialist (matched by `starter_deck` slug) on desktop when one is
+ *  published; otherwise the greedy CPU. */
 export async function createAiStarterGame(params: {
   deck: DeckResponse;
   starterDecks: DeckResponse[];
   seed?: string | null;
+  /** `'random'`/unset → seed-derived deck; otherwise a starter deck id the
+   *  AI pilots with that deck's specialist. */
+  opponent?: string | null;
 }): Promise<{ game_id: string; seed?: string; aiDeckName: string }> {
   const seed = params.seed ?? null;
-  const aiDeck = params.starterDecks[starterIndexFromSeed(seed, params.starterDecks.length)]!;
+  const opponent = params.opponent ?? AI_STARTER_RANDOM;
+  const chosen =
+    opponent !== AI_STARTER_RANDOM
+      ? params.starterDecks.find((d) => d.id === opponent)
+      : undefined;
+  const aiDeck =
+    chosen ?? params.starterDecks[starterIndexFromSeed(seed, params.starterDecks.length)]!;
   const deck1 = [...params.deck.egg_deck, ...params.deck.main_deck];
   const deck2 = [...aiDeck.egg_deck, ...aiDeck.main_deck];
 
-  // Resolve the released model (desktop only); any failure -> greedy CPU.
+  // Resolve the trained specialist for the AI's deck (desktop only); any
+  // failure / no published specialist -> greedy CPU.
   let modelId: string | null = null;
   if (IS_DESKTOP && MANIFEST_BASE) {
     try {
-      modelId = await resolveStarterModel(MANIFEST_BASE);
+      modelId = await resolveModelForDeck(MANIFEST_BASE, aiDeck.id);
     } catch {
       modelId = null;
     }
