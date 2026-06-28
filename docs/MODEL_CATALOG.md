@@ -155,7 +155,40 @@ This stays *gated* (one secret you hold) on purpose — the catalog is downloade
 and executed by every desktop client, so an open upload endpoint would be a
 supply-chain hole. The admin-JWT path below is unchanged; use either.
 
-Two calls per model:
+### Scripted upload — `code/tools/publish_model.py` (recommended)
+
+`publish_model.py` runs the whole create → presigned-PUT → confirm → publish flow
+and is the easiest correct path:
+
+```bash
+# Prod (admin key from the droplet /opt/digimon/.env), publish immediately,
+# tagged for AI-Starter per-deck routing:
+ADMIN_API_KEY=... python code/tools/publish_model.py \
+  --onnx models/st3.onnx --name "ST-3 Specialist" --type mlp \
+  --api-base https://inbetweentheatre.duckdns.org \
+  --starter-deck starter_st3_heavens_yellow --publish
+
+# Local dev (JWT login):
+ADMIN_USERNAME=... ADMIN_PASSWORD=... python code/tools/publish_model.py \
+  --onnx models/agent.onnx --name agent_v1 --type lstm --api-base http://localhost:8000
+```
+
+Two non-obvious facts the script handles so hand-rolled `curl`/`requests` don't trip:
+
+- **Auth on prod is the admin key, not login.** Prod has no seeded admin user, so
+  `/auth/login` 401s. Pass `ADMIN_API_KEY` (or `--admin-key`); it's sent as the
+  `X-Admin-Key` header. `ADMIN_USERNAME`/`ADMIN_PASSWORD` is the local-dev fallback.
+- **The presigned PUT signs `ContentType` *and* `ACL=public-read`**
+  (`spaces.generate_presigned_put`), so the upload **must** send both
+  `Content-Type: application/octet-stream` and `x-amz-acl: public-read` headers.
+  Omitting the ACL header makes Spaces reject the signature — symptom is a fast
+  HTTP 400, or a mid-body `ConnectionReset` with python `requests`.
+
+`--starter-deck <built-in deck slug>` tags the model so the desktop AI-Starter
+mode routes that deck to its specialist; `--publish` flips `published=true` (omit
+to upload + confirm only and publish later).
+
+The manual two-call flow below shows the same steps for reference:
 
 ### 1. Create the record
 ```bash
