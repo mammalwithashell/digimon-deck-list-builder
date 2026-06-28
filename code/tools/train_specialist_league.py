@@ -91,6 +91,11 @@ class LeagueSpec:
     lr: float = 1e-4
     tensor_profile: str = "standard_lite_deck_v2"
     reward_profile: str = "starter1_6_flat"
+    # Learner architecture: "mlp" (MaskablePPO) or "lstm" (MaskableRecurrentPPO).
+    # An LSTM league seeds from the MLP generalist, so round 1 transfers ONLY the
+    # shared CardEmbeddingExtractor (--init-extractor-from); later rounds continue
+    # the deck's own LSTM checkpoint (--init-from). See build_specialist_argv.
+    algorithm: str = "mlp"
     match_format: str = "bo3"
     layout_hash: str = DEFAULT_LAYOUT_HASH
     keep_last_per_deck: int = 2  # generous retention (avoid the keep_last=3 peak-loss lesson)
@@ -306,19 +311,43 @@ def _resolve_warmstart(
     return fallback
 
 
+def _source_algorithm(path: str) -> str:
+    """Architecture of a warm-start source, read from its ``.meta.json`` sidecar
+    (lowercased; ``"mlp"`` fallback). Used to decide whether a warm-start crosses
+    architectures (MLP generalist → LSTM specialist) and so must transfer only the
+    shared features extractor rather than the full policy."""
+    meta = Path(path).with_suffix(".meta.json")
+    if meta.is_file():
+        try:
+            algo = json.loads(meta.read_text(encoding="utf-8")).get("algorithm", "")
+            if algo:
+                return str(algo).lower()
+        except Exception:
+            pass
+    return "mlp"
+
+
 def build_specialist_argv(
     spec: LeagueSpec, deck: str, rnd: int, init_from: str, pool_manifest: Path
 ) -> List[str]:
     """Argv for one specialist's round: deck-scoped, warm-started, vs the frozen
     league pool. ``--opponent league`` pins the agent to ``deck`` and couples each
-    opponent's (policy, deck) from the manifest."""
+    opponent's (policy, deck) from the manifest.
+
+    Warm-start flag is architecture-aware: when the source's architecture differs
+    from this league's (e.g. an LSTM round 1 seeding from the MLP generalist) only
+    the shared CardEmbeddingExtractor can transfer, so we pass
+    ``--init-extractor-from`` (mutually exclusive with ``--init-from`` in
+    pilot_training); same-architecture warm-starts use ``--init-from`` as before."""
     name = f"{spec.slug(deck)}_r{rnd}"
+    cross_arch = _source_algorithm(init_from) != spec.algorithm.lower()
+    init_flag = "--init-extractor-from" if cross_arch else "--init-from"
     argv = [
         spec.python, "-m", PILOT_MODULE,
         "--opponent", "league",
         "--league-pool-manifest", str(pool_manifest),
         "--archetypes", deck,                      # pins agent deck (single archetype)
-        "--init-from", init_from,
+        init_flag, init_from,
         "--timesteps", str(spec.steps_per_round),
         "--lr", repr(spec.lr),
         "--match-format", spec.match_format,
@@ -338,6 +367,8 @@ def build_specialist_argv(
         "--set", f"n_epochs={spec.n_epochs}",
         "--lr-schedule", spec.lr_schedule,
     ]
+    if spec.algorithm.lower() == "lstm":
+        argv.append("--lstm")
     if spec.wandb:
         argv += [
             "--wandb",
@@ -431,8 +462,13 @@ def _barrier(spec: LeagueSpec, reg: SpecialistRegistry, rnd: int,
     mirror head-to-head vs its prior checkpoint — a round that doesn't clear the
     bar is rejected (the prior stays current), so a regressing round can't poison
     the pool. Promotion uses the anchored frame only (never the in-run win rate)."""
+    # Trained specialists carry THIS league's architecture, not the generalist
+    # seed's — an LSTM league seeds from an MLP generalist, so the produced
+    # specialists are LSTM and must be tagged as such (the registry's algorithm
+    # drives how later rounds load them as opponents via make_agent_opponent_fn).
     meta = {**_generalist_meta(spec.generalist, spec),
-            "tensor_layout_hash": spec.layout_hash}
+            "tensor_layout_hash": spec.layout_hash,
+            "algorithm": spec.algorithm}
     gate = spec.promote_min_wr > 0.0
     prev = {deck: reg.get(deck) for deck in spec.decks}  # round-(r-1), pre-update
     load_candidate = policy_loader = None
@@ -481,6 +517,12 @@ def main() -> None:
     )
     p.add_argument("--generalist", required=True,
                    help="Warm-start seed (generalist final.zip).")
+    p.add_argument("--lstm", action="store_true",
+                   help="Train LSTM (MaskableRecurrentPPO) specialists instead of "
+                        "MLP. Round 1 transfers only the shared features extractor "
+                        "from the (MLP) generalist (--init-extractor-from); later "
+                        "rounds continue each deck's own LSTM checkpoint. Use "
+                        "--warmstart accumulate (the default).")
     p.add_argument("--decks", default=None,
                    help="Comma-separated archetype keys (default: the six starters).")
     p.add_argument("--rounds", type=int, default=3)
@@ -574,6 +616,7 @@ def main() -> None:
         vec_env_backend=args.vec_env_backend,
         tensor_profile=args.tensor_profile,
         reward_profile=args.reward_profile,
+        algorithm="lstm" if args.lstm else "mlp",
         match_format=args.match_format,
         layout_hash=args.layout_hash,
         opponent_pool_mode=args.opponent_pool_mode,

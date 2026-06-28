@@ -217,3 +217,48 @@ def test_run_parallel_caps_concurrency(monkeypatch):
     monkeypatch.setattr(L.subprocess, "Popen", FakePopen)
     L._run_parallel([["a"], ["b"], ["c"], ["d"], ["e"]], Path("."), max_parallel=2)
     assert state["peak"] <= 2  # never more than 2 specialists at once
+
+
+# ── LSTM specialist support (cross-arch warm-start) ──────────────────────────
+# An LSTM league seeds from the MLP generalist, so round 1 must transfer ONLY
+# the shared CardEmbeddingExtractor (--init-extractor-from), while later rounds
+# continue the deck's OWN LSTM checkpoint (--init-from, same architecture).
+
+def _write_model(path: Path, algorithm: str) -> str:
+    """Touch a fake <name>.zip + sibling <name>.meta.json carrying `algorithm`."""
+    path.write_bytes(b"")
+    path.with_suffix(".meta.json").write_text(
+        json.dumps({"algorithm": algorithm}), encoding="utf-8")
+    return str(path)
+
+
+def test_build_argv_mlp_uses_init_from(tmp_path):
+    """Regression: default (MLP) league keeps --init-from and no --lstm."""
+    gen = _write_model(tmp_path / "gen.zip", "mlp")
+    spec = _spec(tmp_path)  # algorithm defaults to "mlp"
+    argv = L.build_specialist_argv(spec, DECKS[0], 1, gen, tmp_path / "pool.json")
+    assert "--init-from" in argv
+    assert "--init-extractor-from" not in argv
+    assert "--lstm" not in argv
+
+
+def test_build_argv_lstm_round1_warmstarts_extractor_from_mlp(tmp_path):
+    """LSTM round 1 from the MLP generalist → --init-extractor-from (not --init-from)."""
+    gen = _write_model(tmp_path / "gen.zip", "mlp")
+    spec = _spec(tmp_path, algorithm="lstm")
+    argv = L.build_specialist_argv(spec, DECKS[0], 1, gen, tmp_path / "pool.json")
+    assert "--lstm" in argv
+    assert "--init-extractor-from" in argv
+    assert argv[argv.index("--init-extractor-from") + 1] == gen
+    assert "--init-from" not in argv  # mutually exclusive in pilot_training
+
+
+def test_build_argv_lstm_round2_uses_init_from_own_checkpoint(tmp_path):
+    """LSTM round >1 from its OWN lstm checkpoint (same arch) → --init-from."""
+    ckpt = _write_model(tmp_path / "r1_final.zip", "lstm")
+    spec = _spec(tmp_path, algorithm="lstm")
+    argv = L.build_specialist_argv(spec, DECKS[0], 2, ckpt, tmp_path / "pool.json")
+    assert "--lstm" in argv
+    assert "--init-from" in argv
+    assert argv[argv.index("--init-from") + 1] == ckpt
+    assert "--init-extractor-from" not in argv
