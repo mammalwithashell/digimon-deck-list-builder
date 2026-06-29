@@ -21,7 +21,40 @@ use crate::token_registry::*;
 use crate::trigger_context::*;
 use rand::seq::SliceRandom;
 
+/// make-engine-cloneable: resumable-VM frame state for the Plug-In Option
+/// play-mode select ("play as [Main] vs plug in via Link"). Plain data mirroring
+/// `install_option_mode_select`'s closure captures. An effect can play an option
+/// (`use_option_from_hand`) so this CAN nest mid-clause → carries `outer_conts`.
+#[derive(Debug, Clone)]
+pub(crate) struct OptionModeSelectState {
+    pub player_id: PlayerId,
+    pub source: OptionSource,
+    pub modes: Vec<OptionPlayMode>,
+    pub cost_policy: OptionCostPolicy,
+    pub outer_conts: Vec<crate::resume::OuterContinuation>,
+}
+
 impl Game {
+    /// Resolve a parked Option play-mode select (resumable VM). Mirrors
+    /// `install_option_mode_select`'s callback: decode the chosen mode index and
+    /// play the option in that mode (defaulting to Standard on a stale index),
+    /// then run any composed outer-clause tails.
+    pub(crate) fn run_option_mode_select_step(
+        &mut self,
+        state: OptionModeSelectState,
+        action_id: u16,
+    ) {
+        let index =
+            action_id.saturating_sub(crate::action::space::HAND_EFFECT_START) as usize;
+        let mode = state
+            .modes
+            .get(index)
+            .copied()
+            .unwrap_or(OptionPlayMode::Standard);
+        let _ = self.play_option_core(state.player_id, state.source, Some(mode), state.cost_policy);
+        crate::dsl_cards::step::selections::run_outer_conts(self, state.outer_conts);
+    }
+
     /// Play an Option card from `player`'s hand.
     ///
     /// Pipeline:
@@ -769,6 +802,9 @@ impl Game {
         }
 
         let modes = legal_modes;
+        // make-engine-cloneable: capture the modes for the data frame before the
+        // closure moves them.
+        let modes_for_resume = modes.clone();
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
         self.pending_selection = Some(PendingSelection {
@@ -792,6 +828,20 @@ impl Game {
                 let _ = game.play_option_core(player_id, source, Some(mode), cost_policy);
             }),
             on_decline: None,
+        });
+        // Park the data frame: resolves via `run_option_mode_select_step`. An
+        // effect-initiated option play can nest this mid-clause, so it threads
+        // `outer_conts`.
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::OptionModeSelect(
+                OptionModeSelectState {
+                    player_id,
+                    source,
+                    modes: modes_for_resume,
+                    cost_policy,
+                    outer_conts: Vec::new(),
+                },
+            )],
         });
     }
 

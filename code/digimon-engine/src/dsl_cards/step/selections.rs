@@ -968,6 +968,9 @@ pub(crate) fn run_resume(
         ResumeFrame::RefireEffectChoice(state) => {
             game.run_refire_effect_choice_step(state, action_id, is_pass);
         }
+        ResumeFrame::OptionModeSelect(state) => {
+            game.run_option_mode_select_step(state, action_id);
+        }
     }
 }
 

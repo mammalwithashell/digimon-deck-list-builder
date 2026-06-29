@@ -33,7 +33,7 @@ mod helpers; // facade-decomposition Tier-2 primitives (trash_source_and_fire, w
 mod link; // DigiLink Shape-B (Digimon-link) — activate/begin/commit/absorb + facet-#9 chosen-card link
 mod misc;
 mod movement;
-mod options;
+pub(crate) mod options;
 mod play;
 mod security;
 mod sources;
@@ -43,7 +43,7 @@ mod zones;
 /// API is the pair of `play_option_from_hand` / `play_option_from_trash`
 /// entry points.
 #[derive(Clone, Copy, Debug)]
-enum OptionSource {
+pub(crate) enum OptionSource {
     Hand(usize),
     Trash(usize),
 }
@@ -85,7 +85,7 @@ enum CostReductionKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum OptionCostPolicy {
+pub(crate) enum OptionCostPolicy {
     /// Pay the printed use cost (less any field-hosted `BeforePayCost`
     /// `OptionUse` reductions). Ordinary "use this Option" path.
     Pay,

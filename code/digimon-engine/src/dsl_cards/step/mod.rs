@@ -280,6 +280,7 @@ fn wrap_pending_selection_with_tail(
                 "digivolve cost prompts are a top-level player action, never nested in a DSL clause"
             ),
             Some(ResumeFrame::RefireEffectChoice(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::OptionModeSelect(s)) => s.outer_conts.push(cont),
             None => unreachable!("pending_selection_resume set but frame stack empty"),
         }
         game.pending_selection = Some(pending);

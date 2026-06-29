@@ -420,6 +420,12 @@ pub enum ResumeFrame {
     /// (`refire_target_effect`), so it CAN be nested mid-clause — carries real
     /// `outer_conts` (run after the refire, like the RunTail frames).
     RefireEffectChoice(RefireEffectChoiceState),
+    /// Plug-In Option play-mode select ("play as [Main]" vs "plug in via Link",
+    /// `install_option_mode_select`). Decode the chosen mode index → play the
+    /// option in that mode. INSTALLED during option play, which an effect can
+    /// initiate (`use_option_from_hand`), so it CAN nest mid-clause → carries
+    /// `outer_conts`. See [`crate::game_actions::options::OptionModeSelectState`].
+    OptionModeSelect(crate::game_actions::options::OptionModeSelectState),
 }
 
 /// State for a parked refire-effect choice (resumable VM). `effects` are the
