@@ -300,6 +300,64 @@ fn multiple_refireable_effects_install_visible_choice() {
     assert_eq!(r.memory(), 3);
 }
 
+/// make-engine-cloneable (Wave A): the refire-effect choice is resume-driven, so
+/// cloning the game at the prompt is faithful — the clone runs the chosen effect
+/// while the original is untouched and replays identically.
+#[test]
+fn refire_effect_choice_clones_faithfully() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("SOURCE-STACK", "Source Stack"))
+        .add_card(make_test_card("REFIRE-TARGET", "Refire Target"))
+        .memory(0)
+        .start();
+    r.register_effect("REFIRE-TARGET", Arc::new(TwoWhenDigivolvingEffects));
+
+    let source_stack = r.place_on_field(0, "SOURCE-STACK", Some(0));
+    let target = r.place_on_field(0, "REFIRE-TARGET", Some(0));
+    let caller_source = r.top_card(source_stack);
+    {
+        let mut ctx = EffectContext::new(&mut r.game, caller_source, Some(source_stack), 0);
+        ctx.refire_effect_from_permanent(target, "when_digivolving", false)
+            .expect("install refire choice");
+    }
+
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "the refire-effect choice must be resume-driven (clone-safe)"
+    );
+    let mem_before = r.game.memory;
+
+    // Clone at the prompt; run the second effect on the clone only.
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, HAND_EFFECT_START + 1)
+        .expect("clone picks the second effect");
+    assert!(clone.pending_selection.is_none(), "clone: refire resolved");
+    assert_ne!(
+        clone.memory, mem_before,
+        "clone: the chosen effect ran (memory changed)"
+    );
+
+    // INDEPENDENCE: the original is untouched.
+    assert!(
+        r.game.pending_selection.is_some(),
+        "original's refire choice survives the clone"
+    );
+    assert_eq!(
+        r.game.memory, mem_before,
+        "original: no effect run while the clone resolved"
+    );
+
+    // REPLAYS IDENTICALLY.
+    r.game
+        .resolve_selection(0, HAND_EFFECT_START + 1)
+        .expect("original picks the second effect");
+    assert_eq!(
+        r.game.memory, clone.memory,
+        "original reaches the clone's state"
+    );
+}
+
 #[test]
 fn refire_target_effect_returns_false_when_no_eligible_effects_exist() {
     let mut r = DebugRunner::builder()

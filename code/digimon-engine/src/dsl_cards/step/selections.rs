@@ -965,6 +965,9 @@ pub(crate) fn run_resume(
         ResumeFrame::DigivolveReducerSuspend(state) => {
             game.run_digivolve_reducer_suspend_step(state, action_id);
         }
+        ResumeFrame::RefireEffectChoice(state) => {
+            game.run_refire_effect_choice_step(state, action_id, is_pass);
+        }
     }
 }
 

@@ -414,6 +414,22 @@ pub enum ResumeFrame {
     /// suspend target, suspend it, consume the reducer, credit the reduction,
     /// re-enter the digivolve. Mandatory.
     DigivolveReducerSuspend(crate::game_actions::digivolve::DigivolveReducerState),
+    /// Refire-effect choice ("activate one of this Digimon's effects again" —
+    /// `install_refire_effect_selection`). Decode the picked effect index → run
+    /// it (`run_refired_effect`); optional PASS → no-op. INSTALLED BY A DSL ACTION
+    /// (`refire_target_effect`), so it CAN be nested mid-clause — carries real
+    /// `outer_conts` (run after the refire, like the RunTail frames).
+    RefireEffectChoice(RefireEffectChoiceState),
+}
+
+/// State for a parked refire-effect choice (resumable VM). `effects` are the
+/// re-fireable candidates (decoded by `HAND_EFFECT_START + index`); `outer_conts`
+/// carry any outer-clause tail composed onto this select when it nests inside a
+/// larger clause. Plain data — no closures.
+#[derive(Debug, Clone)]
+pub struct RefireEffectChoiceState {
+    pub effects: Vec<crate::effect::ReFireableEffect>,
+    pub outer_conts: Vec<OuterContinuation>,
 }
 
 /// In-flight state of a `use_option_from_hand` selection, as data. The pick

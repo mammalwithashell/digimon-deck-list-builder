@@ -195,6 +195,9 @@ impl Game {
         }
 
         let head = effects[0].clone();
+        // make-engine-cloneable: capture the candidates for the data frame before
+        // the closure moves them.
+        let effects_for_resume = effects.clone();
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
         self.pending_selection = Some(PendingSelection {
@@ -217,6 +220,34 @@ impl Game {
             }),
             on_decline: optional.then(|| Box::new(|_game: &mut Game| {}) as DeclineCallback),
         });
+        // Park the data frame: resolves via `run_refire_effect_choice_step`.
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RefireEffectChoice(
+                crate::resume::RefireEffectChoiceState {
+                    effects: effects_for_resume,
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
+    }
+
+    /// Resolve a parked refire-effect choice (resumable VM). Mirrors
+    /// `install_refire_effect_selection`'s callback/on_decline: accept → decode
+    /// the picked effect index and run it; PASS (optional decline) → no-op. Then
+    /// run any composed outer-clause tails.
+    pub(crate) fn run_refire_effect_choice_step(
+        &mut self,
+        state: crate::resume::RefireEffectChoiceState,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        if !is_pass {
+            let pos = action_id.saturating_sub(HAND_EFFECT_START) as usize;
+            if let Some(effect) = state.effects.get(pos).cloned() {
+                self.run_refired_effect(effect);
+            }
+        }
+        crate::dsl_cards::step::selections::run_outer_conts(self, state.outer_conts);
     }
 
     /// Collect every effect on `source` whose timing matches `timing` and
