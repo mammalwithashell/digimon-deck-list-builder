@@ -158,9 +158,19 @@ pub enum ResumeSelectKind {
     /// resolved source `CardHandle` via `material_carrier_permanent`.
     Material { perm: PermanentHandle },
     /// `action_id - HAND_EFFECT_START` → 0-based label index of a "choose one"
-    /// prompt (`select_effect_choice`). Binds the index as a literal
-    /// (`insert_literal`). Not optional (a branch must be picked).
-    EffectChoice,
+    /// prompt (`select_effect_choice`). Not optional (a branch must be picked).
+    /// `post: None` is a plain choice: bind the index as a literal
+    /// (`insert_literal`) then run `inner_tail`. `post: Some(..)` runs a data
+    /// post-action keyed on the chosen index INSTEAD of binding — e.g.
+    /// `OrderRemainder` (multi-destination `order_remainder`) maps the index to
+    /// a deck position and chains into the already-flipped
+    /// `install_remainder_permutation_with_tail` (frame-installs-frame, like
+    /// `DnaPairLeft`); `inner_tail` is NOT run here — it becomes the
+    /// permutation's tail. `outer_conts` transfer to the permutation frame via
+    /// the shared post-match `run_outer_conts`.
+    EffectChoice {
+        post: Option<EffectChoicePostAction>,
+    },
     /// LEFT pick of a `select_dna_pair` (heterogeneous two-pick). The
     /// `candidates` are the left-filter matches (`encode_attack`-encoded, both
     /// battle areas); the arm resolves the picked `left`, binds it via the
@@ -221,6 +231,31 @@ pub enum FieldPermanentPostAction {
     /// Tamer's bottom face-down digivolution source (`trash_bottom_face_down_source`);
     /// the tail runs ONLY if the trash succeeded (no-approximations cost gate).
     TrashBottomFaceDownSource,
+    /// `try_run_relink` (`relink_self_to_own_digimon`, EX11-027): the picked
+    /// permanent is the host; absorb the effect's own standing `source`
+    /// permanent onto it as a link card (`absorb_standing_digimon_as_link`).
+    /// No bind. The absorb fires `OnDigivolutionCardTrashed` / `OnLinkedCardTrashed`
+    /// / `OnLink` + drains (NOT atomic), so a nested park threads via the empty
+    /// `inner_tail` + `outer_conts` (`run_outer_conts` → `drain_or_rewrap`),
+    /// exactly like `AddTopToHand` / the redirect arm. Host pick is mandatory
+    /// (`select_own_permanent(.., false, ..)`) → decline `None`.
+    AbsorbStandingAsLink { source: PermanentHandle },
+}
+
+/// Post-action run on an `EffectChoice` resolve, keyed on the chosen label
+/// index, INSTEAD of binding the index. Plain data — no closure.
+#[derive(Debug, Clone)]
+pub enum EffectChoicePostAction {
+    /// Multi-destination `order_remainder`: the choice picks deck top vs bottom
+    /// (`positions[index]`), then the picked position drives
+    /// `install_remainder_permutation_with_tail` over the reveal pool, which
+    /// parks its own `PermutationStep`. Frame-installs-frame: the `EffectChoice`
+    /// frame's `inner_tail` becomes the permutation's tail (not run in the
+    /// choice arm). `positions.len()` matches the prompt's label count.
+    OrderRemainder {
+        positions: Vec<crate::enums::StackPosition>,
+        player: PlayerId,
+    },
 }
 
 /// Post-action run on a `Security` resolve before the `inner_tail`. Plain data —
@@ -356,6 +391,51 @@ pub enum ResumeFrame {
     /// `drain_or_rewrap_pending_tail` (which threads it onto the nested frame)
     /// rather than run inline. See [`UseOptionFromHandState`].
     UseOptionFromHandStep(UseOptionFromHandState),
+    /// One pick stage of the recursive `link_cards` loop (`link 1..N cards from
+    /// hand/trash/digivolution-sources to a Digimon`). The state carries the
+    /// loop's spec (Arc) + `pick_index` + a per-stage enum; `run_link_pick_step`
+    /// decodes the resolving action for that stage and advances the loop (re-park
+    /// the next stage, attach + recurse, or run the captured tail), mirroring the
+    /// closure callbacks. The post-attach `install_pick(K+1)` runs inline exactly
+    /// as the closure path does. See [`crate::dsl_cards::step::link_cards::LinkPickState`].
+    LinkPickStep(crate::dsl_cards::step::link_cards::LinkPickState),
+    /// Digivolve cost-choice (rule 17 — a base satisfies >1 of a hand card's
+    /// digivolution requirements at different costs). A top-level player action,
+    /// so it carries no `outer_conts` and is never nested in a DSL clause;
+    /// `Game::run_digivolve_cost_choice_step` decodes the chosen route index,
+    /// pins it, and re-enters the digivolve. See [`crate::game_actions::digivolve::DigivolveCostChoiceState`].
+    DigivolveCostChoice(crate::game_actions::digivolve::DigivolveCostChoiceState),
+    /// Player-scoped digivolve cost-reducer accept/decline prompt
+    /// (`G-COST-REDUCE-ALLY-DIGIVOLVE`). PASS declines (re-enter at full cost),
+    /// accept runs `player_digivolve_reducer_accept`. A player-digivolve action,
+    /// never nested in a DSL clause. See [`crate::game_actions::digivolve::DigivolveReducerState`].
+    DigivolveReducerPrompt(crate::game_actions::digivolve::DigivolveReducerState),
+    /// The suspend-cost pick that the reducer accept path chains into: decode the
+    /// suspend target, suspend it, consume the reducer, credit the reduction,
+    /// re-enter the digivolve. Mandatory.
+    DigivolveReducerSuspend(crate::game_actions::digivolve::DigivolveReducerState),
+    /// Refire-effect choice ("activate one of this Digimon's effects again" —
+    /// `install_refire_effect_selection`). Decode the picked effect index → run
+    /// it (`run_refired_effect`); optional PASS → no-op. INSTALLED BY A DSL ACTION
+    /// (`refire_target_effect`), so it CAN be nested mid-clause — carries real
+    /// `outer_conts` (run after the refire, like the RunTail frames).
+    RefireEffectChoice(RefireEffectChoiceState),
+    /// Plug-In Option play-mode select ("play as [Main]" vs "plug in via Link",
+    /// `install_option_mode_select`). Decode the chosen mode index → play the
+    /// option in that mode. INSTALLED during option play, which an effect can
+    /// initiate (`use_option_from_hand`), so it CAN nest mid-clause → carries
+    /// `outer_conts`. See [`crate::game_actions::options::OptionModeSelectState`].
+    OptionModeSelect(crate::game_actions::options::OptionModeSelectState),
+}
+
+/// State for a parked refire-effect choice (resumable VM). `effects` are the
+/// re-fireable candidates (decoded by `HAND_EFFECT_START + index`); `outer_conts`
+/// carry any outer-clause tail composed onto this select when it nests inside a
+/// larger clause. Plain data — no closures.
+#[derive(Debug, Clone)]
+pub struct RefireEffectChoiceState {
+    pub effects: Vec<crate::effect::ReFireableEffect>,
+    pub outer_conts: Vec<OuterContinuation>,
 }
 
 /// In-flight state of a `use_option_from_hand` selection, as data. The pick

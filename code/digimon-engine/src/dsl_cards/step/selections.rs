@@ -424,6 +424,25 @@ pub(crate) fn run_resume(
                                 );
                             }
                         }
+                        Some(crate::resume::FieldPermanentPostAction::AbsorbStandingAsLink {
+                            source,
+                        }) => {
+                            // Mirror try_run_relink's host callback: absorb the
+                            // effect's own standing source permanent onto the
+                            // picked host (`h`) as a link card. The absorb drains
+                            // (OnDigivolutionCardTrashed/OnLinkedCardTrashed/OnLink)
+                            // — NOT atomic; the empty inner_tail is a no-op and the
+                            // dispatcher tail (wrapped as outer_conts) composes onto
+                            // any nested park via run_outer_conts. No bind.
+                            ctx.game.absorb_standing_digimon_as_link(source, h);
+                            run_tail_preserving_trigger_context(
+                                &mut ctx,
+                                trigger_context,
+                                &inner_tail,
+                                &mut b,
+                                &runtime,
+                            );
+                        }
                     }
                     ctx.game.effect_source_player = previous_effect_source;
                 }
@@ -662,9 +681,8 @@ pub(crate) fn run_resume(
                         &runtime,
                     );
                 }
-                ResumeSelectKind::EffectChoice => {
-                    // "choose one": action_id - HAND_EFFECT_START → label index,
-                    // bound as a literal (mirrors ctx.select_effect_choice).
+                ResumeSelectKind::EffectChoice { post } => {
+                    // "choose one": action_id - HAND_EFFECT_START → label index.
                     let choice_index = action_id
                         .saturating_sub(crate::action::space::HAND_EFFECT_START)
                         as usize;
@@ -677,16 +695,49 @@ pub(crate) fn run_resume(
                         prov.override_pin,
                     );
                     let mut b = bindings;
-                    if let Some(name) = &bind_as {
-                        b.insert_literal(name, choice_index as i64);
+                    match post {
+                        None => {
+                            // Plain choice: bind the index then run inner_tail
+                            // (mirrors ctx.select_effect_choice's callback).
+                            if let Some(name) = &bind_as {
+                                b.insert_literal(name, choice_index as i64);
+                            }
+                            run_tail_preserving_trigger_context(
+                                &mut ctx,
+                                trigger_context,
+                                &inner_tail,
+                                &mut b,
+                                &runtime,
+                            );
+                        }
+                        Some(crate::resume::EffectChoicePostAction::OrderRemainder {
+                            positions,
+                            player,
+                        }) => {
+                            // Multi-destination order_remainder: map the chosen
+                            // index → deck position, then chain into the
+                            // already-flipped permutation installer (which parks
+                            // its own PermutationStep). Frame-installs-frame: we
+                            // do NOT run inner_tail here — it becomes the
+                            // permutation's tail. Mirrors install_order_remainder's
+                            // select_effect_choice callback, including the
+                            // post-install trigger-context restore. outer_conts
+                            // thread onto the permutation frame via the shared
+                            // run_outer_conts below.
+                            let Some(position) = positions.get(choice_index).copied() else {
+                                return;
+                            };
+                            let _ = install_remainder_permutation_with_tail(
+                                &mut ctx,
+                                player,
+                                position,
+                                (*inner_tail).clone(),
+                                b,
+                                runtime,
+                            );
+                            ctx.game.current_trigger_context = trigger_context;
+                        }
                     }
-                    run_tail_preserving_trigger_context(
-                        &mut ctx,
-                        trigger_context,
-                        &inner_tail,
-                        &mut b,
-                        &runtime,
-                    );
                 }
                 ResumeSelectKind::DnaPairLeft {
                     candidates,
@@ -901,6 +952,24 @@ pub(crate) fn run_resume(
         }
         ResumeFrame::UseOptionFromHandStep(state) => {
             run_use_option_from_hand_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::LinkPickStep(state) => {
+            crate::dsl_cards::step::link_cards::run_link_pick_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::DigivolveCostChoice(state) => {
+            game.run_digivolve_cost_choice_step(state, action_id);
+        }
+        ResumeFrame::DigivolveReducerPrompt(state) => {
+            game.run_digivolve_reducer_prompt_step(state, is_pass);
+        }
+        ResumeFrame::DigivolveReducerSuspend(state) => {
+            game.run_digivolve_reducer_suspend_step(state, action_id);
+        }
+        ResumeFrame::RefireEffectChoice(state) => {
+            game.run_refire_effect_choice_step(state, action_id, is_pass);
+        }
+        ResumeFrame::OptionModeSelect(state) => {
+            game.run_option_mode_select_step(state, action_id);
         }
     }
 }
@@ -1705,7 +1774,10 @@ fn run_permutation_step(
 /// after merging the bindings the just-run tail published (the
 /// `dsl_resolved_tail_bindings` freshness channel, exactly as the closure
 /// wrapper did). Conts run in push order.
-fn run_outer_conts(game: &mut crate::game::Game, conts: Vec<crate::resume::OuterContinuation>) {
+pub(crate) fn run_outer_conts(
+    game: &mut crate::game::Game,
+    conts: Vec<crate::resume::OuterContinuation>,
+) {
     for cont in conts {
         let mut merged = cont.bindings;
         if let Some(fresh) = game.dsl_resolved_tail_bindings.take() {
@@ -4950,7 +5022,7 @@ fn install_select_effect_choice(
                     controller: player,
                     override_pin,
                 },
-                select_kind: crate::resume::ResumeSelectKind::EffectChoice,
+                select_kind: crate::resume::ResumeSelectKind::EffectChoice { post: None },
                 bind_as: bind_as_for_resume,
                 inner_tail: tail_for_resume,
                 outer_conts: Vec::new(),
@@ -6720,8 +6792,27 @@ fn install_order_remainder(
     let prompt =
         prompt.unwrap_or_else(|| "Place remaining cards on top or bottom of the deck?".to_string());
     let destinations_capture: Vec<CompiledRemainderDestination> = destinations;
+    // Resumable-VM: map each destination to a deck position for the
+    // EffectChoice{post: OrderRemainder} data frame (parked below). The index
+    // chosen in the prompt selects into this list, exactly as the closure
+    // indexes `destinations_capture`.
+    let positions_for_resume: Vec<crate::enums::StackPosition> = destinations_capture
+        .iter()
+        .map(|d| remainder_destination_position(*d))
+        .collect();
     let tail_arc = Arc::new(tail);
     let trigger_context = ctx.game.current_trigger_context.clone();
+    // Capture provenance + the carried tail/bindings/runtime for the data frame
+    // BEFORE the closure moves them (coexistence: both paths install).
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let controller = ctx.player;
+    let override_pin = ctx.override_selecting_player();
+    let tail_for_resume = Arc::clone(&tail_arc);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
     ctx.select_effect_choice(&prompt, labels, move |cb_ctx, idx| {
         let position = remainder_destination_position(destinations_capture[idx]);
         // The select_effect_choice callback runs in a fresh selection scope
@@ -6739,6 +6830,35 @@ fn install_order_remainder(
         cb_ctx.game.current_trigger_context = trigger_context.clone();
     });
     if ctx.game.pending_selection.is_some() {
+        // Park the data frame (coexistence): driven by run_resume's
+        // EffectChoice{post: OrderRemainder} arm, which chains into
+        // install_remainder_permutation_with_tail (frame-installs-frame). The
+        // destination choice is not optional (a branch must be picked) → decline
+        // None. inner_tail becomes the permutation's tail, not run in the choice.
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::EffectChoice {
+                    post: Some(crate::resume::EffectChoicePostAction::OrderRemainder {
+                        positions: positions_for_resume,
+                        player: target_player,
+                    }),
+                },
+                bind_as: None,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
         InstallResult::Parked
     } else {
         InstallResult::Continue

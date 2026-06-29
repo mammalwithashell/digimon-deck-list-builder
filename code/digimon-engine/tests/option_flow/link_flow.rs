@@ -2017,6 +2017,263 @@ effects:
     );
 }
 
+// ── make-engine-cloneable: link-loop clone-safety (all 4 pick stages) ────────
+
+/// HostSelect stage: clone the game AT the per-pick host select (after the card
+/// is chosen). The clone resolves host → attach → recurse while the original is
+/// untouched and replays identically.
+#[test]
+fn link_loop_host_select_clones_faithfully() {
+    use digimon_engine::action::space::encode_attack;
+    let yaml = r#"
+card: VULC-CLN
+name: Vulcanusmon
+kind: digimon
+effects:
+  - when: on_play
+    process:
+      - link_cards:
+          from: [hand]
+          to: own_digimon
+          count: { up_to: 2 }
+          cost: free
+"#;
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("VULC-CLN", CardColor::Red))
+        .add_card(digimon_card("TARGET-CLN", CardColor::Red))
+        .add_card(option_card("CCARD-A", 0, CardColor::Red))
+        .add_card(option_card("CCARD-B", 0, CardColor::Red))
+        .hand(0, &["CCARD-A", "CCARD-B"])
+        .memory(3)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let vulc = r.place_on_field(0, "VULC-CLN", Some(0));
+    let target = r.place_on_field(0, "TARGET-CLN", Some(0));
+    advance_to_main(&mut r);
+    r.game.fire_on_play(0, vulc.index as usize);
+
+    // Pick-1 card select (resume-driven) → resolve → host select.
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "link card select must be resume-driven (clone-safe)"
+    );
+    let card_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    r.game.resolve_selection(0, card_action).expect("pick card 1");
+
+    assert!(
+        r.game.pending_selection.is_some() && r.game.pending_selection_resume.is_some(),
+        "host select installed and resume-driven"
+    );
+    let host_action = encode_attack(target.player as u16, target.index as u16);
+
+    // Clone AT the host select; finish the loop on the clone only.
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, host_action)
+        .expect("clone resolves host");
+    assert!(
+        clone.pending_selection.is_some(),
+        "clone: pick-2 select offered after the attach + recurse"
+    );
+    clone.resolve_selection(0, PASS).expect("clone PASS pick 2");
+    assert!(clone.pending_selection.is_none(), "clone: loop complete");
+    assert_eq!(
+        clone.player(0).battle_area[target.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "clone: exactly one card linked onto the host"
+    );
+
+    // INDEPENDENCE: the original is untouched.
+    assert!(
+        r.game.pending_selection.is_some(),
+        "original's host select survives the clone"
+    );
+    assert_eq!(
+        r.game.player(0).battle_area[target.index as usize]
+            .linked_cards
+            .len(),
+        0,
+        "original: nothing linked while the clone resolved"
+    );
+
+    // REPLAYS IDENTICALLY.
+    r.game
+        .resolve_selection(0, host_action)
+        .expect("original resolves host");
+    r.game.resolve_selection(0, PASS).expect("original PASS pick 2");
+    assert_eq!(
+        r.game.player(0).battle_area[target.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "original reaches the clone's linked state"
+    );
+}
+
+/// ZoneChoice stage: clone the game AT the zone-choice prompt (both hand +
+/// self_sources have candidates). The clone picks hand → card → attach (to: self).
+#[test]
+fn link_loop_zone_choice_clones_faithfully() {
+    let yaml = r#"
+card: REBOOT-CLN
+name: Rebootmon
+kind: digimon
+effects:
+  - when: on_play
+    process:
+      - link_cards:
+          from: [hand, self_sources]
+          filter: { trait_has: Appmon }
+          to: self
+          count: { exactly: 1 }
+          cost: free
+"#;
+    let mut r = DebugRunner::builder()
+        .add_card(appmon_card("APP-SRC-C", CardColor::Red))
+        .add_card(digimon_card("REBOOT-CLN", CardColor::Red))
+        .add_card(appmon_card("APP-HAND-C", CardColor::Red))
+        .hand(0, &["APP-HAND-C"])
+        .memory(3)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let host = r.place_stack(0, &["APP-SRC-C", "REBOOT-CLN"]);
+    advance_to_main(&mut r);
+    r.game.fire_on_play(0, host.index as usize);
+
+    assert_eq!(
+        r.game.pending_selection.as_ref().unwrap().kind,
+        digimon_engine::selection::SelectionKind::EffectChoice,
+        "zone choice installed first"
+    );
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "zone choice must be resume-driven (clone-safe)"
+    );
+    // eligible is in `from:` order → action_ids[0] = hand.
+    let zone_hand = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, zone_hand)
+        .expect("clone picks the hand zone");
+    let card = clone.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    clone.resolve_selection(0, card).expect("clone picks the card");
+    assert!(
+        clone.pending_selection.is_none(),
+        "clone: loop complete after the exactly-1 pick"
+    );
+    assert_eq!(
+        clone.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "clone: one card linked to self"
+    );
+
+    // INDEPENDENCE.
+    assert_eq!(
+        r.game.pending_selection.as_ref().unwrap().kind,
+        digimon_engine::selection::SelectionKind::EffectChoice,
+        "original still parked at the zone choice"
+    );
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        0,
+        "original: nothing linked yet"
+    );
+
+    // REPLAYS IDENTICALLY.
+    r.game
+        .resolve_selection(0, zone_hand)
+        .expect("original picks the hand zone");
+    let card2 = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    r.game.resolve_selection(0, card2).expect("original picks the card");
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "original reaches the clone's linked state"
+    );
+}
+
+/// CardSelectSources stage: `from: [self_sources]` only → straight to the
+/// source select. Clone there; the clone resolves the source link to self.
+#[test]
+fn link_loop_source_select_clones_faithfully() {
+    let yaml = r#"
+card: REBOOT-SRC
+name: Rebootmon
+kind: digimon
+effects:
+  - when: on_play
+    process:
+      - link_cards:
+          from: [self_sources]
+          filter: { trait_has: Appmon }
+          to: self
+          count: { exactly: 1 }
+          cost: free
+"#;
+    let mut r = DebugRunner::builder()
+        .add_card(appmon_card("APP-USRC", CardColor::Red))
+        .add_card(digimon_card("REBOOT-SRC", CardColor::Red))
+        .memory(3)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let host = r.place_stack(0, &["APP-USRC", "REBOOT-SRC"]);
+    advance_to_main(&mut r);
+    r.game.fire_on_play(0, host.index as usize);
+
+    assert!(
+        r.game.pending_selection.is_some() && r.game.pending_selection_resume.is_some(),
+        "source select installed and resume-driven (clone-safe)"
+    );
+    let src_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, src_action)
+        .expect("clone picks the source");
+    assert!(clone.pending_selection.is_none(), "clone: loop complete");
+    assert_eq!(
+        clone.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "clone: the digivolution source linked to self"
+    );
+
+    // INDEPENDENCE.
+    assert!(
+        r.game.pending_selection.is_some(),
+        "original survives the clone"
+    );
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        0,
+        "original: source not yet linked"
+    );
+
+    // REPLAYS IDENTICALLY.
+    r.game
+        .resolve_selection(0, src_action)
+        .expect("original picks the source");
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "original reaches the clone's linked state"
+    );
+}
+
 /// §4.5.2 — `link_cards { to: own_digimon }` honors `host_filter` (the link
 /// requirement) AND `exclude_source` ("1 of your OTHER Digimon"): the host
 /// select offers only own Digimon matching the predicate, never the effect's
@@ -2163,6 +2420,101 @@ effects:
     assert!(
         hosted,
         "RELINKER's top card is now a link card on the chosen host"
+    );
+}
+
+/// make-engine-cloneable: `relink_self_to_own_digimon`'s host select is the
+/// resumable-VM `FieldPermanent { post: AbsorbStandingAsLink }`, so cloning the
+/// game AT the host prompt is faithful — the clone resolves to the absorb while
+/// the original is untouched and replays identically.
+#[test]
+fn relink_self_to_own_digimon_clones_faithfully_at_host_prompt() {
+    let yaml = r#"
+card: RELINKER
+name: Relinker
+kind: digimon
+effects:
+  - when: on_play
+    summary: "link this Digimon to a [Marked] OTHER Digimon"
+    process:
+      - relink_self_to_own_digimon:
+          host_filter: { trait_has: Marked }
+"#;
+    let mut r = DebugRunner::builder()
+        .add_card(traited_digimon("RELINKER", CardColor::Red, &["Marked"]))
+        .add_card(traited_digimon("HOST-OK", CardColor::Red, &["Marked"]))
+        .add_card(traited_digimon("HOST-NO", CardColor::Red, &[]))
+        .memory(5)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let src = r.place_on_field(0, "RELINKER", Some(0));
+    let _ok = r.place_on_field(0, "HOST-OK", Some(0));
+    let _no = r.place_on_field(0, "HOST-NO", Some(0));
+    advance_to_main(&mut r);
+
+    let self_card = r.game.player(0).battle_area[src.index as usize]
+        .top_card()
+        .handle();
+    r.game.fire_on_play(0, src.index as usize);
+
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("relink host select installed");
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "relink host select must be resume-driven (clone-safe)"
+    );
+    let action = pending.valid_action_ids[0];
+
+    // Clone AT the host prompt; resolve the absorb on the clone only.
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, action)
+        .expect("clone resolves host pick");
+    assert_eq!(
+        clone.player(0).battle_area.len(),
+        2,
+        "clone: RELINKER absorbed (battle area shrank by 1)"
+    );
+    assert!(
+        clone
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| p.linked_cards.iter().any(|c| c.handle() == self_card)),
+        "clone: RELINKER's top card is now a link card on the chosen host"
+    );
+
+    // INDEPENDENCE: the original is untouched by resolving the clone.
+    assert!(
+        r.game.pending_selection.is_some(),
+        "original's host select survives cloning + resolving the clone"
+    );
+    assert_eq!(
+        r.battle_area_size(0),
+        3,
+        "original still has all 3 permanents while the clone absorbed"
+    );
+
+    // REPLAYS IDENTICALLY: resolving the original the same way reaches the
+    // clone's state.
+    r.game
+        .resolve_selection(0, action)
+        .expect("original resolves host pick");
+    assert_eq!(
+        r.battle_area_size(0),
+        clone.player(0).battle_area.len(),
+        "original reaches the same battle-area size as the clone"
+    );
+    assert!(
+        r.game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| p.linked_cards.iter().any(|c| c.handle() == self_card)),
+        "original: RELINKER absorbed onto the chosen host"
     );
 }
 

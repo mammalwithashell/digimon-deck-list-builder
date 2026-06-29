@@ -21,6 +21,121 @@ use crate::token_registry::*;
 use crate::trigger_context::*;
 use rand::seq::SliceRandom;
 
+/// make-engine-cloneable: resumable-VM frame state for the digivolve cost-choice
+/// prompt (rule 17 — when a base satisfies >1 of a hand card's digivolution
+/// requirements at different costs). Plain data mirroring
+/// `install_digivolve_cost_choice_prompt`'s closure captures, so a clone paused
+/// at the cost choice replays the chosen cost faithfully. The prompt is a
+/// top-level player action (dispatched from `action/decode.rs`), never nested in
+/// a DSL clause — so it needs no `outer_conts`.
+#[derive(Debug, Clone)]
+pub(crate) struct DigivolveCostChoiceState {
+    pub acting_player: PlayerId,
+    pub hand_index: usize,
+    pub field_index: usize,
+    pub source: PlaySource,
+    pub routes: Vec<crate::dna_digivolve::DigivolveRouteMatch>,
+}
+
+/// make-engine-cloneable: resumable-VM frame state for the player-scoped
+/// digivolve cost-reducer prompts (`G-COST-REDUCE-ALLY-DIGIVOLVE`). Shared by
+/// the accept/decline prompt frame and the suspend-cost frame it chains into.
+/// All a player-digivolve action (never mid-DSL-clause) → no `outer_conts`.
+#[derive(Debug, Clone)]
+pub(crate) struct DigivolveReducerState {
+    pub reducer_idx: usize,
+    pub reducer: crate::player_cost_reducer::PlayerDigivolveCostReducer,
+    pub acting_player: PlayerId,
+    pub hand_index: usize,
+    pub field_index: usize,
+    pub source: PlaySource,
+}
+
+impl Game {
+    /// Resolve a parked digivolve cost-choice (resumable VM). Mirrors
+    /// `install_digivolve_cost_choice_prompt`'s callback exactly: decode the
+    /// chosen route index, pin it as `pending_digivolve_route_choice`, then
+    /// re-enter the digivolve.
+    pub(crate) fn run_digivolve_cost_choice_step(
+        &mut self,
+        state: DigivolveCostChoiceState,
+        action_id: u16,
+    ) {
+        let idx = action_id.saturating_sub(crate::action::space::HAND_EFFECT_START) as usize;
+        if let Some(chosen) = state.routes.get(idx).copied() {
+            self.pending_digivolve_route_choice = Some(chosen);
+        }
+        self.digivolve_from_hand_inner(
+            state.acting_player,
+            state.hand_index,
+            state.field_index,
+            state.source,
+            false,
+        );
+    }
+
+    /// Resolve a parked digivolve cost-reducer accept/decline prompt (resumable
+    /// VM). Mirrors `install_player_digivolve_reducer_prompt`'s callback / on_decline:
+    /// PASS (decline) → zero the reduction and re-enter the digivolve at full
+    /// cost; accept → run `player_digivolve_reducer_accept` (which installs the
+    /// suspend-cost pick or applies the reduction directly).
+    pub(crate) fn run_digivolve_reducer_prompt_step(
+        &mut self,
+        state: DigivolveReducerState,
+        is_pass: bool,
+    ) {
+        if is_pass {
+            self.pending_player_digivolve_reduction = 0;
+            self.digivolve_from_hand_inner(
+                state.acting_player,
+                state.hand_index,
+                state.field_index,
+                state.source,
+                true,
+            );
+        } else {
+            self.player_digivolve_reducer_accept(
+                state.reducer_idx,
+                state.reducer,
+                state.acting_player,
+                state.hand_index,
+                state.field_index,
+                state.source,
+            );
+        }
+    }
+
+    /// Resolve a parked digivolve cost-reducer suspend-cost pick (resumable VM).
+    /// Mirrors the OwnField callback in `player_digivolve_reducer_accept`: decode
+    /// the suspend target, suspend it, consume the reducer (if single-fire),
+    /// credit the reduction, then re-enter the digivolve.
+    pub(crate) fn run_digivolve_reducer_suspend_step(
+        &mut self,
+        state: DigivolveReducerState,
+        action_id: u16,
+    ) {
+        use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
+        let offset = action_id.saturating_sub(ATTACK_START);
+        let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
+        let suspend_target = PermanentHandle {
+            player: state.acting_player,
+            index: target_index,
+        };
+        self.suspend(suspend_target);
+        let single_fire = state.reducer.single_fire;
+        let amount = state.reducer.amount;
+        self.consume_player_digivolve_reducer(state.reducer_idx, &state.reducer, single_fire);
+        self.pending_player_digivolve_reduction = amount;
+        self.digivolve_from_hand_inner(
+            state.acting_player,
+            state.hand_index,
+            state.field_index,
+            state.source,
+            true,
+        );
+    }
+}
+
 impl Game {
     /// Digivolve: push a card onto a permanent's stack.
     pub fn digivolve_onto(
@@ -361,6 +476,10 @@ impl Game {
             .collect();
         let valid_action_ids: Vec<u16> = entries.iter().map(|e| e.action_id).collect();
 
+        // make-engine-cloneable: capture a copy of the routes for the data frame
+        // before the closure moves them (coexistence: both paths install).
+        let routes_for_resume = routes.clone();
+
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
         self.pending_selection = Some(PendingSelection {
@@ -384,6 +503,19 @@ impl Game {
             }),
             on_decline: None,
         });
+        // Park the data frame alongside the closure. The cost-choice resolves via
+        // `run_digivolve_cost_choice_step` when driven through the resumable VM.
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::DigivolveCostChoice(
+                DigivolveCostChoiceState {
+                    acting_player,
+                    hand_index,
+                    field_index,
+                    source,
+                    routes: routes_for_resume,
+                },
+            )],
+        });
     }
 
     /// Install the accept/decline `PendingSelection` for a player-scoped
@@ -406,6 +538,9 @@ impl Game {
         let source_card = reducer.source_card;
         let source_kind = self.effect_source_kind_for_handle(source_card);
         let amount = reducer.amount;
+        // make-engine-cloneable: capture a copy for the data frame before the
+        // accept closure moves the reducer.
+        let reducer_for_resume = reducer.clone();
 
         // Accept branch — pay the suspend cost (if any), apply the reduction,
         // consume the reducer if single-fire, then re-enter the digivolve.
@@ -457,6 +592,20 @@ impl Game {
             callback: Box::new(accept),
             on_decline: Some(Box::new(decline)),
         });
+        // Park the data frame: accept/decline resolve via
+        // `run_digivolve_reducer_prompt_step` through the resumable VM.
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::DigivolveReducerPrompt(
+                DigivolveReducerState {
+                    reducer_idx,
+                    reducer: reducer_for_resume,
+                    acting_player,
+                    hand_index,
+                    field_index,
+                    source,
+                },
+            )],
+        });
     }
 
     /// Accept-branch continuation for a player-scoped digivolve cost
@@ -480,6 +629,9 @@ impl Game {
         let single_fire = reducer.single_fire;
         let source_card = reducer.source_card;
         let source_kind = self.effect_source_kind_for_handle(source_card);
+        // make-engine-cloneable: capture a copy for the data frame before the
+        // suspend-pick closure moves the reducer.
+        let reducer_for_resume = reducer.clone();
 
         if !reducer.suspend_cost {
             // No suspend cost — apply the reduction directly.
@@ -536,6 +688,20 @@ impl Game {
                 );
             }),
             on_decline: None,
+        });
+        // Park the data frame: the suspend pick resolves via
+        // `run_digivolve_reducer_suspend_step` through the resumable VM.
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::DigivolveReducerSuspend(
+                DigivolveReducerState {
+                    reducer_idx,
+                    reducer: reducer_for_resume,
+                    acting_player,
+                    hand_index,
+                    field_index,
+                    source,
+                },
+            )],
         });
     }
 

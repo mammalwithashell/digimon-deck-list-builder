@@ -635,6 +635,73 @@ fn st22_08_main_link_step_is_optional() {
         .expect("PASS must be accepted to decline the optional link");
 }
 
+/// make-engine-cloneable (Wave A): the dual-mode Plug-In Option play-mode select
+/// is resume-driven, so cloning the game at the mode prompt is faithful — the
+/// clone plays the chosen mode (advancing into the [Main] link prompt) while the
+/// original is untouched and replays identically.
+#[test]
+fn st22_08_mode_select_clones_faithfully() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("YAML parses")
+        .add_card(tamer("RED-TAMER", CardColor::Red))
+        .add_card(red_digimon("MY-DIGI", 4, 5000, 4))
+        .hand(0, &["ST22-08"])
+        .memory(20)
+        .start();
+    runner.place_on_field(0, "RED-TAMER", Some(0));
+    runner.place_on_field(0, "MY-DIGI", None);
+    runner.game.enter_main_phase();
+
+    let _ = runner.game.play_option_from_hand(0, 0);
+    assert!(mode_select_pending(&runner), "dual-mode mode-select installed");
+    assert!(
+        runner.game.pending_selection_resume.is_some(),
+        "the mode-select must be resume-driven (clone-safe)"
+    );
+    let main_mode = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+
+    // Clone at the mode-select; play Standard [Main] on the clone only.
+    let mut clone = runner.game.clone();
+    clone
+        .resolve_selection(0, main_mode)
+        .expect("clone resolves the mode");
+    // Standard [Main] advances to the optional link host-selection prompt
+    // (an OwnField select, not the EffectChoice mode prompt).
+    assert!(
+        clone
+            .pending_selection
+            .as_ref()
+            .is_some_and(|s| !matches!(s.kind, SelectionKind::EffectChoice)),
+        "clone advanced past the mode-select into the [Main] link prompt"
+    );
+    let clone_disc = clone
+        .pending_selection
+        .as_ref()
+        .map(|s| std::mem::discriminant(&s.kind));
+
+    // INDEPENDENCE: the original is still at the mode-select.
+    assert!(
+        mode_select_pending(&runner),
+        "original survives the clone, still at the mode-select"
+    );
+
+    // REPLAYS IDENTICALLY.
+    runner
+        .game
+        .resolve_selection(0, main_mode)
+        .expect("original resolves the mode");
+    assert_eq!(
+        runner
+            .game
+            .pending_selection
+            .as_ref()
+            .map(|s| std::mem::discriminant(&s.kind)),
+        clone_disc,
+        "original reaches the clone's pending-selection state"
+    );
+}
+
 /// Positive: resolving the link host-selection attaches ST22-08 to the chosen
 /// Digimon (it appears in that permanent's `linked_cards`).
 #[test]

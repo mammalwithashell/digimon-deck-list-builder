@@ -402,6 +402,95 @@ fn bt3_103_cost_reduction_fires_on_green_digimon_only() {
     );
 }
 
+/// make-engine-cloneable (Wave A1+A2): the ally-suspend digivolve cost-reducer
+/// chain — the accept/decline prompt AND the suspend-cost pick it chains into —
+/// is resume-driven, so cloning the game at EITHER chain link is faithful.
+#[test]
+fn bt3_103_reducer_chain_clones_faithfully() {
+    let (mut r, green_base, _red) = digivolve_scenario();
+    r.game.activate_hand_main(0, 0); // arm the reducer
+    let memory_before = r.memory();
+
+    // Hand is [BT3-103, GEVO, REVO] — GEVO (green Lv.4) is index 1.
+    assert!(!r
+        .game
+        .digivolve_from_hand(0, 1, green_base, PlaySource::ByDigivolve));
+
+    // ── Link A1: the accept/decline prompt is resume-driven. Clone here.
+    assert!(matches!(
+        r.game.pending_selection.as_ref().unwrap().kind,
+        SelectionKind::EffectChoice
+    ));
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "the reducer accept/decline prompt must be resume-driven (clone-safe)"
+    );
+    let suspend_action = encode_attack(0, green_base as u16);
+
+    let mut clone1 = r.game.clone();
+    clone1
+        .resolve_selection(0, HAND_EFFECT_START)
+        .expect("clone1 accepts");
+    clone1
+        .resolve_selection(0, suspend_action)
+        .expect("clone1 suspends");
+    assert!(clone1.pending_selection.is_none(), "clone1: digivolve done");
+    assert_eq!(clone1.memory, memory_before, "clone1: cost reduced to 0");
+    assert!(
+        clone1.player_digivolve_cost_reducers.is_empty(),
+        "clone1: single-fire reducer consumed"
+    );
+
+    // INDEPENDENCE: the original is still at the accept prompt.
+    assert!(
+        r.game.pending_selection.is_some(),
+        "original survives cloning + resolving clone1"
+    );
+    assert_eq!(r.memory(), memory_before, "original: no cost paid yet");
+    assert_eq!(
+        r.game.player_digivolve_cost_reducers.len(),
+        1,
+        "original: reducer still armed"
+    );
+
+    // Advance the original to Link A2 (the suspend pick) and clone AGAIN.
+    r.game
+        .resolve_selection(0, HAND_EFFECT_START)
+        .expect("original accepts");
+    assert!(matches!(
+        r.game.pending_selection.as_ref().unwrap().kind,
+        SelectionKind::OwnField
+    ));
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "the suspend-cost pick must be resume-driven (clone-safe)"
+    );
+
+    let mut clone2 = r.game.clone();
+    clone2
+        .resolve_selection(0, suspend_action)
+        .expect("clone2 suspends");
+    assert!(clone2.pending_selection.is_none(), "clone2: digivolve done");
+    assert!(
+        clone2.player_digivolve_cost_reducers.is_empty(),
+        "clone2: reducer consumed"
+    );
+
+    // INDEPENDENCE: the original is still at the suspend pick.
+    assert!(
+        r.game.pending_selection.is_some(),
+        "original's suspend pick survives cloning + resolving clone2"
+    );
+
+    // REPLAYS IDENTICALLY: resolve the suspend on the original.
+    r.game
+        .resolve_selection(0, suspend_action)
+        .expect("original suspends");
+    assert!(r.game.pending_selection.is_none());
+    assert_eq!(r.memory(), clone2.memory, "original matches clone2 memory");
+    assert!(r.game.player_digivolve_cost_reducers.is_empty());
+}
+
 /// Negative test: a non-green (red) Digimon digivolving never sees the
 /// prompt — the reducer's green target filter excludes it.
 #[test]

@@ -148,6 +148,85 @@ fn choosing_cost_0_pays_zero_memory() {
     assert!(runner.pending_selection().is_none());
 }
 
+/// make-engine-cloneable: the digivolve cost-choice is resume-driven, so cloning
+/// the game AT the cost prompt is faithful — the clone resolves the chosen cost
+/// and digivolves while the original is untouched and replays identically.
+#[test]
+fn cost_choice_clones_faithfully() {
+    let mut runner = runner_with_base(base("BG-EGG", vec![CardColor::Blue, CardColor::Green]));
+    let mem_before = runner.game.memory;
+    assert!(
+        !runner.game.digivolve_from_hand(0, 0, 0, PlaySource::ByHand),
+        "digivolve pauses for the cost choice"
+    );
+
+    assert!(
+        runner.game.pending_selection_resume.is_some(),
+        "the cost choice must be resume-driven (clone-safe)"
+    );
+    let choices = runner
+        .pending_selection_view()
+        .expect("cost choice pending")
+        .effect_choices
+        .clone()
+        .expect("effect_choices");
+    let cost1 = choices
+        .iter()
+        .find(|c| c.label.contains('1'))
+        .expect("a cost-1 option")
+        .action_id;
+
+    // Clone AT the cost prompt; resolve the cost-1 route on the clone only.
+    let mut clone = runner.game.clone();
+    clone
+        .resolve_selection(0, cost1)
+        .expect("clone resolves the cost-1 route");
+    assert!(
+        clone.pending_selection.is_none(),
+        "clone: digivolve completed after the cost choice"
+    );
+    assert_eq!(
+        clone.memory,
+        mem_before - 1,
+        "clone: paid exactly 1 memory for the cost-1 route"
+    );
+    assert_eq!(
+        clone.players[0].battle_area[0]
+            .top_card()
+            .card_id(&clone.card_data),
+        "EVOLVER",
+        "clone: the evolver is stacked on top"
+    );
+
+    // INDEPENDENCE: the original is untouched.
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "original's cost choice survives the clone"
+    );
+    assert_eq!(
+        runner.game.memory, mem_before,
+        "original: no memory paid while the clone digivolved"
+    );
+
+    // REPLAYS IDENTICALLY.
+    runner
+        .game
+        .resolve_selection(0, cost1)
+        .expect("original resolves the cost-1 route");
+    assert_eq!(
+        runner.game.memory,
+        mem_before - 1,
+        "original: paid 1 memory, matching the clone"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "EVOLVER",
+        "original: evolver stacked, matching the clone"
+    );
+}
+
 /// Single-colour base → only one cost applies, so NO choice is prompted and the
 /// digivolve completes immediately at that cost.
 #[test]

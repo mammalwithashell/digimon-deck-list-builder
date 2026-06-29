@@ -81,7 +81,8 @@ pub fn try_install(
 }
 
 /// Immutable per-step configuration, shared across the recursive pick loop.
-struct LinkCardsSpec {
+#[derive(Debug)]
+pub(crate) struct LinkCardsSpec {
     from: Vec<CompiledLinkSourceZone>,
     filter: CompiledPredicate,
     to: CompiledLinkTo,
@@ -113,6 +114,296 @@ impl LinkCardsSpec {
     fn pick_is_optional(&self) -> bool {
         matches!(self.count, CompiledLinkCount::UpTo(_))
     }
+}
+
+// ── make-engine-cloneable: resumable-VM frame for the recursive link loop ─────
+//
+// One `LinkPickState` frame represents the loop paused at a single pick stage.
+// Each stage's `install_*` helper installs the legacy closure select (for the
+// action space + coexistence) AND parks this frame via `park_link_frame`; in a
+// clone-driven (resume) resolution the closure is bypassed and
+// `run_link_pick_step` decodes the resolving action for the stage and advances
+// the loop, mirroring the closure callbacks exactly. The post-attach
+// `install_pick(K+1)` runs inline (the closure path does the same with no
+// park-guard), so a clone is faithful AT a pick prompt; a clone at a nested
+// `OnLink`-observer park is closure-based non-DSL state (out of scope).
+
+/// Frame state for the recursive link loop. All fields are `Clone`/`Debug` data
+/// (the spec lives behind an `Arc`; no closures).
+#[derive(Debug, Clone)]
+pub(crate) struct LinkPickState {
+    pub prov: crate::resume::ResumeProvenance,
+    pub spec: Arc<LinkCardsSpec>,
+    pub pick_index: u8,
+    pub stage: LinkStage,
+    pub tail: Arc<Vec<CompiledStep>>,
+    pub bindings: Bindings,
+    pub runtime: StepRuntime,
+    pub outer_conts: Vec<crate::resume::OuterContinuation>,
+}
+
+/// Which pick stage a `LinkPickState` is paused at (data — no closures).
+#[derive(Debug, Clone)]
+pub(crate) enum LinkStage {
+    /// `select_effect_choice` over the eligible source zones (≥2 had a
+    /// candidate). Decode: `action_id - HAND_EFFECT_START` → `eligible[idx]`.
+    ZoneChoice { eligible: Vec<CompiledLinkSourceZone> },
+    /// `select_hand` / `select_trash` over the zone's filtered cards. Decode by
+    /// index; optional (UpTo) ⇒ PASS runs the captured tail.
+    CardSelectHandTrash { zone: CompiledLinkSourceZone },
+    /// `select_own_sources(min,1)` over the digivolution-source zones. Decode via
+    /// `decode_source_select`; PASS (min=0) runs the captured tail. `restrict_to`
+    /// is `Some` for `SelfSources` (the effect's own permanent).
+    CardSelectSources { restrict_to: Option<PermanentHandle> },
+    /// `select_own_permanent` host pick (`to: own_digimon`), carrying the
+    /// already-chosen card + its source. Decode FieldPermanent; mandatory.
+    HostSelect {
+        card: CardHandle,
+        source: LinkCardSource,
+    },
+}
+
+/// Park a `LinkPickState` frame alongside the just-installed closure selection
+/// (coexistence). No-op if the install left no `pending_selection` (the stage
+/// completed inline / ran the captured tail).
+fn park_link_frame(
+    ctx: &mut EffectContext<'_>,
+    spec: Arc<LinkCardsSpec>,
+    pick_index: u8,
+    stage: LinkStage,
+    tail: Arc<Vec<CompiledStep>>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    if ctx.game.pending_selection.is_none() {
+        return;
+    }
+    let prov = crate::resume::ResumeProvenance {
+        source_card: ctx.source_card,
+        source_permanent: ctx.source_permanent,
+        source_kind: ctx.source_kind,
+        controller: ctx.player,
+        override_pin: ctx.override_selecting_player(),
+    };
+    ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::LinkPickStep(LinkPickState {
+            prov,
+            spec,
+            pick_index,
+            stage,
+            tail,
+            bindings,
+            runtime,
+            outer_conts: Vec::new(),
+        })],
+    });
+}
+
+/// Re-derive + validate the card at `idx` in the hand/trash zone (mirrors
+/// `install_card_select_zone_indexed`'s `candidate_at`). `None` ⇒ stale index.
+fn link_card_at_index(
+    game: &crate::game::Game,
+    prov: &crate::resume::ResumeProvenance,
+    filter: &CompiledPredicate,
+    bindings: &Bindings,
+    is_trash: bool,
+    idx: usize,
+) -> Option<CardHandle> {
+    let player = prov.controller;
+    let card = if is_trash {
+        game.player(player).trash.get(idx)
+    } else {
+        game.player(player).hand.get(idx)
+    }
+    .map(|c| c.handle())?;
+    let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+        game,
+        prov.source_card,
+        prov.source_permanent,
+        prov.source_kind,
+        player,
+    );
+    eval_predicate_with_bindings(filter, &read, PredicateSubject::Card(card), Some(bindings))
+        .then_some(card)
+}
+
+/// Reconstruct + validate the digivolution source at `(field, source_index)`
+/// under the controller's own permanent (mirrors `install_card_select_sources`'s
+/// `matches_source`). Must be BELOW the stack top and pass the link filter on the
+/// card; honors `restrict_to` (`SelfSources`). `None` ⇒ stale/invalid.
+fn link_source_at(
+    game: &crate::game::Game,
+    prov: &crate::resume::ResumeProvenance,
+    filter: &CompiledPredicate,
+    bindings: &Bindings,
+    restrict_to: Option<PermanentHandle>,
+    field: u16,
+    source_index: u16,
+) -> Option<SourceSelectionRef> {
+    let player = prov.controller;
+    let permanent = PermanentHandle {
+        player,
+        index: field as u8,
+    };
+    if let Some(only) = restrict_to {
+        if permanent != only {
+            return None;
+        }
+    }
+    let perm = game.player(player).battle_area.get(field as usize)?;
+    let top = perm.card_sources.len().saturating_sub(1);
+    if source_index as usize >= top {
+        return None; // the stack top is the live Digimon, never a link source
+    }
+    let card = perm.card_sources.get(source_index as usize)?.handle();
+    let read = crate::effect_context::EffectReadContext::new_with_source_kind(
+        game,
+        prov.source_card,
+        prov.source_permanent,
+        prov.source_kind,
+        player,
+    );
+    if !eval_predicate_with_bindings(filter, &read, PredicateSubject::Card(card), Some(bindings)) {
+        return None;
+    }
+    Some(SourceSelectionRef {
+        permanent,
+        field_index: field as u8,
+        source_index: source_index as u8,
+        card,
+    })
+}
+
+/// Drive one resolution of a parked `LinkPickState` (resumable VM). Decodes the
+/// action for the frame's stage and advances the loop, mirroring the closure
+/// callbacks; then runs any composed outer continuations.
+pub(crate) fn run_link_pick_step(
+    game: &mut crate::game::Game,
+    state: LinkPickState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    use crate::action::space::{
+        ATTACK_START, HAND_EFFECT_START, PLAY_HAND_START, TARGETS_PER_ATTACKER, TRASH_EFFECT_START,
+    };
+
+    let LinkPickState {
+        prov,
+        spec,
+        pick_index,
+        stage,
+        tail,
+        bindings,
+        runtime,
+        outer_conts,
+    } = state;
+
+    // What the resolved action advances the loop to. Computed with immutable
+    // reads first so the mutable EffectContext can be built afterward.
+    enum Advance {
+        ZoneTo(CompiledLinkSourceZone),
+        CardChosen(CardHandle, LinkCardSource),
+        Host(PermanentHandle, CardHandle, LinkCardSource),
+        RunTail,
+        /// Stale/invalid action — mirror the closure callbacks' early return.
+        Nothing,
+    }
+
+    let advance = match &stage {
+        LinkStage::ZoneChoice { eligible } => {
+            let choice = action_id.saturating_sub(HAND_EFFECT_START) as usize;
+            match eligible.get(choice).copied() {
+                Some(zone) => Advance::ZoneTo(zone),
+                None => Advance::Nothing,
+            }
+        }
+        LinkStage::CardSelectHandTrash { zone } => {
+            if is_pass {
+                Advance::RunTail
+            } else {
+                let is_trash = matches!(zone, CompiledLinkSourceZone::Trash);
+                let idx = if is_trash {
+                    action_id.saturating_sub(TRASH_EFFECT_START) as usize
+                } else {
+                    action_id.saturating_sub(PLAY_HAND_START) as usize
+                };
+                match link_card_at_index(game, &prov, &spec.filter, &bindings, is_trash, idx) {
+                    Some(card) => {
+                        let source = if is_trash {
+                            LinkCardSource::Trash(prov.controller)
+                        } else {
+                            LinkCardSource::Hand(prov.controller)
+                        };
+                        Advance::CardChosen(card, source)
+                    }
+                    None => Advance::Nothing,
+                }
+            }
+        }
+        LinkStage::CardSelectSources { restrict_to } => {
+            if is_pass {
+                Advance::RunTail
+            } else {
+                let (field, source_index) =
+                    crate::action::space::decode_source_select(action_id);
+                match link_source_at(
+                    game,
+                    &prov,
+                    &spec.filter,
+                    &bindings,
+                    *restrict_to,
+                    field,
+                    source_index,
+                ) {
+                    Some(sref) => Advance::CardChosen(
+                        sref.card,
+                        LinkCardSource::DigivolutionSource(sref.permanent),
+                    ),
+                    None => Advance::Nothing,
+                }
+            }
+        }
+        LinkStage::HostSelect { card, source } => {
+            let offset = action_id.saturating_sub(ATTACK_START);
+            let index = (offset % TARGETS_PER_ATTACKER) as u8;
+            Advance::Host(
+                PermanentHandle {
+                    player: prov.controller,
+                    index,
+                },
+                *card,
+                *source,
+            )
+        }
+    };
+
+    {
+        let mut ctx = EffectContext::new_with_source_kind_and_override(
+            game,
+            prov.source_card,
+            prov.source_permanent,
+            prov.source_kind,
+            prov.controller,
+            prov.override_pin,
+        );
+        match advance {
+            Advance::ZoneTo(zone) => {
+                install_card_select(&mut ctx, spec, pick_index, zone, tail, bindings, runtime);
+            }
+            Advance::CardChosen(card, source) => {
+                after_card_chosen(&mut ctx, spec, pick_index, card, source, tail, bindings, runtime);
+            }
+            Advance::Host(host, card, source) => {
+                attach_and_continue(
+                    &mut ctx, spec, pick_index, host, card, source, tail, bindings, runtime,
+                );
+            }
+            Advance::RunTail => run_captured_tail(&mut ctx, &tail, bindings, &runtime),
+            Advance::Nothing => {}
+        }
+    }
+
+    crate::dsl_cards::step::selections::run_outer_conts(game, outer_conts);
 }
 
 /// Whether a single source zone currently holds ≥1 filter-matching card.
@@ -245,12 +536,29 @@ fn install_zone_choice(
 ) {
     let labels: Vec<String> = eligible.iter().map(|z| zone_label(*z)).collect();
     let prompt = "From which area do you select a card to link?".to_string();
+    // Resumable-VM copies captured before the closure moves them.
+    let frame_spec = Arc::clone(&spec);
+    let frame_eligible = eligible.clone();
+    let frame_tail = Arc::clone(&tail);
+    let frame_bindings = bindings.clone();
+    let frame_runtime = runtime.clone();
     ctx.select_effect_choice(&prompt, labels, move |cb_ctx, choice_index| {
         let Some(zone) = eligible.get(choice_index).copied() else {
             return;
         };
         install_card_select(cb_ctx, spec, pick_index, zone, tail, bindings, runtime);
     });
+    park_link_frame(
+        ctx,
+        frame_spec,
+        pick_index,
+        LinkStage::ZoneChoice {
+            eligible: frame_eligible,
+        },
+        frame_tail,
+        frame_bindings,
+        frame_runtime,
+    );
 }
 
 fn zone_label(zone: CompiledLinkSourceZone) -> String {
@@ -371,6 +679,12 @@ fn install_card_select_zone_indexed(
         )
     });
 
+    // Resumable-VM copies captured before the closures move them.
+    let frame_spec = Arc::clone(&spec);
+    let frame_tail = Arc::clone(&tail);
+    let frame_bindings = bindings.clone();
+    let frame_runtime = runtime.clone();
+
     let on_pick = {
         let candidate_at = candidate_at.clone();
         move |cb_ctx: &mut EffectContext<'_>, idx: usize| {
@@ -398,6 +712,15 @@ fn install_card_select_zone_indexed(
     if let Some((spec, tail, bindings, runtime)) = decline_state {
         install_optional_decline(ctx, spec, pick_index, tail, bindings, runtime);
     }
+    park_link_frame(
+        ctx,
+        frame_spec,
+        pick_index,
+        LinkStage::CardSelectHandTrash { zone },
+        frame_tail,
+        frame_bindings,
+        frame_runtime,
+    );
 }
 
 /// Card select for the digivolution-source zones. Uses `select_own_sources`
@@ -456,6 +779,12 @@ fn install_card_select_sources(
         )
     };
 
+    // Resumable-VM copies captured before the callback moves them.
+    let frame_spec = Arc::clone(&spec);
+    let frame_tail = Arc::clone(&tail);
+    let frame_bindings = bindings.clone();
+    let frame_runtime = runtime.clone();
+
     ctx.select_own_sources(
         &prompt,
         min,
@@ -472,6 +801,15 @@ fn install_card_select_sources(
                 cb_ctx, spec, pick_index, sref.card, source, tail, bindings, runtime,
             );
         },
+    );
+    park_link_frame(
+        ctx,
+        frame_spec,
+        pick_index,
+        LinkStage::CardSelectSources { restrict_to },
+        frame_tail,
+        frame_bindings,
+        frame_runtime,
     );
 }
 
@@ -610,6 +948,13 @@ fn install_host_select(
         return;
     }
 
+    // Resumable-VM copies captured before the closure moves them (card + source
+    // are Copy). The host decode is the FieldPermanent arm; the stage carries the
+    // already-chosen card/source for the attach.
+    let frame_spec = Arc::clone(&spec);
+    let frame_tail = Arc::clone(&tail);
+    let frame_bindings = bindings.clone();
+    let frame_runtime = runtime.clone();
     ctx.select_own_permanent(
         "Choose a Digimon to link the card to",
         false,
@@ -619,6 +964,15 @@ fn install_host_select(
                 cb_ctx, spec, pick_index, host, card, source, tail, bindings, runtime,
             );
         },
+    );
+    park_link_frame(
+        ctx,
+        frame_spec,
+        pick_index,
+        LinkStage::HostSelect { card, source },
+        frame_tail,
+        frame_bindings,
+        frame_runtime,
     );
 }
 
@@ -763,8 +1117,44 @@ pub fn try_run_relink(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings
     let prompt_str = prompt
         .clone()
         .unwrap_or_else(|| "Choose 1 of your Digimon to link this Digimon to".to_string());
+    // Capture provenance for the resume frame BEFORE the closure borrows ctx.
+    let source_permanent = ctx.source_permanent;
+    let override_pin = ctx.override_selecting_player();
+    let trigger_context = ctx.game.current_trigger_context.clone();
     ctx.select_own_permanent(&prompt_str, false, host_filter_fn, move |cb_ctx, host| {
         cb_ctx.game.absorb_standing_digimon_as_link(source, host);
     });
+    // make-engine-cloneable: park a data frame alongside the closure (coexistence).
+    // `select_own_permanent` installs a FieldPermanent(OwnField) select over the
+    // controller's battle area, so the host decode is the existing FieldPermanent
+    // arm; the absorb is encoded as `AbsorbStandingAsLink { source }`. The host
+    // pick is mandatory (is_optional=false) → decline None. The dispatcher tail
+    // after this step is wrapped onto the frame's `outer_conts` by the step loop.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
+                    of_player: player,
+                    post: Some(crate::resume::FieldPermanentPostAction::AbsorbStandingAsLink {
+                        source,
+                    }),
+                },
+                bind_as: None,
+                inner_tail: Arc::new(Vec::new()),
+                outer_conts: Vec::new(),
+                bindings: bindings.clone(),
+                runtime: StepRuntime::default(),
+                trigger_context,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
     true
 }

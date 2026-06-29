@@ -1,0 +1,79 @@
+name: Engine Clone-Safety & Both-Path Guard
+
+# make-engine-cloneable task 1.4 — keep BOTH execution paths green during the
+# closure-executor → resumable-data-VM transition.
+#
+# The resumable VM (`run_resume` over `ResumeFrame`/`ResumeSelectKind`) and the
+# legacy closure executor (`resolve_generic_selection`'s `sel.callback` branch)
+# coexist behind a per-installer switch until the whole selection surface is
+# migrated (tasks 3.1 / 6.1). The `cards_behavioral` suite exercises BOTH paths
+# at once — resume-flipped installers route through `pending_selection_resume`,
+# the not-yet-flipped ones still route through the closure — so a green run is
+# the parity gate D6 calls for. The engine lib tests carry the clone-guard
+# (`resume::tests::game_clone_is_independent_and_replays_identically` and the
+# per-installer `*_clones_faithfully_*` analogues) that prove `Game: Clone` stays
+# independent + replays identically.
+#
+# Migration tracker (the doc half of task 1.4):
+#   openspec/changes/make-engine-cloneable/migration-playbook.md
+#   openspec/changes/make-engine-cloneable/tasks.md (§3.1 batch log)
+#   .claude/plans/make-engine-cloneable-remaining-installers.md
+
+on:
+  pull_request:
+    paths:
+      - 'code/digimon-engine/**'
+      - 'code/digimon-dsl/**'
+      - '.github/workflows/engine-clone-safety.yml'
+  push:
+    branches: ["main"]
+    paths:
+      - 'code/digimon-engine/**'
+      - 'code/digimon-dsl/**'
+      - '.github/workflows/engine-clone-safety.yml'
+
+jobs:
+  clone-safety-and-both-path:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry + target
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-engine-clone-${{ hashFiles('Cargo.lock', 'code/digimon-engine/Cargo.toml', 'code/digimon-dsl/Cargo.toml') }}
+
+      # The clone-independence / clone-replays-identically guard tests live in
+      # the engine lib (`src/resume.rs` #[cfg(test)] mod) alongside the
+      # per-installer `*_clones_faithfully_*` analogues.
+      - name: Clone-safety guard (engine lib unit tests)
+        env:
+          RUST_MIN_STACK: "268435456"
+        run: cargo test -p digimon-engine --lib
+
+      # The full per-card behavioral suite is the both-path parity gate: it runs
+      # resume-flipped installers through the data VM and the rest through the
+      # legacy closure executor in the same process.
+      - name: Both-path parity (cards_behavioral)
+        env:
+          RUST_MIN_STACK: "268435456"
+        run: cargo test -p digimon-engine --test cards_behavioral
+
+      # The DSL behavioral + archetype/interaction tests round out the gate.
+      - name: DSL behavioral tests
+        env:
+          RUST_MIN_STACK: "268435456"
+        run: cargo test -p digimon-engine --test dsl
+
+      - name: Archetype interaction tests
+        env:
+          RUST_MIN_STACK: "268435456"
+        run: cargo test -p digimon-engine --test archetypes
