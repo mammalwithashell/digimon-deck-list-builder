@@ -47,6 +47,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
@@ -105,6 +106,16 @@ class LeagueSpec:
     max_parallel: int = 0  # parallel topology: max specialists running at once
                            # (0 = all decks at once). On a 16-core box use 2 with
                            # n_envs=8 each (the loop is update-bound past ~8 cores).
+    # Seconds to wait between launching concurrent specialists (parallel topology).
+    # Each specialist builds a SubprocVecEnv with start_method="spawn"; launching
+    # two simultaneously makes their spawn bursts collide and one dies with
+    # BrokenPipeError. Staggering separates the bursts so each finishes spawning
+    # before the next starts. 0 = no stagger (legacy).
+    parallel_stagger: int = 45
+    # How many times to re-run a failed specialist SEQUENTIALLY after the
+    # concurrent wave drains (a backstop if the stagger didn't fully separate a
+    # spawn burst — a lone sequential retry can't collide with anything).
+    parallel_retries: int = 1
     n_envs: int = 1
     vec_env_backend: str = "subproc"
     eval_freq: int = 50_000
@@ -392,19 +403,36 @@ def _run(argv: List[str], cwd: Path) -> None:
     subprocess.run(argv, cwd=str(cwd), env=env, check=True)
 
 
-def _run_parallel(argvs: List[List[str]], cwd: Path, max_parallel: int = 0) -> None:
+def _run_parallel(
+    argvs: List[List[str]], cwd: Path, max_parallel: int = 0,
+    stagger_seconds: int = 0, retries: int = 0,
+) -> None:
     """Run specialist subprocesses with at most ``max_parallel`` concurrent
     (0 = all at once). Bounds oversubscription on a fixed-core box — e.g. 2 with
-    ``--n-envs 8`` saturates 16 cores without contention (update-bound past ~8)."""
+    ``--n-envs 8`` saturates 16 cores without contention (update-bound past ~8).
+
+    ``stagger_seconds`` waits between launching concurrent specialists so their
+    ``SubprocVecEnv(start_method="spawn")`` bursts don't overlap (simultaneous
+    spawn → one dies with BrokenPipeError). ``retries`` re-runs any failed
+    specialist SEQUENTIALLY after the concurrent wave drains — a lone run can't
+    collide, so a transient spawn race self-heals instead of aborting the round."""
     env = dict(os.environ)
     env["PYTHONPATH"] = str((cwd / "code").resolve()) + os.pathsep + env.get("PYTHONPATH", "")
     cap = max_parallel if (max_parallel and max_parallel > 0) else len(argvs)
     pending = list(argvs)
     running: List[subprocess.Popen] = []
-    failed: List = []
+    failed: List[List[str]] = []
 
     def _fill() -> None:
         while pending and len(running) < cap:
+            # Stagger only when something is already running (a fresh launch into
+            # a non-empty pool would overlap that process's spawn burst). The very
+            # first launch and post-finish refills (others long past startup) skip
+            # the wait in practice — only the initial concurrent burst is spaced.
+            if running and stagger_seconds > 0:
+                print(f"  [stagger] waiting {stagger_seconds}s before next "
+                      f"specialist launch (avoid concurrent spawn collision)", flush=True)
+                time.sleep(stagger_seconds)
             argv = pending.pop(0)
             print("\n$ (bg) " + " ".join(argv), flush=True)
             running.append(subprocess.Popen(argv, cwd=str(cwd), env=env))
@@ -413,8 +441,23 @@ def _run_parallel(argvs: List[List[str]], cwd: Path, max_parallel: int = 0) -> N
     while running:
         proc = running.pop(0)          # wait on the oldest, then refill the slot
         if proc.wait() != 0:
-            failed.append(proc.args)
+            failed.append(list(proc.args))
         _fill()
+
+    # Sequential retry backstop: a failed specialist re-run alone cannot hit the
+    # concurrent-spawn race. Retry each up to ``retries`` times before giving up.
+    for attempt in range(1, retries + 1):
+        if not failed:
+            break
+        retry_batch, failed = failed, []
+        print(f"\n[retry {attempt}/{retries}] re-running {len(retry_batch)} "
+              f"failed specialist(s) sequentially", flush=True)
+        for argv in retry_batch:
+            try:
+                _run(argv, cwd)        # subprocess.run(check=True) — raises on failure
+            except subprocess.CalledProcessError:
+                failed.append(argv)
+
     if failed:
         raise RuntimeError(f"{len(failed)} specialist run(s) failed this round")
 
@@ -446,7 +489,9 @@ def run_round(spec: LeagueSpec, reg: SpecialistRegistry, rnd: int, cwd: Path,
         return
 
     if spec.topology == "parallel":
-        _run_parallel(argvs, cwd, max_parallel=spec.max_parallel)
+        _run_parallel(argvs, cwd, max_parallel=spec.max_parallel,
+                      stagger_seconds=spec.parallel_stagger,
+                      retries=spec.parallel_retries)
     else:
         for argv in argvs:
             _run(argv, cwd)
@@ -537,6 +582,13 @@ def main() -> None:
     p.add_argument("--max-parallel", type=int, default=0,
                    help="parallel topology: max specialists running at once "
                         "(0 = all). On a 16-core box use 2 with --n-envs 8.")
+    p.add_argument("--parallel-stagger", type=int, default=45,
+                   help="seconds between launching concurrent specialists "
+                        "(parallel topology) so their SubprocVecEnv spawn bursts "
+                        "don't collide -> BrokenPipeError. 0 to disable.")
+    p.add_argument("--parallel-retries", type=int, default=1,
+                   help="re-run a failed specialist sequentially this many times "
+                        "after the concurrent wave (backstop for a spawn race).")
     p.add_argument("--n-envs", type=int, default=1)
     p.add_argument("--vec-env-backend", default="subproc")
     p.add_argument("--tensor-profile", default="standard_lite_deck_v2")
@@ -612,6 +664,8 @@ def main() -> None:
         include_mirror=not args.no_mirror,
         topology=args.topology,
         max_parallel=args.max_parallel,
+        parallel_stagger=args.parallel_stagger,
+        parallel_retries=args.parallel_retries,
         n_envs=args.n_envs,
         vec_env_backend=args.vec_env_backend,
         tensor_profile=args.tensor_profile,

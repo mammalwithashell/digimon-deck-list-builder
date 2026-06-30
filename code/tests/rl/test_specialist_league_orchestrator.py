@@ -262,3 +262,83 @@ def test_build_argv_lstm_round2_uses_init_from_own_checkpoint(tmp_path):
     assert "--init-from" in argv
     assert argv[argv.index("--init-from") + 1] == ckpt
     assert "--init-extractor-from" not in argv
+
+
+# ── Parallel launch hardening: stagger + sequential retry ─────────────────────
+# Two specialists each build a SubprocVecEnv(start_method="spawn"); launching
+# them simultaneously makes the spawn bursts collide -> one dies with
+# BrokenPipeError. _run_parallel staggers concurrent launches and retries a
+# failed specialist sequentially (a lone run can't collide).
+
+def test_run_parallel_staggers_concurrent_launches(monkeypatch):
+    sleeps, launches = [], []
+
+    class FakePopen:
+        def __init__(self, argv, cwd=None, env=None):
+            self.args = argv
+            launches.append(argv)
+
+        def wait(self):
+            return 0
+
+    monkeypatch.setattr(L.subprocess, "Popen", FakePopen)
+    monkeypatch.setattr(L.time, "sleep", lambda s: sleeps.append(s))
+    L._run_parallel([["a"], ["b"]], Path("."), max_parallel=2,
+                    stagger_seconds=45, retries=0)
+    assert 45 in sleeps          # waited between the two concurrent launches
+    assert launches == [["a"], ["b"]]  # both still launched
+
+
+def test_run_parallel_no_stagger_when_disabled(monkeypatch):
+    sleeps = []
+
+    class FakePopen:
+        def __init__(self, argv, cwd=None, env=None):
+            self.args = argv
+
+        def wait(self):
+            return 0
+
+    monkeypatch.setattr(L.subprocess, "Popen", FakePopen)
+    monkeypatch.setattr(L.time, "sleep", lambda s: sleeps.append(s))
+    L._run_parallel([["a"], ["b"]], Path("."), max_parallel=2,
+                    stagger_seconds=0, retries=0)
+    assert sleeps == []          # legacy behaviour: no waiting
+
+
+def test_run_parallel_retries_failed_sequentially(monkeypatch):
+    """A specialist that fails in the concurrent wave is retried via _run (alone)."""
+    ran = []
+
+    class FakePopen:
+        def __init__(self, argv, cwd=None, env=None):
+            self.args = argv
+
+        def wait(self):
+            return 1 if self.args == ["b"] else 0   # only "b" fails concurrently
+
+    monkeypatch.setattr(L.subprocess, "Popen", FakePopen)
+    monkeypatch.setattr(L.time, "sleep", lambda s: None)
+    monkeypatch.setattr(L, "_run", lambda argv, cwd: ran.append(argv))  # retry succeeds
+    L._run_parallel([["a"], ["b"]], Path("."), max_parallel=2,
+                    stagger_seconds=0, retries=1)
+    assert ran == [["b"]]        # only the failed one, retried sequentially; no raise
+
+
+def test_run_parallel_raises_when_retry_exhausted(monkeypatch):
+    class FakePopen:
+        def __init__(self, argv, cwd=None, env=None):
+            self.args = argv
+
+        def wait(self):
+            return 1             # fails in the concurrent wave
+
+    def fake_run(argv, cwd):
+        raise L.subprocess.CalledProcessError(1, argv)  # and fails the retry too
+
+    monkeypatch.setattr(L.subprocess, "Popen", FakePopen)
+    monkeypatch.setattr(L.time, "sleep", lambda s: None)
+    monkeypatch.setattr(L, "_run", fake_run)
+    with pytest.raises(RuntimeError):
+        L._run_parallel([["a"]], Path("."), max_parallel=1,
+                        stagger_seconds=0, retries=1)
