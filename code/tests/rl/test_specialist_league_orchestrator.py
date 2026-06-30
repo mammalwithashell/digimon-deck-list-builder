@@ -201,21 +201,30 @@ def test_wandb_flags_plumb_into_specialist_argv(tmp_path):
     assert "--wandb" not in off
 
 
-def test_run_parallel_caps_concurrency(monkeypatch):
+def test_run_parallel_caps_concurrency(monkeypatch, tmp_path):
     state = {"running": 0, "peak": 0}
 
     class FakePopen:
         def __init__(self, argv, cwd=None, env=None):
             self.args = argv
+            self._done = False
+            # Simulate instant spawn so the ready-gate proceeds without delay.
+            rf = (env or {}).get("DIGIMON_SPAWN_READY_FILE")
+            if rf:
+                Path(rf).write_text("ready")
             state["running"] += 1
             state["peak"] = max(state["peak"], state["running"])
 
+        def poll(self):
+            return 0 if self._done else None
+
         def wait(self):
+            self._done = True
             state["running"] -= 1
             return 0
 
     monkeypatch.setattr(L.subprocess, "Popen", FakePopen)
-    L._run_parallel([["a"], ["b"], ["c"], ["d"], ["e"]], Path("."), max_parallel=2)
+    L._run_parallel([["a"], ["b"], ["c"], ["d"], ["e"]], tmp_path, max_parallel=2)
     assert state["peak"] <= 2  # never more than 2 specialists at once
 
 
@@ -264,73 +273,153 @@ def test_build_argv_lstm_round2_uses_init_from_own_checkpoint(tmp_path):
     assert "--init-extractor-from" not in argv
 
 
-# ── Parallel launch hardening: stagger + sequential retry ─────────────────────
-# Two specialists each build a SubprocVecEnv(start_method="spawn"); launching
-# them simultaneously makes the spawn bursts collide -> one dies with
-# BrokenPipeError. _run_parallel staggers concurrent launches and retries a
-# failed specialist sequentially (a lone run can't collide).
+# ── Parallel launch hardening: ready-gate + thread caps + retry ───────────────
+# Two specialists building their SubprocVecEnv(start_method="spawn") pools at the
+# same instant collide -> one dies with BrokenPipe/ConnectionReset. _run_parallel
+# (a) launches the next only after the previous signals it has spawned (adaptive
+# ready-gate), (b) caps per-process threads so N specialists don't oversubscribe,
+# (c) retries a failed specialist sequentially (a lone run can't collide).
 
-def test_run_parallel_staggers_concurrent_launches(monkeypatch):
-    sleeps, launches = [], []
-
-    class FakePopen:
-        def __init__(self, argv, cwd=None, env=None):
-            self.args = argv
-            launches.append(argv)
-
-        def wait(self):
-            return 0
-
-    monkeypatch.setattr(L.subprocess, "Popen", FakePopen)
-    monkeypatch.setattr(L.time, "sleep", lambda s: sleeps.append(s))
-    L._run_parallel([["a"], ["b"]], Path("."), max_parallel=2,
-                    stagger_seconds=45, retries=0)
-    assert 45 in sleeps          # waited between the two concurrent launches
-    assert launches == [["a"], ["b"]]  # both still launched
-
-
-def test_run_parallel_no_stagger_when_disabled(monkeypatch):
-    sleeps = []
+def test_run_parallel_ready_gate_waits_for_spawn_marker(monkeypatch, tmp_path):
+    """The 2nd specialist launches only AFTER the 1st writes its spawn marker."""
+    events = []  # ordered: ("launch", argv) and ("ready", argv)
 
     class FakePopen:
         def __init__(self, argv, cwd=None, env=None):
             self.args = argv
+            self._done = False
+            self._rf = (env or {}).get("DIGIMON_SPAWN_READY_FILE")
+            events.append(("launch", argv[0]))
+
+        def poll(self):
+            return 0 if self._done else None
 
         def wait(self):
+            self._done = True
+            return 0
+
+    # The ready-gate polls via time.sleep waiting for the marker. On each tick,
+    # mark the most-recently-launched specialist as spawned (write its marker) so
+    # the gate advances — and record the ordering.
+    def fake_sleep(_s):
+        for p in reversed(FakePopen.instances):
+            if p._rf and not Path(p._rf).exists():
+                Path(p._rf).write_text("ready")
+                events.append(("ready", p.args[0]))
+                break
+
+    FakePopen.instances = []
+    _orig_init = FakePopen.__init__
+    def _tracking_init(self, argv, cwd=None, env=None):
+        _orig_init(self, argv, cwd, env)
+        FakePopen.instances.append(self)
+    FakePopen.__init__ = _tracking_init
+
+    monkeypatch.setattr(L.subprocess, "Popen", FakePopen)
+    monkeypatch.setattr(L.time, "sleep", fake_sleep)
+    L._run_parallel([["a"], ["b"]], tmp_path, max_parallel=2,
+                    stagger_seconds=0, retries=0, ready_timeout=60)
+    # "a" must be marked ready before "b" is launched.
+    assert ("launch", "a") in events and ("launch", "b") in events
+    assert events.index(("ready", "a")) < events.index(("launch", "b"))
+
+
+def test_run_parallel_ready_gate_proceeds_on_early_exit(monkeypatch, tmp_path):
+    """If a specialist exits before signaling ready, the gate proceeds (no hang)."""
+    launches = []
+
+    class FakePopen:
+        def __init__(self, argv, cwd=None, env=None):
+            self.args = argv
+            launches.append(argv[0])
+
+        def poll(self):
+            return 1            # already exited (never writes a marker)
+
+        def wait(self):
+            return 1
+
+    monkeypatch.setattr(L.subprocess, "Popen", FakePopen)
+    monkeypatch.setattr(L.time, "sleep", lambda s: None)
+    monkeypatch.setattr(L, "_run", lambda argv, cwd: None)  # retries succeed
+    L._run_parallel([["a"], ["b"]], tmp_path, max_parallel=2,
+                    stagger_seconds=0, retries=1, ready_timeout=60)
+    assert launches == ["a", "b"]   # gate didn't hang; both got launched
+
+
+def test_run_parallel_sets_concurrency_not_omp(monkeypatch, tmp_path):
+    """Each specialist's env carries DIGIMON_LEAGUE_CONCURRENCY but must NOT pin
+    OMP_NUM_THREADS — pinning it here would reach the learner's torch import and
+    throttle its update matmul (measured 188 -> 37 fps). The per-worker OMP cap is
+    applied inside make_vec_env (after the learner imports torch), not here."""
+    seen_envs = []
+
+    class FakePopen:
+        def __init__(self, argv, cwd=None, env=None):
+            self.args = argv
+            self._done = False
+            seen_envs.append(env)
+            rf = (env or {}).get("DIGIMON_SPAWN_READY_FILE")
+            if rf:
+                Path(rf).write_text("ready")
+
+        def poll(self):
+            return 0 if self._done else None
+
+        def wait(self):
+            self._done = True
             return 0
 
     monkeypatch.setattr(L.subprocess, "Popen", FakePopen)
-    monkeypatch.setattr(L.time, "sleep", lambda s: sleeps.append(s))
-    L._run_parallel([["a"], ["b"]], Path("."), max_parallel=2,
+    # Ensure no ambient OMP pin leaks in from the test runner's environment.
+    monkeypatch.delenv("OMP_NUM_THREADS", raising=False)
+    L._run_parallel([["a"], ["b"]], tmp_path, max_parallel=2,
                     stagger_seconds=0, retries=0)
-    assert sleeps == []          # legacy behaviour: no waiting
+    assert seen_envs and all(e["DIGIMON_LEAGUE_CONCURRENCY"] == "2" for e in seen_envs)
+    assert all("OMP_NUM_THREADS" not in e for e in seen_envs)  # learner not throttled
 
 
-def test_run_parallel_retries_failed_sequentially(monkeypatch):
+def test_run_parallel_retries_failed_sequentially(monkeypatch, tmp_path):
     """A specialist that fails in the concurrent wave is retried via _run (alone)."""
     ran = []
 
     class FakePopen:
         def __init__(self, argv, cwd=None, env=None):
             self.args = argv
+            self._done = False
+            rf = (env or {}).get("DIGIMON_SPAWN_READY_FILE")
+            if rf:
+                Path(rf).write_text("ready")
+
+        def poll(self):
+            return (1 if self.args == ["b"] else 0) if self._done else None
 
         def wait(self):
+            self._done = True
             return 1 if self.args == ["b"] else 0   # only "b" fails concurrently
 
     monkeypatch.setattr(L.subprocess, "Popen", FakePopen)
     monkeypatch.setattr(L.time, "sleep", lambda s: None)
     monkeypatch.setattr(L, "_run", lambda argv, cwd: ran.append(argv))  # retry succeeds
-    L._run_parallel([["a"], ["b"]], Path("."), max_parallel=2,
+    L._run_parallel([["a"], ["b"]], tmp_path, max_parallel=2,
                     stagger_seconds=0, retries=1)
     assert ran == [["b"]]        # only the failed one, retried sequentially; no raise
 
 
-def test_run_parallel_raises_when_retry_exhausted(monkeypatch):
+def test_run_parallel_raises_when_retry_exhausted(monkeypatch, tmp_path):
     class FakePopen:
         def __init__(self, argv, cwd=None, env=None):
             self.args = argv
+            self._done = False
+            rf = (env or {}).get("DIGIMON_SPAWN_READY_FILE")
+            if rf:
+                Path(rf).write_text("ready")
+
+        def poll(self):
+            return 1 if self._done else None
 
         def wait(self):
+            self._done = True
             return 1             # fails in the concurrent wave
 
     def fake_run(argv, cwd):
@@ -340,5 +429,5 @@ def test_run_parallel_raises_when_retry_exhausted(monkeypatch):
     monkeypatch.setattr(L.time, "sleep", lambda s: None)
     monkeypatch.setattr(L, "_run", fake_run)
     with pytest.raises(RuntimeError):
-        L._run_parallel([["a"]], Path("."), max_parallel=1,
+        L._run_parallel([["a"]], tmp_path, max_parallel=1,
                         stagger_seconds=0, retries=1)

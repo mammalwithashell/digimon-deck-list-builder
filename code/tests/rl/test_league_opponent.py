@@ -157,3 +157,43 @@ def test_load_league_pool_roundtrip(tmp_path):
     p.write_text(json.dumps(manifest))
     entries = load_league_pool(p)
     assert len(entries) == 1 and entries[0].deck == "ST-1 Gaia Red"
+
+
+def test_load_cache_bounded_lru_evicts():
+    """Per-worker opponent cache is bounded (LRU) so concurrent specialists can't
+    OOM by each accumulating the whole pool (the EOFError/SIGKILL root cause)."""
+    entries = _entries()  # a.zip (e0), b.zip (e1)
+    calls = []
+
+    def loader(path, algo):
+        calls.append(path)
+        return _FakePolicy(action=0)
+
+    wrap = LeaguePoolWrapper(
+        _FakeEnv(), entries, player_deck=["X"], controller=LeagueOpponentController(),
+        policy_loader=loader, sampling_mode="uniform", seed=0, cache_size=1,
+    )
+    wrap._load(entries[0])          # load a  -> calls=[a]
+    wrap._load(entries[1])          # load b, evict a -> calls=[a,b]
+    assert len(wrap._cache) == 1    # bounded
+    wrap._load(entries[0])          # a was evicted -> reload -> calls=[a,b,a]
+    assert calls == ["a.zip", "b.zip", "a.zip"]
+    assert len(wrap._cache) == 1    # still bounded
+
+
+def test_load_cache_no_reload_within_capacity():
+    """Within cache_size, repeated loads are served from cache (no reload)."""
+    entries = _entries()
+    calls = []
+
+    def loader(path, algo):
+        calls.append(path)
+        return _FakePolicy(action=0)
+
+    wrap = LeaguePoolWrapper(
+        _FakeEnv(), entries, player_deck=["X"], controller=LeagueOpponentController(),
+        policy_loader=loader, sampling_mode="uniform", seed=0, cache_size=2,
+    )
+    for _ in range(5):
+        wrap._load(entries[0]); wrap._load(entries[1])   # both fit in cache
+    assert calls == ["a.zip", "b.zip"]   # each loaded exactly once

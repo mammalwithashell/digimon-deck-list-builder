@@ -107,14 +107,16 @@ class LeagueSpec:
                            # (0 = all decks at once). On a 16-core box use 2 with
                            # n_envs=8 each (the loop is update-bound past ~8 cores).
     # Seconds to wait between launching concurrent specialists (parallel topology).
-    # Each specialist builds a SubprocVecEnv with start_method="spawn"; launching
-    # two simultaneously makes their spawn bursts collide and one dies with
-    # BrokenPipeError. Staggering separates the bursts so each finishes spawning
-    # before the next starts. 0 = no stagger (legacy).
-    parallel_stagger: int = 45
+    # Two specialists building their SubprocVecEnv worker pools at the same instant
+    # collide (one dies with BrokenPipe/ConnectionReset). The primary defense is
+    # the ADAPTIVE ready-gate: launch the next specialist only after the previous
+    # one signals its pool is spawned, waiting at most parallel_ready_timeout sec.
+    # parallel_stagger is a legacy FIXED floor on top (0 = rely on the ready-gate).
+    parallel_stagger: int = 0
+    parallel_ready_timeout: int = 240
     # How many times to re-run a failed specialist SEQUENTIALLY after the
-    # concurrent wave drains (a backstop if the stagger didn't fully separate a
-    # spawn burst — a lone sequential retry can't collide with anything).
+    # concurrent wave drains (a backstop if the ready-gate didn't fully separate a
+    # spawn — a lone sequential retry can't collide with anything).
     parallel_retries: int = 1
     n_envs: int = 1
     vec_env_backend: str = "subproc"
@@ -405,37 +407,80 @@ def _run(argv: List[str], cwd: Path) -> None:
 
 def _run_parallel(
     argvs: List[List[str]], cwd: Path, max_parallel: int = 0,
-    stagger_seconds: int = 0, retries: int = 0,
+    stagger_seconds: int = 0, retries: int = 0, ready_timeout: int = 240,
 ) -> None:
     """Run specialist subprocesses with at most ``max_parallel`` concurrent
     (0 = all at once). Bounds oversubscription on a fixed-core box — e.g. 2 with
     ``--n-envs 8`` saturates 16 cores without contention (update-bound past ~8).
 
-    ``stagger_seconds`` waits between launching concurrent specialists so their
-    ``SubprocVecEnv(start_method="spawn")`` bursts don't overlap (simultaneous
-    spawn → one dies with BrokenPipeError). ``retries`` re-runs any failed
-    specialist SEQUENTIALLY after the concurrent wave drains — a lone run can't
-    collide, so a transient spawn race self-heals instead of aborting the round."""
+    ADAPTIVE READY-GATE: two specialists building their ``SubprocVecEnv`` worker
+    pools at the same instant collide (one dies with BrokenPipe/ConnectionReset).
+    A fixed sleep can't fix this — spawn time is variable (model load + ONNX
+    opponent export + worker spawn). Instead each specialist writes a marker the
+    moment its pool is spawned (``DIGIMON_SPAWN_READY_FILE``), and we launch the
+    next only after the previous one's marker appears (or it exits, or
+    ``ready_timeout`` elapses). ``stagger_seconds`` is a legacy floor applied on
+    top. ``retries`` re-runs any failed specialist SEQUENTIALLY after the
+    concurrent wave drains — a lone run can't collide, so a leftover race
+    self-heals instead of aborting the round."""
     env = dict(os.environ)
     env["PYTHONPATH"] = str((cwd / "code").resolve()) + os.pathsep + env.get("PYTHONPATH", "")
     cap = max_parallel if (max_parallel and max_parallel > 0) else len(argvs)
+    # Tell each specialist how many run concurrently so it caps its PPO-update
+    # threads to cpu_count // cap (the learner does this itself via
+    # torch.set_num_threads in the per-phase callback — see pilot_training).
+    #
+    # IMPORTANT: do NOT pin OMP_NUM_THREADS=1 in this subprocess env. That env is
+    # present when the specialist imports torch, which pins the LEARNER's update
+    # matmul to 1 thread (torch.set_num_threads can't grow it back) -> ~5x slower
+    # (measured: solo collapses 188 -> 37 fps). The per-WORKER thread storm is
+    # instead capped inside make_vec_env, which sets OMP=1 only AFTER the learner
+    # has imported torch and just before spawning workers, so only the spawned
+    # workers inherit the cap. Here we pass only the concurrency hint.
+    env["DIGIMON_LEAGUE_CONCURRENCY"] = str(cap)
     pending = list(argvs)
     running: List[subprocess.Popen] = []
     failed: List[List[str]] = []
+    _launch_seq = [0]
+
+    def _wait_until_spawned(proc: subprocess.Popen, ready_file: Path) -> None:
+        """Block until ``proc`` has spawned its worker pool (marker written), has
+        exited, or ``ready_timeout`` elapses — so the next launch can't overlap
+        this one's spawn burst."""
+        waited = 0
+        while waited < ready_timeout:
+            if ready_file.exists():
+                print(f"  [ready-gate] specialist spawned after ~{waited}s "
+                      f"— launching next", flush=True)
+                return
+            if proc.poll() is not None:   # crashed/exited before signaling
+                print("  [ready-gate] specialist exited before ready — proceeding", flush=True)
+                return
+            time.sleep(3)
+            waited += 3
+        print(f"  [ready-gate] timeout {ready_timeout}s waiting for spawn marker "
+              f"— proceeding anyway", flush=True)
 
     def _fill() -> None:
         while pending and len(running) < cap:
-            # Stagger only when something is already running (a fresh launch into
-            # a non-empty pool would overlap that process's spawn burst). The very
-            # first launch and post-finish refills (others long past startup) skip
-            # the wait in practice — only the initial concurrent burst is spaced.
-            if running and stagger_seconds > 0:
-                print(f"  [stagger] waiting {stagger_seconds}s before next "
-                      f"specialist launch (avoid concurrent spawn collision)", flush=True)
-                time.sleep(stagger_seconds)
+            idx = _launch_seq[0]; _launch_seq[0] += 1
+            ready_file = cwd / f".spawn_ready_{idx}.flag"
+            try:
+                ready_file.unlink()
+            except FileNotFoundError:
+                pass
+            penv = dict(env)
+            penv["DIGIMON_SPAWN_READY_FILE"] = str(ready_file)
             argv = pending.pop(0)
             print("\n$ (bg) " + " ".join(argv), flush=True)
-            running.append(subprocess.Popen(argv, cwd=str(cwd), env=env))
+            proc = subprocess.Popen(argv, cwd=str(cwd), env=penv)
+            running.append(proc)
+            # Gate the NEXT launch on this one finishing its spawn (adaptive), with
+            # an optional fixed floor on top.
+            if pending and len(running) < cap:
+                if stagger_seconds > 0:
+                    time.sleep(stagger_seconds)
+                _wait_until_spawned(proc, ready_file)
 
     _fill()
     while running:
@@ -491,7 +536,8 @@ def run_round(spec: LeagueSpec, reg: SpecialistRegistry, rnd: int, cwd: Path,
     if spec.topology == "parallel":
         _run_parallel(argvs, cwd, max_parallel=spec.max_parallel,
                       stagger_seconds=spec.parallel_stagger,
-                      retries=spec.parallel_retries)
+                      retries=spec.parallel_retries,
+                      ready_timeout=spec.parallel_ready_timeout)
     else:
         for argv in argvs:
             _run(argv, cwd)
@@ -582,10 +628,14 @@ def main() -> None:
     p.add_argument("--max-parallel", type=int, default=0,
                    help="parallel topology: max specialists running at once "
                         "(0 = all). On a 16-core box use 2 with --n-envs 8.")
-    p.add_argument("--parallel-stagger", type=int, default=45,
-                   help="seconds between launching concurrent specialists "
-                        "(parallel topology) so their SubprocVecEnv spawn bursts "
-                        "don't collide -> BrokenPipeError. 0 to disable.")
+    p.add_argument("--parallel-stagger", type=int, default=0,
+                   help="legacy FIXED seconds between concurrent specialist "
+                        "launches (a floor on top of the adaptive ready-gate). "
+                        "0 = rely on the ready-gate.")
+    p.add_argument("--parallel-ready-timeout", type=int, default=240,
+                   help="adaptive ready-gate: max seconds to wait for a specialist "
+                        "to signal its SubprocVecEnv is spawned before launching "
+                        "the next (avoids overlapping spawn bursts).")
     p.add_argument("--parallel-retries", type=int, default=1,
                    help="re-run a failed specialist sequentially this many times "
                         "after the concurrent wave (backstop for a spawn race).")
@@ -665,6 +715,7 @@ def main() -> None:
         topology=args.topology,
         max_parallel=args.max_parallel,
         parallel_stagger=args.parallel_stagger,
+        parallel_ready_timeout=args.parallel_ready_timeout,
         parallel_retries=args.parallel_retries,
         n_envs=args.n_envs,
         vec_env_backend=args.vec_env_backend,
