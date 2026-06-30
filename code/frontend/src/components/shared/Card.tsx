@@ -27,6 +27,8 @@ interface CardProps {
   suspended?: boolean;
   dimmed?: boolean;
   highlighted?: boolean;
+  /** Already chosen during an in-progress "choose N" selection. */
+  selected?: boolean;
   targeted?: boolean;
   isAltArt?: boolean;
   overlay?: CardOverlay;
@@ -46,6 +48,7 @@ export function Card({
   suspended = false,
   dimmed = false,
   highlighted = false,
+  selected = false,
   targeted = false,
   isAltArt = false,
   overlay,
@@ -61,18 +64,20 @@ export function Card({
   const colorName = cardColor !== undefined ? COLOR_NAMES[cardColor] : undefined;
   const bgColor = colorName ? COLOR_HEX[colorName] ?? '#374151' : '#374151';
 
-  const borderClass = highlighted
-    ? 'ring-2 ring-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.4)]'
-    : targeted
-      ? 'ring-2 ring-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]'
-      : '';
+  const borderClass = selected
+    ? 'ring-2 ring-emerald-400 shadow-[0_0_12px_rgba(52,211,153,0.6)]'
+    : highlighted
+      ? 'ring-2 ring-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.4)]'
+      : targeted
+        ? 'ring-2 ring-red-500 shadow-[0_0_10px_rgba(239,68,68,0.4)]'
+        : '';
 
   return (
     <div
       className={`relative inline-block rounded overflow-hidden select-none cursor-pointer transition-shadow duration-200
         ${suspended ? 'rotate-90' : ''}
         ${dimmed ? 'opacity-30' : ''}
-        ${!dimmed && !highlighted && !targeted ? 'hover:shadow-[0_0_8px_rgba(34,211,238,0.3)] hover:ring-1 hover:ring-cyan-500/40' : ''}
+        ${!dimmed && !highlighted && !targeted && !selected ? 'hover:shadow-[0_0_8px_rgba(34,211,238,0.3)] hover:ring-1 hover:ring-cyan-500/40' : ''}
         ${borderClass} ${className}`}
       style={{ width, height }}
       title={faceDown ? undefined : cardId}
