@@ -495,7 +495,14 @@ def make_agent_opponent_fn(
         A callable ``(DigimonEnv) -> int`` that predicts Player 2 actions.
     """
     if algorithm == "lstm":
-        model = MaskableRecurrentPPO.load(weights_path)
+        # device="cpu" is REQUIRED, not incidental: this loader runs inside every
+        # SubprocVecEnv worker (one per n_env), so without it SB3's device="auto"
+        # puts each worker's LSTM opponent on the GPU. N concurrent CUDA
+        # model-loads (high n_envs, or parallel specialists sharing a GPU) collide
+        # at init -> the worker dies and the parent sees BrokenPipeError at
+        # SubprocVecEnv setup. Opponents only do inference (forward pass for action
+        # selection), which is fine on CPU — and matches the MLP/ONNX paths below.
+        model = MaskableRecurrentPPO.load(weights_path, device="cpu")
         # LSTM state must persist across steps within a single episode.
         lstm_states: list = [None]  # mutable container for closure
 
@@ -522,7 +529,12 @@ def make_agent_opponent_fn(
                     "ONNX opponent for %s failed (%s); falling back to torch.",
                     weights_path, exc,
                 )
-        model = MaskablePPO.load(weights_path)
+        # device="cpu" for the same reason as the LSTM branch above: this runs in
+        # every SubprocVecEnv worker, so device="auto" would load each worker's
+        # opponent on the GPU -> concurrent CUDA loads collide -> BrokenPipe at
+        # high n_envs / parallel specialists. (Normally unreached when
+        # DIGIMON_ONNX_OPPONENT is on, but the torch fallback must be safe too.)
+        model = MaskablePPO.load(weights_path, device="cpu")
 
         def _mlp_policy(env: DigimonEnv) -> int:
             mask = env.action_mask()
