@@ -8,6 +8,8 @@ interface PermanentSlotProps {
   slotIndex: number;
   isOpponent: boolean;
   highlighted?: boolean;
+  /** Already picked during an in-progress "choose N" selection. */
+  selected?: boolean;
   targeted?: boolean;
   onClick?: () => void;
   onMouseEnter?: () => void;
@@ -21,6 +23,7 @@ export function PermanentSlot({
   slotIndex,
   isOpponent,
   highlighted = false,
+  selected = false,
   targeted = false,
   onClick,
   onMouseEnter,
@@ -64,6 +67,7 @@ export function PermanentSlot({
         size="md"
         suspended={perm.isSuspended}
         highlighted={highlighted}
+        selected={selected}
         targeted={targeted}
         overlay={{
           dp: perm.dp,
@@ -72,6 +76,15 @@ export function PermanentSlot({
           saModifier: perm.securityAttackModifier,
         }}
       />
+      {/* Selected-for-"choose N" check badge — mirrors the trash modal's badge */}
+      {selected && (
+        <div
+          data-testid="permanent-selected-badge"
+          className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full bg-emerald-500 text-white text-xs font-bold flex items-center justify-center shadow"
+        >
+          ✓
+        </div>
+      )}
       {/* Source count badge */}
       {perm.sourceCount > 1 && (
         <div className="ib-source-count">

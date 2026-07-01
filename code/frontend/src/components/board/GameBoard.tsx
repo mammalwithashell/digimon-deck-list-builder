@@ -1,5 +1,6 @@
 import { useGameStore } from '@/stores/gameStore';
 import { useEffectiveLiveBackground } from '@/stores/uiStore';
+import { usePeekStore } from '@/stores/peekStore';
 import { LiveAtmosphere } from '@/components/layout/LiveAtmosphere';
 import { PlayerHalf } from './PlayerHalf';
 import { HandZone } from './HandZone';
@@ -28,6 +29,9 @@ interface GameBoardProps {
   playableHandIndices?: Set<number>;
   highlightedOwnSlots?: Set<number>;
   highlightedEnemySlots?: Set<number>;
+  /** Own/enemy slots already picked during a board-driven "choose N" selection. */
+  selectedOwnSlots?: Set<number>;
+  selectedEnemySlots?: Set<number>;
   targetedSlots?: Set<number>;
   validRevealedIndices?: Set<number>;
   /** Field slot indices where dragged hand card can digivolve */
@@ -64,6 +68,8 @@ export function GameBoard({
   playableHandIndices,
   highlightedOwnSlots,
   highlightedEnemySlots,
+  selectedOwnSlots,
+  selectedEnemySlots,
   targetedSlots,
   validRevealedIndices,
   dragValidDropSlots,
@@ -93,6 +99,11 @@ export function GameBoard({
   // (motion full + toggle). Drives the `is-live` gate on the board's
   // scanline-roll / grid-drift CSS (animate-board-atmosphere).
   const liveBg = useEffectiveLiveBackground();
+
+  // "Peek the board" also fades the centered revealed-cards strip (a reveal
+  // selection is one of the modal surfaces the PeekButton shows for), so the
+  // player can read the board behind it before picking.
+  const peeking = usePeekStore((s) => s.peeking);
 
   if (!player1 || !player2) {
     return (
@@ -173,6 +184,7 @@ export function GameBoard({
             player={player2}
             isOpponent
             highlightedSlots={enemySlots}
+            selectedSlots={selectedEnemySlots}
             onTrashClick={onOpponentTrashClick}
             targetedSlots={targetedSlots}
             onSlotClick={(i) => onSlotClick?.(true, i)}
@@ -196,6 +208,7 @@ export function GameBoard({
             player={player1}
             isOpponent={false}
             highlightedSlots={ownSlots}
+            selectedSlots={selectedOwnSlots}
             canHatch={canHatch}
             canMove={canMove}
             canDigivolveBreeding={canDigivolveBreeding}
@@ -217,7 +230,11 @@ export function GameBoard({
       {/* Revealed-cards zone overlays the gauge area (absolute), so it lives
           outside the flow stage. */}
       {revealedCards.length > 0 && (
-        <div className="ib-board__revealed">
+        <div
+          className={`ib-board__revealed transition-opacity duration-150 ${
+            peeking ? 'pointer-events-none opacity-0' : ''
+          }`}
+        >
           <RevealedCardsZone
             cards={revealedCards}
             validIndices={validRevealedIndices}

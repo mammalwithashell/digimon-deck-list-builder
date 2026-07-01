@@ -60,6 +60,7 @@ import {
   isAnyFieldSelectionKind,
   isFieldSelectionKind,
 } from '@/utils/selectionTargets';
+import { isBoardDrivenSelection } from '@/utils/selectionSurface';
 import {
   GamePhase,
   type ActionTrace,
@@ -394,12 +395,36 @@ export function GamePage() {
   const [hoveredHandIndex, setHoveredHandIndex] = useState<number | null>(null);
   // Track which player surrendered (if any)
   const [surrenderedBy, setSurrenderedBy] = useState<number | null>(null);
+  // Ordered engine selection action ids the player has already committed during
+  // the CURRENT board-driven "choose N" pick (e.g. "delete up to 2 of your
+  // opponent's Digimon"). These permanents stay on the board until the whole
+  // selection resolves, so we mark them as selected. Reset whenever a new
+  // selection opens (see the identity effect below).
+  const [pickedSelectionIds, setPickedSelectionIds] = useState<number[]>([]);
+  const selectionIdentityRef = useRef<string | null>(null);
   const boardContainerRef = useRef<HTMLDivElement>(null);
 
   // Load saved decks on first render
   useState(() => {
     decks.listDecks().then(setSavedDecks).catch(() => {});
   });
+
+  // Clear the "already-picked" set whenever a genuinely new selection opens.
+  // A capped multi-select RE-prompts after each pick with the same prompt /
+  // kind / player (only the hidden `picked` count changes), so keying the
+  // identity off those three fields keeps the set accumulating across the
+  // re-prompts of one selection and resets it the moment a different selection
+  // (or none) takes over.
+  const sel = store.pendingSelection;
+  const selectionIdentity = sel
+    ? `${sel.prompt}::${sel.kind ?? ''}::${sel.selectingPlayer}`
+    : null;
+  useEffect(() => {
+    if (selectionIdentity !== selectionIdentityRef.current) {
+      selectionIdentityRef.current = selectionIdentity;
+      setPickedSelectionIds([]);
+    }
+  }, [selectionIdentity]);
 
   // DnD sensors: pointer with 8px activation distance, touch with 150ms delay
   const sensors = useSensors(
@@ -742,6 +767,10 @@ export function GamePage() {
           parsedMask.validSelections,
         );
         if (selIdx !== null) {
+          // Mark this permanent as selected for the duration of a capped
+          // multi-select ("choose N"); a single-target pick resolves at once
+          // and the identity effect clears it on the next state.
+          setPickedSelectionIds((prev) => prev.includes(selIdx) ? prev : [...prev, selIdx]);
           handleAction(selIdx);
           return;
         }
@@ -762,6 +791,7 @@ export function GamePage() {
           store.pendingSelection?.selectingPlayer,
         );
         if (selIdx !== null) {
+          setPickedSelectionIds((prev) => prev.includes(selIdx) ? prev : [...prev, selIdx]);
           handleAction(selIdx);
           return;
         }
@@ -1117,6 +1147,33 @@ export function GamePage() {
     }
   }
 
+  // Permanents already picked during a board-driven "choose N" selection.
+  // The engine drops a picked card from `validIndices` (so it stops being a
+  // selectable highlight) but keeps it on the board until the whole selection
+  // resolves, so we mark those slots as SELECTED (distinct from selectable).
+  // Reuse the same id→side split as the highlights: `OwnField`/`OppField` ids
+  // resolve by `kind`, `AnyField` ids decode the side from the id.
+  const selectedOwnSlots = new Set<number>();
+  const selectedEnemySlots = new Set<number>();
+  {
+    const fieldPicked = fieldSelectionHighlights(
+      store.pendingSelection?.kind,
+      pickedSelectionIds,
+    );
+    const anyPicked = anyFieldSelectionHighlights(
+      store.pendingSelection?.kind,
+      pickedSelectionIds,
+      store.pendingSelection?.selectingPlayer,
+    );
+    for (const slot of fieldPicked.own) selectedOwnSlots.add(slot);
+    for (const slot of anyPicked.own) selectedOwnSlots.add(slot);
+    for (const slot of fieldPicked.enemy) selectedEnemySlots.add(slot);
+    for (const slot of anyPicked.enemy) selectedEnemySlots.add(slot);
+    // A picked slot is no longer "selectable" — keep the two states disjoint.
+    for (const slot of selectedOwnSlots) highlightedOwnSlots.delete(slot);
+    for (const slot of selectedEnemySlots) highlightedEnemySlots.delete(slot);
+  }
+
   // If attacker selected, show valid targets
   const targetedSlots = new Set<number>();
   if (store.selectedAttacker !== null) {
@@ -1312,6 +1369,8 @@ export function GamePage() {
               playableHandIndices={highlightedHand}
               highlightedOwnSlots={highlightedOwnSlots}
               highlightedEnemySlots={highlightedEnemySlots}
+              selectedOwnSlots={selectedOwnSlots}
+              selectedEnemySlots={selectedEnemySlots}
               targetedSlots={targetedSlots}
               validRevealedIndices={validRevealedIndices}
               dragValidDropSlots={draggedHandIndex !== null ? dragValidDropSlots : undefined}
@@ -1478,8 +1537,14 @@ export function GamePage() {
       />
 
       {/* Peek toggle — hides the blocking decision overlays so the player can
-          read the board before committing to a choice. */}
-      {store.pendingSelection?.selectingPlayer === 1 && !store.isGameOver && <PeekButton />}
+          read the board before committing to a choice. Only meaningful when a
+          board-COVERING modal (SelectionPanel / TrashSelectModal / reveal /
+          keyword prompt) is up; for board-driven field/material picks there is
+          nothing to hide and the floating pill would just overlap the prompt
+          bar / effect description. */}
+      {store.pendingSelection?.selectingPlayer === 1 &&
+        !store.isGameOver &&
+        !isBoardDrivenSelection(store.pendingSelection, store.currentPhase) && <PeekButton />}
     </div>
   );
 }
