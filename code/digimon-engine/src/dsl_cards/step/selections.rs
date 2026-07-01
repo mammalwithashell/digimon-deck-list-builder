@@ -737,6 +737,18 @@ pub(crate) fn run_resume(
                             );
                             ctx.game.current_trigger_context = trigger_context;
                         }
+                        Some(crate::resume::EffectChoicePostAction::RunTailBranch { branches }) => {
+                            let Some(branch) = branches.get(choice_index) else {
+                                return;
+                            };
+                            run_tail_preserving_trigger_context(
+                                &mut ctx,
+                                trigger_context,
+                                branch,
+                                &mut b,
+                                &runtime,
+                            );
+                        }
                     }
                 }
                 ResumeSelectKind::DnaPairLeft {
@@ -2373,12 +2385,26 @@ pub fn try_install(
                 InstallResult::Continue
             };
         }
+        CompiledStep::PlaceRemainderOnDeck { of, position }
+            if *position != CompiledStackPosition::Choice =>
+        {
+            let player = resolve_player(ctx, *of);
+            install_remainder_permutation_with_tail(
+                ctx,
+                player,
+                super::map_stack_position(*position),
+                tail.to_vec(),
+                bindings,
+                runtime.clone(),
+            )
+        }
         // collapse §3.1 — `place_remainder_on_deck` with `position: choice`.
         // Install a binary top/bottom pick; the chosen branch re-runs
         // place_remainder at the concrete end THROUGH run_steps, so the
         // remainder-ordering selection it installs and the outer tail are both
-        // captured/parked correctly. Non-Choice positions are NOT matched here
-        // and fall through to the synchronous runner unchanged.
+        // captured/parked correctly. Non-Choice positions are matched above so
+        // fixed-position remainder placement also uses the resume-backed
+        // permutation frame instead of the legacy callback helper.
         CompiledStep::PlaceRemainderOnDeck {
             of,
             position: CompiledStackPosition::Choice,
@@ -2392,6 +2418,15 @@ pub fn try_install(
             let tail_bottom = branch(CompiledStackPosition::Bottom);
             let trigger_context = ctx.game.current_trigger_context.clone();
             let runtime = runtime.clone();
+            let branches_for_resume = vec![Arc::clone(&tail_top), Arc::clone(&tail_bottom)];
+            let bindings_for_resume = bindings.clone();
+            let runtime_for_resume = runtime.clone();
+            let trigger_for_resume = trigger_context.clone();
+            let source_card = ctx.source_card;
+            let source_permanent = ctx.source_permanent;
+            let source_kind = ctx.source_kind;
+            let player = ctx.player;
+            let override_pin = ctx.override_selecting_player();
             ctx.select_effect_choice(
                 "Place the remaining cards on the top or bottom of the deck",
                 vec!["Top of deck".to_string(), "Bottom of deck".to_string()],
@@ -2407,6 +2442,31 @@ pub fn try_install(
                     );
                 },
             );
+            if ctx.game.pending_selection.is_some() {
+                ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                    frames: vec![crate::resume::ResumeFrame::RunTail {
+                        prov: crate::resume::ResumeProvenance {
+                            source_card,
+                            source_permanent,
+                            source_kind,
+                            controller: player,
+                            override_pin,
+                        },
+                        select_kind: crate::resume::ResumeSelectKind::EffectChoice {
+                            post: Some(crate::resume::EffectChoicePostAction::RunTailBranch {
+                                branches: branches_for_resume,
+                            }),
+                        },
+                        bind_as: None,
+                        inner_tail: Arc::new(Vec::new()),
+                        outer_conts: Vec::new(),
+                        bindings: bindings_for_resume,
+                        runtime: runtime_for_resume,
+                        trigger_context: trigger_for_resume,
+                        decline: crate::resume::ResumeDecline::None,
+                    }],
+                });
+            }
             selection_result(ctx)
         }
         // collapse §3.1/§3.2 — `place_on_security` (card source) with
@@ -2436,6 +2496,15 @@ pub fn try_install(
             let tail_bottom = branch(CompiledStackPosition::Bottom);
             let trigger_context = ctx.game.current_trigger_context.clone();
             let runtime = runtime.clone();
+            let branches_for_resume = vec![Arc::clone(&tail_top), Arc::clone(&tail_bottom)];
+            let bindings_for_resume = bindings.clone();
+            let runtime_for_resume = runtime.clone();
+            let trigger_for_resume = trigger_context.clone();
+            let source_card = ctx.source_card;
+            let source_permanent = ctx.source_permanent;
+            let source_kind = ctx.source_kind;
+            let player = ctx.player;
+            let override_pin = ctx.override_selecting_player();
             ctx.select_effect_choice(
                 "Place as the top or bottom security card",
                 vec![
@@ -2454,6 +2523,31 @@ pub fn try_install(
                     );
                 },
             );
+            if ctx.game.pending_selection.is_some() {
+                ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                    frames: vec![crate::resume::ResumeFrame::RunTail {
+                        prov: crate::resume::ResumeProvenance {
+                            source_card,
+                            source_permanent,
+                            source_kind,
+                            controller: player,
+                            override_pin,
+                        },
+                        select_kind: crate::resume::ResumeSelectKind::EffectChoice {
+                            post: Some(crate::resume::EffectChoicePostAction::RunTailBranch {
+                                branches: branches_for_resume,
+                            }),
+                        },
+                        bind_as: None,
+                        inner_tail: Arc::new(Vec::new()),
+                        outer_conts: Vec::new(),
+                        bindings: bindings_for_resume,
+                        runtime: runtime_for_resume,
+                        trigger_context: trigger_for_resume,
+                        decline: crate::resume::ResumeDecline::None,
+                    }],
+                });
+            }
             selection_result(ctx)
         }
         CompiledStep::SelectRevealBuckets {

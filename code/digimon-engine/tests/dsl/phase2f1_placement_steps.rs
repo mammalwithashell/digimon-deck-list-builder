@@ -7,10 +7,11 @@
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledPlayerRef, CompiledStackPosition, CompiledStep,
 };
+use digimon_engine::action::space::HAND_EFFECT_START;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
-use digimon_engine::dsl_cards::step::run_step;
+use digimon_engine::dsl_cards::step::{run_step, run_steps};
 use digimon_engine::effect_context::EffectContext;
 
 // ─── PlaceOnSecurity ─────────────────────────────────────────────────────────
@@ -300,6 +301,75 @@ fn place_on_security_uses_bound_trash_owner() {
             .iter()
             .any(|cs| cs.handle() == p1_trash_handle),
         "P1 trash card is placed into P0 security"
+    );
+}
+
+#[test]
+fn place_on_security_choice_prompt_clones_faithfully() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "SRC"))
+        .hand(0, &["SRC"])
+        .memory(5)
+        .start();
+
+    let src_handle = runner.game.players[0].hand[0].handle();
+    let mut bindings = Bindings::new();
+    bindings.insert_hand_index("src", 0, 0);
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_handle, None, 0);
+        run_steps(
+            &[CompiledStep::PlaceOnSecurity {
+                of: CompiledPlayerRef::You,
+                source: CompiledBindingRef::Named("src".into()),
+                position: CompiledStackPosition::Choice,
+                face_up: false,
+            }],
+            &mut ctx,
+            &mut bindings,
+        );
+    }
+
+    let top_choice = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("top/bottom security placement prompt should be parked")
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|id| *id == HAND_EFFECT_START)
+        .expect("top choice should be the first effect-choice action");
+    assert!(
+        runner.game.pending_selection_resume.is_some(),
+        "top/bottom security placement prompt must be resume-driven before cloning"
+    );
+
+    let mut clone = runner.game.clone();
+    clone
+        .resolve_selection(0, top_choice)
+        .expect("clone resolves top placement choice");
+
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "resolving the clone must not clear the original prompt"
+    );
+    assert!(
+        runner.game.players[0].security.is_empty(),
+        "resolving the clone must not mutate the original security"
+    );
+
+    runner
+        .game
+        .resolve_selection(0, top_choice)
+        .expect("original resolves the same top placement choice");
+
+    assert!(runner.game.pending_selection.is_none());
+    assert!(clone.pending_selection.is_none());
+    assert_eq!(
+        clone.players[0].security[0].handle(),
+        runner.game.players[0].security[0].handle(),
+        "clone and original should place the same card after the same choice"
     );
 }
 

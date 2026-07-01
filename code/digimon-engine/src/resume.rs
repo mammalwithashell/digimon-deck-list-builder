@@ -256,6 +256,13 @@ pub enum EffectChoicePostAction {
         positions: Vec<crate::enums::StackPosition>,
         player: PlayerId,
     },
+    /// Generic top/bottom-style choice where each label maps to a complete
+    /// compiled tail. Used by placement verbs whose `position: choice` expands
+    /// into either the top-position or bottom-position step plus the original
+    /// dispatcher tail.
+    RunTailBranch {
+        branches: Vec<Arc<Vec<CompiledStep>>>,
+    },
 }
 
 /// Post-action run on a `Security` resolve before the `inner_tail`. Plain data —
