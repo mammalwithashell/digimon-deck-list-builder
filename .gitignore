@@ -1,4 +1,3 @@
-cloud_downloads/
 __pycache__/
 *.pyc
 *.egg-info/
