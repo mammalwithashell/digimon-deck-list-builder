@@ -2,7 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { normalizeSeedInput } from '@/api/gameApi';
 import { InBetweenShell } from '@/features/play/InBetweenShell';
-import { AI_STARTER_RANDOM, createAiStarterGame, listStarterDecks } from '@/features/play/playApi';
+import {
+  AI_STARTER_RANDOM,
+  createAiStarterGame,
+  isAiStarterOpponent,
+  listStarterDecks,
+} from '@/features/play/playApi';
+import type { AiStarterOpponent } from '@/features/play/playApi';
 import type { DeckResponse } from '@/types/deck';
 import { getCardImageUrl } from '@/utils/cardImages';
 import './DeckSelectPage.css';
@@ -16,7 +22,7 @@ export function StarterDeckSelectPage() {
   const [launching, setLaunching] = useState(false);
   // AI opponent: AI_STARTER_RANDOM (seed-derived deck) or a specific starter
   // deck id the AI pilots with that deck's trained specialist.
-  const [opponent, setOpponent] = useState<string>(AI_STARTER_RANDOM);
+  const [opponent, setOpponent] = useState<AiStarterOpponent>(AI_STARTER_RANDOM);
 
   useEffect(() => {
     listStarterDecks()
@@ -110,7 +116,10 @@ export function StarterDeckSelectPage() {
               <select
                 aria-label="AI opponent"
                 value={opponent}
-                onChange={(event) => setOpponent(event.target.value)}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  if (isAiStarterOpponent(next)) setOpponent(next);
+                }}
               >
                 <option value={AI_STARTER_RANDOM}>Random specialist</option>
                 {decks.map((deck) => (

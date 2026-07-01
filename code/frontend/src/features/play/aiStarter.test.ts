@@ -10,8 +10,18 @@ vi.mock('@/api/client', () => ({ default: { post: vi.fn() } }));
 // Force the Tauri-desktop path.
 vi.stubGlobal('isTauri', true);
 
-import { starterIndexFromSeed, createAiStarterGame } from './playApi';
+import {
+  AI_STARTER_RANDOM,
+  createAiStarterGame,
+  starterIndexFromSeed,
+} from './playApi';
+import type { AiStarterOpponent } from './playApi';
 import { STARTER_DECKS } from './starterDecks.generated';
+
+type CreateAiStarterGameParams = Parameters<typeof createAiStarterGame>[0];
+// @ts-expect-error AI-starter opponents must be the random sentinel or a bundled starter deck id.
+const arbitraryOpponentIsRejected: CreateAiStarterGameParams['opponent'] = 'not_a_real_deck_id';
+void arbitraryOpponentIsRejected;
 
 beforeEach(() => createGame.mockClear());
 
@@ -53,11 +63,12 @@ describe('createAiStarterGame', () => {
 
   it('honors a specific opponent: AI plays the chosen starter deck', async () => {
     const aiPick = STARTER_DECKS[2]!; // a specific specialist deck
+    const opponent: AiStarterOpponent = aiPick.id;
     const res = await createAiStarterGame({
       deck: STARTER_DECKS[0]!,
       starterDecks: STARTER_DECKS,
       seed: '42',
-      opponent: aiPick.id,
+      opponent,
     });
     expect(res.aiDeckName).toBe(aiPick.name);
     const arg = (createGame.mock.calls[0]?.[0] as unknown) as { deck2: string[] };
@@ -65,13 +76,13 @@ describe('createAiStarterGame', () => {
     expect(arg.deck2).toEqual([...aiPick.egg_deck, ...aiPick.main_deck]);
   });
 
-  it('falls back to seed-derived deck when opponent id is unknown', async () => {
+  it('uses the seed-derived deck when opponent is the random sentinel', async () => {
     const seedDeck = STARTER_DECKS[starterIndexFromSeed('42', STARTER_DECKS.length)]!;
     const res = await createAiStarterGame({
       deck: STARTER_DECKS[0]!,
       starterDecks: STARTER_DECKS,
       seed: '42',
-      opponent: 'not_a_real_deck_id',
+      opponent: AI_STARTER_RANDOM,
     });
     expect(res.aiDeckName).toBe(seedDeck.name);
   });
