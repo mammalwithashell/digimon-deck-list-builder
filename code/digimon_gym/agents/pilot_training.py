@@ -89,6 +89,7 @@ from digimon_gym.agents.training_recording import (
 )
 from digimon_gym.agents.mulligan_log import MulliganLogWrapper, MulliganLogWriter
 from digimon_gym.agents.game_log import GameLogWriter
+from digimon_gym.agents.specialist_registry import meta_algorithm
 
 import torch as _torch
 
@@ -2988,15 +2989,7 @@ def train(total_timesteps: int = 100_000,
         # must be reconstructed with the class it was saved as — loading an MLP
         # checkpoint as MaskableRecurrentPPO fails (policy-kwarg mismatch). The
         # source's algorithm is read from its `.meta.json` sidecar ("mlp" default).
-        _src_meta = Path(cfg.init_extractor_from).with_suffix(".meta.json")
-        _src_algo = "mlp"
-        if _src_meta.is_file():
-            try:
-                _src_algo = str(
-                    json.loads(_src_meta.read_text(encoding="utf-8")).get("algorithm", "mlp")
-                ).lower()
-            except Exception:
-                pass
+        _src_algo = meta_algorithm(cfg.init_extractor_from)
         _src_cls = MaskableRecurrentPPO if _src_algo == "lstm" else MaskablePPO
         _src = _src_cls.load(cfg.init_extractor_from, device=device)
         _src_sd = _src.policy.state_dict()

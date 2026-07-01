@@ -181,6 +181,30 @@ def test_load_cache_bounded_lru_evicts():
     assert len(wrap._cache) == 1    # still bounded
 
 
+def test_load_cache_size_edge_values_coerced_to_one():
+    """cache_size is coerced via max(1, int(cache_size)): non-positive values still
+    behave as a size-1 LRU (evict on every distinct load) rather than an unbounded
+    or zero-size cache."""
+    entries = _entries()  # a.zip (e0), b.zip (e1)
+    for bad in (0, -5):
+        calls = []
+
+        def loader(path, algo):
+            calls.append(path)
+            return _FakePolicy(action=0)
+
+        wrap = LeaguePoolWrapper(
+            _FakeEnv(), entries, player_deck=["X"], controller=LeagueOpponentController(),
+            policy_loader=loader, sampling_mode="uniform", seed=0, cache_size=bad,
+        )
+        assert wrap._cache_size == 1     # coerced up to the minimum
+        wrap._load(entries[0])           # load a
+        wrap._load(entries[1])           # load b, evict a
+        assert len(wrap._cache) == 1     # never grows past 1
+        wrap._load(entries[0])           # a evicted -> reload
+        assert calls == ["a.zip", "b.zip", "a.zip"]
+
+
 def test_load_cache_no_reload_within_capacity():
     """Within cache_size, repeated loads are served from cache (no reload)."""
     entries = _entries()

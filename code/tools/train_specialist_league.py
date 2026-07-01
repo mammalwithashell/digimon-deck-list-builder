@@ -60,6 +60,7 @@ if str(_CODE) not in sys.path:
 from digimon_gym.agents.specialist_registry import (  # noqa: E402
     Specialist,
     SpecialistRegistry,
+    meta_algorithm,
     slugify_deck,
 )
 
@@ -324,22 +325,6 @@ def _resolve_warmstart(
     return fallback
 
 
-def _source_algorithm(path: str) -> str:
-    """Architecture of a warm-start source, read from its ``.meta.json`` sidecar
-    (lowercased; ``"mlp"`` fallback). Used to decide whether a warm-start crosses
-    architectures (MLP generalist → LSTM specialist) and so must transfer only the
-    shared features extractor rather than the full policy."""
-    meta = Path(path).with_suffix(".meta.json")
-    if meta.is_file():
-        try:
-            algo = json.loads(meta.read_text(encoding="utf-8")).get("algorithm", "")
-            if algo:
-                return str(algo).lower()
-        except Exception:
-            pass
-    return "mlp"
-
-
 def build_specialist_argv(
     spec: LeagueSpec, deck: str, rnd: int, init_from: str, pool_manifest: Path
 ) -> List[str]:
@@ -353,7 +338,7 @@ def build_specialist_argv(
     ``--init-extractor-from`` (mutually exclusive with ``--init-from`` in
     pilot_training); same-architecture warm-starts use ``--init-from`` as before."""
     name = f"{spec.slug(deck)}_r{rnd}"
-    cross_arch = _source_algorithm(init_from) != spec.algorithm.lower()
+    cross_arch = meta_algorithm(init_from) != spec.algorithm.lower()
     init_flag = "--init-extractor-from" if cross_arch else "--init-from"
     argv = [
         spec.python, "-m", PILOT_MODULE,
@@ -442,6 +427,7 @@ def _run_parallel(
     running: List[subprocess.Popen] = []
     failed: List[List[str]] = []
     _launch_seq = [0]
+    _markers: List[Path] = []   # ready-gate flag files to clean up when done
 
     def _wait_until_spawned(proc: subprocess.Popen, ready_file: Path) -> None:
         """Block until ``proc`` has spawned its worker pool (marker written), has
@@ -465,6 +451,7 @@ def _run_parallel(
         while pending and len(running) < cap:
             idx = _launch_seq[0]; _launch_seq[0] += 1
             ready_file = cwd / f".spawn_ready_{idx}.flag"
+            _markers.append(ready_file)
             try:
                 ready_file.unlink()
             except FileNotFoundError:
@@ -482,29 +469,38 @@ def _run_parallel(
                     time.sleep(stagger_seconds)
                 _wait_until_spawned(proc, ready_file)
 
-    _fill()
-    while running:
-        proc = running.pop(0)          # wait on the oldest, then refill the slot
-        if proc.wait() != 0:
-            failed.append(list(proc.args))
+    try:
         _fill()
+        while running:
+            proc = running.pop(0)      # wait on the oldest, then refill the slot
+            if proc.wait() != 0:
+                failed.append(list(proc.args))
+            _fill()
 
-    # Sequential retry backstop: a failed specialist re-run alone cannot hit the
-    # concurrent-spawn race. Retry each up to ``retries`` times before giving up.
-    for attempt in range(1, retries + 1):
-        if not failed:
-            break
-        retry_batch, failed = failed, []
-        print(f"\n[retry {attempt}/{retries}] re-running {len(retry_batch)} "
-              f"failed specialist(s) sequentially", flush=True)
-        for argv in retry_batch:
+        # Sequential retry backstop: a failed specialist re-run alone cannot hit
+        # the concurrent-spawn race. Retry each up to ``retries`` times.
+        for attempt in range(1, retries + 1):
+            if not failed:
+                break
+            retry_batch, failed = failed, []
+            print(f"\n[retry {attempt}/{retries}] re-running {len(retry_batch)} "
+                  f"failed specialist(s) sequentially", flush=True)
+            for argv in retry_batch:
+                try:
+                    _run(argv, cwd)    # subprocess.run(check=True) — raises on failure
+                except subprocess.CalledProcessError:
+                    failed.append(argv)
+
+        if failed:
+            raise RuntimeError(f"{len(failed)} specialist run(s) failed this round")
+    finally:
+        # Remove the ready-gate marker files so repeated rounds/runs in the same
+        # cwd don't accumulate stale ``.spawn_ready_*.flag`` files.
+        for marker in _markers:
             try:
-                _run(argv, cwd)        # subprocess.run(check=True) — raises on failure
-            except subprocess.CalledProcessError:
-                failed.append(argv)
-
-    if failed:
-        raise RuntimeError(f"{len(failed)} specialist run(s) failed this round")
+                marker.unlink()
+            except FileNotFoundError:
+                pass
 
 
 def run_round(spec: LeagueSpec, reg: SpecialistRegistry, rnd: int, cwd: Path,
