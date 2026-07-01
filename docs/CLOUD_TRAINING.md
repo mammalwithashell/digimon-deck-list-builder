@@ -433,6 +433,49 @@ deploy; revisit if symptoms match.
 | `tools/run_training_job.py` crashes with `FileNotFoundError: /data/deck_library.json` | `DIGIMON_DATA_DIR` env var missing inside the pod | Same fix as above (env propagation) |
 | `nvidia-smi` works but `torch.cuda.is_available()` returns False | torch on Stage 2 was a CPU-only wheel | Should not happen with v0.10+ — the `pip install torch>=2.0` line pulls the CUDA wheel by default. If it does, switch Stage 2 base to `nvidia/cuda:*-runtime-ubuntu22.04` and republish as `training-vX.Y+1`. |
 | First-time pod boot takes 3+ minutes before SSH ready | Legitimate — 2.78 GB image pull + container init on a cold worker | Patience. Subsequent boots on the same worker use cached layers. |
+| **Throughput is far below what the GPU/cores suggest; GPU sits at 0–2%** | **RunPod container is CPU-cgroup-throttled — `nproc` lies.** A pod reporting `nproc=96` had `cpu.max = 765000 100000` ≈ **7.65 effective cores**, with large `throttled_usec` in `cpu.stat`. | Read effective cores from the cgroup, not `nproc`: `cat /sys/fs/cgroup/cpu.max` (quota ÷ period). RunPod's `vcpuCount` reflects the *real* quota — use it to pre-filter. Prefer SECURE/dedicated pods for guaranteed cores. **Never compare throughput across pods without first checking `cpu.max`.** |
+| `runpodctl pod create` **hangs** when a network volume is attached | A40-secure pods hang provisioning with `--volume-in-gb` | Create **container-disk-only** (no volume). Then artifacts are ephemeral — harvest `final.zip` + `.meta.json` to your laptop **before** `pod delete` (see A.9). |
+| Learner crashes with `EOFError` at `step_wait` partway into a parallel run | A SubprocVecEnv worker was **OOM-killed** (`memory.events` `oom_kill > 0`); the unbounded per-worker opponent cache × many workers × concurrent specialists exceeded the ~50 GB container `memory.max` | Bound `LeaguePoolWrapper(cache_size=…)` **only** when sharing a box (in-pod parallel). For one-specialist-per-pod leave it large. Check `cat /sys/fs/cgroup/memory.events`. |
+| In-pod parallel (`--topology parallel`) load average spikes to hundreds | OMP/MKL/OPENBLAS/RAYON thread storm — each specialist's workers each spawn a full thread pool | The driver caps worker threads transiently around `SubprocVecEnv` spawn **only when `DIGIMON_LEAGUE_CONCURRENCY>1`**. Do not pin OMP in the learner (throttles its update ~5×). One-specialist-per-pod sidesteps this entirely. |
+
+---
+
+## A.11 Scaling a league: one specialist per pod, not one box
+
+A 2026-06-30 investigation tried to scale the deck-specialist league *inside*
+one pod via `--topology parallel` (two+ specialists training concurrently on a
+single box). **Verdict: in-pod parallel is now reliable, but it is NOT a proven
+speedup — and on RunPod it is actively confounded by CPU-cgroup throttling.**
+
+What we found, in order:
+
+- Four real reliability bugs were fixed (opponents loaded on GPU per worker →
+  CUDA-load collision/BrokenPipe; OMP/MKL/rayon thread storm; simultaneous-spawn
+  collision → ready-gate; unbounded per-worker opponent cache → cgroup OOM /
+  `EOFError`). The parallel path no longer crashes.
+- **But every throughput number was confounded by the `cpu.max` throttling
+  above.** The pod we measured on had ~7.65 effective cores behind a 96-core
+  `nproc`, so "2 specialists at 36 fps each vs 1 at 188 fps" was apples-to-
+  oranges — we were dividing ~8 real cores two ways, not 96.
+- Capping a single specialist's worker threads throttled its collection ~5×;
+  pinning OMP threads in the learner throttled its update ~5×. Those caps exist
+  **only** to keep the in-pod *parallel* case from thread-storming, and are
+  gated on `DIGIMON_LEAGUE_CONCURRENCY>1` so they never touch a normal run.
+
+**The dependable, scalable path is one specialist per pod**, fanned out across
+pods — each specialist gets a full, uncapped box (no thread cap, large opponent
+cache, unpinned learner OMP). To parallelize a league:
+
+- **Tier 1 (recommended default):** one deck per pod against a *fixed* champion
+  pool (no cross-round barrier → embarrassingly parallel, ~N× wall-clock).
+- **Tier 2:** the full evolving cross-deck league needs a shared artifact store +
+  an outer orchestrator that runs the per-round barrier centrally.
+
+Both tiers are specified in the OpenSpec change
+`openspec/changes/add-cross-pod-league-orchestration/` (provisioning contract,
+fan-out launcher, distributed orchestrator). **Provision/verify every pod by
+`cpu.max`, not `nproc`, and harvest artifacts before terminate (no reliable
+persistent volume).**
 
 ---
 
