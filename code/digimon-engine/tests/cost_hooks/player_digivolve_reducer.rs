@@ -323,26 +323,32 @@ fn reducer_expires_at_end_of_turn() {
     );
 }
 
-/// A reducer with no suspend cost applies the reduction directly on accept
-/// (no nested suspend selection).
+/// A FREE reducer (no suspend cost) carries no player choice: the reduction
+/// auto-applies synchronously with NO accept/decline prompt (DCGO ST12_15.cs
+/// installs an unconditional `Cost -= 1`; parking an optional prompt would
+/// over-expose an illegal PASS — G-DELAY-NEXT-DIGIVOLVE-COST-REDUCTION).
 #[test]
-fn no_suspend_cost_applies_on_accept() {
+fn no_suspend_cost_auto_applies_without_prompt() {
     let (mut r, base) =
         green_digivolve_runner(std::sync::Arc::new(ArmsGreenDigivolveReducerNoCost));
     r.play(0, 0); // play ARM
     let memory_before = r.memory();
 
-    r.game
+    let ok = r
+        .game
         .digivolve_from_hand(0, 0, base, PlaySource::ByDigivolve);
-    // Accept — with no suspend cost, the digivolution completes immediately.
-    r.game
-        .resolve_selection(0, HAND_EFFECT_START)
-        .expect("accept resolves");
-    assert!(r.game.pending_selection.is_none());
+    assert!(ok, "free-reducer digivolution completes synchronously");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "a free (no-suspend-cost) reducer must NOT park an accept/decline prompt"
+    );
     assert_eq!(
         r.memory(),
         memory_before,
         "reduced digivolution cost is 0 (4 - 5, clamped)"
     );
-    assert!(r.game.player_digivolve_cost_reducers.is_empty());
+    assert!(
+        r.game.player_digivolve_cost_reducers.is_empty(),
+        "single-fire reducer consumed by the auto-application"
+    );
 }
