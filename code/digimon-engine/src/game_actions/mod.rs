@@ -67,8 +67,8 @@ struct TakenCardSource {
 /// `pending_selection` (the material is now in the leaving/limbo slot). Once the
 /// parked reward settles, the loop re-enters at `next_material` and ultimately
 /// finalizes the host play (G-DIGIXROS-REDIRECT-EXTRACTION).
-#[derive(Clone)]
-struct DigiXrosResumeContinuation {
+#[derive(Debug, Clone)]
+pub(crate) struct DigiXrosResumeContinuation {
     player: PlayerId,
     target_card: CardHandle,
     total_reduction: i32,

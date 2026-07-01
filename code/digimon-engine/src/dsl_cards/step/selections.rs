@@ -1494,15 +1494,8 @@ fn finish_non_dsl_count_capped(
                 let player = ctx.player;
                 let _ = ctx.play_from_trash_free_unsuspended(first);
                 if let Some(second) = second {
-                    ctx.game.run_after_selections_drain(Box::new(move |game| {
-                        let mut c2 = crate::effect_context::EffectContext::new(
-                            game,
-                            source_card,
-                            None,
-                            player,
-                        );
-                        let _ = c2.play_from_trash_free_unsuspended(second);
-                    }));
+                    ctx.game
+                        .queue_partition_second_play(player, source_card, second);
                 }
             }
         }

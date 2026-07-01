@@ -34,34 +34,79 @@ use crate::permanent::PermanentHandle;
 use crate::selection::{SourceSelectionRef, UnionZoneOrigin};
 use crate::trigger_context::TriggerContext;
 
-/// Coexistence-only resume-side continuation hooks (make-engine-cloneable
-/// Phase 2). Several callback-wrappers — the play-cost / digivolve-reducer /
-/// option-reducer continuations, the DigiXros leave-window resume, and
-/// `run_after_selections_drain` — compose their continuation onto a selection's
-/// CLOSURE `callback`/`on_decline`. When the selection is resume-driven the
-/// closure is BYPASSED by [`run_resume`](crate::dsl_cards::step::selections::run_resume),
-/// so those wrappers instead defer their continuation here, and
-/// `resolve_generic_selection` drains it right after the resume resolution (for
-/// both accept and decline — every current wrapper runs the same continuation
-/// either way).
+/// Resume-side continuation hooks (make-engine-cloneable Phase 2, defunc-
+/// tionalized 2026-07-01). Several continuation wrappers — the play-cost /
+/// digivolve-reducer / option-reducer continuations, the DigiXros
+/// leave-window resume, and the `<Partition>` second-source play — must run
+/// AFTER the currently parked selection resolves. When the selection is
+/// resume-driven its closure `callback`/`on_decline` is BYPASSED by
+/// [`run_resume`](crate::dsl_cards::step::selections::run_resume), so those
+/// wrappers defer their continuation here as **plain data**, and
+/// `resolve_generic_selection` drains the list right after the resume
+/// resolution (for both accept and decline — every current wrapper runs the
+/// same continuation either way).
 ///
-/// Like the closure callbacks they stand in for, these are **not**
-/// clone-faithful: a clone yields an EMPTY list (a forked search node must not
-/// inherit live closure continuations). Faithful clone of a mid-continuation
-/// state arrives only once the wrappers themselves are ported to data.
-#[derive(Default)]
-pub struct ResumeContinuationHooks(pub Vec<Box<dyn FnOnce(&mut crate::game::Game) + Send + Sync>>);
+/// Because every variant is data, this channel is **clone-faithful**: a
+/// forked search node inherits the armed continuations and replays them
+/// identically.
+#[derive(Debug, Clone, Default)]
+pub struct ResumeContinuationHooks(pub Vec<AfterSelectionHook>);
 
-impl Clone for ResumeContinuationHooks {
-    fn clone(&self) -> Self {
-        Self(Vec::new())
-    }
-}
-
-impl std::fmt::Debug for ResumeContinuationHooks {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ResumeContinuationHooks({} pending)", self.0.len())
-    }
+/// A deferred post-selection continuation, as data. Each variant mirrors one
+/// former `Box<dyn FnOnce(&mut Game)>` hook; `Game::run_after_selection_hook`
+/// dispatches it to the owning module's resume method. All payloads are plain
+/// `Clone` data so `Game: Clone` carries armed continuations faithfully.
+#[derive(Debug, Clone)]
+pub enum AfterSelectionHook {
+    /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST` — credit the digivolve
+    /// reducer's reduction and re-enter the digivolve once the parked
+    /// pay-cost selection settles (`game_actions/cost.rs`).
+    InteractiveDigivolveReducer {
+        amount: i32,
+        acting_player: PlayerId,
+        hand_index: usize,
+        field_index: usize,
+        source: crate::enums::PlaySource,
+    },
+    /// `G-DIGIXROS-REDIRECT-EXTRACTION` — re-enter the DigiXros leave-window
+    /// loop at the next material once the parked leave reward settles
+    /// (`game_actions/misc.rs`).
+    DigiXrosLeaveContinuation {
+        cont: crate::game_actions::DigiXrosResumeContinuation,
+    },
+    /// Play-from-hand cost-reduction pipeline — resume the reduction chain
+    /// once the parked pay-cost selection settles (`game_actions/misc.rs`).
+    PlayCostContinuation {
+        player_id: PlayerId,
+        hand_index: usize,
+        target: crate::game_actions::CostTargetContext,
+        cost_delta: CostDelta,
+        source: crate::enums::PlaySource,
+        origin: crate::game::PendingWouldPlayOrigin,
+        suppress_on_play: bool,
+        accumulated_reduction: i32,
+        processed: Vec<crate::game_actions::CostReductionKey>,
+    },
+    /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST` — credit the Option-use
+    /// reducer's reduction and re-enter `play_option_core` once the parked
+    /// pay-cost selection settles (`game_actions/options.rs`).
+    InteractiveOptionUseReducer {
+        amount: i32,
+        player_id: PlayerId,
+        source: crate::game_actions::OptionSource,
+        mode: crate::game_actions::OptionPlayMode,
+        cost_policy: crate::game_actions::OptionCostPolicy,
+    },
+    /// `<Partition>` (judge-quiz Q30) — play the SECOND extracted partition
+    /// source only after the FIRST play's would-play interrupt chain fully
+    /// drains ("played out simultaneously": the second card must not be in
+    /// the battle area while the first's interrupts resolve). Re-arms itself
+    /// while a selection is still pending.
+    PartitionSecondPlay {
+        controller: PlayerId,
+        source_card: CardHandle,
+        card: CardHandle,
+    },
 }
 
 /// A paused continuation, as data. Frames run inner→outer on selection

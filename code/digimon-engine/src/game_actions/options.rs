@@ -735,17 +735,15 @@ impl Game {
         // channel when the parked select is data-driven (closure bypassed).
         if self.pending_selection_resume.is_some() {
             self.pending_selection = Some(pending);
-            self.after_selection_resume_hooks
-                .0
-                .push(Box::new(move |game: &mut Game| {
-                    game.resume_interactive_option_use_reducer_after_pending(
-                        amount,
-                        player_id,
-                        source,
-                        mode,
-                        cost_policy,
-                    );
-                }));
+            self.after_selection_resume_hooks.0.push(
+                crate::resume::AfterSelectionHook::InteractiveOptionUseReducer {
+                    amount,
+                    player_id,
+                    source,
+                    mode,
+                    cost_policy,
+                },
+            );
             return;
         }
         let original_callback = pending.callback;
@@ -779,7 +777,7 @@ impl Game {
     /// pay_cost resolves. If it installed a FURTHER selection, re-wrap; else
     /// credit the reduction and re-enter `play_option_core`.
     /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
-    fn resume_interactive_option_use_reducer_after_pending(
+    pub(crate) fn resume_interactive_option_use_reducer_after_pending(
         &mut self,
         amount: i32,
         player_id: PlayerId,

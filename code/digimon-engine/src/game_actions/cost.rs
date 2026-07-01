@@ -645,17 +645,15 @@ impl Game {
         // closure is bypassed by `run_resume`).
         if self.pending_selection_resume.is_some() {
             self.pending_selection = Some(pending);
-            self.after_selection_resume_hooks
-                .0
-                .push(Box::new(move |game: &mut Game| {
-                    game.resume_interactive_digivolve_reducer_after_pending(
-                        amount,
-                        acting_player,
-                        hand_index,
-                        field_index,
-                        source,
-                    );
-                }));
+            self.after_selection_resume_hooks.0.push(
+                crate::resume::AfterSelectionHook::InteractiveDigivolveReducer {
+                    amount,
+                    acting_player,
+                    hand_index,
+                    field_index,
+                    source,
+                },
+            );
             return;
         }
         let original_callback = pending.callback;
@@ -695,7 +693,7 @@ impl Game {
     /// resolves. If the pay_cost installed a FURTHER selection, re-wrap; else
     /// credit the reduction (only when the cost was actually paid) and re-enter
     /// the digivolve. `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
-    fn resume_interactive_digivolve_reducer_after_pending(
+    pub(crate) fn resume_interactive_digivolve_reducer_after_pending(
         &mut self,
         amount: i32,
         acting_player: PlayerId,

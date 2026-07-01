@@ -313,9 +313,7 @@ impl Game {
             self.pending_selection = Some(selection);
             self.after_selection_resume_hooks
                 .0
-                .push(Box::new(move |game: &mut Game| {
-                    game.continue_digixros_after_parked_leave(cont);
-                }));
+                .push(crate::resume::AfterSelectionHook::DigiXrosLeaveContinuation { cont });
             return;
         }
 
@@ -478,21 +476,19 @@ impl Game {
         // for accept AND decline — both branches below run the same call).
         if self.pending_selection_resume.is_some() {
             self.pending_selection = Some(pending);
-            self.after_selection_resume_hooks
-                .0
-                .push(Box::new(move |game: &mut Game| {
-                    game.resume_play_cost_continuation_after_pending(
-                        player_id,
-                        hand_index,
-                        target,
-                        cost_delta,
-                        source,
-                        origin,
-                        suppress_on_play,
-                        accumulated_reduction,
-                        processed,
-                    );
-                }));
+            self.after_selection_resume_hooks.0.push(
+                crate::resume::AfterSelectionHook::PlayCostContinuation {
+                    player_id,
+                    hand_index,
+                    target,
+                    cost_delta,
+                    source,
+                    origin,
+                    suppress_on_play,
+                    accumulated_reduction,
+                    processed,
+                },
+            );
             return;
         }
 

@@ -777,63 +777,106 @@ impl Game {
         }
     }
 
-    /// Run `hook` once the CURRENT pending-selection chain fully drains.
-    ///
-    /// If no selection is pending, the hook runs immediately. Otherwise the
-    /// pending selection's `callback` / `on_decline` are composed so that,
-    /// after the original resolution, the hook RE-ARMS on whatever selection
-    /// the resolution installed next — it fires exactly once, after the last
-    /// selection in the chain resolves.
-    ///
-    /// Introduced for interruptive `<Partition>` (judge-quiz Q30): the second
+    /// Play the SECOND extracted `<Partition>` source once the CURRENT
+    /// pending-selection chain fully drains (judge-quiz Q30: the second
     /// partition source must be played only after the FIRST play's would-play
-    /// interrupt chain (e.g. MedievalGallantmon's "suspend 2 Digimon" cost
-    /// reduction) completes, so the second card is not yet in the battle area
-    /// while the first's interrupts resolve ("played out simultaneously").
-    pub(crate) fn run_after_selections_drain(
+    /// interrupt chain — e.g. MedievalGallantmon's "suspend 2 Digimon" cost
+    /// reduction — completes, so the second card is not yet in the battle
+    /// area while the first's interrupts resolve, "played out
+    /// simultaneously").
+    ///
+    /// If no selection is pending, the play happens immediately. Otherwise a
+    /// data [`AfterSelectionHook::PartitionSecondPlay`] is armed; the drain
+    /// in `resolve_generic_selection` re-enters here after each resolution,
+    /// so the hook RE-ARMS until the last selection in the chain resolves —
+    /// it fires exactly once. Being plain data, an armed hook survives
+    /// `Game::clone` faithfully.
+    pub(crate) fn queue_partition_second_play(
         &mut self,
-        hook: Box<dyn FnOnce(&mut crate::game::Game) + Send + Sync + 'static>,
+        controller: PlayerId,
+        source_card: crate::card_source::CardHandle,
+        card: crate::card_source::CardHandle,
     ) {
-        use std::sync::{Arc, Mutex};
-        let Some(mut pending) = self.pending_selection.take() else {
-            hook(self);
-            return;
-        };
-        // Resume-aware (make-engine-cloneable Batch 2): a resume-driven select's
-        // closure is bypassed, so defer the re-arm onto the resume channel.
-        // After the resume resolution it re-calls run_after_selections_drain,
-        // which fires the hook if the chain drained or re-composes otherwise.
-        if self.pending_selection_resume.is_some() {
-            self.pending_selection = Some(pending);
-            self.after_selection_resume_hooks.0.push(Box::new(
-                move |game: &mut crate::game::Game| {
-                    game.run_after_selections_drain(hook);
-                },
-            ));
+        if self.pending_selection.is_none() {
+            let mut ctx =
+                crate::effect_context::EffectContext::new(self, source_card, None, controller);
+            let _ = ctx.play_from_trash_free_unsuspended(card);
             return;
         }
-        let original = pending.callback;
-        // One-shot shared slot so the accept and decline paths can both
-        // re-arm without ever double-firing the hook.
-        type Hook = Box<dyn FnOnce(&mut crate::game::Game) + Send + Sync + 'static>;
-        let slot: Arc<Mutex<Option<Hook>>> = Arc::new(Mutex::new(Some(hook)));
-        let slot_cb = Arc::clone(&slot);
-        pending.callback = Box::new(move |game, action| {
-            original(game, action);
-            if let Some(h) = slot_cb.lock().unwrap().take() {
-                game.run_after_selections_drain(h);
+        self.after_selection_resume_hooks.0.push(
+            crate::resume::AfterSelectionHook::PartitionSecondPlay {
+                controller,
+                source_card,
+                card,
+            },
+        );
+    }
+
+    /// Dispatch one drained [`AfterSelectionHook`] to its owning module's
+    /// resume method. Called by `resolve_generic_selection` right after a
+    /// resume-driven resolution (the data analog of the retired
+    /// closure-composition wrappers).
+    pub(crate) fn run_after_selection_hook(&mut self, hook: crate::resume::AfterSelectionHook) {
+        use crate::resume::AfterSelectionHook as Hook;
+        match hook {
+            Hook::InteractiveDigivolveReducer {
+                amount,
+                acting_player,
+                hand_index,
+                field_index,
+                source,
+            } => self.resume_interactive_digivolve_reducer_after_pending(
+                amount,
+                acting_player,
+                hand_index,
+                field_index,
+                source,
+            ),
+            Hook::DigiXrosLeaveContinuation { cont } => {
+                self.continue_digixros_after_parked_leave(cont)
             }
-        });
-        if let Some(orig_decline) = pending.on_decline.take() {
-            let slot_dec = Arc::clone(&slot);
-            pending.on_decline = Some(Box::new(move |game| {
-                orig_decline(game);
-                if let Some(h) = slot_dec.lock().unwrap().take() {
-                    game.run_after_selections_drain(h);
-                }
-            }));
+            Hook::PlayCostContinuation {
+                player_id,
+                hand_index,
+                target,
+                cost_delta,
+                source,
+                origin,
+                suppress_on_play,
+                accumulated_reduction,
+                processed,
+            } => self.resume_play_cost_continuation_after_pending(
+                player_id,
+                hand_index,
+                target,
+                cost_delta,
+                source,
+                origin,
+                suppress_on_play,
+                accumulated_reduction,
+                processed,
+            ),
+            Hook::InteractiveOptionUseReducer {
+                amount,
+                player_id,
+                source,
+                mode,
+                cost_policy,
+            } => self.resume_interactive_option_use_reducer_after_pending(
+                amount,
+                player_id,
+                source,
+                mode,
+                cost_policy,
+            ),
+            // Re-arms itself while a selection is still pending; plays once
+            // the chain has drained.
+            Hook::PartitionSecondPlay {
+                controller,
+                source_card,
+                card,
+            } => self.queue_partition_second_play(controller, source_card, card),
         }
-        self.pending_selection = Some(pending);
     }
 
     /// Drain the effect queue. Fires each queued effect in order, pausing
@@ -3691,15 +3734,15 @@ impl Game {
             let prev_aborted = std::mem::replace(&mut self.dsl_clause_aborted, false);
             crate::dsl_cards::step::selections::run_resume(self, stack, action_id, is_pass);
             self.dsl_clause_aborted = prev_aborted;
-            // Coexistence: run continuations that callback-wrappers (play-cost /
-            // reducer / digixros-leave / after-selections-drain) deferred because
-            // this selection was resume-driven — their closure was bypassed by
-            // run_resume. Mirrors the wrapped callback's post-`original` step;
+            // Run continuations that wrappers (play-cost / reducer /
+            // digixros-leave / partition-second-play) deferred because this
+            // selection was resume-driven — their closure was bypassed by
+            // run_resume. Each hook is plain data (`AfterSelectionHook`);
             // a hook that installs another resume-driven selection re-arms by
             // pushing onto the (now-drained) channel for the next resolution.
             let hooks = std::mem::take(&mut self.after_selection_resume_hooks.0);
             for hook in hooks {
-                hook(self);
+                self.run_after_selection_hook(hook);
             }
         } else if is_pass {
             if let Some(on_decline) = sel.on_decline {
