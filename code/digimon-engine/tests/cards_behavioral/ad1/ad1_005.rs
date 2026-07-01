@@ -215,7 +215,10 @@ fn ad1_005_has_standard_lv5_digivolve_alt_path_cost_4() {
     assert!(
         standard.is_some(),
         "must have a standard Digivolve path at Lv.5 / Cost 4; paths: {:?}",
-        c.alt_paths.iter().map(|p| (&p.kind, &p.cost)).collect::<Vec<_>>()
+        c.alt_paths
+            .iter()
+            .map(|p| (&p.kind, &p.cost))
+            .collect::<Vec<_>>()
     );
 }
 
@@ -845,8 +848,13 @@ fn ad1_005_ace_overflow_fires_on_leave_field() {
     let mem_before = runner.game.memory;
 
     // Delete the Digimon to trigger leave-field (and overflow).
-    let handle = PermanentHandle { player: 0, index: gaiamon.index };
-    runner.game.delete_permanent_with_cause(handle, ReplacementCause::OwnEffect);
+    let handle = PermanentHandle {
+        player: 0,
+        index: gaiamon.index,
+    };
+    runner
+        .game
+        .delete_permanent_with_cause(handle, ReplacementCause::OwnEffect);
     runner.game.drain_effect_queue();
 
     assert_eq!(

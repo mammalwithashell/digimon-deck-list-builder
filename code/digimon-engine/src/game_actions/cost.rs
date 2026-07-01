@@ -78,9 +78,7 @@ impl Game {
             // `false`). Auto-apply runs the `pay_cost` directly so its inner
             // optional select IS the acceptance prompt — matching DCGO, which
             // surfaces the Shoutmon preattach as an optional "you may".
-            if !candidate.optional
-                && (!candidate.has_pay_cost || candidate.pay_cost_self_gated)
-            {
+            if !candidate.optional && (!candidate.has_pay_cost || candidate.pay_cost_self_gated) {
                 let key = candidate.key.clone();
                 if let Some(amount) = self.apply_cost_reduction_candidate(&key, target, true) {
                     accumulated_reduction += amount;
@@ -185,8 +183,92 @@ impl Game {
                 }),
                 on_decline,
             });
+            self.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![crate::resume::ResumeFrame::PlayFromHandCostReductionPrompt(
+                    PlayFromHandCostReductionPromptState {
+                        player_id,
+                        hand_index,
+                        target,
+                        cost_delta,
+                        source,
+                        origin,
+                        suppress_on_play,
+                        accumulated_reduction,
+                        processed,
+                        key,
+                        outer_conts: Vec::new(),
+                    },
+                )],
+            });
             return PlayFromHandCostResult::Pending;
         }
+    }
+
+    pub(crate) fn run_play_from_hand_cost_reduction_prompt_step(
+        &mut self,
+        state: PlayFromHandCostReductionPromptState,
+        is_pass: bool,
+    ) {
+        let PlayFromHandCostReductionPromptState {
+            player_id,
+            hand_index,
+            target,
+            cost_delta,
+            source,
+            origin,
+            suppress_on_play,
+            accumulated_reduction,
+            mut processed,
+            key,
+            outer_conts: _,
+        } = state;
+
+        if is_pass {
+            processed.push(key);
+            let _ = self.continue_play_from_hand_cost_reduction_chain(
+                player_id,
+                hand_index,
+                target,
+                cost_delta,
+                source,
+                origin,
+                suppress_on_play,
+                accumulated_reduction,
+                processed,
+            );
+            return;
+        }
+
+        let mut reduction = accumulated_reduction;
+        if let Some(amount) = self.apply_cost_reduction_candidate(&key, target, true) {
+            reduction += amount;
+        }
+        processed.push(key);
+        if self.pending_selection.is_some() {
+            self.wrap_pending_play_cost_continuation(
+                player_id,
+                hand_index,
+                target,
+                cost_delta,
+                source,
+                origin,
+                suppress_on_play,
+                reduction,
+                processed,
+            );
+            return;
+        }
+        let _ = self.continue_play_from_hand_cost_reduction_chain(
+            player_id,
+            hand_index,
+            target,
+            cost_delta,
+            source,
+            origin,
+            suppress_on_play,
+            reduction,
+            processed,
+        );
     }
 
     /// G-COST-REDUCE-ALLY-DIGIVOLVE — consult `Game::player_digivolve_cost_reducers`
@@ -394,6 +476,21 @@ impl Game {
                     );
                 })),
             });
+            self.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![
+                    crate::resume::ResumeFrame::InteractiveDigivolveCostReductionPrompt(
+                        InteractiveDigivolveCostReductionPromptState {
+                            acting_player,
+                            target,
+                            hand_index,
+                            field_index,
+                            source,
+                            key,
+                            outer_conts: Vec::new(),
+                        },
+                    ),
+                ],
+            });
             return true;
         }
 
@@ -412,6 +509,41 @@ impl Game {
             field_index,
             source,
         )
+    }
+
+    pub(crate) fn run_interactive_digivolve_cost_reduction_prompt_step(
+        &mut self,
+        state: InteractiveDigivolveCostReductionPromptState,
+        is_pass: bool,
+    ) {
+        if is_pass {
+            self.digivolve_from_hand_inner(
+                state.acting_player,
+                state.hand_index,
+                state.field_index,
+                state.source,
+                true,
+            );
+            return;
+        }
+
+        let parked = self.run_interactive_digivolve_reducer_pay_cost(
+            state.key,
+            state.target,
+            state.acting_player,
+            state.hand_index,
+            state.field_index,
+            state.source,
+        );
+        if !parked {
+            self.digivolve_from_hand_inner(
+                state.acting_player,
+                state.hand_index,
+                state.field_index,
+                state.source,
+                true,
+            );
+        }
     }
 
     /// Run a field-hosted interactive digivolve reducer's `pay_cost`. Returns

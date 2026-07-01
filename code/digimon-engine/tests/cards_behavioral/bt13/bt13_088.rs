@@ -105,7 +105,10 @@ fn fire_when_digivolving(
     runner.game.drain_effect_queue();
 }
 
-fn rage_is_source(runner: &DebugRunner, handle: digimon_engine::permanent::PermanentHandle) -> bool {
+fn rage_is_source(
+    runner: &DebugRunner,
+    handle: digimon_engine::permanent::PermanentHandle,
+) -> bool {
     runner.game.players[handle.player as usize].battle_area[handle.index as usize]
         .card_sources
         .iter()
@@ -128,9 +131,7 @@ fn bt13_088_metadata_matches_printed_card() {
     assert_eq!(card.cost, Some(11));
     assert_eq!(card.dp, Some(11000));
     assert!(card.traits.contains(&"Demon Lord".to_string()));
-    assert!(card
-        .traits
-        .contains(&"Seven Great Demon Lords".to_string()));
+    assert!(card.traits.contains(&"Seven Great Demon Lords".to_string()));
 }
 
 #[test]
@@ -178,9 +179,7 @@ fn bt13_088_opponent_attack_clause_is_opt_face_up() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when == vec![CompiledTiming::OnOpponentAttack] =>
-            {
+            CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::OnOpponentAttack] => {
                 Some(t)
             }
             _ => None,
@@ -309,11 +308,7 @@ fn bt13_088_on_play_places_rage_and_grants_cannot_attack_plus_immunity() {
         rage_is_source(&runner, belphemon),
         "Belphemon: Rage Mode is now a digivolution source of Belphemon"
     );
-    assert_eq!(
-        runner.trash_size(0),
-        0,
-        "the Rage Mode card left the trash"
-    );
+    assert_eq!(runner.trash_size(0), 0, "the Rage Mode card left the trash");
     assert!(
         runner
             .game
@@ -415,7 +410,11 @@ fn bt13_088_grants_expire_at_end_of_opponents_turn() {
     // not stall the rotation.
     runner.game.set_memory(3);
     runner.end_turn(); // P0 ends -> P1's (opponent's) turn begins
-    assert_eq!(runner.game.turn_player(), 1, "rotated to the opponent's turn");
+    assert_eq!(
+        runner.game.turn_player(),
+        1,
+        "rotated to the opponent's turn"
+    );
     assert!(
         runner
             .game
@@ -427,7 +426,11 @@ fn bt13_088_grants_expire_at_end_of_opponents_turn() {
     runner.game.enter_main_phase();
     runner.game.set_memory(3);
     runner.end_turn(); // P1's (opponent's) turn ends -> back to P0
-    assert_eq!(runner.game.turn_player(), 0, "rotated back to the controller");
+    assert_eq!(
+        runner.game.turn_player(),
+        0,
+        "rotated back to the controller"
+    );
 
     assert!(
         !runner
@@ -564,11 +567,7 @@ fn bt13_088_opp_attack_decline_lets_attack_resolve() {
     runner.execute_action(0, PASS).expect("decline the cancel");
     runner.auto_resolve().expect("resolve attack");
 
-    assert_eq!(
-        runner.hand_size(0),
-        2,
-        "declining trashes no hand cards"
-    );
+    assert_eq!(runner.hand_size(0), 2, "declining trashes no hand cards");
     assert_eq!(
         runner.security_count(0),
         0,
@@ -610,9 +609,7 @@ fn bt13_088_opp_attack_opt_locks_second_attack_same_turn() {
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("trash first card");
-    let view2 = runner
-        .pending_selection_view()
-        .expect("second pick prompt");
+    let view2 = runner.pending_selection_view().expect("second pick prompt");
     runner
         .execute_action(0, view2.valid_action_ids[0])
         .expect("trash second card");

@@ -181,7 +181,11 @@ fn bt13_075_places_source_then_blocks_high_play_cost_attacks() {
     // Rotate to the opponent's (P1's) turn so they can declare attacks.
     runner.game.set_memory(3);
     runner.end_turn();
-    assert_eq!(runner.game.turn_player(), 1, "rotated to the opponent's turn");
+    assert_eq!(
+        runner.game.turn_player(),
+        1,
+        "rotated to the opponent's turn"
+    );
 
     // (c) LATE ENTRANT: a NEW 11-cost opponent Digimon played after the aura
     // resolved is ALSO bound (continuous re-evaluation). In real play, entering
@@ -248,7 +252,11 @@ fn bt13_075_aura_does_not_block_sub_ten_cost_attacker() {
 
     runner.game.set_memory(3);
     runner.end_turn();
-    assert_eq!(runner.game.turn_player(), 1, "rotated to the opponent's turn");
+    assert_eq!(
+        runner.game.turn_player(),
+        1,
+        "rotated to the opponent's turn"
+    );
 
     assert_ne!(
         runner.attack_player(opp_small, 0, false),

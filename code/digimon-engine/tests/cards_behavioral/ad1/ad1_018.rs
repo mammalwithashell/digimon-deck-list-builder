@@ -56,8 +56,7 @@ fn opp_digimon(id: &str, cost: u16) -> CardData {
 }
 
 fn pred_any<F: Fn(&CompiledPredicate) -> bool + Copy>(p: &CompiledPredicate, f: F) -> bool {
-    f(p)
-        || p.all_of.iter().any(|q| pred_any(q, f))
+    f(p) || p.all_of.iter().any(|q| pred_any(q, f))
         || p.any_of.iter().any(|q| pred_any(q, f))
         || p.none_of.iter().any(|q| pred_any(q, f))
         || p.not.as_ref().map(|q| pred_any(q, f)).unwrap_or(false)
@@ -126,11 +125,13 @@ fn ad1_018_cost_reduction_requires_knightmon_lucemon_named_field_digimon() {
         "presence check: >=1 named Digimon in play (card face: 'if you have a Digimon')"
     );
     assert!(
-        pred_any(&agg.filter, |q| q.name_contains.as_deref() == Some("Knightmon")),
+        pred_any(&agg.filter, |q| q.name_contains.as_deref()
+            == Some("Knightmon")),
         "count filter must match a field Digimon NAMED Knightmon"
     );
     assert!(
-        pred_any(&agg.filter, |q| q.name_contains.as_deref() == Some("Lucemon")),
+        pred_any(&agg.filter, |q| q.name_contains.as_deref()
+            == Some("Lucemon")),
         "count filter must match a field Digimon NAMED Lucemon"
     );
 }
@@ -172,7 +173,10 @@ fn ad1_018_on_play_grants_one_digimon_opponent_effect_immunity() {
     let _ = runner.auto_resolve();
 
     assert!(
-        runner.game.modifiers.has(ally, ModifierType::CannotBeAffected),
+        runner
+            .game
+            .modifiers
+            .has(ally, ModifierType::CannotBeAffected),
         "the chosen Digimon must gain opponent-effect immunity (CannotBeAffected)"
     );
 }
@@ -190,10 +194,9 @@ fn ad1_018_when_digivolving_fires_immunity_clause() {
     let _ally = runner.place_on_field(0, "LK-WD-ALLY", Some(0));
     let lk = runner.place_on_field(0, "AD1-018", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::WhenDigivolving,
-        TriggerSource::Permanent(lk),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(lk));
     runner.game.drain_effect_queue();
 
     assert!(
@@ -309,10 +312,13 @@ fn ad1_018_inherited_security_clause_shape() {
         .expect("AD1-018 must carry an inherited [Security] clause");
 
     assert!(
-        clause
-            .process
-            .iter()
-            .any(|s| matches!(s, CompiledStep::DeDigivolve { amount: Some(1), .. })),
+        clause.process.iter().any(|s| matches!(
+            s,
+            CompiledStep::DeDigivolve {
+                amount: Some(1),
+                ..
+            }
+        )),
         "inherited [Security] must De-Digivolve 1; got {:?}",
         clause.process
     );
@@ -367,18 +373,23 @@ fn ad1_018_dedigivolve_observer_keys_on_played_card_text() {
         .as_ref()
         .expect("observer must be gated on the played card's text");
     assert!(
-        pred_any(cond, |q| q.event_card_text_contains.as_deref() == Some("Knightmon")),
+        pred_any(cond, |q| q.event_card_text_contains.as_deref()
+            == Some("Knightmon")),
         "observer must gate on event_card_text_contains: Knightmon"
     );
     assert!(
-        pred_any(cond, |q| q.event_card_text_contains.as_deref() == Some("Lucemon")),
+        pred_any(cond, |q| q.event_card_text_contains.as_deref()
+            == Some("Lucemon")),
         "observer must gate on event_card_text_contains: Lucemon"
     );
     assert!(
-        clause
-            .process
-            .iter()
-            .any(|s| matches!(s, CompiledStep::DeDigivolve { amount: Some(2), .. })),
+        clause.process.iter().any(|s| matches!(
+            s,
+            CompiledStep::DeDigivolve {
+                amount: Some(2),
+                ..
+            }
+        )),
         "observer body must De-Digivolve 2; got {:?}",
         clause.process
     );
@@ -391,7 +402,10 @@ fn ad1_018_dedigivolve_fires_when_played_ally_has_lucemon_in_text() {
     let mut runner = DebugRunner::builder()
         .dsl_card("AD1-018")
         .expect("AD1-018 loads")
-        .add_card(ally_with_text("LUCE-ALLY", "When this Digimon attacks, gain 1 memory. [Lucemon] only."))
+        .add_card(ally_with_text(
+            "LUCE-ALLY",
+            "When this Digimon attacks, gain 1 memory. [Lucemon] only.",
+        ))
         .add_card(opp_digimon("OPP-TOP", 5))
         .add_card(opp_digimon("OPP-SRC-A", 5))
         .add_card(opp_digimon("OPP-SRC-B", 5))
@@ -419,7 +433,9 @@ fn ad1_018_dedigivolve_fires_when_played_ally_has_lucemon_in_text() {
         view.valid_action_ids.contains(&pick),
         "the opponent Digimon must be a valid De-Digivolve target"
     );
-    runner.execute_action(view.selecting_player, pick).expect("De-Digivolve it");
+    runner
+        .execute_action(view.selecting_player, pick)
+        .expect("De-Digivolve it");
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -438,7 +454,10 @@ fn ad1_018_dedigivolve_does_not_fire_for_unrelated_text() {
     let mut runner = DebugRunner::builder()
         .dsl_card("AD1-018")
         .expect("AD1-018 loads")
-        .add_card(ally_with_text("PLAIN-ALLY", "When this Digimon attacks, draw 1."))
+        .add_card(ally_with_text(
+            "PLAIN-ALLY",
+            "When this Digimon attacks, draw 1.",
+        ))
         .add_card(opp_digimon("OPP-TOP2", 5))
         .add_card(opp_digimon("OPP-SRC2", 5))
         .hand(0, &["PLAIN-ALLY"])

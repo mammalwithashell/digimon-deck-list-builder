@@ -213,7 +213,9 @@ fn bt25_099_main_replaces_bottom_security_with_self_and_plays_reduced_ts() {
         "no face-up security should satisfy the option's color bypass"
     );
 
-    let hand_prompt = runner.pending_selection_view().expect("reduced play prompt");
+    let hand_prompt = runner
+        .pending_selection_view()
+        .expect("reduced play prompt");
     assert_eq!(hand_prompt.kind, SelectionKind::Hand);
     assert!(hand_prompt.is_optional, "the 'you may play' is optional");
 

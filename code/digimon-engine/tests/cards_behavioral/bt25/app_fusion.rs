@@ -195,8 +195,8 @@ fn gap4_dsl_app_fusion() {
     // Confirm the DSL `kind: app_fusion` compiles to an AppFusion alt-path.
     let spec: digimon_dsl::CardSpec =
         serde_yml::from_str(APP_FUSION_CARD).expect("App Fusion YAML parses");
-    let registry = digimon_dsl::CardRegistry::from_specs("test", &[spec])
-        .expect("App Fusion YAML compiles");
+    let registry =
+        digimon_dsl::CardRegistry::from_specs("test", &[spec]).expect("App Fusion YAML compiles");
     let compiled = registry
         .lookup("TEST-APPFUSE")
         .expect("TEST-APPFUSE in registry");

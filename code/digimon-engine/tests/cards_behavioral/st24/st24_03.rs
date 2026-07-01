@@ -181,7 +181,11 @@ fn st24_03_bounces_lv3_then_places_deck_top_under_ds_tamer() {
         .pending_selection_view()
         .expect("bounce pick for the opponent's Lv.3 Digimon installs");
     assert!(v.is_optional, "'you may return' ⇒ optional");
-    assert_eq!(v.valid_action_ids.len(), 1, "only the Lv.3 is a legal bounce");
+    assert_eq!(
+        v.valid_action_ids.len(),
+        1,
+        "only the Lv.3 is a legal bounce"
+    );
     r.execute_action(0, v.valid_action_ids[0]).unwrap();
 
     // Prompt 2: choose the DATA SQUAD Tamer to place the deck-top under.
@@ -198,7 +202,11 @@ fn st24_03_bounces_lv3_then_places_deck_top_under_ds_tamer() {
         opp_field_before - 1,
         "the opponent's Lv.3 Digimon left the field (bounced)"
     );
-    assert_eq!(r.hand_size(1), opp_hand_before + 1, "the bounced card went to the opponent's hand");
+    assert_eq!(
+        r.hand_size(1),
+        opp_hand_before + 1,
+        "the bounced card went to the opponent's hand"
+    );
     assert_eq!(
         r.game.players[0].battle_area[tamer.index as usize]
             .card_sources
@@ -210,7 +218,11 @@ fn st24_03_bounces_lv3_then_places_deck_top_under_ds_tamer() {
         r.game.players[0].battle_area[tamer.index as usize].card_sources[0].face_down,
         "the placed source is face-down"
     );
-    assert_eq!(r.deck_size(0), deck_before - 1, "deck-top consumed by the place");
+    assert_eq!(
+        r.deck_size(0),
+        deck_before - 1,
+        "deck-top consumed by the place"
+    );
 }
 
 /// FILTER: a Lv.4 opponent Digimon is not a legal bounce target; with NO Lv.3,
@@ -282,7 +294,11 @@ fn st24_03_declining_both_halves_is_clean_noop() {
         tamer_sources_before,
         "declined place ⇒ nothing under the Tamer"
     );
-    assert_eq!(r.deck_size(0), deck_before, "declined place ⇒ deck unchanged");
+    assert_eq!(
+        r.deck_size(0),
+        deck_before,
+        "declined place ⇒ deck unchanged"
+    );
 }
 
 /// GATE: no DATA SQUAD Tamer ⇒ only the bounce is offered; the place half is

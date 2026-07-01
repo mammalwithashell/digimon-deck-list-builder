@@ -164,7 +164,9 @@ fn bt20_021_has_dna_digivolve_alt_path_cost_0() {
 #[test]
 fn bt20_021_ace_overflow_is_minus_5() {
     let runner = base();
-    let card = runner.compiled_card(CARD_ID).expect("compiled card present");
+    let card = runner
+        .compiled_card(CARD_ID)
+        .expect("compiled card present");
     assert_eq!(
         card.ace_overflow,
         Some(-5),
@@ -175,7 +177,9 @@ fn bt20_021_ace_overflow_is_minus_5() {
 #[test]
 fn bt20_021_cost_clause_carries_three_timings_and_opt() {
     let runner = base();
-    let card = runner.compiled_card(CARD_ID).expect("compiled card present");
+    let card = runner
+        .compiled_card(CARD_ID)
+        .expect("compiled card present");
 
     // The place-source/delete clause must trigger on On Play, When Digivolving
     // AND When Attacking, and be Once Per Turn.
@@ -237,7 +241,9 @@ fn bt20_021_on_play_places_rk_from_hand_then_deletes_eligible() {
     );
 
     // Place the RK card (optional cost), then delete the only eligible target.
-    runner.auto_resolve().expect("place RK source + delete resolves");
+    runner
+        .auto_resolve()
+        .expect("place RK source + delete resolves");
 
     let sources_after = runner.game.players[0].battle_area[jesmon.index as usize]
         .card_sources
@@ -306,9 +312,7 @@ fn bt20_021_delete_filter_excludes_higher_dp_includes_equal() {
     // Resolve the rest; the 17000-DP Digimon must survive.
     runner.auto_resolve().expect("resolve delete");
     assert!(
-        runner
-            .game
-            .players[1]
+        runner.game.players[1]
             .battle_area
             .iter()
             .any(|p| p.top_card().card_id(&runner.game.card_data) == "OPP-17K"),
@@ -418,7 +422,9 @@ fn bt20_021_places_rk_from_trash() {
         runner.pending_selection().is_some(),
         "a [Royal Knight] card in trash must let the place-source cost install"
     );
-    runner.auto_resolve().expect("place from trash + delete resolves");
+    runner
+        .auto_resolve()
+        .expect("place from trash + delete resolves");
 
     let sources_after = runner.game.players[0].battle_area[jesmon.index as usize]
         .card_sources
@@ -463,7 +469,9 @@ fn bt20_021_when_attacking_unsuspends_and_trashes_two_security_with_four_rk_sour
     // Resolve the When-Attacking clauses. The cost-delete clause may also fire,
     // but with no RK card in hand/trash it is a no-op; the unsuspend/trash
     // clause is mandatory.
-    runner.auto_resolve().expect("when-attacking clauses resolve");
+    runner
+        .auto_resolve()
+        .expect("when-attacking clauses resolve");
 
     assert!(
         !runner.game.players[0].battle_area[jesmon.index as usize].is_suspended,

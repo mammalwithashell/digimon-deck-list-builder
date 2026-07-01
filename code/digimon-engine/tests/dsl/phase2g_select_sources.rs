@@ -1,7 +1,9 @@
 //! Phase 2g: source selections can bind stable cross-permanent source refs and
 //! consume them from later DSL steps.
 
-use digimon_dsl::compiled::{CompiledBindingRef, CompiledCountBound, CompiledPredicate, CompiledStep};
+use digimon_dsl::compiled::{
+    CompiledBindingRef, CompiledCountBound, CompiledPredicate, CompiledStep,
+};
 use digimon_engine::action::space::{encode_source_select, PASS};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
@@ -630,7 +632,11 @@ fn select_opponent_sources_clamp_to_available_clamps_min_and_max() {
     runner.execute_action(0, action_a).expect("pick opp A");
 
     assert!(runner.game.pending_selection.is_none());
-    assert_eq!(runner.game.players[1].trash.len(), 1, "the 1 available source trashed");
+    assert_eq!(
+        runner.game.players[1].trash.len(),
+        1,
+        "the 1 available source trashed"
+    );
     assert_eq!(
         runner.game.memory, 6,
         "clamped pick completes: then-body (+5) and outer tail (+1) both ran"
@@ -750,7 +756,9 @@ effects:
     );
 
     let action_a = encode_source_select(opp_a.index as u16, 0).expect("opp A source action");
-    runner.execute_action(0, action_a).expect("pick the only candidate");
+    runner
+        .execute_action(0, action_a)
+        .expect("pick the only candidate");
 
     // After the only candidate is picked, no candidates remain and
     // picked (1) < min (2): the continuation is dropped — nothing is

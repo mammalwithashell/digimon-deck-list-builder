@@ -261,10 +261,7 @@ fn bt12_028_dna_digivolve_applies_cannot_attack_to_two_digimon_with_no_sources()
     let view = runner
         .pending_selection_view()
         .expect("second DNA target selection remains pending");
-    assert_eq!(
-        view.kind,
-        SelectionKind::OppField
-    );
+    assert_eq!(view.kind, SelectionKind::OppField);
     runner
         .execute_action(view.selecting_player, view.valid_action_ids[0])
         .expect("select second no-source opponent Digimon");

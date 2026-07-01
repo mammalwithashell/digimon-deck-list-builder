@@ -70,8 +70,8 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardKind, EffectTiming, Keyword, PlayerId};
-use digimon_engine::selection::TriggerSource;
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::TriggerSource;
 
 const CARD_ID: &str = "BT21-059";
 
@@ -140,9 +140,15 @@ fn bt21_059_traits_include_sup_appmon_tool_time_slip() {
     let card = r.compiled_card(CARD_ID).expect("present in pack");
     let traits = &card.traits;
     assert!(traits.iter().any(|t| t == "Sup."), "must have Sup. trait");
-    assert!(traits.iter().any(|t| t == "Appmon"), "must have Appmon trait");
+    assert!(
+        traits.iter().any(|t| t == "Appmon"),
+        "must have Appmon trait"
+    );
     assert!(traits.iter().any(|t| t == "Tool"), "must have Tool trait");
-    assert!(traits.iter().any(|t| t == "Time Slip"), "must have Time Slip trait");
+    assert!(
+        traits.iter().any(|t| t == "Time Slip"),
+        "must have Time Slip trait"
+    );
 }
 
 /// Blocker is a declarative grant_keyword clause.
@@ -158,7 +164,10 @@ fn bt21_059_has_blocker_grant_keyword() {
             }) if keyword == "Blocker"
         )
     });
-    assert!(has_blocker, "BT21-059 must have a Blocker declarative grant_keyword");
+    assert!(
+        has_blocker,
+        "BT21-059 must have a Blocker declarative grant_keyword"
+    );
 }
 
 /// Blocker is installed on the permanent after placement on the field.
@@ -184,7 +193,10 @@ fn bt21_059_has_link_condition_appmon_cost_2() {
                 if *cost == 2
         )
     });
-    assert!(has, "BT21-059 must declare a self link-condition with cost 2");
+    assert!(
+        has,
+        "BT21-059 must declare a self link-condition with cost 2"
+    );
 }
 
 /// Alt-path: digivolve from a [Stnd.] trait Digimon for cost 2.
@@ -241,7 +253,11 @@ fn bt21_059_linked_aura_increases_host_dp_by_3000() {
 
     // Link Timemon to HOST-APP via the link action.
     r.game.decode_action(link_bit(timemon) as u16, 0);
-    let sel = r.game.pending_selection.as_ref().expect("link host-select installs");
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("link host-select installs");
     let host_pick = sel.valid_action_ids[0];
     let _ = r.game.resolve_selection(0, host_pick);
 
@@ -271,7 +287,10 @@ fn bt21_059_has_when_card_linked_to_this_once_per_turn_your_turn() {
         _ => None,
     });
     let clause = clause.expect("must have a host-side when_card_linked_to_this clause");
-    assert!(clause.once_per_turn, "host when_card_linked_to_this must be [Once Per Turn]");
+    assert!(
+        clause.once_per_turn,
+        "host when_card_linked_to_this must be [Once Per Turn]"
+    );
     assert!(
         clause.active_when.is_some(),
         "must gate on your turn (active_when.your_turn)"
@@ -392,7 +411,11 @@ fn bt21_059_host_when_linked_de_digivolve_stops_at_level_3() {
         1,
         "Lv3 single-stack is a no-op for stop_at_level 3"
     );
-    assert_eq!(r.trash_size(1), 0, "no card trashed (stop_at_level 3 boundary)");
+    assert_eq!(
+        r.trash_size(1),
+        0,
+        "no card trashed (stop_at_level 3 boundary)"
+    );
 }
 
 /// OPT lockout: second when_card_linked_to_this trigger in the same turn must not fire.
@@ -407,7 +430,11 @@ fn bt21_059_host_when_linked_opt_lockout() {
 
     // First fire — must install selection.
     fire_link_to_host(&mut r, timemon);
-    let first_sel = r.game.pending_selection.as_ref().expect("first fire installs");
+    let first_sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("first fire installs");
     let action = first_sel.valid_action_ids[0];
     let _ = r.game.resolve_selection(0, action);
     let _ = r.auto_resolve();
@@ -431,7 +458,12 @@ fn bt21_059_host_when_linked_opt_clears_next_turn() {
 
     // Fire once; resolve to set the OPT flag.
     fire_link_to_host(&mut r, timemon);
-    let action = r.game.pending_selection.as_ref().expect("first fire").valid_action_ids[0];
+    let action = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("first fire")
+        .valid_action_ids[0];
     let _ = r.game.resolve_selection(0, action);
     let _ = r.auto_resolve();
 
@@ -487,7 +519,11 @@ fn bt21_059_linked_when_linking_de_digivolve_fires() {
 
     // Activate the link action on Timemon → select host → link fires WhenLinked.
     r.game.decode_action(link_bit(timemon) as u16, 0);
-    let host_sel = r.game.pending_selection.as_ref().expect("host-pick installs");
+    let host_sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("host-pick installs");
     let host_action = host_sel.valid_action_ids[0];
     let _ = r.game.resolve_selection(0, host_action);
 
@@ -525,18 +561,29 @@ fn bt21_059_linked_when_linking_de_digivolve_stops_at_level_3() {
     let opp_lv3 = r.place_on_field(1, "OPP-LV3", Some(0)); // single Lv3 stack
 
     r.game.decode_action(link_bit(timemon) as u16, 0);
-    let host_sel = r.game.pending_selection.as_ref().expect("host-pick installs");
+    let host_sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("host-pick installs");
     let host_action = host_sel.valid_action_ids[0];
     let _ = r.game.resolve_selection(0, host_action);
 
     // Selection surfaces.
-    assert!(r.game.pending_selection.is_some(), "De-Digivolve selection surfaces");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "De-Digivolve selection surfaces"
+    );
     let de_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, de_action);
     let _ = r.auto_resolve();
 
     // Lv3 stays intact.
     let perm = &r.game.player(1).battle_area[opp_lv3.index as usize];
-    assert_eq!(perm.stack_size(), 1, "Lv3-only is a no-op — stop_at_level 3");
+    assert_eq!(
+        perm.stack_size(),
+        1,
+        "Lv3-only is a no-op — stop_at_level 3"
+    );
     assert_eq!(r.trash_size(1), 0, "nothing trashed");
 }

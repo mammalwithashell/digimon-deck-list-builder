@@ -80,7 +80,11 @@ fn miragegaogamon() -> CardData {
     c.level = Some(6);
     c.dp = Some(12000);
     c.play_cost = 12;
-    c.evo_costs = vec![EvoCost { card_color: 1, level: 5, memory_cost: 4 }];
+    c.evo_costs = vec![EvoCost {
+        card_color: 1,
+        level: 5,
+        memory_cost: 4,
+    }];
     c
 }
 
@@ -250,9 +254,18 @@ fn bt25_096_main_places_two_trash_sources_and_free_digivolves() {
             .iter()
             .any(|s| s.card_id(&runner.game.card_data) == id)
     };
-    assert!(has_source("Gaogamon"), "Gaogamon is a source under MirageGaogamon");
-    assert!(has_source("MachGaogamon"), "MachGaogamon is a source under MirageGaogamon");
-    assert!(has_source("Gaomon"), "the Gaomon is tucked under MirageGaogamon");
+    assert!(
+        has_source("Gaogamon"),
+        "Gaogamon is a source under MirageGaogamon"
+    );
+    assert!(
+        has_source("MachGaogamon"),
+        "MachGaogamon is a source under MirageGaogamon"
+    );
+    assert!(
+        has_source("Gaomon"),
+        "the Gaomon is tucked under MirageGaogamon"
+    );
     assert!(
         runner.game.players[0].battle_area[gaomon.index as usize]
             .card_sources

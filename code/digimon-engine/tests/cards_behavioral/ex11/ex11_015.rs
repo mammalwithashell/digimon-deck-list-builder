@@ -423,7 +423,10 @@ fn ex11_015_plays_suzune_from_hand_for_free() {
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "SUZ-1");
-    assert!(has_suzune, "the new permanent is the played [Suzune Kazuki]");
+    assert!(
+        has_suzune,
+        "the new permanent is the played [Suzune Kazuki]"
+    );
 }
 
 /// Declining ("you may"): PASS is legal and leaves everything unchanged.

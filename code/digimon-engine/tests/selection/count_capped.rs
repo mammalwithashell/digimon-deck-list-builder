@@ -109,7 +109,14 @@ fn auto_commits_at_max() {
             .as_ref()
             .expect("step 1 must park selection");
         assert!(
-            matches!(sel.kind, SelectionKind::CountCappedMultiSelect { max: 2, picked: 0, .. }),
+            matches!(
+                sel.kind,
+                SelectionKind::CountCappedMultiSelect {
+                    max: 2,
+                    picked: 0,
+                    ..
+                }
+            ),
             "step 1: kind must be CountCappedMultiSelect {{ max: 2, picked: 0 }}"
         );
         assert_eq!(r.game.current_phase, GamePhase::SelectBudgeted);
@@ -139,7 +146,14 @@ fn auto_commits_at_max() {
             .as_ref()
             .expect("step 2 must park selection");
         assert!(
-            matches!(sel.kind, SelectionKind::CountCappedMultiSelect { max: 2, picked: 1, .. }),
+            matches!(
+                sel.kind,
+                SelectionKind::CountCappedMultiSelect {
+                    max: 2,
+                    picked: 1,
+                    ..
+                }
+            ),
             "step 2: kind must be CountCappedMultiSelect {{ max: 2, picked: 1 }}"
         );
         assert_eq!(r.game.current_phase, GamePhase::SelectBudgeted);
@@ -234,7 +248,11 @@ fn pass_commits_early_when_picked_ge_1() {
             .expect("step 2 must park selection");
         assert!(matches!(
             sel.kind,
-            SelectionKind::CountCappedMultiSelect { max: 3, picked: 1, .. }
+            SelectionKind::CountCappedMultiSelect {
+                max: 3,
+                picked: 1,
+                ..
+            }
         ));
         assert!(
             sel.is_optional,
@@ -374,7 +392,11 @@ fn optional_zero_allows_pass_at_start() {
         );
         assert!(matches!(
             sel.kind,
-            SelectionKind::CountCappedMultiSelect { max: 2, picked: 0, .. }
+            SelectionKind::CountCappedMultiSelect {
+                max: 2,
+                picked: 0,
+                ..
+            }
         ));
     }
 
@@ -497,7 +519,14 @@ fn kind_reflects_picked_counter() {
     {
         let sel = r.game.pending_selection.as_ref().expect("step 1");
         assert!(
-            matches!(sel.kind, SelectionKind::CountCappedMultiSelect { max: 2, picked: 0, .. }),
+            matches!(
+                sel.kind,
+                SelectionKind::CountCappedMultiSelect {
+                    max: 2,
+                    picked: 0,
+                    ..
+                }
+            ),
             "step 1: kind must have picked=0"
         );
     }
@@ -509,7 +538,14 @@ fn kind_reflects_picked_counter() {
     {
         let sel = r.game.pending_selection.as_ref().expect("step 2");
         assert!(
-            matches!(sel.kind, SelectionKind::CountCappedMultiSelect { max: 2, picked: 1, .. }),
+            matches!(
+                sel.kind,
+                SelectionKind::CountCappedMultiSelect {
+                    max: 2,
+                    picked: 1,
+                    ..
+                }
+            ),
             "step 2: kind must have picked=1"
         );
     }

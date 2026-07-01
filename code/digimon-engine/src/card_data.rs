@@ -941,7 +941,10 @@ mod tests {
             "",
             "",
         );
-        assert!(kws.is_empty(), "formula/grant token must not be innate, got {kws:?}");
+        assert!(
+            kws.is_empty(),
+            "formula/grant token must not be innate, got {kws:?}"
+        );
     }
 
     #[test]
@@ -953,7 +956,10 @@ mod tests {
             "",
             "",
         );
-        assert!(kws.is_empty(), "target-filter token must not be innate, got {kws:?}");
+        assert!(
+            kws.is_empty(),
+            "target-filter token must not be innate, got {kws:?}"
+        );
     }
 
     #[test]
@@ -964,7 +970,10 @@ mod tests {
             "",
             "",
         );
-        assert!(kws.is_empty(), "conditional grant must not be innate, got {kws:?}");
+        assert!(
+            kws.is_empty(),
+            "conditional grant must not be innate, got {kws:?}"
+        );
     }
 
     #[test]
@@ -978,8 +987,14 @@ mod tests {
             "",
             "",
         );
-        assert!(kws.contains(&Keyword::Decoy(0)), "Decoy innate, got {kws:?}");
-        assert!(kws.contains(&Keyword::Blocker), "second leading keyword innate, got {kws:?}");
+        assert!(
+            kws.contains(&Keyword::Decoy(0)),
+            "Decoy innate, got {kws:?}"
+        );
+        assert!(
+            kws.contains(&Keyword::Blocker),
+            "second leading keyword innate, got {kws:?}"
+        );
     }
 
     #[test]
@@ -1007,7 +1022,10 @@ mod tests {
             "Inherited Effect [Your Turn] While this Digimon has ＜Reboot＞, it gains ＜Security A. +1＞",
             "",
         );
-        assert!(granted.is_empty(), "header + timed grant yields no innate, got {granted:?}");
+        assert!(
+            granted.is_empty(),
+            "header + timed grant yields no innate, got {granted:?}"
+        );
     }
 
     #[test]
@@ -1045,7 +1063,10 @@ mod tests {
             "",
             "",
         );
-        assert!(kws.is_empty(), "condition reference must not be innate, got {kws:?}");
+        assert!(
+            kws.is_empty(),
+            "condition reference must not be innate, got {kws:?}"
+        );
     }
 
     #[test]
@@ -1057,7 +1078,10 @@ mod tests {
             "",
             "",
         );
-        assert!(kws.is_empty(), "DP-and-keyword grant must not be innate, got {kws:?}");
+        assert!(
+            kws.is_empty(),
+            "DP-and-keyword grant must not be innate, got {kws:?}"
+        );
     }
 
     #[test]

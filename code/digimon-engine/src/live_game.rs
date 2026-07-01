@@ -498,7 +498,9 @@ impl LiveGame {
         let adapter = NativeAdapter::from_recording(recording.clone(), card_data)?;
         let (mut game, mut driver) =
             ReplayDriver::from_source(Box::new(adapter), card_data, false)?;
-        driver.seek(&mut game, step_n).map_err(LiveGameError::Replay)?;
+        driver
+            .seek(&mut game, step_n)
+            .map_err(LiveGameError::Replay)?;
         let deck_card_ids = deck_ids_from_recording(&recording);
         Ok(Self {
             game,
@@ -989,7 +991,11 @@ impl LiveGame {
                     step: driver.cursor(),
                     before_seq: self.game.event_seq,
                     before_phase: self.game.current_phase,
-                    before_pending: self.game.pending_selection.as_ref().map(pending_fingerprint),
+                    before_pending: self
+                        .game
+                        .pending_selection
+                        .as_ref()
+                        .map(pending_fingerprint),
                 };
                 driver.step(&mut self.game);
                 if let Some(detail) = classify(&probe, &self.game) {
@@ -2195,9 +2201,16 @@ mod tests {
     /// four passes that alternate turns.
     fn multi_step_recording(seed: u64) -> serde_json::Value {
         let db = minimal_db();
-        let mut hr =
-            crate::HeadlessRunner::new(small_deck(), small_deck(), &db, false, true, false, Some(seed))
-                .unwrap();
+        let mut hr = crate::HeadlessRunner::new(
+            small_deck(),
+            small_deck(),
+            &db,
+            false,
+            true,
+            false,
+            Some(seed),
+        )
+        .unwrap();
         hr.step(0); // mulligan keep p1
         hr.step(0); // mulligan keep p2
         for _ in 0..4 {
@@ -2213,7 +2226,10 @@ mod tests {
         assert!(lg.is_recording());
         assert_eq!(lg.replay_cursor(), 0);
         let total = lg.replay_total_steps();
-        assert!(total >= 2, "expected multiple replayable steps, got {total}");
+        assert!(
+            total >= 2,
+            "expected multiple replayable steps, got {total}"
+        );
 
         let view = lg.step_forward().unwrap();
         assert_eq!(view.cursor, 1);
@@ -2285,7 +2301,11 @@ mod tests {
             "native recording diverged from itself: {:?}",
             div.findings
         );
-        assert_eq!(lg.replay_cursor(), 1, "scan_divergences perturbed the cursor");
+        assert_eq!(
+            lg.replay_cursor(),
+            1,
+            "scan_divergences perturbed the cursor"
+        );
 
         let fizz = lg.scan_fizzles().unwrap();
         assert_eq!(fizz.kind, "fizzles");

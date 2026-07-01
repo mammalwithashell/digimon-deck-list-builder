@@ -59,15 +59,12 @@ fn filler(id: &str) -> CardData {
     c
 }
 
-fn trigger_trash_under(
-    runner: &mut DebugRunner,
-    host: PermanentHandle,
-) {
+fn trigger_trash_under(runner: &mut DebugRunner, host: PermanentHandle) {
     let host_card = runner.game.players[0].battle_area[host.index as usize]
         .top_card()
         .handle();
-    let trashed_card = runner.game.players[0].battle_area[host.index as usize].card_sources[0]
-        .handle();
+    let trashed_card =
+        runner.game.players[0].battle_area[host.index as usize].card_sources[0].handle();
     runner.game.enqueue_triggered(
         EffectTiming::OnDigivolutionCardTrashed,
         TriggerSource::SourceTrashedFromStack {
@@ -106,8 +103,10 @@ fn st24_14_has_somp_onplay_trash_trigger_and_security_clauses() {
         .collect();
 
     assert!(
-        triggered.iter().any(|t| t.when.contains(&CompiledTiming::OnPlay)
-            && t.when.contains(&CompiledTiming::StartOfYourMainPhase)),
+        triggered
+            .iter()
+            .any(|t| t.when.contains(&CompiledTiming::OnPlay)
+                && t.when.contains(&CompiledTiming::StartOfYourMainPhase)),
         "[SOMP][On Play] shared clause present"
     );
     assert!(
@@ -148,7 +147,10 @@ fn st24_14_trash_trigger_is_all_turns() {
             || p.any_of.iter().any(has_your_turn)
     }
     assert!(
-        trash.active_when.as_ref().map_or(true, |p| !has_your_turn(p)),
+        trash
+            .active_when
+            .as_ref()
+            .map_or(true, |p| !has_your_turn(p)),
         "[All Turns] trash trigger must NOT carry a your-turn gate"
     );
 }
@@ -176,7 +178,9 @@ fn st24_14_on_play_places_and_gains_memory_when_opp_has_digimon() {
         .len();
 
     runner.fire_on_play(0, tamer.index as usize);
-    let _v = runner.pending_selection_view().expect("place Yes/No installs");
+    let _v = runner
+        .pending_selection_view()
+        .expect("place Yes/No installs");
     runner.execute_branch(0).expect("accept the place");
     let _ = runner.auto_resolve();
 
@@ -208,12 +212,18 @@ fn st24_14_memory_gain_fires_even_when_place_declined() {
     let deck_before = runner.deck_size(0);
 
     runner.fire_on_play(0, tamer.index as usize);
-    let v = runner.pending_selection_view().expect("place Yes/No installs");
+    let v = runner
+        .pending_selection_view()
+        .expect("place Yes/No installs");
     let last = v.effect_choices.as_ref().unwrap().len() - 1;
     runner.execute_branch(last).expect("decline the place");
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.deck_size(0), deck_before, "declined ⇒ nothing placed");
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before,
+        "declined ⇒ nothing placed"
+    );
     assert_eq!(
         runner.memory(),
         mem_before + 1,
@@ -245,7 +255,9 @@ fn st24_14_trash_under_tamer_suspends_self_and_suspends_opp_digimon() {
         runner.pending_selection().is_some(),
         "the host-scoped trash trigger installs an optional accept prompt"
     );
-    runner.accept_optional_trigger().expect("accept suspend+suspend");
+    runner
+        .accept_optional_trigger()
+        .expect("accept suspend+suspend");
     let v = runner
         .pending_selection_view()
         .expect("opponent-Digimon pick installs");

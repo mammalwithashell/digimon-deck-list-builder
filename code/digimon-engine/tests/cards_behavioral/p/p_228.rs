@@ -359,7 +359,10 @@ fn p_228_main_uses_dual_reveal_buckets_for_ice_snow_digimon_and_liberator() {
     assert_eq!(buckets.0[0].max, 1);
     assert!(
         predicate_has_ice_snow_digimon_filter(
-            buckets.0[0].filter.as_ref().expect("Ice-Snow bucket filter")
+            buckets.0[0]
+                .filter
+                .as_ref()
+                .expect("Ice-Snow bucket filter")
         ),
         "first bucket must require an [Ice-Snow] trait Digimon"
     );

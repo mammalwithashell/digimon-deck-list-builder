@@ -336,7 +336,9 @@ fn bt13_102_observer_effect_play_opp_turn_accept_suspends_and_gains() {
         "the suspend cost must not be paid before accepting"
     );
 
-    runner.accept_optional_trigger().expect("accept the suspend");
+    runner
+        .accept_optional_trigger()
+        .expect("accept the suspend");
     runner.game.drain_effect_queue();
 
     assert!(

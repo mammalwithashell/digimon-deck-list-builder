@@ -136,9 +136,7 @@ fn declined_block_still_increments_once() {
         .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
 
     r.attack_player(atk, 1, false);
-    r.game
-        .resolve_selection(1, PASS)
-        .expect("decline block");
+    r.game.resolve_selection(1, PASS).expect("decline block");
 
     assert_eq!(
         r.game.n_digivolve_driven_attacks,
@@ -163,12 +161,7 @@ fn security_attack_plus_one_increments_exactly_once() {
     // recompute loop in resolve_player_security_loop reveals two cards.
     r.game.modifiers.add(
         atk,
-        ModifierEntry::simple(
-            ModifierType::SecurityAttackChange,
-            1,
-            Expiry::Permanent,
-            0,
-        ),
+        ModifierEntry::simple(ModifierType::SecurityAttackChange, 1, Expiry::Permanent, 0),
     );
 
     let _ = r.attack_player(atk, 1, false);
@@ -198,12 +191,7 @@ fn jamming_zero_strike_does_not_increment() {
     let atk = r.place_on_field(0, "ATK5", Some(0));
     r.game.modifiers.add(
         atk,
-        ModifierEntry::simple(
-            ModifierType::SecurityAttackChange,
-            -1,
-            Expiry::Permanent,
-            0,
-        ),
+        ModifierEntry::simple(ModifierType::SecurityAttackChange, -1, Expiry::Permanent, 0),
     );
 
     let _ = r.attack_player(atk, 1, false);

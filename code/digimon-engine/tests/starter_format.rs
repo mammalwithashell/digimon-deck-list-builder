@@ -3,11 +3,14 @@
 
 use digimon_engine::deck_tools::validate_deck_for_game_mode;
 
-const STARTER_JSON: &str =
-    include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/../../data/starter_decks.json"));
+const STARTER_JSON: &str = include_str!(concat!(
+    env!("CARGO_MANIFEST_DIR"),
+    "/../../data/starter_decks.json"
+));
 
 fn st2_cards() -> Vec<String> {
-    let v: serde_json::Value = serde_json::from_str(STARTER_JSON).expect("parse starter_decks.json");
+    let v: serde_json::Value =
+        serde_json::from_str(STARTER_JSON).expect("parse starter_decks.json");
     let decks = v["starter_decks"].as_array().expect("starter_decks array");
     let st2 = decks
         .iter()

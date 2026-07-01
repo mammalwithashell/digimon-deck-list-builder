@@ -369,8 +369,8 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 if let Some((link_cost, link_hosts)) =
                     game.digimon_link_condition_targets(perm_handle)
                 {
-                    let affordable = (game.memory as i32 - link_cost as i32)
-                        >= game.rules.memory_range.0 as i32;
+                    let affordable =
+                        (game.memory as i32 - link_cost as i32) >= game.rules.memory_range.0 as i32;
                     if !link_hosts.is_empty() && affordable {
                         let bit = FIELD_EFFECT_START
                             + i as u16 * EFFECTS_PER_PERMANENT

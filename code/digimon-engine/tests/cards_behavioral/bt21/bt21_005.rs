@@ -60,11 +60,7 @@ fn make_digimon(card_id: &str) -> CardData {
 /// This bypasses `decode_action` (which is turn-player-gated) so we can test
 /// the link event independently of whose turn it is — exercising the
 /// `active_when: { your_turn: true }` gate cleanly.
-fn simulate_link(
-    r: &mut DebugRunner,
-    host: PermanentHandle,
-    link_card_id: &str,
-) -> CardHandle {
+fn simulate_link(r: &mut DebugRunner, host: PermanentHandle, link_card_id: &str) -> CardHandle {
     let linked_handle = r.push_linked_owned(host, link_card_id, host.player);
     let player_count = r.game.players.len();
     for pid in 0..player_count {
@@ -149,9 +145,7 @@ fn bt21_005_has_single_inherited_when_linked_clause_no_other_clauses() {
         "the draw clause must be scope: inherited"
     );
     assert!(
-        clause
-            .when
-            .contains(&CompiledTiming::WhenCardLinkedToThis),
+        clause.when.contains(&CompiledTiming::WhenCardLinkedToThis),
         "must fire on WhenCardLinkedToThis; when={:?}",
         clause.when
     );

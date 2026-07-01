@@ -126,7 +126,10 @@ fn combo_a_dna_blowout_deletes_all_highest_level_and_grants_immunity() {
     let red = runner.place_on_field(0, "ST1-10", None);
 
     let before = snapshot(&runner);
-    assert_eq!(before.field[1], 3, "fixture: 3 opp Digimon (2 tied high + 1 low)");
+    assert_eq!(
+        before.field[1], 3,
+        "fixture: 3 opp Digimon (2 tied high + 1 low)"
+    );
 
     // Fire the REAL DNA digivolve: Blue Lv.6 + Red Lv.6 → EX9-021 at cost 0.
     let hand_card = runner.game.player(0).hand[0].handle();
@@ -166,7 +169,9 @@ fn combo_a_dna_blowout_deletes_all_highest_level_and_grants_immunity() {
         EffectSourceKind::Option,
     ] {
         assert!(
-            runner.game.permanent_is_unaffected_by_effect(evolved, 1, kind),
+            runner
+                .game
+                .permanent_is_unaffected_by_effect(evolved, 1, kind),
             "DNA-origin EX9-021 must be immune to opponent {kind:?} effects for the turn"
         );
     }
@@ -208,7 +213,9 @@ fn combo_a_standard_digivolve_does_not_grant_immunity() {
         },
     );
     runner.game.drain_effect_queue();
-    runner.auto_resolve().expect("standard trigger order resolves");
+    runner
+        .auto_resolve()
+        .expect("standard trigger order resolves");
 
     assert!(
         !runner
@@ -262,10 +269,13 @@ fn combo_a_standard_digivolve_does_not_grant_immunity() {
 /// currently a seated Delay-Option. Used to confirm BT17-095 seated itself as a
 /// Delay through its REAL [Main] body (Clause A `place_self_as_delay_option`).
 fn delay_option_present(runner: &DebugRunner, player: u8, card_id: &str) -> bool {
-    runner.game.players[player as usize].battle_area.iter().any(|p| {
-        p.top_card().card_id(&runner.game.card_data) == card_id
-            && matches!(p.option_state, OptionState::Delayed { .. })
-    })
+    runner.game.players[player as usize]
+        .battle_area
+        .iter()
+        .any(|p| {
+            p.top_card().card_id(&runner.game.card_data) == card_id
+                && matches!(p.option_state, OptionState::Delayed { .. })
+        })
 }
 
 /// Play BT17-095 from `player`'s hand through its REAL Option-play path and let
@@ -316,7 +326,11 @@ fn drive_first_valid(runner: &mut DebugRunner, max_steps: usize) {
             .copied()
             .find(|&a| a != PASS)
             .unwrap_or(PASS);
-        if runner.game.resolve_selection(view.selecting_player, action).is_err() {
+        if runner
+            .game
+            .resolve_selection(view.selecting_player, action)
+            .is_err()
+        {
             return;
         }
         runner.game.drain_effect_queue();
@@ -379,7 +393,10 @@ fn combo_b_delay_consumes_leaving_lv6_into_merged_omnimon() {
         .find(|p| p.top_card().card_id(&runner.game.card_data) == "EX4-060")
         .expect("merged Omnimon permanent must exist after the Delay DNA digivolve");
     assert!(
-        merged.card_sources.iter().any(|s| s.handle() == greymon_card),
+        merged
+            .card_sources
+            .iter()
+            .any(|s| s.handle() == greymon_card),
         "the leaving WarGreymon must be a digivolution source under the merged Omnimon"
     );
     assert!(
@@ -664,7 +681,9 @@ fn combo_d_free_cross_tribe_assembly_yields_both_lv6_materials() {
     runner.game.drain_effect_queue();
 
     // Branch 1 = "Digivolve Gabumon into MetalGarurumon free".
-    runner.execute_branch(1).expect("pick the free cross-tribe digivolve branch");
+    runner
+        .execute_branch(1)
+        .expect("pick the free cross-tribe digivolve branch");
     drive_first_valid(&mut runner, 20);
 
     // The former Gabumon stack is now topped by the Blue Lv.6 MetalGarurumon.
@@ -691,12 +710,12 @@ fn combo_d_free_cross_tribe_assembly_yields_both_lv6_materials() {
             )
         })
         .collect();
-    let has_red_lv6 = tops
-        .iter()
-        .any(|(name, lvl, cols)| name == "WarGreymon" && *lvl == Some(6) && cols.contains(&CardColor::Red));
-    let has_blue_lv6 = tops
-        .iter()
-        .any(|(name, lvl, cols)| name == "MetalGarurumon" && *lvl == Some(6) && cols.contains(&CardColor::Blue));
+    let has_red_lv6 = tops.iter().any(|(name, lvl, cols)| {
+        name == "WarGreymon" && *lvl == Some(6) && cols.contains(&CardColor::Red)
+    });
+    let has_blue_lv6 = tops.iter().any(|(name, lvl, cols)| {
+        name == "MetalGarurumon" && *lvl == Some(6) && cols.contains(&CardColor::Blue)
+    });
     assert!(
         has_red_lv6 && has_blue_lv6,
         "after the free arm, both a Red Lv.6 (WarGreymon) and a Blue Lv.6 \
@@ -850,7 +869,9 @@ fn combo_e_nokia_cost6_lv6_jump() {
         "the cost-6 jump must be a real digivolve → BT22-013's [When Digivolving] \
          branch-choice fires as a result"
     );
-    runner.auto_resolve().expect("branch-choice + follow-ups resolve");
+    runner
+        .auto_resolve()
+        .expect("branch-choice + follow-ups resolve");
 
     // The Agumon stack is now topped by WarGreymon (BT22-013).
     let agumon_perm = runner

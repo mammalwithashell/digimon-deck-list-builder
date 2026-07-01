@@ -28,9 +28,9 @@
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledCost, CompiledScope, CompiledStep, CompiledTiming,
 };
+use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
-use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
 use digimon_engine::enums::{CardKind, ModifierType, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 
@@ -105,13 +105,18 @@ fn bt25_071_has_lockdown_and_two_suspend_clauses() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
 
-    let lockdown = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::OnPlay)
-                && t.when.contains(&CompiledTiming::WhenDigivolving)
-    ));
-    assert!(lockdown, "must have an OnPlay/WhenDigivolving lockdown clause");
+    let lockdown = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::OnPlay)
+                    && t.when.contains(&CompiledTiming::WhenDigivolving)
+        )
+    });
+    assert!(
+        lockdown,
+        "must have an OnPlay/WhenDigivolving lockdown clause"
+    );
 
     let suspend_clauses: Vec<_> = card
         .effects
@@ -127,11 +132,15 @@ fn bt25_071_has_lockdown_and_two_suspend_clauses() {
         "must have a face-up AND an inherited on-suspend reveal clause"
     );
     assert!(
-        suspend_clauses.iter().any(|t| t.scope == CompiledScope::FaceUp),
+        suspend_clauses
+            .iter()
+            .any(|t| t.scope == CompiledScope::FaceUp),
         "one suspend clause is face-up"
     );
     assert!(
-        suspend_clauses.iter().any(|t| t.scope == CompiledScope::Inherited),
+        suspend_clauses
+            .iter()
+            .any(|t| t.scope == CompiledScope::Inherited),
         "one suspend clause is inherited"
     );
     for t in &suspend_clauses {
@@ -177,16 +186,15 @@ fn bt25_071_locks_an_opponent_digimon() {
     let orochimon = runner.place_on_field(0, CARD_ID, Some(0));
     let opp = runner.place_on_field(1, "OPP-DIGI", Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(
-            digimon_engine::enums::EffectTiming::OnPlay,
-            digimon_engine::selection::TriggerSource::Permanent(orochimon),
-        );
+    runner.game.enqueue_triggered(
+        digimon_engine::enums::EffectTiming::OnPlay,
+        digimon_engine::selection::TriggerSource::Permanent(orochimon),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
-        runner.pending_selection().is_some() || runner.game.modifiers.has(opp, ModifierType::CannotAttack),
+        runner.pending_selection().is_some()
+            || runner.game.modifiers.has(opp, ModifierType::CannotAttack),
         "lockdown must target the opponent Digimon"
     );
     if runner.pending_selection().is_some() {

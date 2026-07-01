@@ -123,15 +123,26 @@ fn st24_07_digimon_face_has_keywords_and_alt_path_ignore_requirements() {
     let alt = compiled
         .alt_paths
         .iter()
-        .find(|p| matches!(p.cost, Some(digimon_dsl::compiled::CompiledCost::Literal(3))))
+        .find(|p| {
+            matches!(
+                p.cost,
+                Some(digimon_dsl::compiled::CompiledCost::Literal(3))
+            )
+        })
         .expect("Lv.5 cost-3 alt-path present");
-    assert!(alt.ignore_requirements, "alt-path ignores digivolution requirements");
+    assert!(
+        alt.ignore_requirements,
+        "alt-path ignores digivolution requirements"
+    );
 
     // Static keywords on the Digimon face (Raid / Piercing / Security A. +1).
     let dual = compiled.dual.as_ref().unwrap();
     let kw_text = format!("{:?}", dual.digimon.effects);
     assert!(kw_text.contains("Raid"), "Digimon face grants <Raid>");
-    assert!(kw_text.contains("Piercing"), "Digimon face grants <Piercing>");
+    assert!(
+        kw_text.contains("Piercing"),
+        "Digimon face grants <Piercing>"
+    );
     assert!(
         kw_text.contains("SecurityAttackPlus"),
         "Digimon face grants <Security A. +1>"
@@ -215,7 +226,11 @@ fn st24_07_digimon_wd_plays_tamer_free_then_minus_9000() {
         .iter()
         .filter(|p| p.top_card().card_kind(&r.game.card_data) == CardKind::Tamer)
         .count();
-    assert_eq!(tamers_after, tamers_before + 1, "the Tamer was played for free");
+    assert_eq!(
+        tamers_after,
+        tamers_before + 1,
+        "the Tamer was played for free"
+    );
     assert_eq!(
         r.dp_of(opp).unwrap(),
         dp_before - 9000,
@@ -234,7 +249,9 @@ fn st24_07_tamer_play_declinable_but_minus_9000_still_applies() {
     let dp_before = r.dp_of(opp).unwrap();
 
     fire(&mut r, EffectTiming::WhenAttacking, me);
-    let v = r.pending_selection_view().expect("Tamer free-play installs");
+    let v = r
+        .pending_selection_view()
+        .expect("Tamer free-play installs");
     assert!(v.is_optional);
     r.execute_action(0, PASS).expect("decline the Tamer play");
     let _ = r.auto_resolve();
@@ -263,7 +280,11 @@ fn st24_07_option_main_minus_6000_then_delete_le_7000() {
     let opp_field_before = r.game.players[1].battle_area.len();
 
     let result = r.game.play_option_from_hand(0, 0);
-    assert_eq!(result, OptionPlayResult::Pending, "Option [Main] parks a selection");
+    assert_eq!(
+        result,
+        OptionPlayResult::Pending,
+        "Option [Main] parks a selection"
+    );
 
     // Prompt 1 (mandatory): -6000 DP target (any opponent Digimon).
     let v = r.pending_selection_view().expect("-6000 DP pick installs");
@@ -272,7 +293,12 @@ fn st24_07_option_main_minus_6000_then_delete_le_7000() {
     // Prompt 2 (optional): delete 1 opponent Digimon with ≤7000 DP. Only the
     // 7000 Digimon is legal (the 9000 is excluded).
     let v2 = r.pending_selection_view().expect("delete pick installs");
-    let legal: Vec<_> = v2.valid_action_ids.iter().copied().filter(|&id| id != PASS).collect();
+    let legal: Vec<_> = v2
+        .valid_action_ids
+        .iter()
+        .copied()
+        .filter(|&id| id != PASS)
+        .collect();
     // Pick the deletable Digimon.
     let pick = legal[0];
     r.execute_action(0, pick).unwrap();

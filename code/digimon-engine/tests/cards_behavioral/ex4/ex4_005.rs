@@ -115,7 +115,11 @@ fn ex4_005_has_koromon_digivolve_alt_path_cost0() {
     let found = card.alt_paths.iter().any(|p| {
         p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(0))
     });
-    assert!(found, "must declare a cost-0 [Koromon] digivolve; got {:?}", card.alt_paths);
+    assert!(
+        found,
+        "must declare a cost-0 [Koromon] digivolve; got {:?}",
+        card.alt_paths
+    );
 }
 
 // ─── SECTION 2 — Clause 1 [Start of Your Main Phase] gain 1 memory ──────────
@@ -130,7 +134,11 @@ fn ex4_005_gains_memory_with_red_tamer_in_play() {
     runner.game.enter_main_phase();
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.memory(), 1, "red Tamer in play → +1 memory at start of main");
+    assert_eq!(
+        runner.memory(),
+        1,
+        "red Tamer in play → +1 memory at start of main"
+    );
 }
 
 #[test]

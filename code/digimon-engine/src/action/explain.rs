@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 
+use crate::action::main_effect_select;
 use crate::action::space::{
     decode_attack, decode_breeding_source_select, decode_digivolve, decode_field_effect,
     decode_source_select, ACTION_SPACE_SIZE, ATTACK_END, ATTACK_START, BREEDING_SOURCE_SELECT_END,
@@ -9,7 +10,6 @@ use crate::action::space::{
     PLAY_HAND_END, PLAY_HAND_START, SECURITY_TARGET, SOURCE_SELECT_END, SOURCE_SELECT_START,
     TRASH_EFFECT_END, TRASH_EFFECT_START,
 };
-use crate::action::main_effect_select;
 use crate::card_source::CardSource;
 use crate::enums::{GamePhase, PlayerId};
 use crate::game::Game;
@@ -282,8 +282,8 @@ fn explain_main(game: &Game, player_id: PlayerId, action_id: u16) -> ActionExpla
         e.source_zone = Some(ActionZone::Hand);
         e.source_index = Some(hand_idx as u16);
         let e = with_hand_card(e, game, player_id, hand_idx);
-        let name =
-            main_effect_select::hand_main_match(game, player_id, hand_idx).and_then(|m| m.name_opt());
+        let name = main_effect_select::hand_main_match(game, player_id, hand_idx)
+            .and_then(|m| m.name_opt());
         return finalize_main_effect(e, name);
     }
 

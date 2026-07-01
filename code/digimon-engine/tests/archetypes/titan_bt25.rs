@@ -154,8 +154,16 @@ fn t1_dorimon_unsuspends_titan_deltamon() {
 
     let after = snapshot(&runner);
     // Cost paid: exactly 1 hand card trashed.
-    assert_eq!(after.hand[0], before.hand[0] - 1, "1 hand card trashed (the cost)");
-    assert_eq!(after.trash[0], before.trash[0] + 1, "trashed card lands in trash");
+    assert_eq!(
+        after.hand[0],
+        before.hand[0] - 1,
+        "1 hand card trashed (the cost)"
+    );
+    assert_eq!(
+        after.trash[0],
+        before.trash[0] + 1,
+        "trashed card lands in trash"
+    );
     // Payoff: Deltamon (the Titan) is unsuspended.
     assert!(
         !runner.game.players[0].battle_area[deltamon.index as usize].is_suspended,
@@ -268,9 +276,17 @@ fn t2_deltamon_de_digivolve_re_arms_on_opponent_turn() {
     let opp_a = runner.place_stack(1, &["OPP-LV4", "OPP-LV5"]);
     let opp_b = runner.place_stack(1, &["OPP-LV4B", "OPP-LV5B"]);
 
-    let a_before = runner.game.players[1].battle_area[opp_a.index as usize].card_sources.len();
-    let b_before = runner.game.players[1].battle_area[opp_b.index as usize].card_sources.len();
-    assert_eq!((a_before, b_before), (2, 2), "precondition: two 2-source opponent stacks");
+    let a_before = runner.game.players[1].battle_area[opp_a.index as usize]
+        .card_sources
+        .len();
+    let b_before = runner.game.players[1].battle_area[opp_b.index as usize]
+        .card_sources
+        .len();
+    assert_eq!(
+        (a_before, b_before),
+        (2, 2),
+        "precondition: two 2-source opponent stacks"
+    );
 
     // ── Suspend #1 on P0's turn → fires De-Digivolve (removes 1 source). ──
     runner.game.suspend(deltamon);
@@ -280,10 +296,17 @@ fn t2_deltamon_de_digivolve_re_arms_on_opponent_turn() {
     );
     runner.auto_resolve().expect("resolve first De-Digivolve");
     let removed_after_first = (a_before
-        - runner.game.players[1].battle_area[opp_a.index as usize].card_sources.len())
+        - runner.game.players[1].battle_area[opp_a.index as usize]
+            .card_sources
+            .len())
         + (b_before
-            - runner.game.players[1].battle_area[opp_b.index as usize].card_sources.len());
-    assert_eq!(removed_after_first, 1, "exactly one opponent source De-Digivolved on turn 1");
+            - runner.game.players[1].battle_area[opp_b.index as usize]
+                .card_sources
+                .len());
+    assert_eq!(
+        removed_after_first, 1,
+        "exactly one opponent source De-Digivolved on turn 1"
+    );
 
     // ── Rotate to the opponent's turn. ──
     runner.end_turn();
@@ -301,9 +324,13 @@ fn t2_deltamon_de_digivolve_re_arms_on_opponent_turn() {
     );
     runner.auto_resolve().expect("resolve second De-Digivolve");
     let removed_total = (a_before
-        - runner.game.players[1].battle_area[opp_a.index as usize].card_sources.len())
+        - runner.game.players[1].battle_area[opp_a.index as usize]
+            .card_sources
+            .len())
         + (b_before
-            - runner.game.players[1].battle_area[opp_b.index as usize].card_sources.len());
+            - runner.game.players[1].battle_area[opp_b.index as usize]
+                .card_sources
+                .len());
     assert_eq!(
         removed_total, 2,
         "a second source must be De-Digivolved on the opponent's turn (cross-turn re-arm)"
@@ -329,7 +356,9 @@ fn t2_deltamon_de_digivolve_same_turn_lockout() {
 
     let deltamon = runner.place_on_field(0, DELTAMON, Some(0));
     let opp = runner.place_stack(1, &["OPP-LV4", "OPP-LV5"]);
-    let before = runner.game.players[1].battle_area[opp.index as usize].card_sources.len();
+    let before = runner.game.players[1].battle_area[opp.index as usize]
+        .card_sources
+        .len();
 
     runner.game.suspend(deltamon);
     runner.auto_resolve().expect("first De-Digivolve resolves");
@@ -338,8 +367,14 @@ fn t2_deltamon_de_digivolve_same_turn_lockout() {
         runner.pending_selection().is_none(),
         "second self-suspend in the SAME turn must not fire (OPT lockout)"
     );
-    let after = runner.game.players[1].battle_area[opp.index as usize].card_sources.len();
-    assert_eq!(before - after, 1, "only one source De-Digivolved within one turn");
+    let after = runner.game.players[1].battle_area[opp.index as usize]
+        .card_sources
+        .len();
+    assert_eq!(
+        before - after,
+        1,
+        "only one source De-Digivolved within one turn"
+    );
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -492,7 +527,11 @@ fn t4_brachiomon_removes_highest_dp_after_de_digivolve() {
 
     let before = snapshot(&runner);
     let high_dp = runner.effective_dp(opp_high);
-    assert_eq!(high_dp, Some(11000), "OPP-HIGH is the highest-DP opponent Digimon");
+    assert_eq!(
+        high_dp,
+        Some(11000),
+        "OPP-HIGH is the highest-DP opponent Digimon"
+    );
 
     // Fire Brachiomon's [On Play] removal.
     runner.fire_play_event_triggers(0, brachiomon.index as usize, false, false);

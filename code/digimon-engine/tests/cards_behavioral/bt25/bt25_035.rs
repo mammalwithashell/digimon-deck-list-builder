@@ -141,7 +141,10 @@ fn face_down_source_count(runner: &DebugRunner, p: u8) -> usize {
 /// Build a runner with Cougarmon on the field as a battle-area top (the carrier
 /// that will digivolve), plus the requested digivolve targets in hand, plus
 /// the requested set of Tamers each carrying `face_down_each` face-down sources.
-fn cougar_runner(targets: &[&str], tamers_fd: &[usize]) -> (DebugRunner, PermanentHandle, Vec<PermanentHandle>) {
+fn cougar_runner(
+    targets: &[&str],
+    tamers_fd: &[usize],
+) -> (DebugRunner, PermanentHandle, Vec<PermanentHandle>) {
     let mut builder = DebugRunner::builder()
         .add_card(cougarmon())
         .add_card(make_opp_digimon("OPP", 6000))
@@ -149,7 +152,10 @@ fn cougar_runner(targets: &[&str], tamers_fd: &[usize]) -> (DebugRunner, Permane
         .add_card(gd_lv5("GD5"))
         .add_card(non_gd_lv5("NONGD5"))
         .add_card(tamer("TAMER"));
-    builder = builder.deck(0, &["FILLER"; 6]).deck(1, &["FILLER"; 6]).memory(10);
+    builder = builder
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(10);
     let mut runner = builder.start();
     runner.set_first_player(0);
 
@@ -228,7 +234,10 @@ fn bt25_035_has_onplay_whendigivolving_and_inherited_barrier() {
                 if *scope == CompiledScope::Inherited
         )
     });
-    assert!(has_inherited_keyword, "inherited grant_keyword (Barrier) present");
+    assert!(
+        has_inherited_keyword,
+        "inherited grant_keyword (Barrier) present"
+    );
 }
 
 #[test]
@@ -326,7 +335,9 @@ fn bt25_035_dp_debuff_expires_at_end_of_turn() {
         .copied()
         .find(|&id| id != digimon_engine::action::space::PASS)
         .expect("target");
-    runner.execute_action(view.selecting_player, target).expect("apply");
+    runner
+        .execute_action(view.selecting_player, target)
+        .expect("apply");
     let _ = runner.auto_resolve();
     assert_eq!(runner.effective_dp(opp).expect("opp dp"), dp_before - 3000);
 
@@ -374,7 +385,11 @@ fn bt25_035_trash_2_from_one_tamer_then_free_digivolve() {
     let (mut runner, cougar, tamers) = cougar_runner(&["GD5", "NONGD5"], &[2]);
     let tamer = tamers[0];
     let mem_before = runner.memory();
-    assert_eq!(face_down_source_count(&runner, 0), 2, "2 face-down sources staged");
+    assert_eq!(
+        face_down_source_count(&runner, 0),
+        2,
+        "2 face-down sources staged"
+    );
 
     runner.fire_on_play(0, cougar.index as usize);
 
@@ -433,7 +448,11 @@ fn bt25_035_trash_2_from_one_tamer_then_free_digivolve() {
 fn bt25_035_trash_1_from_each_of_two_tamers_then_free_digivolve() {
     let (mut runner, cougar, tamers) = cougar_runner(&["GD5"], &[1, 1]);
     assert_eq!(tamers.len(), 2);
-    assert_eq!(face_down_source_count(&runner, 0), 2, "1 face-down under each Tamer");
+    assert_eq!(
+        face_down_source_count(&runner, 0),
+        2,
+        "1 face-down under each Tamer"
+    );
     let mem_before = runner.memory();
 
     runner.fire_on_play(0, cougar.index as usize);
@@ -455,7 +474,14 @@ fn bt25_035_trash_1_from_each_of_two_tamers_then_free_digivolve() {
         "both Tamers are eligible for the first trash pick"
     );
     runner
-        .execute_action(0, v1.valid_action_ids.iter().copied().find(|&id| id != PASS).unwrap())
+        .execute_action(
+            0,
+            v1.valid_action_ids
+                .iter()
+                .copied()
+                .find(|&id| id != PASS)
+                .unwrap(),
+        )
         .expect("pick first Tamer");
 
     // Second Tamer pick (the other Tamer, since the first now has no face-down).
@@ -463,7 +489,14 @@ fn bt25_035_trash_1_from_each_of_two_tamers_then_free_digivolve() {
         .pending_selection_view()
         .expect("second Tamer pick installs (1+1 distribution)");
     runner
-        .execute_action(0, v2.valid_action_ids.iter().copied().find(|&id| id != PASS).unwrap())
+        .execute_action(
+            0,
+            v2.valid_action_ids
+                .iter()
+                .copied()
+                .find(|&id| id != PASS)
+                .unwrap(),
+        )
         .expect("pick second Tamer");
     let _ = runner.auto_resolve();
 
@@ -478,7 +511,11 @@ fn bt25_035_trash_1_from_each_of_two_tamers_then_free_digivolve() {
         0,
         "1 face-down source trashed from each of the two Tamers"
     );
-    assert_eq!(runner.memory(), mem_before, "free digivolve — no memory paid");
+    assert_eq!(
+        runner.memory(),
+        mem_before,
+        "free digivolve — no memory paid"
+    );
 }
 
 /// DECLINABLE ("may"): PASS on the hand pick leaves Cougarmon as-is, no trash,
@@ -489,7 +526,9 @@ fn bt25_035_then_clause_is_declinable() {
     let mem_before = runner.memory();
 
     runner.fire_on_play(0, cougar.index as usize);
-    let view = runner.pending_selection_view().expect("optional hand pick surfaces");
+    let view = runner
+        .pending_selection_view()
+        .expect("optional hand pick surfaces");
     assert!(view.is_optional);
     runner.execute_action(0, PASS).expect("declining is legal");
     let _ = runner.auto_resolve();
@@ -514,7 +553,11 @@ fn bt25_035_then_clause_is_declinable() {
 #[test]
 fn bt25_035_then_clause_blocked_when_fewer_than_2_face_down_sources() {
     let (mut runner, cougar, _tamers) = cougar_runner(&["GD5"], &[1]);
-    assert_eq!(face_down_source_count(&runner, 0), 1, "only 1 face-down source");
+    assert_eq!(
+        face_down_source_count(&runner, 0),
+        1,
+        "only 1 face-down source"
+    );
     let mem_before = runner.memory();
 
     runner.fire_on_play(0, cougar.index as usize);
@@ -550,7 +593,11 @@ fn bt25_035_then_clause_blocked_when_fewer_than_2_face_down_sources() {
 #[test]
 fn bt25_035_trash_n_clones_faithfully_between_tamer_picks() {
     let (mut runner, cougar, _tamers) = cougar_runner(&["GD5"], &[1, 1]);
-    assert_eq!(face_down_source_count(&runner, 0), 2, "1 face-down under each Tamer");
+    assert_eq!(
+        face_down_source_count(&runner, 0),
+        2,
+        "1 face-down under each Tamer"
+    );
     let mem_before = runner.memory();
 
     runner.fire_on_play(0, cougar.index as usize);
@@ -564,7 +611,9 @@ fn bt25_035_trash_n_clones_faithfully_between_tamer_picks() {
     runner.execute_action(0, pick).expect("choose GD5");
 
     // First Tamer pick → resolve it (trashes 1, re-parks the second pick).
-    let v1 = runner.pending_selection_view().expect("first Tamer pick installs");
+    let v1 = runner
+        .pending_selection_view()
+        .expect("first Tamer pick installs");
     let t1 = v1
         .valid_action_ids
         .iter()
@@ -597,7 +646,9 @@ fn bt25_035_trash_n_clones_faithfully_between_tamer_picks() {
     );
 
     // Clone, then resolve the second pick on the CLONE only.
-    let v2 = runner.pending_selection_view().expect("second Tamer pick installs");
+    let v2 = runner
+        .pending_selection_view()
+        .expect("second Tamer pick installs");
     let t2 = v2
         .valid_action_ids
         .iter()
@@ -605,7 +656,9 @@ fn bt25_035_trash_n_clones_faithfully_between_tamer_picks() {
         .find(|&id| id != PASS)
         .unwrap();
     let mut clone = runner.game.clone();
-    clone.resolve_selection(0, t2).expect("clone's second pick resolves");
+    clone
+        .resolve_selection(0, t2)
+        .expect("clone's second pick resolves");
     assert_eq!(
         clone.player(0).battle_area[cougar.index as usize]
             .top_card()
@@ -629,7 +682,9 @@ fn bt25_035_trash_n_clones_faithfully_between_tamer_picks() {
 
     // REPLAYS IDENTICALLY: resolving the same pick on the original reaches the
     // clone's state.
-    runner.execute_action(0, t2).expect("original's second pick resolves");
+    runner
+        .execute_action(0, t2)
+        .expect("original's second pick resolves");
     let _ = runner.auto_resolve();
     assert_eq!(
         runner.game.player(0).battle_area[cougar.index as usize]
@@ -638,8 +693,16 @@ fn bt25_035_trash_n_clones_faithfully_between_tamer_picks() {
         "GD5",
         "original reaches the same GD5 digivolve as the clone"
     );
-    assert_eq!(face_down_source_count(&runner, 0), 0, "both sources trashed");
-    assert_eq!(runner.memory(), mem_before, "free digivolve — no memory paid");
+    assert_eq!(
+        face_down_source_count(&runner, 0),
+        0,
+        "both sources trashed"
+    );
+    assert_eq!(
+        runner.memory(),
+        mem_before,
+        "free digivolve — no memory paid"
+    );
 }
 
 /// NEGATIVE (target filter): no [Glowing Dawn] Lv.5 in hand ⇒ clean no-op even

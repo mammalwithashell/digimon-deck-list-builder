@@ -1313,7 +1313,9 @@ fn make_partner_lv4_green(id: &str) -> CardData {
 
 /// Plays the Veemon from Davis & Ken's start-of-main trigger. Returns the
 /// PermanentHandle the Veemon ended up at.
-fn play_veemon_via_davis_and_ken(runner: &mut DebugRunner) -> digimon_engine::permanent::PermanentHandle {
+fn play_veemon_via_davis_and_ken(
+    runner: &mut DebugRunner,
+) -> digimon_engine::permanent::PermanentHandle {
     runner.game.enter_main_phase();
     let view = runner.pending_selection_view().expect("hand selection");
     runner
@@ -1402,8 +1404,9 @@ fn bt16_085_dna_into_paildramon_skips_scheduled_return() {
         .iter()
         .position(|p| p.top_card().card_id(&runner.game.card_data) == "PAILDRAMON-RESULT")
         .expect("merged Paildramon on field after DNA");
-    let pre_eot_sources_len =
-        runner.game.players[0].battle_area[paildramon_slot].card_sources.len();
+    let pre_eot_sources_len = runner.game.players[0].battle_area[paildramon_slot]
+        .card_sources
+        .len();
     assert!(
         pre_eot_sources_len >= 3,
         "merged stack should carry both materials' sources + the new top, got {} sources",
@@ -1452,7 +1455,10 @@ fn bt16_085_dna_into_paildramon_skips_scheduled_return() {
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT16-085");
-    assert!(tamer_still_on_field, "Davis & Ken tamer must still be on field");
+    assert!(
+        tamer_still_on_field,
+        "Davis & Ken tamer must still be on field"
+    );
     let _ = tamer;
 }
 
@@ -1572,7 +1578,10 @@ fn bt16_085_played_digimon_deleted_skips_scheduled_return() {
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "VEEMON");
-    assert!(!veemon_in_battle_area, "Veemon must be deleted from battle area");
+    assert!(
+        !veemon_in_battle_area,
+        "Veemon must be deleted from battle area"
+    );
     let p0_trash_after_delete = runner.game.player(0).trash.len();
     assert!(
         p0_trash_after_delete > p0_trash_before_delete,

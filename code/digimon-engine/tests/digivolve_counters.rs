@@ -39,9 +39,7 @@ fn regular_digivolve_from_hand_increments_only_active_player_regular_counter() {
     runner.place_on_field(0, "BASE-LV4", Some(0));
     runner.game.current_phase = GamePhase::Main;
 
-    let ok = runner
-        .game
-        .digivolve_from_hand(0, 0, 0, PlaySource::ByHand);
+    let ok = runner.game.digivolve_from_hand(0, 0, 0, PlaySource::ByHand);
     assert!(ok, "regular digivolve must succeed in this setup");
 
     assert_eq!(runner.game.n_digivolutions, [1u32, 0u32]);
@@ -82,6 +80,77 @@ fn dna_digivolve_increments_both_active_player_counters_once() {
 
     assert_eq!(runner.game.n_digivolutions, [1u32, 0u32]);
     assert_eq!(runner.game.n_dna_digivolutions, [1u32, 0u32]);
+}
+
+#[test]
+fn dna_digivolve_material_prompts_clone_faithfully() {
+    let lv5 = make_test_card_with_level("TST-LV5", "FiveDigi", 5);
+    let lv6 = make_test_card_with_level("TST-LV6", "SixDigi", 6);
+    let dna = make_test_dna_card("TST-DNA", "DnaDigi", 5, 6, 0);
+
+    let mut runner = DebugRunner::builder()
+        .add_card(lv5)
+        .add_card(lv6)
+        .add_card(dna)
+        .hand(0, &["TST-DNA"])
+        .memory(5)
+        .start();
+
+    let handle_lv5 = runner.place_on_field(0, "TST-LV5", None);
+    let handle_lv6 = runner.place_on_field(0, "TST-LV6", None);
+    runner.game.current_phase = GamePhase::Main;
+
+    assert!(runner.game.initiate_dna_digivolve(0, 0));
+    assert!(
+        runner.game.pending_selection_resume.is_some(),
+        "DNA first-material prompt must park a data frame"
+    );
+
+    let mut clone = runner.game.clone();
+    clone
+        .resolve_selection(0, handle_lv5.index as u16)
+        .expect("clone picks first DNA material");
+    assert!(
+        clone.pending_selection_resume.is_some(),
+        "DNA second-material prompt must also park a data frame"
+    );
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "resolving the clone must leave the original at the first DNA prompt"
+    );
+
+    clone
+        .resolve_selection(0, handle_lv6.index as u16)
+        .expect("clone picks second DNA material");
+    assert!(clone.pending_selection.is_none());
+    assert_eq!(clone.player(0).hand.len(), 0);
+    assert_eq!(clone.player(0).battle_area.len(), 1);
+    assert_eq!(clone.n_digivolutions, [1u32, 0u32]);
+    assert_eq!(clone.n_dna_digivolutions, [1u32, 0u32]);
+
+    runner
+        .game
+        .resolve_selection(0, handle_lv5.index as u16)
+        .expect("original picks first DNA material");
+    runner
+        .game
+        .resolve_selection(0, handle_lv6.index as u16)
+        .expect("original picks second DNA material");
+
+    assert_eq!(
+        runner.game.player(0).hand.len(),
+        clone.player(0).hand.len(),
+        "original and clone consume the DNA result card identically"
+    );
+    assert_eq!(
+        runner.game.player(0).battle_area.len(),
+        clone.player(0).battle_area.len(),
+        "original and clone leave the same number of permanents"
+    );
+    assert_eq!(
+        runner.game.n_dna_digivolutions, clone.n_dna_digivolutions,
+        "original and clone increment DNA counters identically"
+    );
 }
 
 /// If a DNA digivolve is rejected for a phase-illegality reason (here:

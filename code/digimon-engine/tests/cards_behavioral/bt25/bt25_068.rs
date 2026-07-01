@@ -98,11 +98,13 @@ fn bt25_068_metadata() {
 fn bt25_068_has_collision_keyword() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
-    let has = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
-            if keyword == "Collision"
-    ));
+    let has = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
+                if keyword == "Collision"
+        )
+    });
     assert!(has, "BT25-068 must grant <Collision>");
 }
 
@@ -175,9 +177,13 @@ fn bt25_068_self_suspend_de_digivolves_opponent() {
     let deltamon = runner.place_on_field(0, CARD_ID, Some(0));
     let opp = runner.place_stack(1, &["OPP-LV4", "OPP-LV5"]);
 
-    let opp_sources_before =
-        runner.game.players[1].battle_area[opp.index as usize].card_sources.len();
-    assert_eq!(opp_sources_before, 2, "precondition: opponent has 2 sources");
+    let opp_sources_before = runner.game.players[1].battle_area[opp.index as usize]
+        .card_sources
+        .len();
+    assert_eq!(
+        opp_sources_before, 2,
+        "precondition: opponent has 2 sources"
+    );
 
     runner.game.suspend(deltamon);
     assert!(
@@ -186,8 +192,9 @@ fn bt25_068_self_suspend_de_digivolves_opponent() {
     );
     runner.auto_resolve().expect("resolve de_digivolve");
 
-    let opp_sources_after =
-        runner.game.players[1].battle_area[opp.index as usize].card_sources.len();
+    let opp_sources_after = runner.game.players[1].battle_area[opp.index as usize]
+        .card_sources
+        .len();
     assert_eq!(
         opp_sources_after,
         opp_sources_before - 1,
@@ -204,8 +211,9 @@ fn bt25_068_de_digivolve_is_once_per_turn() {
 
     runner.game.suspend(deltamon);
     runner.auto_resolve().expect("first de_digivolve resolves");
-    let after_first =
-        runner.game.players[1].battle_area[opp.index as usize].card_sources.len();
+    let after_first = runner.game.players[1].battle_area[opp.index as usize]
+        .card_sources
+        .len();
 
     // Re-suspend in the same turn.
     runner.game.suspend(deltamon);
@@ -213,8 +221,9 @@ fn bt25_068_de_digivolve_is_once_per_turn() {
         runner.pending_selection().is_none(),
         "second self-suspend in the same turn must not fire (OPT)"
     );
-    let after_second =
-        runner.game.players[1].battle_area[opp.index as usize].card_sources.len();
+    let after_second = runner.game.players[1].battle_area[opp.index as usize]
+        .card_sources
+        .len();
     assert_eq!(
         after_first, after_second,
         "no further De-Digivolve on the second suspend"

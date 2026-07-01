@@ -654,12 +654,20 @@ fn st22_08_mode_select_clones_faithfully() {
     runner.game.enter_main_phase();
 
     let _ = runner.game.play_option_from_hand(0, 0);
-    assert!(mode_select_pending(&runner), "dual-mode mode-select installed");
+    assert!(
+        mode_select_pending(&runner),
+        "dual-mode mode-select installed"
+    );
     assert!(
         runner.game.pending_selection_resume.is_some(),
         "the mode-select must be resume-driven (clone-safe)"
     );
-    let main_mode = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let main_mode = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
 
     // Clone at the mode-select; play Standard [Main] on the clone only.
     let mut clone = runner.game.clone();

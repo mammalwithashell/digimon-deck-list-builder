@@ -154,10 +154,13 @@ fn field_has_top(runner: &DebugRunner, player: u8, card_id: &str) -> bool {
 /// The single battle-area permanent on `player`'s side whose top card is
 /// `card_id`, as a Delay-Option state matcher.
 fn delay_option_present(runner: &DebugRunner, player: u8, card_id: &str) -> bool {
-    runner.game.players[player as usize].battle_area.iter().any(|p| {
-        p.top_card().card_id(&runner.game.card_data) == card_id
-            && matches!(p.option_state, OptionState::Delayed { .. })
-    })
+    runner.game.players[player as usize]
+        .battle_area
+        .iter()
+        .any(|p| {
+            p.top_card().card_id(&runner.game.card_data) == card_id
+                && matches!(p.option_state, OptionState::Delayed { .. })
+        })
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -584,7 +587,10 @@ fn combo3_mega_knight_security_free_plays_tamer_and_returns_self_to_hand() {
 
     let attacker_handle = runner.place_on_field(0, "ST1-08", Some(0));
     let before = snapshot(&runner);
-    assert_eq!(before.security[1], 1, "precondition: BT17-095 in P1 security");
+    assert_eq!(
+        before.security[1], 1,
+        "precondition: BT17-095 in P1 security"
+    );
     assert_eq!(before.field[1], 0, "precondition: P1 has no Tamer on field");
 
     // Real attack into the defender's security → BT17-095 is checked and its
@@ -651,7 +657,11 @@ fn combo3_mega_knight_security_returns_self_to_hand_with_no_tamer() {
 
     let attacker_handle = runner.place_on_field(0, "ST1-08", Some(0));
     assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
-    assert_eq!(runner.trash_size(1), 0, "precondition: defender trash empty");
+    assert_eq!(
+        runner.trash_size(1),
+        0,
+        "precondition: defender trash empty"
+    );
 
     let _ = runner.attack_player(attacker_handle, 1, false);
     runner.auto_resolve().expect("security selections resolve");
@@ -663,7 +673,11 @@ fn combo3_mega_knight_security_returns_self_to_hand_with_no_tamer() {
         "no Tamer played from an empty hand and trash"
     );
     // The mandatory tail still added BT17-095 to the defender's hand.
-    assert_eq!(runner.security_count(1), 0, "BT17-095 left the security stack");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "BT17-095 left the security stack"
+    );
     assert_eq!(
         runner.hand_size(1),
         1,

@@ -54,9 +54,10 @@ fn push_trash(runner: &mut DebugRunner, p: u8, card_id: &str) {
 /// Fire a permanent's `[When Digivolving]` timing (`place_stack` builds the stack
 /// without firing the trigger, so we fire it explicitly to model the digivolve).
 fn fire_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -246,12 +247,13 @@ fn death_claw_only_targets_opponent_level_4_or_lower() {
     let lv4_h = runner.place_on_field(1, "ST6-07", None);
     runner.place_on_field(1, "ST6-09", None);
 
-    assert!(runner.game.activate_hand_main(0, 0), "Death Claw must activate");
+    assert!(
+        runner.game.activate_hand_main(0, 0),
+        "Death Claw must activate"
+    );
 
     // Accept the sacrifice (own carrier).
-    let sac_view = runner
-        .pending_selection_view()
-        .expect("sacrifice prompt");
+    let sac_view = runner.pending_selection_view().expect("sacrifice prompt");
     let sac_action = sac_view
         .valid_action_ids
         .iter()
@@ -562,7 +564,10 @@ fn cresgarurumon_digiburst_plays_lv3_purple_from_trash() {
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "ST6-02");
-    assert!(lv3_on_field, "the recurred purple Lv3 (ST6-02) must be on your field");
+    assert!(
+        lv3_on_field,
+        "the recurred purple Lv3 (ST6-02) must be on your field"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

@@ -22,7 +22,10 @@ use crate::trigger_context::*;
 use rand::seq::SliceRandom;
 
 impl Game {
-    pub(crate) fn commit_digixros_material_sources(&mut self, mut target: PermanentHandle) -> PermanentHandle {
+    pub(crate) fn commit_digixros_material_sources(
+        &mut self,
+        mut target: PermanentHandle,
+    ) -> PermanentHandle {
         let Some(origins) = self
             .pending_digixros_transaction
             .as_ref()

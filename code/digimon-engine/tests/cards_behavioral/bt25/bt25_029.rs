@@ -83,8 +83,10 @@ fn seed_tamer_with_face_down(runner: &mut DebugRunner, player: u8) -> PermanentH
 }
 
 fn fire_wd(r: &mut DebugRunner, handle: PermanentHandle) {
-    r.game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     r.game.drain_effect_queue();
 }
 
@@ -133,13 +135,17 @@ fn bt25_029_metadata_keywords_and_alt_path() {
         .iter()
         .filter_map(|c| match c {
             CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
-                keyword, ..
+                keyword,
+                ..
             }) => Some(format!("{keyword:?}")),
             _ => None,
         })
         .collect();
     for want in ["Reboot", "Blocker", "Evade"] {
-        assert!(kws.iter().any(|k| k.contains(want)), "<{want}> grant present");
+        assert!(
+            kws.iter().any(|k| k.contains(want)),
+            "<{want}> grant present"
+        );
     }
 
     assert!(
@@ -202,7 +208,9 @@ fn bt25_029_wd_first_bounce_then_declines_trash() {
     fire_wd(&mut runner, mir);
 
     // Prompt 1: optional bounce of a Lv≤5 Digimon — only OPP-LOW (Lv3) is legal.
-    let v = runner.pending_selection_view().expect("first bounce prompt");
+    let v = runner
+        .pending_selection_view()
+        .expect("first bounce prompt");
     assert!(v.is_optional, "the first bounce is 'you may' ⇒ optional");
     let pick = v
         .valid_action_ids
@@ -214,7 +222,9 @@ fn bt25_029_wd_first_bounce_then_declines_trash() {
     assert!(in_hand(&runner, 1, "OPP-LOW"), "OPP-LOW returned to hand");
 
     // Prompt 2: the optional trash — DECLINE it.
-    let v2 = runner.pending_selection_view().expect("optional trash prompt");
+    let v2 = runner
+        .pending_selection_view()
+        .expect("optional trash prompt");
     assert!(v2.is_optional, "the trash+lowest-bounce is declinable");
     runner.execute_action(0, PASS).expect("decline the trash");
     let _ = runner.auto_resolve();
@@ -234,12 +244,18 @@ fn bt25_029_wd_trash_then_bounces_lowest_level() {
     fire_wd(&mut runner, mir);
 
     // Prompt 1: DECLINE the optional first bounce.
-    let v = runner.pending_selection_view().expect("first bounce prompt");
+    let v = runner
+        .pending_selection_view()
+        .expect("first bounce prompt");
     assert!(v.is_optional);
-    runner.execute_action(0, PASS).expect("decline first bounce");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline first bounce");
 
     // Prompt 2: ENGAGE the optional trash (pick the Tamer).
-    let v2 = runner.pending_selection_view().expect("optional trash prompt");
+    let v2 = runner
+        .pending_selection_view()
+        .expect("optional trash prompt");
     let tamer_pick = v2
         .valid_action_ids
         .iter()
@@ -249,7 +265,11 @@ fn bt25_029_wd_trash_then_bounces_lowest_level() {
     runner.execute_action(0, tamer_pick).unwrap();
     let _ = runner.auto_resolve();
 
-    assert_eq!(face_down_count(&runner, 0), 0, "engaged ⇒ the FD source trashed");
+    assert_eq!(
+        face_down_count(&runner, 0),
+        0,
+        "engaged ⇒ the FD source trashed"
+    );
     assert!(
         in_hand(&runner, 1, "OPP-LOW"),
         "the lowest-level opp Digimon (OPP-LOW, Lv3) was returned to hand"
@@ -285,7 +305,10 @@ fn at_runner() -> (DebugRunner, PermanentHandle, PermanentHandle) {
 fn bt25_029_unsuspends_on_opponent_hand_gain_by_effect() {
     let (mut runner, mir, _t) = at_runner();
     fire_effect_add_to_hand(&mut runner, 1);
-    assert!(runner.pending_selection().is_some(), "optional unsuspend prompt installs");
+    assert!(
+        runner.pending_selection().is_some(),
+        "optional unsuspend prompt installs"
+    );
     let _ = runner.auto_resolve();
     assert!(
         !runner.game.players[0].battle_area[mir.index as usize].is_suspended,
@@ -311,7 +334,10 @@ fn bt25_029_does_not_unsuspend_on_own_hand_gain() {
 fn bt25_029_unsuspends_on_own_tamer_source_trashed() {
     let (mut runner, mir, tamer) = at_runner();
     runner.trash_one_source(tamer);
-    assert!(runner.pending_selection().is_some(), "optional unsuspend prompt installs");
+    assert!(
+        runner.pending_selection().is_some(),
+        "optional unsuspend prompt installs"
+    );
     let _ = runner.auto_resolve();
     assert!(
         !runner.game.players[0].battle_area[mir.index as usize].is_suspended,

@@ -116,11 +116,7 @@ fn bt25_101_structure_use_req_main_security_inherited_ess_and_link_req() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when == vec![CompiledTiming::MainFromHand] =>
-            {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::MainFromHand] => Some(t),
             _ => None,
         })
         .expect("MainFromHand clause");
@@ -131,7 +127,10 @@ fn bt25_101_structure_use_req_main_security_inherited_ess_and_link_req() {
         "[Main] draws (inside the trash-cost gate)"
     );
     assert!(
-        steps_contain(&main.process, &|s| matches!(s, CompiledStep::LinkCards { .. })),
+        steps_contain(&main.process, &|s| matches!(
+            s,
+            CompiledStep::LinkCards { .. }
+        )),
         "[Main] has a link_cards step (link this card or TS from trash)"
     );
     // The trash cost is a `select_hand { cost: true }` over [TS] hand cards.

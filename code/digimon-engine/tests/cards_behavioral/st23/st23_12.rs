@@ -131,10 +131,12 @@ fn st23_12_metadata_and_alt_path() {
 fn st23_12_has_on_play_clause_and_inherited_retaliation() {
     let runner = base();
     let card = runner.compiled_card(CARD_ID).expect("compiled");
-    let has_op = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnPlay)
-    ));
+    let has_op = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnPlay)
+        )
+    });
     assert!(has_op, "[On Play] clause present");
     let has_ret = card.effects.iter().any(|c| matches!(
         c,
@@ -170,7 +172,9 @@ fn st23_12_trashes_face_down_and_returns_glowing_dawn_from_trash() {
         .accept_optional_trigger()
         .expect("accept the optional clause");
     // The Tamer pick (cost): pick the only eligible Tamer.
-    let v = runner.pending_selection_view().expect("Tamer pick installs");
+    let v = runner
+        .pending_selection_view()
+        .expect("Tamer pick installs");
     runner.execute_action(0, v.valid_action_ids[0]).unwrap();
     // The [Glowing Dawn] Digimon in trash to return.
     let v2 = runner
@@ -216,12 +220,16 @@ fn st23_12_return_is_optional() {
         .accept_optional_trigger()
         .expect("accept the optional clause");
     // Tamer pick (the cost): pick the only eligible Tamer.
-    let tamer_pick = runner.pending_selection_view().expect("Tamer pick installs");
+    let tamer_pick = runner
+        .pending_selection_view()
+        .expect("Tamer pick installs");
     runner
         .execute_action(0, tamer_pick.valid_action_ids[0])
         .unwrap();
     // Return pick — optional ("you may return"): decline it.
-    let v2 = runner.pending_selection_view().expect("return pick installs");
+    let v2 = runner
+        .pending_selection_view()
+        .expect("return pick installs");
     assert!(v2.is_optional, "the return is optional ('you may return')");
     runner
         .execute_action(0, digimon_engine::action::space::PASS)
@@ -259,7 +267,11 @@ fn st23_12_no_face_down_source_clean_noop() {
     let _ = runner.auto_resolve();
 
     assert_eq!(runner.hand_size(0), hand_before, "no cost ⇒ no return");
-    assert_eq!(runner.trash_size(0), trash_before, "no cost ⇒ trash unchanged");
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before,
+        "no cost ⇒ trash unchanged"
+    );
 }
 
 /// NEGATIVE (trash filter): with the cost payable but only a NON-Glowing-Dawn
@@ -275,7 +287,9 @@ fn st23_12_no_glowing_dawn_in_trash_returns_nothing() {
     let hand_before = runner.hand_size(0);
 
     runner.fire_on_play(0, arma.index as usize);
-    let v = runner.pending_selection_view().expect("Tamer pick installs");
+    let v = runner
+        .pending_selection_view()
+        .expect("Tamer pick installs");
     runner.execute_action(0, v.valid_action_ids[0]).unwrap();
     let _ = runner.auto_resolve();
 

@@ -2981,8 +2981,10 @@ fn granted_effect_suppressed_when_carrier_immune_to_grantor() {
 
     // Control (non-immune) fires → gauge moves by 2.
     let m0 = r.game.memory;
-    r.game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(control_h));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(control_h),
+    );
     r.game.drain_effect_queue();
     assert_eq!(
         (r.game.memory - m0).abs(),
@@ -2993,8 +2995,10 @@ fn granted_effect_suppressed_when_carrier_immune_to_grantor() {
     // Immune carrier → granted body SUPPRESSED (no gauge change). The grant is
     // still installed; the dispatch's immunity gate skips firing it.
     let m1 = r.game.memory;
-    r.game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(immune_h));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(immune_h),
+    );
     r.game.drain_effect_queue();
     assert_eq!(
         r.game.memory, m1,

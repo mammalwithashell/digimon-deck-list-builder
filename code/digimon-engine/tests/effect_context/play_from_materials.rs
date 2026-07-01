@@ -422,10 +422,11 @@ fn play_from_materials_emptying_lower_indexed_carrier_shifts_neighbor_index() {
 
     // Neighbor must still be present (its original body) — at shifted index 0
     // (carrier removed) with the played card now at the new tail index.
-    let neighbor_still_present = runner.game.players[0]
-        .battle_area
-        .iter()
-        .any(|p| p.card_sources.iter().any(|c| c.handle() == neighbor_top_pre));
+    let neighbor_still_present = runner.game.players[0].battle_area.iter().any(|p| {
+        p.card_sources
+            .iter()
+            .any(|c| c.handle() == neighbor_top_pre)
+    });
     assert!(
         neighbor_still_present,
         "neighbor permanent must survive the carrier's soft-remove"

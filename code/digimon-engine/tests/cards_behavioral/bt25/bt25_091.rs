@@ -100,7 +100,11 @@ fn bt25_091_start_of_turn_does_not_change_high_memory() {
     runner.end_turn();
     runner.end_turn();
     let _ = runner.auto_resolve();
-    assert_eq!(runner.memory(), 5, "memory >2 is unchanged (condition gates)");
+    assert_eq!(
+        runner.memory(),
+        5,
+        "memory >2 is unchanged (condition gates)"
+    );
 }
 
 // ── Section 3: [On Play] return-or-draw ──────────────────────────────────
@@ -134,7 +138,12 @@ fn bt25_091_on_play_returns_ts_option_from_trash() {
     // The TS Option moved trash → hand. (Net hand: -Monica +TS-OPT = same count
     // as before play; assert the option is in hand and trash shrank.)
     assert!(
-        runner.game.player(0).hand.iter().any(|c| c.card_id(&runner.game.card_data) == "TS-OPT"),
+        runner
+            .game
+            .player(0)
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "TS-OPT"),
         "returned TS Option is in hand"
     );
     assert_eq!(runner.trash_size(0), trash_before - 1, "trash shrank by 1");
@@ -167,7 +176,9 @@ fn bt25_091_on_play_draws_when_no_return() {
 // ── fixtures ─────────────────────────────────────────────────────────────
 
 fn monica_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
-    DebugRunner::builder().from_dsl_yaml(YAML).expect("BT25-091 YAML loads")
+    DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT25-091 YAML loads")
 }
 
 fn make_ts_option(id: &str) -> digimon_engine::CardData {

@@ -301,7 +301,10 @@ fn c2_mega_knight_delay_dna_digivolves_leaving_wargreymon_into_omnimon() {
     // The leaving WarGreymon is a source under the merged Omnimon — consumed,
     // not trashed.
     assert!(
-        merged.card_sources.iter().any(|s| s.handle() == wargrey_card),
+        merged
+            .card_sources
+            .iter()
+            .any(|s| s.handle() == wargrey_card),
         "the leaving BT17-015 WarGreymon must live inside the merged Omnimon's stack"
     );
     assert!(
@@ -424,9 +427,7 @@ fn c3_digital_gate_open_main_digs_then_delay_cheats_nokia_cost_reduced() {
     // candidate, plus a filler (ST1-02 Biyomon). A Red field Digimon (ST1-05
     // Birdramon) so BT22-084 (Red+Blue Tamer) colour-matches the board.
     let mut runner = dsl_builder_with(
-        &[
-            "P-206", "BT22-084", "ST1-04", "ST4-14", "ST1-02", "ST1-05",
-        ],
+        &["P-206", "BT22-084", "ST1-04", "ST4-14", "ST1-02", "ST1-05"],
         |b| {
             // Deck top-to-bottom (last element = top): ST1-04 top, ST4-14 next,
             // ST1-02 third — the [Main] reveal-3 window.
@@ -682,8 +683,7 @@ fn c5_omnimon_alter_s_dna_wipe_deletes_opponent_highest_level() {
     // Rosemon: Burst Mode (Lv7, the unique highest → deleted; its only effects are
     // [When Digivolving]/[When Attacking], neither of which fires when placed or
     // deleted, so it is a clean removal victim).
-    let mut runner =
-        dsl_card_runner(&["EX9-021", "BT22-026", "BT22-013", "ST5-10", "BT13-060"]);
+    let mut runner = dsl_card_runner(&["EX9-021", "BT22-026", "BT22-013", "ST5-10", "BT13-060"]);
     runner.game.turn_count = 1;
 
     // The two real Lv6 DNA materials on P0's field; EX9-021 in hand.
@@ -701,7 +701,10 @@ fn c5_omnimon_alter_s_dna_wipe_deletes_opponent_highest_level() {
         .handle();
 
     let before = snapshot(&runner);
-    assert_eq!(before.field[1], 2, "precondition: 2 opponent Digimon on field");
+    assert_eq!(
+        before.field[1], 2,
+        "precondition: 2 opponent Digimon on field"
+    );
 
     // Drive the REAL DNA digivolve path (Blue Lv6 + Red Lv6 → EX9-021, cost 0).
     let evolved = {

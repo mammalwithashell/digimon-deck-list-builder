@@ -136,10 +136,7 @@ pub(crate) fn field_main_match(
 /// mask emitter, which deliberately does not run the effect's own condition
 /// closure here). The name is a best-effort read of the top card's
 /// non-inherited `MainOnField` effect (`<Training>` auto-effect).
-pub(crate) fn breeding_training_match(
-    game: &Game,
-    player_id: PlayerId,
-) -> Option<MainEffectMatch> {
+pub(crate) fn breeding_training_match(game: &Game, player_id: PlayerId) -> Option<MainEffectMatch> {
     let breeding = game.player(player_id).breeding_area.as_ref()?;
     let top = breeding.top_card();
     let top_data = &game.card_data[top.data_index];

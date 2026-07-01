@@ -34,18 +34,12 @@ fn st5_15_main_de_digivolves_up_to_two_opponent_digimon() {
     runner.place_stack(1, &["ST5-15-B3", "ST5-15-B4"]);
 
     assert!(runner.game.activate_hand_main(0, 0));
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::OppField)
-    );
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
     let first = runner.pending_selection_view().unwrap().valid_action_ids[0];
     runner
         .execute_action(0, first)
         .expect("select first Laser Eye target");
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::OppField)
-    );
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
     let second = runner.pending_selection_view().unwrap().valid_action_ids[0];
     runner
         .execute_action(0, second)
@@ -73,10 +67,7 @@ fn st5_15_security_activates_laser_eye_main_effect() {
     );
     runner.game.drain_effect_queue();
 
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::OppField)
-    );
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::OppField));
     let pick = runner.pending_selection_view().unwrap().valid_action_ids[0];
     runner
         .execute_action(0, pick)

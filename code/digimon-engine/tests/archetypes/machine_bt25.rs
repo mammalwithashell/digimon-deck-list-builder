@@ -88,7 +88,11 @@ fn make_lv4_beast(id: &str) -> CardData {
 /// placed into P0's hand; `memory` and an opponent Digimon complete the combo
 /// setup. Returns the runner with Kokuwamon standing on P0's field and the
 /// opponent Digimon on P1's field, P0's turn.
-fn combo_board(hand_card: &str, memory: i16, opp_dp: i32) -> (DebugRunner, PermanentHandle, PermanentHandle) {
+fn combo_board(
+    hand_card: &str,
+    memory: i16,
+    opp_dp: i32,
+) -> (DebugRunner, PermanentHandle, PermanentHandle) {
     let mut runner = DebugRunner::builder()
         .dsl_card(KOKUWAMON)
         .expect("BT25-062 (Kokuwamon) in embedded DSL pack")
@@ -142,9 +146,7 @@ fn kokuwamon_free_digivolve_into_gatomon_fires_when_digivolving_debuff() {
         "after accepting, the select_hand evolution picker must be pending"
     );
     // Gatomon is the only [Machine]/[Cyborg]/[TS] Digimon in hand → resolve it.
-    let pick = runner
-        .pending_selection_view()
-        .expect("hand picker view");
+    let pick = runner.pending_selection_view().expect("hand picker view");
     let pick_action = pick
         .valid_action_ids
         .iter()

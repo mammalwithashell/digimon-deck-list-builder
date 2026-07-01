@@ -83,7 +83,8 @@ fn mp31_mandatory_two_target_must_affect_two_when_available() {
         .iter()
         .find(|&&a| a != PASS)
         .expect("second target available");
-    r.execute_action(selp, second).expect("second pick resolves");
+    r.execute_action(selp, second)
+        .expect("second pick resolves");
     let suspended = (0..r.battle_area_size(opp))
         .filter(|&i| r.game.players[opp as usize].battle_area[i].is_suspended)
         .count();

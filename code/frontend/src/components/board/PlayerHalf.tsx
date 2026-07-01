@@ -10,8 +10,6 @@ interface PlayerHalfProps {
   player: PlayerState;
   isOpponent: boolean;
   highlightedSlots?: Set<number>;
-  /** Slots already picked during a "choose N" selection (marked as selected). */
-  selectedSlots?: Set<number>;
   targetedSlots?: Set<number>;
   canHatch?: boolean;
   canMove?: boolean;
@@ -34,7 +32,6 @@ export function PlayerHalf({
   player,
   isOpponent,
   highlightedSlots,
-  selectedSlots,
   targetedSlots,
   canHatch = false,
   canMove = false,
@@ -80,7 +77,6 @@ export function PlayerHalf({
           permanents={player.battleArea}
           isOpponent={isOpponent}
           highlightedSlots={highlightedSlots}
-          selectedSlots={selectedSlots}
           targetedSlots={targetedSlots}
           onSlotClick={onSlotClick}
           onSlotHover={onSlotHover}

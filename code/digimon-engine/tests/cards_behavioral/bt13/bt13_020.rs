@@ -81,7 +81,11 @@ fn marcus_handle(runner: &DebugRunner) -> Option<PermanentHandle> {
         })
 }
 
-fn tamer_on_field(runner: &DebugRunner, player: PlayerId, card_id: &str) -> Option<PermanentHandle> {
+fn tamer_on_field(
+    runner: &DebugRunner,
+    player: PlayerId,
+    card_id: &str,
+) -> Option<PermanentHandle> {
     runner.game.players[player as usize]
         .battle_area
         .iter()
@@ -438,7 +442,9 @@ fn bt13_020_when_digivolving_decline_plays_no_tamer_and_no_modifiers() {
             .as_ref()
             .expect("play prompt installed"),
     );
-    runner.execute_action(player, PASS).expect("decline resolves");
+    runner
+        .execute_action(player, PASS)
+        .expect("decline resolves");
     let _ = runner.auto_resolve();
 
     assert_eq!(

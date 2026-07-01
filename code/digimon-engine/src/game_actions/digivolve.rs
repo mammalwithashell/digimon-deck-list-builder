@@ -51,6 +51,29 @@ pub(crate) struct DigivolveReducerState {
     pub source: PlaySource,
 }
 
+/// make-engine-cloneable: first material pick for a normal DNA digivolve from
+/// hand. This mirrors the captures in `initiate_dna_digivolve`'s stage-1
+/// closure; resolving it installs the second material prompt as another data
+/// frame.
+#[derive(Debug, Clone)]
+pub struct DnaDigivolveFirstMaterialState {
+    pub player_id: PlayerId,
+    pub hand_index: usize,
+    pub route_window: crate::dna_digivolve::DnaRouteWindow,
+    pub source_card: CardHandle,
+    pub previous_phase: GamePhase,
+}
+
+/// make-engine-cloneable: second material pick for a normal DNA digivolve from
+/// hand. Resolving it calls the existing stage-2 resolver.
+#[derive(Debug, Clone)]
+pub struct DnaDigivolveSecondMaterialState {
+    pub player_id: PlayerId,
+    pub hand_index: usize,
+    pub first_idx: usize,
+    pub route_window: crate::dna_digivolve::DnaRouteWindow,
+}
+
 impl Game {
     /// Resolve a parked digivolve cost-choice (resumable VM). Mirrors
     /// `install_digivolve_cost_choice_prompt`'s callback exactly: decode the
@@ -132,6 +155,104 @@ impl Game {
             state.field_index,
             state.source,
             true,
+        );
+    }
+
+    /// Resolve a parked normal DNA-digivolve first-material prompt. Mirrors
+    /// `initiate_dna_digivolve`'s stage-1 callback: validate the first material,
+    /// derive valid second-material targets, install that second prompt, and
+    /// keep the phase in `SelectMaterial`.
+    pub(crate) fn run_dna_digivolve_first_material_step(
+        &mut self,
+        state: DnaDigivolveFirstMaterialState,
+        action_id: u16,
+    ) {
+        let first_idx = action_id as usize;
+
+        if first_idx >= self.player(state.player_id).battle_area.len() {
+            self.logger.log(&format!(
+                "[Rejected] dna_digivolve stage 1: first index {} out of range (battle_area size={})",
+                first_idx,
+                self.player(state.player_id).battle_area.len()
+            ));
+            return;
+        }
+        if state.hand_index >= self.player(state.player_id).hand.len() {
+            self.logger.log(&format!(
+                "[Rejected] dna_digivolve stage 1: evo hand index {} out of range (hand size={})",
+                state.hand_index,
+                self.player(state.player_id).hand.len()
+            ));
+            return;
+        }
+
+        let second_targets: Vec<u16> = self
+            .valid_dna_second_targets_for_hand_card(
+                state.player_id,
+                state.hand_index,
+                first_idx,
+                state.route_window,
+            )
+            .collect();
+        if second_targets.is_empty() {
+            self.logger.log(&format!(
+                "[Rejected] dna_digivolve stage 1: no valid second-material targets for first index {}",
+                first_idx
+            ));
+            return;
+        }
+
+        self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
+            kind: SelectionKind::Material,
+            selecting_player: state.player_id,
+            previous_phase: state.previous_phase,
+            valid_action_ids: second_targets,
+            is_optional: false,
+            prompt: "Select second DNA material".to_string(),
+            effect_choices: None,
+            source_card: state.source_card,
+            source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let second_idx = action_id as usize;
+                game.resolve_dna_digivolve_stage2_with_window(
+                    state.player_id,
+                    first_idx,
+                    second_idx,
+                    state.hand_index,
+                    state.route_window,
+                );
+            }),
+            on_decline: None,
+        });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::DnaDigivolveSecondMaterial(
+                DnaDigivolveSecondMaterialState {
+                    player_id: state.player_id,
+                    hand_index: state.hand_index,
+                    first_idx,
+                    route_window: state.route_window,
+                },
+            )],
+        });
+        self.current_phase = GamePhase::SelectMaterial;
+    }
+
+    /// Resolve a parked normal DNA-digivolve second-material prompt. Mirrors
+    /// the stage-2 callback by forwarding to the shared resolver.
+    pub(crate) fn run_dna_digivolve_second_material_step(
+        &mut self,
+        state: DnaDigivolveSecondMaterialState,
+        action_id: u16,
+    ) {
+        let second_idx = action_id as usize;
+        self.resolve_dna_digivolve_stage2_with_window(
+            state.player_id,
+            state.first_idx,
+            second_idx,
+            state.hand_index,
+            state.route_window,
         );
     }
 }
@@ -499,7 +620,13 @@ impl Game {
                 if let Some(chosen) = routes.get(idx).copied() {
                     game.pending_digivolve_route_choice = Some(chosen);
                 }
-                game.digivolve_from_hand_inner(acting_player, hand_index, field_index, source, false);
+                game.digivolve_from_hand_inner(
+                    acting_player,
+                    hand_index,
+                    field_index,
+                    source,
+                    false,
+                );
             }),
             on_decline: None,
         });
@@ -905,7 +1032,12 @@ impl Game {
         if host.player != player_id {
             return false;
         }
-        if self.player(player_id).battle_area.get(field_index).is_none() {
+        if self
+            .player(player_id)
+            .battle_area
+            .get(field_index)
+            .is_none()
+        {
             self.logger
                 .log("[Rejected] app_fuse: host index out of range");
             return false;
@@ -995,7 +1127,10 @@ impl Game {
             memory_paid: 0,
         });
 
-        self.enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(host));
+        self.enqueue_triggered(
+            EffectTiming::WhenDigivolving,
+            TriggerSource::Permanent(host),
+        );
         self.drain_effect_queue();
 
         self.enqueue_triggered(
@@ -1150,6 +1285,17 @@ impl Game {
                 game.current_phase = GamePhase::SelectMaterial;
             }),
             on_decline: None,
+        });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::DnaDigivolveFirstMaterial(
+                DnaDigivolveFirstMaterialState {
+                    player_id,
+                    hand_index,
+                    route_window,
+                    source_card,
+                    previous_phase,
+                },
+            )],
         });
         true
     }

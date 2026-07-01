@@ -339,7 +339,9 @@ fn c3_wanyamon_under_mach_draws_both_players_on_ds_tamer_play() {
     let h = push_to_hand(&mut runner, 0, "DS-TAMER");
     // (DS-TAMER was seeded both via hand() and pushed; play the freshly-pushed one.)
     runner.play(0, h).expect("play the DATA SQUAD Tamer");
-    runner.auto_resolve().expect("resolve the inherited both-players draw");
+    runner
+        .auto_resolve()
+        .expect("resolve the inherited both-players draw");
 
     assert_eq!(
         runner.deck_size(0),

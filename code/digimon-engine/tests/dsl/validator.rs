@@ -393,8 +393,8 @@ effects:
     let reg = StubRegistry::empty();
     let errs = validate(&spec, &ctx(&reg)).unwrap_err();
     assert!(
-        errs.iter().any(|e| e.path.contains("dp_modifier")
-            && e.message.contains("DP-dependent target")),
+        errs.iter()
+            .any(|e| e.path.contains("dp_modifier") && e.message.contains("DP-dependent target")),
         "expected dynamic DP aura DP-dependent target rejection, got: {errs:?}"
     );
 }

@@ -36,9 +36,7 @@ impl Game {
                 .card_data
                 .iter()
                 .position(|c| c.card_id == *card_id)
-                .unwrap_or_else(|| {
-                    panic!("stage_place_field_stack: unknown card_id {card_id}")
-                });
+                .unwrap_or_else(|| panic!("stage_place_field_stack: unknown card_id {card_id}"));
             let next_idx = self.next_card_index();
             let mut card = crate::card_source::CardSource::new(data_idx, player, next_idx);
             card.card_index = next_idx;
@@ -121,9 +119,7 @@ impl Game {
                 .card_data
                 .iter()
                 .position(|c| c.card_id == *card_id)
-                .unwrap_or_else(|| {
-                    panic!("stage_place_in_breeding: unknown card_id {card_id}")
-                });
+                .unwrap_or_else(|| panic!("stage_place_in_breeding: unknown card_id {card_id}"));
             let next_idx = self.next_card_index();
             let mut card = crate::card_source::CardSource::new(data_idx, player, next_idx);
             card.card_index = next_idx;

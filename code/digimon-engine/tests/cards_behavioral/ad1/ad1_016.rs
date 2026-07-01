@@ -277,9 +277,11 @@ fn ad1_016_has_wd_wa_cluster_and_all_turns_observer_clause() {
 
     // The WD/WA cluster: one clause with [when_digivolving, when_attacking], OPT.
     assert!(
-        triggered.iter().any(|t| t.when.contains(&CompiledTiming::WhenDigivolving)
-            && t.when.contains(&CompiledTiming::WhenAttacking)
-            && t.once_per_turn),
+        triggered
+            .iter()
+            .any(|t| t.when.contains(&CompiledTiming::WhenDigivolving)
+                && t.when.contains(&CompiledTiming::WhenAttacking)
+                && t.once_per_turn),
         "expected OPT cluster clause covering [when_digivolving, when_attacking]"
     );
 
@@ -296,7 +298,9 @@ fn ad1_016_has_wd_wa_cluster_and_all_turns_observer_clause() {
 
     // All authored clauses are own-scope (no inherited / security text).
     assert!(
-        triggered.iter().all(|t| matches!(t.scope, CompiledScope::FaceUp)),
+        triggered
+            .iter()
+            .all(|t| matches!(t.scope, CompiledScope::FaceUp)),
         "AD1-016 has no inherited or security effects"
     );
 }
@@ -904,7 +908,9 @@ fn ad1_016_all_turns_observer_opt_blocks_second_marcus_play_same_turn() {
             .expect("a delete target");
         (view.selecting_player, pick)
     };
-    runner.execute_action(sp, a).expect("delete on first Marcus");
+    runner
+        .execute_action(sp, a)
+        .expect("delete on first Marcus");
     let _ = runner.auto_resolve();
     assert_eq!(opp_digimon_count(&runner), 1, "first delete removed one");
 

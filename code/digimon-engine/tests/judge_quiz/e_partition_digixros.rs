@@ -103,18 +103,21 @@ fn q16_partition_not_triggered_when_leaving_by_own_granted_effect() {
     let p1_sec_before = r.security_count(1);
 
     // Fire the granted "[End of Your Turn] Delete this Digimon".
-    r.game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(paildramon));
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::Permanent(paildramon),
+    );
     r.game.drain_effect_queue();
 
     // Paildramon was deleted by its OWN (granted) effect.
-    let paildramon_alive = r
-        .game
-        .players[1]
+    let paildramon_alive = r.game.players[1]
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&r.game.card_data) == "BT16-025");
-    assert!(!paildramon_alive, "the granted [EoT] delete must remove Paildramon");
+    assert!(
+        !paildramon_alive,
+        "the granted [EoT] delete must remove Paildramon"
+    );
 
     // <Partition> must NOT fire: no mandatory 2-source replay selection, and
     // the partition sources land in trash rather than being replayed onto the
@@ -222,10 +225,8 @@ fn q15_sequential_de_digivolve_halted_by_x_antibody_immunity() {
     let b_trash_before = r.trash_size(1);
 
     // Resolve LordKnightmon (X Antibody)'s [When Digivolving].
-    r.game.enqueue_triggered(
-        EffectTiming::WhenDigivolving,
-        TriggerSource::Permanent(lkx),
-    );
+    r.game
+        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(lkx));
     r.game.drain_effect_queue();
 
     // Selection 1 — the <De-Digivolve 1> target: Player A targets the
@@ -270,7 +271,11 @@ fn q15_sequential_de_digivolve_halted_by_x_antibody_immunity() {
         "only Omnimon (X Antibody) landed in Player B's trash"
     );
     assert!(
-        r.game.player(1).trash.iter().any(|c| c.card_id(&r.game.card_data) == "BT20-102"),
+        r.game
+            .player(1)
+            .trash
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "BT20-102"),
         "the trashed card is Omnimon (X Antibody) BT20-102"
     );
     // The rest of the stack is intact, in order (bottom→top).
@@ -349,7 +354,10 @@ fn q25_all_turns_fires_on_digixros_departure_not_battle() {
             c.card_kind = CardKind::Digimon;
             c
         })
-        .hand(0, &["EX3-014", "Q25-DRG0", "Q25-DRG1", "Q25-DRG2", "Q25-DRG3"])
+        .hand(
+            0,
+            &["EX3-014", "Q25-DRG0", "Q25-DRG1", "Q25-DRG2", "Q25-DRG3"],
+        )
         .deck(0, &["Q25-FILL"; 5])
         .deck(1, &["Q25-FILL"; 5])
         .memory(13)
@@ -419,8 +427,7 @@ fn q25_all_turns_fires_on_digixros_departure_not_battle() {
     // battle-area materials (WarGreymon) are pulled under Dorbickmon. The
     // Material selection is optional, so PASS is accepted even once the recipe
     // is full (empty candidate list).
-    if r
-        .pending_selection()
+    if r.pending_selection()
         .is_some_and(|sel| sel.kind == digimon_engine::selection::SelectionKind::Material)
     {
         let _ = r.execute_action(0, digimon_engine::action::space::PASS);
@@ -541,8 +548,15 @@ fn q29_drive_darkness_bagramon_play(r: &mut DebugRunner, under_tamer_picks: &[bo
             "judge Q29: Yuu Amano's would-play hook resolves BEFORE the DigiXros \
              material selection"
         );
-        if !view.valid_action_ids.iter().any(|&a| a >= SOURCE_SELECT_START) {
-            assert!(view.is_optional, "Yuu Amano's hook accept prompt is optional");
+        if !view
+            .valid_action_ids
+            .iter()
+            .any(|&a| a >= SOURCE_SELECT_START)
+        {
+            assert!(
+                view.is_optional,
+                "Yuu Amano's hook accept prompt is optional"
+            );
             let accept = view.valid_action_ids[0];
             r.execute_action(0, accept)
                 .expect("accept Yuu Amano's would-play hook");
@@ -580,8 +594,7 @@ fn q29_drive_darkness_bagramon_play(r: &mut DebugRunner, under_tamer_picks: &[bo
     }
     // Close the up-to-3 multi-select if it is still open (PASS is legal on a
     // min-0 selection).
-    if r
-        .pending_selection_view()
+    if r.pending_selection_view()
         .is_some_and(|v| v.kind != SelectionKind::Material && v.valid_action_ids.contains(&PASS))
     {
         r.execute_action(0, PASS)
@@ -609,8 +622,7 @@ fn q29_drive_darkness_bagramon_play(r: &mut DebugRunner, under_tamer_picks: &[bo
             .expect("select DigiXros material from hand");
     }
     // Close the material selection if the transaction is still collecting.
-    if r
-        .pending_selection_view()
+    if r.pending_selection_view()
         .is_some_and(|v| v.kind == SelectionKind::Material)
     {
         let _ = r.execute_action(0, PASS);
@@ -623,9 +635,7 @@ fn q29_drive_darkness_bagramon_play(r: &mut DebugRunner, under_tamer_picks: &[bo
 /// Collect Player A's DarknessBagramon stack as card ids, bottom→top
 /// (the top card is the LAST element of `card_sources`).
 fn q29_db_stack(r: &DebugRunner) -> Vec<String> {
-    let perm = r
-        .game
-        .players[0]
+    let perm = r.game.players[0]
         .battle_area
         .iter()
         .find(|p| p.top_card().card_id(&r.game.card_data) == "EX10-059")
@@ -643,7 +653,10 @@ fn q29_db_stack(r: &DebugRunner) -> Vec<String> {
 fn q29_legal_digixros_stack_orderings_with_yuu_amano() {
     let mut r = q29_runner();
     let memory_before = r.memory();
-    assert_eq!(memory_before, 10, "staged memory must be at the engine ceiling");
+    assert_eq!(
+        memory_before, 10,
+        "staged memory must be at the engine ceiling"
+    );
 
     // Pick Damemon (the higher under-Tamer slot) first, then ChuuChuumon.
     q29_drive_darkness_bagramon_play(&mut r, &[true, false]);
@@ -672,9 +685,7 @@ fn q29_legal_digixros_stack_orderings_with_yuu_amano() {
     );
 
     // The placed cards left Yuu Amano's source stack.
-    let yuu = r
-        .game
-        .players[0]
+    let yuu = r.game.players[0]
         .battle_area
         .iter()
         .find(|p| p.top_card().card_id(&r.game.card_data) == "BT10-093")
@@ -686,7 +697,11 @@ fn q29_legal_digixros_stack_orderings_with_yuu_amano() {
         "both purple cards must leave Yuu Amano's source stack"
     );
     // Both hand materials were consumed.
-    assert_eq!(r.hand_size(0), 0, "Bagramon + DarkKnightmon left the hand as materials");
+    assert_eq!(
+        r.hand_size(0),
+        0,
+        "Bagramon + DarkKnightmon left the hand as materials"
+    );
 }
 
 /// Q29 (only ChuuChuumon placed — "up to 3" allows fewer): legal stack L3 —
@@ -712,9 +727,7 @@ fn q29_single_under_tamer_card_yields_third_legal_stack() {
         "the DigiXros play must cost 16 −3 −3 −2 = 8 memory"
     );
     // Damemon stays under Yuu Amano.
-    let yuu = r
-        .game
-        .players[0]
+    let yuu = r.game.players[0]
         .battle_area
         .iter()
         .find(|p| p.top_card().card_id(&r.game.card_data) == "BT10-093")

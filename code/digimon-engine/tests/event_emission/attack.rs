@@ -64,7 +64,10 @@ fn attack_on_digimon_emits_attack_event_with_field_index_target() {
     };
 
     assert_eq!(player, 0, "attacker is P1 (Rust 0)");
-    assert_eq!(attacker_field_index, atk.index, "attacker_field_index matches handle");
+    assert_eq!(
+        attacker_field_index, atk.index,
+        "attacker_field_index matches handle"
+    );
     assert_eq!(
         target_field_index,
         Some(def.index),
@@ -141,8 +144,16 @@ fn attack_on_digimon_carries_attacker_and_target_identity() {
     assert_eq!(attacker_card_name, "Greymon");
     assert_eq!(target_card_id.as_deref(), Some("DEF"));
     assert_eq!(target_card_name.as_deref(), Some("Tyrannomon"));
-    assert_eq!(attacker_dp, Some(5000), "attacker effective DP carried for battle");
-    assert_eq!(target_dp, Some(3000), "target effective DP carried for battle");
+    assert_eq!(
+        attacker_dp,
+        Some(5000),
+        "attacker effective DP carried for battle"
+    );
+    assert_eq!(
+        target_dp,
+        Some(3000),
+        "target effective DP carried for battle"
+    );
 }
 
 #[test]
@@ -170,7 +181,13 @@ fn attack_on_security_has_no_target_identity() {
         unreachable!()
     };
     assert_eq!(attacker_card_id, "ATK", "attacker identity present");
-    assert_eq!(target_card_id, None, "security attack has no target card id");
-    assert_eq!(target_card_name, None, "security attack has no target card name");
+    assert_eq!(
+        target_card_id, None,
+        "security attack has no target card id"
+    );
+    assert_eq!(
+        target_card_name, None,
+        "security attack has no target card name"
+    );
     assert_eq!(target_dp, None, "security attack has no target DP");
 }

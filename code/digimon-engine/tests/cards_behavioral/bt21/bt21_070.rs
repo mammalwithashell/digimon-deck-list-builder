@@ -91,7 +91,13 @@ fn base() -> DebugRunnerBuilder {
         .from_dsl_yaml(GOSSIPMON_YAML)
         .expect("BT21-070 YAML parses and compiles")
         // Appmon Digimon to put in trash for the return clause tests.
-        .add_card(make_digimon("APPMON-DIGI", 3, 2000, 3, &["Search", "Appmon"]))
+        .add_card(make_digimon(
+            "APPMON-DIGI",
+            3,
+            2000,
+            3,
+            &["Search", "Appmon"],
+        ))
         // Non-Appmon Digimon — must NOT be selectable by the trash filter.
         .add_card(make_digimon("NON-APPMON", 3, 2000, 3, &["Dragon"]))
         // Non-Digimon Appmon (Option card) — must NOT be selectable (kind: digimon filter).
@@ -136,9 +142,7 @@ fn bt21_070_has_on_security_clause() {
     let card = runner.compiled_card(CARD_ID).expect("present");
 
     let has = card.effects.iter().any(|c| match c {
-        CompiledClause::Triggered(t) => {
-            t.when == vec![CompiledTiming::OnSecurity] && !t.optional
-        }
+        CompiledClause::Triggered(t) => t.when == vec![CompiledTiming::OnSecurity] && !t.optional,
         _ => false,
     });
     assert!(
@@ -166,9 +170,8 @@ fn bt21_070_has_on_play_when_digivolving_optional_clause() {
                 && t.when.contains(&CompiledTiming::WhenDigivolving)
         });
 
-    let clause = clause.expect(
-        "BT21-070 must have a triggered clause with when: [on_play, when_digivolving]",
-    );
+    let clause = clause
+        .expect("BT21-070 must have a triggered clause with when: [on_play, when_digivolving]");
     assert!(
         clause.optional,
         "the On Play / When Digivolving clause must be optional (DCGO canNoSelect: true)"
@@ -181,11 +184,13 @@ fn bt21_070_has_link_condition_appmon_cost_2() {
     let runner = base().deck(0, &["DECK-PAD"; 5]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
 
-    let has = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition { cost, .. })
-            if *cost == 2
-    ));
+    let has = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition { cost, .. })
+                if *cost == 2
+        )
+    });
     assert!(
         has,
         "BT21-070 must declare a self link-condition with cost 2"
@@ -205,13 +210,9 @@ fn bt21_070_has_linked_when_linked_optional_clause() {
             CompiledClause::Triggered(t) => Some(t),
             _ => None,
         })
-        .find(|t| {
-            t.when.contains(&CompiledTiming::WhenLinked)
-                && t.scope == CompiledScope::Linked
-        });
+        .find(|t| t.when.contains(&CompiledTiming::WhenLinked) && t.scope == CompiledScope::Linked);
 
-    let clause =
-        clause.expect("BT21-070 must have a Linked-scope when_linked triggered clause");
+    let clause = clause.expect("BT21-070 must have a Linked-scope when_linked triggered clause");
     assert!(
         clause.optional,
         "the when_linked clause must be optional (DCGO canNoSelect: true)"
@@ -284,11 +285,7 @@ fn bt21_070_on_play_returns_appmon_to_hand() {
         hand_before,
         "net hand should be unchanged: -1 played Gossipmon +1 returned from trash = 0 net"
     );
-    assert_eq!(
-        r.trash_size(0),
-        0,
-        "APPMON-DIGI must have left the trash"
-    );
+    assert_eq!(r.trash_size(0), 0, "APPMON-DIGI must have left the trash");
 }
 
 /// Negative: On Play with NO Appmon Digimon in trash → no selection installs
@@ -375,7 +372,9 @@ fn bt21_070_when_digivolving_installs_trash_selection() {
     );
     r.game.drain_effect_queue();
 
-    let kind = r.pending_kind().expect("trash selection installs on WhenDigivolving");
+    let kind = r
+        .pending_kind()
+        .expect("trash selection installs on WhenDigivolving");
     assert!(
         matches!(kind, SelectionKind::Trash),
         "expected Trash selection on WhenDigivolving; got {:?}",
@@ -465,10 +464,7 @@ fn bt21_070_when_linked_installs_trash_selection() {
         EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_LINK, FIELD_EFFECT_START,
     };
 
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 5])
-        .memory(5)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 5]).memory(5).start();
 
     let host = r.place_on_field(0, "HOST-APP", Some(0));
     let gossip = r.place_on_field(0, CARD_ID, Some(0));
@@ -507,10 +503,7 @@ fn bt21_070_when_linked_no_selection_when_trash_empty() {
         EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_LINK, FIELD_EFFECT_START,
     };
 
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 5])
-        .memory(5)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 5]).memory(5).start();
 
     let host = r.place_on_field(0, "HOST-APP", Some(0));
     let gossip = r.place_on_field(0, CARD_ID, Some(0));
@@ -544,10 +537,7 @@ fn bt21_070_when_linked_returns_appmon_to_hand() {
         EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_LINK, FIELD_EFFECT_START,
     };
 
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 5])
-        .memory(5)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 5]).memory(5).start();
 
     let host = r.place_on_field(0, "HOST-APP", Some(0));
     let gossip = r.place_on_field(0, CARD_ID, Some(0));
@@ -569,7 +559,8 @@ fn bt21_070_when_linked_returns_appmon_to_hand() {
     let _ = r.game.resolve_selection(0, action);
 
     // WhenLinked trash return: auto-resolve picks the only Appmon Digimon.
-    r.auto_resolve().expect("when_linked trash selection resolves");
+    r.auto_resolve()
+        .expect("when_linked trash selection resolves");
 
     assert_eq!(
         r.hand_size(0),
@@ -600,7 +591,10 @@ fn bt21_070_has_linked_dp_aura_3000() {
             })
         )
     });
-    assert!(has, "BT21-070 declares scope:linked +3000 DP aura (link box)");
+    assert!(
+        has,
+        "BT21-070 declares scope:linked +3000 DP aura (link box)"
+    );
 }
 
 /// Behavioral: host effective DP +3000 while BT21-070 is linked.

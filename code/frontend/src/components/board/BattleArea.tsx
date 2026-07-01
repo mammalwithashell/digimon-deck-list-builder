@@ -53,8 +53,6 @@ interface BattleAreaProps {
   permanents: PermanentInfo[];
   isOpponent: boolean;
   highlightedSlots?: Set<number>;
-  /** Slots already picked during a "choose N" selection (marked as selected). */
-  selectedSlots?: Set<number>;
   targetedSlots?: Set<number>;
   onSlotClick?: (slotIndex: number) => void;
   onSlotHover?: (slotIndex: number | null) => void;
@@ -72,7 +70,6 @@ export function BattleArea({
   permanents,
   isOpponent,
   highlightedSlots,
-  selectedSlots,
   targetedSlots,
   onSlotClick,
   onSlotHover,
@@ -177,7 +174,6 @@ export function BattleArea({
                   slotIndex={i}
                   isOpponent={isOpponent}
                   highlighted={highlightedSlots?.has(i)}
-                  selected={selectedSlots?.has(i)}
                   targeted={targetedSlots?.has(i)}
                   // No onClick here — the DroppableSlot wrapper owns the
                   // click for the whole slot. Binding it here too would

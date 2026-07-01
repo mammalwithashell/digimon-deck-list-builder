@@ -8,8 +8,8 @@ use digimon_engine::debug_runner::{DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{Keyword, ModifierType, PlaySource};
 
 const ST1_IDS: [&str; 16] = [
-    "ST1-01", "ST1-02", "ST1-03", "ST1-04", "ST1-05", "ST1-06", "ST1-07", "ST1-08",
-    "ST1-09", "ST1-10", "ST1-11", "ST1-12", "ST1-13", "ST1-14", "ST1-15", "ST1-16",
+    "ST1-01", "ST1-02", "ST1-03", "ST1-04", "ST1-05", "ST1-06", "ST1-07", "ST1-08", "ST1-09",
+    "ST1-10", "ST1-11", "ST1-12", "ST1-13", "ST1-14", "ST1-15", "ST1-16",
 ];
 
 fn st1_builder() -> DebugRunnerBuilder {
@@ -123,11 +123,18 @@ fn st1_06_when_attacking_into_negative_memory_ends_the_turn() {
         .deck(1, &["ST1-02", "ST1-02", "ST1-02"])
         .start();
     let coredramon = runner.place_on_field(0, "ST1-06", Some(0));
-    assert_eq!(runner.turn_player(), 0, "player 0 starts as the active player");
+    assert_eq!(
+        runner.turn_player(),
+        0,
+        "player 0 starts as the active player"
+    );
 
     runner.attack_player(coredramon, 1, false);
 
-    assert!(!runner.game_over(), "P1 still has security, so the game continues");
+    assert!(
+        !runner.game_over(),
+        "P1 still has security, so the game continues"
+    );
     assert_eq!(
         runner.turn_player(),
         1,

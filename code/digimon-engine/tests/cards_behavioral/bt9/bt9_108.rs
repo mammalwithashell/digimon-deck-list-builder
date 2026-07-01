@@ -20,7 +20,9 @@
 //!   the played Digimon's own [On Play] effects do NOT activate.
 //! - SECURITY-MIRROR: the [Security] clause re-runs the [Main] effect.
 
-use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledColor, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledCardKind, CompiledClause, CompiledColor, CompiledScope, CompiledTiming,
+};
 use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -604,7 +606,9 @@ fn bt9_108_security_mirror_deletes_chosen_digimon() {
     runner
         .execute_action(1, pick)
         .expect("security owner deletes the chosen unsuspended Digimon");
-    runner.auto_resolve().expect("resolve the rest of the mirror");
+    runner
+        .auto_resolve()
+        .expect("resolve the rest of the mirror");
 
     assert_eq!(
         runner.battle_area_size(0),

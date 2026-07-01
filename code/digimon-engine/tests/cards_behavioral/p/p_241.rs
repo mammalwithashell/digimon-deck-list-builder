@@ -189,7 +189,10 @@ fn p_241_start_of_turn_no_change_when_memory_above_3() {
         TriggerSource::Permanent(handle),
     );
     r.game.drain_effect_queue();
-    assert_eq!(r.game.memory, 5, "memory was 5 (>2) → must remain unchanged");
+    assert_eq!(
+        r.game.memory, 5,
+        "memory was 5 (>2) → must remain unchanged"
+    );
 }
 
 // ─── Clause 2: on_any_link observer ───────────────────────────────────────────
@@ -503,7 +506,8 @@ fn p_241_app_fuse_from_hand_after_vortex_grant() {
     // 2. Vortex/+3000 target selection: pick the host (the only [Appmon] Digimon).
     {
         let _sel = r.pending_selection_view().expect("Vortex target selection");
-        r.execute_action(0, host_action).expect("pick Vortex target");
+        r.execute_action(0, host_action)
+            .expect("pick Vortex target");
     }
     assert!(
         r.game.has_keyword(host_handle, Keyword::Vortex),

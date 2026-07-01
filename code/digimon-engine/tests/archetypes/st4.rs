@@ -35,9 +35,10 @@ use super::support::snapshot;
 /// `place_stack` builds the stack without firing the trigger, so we fire it
 /// explicitly to model the digivolve, mirroring `rocks.rs` / `st5.rs`).
 fn fire_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -199,7 +200,10 @@ fn needle_spray_alone_suspends_but_grants_no_memory_without_izzy() {
     let target = runner.place_on_field(1, "ST4-02", Some(0));
     let before = snapshot(&runner);
 
-    assert!(runner.game.activate_hand_main(0, 0), "Needle Spray activates");
+    assert!(
+        runner.game.activate_hand_main(0, 0),
+        "Needle Spray activates"
+    );
     let pick = encode_attack(0, target.index as u16);
     runner.execute_action(0, pick).expect("suspend the target");
     resolve_all(&mut runner);
@@ -444,7 +448,10 @@ fn rosemon_lockdown_modifiers() {
     resolve_all(&mut runner);
 
     assert!(
-        runner.game.modifiers.has(target, ModifierType::CannotAttack),
+        runner
+            .game
+            .modifiers
+            .has(target, ModifierType::CannotAttack),
         "Rosemon applies CannotAttack to the chosen opponent Digimon"
     );
     assert!(
@@ -492,7 +499,10 @@ fn electro_shocker_cannot_bounce_rosemon_locked_unsuspended_target() {
         .expect("lock the target with Rosemon");
     resolve_all(&mut runner);
     assert!(
-        runner.game.modifiers.has(target, ModifierType::CannotAttack),
+        runner
+            .game
+            .modifiers
+            .has(target, ModifierType::CannotAttack),
         "the target is Rosemon-locked"
     );
     assert!(

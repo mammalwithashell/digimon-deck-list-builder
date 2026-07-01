@@ -16,7 +16,11 @@ use digimon_engine::effect::CardEffect;
 use digimon_engine::effect_context::EffectContext;
 
 /// Run a one-OnPlay `reveal_search` card's process from `card` (player 0).
-fn run_on_play(runner: &mut DebugRunner, compiled: digimon_dsl::compiled::CompiledCard, card: CardHandle) {
+fn run_on_play(
+    runner: &mut DebugRunner,
+    compiled: digimon_dsl::compiled::CompiledCard,
+    card: CardHandle,
+) {
     let dsl_effect = DslCardEffect::new(Arc::new(compiled));
     let effects = dsl_effect.effects(card);
     assert_eq!(effects.len(), 1, "one OnPlay effect");
@@ -134,8 +138,15 @@ fn reveal_search_adds_all_when_fewer_than_max_match() {
     resolve_all_picks(&mut runner);
 
     let hand = hand_ids(&runner);
-    assert!(hand.contains(&"M1".to_string()), "the lone match is added: {hand:?}");
-    assert_eq!(runner.game.players[0].deck.len(), 3, "3 fillers return to deck");
+    assert!(
+        hand.contains(&"M1".to_string()),
+        "the lone match is added: {hand:?}"
+    );
+    assert_eq!(
+        runner.game.players[0].deck.len(),
+        3,
+        "3 fillers return to deck"
+    );
     assert!(runner.game.pending_selection.is_none());
 }
 
@@ -160,8 +171,15 @@ fn reveal_search_short_pool_adds_nothing_returns_remainder() {
     resolve_all_picks(&mut runner);
 
     let hand = hand_ids(&runner);
-    assert!(!hand.contains(&"F1".to_string()), "no match → filler NOT added to hand");
-    assert_eq!(runner.game.players[0].deck.len(), 1, "filler returned to deck");
+    assert!(
+        !hand.contains(&"F1".to_string()),
+        "no match → filler NOT added to hand"
+    );
+    assert_eq!(
+        runner.game.players[0].deck.len(),
+        1,
+        "filler returned to deck"
+    );
     assert!(runner.game.revealed_cards.is_empty(), "reveal pool emptied");
 }
 
@@ -207,7 +225,11 @@ fn reveal_search_optional_bucket_declined_adds_nothing() {
     run_on_play(&mut runner, compiled, card);
 
     // The optional bucket is the first pending and exposes PASS (is_optional).
-    let pending = runner.game.pending_selection.as_ref().expect("optional bucket pending");
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("optional bucket pending");
     assert!(pending.is_optional, "optional bucket must expose PASS");
     let p = pending.selecting_player;
     // Decline the bucket entirely.
@@ -287,8 +309,15 @@ fn reveal_search_two_buckets_dedup_routes_distinctly() {
 
     assert_eq!(hand.len(), 1, "exactly one Garurumon to hand: {hand:?}");
     assert_eq!(trash.len(), 1, "exactly one Garurumon to trash: {trash:?}");
-    assert_ne!(hand[0], trash[0], "de-dup: the two buckets get DISTINCT cards");
-    assert_eq!(runner.game.players[0].deck.len(), 2, "the 2 fillers return to deck");
+    assert_ne!(
+        hand[0], trash[0],
+        "de-dup: the two buckets get DISTINCT cards"
+    );
+    assert_eq!(
+        runner.game.players[0].deck.len(),
+        2,
+        "the 2 fillers return to deck"
+    );
 }
 
 const CHOOSE_REMAINDER_SEARCHER: &str = r#"

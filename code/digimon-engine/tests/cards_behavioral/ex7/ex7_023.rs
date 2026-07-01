@@ -253,8 +253,7 @@ fn ex7_023_compiles_with_printed_stats_and_lv5_blue_path() {
             path.kind == CompiledAltPathKind::Digivolve
                 && path.cost == Some(CompiledCost::Literal(4))
                 && path.from.as_ref().is_some_and(|from| {
-                    (from.level_eq == Some(5)
-                        || from.all_of.iter().any(|p| p.level_eq == Some(5)))
+                    (from.level_eq == Some(5) || from.all_of.iter().any(|p| p.level_eq == Some(5)))
                         && (from.color_is == Some(CompiledColor::Blue)
                             || from
                                 .all_of
@@ -301,9 +300,8 @@ fn ex7_023_face_up_keyword_clause_shapes() {
         }) if *scope == CompiledScope::FaceUp => Some((active_when, *sa)),
         _ => None,
     });
-    let (active_when, sa) = sa_aura.expect(
-        "EX7-023 must encode <Security A. +1> as a face-up self-aura with security_attack",
-    );
+    let (active_when, sa) = sa_aura
+        .expect("EX7-023 must encode <Security A. +1> as a face-up self-aura with security_attack");
     assert_eq!(sa, 1, "the aura grants a flat <Security A. +1>");
     assert!(
         active_when.is_none(),
@@ -811,7 +809,12 @@ fn aura_runner(self_sources: usize) -> (DebugRunner, u8, u8, PermanentHandle) {
 
 /// Place a Digimon stack for `player` with `n` sources (uses the SRC-3..5 /
 /// TOP-t pools so it never collides with the owner stack).
-fn place_aura_opp_stack(runner: &mut DebugRunner, player: u8, t: usize, n: usize) -> PermanentHandle {
+fn place_aura_opp_stack(
+    runner: &mut DebugRunner,
+    player: u8,
+    t: usize,
+    n: usize,
+) -> PermanentHandle {
     let mut ids: Vec<String> = (0..n).map(|i| format!("SRC-{}", 3 + i)).collect();
     ids.push(format!("TOP-{t}"));
     let refs: Vec<&str> = ids.iter().map(String::as_str).collect();
@@ -835,19 +838,31 @@ fn ex7_023_opp_turn_aura_locks_equal_and_fewer_sources_not_more() {
 
     let _ = hexe;
     assert!(
-        runner.game.modifiers.has(opp_fewer, ModifierType::CannotSuspend),
+        runner
+            .game
+            .modifiers
+            .has(opp_fewer, ModifierType::CannotSuspend),
         "0 sources < 1 — FEWER digivolution cards must be locked"
     );
     assert!(
-        runner.game.modifiers.has(opp_equal, ModifierType::CannotSuspend),
+        runner
+            .game
+            .modifiers
+            .has(opp_equal, ModifierType::CannotSuspend),
         "1 source == 1 — AS MANY digivolution cards must be locked"
     );
     assert!(
-        !runner.game.modifiers.has(opp_more, ModifierType::CannotSuspend),
+        !runner
+            .game
+            .modifiers
+            .has(opp_more, ModifierType::CannotSuspend),
         "2 sources > 1 — MORE digivolution cards must stay free"
     );
     assert!(
-        !runner.game.modifiers.has(opp_tamer, ModifierType::CannotSuspend),
+        !runner
+            .game
+            .modifiers
+            .has(opp_tamer, ModifierType::CannotSuspend),
         "the lock reads 'Digimon' — an opponent Tamer is never locked"
     );
 }
@@ -894,7 +909,10 @@ fn ex7_023_opp_turn_aura_compares_live_own_source_count() {
     runner.game.tick_declarative_effects();
 
     assert!(
-        runner.game.modifiers.has(opp_bare, ModifierType::CannotSuspend),
+        runner
+            .game
+            .modifiers
+            .has(opp_bare, ModifierType::CannotSuspend),
         "0 sources <= 0 — the bare Digimon is locked"
     );
     assert!(
@@ -916,7 +934,10 @@ fn ex7_023_locked_opponent_digimon_cannot_declare_attack() {
     // A locked (sourceless) opponent Digimon on its controller's own turn.
     let locked = runner.place_on_field(tp, "TOP-0", Some(0));
     runner.game.tick_declarative_effects();
-    assert!(runner.game.modifiers.has(locked, ModifierType::CannotSuspend));
+    assert!(runner
+        .game
+        .modifiers
+        .has(locked, ModifierType::CannotSuspend));
 
     let security_before = runner.security_count(owner);
     let result = runner.attack_player(locked, owner, false);

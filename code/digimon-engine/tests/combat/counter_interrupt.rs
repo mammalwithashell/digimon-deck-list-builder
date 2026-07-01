@@ -245,6 +245,64 @@ fn counter_declined_advances_to_block_and_preserves_hand() {
 }
 
 #[test]
+fn counter_blast_prompt_clones_faithfully() {
+    let (mut r, atk) = scenario_with_blast_in_hand("TEST-013", 3, 0, 3000);
+    r.game_mut().set_memory(2);
+    let hand_before = r.hand_size(1);
+    let target = r.perm_handle(1, 0);
+
+    r.attack_digimon(atk, target, false);
+    assert_eq!(r.current_phase(), GamePhase::CounterTiming);
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "CounterTiming must park a data frame for clone-faithful prompts"
+    );
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(1, encode_digivolve(0, 0))
+        .expect("clone declares blast");
+
+    assert!(
+        clone.pending_attack.is_none(),
+        "clone should continue the attack to completion"
+    );
+    assert_eq!(
+        clone.player(1).hand.len(),
+        hand_before - 1,
+        "clone should move the blast card out of hand"
+    );
+    assert_eq!(
+        clone.player(1).battle_area[0].card_sources.len(),
+        2,
+        "clone should stack the blast card on the defender"
+    );
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original at the Counter prompt"
+    );
+    assert_eq!(
+        r.hand_size(1),
+        hand_before,
+        "resolving the clone must not mutate the original hand"
+    );
+
+    r.game
+        .resolve_selection(1, encode_digivolve(0, 0))
+        .expect("original declares blast");
+    assert_eq!(
+        r.game.player(1).hand.len(),
+        clone.player(1).hand.len(),
+        "original and clone replay the Counter blast identically"
+    );
+    assert_eq!(
+        r.game.player(1).battle_area[0].card_sources.len(),
+        clone.player(1).battle_area[0].card_sources.len(),
+        "original and clone produce the same stack"
+    );
+}
+
+#[test]
 fn counter_declared_stacks_card_and_fires_when_digivolving() {
     // Use a weaker attacker (3000) so the post-blast permanent (5000) wins
     // the battle outright — this lets us inspect the stacked state after
@@ -275,7 +333,11 @@ fn counter_declared_stacks_card_and_fires_when_digivolving() {
     // WhenDigivolving fired — pilot grants +1 memory to the defender,
     // moving the seesaw toward player 1 during player 0's attack.
     assert_eq!(r.memory(), memory_before - 1);
-    assert_eq!(r.turn_player(), 0, "memory stayed on P0's side — no turn end");
+    assert_eq!(
+        r.turn_player(),
+        0,
+        "memory stayed on P0's side — no turn end"
+    );
     // Attacker deleted by defender's stacked Digimon.
     assert_eq!(r.battle_area_size(0), 0);
 }

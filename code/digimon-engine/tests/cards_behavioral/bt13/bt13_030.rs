@@ -72,18 +72,31 @@ fn runner() -> DebugRunner {
         .add_card(digimon("OPP-NOSRC", "Opp NoSrc", 5, 5000))
         // Own counted objects.
         .add_card(royal_knight("ALLY-RK", "Ally Royal Knight", 5, 6000))
-        .add_card(tamer_with_colors("BLUE-TAMER", "Blue Tamer", &[CardColor::Blue]))
+        .add_card(tamer_with_colors(
+            "BLUE-TAMER",
+            "Blue Tamer",
+            &[CardColor::Blue],
+        ))
         // Own NON-counted objects (must NOT count toward N).
         .add_card(digimon("ALLY-PLAIN", "Plain Ally", 5, 6000))
-        .add_card(tamer_with_colors("RED-TAMER", "Red Tamer", &[CardColor::Red]))
+        .add_card(tamer_with_colors(
+            "RED-TAMER",
+            "Red Tamer",
+            &[CardColor::Red],
+        ))
         .memory(10)
         .start()
 }
 
 /// Build the opponent victim with `source_count` digivolution cards beneath an
 /// opponent top card. Returns its handle.
-fn place_opp_victim(runner: &mut DebugRunner, source_count: usize) -> digimon_engine::permanent::PermanentHandle {
-    let pool = ["SRC-A", "SRC-B", "SRC-C", "SRC-D", "SRC-E", "SRC-F", "SRC-G"];
+fn place_opp_victim(
+    runner: &mut DebugRunner,
+    source_count: usize,
+) -> digimon_engine::permanent::PermanentHandle {
+    let pool = [
+        "SRC-A", "SRC-B", "SRC-C", "SRC-D", "SRC-E", "SRC-F", "SRC-G",
+    ];
     let mut ids: Vec<&str> = pool[..source_count].to_vec();
     ids.push("TOP-OPP");
     runner.place_stack(1, &ids)
@@ -201,7 +214,11 @@ fn bt13_030_when_digivolving_also_trashes() {
     let after = runner.game.players[1].battle_area[victim.index as usize]
         .card_sources
         .len();
-    assert_eq!(before - after, 2, "[When Digivolving] also trashes 2N (N=1)");
+    assert_eq!(
+        before - after,
+        2,
+        "[When Digivolving] also trashes 2N (N=1)"
+    );
 }
 
 /// Eligibility: a clamp test — trashing 2N off a short stack stops at the top
@@ -225,7 +242,10 @@ fn bt13_030_trash_clamps_to_available_sources() {
     let after = runner.game.players[1].battle_area[victim.index as usize]
         .card_sources
         .len();
-    assert_eq!(after, 1, "trash clamps at the visible top card (no over-trash)");
+    assert_eq!(
+        after, 1,
+        "trash clamps at the visible top card (no over-trash)"
+    );
     assert_eq!(
         runner.battle_area_size(1),
         1,

@@ -108,10 +108,64 @@
 
 use crate::card_source::CardHandle;
 use crate::effect::Effect;
-use crate::effect_context::CountCappedZone;
+use crate::effect_context::{CountCappedZone, EffectContext};
 use crate::enums::{EffectTiming, Expiry, Keyword, ModifierType, Zone};
 use crate::modifiers::ModifierEntry;
 use crate::replacement::ReplacementSubject;
+use crate::resume::{
+    KeywordAscensionChoiceState, KeywordMaterialSaveTamerSelectionState,
+    KeywordMindLinkSelectionState, KeywordSaveSelectionState, KeywordScapegoatSelectionState,
+    NonDslCountCappedState, NonDslCountCappedTerminal, ResumeFrame, ResumeProvenance, ResumeStack,
+};
+
+fn resume_provenance(ctx: &EffectContext<'_>) -> ResumeProvenance {
+    ResumeProvenance {
+        source_card: ctx.source_card,
+        source_permanent: ctx.source_permanent,
+        source_kind: ctx.source_kind,
+        controller: ctx.player,
+        override_pin: ctx.override_selecting_player(),
+    }
+}
+
+fn park_keyword_frame(ctx: &mut EffectContext<'_>, frame: ResumeFrame) {
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(ResumeStack {
+            frames: vec![frame],
+        });
+    }
+}
+
+fn park_keyword_count_capped_frame(
+    ctx: &mut EffectContext<'_>,
+    prov: ResumeProvenance,
+    of_player: crate::enums::PlayerId,
+    zone: CountCappedZone,
+    min: u8,
+    max: u8,
+    is_optional_zero: bool,
+    terminal: NonDslCountCappedTerminal,
+) {
+    if let Some(pending) = ctx.game.pending_selection.as_ref() {
+        ctx.game.pending_selection_resume = Some(ResumeStack {
+            frames: vec![ResumeFrame::NonDslCountCappedStep(NonDslCountCappedState {
+                prov,
+                of_player,
+                zone,
+                min,
+                max,
+                is_optional_zero,
+                distinct_by: None,
+                candidate_actions: pending.valid_action_ids.clone(),
+                accum: Vec::new(),
+                prompt: pending.prompt.clone(),
+                previous_phase: pending.previous_phase,
+                terminal,
+                outer_conts: Vec::new(),
+            })],
+        });
+    }
+}
 
 /// Map a printed keyword to zero-or-more synthesized `Effect`s that install
 /// the matching `WhenWouldBe*` replacements. Returns an empty `Vec` for
@@ -323,6 +377,7 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 // matches DCGO `Fragment.cs:38` `canNoSelect: () => false`
                 // — the inner pick UI does not offer "no selection".
                 let controller = subject.player;
+                let prov = resume_provenance(&rctx.effect);
                 rctx.effect.select_count_capped_multi(
                     controller,
                     CountCappedZone::Material(subject),
@@ -348,6 +403,16 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                         // with its remaining sources + top.
                         ctx.cancel_leave();
                     },
+                );
+                park_keyword_count_capped_frame(
+                    &mut rctx.effect,
+                    prov,
+                    controller,
+                    CountCappedZone::Material(subject),
+                    0,
+                    n,
+                    false,
+                    NonDslCountCappedTerminal::KeywordFragment { subject },
                 );
             })
             .build()],
@@ -567,6 +632,7 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 };
                 let owner = snap.former_controller;
                 let self_card = snap.top_card;
+                let prov = resume_provenance(ctx);
 
                 // Park the optional Tamer-pick. `select_own_permanent`
                 // no-ops silently with no parking when the candidate
@@ -593,6 +659,15 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                         // chosen Tamer's stack.
                         ctx.place_card_under_permanent_bottom(self_card, tamer, false);
                     },
+                );
+                park_keyword_frame(
+                    ctx,
+                    ResumeFrame::KeywordSaveSelection(KeywordSaveSelectionState {
+                        prov,
+                        owner,
+                        self_card,
+                        outer_conts: Vec::new(),
+                    }),
                 );
             })
             .build()],
@@ -937,6 +1012,7 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 }
 
                 let controller = subject.player;
+                let prov = resume_provenance(&rctx.effect);
                 rctx.effect.select_count_capped_multi(
                     controller,
                     CountCappedZone::Material(subject),
@@ -988,24 +1064,30 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                             let player = ctx.player;
                             let _ = ctx.play_from_trash_free_unsuspended(first);
                             if let Some(second) = second {
-                                ctx.game.run_after_selections_drain(Box::new(
-                                    move |game| {
-                                        let mut c2 =
-                                            crate::effect_context::EffectContext::new(
-                                                game,
-                                                source_card,
-                                                None,
-                                                player,
-                                            );
-                                        let _ = c2
-                                            .play_from_trash_free_unsuspended(second);
-                                    },
-                                ));
+                                ctx.game.run_after_selections_drain(Box::new(move |game| {
+                                    let mut c2 = crate::effect_context::EffectContext::new(
+                                        game,
+                                        source_card,
+                                        None,
+                                        player,
+                                    );
+                                    let _ = c2.play_from_trash_free_unsuspended(second);
+                                }));
                             }
                         }
                         // No cancel_leave(): the carrier's departure
                         // proceeds with the remaining stack.
                     },
+                );
+                park_keyword_count_capped_frame(
+                    &mut rctx.effect,
+                    prov,
+                    controller,
+                    CountCappedZone::Material(subject),
+                    0,
+                    2,
+                    false,
+                    NonDslCountCappedTerminal::KeywordPartition { subject },
                 );
             })
             .build()],
@@ -1040,6 +1122,8 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 {
                     return;
                 }
+                let prov = resume_provenance(ctx);
+                let eligible_sources_for_frame = eligible_sources.clone();
 
                 ctx.select_own_permanent(
                     "you may place Material Save sources under one of your Tamers",
@@ -1073,6 +1157,18 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                             },
                         );
                     },
+                );
+                park_keyword_frame(
+                    ctx,
+                    ResumeFrame::KeywordMaterialSaveTamerSelection(
+                        KeywordMaterialSaveTamerSelectionState {
+                            prov,
+                            owner,
+                            eligible_sources: eligible_sources_for_frame,
+                            max: n,
+                            outer_conts: Vec::new(),
+                        },
+                    ),
                 );
             })
             .build()],
@@ -1280,6 +1376,7 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 // least one Digimon candidate exists, so this
                 // select_own_permanent will always install a
                 // pending_selection.
+                let prov = resume_provenance(&rctx.effect);
                 rctx.effect.select_own_permanent(
                     "select another of your Digimon to delete instead",
                     /*is_optional=*/ false,
@@ -1298,6 +1395,15 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                         // arm finalizes the redirected deletion.
                         ctx.substitute_replacement(ReplacementSubject::Permanent(picked));
                     },
+                );
+                park_keyword_frame(
+                    &mut rctx.effect,
+                    ResumeFrame::KeywordScapegoatSelection(KeywordScapegoatSelectionState {
+                        prov,
+                        owner,
+                        self_perm: me_perm,
+                        outer_conts: Vec::new(),
+                    }),
                 );
             })
             .build()],
@@ -1522,6 +1628,7 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                     return;
                 };
                 let owner = me.player;
+                let prov = resume_provenance(ctx);
 
                 // Optional own-permanent pick (DCGO `canNoSelect: true`).
                 // Filter mirrors the gate plus a self-exclusion (the
@@ -1553,6 +1660,15 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                     move |ctx, picked| {
                         ctx.attach_tamer_to_digimon(me, picked);
                     },
+                );
+                park_keyword_frame(
+                    ctx,
+                    ResumeFrame::KeywordMindLinkSelection(KeywordMindLinkSelectionState {
+                        prov,
+                        owner,
+                        tamer: me,
+                        outer_conts: Vec::new(),
+                    }),
                 );
             })
             .build()],
@@ -1668,6 +1784,7 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 };
                 let owner = snap.former_controller;
                 let self_card = snap.top_card;
+                let prov = resume_provenance(ctx);
                 // Only offer if the carrier actually landed in the owner's
                 // trash (always true under the batched deletion flow).
                 if !ctx
@@ -1707,6 +1824,15 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                             /*face_up=*/ false,
                         );
                     },
+                );
+                park_keyword_frame(
+                    ctx,
+                    ResumeFrame::KeywordAscensionChoice(KeywordAscensionChoiceState {
+                        prov,
+                        owner,
+                        self_card,
+                        outer_conts: Vec::new(),
+                    }),
                 );
             })
             .build()],

@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "entries": [
+    {
+      "name": "v022-generalist-v1",
+      "weights_path": "C:\\Users\\james\\Documents\\digimon-deck-list-builder-1\\cloud_downloads\\v022-hf4zm2hl82qk48\\models\\pilot_ppo_starter_decks_generalist_v1.zip",
+      "algorithm": "lstm",
+      "win_rate_vs_pool": 0.5,
+      "games_played": 0
+    },
+    {
+      "name": "v020-generalist-v1",
+      "weights_path": "C:\\Users\\james\\Documents\\digimon-deck-list-builder-1\\cloud_downloads\\v020-3fm5tm9kci2isy\\models\\pilot_ppo_starter_decks_generalist_v1.zip",
+      "algorithm": "lstm",
+      "win_rate_vs_pool": 0.5,
+      "games_played": 0
+    }
+  ]
+}

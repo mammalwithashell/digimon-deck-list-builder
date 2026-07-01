@@ -52,7 +52,11 @@ fn plain_blue_lv3_base(id: &str) -> CardData {
     c.dp = Some(4000);
     c.colors = vec![CardColor::Blue];
     c.traits = vec!["Beast".to_string()];
-    c.evo_costs = vec![EvoCost { card_color: EVO_BLUE, level: 3, memory_cost: 0 }];
+    c.evo_costs = vec![EvoCost {
+        card_color: EVO_BLUE,
+        level: 3,
+        memory_cost: 0,
+    }];
     c
 }
 
@@ -65,7 +69,11 @@ fn plain_blue_lv4_base(id: &str) -> CardData {
     c.dp = Some(5000);
     c.colors = vec![CardColor::Blue];
     c.traits = vec!["Beast".to_string()];
-    c.evo_costs = vec![EvoCost { card_color: EVO_BLUE, level: 4, memory_cost: 0 }];
+    c.evo_costs = vec![EvoCost {
+        card_color: EVO_BLUE,
+        level: 4,
+        memory_cost: 0,
+    }];
     c
 }
 
@@ -91,7 +99,11 @@ fn ice_snow_lv4_vanilla(id: &str) -> CardData {
     c.dp = Some(5000);
     c.colors = vec![CardColor::Blue];
     c.traits = vec!["Ice-Snow".to_string()];
-    c.evo_costs = vec![EvoCost { card_color: EVO_BLUE, level: 3, memory_cost: 2 }];
+    c.evo_costs = vec![EvoCost {
+        card_color: EVO_BLUE,
+        level: 3,
+        memory_cost: 2,
+    }];
     c
 }
 
@@ -178,7 +190,11 @@ fn ice_snow_ex8019_ramp_into_paledramon_reduces_cost_then_strips_two_sources() {
 
     // Opponent Digimon with 3 sources (bottom → top: S1, S2, S3, then TOP).
     let opp = runner.place_stack(1, &["OPP-S1", "OPP-S2", "OPP-S3", "OPP-TOP"]);
-    assert_eq!(source_count(&runner, opp), 3, "opponent starts with 3 sources");
+    assert_eq!(
+        source_count(&runner, opp),
+        3,
+        "opponent starts with 3 sources"
+    );
 
     // EX8-019 Penguinmon on field; EX7-020 Paledramon in hand to digivolve over it.
     let base = runner.place_on_field(0, "EX8-019", Some(0));
@@ -210,7 +226,10 @@ fn ice_snow_ex8019_ramp_into_paledramon_reduces_cost_then_strips_two_sources() {
         .expect("pick the opponent Digimon to trash its bottom 2 sources");
     let _ = runner.auto_resolve();
 
-    let opp = PermanentHandle { player: 1, index: 0 };
+    let opp = PermanentHandle {
+        player: 1,
+        index: 0,
+    };
     assert_eq!(
         source_count(&runner, opp),
         1,
@@ -306,8 +325,15 @@ fn ice_snow_frigimon_ex8022_strips_two_and_withholds_memory_while_opponent_stays
         .expect("strip the opponent's bottom 2 sources");
     let _ = runner.auto_resolve();
 
-    let opp = PermanentHandle { player: 1, index: 0 };
-    assert_eq!(source_count(&runner, opp), 1, "bottom 2 of 3 sources trashed");
+    let opp = PermanentHandle {
+        player: 1,
+        index: 0,
+    };
+    assert_eq!(
+        source_count(&runner, opp),
+        1,
+        "bottom 2 of 3 sources trashed"
+    );
     assert_eq!(
         runner.game.memory, memory_after_cost,
         "the opponent still has a sourced Digimon, so the +1-memory rider must NOT fire"
@@ -366,7 +392,10 @@ fn ice_snow_suzune_ex8066_suspends_to_trash_a_source_on_an_ice_snow_digivolve() 
         .pending_selection_view()
         .expect("Suzune's [All Turns] observer must offer on an Ice-Snow digivolve");
     assert_eq!(view.kind, SelectionKind::TriggerOrder);
-    assert!(view.is_optional, "\"by suspending this Tamer\" is a declinable cost");
+    assert!(
+        view.is_optional,
+        "\"by suspending this Tamer\" is a declinable cost"
+    );
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("accept: pay the suspend cost");
@@ -385,7 +414,10 @@ fn ice_snow_suzune_ex8066_suspends_to_trash_a_source_on_an_ice_snow_digivolve() 
         runner.game.players[0].battle_area[tamer.index as usize].is_suspended,
         "paying the cost suspends Suzune Kazuki"
     );
-    let opp = PermanentHandle { player: 1, index: 0 };
+    let opp = PermanentHandle {
+        player: 1,
+        index: 0,
+    };
     assert_eq!(
         source_count(&runner, opp),
         1,

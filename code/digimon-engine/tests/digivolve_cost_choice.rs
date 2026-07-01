@@ -37,8 +37,16 @@ fn evolver() -> CardData {
     c.colors = vec![CardColor::Blue];
     c.dp = Some(3000);
     c.evo_costs = vec![
-        EvoCost { card_color: EVO_BLUE, level: 2, memory_cost: 1 },
-        EvoCost { card_color: EVO_GREEN, level: 2, memory_cost: 0 },
+        EvoCost {
+            card_color: EVO_BLUE,
+            level: 2,
+            memory_cost: 1,
+        },
+        EvoCost {
+            card_color: EVO_GREEN,
+            level: 2,
+            memory_cost: 0,
+        },
     ];
     c
 }
@@ -98,8 +106,14 @@ fn two_colour_base_prompts_for_cost_choice() {
         choices.iter().map(|c| c.label.clone()).collect::<Vec<_>>()
     );
     let labels: Vec<String> = choices.iter().map(|c| c.label.to_lowercase()).collect();
-    assert!(labels.iter().any(|l| l.contains('0')), "an option for cost 0 (labels: {labels:?})");
-    assert!(labels.iter().any(|l| l.contains('1')), "an option for cost 1 (labels: {labels:?})");
+    assert!(
+        labels.iter().any(|l| l.contains('0')),
+        "an option for cost 0 (labels: {labels:?})"
+    );
+    assert!(
+        labels.iter().any(|l| l.contains('1')),
+        "an option for cost 1 (labels: {labels:?})"
+    );
 }
 
 /// Choosing the COSTLIER option (cost 1) actually pays 1 memory — proving the
@@ -110,9 +124,14 @@ fn choosing_cost_1_pays_one_memory() {
     let mem_before = runner.game.memory;
 
     assert!(!runner.game.digivolve_from_hand(0, 0, 0, PlaySource::ByHand));
-    let view = runner.pending_selection_view().expect("cost choice pending");
+    let view = runner
+        .pending_selection_view()
+        .expect("cost choice pending");
     let choices = view.effect_choices.clone().expect("effect_choices");
-    let cost1 = choices.iter().find(|c| c.label.contains('1')).expect("a cost-1 option");
+    let cost1 = choices
+        .iter()
+        .find(|c| c.label.contains('1'))
+        .expect("a cost-1 option");
     runner
         .execute_action(0, cost1.action_id)
         .expect("resolve the cost choice with the cost-1 option");
@@ -127,7 +146,10 @@ fn choosing_cost_1_pays_one_memory() {
         .top_card()
         .card_id(&runner.game.card_data)
         .to_string();
-    assert_eq!(top, "EVOLVER", "the evolver must be stacked on top after digivolve");
+    assert_eq!(
+        top, "EVOLVER",
+        "the evolver must be stacked on top after digivolve"
+    );
 }
 
 /// Choosing the cheaper option (cost 0) pays 0.
@@ -137,14 +159,22 @@ fn choosing_cost_0_pays_zero_memory() {
     let mem_before = runner.game.memory;
 
     assert!(!runner.game.digivolve_from_hand(0, 0, 0, PlaySource::ByHand));
-    let view = runner.pending_selection_view().expect("cost choice pending");
+    let view = runner
+        .pending_selection_view()
+        .expect("cost choice pending");
     let choices = view.effect_choices.clone().expect("effect_choices");
-    let cost0 = choices.iter().find(|c| c.label.contains('0')).expect("a cost-0 option");
+    let cost0 = choices
+        .iter()
+        .find(|c| c.label.contains('0'))
+        .expect("a cost-0 option");
     runner
         .execute_action(0, cost0.action_id)
         .expect("resolve the cost choice with the cost-0 option");
 
-    assert_eq!(runner.game.memory, mem_before, "the cost-0 path must pay 0 memory");
+    assert_eq!(
+        runner.game.memory, mem_before,
+        "the cost-0 path must pay 0 memory"
+    );
     assert!(runner.pending_selection().is_none());
 }
 

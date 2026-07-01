@@ -200,9 +200,10 @@ fn st23_01_only_effect_is_inherited_when_attacking_opt() {
     );
     assert!(t.once_per_turn, "[Once Per Turn]");
 
-    let has_optional_hand_pick = t.process.iter().any(|s| {
-        matches!(s, CompiledStep::SelectHand { optional: true, .. })
-    });
+    let has_optional_hand_pick = t
+        .process
+        .iter()
+        .any(|s| matches!(s, CompiledStep::SelectHand { optional: true, .. }));
     assert!(
         has_optional_hand_pick,
         "'may digivolve' → optional select_hand carries the decline"
@@ -284,7 +285,9 @@ fn st23_01_digivolve_is_declinable() {
         .len();
 
     fire(&mut r, EffectTiming::WhenAttacking, carrier);
-    let view = r.pending_selection_view().expect("optional hand pick surfaces");
+    let view = r
+        .pending_selection_view()
+        .expect("optional hand pick surfaces");
     assert!(view.is_optional);
     r.execute_action(0, PASS).expect("declining is legal");
     let _ = r.auto_resolve();

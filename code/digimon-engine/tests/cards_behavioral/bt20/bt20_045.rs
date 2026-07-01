@@ -50,12 +50,10 @@ fn bt20_045_has_standard_dna_digivolve_green_blue() {
             path.kind == CompiledAltPathKind::DnaDigivolve
                 && path.cost == Some(CompiledCost::Literal(0))
                 && path.materials.iter().any(|m| {
-                    m.filter.level_eq == Some(6)
-                        && m.filter.color_is == Some(CompiledColor::Green)
+                    m.filter.level_eq == Some(6) && m.filter.color_is == Some(CompiledColor::Green)
                 })
                 && path.materials.iter().any(|m| {
-                    m.filter.level_eq == Some(6)
-                        && m.filter.color_is == Some(CompiledColor::Blue)
+                    m.filter.level_eq == Some(6) && m.filter.color_is == Some(CompiledColor::Blue)
                 })
         }),
         "BT20-045 must have a standard Green Lv.6 + Blue Lv.6 DNA digivolve (cost 0)"
@@ -193,9 +191,7 @@ fn counter_blast_dna_into_examon_with_opp_field(
     for c in opp_field {
         builder = builder.add_card(c.clone());
     }
-    let mut runner = builder
-        .hand(1, &["BT20-045", "TEST-SLAYERDRAMON"])
-        .start();
+    let mut runner = builder.hand(1, &["BT20-045", "TEST-SLAYERDRAMON"]).start();
 
     // Player 0 (the opponent of the Blast-DNA-ing player 1) gets the field.
     let attacking = runner.place_on_field(0, "TEST-ATTACKER", Some(0));
@@ -232,8 +228,7 @@ fn bt20_045_dna_digivolve_bottom_decks_all_highest_dp_opp_digimon() {
     let high_b = dp_digimon("OPP-HIGH-B", "OppHighB", 18000);
     let low = dp_digimon("OPP-LOW", "OppLow", 9000);
 
-    let mut runner =
-        counter_blast_dna_into_examon_with_opp_field(&[high_a, high_b, low]);
+    let mut runner = counter_blast_dna_into_examon_with_opp_field(&[high_a, high_b, low]);
     let _ = runner.auto_resolve();
 
     // The two 18000 Digimon are the highest → both returned to deck bottom.
@@ -360,7 +355,10 @@ fn bt20_045_non_dna_digivolve_does_not_sweep() {
 
 /// Place BT20-045 on a player's field and pre-suspend it, then return its
 /// handle.
-fn placed_suspended_examon(runner: &mut DebugRunner, player: u8) -> digimon_engine::permanent::PermanentHandle {
+fn placed_suspended_examon(
+    runner: &mut DebugRunner,
+    player: u8,
+) -> digimon_engine::permanent::PermanentHandle {
     let perm = runner.place_on_field(player, "BT20-045", Some(0));
     runner.game.players[player as usize].battle_area[perm.index as usize].is_suspended = true;
     perm

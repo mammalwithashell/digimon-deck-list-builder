@@ -392,9 +392,7 @@ fn ex8_028_wd_free_play_clause_structural_shape() {
         .effects
         .iter()
         .find_map(|clause| match clause {
-            CompiledClause::Triggered(t)
-                if t.when == vec![CompiledTiming::WhenDigivolving] =>
-            {
+            CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::WhenDigivolving] => {
                 Some(t)
             }
             _ => None,
@@ -803,7 +801,9 @@ fn ex8_028_wd_free_play_decline_is_legal() {
 
     drive_to_kind(&mut runner, 0, SelectionKind::Hand);
     assert!(runner.pending_is_optional(), "PASS must be legal");
-    runner.execute_action(0, PASS).expect("decline the free play");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the free play");
     decline_rest(&mut runner, 0);
 
     assert_eq!(runner.battle_area_size(0), field_before, "nothing played");

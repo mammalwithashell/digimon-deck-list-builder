@@ -1194,6 +1194,61 @@ impl Game {
         Ok(())
     }
 
+    pub(crate) fn run_alliance_selection_step(
+        &mut self,
+        attacker: PermanentHandle,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        if is_pass {
+            if let Some(pa) = self.pending_attack.as_mut() {
+                pa.state = AttackState::CounterOpen;
+            }
+            self.advance_pending_attack();
+            return;
+        }
+
+        use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
+        use crate::enums::{Expiry, ModifierType};
+        use crate::modifiers::ModifierEntry;
+
+        let attacker_player = attacker.player;
+        let offset = action_id.saturating_sub(ATTACK_START);
+        let ally_index = (offset % TARGETS_PER_ATTACKER) as u8;
+        let ally = PermanentHandle {
+            player: attacker_player,
+            index: ally_index,
+        };
+
+        self.enter_deferred_drain();
+        self.suspend_with_cause(ally, true);
+        let ally_dp = self.effective_dp(ally).unwrap_or(0);
+        self.modifiers.add(
+            attacker,
+            ModifierEntry::simple(
+                ModifierType::ChangeDp,
+                ally_dp,
+                Expiry::EndOfAttack,
+                attacker_player,
+            ),
+        );
+        self.modifiers.add(
+            attacker,
+            ModifierEntry::simple(
+                ModifierType::SecurityAttackChange,
+                1,
+                Expiry::EndOfAttack,
+                attacker_player,
+            ),
+        );
+        self.exit_deferred_drain_and_flush();
+
+        if let Some(pa) = self.pending_attack.as_mut() {
+            pa.state = AttackState::CounterOpen;
+        }
+        self.advance_pending_attack();
+    }
+
     /// If the ATTACKER has `<Alliance>`, scan its side for unsuspended
     /// allies to declare. Install a `PendingSelection` in `AllianceTiming`
     /// if any candidate exists. Returns `true` if a selection was installed.
@@ -1342,6 +1397,14 @@ impl Game {
                 }
                 game.advance_pending_attack();
             })),
+        });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::AllianceSelection(
+                crate::resume::CombatAllianceState {
+                    attacker,
+                    outer_conts: Vec::new(),
+                },
+            )],
         });
 
         true
@@ -1540,6 +1603,8 @@ impl Game {
 
         // Snapshot the candidate list into the closure for decoding.
         let candidate_snapshot = candidates.clone();
+        let resume_valid_action_ids = valid_action_ids.clone();
+        let resume_candidates = candidate_snapshot.clone();
 
         // Increment the counter-depth guard — subsequent nested attacks
         // launched by the counter body will see `counter_depth >= 1` and
@@ -1602,8 +1667,55 @@ impl Game {
                 game.advance_pending_attack();
             })),
         });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::CounterSelection(
+                crate::resume::CombatCounterState {
+                    defender_player,
+                    valid_action_ids: resume_valid_action_ids,
+                    candidates: resume_candidates,
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
 
         true
+    }
+
+    pub(crate) fn run_counter_selection_step(
+        &mut self,
+        defender_player: PlayerId,
+        valid_action_ids: &[u16],
+        candidates: &[CounterCandidate],
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        if is_pass {
+            if let Some(pa) = self.pending_attack.as_mut() {
+                pa.state = AttackState::BlockOpen;
+            }
+            self.advance_pending_attack();
+            return;
+        }
+
+        let picked = valid_action_ids
+            .iter()
+            .position(|&a| a == action_id)
+            .and_then(|pos| candidates.get(pos).copied());
+        if let Some(cand) = picked {
+            self.resolve_counter_selection(defender_player, cand);
+        }
+
+        if self.pending_selection.is_some() {
+            return;
+        }
+
+        let next_state = match self.pending_attack.as_ref() {
+            Some(pa) if self.handle_valid(pa.attacker) => AttackState::BlockOpen,
+            Some(_) => AttackState::Cleanup,
+            None => return,
+        };
+        self.transition_attack_state(next_state);
+        self.advance_pending_attack();
     }
 
     /// Route a resolved Counter candidate to its execution path. Called
@@ -1771,7 +1883,89 @@ impl Game {
             }),
             on_decline: None,
         });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::CounterBlastDnaFieldMaterial(
+                crate::resume::CombatBlastDnaFieldMaterialState {
+                    defender,
+                    result_hand_index,
+                    source_card,
+                    previous_phase,
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
         true
+    }
+
+    pub(crate) fn run_counter_blast_dna_field_material_step(
+        &mut self,
+        defender: PlayerId,
+        result_hand_index: usize,
+        source_card: CardHandle,
+        previous_phase: GamePhase,
+        action_id: u16,
+    ) {
+        use crate::action::space::PLAY_HAND_START;
+
+        let field_idx = action_id as usize;
+        let hand_targets: Vec<u16> = self
+            .valid_blast_dna_hand_materials_for_hand_card(defender, result_hand_index, field_idx)
+            .map(|idx| PLAY_HAND_START + idx)
+            .collect();
+        if hand_targets.is_empty() {
+            return;
+        }
+
+        self.current_phase = GamePhase::SelectHand;
+        self.pending_selection = Some(PendingSelection {
+            zone_owner: None,
+            kind: SelectionKind::Hand,
+            selecting_player: defender,
+            previous_phase,
+            valid_action_ids: hand_targets,
+            is_optional: false,
+            prompt: "Select Blast DNA hand material".to_string(),
+            effect_choices: None,
+            source_card,
+            source_permanent: None,
+            source_kind: crate::enums::EffectSourceKind::Digimon,
+            callback: Box::new(move |game: &mut Game, action_id: u16| {
+                let material_idx = (action_id - PLAY_HAND_START) as usize;
+                game.execute_blast_dna_digivolve(
+                    defender,
+                    result_hand_index,
+                    field_idx,
+                    material_idx,
+                );
+            }),
+            on_decline: None,
+        });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::CounterBlastDnaHandMaterial(
+                crate::resume::CombatBlastDnaHandMaterialState {
+                    defender,
+                    result_hand_index,
+                    field_idx,
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
+    }
+
+    pub(crate) fn run_counter_blast_dna_hand_material_step(
+        &mut self,
+        defender: PlayerId,
+        result_hand_index: usize,
+        field_idx: usize,
+        action_id: u16,
+    ) {
+        use crate::action::space::PLAY_HAND_START;
+
+        if action_id < PLAY_HAND_START {
+            return;
+        }
+        let material_idx = (action_id - PLAY_HAND_START) as usize;
+        self.execute_blast_dna_digivolve(defender, result_hand_index, field_idx, material_idx);
     }
 
     fn execute_blast_dna_digivolve(
@@ -2061,8 +2255,82 @@ impl Game {
                 game.advance_pending_attack();
             })),
         });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::BlockSelection(
+                crate::resume::CombatBlockState {
+                    attacker,
+                    defender_player,
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
 
         true
+    }
+
+    pub(crate) fn run_block_selection_step(
+        &mut self,
+        attacker: PermanentHandle,
+        defender_player: PlayerId,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        if is_pass {
+            if let Some(pa) = self.pending_attack.as_mut() {
+                pa.state = AttackState::PostBlock;
+            }
+            self.advance_pending_attack();
+            return;
+        }
+
+        use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
+        let offset = action_id.saturating_sub(ATTACK_START);
+        let blocker_index = (offset % TARGETS_PER_ATTACKER) as u8;
+        let blocker = PermanentHandle {
+            player: defender_player,
+            index: blocker_index,
+        };
+
+        if self
+            .validate_attack_redirect_target(attacker, AttackTarget::Digimon(blocker))
+            .is_err()
+        {
+            if let Some(pa) = self.pending_attack.as_mut() {
+                pa.state = AttackState::PostBlock;
+            }
+            self.advance_pending_attack();
+            return;
+        }
+
+        if let Some(pa) = self.pending_attack.as_mut() {
+            pa.is_blocked = true;
+            pa.blocker = Some(blocker);
+            pa.state = AttackState::PostBlock;
+        }
+        self.suspend(blocker);
+        self.apply_attack_target_substitution_with_reason(
+            AttackTarget::Digimon(blocker),
+            AttackTargetChangeReason::Blocker,
+        );
+
+        if let Some(card) = self
+            .player(attacker.player)
+            .battle_area
+            .get(attacker.index as usize)
+            .map(|perm| perm.top_card().handle())
+        {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnBlock,
+                crate::selection::TriggerSource::BlockDeclared {
+                    attacker,
+                    blocker,
+                    card,
+                },
+            );
+        }
+        self.drain_effect_queue();
+
+        self.advance_pending_attack();
     }
 
     /// Open Raid's printed optional attack-target switch immediately after
@@ -2198,6 +2466,66 @@ impl Game {
                 game.advance_pending_attack();
             })),
         });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RaidSelection(
+                crate::resume::CombatRaidSelectionState {
+                    attacker,
+                    opponent_player: opp_id,
+                    mode: crate::resume::CombatRaidSelectionMode::Switch,
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
+    }
+
+    pub(crate) fn run_raid_selection_step(
+        &mut self,
+        attacker: PermanentHandle,
+        opponent_player: PlayerId,
+        mode: crate::resume::CombatRaidSelectionMode,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        if is_pass {
+            if mode == crate::resume::CombatRaidSelectionMode::Switch {
+                if let Some(pa) = self.pending_attack.as_mut() {
+                    pa.state = AttackState::AllianceOpen;
+                }
+                self.advance_pending_attack();
+            }
+            return;
+        }
+
+        use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
+        let offset = action_id.saturating_sub(ATTACK_START);
+        let new_index = (offset % TARGETS_PER_ATTACKER) as u8;
+        let new_target = PermanentHandle {
+            player: opponent_player,
+            index: new_index,
+        };
+
+        let valid = self
+            .validate_attack_redirect_target(attacker, AttackTarget::Digimon(new_target))
+            .is_ok();
+        if valid {
+            self.apply_attack_target_substitution_with_reason(
+                AttackTarget::Digimon(new_target),
+                AttackTargetChangeReason::Raid,
+            );
+        } else if mode == crate::resume::CombatRaidSelectionMode::Retarget {
+            self.cleanup_attack(AttackResult::Cancelled);
+            return;
+        }
+
+        match mode {
+            crate::resume::CombatRaidSelectionMode::Switch => {
+                self.transition_attack_state(AttackState::AllianceOpen);
+            }
+            crate::resume::CombatRaidSelectionMode::Retarget => {
+                self.transition_attack_state(AttackState::Battle);
+            }
+        }
+        self.advance_pending_attack();
     }
 
     /// Phase 9 Task 4 — Raid target-switch rider. Evaluates the
@@ -2421,6 +2749,16 @@ impl Game {
                 game.advance_pending_attack();
             }),
             on_decline: None,
+        });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RaidSelection(
+                crate::resume::CombatRaidSelectionState {
+                    attacker,
+                    opponent_player: opp_id,
+                    mode: crate::resume::CombatRaidSelectionMode::Retarget,
+                    outer_conts: Vec::new(),
+                },
+            )],
         });
     }
 
@@ -3311,7 +3649,10 @@ impl Game {
         let perm = &mut self.players[handle.player as usize].battle_area[handle.index as usize];
         perm.is_suspended = true;
         perm.attacks_this_turn = perm.attacks_this_turn.saturating_add(1);
-        if let Some(count) = self.digimon_attacks_this_turn.get_mut(handle.player as usize) {
+        if let Some(count) = self
+            .digimon_attacks_this_turn
+            .get_mut(handle.player as usize)
+        {
             *count = count.saturating_add(1);
         }
     }
@@ -3635,5 +3976,4 @@ impl Game {
             std::panic::resume_unwind(payload);
         }
     }
-
 }

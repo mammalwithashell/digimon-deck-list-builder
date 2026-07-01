@@ -68,7 +68,13 @@ fn base() -> DebugRunnerBuilder {
         .dsl_card(CARD_ID)
         .expect("BT21-009 YAML parses and compiles")
         .add_card(make_test_card("DECK-PAD", "Filler"))
-        .add_card(make_digimon("APPMON-HOST", 4, 4000, 4, &["Appmon", "Social"]))
+        .add_card(make_digimon(
+            "APPMON-HOST",
+            4,
+            4000,
+            4,
+            &["Appmon", "Social"],
+        ))
         .add_card(make_haru("HARU-IN-HAND"))
         .add_card(make_tamer("TAMER-A"))
         .add_card(make_tamer("TAMER-B"))
@@ -395,14 +401,8 @@ fn bt21_009_when_linked_decline_no_play() {
 
     fire_link_onto_host(&mut r, host);
 
-    assert!(
-        r.game.pending_selection.is_some(),
-        "when-linked fires"
-    );
-    assert!(
-        r.pending_is_optional(),
-        "prompt must be optional (you may)"
-    );
+    assert!(r.game.pending_selection.is_some(), "when-linked fires");
+    assert!(r.pending_is_optional(), "prompt must be optional (you may)");
     let _ = r.game.resolve_selection(0, PASS);
 
     assert_eq!(r.battle_area_size(0), field_before, "PASS: no card played");

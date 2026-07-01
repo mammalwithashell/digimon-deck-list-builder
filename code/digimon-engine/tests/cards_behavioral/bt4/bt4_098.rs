@@ -20,9 +20,7 @@
 //!   - SecuritySkill: ChangeDigimonSAttackPlayerEffect +1 over all of owner's
 //!     battle-area Digimon, UntilOwnerTurnEnd (= end of your next turn).
 
-use digimon_dsl::compiled::{
-    CompiledClause, CompiledModifierValue, CompiledStep, CompiledTiming,
-};
+use digimon_dsl::compiled::{CompiledClause, CompiledModifierValue, CompiledStep, CompiledTiming};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, ModifierType};
@@ -123,9 +121,9 @@ fn bt4_098_main_clause_grants_dp_sattack_and_block_trigger() {
         matches!(s, CompiledStep::AddModifier { modifier, value, .. }
             if modifier == "SecurityAttackChange" && *value == CompiledModifierValue::Literal(1))
     });
-    let has_block_grant = main.process.iter().any(|s| {
-        matches!(s, CompiledStep::GrantTriggeredEffect { timing, .. } if timing == "on_block")
-    });
+    let has_block_grant = main.process.iter().any(
+        |s| matches!(s, CompiledStep::GrantTriggeredEffect { timing, .. } if timing == "on_block"),
+    );
 
     assert!(has_change_dp, "[Main] must add ChangeDp +3000");
     assert!(has_satk, "[Main] must add SecurityAttackChange +1");

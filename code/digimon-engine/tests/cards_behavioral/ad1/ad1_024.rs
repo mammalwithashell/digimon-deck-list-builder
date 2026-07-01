@@ -691,7 +691,7 @@ fn ad1_024_all_turns_accept_then_decline_everything_refunds_opt() {
     runner.fire_play_event_triggers(0, first.index as usize, false, false);
 
     pick_first(&mut runner); // accept the outer confirm
-    // The suspend pick is DECLINABLE (DCGO canNoSelect: true) — decline it.
+                             // The suspend pick is DECLINABLE (DCGO canNoSelect: true) — decline it.
     assert!(
         runner.game.pending_selection.is_some(),
         "the suspend pick must install after accepting the confirm"

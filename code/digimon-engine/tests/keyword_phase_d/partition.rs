@@ -194,7 +194,9 @@ fn partition_plays_two_picked_sources_on_opponent_effect_deletion() {
     }
     // Accept the optional <Partition> activation.
     let accept = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
-    r.game.resolve_selection(0, accept).expect("accept Partition");
+    r.game
+        .resolve_selection(0, accept)
+        .expect("accept Partition");
     {
         let pending = r
             .game
@@ -283,6 +285,71 @@ fn partition_plays_two_picked_sources_on_opponent_effect_deletion() {
     assert_eq!(
         r.game.memory, memory_before,
         "Partition replays are free — memory must not change"
+    );
+}
+
+#[test]
+fn partition_source_prompt_clones_faithfully() {
+    let mut r = DebugRunner::builder()
+        .add_card(partition_card("PARTITION"))
+        .add_card(plain_digimon("SRC-A"))
+        .add_card(plain_digimon("SRC-B"))
+        .add_card(plain_digimon("SRC-C"))
+        .start();
+
+    let carrier = r.place_on_field(0, "SRC-A", None);
+    push_source_card(&mut r, 0, carrier.index as usize, "SRC-B");
+    push_source_card(&mut r, 0, carrier.index as usize, "SRC-C");
+    push_source_card(&mut r, 0, carrier.index as usize, "PARTITION");
+    r.game.set_effect_source_player_for_test(Some(1));
+    r.game.delete_permanent_with_effects(carrier);
+
+    let accept = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    r.game
+        .resolve_selection(0, accept)
+        .expect("accept Partition");
+    let first_action = {
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("Partition source pick must be parked");
+        assert!(
+            r.game.pending_selection_resume.is_some(),
+            "Partition source prompt must be resume-driven before cloning"
+        );
+        pending.valid_action_ids[0]
+    };
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, first_action)
+        .expect("cloned first Partition pick resolves");
+    assert!(
+        clone.pending_selection_resume.is_some(),
+        "cloned first pick should re-park a resume-driven second pick"
+    );
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original Partition prompt intact"
+    );
+
+    r.game
+        .resolve_selection(0, first_action)
+        .expect("original first Partition pick resolves");
+    let second_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    clone
+        .resolve_selection(0, second_action)
+        .expect("cloned second Partition pick resolves");
+    r.game
+        .resolve_selection(0, second_action)
+        .expect("original second Partition pick resolves");
+    r.game.set_effect_source_player_for_test(None);
+
+    assert_eq!(
+        clone.players[0].battle_area.len(),
+        r.game.players[0].battle_area.len(),
+        "clone and original should replay the same Partition result"
     );
 }
 

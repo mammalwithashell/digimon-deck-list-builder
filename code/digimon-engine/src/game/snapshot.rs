@@ -66,7 +66,9 @@ impl Game {
                 let pid = pid_1based
                     .checked_sub(1)
                     .filter(|p| (*p as usize) < self.players.len())
-                    .ok_or_else(|| format!("apply_scenario: player key {pid_str:?} out of range"))?;
+                    .ok_or_else(|| {
+                        format!("apply_scenario: player key {pid_str:?} out of range")
+                    })?;
                 self.apply_zone_spec(pid, zspec)?;
             }
         }
@@ -111,7 +113,9 @@ impl Game {
         if let Some(sec) = z.get("security").and_then(Value::as_array) {
             self.stage_clear_zone(pid, "security")?;
             for c in sec.iter().rev() {
-                let id = c.as_str().ok_or("apply_scenario: non-string security card")?;
+                let id = c
+                    .as_str()
+                    .ok_or("apply_scenario: non-string security card")?;
                 self.stage_inject_card(pid, id, "security_top")?;
             }
         }
@@ -133,9 +137,11 @@ impl Game {
                 if stack.is_empty() {
                     return Err("apply_scenario: empty field stack".to_string());
                 }
-                let suspended = fs.get("is_suspended").and_then(Value::as_bool).unwrap_or(false);
-                let turn_played =
-                    fs.get("turn_played").and_then(Value::as_u64).unwrap_or(0) as u16;
+                let suspended = fs
+                    .get("is_suspended")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false);
+                let turn_played = fs.get("turn_played").and_then(Value::as_u64).unwrap_or(0) as u16;
                 self.stage_place_field_stack(pid, &stack, suspended, turn_played);
             }
         }
@@ -212,7 +218,11 @@ impl Game {
             })
             .collect();
         let breeding = match &p.breeding_area {
-            Some(perm) => json!(perm.card_sources.iter().map(|cs| self.cs_id(cs)).collect::<Vec<_>>()),
+            Some(perm) => json!(perm
+                .card_sources
+                .iter()
+                .map(|cs| self.cs_id(cs))
+                .collect::<Vec<_>>()),
             None => Value::Null,
         };
         json!({

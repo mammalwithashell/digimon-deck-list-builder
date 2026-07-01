@@ -228,7 +228,11 @@ fn q10_multi_effect_memory_arithmetic_ends_at_zero() {
     r.game.gain_memory_for_player(b, -2);
     // Gravity Crush's pending end-of-turn loss: Player B loses 2.
     r.game.gain_memory_for_player(b, -2);
-    assert_eq!(r.memory(), -3, "after Mental Training + Gravity Crush: 3 on A's side");
+    assert_eq!(
+        r.memory(),
+        -3,
+        "after Mental Training + Gravity Crush: 3 on A's side"
+    );
 
     // End of Player B's turn → Akihiro Kurata's [End of Opp Turn]: <Draw 1> (A
     // 15→16) — the effect-add fires MirageGaogamon's observer — then trash 1
@@ -429,8 +433,10 @@ fn q12_token_placeable_as_digivolution_card_unsuspends() {
 
     // Fire the carrier's inherited `[When Attacking]` (OPTIONAL) → first an
     // accept/decline prompt installs (G-OUTER-OPTIONAL-NOT-INSTALLED); accept it.
-    r.game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(carrier));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(carrier),
+    );
     r.game.drain_effect_queue();
     let accept_view = r
         .pending_selection_view()
@@ -456,7 +462,10 @@ fn q12_token_placeable_as_digivolution_card_unsuspends() {
          'place 1 of your other Digimon' pick (G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT)"
     );
     assert!(
-        !view.valid_action_ids.iter().any(|a| *a != PASS && *a != token_action),
+        !view
+            .valid_action_ids
+            .iter()
+            .any(|a| *a != PASS && *a != token_action),
         "the token is the only non-PASS placement candidate (TEST-023 removed)"
     );
 

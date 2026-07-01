@@ -158,20 +158,14 @@ fn bt25_062_somp_clause_is_optional_and_memory_gated() {
         clause.optional,
         "printed text says 'may' → clause must be optional"
     );
-    assert!(
-        !clause.once_per_turn,
-        "printed text has no [Once Per Turn]"
-    );
+    assert!(!clause.once_per_turn, "printed text has no [Once Per Turn]");
     let active = clause
         .active_when
         .as_ref()
         .expect("clause must be gated by your_turn + memory_lte: 4");
     // The memory gate lives in an all_of compound.
-    let mentions_memory = active.memory_lte.is_some()
-        || active
-            .all_of
-            .iter()
-            .any(|p| p.memory_lte.is_some());
+    let mentions_memory =
+        active.memory_lte.is_some() || active.all_of.iter().any(|p| p.memory_lte.is_some());
     assert!(
         mentions_memory,
         "'If you have 4 or less memory' must compile to a memory_lte gate"
@@ -196,12 +190,10 @@ fn bt25_062_somp_clause_digivolves_self_from_hand_for_free() {
         })
         .expect("SOMP clause present");
 
-    let has_eid = clause.process.iter().any(|s| {
-        matches!(
-            s,
-            CompiledStep::EffectInitiatedDigivolve { .. }
-        )
-    });
+    let has_eid = clause
+        .process
+        .iter()
+        .any(|s| matches!(s, CompiledStep::EffectInitiatedDigivolve { .. }));
     assert!(
         has_eid,
         "SOMP clause body must contain an effect_initiated_digivolve step"
@@ -224,10 +216,7 @@ fn bt25_062_has_inherited_dp_aura() {
             })
         )
     });
-    assert!(
-        aura,
-        "BT25-062 must have an inherited +1000 DP aura"
-    );
+    assert!(aura, "BT25-062 must have an inherited +1000 DP aura");
 }
 
 // ─── Section 2 — Behavior: SOMP free-digivolve ───────────────────────────────

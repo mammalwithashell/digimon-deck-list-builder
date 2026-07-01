@@ -23,7 +23,10 @@ pub fn from_embedded() -> Result<CardRegistry, String> {
 /// Read-only after parse (callers only enrich/iterate), so sharing is safe.
 pub fn from_embedded_cached() -> Result<&'static CardRegistry, String> {
     static CACHE: std::sync::OnceLock<Result<CardRegistry, String>> = std::sync::OnceLock::new();
-    CACHE.get_or_init(from_embedded).as_ref().map_err(Clone::clone)
+    CACHE
+        .get_or_init(from_embedded)
+        .as_ref()
+        .map_err(Clone::clone)
 }
 
 /// Load the card registry from embedded bytes and reject packs whose manifest

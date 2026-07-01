@@ -34,16 +34,18 @@
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
-use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+};
+use digimon_engine::action::space::{
+    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_LINK, FIELD_EFFECT_START,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardKind, EffectTiming, GamePhase};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
-use digimon_engine::action::space::{
-    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_LINK, FIELD_EFFECT_START,
-};
 
 const CARD_ID: &str = "BT21-043";
 const SOCIAMON_YAML: &str = include_str!("../../../cards/bt21/BT21-043.yaml");
@@ -86,9 +88,16 @@ fn link_action_id(field_index: u8) -> u16 {
 /// Drive the card's link action onto a host: decode_action → resolve host selection prompt.
 /// Returns the host handle.
 fn do_link(runner: &mut DebugRunner, linking_perm: PermanentHandle, host: PermanentHandle) {
-    runner.game.decode_action(link_action_id(linking_perm.index), 0);
+    runner
+        .game
+        .decode_action(link_action_id(linking_perm.index), 0);
     // Resolve the host-pick prompt (mandatory: picks HOST-APPMON)
-    let host_action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let host_action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
     let _ = runner.game.resolve_selection(0, host_action);
 }
 
@@ -150,7 +159,10 @@ fn bt21_043_has_on_security_clause() {
         CompiledClause::Triggered(t) => t.when.contains(&CompiledTiming::OnSecurity),
         _ => false,
     });
-    assert!(has, "BT21-043 must have a triggered clause with when: on_security");
+    assert!(
+        has,
+        "BT21-043 must have a triggered clause with when: on_security"
+    );
 }
 
 #[test]
@@ -164,7 +176,10 @@ fn bt21_043_has_on_play_when_digivolving_clause() {
         }
         _ => false,
     });
-    assert!(has, "BT21-043 must have a triggered clause with when: [on_play, when_digivolving]");
+    assert!(
+        has,
+        "BT21-043 must have a triggered clause with when: [on_play, when_digivolving]"
+    );
 }
 
 #[test]
@@ -200,7 +215,10 @@ fn bt21_043_has_link_condition_appmon_cost_2() {
             CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition { cost, .. }) if *cost == 2
         )
     });
-    assert!(has, "BT21-043 must have a self link-condition with cost 2 (filter: Appmon)");
+    assert!(
+        has,
+        "BT21-043 must have a self link-condition with cost 2 (filter: Appmon)"
+    );
 }
 
 #[test]
@@ -226,8 +244,7 @@ fn bt21_043_has_linked_scope_when_linked_triggered_clause() {
     let card = runner.compiled_card(CARD_ID).expect("present");
     let has = card.effects.iter().any(|c| match c {
         CompiledClause::Triggered(t) => {
-            t.when.contains(&CompiledTiming::WhenLinked)
-                && matches!(t.scope, CompiledScope::Linked)
+            t.when.contains(&CompiledTiming::WhenLinked) && matches!(t.scope, CompiledScope::Linked)
         }
         _ => false,
     });
@@ -354,7 +371,11 @@ fn bt21_043_on_play_debuff_expires_at_end_of_opponents_turn() {
 
     runner.play(0, 0).expect("Sociamon plays from hand");
     runner.auto_resolve().expect("selection resolves");
-    assert_eq!(runner.dp_of(opp), Some(4000), "debuff applied (6000 - 2000)");
+    assert_eq!(
+        runner.dp_of(opp),
+        Some(4000),
+        "debuff applied (6000 - 2000)"
+    );
 
     // Advance to player 1's turn — debuff must persist through their turn.
     advance_to_turn_player(&mut runner, 1);
@@ -464,10 +485,7 @@ fn bt21_043_security_plays_card_onto_field_after_battle() {
 /// Positive: when Sociamon is linked to a host, host's effective DP increases by +3000.
 #[test]
 fn bt21_043_linked_aura_gives_host_plus_3000_dp() {
-    let mut runner = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(10)
-        .start();
+    let mut runner = base().deck(0, &["DECK-PAD"; 12]).memory(10).start();
 
     let host = runner.place_on_field(0, "HOST-APPMON", Some(0)); // 5000 base DP
     let socio = runner.place_on_field(0, CARD_ID, Some(0));
@@ -495,10 +513,7 @@ fn bt21_043_linked_aura_gives_host_plus_3000_dp() {
 /// Positive: when Sociamon links to host while opponent has a Digimon, -2000 DP prompt surfaces.
 #[test]
 fn bt21_043_when_linked_installs_dp_debuff_selection() {
-    let mut runner = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(10)
-        .start();
+    let mut runner = base().deck(0, &["DECK-PAD"; 12]).memory(10).start();
 
     let host = runner.place_on_field(0, "HOST-APPMON", Some(0));
     let socio = runner.place_on_field(0, CARD_ID, Some(0));
@@ -508,7 +523,12 @@ fn bt21_043_when_linked_installs_dp_debuff_selection() {
     // Initiate link action.
     runner.game.decode_action(link_action_id(socio.index), 0);
     // Resolve host-pick selection.
-    let host_action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let host_action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
     let _ = runner.game.resolve_selection(0, host_action);
 
     // After linking, When Linking trigger must surface an OppField selection.
@@ -525,10 +545,7 @@ fn bt21_043_when_linked_installs_dp_debuff_selection() {
 /// Positive: selecting target in When Linking applies -2000 DP.
 #[test]
 fn bt21_043_when_linked_applies_2000_dp_debuff() {
-    let mut runner = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(10)
-        .start();
+    let mut runner = base().deck(0, &["DECK-PAD"; 12]).memory(10).start();
 
     let host = runner.place_on_field(0, "HOST-APPMON", Some(0));
     let socio = runner.place_on_field(0, CARD_ID, Some(0));
@@ -549,10 +566,7 @@ fn bt21_043_when_linked_applies_2000_dp_debuff() {
 /// Negative: when Sociamon links but opponent has no Digimon → no pending selection.
 #[test]
 fn bt21_043_when_linked_no_selection_when_no_opponent_digimon() {
-    let mut runner = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(10)
-        .start();
+    let mut runner = base().deck(0, &["DECK-PAD"; 12]).memory(10).start();
 
     let host = runner.place_on_field(0, "HOST-APPMON", Some(0));
     let socio = runner.place_on_field(0, CARD_ID, Some(0));
@@ -561,7 +575,12 @@ fn bt21_043_when_linked_no_selection_when_no_opponent_digimon() {
 
     // Initiate link.
     runner.game.decode_action(link_action_id(socio.index), 0);
-    let host_action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let host_action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
     let _ = runner.game.resolve_selection(0, host_action);
     runner.auto_resolve().ok();
 

@@ -229,15 +229,20 @@ fn st23_04_metadata_alliance_alt_path_and_main_clause() {
     let op_wd = card
         .effects
         .iter()
-        .filter(|c| matches!(
-            c,
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::OnPlay)
-                    && t.when.contains(&CompiledTiming::WhenDigivolving)
-                    && t.scope == CompiledScope::FaceUp
-        ))
+        .filter(|c| {
+            matches!(
+                c,
+                CompiledClause::Triggered(t)
+                    if t.when.contains(&CompiledTiming::OnPlay)
+                        && t.when.contains(&CompiledTiming::WhenDigivolving)
+                        && t.scope == CompiledScope::FaceUp
+            )
+        })
         .count();
-    assert_eq!(op_wd, 2, "DP-minus clause + play-or-use clause both present");
+    assert_eq!(
+        op_wd, 2,
+        "DP-minus clause + play-or-use clause both present"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -389,10 +394,15 @@ fn st23_04_play_or_use_is_declinable() {
                 .unwrap();
             declined = true;
         } else {
-            runner.execute_action(v.selecting_player, v.valid_action_ids[0]).unwrap();
+            runner
+                .execute_action(v.selecting_player, v.valid_action_ids[0])
+                .unwrap();
         }
     }
-    assert!(declined, "the optional engagement gate was offered and declined");
+    assert!(
+        declined,
+        "the optional engagement gate was offered and declined"
+    );
 
     assert_eq!(
         runner.trash_size(0),

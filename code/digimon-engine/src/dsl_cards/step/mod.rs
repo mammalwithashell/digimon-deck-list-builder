@@ -271,16 +271,68 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::BudgetStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::SourceMultiStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::CountCappedPermanentsStep(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::NonDslCountCappedStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::RevealBucketStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::UseOptionFromHandStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::LinkPickStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::DigivolveCostChoice(_))
             | Some(ResumeFrame::DigivolveReducerPrompt(_))
-            | Some(ResumeFrame::DigivolveReducerSuspend(_)) => unreachable!(
-                "digivolve cost prompts are a top-level player action, never nested in a DSL clause"
+            | Some(ResumeFrame::DigivolveReducerSuspend(_))
+            | Some(ResumeFrame::DnaDigivolveFirstMaterial(_))
+            | Some(ResumeFrame::DnaDigivolveSecondMaterial(_)) => unreachable!(
+                "digivolve prompts are a top-level player action, never nested in a DSL clause"
             ),
             Some(ResumeFrame::RefireEffectChoice(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::OptionModeSelect(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::DigiXrosMaterialSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::OuterOptionalTrigger(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::TriggerOrderSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::OptionalReplacement(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::DelayCancelAfterSelection { outer_conts, .. }) => {
+                outer_conts.push(cont)
+            }
+            Some(ResumeFrame::DelayHandDigivolveAfterSelection { outer_conts, .. }) => {
+                outer_conts.push(cont)
+            }
+            Some(ResumeFrame::DelayDnaAfterSelection { outer_conts, .. }) => outer_conts.push(cont),
+            Some(ResumeFrame::DelayHandDigivolveSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::DelayDnaCardSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::AppFuseHostSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::AppFuseResultSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::ArtsDigivolveSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::LinkOptionHostSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::DigimonLinkHostSelection(_)) => unreachable!(
+                "Digimon Link prompts are top-level player actions, never nested in a DSL clause"
+            ),
+            Some(ResumeFrame::PlayFromHandCostReductionPrompt(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::InteractiveDigivolveCostReductionPrompt(s)) => {
+                s.outer_conts.push(cont)
+            }
+            Some(ResumeFrame::InteractiveOptionUseCostReductionPrompt(s)) => {
+                s.outer_conts.push(cont)
+            }
+            Some(ResumeFrame::AllianceSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::BlockSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::RaidSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::CounterSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::CounterBlastDnaFieldMaterial(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::CounterBlastDnaHandMaterial(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::OverclockSelection(_)) => unreachable!(
+                "Overclock prompts are top-level end-of-turn actions, never nested in a DSL clause"
+            ),
+            Some(ResumeFrame::PlayOrderSelection) => unreachable!(
+                "play-order prompts are an engine lifecycle action, never nested in a DSL clause"
+            ),
+            Some(ResumeFrame::KeywordSaveSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::KeywordMaterialSaveTamerSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::KeywordScapegoatSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::KeywordMindLinkSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::KeywordAscensionChoice(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::FamiliarTokenOnDeletionSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::LinkCardLeaveSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::PlayOrUseDualChoice(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::MayDnaPartnerSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::MayDnaResultSelection(s)) => s.outer_conts.push(cont),
             None => unreachable!("pending_selection_resume set but frame stack empty"),
         }
         game.pending_selection = Some(pending);

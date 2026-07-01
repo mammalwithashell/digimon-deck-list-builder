@@ -279,7 +279,11 @@ fn carrier_lv5(card_id: &str) -> CardData {
 fn bt25_067_inherited_aura_grants_1000_dp_on_your_turn() {
     let mut runner = base().add_card(carrier_lv5("CARRIER-LV5")).start();
     let carrier = runner.place_stack(0, &[CARD_ID, "CARRIER-LV5"]);
-    assert_eq!(runner.game.turn_player(), 0, "precondition: P0 is turn player");
+    assert_eq!(
+        runner.game.turn_player(),
+        0,
+        "precondition: P0 is turn player"
+    );
 
     let contribution = runner.game.source_dp_contribution(carrier, 0);
     assert_eq!(
@@ -293,7 +297,11 @@ fn bt25_067_inherited_aura_grants_1000_dp_on_opponents_turn() {
     let mut runner = base().add_card(carrier_lv5("CARRIER-LV5")).start();
     let carrier = runner.place_stack(0, &[CARD_ID, "CARRIER-LV5"]);
     runner.end_turn();
-    assert_ne!(runner.game.turn_player(), 0, "precondition: P0 not turn player");
+    assert_ne!(
+        runner.game.turn_player(),
+        0,
+        "precondition: P0 not turn player"
+    );
 
     let contribution = runner.game.source_dp_contribution(carrier, 0);
     assert_eq!(

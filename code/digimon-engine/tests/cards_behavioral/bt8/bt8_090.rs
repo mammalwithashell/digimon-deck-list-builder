@@ -136,7 +136,11 @@ fn bt8_090_start_of_turn_sets_memory_to_3_when_lte_2() {
 /// Helper: place `count` deck-top cards on `player`'s own security through the
 /// real game flow (`EffectContext::place_on_security` from `DeckTop`), which
 /// fires `fire_on_place_security` exactly as an in-game recovery would.
-fn add_own_deck_top_to_security(runner: &mut DebugRunner, player: u8, source: digimon_engine::card_source::CardHandle) {
+fn add_own_deck_top_to_security(
+    runner: &mut DebugRunner,
+    player: u8,
+    source: digimon_engine::card_source::CardHandle,
+) {
     let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
     let placed = ctx.place_on_security(
         player,

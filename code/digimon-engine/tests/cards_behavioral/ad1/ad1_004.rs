@@ -430,7 +430,10 @@ fn ad1_004_inherited_when_attacking_delete_clause_compiles() {
         p.all_of.iter().any(|q| pred_has_name(q, name))
             || p.any_of.iter().any(|q| pred_has_name(q, name))
             || p.none_of.iter().any(|q| pred_has_name(q, name))
-            || p.not.as_ref().map(|q| pred_has_name(q, name)).unwrap_or(false)
+            || p.not
+                .as_ref()
+                .map(|q| pred_has_name(q, name))
+                .unwrap_or(false)
     }
     let g = gate.expect("inherited delete must carry a name-gate condition");
     assert!(

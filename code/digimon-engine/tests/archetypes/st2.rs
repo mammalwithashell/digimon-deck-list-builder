@@ -186,7 +186,10 @@ fn sorrow_blue_locks_only_the_bare_opponent_digimon() {
         "the sourced Digimon is untouched (can still attack)"
     );
     assert!(
-        !runner.game.modifiers.has(sourced, ModifierType::CannotBlock),
+        !runner
+            .game
+            .modifiers
+            .has(sourced, ModifierType::CannotBlock),
         "the sourced Digimon is untouched (can still block)"
     );
 }
@@ -210,8 +213,8 @@ fn matt_memory_engine_gated_on_bare_opponent() {
     let mut runner = st2_builder().memory(0).start();
     let matt = runner.place_on_field(0, "ST2-12", Some(0));
     let opp = runner.place_stack(1, &["ST2-02", "ST2-10"]); // 1 source: not bare
-    // `source_ids` (== `card_sources`) includes the active top card, so a
-    // stack of [ST2-02, ST2-10] reads [ST2-02, ST2-10].
+                                                            // `source_ids` (== `card_sources`) includes the active top card, so a
+                                                            // stack of [ST2-02, ST2-10] reads [ST2-02, ST2-10].
     assert_eq!(
         source_ids(&runner, 1, opp.index as usize),
         vec!["ST2-02", "ST2-10"]
@@ -230,7 +233,7 @@ fn matt_memory_engine_gated_on_bare_opponent() {
     let stripper = runner.place_stack(0, &["ST2-06", "ST2-05"]);
     fire(&mut runner, EffectTiming::WhenAttacking, stripper);
     choose_first_pending(&mut runner); // choose the opponent Digimon to strip
-    // "Bare" = no digivolution sources left; only the active top card remains.
+                                       // "Bare" = no digivolution sources left; only the active top card remains.
     assert_eq!(
         source_ids(&runner, 1, opp.index as usize),
         vec!["ST2-10"],

@@ -256,15 +256,7 @@ fn st3_starter_deck_cards_are_registered_as_implemented() {
 fn st3_starter_deck_initializes_headless_runner() {
     let deck = st3_starter_deck();
     let card_data = full_card_data();
-    let runner = HeadlessRunner::new(
-        deck.clone(),
-        deck,
-        &card_data,
-        false,
-        false,
-        false,
-        Some(3),
-    );
+    let runner = HeadlessRunner::new(deck.clone(), deck, &card_data, false, false, false, Some(3));
 
     assert!(
         runner.is_ok(),
@@ -707,7 +699,11 @@ fn card_legality_reports_banned_card() {
     let leg = card_legality("BT2-090", "standard").unwrap(); // Matt Ishida, banned.
     assert!(!leg.legal);
     assert_eq!(leg.max_copies, 0);
-    assert!(leg.reason.unwrap_or_default().to_lowercase().contains("banned"));
+    assert!(leg
+        .reason
+        .unwrap_or_default()
+        .to_lowercase()
+        .contains("banned"));
 }
 
 #[test]

@@ -1553,12 +1553,7 @@ fn eval_event_fields(
             .and_then(|t| t.event_host_permanent);
         let is_own_tamer = host
             .filter(|h| h.player == rctx.player)
-            .and_then(|h| {
-                rctx.game
-                    .player(h.player)
-                    .battle_area
-                    .get(h.index as usize)
-            })
+            .and_then(|h| rctx.game.player(h.player).battle_area.get(h.index as usize))
             .map(|perm| perm.top_card().card_kind(rctx.card_data()) == CardKind::Tamer)
             .unwrap_or(false);
         if is_own_tamer != want {
@@ -2638,8 +2633,7 @@ fn eval_permanent_fields(
                 .iter()
                 .all(|c| allowed.iter().any(|a| color_matches(*a, *c)))
     });
-    let has_dp_constraint =
-        pred.dp_eq.is_some() || pred.dp_lte.is_some() || pred.dp_gte.is_some();
+    let has_dp_constraint = pred.dp_eq.is_some() || pred.dp_lte.is_some() || pred.dp_gte.is_some();
     // `kind` for a field permanent is authoritatively checked below against
     // `synth_identity.kind` via `kind_matches_field` (which treats a battle-area
     // `CardKind::Token` as a Digimon — G-TOKEN-NOT-DIGIMON-FOR-FIELD-SELECT). The
@@ -2775,7 +2769,8 @@ fn eval_permanent_fields(
         }
     }
     if let Some(want) = &pred.stack_size_eq {
-        if perm.card_sources.len() as i32 != eval_int_constraint(want, rctx, Some(handle), bindings) {
+        if perm.card_sources.len() as i32 != eval_int_constraint(want, rctx, Some(handle), bindings)
+        {
             return false;
         }
     }
@@ -3041,7 +3036,8 @@ fn eval_breeding_permanent_fields(
         }
     }
     if let Some(want) = &pred.stack_size_eq {
-        if perm.card_sources.len() as i32 != eval_int_constraint(want, rctx, Some(handle), bindings) {
+        if perm.card_sources.len() as i32 != eval_int_constraint(want, rctx, Some(handle), bindings)
+        {
             return false;
         }
     }

@@ -518,11 +518,7 @@ impl Game {
     /// (`EffectContext::initiate_effect_app_fuse`); the alt-play path uses the
     /// private route fn directly. Returns false when the feature that holds the
     /// alt-path registry is disabled.
-    pub(crate) fn can_app_fuse_onto(
-        &self,
-        result: &CardSource,
-        host: PermanentHandle,
-    ) -> bool {
+    pub(crate) fn can_app_fuse_onto(&self, result: &CardSource, host: PermanentHandle) -> bool {
         #[cfg(feature = "dsl-yaml-loader")]
         {
             self.app_fusion_digivolve_route_for_card(result, host)

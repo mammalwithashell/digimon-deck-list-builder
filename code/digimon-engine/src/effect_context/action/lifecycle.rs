@@ -94,7 +94,11 @@ impl<'a> EffectContext<'a> {
         self.schedule_provenance_deletion(permanent, true);
     }
 
-    pub(crate) fn schedule_provenance_deletion(&mut self, permanent: PermanentHandle, opponents_turn: bool) {
+    pub(crate) fn schedule_provenance_deletion(
+        &mut self,
+        permanent: PermanentHandle,
+        opponents_turn: bool,
+    ) {
         let Some(top) = self
             .game
             .player(permanent.player)
@@ -391,7 +395,11 @@ impl<'a> EffectContext<'a> {
     /// share the same Digi-Egg rule for any egg in a returned digivolution
     /// stack; those live on a different (game.rs) path and are out of scope for
     /// this trash→deck fix.
-    pub(crate) fn move_card_to_deck(&mut self, card: crate::card_source::CardSource, to_bottom: bool) {
+    pub(crate) fn move_card_to_deck(
+        &mut self,
+        card: crate::card_source::CardSource,
+        to_bottom: bool,
+    ) {
         let owner = card.owner;
         let is_egg = card.card_kind(&self.game.card_data) == CardKind::DigiEgg;
         let player = self.game.player_mut(owner);

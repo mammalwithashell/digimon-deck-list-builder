@@ -89,7 +89,10 @@ fn bt25_066_grants_blocker() {
                 if keyword == "Blocker" && *scope == CompiledScope::FaceUp
         )
     });
-    assert!(has_blocker, "BT25-066 grants <Blocker> (self, non-inherited)");
+    assert!(
+        has_blocker,
+        "BT25-066 grants <Blocker> (self, non-inherited)"
+    );
 }
 
 #[test]

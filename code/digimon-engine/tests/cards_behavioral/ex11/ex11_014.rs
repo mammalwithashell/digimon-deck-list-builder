@@ -212,7 +212,10 @@ fn ex11_014_has_on_play_reveal_two_mandatory_buckets_rest_to_bottom() {
         .process
         .iter()
         .any(|s| matches!(s, CompiledStep::PlaceRemainderOnDeck { .. }));
-    assert!(has_place_remainder, "rest returns to the bottom of the deck");
+    assert!(
+        has_place_remainder,
+        "rest returns to the bottom of the deck"
+    );
 }
 
 #[test]
@@ -300,10 +303,7 @@ fn on_play_runner(extra: Vec<CardData>, deck_top_down: &[&str]) -> DebugRunner {
     for c in extra {
         b = b.add_card(c);
     }
-    b.hand(0, &[CARD_ID])
-        .deck(0, &deck)
-        .memory(10)
-        .start()
+    b.hand(0, &[CARD_ID]).deck(0, &deck).memory(10).start()
 }
 
 fn hand_ids(runner: &DebugRunner) -> Vec<String> {
@@ -331,7 +331,10 @@ fn ex11_014_on_play_adds_suzune_and_ice_snow_digimon_rest_to_bottom() {
     runner.auto_resolve().expect("resolve both bucket picks");
 
     let hand = hand_ids(&runner);
-    assert!(hand.iter().any(|id| id == "SUZ"), "Suzune to hand: {hand:?}");
+    assert!(
+        hand.iter().any(|id| id == "SUZ"),
+        "Suzune to hand: {hand:?}"
+    );
     assert!(
         hand.iter().any(|id| id == "ICE"),
         "Ice-Snow Digimon to hand: {hand:?}"
@@ -480,7 +483,9 @@ fn ex11_014_one_card_cannot_fill_both_buckets() {
     let hand_before = runner.game.players[0].hand.len();
 
     assert!(runner.game.play_from_hand(0, 0).is_some());
-    runner.auto_resolve().expect("resolve the single shared pick");
+    runner
+        .auto_resolve()
+        .expect("resolve the single shared pick");
 
     let hand = hand_ids(&runner);
     assert!(

@@ -200,6 +200,84 @@ fn material_save_filters_recipe_sources_and_enforces_cap() {
 }
 
 #[test]
+fn material_save_prompts_clone_faithfully() {
+    let mut runner = runner_with_material_save(1, true);
+    let carrier = place_material_save_stack(&mut runner);
+    runner.place_on_field(0, "TAMER", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
+    let tamer_action = {
+        let pending = runner
+            .pending_selection()
+            .expect("Material Save should ask for a Tamer destination");
+        assert!(
+            runner.game.pending_selection_resume.is_some(),
+            "Material Save Tamer prompt must be resume-driven before cloning"
+        );
+        pending.valid_action_ids[0]
+    };
+
+    let mut clone_at_tamer = runner.game.clone();
+    clone_at_tamer
+        .resolve_selection(0, tamer_action)
+        .expect("cloned Tamer prompt resolves");
+    assert!(
+        clone_at_tamer.pending_selection_resume.is_some(),
+        "cloned Tamer resolution should install a resume-driven source prompt"
+    );
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "resolving the clone must leave the original Tamer prompt intact"
+    );
+
+    runner
+        .execute_action(0, tamer_action)
+        .expect("choose Tamer destination");
+    let source_action = {
+        let pending = runner
+            .pending_selection()
+            .expect("Material Save should ask for eligible sources");
+        assert!(
+            runner.game.pending_selection_resume.is_some(),
+            "Material Save source prompt must be resume-driven before cloning"
+        );
+        pending.valid_action_ids[0]
+    };
+
+    let mut clone_at_source = runner.game.clone();
+    clone_at_source
+        .resolve_selection(0, source_action)
+        .expect("cloned source prompt resolves");
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "resolving the source clone must leave the original source prompt intact"
+    );
+    runner
+        .execute_action(0, source_action)
+        .expect("select Material Save source");
+
+    let cloned_saved = clone_at_source.players[0].battle_area[0]
+        .card_sources
+        .iter()
+        .filter(|card| {
+            let id = card.card_id(&clone_at_source.card_data);
+            id == "SRC-SHOUT" || id == "SRC-BALLISTA"
+        })
+        .count();
+    let original_saved = runner.game.players[0].battle_area[0]
+        .card_sources
+        .iter()
+        .filter(|card| {
+            let id = card.card_id(&runner.game.card_data);
+            id == "SRC-SHOUT" || id == "SRC-BALLISTA"
+        })
+        .count();
+    assert_eq!(cloned_saved, original_saved);
+}
+
+#[test]
 fn material_save_skips_when_no_tamer_or_no_eligible_source_exists() {
     let mut no_tamer = runner_with_material_save(2, false);
     let carrier = place_material_save_stack(&mut no_tamer);

@@ -6,6 +6,7 @@
 //! exercises default-profile semantics.
 
 use digimon_engine::tensor::TENSOR_SIZE as DEFAULT_TENSOR_SIZE;
+use digimon_engine::tensor_profiles::standard;
 use digimon_engine::tensor_profiles::standard::v1::{
     FIELD_SLOTS, GLOBAL_SIZE, HAND_SIZE, MAX_SOURCES, OFF_GLOBAL, OFF_MY_BATTLE, OFF_MY_BREEDING,
     OFF_MY_HAND, OFF_MY_SECURITY, OFF_MY_TRASH, OFF_OPP_BATTLE, OFF_OPP_BREEDING, OFF_OPP_HAND,
@@ -16,7 +17,6 @@ use digimon_engine::tensor_profiles::standard::v1::{
     SOURCE_DP_CONTRIBUTION_OFFSET, SOURCE_ENTRY_SIZE, SOURCE_OPT_STATE_OFFSET,
     TENSOR_SIZE as V1_TENSOR_SIZE, TRASH_SIZE,
 };
-use digimon_engine::tensor_profiles::standard;
 use digimon_engine::tensor_profiles::{
     all_profile_ids, default_profile, profile_by_id, TensorFieldKind, TensorSectionKind,
     COMPACT_V1_LEGACY_PROFILE_ID, STANDARD_COMPACT_V1_PROFILE_ID, STANDARD_FULL_V2_PROFILE_ID,

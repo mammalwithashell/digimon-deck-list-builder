@@ -23,7 +23,11 @@ fn legal_main_deck() -> Vec<String> {
         .collect();
     candidates.sort_unstable();
     let ids: Vec<&str> = candidates.into_iter().take(13).collect();
-    assert_eq!(ids.len(), 13, "need 13 unrestricted 4-copy Digimon in the DB");
+    assert_eq!(
+        ids.len(),
+        13,
+        "need 13 unrestricted 4-copy Digimon in the DB"
+    );
     let mut deck = Vec::with_capacity(50);
     for cid in &ids {
         for _ in 0..4 {

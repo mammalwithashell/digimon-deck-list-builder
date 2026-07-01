@@ -158,7 +158,9 @@ fn bt16_101_has_rapidmon_alt_path_cost4() {
     let rapid = card
         .alt_paths
         .iter()
-        .find(|p| p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(4)))
+        .find(|p| {
+            p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(4))
+        })
         .expect("must have a [Rapidmon] cost-4 digivolve alt-path");
     assert_eq!(rapid.cost, Some(CompiledCost::Literal(4)));
 }
@@ -167,11 +169,13 @@ fn bt16_101_has_rapidmon_alt_path_cost4() {
 #[test]
 fn bt16_101_grants_armor_purge_keyword() {
     let card = compiled(CARD_ID);
-    let has_armor_purge = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
-            if format!("{keyword:?}").contains("ArmorPurge")
-    ));
+    let has_armor_purge = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
+                if format!("{keyword:?}").contains("ArmorPurge")
+        )
+    });
     assert!(
         has_armor_purge,
         "BT16-101 must declare <Armor Purge> via grant_keyword: ArmorPurge; clauses: {:?}",
@@ -276,10 +280,15 @@ fn bt16_101_deletion_observer_gates_on_opponent_digimon_and_cause() {
 #[test]
 fn bt16_101_has_minus4000_aura() {
     let card = compiled(CARD_ID);
-    let has_aura = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::Aura { dp_modifier: Some(-4000), .. })
-    ));
+    let has_aura = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
+                dp_modifier: Some(-4000),
+                ..
+            })
+        )
+    });
     assert!(
         has_aura,
         "BT16-101 must carry an aura with dp_modifier -4000; clauses: {:?}",
@@ -374,10 +383,8 @@ fn bt16_101_may_attack_clones_faithfully_at_the_prompt() {
         runner.game.pending_selection_resume.is_some(),
         "the may-attack prompt must be resume-driven (clone-safe)"
     );
-    let attack_opp = digimon_engine::action::space::encode_attack(
-        rapid.index as u16,
-        opp.index as u16,
-    );
+    let attack_opp =
+        digimon_engine::action::space::encode_attack(rapid.index as u16, opp.index as u16);
     let view = runner.pending_selection_view().expect("may-attack prompt");
     assert!(
         view.valid_action_ids.contains(&attack_opp),
@@ -458,7 +465,7 @@ fn bt16_101_aura_minus4000_to_suspended_opp_when_rapidmon_source() {
     // BT16-101 with a Rapidmon source beneath it.
     let _rapid = runner.place_stack(0, &["RAPID-SRC", CARD_ID]);
     let opp = runner.place_on_field(1, "OPP-A", Some(0)); // base DP 5000
-    // Suspend the opponent Digimon (the aura targets only suspended ones).
+                                                          // Suspend the opponent Digimon (the aura targets only suspended ones).
     runner.game.player_mut(1).battle_area[opp.index as usize].is_suspended = true;
 
     runner.game.tick_declarative_effects();
@@ -567,7 +574,9 @@ fn bt16_101_gains_2_memory_on_opp_battle_deletion() {
     let mem_before = runner.memory();
 
     // A battle deletion of the opponent's Digimon (cause = BattleDeletion).
-    runner.game.delete_permanent_with_cause(opp, ReplacementCause::Battle);
+    runner
+        .game
+        .delete_permanent_with_cause(opp, ReplacementCause::Battle);
     let _ = runner.auto_resolve();
 
     assert_eq!(
@@ -586,7 +595,10 @@ fn bt16_101_gains_2_memory_on_opp_zero_dp_deletion() {
 
     // Drive OPP-A (5000 DP) to -? via a -DP effect, then let the rules-check run.
     let rapid_card = runner.game.player(0).battle_area[0].top_card().handle();
-    let rapid_perm = PermanentHandle { player: 0, index: 0 };
+    let rapid_perm = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     {
         let mut ctx = EffectContext::new(&mut runner.game, rapid_card, Some(rapid_perm), 0);
         ctx.add_dp_modifier(opp, -6000, Expiry::Permanent); // 5000 -> -1000
@@ -624,7 +636,10 @@ fn bt16_101_no_memory_on_opp_effect_deletion() {
 
     // P0's effect deletes the opponent's Digimon (cause = OwnEffect / effect).
     let rapid_card = runner.game.player(0).battle_area[0].top_card().handle();
-    let rapid_perm = PermanentHandle { player: 0, index: 0 };
+    let rapid_perm = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     {
         let mut ctx = EffectContext::new(&mut runner.game, rapid_card, Some(rapid_perm), 0);
         ctx.delete_permanent(opp);
@@ -653,7 +668,9 @@ fn bt16_101_no_memory_on_own_battle_deletion() {
     let own = runner.place_on_field(0, "PLAIN-LV5", Some(0));
     let mem_before = runner.memory();
 
-    runner.game.delete_permanent_with_cause(own, ReplacementCause::Battle);
+    runner
+        .game
+        .delete_permanent_with_cause(own, ReplacementCause::Battle);
     let _ = runner.auto_resolve();
 
     assert_eq!(
@@ -675,7 +692,9 @@ fn bt16_101_opt_caps_gain_at_2_per_turn() {
     let mem_before = runner.memory();
 
     // First trigger: battle death of OPP-A → +2.
-    runner.game.delete_permanent_with_cause(opp_a, ReplacementCause::Battle);
+    runner
+        .game
+        .delete_permanent_with_cause(opp_a, ReplacementCause::Battle);
     let _ = runner.auto_resolve();
     assert_eq!(
         runner.memory(),
@@ -696,7 +715,10 @@ fn bt16_101_opt_caps_gain_at_2_per_turn() {
             .expect("OPP-B still on field") as u8,
     };
     let rapid_card = runner.game.player(0).battle_area[0].top_card().handle();
-    let rapid_perm = PermanentHandle { player: 0, index: 0 };
+    let rapid_perm = PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     {
         let mut ctx = EffectContext::new(&mut runner.game, rapid_card, Some(rapid_perm), 0);
         ctx.add_dp_modifier(opp_b_handle, -8000, Expiry::Permanent);

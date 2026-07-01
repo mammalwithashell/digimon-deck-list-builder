@@ -86,7 +86,10 @@ fn ex4_065_main_deletes_highest_dp_opponent_digimon() {
     assert_eq!(r.battle_area_size(1), 2);
 
     // Activate the Option's [Main] effect from hand.
-    assert!(r.game.activate_hand_main(0, 0), "activate Trident Gaia [Main]");
+    assert!(
+        r.game.activate_hand_main(0, 0),
+        "activate Trident Gaia [Main]"
+    );
 
     // Only the highest-DP Digimon should be a legal delete target.
     let view = r
@@ -141,7 +144,10 @@ fn ex4_065_main_no_target_is_a_noop() {
         .memory(8)
         .start();
 
-    assert!(r.game.activate_hand_main(0, 0), "activate Trident Gaia [Main]");
+    assert!(
+        r.game.activate_hand_main(0, 0),
+        "activate Trident Gaia [Main]"
+    );
     let _ = r.auto_resolve();
     assert_eq!(r.battle_area_size(1), 0, "no opponent Digimon to delete");
 }
@@ -171,7 +177,10 @@ fn run_main_delete_with_security(opp_dp: i32) -> DebugRunner {
     assert_eq!(r.battle_area_size(1), 1);
     assert_eq!(r.security_count(1), 3, "opponent starts with 3 security");
 
-    assert!(r.game.activate_hand_main(0, 0), "activate Trident Gaia [Main]");
+    assert!(
+        r.game.activate_hand_main(0, 0),
+        "activate Trident Gaia [Main]"
+    );
     let view = r
         .pending_selection_view()
         .expect("highest-DP delete target prompt installs");
@@ -232,14 +241,13 @@ fn ex4_065_no_security_trash_when_no_delete_target() {
         .memory(8)
         .start();
 
-    assert!(r.game.activate_hand_main(0, 0), "activate Trident Gaia [Main]");
+    assert!(
+        r.game.activate_hand_main(0, 0),
+        "activate Trident Gaia [Main]"
+    );
     let _ = r.auto_resolve();
     assert_eq!(r.battle_area_size(1), 0, "no opponent Digimon to delete");
-    assert_eq!(
-        r.security_count(1),
-        3,
-        "no deletion ⇒ no security trash"
-    );
+    assert_eq!(r.security_count(1), 3, "no deletion ⇒ no security trash");
 }
 
 // NOTE: the [Security] clause shares the identical delete + conditional

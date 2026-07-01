@@ -451,8 +451,11 @@ pub struct Game {
     /// parked replacement whose subject was the leaving permanent re-resolve to
     /// the limbo-encoded handle (`remap_digixros_limbo_subject`), since the
     /// subject is addressed by index alone.
-    pub(crate) digixros_leaving_limbo:
-        Vec<(crate::enums::PlayerId, crate::permanent::PermanentHandle, crate::permanent::Permanent)>,
+    pub(crate) digixros_leaving_limbo: Vec<(
+        crate::enums::PlayerId,
+        crate::permanent::PermanentHandle,
+        crate::permanent::Permanent,
+    )>,
     /// Turn-scoped DigiXros wildcard material modifiers waiting to be copied
     /// into the next matching transaction.
     pub(crate) active_digixros_wildcards: Vec<crate::digixros::ActiveDigiXrosWildcardSubstitution>,
@@ -547,7 +550,10 @@ pub struct Game {
     /// cleared on consume. Same transient-slot pattern as
     /// `pending_would_play_resume`.
     #[doc(hidden)]
-    pub(crate) pending_assembly_materials: Option<(crate::card_source::CardHandle, Vec<crate::card_source::CardHandle>)>,
+    pub(crate) pending_assembly_materials: Option<(
+        crate::card_source::CardHandle,
+        Vec<crate::card_source::CardHandle>,
+    )>,
     /// Fire-site continuation for optional `WhenWouldLink` replacements whose
     /// subject is the pending Link Option card.
     #[doc(hidden)]
@@ -2214,11 +2220,8 @@ impl Game {
         effect_immunity: Option<crate::modifiers::EffectImmunityFilter>,
         payload: Option<crate::modifiers::ModifierPayload>,
     ) {
-        let pending_skips = crate::modifiers::pending_skips_for_install(
-            expiry,
-            source_player,
-            self.turn_player(),
-        );
+        let pending_skips =
+            crate::modifiers::pending_skips_for_install(expiry, source_player, self.turn_player());
         self.floating_mass_modifiers
             .push(crate::floating_modifier::FloatingMassModifier {
                 filter,
@@ -3226,11 +3229,13 @@ mod resolve_token_as_battle_area_top_tests {
     fn case_d_token_does_not_resolve_anywhere_yields_none() {
         let r = DebugRunner::builder().add_card(lv3_card("VEEMON")).start();
         assert_eq!(
-            r.game.resolve_token_as_battle_area_top(ProvenanceToken(99_999)),
+            r.game
+                .resolve_token_as_battle_area_top(ProvenanceToken(99_999)),
             None
         );
         assert_eq!(
-            r.game.resolve_token_as_battle_area_top(ProvenanceToken(12345)),
+            r.game
+                .resolve_token_as_battle_area_top(ProvenanceToken(12345)),
             None,
             "unknown card index yields None"
         );

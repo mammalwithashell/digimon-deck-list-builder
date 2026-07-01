@@ -328,9 +328,7 @@ fn bt25_081_inherited_retaliation_deletes_the_winner() {
     let _ = runner.auto_resolve();
 
     assert!(
-        !runner
-            .game
-            .players[1]
+        !runner.game.players[1]
             .battle_area
             .iter()
             .any(|p| p.top_card().card_id(&runner.game.card_data) == "ATTACKER"),

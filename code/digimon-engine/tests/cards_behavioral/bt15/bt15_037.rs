@@ -10,7 +10,9 @@
 //!    Gatomon is in the battle area; the judge-quiz Q9 crux.)
 //!  - Inherited <Barrier>.
 
-use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -73,7 +75,9 @@ fn bt15_037_grants_barrier_face_and_inherited() {
         "Gatomon must grant <Barrier> on its own face"
     );
     assert!(
-        barrier_clauses.iter().any(|s| *s == CompiledScope::Inherited),
+        barrier_clauses
+            .iter()
+            .any(|s| *s == CompiledScope::Inherited),
         "Gatomon must grant inherited <Barrier>"
     );
 }

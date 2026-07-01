@@ -102,7 +102,10 @@ fn st17_07_clause1_is_on_play_and_when_digivolving() {
         }
         _ => false,
     });
-    assert!(found, "De-Digivolve clause fires on [On Play] and [When Digivolving]");
+    assert!(
+        found,
+        "De-Digivolve clause fires on [On Play] and [When Digivolving]"
+    );
 }
 
 #[test]
@@ -178,7 +181,9 @@ fn st17_07_de_digivolve_trashes_top_source() {
         let p = runner.game.pending_selection.as_ref().expect("selection");
         (p.selecting_player, first_action(p))
     };
-    runner.execute_action(player, action).expect("select opp Digimon");
+    runner
+        .execute_action(player, action)
+        .expect("select opp Digimon");
     let _ = runner.auto_resolve();
 
     assert_eq!(
@@ -205,7 +210,9 @@ fn st17_07_de_digivolve_stops_at_level_three() {
         let p = runner.game.pending_selection.as_ref().expect("selection");
         (p.selecting_player, first_action(p))
     };
-    runner.execute_action(player, action).expect("select opp Digimon");
+    runner
+        .execute_action(player, action)
+        .expect("select opp Digimon");
     let _ = runner.auto_resolve();
 
     let perm = &runner.game.players[1].battle_area[opp.index as usize];
@@ -224,7 +231,9 @@ fn st17_07_when_digivolving_also_de_digivolves() {
         let p = runner.game.pending_selection.as_ref().expect("selection");
         (p.selecting_player, first_action(p))
     };
-    runner.execute_action(player, action).expect("select opp Digimon");
+    runner
+        .execute_action(player, action)
+        .expect("select opp Digimon");
     let _ = runner.auto_resolve();
 
     assert_eq!(
@@ -261,7 +270,10 @@ fn st17_07_inherited_clause_condition_is_battle_delete_by_source() {
                     && t.when.contains(&CompiledTiming::OnAnyDeletion))
         })
         .count();
-    assert_eq!(inherited_count, 1, "exactly one inherited battle-delete observer");
+    assert_eq!(
+        inherited_count, 1,
+        "exactly one inherited battle-delete observer"
+    );
 }
 
 // ─── SECTION 4 — BLOCKED: green-Tamer opponent-scoped protection rider ──────

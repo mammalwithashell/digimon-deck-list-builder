@@ -383,20 +383,16 @@ impl Game {
 
         // Re-find the target by its top-card identity (its index may have
         // shifted from the Option removal).
-        let target_now = self
-            .players
-            .iter()
-            .enumerate()
-            .find_map(|(pid, player)| {
-                player
-                    .battle_area
-                    .iter()
-                    .position(|perm| perm.top_card().handle() == target_top)
-                    .map(|idx| PermanentHandle {
-                        player: pid as PlayerId,
-                        index: idx as u8,
-                    })
-            });
+        let target_now = self.players.iter().enumerate().find_map(|(pid, player)| {
+            player
+                .battle_area
+                .iter()
+                .position(|perm| perm.top_card().handle() == target_top)
+                .map(|idx| PermanentHandle {
+                    player: pid as PlayerId,
+                    index: idx as u8,
+                })
+        });
         let Some(target_now) = target_now else {
             // Target vanished mid-resolution (extremely unlikely) — route the
             // moved card to its owner's trash rather than dropping it.

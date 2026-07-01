@@ -123,7 +123,10 @@ fn bt25_015_grants_raid_and_fortitude() {
         })
         .collect();
     let blob = decl_dbg.join(" | ");
-    assert!(blob.contains("Raid"), "BT25-015 must grant <Raid>; decls = {blob}");
+    assert!(
+        blob.contains("Raid"),
+        "BT25-015 must grant <Raid>; decls = {blob}"
+    );
     assert!(
         blob.contains("Fortitude"),
         "BT25-015 must grant <Fortitude>; decls = {blob}"
@@ -145,14 +148,18 @@ fn bt25_015_has_on_play_delete_and_inherited_ess_clauses() {
         .collect();
 
     let has_op_wd = triggered.iter().any(|t| {
-        t.when.contains(&CompiledTiming::OnPlay) && t.when.contains(&CompiledTiming::WhenDigivolving)
+        t.when.contains(&CompiledTiming::OnPlay)
+            && t.when.contains(&CompiledTiming::WhenDigivolving)
     });
     let has_inherited_ess = triggered.iter().any(|t| {
         t.scope == CompiledScope::Inherited
             && t.when.contains(&CompiledTiming::OnAnyDeletion)
             && t.once_per_turn
     });
-    assert!(has_op_wd, "must have [On Play][When Digivolving] delete clause");
+    assert!(
+        has_op_wd,
+        "must have [On Play][When Digivolving] delete clause"
+    );
     assert!(
         has_inherited_ess,
         "must have inherited [All Turns][OPT] battle-delete trash-top-security clause"

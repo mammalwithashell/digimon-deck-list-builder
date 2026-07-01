@@ -77,8 +77,10 @@ fn base_runner() -> DebugRunner {
 }
 
 fn fire_when_digivolving(r: &mut DebugRunner, handle: PermanentHandle) {
-    r.game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     r.game.drain_effect_queue();
 }
 
@@ -132,10 +134,12 @@ fn bt19_073_clause_shape() {
     let wd = card
         .effects
         .iter()
-        .filter(|c| matches!(
-            c,
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::WhenDigivolving)
-        ))
+        .filter(|c| {
+            matches!(
+                c,
+                CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::WhenDigivolving)
+            )
+        })
         .count();
     assert_eq!(wd, 1, "exactly one [When Digivolving] clause");
     assert!(
@@ -189,7 +193,11 @@ fn bt19_073_when_digivolving_de_digivolves_once_per_own_digimon() {
 
     // 3 pops: Lv6, Lv5, Lv4 trashed; Lv3 base remains.
     let perm = &r.game.player(1).battle_area[opp.index as usize];
-    assert_eq!(perm.stack_size(), 1, "3 De-Digivolve 1 instances popped 3 cards");
+    assert_eq!(
+        perm.stack_size(),
+        1,
+        "3 De-Digivolve 1 instances popped 3 cards"
+    );
     assert_eq!(perm.top_card().card_id(&r.game.card_data), "OPP-L3");
     assert_eq!(r.trash_size(1), trash_before + 3);
     // The chosen Digimon can't digivolve until the end of the opponent's turn.

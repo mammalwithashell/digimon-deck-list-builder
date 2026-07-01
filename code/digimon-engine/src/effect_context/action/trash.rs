@@ -476,7 +476,8 @@ impl<'a> EffectContext<'a> {
             };
             (permanent.card_sources.remove(pos), host_card)
         };
-        self.game.trash_source_and_fire(removed.owner, perm, removed, host_card);
+        self.game
+            .trash_source_and_fire(removed.owner, perm, removed, host_card);
         // Soft-remove the carrier slot if the trash emptied it. Sibling
         // of the digivolve-from-material fix landed in PR #533. The
         // `fire_digivolution_card_trashed` observer dispatch above runs
@@ -588,7 +589,8 @@ impl<'a> EffectContext<'a> {
         // `armor_purge_top` and the sources-below-top dispatch in
         // `Game::return_to_hand` / `Game::return_to_deck`. Host known
         // pre-push → use the shared Tier-2 push+fire primitive.
-        self.game.trash_source_and_fire(removed.owner, target, removed, host_card);
+        self.game
+            .trash_source_and_fire(removed.owner, target, removed, host_card);
         let _ = self.cleanup_exposed_battle_area_digi_egg(target);
         true
     }
@@ -777,6 +779,13 @@ impl<'a> EffectContext<'a> {
             return false;
         }
         let to_trash = (current - target).min(u8::MAX as usize) as u8;
+        let prov = crate::resume::ResumeProvenance {
+            source_card: self.source_card,
+            source_permanent: self.source_permanent,
+            source_kind: self.source_kind,
+            controller: self.player,
+            override_pin: Some(opponent),
+        };
 
         self.as_selecting_player(opponent)
             .select_count_capped_multi(
@@ -803,6 +812,30 @@ impl<'a> EffectContext<'a> {
                     }
                 },
             );
+        if let Some(pending) = self.game.pending_selection.as_ref() {
+            self.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![crate::resume::ResumeFrame::NonDslCountCappedStep(
+                    crate::resume::NonDslCountCappedState {
+                        prov,
+                        of_player: opponent,
+                        zone: CountCappedZone::Hand,
+                        min: 0,
+                        max: to_trash,
+                        is_optional_zero: false,
+                        distinct_by: None,
+                        candidate_actions: pending.valid_action_ids.clone(),
+                        accum: Vec::new(),
+                        prompt: pending.prompt.clone(),
+                        previous_phase: pending.previous_phase,
+                        terminal:
+                            crate::resume::NonDslCountCappedTerminal::TrashOpponentHandToCount {
+                                opponent,
+                            },
+                        outer_conts: Vec::new(),
+                    },
+                )],
+            });
+        }
         true
     }
 

@@ -138,6 +138,70 @@ fn raid_opens_optional_target_switch_when_attacking_player() {
 }
 
 #[test]
+fn raid_switch_prompt_clones_faithfully() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("LOW"))
+        .add_card(card("HIGH"))
+        .add_card(card("SEC"))
+        .security(1, &["SEC"])
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let _low = r.place_on_field(1, "LOW", Some(0));
+    let high = r.place_on_field(1, "HIGH", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Raid, Expiry::Permanent, 0);
+    r.game.modifiers.add(
+        high,
+        ModifierEntry::simple(ModifierType::ChangeDp, 3000, Expiry::Permanent, 1),
+    );
+    let security_before = r.game.players[1].security.len();
+    let switch_action = encode_attack(0, high.index as u16);
+
+    let result = r.attack_player(atk, 1, false);
+    assert_eq!(result, AttackResult::InProgress);
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "Raid switch prompt must park a data frame for clone-faithful prompts"
+    );
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, switch_action)
+        .expect("clone resolves Raid switch");
+    assert!(
+        clone.pending_attack.is_none(),
+        "clone should continue the switched attack to completion"
+    );
+    assert_eq!(
+        clone.players[1].security.len(),
+        security_before,
+        "clone should switch to the Digimon target instead of checking security"
+    );
+
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original at the Raid switch prompt"
+    );
+    assert_eq!(
+        r.game.players[1].security.len(),
+        security_before,
+        "resolving the clone must not mutate original security"
+    );
+
+    r.game
+        .resolve_selection(0, switch_action)
+        .expect("original resolves Raid switch");
+    assert_eq!(
+        r.game.players[1].security.len(),
+        clone.players[1].security.len(),
+        "original and clone replay the Raid switch identically"
+    );
+}
+
+#[test]
 fn raid_attacker_retargets_when_original_target_leaves() {
     let mut r = DebugRunner::builder()
         .add_card(card("ATK"))
@@ -186,6 +250,59 @@ fn raid_attacker_retargets_when_original_target_leaves() {
         sel.valid_action_ids,
         vec![encode_attack(0, 0)],
         "only the surviving opposing Digimon (DEF @ slot 0) is a legal retarget"
+    );
+}
+
+#[test]
+fn raid_retarget_prompt_clones_faithfully() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("DEF"))
+        .add_card(card("VICTIM"))
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let _def = r.place_on_field(1, "DEF", Some(0));
+    let victim = r.place_on_field(1, "VICTIM", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Raid, Expiry::Permanent, 0);
+    r.register_effect("ATK", Arc::new(DeleteOnAttack(victim)));
+
+    let result = r.attack_digimon(atk, victim, false);
+    assert_eq!(result, AttackResult::InProgress);
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "Raid retarget prompt must park a data frame for clone-faithful prompts"
+    );
+    let retarget_action = encode_attack(0, 0);
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, retarget_action)
+        .expect("clone resolves Raid retarget");
+    assert!(
+        clone.pending_attack.is_none(),
+        "clone should continue the retargeted attack to completion"
+    );
+
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original at the Raid retarget prompt"
+    );
+    assert_eq!(
+        r.game.players[1].battle_area.len(),
+        1,
+        "resolving the clone must not mutate the original surviving defender"
+    );
+
+    r.game
+        .resolve_selection(0, retarget_action)
+        .expect("original resolves Raid retarget");
+    assert_eq!(
+        r.game.players[1].battle_area.len(),
+        clone.players[1].battle_area.len(),
+        "original and clone replay the Raid retarget identically"
     );
 }
 

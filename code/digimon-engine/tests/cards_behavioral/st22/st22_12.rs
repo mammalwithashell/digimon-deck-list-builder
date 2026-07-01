@@ -153,7 +153,10 @@ fn st22_12_has_raid_keyword() {
             }) if keyword == "Raid"
         )
     });
-    assert!(has_raid, "ST22-12 must declare <Raid> via grant_keyword Raid");
+    assert!(
+        has_raid,
+        "ST22-12 must declare <Raid> via grant_keyword Raid"
+    );
 }
 
 /// The [When Attacking][OPT] clause has once_per_turn=true and optional=true.
@@ -178,7 +181,11 @@ fn st22_12_has_when_attacking_opt_optional_clause() {
             }
         })
         .collect();
-    assert_eq!(wa_clauses.len(), 1, "exactly one face-up WhenAttacking clause");
+    assert_eq!(
+        wa_clauses.len(),
+        1,
+        "exactly one face-up WhenAttacking clause"
+    );
     let c = wa_clauses[0];
     assert!(c.once_per_turn, "[Once Per Turn] flag must be set");
     assert!(c.optional, "You may → optional must be true");
@@ -196,7 +203,10 @@ fn st22_12_has_link_condition_appmon_cost_2() {
                 if *cost == 2
         )
     });
-    assert!(has_lc, "ST22-12 must declare a self link-condition with cost 2");
+    assert!(
+        has_lc,
+        "ST22-12 must declare a self link-condition with cost 2"
+    );
 }
 
 /// App Fusion alt-path is declared in alt_paths.
@@ -223,7 +233,10 @@ fn st22_12_has_linked_when_linked_clause() {
             false
         }
     });
-    assert!(has, "ST22-12 must have a scope:linked when:when_linked clause");
+    assert!(
+        has,
+        "ST22-12 must have a scope:linked when:when_linked clause"
+    );
 }
 
 // ─── §2 Behavioral — When Attacking link from HAND ────────────────────────────
@@ -275,7 +288,11 @@ fn st22_12_wa_link_social_from_hand_then_when_linking_fires() {
 
     // DoGatchmon should now have 1 linked card.
     let linked = &r.game.player(0).battle_area[dogatchmon_idx].linked_cards;
-    assert_eq!(linked.len(), 1, "Social card from hand attached as linked card");
+    assert_eq!(
+        linked.len(),
+        1,
+        "Social card from hand attached as linked card"
+    );
 }
 
 /// [When Attacking][OPT] — linking from digivolution sources works.
@@ -283,9 +300,7 @@ fn st22_12_wa_link_social_from_hand_then_when_linking_fires() {
 /// push_source, then confirm the When-Attacking selection includes it.
 #[test]
 fn st22_12_wa_link_tool_from_digivolution_sources() {
-    let mut r = base()
-        .memory(10)
-        .start();
+    let mut r = base().memory(10).start();
     r.game.players[1].security.clear();
     r.game.enter_main_phase();
 
@@ -324,7 +339,11 @@ fn st22_12_wa_link_tool_from_digivolution_sources() {
     let _ = r.game.resolve_selection(0, action);
 
     let linked = &r.game.player(0).battle_area[dogatchmon_idx].linked_cards;
-    assert_eq!(linked.len(), 1, "Tool from digi-sources attached as linked card");
+    assert_eq!(
+        linked.len(),
+        1,
+        "Tool from digi-sources attached as linked card"
+    );
 }
 
 /// [When Attacking][OPT] — player declines (PASS), nothing links.
@@ -347,7 +366,10 @@ fn st22_12_wa_link_decline_does_nothing() {
     r.attack_player(attacker, 1, false);
 
     // A selection should be pending (optional).
-    assert!(r.game.pending_selection.is_some(), "link prompt must appear");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "link prompt must appear"
+    );
     assert!(
         r.game.pending_selection.as_ref().unwrap().is_optional,
         "the selection must be optional (PASS allowed)"
@@ -377,7 +399,9 @@ fn st22_12_wa_no_eligible_card_no_prompt() {
     let dogatchmon_idx = dogatchmon_handle.index as usize;
     r.game.enter_main_phase();
 
-    let linked_before = r.game.player(0).battle_area[dogatchmon_idx].linked_cards.len();
+    let linked_before = r.game.player(0).battle_area[dogatchmon_idx]
+        .linked_cards
+        .len();
 
     let attacker = PermanentHandle {
         player: 0,
@@ -416,7 +440,10 @@ fn st22_12_wa_wrong_trait_card_not_selectable() {
 
     // Link prompt fires (Social is eligible); valid_action_ids includes the
     // Social card action + PASS (optional: true).
-    assert!(r.game.pending_selection.is_some(), "link selection must fire");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "link selection must fire"
+    );
     let real_candidates: Vec<u16> = r
         .game
         .pending_selection
@@ -429,7 +456,8 @@ fn st22_12_wa_wrong_trait_card_not_selectable() {
         .collect();
     // Only 1 real candidate: the Social card. Beast must NOT appear.
     assert_eq!(
-        real_candidates.len(), 1,
+        real_candidates.len(),
+        1,
         "only the Social card should be offered (Beast excluded)"
     );
 }
@@ -439,10 +467,7 @@ fn st22_12_wa_wrong_trait_card_not_selectable() {
 /// Second attack same turn → no new link prompt (OPT lockout).
 #[test]
 fn st22_12_opt_blocks_second_attack_same_turn() {
-    let mut r = base()
-        .hand(0, &["SOCIAL", "NAVI"])
-        .memory(10)
-        .start();
+    let mut r = base().hand(0, &["SOCIAL", "NAVI"]).memory(10).start();
     r.game.players[1].security.clear();
     // Place DoGatchmon directly (no summoning sickness).
     let dogatchmon_handle = r.place_on_field(0, CARD_ID, Some(0));
@@ -470,7 +495,9 @@ fn st22_12_opt_blocks_second_attack_same_turn() {
         let _ = r.game.resolve_selection(0, action);
         r.auto_resolve().ok();
     }
-    let linked_after_first = r.game.player(0).battle_area[dogatchmon_idx].linked_cards.len();
+    let linked_after_first = r.game.player(0).battle_area[dogatchmon_idx]
+        .linked_cards
+        .len();
 
     // Unsuspend DoGatchmon to allow a second attack this turn.
     r.game.players[0].battle_area[dogatchmon_idx].is_suspended = false;
@@ -479,7 +506,9 @@ fn st22_12_opt_blocks_second_attack_same_turn() {
     r.attack_player(attacker, 1, false);
     r.auto_resolve().ok();
 
-    let linked_after_second = r.game.player(0).battle_area[dogatchmon_idx].linked_cards.len();
+    let linked_after_second = r.game.player(0).battle_area[dogatchmon_idx]
+        .linked_cards
+        .len();
     assert_eq!(
         linked_after_second, linked_after_first,
         "OPT must block the second link attempt in the same turn"
@@ -520,7 +549,9 @@ fn st22_12_opt_clears_after_end_turn() {
         let _ = r.game.resolve_selection(0, action);
         r.auto_resolve().ok();
     }
-    let linked_t1 = r.game.player(0).battle_area[dogatchmon_idx].linked_cards.len();
+    let linked_t1 = r.game.player(0).battle_area[dogatchmon_idx]
+        .linked_cards
+        .len();
 
     if r.game_over() {
         return; // game ended; skip OPT-reset verification
@@ -576,10 +607,7 @@ fn st22_12_opt_clears_after_end_turn() {
 /// [When Linking] return-to-deck prompt targeting opponent's ≤5000 DP Digimon.
 #[test]
 fn st22_12_when_linked_prompts_return_opp_le5000_dp_digimon() {
-    let mut r = base()
-        .hand(0, &[CARD_ID])
-        .memory(10)
-        .start();
+    let mut r = base().hand(0, &[CARD_ID]).memory(10).start();
     // P1 has a weak (4000 DP) and a strong (6000 DP) Digimon on field.
     let _opp_weak_perm = r.place_on_field(1, "OPP-WEAK", Some(0));
     let _opp_strong_perm = r.place_on_field(1, "OPP-STRONG", Some(0));
@@ -604,7 +632,10 @@ fn st22_12_when_linked_prompts_return_opp_le5000_dp_digimon() {
 
     // The weak Digimon (4000 DP) must be selectable; the strong (6000 DP) must not.
     let valid = &r.game.pending_selection.as_ref().unwrap().valid_action_ids;
-    assert!(!valid.is_empty(), "at least 1 valid target (OPP-WEAK ≤5000 DP)");
+    assert!(
+        !valid.is_empty(),
+        "at least 1 valid target (OPP-WEAK ≤5000 DP)"
+    );
 
     let prev_battle = r.game.player(1).battle_area.len();
     let ret_action = valid[0];
@@ -626,10 +657,7 @@ fn st22_12_when_linked_prompts_return_opp_le5000_dp_digimon() {
 /// prompt has no valid candidates — effectively a no-op.
 #[test]
 fn st22_12_when_linked_no_valid_target_is_noop() {
-    let mut r = base()
-        .hand(0, &[CARD_ID])
-        .memory(10)
-        .start();
+    let mut r = base().hand(0, &[CARD_ID]).memory(10).start();
     // P1 has only a strong Digimon (6000 DP — above the 5000 threshold).
     let _opp_strong_perm = r.place_on_field(1, "OPP-STRONG", Some(0));
     let host = r.place_on_field(0, "HOST", Some(0));

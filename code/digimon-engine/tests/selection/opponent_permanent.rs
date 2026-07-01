@@ -17,10 +17,10 @@
 use digimon_engine::action::build_action_mask;
 use digimon_engine::action::space::{encode_attack, ACTION_SPACE_SIZE, CONCEDE_GAME, PASS};
 use digimon_engine::card_registry::CardRegistry;
-use digimon_engine::tensor_v1::build_tensor_standard_compact_v1;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::GamePhase;
 use digimon_engine::selection::{SelectionError, SelectionKind};
+use digimon_engine::tensor_v1::build_tensor_standard_compact_v1;
 
 fn runner_with_opponent_field(opp_count: usize) -> DebugRunner {
     let mut r = DebugRunner::builder()

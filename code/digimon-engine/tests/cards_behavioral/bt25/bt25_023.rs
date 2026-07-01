@@ -125,9 +125,7 @@ fn bt25_023_offers_play_when_zero_tamers() {
 #[test]
 fn bt25_023_plays_thomas_for_free() {
     let mut runner = base().hand(0, &[CARD_ID, "THOMAS"]).memory(10).start();
-    let tamers_before = runner
-        .game
-        .players[0]
+    let tamers_before = runner.game.players[0]
         .battle_area
         .iter()
         .filter(|p| p.top_card().card_id(&runner.game.card_data) == "THOMAS")

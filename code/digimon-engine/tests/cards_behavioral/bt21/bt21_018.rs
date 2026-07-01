@@ -171,7 +171,10 @@ fn bt21_018_has_rush_keyword_declarative() {
             }) if keyword == "Rush" && matches!(scope, CompiledScope::FaceUp)
         )
     });
-    assert!(has_rush, "BT21-018 must declare <Rush> as a FaceUp grant_keyword");
+    assert!(
+        has_rush,
+        "BT21-018 must declare <Rush> as a FaceUp grant_keyword"
+    );
 }
 
 /// Raid is declared as a self (FaceUp scope) grant_keyword.
@@ -189,7 +192,10 @@ fn bt21_018_has_raid_keyword_declarative() {
             }) if keyword == "Raid" && matches!(scope, CompiledScope::FaceUp)
         )
     });
-    assert!(has_raid, "BT21-018 must declare <Raid> as a FaceUp grant_keyword");
+    assert!(
+        has_raid,
+        "BT21-018 must declare <Raid> as a FaceUp grant_keyword"
+    );
 }
 
 /// Link condition: self link-condition costs 2 for Appmon hosts.
@@ -204,7 +210,10 @@ fn bt21_018_has_link_condition_appmon_cost_2() {
                 if *cost == 2
         )
     });
-    assert!(has, "BT21-018 must declare a self link-condition with cost 2");
+    assert!(
+        has,
+        "BT21-018 must declare a self link-condition with cost 2"
+    );
 }
 
 /// App Fusion alt-path for Gatchmon/Navimon/Tweetmon is declared.
@@ -258,9 +267,7 @@ fn bt21_018_when_card_linked_to_this_is_opt_and_optional() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("present");
     let clause = card.effects.iter().find_map(|c| match c {
-        CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::WhenCardLinkedToThis) =>
-        {
+        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::WhenCardLinkedToThis) => {
             Some(t)
         }
         _ => None,

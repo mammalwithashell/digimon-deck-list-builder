@@ -106,9 +106,7 @@ fn bt25_006_inherited_clause_is_optional_opt_and_opp_turn_gated() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::OnOpponentAttack) =>
-            {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnOpponentAttack) => {
                 Some(t)
             }
             _ => None,
@@ -141,9 +139,7 @@ fn bt25_006_clause_trashes_hand_then_unsuspends() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::OnOpponentAttack) =>
-            {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnOpponentAttack) => {
                 Some(t)
             }
             _ => None,
@@ -271,7 +267,11 @@ fn bt25_006_decline_keeps_hand_and_suspension() {
         .decline_optional_trigger()
         .expect("declining the optional trigger is legal");
 
-    assert_eq!(runner.hand_size(0), hand_before, "no card trashed on decline");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before,
+        "no card trashed on decline"
+    );
     assert!(
         runner.game.players[0].battle_area[carrier.index as usize].is_suspended,
         "declining leaves the Titan suspended"

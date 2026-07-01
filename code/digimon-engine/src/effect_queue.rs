@@ -2541,8 +2541,7 @@ impl Game {
                 if !snap.is_token {
                     let top = snap.top_card;
                     let owner = snap.former_controller;
-                    let in_trash =
-                        self.player(owner).trash.iter().any(|c| c.handle() == top);
+                    let in_trash = self.player(owner).trash.iter().any(|c| c.handle() == top);
                     if !in_trash {
                         return; // suppressed: top card no longer in trash
                     }
@@ -3434,6 +3433,7 @@ impl Game {
         let source_permanent = qe.source_permanent;
         let source_kind = qe.source_kind;
         let prompt = format!("You may activate {}'s triggered effect", qe.card_id);
+        let qe_for_resume = qe.clone();
 
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::EffectChoice;
@@ -3460,6 +3460,24 @@ impl Game {
             // generic resolver resumes draining the rest of the queue.
             on_decline: Some(Box::new(|_game: &mut Game| {})),
         });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::OuterOptionalTrigger(
+                crate::resume::OuterOptionalTriggerState {
+                    queued_effect: qe_for_resume,
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
+    }
+
+    pub(crate) fn run_outer_optional_trigger_step(
+        &mut self,
+        state: crate::resume::OuterOptionalTriggerState,
+        is_pass: bool,
+    ) {
+        if !is_pass {
+            self.run_queued_effect(state.queued_effect);
+        }
     }
 
     fn install_trigger_order_selection(
@@ -3575,6 +3593,44 @@ impl Game {
                 None
             },
         });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::TriggerOrderSelection(
+                crate::resume::TriggerOrderSelectionState {
+                    chooser,
+                    allow_decline_all,
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
+    }
+
+    pub(crate) fn run_trigger_order_selection_step(
+        &mut self,
+        state: crate::resume::TriggerOrderSelectionState,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        if is_pass {
+            if state.allow_decline_all {
+                self.effect_queue
+                    .retain(|qe| !(qe.controller == state.chooser && qe.is_optional));
+            }
+            return;
+        }
+
+        let pos = action_id.saturating_sub(HAND_EFFECT_START) as usize;
+        let target_idx = self
+            .effect_queue
+            .iter()
+            .enumerate()
+            .filter(|(_, qe)| qe.controller == state.chooser)
+            .nth(pos)
+            .map(|(i, _)| i);
+        if let Some(idx) = target_idx {
+            if let Some(qe) = self.effect_queue.remove(idx) {
+                self.run_queued_effect(qe);
+            }
+        }
     }
 
     /// Resolve any pending selection — `TriggerOrder`, `Target`, `Hand`,

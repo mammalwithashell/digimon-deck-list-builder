@@ -172,12 +172,8 @@ fn ex5_060_all_turns_recursion_gated_on_played_level() {
     // An effect (any controller) plays the opponent's Digimon from trash.
     {
         let src_card = r.game.players[1].trash[0].handle();
-        let mut ctx = digimon_engine::effect_context::EffectContext::new(
-            &mut r.game,
-            src_card,
-            None,
-            1,
-        );
+        let mut ctx =
+            digimon_engine::effect_context::EffectContext::new(&mut r.game, src_card, None, 1);
         let played = ctx.play_from_trash_free_unsuspended_for(1, src_card, false);
         assert!(played.is_some(), "staging: the effect-play resolves");
     }

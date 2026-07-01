@@ -181,7 +181,9 @@ fn assert_cost_reduction_for_sources(n_sources: usize) {
     );
 
     // Accept the reduction (branch 0).
-    runner.execute_branch(0).expect("accept King Drasil reducer");
+    runner
+        .execute_branch(0)
+        .expect("accept King Drasil reducer");
     runner.auto_resolve().ok();
 
     let paid = start_memory - runner.memory();
@@ -192,9 +194,7 @@ fn assert_cost_reduction_for_sources(n_sources: usize) {
          expected to pay {expected_paid} of an 11-cost Royal Knight, paid {paid}"
     );
     assert!(
-        runner
-            .game
-            .players[0]
+        runner.game.players[0]
             .battle_area
             .iter()
             .any(|p| p.top_card().card_id(&runner.game.card_data) == "RK-PLAY"),
@@ -236,7 +236,10 @@ fn bt13_007_floodgate_blocks_own_digivolve_only_on_your_turn() {
     runner.game.turn_player_idx = 0;
     runner.game.tick_declarative_effects();
     assert!(
-        runner.game.modifiers.has(own, ModifierType::CannotDigivolve),
+        runner
+            .game
+            .modifiers
+            .has(own, ModifierType::CannotDigivolve),
         "on your turn, King Drasil's floodgate must block your Digimon from digivolving"
     );
 
@@ -245,7 +248,10 @@ fn bt13_007_floodgate_blocks_own_digivolve_only_on_your_turn() {
     runner.game.turn_player_idx = 1;
     runner.game.tick_declarative_effects();
     assert!(
-        !runner.game.modifiers.has(own, ModifierType::CannotDigivolve),
+        !runner
+            .game
+            .modifiers
+            .has(own, ModifierType::CannotDigivolve),
         "on the opponent's turn the [Your Turn] floodgate must NOT block your Digimon \
          (Blast/Counter digivolves remain legal)"
     );

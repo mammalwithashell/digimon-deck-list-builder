@@ -51,8 +51,7 @@ fn text_card(id: &str, text: &str) -> CardData {
 
 /// Recursively search a CompiledPredicate tree for a node satisfying `f`.
 fn pred_any<F: Fn(&CompiledPredicate) -> bool + Copy>(p: &CompiledPredicate, f: F) -> bool {
-    f(p)
-        || p.all_of.iter().any(|q| pred_any(q, f))
+    f(p) || p.all_of.iter().any(|q| pred_any(q, f))
         || p.any_of.iter().any(|q| pred_any(q, f))
         || p.none_of.iter().any(|q| pred_any(q, f))
         || p.not.as_ref().map(|q| pred_any(q, f)).unwrap_or(false)
@@ -109,11 +108,7 @@ fn ad1_017_cost_reduction_clause_shape() {
     let agg: &CompiledCountAggregate = cond
         .count_gte
         .as_ref()
-        .or_else(|| {
-            cond.all_of
-                .iter()
-                .find_map(|p| p.count_gte.as_ref())
-        })
+        .or_else(|| cond.all_of.iter().find_map(|p| p.count_gte.as_ref()))
         .expect("cost reduction condition must use count_gte over trash");
     assert_eq!(
         agg.n,
@@ -121,7 +116,8 @@ fn ad1_017_cost_reduction_clause_shape() {
         "count threshold must be 4 ([4 or more])"
     );
     assert!(
-        pred_any(&agg.filter, |q| q.effect_text_contains.as_deref() == Some("Lucemon")),
+        pred_any(&agg.filter, |q| q.effect_text_contains.as_deref()
+            == Some("Lucemon")),
         "count filter must include effect_text_contains: Lucemon"
     );
     assert!(
@@ -261,7 +257,9 @@ fn ad1_017_on_play_trash_bottom_security_branch() {
     let opp_a_dp = runner.effective_dp(opp_a).unwrap();
 
     runner.fire_on_play(0, dyn_.index as usize);
-    runner.execute_branch(1).expect("pick the trash-bottom branch");
+    runner
+        .execute_branch(1)
+        .expect("pick the trash-bottom branch");
     runner.game.drain_effect_queue();
 
     // Decline the cascading own-security-removed observer (faithful cascade).
@@ -277,7 +275,10 @@ fn ad1_017_on_play_trash_bottom_security_branch() {
         .security
         .iter()
         .any(|c| c.card_index == bot_idx);
-    assert!(bottom_gone, "trash-bottom must remove the bottom security card");
+    assert!(
+        bottom_gone,
+        "trash-bottom must remove the bottom security card"
+    );
     assert_eq!(
         runner.effective_dp(opp_a),
         Some(opp_a_dp - 6000),
@@ -323,8 +324,15 @@ fn ad1_017_own_security_removed_deletes_lowest_dp_opponent_digimon() {
     let view = runner
         .pending_selection_view()
         .expect("own-security removal must offer the optional delete");
-    assert_eq!(view.kind, SelectionKind::OppField, "delete target is OppField");
-    assert!(view.is_optional, "the delete is 'you may delete' (optional)");
+    assert_eq!(
+        view.kind,
+        SelectionKind::OppField,
+        "delete target is OppField"
+    );
+    assert!(
+        view.is_optional,
+        "the delete is 'you may delete' (optional)"
+    );
     // Only the lowest-DP Digimon (3000) is a valid pick; the 9000 one is not.
     let want_low = encode_attack(0, low.index as u16);
     let want_high = encode_attack(0, high.index as u16);
@@ -337,7 +345,9 @@ fn ad1_017_own_security_removed_deletes_lowest_dp_opponent_digimon() {
         "only the LOWEST-DP Digimon is a valid target; the 9000-DP one must not be"
     );
 
-    runner.execute_action(0, want_low).expect("delete lowest-DP");
+    runner
+        .execute_action(0, want_low)
+        .expect("delete lowest-DP");
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -442,7 +452,9 @@ fn ad1_017_inherited_security_clause_shape() {
             CompiledClause::Triggered(t) => Some(t),
             _ => None,
         })
-        .find(|t| t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnSecurity))
+        .find(|t| {
+            t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnSecurity)
+        })
         .expect("AD1-017 must carry an inherited [Security] clause");
 
     use digimon_dsl::compiled::CompiledModifierValue;
@@ -463,7 +475,10 @@ fn ad1_017_inherited_security_clause_shape() {
     let has_dp = clause.process.iter().any(|s| {
         matches!(
             s,
-            CompiledStep::AddDpModifier { value: CompiledModifierValue::Literal(-3000), .. }
+            CompiledStep::AddDpModifier {
+                value: CompiledModifierValue::Literal(-3000),
+                ..
+            }
         )
     });
     assert!(
@@ -511,14 +526,20 @@ fn ad1_017_inherited_security_installs_debuffs() {
 
     // One opponent Digimon must carry the SecurityAttackChange (-1) debuff and
     // one must carry a -3000 DP reduction.
-    let sec_a = runner.game.modifiers.has(a, ModifierType::SecurityAttackChange);
-    let sec_b = runner.game.modifiers.has(b, ModifierType::SecurityAttackChange);
+    let sec_a = runner
+        .game
+        .modifiers
+        .has(a, ModifierType::SecurityAttackChange);
+    let sec_b = runner
+        .game
+        .modifiers
+        .has(b, ModifierType::SecurityAttackChange);
     assert!(
         sec_a || sec_b,
         "an opponent Digimon must receive the Security A. -1 debuff"
     );
-    let dp_drop = runner.effective_dp(a) == Some(a_dp - 3000)
-        || runner.effective_dp(b) == Some(b_dp - 3000);
+    let dp_drop =
+        runner.effective_dp(a) == Some(a_dp - 3000) || runner.effective_dp(b) == Some(b_dp - 3000);
     assert!(
         dp_drop,
         "an opponent Digimon must receive the -3000 DP debuff"

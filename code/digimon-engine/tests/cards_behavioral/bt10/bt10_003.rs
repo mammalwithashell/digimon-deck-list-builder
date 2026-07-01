@@ -6,7 +6,10 @@ const CARD_ID: &str = "BT10-003";
 fn carrier(card_id: &str, name: &str, traits: &[&str]) -> digimon_engine::card_data::CardData {
     let mut card = make_test_card_with_level(card_id, name, 3);
     card.colors = vec![CardColor::Red];
-    card.traits = traits.iter().map(|trait_name| (*trait_name).to_string()).collect();
+    card.traits = traits
+        .iter()
+        .map(|trait_name| (*trait_name).to_string())
+        .collect();
     card
 }
 
@@ -47,7 +50,9 @@ fn bt10_003_inherited_does_not_draw_without_xros_heart_carrier() {
 
     let hand_before = runner.hand_size(0);
     runner.attack_player(stack, 1, false);
-    runner.auto_resolve().expect("resolve attack without inherited draw");
+    runner
+        .auto_resolve()
+        .expect("resolve attack without inherited draw");
 
     assert_eq!(
         runner.hand_size(0),

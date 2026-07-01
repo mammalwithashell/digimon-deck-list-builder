@@ -117,7 +117,10 @@ fn bt25_065_registers_ts_alt_digivolve() {
         .iter()
         .filter(|p| matches!(p.kind, CompiledAltPathKind::Digivolve))
         .count();
-    assert_eq!(digivolve_paths, 1, "BT25-065 must register the TS-trait alt digivolve path");
+    assert_eq!(
+        digivolve_paths, 1,
+        "BT25-065 must register the TS-trait alt digivolve path"
+    );
 }
 
 // ── Section 3: Behavioral — on_suspend self-draw ───────────────────────────

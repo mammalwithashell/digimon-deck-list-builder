@@ -1,6 +1,6 @@
 use digimon_dsl::compiled::{CompiledBindingRef, CompiledClause, CompiledStep, CompiledZone};
 use digimon_dsl::{compile::compile, spec::CardSpec};
-use digimon_engine::action::space::PASS;
+use digimon_engine::action::space::{HAND_EFFECT_START, PASS};
 use digimon_engine::debug_runner::DebugRunner;
 
 fn digixros_yaml() -> &'static str {
@@ -193,4 +193,67 @@ fn turn_scoped_wildcard_step_makes_source_legal_for_later_digixros() {
         .card_sources
         .iter()
         .any(|card| card.card_id(&runner.game.card_data) == "DX-WILDCARD"));
+}
+
+#[test]
+fn digixros_material_prompt_clones_faithfully() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(digixros_yaml())
+        .expect("compile DigiXros target")
+        .from_dsl_yaml(wildcard_yaml())
+        .expect("compile material body")
+        .hand(0, &["DX-TARGET", "DX-WILDCARD"])
+        .memory(10)
+        .start();
+
+    assert_eq!(runner.play(0, 0), None, "DigiXros target should park");
+    assert!(
+        runner.game.pending_selection_resume.is_some(),
+        "DigiXros material prompt must park a data frame"
+    );
+
+    let material_action = HAND_EFFECT_START + 1;
+    let mut clone = runner.game.clone();
+    clone
+        .resolve_selection(0, material_action)
+        .expect("clone selects the hand material");
+    assert!(
+        clone.pending_selection_resume.is_some(),
+        "follow-up DigiXros material prompt must also park a data frame"
+    );
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "resolving the clone must leave the original at the material prompt"
+    );
+
+    clone
+        .resolve_selection(0, PASS)
+        .expect("clone commits DigiXros materials");
+    assert!(clone.pending_selection.is_none());
+    assert_eq!(clone.memory, 6, "one -1 material reduces cost 5 to 4");
+    assert_eq!(clone.players[0].hand.len(), 0);
+    assert_eq!(clone.players[0].battle_area.len(), 1);
+    assert!(clone.players[0].battle_area[0]
+        .card_sources
+        .iter()
+        .any(|card| card.card_id(&clone.card_data) == "DX-WILDCARD"));
+
+    runner
+        .game
+        .resolve_selection(0, material_action)
+        .expect("original selects the hand material");
+    runner
+        .game
+        .resolve_selection(0, PASS)
+        .expect("original commits DigiXros materials");
+
+    assert_eq!(runner.game.memory, clone.memory);
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        clone.players[0].hand.len()
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[0].card_sources.len(),
+        clone.players[0].battle_area[0].card_sources.len()
+    );
 }

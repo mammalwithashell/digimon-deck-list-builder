@@ -21,8 +21,8 @@ fn trash_source_ref_emptying_carrier_removes_slot() {
         .start();
 
     let perm = runner.place_on_field(0, "T-ONLY", None);
-    let only_handle = runner.game.players[0].battle_area[perm.index as usize].card_sources[0]
-        .handle();
+    let only_handle =
+        runner.game.players[0].battle_area[perm.index as usize].card_sources[0].handle();
     assert_eq!(
         runner.game.players[0].battle_area[perm.index as usize]
             .card_sources

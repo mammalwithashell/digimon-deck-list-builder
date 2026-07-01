@@ -495,7 +495,11 @@ fn bt20_059_opp_turn_grants_reboot_and_blocker_to_matching_allies() {
     runner.game.turn_player_idx = 1;
     runner.game.tick_declarative_effects();
 
-    for (label, h) in [("Sistermon", sister), ("Huckmon", huck), ("Royal Knight", rk)] {
+    for (label, h) in [
+        ("Sistermon", sister),
+        ("Huckmon", huck),
+        ("Royal Knight", rk),
+    ] {
         assert!(
             runner.game.has_keyword(h, Keyword::Reboot),
             "{label} ally must gain Reboot on opponent's turn"

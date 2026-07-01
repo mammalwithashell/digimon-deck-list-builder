@@ -363,11 +363,17 @@ fn c2_gravel_hearts_free_plays_sunarizamon_from_trash_and_searches() {
             } else {
                 view.valid_action_ids.first().copied().unwrap_or(PASS)
             };
-            if runner.execute_action(view.selecting_player, action).is_err() {
+            if runner
+                .execute_action(view.selecting_player, action)
+                .is_err()
+            {
                 break;
             }
         }
-        assert!(chose_trash, "the Gravel Hearts zone EffectChoice must have appeared");
+        assert!(
+            chose_trash,
+            "the Gravel Hearts zone EffectChoice must have appeared"
+        );
     }
     let after = snapshot(&runner);
 
@@ -773,9 +779,10 @@ fn c5_magneticdramon_source_trash_double_removal() {
     let magnet = runner.place_on_field(0, "EX10-036", None);
 
     let before = snapshot(&runner);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(magnet));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(magnet),
+    );
     runner.game.drain_effect_queue();
     drive_first_valid(&mut runner, 50);
     let after = snapshot(&runner);

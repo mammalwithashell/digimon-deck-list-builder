@@ -153,7 +153,9 @@ fn bt25_002_negative_opponent_turn_no_draw() {
     let next = runner.game.next_card_index();
     runner.game.players[1]
         .hand
-        .push(digimon_engine::card_source::CardSource::new(data_idx, 1, next));
+        .push(digimon_engine::card_source::CardSource::new(
+            data_idx, 1, next,
+        ));
     let p1_idx = runner.game.players[1].hand.len() - 1;
 
     let _ = runner.play(1, p1_idx);
@@ -218,7 +220,9 @@ fn bt25_002_opt_second_tamer_same_turn_no_second_draw() {
     let next = runner.game.next_card_index();
     runner.game.players[0]
         .hand
-        .push(digimon_engine::card_source::CardSource::new(data_idx, 0, next));
+        .push(digimon_engine::card_source::CardSource::new(
+            data_idx, 0, next,
+        ));
     let idx = runner.game.players[0].hand.len() - 1;
     let deck_now = runner.deck_size(0);
     let _ = runner.play(0, idx);

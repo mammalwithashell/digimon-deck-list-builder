@@ -223,6 +223,43 @@ fn resolve_via_convenience_method_records_choice() {
 }
 
 #[test]
+fn play_order_selection_clones_faithfully() {
+    let mut runner = DebugRunner::builder().start();
+    runner.game.current_phase = GamePhase::GameOver;
+    runner.game.request_play_order_selection(1);
+
+    assert!(
+        runner.game.pending_selection_resume.is_some(),
+        "SelectPlayOrder must park a data resume frame so cloned games do not hit the callback panic-stub"
+    );
+
+    let mut clone = runner.game.clone();
+    clone
+        .resolve_selection(1, PLAY_FIRST)
+        .expect("clone resolves PLAY_FIRST through the data frame");
+
+    assert_eq!(clone.last_play_order_choice, Some(PlayOrder::First));
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "resolving the clone must not clear the original prompt"
+    );
+    assert_eq!(
+        runner.game.last_play_order_choice, None,
+        "resolving the clone must not write the original choice slot"
+    );
+
+    runner
+        .game
+        .resolve_selection(1, PLAY_FIRST)
+        .expect("original resolves the same choice");
+    assert_eq!(
+        runner.game.last_play_order_choice, clone.last_play_order_choice,
+        "original and clone replay identically from the same play-order choice"
+    );
+    assert_eq!(runner.game.current_phase, clone.current_phase);
+}
+
+#[test]
 fn resolve_convenience_errors_without_pending_play_order() {
     let mut runner = DebugRunner::builder().start();
     // No pending selection installed.

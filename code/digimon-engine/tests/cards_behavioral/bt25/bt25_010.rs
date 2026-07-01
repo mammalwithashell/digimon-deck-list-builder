@@ -136,9 +136,9 @@ fn bt25_010_has_ts_and_poromon_cost0_alt_paths() {
     let has_ts = card.alt_paths.iter().any(|p| {
         p.kind == CompiledAltPathKind::Digivolve
             && p.cost == Some(CompiledCost::Literal(0))
-            && p.from.as_ref().is_some_and(|f| {
-                f.level_eq == Some(2) && f.trait_has.as_deref() == Some("TS")
-            })
+            && p.from
+                .as_ref()
+                .is_some_and(|f| f.level_eq == Some(2) && f.trait_has.as_deref() == Some("TS"))
     });
     assert!(has_ts, "BT25-010 must have a Lv.2 [TS] → cost 0 alt-path");
 
@@ -242,7 +242,10 @@ fn bt25_010_does_not_reduce_for_sea_animal_target() {
             .game
             .digivolve_from_hand(0, hand_index, hawkmon.index as usize, PlaySource::ByHand);
 
-    assert!(digivolved, "Sea Animal target is still a legal digivolution");
+    assert!(
+        digivolved,
+        "Sea Animal target is still a legal digivolution"
+    );
     assert_eq!(
         runner.game.memory,
         memory_before - 1,

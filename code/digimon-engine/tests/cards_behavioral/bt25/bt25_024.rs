@@ -168,14 +168,18 @@ fn bt25_024_has_draw_and_your_turn_clauses() {
         .collect();
 
     let has_draw = triggered.iter().any(|t| {
-        t.when.contains(&CompiledTiming::OnPlay) && t.when.contains(&CompiledTiming::WhenDigivolving)
+        t.when.contains(&CompiledTiming::OnPlay)
+            && t.when.contains(&CompiledTiming::WhenDigivolving)
     });
     let has_your_turn = triggered.iter().any(|t| {
         (t.when.contains(&CompiledTiming::OnEnterFieldAnyone)
             || t.when.contains(&CompiledTiming::OnDigivolve))
             && t.optional
     });
-    assert!(has_draw, "must have [On Play][When Digivolving] draw clause");
+    assert!(
+        has_draw,
+        "must have [On Play][When Digivolving] draw clause"
+    );
     assert!(
         has_your_turn,
         "must have the optional [Your Turn] played/digivolve digivolve clause"
@@ -270,8 +274,5 @@ fn bt25_024_has_inherited_jamming() {
         CompiledClause::Declarative(d) => format!("{d:?}").contains("Jamming"),
         _ => false,
     });
-    assert!(
-        has_jamming,
-        "BT25-024 must grant inherited <Jamming>"
-    );
+    assert!(has_jamming, "BT25-024 must grant inherited <Jamming>");
 }

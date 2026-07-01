@@ -499,9 +499,7 @@ fn ex11_016_on_play_trashes_two_sources_then_places_chosen_digimon_top_security(
         SelectionKind::EffectChoice,
         "top-or-bottom is a real player choice (DCGO SetBoolSelection)"
     );
-    runner
-        .execute_branch(0)
-        .expect("choose 'top' (branch 0)");
+    runner.execute_branch(0).expect("choose 'top' (branch 0)");
     runner.auto_resolve().expect("finish the On Play effect");
 
     // OPP-A left the field into the OPPONENT's security, on TOP, face-down.
@@ -536,7 +534,10 @@ fn ex11_016_on_play_trashes_two_sources_then_places_chosen_digimon_top_security(
         "the placed security card is face-down (DCGO isFaceup defaults false)"
     );
     assert!(
-        !runner.game.modifiers.has(opp_b, ModifierType::CannotSuspend),
+        !runner
+            .game
+            .modifiers
+            .has(opp_b, ModifierType::CannotSuspend),
         "EX11-016 (unlike sibling EX8-023) applies NO suspend/WD lock"
     );
 }
@@ -770,7 +771,9 @@ fn ex11_016_no_place_prompt_when_no_sourceless_digimon_remains() {
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("first source pick");
-    let view = runner.pending_selection_view().expect("second pick pending");
+    let view = runner
+        .pending_selection_view()
+        .expect("second pick pending");
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("second source pick");
@@ -864,7 +867,9 @@ fn ex11_016_when_digivolving_via_ice_snow_alt_path_costs_3_and_fires_effect() {
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("first source pick");
-    let view = runner.pending_selection_view().expect("second pick pending");
+    let view = runner
+        .pending_selection_view()
+        .expect("second pick pending");
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("second source pick");

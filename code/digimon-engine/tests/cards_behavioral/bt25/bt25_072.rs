@@ -42,7 +42,9 @@ fn seed_trash(runner: &mut DebugRunner, player: usize, card_id: &str) {
         .position(|c| c.card_id == card_id)
         .unwrap();
     let iid = runner.game.next_card_index();
-    runner.game.players[player].trash.push(CardSource::new(idx, player as u8, iid));
+    runner.game.players[player]
+        .trash
+        .push(CardSource::new(idx, player as u8, iid));
 }
 
 const CARD_ID: &str = "BT25-072";
@@ -167,9 +169,7 @@ fn bt25_072_when_linked_denies_opponent_digivolve() {
     let _ = r.game.resolve_selection(0, deny_action);
 
     assert!(
-        r.game
-            .modifiers
-            .has(opp, ModifierType::CannotDigivolve),
+        r.game.modifiers.has(opp, ModifierType::CannotDigivolve),
         "opponent Digimon can't digivolve after Shutmon got linked"
     );
 }

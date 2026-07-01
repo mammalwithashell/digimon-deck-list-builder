@@ -217,12 +217,10 @@ fn bt16_027_digivolves_from_dragon_mode_at_cost_2() {
     let hand_idx = find_hand_index(&runner, 0, "BT16-027").expect("BT16-027 in hand");
     let mem_before = runner.memory();
 
-    let ok = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        base.index as usize,
-        PlaySource::ByDigivolve,
-    );
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
     assert!(
         ok,
         "BT16-027 must digivolve from the Dragon Mode base (cost-2 add-source path)"

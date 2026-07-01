@@ -89,11 +89,13 @@ fn bt25_011_yaml_has_printed_metadata() {
 fn bt25_011_grants_raid() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
-    let grants_raid = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
-            if keyword.eq_ignore_ascii_case("Raid")
-    ));
+    let grants_raid = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
+                if keyword.eq_ignore_ascii_case("Raid")
+        )
+    });
     assert!(grants_raid, "BT25-011 must grant <Raid>");
 }
 
@@ -136,9 +138,7 @@ fn bt25_011_has_inherited_dp_aura() {
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
     let aura = card.effects.iter().find_map(|c| match c {
         CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
-            dp_modifier,
-            scope,
-            ..
+            dp_modifier, scope, ..
         }) => Some((*dp_modifier, *scope)),
         _ => None,
     });

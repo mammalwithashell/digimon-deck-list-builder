@@ -156,6 +156,20 @@ pub struct ParkedReplacement {
     pub outcome: ReplacementOutcome,
 }
 
+#[derive(Debug, Clone)]
+pub struct OptionalReplacementState {
+    pub(crate) card_id: String,
+    pub(crate) source_card: CardHandle,
+    pub(crate) source_permanent: Option<PermanentHandle>,
+    pub(crate) controller: PlayerId,
+    pub(crate) effect_slot: u8,
+    pub(crate) subject: ReplacementSubject,
+    pub(crate) cause: ReplacementCause,
+    pub(crate) event_cause_override: Option<crate::trigger_context::EventCause>,
+    pub(crate) original_destination: Option<Zone>,
+    pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
+}
+
 // ─── Dispatcher ────────────────────────────────────────────────────
 
 /// Controller of the subject for layering and optional-prompt ownership.
@@ -994,7 +1008,7 @@ fn install_optional_selection(
     let event_cause_override = game.current_deletion_event_cause_override;
 
     let callback = make_accept_callback(
-        card_id,
+        card_id.clone(),
         source_card,
         source_permanent,
         controller,
@@ -1021,6 +1035,22 @@ fn install_optional_selection(
         source_kind: crate::enums::EffectSourceKind::Rule,
         callback,
         on_decline: Some(on_decline),
+    });
+    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::OptionalReplacement(
+            OptionalReplacementState {
+                card_id,
+                source_card,
+                source_permanent,
+                controller,
+                effect_slot,
+                subject,
+                cause,
+                event_cause_override,
+                original_destination,
+                outer_conts: Vec::new(),
+            },
+        )],
     });
 }
 
@@ -1198,6 +1228,66 @@ fn make_decline_callback(
             );
         });
     })
+}
+
+pub(crate) fn run_optional_replacement_step(
+    game: &mut crate::game::Game,
+    state: OptionalReplacementState,
+    is_pass: bool,
+) {
+    if is_pass {
+        run_commit_with_flag(game, |game| {
+            commit_deferred_outcome(
+                game,
+                state.subject,
+                state.cause,
+                state.event_cause_override,
+                state.original_destination,
+                ReplacementOutcome::None,
+            );
+        });
+        return;
+    }
+
+    let outcome = run_candidate_inner(
+        game,
+        &state.card_id,
+        state.source_card,
+        state.source_permanent,
+        state.controller,
+        state.effect_slot,
+        state.subject,
+        state.cause,
+        state.original_destination,
+    );
+
+    let current_accept_parked = game.parked_replacement.as_ref().is_some_and(|parked| {
+        parked.subject == state.subject
+            && parked.cause == state.cause
+            && parked.original_destination == state.original_destination
+            && parked.source_card == state.source_card
+            && parked.source_permanent == state.source_permanent
+            && parked.controller == state.controller
+    });
+    if current_accept_parked {
+        return;
+    }
+    let has_unrelated_parked_replacement = game.parked_replacement.is_some();
+
+    game.replacement_pending_outcome = Some(outcome);
+    run_commit_with_flag(game, |game| {
+        commit_deferred_outcome(
+            game,
+            state.subject,
+            state.cause,
+            state.event_cause_override,
+            state.original_destination,
+            outcome,
+        );
+    });
+    if has_unrelated_parked_replacement {
+        game.replacement_pending_outcome = None;
+    }
 }
 
 /// Commit a `ReplacementOutcome` at the appropriate fire-site now that the

@@ -305,6 +305,54 @@ fn optional_when_would_attack_emits_selection() {
         .expect("decline optional replacement");
 }
 
+#[test]
+fn optional_when_would_attack_replacement_clones_faithfully() {
+    let mut r = DebugRunner::builder()
+        .add_card(card("ATK"))
+        .add_card(card("DEF"))
+        .start();
+    r.register_effect("ATK", Arc::new(OptionalCancelAttack));
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+
+    let result = r.attack_digimon(atk, def, false);
+    assert_eq!(result, AttackResult::InProgress);
+    assert_eq!(
+        r.game.pending_selection.as_ref().map(|sel| sel.kind),
+        Some(SelectionKind::Replacement)
+    );
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "optional replacement prompt must park a data frame"
+    );
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("clone accepts optional replacement");
+    assert!(clone.pending_selection.is_none());
+    assert!(
+        clone.pending_attack.is_none(),
+        "accepted cancel replacement aborts the cloned attack"
+    );
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original at the Replacement prompt"
+    );
+
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("original accepts optional replacement");
+    assert_eq!(
+        r.game.pending_attack.is_some(),
+        clone.pending_attack.is_some()
+    );
+    assert_eq!(
+        r.game.pending_selection.is_some(),
+        clone.pending_selection.is_some()
+    );
+}
+
 /// Test 6: Multiple `WhenWouldAttack` candidates — subject's controller
 /// fires first (Phase 7 layering rule: controller-of-subject first, then
 /// opponent). Both mandatory sentinels record their tag; the order is

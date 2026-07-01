@@ -493,7 +493,11 @@ fn counter_field_ability_fires_without_play_cost() {
     assert_eq!(r.trash_size(1), trash_before, "no card consumed to trash");
     // Field counter body gained +2 memory for the defender.
     assert_eq!(r.memory(), memory_before - 2);
-    assert_eq!(r.turn_player(), 0, "memory stayed on P0's side — no turn end");
+    assert_eq!(
+        r.turn_player(),
+        0,
+        "memory stayed on P0's side — no turn end"
+    );
 }
 
 #[test]
@@ -611,6 +615,92 @@ fn counter_blast_dna_uses_field_material_plus_named_hand_material() {
         .map(|c| c.card_id(&r.game.card_data).to_string())
         .collect();
     assert_eq!(stack_ids, vec!["FIELD-MAT", "HAND-MAT", "DNA-EVO"]);
+}
+
+#[test]
+fn counter_blast_dna_prompts_clone_faithfully() {
+    let witness = Arc::new(Mutex::new(0u32));
+
+    let mut r = DebugRunner::builder()
+        .add_card(blast_dna_card("DNA-EVO", 6, 5, 5))
+        .add_card(dgmn("FIELD-MAT", 5, 5000))
+        .add_card(dgmn("HAND-MAT", 5, 5000))
+        .add_card(dgmn("ATK", 4, 5000))
+        .hand(1, &["DNA-EVO", "HAND-MAT"])
+        .memory(0)
+        .start();
+    r.register_effect(
+        "DNA-EVO",
+        Arc::new(BlastDnaWitness {
+            witness: witness.clone(),
+        }),
+    );
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let target = r.place_on_field(1, "FIELD-MAT", Some(0));
+    r.attack_digimon(atk, target, false);
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "Counter Blast DNA entry prompt must park a resumable frame"
+    );
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(1, DNA_DIGIVOLVE_START)
+        .expect("clone picks Blast DNA result");
+    assert!(
+        clone.pending_selection_resume.is_some(),
+        "field-material prompt must also park a resumable frame"
+    );
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original at the Counter prompt"
+    );
+    assert_eq!(
+        r.game.player(1).hand.len(),
+        2,
+        "resolving the clone must not mutate the original hand"
+    );
+
+    clone
+        .resolve_selection(1, 0)
+        .expect("clone picks field material");
+    assert!(
+        clone.pending_selection_resume.is_some(),
+        "hand-material prompt must also park a resumable frame"
+    );
+
+    clone
+        .resolve_selection(1, PLAY_HAND_START + 1)
+        .expect("clone picks hand material");
+    assert!(clone.pending_selection.is_none());
+    assert_eq!(clone.player(1).hand.len(), 0);
+    assert_eq!(clone.player(1).battle_area.len(), 1);
+    let clone_stack_ids: Vec<_> = clone.player(1).battle_area[0]
+        .card_sources
+        .iter()
+        .map(|c| c.card_id(&clone.card_data).to_string())
+        .collect();
+    assert_eq!(clone_stack_ids, vec!["FIELD-MAT", "HAND-MAT", "DNA-EVO"]);
+
+    r.game
+        .resolve_selection(1, DNA_DIGIVOLVE_START)
+        .expect("original picks Blast DNA result");
+    r.game
+        .resolve_selection(1, 0)
+        .expect("original picks field material");
+    r.game
+        .resolve_selection(1, PLAY_HAND_START + 1)
+        .expect("original picks hand material");
+    let original_stack_ids: Vec<_> = r.game.player(1).battle_area[0]
+        .card_sources
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        original_stack_ids, clone_stack_ids,
+        "original and clone replay Blast DNA identically"
+    );
 }
 
 #[test]

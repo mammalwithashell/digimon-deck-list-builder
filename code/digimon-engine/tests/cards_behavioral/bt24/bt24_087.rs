@@ -202,7 +202,10 @@ fn bt24_087_accept_prompt_suspends_rei_and_draws_then_trash_prompt() {
     let host_handle = r.perm_handle(0, host.index as usize);
     fire_link_event(&mut r, 0, host_handle, "LINKED-CARD");
 
-    assert!(r.pending_selection().is_some(), "optional prompt must appear");
+    assert!(
+        r.pending_selection().is_some(),
+        "optional prompt must appear"
+    );
 
     // Accept the outer optional prompt (first valid action is the accept).
     let sel = r.game.pending_selection.as_ref().unwrap();
@@ -580,11 +583,14 @@ alt_paths:
         .position(|c| c.card_id(&r.game.card_data) == "TEST-APPFUSE-PLAIN")
         .unwrap();
     assert!(
-        view.valid_action_ids.contains(&(TRASH_EFFECT_START + sys_pos as u16)),
+        view.valid_action_ids
+            .contains(&(TRASH_EFFECT_START + sys_pos as u16)),
         "the [System] result is offered"
     );
     assert!(
-        !view.valid_action_ids.contains(&(TRASH_EFFECT_START + plain_pos as u16)),
+        !view
+            .valid_action_ids
+            .contains(&(TRASH_EFFECT_START + plain_pos as u16)),
         "the no-trait result is filtered out"
     );
 }

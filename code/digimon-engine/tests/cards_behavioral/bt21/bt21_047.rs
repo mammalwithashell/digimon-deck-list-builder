@@ -76,7 +76,13 @@ fn base() -> DebugRunnerBuilder {
         .expect("BT21-047 YAML parses and compiles")
         .add_card(make_test_card("DECK-PAD", "Filler"))
         // Cards for reveal buckets.
-        .add_card(make_digimon("APPMON-CARD", 3, 2000, 3, &["Search", "Appmon"]))
+        .add_card(make_digimon(
+            "APPMON-CARD",
+            3,
+            2000,
+            3,
+            &["Search", "Appmon"],
+        ))
         .add_card(make_digimon("DRIVER-CARD", 3, 2000, 3, &["App Driver"]))
         .add_card(make_digimon("PLAIN-CARD", 3, 2000, 3, &["Beast"]))
         // Host for link absorption.
@@ -94,7 +100,9 @@ fn advance_to_main(r: &mut DebugRunner) {
 #[test]
 fn bt21_047_yaml_printed_metadata() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
-    let card = runner.compiled_card(CARD_ID).expect("BT21-047 in compiled pack");
+    let card = runner
+        .compiled_card(CARD_ID)
+        .expect("BT21-047 in compiled pack");
     assert_eq!(card.name, "Navimon", "name");
     assert_eq!(card.level, Some(3), "level");
     assert_eq!(card.dp, Some(1000), "dp");
@@ -112,7 +120,10 @@ fn bt21_047_has_link_condition_appmon_cost_1() {
                 if *cost == 1
         )
     });
-    assert!(has, "BT21-047 must declare a self link-condition with cost 1");
+    assert!(
+        has,
+        "BT21-047 must declare a self link-condition with cost 1"
+    );
 }
 
 /// The alt-path must be a cost-0 digivolve over an Appmon Lv.2.
@@ -210,7 +221,11 @@ fn bt21_047_on_play_adds_both_bucket_cards_to_hand() {
         "On Play must add exactly 2 cards to hand (one per bucket)"
     );
     // No revealed card should go to trash; remainder goes to deck bottom.
-    assert_eq!(r.trash_size(0), 0, "remainder must be bottomed, not trashed");
+    assert_eq!(
+        r.trash_size(0),
+        0,
+        "remainder must be bottomed, not trashed"
+    );
 }
 
 /// Negative: only [Appmon] matches in the top 3 (no [App Driver]).

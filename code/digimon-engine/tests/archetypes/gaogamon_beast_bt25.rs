@@ -560,11 +560,7 @@ fn c5_grizzlymon_gy_pump_persists_into_opponent_turn() {
     // Cross-turn persistence: still +3000 on the opponent's turn (where C4's
     // identical-looking pump would already have expired).
     runner.end_turn();
-    assert_eq!(
-        runner.turn_player(),
-        1,
-        "it is now the opponent's turn"
-    );
+    assert_eq!(runner.turn_player(), 1, "it is now the opponent's turn");
     assert_eq!(
         runner.effective_dp(ally),
         Some(dp_before + 3000),
@@ -847,7 +843,11 @@ fn c9_gaogamon_does_not_offer_when_two_tamers_down() {
     let _t1 = runner.place_on_field(0, "TAMER-A", None);
     let _t2 = runner.place_on_field(0, "TAMER-B", None);
     let _thomas_in_hand = push_to_hand(&mut runner, 0, "THOMAS");
-    assert_eq!(tamer_count(&runner, 0), 2, "two Tamers on field — gate closed");
+    assert_eq!(
+        tamer_count(&runner, 0),
+        2,
+        "two Tamers on field — gate closed"
+    );
 
     let hand_index = push_to_hand(&mut runner, 0, GAOGAMON);
     runner.play(0, hand_index);

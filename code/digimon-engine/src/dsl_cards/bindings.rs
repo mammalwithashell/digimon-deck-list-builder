@@ -280,10 +280,7 @@ impl Bindings {
     /// consumers MUST NOT use this — they SHALL route through
     /// `resolve_binding_ref` (strict) or `resolve_played_permanent_permissive`
     /// (carrier-aware). Intended for tests and tracing only.
-    pub fn get_played_permanent(
-        &self,
-        name: &str,
-    ) -> Option<(ProvenanceToken, PermanentHandle)> {
+    pub fn get_played_permanent(&self, name: &str) -> Option<(ProvenanceToken, PermanentHandle)> {
         match self.get(name)? {
             BindingValue::PlayedPermanent { token, fallback } => Some((token, fallback)),
             _ => None,
@@ -476,8 +473,7 @@ mod tests {
             index: 3,
         };
         b.insert_played_permanent("played", token, fallback);
-        let (got_token, got_fallback) =
-            b.get_played_permanent("played").expect("binding present");
+        let (got_token, got_fallback) = b.get_played_permanent("played").expect("binding present");
         assert_eq!(got_token, token);
         assert_eq!(got_fallback, fallback);
         // `get_permanent` (which expects a plain Permanent variant) must NOT
@@ -503,8 +499,9 @@ mod tests {
             index: 0,
         };
         b.insert_played_permanent("played", new_token, new_fallback);
-        let (clone_token, clone_fallback) =
-            cloned.get_played_permanent("played").expect("clone preserved");
+        let (clone_token, clone_fallback) = cloned
+            .get_played_permanent("played")
+            .expect("clone preserved");
         assert_eq!(clone_token, token);
         assert_eq!(clone_fallback, fallback);
     }

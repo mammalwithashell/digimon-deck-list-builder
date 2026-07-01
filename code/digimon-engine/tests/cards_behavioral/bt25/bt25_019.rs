@@ -31,8 +31,8 @@ use digimon_dsl::compiled::{
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardKind, EffectSourceKind, EffectTiming, PlayerId};
-use digimon_engine::selection::TriggerSource;
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::TriggerSource;
 
 const CARD_ID: &str = "BT25-019";
 
@@ -79,11 +79,13 @@ fn bt25_019_has_reboot_and_blocker() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
     for kw in ["Reboot", "Blocker"] {
-        let has = card.effects.iter().any(|c| matches!(
-            c,
-            CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
-                if keyword == kw
-        ));
+        let has = card.effects.iter().any(|c| {
+            matches!(
+                c,
+                CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
+                    if keyword == kw
+            )
+        });
         assert!(has, "BT25-019 must grant {kw}");
     }
 }
@@ -123,9 +125,7 @@ fn bt25_019_eot_clause_is_opt() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::EndOfYourTurn) =>
-            {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::EndOfYourTurn) => {
                 Some(t)
             }
             _ => None,
@@ -172,15 +172,17 @@ fn bt25_019_deletes_highest_dp_opponent() {
     }
 
     assert!(
-        !runner.game.players[1].battle_area.iter().any(|p| {
-            p.top_card().card_id(&runner.game.card_data) == "OPP-HIGH"
-        }),
+        !runner.game.players[1]
+            .battle_area
+            .iter()
+            .any(|p| { p.top_card().card_id(&runner.game.card_data) == "OPP-HIGH" }),
         "highest-DP opponent Digimon must be deleted"
     );
     assert!(
-        runner.game.players[1].battle_area.iter().any(|p| {
-            p.top_card().card_id(&runner.game.card_data) == "OPP-LOW"
-        }),
+        runner.game.players[1]
+            .battle_area
+            .iter()
+            .any(|p| { p.top_card().card_id(&runner.game.card_data) == "OPP-LOW" }),
         "the lower-DP Digimon is not a legal highest-DP target and survives"
     );
 }
@@ -201,9 +203,10 @@ fn bt25_019_delete_no_fire_without_opponent_digimon() {
 
 /// Fire the EndOfYourTurn trigger.
 fn fire_eot(runner: &mut DebugRunner, brachio: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(brachio));
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::Permanent(brachio),
+    );
     runner.game.drain_effect_queue();
     if runner.pending_selection().is_some() {
         runner.auto_resolve().expect("resolve EoT immunity");

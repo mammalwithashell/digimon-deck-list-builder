@@ -56,7 +56,11 @@ pub fn greedy_action(game: &Game, mask: &[f32]) -> u16 {
     // else out (no real recovery path), the original valid is used and
     // CONCEDE may be picked.
     let valid: Vec<u16> = if all_valid.iter().any(|&a| a != CONCEDE_GAME) {
-        all_valid.iter().copied().filter(|&a| a != CONCEDE_GAME).collect()
+        all_valid
+            .iter()
+            .copied()
+            .filter(|&a| a != CONCEDE_GAME)
+            .collect()
     } else {
         all_valid.clone()
     };

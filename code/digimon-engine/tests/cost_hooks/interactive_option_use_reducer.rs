@@ -163,8 +163,7 @@ impl CardEffect for InteractiveOptionUseReducerOptional {
                     return false;
                 };
                 rctx.game.card_data_for_handle(target).is_some_and(|d| {
-                    d.card_kind == CardKind::Option
-                        && d.traits.iter().any(|t| t == "Glowing Dawn")
+                    d.card_kind == CardKind::Option && d.traits.iter().any(|t| t == "Glowing Dawn")
                 })
             })
             .cost_reduction(3)
@@ -232,7 +231,10 @@ fn option_runner_with(
         .memory(10)
         .start();
     if optional_reducer {
-        r.register_effect("ARMA", std::sync::Arc::new(InteractiveOptionUseReducerOptional));
+        r.register_effect(
+            "ARMA",
+            std::sync::Arc::new(InteractiveOptionUseReducerOptional),
+        );
     } else {
         r.register_effect("ARMA", std::sync::Arc::new(InteractiveOptionUseReducer));
     }
@@ -270,7 +272,11 @@ fn interactive_option_use_reducer_credits_reduction_on_paid_park() {
         .as_ref()
         .expect("interactive reducer parks on the Tamer pick");
     assert!(matches!(pending.kind, SelectionKind::OwnField));
-    assert_eq!(r.memory(), memory_before, "no cost paid before the park resolves");
+    assert_eq!(
+        r.memory(),
+        memory_before,
+        "no cost paid before the park resolves"
+    );
 
     let _ = r.auto_resolve();
     assert!(r.game.pending_selection.is_none(), "option resolves");

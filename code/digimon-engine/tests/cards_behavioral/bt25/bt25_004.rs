@@ -74,7 +74,13 @@ fn base() -> DebugRunnerBuilder {
         .add_card(make_digimon("HOST-APP", 4, 4000, 4, &["Appmon"]))
         // A Social+Appmon linking source variant we register a link-condition on
         // by reusing BT25-007's effect: see the Social source note in the test.
-        .add_card(make_digimon("SRC-SOCIAL", 3, 2000, 3, &["Social", "Appmon"]))
+        .add_card(make_digimon(
+            "SRC-SOCIAL",
+            3,
+            2000,
+            3,
+            &["Social", "Appmon"],
+        ))
 }
 
 fn advance_to_main(r: &mut DebugRunner) {

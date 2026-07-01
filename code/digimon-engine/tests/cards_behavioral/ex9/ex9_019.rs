@@ -161,14 +161,17 @@ fn ex9_019_has_five_printed_digivolve_alt_paths() {
     // The printed Lv.4 Blue / Cost 4 standard route is still present.
     assert!(
         digi_paths.iter().any(|p| matches!(p.cost, Some(Literal(4)))
-            && p.from.as_ref().is_some_and(|f| f.level_eq == Some(4)
-                && f.color_is == Some(CompiledColor::Blue))),
+            && p.from
+                .as_ref()
+                .is_some_and(|f| f.level_eq == Some(4) && f.color_is == Some(CompiledColor::Blue))),
         "the printed Lv.4 Blue / Cost 4 standard route must remain"
     );
     // The cheaper [WereGarurumon] cost-1 route is now encoded.
     assert!(
         digi_paths.iter().any(|p| matches!(p.cost, Some(Literal(1)))
-            && p.from.as_ref().is_some_and(|f| f.name_contains.as_deref() == Some("WereGarurumon"))),
+            && p.from
+                .as_ref()
+                .is_some_and(|f| f.name_contains.as_deref() == Some("WereGarurumon"))),
         "the printed [WereGarurumon] cost-1 route must be encoded"
     );
 }

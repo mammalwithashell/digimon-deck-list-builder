@@ -65,17 +65,3 @@ describe('PermanentSlot right-click inspect', () => {
     expect(onClick).not.toHaveBeenCalled();
   });
 });
-
-describe('PermanentSlot "choose N" selected badge', () => {
-  it('renders the selected check badge only when selected', () => {
-    const { queryByTestId, rerender } = render(
-      <PermanentSlot perm={makePerm()} slotIndex={0} isOpponent={false} />,
-    );
-    expect(queryByTestId('permanent-selected-badge')).toBeNull();
-
-    rerender(
-      <PermanentSlot perm={makePerm()} slotIndex={0} isOpponent={false} selected />,
-    );
-    expect(queryByTestId('permanent-selected-badge')).toBeInTheDocument();
-  });
-});

@@ -98,8 +98,10 @@ fn st23_14_has_somp_onplay_trash_trigger_and_security_clauses() {
         .collect();
 
     assert!(
-        triggered.iter().any(|t| t.when.contains(&CompiledTiming::OnPlay)
-            && t.when.contains(&CompiledTiming::StartOfYourMainPhase)),
+        triggered
+            .iter()
+            .any(|t| t.when.contains(&CompiledTiming::OnPlay)
+                && t.when.contains(&CompiledTiming::StartOfYourMainPhase)),
         "[SOMP][On Play] shared clause present"
     );
     assert!(
@@ -139,7 +141,9 @@ fn st23_14_on_play_places_and_gains_memory_when_opp_has_digimon() {
         .len();
 
     runner.fire_on_play(0, tamer.index as usize);
-    let v = runner.pending_selection_view().expect("place Yes/No installs");
+    let v = runner
+        .pending_selection_view()
+        .expect("place Yes/No installs");
     runner.execute_branch(0).expect("accept the place");
     let _ = runner.auto_resolve();
 
@@ -171,12 +175,18 @@ fn st23_14_memory_gain_fires_even_when_place_declined() {
     let deck_before = runner.deck_size(0);
 
     runner.fire_on_play(0, tamer.index as usize);
-    let v = runner.pending_selection_view().expect("place Yes/No installs");
+    let v = runner
+        .pending_selection_view()
+        .expect("place Yes/No installs");
     let last = v.effect_choices.as_ref().unwrap().len() - 1;
     runner.execute_branch(last).expect("decline the place");
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.deck_size(0), deck_before, "declined ⇒ nothing placed");
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before,
+        "declined ⇒ nothing placed"
+    );
     assert_eq!(
         runner.memory(),
         mem_before + 1,
@@ -205,7 +215,11 @@ fn st23_14_no_memory_when_opponent_has_no_digimon() {
     }
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.memory(), mem_before, "no opponent Digimon ⇒ no memory");
+    assert_eq!(
+        runner.memory(),
+        mem_before,
+        "no opponent Digimon ⇒ no memory"
+    );
 }
 
 // ─── Section 3 — trash-from-under-this-Tamer trigger → suspend → Jamming ─────
@@ -235,8 +249,8 @@ fn st23_14_trash_under_tamer_suspends_self_and_grants_jamming() {
     let host_card = runner.game.players[0].battle_area[tamer.index as usize]
         .top_card()
         .handle();
-    let trashed_card = runner.game.players[0].battle_area[tamer.index as usize].card_sources[0]
-        .handle();
+    let trashed_card =
+        runner.game.players[0].battle_area[tamer.index as usize].card_sources[0].handle();
 
     runner.game.enqueue_triggered(
         EffectTiming::OnDigivolutionCardTrashed,
@@ -254,8 +268,12 @@ fn st23_14_trash_under_tamer_suspends_self_and_grants_jamming() {
         runner.pending_selection().is_some(),
         "the host-scoped trash trigger installs an optional accept prompt"
     );
-    runner.accept_optional_trigger().expect("accept suspend+grant");
-    let v = runner.pending_selection_view().expect("target pick installs");
+    runner
+        .accept_optional_trigger()
+        .expect("accept suspend+grant");
+    let v = runner
+        .pending_selection_view()
+        .expect("target pick installs");
     runner.execute_action(0, v.valid_action_ids[0]).unwrap();
     let _ = runner.auto_resolve();
 
@@ -287,8 +305,8 @@ fn st23_14_jamming_grant_expires_at_end_of_turn() {
     let host_card = runner.game.players[0].battle_area[tamer.index as usize]
         .top_card()
         .handle();
-    let trashed_card = runner.game.players[0].battle_area[tamer.index as usize].card_sources[0]
-        .handle();
+    let trashed_card =
+        runner.game.players[0].battle_area[tamer.index as usize].card_sources[0].handle();
     runner.game.enqueue_triggered(
         EffectTiming::OnDigivolutionCardTrashed,
         TriggerSource::SourceTrashedFromStack {
@@ -304,7 +322,10 @@ fn st23_14_jamming_grant_expires_at_end_of_turn() {
     let v = runner.pending_selection_view().expect("target pick");
     runner.execute_action(0, v.valid_action_ids[0]).unwrap();
     let _ = runner.auto_resolve();
-    assert!(runner.game.has_keyword(gd, Keyword::Jamming), "Jamming active");
+    assert!(
+        runner.game.has_keyword(gd, Keyword::Jamming),
+        "Jamming active"
+    );
 
     runner.end_turn(); // end of your turn → Jamming should clear
     let _ = runner.auto_resolve();
@@ -333,8 +354,8 @@ fn st23_14_trash_under_other_permanent_does_not_trigger() {
     let host_card = runner.game.players[0].battle_area[other.index as usize]
         .top_card()
         .handle();
-    let trashed_card = runner.game.players[0].battle_area[other.index as usize].card_sources[0]
-        .handle();
+    let trashed_card =
+        runner.game.players[0].battle_area[other.index as usize].card_sources[0].handle();
     runner.game.enqueue_triggered(
         EffectTiming::OnDigivolutionCardTrashed,
         TriggerSource::SourceTrashedFromStack {

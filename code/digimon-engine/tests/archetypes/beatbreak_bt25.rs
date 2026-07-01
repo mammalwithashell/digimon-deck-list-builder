@@ -143,7 +143,10 @@ fn bb_it1_armalizamon_suspend_feeds_tomoro_face_down_banker() {
     let view = runner
         .pending_selection_view()
         .expect("Armalizamon's optional suspend prompt installs (opp Digimon present)");
-    assert!(view.is_optional, "Armalizamon's suspend is 'you may' → optional");
+    assert!(
+        view.is_optional,
+        "Armalizamon's suspend is 'you may' → optional"
+    );
     let target = view
         .valid_action_ids
         .iter()
@@ -268,7 +271,10 @@ fn bb_it1_no_opp_digimon_means_no_suspend_and_no_banking() {
 
 /// Drive Tomoro's real banker so a face-down exists under it, then fire
 /// Murasamemon's inherited unsuspend, which spends that exact banked face-down.
-fn bank_one_under_tomoro(runner: &mut DebugRunner, tomoro: digimon_engine::permanent::PermanentHandle) {
+fn bank_one_under_tomoro(
+    runner: &mut DebugRunner,
+    tomoro: digimon_engine::permanent::PermanentHandle,
+) {
     // Trigger Tomoro's [All Turns] banker by suspending a Digimon on the field.
     // (We seed an opp Digimon and suspend it directly — the event is what matters.)
     let opp = runner.place_on_field(1, "BB2-OPP", Some(0));
@@ -286,7 +292,10 @@ fn bank_one_under_tomoro(runner: &mut DebugRunner, tomoro: digimon_engine::perma
         .iter()
         .filter(|s| s.face_down)
         .count();
-    assert!(banked >= 1, "Tomoro must have banked at least one face-down source");
+    assert!(
+        banked >= 1,
+        "Tomoro must have banked at least one face-down source"
+    );
 }
 
 #[test]

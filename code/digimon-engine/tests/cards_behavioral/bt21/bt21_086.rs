@@ -166,7 +166,10 @@ fn bt21_086_self_suspend_prompts_to_buff_own_digimon() {
     expected.sort();
     let mut got = view.valid_action_ids.clone();
     got.sort();
-    assert_eq!(got, expected, "both own Digimon are legal Piercing/+3000 targets");
+    assert_eq!(
+        got, expected,
+        "both own Digimon are legal Piercing/+3000 targets"
+    );
 }
 
 #[test]

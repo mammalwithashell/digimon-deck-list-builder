@@ -282,7 +282,10 @@ fn st12_15_delay_reduces_next_digivolution_cost_by_1() {
     let reducer = &runner.game.player_digivolve_cost_reducers[0];
     assert_eq!(reducer.player, 0);
     assert_eq!(reducer.amount, 1, "the reduction is -1");
-    assert!(reducer.single_fire, "\"next time ... this turn\" is single-fire");
+    assert!(
+        reducer.single_fire,
+        "\"next time ... this turn\" is single-fire"
+    );
     assert!(
         reducer.target_color.is_none(),
         "the reduction applies to a digivolution of ANY color Digimon"
