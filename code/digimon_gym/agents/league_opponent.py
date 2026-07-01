@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import json
 import logging
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Union
 
@@ -97,6 +98,7 @@ class LeaguePoolWrapper(gymnasium.Wrapper):
         sampling_mode: str = "pfsp",
         power: float = 1.0,
         seed: Optional[int] = None,
+        cache_size: int = 1024,
     ) -> None:
         super().__init__(env)
         if not entries:
@@ -109,7 +111,18 @@ class LeaguePoolWrapper(gymnasium.Wrapper):
         self.power = power
         self._rng = np.random.default_rng(seed)
 
-        self._cache: Dict[str, OpponentFn] = {}
+        # LRU cache of loaded opponent policies. Default cache_size is large
+        # (effectively unbounded for any real pool) — that's the correct default:
+        # a SMALL cache forces torch.load reloads when PFSP re-samples an evicted
+        # opponent, which throttles collection badly (each LSTM reload ~1s/match ->
+        # measured fps collapse). Bounding is an OPT-IN knob (set a small value)
+        # only for the memory-constrained case: this wrapper lives in EVERY
+        # SubprocVecEnv worker, so MANY workers x MANY concurrent specialists each
+        # holding the whole pool can exceed a container's memory cgroup (the ~50 GB
+        # RunPod cap) -> OOM-killer SIGKILLs a worker -> learner sees EOFError at
+        # step_wait. For single-specialist (sequential) runs leave it large.
+        self._cache_size = max(1, int(cache_size))
+        self._cache: "OrderedDict[str, OpponentFn]" = OrderedDict()
         self._games: Dict[str, int] = {e.name: 0 for e in entries}
         self._wins: Dict[str, int] = {e.name: 0 for e in entries}  # agent wins
         self._current: Optional[LeaguePoolEntry] = None
@@ -134,11 +147,16 @@ class LeaguePoolWrapper(gymnasium.Wrapper):
         return arr
 
     def _load(self, entry: LeaguePoolEntry) -> OpponentFn:
-        if entry.weights_path not in self._cache:
-            self._cache[entry.weights_path] = self.policy_loader(
-                entry.weights_path, entry.algorithm
-            )
-        return self._cache[entry.weights_path]
+        wp = entry.weights_path
+        fn = self._cache.get(wp)
+        if fn is not None:
+            self._cache.move_to_end(wp)  # mark most-recently-used
+            return fn
+        fn = self.policy_loader(wp, entry.algorithm)
+        self._cache[wp] = fn
+        while len(self._cache) > self._cache_size:
+            self._cache.popitem(last=False)  # evict least-recently-used
+        return fn
 
     def reset(self, **kwargs):
         idx = int(self._rng.choice(len(self.entries), p=self._weights()))
