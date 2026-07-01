@@ -77,3 +77,18 @@ jobs:
         env:
           RUST_MIN_STACK: "268435456"
         run: cargo test -p digimon-engine --test archetypes
+
+      # Judge-quiz faithfulness corpus — carries the Q30 mid-interrupt-chain
+      # clone guard (q30_partition_second_play_hook_clones_faithfully_mid_chain:
+      # a data AfterSelectionHook armed across a fork must replay identically).
+      - name: Judge-quiz tests (incl. armed-hook clone guard)
+        env:
+          RUST_MIN_STACK: "268435456"
+        run: cargo test -p digimon-engine --test judge_quiz
+
+      # Selection-kind pilots — carries the TEST-010 worked-example clone guard
+      # (test_010_prompt_clones_faithfully).
+      - name: Selection pilot tests (incl. worked-example clone guard)
+        env:
+          RUST_MIN_STACK: "268435456"
+        run: cargo test -p digimon-engine --test selection
