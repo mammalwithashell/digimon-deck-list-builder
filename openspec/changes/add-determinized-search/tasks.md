@@ -19,7 +19,7 @@ Phased; each phase independently testable. **Gate analysis REVISED 2026-07-01** 
 - [ ] 1.5 Sampler invariant checker (counts balance, ≤copy-limit, no card in two zones; reconcile BOTH `OpaqueDeckState` books — `restore()` never errors and placeholder accounting desyncs `total_remaining` from the per-card multiset by design) + round-trip property test (re-extract infoset from a sampled world == source infoset for the viewer).
 - [ ] 1.6 Self-play regime only here (exact `DeckPrior` from the training pool); PvP prior deferred to Phase 6.
 
-## 2. Neural MCTS search core (gated on the make-engine-cloneable 6.1 non-DSL cutover — rollouts panic at closure-based interrupts until then)
+## 2. Neural MCTS search core (gate LIFTED 2026-07-02 — the non-DSL surface is resume-backed with zero live-closure production call paths per make-engine-cloneable 6.1; open with a clone-fuzz spike: clone at every decision of random real-deck playouts, resolve both copies, assert identical outcomes)
 
 - [ ] 2.1 PUCT-MCTS over a determinized world: node = (`current_player_id`, action mask), edge = masked `action_id`, expand = clone + `step`, backup = leaf value. Dirichlet root noise + temperature schedule.
 - [ ] 2.2 Evaluator trait: `(observation tensor) -> (policy over 2192 masked, value)`; uniform/stub evaluator first.
