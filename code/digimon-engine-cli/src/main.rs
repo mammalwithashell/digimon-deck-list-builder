@@ -18,6 +18,7 @@ use serde_json::Value;
 
 mod debug_repl;
 mod replay_view;
+mod winprob;
 
 /// Top-level CLI parser.
 #[derive(Parser, Debug)]
@@ -85,6 +86,24 @@ enum Command {
         /// values, prints divergences).
         #[arg(long)]
         verify: bool,
+    },
+
+    /// Replay a `GameRecorder` recording and evaluate every decision with
+    /// a policy+value ONNX export (task-0.2 inline-value graph), emitting a
+    /// per-decision value / played-prior sidecar JSON — the review-v0
+    /// "win-probability bar" trace (add-determinized-search task 0.5).
+    Winprob {
+        /// Path to the recording JSON (native GameRecorder format).
+        recording: PathBuf,
+        /// Path to the policy+value .onnx (must have an inline `value` output).
+        #[arg(long)]
+        model: PathBuf,
+        /// Output sidecar path. Defaults to `<recording stem>.winprob.json`.
+        #[arg(long)]
+        out: Option<PathBuf>,
+        /// Evaluation batch size.
+        #[arg(long, default_value_t = 256)]
+        batch: usize,
     },
 
     /// Print the card pool as a sorted JSON array of card IDs and exit.
@@ -158,6 +177,21 @@ fn run() -> ExitCode {
                 }
             };
             replay_view::run(recording, step, &view, &show, player, verify, card_data)
+        }
+        Command::Winprob {
+            recording,
+            model,
+            out,
+            batch,
+        } => {
+            let card_data = match load_card_data(&cli.cards_json, &cli.pool) {
+                Ok(cd) => cd,
+                Err(e) => {
+                    eprintln!("error loading card data: {}", e);
+                    return ExitCode::from(2);
+                }
+            };
+            winprob::run(recording, model, out, batch, card_data)
         }
         Command::Pool => {
             let card_data = match load_card_data(&cli.cards_json, &cli.pool) {
