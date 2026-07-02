@@ -3686,5 +3686,19 @@
       "Stnd.",
       "Appmon"
     ]
+  },
+  "BT12-043": {
+    "evo_costs": [
+      {
+        "card_color": 2,
+        "level": 5,
+        "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
+      }
+    ]
   }
 }

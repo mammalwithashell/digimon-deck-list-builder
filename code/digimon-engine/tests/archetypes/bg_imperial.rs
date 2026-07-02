@@ -542,6 +542,10 @@ fn imperialdramon_dm_st9_06_standard_digivolve_is_blue_lv5_cost_4() {
 
 const EVO_BLUE: u8 = 1;
 const EVO_GREEN: u8 = 3;
+// For the BT12-043 ShineGreymon cross-archetype regression below (same
+// API-drop bug class; codes per action/mask.rs::evo_color).
+const EVO_RED: u8 = 0;
+const EVO_YELLOW: u8 = 2;
 
 /// A digivolve BASE (egg / lower Digimon): a Digimon of a given level + single
 /// colour. No evo-cost needed — only the digivolving (top) card's evo-cost is
@@ -731,6 +735,33 @@ fn dual_colour_exveemon_and_stingmon_accept_the_off_colour_lv3() {
     );
 }
 
+/// BT12-043 ShineGreymon (DATA SQUAD, Yellow/Red Lv.6) — same API-drop bug
+/// class as the Imperial line, caught 2026-07-02: its printed face shows TWO
+/// digivolve circles (Yellow Lv.5 AND Red Lv.5, cost 4 each) but cards.json
+/// carried only the Yellow one. Pinned here because this file is the canonical
+/// dual-circle regression home; the synthetic evolver mirrors the corrected
+/// evo_costs and the Combo-6b data test below pins the real data.
+#[test]
+fn dual_colour_shinegreymon_bt12_043_takes_yellow_or_red_lv5() {
+    let shine = || {
+        evolver(
+            "BT12-043",
+            "ShineGreymon",
+            6,
+            CardColor::Yellow,
+            &[(EVO_YELLOW, 5), (EVO_RED, 5)],
+        )
+    };
+    assert!(
+        colour_gate_allows(shine(), base_digimon("RIZE-Y5", 5, CardColor::Yellow)),
+        "BT12-043 ShineGreymon must digivolve from a yellow Lv.5"
+    );
+    assert!(
+        colour_gate_allows(shine(), base_digimon("RIZE-R5", 5, CardColor::Red)),
+        "BT12-043 ShineGreymon must ALSO digivolve from a red Lv.5 — its face shows a Red Lv.5 circle"
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Combo 6b — "Real-data digivolve-colour regression" (user-reported 2026-06-15)
 //
@@ -777,6 +808,9 @@ fn imperial_line_cards_carry_both_digivolve_colours_in_cards_json() {
         ("BT12-028", &[(1, 4, 4), (3, 4, 4)]), // Paildramon: Blue L4 + Green L4
         ("BT12-030", &[(1, 5, 4), (3, 5, 4)]), // Imperialdramon DM: Blue L5 + Green L5
         ("BT12-031", &[(1, 5, 5), (3, 5, 5)]), // Imperialdramon FM: Blue L5 + Green L5 (cost 5)
+        // Cross-archetype pin (DATA SQUAD): same dual-circle API-drop class,
+        // caught + fixed 2026-07-02. Yellow=2, Red=0.
+        ("BT12-043", &[(2, 5, 4), (0, 5, 4)]), // ShineGreymon: Yellow L5 + Red L5
     ];
 
     for (id, circles) in expected {

@@ -44716,6 +44716,11 @@
         "card_color": 2,
         "level": 5,
         "memory_cost": 4
+      },
+      {
+        "card_color": 0,
+        "level": 5,
+        "memory_cost": 4
       }
     ],
     "xros_req": "[Digivolve] Lv.5 w/[RizeGreymon] in name: Cost 3"
