@@ -1,0 +1,187 @@
+# BT18-019 Millenniummon — Digimon, Lv.7, Red/Black, DP 14000, Cost 14.
+# Traits: Composite. Attribute: Virus.
+#
+# Digivolution (official Bandai DB / data/card_bundles/BT18-019.md):
+#   Standard: Lv.6 Red / Cost 4.
+#   DNA Digivolve: [Kimeramon] + [Machinedramon] / Cost 0, stacks unsuspended
+#     (DCGO AddJogressConditionClass, EffectTiming.None).
+#   DigiXros -2 (per material): [Kimeramon] x [Machinedramon]
+#     (DCGO `DigiXrosCondition(elements, null, 2)` — the trailing ctor param
+#     is literally named `reduceCostPerCard` in DCGO's CardSource.cs, so
+#     EACH of the 2 named materials contributes cost_delta -2, not a flat
+#     total -2 split across them).
+#
+# Printed text (official Bandai DB / data/card_bundles/BT18-019.md):
+#   [On Play] [When Digivolving] Delete 1 of your opponent's Digimon. Then,
+#   if DNA digivolving, by returning 1 of each Digimon card with different
+#   levels from your opponent's trash to the top of the deck, gain 1 memory
+#   for each card returned.
+#   [On Deletion] By returning 1 [Kimeramon] and 1 [Machinedramon] from your
+#   trash to the bottom of the deck, you may play 1 [Millenniummon] from
+#   your trash without paying the cost.
+#
+# Official Q&A: "No, you can't. You can only return Digimon cards." (the
+# return-by-level step is restricted to Digimon cards — modeled via
+# `filter: { kind: digimon }`).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT18/Red/BT18_019.cs
+#
+# ─── Modeling notes ───────────────────────────────────────────────────────
+#
+# DCGO splits [On Play] and [When Digivolving] into separate ActivateClass
+# blocks (both "delete 1 opponent Digimon"), plus a third block (also
+# EffectTiming.OnEnterFieldAnyone / CanTriggerWhenDigivolving) that repeats
+# the delete AND, only `if (CardEffectCommons.IsJogress(_hashtable))`, loops
+# levels 3..7 selecting up to 1 opponent-trash Digimon per level bucket
+# (each level's pick has `canNoSelect: () => true` — fully optional per
+# level), reverses pick order for placement, adds them to the top of the
+# deck, then `AddMemory(1 * sources.Count)` once at the end.
+#
+# The DSL doesn't need DCGO's per-timing ActivateClass duplication: a single
+# `when: [on_play, when_digivolving]` clause authors the delete once, with
+# the DNA-return sub-effect gated by `condition: { dna_origin: true }` — the
+# proven pattern from BT17-078 (`[On Play][When Digivolving]` + inner
+# `dna_origin: true` gate; `dna_origin` is unset/false for a plain OnPlay
+# trigger, so the sub-effect naturally never fires there).
+#
+# "1 of each Digimon card with different levels" is modeled with
+# `select_count_capped_multi { zone: trash, of: opponent, distinct_by: level,
+# optional_zero: true }`: `distinct_by: level` prunes already-matched-level
+# candidates after every pick (no two picks share a level — DCGO's per-level
+# bucket loop collapsed into one multi-select), and `optional_zero: true`
+# makes the whole selection a "may" (0 picks legal from the start, matching
+# DCGO's per-level `canNoSelect: () => true`). `max: 7` is a generous cap
+# (`distinct_by` self-limits to however many distinct levels actually exist
+# among candidates regardless of `max`).
+#
+# The move-to-deck-top + per-card memory gain uses `per_selected` over the
+# bound list: each iteration does `move_trash_card_to_deck_top` (the
+# selected-trash-card, deck-TOP verb — G-ZONE-SELECTED-TRASH-TO-DECK-TOP)
+# then `gain_memory: 1`. NOT `return_to_deck_from_reveal`: that verb only
+# operates on the engine's `revealed_cards` pool (reveal-then-return flows
+# like LM-020's security reveal), not on a `select_count_capped_multi
+# { zone: trash }` binding — using it here would silently no-op every move
+# (the card handle is never found in `revealed_cards`).
+#
+# [On Deletion]: DCGO requires the SAME selection to include >=1 Kimeramon
+# AND >=1 Machinedramon (`canEndSelectCondition`), cross-excluding extra
+# picks of one name once the other is still needed
+# (`CanTargetCondition_ByPreSelecetedList`). Modeled as two sequential
+# `select_trash` + `return_trash_list_to_deck_bottom` PAIRS (pick Kimeramon,
+# move it; pick Machinedramon, move it) rather than both picks followed by
+# both moves — a `select_trash` binding is a positional `TrashIndex`, so
+# moving the FIRST pick out of trash before resolving the SECOND pick's
+# binding would shift indices under it (the classic index-shift class of
+# bug; interleaving pick+move per card avoids it entirely). Both selects sit
+# under a single `optional: true` clause (the whole cost-then-effect is "you
+# may"). If either name is absent from trash, its mandatory sub-pick has
+# zero candidates and silently no-ops per the standard DSL 2b/2c convention,
+# so neither return happens and the free-play tail never runs — faithfully
+# matching "by returning 1 X AND 1 Y" as an atomic pair-cost. Destination is
+# the deck BOTTOM (DCGO `AddLibraryBottomCards`) via
+# `return_trash_list_to_deck_bottom` (default `destination: bottom`) per
+# pick, list of size 1 each.
+# Verdict: IMPLEMENTED.
+
+card: BT18-019
+name: Millenniummon
+kind: digimon
+level: 7
+color: [red, black]
+cost: 14
+dp: 14000
+traits: [Composite]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 4
+  - kind: dna_digivolve
+    materials:
+      - { name_is: "Kimeramon" }
+      - { name_is: "Machinedramon" }
+    cost: 0
+    stacks_unsuspended: true
+  - kind: digixros
+    # per-material cost_delta -2 (DCGO reduceCostPerCard = 2)
+    materials:
+      - filter: { name_is: "Kimeramon" }
+        cost_delta: -2
+      - filter: { name_is: "Machinedramon" }
+        cost_delta: -2
+    cost: 14
+
+effects:
+  # ─── [On Play][When Digivolving] delete 1 opp Digimon; if DNA, may return
+  # up to 1-per-level opponent trash Digimon to the top of the deck, +1
+  # memory per card returned ─────────────────────────────────────────────
+  - when: [on_play, when_digivolving]
+    summary: "[OnPlay/WhenDigivolving] Delete 1 opp Digimon; if DNA, may return 1-per-level opp trash Digimon to deck top for +1 memory each"
+    process:
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - select_opponent_permanent:
+                bind_as: del_target
+                filter: { kind: digimon }
+                prompt: "Delete 1 of your opponent's Digimon"
+            - delete_permanent: { target: del_target }
+      - if:
+          condition: { dna_origin: true }
+          then:
+            - select_count_capped_multi:
+                of: opponent
+                zone: trash
+                max: 7
+                distinct_by: level
+                filter: { kind: digimon }
+                bind_as: returns
+                optional_zero: true
+                prompt: "Return 1 of each Digimon card with different levels from your opponent's trash to the top of their deck"
+            - per_selected:
+                selection: returns
+                bind_as: c
+                body:
+                  - move_trash_card_to_deck_top: { of: opponent, card: c }
+                  - gain_memory: 1
+
+  # ─── [On Deletion] By returning 1 Kimeramon + 1 Machinedramon from trash
+  # to the bottom of the deck, may play 1 Millenniummon from trash free ────
+  - when: on_deletion
+    optional: true
+    summary: "[On Deletion] By returning 1 Kimeramon + 1 Machinedramon from trash to deck bottom, may play 1 Millenniummon from trash free"
+    process:
+      # First pick `optional: true, cost: true` (declining — or no Kimeramon
+      # in trash — aborts the whole clause: nothing is returned, nothing is
+      # played). This also satisfies `body_first_step_is_declinable` so the
+      # engine does not ALSO install a redundant outer accept/decline gate
+      # ahead of this step (G-OUTER-OPTIONAL / lower_triggered.rs). Second
+      # pick is mandatory once the cost is committed to (mirrors BT13-088's
+      # two-sequential-picks pattern for a compound "trash/return X AND Y"
+      # cost).
+      - select_trash:
+          of: you
+          bind_as: kim
+          optional: true
+          cost: true
+          filter: { name_is: "Kimeramon" }
+          prompt: "Return 1 [Kimeramon] from your trash to the bottom of your deck"
+      - return_trash_list_to_deck_bottom: { of: you, cards: kim }
+      - select_trash:
+          of: you
+          bind_as: mach
+          filter: { name_is: "Machinedramon" }
+          prompt: "Return 1 [Machinedramon] from your trash to the bottom of your deck"
+      - return_trash_list_to_deck_bottom: { of: you, cards: mach }
+      - select_trash:
+          of: you
+          bind_as: millen
+          optional: true
+          filter: { name_is: "Millenniummon" }
+          prompt: "Play 1 [Millenniummon] from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: millen }

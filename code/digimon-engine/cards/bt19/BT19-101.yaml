@@ -1,0 +1,199 @@
+# BT19-101 ZeedMillenniummon — Digimon, Lv.7, Red/Purple/Black, DP 16000,
+# Cost 16. Traits: Wicked God. Form: Mega. Attribute: Virus.
+# Standard digivolve (official Bandai DB / cards.json evo_costs): Lv.6
+# red/purple/black / cost 6.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT19-101.md,
+# authoritative; matches cards.json):
+#
+#   <Overclock ([Composite] Trait)> (At the end of your turn, by deleting 1 of
+#   your Tokens or other [Composite] trait Digimon, this Digimon attacks a
+#   player without suspending.)
+#   [On Play] [When Digivolving] [When Attacking] By returning 1 Digimon card
+#   from your opponent's trash to the top of the deck, return 1 of their
+#   Digimon to the bottom of the deck.
+#   [All Turns] This Digimon with no digivolution cards can't be suspended,
+#   and isn't affected by your opponent's effects.
+#
+# Special digivolution condition (official Bandai DB `xros_req`):
+#   [Digivolve] [MoonMillenniummon]: Cost 2
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT19/Red/BT19_101.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alternate Digivolution (EffectTiming.None):
+#   AddSelfDigivolutionRequirementStaticEffect(permanentCondition:
+#   TopCard.EqualsCardName("MoonMillenniummon"), digivolutionCost: 2,
+#   ignoreDigivolutionRequirement: false) → alt_paths entry
+#   `from: { name_is: "MoonMillenniummon" }`, cost 2, alongside the standard
+#   Lv.6/cost 6 evo box (printed evo_costs).
+#
+# Overclock (EffectTiming.OverclockSelfEffect, trait: "Composite"):
+#   face-up `grant_keyword: Overclock` with `overclock_cost_filter: { any_of:
+#   [{ kind: token }, { all_of: [{ kind: digimon }, { trait_has: Composite
+#   }] }] }` — identical shape to EX7-027/BT22-036/EX7-030's Puppet-trait
+#   Overclock grants, parametrized on [Composite] per the printed keyword.
+#
+# On Play / When Digivolving / When Attacking (EffectTiming.
+#   OnEnterFieldAnyone x2 shared ActivateCoroutine body, + OnAllyAttack):
+#   CanActivateCondition = Enemy.TrashCards.Count(IsDigimon) >= 1 (the outer
+#   activation gate — with 0 candidates the clause does not fire at all, so
+#   although DCGO's inner SelectCardEffect is technically canNoSelect: () =>
+#   true, the clause-level gate means "By returning..." never offers a decline
+#   once activated: the cost pick is effectively forced through by the outer
+#   CanActivateCondition, matching the printed "By X-ing, do Y" cost-gated
+#   mandatory idiom (BT12-031 / EX7-023 / EX8-023 idiom — no printed "you
+#   may"). SelectCardEffect over the opponent's trash (IsDigimon) →
+#   AddLibraryTopCards (returns the selected card to the TOP of the
+#   opponent's deck). AfterSelectCardCoroutine then unconditionally runs
+#   SelectPermanentEffect(Mode.PutLibraryBottom, maxCount: min(1, opponent
+#   battle-area Digimon count), canNoSelect: false) — a second, separately
+#   mandatory pick that silently skips when the opponent has no Digimon.
+#   → `select_trash: { of: opponent, filter: { kind: digimon } }` (no
+#   `optional: true` — matches the mandatory-once-activated shape) →
+#   `move_trash_card_to_deck_top: { of: opponent }` (G-ZONE-SELECTED-TRASH-TO-
+#   DECK-TOP, LM-030 idiom) → `select_opponent_permanent: { kind: digimon }`
+#   (mandatory, silently no-ops with 0 candidates) → `return_to_deck: {
+#   position: bottom }` (BT17-077 idiom).
+#
+# All Turns (EffectTiming.None x2 — CanNotAffectedClass + CanNotSuspendClass,
+#   BOTH gated on the shared ImmunityAndNoSuspendCondition:
+#   card.PermanentOfThisCard().DigivolutionCards.Count == 0):
+#   two self-auras sharing `active_when: { stack_size_lte: 1 }` ("no
+#   digivolution cards" — card_sources.len() == 1, the top card alone;
+#   BT1-085/BT12-031/BT17-077 idiom). One installs `modifier: CannotSuspend`
+#   (permanent-scoped CannotSuspend enforcement is RESOLVED 2026-06-13 —
+#   consulted at basic-attack declaration, block/Alliance/Counter candidate
+#   walks, suspend-as-cost helpers, and the universal suspend/unsuspend
+#   chokepoint; see docs/RUST_ENGINE_GAPS.md). The other installs
+#   `effect_immunity: { source_controller: opponent }` — NO `source_kind`
+#   filter (any source kind), matching DCGO's SkillCondition =
+#   CardEffectCommons.IsOpponentEffect(cardEffect, card) with no additional
+#   IsDigimonEffect gate (unlike EX8-073's Digimon-only variant — this card's
+#   printed text says "your opponent's effects", not "your opponent's Digimon
+#   effects"). G-DSL-AURA-EFFECT-IMMUNITY, EX8-073/BT17-016 idiom — lowered to
+#   a materialized filtered CannotBeAffected re-evaluated every declarative
+#   tick, so the lock/immunity track the live stack size (digivolving onto
+#   this card, or a future de-digivolve, flips it immediately).
+#
+# ─── Implementation status ────────────────────────────────────────────────────
+#
+# | Card-text element                                                    | Status      |
+# |------------------------------------------------------------------------|-----------|
+# | Std digivolve Lv.6 (red/purple/black) / Cost 6                        | IMPLEMENTED (printed evo_costs) |
+# | Alt digivolve [MoonMillenniummon] / Cost 2                            | IMPLEMENTED (alt_paths name_is) |
+# | <Overclock ([Composite] Trait)>                                       | IMPLEMENTED (grant_keyword + overclock_cost_filter) |
+# | [On Play][When Digivolving][When Attacking] return opp-trash Digimon to top of deck, then return 1 opp Digimon to bottom of deck | IMPLEMENTED (select_trash + move_trash_card_to_deck_top + select_opponent_permanent + return_to_deck) |
+# | [All Turns] no digivolution cards → can't be suspended                | IMPLEMENTED (self-aura, modifier: CannotSuspend, active_when stack_size_lte: 1) |
+# | [All Turns] no digivolution cards → isn't affected by opponent's effects | IMPLEMENTED (self-aura, effect_immunity source_controller: opponent, active_when stack_size_lte: 1) |
+
+card: BT19-101
+name: ZeedMillenniummon
+kind: digimon
+level: 7
+color: [red, purple, black]
+cost: 16
+dp: 16000
+traits: [Wicked God]
+attribute: Virus
+form: Mega
+
+alt_paths:
+  # Standard digivolution: Lv.6 red/purple/black / cost 6 (printed evo box).
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - any_of:
+            - color_is: red
+            - color_is: purple
+            - color_is: black
+    cost: 6
+  # Named alt-digivolve: [Digivolve] [MoonMillenniummon]: Cost 2.
+  - kind: digivolve
+    from: { name_is: "MoonMillenniummon" }
+    cost: 2
+
+effects:
+  # ─── Declarative: <Overclock ([Composite] Trait)> ───────────────────────────
+  #
+  # "(At the end of your turn, by deleting 1 of your Tokens or other
+  #  [Composite] trait Digimon, this Digimon attacks a player without
+  #  suspending.)"
+  - kind: grant_keyword
+    keyword: Overclock
+    overclock_cost_filter:
+      any_of:
+        - kind: token
+        - all_of:
+            - kind: digimon
+            - trait_has: Composite
+
+  # ─── Clause A: [On Play][When Digivolving][When Attacking] ──────────────────
+  # "By returning 1 Digimon card from your opponent's trash to the top of the
+  #  deck, return 1 of their Digimon to the bottom of the deck."
+  #
+  # Clause-level `condition:` mirrors DCGO's CanActivateCondition (>=1
+  # opponent-trash Digimon) — with 0 candidates the clause does not activate.
+  # Once activated, both picks are mandatory (no `optional:` — the printed
+  # "By X-ing, do Y" cost-gated idiom; DCGO's inner canNoSelect flags are
+  # effectively moot once the outer gate has already required a candidate).
+  - when: [on_play, when_digivolving, when_attacking]
+    summary: "[On Play][When Digivolving][When Attacking] By returning 1 opponent-trash Digimon card to the top of their deck, return 1 of their Digimon to the bottom of their deck"
+    condition:
+      count_gte:
+        filter:
+          of: opponent
+          zone: [trash]
+          kind: digimon
+        n: 1
+    process:
+      # Step 1 (cost): select + return 1 Digimon card from the opponent's
+      # trash to the TOP of their deck.
+      - select_trash:
+          of: opponent
+          bind_as: trash_pick
+          filter: { kind: digimon }
+          prompt: "Return 1 Digimon card from your opponent's trash to the top of their deck"
+      - move_trash_card_to_deck_top:
+          of: opponent
+          card: trash_pick
+      # Step 2: return 1 of the opponent's Digimon to the bottom of their
+      # deck. Mandatory; silently no-ops with 0 opponent battle-area Digimon
+      # (DCGO SelectPermanentEffect maxCount min(1, count)).
+      - select_opponent_permanent:
+          bind_as: bounce_target
+          filter: { kind: digimon }
+          prompt: "Return 1 of your opponent's Digimon to the bottom of their deck"
+      - return_to_deck:
+          target: bounce_target
+          position: bottom
+
+  # ─── Clause B: [All Turns] no digivolution cards → can't be suspended ───────
+  # "This Digimon with no digivolution cards can't be suspended..."
+  #
+  # Self-aura, `active_when: { stack_size_lte: 1 }` — "no digivolution cards"
+  # (card_sources.len() == 1: only the top card, nothing below it).
+  # Permanent-scoped CannotSuspend enforcement is RESOLVED (2026-06-13):
+  # consulted at basic-attack declaration, block/Alliance/Counter walks,
+  # suspend-as-cost helpers, and the universal suspend/unsuspend chokepoint.
+  - kind: aura
+    active_when: { stack_size_lte: 1 }
+    target: {}
+    modifier: CannotSuspend
+    summary: "[All Turns] While this Digimon has no digivolution cards, it can't be suspended"
+
+  # ─── Clause C: [All Turns] no digivolution cards → immune to opp effects ────
+  # "...and isn't affected by your opponent's effects."
+  #
+  # Self-aura sharing the same `active_when: { stack_size_lte: 1 }` gate.
+  # `effect_immunity` with no `source_kind` filter = ANY opponent effect
+  # source kind (Digimon, Tamer, Option, rule), matching DCGO's
+  # SkillCondition = IsOpponentEffect with no IsDigimonEffect narrowing.
+  - kind: aura
+    active_when: { stack_size_lte: 1 }
+    target: {}
+    effect_immunity:
+      source_controller: opponent
+    summary: "[All Turns] While this Digimon has no digivolution cards, it isn't affected by your opponent's effects"
