@@ -341,9 +341,7 @@ fn bt20_060_security_removed_clause_is_unified_all_turns_opt() {
         .expect("security-removed memory clause exists");
 
     assert!(
-        clause
-            .when
-            .contains(&CompiledTiming::OnOwnSecurityRemoved),
+        clause.when.contains(&CompiledTiming::OnOwnSecurityRemoved),
         "must fire when OWN security stack is removed from"
     );
     assert!(
@@ -357,10 +355,10 @@ fn bt20_060_security_removed_clause_is_unified_all_turns_opt() {
         "printed [Once Per Turn] — single shared lockout across both stacks"
     );
     assert!(
-        clause.process.iter().any(|step| matches!(
-            step,
-            CompiledStep::GainMemory(3)
-        )),
+        clause
+            .process
+            .iter()
+            .any(|step| matches!(step, CompiledStep::GainMemory(3))),
         "clause must gain exactly 3 memory; process={:?}",
         clause.process
     );

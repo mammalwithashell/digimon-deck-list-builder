@@ -89,6 +89,7 @@ from digimon_gym.agents.training_recording import (
 )
 from digimon_gym.agents.mulligan_log import MulliganLogWrapper, MulliganLogWriter
 from digimon_gym.agents.game_log import GameLogWriter
+from digimon_gym.agents.specialist_registry import meta_algorithm
 
 import torch as _torch
 
@@ -495,7 +496,14 @@ def make_agent_opponent_fn(
         A callable ``(DigimonEnv) -> int`` that predicts Player 2 actions.
     """
     if algorithm == "lstm":
-        model = MaskableRecurrentPPO.load(weights_path)
+        # device="cpu" is REQUIRED, not incidental: this loader runs inside every
+        # SubprocVecEnv worker (one per n_env), so without it SB3's device="auto"
+        # puts each worker's LSTM opponent on the GPU. N concurrent CUDA
+        # model-loads (high n_envs, or parallel specialists sharing a GPU) collide
+        # at init -> the worker dies and the parent sees BrokenPipeError at
+        # SubprocVecEnv setup. Opponents only do inference (forward pass for action
+        # selection), which is fine on CPU — and matches the MLP/ONNX paths below.
+        model = MaskableRecurrentPPO.load(weights_path, device="cpu")
         # LSTM state must persist across steps within a single episode.
         lstm_states: list = [None]  # mutable container for closure
 
@@ -522,7 +530,12 @@ def make_agent_opponent_fn(
                     "ONNX opponent for %s failed (%s); falling back to torch.",
                     weights_path, exc,
                 )
-        model = MaskablePPO.load(weights_path)
+        # device="cpu" for the same reason as the LSTM branch above: this runs in
+        # every SubprocVecEnv worker, so device="auto" would load each worker's
+        # opponent on the GPU -> concurrent CUDA loads collide -> BrokenPipe at
+        # high n_envs / parallel specialists. (Normally unreached when
+        # DIGIMON_ONNX_OPPONENT is on, but the torch fallback must be safe too.)
+        model = MaskablePPO.load(weights_path, device="cpu")
 
         def _mlp_policy(env: DigimonEnv) -> int:
             mask = env.action_mask()
@@ -2354,9 +2367,57 @@ def make_vec_env(
 
     factories = [_factory(rank) for rank in range(cfg.n_envs)]
     if cfg.vec_env_backend == "subproc" and cfg.n_envs > 1:
-        # Thread management for the subproc path lives in _SubprocThreadPhaseCallback
-        # (per-phase toggle), not here — see train().
-        return SubprocVecEnv(factories, start_method="spawn")
+        # Right-size per-worker library threads, ONLY TRANSIENTLY around the spawn.
+        #
+        # Each spawned worker is a fresh interpreter that otherwise sizes its
+        # OMP/MKL/BLAS/rayon pools to os.cpu_count() — N workers x 96 cores = a
+        # ~1800-thread storm (load >> cores -> thrash). But pinning workers to 1
+        # thread is the OPPOSITE mistake: each worker runs an LSTM opponent forward
+        # (torch on CPU) every step, which is thread-hungry, so OMP=1 throttles
+        # COLLECTION ~5x (measured: solo 188 -> 35 fps). The right budget is
+        # cores // (total concurrent workers) = cpu_count // (n_envs * concurrency):
+        # enough threads for fast opponent inference, summing to ~cpu_count overall.
+        #
+        # A "spawn" worker captures a COPY of os.environ at creation, so set ->
+        # spawn -> restore: workers keep the budget (frozen env copy); the learner
+        # (this process) is restored so its update isn't throttled (torch reads OMP
+        # lazily at op time — a persistent pin would cap the update matmul). The
+        # learner's update threads are set by torch.set_num_threads in train()'s
+        # _SubprocThreadPhaseCallback.
+        # Only cap workers when MULTIPLE specialists share the box (in-pod parallel,
+        # DIGIMON_LEAGUE_CONCURRENCY > 1). A SINGLE specialist's workers must stay
+        # UNCAPPED — capping them (even to cores/n_envs) throttles the per-step
+        # opponent forward and craters fps (measured: solo 188 -> 35). So sequential
+        # runs (the default) keep full per-worker threads; only the parallel case
+        # pays the cap to avoid the cross-specialist thread storm.
+        _concurrency = max(1, int(os.environ.get("DIGIMON_LEAGUE_CONCURRENCY", "1")))
+        _thr_vars = ("OMP_NUM_THREADS", "MKL_NUM_THREADS", "OPENBLAS_NUM_THREADS",
+                     "NUMEXPR_NUM_THREADS", "RAYON_NUM_THREADS")
+        _thr_saved = {k: os.environ.get(k) for k in _thr_vars}
+        if _concurrency > 1:
+            _worker_threads = max(1, (os.cpu_count() or cfg.n_envs) // (cfg.n_envs * _concurrency))
+            for k in _thr_vars:
+                os.environ.setdefault(k, str(_worker_threads))   # operator pin still wins
+        try:
+            vec = SubprocVecEnv(factories, start_method="spawn")
+        finally:
+            for k, v in _thr_saved.items():
+                if v is None:
+                    os.environ.pop(k, None)
+                else:
+                    os.environ[k] = v
+        # Adaptive ready-gate: the instant the worker pool is spawned, signal the
+        # league driver (via the path it set in DIGIMON_SPAWN_READY_FILE) that this
+        # specialist is past its spawn. The driver waits for this before launching
+        # the next specialist, so two spawn bursts never overlap — a precise
+        # replacement for the fragile fixed --parallel-stagger sleep.
+        _ready = os.environ.get("DIGIMON_SPAWN_READY_FILE")
+        if _ready:
+            try:
+                Path(_ready).write_text("ready")
+            except Exception:
+                pass
+        return vec
     return DummyVecEnv(factories)
 
 
@@ -2922,7 +2983,14 @@ def train(total_timesteps: int = 100_000,
     # inherit the same learned representation). Validated mutually exclusive with
     # init_from / resume_from, so `model` here is always a fresh build.
     if cfg.init_extractor_from:
-        _src_cls = MaskableRecurrentPPO if use_lstm else MaskablePPO
+        # Load the source with ITS OWN architecture, which may differ from this
+        # run's (e.g. warm-starting an LSTM from an MLP generalist): the shared
+        # CardEmbeddingExtractor transfers across architectures, but the source
+        # must be reconstructed with the class it was saved as — loading an MLP
+        # checkpoint as MaskableRecurrentPPO fails (policy-kwarg mismatch). The
+        # source's algorithm is read from its `.meta.json` sidecar ("mlp" default).
+        _src_algo = meta_algorithm(cfg.init_extractor_from)
+        _src_cls = MaskableRecurrentPPO if _src_algo == "lstm" else MaskablePPO
         _src = _src_cls.load(cfg.init_extractor_from, device=device)
         _src_sd = _src.policy.state_dict()
         _dst_sd = model.policy.state_dict()
@@ -3054,11 +3122,20 @@ def train(total_timesteps: int = 100_000,
     #     the cores.
     #   * PPO update — big-batch backprop over the whole rollout buffer while the
     #     workers idle. Wants ALL cores.
-    # So pin to 1 thread for rollout, restore to the box core count for the
-    # update. No-op for DummyVecEnv (no workers to starve) and honored only when
-    # the operator hasn't pinned OMP_NUM_THREADS themselves.
-    if cfg.vec_env_backend == "subproc" and cfg.n_envs > 1 and "OMP_NUM_THREADS" not in os.environ:
-        _update_threads = os.cpu_count() or cfg.n_envs
+    # So pin to 1 thread for rollout, restore to the (concurrency-adjusted) box
+    # core count for the update. No-op for DummyVecEnv (no workers to starve).
+    # Always run for subproc: we deliberately set OMP_NUM_THREADS=1 (worker cap in
+    # make_vec_env), and torch.set_num_threads here overrides OMP for the learner's
+    # intra-op, so the per-phase toggle must not be skipped just because OMP is set.
+    #
+    # Concurrency-aware: when the league trains N specialists at once (each its own
+    # process sharing this box), each must cap UPDATE threads to cpu_count // N or
+    # the N concurrent updates oversubscribe (load >> cores -> thrash, the bug that
+    # made parallel topology slower than sequential). The league driver exports
+    # DIGIMON_LEAGUE_CONCURRENCY=N; default 1 (solo) preserves prior behavior.
+    if cfg.vec_env_backend == "subproc" and cfg.n_envs > 1:
+        _concurrency = max(1, int(os.environ.get("DIGIMON_LEAGUE_CONCURRENCY", "1")))
+        _update_threads = max(1, (os.cpu_count() or cfg.n_envs) // _concurrency)
 
         class _SubprocThreadPhaseCallback(BaseCallback):
             def _on_rollout_start(self) -> None:

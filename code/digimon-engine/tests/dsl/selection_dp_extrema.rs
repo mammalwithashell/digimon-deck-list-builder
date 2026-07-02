@@ -213,10 +213,7 @@ effects:
             .pending_selection
             .as_ref()
             .expect("first selection should park");
-        (
-            pending.selecting_player,
-            pending.valid_action_ids.clone(),
-        )
+        (pending.selecting_player, pending.valid_action_ids.clone())
     };
     assert!(first_actions.contains(&reduce_action));
     runner

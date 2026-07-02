@@ -18,10 +18,32 @@ use crate::action::space::{encode_attack, HAND_EFFECT_START, TRASH_EFFECT_START}
 use crate::card_source::{CardHandle, CardSource};
 use crate::dsl_cards::predicate::{eval_predicate, PredicateSubject};
 use crate::effect_context::{EffectContext, EffectReadContext};
-use crate::enums::GamePhase;
+use crate::enums::{EffectSourceKind, GamePhase, PlayerId};
 use crate::game_actions::AppFuseSourceZone;
 use crate::permanent::{OptionState, PermanentHandle};
 use crate::selection::{PendingSelection, SelectionKind};
+
+#[derive(Debug, Clone)]
+pub(crate) struct AppFuseHostSelectionState {
+    pub(crate) controller: PlayerId,
+    pub(crate) per_perm: Vec<(u16, PermanentHandle, Vec<(u16, CardHandle)>)>,
+    pub(crate) from_zone: CompiledAppFuseZone,
+    pub(crate) optional: bool,
+    pub(crate) selecting_player: PlayerId,
+    pub(crate) source_card: CardHandle,
+    pub(crate) source_permanent: Option<PermanentHandle>,
+    pub(crate) source_kind: EffectSourceKind,
+    pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct AppFuseResultSelectionState {
+    pub(crate) controller: PlayerId,
+    pub(crate) host: PermanentHandle,
+    pub(crate) results: Vec<(u16, CardHandle)>,
+    pub(crate) zone: CompiledAppFuseZone,
+    pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
+}
 
 impl EffectContext<'_> {
     /// Effect-initiated App Fuse. Installs selection #1 over the controller's
@@ -113,6 +135,8 @@ impl EffectContext<'_> {
         // 3. Install selection #1 over the eligible permanents.
         let valid_action_ids: Vec<u16> = per_perm.iter().map(|(a, _, _)| *a).collect();
         let previous_phase = self.game.current_phase;
+        let callback_per_perm = per_perm.clone();
+        let callback_from_zone = from_zone.clone();
         self.game.current_phase = GamePhase::SelectTarget;
         self.game.pending_selection = Some(PendingSelection {
             kind: SelectionKind::Target,
@@ -127,7 +151,7 @@ impl EffectContext<'_> {
             source_kind,
             zone_owner: None,
             callback: Box::new(move |game, action_id| {
-                let Some((_, host, results)) = per_perm
+                let Some((_, host, results)) = callback_per_perm
                     .iter()
                     .find(|(a, _, _)| *a == action_id)
                     .cloned()
@@ -139,7 +163,7 @@ impl EffectContext<'_> {
                     controller,
                     host,
                     results,
-                    from_zone,
+                    callback_from_zone,
                     optional,
                     selecting_player,
                     source_card,
@@ -149,7 +173,65 @@ impl EffectContext<'_> {
             }),
             on_decline: None,
         });
+        self.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::AppFuseHostSelection(
+                AppFuseHostSelectionState {
+                    controller,
+                    per_perm,
+                    from_zone,
+                    optional,
+                    selecting_player,
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
     }
+}
+
+pub(crate) fn run_app_fuse_host_selection_step(
+    game: &mut crate::game::Game,
+    state: AppFuseHostSelectionState,
+    action_id: u16,
+) {
+    let Some((_, host, results)) = state
+        .per_perm
+        .iter()
+        .find(|(a, _, _)| *a == action_id)
+        .cloned()
+    else {
+        return;
+    };
+    install_result_selection(
+        game,
+        state.controller,
+        host,
+        results,
+        state.from_zone,
+        state.optional,
+        state.selecting_player,
+        state.source_card,
+        state.source_permanent,
+        state.source_kind,
+    );
+}
+
+pub(crate) fn run_app_fuse_result_selection_step(
+    game: &mut crate::game::Game,
+    state: AppFuseResultSelectionState,
+    action_id: u16,
+) {
+    let Some((_, card)) = state.results.iter().find(|(a, _)| *a == action_id).copied() else {
+        return;
+    };
+    game.commit_effect_app_fuse(
+        state.controller,
+        state.host,
+        card,
+        app_fuse_source_zone(state.zone),
+    );
 }
 
 /// Install selection #2: the result card (in `zone`) to app-fuse onto `host`.
@@ -172,10 +254,8 @@ fn install_result_selection(
     }
     let valid_action_ids: Vec<u16> = results.iter().map(|(a, _)| *a).collect();
     let previous_phase = game.current_phase;
-    let gz = match zone {
-        CompiledAppFuseZone::Hand => AppFuseSourceZone::Hand,
-        CompiledAppFuseZone::Trash => AppFuseSourceZone::Trash,
-    };
+    let gz = app_fuse_source_zone(zone.clone());
+    let callback_results = results.clone();
     game.current_phase = GamePhase::SelectTarget;
     game.pending_selection = Some(PendingSelection {
         kind: SelectionKind::Target,
@@ -190,11 +270,33 @@ fn install_result_selection(
         source_kind,
         zone_owner: None,
         callback: Box::new(move |game, action_id| {
-            let Some((_, card)) = results.iter().find(|(a, _)| *a == action_id).copied() else {
+            let Some((_, card)) = callback_results
+                .iter()
+                .find(|(a, _)| *a == action_id)
+                .copied()
+            else {
                 return;
             };
             game.commit_effect_app_fuse(controller, host, card, gz);
         }),
         on_decline: None,
     });
+    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::AppFuseResultSelection(
+            AppFuseResultSelectionState {
+                controller,
+                host,
+                results,
+                zone,
+                outer_conts: Vec::new(),
+            },
+        )],
+    });
+}
+
+fn app_fuse_source_zone(zone: CompiledAppFuseZone) -> AppFuseSourceZone {
+    match zone {
+        CompiledAppFuseZone::Hand => AppFuseSourceZone::Hand,
+        CompiledAppFuseZone::Trash => AppFuseSourceZone::Trash,
+    }
 }

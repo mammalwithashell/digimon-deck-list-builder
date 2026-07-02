@@ -113,12 +113,14 @@ fn st23_07_has_op_wd_clause_and_inherited_piercing() {
     let runner = base();
     let card = runner.compiled_card(CARD_ID).expect("compiled");
 
-    let has_op_wd = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::OnPlay)
-                && t.when.contains(&CompiledTiming::WhenDigivolving)
-    ));
+    let has_op_wd = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::OnPlay)
+                    && t.when.contains(&CompiledTiming::WhenDigivolving)
+        )
+    });
     assert!(has_op_wd, "[On Play][When Digivolving] clause present");
 
     let has_pierce = card.effects.iter().any(|c| matches!(
@@ -143,9 +145,7 @@ fn st23_07_plays_glowing_dawn_tamer_free_when_zero_tamers() {
     // Put Armalizamon directly on field and fire its OnPlay.
     let arma = runner.place_on_field(0, CARD_ID, Some(0));
     let mem_before = runner.memory();
-    let tamers_before = runner
-        .game
-        .players[0]
+    let tamers_before = runner.game.players[0]
         .battle_area
         .iter()
         .filter(|p| p.top_card().card_kind(&runner.game.card_data) == CardKind::Tamer)
@@ -159,15 +159,17 @@ fn st23_07_plays_glowing_dawn_tamer_free_when_zero_tamers() {
     runner.execute_action(0, view.valid_action_ids[0]).unwrap();
     let _ = runner.auto_resolve();
 
-    let tamers_after = runner
-        .game
-        .players[0]
+    let tamers_after = runner.game.players[0]
         .battle_area
         .iter()
         .filter(|p| p.top_card().card_kind(&runner.game.card_data) == CardKind::Tamer)
         .count();
     assert_eq!(tamers_after, tamers_before + 1, "the GD Tamer was played");
-    assert_eq!(runner.memory(), mem_before, "played without paying the cost");
+    assert_eq!(
+        runner.memory(),
+        mem_before,
+        "played without paying the cost"
+    );
 }
 
 /// DECLINE: declining the optional play leaves the board and memory unchanged.
@@ -181,14 +183,20 @@ fn st23_07_free_tamer_play_is_declinable() {
     let hand_before = runner.hand_size(0);
     runner.fire_on_play(0, arma.index as usize);
 
-    let view = runner.pending_selection_view().expect("optional pick surfaces");
+    let view = runner
+        .pending_selection_view()
+        .expect("optional pick surfaces");
     assert!(view.is_optional);
     runner
         .execute_action(0, digimon_engine::action::space::PASS)
         .expect("decline");
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.hand_size(0), hand_before, "declined ⇒ Tamer stays in hand");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before,
+        "declined ⇒ Tamer stays in hand"
+    );
     assert_eq!(runner.memory(), mem_before, "declined ⇒ no change");
 }
 
@@ -229,7 +237,8 @@ fn st23_07_non_glowing_dawn_tamer_is_not_a_legal_pick() {
     // Either no prompt at all, or an optional prompt with no legal target that
     // resolves to a no-op. Either way no Tamer is played.
     assert_eq!(
-        runner.hand_size(0), hand_before,
+        runner.hand_size(0),
+        hand_before,
         "a non-[Glowing Dawn] Tamer is not playable by this effect"
     );
 }

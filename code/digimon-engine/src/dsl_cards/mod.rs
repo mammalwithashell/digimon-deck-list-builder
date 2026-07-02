@@ -124,22 +124,26 @@ impl CardEffect for DslCardEffect {
         // `clause_index` seeds the shared-OPT-group key for multi-timing
         // once-per-turn clauses; each face is offset into a disjoint band so a
         // Digimon-face WD/WA OPT can never collide with an Option-face one.
-        let mut clauses: Vec<(usize, &CompiledClause, CompiledCardKind, Option<Arc<CompiledPredicate>>)> =
-            Vec::new();
+        let mut clauses: Vec<(
+            usize,
+            &CompiledClause,
+            CompiledCardKind,
+            Option<Arc<CompiledPredicate>>,
+        )> = Vec::new();
         for (i, clause) in self.compiled.effects.iter().enumerate() {
-            clauses.push((i, clause, self.compiled.kind, option_use_requirement.clone()));
+            clauses.push((
+                i,
+                clause,
+                self.compiled.kind,
+                option_use_requirement.clone(),
+            ));
         }
         if let Some(dual) = self.compiled.dual.as_ref() {
             const FACE_OFFSET: usize = 64;
             for (i, clause) in dual.digimon.effects.iter().enumerate() {
                 // Digimon face: lower as a Digimon, never as an Option — no
                 // use-requirement bypass and no Main→OptionMain rewrite.
-                clauses.push((
-                    FACE_OFFSET + i,
-                    clause,
-                    CompiledCardKind::Digimon,
-                    None,
-                ));
+                clauses.push((FACE_OFFSET + i, clause, CompiledCardKind::Digimon, None));
             }
             for (i, clause) in dual.option.effects.iter().enumerate() {
                 // Option face: lower with the Dual identity so `when: main`

@@ -183,6 +183,9 @@ impl Game {
             }),
             on_decline: None,
         });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::PlayOrderSelection],
+        });
     }
 
     /// Convenience entry point that resolves a pending play-order selection

@@ -33,14 +33,14 @@
 
 use std::collections::HashSet;
 
-use digimon_engine::card_data::CardData;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, GamePhase, PlaySource};
-use digimon_engine::selection::SelectionKind;
 use digimon_dsl::compiled::{
     CompiledAltPathDirection, CompiledAltPathKind, CompiledCardKind, CompiledColor, CompiledCost,
     CompiledPredicate,
 };
+use digimon_engine::card_data::CardData;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{CardColor, CardKind, GamePhase, PlaySource};
+use digimon_engine::selection::SelectionKind;
 
 const ALL_COLORS: [CardColor; 7] = [
     CardColor::Red,

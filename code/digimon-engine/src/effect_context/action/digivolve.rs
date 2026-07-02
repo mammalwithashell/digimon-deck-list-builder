@@ -525,6 +525,13 @@ impl<'a> EffectContext<'a> {
         if !has_target {
             return;
         }
+        let target_candidate_actions: Vec<u16> = {
+            let hand_len = self.game.player(controller).hand.len();
+            (0..hand_len)
+                .filter(|&i| target_filter(self.game, i))
+                .map(|i| PLAY_HAND_START + i as u16)
+                .collect()
+        };
 
         // Snapshot the partner/target predicates for the chained closures.
         let partner_filter_for_install = std::sync::Arc::clone(&partner_filter);
@@ -536,6 +543,14 @@ impl<'a> EffectContext<'a> {
         let target_prompt = target_prompt
             .map(|s| s.to_string())
             .unwrap_or_else(|| "Choose a Digimon card from hand to DNA digivolve into".to_string());
+        let target_prompt_for_resume = target_prompt.clone();
+        let prov = crate::resume::ResumeProvenance {
+            source_card: self.source_card,
+            source_permanent: self.source_permanent,
+            source_kind: self.source_kind,
+            controller: self.player,
+            override_pin: self.override_selecting_player(),
+        };
 
         // Install partner selection. The anchor exclusion is enforced inline.
         self.select_own_permanent(
@@ -583,8 +598,10 @@ impl<'a> EffectContext<'a> {
                         let charge = if ignore_requirements {
                             cost as i32
                         } else {
-                            dna_pair_cost_for_hand_card(ctx.game, controller, anchor, partner, hand_idx)
-                                .unwrap_or(cost as i32)
+                            dna_pair_cost_for_hand_card(
+                                ctx.game, controller, anchor, partner, hand_idx,
+                            )
+                            .unwrap_or(cost as i32)
                         };
                         ctx.effect_initiated_dna_digivolve(
                             anchor,
@@ -597,5 +614,22 @@ impl<'a> EffectContext<'a> {
                 );
             },
         );
+        if self.game.pending_selection.is_some() {
+            self.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![crate::resume::ResumeFrame::MayDnaPartnerSelection(
+                    crate::resume::MayDnaPartnerSelectionState {
+                        prov,
+                        controller,
+                        anchor,
+                        cost,
+                        ignore_requirements,
+                        optional,
+                        target_prompt: target_prompt_for_resume,
+                        target_candidate_actions,
+                        outer_conts: Vec::new(),
+                    },
+                )],
+            });
+        }
     }
 }

@@ -92,7 +92,10 @@ fn bt25_061_has_link_condition_cost_1() {
         c,
         CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition { cost, .. }) if *cost == 1
     ));
-    assert!(has, "BT25-061 must declare a self link-condition with cost 1");
+    assert!(
+        has,
+        "BT25-061 must declare a self link-condition with cost 1"
+    );
 }
 
 #[test]
@@ -103,22 +106,32 @@ fn bt25_061_registers_appmon_alt_digivolve() {
         matches!(p.kind, CompiledAltPathKind::Digivolve)
             && matches!(p.cost, Some(CompiledCost::Literal(0)))
     });
-    assert!(has, "BT25-061 must register a cost-0 alt-digivolve over Appmon");
+    assert!(
+        has,
+        "BT25-061 must register a cost-0 alt-digivolve over Appmon"
+    );
 }
 
 #[test]
 fn bt25_061_has_start_main_and_when_linked_clauses() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let start_main = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::StartOfYourMainPhase)
-    ));
-    let when_linked = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::WhenLinked)
-    ));
-    assert!(start_main, "BT25-061 must have a [Start of Your Main Phase] clause");
+    let start_main = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::StartOfYourMainPhase)
+        )
+    });
+    let when_linked = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::WhenLinked)
+        )
+    });
+    assert!(
+        start_main,
+        "BT25-061 must have a [Start of Your Main Phase] clause"
+    );
     assert!(when_linked, "BT25-061 must have a [When Linking] clause");
 }
 

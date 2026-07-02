@@ -1013,8 +1013,14 @@ fn host_side_when_linked_fires_for_receiving_host_only() {
         .start();
     r.register_effect("LINK-A", Arc::new(LinkAnyHost));
     r.register_effect("LINK-B", Arc::new(LinkAnyHost));
-    r.register_effect("HOST-A", Arc::new(HostSideWhenLinked(host_a_witness.clone())));
-    r.register_effect("HOST-B", Arc::new(HostSideWhenLinked(host_b_witness.clone())));
+    r.register_effect(
+        "HOST-A",
+        Arc::new(HostSideWhenLinked(host_a_witness.clone())),
+    );
+    r.register_effect(
+        "HOST-B",
+        Arc::new(HostSideWhenLinked(host_b_witness.clone())),
+    );
     let host_a = r.place_on_field(0, "HOST-A", Some(0));
     let host_b = r.place_on_field(0, "HOST-B", Some(0));
     advance_to_main(&mut r);
@@ -1110,10 +1116,7 @@ fn digimon_self_link_condition_lists_hosts_and_excludes_self() {
         .expect("GATCH carries a self link-condition");
     assert_eq!(cost, 1, "printed link cost");
     assert!(hosts.contains(&host), "HOST is a legal link host");
-    assert!(
-        !hosts.contains(&gatch),
-        "a Digimon cannot link onto itself"
-    );
+    assert!(!hosts.contains(&gatch), "a Digimon cannot link onto itself");
 
     // A plain Digimon with no link condition is not a link source.
     assert!(
@@ -2058,7 +2061,9 @@ effects:
         "link card select must be resume-driven (clone-safe)"
     );
     let card_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
-    r.game.resolve_selection(0, card_action).expect("pick card 1");
+    r.game
+        .resolve_selection(0, card_action)
+        .expect("pick card 1");
 
     assert!(
         r.game.pending_selection.is_some() && r.game.pending_selection_resume.is_some(),
@@ -2102,7 +2107,9 @@ effects:
     r.game
         .resolve_selection(0, host_action)
         .expect("original resolves host");
-    r.game.resolve_selection(0, PASS).expect("original PASS pick 2");
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("original PASS pick 2");
     assert_eq!(
         r.game.player(0).battle_area[target.index as usize]
             .linked_cards
@@ -2159,7 +2166,9 @@ effects:
         .resolve_selection(0, zone_hand)
         .expect("clone picks the hand zone");
     let card = clone.pending_selection.as_ref().unwrap().valid_action_ids[0];
-    clone.resolve_selection(0, card).expect("clone picks the card");
+    clone
+        .resolve_selection(0, card)
+        .expect("clone picks the card");
     assert!(
         clone.pending_selection.is_none(),
         "clone: loop complete after the exactly-1 pick"
@@ -2191,7 +2200,9 @@ effects:
         .resolve_selection(0, zone_hand)
         .expect("original picks the hand zone");
     let card2 = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
-    r.game.resolve_selection(0, card2).expect("original picks the card");
+    r.game
+        .resolve_selection(0, card2)
+        .expect("original picks the card");
     assert_eq!(
         r.game.player(0).battle_area[host.index as usize]
             .linked_cards
@@ -2576,7 +2587,10 @@ fn ex11_027_pure_dsl_on_play_wires_relink_and_linkcards() {
         "on_play uses relink_self_to_own_digimon (Link this Maquinamon)"
     );
     assert!(
-        ex11_step_tree_has(&on_play.process, &|s| matches!(s, CompiledStep::LinkCards { .. })),
+        ex11_step_tree_has(&on_play.process, &|s| matches!(
+            s,
+            CompiledStep::LinkCards { .. }
+        )),
         "on_play uses link_cards (Link a Maquinamon from hand)"
     );
 }
@@ -2616,10 +2630,16 @@ fn ex11_027_linked_leave_prevention_places_link_card_as_bottom_source() {
         .as_ref()
         .expect("which-link-card selection installed")
         .valid_action_ids[0];
-    r.game.resolve_selection(0, pick).expect("pick the link card");
+    r.game
+        .resolve_selection(0, pick)
+        .expect("pick the link card");
 
     let host_ref = &r.game.player(0).battle_area[host.index as usize];
-    assert_eq!(r.battle_area_size(0), 1, "HOST did not leave the battle area");
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "HOST did not leave the battle area"
+    );
     assert!(
         host_ref.card_sources.iter().any(|c| c.handle() == maq),
         "Maquinamon was placed as a digivolution source under HOST"
@@ -2676,9 +2696,7 @@ fn subject_card_has_required_trait(
     let Some(data) = rctx.game.card_data_for_handle(card) else {
         return false;
     };
-    data.traits
-        .iter()
-        .any(|t| REQUIRED.iter().any(|r| r == t))
+    data.traits.iter().any(|t| REQUIRED.iter().any(|r| r == t))
 }
 
 /// The faithful BT25-004/045 host-side reducer, hand-written for substrate TDD.
@@ -2702,9 +2720,7 @@ impl CardEffect for LinkCostReducer {
                     && rctx.game.turn_player() == rctx.player
             })
             // (b) the linking card carries a required trait.
-            .replacement_condition(|rctx, subject| {
-                subject_card_has_required_trait(rctx, subject)
-            })
+            .replacement_condition(|rctx, subject| subject_card_has_required_trait(rctx, subject))
             .replacement_process(|rctx| {
                 rctx.effect.reduce_pending_link_cost(1);
             })
@@ -2736,9 +2752,8 @@ fn activate_standing_link(r: &mut DebugRunner, source_idx: usize, host_idx: u8) 
         encode_attack, EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_LINK, FIELD_EFFECT_START,
     };
     // 1. The FIELD_EFFECT link bit must be legal in the mask.
-    let link_bit = FIELD_EFFECT_START
-        + source_idx as u16 * EFFECTS_PER_PERMANENT
-        + FIELD_EFFECT_SLOT_FOR_LINK;
+    let link_bit =
+        FIELD_EFFECT_START + source_idx as u16 * EFFECTS_PER_PERMANENT + FIELD_EFFECT_SLOT_FOR_LINK;
     let mask = build_action_mask(&r.game, 0);
     assert_eq!(
         mask[link_bit as usize], 1.0,
@@ -3110,11 +3125,9 @@ fn gap3a_leave_replacement_no_link_cards_not_offered() {
     let perm = r.place_on_field(0, "STAYER", Some(0));
     advance_to_main(&mut r);
 
-    assert!(
-        r.game.player(0).battle_area[perm.index as usize]
-            .linked_cards
-            .is_empty()
-    );
+    assert!(r.game.player(0).battle_area[perm.index as usize]
+        .linked_cards
+        .is_empty());
 
     r.game.delete_permanent_with_effects(perm);
     assert!(
@@ -3181,6 +3194,45 @@ fn gap3a_leave_replacement_chooses_which_link_card() {
     assert!(
         r.game.player(0).trash.iter().any(|c| c.handle() == link_a),
         "the chosen link card (LINK-A) is in trash"
+    );
+}
+
+#[test]
+fn gap3a_link_card_trash_prompt_clones_faithfully() {
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("STAYER", CardColor::Red))
+        .add_card(digimon_card("LINK-A", CardColor::Red))
+        .add_card(digimon_card("LINK-B", CardColor::Red))
+        .memory(0)
+        .start();
+    r.register_effect("STAYER", Arc::new(LinkTrashLeaveReplacement));
+    let perm = r.place_on_field(0, "STAYER", Some(0));
+    let link_a = r.push_linked_owned(perm, "LINK-A", 0);
+    let _link_b = r.push_linked_owned(perm, "LINK-B", 0);
+    advance_to_main(&mut r);
+
+    r.game.delete_permanent_with_effects(perm);
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept");
+
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "link-card trash prompt must be resume-driven before cloning"
+    );
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+
+    let mut cloned = r.game.clone();
+    cloned
+        .resolve_selection(0, action)
+        .expect("clone resolves chosen link card");
+
+    assert_eq!(cloned.player(0).battle_area.len(), 1, "clone: host stays");
+    let linked = &cloned.player(0).battle_area[perm.index as usize].linked_cards;
+    assert_eq!(linked.len(), 1, "clone: exactly one link card remains");
+    assert!(
+        cloned.player(0).trash.iter().any(|c| c.handle() == link_a),
+        "clone: chosen link card is trashed"
     );
 }
 
@@ -3300,8 +3352,9 @@ effects:
     advance_to_main(&mut r);
 
     let trash_before = r.trash_size(0);
-    let sources_before =
-        r.game.player(0).battle_area[perm.index as usize].card_sources.len();
+    let sources_before = r.game.player(0).battle_area[perm.index as usize]
+        .card_sources
+        .len();
 
     r.game.delete_permanent_with_effects(perm);
     assert!(
@@ -3323,7 +3376,11 @@ effects:
 
     let perm_ref = &r.game.player(0).battle_area[perm.index as usize];
     assert_eq!(r.battle_area_size(0), 1, "the Digimon did NOT leave");
-    assert_eq!(perm_ref.linked_cards.len(), 0, "the link card left linked_cards");
+    assert_eq!(
+        perm_ref.linked_cards.len(),
+        0,
+        "the link card left linked_cards"
+    );
     assert_eq!(
         perm_ref.card_sources.len(),
         sources_before + 1,
@@ -3338,6 +3395,58 @@ effects:
         r.trash_size(0),
         trash_before,
         "the link card was NOT trashed (it was placed under the carrier)"
+    );
+}
+
+#[test]
+fn place_link_card_as_bottom_source_prompt_clones_faithfully() {
+    let yaml = r#"
+card: EX11-027-PLACE
+name: Place-Stayer
+kind: digimon
+effects:
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    cost: { place_link_card_as_bottom_digivolution: true }
+    outcome: prevent
+"#;
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("EX11-027-PLACE", CardColor::Red))
+        .add_card(digimon_card("LINKEE", CardColor::Red))
+        .memory(0)
+        .start();
+    register_dsl_yaml(&mut r, yaml);
+    let perm = r.place_on_field(0, "EX11-027-PLACE", Some(0));
+    let linkee = r.push_linked_owned(perm, "LINKEE", 0);
+    advance_to_main(&mut r);
+
+    r.game.delete_permanent_with_effects(perm);
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept");
+
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "place-link-card prompt must be resume-driven before cloning"
+    );
+    let action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+
+    let mut cloned = r.game.clone();
+    cloned
+        .resolve_selection(0, action)
+        .expect("clone resolves chosen link card");
+
+    let perm_ref = &cloned.player(0).battle_area[perm.index as usize];
+    assert_eq!(perm_ref.linked_cards.len(), 0, "clone: link slot emptied");
+    assert_eq!(
+        perm_ref.card_sources[0].handle(),
+        linkee,
+        "clone: chosen link card is now the bottom source"
+    );
+    assert!(
+        cloned.player(0).trash.iter().all(|c| c.handle() != linkee),
+        "clone: placed link card was not trashed"
     );
 }
 

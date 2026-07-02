@@ -128,7 +128,10 @@ fn bt25_043_has_glowing_dawn_leave_replacement() {
             CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { .. })
         )
     });
-    assert!(has_repl, "leave-prevention replacement present on Digimon face");
+    assert!(
+        has_repl,
+        "leave-prevention replacement present on Digimon face"
+    );
 }
 
 #[test]
@@ -379,12 +382,10 @@ fn bt25_043_option_main_minus_8000_then_minus_5000_all_with_security_trash() {
     while runner.game.pending_selection.is_some() {
         let sel = runner.game.pending_selection.as_ref().unwrap();
         // Accept the optional security-trash branch (first non-PASS action).
-        let action = sel
-            .valid_action_ids
-            .first()
-            .copied()
-            .unwrap_or(PASS);
-        runner.execute_action(0, action).expect("accept mass debuff");
+        let action = sel.valid_action_ids.first().copied().unwrap_or(PASS);
+        runner
+            .execute_action(0, action)
+            .expect("accept mass debuff");
     }
 
     assert_eq!(

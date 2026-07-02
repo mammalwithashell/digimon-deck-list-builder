@@ -224,15 +224,10 @@ fn bt25_003_only_effect_is_inherited_when_attacking_opt() {
     // `select_hand` (so declining leaves the trash cost unpaid), NOT the
     // clause-level outer-optional flag — the BT12-016 idiom. The behavioral
     // `bt25_003_digivolve_is_declinable` test proves the decline path.
-    let has_optional_hand_pick = t.process.iter().any(|s| {
-        matches!(
-            s,
-            CompiledStep::SelectHand {
-                optional: true,
-                ..
-            }
-        )
-    });
+    let has_optional_hand_pick = t
+        .process
+        .iter()
+        .any(|s| matches!(s, CompiledStep::SelectHand { optional: true, .. }));
     assert!(
         has_optional_hand_pick,
         "printed 'may digivolve' → an optional select_hand carries the decline"

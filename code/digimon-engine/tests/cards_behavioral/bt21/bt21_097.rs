@@ -156,7 +156,10 @@ fn bt21_097_is_green_appmon_option_cost_3() {
     assert_eq!(card.name, "App Link");
     assert_eq!(card.kind, CompiledCardKind::Option);
     assert_eq!(card.cost, Some(3));
-    assert!(card.traits.iter().any(|t| t == "Appmon"), "trait Appmon present");
+    assert!(
+        card.traits.iter().any(|t| t == "Appmon"),
+        "trait Appmon present"
+    );
     assert!(
         card.use_requirement.is_some(),
         "card has a <Use Req. ([Appmon] trait)>"
@@ -185,9 +188,7 @@ fn bt21_097_main_reveals_three_adds_appmon_or_appdriver_trashes_rest_places_self
         .effects
         .iter()
         .find_map(|clause| match clause {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::MainFromHand) =>
-            {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::MainFromHand) => {
                 Some(t)
             }
             _ => None,
@@ -250,7 +251,10 @@ fn bt21_097_has_standard_delay_clause_with_link_cards_step() {
     );
     // The body links a hand card to an own Digimon for free.
     assert!(
-        delay.1.iter().any(|s| matches!(s, CompiledStep::LinkCards { .. })),
+        delay
+            .1
+            .iter()
+            .any(|s| matches!(s, CompiledStep::LinkCards { .. })),
         "Delay body must contain a LinkCards step"
     );
 }
@@ -263,11 +267,7 @@ fn bt21_097_security_places_self_in_battle_area() {
         .effects
         .iter()
         .find_map(|clause| match clause {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::OnSecurity) =>
-            {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity) => Some(t),
             _ => None,
         })
         .expect("[Security] clause");
@@ -442,7 +442,9 @@ fn bt21_097_main_with_no_eligible_trashes_all_three_and_places_self() {
     }
 
     assert!(
-        !hand_ids(&runner, 0).iter().any(|id| id.starts_with("PLAIN")),
+        !hand_ids(&runner, 0)
+            .iter()
+            .any(|id| id.starts_with("PLAIN")),
         "no non-Appmon/App-Driver card is ever added to hand: {:?}",
         hand_ids(&runner, 0)
     );
@@ -463,14 +465,16 @@ fn bt21_097_main_with_no_eligible_trashes_all_three_and_places_self() {
 fn bt21_097_use_requirement_targets_appmon_digimon_or_tamer() {
     let runner = runner();
     let card = runner.compiled_card(CARD_ID).expect("compiled");
-    let has_gate = card.effects.iter().any(|clause| matches!(
-        clause,
-        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate {
-            modifier,
-            active_when,
-            ..
-        }) if modifier == "IgnoreColorRequirement" && active_when.is_some()
-    ));
+    let has_gate = card.effects.iter().any(|clause| {
+        matches!(
+            clause,
+            CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate {
+                modifier,
+                active_when,
+                ..
+            }) if modifier == "IgnoreColorRequirement" && active_when.is_some()
+        )
+    });
     assert!(
         has_gate,
         "IgnoreColorRequirement flood gate is conditioned on an Appmon Digimon/Tamer"

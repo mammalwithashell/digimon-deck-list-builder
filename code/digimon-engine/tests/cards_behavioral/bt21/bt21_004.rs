@@ -98,7 +98,11 @@ fn bt21_004_has_single_inherited_opt_suspend_clause_no_main_effect() {
             _ => None,
         })
         .collect();
-    assert_eq!(triggered.len(), 1, "exactly one clause (the inherited draw)");
+    assert_eq!(
+        triggered.len(),
+        1,
+        "exactly one clause (the inherited draw)"
+    );
     let clause = triggered[0];
     assert_eq!(clause.scope, CompiledScope::Inherited, "must be inherited");
     assert!(clause.when.contains(&CompiledTiming::OnSuspend));

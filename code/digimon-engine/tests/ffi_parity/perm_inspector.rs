@@ -23,10 +23,7 @@ fn runner_with_stack() -> DebugRunner {
     let mut src = make_test_card("SRC", "SrcMon");
     src.inherited_text = "Inherited: gain 1 memory.".to_string();
 
-    let mut r = DebugRunner::builder()
-        .add_card(top)
-        .add_card(src)
-        .start();
+    let mut r = DebugRunner::builder().add_card(top).add_card(src).start();
     // bottom-to-top: SRC under TOP
     r.place_stack(0, &["SRC", "TOP"]);
     r
@@ -49,7 +46,10 @@ fn innate_printed_keyword_breakdown() {
     );
     let innate = p["keywordBreakdown"]["innate"].as_array().unwrap();
     let gained = p["keywordBreakdown"]["gained"].as_array().unwrap();
-    assert!(innate.iter().any(|k| k == "blocker"), "blocker should be innate");
+    assert!(
+        innate.iter().any(|k| k == "blocker"),
+        "blocker should be innate"
+    );
     assert!(
         !gained.iter().any(|k| k == "blocker"),
         "blocker should not be gained"
@@ -59,22 +59,37 @@ fn innate_printed_keyword_breakdown() {
 #[test]
 fn modifier_granted_keyword_is_gained() {
     let mut r = runner_with_stack();
-    let handle = digimon_engine::permanent::PermanentHandle { player: 0, index: 0 };
+    let handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     // Grant Rush via the keyword store (how engine grants actually register).
-    r.game.modifiers.grant_keyword(handle, Keyword::Rush, Expiry::Permanent, 0);
+    r.game
+        .modifiers
+        .grant_keyword(handle, Keyword::Rush, Expiry::Permanent, 0);
 
     let v = to_ui_json(&r.game);
     let p = perm0(&v);
     let gained = p["keywordBreakdown"]["gained"].as_array().unwrap();
     let innate = p["keywordBreakdown"]["innate"].as_array().unwrap();
-    assert!(gained.iter().any(|k| k == "rush"), "rush should be gained, got {:?}", gained);
-    assert!(!innate.iter().any(|k| k == "rush"), "rush should not be innate");
+    assert!(
+        gained.iter().any(|k| k == "rush"),
+        "rush should be gained, got {:?}",
+        gained
+    );
+    assert!(
+        !innate.iter().any(|k| k == "rush"),
+        "rush should not be innate"
+    );
 }
 
 #[test]
 fn dp_breakdown_reflects_modifier() {
     let mut r = runner_with_stack();
-    let handle = digimon_engine::permanent::PermanentHandle { player: 0, index: 0 };
+    let handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     r.game.modifiers.add(
         handle,
         ModifierEntry::simple(ModifierType::ChangeDp, 3000, Expiry::Permanent, 0),
@@ -111,19 +126,32 @@ fn source_and_inherited_effect_text_populated() {
     let p = perm0(&v);
 
     // Top card's main effect text on the permanent and on its top source.
-    assert_eq!(p["mainEffectText"], serde_json::json!("＜Blocker＞\nTop main effect."));
+    assert_eq!(
+        p["mainEffectText"],
+        serde_json::json!("＜Blocker＞\nTop main effect.")
+    );
 
     let sources = p["sources"].as_array().unwrap();
     assert_eq!(sources.len(), 2, "expected a two-card stack");
     // The bottom source (non-top) carries inherited text.
     let bottom = sources.iter().find(|s| s["cardId"] == "SRC").unwrap();
-    assert_eq!(bottom["inheritedEffectText"], serde_json::json!("Inherited: gain 1 memory."));
+    assert_eq!(
+        bottom["inheritedEffectText"],
+        serde_json::json!("Inherited: gain 1 memory.")
+    );
 
     // Permanent-level inheritedEffects lists the non-top source.
     let inh = p["inheritedEffects"].as_array().unwrap();
-    assert_eq!(inh.len(), 1, "exactly one inherited effect from the buried source");
+    assert_eq!(
+        inh.len(),
+        1,
+        "exactly one inherited effect from the buried source"
+    );
     assert_eq!(inh[0]["cardId"], serde_json::json!("SRC"));
-    assert_eq!(inh[0]["text"], serde_json::json!("Inherited: gain 1 memory."));
+    assert_eq!(
+        inh[0]["text"],
+        serde_json::json!("Inherited: gain 1 memory.")
+    );
 }
 
 #[test]
@@ -142,7 +170,10 @@ fn single_card_permanent_has_no_inherited_effects() {
 #[test]
 fn active_modifier_list_emits_structured_entries() {
     let mut r = runner_with_stack();
-    let handle = digimon_engine::permanent::PermanentHandle { player: 0, index: 0 };
+    let handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: 0,
+    };
     r.game.modifiers.add(
         handle,
         ModifierEntry::simple(ModifierType::CannotBeDestroyed, 0, Expiry::Permanent, 0),
@@ -160,7 +191,10 @@ fn active_modifier_list_emits_structured_entries() {
     let p = perm0(&v);
     let mods = p["modifiers"].as_array().unwrap();
 
-    let immunity = mods.iter().find(|m| m["type"] == "CannotBeDestroyed").unwrap();
+    let immunity = mods
+        .iter()
+        .find(|m| m["type"] == "CannotBeDestroyed")
+        .unwrap();
     assert_eq!(immunity["expiry"], serde_json::json!("Permanent"));
 
     let dp = mods.iter().find(|m| m["type"] == "ChangeDp").unwrap();

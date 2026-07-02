@@ -124,7 +124,14 @@ fn material_zone_collects_permanent_card_sources() {
         .expect("Material zone must park a selection when sources exist");
 
     assert!(
-        matches!(sel.kind, SelectionKind::CountCappedMultiSelect { max: 2, picked: 0, .. }),
+        matches!(
+            sel.kind,
+            SelectionKind::CountCappedMultiSelect {
+                max: 2,
+                picked: 0,
+                ..
+            }
+        ),
         "kind must be CountCappedMultiSelect {{ max: 2, picked: 0 }}"
     );
     assert_eq!(r.game.current_phase, GamePhase::SelectBudgeted);
@@ -154,7 +161,11 @@ fn material_zone_collects_permanent_card_sources() {
         let sel2 = r.game.pending_selection.as_ref().expect("step 2 selection");
         assert!(matches!(
             sel2.kind,
-            SelectionKind::CountCappedMultiSelect { max: 2, picked: 1, .. }
+            SelectionKind::CountCappedMultiSelect {
+                max: 2,
+                picked: 1,
+                ..
+            }
         ));
         // SRC-A's action id must be gone.
         assert!(

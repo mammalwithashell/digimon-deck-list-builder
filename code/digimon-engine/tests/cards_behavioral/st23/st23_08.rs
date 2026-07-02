@@ -195,13 +195,15 @@ fn st23_08_metadata_alliance_alt_path_and_main_clause() {
     let op_wd = card
         .effects
         .iter()
-        .filter(|c| matches!(
-            c,
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::OnPlay)
-                    && t.when.contains(&CompiledTiming::WhenDigivolving)
-                    && t.scope == CompiledScope::FaceUp
-        ))
+        .filter(|c| {
+            matches!(
+                c,
+                CompiledClause::Triggered(t)
+                    if t.when.contains(&CompiledTiming::OnPlay)
+                        && t.when.contains(&CompiledTiming::WhenDigivolving)
+                        && t.scope == CompiledScope::FaceUp
+            )
+        })
         .count();
     assert_eq!(op_wd, 2, "DP-buff clause + play-or-use clause both present");
 }
@@ -248,7 +250,11 @@ fn st23_08_plays_glowing_dawn_digimon_at_cost_minus_3() {
     // → hand pick (the GD Digimon). The driver accepts the optional gate.
     drive_choosing(&mut runner, "GD-DIGI");
 
-    assert_eq!(runner.trash_size(0), trash_before + 1, "face-down trashed as cost");
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before + 1,
+        "face-down trashed as cost"
+    );
     assert!(
         runner.game.players[0]
             .battle_area
@@ -318,10 +324,15 @@ fn st23_08_play_or_use_is_declinable() {
                 .unwrap();
             declined = true;
         } else {
-            runner.execute_action(v.selecting_player, v.valid_action_ids[0]).unwrap();
+            runner
+                .execute_action(v.selecting_player, v.valid_action_ids[0])
+                .unwrap();
         }
     }
-    assert!(declined, "the optional engagement gate was offered and declined");
+    assert!(
+        declined,
+        "the optional engagement gate was offered and declined"
+    );
 
     assert_eq!(runner.trash_size(0), trash_before, "no trash on decline");
     assert_eq!(

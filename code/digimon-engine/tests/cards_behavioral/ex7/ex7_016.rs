@@ -184,8 +184,7 @@ fn ex7_016_compiles_with_printed_stats_and_lv2_blue_path() {
             path.kind == CompiledAltPathKind::Digivolve
                 && path.cost == Some(CompiledCost::Literal(0))
                 && path.from.as_ref().is_some_and(|from| {
-                    (from.level_eq == Some(2)
-                        || from.all_of.iter().any(|p| p.level_eq == Some(2)))
+                    (from.level_eq == Some(2) || from.all_of.iter().any(|p| p.level_eq == Some(2)))
                         && (from.color_is == Some(CompiledColor::Blue)
                             || from
                                 .all_of
@@ -270,7 +269,10 @@ fn ex7_016_on_play_mixed_reveal_adds_name_and_ice_snow_and_bottoms_rest() {
     // Bucket 0 — name filter. Mandatory; only PALE is a candidate.
     assert!(matches!(
         runner.pending_kind(),
-        Some(SelectionKind::RevealBucket { bucket_index: 0, .. })
+        Some(SelectionKind::RevealBucket {
+            bucket_index: 0,
+            ..
+        })
     ));
     assert_mandatory_pick(&runner, "name bucket");
     let view = runner.pending_selection_view().expect("name bucket view");
@@ -284,7 +286,10 @@ fn ex7_016_on_play_mixed_reveal_adds_name_and_ice_snow_and_bottoms_rest() {
     // Bucket 1 — Ice-Snow trait filter. Mandatory; only ICE is a candidate.
     assert!(matches!(
         runner.pending_kind(),
-        Some(SelectionKind::RevealBucket { bucket_index: 1, .. })
+        Some(SelectionKind::RevealBucket {
+            bucket_index: 1,
+            ..
+        })
     ));
     assert_mandatory_pick(&runner, "Ice-Snow bucket");
     let view = runner
@@ -349,7 +354,10 @@ fn ex7_016_on_play_no_matches_bottoms_all_three() {
             "{id} must be among the 3 bottomed cards; bottom3={bottom3:?}"
         );
     }
-    assert_eq!(deck_ids[3], "D1", "pre-existing deck card stays above the bottomed rest");
+    assert_eq!(
+        deck_ids[3], "D1",
+        "pre-existing deck card stays above the bottomed rest"
+    );
 }
 
 /// Name filter positive/negative: a Hexeblaumon-named card IS a name-bucket
@@ -370,7 +378,10 @@ fn ex7_016_on_play_hexeblaumon_qualifies_for_name_bucket_and_junk_does_not() {
 
     assert!(matches!(
         runner.pending_kind(),
-        Some(SelectionKind::RevealBucket { bucket_index: 0, .. })
+        Some(SelectionKind::RevealBucket {
+            bucket_index: 0,
+            ..
+        })
     ));
     let view = runner.pending_selection_view().expect("name bucket view");
     assert_eq!(
@@ -404,7 +415,10 @@ fn ex7_016_on_play_ice_snow_only_skips_name_bucket() {
     assert!(
         matches!(
             runner.pending_kind(),
-            Some(SelectionKind::RevealBucket { bucket_index: 1, .. })
+            Some(SelectionKind::RevealBucket {
+                bucket_index: 1,
+                ..
+            })
         ),
         "with no name-bucket candidate, the Ice-Snow bucket prompts directly; got {:?}",
         runner.pending_kind()
@@ -600,7 +614,9 @@ fn ex7_016_inherited_opt_blocks_second_attack_same_turn() {
     // First attack: fires, trashes OPP-MID. (Security fallout — SEC cards —
     // also reaches the trash; assertions are membership-based.)
     runner.attack_player(carrier, 1, false);
-    let view = runner.pending_selection_view().expect("first-attack prompt");
+    let view = runner
+        .pending_selection_view()
+        .expect("first-attack prompt");
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("resolve first trash");

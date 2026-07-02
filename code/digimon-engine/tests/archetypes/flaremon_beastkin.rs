@@ -216,7 +216,9 @@ fn f1_grapleomon_pump_arms_the_13k_free_digivolve_observer() {
         runner.pending_kind().is_some(),
         "a 13000-DP attacker (only 13000 because of the pump) must arm GrapLeomon's free digivolve"
     );
-    runner.auto_resolve().expect("resolve the free-digivolve offer");
+    runner
+        .auto_resolve()
+        .expect("resolve the free-digivolve offer");
 
     // The digivolve is "without paying the cost" — memory must be unchanged by it.
     assert_eq!(
@@ -315,7 +317,10 @@ fn finish_on_play_declining_attack(runner: &mut DebugRunner) {
                 None => return,
             }
         };
-        if runner.execute_action(view.selecting_player, action).is_err() {
+        if runner
+            .execute_action(view.selecting_player, action)
+            .is_err()
+        {
             return;
         }
     }
@@ -555,7 +560,9 @@ fn f3_buried_grizzly_battle_win_trashes_top_security() {
 
     let before = snapshot(&runner);
     runner.attack_digimon(stack, weak, false);
-    runner.auto_resolve().expect("resolve inherited security trash");
+    runner
+        .auto_resolve()
+        .expect("resolve inherited security trash");
 
     let after = snapshot(&runner);
 

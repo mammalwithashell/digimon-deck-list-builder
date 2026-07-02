@@ -9,34 +9,53 @@ use digimon_engine::deck_tools::{
 };
 use digimon_engine::{build_registry, CardData, GameMode, HeadlessRunner, Rarity};
 use serde::Deserialize;
-use std::collections::{BTreeMap, HashMap};
+use std::collections::HashMap;
 
 const STARTER_DECKS_JSON: &str = include_str!("../../../../data/starter_decks.json");
 const CARDS_JSON: &str = include_str!("../../../../data/cards.json");
 
+// v2 schema (gen_starter_decks.py): `starter_decks` is an ARRAY of entries
+// with split `egg_deck` / `main_deck` lists and a `set` discriminator.
 #[derive(Debug, Deserialize)]
 struct StarterDecksFixture {
-    starter_decks: BTreeMap<String, StarterDeckFixture>,
+    starter_decks: Vec<StarterDeckFixture>,
 }
 
 #[derive(Debug, Deserialize)]
 struct StarterDeckFixture {
     id: String,
     name: String,
-    decklist: Vec<String>,
+    set: String,
+    egg_deck: Vec<String>,
+    main_deck: Vec<String>,
+}
+
+impl StarterDeckFixture {
+    /// Combined egg + main list (the shape `summarize_deck`/`validate_deck`
+    /// and the headless runner consume).
+    fn decklist(&self) -> Vec<String> {
+        self.egg_deck
+            .iter()
+            .chain(self.main_deck.iter())
+            .cloned()
+            .collect()
+    }
 }
 
 fn starter_decks_fixture() -> StarterDecksFixture {
     serde_json::from_str(STARTER_DECKS_JSON).expect("starter_decks.json parses")
 }
 
-fn st3_starter_deck() -> Vec<String> {
+fn st3_fixture() -> StarterDeckFixture {
     starter_decks_fixture()
         .starter_decks
-        .get("ST-3")
-        .expect("ST-3 fixture exists")
-        .decklist
-        .clone()
+        .into_iter()
+        .find(|d| d.set == "ST3")
+        .expect("ST3 fixture exists")
+}
+
+fn st3_starter_deck() -> Vec<String> {
+    st3_fixture().decklist()
 }
 
 fn full_card_data() -> HashMap<String, CardData> {
@@ -200,15 +219,14 @@ fn tested_card_metadata_covers_allowlist_with_display_fields() {
 
 #[test]
 fn st3_starter_deck_fixture_has_canonical_counts() {
-    let fixture = starter_decks_fixture();
-    let st3 = fixture
-        .starter_decks
-        .get("ST-3")
-        .expect("ST-3 fixture exists");
-    assert_eq!(st3.id, "ST-3");
+    let st3 = st3_fixture();
+    assert_eq!(st3.id, "starter_st3_heavens_yellow");
     assert_eq!(st3.name, "Starter Deck Heaven's Yellow");
+    assert_eq!(st3.egg_deck.len(), 4);
+    assert_eq!(st3.main_deck.len(), 50);
 
-    let counts = summarize_deck(&st3.decklist);
+    let decklist = st3.decklist();
+    let counts = summarize_deck(&decklist);
     let expected = HashMap::from([
         ("ST3-01".to_string(), 4_u32),
         ("ST3-02".to_string(), 4),
@@ -228,11 +246,11 @@ fn st3_starter_deck_fixture_has_canonical_counts() {
         ("ST3-16".to_string(), 2),
     ]);
 
-    assert_eq!(st3.decklist.len(), 54);
+    assert_eq!(decklist.len(), 54);
     assert_eq!(counts, expected);
-    assert!(out_of_set_cards(&st3.decklist).is_empty());
+    assert!(out_of_set_cards(&decklist).is_empty());
 
-    let validation = validate_deck(&st3.decklist);
+    let validation = validate_deck(&decklist);
     assert!(
         validation.is_valid,
         "ST-3 starter deck should validate cleanly: {:?}",
@@ -256,15 +274,7 @@ fn st3_starter_deck_cards_are_registered_as_implemented() {
 fn st3_starter_deck_initializes_headless_runner() {
     let deck = st3_starter_deck();
     let card_data = full_card_data();
-    let runner = HeadlessRunner::new(
-        deck.clone(),
-        deck,
-        &card_data,
-        false,
-        false,
-        false,
-        Some(3),
-    );
+    let runner = HeadlessRunner::new(deck.clone(), deck, &card_data, false, false, false, Some(3));
 
     assert!(
         runner.is_ok(),
@@ -707,7 +717,11 @@ fn card_legality_reports_banned_card() {
     let leg = card_legality("BT2-090", "standard").unwrap(); // Matt Ishida, banned.
     assert!(!leg.legal);
     assert_eq!(leg.max_copies, 0);
-    assert!(leg.reason.unwrap_or_default().to_lowercase().contains("banned"));
+    assert!(leg
+        .reason
+        .unwrap_or_default()
+        .to_lowercase()
+        .contains("banned"));
 }
 
 #[test]

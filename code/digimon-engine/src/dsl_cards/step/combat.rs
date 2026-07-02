@@ -269,9 +269,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
                                 controller,
                                 override_pin,
                             },
-                            select_kind: crate::resume::ResumeSelectKind::AttackTarget {
-                                attacker,
-                            },
+                            select_kind: crate::resume::ResumeSelectKind::AttackTarget { attacker },
                             bind_as: None,
                             inner_tail: std::sync::Arc::new(Vec::new()),
                             outer_conts: Vec::new(),

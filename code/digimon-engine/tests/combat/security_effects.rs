@@ -168,7 +168,11 @@ fn test_022_gains_memory_from_security() {
         memory_before - 3,
         "SecuritySkill memory gain must apply to the defender's side of the seesaw"
     );
-    assert_eq!(r.turn_player(), 0, "memory stayed on P0's side — no turn end");
+    assert_eq!(
+        r.turn_player(),
+        0,
+        "memory stayed on P0's side — no turn end"
+    );
     assert_eq!(r.trash_size(1), 1);
 }
 

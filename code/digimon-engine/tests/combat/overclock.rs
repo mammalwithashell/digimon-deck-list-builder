@@ -248,6 +248,74 @@ fn full_flow_sacrifice_and_attack_resolves_on_security() {
 }
 
 #[test]
+fn overclock_sacrifice_prompt_clones_faithfully() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("OC", 7000))
+        .add_card(make_digimon("SAC", 3000))
+        .add_card(make_digimon("SEC_DIGI", 2000))
+        .security(1, &["SEC_DIGI"])
+        .start();
+
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+    let oc = r.place_on_field(tp, "OC", Some(0));
+    let sac = r.place_on_field(tp, "SAC", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(oc, Keyword::Overclock, Expiry::EndOfTurn, tp);
+    r.game.end_turn();
+
+    let own_before = r.game.player(tp).battle_area.len();
+    let sec_before = r.game.player(opp).security.len();
+    r.game.activate_overclock(0).unwrap();
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "Overclock sacrifice prompt must park a data frame for clone-faithful prompts"
+    );
+
+    let action = encode_attack(0, sac.index as u16);
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(tp, action)
+        .expect("clone pays Overclock sacrifice");
+
+    assert!(clone.pending_attack.is_none());
+    assert_eq!(
+        clone.player(tp).battle_area.len(),
+        own_before - 1,
+        "clone should delete the sacrifice"
+    );
+    assert_eq!(
+        clone.player(opp).security.len(),
+        sec_before - 1,
+        "clone should run the Overclock attack"
+    );
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original at the Overclock prompt"
+    );
+    assert_eq!(
+        r.game.player(tp).battle_area.len(),
+        own_before,
+        "resolving the clone must not delete the original sacrifice"
+    );
+
+    r.game
+        .resolve_selection(tp, action)
+        .expect("original pays Overclock sacrifice");
+    assert_eq!(
+        r.game.player(tp).battle_area.len(),
+        clone.player(tp).battle_area.len(),
+        "original and clone delete the same sacrifice"
+    );
+    assert_eq!(
+        r.game.player(opp).security.len(),
+        clone.player(opp).security.len(),
+        "original and clone replay the Overclock attack identically"
+    );
+}
+
+#[test]
 fn overclock_sacrifice_deletion_reports_overclock_cause() {
     let cause = Arc::new(Mutex::new(None));
     let mut r = DebugRunner::builder()

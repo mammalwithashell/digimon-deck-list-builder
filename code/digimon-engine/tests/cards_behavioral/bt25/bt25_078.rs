@@ -79,8 +79,7 @@ fn bt25_078_shared_clause_is_when_moving_and_on_play_optional_opt() {
         .iter()
         .find_map(|c| match c {
             CompiledClause::Triggered(t)
-                if t.scope == CompiledScope::FaceUp
-                    && t.when.contains(&CompiledTiming::OnPlay) =>
+                if t.scope == CompiledScope::FaceUp && t.when.contains(&CompiledTiming::OnPlay) =>
             {
                 Some(t)
             }
@@ -114,14 +113,19 @@ fn bt25_078_has_both_route_branches() {
         .iter()
         .any(|s| matches!(s, CompiledStep::SelectEffectChoice { .. }));
     assert!(has_reveal, "must reveal top 3");
-    assert!(has_effect_choice, "must surface the hand-vs-source branch choice");
+    assert!(
+        has_effect_choice,
+        "must surface the hand-vs-source branch choice"
+    );
 
     // Recurse into if-branches to find the two choose_from_reveal destinations.
     fn collect_choose<'a>(steps: &'a [CompiledStep], out: &mut Vec<&'a CompiledRevealDestination>) {
         for s in steps {
             match s {
                 CompiledStep::ChooseFromReveal { destination, .. } => out.push(destination),
-                CompiledStep::If { then, else_branch, .. } => {
+                CompiledStep::If {
+                    then, else_branch, ..
+                } => {
                     collect_choose(then, out);
                     collect_choose(else_branch, out);
                 }
@@ -227,7 +231,9 @@ fn bt25_078_add_to_hand_branch_moves_text_match_to_hand() {
         .expect("choose add-to-hand branch");
 
     // Then the reveal pick (TM-TEXT is the only text match).
-    runner.auto_resolve().expect("reveal pick + remainder resolve");
+    runner
+        .auto_resolve()
+        .expect("reveal pick + remainder resolve");
 
     let hand_ids: Vec<&str> = runner.game.players[0]
         .hand
@@ -301,7 +307,9 @@ fn bt25_078_place_branch_tucks_trait_card_under_self() {
         .execute_action(0, place_action)
         .expect("choose place-as-source branch");
 
-    runner.auto_resolve().expect("reveal pick + remainder resolve");
+    runner
+        .auto_resolve()
+        .expect("reveal pick + remainder resolve");
 
     let perm = runner
         .game
@@ -335,7 +343,10 @@ fn bt25_078_place_branch_tucks_trait_card_under_self() {
         .iter()
         .map(|c| c.card_id(&runner.game.card_data))
         .collect();
-    assert!(!hand_ids.contains(&"TM-TRAIT"), "placed card is not in hand");
+    assert!(
+        !hand_ids.contains(&"TM-TRAIT"),
+        "placed card is not in hand"
+    );
 }
 
 // ── Section 2: Optional — decline the whole effect ─────────────────────────
@@ -367,8 +378,10 @@ fn bt25_078_effect_is_optional_decline_does_nothing() {
         .expect("compiled")
         .effects
         .iter()
-        .any(|c| matches!(c, CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::OnPlay) && t.optional));
+        .any(|c| {
+            matches!(c, CompiledClause::Triggered(t)
+            if t.when.contains(&CompiledTiming::OnPlay) && t.optional)
+        });
     assert!(clause_optional, "shared clause is optional");
 
     // Drive the process; at the first prompt (effect choice), the optional

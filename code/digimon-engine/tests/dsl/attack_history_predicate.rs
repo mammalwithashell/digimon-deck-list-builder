@@ -96,9 +96,10 @@ effects:
 
     let carrier = runner.place_stack(0, &["TEST-ATTACK-HISTORY-RUNTIME", "TARGET-HISTORY"]);
     let hand_before = runner.hand_size(0);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::EndOfOpponentsTurn, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfOpponentsTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
     assert_eq!(
         runner.hand_size(0),
@@ -112,9 +113,10 @@ effects:
     let _ = runner.attack_digimon(attacker, defender, false);
     runner.auto_resolve().expect("attack resolves");
     let hand_before = runner.hand_size(0);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::EndOfOpponentsTurn, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfOpponentsTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -164,18 +166,20 @@ effects:
     let _ = runner.attack_digimon(attacker, carrier, false);
     runner.auto_resolve().expect("attack resolves");
     let hand_before = runner.hand_size(0);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::EndOfOpponentsTurn, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfOpponentsTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
     assert_eq!(runner.hand_size(0), hand_before + 1);
 
     runner.end_turn(); // finish player 1 turn -> player 0
     runner.end_turn(); // finish player 0 turn -> player 1; player 1 attack history resets
     let hand_after_reset = runner.hand_size(0);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::EndOfOpponentsTurn, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfOpponentsTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
     assert_eq!(
         runner.hand_size(0),

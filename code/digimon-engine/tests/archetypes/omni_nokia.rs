@@ -82,9 +82,10 @@ fn drive_first_valid(runner: &mut DebugRunner, max_steps: usize) {
 /// without firing the trigger, so we enqueue it explicitly to model the
 /// digivolve).
 fn fire_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -399,7 +400,10 @@ fn combo2_delay_does_not_fire_for_opponents_lv6_greymon() {
         .battle_area
         .iter()
         .all(|p| p.top_card().card_id(&runner.game.card_data) != "BT22-015");
-    assert!(no_omnimon, "no Omnimon may be off-stacked for an opponent's leave");
+    assert!(
+        no_omnimon,
+        "no Omnimon may be off-stacked for an opponent's leave"
+    );
 }
 
 /// Unhappy path B — an OWN Lv6 with a non-Greymon/Garurumon name leaving must
@@ -518,17 +522,16 @@ fn combo3_board(with_greymon: bool, with_garurumon: bool) -> DebugRunner {
 /// outer accept + the rookie pick + the Tai & Matt activation.
 fn nokia_free_play_agumon(runner: &mut DebugRunner) {
     // Fire Nokia's free-play clause directly (its OnPlay/StartOfMain body).
-    let nokia = runner
-        .game
-        .players[0]
+    let nokia = runner.game.players[0]
         .battle_area
         .iter()
         .position(|p| p.top_card().card_id(&runner.game.card_data) == "BT22-084")
         .map(|i| runner.perm_handle(0, i))
         .expect("Nokia on field");
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::StartOfYourMainPhase, TriggerSource::Permanent(nokia));
+    runner.game.enqueue_triggered(
+        EffectTiming::StartOfYourMainPhase,
+        TriggerSource::Permanent(nokia),
+    );
     runner.game.drain_effect_queue();
     drive_first_valid(runner, 20);
 }
@@ -549,7 +552,10 @@ fn combo3_nokia_freeplay_taimatt_zero_memory_without_named_digimon() {
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT22-008");
-    assert!(agumon_on_field, "BT22-008 Agumon must be free-played onto the field");
+    assert!(
+        agumon_on_field,
+        "BT22-008 Agumon must be free-played onto the field"
+    );
     assert_eq!(
         after.field[0],
         before.field[0] + 1,
@@ -601,9 +607,7 @@ fn combo3_nokia_freeplay_taimatt_plus_one_with_greymon_name() {
 fn combo3_taimatt_plus_two_with_both_names_on_own_digimon_play() {
     let mut runner = combo3_board(true, true);
     // 2 own Digimon present → Nokia's free-play is gated off (count_lte: 1).
-    let tm = runner
-        .game
-        .players[0]
+    let tm = runner.game.players[0]
         .battle_area
         .iter()
         .position(|p| p.top_card().card_id(&runner.game.card_data) == "BT17-081")
@@ -618,7 +622,9 @@ fn combo3_taimatt_plus_two_with_both_names_on_own_digimon_play() {
         .iter()
         .position(|c| c.card_id(&runner.game.card_data) == "BT22-008")
         .expect("BT22-008 Agumon in hand");
-    runner.play(0, agu_idx).expect("BT22-008 Agumon plays from hand");
+    runner
+        .play(0, agu_idx)
+        .expect("BT22-008 Agumon plays from hand");
     drive_first_valid(&mut runner, 20);
 
     // Tai & Matt suspended (the activation cost was paid).

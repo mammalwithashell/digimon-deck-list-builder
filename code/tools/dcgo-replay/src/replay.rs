@@ -4,7 +4,9 @@
 //! Parity is defined as:
 //!   1. The action stream is **legality-consistent**: every recorded
 //!      `action_id` is set in the engine's action mask at the moment the
-//!      engine expects that actor to decide.
+//!      engine expects that actor to decide, except `CONCEDE_GAME`, which
+//!      remains a decoder-accepted surrender primitive even though RL masks
+//!      hide it from learnable policy actions.
 //!   2. The actor stream is **player-consistent**: the recording's `actor`
 //!      field matches the engine's `current_decision_player()` at every step.
 //!   3. The terminal state is **winner-consistent**: after consuming every
@@ -141,7 +143,8 @@ pub struct WinnerMismatch {
 /// `Game::new`; opaque PvP recordings build via `Game::new_with_opaque_opponent`
 /// with a `RevealQueue` from the reveal stream. The session runs under the
 /// adapter's default `CheckThenApply` policy, so a recorded action the engine
-/// masks out pauses and records a divergence, which this driver maps back to
+/// masks out pauses and records a divergence, except the decoder-supported
+/// `CONCEDE_GAME` surrender primitive. This driver maps divergences back to
 /// the batch [`ReplayOutcome`] taxonomy.
 pub fn replay_recording(
     recording: &RecordingV1,

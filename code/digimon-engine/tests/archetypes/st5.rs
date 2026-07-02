@@ -34,9 +34,10 @@ use super::support::snapshot;
 /// `place_stack` builds the stack without firing the trigger, so we fire it
 /// explicitly to model the digivolve, mirroring `rocks.rs` / `st1.rs`).
 fn fire_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -341,10 +342,16 @@ fn machinedramon_grants_reboot_to_chosen_wall_members_only() {
     // own-field selection so the UI's field-click router can map board clicks.
     assert_eq!(runner.pending_kind(), Some(SelectionKind::OwnField));
     let first = runner.pending_selection_view().unwrap().valid_action_ids[1];
-    runner.execute_action(0, first).expect("pick first Reboot target");
+    runner
+        .execute_action(0, first)
+        .expect("pick first Reboot target");
     let second = runner.pending_selection_view().unwrap().valid_action_ids[1];
-    runner.execute_action(0, second).expect("pick second Reboot target");
-    runner.auto_resolve().expect("finish Machinedramon Reboot grant");
+    runner
+        .execute_action(0, second)
+        .expect("pick second Reboot target");
+    runner
+        .auto_resolve()
+        .expect("finish Machinedramon Reboot grant");
 
     // Two of the chosen wall members hold ＜Reboot＞ and one does not. The exact
     // pair the engine ordered the action ids over is deterministic, so we assert

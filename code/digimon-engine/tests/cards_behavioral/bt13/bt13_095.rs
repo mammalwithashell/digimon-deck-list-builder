@@ -25,9 +25,7 @@
 //! - Mandatory opponent Digimon -3000 DP selection
 //! - Conditional memory gain gated on an own [Agumon]/[Greymon] Digimon
 
-use digimon_dsl::compiled::{
-    CompiledClause, CompiledPredicate, CompiledScope, CompiledTiming,
-};
+use digimon_dsl::compiled::{CompiledClause, CompiledPredicate, CompiledScope, CompiledTiming};
 use digimon_engine::action::space::encode_attack;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardColor, CardKind, ModifierType};
@@ -170,7 +168,10 @@ fn bt13_095_self_suspend_prompts_for_opponent_digimon_debuff() {
     expected.sort();
     let mut got = view.valid_action_ids.clone();
     got.sort();
-    assert_eq!(got, expected, "both opponent Digimon are legal -3000 targets");
+    assert_eq!(
+        got, expected,
+        "both opponent Digimon are legal -3000 targets"
+    );
 }
 
 #[test]

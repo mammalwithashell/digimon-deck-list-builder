@@ -18,7 +18,9 @@
 
 #![allow(unused_imports)]
 
-use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledColor, CompiledStep, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledCardKind, CompiledClause, CompiledColor, CompiledStep, CompiledTiming,
+};
 use digimon_engine::debug_runner::DebugRunner;
 
 const CARD_ID: &str = "BT16-102";
@@ -36,8 +38,16 @@ fn bt16_102_is_tricolor_lv6_with_four_clauses() {
     assert_eq!(card.kind, CompiledCardKind::Digimon);
     assert_eq!(card.level, Some(6));
     assert_eq!(card.cost, Some(12));
-    for c in [CompiledColor::Yellow, CompiledColor::Blue, CompiledColor::White] {
-        assert!(card.color.contains(&c), "BT16-102 is Yellow/Blue/White; got {:?}", card.color);
+    for c in [
+        CompiledColor::Yellow,
+        CompiledColor::Blue,
+        CompiledColor::White,
+    ] {
+        assert!(
+            card.color.contains(&c),
+            "BT16-102 is Yellow/Blue/White; got {:?}",
+            card.color
+        );
     }
     assert_eq!(
         card.effects.len(),

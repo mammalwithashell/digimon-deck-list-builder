@@ -19,6 +19,13 @@ use crate::game::{
 use crate::permanent::PermanentHandle;
 use crate::selection::{AttackTarget, PendingSelection, SelectionKind};
 
+#[derive(Debug, Clone)]
+pub struct OverclockSelectionState {
+    pub player: PlayerId,
+    pub source_card: CardHandle,
+    pub opponent: PlayerId,
+}
+
 impl Game {
     /// Set a MAIN turn phase and emit a [`crate::events::GameEvent::PhaseChange`].
     /// Used ONLY by the turn machine for the Unsuspend/Draw/Breeding/Main/EndTurn
@@ -768,8 +775,54 @@ impl Game {
                 game.declined_overclock_this_eot.insert(source_card);
             })),
         });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::OverclockSelection(
+                OverclockSelectionState {
+                    player,
+                    source_card,
+                    opponent,
+                },
+            )],
+        });
 
         Ok(())
+    }
+
+    pub(crate) fn run_overclock_selection_step(
+        &mut self,
+        state: OverclockSelectionState,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
+
+        if is_pass {
+            self.declined_overclock_this_eot.insert(state.source_card);
+            return;
+        }
+
+        let offset = action_id.saturating_sub(ATTACK_START);
+        let sacrifice_index = (offset % TARGETS_PER_ATTACKER) as u8;
+        let sacrifice_handle = PermanentHandle {
+            player: state.player,
+            index: sacrifice_index,
+        };
+
+        let previous_cause = self.current_deletion_event_cause_override;
+        self.current_deletion_event_cause_override =
+            Some(crate::trigger_context::EventCause::Overclock);
+        self.delete_permanent_with_cause(
+            sacrifice_handle,
+            crate::replacement::ReplacementCause::Cost,
+        );
+        self.current_deletion_event_cause_override = previous_cause;
+
+        if self.pending_selection.is_some() {
+            self.pending_overclock_attack = Some((state.player, state.source_card, state.opponent));
+            return;
+        }
+
+        self.resume_overclock_attack(state.player, state.source_card, state.opponent);
     }
 
     pub(crate) fn is_overclock_declined_for_action_mask(&self, handle: PermanentHandle) -> bool {

@@ -17,10 +17,10 @@
 use digimon_engine::action::build_action_mask;
 use digimon_engine::action::space::{encode_attack, ACTION_SPACE_SIZE, CONCEDE_GAME, PASS};
 use digimon_engine::card_registry::CardRegistry;
-use digimon_engine::tensor_v1::build_tensor_standard_compact_v1;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::GamePhase;
 use digimon_engine::selection::{SelectionError, SelectionKind};
+use digimon_engine::tensor_v1::build_tensor_standard_compact_v1;
 
 fn runner_with_opponent_field(opp_count: usize) -> DebugRunner {
     let mut r = DebugRunner::builder()
@@ -229,4 +229,56 @@ fn tensor_reports_valid_count_and_selecting_player() {
         expected
     );
     assert_eq!(tensor[OFF_SELECTION + 2], 0.0, "selecting_player = P0");
+}
+
+/// make-engine-cloneable — TEST-010 is the clone-safety worked example for
+/// `select_opponent_permanent`: its continuation is parked as a data
+/// `ResumeFrame`, so a `Game` cloned at the prompt resolves faithfully
+/// through the resumable VM (and the original is untouched).
+#[test]
+fn test_010_prompt_clones_faithfully() {
+    let mut r = runner_with_opponent_field(2);
+    r.play(0, 0);
+
+    assert!(
+        r.game.pending_selection.is_some(),
+        "TEST-010 installs a selection"
+    );
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "TEST-010's prompt must be resume-driven (clone-safe)"
+    );
+
+    // Fork at the prompt; resolve the CLONE only.
+    let mut clone = r.game.clone();
+    let target = encode_attack(0, 0);
+    clone
+        .resolve_selection(0, target)
+        .expect("clone's pick resolves via the data path");
+    assert_eq!(
+        clone.players[1].battle_area.len(),
+        1,
+        "clone: the chosen opponent Digimon was deleted"
+    );
+
+    // Independence: the original still sits at the prompt.
+    assert!(
+        r.game.pending_selection.is_some(),
+        "original's prompt survives resolving the clone"
+    );
+    assert_eq!(
+        r.game.players[1].battle_area.len(),
+        2,
+        "original board untouched by the clone's resolution"
+    );
+
+    // Replay: the original resolves identically with the same input.
+    r.game
+        .resolve_selection(0, target)
+        .expect("original resolves");
+    assert_eq!(
+        r.game.players[1].battle_area.len(),
+        1,
+        "original replays identically to the clone"
+    );
 }

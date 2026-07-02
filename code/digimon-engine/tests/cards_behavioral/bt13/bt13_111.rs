@@ -205,11 +205,13 @@ fn bt13_111_has_rush_grant_keyword() {
         .start();
 
     let compiled = runner.compiled_card("BT13-111").expect("compiled");
-    let has_rush = compiled.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
-            if keyword == "Rush"
-    ));
+    let has_rush = compiled.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
+                if keyword == "Rush"
+        )
+    });
     assert!(has_rush, "BT13-111 must grant Rush");
 }
 
@@ -493,19 +495,15 @@ fn bt13_111_cost_reduction_does_not_apply_on_digivolve_path() {
     }
 
     let mem_before = runner.memory();
-    let hand_idx = runner
-        .game
-        .players[0]
+    let hand_idx = runner.game.players[0]
         .hand
         .iter()
         .position(|c| c.card_id(&runner.game.card_data) == "BT13-111")
         .expect("BT13-111 in hand");
-    let ok = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        base.index as usize,
-        PlaySource::ByDigivolve,
-    );
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
     assert!(ok, "digivolve_from_hand must succeed");
     let _ = runner.auto_resolve();
     let mem_after = runner.memory();
@@ -761,9 +759,12 @@ fn bt13_111_on_play_only_targets_opponent_digimon() {
 
     let _ = runner.auto_resolve();
     assert!(
-        runner.game.player(0).battle_area.iter().any(|p| {
-            p.top_card().card_id(&runner.game.card_data) == "OWN-SMALL"
-        }),
+        runner
+            .game
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| { p.top_card().card_id(&runner.game.card_data) == "OWN-SMALL" }),
         "the controller's own 3000 DP Digimon must survive"
     );
 }

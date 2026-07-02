@@ -137,7 +137,9 @@ fn bt22_041_cost_reduced_by_6_when_total_security_6_or_fewer() {
         .memory(6)
         .start();
 
-    runner.play(0, 0).expect("play Kentaurosmon at reduced cost");
+    runner
+        .play(0, 0)
+        .expect("play Kentaurosmon at reduced cost");
 
     assert_eq!(runner.battle_area_size(0), 1, "Kentaurosmon is in play");
     assert_eq!(

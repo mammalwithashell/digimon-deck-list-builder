@@ -33,12 +33,14 @@ fn bt16_077_compiles_with_dna_path_and_dual_partition() {
     let inherited_partitions = card
         .effects
         .iter()
-        .filter(|c| matches!(
-            c,
-            CompiledClause::Declarative(
-                digimon_dsl::compiled::CompiledDeclarativeClause::Partition { scope, .. }
-            ) if *scope == CompiledScope::Inherited
-        ))
+        .filter(|c| {
+            matches!(
+                c,
+                CompiledClause::Declarative(
+                    digimon_dsl::compiled::CompiledDeclarativeClause::Partition { scope, .. }
+                ) if *scope == CompiledScope::Inherited
+            )
+        })
         .count();
     assert_eq!(inherited_partitions, 1, "one inherited <Partition> clause");
 }
@@ -52,5 +54,8 @@ fn bt16_077_grants_raid_and_partition_on_field() {
     let h = r.place_on_field(0, "BT16-077", None);
     r.game.tick_declarative_effects();
     assert!(r.game.has_keyword(h, Keyword::Raid), "<Raid> granted");
-    assert!(r.game.has_keyword(h, Keyword::Partition), "<Partition> granted");
+    assert!(
+        r.game.has_keyword(h, Keyword::Partition),
+        "<Partition> granted"
+    );
 }

@@ -196,7 +196,10 @@ fn bt21_101_registers_ult_alt_digivolve() {
         matches!(p.kind, CompiledAltPathKind::Digivolve)
             && matches!(p.cost, Some(CompiledCost::Literal(5)))
     });
-    assert!(has, "BT21-101 must register a cost-5 alt-digivolve (Ult. host)");
+    assert!(
+        has,
+        "BT21-101 must register a cost-5 alt-digivolve (Ult. host)"
+    );
 }
 
 /// App Fusion (Globemon & Charismon) at cost 0 must be registered.
@@ -239,7 +242,10 @@ fn bt21_101_wd_wa_clause_shape() {
         "exactly 1 triggered clause must cover WhenDigivolving+WhenAttacking"
     );
     let clause = wd_wa[0];
-    assert!(clause.optional, "WD/WA clause must be optional (\"you may\")");
+    assert!(
+        clause.optional,
+        "WD/WA clause must be optional (\"you may\")"
+    );
     assert!(
         !clause.once_per_turn,
         "WD/WA clause must NOT be once_per_turn (no [Once Per Turn] tag)"
@@ -261,11 +267,7 @@ fn bt21_101_on_any_link_clause_shape() {
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::OnAnyLink) =>
-            {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnAnyLink) => Some(t),
             _ => None,
         })
         .collect();
@@ -364,7 +366,11 @@ fn bt21_101_wd_link_decline_does_nothing() {
     let _ = r.auto_resolve();
 
     // Hand unchanged, no links.
-    assert_eq!(r.hand_size(0), hand_before, "declining must leave hand unchanged");
+    assert_eq!(
+        r.hand_size(0),
+        hand_before,
+        "declining must leave hand unchanged"
+    );
     let all_links: usize = r.game.players[0]
         .battle_area
         .iter()
@@ -406,10 +412,8 @@ fn bt21_101_wa_link_from_hand_to_chosen_host() {
     add_to_hand(&mut r, 0, "APPMON-HAND");
 
     // Fire WhenAttacking trigger for Gaiamon.
-    r.game.enqueue_triggered(
-        EffectTiming::WhenAttacking,
-        TriggerSource::Permanent(gaia),
-    );
+    r.game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(gaia));
     r.game.drain_effect_queue();
 
     assert!(
@@ -432,7 +436,10 @@ fn bt21_101_wa_link_from_hand_to_chosen_host() {
         .iter()
         .map(|p| p.linked_cards.len())
         .sum();
-    assert_eq!(total_links, 1, "[WA] must have attached exactly 1 link card");
+    assert_eq!(
+        total_links, 1,
+        "[WA] must have attached exactly 1 link card"
+    );
 }
 
 // ─── Section 4: [WD] link from digivolution sources ──────────────────────────

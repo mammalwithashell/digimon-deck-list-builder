@@ -47,6 +47,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import List, Optional
@@ -59,6 +60,7 @@ if str(_CODE) not in sys.path:
 from digimon_gym.agents.specialist_registry import (  # noqa: E402
     Specialist,
     SpecialistRegistry,
+    meta_algorithm,
     slugify_deck,
 )
 
@@ -91,6 +93,11 @@ class LeagueSpec:
     lr: float = 1e-4
     tensor_profile: str = "standard_lite_deck_v2"
     reward_profile: str = "starter1_6_flat"
+    # Learner architecture: "mlp" (MaskablePPO) or "lstm" (MaskableRecurrentPPO).
+    # An LSTM league seeds from the MLP generalist, so round 1 transfers ONLY the
+    # shared CardEmbeddingExtractor (--init-extractor-from); later rounds continue
+    # the deck's own LSTM checkpoint (--init-from). See build_specialist_argv.
+    algorithm: str = "mlp"
     match_format: str = "bo3"
     layout_hash: str = DEFAULT_LAYOUT_HASH
     keep_last_per_deck: int = 2  # generous retention (avoid the keep_last=3 peak-loss lesson)
@@ -100,6 +107,18 @@ class LeagueSpec:
     max_parallel: int = 0  # parallel topology: max specialists running at once
                            # (0 = all decks at once). On a 16-core box use 2 with
                            # n_envs=8 each (the loop is update-bound past ~8 cores).
+    # Seconds to wait between launching concurrent specialists (parallel topology).
+    # Two specialists building their SubprocVecEnv worker pools at the same instant
+    # collide (one dies with BrokenPipe/ConnectionReset). The primary defense is
+    # the ADAPTIVE ready-gate: launch the next specialist only after the previous
+    # one signals its pool is spawned, waiting at most parallel_ready_timeout sec.
+    # parallel_stagger is a legacy FIXED floor on top (0 = rely on the ready-gate).
+    parallel_stagger: int = 0
+    parallel_ready_timeout: int = 240
+    # How many times to re-run a failed specialist SEQUENTIALLY after the
+    # concurrent wave drains (a backstop if the ready-gate didn't fully separate a
+    # spawn — a lone sequential retry can't collide with anything).
+    parallel_retries: int = 1
     n_envs: int = 1
     vec_env_backend: str = "subproc"
     eval_freq: int = 50_000
@@ -311,14 +330,22 @@ def build_specialist_argv(
 ) -> List[str]:
     """Argv for one specialist's round: deck-scoped, warm-started, vs the frozen
     league pool. ``--opponent league`` pins the agent to ``deck`` and couples each
-    opponent's (policy, deck) from the manifest."""
+    opponent's (policy, deck) from the manifest.
+
+    Warm-start flag is architecture-aware: when the source's architecture differs
+    from this league's (e.g. an LSTM round 1 seeding from the MLP generalist) only
+    the shared CardEmbeddingExtractor can transfer, so we pass
+    ``--init-extractor-from`` (mutually exclusive with ``--init-from`` in
+    pilot_training); same-architecture warm-starts use ``--init-from`` as before."""
     name = f"{spec.slug(deck)}_r{rnd}"
+    cross_arch = meta_algorithm(init_from) != spec.algorithm.lower()
+    init_flag = "--init-extractor-from" if cross_arch else "--init-from"
     argv = [
         spec.python, "-m", PILOT_MODULE,
         "--opponent", "league",
         "--league-pool-manifest", str(pool_manifest),
         "--archetypes", deck,                      # pins agent deck (single archetype)
-        "--init-from", init_from,
+        init_flag, init_from,
         "--timesteps", str(spec.steps_per_round),
         "--lr", repr(spec.lr),
         "--match-format", spec.match_format,
@@ -338,6 +365,8 @@ def build_specialist_argv(
         "--set", f"n_epochs={spec.n_epochs}",
         "--lr-schedule", spec.lr_schedule,
     ]
+    if spec.algorithm.lower() == "lstm":
+        argv.append("--lstm")
     if spec.wandb:
         argv += [
             "--wandb",
@@ -361,31 +390,117 @@ def _run(argv: List[str], cwd: Path) -> None:
     subprocess.run(argv, cwd=str(cwd), env=env, check=True)
 
 
-def _run_parallel(argvs: List[List[str]], cwd: Path, max_parallel: int = 0) -> None:
+def _run_parallel(
+    argvs: List[List[str]], cwd: Path, max_parallel: int = 0,
+    stagger_seconds: int = 0, retries: int = 0, ready_timeout: int = 240,
+) -> None:
     """Run specialist subprocesses with at most ``max_parallel`` concurrent
     (0 = all at once). Bounds oversubscription on a fixed-core box — e.g. 2 with
-    ``--n-envs 8`` saturates 16 cores without contention (update-bound past ~8)."""
+    ``--n-envs 8`` saturates 16 cores without contention (update-bound past ~8).
+
+    ADAPTIVE READY-GATE: two specialists building their ``SubprocVecEnv`` worker
+    pools at the same instant collide (one dies with BrokenPipe/ConnectionReset).
+    A fixed sleep can't fix this — spawn time is variable (model load + ONNX
+    opponent export + worker spawn). Instead each specialist writes a marker the
+    moment its pool is spawned (``DIGIMON_SPAWN_READY_FILE``), and we launch the
+    next only after the previous one's marker appears (or it exits, or
+    ``ready_timeout`` elapses). ``stagger_seconds`` is a legacy floor applied on
+    top. ``retries`` re-runs any failed specialist SEQUENTIALLY after the
+    concurrent wave drains — a lone run can't collide, so a leftover race
+    self-heals instead of aborting the round."""
     env = dict(os.environ)
     env["PYTHONPATH"] = str((cwd / "code").resolve()) + os.pathsep + env.get("PYTHONPATH", "")
     cap = max_parallel if (max_parallel and max_parallel > 0) else len(argvs)
+    # Tell each specialist how many run concurrently so it caps its PPO-update
+    # threads to cpu_count // cap (the learner does this itself via
+    # torch.set_num_threads in the per-phase callback — see pilot_training).
+    #
+    # IMPORTANT: do NOT pin OMP_NUM_THREADS=1 in this subprocess env. That env is
+    # present when the specialist imports torch, which pins the LEARNER's update
+    # matmul to 1 thread (torch.set_num_threads can't grow it back) -> ~5x slower
+    # (measured: solo collapses 188 -> 37 fps). The per-WORKER thread storm is
+    # instead capped inside make_vec_env, which sets OMP=1 only AFTER the learner
+    # has imported torch and just before spawning workers, so only the spawned
+    # workers inherit the cap. Here we pass only the concurrency hint.
+    env["DIGIMON_LEAGUE_CONCURRENCY"] = str(cap)
     pending = list(argvs)
     running: List[subprocess.Popen] = []
-    failed: List = []
+    failed: List[List[str]] = []
+    _launch_seq = [0]
+    _markers: List[Path] = []   # ready-gate flag files to clean up when done
+
+    def _wait_until_spawned(proc: subprocess.Popen, ready_file: Path) -> None:
+        """Block until ``proc`` has spawned its worker pool (marker written), has
+        exited, or ``ready_timeout`` elapses — so the next launch can't overlap
+        this one's spawn burst."""
+        waited = 0
+        while waited < ready_timeout:
+            if ready_file.exists():
+                print(f"  [ready-gate] specialist spawned after ~{waited}s "
+                      f"— launching next", flush=True)
+                return
+            if proc.poll() is not None:   # crashed/exited before signaling
+                print("  [ready-gate] specialist exited before ready — proceeding", flush=True)
+                return
+            time.sleep(3)
+            waited += 3
+        print(f"  [ready-gate] timeout {ready_timeout}s waiting for spawn marker "
+              f"— proceeding anyway", flush=True)
 
     def _fill() -> None:
         while pending and len(running) < cap:
+            idx = _launch_seq[0]; _launch_seq[0] += 1
+            ready_file = cwd / f".spawn_ready_{idx}.flag"
+            _markers.append(ready_file)
+            try:
+                ready_file.unlink()
+            except FileNotFoundError:
+                pass
+            penv = dict(env)
+            penv["DIGIMON_SPAWN_READY_FILE"] = str(ready_file)
             argv = pending.pop(0)
             print("\n$ (bg) " + " ".join(argv), flush=True)
-            running.append(subprocess.Popen(argv, cwd=str(cwd), env=env))
+            proc = subprocess.Popen(argv, cwd=str(cwd), env=penv)
+            running.append(proc)
+            # Gate the NEXT launch on this one finishing its spawn (adaptive), with
+            # an optional fixed floor on top.
+            if pending and len(running) < cap:
+                if stagger_seconds > 0:
+                    time.sleep(stagger_seconds)
+                _wait_until_spawned(proc, ready_file)
 
-    _fill()
-    while running:
-        proc = running.pop(0)          # wait on the oldest, then refill the slot
-        if proc.wait() != 0:
-            failed.append(proc.args)
+    try:
         _fill()
-    if failed:
-        raise RuntimeError(f"{len(failed)} specialist run(s) failed this round")
+        while running:
+            proc = running.pop(0)      # wait on the oldest, then refill the slot
+            if proc.wait() != 0:
+                failed.append(list(proc.args))
+            _fill()
+
+        # Sequential retry backstop: a failed specialist re-run alone cannot hit
+        # the concurrent-spawn race. Retry each up to ``retries`` times.
+        for attempt in range(1, retries + 1):
+            if not failed:
+                break
+            retry_batch, failed = failed, []
+            print(f"\n[retry {attempt}/{retries}] re-running {len(retry_batch)} "
+                  f"failed specialist(s) sequentially", flush=True)
+            for argv in retry_batch:
+                try:
+                    _run(argv, cwd)    # subprocess.run(check=True) — raises on failure
+                except subprocess.CalledProcessError:
+                    failed.append(argv)
+
+        if failed:
+            raise RuntimeError(f"{len(failed)} specialist run(s) failed this round")
+    finally:
+        # Remove the ready-gate marker files so repeated rounds/runs in the same
+        # cwd don't accumulate stale ``.spawn_ready_*.flag`` files.
+        for marker in _markers:
+            try:
+                marker.unlink()
+            except FileNotFoundError:
+                pass
 
 
 def run_round(spec: LeagueSpec, reg: SpecialistRegistry, rnd: int, cwd: Path,
@@ -415,7 +530,10 @@ def run_round(spec: LeagueSpec, reg: SpecialistRegistry, rnd: int, cwd: Path,
         return
 
     if spec.topology == "parallel":
-        _run_parallel(argvs, cwd, max_parallel=spec.max_parallel)
+        _run_parallel(argvs, cwd, max_parallel=spec.max_parallel,
+                      stagger_seconds=spec.parallel_stagger,
+                      retries=spec.parallel_retries,
+                      ready_timeout=spec.parallel_ready_timeout)
     else:
         for argv in argvs:
             _run(argv, cwd)
@@ -431,8 +549,13 @@ def _barrier(spec: LeagueSpec, reg: SpecialistRegistry, rnd: int,
     mirror head-to-head vs its prior checkpoint — a round that doesn't clear the
     bar is rejected (the prior stays current), so a regressing round can't poison
     the pool. Promotion uses the anchored frame only (never the in-run win rate)."""
+    # Trained specialists carry THIS league's architecture, not the generalist
+    # seed's — an LSTM league seeds from an MLP generalist, so the produced
+    # specialists are LSTM and must be tagged as such (the registry's algorithm
+    # drives how later rounds load them as opponents via make_agent_opponent_fn).
     meta = {**_generalist_meta(spec.generalist, spec),
-            "tensor_layout_hash": spec.layout_hash}
+            "tensor_layout_hash": spec.layout_hash,
+            "algorithm": spec.algorithm}
     gate = spec.promote_min_wr > 0.0
     prev = {deck: reg.get(deck) for deck in spec.decks}  # round-(r-1), pre-update
     load_candidate = policy_loader = None
@@ -481,6 +604,12 @@ def main() -> None:
     )
     p.add_argument("--generalist", required=True,
                    help="Warm-start seed (generalist final.zip).")
+    p.add_argument("--lstm", action="store_true",
+                   help="Train LSTM (MaskableRecurrentPPO) specialists instead of "
+                        "MLP. Round 1 transfers only the shared features extractor "
+                        "from the (MLP) generalist (--init-extractor-from); later "
+                        "rounds continue each deck's own LSTM checkpoint. Use "
+                        "--warmstart accumulate (the default).")
     p.add_argument("--decks", default=None,
                    help="Comma-separated archetype keys (default: the six starters).")
     p.add_argument("--rounds", type=int, default=3)
@@ -495,6 +624,17 @@ def main() -> None:
     p.add_argument("--max-parallel", type=int, default=0,
                    help="parallel topology: max specialists running at once "
                         "(0 = all). On a 16-core box use 2 with --n-envs 8.")
+    p.add_argument("--parallel-stagger", type=int, default=0,
+                   help="legacy FIXED seconds between concurrent specialist "
+                        "launches (a floor on top of the adaptive ready-gate). "
+                        "0 = rely on the ready-gate.")
+    p.add_argument("--parallel-ready-timeout", type=int, default=240,
+                   help="adaptive ready-gate: max seconds to wait for a specialist "
+                        "to signal its SubprocVecEnv is spawned before launching "
+                        "the next (avoids overlapping spawn bursts).")
+    p.add_argument("--parallel-retries", type=int, default=1,
+                   help="re-run a failed specialist sequentially this many times "
+                        "after the concurrent wave (backstop for a spawn race).")
     p.add_argument("--n-envs", type=int, default=1)
     p.add_argument("--vec-env-backend", default="subproc")
     p.add_argument("--tensor-profile", default="standard_lite_deck_v2")
@@ -570,10 +710,14 @@ def main() -> None:
         include_mirror=not args.no_mirror,
         topology=args.topology,
         max_parallel=args.max_parallel,
+        parallel_stagger=args.parallel_stagger,
+        parallel_ready_timeout=args.parallel_ready_timeout,
+        parallel_retries=args.parallel_retries,
         n_envs=args.n_envs,
         vec_env_backend=args.vec_env_backend,
         tensor_profile=args.tensor_profile,
         reward_profile=args.reward_profile,
+        algorithm="lstm" if args.lstm else "mlp",
         match_format=args.match_format,
         layout_hash=args.layout_hash,
         opponent_pool_mode=args.opponent_pool_mode,

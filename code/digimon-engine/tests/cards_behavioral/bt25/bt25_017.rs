@@ -176,7 +176,8 @@ fn bt25_017_has_on_play_and_your_turn_clauses() {
         .collect();
 
     let has_op = triggered.iter().any(|t| {
-        t.when.contains(&CompiledTiming::OnPlay) && t.when.contains(&CompiledTiming::WhenDigivolving)
+        t.when.contains(&CompiledTiming::OnPlay)
+            && t.when.contains(&CompiledTiming::WhenDigivolving)
     });
     let has_your_turn = triggered.iter().any(|t| {
         (t.when.contains(&CompiledTiming::OnEnterFieldAnyone)

@@ -1907,6 +1907,58 @@ fn trash_opponent_hand_to_count_installs_opponent_selection_when_hand_over_targe
     );
 }
 
+#[test]
+fn trash_opponent_hand_to_count_prompt_clones_faithfully() {
+    use digimon_engine::effect_context::EffectContext;
+    let mut r = DebugRunner::builder()
+        .add_card(plain_digimon("C1", "C1", 1))
+        .add_card(plain_digimon("C2", "C2", 1))
+        .add_card(plain_digimon("C3", "C3", 1))
+        .add_card(plain_digimon("C4", "C4", 1))
+        .add_card(plain_digimon("C5", "C5", 1))
+        .hand(1, &["C1", "C2", "C3", "C4", "C5"])
+        .start();
+
+    {
+        let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), None, /* acting */ 0);
+        assert!(ctx.trash_opponent_hand_to_count(/* opponent */ 1, /* target */ 2));
+    }
+
+    assert!(
+        r.game_mut().pending_selection_resume.is_some(),
+        "opponent hand-trash prompt must be resume-driven before cloning"
+    );
+    let actions = r
+        .game_mut()
+        .pending_selection
+        .as_ref()
+        .expect("multi-pick selection installed")
+        .valid_action_ids
+        .clone();
+
+    let mut cloned = r.game_mut().clone();
+    for action in actions.into_iter().take(3) {
+        cloned
+            .resolve_selection(1, action)
+            .expect("clone resolves hand-trash pick");
+    }
+
+    assert_eq!(
+        cloned.player(1).hand.len(),
+        2,
+        "clone: hand reduced to target"
+    );
+    assert_eq!(
+        cloned.player(1).trash.len(),
+        3,
+        "clone: selected hand cards were trashed"
+    );
+    assert!(
+        cloned.pending_selection.is_none(),
+        "clone: multi-pick completed"
+    );
+}
+
 // ─── trash_top_n_digivolution_cards_of_each ──────────────────────────────────
 
 #[test]

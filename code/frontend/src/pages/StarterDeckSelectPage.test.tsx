@@ -15,6 +15,8 @@ vi.mock('@/features/play/playApi', async () => {
   );
   return {
     AI_STARTER_RANDOM: 'random',
+    isAiStarterOpponent: (value: string) =>
+      value === 'random' || STARTER_DECKS.some((deck) => deck.id === value),
     listStarterDecks: async () => STARTER_DECKS,
     createAiStarterGame: (arg: unknown) => createAiStarterGame(arg),
   };

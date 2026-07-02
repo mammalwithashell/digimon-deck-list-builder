@@ -226,10 +226,7 @@ pub enum GameEvent {
     /// (i.e., the loser); the match-level winner is the opponent and
     /// will be carried by the immediately-following `GameOver` event
     /// with `reason = TerminalOutcomeReason::Concede`.
-    Concede {
-        seq: u64,
-        player: PlayerId,
-    },
+    Concede { seq: u64, player: PlayerId },
 
     /// A mandatory pending selection was discarded because no executable
     /// option remained. Emitted in two situations:

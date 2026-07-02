@@ -289,9 +289,7 @@ fn ad1_002_eoa_od_trash_hybrid_draws_two() {
 
     // Accept the optional trash by selecting the Hybrid card (first valid id),
     // then auto-resolve the remaining steps (draw + optional play decline).
-    let pending = runner
-        .pending_selection()
-        .expect("trash prompt installs");
+    let pending = runner.pending_selection().expect("trash prompt installs");
     let pick = *pending
         .valid_action_ids
         .iter()

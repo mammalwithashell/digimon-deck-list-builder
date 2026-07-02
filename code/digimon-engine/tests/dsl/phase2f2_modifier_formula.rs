@@ -138,8 +138,8 @@ fn add_modifier_filter_target_formula_evaluated_per_match() {
             delta: 1,
         }),
         expiry: "end_of_turn".into(),
-    synth_identity: None,
-    continuous: false,
+        synth_identity: None,
+        continuous: false,
     };
 
     {

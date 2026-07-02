@@ -743,7 +743,9 @@ fn ex8_022_inherited_when_attacking_mandatory_select_gives_security_attack_minus
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("choose the opponent Digimon");
-    runner.auto_resolve().expect("finish the Security A. -1 grant");
+    runner
+        .auto_resolve()
+        .expect("finish the Security A. -1 grant");
 
     assert_eq!(
         runner
@@ -787,7 +789,9 @@ fn ex8_022_security_attack_minus_1_zero_checks_and_expires_at_end_of_their_turn(
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("choose the opponent Digimon");
-    runner.auto_resolve().expect("finish the Security A. -1 grant");
+    runner
+        .auto_resolve()
+        .expect("finish the Security A. -1 grant");
     assert_eq!(
         runner
             .game

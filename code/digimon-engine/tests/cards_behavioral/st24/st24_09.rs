@@ -151,9 +151,7 @@ fn st24_09_suspends_opp_digimon_then_places_deck_top() {
     fire(&mut r, EffectTiming::OnPlay, carrier);
 
     // Prompt 1: suspend the opponent Digimon (or Tamer).
-    let v = r
-        .pending_selection_view()
-        .expect("suspend pick installs");
+    let v = r.pending_selection_view().expect("suspend pick installs");
     assert!(v.is_optional, "'you may suspend' ⇒ optional");
     r.execute_action(0, v.valid_action_ids[0]).unwrap();
 
@@ -180,7 +178,11 @@ fn st24_09_suspends_opp_digimon_then_places_deck_top() {
         r.game.players[0].battle_area[tamer.index as usize].card_sources[0].face_down,
         "the placed source is face-down"
     );
-    assert_eq!(r.deck_size(0), deck_before - 1, "deck-top consumed by the place");
+    assert_eq!(
+        r.deck_size(0),
+        deck_before - 1,
+        "deck-top consumed by the place"
+    );
 }
 
 /// A Tamer is a legal suspend target too ("Digimon or Tamers").
@@ -196,7 +198,11 @@ fn st24_09_can_suspend_opponent_tamer() {
     let v = r
         .pending_selection_view()
         .expect("suspend pick installs (an opponent Tamer is a legal target)");
-    assert_eq!(v.valid_action_ids.len(), 1, "the opponent Tamer is a legal suspend target");
+    assert_eq!(
+        v.valid_action_ids.len(),
+        1,
+        "the opponent Tamer is a legal suspend target"
+    );
     r.execute_action(0, v.valid_action_ids[0]).unwrap();
     let _ = r.auto_resolve();
 

@@ -72,10 +72,12 @@ fn bt25_053_grants_vortex_and_has_decode_replacement() {
         CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, scope, .. })
             if keyword.eq_ignore_ascii_case("Vortex") && *scope == CompiledScope::FaceUp
     ));
-    let decode = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { .. })
-    ));
+    let decode = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { .. })
+        )
+    });
     assert!(vortex, "own <Vortex>");
     assert!(decode, "Decode modeled as Replacement");
 }
@@ -106,7 +108,11 @@ fn bt25_053_has_inherited_security_removed_optional_clause() {
 /// guard blocks; no suspend prompt installs.
 #[test]
 fn bt25_053_no_opponent_target_blocks_clause() {
-    let mut runner = base().hand(0, &[CARD_ID]).security(0, &["DECK-PAD"]).memory(10).start();
+    let mut runner = base()
+        .hand(0, &[CARD_ID])
+        .security(0, &["DECK-PAD"])
+        .memory(10)
+        .start();
     let _perm = runner.play(0, 0).expect("play");
     assert!(
         runner.pending_selection().is_none(),

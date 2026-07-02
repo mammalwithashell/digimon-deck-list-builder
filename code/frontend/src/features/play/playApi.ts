@@ -8,7 +8,8 @@ import type { DeckResponse } from '@/types/deck';
 import type { PlayFormatId } from './formatCatalog';
 import { formatToQueueType } from './formatCatalog';
 import { resolveModelForDeck } from '@/api/desktopModelsApi';
-import { STARTER_DECKS } from './starterDecks.generated';
+import { isStarterDeckId, STARTER_DECKS } from './starterDecks.generated';
+import type { StarterDeckId } from './starterDecks.generated';
 import { fnv1a } from './hash';
 
 const MANIFEST_BASE = (import.meta.env.VITE_MODELS_MANIFEST_URL as string | undefined) ?? '';
@@ -133,7 +134,13 @@ export function starterIndexFromSeed(seed: string | null, count: number): number
 
 /** Sentinel for "let the AI pick a random starter deck (seed-derived)". Any
  *  other `opponent` value is a specific starter deck id the AI will pilot. */
-export const AI_STARTER_RANDOM = 'random';
+export const AI_STARTER_RANDOM = 'random' as const;
+
+export type AiStarterOpponent = typeof AI_STARTER_RANDOM | StarterDeckId;
+
+export function isAiStarterOpponent(value: string): value is AiStarterOpponent {
+  return value === AI_STARTER_RANDOM || isStarterDeckId(value);
+}
 
 /** Start a game vs the AI: player pilots `deck`. The AI pilots either a
  *  seed-derived random starter deck (`opponent` unset / `'random'`) or a
@@ -144,9 +151,9 @@ export async function createAiStarterGame(params: {
   deck: DeckResponse;
   starterDecks: DeckResponse[];
   seed?: string | null;
-  /** `'random'`/unset → seed-derived deck; otherwise a starter deck id the
+  /** `'random'`/unset -> seed-derived deck; otherwise a starter deck id the
    *  AI pilots with that deck's specialist. */
-  opponent?: string | null;
+  opponent?: AiStarterOpponent;
 }): Promise<{ game_id: string; seed?: string; aiDeckName: string }> {
   const seed = params.seed ?? null;
   const opponent = params.opponent ?? AI_STARTER_RANDOM;

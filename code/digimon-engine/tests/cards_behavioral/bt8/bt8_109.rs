@@ -19,7 +19,9 @@
 //! the target via the state-based <=0-DP rules-check AFTER the option resolves,
 //! NOT mid-effect.
 
-use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledColor, CompiledScope, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledCardKind, CompiledClause, CompiledColor, CompiledScope, CompiledTiming,
+};
 use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -77,9 +79,9 @@ fn hellscythe_runner() -> DebugRunner {
         .add_card(digimon("PURPLE-6000", CardColor::Purple, 5, 6000)) // legal trash-play
         .add_card(digimon("YELLOW-5000", CardColor::Yellow, 4, 5000)) // legal trash-play
         .add_card(digimon("PURPLE-7000", CardColor::Purple, 6, 7000)) // DP too high — filtered
-        .add_card(digimon("GREEN-3000", CardColor::Green, 3, 3000))   // wrong color — filtered
-        .add_card(digimon("OPP-BIG", CardColor::Blue, 6, 11000))      // survives -6000
-        .add_card(digimon("OPP-SMALL", CardColor::Blue, 4, 5000))     // dies to -6000 (Q6)
+        .add_card(digimon("GREEN-3000", CardColor::Green, 3, 3000)) // wrong color — filtered
+        .add_card(digimon("OPP-BIG", CardColor::Blue, 6, 11000)) // survives -6000
+        .add_card(digimon("OPP-SMALL", CardColor::Blue, 4, 5000)) // dies to -6000 (Q6)
         .hand(0, &["BT8-109"])
         .deck(0, &["PURPLE-6000", "PURPLE-6000", "PURPLE-6000"])
         .memory(10)
@@ -155,7 +157,10 @@ fn bt8_109_main_applies_minus_6000_for_the_turn() {
         .battle_area
         .iter()
         .position(|p| p.top_card().card_id(&runner.game.card_data) == "OPP-BIG")
-        .map(|i| digimon_engine::permanent::PermanentHandle { player: 1, index: i as u8 })
+        .map(|i| digimon_engine::permanent::PermanentHandle {
+            player: 1,
+            index: i as u8,
+        })
         .expect("OPP-BIG still on field (11000 - 6000 = 5000 > 0)");
     assert_eq!(
         runner.effective_dp(opp),
@@ -177,7 +182,9 @@ fn bt8_109_main_minus_6000_deletes_small_digimon_via_rules_check() {
     runner
         .execute_action(0, encode_attack(0, opp.index as u16))
         .expect("target the small opponent Digimon");
-    runner.auto_resolve().expect("resolve + state-based rules check");
+    runner
+        .auto_resolve()
+        .expect("resolve + state-based rules check");
 
     assert_eq!(
         runner.battle_area_size(1),
@@ -214,7 +221,7 @@ fn bt8_109_main_trash_play_offers_only_purple_or_yellow_dp6000_or_less() {
     seed_trash(&mut runner, 0, "PURPLE-6000"); // legal
     seed_trash(&mut runner, 0, "YELLOW-5000"); // legal
     seed_trash(&mut runner, 0, "PURPLE-7000"); // DP too high
-    seed_trash(&mut runner, 0, "GREEN-3000");  // wrong color
+    seed_trash(&mut runner, 0, "GREEN-3000"); // wrong color
 
     runner.play(0, 0).expect("play BT8-109");
     runner
@@ -246,7 +253,10 @@ fn bt8_109_main_decline_trash_play_plays_nothing() {
     let battle_before = runner.battle_area_size(0);
     runner.execute_action(0, PASS).expect("decline trash-play");
 
-    assert!(runner.pending_selection().is_none(), "effect ends on decline");
+    assert!(
+        runner.pending_selection().is_none(),
+        "effect ends on decline"
+    );
     assert_eq!(runner.battle_area_size(0), battle_before, "nothing played");
     assert!(
         runner.game.players[0]
@@ -276,7 +286,11 @@ fn bt8_109_main_plays_chosen_card_from_trash_free() {
         .expect("play yellow-5000 from trash free");
     runner.auto_resolve().expect("resolve the free play");
 
-    assert_eq!(runner.battle_area_size(0), battle_before + 1, "card entered field");
+    assert_eq!(
+        runner.battle_area_size(0),
+        battle_before + 1,
+        "card entered field"
+    );
     assert!(
         runner.game.players[0]
             .battle_area
@@ -284,7 +298,11 @@ fn bt8_109_main_plays_chosen_card_from_trash_free() {
             .any(|p| p.top_card().card_id(&runner.game.card_data) == "YELLOW-5000"),
         "the yellow Lv.4 from trash is on the field"
     );
-    assert_eq!(runner.memory(), mem_after_option, "the trash play costs no memory");
+    assert_eq!(
+        runner.memory(),
+        mem_after_option,
+        "the trash play costs no memory"
+    );
 }
 
 /// BT8-109 does NOT suppress the played card's [On Play] (DCGO activateETB:
@@ -307,7 +325,9 @@ fn bt8_109_main_played_card_on_play_fires() {
     runner
         .execute_action(0, sel.valid_action_ids[0])
         .expect("play the On-Play purple from trash");
-    runner.auto_resolve().expect("resolve, incl. the played card's On Play");
+    runner
+        .auto_resolve()
+        .expect("resolve, incl. the played card's On Play");
 
     assert_eq!(
         runner.hand_size(0),

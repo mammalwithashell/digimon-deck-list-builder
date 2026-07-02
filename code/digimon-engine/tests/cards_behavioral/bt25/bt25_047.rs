@@ -103,7 +103,10 @@ fn bt25_047_has_on_play_reveal_two_pick_clause() {
         .any(|s| matches!(s, CompiledStep::PlaceRemainderOnDeck { .. }));
 
     assert!(has_reveal, "must reveal top 3");
-    assert_eq!(bucket_count, 2, "must have 2 buckets (Vegetation/Shaman, TS)");
+    assert_eq!(
+        bucket_count, 2,
+        "must have 2 buckets (Vegetation/Shaman, TS)"
+    );
     assert_eq!(add_to_hand_count, 2, "must add 2 cards to hand");
     assert!(has_place_remainder, "must place remainder on deck bottom");
 }
@@ -197,8 +200,14 @@ fn bt25_047_on_play_adds_vegetation_and_ts_to_hand_rest_to_bottom() {
         .iter()
         .map(|c| c.card_id(&runner.game.card_data))
         .collect();
-    assert!(hand_ids.contains(&"VEG-A"), "Vegetation pick to hand: {hand_ids:?}");
-    assert!(hand_ids.contains(&"TS-047"), "TS pick to hand: {hand_ids:?}");
+    assert!(
+        hand_ids.contains(&"VEG-A"),
+        "Vegetation pick to hand: {hand_ids:?}"
+    );
+    assert!(
+        hand_ids.contains(&"TS-047"),
+        "TS pick to hand: {hand_ids:?}"
+    );
     assert!(
         !hand_ids.contains(&"FILL-047"),
         "non-matching filler must NOT be added to hand: {hand_ids:?}"
@@ -299,6 +308,12 @@ fn bt25_047_shaman_satisfies_first_bucket() {
         .iter()
         .map(|c| c.card_id(&runner.game.card_data))
         .collect();
-    assert!(hand_ids.contains(&"SHAMAN-A"), "Shaman pick to hand: {hand_ids:?}");
-    assert!(hand_ids.contains(&"TS-047B"), "TS pick to hand: {hand_ids:?}");
+    assert!(
+        hand_ids.contains(&"SHAMAN-A"),
+        "Shaman pick to hand: {hand_ids:?}"
+    );
+    assert!(
+        hand_ids.contains(&"TS-047B"),
+        "TS pick to hand: {hand_ids:?}"
+    );
 }

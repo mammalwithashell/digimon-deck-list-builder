@@ -111,7 +111,9 @@ fn bt15_084_has_all_four_clauses() {
     let card = runner.compiled_card(CARD_ID).expect("compiled card");
 
     let has = |f: &dyn Fn(&digimon_dsl::compiled::CompiledTriggeredClause) -> bool| {
-        card.effects.iter().any(|c| matches!(c, CompiledClause::Triggered(t) if f(t)))
+        card.effects
+            .iter()
+            .any(|c| matches!(c, CompiledClause::Triggered(t) if f(t)))
     };
     assert!(
         has(&|t| t.when.contains(&CompiledTiming::StartOfYourTurn)),
@@ -171,20 +173,31 @@ fn bt15_084_security_removed_accept_suspends_self_and_applies_security_attack_mi
     expected.sort();
     let mut got = view.valid_action_ids.clone();
     got.sort();
-    assert_eq!(got, expected, "both opponent Digimon are legal Security A. -1 targets");
+    assert_eq!(
+        got, expected,
+        "both opponent Digimon are legal Security A. -1 targets"
+    );
 
     runner
         .execute_action(view.selecting_player, encode_permanent(opp_a))
         .expect("choose opponent Digimon");
-    runner.auto_resolve().expect("finish security-removed effect");
+    runner
+        .auto_resolve()
+        .expect("finish security-removed effect");
 
     assert_eq!(
-        runner.game.modifiers.sum(opp_a, ModifierType::SecurityAttackChange),
+        runner
+            .game
+            .modifiers
+            .sum(opp_a, ModifierType::SecurityAttackChange),
         -1,
         "chosen opponent Digimon gets Security A. -1"
     );
     assert_eq!(
-        runner.game.modifiers.sum(opp_b, ModifierType::SecurityAttackChange),
+        runner
+            .game
+            .modifiers
+            .sum(opp_b, ModifierType::SecurityAttackChange),
         0,
         "the unchosen opponent Digimon is unaffected"
     );
@@ -208,7 +221,10 @@ fn bt15_084_security_removed_decline_does_nothing() {
         "declining leaves Kari unsuspended"
     );
     assert_eq!(
-        runner.game.modifiers.sum(opp, ModifierType::SecurityAttackChange),
+        runner
+            .game
+            .modifiers
+            .sum(opp, ModifierType::SecurityAttackChange),
         0,
         "declining applies no Security A. -1"
     );
@@ -262,7 +278,11 @@ fn bt15_084_when_trashed_from_security_applies_security_attack_minus() {
     let view = runner
         .pending_selection_view()
         .expect("effect-trashing Kari from security must install a target prompt");
-    assert_eq!(view.kind, SelectionKind::OppField, "select 1 opponent Digimon");
+    assert_eq!(
+        view.kind,
+        SelectionKind::OppField,
+        "select 1 opponent Digimon"
+    );
     assert!(
         !runner.pending_is_optional(),
         "the [Security-trash] effect is mandatory (DCGO canNoSelect:false)"
@@ -274,7 +294,10 @@ fn bt15_084_when_trashed_from_security_applies_security_attack_minus() {
     runner.auto_resolve().expect("resolve");
 
     assert_eq!(
-        runner.game.modifiers.sum(opp, ModifierType::SecurityAttackChange),
+        runner
+            .game
+            .modifiers
+            .sum(opp, ModifierType::SecurityAttackChange),
         -1,
         "chosen opponent Digimon gets Security A. -1"
     );

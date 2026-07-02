@@ -129,7 +129,9 @@ fn stage_q26_board() -> (DebugRunner, i16) {
     r.execute_action(0, wargreymon_action)
         .expect("select WarGreymon as DigiXros material");
     for _ in 0..4 {
-        let Some(sel) = r.pending_selection() else { break };
+        let Some(sel) = r.pending_selection() else {
+            break;
+        };
         if sel.kind != digimon_engine::selection::SelectionKind::Material {
             break;
         }
@@ -247,8 +249,7 @@ fn q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo() {
     // partner) into Omnimon, removing WarGreymon as a Dorbickmon material ⇒
     // Dorbickmon can no longer pay its DigiXros cost ⇒ Dorbickmon returns to
     // hand (judge Q26).
-    if r
-        .pending_selection()
+    if r.pending_selection()
         .is_some_and(|s| s.kind == digimon_engine::selection::SelectionKind::Material)
     {
         let _ = r.execute_action(0, digimon_engine::action::space::PASS);
@@ -298,8 +299,7 @@ fn q26_dorbickmon_returns_to_hand_when_cost_unpayable_after_dna_evo() {
 fn q27_dorbickmon_pays_zero_memory_when_returned_to_hand() {
     let (mut r, memory_before) = stage_q26_board();
 
-    if r
-        .pending_selection()
+    if r.pending_selection()
         .is_some_and(|s| s.kind == digimon_engine::selection::SelectionKind::Material)
     {
         let _ = r.execute_action(0, digimon_engine::action::space::PASS);
@@ -349,8 +349,18 @@ fn q27_dorbickmon_pays_zero_memory_when_returned_to_hand() {
 /// battle area — so the only legal suspend targets are **Imperialdramon:
 /// Dragon Mode & Chaosmon: Valdur Arm** (the suspended random Digimon is
 /// not a legal target). Answer: YES — suspend those two.
-#[test]
-fn q30_partition_interruptive_suspends_both_with_cost_reduction() {
+/// Shared Q30 driver: set up the quiz board and drive to Medieval-
+/// Gallantmon's first suspend pick (his would-play cost reduction accepted).
+/// At the returned state the `<Partition>` SECOND-source play (BanchoLeomon)
+/// is armed as a data [`AfterSelectionHook::PartitionSecondPlay`] waiting for
+/// Medieval's interrupt chain to drain. Returns
+/// `(runner, chaosmon, random, imperial)`.
+fn q30_drive_to_medieval_suspend_prompt() -> (
+    DebugRunner,
+    digimon_engine::permanent::PermanentHandle,
+    digimon_engine::permanent::PermanentHandle,
+    digimon_engine::permanent::PermanentHandle,
+) {
     use digimon_engine::action::space::encode_attack;
 
     let mut r = DebugRunner::builder()
@@ -406,7 +416,9 @@ fn q30_partition_interruptive_suspends_both_with_cost_reduction() {
     // keep-pick surfaces for Player A.
     let pass = digimon_engine::action::space::PASS;
     for _ in 0..6 {
-        let Some(view) = r.pending_selection_view() else { break };
+        let Some(view) = r.pending_selection_view() else {
+            break;
+        };
         if view.selecting_player == 0 {
             break; // Imperialdramon's [WD] keep-pick (A chooses)
         }
@@ -421,13 +433,14 @@ fn q30_partition_interruptive_suspends_both_with_cost_reduction() {
     }
 
     // Imperialdramon: Dragon Mode must be on B's field (DNA digivolved).
-    let imperial = r
-        .game
-        .players[1]
+    let imperial = r.game.players[1]
         .battle_area
         .iter()
         .position(|p| p.top_card().card_id(&r.game.card_data) == "EX3-063")
-        .map(|i| digimon_engine::permanent::PermanentHandle { player: 1, index: i as u8 })
+        .map(|i| digimon_engine::permanent::PermanentHandle {
+            player: 1,
+            index: i as u8,
+        })
         .expect("Imperialdramon: Dragon Mode DNA digivolved onto B's field");
     assert!(
         !r.game.players[1].battle_area[imperial.index as usize].is_suspended,
@@ -438,23 +451,29 @@ fn q30_partition_interruptive_suspends_both_with_cost_reduction() {
     let view = r
         .pending_selection_view()
         .expect("Imperialdramon [WD]: A's keep-pick must surface");
-    assert_eq!(view.selecting_player, 0, "the OPPONENT (A) makes the keep-pick");
+    assert_eq!(
+        view.selecting_player, 0,
+        "the OPPONENT (A) makes the keep-pick"
+    );
     let keep_random = encode_attack(random.player as u16, random.index as u16);
     assert!(
         view.valid_action_ids.contains(&keep_random),
         "the random Digimon must be a keep candidate"
     );
-    r.execute_action(0, keep_random).expect("A keeps the random Digimon");
+    r.execute_action(0, keep_random)
+        .expect("A keeps the random Digimon");
 
     // ── <Partition> interrupts Chaosmon's deletion (carrier still on field) ─
     let view = r
         .pending_selection_view()
         .expect("Partition accept dialog must surface");
     assert_eq!(view.selecting_player, 0);
-    assert!(view.is_optional, "Partition activation is the player's choice");
     assert!(
-        r.game
-            .players[0]
+        view.is_optional,
+        "Partition activation is the player's choice"
+    );
+    assert!(
+        r.game.players[0]
             .battle_area
             .iter()
             .any(|p| p.top_card().card_id(&r.game.card_data) == "BT20-037"),
@@ -473,7 +492,11 @@ fn q30_partition_interruptive_suspends_both_with_cost_reduction() {
             .expect("Partition source pick must surface");
         let mut acts: Vec<u16> = view.valid_action_ids.clone();
         acts.sort_unstable();
-        let pick = if want_max { *acts.last().unwrap() } else { acts[0] };
+        let pick = if want_max {
+            *acts.last().unwrap()
+        } else {
+            acts[0]
+        };
         r.execute_action(0, pick).expect("pick a Partition source");
     }
 
@@ -485,6 +508,16 @@ fn q30_partition_interruptive_suspends_both_with_cost_reduction() {
     assert_eq!(view.selecting_player, 0);
     r.execute_action(0, view.valid_action_ids[0])
         .expect("A uses Medieval's cost reduction");
+
+    (r, chaosmon, random, imperial)
+}
+
+#[test]
+fn q30_partition_interruptive_suspends_both_with_cost_reduction() {
+    use digimon_engine::action::space::encode_attack;
+
+    let (mut r, chaosmon, _random, imperial) = q30_drive_to_medieval_suspend_prompt();
+    let pass = digimon_engine::action::space::PASS;
 
     // THE JUDGE PIN: the legal suspend set is EXACTLY {Imperialdramon:
     // Dragon Mode, Chaosmon: Valdur Arm} — BanchoLeomon is not in the
@@ -529,7 +562,9 @@ fn q30_partition_interruptive_suspends_both_with_cost_reduction() {
     // park, the engine's single-park boundary; see
     // G-NESTED-PARKED-REPLACEMENT). The judge line ends here.
     for _ in 0..10 {
-        let Some(view) = r.pending_selection_view() else { break };
+        let Some(view) = r.pending_selection_view() else {
+            break;
+        };
         let action = if view.is_optional {
             pass
         } else {
@@ -550,17 +585,14 @@ fn q30_partition_interruptive_suspends_both_with_cost_reduction() {
     // Chaosmon was suspended DURING the interrupt, then its deletion
     // completed — it is in A's trash.
     assert!(
-        r.game
-            .players[0]
+        r.game.players[0]
             .trash
             .iter()
             .any(|c| c.card_id(&r.game.card_data) == "BT20-037"),
         "Chaosmon: Valdur Arm's deletion proceeded after the interrupt"
     );
     // Both partition plays are on A's field; the kept random Digimon too.
-    let a_ids: Vec<&str> = r
-        .game
-        .players[0]
+    let a_ids: Vec<&str> = r.game.players[0]
         .battle_area
         .iter()
         .map(|p| p.top_card().card_id(&r.game.card_data))
@@ -570,4 +602,124 @@ fn q30_partition_interruptive_suspends_both_with_cost_reduction() {
         "both partition sources were played; got {a_ids:?}"
     );
     assert!(a_ids.contains(&"Q30-RND"), "the kept Digimon survived");
+}
+
+/// make-engine-cloneable — the `<Partition>` SECOND-source play is armed as a
+/// data [`AfterSelectionHook::PartitionSecondPlay`] while the FIRST play's
+/// would-play interrupt chain (Medieval's suspend-2 cost reduction) resolves.
+/// A `Game` cloned mid-chain must carry the armed hook: driving the CLONE to
+/// completion plays BanchoLeomon there too, and resolving the clone leaves
+/// the original untouched (which then replays identically).
+#[test]
+fn q30_partition_second_play_hook_clones_faithfully_mid_chain() {
+    let (r, _chaosmon, _random, _imperial) = q30_drive_to_medieval_suspend_prompt();
+    let pass = digimon_engine::action::space::PASS;
+
+    // At the suspend prompt the second-source play must be armed AS DATA.
+    assert!(
+        r.game.pending_selection.is_some(),
+        "Medieval's suspend pick is parked"
+    );
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "the suspend pick must be resume-driven (clone-safe)"
+    );
+    assert!(
+        r.game
+            .after_selection_resume_hooks
+            .0
+            .iter()
+            .any(|h| matches!(
+                h,
+                digimon_engine::resume::AfterSelectionHook::PartitionSecondPlay { .. }
+            )),
+        "the <Partition> second-source play is armed as a data hook mid-chain"
+    );
+
+    // Fork. The clone must inherit the armed hook.
+    let mut clone = r.game.clone();
+    assert_eq!(
+        clone.after_selection_resume_hooks.0.len(),
+        r.game.after_selection_resume_hooks.0.len(),
+        "clone inherits the armed after-selection hooks"
+    );
+
+    // Drive the CLONE to completion: both suspend picks, then decline
+    // trailing optional prompts (mirrors the Q30 driver's drain).
+    for _ in 0..12 {
+        let Some(sel) = clone.pending_selection.as_ref() else {
+            break;
+        };
+        let player = sel.selecting_player;
+        let action = if sel.is_optional {
+            pass
+        } else {
+            *sel.valid_action_ids
+                .iter()
+                .find(|&&a| a != pass)
+                .unwrap_or(&pass)
+        };
+        if clone.resolve_selection(player, action).is_err() {
+            break;
+        }
+    }
+    let clone_ids: Vec<&str> = clone.players[0]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&clone.card_data))
+        .collect();
+    assert!(
+        clone_ids.contains(&"BT20-036") && clone_ids.contains(&"EX8-074"),
+        "clone: BOTH partition sources played after the chain drained \
+         (the second play survived the fork as data); got {clone_ids:?}"
+    );
+
+    // INDEPENDENCE: the original still sits at the suspend prompt with the
+    // hook armed — resolving the clone did not touch it.
+    assert!(
+        r.game.pending_selection.is_some(),
+        "original's suspend pick survives resolving the clone"
+    );
+    assert!(
+        r.game
+            .after_selection_resume_hooks
+            .0
+            .iter()
+            .any(|h| matches!(
+                h,
+                digimon_engine::resume::AfterSelectionHook::PartitionSecondPlay { .. }
+            )),
+        "original's armed hook survives resolving the clone"
+    );
+
+    // REPLAY: driving the ORIGINAL with the same inputs reaches the same
+    // battle-area outcome.
+    let mut r = r;
+    for _ in 0..12 {
+        let Some(view) = r.pending_selection_view() else {
+            break;
+        };
+        let player = view.selecting_player;
+        let action = if view.is_optional {
+            pass
+        } else {
+            *view
+                .valid_action_ids
+                .iter()
+                .find(|&&a| a != pass)
+                .unwrap_or(&pass)
+        };
+        if r.execute_action(player, action).is_err() {
+            break;
+        }
+    }
+    let orig_ids: Vec<&str> = r.game.players[0]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&r.game.card_data))
+        .collect();
+    assert_eq!(
+        orig_ids, clone_ids,
+        "original replays identically to the clone"
+    );
 }

@@ -105,7 +105,10 @@ fn bt25_049_has_onplay_whendigivolving_clause_and_inherited_piercing() {
                 if *scope == CompiledScope::Inherited
         )
     });
-    assert!(has_inherited_keyword, "inherited grant_keyword (Piercing) present");
+    assert!(
+        has_inherited_keyword,
+        "inherited grant_keyword (Piercing) present"
+    );
 }
 
 #[test]
@@ -340,14 +343,24 @@ fn bt25_049_option_use_reducer_credits_minus_three_on_paid_park() {
         matches!(result, digimon_engine::selection::OptionPlayResult::Pending),
         "using the Glowing Dawn Option installs the cost-reduction prompt"
     );
-    assert!(runner.pending_is_optional(), "the -3 reducer is optional (decline allowed)");
-    assert_eq!(runner.memory(), mem_before, "no cost paid before the gate resolves");
+    assert!(
+        runner.pending_is_optional(),
+        "the -3 reducer is optional (decline allowed)"
+    );
+    assert_eq!(
+        runner.memory(),
+        mem_before,
+        "no cost paid before the gate resolves"
+    );
 
     runner
         .accept_optional_trigger()
         .expect("accept the -3 cost reduction");
     let _ = runner.auto_resolve();
-    assert!(runner.game.pending_selection.is_none(), "the Option resolves");
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "the Option resolves"
+    );
 
     assert_eq!(
         runner.trash_size(0),
@@ -407,13 +420,19 @@ fn bt25_049_option_use_reducer_decline_pays_full_cost() {
         result,
         digimon_engine::selection::OptionPlayResult::Pending
     ));
-    assert!(runner.pending_is_optional(), "an accept/decline gate installs");
+    assert!(
+        runner.pending_is_optional(),
+        "an accept/decline gate installs"
+    );
     runner
         .decline_optional_trigger()
         .expect("decline the optional reducer");
     let _ = runner.auto_resolve();
 
-    assert!(runner.game.pending_selection.is_none(), "the Option play completes");
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "the Option play completes"
+    );
     assert_eq!(
         runner.trash_size(0),
         trash_before + 1,

@@ -165,7 +165,8 @@ fn bt25_054_has_op_taunt_and_two_endbattle_clauses() {
         .collect();
 
     let has_op = triggered.iter().any(|t| {
-        t.when.contains(&CompiledTiming::OnPlay) && t.when.contains(&CompiledTiming::WhenDigivolving)
+        t.when.contains(&CompiledTiming::OnPlay)
+            && t.when.contains(&CompiledTiming::WhenDigivolving)
     });
     // Win-battle clauses lower onto a deletion/end-battle timing.
     let has_win_digivolve = triggered.iter().any(|t| {
@@ -291,7 +292,7 @@ fn bt25_054_inherited_trashes_top_security_on_battle_win() {
 
     let stack = runner.place_stack(0, &[CARD_ID, "CARRIER6"]); // GreatGrizzlymon is a source
     let weak = runner.place_on_field(1, "OPP-WEAK", Some(0)); // 1000 DP — gets deleted
-    // Opponent security to trash.
+                                                              // Opponent security to trash.
     runner.game_mut().players[1].security.clear();
     let fill_idx = runner
         .game
@@ -308,7 +309,9 @@ fn bt25_054_inherited_trashes_top_security_on_battle_win() {
 
     let sec_before = runner.security_count(1);
     runner.attack_digimon(stack, weak, false);
-    runner.auto_resolve().expect("resolve inherited security trash");
+    runner
+        .auto_resolve()
+        .expect("resolve inherited security trash");
 
     assert_eq!(
         runner.security_count(1),

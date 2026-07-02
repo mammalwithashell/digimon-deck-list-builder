@@ -91,7 +91,9 @@ fn bt25_028_op_wd_clause_deletes_and_is_mandatory() {
             CompiledClause::Triggered(t)
                 if t.when.contains(&CompiledTiming::OnPlay)
                     && t.when.contains(&CompiledTiming::WhenDigivolving)
-                    && t.process.iter().any(|s| matches!(s, CompiledStep::DeletePermanent { .. })) =>
+                    && t.process
+                        .iter()
+                        .any(|s| matches!(s, CompiledStep::DeletePermanent { .. })) =>
             {
                 Some(t)
             }
@@ -120,7 +122,10 @@ fn bt25_028_has_inherited_wa_cannot_suspend() {
         .expect("inherited WA clause present");
     assert!(clause.once_per_turn, "[Once Per Turn]");
     assert!(
-        clause.process.iter().any(|s| matches!(s, CompiledStep::AddModifier { .. })),
+        clause
+            .process
+            .iter()
+            .any(|s| matches!(s, CompiledStep::AddModifier { .. })),
         "inherited WA applies a CannotSuspend modifier"
     );
 }

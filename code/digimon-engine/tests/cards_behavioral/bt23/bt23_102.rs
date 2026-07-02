@@ -114,7 +114,11 @@ fn builder() -> digimon_engine::debug_runner::DebugRunnerBuilder {
 
 /// Base runner with a default deck and memory (no security override).
 fn base_runner() -> DebugRunner {
-    builder().deck(0, &["DECK"]).deck(1, &["DECK"]).memory(10).start()
+    builder()
+        .deck(0, &["DECK"])
+        .deck(1, &["DECK"])
+        .memory(10)
+        .start()
 }
 
 // ─── SECTION 1 — Structural ──────────────────────────────────────────────────
@@ -201,9 +205,7 @@ fn bt23_102_has_optional_opt_lose_security_clause() {
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::OnLoseSecurity) =>
-            {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnLoseSecurity) => {
                 Some(t)
             }
             _ => None,
@@ -271,9 +273,10 @@ fn bt23_102_when_digivolving_trims_opponent_security_to_three() {
     assert_eq!(runner.security_count(0), 3);
     assert_eq!(runner.security_count(1), 6);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(mastemon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(mastemon),
+    );
     runner.game.drain_effect_queue();
     let _ = runner.auto_resolve();
 
@@ -322,9 +325,10 @@ fn bt23_102_when_digivolving_controller_trim_removes_own_security() {
     );
 
     let before = runner.security_count(0);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(mastemon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(mastemon),
+    );
     runner.game.drain_effect_queue();
     // Drive every interrupting selection by PASS/decline so the optional
     // place-security OPT never adds a card back (isolating the removal).
@@ -361,9 +365,10 @@ fn bt23_102_when_digivolving_skips_player_at_or_below_three() {
         runner.game.turn_count,
     );
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(mastemon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(mastemon),
+    );
     runner.game.drain_effect_queue();
     let _ = runner.auto_resolve();
 
@@ -399,9 +404,10 @@ fn bt23_102_when_digivolving_no_same_level_pair_does_not_trim() {
         runner.game.turn_count,
     );
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(mastemon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(mastemon),
+    );
     runner.game.drain_effect_queue();
     let _ = runner.auto_resolve();
 
@@ -441,9 +447,10 @@ fn bt23_102_when_digivolving_offers_free_play_when_yellow_purple_in_hand() {
         runner.game.turn_count,
     );
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(mastemon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(mastemon),
+    );
     runner.game.drain_effect_queue();
 
     assert!(

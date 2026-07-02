@@ -185,7 +185,9 @@ fn q4_security_attack_net_modifiers_one_check() {
         .copied()
         .expect("Aldamon is a legal Hybrid target");
     runner.execute_action(p0, pick).expect("select Aldamon");
-    runner.auto_resolve().expect("resolve Atomic Inferno grants");
+    runner
+        .auto_resolve()
+        .expect("resolve Atomic Inferno grants");
 
     // Pre-attack: Aldamon carries the +1 from Atomic Inferno (would check 2).
     assert_eq!(
@@ -261,7 +263,9 @@ fn q4_control_atomic_inferno_plus_one_alone_checks_two() {
         .copied()
         .expect("Aldamon is a legal Hybrid target");
     runner.execute_action(p0, pick).expect("select Aldamon");
-    runner.auto_resolve().expect("resolve Atomic Inferno grants");
+    runner
+        .auto_resolve()
+        .expect("resolve Atomic Inferno grants");
 
     assert_eq!(runner.security_count(p1), 2, "P1 security starts at 2");
 

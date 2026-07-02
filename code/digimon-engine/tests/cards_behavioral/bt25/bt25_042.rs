@@ -26,8 +26,8 @@ use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledStep, Compile
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardKind, EffectSourceKind, EffectTiming, PlayerId};
-use digimon_engine::selection::TriggerSource;
 use digimon_engine::permanent::PermanentHandle;
+use digimon_engine::selection::TriggerSource;
 
 const CARD_ID: &str = "BT25-042";
 
@@ -98,7 +98,10 @@ fn bt25_042_metadata() {
 fn bt25_042_has_alt_digivolve_path() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
-    assert!(!card.alt_paths.is_empty(), "must have an alt-digivolve path");
+    assert!(
+        !card.alt_paths.is_empty(),
+        "must have an alt-digivolve path"
+    );
 }
 
 #[test]
@@ -120,7 +123,10 @@ fn bt25_042_shared_clause_is_opt_across_three_timings() {
         })
         .expect("must have shared OP/WD/WA clause");
     assert!(clause.once_per_turn, "shared clause is [Once Per Turn]");
-    assert!(clause.optional, "DCGO presents a 'Don't trash' decline → optional");
+    assert!(
+        clause.optional,
+        "DCGO presents a 'Don't trash' decline → optional"
+    );
     // The top/bottom security trash is a genuine player choice.
     assert!(
         clause
@@ -143,8 +149,7 @@ fn step_grants_immunity(step: &CompiledStep) -> bool {
         CompiledStep::GrantEffectImmunity { .. } => true,
         CompiledStep::If {
             then, else_branch, ..
-        } => then.iter().any(step_grants_immunity)
-            || else_branch.iter().any(step_grants_immunity),
+        } => then.iter().any(step_grants_immunity) || else_branch.iter().any(step_grants_immunity),
         _ => false,
     }
 }
@@ -190,8 +195,12 @@ fn bt25_042_on_play_trash_security_grants_digimon_immunity() {
         runner.pending_selection().is_some(),
         "shared clause must install the accept/decline + top/bottom prompt"
     );
-    runner.accept_optional_trigger().expect("accept the trigger");
-    runner.auto_resolve().expect("resolve top/bottom trash + immunity grant");
+    runner
+        .accept_optional_trigger()
+        .expect("accept the trigger");
+    runner
+        .auto_resolve()
+        .expect("resolve top/bottom trash + immunity grant");
 
     assert_eq!(
         runner.security_count(0),
@@ -303,7 +312,11 @@ fn bt25_042_security_removed_empty_hand_no_freeplay() {
         runner.auto_resolve().expect("resolve grants");
     }
 
-    assert_eq!(runner.hand_size(0), hand_before, "no card played (empty hand)");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before,
+        "no card played (empty hand)"
+    );
     assert_eq!(
         runner.battle_area_size(0),
         field_before,

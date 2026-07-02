@@ -44,8 +44,7 @@ impl Game {
         state: OptionModeSelectState,
         action_id: u16,
     ) {
-        let index =
-            action_id.saturating_sub(crate::action::space::HAND_EFFECT_START) as usize;
+        let index = action_id.saturating_sub(crate::action::space::HAND_EFFECT_START) as usize;
         let mode = state
             .modes
             .get(index)
@@ -129,8 +128,7 @@ impl Game {
         };
         let prev = self.effect_driven_option_use;
         self.effect_driven_option_use = true;
-        let result =
-            self.play_option_core(player_id, OptionSource::Hand(hand_index), None, policy);
+        let result = self.play_option_core(player_id, OptionSource::Hand(hand_index), None, policy);
         // Restore the flag UNLESS the play parked a selection — a parked
         // Option play re-enters `play_option_core` from the selection callback
         // (mode-select / OptionMain selection), which must still see the gate
@@ -395,9 +393,7 @@ impl Game {
             _ if cost_policy == OptionCostPolicy::Free => 0,
             // Effect-driven "use … for exactly N memory" — ignore the printed
             // use cost and field reductions. `G-PLAY-OR-USE-FROM-HAND`.
-            OptionPlayMode::Standard
-            | OptionPlayMode::Delay(_)
-            | OptionPlayMode::Training
+            OptionPlayMode::Standard | OptionPlayMode::Delay(_) | OptionPlayMode::Training
                 if matches!(cost_policy, OptionCostPolicy::Fixed(_)) =>
             {
                 let OptionCostPolicy::Fixed(n) = cost_policy else {
@@ -409,9 +405,7 @@ impl Game {
             // stacks on top of the field-hosted BeforePayCost reductions, same
             // precedent as `CostDelta::Reduce` on the play half.
             // `G-PLAY-OR-USE-FROM-HAND`.
-            OptionPlayMode::Standard
-            | OptionPlayMode::Delay(_)
-            | OptionPlayMode::Training
+            OptionPlayMode::Standard | OptionPlayMode::Delay(_) | OptionPlayMode::Training
                 if matches!(cost_policy, OptionCostPolicy::Reduce(_)) =>
             {
                 let OptionCostPolicy::Reduce(n) = cost_policy else {
@@ -585,6 +579,21 @@ impl Game {
                     let _ = game.play_option_core(player_id, source, Some(mode), cost_policy);
                 })),
             });
+            self.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![
+                    crate::resume::ResumeFrame::InteractiveOptionUseCostReductionPrompt(
+                        InteractiveOptionUseCostReductionPromptState {
+                            player_id,
+                            cost_target,
+                            source,
+                            mode,
+                            cost_policy,
+                            key,
+                            outer_conts: Vec::new(),
+                        },
+                    ),
+                ],
+            });
             return true;
         }
 
@@ -601,6 +610,39 @@ impl Game {
             mode,
             cost_policy,
         )
+    }
+
+    pub(crate) fn run_interactive_option_use_cost_reduction_prompt_step(
+        &mut self,
+        state: InteractiveOptionUseCostReductionPromptState,
+        is_pass: bool,
+    ) {
+        if is_pass {
+            let _ = self.play_option_core(
+                state.player_id,
+                state.source,
+                Some(state.mode),
+                state.cost_policy,
+            );
+            return;
+        }
+
+        let parked = self.run_interactive_option_use_reducer_pay_cost(
+            state.key,
+            state.cost_target,
+            state.player_id,
+            state.source,
+            state.mode,
+            state.cost_policy,
+        );
+        if !parked {
+            let _ = self.play_option_core(
+                state.player_id,
+                state.source,
+                Some(state.mode),
+                state.cost_policy,
+            );
+        }
     }
 
     /// Run a field-hosted interactive Option-use reducer's `pay_cost`. Returns
@@ -693,17 +735,15 @@ impl Game {
         // channel when the parked select is data-driven (closure bypassed).
         if self.pending_selection_resume.is_some() {
             self.pending_selection = Some(pending);
-            self.after_selection_resume_hooks
-                .0
-                .push(Box::new(move |game: &mut Game| {
-                    game.resume_interactive_option_use_reducer_after_pending(
-                        amount,
-                        player_id,
-                        source,
-                        mode,
-                        cost_policy,
-                    );
-                }));
+            self.after_selection_resume_hooks.0.push(
+                crate::resume::AfterSelectionHook::InteractiveOptionUseReducer {
+                    amount,
+                    player_id,
+                    source,
+                    mode,
+                    cost_policy,
+                },
+            );
             return;
         }
         let original_callback = pending.callback;
@@ -737,7 +777,7 @@ impl Game {
     /// pay_cost resolves. If it installed a FURTHER selection, re-wrap; else
     /// credit the reduction and re-enter `play_option_core`.
     /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
-    fn resume_interactive_option_use_reducer_after_pending(
+    pub(crate) fn resume_interactive_option_use_reducer_after_pending(
         &mut self,
         amount: i32,
         player_id: PlayerId,

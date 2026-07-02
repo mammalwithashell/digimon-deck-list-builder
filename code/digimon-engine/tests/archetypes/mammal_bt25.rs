@@ -473,7 +473,9 @@ fn ma3_gazimon_place_branch_tucks_under_existing_stack() {
     runner
         .execute_action(0, place_action)
         .expect("choose the place-as-bottom-source branch");
-    runner.auto_resolve().expect("reveal pick + remainder resolve");
+    runner
+        .auto_resolve()
+        .expect("reveal pick + remainder resolve");
 
     // ── Claimed mechanical outcome ───────────────────────────────────────────
     let perm = &runner.game.players[0].battle_area[stack.index as usize];
@@ -555,8 +557,10 @@ fn ma3_gazimon_optional_decline_leaves_stack_untouched() {
         .expect("compiled")
         .effects
         .iter()
-        .any(|c| matches!(c, CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::OnPlay) && t.optional));
+        .any(|c| {
+            matches!(c, CompiledClause::Triggered(t)
+            if t.when.contains(&CompiledTiming::OnPlay) && t.optional)
+        });
     assert!(clause_optional, "Gazimon's shared clause is optional");
 
     let process = on_play_process(&runner, GAZIMON);
@@ -566,7 +570,11 @@ fn ma3_gazimon_optional_decline_leaves_stack_untouched() {
     }
     // Decline at whatever optional gate surfaces.
     if let Some(sel) = runner.pending_selection() {
-        if sel.is_optional || sel.valid_action_ids.contains(&digimon_engine::action::space::PASS) {
+        if sel.is_optional
+            || sel
+                .valid_action_ids
+                .contains(&digimon_engine::action::space::PASS)
+        {
             let _ = runner
                 .game
                 .resolve_selection(0, digimon_engine::action::space::PASS);

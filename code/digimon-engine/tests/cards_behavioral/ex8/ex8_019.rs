@@ -289,7 +289,11 @@ fn ex8_019_cost_reduction_clause_structural_shape() {
         Some("before_pay_cost"),
         "cost reduction must fire at BeforePayCost cost-calc"
     );
-    assert_eq!(amount, Some(1), "printed text reduces the cost by exactly 1");
+    assert_eq!(
+        amount,
+        Some(1),
+        "printed text reduces the cost by exactly 1"
+    );
     assert!(
         !once_per_turn,
         "printed text carries no [Once Per Turn] — the reduction applies to every \
@@ -366,12 +370,10 @@ fn ex8_019_cost_reduction_reduces_digivolving_into_ice_snow_by_one() {
     let hand_idx = put_in_hand(&mut runner, 0, "ICESNOW-LV4");
 
     let memory_before = runner.game.memory;
-    let digivolved = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        penguinmon.index as usize,
-        PlaySource::ByHand,
-    );
+    let digivolved =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, penguinmon.index as usize, PlaySource::ByHand);
     assert!(
         digivolved,
         "EX8-019 must digivolve into the Lv.4 Ice-Snow Digimon (effective cost 2 - 1 = 1)"
@@ -404,12 +406,10 @@ fn ex8_019_cost_reduction_does_not_apply_to_non_ice_snow_target() {
     let hand_idx = put_in_hand(&mut runner, 0, "NONICE-LV4");
 
     let memory_before = runner.game.memory;
-    let digivolved = runner.game.digivolve_from_hand(
-        0,
-        hand_idx,
-        penguinmon.index as usize,
-        PlaySource::ByHand,
-    );
+    let digivolved =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, penguinmon.index as usize, PlaySource::ByHand);
     assert!(
         digivolved,
         "EX8-019 must still digivolve into the non-Ice-Snow Lv.4 Digimon"
@@ -502,7 +502,9 @@ fn ex8_019_inherited_when_attacking_mandatory_select_gives_security_attack_minus
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("choose the opponent Digimon");
-    runner.auto_resolve().expect("finish the Security A. -1 grant");
+    runner
+        .auto_resolve()
+        .expect("finish the Security A. -1 grant");
 
     assert_eq!(
         runner
@@ -547,7 +549,9 @@ fn ex8_019_security_attack_minus_1_zero_checks_and_expires_at_end_of_their_turn(
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("choose the opponent Digimon");
-    runner.auto_resolve().expect("finish the Security A. -1 grant");
+    runner
+        .auto_resolve()
+        .expect("finish the Security A. -1 grant");
     assert_eq!(
         runner
             .game

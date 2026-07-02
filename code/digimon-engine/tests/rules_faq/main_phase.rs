@@ -284,7 +284,10 @@ fn mp03_promoted_from_breeding_can_attack_this_turn() {
 
     // A Lv3 in breeding, then promoted to the battle area.
     r.place_in_breeding(p, "EX4-005");
-    assert!(r.game.move_from_breeding(p), "promote the Lv3 to the battle area");
+    assert!(
+        r.game.move_from_breeding(p),
+        "promote the Lv3 to the battle area"
+    );
     let promoted = r.perm_handle(p, 0);
 
     // A suspended opponent Digimon to attack.

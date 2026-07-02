@@ -114,8 +114,7 @@ pub fn full_card_data() -> HashMap<String, crate::card_data::CardData> {
     use crate::card_data::CardData;
     static CELL: OnceLock<HashMap<String, CardData>> = OnceLock::new();
     let parsed = CELL.get_or_init(|| {
-        CardData::load_from_str(CARDS_JSON)
-            .expect("cards.json is malformed (compiled-in resource)")
+        CardData::load_from_str(CARDS_JSON).expect("cards.json is malformed (compiled-in resource)")
     });
     parsed.clone()
 }
@@ -312,7 +311,11 @@ pub fn validate_deck_for_game_mode(
     card_ids: &[String],
     game_mode: &str,
 ) -> Result<DeckValidationResult, String> {
-    let id = if game_mode.is_empty() { "standard" } else { game_mode };
+    let id = if game_mode.is_empty() {
+        "standard"
+    } else {
+        game_mode
+    };
     let fmt = format::descriptor(id)
         .ok_or_else(|| format!("Unsupported deck validation game_mode: {game_mode}"))?;
     Ok(validate_deck_for_descriptor(card_ids, fmt))
@@ -535,7 +538,11 @@ pub struct CardLegality {
 
 /// Resolve legality for a single card under a named game mode.
 pub fn card_legality(card_id: &str, game_mode: &str) -> Result<CardLegality, String> {
-    let id = if game_mode.is_empty() { "standard" } else { game_mode };
+    let id = if game_mode.is_empty() {
+        "standard"
+    } else {
+        game_mode
+    };
     let fmt = format::descriptor(id)
         .ok_or_else(|| format!("Unsupported deck validation game_mode: {game_mode}"))?;
     Ok(card_legality_for_descriptor(card_id, fmt))
@@ -634,7 +641,11 @@ pub fn card_legality_for_descriptor(card_id: &str, fmt: &FormatDescriptor) -> Ca
 /// Legality for every card on the tested allowlist under a game mode, keyed by
 /// card id. Lets the deck builder filter/badge the whole pool in one call.
 pub fn card_legality_bulk(game_mode: &str) -> Result<HashMap<String, CardLegality>, String> {
-    let id = if game_mode.is_empty() { "standard" } else { game_mode };
+    let id = if game_mode.is_empty() {
+        "standard"
+    } else {
+        game_mode
+    };
     let fmt = format::descriptor(id)
         .ok_or_else(|| format!("Unsupported deck validation game_mode: {game_mode}"))?;
     let out = tested_cards_set()

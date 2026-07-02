@@ -57,7 +57,8 @@ fn forced_single_target_selection_emits_effect_target() {
 
     // Drain install-time events, then commit the pick.
     r.game.drain_events();
-    r.auto_resolve().expect("resolve the forced single-target pick");
+    r.auto_resolve()
+        .expect("resolve the forced single-target pick");
 
     let targets: Vec<GameEvent> = r
         .game

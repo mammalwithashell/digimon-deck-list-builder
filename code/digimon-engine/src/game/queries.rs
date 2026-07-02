@@ -331,8 +331,7 @@ impl Game {
                 {
                     continue;
                 }
-                let rctx =
-                    EffectReadContext::new(self, source_card, Some(target), target.player);
+                let rctx = EffectReadContext::new(self, source_card, Some(target), target.player);
                 if let Some(condition) = &effect.condition {
                     if !condition(&rctx) {
                         continue;

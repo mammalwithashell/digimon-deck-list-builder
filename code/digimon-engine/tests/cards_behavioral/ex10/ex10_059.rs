@@ -43,7 +43,11 @@ fn ex10_059_compiles_with_named_two_slot_digixros_path() {
         .iter()
         .find(|p| matches!(p.kind, CompiledAltPathKind::DigiXros))
         .expect("the [DigiXros -3] path must compile");
-    assert_eq!(xros.materials.len(), 2, "[Bagramon] × [DarkKnightmon] slots");
+    assert_eq!(
+        xros.materials.len(),
+        2,
+        "[Bagramon] × [DarkKnightmon] slots"
+    );
     for slot in &xros.materials {
         assert_eq!(
             slot.cost_delta,
@@ -94,8 +98,7 @@ fn ex10_059_digixros_with_both_materials_costs_10() {
             .expect("a hand material candidate");
         r.execute_action(0, pick).expect("select material");
     }
-    if r
-        .pending_selection_view()
+    if r.pending_selection_view()
         .is_some_and(|v| v.kind == SelectionKind::Material)
     {
         let _ = r.execute_action(0, PASS);
@@ -107,9 +110,7 @@ fn ex10_059_digixros_with_both_materials_costs_10() {
         memory_before - 10,
         "DarknessBagramon via DigiXros with both materials must cost 16 −3 −3 = 10"
     );
-    let db = r
-        .game
-        .players[0]
+    let db = r.game.players[0]
         .battle_area
         .iter()
         .find(|p| p.top_card().card_id(&r.game.card_data) == "EX10-059")

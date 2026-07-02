@@ -238,7 +238,9 @@ fn bt25_050_two_suspended_locks_an_opponent_digimon() {
     runner
         .execute_action(0, suspend_action)
         .expect("suspend the third Digimon");
-    runner.auto_resolve().expect("resolve the mandatory lock pick");
+    runner
+        .auto_resolve()
+        .expect("resolve the mandatory lock pick");
 
     let locked = runner.modifiers().has(opp_a, ModifierType::CannotUnsuspend)
         || runner.modifiers().has(opp_b, ModifierType::CannotUnsuspend);

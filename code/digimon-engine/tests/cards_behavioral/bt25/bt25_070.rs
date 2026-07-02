@@ -43,7 +43,9 @@ fn seed_trash(runner: &mut DebugRunner, player: usize, card_id: &str) {
         .position(|c| c.card_id == card_id)
         .unwrap();
     let iid = runner.game.next_card_index();
-    runner.game.players[player].trash.push(CardSource::new(idx, player as u8, iid));
+    runner.game.players[player]
+        .trash
+        .push(CardSource::new(idx, player as u8, iid));
 }
 
 fn base() -> DebugRunnerBuilder {
@@ -94,10 +96,7 @@ fn bt25_070_has_link_condition_appmon_cost_2() {
 
 #[test]
 fn bt25_070_main_links_then_when_linked_deletes_small_opp() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(10)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(10).start();
     seed_trash(&mut r, 0, "TOOL-IN-TRASH");
     let loga = r.place_on_field(0, CARD_ID, Some(0));
     let opp_small = r.place_on_field(1, "OPP-SMALL", Some(0)); // cost 3 — deletable

@@ -98,8 +98,10 @@ fn st23_13_has_somp_onplay_trash_trigger_and_security_clauses() {
         .collect();
 
     assert!(
-        triggered.iter().any(|t| t.when.contains(&CompiledTiming::OnPlay)
-            && t.when.contains(&CompiledTiming::StartOfYourMainPhase)),
+        triggered
+            .iter()
+            .any(|t| t.when.contains(&CompiledTiming::OnPlay)
+                && t.when.contains(&CompiledTiming::StartOfYourMainPhase)),
         "[SOMP][On Play] shared clause present"
     );
     assert!(
@@ -143,7 +145,9 @@ fn st23_13_on_play_places_and_gains_memory_when_opp_has_digimon() {
 
     runner.fire_on_play(0, tamer.index as usize);
     // Internal Yes/No place choice — accept (branch 0).
-    let v = runner.pending_selection_view().expect("place Yes/No installs");
+    let v = runner
+        .pending_selection_view()
+        .expect("place Yes/No installs");
     runner.execute_branch(0).expect("accept the place");
     let _ = runner.auto_resolve();
 
@@ -159,7 +163,11 @@ fn st23_13_on_play_places_and_gains_memory_when_opp_has_digimon() {
         "the placed source is face-down"
     );
     assert_eq!(runner.deck_size(0), deck_before - 1, "1 card left the deck");
-    assert_eq!(runner.memory(), mem_before + 1, "gained 1 memory (opp has a Digimon)");
+    assert_eq!(
+        runner.memory(),
+        mem_before + 1,
+        "gained 1 memory (opp has a Digimon)"
+    );
 }
 
 /// Memory gain fires even when the place is DECLINED (the place is the only
@@ -181,12 +189,18 @@ fn st23_13_memory_gain_fires_even_when_place_declined() {
     let deck_before = runner.deck_size(0);
 
     runner.fire_on_play(0, tamer.index as usize);
-    let v = runner.pending_selection_view().expect("place Yes/No installs");
+    let v = runner
+        .pending_selection_view()
+        .expect("place Yes/No installs");
     let last = v.effect_choices.as_ref().unwrap().len() - 1;
     runner.execute_branch(last).expect("decline the place");
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.deck_size(0), deck_before, "declined ⇒ nothing placed");
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before,
+        "declined ⇒ nothing placed"
+    );
     assert_eq!(
         runner.memory(),
         mem_before + 1,
@@ -248,8 +262,8 @@ fn st23_13_trash_under_tamer_suspends_self_and_buffs_glowing_dawn() {
     let host_card = runner.game.players[0].battle_area[tamer.index as usize]
         .top_card()
         .handle();
-    let trashed_card = runner.game.players[0].battle_area[tamer.index as usize].card_sources[0]
-        .handle();
+    let trashed_card =
+        runner.game.players[0].battle_area[tamer.index as usize].card_sources[0].handle();
 
     runner.game.enqueue_triggered(
         EffectTiming::OnDigivolutionCardTrashed,
@@ -268,9 +282,13 @@ fn st23_13_trash_under_tamer_suspends_self_and_buffs_glowing_dawn() {
         runner.pending_selection().is_some(),
         "the host-scoped trash trigger installs an optional accept prompt"
     );
-    runner.accept_optional_trigger().expect("accept suspend+buff");
+    runner
+        .accept_optional_trigger()
+        .expect("accept suspend+buff");
     // Then the [Glowing Dawn] target pick.
-    let v = runner.pending_selection_view().expect("target pick installs");
+    let v = runner
+        .pending_selection_view()
+        .expect("target pick installs");
     runner.execute_action(0, v.valid_action_ids[0]).unwrap();
     let _ = runner.auto_resolve();
 
@@ -308,8 +326,8 @@ fn st23_13_dp_buff_uses_until_opponents_turn_end_expiry() {
     let host_card = runner.game.players[0].battle_area[tamer.index as usize]
         .top_card()
         .handle();
-    let trashed_card = runner.game.players[0].battle_area[tamer.index as usize].card_sources[0]
-        .handle();
+    let trashed_card =
+        runner.game.players[0].battle_area[tamer.index as usize].card_sources[0].handle();
     runner.game.enqueue_triggered(
         EffectTiming::OnDigivolutionCardTrashed,
         TriggerSource::SourceTrashedFromStack {
@@ -325,7 +343,11 @@ fn st23_13_dp_buff_uses_until_opponents_turn_end_expiry() {
     let v = runner.pending_selection_view().expect("target pick");
     runner.execute_action(0, v.valid_action_ids[0]).unwrap();
     let _ = runner.auto_resolve();
-    assert_eq!(runner.effective_dp(gd).expect("gd dp"), base_dp + 3000, "buff active");
+    assert_eq!(
+        runner.effective_dp(gd).expect("gd dp"),
+        base_dp + 3000,
+        "buff active"
+    );
 
     // End your turn → opponent's turn → end opponent's turn → buff should clear.
     runner.end_turn(); // now opponent's turn
@@ -358,8 +380,8 @@ fn st23_13_trash_under_other_permanent_does_not_trigger() {
     let host_card = runner.game.players[0].battle_area[other.index as usize]
         .top_card()
         .handle();
-    let trashed_card = runner.game.players[0].battle_area[other.index as usize].card_sources[0]
-        .handle();
+    let trashed_card =
+        runner.game.players[0].battle_area[other.index as usize].card_sources[0].handle();
     runner.game.enqueue_triggered(
         EffectTiming::OnDigivolutionCardTrashed,
         TriggerSource::SourceTrashedFromStack {

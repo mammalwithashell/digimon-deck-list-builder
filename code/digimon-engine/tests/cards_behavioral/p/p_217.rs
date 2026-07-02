@@ -114,16 +114,16 @@ fn base() -> DebugRunnerBuilder {
 /// 2. Enqueue `EffectTiming::OnLink` with `TriggerSource::Linked { player: pid,
 ///    host, card }` for BOTH player sides (matching the engine's broadcast).
 /// 3. Drain the effect queue.
-fn fire_link_event(
-    r: &mut DebugRunner,
-    host: PermanentHandle,
-    linked_card_id: &str,
-) {
+fn fire_link_event(r: &mut DebugRunner, host: PermanentHandle, linked_card_id: &str) {
     let card = r.push_linked_owned(host, linked_card_id, host.player);
     for pid in 0..2u8 {
         r.game.enqueue_triggered(
             EffectTiming::OnLink,
-            TriggerSource::Linked { player: pid, host, card },
+            TriggerSource::Linked {
+                player: pid,
+                host,
+                card,
+            },
         );
     }
     r.game.drain_effect_queue();
@@ -182,7 +182,10 @@ fn p_217_has_on_any_link_clause() {
             CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnAnyLink)
         )
     });
-    assert!(has, "P-217 must have a board-wide [On Any Link] observer clause");
+    assert!(
+        has,
+        "P-217 must have a board-wide [On Any Link] observer clause"
+    );
 }
 
 /// The [On Any Link] clause must be optional (DCGO is_skippable = true).
@@ -327,10 +330,7 @@ fn p_217_on_play_none_matched_all_three_to_bottom() {
 /// When accepted: Tamer suspends + memory +1.
 #[test]
 fn p_217_observer_social_link_on_your_turn_accept_suspends_and_gains_memory() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 8])
-        .memory(3)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 8]).memory(3).start();
 
     // Place P-217 (unsuspended) and a host Digimon on P0's field.
     let tamer = r.place_on_field(0, CARD_ID, None);
@@ -373,10 +373,7 @@ fn p_217_observer_social_link_on_your_turn_accept_suspends_and_gains_memory() {
 /// memory unchanged.
 #[test]
 fn p_217_observer_social_link_on_your_turn_decline_no_effect() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 8])
-        .memory(3)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 8]).memory(3).start();
 
     let tamer = r.place_on_field(0, CARD_ID, None);
     let host = r.place_on_field(0, "HOST-DIGI", None);
@@ -398,8 +395,7 @@ fn p_217_observer_social_link_on_your_turn_decline_no_effect() {
         "Tamer must NOT be suspended when the optional observer is declined"
     );
     assert_eq!(
-        r.game.memory,
-        memory_before,
+        r.game.memory, memory_before,
         "Memory must be unchanged when the observer is declined"
     );
 }
@@ -412,10 +408,7 @@ fn p_217_observer_social_link_on_your_turn_decline_no_effect() {
 /// fire. No selection, no memory change.
 #[test]
 fn p_217_observer_irrelevant_trait_does_not_fire() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 8])
-        .memory(3)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 8]).memory(3).start();
 
     let _tamer = r.place_on_field(0, CARD_ID, None);
     let host = r.place_on_field(0, "HOST-DIGI", None);
@@ -431,8 +424,7 @@ fn p_217_observer_irrelevant_trait_does_not_fire() {
         "Observer must NOT fire when the linked card has no matching trait"
     );
     assert_eq!(
-        r.game.memory,
-        memory_before,
+        r.game.memory, memory_before,
         "Memory must be unchanged when linked card has no matching trait"
     );
 }
@@ -441,10 +433,7 @@ fn p_217_observer_irrelevant_trait_does_not_fire() {
 /// (DCGO omits Creation; printed text includes it — this tests the divergence.)
 #[test]
 fn p_217_observer_creation_trait_fires_not_dcgo_bug() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 8])
-        .memory(3)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 8]).memory(3).start();
 
     let tamer = r.place_on_field(0, CARD_ID, None);
     let host = r.place_on_field(0, "HOST-DIGI", None);
@@ -475,10 +464,7 @@ fn p_217_observer_creation_trait_fires_not_dcgo_bug() {
 /// [Your Turn] linked card has [Navi] trait → observer fires.
 #[test]
 fn p_217_observer_navi_trait_fires() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 8])
-        .memory(3)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 8]).memory(3).start();
 
     let tamer = r.place_on_field(0, CARD_ID, None);
     let host = r.place_on_field(0, "HOST-DIGI", None);
@@ -495,10 +481,7 @@ fn p_217_observer_navi_trait_fires() {
 /// [Your Turn] linked card has [Tool] trait → observer fires.
 #[test]
 fn p_217_observer_tool_trait_fires() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 8])
-        .memory(3)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 8]).memory(3).start();
 
     let tamer = r.place_on_field(0, CARD_ID, None);
     let host = r.place_on_field(0, "HOST-DIGI", None);
@@ -520,10 +503,7 @@ fn p_217_observer_tool_trait_fires() {
 /// P-217 must NOT fire — `your_turn: true` blocks it.
 #[test]
 fn p_217_observer_does_not_fire_on_opponents_turn() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 8])
-        .memory(3)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 8]).memory(3).start();
 
     let _tamer = r.place_on_field(0, CARD_ID, None);
     // Place a Digimon on P0's field that will be the linked host.
@@ -541,7 +521,11 @@ fn p_217_observer_does_not_fire_on_opponents_turn() {
     for pid in 0..2u8 {
         r.game.enqueue_triggered(
             EffectTiming::OnLink,
-            TriggerSource::Linked { player: pid, host: p0_host, card },
+            TriggerSource::Linked {
+                player: pid,
+                host: p0_host,
+                card,
+            },
         );
     }
     r.game.drain_effect_queue();
@@ -551,8 +535,7 @@ fn p_217_observer_does_not_fire_on_opponents_turn() {
         "P-217 observer must NOT fire on opponent's turn"
     );
     assert_eq!(
-        r.game.memory,
-        memory_before,
+        r.game.memory, memory_before,
         "Memory must be unchanged when observer suppressed by opponent's turn"
     );
 }
@@ -561,10 +544,7 @@ fn p_217_observer_does_not_fire_on_opponents_turn() {
 /// must NOT fire — `event_target_owner: you` blocks it.
 #[test]
 fn p_217_observer_does_not_fire_for_opponent_digimon_link() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 8])
-        .memory(3)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 8]).memory(3).start();
 
     let _tamer = r.place_on_field(0, CARD_ID, None);
     // Opponent's Digimon.
@@ -579,7 +559,11 @@ fn p_217_observer_does_not_fire_for_opponent_digimon_link() {
     for pid in 0..2u8 {
         r.game.enqueue_triggered(
             EffectTiming::OnLink,
-            TriggerSource::Linked { player: pid, host: opp_host, card },
+            TriggerSource::Linked {
+                player: pid,
+                host: opp_host,
+                card,
+            },
         );
     }
     r.game.drain_effect_queue();
@@ -589,8 +573,7 @@ fn p_217_observer_does_not_fire_for_opponent_digimon_link() {
         "P-217 observer must NOT fire when the link host belongs to the opponent"
     );
     assert_eq!(
-        r.game.memory,
-        memory_before,
+        r.game.memory, memory_before,
         "Memory must be unchanged when opponent's Digimon is the link host"
     );
 }
@@ -604,10 +587,7 @@ fn p_217_observer_does_not_fire_for_opponent_digimon_link() {
 /// only, cost unpayable).
 #[test]
 fn p_217_observer_already_suspended_tamer_cannot_pay_cost() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 8])
-        .memory(3)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 8]).memory(3).start();
 
     let tamer = r.place_on_field(0, CARD_ID, None);
     let host = r.place_on_field(0, "HOST-DIGI", None);
@@ -641,8 +621,7 @@ fn p_217_observer_already_suspended_tamer_cannot_pay_cost() {
         "Tamer must still be suspended (cost couldn't be paid)"
     );
     assert_eq!(
-        r.game.memory,
-        memory_before,
+        r.game.memory, memory_before,
         "Memory must not change when cost cannot be paid"
     );
 }
@@ -678,7 +657,11 @@ fn p_217_security_plays_tamer_free() {
     r.auto_resolve().ok();
 
     // Security card must have been consumed.
-    assert_eq!(r.security_count(1), 0, "Security stack must be empty after check");
+    assert_eq!(
+        r.security_count(1),
+        0,
+        "Security stack must be empty after check"
+    );
 
     // P-217 must be on P1's battle area (played free by [Security] effect).
     assert_eq!(

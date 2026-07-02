@@ -189,7 +189,10 @@ fn has_entry_with_expiry(
 /// CannotActivateWhenDigivolvingEffects, both until end of opponent's turn.
 fn assert_locked(runner: &DebugRunner, handle: PermanentHandle) {
     assert!(
-        runner.game.modifiers.has(handle, ModifierType::CannotSuspend),
+        runner
+            .game
+            .modifiers
+            .has(handle, ModifierType::CannotSuspend),
         "locked Digimon must hold CannotSuspend"
     );
     assert!(
@@ -736,7 +739,9 @@ fn ex8_023_on_play_lock_skipped_when_no_sourceless_digimon_remains() {
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("first source pick");
-    let view = runner.pending_selection_view().expect("second pick pending");
+    let view = runner
+        .pending_selection_view()
+        .expect("second pick pending");
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("second source pick");
@@ -790,7 +795,9 @@ fn ex8_023_on_play_stripped_digimon_is_legal_lock_target() {
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("pick OPP-A's first source");
-    let view = runner.pending_selection_view().expect("second pick pending");
+    let view = runner
+        .pending_selection_view()
+        .expect("second pick pending");
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("pick OPP-A's second source");
@@ -911,7 +918,9 @@ fn ex8_023_when_digivolving_via_ice_snow_alt_path_costs_3_and_fires_effect() {
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("first source pick");
-    let view = runner.pending_selection_view().expect("second pick pending");
+    let view = runner
+        .pending_selection_view()
+        .expect("second pick pending");
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("second source pick");

@@ -95,7 +95,10 @@ fn base() -> DebugRunnerBuilder {
         .dsl_card(CARD_ID)
         .expect("BT25-082 YAML parses and compiles")
         .add_card(make_test_card("DECK-PAD", "Filler"))
-        .add_card(make_tamer("TM-TAMER", "[Three Musketeers] Once per turn ..."))
+        .add_card(make_tamer(
+            "TM-TAMER",
+            "[Three Musketeers] Once per turn ...",
+        ))
         .add_card(make_tamer("PLAIN-TAMER", "A boring tamer with no keywords"))
         .add_card(make_digimon("TM-DIGI", 4, &["Three Musketeers"]))
         .add_card(make_digimon("TM-DIGI-LV5", 5, &["Three Musketeers"]))
@@ -140,7 +143,9 @@ fn bt25_082_has_conditional_into_alt_path_cost4() {
     let path = card
         .alt_paths
         .iter()
-        .find(|p| p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(4)))
+        .find(|p| {
+            p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(4))
+        })
         .expect("BT25-082 must include a cost-4 digivolve alt-path (the [All Turns] into-path)");
 
     assert!(
@@ -222,7 +227,10 @@ fn bt25_082_has_inherited_when_attacking_opt_clause() {
         .process
         .iter()
         .any(|s| matches!(s, CompiledStep::PlaceAsBottomSource { .. }));
-    let has_draw = clause.process.iter().any(|s| matches!(s, CompiledStep::Draw { .. }));
+    let has_draw = clause
+        .process
+        .iter()
+        .any(|s| matches!(s, CompiledStep::Draw { .. }));
     assert!(
         has_bottom_source,
         "inherited WA body must place a card as a bottom source"
@@ -236,10 +244,7 @@ fn bt25_082_has_inherited_when_attacking_opt_clause() {
 /// optional prompt; accepting + picking plays the Tamer for free.
 #[test]
 fn bt25_082_op_plays_tm_text_tamer_free_from_hand() {
-    let mut runner = base()
-        .hand(0, &[CARD_ID, "TM-TAMER"])
-        .memory(8)
-        .start();
+    let mut runner = base().hand(0, &[CARD_ID, "TM-TAMER"]).memory(8).start();
 
     let tamers_before = runner.game.players[0]
         .battle_area
@@ -277,10 +282,7 @@ fn bt25_082_op_plays_tm_text_tamer_free_from_hand() {
 /// clause entirely (no prompt).
 #[test]
 fn bt25_082_op_blocked_with_two_tamers() {
-    let mut runner = base()
-        .hand(0, &[CARD_ID, "TM-TAMER"])
-        .memory(8)
-        .start();
+    let mut runner = base().hand(0, &[CARD_ID, "TM-TAMER"]).memory(8).start();
     // Seed two Tamers onto P0's field.
     runner.place_on_field(0, "PLAIN-TAMER", Some(0));
     runner.place_on_field(0, "PLAIN-TAMER", Some(0));
@@ -297,10 +299,7 @@ fn bt25_082_op_blocked_with_two_tamers() {
 /// target, clause is a no-op.
 #[test]
 fn bt25_082_op_no_fire_without_tm_text_tamer_in_hand() {
-    let mut runner = base()
-        .hand(0, &[CARD_ID, "PLAIN-TAMER"])
-        .memory(8)
-        .start();
+    let mut runner = base().hand(0, &[CARD_ID, "PLAIN-TAMER"]).memory(8).start();
 
     let _bg = runner.play(0, 0).expect("play BlackGatomon");
 
@@ -313,10 +312,7 @@ fn bt25_082_op_no_fire_without_tm_text_tamer_in_hand() {
 /// Optional decline: the player may decline the OnPlay trigger.
 #[test]
 fn bt25_082_op_decline_keeps_field_unchanged() {
-    let mut runner = base()
-        .hand(0, &[CARD_ID, "TM-TAMER"])
-        .memory(8)
-        .start();
+    let mut runner = base().hand(0, &[CARD_ID, "TM-TAMER"]).memory(8).start();
 
     let _bg = runner.play(0, 0).expect("play BlackGatomon");
     assert!(runner.pending_selection().is_some(), "prompt installed");
@@ -428,7 +424,10 @@ fn bt25_082_inherited_wa_opt_locks_second_attack() {
     let defender2 = runner.place_on_field(1, "PLAIN-DIGI", Some(0));
 
     runner.attack_digimon(stack, defender, false);
-    assert!(runner.pending_selection().is_some(), "first WA installs prompt");
+    assert!(
+        runner.pending_selection().is_some(),
+        "first WA installs prompt"
+    );
     runner.accept_optional_trigger().expect("accept");
     runner.auto_resolve().expect("resolve first WA");
 

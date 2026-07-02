@@ -265,7 +265,10 @@ fn bt25_009_somp_accepts_animal_trait_hand_card() {
     runner.accept_optional_trigger().expect("accept");
     runner.auto_resolve().expect("resolve");
     let perm = &runner.game.players[0].battle_area[bear.index as usize];
-    assert_eq!(perm.top_card().card_id(&runner.game.card_data), "ANIMAL-LV4");
+    assert_eq!(
+        perm.top_card().card_id(&runner.game.card_data),
+        "ANIMAL-LV4"
+    );
 }
 
 #[test]

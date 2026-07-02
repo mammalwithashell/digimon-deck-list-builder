@@ -493,7 +493,10 @@ fn ex11_023_other_deletion_recursion_fires_on_familiar_token_deletion() {
         .pending_selection_view()
         .expect("a Familiar Token deletion (a Digimon) must offer Kaguyamon's trash-recursion");
     assert_eq!(target.kind, SelectionKind::Trash);
-    assert!(target.is_optional, "printed 'you may' trash-play is optional");
+    assert!(
+        target.is_optional,
+        "printed 'you may' trash-play is optional"
+    );
     runner
         .execute_action(0, target.valid_action_ids[0])
         .expect("play Puppet from trash");

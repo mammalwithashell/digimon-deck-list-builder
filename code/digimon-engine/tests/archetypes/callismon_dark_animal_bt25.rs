@@ -467,13 +467,10 @@ fn c3_blackgatomon_op_tamer_anchor_then_at_into_path_is_unlocked() {
         .expect("C3: pick + free-play the TM-text Tamer");
 
     // ── Claimed mechanical outcome (anchor) ──────────────────────────────────
-    let tm_tamer_on_field = runner.game.players[0]
-        .battle_area
-        .iter()
-        .any(|p| {
-            p.is_tamer(&runner.game.card_data)
-                && p.top_card().card_id(&runner.game.card_data) == "TM-TAMER"
-        });
+    let tm_tamer_on_field = runner.game.players[0].battle_area.iter().any(|p| {
+        p.is_tamer(&runner.game.card_data)
+            && p.top_card().card_id(&runner.game.card_data) == "TM-TAMER"
+    });
     assert!(
         tm_tamer_on_field,
         "C3: the [On Play] anchor free-played the [Three Musketeers]-text Tamer onto the field"

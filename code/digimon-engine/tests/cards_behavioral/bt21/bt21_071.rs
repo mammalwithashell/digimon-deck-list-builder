@@ -134,7 +134,9 @@ fn advance_to_main(r: &mut DebugRunner) {
 #[test]
 fn bt21_071_yaml_compiles_and_metadata() {
     let runner = base().memory(0).start();
-    let card = runner.compiled_card(CARD_ID).expect("BT21-071 in compiled pack");
+    let card = runner
+        .compiled_card(CARD_ID)
+        .expect("BT21-071 in compiled pack");
     assert_eq!(card.name, "Scopemon");
     assert_eq!(card.level, Some(4));
     assert_eq!(card.dp, Some(4000));
@@ -152,7 +154,10 @@ fn bt21_071_has_link_condition_appmon_cost_2() {
             }) if *cost == 2
         )
     });
-    assert!(has, "BT21-071 must declare a self link-condition with cost 2");
+    assert!(
+        has,
+        "BT21-071 must declare a self link-condition with cost 2"
+    );
 }
 
 #[test]
@@ -172,7 +177,10 @@ fn bt21_071_has_on_play_and_when_digivolving_clauses() {
         )
     });
     assert!(has_on_play, "BT21-071 must have an [On Play] clause");
-    assert!(has_when_digi, "BT21-071 must have a [When Digivolving] clause");
+    assert!(
+        has_when_digi,
+        "BT21-071 must have a [When Digivolving] clause"
+    );
 }
 
 #[test]
@@ -185,7 +193,10 @@ fn bt21_071_has_when_linked_clause() {
             CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::WhenLinked)
         )
     });
-    assert!(has, "BT21-071 must have a [When Linking] (when_linked) clause");
+    assert!(
+        has,
+        "BT21-071 must have a [When Linking] (when_linked) clause"
+    );
 }
 
 #[test]
@@ -217,10 +228,7 @@ fn bt21_071_registers_three_alt_paths() {
 /// Selecting the card and a host Digimon → card placed as bottom source, +1 memory.
 #[test]
 fn bt21_071_on_play_place_appmon_from_hand_gains_memory() {
-    let mut r = base()
-        .hand(0, &[CARD_ID])
-        .memory(5)
-        .start();
+    let mut r = base().hand(0, &[CARD_ID]).memory(5).start();
 
     // Add an Appmon to P0's hand and a Digimon on field to receive the source.
     push_to_hand(&mut r, "APPMON-HAND");
@@ -259,10 +267,7 @@ fn bt21_071_on_play_place_appmon_from_hand_gains_memory() {
 /// [On Play] with an Appmon in trash → place from trash → gain memory.
 #[test]
 fn bt21_071_on_play_place_appmon_from_trash_gains_memory() {
-    let mut r = base()
-        .hand(0, &[CARD_ID])
-        .memory(5)
-        .start();
+    let mut r = base().hand(0, &[CARD_ID]).memory(5).start();
 
     push_to_trash(&mut r, "APPMON-TRASH");
     let host = r.place_on_field(0, "HOST-DIGI", Some(0));
@@ -310,10 +315,7 @@ fn bt21_071_on_play_no_eligible_cards_no_memory() {
 /// (Player can select the card but has no valid host — selecting PASS for host → no memory.)
 #[test]
 fn bt21_071_on_play_no_own_digimon_to_place_under_no_memory() {
-    let mut r = base()
-        .hand(0, &[CARD_ID])
-        .memory(5)
-        .start();
+    let mut r = base().hand(0, &[CARD_ID]).memory(5).start();
 
     push_to_hand(&mut r, "APPMON-HAND");
     // No other Digimon on P0's field; only Scopemon itself (which will just
@@ -337,10 +339,7 @@ fn bt21_071_on_play_no_own_digimon_to_place_under_no_memory() {
 /// [On Play] decline the union-zone pick (PASS) → no placement, no memory.
 #[test]
 fn bt21_071_on_play_decline_no_placement_no_memory() {
-    let mut r = base()
-        .hand(0, &[CARD_ID])
-        .memory(5)
-        .start();
+    let mut r = base().hand(0, &[CARD_ID]).memory(5).start();
 
     push_to_hand(&mut r, "APPMON-HAND");
     let _host = r.place_on_field(0, "HOST-DIGI", Some(0));
@@ -510,8 +509,7 @@ fn bt21_071_link_condition_only_appmon_host() {
     // NOTE: link action is on the Scopemon permanent itself; the mask should show
     // whether the link can fire. With no Appmon host present, it should be masked (0.0).
     assert_eq!(
-        mask[link_action as usize],
-        0.0f32,
+        mask[link_action as usize], 0.0f32,
         "Link action must be masked when no [Appmon] host is present; link_action={link_action}"
     );
 }
@@ -534,7 +532,10 @@ fn bt21_071_has_linked_dp_aura_3000() {
             })
         )
     });
-    assert!(has, "BT21-071 declares scope:linked +3000 DP aura (link box)");
+    assert!(
+        has,
+        "BT21-071 declares scope:linked +3000 DP aura (link box)"
+    );
 }
 
 /// Behavioral: host effective DP +3000 while BT21-071 is linked.

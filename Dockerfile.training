@@ -88,6 +88,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY --from=rust-builder /wheels/*.whl /wheels/
 RUN pip install --no-cache-dir /wheels/*.whl && rm -rf /wheels
 
+# Install torch from the CUDA 12.8 wheel index FIRST, before the
+# requirements-training.txt install, so the cu128 build is already present
+# and satisfies the `torch>=2.0` line below (pip won't replace it).
+#
+# WHY: the default PyPI torch is built for CUDA 13.0 (`+cu130`). RunPod's
+# current GPU fleet (RTX 4090/5090 community hosts) ships CUDA 12.8 drivers,
+# and GeForce cards have no CUDA forward-compat, so a cu130 torch reports
+# `cuda.is_available()=False` and training silently falls back to CPU. cu128
+# is the highest CUDA build a 12.8 driver supports; 2.11.0 is the newest torch
+# published for cu128/cp311 (2.12.x is cu130-only). SB3/sb3-contrib >=2.0 are
+# compatible with torch 2.11. CPU-only hosts (Hetzner) ignore the CUDA build.
+RUN pip install --no-cache-dir torch==2.11.0 \
+    --index-url https://download.pytorch.org/whl/cu128
+
 # Install Python training dependencies
 COPY requirements-training.txt .
 RUN pip install --no-cache-dir -r requirements-training.txt

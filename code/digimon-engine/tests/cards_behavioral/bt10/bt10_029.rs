@@ -72,7 +72,9 @@ fn bt10_029_inherited_draws_for_shoutmon_named_carrier_only() {
 
     let hand_before = runner.hand_size(0);
     runner.attack_player(stack, 1, false);
-    runner.auto_resolve().expect("resolve Starmons inherited draw");
+    runner
+        .auto_resolve()
+        .expect("resolve Starmons inherited draw");
 
     assert_eq!(runner.hand_size(0), hand_before + 1);
 
@@ -121,4 +123,43 @@ fn bt10_029_save_offers_own_tamer_and_is_optional() {
 
     let after = source_count_for_card_id(&runner, 0, "XROS-TAMER");
     assert_eq!(after, before + 1, "Save should place Starmons under Tamer");
+}
+
+#[test]
+fn bt10_029_save_prompt_clones_faithfully() {
+    let mut runner = make_runner();
+    let starmons = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(0, "XROS-TAMER", Some(0));
+
+    runner
+        .game
+        .delete_permanent_with_cause(starmons, ReplacementCause::OpponentEffect);
+    let action = {
+        let pending = runner
+            .pending_selection()
+            .expect("Save should offer a Tamer destination");
+        assert!(
+            runner.game.pending_selection_resume.is_some(),
+            "Save prompt must be resume-driven before cloning"
+        );
+        pending.valid_action_ids[0]
+    };
+
+    let mut cloned = runner.game.clone();
+    cloned
+        .resolve_selection(0, action)
+        .expect("cloned Save prompt resolves");
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "resolving the clone must not consume the original prompt"
+    );
+    runner
+        .execute_action(0, action)
+        .expect("original Save prompt resolves");
+
+    assert_eq!(
+        cloned.players[0].battle_area[0].card_sources.len(),
+        runner.game.players[0].battle_area[0].card_sources.len(),
+        "clone and original should replay the same Save result"
+    );
 }

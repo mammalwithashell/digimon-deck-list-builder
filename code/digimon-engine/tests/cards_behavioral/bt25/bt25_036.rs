@@ -47,8 +47,8 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
     CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::{encode_digivolve, EFFECTS_PER_PERMANENT};
 use digimon_engine::action::build_action_mask;
+use digimon_engine::action::space::{encode_digivolve, EFFECTS_PER_PERMANENT};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
 use digimon_engine::enums::{CardColor, CardKind, PlayerId};
@@ -99,7 +99,10 @@ fn advance_to_main(r: &mut DebugRunner) {
 
 #[test]
 fn bt25_036_yaml_printed_metadata() {
-    let runner = base().deck(0, &["DECK-PAD"; 12]).deck(1, &["DECK-PAD"; 12]).start();
+    let runner = base()
+        .deck(0, &["DECK-PAD"; 12])
+        .deck(1, &["DECK-PAD"; 12])
+        .start();
     let card = runner.compiled_card(CARD_ID).expect("present in pack");
     assert_eq!(card.name, "Craftmon");
     assert_eq!(card.level, Some(4));
@@ -108,7 +111,10 @@ fn bt25_036_yaml_printed_metadata() {
 
 #[test]
 fn bt25_036_registers_app_fusion_and_alt_digivolve() {
-    let runner = base().deck(0, &["DECK-PAD"; 12]).deck(1, &["DECK-PAD"; 12]).start();
+    let runner = base()
+        .deck(0, &["DECK-PAD"; 12])
+        .deck(1, &["DECK-PAD"; 12])
+        .start();
     let card = runner.compiled_card(CARD_ID).expect("present");
     let app_fusion = card.alt_paths.iter().any(|p| {
         matches!(p.kind, CompiledAltPathKind::AppFusion)
@@ -119,12 +125,18 @@ fn bt25_036_registers_app_fusion_and_alt_digivolve() {
         matches!(p.kind, CompiledAltPathKind::Digivolve)
             && matches!(p.cost, Some(CompiledCost::Literal(2)))
     });
-    assert!(alt_digi, "must register a cost-2 alt-digivolve over a Lv.2 [Stnd.]");
+    assert!(
+        alt_digi,
+        "must register a cost-2 alt-digivolve over a Lv.2 [Stnd.]"
+    );
 }
 
 #[test]
 fn bt25_036_has_link_condition_cost_2() {
-    let runner = base().deck(0, &["DECK-PAD"; 12]).deck(1, &["DECK-PAD"; 12]).start();
+    let runner = base()
+        .deck(0, &["DECK-PAD"; 12])
+        .deck(1, &["DECK-PAD"; 12])
+        .start();
     let card = runner.compiled_card(CARD_ID).expect("present");
     let link = card.effects.iter().any(|c| matches!(
         c,
@@ -135,34 +147,51 @@ fn bt25_036_has_link_condition_cost_2() {
 
 #[test]
 fn bt25_036_has_op_wd_when_linked_inherited_and_security_clauses() {
-    let runner = base().deck(0, &["DECK-PAD"; 12]).deck(1, &["DECK-PAD"; 12]).start();
+    let runner = base()
+        .deck(0, &["DECK-PAD"; 12])
+        .deck(1, &["DECK-PAD"; 12])
+        .start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let op_wd = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::OnPlay)
-                && t.when.contains(&CompiledTiming::WhenDigivolving)
-    ));
-    let when_linked = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::WhenLinked)
-                && matches!(t.scope, CompiledScope::Linked)
-    ));
-    let security = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity)
-    ));
-    assert!(op_wd, "must have a shared [On Play][When Digivolving] clause");
+    let op_wd = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::OnPlay)
+                    && t.when.contains(&CompiledTiming::WhenDigivolving)
+        )
+    });
+    let when_linked = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::WhenLinked)
+                    && matches!(t.scope, CompiledScope::Linked)
+        )
+    });
+    let security = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity)
+        )
+    });
+    assert!(
+        op_wd,
+        "must have a shared [On Play][When Digivolving] clause"
+    );
     assert!(when_linked, "must have a linked [When Linking] clause");
-    assert!(security, "must have a [Security] clause (on_security timing)");
+    assert!(
+        security,
+        "must have a [Security] clause (on_security timing)"
+    );
     // The card prints exactly ONE "trash 1 Appmon -> Draw 2" box ([When Linking]);
     // cards.json's "inherited" field is a mis-slot of that same clause (cf.
     // BT25-045), so there is NO separate inherited clause.
-    let inherited = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t) if matches!(t.scope, CompiledScope::Inherited)
-    ));
+    let inherited = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t) if matches!(t.scope, CompiledScope::Inherited)
+        )
+    });
     assert!(
         !inherited,
         "no separate inherited clause — the trash->Draw 2 is the [When Linking] effect"
@@ -323,9 +352,7 @@ fn bt25_036_app_fusion_legal_with_two_named_linked_and_stacks() {
         "Craftmon stacked on top via App Fusion"
     );
     assert!(
-        perm.card_sources
-            .iter()
-            .any(|c| c.handle() == linked),
+        perm.card_sources.iter().any(|c| c.handle() == linked),
         "the host's linked Gomimon was consumed under the new top as a source"
     );
     assert!(

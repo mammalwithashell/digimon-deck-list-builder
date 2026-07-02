@@ -171,9 +171,10 @@ fn add_tamer_with_face_down(runner: &mut DebugRunner) -> PermanentHandle {
 }
 
 fn fire_when_digivolving(runner: &mut DebugRunner, murasame: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(murasame));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(murasame),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -350,7 +351,9 @@ fn bt25_041_trash_face_down_then_play_glowing_dawn_digimon() {
     // 1) Optional engagement gate.
     let v = runner.pending_selection_view().expect("engagement gate");
     assert!(v.is_optional, "'you may play or use' ⇒ optional");
-    runner.execute_action(v.selecting_player, v.valid_action_ids[0]).unwrap();
+    runner
+        .execute_action(v.selecting_player, v.valid_action_ids[0])
+        .unwrap();
 
     // 2) 2-way pay-cost choice. With no security, only the trash-FD branch (idx 1)
     //    + "don't pay" are meaningful; pick the trash-FD branch.
@@ -359,17 +362,24 @@ fn bt25_041_trash_face_down_then_play_glowing_dawn_digimon() {
         v.effect_choices.is_some(),
         "the pay-cost choice is an EffectChoice menu"
     );
-    runner.execute_branch(1).expect("choose trash-FD-under-Tamer");
+    runner
+        .execute_branch(1)
+        .expect("choose trash-FD-under-Tamer");
 
     // 3) Tamer pick (the trash).
     let v = runner.pending_selection_view().expect("Tamer pick");
-    runner.execute_action(v.selecting_player, v.valid_action_ids[0]).unwrap();
+    runner
+        .execute_action(v.selecting_player, v.valid_action_ids[0])
+        .unwrap();
 
     // 4) Hand pick — the GD Digimon.
     let gd_idx = hand_index_of(&runner, 0, "GD-DIGI");
     let v = runner.pending_selection_view().expect("hand pick");
     let want = digimon_engine::action::space::PLAY_HAND_START + gd_idx as u16;
-    assert!(v.valid_action_ids.contains(&want), "GD-DIGI is a legal pick");
+    assert!(
+        v.valid_action_ids.contains(&want),
+        "GD-DIGI is a legal pick"
+    );
     runner.execute_action(v.selecting_player, want).unwrap();
     let _ = runner.auto_resolve();
 
@@ -409,7 +419,9 @@ fn bt25_041_add_security_then_use_glowing_dawn_option() {
 
     // Engagement gate.
     let v = runner.pending_selection_view().expect("engagement gate");
-    runner.execute_action(v.selecting_player, v.valid_action_ids[0]).unwrap();
+    runner
+        .execute_action(v.selecting_player, v.valid_action_ids[0])
+        .unwrap();
 
     // Pay-cost choice → branch 0 "Add your top security card to the hand".
     let v = runner.pending_selection_view().expect("pay-cost choice");
@@ -467,7 +479,11 @@ fn bt25_041_main_clause_is_declinable() {
     let _ = runner.auto_resolve();
 
     assert_eq!(runner.trash_size(0), trash_before, "no trash on decline");
-    assert_eq!(runner.security_count(0), sec_before, "no security added on decline");
+    assert_eq!(
+        runner.security_count(0),
+        sec_before,
+        "no security added on decline"
+    );
     assert_eq!(
         runner.game.players[0].battle_area.len(),
         field_before,
@@ -488,11 +504,15 @@ fn bt25_041_no_glowing_dawn_card_in_hand_no_play() {
     fire_when_digivolving(&mut runner, murasame);
 
     let v = runner.pending_selection_view().expect("engagement gate");
-    runner.execute_action(v.selecting_player, v.valid_action_ids[0]).unwrap();
+    runner
+        .execute_action(v.selecting_player, v.valid_action_ids[0])
+        .unwrap();
     let v = runner.pending_selection_view().expect("pay-cost choice");
     runner.execute_branch(1).expect("choose trash-FD");
     let v = runner.pending_selection_view().expect("Tamer pick");
-    runner.execute_action(v.selecting_player, v.valid_action_ids[0]).unwrap();
+    runner
+        .execute_action(v.selecting_player, v.valid_action_ids[0])
+        .unwrap();
     let _ = runner.auto_resolve();
 
     assert!(

@@ -202,6 +202,70 @@ fn block_declared_redirects_battle_to_blocker() {
 }
 
 #[test]
+fn block_prompt_clones_faithfully() {
+    let mut r = runner_with_attacker_vs(3000, 5000);
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+    let blk = r.place_on_field(1, "BLK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
+
+    r.attack_digimon(atk, def, false);
+    let block_action = encode_attack(0, blk.index as u16);
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "BlockTiming must park a data frame for clone-faithful prompts"
+    );
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(1, block_action)
+        .expect("clone declares blocker");
+    assert!(
+        clone.pending_attack.is_none(),
+        "clone should continue the blocked attack to completion"
+    );
+    assert_eq!(
+        clone.players[0].battle_area.len(),
+        0,
+        "clone should delete the attacker after battling the stronger blocker"
+    );
+    assert!(
+        clone.players[1].battle_area[blk.index as usize].is_suspended,
+        "clone should suspend the declared blocker"
+    );
+
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original at the Block prompt"
+    );
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        1,
+        "resolving the clone must not delete the original attacker"
+    );
+    assert!(
+        !r.game.players[1].battle_area[blk.index as usize].is_suspended,
+        "resolving the clone must not suspend the original blocker"
+    );
+
+    r.game
+        .resolve_selection(1, block_action)
+        .expect("original declares blocker");
+    assert_eq!(
+        r.game.players[0].battle_area.len(),
+        clone.players[0].battle_area.len(),
+        "original and clone replay the block identically"
+    );
+    assert_eq!(
+        r.game.players[1].battle_area[blk.index as usize].is_suspended,
+        clone.players[1].battle_area[blk.index as usize].is_suspended,
+        "original and clone pay the same block suspend cost"
+    );
+}
+
+#[test]
 fn block_declared_payload_carries_old_new_and_blocker_reason() {
     let payload_log: Arc<Mutex<Vec<TargetChangeSnapshot>>> = Arc::new(Mutex::new(Vec::new()));
 

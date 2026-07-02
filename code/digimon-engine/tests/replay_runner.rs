@@ -364,7 +364,10 @@ fn replay_session_check_then_apply_passes_legal_recording() {
         !s.is_paused(),
         "a legal recording must not pause under CheckThenApply"
     );
-    assert!(s.divergences().is_empty(), "no divergences on a legal recording");
+    assert!(
+        s.divergences().is_empty(),
+        "no divergences on a legal recording"
+    );
     assert_eq!(s.current_step(), s.total_steps());
 }
 
@@ -400,14 +403,22 @@ fn replay_session_check_then_apply_pauses_on_masked_out_action() {
 fn replay_session_trust_ignores_illegality() {
     let db = minimal_db();
     let mut s = ReplaySession::new(recording_with_illegal_first_action(), &db, false).unwrap();
-    assert_eq!(s.policy(), StepPolicy::Trust, "native default policy is Trust");
+    assert_eq!(
+        s.policy(),
+        StepPolicy::Trust,
+        "native default policy is Trust"
+    );
     s.run_to_completion();
     assert!(!s.is_paused(), "Trust never pauses on legality");
     assert!(
         s.divergences().is_empty(),
         "Trust records no differential divergences"
     );
-    assert_eq!(s.current_step(), s.total_steps(), "Trust advances through all steps");
+    assert_eq!(
+        s.current_step(),
+        s.total_steps(),
+        "Trust advances through all steps"
+    );
 }
 
 // ── Group 4: DcgoAdapter (bot + opaque) ─────────────────────────────────────
@@ -457,8 +468,16 @@ fn dcgo_bot_recording_reconstructs_deterministically() {
     let a = ReplaySession::from_dcgo(dcgo_bot_recording(), &db, false).unwrap();
     let b = ReplaySession::from_dcgo(dcgo_bot_recording(), &db, false).unwrap();
 
-    assert_eq!(a.policy(), StepPolicy::CheckThenApply, "DCGO default policy");
-    assert_eq!(a.total_steps(), 2, "two mulligan actions are replayable steps");
+    assert_eq!(
+        a.policy(),
+        StepPolicy::CheckThenApply,
+        "DCGO default policy"
+    );
+    assert_eq!(
+        a.total_steps(),
+        2,
+        "two mulligan actions are replayable steps"
+    );
     // Deterministic reconstruction (seed 0).
     assert_eq!(a.game.turn_player(), b.game.turn_player());
     for i in 0..2 {
@@ -584,7 +603,10 @@ fn opaque_security_placeholder_renders_hidden_then_concrete() {
 
     let sec = SecurityView::from_game(&game, 1, Perspective::God);
     let ids = sec.card_ids.clone().expect("god view exposes card_ids");
-    let phs = sec.placeholders.clone().expect("god view exposes placeholders");
+    let phs = sec
+        .placeholders
+        .clone()
+        .expect("god view exposes placeholders");
     assert_eq!(ids.len(), 2);
     assert_eq!(phs, vec![true, false], "slot 0 hidden, slot 1 concrete");
     assert_eq!(
@@ -622,7 +644,13 @@ fn dcgo_bot_backward_seek_rebuilds_to_fresh_state() {
     let fresh = ReplaySession::from_dcgo(dcgo_bot_recording(), &db, false).unwrap();
     assert_eq!(s.game.turn_player(), fresh.game.turn_player());
     for i in 0..2 {
-        assert_eq!(s.game.players[i].deck.len(), fresh.game.players[i].deck.len());
-        assert_eq!(s.game.players[i].hand.len(), fresh.game.players[i].hand.len());
+        assert_eq!(
+            s.game.players[i].deck.len(),
+            fresh.game.players[i].deck.len()
+        );
+        assert_eq!(
+            s.game.players[i].hand.len(),
+            fresh.game.players[i].hand.len()
+        );
     }
 }

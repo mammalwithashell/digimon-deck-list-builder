@@ -228,7 +228,11 @@ fn digivolve_runner(target_glowing_dawn: bool) -> (DebugRunner, usize, usize, us
     let tamer_perm = runner.place_stack(0, &["STASH", "TAMER"]);
     runner.game.players[0].battle_area[tamer_perm.index as usize].card_sources[0].face_down = true;
 
-    let target_id = if target_glowing_dawn { "GD-LV5" } else { "PLAIN-LV5" };
+    let target_id = if target_glowing_dawn {
+        "GD-LV5"
+    } else {
+        "PLAIN-LV5"
+    };
     let hand_idx = push_to_hand(&mut runner, 0, target_id);
 
     (
@@ -257,14 +261,24 @@ fn st23_11_digivolve_reducer_credits_minus_two_on_paid_park() {
         !ok,
         "digivolve must park while the interactive reducer prompt is pending"
     );
-    assert!(runner.pending_is_optional(), "the reducer is optional (decline allowed)");
-    assert_eq!(runner.memory(), mem_before, "no cost paid before the gate resolves");
+    assert!(
+        runner.pending_is_optional(),
+        "the reducer is optional (decline allowed)"
+    );
+    assert_eq!(
+        runner.memory(),
+        mem_before,
+        "no cost paid before the gate resolves"
+    );
 
     runner
         .accept_optional_trigger()
         .expect("accept the -2 cost reduction");
     let _ = runner.auto_resolve();
-    assert!(runner.game.pending_selection.is_none(), "digivolution completes");
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "digivolution completes"
+    );
 
     assert_eq!(
         runner.trash_size(0),
@@ -293,7 +307,11 @@ fn st23_11_digivolve_reducer_no_reduction_when_unpayable() {
         .digivolve_from_hand(0, hand_idx, base, PlaySource::ByHand);
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.trash_size(0), trash_before, "no face-down stash → nothing trashed");
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before,
+        "no face-down stash → nothing trashed"
+    );
     assert_eq!(
         mem_before - runner.memory(),
         4,
@@ -313,14 +331,24 @@ fn st23_11_digivolve_reducer_decline_pays_full_cost() {
     let _ = runner
         .game
         .digivolve_from_hand(0, hand_idx, base, PlaySource::ByHand);
-    assert!(runner.pending_is_optional(), "an accept/decline gate installs");
+    assert!(
+        runner.pending_is_optional(),
+        "an accept/decline gate installs"
+    );
     runner
         .decline_optional_trigger()
         .expect("decline the optional reducer");
     let _ = runner.auto_resolve();
 
-    assert!(runner.game.pending_selection.is_none(), "digivolution completes");
-    assert_eq!(runner.trash_size(0), trash_before, "declined → FD stash untouched");
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "digivolution completes"
+    );
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before,
+        "declined → FD stash untouched"
+    );
     assert_eq!(
         mem_before - runner.memory(),
         4,

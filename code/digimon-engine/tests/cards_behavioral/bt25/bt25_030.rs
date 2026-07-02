@@ -203,7 +203,9 @@ fn bt25_030_start_of_main_decline_keeps_security_no_memory() {
     runner.game.drain_effect_queue();
 
     assert!(runner.pending_is_optional());
-    runner.execute_action(0, PASS).expect("decline start-of-main");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline start-of-main");
 
     assert_eq!(
         runner.security_count(0),
@@ -262,9 +264,10 @@ fn bt25_030_inherited_adds_top_security_then_recovers_at_zero() {
         .start();
 
     let carrier = runner.place_stack(0, &["BT25-030", "CARRIER"]);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(carrier));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(carrier),
+    );
     runner.game.drain_effect_queue();
 
     // The "you may add top security" surfaces as an optional pick.
@@ -303,13 +306,16 @@ fn bt25_030_inherited_decline_keeps_security_no_recovery() {
         .start();
 
     let carrier = runner.place_stack(0, &["BT25-030", "CARRIER"]);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(carrier));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(carrier),
+    );
     runner.game.drain_effect_queue();
 
     assert!(runner.pending_is_optional());
-    runner.execute_action(0, PASS).expect("decline security add");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline security add");
 
     let hand_ids = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
     assert!(!hand_ids.contains(&"SECURITY".to_string()));
@@ -339,9 +345,10 @@ fn bt25_030_inherited_recovers_when_security_already_zero() {
         .start();
 
     let carrier = runner.place_stack(0, &["BT25-030", "CARRIER"]);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(carrier));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(carrier),
+    );
     runner.game.drain_effect_queue();
 
     assert!(

@@ -179,6 +179,21 @@ DIGIMON_ONNX_OPPONENT=1 python code/tools/train_specialist_league.py \
 # it into the image). Online mode auto-downgrades to offline if the key is missing
 # (buffer locally, `wandb sync` later). Flag is OFF by default — runs are byte-identical
 # without it. Same --wandb flag works on a bare `pilot_training` run.
+# LSTM specialists: add --lstm to train MaskableRecurrentPPO specialists. Cross-arch
+# warm-start is supported — an MLP generalist transfers ONLY its shared
+# CardEmbeddingExtractor into the LSTM specialists via --init-extractor-from (the
+# source is loaded by ITS OWN arch, read from <model>.meta.json, not the target's);
+# --init-from is full-checkpoint and requires matching arch. Promotion gating + the
+# 6x6 cross-deck matrix come from --promote-min-wr (keep-best threshold) and --eval-n
+# (games per matrix cell — small n is deck-luck noisy; use >=24).
+#   python code/tools/train_specialist_league.py --generalist models/starter_pool_v1/final.zip \
+#     --lstm --init-extractor-from models/starter_pool_v1/final.zip \
+#     --rounds 3 --steps-per-round 500000 --eval-n 24 --promote-min-wr 0.55
+# Scaling a league ACROSS pods: --topology parallel (multiple specialists in ONE pod)
+# is reliable but NOT a proven speedup and is confounded by RunPod CPU-cgroup
+# throttling — see docs/CLOUD_TRAINING.md §A.11. The scalable path is one specialist
+# per pod fanned out across pods (OpenSpec: add-cross-pod-league-orchestration);
+# provision/verify pods by cpu.max (not nproc) and harvest finals before terminate.
 
 # With custom deck
 python -m digimon_gym.agents.pilot_training --deck1 path/to/deck.txt --timesteps 500000
@@ -476,6 +491,30 @@ export uses a **pid-unique temp** because N subprocs race to export the same
 opponent at startup. Tell-tale that it silently fell back: `ONNX opponent for ...
 failed (...); falling back to torch.` in `docker logs`, and no `*.opponent.onnx`
 appearing next to the `.zip`.
+
+### 6.5.1 In-pod parallel vs one-specialist-per-pod (league scaling)
+
+`train_specialist_league.py --topology parallel` trains several specialists
+concurrently in **one** box. A 2026-06-30 investigation made it *reliable* (fixed
+GPU-load collisions, a thread storm, a spawn-collision race via a ready-gate, and
+an OOM from an unbounded opponent cache) **but never proved it faster**, because:
+
+- **RunPod containers are CPU-cgroup-throttled and `nproc` lies.** A pod showing
+  `nproc=96` had `cpu.max = 765000 100000` ≈ **7.65 effective cores**. Every
+  "fps with 2 specialists vs 1" number was dividing ~8 real cores, not 96 — the
+  comparison was confounded. **Always check `cat /sys/fs/cgroup/cpu.max`
+  (quota ÷ period) — and `runpodctl vcpuCount`, which reflects the real quota —
+  before trusting any throughput claim.**
+- The per-worker thread caps and bounded opponent cache that keep the parallel
+  case from thread-storming / OOMing **throttle a lone specialist** (~5× on
+  collection; pinning OMP in the learner throttles its update ~5×). They are
+  gated on `DIGIMON_LEAGUE_CONCURRENCY>1`, so a normal one-per-box run is
+  untouched — but it means parallel pays a tax solo runs don't.
+
+**Recommendation: one specialist per pod, fanned out across pods** — each gets a
+full uncapped box. See `docs/CLOUD_TRAINING.md` §A.11 and the OpenSpec change
+`add-cross-pod-league-orchestration` (Tier 1 barrier-free fan-out against a fixed
+champion pool; Tier 2 distributed league with a shared store + per-round barrier).
 
 ---
 

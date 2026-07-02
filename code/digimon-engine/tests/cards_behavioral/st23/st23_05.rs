@@ -100,18 +100,22 @@ fn st23_05_metadata_and_alt_paths() {
 fn st23_05_has_wd_wa_clause_and_leave_replacement() {
     let runner = base();
     let card = runner.compiled_card(CARD_ID).expect("compiled");
-    let has_wd_wa = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::WhenDigivolving)
-                && t.when.contains(&CompiledTiming::WhenAttacking)
-                && t.once_per_turn
-    ));
+    let has_wd_wa = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::WhenDigivolving)
+                    && t.when.contains(&CompiledTiming::WhenAttacking)
+                    && t.once_per_turn
+        )
+    });
     assert!(has_wd_wa, "[WD][WA][OPT] clause present");
-    let has_repl = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { .. })
-    ));
+    let has_repl = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { .. })
+        )
+    });
     assert!(has_repl, "leave-prevention replacement present");
 }
 
@@ -146,13 +150,17 @@ fn st23_05_places_opponent_lowest_dp_as_top_security() {
         "only the lowest-DP (2000) opponent Digimon is a legal target; got {:?}",
         view.valid_action_ids
     );
-    runner.execute_action(view.selecting_player, view.valid_action_ids[0]).unwrap();
+    runner
+        .execute_action(view.selecting_player, view.valid_action_ids[0])
+        .unwrap();
 
     // Step B: the most-security 3-way choice — decline it for this test.
     if let Some(SelectionKind::EffectChoice) = runner.pending_kind() {
         let v = runner.pending_selection_view().unwrap();
         let last = v.effect_choices.as_ref().unwrap().len() - 1;
-        runner.execute_branch(last).expect("decline the trash choice");
+        runner
+            .execute_branch(last)
+            .expect("decline the trash choice");
     }
     let _ = runner.auto_resolve();
 
@@ -224,10 +232,16 @@ fn st23_05_trash_own_security_recovers_to_owner() {
 
     runner.attack_player(hab, 1, false);
     // Step A: place the opponent's lowest-DP Digimon on security.
-    let v = runner.pending_selection_view().expect("place pick installs");
-    runner.execute_action(v.selecting_player, v.valid_action_ids[0]).unwrap();
+    let v = runner
+        .pending_selection_view()
+        .expect("place pick installs");
+    runner
+        .execute_action(v.selecting_player, v.valid_action_ids[0])
+        .unwrap();
     // Step B: choose "trash your own top security card" (branch 0).
-    let choice = runner.pending_selection_view().expect("3-way choice installs");
+    let choice = runner
+        .pending_selection_view()
+        .expect("3-way choice installs");
     assert_eq!(runner.pending_kind(), Some(SelectionKind::EffectChoice));
     runner.execute_branch(0).expect("trash own");
     let _ = runner.auto_resolve();
@@ -262,8 +276,12 @@ fn st23_05_own_trash_gated_when_not_most_security() {
     let own_sec_before = runner.security_count(0);
 
     runner.attack_player(hab, 1, false);
-    let v = runner.pending_selection_view().expect("place pick installs");
-    runner.execute_action(v.selecting_player, v.valid_action_ids[0]).unwrap();
+    let v = runner
+        .pending_selection_view()
+        .expect("place pick installs");
+    runner
+        .execute_action(v.selecting_player, v.valid_action_ids[0])
+        .unwrap();
     // Choose "trash own" — but own is NOT the most-security player, so the
     // formula-gated branch does NOT fire (no trash, no Recovery).
     if let Some(SelectionKind::EffectChoice) = runner.pending_kind() {

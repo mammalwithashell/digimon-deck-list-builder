@@ -21,7 +21,11 @@ use digimon_engine::effect_context::EffectContext;
 /// Drive a single-OnPlay DSL card's process closure from `card` (player 0),
 /// then resolve the single installed pending selection by its first valid
 /// action id. Mirrors `phase2b_end_to_end.rs`.
-fn run_on_play_and_resolve_single(runner: &mut DebugRunner, compiled: digimon_dsl::compiled::CompiledCard, card: CardHandle) {
+fn run_on_play_and_resolve_single(
+    runner: &mut DebugRunner,
+    compiled: digimon_dsl::compiled::CompiledCard,
+    card: CardHandle,
+) {
     let dsl_effect = DslCardEffect::new(Arc::new(compiled));
     let effects = dsl_effect.effects(card);
     assert_eq!(effects.len(), 1, "exactly one OnPlay effect");

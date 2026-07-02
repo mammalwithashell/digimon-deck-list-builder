@@ -198,7 +198,9 @@ pub fn lower_with_formula(
         // routes such a reducer through a dedicated interactive prompt.
         // `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
         builder = builder.pay_cost_interactive(
-            crate::dsl_cards::lower_triggered::body_first_step_installs_selection(pay_cost.as_ref()),
+            crate::dsl_cards::lower_triggered::body_first_step_installs_selection(
+                pay_cost.as_ref(),
+            ),
         );
         // Special-case the "by suspending this Tamer" idiom: a `pay_cost` of
         // a single self-targeted `suspend` must FAIL when the source is

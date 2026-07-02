@@ -79,11 +79,7 @@ fn ascension_yes_places_self_on_top_of_security() {
         .as_ref()
         .expect("Ascension must park a Yes/No effect choice on deletion");
     assert_eq!(pending.selecting_player, 0);
-    assert_eq!(
-        pending.valid_action_ids.len(),
-        2,
-        "two branches: Yes / No"
-    );
+    assert_eq!(pending.valid_action_ids.len(), 2, "two branches: Yes / No");
 
     // Choose Yes (first branch).
     let yes = pending.valid_action_ids[0];
@@ -110,6 +106,47 @@ fn ascension_yes_places_self_on_top_of_security() {
             .iter()
             .any(|c| c.card_id(&r.game.card_data) == "ASCENSION"),
         "carrier moved out of trash into security"
+    );
+}
+
+#[test]
+fn ascension_choice_prompt_clones_faithfully() {
+    let mut r = DebugRunner::builder()
+        .add_card(ascension_card("ASCENSION"))
+        .start();
+
+    let carrier = r.place_on_field(0, "ASCENSION", None);
+    r.game.delete_permanent_with_effects(carrier);
+
+    let yes = {
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("Ascension must park a Yes/No effect choice on deletion");
+        assert!(
+            r.game.pending_selection_resume.is_some(),
+            "Ascension choice must be resume-driven before cloning"
+        );
+        pending.valid_action_ids[0]
+    };
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, yes)
+        .expect("cloned Ascension choice resolves");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original Ascension prompt intact"
+    );
+    r.game
+        .resolve_selection(0, yes)
+        .expect("original Ascension choice resolves");
+
+    assert_eq!(
+        clone.players[0].security.len(),
+        r.game.players[0].security.len(),
+        "clone and original should replay the same Ascension result"
     );
 }
 

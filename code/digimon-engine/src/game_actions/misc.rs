@@ -298,7 +298,10 @@ impl Game {
     /// parked DigiXros leave reward settles (and any nested selections drain),
     /// the leave-window loop re-enters at `cont.next_material`. Mirrors the
     /// `<Delay>` continuation arming in `lower_replacement.rs`.
-    pub(crate) fn arm_digixros_resume_after_parked_leave(&mut self, cont: DigiXrosResumeContinuation) {
+    pub(crate) fn arm_digixros_resume_after_parked_leave(
+        &mut self,
+        cont: DigiXrosResumeContinuation,
+    ) {
         let Some(mut selection) = self.pending_selection.take() else {
             self.continue_digixros_after_parked_leave(cont);
             return;
@@ -310,9 +313,7 @@ impl Game {
             self.pending_selection = Some(selection);
             self.after_selection_resume_hooks
                 .0
-                .push(Box::new(move |game: &mut Game| {
-                    game.continue_digixros_after_parked_leave(cont);
-                }));
+                .push(crate::resume::AfterSelectionHook::DigiXrosLeaveContinuation { cont });
             return;
         }
 
@@ -337,7 +338,10 @@ impl Game {
     /// Re-enter the DigiXros leave-window loop after a parked reward settled. If
     /// the reward surfaced further selections, re-arm onto them; otherwise resume
     /// the loop at the next material (eventually reaching `finalize_...`).
-    pub(crate) fn continue_digixros_after_parked_leave(&mut self, cont: DigiXrosResumeContinuation) {
+    pub(crate) fn continue_digixros_after_parked_leave(
+        &mut self,
+        cont: DigiXrosResumeContinuation,
+    ) {
         if self.pending_selection.is_some() {
             self.arm_digixros_resume_after_parked_leave(cont);
             return;
@@ -387,7 +391,9 @@ impl Game {
             if let Some(tx) = self.pending_digixros_transaction.as_mut() {
                 let before = tx.material_count();
                 tx.retain_materials(|origin| match origin {
-                    DigiXrosMaterialOrigin::BattleArea { card, .. } => live_on_field.contains(&card),
+                    DigiXrosMaterialOrigin::BattleArea { card, .. } => {
+                        live_on_field.contains(&card)
+                    }
                     _ => true,
                 });
                 tx.material_count() < before
@@ -470,21 +476,19 @@ impl Game {
         // for accept AND decline — both branches below run the same call).
         if self.pending_selection_resume.is_some() {
             self.pending_selection = Some(pending);
-            self.after_selection_resume_hooks
-                .0
-                .push(Box::new(move |game: &mut Game| {
-                    game.resume_play_cost_continuation_after_pending(
-                        player_id,
-                        hand_index,
-                        target,
-                        cost_delta,
-                        source,
-                        origin,
-                        suppress_on_play,
-                        accumulated_reduction,
-                        processed,
-                    );
-                }));
+            self.after_selection_resume_hooks.0.push(
+                crate::resume::AfterSelectionHook::PlayCostContinuation {
+                    player_id,
+                    hand_index,
+                    target,
+                    cost_delta,
+                    source,
+                    origin,
+                    suppress_on_play,
+                    accumulated_reduction,
+                    processed,
+                },
+            );
             return;
         }
 
@@ -567,6 +571,52 @@ impl Game {
         );
     }
 
+    pub(crate) fn run_digixros_material_selection_step(
+        &mut self,
+        state: crate::resume::DigiXrosMaterialSelectionState,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        if is_pass {
+            let _ = self.commit_play_from_hand_after_reductions(
+                state.player_id,
+                state.hand_index,
+                state.target_card,
+                state.cost_delta,
+                state.source,
+                state.origin,
+                state.suppress_on_play,
+                state.total_reduction,
+            );
+            return;
+        }
+
+        let Some((_, material_origin)) = state
+            .candidates
+            .iter()
+            .find(|(candidate_action, _)| *candidate_action == action_id)
+            .copied()
+        else {
+            return;
+        };
+        let Some(card_data) = self.card_data_for_handle(material_origin.card()).cloned() else {
+            return;
+        };
+        if let Some(transaction) = self.pending_digixros_transaction.as_mut() {
+            let _ = transaction.try_select_material(material_origin, &card_data);
+        }
+        let _ = self.finish_play_from_hand_after_reductions(
+            state.player_id,
+            state.hand_index,
+            state.target_card,
+            state.cost_delta,
+            state.source,
+            state.origin,
+            state.suppress_on_play,
+            state.total_reduction,
+        );
+    }
+
     #[allow(clippy::too_many_arguments)]
     pub(crate) fn install_pending_digixros_material_selection_or_finish(
         &mut self,
@@ -595,6 +645,7 @@ impl Game {
             .iter()
             .map(|(action_id, _)| *action_id)
             .collect::<Vec<_>>();
+        let resume_candidates = candidates.clone();
         let previous_phase = self.current_phase;
         self.current_phase = GamePhase::SelectMaterial;
         self.pending_selection = Some(PendingSelection {
@@ -647,6 +698,22 @@ impl Game {
                     total_reduction,
                 );
             })),
+        });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::DigiXrosMaterialSelection(
+                crate::resume::DigiXrosMaterialSelectionState {
+                    player_id,
+                    hand_index,
+                    target_card,
+                    cost_delta,
+                    source,
+                    origin,
+                    suppress_on_play,
+                    total_reduction,
+                    candidates: resume_candidates,
+                    outer_conts: Vec::new(),
+                },
+            )],
         });
         true
     }
@@ -853,8 +920,10 @@ impl Game {
                         continue;
                     };
                     let cs = self.player_mut(player_id).trash.remove(pos);
-                    if let Some(perm) =
-                        self.player_mut(player_id).battle_area.get_mut(entered_index)
+                    if let Some(perm) = self
+                        .player_mut(player_id)
+                        .battle_area
+                        .get_mut(entered_index)
                     {
                         perm.push_under(cs);
                     } else {

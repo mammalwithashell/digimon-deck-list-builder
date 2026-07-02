@@ -198,6 +198,99 @@ effects:
 }
 
 #[test]
+fn may_dna_digivolve_now_prompts_clone_faithfully() {
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon("SRC-A", 3, Vec::new(), Vec::new()))
+        .add_card(digimon("SRC-B", 3, Vec::new(), Vec::new()))
+        .add_card(digimon("DNA-RESULT", 4, vec![dna_cost()], Vec::new()))
+        .hand(0, &["DNA-RESULT"])
+        .memory(5)
+        .start();
+
+    let anchor = runner.place_on_field(0, "SRC-A", None);
+    let _partner = runner.place_on_field(0, "SRC-B", None);
+    runner.game.enter_main_phase();
+
+    let source = runner.game.player(0).battle_area[anchor.index as usize]
+        .top_card()
+        .handle();
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, source, Some(anchor), 0);
+        ctx.may_dna_digivolve_now(
+            anchor,
+            Arc::new(|game, handle| {
+                game.player(handle.player)
+                    .battle_area
+                    .get(handle.index as usize)
+                    .is_some_and(|perm| perm.top_card().card_id(&game.card_data) == "SRC-B")
+            }),
+            Arc::new(|game, hand_index| {
+                game.player(0)
+                    .hand
+                    .get(hand_index)
+                    .is_some_and(|card| card.card_id(&game.card_data) == "DNA-RESULT")
+            }),
+            0,
+            false,
+            false,
+            None,
+            None,
+        );
+    }
+
+    assert!(
+        runner.game.pending_selection_resume.is_some(),
+        "may-DNA partner prompt must be resume-driven before cloning"
+    );
+    let partner_action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("partner prompt installed")
+        .valid_action_ids[0];
+
+    let mut clone_at_partner = runner.game.clone();
+    clone_at_partner
+        .resolve_selection(0, partner_action)
+        .expect("clone picks DNA partner");
+    assert!(
+        clone_at_partner.pending_selection_resume.is_some(),
+        "result-card prompt installed by clone must also be resume-driven"
+    );
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "resolving the clone leaves the original at the partner prompt"
+    );
+
+    let result_action = clone_at_partner
+        .pending_selection
+        .as_ref()
+        .expect("result prompt installed")
+        .valid_action_ids[0];
+    let mut clone_at_result = clone_at_partner.clone();
+    clone_at_result
+        .resolve_selection(0, result_action)
+        .expect("clone picks DNA result card");
+
+    assert_eq!(
+        clone_at_result.player(0).battle_area.len(),
+        1,
+        "clone performs the DNA merge"
+    );
+    assert_eq!(
+        clone_at_result.player(0).battle_area[0]
+            .top_card()
+            .card_id(&clone_at_result.card_data),
+        "DNA-RESULT",
+        "clone's merged stack has the selected result on top"
+    );
+    assert!(
+        clone_at_partner.pending_selection.is_some(),
+        "resolving the result-prompt clone leaves its parent clone at the result prompt"
+    );
+}
+
+#[test]
 fn on_digivolve_global_observer_reads_dna_origin_payload() {
     let yaml = r#"
 card: DNA-RESULT

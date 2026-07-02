@@ -24,6 +24,91 @@ use crate::token_registry::*;
 use crate::trigger_context::*;
 
 impl<'a> EffectContext<'a> {
+    fn park_begin_attack_resume_frame(
+        &mut self,
+        attacker: PermanentHandle,
+        without_suspending: bool,
+        ignore_summoning_sickness: bool,
+        optional: bool,
+        cost_upgrade: Option<crate::combat::AttackCostUpgrade>,
+    ) {
+        if self.game.pending_selection.is_none() {
+            return;
+        }
+        let decline = if optional {
+            crate::resume::ResumeDecline::RunTail {
+                tail: std::sync::Arc::new(Vec::new()),
+                aborts_clause: false,
+            }
+        } else {
+            crate::resume::ResumeDecline::None
+        };
+        let trigger_context = self.game.current_trigger_context.clone();
+        self.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card: self.source_card,
+                    source_permanent: self.source_permanent,
+                    source_kind: self.source_kind,
+                    controller: self.player,
+                    override_pin: self.override_selecting_player(),
+                },
+                select_kind: crate::resume::ResumeSelectKind::BeginAttack {
+                    attacker,
+                    without_suspending,
+                    ignore_summoning_sickness,
+                    optional,
+                    cost_upgrade,
+                },
+                bind_as: None,
+                inner_tail: std::sync::Arc::new(Vec::new()),
+                outer_conts: Vec::new(),
+                bindings: Bindings::new(),
+                runtime: StepRuntime::default(),
+                trigger_context,
+                decline,
+            }],
+        });
+    }
+
+    fn park_redirect_attack_target_resume_frame(
+        &mut self,
+        attacker: PermanentHandle,
+        optional: bool,
+    ) {
+        if self.game.pending_selection.is_none() {
+            return;
+        }
+        let decline = if optional {
+            crate::resume::ResumeDecline::RunTail {
+                tail: std::sync::Arc::new(Vec::new()),
+                aborts_clause: false,
+            }
+        } else {
+            crate::resume::ResumeDecline::None
+        };
+        let trigger_context = self.game.current_trigger_context.clone();
+        self.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card: self.source_card,
+                    source_permanent: self.source_permanent,
+                    source_kind: self.source_kind,
+                    controller: self.player,
+                    override_pin: self.override_selecting_player(),
+                },
+                select_kind: crate::resume::ResumeSelectKind::AttackTarget { attacker },
+                bind_as: None,
+                inner_tail: std::sync::Arc::new(Vec::new()),
+                outer_conts: Vec::new(),
+                bindings: Bindings::new(),
+                runtime: StepRuntime::default(),
+                trigger_context,
+                decline,
+            }],
+        });
+    }
+
     pub(crate) fn cleanup_exposed_battle_area_digi_egg(&mut self, target: PermanentHandle) -> bool {
         let exposed = self
             .game
@@ -182,6 +267,7 @@ impl<'a> EffectContext<'a> {
                 None
             },
         });
+        self.park_redirect_attack_target_resume_frame(attacker, optional);
         Ok(())
     }
 
@@ -384,6 +470,13 @@ impl<'a> EffectContext<'a> {
                 None
             },
         });
+        self.park_begin_attack_resume_frame(
+            attacker,
+            without_suspending,
+            ignore_summoning_sickness,
+            optional,
+            cost_upgrade,
+        );
         Ok(())
     }
 

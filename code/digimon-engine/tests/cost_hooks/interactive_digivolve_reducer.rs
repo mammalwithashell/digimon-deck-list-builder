@@ -232,7 +232,11 @@ fn interactive_digivolve_reducer_credits_reduction_on_paid_park() {
         .expect("interactive reducer parks on the Tamer pick");
     assert!(matches!(pending.kind, SelectionKind::OwnField));
     // No memory spent yet — the digivolve cost is paid only after the park.
-    assert_eq!(r.memory(), memory_before, "no cost paid before the park resolves");
+    assert_eq!(
+        r.memory(),
+        memory_before,
+        "no cost paid before the park resolves"
+    );
 
     // Resolve the (single-eligible) Tamer pick.
     let _ = r.auto_resolve();
@@ -268,7 +272,10 @@ fn interactive_digivolve_reducer_no_reduction_when_unpayable() {
         .digivolve_from_hand(0, 0, base, PlaySource::ByDigivolve);
     // Unpayable cost → no park; the digivolve completes synchronously at full
     // cost.
-    assert!(ok, "digivolve completes synchronously when the reducer is unpayable");
+    assert!(
+        ok,
+        "digivolve completes synchronously when the reducer is unpayable"
+    );
     let _ = r.auto_resolve();
 
     assert_eq!(

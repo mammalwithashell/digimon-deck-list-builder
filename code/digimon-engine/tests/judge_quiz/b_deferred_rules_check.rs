@@ -259,10 +259,14 @@ fn q24_analog_rules_check_deletes_between_queued_effects() {
             value: 2000,
         }),
     );
-    r.game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(damager));
-    r.game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(healer));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(damager),
+    );
+    r.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(healer),
+    );
     r.game.drain_effect_queue();
     assert_eq!(
         r.battle_area_size(1),
@@ -354,7 +358,8 @@ fn q6_pillomon_zero_dp_not_deleted_until_flame_hellscythe_resolves() {
         .pending_selection_view()
         .expect("[Main] sub-effect 1: -6000 target prompt installs");
     assert_eq!(view.kind, SelectionKind::OppField);
-    r.game.decode_action(encode_attack(0, pillomon.index as u16), 0);
+    r.game
+        .decode_action(encode_attack(0, pillomon.index as u16), 0);
 
     // (2) Pillomon is at ≤0 DP but NOT deleted mid-effect; floodgate still up.
     assert!(
@@ -532,15 +537,10 @@ fn q7_eye_of_the_gorgon_sequential_delete_then_play() {
     // Resolve the delete via `decode_action` so declarative state is re-ticked
     // AFTER Pillomon is removed — the engine's real between-selection refresh
     // that clears the floodgate before sub-effect 2 resolves.
-    r.game
-        .decode_action(view.valid_action_ids[0], 0);
+    r.game.decode_action(view.valid_action_ids[0], 0);
 
     // Sub-effect 1 happened: Pillomon deleted, floodgate cleared.
-    assert_eq!(
-        r.battle_area_size(1),
-        0,
-        "sub-effect 1 deleted Pillomon"
-    );
+    assert_eq!(r.battle_area_size(1), 0, "sub-effect 1 deleted Pillomon");
     assert!(
         !r.game
             .modifiers
@@ -753,11 +753,17 @@ fn q14_ruin_mode_mass_debuff_is_continuous_catches_later_entrant() {
     let own = r.place_on_field(0, "OWN-CTRL", Some(0));
     // Player 1 (the OPPONENT of the source) has one Digimon up front.
     let early = r.place_on_field(1, "OPP-EARLY", Some(0));
-    assert_eq!(r.turn_player(), 0, "Ruin Mode installs during its controller's turn");
+    assert_eq!(
+        r.turn_player(),
+        0,
+        "Ruin Mode installs during its controller's turn"
+    );
 
     // Fire Ruin Mode's [When Digivolving] → install the continuous mass debuff.
-    r.game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(ruin));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(ruin),
+    );
     r.game.drain_effect_queue();
     r.game.tick_declarative_effects();
 
@@ -836,8 +842,10 @@ fn q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode() {
 
     // Activate Ruin Mode's [When Digivolving] mass -5000 (must be CONTINUOUS to
     // catch the ShoeShoemon Nyabootmon plays next).
-    r.game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(ruin));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(ruin),
+    );
     r.game.drain_effect_queue();
 
     let ruin_dp_before = r.game.effective_dp(ruin).expect("ruin DP");
@@ -878,7 +886,10 @@ fn q14_nyabootmon_dp_minus_vs_shinegreymon_ruin_mode() {
         .battle_area
         .iter()
         .position(|p| p.top_card().card_id(&r.game.card_data) == "P-165")
-        .map(|i| PermanentHandle { player: 0, index: i as u8 });
+        .map(|i| PermanentHandle {
+            player: 0,
+            index: i as u8,
+        });
     if let Some(shoe) = shoe {
         assert!(
             r.game.effective_dp(shoe).unwrap_or(4000) <= 0,
@@ -1037,9 +1048,10 @@ fn q24_hudiemon_alliance_partner_deleted_by_rules_check_before_trigger() {
     );
     assert!(
         r.game.pending_selection.is_none()
-            || r.game.pending_selection.as_ref().is_some_and(|s| {
-                !s.prompt.contains("+2000")
-            }),
+            || r.game
+                .pending_selection
+                .as_ref()
+                .is_some_and(|s| { !s.prompt.contains("+2000") }),
         "Kokomon's +2000 selection must NOT surface (its carrier was deleted \
          by the rules check before the inherited effect activated)"
     );

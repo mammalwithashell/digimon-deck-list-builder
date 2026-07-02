@@ -126,11 +126,15 @@ fn bt25_038_has_ts_alt_and_dna_digivolution_paths() {
                 .as_ref()
                 .is_some_and(|f| f.level_eq == Some(4) && f.trait_has.as_deref() == Some("TS"))
     });
-    let has_dna = card.alt_paths.iter().any(|p| {
-        p.kind == CompiledAltPathKind::DnaDigivolve && p.materials.len() >= 2
-    });
+    let has_dna = card
+        .alt_paths
+        .iter()
+        .any(|p| p.kind == CompiledAltPathKind::DnaDigivolve && p.materials.len() >= 2);
     assert!(has_ts, "BT25-038 must have a Lv.4 [TS] → cost 3 alt-path");
-    assert!(has_dna, "BT25-038 must have a DNA digivolve alt-path (2 materials)");
+    assert!(
+        has_dna,
+        "BT25-038 must have a DNA digivolve alt-path (2 materials)"
+    );
 }
 
 #[test]
@@ -165,8 +169,14 @@ fn bt25_038_has_all_four_triggered_clauses() {
             && t.when.contains(&CompiledTiming::OnOwnSecurityRemoved)
             && t.once_per_turn
     });
-    assert!(has_op_wd, "must have optional [OP][WD] place-security clause");
-    assert!(has_dna_rider, "must have on_dna_digivolve trash-both-top-security rider");
+    assert!(
+        has_op_wd,
+        "must have optional [OP][WD] place-security clause"
+    );
+    assert!(
+        has_dna_rider,
+        "must have on_dna_digivolve trash-both-top-security rider"
+    );
     assert!(
         has_security_added,
         "must have [All Turns][OPT] on_added_to_security De-Digivolve clause"
@@ -235,7 +245,10 @@ fn bt25_038_security_added_clause_is_opt_and_all_turns() {
                 || t.when.contains(&CompiledTiming::OnPlaceSecurity)
         })
         .expect("on_added_to_security clause present");
-    assert!(clause.once_per_turn, "De-Digivolve clause must be [Once Per Turn]");
+    assert!(
+        clause.once_per_turn,
+        "De-Digivolve clause must be [Once Per Turn]"
+    );
 }
 
 // ─── Section 4 — inherited own-security-removed -4000 DP ─────────────────────
@@ -256,5 +269,8 @@ fn bt25_038_inherited_security_removed_clause_structure() {
                 && t.when.contains(&CompiledTiming::OnOwnSecurityRemoved)
         })
         .expect("inherited own-security-removed clause present");
-    assert!(inh.once_per_turn, "inherited -4000 clause must be [Once Per Turn]");
+    assert!(
+        inh.once_per_turn,
+        "inherited -4000 clause must be [Once Per Turn]"
+    );
 }

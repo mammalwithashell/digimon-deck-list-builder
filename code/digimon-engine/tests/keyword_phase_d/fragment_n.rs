@@ -179,6 +179,70 @@ fn fragment_2_picks_two_sources_and_cancels_deletion() {
     );
 }
 
+#[test]
+fn fragment_source_prompt_clones_faithfully() {
+    let mut r = DebugRunner::builder()
+        .add_card(fragment_card("FRAG"))
+        .add_card(plain_digimon("SRC-A"))
+        .add_card(plain_digimon("SRC-B"))
+        .add_card(plain_digimon("SRC-C"))
+        .start();
+
+    let frag = r.place_on_field(0, "SRC-A", None);
+    push_source_card(&mut r, 0, frag.index as usize, "SRC-B");
+    push_source_card(&mut r, 0, frag.index as usize, "SRC-C");
+    push_source_card(&mut r, 0, frag.index as usize, "FRAG");
+
+    r.game.delete_permanent_with_effects(frag);
+    assert_outer_accept_dialog_shape(&r);
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept Fragment");
+
+    let first_action = {
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("Fragment source pick must be parked");
+        assert!(
+            r.game.pending_selection_resume.is_some(),
+            "Fragment source prompt must be resume-driven before cloning"
+        );
+        pending.valid_action_ids[0]
+    };
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, first_action)
+        .expect("cloned first Fragment pick resolves");
+    assert!(
+        clone.pending_selection_resume.is_some(),
+        "cloned first pick should re-park a resume-driven second pick"
+    );
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original Fragment prompt intact"
+    );
+
+    r.game
+        .resolve_selection(0, first_action)
+        .expect("original first Fragment pick resolves");
+    let second_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    clone
+        .resolve_selection(0, second_action)
+        .expect("cloned second Fragment pick resolves");
+    r.game
+        .resolve_selection(0, second_action)
+        .expect("original second Fragment pick resolves");
+
+    assert_eq!(
+        clone.players[0].battle_area[0].card_sources.len(),
+        r.game.players[0].battle_area[0].card_sources.len(),
+        "clone and original should replay the same Fragment result"
+    );
+}
+
 // ─── Test 2: gate fail — fewer than N sources → no park → normal deletion ───
 
 #[test]

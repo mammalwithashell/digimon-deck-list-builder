@@ -87,12 +87,14 @@ fn bt17_016_delete_clause_covers_both_timings() {
     let both = card
         .effects
         .iter()
-        .filter(|c| matches!(
-            c,
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::WhenDigivolving)
-                    && t.when.contains(&CompiledTiming::WhenAttacking)
-        ))
+        .filter(|c| {
+            matches!(
+                c,
+                CompiledClause::Triggered(t)
+                    if t.when.contains(&CompiledTiming::WhenDigivolving)
+                        && t.when.contains(&CompiledTiming::WhenAttacking)
+            )
+        })
         .count();
     assert_eq!(both, 1, "one shared [WD][WA] clause");
 }

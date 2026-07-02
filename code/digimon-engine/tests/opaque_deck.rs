@@ -98,8 +98,14 @@ fn construction_accepts_well_formed_inputs() {
     // Calling player (0) has an ordered deck — the engine populated it
     // from the supplied my_deck.
     let me = &game.players[0];
-    assert!(me.opaque_deck_state.is_none(), "calling player should not be opaque");
-    assert!(!me.deck.is_empty(), "calling player's deck should be populated");
+    assert!(
+        me.opaque_deck_state.is_none(),
+        "calling player should not be opaque"
+    );
+    assert!(
+        !me.deck.is_empty(),
+        "calling player's deck should be populated"
+    );
 
     // Opponent (1) is in opaque mode with the multiset known.
     let opp = &game.players[1];
@@ -108,12 +114,21 @@ fn construction_accepts_well_formed_inputs() {
     // Initial multiset = decklist minus digitama (4 DigiEggs go to digitama_deck)
     // minus starting_hand cards (already drawn from the reveal source).
     let expected = 50 - 4 - starting_hand;
-    assert_eq!(state.total_remaining(), expected,
-        "after initial draw, opaque pile should have {} cards", expected);
-    assert!(opp.deck.is_empty(),
-        "opaque player's ordered deck Vec should be empty (state owns composition)");
-    assert_eq!(opp.hand.len(), starting_hand,
-        "opaque player's starting hand should be filled via reveals");
+    assert_eq!(
+        state.total_remaining(),
+        expected,
+        "after initial draw, opaque pile should have {} cards",
+        expected
+    );
+    assert!(
+        opp.deck.is_empty(),
+        "opaque player's ordered deck Vec should be empty (state owns composition)"
+    );
+    assert_eq!(
+        opp.hand.len(),
+        starting_hand,
+        "opaque player's starting hand should be filled via reveals"
+    );
 }
 
 #[test]
@@ -133,7 +148,11 @@ fn construction_rejects_wrong_player_count_rules() {
         Some(0),
     )
     .expect_err("3-player rules should be rejected for opaque mode");
-    assert!(err.contains("player_count == 2"), "unexpected error: {}", err);
+    assert!(
+        err.contains("player_count == 2"),
+        "unexpected error: {}",
+        err
+    );
 }
 
 #[test]
@@ -170,8 +189,11 @@ fn construction_rejects_mismatched_decklist_sizes() {
         Some(0),
     )
     .expect_err("size mismatch should be rejected");
-    assert!(err.contains("size") && err.contains("differs"),
-        "unexpected error: {}", err);
+    assert!(
+        err.contains("size") && err.contains("differs"),
+        "unexpected error: {}",
+        err
+    );
 }
 
 #[test]
@@ -192,7 +214,11 @@ fn construction_rejects_unknown_card_id_in_opponent_decklist() {
     )
     .expect_err("unknown card ID should be rejected");
     assert!(err.contains("unknown card ID"), "unexpected error: {}", err);
-    assert!(err.contains("FAKE-NONEXISTENT-CARD"), "should name the offending card: {}", err);
+    assert!(
+        err.contains("FAKE-NONEXISTENT-CARD"),
+        "should name the offending card: {}",
+        err
+    );
 }
 
 #[test]
@@ -223,8 +249,11 @@ fn initial_hand_setup_consumes_reveals_in_order() {
     assert_eq!(opp.hand.len(), starting_hand);
     for card in &opp.hand {
         let card_id = card.card_id(&game.card_data);
-        assert_eq!(card_id, "BT1-025",
-            "opaque opponent hand card should match served reveal, got {}", card_id);
+        assert_eq!(
+            card_id, "BT1-025",
+            "opaque opponent hand card should match served reveal, got {}",
+            card_id
+        );
     }
     // The multiset is correspondingly depleted of Greymon.
     let state = opp.opaque_deck_state.as_ref().unwrap();
@@ -270,8 +299,10 @@ fn calling_player_draws_follow_supplied_deck_order() {
     //      AS USED BY OPPONENT ONLY.
     let me = &game.players[0];
     assert_eq!(me.hand.len(), starting_hand);
-    assert!(!me.deck.is_empty(),
-        "calling player should still have a deck after drawing starting hand");
+    assert!(
+        !me.deck.is_empty(),
+        "calling player should still have a deck after drawing starting hand"
+    );
     // The variable `queue_remaining_before_test` is for documentation —
     // the assertions above transitively prove the source wasn't
     // double-consumed (otherwise the opponent's hand would be incomplete
@@ -298,8 +329,11 @@ fn empty_reveal_source_at_init_surfaces_error() {
         Some(0),
     )
     .expect_err("undersized reveal source should fail construction");
-    assert!(err.contains("queue empty") || err.contains("exhausted"),
-        "unexpected error: {}", err);
+    assert!(
+        err.contains("queue empty") || err.contains("exhausted"),
+        "unexpected error: {}",
+        err
+    );
 }
 
 #[test]
@@ -368,13 +402,20 @@ fn opaque_security_setup_via_finalize_mulligan_pushes_placeholders() {
 
     // Opaque opponent's security has `security_count` placeholder cards.
     let opp = &game.players[1];
-    assert_eq!(opp.security.len(), security_count,
-        "opaque opponent's security should hold `security_count` placeholders");
+    assert_eq!(
+        opp.security.len(),
+        security_count,
+        "opaque opponent's security should hold `security_count` placeholders"
+    );
     for card in &opp.security {
-        assert!(card.is_opaque_placeholder,
-            "every opaque opponent security card should be a placeholder pre-flip");
-        assert!(card.face_down,
-            "opaque security placeholders should be face-down");
+        assert!(
+            card.is_opaque_placeholder,
+            "every opaque opponent security card should be a placeholder pre-flip"
+        );
+        assert!(
+            card.face_down,
+            "opaque security placeholders should be face-down"
+        );
     }
     // The reveal queue had only `starting_hand` reveals (no extra for
     // security); construction would have failed if security had eagerly
@@ -437,12 +478,19 @@ fn opaque_mulligan_restores_hand_to_pile_and_redraws() {
     // After redraw, opponent's hand should contain `starting_hand`
     // copies of BT1-025 (the cards served for the redraw).
     let opp = &game.players[1];
-    assert_eq!(opp.hand.len(), starting_hand,
-        "opaque opponent's hand should be re-filled to {} after mulligan", starting_hand);
+    assert_eq!(
+        opp.hand.len(),
+        starting_hand,
+        "opaque opponent's hand should be re-filled to {} after mulligan",
+        starting_hand
+    );
     for card in &opp.hand {
         let id = card.card_id(&game.card_data);
-        assert_eq!(id, "BT1-025",
-            "post-mulligan hand card should be from the redraw stream, got {}", id);
+        assert_eq!(
+            id, "BT1-025",
+            "post-mulligan hand card should be from the redraw stream, got {}",
+            id
+        );
     }
 
     // Multiset should have restored the original hand (BT1-010) and
@@ -455,18 +503,27 @@ fn opaque_mulligan_restores_hand_to_pile_and_redraws() {
     // Before mulligan: 30 BT1-010 - starting_hand = 30 - 5 = 25 BT1-010.
     // After mulligan restore: +starting_hand = back to 30.
     // Security setup is lazy and doesn't debit per-card counts.
-    assert_eq!(state.count_of("BT1-010"), 30,
-        "BT1-010 count should reflect restore-after-mulligan (security debit is lazy)");
+    assert_eq!(
+        state.count_of("BT1-010"),
+        30,
+        "BT1-010 count should reflect restore-after-mulligan (security debit is lazy)"
+    );
     // BT1-025 initial 16, redrew starting_hand=5 in hand, so 16 - 5 = 11 remain.
-    assert_eq!(state.count_of("BT1-025"), 16 - starting_hand,
-        "BT1-025 count should reflect redraw consumption");
+    assert_eq!(
+        state.count_of("BT1-025"),
+        16 - starting_hand,
+        "BT1-025 count should reflect redraw consumption"
+    );
     // Total remaining reflects: 50 - 4 digitama (routed to digitama_deck
     // at game start, not opaque pile) - starting_hand drawn - security_count
     // reserved. (Restore-after-mulligan brought hand back, then redraw
     // pulled starting_hand cards.)
     let expected_total = 50 - 4 - starting_hand - security_count;
-    assert_eq!(state.total_remaining(), expected_total,
-        "total_remaining should reflect reserved security placeholders + hand");
+    assert_eq!(
+        state.total_remaining(),
+        expected_total,
+        "total_remaining should reflect reserved security placeholders + hand"
+    );
 }
 
 #[test]
@@ -541,10 +598,16 @@ fn opaque_security_placeholder_materializes_on_flip() {
 
     // BT1-025 per-card count debited by 1; total_remaining unchanged.
     let state = game.players[1].opaque_deck_state.as_ref().unwrap();
-    assert_eq!(state.count_of("BT1-025"), bt1_025_before - 1,
-        "per-card BT1-025 count should drop by 1 after materialization");
-    assert_eq!(state.total_remaining(), total_before,
-        "total_remaining should NOT change (was debited at setup)");
+    assert_eq!(
+        state.count_of("BT1-025"),
+        bt1_025_before - 1,
+        "per-card BT1-025 count should drop by 1 after materialization"
+    );
+    assert_eq!(
+        state.total_remaining(),
+        total_before,
+        "total_remaining should NOT change (was debited at setup)"
+    );
 
     // Idempotent: calling materialize on the same now-materialized slot
     // is a no-op (returns Ok(false), doesn't touch source).
@@ -599,7 +662,11 @@ fn opaque_per_turn_draw_consumes_one_reveal() {
         "opaque opponent's hand should grow by one after a draw"
     );
     assert_eq!(
-        game.players[1].opaque_deck_state.as_ref().unwrap().total_remaining(),
+        game.players[1]
+            .opaque_deck_state
+            .as_ref()
+            .unwrap()
+            .total_remaining(),
         opp_remaining_before - 1,
         "opaque pile total should shrink by one"
     );
@@ -667,8 +734,10 @@ fn ensure_security_materialized_helper_idempotent_and_safe() {
     let top_idx = game.players[1].security.len() - 1;
     assert!(game.players[1].security[top_idx].is_opaque_placeholder);
     game.ensure_security_materialized(1, top_idx);
-    assert!(!game.players[1].security[top_idx].is_opaque_placeholder,
-        "helper should materialize a placeholder");
+    assert!(
+        !game.players[1].security[top_idx].is_opaque_placeholder,
+        "helper should materialize a placeholder"
+    );
     assert_eq!(
         game.players[1].security[top_idx].card_id(&game.card_data),
         "BT1-025",

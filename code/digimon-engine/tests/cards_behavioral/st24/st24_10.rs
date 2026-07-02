@@ -158,7 +158,10 @@ fn base_builder() -> digimon_engine::debug_runner::DebugRunnerBuilder {
 
 /// Place Lilamon as a battle-area top (a Lv.4 filler underneath), plus the
 /// requested set of Tamers each carrying `n` face-down sources.
-fn lilamon_runner(targets: &[&str], tamers_fd: &[usize]) -> (DebugRunner, PermanentHandle, Vec<PermanentHandle>) {
+fn lilamon_runner(
+    targets: &[&str],
+    tamers_fd: &[usize],
+) -> (DebugRunner, PermanentHandle, Vec<PermanentHandle>) {
     let mut runner = base_builder().start();
     runner.set_first_player(0);
 
@@ -256,7 +259,10 @@ fn st24_10_has_multi_timing_opt_and_inherited_replacement() {
                 && format!("{:?}", t.process).contains("CancelReplacement")
         }
     });
-    assert!(has_replacement, "inherited leave-replacement clause present");
+    assert!(
+        has_replacement,
+        "inherited leave-replacement clause present"
+    );
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -271,7 +277,11 @@ fn st24_10_suspends_locks_then_trash_2_free_digivolve() {
     let opp = runner.place_on_field(1, "OPP-DIGI", Some(0));
     let _tamer = tamers[0];
     let mem_before = runner.memory();
-    assert_eq!(face_down_source_count(&runner, 0), 2, "2 face-down sources staged");
+    assert_eq!(
+        face_down_source_count(&runner, 0),
+        2,
+        "2 face-down sources staged"
+    );
 
     fire(&mut runner, EffectTiming::OnPlay, lilamon);
 
@@ -333,14 +343,18 @@ fn st24_10_then_free_digivolve_is_declinable() {
 
     fire(&mut runner, EffectTiming::OnPlay, lilamon);
     // Suspend pick (mandatory).
-    let v = runner.pending_selection_view().expect("suspend pick installs");
+    let v = runner
+        .pending_selection_view()
+        .expect("suspend pick installs");
     runner.execute_action(0, v.valid_action_ids[0]).unwrap();
     assert!(runner.game.players[1].battle_area[opp.index as usize].is_suspended);
 
     // Decline the "may digivolve".
     let v2 = runner.pending_selection_view().expect("hand pick installs");
     assert!(v2.is_optional);
-    runner.execute_action(0, PASS).expect("decline the digivolve");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the digivolve");
     let _ = runner.auto_resolve();
 
     let perm = &runner.game.player(0).battle_area[lilamon.index as usize];
@@ -383,7 +397,9 @@ fn st24_10_shared_opt_locks_across_timings() {
     runner.place_on_field(1, "OPP-DIGI", Some(0));
 
     fire(&mut runner, EffectTiming::OnPlay, lilamon);
-    let v = runner.pending_selection_view().expect("first suspend prompt");
+    let v = runner
+        .pending_selection_view()
+        .expect("first suspend prompt");
     runner.execute_action(0, v.valid_action_ids[0]).unwrap();
     let _ = runner.auto_resolve();
 

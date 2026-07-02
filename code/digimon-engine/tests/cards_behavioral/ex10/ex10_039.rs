@@ -107,10 +107,12 @@ fn ex10_039_start_of_main_places_bagra_card_from_hand_under_bagra_tamer() {
     r.execute_action(0, want).expect("place under Yuu Amano");
     let _ = r.auto_resolve();
 
-    assert_eq!(r.hand_size(0), hand_before - 1, "Damemon must leave the hand");
-    let yuu = r
-        .game
-        .players[0]
+    assert_eq!(
+        r.hand_size(0),
+        hand_before - 1,
+        "Damemon must leave the hand"
+    );
+    let yuu = r.game.players[0]
         .battle_area
         .iter()
         .find(|p| p.top_card().card_id(&r.game.card_data) == "BT10-093")

@@ -41,6 +41,28 @@ def _norm_algorithm(raw: str) -> str:
     return "mlp"
 
 
+def meta_algorithm(path: Union[str, Path], default: str = "mlp") -> str:
+    """Normalized architecture (``"lstm"``/``"mlp"``) of a saved model, read from
+    its ``.meta.json`` sidecar next to ``path`` and passed through
+    :func:`_norm_algorithm` (so variants like ``"MaskableRecurrentPPO"`` normalize
+    correctly). Returns ``default`` when the sidecar is missing, unreadable, or
+    lacks a non-empty ``algorithm`` key.
+
+    Shared by the league driver (to decide whether a warm-start crosses
+    architectures — MLP generalist → LSTM specialist — and so must transfer only
+    the shared features extractor) and ``pilot_training`` (to reconstruct a
+    ``--init-extractor-from`` source with the class it was saved as)."""
+    meta = Path(path).with_suffix(".meta.json")
+    if meta.is_file():
+        try:
+            raw = json.loads(meta.read_text(encoding="utf-8")).get("algorithm", "")
+            if raw:
+                return _norm_algorithm(raw)
+        except Exception:
+            pass
+    return default
+
+
 @dataclass
 class Specialist:
     """A frozen specialist snapshot: one deck's policy at one league round."""

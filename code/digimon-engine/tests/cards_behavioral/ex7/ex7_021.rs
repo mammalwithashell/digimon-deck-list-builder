@@ -223,8 +223,7 @@ fn ex7_021_compiles_with_printed_stats_and_lv4_blue_path() {
             path.kind == CompiledAltPathKind::Digivolve
                 && path.cost == Some(CompiledCost::Literal(3))
                 && path.from.as_ref().is_some_and(|from| {
-                    (from.level_eq == Some(4)
-                        || from.all_of.iter().any(|p| p.level_eq == Some(4)))
+                    (from.level_eq == Some(4) || from.all_of.iter().any(|p| p.level_eq == Some(4)))
                         && (from.color_is == Some(CompiledColor::Blue)
                             || from
                                 .all_of
@@ -474,7 +473,11 @@ fn ex7_021_wd_trashes_one_source_from_each_of_two_digimon_and_unsuspends() {
     // Mandatory cross-permanent source selection: 2 candidates, no PASS.
     assert_eq!(
         runner.pending_kind(),
-        Some(SelectionKind::SourceMulti { min: 2, max: 2, picked: 0 }),
+        Some(SelectionKind::SourceMulti {
+            min: 2,
+            max: 2,
+            picked: 0
+        }),
         "a mandatory 2-source selection must install"
     );
     let view = runner.pending_selection_view().expect("source prompt");
@@ -498,7 +501,9 @@ fn ex7_021_wd_trashes_one_source_from_each_of_two_digimon_and_unsuspends() {
         .execute_action(0, pick_a)
         .expect("pick the source under opponent stack A");
     // Second pick still mandatory — no PASS until min 2 is met.
-    let view = runner.pending_selection_view().expect("second source prompt");
+    let view = runner
+        .pending_selection_view()
+        .expect("second source prompt");
     assert!(
         !view.valid_action_ids.contains(&PASS),
         "PASS must not appear after 1 of 2 mandatory picks"

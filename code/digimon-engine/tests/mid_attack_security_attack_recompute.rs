@@ -143,16 +143,23 @@ fn mid_attack_digivolve_into_medusamon_extends_security_check_loop() {
     patch_evo_costs(
         &mut runner,
         "BT21-029",
-        vec![EvoCost { card_color: 0, level: 5, memory_cost: 4 }],
+        vec![EvoCost {
+            card_color: 0,
+            level: 5,
+            memory_cost: 4,
+        }],
     );
 
     let p1: PlayerId = 0;
     let p2: PlayerId = 1;
 
-    let host =
-        runner.place_stack(p1, &["BT21-001", "BT24-008", "BT21-025"]);
+    let host = runner.place_stack(p1, &["BT21-001", "BT24-008", "BT21-025"]);
 
-    assert_eq!(runner.security_count(p2), 3, "P2 security should start at 3");
+    assert_eq!(
+        runner.security_count(p2),
+        3,
+        "P2 security should start at 3"
+    );
     let attack_result = runner.game.attack_player(host, p2, false);
     assert_eq!(
         attack_result,

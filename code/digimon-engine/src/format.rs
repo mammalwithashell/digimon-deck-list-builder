@@ -221,7 +221,12 @@ fn registry() -> &'static Registry {
                     rarities: c.rarities.iter().map(|r| parse_rarity_code(r)).collect(),
                 })
                 .collect(),
-            extra_card_ids: raw.anomaly_protocol.extra_card_ids.iter().cloned().collect(),
+            extra_card_ids: raw
+                .anomaly_protocol
+                .extra_card_ids
+                .iter()
+                .cloned()
+                .collect(),
         };
 
         let mut formats = Vec::with_capacity(raw.formats.len());
@@ -314,7 +319,14 @@ mod tests {
         let ids: Vec<&str> = list_formats().iter().map(|f| f.id.as_str()).collect();
         assert_eq!(
             ids,
-            ["standard", "no_restriction", "pauper", "eden", "eden_singleton", "starter"]
+            [
+                "standard",
+                "no_restriction",
+                "pauper",
+                "eden",
+                "eden_singleton",
+                "starter"
+            ]
         );
     }
 
@@ -342,7 +354,10 @@ mod tests {
 
     #[test]
     fn rarity_policies_per_format() {
-        assert_eq!(descriptor("standard").unwrap().rarity_policy, RarityPolicy::All);
+        assert_eq!(
+            descriptor("standard").unwrap().rarity_policy,
+            RarityPolicy::All
+        );
         assert_eq!(
             descriptor("no_restriction").unwrap().rarity_policy,
             RarityPolicy::All

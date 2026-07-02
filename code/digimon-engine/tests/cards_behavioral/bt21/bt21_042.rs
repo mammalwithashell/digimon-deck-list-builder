@@ -532,7 +532,10 @@ fn bt21_042_observer_no_prompt_without_eligible_hand_card() {
 #[test]
 fn bt21_042_observer_excludes_non_yellow_rizegreymon() {
     let mut runner = geogrey_runner();
-    runner.game.card_data.push(make_red_rizegrey_lv4("RED-RIZE"));
+    runner
+        .game
+        .card_data
+        .push(make_red_rizegrey_lv4("RED-RIZE"));
     runner
         .game
         .card_data

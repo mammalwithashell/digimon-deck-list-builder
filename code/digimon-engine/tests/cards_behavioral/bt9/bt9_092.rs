@@ -268,12 +268,10 @@ fn bt9_092_same_level_x_antibody_digivolve_observer_suspends_draws_and_gains_mem
         .iter()
         .position(|c| c.card_id(&runner.game.card_data) == "X-EVO-L4")
         .expect("X-EVO-L4 in P0 hand");
-    let ok = runner.game.digivolve_from_hand(
-        0,
-        evo_idx,
-        base.index as usize,
-        PlaySource::ByDigivolve,
-    );
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, evo_idx, base.index as usize, PlaySource::ByDigivolve);
     assert!(ok, "same-level L4->L4 X-Antibody digivolve must succeed");
 
     // Snapshot AFTER the digivolve itself (digivolve_from_hand draws 1 of its
@@ -375,11 +373,7 @@ fn bt9_092_observer_decline_leaves_tamer_unsuspended() {
         mem_before,
         "declining must not gain memory"
     );
-    assert_eq!(
-        runner.hand_size(0),
-        hand_before,
-        "declining must not draw"
-    );
+    assert_eq!(runner.hand_size(0), hand_before, "declining must not draw");
 }
 
 /// Negative (level gate): digivolving into a DIFFERENT-level (Lv.5) [X

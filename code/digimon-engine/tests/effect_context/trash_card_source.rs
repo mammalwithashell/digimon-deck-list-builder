@@ -204,7 +204,9 @@ fn trash_card_source_removes_bottom_card() {
 /// removal so observers attribute the event to the correct host.
 #[test]
 fn trash_card_source_emptying_carrier_removes_slot() {
-    let mut r = DebugRunner::builder().add_card(make_digimon("ONLY")).start();
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ONLY"))
+        .start();
 
     let tp = r.game.turn_player();
     let perm_handle = r.place_on_field(tp, "ONLY", Some(0));
@@ -333,12 +335,7 @@ fn trash_card_source_returns_false_on_missing_carrier() {
         .start();
     let tp = r.game.turn_player();
     let perm_handle = r.place_on_field(tp, "BASE", Some(0));
-    let captured_card = push_source_on_top(
-        &mut r,
-        tp,
-        perm_handle.index as usize,
-        "SRC",
-    );
+    let captured_card = push_source_on_top(&mut r, tp, perm_handle.index as usize, "SRC");
 
     // Simulate removal of the entire carrier slot (an intervening delete or
     // batched return). Direct mutation matches what `Game::soft_remove_if_emptied`
@@ -393,9 +390,7 @@ fn trash_card_source_returns_false_on_empty_stack() {
     // Capture a handle BEFORE emptying — its identity will not match anything
     // in the empty stack, but the test point is that we never even get to
     // the lookup because the empty-stack guard fires first.
-    let captured = r.game.players[tp as usize].battle_area[perm_idx]
-        .card_sources[0]
-        .handle();
+    let captured = r.game.players[tp as usize].battle_area[perm_idx].card_sources[0].handle();
 
     // Empty the stack directly (zombie slot).
     r.game.players[tp as usize].battle_area[perm_idx]
@@ -414,7 +409,10 @@ fn trash_card_source_returns_false_on_empty_stack() {
         // Must not panic on `top_card()` even though stack is empty.
         ctx.trash_card_source(perm_handle, captured)
     };
-    assert!(!trashed, "empty stack must return false (no top_card panic)");
+    assert!(
+        !trashed,
+        "empty stack must return false (no top_card panic)"
+    );
     assert_eq!(
         r.game.players[tp as usize].trash.len(),
         trash_len_before,

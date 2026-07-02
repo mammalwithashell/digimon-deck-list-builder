@@ -285,3 +285,90 @@ fn familiar_on_deletion_prompts_opponent_target_and_applies_minus_3000() {
         "OPP-HIGH should be 7000 DP with a -3000 DP until-turn-end modifier"
     );
 }
+
+#[test]
+fn familiar_on_deletion_target_prompt_clones_faithfully() {
+    use digimon_engine::action::space::encode_attack;
+    use digimon_engine::permanent::PermanentHandle;
+    use digimon_engine::selection::SelectionKind;
+
+    let mut opp = make_test_card("OPP", "Opponent");
+    opp.dp = Some(7000);
+
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("TEST-029", "PlayFamiliarToken"))
+        .add_card(opp)
+        .hand(0, &["TEST-029"])
+        .memory(5)
+        .start();
+
+    r.place_on_field(1, "OPP", Some(0));
+    r.play(0, 0).expect("TEST-029 plays");
+
+    let token_idx = r
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_name(&r.game.card_data) == "Familiar Token")
+        .expect("Familiar Token missing");
+
+    r.game.delete_permanent_with_effects(PermanentHandle {
+        player: 0,
+        index: token_idx as u8,
+    });
+
+    let action = encode_attack(0, 0);
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Familiar OnDeletion must ask for an opponent Digimon");
+    assert_eq!(pending.kind, SelectionKind::OppField);
+    assert!(pending.valid_action_ids.contains(&action));
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "Familiar token target prompt must be resume-driven before cloning"
+    );
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, action)
+        .expect("clone resolves Familiar target prompt");
+    assert_eq!(
+        clone.effective_dp(PermanentHandle {
+            player: 1,
+            index: 0
+        }),
+        Some(4000),
+        "clone should apply Familiar's -3000 DP"
+    );
+
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original at the Familiar prompt"
+    );
+    assert_eq!(
+        r.game.effective_dp(PermanentHandle {
+            player: 1,
+            index: 0
+        }),
+        Some(7000),
+        "resolving the clone must not mutate the original"
+    );
+
+    r.game
+        .resolve_selection(0, action)
+        .expect("original resolves Familiar target prompt");
+    assert_eq!(
+        r.game.effective_dp(PermanentHandle {
+            player: 1,
+            index: 0
+        }),
+        clone.effective_dp(PermanentHandle {
+            player: 1,
+            index: 0
+        }),
+        "original and clone replay the Familiar target prompt identically"
+    );
+}

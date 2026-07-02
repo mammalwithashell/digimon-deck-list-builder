@@ -153,8 +153,10 @@ fn q23_inherited_trash_memory_gated_on_remaining_in_trash() {
     );
 
     let mem_before = r.memory() as i32;
-    r.game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::PlayerBattleArea(0));
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     r.game.drain_effect_queue();
 
     // The 3 mandatory observers form a multi-trigger bundle → the engine installs
@@ -258,16 +260,20 @@ fn q9_gatomon_not_in_battle_area_during_removal_no_memory() {
 
     // Fire Mastemon's [When Digivolving]: trims P1's security to 3, trashing
     // Gatomon (on top) from the security stack.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(mastemon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(mastemon),
+    );
     runner.game.drain_effect_queue();
     // Decline Mastemon's optional free-play / place-security; never accept anything.
     let mut steps = 0;
     while runner.game.pending_selection.is_some() && steps < 50 {
         let (player, action) = {
             let sel = runner.game.pending_selection.as_ref().unwrap();
-            let id = if sel.valid_action_ids.contains(&digimon_engine::action::space::PASS) {
+            let id = if sel
+                .valid_action_ids
+                .contains(&digimon_engine::action::space::PASS)
+            {
                 digimon_engine::action::space::PASS
             } else {
                 sel.valid_action_ids[0]
@@ -539,4 +545,3 @@ fn q21_remaining_on_deletion_suppressed_when_played_from_trash() {
         "Q21: carrier played from trash ⇒ remaining [On Deletion] suppressed (judge: 0 draws)"
     );
 }
-

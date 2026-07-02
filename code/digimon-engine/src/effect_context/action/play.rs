@@ -63,11 +63,10 @@ impl<'a> EffectContext<'a> {
         // tokens under this lock. Mirror the hand/trash play-gate
         // (`Game::play_from_hand_with_cost`) so effect-played tokens are blocked
         // when the controller carries the modifier. (G-PLAY-TOKEN-FLOODGATE.)
-        if self
-            .game
-            .modifiers
-            .player_has(controller, crate::enums::ModifierType::CannotPlayDigimonByEffect)
-        {
+        if self.game.modifiers.player_has(
+            controller,
+            crate::enums::ModifierType::CannotPlayDigimonByEffect,
+        ) {
             return None;
         }
 
@@ -348,12 +347,16 @@ impl<'a> EffectContext<'a> {
                 // A Token never lives in hand; nothing to play or use.
             }
             crate::enums::CardKind::Dual => {
+                let prov = crate::resume::ResumeProvenance {
+                    source_card: self.source_card,
+                    source_permanent: self.source_permanent,
+                    source_kind: self.source_kind,
+                    controller: self.player,
+                    override_pin: self.override_selecting_player(),
+                };
                 self.select_effect_choice(
                     "Play as Digimon or use as Option",
-                    vec![
-                        "Play as Digimon".to_string(),
-                        "Use as Option".to_string(),
-                    ],
+                    vec!["Play as Digimon".to_string(), "Use as Option".to_string()],
                     move |cb_ctx, choice| {
                         // Re-resolve the hand index defensively (the hand has
                         // not mutated between installing the prompt and its
@@ -365,8 +368,8 @@ impl<'a> EffectContext<'a> {
                         match choice {
                             // 0 → Play as Digimon.
                             0 => {
-                                let _ = cb_ctx
-                                    .play_from_hand_with_cost(player, hand_index, cost_delta);
+                                let _ =
+                                    cb_ctx.play_from_hand_with_cost(player, hand_index, cost_delta);
                             }
                             // 1 → Use as Option.
                             _ => {
@@ -376,6 +379,19 @@ impl<'a> EffectContext<'a> {
                         }
                     },
                 );
+                if self.game.pending_selection.is_some() {
+                    self.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                        frames: vec![crate::resume::ResumeFrame::PlayOrUseDualChoice(
+                            crate::resume::PlayOrUseDualChoiceState {
+                                prov,
+                                player,
+                                hand_index,
+                                cost_delta,
+                                outer_conts: Vec::new(),
+                            },
+                        )],
+                    });
+                }
             }
         }
     }

@@ -186,7 +186,8 @@ fn bt25_057_option_main_grants_rush_secatk_dp_to_chosen_digimon() {
     assert_eq!(r.pending_kind(), Some(SelectionKind::OwnField));
 
     let pick = encode_attack(0, buff_target.index as u16);
-    r.execute_action(0, pick).expect("select own Digimon to buff");
+    r.execute_action(0, pick)
+        .expect("select own Digimon to buff");
 
     assert!(
         r.game.has_keyword(buff_target, Keyword::Rush),
@@ -210,10 +211,16 @@ fn bt25_057_option_main_grants_rush_secatk_dp_to_chosen_digimon() {
 /// Arts-digivolve OwnField prompt (optional, with `base` legal) is on top.
 fn drive_to_arts(r: &mut DebugRunner, base: PermanentHandle) {
     loop {
-        let sel = r.game.pending_selection.as_ref().expect("a selection is parked");
+        let sel = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("a selection is parked");
         let is_arts = sel.kind == SelectionKind::OwnField
             && sel.is_optional
-            && sel.valid_action_ids.contains(&encode_attack(0, base.index as u16));
+            && sel
+                .valid_action_ids
+                .contains(&encode_attack(0, base.index as u16));
         if is_arts {
             return;
         }
@@ -236,7 +243,10 @@ fn bt25_057_arts_digivolve_prompt_arms_after_option_main() {
     let base = r.place_on_field(0, "GD-BASE", Some(0));
     r.game.enter_main_phase();
 
-    assert_eq!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
     assert_eq!(r.pending_kind(), Some(SelectionKind::OwnField));
     r.execute_action(0, encode_attack(0, base.index as u16))
         .expect("pick buff target");
@@ -244,7 +254,10 @@ fn bt25_057_arts_digivolve_prompt_arms_after_option_main() {
     drive_to_arts(&mut r, base);
     let arts = r.game.pending_selection.as_ref().unwrap();
     assert_eq!(arts.kind, SelectionKind::OwnField);
-    assert!(arts.is_optional, "Arts digivolve is declinable (PASS → trash)");
+    assert!(
+        arts.is_optional,
+        "Arts digivolve is declinable (PASS → trash)"
+    );
     assert!(
         arts.valid_action_ids
             .contains(&encode_attack(0, base.index as u16)),
@@ -262,7 +275,10 @@ fn bt25_057_arts_accept_stacks_dual_onto_base_without_cost() {
     let base = r.place_on_field(0, "GD-BASE", Some(0));
     r.game.enter_main_phase();
 
-    assert_eq!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
     r.execute_action(0, encode_attack(0, base.index as u16))
         .expect("buff pick");
     drive_to_arts(&mut r, base);
@@ -288,8 +304,10 @@ fn bt25_057_arts_accept_stacks_dual_onto_base_without_cost() {
 // ─── Digimon face: [WD] may-battle ───────────────────────────────────────────
 
 fn fire_when_digivolving(r: &mut DebugRunner, handle: PermanentHandle) {
-    r.game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     r.game.drain_effect_queue();
 }
 

@@ -15,6 +15,11 @@
 mod action;
 pub(crate) mod selections;
 
+pub(crate) use action::app_fuse::{
+    run_app_fuse_host_selection_step, run_app_fuse_result_selection_step,
+    AppFuseHostSelectionState, AppFuseResultSelectionState,
+};
+
 pub use selections::{
     CountCappedZone, DistinctByMode, EffectContextSelectorScope, RevealBucketSelection,
 };
@@ -1503,7 +1508,6 @@ impl<'a> EffectContext<'a> {
     // ─── Breeding-area mutations ──────────────────────────────────────
 
     // ─── Combat mutations (Phase 9 Task 2) ────────────────────────────
-
 }
 
 /// Can the `{anchor, partner}` battle-area pair legally DNA-digivolve into the

@@ -153,6 +153,37 @@ impl Game {
             }),
             on_decline: None,
         });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::DigimonLinkHostSelection(
+                DigimonLinkHostSelectionState {
+                    owner,
+                    source,
+                    cost,
+                    candidates,
+                },
+            )],
+        });
+    }
+
+    pub(crate) fn run_digimon_link_host_selection_step(
+        &mut self,
+        state: DigimonLinkHostSelectionState,
+        action_id: u16,
+    ) {
+        use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
+
+        let offset = action_id.saturating_sub(ATTACK_START);
+        let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
+        let picked = state
+            .candidates
+            .iter()
+            .copied()
+            .find(|h| h.index == target_index)
+            .unwrap_or(PermanentHandle {
+                player: state.owner,
+                index: target_index,
+            });
+        self.begin_digimon_link(state.source, picked, state.cost);
     }
 
     /// Begin the link attach: fire the `WhenWouldLink` replacement window on the
@@ -167,7 +198,10 @@ impl Game {
         use crate::enums::Zone;
         use crate::replacement::{ReplacementCause, ReplacementSubject};
 
-        let Some(src_perm) = self.player(source.player).battle_area.get(source.index as usize)
+        let Some(src_perm) = self
+            .player(source.player)
+            .battle_area
+            .get(source.index as usize)
         else {
             return;
         };
@@ -258,8 +292,8 @@ impl Game {
             self.check_turn_end();
             return;
         }
-        let effective =
-            (p.cost as i32 + self.modifiers.link_cost_delta_for_player(p.source.player)).max(0) as u16;
+        let effective = (p.cost as i32 + self.modifiers.link_cost_delta_for_player(p.source.player))
+            .max(0) as u16;
         if !self.pay_memory(effective) {
             self.check_turn_end();
             return;
@@ -416,11 +450,7 @@ impl Game {
             LinkCardSource::DigivolutionSource(src) => {
                 // A digivolution source under another permanent's top card.
                 // It must not be the stack top (the top is the live Digimon).
-                match self
-                    .player(src.player)
-                    .battle_area
-                    .get(src.index as usize)
-                {
+                match self.player(src.player).battle_area.get(src.index as usize) {
                     Some(perm) => {
                         let top_pos = perm.card_sources.len().saturating_sub(1);
                         let pos = perm
@@ -444,9 +474,7 @@ impl Game {
                 // the one currently held in `pending_option` and owned by
                 // `owner`; otherwise no-op (defensive).
                 match self.pending_option.as_ref() {
-                    Some(pending)
-                        if pending.owner == owner && pending.card.handle() == card =>
-                    {
+                    Some(pending) if pending.owner == owner && pending.card.handle() == card => {
                         self.pending_option.take().map(|p| p.card)
                     }
                     _ => None,

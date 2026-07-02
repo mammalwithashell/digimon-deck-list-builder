@@ -101,6 +101,55 @@ fn scapegoat_substitutes_ally_for_self_on_opponent_effect_deletion() {
     );
 }
 
+#[test]
+fn scapegoat_inner_prompt_clones_faithfully() {
+    use digimon_engine::replacement::ReplacementCause;
+
+    let mut r = DebugRunner::builder()
+        .add_card(scapegoat_card("SCAP"))
+        .add_card(plain_digimon("ALLY"))
+        .start();
+
+    let scap = r.place_on_field(0, "SCAP", None);
+    let _ally = r.place_on_field(0, "ALLY", None);
+
+    r.game
+        .delete_permanent_with_cause(scap, ReplacementCause::OpponentEffect);
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept Scapegoat");
+    let inner_action = {
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("Scapegoat inner ally pick must be parked");
+        assert!(
+            r.game.pending_selection_resume.is_some(),
+            "Scapegoat inner prompt must be resume-driven before cloning"
+        );
+        pending.valid_action_ids[0]
+    };
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, inner_action)
+        .expect("cloned Scapegoat pick resolves");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original Scapegoat prompt intact"
+    );
+    r.game
+        .resolve_selection(0, inner_action)
+        .expect("original Scapegoat pick resolves");
+
+    assert_eq!(
+        clone.players[0].battle_area.len(),
+        r.game.players[0].battle_area.len(),
+        "clone and original should replay the same Scapegoat result"
+    );
+}
+
 // ─── Test 2: cause gate — own-effect deletion does NOT trigger Scapegoat ────
 
 /// Cause gate: own-effect deletion does NOT trigger Scapegoat.

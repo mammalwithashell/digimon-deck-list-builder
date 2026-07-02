@@ -72,7 +72,9 @@ fn seed_trash(runner: &mut DebugRunner, card_id: &str) {
         .position(|c| c.card_id == card_id)
         .unwrap();
     let iid = runner.game.next_card_index();
-    runner.game.players[0].trash.push(CardSource::new(idx, 0, iid));
+    runner.game.players[0]
+        .trash
+        .push(CardSource::new(idx, 0, iid));
 }
 
 // ─── Section 1 — Structural ──────────────────────────────────────────────────
@@ -122,7 +124,7 @@ fn bt25_013_trash_then_recover_red_iliad() {
 
     let hand_before = runner.hand_size(0); // CARD_ID + FILL
     runner.play(0, 0); // Firamon leaves hand
-    // Accept + drive: trash the FILL card, then recover RED-ILIAD.
+                       // Accept + drive: trash the FILL card, then recover RED-ILIAD.
     runner.auto_resolve().expect("resolve trash + recover");
 
     let hand_ids: Vec<String> = runner.game.players[0]

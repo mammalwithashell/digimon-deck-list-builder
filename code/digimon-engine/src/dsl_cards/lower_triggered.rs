@@ -4,8 +4,8 @@
 use std::sync::Arc;
 
 use digimon_dsl::compiled::{
-    CompiledActivationCostKind, CompiledCardKind, CompiledPlayerRef, CompiledPredicate,
-    CompiledBindingRef, CompiledScope, CompiledStep, CompiledTriggeredClause,
+    CompiledActivationCostKind, CompiledBindingRef, CompiledCardKind, CompiledPlayerRef,
+    CompiledPredicate, CompiledScope, CompiledStep, CompiledTriggeredClause,
 };
 
 use crate::card_source::CardHandle;
@@ -77,8 +77,7 @@ pub fn lower_for_kind_with_clause_index(
         .iter()
         .filter(|t| compiled_timing_to_engine(**t).is_some())
         .count();
-    let has_opt_cap =
-        clause.once_per_turn || matches!(clause.max_per_turn, Some(n) if n > 0);
+    let has_opt_cap = clause.once_per_turn || matches!(clause.max_per_turn, Some(n) if n > 0);
     // A clause containing a `refund_opt` step needs its OPT key to be
     // STATICALLY known (the step un-records the activation at runtime via the
     // StepRuntime — G-OPT-REFUND-ON-DECLINE). Forcing such a clause into its
@@ -101,8 +100,7 @@ pub fn lower_for_kind_with_clause_index(
         // + a self-filter (`event_card == source_card`) so a linked card's
         // "when this Digimon gets linked" effect fires once for itself and not
         // when a sibling links to the same host (design D6).
-        let is_when_linked =
-            matches!(*t, digimon_dsl::compiled::CompiledTiming::WhenLinked);
+        let is_when_linked = matches!(*t, digimon_dsl::compiled::CompiledTiming::WhenLinked);
         // DigiLink host-side: `when: when_card_linked_to_this` lowers to
         // `OnLink` + a HOST self-filter (`event_permanent == source_permanent`)
         // so the host's "[When Linked]" fires once for the host the card
@@ -148,8 +146,8 @@ pub fn lower_for_kind_with_clause_index(
         // step is declinable — DCGO's always-shown initial Yes/No
         // (G-OPT-REFUND-ON-DECLINE: declining the confirm drops the queued
         // effect before its OPT is recorded, i.e. DCGO `RemoveUse`).
-        let needs_outer_optional = clause.optional
-            && (clause.outer_prompt || !body_first_step_is_declinable(&body_steps));
+        let needs_outer_optional =
+            clause.optional && (clause.outer_prompt || !body_first_step_is_declinable(&body_steps));
         // Guard predicate: when the body's first step is a selection, the
         // outer prompt only installs if it has >=1 candidate. `None` ⇒ no
         // guard (always prompt). A FORCED outer prompt (`outer_prompt: true`)

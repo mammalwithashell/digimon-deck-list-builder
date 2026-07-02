@@ -182,12 +182,9 @@ fn ex10_020_battle_area_restriction_blocks_non_apocalymon_digivolve() {
 
     // Megadramon (hand 0): valid green Lv.6 route, but the name is not
     // [Apocalymon] → BLOCKED.
-    let blocked = r.game.digivolve_from_hand(
-        0,
-        0,
-        puppet.index as usize,
-        PlaySource::ByHand,
-    );
+    let blocked = r
+        .game
+        .digivolve_from_hand(0, 0, puppet.index as usize, PlaySource::ByHand);
     assert!(
         !blocked,
         "the [All Turns] restriction must block a non-[Apocalymon] digivolve \
@@ -203,12 +200,9 @@ fn ex10_020_battle_area_restriction_blocks_non_apocalymon_digivolve() {
 
     // Apocalymon (now hand 0 after no removal — MEGA still in hand at 0;
     // APOC is at hand index 1).
-    let allowed = r.game.digivolve_from_hand(
-        0,
-        1,
-        puppet.index as usize,
-        PlaySource::ByHand,
-    );
+    let allowed = r
+        .game
+        .digivolve_from_hand(0, 1, puppet.index as usize, PlaySource::ByHand);
     assert!(allowed, "[Apocalymon] is the allowed digivolve target");
     assert_eq!(
         r.game.players[0].battle_area[puppet.index as usize]
@@ -233,8 +227,10 @@ fn ex10_020_on_deletion_places_self_face_up_as_bottom_security() {
     let puppet = r.place_on_field(0, "EX10-020", Some(0));
     let sec_before = r.security_count(0);
 
-    r.game
-        .delete_permanent_with_cause(puppet, digimon_engine::replacement::ReplacementCause::OpponentEffect);
+    r.game.delete_permanent_with_cause(
+        puppet,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
     let _ = r.auto_resolve();
 
     assert_eq!(
@@ -270,8 +266,10 @@ fn ex10_020_on_deletion_skipped_when_green_face_up_security_present() {
     let puppet = r.place_on_field(0, "EX10-020", Some(0));
     let sec_before = r.security_count(0);
 
-    r.game
-        .delete_permanent_with_cause(puppet, digimon_engine::replacement::ReplacementCause::OpponentEffect);
+    r.game.delete_permanent_with_cause(
+        puppet,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
     let _ = r.auto_resolve();
 
     assert_eq!(

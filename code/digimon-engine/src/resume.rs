@@ -29,39 +29,84 @@ use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
 use crate::effect_context::selections::{CountCappedZone, DistinctByMode, RevealBucketSelection};
-use crate::enums::{EffectSourceKind, GamePhase, PlayerId, StackPosition};
+use crate::enums::{CostDelta, EffectSourceKind, GamePhase, PlaySource, PlayerId, StackPosition};
 use crate::permanent::PermanentHandle;
 use crate::selection::{SourceSelectionRef, UnionZoneOrigin};
 use crate::trigger_context::TriggerContext;
 
-/// Coexistence-only resume-side continuation hooks (make-engine-cloneable
-/// Phase 2). Several callback-wrappers — the play-cost / digivolve-reducer /
-/// option-reducer continuations, the DigiXros leave-window resume, and
-/// `run_after_selections_drain` — compose their continuation onto a selection's
-/// CLOSURE `callback`/`on_decline`. When the selection is resume-driven the
-/// closure is BYPASSED by [`run_resume`](crate::dsl_cards::step::selections::run_resume),
-/// so those wrappers instead defer their continuation here, and
-/// `resolve_generic_selection` drains it right after the resume resolution (for
-/// both accept and decline — every current wrapper runs the same continuation
-/// either way).
+/// Resume-side continuation hooks (make-engine-cloneable Phase 2, defunc-
+/// tionalized 2026-07-01). Several continuation wrappers — the play-cost /
+/// digivolve-reducer / option-reducer continuations, the DigiXros
+/// leave-window resume, and the `<Partition>` second-source play — must run
+/// AFTER the currently parked selection resolves. When the selection is
+/// resume-driven its closure `callback`/`on_decline` is BYPASSED by
+/// [`run_resume`](crate::dsl_cards::step::selections::run_resume), so those
+/// wrappers defer their continuation here as **plain data**, and
+/// `resolve_generic_selection` drains the list right after the resume
+/// resolution (for both accept and decline — every current wrapper runs the
+/// same continuation either way).
 ///
-/// Like the closure callbacks they stand in for, these are **not**
-/// clone-faithful: a clone yields an EMPTY list (a forked search node must not
-/// inherit live closure continuations). Faithful clone of a mid-continuation
-/// state arrives only once the wrappers themselves are ported to data.
-#[derive(Default)]
-pub struct ResumeContinuationHooks(pub Vec<Box<dyn FnOnce(&mut crate::game::Game) + Send + Sync>>);
+/// Because every variant is data, this channel is **clone-faithful**: a
+/// forked search node inherits the armed continuations and replays them
+/// identically.
+#[derive(Debug, Clone, Default)]
+pub struct ResumeContinuationHooks(pub Vec<AfterSelectionHook>);
 
-impl Clone for ResumeContinuationHooks {
-    fn clone(&self) -> Self {
-        Self(Vec::new())
-    }
-}
-
-impl std::fmt::Debug for ResumeContinuationHooks {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "ResumeContinuationHooks({} pending)", self.0.len())
-    }
+/// A deferred post-selection continuation, as data. Each variant mirrors one
+/// former `Box<dyn FnOnce(&mut Game)>` hook; `Game::run_after_selection_hook`
+/// dispatches it to the owning module's resume method. All payloads are plain
+/// `Clone` data so `Game: Clone` carries armed continuations faithfully.
+#[derive(Debug, Clone)]
+pub enum AfterSelectionHook {
+    /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST` — credit the digivolve
+    /// reducer's reduction and re-enter the digivolve once the parked
+    /// pay-cost selection settles (`game_actions/cost.rs`).
+    InteractiveDigivolveReducer {
+        amount: i32,
+        acting_player: PlayerId,
+        hand_index: usize,
+        field_index: usize,
+        source: crate::enums::PlaySource,
+    },
+    /// `G-DIGIXROS-REDIRECT-EXTRACTION` — re-enter the DigiXros leave-window
+    /// loop at the next material once the parked leave reward settles
+    /// (`game_actions/misc.rs`).
+    DigiXrosLeaveContinuation {
+        cont: crate::game_actions::DigiXrosResumeContinuation,
+    },
+    /// Play-from-hand cost-reduction pipeline — resume the reduction chain
+    /// once the parked pay-cost selection settles (`game_actions/misc.rs`).
+    PlayCostContinuation {
+        player_id: PlayerId,
+        hand_index: usize,
+        target: crate::game_actions::CostTargetContext,
+        cost_delta: CostDelta,
+        source: crate::enums::PlaySource,
+        origin: crate::game::PendingWouldPlayOrigin,
+        suppress_on_play: bool,
+        accumulated_reduction: i32,
+        processed: Vec<crate::game_actions::CostReductionKey>,
+    },
+    /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST` — credit the Option-use
+    /// reducer's reduction and re-enter `play_option_core` once the parked
+    /// pay-cost selection settles (`game_actions/options.rs`).
+    InteractiveOptionUseReducer {
+        amount: i32,
+        player_id: PlayerId,
+        source: crate::game_actions::OptionSource,
+        mode: crate::game_actions::OptionPlayMode,
+        cost_policy: crate::game_actions::OptionCostPolicy,
+    },
+    /// `<Partition>` (judge-quiz Q30) — play the SECOND extracted partition
+    /// source only after the FIRST play's would-play interrupt chain fully
+    /// drains ("played out simultaneously": the second card must not be in
+    /// the battle area while the first's interrupts resolve). Re-arms itself
+    /// while a selection is still pending.
+    PartitionSecondPlay {
+        controller: PlayerId,
+        source_card: CardHandle,
+        card: CardHandle,
+    },
 }
 
 /// A paused continuation, as data. Frames run inner→outer on selection
@@ -256,6 +301,13 @@ pub enum EffectChoicePostAction {
         positions: Vec<crate::enums::StackPosition>,
         player: PlayerId,
     },
+    /// Generic top/bottom-style choice where each label maps to a complete
+    /// compiled tail. Used by placement verbs whose `position: choice` expands
+    /// into either the top-position or bottom-position step plus the original
+    /// dispatcher tail.
+    RunTailBranch {
+        branches: Vec<Arc<Vec<CompiledStep>>>,
+    },
 }
 
 /// Post-action run on a `Security` resolve before the `inner_tail`. Plain data —
@@ -377,6 +429,12 @@ pub enum ResumeFrame {
     /// mirrors the closure). PASS commits at/above the floor; terminal binds the
     /// permanent list. See [`CountCappedPermanentsState`].
     CountCappedPermanentsStep(CountCappedPermanentsState),
+    /// Non-DSL count-capped multi-pick over hand/trash/material zones. This
+    /// mirrors `EffectContext::select_count_capped_multi(_min)` for keyword and
+    /// engine-action call sites whose terminal callback is not a compiled DSL
+    /// tail. The prompt UI still uses the same `PendingSelection` shape; this
+    /// frame replaces the recursive callback/decline finalizer with data.
+    NonDslCountCappedStep(NonDslCountCappedState),
     /// Multi-bucket reveal selection (`select_reveal_buckets`): a sequence of
     /// buckets, each picking `min..max` from its pre-resolved candidate handles
     /// (∩ the live reveal pile, minus already-picked + cross-bucket dedup). A
@@ -414,6 +472,13 @@ pub enum ResumeFrame {
     /// suspend target, suspend it, consume the reducer, credit the reduction,
     /// re-enter the digivolve. Mandatory.
     DigivolveReducerSuspend(crate::game_actions::digivolve::DigivolveReducerState),
+    /// Normal DNA-digivolve first material prompt. A top-level player action:
+    /// resolving it installs the second-material prompt and parks
+    /// `DnaDigivolveSecondMaterial`.
+    DnaDigivolveFirstMaterial(crate::game_actions::digivolve::DnaDigivolveFirstMaterialState),
+    /// Normal DNA-digivolve second material prompt. Resolving it performs the
+    /// DNA digivolve through the shared stage-2 resolver.
+    DnaDigivolveSecondMaterial(crate::game_actions::digivolve::DnaDigivolveSecondMaterialState),
     /// Refire-effect choice ("activate one of this Digimon's effects again" —
     /// `install_refire_effect_selection`). Decode the picked effect index → run
     /// it (`run_refired_effect`); optional PASS → no-op. INSTALLED BY A DSL ACTION
@@ -426,6 +491,192 @@ pub enum ResumeFrame {
     /// initiate (`use_option_from_hand`), so it CAN nest mid-clause → carries
     /// `outer_conts`. See [`crate::game_actions::options::OptionModeSelectState`].
     OptionModeSelect(crate::game_actions::options::OptionModeSelectState),
+    /// Optional DigiXros material selection while playing a card from hand.
+    /// Accept adds one material to the transaction and re-enters the play
+    /// finish path; PASS commits with the currently selected materials.
+    DigiXrosMaterialSelection(DigiXrosMaterialSelectionState),
+    /// Outer accept/decline prompt for a lone optional triggered effect whose
+    /// body begins with a mandatory choice. Accept runs the queued effect; PASS
+    /// drops it.
+    OuterOptionalTrigger(OuterOptionalTriggerState),
+    /// Trigger-order selection for a controller's queued triggered effects.
+    /// Accept runs the chosen queued effect; optional PASS drops every
+    /// remaining optional queued effect for that chooser.
+    TriggerOrderSelection(TriggerOrderSelectionState),
+    /// Optional replacement-effect accept/decline prompt. Accept re-runs the
+    /// parked replacement process and commits its outcome; PASS commits the
+    /// original event with no replacement.
+    OptionalReplacement(crate::replacement::OptionalReplacementState),
+    /// A Delay replacement paid its trash-self cost by resolving another
+    /// selection first (usually a replacement window around the cost trash).
+    /// Resolve that inner selection as data, then continue the Delay self-cancel
+    /// flow.
+    DelayCancelAfterSelection {
+        inner: Box<ResumeStack>,
+        continuation: crate::dsl_cards::lower_replacement::DelayCancelContinuation,
+        outer_conts: Vec<OuterContinuation>,
+    },
+    /// A Delay replacement paid its trash-self cost by resolving another
+    /// selection first. Resolve that inner selection as data, then continue the
+    /// hand-digivolve reward flow.
+    DelayHandDigivolveAfterSelection {
+        inner: Box<ResumeStack>,
+        continuation: crate::dsl_cards::lower_replacement::DelayCostContinuation,
+        outer_conts: Vec<OuterContinuation>,
+    },
+    /// A Delay replacement paid its trash-self cost by resolving another
+    /// selection first. Resolve that inner selection as data, then continue the
+    /// two-stage hand-DNA reward flow.
+    DelayDnaAfterSelection {
+        inner: Box<ResumeStack>,
+        continuation: crate::dsl_cards::lower_replacement::DelayDnaCostContinuation,
+        outer_conts: Vec<OuterContinuation>,
+    },
+    /// Delay-cost hand-digivolve reward prompt. Accept digivolves the
+    /// replacement subject with the chosen hand card; PASS declines.
+    DelayHandDigivolveSelection(
+        crate::dsl_cards::lower_replacement::DelayHandDigivolveSelectionState,
+    ),
+    /// Delay-cost two-stage hand-DNA reward prompt. The same frame type covers
+    /// both the result-card and partner-card stages.
+    DelayDnaCardSelection(crate::dsl_cards::lower_replacement::DelayDnaCardSelectionState),
+    /// Effect-initiated App Fuse host prompt. Accept installs the result-card
+    /// prompt; PASS declines without running any composed tail, matching the
+    /// legacy prompt's absent `on_decline`.
+    AppFuseHostSelection(crate::effect_context::AppFuseHostSelectionState),
+    /// Effect-initiated App Fuse result-card prompt. Accept commits the App
+    /// Fuse; PASS declines without running any composed tail.
+    AppFuseResultSelection(crate::effect_context::AppFuseResultSelectionState),
+    /// Arts Digivolve target prompt installed while an Option is resolving.
+    /// Accept stacks the pending Option onto the selected base; PASS disposes
+    /// the Option normally.
+    ArtsDigivolveSelection(crate::game_actions::ArtsDigivolveSelectionState),
+    /// Link Option host prompt installed while an Option is resolving. Accept
+    /// attaches the pending Option as a link; optional PASS trashes it.
+    LinkOptionHostSelection(crate::game_actions::LinkOptionHostSelectionState),
+    /// Field Digimon Link host prompt. Top-level player action; accept begins
+    /// the WhenWouldLink window and then commits/resumes the Digimon link.
+    DigimonLinkHostSelection(crate::game_actions::DigimonLinkHostSelectionState),
+    /// Interactive play-from-hand cost-reduction accept/decline prompt.
+    /// Accept applies the reducer and continues the recursive reducer chain;
+    /// PASS skips this reducer and continues the chain.
+    PlayFromHandCostReductionPrompt(crate::game_actions::PlayFromHandCostReductionPromptState),
+    /// Interactive digivolve cost-reduction accept/decline prompt for
+    /// field-hosted BeforePayCost reducers whose pay_cost may itself park.
+    InteractiveDigivolveCostReductionPrompt(
+        crate::game_actions::InteractiveDigivolveCostReductionPromptState,
+    ),
+    /// Interactive Option-use cost-reduction accept/decline prompt for
+    /// field-hosted BeforePayCost reducers whose pay_cost may itself park.
+    InteractiveOptionUseCostReductionPrompt(
+        crate::game_actions::InteractiveOptionUseCostReductionPromptState,
+    ),
+    /// Combat `<Alliance>` declaration prompt. Decode the ally pick or PASS,
+    /// apply the Alliance cost/grants, advance combat, then run/re-wrap any
+    /// composed DSL outer tails. See [`CombatAllianceState`].
+    AllianceSelection(CombatAllianceState),
+    /// Combat Block declaration prompt. Decode the blocker pick or PASS,
+    /// rewrite the attack target when a block is declared, advance combat, then
+    /// run/re-wrap any composed DSL outer tails. See [`CombatBlockState`].
+    BlockSelection(CombatBlockState),
+    /// Combat Raid target-selection prompt. Covers both the optional printed
+    /// Raid switch before Alliance and the mandatory post-Block invalid-target
+    /// Raid retarget. See [`CombatRaidSelectionState`].
+    RaidSelection(CombatRaidSelectionState),
+    /// Combat Counter declaration prompt. Decodes the selected Counter candidate
+    /// or PASS, runs the Counter effect path, advances combat, then composes any
+    /// outer DSL tails. See [`CombatCounterState`].
+    CounterSelection(CombatCounterState),
+    /// First follow-up prompt for Counter-window Blast DNA: pick the field
+    /// material. The selected field index installs the hand-material prompt.
+    CounterBlastDnaFieldMaterial(CombatBlastDnaFieldMaterialState),
+    /// Second follow-up prompt for Counter-window Blast DNA: pick the hand
+    /// material and perform the DNA digivolve.
+    CounterBlastDnaHandMaterial(CombatBlastDnaHandMaterialState),
+    /// End-of-turn `<Overclock>` sacrifice prompt. Decode the chosen own-field
+    /// sacrifice or PASS, then continue the keyword attack flow.
+    OverclockSelection(crate::game_phases::OverclockSelectionState),
+    /// BO3 between-game play-order prompt (`Game::request_play_order_selection`).
+    /// Decode `PLAY_FIRST` / `PLAY_SECOND` and write `Game::last_play_order_choice`.
+    /// This is an engine/lifecycle prompt, never nested inside a DSL clause.
+    PlayOrderSelection,
+    /// `<Save>` Tamer destination prompt.
+    KeywordSaveSelection(KeywordSaveSelectionState),
+    /// `<Material Save>` first-stage Tamer destination prompt. Accept installs
+    /// a non-DSL count-capped source prompt.
+    KeywordMaterialSaveTamerSelection(KeywordMaterialSaveTamerSelectionState),
+    /// `<Scapegoat>` inner replacement-substitute prompt.
+    KeywordScapegoatSelection(KeywordScapegoatSelectionState),
+    /// `<Mind Link>` target prompt from the keyword's `[Main]` action.
+    KeywordMindLinkSelection(KeywordMindLinkSelectionState),
+    /// `<Ascension>` Yes/No prompt.
+    KeywordAscensionChoice(KeywordAscensionChoiceState),
+    /// Familiar Token `[On Deletion]` opponent-Digimon target prompt.
+    FamiliarTokenOnDeletionSelection(FamiliarTokenOnDeletionSelectionState),
+    /// Effect-action helper prompt to pay a leave replacement by choosing one
+    /// linked card, then either trashing it or moving it under the carrier.
+    LinkCardLeaveSelection(LinkCardLeaveSelectionState),
+    /// Effect-action helper prompt for Dual cards that can be played as a
+    /// Digimon or used as an Option.
+    PlayOrUseDualChoice(PlayOrUseDualChoiceState),
+    /// `may_dna_digivolve_now` partner prompt. Accept installs the result-card
+    /// hand prompt; PASS declines without running composed tails, matching the
+    /// legacy `select_own_permanent` no-decline callback.
+    MayDnaPartnerSelection(MayDnaPartnerSelectionState),
+    /// `may_dna_digivolve_now` result-card prompt after a partner was chosen.
+    MayDnaResultSelection(MayDnaResultSelectionState),
+}
+
+#[derive(Debug, Clone)]
+pub struct CombatAllianceState {
+    pub attacker: PermanentHandle,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CombatBlockState {
+    pub attacker: PermanentHandle,
+    pub defender_player: PlayerId,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CombatRaidSelectionMode {
+    Switch,
+    Retarget,
+}
+
+#[derive(Debug, Clone)]
+pub struct CombatRaidSelectionState {
+    pub attacker: PermanentHandle,
+    pub opponent_player: PlayerId,
+    pub mode: CombatRaidSelectionMode,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CombatCounterState {
+    pub defender_player: PlayerId,
+    pub valid_action_ids: Vec<u16>,
+    pub(crate) candidates: Vec<crate::combat::CounterCandidate>,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CombatBlastDnaFieldMaterialState {
+    pub defender: PlayerId,
+    pub result_hand_index: usize,
+    pub source_card: CardHandle,
+    pub previous_phase: GamePhase,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct CombatBlastDnaHandMaterialState {
+    pub defender: PlayerId,
+    pub result_hand_index: usize,
+    pub field_idx: usize,
+    pub outer_conts: Vec<OuterContinuation>,
 }
 
 /// State for a parked refire-effect choice (resumable VM). `effects` are the
@@ -436,6 +687,171 @@ pub enum ResumeFrame {
 pub struct RefireEffectChoiceState {
     pub effects: Vec<crate::effect::ReFireableEffect>,
     pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct DigiXrosMaterialSelectionState {
+    pub(crate) player_id: PlayerId,
+    pub(crate) hand_index: usize,
+    pub(crate) target_card: CardHandle,
+    pub(crate) cost_delta: CostDelta,
+    pub(crate) source: PlaySource,
+    pub(crate) origin: crate::game::PendingWouldPlayOrigin,
+    pub(crate) suppress_on_play: bool,
+    pub(crate) total_reduction: i32,
+    pub(crate) candidates: Vec<(u16, crate::digixros::DigiXrosMaterialOrigin)>,
+    pub(crate) outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct OuterOptionalTriggerState {
+    pub(crate) queued_effect: crate::selection::QueuedEffect,
+    pub(crate) outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct TriggerOrderSelectionState {
+    pub(crate) chooser: PlayerId,
+    pub(crate) allow_decline_all: bool,
+    pub(crate) outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct KeywordSaveSelectionState {
+    pub prov: ResumeProvenance,
+    pub owner: PlayerId,
+    pub self_card: CardHandle,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct KeywordMaterialSaveTamerSelectionState {
+    pub prov: ResumeProvenance,
+    pub owner: PlayerId,
+    pub eligible_sources: Vec<CardHandle>,
+    pub max: u8,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct KeywordScapegoatSelectionState {
+    pub prov: ResumeProvenance,
+    pub owner: PlayerId,
+    pub self_perm: PermanentHandle,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct KeywordMindLinkSelectionState {
+    pub prov: ResumeProvenance,
+    pub owner: PlayerId,
+    pub tamer: PermanentHandle,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct KeywordAscensionChoiceState {
+    pub prov: ResumeProvenance,
+    pub owner: PlayerId,
+    pub self_card: CardHandle,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct FamiliarTokenOnDeletionSelectionState {
+    pub prov: ResumeProvenance,
+    pub target_player: PlayerId,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LinkCardLeaveMode {
+    TrashAndCancel,
+    PlaceAsBottomSourceAndCancel,
+}
+
+#[derive(Debug, Clone)]
+pub struct LinkCardLeaveSelectionState {
+    pub prov: ResumeProvenance,
+    pub host: PermanentHandle,
+    pub cards: Vec<CardHandle>,
+    pub mode: LinkCardLeaveMode,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct PlayOrUseDualChoiceState {
+    pub prov: ResumeProvenance,
+    pub player: PlayerId,
+    pub hand_index: usize,
+    pub cost_delta: CostDelta,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MayDnaPartnerSelectionState {
+    pub prov: ResumeProvenance,
+    pub controller: PlayerId,
+    pub anchor: PermanentHandle,
+    pub cost: u16,
+    pub ignore_requirements: bool,
+    pub optional: bool,
+    pub target_prompt: String,
+    pub target_candidate_actions: Vec<u16>,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct MayDnaResultSelectionState {
+    pub prov: ResumeProvenance,
+    pub controller: PlayerId,
+    pub anchor: PermanentHandle,
+    pub partner: PermanentHandle,
+    pub cost: u16,
+    pub ignore_requirements: bool,
+    pub valid_action_ids: Vec<u16>,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub struct NonDslCountCappedState {
+    pub prov: ResumeProvenance,
+    pub of_player: PlayerId,
+    pub zone: CountCappedZone,
+    pub min: u8,
+    pub max: u8,
+    pub is_optional_zero: bool,
+    pub distinct_by: Option<DistinctByMode>,
+    pub candidate_actions: Vec<u16>,
+    pub accum: Vec<CardHandle>,
+    pub prompt: String,
+    pub previous_phase: GamePhase,
+    pub terminal: NonDslCountCappedTerminal,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub enum NonDslCountCappedTerminal {
+    KeywordFragment {
+        subject: PermanentHandle,
+    },
+    KeywordPartition {
+        subject: PermanentHandle,
+    },
+    KeywordMaterialSave {
+        tamer: PermanentHandle,
+    },
+    TrashOpponentHandToCount {
+        opponent: PlayerId,
+    },
+    Assembly {
+        player: PlayerId,
+        target_card: CardHandle,
+        params: crate::game_actions::AssemblyPlayParams,
+        elements: Arc<Vec<(CompiledPredicate, u8)>>,
+        element_idx: usize,
+        picked_so_far: Vec<CardHandle>,
+    },
 }
 
 /// In-flight state of a `use_option_from_hand` selection, as data. The pick
@@ -915,7 +1331,10 @@ mod tests {
                         controller: 0,
                         override_pin: None,
                     },
-                    select_kind: ResumeSelectKind::Security { of_player: 0, post: None },
+                    select_kind: ResumeSelectKind::Security {
+                        of_player: 0,
+                        post: None,
+                    },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
                     outer_conts: Vec::new(),
@@ -977,7 +1396,10 @@ mod tests {
                         controller: 0,
                         override_pin: None,
                     },
-                    select_kind: ResumeSelectKind::Security { of_player: 0, post: None },
+                    select_kind: ResumeSelectKind::Security {
+                        of_player: 0,
+                        post: None,
+                    },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
                     outer_conts: Vec::new(),
@@ -1166,7 +1588,13 @@ mod tests {
                         override_pin: None,
                     },
                     select_kind: ResumeSelectKind::AnyPermanent {
-                        candidates: vec![(action, PermanentHandle { player: 0, index: 0 })],
+                        candidates: vec![(
+                            action,
+                            PermanentHandle {
+                                player: 0,
+                                index: 0,
+                            },
+                        )],
                     },
                     bind_as: None,
                     inner_tail: Arc::new(vec![CompiledStep::GainMemory(5)]),
@@ -1428,7 +1856,11 @@ mod tests {
         {
             let g = runner.game_mut();
             assert!(g.pending_selection.is_some(), "must re-park for pick 2");
-            match g.pending_selection_resume.as_ref().expect("re-parked frame") {
+            match g
+                .pending_selection_resume
+                .as_ref()
+                .expect("re-parked frame")
+            {
                 ResumeStack { frames } => match &frames[0] {
                     ResumeFrame::MultiPickStep(s) => {
                         assert_eq!(s.accum.len(), 1, "exactly one pick accumulated");
@@ -1566,7 +1998,10 @@ mod tests {
             placement: None,
             outer_conts: Vec::new(),
         };
-        crate::dsl_cards::step::selections::install_permutation_resume_step(runner.game_mut(), state);
+        crate::dsl_cards::step::selections::install_permutation_resume_step(
+            runner.game_mut(),
+            state,
+        );
 
         // Pick item 0: re-parks for the last item.
         runner
@@ -1575,8 +2010,16 @@ mod tests {
             .expect("pick 1 resolves");
         {
             let g = runner.game_mut();
-            assert!(g.pending_selection.is_some(), "must re-park for the 2nd pick");
-            match &g.pending_selection_resume.as_ref().expect("re-parked").frames[0] {
+            assert!(
+                g.pending_selection.is_some(),
+                "must re-park for the 2nd pick"
+            );
+            match &g
+                .pending_selection_resume
+                .as_ref()
+                .expect("re-parked")
+                .frames[0]
+            {
                 ResumeFrame::PermutationStep(s) => {
                     assert_eq!(s.accum, vec![c0], "first pick accumulated in order");
                     assert_eq!(s.remaining, vec![c1], "picked item removed");
@@ -1805,7 +2248,10 @@ mod tests {
                 vec![a1],
                 "right pick must exclude the left handle (only slot 1 remains)"
             );
-            assert_eq!(g.memory, 0, "tail must NOT run until the right pick resolves");
+            assert_eq!(
+                g.memory, 0,
+                "tail must NOT run until the right pick resolves"
+            );
             assert!(
                 g.pending_selection_resume.is_some(),
                 "right pick must be resume-driven (data VM), not closure-only"

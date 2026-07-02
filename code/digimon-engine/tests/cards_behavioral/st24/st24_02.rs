@@ -146,7 +146,10 @@ fn st24_02_has_on_play_and_inherited_when_attacking() {
             && t.when.contains(&CompiledTiming::WhenAttacking)
             && t.once_per_turn)
     });
-    assert!(has_inherited_wa, "inherited [When Attacking][OPT] draw present");
+    assert!(
+        has_inherited_wa,
+        "inherited [When Attacking][OPT] draw present"
+    );
 }
 
 // ─── Section 2 — On Play (place under DATA SQUAD Tamer + Draw 2) ──────────────
@@ -193,7 +196,11 @@ fn st24_02_places_hand_card_face_down_and_draws_two() {
         hand_before - 1 + 2,
         "1 card stashed, then 2 drawn (net +1)"
     );
-    assert_eq!(runner.deck_size(0), deck_before - 2, "<Draw 2> drew 2 cards");
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before - 2,
+        "<Draw 2> drew 2 cards"
+    );
 }
 
 #[test]

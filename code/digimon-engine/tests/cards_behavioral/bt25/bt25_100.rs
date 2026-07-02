@@ -108,7 +108,9 @@ fn bt25_100_grants_inherited_piercing_to_host() {
     runner.game.enter_main_phase();
 
     assert_eq!(play_iron_standard(&mut runner), OptionPlayResult::Pending);
-    let tview = runner.pending_selection_view().expect("de-digi target prompt");
+    let tview = runner
+        .pending_selection_view()
+        .expect("de-digi target prompt");
     runner
         .execute_action(tview.selecting_player, encode_attack(0, opp.index as u16))
         .expect("choose opponent Digimon");
@@ -145,7 +147,9 @@ fn bt25_100_main_de_digivolves_two_then_can_decline_link() {
 
     let trash_before = runner.trash_size(1);
     assert_eq!(play_iron_standard(&mut runner), OptionPlayResult::Pending);
-    let tview = runner.pending_selection_view().expect("de-digi target prompt");
+    let tview = runner
+        .pending_selection_view()
+        .expect("de-digi target prompt");
     assert_eq!(tview.kind, SelectionKind::OppField);
     runner
         .execute_action(tview.selecting_player, encode_attack(0, opp.index as u16))
@@ -183,7 +187,9 @@ fn bt25_100_main_links_to_chosen_digimon() {
     runner.game.enter_main_phase();
 
     assert_eq!(play_iron_standard(&mut runner), OptionPlayResult::Pending);
-    let tview = runner.pending_selection_view().expect("de-digi target prompt");
+    let tview = runner
+        .pending_selection_view()
+        .expect("de-digi target prompt");
     runner
         .execute_action(tview.selecting_player, encode_attack(0, opp.index as u16))
         .expect("choose opponent Digimon");
@@ -212,7 +218,9 @@ fn bt25_100_no_link_prompt_when_no_own_digimon() {
     runner.game.enter_main_phase();
 
     assert_eq!(play_iron_standard(&mut runner), OptionPlayResult::Pending);
-    let tview = runner.pending_selection_view().expect("de-digi target prompt");
+    let tview = runner
+        .pending_selection_view()
+        .expect("de-digi target prompt");
     runner
         .execute_action(tview.selecting_player, encode_attack(0, opp.index as u16))
         .expect("choose opponent Digimon");

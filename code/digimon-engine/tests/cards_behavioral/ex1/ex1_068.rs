@@ -194,7 +194,10 @@ fn ex1_068_main_from_hand_grant_clause_shape() {
         .expect("[Main] process must contain a grant_triggered_effect step");
 
     let (target, timing, expiry, body) = grant;
-    assert_eq!(timing, "when_attacking", "granted trigger fires when attacking");
+    assert_eq!(
+        timing, "when_attacking",
+        "granted trigger fires when attacking"
+    );
     assert_eq!(
         expiry, "end_of_opponents_next_turn",
         "grant lasts until the end of the opponent's next turn"
@@ -204,7 +207,8 @@ fn ex1_068_main_from_hand_grant_clause_shape() {
         "target must be a predicate filter (opponent Digimon), got {target:?}"
     );
     assert!(
-        body.iter().any(|s| matches!(s, CompiledStep::LoseMemory(2))),
+        body.iter()
+            .any(|s| matches!(s, CompiledStep::LoseMemory(2))),
         "granted body must lose 2 memory; got {body:?}"
     );
 }

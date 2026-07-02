@@ -9,8 +9,8 @@ use crate::card_source::{CardHandle, CardSource};
 use crate::digixros::DigiXrosMaterialOrigin;
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{
-    CardKind, EffectSourceKind, EffectTiming, GamePhase, Keyword, ModifierType, PlaySource,
-    PlayerId, Zone,
+    CardKind, CostDelta, EffectSourceKind, EffectTiming, GamePhase, Keyword, ModifierType,
+    PlaySource, PlayerId, Zone,
 };
 use crate::game::Game;
 use crate::game::{
@@ -67,8 +67,8 @@ struct TakenCardSource {
 /// `pending_selection` (the material is now in the leaving/limbo slot). Once the
 /// parked reward settles, the loop re-enters at `next_material` and ultimately
 /// finalizes the host play (G-DIGIXROS-REDIRECT-EXTRACTION).
-#[derive(Clone)]
-struct DigiXrosResumeContinuation {
+#[derive(Debug, Clone)]
+pub(crate) struct DigiXrosResumeContinuation {
     player: PlayerId,
     target_card: CardHandle,
     total_reduction: i32,
@@ -78,7 +78,7 @@ struct DigiXrosResumeContinuation {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum CostReductionKind {
+pub(crate) enum CostReductionKind {
     Play,
     Digivolve,
     OptionUse,
@@ -160,7 +160,7 @@ fn source_kind_for_card_kind(kind: CardKind) -> EffectSourceKind {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct CostReductionKey {
+pub(crate) struct CostReductionKey {
     source_card: crate::card_source::CardHandle,
     source_permanent: Option<crate::permanent::PermanentHandle>,
     controller: PlayerId,
@@ -169,7 +169,8 @@ struct CostReductionKey {
     is_under: bool,
 }
 
-struct CostReductionCandidate {
+#[derive(Debug, Clone)]
+pub(crate) struct CostReductionCandidate {
     key: CostReductionKey,
     label: String,
     amount: i32,
@@ -186,7 +187,7 @@ struct CostReductionCandidate {
     pay_cost_interactive: bool,
 }
 
-struct BeforePayCostSourceInfo {
+pub(crate) struct BeforePayCostSourceInfo {
     source_permanent: Option<crate::permanent::PermanentHandle>,
     source_card: crate::card_source::CardHandle,
     card_id: String,
@@ -195,8 +196,68 @@ struct BeforePayCostSourceInfo {
     effect_slot: u8,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct ArtsDigivolveSelectionState {
+    pub(crate) owner: PlayerId,
+    pub(crate) targets: Vec<PermanentHandle>,
+    pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct LinkOptionHostSelectionState {
+    pub(crate) owner: PlayerId,
+    pub(crate) candidates: Vec<PermanentHandle>,
+    pub(crate) optional: bool,
+    pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct DigimonLinkHostSelectionState {
+    pub(crate) owner: PlayerId,
+    pub(crate) source: PermanentHandle,
+    pub(crate) cost: u16,
+    pub(crate) candidates: Vec<PermanentHandle>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct PlayFromHandCostReductionPromptState {
+    pub(crate) player_id: PlayerId,
+    pub(crate) hand_index: usize,
+    pub(crate) target: CostTargetContext,
+    pub(crate) cost_delta: CostDelta,
+    pub(crate) source: PlaySource,
+    pub(crate) origin: crate::game::PendingWouldPlayOrigin,
+    pub(crate) suppress_on_play: bool,
+    pub(crate) accumulated_reduction: i32,
+    pub(crate) processed: Vec<CostReductionKey>,
+    pub(crate) key: CostReductionKey,
+    pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct InteractiveDigivolveCostReductionPromptState {
+    pub(crate) acting_player: PlayerId,
+    pub(crate) target: CostTargetContext,
+    pub(crate) hand_index: usize,
+    pub(crate) field_index: usize,
+    pub(crate) source: PlaySource,
+    pub(crate) key: CostReductionKey,
+    pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct InteractiveOptionUseCostReductionPromptState {
+    pub(crate) player_id: PlayerId,
+    pub(crate) cost_target: CostTargetContext,
+    pub(crate) source: OptionSource,
+    pub(crate) mode: OptionPlayMode,
+    pub(crate) cost_policy: OptionCostPolicy,
+    pub(crate) key: CostReductionKey,
+    pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
+}
+
 #[derive(Debug, Clone, Copy)]
-struct CostTargetContext {
+pub(crate) struct CostTargetContext {
     card: crate::card_source::CardHandle,
     from_hand: bool,
     /// True when this cost is a DIGIVOLVE cost (normal or DNA). Surfaced to
@@ -530,7 +591,9 @@ impl Game {
         hand_index: usize,
         target_card: CardHandle,
     ) -> Option<(i32, Vec<(digimon_dsl::compiled::CompiledPredicate, u8)>)> {
-        use digimon_dsl::compiled::{CompiledAltPathKind, CompiledCost, CompiledRepeat, CompiledZone};
+        use digimon_dsl::compiled::{
+            CompiledAltPathKind, CompiledCost, CompiledRepeat, CompiledZone,
+        };
 
         let card_id = {
             let card = self.player(player_id).hand.get(hand_index)?;
@@ -883,7 +946,46 @@ impl Game {
                 game.check_turn_end();
             })),
         });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::ArtsDigivolveSelection(
+                ArtsDigivolveSelectionState {
+                    owner,
+                    targets,
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
         true
+    }
+
+    pub(crate) fn run_arts_digivolve_selection_step(
+        &mut self,
+        state: ArtsDigivolveSelectionState,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        use crate::action::space::{ATTACK_START, BREEDING_SELECTION_TARGET, TARGETS_PER_ATTACKER};
+
+        if is_pass {
+            self.dispose_option();
+            self.check_turn_end();
+            return;
+        }
+
+        if action_id == BREEDING_SELECTION_TARGET {
+            let _ = self.arts_digivolve_pending_option_onto_breeding(state.owner);
+            return;
+        }
+
+        let offset = action_id.saturating_sub(ATTACK_START);
+        let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
+        if state.targets.iter().any(|h| h.index == target_index) {
+            let target = PermanentHandle {
+                player: state.owner,
+                index: target_index,
+            };
+            let _ = self.arts_digivolve_pending_option_onto_battle(target);
+        }
     }
 
     pub(crate) fn arts_digivolve_pending_option_onto_battle(
@@ -1391,6 +1493,48 @@ impl Game {
                 }) as Box<dyn FnOnce(&mut Game) + Send + Sync>
             }),
         });
+        self.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::LinkOptionHostSelection(
+                LinkOptionHostSelectionState {
+                    owner,
+                    candidates,
+                    optional,
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
+    }
+
+    pub(crate) fn run_link_option_host_selection_step(
+        &mut self,
+        state: LinkOptionHostSelectionState,
+        action_id: u16,
+        is_pass: bool,
+    ) {
+        use crate::action::space::{ATTACK_START, TARGETS_PER_ATTACKER};
+
+        if is_pass {
+            if state.optional {
+                if let Some(pending) = self.pending_option.take() {
+                    self.player_mut(pending.owner).trash.push(pending.card);
+                    self.check_turn_end();
+                }
+            }
+            return;
+        }
+
+        let offset = action_id.saturating_sub(ATTACK_START);
+        let target_index = (offset % TARGETS_PER_ATTACKER) as u8;
+        let picked = state
+            .candidates
+            .iter()
+            .copied()
+            .find(|h| h.index == target_index)
+            .unwrap_or(PermanentHandle {
+                player: state.owner,
+                index: target_index,
+            });
+        self.attach_linked_card(picked);
     }
 
     /// Complete a Link Option's attach: push the pending card into the
@@ -2855,7 +2999,6 @@ impl Game {
         self.fire_on_place_security(player_id, observer_player, source_card);
         true
     }
-
 }
 
 // ── Assembly play-execution free helpers (G-ASSEMBLY-PLAY-EXECUTION) ──────
@@ -2867,16 +3010,16 @@ impl Game {
 /// Immutable bundle of the play parameters threaded through the Assembly
 /// selection chain. `Copy` so each recursive step / closure can take it.
 #[cfg(feature = "dsl-yaml-loader")]
-#[derive(Clone, Copy)]
-struct AssemblyPlayParams {
-    cost_delta: crate::enums::CostDelta,
-    source: PlaySource,
-    origin: PendingWouldPlayOrigin,
-    suppress_on_play: bool,
+#[derive(Clone, Copy, Debug)]
+pub struct AssemblyPlayParams {
+    pub(crate) cost_delta: crate::enums::CostDelta,
+    pub(crate) source: PlaySource,
+    pub(crate) origin: PendingWouldPlayOrigin,
+    pub(crate) suppress_on_play: bool,
     /// Generic cost reduction accumulated by the BeforePayCost chain.
-    total_reduction: i32,
+    pub(crate) total_reduction: i32,
     /// The assembly-specific reduction (D5 — `cost:` on the alt-path).
-    assembly_reduction: i32,
+    pub(crate) assembly_reduction: i32,
 }
 
 /// Recursive system-of-distinct-representatives check: can each assembly
@@ -2946,7 +3089,15 @@ fn install_assembly_element(
     );
 
     let elements_for_cb = std::sync::Arc::clone(&elements);
+    let picked_so_far_for_resume = picked_so_far.clone();
     let mut ctx = EffectContext::new(game, source_card, None, player);
+    let prov = crate::resume::ResumeProvenance {
+        source_card: ctx.source_card,
+        source_permanent: ctx.source_permanent,
+        source_kind: ctx.source_kind,
+        controller: ctx.player,
+        override_pin: ctx.override_selecting_player(),
+    };
     ctx.select_count_capped_multi_min(
         player,
         CountCappedZone::Trash,
@@ -2987,6 +3138,72 @@ fn install_assembly_element(
             }
         },
     );
+    if let Some(pending) = ctx.game.pending_selection.as_ref() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::NonDslCountCappedStep(
+                crate::resume::NonDslCountCappedState {
+                    prov,
+                    of_player: player,
+                    zone: CountCappedZone::Trash,
+                    min,
+                    max,
+                    is_optional_zero: is_first,
+                    distinct_by: None,
+                    candidate_actions: pending.valid_action_ids.clone(),
+                    accum: Vec::new(),
+                    prompt: pending.prompt.clone(),
+                    previous_phase: pending.previous_phase,
+                    terminal: crate::resume::NonDslCountCappedTerminal::Assembly {
+                        player,
+                        target_card,
+                        params,
+                        elements,
+                        element_idx,
+                        picked_so_far: picked_so_far_for_resume,
+                    },
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
+    }
+}
+
+#[cfg(feature = "dsl-yaml-loader")]
+pub(crate) fn continue_assembly_after_material_picks(
+    game: &mut Game,
+    player: PlayerId,
+    target_card: CardHandle,
+    params: AssemblyPlayParams,
+    elements: std::sync::Arc<Vec<(digimon_dsl::compiled::CompiledPredicate, u8)>>,
+    element_idx: usize,
+    picked_so_far: Vec<CardHandle>,
+    picks: Vec<CardHandle>,
+) {
+    let is_first = element_idx == 0;
+    let is_last = element_idx + 1 >= elements.len();
+    if is_first && picks.is_empty() {
+        let _ = assembly_finish(game, player, target_card, params, params.total_reduction);
+        return;
+    }
+
+    let mut all_picked = picked_so_far;
+    all_picked.extend(picks);
+    if is_last {
+        let total = params.total_reduction + params.assembly_reduction;
+        game.pending_assembly_materials = Some((target_card, all_picked));
+        let _ = assembly_finish(game, player, target_card, params, total);
+        game.pending_assembly_materials = None;
+    } else {
+        install_assembly_element(
+            game,
+            player,
+            target_card,
+            params,
+            elements,
+            element_idx + 1,
+            all_picked,
+        );
+    }
 }
 
 /// Re-resolve the hand index for `target_card` (the selection callbacks fire

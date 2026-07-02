@@ -179,8 +179,7 @@ fn ex7_020_compiles_with_printed_stats_and_lv3_blue_path() {
             path.kind == CompiledAltPathKind::Digivolve
                 && path.cost == Some(CompiledCost::Literal(2))
                 && path.from.as_ref().is_some_and(|from| {
-                    (from.level_eq == Some(3)
-                        || from.all_of.iter().any(|p| p.level_eq == Some(3)))
+                    (from.level_eq == Some(3) || from.all_of.iter().any(|p| p.level_eq == Some(3)))
                         && (from.color_is == Some(CompiledColor::Blue)
                             || from
                                 .all_of
@@ -636,7 +635,9 @@ fn ex7_020_inherited_opt_blocks_second_attack_same_turn() {
     // First attack: fires, trashes OPP-MID. (Security fallout — SEC cards —
     // also reaches the trash; assertions are membership-based.)
     runner.attack_player(carrier, 1, false);
-    let view = runner.pending_selection_view().expect("first-attack prompt");
+    let view = runner
+        .pending_selection_view()
+        .expect("first-attack prompt");
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("resolve first trash");

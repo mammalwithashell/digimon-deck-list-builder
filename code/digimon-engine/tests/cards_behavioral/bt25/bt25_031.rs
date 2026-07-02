@@ -184,7 +184,10 @@ fn bt25_031_on_play_adds_angel_group_and_ts_rest_to_bottom() {
         hand_ids.contains(&"ANGEL-A"),
         "Archangel pick to hand: {hand_ids:?}"
     );
-    assert!(hand_ids.contains(&"TS-031"), "TS pick to hand: {hand_ids:?}");
+    assert!(
+        hand_ids.contains(&"TS-031"),
+        "TS pick to hand: {hand_ids:?}"
+    );
     assert!(
         !hand_ids.contains(&"FILL-031"),
         "non-matching filler must NOT be added to hand: {hand_ids:?}"
@@ -237,14 +240,19 @@ fn bt25_031_angel_bucket_rejects_non_angel_traits() {
         let mut ctx = EffectContext::new(&mut runner.game, src, None, 0);
         run_steps(&process, &mut ctx, &mut Bindings::new());
     }
-    runner.auto_resolve().expect("resolves with only TS candidate");
+    runner
+        .auto_resolve()
+        .expect("resolves with only TS candidate");
 
     let hand_ids: Vec<&str> = runner.game.players[0]
         .hand
         .iter()
         .map(|c| c.card_id(&runner.game.card_data))
         .collect();
-    assert!(hand_ids.contains(&"TS-031B"), "TS pick to hand: {hand_ids:?}");
+    assert!(
+        hand_ids.contains(&"TS-031B"),
+        "TS pick to hand: {hand_ids:?}"
+    );
     assert!(
         !hand_ids.contains(&"DRG-031"),
         "plain Dragon trait must NOT satisfy the Angel/4-Great-Dragons bucket: {hand_ids:?}"

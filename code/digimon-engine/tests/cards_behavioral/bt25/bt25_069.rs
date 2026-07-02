@@ -41,7 +41,9 @@ fn seed_trash(runner: &mut DebugRunner, player: usize, card_id: &str) {
         .position(|c| c.card_id == card_id)
         .unwrap();
     let iid = runner.game.next_card_index();
-    runner.game.players[player].trash.push(CardSource::new(idx, player as u8, iid));
+    runner.game.players[player]
+        .trash
+        .push(CardSource::new(idx, player as u8, iid));
 }
 
 fn base() -> DebugRunnerBuilder {

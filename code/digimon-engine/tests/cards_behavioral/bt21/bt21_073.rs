@@ -110,7 +110,10 @@ fn bt21_073_has_link_condition_appmon_cost_3() {
                 if *cost == 3
         )
     });
-    assert!(has, "BT21-073 must declare a self link-condition with cost 3 for [Appmon] hosts");
+    assert!(
+        has,
+        "BT21-073 must declare a self link-condition with cost 3 for [Appmon] hosts"
+    );
 }
 
 #[test]
@@ -121,7 +124,10 @@ fn bt21_073_has_app_fusion_altpath() {
         .alt_paths
         .iter()
         .any(|p| matches!(p.kind, CompiledAltPathKind::AppFusion));
-    assert!(has, "BT21-073 must declare an App Fusion alt-path (Sociamon & Gossipmon)");
+    assert!(
+        has,
+        "BT21-073 must declare an App Fusion alt-path (Sociamon & Gossipmon)"
+    );
 }
 
 #[test]
@@ -132,18 +138,23 @@ fn bt21_073_has_sup_altdigivolve_path() {
         .alt_paths
         .iter()
         .any(|p| matches!(p.kind, CompiledAltPathKind::Digivolve));
-    assert!(has, "BT21-073 must have an alt-digivolve path (Sup. trait gate, cost 4)");
+    assert!(
+        has,
+        "BT21-073 must have an alt-digivolve path (Sup. trait gate, cost 4)"
+    );
 }
 
 #[test]
 fn bt21_073_has_blocker_keyword() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let has = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
-            if keyword == "Blocker"
-    ));
+    let has = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
+                if keyword == "Blocker"
+        )
+    });
     assert!(has, "BT21-073 must have a Blocker grant_keyword clause");
 }
 
@@ -151,26 +162,36 @@ fn bt21_073_has_blocker_keyword() {
 fn bt21_073_has_on_play_when_digivolving_link_clause() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let has = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::OnPlay)
-            && t.when.contains(&CompiledTiming::WhenDigivolving)
-    ));
-    assert!(has, "BT21-073 must have a clause triggering on both on_play and when_digivolving");
+    let has = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::OnPlay)
+                && t.when.contains(&CompiledTiming::WhenDigivolving)
+        )
+    });
+    assert!(
+        has,
+        "BT21-073 must have a clause triggering on both on_play and when_digivolving"
+    );
 }
 
 #[test]
 fn bt21_073_has_when_card_linked_once_per_turn() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let has = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::WhenCardLinkedToThis)
-            && t.once_per_turn
-    ));
-    assert!(has, "BT21-073 must have a when_card_linked_to_this clause with once_per_turn");
+    let has = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::WhenCardLinkedToThis)
+                && t.once_per_turn
+        )
+    });
+    assert!(
+        has,
+        "BT21-073 must have a when_card_linked_to_this clause with once_per_turn"
+    );
 }
 
 #[test]
@@ -178,11 +199,13 @@ fn bt21_073_has_linked_leave_replacement() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
     // The leave-replacement is a linked-scope declarative clause (SetIsLinkedEffect(true) in DCGO).
-    let has = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { scope, .. })
-            if *scope == CompiledScope::Linked
-    ));
+    let has = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { scope, .. })
+                if *scope == CompiledScope::Linked
+        )
+    });
     assert!(
         has,
         "BT21-073 must have a scope:Linked Replacement clause for the leave-prevention link effect"
@@ -193,12 +216,17 @@ fn bt21_073_has_linked_leave_replacement() {
 fn bt21_073_has_linked_dp_aura() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let has = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::Aura { scope, .. })
-            if *scope == CompiledScope::Linked
-    ));
-    assert!(has, "BT21-073 must have a scope:Linked Aura clause for the +4000 DP link bonus");
+    let has = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Aura { scope, .. })
+                if *scope == CompiledScope::Linked
+        )
+    });
+    assert!(
+        has,
+        "BT21-073 must have a scope:Linked Aura clause for the +4000 DP link bonus"
+    );
 }
 
 // ─── Section 2 — On Play self-link (from trash) ──────────────────────────────
@@ -281,7 +309,10 @@ fn bt21_073_on_play_no_prompt_when_no_eligible_card_in_trash_or_sources() {
         r.game.pending_selection.is_none(),
         "[On Play] link prompt must NOT surface when no level-4-or-lower Digimon is in trash/sources"
     );
-    assert_eq!(r.game.player(0).battle_area[chari_idx].linked_cards.len(), 0);
+    assert_eq!(
+        r.game.player(0).battle_area[chari_idx].linked_cards.len(),
+        0
+    );
 }
 
 // ─── Section 3 — On Play self-link (from digivolution sources) ───────────────
@@ -338,7 +369,10 @@ fn bt21_073_when_linked_your_turn_grants_taunt_to_opp_digi() {
     advance_to_main(&mut r);
 
     let chari_idx = r.play(0, 0).expect("Charismon played");
-    assert!(r.game.pending_selection.is_some(), "[On Play] link prompt surfaces");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "[On Play] link prompt surfaces"
+    );
 
     // Link APPMON-LV4 from trash.
     let link_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
@@ -400,12 +434,18 @@ fn bt21_073_when_linked_taunt_opt_lockout_same_turn() {
 
     // First: play Charismon → On Play link.
     let chari_idx = r.play(0, 0).expect("Charismon played");
-    assert!(r.game.pending_selection.is_some(), "On Play link prompt (first)");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "On Play link prompt (first)"
+    );
     let link1 = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, link1);
 
     // Taunt prompt fires (OPT used).
-    assert!(r.game.pending_selection.is_some(), "First taunt prompt surfaces");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "First taunt prompt surfaces"
+    );
     let taunt1 = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, taunt1);
 
@@ -438,7 +478,10 @@ fn bt21_073_when_linked_taunt_opt_clears_after_end_turn() {
 
     // Turn 0.
     let chari_idx = r.play(0, 0).expect("Charismon played");
-    assert!(r.game.pending_selection.is_some(), "[On Play] link prompt T0");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "[On Play] link prompt T0"
+    );
     let link1 = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, link1);
     if r.game.pending_selection.is_some() {
@@ -475,10 +518,7 @@ fn bt21_073_when_linked_taunt_opt_clears_after_end_turn() {
 fn bt21_073_linked_dp_aura_increases_host_effective_dp() {
     // Place APPMON-LV4 host (DP 4000) on field. Link Charismon to it.
     // The host's effective_dp should increase by 4000 to 8000.
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(5)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(5).start();
     let host = r.place_on_field(0, "APPMON-LV4", Some(0)); // base DP 4000
     let charismon = r.place_on_field(0, CARD_ID, Some(0));
     advance_to_main(&mut r);
@@ -544,5 +584,8 @@ fn bt21_073_when_linked_taunt_grant_fires_cleanly() {
         "Events should fire when Charismon links and grants the taunt"
     );
     // No pending selection remains.
-    assert!(r.game.pending_selection.is_none(), "All selections resolved cleanly");
+    assert!(
+        r.game.pending_selection.is_none(),
+        "All selections resolved cleanly"
+    );
 }

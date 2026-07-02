@@ -113,7 +113,11 @@ fn play_or_use_cost_lte_admits_digimon_at_or_below_ceiling() {
         .start();
 
     let offered = offered_hand_indices(&mut runner);
-    assert_eq!(offered, vec![0], "only the cost-5 Digimon (index 0) is offered");
+    assert_eq!(
+        offered,
+        vec![0],
+        "only the cost-5 Digimon (index 0) is offered"
+    );
 }
 
 #[test]
@@ -130,7 +134,11 @@ fn play_or_use_cost_lte_admits_option_by_use_cost() {
         .start();
 
     let offered = offered_hand_indices(&mut runner);
-    assert_eq!(offered, vec![0], "only the use-cost-5 Option (index 0) is offered");
+    assert_eq!(
+        offered,
+        vec![0],
+        "only the use-cost-5 Option (index 0) is offered"
+    );
 }
 
 #[test]

@@ -70,7 +70,10 @@ fn bt25_048_metadata() {
     let card = runner.compiled_card(CARD_ID).expect("present");
     assert_eq!(card.name, "Bearmon");
     assert_eq!(card.dp, Some(2000));
-    assert!(card.color.iter().any(|c| format!("{c:?}").contains("Green")));
+    assert!(card
+        .color
+        .iter()
+        .any(|c| format!("{c:?}").contains("Green")));
 }
 
 #[test]

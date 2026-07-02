@@ -208,7 +208,9 @@ fn rb1_035_own_digimon_played_does_not_trigger() {
     let memory_before = runner.memory();
     let deck_before = runner.deck_size(0);
 
-    runner.play(0, 0).expect("controller plays own Lv.4 Digimon");
+    runner
+        .play(0, 0)
+        .expect("controller plays own Lv.4 Digimon");
     runner.auto_resolve().expect("settle own play");
 
     assert!(
@@ -262,11 +264,7 @@ fn rb1_035_opponent_played_observer_can_be_declined() {
         memory_before,
         "declining must not gain memory"
     );
-    assert_eq!(
-        runner.deck_size(0),
-        deck_before,
-        "declining must not draw"
-    );
+    assert_eq!(runner.deck_size(0), deck_before, "declining must not draw");
 }
 
 /// Already-suspended Tamer cannot pay the suspend cost: no memory/draw and the

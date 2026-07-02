@@ -97,5 +97,9 @@ fn trash_from_deck_top_emits_per_card_reveals_in_order() {
             _ => unreachable!(),
         })
         .collect();
-    assert_eq!(ids, vec!["A".to_string(), "B".to_string()], "top-first order");
+    assert_eq!(
+        ids,
+        vec!["A".to_string(), "B".to_string()],
+        "top-first order"
+    );
 }

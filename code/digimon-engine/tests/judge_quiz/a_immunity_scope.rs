@@ -57,7 +57,9 @@ fn blue_digimon(id: &str) -> CardData {
 fn cluster_a_self_immunity_blocks_own_controller_effect() {
     use digimon_engine::enums::{EffectSourceKind, ModifierType};
     let mut r = DebugRunner::builder()
-        .add_card(digimon_engine::debug_runner::make_test_card("IMMUNE", "Immune"))
+        .add_card(digimon_engine::debug_runner::make_test_card(
+            "IMMUNE", "Immune",
+        ))
         .memory(10)
         .start();
     let h = r.place_on_field(0, "IMMUNE", Some(0));
@@ -150,7 +152,11 @@ fn q2_medusamon_progress_blocks_ice_wall_memory_loss() {
 
     // Player 0 plays Ice Wall! on its own turn (already in Main) → grants every
     // Player-1 Digimon "[When Attacking] lose 2 memory".
-    assert_eq!(r.turn_player(), 0, "Player 0 plays Ice Wall on the start turn");
+    assert_eq!(
+        r.turn_player(),
+        0,
+        "Player 0 plays Ice Wall on the start turn"
+    );
     r.game.decode_action(PLAY_HAND_START, 0);
     assert!(
         r.game.player(0).hand.is_empty(),
@@ -185,8 +191,10 @@ fn q2_medusamon_progress_blocks_ice_wall_memory_loss() {
     // player) loses 2 memory.
     set_active_attacker(&mut r, vanilla);
     r.game.set_memory(5);
-    r.game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(vanilla));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(vanilla),
+    );
     r.game.drain_effect_queue();
     assert_eq!(
         r.game.memory, 3,
@@ -200,8 +208,10 @@ fn q2_medusamon_progress_blocks_ice_wall_memory_loss() {
     // effects while attacking → the granted clause does NOT fire → NO loss.
     set_active_attacker(&mut r, medusamon);
     r.game.set_memory(5);
-    r.game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(medusamon));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(medusamon),
+    );
     r.game.drain_effect_queue();
     assert_eq!(
         r.game.memory, 5,
@@ -512,7 +522,8 @@ fn q18_quantumon_self_immunity_blocks_own_blast_digivolve() {
     );
     r.game.drain_effect_queue();
     r.execute_branch(0).expect("declare Digimon category");
-    r.execute_branch(0).expect("return revealed card to deck top");
+    r.execute_branch(0)
+        .expect("return revealed card to deck top");
 
     // Judge: NO. Quantumon is now unaffected by Digimon effects from ANY
     // controller, including its OWN — the exact condition combat uses to forbid
