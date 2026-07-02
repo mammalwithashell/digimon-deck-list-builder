@@ -1,0 +1,178 @@
+# BT19-065 Machinedramon — Digimon, Lv.6, Black/Purple, DP 11000, Cost 11.
+# Traits: Machine, Composite (Rule-granted — see data/card_bundles/BT19-065.md
+# "(Rule) Trait: Has [Composite] Type."; dropped from cards.json's API-ingested
+# type_eng, per CLAUDE.md source-priority — the official Bandai DB is
+# authoritative for Rule-granted traits). Form: Mega. Attribute: Virus.
+#
+# ─── Printed card text (official Bandai DB, data/card_bundles/BT19-065.md) ───
+#
+#   [On Play] [When Digivolving] Delete 1 level 5 or lower Digimon.
+#   [On Deletion] You may play 1 level 5 or lower Digimon card with the
+#     [Cyborg] or [Composite] trait from your trash without paying the cost.
+#   DigiXros -1: 5 Lv.5 or lower [Cyborg]/[Composite] trait Digimon cards
+#     w/different card numbers.
+#   Inherited: [Opponent's Turn] [Once Per Turn] When any of your opponent's
+#     Digimon attack, you may change the attack target to 1 of your Digimon
+#     with the [Composite] or [Wicked God] trait.
+#   Official Q&A: "Yes, you can delete a Digimon." — confirms the [On Play] /
+#     [When Digivolving] delete is NOT restricted to the opponent's side.
+#
+# ─── DCGO C# crosscheck ────────────────────────────────────────────────────
+#   DCGO/Assets/Scripts/CardEffect/BT19/Black/BT19_065.cs
+#
+#   1. DigiXros (EffectTiming.None) — AddDigiXrosConditionClass, 5 repeated
+#      DigiXrosConditionElements. CanSelectCardCondition = owner-controlled
+#      Digimon, Level <= 5, trait Cyborg OR Composite (EqualsTraits).
+#      CanTargetCondition_ByPreSelecetedList rejects a card whose CardID
+#      (card number) was already picked. -> alt_paths kind: digixros,
+#      repeat: {min:5, max:5}, distinct_by: card_number, cost_delta: -1.
+#   2. On Play / When Digivolving (both EffectTiming.OnEnterFieldAnyone) —
+#      IsLevel5Digimon = IsPermanentExistsOnBattleAreaDigimon (NO owner
+#      filter — ANY battle-area Digimon) && Level <= 5.
+#      SelectPermanentEffect canNoSelect: false, mode: Destroy — MANDATORY
+#      delete when a valid target exists. -> select_any_permanent +
+#      delete_permanent, not optional.
+#   3. On Deletion (EffectTiming.OnDestroyedAnyone + CanTriggerOnDeletion,
+#      self-deletion) — IsTargetableDigimon = owner's trash Digimon,
+#      Level <= 5, trait Cyborg OR Composite, CanPlayAsNewPermanent.
+#      SetUpActivateClass(..., isOptional: true, ...) gates the whole
+#      activation as "you may"; the inner SELECT itself is canNoSelect:
+#      false (a pick is required once you accept). -> select_trash
+#      (optional: true) + play_from_trash_free.
+#   4. Opponents Turn - ESS (EffectTiming.OnAllyAttack, inherited,
+#      SetHashString("SwitchTarget_BT18-073") — OPT identity literally
+#      SHARED with BT18-073's inherited clause, confirming this is the same
+#      printed reusable inherited text) — CanSelectPermanentCondition =
+#      owner's Digimon with trait Composite OR Wicked God. Redirects the
+#      attack via SwitchDefender. -> on_opponent_attack, optional,
+#      once_per_turn, select_own_permanent + redirect_attack_target, with
+#      `scope: inherited`. This clause is printed in Machinedramon's
+#      INHERITED effect text box (card image BT19-065.webp; DCGO
+#      `SetIsInheritedEffect(true)` on the ActivateClass above), and DCGO's
+#      `EffectList_ForCard` fires inherited-flagged TRIGGERED effects ONLY
+#      while the card is buried as a digivolution SOURCE beneath another
+#      permanent (RULES 15-3-1 — an inherited effect stays with a digivolved
+#      card's owner, but is only "active" from a buried source position, not
+#      the current top card). The Rust engine mirrors this exactly:
+#      `Game::activation_counts_for_permanent`'s `is_under != effect.inherited`
+#      gate (game/mod.rs:2824) — `is_under` is true only for a source at
+#      `source_index + 1 < stack_size`, i.e. NOT the top card — so a
+#      triggered clause compiled with `scope: inherited` fires only while
+#      Machinedramon is buried, and stays correctly silent while it stands
+#      alone as its own top card. A prior pass on this card mis-modeled the
+#      clause with the DEFAULT FaceUp scope, citing BT19-072 LordKnightmon as
+#      precedent — that precedent does not hold: BT19-072's identical-shape
+#      redirect clause is printed in its MAIN effect text box (not
+#      "Inherited"), so BT19-072 is correctly FaceUp and is not evidence for
+#      Machinedramon's inherited-boxed clause. FaceUp on BT19-065 was the
+#      exact INVERSE of the correct behavior (fires face-up, silent when
+#      buried — backwards from the printed "Inherited Effect" semantics).
+#      Contrast with a STATIC keyword grant like BT19-069's <Blocker>: those
+#      use `scope: both` because a keyword grant must be visible from BOTH
+#      the active top-card position and the buried-source position
+#      simultaneously (the granted keyword augments whichever permanent is
+#      currently on top). A TRIGGERED inherited effect has no such duality —
+#      it is scoped to the buried-source position only, per DCGO's
+#      `EffectList_ForCard` inherited-timing gate.
+#
+# ─── Implementation status (faithfulness diff) ─────────────────────────────
+#
+# | Card-text element                                                    | Status |
+# |------------------------------------------------------------------------|--------|
+# | Standard digivolve Lv.5 Black / Cost 3                                 | IMPLEMENTED |
+# | DigiXros -1: 5x Lv.5- [Cyborg]/[Composite]                             | IMPLEMENTED |
+# | DigiXros "different card numbers" uniqueness enforcement               | GAP (G-ENGINE-DIGIXROS-DISTINCT-BY, docs/RUST_ENGINE_GAPS.md — YAML declares `distinct_by: card_number`, but the engine never reads `DigiXrosRecipeSlot.distinct_by` at runtime; see the `#[ignore]`d bt19_065_digixros_rejects_duplicate_card_number test) |
+# | [On Play][When Digivolving] delete 1 Lv.5- Digimon (any owner)         | IMPLEMENTED |
+# | [On Deletion] may play 1 Lv.5- [Cyborg]/[Composite] from trash free    | IMPLEMENTED |
+# | (Rule) Trait: Has [Composite] Type                                     | IMPLEMENTED (traits list) |
+# | Inherited [Opponent's Turn][OPT] redirect to Composite/Wicked God      | IMPLEMENTED |
+#
+# Verdict: IMPLEMENTED — no approximations, no auto-selections; every choice
+# (delete target, trash-play target, DigiXros materials, redirect target)
+# surfaces through pending_selection. One pre-existing, shared engine gap
+# (distinct-card-number DigiXros enforcement) is logged, not routed around.
+
+card: BT19-065
+name: Machinedramon
+kind: digimon
+level: 6
+color: [black, purple]
+cost: 11
+dp: 11000
+traits: [Machine, Composite]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 3
+
+  - kind: digixros
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_lte: 5
+            - any_of:
+                - trait_has: "Cyborg"
+                - trait_has: "Composite"
+        repeat: { min: 5, max: 5 }
+        distinct_by: card_number
+        zones: [hand, battle_area]
+        cost_delta: -1
+    cost: 11
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 level 5 or lower Digimon (any owner)"
+    process:
+      - select_any_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+          prompt: "Delete 1 level 5 or lower Digimon"
+      - delete_permanent: { target: target }
+
+  - when: on_deletion
+    optional: true
+    summary: "[On Deletion] You may play 1 level 5 or lower [Cyborg]/[Composite] Digimon from your trash without paying the cost"
+    process:
+      - select_trash:
+          of: you
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+              - any_of:
+                  - trait_has: "Cyborg"
+                  - trait_has: "Composite"
+          prompt: "Select 1 level 5 or lower [Cyborg]/[Composite] Digimon to play free"
+      - play_from_trash_free: { of: you, hand_index: pick }
+
+  - when: on_opponent_attack
+    scope: inherited
+    optional: true
+    once_per_turn: true
+    summary: "[Opponent's Turn][Once Per Turn] Switch attack target to 1 of your [Composite]/[Wicked God] Digimon"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        any_of:
+          - trait_has: "Composite"
+          - trait_has: "Wicked God"
+    process:
+      - select_own_permanent:
+          bind_as: redirect_target
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "Composite"
+                  - trait_has: "Wicked God"
+          prompt: "Switch the attack target to 1 of your [Composite] or [Wicked God] Digimon"
+      - redirect_attack_target: { new_target: redirect_target }

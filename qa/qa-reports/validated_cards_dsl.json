@@ -9923,6 +9923,18 @@
       "test_count": 16,
       "patterns": [],
       "notes": "Training keyword (grant_keyword, EX9-008 precedent); cross-timing WD+WA shared OPT place-face-down-source -> Draw 1; inherited on-deletion lv4- delete"
+    },
+    "BT19-065": {
+      "card_name": "Machinedramon",
+      "validated_date": "2026-07-02",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "store-champs-june-2026 / Millenniummon",
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-065.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_065.rs",
+      "test_count": 23,
+      "notes": "any-owner lv5- delete; OnDeletion Cyborg/Composite free play; DigiXros -1 5x distinct card numbers (enforcement pending G-ENGINE-DIGIXROS-DISTINCT-BY, #[ignore]d prover); review fix: redirect clause corrected FaceUp -> scope: inherited (triggered inherited fires only while buried)"
     }
   }
 }
