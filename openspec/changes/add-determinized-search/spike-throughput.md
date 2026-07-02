@@ -16,6 +16,20 @@
 | Derived sim = clone + 10-step rollout | ~7.4 ms → ~135 sims/sec/core |
 | Game length | greedy 33 steps, random ~75 steps |
 
+## Evaluator numbers (task 0.3, same box, CPU `ort`)
+
+Real-shape untrained MLP (standard_lite_v2: 8410 obs → 2192 logits + value), `code/digimon-engine/examples/evaluator_bench.rs`:
+
+| Batch | µs/eval | evals/sec |
+|---|---|---|
+| 1 | 127.9 | 7,819 |
+| 8 | 43.3 | 23,110 |
+| 32 | 51.8 | 19,305 |
+| 128 | 41.3 | 24,194 |
+| 512 | 29.5 | 33,942 |
+
+**Complete sim price (mid-game): clone 184 µs + step-with-mask 721 µs + batched eval ~43 µs ≈ 950 µs → ~1,050 sims/sec/core.** The engine is ~95% of the cost; NN evaluation is a rounding error once batched (and only 13% even unbatched, on CPU with no GPU involved). Leaf batching pays 3–4× on the eval slice but the design's throughput risk lives almost entirely in `step` + mask build.
+
 ## Verdict: GO (AlphaZero-style), with levers identified
 
 - **Clone decisively beats reset-replay as the fork primitive** (73–243×, growing with depth). The `make-engine-cloneable` bet is validated empirically.
