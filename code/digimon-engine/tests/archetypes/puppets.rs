@@ -20,8 +20,7 @@
 #![allow(dead_code)]
 
 use digimon_engine::action::space::{
-    encode_attack, EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_OVERCLOCK, FIELD_EFFECT_START,
-    PASS,
+    encode_attack, EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_OVERCLOCK, FIELD_EFFECT_START, PASS,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -101,8 +100,10 @@ fn encode_field_effect(handle: PermanentHandle, slot: u16) -> u16 {
 /// proven harness pattern; `place_stack` builds the stack without firing the
 /// trigger, so we fire it explicitly to model the digivolve).
 fn fire_when_digivolving(r: &mut DebugRunner, handle: PermanentHandle) {
-    r.game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     r.game.drain_effect_queue();
 }
 
@@ -201,8 +202,13 @@ fn c1_overclock_token_sacrifice_draws_for_arisa_and_reduces_opponent_dp() {
     // Tokens (the loop's fuel).
     let cendrill = r.place_stack(0, &["C1-BASE", "ST19-12"]);
     fire_when_digivolving(&mut r, cendrill);
-    r.auto_resolve().expect("accept ST19-12's 2 Familiar Tokens");
-    assert_eq!(familiar_count(&r, 0), 2, "ST19-12 When-Dig plays 2 Familiar Tokens");
+    r.auto_resolve()
+        .expect("accept ST19-12's 2 Familiar Tokens");
+    assert_eq!(
+        familiar_count(&r, 0),
+        2,
+        "ST19-12 When-Dig plays 2 Familiar Tokens"
+    );
 
     r.place_on_field(0, "EX11-060", Some(0)); // Arisa, unsuspended
     let opp = r.place_on_field(1, "C1-OPP", Some(0));
@@ -230,7 +236,11 @@ fn c1_overclock_token_sacrifice_draws_for_arisa_and_reduces_opponent_dp() {
         "the sacrificed Familiar's On-Deletion reduces an opponent Digimon by 3000 DP"
     );
     // One token was consumed by the Overclock cost.
-    assert_eq!(familiar_count(&r, 0), 1, "exactly one Familiar Token was deleted as the cost");
+    assert_eq!(
+        familiar_count(&r, 0),
+        1,
+        "exactly one Familiar Token was deleted as the cost"
+    );
 }
 
 #[test]
@@ -491,7 +501,9 @@ fn accept_start_of_main(r: &mut DebugRunner) {
 
 /// Take the first concrete (non-PASS) option of the currently-parked selection.
 fn pick_first_concrete(r: &mut DebugRunner, label: &str) {
-    let view = r.pending_selection_view().unwrap_or_else(|| panic!("{label}"));
+    let view = r
+        .pending_selection_view()
+        .unwrap_or_else(|| panic!("{label}"));
     let action = view
         .valid_action_ids
         .iter()
@@ -772,7 +784,11 @@ fn s5_bt22_088_draws_exactly_once_when_two_tokens_are_played() {
     fire_when_digivolving(&mut r, cendrill); // plays 2 Familiar Tokens
     resolve_taking_affirmative(&mut r);
 
-    assert_eq!(familiar_count(&r, 0), 2, "ST19-12 plays two Familiar Tokens");
+    assert_eq!(
+        familiar_count(&r, 0),
+        2,
+        "ST19-12 plays two Familiar Tokens"
+    );
     assert_eq!(
         r.hand_size(0),
         hand_before + 1,

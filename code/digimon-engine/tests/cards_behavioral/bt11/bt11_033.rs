@@ -132,10 +132,14 @@ fn field_contains(runner: &DebugRunner, player: PlayerId, card_id: &str) -> bool
 
 /// Fire BT11-033's [When Digivolving] trigger on a permanent already on the
 /// field (mirrors the production digivolve flow's `WhenDigivolving` enqueue).
-fn fire_when_digivolving(runner: &mut DebugRunner, handle: digimon_engine::permanent::PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+fn fire_when_digivolving(
+    runner: &mut DebugRunner,
+    handle: digimon_engine::permanent::PermanentHandle,
+) {
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -176,7 +180,10 @@ fn bt11_033_structural_identity_and_when_digivolving_clause() {
     assert!(
         wd.process.iter().any(|step| matches!(
             step,
-            CompiledStep::SelectOpponentPermanent { optional: false, .. }
+            CompiledStep::SelectOpponentPermanent {
+                optional: false,
+                ..
+            }
         )),
         "clause 1 must mandatorily select an opponent Digimon (DCGO canNoSelect: false)"
     );
@@ -466,4 +473,3 @@ fn bt11_033_memory_observer_is_once_per_turn_and_clears_after_end_turn() {
         "once the per-turn OPT counter resets (new turn), the observer gains again"
     );
 }
-

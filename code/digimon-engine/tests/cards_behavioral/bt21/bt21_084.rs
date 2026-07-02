@@ -146,7 +146,10 @@ fn bt21_084_start_of_turn_does_not_change_memory_when_above_3() {
         TriggerSource::Permanent(handle),
     );
     r.game.drain_effect_queue();
-    assert_eq!(r.game.memory, 5, "memory was 5 (>2) → must remain unchanged");
+    assert_eq!(
+        r.game.memory, 5,
+        "memory was 5 (>2) → must remain unchanged"
+    );
 }
 
 // ─── Clause 2: on_any_link observer — prompt fires ────────────────────────────
@@ -156,10 +159,7 @@ fn bt21_084_start_of_turn_does_not_change_memory_when_above_3() {
 /// suspend cost can be paid).
 #[test]
 fn bt21_084_own_digimon_linked_on_your_turn_installs_optional_prompt() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(5)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(5).start();
     let haru = r.place_on_field(0, CARD_ID, Some(0));
     let host = r.place_on_field(0, "MY-DIGIMON", Some(0));
     r.game.enter_main_phase();
@@ -176,10 +176,7 @@ fn bt21_084_own_digimon_linked_on_your_turn_installs_optional_prompt() {
 /// Accepting the prompt: Haru is suspended and player draws a card.
 #[test]
 fn bt21_084_accept_prompt_suspends_haru_and_draws() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(5)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(5).start();
     let haru = r.place_on_field(0, CARD_ID, Some(0));
     let host = r.place_on_field(0, "MY-DIGIMON", Some(0));
     r.game.enter_main_phase();
@@ -189,7 +186,10 @@ fn bt21_084_accept_prompt_suspends_haru_and_draws() {
     let host_handle = r.perm_handle(0, host.index as usize);
     fire_link_event(&mut r, 0, host_handle, "APPMON-CARD");
 
-    assert!(r.pending_selection().is_some(), "optional prompt must appear");
+    assert!(
+        r.pending_selection().is_some(),
+        "optional prompt must appear"
+    );
 
     // Accept: pick the first non-pass action (the "yes" action).
     let sel = r.game.pending_selection.as_ref().unwrap();
@@ -212,10 +212,7 @@ fn bt21_084_accept_prompt_suspends_haru_and_draws() {
 /// Declining the prompt: nothing changes (Haru stays unsuspended, no draw).
 #[test]
 fn bt21_084_decline_prompt_no_effect() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(5)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(5).start();
     let haru = r.place_on_field(0, CARD_ID, Some(0));
     let host = r.place_on_field(0, "MY-DIGIMON", Some(0));
     r.game.enter_main_phase();
@@ -247,10 +244,7 @@ fn bt21_084_decline_prompt_no_effect() {
 /// Already-suspended Haru cannot pay the activation cost → no prompt.
 #[test]
 fn bt21_084_already_suspended_haru_no_prompt() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(5)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(5).start();
     let haru = r.place_on_field(0, CARD_ID, Some(0));
     let host = r.place_on_field(0, "MY-DIGIMON", Some(0));
     r.game.enter_main_phase();
@@ -271,10 +265,7 @@ fn bt21_084_already_suspended_haru_no_prompt() {
 /// (active_when: your_turn: true gate).
 #[test]
 fn bt21_084_opponents_turn_link_no_prompt() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(5)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(5).start();
     let haru = r.place_on_field(0, CARD_ID, Some(0));
     let host = r.place_on_field(0, "MY-DIGIMON", Some(0));
     r.game.enter_main_phase();
@@ -296,10 +287,7 @@ fn bt21_084_opponents_turn_link_no_prompt() {
 /// (event_target_owner: you gate — host is opponent, not us).
 #[test]
 fn bt21_084_opponent_digimon_linked_no_prompt() {
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(5)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(5).start();
     let haru = r.place_on_field(0, CARD_ID, Some(0));
     let opp_host = r.place_on_field(1, "OPP-DIGIMON", Some(0));
     r.game.enter_main_phase();

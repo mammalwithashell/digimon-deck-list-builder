@@ -71,7 +71,10 @@ fn nv1_no_dp_digimon_cannot_gain_dp() {
         .expect("BT24-068 (DemiDevimon) in embedded DSL pack")
         .start();
     let c = card(&r, "BT24-068");
-    assert!(c.dp.is_none(), "precondition: DemiDevimon has no printed DP value");
+    assert!(
+        c.dp.is_none(),
+        "precondition: DemiDevimon has no printed DP value"
+    );
 
     let p = r.turn_player();
     let h = r.place_on_field(p, "BT24-068", Some(0));

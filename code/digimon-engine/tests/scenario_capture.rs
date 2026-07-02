@@ -80,7 +80,10 @@ fn capture_round_trips_zones_and_scalar_state() {
     );
 
     // Scalar state must match.
-    assert_eq!(captured["state"], restaged["state"], "scalar state must round-trip");
+    assert_eq!(
+        captured["state"], restaged["state"],
+        "scalar state must round-trip"
+    );
 
     // Deck pool must match as a multiset (order may differ; content cannot).
     for pid in ["1", "2"] {
@@ -99,7 +102,10 @@ fn capture_round_trips_zones_and_scalar_state() {
     assert_eq!(p1_field[0]["stack"], serde_json::json!(["D-A", "D-B"]));
     assert_eq!(p1_field[0]["is_suspended"], true);
     assert_eq!(p1_field[0]["turn_played"], 3);
-    assert_eq!(captured["zones"]["1"]["breeding"], serde_json::json!(["D-D"]));
+    assert_eq!(
+        captured["zones"]["1"]["breeding"],
+        serde_json::json!(["D-D"])
+    );
     assert_eq!(captured["zones"]["1"]["trash"], serde_json::json!(["D-E"]));
 }
 
@@ -108,8 +114,18 @@ fn captured_fixture_has_the_documented_schema_shape() {
     let captured = staged_board().game.to_scenario();
 
     // Required top-level keys.
-    for key in ["schema_version", "decks", "seed", "state", "zones", "assertions"] {
-        assert!(captured.get(key).is_some(), "captured fixture missing '{key}'");
+    for key in [
+        "schema_version",
+        "decks",
+        "seed",
+        "state",
+        "zones",
+        "assertions",
+    ] {
+        assert!(
+            captured.get(key).is_some(),
+            "captured fixture missing '{key}'"
+        );
     }
     assert_eq!(captured["schema_version"], 1);
 

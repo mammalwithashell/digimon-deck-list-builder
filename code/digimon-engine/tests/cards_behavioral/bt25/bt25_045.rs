@@ -169,13 +169,18 @@ fn bt25_045_has_linked_when_linking_suspend() {
         .deck(1, &["DECK-PAD"; 12])
         .start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let when_linked = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::WhenLinked)
-                && matches!(t.scope, CompiledScope::Linked)
-    ));
-    assert!(when_linked, "must have a linked [When Linking] suspend clause");
+    let when_linked = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::WhenLinked)
+                    && matches!(t.scope, CompiledScope::Linked)
+        )
+    });
+    assert!(
+        when_linked,
+        "must have a linked [When Linking] suspend clause"
+    );
 }
 
 // ─── Section 3 — Behavioral: [When Linking] suspends an opponent Digimon ──────

@@ -203,7 +203,9 @@ fn bt19_093_clause_0_gate_is_negative_no_queen_device() {
     let card = runner.compiled_card(CARD_ID).expect("BT19-093 compiled");
 
     let active_dbg = match &card.effects[0] {
-        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { active_when, .. }) => {
+        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate {
+            active_when, ..
+        }) => {
             format!("{:?}", active_when)
         }
         other => panic!("clause 0 must be a FloodGate; got {:?}", other),
@@ -245,7 +247,10 @@ fn bt19_093_clause_1_main_from_hand_mandatory() {
                 "clause 1 [Main] is NOT optional — no 'you may' in printed text"
             );
         }
-        other => panic!("clause 1 must be Triggered(main_from_hand); got {:?}", other),
+        other => panic!(
+            "clause 1 must be Triggered(main_from_hand); got {:?}",
+            other
+        ),
     }
 }
 
@@ -458,12 +463,16 @@ fn bt19_093_security_minus2_on_two_opp_then_add_self_to_hand() {
 
     // Both player-0 Digimon must carry the SecurityAttackChange -2 modifier.
     assert_eq!(
-        runner.modifiers().sum(p0_a, ModifierType::SecurityAttackChange),
+        runner
+            .modifiers()
+            .sum(p0_a, ModifierType::SecurityAttackChange),
         -2,
         "P0-DIG-A must carry <Security A. -2>"
     );
     assert_eq!(
-        runner.modifiers().sum(p0_b, ModifierType::SecurityAttackChange),
+        runner
+            .modifiers()
+            .sum(p0_b, ModifierType::SecurityAttackChange),
         -2,
         "P0-DIG-B must carry <Security A. -2>"
     );
@@ -518,7 +527,9 @@ fn bt19_093_security_clamps_to_one_when_only_one_opp_digimon() {
         .expect("security clause selections resolve");
 
     assert_eq!(
-        runner.modifiers().sum(p0_a, ModifierType::SecurityAttackChange),
+        runner
+            .modifiers()
+            .sum(p0_a, ModifierType::SecurityAttackChange),
         -2,
         "the single opponent Digimon must carry <Security A. -2>"
     );

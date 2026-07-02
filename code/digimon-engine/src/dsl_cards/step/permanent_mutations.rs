@@ -29,7 +29,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 // trash (rule 25) and a live DP read is unavailable. Same
                 // modifier-aware read `build_snapshot_for_handle` uses for
                 // `dp_just_before`.
-                let dp = if existed { ctx.game.effective_dp(h) } else { None };
+                let dp = if existed {
+                    ctx.game.effective_dp(h)
+                } else {
+                    None
+                };
                 ctx.delete_permanent(h);
                 if existed {
                     bindings.record_deleted(h, dp);

@@ -281,7 +281,13 @@ fn bt13_087_observer_deletes_level_4_or_lower_when_another_matching_digimon_play
     let mut runner = DebugRunner::builder()
         .dsl_card("BT13-087")
         .expect("BT13-087 YAML loads")
-        .add_card(make_digimon("ALLY-RK", "Gankoomon", 6, 11000, &["Royal Knight"]))
+        .add_card(make_digimon(
+            "ALLY-RK",
+            "Gankoomon",
+            6,
+            11000,
+            &["Royal Knight"],
+        ))
         .add_card(make_digimon("OPP-LV3", "OppLv3", 3, 3000, &[]))
         .add_card(make_digimon("OPP-LV5", "OppLv5", 5, 7000, &[]))
         .hand(0, &["ALLY-RK"])
@@ -329,7 +335,13 @@ fn bt13_087_observer_fires_on_lucemon_named_ally() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT13-087")
         .expect("BT13-087 YAML loads")
-        .add_card(make_digimon("ALLY-LUCE", "Lucemon", 4, 3000, &["Demon Lord"]))
+        .add_card(make_digimon(
+            "ALLY-LUCE",
+            "Lucemon",
+            4,
+            3000,
+            &["Demon Lord"],
+        ))
         .add_card(make_digimon("OPP-LV4", "OppLv4", 4, 4000, &[]))
         .hand(0, &["ALLY-LUCE"])
         .memory(20)
@@ -420,7 +432,13 @@ fn bt13_087_observer_ignores_opponent_played_matching_digimon() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT13-087")
         .expect("BT13-087 YAML loads")
-        .add_card(make_digimon("OPP-RK", "Examon", 6, 12000, &["Royal Knight"]))
+        .add_card(make_digimon(
+            "OPP-RK",
+            "Examon",
+            6,
+            12000,
+            &["Royal Knight"],
+        ))
         .add_card(make_digimon("OPP-LV3", "OppLv3", 3, 3000, &[]))
         .memory(20)
         .start();

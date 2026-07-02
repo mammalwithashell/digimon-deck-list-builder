@@ -15,15 +15,16 @@
 
 use std::sync::{Arc, Mutex};
 
-use digimon_engine::action::space::encode_attack;
+use digimon_engine::action::space::{encode_attack, SECURITY_TARGET};
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::combat::{AttackError, AttackResult};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect, EffectBuilder};
+use digimon_engine::effect_context::AttackTargetRestriction;
 use digimon_engine::enums::{EffectTiming, Expiry, ModifierType};
 use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::AttackTarget;
+use digimon_engine::selection::{AttackTarget, SelectionKind};
 use digimon_engine::AttackTargetChangeReason;
 
 fn card(id: &str) -> digimon_engine::CardData {
@@ -48,6 +49,23 @@ impl CardEffect for RedirectOnAttack {
             .name("Redirect from OnAttack")
             .process(move |ctx| {
                 let _ = ctx.redirect_attack(AttackTarget::Digimon(new_target));
+            })
+            .build()]
+    }
+}
+
+/// OnAttack closure that parks a player-facing redirect-target prompt.
+struct SelectRedirectOnAttack;
+impl CardEffect for SelectRedirectOnAttack {
+    fn effects(&self, c: CardHandle) -> Vec<Effect> {
+        vec![Effect::on_attack(c)
+            .name("Select redirect target from OnAttack")
+            .process(move |ctx| {
+                let _ = ctx.select_redirect_attack_target(
+                    AttackTargetRestriction::PlayerOnly,
+                    false,
+                    "Redirect the attack to the player?",
+                );
             })
             .build()]
     }
@@ -292,6 +310,66 @@ fn ctx_redirect_attack_payload_carries_old_new_reason_and_controller() {
             controller: 0,
         }],
         "OnAttackTargetChange should expose its structured payload"
+    );
+}
+
+#[test]
+fn ctx_select_redirect_attack_target_prompt_clones_faithfully() {
+    let mut r = DebugRunner::builder()
+        .add_card(card_with_dp("ATK", 7000))
+        .add_card(card_with_dp("DEF", 2000))
+        .add_card(card_with_dp("SEC", 1000))
+        .security(1, &["SEC"])
+        .start();
+
+    r.register_effect("ATK", Arc::new(SelectRedirectOnAttack));
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+    let security_before = r.game.players[1].security.len();
+    let player_action = encode_attack(atk.index as u16, SECURITY_TARGET);
+
+    assert_eq!(
+        r.attack_digimon(atk, def, false),
+        AttackResult::InProgress,
+        "attack should park at the redirect-target prompt"
+    );
+
+    let pending = r.game.pending_selection.as_ref().expect("redirect prompt");
+    assert_eq!(pending.kind, SelectionKind::Target);
+    assert!(pending.valid_action_ids.contains(&player_action));
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "select_redirect_attack_target must park an AttackTarget data frame for clone-faithful prompts"
+    );
+    let selecting_player = pending.selecting_player;
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(selecting_player, player_action)
+        .expect("clone redirect resolves");
+    assert_eq!(
+        clone.players[1].security.len(),
+        security_before - 1,
+        "clone should redirect to the player and continue into the security check"
+    );
+
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original at the redirect prompt"
+    );
+    assert_eq!(
+        r.game.players[1].security.len(),
+        security_before,
+        "resolving the clone must not mutate original security"
+    );
+
+    r.game
+        .resolve_selection(selecting_player, player_action)
+        .expect("original redirect resolves");
+    assert_eq!(
+        r.game.players[1].security.len(),
+        clone.players[1].security.len(),
+        "original and clone replay the redirect identically"
     );
 }
 

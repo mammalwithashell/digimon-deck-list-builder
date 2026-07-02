@@ -111,7 +111,11 @@ fn assert_cost_choice(card_id: &str, base_card: CardData, cheaper: i16, costlier
     let view = r
         .pending_selection_view()
         .unwrap_or_else(|| panic!("{card_id}: a cost-choice selection must be pending"));
-    assert_eq!(view.kind, SelectionKind::EffectChoice, "{card_id}: cost choice is an EffectChoice");
+    assert_eq!(
+        view.kind,
+        SelectionKind::EffectChoice,
+        "{card_id}: cost choice is an EffectChoice"
+    );
     let choices = view
         .effect_choices
         .as_ref()
@@ -183,7 +187,10 @@ fn assert_no_prompt(card_id: &str, base_card: CardData, cost: i16) {
         proceeded,
         "{card_id}: a single applicable route must complete immediately (no spurious cost prompt)"
     );
-    assert!(r.pending_selection().is_none(), "{card_id}: no selection may be pending");
+    assert!(
+        r.pending_selection().is_none(),
+        "{card_id}: no selection may be pending"
+    );
     assert_eq!(
         mem_before - r.game.memory,
         cost,
@@ -333,7 +340,9 @@ fn ex11_017_skadimon_from_production_cryspaledramon_prompts_4_vs_3() {
                 .expect("EX7-021 present in cards.json")
                 .clone();
             assert!(
-                crys.traits.iter().any(|t| t.eq_ignore_ascii_case("Ice-Snow")),
+                crys.traits
+                    .iter()
+                    .any(|t| t.eq_ignore_ascii_case("Ice-Snow")),
                 "EX7-021 production CardData must carry the recovered Ice-Snow trait; got {:?}",
                 crys.traits
             );

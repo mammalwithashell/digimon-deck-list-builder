@@ -5,7 +5,8 @@ use digimon_engine::card_data::{CardData, DualCardData, DualDigimonFace, DualOpt
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
-use digimon_engine::enums::{CardColor, CardKind};
+use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::{CardColor, CardKind, CostDelta};
 use digimon_engine::selection::OptionPlayResult;
 
 fn advance_to_main(r: &mut DebugRunner) {
@@ -133,4 +134,40 @@ fn dual_emits_digivolve_bit_using_digimon_face() {
     let mask = build_action_mask(&r.game, 0);
     let bit = encode_digivolve(0, 0) as usize;
     assert_eq!(mask[bit], 1.0, "DUAL can digivolve as a Digimon");
+}
+
+#[test]
+fn play_or_use_dual_choice_clones_faithfully() {
+    let mut r = DebugRunner::builder()
+        .add_card(dual_card())
+        .hand(0, &["DUAL-MASK"])
+        .memory(0)
+        .start();
+    advance_to_main(&mut r);
+
+    {
+        let mut ctx = EffectContext::new(r.game_mut(), CardHandle(0), None, 0);
+        ctx.play_or_use_from_hand_with_cost(0, 0, CostDelta::Free);
+    }
+
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "dual play/use choice must be resume-driven before cloning"
+    );
+    let play_as_digimon = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+
+    let mut cloned = r.game.clone();
+    cloned
+        .resolve_selection(0, play_as_digimon)
+        .expect("clone resolves play/use choice");
+
+    assert_eq!(cloned.player(0).hand.len(), 0, "clone: Dual left hand");
+    assert!(
+        cloned
+            .player(0)
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&cloned.card_data) == "DUAL-MASK"),
+        "clone: Dual was played as a Digimon"
+    );
 }

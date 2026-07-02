@@ -140,8 +140,10 @@ fn bt25_027_structural_clauses_and_alt_path() {
         })
         .collect();
     assert!(
-        triggered.iter().any(|t| t.when.contains(&CompiledTiming::WhenDigivolving)
-            && t.when.contains(&CompiledTiming::WhenAttacking)),
+        triggered
+            .iter()
+            .any(|t| t.when.contains(&CompiledTiming::WhenDigivolving)
+                && t.when.contains(&CompiledTiming::WhenAttacking)),
         "WD/WA shared bounce+unsuspend clause"
     );
 
@@ -274,7 +276,10 @@ fn bt25_027_leave_prevention_trashes_facedown_and_stays() {
         let _ = runner.execute_action(0, PASS);
     }
 
-    assert!(saw_replacement, "a leave-prevention replacement prompt was offered");
+    assert!(
+        saw_replacement,
+        "a leave-prevention replacement prompt was offered"
+    );
     assert!(
         find_field(&runner, 0, CARD_ID).is_some(),
         "MachGaogamon does not leave the battle area after paying the cost"

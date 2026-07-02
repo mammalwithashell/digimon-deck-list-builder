@@ -349,11 +349,8 @@ mod tests {
 
     #[test]
     fn opaque_deck_state_from_decklist_counts_duplicates() {
-        let s = OpaqueDeckState::from_decklist(&[
-            "BT1-001".into(),
-            "BT1-001".into(),
-            "BT1-010".into(),
-        ]);
+        let s =
+            OpaqueDeckState::from_decklist(&["BT1-001".into(), "BT1-001".into(), "BT1-010".into()]);
         assert_eq!(s.total_remaining(), 3);
         assert_eq!(s.count_of("BT1-001"), 2);
         assert_eq!(s.count_of("BT1-010"), 1);
@@ -362,11 +359,8 @@ mod tests {
 
     #[test]
     fn opaque_deck_state_consume_decrements() {
-        let mut s = OpaqueDeckState::from_decklist(&[
-            "BT1-001".into(),
-            "BT1-001".into(),
-            "BT1-010".into(),
-        ]);
+        let mut s =
+            OpaqueDeckState::from_decklist(&["BT1-001".into(), "BT1-001".into(), "BT1-010".into()]);
         s.consume("BT1-001").unwrap();
         assert_eq!(s.total_remaining(), 2);
         assert_eq!(s.count_of("BT1-001"), 1);

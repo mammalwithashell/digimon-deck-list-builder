@@ -213,7 +213,9 @@ fn bt25_058_has_all_turns_dedigivolve_battle_clause() {
         .iter()
         .find_map(|c| match c {
             CompiledClause::Triggered(t)
-                if t.process.iter().any(|s| matches!(s, CompiledStep::DeDigivolve { .. })) =>
+                if t.process
+                    .iter()
+                    .any(|s| matches!(s, CompiledStep::DeDigivolve { .. })) =>
             {
                 Some(t)
             }
@@ -227,8 +229,14 @@ fn bt25_058_has_all_turns_dedigivolve_battle_clause() {
             || clause.when.contains(&CompiledTiming::OnDigivolve),
         "[All Turns] clause must observe play/digivolve timings"
     );
-    let has_battle = clause.process.iter().any(|s| matches!(s, CompiledStep::Battle { .. }));
-    assert!(has_battle, "[All Turns] clause must end with a may-battle step");
+    let has_battle = clause
+        .process
+        .iter()
+        .any(|s| matches!(s, CompiledStep::Battle { .. }));
+    assert!(
+        has_battle,
+        "[All Turns] clause must end with a may-battle step"
+    );
     // The effect-initiated gate is the structural correctness point.
     let condition = clause
         .active_when

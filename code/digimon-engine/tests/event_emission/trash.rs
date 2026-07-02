@@ -3,9 +3,9 @@
 //! under "Rust engine emits Trash events for every card-to-trash migration".
 
 use digimon_engine::card_data::CardData;
-use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::events::GameEvent;
+use digimon_engine::replacement::ReplacementCause;
 
 fn fighter(id: &str, dp: i32) -> CardData {
     let mut card = make_test_card(id, id);
@@ -55,5 +55,8 @@ fn deleting_a_single_card_permanent_emits_one_trash_event() {
 
     assert_eq!(player, 0, "owner is P1 (Rust 0)");
     assert_eq!(card_id, "VICTIM", "card_id matches the trashed card");
-    assert_eq!(card_name, "VICTIM", "card_name is carried on the Trash event");
+    assert_eq!(
+        card_name, "VICTIM",
+        "card_name is carried on the Trash event"
+    );
 }

@@ -61,7 +61,11 @@ fn bt25_093_structure_use_req_main_security_when_attacking_and_link_requirement(
         .expect("MainFromHand clause");
     assert!(main.process.iter().any(|s| matches!(
         s,
-        CompiledStep::LinkToOwnDigimon { optional: true, free: true, .. }
+        CompiledStep::LinkToOwnDigimon {
+            optional: true,
+            free: true,
+            ..
+        }
     )));
 
     // [Security] inherited activation.

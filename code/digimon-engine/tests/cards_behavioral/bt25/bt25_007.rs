@@ -99,7 +99,10 @@ fn bt25_007_has_link_condition_appmon_cost_1() {
         c,
         CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition { cost, .. }) if *cost == 1
     ));
-    assert!(has, "BT25-007 must declare a self link-condition with cost 1");
+    assert!(
+        has,
+        "BT25-007 must declare a self link-condition with cost 1"
+    );
 }
 
 #[test]
@@ -110,21 +113,28 @@ fn bt25_007_registers_appmon_alt_digivolve() {
         matches!(p.kind, CompiledAltPathKind::Digivolve)
             && matches!(p.cost, Some(CompiledCost::Literal(0)))
     });
-    assert!(has, "BT25-007 must register a cost-0 alt-digivolve over Appmon");
+    assert!(
+        has,
+        "BT25-007 must register a cost-0 alt-digivolve over Appmon"
+    );
 }
 
 #[test]
 fn bt25_007_has_on_play_and_when_linked_clauses() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let on_play = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnPlay)
-    ));
-    let when_linked = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::WhenLinked)
-    ));
+    let on_play = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnPlay)
+        )
+    });
+    let when_linked = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::WhenLinked)
+        )
+    });
     assert!(on_play, "BT25-007 must have an [On Play] clause");
     assert!(when_linked, "BT25-007 must have a [When Linking] clause");
 }

@@ -24,9 +24,10 @@ use super::support::{dsl_builder, snapshot};
 /// `place_stack` builds the stack without firing the trigger, so we fire it
 /// explicitly to model the digivolve, mirroring `rocks.rs`).
 fn fire_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -200,7 +201,9 @@ fn tai_plus_shadow_wing_stacks_dp_on_own_attacker() {
     );
 
     // Play Shadow Wing [Main] and target Birdramon for +3000 for the turn.
-    runner.play(0, 0).expect("play ST1-13 Shadow Wing from hand");
+    runner
+        .play(0, 0)
+        .expect("play ST1-13 Shadow Wing from hand");
     runner.game.drain_effect_queue();
     runner
         .execute_action(0, encode_attack(0, attacker.index as u16))
@@ -235,7 +238,9 @@ fn tai_and_shadow_wing_do_not_buff_opponent_digimon() {
 
     // Play Shadow Wing — its only legal targets are your own Digimon, so the
     // opponent body can never be picked. Target your own Birdramon.
-    runner.play(0, 0).expect("play ST1-13 Shadow Wing from hand");
+    runner
+        .play(0, 0)
+        .expect("play ST1-13 Shadow Wing from hand");
     runner.game.drain_effect_queue();
     let view = runner
         .pending_selection_view()
@@ -289,7 +294,9 @@ fn tai_and_shadow_wing_do_not_buff_opponent_digimon() {
 /// - DCGO: `$BASE_DCGO/Assets/Scripts/CardEffect/ST1/Red/ST1_08.cs`, `ST1_12.cs`.
 #[test]
 fn garudamon_when_digivolving_buff_stacks_additively_with_tai_aura() {
-    let mut runner = dsl_builder(&["ST1-05", "ST1-08", "ST1-12"]).memory(10).start();
+    let mut runner = dsl_builder(&["ST1-05", "ST1-08", "ST1-12"])
+        .memory(10)
+        .start();
 
     // Tai on field for the +1000 aura.
     runner.place_on_field(0, "ST1-12", Some(0));
@@ -338,7 +345,10 @@ fn garudamon_when_digivolving_buff_stacks_additively_with_tai_aura() {
 /// - DCGO: `$BASE_DCGO/Assets/Scripts/CardEffect/ST1/Red/ST1_14.cs`.
 #[test]
 fn starlight_explosion_installs_own_security_digimon_dp_window() {
-    let mut runner = dsl_builder(&["ST1-14"]).hand(0, &["ST1-14"]).memory(10).start();
+    let mut runner = dsl_builder(&["ST1-14"])
+        .hand(0, &["ST1-14"])
+        .memory(10)
+        .start();
 
     assert_eq!(
         runner
@@ -348,7 +358,9 @@ fn starlight_explosion_installs_own_security_digimon_dp_window() {
         "no own-security DP window before Starlight Explosion is played"
     );
 
-    runner.play(0, 0).expect("play ST1-14 Starlight Explosion from hand");
+    runner
+        .play(0, 0)
+        .expect("play ST1-14 Starlight Explosion from hand");
     let _ = runner.auto_resolve();
 
     assert_eq!(
@@ -413,7 +425,9 @@ fn giga_destroyer_deletes_only_le_4000_opponents_and_tai_does_not_widen_window()
 
     let before = snapshot(&runner);
 
-    runner.play(0, 0).expect("play ST1-15 Giga Destroyer from hand");
+    runner
+        .play(0, 0)
+        .expect("play ST1-15 Giga Destroyer from hand");
     let prompt = runner
         .pending_selection()
         .expect("Giga Destroyer installs an up-to-2 selection");
@@ -443,7 +457,9 @@ fn giga_destroyer_deletes_only_le_4000_opponents_and_tai_does_not_widen_window()
         prompt.valid_action_ids.contains(&pick_3k) && prompt.valid_action_ids.contains(&pick_4k),
         "both ≤4000 bodies are first-pick eligible"
     );
-    runner.execute_action(0, pick_3k).expect("pick the 3000-DP target");
+    runner
+        .execute_action(0, pick_3k)
+        .expect("pick the 3000-DP target");
 
     // CONFIRMATION (candidate engine bug #9): after the first ≤4000 pick, the
     // SECOND prompt must still apply the `dp_lte 4000` filter — it must offer
@@ -460,7 +476,9 @@ fn giga_destroyer_deletes_only_le_4000_opponents_and_tai_does_not_widen_window()
         second_prompt.valid_action_ids.contains(&pick_4k),
         "the remaining 4000-DP body must be the SECOND-pick eligible target"
     );
-    runner.execute_action(0, pick_4k).expect("pick the 4000-DP target");
+    runner
+        .execute_action(0, pick_4k)
+        .expect("pick the 4000-DP target");
     let _ = runner.auto_resolve();
 
     let after = snapshot(&runner);

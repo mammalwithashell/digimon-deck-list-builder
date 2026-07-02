@@ -17,13 +17,13 @@ use digimon_engine::debug_runner::DebugRunner;
 
 /// Every quiz-referenced card with a DSL YAML on disk (per the 2026-05-28 scan).
 const IMPLEMENTED_QUIZ_CARDS: &[&str] = &[
-    "AD1-004", // WarGreymon (Q25–27)
-    "AD1-014", // MetalGarurumon (Q25–27)
-    "AD1-025", // Omnimon [Assembly] (Q5, Q25–27)
-    "BT1-090", // Gravity Crush (Q10/Q11)
-    "BT6-084", // Sistermon Ciel (Q28)
-    "BT7-107", // Calling From the Darkness (Q19–21)  [NOTE: lacks a behavioral test]
-    "BT9-033", // Pillomon (Q6/Q7)
+    "AD1-004",  // WarGreymon (Q25–27)
+    "AD1-014",  // MetalGarurumon (Q25–27)
+    "AD1-025",  // Omnimon [Assembly] (Q5, Q25–27)
+    "BT1-090",  // Gravity Crush (Q10/Q11)
+    "BT6-084",  // Sistermon Ciel (Q28)
+    "BT7-107",  // Calling From the Darkness (Q19–21)  [NOTE: lacks a behavioral test]
+    "BT9-033",  // Pillomon (Q6/Q7)
     "BT12-022", // ExVeemon (Q16)
     "BT12-050", // Stingmon (Q16)
     "BT16-025", // Paildramon (Q16)
@@ -36,14 +36,14 @@ const IMPLEMENTED_QUIZ_CARDS: &[&str] = &[
     "BT23-096", // Comet Hammer (Q8)
     "BT24-017", // Medusamon (Q1, Q2, Q22)
     "BT24-040", // Venusmon (Q12)
-    "EX1-068", // Ice Wall! (Q2)
-    "EX4-006", // Guilmon (Q15)
-    "EX4-074", // ShineGreymon: Ruin Mode (Q14)
-    "EX8-005", // Tumblemon (Q22/Q23)
-    "EX8-051", // Proganomon (Q22/Q23)
-    "EX8-073", // Gallantmon (X Antibody) (Q15)
-    "EX8-074", // MedievalGallantmon (Q30)
-    "P-165",   // ShoeShoemon (Q13/Q14)
+    "EX1-068",  // Ice Wall! (Q2)
+    "EX4-006",  // Guilmon (Q15)
+    "EX4-074",  // ShineGreymon: Ruin Mode (Q14)
+    "EX8-005",  // Tumblemon (Q22/Q23)
+    "EX8-051",  // Proganomon (Q22/Q23)
+    "EX8-073",  // Gallantmon (X Antibody) (Q15)
+    "EX8-074",  // MedievalGallantmon (Q30)
+    "P-165",    // ShoeShoemon (Q13/Q14)
 ];
 
 /// Every implemented quiz card must be loadable from the embedded DSL pack.

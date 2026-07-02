@@ -141,10 +141,7 @@ fn st24_04_is_agumon_lv3_data_squad_with_alt_paths() {
     let has_lv2_ds = card.alt_paths.iter().any(|p| {
         p.from
             .as_ref()
-            .map(|f| {
-                f.level_eq == Some(2)
-                    && f.trait_has.as_deref() == Some("DATA SQUAD")
-            })
+            .map(|f| f.level_eq == Some(2) && f.trait_has.as_deref() == Some("DATA SQUAD"))
             .unwrap_or(false)
     });
     assert!(has_koromon, "alt-path from Koromon present");
@@ -170,7 +167,11 @@ fn st24_04_has_onplay_onmove_reveal_and_inherited_dp() {
 // Section 2 — Behavioral: reveal-3 → add 1 + place 1 under DATA SQUAD Tamer
 // ════════════════════════════════════════════════════════════════════════════
 
-fn setup(deck_top: &[&str], with_ds_tamer: bool, with_plain_tamer: bool) -> (DebugRunner, PermanentHandle) {
+fn setup(
+    deck_top: &[&str],
+    with_ds_tamer: bool,
+    with_plain_tamer: bool,
+) -> (DebugRunner, PermanentHandle) {
     let mut builder = DebugRunner::builder()
         .add_card(agumon())
         .add_card(ds_card("DS_A"))
@@ -205,7 +206,10 @@ fn tamer_handle(runner: &DebugRunner, id: &str) -> PermanentHandle {
         .battle_area
         .iter()
         .position(|p| p.top_card().card_id(&runner.game.card_data) == id)
-        .map(|i| PermanentHandle { player: 0, index: i as u8 })
+        .map(|i| PermanentHandle {
+            player: 0,
+            index: i as u8,
+        })
         .unwrap_or_else(|| panic!("{id} on field"))
 }
 
@@ -245,7 +249,10 @@ fn st24_04_adds_one_and_places_one_under_ds_tamer() {
         placed_id == "DS_A" || placed_id == "DS_B",
         "the placed card is a revealed [DATA SQUAD] card (got {placed_id})"
     );
-    assert!(runner.game.pending_selection.is_none(), "no stuck selection");
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no stuck selection"
+    );
 }
 
 /// NEGATIVE (no DS Tamer): only the add-to-hand bucket runs.
@@ -261,7 +268,11 @@ fn st24_04_only_adds_to_hand_when_no_ds_tamer() {
     fire_on_play(&mut runner, agu);
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.hand_size(0), hand_before + 1, "1 [DATA SQUAD] added to hand");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before + 1,
+        "1 [DATA SQUAD] added to hand"
+    );
     assert_eq!(
         runner.game.players[0].battle_area[pt.index as usize]
             .card_sources
@@ -269,7 +280,10 @@ fn st24_04_only_adds_to_hand_when_no_ds_tamer() {
         pt_sources_before,
         "no card placed under a non-[DATA SQUAD] Tamer"
     );
-    assert!(runner.game.pending_selection.is_none(), "no stuck selection");
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no stuck selection"
+    );
 }
 
 /// NEGATIVE (no [DATA SQUAD] revealed): nothing added or placed; all to bottom.
@@ -310,7 +324,11 @@ fn st24_04_single_data_squad_revealed_goes_to_hand_only() {
     fire_on_play(&mut runner, agu);
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.hand_size(0), hand_before + 1, "single [DATA SQUAD] added to hand");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before + 1,
+        "single [DATA SQUAD] added to hand"
+    );
     assert_eq!(
         runner.game.players[0].battle_area[tamer.index as usize]
             .card_sources

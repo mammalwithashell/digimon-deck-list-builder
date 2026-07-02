@@ -86,7 +86,10 @@ fn bt25_084_has_op_wd_wa_cost_delete_clause() {
     assert!(clause.once_per_turn, "[Once Per Turn]");
     assert!(clause.optional, "printed 'By trashing' -> optional");
     assert!(
-        clause.process.iter().any(|s| matches!(s, CompiledStep::ForEach { .. })),
+        clause
+            .process
+            .iter()
+            .any(|s| matches!(s, CompiledStep::ForEach { .. })),
         "delete-all-highest is a for_each over highest-DP opp Digimon"
     );
 }
@@ -109,11 +112,9 @@ fn bt25_084_has_ts_alt_path() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
     assert!(
-        card.alt_paths.iter().any(|p| p
-            .from
-            .as_ref()
-            .and_then(|f| f.trait_has.as_deref())
-            == Some("TS")),
+        card.alt_paths
+            .iter()
+            .any(|p| p.from.as_ref().and_then(|f| f.trait_has.as_deref()) == Some("TS")),
         "Lv.5 [TS] alt-path present"
     );
 }
@@ -133,7 +134,9 @@ fn bt25_084_op_wd_deletes_all_highest_dp_after_hand_trash() {
     runner.fire_on_play(0, titamon.index as usize);
 
     // The optional hand-trash cost prompt installs.
-    let view = runner.pending_selection_view().expect("hand-trash cost prompt");
+    let view = runner
+        .pending_selection_view()
+        .expect("hand-trash cost prompt");
     runner
         .execute_action(view.selecting_player, view.valid_action_ids[0])
         .expect("trash 1 hand card");
@@ -158,7 +161,9 @@ fn bt25_084_op_wd_declining_cost_does_nothing() {
 
     // Decline the optional cost (cost:true aborts the delete).
     if runner.pending_is_optional() {
-        runner.execute_action(0, digimon_engine::action::space::PASS).ok();
+        runner
+            .execute_action(0, digimon_engine::action::space::PASS)
+            .ok();
         runner.auto_resolve().ok();
     }
     assert_eq!(

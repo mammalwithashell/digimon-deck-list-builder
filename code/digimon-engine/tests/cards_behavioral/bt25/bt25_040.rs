@@ -142,7 +142,8 @@ fn bt25_040_has_security_play_op_and_inherited_clauses() {
         t.scope == CompiledScope::Security && t.when.contains(&CompiledTiming::OnDiscardSecurity)
     });
     let has_op_wd = triggered.iter().any(|t| {
-        t.when.contains(&CompiledTiming::OnPlay) && t.when.contains(&CompiledTiming::WhenDigivolving)
+        t.when.contains(&CompiledTiming::OnPlay)
+            && t.when.contains(&CompiledTiming::WhenDigivolving)
     });
     let has_inherited_lose_sec = triggered.iter().any(|t| {
         t.scope == CompiledScope::Inherited
@@ -153,7 +154,10 @@ fn bt25_040_has_security_play_op_and_inherited_clauses() {
         has_security_play,
         "must have [Security-trash] play-from-hand-free clause"
     );
-    assert!(has_op_wd, "must have [On Play][When Digivolving] DP-minus clause");
+    assert!(
+        has_op_wd,
+        "must have [On Play][When Digivolving] DP-minus clause"
+    );
     assert!(
         has_inherited_lose_sec,
         "must have inherited [All Turns][OPT] own-security-removed DP-minus clause"

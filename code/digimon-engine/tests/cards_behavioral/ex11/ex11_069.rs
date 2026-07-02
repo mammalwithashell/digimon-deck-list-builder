@@ -434,9 +434,10 @@ fn ex11_069_end_of_all_turns_returns_evil_or_dragon_trait_card() {
     set_hand_size(&mut runner, 0, 4);
 
     let hand_before = runner.hand_size(0);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     // The optional [End of All Turns] clause (cost-bearing) surfaces a pre-cost
@@ -509,9 +510,10 @@ fn ex11_069_end_of_all_turns_gated_off_when_hand_over_four() {
     push_to_trash(&mut runner, 0, "EVIL-T");
     set_hand_size(&mut runner, 0, 5); // more than 4
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
@@ -535,9 +537,10 @@ fn ex11_069_end_of_all_turns_admits_dragon_trait_cards() {
     push_to_trash(&mut runner, 0, "ED5"); // [Evil Dragon] Digimon in trash
     set_hand_size(&mut runner, 0, 3);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::PlayerBattleArea(0));
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
     runner.game.drain_effect_queue();
     let view = runner
         .pending_selection_view()

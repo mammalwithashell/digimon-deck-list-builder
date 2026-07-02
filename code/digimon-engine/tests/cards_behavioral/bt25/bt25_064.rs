@@ -191,8 +191,14 @@ fn bt25_064_on_play_adds_option_and_ts_to_hand_rest_to_bottom() {
         .iter()
         .map(|c| c.card_id(&runner.game.card_data))
         .collect();
-    assert!(hand_ids.contains(&"BT25-100"), "Option pick to hand: {hand_ids:?}");
-    assert!(hand_ids.contains(&"TS-064"), "TS pick to hand: {hand_ids:?}");
+    assert!(
+        hand_ids.contains(&"BT25-100"),
+        "Option pick to hand: {hand_ids:?}"
+    );
+    assert!(
+        hand_ids.contains(&"TS-064"),
+        "TS pick to hand: {hand_ids:?}"
+    );
     assert!(
         !hand_ids.contains(&"FILL-064"),
         "non-matching filler must NOT be added to hand: {hand_ids:?}"
@@ -244,6 +250,13 @@ fn bt25_064_on_play_fizzles_when_no_candidates() {
         deck_before + 3,
         "all 3 revealed cards return to deck on fizzle"
     );
-    assert!(runner.pending_selection().is_none(), "no pending selection after fizzle");
-    assert_eq!(runner.game.revealed_cards.len(), 0, "reveal pool empty after fizzle");
+    assert!(
+        runner.pending_selection().is_none(),
+        "no pending selection after fizzle"
+    );
+    assert_eq!(
+        runner.game.revealed_cards.len(),
+        0,
+        "reveal pool empty after fizzle"
+    );
 }

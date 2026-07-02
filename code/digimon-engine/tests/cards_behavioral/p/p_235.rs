@@ -148,7 +148,10 @@ fn p_235_is_option_cost_3_yellow() {
         .compiled_card("P-235")
         .expect("P-235 compiled card present");
 
-    assert_eq!(compiled.kind, digimon_dsl::compiled::CompiledCardKind::Option);
+    assert_eq!(
+        compiled.kind,
+        digimon_dsl::compiled::CompiledCardKind::Option
+    );
     assert_eq!(compiled.cost, Some(3));
 }
 
@@ -477,7 +480,11 @@ fn p_235_security_places_self_in_battle_area() {
         .start();
 
     let attacker_handle = runner.place_on_field(0, "P235-ATK", Some(0));
-    assert_eq!(runner.security_count(1), 1, "precondition: P-235 in security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: P-235 in security"
+    );
 
     let _ = runner.attack_player(attacker_handle, 1, false);
     runner.auto_resolve().expect("security selections resolve");

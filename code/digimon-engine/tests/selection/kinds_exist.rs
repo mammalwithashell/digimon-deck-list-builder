@@ -7,7 +7,12 @@ fn new_selection_kinds_exist() {
         zones: UnionZoneSet::HAND | UnionZoneSet::TRASH,
     };
     let _ = SelectionKind::OrderedPermutation { remaining: 3 };
-    let _ = SelectionKind::CountCappedMultiSelect { min: 1, max: 2, picked: 0, distinct: false };
+    let _ = SelectionKind::CountCappedMultiSelect {
+        min: 1,
+        max: 2,
+        picked: 0,
+        distinct: false,
+    };
     let _ = GamePhase::SelectUnion;
     let _ = GamePhase::SelectPermutation;
     let _ = GamePhase::SelectBudgeted;
@@ -28,7 +33,10 @@ fn count_capped_kind_str_carries_ui_fields() {
     let s = format!("{kind:?}");
     assert!(s.starts_with("CountCappedMultiSelect"), "got {s}");
     for field in ["min: 1", "max: 3", "picked: 2", "distinct: true"] {
-        assert!(s.contains(field), "kind string {s:?} must contain {field:?}");
+        assert!(
+            s.contains(field),
+            "kind string {s:?} must contain {field:?}"
+        );
     }
 }
 

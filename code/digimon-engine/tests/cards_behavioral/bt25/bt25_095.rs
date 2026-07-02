@@ -174,8 +174,14 @@ fn bt25_095_metadata_floodgate_auras_main_and_security_compile() {
         .iter()
         .any(|s| matches!(s, CompiledStep::PlayFromHand { .. }));
     assert!(has_add_bottom, "main must add bottom security to hand");
-    assert!(has_place_self, "main must place self face-up at bottom security");
-    assert!(has_play, "main must play a reduced-cost TS Digimon from hand");
+    assert!(
+        has_place_self,
+        "main must place self face-up at bottom security"
+    );
+    assert!(
+        has_play,
+        "main must play a reduced-cost TS Digimon from hand"
+    );
 
     // Inherited [Security] clause.
     assert!(
@@ -212,7 +218,9 @@ fn bt25_095_main_replaces_bottom_security_with_self_and_plays_reduced_ts() {
         "no face-up security should satisfy the option's color bypass"
     );
 
-    let hand_prompt = runner.pending_selection_view().expect("reduced play prompt");
+    let hand_prompt = runner
+        .pending_selection_view()
+        .expect("reduced play prompt");
     assert_eq!(hand_prompt.kind, SelectionKind::Hand);
     assert!(hand_prompt.is_optional, "the 'you may play' is optional");
 

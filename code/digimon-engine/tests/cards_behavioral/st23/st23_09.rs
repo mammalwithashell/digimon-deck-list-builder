@@ -151,8 +151,10 @@ fn st23_09_static_keywords_live_on_field() {
 // ─── Digimon [WD/WA][OPT]: immunity + delete lowest-DP ───────────────────────
 
 fn fire_wd(r: &mut DebugRunner, handle: PermanentHandle) {
-    r.game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    r.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     r.game.drain_effect_queue();
 }
 
@@ -200,7 +202,10 @@ fn st23_09_option_main_suspends_then_bounces_highest_dp_suspended() {
     let high = r.place_on_field(1, "OPP-HIGH", Some(0)); // 9000
     r.game.enter_main_phase();
 
-    assert_eq!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
     // Step 1: suspend selection (any opponent Digimon). Suspend the HIGH one so
     // it becomes the highest-DP *suspended* Digimon for the bounce.
     assert_eq!(r.pending_kind(), Some(SelectionKind::OppField));
@@ -237,7 +242,11 @@ fn st23_09_option_main_suspends_then_bounces_highest_dp_suspended() {
     r.execute_action(0, encode_attack(0, high.index as u16))
         .expect("bounce highest-DP suspended");
     assert_eq!(r.battle_area_size(1), battle_before - 1);
-    assert_eq!(r.deck_size(1), deck_before + 1, "bounced to the deck bottom");
+    assert_eq!(
+        r.deck_size(1),
+        deck_before + 1,
+        "bounced to the deck bottom"
+    );
 }
 
 // ─── Arts Digivolve wiring ───────────────────────────────────────────────────
@@ -278,7 +287,10 @@ fn st23_09_arts_digivolve_arms_and_stacks_onto_base() {
     // resolution proceeds straight to the Arts prompt.
     r.game.enter_main_phase();
 
-    assert_eq!(r.game.play_option_from_hand(0, 0), OptionPlayResult::Pending);
+    assert_eq!(
+        r.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
     drive_to_arts(&mut r, base);
     let arts = r.game.pending_selection.as_ref().unwrap();
     assert!(arts.is_optional, "Arts is declinable");

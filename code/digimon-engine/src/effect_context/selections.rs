@@ -1722,12 +1722,11 @@ impl<'a> EffectContext<'a> {
                 let refs: Vec<crate::events::EventCardRef> = picks
                     .iter()
                     .filter_map(|h| {
-                        game.card_data_for_handle(*h).map(|cd| {
-                            crate::events::EventCardRef {
+                        game.card_data_for_handle(*h)
+                            .map(|cd| crate::events::EventCardRef {
                                 card_id: cd.card_id.clone(),
                                 card_name: cd.card_name.clone(),
-                            }
-                        })
+                            })
                     })
                     .collect();
                 push_effect_target_multi(game, controller, source_card, refs);

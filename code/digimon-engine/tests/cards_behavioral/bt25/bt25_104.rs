@@ -141,12 +141,19 @@ fn bt25_104_grants_five_static_keywords() {
         .iter()
         .filter_map(|c| match c {
             CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
-                keyword, ..
+                keyword,
+                ..
             }) => Some(keyword.as_str()),
             _ => None,
         })
         .collect();
-    for kw in ["Raid", "Piercing", "SecurityAttackPlus", "Blocker", "Barrier"] {
+    for kw in [
+        "Raid",
+        "Piercing",
+        "SecurityAttackPlus",
+        "Blocker",
+        "Barrier",
+    ] {
         assert!(
             granted.contains(&kw),
             "BT25-104 must grant the {kw} keyword; granted = {granted:?}"
@@ -159,13 +166,17 @@ fn bt25_104_grants_five_static_keywords() {
 fn bt25_104_has_digivolve_and_burst_alt_paths() {
     let card = compiled("BT25-104");
     assert!(
-        card.alt_paths.iter().any(|p| p.kind == CompiledAltPathKind::Digivolve
-            && p.cost == Some(CompiledCost::Literal(5))),
+        card.alt_paths
+            .iter()
+            .any(|p| p.kind == CompiledAltPathKind::Digivolve
+                && p.cost == Some(CompiledCost::Literal(5))),
         "must have a cost-5 DATA SQUAD digivolve alt-path"
     );
     assert!(
-        card.alt_paths.iter().any(|p| p.kind == CompiledAltPathKind::BurstDigivolve
-            && p.cost == Some(CompiledCost::Literal(0))),
+        card.alt_paths
+            .iter()
+            .any(|p| p.kind == CompiledAltPathKind::BurstDigivolve
+                && p.cost == Some(CompiledCost::Literal(0))),
         "must have a cost-0 burst_digivolve alt-path"
     );
 }
@@ -189,7 +200,10 @@ fn bt25_104_has_wd_wa_opt_inline_clause() {
         })
         .next()
         .expect("[WD][WA] inline option-main clause must exist");
-    assert!(clause.once_per_turn, "the [WD][WA] inline clause is [Once Per Turn]");
+    assert!(
+        clause.once_per_turn,
+        "the [WD][WA] inline clause is [Once Per Turn]"
+    );
 }
 
 /// The Option-face [Main] clause exists (fires on MainFromHand).
@@ -213,8 +227,18 @@ fn bt25_104_has_option_main_clause() {
 fn drain(runner: &mut DebugRunner) {
     let mut steps = 0;
     while runner.game.pending_selection.is_some() && steps < 30 {
-        let p = runner.game.pending_selection.as_ref().unwrap().selecting_player;
-        let a = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .selecting_player;
+        let a = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .unwrap()
+            .valid_action_ids[0];
         runner.game.resolve_selection(p, a).ok();
         runner.game.drain_effect_queue();
         steps += 1;
@@ -359,9 +383,10 @@ fn bt25_104_your_turn_marcus_treated_as_12000_digimon_with_rush() {
 
     // The [Your Turn] aura installs on the digivolve that brings the Burst Mode
     // face in (and re-installs at each start_of_your_turn).
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(shine));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(shine),
+    );
     runner.game.drain_effect_queue();
     runner.game.tick_declarative_effects();
 

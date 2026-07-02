@@ -495,7 +495,12 @@ pub fn lower(
                             },
                         );
                     } else {
-                        ctx.add_declarative_modifier(h, modifier, modifier_value, Expiry::Permanent);
+                        ctx.add_declarative_modifier(
+                            h,
+                            modifier,
+                            modifier_value,
+                            Expiry::Permanent,
+                        );
                     }
                 }
             }

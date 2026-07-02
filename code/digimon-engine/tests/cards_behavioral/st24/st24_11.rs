@@ -277,7 +277,10 @@ fn st24_11_suspends_two_and_locks_them_through_unsuspend_phase() {
     drive_engage(&mut runner); // suspend both + engage trash
 
     assert!(
-        runner.game.modifiers.player_has(1, ModifierType::CannotUnsuspend),
+        runner
+            .game
+            .modifiers
+            .player_has(1, ModifierType::CannotUnsuspend),
         "the opponent carries the player-scope mass CannotUnsuspend aura"
     );
 

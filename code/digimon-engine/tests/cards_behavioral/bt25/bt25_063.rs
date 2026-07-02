@@ -97,8 +97,7 @@ fn bt25_063_shared_clause_is_when_moving_and_on_play() {
         .iter()
         .find_map(|c| match c {
             CompiledClause::Triggered(t)
-                if t.scope == CompiledScope::FaceUp
-                    && t.when.contains(&CompiledTiming::OnPlay) =>
+                if t.scope == CompiledScope::FaceUp && t.when.contains(&CompiledTiming::OnPlay) =>
             {
                 Some(t)
             }
@@ -212,14 +211,19 @@ fn bt25_063_adds_accel_trait_card_to_hand() {
         let mut ctx = EffectContext::new(&mut runner.game, src, Some(holder_perm), 0);
         run_steps(&process, &mut ctx, &mut Bindings::new());
     }
-    runner.auto_resolve().expect("pick + order remainder resolve");
+    runner
+        .auto_resolve()
+        .expect("pick + order remainder resolve");
 
     let hand_ids: Vec<&str> = runner.game.players[0]
         .hand
         .iter()
         .map(|c| c.card_id(&runner.game.card_data))
         .collect();
-    assert!(hand_ids.contains(&"ACCEL-A"), "ACCEL-trait card added to hand: {hand_ids:?}");
+    assert!(
+        hand_ids.contains(&"ACCEL-A"),
+        "ACCEL-trait card added to hand: {hand_ids:?}"
+    );
     // One card left the deck; the other two were ordered back onto the deck.
     assert_eq!(
         runner.game.players[0].deck.len(),
@@ -254,7 +258,9 @@ fn bt25_063_adds_chaosmon_name_card_to_hand() {
         let mut ctx = EffectContext::new(&mut runner.game, src, Some(holder_perm), 0);
         run_steps(&process, &mut ctx, &mut Bindings::new());
     }
-    runner.auto_resolve().expect("pick + order remainder resolve");
+    runner
+        .auto_resolve()
+        .expect("pick + order remainder resolve");
 
     let hand_ids: Vec<&str> = runner.game.players[0]
         .hand
@@ -307,14 +313,18 @@ fn bt25_063_order_remainder_dest_choice_clones_faithfully() {
 
     // Resolve the reveal pick (ACCEL-CLN → hand). The next installed selection
     // is the multi-dest order_remainder DESTINATION choice (top vs bottom).
-    let pick_view = runner.pending_selection_view().expect("reveal pick installs");
+    let pick_view = runner
+        .pending_selection_view()
+        .expect("reveal pick installs");
     let pick = pick_view
         .valid_action_ids
         .iter()
         .copied()
         .find(|&id| id != PASS)
         .unwrap();
-    runner.execute_action(0, pick).expect("add ACCEL-CLN to hand");
+    runner
+        .execute_action(0, pick)
+        .expect("add ACCEL-CLN to hand");
 
     assert!(
         runner.game.pending_selection.is_some(),
@@ -401,6 +411,9 @@ fn bt25_063_no_match_returns_all_to_deck() {
         deck_before + 3,
         "all 3 revealed cards return to deck"
     );
-    assert!(runner.pending_selection().is_none(), "no pending selection remains");
+    assert!(
+        runner.pending_selection().is_none(),
+        "no pending selection remains"
+    );
     assert_eq!(runner.game.revealed_cards.len(), 0, "reveal pool empty");
 }

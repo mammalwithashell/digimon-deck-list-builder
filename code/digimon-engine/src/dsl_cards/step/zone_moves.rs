@@ -400,7 +400,11 @@ pub fn try_run(
                 super::map_stack_position(*position) == crate::enums::StackPosition::Bottom;
             if let Some(source_refs) = bindings.get_source_refs(source_refs) {
                 for source_ref in source_refs {
-                    ctx.return_card_source_to_deck(source_ref.permanent, source_ref.card, to_bottom);
+                    ctx.return_card_source_to_deck(
+                        source_ref.permanent,
+                        source_ref.card,
+                        to_bottom,
+                    );
                 }
             }
             true

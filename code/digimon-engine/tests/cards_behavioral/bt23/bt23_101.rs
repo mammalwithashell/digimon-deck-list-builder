@@ -35,7 +35,14 @@ fn hudiemon() -> digimon_dsl::compiled::CompiledCard {
     dsl_card_data::compiled("BT23-101")
 }
 
-fn digimon_traits(id: &str, color: CardColor, level: u8, dp: i32, cost: u16, traits: &[&str]) -> CardData {
+fn digimon_traits(
+    id: &str,
+    color: CardColor,
+    level: u8,
+    dp: i32,
+    cost: u16,
+    traits: &[&str],
+) -> CardData {
     let mut c = make_test_card(id, id);
     c.card_kind = CardKind::Digimon;
     c.colors = vec![color];
@@ -61,7 +68,9 @@ fn first_action(p: &PendingSelection) -> u16 {
 }
 
 fn fire(runner: &mut DebugRunner, timing: EffectTiming, h: PermanentHandle) {
-    runner.game.enqueue_triggered(timing, TriggerSource::Permanent(h));
+    runner
+        .game
+        .enqueue_triggered(timing, TriggerSource::Permanent(h));
     runner.game.drain_effect_queue();
 }
 
@@ -69,11 +78,32 @@ fn base_runner() -> DebugRunner {
     DebugRunner::builder()
         .dsl_card("BT23-101")
         .expect("BT23-101 in pack")
-        .add_card(digimon_traits("CS-5", CardColor::Green, 4, 4000, 5, &["CS"]))     // legal free-play
-        .add_card(digimon_traits("CS-6", CardColor::Green, 5, 6000, 6, &["CS"]))     // cost too high
-        .add_card(digimon_traits("NONCS-3", CardColor::Green, 3, 2000, 3, &[]))      // not CS
-        .add_card(digimon_traits("HUDIE-A", CardColor::Green, 4, 5000, 5, &["Hudie"])) // extra Hudie
-        .add_card(digimon_traits("OPP", CardColor::Blue, 6, 11000, 11, &[]))         // debuff target
+        .add_card(digimon_traits(
+            "CS-5",
+            CardColor::Green,
+            4,
+            4000,
+            5,
+            &["CS"],
+        )) // legal free-play
+        .add_card(digimon_traits(
+            "CS-6",
+            CardColor::Green,
+            5,
+            6000,
+            6,
+            &["CS"],
+        )) // cost too high
+        .add_card(digimon_traits("NONCS-3", CardColor::Green, 3, 2000, 3, &[])) // not CS
+        .add_card(digimon_traits(
+            "HUDIE-A",
+            CardColor::Green,
+            4,
+            5000,
+            5,
+            &["Hudie"],
+        )) // extra Hudie
+        .add_card(digimon_traits("OPP", CardColor::Blue, 6, 11000, 11, &[])) // debuff target
         .add_card(tamer_traits("CS-TAMER", CardColor::Green, &["CS"]))
         .add_card(tamer_traits("NONCS-TAMER", CardColor::Green, &[]))
         .add_card(digimon_traits("FILLER", CardColor::Blue, 4, 3000, 4, &[]))
@@ -102,10 +132,13 @@ fn bt23_101_metadata_green_yellow_lv4_cs_hudie() {
 fn bt23_101_has_alliance_grant_and_two_triggered_clauses() {
     let card = hudiemon();
     // Declarative Alliance grant (a Declarative clause, not Triggered).
-    let has_alliance = card.effects.iter().any(|c| {
-        matches!(c, CompiledClause::Declarative(d) if format!("{d:?}").contains("Alliance"))
-    });
-    assert!(has_alliance, "must declare an Alliance grant_keyword clause");
+    let has_alliance = card.effects.iter().any(
+        |c| matches!(c, CompiledClause::Declarative(d) if format!("{d:?}").contains("Alliance")),
+    );
+    assert!(
+        has_alliance,
+        "must declare an Alliance grant_keyword clause"
+    );
 
     let triggered: Vec<_> = card
         .effects
@@ -116,15 +149,20 @@ fn bt23_101_has_alliance_grant_and_two_triggered_clauses() {
         })
         .collect();
     assert!(
-        triggered.iter().any(|t| t.when.contains(&CompiledTiming::OnPlay)
-            && t.when.contains(&CompiledTiming::WhenDigivolving)),
+        triggered
+            .iter()
+            .any(|t| t.when.contains(&CompiledTiming::OnPlay)
+                && t.when.contains(&CompiledTiming::WhenDigivolving)),
         "On Play / When Digivolving clause"
     );
     let wa = triggered
         .iter()
         .find(|t| t.when.contains(&CompiledTiming::WhenAttacking))
         .expect("When Attacking clause");
-    assert!(wa.once_per_turn, "[Once Per Turn] on the When Attacking clause");
+    assert!(
+        wa.once_per_turn,
+        "[Once Per Turn] on the When Attacking clause"
+    );
 }
 
 #[test]
@@ -136,8 +174,16 @@ fn bt23_101_has_cs_and_conditional_erika_alt_paths() {
     let erika3 = card.alt_paths.iter().any(|p| {
         p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(3))
     });
-    assert!(cs4, "Lv.3 [CS]-trait cost-4 digivolve; got {:?}", card.alt_paths);
-    assert!(erika3, "[Erika Mishima] cost-3 conditional digivolve; got {:?}", card.alt_paths);
+    assert!(
+        cs4,
+        "Lv.3 [CS]-trait cost-4 digivolve; got {:?}",
+        card.alt_paths
+    );
+    assert!(
+        erika3,
+        "[Erika Mishima] cost-3 conditional digivolve; got {:?}",
+        card.alt_paths
+    );
 }
 
 // ─── SECTION 2 — Alliance runtime-installed ─────────────────────────────────
@@ -190,17 +236,28 @@ fn bt23_101_on_play_debuff_scales_with_one_hudie() {
 
     fire(&mut runner, EffectTiming::OnPlay, h);
     // Decline the optional CS play (no CS card in hand here anyway).
-    if runner.game.pending_selection.as_ref().map_or(false, |p| p.is_optional) {
+    if runner
+        .game
+        .pending_selection
+        .as_ref()
+        .map_or(false, |p| p.is_optional)
+    {
         runner
             .execute_action(0, digimon_engine::action::space::PASS)
             .expect("decline optional play");
     }
     // Mandatory debuff target select.
     let (player, action) = {
-        let p = runner.game.pending_selection.as_ref().expect("debuff target select");
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("debuff target select");
         (p.selecting_player, first_action(p))
     };
-    runner.execute_action(player, action).expect("pick opp target");
+    runner
+        .execute_action(player, action)
+        .expect("pick opp target");
     let _ = runner.auto_resolve();
 
     assert_eq!(
@@ -218,16 +275,27 @@ fn bt23_101_on_play_debuff_scales_with_extra_hudie() {
     let opp = runner.place_on_field(1, "OPP", Some(0));
 
     fire(&mut runner, EffectTiming::OnPlay, h);
-    if runner.game.pending_selection.as_ref().map_or(false, |p| p.is_optional) {
+    if runner
+        .game
+        .pending_selection
+        .as_ref()
+        .map_or(false, |p| p.is_optional)
+    {
         runner
             .execute_action(0, digimon_engine::action::space::PASS)
             .expect("decline optional play");
     }
     let (player, action) = {
-        let p = runner.game.pending_selection.as_ref().expect("debuff target select");
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("debuff target select");
         (p.selecting_player, first_action(p))
     };
-    runner.execute_action(player, action).expect("pick opp target");
+    runner
+        .execute_action(player, action)
+        .expect("pick opp target");
     let _ = runner.auto_resolve();
 
     assert_eq!(
@@ -244,16 +312,27 @@ fn bt23_101_on_play_debuff_expires_end_of_turn() {
     let opp = runner.place_on_field(1, "OPP", Some(0));
 
     fire(&mut runner, EffectTiming::OnPlay, h);
-    if runner.game.pending_selection.as_ref().map_or(false, |p| p.is_optional) {
+    if runner
+        .game
+        .pending_selection
+        .as_ref()
+        .map_or(false, |p| p.is_optional)
+    {
         runner
             .execute_action(0, digimon_engine::action::space::PASS)
             .expect("decline optional play");
     }
     let (player, action) = {
-        let p = runner.game.pending_selection.as_ref().expect("debuff target");
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("debuff target");
         (p.selecting_player, first_action(p))
     };
-    runner.execute_action(player, action).expect("pick opp target");
+    runner
+        .execute_action(player, action)
+        .expect("pick opp target");
     let _ = runner.auto_resolve();
     assert_eq!(runner.effective_dp(opp), Some(8000));
 
@@ -263,7 +342,10 @@ fn bt23_101_on_play_debuff_expires_end_of_turn() {
         .battle_area
         .iter()
         .position(|p| p.top_card().card_id(&runner.game.card_data) == "OPP")
-        .map(|i| PermanentHandle { player: 1, index: i as u8 })
+        .map(|i| PermanentHandle {
+            player: 1,
+            index: i as u8,
+        })
         .expect("OPP still on field");
     assert_eq!(
         runner.effective_dp(opp),
@@ -340,7 +422,10 @@ fn bt23_101_when_attacking_returns_tamer_and_reactivates_debuff() {
         .battle_area
         .iter()
         .position(|p| p.top_card().card_id(&runner.game.card_data) == "OPP")
-        .map(|i| PermanentHandle { player: 1, index: i as u8 })
+        .map(|i| PermanentHandle {
+            player: 1,
+            index: i as u8,
+        })
         .expect("OPP still on field");
     assert!(
         runner.effective_dp(opp).unwrap_or(11000) <= 8000,
@@ -396,10 +481,31 @@ fn base_runner_with_hand(hand: &[&str]) -> DebugRunner {
     DebugRunner::builder()
         .dsl_card("BT23-101")
         .expect("BT23-101 in pack")
-        .add_card(digimon_traits("CS-5", CardColor::Green, 4, 4000, 5, &["CS"]))
-        .add_card(digimon_traits("CS-6", CardColor::Green, 5, 6000, 6, &["CS"]))
+        .add_card(digimon_traits(
+            "CS-5",
+            CardColor::Green,
+            4,
+            4000,
+            5,
+            &["CS"],
+        ))
+        .add_card(digimon_traits(
+            "CS-6",
+            CardColor::Green,
+            5,
+            6000,
+            6,
+            &["CS"],
+        ))
         .add_card(digimon_traits("NONCS-3", CardColor::Green, 3, 2000, 3, &[]))
-        .add_card(digimon_traits("HUDIE-A", CardColor::Green, 4, 5000, 5, &["Hudie"]))
+        .add_card(digimon_traits(
+            "HUDIE-A",
+            CardColor::Green,
+            4,
+            5000,
+            5,
+            &["Hudie"],
+        ))
         .add_card(digimon_traits("OPP", CardColor::Blue, 6, 11000, 11, &[]))
         .add_card(tamer_traits("CS-TAMER", CardColor::Green, &["CS"]))
         .add_card(digimon_traits("FILLER", CardColor::Blue, 4, 3000, 4, &[]))

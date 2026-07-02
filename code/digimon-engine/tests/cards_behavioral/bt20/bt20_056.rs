@@ -15,11 +15,11 @@
 //!
 //! DCGO reference (READ-ONLY): DCGO/Assets/Scripts/CardEffect/BT20/Black/BT20_056.cs
 
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect_context::EffectContext;
 use digimon_engine::enums::CardKind;
-use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::SelectionKind;
 
@@ -52,8 +52,13 @@ fn security_ids(runner: &DebugRunner, player: usize) -> Vec<&str> {
 /// is the trigger condition for the `on_own/opponent_security_removed`
 /// observers. Uses a throwaway EffectContext sourced from the BT20-056
 /// permanent (same pattern as BT24-101's security-loss test).
-fn trash_top_security_via_effect(runner: &mut DebugRunner, source: digimon_engine::permanent::PermanentHandle, owner: u8) {
-    let source_card = runner.game.players[source.player as usize].battle_area[source.index as usize]
+fn trash_top_security_via_effect(
+    runner: &mut DebugRunner,
+    source: digimon_engine::permanent::PermanentHandle,
+    owner: u8,
+) {
+    let source_card = runner.game.players[source.player as usize].battle_area
+        [source.index as usize]
         .top_card()
         .handle();
     let mut ctx = EffectContext::new(&mut runner.game, source_card, None, source.player);
@@ -161,7 +166,9 @@ fn bt20_056_security_removed_debuff_is_optional_when_no_opponent_digimon() {
 
     trash_top_security_via_effect(&mut runner, alphamon, 0);
     // No opponent Digimon exists; resolving must not panic or strand a prompt.
-    runner.auto_resolve().expect("observer resolves with no target");
+    runner
+        .auto_resolve()
+        .expect("observer resolves with no target");
     assert_eq!(runner.security_count(0), 1);
 }
 
@@ -200,8 +207,16 @@ fn bt20_056_ouryuken_inherited_replacement_prevents_leave_for_top_security() {
         permanent_exists(&runner, 0, "OURYUKEN"),
         "Alphamon: Ouryuken stays after trashing top security"
     );
-    assert_eq!(runner.security_count(0), 1, "top security was trashed as the cost");
-    assert_eq!(security_ids(&runner, 0), vec!["SEC-A"], "the top (SEC-B) was trashed");
+    assert_eq!(
+        runner.security_count(0),
+        1,
+        "top security was trashed as the cost"
+    );
+    assert_eq!(
+        security_ids(&runner, 0),
+        vec!["SEC-A"],
+        "the top (SEC-B) was trashed"
+    );
 }
 
 #[test]

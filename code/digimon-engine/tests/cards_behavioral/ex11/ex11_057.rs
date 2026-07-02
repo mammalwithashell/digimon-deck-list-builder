@@ -255,9 +255,7 @@ fn ex11_057_security_clause_is_mandatory_faceup_play_from_security() {
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity) => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity) => Some(t),
             _ => None,
         })
         .next()

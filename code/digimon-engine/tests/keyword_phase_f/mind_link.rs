@@ -173,6 +173,51 @@ fn mind_link_attaches_tamer_to_digimon_with_no_tamer_source() {
     );
 }
 
+#[test]
+fn mind_link_target_prompt_clones_faithfully() {
+    let mut r = DebugRunner::builder()
+        .add_card(mind_link_tamer("ML-TAMER"))
+        .add_card(plain_digimon("DIGI"))
+        .start();
+
+    let _digi = r.place_on_field(0, "DIGI", None);
+    let tamer = r.place_on_field(0, "ML-TAMER", None);
+    r.game.enter_main_phase();
+    r.game.set_memory(0);
+
+    assert!(r.game.activate_field_main(0, tamer.index as usize));
+    let digi_action = {
+        let pending = r
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("MindLink target pick must be parked");
+        assert!(
+            r.game.pending_selection_resume.is_some(),
+            "MindLink target prompt must be resume-driven before cloning"
+        );
+        pending.valid_action_ids[0]
+    };
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, digi_action)
+        .expect("cloned MindLink target pick resolves");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original MindLink prompt intact"
+    );
+    r.game
+        .resolve_selection(0, digi_action)
+        .expect("original MindLink target pick resolves");
+
+    assert_eq!(
+        clone.players[0].battle_area.len(),
+        r.game.players[0].battle_area.len(),
+        "clone and original should replay the same MindLink result"
+    );
+}
+
 // ─── Test 2: Digimon with non-face-down Tamer source is filtered out ───────
 
 /// P0 has a Tamer-with-MindLink and a Digimon that already has a

@@ -39,9 +39,7 @@ fn standard_evo_cost_digivolve_emits_was_dna_false_with_memory_paid() {
     runner.game.current_phase = GamePhase::Main;
     runner.game.drain_events();
 
-    let ok = runner
-        .game
-        .digivolve_from_hand(0, 0, 0, PlaySource::ByHand);
+    let ok = runner.game.digivolve_from_hand(0, 0, 0, PlaySource::ByHand);
     assert!(ok, "standard evo-cost digivolve must succeed");
 
     let digivolves = drained_digivolves(&mut runner);

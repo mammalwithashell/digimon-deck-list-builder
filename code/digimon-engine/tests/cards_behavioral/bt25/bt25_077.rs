@@ -107,13 +107,19 @@ fn bt25_077_has_all_turns_suspend_delete_clause() {
         })
         .expect("[All Turns] suspend/delete clause present");
     assert!(
-        clause.process.iter().any(|s| matches!(s, CompiledStep::Suspend { .. })),
+        clause
+            .process
+            .iter()
+            .any(|s| matches!(s, CompiledStep::Suspend { .. })),
         "clause has a top-level suspend step"
     );
     // The lowest-DP delete is nested inside the `if event_is_effect_initiated`
     // gate, so it appears as a CompiledStep::If at the clause top level.
     assert!(
-        clause.process.iter().any(|s| matches!(s, CompiledStep::If { .. })),
+        clause
+            .process
+            .iter()
+            .any(|s| matches!(s, CompiledStep::If { .. })),
         "clause has an effect-initiated gate (If) wrapping the lowest-DP delete"
     );
 }

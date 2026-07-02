@@ -148,7 +148,9 @@ fn bt21_044_has_geogreymon_alt_path_cost3() {
     let geo = card
         .alt_paths
         .iter()
-        .find(|p| p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(3)))
+        .find(|p| {
+            p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(3))
+        })
         .expect("must have a GeoGreymon cost-3 digivolve alt-path");
     assert_eq!(geo.cost, Some(CompiledCost::Literal(3)));
 }
@@ -162,8 +164,7 @@ fn bt21_044_clause1_fires_on_play_and_when_digivolving() {
         .iter()
         .filter_map(|c| match c {
             CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::OnPlay)
-                    && t.scope == CompiledScope::FaceUp =>
+                if t.when.contains(&CompiledTiming::OnPlay) && t.scope == CompiledScope::FaceUp =>
             {
                 Some(t)
             }
@@ -250,8 +251,12 @@ fn predicate_mentions_event_target_color(p: &CompiledPredicate) -> bool {
 
 fn predicate_mentions_event_target_owner_you(p: &CompiledPredicate) -> bool {
     p.event_target_owner == Some(CompiledPlayerRef::You)
-        || p.all_of.iter().any(predicate_mentions_event_target_owner_you)
-        || p.any_of.iter().any(predicate_mentions_event_target_owner_you)
+        || p.all_of
+            .iter()
+            .any(predicate_mentions_event_target_owner_you)
+        || p.any_of
+            .iter()
+            .any(predicate_mentions_event_target_owner_you)
 }
 
 #[test]
@@ -294,14 +299,14 @@ fn bt21_044_deletion_observers_gate_on_own_yellow_red_tamer() {
 
 /// Helper: play RizeGreymon from hand (On Play timing).
 fn play_rize(runner: &mut DebugRunner) -> PermanentHandle {
-    let idx = runner
-        .game
-        .players[0]
+    let idx = runner.game.players[0]
         .hand
         .iter()
         .position(|c| runner.game.card_data[c.data_index].card_id == "BT21-044")
         .expect("RizeGreymon in hand");
-    let battle_idx = runner.play(0, idx).expect("RizeGreymon plays onto the field");
+    let battle_idx = runner
+        .play(0, idx)
+        .expect("RizeGreymon plays onto the field");
     PermanentHandle {
         player: 0,
         index: battle_idx as u8,
@@ -352,7 +357,12 @@ fn bt21_044_on_play_treats_marcus_as_3000_digimon_with_rush_alliance() {
     play_rize(&mut runner);
 
     // Pick the Marcus Damon (the first valid action).
-    let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
     runner
         .game
         .resolve_selection(0, action)
@@ -369,7 +379,9 @@ fn bt21_044_on_play_treats_marcus_as_3000_digimon_with_rush_alliance() {
         "Marcus must be treated as a 3000 DP Digimon"
     );
     assert!(
-        runner.modifiers().has(marcus, ModifierType::CannotDigivolve),
+        runner
+            .modifiers()
+            .has(marcus, ModifierType::CannotDigivolve),
         "Marcus must gain CannotDigivolve"
     );
     assert!(
@@ -388,7 +400,12 @@ fn bt21_044_on_play_marcus_grants_expire_at_end_of_turn() {
     let mut runner = rizegreymon_runner();
     let marcus = runner.place_on_field(0, "MARCUS-Y", Some(0));
     play_rize(&mut runner);
-    let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
     runner.game.resolve_selection(0, action).expect("resolves");
     // Part (b) "1 of your Digimon may attack" is optional. Marcus is now treated
     // as a Digimon, so it (and RizeGreymon) are legal attacker candidates —
@@ -420,7 +437,9 @@ fn bt21_044_on_play_marcus_grants_expire_at_end_of_turn() {
         "TreatAsDigimon must expire at end of turn"
     );
     assert!(
-        !runner.modifiers().has(marcus, ModifierType::CannotDigivolve),
+        !runner
+            .modifiers()
+            .has(marcus, ModifierType::CannotDigivolve),
         "CannotDigivolve must expire at end of turn"
     );
     assert!(
@@ -465,7 +484,12 @@ fn bt21_044_on_play_then_one_digimon_may_attack() {
     play_rize(&mut runner);
 
     // 1) Resolve the mandatory Marcus pick.
-    let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
     runner.game.resolve_selection(0, action).expect("resolves");
 
     // 2) The "1 of your Digimon may attack" optional selection must install.
@@ -494,9 +518,10 @@ fn bt21_044_clause1_fires_when_digivolving() {
     let _marcus = runner.place_on_field(0, "MARCUS-Y", Some(0));
     let rize = runner.place_stack(0, &["LV5-BASE", "BT21-044"]);
 
-    runner
-        .game
-        .enqueue_triggered(CompiledTimingShim::when_digivolving(), TriggerSource::Permanent(rize));
+    runner.game.enqueue_triggered(
+        CompiledTimingShim::when_digivolving(),
+        TriggerSource::Permanent(rize),
+    );
     runner.game.drain_effect_queue();
 
     let pending = runner
@@ -596,13 +621,21 @@ fn bt21_044_deletion_places_marcus_from_trash_to_top_security() {
 fn bt21_044_placed_security_card_is_marcus_on_top() {
     let (mut runner, tamer) = deletion_runner_with_rize_on_field();
     runner.game.delete_permanent_with_effects(tamer);
-    let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
     runner.game.resolve_selection(0, action).expect("resolves");
     let _ = runner.auto_resolve();
 
     let top = &runner.game.players[0].security[0];
     let name = runner.game.card_data[top.data_index].card_name.clone();
-    assert_eq!(name, "Marcus Damon", "top security card must be the Marcus Damon");
+    assert_eq!(
+        name, "Marcus Damon",
+        "top security card must be the Marcus Damon"
+    );
 }
 
 /// OPTIONAL DECLINE: deleting an eligible Tamer offers the place, but PASS leaves
@@ -681,8 +714,16 @@ fn bt21_044_deletion_observer_is_once_per_turn() {
 
     // First deletion fires; accept the place.
     runner.game.delete_permanent_with_effects(tamer1);
-    let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
-    runner.game.resolve_selection(0, action).expect("first resolves");
+    let action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
+    runner
+        .game
+        .resolve_selection(0, action)
+        .expect("first resolves");
     let _ = runner.auto_resolve();
     let sec_after_first = runner.security_count(0);
 
@@ -710,8 +751,16 @@ fn bt21_044_deletion_opt_clears_next_turn() {
     let tamer1 = runner.place_on_field(0, "MARCUS-Y", Some(0));
 
     runner.game.delete_permanent_with_effects(tamer1);
-    let action = runner.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
-    runner.game.resolve_selection(0, action).expect("first resolves");
+    let action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .valid_action_ids[0];
+    runner
+        .game
+        .resolve_selection(0, action)
+        .expect("first resolves");
     let _ = runner.auto_resolve();
 
     // Cycle back to P0's turn.

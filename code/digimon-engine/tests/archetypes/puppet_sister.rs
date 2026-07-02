@@ -418,13 +418,27 @@ fn combo1_fable_waltz_delay_digivolves_base_into_ex11_022() {
     runner.game.suspend(arisa);
     // Base pick → EX11-022 hand pick → cost-reduced digivolve.
     {
-        let view = runner.pending_selection_view().expect("Delay base selection");
-        let pick = view.valid_action_ids.iter().copied().find(|&a| a != PASS).unwrap();
+        let view = runner
+            .pending_selection_view()
+            .expect("Delay base selection");
+        let pick = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .unwrap();
         runner.execute_action(view.selecting_player, pick).unwrap();
     }
     {
-        let view = runner.pending_selection_view().expect("Delay hand-evo selection");
-        let pick = view.valid_action_ids.iter().copied().find(|&a| a != PASS).unwrap();
+        let view = runner
+            .pending_selection_view()
+            .expect("Delay hand-evo selection");
+        let pick = view
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != PASS)
+            .unwrap();
         runner.execute_action(view.selecting_player, pick).unwrap();
     }
     runner.auto_resolve().expect("complete the Delay digivolve");
@@ -1082,8 +1096,7 @@ fn combo4_without_fodder_overclock_unpayable_no_fanout() {
         after.field[opp as usize], before.field[opp as usize],
         "no death event means no Kaguyamon removal — opponent board untouched \
          (before={}, after={})",
-        before.field[opp as usize],
-        after.field[opp as usize],
+        before.field[opp as usize], after.field[opp as usize],
     );
     assert!(
         !hand_has(&runner, tp as usize, "ST1-04"),

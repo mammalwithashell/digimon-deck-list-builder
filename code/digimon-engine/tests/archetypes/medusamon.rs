@@ -71,7 +71,11 @@ fn settle(runner: &mut DebugRunner) {
         } else {
             v.valid_action_ids[0]
         };
-        if runner.game.resolve_selection(v.selecting_player, act).is_err() {
+        if runner
+            .game
+            .resolve_selection(v.selecting_player, act)
+            .is_err()
+        {
             break;
         }
     }
@@ -141,7 +145,9 @@ fn push_to_trash(runner: &mut DebugRunner, p: u8, card_id: &str) {
     let next = runner.game.next_card_index();
     runner.game.players[p as usize]
         .trash
-        .push(digimon_engine::card_source::CardSource::new(data_idx, p, next));
+        .push(digimon_engine::card_source::CardSource::new(
+            data_idx, p, next,
+        ));
 }
 
 // ═════════════════════════════════════════════════════════════════════════════
@@ -227,7 +233,11 @@ fn petrification_token_deletion_chains_into_styracomon_removal() {
     let target = runner
         .pending_selection_view()
         .expect("delete-target selection installs after accept");
-    assert_eq!(target.kind, SelectionKind::OppField, "selects an opp Digimon");
+    assert_eq!(
+        target.kind,
+        SelectionKind::OppField,
+        "selects an opp Digimon"
+    );
     runner
         .game
         .resolve_selection(target.selecting_player, target.valid_action_ids[0])
@@ -688,7 +698,11 @@ fn ex11_012_survives_by_deleting_opponents_petrification_token() {
         1,
         "EX11-012 must survive by deleting the opponent's Petrification token"
     );
-    assert_eq!(token_count(&runner, 1), 0, "the opponent's token is consumed");
+    assert_eq!(
+        token_count(&runner, 1),
+        0,
+        "the opponent's token is consumed"
+    );
     assert_eq!(
         runner.security_count(1),
         sec_before - 1,
@@ -753,7 +767,9 @@ fn drive_cheat_in(runner: &mut DebugRunner) {
         .game
         .resolve_selection(v.selecting_player, v.valid_action_ids[0])
         .expect("select Elizamon");
-    let v = runner.pending_selection_view().expect("Dimetromon trash-select");
+    let v = runner
+        .pending_selection_view()
+        .expect("Dimetromon trash-select");
     runner
         .game
         .resolve_selection(v.selecting_player, v.valid_action_ids[0])
@@ -868,7 +884,11 @@ fn cheat_in_blocked_without_owen_silences_the_chain() {
         opp_hand_before,
         "no security swap chains without the cheat-in"
     );
-    assert_eq!(runner.security_count(1), opp_sec_before, "opponent security untouched");
+    assert_eq!(
+        runner.security_count(1),
+        opp_sec_before,
+        "opponent security untouched"
+    );
     assert_eq!(runner.memory(), mem_before, "no inherited memory gained");
 }
 

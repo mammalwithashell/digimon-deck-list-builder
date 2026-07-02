@@ -410,7 +410,9 @@ fn st24_06_then_play_or_use_is_declinable() {
     // DECLINE the optional play-or-use.
     let v2 = runner.pending_selection_view().expect("hand pick installs");
     assert!(v2.is_optional);
-    runner.execute_action(0, PASS).expect("decline the play-or-use");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the play-or-use");
     let _ = runner.auto_resolve();
 
     assert_eq!(

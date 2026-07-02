@@ -52,7 +52,10 @@ fn bt25_092_structure_start_of_main_and_security() {
         .iter()
         .find(|t| t.when == vec![CompiledTiming::StartOfYourMainPhase])
         .expect("start-of-your-main-phase clause present");
-    assert!(start_main.optional, "the trash-as-cost clause is optional (\"by trashing\")");
+    assert!(
+        start_main.optional,
+        "the trash-as-cost clause is optional (\"by trashing\")"
+    );
 
     assert!(
         triggered
@@ -102,7 +105,11 @@ fn bt25_092_start_of_main_trashes_ts_card_draws_and_gains_memory() {
         .expect("trash the TS card as cost");
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.trash_size(0), trash_before + 1, "TS card trashed as cost");
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before + 1,
+        "TS card trashed as cost"
+    );
     assert_eq!(runner.deck_size(0), deck_before - 1, "Draw 1 fired");
     assert_eq!(runner.memory(), memory_before + 1, "gained 1 memory");
 }
@@ -135,7 +142,9 @@ fn bt25_092_start_of_main_no_cost_card_does_not_fire() {
 // ── fixtures ─────────────────────────────────────────────────────────────
 
 fn asuna_runner() -> digimon_engine::debug_runner::DebugRunnerBuilder {
-    DebugRunner::builder().from_dsl_yaml(YAML).expect("BT25-092 YAML loads")
+    DebugRunner::builder()
+        .from_dsl_yaml(YAML)
+        .expect("BT25-092 YAML loads")
 }
 
 fn make_ts_hand_card(id: &str) -> digimon_engine::CardData {

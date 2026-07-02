@@ -167,13 +167,7 @@ impl Game {
                     index: index as u8,
                 };
                 let top = perm.top_card();
-                sources.push((
-                    top.data_index,
-                    top.handle(),
-                    Some(handle),
-                    player_id,
-                    false,
-                ));
+                sources.push((top.data_index, top.handle(), Some(handle), player_id, false));
 
                 let stack_size = perm.card_sources.len();
                 for (source_index, source) in perm.card_sources.iter().enumerate() {
@@ -196,13 +190,7 @@ impl Game {
                     index: crate::action::space::BREEDING_TARGET as u8,
                 };
                 let top = perm.top_card();
-                sources.push((
-                    top.data_index,
-                    top.handle(),
-                    Some(handle),
-                    player_id,
-                    false,
-                ));
+                sources.push((top.data_index, top.handle(), Some(handle), player_id, false));
             }
 
             // Track H §5 — security-zone-sourced auras. Face-up security
@@ -221,18 +209,13 @@ impl Game {
                 if !player.face_up_security.contains(&card.card_index) {
                     continue;
                 }
-                sources.push((
-                    card.data_index,
-                    card.handle(),
-                    None,
-                    player_id,
-                    false,
-                ));
+                sources.push((card.data_index, card.handle(), None, player_id, false));
             }
         }
 
         for (data_index, source_card, source_permanent, controller, inherited_source) in sources {
-            let Some(effects) = self.effects_for_card(&self.card_data[data_index].card_id, source_card)
+            let Some(effects) =
+                self.effects_for_card(&self.card_data[data_index].card_id, source_card)
             else {
                 continue;
             };
@@ -259,8 +242,9 @@ impl Game {
                 // grant still materializes there), but the real game loads them
                 // from `cards.json`, where the double-count would otherwise show.
                 if let Some(kw) = effect.granted_keyword {
-                    let already_printed =
-                        self.card_data_by_id(&self.card_data[data_index].card_id).is_some_and(|cd| {
+                    let already_printed = self
+                        .card_data_by_id(&self.card_data[data_index].card_id)
+                        .is_some_and(|cd| {
                             if inherited_source {
                                 inherited_keywords(cd).contains(&kw)
                             } else {
@@ -317,17 +301,13 @@ impl Game {
                     index: index as u8,
                 };
                 for linked in &perm.linked_cards {
-                    linked_sources.push((
-                        linked.data_index,
-                        linked.handle(),
-                        host,
-                        player_id,
-                    ));
+                    linked_sources.push((linked.data_index, linked.handle(), host, player_id));
                 }
             }
         }
         for (data_index, source_card, host, controller) in linked_sources {
-            let Some(effects) = self.effects_for_card(&self.card_data[data_index].card_id, source_card)
+            let Some(effects) =
+                self.effects_for_card(&self.card_data[data_index].card_id, source_card)
             else {
                 continue;
             };

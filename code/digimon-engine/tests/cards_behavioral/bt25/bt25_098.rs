@@ -366,7 +366,9 @@ fn bt25_098_main_with_no_appmon_revealed_trashes_all_three_and_still_places() {
     }
 
     assert!(
-        !hand_ids(&runner, 0).iter().any(|id| id.starts_with("PLAIN")),
+        !hand_ids(&runner, 0)
+            .iter()
+            .any(|id| id.starts_with("PLAIN")),
         "no non-Appmon card is ever added to hand: {:?}",
         hand_ids(&runner, 0)
     );
@@ -429,9 +431,7 @@ fn bt25_098_delay_after_placing_turn_plays_appmon_for_three_less() {
 
     // Activate the standard <Delay> [Main] on the delay option's field slot.
     assert!(
-        runner
-            .game
-            .activate_field_main(0, handle.index as usize),
+        runner.game.activate_field_main(0, handle.index as usize),
         "the standard <Delay> [Main] is activatable after the placing turn"
     );
 
@@ -630,9 +630,7 @@ fn bt25_098_delay_with_no_appmon_in_hand_offers_only_pass_or_skips() {
     runner.game.set_memory(10);
 
     assert!(
-        runner
-            .game
-            .activate_field_main(0, handle.index as usize),
+        runner.game.activate_field_main(0, handle.index as usize),
         "the <Delay> must be activatable (placing-turn gate has passed)"
     );
 

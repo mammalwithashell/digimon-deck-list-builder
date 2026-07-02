@@ -67,9 +67,10 @@ fn digimon(card_id: &str, dp: i32, keywords: Vec<Keyword>) -> CardData {
 
 fn lock(r: &mut DebugRunner, handle: PermanentHandle, modifier: ModifierType, expiry: Expiry) {
     let source_player = 1 - handle.player;
-    r.game
-        .modifiers
-        .add(handle, ModifierEntry::simple(modifier, 0, expiry, source_player));
+    r.game.modifiers.add(
+        handle,
+        ModifierEntry::simple(modifier, 0, expiry, source_player),
+    );
 }
 
 fn base_runner() -> DebugRunner {
@@ -110,7 +111,12 @@ fn cannot_suspend_zeroes_attack_bits_for_locked_attacker_only() {
         "sanity: digimon-attack bit lit before the lock"
     );
 
-    lock(&mut r, locked, ModifierType::CannotSuspend, Expiry::Permanent);
+    lock(
+        &mut r,
+        locked,
+        ModifierType::CannotSuspend,
+        Expiry::Permanent,
+    );
 
     let after = build_action_mask(&r.game, tp);
     for target in 0..=SECURITY_TARGET {
@@ -166,7 +172,12 @@ fn cannot_attack_zeroes_attack_bits_for_locked_attacker_only() {
         "sanity: digimon-attack bit lit before the lock"
     );
 
-    lock(&mut r, locked, ModifierType::CannotAttack, Expiry::Permanent);
+    lock(
+        &mut r,
+        locked,
+        ModifierType::CannotAttack,
+        Expiry::Permanent,
+    );
 
     let after = build_action_mask(&r.game, tp);
     for target in 0..=SECURITY_TARGET {
@@ -201,7 +212,12 @@ fn cannot_suspend_rejects_attack_declaration_at_api() {
     let def = r.place_on_field(opp, "DEF", Some(0));
     r.game.players[opp as usize].battle_area[def.index as usize].is_suspended = true;
 
-    lock(&mut r, locked, ModifierType::CannotSuspend, Expiry::Permanent);
+    lock(
+        &mut r,
+        locked,
+        ModifierType::CannotSuspend,
+        Expiry::Permanent,
+    );
 
     let security_before = r.security_count(opp);
     let result = r.attack_player(locked, opp, false);
@@ -239,7 +255,12 @@ fn cannot_suspend_expiry_restores_attack() {
     let locked = r.place_on_field(tp, "ATK", Some(0));
     let _def = r.place_on_field(opp, "DEF", Some(0));
 
-    lock(&mut r, locked, ModifierType::CannotSuspend, Expiry::EndOfTurn);
+    lock(
+        &mut r,
+        locked,
+        ModifierType::CannotSuspend,
+        Expiry::EndOfTurn,
+    );
     assert_eq!(
         r.attack_player(locked, opp, false),
         AttackResult::Invalid,
@@ -300,10 +321,7 @@ fn cannot_suspend_excludes_blocker_from_block_window() {
         .iter()
         .find(|p| p.top_card().card_id(&r.game.card_data) == "BLK")
         .expect("the locked Blocker survived (it never blocked)");
-    assert!(
-        !blk_perm.is_suspended,
-        "the locked Blocker never suspends"
-    );
+    assert!(!blk_perm.is_suspended, "the locked Blocker never suspends");
 }
 
 /// With one locked and one free Blocker, the BlockTiming candidate list
@@ -328,10 +346,19 @@ fn cannot_suspend_filters_block_candidate_list() {
         .modifiers
         .grant_keyword(free_blk, Keyword::Blocker, Expiry::Permanent, 1);
 
-    lock(&mut r, locked_blk, ModifierType::CannotSuspend, Expiry::Permanent);
+    lock(
+        &mut r,
+        locked_blk,
+        ModifierType::CannotSuspend,
+        Expiry::Permanent,
+    );
 
     let result = r.attack_digimon(atk, def, false);
-    assert_eq!(result, AttackResult::InProgress, "free Blocker opens the window");
+    assert_eq!(
+        result,
+        AttackResult::InProgress,
+        "free Blocker opens the window"
+    );
     assert_eq!(r.current_phase(), GamePhase::BlockTiming);
     let pending = r
         .game
@@ -358,7 +385,12 @@ fn cannot_suspend_makes_effect_suspend_noop() {
     let locked = r.place_on_field(opp, "DEF", Some(0));
     let free = r.place_on_field(opp, "ATK2", Some(0));
 
-    lock(&mut r, locked, ModifierType::CannotSuspend, Expiry::Permanent);
+    lock(
+        &mut r,
+        locked,
+        ModifierType::CannotSuspend,
+        Expiry::Permanent,
+    );
 
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, tp);
@@ -391,7 +423,12 @@ fn cannot_unsuspend_makes_effect_unsuspend_noop() {
     r.game.players[opp as usize].battle_area[locked.index as usize].is_suspended = true;
     r.game.players[opp as usize].battle_area[free.index as usize].is_suspended = true;
 
-    lock(&mut r, locked, ModifierType::CannotUnsuspend, Expiry::Permanent);
+    lock(
+        &mut r,
+        locked,
+        ModifierType::CannotUnsuspend,
+        Expiry::Permanent,
+    );
 
     {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), None, tp);
@@ -419,7 +456,12 @@ fn cannot_suspend_blocks_suspend_self_as_cost() {
     let tp = r.game.turn_player();
 
     let locked = r.place_on_field(tp, "ATK", Some(0));
-    lock(&mut r, locked, ModifierType::CannotSuspend, Expiry::Permanent);
+    lock(
+        &mut r,
+        locked,
+        ModifierType::CannotSuspend,
+        Expiry::Permanent,
+    );
 
     let paid = {
         let mut ctx = EffectContext::new(&mut r.game, CardHandle(0), Some(locked), tp);
@@ -459,7 +501,12 @@ fn cannot_suspend_filters_alliance_ally_candidates() {
     let locked_ally = r.place_on_field(0, "ALLY", Some(0));
     let free_ally = r.place_on_field(0, "ALLY2", Some(0));
 
-    lock(&mut r, locked_ally, ModifierType::CannotSuspend, Expiry::Permanent);
+    lock(
+        &mut r,
+        locked_ally,
+        ModifierType::CannotSuspend,
+        Expiry::Permanent,
+    );
 
     let result = r.attack_player(atk, 1, false);
     assert_eq!(
@@ -490,7 +537,12 @@ fn cannot_suspend_blocks_evade_cost() {
         .start();
     let evade = r.place_on_field(0, "EVADE", None);
 
-    lock(&mut r, evade, ModifierType::CannotSuspend, Expiry::Permanent);
+    lock(
+        &mut r,
+        evade,
+        ModifierType::CannotSuspend,
+        Expiry::Permanent,
+    );
 
     r.game.delete_permanent_with_effects(evade);
 

@@ -87,9 +87,10 @@ pub struct DivergenceReport {
 ///   the engine itself — native self-play / eval). Default for
 ///   `NativeAdapter`.
 /// - `CheckThenApply`: verify the recorded actor and mask-membership of the
-///   action BEFORE applying; on a mismatch record a [`Divergence`] and pause
-///   (differential replay against a battle-tested oracle — DCGO). Default for
-///   `DcgoAdapter` (Group 4).
+///   action BEFORE applying. `CONCEDE_GAME` is accepted as the explicit
+///   surrender primitive even when hidden from RL masks. On a mismatch record
+///   a [`Divergence`] and pause (differential replay against a battle-tested
+///   oracle — DCGO). Default for `DcgoAdapter` (Group 4).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum StepPolicy {
     Trust,
@@ -105,7 +106,10 @@ pub enum DivergenceKind {
     /// Recorded action not set in the engine's legal-action mask.
     MaskMiss { sample_legal_ids: Vec<u16> },
     /// Engine expected a different decision player than the recording.
-    Actor { expected: PlayerId, recorded: PlayerId },
+    Actor {
+        expected: PlayerId,
+        recorded: PlayerId,
+    },
     /// Replayed memory differs from the recorded value.
     Memory { recorded: i64, replayed: i64 },
     /// Replayed phase differs from the recorded value.
@@ -1033,8 +1037,9 @@ impl ReplayDriver {
 
     /// Apply exactly one replayable step against `game`. No-op once complete
     /// or paused. Under `CheckThenApply`, verifies actor + mask-membership
-    /// first; a mismatch records a [`Divergence`] and pauses without
-    /// applying or aborting.
+    /// first. `CONCEDE_GAME` is accepted as the decoder-supported surrender
+    /// primitive even though RL masks intentionally hide it. A mismatch
+    /// records a [`Divergence`] and pauses without applying or aborting.
     pub(crate) fn step(&mut self, game: &mut Game) -> ReplayStepResult {
         if self.is_complete() || self.paused {
             return self.no_progress_result(game);
@@ -1072,7 +1077,8 @@ impl ReplayDriver {
                 return self.no_progress_result(game);
             }
             let mask = crate::action::build_action_mask(game, actor);
-            let legal = mask.get(action_id as usize).copied().unwrap_or(0.0) > 0.5;
+            let legal = action_id == crate::action::space::CONCEDE_GAME
+                || mask.get(action_id as usize).copied().unwrap_or(0.0) > 0.5;
             if !legal {
                 let sample = sample_legal_ids(&mask, 10);
                 self.divergences.push(Divergence {

@@ -95,7 +95,10 @@ fn bt25_059_has_op_wd_suspend_clause() {
         .process
         .iter()
         .any(|s| matches!(s, CompiledStep::SelectCountCappedMulti { .. }));
-    assert!(has_suspend, "OP/WD clause has a count-capped suspend selection");
+    assert!(
+        has_suspend,
+        "OP/WD clause has a count-capped suspend selection"
+    );
 }
 
 #[test]
@@ -112,7 +115,10 @@ fn bt25_059_has_on_suspend_debuff_clause() {
         .expect("on_suspend clause present");
     assert!(clause.once_per_turn, "[Once Per Turn]");
     assert!(
-        clause.process.iter().any(|s| matches!(s, CompiledStep::AddDpModifier { .. })),
+        clause
+            .process
+            .iter()
+            .any(|s| matches!(s, CompiledStep::AddDpModifier { .. })),
         "on_suspend clause applies a DP modifier"
     );
 }
@@ -129,10 +135,7 @@ fn bt25_059_on_play_installs_suspend_up_to_2_prompt() {
     runner.fire_on_play(0, ceres.index as usize);
 
     assert!(
-        matches!(
-            runner.pending_kind(),
-            Some(SelectionKind::OwnField)
-        ),
+        matches!(runner.pending_kind(), Some(SelectionKind::OwnField)),
         "suspend-up-to-2 prompt installs"
     );
 }
@@ -155,7 +158,10 @@ fn bt25_059_suspend_picks_actually_suspend_targets() {
         .battle_area
         .iter()
         .any(|p| p.is_suspended);
-    assert!(suspended, "at least one Digimon was suspended by the effect");
+    assert!(
+        suspended,
+        "at least one Digimon was suspended by the effect"
+    );
 }
 
 // ─── Behavior: on_suspend DP debuff ─────────────────────────────────────────
@@ -170,15 +176,14 @@ fn bt25_059_on_suspend_debuffs_opponent_digimon() {
     // Suspending a Digimon (via Ceresmon's OP/WD) triggers the on_suspend clause.
     runner.fire_on_play(0, ceres.index as usize);
     // Resolve the suspend-up-to-2 selection by suspending Ceresmon itself.
-    if matches!(
-        runner.pending_kind(),
-        Some(SelectionKind::OwnField)
-    ) {
+    if matches!(runner.pending_kind(), Some(SelectionKind::OwnField)) {
         let view = runner.pending_selection_view().unwrap();
         runner
             .execute_action(view.selecting_player, view.valid_action_ids[0])
             .expect("suspend 1");
-        runner.auto_resolve().expect("resolve cascade incl. on_suspend debuff");
+        runner
+            .auto_resolve()
+            .expect("resolve cascade incl. on_suspend debuff");
     }
 
     // The on_suspend observer gives the opponent Digimon -3000 per suspended.

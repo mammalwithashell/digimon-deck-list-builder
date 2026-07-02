@@ -12,6 +12,7 @@
 use digimon_dsl::compiled::{
     CompiledBindingRef, CompiledPlayerRef, CompiledStackPosition, CompiledStep,
 };
+use digimon_engine::action::space::HAND_EFFECT_START;
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::dsl_cards::bindings::Bindings;
@@ -290,6 +291,103 @@ fn place_remainder_on_deck_installs_permutation_selection_and_resolves() {
         runner.game.players[0].deck.last().unwrap().handle(),
         rem_handle,
         "card at top of deck"
+    );
+}
+
+#[test]
+fn place_remainder_on_deck_choice_prompt_clones_faithfully() {
+    let mut runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "SRC"))
+        .add_card(make_test_card("REM", "REM"))
+        .hand(0, &["SRC"])
+        .deck(0, &["REM"])
+        .build();
+
+    let src_card = runner.game.players[0].hand[0].handle();
+    let rem_handle = push_deck_card_to_reveal(&mut runner);
+
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src_card, None, 0);
+        let mut bindings = Bindings::new();
+        run_steps(
+            &[CompiledStep::PlaceRemainderOnDeck {
+                of: CompiledPlayerRef::You,
+                position: CompiledStackPosition::Choice,
+            }],
+            &mut ctx,
+            &mut bindings,
+        );
+    }
+
+    let top_choice = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("top/bottom remainder placement prompt should be parked")
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|id| *id == HAND_EFFECT_START)
+        .expect("top choice should be the first effect-choice action");
+    assert!(
+        runner.game.pending_selection_resume.is_some(),
+        "top/bottom remainder placement prompt must be resume-driven before cloning"
+    );
+
+    let mut clone = runner.game.clone();
+    clone
+        .resolve_selection(0, top_choice)
+        .expect("clone resolves top/bottom choice");
+
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "resolving the clone must not clear the original choice prompt"
+    );
+    assert!(
+        runner.game.players[0].deck.is_empty(),
+        "resolving the clone must not mutate the original deck"
+    );
+
+    runner
+        .game
+        .resolve_selection(0, top_choice)
+        .expect("original resolves the same top/bottom choice");
+
+    let clone_permutation = clone
+        .pending_selection
+        .as_ref()
+        .expect("clone should continue into the ordered permutation prompt")
+        .valid_action_ids[0];
+    let original_permutation = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("original should continue into the ordered permutation prompt")
+        .valid_action_ids[0];
+    assert!(
+        clone.pending_selection_resume.is_some(),
+        "clone's ordered permutation prompt should remain resume-driven"
+    );
+    assert!(
+        runner.game.pending_selection_resume.is_some(),
+        "original's ordered permutation prompt should remain resume-driven"
+    );
+
+    clone
+        .resolve_selection(0, clone_permutation)
+        .expect("clone resolves ordered permutation");
+    runner
+        .game
+        .resolve_selection(0, original_permutation)
+        .expect("original resolves ordered permutation");
+
+    assert_eq!(clone.players[0].deck.len(), 1);
+    assert_eq!(runner.game.players[0].deck.len(), 1);
+    assert_eq!(clone.players[0].deck[0].handle(), rem_handle);
+    assert_eq!(
+        clone.players[0].deck[0].handle(),
+        runner.game.players[0].deck[0].handle(),
+        "clone and original should return the same revealed card after the same choices"
     );
 }
 

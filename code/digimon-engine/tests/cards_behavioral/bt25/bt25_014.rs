@@ -111,18 +111,22 @@ fn bt25_014_has_main_clause_and_inherited_when_attacking() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
 
-    let has_main = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::MainOnField)
-    ));
+    let has_main = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::MainOnField)
+        )
+    });
     assert!(has_main, "BT25-014 must have a [Main] activated clause");
 
-    let inherited_wa = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.scope == CompiledScope::Inherited
-                && t.when.contains(&CompiledTiming::WhenAttacking)
-    ));
+    let inherited_wa = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.scope == CompiledScope::Inherited
+                    && t.when.contains(&CompiledTiming::WhenAttacking)
+        )
+    });
     assert!(
         inherited_wa,
         "BT25-014 must have an inherited When Attacking clause"
@@ -137,7 +141,9 @@ fn bt25_014_main_clause_is_once_per_turn() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::MainOnField) => Some(t),
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::MainOnField) => {
+                Some(t)
+            }
             _ => None,
         })
         .expect("main clause present");
@@ -156,7 +162,10 @@ fn bt25_014_main_installs_prompt_with_flame_in_hand() {
 
     // Fire the Main activated effect of Meramon (field index 0).
     let fired = fire_main(&mut runner, 0, 0);
-    assert!(fired, "Main effect must be activatable with a Flame card in hand");
+    assert!(
+        fired,
+        "Main effect must be activatable with a Flame card in hand"
+    );
     assert!(
         runner.pending_selection().is_some(),
         "activating Main installs the trash-cost / delete prompt"

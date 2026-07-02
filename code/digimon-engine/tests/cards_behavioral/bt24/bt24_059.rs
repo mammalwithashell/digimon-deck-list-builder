@@ -236,7 +236,10 @@ fn bt24_059_on_deletion_plays_ts_card_suspended_for_free() {
                 && buckets[0].min == 0
                 && buckets[0].max == 1)
     });
-    assert!(bucket_ok, "must offer an optional single-pick reveal bucket");
+    assert!(
+        bucket_ok,
+        "must offer an optional single-pick reveal bucket"
+    );
 
     // Play the picked card for free, binding the played permanent.
     let play_binding = od
@@ -269,7 +272,10 @@ fn bt24_059_on_deletion_plays_ts_card_suspended_for_free() {
             .any(|inner| matches!(inner, CompiledStep::TrashFromReveal { .. })),
         _ => false,
     });
-    assert!(has_trash_rest, "On Deletion must trash the remaining revealed cards");
+    assert!(
+        has_trash_rest,
+        "On Deletion must trash the remaining revealed cards"
+    );
 }
 
 /// Clause C — an inherited When Attacking clause exists, optional, once-per-turn.
@@ -453,9 +459,10 @@ fn bt24_059_on_deletion_installs_optional_ts_selection() {
         .start();
 
     let shark = runner.place_on_field(0, CARD_ID, Some(0));
-    runner
-        .game
-        .delete_permanent_with_cause(shark, digimon_engine::replacement::ReplacementCause::OpponentEffect);
+    runner.game.delete_permanent_with_cause(
+        shark,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
     runner.game.drain_effect_queue();
 
     let view = runner
@@ -483,9 +490,10 @@ fn bt24_059_on_deletion_plays_ts_card_suspended_and_trashes_rest() {
         .start();
 
     let shark = runner.place_on_field(0, CARD_ID, Some(0));
-    runner
-        .game
-        .delete_permanent_with_cause(shark, digimon_engine::replacement::ReplacementCause::OpponentEffect);
+    runner.game.delete_permanent_with_cause(
+        shark,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
     runner.game.drain_effect_queue();
 
     let field_before = runner.battle_area_size(0);
@@ -543,9 +551,10 @@ fn bt24_059_on_deletion_ts_tamer_is_eligible() {
         .start();
 
     let shark = runner.place_on_field(0, CARD_ID, Some(0));
-    runner
-        .game
-        .delete_permanent_with_cause(shark, digimon_engine::replacement::ReplacementCause::OpponentEffect);
+    runner.game.delete_permanent_with_cause(
+        shark,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
     runner.game.drain_effect_queue();
 
     let view = runner
@@ -571,9 +580,10 @@ fn bt24_059_on_deletion_non_ts_and_overcost_not_eligible() {
         .start();
 
     let shark = runner.place_on_field(0, CARD_ID, Some(0));
-    runner
-        .game
-        .delete_permanent_with_cause(shark, digimon_engine::replacement::ReplacementCause::OpponentEffect);
+    runner.game.delete_permanent_with_cause(
+        shark,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
     runner.game.drain_effect_queue();
 
     // No eligible card → bucket auto-skips (no selection), or, if installed, the
@@ -601,9 +611,10 @@ fn bt24_059_on_deletion_decline_trashes_all_three() {
 
     let shark = runner.place_on_field(0, CARD_ID, Some(0));
     let trash_before = runner.trash_size(0);
-    runner
-        .game
-        .delete_permanent_with_cause(shark, digimon_engine::replacement::ReplacementCause::OpponentEffect);
+    runner.game.delete_permanent_with_cause(
+        shark,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
     runner.game.drain_effect_queue();
 
     if runner.pending_selection_view().is_some() {
@@ -789,7 +800,9 @@ fn bt24_059_inherited_q12_token_source_counts_and_unsuspends() {
         .find(|a| **a != PASS)
         .copied()
         .expect("token-like permanent is a legal placement");
-    runner.execute_action(0, pick).expect("place token-like source");
+    runner
+        .execute_action(0, pick)
+        .expect("place token-like source");
     runner.game.drain_effect_queue();
     let _ = runner.auto_resolve();
 

@@ -142,9 +142,10 @@ fn st24_15_has_main_somp_and_security_clauses() {
         "[Main] clause present"
     );
     assert!(
-        triggered
+        triggered.iter().any(|t| t
+            .when
             .iter()
-            .any(|t| t.when.iter().any(|w| *w == CompiledTiming::StartOfYourMainPhase)),
+            .any(|w| *w == CompiledTiming::StartOfYourMainPhase)),
         "[Start of Your Main Phase] relocate clause present"
     );
     assert!(
@@ -163,7 +164,9 @@ fn st24_15_somp_clause_relocates_self_under_a_tamer() {
         .iter()
         .find_map(|c| match c {
             CompiledClause::Triggered(t)
-                if t.when.iter().any(|w| *w == CompiledTiming::StartOfYourMainPhase) =>
+                if t.when
+                    .iter()
+                    .any(|w| *w == CompiledTiming::StartOfYourMainPhase) =>
             {
                 Some(t)
             }
@@ -180,14 +183,20 @@ fn st24_15_somp_clause_relocates_self_under_a_tamer() {
 // Section 2 — [Start of Your Main Phase] relocate → Draw 1 + gain 1 memory
 // ════════════════════════════════════════════════════════════════════════════
 
-fn setup_field_option(with_ds_tamer: bool, with_plain_tamer: bool) -> (DebugRunner, PermanentHandle) {
+fn setup_field_option(
+    with_ds_tamer: bool,
+    with_plain_tamer: bool,
+) -> (DebugRunner, PermanentHandle) {
     let mut builder = DebugRunner::builder()
         .add_card(dna_charge())
         .add_card(ds_tamer("DST"))
         .add_card(plain_tamer("PT"))
         .add_card(ds_digimon("DSD"))
         .add_card(filler("FILLER"));
-    builder = builder.deck(0, &["FILLER"; 6]).deck(1, &["FILLER"; 6]).memory(5);
+    builder = builder
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(5);
     let mut runner = builder.start();
     runner.set_first_player(0);
 
@@ -206,7 +215,10 @@ fn tamer_handle(runner: &DebugRunner, id: &str) -> PermanentHandle {
         .battle_area
         .iter()
         .position(|p| p.top_card().card_id(&runner.game.card_data) == id)
-        .map(|i| PermanentHandle { player: 0, index: i as u8 })
+        .map(|i| PermanentHandle {
+            player: 0,
+            index: i as u8,
+        })
         .unwrap_or_else(|| panic!("{id} not on field"))
 }
 
@@ -274,8 +286,13 @@ fn st24_15_somp_relocate_is_declinable() {
 
     fire_start_of_main(&mut runner);
     if let Some(v) = runner.pending_selection_view() {
-        assert!(v.is_optional, "the relocate is optional (canNoSelect: true)");
-        runner.execute_action(v.selecting_player, PASS).expect("decline");
+        assert!(
+            v.is_optional,
+            "the relocate is optional (canNoSelect: true)"
+        );
+        runner
+            .execute_action(v.selecting_player, PASS)
+            .expect("decline");
     }
     let _ = runner.auto_resolve();
 
@@ -302,7 +319,11 @@ fn st24_15_somp_no_ds_tamer_no_relocate() {
         runner.game.pending_selection.is_none(),
         "no [DATA SQUAD] Tamer ⇒ no relocate prompt"
     );
-    assert_eq!(runner.battle_area_size(0), ba_before, "DNA Charge stays on the field");
+    assert_eq!(
+        runner.battle_area_size(0),
+        ba_before,
+        "DNA Charge stays on the field"
+    );
     assert_eq!(runner.hand_size(0), hand_before, "no draw");
     assert_eq!(runner.memory(), mem_before, "no memory gain");
 }

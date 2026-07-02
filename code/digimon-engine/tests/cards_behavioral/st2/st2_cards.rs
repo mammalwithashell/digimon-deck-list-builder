@@ -321,7 +321,9 @@ fn st2_06_targets_sourceless_opponent_digimon() {
     // whose DCGO sources DO require a digivolution card. So a sourceless opponent
     // Digimon is a legal target (the trash is simply a no-op). The effect must
     // still activate and surface the choice.
-    let mut runner = st2_builder().add_card(digimon("OPP-NOSRC", 5, 5000)).start();
+    let mut runner = st2_builder()
+        .add_card(digimon("OPP-NOSRC", 5, 5000))
+        .start();
     let attacker = runner.place_stack(0, &["ST2-06", "ST2-08"]);
     // Opponent has exactly one Digimon, with NO digivolution cards.
     runner.place_on_field(1, "OPP-NOSRC", Some(0));
@@ -491,14 +493,20 @@ fn st2_14_security_restriction_survives_until_your_next_turn() {
     }
 
     assert!(
-        runner.game.modifiers.has(attacker, ModifierType::CannotAttack),
+        runner
+            .game
+            .modifiers
+            .has(attacker, ModifierType::CannotAttack),
         "Sorrow Blue [Security] locks the chosen no-source opponent Digimon"
     );
 
     // The attacker's (P0's) turn ends — the lock must NOT expire here.
     runner.end_turn();
     assert!(
-        runner.game.modifiers.has(attacker, ModifierType::CannotAttack),
+        runner
+            .game
+            .modifiers
+            .has(attacker, ModifierType::CannotAttack),
         "lock must survive the attacker's turn-end (it lasts until the END of the \
          security owner's NEXT turn, not the attacker's current turn)"
     );
@@ -506,7 +514,10 @@ fn st2_14_security_restriction_survives_until_your_next_turn() {
     // The security owner's (P1's) next turn ends — now the lock expires.
     runner.end_turn();
     assert!(
-        !runner.game.modifiers.has(attacker, ModifierType::CannotAttack),
+        !runner
+            .game
+            .modifiers
+            .has(attacker, ModifierType::CannotAttack),
         "lock expires at the end of the security owner's next turn"
     );
 }

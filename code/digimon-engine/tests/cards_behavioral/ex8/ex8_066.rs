@@ -153,11 +153,7 @@ fn ex8_066_metadata_matches_printed_card() {
     assert_eq!(card.cost, Some(3), "play cost 3");
     assert_eq!(card.level, None, "Tamers have no level");
     assert_eq!(card.dp, None, "Tamers have no DP");
-    assert_eq!(
-        card.color,
-        vec![CompiledColor::Blue],
-        "mono-blue Tamer"
-    );
+    assert_eq!(card.color, vec![CompiledColor::Blue], "mono-blue Tamer");
     assert!(
         card.traits.iter().any(|t| t == "LIBERATOR"),
         "must carry the LIBERATOR trait"
@@ -243,9 +239,7 @@ fn ex8_066_security_clause_is_mandatory_faceup_play_from_security() {
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity) => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity) => Some(t),
             _ => None,
         })
         .next()

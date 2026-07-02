@@ -230,8 +230,7 @@ impl Game {
         // re-call with a lower amount.
         let cause = self.infer_effect_cause(target.player);
         let subject = ReplacementSubject::Permanent(target);
-        let outcome =
-            self.try_replace(EffectTiming::WhenWouldBeDeDigivolved, subject, cause, None);
+        let outcome = self.try_replace(EffectTiming::WhenWouldBeDeDigivolved, subject, cause, None);
         if self.pending_selection.is_some() {
             return 0;
         }
@@ -241,12 +240,18 @@ impl Game {
                 return 0;
             }
             ReplacementOutcome::Redirected(_) => {
-                debug_assert!(false, "Redirected not meaningful for WhenWouldBeDeDigivolved");
+                debug_assert!(
+                    false,
+                    "Redirected not meaningful for WhenWouldBeDeDigivolved"
+                );
                 target
             }
             ReplacementOutcome::Substituted(ReplacementSubject::Permanent(other)) => other,
             ReplacementOutcome::Substituted(_) => {
-                debug_assert!(false, "non-Permanent substitute for WhenWouldBeDeDigivolved");
+                debug_assert!(
+                    false,
+                    "non-Permanent substitute for WhenWouldBeDeDigivolved"
+                );
                 target
             }
         };
@@ -256,7 +261,11 @@ impl Game {
         let mut popped: u8 = 0;
 
         while popped < max {
-            let perm = match self.player(target.player).battle_area.get(target.index as usize) {
+            let perm = match self
+                .player(target.player)
+                .battle_area
+                .get(target.index as usize)
+            {
                 Some(p) => p,
                 None => break,
             };

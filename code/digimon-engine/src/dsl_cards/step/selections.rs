@@ -24,8 +24,7 @@ use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::predicate::{eval_predicate, eval_predicate_with_bindings, PredicateSubject};
 use crate::dsl_cards::step::{
-    drain_dsl_outer_tail, drain_or_rewrap_pending_tail, resolve_player, run_steps_with_runtime,
-    StepRuntime,
+    drain_or_rewrap_pending_tail, resolve_player, run_steps_with_runtime, StepRuntime,
 };
 use crate::effect_context::{
     CountCappedZone, DistinctByMode, EffectContext, EffectReadContext, RevealBucketSelection,
@@ -245,7 +244,11 @@ pub(crate) fn run_resume(
                 //   None       → no on_decline installed (e.g. select_security): do nothing.
                 //   RunTail{..} → run the decline tail; aborts_clause first sets
                 //                 dsl_clause_aborted (G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE).
-                if let crate::resume::ResumeDecline::RunTail { tail, aborts_clause } = decline {
+                if let crate::resume::ResumeDecline::RunTail {
+                    tail,
+                    aborts_clause,
+                } = decline
+                {
                     if aborts_clause {
                         game.dsl_clause_aborted = true;
                     }
@@ -278,9 +281,8 @@ pub(crate) fn run_resume(
             }
             match select_kind {
                 ResumeSelectKind::Hand { of_player } => {
-                    let hand_index = action_id
-                        .saturating_sub(crate::action::space::PLAY_HAND_START)
-                        as usize;
+                    let hand_index =
+                        action_id.saturating_sub(crate::action::space::PLAY_HAND_START) as usize;
                     // Target tracking (mirrors `ctx.select_hand`'s wrapper).
                     if let Some(card) = game.player(of_player).hand.get(hand_index) {
                         let tid = card.card_id(&game.card_data).to_string();
@@ -314,9 +316,8 @@ pub(crate) fn run_resume(
                     );
                 }
                 ResumeSelectKind::Trash { of_player } => {
-                    let trash_index = action_id
-                        .saturating_sub(crate::action::space::TRASH_EFFECT_START)
-                        as usize;
+                    let trash_index =
+                        action_id.saturating_sub(crate::action::space::TRASH_EFFECT_START) as usize;
                     // Target tracking (mirrors `ctx.select_trash`'s wrapper).
                     if let Some(card) = game.player(of_player).trash.get(trash_index) {
                         let tid = card.card_id(&game.card_data).to_string();
@@ -350,17 +351,17 @@ pub(crate) fn run_resume(
                     );
                 }
                 ResumeSelectKind::FieldPermanent { of_player, post } => {
-                    let offset =
-                        action_id.saturating_sub(crate::action::space::ATTACK_START);
-                    let target_index =
-                        (offset % crate::action::space::TARGETS_PER_ATTACKER) as u8;
+                    let offset = action_id.saturating_sub(crate::action::space::ATTACK_START);
+                    let target_index = (offset % crate::action::space::TARGETS_PER_ATTACKER) as u8;
                     let h = crate::permanent::PermanentHandle {
                         player: of_player,
                         index: target_index,
                     };
                     // Target tracking (mirrors install_field_selection's wrapper).
-                    if let Some(perm) =
-                        game.player(of_player).battle_area.get(target_index as usize)
+                    if let Some(perm) = game
+                        .player(of_player)
+                        .battle_area
+                        .get(target_index as usize)
                     {
                         let top = perm.top_card();
                         let tid = top.card_id(&game.card_data).to_string();
@@ -398,7 +399,9 @@ pub(crate) fn run_resume(
                                 &runtime,
                             );
                         }
-                        Some(crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSource) => {
+                        Some(
+                            crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSource,
+                        ) => {
                             // Cost post-action (mirrors
                             // install_trash_bottom_face_down_source_under_tamer's
                             // callback): trash the picked Tamer's bottom face-down
@@ -683,9 +686,8 @@ pub(crate) fn run_resume(
                 }
                 ResumeSelectKind::EffectChoice { post } => {
                     // "choose one": action_id - HAND_EFFECT_START → label index.
-                    let choice_index = action_id
-                        .saturating_sub(crate::action::space::HAND_EFFECT_START)
-                        as usize;
+                    let choice_index =
+                        action_id.saturating_sub(crate::action::space::HAND_EFFECT_START) as usize;
                     let mut ctx = EffectContext::new_with_source_kind_and_override(
                         game,
                         prov.source_card,
@@ -736,6 +738,18 @@ pub(crate) fn run_resume(
                                 runtime,
                             );
                             ctx.game.current_trigger_context = trigger_context;
+                        }
+                        Some(crate::resume::EffectChoicePostAction::RunTailBranch { branches }) => {
+                            let Some(branch) = branches.get(choice_index) else {
+                                return;
+                            };
+                            run_tail_preserving_trigger_context(
+                                &mut ctx,
+                                trigger_context,
+                                branch,
+                                &mut b,
+                                &runtime,
+                            );
                         }
                     }
                 }
@@ -830,9 +844,7 @@ pub(crate) fn run_resume(
                         crate::action::space::decode_attack(action_id);
                     if decoded_attacker as u8 == attacker.index {
                         let opponent = game.next_clockwise(attacker.player);
-                        let target = if decoded_target
-                            == crate::action::space::SECURITY_TARGET
-                        {
+                        let target = if decoded_target == crate::action::space::SECURITY_TARGET {
                             crate::selection::AttackTarget::Player(opponent)
                         } else {
                             crate::selection::AttackTarget::Digimon(
@@ -842,7 +854,10 @@ pub(crate) fn run_resume(
                                 },
                             )
                         };
-                        if game.validate_attack_redirect_target(attacker, target).is_ok() {
+                        if game
+                            .validate_attack_redirect_target(attacker, target)
+                            .is_ok()
+                        {
                             game.apply_attack_target_substitution_with_reason(
                                 target,
                                 crate::trigger_context::AttackTargetChangeReason::EffectRedirect(
@@ -884,9 +899,7 @@ pub(crate) fn run_resume(
                         crate::action::space::decode_attack(action_id);
                     if decoded_attacker as u8 == attacker.index {
                         let opponent = game.next_clockwise(attacker.player);
-                        let target = if decoded_target
-                            == crate::action::space::SECURITY_TARGET
-                        {
+                        let target = if decoded_target == crate::action::space::SECURITY_TARGET {
                             crate::selection::AttackTarget::Player(opponent)
                         } else {
                             crate::selection::AttackTarget::Digimon(
@@ -947,6 +960,9 @@ pub(crate) fn run_resume(
         ResumeFrame::CountCappedPermanentsStep(state) => {
             run_count_capped_permanent_step(game, state, action_id, is_pass);
         }
+        ResumeFrame::NonDslCountCappedStep(state) => {
+            run_non_dsl_count_capped_step(game, state, action_id, is_pass);
+        }
         ResumeFrame::RevealBucketStep(state) => {
             run_reveal_bucket_step(game, state, action_id, is_pass);
         }
@@ -965,13 +981,964 @@ pub(crate) fn run_resume(
         ResumeFrame::DigivolveReducerSuspend(state) => {
             game.run_digivolve_reducer_suspend_step(state, action_id);
         }
+        ResumeFrame::DnaDigivolveFirstMaterial(state) => {
+            game.run_dna_digivolve_first_material_step(state, action_id);
+        }
+        ResumeFrame::DnaDigivolveSecondMaterial(state) => {
+            game.run_dna_digivolve_second_material_step(state, action_id);
+        }
         ResumeFrame::RefireEffectChoice(state) => {
             game.run_refire_effect_choice_step(state, action_id, is_pass);
         }
         ResumeFrame::OptionModeSelect(state) => {
             game.run_option_mode_select_step(state, action_id);
         }
+        ResumeFrame::DigiXrosMaterialSelection(mut state) => {
+            let outer_conts = std::mem::take(&mut state.outer_conts);
+            game.run_digixros_material_selection_step(state, action_id, is_pass);
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::OuterOptionalTrigger(mut state) => {
+            let outer_conts = std::mem::take(&mut state.outer_conts);
+            game.run_outer_optional_trigger_step(state, is_pass);
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::TriggerOrderSelection(mut state) => {
+            let outer_conts = std::mem::take(&mut state.outer_conts);
+            game.run_trigger_order_selection_step(state, action_id, is_pass);
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::OptionalReplacement(mut state) => {
+            let outer_conts = std::mem::take(&mut state.outer_conts);
+            crate::replacement::run_optional_replacement_step(game, state, is_pass);
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::DelayCancelAfterSelection {
+            inner,
+            continuation,
+            outer_conts,
+        } => {
+            run_resume(game, *inner, action_id, is_pass);
+            crate::dsl_cards::lower_replacement::continue_delay_cancel_after_selection(
+                game,
+                continuation,
+            );
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::DelayHandDigivolveAfterSelection {
+            inner,
+            continuation,
+            outer_conts,
+        } => {
+            run_resume(game, *inner, action_id, is_pass);
+            crate::dsl_cards::lower_replacement::continue_delay_cost_after_selection(
+                game,
+                continuation,
+            );
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::DelayDnaAfterSelection {
+            inner,
+            continuation,
+            outer_conts,
+        } => {
+            run_resume(game, *inner, action_id, is_pass);
+            crate::dsl_cards::lower_replacement::continue_delay_dna_after_selection(
+                game,
+                continuation,
+            );
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::DelayHandDigivolveSelection(state) => {
+            crate::dsl_cards::lower_replacement::run_delay_hand_digivolve_selection_step(
+                game, state, action_id, is_pass,
+            );
+        }
+        ResumeFrame::DelayDnaCardSelection(state) => {
+            crate::dsl_cards::lower_replacement::run_delay_dna_card_selection_step(
+                game, state, action_id, is_pass,
+            );
+        }
+        ResumeFrame::AppFuseHostSelection(mut state) => {
+            if is_pass {
+                return;
+            }
+            let outer_conts = std::mem::take(&mut state.outer_conts);
+            crate::effect_context::run_app_fuse_host_selection_step(game, state, action_id);
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::AppFuseResultSelection(mut state) => {
+            if is_pass {
+                return;
+            }
+            let outer_conts = std::mem::take(&mut state.outer_conts);
+            crate::effect_context::run_app_fuse_result_selection_step(game, state, action_id);
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::ArtsDigivolveSelection(mut state) => {
+            let outer_conts = std::mem::take(&mut state.outer_conts);
+            game.run_arts_digivolve_selection_step(state, action_id, is_pass);
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::LinkOptionHostSelection(mut state) => {
+            let outer_conts = std::mem::take(&mut state.outer_conts);
+            game.run_link_option_host_selection_step(state, action_id, is_pass);
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::DigimonLinkHostSelection(state) => {
+            game.run_digimon_link_host_selection_step(state, action_id);
+        }
+        ResumeFrame::PlayFromHandCostReductionPrompt(mut state) => {
+            let outer_conts = std::mem::take(&mut state.outer_conts);
+            game.run_play_from_hand_cost_reduction_prompt_step(state, is_pass);
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::InteractiveDigivolveCostReductionPrompt(mut state) => {
+            let outer_conts = std::mem::take(&mut state.outer_conts);
+            game.run_interactive_digivolve_cost_reduction_prompt_step(state, is_pass);
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::InteractiveOptionUseCostReductionPrompt(mut state) => {
+            let outer_conts = std::mem::take(&mut state.outer_conts);
+            game.run_interactive_option_use_cost_reduction_prompt_step(state, is_pass);
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::AllianceSelection(state) => {
+            let crate::resume::CombatAllianceState {
+                attacker,
+                outer_conts,
+            } = state;
+            game.run_alliance_selection_step(attacker, action_id, is_pass);
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::BlockSelection(state) => {
+            let crate::resume::CombatBlockState {
+                attacker,
+                defender_player,
+                outer_conts,
+            } = state;
+            game.run_block_selection_step(attacker, defender_player, action_id, is_pass);
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::RaidSelection(state) => {
+            let crate::resume::CombatRaidSelectionState {
+                attacker,
+                opponent_player,
+                mode,
+                outer_conts,
+            } = state;
+            game.run_raid_selection_step(attacker, opponent_player, mode, action_id, is_pass);
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::CounterSelection(state) => {
+            let crate::resume::CombatCounterState {
+                defender_player,
+                valid_action_ids,
+                candidates,
+                outer_conts,
+            } = state;
+            game.run_counter_selection_step(
+                defender_player,
+                &valid_action_ids,
+                &candidates,
+                action_id,
+                is_pass,
+            );
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::CounterBlastDnaFieldMaterial(state) => {
+            let crate::resume::CombatBlastDnaFieldMaterialState {
+                defender,
+                result_hand_index,
+                source_card,
+                previous_phase,
+                outer_conts,
+            } = state;
+            game.run_counter_blast_dna_field_material_step(
+                defender,
+                result_hand_index,
+                source_card,
+                previous_phase,
+                action_id,
+            );
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::CounterBlastDnaHandMaterial(state) => {
+            let crate::resume::CombatBlastDnaHandMaterialState {
+                defender,
+                result_hand_index,
+                field_idx,
+                outer_conts,
+            } = state;
+            game.run_counter_blast_dna_hand_material_step(
+                defender,
+                result_hand_index,
+                field_idx,
+                action_id,
+            );
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::OverclockSelection(state) => {
+            game.run_overclock_selection_step(state, action_id, is_pass);
+        }
+        ResumeFrame::PlayOrderSelection => {
+            game.last_play_order_choice = Some(if action_id == crate::action::space::PLAY_FIRST {
+                crate::selection::PlayOrder::First
+            } else {
+                crate::selection::PlayOrder::Second
+            });
+        }
+        ResumeFrame::KeywordSaveSelection(state) => {
+            run_keyword_save_selection_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::KeywordMaterialSaveTamerSelection(state) => {
+            run_keyword_material_save_tamer_selection_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::KeywordScapegoatSelection(state) => {
+            run_keyword_scapegoat_selection_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::KeywordMindLinkSelection(state) => {
+            run_keyword_mind_link_selection_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::KeywordAscensionChoice(state) => {
+            run_keyword_ascension_choice_step(game, state, action_id);
+        }
+        ResumeFrame::FamiliarTokenOnDeletionSelection(state) => {
+            run_familiar_token_on_deletion_selection_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::LinkCardLeaveSelection(state) => {
+            run_link_card_leave_selection_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::PlayOrUseDualChoice(state) => {
+            run_play_or_use_dual_choice_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::MayDnaPartnerSelection(state) => {
+            run_may_dna_partner_selection_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::MayDnaResultSelection(state) => {
+            run_may_dna_result_selection_step(game, state, action_id, is_pass);
+        }
     }
+}
+
+fn field_handle_from_action(of_player: PlayerId, action_id: u16) -> PermanentHandle {
+    let offset = action_id.saturating_sub(crate::action::space::ATTACK_START);
+    PermanentHandle {
+        player: of_player,
+        index: (offset % crate::action::space::TARGETS_PER_ATTACKER) as u8,
+    }
+}
+
+fn push_field_effect_target(
+    game: &mut crate::game::Game,
+    controller: PlayerId,
+    source_card: crate::card_source::CardHandle,
+    handle: PermanentHandle,
+) {
+    if let Some(perm) = game
+        .player(handle.player)
+        .battle_area
+        .get(handle.index as usize)
+    {
+        let top = perm.top_card();
+        let tid = top.card_id(&game.card_data).to_string();
+        let tname = top.card_name(&game.card_data).to_string();
+        crate::effect_context::selections::push_effect_target(
+            game,
+            controller,
+            source_card,
+            tid,
+            tname,
+        );
+    }
+}
+
+fn count_capped_handle_for_action(
+    game: &crate::game::Game,
+    of_player: PlayerId,
+    zone: CountCappedZone,
+    action_id: u16,
+) -> Option<crate::card_source::CardHandle> {
+    match zone {
+        CountCappedZone::Hand => {
+            let idx = action_id.saturating_sub(crate::action::space::PLAY_HAND_START) as usize;
+            game.player(of_player).hand.get(idx).map(|c| c.handle())
+        }
+        CountCappedZone::Trash => {
+            let idx = action_id.saturating_sub(crate::action::space::TRASH_EFFECT_START) as usize;
+            game.player(of_player).trash.get(idx).map(|c| c.handle())
+        }
+        CountCappedZone::Material(perm) => {
+            let (_, range_start) =
+                crate::effect_context::selections::material_zone_geometry(game, perm)?;
+            let idx = action_id.saturating_sub(range_start) as usize;
+            crate::effect_context::selections::material_zone_slice(game, perm)?
+                .get(idx)
+                .map(|c| c.handle())
+        }
+    }
+}
+
+fn count_capped_data_index_for_action(
+    game: &crate::game::Game,
+    of_player: PlayerId,
+    zone: CountCappedZone,
+    action_id: u16,
+) -> Option<usize> {
+    match zone {
+        CountCappedZone::Hand => {
+            let idx = action_id.saturating_sub(crate::action::space::PLAY_HAND_START) as usize;
+            game.player(of_player).hand.get(idx).map(|c| c.data_index)
+        }
+        CountCappedZone::Trash => {
+            let idx = action_id.saturating_sub(crate::action::space::TRASH_EFFECT_START) as usize;
+            game.player(of_player).trash.get(idx).map(|c| c.data_index)
+        }
+        CountCappedZone::Material(perm) => {
+            let (_, range_start) =
+                crate::effect_context::selections::material_zone_geometry(game, perm)?;
+            let idx = action_id.saturating_sub(range_start) as usize;
+            crate::effect_context::selections::material_zone_slice(game, perm)?
+                .get(idx)
+                .map(|c| c.data_index)
+        }
+    }
+}
+
+fn count_capped_rejects_distinct(
+    game: &crate::game::Game,
+    mode: DistinctByMode,
+    picked_data_indices: &[usize],
+    candidate_data_index: usize,
+) -> bool {
+    let candidate = &game.card_data[candidate_data_index];
+    picked_data_indices.iter().any(|&picked_idx| {
+        let picked = &game.card_data[picked_idx];
+        match mode {
+            DistinctByMode::CardNumber => picked.card_id == candidate.card_id,
+            DistinctByMode::Level => {
+                matches!((picked.level, candidate.level), (Some(p), Some(c)) if p == c)
+            }
+            DistinctByMode::Name => picked.card_name == candidate.card_name,
+        }
+    })
+}
+
+fn park_non_dsl_count_capped_state(
+    game: &mut crate::game::Game,
+    state: crate::resume::NonDslCountCappedState,
+) {
+    let effective_min = state.min.max(if state.is_optional_zero { 0 } else { 1 });
+    let picked = state.accum.len() as u8;
+    game.current_phase = GamePhase::SelectBudgeted;
+    game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
+        kind: SelectionKind::CountCappedMultiSelect {
+            min: effective_min,
+            max: state.max,
+            picked,
+            distinct: state.distinct_by.is_some(),
+        },
+        selecting_player: state.prov.override_pin.unwrap_or(state.prov.controller),
+        previous_phase: state.previous_phase,
+        valid_action_ids: state.candidate_actions.clone(),
+        is_optional: picked >= effective_min,
+        prompt: state.prompt.clone(),
+        effect_choices: None,
+        source_card: state.prov.source_card,
+        source_permanent: state.prov.source_permanent,
+        source_kind: state.prov.source_kind,
+        callback: Box::new(|_, _| {
+            panic!("non-DSL count-capped selection must resolve through ResumeFrame")
+        }),
+        on_decline: Some(Box::new(|_| {
+            panic!("non-DSL count-capped selection must resolve through ResumeFrame")
+        })),
+    });
+    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::NonDslCountCappedStep(state)],
+    });
+}
+
+fn run_non_dsl_count_capped_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::NonDslCountCappedState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        finish_non_dsl_count_capped(game, state);
+        return;
+    }
+    if !state.candidate_actions.contains(&action_id) {
+        return;
+    }
+    let Some(card) = count_capped_handle_for_action(game, state.of_player, state.zone, action_id)
+    else {
+        return;
+    };
+    state.accum.push(card);
+    if state.accum.len() == state.max as usize {
+        finish_non_dsl_count_capped(game, state);
+        return;
+    }
+
+    let picked_data_indices: Vec<usize> = state
+        .accum
+        .iter()
+        .filter_map(|&picked| {
+            state
+                .candidate_actions
+                .iter()
+                .copied()
+                .find(|&candidate| {
+                    count_capped_handle_for_action(game, state.of_player, state.zone, candidate)
+                        == Some(picked)
+                })
+                .and_then(|candidate| {
+                    count_capped_data_index_for_action(game, state.of_player, state.zone, candidate)
+                })
+        })
+        .collect();
+
+    state.candidate_actions = state
+        .candidate_actions
+        .into_iter()
+        .filter(|&candidate| candidate != action_id)
+        .filter(|&candidate| {
+            let Some(mode) = state.distinct_by else {
+                return true;
+            };
+            let Some(candidate_idx) =
+                count_capped_data_index_for_action(game, state.of_player, state.zone, candidate)
+            else {
+                return false;
+            };
+            !count_capped_rejects_distinct(game, mode, &picked_data_indices, candidate_idx)
+        })
+        .collect();
+
+    if state.candidate_actions.is_empty() {
+        finish_non_dsl_count_capped(game, state);
+    } else {
+        park_non_dsl_count_capped_state(game, state);
+    }
+}
+
+fn finish_non_dsl_count_capped(
+    game: &mut crate::game::Game,
+    state: crate::resume::NonDslCountCappedState,
+) {
+    let refs: Vec<crate::events::EventCardRef> = state
+        .accum
+        .iter()
+        .filter_map(|h| {
+            game.card_data_for_handle(*h)
+                .map(|cd| crate::events::EventCardRef {
+                    card_id: cd.card_id.clone(),
+                    card_name: cd.card_name.clone(),
+                })
+        })
+        .collect();
+    crate::effect_context::selections::push_effect_target_multi(
+        game,
+        state.prov.controller,
+        state.prov.source_card,
+        refs,
+    );
+
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    match state.terminal {
+        crate::resume::NonDslCountCappedTerminal::KeywordFragment { subject } => {
+            for handle in &state.accum {
+                let _ = ctx.trash_card_source(subject, *handle);
+            }
+            ctx.cancel_leave();
+        }
+        crate::resume::NonDslCountCappedTerminal::KeywordPartition { subject } => {
+            let mut extracted: Vec<crate::card_source::CardHandle> = Vec::new();
+            for handle in &state.accum {
+                let removed = {
+                    let Some(permanent) = ctx
+                        .game
+                        .player_mut(subject.player)
+                        .battle_area
+                        .get_mut(subject.index as usize)
+                    else {
+                        continue;
+                    };
+                    let Some(pos) = permanent
+                        .card_sources
+                        .iter()
+                        .position(|c| c.handle() == *handle)
+                    else {
+                        continue;
+                    };
+                    permanent.card_sources.remove(pos)
+                };
+                let owner = removed.owner;
+                ctx.game.player_mut(owner).trash.push(removed);
+                extracted.push(*handle);
+            }
+            let mut iter = extracted.into_iter();
+            if let Some(first) = iter.next() {
+                let second = iter.next();
+                let source_card = ctx.source_card;
+                let player = ctx.player;
+                let _ = ctx.play_from_trash_free_unsuspended(first);
+                if let Some(second) = second {
+                    ctx.game
+                        .queue_partition_second_play(player, source_card, second);
+                }
+            }
+        }
+        crate::resume::NonDslCountCappedTerminal::KeywordMaterialSave { tamer } => {
+            for source in &state.accum {
+                ctx.place_card_under_permanent_bottom(*source, tamer, false);
+            }
+        }
+        crate::resume::NonDslCountCappedTerminal::TrashOpponentHandToCount { opponent } => {
+            for card_handle in &state.accum {
+                let idx = ctx
+                    .game
+                    .player(opponent)
+                    .hand
+                    .iter()
+                    .position(|c| c.handle() == *card_handle);
+                if let Some(i) = idx {
+                    ctx.trash_from_hand_by_index(opponent, i);
+                }
+            }
+        }
+        crate::resume::NonDslCountCappedTerminal::Assembly {
+            player,
+            target_card,
+            params,
+            elements,
+            element_idx,
+            picked_so_far,
+        } => {
+            crate::game_actions::continue_assembly_after_material_picks(
+                ctx.game,
+                player,
+                target_card,
+                params,
+                elements,
+                element_idx,
+                picked_so_far,
+                state.accum.clone(),
+            );
+        }
+    }
+    run_outer_conts(ctx.game, state.outer_conts);
+}
+
+fn run_keyword_save_selection_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::KeywordSaveSelectionState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        return;
+    }
+    let tamer = field_handle_from_action(state.owner, action_id);
+    push_field_effect_target(game, state.prov.controller, state.prov.source_card, tamer);
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    ctx.place_card_under_permanent_bottom(state.self_card, tamer, false);
+    run_outer_conts(ctx.game, state.outer_conts);
+}
+
+fn run_keyword_material_save_tamer_selection_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::KeywordMaterialSaveTamerSelectionState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        return;
+    }
+    let tamer = field_handle_from_action(state.owner, action_id);
+    push_field_effect_target(game, state.prov.controller, state.prov.source_card, tamer);
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let eligible_sources = state.eligible_sources.clone();
+    ctx.select_count_capped_multi(
+        state.owner,
+        CountCappedZone::Trash,
+        state.max,
+        "select Material Save sources to place under Tamer",
+        true,
+        None,
+        move |_g, card| eligible_sources.contains(&card.handle()),
+        move |ctx, picks| {
+            for source in picks {
+                ctx.place_card_under_permanent_bottom(source, tamer, false);
+            }
+        },
+    );
+    if let Some(pending) = ctx.game.pending_selection.as_ref() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::NonDslCountCappedStep(
+                crate::resume::NonDslCountCappedState {
+                    prov: state.prov,
+                    of_player: state.owner,
+                    zone: CountCappedZone::Trash,
+                    min: 0,
+                    max: state.max,
+                    is_optional_zero: true,
+                    distinct_by: None,
+                    candidate_actions: pending.valid_action_ids.clone(),
+                    accum: Vec::new(),
+                    prompt: pending.prompt.clone(),
+                    previous_phase: pending.previous_phase,
+                    terminal: crate::resume::NonDslCountCappedTerminal::KeywordMaterialSave {
+                        tamer,
+                    },
+                    outer_conts: Vec::new(),
+                },
+            )],
+        });
+    }
+    run_outer_conts(ctx.game, state.outer_conts);
+}
+
+fn run_keyword_scapegoat_selection_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::KeywordScapegoatSelectionState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        return;
+    }
+    let picked = field_handle_from_action(state.owner, action_id);
+    push_field_effect_target(game, state.prov.controller, state.prov.source_card, picked);
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    if picked != state.self_perm {
+        ctx.substitute_replacement(crate::replacement::ReplacementSubject::Permanent(picked));
+    }
+    run_outer_conts(ctx.game, state.outer_conts);
+}
+
+fn run_keyword_mind_link_selection_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::KeywordMindLinkSelectionState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        return;
+    }
+    let picked = field_handle_from_action(state.owner, action_id);
+    push_field_effect_target(game, state.prov.controller, state.prov.source_card, picked);
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    ctx.attach_tamer_to_digimon(state.tamer, picked);
+    run_outer_conts(ctx.game, state.outer_conts);
+}
+
+fn run_keyword_ascension_choice_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::KeywordAscensionChoiceState,
+    action_id: u16,
+) {
+    let choice = action_id.saturating_sub(crate::action::space::HAND_EFFECT_START) as usize;
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    if choice == 0 {
+        if let Some(idx) = ctx
+            .game
+            .player(state.owner)
+            .trash
+            .iter()
+            .position(|c| c.handle() == state.self_card)
+        {
+            ctx.place_on_security(
+                state.owner,
+                crate::enums::CardSourceRef::Trash(state.owner, idx),
+                crate::enums::StackPosition::Top,
+                false,
+            );
+        }
+    }
+    run_outer_conts(ctx.game, state.outer_conts);
+}
+
+fn run_familiar_token_on_deletion_selection_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::FamiliarTokenOnDeletionSelectionState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        return;
+    }
+    let target = field_handle_from_action(state.target_player, action_id);
+    push_field_effect_target(game, state.prov.controller, state.prov.source_card, target);
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    ctx.add_dp_modifier(target, -3000, crate::enums::Expiry::EndOfTurn);
+    run_outer_conts(ctx.game, state.outer_conts);
+}
+
+fn run_link_card_leave_selection_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::LinkCardLeaveSelectionState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        return;
+    }
+    let choice = action_id.saturating_sub(crate::action::space::HAND_EFFECT_START) as usize;
+    let Some(card) = state.cards.get(choice).copied() else {
+        return;
+    };
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let paid = match state.mode {
+        crate::resume::LinkCardLeaveMode::TrashAndCancel => {
+            ctx.game.trash_specific_link_card(state.host, card)
+        }
+        crate::resume::LinkCardLeaveMode::PlaceAsBottomSourceAndCancel => ctx
+            .game
+            .place_specific_link_card_as_bottom_source(state.host, card),
+    };
+    if paid {
+        ctx.cancel_leave();
+    }
+    run_outer_conts(ctx.game, state.outer_conts);
+}
+
+fn run_play_or_use_dual_choice_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::PlayOrUseDualChoiceState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        return;
+    }
+    let choice = action_id.saturating_sub(crate::action::space::HAND_EFFECT_START) as usize;
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    if ctx
+        .game
+        .player(state.player)
+        .hand
+        .get(state.hand_index)
+        .is_none()
+    {
+        run_outer_conts(ctx.game, state.outer_conts);
+        return;
+    }
+    match choice {
+        0 => {
+            let _ = ctx.play_from_hand_with_cost(state.player, state.hand_index, state.cost_delta);
+        }
+        _ => {
+            let _ = ctx.use_option_from_hand_with_cost(
+                state.player,
+                state.hand_index,
+                state.cost_delta,
+            );
+        }
+    }
+    run_outer_conts(ctx.game, state.outer_conts);
+}
+
+fn run_may_dna_partner_selection_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::MayDnaPartnerSelectionState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        return;
+    }
+    let partner = field_handle_from_action(state.controller, action_id);
+    push_field_effect_target(game, state.prov.controller, state.prov.source_card, partner);
+
+    let valid_action_ids: Vec<u16> = state
+        .target_candidate_actions
+        .iter()
+        .copied()
+        .filter(|&candidate| {
+            let hand_idx = candidate.saturating_sub(crate::action::space::PLAY_HAND_START) as usize;
+            if game.player(state.controller).hand.get(hand_idx).is_none() {
+                return false;
+            }
+            state.ignore_requirements
+                || crate::effect_context::dna_pair_can_reach_hand_card(
+                    game,
+                    state.controller,
+                    state.anchor,
+                    partner,
+                    hand_idx,
+                )
+        })
+        .collect();
+
+    if valid_action_ids.is_empty() {
+        run_outer_conts(game, state.outer_conts);
+        return;
+    }
+
+    let previous_phase = game.current_phase;
+    game.current_phase = GamePhase::SelectHand;
+    game.pending_selection = Some(PendingSelection {
+        zone_owner: Some(state.controller),
+        kind: SelectionKind::Hand,
+        selecting_player: state.prov.override_pin.unwrap_or(state.prov.controller),
+        previous_phase,
+        valid_action_ids: valid_action_ids.clone(),
+        is_optional: state.optional,
+        prompt: state.target_prompt.clone(),
+        effect_choices: None,
+        source_card: state.prov.source_card,
+        source_permanent: state.prov.source_permanent,
+        source_kind: state.prov.source_kind,
+        callback: Box::new(|_, _| {
+            panic!("may-DNA result selection must resolve through ResumeFrame")
+        }),
+        on_decline: None,
+    });
+    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::MayDnaResultSelection(
+            crate::resume::MayDnaResultSelectionState {
+                prov: state.prov,
+                controller: state.controller,
+                anchor: state.anchor,
+                partner,
+                cost: state.cost,
+                ignore_requirements: state.ignore_requirements,
+                valid_action_ids,
+                outer_conts: state.outer_conts,
+            },
+        )],
+    });
+}
+
+fn run_may_dna_result_selection_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::MayDnaResultSelectionState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        return;
+    }
+    if !state.valid_action_ids.contains(&action_id) {
+        return;
+    }
+    let hand_idx = action_id.saturating_sub(crate::action::space::PLAY_HAND_START) as usize;
+    if let Some(card) = game.player(state.controller).hand.get(hand_idx) {
+        let tid = card.card_id(&game.card_data).to_string();
+        let tname = card.card_name(&game.card_data).to_string();
+        crate::effect_context::selections::push_effect_target(
+            game,
+            state.prov.controller,
+            state.prov.source_card,
+            tid,
+            tname,
+        );
+    }
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let Some(card) = ctx
+        .game
+        .player(state.controller)
+        .hand
+        .get(hand_idx)
+        .map(|c| c.handle())
+    else {
+        run_outer_conts(ctx.game, state.outer_conts);
+        return;
+    };
+    let charge = if state.ignore_requirements {
+        state.cost as i32
+    } else {
+        crate::effect_context::dna_pair_cost_for_hand_card(
+            ctx.game,
+            state.controller,
+            state.anchor,
+            state.partner,
+            hand_idx,
+        )
+        .unwrap_or(state.cost as i32)
+    };
+    ctx.effect_initiated_dna_digivolve(
+        state.anchor,
+        state.partner,
+        card,
+        charge,
+        state.ignore_requirements,
+    );
+    run_outer_conts(ctx.game, state.outer_conts);
 }
 
 /// Executor for a `use_option_from_hand` selection (mirrors
@@ -1021,8 +1988,7 @@ fn run_use_option_from_hand_step(
         return;
     }
 
-    let idx =
-        action_id.saturating_sub(crate::action::space::PLAY_HAND_START) as usize;
+    let idx = action_id.saturating_sub(crate::action::space::PLAY_HAND_START) as usize;
     // Target tracking (mirrors ctx.select_hand's wrapper).
     if let Some(card) = game.player(of_player).hand.get(idx) {
         let tid = card.card_id(&game.card_data).to_string();
@@ -1063,7 +2029,10 @@ fn run_use_option_from_hand_step(
 /// Data terminal for a multi-bucket reveal selection: bind each bucket's picked
 /// list by its `bind_as`, then run the inner tail. Mirrors `select_reveal_buckets`'
 /// final callback (no EffectTarget push).
-fn run_reveal_bucket_terminal(game: &mut crate::game::Game, state: crate::resume::RevealBucketState) {
+fn run_reveal_bucket_terminal(
+    game: &mut crate::game::Game,
+    state: crate::resume::RevealBucketState,
+) {
     let mut ctx = EffectContext::new_with_source_kind_and_override(
         game,
         state.prov.source_card,
@@ -2373,18 +3342,35 @@ pub fn try_install(
                 InstallResult::Continue
             };
         }
+        CompiledStep::PlaceRemainderOnDeck { of, position }
+            if *position != CompiledStackPosition::Choice =>
+        {
+            let player = resolve_player(ctx, *of);
+            install_remainder_permutation_with_tail(
+                ctx,
+                player,
+                super::map_stack_position(*position),
+                tail.to_vec(),
+                bindings,
+                runtime.clone(),
+            )
+        }
         // collapse §3.1 — `place_remainder_on_deck` with `position: choice`.
         // Install a binary top/bottom pick; the chosen branch re-runs
         // place_remainder at the concrete end THROUGH run_steps, so the
         // remainder-ordering selection it installs and the outer tail are both
-        // captured/parked correctly. Non-Choice positions are NOT matched here
-        // and fall through to the synchronous runner unchanged.
+        // captured/parked correctly. Non-Choice positions are matched above so
+        // fixed-position remainder placement also uses the resume-backed
+        // permutation frame instead of the legacy callback helper.
         CompiledStep::PlaceRemainderOnDeck {
             of,
             position: CompiledStackPosition::Choice,
         } => {
-            let mut branch = |pos: CompiledStackPosition| {
-                let mut t = vec![CompiledStep::PlaceRemainderOnDeck { of: *of, position: pos }];
+            let branch = |pos: CompiledStackPosition| {
+                let mut t = vec![CompiledStep::PlaceRemainderOnDeck {
+                    of: *of,
+                    position: pos,
+                }];
                 t.extend_from_slice(tail);
                 Arc::new(t)
             };
@@ -2392,6 +3378,15 @@ pub fn try_install(
             let tail_bottom = branch(CompiledStackPosition::Bottom);
             let trigger_context = ctx.game.current_trigger_context.clone();
             let runtime = runtime.clone();
+            let branches_for_resume = vec![Arc::clone(&tail_top), Arc::clone(&tail_bottom)];
+            let bindings_for_resume = bindings.clone();
+            let runtime_for_resume = runtime.clone();
+            let trigger_for_resume = trigger_context.clone();
+            let source_card = ctx.source_card;
+            let source_permanent = ctx.source_permanent;
+            let source_kind = ctx.source_kind;
+            let player = ctx.player;
+            let override_pin = ctx.override_selecting_player();
             ctx.select_effect_choice(
                 "Place the remaining cards on the top or bottom of the deck",
                 vec!["Top of deck".to_string(), "Bottom of deck".to_string()],
@@ -2407,6 +3402,31 @@ pub fn try_install(
                     );
                 },
             );
+            if ctx.game.pending_selection.is_some() {
+                ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                    frames: vec![crate::resume::ResumeFrame::RunTail {
+                        prov: crate::resume::ResumeProvenance {
+                            source_card,
+                            source_permanent,
+                            source_kind,
+                            controller: player,
+                            override_pin,
+                        },
+                        select_kind: crate::resume::ResumeSelectKind::EffectChoice {
+                            post: Some(crate::resume::EffectChoicePostAction::RunTailBranch {
+                                branches: branches_for_resume,
+                            }),
+                        },
+                        bind_as: None,
+                        inner_tail: Arc::new(Vec::new()),
+                        outer_conts: Vec::new(),
+                        bindings: bindings_for_resume,
+                        runtime: runtime_for_resume,
+                        trigger_context: trigger_for_resume,
+                        decline: crate::resume::ResumeDecline::None,
+                    }],
+                });
+            }
             selection_result(ctx)
         }
         // collapse §3.1/§3.2 — `place_on_security` (card source) with
@@ -2422,7 +3442,7 @@ pub fn try_install(
             position: CompiledStackPosition::Choice,
             face_up,
         } => {
-            let mut branch = |pos: CompiledStackPosition| {
+            let branch = |pos: CompiledStackPosition| {
                 let mut t = vec![CompiledStep::PlaceOnSecurity {
                     of: *of,
                     source: source.clone(),
@@ -2436,6 +3456,15 @@ pub fn try_install(
             let tail_bottom = branch(CompiledStackPosition::Bottom);
             let trigger_context = ctx.game.current_trigger_context.clone();
             let runtime = runtime.clone();
+            let branches_for_resume = vec![Arc::clone(&tail_top), Arc::clone(&tail_bottom)];
+            let bindings_for_resume = bindings.clone();
+            let runtime_for_resume = runtime.clone();
+            let trigger_for_resume = trigger_context.clone();
+            let source_card = ctx.source_card;
+            let source_permanent = ctx.source_permanent;
+            let source_kind = ctx.source_kind;
+            let player = ctx.player;
+            let override_pin = ctx.override_selecting_player();
             ctx.select_effect_choice(
                 "Place as the top or bottom security card",
                 vec![
@@ -2454,6 +3483,31 @@ pub fn try_install(
                     );
                 },
             );
+            if ctx.game.pending_selection.is_some() {
+                ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                    frames: vec![crate::resume::ResumeFrame::RunTail {
+                        prov: crate::resume::ResumeProvenance {
+                            source_card,
+                            source_permanent,
+                            source_kind,
+                            controller: player,
+                            override_pin,
+                        },
+                        select_kind: crate::resume::ResumeSelectKind::EffectChoice {
+                            post: Some(crate::resume::EffectChoicePostAction::RunTailBranch {
+                                branches: branches_for_resume,
+                            }),
+                        },
+                        bind_as: None,
+                        inner_tail: Arc::new(Vec::new()),
+                        outer_conts: Vec::new(),
+                        bindings: bindings_for_resume,
+                        runtime: runtime_for_resume,
+                        trigger_context: trigger_for_resume,
+                        decline: crate::resume::ResumeDecline::None,
+                    }],
+                });
+            }
             selection_result(ctx)
         }
         CompiledStep::SelectRevealBuckets {
@@ -2515,7 +3569,8 @@ pub fn try_install(
             // 4. Captured tail: per-bucket reveal-move (consumes the bucket's
             //    bound CardList via the §2.1 multi-card move verbs), then place
             //    the remainder, then the outer dispatcher tail.
-            let mut inner_tail: Vec<CompiledStep> = Vec::with_capacity(buckets.len() + 1 + tail.len());
+            let mut inner_tail: Vec<CompiledStep> =
+                Vec::with_capacity(buckets.len() + 1 + tail.len());
             for (i, bk) in buckets.iter().enumerate() {
                 let card = CompiledBindingRef::Named(bucket_binding(i));
                 inner_tail.push(match bk.to {
@@ -3883,9 +4938,7 @@ fn install_trash_bottom_face_down_source_under_tamer(
                 },
                 select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
                     of_player: player,
-                    post: Some(
-                        crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSource,
-                    ),
+                    post: Some(crate::resume::FieldPermanentPostAction::TrashBottomFaceDownSource),
                 },
                 bind_as: None,
                 inner_tail: tail_for_resume,
@@ -4679,11 +5732,11 @@ fn count_capped_card_candidate_indices(
     let zone_len = match zone {
         CountCappedZone::Hand => game.player(of_player).hand.len().min(HAND_MAIN_LIMIT),
         CountCappedZone::Trash => game.player(of_player).trash.len().min(TRASH_MAIN_LIMIT),
-        CountCappedZone::Material(ph) => crate::effect_context::selections::material_zone_slice(
-            game, ph,
-        )
-        .map(|s| s.len().saturating_sub(1))
-        .unwrap_or(0),
+        CountCappedZone::Material(ph) => {
+            crate::effect_context::selections::material_zone_slice(game, ph)
+                .map(|s| s.len().saturating_sub(1))
+                .unwrap_or(0)
+        }
     };
     // Collect handles first (release the zone borrow before the read context).
     let mut handles: Vec<crate::card_source::CardHandle> = Vec::with_capacity(zone_len);
@@ -4709,8 +5762,12 @@ fn count_capped_card_candidate_indices(
     );
     let mut out = Vec::new();
     for (i, h) in handles.into_iter().enumerate() {
-        if eval_predicate_with_bindings(filter, &read, PredicateSubject::Card(h), Some(filter_bindings))
-        {
+        if eval_predicate_with_bindings(
+            filter,
+            &read,
+            PredicateSubject::Card(h),
+            Some(filter_bindings),
+        ) {
             out.push(i);
         }
     }
@@ -5527,11 +6584,10 @@ fn install_select_materials(
         if let Some(pending) = ctx.game.pending_selection.as_ref() {
             let selecting_player = pending.selecting_player;
             let previous_phase = pending.previous_phase;
-            let range_start = crate::effect_context::selections::material_zone_geometry(
-                ctx.game, perm,
-            )
-            .map(|(_, rs)| rs)
-            .unwrap_or(0);
+            let range_start =
+                crate::effect_context::selections::material_zone_geometry(ctx.game, perm)
+                    .map(|(_, rs)| rs)
+                    .unwrap_or(0);
             ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
                 frames: vec![crate::resume::ResumeFrame::MultiPickStep(
                     crate::resume::MultiPickState {
@@ -6268,61 +7324,60 @@ fn union_zone_candidates(
     use crate::selection::UnionZoneOrigin;
     let mut out = Vec::with_capacity(valid_action_ids.len());
     for &action in valid_action_ids {
-        let resolved = if (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END)
-            .contains(&action)
-        {
-            let (player, source_index) = decode_breeding_source_select(action);
-            let (player, source_index) = (player as u8, source_index as u8);
-            let carrier = PermanentHandle {
-                player,
-                index: BREEDING_TARGET as u8,
+        let resolved =
+            if (BREEDING_SOURCE_SELECT_START..BREEDING_SOURCE_SELECT_END).contains(&action) {
+                let (player, source_index) = decode_breeding_source_select(action);
+                let (player, source_index) = (player as u8, source_index as u8);
+                let carrier = PermanentHandle {
+                    player,
+                    index: BREEDING_TARGET as u8,
+                };
+                game.player(player)
+                    .breeding_area
+                    .as_ref()
+                    .and_then(|p| p.card_sources.get(source_index as usize))
+                    .map(|c| {
+                        (
+                            c.handle(),
+                            UnionZoneOrigin::Material {
+                                carrier,
+                                source_index,
+                            },
+                        )
+                    })
+            } else if (SOURCE_SELECT_START..SOURCE_SELECT_END).contains(&action) {
+                let (field_index, source_index) = decode_source_select(action);
+                let (field_index, source_index) = (field_index as u8, source_index as u8);
+                let carrier = PermanentHandle {
+                    player: of_player,
+                    index: field_index,
+                };
+                game.player(of_player)
+                    .battle_area
+                    .get(field_index as usize)
+                    .and_then(|p| p.card_sources.get(source_index as usize))
+                    .map(|c| {
+                        (
+                            c.handle(),
+                            UnionZoneOrigin::Material {
+                                carrier,
+                                source_index,
+                            },
+                        )
+                    })
+            } else if (TRASH_EFFECT_START..TRASH_EFFECT_END).contains(&action) {
+                let idx = (action - TRASH_EFFECT_START) as usize;
+                game.player(of_player)
+                    .trash
+                    .get(idx)
+                    .map(|c| (c.handle(), UnionZoneOrigin::Trash))
+            } else {
+                let idx = action.saturating_sub(PLAY_HAND_START) as usize;
+                game.player(of_player)
+                    .hand
+                    .get(idx)
+                    .map(|c| (c.handle(), UnionZoneOrigin::Hand))
             };
-            game.player(player)
-                .breeding_area
-                .as_ref()
-                .and_then(|p| p.card_sources.get(source_index as usize))
-                .map(|c| {
-                    (
-                        c.handle(),
-                        UnionZoneOrigin::Material {
-                            carrier,
-                            source_index,
-                        },
-                    )
-                })
-        } else if (SOURCE_SELECT_START..SOURCE_SELECT_END).contains(&action) {
-            let (field_index, source_index) = decode_source_select(action);
-            let (field_index, source_index) = (field_index as u8, source_index as u8);
-            let carrier = PermanentHandle {
-                player: of_player,
-                index: field_index,
-            };
-            game.player(of_player)
-                .battle_area
-                .get(field_index as usize)
-                .and_then(|p| p.card_sources.get(source_index as usize))
-                .map(|c| {
-                    (
-                        c.handle(),
-                        UnionZoneOrigin::Material {
-                            carrier,
-                            source_index,
-                        },
-                    )
-                })
-        } else if (TRASH_EFFECT_START..TRASH_EFFECT_END).contains(&action) {
-            let idx = (action - TRASH_EFFECT_START) as usize;
-            game.player(of_player)
-                .trash
-                .get(idx)
-                .map(|c| (c.handle(), UnionZoneOrigin::Trash))
-        } else {
-            let idx = action.saturating_sub(PLAY_HAND_START) as usize;
-            game.player(of_player)
-                .hand
-                .get(idx)
-                .map(|c| (c.handle(), UnionZoneOrigin::Hand))
-        };
         if let Some((handle, origin)) = resolved {
             out.push((action, handle, origin));
         }

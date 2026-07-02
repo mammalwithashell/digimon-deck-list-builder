@@ -176,6 +176,66 @@ fn may_attack_now_without_suspending_resolves_real_attack_flow() {
 }
 
 #[test]
+fn may_attack_now_prompt_clones_faithfully() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_digimon("ATK", 7000))
+        .add_card(make_digimon("SEC", 2000))
+        .security(1, &["SEC"])
+        .start();
+    let p0 = r.game.turn_player();
+    let p1 = 1 - p0;
+    let attacker = r.place_on_field(p0, "ATK", Some(0));
+    let source_card = r.top_card(attacker);
+    let action = encode_attack(attacker.index as u16, SECURITY_TARGET);
+    let security_before = r.game.player(p1).security.len();
+
+    {
+        let mut ctx = EffectContext::new(&mut r.game, source_card, Some(attacker), p0);
+        ctx.may_attack_now(
+            attacker,
+            AttackTargetRestriction::PlayerOnly,
+            true,
+            "Attack without suspending?",
+        )
+        .expect("install attack prompt");
+    }
+
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "may_attack_now must park a BeginAttack data frame for clone-faithful prompts"
+    );
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(p0, action)
+        .expect("clone resolves effect-created attack");
+
+    assert_eq!(
+        clone.player(p1).security.len(),
+        security_before - 1,
+        "clone should run the effect-created attack"
+    );
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must not clear the original attack prompt"
+    );
+    assert_eq!(
+        r.game.player(p1).security.len(),
+        security_before,
+        "resolving the clone must not mutate the original"
+    );
+
+    r.game
+        .resolve_selection(p0, action)
+        .expect("original resolves the same effect-created attack");
+    assert_eq!(
+        r.game.player(p1).security.len(),
+        clone.player(p1).security.len(),
+        "original and clone replay identically from the same target choice"
+    );
+}
+
+#[test]
 fn attack_open_entry_supports_effect_attacks_without_suspending() {
     let mut r = DebugRunner::builder()
         .add_card(make_digimon("ATK", 7000))

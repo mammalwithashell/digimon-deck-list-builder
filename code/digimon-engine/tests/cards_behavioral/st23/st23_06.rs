@@ -154,11 +154,10 @@ fn st23_06_has_onmove_onplay_and_inherited_piercing() {
         })
         .collect();
     assert!(
-        triggered.iter().any(|t| t
-            .when
+        triggered
             .iter()
-            .any(|w| *w == CompiledTiming::OnPlay)
-            && t.when.iter().any(|w| *w == CompiledTiming::OnMove)),
+            .any(|t| t.when.iter().any(|w| *w == CompiledTiming::OnPlay)
+                && t.when.iter().any(|w| *w == CompiledTiming::OnMove)),
         "[When Moving][On Play] shared reveal clause present"
     );
     let has_inherited_piercing = card.effects.iter().any(|c| {
@@ -180,9 +179,7 @@ fn st23_06_reveal_clause_places_a_card_under_a_tamer() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.iter().any(|w| *w == CompiledTiming::OnPlay) =>
-            {
+            CompiledClause::Triggered(t) if t.when.iter().any(|w| *w == CompiledTiming::OnPlay) => {
                 Some(t)
             }
             _ => None,
@@ -201,7 +198,11 @@ fn st23_06_reveal_clause_places_a_card_under_a_tamer() {
 /// Build a runner with Gekkomon on the field, a deck whose top 3 are the named
 /// cards (in deck-top-first order), and optionally a [Glowing Dawn] Tamer.
 /// `deck_top` lists cards from the TOP of the deck downward.
-fn setup(deck_top: &[&str], with_gd_tamer: bool, with_plain_tamer: bool) -> (DebugRunner, PermanentHandle) {
+fn setup(
+    deck_top: &[&str],
+    with_gd_tamer: bool,
+    with_plain_tamer: bool,
+) -> (DebugRunner, PermanentHandle) {
     let mut builder = DebugRunner::builder()
         .add_card(gekkomon())
         .add_card(gd_card("GD_A"))
@@ -244,7 +245,10 @@ fn st23_06_adds_one_and_places_one_under_glowing_dawn_tamer() {
         .battle_area
         .iter()
         .position(|p| p.top_card().card_id(&runner.game.card_data) == "GDT")
-        .map(|i| PermanentHandle { player: 0, index: i as u8 })
+        .map(|i| PermanentHandle {
+            player: 0,
+            index: i as u8,
+        })
         .expect("GD Tamer on field");
     let hand_before = runner.hand_size(0);
     let tamer_sources_before = runner.game.players[0].battle_area[tamer.index as usize]
@@ -280,7 +284,10 @@ fn st23_06_adds_one_and_places_one_under_glowing_dawn_tamer() {
         "the placed card is one of the revealed [Glowing Dawn] cards (got {placed_id})"
     );
     // No stuck selection; PLAIN returned to deck bottom.
-    assert!(runner.game.pending_selection.is_none(), "no stuck selection");
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no stuck selection"
+    );
 }
 
 /// NEGATIVE (no GD Tamer): only the add-to-hand bucket runs; nothing is placed
@@ -293,7 +300,10 @@ fn st23_06_only_adds_to_hand_when_no_glowing_dawn_tamer() {
         .battle_area
         .iter()
         .position(|p| p.top_card().card_id(&runner.game.card_data) == "PT")
-        .map(|i| PermanentHandle { player: 0, index: i as u8 })
+        .map(|i| PermanentHandle {
+            player: 0,
+            index: i as u8,
+        })
         .expect("plain Tamer on field");
     let hand_before = runner.hand_size(0);
     let pt_sources_before = runner.game.players[0].battle_area[pt.index as usize]
@@ -315,7 +325,10 @@ fn st23_06_only_adds_to_hand_when_no_glowing_dawn_tamer() {
         pt_sources_before,
         "no card placed under a non-[Glowing Dawn] Tamer"
     );
-    assert!(runner.game.pending_selection.is_none(), "no stuck selection");
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no stuck selection"
+    );
 }
 
 /// Only 1 [Glowing Dawn] card revealed: it goes to hand (the add bucket has
@@ -328,7 +341,10 @@ fn st23_06_single_glowing_dawn_revealed_goes_to_hand_only() {
         .battle_area
         .iter()
         .position(|p| p.top_card().card_id(&runner.game.card_data) == "GDT")
-        .map(|i| PermanentHandle { player: 0, index: i as u8 })
+        .map(|i| PermanentHandle {
+            player: 0,
+            index: i as u8,
+        })
         .expect("GD Tamer");
     let hand_before = runner.hand_size(0);
     let tamer_sources_before = runner.game.players[0].battle_area[tamer.index as usize]
@@ -362,7 +378,10 @@ fn st23_06_no_glowing_dawn_revealed_all_to_deck_bottom() {
         .battle_area
         .iter()
         .position(|p| p.top_card().card_id(&runner.game.card_data) == "GDT")
-        .map(|i| PermanentHandle { player: 0, index: i as u8 })
+        .map(|i| PermanentHandle {
+            player: 0,
+            index: i as u8,
+        })
         .expect("GD Tamer");
     let hand_before = runner.hand_size(0);
     let tamer_sources_before = runner.game.players[0].battle_area[tamer.index as usize]

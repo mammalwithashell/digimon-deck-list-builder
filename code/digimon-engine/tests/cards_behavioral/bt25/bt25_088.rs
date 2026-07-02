@@ -195,7 +195,11 @@ fn bt25_088_start_of_turn_does_not_change_high_memory() {
     runner.end_turn();
     runner.end_turn();
     let _ = runner.auto_resolve();
-    assert_eq!(runner.memory(), 5, "memory >2 is unchanged (condition gates)");
+    assert_eq!(
+        runner.memory(),
+        5,
+        "memory >2 is unchanged (condition gates)"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -306,9 +310,9 @@ fn bt25_088_lose_security_decline_does_nothing() {
 #[test]
 fn bt25_088_clause_on_security_present() {
     let card = compiled(CARD_ID);
-    let on_sec = card.effects.iter().any(|c| {
-        matches!(c, CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::OnSecurity])
-    });
+    let on_sec = card.effects.iter().any(
+        |c| matches!(c, CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::OnSecurity]),
+    );
     assert!(on_sec, "[Security] play-self clause must compile");
 }
 

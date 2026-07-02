@@ -80,10 +80,15 @@ fn bt25_018_yaml_has_printed_metadata() {
 fn bt25_018_has_cost_reduction_clause() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let has = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction { amount: Some(5), .. })
-    ));
+    let has = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction {
+                amount: Some(5),
+                ..
+            })
+        )
+    });
     assert!(has, "cost reduction of 5");
 }
 
@@ -91,17 +96,21 @@ fn bt25_018_has_cost_reduction_clause() {
 fn bt25_018_has_eot_dna_clause_and_inherited_wa() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let eot = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::EndOfYourTurn)
-    ));
-    let inh_wa = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.scope == CompiledScope::Inherited
-                && t.when.contains(&CompiledTiming::WhenAttacking)
-                && t.once_per_turn
-    ));
+    let eot = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::EndOfYourTurn)
+        )
+    });
+    let inh_wa = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.scope == CompiledScope::Inherited
+                    && t.when.contains(&CompiledTiming::WhenAttacking)
+                    && t.once_per_turn
+        )
+    });
     assert!(eot, "EOT DNA clause present");
     assert!(inh_wa, "inherited When Attacking OPT clause present");
 }

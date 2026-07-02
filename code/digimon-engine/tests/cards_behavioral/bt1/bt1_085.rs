@@ -172,8 +172,13 @@ fn bt1_085_clause2_aura_grants_security_attack_plus_one() {
         digimon_dsl::compiled::CompiledPredicate::default(),
         "aura target must be filtered (red + 4-or-more digivolution cards)"
     );
-    let gk = grant_keyword.as_ref().expect("aura must carry grant_keyword");
-    assert_eq!(gk.keyword, "SecurityAttackPlus", "grants SecurityAttackPlus");
+    let gk = grant_keyword
+        .as_ref()
+        .expect("aura must carry grant_keyword");
+    assert_eq!(
+        gk.keyword, "SecurityAttackPlus",
+        "grants SecurityAttackPlus"
+    );
     assert_eq!(gk.value, Some(1), "<Security A. +1> — value must be 1");
 }
 
@@ -403,7 +408,10 @@ fn bt1_085_sums_additively_with_wargreymon_formula_to_check_four() {
     let _ = runner.auto_resolve();
     let after = runner.game.player(1).security.len();
 
-    assert!(!runner.game_over(), "6 security vs a 4-check must not deck out");
+    assert!(
+        !runner.game_over(),
+        "6 security vs a 4-check must not deck out"
+    );
     assert_eq!(
         before - after,
         4,
@@ -441,7 +449,12 @@ fn bt1_085_sums_with_wargreymon_and_greymon_to_check_five() {
         .add_card(make_weak_opp("SEC-F", "SecF"))
         .add_card(make_weak_opp("SEC-G", "SecG"))
         .memory(3)
-        .security(1, &["SEC-A", "SEC-B", "SEC-C", "SEC-D", "SEC-E", "SEC-F", "SEC-G"])
+        .security(
+            1,
+            &[
+                "SEC-A", "SEC-B", "SEC-C", "SEC-D", "SEC-E", "SEC-F", "SEC-G",
+            ],
+        )
         .start();
     runner.game.turn_count = 1;
 
@@ -454,7 +467,10 @@ fn bt1_085_sums_with_wargreymon_and_greymon_to_check_five() {
     let _ = runner.auto_resolve();
     let after = runner.game.player(1).security.len();
 
-    assert!(!runner.game_over(), "7 security vs a 5-check must not deck out");
+    assert!(
+        !runner.game_over(),
+        "7 security vs a 5-check must not deck out"
+    );
     assert_eq!(
         before - after,
         5,

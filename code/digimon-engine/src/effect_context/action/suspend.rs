@@ -67,11 +67,7 @@ impl<'a> EffectContext<'a> {
         // precedence 15-1-3). Without this the chokepoint gate inside
         // `Game::suspend_with_cause` would silently no-op the suspension
         // while this helper reported the cost as paid.
-        if self
-            .game
-            .modifiers
-            .has(handle, ModifierType::CannotSuspend)
-        {
+        if self.game.modifiers.has(handle, ModifierType::CannotSuspend) {
             return false;
         }
         self.suspend(handle);

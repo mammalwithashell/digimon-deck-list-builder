@@ -88,7 +88,10 @@ fn structural_memory_change_is_unattributed() {
     else {
         unreachable!()
     };
-    assert_eq!(source_card_id, None, "structural change carries no source id");
+    assert_eq!(
+        source_card_id, None,
+        "structural change carries no source id"
+    );
     assert_eq!(
         source_card_name, None,
         "structural change carries no source name"

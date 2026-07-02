@@ -47,7 +47,9 @@ fn ex6_057_is_purple_lv6_digimon_with_three_clauses() {
     assert_eq!(card.level, Some(6));
     assert_eq!(card.cost, Some(11));
     assert!(
-        card.color.iter().any(|c| matches!(c, CompiledColor::Purple)),
+        card.color
+            .iter()
+            .any(|c| matches!(c, CompiledColor::Purple)),
         "EX6-057 is a Purple card; got {:?}",
         card.color
     );

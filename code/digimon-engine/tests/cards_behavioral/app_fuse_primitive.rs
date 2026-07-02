@@ -167,20 +167,35 @@ fn app_fuse_hand_happy_path_stacks_result_and_consumes_link() {
     r.play(0, src_idx);
 
     // Selection #1: pick the host permanent.
-    assert_eq!(r.pending_kind(), Some(SelectionKind::Target), "perm selection installs");
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Target),
+        "perm selection installs"
+    );
     let host_action = encode_attack(0, host.index as u16);
     assert!(
-        r.pending_selection_view().unwrap().valid_action_ids.contains(&host_action),
+        r.pending_selection_view()
+            .unwrap()
+            .valid_action_ids
+            .contains(&host_action),
         "host is an eligible app-fuse permanent"
     );
     r.execute_action(0, host_action).expect("pick host");
 
     // Selection #2: pick the result card in hand.
-    assert_eq!(r.pending_kind(), Some(SelectionKind::Target), "result-card selection installs");
+    assert_eq!(
+        r.pending_kind(),
+        Some(SelectionKind::Target),
+        "result-card selection installs"
+    );
     let card_action = HAND_EFFECT_START + hand_index(&r, "TEST-APPFUSE") as u16;
     r.execute_action(0, card_action).expect("pick result card");
 
-    assert_eq!(top_id(&r, host), "TEST-APPFUSE", "result card stacked on top");
+    assert_eq!(
+        top_id(&r, host),
+        "TEST-APPFUSE",
+        "result card stacked on top"
+    );
     let perm = &r.game.players[0].battle_area[host.index as usize];
     assert!(perm.linked_cards.is_empty(), "linked materials consumed");
     assert!(
@@ -188,6 +203,71 @@ fn app_fuse_hand_happy_path_stacks_result_and_consumes_link() {
             .iter()
             .any(|c| c.card_id(&r.game.card_data) == "TEST-GOMIMON"),
         "consumed link folded under the new top as a digivolution source"
+    );
+}
+
+#[test]
+fn app_fuse_prompts_clone_faithfully() {
+    let mut r = builder()
+        .hand(0, &["DSL-APPFUSE-HAND", "TEST-APPFUSE"])
+        .start();
+    let host = fused_host(&mut r);
+
+    let src_idx = hand_index(&r, "DSL-APPFUSE-HAND");
+    r.play(0, src_idx);
+
+    let host_action = encode_attack(0, host.index as u16);
+    assert_eq!(r.pending_kind(), Some(SelectionKind::Target));
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "App Fuse host prompt must park a data frame"
+    );
+
+    let mut clone_at_host = r.game.clone();
+    clone_at_host
+        .resolve_selection(0, host_action)
+        .expect("clone resolves host prompt");
+    assert!(
+        clone_at_host.pending_selection.is_some(),
+        "clone advances to result-card prompt"
+    );
+    assert!(
+        clone_at_host.pending_selection_resume.is_some(),
+        "App Fuse result prompt must park a data frame"
+    );
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original at the host prompt"
+    );
+
+    r.execute_action(0, host_action)
+        .expect("original picks host");
+    let card_action = HAND_EFFECT_START + hand_index(&r, "TEST-APPFUSE") as u16;
+    assert!(r.game.pending_selection_resume.is_some());
+
+    let mut clone_at_result = r.game.clone();
+    clone_at_result
+        .resolve_selection(0, card_action)
+        .expect("clone resolves result-card prompt");
+    assert!(clone_at_result.pending_selection.is_none());
+    assert_eq!(
+        clone_at_result.players[0].battle_area[host.index as usize]
+            .top_card()
+            .card_id(&clone_at_result.card_data),
+        "TEST-APPFUSE"
+    );
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the result clone must leave the original at the result prompt"
+    );
+
+    r.execute_action(0, card_action)
+        .expect("original picks result card");
+    assert_eq!(
+        top_id(&r, host),
+        clone_at_result.players[0].battle_area[host.index as usize]
+            .top_card()
+            .card_id(&clone_at_result.card_data)
     );
 }
 
@@ -203,15 +283,21 @@ fn app_fuse_trash_happy_path() {
     let src_idx = hand_index(&r, "DSL-APPFUSE-TRASH");
     r.play(0, src_idx);
 
-    r.execute_action(0, encode_attack(0, host.index as u16)).expect("pick host");
+    r.execute_action(0, encode_attack(0, host.index as u16))
+        .expect("pick host");
     let trash_pos = r.game.players[0]
         .trash
         .iter()
         .position(|c| c.card_id(&r.game.card_data) == "TEST-APPFUSE")
         .unwrap();
-    r.execute_action(0, TRASH_EFFECT_START + trash_pos as u16).expect("pick result from trash");
+    r.execute_action(0, TRASH_EFFECT_START + trash_pos as u16)
+        .expect("pick result from trash");
 
-    assert_eq!(top_id(&r, host), "TEST-APPFUSE", "result card stacked from trash");
+    assert_eq!(
+        top_id(&r, host),
+        "TEST-APPFUSE",
+        "result card stacked from trash"
+    );
     assert_eq!(r.trash_size(0), trash_before - 1, "result card left trash");
 }
 
@@ -227,10 +313,13 @@ fn app_fuse_result_filter_excludes_nonmatching_trash_card() {
 
     let src_idx = hand_index(&r, "DSL-APPFUSE-FILTER");
     r.play(0, src_idx);
-    r.execute_action(0, encode_attack(0, host.index as u16)).expect("pick host");
+    r.execute_action(0, encode_attack(0, host.index as u16))
+        .expect("pick host");
 
     // Selection #2 should offer ONLY the [System] result.
-    let view = r.pending_selection_view().expect("result selection installed");
+    let view = r
+        .pending_selection_view()
+        .expect("result selection installed");
     let tagged_pos = r.game.players[0]
         .trash
         .iter()
@@ -242,11 +331,14 @@ fn app_fuse_result_filter_excludes_nonmatching_trash_card() {
         .position(|c| c.card_id(&r.game.card_data) == "TEST-APPFUSE")
         .unwrap();
     assert!(
-        view.valid_action_ids.contains(&(TRASH_EFFECT_START + tagged_pos as u16)),
+        view.valid_action_ids
+            .contains(&(TRASH_EFFECT_START + tagged_pos as u16)),
         "the [System] result is offered"
     );
     assert!(
-        !view.valid_action_ids.contains(&(TRASH_EFFECT_START + plain_pos as u16)),
+        !view
+            .valid_action_ids
+            .contains(&(TRASH_EFFECT_START + plain_pos as u16)),
         "the non-[System] result is filtered out"
     );
 }
@@ -267,11 +359,14 @@ fn app_fuse_ineligible_permanent_not_offered() {
 
     let view = r.pending_selection_view().expect("perm selection installs");
     assert!(
-        view.valid_action_ids.contains(&encode_attack(0, good.index as u16)),
+        view.valid_action_ids
+            .contains(&encode_attack(0, good.index as u16)),
         "the fully-materialed host is eligible"
     );
     assert!(
-        !view.valid_action_ids.contains(&encode_attack(0, bare.index as u16)),
+        !view
+            .valid_action_ids
+            .contains(&encode_attack(0, bare.index as u16)),
         "the bare host (one material only) is NOT eligible"
     );
 }
@@ -286,7 +381,10 @@ fn app_fuse_no_eligible_permanent_is_silent_noop() {
     // No host with materials on the field at all.
     let src_idx = hand_index(&r, "DSL-APPFUSE-HAND");
     r.play(0, src_idx);
-    assert!(r.pending_selection_view().is_none(), "no selection installs with no eligible host");
+    assert!(
+        r.pending_selection_view().is_none(),
+        "no selection installs with no eligible host"
+    );
 }
 
 // ── 6. Decline at permanent pick ────────────────────────────────────────────
@@ -302,7 +400,11 @@ fn app_fuse_decline_at_permanent_pick_does_nothing() {
 
     assert!(r.pending_is_optional(), "perm selection is optional (may)");
     r.execute_action(0, PASS).expect("decline");
-    assert_eq!(top_id(&r, host), "TEST-KABEMON", "host unchanged after decline");
+    assert_eq!(
+        top_id(&r, host),
+        "TEST-KABEMON",
+        "host unchanged after decline"
+    );
     assert!(r.pending_selection_view().is_none(), "no further selection");
 }
 
@@ -317,10 +419,15 @@ fn app_fuse_decline_at_card_pick_does_nothing() {
     let src_idx = hand_index(&r, "DSL-APPFUSE-HAND");
     r.play(0, src_idx);
 
-    r.execute_action(0, encode_attack(0, host.index as u16)).expect("pick host");
+    r.execute_action(0, encode_attack(0, host.index as u16))
+        .expect("pick host");
     assert!(r.pending_is_optional(), "card selection is optional (may)");
     r.execute_action(0, PASS).expect("decline card");
-    assert_eq!(top_id(&r, host), "TEST-KABEMON", "host unchanged after declining the card pick");
+    assert_eq!(
+        top_id(&r, host),
+        "TEST-KABEMON",
+        "host unchanged after declining the card pick"
+    );
 }
 
 // ── 8. Requires two distinct named materials ────────────────────────────────

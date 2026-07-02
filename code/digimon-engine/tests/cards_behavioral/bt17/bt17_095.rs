@@ -741,6 +741,157 @@ fn bt17_095_replacement_dna_consumes_leaving_subject_into_merged_permanent() {
     );
 }
 
+/// make-engine-cloneable: the Delay-cost DNA reward's two hand-card prompts
+/// must be resume-driven. A clone taken at the Omnimon-result prompt advances
+/// to the partner prompt without touching the original; a clone taken at the
+/// partner prompt performs the DNA merge without touching the original.
+#[test]
+fn bt17_095_delay_dna_prompts_clone_faithfully() {
+    let greymon = make_l6_digimon_named("BT17095-FIELD-GREY-CLONE", "Greymon");
+    let omnimon = make_l7_omnimon("BT17095-OMNI-CLONE");
+    let partner = make_l6_hand_partner("BT17095-PARTNER-CLONE");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(BT17_095_YAML)
+        .expect("BT17-095 YAML parses")
+        .add_card(greymon)
+        .add_card(omnimon)
+        .add_card(partner)
+        .add_card(make_filler("FILL"))
+        .memory(10)
+        .hand(0, &["BT17095-OMNI-CLONE", "BT17095-PARTNER-CLONE"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    let bt17_095 = runner.place_on_field(0, "BT17-095", Some(0));
+    seat_as_delay_option(&mut runner, bt17_095);
+    let greymon_handle = runner.place_on_field(0, "BT17095-FIELD-GREY-CLONE", None);
+
+    runner.game.delete_permanent_with_cause(
+        greymon_handle,
+        digimon_engine::replacement::ReplacementCause::OwnEffect,
+    );
+
+    {
+        let accept = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("optional replacement accept prompt installs");
+        let player = accept.selecting_player;
+        let action = accept.valid_action_ids[0];
+        runner
+            .game
+            .resolve_selection(player, action)
+            .expect("accept replacement");
+    }
+
+    let (result_player, result_action) = {
+        let sel = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("Omnimon result prompt installs");
+        assert!(
+            runner.game.pending_selection_resume.is_some(),
+            "Delay DNA result prompt must be resume-driven"
+        );
+        let action = sel
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != digimon_engine::action::space::PASS)
+            .expect("result prompt has a card action");
+        (sel.selecting_player, action)
+    };
+
+    let mut clone_at_result = runner.game.clone();
+    clone_at_result
+        .resolve_selection(result_player, result_action)
+        .expect("clone picks Omnimon result");
+    assert!(
+        clone_at_result.pending_selection.is_some(),
+        "clone advances to the partner prompt"
+    );
+    assert!(
+        clone_at_result.pending_selection_resume.is_some(),
+        "partner prompt installed by clone must also be resume-driven"
+    );
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "resolving the clone leaves the original at the result prompt"
+    );
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .all(|p| p.top_card().card_id(&runner.game.card_data) != "BT17095-OMNI-CLONE"),
+        "original has not merged while the result-prompt clone resolved"
+    );
+
+    runner
+        .game
+        .resolve_selection(result_player, result_action)
+        .expect("original picks Omnimon result");
+
+    let (partner_player, partner_action) = {
+        let sel = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("partner prompt installs");
+        assert!(
+            runner.game.pending_selection_resume.is_some(),
+            "Delay DNA partner prompt must be resume-driven"
+        );
+        let action = sel
+            .valid_action_ids
+            .iter()
+            .copied()
+            .find(|&a| a != digimon_engine::action::space::PASS)
+            .expect("partner prompt has a card action");
+        (sel.selecting_player, action)
+    };
+
+    let mut clone_at_partner = runner.game.clone();
+    clone_at_partner
+        .resolve_selection(partner_player, partner_action)
+        .expect("clone picks hand partner");
+    clone_at_partner.drain_effect_queue();
+    assert!(
+        clone_at_partner.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&clone_at_partner.card_data) == "BT17095-OMNI-CLONE"),
+        "clone performs the DNA merge"
+    );
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "resolving the partner-prompt clone leaves the original at the partner prompt"
+    );
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .all(|p| p.top_card().card_id(&runner.game.card_data) != "BT17095-OMNI-CLONE"),
+        "original has not merged while the partner-prompt clone resolved"
+    );
+
+    runner
+        .game
+        .resolve_selection(partner_player, partner_action)
+        .expect("original picks hand partner");
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "BT17095-OMNI-CLONE"),
+        "original reaches the same DNA merge as the clone"
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Section 4 — Clause C: [Security] (inherited) Tai Kamiya / Matt Ishida
 // ═══════════════════════════════════════════════════════════════════════════

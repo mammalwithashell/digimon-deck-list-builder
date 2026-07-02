@@ -183,7 +183,10 @@ fn bt24_031_security_to_hand_clones_faithfully_at_the_prompt() {
         "may-add-top-security must be resume-driven (clone-safe)"
     );
     assert_eq!(
-        runner.pending_selection_view().expect("prompt").valid_action_ids,
+        runner
+            .pending_selection_view()
+            .expect("prompt")
+            .valid_action_ids,
         vec![SEL_MY_SECURITY_START]
     );
 
@@ -198,7 +201,11 @@ fn bt24_031_security_to_hand_clones_faithfully_at_the_prompt() {
         "clone: top security added to hand"
     );
     assert_eq!(
-        clone.players[0].security.last().unwrap().card_id(&clone.card_data),
+        clone.players[0]
+            .security
+            .last()
+            .unwrap()
+            .card_id(&clone.card_data),
         "RECOVER",
         "clone: the recovery outer-tail ran (RECOVER now in security)"
     );

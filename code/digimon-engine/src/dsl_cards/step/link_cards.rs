@@ -76,7 +76,14 @@ pub fn try_install(
         exclude_source: *exclude_source,
     });
 
-    install_pick(ctx, spec, 0, Arc::new(tail.to_vec()), bindings, runtime.clone());
+    install_pick(
+        ctx,
+        spec,
+        0,
+        Arc::new(tail.to_vec()),
+        bindings,
+        runtime.clone(),
+    );
     true
 }
 
@@ -147,14 +154,18 @@ pub(crate) struct LinkPickState {
 pub(crate) enum LinkStage {
     /// `select_effect_choice` over the eligible source zones (≥2 had a
     /// candidate). Decode: `action_id - HAND_EFFECT_START` → `eligible[idx]`.
-    ZoneChoice { eligible: Vec<CompiledLinkSourceZone> },
+    ZoneChoice {
+        eligible: Vec<CompiledLinkSourceZone>,
+    },
     /// `select_hand` / `select_trash` over the zone's filtered cards. Decode by
     /// index; optional (UpTo) ⇒ PASS runs the captured tail.
     CardSelectHandTrash { zone: CompiledLinkSourceZone },
     /// `select_own_sources(min,1)` over the digivolution-source zones. Decode via
     /// `decode_source_select`; PASS (min=0) runs the captured tail. `restrict_to`
     /// is `Some` for `SelfSources` (the effect's own permanent).
-    CardSelectSources { restrict_to: Option<PermanentHandle> },
+    CardSelectSources {
+        restrict_to: Option<PermanentHandle>,
+    },
     /// `select_own_permanent` host pick (`to: own_digimon`), carrying the
     /// already-chosen card + its source. Decode FieldPermanent; mandatory.
     HostSelect {
@@ -344,8 +355,7 @@ pub(crate) fn run_link_pick_step(
             if is_pass {
                 Advance::RunTail
             } else {
-                let (field, source_index) =
-                    crate::action::space::decode_source_select(action_id);
+                let (field, source_index) = crate::action::space::decode_source_select(action_id);
                 match link_source_at(
                     game,
                     &prov,
@@ -391,7 +401,9 @@ pub(crate) fn run_link_pick_step(
                 install_card_select(&mut ctx, spec, pick_index, zone, tail, bindings, runtime);
             }
             Advance::CardChosen(card, source) => {
-                after_card_chosen(&mut ctx, spec, pick_index, card, source, tail, bindings, runtime);
+                after_card_chosen(
+                    &mut ctx, spec, pick_index, card, source, tail, bindings, runtime,
+                );
             }
             Advance::Host(host, card, source) => {
                 attach_and_continue(
@@ -477,7 +489,12 @@ fn permanent_has_source_candidate(
     };
     let top = p.card_sources.len().saturating_sub(1);
     p.card_sources.iter().take(top).any(|c| {
-        eval_predicate_with_bindings(filter, &read, PredicateSubject::Card(c.handle()), Some(bindings))
+        eval_predicate_with_bindings(
+            filter,
+            &read,
+            PredicateSubject::Card(c.handle()),
+            Some(bindings),
+        )
     })
 }
 
@@ -698,7 +715,9 @@ fn install_card_select_zone_indexed(
             } else {
                 LinkCardSource::Hand(player)
             };
-            after_card_chosen(cb_ctx, spec, pick_index, card, source, tail, bindings, runtime);
+            after_card_chosen(
+                cb_ctx, spec, pick_index, card, source, tail, bindings, runtime,
+            );
         }
     };
 
@@ -862,7 +881,9 @@ fn after_card_chosen(
                 run_captured_tail(ctx, &tail, bindings, &runtime);
                 return;
             };
-            attach_and_continue(ctx, spec, pick_index, host, card, source, tail, bindings, runtime);
+            attach_and_continue(
+                ctx, spec, pick_index, host, card, source, tail, bindings, runtime,
+            );
         }
         CompiledLinkTo::OwnDigimon => {
             install_host_select(ctx, spec, pick_index, card, source, tail, bindings, runtime);
@@ -1042,8 +1063,16 @@ fn run_captured_tail(
 /// Returns `true` when `step` is a `RelinkSelfToOwnDigimon` (handled here). A
 /// no-op (no selection installed) when the source isn't a live standing Digimon
 /// or no eligible OTHER host exists — the dispatcher then advances to the tail.
-pub fn try_run_relink(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bindings) -> bool {
-    let CompiledStep::RelinkSelfToOwnDigimon { host_filter, prompt } = step else {
+pub fn try_run_relink(
+    step: &CompiledStep,
+    ctx: &mut EffectContext<'_>,
+    bindings: &Bindings,
+) -> bool {
+    let CompiledStep::RelinkSelfToOwnDigimon {
+        host_filter,
+        prompt,
+    } = step
+    else {
         return false;
     };
     let Some(source) = ctx.source_permanent else {
@@ -1108,8 +1137,15 @@ pub fn try_run_relink(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings
 
     // No eligible OTHER host → no-op (the heterogeneous-choice gate normally
     // prevents offering this branch with no valid host, but be defensive).
-    let any_host = (0..ctx.game.player(player).battle_area.len())
-        .any(|i| host_filter_fn(ctx.game, PermanentHandle { player, index: i as u8 }));
+    let any_host = (0..ctx.game.player(player).battle_area.len()).any(|i| {
+        host_filter_fn(
+            ctx.game,
+            PermanentHandle {
+                player,
+                index: i as u8,
+            },
+        )
+    });
     if !any_host {
         return true;
     }
@@ -1142,9 +1178,9 @@ pub fn try_run_relink(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings
                 },
                 select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
                     of_player: player,
-                    post: Some(crate::resume::FieldPermanentPostAction::AbsorbStandingAsLink {
-                        source,
-                    }),
+                    post: Some(
+                        crate::resume::FieldPermanentPostAction::AbsorbStandingAsLink { source },
+                    ),
                 },
                 bind_as: None,
                 inner_tail: Arc::new(Vec::new()),

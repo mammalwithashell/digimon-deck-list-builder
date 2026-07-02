@@ -306,8 +306,16 @@ fn return_security_card_to_deck_unknown_card_is_noop() {
         let mut ctx = EffectContext::new(&mut runner.game, bogus, None, 0);
         assert!(!ctx.return_security_card_to_deck(1, bogus, false));
     }
-    assert_eq!(runner.game.players[1].security.len(), 1, "security untouched");
-    assert_eq!(runner.game.players[1].deck.len(), deck_before, "deck untouched");
+    assert_eq!(
+        runner.game.players[1].security.len(),
+        1,
+        "security untouched"
+    );
+    assert_eq!(
+        runner.game.players[1].deck.len(),
+        deck_before,
+        "deck untouched"
+    );
 }
 
 #[test]

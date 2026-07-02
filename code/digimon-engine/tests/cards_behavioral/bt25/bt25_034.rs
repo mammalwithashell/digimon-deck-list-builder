@@ -97,12 +97,14 @@ fn bt25_034_yaml_has_printed_metadata() {
 fn bt25_034_has_security_scope_discard_clause() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
-    let has_sec_clause = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.scope == CompiledScope::Security
-                && t.when.contains(&CompiledTiming::OnDiscardSecurity)
-    ));
+    let has_sec_clause = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.scope == CompiledScope::Security
+                    && t.when.contains(&CompiledTiming::OnDiscardSecurity)
+        )
+    });
     assert!(
         has_sec_clause,
         "BT25-034 must have a security-scope OnDiscardSecurity clause"
@@ -152,7 +154,10 @@ fn bt25_034_security_clause_is_optional() {
             _ => None,
         })
         .expect("security clause present");
-    assert!(clause.optional, "the play-free clause is optional (you may)");
+    assert!(
+        clause.optional,
+        "the play-free clause is optional (you may)"
+    );
 }
 
 // ─── Section 2 — Behavior: effect-trash from security triggers play-free ─────

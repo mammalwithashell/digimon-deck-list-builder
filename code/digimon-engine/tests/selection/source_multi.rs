@@ -219,7 +219,11 @@ fn source_multi_picker_re_installs_on_stale_pick_min_one_no_op() {
 
     // Picker offers exactly one candidate: slot 0, source 0 (SRC-A).
     let stale_action = encode_source_select(stack.index as u16, 0).unwrap();
-    let sel = r.game.pending_selection.as_ref().expect("source picker open");
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("source picker open");
     assert_eq!(
         sel.kind,
         SelectionKind::SourceMulti {

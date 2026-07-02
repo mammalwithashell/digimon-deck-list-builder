@@ -3,10 +3,10 @@
 //! separately so we can see the top-level breakdown without a sampling
 //! profiler. Run from repo root:
 //!   cargo run --release --example step_profile --features dsl-yaml-loader -- 40000
-use std::time::Instant;
 use digimon_engine::card_data::CardData;
-use digimon_engine::runners::HeadlessRunner;
 use digimon_engine::policies::greedy_action;
+use digimon_engine::runners::HeadlessRunner;
+use std::time::Instant;
 
 const D1: &[&str] = &[
     "ST1-01", "ST1-01", "ST1-01", "ST1-01", "ST1-02", "ST1-02", "ST1-02", "ST1-02", "ST1-03",
@@ -25,13 +25,31 @@ const D2: &[&str] = &[
     "ST5-14", "ST5-14", "ST5-14", "ST5-15", "ST5-15",
 ];
 
-fn build(d1: &[String], d2: &[String], cd: &std::collections::HashMap<String, CardData>, seed: u64) -> HeadlessRunner {
-    HeadlessRunner::new(d1.to_vec(), d2.to_vec(), cd, false, false, false, Some(seed)).expect("build")
+fn build(
+    d1: &[String],
+    d2: &[String],
+    cd: &std::collections::HashMap<String, CardData>,
+    seed: u64,
+) -> HeadlessRunner {
+    HeadlessRunner::new(
+        d1.to_vec(),
+        d2.to_vec(),
+        cd,
+        false,
+        false,
+        false,
+        Some(seed),
+    )
+    .expect("build")
 }
 
 fn main() {
-    let target: u64 = std::env::args().nth(1).and_then(|s| s.parse().ok()).unwrap_or(40_000);
-    let text = std::fs::read_to_string("data/cards.json").expect("run from repo root (needs data/cards.json)");
+    let target: u64 = std::env::args()
+        .nth(1)
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(40_000);
+    let text = std::fs::read_to_string("data/cards.json")
+        .expect("run from repo root (needs data/cards.json)");
     let card_data = CardData::load_from_str(&text).expect("parse cards.json");
     let d1: Vec<String> = D1.iter().map(|s| s.to_string()).collect();
     let d2: Vec<String> = D2.iter().map(|s| s.to_string()).collect();
@@ -44,21 +62,54 @@ fn main() {
     let wall = Instant::now();
     while steps < target {
         if runner.game.game_over {
-            seed += 1; games += 1;
+            seed += 1;
+            games += 1;
             let t = Instant::now();
             runner = build(&d1, &d2, &card_data, seed);
             ctor_t += t.elapsed().as_secs_f64();
         }
-        let t = Instant::now(); let mask = runner.get_action_mask(); mask_t += t.elapsed().as_secs_f64();
-        let t = Instant::now(); let a = greedy_action(&runner.game, &mask); greedy_t += t.elapsed().as_secs_f64();
-        let t = Instant::now(); runner.step(a); step_t += t.elapsed().as_secs_f64();
+        let t = Instant::now();
+        let mask = runner.get_action_mask();
+        mask_t += t.elapsed().as_secs_f64();
+        let t = Instant::now();
+        let a = greedy_action(&runner.game, &mask);
+        greedy_t += t.elapsed().as_secs_f64();
+        let t = Instant::now();
+        runner.step(a);
+        step_t += t.elapsed().as_secs_f64();
         steps += 1;
     }
     let total = wall.elapsed().as_secs_f64();
     let ms = |x: f64| x * 1000.0;
-    eprintln!("=== {} steps / {} games / {:.1}s wall ({:.2} steps/game) ===", steps, games, total, steps as f64 / games as f64);
-    eprintln!("construction: {:8.1} ms ({:4.0}%) = {:.2} ms/game", ms(ctor_t), 100.0*ctor_t/total, ms(ctor_t)/games as f64);
-    eprintln!("engine step : {:8.1} ms ({:4.0}%) = {:.3} ms/step", ms(step_t), 100.0*step_t/total, ms(step_t)/steps as f64);
-    eprintln!("mask build  : {:8.1} ms ({:4.0}%) = {:.3} ms/step", ms(mask_t), 100.0*mask_t/total, ms(mask_t)/steps as f64);
-    eprintln!("greedy      : {:8.1} ms ({:4.0}%) = {:.3} ms/step", ms(greedy_t), 100.0*greedy_t/total, ms(greedy_t)/steps as f64);
+    eprintln!(
+        "=== {} steps / {} games / {:.1}s wall ({:.2} steps/game) ===",
+        steps,
+        games,
+        total,
+        steps as f64 / games as f64
+    );
+    eprintln!(
+        "construction: {:8.1} ms ({:4.0}%) = {:.2} ms/game",
+        ms(ctor_t),
+        100.0 * ctor_t / total,
+        ms(ctor_t) / games as f64
+    );
+    eprintln!(
+        "engine step : {:8.1} ms ({:4.0}%) = {:.3} ms/step",
+        ms(step_t),
+        100.0 * step_t / total,
+        ms(step_t) / steps as f64
+    );
+    eprintln!(
+        "mask build  : {:8.1} ms ({:4.0}%) = {:.3} ms/step",
+        ms(mask_t),
+        100.0 * mask_t / total,
+        ms(mask_t) / steps as f64
+    );
+    eprintln!(
+        "greedy      : {:8.1} ms ({:4.0}%) = {:.3} ms/step",
+        ms(greedy_t),
+        100.0 * greedy_t / total,
+        ms(greedy_t) / steps as f64
+    );
 }

@@ -225,7 +225,10 @@ fn bt23_037_has_cost_reduction_and_inherited_when_attacking_clauses() {
             CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction { .. })
         )
     });
-    assert!(has_cost_reduction, "Clause 1 must be a CostReduction clause");
+    assert!(
+        has_cost_reduction,
+        "Clause 1 must be a CostReduction clause"
+    );
 
     let inherited_wa = compiled.effects.iter().any(|c| match c {
         CompiledClause::Triggered(t) => {
@@ -376,9 +379,10 @@ fn bt23_037_digivolves_from_cs_lv2_for_cost_zero() {
     // the printed green Lv.2 (cost 1) AND the [CS] Lv.2 xros_req (cost 0). Rule
     // 17: the engine prompts for WHICH cost to pay rather than auto-picking the
     // cheaper. Pick the cost-0 [CS] route.
-    let started = runner
-        .game
-        .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByHand);
+    let started =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByHand);
     assert!(
         !started,
         "two costs (0 and 1) apply — the engine must prompt, not auto-pick the cheaper"
@@ -430,7 +434,10 @@ fn bt23_037_digivolves_from_non_cs_lv2_for_cost_one() {
     let ok = runner
         .game
         .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByHand);
-    assert!(ok, "Tentomon must digivolve from a Lv.2 Green base (cost 1)");
+    assert!(
+        ok,
+        "Tentomon must digivolve from a Lv.2 Green base (cost 1)"
+    );
     assert_eq!(
         runner.game.memory,
         memory_before - 1,
@@ -633,7 +640,9 @@ fn bt23_037_when_attacking_decline_plays_nothing() {
         .pending_selection_view()
         .expect("play prompt installed")
         .selecting_player;
-    runner.execute_action(player, PASS).expect("decline resolves");
+    runner
+        .execute_action(player, PASS)
+        .expect("decline resolves");
     let _ = runner.auto_resolve();
 
     assert_eq!(
@@ -672,7 +681,9 @@ fn bt23_037_when_attacking_plays_hudie_for_free() {
             .expect("a Hudie candidate is offered");
         (view.selecting_player, first)
     };
-    runner.execute_action(player, action_id).expect("play resolves");
+    runner
+        .execute_action(player, action_id)
+        .expect("play resolves");
     let _ = runner.auto_resolve();
 
     assert_eq!(
@@ -740,7 +751,9 @@ effects:
             .expect("a Hudie candidate is offered");
         (view.selecting_player, first)
     };
-    runner.execute_action(player, action_id).expect("play resolves");
+    runner
+        .execute_action(player, action_id)
+        .expect("play resolves");
     let _ = runner.auto_resolve();
 
     assert_eq!(
@@ -770,7 +783,9 @@ fn bt23_037_played_hudie_cannot_digivolve() {
             .expect("a Hudie candidate");
         (view.selecting_player, first)
     };
-    runner.execute_action(player, action_id).expect("play resolves");
+    runner
+        .execute_action(player, action_id)
+        .expect("play resolves");
     let _ = runner.auto_resolve();
 
     let played = runner.game.players[0]
@@ -784,7 +799,10 @@ fn bt23_037_played_hudie_cannot_digivolve() {
         .expect("HUDIE-3 on field");
 
     assert!(
-        runner.game.modifiers.has(played, ModifierType::CannotDigivolve),
+        runner
+            .game
+            .modifiers
+            .has(played, ModifierType::CannotDigivolve),
         "the played Hudie must be marked CannotDigivolve"
     );
 }
@@ -811,7 +829,9 @@ fn bt23_037_played_hudie_deleted_at_end_of_opponents_turn() {
             .expect("a Hudie candidate");
         (view.selecting_player, first)
     };
-    runner.execute_action(player, action_id).expect("play resolves");
+    runner
+        .execute_action(player, action_id)
+        .expect("play resolves");
     let _ = runner.auto_resolve();
 
     let played_card_index = runner.game.players[0]

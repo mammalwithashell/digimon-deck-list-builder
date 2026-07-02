@@ -193,7 +193,9 @@ fn st24_12_trashes_face_down_and_returns_ds_from_trash() {
     runner
         .accept_optional_trigger()
         .expect("accept the optional clause");
-    let v = runner.pending_selection_view().expect("Tamer pick installs");
+    let v = runner
+        .pending_selection_view()
+        .expect("Tamer pick installs");
     runner.execute_action(0, v.valid_action_ids[0]).unwrap();
     let v2 = runner
         .pending_selection_view()

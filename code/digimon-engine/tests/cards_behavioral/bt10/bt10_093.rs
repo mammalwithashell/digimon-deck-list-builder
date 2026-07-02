@@ -69,8 +69,15 @@ fn bt10_093_hook_places_under_tamer_card_and_reduces_cost_by_2() {
     let view = r
         .pending_selection_view()
         .expect("Yuu Amano's would-play hook must surface");
-    assert!(view.is_optional, "the printed 'by placing...' hook is optional");
-    if !view.valid_action_ids.iter().any(|&a| a >= SOURCE_SELECT_START) {
+    assert!(
+        view.is_optional,
+        "the printed 'by placing...' hook is optional"
+    );
+    if !view
+        .valid_action_ids
+        .iter()
+        .any(|&a| a >= SOURCE_SELECT_START)
+    {
         let accept = view.valid_action_ids[0];
         r.execute_action(0, accept).expect("accept the hook");
     }
@@ -86,8 +93,7 @@ fn bt10_093_hook_places_under_tamer_card_and_reduces_cost_by_2() {
         .find(|&a| a >= SOURCE_SELECT_START)
         .expect("ChuuChuumon must be selectable from under Yuu Amano");
     r.execute_action(0, pick).expect("pick ChuuChuumon");
-    if r
-        .pending_selection_view()
+    if r.pending_selection_view()
         .is_some_and(|v| matches!(v.kind, SelectionKind::SourceMulti { .. }))
     {
         r.execute_action(0, PASS).expect("close the multi-select");
@@ -103,9 +109,7 @@ fn bt10_093_hook_places_under_tamer_card_and_reduces_cost_by_2() {
     );
 
     // ChuuChuumon is now a digivolution card of the played DarkKnightmon...
-    let dk = r
-        .game
-        .players[0]
+    let dk = r.game.players[0]
         .battle_area
         .iter()
         .find(|p| p.top_card().card_id(&r.game.card_data) == "EX10-031")
@@ -117,9 +121,7 @@ fn bt10_093_hook_places_under_tamer_card_and_reduces_cost_by_2() {
         "ChuuChuumon must be placed in DarkKnightmon's digivolution cards"
     );
     // ...and no longer under Yuu Amano.
-    let yuu = r
-        .game
-        .players[0]
+    let yuu = r.game.players[0]
         .battle_area
         .iter()
         .find(|p| p.top_card().card_id(&r.game.card_data) == "BT10-093")
@@ -156,9 +158,7 @@ fn bt10_093_declining_hook_plays_at_full_cost() {
         memory_before - 7,
         "declining the hook must pay DarkKnightmon's full printed cost 7"
     );
-    let yuu = r
-        .game
-        .players[0]
+    let yuu = r.game.players[0]
         .battle_area
         .iter()
         .find(|p| p.top_card().card_id(&r.game.card_data) == "BT10-093")

@@ -138,7 +138,9 @@ fn bt25_044_on_play_places_other_digimon_and_trashes_both_top_security() {
     let _j = runner.play(0, 0).expect("play Junomon");
 
     // OnPlay installs the place-1-other selection (optional).
-    let kind = runner.pending_kind().expect("place-security selection installs");
+    let kind = runner
+        .pending_kind()
+        .expect("place-security selection installs");
     // Drive the placement of the other Digimon, then auto-resolve the trashes.
     let view = runner.pending_selection_view().unwrap();
     runner

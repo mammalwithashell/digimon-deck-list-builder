@@ -89,7 +89,9 @@ fn push_to_trash(runner: &mut DebugRunner, p: u8, card_id: &str) {
     let idx = runner.game.next_card_index();
     runner.game.players[p as usize]
         .trash
-        .push(digimon_engine::card_source::CardSource::new(data_idx, p, idx));
+        .push(digimon_engine::card_source::CardSource::new(
+            data_idx, p, idx,
+        ));
 }
 
 // ─── Section 1: Structural assertions ────────────────────────────────────────
@@ -154,11 +156,17 @@ fn bt23_057_shared_clause_plays_token_and_deletes() {
     // The token play lives inside an `if` branch (gated on the may/decline
     // choice); the delete runs at top level. Walk steps recursively.
     assert!(
-        steps_contain(&shared.process, &|s| matches!(s, CompiledStep::PlayToken { .. })),
+        steps_contain(&shared.process, &|s| matches!(
+            s,
+            CompiledStep::PlayToken { .. }
+        )),
         "shared clause must play the Hinukamuy token"
     );
     assert!(
-        steps_contain(&shared.process, &|s| matches!(s, CompiledStep::DeletePermanent { .. })),
+        steps_contain(&shared.process, &|s| matches!(
+            s,
+            CompiledStep::DeletePermanent { .. }
+        )),
         "shared clause must delete an opponent Digimon"
     );
 }
@@ -171,9 +179,9 @@ fn steps_contain(steps: &[CompiledStep], pred: &dyn Fn(&CompiledStep) -> bool) -
             return true;
         }
         match step {
-            CompiledStep::If { then, else_branch, .. } => {
-                steps_contain(then, pred) || steps_contain(else_branch, pred)
-            }
+            CompiledStep::If {
+                then, else_branch, ..
+            } => steps_contain(then, pred) || steps_contain(else_branch, pred),
             CompiledStep::Optional(body) => steps_contain(body, pred),
             _ => false,
         }
@@ -403,7 +411,9 @@ fn decline_token(runner: &mut DebugRunner) {
         .expect("token may-play prompt");
     let player = view.selecting_player;
     if view.valid_action_ids.iter().any(|a| *a == PASS) {
-        runner.execute_action(player, PASS).expect("decline token via PASS");
+        runner
+            .execute_action(player, PASS)
+            .expect("decline token via PASS");
     } else {
         // EffectChoice "Don't play token" is the second label (index 1).
         let decline = view

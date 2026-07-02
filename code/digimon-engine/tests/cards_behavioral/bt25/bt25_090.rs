@@ -289,9 +289,9 @@ fn bt25_090_on_suspend_decline_does_nothing() {
 #[test]
 fn bt25_090_clause_on_security_present() {
     let card = compiled(CARD_ID);
-    let on_sec = card.effects.iter().any(|c| {
-        matches!(c, CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::OnSecurity])
-    });
+    let on_sec = card.effects.iter().any(
+        |c| matches!(c, CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::OnSecurity]),
+    );
     assert!(on_sec, "[Security] play-self clause must compile");
 }
 
@@ -393,14 +393,24 @@ fn bt25_090_option_use_reducer_credits_minus_one_on_paid_park() {
         matches!(result, digimon_engine::selection::OptionPlayResult::Pending),
         "using the Glowing Dawn Option installs the cost-reduction prompt"
     );
-    assert!(runner.pending_is_optional(), "the -1 reducer is optional (decline allowed)");
-    assert_eq!(runner.memory(), mem_before, "no cost paid before the gate resolves");
+    assert!(
+        runner.pending_is_optional(),
+        "the -1 reducer is optional (decline allowed)"
+    );
+    assert_eq!(
+        runner.memory(),
+        mem_before,
+        "no cost paid before the gate resolves"
+    );
 
     runner
         .accept_optional_trigger()
         .expect("accept the -1 cost reduction");
     let _ = runner.auto_resolve();
-    assert!(runner.game.pending_selection.is_none(), "the Option resolves");
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "the Option resolves"
+    );
 
     assert_eq!(
         runner.trash_size(0),
@@ -459,13 +469,19 @@ fn bt25_090_option_use_reducer_decline_pays_full_cost() {
         result,
         digimon_engine::selection::OptionPlayResult::Pending
     ));
-    assert!(runner.pending_is_optional(), "an accept/decline gate installs");
+    assert!(
+        runner.pending_is_optional(),
+        "an accept/decline gate installs"
+    );
     runner
         .decline_optional_trigger()
         .expect("decline the optional reducer");
     let _ = runner.auto_resolve();
 
-    assert!(runner.game.pending_selection.is_none(), "the Option play completes");
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "the Option play completes"
+    );
     assert_eq!(
         runner.trash_size(0),
         trash_before + 1,

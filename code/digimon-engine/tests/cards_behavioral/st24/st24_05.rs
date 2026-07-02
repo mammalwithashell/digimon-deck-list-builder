@@ -107,9 +107,10 @@ fn st24_05_metadata_and_composite_alt_path() {
     // The composite alt-path (Agumon+Dinosaur OR DATA SQUAD) must compile;
     // assert at least one alt-path exists with literal cost 2.
     assert!(
-        card.alt_paths
-            .iter()
-            .any(|p| matches!(p.cost, Some(digimon_dsl::compiled::CompiledCost::Literal(2)))),
+        card.alt_paths.iter().any(|p| matches!(
+            p.cost,
+            Some(digimon_dsl::compiled::CompiledCost::Literal(2))
+        )),
         "Lv.3 cost-2 alt-path present"
     );
 }
@@ -131,7 +132,10 @@ fn st24_05_has_op_wd_clause_and_inherited_dp() {
             scope, dp_modifier: Some(2000), ..
         }) if *scope == CompiledScope::Inherited)
     });
-    assert!(has_inherited_dp, "inherited [Your Turn] +2000 DP aura present");
+    assert!(
+        has_inherited_dp,
+        "inherited [Your Turn] +2000 DP aura present"
+    );
 }
 
 // ─── Section 2 — Behavioral: conditional free-Tamer-play ─────────────────────
@@ -156,8 +160,16 @@ fn st24_05_plays_ds_tamer_free_when_zero_tamers() {
     runner.execute_action(0, view.valid_action_ids[0]).unwrap();
     let _ = runner.auto_resolve();
 
-    assert_eq!(tamer_count(&runner, 0), tamers_before + 1, "the [DATA SQUAD] Tamer was played");
-    assert_eq!(runner.memory(), mem_before, "played without paying the cost");
+    assert_eq!(
+        tamer_count(&runner, 0),
+        tamers_before + 1,
+        "the [DATA SQUAD] Tamer was played"
+    );
+    assert_eq!(
+        runner.memory(),
+        mem_before,
+        "played without paying the cost"
+    );
 }
 
 #[test]
@@ -170,14 +182,20 @@ fn st24_05_free_tamer_play_is_declinable() {
     let hand_before = runner.hand_size(0);
     runner.fire_on_play(0, geo.index as usize);
 
-    let view = runner.pending_selection_view().expect("optional pick surfaces");
+    let view = runner
+        .pending_selection_view()
+        .expect("optional pick surfaces");
     assert!(view.is_optional);
     runner
         .execute_action(0, digimon_engine::action::space::PASS)
         .expect("decline");
     let _ = runner.auto_resolve();
 
-    assert_eq!(runner.hand_size(0), hand_before, "declined ⇒ Tamer stays in hand");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before,
+        "declined ⇒ Tamer stays in hand"
+    );
     assert_eq!(runner.memory(), mem_before, "declined ⇒ no change");
 }
 

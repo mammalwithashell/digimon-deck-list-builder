@@ -348,9 +348,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                         .map(|cs| (owner, cs.handle())),
                     Some(ResolvedBinding::Card(h)) => {
                         let owner = (0..ctx.game.players.len() as crate::enums::PlayerId)
-                            .find(|&p| {
-                                ctx.game.player(p).trash.iter().any(|c| c.handle() == h)
-                            })
+                            .find(|&p| ctx.game.player(p).trash.iter().any(|c| c.handle() == h))
                             .unwrap_or(ctx.player);
                         Some((owner, h))
                     }

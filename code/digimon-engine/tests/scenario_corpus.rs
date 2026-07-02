@@ -53,11 +53,7 @@ fn parse_phase(s: &str) -> GamePhase {
 
 fn str_list(v: &Value) -> Vec<String> {
     v.as_array()
-        .map(|a| {
-            a.iter()
-                .map(|x| x.as_str().unwrap().to_string())
-                .collect()
-        })
+        .map(|a| a.iter().map(|x| x.as_str().unwrap().to_string()).collect())
         .unwrap_or_default()
 }
 
@@ -159,7 +155,10 @@ fn evaluate(r: &DebugRunner, a: &Value) -> (bool, String) {
             let want = a["value"].as_i64().unwrap() as i32;
             let handle = r.perm_handle(pid, fi);
             let got = r.effective_dp(handle).unwrap_or(i32::MIN);
-            (got == want, format!("effective_dp expected {want}, got {got}"))
+            (
+                got == want,
+                format!("effective_dp expected {want}, got {got}"),
+            )
         }
         "zone_count" => {
             let pid = a["player"].as_u64().unwrap() as u8 - 1;
@@ -173,22 +172,29 @@ fn evaluate(r: &DebugRunner, a: &Value) -> (bool, String) {
                 "trash" => p.trash.len(),
                 other => return (false, format!("unknown zone {other}")),
             };
-            (got == want, format!("{zone} count expected {want}, got {got}"))
+            (
+                got == want,
+                format!("{zone} count expected {want}, got {got}"),
+            )
         }
         "action_legal" => {
             let aid = a["action_id"].as_u64().unwrap() as usize;
             let want = a["expected"].as_bool().unwrap_or(true);
-            let mask = digimon_engine::action::mask::build_action_mask(
-                &r.game,
-                r.game.turn_player(),
-            );
+            let mask =
+                digimon_engine::action::mask::build_action_mask(&r.game, r.game.turn_player());
             let legal = aid < mask.len() && mask[aid] == 1.0;
-            (legal == want, format!("action {aid} legal={legal}, want {want}"))
+            (
+                legal == want,
+                format!("action {aid} legal={legal}, want {want}"),
+            )
         }
         // effect_triggered / legal_selection_options need full resolution /
         // DSL effects; not evaluated in the headless test path (those live
         // on blocked fixtures or the server path). Treat as inconclusive.
-        other => (false, format!("assertion kind {other} not supported in headless runner")),
+        other => (
+            false,
+            format!("assertion kind {other} not supported in headless runner"),
+        ),
     }
 }
 
@@ -207,8 +213,8 @@ fn scenario_corpus_runs() {
             continue;
         }
         let raw = fs::read_to_string(&path).unwrap();
-        let fixture: Value = serde_json::from_str(&raw)
-            .unwrap_or_else(|e| panic!("parse {path:?}: {e}"));
+        let fixture: Value =
+            serde_json::from_str(&raw).unwrap_or_else(|e| panic!("parse {path:?}: {e}"));
         let id = fixture["id"].as_str().unwrap_or("<no-id>").to_string();
         let readiness = fixture["readiness"].as_str().unwrap_or("expected_pass");
 

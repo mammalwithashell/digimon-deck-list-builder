@@ -173,7 +173,11 @@ fn bt25_055_inherited_redirect_clause_present() {
             _ => None,
         })
         .expect("must have inherited OnOpponentAttack redirect clause");
-    assert_eq!(clause.scope, CompiledScope::Inherited, "redirect is inherited");
+    assert_eq!(
+        clause.scope,
+        CompiledScope::Inherited,
+        "redirect is inherited"
+    );
     assert!(clause.once_per_turn, "redirect clause is OPT");
     assert!(clause.optional, "redirect clause is 'you may'");
     assert!(
@@ -204,7 +208,9 @@ fn bt25_055_on_play_suspends_chosen_digimon() {
         runner.pending_selection().is_some(),
         "On Play must install the suspend-target selection"
     );
-    runner.auto_resolve().expect("resolve suspend (and any unsuspend guard)");
+    runner
+        .auto_resolve()
+        .expect("resolve suspend (and any unsuspend guard)");
 
     assert!(
         runner.game.players[0].battle_area[victim.index as usize].is_suspended
@@ -260,7 +266,11 @@ fn bt25_055_self_suspend_decline_plays_nothing() {
         .decline_optional_trigger()
         .expect("declining is legal");
 
-    assert_eq!(runner.hand_size(0), hand_before, "no card played on decline");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before,
+        "no card played on decline"
+    );
     assert_eq!(
         runner.battle_area_size(0),
         field_before,

@@ -110,10 +110,12 @@ fn st23_10_metadata_and_alt_path() {
 fn st23_10_has_on_play_clause_and_inherited_blocker() {
     let runner = base();
     let card = runner.compiled_card(CARD_ID).expect("compiled");
-    let has_op = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnPlay)
-    ));
+    let has_op = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnPlay)
+        )
+    });
     assert!(has_op, "[On Play] clause present");
     let has_blocker = card.effects.iter().any(|c| matches!(
         c,
@@ -172,7 +174,11 @@ fn st23_10_places_hand_card_face_down_and_draws_two() {
         hand_before - 1 + 2,
         "1 card stashed, then 2 drawn (net +1)"
     );
-    assert_eq!(runner.deck_size(0), deck_before - 2, "<Draw 2> drew 2 cards");
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before - 2,
+        "<Draw 2> drew 2 cards"
+    );
 }
 
 /// DECLINE the hand-card pick → no placement, no draw (the cost was not paid).
@@ -191,7 +197,9 @@ fn st23_10_declining_hand_pick_does_nothing() {
         .len();
 
     runner.fire_on_play(0, arma.index as usize);
-    let v = runner.pending_selection_view().expect("hand-card pick installs");
+    let v = runner
+        .pending_selection_view()
+        .expect("hand-card pick installs");
     assert!(v.is_optional, "the placement is optional");
     runner
         .execute_action(0, digimon_engine::action::space::PASS)

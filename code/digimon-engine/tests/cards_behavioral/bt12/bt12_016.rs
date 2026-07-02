@@ -153,8 +153,8 @@ fn bt12_016_may_digivolve_into_gallantmon_with_cost_reduced_1() {
     r.set_first_player(0);
     let war = r.place_on_field(0, CARD_ID, Some(0));
     let _opp = r.place_on_field(1, "OPP-BIG", Some(0)); // not a legal delete target
-    // Hand: the real Gallantmon (legal), a non-Gallantmon Lv.6 (illegal), a
-    // Lv.4 Gallantmon-named card (illegal).
+                                                        // Hand: the real Gallantmon (legal), a non-Gallantmon Lv.6 (illegal), a
+                                                        // Lv.4 Gallantmon-named card (illegal).
     push_to_hand(&mut r, 0, "BT17-016");
     push_to_hand(&mut r, 0, "LV6-OTHER");
     push_to_hand(&mut r, 0, "GALL-LV4");
@@ -185,7 +185,11 @@ fn bt12_016_may_digivolve_into_gallantmon_with_cost_reduced_1() {
         "BT17-016",
         "WarGrowlmon digivolves into the hand Gallantmon"
     );
-    assert_eq!(perm.stack_size(), 2, "BT12-016 stays as a digivolution source");
+    assert_eq!(
+        perm.stack_size(),
+        2,
+        "BT12-016 stays as a digivolution source"
+    );
     // BT17-016's digivolution route from a Lv.5 red is cost 3 ⇒ pays 2.
     assert_eq!(
         r.memory(),

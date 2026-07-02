@@ -77,6 +77,12 @@ impl CardEffect for InheritedAttackingMemoryGain {
     }
 }
 
+// NOTE (2026-07-01): `[When Attacking]` is carrier-scoped ("when THIS Digimon
+// attacks" — see `fire_on_attack`), so these two tests put the memory-gain
+// effect AND the `DisableEffect` modifier on the ATTACKER itself. The original
+// shape (effect on a bystander "observer" permanent) stopped firing when the
+// timing was correctly narrowed from battle-area-wide to the attacker's stack,
+// which made the positive test vacuous and the negative control fail.
 #[test]
 fn disable_effect_modifier_suppresses_only_the_named_timing() {
     let mut attacker_data = plain_digimon("ATK", "Attacker", 5);
@@ -86,30 +92,24 @@ fn disable_effect_modifier_suppresses_only_the_named_timing() {
     let filler: Vec<&str> = vec!["F"; 10];
     let mut r = DebugRunner::builder()
         .add_card(attacker_data)
-        .add_card(plain_digimon("OBS", "Observer", 3))
         .add_card(plain_digimon("F", "F", 1))
-        .hand(0, &["ATK", "OBS"])
+        .hand(0, &["ATK"])
         .deck(0, &filler)
         .deck(1, &filler)
         .memory(10)
         .start();
-    r.register_effect("OBS", Arc::new(AttackingMemoryGain));
+    r.register_effect("ATK", Arc::new(AttackingMemoryGain));
 
     r.play(0, 0);
-    r.play(0, 0);
-    let observer_handle = PermanentHandle {
-        player: 0,
-        index: 1,
-    };
-    r.game.modifiers.add(
-        observer_handle,
-        ModifierEntry::disable_effect(EffectTiming::WhenAttacking, Expiry::Permanent, 1),
-    );
-
     let attacker_handle = PermanentHandle {
         player: 0,
         index: 0,
     };
+    r.game.modifiers.add(
+        attacker_handle,
+        ModifierEntry::disable_effect(EffectTiming::WhenAttacking, Expiry::Permanent, 1),
+    );
+
     let before = r.memory();
     let result = r.attack_player(attacker_handle, 1, /* vortex */ true);
     assert_ne!(
@@ -120,7 +120,7 @@ fn disable_effect_modifier_suppresses_only_the_named_timing() {
     assert_eq!(
         r.memory(),
         before,
-        "DisableEffect{{WhenAttacking}} must suppress the observer's WhenAttacking gain"
+        "DisableEffect{{WhenAttacking}} must suppress the attacker's WhenAttacking gain"
     );
 }
 
@@ -135,30 +135,24 @@ fn disable_effect_modifier_for_a_different_timing_does_not_suppress_when_attacki
     let filler: Vec<&str> = vec!["F"; 10];
     let mut r = DebugRunner::builder()
         .add_card(attacker_data)
-        .add_card(plain_digimon("OBS", "Observer", 3))
         .add_card(plain_digimon("F", "F", 1))
-        .hand(0, &["ATK", "OBS"])
+        .hand(0, &["ATK"])
         .deck(0, &filler)
         .deck(1, &filler)
         .memory(10)
         .start();
-    r.register_effect("OBS", Arc::new(AttackingMemoryGain));
+    r.register_effect("ATK", Arc::new(AttackingMemoryGain));
 
     r.play(0, 0);
-    r.play(0, 0);
-    let observer_handle = PermanentHandle {
-        player: 0,
-        index: 1,
-    };
-    r.game.modifiers.add(
-        observer_handle,
-        ModifierEntry::disable_effect(EffectTiming::OnPlay, Expiry::Permanent, 1),
-    );
-
     let attacker_handle = PermanentHandle {
         player: 0,
         index: 0,
     };
+    r.game.modifiers.add(
+        attacker_handle,
+        ModifierEntry::disable_effect(EffectTiming::OnPlay, Expiry::Permanent, 1),
+    );
+
     let before = r.memory();
     let result = r.attack_player(attacker_handle, 1, /* vortex */ true);
     assert_ne!(result, AttackResult::Invalid);

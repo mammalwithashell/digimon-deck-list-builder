@@ -181,7 +181,9 @@ fn bt23_058_self_suspend_deletes_all_lowest_play_cost_opponent_digimon() {
     assert_eq!(runner.battle_area_size(1), 3);
 
     runner.game.suspend(craniamon);
-    runner.auto_resolve().expect("resolve lowest-play-cost sweep");
+    runner
+        .auto_resolve()
+        .expect("resolve lowest-play-cost sweep");
 
     assert_eq!(
         runner.battle_area_size(1),

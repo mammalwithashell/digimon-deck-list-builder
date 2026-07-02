@@ -11,8 +11,8 @@ use digimon_dsl::compiled::{
 use digimon_engine::debug_runner::DebugRunner;
 
 pub(crate) const ST6_CARD_IDS: [&str; 16] = [
-    "ST6-01", "ST6-02", "ST6-03", "ST6-04", "ST6-05", "ST6-06", "ST6-07", "ST6-08",
-    "ST6-09", "ST6-10", "ST6-11", "ST6-12", "ST6-13", "ST6-14", "ST6-15", "ST6-16",
+    "ST6-01", "ST6-02", "ST6-03", "ST6-04", "ST6-05", "ST6-06", "ST6-07", "ST6-08", "ST6-09",
+    "ST6-10", "ST6-11", "ST6-12", "ST6-13", "ST6-14", "ST6-15", "ST6-16",
 ];
 
 fn st6_runner() -> DebugRunner {
@@ -43,7 +43,10 @@ fn has_purple_evo_path(card: &CompiledCard, from_level: u8, cost: i32) -> bool {
     })
 }
 
-fn triggered(card: &CompiledCard, timing: CompiledTiming) -> Vec<&digimon_dsl::compiled::CompiledTriggeredClause> {
+fn triggered(
+    card: &CompiledCard,
+    timing: CompiledTiming,
+) -> Vec<&digimon_dsl::compiled::CompiledTriggeredClause> {
     card.effects
         .iter()
         .filter_map(|clause| match clause {
@@ -145,7 +148,10 @@ fn st6_inherited_trash_draw_and_dp_effects_are_authored() {
         assert!(
             any_step(&when_attacking.process, &|step| matches!(
                 step,
-                CompiledStep::SelectHand { optional: false, .. }
+                CompiledStep::SelectHand {
+                    optional: false,
+                    ..
+                }
             )),
             "{card_id} must require a hand card to trash after drawing"
         );
@@ -168,9 +174,7 @@ fn st6_inherited_trash_draw_and_dp_effects_are_authored() {
                 active_when,
                 dp_modifier,
                 ..
-            }) if *scope == CompiledScope::Inherited => {
-                Some((active_when, dp_modifier))
-            }
+            }) if *scope == CompiledScope::Inherited => Some((active_when, dp_modifier)),
             _ => None,
         })
         .expect("ST6-11 inherited DP aura");
@@ -185,12 +189,10 @@ fn st6_inherited_trash_draw_and_dp_effects_are_authored() {
     );
     assert!(
         condition.all_of.iter().any(|part| {
-            part.count_gte
-                .as_ref()
-                .is_some_and(|count| {
-                    count.n == CompiledDpConstraint::Literal(5)
-                        && count.filter.zone == vec![CompiledZone::Trash]
-                })
+            part.count_gte.as_ref().is_some_and(|count| {
+                count.n == CompiledDpConstraint::Literal(5)
+                    && count.filter.zone == vec![CompiledZone::Trash]
+            })
         }),
         "ST6-11 aura must require 5 or more cards in your trash"
     );
@@ -342,7 +344,10 @@ fn st6_tamer_and_option_security_shapes_are_authored() {
     )));
     assert!(any_step(&main.process, &|step| matches!(
         step,
-        CompiledStep::SelectOpponentPermanent { optional: false, .. }
+        CompiledStep::SelectOpponentPermanent {
+            optional: false,
+            ..
+        }
     )));
     assert!(any_step(&main.process, &|step| matches!(
         step,
@@ -354,7 +359,10 @@ fn st6_tamer_and_option_security_shapes_are_authored() {
     assert_eq!(security.scope, CompiledScope::Inherited);
     assert!(any_step(&security.process, &|step| matches!(
         step,
-        CompiledStep::SelectOpponentPermanent { optional: false, .. }
+        CompiledStep::SelectOpponentPermanent {
+            optional: false,
+            ..
+        }
     )));
 
     let nail_bone = compiled("ST6-16");

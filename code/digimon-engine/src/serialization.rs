@@ -310,7 +310,9 @@ pub fn modifier_type_str(m: ModifierType) -> Option<&'static str> {
         // Effect-activation restrictions
         ModifierType::CannotActivateOnPlayEffects => "CannotActivateOnPlayEffects",
         ModifierType::CannotActivateMainEffects => "CannotActivateMainEffects",
-        ModifierType::CannotActivateWhenDigivolvingEffects => "CannotActivateWhenDigivolvingEffects",
+        ModifierType::CannotActivateWhenDigivolvingEffects => {
+            "CannotActivateWhenDigivolvingEffects"
+        }
         ModifierType::CannotActivateWhenAttackingEffects => "CannotActivateWhenAttackingEffects",
         ModifierType::CannotActivateSecurityEffects => "CannotActivateSecurityEffects",
         // Attack grants / mandates
@@ -350,7 +352,12 @@ pub fn expiry_str(e: Expiry) -> &'static str {
 /// live engine state. When `handle` is `None` (breeding area) those fields fall
 /// back to printed/neutral values, since breeding permanents are not
 /// battle-area-addressable for the live queries.
-fn perm_data(perm: &Permanent, data: &[CardData], game: &Game, handle: Option<PermanentHandle>) -> Value {
+fn perm_data(
+    perm: &Permanent,
+    data: &[CardData],
+    game: &Game,
+    handle: Option<PermanentHandle>,
+) -> Value {
     let top = perm.top_card();
     let top_data = &data[top.data_index];
     let base_dp = top_data.dp.unwrap_or(0);

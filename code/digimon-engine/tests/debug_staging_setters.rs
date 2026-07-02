@@ -47,7 +47,11 @@ fn set_first_player_reorders_and_resets_seesaw() {
     let mut r = staged_runner();
     // Make player 1 (Rust 0-based) the active turn player.
     r.set_first_player(1);
-    assert_eq!(r.turn_player(), 1, "player 1 must be the active turn player");
+    assert_eq!(
+        r.turn_player(),
+        1,
+        "player 1 must be the active turn player"
+    );
     // memory_pair active side must be the new first player.
     assert_eq!(
         r.game.memory_pair.0, 1,

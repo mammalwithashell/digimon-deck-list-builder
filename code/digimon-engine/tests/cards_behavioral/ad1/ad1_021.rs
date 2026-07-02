@@ -167,7 +167,10 @@ fn ad1_021_is_tamer_cost_5_yellow_red() {
         .start();
 
     let compiled = runner.compiled_card("AD1-021").expect("compiled present");
-    assert_eq!(compiled.kind, digimon_dsl::compiled::CompiledCardKind::Tamer);
+    assert_eq!(
+        compiled.kind,
+        digimon_dsl::compiled::CompiledCardKind::Tamer
+    );
     assert_eq!(compiled.cost, Some(5));
     assert!(compiled
         .color
@@ -188,10 +191,7 @@ fn ad1_021_also_treated_as_marcus_damon() {
 
     let compiled = runner.compiled_card("AD1-021").expect("compiled present");
     assert!(
-        compiled
-            .also_treated_as
-            .iter()
-            .any(|n| n == "Marcus Damon"),
+        compiled.also_treated_as.iter().any(|n| n == "Marcus Damon"),
         "AD1-021 must be also_treated_as [Marcus Damon]; got {:?}",
         compiled.also_treated_as
     );
@@ -233,19 +233,14 @@ fn ad1_021_clause2_is_end_of_your_turn_opt() {
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::EndOfYourTurn) =>
-            {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::EndOfYourTurn) => {
                 Some(t)
             }
             _ => None,
         })
         .next()
         .expect("clause 2 (end_of_your_turn) must exist");
-    assert!(
-        clause2.once_per_turn,
-        "EoYT clause must be [Once Per Turn]"
-    );
+    assert!(clause2.once_per_turn, "EoYT clause must be [Once Per Turn]");
 }
 
 /// Clause 3 fires at on_security.
@@ -434,7 +429,9 @@ fn ad1_021_eoyt_treats_marcus_as_6000_digimon_rush_cant_digivolve() {
         "Marcus must be treated as a 6000 DP Digimon"
     );
     assert!(
-        runner.modifiers().has(marcus, ModifierType::CannotDigivolve),
+        runner
+            .modifiers()
+            .has(marcus, ModifierType::CannotDigivolve),
         "Marcus must gain CannotDigivolve"
     );
     assert!(
@@ -500,7 +497,9 @@ fn ad1_021_eoyt_grants_expire_at_end_of_turn() {
         "TreatAsDigimon must expire at end of turn"
     );
     assert!(
-        !runner.modifiers().has(marcus, ModifierType::CannotDigivolve),
+        !runner
+            .modifiers()
+            .has(marcus, ModifierType::CannotDigivolve),
         "CannotDigivolve must expire at end of turn"
     );
     assert!(
@@ -535,7 +534,11 @@ fn ad1_021_security_plays_self_free() {
         .start();
 
     let attacker_handle = runner.place_on_field(0, "AD1021-ATK", Some(0));
-    assert_eq!(runner.security_count(1), 1, "precondition: AD1-021 in security");
+    assert_eq!(
+        runner.security_count(1),
+        1,
+        "precondition: AD1-021 in security"
+    );
 
     let _ = runner.attack_player(attacker_handle, 1, false);
     runner.auto_resolve().expect("security selections resolve");

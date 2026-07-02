@@ -213,7 +213,10 @@ fn p_236_has_standard_delay_clause_gaining_two_memory() {
         "the <Delay> is a standard manual delay (trash after the placing turn)"
     );
     assert!(
-        delay.1.iter().any(|s| matches!(s, CompiledStep::GainMemory { .. })),
+        delay
+            .1
+            .iter()
+            .any(|s| matches!(s, CompiledStep::GainMemory { .. })),
         "the <Delay> body gains memory"
     );
 }
@@ -270,10 +273,7 @@ fn p_236_main_adds_one_glowing_dawn_bottoms_the_other_two_then_parks_as_delay() 
         .pending_selection_view()
         .expect("reveal add-to-hand selection pending");
     assert_eq!(
-        view.valid_action_ids
-            .iter()
-            .filter(|&&a| a != PASS)
-            .count(),
+        view.valid_action_ids.iter().filter(|&&a| a != PASS).count(),
         1,
         "only the lone [Glowing Dawn] card (GD-A) is eligible to add"
     );
@@ -353,7 +353,9 @@ fn p_236_main_with_no_glowing_dawn_revealed_bottoms_all_three_and_still_places()
     }
 
     assert!(
-        !hand_ids(&runner, 0).iter().any(|id| id.starts_with("PLAIN")),
+        !hand_ids(&runner, 0)
+            .iter()
+            .any(|id| id.starts_with("PLAIN")),
         "no non-Glowing-Dawn card is ever added to hand: {:?}",
         hand_ids(&runner, 0)
     );

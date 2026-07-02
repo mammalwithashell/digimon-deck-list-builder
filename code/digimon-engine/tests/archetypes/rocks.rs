@@ -75,9 +75,10 @@ fn make_opp_digimon(id: &str, name: &str, dp: i32) -> CardData {
 /// drain — the proven harness pattern; `place_stack` builds the stack without
 /// firing the trigger, so we fire it explicitly to model the digivolve).
 fn fire_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -206,11 +207,7 @@ fn drive_first_valid(runner: &mut DebugRunner, max_steps: usize) {
             return;
         };
         let player = view.selecting_player;
-        let action = view
-            .valid_action_ids
-            .first()
-            .copied()
-            .unwrap_or(PASS);
+        let action = view.valid_action_ids.first().copied().unwrap_or(PASS);
         // Errors are swallowed: a rejected action (e.g. PASS at a mandatory
         // empty pick) means the engine has nothing more to do for this combo.
         if runner.execute_action(player, action).is_err() {
@@ -686,9 +683,10 @@ fn fire_digivolve_onto(runner: &mut DebugRunner, base: PermanentHandle, card_id:
             .expect("base permanent must be on field");
         perm.digivolve(card, turn);
     }
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(base));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(base),
+    );
     runner.game.drain_effect_queue();
     runner.game.enqueue_triggered(
         EffectTiming::OnDigivolve,

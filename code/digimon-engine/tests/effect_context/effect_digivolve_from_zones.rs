@@ -722,9 +722,7 @@ fn effect_digivolve_from_material_taking_bottom_of_multi_card_stack_keeps_carrie
     assert!(ok, "digivolve should succeed");
     // Carrier survives with 1 card (the EVO4 top, which is now also its bottom).
     assert!(
-        runner
-            .game
-            .players[0]
+        runner.game.players[0]
             .battle_area
             .iter()
             .any(|p| !p.card_sources.is_empty()

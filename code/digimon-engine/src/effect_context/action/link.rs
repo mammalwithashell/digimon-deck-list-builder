@@ -101,6 +101,15 @@ impl<'a> EffectContext<'a> {
             })
             .collect();
 
+        let cards_for_resume = cards.clone();
+        let prov = crate::resume::ResumeProvenance {
+            source_card: self.source_card,
+            source_permanent: self.source_permanent,
+            source_kind: self.source_kind,
+            controller: self.player,
+            override_pin: self.override_selecting_player(),
+        };
+
         self.select_effect_choice(
             "Choose 1 link card to trash (it doesn't leave)",
             labels,
@@ -113,6 +122,19 @@ impl<'a> EffectContext<'a> {
                 }
             },
         );
+        if self.game.pending_selection.is_some() {
+            self.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![crate::resume::ResumeFrame::LinkCardLeaveSelection(
+                    crate::resume::LinkCardLeaveSelectionState {
+                        prov,
+                        host,
+                        cards: cards_for_resume,
+                        mode: crate::resume::LinkCardLeaveMode::TrashAndCancel,
+                        outer_conts: Vec::new(),
+                    },
+                )],
+            });
+        }
     }
 
     /// EX11-027 Maquinamon — pay a `WhenWouldLeaveBattleArea` replacement by
@@ -151,6 +173,15 @@ impl<'a> EffectContext<'a> {
             })
             .collect();
 
+        let cards_for_resume = cards.clone();
+        let prov = crate::resume::ResumeProvenance {
+            source_card: self.source_card,
+            source_permanent: self.source_permanent,
+            source_kind: self.source_kind,
+            controller: self.player,
+            override_pin: self.override_selecting_player(),
+        };
+
         self.select_effect_choice(
             "Choose 1 link card to place as the bottom digivolution card (it doesn't leave)",
             labels,
@@ -158,11 +189,27 @@ impl<'a> EffectContext<'a> {
                 let Some(card) = cards.get(idx).copied() else {
                     return;
                 };
-                if cb_ctx.game.place_specific_link_card_as_bottom_source(host, card) {
+                if cb_ctx
+                    .game
+                    .place_specific_link_card_as_bottom_source(host, card)
+                {
                     cb_ctx.cancel_leave();
                 }
             },
         );
+        if self.game.pending_selection.is_some() {
+            self.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![crate::resume::ResumeFrame::LinkCardLeaveSelection(
+                    crate::resume::LinkCardLeaveSelectionState {
+                        prov,
+                        host,
+                        cards: cards_for_resume,
+                        mode: crate::resume::LinkCardLeaveMode::PlaceAsBottomSourceAndCancel,
+                        outer_conts: Vec::new(),
+                    },
+                )],
+            });
+        }
     }
 
     /// Facet #9 — link a chosen card from a non-battle-area zone (hand /

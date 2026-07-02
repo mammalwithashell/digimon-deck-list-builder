@@ -41,7 +41,9 @@ use digimon_dsl::compiled::{
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{CardKind, EffectSourceKind, EffectTiming, Keyword, ModifierType, PlayerId};
+use digimon_engine::enums::{
+    CardKind, EffectSourceKind, EffectTiming, Keyword, ModifierType, PlayerId,
+};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::TriggerSource;
 
@@ -74,7 +76,13 @@ fn base() -> DebugRunnerBuilder {
         .expect("BT25-060 YAML parses and compiles")
         .add_card(make_test_card("DECK-PAD", "Filler"))
         // [Appmon] Digimon card that can be linked from hand / sources.
-        .add_card(make_digimon("APPMON-IN-HAND", 4, 4000, 4, &["Appmon", "Social"]))
+        .add_card(make_digimon(
+            "APPMON-IN-HAND",
+            4,
+            4000,
+            4,
+            &["Appmon", "Social"],
+        ))
         // A non-Appmon Digimon — must NOT be linkable.
         .add_card(make_digimon("NON-APPMON", 4, 4000, 4, &["Beast"]))
         // A second own Digimon to be the unsuspend target.
@@ -94,9 +102,10 @@ fn advance_to_main(r: &mut DebugRunner) {
 /// Fire the [When Digivolving] activated effect of the permanent at `field_index`.
 fn fire_when_digivolving(runner: &mut DebugRunner, player: PlayerId, field_index: usize) -> bool {
     let handle = runner.perm_handle(player, field_index);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
     runner.pending_selection().is_some()
 }
@@ -104,9 +113,10 @@ fn fire_when_digivolving(runner: &mut DebugRunner, player: PlayerId, field_index
 /// Fire the [When Attacking] activated effect of the permanent at `field_index`.
 fn fire_when_attacking(runner: &mut DebugRunner, player: PlayerId, field_index: usize) -> bool {
     let handle = runner.perm_handle(player, field_index);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
     runner.pending_selection().is_some()
 }
@@ -129,7 +139,9 @@ fn resolve_all_first(r: &mut DebugRunner, player: PlayerId) {
                 let _ = r.game.resolve_selection(player, a);
             }
             None => {
-                let _ = r.game.resolve_selection(player, digimon_engine::action::space::PASS);
+                let _ = r
+                    .game
+                    .resolve_selection(player, digimon_engine::action::space::PASS);
             }
         }
     }
@@ -166,7 +178,10 @@ fn bt25_060_has_no_link_condition() {
             CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition { .. })
         )
     });
-    assert!(!has_lc, "Rebootmon declares NO link_condition (no printed link box)");
+    assert!(
+        !has_lc,
+        "Rebootmon declares NO link_condition (no printed link box)"
+    );
 }
 
 #[test]
@@ -178,18 +193,23 @@ fn bt25_060_grants_security_attack_plus_one() {
         CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, value, .. })
             if keyword == "SecurityAttackPlus" && *value == Some(1)
     ));
-    assert!(has, "<Security A. +1> declared as grant_keyword SecurityAttackPlus value 1");
+    assert!(
+        has,
+        "<Security A. +1> declared as grant_keyword SecurityAttackPlus value 1"
+    );
 }
 
 #[test]
 fn bt25_060_grants_reboot() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let has = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
-            if keyword == "Reboot"
-    ));
+    let has = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
+                if keyword == "Reboot"
+        )
+    });
     assert!(has, "<Reboot> declared as grant_keyword Reboot");
 }
 
@@ -202,7 +222,10 @@ fn bt25_060_has_link_plus_one_aura() {
         CompiledClause::Declarative(CompiledDeclarativeClause::Aura { modifier, modifier_value, .. })
             if modifier.as_deref() == Some("ChangeLinkMax") && *modifier_value == Some(1)
     ));
-    assert!(has, "<Link +1> declared as aura ChangeLinkMax modifier_value 1");
+    assert!(
+        has,
+        "<Link +1> declared as aura ChangeLinkMax modifier_value 1"
+    );
 }
 
 #[test]
@@ -214,7 +237,10 @@ fn bt25_060_has_ult_alt_digivolve() {
         .iter()
         .filter(|p| matches!(p.kind, CompiledAltPathKind::Digivolve))
         .count();
-    assert!(count >= 1, "at least one digivolve alt-path (Ult. / Cost 4) declared");
+    assert!(
+        count >= 1,
+        "at least one digivolve alt-path (Ult. / Cost 4) declared"
+    );
 }
 
 #[test]
@@ -225,7 +251,10 @@ fn bt25_060_has_app_fusion_bootmon_shutmon() {
         .alt_paths
         .iter()
         .any(|p| matches!(p.kind, CompiledAltPathKind::AppFusion));
-    assert!(has, "App Fusion [Bootmon] & [Shutmon] declared as app_fusion alt-path");
+    assert!(
+        has,
+        "App Fusion [Bootmon] & [Shutmon] declared as app_fusion alt-path"
+    );
 }
 
 #[test]
@@ -233,7 +262,9 @@ fn bt25_060_has_wd_wa_link_then_unsuspend_clause() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
     let has = card.effects.iter().any(|c| {
-        let CompiledClause::Triggered(t) = c else { return false };
+        let CompiledClause::Triggered(t) = c else {
+            return false;
+        };
         let wd = t.when.contains(&CompiledTiming::WhenDigivolving);
         let wa = t.when.contains(&CompiledTiming::WhenAttacking);
         let links = t
@@ -254,10 +285,15 @@ fn bt25_060_has_all_turns_dual_timing_grant_clause() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
     let has = card.effects.iter().any(|c| {
-        let CompiledClause::Triggered(t) = c else { return false };
+        let CompiledClause::Triggered(t) = c else {
+            return false;
+        };
         let linked = t.when.contains(&CompiledTiming::WhenCardLinkedToThis);
         let unsusp = t.when.contains(&CompiledTiming::OnUnsuspend);
-        let grants_kw = t.process.iter().any(|s| matches!(s, CompiledStep::GrantKeyword { .. }));
+        let grants_kw = t
+            .process
+            .iter()
+            .any(|s| matches!(s, CompiledStep::GrantKeyword { .. }));
         let grants_immunity = t
             .process
             .iter()
@@ -275,9 +311,9 @@ fn step_tree_has_unsuspend(steps: &[CompiledStep]) -> bool {
     steps.iter().any(|s| match s {
         CompiledStep::Unsuspend { .. } => true,
         CompiledStep::Optional(body) => step_tree_has_unsuspend(body),
-        CompiledStep::If { then, else_branch, .. } => {
-            step_tree_has_unsuspend(then) || step_tree_has_unsuspend(else_branch)
-        }
+        CompiledStep::If {
+            then, else_branch, ..
+        } => step_tree_has_unsuspend(then) || step_tree_has_unsuspend(else_branch),
         CompiledStep::ForEach { body, .. } => step_tree_has_unsuspend(body),
         _ => false,
     })
@@ -313,7 +349,9 @@ fn bt25_060_wd_links_appmon_from_hand_then_unsuspends_chosen_ally() {
     let link_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, link_action);
     assert_eq!(
-        r.game.player(0).battle_area[reboot.index as usize].linked_cards.len(),
+        r.game.player(0).battle_area[reboot.index as usize]
+            .linked_cards
+            .len(),
         1,
         "the Appmon from hand linked onto Rebootmon"
     );
@@ -357,7 +395,9 @@ fn bt25_060_wd_does_not_link_non_appmon() {
     let _ = fire_when_digivolving(&mut r, 0, reboot.index as usize);
     resolve_all_first(&mut r, 0);
     assert_eq!(
-        r.game.player(0).battle_area[reboot.index as usize].linked_cards.len(),
+        r.game.player(0).battle_area[reboot.index as usize]
+            .linked_cards
+            .len(),
         0,
         "a non-Appmon card is never linked"
     );
@@ -384,10 +424,14 @@ fn bt25_060_wd_declining_link_skips_unsuspend() {
         "the link selection is optional (declinable)"
     );
     // Decline the link (PASS).
-    let _ = r.game.resolve_selection(0, digimon_engine::action::space::PASS);
+    let _ = r
+        .game
+        .resolve_selection(0, digimon_engine::action::space::PASS);
 
     assert_eq!(
-        r.game.player(0).battle_area[reboot.index as usize].linked_cards.len(),
+        r.game.player(0).battle_area[reboot.index as usize]
+            .linked_cards
+            .len(),
         0,
         "no card linked after declining"
     );
@@ -423,7 +467,9 @@ fn bt25_060_wd_wa_share_once_per_turn_lockout() {
     let _ = r.game.resolve_selection(0, link_action);
     resolve_all_first(&mut r, 0);
     assert_eq!(
-        r.game.player(0).battle_area[reboot.index as usize].linked_cards.len(),
+        r.game.player(0).battle_area[reboot.index as usize]
+            .linked_cards
+            .len(),
         1,
         "WD linked 1 Appmon"
     );
@@ -435,7 +481,9 @@ fn bt25_060_wd_wa_share_once_per_turn_lockout() {
         "[WA] is locked out after [WD] fired the shared once-per-turn"
     );
     assert_eq!(
-        r.game.player(0).battle_area[reboot.index as usize].linked_cards.len(),
+        r.game.player(0).battle_area[reboot.index as usize]
+            .linked_cards
+            .len(),
         1,
         "no second link via WA after WD consumed the OPT"
     );
@@ -454,7 +502,9 @@ fn bt25_060_wd_wa_share_once_per_turn_lockout() {
     let _ = r.game.resolve_selection(0, link2);
     resolve_all_first(&mut r, 0);
     assert_eq!(
-        r.game.player(0).battle_area[reboot2.index as usize].linked_cards.len(),
+        r.game.player(0).battle_area[reboot2.index as usize]
+            .linked_cards
+            .len(),
         2,
         "second Appmon linked next turn after the OPT reset"
     );
@@ -472,8 +522,14 @@ fn bt25_060_grant_fires_on_link_to_host() {
     let reboot = r.place_on_field(0, CARD_ID, Some(0));
     advance_to_main(&mut r);
 
-    assert!(!r.game.has_keyword(reboot, Keyword::Piercing), "no Piercing pre-link");
-    assert!(!r.game.has_keyword(reboot, Keyword::Blocker), "no Blocker pre-link");
+    assert!(
+        !r.game.has_keyword(reboot, Keyword::Piercing),
+        "no Piercing pre-link"
+    );
+    assert!(
+        !r.game.has_keyword(reboot, Keyword::Blocker),
+        "no Blocker pre-link"
+    );
 
     // Drive a real link onto Rebootmon via its own [WD] link step so OnLink
     // fires the host-side when_card_linked_to_this trigger.
@@ -491,7 +547,8 @@ fn bt25_060_grant_fires_on_link_to_host() {
         "Rebootmon gained <Blocker> when a card linked to it"
     );
     assert!(
-        r.game.permanent_is_unaffected_by_effect(reboot, 1, EffectSourceKind::Digimon),
+        r.game
+            .permanent_is_unaffected_by_effect(reboot, 1, EffectSourceKind::Digimon),
         "Rebootmon is immune to opponent's Digimon effects after the link"
     );
 }
@@ -503,7 +560,10 @@ fn bt25_060_grant_fires_on_unsuspend() {
     let reboot = r.place_on_field(0, CARD_ID, Some(0));
     advance_to_main(&mut r);
     r.game.suspend(reboot);
-    assert!(!r.game.has_keyword(reboot, Keyword::Piercing), "no Piercing before unsuspend");
+    assert!(
+        !r.game.has_keyword(reboot, Keyword::Piercing),
+        "no Piercing before unsuspend"
+    );
 
     r.game.unsuspend(reboot);
     resolve_all_first(&mut r, 0);
@@ -517,7 +577,8 @@ fn bt25_060_grant_fires_on_unsuspend() {
         "Rebootmon gained <Blocker> on unsuspend"
     );
     assert!(
-        r.game.permanent_is_unaffected_by_effect(reboot, 1, EffectSourceKind::Digimon),
+        r.game
+            .permanent_is_unaffected_by_effect(reboot, 1, EffectSourceKind::Digimon),
         "Rebootmon immune to opponent Digimon effects on unsuspend"
     );
 }
@@ -531,7 +592,10 @@ fn bt25_060_grant_expires_end_of_your_turn() {
     r.game.suspend(reboot);
     r.game.unsuspend(reboot);
     resolve_all_first(&mut r, 0);
-    assert!(r.game.has_keyword(reboot, Keyword::Piercing), "Piercing present this turn");
+    assert!(
+        r.game.has_keyword(reboot, Keyword::Piercing),
+        "Piercing present this turn"
+    );
 
     // End the turn → the until-your-turn-end grants must expire.
     r.end_turn();
@@ -544,7 +608,8 @@ fn bt25_060_grant_expires_end_of_your_turn() {
         "Blocker expired at end of your turn"
     );
     assert!(
-        !r.game.permanent_is_unaffected_by_effect(reboot, 1, EffectSourceKind::Digimon),
+        !r.game
+            .permanent_is_unaffected_by_effect(reboot, 1, EffectSourceKind::Digimon),
         "effect-immunity expired at end of your turn"
     );
 }
@@ -557,7 +622,10 @@ fn bt25_060_link_plus_one_raises_link_max() {
     advance_to_main(&mut r);
     r.game.tick_declarative_effects();
     let delta = r.game.modifiers.link_max_delta(reboot);
-    assert_eq!(delta, 1, "<Link +1> grants a +1 ChangeLinkMax delta while on field");
+    assert_eq!(
+        delta, 1,
+        "<Link +1> grants a +1 ChangeLinkMax delta while on field"
+    );
 }
 
 /// App Fusion behavioral: top Bootmon + linked Shutmon → Rebootmon's app-fusion
@@ -594,5 +662,8 @@ fn bt25_060_app_fusion_stacks_bootmon_and_shutmon() {
         perm.card_sources.iter().any(|c| c.handle() == linked),
         "the linked Shutmon was consumed under the new top as a digivolution source"
     );
-    assert!(perm.linked_cards.is_empty(), "consumed link removed from linked_cards");
+    assert!(
+        perm.linked_cards.is_empty(),
+        "consumed link removed from linked_cards"
+    );
 }

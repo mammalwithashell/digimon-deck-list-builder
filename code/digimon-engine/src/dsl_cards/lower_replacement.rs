@@ -17,7 +17,7 @@ use crate::dsl_cards::step::{resolve_player, run_steps_with_runtime, StepRuntime
 use crate::dsl_cards::trigger_map::lookup_replacement_trigger;
 use crate::effect::{Effect, EffectBuilder};
 use crate::effect_context::{DelayCostStatus, EffectContext, EffectReadContext};
-use crate::enums::{EffectTiming, GamePhase, ModifierType, PlayerId};
+use crate::enums::{EffectSourceKind, EffectTiming, GamePhase, ModifierType, PlayerId};
 use crate::game::Game;
 use crate::permanent::{OptionState, PermanentHandle};
 use crate::replacement::ReplacementSubject;
@@ -509,12 +509,7 @@ fn required_selection_step_has_candidate(
         CompiledStep::TrashOwnLinkCardAndCancelLeave
         | CompiledStep::PlaceLinkCardAsBottomSourceAndCancelLeave => bindings
             .get_permanent("replacement_subject")
-            .and_then(|h| {
-                ctx.game
-                    .player(h.player)
-                    .battle_area
-                    .get(h.index as usize)
-            })
+            .and_then(|h| ctx.game.player(h.player).battle_area.get(h.index as usize))
             .is_some_and(|perm| !perm.linked_cards.is_empty()),
         // Non-selection first steps may mutate state before a later selection,
         // so this read-only preflight deliberately does not speculate.
@@ -831,14 +826,14 @@ struct DelayHandDigivolveFlow {
 
 struct DelaySelfCancelFlow;
 
-#[derive(Clone)]
-struct DelayCancelContinuation {
+#[derive(Clone, Debug)]
+pub(crate) struct DelayCancelContinuation {
     source_player: PlayerId,
     source_card: CardHandle,
 }
 
-#[derive(Clone)]
-struct DelayCostContinuation {
+#[derive(Clone, Debug)]
+pub(crate) struct DelayCostContinuation {
     source_player: PlayerId,
     source_card: CardHandle,
     subject: ReplacementSubject,
@@ -846,6 +841,17 @@ struct DelayCostContinuation {
     player: PlayerId,
     prompt: String,
     filter: CompiledPredicate,
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct DelayHandDigivolveSelectionState {
+    subject: ReplacementSubject,
+    player: PlayerId,
+    source_card: CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    source_kind: EffectSourceKind,
+    candidates: Vec<CardHandle>,
+    pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
 }
 
 impl DelaySelfCancelFlow {
@@ -930,8 +936,8 @@ struct DelayHandDnaDigivolveFlow {
     partner_prompt: String,
 }
 
-#[derive(Clone)]
-struct DelayDnaCostContinuation {
+#[derive(Clone, Debug)]
+pub(crate) struct DelayDnaCostContinuation {
     source_player: PlayerId,
     source_card: CardHandle,
     subject: ReplacementSubject,
@@ -941,6 +947,30 @@ struct DelayDnaCostContinuation {
     result_filter: CompiledPredicate,
     partner_prompt: String,
     partner_filter: CompiledPredicate,
+}
+
+/// Which selection stage a `DnaSelectionStage` callback represents.
+#[derive(Clone, Debug)]
+pub(crate) enum DnaSelectionStage {
+    /// Stage 1 -- the chosen card is the Omnimon result. Chain into Stage 2.
+    Result(DelayDnaCostContinuation),
+    /// Stage 2 -- the chosen card is the hand partner; `result` is the
+    /// already-chosen Omnimon card. Execute the DNA merge.
+    Partner {
+        continuation: DelayDnaCostContinuation,
+        result: CardHandle,
+    },
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct DelayDnaCardSelectionState {
+    player: PlayerId,
+    source_card: CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    source_kind: EffectSourceKind,
+    candidates: Vec<CardHandle>,
+    stage: DnaSelectionStage,
+    pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
 }
 
 impl DelayHandDnaDigivolveFlow {
@@ -1108,6 +1138,7 @@ fn install_delay_hand_digivolve_selection(
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind();
+    let resume_candidates = candidates.clone();
 
     ctx.game.current_phase = GamePhase::EffectChoice;
     ctx.game.pending_selection = Some(PendingSelection {
@@ -1142,6 +1173,56 @@ fn install_delay_hand_digivolve_selection(
         }),
         on_decline: None,
     });
+    ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::DelayHandDigivolveSelection(
+            DelayHandDigivolveSelectionState {
+                subject,
+                player,
+                source_card,
+                source_permanent,
+                source_kind,
+                candidates: resume_candidates,
+                outer_conts: Vec::new(),
+            },
+        )],
+    });
+}
+
+pub(crate) fn run_delay_hand_digivolve_selection_step(
+    game: &mut Game,
+    state: DelayHandDigivolveSelectionState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        return;
+    }
+    let DelayHandDigivolveSelectionState {
+        subject,
+        player,
+        source_card,
+        source_permanent,
+        source_kind,
+        candidates,
+        outer_conts,
+    } = state;
+    let Some(idx) = action_id.checked_sub(HAND_EFFECT_START).map(|i| i as usize) else {
+        return;
+    };
+    let Some(card) = candidates.get(idx).copied() else {
+        return;
+    };
+    let mut ctx = EffectContext::new_with_source_kind(
+        game,
+        source_card,
+        source_permanent,
+        source_kind,
+        player,
+    );
+    if ctx.digivolve_replacement_subject_without_cost(subject, card) {
+        ctx.cancel_current_replacement();
+    }
+    crate::dsl_cards::step::selections::run_outer_conts(ctx.game, outer_conts);
 }
 
 fn arm_pending_delay_cost_continuation(game: &mut Game, continuation: DelayCostContinuation) {
@@ -1149,6 +1230,20 @@ fn arm_pending_delay_cost_continuation(game: &mut Game, continuation: DelayCostC
         continue_delay_cost_after_selection(game, continuation);
         return;
     };
+
+    if let Some(inner) = game.pending_selection_resume.take() {
+        game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![
+                crate::resume::ResumeFrame::DelayHandDigivolveAfterSelection {
+                    inner: Box::new(inner),
+                    continuation,
+                    outer_conts: Vec::new(),
+                },
+            ],
+        });
+        game.pending_selection = Some(selection);
+        return;
+    }
 
     let original_callback = selection.callback;
     let callback_continuation = continuation.clone();
@@ -1174,6 +1269,18 @@ fn arm_pending_delay_cancel_continuation(game: &mut Game, continuation: DelayCan
         return;
     };
 
+    if let Some(inner) = game.pending_selection_resume.take() {
+        game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::DelayCancelAfterSelection {
+                inner: Box::new(inner),
+                continuation,
+                outer_conts: Vec::new(),
+            }],
+        });
+        game.pending_selection = Some(selection);
+        return;
+    }
+
     let original_callback = selection.callback;
     let callback_continuation = continuation.clone();
     selection.callback = Box::new(move |game, action_id| {
@@ -1192,7 +1299,10 @@ fn arm_pending_delay_cancel_continuation(game: &mut Game, continuation: DelayCan
     game.pending_selection = Some(selection);
 }
 
-fn continue_delay_cancel_after_selection(game: &mut Game, continuation: DelayCancelContinuation) {
+pub(crate) fn continue_delay_cancel_after_selection(
+    game: &mut Game,
+    continuation: DelayCancelContinuation,
+) {
     if game.pending_selection.is_some() {
         arm_pending_delay_cancel_continuation(game, continuation);
         return;
@@ -1216,7 +1326,10 @@ fn continue_delay_cancel_after_selection(game: &mut Game, continuation: DelayCan
     }
 }
 
-fn continue_delay_cost_after_selection(game: &mut Game, continuation: DelayCostContinuation) {
+pub(crate) fn continue_delay_cost_after_selection(
+    game: &mut Game,
+    continuation: DelayCostContinuation,
+) {
     if game.pending_selection.is_some() {
         arm_pending_delay_cost_continuation(game, continuation);
         return;
@@ -1266,6 +1379,18 @@ fn arm_pending_delay_dna_continuation(game: &mut Game, continuation: DelayDnaCos
         return;
     };
 
+    if let Some(inner) = game.pending_selection_resume.take() {
+        game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::DelayDnaAfterSelection {
+                inner: Box::new(inner),
+                continuation,
+                outer_conts: Vec::new(),
+            }],
+        });
+        game.pending_selection = Some(selection);
+        return;
+    }
+
     let original_callback = selection.callback;
     let callback_continuation = continuation.clone();
     selection.callback = Box::new(move |game, action_id| {
@@ -1284,7 +1409,10 @@ fn arm_pending_delay_dna_continuation(game: &mut Game, continuation: DelayDnaCos
     game.pending_selection = Some(selection);
 }
 
-fn continue_delay_dna_after_selection(game: &mut Game, continuation: DelayDnaCostContinuation) {
+pub(crate) fn continue_delay_dna_after_selection(
+    game: &mut Game,
+    continuation: DelayDnaCostContinuation,
+) {
     if game.pending_selection.is_some() {
         arm_pending_delay_dna_continuation(game, continuation);
         return;
@@ -1342,18 +1470,6 @@ fn install_delay_dna_after_paid(
     );
 }
 
-/// Which selection stage a `DnaSelectionStage` callback represents.
-enum DnaSelectionStage {
-    /// Stage 1 — the chosen card is the Omnimon result. Chain into Stage 2.
-    Result(DelayDnaCostContinuation),
-    /// Stage 2 — the chosen card is the hand partner; `result` is the
-    /// already-chosen Omnimon card. Execute the DNA merge.
-    Partner {
-        continuation: DelayDnaCostContinuation,
-        result: CardHandle,
-    },
-}
-
 /// Install a hand-card `EffectChoice` selection for one DNA stage. The chosen
 /// card drives the next stage (Result → Partner) or the merge (Partner).
 fn install_delay_dna_card_selection(
@@ -1389,6 +1505,8 @@ fn install_delay_dna_card_selection(
     let source_card = ctx.source_card;
     let source_permanent = ctx.source_permanent;
     let source_kind = ctx.source_kind();
+    let resume_candidates = candidates.clone();
+    let resume_stage = stage.clone();
 
     ctx.game.current_phase = GamePhase::EffectChoice;
     ctx.game.pending_selection = Some(PendingSelection {
@@ -1482,4 +1600,105 @@ fn install_delay_dna_card_selection(
         }),
         on_decline: None,
     });
+    ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::DelayDnaCardSelection(
+            DelayDnaCardSelectionState {
+                player,
+                source_card,
+                source_permanent,
+                source_kind,
+                candidates: resume_candidates,
+                stage: resume_stage,
+                outer_conts: Vec::new(),
+            },
+        )],
+    });
+}
+
+pub(crate) fn run_delay_dna_card_selection_step(
+    game: &mut Game,
+    state: DelayDnaCardSelectionState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        return;
+    }
+    let DelayDnaCardSelectionState {
+        player,
+        source_card,
+        source_permanent,
+        source_kind,
+        candidates,
+        stage,
+        outer_conts,
+    } = state;
+    let Some(idx) = action_id.checked_sub(HAND_EFFECT_START).map(|i| i as usize) else {
+        return;
+    };
+    let Some(chosen) = candidates.get(idx).copied() else {
+        return;
+    };
+    match &stage {
+        DnaSelectionStage::Result(continuation) => {
+            let mut ctx = EffectContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            let partner_candidates: Vec<CardHandle> = matching_hand_candidates(
+                &ctx,
+                continuation.player,
+                &continuation.partner_filter,
+                HAND_MAIN_LIMIT,
+            )
+            .into_iter()
+            .filter(|c| *c != chosen)
+            .collect();
+            if !partner_candidates.is_empty() {
+                install_delay_dna_card_selection(
+                    &mut ctx,
+                    continuation.player,
+                    continuation.partner_prompt.clone(),
+                    partner_candidates,
+                    DnaSelectionStage::Partner {
+                        continuation: continuation.clone(),
+                        result: chosen,
+                    },
+                );
+            }
+        }
+        DnaSelectionStage::Partner {
+            continuation,
+            result,
+        } => {
+            let mut ctx = EffectContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            if let Some(subject) = resolve_stable_replacement_subject(
+                &ctx,
+                continuation.subject,
+                continuation.subject_card,
+            ) {
+                if let Some(target) = subject.permanent() {
+                    let merged = ctx.effect_initiated_dna_digivolve_with_hand_partner(
+                        target, chosen, *result, 0, true,
+                    );
+                    if merged.is_some() {
+                        ctx.cancel_current_replacement();
+                        if let Some(parked) = ctx.game.parked_replacement.as_mut() {
+                            parked.outcome = crate::replacement::ReplacementOutcome::Cancelled;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    crate::dsl_cards::step::selections::run_outer_conts(game, outer_conts);
 }

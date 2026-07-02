@@ -156,6 +156,73 @@ fn alliance_declared_buffs_attacker_and_suspends_ally() {
 }
 
 #[test]
+fn alliance_prompt_clones_faithfully() {
+    let mut r = DebugRunner::builder()
+        .add_card(dgmn("ATK", 4000))
+        .add_card(dgmn("DEF", 6000))
+        .add_card(dgmn("ALLY", 3000))
+        .start();
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let _ally = r.place_on_field(0, "ALLY", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Alliance, Expiry::Permanent, 0);
+
+    r.attack_digimon(atk, def, false);
+    let ally_action = encode_attack(0, 1);
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "AllianceTiming must park a data frame for clone-faithful prompts"
+    );
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, ally_action)
+        .expect("clone declares Alliance");
+    assert!(
+        clone.pending_attack.is_none(),
+        "clone should continue the attack to completion"
+    );
+    assert_eq!(
+        clone.players[1].battle_area.len(),
+        0,
+        "clone should apply the Alliance buff and delete the defender"
+    );
+    assert!(
+        clone.players[0].battle_area[1].is_suspended,
+        "clone should pay the Alliance suspend cost"
+    );
+
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original at the Alliance prompt"
+    );
+    assert_eq!(
+        r.game.players[1].battle_area.len(),
+        1,
+        "resolving the clone must not mutate the original defender"
+    );
+    assert!(
+        !r.game.players[0].battle_area[1].is_suspended,
+        "resolving the clone must not suspend the original ally"
+    );
+
+    r.game
+        .resolve_selection(0, ally_action)
+        .expect("original declares Alliance");
+    assert_eq!(
+        r.game.players[1].battle_area.len(),
+        clone.players[1].battle_area.len(),
+        "original and clone replay Alliance identically"
+    );
+    assert_eq!(
+        r.game.players[0].battle_area[1].is_suspended, clone.players[0].battle_area[1].is_suspended,
+        "original and clone pay the same Alliance cost"
+    );
+}
+
+#[test]
 fn alliance_declined_preserves_board_state() {
     let mut r = DebugRunner::builder()
         .add_card(dgmn("ATK", 5000))

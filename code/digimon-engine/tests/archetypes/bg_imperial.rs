@@ -168,7 +168,9 @@ fn dna_bounce_real_exveemon_stingmon_returns_low_dp_opponent() {
 
     // Resolve: pick the only opp target.
     let action = first_valid_action(&runner);
-    runner.execute_action(0, action).expect("resolve the bounce");
+    runner
+        .execute_action(0, action)
+        .expect("resolve the bounce");
 
     let after = snapshot_min(&runner);
     assert_eq!(
@@ -208,9 +210,7 @@ fn regular_digivolve_into_paildramon_does_not_fire_dna_bounce() {
     let before = snapshot_min(&runner);
     // Regular digivolve: P0 hand index 0 (ST9-05) onto field slot 0, pay from hand.
     assert!(
-        runner
-            .game
-            .digivolve_from_hand(0, 0, 0, PlaySource::ByHand),
+        runner.game.digivolve_from_hand(0, 0, 0, PlaySource::ByHand),
         "regular digivolve into ST9-05 must succeed from a Lv.4 blue base"
     );
     let after = snapshot_min(&runner);
@@ -262,9 +262,7 @@ fn dna_lockdown_suspends_and_locks_opponent() {
     );
     // on_dna_digivolve: the DNA-only lock is applied.
     assert!(
-        runner
-            .modifiers()
-            .has(opp, ModifierType::CannotUnsuspend),
+        runner.modifiers().has(opp, ModifierType::CannotUnsuspend),
         "the DNA path must apply CannotUnsuspend to the opp Digimon"
     );
 }
@@ -289,9 +287,7 @@ fn regular_digivolve_into_meta_paildramon_suspends_but_does_not_lock() {
     let opp = runner.place_on_field(1, "OPP", Some(0));
 
     assert!(
-        runner
-            .game
-            .digivolve_from_hand(0, 0, 0, PlaySource::ByHand),
+        runner.game.digivolve_from_hand(0, 0, 0, PlaySource::ByHand),
         "regular digivolve into BT16-025 must succeed"
     );
     let _ = runner.auto_resolve();
@@ -301,9 +297,7 @@ fn regular_digivolve_into_meta_paildramon_suspends_but_does_not_lock() {
         "[When Digivolving] suspend fires on a regular digivolve too"
     );
     assert!(
-        !runner
-            .modifiers()
-            .has(opp, ModifierType::CannotUnsuspend),
+        !runner.modifiers().has(opp, ModifierType::CannotUnsuspend),
         "the CannotUnsuspend lock must NOT apply off a regular (non-DNA) digivolve"
     );
 }
@@ -324,9 +318,10 @@ fn regular_digivolve_into_meta_paildramon_suspends_but_does_not_lock() {
 /// pattern from `rocks.rs` — `place_stack` builds the stack without firing the
 /// trigger, so we enqueue + drain it to model the digivolve).
 fn fire_when_digivolving(runner: &mut DebugRunner, handle: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -615,7 +610,13 @@ fn veemon_digivolves_over_blue_egg() {
 /// it even though the level (2) matches.
 #[test]
 fn wormmon_cannot_digivolve_over_blue_egg() {
-    let wormmon = evolver("BT12-047", "Wormmon", 3, CardColor::Green, &[(EVO_GREEN, 2)]);
+    let wormmon = evolver(
+        "BT12-047",
+        "Wormmon",
+        3,
+        CardColor::Green,
+        &[(EVO_GREEN, 2)],
+    );
     let blue_egg = base_digimon("BT12-002", 2, CardColor::Blue); // DemiVeemon
     assert!(
         !colour_gate_allows(wormmon, blue_egg),
@@ -628,7 +629,13 @@ fn wormmon_cannot_digivolve_over_blue_egg() {
 /// hard-play, not the blue DemiVeemon.)
 #[test]
 fn wormmon_digivolves_over_green_egg() {
-    let wormmon = evolver("BT12-047", "Wormmon", 3, CardColor::Green, &[(EVO_GREEN, 2)]);
+    let wormmon = evolver(
+        "BT12-047",
+        "Wormmon",
+        3,
+        CardColor::Green,
+        &[(EVO_GREEN, 2)],
+    );
     let green_egg = base_digimon("GREEN-EGG", 2, CardColor::Green);
     assert!(
         colour_gate_allows(wormmon, green_egg),
@@ -763,10 +770,10 @@ fn imperial_line_cards_carry_both_digivolve_colours_in_cards_json() {
     // (card_id, [(colour_code, level, memory_cost), ...]) — the FULL set of
     // printed digivolve circles per card, verified against the card image.
     let expected: &[(&str, &[(u8, u8, u16)])] = &[
-        ("EX1-014", &[(1, 3, 2), (3, 3, 2)]),  // ExVeemon: Blue L3 + Green L3
-        ("ST9-09", &[(3, 3, 2), (1, 3, 2)]),   // Stingmon: Green L3 + Blue L3
-        ("ST9-05", &[(1, 4, 4), (3, 4, 4)]),   // Paildramon: Blue L4 + Green L4
-        ("ST9-06", &[(1, 5, 4), (3, 5, 4)]),   // Imperialdramon DM: Blue L5 + Green L5
+        ("EX1-014", &[(1, 3, 2), (3, 3, 2)]), // ExVeemon: Blue L3 + Green L3
+        ("ST9-09", &[(3, 3, 2), (1, 3, 2)]),  // Stingmon: Green L3 + Blue L3
+        ("ST9-05", &[(1, 4, 4), (3, 4, 4)]),  // Paildramon: Blue L4 + Green L4
+        ("ST9-06", &[(1, 5, 4), (3, 5, 4)]),  // Imperialdramon DM: Blue L5 + Green L5
         ("BT12-028", &[(1, 4, 4), (3, 4, 4)]), // Paildramon: Blue L4 + Green L4
         ("BT12-030", &[(1, 5, 4), (3, 5, 4)]), // Imperialdramon DM: Blue L5 + Green L5
         ("BT12-031", &[(1, 5, 5), (3, 5, 5)]), // Imperialdramon FM: Blue L5 + Green L5 (cost 5)

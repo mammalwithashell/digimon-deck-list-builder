@@ -91,10 +91,12 @@ fn bt25_025_grants_blocker() {
 fn bt25_025_has_replacement_for_decode() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let has = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { .. })
-    ));
+    let has = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { .. })
+        )
+    });
     assert!(has, "Decode is modeled as a Replacement clause");
 }
 

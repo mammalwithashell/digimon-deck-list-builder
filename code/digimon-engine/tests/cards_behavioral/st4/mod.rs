@@ -713,7 +713,9 @@ fn st4_13_digi_burst_suspend_is_mandatory() {
         Some(SelectionKind::OppField),
         "Digi-Burst must lead into the suspend target selection"
     );
-    let prompt = runner.pending_selection().expect("suspend selection pending");
+    let prompt = runner
+        .pending_selection()
+        .expect("suspend selection pending");
     assert!(
         !prompt.is_optional,
         "\"Suspend 1 of your opponent's Digimon\" is mandatory once Digi-Burst is paid"

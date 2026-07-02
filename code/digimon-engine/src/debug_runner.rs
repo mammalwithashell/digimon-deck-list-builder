@@ -149,12 +149,8 @@ impl DebugRunner {
         effect_initiated: bool,
         suppress_on_play: bool,
     ) {
-        self.game.fire_play_event_triggers(
-            player,
-            field_index,
-            effect_initiated,
-            suppress_on_play,
-        );
+        self.game
+            .fire_play_event_triggers(player, field_index, effect_initiated, suppress_on_play);
     }
 
     /// Place a card directly on a player's field (bypass hand/play_from_hand).
@@ -1009,18 +1005,17 @@ impl DebugRunnerBuilder {
         {
             // `alt_path_registry` is a shared `Arc` (see `card_store`); copy-on-write
             // so a DebugRunner's injected cards extend a private copy.
-            std::sync::Arc::make_mut(&mut game.alt_path_registry)
-                .extend(
-                    self.compiled_cards
-                        .iter()
-                        .filter_map(|(card_id, compiled)| {
-                            if compiled.alt_paths.is_empty() {
-                                None
-                            } else {
-                                Some((card_id.clone(), compiled.alt_paths.clone()))
-                            }
-                        }),
-                );
+            std::sync::Arc::make_mut(&mut game.alt_path_registry).extend(
+                self.compiled_cards
+                    .iter()
+                    .filter_map(|(card_id, compiled)| {
+                        if compiled.alt_paths.is_empty() {
+                            None
+                        } else {
+                            Some((card_id.clone(), compiled.alt_paths.clone()))
+                        }
+                    }),
+            );
         }
 
         // Wipe any cards Game::new placed (it populates from empty decks, so this

@@ -114,9 +114,9 @@ fn ex10_068_has_start_main_and_on_play_clauses() {
         "EX10-068 must carry a Start-of-Your-Main-Phase distinct-color memory clause"
     );
 
-    let has_on_play = card.effects.iter().any(|c| {
-        matches!(c, CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnPlay))
-    });
+    let has_on_play = card.effects.iter().any(
+        |c| matches!(c, CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnPlay)),
+    );
     assert!(
         has_on_play,
         "EX10-068 must carry an On Play delete/return/play clause"
@@ -156,7 +156,12 @@ fn ex10_068_on_play_deletes_play_cost_5_or_lower_opponent_digimon() {
     runner.auto_resolve().expect("delete target resolves");
 
     assert!(
-        runner.game.player(1).battle_area.get(opp.index as usize).is_none()
+        runner
+            .game
+            .player(1)
+            .battle_area
+            .get(opp.index as usize)
+            .is_none()
             || runner.game.player(1).battle_area.is_empty(),
         "the play-cost-5 opponent Digimon must be deleted"
     );
@@ -317,7 +322,9 @@ fn ex10_068_wrong_color_only_offers_no_play() {
         .copied()
         .find(|&a| a != digimon_engine::action::space::PASS)
         .expect("a return target must be offered");
-    runner.execute_action(0, pick).expect("return the Blue card");
+    runner
+        .execute_action(0, pick)
+        .expect("return the Blue card");
 
     // The play either does not install (no candidates) or installs optional with
     // no concrete candidate — in both cases the controller plays nothing.

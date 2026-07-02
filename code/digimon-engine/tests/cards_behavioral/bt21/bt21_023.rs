@@ -117,7 +117,10 @@ fn bt21_023_has_link_condition_appmon_cost_3() {
                 if *cost == 3
         )
     });
-    assert!(has, "BT21-023 declares a self link-condition with cost 3 for [Appmon] hosts");
+    assert!(
+        has,
+        "BT21-023 declares a self link-condition with cost 3 for [Appmon] hosts"
+    );
 }
 
 #[test]
@@ -135,51 +138,71 @@ fn bt21_023_has_app_fusion_altpath() {
 fn bt21_023_grants_security_attack_plus_1() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let has = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
-            if keyword == "SecurityAttackPlus"
-    ));
-    assert!(has, "BT21-023 must have a SecurityAttackPlus grant_keyword clause");
+    let has = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword { keyword, .. })
+                if keyword == "SecurityAttackPlus"
+        )
+    });
+    assert!(
+        has,
+        "BT21-023 must have a SecurityAttackPlus grant_keyword clause"
+    );
 }
 
 #[test]
 fn bt21_023_has_on_play_when_digivolving_link_clause() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let op = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::OnPlay)
-            && t.when.contains(&CompiledTiming::WhenDigivolving)
-    ));
-    assert!(op, "BT21-023 must have a clause triggering on both on_play and when_digivolving");
+    let op = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::OnPlay)
+                && t.when.contains(&CompiledTiming::WhenDigivolving)
+        )
+    });
+    assert!(
+        op,
+        "BT21-023 must have a clause triggering on both on_play and when_digivolving"
+    );
 }
 
 #[test]
 fn bt21_023_has_when_card_linked_once_per_turn() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let has = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.when.contains(&CompiledTiming::WhenCardLinkedToThis)
-            && t.once_per_turn
-    ));
-    assert!(has, "BT21-023 must have a when_card_linked_to_this clause with once_per_turn");
+    let has = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::WhenCardLinkedToThis)
+                && t.once_per_turn
+        )
+    });
+    assert!(
+        has,
+        "BT21-023 must have a when_card_linked_to_this clause with once_per_turn"
+    );
 }
 
 #[test]
 fn bt21_023_has_linked_when_linked_ess_clause() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let has = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.scope == CompiledScope::Linked
-            && t.when.contains(&CompiledTiming::WhenLinked)
-    ));
-    assert!(has, "BT21-023 must have a scope:Linked WhenLinked ESS clause");
+    let has = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.scope == CompiledScope::Linked
+                && t.when.contains(&CompiledTiming::WhenLinked)
+        )
+    });
+    assert!(
+        has,
+        "BT21-023 must have a scope:Linked WhenLinked ESS clause"
+    );
 }
 
 #[test]
@@ -188,12 +211,17 @@ fn bt21_023_has_linked_dp_aura() {
     let card = runner.compiled_card(CARD_ID).expect("present");
     // The linked +4000 DP aura is a CompiledDeclarativeClause::Aura with scope Linked.
     // We detect it by looking for a Linked-scoped aura clause in the effects.
-    let has = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::Aura { scope, .. })
-            if *scope == CompiledScope::Linked
-    ));
-    assert!(has, "BT21-023 must have a scope:Linked Aura clause for the +4000 DP link bonus");
+    let has = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Aura { scope, .. })
+                if *scope == CompiledScope::Linked
+        )
+    });
+    assert!(
+        has,
+        "BT21-023 must have a scope:Linked Aura clause for the +4000 DP link bonus"
+    );
 }
 
 // ─── Section 2 — On Play self-link (from hand) ───────────────────────────────
@@ -275,10 +303,7 @@ fn bt21_023_on_play_no_prompt_when_no_eligible_card_in_hand() {
         r.game.pending_selection.is_none(),
         "[On Play] link prompt must NOT surface when no level-4-or-lower Digimon is available"
     );
-    assert_eq!(
-        r.game.player(0).battle_area[glob_idx].linked_cards.len(),
-        0
-    );
+    assert_eq!(r.game.player(0).battle_area[glob_idx].linked_cards.len(), 0);
 }
 
 #[test]
@@ -431,7 +456,10 @@ fn bt21_023_when_linked_no_delete_if_no_eligible_opp() {
 
     let _glob_idx = r.play(0, 0).expect("Globemon played");
 
-    assert!(r.game.pending_selection.is_some(), "[On Play] link prompt surfaces");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "[On Play] link prompt surfaces"
+    );
     let link_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, link_action);
 
@@ -475,7 +503,12 @@ fn bt21_023_when_linked_opt_lockout_same_turn() {
     // Now fire on_play again (simulate a second link via fire_on_play + add another
     // APPMON-LV4 to hand).
     {
-        let idx = r.game.card_data.iter().position(|c| c.card_id == "APPMON-LV4").unwrap();
+        let idx = r
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "APPMON-LV4")
+            .unwrap();
         let iid = r.game.next_card_index();
         r.game.players[0].hand.push(CardSource::new(idx, 0, iid));
     }
@@ -517,7 +550,10 @@ fn bt21_023_when_linked_opt_clears_after_end_turn() {
 
     // Turn 0: play Globemon → On Play link → delete fires.
     let glob_idx = r.play(0, 0).expect("Globemon played");
-    assert!(r.game.pending_selection.is_some(), "[On Play] link prompt T0");
+    assert!(
+        r.game.pending_selection.is_some(),
+        "[On Play] link prompt T0"
+    );
     let link_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
     let _ = r.game.resolve_selection(0, link_action);
     if r.game.pending_selection.is_some() {
@@ -531,7 +567,12 @@ fn bt21_023_when_linked_opt_clears_after_end_turn() {
 
     // Add another APPMON-LV4 to hand and another opp Digimon on field.
     {
-        let idx = r.game.card_data.iter().position(|c| c.card_id == "APPMON-LV4").unwrap();
+        let idx = r
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "APPMON-LV4")
+            .unwrap();
         let iid = r.game.next_card_index();
         r.game.players[0].hand.push(CardSource::new(idx, 0, iid));
     }
@@ -561,10 +602,7 @@ fn bt21_023_linked_ess_deletes_opp_within_dp_ceiling() {
     // makes effective host DP = 12000. The delete ceiling = 12000.
     // OPP-SMALL (8000) and OPP-BELOW-14K (13000) are on the field.
     // OPP-BIG (12000) and OPP-BELOW-14K (13000): only OPP-SMALL should be selectable.
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(10)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(10).start();
     let host = r.place_on_field(0, "APPMON-LV4", Some(0)); // DP 4000 base
     let globemon = r.place_on_field(0, CARD_ID, Some(0)); // will be linked
     let opp_small = r.place_on_field(1, "OPP-SMALL", Some(0)); // DP 8000
@@ -604,10 +642,7 @@ fn bt21_023_linked_ess_dp_ceiling_with_aura_bonus() {
     // Host base DP = 4000. After linking Globemon (+4000 aura) = effective 8000.
     // OPP-SMALL DP 8000 is exactly at the ceiling — should be selectable.
     // OPP-BIG DP 12000 exceeds 8000 — should NOT be selectable.
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(10)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(10).start();
     let host = r.place_on_field(0, "APPMON-LV4", Some(0)); // DP 4000 base
     let globemon = r.place_on_field(0, CARD_ID, Some(0));
     let opp_small = r.place_on_field(1, "OPP-SMALL", Some(0)); // DP 8000
@@ -656,17 +691,17 @@ fn bt21_023_linked_ess_dp_ceiling_with_aura_bonus() {
         .unwrap_or(0);
     // OPP-BIG has dp 12000; OPP-SMALL has dp 8000.
     // After deletion OPP-BIG (12000) survives.
-    assert_eq!(survivor_dp, 12000, "OPP-BIG (12000 DP) should survive; only OPP-SMALL (8000) deleted");
+    assert_eq!(
+        survivor_dp, 12000,
+        "OPP-BIG (12000 DP) should survive; only OPP-SMALL (8000) deleted"
+    );
 }
 
 #[test]
 fn bt21_023_linked_ess_no_prompt_when_no_eligible_opp() {
     // After linking Globemon onto a host (effective host DP = 4000+4000=8000),
     // if the only opponent Digimon has DP > 8000, no delete prompt surfaces.
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(10)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(10).start();
     let host = r.place_on_field(0, "APPMON-LV4", Some(0)); // DP 4000
     let globemon = r.place_on_field(0, CARD_ID, Some(0));
     let _opp_big = r.place_on_field(1, "OPP-BIG", Some(0)); // DP 12000 > 8000
@@ -688,7 +723,11 @@ fn bt21_023_linked_ess_no_prompt_when_no_eligible_opp() {
     // Drain any additional prompts (e.g. when_card_linked_to_this).
     r.auto_resolve().ok();
 
-    assert_eq!(r.battle_area_size(1), 1, "OPP-BIG stays; no eligible ESS target");
+    assert_eq!(
+        r.battle_area_size(1),
+        1,
+        "OPP-BIG stays; no eligible ESS target"
+    );
 }
 
 // ─── Section 7 — Linked +4000 DP aura on the host ───────────────────────────
@@ -697,10 +736,7 @@ fn bt21_023_linked_ess_no_prompt_when_no_eligible_opp() {
 fn bt21_023_linked_dp_aura_increases_host_effective_dp() {
     // Place an Appmon-Lv4 (DP 4000) on the field. Then link Globemon to it.
     // The host's effective_dp should increase by 4000 (to 8000) after linking.
-    let mut r = base()
-        .deck(0, &["DECK-PAD"; 12])
-        .memory(5)
-        .start();
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(5).start();
     let host = r.place_on_field(0, "APPMON-LV4", Some(0)); // base DP 4000
     let globemon = r.place_on_field(0, CARD_ID, Some(0));
     advance_to_main(&mut r);
@@ -763,9 +799,7 @@ fn bt21_023_when_linked_your_turn_deletion_fires_deletion_event() {
     }
 
     let events = r.events_since(cp);
-    let has_deletion = events
-        .iter()
-        .any(|e| matches!(e, GameEvent::Trash { .. }));
+    let has_deletion = events.iter().any(|e| matches!(e, GameEvent::Trash { .. }));
     assert!(
         has_deletion,
         "A GameEvent::Trash must fire when the when_card_linked_to_this effect deletes an opponent Digimon"

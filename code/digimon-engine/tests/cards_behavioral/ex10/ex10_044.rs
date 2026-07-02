@@ -99,9 +99,7 @@ fn ex10_044_on_play_places_bagra_card_under_tamer_then_draws_1() {
         hand_before,
         "place 1 from hand + Draw 1 must net to an unchanged hand size"
     );
-    let yuu = r
-        .game
-        .players[0]
+    let yuu = r.game.players[0]
         .battle_area
         .iter()
         .find(|p| p.top_card().card_id(&r.game.card_data) == "BT10-093")
@@ -148,7 +146,9 @@ fn ex10_044_on_deletion_plays_tuwarmon_from_under_tamer_then_saves() {
     // pick over PASS — the Save destination select is itself a "you may".
     let pass = digimon_engine::action::space::PASS;
     for _ in 0..8 {
-        let Some(view) = r.pending_selection_view() else { break };
+        let Some(view) = r.pending_selection_view() else {
+            break;
+        };
         let action = view
             .valid_action_ids
             .iter()
@@ -163,8 +163,7 @@ fn ex10_044_on_deletion_plays_tuwarmon_from_under_tamer_then_saves() {
 
     // Tuwarmon was played without paying the cost.
     assert!(
-        r.game
-            .players[0]
+        r.game.players[0]
             .battle_area
             .iter()
             .any(|p| p.top_card().card_id(&r.game.card_data) == "TUWARMON-T"),
@@ -173,9 +172,7 @@ fn ex10_044_on_deletion_plays_tuwarmon_from_under_tamer_then_saves() {
     assert_eq!(r.memory(), memory_before, "the play must cost no memory");
 
     // <Save>: the deleted Damemon sits under the Tamer, not in trash.
-    let yuu_perm = r
-        .game
-        .players[0]
+    let yuu_perm = r.game.players[0]
         .battle_area
         .iter()
         .find(|p| p.top_card().card_id(&r.game.card_data) == "DAME-TAMER")
@@ -231,7 +228,9 @@ fn ex10_044_save_survives_cost_reduction_interrupt() {
     // real pick over PASS.
     let pass = digimon_engine::action::space::PASS;
     for _ in 0..8 {
-        let Some(view) = r.pending_selection_view() else { break };
+        let Some(view) = r.pending_selection_view() else {
+            break;
+        };
         let action = view
             .valid_action_ids
             .iter()
@@ -246,8 +245,7 @@ fn ex10_044_save_survives_cost_reduction_interrupt() {
 
     // Tuwarmon was still played for free.
     assert!(
-        r.game
-            .players[0]
+        r.game.players[0]
             .battle_area
             .iter()
             .any(|p| p.top_card().card_id(&r.game.card_data) == "TUWARMON-T"),
@@ -257,9 +255,7 @@ fn ex10_044_save_survives_cost_reduction_interrupt() {
     // ── THE PIN ─────────────────────────────────────────────────────────────
     // The Save must survive the interleaved cost-reduction interrupt: the
     // deleted Damemon sits under Yuu Amano, not in the trash.
-    let yuu_perm = r
-        .game
-        .players[0]
+    let yuu_perm = r.game.players[0]
         .battle_area
         .iter()
         .find(|p| p.top_card().card_id(&r.game.card_data) == "BT10-093")

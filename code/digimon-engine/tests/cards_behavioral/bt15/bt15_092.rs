@@ -37,9 +37,7 @@
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
-use digimon_dsl::compiled::{
-    CompiledClause, CompiledScope, CompiledStep, CompiledTiming,
-};
+use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledStep, CompiledTiming};
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
@@ -147,12 +145,14 @@ fn bt15_092_loads_with_printed_metadata() {
 fn bt15_092_has_security_scope_discard_clause() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
-    let has = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.scope == CompiledScope::Security
-                && t.when.contains(&CompiledTiming::OnDiscardSecurity)
-    ));
+    let has = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.scope == CompiledScope::Security
+                    && t.when.contains(&CompiledTiming::OnDiscardSecurity)
+        )
+    });
     assert!(
         has,
         "BT15-092 must carry a security-scope OnDiscardSecurity dispatch clause"
@@ -163,16 +163,26 @@ fn bt15_092_has_security_scope_discard_clause() {
 fn bt15_092_has_main_and_security_clauses() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("compiled present");
-    let has_main = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::MainFromHand)
-    ));
-    let has_security = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity)
-    ));
-    assert!(has_main, "BT15-092 must carry a [Main] (main_from_hand) clause");
-    assert!(has_security, "BT15-092 must carry a [Security] (on_security) clause");
+    let has_main = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::MainFromHand)
+        )
+    });
+    let has_security = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity)
+        )
+    });
+    assert!(
+        has_main,
+        "BT15-092 must carry a [Main] (main_from_hand) clause"
+    );
+    assert!(
+        has_security,
+        "BT15-092 must carry a [Security] (on_security) clause"
+    );
 }
 
 // ─── Section 1 — [Main]: search security, play yellow Lv<=4 free, shuffle ─────
@@ -252,7 +262,9 @@ fn bt15_092_main_decline_plays_nothing_and_does_not_self_place_without_kari() {
         .pending_selection()
         .expect("optional security-search prompt installs")
         .selecting_player;
-    runner.execute_action(player, PASS).expect("decline resolves");
+    runner
+        .execute_action(player, PASS)
+        .expect("decline resolves");
     runner.auto_resolve().ok();
 
     assert!(
@@ -347,10 +359,7 @@ fn run_security_effect(runner: &mut DebugRunner, attacker: PermanentHandle, defe
 fn bt15_092_security_debuffs_opponent_battle_area_digimon() {
     // P1 owns BT15-092 in security. P0 is the attacker (the "opponent" from
     // P1's perspective). P0 has a 5000-DP Digimon on the field.
-    let mut runner = base()
-        .security(1, &[CARD_ID])
-        .memory(0)
-        .start();
+    let mut runner = base().security(1, &[CARD_ID]).memory(0).start();
     let attacker = runner.place_on_field(0, "OPP-DGM", Some(0));
     let bystander = runner.place_on_field(0, "OPP-DGM-2", Some(0));
 
@@ -375,10 +384,7 @@ fn bt15_092_security_debuffs_opponent_battle_area_digimon() {
 /// P0 later defends.
 #[test]
 fn bt15_092_security_debuffs_opponent_security_digimon() {
-    let mut runner = base()
-        .security(1, &[CARD_ID])
-        .memory(0)
-        .start();
+    let mut runner = base().security(1, &[CARD_ID]).memory(0).start();
     let attacker = runner.place_on_field(0, "OPP-DGM", Some(0));
 
     // No security DP modifier on P0 before the effect.
@@ -469,10 +475,7 @@ fn bt15_092_normal_security_check_is_not_an_effect_trash_dispatch() {
     // No opponent battle-area Digimon here so we isolate the dispatch path:
     // we only check that the card resolves as a security card (leaves security)
     // and the game proceeds without panicking on a double dispatch.
-    let mut runner = base()
-        .security(1, &[CARD_ID])
-        .memory(0)
-        .start();
+    let mut runner = base().security(1, &[CARD_ID]).memory(0).start();
     let attacker = runner.place_on_field(0, "OPP-DGM", Some(0));
 
     let _ = runner.attack_player(attacker, 1, false);

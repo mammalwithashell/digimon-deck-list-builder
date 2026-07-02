@@ -136,15 +136,11 @@ fn bt12_057_aura_blocks_other_unsuspends_at_turn_start() {
     r.game.tick_declarative_effects();
 
     assert!(
-        r.game
-            .modifiers
-            .has(own_d, ModifierType::CannotUnsuspend),
+        r.game.modifiers.has(own_d, ModifierType::CannotUnsuspend),
         "the aura installs CannotUnsuspend on the OTHER Digimon"
     );
     assert!(
-        !r.game
-            .modifiers
-            .has(quartz, ModifierType::CannotUnsuspend),
+        !r.game.modifiers.has(quartz, ModifierType::CannotUnsuspend),
         "Quartzmon itself is exempt ('all OTHER')"
     );
 
@@ -209,8 +205,7 @@ fn bt12_057_when_attacking_suspends_one_and_trashes_security_per_five() {
         .expect("suspend-1-opponent pick pending");
     let want = digimon_engine::action::space::encode_attack(0, oppt.index as u16);
     assert!(
-        view.valid_action_ids.contains(&want)
-            || view.valid_action_ids.len() == 2,
+        view.valid_action_ids.contains(&want) || view.valid_action_ids.len() == 2,
         "both opponent permanents (Digimon + Tamer) are legal picks; got {:?}",
         view.valid_action_ids
     );

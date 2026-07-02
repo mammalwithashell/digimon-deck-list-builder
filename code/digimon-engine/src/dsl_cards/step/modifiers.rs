@@ -127,7 +127,9 @@ pub(crate) fn lower_effect_source_kind(kind: CompiledEffectSourceKind) -> Effect
     }
 }
 
-pub(crate) fn lower_effect_controller(controller: CompiledEffectController) -> EffectControllerFilter {
+pub(crate) fn lower_effect_controller(
+    controller: CompiledEffectController,
+) -> EffectControllerFilter {
     match controller {
         CompiledEffectController::Any => EffectControllerFilter::Any,
         CompiledEffectController::Opponent => EffectControllerFilter::OpponentOnly,
@@ -167,7 +169,12 @@ pub(crate) fn build_synth_payload(s: &CompiledSynthIdentity) -> crate::modifiers
     crate::modifiers::ModifierPayload::SynthIdentity {
         kind: compiled_kind_to_card_kind(s.kind),
         level: s.level,
-        colors: s.colors.iter().copied().map(compiled_color_to_card_color).collect(),
+        colors: s
+            .colors
+            .iter()
+            .copied()
+            .map(compiled_color_to_card_color)
+            .collect(),
         traits: s.traits.clone(),
         dp: s.dp,
     }
@@ -216,11 +223,9 @@ pub fn try_run(
             // `ModifierPayload::SynthIdentity` instead of a bare scalar.
             let payload = synth_identity.as_ref().map(build_synth_payload);
             // Closure installs with-or-without payload depending on `payload`.
-            let install = |ctx: &mut crate::effect_context::EffectContext, h, n| {
-                match &payload {
-                    Some(p) => ctx.add_modifier_with_payload(h, modifier_ty, n, expiry, p.clone()),
-                    None => ctx.add_modifier(h, modifier_ty, n, expiry),
-                }
+            let install = |ctx: &mut crate::effect_context::EffectContext, h, n| match &payload {
+                Some(p) => ctx.add_modifier_with_payload(h, modifier_ty, n, expiry, p.clone()),
+                None => ctx.add_modifier(h, modifier_ty, n, expiry),
             };
             match target {
                 CompiledModifierTarget::Binding(b) => {

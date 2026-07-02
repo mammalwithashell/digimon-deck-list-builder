@@ -467,4 +467,3 @@ fn fallback_does_not_pick_concede_even_with_lone_low_id_action() {
     assert_ne!(picked, CONCEDE_GAME);
     assert_eq!(picked, 99, "greedy should return the non-CONCEDE action");
 }
-

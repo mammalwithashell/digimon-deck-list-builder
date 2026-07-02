@@ -179,8 +179,7 @@ fn bt25_089_start_of_main_no_opp_digimon_does_not_gain_memory() {
     r.game.drain_effect_queue();
 
     assert_eq!(
-        r.game.memory,
-        mem_before,
+        r.game.memory, mem_before,
         "memory must not change when opponent has no Digimon"
     );
 }
@@ -290,9 +289,10 @@ fn app_fuse_base() -> DebugRunnerBuilder {
 
 fn fire_eot(runner: &mut DebugRunner, player: PlayerId, field_index: usize) {
     let handle = runner.perm_handle(player, field_index);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 

@@ -42,7 +42,11 @@ fn ex10_031_compiles_with_three_alt_paths() {
         .expect("EX10-031 YAML parses and compiles")
         .build();
     let card = r.compiled_card("EX10-031").expect("present in pack");
-    assert_eq!(card.alt_paths.len(), 3, "2 digivolve paths + 1 digixros path");
+    assert_eq!(
+        card.alt_paths.len(),
+        3,
+        "2 digivolve paths + 1 digixros path"
+    );
     assert!(
         card.alt_paths
             .iter()
@@ -103,7 +107,9 @@ fn ex10_031_on_play_shields_one_digimon_from_de_digivolve_and_grants_3000_dp() {
     let _ = r.auto_resolve();
 
     assert!(
-        r.game.modifiers.has(ally, ModifierType::CannotBeDeDigivolved),
+        r.game
+            .modifiers
+            .has(ally, ModifierType::CannotBeDeDigivolved),
         "the picked Digimon must have the (opponent-scoped) De-Digivolve protection"
     );
     assert_eq!(

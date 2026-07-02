@@ -125,7 +125,10 @@ fn assembly_play_full_flow_places_materials_under_and_reduces_cost() {
 
     // Play the assembly card → element-0 (WarGreymon) gate selection surfaces.
     runner.game.decode_action(PLAY_HAND_START, 0);
-    assert!(runner.game.pending_selection.is_some(), "element-0 selection");
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "element-0 selection"
+    );
 
     // Pick WarGreymon (trash index 0) → element-1 (MetalGarurumon) surfaces.
     runner.game.decode_action(TRASH_EFFECT_START, 0);
@@ -175,6 +178,75 @@ fn assembly_play_full_flow_places_materials_under_and_reduces_cost() {
         mem_before - runner.game.memory,
         9,
         "Assembly play pays the reduced cost (15 base − 6 reduction = 9)"
+    );
+}
+
+#[test]
+fn assembly_material_prompts_clone_faithfully() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(ASSEMBLY_CARD_YAML)
+        .expect("assembly card compiles")
+        .add_card(material("WARG", "WarGreymon"))
+        .add_card(material("METG", "MetalGarurumon"))
+        .hand(0, &["T-ASM"])
+        .memory(20)
+        .start();
+    runner.skip_mulligan();
+    push_to_trash(&mut runner, 0, "WARG");
+    push_to_trash(&mut runner, 0, "METG");
+
+    runner.game.decode_action(PLAY_HAND_START, 0);
+    assert!(
+        runner.game.pending_selection_resume.is_some(),
+        "Assembly element-0 prompt must be resume-driven before cloning"
+    );
+    let first_action = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("element-0 prompt installed")
+        .valid_action_ids[0];
+
+    let mut clone_at_first = runner.game.clone();
+    clone_at_first
+        .resolve_selection(0, first_action)
+        .expect("clone picks first Assembly material");
+    assert!(
+        clone_at_first.pending_selection_resume.is_some(),
+        "Assembly element-1 prompt installed by clone must also be resume-driven"
+    );
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "resolving the clone leaves the original at element 0"
+    );
+
+    let second_action = clone_at_first
+        .pending_selection
+        .as_ref()
+        .expect("element-1 prompt installed")
+        .valid_action_ids[0];
+    let mut clone_at_second = clone_at_first.clone();
+    clone_at_second
+        .resolve_selection(0, second_action)
+        .expect("clone picks second Assembly material");
+
+    assert!(
+        clone_at_second.pending_selection.is_none(),
+        "clone completes the Assembly flow"
+    );
+    assert_eq!(
+        clone_at_second.player(0).battle_area.len(),
+        1,
+        "clone: Assembly card entered"
+    );
+    assert_eq!(
+        clone_at_second.player(0).battle_area[0].card_sources.len(),
+        3,
+        "clone: result has both materials underneath"
+    );
+    assert!(
+        clone_at_first.pending_selection.is_some(),
+        "resolving the element-1 clone leaves its parent clone at element 1"
     );
 }
 

@@ -132,7 +132,10 @@ fn bt25_032_has_on_play_reveal_two_pick_clause() {
         .any(|s| matches!(s, CompiledStep::PlaceRemainderOnDeck { .. }));
 
     assert!(has_reveal, "must reveal top 3");
-    assert_eq!(bucket_count, 2, "must have 2 buckets (Glowing Dawn, yellow BEATBREAK)");
+    assert_eq!(
+        bucket_count, 2,
+        "must have 2 buckets (Glowing Dawn, yellow BEATBREAK)"
+    );
     assert_eq!(add_to_hand_count, 2, "must add 2 cards to hand");
     assert!(has_place_remainder, "must place remainder on deck bottom");
 }
@@ -226,7 +229,10 @@ fn bt25_032_on_play_adds_glowing_dawn_and_yellow_beatbreak_rest_to_bottom() {
         .iter()
         .map(|c| c.card_id(&runner.game.card_data))
         .collect();
-    assert!(hand_ids.contains(&"GD-A"), "Glowing Dawn pick to hand: {hand_ids:?}");
+    assert!(
+        hand_ids.contains(&"GD-A"),
+        "Glowing Dawn pick to hand: {hand_ids:?}"
+    );
     assert!(
         hand_ids.contains(&"YBB-032"),
         "yellow BEATBREAK pick to hand: {hand_ids:?}"
@@ -272,14 +278,19 @@ fn bt25_032_beatbreak_bucket_rejects_non_yellow_color() {
         let mut ctx = EffectContext::new(&mut runner.game, src, None, 0);
         run_steps(&process, &mut ctx, &mut Bindings::new());
     }
-    runner.auto_resolve().expect("resolves with only the Glowing Dawn candidate");
+    runner
+        .auto_resolve()
+        .expect("resolves with only the Glowing Dawn candidate");
 
     let hand_ids: Vec<&str> = runner.game.players[0]
         .hand
         .iter()
         .map(|c| c.card_id(&runner.game.card_data))
         .collect();
-    assert!(hand_ids.contains(&"GD-032B"), "Glowing Dawn pick to hand: {hand_ids:?}");
+    assert!(
+        hand_ids.contains(&"GD-032B"),
+        "Glowing Dawn pick to hand: {hand_ids:?}"
+    );
     assert!(
         !hand_ids.contains(&"GBB-032"),
         "a GREEN [BEATBREAK] must NOT satisfy the yellow BEATBREAK bucket: {hand_ids:?}"

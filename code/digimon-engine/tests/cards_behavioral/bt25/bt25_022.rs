@@ -183,7 +183,10 @@ fn bt25_022_on_play_adds_iliad_and_ts_to_hand_rest_to_bottom() {
         .iter()
         .map(|c| c.card_id(&runner.game.card_data))
         .collect();
-    assert!(hand_ids.contains(&"ILIAD-A"), "Iliad pick to hand: {hand_ids:?}");
+    assert!(
+        hand_ids.contains(&"ILIAD-A"),
+        "Iliad pick to hand: {hand_ids:?}"
+    );
     assert!(hand_ids.contains(&"TS-A"), "TS pick to hand: {hand_ids:?}");
     assert!(
         !hand_ids.contains(&"FILL-022"),

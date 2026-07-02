@@ -139,7 +139,9 @@ fn bt23_035_security_removed_grants_sec_attack_and_recovers_at_low_security() {
     runner.game.turn_count = 1;
 
     assert!(
-        !runner.game.has_keyword(dyna, Keyword::SecurityAttackPlus(1)),
+        !runner
+            .game
+            .has_keyword(dyna, Keyword::SecurityAttackPlus(1)),
         "Dynasmon must not have Security A. +1 before the trigger"
     );
     let sec_before = runner.security_count(0);
@@ -148,7 +150,9 @@ fn bt23_035_security_removed_grants_sec_attack_and_recovers_at_low_security() {
     let _ = runner.auto_resolve();
 
     assert!(
-        runner.game.has_keyword(dyna, Keyword::SecurityAttackPlus(1)),
+        runner
+            .game
+            .has_keyword(dyna, Keyword::SecurityAttackPlus(1)),
         "Dynasmon must gain Security A. +1 after security is removed from"
     );
     assert_eq!(
@@ -175,7 +179,9 @@ fn bt23_035_security_removed_no_recovery_above_three_security() {
     let _ = runner.auto_resolve();
 
     assert!(
-        runner.game.has_keyword(dyna, Keyword::SecurityAttackPlus(1)),
+        runner
+            .game
+            .has_keyword(dyna, Keyword::SecurityAttackPlus(1)),
         "Dynasmon must still gain Security A. +1 regardless of security count"
     );
     assert_eq!(
@@ -207,7 +213,9 @@ fn bt23_035_sec_attack_grant_expires_after_your_turn() {
     fire_own_security_removed(&mut runner);
     let _ = runner.auto_resolve();
     assert!(
-        runner.game.has_keyword(dyna, Keyword::SecurityAttackPlus(1)),
+        runner
+            .game
+            .has_keyword(dyna, Keyword::SecurityAttackPlus(1)),
         "grant must be active while it persists"
     );
 
@@ -220,7 +228,9 @@ fn bt23_035_sec_attack_grant_expires_after_your_turn() {
         return;
     }
     assert!(
-        !runner.game.has_keyword(dyna, Keyword::SecurityAttackPlus(1)),
+        !runner
+            .game
+            .has_keyword(dyna, Keyword::SecurityAttackPlus(1)),
         "the Security A. +1 grant must expire after your turn ends"
     );
 }

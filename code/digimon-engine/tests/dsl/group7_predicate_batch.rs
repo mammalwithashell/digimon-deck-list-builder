@@ -558,8 +558,8 @@ fn add_modifier_filter_threads_bindings_for_not_in_binding() {
         modifier: "CannotBeAffected".to_string(),
         value: CompiledModifierValue::Literal(0),
         expiry: "end_of_turn".to_string(),
-    synth_identity: None,
-    continuous: false,
+        synth_identity: None,
+        continuous: false,
     }];
 
     let mut ctx = EffectContext::new(&mut runner.game, source, None, 0);
@@ -941,8 +941,8 @@ fn result_bound_suspend_predicate_reads_current_effect_result_log() {
                 modifier: "ChangeDp".to_string(),
                 value: CompiledModifierValue::Literal(1000),
                 expiry: "end_of_turn".to_string(),
-            synth_identity: None,
-            continuous: false,
+                synth_identity: None,
+                continuous: false,
             }],
             else_branch: vec![],
         },

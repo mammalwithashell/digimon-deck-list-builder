@@ -124,7 +124,10 @@ fn bt25_021_has_on_play_and_inherited_when_attacking_opt() {
             _ => None,
         })
         .expect("inherited When Attacking clause present");
-    assert!(inherited.once_per_turn, "inherited clause is [Once Per Turn]");
+    assert!(
+        inherited.once_per_turn,
+        "inherited clause is [Once Per Turn]"
+    );
 }
 
 // ─── Section 2 — Behavior: reveal 3, add 2, bottom rest ──────────────────────
@@ -138,7 +141,10 @@ fn bt25_021_on_play_adds_squad_and_gaogamon_bottoms_rest() {
     // place the three reveal targets last (top of deck).
     let mut runner = gaomon_base()
         .hand(0, &[CARD_ID])
-        .deck(0, &["DECK-PAD", "DECK-PAD", "PLAIN-A", "GAOGA-A", "SQUAD-A"])
+        .deck(
+            0,
+            &["DECK-PAD", "DECK-PAD", "PLAIN-A", "GAOGA-A", "SQUAD-A"],
+        )
         .deck(1, &["DECK-PAD"; 6])
         .memory(10)
         .start();
@@ -152,7 +158,9 @@ fn bt25_021_on_play_adds_squad_and_gaogamon_bottoms_rest() {
     // Bucket A (DATA SQUAD/Thomas): pick SQUAD-A. Bucket B (Gaogamon): pick GAOGA-A.
     pick_revealed_by_id(&mut runner, 0, "SQUAD-A");
     pick_revealed_by_id(&mut runner, 0, "GAOGA-A");
-    runner.auto_resolve().expect("resolve remaining (bottom the rest)");
+    runner
+        .auto_resolve()
+        .expect("resolve remaining (bottom the rest)");
 
     // Gaomon left hand (played); 2 cards added → hand net = (hand_before - 1) + 2.
     assert_eq!(

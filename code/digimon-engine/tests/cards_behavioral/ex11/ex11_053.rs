@@ -3,9 +3,7 @@
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::{
-    encode_attack, encode_source_select, PASS, PLAY_HAND_START,
-};
+use digimon_engine::action::space::{encode_attack, encode_source_select, PASS, PLAY_HAND_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -196,12 +194,10 @@ fn inject_hand(runner: &mut DebugRunner, card_id: &str) {
 
 /// Delete the Omekamon at battle-area index `idx` to fire its On Deletion.
 fn delete_omekamon(runner: &mut DebugRunner, idx: usize) {
-    runner
-        .game
-        .delete_permanent_with_effects(PermanentHandle {
-            player: 0,
-            index: idx as u8,
-        });
+    runner.game.delete_permanent_with_effects(PermanentHandle {
+        player: 0,
+        index: idx as u8,
+    });
 }
 
 /// (DISCRIMINATING first-fail) The On Deletion union-zone material scan must be
@@ -264,7 +260,10 @@ fn ex11_053_on_deletion_plays_omnimon_x_from_hand_and_attaches_self() {
     let pending = runner
         .pending_selection()
         .expect("On Deletion union-zone selection opens");
-    assert!(pending.is_optional, "printed 'you may play' must expose PASS");
+    assert!(
+        pending.is_optional,
+        "printed 'you may play' must expose PASS"
+    );
     // Hand Omnimon X is the only legal pick (hand index 0).
     assert_eq!(
         pending.valid_action_ids,
@@ -314,15 +313,16 @@ fn ex11_053_on_deletion_plays_omnimon_x_from_hand_and_attaches_self() {
 fn ex11_053_on_deletion_plays_omnimon_x_from_king_drasil_source_and_attaches_self() {
     let mut runner = deletion_runner();
     let king = runner.place_stack(0, &["OMNI-X", "KING"]);
-    let omni_source_handle = runner.game.player(0).battle_area[king.index as usize].card_sources[0]
-        .handle();
+    let omni_source_handle =
+        runner.game.player(0).battle_area[king.index as usize].card_sources[0].handle();
     let omekamon = runner.place_on_field(0, "EX11-053", Some(0));
     let omekamon_handle = runner.game.player(0).battle_area[omekamon.index as usize]
         .top_card()
         .handle();
 
-    let king_sources_before =
-        runner.game.player(0).battle_area[king.index as usize].card_sources.len();
+    let king_sources_before = runner.game.player(0).battle_area[king.index as usize]
+        .card_sources
+        .len();
 
     delete_omekamon(&mut runner, omekamon.index as usize);
 
@@ -342,8 +342,9 @@ fn ex11_053_on_deletion_plays_omnimon_x_from_king_drasil_source_and_attaches_sel
     runner.auto_resolve().ok();
 
     // The Omnimon X left the King Drasil stack and entered the battle area.
-    let king_sources_after =
-        runner.game.player(0).battle_area[king.index as usize].card_sources.len();
+    let king_sources_after = runner.game.player(0).battle_area[king.index as usize]
+        .card_sources
+        .len();
     assert_eq!(
         king_sources_after,
         king_sources_before - 1,

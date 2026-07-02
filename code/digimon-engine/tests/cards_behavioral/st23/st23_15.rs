@@ -157,9 +157,10 @@ fn st23_15_has_main_somp_and_security_clauses() {
         "[Main] clause present"
     );
     assert!(
-        triggered
+        triggered.iter().any(|t| t
+            .when
             .iter()
-            .any(|t| t.when.iter().any(|w| *w == CompiledTiming::StartOfYourMainPhase)),
+            .any(|w| *w == CompiledTiming::StartOfYourMainPhase)),
         "[Start of Your Main Phase] relocate clause present"
     );
     assert!(
@@ -178,7 +179,9 @@ fn st23_15_somp_clause_relocates_self_under_a_tamer() {
         .iter()
         .find_map(|c| match c {
             CompiledClause::Triggered(t)
-                if t.when.iter().any(|w| *w == CompiledTiming::StartOfYourMainPhase) =>
+                if t.when
+                    .iter()
+                    .any(|w| *w == CompiledTiming::StartOfYourMainPhase) =>
             {
                 Some(t)
             }
@@ -197,14 +200,20 @@ fn st23_15_somp_clause_relocates_self_under_a_tamer() {
 
 /// Build a runner with e-Pulse already on P0's battle area as a field Option,
 /// plus the requested Tamers, plus a deck to draw from.
-fn setup_field_option(with_bb_tamer: bool, with_plain_tamer: bool) -> (DebugRunner, PermanentHandle) {
+fn setup_field_option(
+    with_bb_tamer: bool,
+    with_plain_tamer: bool,
+) -> (DebugRunner, PermanentHandle) {
     let mut builder = DebugRunner::builder()
         .add_card(epulse())
         .add_card(bb_tamer("BBT"))
         .add_card(plain_tamer("PT"))
         .add_card(bb_digimon("BBD"))
         .add_card(filler("FILLER"));
-    builder = builder.deck(0, &["FILLER"; 6]).deck(1, &["FILLER"; 6]).memory(5);
+    builder = builder
+        .deck(0, &["FILLER"; 6])
+        .deck(1, &["FILLER"; 6])
+        .memory(5);
     let mut runner = builder.start();
     runner.set_first_player(0);
 
@@ -224,7 +233,10 @@ fn tamer_handle(runner: &DebugRunner, id: &str) -> PermanentHandle {
         .battle_area
         .iter()
         .position(|p| p.top_card().card_id(&runner.game.card_data) == id)
-        .map(|i| PermanentHandle { player: 0, index: i as u8 })
+        .map(|i| PermanentHandle {
+            player: 0,
+            index: i as u8,
+        })
         .unwrap_or_else(|| panic!("{id} not on field"))
 }
 
@@ -303,8 +315,13 @@ fn st23_15_somp_relocate_is_declinable() {
 
     // Decline the optional Tamer pick.
     if let Some(v) = runner.pending_selection_view() {
-        assert!(v.is_optional, "the relocate is optional (canNoSelect: true)");
-        runner.execute_action(v.selecting_player, PASS).expect("decline");
+        assert!(
+            v.is_optional,
+            "the relocate is optional (canNoSelect: true)"
+        );
+        runner
+            .execute_action(v.selecting_player, PASS)
+            .expect("decline");
     }
     let _ = runner.auto_resolve();
 

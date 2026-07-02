@@ -73,7 +73,13 @@ fn base() -> DebugRunnerBuilder {
         .dsl_card(CARD_ID)
         .expect("BT24-067 YAML parses and compiles")
         .add_card(make_test_card("DECK-PAD", "Filler"))
-        .add_card(make_digimon("APPMON-HOST", 4, 4000, 4, &["Appmon", "Social"]))
+        .add_card(make_digimon(
+            "APPMON-HOST",
+            4,
+            4000,
+            4,
+            &["Appmon", "Social"],
+        ))
         .add_card(make_rei("REI-IN-HAND"))
         .add_card(make_tamer("TAMER-A"))
         .add_card(make_tamer("TAMER-B"))
@@ -134,10 +140,12 @@ fn bt24_067_has_alt_digivolve_from_lv2_appmon_cost0() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
     let has = card.alt_paths.iter().any(|p| {
-        matches!(p.kind, CompiledAltPathKind::Digivolve)
-            && p.cost == Some(CompiledCost::Literal(0))
+        matches!(p.kind, CompiledAltPathKind::Digivolve) && p.cost == Some(CompiledCost::Literal(0))
     });
-    assert!(has, "BT24-067 has a Lv.2 [Appmon] alt-digivolve path with cost 0");
+    assert!(
+        has,
+        "BT24-067 has a Lv.2 [Appmon] alt-digivolve path with cost 0"
+    );
 }
 
 /// Link condition: this card links onto [Appmon] hosts for cost 1.
@@ -377,11 +385,7 @@ fn bt24_067_when_linked_plays_rei_katsura_free() {
         field_before + 1,
         "Rei Katsura was played to the field (free)"
     );
-    assert_eq!(
-        r.hand_size(0),
-        hand_before - 1,
-        "Rei Katsura left the hand"
-    );
+    assert_eq!(r.hand_size(0), hand_before - 1, "Rei Katsura left the hand");
 }
 
 /// Decline (PASS) → nothing happens.
@@ -401,14 +405,8 @@ fn bt24_067_when_linked_decline_no_play() {
 
     fire_link_onto_host(&mut r, host);
 
-    assert!(
-        r.game.pending_selection.is_some(),
-        "when-linked fires"
-    );
-    assert!(
-        r.pending_is_optional(),
-        "prompt must be optional (you may)"
-    );
+    assert!(r.game.pending_selection.is_some(), "when-linked fires");
+    assert!(r.pending_is_optional(), "prompt must be optional (you may)");
     let _ = r.game.resolve_selection(0, PASS);
 
     assert_eq!(r.battle_area_size(0), field_before, "PASS: no card played");

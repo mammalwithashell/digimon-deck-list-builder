@@ -305,7 +305,10 @@ fn has_entry_with_expiry(
 /// Assert the suspend lock landed: CannotSuspend until end of opponent's turn.
 fn assert_locked(runner: &DebugRunner, handle: PermanentHandle) {
     assert!(
-        runner.game.modifiers.has(handle, ModifierType::CannotSuspend),
+        runner
+            .game
+            .modifiers
+            .has(handle, ModifierType::CannotSuspend),
         "locked Digimon must hold CannotSuspend"
     );
     assert!(
@@ -603,7 +606,9 @@ fn ex11_017_free_play_plays_suzune_free() {
 /// plays it without paying its cost.
 #[test]
 fn ex11_017_free_play_plays_lv4_ice_snow_free() {
-    let mut runner = base_builder().add_card(ice_snow_digimon("ICE-4", 4)).start();
+    let mut runner = base_builder()
+        .add_card(ice_snow_digimon("ICE-4", 4))
+        .start();
     runner.game.turn_count = 1;
 
     let skadimon = runner.place_on_field(0, CARD_ID, Some(0));
@@ -644,7 +649,9 @@ fn ex11_017_free_play_plays_lv4_ice_snow_free() {
 /// installs at all (DCGO SharedCanActivateCondition hand-existence gate).
 #[test]
 fn ex11_017_free_play_rejects_lv5_ice_snow() {
-    let mut runner = base_builder().add_card(ice_snow_digimon("ICE-5", 5)).start();
+    let mut runner = base_builder()
+        .add_card(ice_snow_digimon("ICE-5", 5))
+        .start();
     runner.game.turn_count = 1;
 
     let skadimon = runner.place_on_field(0, CARD_ID, Some(0));
@@ -681,7 +688,9 @@ fn ex11_017_free_play_rejects_non_ice_snow_lv4() {
 /// and the hand is untouched.
 #[test]
 fn ex11_017_free_play_decline_is_legal() {
-    let mut runner = base_builder().add_card(ice_snow_digimon("ICE-4", 4)).start();
+    let mut runner = base_builder()
+        .add_card(ice_snow_digimon("ICE-4", 4))
+        .start();
     runner.game.turn_count = 1;
 
     let skadimon = runner.place_on_field(0, CARD_ID, Some(0));
@@ -692,7 +701,9 @@ fn ex11_017_free_play_decline_is_legal() {
     fire_on_play_for(&mut runner, skadimon);
 
     assert!(runner.pending_is_optional(), "PASS must be legal");
-    runner.execute_action(0, PASS).expect("decline the free play");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the free play");
     let _ = runner.auto_resolve();
 
     assert_eq!(runner.battle_area_size(0), field_before, "nothing played");
@@ -706,7 +717,9 @@ fn ex11_017_free_play_decline_is_legal() {
 /// TIMING [When Digivolving]: the same clause fires at WD.
 #[test]
 fn ex11_017_free_play_fires_at_when_digivolving() {
-    let mut runner = base_builder().add_card(ice_snow_digimon("ICE-4", 4)).start();
+    let mut runner = base_builder()
+        .add_card(ice_snow_digimon("ICE-4", 4))
+        .start();
     runner.game.turn_count = 1;
 
     let skadimon = runner.place_stack(0, &["SRC-9", CARD_ID]);
@@ -724,7 +737,9 @@ fn ex11_017_free_play_fires_at_when_digivolving() {
 /// TIMING [When Attacking]: the same clause fires at WA.
 #[test]
 fn ex11_017_free_play_fires_at_when_attacking() {
-    let mut runner = base_builder().add_card(ice_snow_digimon("ICE-4", 4)).start();
+    let mut runner = base_builder()
+        .add_card(ice_snow_digimon("ICE-4", 4))
+        .start();
     runner.game.turn_count = 1;
 
     let skadimon = runner.place_on_field(0, CARD_ID, Some(0));
@@ -810,8 +825,14 @@ fn ex11_017_observer_own_play_trashes_three_then_locks() {
 
     runner.place_on_field(0, CARD_ID, Some(0));
     place_opp_stacks(&mut runner, &[2, 1]);
-    let opp_a = PermanentHandle { player: 1, index: 0 };
-    let opp_b = PermanentHandle { player: 1, index: 1 };
+    let opp_a = PermanentHandle {
+        player: 1,
+        index: 0,
+    };
+    let opp_b = PermanentHandle {
+        player: 1,
+        index: 1,
+    };
 
     // P0 plays another Digimon normally.
     let played = runner.place_on_field(0, "TOP-3", None);
@@ -945,7 +966,10 @@ fn ex11_017_observer_fires_on_other_digimon_digivolve() {
 
     runner.place_on_field(0, CARD_ID, Some(0));
     place_opp_stacks(&mut runner, &[1]);
-    let opp_a = PermanentHandle { player: 1, index: 0 };
+    let opp_a = PermanentHandle {
+        player: 1,
+        index: 0,
+    };
 
     let base = runner.place_on_field(0, "BASE-4", Some(0));
     let hand_idx = put_in_hand(&mut runner, 0, "EVO-5");
@@ -1182,7 +1206,10 @@ fn ex11_017_observer_lock_skipped_when_no_sourceless_digimon_remains() {
 
     runner.place_on_field(0, CARD_ID, Some(0));
     place_opp_stacks(&mut runner, &[4]);
-    let opp_a = PermanentHandle { player: 1, index: 0 };
+    let opp_a = PermanentHandle {
+        player: 1,
+        index: 0,
+    };
 
     let played = runner.place_on_field(0, "TOP-3", None);
     runner.fire_play_event_triggers(0, played.index as usize, false, false);

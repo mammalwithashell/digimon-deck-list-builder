@@ -132,6 +132,45 @@ fn resolving_trigger_order_fires_choice_then_auto_fires_sibling() {
     assert_eq!(r.memory(), memory_before + 5 - 3);
 }
 
+#[test]
+fn trigger_order_prompt_clones_faithfully() {
+    let mut r = setup_two_effects_on_turn_player(&["TEST-006", "TEST-008"]);
+    let memory_before = r.memory();
+
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
+    r.game.drain_effect_queue();
+
+    assert_eq!(
+        r.game.pending_selection.as_ref().map(|sel| sel.kind),
+        Some(SelectionKind::TriggerOrder)
+    );
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "TriggerOrder prompt must park a data frame"
+    );
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, HAND_EFFECT_START)
+        .expect("clone resolves first trigger-order entry");
+    assert!(clone.pending_selection.is_none());
+    assert!(clone.effect_queue.is_empty());
+    assert_eq!(clone.memory, memory_before + 5 - 3);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original at the TriggerOrder prompt"
+    );
+
+    r.game
+        .resolve_selection(0, HAND_EFFECT_START)
+        .expect("original resolves first trigger-order entry");
+    assert_eq!(r.game.memory, clone.memory);
+    assert_eq!(r.game.effect_queue.len(), clone.effect_queue.len());
+}
+
 /// All-optional bundle → TriggerOrder carries a PASS bit. PASS clears every
 /// remaining optional trigger controlled by the chooser.
 #[test]
@@ -190,6 +229,62 @@ fn optional_pick_one_fires_then_sibling_auto_fires() {
     // Both TEST-007 fired now: sibling auto-fires as size-1 bundle.
     // Each grants +2 memory.
     assert_eq!(r.memory(), memory_before + 2 + 2);
+}
+
+struct OuterOptionalEndTurnMemoryGain;
+impl CardEffect for OuterOptionalEndTurnMemoryGain {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::end_of_your_turn(card)
+            .optional()
+            .needs_outer_optional_prompt()
+            .name("optional outer prompt gains 3 memory")
+            .process(|ctx| {
+                ctx.gain_memory(3);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn outer_optional_trigger_prompt_clones_faithfully() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("OUTER-OPT", "OuterOpt"))
+        .memory(0)
+        .start();
+    r.register_effect("OUTER-OPT", Arc::new(OuterOptionalEndTurnMemoryGain));
+    r.place_on_field(0, "OUTER-OPT", Some(0));
+
+    r.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::PlayerBattleArea(0),
+    );
+    r.game.drain_effect_queue();
+
+    assert_eq!(
+        r.game.pending_selection.as_ref().map(|sel| sel.kind),
+        Some(SelectionKind::Replacement)
+    );
+    assert!(
+        r.game.pending_selection_resume.is_some(),
+        "outer optional trigger prompt must park a data frame"
+    );
+
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("clone accepts the optional trigger");
+    assert_eq!(clone.memory, 3);
+    assert!(clone.pending_selection.is_none());
+    assert!(
+        r.game.pending_selection.is_some(),
+        "resolving the clone must leave the original at the optional prompt"
+    );
+
+    r.game
+        .resolve_selection(0, digimon_engine::action::space::REPLACEMENT_ACCEPT)
+        .expect("original accepts the optional trigger");
+    assert_eq!(r.game.memory, clone.memory);
+    assert_eq!(r.game.effect_queue.len(), clone.effect_queue.len());
 }
 
 /// Turn player's bundle resolves before the non-turn-player's.

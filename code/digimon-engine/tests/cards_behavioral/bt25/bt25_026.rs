@@ -173,14 +173,18 @@ fn bt25_026_has_op_wd_and_your_turn_clauses() {
         .collect();
 
     let has_op_wd = triggered.iter().any(|t| {
-        t.when.contains(&CompiledTiming::OnPlay) && t.when.contains(&CompiledTiming::WhenDigivolving)
+        t.when.contains(&CompiledTiming::OnPlay)
+            && t.when.contains(&CompiledTiming::WhenDigivolving)
     });
     let has_your_turn = triggered.iter().any(|t| {
         (t.when.contains(&CompiledTiming::OnEnterFieldAnyone)
             || t.when.contains(&CompiledTiming::OnDigivolve))
             && t.optional
     });
-    assert!(has_op_wd, "must have [On Play][When Digivolving] sources/lock clause");
+    assert!(
+        has_op_wd,
+        "must have [On Play][When Digivolving] sources/lock clause"
+    );
     assert!(
         has_your_turn,
         "must have the optional [Your Turn] red played/digivolve → Dianamon digivolve clause"

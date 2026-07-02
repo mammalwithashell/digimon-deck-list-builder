@@ -11,13 +11,12 @@ use digimon_engine::policies::GreedyPolicy;
 use digimon_engine::{HeadlessRunner, Policy};
 
 const ST1: &[&str] = &[
-    "ST1-01", "ST1-01", "ST1-01", "ST1-01", "ST1-02", "ST1-02", "ST1-02", "ST1-02",
-    "ST1-03", "ST1-03", "ST1-03", "ST1-03", "ST1-04", "ST1-04", "ST1-04", "ST1-04",
-    "ST1-05", "ST1-05", "ST1-05", "ST1-05", "ST1-06", "ST1-06", "ST1-06", "ST1-06",
-    "ST1-07", "ST1-07", "ST1-08", "ST1-08", "ST1-08", "ST1-08", "ST1-09", "ST1-09",
-    "ST1-09", "ST1-09", "ST1-10", "ST1-10", "ST1-11", "ST1-11", "ST1-12", "ST1-12",
-    "ST1-12", "ST1-12", "ST1-13", "ST1-13", "ST1-13", "ST1-13", "ST1-14", "ST1-14",
-    "ST1-14", "ST1-14", "ST1-15", "ST1-15", "ST1-16", "ST1-16",
+    "ST1-01", "ST1-01", "ST1-01", "ST1-01", "ST1-02", "ST1-02", "ST1-02", "ST1-02", "ST1-03",
+    "ST1-03", "ST1-03", "ST1-03", "ST1-04", "ST1-04", "ST1-04", "ST1-04", "ST1-05", "ST1-05",
+    "ST1-05", "ST1-05", "ST1-06", "ST1-06", "ST1-06", "ST1-06", "ST1-07", "ST1-07", "ST1-08",
+    "ST1-08", "ST1-08", "ST1-08", "ST1-09", "ST1-09", "ST1-09", "ST1-09", "ST1-10", "ST1-10",
+    "ST1-11", "ST1-11", "ST1-12", "ST1-12", "ST1-12", "ST1-12", "ST1-13", "ST1-13", "ST1-13",
+    "ST1-13", "ST1-14", "ST1-14", "ST1-14", "ST1-14", "ST1-15", "ST1-15", "ST1-16", "ST1-16",
 ];
 
 const NUM_GAMES: u64 = 200;
@@ -109,10 +108,26 @@ fn report(label: &str, p: &Phase) {
         NUM_GAMES as f64 / secs,
         p.steps as f64 / secs,
     );
-    eprintln!("  construct : {:>5.1}%  ({:.1} us/step-equiv)", pct(p.construct), us_per_step(p.construct));
-    eprintln!("  mask build: {:>5.1}%  ({:.1} us/step)", pct(p.mask), us_per_step(p.mask));
-    eprintln!("  policy    : {:>5.1}%  ({:.1} us/step)", pct(p.policy), us_per_step(p.policy));
-    eprintln!("  engine step:{:>5.1}%  ({:.1} us/step)  <-- effect resolution", pct(p.step), us_per_step(p.step));
+    eprintln!(
+        "  construct : {:>5.1}%  ({:.1} us/step-equiv)",
+        pct(p.construct),
+        us_per_step(p.construct)
+    );
+    eprintln!(
+        "  mask build: {:>5.1}%  ({:.1} us/step)",
+        pct(p.mask),
+        us_per_step(p.mask)
+    );
+    eprintln!(
+        "  policy    : {:>5.1}%  ({:.1} us/step)",
+        pct(p.policy),
+        us_per_step(p.policy)
+    );
+    eprintln!(
+        "  engine step:{:>5.1}%  ({:.1} us/step)  <-- effect resolution",
+        pct(p.step),
+        us_per_step(p.step)
+    );
 }
 
 #[test]
@@ -126,6 +141,9 @@ fn bench_bare_engine_throughput() {
 
     eprintln!("\n######## BARE-ENGINE THROUGHPUT + PER-PHASE BREAKDOWN ########");
     report("GREEDY self-play (ST-1, real cards.json, release)", &greedy);
-    report("RANDOM self-play (isolates engine step from policy)", &random);
+    report(
+        "RANDOM self-play (isolates engine step from policy)",
+        &random,
+    );
     eprintln!("#############################################################\n");
 }

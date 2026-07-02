@@ -5,7 +5,7 @@
 //! files for readability — the same technique used for `impl Game` across
 //! 14 files and the `selections` sibling module.
 
-mod app_fuse;
+pub(crate) mod app_fuse;
 mod combat;
 mod digivolve;
 mod digixros;
