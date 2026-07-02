@@ -2339,6 +2339,13 @@ pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
     "Save",
     "Fortitude",
     "Ascension",
+    // Phase F keyword (engine: `Keyword::Training`, keyword_effects.rs
+    // `Keyword::Training => ...` arm + tests/keyword_phase_f/training.rs).
+    // Shipped DSL carriers: EX9-008, EX9-060 (`grant_keyword: Training`).
+    // Was missing here, so dsl-lint rejected those cards with
+    // "unknown keyword: Training" — a validator-allowlist staleness, not an
+    // engine gap.
+    "Training",
     "Overclock",
     "Barrier",
     "Decoy",
