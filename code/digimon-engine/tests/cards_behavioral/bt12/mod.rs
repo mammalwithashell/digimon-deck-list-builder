@@ -9,3 +9,7 @@ mod bt12_050;
 mod bt12_057;
 mod bt12_059;
 mod bt12_112;
+mod bt12_034;
+mod bt12_038;
+mod bt12_043;
+mod bt12_092;
