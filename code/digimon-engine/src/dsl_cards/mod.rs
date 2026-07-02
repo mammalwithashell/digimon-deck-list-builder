@@ -177,15 +177,35 @@ impl CardEffect for DslCardEffect {
                         overclock_cost_filter,
                         ..
                     } => {
-                        if let Some(e) = lower_grant_keyword::lower(
-                            card,
-                            keyword,
-                            *value,
-                            *scope,
-                            active_when.clone(),
-                            overclock_cost_filter.clone(),
-                        ) {
-                            out.push(e);
+                        // `scope: both` installs the keyword grant from BOTH the
+                        // active-top (face_up) and digivolution-source (inherited)
+                        // positions — required for DCGO `isSelfEffect`-style
+                        // grants whose `PermanentCondition` checks "is this the
+                        // permanent `card` currently belongs to" (true whether
+                        // `card` is the top card or buried under a later
+                        // digivolve). Mirrors the FloodGate `Both` expansion
+                        // above (BT24-062 attack-target lock precedent).
+                        // BT19-069 Deltamon's inherited `<Blocker>` (DCGO
+                        // `BlockerSelfStaticEffect(isInheritedEffect: true)`,
+                        // `PermanentCondition: permanent == card.PermanentOfThisCard()`)
+                        // is the first card requiring this for GrantKeyword.
+                        let scopes: &[CompiledScope] = match scope {
+                            CompiledScope::Both => {
+                                &[CompiledScope::FaceUp, CompiledScope::Inherited]
+                            }
+                            other => std::slice::from_ref(other),
+                        };
+                        for sc in scopes {
+                            if let Some(e) = lower_grant_keyword::lower(
+                                card,
+                                keyword,
+                                *value,
+                                *sc,
+                                active_when.clone(),
+                                overclock_cost_filter.clone(),
+                            ) {
+                                out.push(e);
+                            }
                         }
                     }
                     CompiledDeclarativeClause::Aura {

@@ -2008,3 +2008,11 @@ Third and final wave (`qa/archetype-qa/store-champs-june-2026-scoping.md`). Fix 
 - **Suggested API shape:** `event_target_trait_contains: <str>` sharing the event-target resolver; compose with `not: {event_target_trait_has: "Sea Animal"}`.
 - **Workaround:** exact-token `any_of` enumeration misses Q&A-included forms; ship-with-fidelity-note at most.
 - **Related:** `trait_contains` (card-subject sibling); `event_target_trait_has`; multi-Digimon single-effect play nuance (DCGO grants all with one suspend — note at implementation).
+
+## DigiXros material `distinct_by` (card number / name / level) is compiled but never enforced at runtime  [G-ENGINE-DIGIXROS-DISTINCT-BY]
+Surfaced by: BT19-065 Machinedramon (batch-implement-cards-rust-dsl, 2026-07-02); PRE-EXISTING, shared by every card whose `alt_paths: kind: digixros` material sets `distinct_by` (BT12-112 Shoutmon X7: Superior Mode `distinct_by: card_number`, EX3-014 Dorbickmon `distinct_by: name`, and the review-added BT19-070 DigiXros -1 path).
+`compiled_path_transaction` (`code/digimon-engine/src/digixros.rs:923-933`) correctly threads `material.distinct_by` into `DigiXrosRecipeSlot.distinct_by`, but that field is **never read anywhere else in the crate**. The runtime candidate filter (`slot_accepts_card`, `validate_material_origin` -> `resolve_material_origin`) checks only name/trait requirements and exact-handle dedup — so a recipe printed "5 cards w/different card numbers" currently accepts two copies of the identical card as two materials (no-approximations violation for decks running duplicates of a qualifying material).
+No existing behavioral test caught this: EX3-014's and BT12-112's DigiXros tests supply already-distinct materials.
+Fix: when `slot.distinct_by` is `Some(mode)`, reject candidates whose printed card number / name / level matches an already-committed material (mirror DCGO `CanTargetCondition_ByPreSelecetedList` deduping on `CardSource.CardID`); exclude conflicts in `pending_digixros_material_candidates` up front so the MASK stays faithful, not just commit-time validation.
+First test: `code/digimon-engine/tests/cards_behavioral/bt19/bt19_065.rs::bt19_065_digixros_rejects_duplicate_card_number` (currently `#[ignore = "pending: G-ENGINE-DIGIXROS-DISTINCT-BY"]`).
+Status: open.

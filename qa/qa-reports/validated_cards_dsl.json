@@ -9884,6 +9884,45 @@
       "test_count": 22,
       "patterns": [],
       "notes": "Overclock([Composite]); tri-timing opp-trash-to-deck-top cost -> return opp Digimon to bottom; stack_size_lte:1 CannotSuspend + opponent-effect immunity auras"
+    },
+    "BT18-013": {
+      "card_name": "Deltamon",
+      "validated_date": "2026-07-02",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "store-champs-june-2026 / Millenniummon",
+      "yaml_path": "code/digimon-engine/cards/bt18/BT18-013.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_013.rs",
+      "test_count": 22,
+      "patterns": [],
+      "notes": "Raid + inherited Retaliation via explicit grant_keyword; optional hand-trash cost -> mandatory Composite/WG trash recovery; Gazimon/Gizamon alt-paths"
+    },
+    "BT19-069": {
+      "card_name": "Deltamon",
+      "validated_date": "2026-07-02",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "store-champs-june-2026 / Millenniummon",
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-069.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_069.rs",
+      "test_count": 19,
+      "patterns": [],
+      "notes": "tri-timing optional-cost -> mandatory lv4- delete; inherited Blocker via NEW GrantKeyword scope: both; drove 2 engine fixes (Trash event emission on trash_from_hand_by_index; scope:both expansion)"
+    },
+    "EX9-060": {
+      "card_name": "Devidramon",
+      "validated_date": "2026-07-02",
+      "report": "batch-implement-cards-rust-dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "store-champs-june-2026 / Millenniummon",
+      "yaml_path": "code/digimon-engine/cards/ex9/EX9-060.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex9/ex9_060.rs",
+      "test_count": 16,
+      "patterns": [],
+      "notes": "Training keyword (grant_keyword, EX9-008 precedent); cross-timing WD+WA shared OPT place-face-down-source -> Draw 1; inherited on-deletion lv4- delete"
     }
   }
 }

@@ -1,0 +1,159 @@
+# EX9-060 Devidramon — Digimon, Lv.4, Purple, DP 5000, Cost 5.
+# Traits: [Evil Dragon, DM, Ver.5]. Attribute: Virus.
+#
+# Printed card text (data/card_bundles/EX9-060.md — official Bandai DB,
+# verbatim; cross-checked against data/cards.json effect_description_eng):
+#
+#   ＜Training＞ (In the main phase, by suspending this Digimon, place your
+#   deck's top card face down as this Digimon's bottom digivolution card.
+#   This effect can also activate in the breeding area.)
+#
+#   [When Digivolving] [When Attacking] [Once Per Turn] By placing 1 card in
+#   your hand face down as this Digimon's bottom digivolution card, ＜Draw 1＞
+#   (Draw 1 card from your deck.)
+#
+# Inherited Effect:
+#   [On Deletion] Delete 1 of your opponent's level 4 or lower Digimon.
+#
+# Digivolution requirements (official Bandai DB / data/card_bundles/EX9-060.md):
+#   Standard: Purple Lv.3 / cost 2 (evo_costs).
+#   Alt: [Digivolve] Lv.3 w/[DM] trait: Cost 2 (xros_req).
+#
+# DCGO C# reference (read from BASE repo per rule 29 — DO NOT init worktree
+# submodule): DCGO/Assets/Scripts/CardEffect/EX9/Purple/EX9_060.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# EX9_060.cs registers four clauses:
+#
+#   (1) EffectTiming.None — AddSelfDigivolutionRequirementStaticEffect for the
+#       xros_req "[Digivolve] Lv.3 w/[DM] trait: Cost 2" line (PermanentCondition:
+#       TopCard.IsLevel3 && TopCard.EqualsTraits("DM")). Named-trait alt-path;
+#       encoded below in alt_paths.
+#   (2) EffectTiming.OnDeclaration — CardEffectFactory.TrainingEffect(card):
+#       the printed <Training> auto-effect. Encoded via grant_keyword: Training
+#       (the shared substrate — see EX9-008 precedent; Phase F §F4 auto-installs
+#       the [Main] suspend-self + place-deck-top-face-down-as-bottom-source
+#       skill, activatable from BOTH battle area and breeding area).
+#   (3) EffectTiming.OnEnterFieldAnyone (When Digivolving) AND
+#       EffectTiming.OnAllyAttack (When Attacking) — TWO separate ActivateClass
+#       registrations that share the SAME hash string "EX9_060_Draw"
+#       (SetHashString), meaning a single Once-Per-Turn lockout spans both
+#       timings. CanUseCondition: IsExistOnBattleAreaDigimon +
+#       (CanTriggerWhenDigivolving | CanTriggerOnAttack). CanActivateCondition:
+#       IsExistOnBattleAreaDigimon(card) && card.Owner.HandCards.Count > 0 (no
+#       selection installs at all with an empty hand — the whole clause is
+#       gated on a candidate existing, matching the "By placing 1 card..." cost
+#       phrasing). Body: SelectHandEffect (canNoSelect: true → the pick itself
+#       is declinable even with cards in hand — "By Xing, Y" but the ActivateClass
+#       itself is ALSO isOptional:true (param 4 = true) at the SetUpActivateClass
+#       level), maxCount: 1; if a card was selected,
+#       AddDigivolutionCardsBottom(isFacedown: true) then DrawClass(1) — the
+#       draw only happens when a card was actually placed (decline → nothing).
+#   (4) EffectTiming.OnDestroyedAnyone — SetIsInheritedEffect(true). Body:
+#       CanSelectOpponentPermanentCondition = own-opponent battle-area Digimon,
+#       TopCard.HasLevel, Level <= 4. If HasMatchConditionPermanent, prompt
+#       SelectPermanentEffect (Mode.Destroy, canNoSelect: false, maxCount =
+#       min(1, candidate count)) — mandatory pick among eligible targets; if
+#       zero eligible targets, no prompt installs at all (silent no-op, not a
+#       stub — matches the "no candidate → no selection" contract used
+#       throughout the DSL, e.g. BT5-112's identical on_deletion shape).
+#
+# ─── DSL modelling notes ─────────────────────────────────────────────────────
+#
+# Clause 1 (<Training>): grant_keyword: Training, own (FaceUp) scope. The
+# Phase F §F4 shared substrate (keyword_effects.rs) auto-installs the full
+# [Main] battle-area + breeding-area behavior (suspend self as cost, place
+# deck-top face-down as bottom source) generically — no per-card process is
+# authored (matches EX9-008 Biyomon precedent exactly).
+#
+# Clause 2 ([When Digivolving][When Attacking][Once Per Turn]): modelled as
+# ONE triggered clause with when: [when_digivolving, when_attacking] and
+# once_per_turn: true — the DSL's shared_opt_group mechanism (see
+# G-OPT-MULTI-TIMING-SHARED-LOCKOUT in main_effect_select.rs / effect.rs)
+# unifies a single clause spanning multiple `when` timings under one OPT
+# counter, matching DCGO's shared "EX9_060_Draw" hash across two separately
+# registered ActivateClasses. `select_hand` with `cost: true, optional: true`
+# encodes "By placing 1 card in your hand face down..." as a cost-pay: DCGO's
+# CanActivateCondition gates the WHOLE clause on HandCards.Count > 0 (no
+# selection when hand is empty — G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE's
+# empty-hand analog: `select_hand` degrades to no legal candidates and
+# short-circuits per the standard "mandatory-select-with-zero-candidates
+# no-ops" contract; being `optional: true` additionally allows the player to
+# decline even when a candidate exists, matching DCGO's SelectHandEffect
+# canNoSelect: true). `then:` gates place_as_bottom_source (face_down: true,
+# target: source — the carrier itself, DCGO's card.PermanentOfThisCard()) and
+# draw: { of: you, count: 1 } so the draw only happens when a card was
+# actually placed (decline → nothing, per DCGO's `if (selectedCard != null)`
+# guard).
+#
+# Clause 3 (Inherited [On Deletion]): scope: inherited, mandatory (no "you
+# may" in the printed text — DCGO canNoSelect: false). select_opponent_permanent
+# filtered to { kind: digimon, level_lte: 4 } then delete_permanent. Mirrors
+# BT5-112's identical on_deletion shape (select_opponent_permanent +
+# delete_permanent, no clause-level condition — a mandatory select with zero
+# candidates silently no-ops, matching DCGO's HasMatchConditionPermanent gate).
+
+card: EX9-060
+name: Devidramon
+kind: digimon
+level: 4
+color: [purple]
+cost: 5
+dp: 5000
+traits: [Evil Dragon, DM, Ver.5]
+attribute: Virus
+
+# ─── Alt-paths ────────────────────────────────────────────────────────────
+# 1. Standard digivolve: Lv.3 Purple / Cost 2 (evo_costs).
+# 2. Alt digivolve: Lv.3 w/[DM] trait / Cost 2 (xros_req).
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 2
+
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: DM }
+    cost: 2
+    ignore_requirements: true
+
+effects:
+  # ─── Clause 1 — <Training> (printed keyword, shared substrate) ────────────
+  - kind: grant_keyword
+    keyword: Training
+
+  # ─── Clause 2 — [When Digivolving][When Attacking][Once Per Turn] ─────────
+  # "By placing 1 card in your hand face down as this Digimon's bottom
+  #  digivolution card, <Draw 1>."
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[When Digivolving][When Attacking][OPT] By placing 1 hand card face down as bottom source, Draw 1"
+    process:
+      - select_hand:
+          of: you
+          bind_as: fd_card
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "Place 1 card from your hand face down as this Digimon's bottom digivolution card"
+          then:
+            - place_as_bottom_source:
+                source: fd_card
+                target: source
+                face_down: true
+            - draw: { of: you, count: 1 }
+
+  # ─── Clause 3 — Inherited [On Deletion] ────────────────────────────────────
+  # "Delete 1 of your opponent's level 4 or lower Digimon."
+  - scope: inherited
+    when: on_deletion
+    summary: "[Inherited][On Deletion] Delete 1 of your opponent's level 4 or lower Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          prompt: "Delete 1 of your opponent's level 4 or lower Digimon"
+      - delete_permanent: { target: target }

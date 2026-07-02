@@ -1,0 +1,130 @@
+# BT18-013 Deltamon — Digimon, Lv.4, Red/Purple, DP 5000, Cost 5.
+# Traits: Composite. Attribute: Virus.
+#
+# Printed card text (code/digimon-engine/cards/bt18/BT18-013.json — verbatim):
+#
+#   ＜Raid＞ (When this Digimon attacks, you may switch the target of attack
+#   to 1 of your opponent's unsuspended Digimon with the highest DP.)
+#   [On Play] [When Digivolving] By trashing 1 card in your hand, return 1
+#   card with the [Composite] or [Wicked God] trait from your trash to the
+#   hand.
+#
+# Inherited Effect:
+#   ＜Retaliation＞ (When this Digimon is deleted after losing a battle,
+#   delete the Digimon it was battling.)
+#
+# Digivolution: standard Lv.3 Red / cost 3, or Lv.3 Purple / cost 3 (printed
+# evo_costs). Alt-digivolve (xros_req): [Digivolve] [Gazimon]/[Gizamon]: Cost 2.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT18/Red/BT18_013.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause "Digivolution Condition" — EffectTiming.None,
+#   AddSelfDigivolutionRequirementStaticEffect over a permanent whose
+#   TopCard.EqualsCardName("Gazimon") || TopCard.EqualsCardName("Gizamon"),
+#   digivolutionCost: 2, ignoreDigivolutionRequirement: false.
+#   → two `kind: digivolve` alt_paths, `from: { name_is: "Gazimon" }` and
+#   `from: { name_is: "Gizamon" }`, both `cost: 2`. Two separate entries
+#   (rather than one `any_of`) because the DCGO source is two independent
+#   `EqualsCardName` checks over the SAME base-permanent's top card — an
+#   `any_of` inside a single `from:` predicate is equivalent, but the
+#   two-alt-path form mirrors the DCGO shape 1:1 and keeps each path
+#   independently inspectable in tests.
+#
+# Clause "Raid" — EffectTiming.OnAllyAttack, RaidSelfEffect(isInheritedEffect:
+#   false) — own-scope (face-up), NOT inherited (the ＜Raid＞ token sits on
+#   this card's own effect line, ahead of [On Play], not on the inherited
+#   line). → `kind: grant_keyword, keyword: Raid` (no `scope:` — own is the
+#   declarative default). Runtime materialization confirmed via
+#   `card_data_from_compiled` (BT20-102 precedent) — no G-DECLARATIVE-KEYWORD
+#   gap (RESOLVED 2026-05-02, qa/resolved-gaps.md).
+#
+# Clause "On Play" / "When Digivolving" — TWO EffectTiming.OnEnterFieldAnyone
+#   ActivateClasses (one gated CanTriggerOnPlay, one CanTriggerWhenDigivolving),
+#   IDENTICAL body, maxUseCount: -1 (unlimited — no [Once Per Turn]),
+#   isSkippable: true (outer optional):
+#     1. SelectHandEffect Mode.Discard, maxCount: 1, canNoSelect: true — "By
+#        trashing 1 card in your hand" is an optional cost.
+#     2. If a card was discarded (CanActivateCondition requires
+#        HandCards.Count >= 1 up front — the prompt itself doesn't even
+#        install with an empty hand): SelectCardEffect Root.Trash Mode.AddHand,
+#        canTargetCondition = EqualsTraits("Composite") ||
+#        EqualsTraits("Wicked God"), maxCount: 1, canNoSelect: () => false
+#        (MANDATORY pick — no "you may" on the return itself), gated on
+#        CardEffectCommons.HasMatchConditionOwnersCardInTrash(card,
+#        CanSelectCardCondition) so with zero eligible trash cards the prompt
+#        silently never installs (matches `select_trash`'s empty-candidate
+#        auto-skip at `EffectContext::select_trash`).
+#   → single `when: [on_play, when_digivolving]` clause. `select_hand` with
+#   `cost: true` (decline aborts the rest of the clause body — the
+#   BT25-013/AD1-002 idiom) → `trash_from_hand_by_index` → `select_trash`
+#   (NOT optional — mirrors DCGO's `canNoSelect: () => false`) with an
+#   `any_of` trait filter over Composite/Wicked God → `add_to_hand_from_trash`.
+#
+# Clause "Retaliation" — EffectTiming.OnDestroyedAnyone,
+#   RetaliationSelfEffect(isInheritedEffect: true). → `kind: grant_keyword,
+#   scope: inherited, keyword: Retaliation`.
+#
+# ─── Per-clause status ───────────────────────────────────────────────────────
+#
+#   | Clause                                                    | Status |
+#   |------------------------------------------------------------|--------|
+#   | Alt-digi (Gazimon or Gizamon top card, cost 2)              | PASS   |
+#   | ＜Raid＞ (own-scope)                                        | PASS   |
+#   | [On Play][When Digivolving] By trashing 1 hand card, return | PASS   |
+#   |   1 [Composite]/[Wicked God] card from trash to hand         |        |
+#   | Inherited ＜Retaliation＞                                    | PASS   |
+
+card: BT18-013
+name: Deltamon
+kind: digimon
+level: 4
+color: [red, purple]
+cost: 5
+dp: 5000
+traits: [Composite]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { name_is: "Gazimon" }
+    cost: 2
+  - kind: digivolve
+    from: { name_is: "Gizamon" }
+    cost: 2
+
+effects:
+  # ─── Clause 0: ＜Raid＞ (own-scope, face-up) ────────────────────────────────
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  # ─── Clause 1: [On Play][When Digivolving] trash 1 hand card → return 1
+  #              [Composite]/[Wicked God] card from trash to hand ───────────
+  - when: [on_play, when_digivolving]
+    summary: "[OnPlay/WhenDigivolving] By trashing 1 hand card, return 1 [Composite]/[Wicked God] card from trash to hand"
+    process:
+      - select_hand:
+          of: you
+          bind_as: cost_card
+          optional: true
+          cost: true
+          filter: {}
+          prompt: "Trash 1 card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+      - select_trash:
+          of: you
+          bind_as: recover
+          filter:
+            any_of:
+              - trait_has: Composite
+              - trait_has: "Wicked God"
+          prompt: "Return 1 [Composite] or [Wicked God] trait card from your trash to the hand"
+      - add_to_hand_from_trash: { of: you, card: recover }
+
+  # ─── Clause 2: Inherited ＜Retaliation＞ ────────────────────────────────────
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Retaliation
+    summary: "[Inherited] <Retaliation>"
