@@ -291,6 +291,44 @@
   .shot .frame::before { content: ""; position: absolute; inset: 0; z-index: 2; pointer-events: none;
     background: repeating-linear-gradient(to bottom, transparent 0 2px, rgba(0,0,0,0.20) 3px 4px); }
   .shot .cap { font-size: 11px; color: var(--phosphor-dim); padding: 7px 10px; letter-spacing: 0.1em; }
+  .shot .frame { cursor: zoom-in; }
+  .shot .frame:hover img { filter: brightness(1.08); }
+  .shot .frame:focus-visible { outline: 2px solid var(--phosphor); outline-offset: -2px; }
+
+  /* ── lightbox ───────────────────────────────────────────────── */
+  .lightbox {
+    position: fixed; inset: 0;
+    z-index: 100; /* above the CRT scanline overlays so the shot reads clean */
+    display: none;
+    align-items: center; justify-content: center;
+    flex-direction: column;
+    gap: 12px;
+    padding: 4vh 4vw;
+    background: rgba(2, 6, 4, 0.92);
+    cursor: zoom-out;
+  }
+  .lightbox.open { display: flex; }
+  .lightbox img {
+    max-width: 100%;
+    max-height: calc(92vh - 60px);
+    border: 1px solid var(--phosphor-dim);
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.6), 0 0 60px -12px rgba(57,255,136,0.4);
+    background: #000;
+    cursor: default;
+  }
+  .lightbox .lb-cap {
+    font-size: 12px; color: var(--phosphor-dim); letter-spacing: 0.12em;
+  }
+  .lightbox .lb-cap .lb-hint { color: var(--ink-dim); }
+  .lightbox .lb-close {
+    position: absolute; top: 14px; right: 20px;
+    font-family: var(--mono); font-size: 13px;
+    text-transform: uppercase; letter-spacing: 0.18em;
+    color: var(--ink-dim);
+    background: none; border: 1px solid var(--line);
+    padding: 6px 12px; cursor: pointer;
+  }
+  .lightbox .lb-close:hover { color: var(--amber); border-color: var(--amber-dim); }
 
   /* ── footer ─────────────────────────────────────────────────── */
   footer {
@@ -441,6 +479,13 @@
     </div>
   </section>
 
+  <!-- ── lightbox ── -->
+  <div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Screenshot viewer">
+    <button class="lb-close" id="lb-close" type="button">esc / close</button>
+    <img id="lb-img" alt="" src="">
+    <div class="lb-cap"><span id="lb-cap-text"></span> <span class="lb-hint">&larr; &rarr; to browse</span></div>
+  </div>
+
   <footer>
     <p class="legal">
       Fan project. Not affiliated with, endorsed by, or sponsored by Bandai, Toei Animation,
@@ -459,6 +504,68 @@
     var w = document.getElementById("shotgrid-wrap");
     w.dataset.skin = w.dataset.skin === "dark" ? "light" : "dark";
   }
+</script>
+
+<script>
+(function () {
+  var wrap = document.getElementById("shotgrid-wrap");
+  var shots = Array.prototype.slice.call(wrap.querySelectorAll(".shot"));
+  var box = document.getElementById("lightbox");
+  var img = document.getElementById("lb-img");
+  var capText = document.getElementById("lb-cap-text");
+  var closeBtn = document.getElementById("lb-close");
+  var current = -1;
+  var lastFocus = null;
+
+  function show(i) {
+    current = (i + shots.length) % shots.length;
+    var shot = shots[current];
+    var skin = wrap.dataset.skin === "light" ? "l" : "d";
+    var src = shot.querySelector("img." + skin);
+    img.src = src.src;
+    img.alt = src.alt;
+    var cap = shot.querySelector(".cap");
+    capText.textContent = cap ? cap.textContent.trim() : "";
+  }
+
+  function open(i) {
+    lastFocus = document.activeElement;
+    show(i);
+    box.classList.add("open");
+    document.body.style.overflow = "hidden";
+    closeBtn.focus();
+  }
+
+  function close() {
+    box.classList.remove("open");
+    img.src = "";
+    document.body.style.overflow = "";
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  shots.forEach(function (shot, i) {
+    var frame = shot.querySelector(".frame");
+    frame.setAttribute("role", "button");
+    frame.setAttribute("tabindex", "0");
+    frame.setAttribute("aria-label", "Enlarge screenshot");
+    frame.addEventListener("click", function () { open(i); });
+    frame.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(i); }
+    });
+  });
+
+  box.addEventListener("click", function (e) {
+    if (e.target !== img) close();
+  });
+  closeBtn.addEventListener("click", close);
+
+  document.addEventListener("keydown", function (e) {
+    if (!box.classList.contains("open")) return;
+    if (e.key === "Escape") close();
+    else if (e.key === "ArrowRight") show(current + 1);
+    else if (e.key === "ArrowLeft") show(current - 1);
+  });
+})();
 </script>
 
 <script>
