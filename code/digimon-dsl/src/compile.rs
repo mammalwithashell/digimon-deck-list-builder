@@ -2766,6 +2766,29 @@ fn compile_step(
             optional: a.optional,
             prompt: a.prompt.clone(),
         },
+        S::UseOptionFromRevealed(a) => CompiledStep::UseOptionFromRevealed {
+            of: compile_player_ref(a.of),
+            card: compile_binding_ref(&a.card),
+            cost_delta: a
+                .cost
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
+        },
+        S::UseOptionFromSources(a) => CompiledStep::UseOptionFromSources {
+            of: compile_player_ref(a.of),
+            card: compile_binding_ref(&a.card),
+            cost_delta: a
+                .cost
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
+        },
+        S::UseOptionBound(a) => CompiledStep::UseOptionBound {
+            binding: a.binding.clone(),
+            cost_delta: a
+                .cost
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
+        },
         S::PlayOrUseFromHand(a) => CompiledStep::PlayOrUseFromHand {
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),

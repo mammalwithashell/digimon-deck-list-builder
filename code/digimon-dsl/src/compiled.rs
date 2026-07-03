@@ -1532,6 +1532,40 @@ pub enum CompiledStep {
         optional: bool,
         prompt: Option<String>,
     },
+    /// Effect-driven Option USE of a reveal-pool pick — consumes a
+    /// `select_reveal` binding (`card` → the reveal-pool card handle) and routes
+    /// it through the shared `Game::use_option_from` pipeline
+    /// (`OptionSource::Revealed`). Non-parking: the upstream `select_reveal`
+    /// already parked; this step consumes its binding synchronously. Driver
+    /// EX7-048 clause 1 ("reveal top 6 … use 1 [Three Musketeers] Option among
+    /// them free"). `cost_delta: None` = free. `G-DSL-USE-OPTION-FROM-SOURCES`.
+    UseOptionFromRevealed {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+        cost_delta: Option<CompiledCostDelta>,
+    },
+    /// Effect-driven Option USE from a permanent's digivolution stack —
+    /// consumes a `select_own_sources` binding (`card` → a `SourceRefs`
+    /// binding) and routes it through `Game::use_option_from`
+    /// (`OptionSource::Source`, which resolves both `card_sources` and
+    /// `linked_cards`). Non-parking. Driver BT25-085 ("use 1 [3M]/[TS] Option
+    /// from … this Digimon's digivolution cards free"). `cost_delta: None` =
+    /// free. `G-DSL-USE-OPTION-FROM-SOURCES`.
+    UseOptionFromSources {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+        cost_delta: Option<CompiledCostDelta>,
+    },
+    /// Effect-driven Option USE of a `select_union_zone{hand,trash}` pick —
+    /// consumes the named union binding and dispatches to the picked Option's
+    /// TRUE origin zone (hand → `OptionSource::Hand`, trash →
+    /// `OptionSource::Trash`) through `Game::use_option_from`. Non-parking.
+    /// Driver BT21-062 ("use 1 [Ragnarok Cannon] from your hand or trash without
+    /// paying the cost"). `cost_delta: None` = free. `G-DSL-USE-OPTION-FROM-SOURCES`.
+    UseOptionBound {
+        binding: String,
+        cost_delta: Option<CompiledCostDelta>,
+    },
     /// Unified play-or-use of a `select_hand`-bound card with a cost
     /// adjustment. `G-PLAY-OR-USE-FROM-HAND`.
     PlayOrUseFromHand {

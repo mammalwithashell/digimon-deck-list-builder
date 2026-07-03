@@ -301,6 +301,118 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             true
         }
 
+        // ── Option-source USE (binding-consuming, non-parking) ────────────
+        // These consume a binding produced by an upstream select step
+        // (`select_reveal` / `select_own_sources` / `select_union_zone`) and
+        // route the picked Option through the SHARED round-1
+        // `Game::use_option_from` pipeline (`play_option_core` [Main]
+        // resolution + `dispose_option`) — only the `OptionSource` origin
+        // differs. The upstream select already parked; this step is a
+        // synchronous-family verb. The Option's own body may install a
+        // data-driven resume frame if it parks (composed by the outer
+        // `run_steps` loop); no bespoke closure is installed here, so the step
+        // is clone-safe. `cost_delta: None` = FREE (mirrors PlayFromRevealedFree).
+        // `G-DSL-USE-OPTION-FROM-SOURCES`.
+        CompiledStep::UseOptionFromRevealed {
+            of,
+            card,
+            cost_delta,
+        } => {
+            let owner = resolve_player(ctx, *of);
+            let delta = match cost_delta {
+                None => CostDelta::Free,
+                Some(_) => lower_cost_delta(cost_delta.as_ref(), ctx, bindings),
+            };
+            // The `select_reveal` binding resolves to the reveal-pool card
+            // handle; route it through the `OptionSource::Revealed` fork.
+            if let Some(ResolvedBinding::Card(handle)) = resolve_binding_ref(card, ctx, bindings) {
+                ctx.game.use_option_from(
+                    owner,
+                    crate::game_actions::OptionSource::Revealed(handle),
+                    delta,
+                );
+            }
+            true
+        }
+        CompiledStep::UseOptionFromSources {
+            of,
+            card,
+            cost_delta,
+        } => {
+            let owner = resolve_player(ctx, *of);
+            let delta = match cost_delta {
+                None => CostDelta::Free,
+                Some(_) => lower_cost_delta(cost_delta.as_ref(), ctx, bindings),
+            };
+            // A `select_own_sources` binding yields one or more
+            // `SourceSelectionRef`s (carrier permanent + card handle). Use the
+            // first — the driver clauses pick exactly one. The engine
+            // `OptionSource::Source` fork resolves both `card_sources` and
+            // `linked_cards`.
+            if let Some(ResolvedBinding::SourceRefs(refs)) = resolve_binding_ref(card, ctx, bindings)
+            {
+                if let Some(sref) = refs.first() {
+                    ctx.game.use_option_from(
+                        owner,
+                        crate::game_actions::OptionSource::Source {
+                            host: sref.permanent,
+                            card: sref.card,
+                        },
+                        delta,
+                    );
+                }
+            }
+            true
+        }
+        CompiledStep::UseOptionBound { binding, cost_delta } => {
+            let delta = match cost_delta {
+                None => CostDelta::Free,
+                Some(_) => lower_cost_delta(cost_delta.as_ref(), ctx, bindings),
+            };
+            // Resolve the `select_union_zone` binding: the picked Option, its
+            // origin zone (hand or trash), and that zone's owner. Route to the
+            // matching origin through `Game::use_option_from`. A `Material`
+            // origin is not a legal Option-use zone (no driver uses it) — silent
+            // no-op. The binding is read directly (not via `resolve_binding_ref`)
+            // so the origin tag is preserved.
+            if let Some((card, origin, owner)) = bindings.get_union_card(binding) {
+                match origin {
+                    UnionZoneOrigin::Hand => {
+                        if let Some(idx) = ctx
+                            .game
+                            .player(owner)
+                            .hand
+                            .iter()
+                            .position(|c| c.handle() == card)
+                        {
+                            ctx.game.use_option_from(
+                                owner,
+                                crate::game_actions::OptionSource::Hand(idx),
+                                delta,
+                            );
+                        }
+                    }
+                    UnionZoneOrigin::Trash => {
+                        if let Some(idx) = ctx
+                            .game
+                            .player(owner)
+                            .trash
+                            .iter()
+                            .position(|c| c.handle() == card)
+                        {
+                            ctx.game.use_option_from(
+                                owner,
+                                crate::game_actions::OptionSource::Trash(idx),
+                                delta,
+                            );
+                        }
+                    }
+                    UnionZoneOrigin::Material { .. } => {}
+                }
+            }
+            true
+        }
+
         // ── Play primitives (trash) ───────────────────────────────────────
         CompiledStep::PlayFromTrash {
             of: _,

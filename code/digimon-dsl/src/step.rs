@@ -213,6 +213,26 @@ pub enum StepSpec {
     /// (Gap 2, `G-DSL-USE-OPTION-FROM-SOURCES`). Trash analogue of
     /// `use_option_from_hand`.
     UseOptionFromTrash(UseOptionFromTrashArgs),
+    /// Use an Option previously picked from the game-level reveal pool by a
+    /// `select_reveal` step, applying `cost` to its printed use cost (omitted =
+    /// free), preserving the full Option lifecycle. `card` names the reveal-pool
+    /// binding. Driver EX7-048 "reveal top 6, use 1 [Three Musketeers] Option
+    /// among them free"; the remaining revealed cards are handled by the
+    /// enclosing reveal step. `G-DSL-USE-OPTION-FROM-SOURCES`.
+    UseOptionFromRevealed(UseOptionFromRevealedArgs),
+    /// Use an Option from a permanent's digivolution stack (a
+    /// `select_own_sources` binding), applying `cost` to its printed use cost
+    /// (omitted = free). `card` names the source-refs binding. Driver BT25-085
+    /// "use 1 [Three Musketeers]/[TS] Option from your hand or this Digimon's
+    /// digivolution cards free" (the digivolution-cards origin — the engine
+    /// `OptionSource::Source` fork resolves both `card_sources` and
+    /// `linked_cards`). `G-DSL-USE-OPTION-FROM-SOURCES`.
+    UseOptionFromSources(UseOptionFromSourcesArgs),
+    /// Use a `select_union_zone{hand,trash}`-bound Option from its true origin
+    /// zone, applying `cost` to its printed use cost (omitted = free). Driver
+    /// BT21-062 "use 1 [Ragnarok Cannon] from your hand or trash without paying
+    /// the cost". `G-DSL-USE-OPTION-FROM-SOURCES`.
+    UseOptionBound(UseOptionBoundArgs),
     /// Unified "play OR use 1 card from hand" — inspects the bound hand card's
     /// kind and routes Digimon/Tamer → play and Option → use (a DUAL card
     /// surfaces a "Play as Digimon / Use as Option" face choice). The card is
@@ -482,6 +502,9 @@ impl Serialize for StepSpec {
             StepSpec::PlayFromHandFree(v) => kv!(s, "play_from_hand_free", v),
             StepSpec::UseOptionFromHand(v) => kv!(s, "use_option_from_hand", v),
             StepSpec::UseOptionFromTrash(v) => kv!(s, "use_option_from_trash", v),
+            StepSpec::UseOptionFromRevealed(v) => kv!(s, "use_option_from_revealed", v),
+            StepSpec::UseOptionFromSources(v) => kv!(s, "use_option_from_sources", v),
+            StepSpec::UseOptionBound(v) => kv!(s, "use_option_bound", v),
             StepSpec::PlayOrUseFromHand(v) => kv!(s, "play_or_use_from_hand", v),
             StepSpec::PlayFromRevealedFree(v) => kv!(s, "play_from_revealed_free", v),
             StepSpec::PlayFromTrash(v) => kv!(s, "play_from_trash", v),
@@ -743,6 +766,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_hand_free" => StepSpec::PlayFromHandFree(map.next_value()?),
             "use_option_from_hand" => StepSpec::UseOptionFromHand(map.next_value()?),
             "use_option_from_trash" => StepSpec::UseOptionFromTrash(map.next_value()?),
+            "use_option_from_revealed" => StepSpec::UseOptionFromRevealed(map.next_value()?),
+            "use_option_from_sources" => StepSpec::UseOptionFromSources(map.next_value()?),
+            "use_option_bound" => StepSpec::UseOptionBound(map.next_value()?),
             "play_or_use_from_hand" => StepSpec::PlayOrUseFromHand(map.next_value()?),
             "play_from_revealed_free" => StepSpec::PlayFromRevealedFree(map.next_value()?),
             "play_from_trash" => StepSpec::PlayFromTrash(map.next_value()?),
@@ -2102,6 +2128,56 @@ pub struct UseOptionFromTrashArgs {
     pub optional: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
+}
+
+/// `use_option_from_revealed:` args — use an Option previously picked from the
+/// reveal pool (a `select_reveal` binding) with `cost` applied to its printed
+/// use cost (omitted = free). The `card` binding resolves to the reveal-pool
+/// card handle at run time. Driver EX7-048 clause 1.
+/// `G-DSL-USE-OPTION-FROM-SOURCES`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct UseOptionFromRevealedArgs {
+    pub of: PlayerRef,
+    /// The `select_reveal` binding naming the Option to use.
+    pub card: BindingRef,
+    /// Cost applied to the Option's printed USE cost. `free` / omitted = pay
+    /// nothing; `{ reduce: N }` = pay `max(0, use_cost - field_reductions - N)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<CostDelta>,
+}
+
+/// `use_option_from_sources:` args — use an Option from a permanent's
+/// digivolution stack (a `select_own_sources` binding) with `cost` applied to
+/// its printed use cost (omitted = free). `card` names the source-refs binding;
+/// its carrier permanent + card handle are recovered from the binding. The
+/// engine `OptionSource::Source` fork resolves both `card_sources` and
+/// `linked_cards`. Driver BT25-085. `G-DSL-USE-OPTION-FROM-SOURCES`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct UseOptionFromSourcesArgs {
+    pub of: PlayerRef,
+    /// The `select_own_sources` binding naming the source Option to use.
+    pub card: BindingRef,
+    /// Cost applied to the Option's printed USE cost. `free` / omitted = pay
+    /// nothing; `{ reduce: N }` = pay `max(0, use_cost - field_reductions - N)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<CostDelta>,
+}
+
+/// `use_option_bound:` args — use a `select_union_zone{hand,trash}`-bound Option
+/// from its true origin zone, with `cost` applied to its printed use cost
+/// (omitted = free). Driver BT21-062 "use 1 [Ragnarok Cannon] from your hand or
+/// trash without paying the cost". `G-DSL-USE-OPTION-FROM-SOURCES`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct UseOptionBoundArgs {
+    /// The `select_union_zone` `bind_as` naming the picked Option.
+    pub binding: String,
+    /// Cost applied to the Option's printed USE cost. `free` / omitted = pay
+    /// nothing; `{ reduce: N }` = pay `max(0, use_cost - field_reductions - N)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<CostDelta>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

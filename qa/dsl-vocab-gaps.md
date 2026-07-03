@@ -3938,3 +3938,11 @@ Consumer: BT21-087 Zenith ([On Play] reveal 3, choose 1 [Vemmon]-text card: if i
 > **Memory-count formula (`player_memory`) — RESOLVED 2026-07-03** (store-champs leaves I). See
 > G-DSL-MEMORY-COUNT-FORMULA in docs/RUST_ENGINE_GAPS.md. BT25-086's End-of-Turn DP scaling is
 > now expressible via `dp_modifier_fn: {base: 0, per: {player_memory: {of: opponent}}, delta: 1000}`.
+
+
+> **Option USE from revealed/sources/union origins — RESOLVED 2026-07-03** (option-verbs
+> reconciliation onto the round-1 `Game::use_option_from` core). DSL verbs
+> `use_option_from_revealed {of, card, cost?}`, `use_option_from_sources {of, card, cost?}`
+> (Source origin resolves card_sources AND linked_cards), `use_option_bound {binding, cost?}`
+> (select_union_zone hand-or-trash consumer). Drivers EX7-048 cl.1 / BT25-085 use-facet /
+> BT21-062. Facet 2 (trash-Option-from-sources-as-COST) remains OPEN.

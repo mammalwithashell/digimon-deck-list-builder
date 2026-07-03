@@ -153,11 +153,20 @@ impl Game {
             OptionSource::Hand(i) => self.player(player_id).hand.get(i),
             OptionSource::Trash(i) => self.player(player_id).trash.get(i),
             OptionSource::Revealed(h) => self.revealed_cards.iter().find(|c| c.handle() == h),
+            // The Option may sit in the host's digivolution stack
+            // (`card_sources`) OR its link cards (`linked_cards`) — BT25-085's
+            // "digivolution cards" origin plus the linked-Option origin. Scan
+            // both by handle. `G-DSL-USE-OPTION-FROM-SOURCES` facet 1.
             OptionSource::Source { host, card } => self
                 .player(host.player)
                 .battle_area
                 .get(host.index as usize)
-                .and_then(|perm| perm.card_sources.iter().find(|c| c.handle() == card)),
+                .and_then(|perm| {
+                    perm.card_sources
+                        .iter()
+                        .chain(perm.linked_cards.iter())
+                        .find(|c| c.handle() == card)
+                }),
         }
     }
 
@@ -183,18 +192,27 @@ impl Game {
                 let pos = self.revealed_cards.iter().position(|c| c.handle() == h)?;
                 Some(self.revealed_cards.remove(pos))
             }
+            // Lift the Option out of the carrier's digivolution stack
+            // (`card_sources`) OR its link cards (`linked_cards`) by handle.
+            // Using an Option out of a source stack is NOT a trash-from-
+            // digivolution (no `OnDigivolutionCardTrashed` fires for a USE) —
+            // the card just plays out of that zone and disposes normally after.
+            // `G-DSL-USE-OPTION-FROM-SOURCES` facet 1.
             OptionSource::Source { host, card } => {
                 let perm = self
                     .player_mut(host.player)
                     .battle_area
                     .get_mut(host.index as usize)?;
-                let pos = perm.card_sources.iter().position(|c| c.handle() == card)?;
-                // Guard: never pull the top card (that is not a digivolution
-                // source — it would decapitate the host).
-                if pos + 1 == perm.card_sources.len() {
-                    return None;
+                if let Some(pos) = perm.card_sources.iter().position(|c| c.handle() == card) {
+                    // Guard: never pull the top card (that is not a digivolution
+                    // source — it would decapitate the host).
+                    if pos + 1 == perm.card_sources.len() {
+                        return None;
+                    }
+                    return Some(perm.card_sources.remove(pos));
                 }
-                Some(perm.card_sources.remove(pos))
+                let pos = perm.linked_cards.iter().position(|c| c.handle() == card)?;
+                Some(perm.linked_cards.remove(pos))
             }
         }
     }
@@ -315,7 +333,10 @@ impl Game {
                         .battle_area
                         .get(host.index as usize)
                         .and_then(|perm| {
-                            perm.card_sources.iter().find(|c| c.handle() == card)
+                            perm.card_sources
+                                .iter()
+                                .chain(perm.linked_cards.iter())
+                                .find(|c| c.handle() == card)
                         })
                         .map(|c| c.card_id(&self.card_data).to_string())
                         .unwrap_or_else(|| format!("source[{:?}]:missing", card)),

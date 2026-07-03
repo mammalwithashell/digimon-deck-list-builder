@@ -1596,6 +1596,16 @@ fn validate_step_binding_scope(
                 errors,
             );
         }
+        StepSpec::UseOptionBound(args) => {
+            // The `binding` must name an in-scope `select_union_zone` bind_as.
+            report_if_undeclared_binding(
+                &args.binding,
+                &format!("{prefix}.binding"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
         StepSpec::BindPermanentProperty(args) => {
             scope.insert(args.bind_as.clone());
         }
