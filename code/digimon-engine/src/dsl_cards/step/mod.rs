@@ -297,6 +297,10 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::DelayDnaAfterSelection { outer_conts, .. }) => outer_conts.push(cont),
             Some(ResumeFrame::DelayHandDigivolveSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::DelayDnaCardSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::DelayPlayFromHandAfterSelection { outer_conts, .. }) => {
+                outer_conts.push(cont)
+            }
+            Some(ResumeFrame::DelayPlayFromHandSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::AppFuseHostSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::AppFuseResultSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::ArtsDigivolveSelection(s)) => s.outer_conts.push(cont),

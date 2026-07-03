@@ -1,27 +1,90 @@
-# ST20-14 Our Courage United — Option, Black, Cost 3.
-# Traits: ADVENTURE.
+# ST20-14 Our Courage United — Option, Black, Cost 3. Traits: ADVENTURE.
 #
-# Printed card text (code/digimon-engine/cards/st20/ST20-14.json — verbatim):
+# Printed card text (data/cards.json / official Bandai DB / card image):
 #
-#   While you have an [ADVENTURE] trait Digimon or Tamer on the field, you
-#   can ignore this card's color requirements.
-#   [Main] ＜Draw 2＞ (Draw 2 cards from your deck.) Then, place this card
-#   in the battle area.
+#   While you have a Digimon or Tamer with the [ADVENTURE] trait on the field,
+#   you can ignore this card's color requirements.
+#
+#   [Main] <Draw 2> (Draw 2 cards from your deck.) Then, place this card in the
+#   battle area.
+#
 #   [All Turns] When any of your level 5 or higher Digimon would leave the
-#   battle area, ＜Delay＞ (By trashing this card after the placing turn,
-#   activate the effect below.)
-#   ・You may play 1 level 5 or lower Digimon card with the [ADVENTURE]
-#   trait from your hand without paying the cost.
+#   battle area, <Delay> (By trashing this card after the placing turn, activate
+#   the effect below.)
+#   ・You may play 1 level 5 or lower Digimon card with the [ADVENTURE] trait
+#     from your hand without paying the cost.
 #
 # Inherited (Security):
 #   Security Effect [Security] Place this card in the battle area.
 #
-# DCGO C# reference:
-#   DCGO/Assets/Scripts/CardEffect/ST20/Black/ST20_14.cs
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST20/Black/ST20_14.cs
 #
-# See code/digimon-engine/cards/st20/ST20-14.yaml on disk for the full
-# annotated DCGO crosscheck / implementation-status / DSL-precedent comment
-# blocks (kept there verbatim; abbreviated here only to fit the response).
+# ─── DCGO crosscheck (high-level) ─────────────────────────────────────────────
+#
+# Clause 0 — `EffectTiming.None` `IgnoreColorConditionClass`. The color-bypass
+#   is card-scoped (`cardCondition: cardSource == card`) and gated by
+#   `HasMatchConditionPermanent((p) => (p.IsTamer || p.IsDigimon) &&
+#   p.TopCard.HasAdventureTraits, true)`. That `HasMatchConditionPermanent`
+#   helper scans the OWNER's field including the breeding area — so the printed
+#   "on the field" counts a breeding-area [ADVENTURE] Digimon too. Expressed as
+#   a top-level `use_requirement` predicate over `any_field_permanent` (which
+#   walks battle area + breeding area — see `field_existential_any` in
+#   `dsl_cards/predicate.rs`).
+#
+# Clause A — `EffectTiming.OptionSkill` (= [Main] play). `DrawClass(owner, 2)`
+#   then `CardEffectCommons.PlaceDelayOptionCards(card)` — the printed
+#   "<Draw 2>. Then, place this card in the battle area." Placing this Option as
+#   a Delay permanent is what installs Clause B's leave observer.
+#
+# Clause B — `EffectTiming.WhenRemoveField` (cross-permanent leave observer).
+#   `CanUseCondition`:
+#     • `CanTriggerWhenPermanentRemoveField(hashtable, PermanentCondition)` —
+#       fires when ANY permanent the OWNER controls (`IsPermanentExistsOnOwner-
+#       BattleAreaDigimon`) is a Digimon with `Level >= 5` and `willBeRemoveField`.
+#       (No "outside of battle" filter — unlike BT17-095, ST20-14 fires on ANY
+#       leave, including battle deletion.)
+#     • `CanDeclareOptionDelayEffect(card)` — this Option must already be a
+#       Delay-Option permanent on the field (i.e. "after the placing turn").
+#   `ActivateCoroutine`:
+#     1. `DeletePermanentAndProcessAccordingToResult` on `card.PermanentOfThis-
+#        Card()` — pays the Delay cost (trash THIS Option from the field). This
+#        is the <Delay> cost; the leaving Digimon still leaves.
+#     2. On success: `SelectHandEffect` (`canNoSelect: true`) over hand Digimon
+#        cards with `HasAdventureTraits && Level <= 5`, then
+#        `CardEffectCommons.PlayPermanentCards(payCost: false)`.
+#   DCGO does NOT `Cancel` the `WhenRemoveField` event — the leaving Digimon
+#   proceeds to leave. So Clause B's process omits any `cancel_replacement`
+#   (default replacement outcome is Proceed).
+#
+# Clause C (Security, inherited) — `EffectTiming.SecuritySkill`
+#   `PlaceSelfDelayOptionSecurityEffect(card)` — the printed "[Security] Place
+#   this card in the battle area" (seats it as a Delay-Option from security).
+#
+# ─── Implementation shape (Path B — no new substrate) ─────────────────────────
+#
+# ST20-14's <Delay> is EVENT-triggered ("When your Lv5+ Digimon would leave the
+# battle area"), NOT the Main-phase-activated `<Delay>` (BT13-110's `kind: delay
+# / trigger: delayed`). The faithful expression is the same `kind: replacement`
+# + `trigger: when_would_leave_battle_area` shape BT17-095 uses (DCGO
+# `EffectTiming.WhenRemoveField` for both). The body — pay the Delay cost by
+# trashing self, then optionally play 1 card from hand — reuses the existing
+# `delete_permanent { target: source }` + `select_hand` + `play_from_hand_free`
+# vocabulary (cf. BT20-091 Cool Boy, which is the same would-leave-then-play-
+# from-hand pattern minus the Delay self-trash cost). No engine/DSL widening is
+# needed; the substrate already expresses this card.
+#
+# ─── Faithfulness diff ────────────────────────────────────────────────────────
+#
+# | Card-text element                                                  | Status |
+# |--------------------------------------------------------------------|--------|
+# | Color bypass while own field/breeding [ADVENTURE] Digimon or Tamer | IMPLEMENTED — use_requirement: any_field_permanent (battle + breeding)
+# | [Main] <Draw 2>                                                     | IMPLEMENTED — draw { count: 2 }
+# | [Main] "Then, place this card in the battle area"                  | IMPLEMENTED — place_self_as_delay_option
+# | [All Turns] When own Lv5+ Digimon would leave: <Delay>              | IMPLEMENTED — kind: replacement / when_would_leave_battle_area
+# | <Delay> cost: trash this card (after the placing turn)              | IMPLEMENTED — delete_permanent { target: source } (Delay-Option self-trash)
+# | ・may play 1 Lv5- [ADVENTURE] Digimon from hand free               | IMPLEMENTED — optional select_hand + play_from_hand_free
+# | leave is NOT cancelled (the Digimon still leaves)                   | IMPLEMENTED — process omits cancel_replacement (Proceed)
+# | [Security] Place this card in the battle area                      | IMPLEMENTED — place_self_as_delay_option (inherited, on_security)
 
 card: ST20-14
 name: "Our Courage United"
@@ -30,79 +93,88 @@ color: [black]
 cost: 3
 traits: [ADVENTURE]
 
-# Card-level Option-use requirement. Printed: "While you have an [ADVENTURE]
-# trait Digimon or Tamer on the field, you can ignore this card's color
-# requirements." This is the FROM-HAND play-time bypass — `use_requirement`
-# lowers onto the [Main] clause's `option_color_requirement_bypass`
-# condition, which the action mask consults in
+# ─── Color bypass (Clause 0) ──────────────────────────────────────────────────
+#
+# Printed: "While you have a Digimon or Tamer with the [ADVENTURE] trait on the
+# field, you can ignore this card's color requirements."
+#
+# `use_requirement` lowers onto the [Main] clause's `option_color_requirement_
+# bypass` condition, consulted by the action mask in
 # `option_use_requirement_or_color_available`. It is card-scoped (only THIS
-# card's color requirement is bypassed), mirroring DCGO
+# card's color requirement is bypassed), mirroring DCGO's
 # `IgnoreColorConditionClass.SetUpIgnoreColorConditionClass(cardCondition:
-# cardSource == card)`. NOTE: this is `use_requirement:` rather than
-# `kind: flood_gate` because flood_gate's lowering only scans battle-area
-# permanents for its `target:` match and can never make a card sitting in
-# hand playable — use_requirement is the verified from-hand mechanism
-# (mirrors ST20-15 Island of Adventure).
+# cardSource == card)`.
+#
+# `any_field_permanent` scans the OWNER's battle area AND breeding area
+# (`field_existential_any`) — the printed "on the field" counts a breeding-area
+# [ADVENTURE] Digimon, faithful to DCGO's `HasMatchConditionPermanent(...)`.
+# NOTE: `any_field_permanent`'s predicate fields are `#[serde(flatten)]`ed
+# directly into the existential (see `ExistentialPredicate` in
+# `digimon-dsl/src/predicate.rs`) — the leaves (`trait_has`, `any_of`) sit
+# DIRECTLY under it, NOT nested under a `predicate:` key. Same shape as
+# BT21-097's ADVENTURE-sibling ([Appmon] "Digimon or Tamer on the field").
 use_requirement:
-  any_of:
-    - any_permanent:
-        of: you
-        kind: digimon
-        trait_has: ADVENTURE
-    - any_permanent:
-        of: you
-        kind: tamer
-        trait_has: ADVENTURE
+  any_field_permanent:
+    of: you
+    trait_has: "ADVENTURE"
+    any_of:
+      - kind: digimon
+      - kind: tamer
 
 effects:
-  # ─── Clause 1: [Main] <Draw 2>; then place self as Delay-Option ──────────────
+  # ─── Clause A — [Main] <Draw 2>; then place this card in the battle area ──────
   #
-  # Printed: "[Main] ＜Draw 2＞ (Draw 2 cards from your deck.) Then, place
-  # this card in the battle area."
+  # Printed: "[Main] <Draw 2> (Draw 2 cards from your deck.) Then, place this
+  # card in the battle area."
   #
-  # Mandatory (DCGO `SetUpActivateClass(..., isOptional: false, ...)`; no
-  # "you may" in printed text). The trailing `place_self_as_delay_option: {}`
-  # step performs "Then, place this card in the battle area" — required
-  # explicitly here because Clause 2 below is `kind: replacement` (not
-  # `kind: delay`), so the engine's automatic Delay-Option auto-seat via
-  # `classify_option_modes` does not detect a `delay_trigger` on this card.
+  # `place_self_as_delay_option` is the FINAL step (RESOLVED G-PLACE-SELF-AS-
+  # OPTION-PERMANENT): it seats this Option in the controller's battle area as a
+  # Delay-Option, which is what installs Clause B's cross-permanent leave
+  # observer once this Option is on the field.
   - when: main_from_hand
-    optional: false
-    summary: "[Main] Draw 2; then place self in battle area as a Delay-Option"
+    summary: "[Main] Draw 2, then place this card in the battle area as a Delay-Option"
     process:
       - draw: { of: you, count: 2 }
       - place_self_as_delay_option: {}
 
-  # ─── Clause 2: [All Turns] own Lv5+ Digimon would-leave <Delay> reward ────────
+  # ─── Clause B — [All Turns] <Delay> own-Lv5+-would-leave → play 1 from hand ───
   #
-  # Printed: "[All Turns] When any of your level 5 or higher Digimon would
-  # leave the battle area, ＜Delay＞ (By trashing this card after the
-  # placing turn, activate the effect below.) ・You may play 1 level 5 or
-  # lower Digimon card with the [ADVENTURE] trait from your hand without
-  # paying the cost."
+  # Printed: "[All Turns] When any of your level 5 or higher Digimon would leave
+  # the battle area, <Delay> (By trashing this card after the placing turn,
+  # activate the effect below.) ・You may play 1 level 5 or lower Digimon card
+  # with the [ADVENTURE] trait from your hand without paying the cost."
   #
-  # RK-G003 (Delay-cost payment via would-leave replacement) + RK-G004
-  # (non-cancelling would-leave observer with a free hand-play reward),
-  # both CLOSED precedents. `delete_permanent: { target: source }` pays the
-  # Delay cost (trashes THIS card from the field). The optional
-  # `select_hand` + mandatory `play_from_hand_free` reward mirrors
-  # BT20-091's non-cancelling shape — the process has NO
-  # `cancel_replacement` step, so the leaving level-5+ Digimon proceeds to
-  # leave the battle area regardless of the reward (matching DCGO, which
-  # never calls `Cancel` on the `WhenRemoveField` event here). With zero
-  # eligible hand cards, `select_hand`'s installer silently no-ops
-  # (matching DCGO's `HandCards.Count(...) >= 1` guard) — the Delay cost is
-  # still paid; there is simply no reward played.
+  # Implementation (same shape as BT17-095 Clause B / BT20-091 Clause B):
+  #   - `kind: replacement` + `trigger: when_would_leave_battle_area` — observes
+  #     all would-leave events, then filters via `active_when`.
+  #   - `replacement_subject_is_mine: true` — the printed "your" Digimon.
+  #   - `kind: digimon` + `level_gte: 5` on the leaving subject (cross-permanent
+  #     subject filter; `predicate_reads_replacement_subject` returns true for
+  #     these leaves).
+  #   - No `replacement_cause` filter — ST20-14 fires on ANY leave (DCGO has no
+  #     `!IsByBattle` guard), including battle deletion.
+  #   - `optional: true` — the printed "may play" makes the reward optional. In
+  #     DCGO `CanUseCondition` returning false skips the whole flow including the
+  #     self-trash; here the optional accept gate is presented to the controller,
+  #     and on decline the Delay cost is NOT paid and the leaving Digimon
+  #     proceeds untouched.
   #
-  # `replacement_subject_is_mine: true` mirrors "any of YOUR level 5 or
-  # higher Digimon". `level_gte: 5` mirrors `HasLevel && Level >= 5`. No
-  # `all_turns: true` gate is needed — `[All Turns]` is the default scope
-  # for a replacement clause with no turn-restriction predicate (see
-  # BT17-095 Clause B).
+  # Process:
+  #   1. `delete_permanent: { target: source }` — pays the <Delay> cost by
+  #      trashing THIS Option from the battle area (synchronous self-trash).
+  #      DCGO: `DeletePermanentAndProcessAccordingToResult` on
+  #      `card.PermanentOfThisCard()`.
+  #   2. `select_hand` (`optional: true`) + `play_from_hand_free` — the printed
+  #      "You may play 1 Lv5- [ADVENTURE] Digimon from hand free". `optional`
+  #      mirrors DCGO's `canNoSelect: true`.
+  #   NO `cancel_replacement` — the leaving Digimon still leaves (DCGO does not
+  #   Cancel `WhenRemoveField`; the default replacement outcome is Proceed).
   #
-  # No `once_per_turn` — printed text carries no [OPT] tag. A single
-  # ST20-14 in play can only fire this body ONCE total because the Delay
-  # cost trashes the carrier.
+  # Note on "after the placing turn": the replacement observer only exists while
+  # THIS card is a live Delay-Option on the field — `place_self_as_delay_option`
+  # seats it, and `source_permanent_is_still_active` (in `lower_replacement.rs`)
+  # gates the observer to that window. A single ST20-14 fires at most once total
+  # because paying the Delay cost trashes it from the field.
   - kind: replacement
     trigger: when_would_leave_battle_area
     optional: true
@@ -111,33 +183,30 @@ effects:
         - replacement_subject_is_mine: true
         - kind: digimon
         - level_gte: 5
-    summary: "[All Turns] Own Lv5+ Digimon would leave: <Delay> trash self, may play 1 Lv5-or-lower [ADVENTURE] Digimon from hand free"
+    summary: "[All Turns] When own Lv5+ Digimon would leave: <Delay> trash self, may play 1 Lv5- [ADVENTURE] Digimon from hand free; leave proceeds"
     process:
       - delete_permanent: { target: source }
       - select_hand:
           of: you
-          bind_as: reward
+          bind_as: adventure_pick
           optional: true
           filter:
             all_of:
               - kind: digimon
               - level_lte: 5
-              - trait_has: ADVENTURE
-          prompt: "You may play 1 level 5 or lower [ADVENTURE] Digimon card from your hand without paying the cost"
+              - trait_has: "ADVENTURE"
+          prompt: "Play 1 level 5 or lower [ADVENTURE] Digimon from hand (free)"
       - play_from_hand_free:
           of: you
-          hand_index: reward
+          hand_index: adventure_pick
 
-  # ─── Clause 3: [Security] (inherited) place self in battle area ──────────────
+  # ─── Clause C — [Security] (inherited) place this card in the battle area ─────
   #
-  # Printed inherited (security): "Security Effect [Security] Place this
-  # card in the battle area."
-  #
-  # DCGO: `CardEffectFactory.PlaceSelfDelayOptionSecurityEffect(card)` —
-  # same idiom as BT22-099 / ST20-15.
+  # Printed inherited (security): "Security Effect [Security] Place this card in
+  # the battle area." DCGO `PlaceSelfDelayOptionSecurityEffect(card)` — seats it
+  # as a Delay-Option straight from security resolution.
   - scope: inherited
     when: on_security
-    optional: false
-    summary: "[Security][Inherited] Place this card in the battle area (as a Delay-Option)"
+    summary: "[Security] Place this card in the battle area as a Delay-Option"
     process:
       - place_self_as_delay_option: {}

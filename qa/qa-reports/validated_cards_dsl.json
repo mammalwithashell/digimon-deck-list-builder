@@ -10547,6 +10547,58 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_092.rs",
       "test_count": null,
       "notes": "follow-up wave, Opus-approved (or orchestrator-applied directives); merged-set green 2026-07-03"
+    },
+    "P-094": {
+      "card_name": "Destromon",
+      "validated_date": "2026-07-03",
+      "report": "batch-implement-cards-rust-dsl (store-champs final batch)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "store-champs-june-2026",
+      "yaml_path": "code/digimon-engine/cards/p/P-094.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/p/p_094.rs",
+      "test_count": 9,
+      "patterns": [],
+      "notes": "IMPLEMENTED via rule-28 widenings: play_cost_budget FormulaSpec + source_count predicate; foreign-carrier source return confirmed expressible"
+    },
+    "BT24-084": {
+      "card_name": "Inori Misono",
+      "validated_date": "2026-07-03",
+      "report": "batch-implement-cards-rust-dsl (store-champs final batch)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "store-champs-june-2026",
+      "yaml_path": "code/digimon-engine/cards/bt24/BT24-084.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt24/bt24_084.rs",
+      "test_count": 20,
+      "patterns": [],
+      "notes": "redo after 2 infra failures; suspend-cost digivolve idiom; pre-cost TriggerOrder decline covered"
+    },
+    "BT21-060": {
+      "card_name": "Destromon",
+      "validated_date": "2026-07-03",
+      "report": "batch-implement-cards-rust-dsl (store-champs final batch)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "store-champs-june-2026",
+      "yaml_path": "code/digimon-engine/cards/bt21/BT21-060.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_060.rs",
+      "test_count": 20,
+      "patterns": [],
+      "notes": "rebuilt after false-green wave-2 body; inherited redirect scope: inherited; first ImmuneFromStackTrashing YAML consumer"
+    },
+    "ST20-14": {
+      "card_name": "Our Courage United",
+      "validated_date": "2026-07-03",
+      "report": "batch-implement-cards-rust-dsl (store-champs final batch)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "store-champs-june-2026",
+      "yaml_path": "code/digimon-engine/cards/st20/ST20-14.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/st20/st20_14.rs",
+      "test_count": 18,
+      "patterns": [],
+      "notes": "IMPLEMENTED via DelaySelfTrashPlayFromHandFlow widening (lower_replacement + resume VM, clone-safe); breeding-area color-gate regression pinned"
     }
   }
 }

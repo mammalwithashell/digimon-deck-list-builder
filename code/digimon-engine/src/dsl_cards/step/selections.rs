@@ -1059,6 +1059,23 @@ pub(crate) fn run_resume(
                 game, state, action_id, is_pass,
             );
         }
+        ResumeFrame::DelayPlayFromHandAfterSelection {
+            inner,
+            continuation,
+            outer_conts,
+        } => {
+            run_resume(game, *inner, action_id, is_pass);
+            crate::dsl_cards::lower_replacement::continue_delay_play_from_hand_after_selection(
+                game,
+                continuation,
+            );
+            run_outer_conts(game, outer_conts);
+        }
+        ResumeFrame::DelayPlayFromHandSelection(state) => {
+            crate::dsl_cards::lower_replacement::run_delay_play_from_hand_selection_step(
+                game, state, action_id, is_pass,
+            );
+        }
         ResumeFrame::AppFuseHostSelection(mut state) => {
             if is_pass {
                 return;

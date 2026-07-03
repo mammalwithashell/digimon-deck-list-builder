@@ -540,6 +540,20 @@ pub enum ResumeFrame {
     /// Delay-cost two-stage hand-DNA reward prompt. The same frame type covers
     /// both the result-card and partner-card stages.
     DelayDnaCardSelection(crate::dsl_cards::lower_replacement::DelayDnaCardSelectionState),
+    /// ST20-14 Delay replacement paid its trash-self cost by resolving another
+    /// selection first. Resolve that inner selection as data, then continue the
+    /// hand-PLAY reward flow.
+    DelayPlayFromHandAfterSelection {
+        inner: Box<ResumeStack>,
+        continuation: crate::dsl_cards::lower_replacement::DelayPlayFromHandContinuation,
+        outer_conts: Vec<OuterContinuation>,
+    },
+    /// ST20-14 Delay-cost hand-PLAY reward prompt. Accept plays the chosen Lv5-
+    /// [ADVENTURE] Digimon from hand for free; PASS declines. The leave still
+    /// proceeds either way.
+    DelayPlayFromHandSelection(
+        crate::dsl_cards::lower_replacement::DelayPlayFromHandSelectionState,
+    ),
     /// Effect-initiated App Fuse host prompt. Accept installs the result-card
     /// prompt; PASS declines without running any composed tail, matching the
     /// legacy prompt's absent `on_decline`.

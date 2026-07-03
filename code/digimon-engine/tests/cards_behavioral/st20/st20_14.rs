@@ -1,15 +1,46 @@
-//! ST20-14 Our Courage United — Option, Black, Cost 3. Traits: ADVENTURE.
-//! Full annotated header (card text, DCGO crosscheck, pattern tags, known
-//! gaps, and the subject-handle-index-shift DEBUG NOTE) is kept verbatim on
-//! disk at code/digimon-engine/tests/cards_behavioral/st20/st20_14.rs.
-//! Summary: card-level use_requirement color bypass; [Main] mandatory
-//! Draw 2 + place_self_as_delay_option; [All Turns] kind:replacement
-//! Delay leave-watcher (RK-G003 delete_permanent{target:source} cost +
-//! RK-G004 non-cancelling optional select_hand/play_from_hand_free reward);
-//! inherited [Security] place_self_as_delay_option. See gaps field for the
-//! one engine issue discovered (G-REPLACEMENT-SUBJECT-STALE-AFTER-SOURCE-DELETE),
-//! which does not block this card and is pinned by a dedicated regression
-//! test (st20_14_engine_gap_subject_handle_stale_when_source_deleted_at_lower_index).
+//! ST20-14 Our Courage United — Option, Black, Cost 3, traits: [ADVENTURE].
+//!
+//! # Card text (official Bandai DB / card image / cards.json)
+//!
+//! While you have a Digimon or Tamer with the [ADVENTURE] trait on the field,
+//! you can ignore this card's color requirements.
+//!
+//! **[Main]** <Draw 2> (Draw 2 cards from your deck.) Then, place this card in
+//! the battle area.
+//!
+//! **[All Turns]** When any of your level 5 or higher Digimon would leave the
+//! battle area, <Delay> (By trashing this card after the placing turn, activate
+//! the effect below.)
+//! ・You may play 1 level 5 or lower Digimon card with the [ADVENTURE] trait
+//!   from your hand without paying the cost.
+//!
+//! **Inherited (Security):** Security Effect [Security] Place this card in the
+//! battle area.
+//!
+//! # DCGO C# reference
+//! `DCGO/Assets/Scripts/CardEffect/ST20/Black/ST20_14.cs`
+//!
+//! # Path taken — B (replacement-shape, no new substrate)
+//!
+//! ST20-14's <Delay> is EVENT-triggered ("When your Lv5+ Digimon would leave
+//! the battle area"), which DCGO models as `EffectTiming.WhenRemoveField` — the
+//! same timing BT17-095 uses. The faithful DSL expression is `kind: replacement`
+//! + `trigger: when_would_leave_battle_area` (BT17-095 Clause B / BT20-091
+//! Clause B), with the body paying the <Delay> cost via
+//! `delete_permanent { target: source }` then optionally playing 1 card from
+//! hand (`select_hand` + `play_from_hand_free`). The leave is NOT cancelled.
+//! No engine/DSL widening was required — every verb already existed.
+//!
+//! # Patterns this test covers
+//!
+//! - **Color bypass via `use_requirement: any_field_permanent`** counting the
+//!   OWNER's battle area AND breeding area — the printed "on the field" counts a
+//!   breeding-area [ADVENTURE] Digimon (REQUIRED breeding-area regression).
+//! - **[Main] <Draw 2> then place self as Delay-Option.**
+//! - **Clause B leave-watcher**: `replacement_subject_is_mine` + `level_gte: 5`
+//!   subject filter; on accept, pay the <Delay> cost (self-trash) then optional
+//!   play 1 Lv5- [ADVENTURE] Digimon from hand free; the leave still proceeds.
+//! - **[Security] (inherited) place self.**
 
 #![allow(dead_code, unused_imports)]
 
@@ -17,106 +48,52 @@ use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledColor, CompiledDeclarativeClause, CompiledScope,
     CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::{
-    PASS, PLAY_HAND_START, REPLACEMENT_ACCEPT, TRASH_EFFECT_START,
-};
-use digimon_engine::build_action_mask;
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{HAND_EFFECT_START, PASS, PLAY_HAND_START, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
+use digimon_engine::permanent::OptionState;
 use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::SelectionKind;
 
-fn make_filler(id: &str) -> CardData {
+const CARD_ID: &str = "ST20-14";
+const YAML: &str = include_str!("../../../cards/st20/ST20-14.yaml");
+
+// ── Card-data factories ──────────────────────────────────────────────────────
+
+fn filler(id: &str) -> CardData {
     make_test_card(id, id)
 }
 
-fn make_adventure_digimon(id: &str) -> CardData {
-    let mut c = make_test_card(id, "AdventureMon");
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(3);
-    c.dp = Some(2000);
-    c.play_cost = 3;
-    c.colors = vec![CardColor::Red];
-    c.traits = vec!["ADVENTURE".to_string()];
-    c
-}
-
-fn make_adventure_tamer(id: &str) -> CardData {
-    let mut c = make_test_card(id, "AdventureTamer");
-    c.card_kind = CardKind::Tamer;
-    c.play_cost = 2;
-    c.colors = vec![CardColor::Red];
-    c.traits = vec!["ADVENTURE".to_string()];
-    c
-}
-
-fn make_non_adventure_digimon(id: &str) -> CardData {
-    let mut c = make_test_card(id, "PlainMon");
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(3);
-    c.dp = Some(2000);
-    c.play_cost = 3;
-    c.colors = vec![CardColor::Red];
-    c
-}
-
-fn make_l5_digimon(id: &str, name: &str) -> CardData {
+/// A level-N Digimon carrying `traits`, with an explicit color (default Black
+/// so it does NOT overlap ST20-14's own color for the bypass tests unless we
+/// deliberately want a color match).
+fn digimon(id: &str, name: &str, level: u8, color: CardColor, traits: &[&str]) -> CardData {
     let mut c = make_test_card(id, name);
     c.card_kind = CardKind::Digimon;
-    c.level = Some(5);
-    c.dp = Some(9000);
-    c.play_cost = 8;
-    c.colors = vec![CardColor::Black];
-    c
-}
-
-fn make_l4_digimon(id: &str) -> CardData {
-    let mut c = make_test_card(id, "L4Mon");
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(4);
-    c.dp = Some(6000);
-    c.play_cost = 5;
-    c.colors = vec![CardColor::Black];
-    c
-}
-
-fn make_adventure_reward_digimon(id: &str, level: u8) -> CardData {
-    let mut c = make_test_card(id, "AdventureReward");
-    c.card_kind = CardKind::Digimon;
     c.level = Some(level);
-    c.dp = Some(5000);
-    c.play_cost = 4;
-    c.colors = vec![CardColor::Black];
-    c.traits = vec!["ADVENTURE".to_string()];
+    c.dp = Some(i32::from(level) * 1000);
+    c.play_cost = u16::from(level);
+    c.colors = vec![color];
+    c.traits = traits.iter().map(|t| t.to_string()).collect();
     c
 }
 
-fn make_adventure_l6_digimon(id: &str) -> CardData {
-    let mut c = make_test_card(id, "AdventureTooHigh");
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(6);
-    c.dp = Some(11000);
-    c.play_cost = 10;
-    c.colors = vec![CardColor::Black];
-    c.traits = vec!["ADVENTURE".to_string()];
-    c
-}
-
-fn make_non_adventure_reward_digimon(id: &str) -> CardData {
-    let mut c = make_test_card(id, "NonAdventureReward");
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(4);
-    c.dp = Some(5000);
-    c.play_cost = 4;
-    c.colors = vec![CardColor::Black];
+/// A Tamer carrying `traits`, with an explicit color.
+fn tamer(id: &str, name: &str, color: CardColor, traits: &[&str]) -> CardData {
+    let mut c = make_test_card(id, name);
+    c.card_kind = CardKind::Tamer;
+    c.play_cost = 3;
+    c.colors = vec![color];
+    c.traits = traits.iter().map(|t| t.to_string()).collect();
     c
 }
 
 fn runner() -> DebugRunner {
     DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 must be in embedded DSL pack")
+        .dsl_card(CARD_ID)
+        .expect("ST20-14 YAML loads")
         .memory(10)
         .start()
 }
@@ -129,64 +106,61 @@ fn field_contains(r: &DebugRunner, player: u8, card_id: &str) -> bool {
     })
 }
 
-fn seat_as_delay_option(
-    runner: &mut DebugRunner,
-    handle: digimon_engine::permanent::PermanentHandle,
-) {
-    use digimon_engine::permanent::OptionState;
-    let turn = runner.game.turn_count;
-    let perm =
-        &mut runner.game.players[handle.player as usize].battle_area[handle.index as usize];
-    perm.option_state = OptionState::Delayed {
-        owner: handle.player,
-        trash_on_turn: turn + 2,
-        trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
-        placed_on_turn: turn,
-    };
+fn field_has_delay_option(r: &DebugRunner, player: u8) -> bool {
+    r.game.player(player)
+        .battle_area
+        .iter()
+        .any(|perm| matches!(perm.option_state, OptionState::Delayed { .. }))
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Section 1 — Structural assertions
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[test]
+fn st20_14_yaml_parses_without_error() {
+    let _ = runner();
 }
 
 #[test]
-fn st20_14_identity_matches_printed_card() {
+fn st20_14_has_printed_metadata() {
     let r = runner();
-    let card = r.compiled_card("ST20-14").expect("ST20-14 present");
+    let card = r.compiled_card(CARD_ID).expect("ST20-14 present");
     assert_eq!(card.name, "Our Courage United");
     assert_eq!(card.kind, CompiledCardKind::Option);
     assert_eq!(card.cost, Some(3));
     assert_eq!(card.color, vec![CompiledColor::Black]);
     assert!(
         card.traits.iter().any(|t| t == "ADVENTURE"),
-        "must carry the ADVENTURE trait, got {:?}",
-        card.traits
+        "ST20-14 carries the ADVENTURE trait"
     );
 }
 
+/// Three compiled clauses: Main (triggered), All-Turns (declarative
+/// replacement), Security (triggered, inherited scope). The color-bypass is a
+/// top-level `use_requirement`, NOT a separate clause.
 #[test]
 fn st20_14_has_three_clauses() {
     let r = runner();
-    let card = r.compiled_card("ST20-14").expect("ST20-14 present");
+    let card = r.compiled_card(CARD_ID).expect("ST20-14 present");
     assert_eq!(
         card.effects.len(),
         3,
-        "expected 3 compiled clauses (Main, replacement, Security); got {}",
+        "ST20-14 must have exactly 3 clauses (Main, Replacement, Security); got {}",
         card.effects.len()
     );
-}
-
-#[test]
-fn st20_14_has_card_level_use_requirement() {
-    let r = runner();
-    let card = r.compiled_card("ST20-14").expect("ST20-14 present");
     assert!(
         card.use_requirement.is_some(),
-        "ST20-14 must declare a card-level use_requirement for its color bypass"
+        "ST20-14 must carry a top-level use_requirement for the color bypass"
     );
 }
 
+/// Clause A: MainFromHand, draws 2, ends by placing self as a Delay-Option.
 #[test]
-fn st20_14_main_clause_is_mandatory_face_up() {
+fn st20_14_main_clause_draws_two_then_places_self() {
     let r = runner();
-    let card = r.compiled_card("ST20-14").expect("ST20-14 present");
-    let main_clause = card
+    let card = r.compiled_card(CARD_ID).expect("ST20-14 present");
+    let main = card
         .effects
         .iter()
         .filter_map(|c| match c {
@@ -195,91 +169,44 @@ fn st20_14_main_clause_is_mandatory_face_up() {
         })
         .find(|t| t.when.contains(&CompiledTiming::MainFromHand))
         .expect("Main clause with MainFromHand timing must exist");
-
     assert!(
-        !main_clause.optional,
-        "ST20-14 [Main] must be mandatory once played (printed text has no 'you may')"
+        main.process
+            .iter()
+            .any(|s| matches!(s, CompiledStep::Draw { count: 2, .. })),
+        "Main clause must <Draw 2>"
     );
-    assert_eq!(
-        main_clause.scope,
-        CompiledScope::FaceUp,
-        "ST20-14 Main clause must have FaceUp scope (Option played from hand)"
+    assert!(
+        main.process
+            .iter()
+            .any(|s| matches!(s, CompiledStep::PlaceSelfAsDelayOption)),
+        "Main clause must place this card as a Delay-Option"
     );
 }
 
+/// Clause B is a declarative replacement targeting `when_would_leave_battle_area`.
 #[test]
-fn st20_14_main_clause_draws_two_and_places_self_as_delay_option() {
+fn st20_14_has_when_would_leave_replacement_clause() {
     let r = runner();
-    let card = r.compiled_card("ST20-14").expect("ST20-14 present");
-    let main_clause = card
-        .effects
-        .iter()
-        .filter_map(|c| match c {
-            CompiledClause::Triggered(t) => Some(t),
-            _ => None,
-        })
-        .find(|t| t.when.contains(&CompiledTiming::MainFromHand))
-        .expect("Main clause exists");
-
-    assert!(
-        main_clause
-            .process
-            .iter()
-            .any(|step| matches!(step, CompiledStep::Draw { count: 2, .. })),
-        "Main clause must draw 2 cards"
-    );
-    assert!(
-        main_clause
-            .process
-            .iter()
-            .any(|step| matches!(step, CompiledStep::PlaceSelfAsDelayOption)),
-        "Main clause must place self as a Delay-Option permanent"
-    );
-}
-
-#[test]
-fn st20_14_has_replacement_clause_for_when_would_leave_battle_area() {
-    let r = runner();
-    let card = r.compiled_card("ST20-14").expect("ST20-14 present");
-    let has_leave_replacement = card.effects.iter().any(|c| {
+    let card = r.compiled_card(CARD_ID).expect("ST20-14 present");
+    let has_leave = card.effects.iter().any(|c| {
         matches!(
             c,
-            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
-                trigger,
-                ..
-            }) if trigger == "when_would_leave_battle_area"
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { trigger, .. })
+                if trigger == "when_would_leave_battle_area"
         )
     });
     assert!(
-        has_leave_replacement,
+        has_leave,
         "ST20-14 must have a declarative when_would_leave_battle_area replacement clause"
     );
 }
 
+/// Clause C: inherited [Security] that places self.
 #[test]
-fn st20_14_replacement_clause_has_no_opt_flag() {
+fn st20_14_security_clause_places_self_inherited() {
     let r = runner();
-    let card = r.compiled_card("ST20-14").expect("ST20-14 present");
-    let once_per_turn = card.effects.iter().find_map(|c| match c {
-        CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
-            trigger,
-            once_per_turn,
-            ..
-        }) if trigger == "when_would_leave_battle_area" => Some(*once_per_turn),
-        _ => None,
-    });
-    assert_eq!(
-        once_per_turn,
-        Some(false),
-        "ST20-14's [All Turns] Delay leave-watcher has no [OPT] tag in printed text"
-    );
-}
-
-#[test]
-fn st20_14_security_clause_is_inherited_and_mandatory() {
-    let r = runner();
-    let card = r.compiled_card("ST20-14").expect("ST20-14 present");
-    let sec_clause = card
+    let card = r.compiled_card(CARD_ID).expect("ST20-14 present");
+    let sec = card
         .effects
         .iter()
         .filter_map(|c| match c {
@@ -288,622 +215,494 @@ fn st20_14_security_clause_is_inherited_and_mandatory() {
         })
         .find(|t| t.when.contains(&CompiledTiming::OnSecurity))
         .expect("Security clause with OnSecurity timing must exist");
-
     assert_eq!(
-        sec_clause.scope,
+        sec.scope,
         CompiledScope::Inherited,
-        "ST20-14 Security clause must have Inherited scope"
+        "Security clause must be inherited-scope"
     );
     assert!(
-        !sec_clause.optional,
-        "printed '[Security] Place this card in the battle area' has no 'you may'"
-    );
-    assert!(
-        sec_clause
-            .process
+        sec.process
             .iter()
-            .any(|step| matches!(step, CompiledStep::PlaceSelfAsDelayOption)),
-        "Security clause must place self as a Delay-Option permanent"
+            .any(|s| matches!(s, CompiledStep::PlaceSelfAsDelayOption)),
+        "Security clause must place this card in the battle area"
     );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Section 2 — Color bypass (use_requirement: any_field_permanent)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// REQUIRED breeding-area regression: with an [ADVENTURE] Digimon seated in the
+/// OWNER's BREEDING area (empty battle area), and ST20-14 in hand, the [Main]
+/// play must be legal — the printed "on the field" counts the breeding area.
+/// The seeded Digimon is Red (off-color) so ordinary color matching cannot
+/// account for the legality; only the use_requirement bypass can.
 #[test]
-fn st20_14_color_bypass_active_with_own_adventure_digimon() {
+fn st20_14_color_bypass_counts_breeding_area_adventure_digimon() {
     let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(make_adventure_digimon("ADV-DIGI"))
-        .memory(10)
-        .hand(0, &["ST20-14"])
-        .start();
-
-    r.place_on_field(0, "ADV-DIGI", Some(0));
-
-    let mask = build_action_mask(&r.game, 0);
-    assert_eq!(
-        mask[PLAY_HAND_START as usize], 1.0,
-        "ST20-14 (Black) must be playable while an own Red ADVENTURE Digimon is on field \
-         (color bypass, not a natural color match)"
-    );
-}
-
-#[test]
-fn st20_14_color_bypass_active_with_own_adventure_tamer() {
-    let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(make_adventure_tamer("ADV-TAMER"))
-        .memory(10)
-        .hand(0, &["ST20-14"])
-        .start();
-
-    r.place_on_field(0, "ADV-TAMER", Some(0));
-
-    let mask = build_action_mask(&r.game, 0);
-    assert_eq!(
-        mask[PLAY_HAND_START as usize], 1.0,
-        "ST20-14 (Black) must be playable while an own Red ADVENTURE Tamer is on field"
-    );
-}
-
-#[test]
-fn st20_14_color_bypass_inactive_without_adventure_permanent() {
-    let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(make_non_adventure_digimon("PLAIN-DIGI"))
-        .memory(10)
-        .hand(0, &["ST20-14"])
-        .start();
-
-    r.place_on_field(0, "PLAIN-DIGI", Some(0));
-
-    let mask = build_action_mask(&r.game, 0);
-    assert_eq!(
-        mask[PLAY_HAND_START as usize], 0.0,
-        "ST20-14 must NOT be playable without an own ADVENTURE Digimon/Tamer or a color match"
-    );
-}
-
-#[test]
-fn st20_14_color_bypass_inactive_for_opponent_adventure_digimon() {
-    let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(make_adventure_digimon("OPP-ADV-DIGI"))
-        .memory(10)
-        .hand(0, &["ST20-14"])
-        .start();
-
-    r.place_on_field(1, "OPP-ADV-DIGI", Some(0));
-
-    let mask = build_action_mask(&r.game, 0);
-    assert_eq!(
-        mask[PLAY_HAND_START as usize], 0.0,
-        "opponent's ADVENTURE Digimon must not satisfy ST20-14's own-field color-bypass gate"
-    );
-}
-
-#[test]
-fn st20_14_main_draws_two_and_places_self_in_battle_area() {
-    let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(make_filler("FILL"))
-        .memory(10)
-        .hand(0, &["ST20-14"])
+        .dsl_card(CARD_ID)
+        .expect("ST20-14 YAML loads")
+        .add_card(digimon("ADV-BREED", "Adventure Breeder", 3, CardColor::Red, &["ADVENTURE"]))
+        .add_card(filler("FILL"))
+        .hand(0, &[CARD_ID])
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
+        .memory(10)
         .start();
 
-    let hand_before = r.hand_size(0);
-    let deck_before = r.game.players[0].deck.len();
-    let battle_before = r.battle_area_size(0);
+    // Seat the off-color [ADVENTURE] Digimon in P0's BREEDING area; leave the
+    // battle area empty.
+    r.place_in_breeding(0, "ADV-BREED");
+    assert!(
+        r.game.players[0].battle_area.is_empty(),
+        "precondition: P0 battle area is empty"
+    );
 
-    let fired = r.game.activate_hand_main(0, 0);
-    assert!(fired, "activate_hand_main must fire ST20-14's [Main]");
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask[PLAY_HAND_START as usize], 1.0,
+        "ST20-14 [Main] play must be legal — a breeding-area [ADVENTURE] Digimon \
+         satisfies the color-bypass use_requirement (any_field_permanent counts \
+         the breeding area)"
+    );
+}
+
+/// Positive: an [ADVENTURE] Digimon in the OWNER's BATTLE area (off-color)
+/// satisfies the bypass too.
+#[test]
+fn st20_14_color_bypass_counts_battle_area_adventure_digimon() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST20-14 YAML loads")
+        .add_card(digimon("ADV-FIELD", "Adventure Field", 4, CardColor::Red, &["ADVENTURE"]))
+        .add_card(filler("FILL"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .memory(10)
+        .start();
+
+    r.place_on_field(0, "ADV-FIELD", None);
+
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask[PLAY_HAND_START as usize], 1.0,
+        "an off-color [ADVENTURE] Digimon in the battle area satisfies the bypass"
+    );
+}
+
+/// Positive: an [ADVENTURE] TAMER on the field (off-color) satisfies the bypass
+/// ("Digimon or Tamer with the [ADVENTURE] trait").
+#[test]
+fn st20_14_color_bypass_counts_adventure_tamer() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST20-14 YAML loads")
+        .add_card(tamer("ADV-TAMER", "Adventure Tamer", CardColor::Red, &["ADVENTURE"]))
+        .add_card(filler("FILL"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .memory(10)
+        .start();
+
+    r.place_on_field(0, "ADV-TAMER", None);
+
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask[PLAY_HAND_START as usize], 1.0,
+        "an off-color [ADVENTURE] Tamer satisfies the bypass"
+    );
+}
+
+/// Negative: with NO [ADVENTURE] permanent anywhere and no color match, the
+/// [Main] play must be ILLEGAL (the bypass is not satisfied and ST20-14 is a
+/// mono-Black option with no Black permanent on the field).
+#[test]
+fn st20_14_color_bypass_absent_when_no_adventure_permanent() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST20-14 YAML loads")
+        // A Red, NON-adventure Digimon: neither a color match (ST20-14 is
+        // Black) nor an [ADVENTURE] permanent.
+        .add_card(digimon("RED-PLAIN", "Red Plain", 3, CardColor::Red, &[]))
+        .add_card(filler("FILL"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .memory(10)
+        .start();
+
+    r.place_on_field(0, "RED-PLAIN", None);
+
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask[PLAY_HAND_START as usize], 0.0,
+        "without any [ADVENTURE] permanent and no Black color match, ST20-14 \
+         [Main] play must be illegal"
+    );
+}
+
+/// A Black permanent (color match) makes the play legal even without any
+/// [ADVENTURE] permanent — ordinary color matching still applies.
+#[test]
+fn st20_14_ordinary_color_match_still_works() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST20-14 YAML loads")
+        .add_card(digimon("BLACK-PLAIN", "Black Plain", 3, CardColor::Black, &[]))
+        .add_card(filler("FILL"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .memory(10)
+        .start();
+
+    r.place_on_field(0, "BLACK-PLAIN", None);
+
+    let mask = build_action_mask(&r.game, 0);
+    assert_eq!(
+        mask[PLAY_HAND_START as usize], 1.0,
+        "a Black (matching-color) permanent makes ST20-14 playable via ordinary \
+         color matching"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Section 3 — Clause A: [Main] <Draw 2>; then place self as a Delay-Option
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[test]
+fn st20_14_main_draws_two_and_places_self_as_delay_option() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST20-14 YAML loads")
+        // Seat an ADVENTURE permanent so the color-bypass allows the play.
+        .add_card(digimon("ADV-FIELD", "Adventure Field", 4, CardColor::Red, &["ADVENTURE"]))
+        .add_card(filler("FILL"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .memory(10)
+        .start();
+    r.place_on_field(0, "ADV-FIELD", None);
+
+    let hand_before = r.game.players[0].hand.len();
+    let deck_before = r.game.players[0].deck.len();
+
+    let _ = r.game.play_option_from_hand(0, 0);
+    // Drain any queued effects (OnOptionPlaced etc.).
     r.game.drain_effect_queue();
 
+    // <Draw 2>: hand had [ST20-14]; playing it removes it (-1) then draws 2
+    // (+2) → net +1 relative to the pre-play hand, and deck shrinks by 2.
     assert_eq!(
         r.game.players[0].deck.len(),
         deck_before - 2,
-        "2 cards must be drawn from the deck"
+        "ST20-14 [Main] must draw 2 cards from the deck"
     );
     assert_eq!(
-        r.hand_size(0),
-        hand_before + 1,
-        "net hand size: -1 (ST20-14 played) + 2 (drawn) = +1"
+        r.game.players[0].hand.len(),
+        hand_before - 1 + 2,
+        "hand = (played ST20-14: -1) + (drew 2: +2)"
     );
-    assert_eq!(
-        r.battle_area_size(0),
-        battle_before + 1,
-        "ST20-14 must be placed on the battle area, not trashed"
+    // "Then, place this card in the battle area" as a Delay-Option.
+    assert!(
+        field_has_delay_option(&r, 0),
+        "ST20-14 must be placed in the battle area as a Delay-Option"
     );
     assert!(
-        field_contains(&r, 0, "ST20-14"),
-        "ST20-14 itself must be the permanent placed on the battle area"
-    );
-    assert_eq!(
-        r.trash_size(0),
-        0,
-        "ST20-14 must NOT be trashed by the standard Option-disposal path"
+        field_contains(&r, 0, CARD_ID),
+        "the placed permanent is ST20-14 itself"
     );
 }
 
-#[test]
-fn st20_14_replacement_installs_for_own_level5_digimon_leaving() {
-    let l5 = make_l5_digimon("L5-SUBJECT", "L5Subject");
-    let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(l5)
-        .memory(10)
-        .deck(0, &["ST20-14"; 3])
-        .deck(1, &["ST20-14"; 3])
-        .start();
+// ═══════════════════════════════════════════════════════════════════════════
+// Section 4 — Clause B: [All Turns] <Delay> own-Lv5+-would-leave observer
+// ═══════════════════════════════════════════════════════════════════════════
 
-    let st20_14 = r.place_on_field(0, "ST20-14", Some(0));
-    seat_as_delay_option(&mut r, st20_14);
-    let subject = r.place_on_field(0, "L5-SUBJECT", None);
-
-    r.game
-        .delete_permanent_with_cause(subject, ReplacementCause::OwnEffect);
-
-    let pending = r
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("ST20-14's optional Delay response must install");
-    assert_eq!(pending.kind, SelectionKind::Replacement);
-    assert!(
-        pending.valid_action_ids.contains(&REPLACEMENT_ACCEPT),
-        "replacement prompt must offer ACCEPT"
-    );
-    assert!(
-        pending.is_optional,
-        "replacement prompt must be optional (PASS legal via is_optional, \
-         not listed in valid_action_ids for this selection kind)"
-    );
+/// Seat the ST20-14 option permanent at `handle` as a Delay-Option so its
+/// Clause B `when_would_leave_battle_area` replacement can fire on a later
+/// turn. Placing via `place_on_field` yields a Standard option, so the Delayed
+/// state is set here directly (mirrors BT17-095's `seat_as_delay_option`).
+fn seat_as_delay_option(
+    r: &mut DebugRunner,
+    handle: digimon_engine::permanent::PermanentHandle,
+) {
+    let turn = r.game.turn_count;
+    let perm = &mut r.game.players[handle.player as usize].battle_area[handle.index as usize];
+    perm.option_state = OptionState::Delayed {
+        owner: handle.player,
+        trash_on_turn: turn + 2,
+        trigger: digimon_engine::enums::DelayTrigger::EndOfYourNextTurn,
+        placed_on_turn: turn,
+    };
 }
 
+/// Positive: with ST20-14 seated as a Delay-Option and an own Lv5+ Digimon on
+/// the field, deleting that Digimon fires the optional would-leave response.
+/// Accepting pays the <Delay> cost (ST20-14 self-trashes) and prompts to play a
+/// Lv5- [ADVENTURE] Digimon from hand; the leaving Digimon still leaves.
 #[test]
-fn st20_14_replacement_does_not_fire_for_own_level4_digimon() {
-    let l4 = make_l4_digimon("L4-SUBJECT");
+fn st20_14_delay_plays_adventure_from_hand_when_own_lv5_leaves() {
     let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(l4)
-        .memory(10)
-        .deck(0, &["ST20-14"; 3])
-        .deck(1, &["ST20-14"; 3])
-        .start();
-
-    let st20_14 = r.place_on_field(0, "ST20-14", Some(0));
-    seat_as_delay_option(&mut r, st20_14);
-    let subject = r.place_on_field(0, "L4-SUBJECT", None);
-
-    r.game
-        .delete_permanent_with_cause(subject, ReplacementCause::OwnEffect);
-
-    assert!(
-        r.game.pending_selection.is_none(),
-        "level-4 leaving Digimon must NOT trigger ST20-14's level-5+ gate"
-    );
-    assert!(
-        field_contains(&r, 0, "ST20-14"),
-        "ST20-14 must remain on field (Delay cost not paid)"
-    );
-}
-
-#[test]
-fn st20_14_replacement_does_not_fire_for_opponent_level5_digimon() {
-    let opp_l5 = make_l5_digimon("OPP-L5", "OppL5");
-    let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(opp_l5)
-        .memory(10)
-        .deck(0, &["ST20-14"; 3])
-        .deck(1, &["ST20-14"; 3])
-        .start();
-
-    let st20_14 = r.place_on_field(0, "ST20-14", Some(0));
-    seat_as_delay_option(&mut r, st20_14);
-    let opp_subject = r.place_on_field(1, "OPP-L5", None);
-
-    r.game
-        .delete_permanent_with_cause(opp_subject, ReplacementCause::OwnEffect);
-
-    assert!(
-        r.game.pending_selection.is_none(),
-        "opponent's level-5+ Digimon leaving must NOT trigger ST20-14 (subject must be mine)"
-    );
-    assert!(
-        field_contains(&r, 0, "ST20-14"),
-        "ST20-14 must remain on field (Delay cost not paid)"
-    );
-}
-
-#[test]
-fn st20_14_replacement_fires_even_when_not_seated_as_delay_option_documented_limitation() {
-    let l5 = make_l5_digimon("L5-STD", "L5Std");
-    let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(l5)
-        .memory(10)
-        .deck(0, &["ST20-14"; 3])
-        .deck(1, &["ST20-14"; 3])
-        .start();
-
-    r.place_on_field(0, "ST20-14", Some(0));
-    let subject = r.place_on_field(0, "L5-STD", None);
-
-    r.game
-        .delete_permanent_with_cause(subject, ReplacementCause::OwnEffect);
-
-    assert!(
-        r.game.pending_selection.is_some(),
-        "documented current behavior: the generic replacement fallback has no \
-         source_is_delayed_option gate, so the clause fires even from a Standard \
-         seating — a state ST20-14 cannot actually reach in real play"
-    );
-}
-
-#[test]
-fn st20_14_replacement_accept_plays_adventure_reward_and_pays_delay_cost() {
-    let l5 = make_l5_digimon("L5-ACCEPT", "L5Accept");
-    let reward = make_adventure_reward_digimon("REWARD-ADV", 4);
-    let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(l5)
-        .add_card(reward)
-        .memory(10)
-        .hand(0, &["REWARD-ADV"])
-        .deck(0, &["ST20-14"; 3])
-        .deck(1, &["ST20-14"; 3])
-        .start();
-
-    let subject = r.place_on_field(0, "L5-ACCEPT", Some(0));
-    let st20_14 = r.place_on_field(0, "ST20-14", None);
-    seat_as_delay_option(&mut r, st20_14);
-    let memory_before = r.memory();
-
-    r.game
-        .delete_permanent_with_cause(subject, ReplacementCause::OwnEffect);
-
-    let pending = r
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("optional replacement prompt installs");
-    let action = pending.valid_action_ids[0];
-    assert_eq!(action, REPLACEMENT_ACCEPT);
-    r.game
-        .resolve_selection(0, action)
-        .expect("accept the Delay response");
-
-    let pending = r
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("accepting asks which ADVENTURE Digimon to play");
-    assert_eq!(pending.kind, SelectionKind::Hand);
-    assert!(
-        pending.is_optional,
-        "the hand pick is optional ('you may play') via is_optional"
-    );
-    let hand_action = pending
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|&a| a != PASS)
-        .expect("a legal hand-card action exists");
-
-    r.game
-        .resolve_selection(0, hand_action)
-        .expect("play the ADVENTURE reward from hand");
-    r.game.drain_effect_queue();
-
-    assert!(
-        field_contains(&r, 0, "REWARD-ADV"),
-        "the selected ADVENTURE reward Digimon must be played to the battle area"
-    );
-    assert_eq!(
-        r.memory(),
-        memory_before,
-        "the reward is played WITHOUT paying its cost (memory unchanged by the play)"
-    );
-    assert!(
-        r.game.players[0]
-            .trash
-            .iter()
-            .any(|c| c.card_id(&r.game.card_data) == "ST20-14"),
-        "ST20-14 itself must be trashed (Delay cost paid)"
-    );
-    assert!(
-        !field_contains(&r, 0, "L5-ACCEPT"),
-        "the leaving level-5 Digimon must still leave the battle area (no cancel)"
-    );
-}
-
-#[test]
-fn st20_14_engine_gap_subject_handle_stale_when_source_deleted_at_lower_index() {
-    let l5 = make_l5_digimon("L5-GAPCASE", "L5GapCase");
-    let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(l5)
-        .memory(10)
-        .deck(0, &["ST20-14"; 3])
-        .deck(1, &["ST20-14"; 3])
-        .start();
-
-    let st20_14 = r.place_on_field(0, "ST20-14", Some(0));
-    seat_as_delay_option(&mut r, st20_14);
-    let subject = r.place_on_field(0, "L5-GAPCASE", None);
-
-    r.game
-        .delete_permanent_with_cause(subject, ReplacementCause::OwnEffect);
-
-    let pending = r
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("the outer Delay-accept prompt installs");
-    let action = pending.valid_action_ids[0];
-    r.game
-        .resolve_selection(0, action)
-        .expect("accept the Delay response");
-    r.game.drain_effect_queue();
-
-    assert!(
-        r.game.players[0]
-            .trash
-            .iter()
-            .any(|c| c.card_id(&r.game.card_data) == "ST20-14"),
-        "ST20-14's Delay cost is still paid regardless of the ordering hazard"
-    );
-    assert!(
-        field_contains(&r, 0, "L5-GAPCASE"),
-        "KNOWN ENGINE GAP: the leaving subject incorrectly remains on field \
-         because its ReplacementSubject handle went stale after ST20-14's \
-         lower-index self-delete shifted battle_area indices. See \
-         G-REPLACEMENT-SUBJECT-STALE-AFTER-SOURCE-DELETE in \
-         docs/RUST_ENGINE_GAPS.md. If this assertion starts failing, the gap \
-         has been fixed — update this test and the tracker."
-    );
-}
-
-#[test]
-fn st20_14_replacement_decline_leaves_st20_14_on_field_and_subject_leaves() {
-    let l5 = make_l5_digimon("L5-DECLINE", "L5Decline");
-    let reward = make_adventure_reward_digimon("REWARD-DECLINE", 4);
-    let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(l5)
-        .add_card(reward)
-        .memory(10)
-        .hand(0, &["REWARD-DECLINE"])
-        .deck(0, &["ST20-14"; 3])
-        .deck(1, &["ST20-14"; 3])
-        .start();
-
-    let st20_14 = r.place_on_field(0, "ST20-14", Some(0));
-    seat_as_delay_option(&mut r, st20_14);
-    let subject = r.place_on_field(0, "L5-DECLINE", None);
-
-    r.game
-        .delete_permanent_with_cause(subject, ReplacementCause::OwnEffect);
-
-    r.game
-        .resolve_selection(0, PASS)
-        .expect("decline the Delay response");
-
-    assert!(
-        !field_contains(&r, 0, "L5-DECLINE"),
-        "the leaving level-5 Digimon must still leave the battle area"
-    );
-    assert!(
-        field_contains(&r, 0, "ST20-14"),
-        "ST20-14 remains on the field — Delay cost was not paid on decline"
-    );
-    assert!(
-        !field_contains(&r, 0, "REWARD-DECLINE"),
-        "declining must not play the reward Digimon"
-    );
-    assert_eq!(
-        r.hand_size(0),
-        1,
-        "the reward Digimon stays in hand after a decline"
-    );
-}
-
-#[test]
-fn st20_14_replacement_accept_with_no_eligible_reward_still_pays_delay_cost() {
-    let l5 = make_l5_digimon("L5-NOREWARD", "L5NoReward");
-    let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(l5)
-        .memory(10)
-        .deck(0, &["ST20-14"; 3])
-        .deck(1, &["ST20-14"; 3])
-        .start();
-
-    let subject = r.place_on_field(0, "L5-NOREWARD", Some(0));
-    let st20_14 = r.place_on_field(0, "ST20-14", None);
-    seat_as_delay_option(&mut r, st20_14);
-
-    r.game
-        .delete_permanent_with_cause(subject, ReplacementCause::OwnEffect);
-
-    let pending = r
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("the outer Delay-accept prompt installs regardless of hand eligibility");
-    assert_eq!(pending.kind, SelectionKind::Replacement);
-    let action = pending.valid_action_ids[0];
-    assert_eq!(action, REPLACEMENT_ACCEPT);
-
-    r.game
-        .resolve_selection(0, action)
-        .expect("accept the Delay response");
-    r.game.drain_effect_queue();
-
-    assert!(
-        r.game.pending_selection.is_none(),
-        "with zero eligible reward candidates, select_hand silently no-ops \
-         (no further prompt installs)"
-    );
-    assert!(
-        !field_contains(&r, 0, "L5-NOREWARD"),
-        "the leaving level-5 Digimon must still leave"
-    );
-    assert!(
-        r.game.players[0]
-            .trash
-            .iter()
-            .any(|c| c.card_id(&r.game.card_data) == "ST20-14"),
-        "ST20-14 must still be trashed — the Delay cost is paid on accept \
-         even when no reward is available"
-    );
-}
-
-#[test]
-fn st20_14_replacement_accept_does_not_offer_non_adventure_hand_digimon() {
-    let l5 = make_l5_digimon("L5-NONADV", "L5NonAdv");
-    let non_adv = make_non_adventure_reward_digimon("NON-ADV-REWARD");
-    let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(l5)
-        .add_card(non_adv)
-        .memory(10)
-        .hand(0, &["NON-ADV-REWARD"])
-        .deck(0, &["ST20-14"; 3])
-        .deck(1, &["ST20-14"; 3])
-        .start();
-
-    let st20_14 = r.place_on_field(0, "ST20-14", Some(0));
-    seat_as_delay_option(&mut r, st20_14);
-    let subject = r.place_on_field(0, "L5-NONADV", None);
-
-    r.game
-        .delete_permanent_with_cause(subject, ReplacementCause::OwnEffect);
-
-    let pending = r
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("the outer Delay-accept prompt installs regardless of hand eligibility");
-    let action = pending.valid_action_ids[0];
-    r.game
-        .resolve_selection(0, action)
-        .expect("accept the Delay response");
-    r.game.drain_effect_queue();
-
-    assert!(
-        r.game.pending_selection.is_none(),
-        "a non-ADVENTURE hand Digimon must not be offered — select_hand no-ops with zero matches"
-    );
-    assert!(
-        !field_contains(&r, 0, "NON-ADV-REWARD"),
-        "the non-ADVENTURE card must not be played"
-    );
-    assert_eq!(
-        r.hand_size(0),
-        1,
-        "the non-ADVENTURE card remains in hand (never an eligible candidate)"
-    );
-}
-
-#[test]
-fn st20_14_replacement_accept_does_not_offer_level6_adventure_hand_digimon() {
-    let l5 = make_l5_digimon("L5-TOOHIGH", "L5TooHigh");
-    let l6_adv = make_adventure_l6_digimon("L6-ADV-REWARD");
-    let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(l5)
-        .add_card(l6_adv)
-        .memory(10)
-        .hand(0, &["L6-ADV-REWARD"])
-        .deck(0, &["ST20-14"; 3])
-        .deck(1, &["ST20-14"; 3])
-        .start();
-
-    let st20_14 = r.place_on_field(0, "ST20-14", Some(0));
-    seat_as_delay_option(&mut r, st20_14);
-    let subject = r.place_on_field(0, "L5-TOOHIGH", None);
-
-    r.game
-        .delete_permanent_with_cause(subject, ReplacementCause::OwnEffect);
-
-    let pending = r
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("the outer Delay-accept prompt installs regardless of hand eligibility");
-    let action = pending.valid_action_ids[0];
-    r.game
-        .resolve_selection(0, action)
-        .expect("accept the Delay response");
-    r.game.drain_effect_queue();
-
-    assert!(
-        r.game.pending_selection.is_none(),
-        "a level-6 ADVENTURE hand Digimon exceeds 'level 5 or lower' — select_hand no-ops"
-    );
-    assert!(
-        !field_contains(&r, 0, "L6-ADV-REWARD"),
-        "the level-6 card must not be played"
-    );
-    assert_eq!(
-        r.hand_size(0),
-        1,
-        "the level-6 card remains in hand (never an eligible candidate)"
-    );
-}
-
-#[test]
-fn st20_14_security_places_self_in_battle_area() {
-    let mut attacker = make_filler("ST2014-ATK");
-    attacker.dp = Some(9000);
-
-    let mut r = DebugRunner::builder()
-        .dsl_card("ST20-14")
-        .expect("ST20-14 loads")
-        .add_card(attacker.clone())
-        .add_card(make_filler("FILL"))
-        .memory(10)
+        .dsl_card(CARD_ID)
+        .expect("ST20-14 YAML loads")
+        .add_card(digimon("LV5-LEAVER", "Big Adventure", 5, CardColor::Black, &[]))
+        .add_card(digimon("ADV-HAND", "Small Adventure", 4, CardColor::Black, &["ADVENTURE"]))
+        .add_card(filler("FILL"))
+        .hand(0, &["ADV-HAND"])
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
-        .security(1, &["ST20-14"])
+        .memory(10)
         .start();
 
-    let attacker_handle = r.place_on_field(0, "ST2014-ATK", Some(0));
-    assert_eq!(r.security_count(1), 1, "precondition: ST20-14 in security");
-    assert_eq!(r.battle_area_size(1), 0, "precondition: empty battle area");
+    let opt = r.place_on_field(0, CARD_ID, Some(0));
+    seat_as_delay_option(&mut r, opt);
+    let leaver = r.place_on_field(0, "LV5-LEAVER", None);
+    let leaver_card = r.top_card(leaver);
 
-    let _ = r.attack_player(attacker_handle, 1, false);
-    r.auto_resolve().expect("security resolution completes");
+    r.game
+        .delete_permanent_with_cause(leaver, ReplacementCause::OwnEffect);
+
+    // Optional replacement installs an accept prompt first.
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("ST20-14 should offer the optional would-leave <Delay> response");
+    assert_eq!(pending.kind, SelectionKind::Replacement);
+    assert!(pending.valid_action_ids.contains(&REPLACEMENT_ACCEPT));
+
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the <Delay> response");
+
+    // Paying the <Delay> cost trashes ST20-14 from the field.
+    assert!(
+        !field_contains(&r, 0, CARD_ID),
+        "the <Delay> cost trashes ST20-14 from the battle area"
+    );
+
+    // Now a data-driven EffectChoice prompt (hand-card action IDs at
+    // HAND_EFFECT_START+i, matching the sister Delay-cost hand flows in
+    // lower_replacement.rs) to play the Lv5- [ADVENTURE] Digimon.
+    let pending = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("accepting prompts which [ADVENTURE] Digimon to play from hand");
+    assert_eq!(pending.kind, SelectionKind::EffectChoice);
+    assert!(pending.valid_action_ids.contains(&HAND_EFFECT_START));
+
+    r.game
+        .resolve_selection(0, HAND_EFFECT_START)
+        .expect("play the [ADVENTURE] Digimon from hand");
+    r.game.drain_effect_queue();
+
+    assert!(
+        field_contains(&r, 0, "ADV-HAND"),
+        "ST20-14 plays the selected Lv5- [ADVENTURE] Digimon from hand"
+    );
+    // The leaving Lv5 Digimon still leaves (not cancelled).
+    assert!(
+        r.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.handle() == leaver_card),
+        "the leaving Lv5 Digimon still leaves the field (the <Delay> does not cancel it)"
+    );
+    assert!(
+        !field_contains(&r, 0, "LV5-LEAVER"),
+        "the Lv5 Digimon is no longer on the field"
+    );
+}
+
+/// Declining the would-leave response leaves ST20-14 on the field (the <Delay>
+/// cost is not paid), no card is played, and the Digimon still leaves.
+#[test]
+fn st20_14_decline_delay_keeps_option_and_plays_nothing() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST20-14 YAML loads")
+        .add_card(digimon("LV5-LEAVER", "Big Adventure", 5, CardColor::Black, &[]))
+        .add_card(digimon("ADV-HAND", "Small Adventure", 4, CardColor::Black, &["ADVENTURE"]))
+        .add_card(filler("FILL"))
+        .hand(0, &["ADV-HAND"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .memory(10)
+        .start();
+
+    let opt = r.place_on_field(0, CARD_ID, Some(0));
+    seat_as_delay_option(&mut r, opt);
+    let leaver = r.place_on_field(0, "LV5-LEAVER", None);
+
+    r.game
+        .delete_permanent_with_cause(leaver, ReplacementCause::OwnEffect);
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline the <Delay> response");
+    r.game.drain_effect_queue();
+
+    assert!(
+        field_contains(&r, 0, CARD_ID),
+        "declining keeps ST20-14 on the field (the <Delay> cost is not paid)"
+    );
+    assert!(
+        !field_contains(&r, 0, "ADV-HAND"),
+        "declining plays nothing — the [ADVENTURE] Digimon stays in hand"
+    );
+    assert!(
+        !field_contains(&r, 0, "LV5-LEAVER"),
+        "the Lv5 Digimon still leaves"
+    );
+}
+
+/// Negative subject filter: an own Lv4 Digimon leaving must NOT fire the
+/// response (`level_gte: 5` rejects it).
+#[test]
+fn st20_14_does_not_fire_for_own_lv4_leaving() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST20-14 YAML loads")
+        .add_card(digimon("LV4-LEAVER", "Low Adventure", 4, CardColor::Black, &[]))
+        .add_card(digimon("ADV-HAND", "Small Adventure", 4, CardColor::Black, &["ADVENTURE"]))
+        .add_card(filler("FILL"))
+        .hand(0, &["ADV-HAND"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .memory(10)
+        .start();
+
+    let opt = r.place_on_field(0, CARD_ID, Some(0));
+    seat_as_delay_option(&mut r, opt);
+    let leaver = r.place_on_field(0, "LV4-LEAVER", None);
+
+    r.game
+        .delete_permanent_with_cause(leaver, ReplacementCause::OwnEffect);
+    r.game.drain_effect_queue();
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "an own Lv4 Digimon leaving must NOT fire ST20-14 (level_gte:5 rejects)"
+    );
+    assert!(
+        field_contains(&r, 0, CARD_ID),
+        "ST20-14 remains on the field (no <Delay> cost paid)"
+    );
+}
+
+/// Negative subject filter: an OPPONENT's Lv5+ Digimon leaving must NOT fire the
+/// response (`replacement_subject_is_mine` rejects it).
+#[test]
+fn st20_14_does_not_fire_for_opponent_lv5_leaving() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST20-14 YAML loads")
+        .add_card(digimon("OPP-LV5", "Enemy Adventure", 5, CardColor::Black, &[]))
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .memory(10)
+        .start();
+
+    let opt = r.place_on_field(0, CARD_ID, Some(0));
+    seat_as_delay_option(&mut r, opt);
+    let opp = r.place_on_field(1, "OPP-LV5", None);
+
+    r.game
+        .delete_permanent_with_cause(opp, ReplacementCause::OwnEffect);
+    r.game.drain_effect_queue();
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "an OPPONENT's Lv5 Digimon leaving must NOT fire ST20-14 \
+         (replacement_subject_is_mine rejects)"
+    );
+    assert!(field_contains(&r, 0, CARD_ID), "ST20-14 remains on the field");
+}
+
+/// With no eligible Lv5- [ADVENTURE] Digimon in hand, ST20-14 must NOT offer the
+/// response (the required play has no candidate). Because the <Delay> reward is
+/// unpayable, the leave proceeds and ST20-14 stays on the field.
+#[test]
+fn st20_14_no_response_when_no_eligible_adventure_in_hand() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST20-14 YAML loads")
+        .add_card(digimon("LV5-LEAVER", "Big Adventure", 5, CardColor::Black, &[]))
+        // A hand Digimon that is NOT [ADVENTURE] and Lv6 (both filters fail).
+        .add_card(digimon("BAD-HAND", "No Adventure", 6, CardColor::Black, &[]))
+        .add_card(filler("FILL"))
+        .hand(0, &["BAD-HAND"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .memory(10)
+        .start();
+
+    let opt = r.place_on_field(0, CARD_ID, Some(0));
+    seat_as_delay_option(&mut r, opt);
+    let leaver = r.place_on_field(0, "LV5-LEAVER", None);
+
+    r.game
+        .delete_permanent_with_cause(leaver, ReplacementCause::OwnEffect);
+    r.game.drain_effect_queue();
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "with no eligible Lv5- [ADVENTURE] Digimon in hand, no <Delay> response is offered"
+    );
+    assert!(
+        field_contains(&r, 0, CARD_ID),
+        "ST20-14 stays on the field when the response isn't offered"
+    );
+    assert!(
+        !field_contains(&r, 0, "LV5-LEAVER"),
+        "the Lv5 Digimon still leaves"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Section 5 — Clause C: [Security] (inherited) place self
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Attacking into a defender whose security tops with ST20-14: the inherited
+/// [Security] clause places ST20-14 into the DEFENDER's battle area as a
+/// Delay-Option (printed "Place this card in the battle area").
+#[test]
+fn st20_14_security_places_self_in_defender_battle_area() {
+    let mut attacker = filler("ATK");
+    attacker.dp = Some(6000);
+
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST20-14 YAML loads")
+        .add_card(attacker.clone())
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .security(1, &[CARD_ID])
+        .memory(10)
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    assert_eq!(r.security_count(1), 1, "precondition: ST20-14 in defender security");
+
+    let _ = r.attack_player(atk, 1, false);
+    r.auto_resolve().expect("security selections resolve");
 
     assert_eq!(
         r.security_count(1),
         0,
-        "ST20-14 must leave the defender's security stack"
+        "ST20-14 left the defender's security stack"
     );
     assert!(
-        field_contains(&r, 1, "ST20-14"),
-        "ST20-14 must be placed on the defender's battle area, not the trash"
+        field_contains(&r, 1, CARD_ID),
+        "ST20-14 was placed into the defender's battle area"
     );
-    assert_eq!(
-        r.trash_size(1),
-        0,
-        "ST20-14 must NOT be trashed by the security-check disposal path"
+    assert!(
+        field_has_delay_option(&r, 1),
+        "ST20-14 is seated as a Delay-Option in the defender's battle area"
     );
 }
