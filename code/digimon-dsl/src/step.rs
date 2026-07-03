@@ -211,6 +211,18 @@ pub enum StepSpec {
     /// (`!HasNoLinkCards`) → `SelectCardEffect Root.LinkedCards` →
     /// `TrashLinkCardsAndProcessAccordingToResult` → `successProcess`.
     TrashLinkCardOfOwnDigimon(TrashLinkCardOfOwnDigimonArgs),
+    /// Trash-Option-from-{digivolution|link}-cards ACTIVATION cost (BT25-085
+    /// BeelStarmon): pick one of `of`'s Digimon whose digivolution cards OR link
+    /// cards carry ≥1 Option, then one such Option, and trash it — the correct
+    /// observer fires per zone (`OnDigivolutionCardTrashed` for a digivolution
+    /// source, `OnLinkedCardTrashed` for a link card). The tail runs only if a
+    /// card was trashed. When no own Digimon has an Option in its
+    /// digivolution/link cards the cost is unpayable → the clause's remaining
+    /// steps are skipped (`TailAlreadyRan`). DCGO `BT25_085.cs`:
+    /// `SelectPermanentEffect(PermanentWithTrashableCard)` → `SelectCardEffect
+    /// Mode.Discard` over `permanent.DigivolutionOrLinkCards.Any(IsOption)`.
+    /// The union-of-sources sibling of `TrashLinkCardOfOwnDigimon`.
+    TrashOptionFromOwnStacks(TrashOptionFromOwnStacksArgs),
     BindPermanentProperty(BindPermanentProperty),
     Hatch(PlayerArg),
     /// Move the specified player's eligible breeding-area Digimon to the
@@ -514,6 +526,9 @@ impl Serialize for StepSpec {
             StepSpec::TrashLinkCardOfOwnDigimon(v) => {
                 kv!(s, "trash_link_card_of_own_digimon", v)
             }
+            StepSpec::TrashOptionFromOwnStacks(v) => {
+                kv!(s, "trash_option_from_own_stacks", v)
+            }
             StepSpec::BindPermanentProperty(v) => kv!(s, "bind_permanent_property", v),
             StepSpec::Hatch(v) => kv!(s, "hatch", v),
             StepSpec::MoveFromBreeding(v) => kv!(s, "move_from_breeding", v),
@@ -783,6 +798,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "trash_link_card_of_own_digimon" => {
                 StepSpec::TrashLinkCardOfOwnDigimon(map.next_value()?)
             }
+            "trash_option_from_own_stacks" => {
+                StepSpec::TrashOptionFromOwnStacks(map.next_value()?)
+            }
             "bind_permanent_property" => StepSpec::BindPermanentProperty(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
             "move_from_breeding" => StepSpec::MoveFromBreeding(map.next_value()?),
@@ -991,6 +1009,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "trash_bottom_face_down_source_under_tamer",
                         "trash_bottom_face_down_sources_under_tamers",
                         "trash_link_card_of_own_digimon",
+                        "trash_option_from_own_stacks",
                         "return_selected_sources_to_deck",
                         "bind_permanent_property",
                         "hatch",
@@ -1334,6 +1353,24 @@ pub struct TrashLinkCardOfOwnDigimonArgs {
     /// "By trashing 1 of your Digimon's link cards, you MAY …" clause. On decline
     /// nothing is trashed and the step's tail does not run. Default `false`
     /// leaves the decline to a clause-level `optional`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+}
+
+/// Args for `trash_option_from_own_stacks` — the trash-Option-from-{digivolution|
+/// link}-cards ACTIVATION cost (BT25-085 BeelStarmon). Picks one of `of`'s
+/// Digimon whose digivolution cards OR link cards carry ≥1 Option, then one such
+/// Option, and trashes it (the correct observer fires per zone); the step's tail
+/// runs only if the trash happened. `G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashOptionFromOwnStacksArgs {
+    pub of: PlayerRef,
+    /// When `true`, BOTH picks (own Digimon and its Option) are DECLINABLE
+    /// (offer PASS) — DCGO's `canNoSelect: true` on both selects for a "By
+    /// trashing 1 Option …, this Digimon MAY …" clause. On decline nothing is
+    /// trashed and the step's tail does not run. Default `false` leaves the
+    /// decline to a clause-level `optional`.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub optional: bool,
 }

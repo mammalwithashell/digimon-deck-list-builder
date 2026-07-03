@@ -1737,6 +1737,37 @@ fn compile_replacement_process(
         return process;
     }
 
+    // EX7-048 — `cost: { trash_option_from_own_digivolution_cards: true }` is the
+    // carrier-scoped Option-trash sibling of `trash_own_link_card`: a single
+    // self-contained step that trashes a chosen Option from the CARRIER's
+    // digivolution cards AND cancels the leave (so it owns the `outcome:
+    // prevent`). Board-wide protect-OTHERS shape; the leaving subject is a
+    // filtered OTHER (or self) own permanent per the clause `active_when`.
+    let trash_option_from_own_digivolution_cards = r
+        .cost
+        .as_ref()
+        .is_some_and(|cost| cost.trash_option_from_own_digivolution_cards);
+    if trash_option_from_own_digivolution_cards {
+        if !matches!(r.outcome, Some(crate::clause::ReplacementOutcome::Prevent)) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { trash_option_from_own_digivolution_cards } requires outcome: prevent"
+                    .into(),
+            });
+        }
+        if !r.optional {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { trash_option_from_own_digivolution_cards } requires optional: true (\"by trashing … they don't leave\" is a may-pay)"
+                    .into(),
+            });
+        }
+        process.push(CompiledStep::TrashOptionFromOwnDigivolutionCardsAndCancelLeave);
+        return process;
+    }
+
     // EX11-027 — `cost: { place_link_card_as_bottom_digivolution: true }` is the
     // place-link-as-bottom-source sibling of `trash_own_link_card`: a single
     // self-contained step that places a chosen link card under the carrier AND
@@ -1816,6 +1847,36 @@ fn compile_replacement_process(
             source_refs: "returned_sources".into(),
             position: compile_stack_position(ret.position),
         });
+    }
+
+    // BT25-039 — `cost: { delete_self: true }` on a protect-OTHERS leave
+    // replacement: delete the CARRIER as the cost, then cancel the parked leave
+    // (which prevents the SUBJECT's leave — the framework applies the outcome to
+    // the replacement subject, not the carrier). Lowers to a single self-contained
+    // `DeleteSelfAndCancelLeave` step — NOT `[DeletePermanent{source},
+    // CancelReplacement]`, which the `DelaySelfCancelFlow` recognizer intercepts
+    // (that path requires a Delayed-Option source and would no-op for a Digimon
+    // carrier). It owns the `outcome: prevent`, so we emit only this step and
+    // return (suppress the trailing `CancelReplacement`).
+    let delete_self = r.cost.as_ref().is_some_and(|cost| cost.delete_self);
+    if delete_self {
+        if !matches!(r.outcome, Some(crate::clause::ReplacementOutcome::Prevent)) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { delete_self } requires outcome: prevent".into(),
+            });
+        }
+        if !r.optional {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { delete_self } requires optional: true (\"by deleting … they don't leave\" is a may-pay)"
+                    .into(),
+            });
+        }
+        process.push(CompiledStep::DeleteSelfAndCancelLeave);
+        return process;
     }
 
     if r.cost.as_ref().is_some_and(|cost| cost.delay_self) {
@@ -2696,6 +2757,10 @@ fn compile_step(
             }
         }
         S::TrashLinkCardOfOwnDigimon(a) => CompiledStep::TrashLinkCardOfOwnDigimon {
+            of: compile_player_ref(a.of),
+            optional: a.optional,
+        },
+        S::TrashOptionFromOwnStacks(a) => CompiledStep::TrashOptionFromOwnStacks {
             of: compile_player_ref(a.of),
             optional: a.optional,
         },

@@ -291,6 +291,13 @@ pub enum FieldPermanentPostAction {
     /// the frame's `inner_tail` as the cost-gated tail. `optional` makes the
     /// link-card pick declinable. `G-DSL-LINK-TRASH-AS-COST`.
     SelectAndTrashLinkCard { optional: bool },
+    /// `trash_option_from_own_stacks` (BT25-085): the picked permanent is one of
+    /// the controller's Digimon whose digivolution cards OR link cards carry ≥1
+    /// Option. Install the SECOND selection over the UNION of its digivolution-
+    /// source Options + link-card Options (`TrashOptionFromStackSelection`)
+    /// carrying the frame's `inner_tail` as the cost-gated tail. `optional` makes
+    /// the Option pick declinable. `G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST`.
+    SelectAndTrashStackOption { optional: bool },
 }
 
 /// Post-action run on an `EffectChoice` resolve, keyed on the chosen label
@@ -646,6 +653,13 @@ pub enum ResumeFrame {
     /// link cards, trash it, and run the cost-gated tail only if a card was
     /// trashed. `G-DSL-LINK-TRASH-AS-COST`.
     TrashLinkCardOfDigimonSelection(TrashLinkCardOfDigimonSelectionState),
+    /// Second selection of the `trash_option_from_own_stacks` ACTIVATION cost
+    /// (BT25-085): after picking which own Digimon (the first `select_own_permanent`
+    /// via `FieldPermanentPostAction::SelectAndTrashStackOption`), pick one Option
+    /// among the UNION of ITS digivolution-source Options + link-card Options,
+    /// trash it (firing the correct per-zone observer), and run the cost-gated
+    /// tail only if a card was trashed. `G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST`.
+    TrashOptionFromStackSelection(TrashOptionFromStackSelectionState),
     /// Effect-action helper prompt for Dual cards that can be played as a
     /// Digimon or used as an Option.
     PlayOrUseDualChoice(PlayOrUseDualChoiceState),
@@ -842,6 +856,10 @@ pub struct FamiliarTokenOnDeletionSelectionState {
 pub enum LinkCardLeaveMode {
     TrashAndCancel,
     PlaceAsBottomSourceAndCancel,
+    /// EX7-048 — trash the chosen Option from the CARRIER's digivolution cards
+    /// (via `Game::trash_specific_source_card`, firing `OnDigivolutionCardTrashed`)
+    /// and cancel the leave. `G-DSL-PROTECT-OTHER-BY-TRASH-OPTION`.
+    TrashDigivolutionOptionAndCancel,
 }
 
 #[derive(Debug, Clone)]
@@ -865,6 +883,40 @@ pub struct TrashLinkCardOfDigimonSelectionState {
     /// Link-card handles of `host`, snapshot at install time (one option each).
     pub cards: Vec<CardHandle>,
     /// The cost-gated tail (the rest of the clause — e.g. Dragomon's play/use).
+    pub tail: Arc<Vec<CompiledStep>>,
+    pub bindings: Bindings,
+    pub runtime: StepRuntime,
+    pub trigger_context: Option<TriggerContext>,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+/// Which zone a `trash_option_from_own_stacks` candidate Option lives in on the
+/// host — determines which trash primitive (and observer) fires.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StackOptionZone {
+    /// A digivolution source (below the stack top). Trashed via
+    /// `Game::trash_specific_source_card` → fires `OnDigivolutionCardTrashed`.
+    Digivolution,
+    /// A link card. Trashed via `Game::trash_specific_link_card` → fires
+    /// `OnLinkedCardTrashed`.
+    Link,
+}
+
+/// Second selection of the `trash_option_from_own_stacks` activation cost: pick
+/// which Option (among the already-chosen `host` Digimon's digivolution-source
+/// Options + link-card Options) to trash, then run the cost-gated `tail` only if
+/// a card was trashed. Each candidate carries its `StackOptionZone` so the run
+/// step routes to the correct per-zone trash primitive.
+/// `G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST`.
+#[derive(Debug, Clone)]
+pub struct TrashOptionFromStackSelectionState {
+    pub prov: ResumeProvenance,
+    /// The own Digimon chosen by the first selection.
+    pub host: PermanentHandle,
+    /// Candidate `(Option handle, which zone)` pairs of `host`, snapshot at
+    /// install time (one selectable option each, digivolution + link cards).
+    pub cards: Vec<(CardHandle, StackOptionZone)>,
+    /// The cost-gated tail (the rest of the clause — e.g. BeelStarmon's unsuspend).
     pub tail: Arc<Vec<CompiledStep>>,
     pub bindings: Bindings,
     pub runtime: StepRuntime,

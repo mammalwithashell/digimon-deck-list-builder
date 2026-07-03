@@ -1533,6 +1533,42 @@ pub enum CompiledStep {
         #[serde(default)]
         optional: bool,
     },
+    /// Trash-Option-from-{digivolution|link}-cards ACTIVATION cost (BT25-085
+    /// BeelStarmon): pick one of `of`'s Digimon whose digivolution cards (sources
+    /// below the top) OR link cards contain ≥1 Option, then one such Option, and
+    /// trash it — a digivolution-source Option fires `OnDigivolutionCardTrashed`,
+    /// a link-card Option fires `OnLinkedCardTrashed` — running the tail only if
+    /// the trash happened. Compiled from `trash_option_from_own_stacks`. The
+    /// union-of-sources sibling of `TrashLinkCardOfOwnDigimon`.
+    /// `G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST`.
+    TrashOptionFromOwnStacks {
+        of: CompiledPlayerRef,
+        /// Declinable picks (PASS skips the trash AND the tail) — DCGO
+        /// `canNoSelect:true`. Plain (no `skip_serializing_if`): bincode packs
+        /// need every field in a fixed slot.
+        #[serde(default)]
+        optional: bool,
+    },
+    /// Trash-1-Option-from-the-CARRIER'S-digivolution-cards leave cost (EX7-048
+    /// Gundramon clause 2): the single-carrier variant of `TrashOptionFromOwnStacks`
+    /// scoped to the effect's own `source_permanent`. Pick one Option among the
+    /// carrier's digivolution cards (below the top), trash it (firing
+    /// `OnDigivolutionCardTrashed`), and cancel the parked leave — it owns the
+    /// `outcome: prevent`, so no separate `CancelReplacement` follows. Synthesized
+    /// from `cost: { trash_option_from_own_digivolution_cards: true }` +
+    /// `outcome: prevent` on a `when_would_leave_battle_area` replacement.
+    /// `G-DSL-PROTECT-OTHER-BY-TRASH-OPTION`.
+    TrashOptionFromOwnDigivolutionCardsAndCancelLeave,
+    /// Delete-the-CARRIER leave cost (BT25-039 Sirenmon clause 3): delete the
+    /// effect's own `source_permanent` (the carrier) as the cost, then cancel the
+    /// parked leave — which prevents the replacement SUBJECT's leave (the
+    /// framework applies the outcome to the subject, not the carrier). A single
+    /// self-contained step so it does NOT collide with the Delay-cost recognizer's
+    /// `[DeletePermanent{source}, CancelReplacement]` shape (that path requires a
+    /// Delayed-Option source). Synthesized from `cost: { delete_self: true }` +
+    /// `outcome: prevent` on a `when_would_leave_battle_area` replacement.
+    /// `G-DSL-PROTECT-OTHER-BY-SELF-DELETE`.
+    DeleteSelfAndCancelLeave,
     PlaceSelectedCardUnderTamer {
         card: CompiledBindingRef,
         tamer: CompiledBindingRef,

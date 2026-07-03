@@ -613,6 +613,39 @@ pub struct ReplacementCostBody {
     /// CancelReplacement`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub return_own_sources_to_deck: Option<ReturnOwnSourcesToDeckCost>,
+
+    /// BT25-039 Sirenmon (clause 3) — pay a `when_would_leave_battle_area`
+    /// replacement by DELETING the CARRIER ("by deleting this Digimon, they
+    /// don't leave"). The board-wide protect-OTHERS shape: the leaving subject
+    /// is a FILTERED OTHER own permanent (see the clause `active_when`), and the
+    /// cost is the carrier's own deletion. Lowers to `DeletePermanent { target:
+    /// source }`; the trailing `outcome: prevent` appends `CancelReplacement`,
+    /// which prevents the SUBJECT's leave (the framework applies the outcome to
+    /// the replacement subject, not the carrier). Only valid on a
+    /// `when_would_leave_battle_area` replacement; the clause must be `optional:
+    /// true` ("by deleting … they don't leave" is a may-pay). No unpayability
+    /// gate is needed — the carrier is always deletable while it is on the field
+    /// (the replacement's own `source_permanent_is_still_active` guard ensures
+    /// the carrier exists). `G-DSL-PROTECT-OTHER-BY-SELF-DELETE`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub delete_self: bool,
+
+    /// EX7-048 Gundramon (clause 2) — pay a `when_would_leave_battle_area`
+    /// replacement by TRASHING 1 Option card from the CARRIER's digivolution
+    /// cards ("by trashing 1 Option card from this Digimon's digivolution cards,
+    /// they don't leave"). The single-carrier variant of
+    /// `trash_option_from_own_stacks`, scoped to the effect's own
+    /// `source_permanent`. The player chooses WHICH Option (exposed to the RL
+    /// action space); the chosen card goes to trash (firing
+    /// `OnDigivolutionCardTrashed`) and the leave is cancelled. Only valid on a
+    /// `when_would_leave_battle_area` replacement; the clause must be `optional:
+    /// true`. Gated so it is not offered when the carrier has 0 Option
+    /// digivolution sources. Lowers to a single
+    /// `TrashOptionFromOwnDigivolutionCardsAndCancelLeave` step (it owns both the
+    /// cost and the `outcome: prevent`, so no separate `CancelReplacement`
+    /// follows). `G-DSL-PROTECT-OTHER-BY-TRASH-OPTION`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub trash_option_from_own_digivolution_cards: bool,
 }
 
 /// Body for `cost: { return_own_sources_to_deck: { filter, count, position } }`

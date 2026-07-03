@@ -2055,3 +2055,28 @@ Status: open.
 - **Suggested API shape:** `once_per_turn_key: <shared>` or make the `scope: both` expansion register one shared OPT id for both lowered copies (mirroring DCGO SetHashString sharing).
 - **Workaround:** shipped as-is with a fidelity comment in BT18-060.yaml — the double-fire window (top card reduces, then same-turn becomes a source and reduces again) is narrow but real. PARTIAL.
 - **Related:** GrantKeyword `scope: both` expansion (2026-07-02); DCGO shared-hash OPT semantics.
+
+
+## Gap-closure round 3 — final resolutions (2026-07-03)
+
+> **G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST — RESOLVED (round 3).** DSL cost verb
+> `trash_option_from_own_stacks: {of, optional}`: two RL-visible selections (which own Digimon
+> whose digivolution OR link cards hold >=1 Option, then which Option); per-zone trash
+> (`trash_specific_source_card` fires OnDigivolutionCardTrashed; `trash_specific_link_card` fires
+> OnLinkedCardTrashed); tail cost-gated; unpayable aborts. Clone-safe resume frames
+> (FieldPermanent{SelectAndTrashStackOption} -> TrashOptionFromStackSelection). Combined with the
+> round-1/2 use_option_from_sources, BT25-085 is fully UNBLOCKED. Tests:
+> tests/dsl/trash_option_from_own_stacks.rs (7).
+
+> **G-DSL-PROTECT-OTHER-BY-SELF-DELETE (BT25-039) + EX7-048 protect-others — RESOLVED (round 3).**
+> The cross-permanent-subject would-leave path already existed; the two missing COST variants
+> landed: `cost: {delete_self: true}` (dedicated DeleteSelfAndCancelLeave step, kept distinct from
+> the Delay recognizer) and `cost: {trash_option_from_own_digivolution_cards: true}` (carrier-scoped
+> Option pick via LinkCardLeaveMode::TrashDigivolutionOptionAndCancel), both with the
+> `none_of: [replacement_cause: own_effect]` cause gate ("other than by your effects").
+> BT25-039 clause 3 and EX7-048 clause 2 UNBLOCKED. Tests:
+> tests/dsl/protect_others_leave_replacement.rs (11).
+
+With round 3, every gap filed by the store-champs June-2026 assessment is RESOLVED, adjudicated
+NOT-A-GAP, or explicitly deferred (BT15-102 Apocalymon's two pre-campaign architectural entries:
+cast-time stack-construction + cross-card re-firing source-card variant).

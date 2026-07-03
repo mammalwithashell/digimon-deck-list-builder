@@ -469,6 +469,27 @@ pub(crate) fn run_resume(
                                 Vec::new(),
                             );
                         }
+                        Some(crate::resume::FieldPermanentPostAction::SelectAndTrashStackOption {
+                            optional,
+                        }) => {
+                            // G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST (BT25-085):
+                            // the first pick chose one of the controller's Digimon
+                            // whose digivolution/link cards carry an Option (`h`).
+                            // Install the SECOND selection over the UNION of ITS
+                            // digivolution-source Options + link-card Options,
+                            // carrying `inner_tail` as the cost-gated tail. Mirrors
+                            // the `SelectAndTrashLinkCard` arm.
+                            install_stack_option_trash_second_selection(
+                                &mut ctx,
+                                h,
+                                optional,
+                                inner_tail.clone(),
+                                b.clone(),
+                                runtime.clone(),
+                                trigger_context.clone(),
+                                Vec::new(),
+                            );
+                        }
                     }
                     ctx.game.effect_source_player = previous_effect_source;
                 }
@@ -1258,6 +1279,9 @@ pub(crate) fn run_resume(
         ResumeFrame::TrashLinkCardOfDigimonSelection(state) => {
             run_trash_link_card_of_digimon_selection_step(game, state, action_id, is_pass);
         }
+        ResumeFrame::TrashOptionFromStackSelection(state) => {
+            run_trash_option_from_stack_selection_step(game, state, action_id, is_pass);
+        }
         ResumeFrame::PlayOrUseDualChoice(state) => {
             run_play_or_use_dual_choice_step(game, state, action_id, is_pass);
         }
@@ -1820,6 +1844,9 @@ fn run_link_card_leave_selection_step(
         crate::resume::LinkCardLeaveMode::PlaceAsBottomSourceAndCancel => ctx
             .game
             .place_specific_link_card_as_bottom_source(state.host, card),
+        crate::resume::LinkCardLeaveMode::TrashDigivolutionOptionAndCancel => {
+            ctx.game.trash_specific_source_card(state.host, card)
+        }
     };
     if paid {
         ctx.cancel_leave();
@@ -3587,6 +3614,36 @@ pub fn try_install(
             // pending selection (single candidate is a 1-option select — no
             // auto-resolve; `optional` adds a PASS), so this parks. On PASS the
             // callback never runs → nothing trashed → tail skipped.
+            selection_result(ctx)
+        }
+        CompiledStep::TrashOptionFromOwnStacks { of, optional } => {
+            // Trash-Option-from-{digivolution|link}-cards ACTIVATION cost
+            // (BT25-085 BeelStarmon). Pre-filter the controller's Digimon whose
+            // digivolution cards (below the top) OR link cards carry ≥1 Option
+            // (DCGO `PermanentWithTrashableCard = IsPermanentExistsOnOwnerBattle
+            // AreaDigimon && DigivolutionOrLinkCards.Any(IsOption)`). When none
+            // qualify the cost is unpayable — abort the clause (stop the
+            // dispatcher, do NOT run the tail).
+            let player = resolve_player(ctx, *of);
+            let candidates = own_digimon_with_stack_options(ctx, player);
+            if candidates.is_empty() {
+                // Same unpayable-abort contract as the link-card-trash cost.
+                // G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST /
+                // G-COST-REDUCTION-INTERACTIVE-PAY-COST.
+                ctx.cost_unpayable = true;
+                return InstallResult::TailAlreadyRan;
+            }
+            install_trash_option_from_own_stacks(
+                ctx,
+                player,
+                *optional,
+                tail.to_vec(),
+                bindings,
+                runtime.clone(),
+            );
+            // With ≥1 candidate the first `select_own_permanent` always installs a
+            // pending selection, so this parks. On PASS the callback never runs →
+            // nothing trashed → tail skipped.
             selection_result(ctx)
         }
         CompiledStep::SelectOpponentPermanent {
@@ -5636,6 +5693,319 @@ fn own_digimon_with_link_cards(ctx: &EffectContext<'_>, player: PlayerId) -> Vec
             index: index as u8,
         })
         .collect()
+}
+
+/// The UNION of a permanent's trashable-Option candidates for the
+/// `trash_option_from_own_stacks` cost: every below-top digivolution SOURCE that
+/// is an Option (tagged `Digivolution`) plus every LINK CARD that is an Option
+/// (tagged `Link`). Mirrors DCGO `permanent.DigivolutionOrLinkCards.Where(IsOption)`
+/// (`DigivolutionCards` excludes the top card, so only below-top sources qualify).
+fn stack_option_candidates(
+    perm: &crate::permanent::Permanent,
+    data: &[crate::card_data::CardData],
+) -> Vec<(crate::card_source::CardHandle, crate::resume::StackOptionZone)> {
+    let mut out = Vec::new();
+    let n = perm.card_sources.len();
+    if n > 1 {
+        for source in perm.card_sources.iter().take(n - 1) {
+            if source.is_option(data) {
+                out.push((source.handle(), crate::resume::StackOptionZone::Digivolution));
+            }
+        }
+    }
+    for linked in perm.linked_cards.iter() {
+        if linked.is_option(data) {
+            out.push((linked.handle(), crate::resume::StackOptionZone::Link));
+        }
+    }
+    out
+}
+
+/// The controller's battle-area Digimon whose digivolution cards (below the top)
+/// OR link cards carry ≥1 Option — the candidate set for the
+/// `trash_option_from_own_stacks` cost's first selection (DCGO
+/// `PermanentWithTrashableCard = IsPermanentExistsOnOwnerBattleAreaDigimon
+/// && DigivolutionOrLinkCards.Any(IsOption)`).
+fn own_digimon_with_stack_options(
+    ctx: &EffectContext<'_>,
+    player: PlayerId,
+) -> Vec<PermanentHandle> {
+    ctx.game
+        .player(player)
+        .battle_area
+        .iter()
+        .enumerate()
+        .filter(|(_, perm)| {
+            perm.is_digimon(&ctx.game.card_data)
+                && !stack_option_candidates(perm, &ctx.game.card_data).is_empty()
+        })
+        .map(|(index, _)| PermanentHandle {
+            player,
+            index: index as u8,
+        })
+        .collect()
+}
+
+/// Install the FIRST selection of the `trash_option_from_own_stacks` activation
+/// cost: pick one of `player`'s Digimon whose digivolution/link cards carry an
+/// Option. On pick, [`install_stack_option_trash_second_selection`] installs the
+/// SECOND selection (which Option among ITS digivolution + link cards to trash).
+/// Clone-safe: the first pick parks a `RunTail`/`FieldPermanent{post:
+/// SelectAndTrashStackOption}` frame, and the second pick a
+/// `TrashOptionFromStackSelection` frame — no bespoke closure-only park.
+/// `G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST`.
+fn install_trash_option_from_own_stacks(
+    ctx: &mut EffectContext<'_>,
+    player: PlayerId,
+    optional: bool,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let override_pin = ctx.override_selecting_player();
+
+    // Closure-path captures (non-cloned resolution).
+    let tail_cb = Arc::clone(&tail);
+    let bindings_cb = bindings.clone();
+    let runtime_cb = runtime.clone();
+    let trigger_cb = trigger_context.clone();
+
+    // Resume-frame captures (cloned resolution).
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+
+    ctx.select_own_permanent(
+        "Choose 1 of your Digimon to trash an Option from",
+        optional,
+        move |game, handle| {
+            game.player(handle.player)
+                .battle_area
+                .get(handle.index as usize)
+                .is_some_and(|perm| {
+                    perm.is_digimon(&game.card_data)
+                        && !stack_option_candidates(perm, &game.card_data).is_empty()
+                })
+        },
+        move |cb_ctx, host: PermanentHandle| {
+            install_stack_option_trash_second_selection(
+                cb_ctx,
+                host,
+                optional,
+                Arc::clone(&tail_cb),
+                bindings_cb.clone(),
+                runtime_cb.clone(),
+                trigger_cb.clone(),
+                Vec::new(),
+            );
+        },
+    );
+    // Park the first-selection data frame (clone-safe): driven by run_resume's
+    // FieldPermanent{post: SelectAndTrashStackOption} arm.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
+                    of_player: player,
+                    post: Some(
+                        crate::resume::FieldPermanentPostAction::SelectAndTrashStackOption {
+                            optional,
+                        },
+                    ),
+                },
+                bind_as: None,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
+}
+
+/// Install the SECOND selection of the `trash_option_from_own_stacks` cost: pick
+/// which Option — among the UNION of `host`'s digivolution-source Options +
+/// link-card Options — to trash, then run the cost-gated `tail` only if a card
+/// was trashed. The correct per-zone trash primitive fires: a digivolution-
+/// source Option via `trash_specific_source_card` (fires `OnDigivolutionCardTrashed`),
+/// a link-card Option via `trash_specific_link_card` (fires `OnLinkedCardTrashed`).
+/// Shared by the closure path and the resume path. Clone-safe: parks a
+/// `TrashOptionFromStackSelection` frame alongside the closure.
+/// `G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST`.
+#[allow(clippy::too_many_arguments)]
+fn install_stack_option_trash_second_selection(
+    ctx: &mut EffectContext<'_>,
+    host: PermanentHandle,
+    optional: bool,
+    tail: Arc<Vec<CompiledStep>>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+    trigger_context: Option<crate::trigger_context::TriggerContext>,
+    outer_conts: Vec<crate::resume::OuterContinuation>,
+) {
+    let Some(perm) = ctx
+        .game
+        .player(host.player)
+        .battle_area
+        .get(host.index as usize)
+    else {
+        return;
+    };
+    let cards = stack_option_candidates(perm, &ctx.game.card_data);
+    if cards.is_empty() {
+        return;
+    }
+    let labels: Vec<String> = cards
+        .iter()
+        .map(|(h, _)| {
+            ctx.game
+                .card_data_for_handle(*h)
+                .map(|d| d.card_name.clone())
+                .unwrap_or_else(|| "Option".to_string())
+        })
+        .collect();
+
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let override_pin = ctx.override_selecting_player();
+
+    // Closure-path captures.
+    let cards_cb = cards.clone();
+    let tail_cb = Arc::clone(&tail);
+    let bindings_cb = bindings.clone();
+    let runtime_cb = runtime.clone();
+    let trigger_cb = trigger_context.clone();
+    let outer_cb = outer_conts.clone();
+
+    ctx.select_effect_choice(
+        "Choose 1 Option to trash (activation cost)",
+        labels,
+        move |cb_ctx, idx| {
+            let Some((card, zone)) = cards_cb.get(idx).copied() else {
+                return;
+            };
+            // No-approximations cost gate: the tail runs ONLY if the Option was
+            // actually trashed. Route to the per-zone trash primitive so the
+            // correct observer fires.
+            let trashed = match zone {
+                crate::resume::StackOptionZone::Digivolution => {
+                    cb_ctx.game.trash_specific_source_card(host, card)
+                }
+                crate::resume::StackOptionZone::Link => {
+                    cb_ctx.game.trash_specific_link_card(host, card)
+                }
+            };
+            if trashed {
+                let mut b = bindings_cb.clone();
+                run_tail_preserving_trigger_context(
+                    cb_ctx,
+                    trigger_cb.clone(),
+                    &tail_cb,
+                    &mut b,
+                    &runtime_cb,
+                );
+            }
+            run_outer_conts(cb_ctx.game, outer_cb.clone());
+        },
+    );
+    // Optional decline: PASS on the Option pick skips the trash and the tail
+    // (DCGO `canNoSelect: true`).
+    if optional {
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            let outer_decline = outer_conts.clone();
+            pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                run_outer_conts(game, outer_decline.clone());
+            }));
+        }
+    }
+    // Park the data frame (clone-safe): driven by run_resume's
+    // TrashOptionFromStackSelection arm.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::TrashOptionFromStackSelection(
+                crate::resume::TrashOptionFromStackSelectionState {
+                    prov: crate::resume::ResumeProvenance {
+                        source_card,
+                        source_permanent,
+                        source_kind,
+                        controller: ctx.player,
+                        override_pin,
+                    },
+                    host,
+                    cards,
+                    tail,
+                    bindings,
+                    runtime,
+                    trigger_context,
+                    outer_conts,
+                },
+            )],
+        });
+    }
+}
+
+/// Resume-path driver for the SECOND selection of `trash_option_from_own_stacks`
+/// (`TrashOptionFromStackSelection` frame). Mirrors the closure callback in
+/// [`install_stack_option_trash_second_selection`].
+fn run_trash_option_from_stack_selection_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::TrashOptionFromStackSelectionState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        // Declined Option pick: no trash, tail skipped; still run outer conts.
+        run_outer_conts(game, state.outer_conts);
+        return;
+    }
+    let choice = action_id.saturating_sub(crate::action::space::HAND_EFFECT_START) as usize;
+    let Some((card, zone)) = state.cards.get(choice).copied() else {
+        run_outer_conts(game, state.outer_conts);
+        return;
+    };
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let trashed = match zone {
+        crate::resume::StackOptionZone::Digivolution => {
+            ctx.game.trash_specific_source_card(state.host, card)
+        }
+        crate::resume::StackOptionZone::Link => {
+            ctx.game.trash_specific_link_card(state.host, card)
+        }
+    };
+    if trashed {
+        let mut b = state.bindings.clone();
+        run_tail_preserving_trigger_context(
+            &mut ctx,
+            state.trigger_context,
+            &state.tail,
+            &mut b,
+            &state.runtime,
+        );
+    }
+    run_outer_conts(ctx.game, state.outer_conts);
 }
 
 /// Install the FIRST selection of the `trash_link_card_of_own_digimon`

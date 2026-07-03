@@ -40,6 +40,33 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::TrashOptionFromOwnDigivolutionCardsAndCancelLeave => {
+            // EX7-048 — the protect-OTHERS cost: trash 1 Option from the
+            // CARRIER'S digivolution cards, then cancel the leave. The carrier is
+            // the effect's own `source_permanent` (NOT the replacement subject —
+            // the subject is the OTHER permanent being protected). With no carrier
+            // this no-ops and the leave proceeds (should not happen for a live
+            // leave replacement).
+            if let Some(carrier) = ctx.source_permanent {
+                ctx.trash_own_digivolution_option_and_cancel_leave(carrier);
+            }
+            true
+        }
+        CompiledStep::DeleteSelfAndCancelLeave => {
+            // BT25-039 — the protect-OTHERS cost: DELETE the CARRIER (the effect's
+            // own `source_permanent`), then cancel the parked leave (preventing
+            // the replacement SUBJECT's leave — the framework applies the outcome
+            // to the subject, not the carrier). The self-delete is an atomic cost
+            // (no player selection), so this is a synchronous body: `set_outcome`
+            // writes `Cancelled` into `dsl_replacement_outcome`, which the generic
+            // replacement process reads into `rctx.outcome`. With no carrier this
+            // no-ops (should not happen for a live leave replacement).
+            if let Some(carrier) = ctx.source_permanent {
+                ctx.delete_permanent(carrier);
+                set_outcome(ctx, ReplacementOutcome::Cancelled);
+            }
+            true
+        }
         CompiledStep::TrashTopSecurityAndCancelReplacement { of } => {
             let player = crate::dsl_cards::step::resolve_player(ctx, *of);
             if ctx.trash_top_security_and_cancel_current_replacement(player) {
