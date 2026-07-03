@@ -2569,6 +2569,16 @@ fn compile_step(
             optional: a.optional,
             prompt: a.prompt.clone(),
         },
+        S::UseOptionFromTrash(a) => CompiledStep::UseOptionFromTrash {
+            of: compile_player_ref(a.of),
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+            cost_delta: a
+                .cost
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
+            optional: a.optional,
+            prompt: a.prompt.clone(),
+        },
         S::PlayOrUseFromHand(a) => CompiledStep::PlayOrUseFromHand {
             of: compile_player_ref(a.of),
             hand_index: compile_binding_ref(&a.hand_index),

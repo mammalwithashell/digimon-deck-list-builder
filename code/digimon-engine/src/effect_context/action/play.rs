@@ -307,6 +307,60 @@ impl<'a> EffectContext<'a> {
             .use_option_from_hand_with_cost(player, hand_index, cost_delta)
     }
 
+    /// Effect-driven Option USE from `player`'s TRASH with `cost_delta` applied
+    /// to the printed use cost, preserving the full Option lifecycle
+    /// (`OnUseOption`, `OptionMain` / mode selection, subtype disposal). The
+    /// trash analogue of `use_option_from_hand_with_cost`; honors
+    /// `CannotPlayFromTrash`. Gap 2 (`G-DSL-USE-OPTION-FROM-SOURCES`). Drivers:
+    /// BT25-083 ("use 1 Option from your trash with the cost reduced by 3"),
+    /// BT21-062 hand-or-trash union.
+    pub fn use_option_from_trash(
+        &mut self,
+        player: PlayerId,
+        trash_index: usize,
+        cost_delta: crate::enums::CostDelta,
+    ) -> crate::selection::OptionPlayResult {
+        self.game.use_option_from(
+            player,
+            crate::game_actions::OptionSource::Trash(trash_index),
+            cost_delta,
+        )
+    }
+
+    /// Effect-driven Option USE from the transient reveal pool
+    /// (`Game::revealed_cards`), identified by stable `CardHandle`. Gap 2. Driver:
+    /// EX7-048 ("reveal top 6 … you may use 1 [Three Musketeers] Option among
+    /// them free").
+    pub fn use_option_from_revealed(
+        &mut self,
+        card: crate::card_source::CardHandle,
+        cost_delta: crate::enums::CostDelta,
+    ) -> crate::selection::OptionPlayResult {
+        let player = self.player;
+        self.game
+            .use_option_from(player, crate::game_actions::OptionSource::Revealed(card), cost_delta)
+    }
+
+    /// Effect-driven Option USE from a permanent's digivolution-source stack —
+    /// `host`'s `card` (a DIGIVOLUTION source, never the top). Gap 2. Driver:
+    /// BT25-085 ("use 1 [3M]/[TS] Option from … this Digimon's digivolution
+    /// cards free"). The `host` / `card` are stable handles so a battle-area
+    /// index shift can't misroute; the used Option is pulled out of the stack
+    /// and disposed per its subtype (Standard → trash).
+    pub fn use_option_from_source(
+        &mut self,
+        host: PermanentHandle,
+        card: crate::card_source::CardHandle,
+        cost_delta: crate::enums::CostDelta,
+    ) -> crate::selection::OptionPlayResult {
+        let player = self.player;
+        self.game.use_option_from(
+            player,
+            crate::game_actions::OptionSource::Source { host, card },
+            cost_delta,
+        )
+    }
+
     /// Unified "**play or use** 1 card from hand with `cost_delta` applied"
     /// entry point (Aces / BEATBREAK printed wording). Inspects the hand
     /// card's `CardKind` and routes:

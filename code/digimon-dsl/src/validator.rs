@@ -932,6 +932,15 @@ fn validate_step(
                 errors,
             );
         }
+        StepSpec::UseOptionFromTrash(args) => {
+            validate_predicate(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
         StepSpec::SelectRevealBuckets(args) => {
             if args.buckets.is_empty() {
                 errors.push(ValidationError {
@@ -1225,6 +1234,15 @@ fn validate_step_binding_scope(
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::UseOptionFromHand(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
+        StepSpec::UseOptionFromTrash(args) => {
             validate_predicate_binding_scope(
                 &args.filter,
                 &format!("{prefix}.filter"),

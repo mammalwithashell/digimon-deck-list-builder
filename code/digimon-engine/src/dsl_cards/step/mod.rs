@@ -274,6 +274,7 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::NonDslCountCappedStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::RevealBucketStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::UseOptionFromHandStep(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::UseOptionFromTrashStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::LinkPickStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::DigivolveCostChoice(_))
             | Some(ResumeFrame::DigivolveReducerPrompt(_))

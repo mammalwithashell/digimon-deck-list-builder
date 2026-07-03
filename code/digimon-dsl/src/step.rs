@@ -205,6 +205,10 @@ pub enum StepSpec {
     PlayFromHand(PlayFromHandArgs),
     PlayFromHandFree(PlayFromHandFreeArgs),
     UseOptionFromHand(UseOptionFromHandArgs),
+    /// Effect-driven Option USE from the controller's trash with a cost delta
+    /// (Gap 2, `G-DSL-USE-OPTION-FROM-SOURCES`). Trash analogue of
+    /// `use_option_from_hand`.
+    UseOptionFromTrash(UseOptionFromTrashArgs),
     /// Unified "play OR use 1 card from hand" — inspects the bound hand card's
     /// kind and routes Digimon/Tamer → play and Option → use (a DUAL card
     /// surfaces a "Play as Digimon / Use as Option" face choice). The card is
@@ -472,6 +476,7 @@ impl Serialize for StepSpec {
             StepSpec::PlayFromHand(v) => kv!(s, "play_from_hand", v),
             StepSpec::PlayFromHandFree(v) => kv!(s, "play_from_hand_free", v),
             StepSpec::UseOptionFromHand(v) => kv!(s, "use_option_from_hand", v),
+            StepSpec::UseOptionFromTrash(v) => kv!(s, "use_option_from_trash", v),
             StepSpec::PlayOrUseFromHand(v) => kv!(s, "play_or_use_from_hand", v),
             StepSpec::PlayFromRevealedFree(v) => kv!(s, "play_from_revealed_free", v),
             StepSpec::PlayFromTrash(v) => kv!(s, "play_from_trash", v),
@@ -731,6 +736,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_hand" => StepSpec::PlayFromHand(map.next_value()?),
             "play_from_hand_free" => StepSpec::PlayFromHandFree(map.next_value()?),
             "use_option_from_hand" => StepSpec::UseOptionFromHand(map.next_value()?),
+            "use_option_from_trash" => StepSpec::UseOptionFromTrash(map.next_value()?),
             "play_or_use_from_hand" => StepSpec::PlayOrUseFromHand(map.next_value()?),
             "play_from_revealed_free" => StepSpec::PlayFromRevealedFree(map.next_value()?),
             "play_from_trash" => StepSpec::PlayFromTrash(map.next_value()?),
@@ -930,6 +936,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "play_from_hand",
                         "play_from_hand_free",
                         "use_option_from_hand",
+                        "use_option_from_trash",
                         "play_or_use_from_hand",
                         "play_from_revealed_free",
                         "play_from_trash",
@@ -2047,6 +2054,30 @@ pub struct UseOptionFromHandArgs {
     /// memory") without adding a one-off formula primitive.
     #[serde(default, skip_serializing_if = "is_false")]
     pub use_cost_lte_opponent_memory: bool,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub optional: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+}
+
+/// `use_option_from_trash:` args — effect-driven Option USE from the
+/// controller's TRASH, with `cost` applied to the printed use cost (Gap 2,
+/// `G-DSL-USE-OPTION-FROM-SOURCES`). Trash analogue of `use_option_from_hand`.
+///
+/// Drivers: BT25-083 ("use 1 [Three Musketeers] Option from your trash with the
+/// cost reduced by 3" → `cost: { reduce: 3 }`), BT21-062's trash leg
+/// ("use 1 [Ragnarok Cannon] from … trash without paying the cost" → `cost: free`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct UseOptionFromTrashArgs {
+    pub of: PlayerRef,
+    pub filter: crate::predicate::PredicateSpec,
+    /// Cost applied to the Option's printed USE cost. `free` = pay nothing;
+    /// `{ reduce: N }` = pay `max(0, use_cost - field_reductions - N)`; `printed`
+    /// / omitted = pay the printed use cost (less field reductions). Reuses the
+    /// shared `CostDelta` shape (same as the play half's `cost:`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<CostDelta>,
     #[serde(default, skip_serializing_if = "is_false")]
     pub optional: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]

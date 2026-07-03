@@ -730,6 +730,10 @@ pub struct PendingOption {
 pub enum OptionUseSource {
     Hand,
     Trash,
+    /// Used from the transient reveal pool (`Game::revealed_cards`).
+    Revealed,
+    /// Used from a permanent's digivolution-source stack (BT25-085).
+    Source,
 }
 
 impl OptionUseSource {
@@ -737,6 +741,8 @@ impl OptionUseSource {
         match self {
             OptionUseSource::Hand => crate::enums::Zone::Hand,
             OptionUseSource::Trash => crate::enums::Zone::Trash,
+            OptionUseSource::Revealed => crate::enums::Zone::Reveal,
+            OptionUseSource::Source => crate::enums::Zone::BattleArea,
         }
     }
 }

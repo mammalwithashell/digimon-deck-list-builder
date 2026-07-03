@@ -244,6 +244,111 @@ impl<'a> EffectContext<'a> {
             .move_field_option_under_permanent(option_handle, target, face_down)
     }
 
+    /// Place THIS effect's source Option as the bottom digivolution card of
+    /// `target`, a chosen own permanent — the "Then, place this card as the
+    /// bottom digivolution card of 1 of your … Digimon" [Main] tail on P-180 /
+    /// EX7-070 / EX7-071 (Gap 1, G-OPTION-PLACE-SELF-UNDER-PERMANENT-ON-PLAY-PATH).
+    ///
+    /// This composes with the standard Option [Main]-play path
+    /// (`play_option_core` / `play_option_from_hand`), where the source Option
+    /// is the in-flight `pending_option` (already removed from hand/trash, not
+    /// yet a field permanent) — so `move_self_option_under_permanent`'s
+    /// field-permanent path does NOT apply. The source-of-truth for how to
+    /// claim the in-flight Option is the RESOLVED sibling
+    /// `place_self_as_delay_option_permanent`: prefer the in-flight
+    /// `pending_option` slot, then a [Security]-resolution `pending_security`,
+    /// then a raw hand/trash source (for direct callers that never went through
+    /// `play_option_core`).
+    ///
+    /// Claiming `pending_option` leaves it empty, so `play_option_core`'s step-8
+    /// `dispose_option` finds nothing and skips the Standard trash — exactly the
+    /// desired end state (the Option MOVES under `target` rather than trashing).
+    /// Fires no `OnOptionTrashed` (the card is not trashed).
+    ///
+    /// The card is seated FACE-UP by default (`face_down: false`); P-180's tail
+    /// places it face up. The `face_down` axis is settable for parity with
+    /// `move_self_option_under_permanent`.
+    ///
+    /// Returns `false` (no state change) when: the source card is not an Option,
+    /// the in-flight Option is not OUR source card, `target` is not an own live
+    /// permanent, or no claimable Option source exists. The caller (DSL step /
+    /// clause tail) gates any follow-up on the returned `bool`.
+    pub fn place_self_under_permanent(
+        &mut self,
+        target: PermanentHandle,
+        face_down: bool,
+    ) -> bool {
+        // The target must be a battle-area permanent the controller owns.
+        if target.player != self.player {
+            return false;
+        }
+        if self
+            .game
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .is_none()
+        {
+            return false;
+        }
+        // A live field-Option source permanent (the card was already placed in
+        // the battle area, e.g. the RESOLVED-sibling relocate path) routes to
+        // `move_self_option_under_permanent` — that path pops the field
+        // permanent and fires no trash observers.
+        if let Some(source_perm) = self.source_permanent {
+            if self
+                .game
+                .option_field_state(source_perm)
+                .is_some()
+            {
+                return self
+                    .game
+                    .move_field_option_under_permanent(source_perm, target, face_down);
+            }
+            // A non-Option field source (a Digimon/Tamer running this as an
+            // effect) cannot place "this card" under a permanent.
+            return false;
+        }
+
+        // Play-path: claim the in-flight Option. Mirrors
+        // `place_self_as_delay_option_permanent`'s claim precedence.
+        let source_card = if let Some(pending) = self.game.pending_security.take() {
+            if pending.played
+                || pending.card.handle() != self.source_card
+                || pending.card.card_kind(&self.game.card_data) != CardKind::Option
+            {
+                self.game.pending_security = Some(pending);
+                return false;
+            }
+            pending.card
+        } else if let Some(pending) = self.game.pending_option.take() {
+            // Real Option-play lifecycle: `play_option_core` moved the Option
+            // into the single-occupancy `pending_option` slot BEFORE running
+            // the [Main] body, so it is no longer in hand/trash. Claim it for
+            // self-placement when it is OUR source Option. Taking it here leaves
+            // `pending_option` empty, so the subsequent `dispose_option`
+            // (play_option_core step 8) finds nothing and skips the Standard
+            // trash — exactly the desired end state.
+            if pending.card.handle() != self.source_card
+                || pending.card.card_kind(&self.game.card_data) != CardKind::Option
+            {
+                self.game.pending_option = Some(pending);
+                return false;
+            }
+            pending.card
+        } else {
+            // Direct caller (never went through `play_option_core`): pull the
+            // source Option out of the controller's hand/trash.
+            let Some(source_card) = self.remove_source_option_from_controller_zones() else {
+                return false;
+            };
+            source_card
+        };
+
+        self.game
+            .seat_card_source_under_permanent(source_card, target, face_down)
+    }
+
     /// Decline the pay cost for a queued triggered effect that parked during
     /// `pay_cost_fn`. The effect queue will discard the parked process tail
     /// after the current selection callback unwinds.

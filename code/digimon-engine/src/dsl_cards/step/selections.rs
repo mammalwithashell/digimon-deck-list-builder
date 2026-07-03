@@ -969,6 +969,9 @@ pub(crate) fn run_resume(
         ResumeFrame::UseOptionFromHandStep(state) => {
             run_use_option_from_hand_step(game, state, action_id, is_pass);
         }
+        ResumeFrame::UseOptionFromTrashStep(state) => {
+            run_use_option_from_trash_step(game, state, action_id, is_pass);
+        }
         ResumeFrame::LinkPickStep(state) => {
             crate::dsl_cards::step::link_cards::run_link_pick_step(game, state, action_id, is_pass);
         }
@@ -3088,6 +3091,31 @@ pub fn try_install(
             );
             selection_result(ctx)
         }
+        CompiledStep::UseOptionFromTrash {
+            of,
+            filter,
+            cost_delta,
+            optional,
+            prompt,
+        } => {
+            let delta = crate::dsl_cards::step::play_digivolve::lower_cost_delta(
+                cost_delta.as_ref(),
+                ctx,
+                &bindings,
+            );
+            install_use_option_from_trash(
+                ctx,
+                *of,
+                filter.clone(),
+                delta,
+                *optional,
+                prompt.clone(),
+                tail.to_vec(),
+                bindings,
+                runtime.clone(),
+            );
+            selection_result(ctx)
+        }
         CompiledStep::SelectOwnPermanent {
             filter,
             bind_as,
@@ -4556,6 +4584,231 @@ fn install_use_option_from_hand(
             )],
         });
     }
+}
+
+/// Trash analogue of [`install_use_option_from_hand`] (Gap 2,
+/// `G-DSL-USE-OPTION-FROM-SOURCES`). Surfaces a `select_trash` prompt over the
+/// controller's Option/Dual trash cards passing `filter`; the pick is USED via
+/// `Game::use_option_from(Trash, cost_delta)` (full [Main] lifecycle +
+/// disposal), then the tail composes onto any nested selection the Option
+/// installed. Clone-safe: the pick parks through the resumable VM
+/// (`UseOptionFromTrashStep` data frame) alongside the closure, and the
+/// downstream Option-use itself parks through the data VM (`play_option_core`).
+#[allow(clippy::too_many_arguments)]
+fn install_use_option_from_trash(
+    ctx: &mut EffectContext<'_>,
+    of: CompiledPlayerRef,
+    filter: CompiledPredicate,
+    cost_delta: crate::enums::CostDelta,
+    optional: bool,
+    prompt: Option<String>,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    let target_player = resolve_player(ctx, of);
+    let prompt = prompt.unwrap_or_else(|| "Choose an Option card to use from trash".to_string());
+
+    // Resume-frame capture (before the accept/decline closures consume state).
+    let of_player_for_resume = target_player;
+    let override_pin_for_resume = ctx.override_selecting_player();
+    let source_card_for_resume = ctx.source_card;
+    let source_permanent_for_resume = ctx.source_permanent;
+    let source_kind_for_resume = ctx.source_kind;
+    let controller_for_resume = ctx.player;
+    let tail_for_resume = Arc::new(tail.clone());
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = ctx.game.current_trigger_context.clone();
+    let optional_for_resume = optional;
+
+    let tail_for_accept = tail.clone();
+    let tail_for_decline = tail;
+    let runtime_for_accept = runtime.clone();
+    let runtime_for_decline = runtime;
+    let bindings_for_accept = bindings.clone();
+    let bindings_for_decline = bindings.clone();
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    let trigger_for_accept = trigger_context.clone();
+    let trigger_for_decline = trigger_context;
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let player = ctx.player;
+    let filter_bindings = bindings.clone();
+
+    ctx.select_trash(
+        target_player,
+        &prompt,
+        optional,
+        move |game, idx| {
+            let Some(card) = game.player(target_player).trash.get(idx) else {
+                return false;
+            };
+            let kind = card.card_kind(&game.card_data);
+            if !matches!(kind, CardKind::Option | CardKind::Dual) {
+                return false;
+            }
+            let read_ctx = EffectReadContext::new_with_source_kind(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+            );
+            eval_predicate_with_bindings(
+                &filter,
+                &read_ctx,
+                PredicateSubject::Card(card.handle()),
+                Some(&filter_bindings),
+            )
+        },
+        move |cb_ctx, idx| {
+            let previous = cb_ctx.game.current_trigger_context.clone();
+            cb_ctx.game.current_trigger_context = trigger_for_accept.clone();
+            let result = cb_ctx.game.use_option_from(
+                target_player,
+                crate::game_actions::OptionSource::Trash(idx),
+                cost_delta,
+            );
+            cb_ctx.game.current_trigger_context = previous;
+            if matches!(result, crate::selection::OptionPlayResult::Invalid) {
+                return;
+            }
+            let tail_context = trigger_for_accept.clone();
+            drain_or_rewrap_pending_tail(
+                cb_ctx.game,
+                source_card,
+                source_permanent,
+                player,
+                tail_for_accept,
+                bindings_for_accept,
+                runtime_for_accept,
+                tail_context,
+            );
+        },
+    );
+
+    if optional {
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                let previous = game.current_trigger_context.clone();
+                game.current_trigger_context = trigger_for_decline.clone();
+                let tail_context = trigger_for_decline.clone();
+                drain_or_rewrap_pending_tail(
+                    game,
+                    source_card,
+                    source_permanent,
+                    player,
+                    tail_for_decline,
+                    bindings_for_decline,
+                    runtime_for_decline,
+                    tail_context,
+                );
+                game.current_trigger_context = previous;
+            }));
+        }
+    }
+    // Park the data frame alongside the closure (coexistence). select_trash
+    // returns WITHOUT installing when no eligible Option/Dual in trash.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::UseOptionFromTrashStep(
+                crate::resume::UseOptionFromTrashState {
+                    prov: crate::resume::ResumeProvenance {
+                        source_card: source_card_for_resume,
+                        source_permanent: source_permanent_for_resume,
+                        source_kind: source_kind_for_resume,
+                        controller: controller_for_resume,
+                        override_pin: override_pin_for_resume,
+                    },
+                    of_player: of_player_for_resume,
+                    cost_delta,
+                    tail: tail_for_resume,
+                    bindings: bindings_for_resume,
+                    runtime: runtime_for_resume,
+                    trigger_context: trigger_for_resume,
+                    outer_conts: Vec::new(),
+                    optional: optional_for_resume,
+                },
+            )],
+        });
+    }
+}
+
+/// Executor for a `use_option_from_trash` selection (Gap 2) — mirrors
+/// [`run_use_option_from_hand_step`] with `TRASH`-space decoding + the trash
+/// origin + `cost_delta`.
+fn run_use_option_from_trash_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::UseOptionFromTrashState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    let crate::resume::UseOptionFromTrashState {
+        prov,
+        of_player,
+        cost_delta,
+        tail,
+        bindings,
+        runtime,
+        trigger_context,
+        outer_conts,
+        optional: _optional,
+    } = state;
+
+    if is_pass {
+        let previous = game.current_trigger_context.clone();
+        game.current_trigger_context = trigger_context.clone();
+        drain_or_rewrap_pending_tail(
+            game,
+            prov.source_card,
+            prov.source_permanent,
+            prov.controller,
+            (*tail).clone(),
+            bindings,
+            runtime,
+            trigger_context,
+        );
+        game.current_trigger_context = previous;
+        run_outer_conts(game, outer_conts);
+        return;
+    }
+
+    let idx = action_id.saturating_sub(crate::action::space::TRASH_EFFECT_START) as usize;
+    if let Some(card) = game.player(of_player).trash.get(idx) {
+        let tid = card.card_id(&game.card_data).to_string();
+        let tname = card.card_name(&game.card_data).to_string();
+        crate::effect_context::selections::push_effect_target(
+            game,
+            prov.controller,
+            prov.source_card,
+            tid,
+            tname,
+        );
+    }
+    let previous = game.current_trigger_context.clone();
+    game.current_trigger_context = trigger_context.clone();
+    let result = game.use_option_from(
+        of_player,
+        crate::game_actions::OptionSource::Trash(idx),
+        cost_delta,
+    );
+    game.current_trigger_context = previous;
+    if matches!(result, crate::selection::OptionPlayResult::Invalid) {
+        return;
+    }
+    drain_or_rewrap_pending_tail(
+        game,
+        prov.source_card,
+        prov.source_permanent,
+        prov.controller,
+        (*tail).clone(),
+        bindings,
+        runtime,
+        trigger_context,
+    );
+    run_outer_conts(game, outer_conts);
 }
 
 /// Count how many hand cards of `of`'s player satisfy `filter` under the

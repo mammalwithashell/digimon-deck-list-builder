@@ -1697,7 +1697,8 @@ Note: the Satellamon (BT21-074) protection bundle cites the *resolved* "Source-s
 return-immunity modifiers" entry — verify at implementation; likely no longer a gap.
 
 ### Option USE routed from non-hand origins (trash / hand-or-trash union / reveal pool / digivolution stack), free or with cost delta
-- **Severity:** 🔴 BLOCKING
+- **Status: 🟢 ENGINE RESOLVED / DSL PARTIAL (2026-07-03).** `Game::use_option_from(player, OptionSource, CostDelta)`: `OptionSource` gains `Revealed(CardHandle)` + `Source{host,card}`; ALL origins route through `play_option_core` (correct [Main] resolution + disposal, `OnUseOption`, mode-select); memory actually paid for `Reduce(n)` (printed 5, reduce 3 → 2 paid), stacking on field `BeforePayCost` reducers; `CannotPlayFromTrash` honored. EffectContext: `use_option_from_trash`/`use_option_from_revealed`/`use_option_from_source`. DSL verb `use_option_from_trash {of, filter, cost, optional}` shipped clone-safe (`UseOptionFromTrashStep` resume frame). **Residual DSL verbs (mechanical repeats over the ready core): `use_option_from_revealed`, `use_option_from_sources`, `use_option_bound`** — needed by EX7-048 / BT25-085 / BT21-062 authoring. Tests: `option_lifecycle_cluster.rs` gap2_* (5/5).
+- **Severity (was):** 🔴 BLOCKING
 - **Discovered in:** Three Musketeers BeelStarmon (2026-07-02); Galacticmon (2026-07-02)
 - **Card(s):** BT25-083 LadyDevimon ("use 1 [Three Musketeers] trait Option card from your trash with the cost reduced by 3"), BT21-062 Galacticmon ("use 1 [Ragnarok Cannon] from your hand or trash without paying the cost"), EX7-048 Gundramon ("Reveal the top 6 cards... You may use 1 [Three Musketeers] trait Option card among them without paying the cost"), BT25-085 BeelStarmon ("use 1 [Three Musketeers] or [TS] trait Option card from your hand or this Digimon's digivolution cards without paying the cost")
 - **Effect text:** as per card list above.
@@ -1707,7 +1708,8 @@ return-immunity modifiers" entry — verify at implementation; likely no longer 
 - **Related:** "Option card play flow (resolve + trash vs. place-on-field)"; resolved "Unified `play_or_use_from_hand_free`" (hand-only sibling); "Filtered hand-or-trash origin-preserving free-play" (Digimon/Tamer-play only); "No player-scoped reducer registry".
 
 ### `move_self_option_under_permanent` doesn't compose with the standard Option [Main]-play path
-- **Severity:** 🔴 BLOCKING
+- **Status: ✅ RESOLVED (2026-07-03).** `EffectContext::place_self_under_permanent(target, face_down)` claims the in-flight `pending_option` (mirroring the resolved `place_self_as_delay_option_permanent` claim precedence: security → pending_option → hand/trash) and seats the Option FACE-UP (settable) via the shared `Game::seat_card_source_under_permanent` (stable-identity target re-resolution); claiming empties the slot so `dispose_option` skips the Standard trash; effect tails gate on the returned bool. Field-Option sources still route to `move_field_option_under_permanent`. Tests: `tests/dsl/option_lifecycle_cluster.rs` gap1_* (3/3). Unblocks the P-180/EX7-070/EX7-071 [Main] tail (cards still to author).
+- **Severity (was):** 🔴 BLOCKING
 - **Discovered in:** Three Musketeers BeelStarmon (2026-07-02)
 - **Card(s):** P-180 Bind Red Trigger, EX7-071 Hurricane Screw Shot, EX7-070 Der Blitz — all [Main] Options ending "Then, place this card as the bottom digivolution card of 1 of your [Three Musketeers] trait Digimon."
 - **Effect text:** "Then, place this card as the bottom digivolution card of 1 of your [Three Musketeers] trait Digimon."

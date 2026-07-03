@@ -140,6 +140,110 @@ impl Game {
         result
     }
 
+    /// Resolve an `OptionSource` to a borrowed `&CardSource` for validation
+    /// (step 2 of `play_option_core`). Returns `None` when the index / handle
+    /// no longer resolves. Origin-parameterized for Gap 2
+    /// (`G-DSL-USE-OPTION-FROM-SOURCES`).
+    pub(crate) fn option_source_card(
+        &self,
+        player_id: PlayerId,
+        source: OptionSource,
+    ) -> Option<&crate::card_source::CardSource> {
+        match source {
+            OptionSource::Hand(i) => self.player(player_id).hand.get(i),
+            OptionSource::Trash(i) => self.player(player_id).trash.get(i),
+            OptionSource::Revealed(h) => self.revealed_cards.iter().find(|c| c.handle() == h),
+            OptionSource::Source { host, card } => self
+                .player(host.player)
+                .battle_area
+                .get(host.index as usize)
+                .and_then(|perm| perm.card_sources.iter().find(|c| c.handle() == card)),
+        }
+    }
+
+    /// Remove the Option card from its source zone (step 5 of
+    /// `play_option_core`), returning the owned `CardSource`. Origin-parameterized
+    /// for Gap 2. For `Source` the card must be a DIGIVOLUTION source (never the
+    /// top card of the stack) — a top-card removal would delete the host.
+    pub(crate) fn remove_option_from_source(
+        &mut self,
+        player_id: PlayerId,
+        source: OptionSource,
+    ) -> Option<crate::card_source::CardSource> {
+        match source {
+            OptionSource::Hand(i) => {
+                (i < self.player(player_id).hand.len())
+                    .then(|| self.player_mut(player_id).hand.remove(i))
+            }
+            OptionSource::Trash(i) => {
+                (i < self.player(player_id).trash.len())
+                    .then(|| self.player_mut(player_id).trash.remove(i))
+            }
+            OptionSource::Revealed(h) => {
+                let pos = self.revealed_cards.iter().position(|c| c.handle() == h)?;
+                Some(self.revealed_cards.remove(pos))
+            }
+            OptionSource::Source { host, card } => {
+                let perm = self
+                    .player_mut(host.player)
+                    .battle_area
+                    .get_mut(host.index as usize)?;
+                let pos = perm.card_sources.iter().position(|c| c.handle() == card)?;
+                // Guard: never pull the top card (that is not a digivolution
+                // source — it would decapitate the host).
+                if pos + 1 == perm.card_sources.len() {
+                    return None;
+                }
+                Some(perm.card_sources.remove(pos))
+            }
+        }
+    }
+
+    /// Effect-driven Option USE from an arbitrary origin zone, with `cost_delta`
+    /// applied to the printed use cost — the origin-parameterized generalization
+    /// of `use_option_from_hand_with_cost` (Gap 2,
+    /// `G-DSL-USE-OPTION-FROM-SOURCES`). Every origin (hand / trash / reveal
+    /// pool / a permanent's digivolution stack) routes through the SAME
+    /// `play_option_core` pipeline — correct [Main] resolution + `dispose_option`
+    /// — so the only per-origin difference is validation + removal (handled by
+    /// `option_source_card` / `remove_option_from_source`).
+    ///
+    /// Drivers: BT25-083 (trash, `Reduce(3)`), BT21-062 (hand-or-trash, `Free`),
+    /// EX7-048 (reveal pool, `Free`), BT25-085 (digivolution sources, `Free`).
+    ///
+    /// The Main-phase gate is LIFTED via the transient `effect_driven_option_use`
+    /// flag (kept set across a parked `Pending` so re-entries still see it),
+    /// exactly like `use_option_from_hand_with_cost`.
+    pub(crate) fn use_option_from(
+        &mut self,
+        player_id: PlayerId,
+        source: OptionSource,
+        cost_delta: crate::enums::CostDelta,
+    ) -> OptionPlayResult {
+        // Trash origins honor the `CannotPlayFromTrash` lock (parity with
+        // `play_option_from_trash`). Reveal / digivolution-source origins are
+        // not "from trash".
+        if matches!(source, OptionSource::Trash(_))
+            && self
+                .modifiers
+                .player_has(player_id, ModifierType::CannotPlayFromTrash)
+        {
+            return OptionPlayResult::Invalid;
+        }
+        let policy = match cost_delta {
+            crate::enums::CostDelta::Free => OptionCostPolicy::Free,
+            crate::enums::CostDelta::Reduce(n) => OptionCostPolicy::Reduce(n),
+            crate::enums::CostDelta::Fixed(n) => OptionCostPolicy::Fixed(n),
+        };
+        let prev = self.effect_driven_option_use;
+        self.effect_driven_option_use = true;
+        let result = self.play_option_core(player_id, source, None, policy);
+        if !matches!(result, OptionPlayResult::Pending) {
+            self.effect_driven_option_use = prev;
+        }
+        result
+    }
+
     /// Play an Option card from `player`'s trash (effect-driven).
     ///
     /// Same pipeline as `play_option_from_hand`, sourced from the trash zone.
@@ -200,6 +304,21 @@ impl Game {
                         .get(i)
                         .map(|c| c.card_id(&self.card_data).to_string())
                         .unwrap_or_else(|| format!("trash[{}]:oob", i)),
+                    OptionSource::Revealed(h) => self
+                        .revealed_cards
+                        .iter()
+                        .find(|c| c.handle() == h)
+                        .map(|c| c.card_id(&self.card_data).to_string())
+                        .unwrap_or_else(|| format!("revealed[{:?}]:missing", h)),
+                    OptionSource::Source { host, card } => self
+                        .player(host.player)
+                        .battle_area
+                        .get(host.index as usize)
+                        .and_then(|perm| {
+                            perm.card_sources.iter().find(|c| c.handle() == card)
+                        })
+                        .map(|c| c.card_id(&self.card_data).to_string())
+                        .unwrap_or_else(|| format!("source[{:?}]:missing", card)),
                 };
                 panic!(
                     "reentrant Option play while another is mid-resolution: \
@@ -233,20 +352,8 @@ impl Game {
         // 2. Source validation + Option kind + color match.
         let source_kind = source.use_source();
         let (card_handle, printed_cost, card_id) = {
-            let player = self.player(player_id);
-            let card = match source {
-                OptionSource::Hand(i) => {
-                    if i >= player.hand.len() {
-                        return OptionPlayResult::Invalid;
-                    }
-                    &player.hand[i]
-                }
-                OptionSource::Trash(i) => {
-                    if i >= player.trash.len() {
-                        return OptionPlayResult::Invalid;
-                    }
-                    &player.trash[i]
-                }
+            let Some(card) = self.option_source_card(player_id, source) else {
+                return OptionPlayResult::Invalid;
             };
             if card.card_kind(&self.card_data) != CardKind::Option
                 && card.card_kind(&self.card_data) != CardKind::Dual
@@ -293,10 +400,8 @@ impl Game {
             None if self.in_counter_window => OptionPlayMode::Standard,
             None => {
                 let legal_modes = {
-                    let player = self.player(player_id);
-                    let card = match source {
-                        OptionSource::Hand(i) => &player.hand[i],
-                        OptionSource::Trash(i) => &player.trash[i],
+                    let Some(card) = self.option_source_card(player_id, source) else {
+                        return OptionPlayResult::Invalid;
                     };
                     self.option_legal_play_modes(card, player_id)
                 };
@@ -423,9 +528,12 @@ impl Game {
 
         // 5. Remove from source zone, install PendingOption with the
         // resolved subtype (so `dispose_option` need not re-classify).
-        let card = match source {
-            OptionSource::Hand(i) => self.player_mut(player_id).hand.remove(i),
-            OptionSource::Trash(i) => self.player_mut(player_id).trash.remove(i),
+        let Some(card) = self.remove_option_from_source(player_id, source) else {
+            // The source vanished between validation and removal (should not
+            // happen — stable handles for reveal/source; the hand/trash indices
+            // were validated above). Refund the paid cost and abort cleanly.
+            self.gain_memory_for_player(player_id, effective_cost as i16);
+            return OptionPlayResult::Invalid;
         };
         self.pending_option = Some(PendingOption {
             owner: player_id,

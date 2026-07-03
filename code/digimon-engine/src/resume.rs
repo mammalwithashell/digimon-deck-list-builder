@@ -449,6 +449,10 @@ pub enum ResumeFrame {
     /// `drain_or_rewrap_pending_tail` (which threads it onto the nested frame)
     /// rather than run inline. See [`UseOptionFromHandState`].
     UseOptionFromHandStep(UseOptionFromHandState),
+    /// `use_option_from_trash` (Gap 2) — the trash analogue of
+    /// `UseOptionFromHandStep`. Same nested-park + composed-tail semantics;
+    /// carries the `cost_delta` applied to the Option's printed use cost.
+    UseOptionFromTrashStep(UseOptionFromTrashState),
     /// One pick stage of the recursive `link_cards` loop (`link 1..N cards from
     /// hand/trash/digivolution-sources to a Digimon`). The state carries the
     /// loop's spec (Arc) + `pick_index` + a per-stage enum; `run_link_pick_step`
@@ -888,6 +892,24 @@ pub struct UseOptionFromHandState {
     pub outer_conts: Vec<OuterContinuation>,
     /// Whether the select was optional (PASS reaches the decline arm only then;
     /// `resolve_generic_selection` rejects PASS on a non-optional select).
+    pub optional: bool,
+}
+
+/// Resumable-VM frame for `use_option_from_trash` (Gap 2). Trash analogue of
+/// [`UseOptionFromHandState`]; `cost_delta` is applied to the Option's printed
+/// use cost when the trash pick is used.
+#[derive(Debug, Clone)]
+pub struct UseOptionFromTrashState {
+    pub prov: ResumeProvenance,
+    /// Trash owner the option is used from (the installer's `target_player`).
+    pub of_player: PlayerId,
+    /// The cost applied to the picked Option's printed use cost.
+    pub cost_delta: crate::enums::CostDelta,
+    pub tail: Arc<Vec<CompiledStep>>,
+    pub bindings: Bindings,
+    pub runtime: StepRuntime,
+    pub trigger_context: Option<TriggerContext>,
+    pub outer_conts: Vec<OuterContinuation>,
     pub optional: bool,
 }
 

@@ -28,6 +28,7 @@ mod i18n_scaffolding;
 mod link;
 mod loader;
 mod option_effect_use;
+mod option_lifecycle_cluster;
 mod option_security_disposition;
 mod option_use_req;
 mod pack_file_loader;

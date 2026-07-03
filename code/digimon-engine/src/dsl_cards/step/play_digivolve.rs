@@ -99,7 +99,7 @@ fn bind_played_with_provenance(
 ///                         resolution time (G-FORMULA-COST-DELTA). A negative
 ///                         result is clamped to 0 — a "reduction" can only
 ///                         lower, never raise, the printed cost.
-fn lower_cost_delta(
+pub(crate) fn lower_cost_delta(
     d: Option<&digimon_dsl::compiled::CompiledCostDelta>,
     ctx: &EffectContext<'_>,
     bindings: &Bindings,

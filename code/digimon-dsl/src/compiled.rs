@@ -1364,6 +1364,16 @@ pub enum CompiledStep {
         optional: bool,
         prompt: Option<String>,
     },
+    /// Effect-driven Option USE from the controller's trash with a cost delta
+    /// (Gap 2, `G-DSL-USE-OPTION-FROM-SOURCES`). Trash analogue of
+    /// `UseOptionFromHand`. `cost_delta: None` = pay printed use cost.
+    UseOptionFromTrash {
+        of: CompiledPlayerRef,
+        filter: CompiledPredicate,
+        cost_delta: Option<CompiledCostDelta>,
+        optional: bool,
+        prompt: Option<String>,
+    },
     /// Unified play-or-use of a `select_hand`-bound card with a cost
     /// adjustment. `G-PLAY-OR-USE-FROM-HAND`.
     PlayOrUseFromHand {

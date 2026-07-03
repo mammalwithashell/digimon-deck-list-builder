@@ -367,12 +367,16 @@ impl Game {
             return false;
         };
 
+        // `target_top` was captured above (before removal) purely to assert the
+        // target existed; `seat_card_source_under_permanent` re-resolves it.
+        let _ = target_top;
+
         let permanent = self
             .player_mut(owner)
             .battle_area
             .remove(option_handle.index as usize);
         let mut cards = permanent.card_sources;
-        let Some(mut top) = cards.pop() else {
+        let Some(top) = cards.pop() else {
             return false;
         };
         // Any sources beneath the Option's top (not expected for a single-card
@@ -381,8 +385,44 @@ impl Game {
             self.player_mut(source.owner).trash.push(source);
         }
 
-        // Re-find the target by its top-card identity (its index may have
-        // shifted from the Option removal).
+        // Seat the moved card under the target (re-resolved by stable identity;
+        // the Option removal above may have shifted battle-area indices). On
+        // failure the helper routes the card to its owner's trash.
+        self.seat_card_source_under_permanent(top, target, face_down)
+    }
+
+    /// Seat a raw `CardSource` (`card`) as the bottom-most digivolution source
+    /// of `target`, optionally face-down. `target` is resolved *now* by its
+    /// stable top-card identity so that any battle-area index shifts a prior
+    /// removal caused (e.g. the caller pulled the Option out of hand/trash /
+    /// claimed the in-flight `pending_option`) don't misroute the placement.
+    ///
+    /// Shared substrate for the Option "place this card as the bottom
+    /// digivolution card of 1 of your Digimon" tail on BOTH lifecycle exits:
+    /// the field-Option relocate (`move_field_option_under_permanent`) and the
+    /// in-flight play-path place (`EffectContext::place_self_under_permanent`,
+    /// Gap 1 — G-OPTION-PLACE-SELF-UNDER-PERMANENT-ON-PLAY-PATH). Fires no
+    /// trash observers — the card MOVES into the stack, it is not trashed.
+    ///
+    /// Returns `false` (routing `card` to its owner's trash) if `target` is not
+    /// a live battle-area permanent.
+    pub(crate) fn seat_card_source_under_permanent(
+        &mut self,
+        mut card: CardSource,
+        target: PermanentHandle,
+        face_down: bool,
+    ) -> bool {
+        // Resolve the target by its top-card identity (its index may have
+        // shifted from a prior removal in the caller).
+        let Some(target_top) = self
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .map(|perm| perm.top_card().handle())
+        else {
+            self.player_mut(card.owner).trash.push(card);
+            return false;
+        };
         let target_now = self.players.iter().enumerate().find_map(|(pid, player)| {
             player
                 .battle_area
@@ -394,14 +434,11 @@ impl Game {
                 })
         });
         let Some(target_now) = target_now else {
-            // Target vanished mid-resolution (extremely unlikely) — route the
-            // moved card to its owner's trash rather than dropping it.
-            self.player_mut(top.owner).trash.push(top);
+            self.player_mut(card.owner).trash.push(card);
             return false;
         };
-
-        top.face_down = face_down;
-        self.player_mut(target_now.player).battle_area[target_now.index as usize].push_under(top);
+        card.face_down = face_down;
+        self.player_mut(target_now.player).battle_area[target_now.index as usize].push_under(card);
         true
     }
 

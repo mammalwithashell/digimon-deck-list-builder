@@ -269,6 +269,7 @@ fn collect_step_raw_rust_fns(step: &CompiledStep, names: &mut BTreeSet<String>) 
         | CompiledStep::SelectOpponentPermanent { filter, .. }
         | CompiledStep::SelectHand { filter, .. }
         | CompiledStep::UseOptionFromHand { filter, .. }
+        | CompiledStep::UseOptionFromTrash { filter, .. }
         | CompiledStep::SelectTrash { filter, .. }
         | CompiledStep::SelectMaterial { filter, .. }
         | CompiledStep::SelectReveal { filter, .. }

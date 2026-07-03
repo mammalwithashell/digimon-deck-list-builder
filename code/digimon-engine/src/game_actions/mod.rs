@@ -41,11 +41,27 @@ mod zones;
 
 /// Source zone for `play_option_core`. Private to this module — the public
 /// API is the pair of `play_option_from_hand` / `play_option_from_trash`
-/// entry points.
+/// entry points, plus the effect-driven origin-parameterized
+/// `use_option_from_*` helpers (Gap 2, `G-DSL-USE-OPTION-FROM-SOURCES`).
+///
+/// Every variant routes through the SAME `play_option_core` pipeline (correct
+/// [Main] resolution + `dispose_option`); only source validation (step 2) and
+/// removal-from-source (step 5) fork on the variant.
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum OptionSource {
     Hand(usize),
     Trash(usize),
+    /// A card currently exposed in `Game::revealed_cards` (EX7-048: "reveal top
+    /// 6 … you may use 1 Option among them free"). Identified by stable
+    /// `CardHandle` — the reveal-pool index shifts as cards are consumed.
+    Revealed(crate::card_source::CardHandle),
+    /// A card sitting in `host`'s digivolution stack as a source (BT25-085:
+    /// "use 1 Option from this Digimon's digivolution cards free"). Identified
+    /// by `(host, card)` so a battle-area index shift can't misroute it.
+    Source {
+        host: crate::permanent::PermanentHandle,
+        card: crate::card_source::CardHandle,
+    },
 }
 
 /// Source zone for the result (fusing-in) card in an effect-initiated App Fuse
@@ -112,6 +128,8 @@ impl OptionSource {
         match self {
             OptionSource::Hand(_) => OptionUseSource::Hand,
             OptionSource::Trash(_) => OptionUseSource::Trash,
+            OptionSource::Revealed(_) => OptionUseSource::Revealed,
+            OptionSource::Source { .. } => OptionUseSource::Source,
         }
     }
 }
