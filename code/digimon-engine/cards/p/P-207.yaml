@@ -1,0 +1,158 @@
+card: P-207
+name: Minervamon
+kind: digimon
+level: 6
+color: [yellow, purple]
+cost: 12
+dp: 12000
+traits: [Shaman, Olympos XII, Iliad, TS]
+attribute: Virus
+
+# ─── Printed text (official Bandai DB bundle — data/card_bundles/P-207.md) ───
+#
+#   ＜Alliance＞ (When this Digimon attacks, by suspending 1 of your other
+#   Digimon, add the suspended Digimon's DP to this Digimon and it gains
+#   ＜Security A. +1＞ for the attack.)
+#   [On Play] [When Digivolving] You may play 1 level 4 or lower Digimon card
+#   with [Avian], [Bird], [Beast], [Animal] or [Sovereign], other than [Sea
+#   Animal], in any of its traits or the [TS] trait from your hand without
+#   paying the cost.
+#   [When Attacking] [Once Per Turn] You may play 1 level 4 or lower Digimon
+#   card with [Avian], [Bird], [Beast], [Animal] or [Sovereign], other than
+#   [Sea Animal], in any of its traits or the [TS] trait from your trash
+#   without paying the cost.
+#
+# Digivolution requirements (official Bandai DB — authoritative; cards.json
+# evo_costs DROPS the Purple standard circle, the classic multi-colour-cost
+# ingest lossiness CLAUDE.md warns about):
+#   Standard: Yellow Lv.5 / cost 4 (present in cards.json evo_costs)
+#             Purple Lv.5 / cost 4 (MISSING from cards.json evo_costs — added
+#             below as an explicit alt_path so a Purple Lv.5 base can also
+#             digivolve into Minervamon, matching the printed card face).
+#   Special:  [Digivolve] Lv.5 w/[Beastkin]/[TS] trait: Cost 3
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Yellow/P_207.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Alternate Digivolution Requirement" (EffectTiming.None):
+#   AddSelfDigivolutionRequirementStaticEffect(
+#     permanentCondition: TopCard.IsLevel5 &&
+#       (TopCard.EqualsTraits("Beastkin") || TopCard.HasTSTraits),
+#     digivolutionCost: 3, ignoreDigivolutionRequirement: false)
+#   EqualsTraits = EXACT trait match (not substring) -> `trait_has: Beastkin`.
+#   HasTSTraits = EqualsTraits("TS") -> `trait_has: TS`.
+#   ignoreDigivolutionRequirement: false -> normal color rule still applies
+#   (no `ignore_requirements: true` on the alt-path).
+#
+# Region "Alliance" (OnAllyAttack): AllianceSelfEffect(isInheritedEffect:
+#   false) -> own-scope `grant_keyword: Alliance` (not inherited).
+#
+# Region "On Play" / "When Digivolving" (OnEnterFieldAnyone, shared body
+#   `SharedActivateCoroutine`): SelectHandEffect with canNoSelect: true
+#   ("you may"), canTargetCondition =
+#     IsDigimon && Level <= 4 && (HasAvianBeastAnimalTraits || HasTSTraits)
+#     && CanPlayAsNewPermanent
+#   maxUsableCount: -1 (unlimited — NOT once-per-turn; each firing of the
+#   OnPlay/WhenDigivolving timing offers the pick once).
+#   HasAvianBeastAnimalTraits (CardSource.cs) = ContainsTraits("Avian") ||
+#   ContainsTraits("Bird") || ContainsTraits("Beast") ||
+#   (ContainsTraits("Animal") && !ContainsTraits("Sea Animal")) ||
+#   ContainsTraits("Sovereign") — SUBSTRING match (`trait_contains`), with the
+#   Sea-Animal exclusion applying ONLY to the "Animal" branch (a trait like
+#   "Sea Animal" still substring-matches "Animal", so it must be explicitly
+#   excluded on that branch only — Avian/Bird/Beast/Sovereign have no such
+#   carve-out).
+#   PlayPermanentCards(payCost: false, isTapped: false) -> `play_from_hand_free`
+#   (enters unsuspended, matches isTapped: false).
+#
+# Region "When Attacking - OPT" (OnAllyAttack, SetHashString "P_207_WA",
+#   maxUsableCount: 1, canNoSelect: true): identical SharedCanSelectCardCondition
+#   filter, but drawn from TRASH (`play_from_trash_free`, which lowers to
+#   `play_from_trash_free_unsuspended_for` — matches isTapped: false) and gated
+#   Once Per Turn (DCGO's maxUsableCount: 1). This is `when: when_attacking`
+#   (carrier-scoped — Minervamon is the one attacking), NOT `on_ally_attack`
+#   (which is the ally-observer timing used for the <Alliance> combat window).
+
+alt_paths:
+  # Standard circles. Yellow is already present in cards.json evo_costs;
+  # it is re-declared here as an explicit alt-path anyway (harmless,
+  # idempotent — matches the P-197 / BT25-023 convention) because the
+  # DSL-fixture test harness (`DebugRunner::dsl_card`) backfills its
+  # synthetic `evo_costs` table ONLY from YAML `alt_paths`, not from
+  # `data/cards.json` (see debug_runner.rs G-DSL-FIXTURE-EVO-COSTS comment).
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 4
+
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: Beastkin }
+    cost: 3
+
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: TS }
+    cost: 3
+
+effects:
+  # ─── <Alliance> — own-scope declarative keyword grant ────────────────────
+  - kind: grant_keyword
+    keyword: Alliance
+    summary: "<Alliance>"
+
+  # ─── [On Play][When Digivolving] may play 1 level<=4 Avian/Bird/Beast/
+  # Animal(not Sea Animal)/Sovereign-trait or TS-trait Digimon from hand free
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[OnPlay/WhenDigivolving] May play 1 level<=4 Avian/Bird/Beast/Animal(not SeaAnimal)/Sovereign or TS Digimon from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: op_wd_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_contains: Avian
+                  - trait_contains: Bird
+                  - trait_contains: Beast
+                  - all_of:
+                      - trait_contains: Animal
+                      - none_of:
+                          - trait_contains: "Sea Animal"
+                  - trait_contains: Sovereign
+                  - trait_has: TS
+          prompt: "Play 1 level 4 or lower Digimon card with [Avian]/[Bird]/[Beast]/[Animal](other than [Sea Animal])/[Sovereign] in any of its traits or the [TS] trait from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: op_wd_pick }
+
+  # ─── [When Attacking][OPT] may play the same filter from trash free ───────
+  - when: when_attacking
+    once_per_turn: true
+    optional: true
+    summary: "[WhenAttacking][OPT] May play 1 level<=4 Avian/Bird/Beast/Animal(not SeaAnimal)/Sovereign or TS Digimon from trash free"
+    process:
+      - select_trash:
+          of: you
+          bind_as: wa_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_contains: Avian
+                  - trait_contains: Bird
+                  - trait_contains: Beast
+                  - all_of:
+                      - trait_contains: Animal
+                      - none_of:
+                          - trait_contains: "Sea Animal"
+                  - trait_contains: Sovereign
+                  - trait_has: TS
+          prompt: "Play 1 level 4 or lower Digimon card with [Avian]/[Bird]/[Beast]/[Animal](other than [Sea Animal])/[Sovereign] in any of its traits or the [TS] trait from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: wa_pick }

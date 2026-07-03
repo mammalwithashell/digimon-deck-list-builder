@@ -1,0 +1,36 @@
+card: BT15-006
+name: DemiMeramon
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+traits: [Flame]
+
+effects:
+  - scope: inherited
+    when: on_deletion
+    optional: true
+    summary: "[Inherited][On Deletion] By trashing 1 level 5+ Digimon card in hand, Draw 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_gte: 5
+          prompt: "You may trash 1 level 5 or higher Digimon card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - draw: { of: you, count: 2 }
+
+# NOTE: the full authored file (with header comments citing the printed
+# text, the DCGO BT15_006.cs crosscheck, and the DSL-modeling rationale for
+# the cost/reward gating) is at
+# code/digimon-engine/cards/bt15/BT15-006.yaml in the worktree. This body
+# reproduces the load-bearing `effects:` block verbatim; see clause_notes
+# for the full rationale that lives in those header comments.

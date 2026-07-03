@@ -29,7 +29,8 @@
 //! `IsOwnerTurn` + `CanTriggerOnPermanentAttack` with `PermanentCondition` =
 //! attacker is an owner battle-area Digimon AND
 //! `DigivolutionCards.Count(Vemmon) >= 2`. `CanActivateCondition` gates on
-//! `CanActivateSuspendCostEffect` (Tamer payable). `ActivateCoroutine`:
+//! `CanActivateSuspendCostEffect` (Tamer payable — unsuspended AND not
+//! CannotSuspend). `ActivateCoroutine`:
 //! 1. `SuspendPermanentsClass.Tap()` on Zenith (self) — the suspend cost.
 //! 2. Re-check attacker + >=2 Vemmon sources are still live.
 //! 3. `SelectCardEffect` over the attacker's `DigivolutionCards` filtered to
@@ -56,24 +57,51 @@
 //! is authoritative (source priority: DCGO > printed text ordering).
 //!
 //! Clause 2: `on_ally_attack`, `optional: true`, `active_when: { your_turn:
-//! true }`. Process: `suspend: { target: source }` (the Tamer's own suspend
-//! cost, fires first exactly as DCGO's `SuspendPermanentsClass.Tap()` does),
-//! then `select_own_sources: { from: event_target, filter: { name_contains:
-//! "Vemmon" }, min: 2, max: 2 }` (the attacker is `event_target` — confirmed
-//! via `TriggerSource::PlayerBattleAreaAttack { attacker, .. }` setting
+//! true }`.
+//!
+//! **2026-07-02 reviewer fix (suspend-cost payability gate):** the printed
+//! "by suspending this Tamer" activation cost maps to DCGO's
+//! `CanActivateSuspendCostEffect(card)` — a real payability pre-check that
+//! must gate the trigger BEFORE it is offered (BT13-101 / AD1-019 / BT21-084
+//! / BT23-072 idiom: PUPPETS-G023). The clause `condition:` now ANDs
+//! `source_is_unsuspended: true` (Zenith must currently be payable) with the
+//! pre-existing opponent-Digimon existence check via `all_of`, and the
+//! process's leading step is `activation_cost: { suspend_self: true }`
+//! (compile-validated leading position; lifts onto
+//! `EffectBuilder::activation_cost`) instead of a bare `suspend: { target:
+//! source }`. `suspend_self_as_cost` (`effect_context/action/suspend.rs`)
+//! returns `false` — silently aborting the whole trigger, no body, no
+//! re-offer, but the OPT/attempt bookkeeping still records the failed
+//! attempt per `effect_queue.rs::run_queued_effect_inner` — when the source
+//! is already suspended OR carries `ModifierType::CannotSuspend`. This
+//! closes a reachable double-fire window: Clause 2 has no `once_per_turn`
+//! (DCGO: `SetUpActivateClass(..., -1, true, ...)`), so with two ally
+//! Digimon each carrying >=2 Vemmon attacking in the same turn, a bare
+//! `suspend:` step let the SECOND attack re-offer (and pay a no-op suspend
+//! on) an already-suspended Zenith, granting a second free De-Digivolve
+//! where DCGO would refuse (cost unpayable). See
+//! `bt18_092_second_ally_attack_does_not_reoffer_when_zenith_already_suspended`
+//! below for the regression coverage.
+//!
+//! Process (post-fix): `activation_cost: { suspend_self: true }` (the
+//! Tamer's own suspend cost, gated, fires first exactly as DCGO's literal
+//! `SuspendPermanentsClass.Tap()` call order), then `select_own_sources: {
+//! from: event_target, filter: { name_contains: "Vemmon" }, min: 2, max: 2 }`
+//! (the attacker is `event_target` — confirmed via
+//! `TriggerSource::PlayerBattleAreaAttack { attacker, .. }` setting
 //! `event_permanent = Some(attacker)` in effect_queue.rs), then
 //! `return_selected_sources_to_deck: { source_refs: <bound>, position:
 //! bottom }`, then `select_opponent_permanent` (mandatory when an opponent
 //! Digimon exists) -> `de_digivolve: { amount: 1, stop_at_level: 3 }`.
 //!
 //! **Known engine-idiom deviation (documented, not a faithfulness bug):**
-//! DCGO's `CanUseCondition` pre-checks ">=2 Vemmon in the attacker's stack"
-//! BEFORE offering the trigger at all (so the suspend cost is never even
-//! offered when the count is insufficient). The DSL substrate has no
-//! predicate to count NAMED digivolution sources on `event_target` ahead of
-//! the cost (`self_digivolution_sources_contain_name`-style predicates only
-//! evaluate the CARRIER's own stack, and only check presence, not count).
-//! Per the documented, load-bearing precedent at
+//! DCGO's `CanUseCondition` ALSO pre-checks ">=2 Vemmon in the attacker's
+//! stack" BEFORE offering the trigger at all (a check independent of
+//! Zenith's own suspend payability, which the 2026-07-02 fix above already
+//! closes). The DSL substrate has no predicate to count NAMED digivolution
+//! sources on `event_target` ahead of the cost (predicates only evaluate the
+//! CARRIER's own stack, and only check presence, not count). Per the
+//! documented, load-bearing precedent at
 //! `lower_triggered.rs::first_step_candidate_guard` (comment citing
 //! EX10-034): "for an OPTIONAL TRIGGERED ability... the designed behavior is
 //! to fire and SILENTLY SKIP... when fewer than N sources exist — it
@@ -83,23 +111,27 @@
 //! (`install_source_multi_selection`, `selections.rs:2838-2842`), so the
 //! NET OBSERVABLE outcome (no target selection, no De-Digivolve) is
 //! identical to DCGO. The only divergence is that, when the trigger IS
-//! accepted (an outer optional accept/decline prompt, since `suspend` isn't
-//! a self-declinable first step, matches `st18_14.rs`'s
-//! `SelectionKind::Replacement` + `accept_optional_trigger()` idiom) but the
-//! attacker turns out to have <2 Vemmon sources, Zenith still gets suspended
-//! (the cost is paid) even though the effect fizzles — DCGO would not have
-//! offered the trigger at all in that state. This is not reachable in normal
-//! play from the player's perspective without foreknowledge that fewer than
-//! 2 Vemmon are present, and does not violate no-approximations (no
-//! auto-selected target, no stubbed choice) — flagged here for visibility,
-//! not filed as a blocking gap.
+//! accepted (an outer optional accept/decline prompt — with a leading
+//! `activation_cost` step present, the queue installs this as a
+//! `SelectionKind::TriggerOrder` prompt rather than the bare-`suspend:`
+//! `SelectionKind::Replacement` shape `st18_14.rs` uses; see
+//! `effect_queue.rs::needs_pre_cost_prompt`) but the attacker turns out to have <2
+//! Vemmon sources, Zenith still gets suspended (the cost is paid) even
+//! though the effect fizzles — DCGO would not have offered the trigger at
+//! all in that state. This is not reachable in normal play from the
+//! player's perspective without foreknowledge that fewer than 2 Vemmon are
+//! present, and does not violate no-approximations (no auto-selected
+//! target, no stubbed choice) — flagged here for visibility, not filed as a
+//! blocking gap.
 //!
 //! Clause 3: `on_security`, `play_from_security: {}` — standard tamer
 //! security-free pattern (BT21-102, BT18-087, BT22-084).
 //!
 //! # Patterns this test covers (RUST_DSL_TEST_API.md §4.3)
 //! - B1 Start-of-main tamer (trash-cost -> draw + memory)
-//! - Your-turn ally-attack observer with suspend-self cost (BT21-102 idiom)
+//! - Your-turn ally-attack observer with gated suspend-self cost (PUPPETS-G023
+//!   / BT13-101 / BT21-084 idiom: `condition: source_is_unsuspended` +
+//!   `activation_cost: { suspend_self: true }`)
 //! - select_own_sources targeting a NON-carrier permanent via `from:
 //!   event_target` (EX8-070 `from: target_digi` idiom, generalized to the
 //!   attacker binding)
@@ -111,10 +143,12 @@
 //! | Clause | Gap | Status |
 //! |--------|-----|--------|
 //! | (1) [Start of Your Main Phase] trash 1 Vemmon -> draw 1 + gain 1 memory | none | PASS |
-//! | (2) [Your Turn] ally attacks: suspend + return 2 Vemmon -> De-Digivolve 1 opp Digimon | documented idiom deviation above (not a gap) | PASS |
+//! | (2) [Your Turn] ally attacks: suspend + return 2 Vemmon -> De-Digivolve 1 opp Digimon | documented idiom deviation above (attacker Vemmon-count pre-check; not a gap) | PASS |
 //! | (3) [Security] play self free | none | PASS |
 
-use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledStep, CompiledTiming};
+use digimon_dsl::compiled::{
+    CompiledActivationCostKind, CompiledClause, CompiledScope, CompiledStep, CompiledTiming,
+};
 use digimon_engine::action::space::PASS;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
@@ -273,6 +307,45 @@ fn zenith_with_attacker_no_opponent_digimon() -> DebugRunner {
     runner
 }
 
+/// Zenith plus TWO attacker Digimon, each carrying exactly 2 Vemmon
+/// digivolution sources, plus 1 opponent Digimon (stacked with an extra
+/// source so it can absorb 2 De-Digivolve steps) to De-Digivolve target
+/// across both attacks.
+fn zenith_with_two_attackers_two_vemmon_sources_each() -> DebugRunner {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT18-092")
+        .expect("BT18-092 in embedded DSL pack")
+        .add_card(make_vemmon("VEM-SRC-A1"))
+        .add_card(make_vemmon("VEM-SRC-B1"))
+        .add_card(make_attacker("ATK-ONE"))
+        .add_card(make_vemmon("VEM-SRC-A2"))
+        .add_card(make_vemmon("VEM-SRC-B2"))
+        .add_card(make_attacker("ATK-TWO"))
+        .add_card(make_defender("OPP-DEF", 6))
+        .add_card(make_filler("DECK-PAD"))
+        .deck(
+            0,
+            &[
+                "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD",
+                "DECK-PAD", "DECK-PAD",
+            ],
+        )
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "BT18-092", None);
+    runner.place_stack(0, &["VEM-SRC-A1", "VEM-SRC-B1", "ATK-ONE"]);
+    runner.place_stack(0, &["VEM-SRC-A2", "VEM-SRC-B2", "ATK-TWO"]);
+    runner.place_on_field(1, "OPP-DEF", Some(0));
+    // Give the opponent's Digimon an extra digivolution source so it can
+    // absorb a De-Digivolve without being deleted at level floor.
+    runner.push_source(
+        digimon_engine::permanent::PermanentHandle { player: 1, index: 0 },
+        "OPP-DEF",
+    );
+    runner
+}
+
 fn find_permanent(
     runner: &DebugRunner,
     player: digimon_engine::enums::PlayerId,
@@ -360,8 +433,12 @@ fn bt18_092_on_ally_attack_clause_is_optional_and_your_turn_scoped() {
     );
 }
 
+/// STRUCTURAL (2026-07-02 fix): the on_ally_attack clause's `condition:` must
+/// gate on `source_is_unsuspended` — the DCGO `CanActivateSuspendCostEffect`
+/// payability pre-check — so the outer accept/decline prompt itself is
+/// suppressed when Zenith cannot pay the suspend cost (BT21-084 idiom).
 #[test]
-fn bt18_092_on_ally_attack_process_contains_suspend_source_multi_and_de_digivolve() {
+fn bt18_092_on_ally_attack_condition_gates_on_source_unsuspended() {
     let runner = zenith_runner();
     let compiled = runner
         .compiled_card("BT18-092")
@@ -377,11 +454,90 @@ fn bt18_092_on_ally_attack_process_contains_suspend_source_multi_and_de_digivolv
         .find(|t| t.when.contains(&CompiledTiming::OnAllyAttack))
         .expect("on_ally_attack clause must exist");
 
-    let has_suspend = clause
+    let condition = clause
+        .condition
+        .as_ref()
+        .expect("on_ally_attack clause must carry a condition gate");
+    // Review fix 2026-07-03: the offer-time gate is PAYABILITY ONLY (bare
+    // `source_is_unsuspended: true`). DCGO's CanUseCondition never pre-checks
+    // opponent-Digimon existence — pre-gating on the opponent's board would
+    // silently drop a legal cost-paying action (faithfulness divergence).
+    let has_source_unsuspended_gate = condition.source_is_unsuspended == Some(true)
+        || condition
+            .all_of
+            .iter()
+            .any(|p| p.source_is_unsuspended == Some(true));
+    assert!(
+        has_source_unsuspended_gate,
+        "condition must require Zenith (source) to be unsuspended before offering the trigger; got {condition:?}"
+    );
+    assert!(
+        condition.all_of.iter().all(|p| p.any_permanent.is_none()),
+        "offer-time gate must NOT pre-check opponent-Digimon existence (review fix 2026-07-03); got {condition:?}"
+    );
+}
+
+/// STRUCTURAL (2026-07-02 fix): the leading process step must be the gated
+/// `activation_cost: { suspend_self: true }` (PUPPETS-G023 idiom), not a bare
+/// `suspend:` step, so the queue drainer can silently abort the whole
+/// trigger when the cost is unpayable.
+#[test]
+fn bt18_092_on_ally_attack_process_leads_with_gated_suspend_activation_cost() {
+    let runner = zenith_runner();
+    let compiled = runner
+        .compiled_card("BT18-092")
+        .expect("BT18-092 in compiled_cards");
+
+    let clause = compiled
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .find(|t| t.when.contains(&CompiledTiming::OnAllyAttack))
+        .expect("on_ally_attack clause must exist");
+
+    let first_step = clause
+        .process
+        .first()
+        .expect("on_ally_attack process must not be empty");
+    assert!(
+        matches!(
+            first_step,
+            CompiledStep::ActivationCost {
+                kind: CompiledActivationCostKind::SuspendSelf
+            }
+        ),
+        "the leading process step must be activation_cost: {{ suspend_self: true }}, not a bare suspend step; got {first_step:?}"
+    );
+
+    let has_bare_suspend = clause
         .process
         .iter()
         .any(|s| matches!(s, CompiledStep::Suspend { .. }));
-    assert!(has_suspend, "process must suspend the Tamer as the cost");
+    assert!(
+        !has_bare_suspend,
+        "process must not contain an un-gated bare Suspend step"
+    );
+}
+
+#[test]
+fn bt18_092_on_ally_attack_process_contains_source_multi_and_de_digivolve() {
+    let runner = zenith_runner();
+    let compiled = runner
+        .compiled_card("BT18-092")
+        .expect("BT18-092 in compiled_cards");
+
+    let clause = compiled
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .find(|t| t.when.contains(&CompiledTiming::OnAllyAttack))
+        .expect("on_ally_attack clause must exist");
 
     let has_source_multi = clause
         .process
@@ -620,8 +776,8 @@ fn bt18_092_trashing_vemmon_fires_trash_event() {
 
 /// POSITIVE: with the attacker carrying exactly 2 Vemmon sources, attacking
 /// installs the outer accept/decline prompt for Zenith's optional trigger
-/// (suspend is not a self-declinable first step -> outer Replacement prompt,
-/// matching the st18_14.rs precedent).
+/// (Zenith is unsuspended, so the gated `condition:` passes and the prompt
+/// installs; matches the st18_14.rs precedent).
 #[test]
 fn bt18_092_ally_attack_offers_outer_optional_prompt_with_two_vemmon_sources() {
     let mut runner = zenith_with_attacker_two_vemmon_sources();
@@ -632,7 +788,7 @@ fn bt18_092_ally_attack_offers_outer_optional_prompt_with_two_vemmon_sources() {
 
     assert_eq!(
         runner.pending_kind(),
-        Some(SelectionKind::Replacement),
+        Some(SelectionKind::TriggerOrder),
         "the optional [Your Turn] trigger must offer an accept/decline prompt"
     );
 }
@@ -657,7 +813,7 @@ fn bt18_092_accepting_ally_attack_suspends_zenith_and_offers_source_selection() 
         .len();
 
     let _ = runner.attack_digimon(attacker, defender, false);
-    assert_eq!(runner.pending_kind(), Some(SelectionKind::Replacement));
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::TriggerOrder));
     runner
         .accept_optional_trigger()
         .expect("accept the outer optional-trigger prompt");
@@ -738,7 +894,7 @@ fn bt18_092_full_resolution_de_digivolves_opponent_by_one() {
     );
 
     let _ = runner.attack_digimon(attacker, defender, false);
-    assert_eq!(runner.pending_kind(), Some(SelectionKind::Replacement));
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::TriggerOrder));
     runner
         .accept_optional_trigger()
         .expect("accept the outer optional-trigger prompt");
@@ -796,7 +952,7 @@ fn bt18_092_declining_ally_attack_trigger_changes_nothing() {
         .len();
 
     let _ = runner.attack_player(attacker, 1, false);
-    assert_eq!(runner.pending_kind(), Some(SelectionKind::Replacement));
+    assert_eq!(runner.pending_kind(), Some(SelectionKind::TriggerOrder));
     runner
         .decline_optional_trigger()
         .expect("decline the outer optional-trigger prompt");
@@ -847,15 +1003,16 @@ fn bt18_092_ally_attack_no_trigger_with_only_one_vemmon_source() {
     // the assertions (rule 14-2-1: lower/equal DP dies).
     let _ = runner.attack_player(attacker, 1, false);
 
-    // Per the documented engine-idiom note in BT18-092.yaml: `suspend` (the
-    // clause's first process step) is not covered by
-    // `first_step_candidate_guard`, so the outer optional accept/decline
-    // prompt installs unconditionally once an ally attacks on the
-    // controller's turn -- it is NOT pre-gated on the attacker's live Vemmon
-    // count the way DCGO's `CanUseCondition` pre-checks it.
+    // Per the documented engine-idiom note in BT18-092.yaml: Zenith's own
+    // suspend-cost payability IS now pre-gated (source_is_unsuspended), but
+    // the DSL substrate still has no predicate to pre-count the ATTACKER's
+    // live Vemmon sources ahead of the cost. So the outer optional
+    // accept/decline prompt installs regardless of the attacker's live
+    // Vemmon count (documented idiom deviation) as long as Zenith itself is
+    // unsuspended — which it is here.
     assert_eq!(
         runner.pending_kind(),
-        Some(SelectionKind::Replacement),
+        Some(SelectionKind::TriggerOrder),
         "the outer optional-trigger prompt installs regardless of the \
          attacker's live Vemmon count (documented idiom deviation)"
     );
@@ -955,33 +1112,22 @@ fn bt18_092_ally_attack_no_target_selection_without_opponent_digimon() {
     // attack's target).
     let _ = runner.attack_player(attacker, 1, false);
 
-    // If an outer prompt installs at all (attacking the player still fires
-    // OnAllyAttack fan-out), accept it and drive the source-multi pick; the
-    // trailing De-Digivolve target selection must never appear because there
-    // is no opponent Digimon.
-    if runner.pending_kind() == Some(SelectionKind::Replacement) {
-        runner
-            .accept_optional_trigger()
-            .expect("accept the outer optional-trigger prompt");
-        while let Some(SelectionKind::SourceMulti { .. }) = runner.pending_kind() {
-            let pending = runner
-                .pending_selection_view()
-                .expect("source-multi selection pending");
-            let action = pending.valid_action_ids[0];
-            runner
-                .execute_action(pending.selecting_player, action)
-                .expect("source pick resolves");
-        }
-    }
-
-    assert!(
-        runner.pending_selection().is_none(),
-        "no opponent Digimon on field must never produce a De-Digivolve target prompt"
+    // Review fix 2026-07-03: the trigger IS offered even with no opponent
+    // Digimon — the offer gate is payability-only (DCGO CanUseCondition).
+    // Paying the cost with no De-Digivolve target is a LEGAL (if bad) play;
+    // the target select simply fizzles with zero candidates after the cost.
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::TriggerOrder),
+        "the trigger must be OFFERED with no opponent Digimon (payability-only offer gate)"
     );
-    // Zenith's suspend state must have resolved deterministically (indexing
-    // does not panic — the permanent slot is still present after the whole
-    // trigger, whether or not the cost was ultimately paid).
-    let _ = runner.game.players[0].battle_area[zenith.index as usize].is_suspended;
+    runner
+        .decline_optional_trigger()
+        .expect("the offer must be declinable (optional trigger)");
+    assert!(
+        !runner.game.players[0].battle_area[zenith.index as usize].is_suspended,
+        "declining the offer must leave Zenith unsuspended"
+    );
 }
 
 /// NEGATIVE: on the OPPONENT's turn, Zenith's [Your Turn] trigger must not
@@ -1007,6 +1153,121 @@ fn bt18_092_ally_attack_does_not_fire_on_opponents_turn() {
     assert!(
         clause.active_when.is_some(),
         "on_ally_attack clause must carry an active_when your_turn gate"
+    );
+}
+
+/// REGRESSION (2026-07-02 reviewer fix): the [Your Turn] ally-attack trigger
+/// is NOT once-per-turn (DCGO `SetUpActivateClass(..., -1, true, ...)`; no
+/// `once_per_turn` here either), so it can fire once per qualifying attack.
+/// With TWO separate ally Digimon each carrying >=2 Vemmon attacking in the
+/// SAME turn: the FIRST attack suspends Zenith and De-Digivolves the
+/// opponent's Digimon (paying the real cost). The SECOND attack must NOT
+/// re-offer the trigger at all — Zenith is already suspended, so
+/// `source_is_unsuspended: true` fails the clause `condition:` gate and the
+/// outer accept/decline prompt never installs — matching DCGO's
+/// `CanActivateSuspendCostEffect` cost-unpayable refusal. Before the fix, a
+/// bare `suspend:` body step was idempotent and let the second attack
+/// re-offer + "pay" a no-op suspend, granting an illegal second free
+/// De-Digivolve.
+#[test]
+fn bt18_092_second_ally_attack_does_not_reoffer_when_zenith_already_suspended() {
+    let mut runner = zenith_with_two_attackers_two_vemmon_sources_each();
+    let zenith = find_permanent(&runner, 0, "BT18-092");
+    let attacker_one = find_permanent(&runner, 0, "ATK-ONE");
+    let attacker_two = find_permanent(&runner, 0, "ATK-TWO");
+    let defender = find_permanent(&runner, 1, "OPP-DEF");
+
+    let opp_stack_before_first = runner.game.players[1].battle_area[defender.index as usize]
+        .card_sources
+        .len();
+
+    // First attack: accept the trigger and drive it to full resolution
+    // (suspend Zenith, return 2 Vemmon, De-Digivolve the opponent's Digimon).
+    let _ = runner.attack_player(attacker_one, 1, false);
+    assert_eq!(
+        runner.pending_kind(),
+        Some(SelectionKind::TriggerOrder),
+        "first attack: Zenith is unsuspended, so the trigger must be offered"
+    );
+    runner
+        .accept_optional_trigger()
+        .expect("accept the outer optional-trigger prompt on the first attack");
+
+    assert!(
+        runner.game.players[0].battle_area[zenith.index as usize].is_suspended,
+        "Zenith must be suspended after paying the first attack's cost"
+    );
+
+    // Drive the two source picks for the first attack.
+    let p1 = runner
+        .pending_selection_view()
+        .expect("first attack: first source pick pending");
+    runner
+        .execute_action(p1.selecting_player, p1.valid_action_ids[0])
+        .expect("first attack: first source pick resolves");
+    let p2 = runner
+        .pending_selection_view()
+        .expect("first attack: second source pick pending");
+    runner
+        .execute_action(p2.selecting_player, p2.valid_action_ids[0])
+        .expect("first attack: second source pick resolves");
+
+    // Drive the mandatory De-Digivolve target pick for the first attack.
+    let target1 = runner
+        .pending_selection_view()
+        .expect("first attack: De-Digivolve target selection pending");
+    assert_eq!(target1.kind, SelectionKind::OppField);
+    runner
+        .execute_action(target1.selecting_player, target1.valid_action_ids[0])
+        .expect("first attack: target pick resolves");
+    let _ = runner.auto_resolve();
+
+    let opp_stack_after_first = runner.game.players[1].battle_area[defender.index as usize]
+        .card_sources
+        .len();
+    assert_eq!(
+        opp_stack_after_first,
+        opp_stack_before_first - 1,
+        "first attack must De-Digivolve the opponent's Digimon by exactly 1"
+    );
+
+    let attacker_two_stack_before_second = runner.game.players[0].battle_area
+        [attacker_two.index as usize]
+        .card_sources
+        .len();
+    let deck_before_second = runner.deck_size(0);
+
+    // Second attack (different ally Digimon, also carrying >= 2 live Vemmon
+    // sources): Zenith is ALREADY suspended, so the trigger must not be
+    // re-offered at all.
+    let _ = runner.attack_player(attacker_two, 1, false);
+    let _ = runner.auto_resolve();
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "second attack must NOT re-offer the trigger while Zenith is already \
+         suspended — the condition gate (source_is_unsuspended) must block \
+         the outer accept/decline prompt entirely"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[attacker_two.index as usize]
+            .card_sources
+            .len(),
+        attacker_two_stack_before_second,
+        "second attack must not consume the second attacker's Vemmon sources"
+    );
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before_second,
+        "second attack must not return any sources to the deck"
+    );
+    assert_eq!(
+        runner.game.players[1].battle_area[defender.index as usize]
+            .card_sources
+            .len(),
+        opp_stack_after_first,
+        "second attack must NOT grant a second free De-Digivolve — the \
+         opponent's Digimon must be untouched beyond the first attack's effect"
     );
 }
 

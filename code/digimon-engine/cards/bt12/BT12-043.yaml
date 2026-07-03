@@ -1,98 +1,133 @@
 # BT12-043 ShineGreymon — Digimon, Lv.6, Yellow/Red, DP 12000, Cost 12.
 # Traits: Light Dragon. Form: Mega. Attribute: Vaccine.
-# Standard digivolve (official Bandai DB, data/card_bundles/BT12-043.md):
-#   Yellow Lv.5 / cost 4, Red Lv.5 / cost 4.
 #
-# Printed card text (official — data/card_bundles/BT12-043.md, verbatim):
+# Digivolution requirements (AUTHORITATIVE — official Bandai DB bundle
+# data/card_bundles/BT12-043.md + card image BT12-043.webp):
+#   Standard digivolve cost circles: Yellow Lv.5 / cost 4 AND Red Lv.5 / cost 4.
+#   cards.json evo_costs (BT12-043.json) drops the Red circle — only
+#   {card_color: 2 (Yellow), level: 5, memory_cost: 4} survives the lossy API
+#   ingest. This is the documented multi-colour-digivolve-cost drop (CLAUDE.md
+#   source-priority + qa memory project_bg_imperial_evo_cost_color_gap /
+#   BT12-038 sibling finding). The Red Lv.5/4 circle is authored explicitly
+#   below as a standard `kind: digivolve` alt_path to restore it.
+#   Special alt-path (xros_req, printed black text): "[Digivolve] 3 from Lv.5
+#   w/[RizeGreymon] in name" — cost 3, gated on the base's TOP CARD being a
+#   Lv.5 Digimon whose name contains "RizeGreymon" (a substring gate, not an
+#   exact-name gate — see below).
 #
-#   Digivolve: 3 from Lv.5 w/[RizeGreymon] in name
+# Printed card text (card image BT12-043.webp + official bundle — verbatim):
 #
 #   [When Digivolving] For each yellow and/or red Tamer you have in play,
-#   1 of your opponent's Digimon and all of your opponent's Security
-#   Digimon get -3000 DP for the turn.
-#   [Your Turn] All of your [Marcus Damon] in play get +3000 DP and gain
-#   ＜Security A. +1＞ (This Digimon checks 1 additional security card.)
+#   1 of your opponent's Digimon and all of your opponent's Security Digimon
+#   get -3000 DP for the turn.
+#   [Your Turn] All of your [Marcus Damon]s in play get +3000 DP and gain
+#   ＜Security Attack +1＞. (This Digimon checks 1 additional security card.)
 #
 # Official Q&A (data/card_bundles/BT12-043.md):
-#   "No, you can't [choose 2]. You choose 1 of your opponent's Digimon,
-#   then that Digimon and all security Digimon get -3000 DP for each of
-#   your yellow or red Tamers." — confirms exactly ONE opponent Digimon is
-#   selected; the security debuff is a separate, unconditional half of the
-#   same clause (both scaled by the same per-Tamer count).
+#   "No, you can't [pick 0 Digimon]. You choose 1 of your opponent's Digimon,
+#   then that Digimon and all security Digimon get -3000 DP for each of your
+#   yellow or red Tamers." — confirms: (a) the opponent-Digimon pick is
+#   MANDATORY when a legal target exists (DCGO canNoSelect: false), and (b)
+#   the debuff magnitude (3000 * count) is shared by BOTH the picked Digimon
+#   and all opponent Security Digimon — one multiplier, two DP-loss targets.
 #
 # DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT12/Yellow/BT12_043.cs
 #
-# ─── DCGO crosscheck (per clause) ───────────────────────────────────────────
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
 #
-# Region `EffectTiming.None` — `AddSelfDigivolutionRequirementStaticEffect(
-#   permanentCondition: TopCard.ContainsCardName("RizeGreymon") &&
-#   TopCard.HasLevel && TopCard.Level == 5, digivolutionCost: 3,
-#   ignoreDigivolutionRequirement: false)`.
-#   → alt_paths: kind: digivolve, from: { level_eq: 5,
-#     name_contains: "RizeGreymon" }, cost: 3.
+# Region 1 (EffectTiming.None, AddSelfDigivolutionRequirementStaticEffect):
+#   PermanentCondition = TopCard.ContainsCardName("RizeGreymon") &&
+#   TopCard.HasLevel && TopCard.Level == 5; digivolutionCost: 3.
+#   `ContainsCardName` (CardSource.cs:1505) is a genuine SUBSTRING scan across
+#   the card's CardNames list (`cardName.Contains(name)` etc.) — distinct from
+#   the exact-membership `CardNames.Contains(name)` idiom seen on other cards
+#   (e.g. BT9-070's Gazimon gate). Pool precedent (AD1-016, BT21-042,
+#   ST24-07) already authors this exact "w/[RizeGreymon] in name" gate as
+#   `name_contains: "RizeGreymon"` — followed here for consistency and
+#   DCGO-fidelity. → `alt_paths: kind: digivolve, from: { level_eq: 5,
+#   name_contains: "RizeGreymon" }, cost: 3`.
 #
-# Region `EffectTiming.OnEnterFieldAnyone` — `ActivateClass`:
-#   `CanUseCondition` = `CanTriggerWhenDigivolving` (fires on THIS
-#   permanent's own digivolution).
-#   `CanActivateCondition`: `IsExistOnBattleArea(card)` AND count of own
-#   battle-area permanents that are Tamers AND (Yellow OR Red colored) >= 1.
-#   `ActivateCoroutine`: recompute `count` (same predicate); `minusDP =
-#   3000 * count`.
-#     (a) If ANY opponent battle-area Digimon exists
-#         (`HasMatchConditionPermanent`), install a MANDATORY
-#         (`canNoSelect: false`, `maxCount: Min(1, candidateCount)`) single
-#         selection over opponent battle-area Digimon, then
-#         `ChangeDigimonDP(targetPermanent, -minusDP,
-#         EffectDuration.UntilEachTurnEnd)`.
-#     (b) THEN, UNCONDITIONALLY (not gated on (a) having a candidate or
-#         having fired) — `ChangeSecurityDigimonCardDPPlayerEffect(
-#         cardCondition: cardSource.Owner == card.Owner.Enemy, -minusDP,
-#         EffectDuration.UntilEachTurnEnd)`: every opponent Security
-#         Digimon gets -minusDP for the turn.
-#   → when: when_digivolving; condition: any_permanent{of: you, kind:
-#     tamer, any_of[color_is: yellow, color_is: red]}; process:
-#     [select_opponent_permanent(mandatory, kind: digimon) ->
-#     add_dp_modifier(formula, expiry: end_of_turn),
-#     add_player_modifier(target_player: opponent, modifier:
-#     ChangeOwnSecurityDigimonDp, value: formula, expiry: end_of_turn)].
-#   `UntilEachTurnEnd` → `expiry: end_of_turn` (ST1-14 / BT25-018 idiom).
-#   The top-level `select_opponent_permanent` + `add_dp_modifier` pair
-#   silently no-ops when no opponent Digimon candidate exists (BT12-016 /
-#   AD1-016 idiom — "empty mandatory select is skipped"), matching DCGO's
-#   `HasMatchConditionPermanent` gate on the select alone; the
-#   `add_player_modifier` step below it is unconditional and always runs
-#   once the outer Tamer-count gate holds, matching DCGO's unconditional
-#   (b).
+# Region 2 (EffectTiming.OnEnterFieldAnyone, ActivateClass):
+#   CanUseCondition = CanTriggerWhenDigivolving (this permanent digivolved
+#   into this turn) → `when: when_digivolving`.
+#   CanActivateCondition: IsExistOnBattleArea(card) AND count(own battle-area
+#   Tamers whose CardColors contains Yellow OR Red) >= 1 → gates the whole
+#   clause; if count == 0 NOTHING fires (no select, no security debuff).
+#   → `condition: count_gte: { filter: { of: you, zone: [battle_area],
+#     kind: tamer, any_of: [{color_is: yellow}, {color_is: red}] }, n: 1 }`.
+#   ActivateCoroutine: recomputes the SAME count (`minusDP = 3000 * count`),
+#   then:
+#     (a) if HasMatchConditionPermanent(opponent battle-area Digimon):
+#         maxCount = min(1, matchCount) → SelectPermanentEffect with
+#         canNoSelect: false (MANDATORY pick of exactly 1 opponent Digimon,
+#         no decline option — matches the Q&A "No, you can't [pick 0]") →
+#         ChangeDigimonDP(-minusDP, UntilEachTurnEnd).
+#         → `select_opponent_permanent` (mandatory — no `optional: true`) +
+#           `add_dp_modifier { value: base_per_delta(yellow/red Tamer count *
+#           -3000), expiry: end_of_turn }`. Absent any opponent Digimon, this
+#           select+modify step is naturally skipped (empty-candidate select
+#           is a documented no-op short-circuit; DCGO's own `if
+#           (HasMatchConditionPermanent(...))` guard is the same skip).
+#     (b) UNCONDITIONALLY (outside the HasMatchConditionPermanent guard):
+#         ChangeSecurityDigimonCardDPPlayerEffect(cardCondition: opponent's
+#         security cards, -minusDP, UntilEachTurnEnd) — ALL of the
+#         opponent's Security Digimon get -minusDP DP for the turn, whether
+#         or not step (a) found (or found no) legal Digimon target. Because
+#         `select_opponent_permanent` short-circuits its OWN process tail on
+#         an empty candidate set (not the whole clause), step (b) is authored
+#         as a SEPARATE sibling process step (not nested inside an `if`
+#         wrapping the select), so it always runs once the Tamer-count gate
+#         (top-level `condition:`) has passed.
+#         → `add_player_modifier { target_player: opponent, modifier:
+#           SecurityDpChange, value: base_per_delta(...), expiry: end_of_turn
+#           }` — the ST3-13/ST1-14/BT15-092 idiom, consumed by
+#           `Game::defender_security_dp_adjustment` for the OPPONENT.
 #
-# Region `EffectTiming.None` x2 — two separate DCGO static effects, both
-#   gated by `IsExistOnBattleArea(card) && IsOwnerTurn(card)`, with
-#   `permanentCondition` = own battle-area permanent whose top card's
-#   `CardNames` contains "Marcus Damon" (DCGO also checks the no-space
-#   "MarcusDamon" alias — a defensive C#-side alternate spelling, not a
-#   second printed name; the printed name "Marcus Damon" is the only
-#   authoritative match target):
-#     - `CardEffectFactory.ChangeDPStaticEffect(changeValue: 3000, ...)`
-#       → declarative Aura: active_when: { your_turn: true }, target: {
-#         owner: you, name_contains: "Marcus Damon" }, dp_modifier: 3000.
-#     - `CardEffectFactory.ChangeSAttackStaticEffect(changeValue: 1, ...)`
-#       → declarative Aura: active_when: { your_turn: true }, target: {
-#         owner: you, name_contains: "Marcus Damon" }, grant_keyword: {
-#         keyword: SecurityAttackPlus, value: 1 }.
-#   Authored as two separate clauses (BT5-093 idiom) rather than merging
-#   dp_modifier + grant_keyword into one clause — mirrors DCGO's two
-#   independent static-effect installs faithfully.
+# Region 3 + 4 (EffectTiming.None, ChangeDPStaticEffect / ChangeSAttackStaticEffect):
+#   Both declarative blocks share the SAME Condition (IsExistOnBattleArea AND
+#   IsOwnerTurn → `active_when: { your_turn: true }`) and the SAME
+#   PermanentCondition: `IsPermanentExistsOnOwnerBattleAreaDigimon(permanent,
+#   card)` — which internally requires `permanent.IsDigimon` — AND
+#   `TopCard.CardNames.Contains("Marcus Damon")` (or the legacy no-space
+#   "MarcusDamon" variant). `Permanent.IsDigimon` (Permanent.cs:3439) is true
+#   when the TopCard is a genuine Digimon/DigiEgg OR when an active
+#   `ITreatAsDigimonEffect` (e.g. AD1-021's/BT13-020's/BT25-104's "1 of your
+#   [Marcus Damon] is also treated as a N DP Digimon") is currently live on
+#   it. Every printed "Marcus Damon" card (BT4-092, BT12-092, BT13-095,
+#   BT17-087, BT21-086) is a TAMER — there is no Digimon-kind "Marcus Damon"
+#   card in the pool — so this clause is a dormant synergy gate: it only ever
+#   grants +3000 DP / Security A. +1 to a Marcus Damon Tamer that ANOTHER
+#   effect has simultaneously made "treated as a Digimon" (the AD1-021 /
+#   BT13-020 / BT25-104 family). This matches the printed text, which grants
+#   DP/Security-Attack stats that only apply to Digimon-kind permanents.
+#   The engine's `synth_identity(...).kind` (permanent.rs `is_digimon_for_
+#   rules`) is consulted by the main battle-area `kind:` predicate match
+#   (predicate.rs:2705-2708), so `kind: digimon` on the aura target filter
+#   faithfully reproduces DCGO's `IsDigimon` (including the TreatAsDigimon
+#   check) rather than the raw un-transformed card kind.
+#   `CardNames.Contains("Marcus Damon")` is EXACT list-membership (matching
+#   the BT9-070/Gazimon finding's C# semantics), so `name_is: "Marcus Damon"`
+#   is the faithful gate — not `name_contains`, and consistent with the
+#   sibling BT25-104's own aura target (`kind: tamer, name_is: "Marcus
+#   Damon"` there, `kind: digimon` here since this clause CONSUMES the
+#   treated-as-Digimon state rather than granting it).
+#   → one `kind: aura` clause per stat: `target: { of: you, kind: digimon,
+#     name_is: "Marcus Damon" }`, `active_when: { your_turn: true }`,
+#     `dp_modifier: 3000` / `security_attack: 1` respectively (both flat —
+#     DCGO's changeValue is a fixed 3000 / 1, not formula-scaled).
 #
-# ─── Implementation status (faithfulness diff) ──────────────────────────────
+# ─── Implementation status ────────────────────────────────────────────────────
 #
-# | Card-text element                                                | Status |
-# |--------------------------------------------------------------------|------|
-# | Std digivolve Yellow Lv.5 / cost 4, Red Lv.5 / cost 4             | PARTIAL — data gap, not this YAML: data/cards.json evo_costs carries ONLY the Yellow Lv.5/cost4 circle (API-ingest drop, same class as the BG Imperial evo-cost colour gap); Red circle missing until data/card_overrides.json is patched. Standard digivolve is data-driven (not authored here) per sibling convention (BT12-016 et al.) |
-# | Alt-digivolve: 3 from Lv.5 w/[RizeGreymon] in name                | IMPLEMENTED (alt_paths digivolve, name_contains, cost 3) |
-# | [WD] gate: >=1 own yellow/red Tamer                                | IMPLEMENTED (condition: any_permanent tamer + color any_of) |
-# | [WD] select+debuff 1 opp Digimon -3000×count DP for the turn      | IMPLEMENTED (select_opponent_permanent + add_dp_modifier formula, expiry end_of_turn) |
-# | [WD] all opp Security Digimon -3000×count DP for the turn         | IMPLEMENTED (add_player_modifier ChangeOwnSecurityDigimonDp, target_player: opponent, formula, expiry end_of_turn) |
-# | [Your Turn] own [Marcus Damon] +3000 DP                           | IMPLEMENTED (declarative Aura, active_when your_turn, name_contains) |
-# | [Your Turn] own [Marcus Damon] gain <Security A. +1>              | IMPLEMENTED (declarative Aura, grant_keyword SecurityAttackPlus 1) |
+# | Card-text element                                                | Status      |
+# |-------------------------------------------------------------------|------------|
+# | Standard digivolve: Yellow Lv.5 / cost 4 (cards.json evo_costs)   | IMPLEMENTED |
+# | Standard digivolve: Red Lv.5 / cost 4 (cards.json-dropped circle) | IMPLEMENTED |
+# | Alt-path: [Digivolve] 3 from Lv.5 w/[RizeGreymon] in name          | IMPLEMENTED |
+# | [WD] gate: count(own yellow/red Tamer) >= 1                       | IMPLEMENTED |
+# | [WD] mandatory -3000*count DP to 1 opp Digimon (when any exists)  | IMPLEMENTED |
+# | [WD] unconditional -3000*count DP to ALL opp Security Digimon     | IMPLEMENTED |
+# | [Your Turn] own [Marcus Damon] (treated-as-Digimon) +3000 DP      | IMPLEMENTED |
+# | [Your Turn] own [Marcus Damon] (treated-as-Digimon) Security A.+1 | IMPLEMENTED |
 
 card: BT12-043
 name: ShineGreymon
@@ -101,41 +136,57 @@ level: 6
 color: [yellow, red]
 cost: 12
 dp: 12000
-traits: [Light Dragon]
+traits: ["Light Dragon"]
 attribute: Vaccine
 
 alt_paths:
+  # Standard printed circle dropped by the lossy cards.json multi-colour
+  # digivolve-cost ingest (only Yellow Lv.5/4 survives in evo_costs). The
+  # Yellow circle loads automatically from evo_costs; this restores Red.
   - kind: digivolve
-    from:
-      all_of:
-        - level_eq: 5
-        - name_contains: "RizeGreymon"
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  # Special alt-path (xros_req black text): "[Digivolve] 3 from Lv.5
+  # w/[RizeGreymon] in name". DCGO ContainsCardName is a substring scan.
+  - kind: digivolve
+    from: { level_eq: 5, name_contains: "RizeGreymon" }
     cost: 3
 
 effects:
-  # ─── [When Digivolving] gated on >=1 own yellow/red Tamer ────────────────
-  # For each yellow and/or red Tamer you have in play:
-  #   (a) select 1 opp Digimon (mandatory when a candidate exists) and give
-  #       it -3000×count DP for the turn;
-  #   (b) unconditionally give all opp Security Digimon -3000×count DP for
-  #       the turn.
+  # ─── [When Digivolving] -3000*count DP to 1 opp Digimon + all opp Security ──
+  #
+  # Printed: "For each yellow and/or red Tamer you have in play, 1 of your
+  # opponent's Digimon and all of your opponent's Security Digimon get -3000
+  # DP for the turn."
+  #
+  # Top-level `condition:` mirrors DCGO's CanActivateCondition (own
+  # yellow/red Tamer count >= 1) — the WHOLE clause (both the opponent-Digimon
+  # pick and the security debuff) is gated on this, matching the Q&A's "get
+  # -3000 DP for each of your yellow or red Tamers" (zero Tamers ⇒ 0 DP ⇒ no
+  # effect, and DCGO's own `if (count >= 1)` wraps both sub-effects).
   - when: when_digivolving
-    summary: "[When Digivolving] For each yellow/red Tamer you control, give 1 opp Digimon and all opp Security Digimon -3000 DP for the turn"
+    summary: "[When Digivolving] For each yellow/red Tamer you have in play, 1 opp Digimon and all opp Security Digimon get -3000 DP for the turn"
     condition:
-      any_permanent:
-        of: you
-        zone: [battle_area]
-        kind: tamer
-        any_of:
-          - color_is: yellow
-          - color_is: red
+      count_gte:
+        filter:
+          all_of:
+            - of: you
+            - zone: [battle_area]
+            - kind: tamer
+            - any_of:
+                - color_is: yellow
+                - color_is: red
+        n: 1
     process:
-      # (a) Mandatory single-target debuff — silently skipped if the
-      # opponent has no battle-area Digimon (BT12-016 / AD1-016 idiom).
+      # Step (a): mandatory pick of 1 opponent Digimon (DCGO canNoSelect:
+      # false — the Q&A confirms the player cannot decline when a legal
+      # target exists). An empty candidate set short-circuits this step's
+      # own tail only (no opponent Digimon on field), matching DCGO's
+      # `if (HasMatchConditionPermanent(...))` guard around step (a) alone.
       - select_opponent_permanent:
           bind_as: dp_target
           filter: { kind: digimon }
-          prompt: "Give -3000 DP per your yellow/red Tamer to 1 opponent Digimon"
+          prompt: "Choose 1 of your opponent's Digimon to get -3000 DP for the turn per your yellow/red Tamer"
       - add_dp_modifier:
           target: dp_target
           value:
@@ -153,11 +204,12 @@ effects:
                           - color_is: red
               delta: -3000
           expiry: end_of_turn
-      # (b) Unconditional opponent-security debuff (fires regardless of
-      # whether (a) had a candidate — matches DCGO's independent second call).
+      # Step (b): UNCONDITIONAL security debuff — a separate sibling step so
+      # it always runs once the top-level Tamer-count gate passes, regardless
+      # of whether step (a) found (or lacked) an opponent Digimon to target.
       - add_player_modifier:
           target_player: opponent
-          modifier: ChangeOwnSecurityDigimonDp
+          modifier: SecurityDpChange
           value:
             formula:
               base: 0
@@ -174,22 +226,25 @@ effects:
               delta: -3000
           expiry: end_of_turn
 
-  # ─── [Your Turn] own [Marcus Damon] +3000 DP ──────────────────────────────
+  # ─── [Your Turn] own [Marcus Damon] (treated-as-Digimon) +3000 DP ──────────
+  #
+  # Printed: "All of your [Marcus Damon]s in play get +3000 DP...".
+  # `kind: digimon` on the target filter consults `synth_identity(...).kind`
+  # (predicate.rs main battle-area path), so this only matches a Marcus Damon
+  # Tamer currently under an active TreatAsDigimon grant (AD1-021 / BT13-020 /
+  # BT25-104 family) — faithfully mirroring DCGO's `Permanent.IsDigimon`
+  # (which itself consults `ITreatAsDigimonEffect`). No printed Marcus Damon
+  # card is natively Digimon-kind, so this is a dormant synergy gate, exactly
+  # as in DCGO.
   - kind: aura
-    summary: "[Your Turn] Your [Marcus Damon] get +3000 DP"
+    target: { of: you, kind: digimon, name_is: "Marcus Damon" }
     active_when: { your_turn: true }
-    target:
-      owner: you
-      zone: [battle_area]
-      name_contains: "Marcus Damon"
     dp_modifier: 3000
+    summary: "[Your Turn] All of your [Marcus Damon]s (while treated as Digimon) get +3000 DP"
 
-  # ─── [Your Turn] own [Marcus Damon] gain <Security A. +1> ─────────────────
+  # ─── [Your Turn] own [Marcus Damon] (treated-as-Digimon) gains Security A.+1
   - kind: aura
-    summary: "[Your Turn] Your [Marcus Damon] gain <Security A. +1>"
+    target: { of: you, kind: digimon, name_is: "Marcus Damon" }
     active_when: { your_turn: true }
-    target:
-      owner: you
-      zone: [battle_area]
-      name_contains: "Marcus Damon"
-    grant_keyword: { keyword: SecurityAttackPlus, value: 1 }
+    security_attack: 1
+    summary: "[Your Turn] All of your [Marcus Damon]s (while treated as Digimon) gain <Security A. +1>"

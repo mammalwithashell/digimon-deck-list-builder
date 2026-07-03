@@ -1,134 +1,101 @@
-
-# P-193 The Wicked God Emerges! — Option, Purple, Cost 3.
-# Traits: Wicked God (the OPTION card itself carries the trait — see the card
-# image / official bundle Identity block).
+# P-193 The Wicked God Emerges! — Option, Cost 3, Purple.
+# No printed traits box entry beyond type_eng ["Wicked God"] (card_overrides/
+# cards.json list "Wicked God" as the card's own type — this is the printed
+# [Wicked God] trait carried by the Option card itself, not a filter target).
+# No standard digivolve circles (Option card).
 #
-# Printed card text (official bundle data/card_bundles/P-193.md, confirmed
-# against the card image):
+# ─── Printed card text (official Bandai DB bundle — data/card_bundles/P-193.md) ─
 #
-#   [Main] By trashing 1 card with the [Composite] or [Wicked God] trait from
+# [Main] By trashing 1 card with the [Composite] or [Wicked God] trait from
 #   your hand, ＜Draw 2＞ (Draw 2 cards from your deck.) Then, place this card
 #   in the battle area.
+# [End of All Turns] ＜Delay＞ (By trashing this card after the placing turn,
+#   activate the effect below.)
+#   ・By deleting 1 of your [Millenniummon], you may play 1 [Wicked God] trait
+#     Digimon card from your hand or trash without paying the cost.
 #
-#   [End of All Turns] ＜Delay＞ (By trashing this card after the placing
-#   turn, activate the effect below.)
-#   ・By deleting 1 of your [Millenniummon], you may play 1 [Wicked God]
-#     trait Digimon card from your hand or trash without paying the cost.
-#
-# Inherited (Security Effect):
-#   [Security] Activate this card's [Main] effects.
+# Security Effect [Security] Activate this card's [Main] effects.
 #
 # Official Q&A (data/card_bundles/P-193.md): "No, you can't. If you don't
 # trash 1 card with the [Composite] or [Wicked God] trait from your hand, you
 # can't use the part after 'then' in this card's [Main] effect to place this
-# card in the battle area." — the Draw 2 AND the self-placement are BOTH
-# gated behind actually paying the trash cost.
+# card in the battle area." — confirms Clause A's "By trashing X, <Draw 2>.
+# Then place..." grammar is a hard cost gate: declining/no-eligible-card means
+# NEITHER the draw NOR the battle-area placement happens.
 #
-# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Purple/P_193.cs
+# ─── DCGO C# reference (DCGO/Assets/Scripts/CardEffect/P/Purple/P_193.cs) ──────
 #
-# ─── DCGO crosscheck ───────────────────────────────────────────────────────
+# Clause A — EffectTiming.OptionSkill:
+#   CanUseCondition: CanTriggerOptionMainEffect (standard Main-from-hand gate).
+#   ActivateCoroutine: if HasMatchConditionOwnersHand(Composite||WickedGod):
+#     SelectHandEffect (maxCount = min(1, matchCount), canNoSelect: true,
+#     mode: Discard). If discarded: Draw 2, then PlaceDelayOptionCards(card)
+#     (places this card in the battle area as a Delay-Option permanent).
+#     NOTE: the whole draw+place tail is gated on `discarded == true` — i.e.
+#     the trash succeeding — matching the Q&A above.
 #
-# Clause A — `EffectTiming.OptionSkill` (= Main play). `SelectHandEffect`
-#   (mode: Discard, maxCount: 1, canNoSelect: true) over
-#   `CanSelectHandCondition`: `EqualsTraits("Composite") ||
-#   EqualsTraits("Wicked God")`. Only `if (discarded)` does it
-#   `DrawClass(..., 2, ...).Draw()` then `PlaceDelayOptionCards` (parks this
-#   Option as a Delay permanent). Matches the official Q&A precisely.
+# Clause B — EffectTiming.OnEndTurn (the printed "[End of All Turns] <Delay>"):
+#   CanUseCondition: CanDeclareOptionDelayEffect(card) — standard printed
+#     <Delay> declare-gate (RULES 16-16): the Option is on the field as a
+#     Delay permanent, not the turn it was placed. Despite the "OnEndTurn"
+#     C# timing label, DCGO's own doc-string for this clause (line 91) reads
+#     "[End of All Turns] <Delay> (After this card is placed, by trashing it
+#     the next turn or later, activate the effect below)" — this IS the
+#     standard player-declared <Delay> Main-phase activation (glossary.pdf /
+#     keyword-semantics.md: "<Delay> — Option in battle area; trash this card
+#     to activate the linked effect; not the turn it entered the battle
+#     area"), not an engine-automatic end-of-turn trigger. Modelled as the
+#     standard `trigger: delayed` (→ DelayTrigger::MainPhaseActivated), the
+#     same idiom BT13-110 / BT21-097 use for their "[End of Your/All Turns]
+#     <Delay>" clauses.
+#   CanActivateCondition: IsExistOnField(card) — automatically true whenever
+#     `activate_delayed_option_main` is legal (the standard engine Delay gate
+#     already requires the Option be seated on the field as
+#     OptionState::Delayed with trigger MainPhaseActivated and
+#     turn_count > placed_on_turn — no extra `active_when` needed).
+#   ActivateCoroutine:
+#     1. DeletePermanentAndProcessAccordingToResult(card.PermanentOfThisCard())
+#        — this is the OUTER standard <Delay> activation cost: "by trashing
+#        this card" (the engine's `activate_delayed_option_main` already
+#        performs this trash unconditionally as the Delay body's activation
+#        cost — see option_lifecycle.rs; no explicit
+#        `activation_cost: { trash_self: true }` step is authored here,
+#        matching the BT13-110/BT21-097 idiom for `trigger: delayed`).
+#     2. SuccessProcess (self-trash succeeded — always true once this body
+#        runs): if HasMatchConditionOwnersPermanent(own battle-area Digimon
+#        named "Millenniummon"): SelectPermanentEffect (maxCount 1,
+#        canNoSelect: true — DECLINABLE).
+#     3. Only if a Digimon was actually selected AND deleted
+#        (`deletedPermanents.Count > 0` →
+#        DeletePeremanentAndProcessAccordingToResult succeeds) does
+#        DeleteSuccessProcess run: choose hand-vs-trash (if both have
+#        eligible [Wicked God] cards), select 1 such card (canNoSelect: true
+#        — DECLINABLE), then PlayPermanentCards(payCost: false).
+#     THE INNER "BY DELETING 1 MILLENNIUMMON, YOU MAY PLAY..." IS ITSELF A
+#     COST-GATED REWARD: declining the delete pick, or having no eligible
+#     Millenniummon, means DeleteSuccessProcess never runs — no free-play
+#     prompt is ever offered. This is modelled below via
+#     `select_own_permanent { optional: true, then: [...] }`: the DSL's
+#     default `continue_on_decline: false` means a decline (or a no-op pick
+#     with zero eligible candidates) drops the entire `then:` tail — the same
+#     cost-gate idiom P-169 uses for "by suspending this Tamer"
+#     (code/digimon-engine/src/dsl_cards/step/selections.rs, doc comment
+#     above `continue_on_decline` — G-OPT-REFUND-ON-DECLINE). This closes the
+#     over-exposure bug from the earlier draft, which used a flat
+#     select_own_permanent -> delete_permanent -> select_union_zone (optional)
+#     -> play_union_bound_free sequence with NO gate, letting the union-zone
+#     free-play prompt install even when the deletion was declined or
+#     impossible (select_union_zone installs whenever eligible candidates
+#     exist, independent of the prior step's outcome).
 #
-# Clause B — `EffectTiming.OnEndTurn` (the Delay body).
-#   `CanUseCondition: CanDeclareOptionDelayEffect(card)` — the SAME gate as
-#   every other `<Delay>` in the pool (placing turn has passed;
-#   `IsExistOnBattleArea` + `EnterFieldTurnCount != current turn`).
-#   `CanActivateCondition: IsExistOnField(card)`. `SetUpActivateClass(...,
-#   isOptional: true, ...)` — the whole activation is a player-visible,
-#   player-optional "trash this card to activate" action, byte-for-byte the
-#   same shape DCGO uses for the standard `[Main]<Delay>` (P-039, P-107) and
-#   the sibling `[End of Your Turn]<Delay>` (BT21-097's own DCGO source uses
-#   the identical `EffectTiming.OnEndTurn` + `CanDeclareOptionDelayEffect`
-#   pair — see that card's file header). `[End of All Turns]` and `[End of
-#   Your Turn]` differ only in the printed *window description*, not the
-#   underlying player-choice-driven activation mechanic (confirmed against
-#   `docs/digimon-rules/keyword-semantics.md`'s `<Delay>` row, rule 16-16:
-#   "Trash this card to activate the linked effect; optional; not the turn
-#   it entered the battle area" — no distinction is drawn between Main-phase
-#   and End-of-Turn windows). Modeled as the standard `kind: delay, trigger:
-#   delayed` (`DelayTrigger::MainPhaseActivated`) per the BT21-097 precedent.
-#
-#   ActivateCoroutine: (1) `DeletePeremanentAndProcessAccordingToResult` on
-#   `card.PermanentOfThisCard()` — pays the Delay activation cost (trash this
-#   Option). (2) On success, `SelectPermanentEffect` (own field, maxCount 1,
-#   `canNoSelect: true`) over `CanSelectPermanentCondition`:
-#   `IsPermanentExistsOnOwnerBattleAreaDigimon && TopCard.EqualsCardName(
-#   "Millenniummon")` — an exact-name-match own Digimon delete, itself
-#   optional ("may"). (3) `DeletePeremanentAndProcessAccordingToResult` on the
-#   selected Millenniummon. (4) On a successful delete,
-#   `DeleteSuccessProcess`: if a `[Wicked God]`-trait Digimon card exists in
-#   hand and/or trash (`CanSelectCardCondition: IsDigimon &&
-#   EqualsTraits("Wicked God") && CanPlayAsNewPermanent`), present a
-#   from-hand/from-trash choice (or auto-route to the sole populated zone),
-#   then `SelectHandEffect`/`SelectCardEffect` (`canNoSelect: true`) over that
-#   zone, then `PlayPermanentCards(payCost: false)`.
-#
-# Clause C — `EffectTiming.SecuritySkill` —
-#   `AddActivateMainOptionSecurityEffect` — replays the OptionSkill coroutine
-#   (same shape as P-151, P-035, P-039, BT22-084).
-#
-# ─── DSL modelling ──────────────────────────────────────────────────────────
-#
-# Clause A: `select_hand { optional: true, cost: true, filter: any_of[
-#   trait_has Composite, trait_has "Wicked God"] }` — the `cost: true` flag
-#   (`G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE`, BT24-008 idiom) makes declining
-#   the prompt abort the REST of the clause body (Draw 2 AND
-#   place_self_as_delay_option), matching the official Q&A exactly.
-#   `trash_from_hand_by_index` pays the cost; `draw: { count: 2 }` is the
-#   printed `<Draw 2>`; `place_self_as_delay_option` is the printed "Then,
-#   place this card in the battle area" (P-039/P-107/BT21-097 idiom — no
-#   explicit step is strictly required because `kind: delay` below already
-#   drives `classify_option_subtype`, but the explicit step keeps the
-#   ordering visible and matches the cost-gated "then" semantics literally.)
-#
-# Clause B: `kind: delay, trigger: delayed` (standard `<Delay>`).
-#   Sub-step 1: `select_own_permanent { optional: true, filter: { kind:
-#     digimon, name_is: "Millenniummon" } }` → `delete_permanent` — mirrors
-#     DCGO's exact-name-match `CanSelectPermanentCondition` and its
-#     `canNoSelect: true` declinability (BT5-106 idiom for the
-#     optional-sacrifice shape).
-#   Sub-step 2: `select_union_zone { optional: true, zones: [hand, trash],
-#     filter: { kind: digimon, trait_has: "Wicked God" } }` →
-#     `play_union_bound_free` — the printed "may play 1 [Wicked God] trait
-#     Digimon card from your hand or trash without paying the cost"
-#     (BT17-095 / AD1-016 `select_union_zone` + `play_union_bound_free`
-#     idiom, G-DSL-UNION-PLAY-FREE CLOSED). When the deletion pick (sub-step
-#     1) is declined or has no eligible target, `delete_permanent` is a
-#     silent no-op on the unbound binding and the free-play pick still
-#     installs but with the SAME eligibility (no Millenniummon requirement
-#     gating the free-play availability in the printed text structure —
-#     matching DCGO, which only skips the free-play prompt entirely when the
-#     DELETE itself did not succeed, i.e. no Millenniummon existed or the
-#     player declined; see `active_when` note below).
-#
-#   NOTE on delete-gates-reward: DCGO's `DeleteSuccessProcess` runs ONLY
-#   `if (CardEffectCommons.DeletePeremanentAndProcessAccordingToResult(...))`
-#   succeeds — i.e. the free-play offer requires an ACTUAL deletion to have
-#   happened (declining the "may" pick, or having no Millenniummon at all,
-#   means no deletion occurred, so the reward is skipped). The DSL process
-#   body models this by binding the delete target and unconditionally
-#   emitting `play_union_bound_free` — when nothing was deleted (unbound
-#   `deleted` binding), the engine still exposes the union-zone pick per the
-#   printed "you may play" wording as a directly reachable player choice
-#   (no-approximations: the choice is exposed rather than silently
-#   suppressed). This is intentionally MORE permissive than DCGO's own
-#   internal short-circuit but never LESS faithful to the printed text: the
-#   printed effect text has no "if a Digimon was deleted" qualifier gating
-#   the "you may play" clause structurally — it reads as a single sentence
-#   "By deleting 1 of your [Millenniummon], you may play 1 [Wicked God]...".
-#   Practically the two are equivalent at the table (a player who declines
-#   the delete has already forfeited any reason to also decline the free
-#   play — PASS remains legal at both steps either way, so no legal action is
-#   gained or lost by exposing the second prompt regardless of the first).
-#
-# Clause C: `scope: inherited, when: on_security` — mirrors Clause A's
-#   process body exactly (P-151 "Activate this card's [Main] effects" idiom).
+# Clause C — EffectTiming.SecuritySkill:
+#   AddActivateMainOptionSecurityEffect — re-runs the FULL Main
+#   (EffectTiming.OptionSkill) coroutine verbatim (CardEffectCommons.cs
+#   `AddActivateMainOptionSecurityEffect` -> `ActivateMainOfOptionSide` ->
+#   `OptionMainEffect(card).Activate(...)`), i.e. the trash-cost-gated
+#   Draw 2 AND the "then place this card in the battle area" tail. Modelled
+#   below as `when: on_security` mirroring Clause A's full process (matching
+#   the BT8-097 idiom for "[Security] Activate this card's [Main] effects").
 
 card: P-193
 name: "The Wicked God Emerges!"
@@ -138,19 +105,15 @@ cost: 3
 traits: ["Wicked God"]
 
 effects:
-  # ─── Clause A: [Main] ──────────────────────────────────────────────────────
-  # "By trashing 1 card with the [Composite] or [Wicked God] trait from your
-  # hand, <Draw 2>. Then, place this card in the battle area."
+  # ─── Clause A — [Main] By trashing 1 [Composite]/[Wicked God] card, Draw 2;
+  #     then place this card in the battle area ─────────────────────────────
   #
-  # `condition: count_gte` clause-level gate (BT24-008 idiom): `select_hand`
-  # silently installs NO prompt at all when zero candidates match
-  # (`EffectContext::select_hand`'s `if valid_action_ids.is_empty() { return; }`
-  # early-out) — so `on_decline` never fires and `cost: true` alone cannot
-  # abort the tail in the zero-candidate case. Gating the whole clause on
-  # "at least 1 eligible card exists" ensures Draw 2 / place-self never run
-  # when there is nothing to trash, matching the official Q&A.
+  # `select_hand { cost: true }` — declining (or the condition gate below
+  # blocking activation when no eligible card exists) means neither the draw
+  # NOR the battle-area placement happens, matching the official Q&A.
   - when: main_from_hand
     optional: true
+    summary: "[Main] By trashing 1 [Composite]/[Wicked God] card from hand, Draw 2; then place this card in the battle area"
     condition:
       count_gte:
         filter:
@@ -160,28 +123,41 @@ effects:
             - trait_has: Composite
             - trait_has: "Wicked God"
         n: 1
-    summary: "[Main] By trashing 1 Composite/Wicked God card from hand, Draw 2; then place self in battle area"
     process:
       - select_hand:
           of: you
-          bind_as: cost_card
+          bind_as: discard
           optional: true
           cost: true
           filter:
             any_of:
               - trait_has: Composite
               - trait_has: "Wicked God"
-          prompt: "Trash 1 card with the [Composite] or [Wicked God] trait from your hand"
-      - trash_from_hand_by_index: { of: you, hand_index: cost_card }
+          prompt: "Trash 1 [Composite] or [Wicked God] trait card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
       - draw: { of: you, count: 2 }
       - place_self_as_delay_option: {}
 
-  # ─── Clause B: [End of All Turns] <Delay> ───────────────────────────────────
-  # "By deleting 1 of your [Millenniummon], you may play 1 [Wicked God]
-  # trait Digimon card from your hand or trash without paying the cost."
+  # ─── Clause B — [End of All Turns] <Delay> — By deleting 1 [Millenniummon],
+  #     you may play 1 [Wicked God] trait Digimon card from hand/trash free ──
+  #
+  # Standard printed <Delay> (trigger: delayed → DelayTrigger::MainPhaseActivated).
+  # The engine's `activate_delayed_option_main` performs the outer "by
+  # trashing this card" activation cost automatically; no explicit
+  # `activation_cost: { trash_self: true }` step is needed (matches
+  # BT13-110 / BT21-097's `trigger: delayed` idiom for "[End of Your/All
+  # Turns] <Delay>").
+  #
+  # Inner cost-gate: the Millenniummon delete pick is the printed "By
+  # deleting 1 of your [Millenniummon]" COST that gates the "you may play"
+  # reward. `select_own_permanent { optional: true, then: [...] }` with the
+  # DSL default `continue_on_decline: false` means declining (or a zero-
+  # candidate no-op) drops the ENTIRE `then:` tail — the free-play prompt is
+  # never installed unless a Millenniummon is actually deleted, matching
+  # DCGO's DeleteSuccessProcess gating.
   - kind: delay
     trigger: delayed
-    summary: "[End of All Turns]<Delay> By deleting 1 of your Millenniummon, may play 1 Wicked God card from hand/trash free"
+    summary: "[End of All Turns]<Delay> By deleting 1 [Millenniummon], you may play 1 [Wicked God] Digimon from hand/trash free"
     process:
       - select_own_permanent:
           bind_as: deleted
@@ -189,28 +165,33 @@ effects:
           filter:
             all_of:
               - kind: digimon
+              - zone: [battle_area]
               - name_is: "Millenniummon"
           prompt: "Delete 1 of your [Millenniummon]"
-      - delete_permanent: { target: deleted }
-      - select_union_zone:
-          of: you
-          zones: [hand, trash]
-          bind_as: wicked_god_pick
-          optional: true
-          filter:
-            all_of:
-              - kind: digimon
-              - trait_has: "Wicked God"
-          prompt: "You may play 1 [Wicked God] trait Digimon card from your hand or trash without paying the cost"
-      - play_union_bound_free:
-          binding: wicked_god_pick
+          then:
+            - delete_permanent: { target: deleted }
+            - select_union_zone:
+                of: you
+                zones: [hand, trash]
+                bind_as: wicked_god_pick
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Wicked God"
+                prompt: "You may play 1 [Wicked God] trait Digimon card from your hand or trash without paying the cost"
+            - play_union_bound_free:
+                binding: wicked_god_pick
 
-  # ─── Clause C: [Security] (inherited) ───────────────────────────────────────
-  # "Security Effect [Security] Activate this card's [Main] effects."
-  # Same `condition: count_gte` gate as Clause A — see that clause's comment.
-  - scope: inherited
-    when: on_security
+  # ─── Clause C — [Security] Activate this card's [Main] effects ────────────
+  #
+  # DCGO AddActivateMainOptionSecurityEffect re-runs the full Main coroutine
+  # (trash-cost-gated Draw 2 AND "then place this card in the battle area"),
+  # matching the BT8-097 idiom of mirroring the Main clause's full process
+  # under `when: on_security`.
+  - when: on_security
     optional: true
+    summary: "[Security] Activate [Main] effects: by trashing 1 [Composite]/[Wicked God] card, Draw 2; then place this card in the battle area"
     condition:
       count_gte:
         filter:
@@ -220,18 +201,17 @@ effects:
             - trait_has: Composite
             - trait_has: "Wicked God"
         n: 1
-    summary: "[Security][Inherited] Activate [Main] effects (trash Composite/Wicked God cost, Draw 2, place self)"
     process:
       - select_hand:
           of: you
-          bind_as: sec_cost_card
+          bind_as: discard
           optional: true
           cost: true
           filter:
             any_of:
               - trait_has: Composite
               - trait_has: "Wicked God"
-          prompt: "Trash 1 card with the [Composite] or [Wicked God] trait from your hand"
-      - trash_from_hand_by_index: { of: you, hand_index: sec_cost_card }
+          prompt: "Trash 1 [Composite] or [Wicked God] trait card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
       - draw: { of: you, count: 2 }
       - place_self_as_delay_option: {}

@@ -2016,3 +2016,12 @@ No existing behavioral test caught this: EX3-014's and BT12-112's DigiXros tests
 Fix: when `slot.distinct_by` is `Some(mode)`, reject candidates whose printed card number / name / level matches an already-committed material (mirror DCGO `CanTargetCondition_ByPreSelecetedList` deduping on `CardSource.CardID`); exclude conflicts in `pending_digixros_material_candidates` up front so the MASK stays faithful, not just commit-time validation.
 First test: `code/digimon-engine/tests/cards_behavioral/bt19/bt19_065.rs::bt19_065_digixros_rejects_duplicate_card_number` (currently `#[ignore = "pending: G-ENGINE-DIGIXROS-DISTINCT-BY"]`).
 Status: open.
+
+### Shared [Once Per Turn] counter across face_up+inherited self cost-reducer (`scope: both` for CostReduction)  [G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER]
+- **Severity:** 🟡 PARTIAL
+- **Discovered in:** store-champs follow-up review (2026-07-03)
+- **Card(s):** BT18-060 Vemmon, BT11-061 Vemmon — both print an inherited `[Your Turn][Once Per Turn]` "reduce by 1 when this Digimon digivolves into a [Vemmon]-text card" whose printed OPT is ONE counter for the card, while the DSL `scope: both` expansion (face_up + inherited copies) gives each copy its OWN OPT counter — a latent double-reduction when the card is both a top card and, post-digivolve in the same turn, a source. DCGO shares one hash across both registrations.
+- **What's missing:** an OPT counter keyed to the CARD (hash-shared across the expanded scope copies), not to each expanded clause instance.
+- **Suggested API shape:** `once_per_turn_key: <shared>` or make the `scope: both` expansion register one shared OPT id for both lowered copies (mirroring DCGO SetHashString sharing).
+- **Workaround:** shipped as-is with a fidelity comment in BT18-060.yaml — the double-fire window (top card reduces, then same-turn becomes a source and reduces again) is narrow but real. PARTIAL.
+- **Related:** GrantKeyword `scope: both` expansion (2026-07-02); DCGO shared-hash OPT semantics.

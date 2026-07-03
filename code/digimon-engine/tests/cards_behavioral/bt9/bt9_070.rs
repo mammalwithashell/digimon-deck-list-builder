@@ -1,451 +1,383 @@
-//! BT9-070 Gazimon (X Antibody) — Digimon, Lv.3, Purple, DP 3000, Cost 3.
+//! BT9-070 Gazimon (X Antibody) — Digimon, Lv.3, Purple, Cost 3, DP 3000.
 //! Traits: Mammal / X Antibody. Form: Rookie. Attribute: Virus.
-//! Standard digivolve (cards.json evo_costs): Lv.2 Purple / Cost 0.
 //!
-//! # Card text (card image BT9-070.webp — verbatim; matches cards.json)
+//! # Card text (card image + official Bandai DB bundle — verbatim)
 //!
 //! ```text
 //! Digivolve: 0 from [Gazimon]
 //! [When Digivolving] Trash the top 3 cards of your deck.
 //! ```
 //!
-//! No inherited effect, no security effect (per-card JSON and card image both
-//! confirm empty inherited/security text — the "Inherited Effect" frame label
-//! on the card face carries no text on this printing).
+//! No inherited/security effect, no [Once Per Turn], no [On Play].
 //!
 //! # DCGO C# reference
-//! DCGO/Assets/Scripts/CardEffect/BT9/Purple/BT9_070.cs
+//! DCGO/Assets/Scripts/CardEffect/BT9/Purple/BT9_070.cs —
+//! `AddSelfDigivolutionRequirementStaticEffect` with
+//! `PermanentCondition = TopCard.CardNames.Contains("Gazimon")` (EXACT
+//! element-membership over the base's effective name list, NOT a substring
+//! scan) at digivolutionCost 0. `OnEnterFieldAnyone`: mandatory
+//! `IAddTrashCardsFromLibraryTop(3, card.Owner, ...)` gated only on
+//! `IsExistOnBattleArea` + `LibraryCards.Count >= 1`.
 //!
-//! - `timing == EffectTiming.None`: `AddSelfDigivolutionRequirementStaticEffect`
-//!   with `PermanentCondition = targetPermanent.TopCard.CardNames.Contains("Gazimon")`,
-//!   `digivolutionCost: 0` → alt_path `{ kind: digivolve, from: { name_contains:
-//!   "Gazimon" }, cost: 0 }`.
-//! - `timing == EffectTiming.OnEnterFieldAnyone` (fires for BOTH On Play AND
-//!   When Digivolving per DCGO's `CanTriggerWhenDigivolving` gate check inside
-//!   `CanUseCondition`; `CanActivateCondition` additionally requires
-//!   `Owner.LibraryCards.Count >= 1`): mandatory
-//!   `IAddTrashCardsFromLibraryTop(3, card.Owner, ...)` → `trash_from_top: { of:
-//!   you, count: 3 }`. No selection is exposed — DCGO trashes unconditionally
-//!   off the top, no player choice.
-//! - The printed text has ONLY `[When Digivolving]` (no `[On Play]` tag), so
-//!   this spec fires solely on `when_digivolving`, matching the printed text
-//!   over DCGO's broader `OnEnterFieldAnyone` internal wiring (DCGO's
-//!   `CanUseCondition` gate — `CanTriggerWhenDigivolving` — restricts the
-//!   *effective* firing window to When Digivolving only, so the two sources
-//!   agree on final behavior).
+//! # DSL YAML
+//! code/digimon-engine/cards/bt9/BT9-070.yaml
 //!
-//! # Patterns this test covers
-//! - Alt-path: `[Digivolve] 0 from [Gazimon]` name-gated cost-0 alt-digivolve.
-//! - Simple mandatory `[When Digivolving]` mill-3 (no selection, no condition
-//!   gate beyond DCGO's library-count guard, which the DSL step already
-//!   no-ops on an empty deck).
-//! - Cost-firing event log: `trash_from_top` must emit `GameEvent::Reveal`
-//!   (`RevealZone::TrashFromDeckTop`) and `GameEvent::Trash` per card milled.
-//! - Negative: `on_play` alone (not digivolving) must NOT fire the clause.
-//! - Negative: an empty deck must not panic and must trash 0 cards (DCGO
-//!   `Owner.LibraryCards.Count >= 1` guard mirrored by trash_from_top's
-//!   natural `Ok(None) => break`).
-//! - Integrated: `Game::digivolve_from_hand` (full production digivolve
-//!   flow — memory paid, hand card removed, stacked on the base, triggers
-//!   drained) exercises the clause end-to-end, both accept and reject paths.
+//! # Faithfulness note — exact-name alt-path gate
+//! The cost-0 "[Digivolve] 0 from [Gazimon]" alt-path is authored as
+//! `from: { name_is: "Gazimon" }` (exact match), NOT `name_contains`. DCGO's
+//! `List<string>.Contains("Gazimon")` is exact element-membership, so a base
+//! whose name merely CONTAINS "Gazimon" (e.g. this very card, "Gazimon (X
+//! Antibody)") must NOT qualify for the cost-0 route. Section 3 below pins
+//! both the positive (exact "Gazimon" base) and negative (substring-only
+//! base) cases.
 
 #![allow(dead_code, unused_imports)]
 
-use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledScope, CompiledTiming,
-    CompiledTriggeredClause,
-};
+use digimon_dsl::compiled::CompiledAltPathKind;
 use digimon_engine::card_data::CardData;
-use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming, PlaySource};
-use digimon_engine::events::GameEvent;
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{CardKind, EffectTiming, PlaySource};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::TriggerSource;
 
 const CARD_ID: &str = "BT9-070";
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── helpers ──────────────────────────────────────────────────────────────
 
-/// A Lv.2 Purple "Gazimon"-named Digimon to use as the standard digivolve base.
-fn gazimon_base(id: &str) -> CardData {
-    let mut c = make_test_card_with_level(id, "Gazimon", 2);
+fn make_filler(id: &str) -> CardData {
+    make_test_card(id, id)
+}
+
+/// A Lv.2 Purple Digimon named exactly "Gazimon" — the real base card
+/// (BT3-077 in the actual pool), qualifying for BOTH the cost-0 alt-path
+/// (exact-name gate) AND the standard Lv.2 Purple / cost 0 circle.
+fn make_exact_gazimon(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Gazimon");
     c.card_kind = CardKind::Digimon;
-    c.colors = vec![CardColor::Purple];
-    c.dp = Some(1000);
+    c.level = Some(2);
+    c.dp = Some(2000);
+    c.colors = vec![digimon_engine::enums::CardColor::Purple];
     c
 }
 
-/// A Lv.2 Purple Digimon whose name does NOT contain the substring "Gazimon"
-/// — negative control for the alt-path name gate. (Careful: a name like
-/// "NotGazimon" would still `.contains("Gazimon")` — must not share the
-/// substring at all.)
-fn non_gazimon_base(id: &str) -> CardData {
-    let mut c = make_test_card_with_level(id, "Palmon", 2);
+/// A Lv.3 Red Digimon whose name CONTAINS "Gazimon" as a substring but is
+/// not exactly "Gazimon" — must be REJECTED by the exact-name alt-path gate.
+/// Deliberately off-level/off-color (Lv.3 Red, not Lv.2 Purple) so it does
+/// NOT separately qualify for the standard Lv.2 Purple / cost 0 circle —
+/// isolating the exact-name alt-path as the only route under test.
+fn make_substring_gazimon(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Gazimon (X Antibody)");
     c.card_kind = CardKind::Digimon;
-    c.colors = vec![CardColor::Purple];
-    c.dp = Some(1000);
+    c.level = Some(3);
+    c.dp = Some(3000);
+    c.colors = vec![digimon_engine::enums::CardColor::Red];
     c
 }
 
-/// Standard runner: BT9-070 in the embedded DSL pack + a Gazimon-named base
-/// in hand, ready to digivolve, with a non-trivial deck to mill from.
+/// A Lv.2 unrelated Digimon (not Purple, not named Gazimon) — must not
+/// qualify for either alt-path.
+fn make_unrelated_lvl2(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Palmon");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(2);
+    c.dp = Some(1000);
+    c.colors = vec![digimon_engine::enums::CardColor::Green];
+    c
+}
+
+fn find_hand_index(runner: &DebugRunner, player: u8, card_id: &str) -> Option<usize> {
+    let data = &runner.game.card_data;
+    runner.game.players[player as usize]
+        .hand
+        .iter()
+        .position(|c| c.card_id(data) == card_id)
+}
+
 fn base_runner() -> DebugRunner {
     DebugRunner::builder()
         .dsl_card(CARD_ID)
-        .expect("BT9-070 must be in embedded DSL pack")
-        .add_card(gazimon_base("GAZIMON-BASE"))
-        .add_card(non_gazimon_base("NOT-GAZIMON-BASE"))
-        .add_card(make_test_card("FILLER", "Filler"))
+        .expect("BT9-070 in embedded DSL pack")
+        .add_card(make_exact_gazimon("EXACT-GAZIMON"))
+        .add_card(make_substring_gazimon("SUB-GAZIMON"))
+        .add_card(make_unrelated_lvl2("UNRELATED"))
+        .add_card(make_filler("FILL"))
         .hand(0, &[CARD_ID])
-        .deck(0, &["FILLER"; 10])
-        .memory(6)
+        .deck(0, &["FILL", "FILL", "FILL", "FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(10)
         .start()
 }
 
-/// Manually enqueue+drain a triggered timing on a permanent — used for
-/// clause-firing tests that don't need the full digivolve action flow.
+// ════════════════════════════════════════════════════════════════════════════
+// Section 1 — structural
+// ════════════════════════════════════════════════════════════════════════════
+
+#[test]
+fn bt9_070_compiles_from_dsl_pack() {
+    let runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT9-070 in embedded pack")
+        .memory(0)
+        .start();
+
+    let card = runner.compiled_card(CARD_ID).expect("compiled card");
+    assert_eq!(card.level, Some(3));
+    assert_eq!(card.cost, Some(3));
+    assert_eq!(card.dp, Some(3000));
+    assert!(card.traits.iter().any(|t| t == "Mammal"));
+    assert!(card.traits.iter().any(|t| t == "X Antibody"));
+}
+
+/// The cost-0 "[Digivolve] 0 from [Gazimon]" alt-path must use an EXACT
+/// name match (`name_is == Some("Gazimon")`), not a substring match
+/// (`name_contains`). This is the reviewer-mandated fix: DCGO's
+/// `CardNames.Contains("Gazimon")` is exact element-membership, and a
+/// substring gate would illegally let a "Gazimon (X Antibody)" base (this
+/// very card) satisfy its own cost-0 alt-path.
+#[test]
+fn bt9_070_has_gazimon_name_gated_cost_0_alt_path() {
+    let runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT9-070 in embedded pack")
+        .memory(0)
+        .start();
+
+    let card = runner.compiled_card(CARD_ID).expect("compiled card");
+
+    let exact_name_cost0 = card.alt_paths.iter().any(|p| {
+        p.kind == CompiledAltPathKind::Digivolve
+            && p.cost == Some(digimon_dsl::compiled::CompiledCost::Literal(0))
+            && p
+                .from
+                .as_ref()
+                .and_then(|f| f.name_is.as_deref())
+                .map(|n| n == "Gazimon")
+                .unwrap_or(false)
+    });
+    assert!(
+        exact_name_cost0,
+        "must have a cost-0 digivolve alt-path gated on EXACT name \"Gazimon\" (name_is), not name_contains"
+    );
+
+    // Guard against regression to the substring form.
+    let uses_substring_gate = card.alt_paths.iter().any(|p| {
+        p.kind == CompiledAltPathKind::Digivolve
+            && p.cost == Some(digimon_dsl::compiled::CompiledCost::Literal(0))
+            && p
+                .from
+                .as_ref()
+                .and_then(|f| f.name_contains.as_deref())
+                .map(|n| n.eq_ignore_ascii_case("Gazimon"))
+                .unwrap_or(false)
+    });
+    assert!(
+        !uses_substring_gate,
+        "the cost-0 alt-path must NOT use name_contains (substring match) — \
+         DCGO's CardNames.Contains(\"Gazimon\") is exact-name matching"
+    );
+}
+
+/// Standard printed route (cards.json evo_costs: Lv.2 Purple / 0) must also
+/// exist as an explicit alt_path (G-DSL-FIXTURE-EVO-COSTS: compiled cards
+/// carry no printed evo_costs in fixture tests).
+#[test]
+fn bt9_070_has_standard_lvl2_purple_cost_0_alt_path() {
+    let runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT9-070 in embedded pack")
+        .memory(0)
+        .start();
+
+    let card = runner.compiled_card(CARD_ID).expect("compiled card");
+
+    let standard_route = card.alt_paths.iter().any(|p| {
+        p.kind == CompiledAltPathKind::Digivolve
+            && p.cost == Some(digimon_dsl::compiled::CompiledCost::Literal(0))
+            && p
+                .from
+                .as_ref()
+                .and_then(|f| f.level_eq)
+                .map(|l| l == 2)
+                .unwrap_or(false)
+            && p
+                .from
+                .as_ref()
+                .and_then(|f| f.color_is)
+                .is_some()
+    });
+    assert!(
+        standard_route,
+        "must have the standard Lv.2 Purple / cost 0 digivolve alt-path"
+    );
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// Section 2 — [When Digivolving] mandatory mill 3
+// ════════════════════════════════════════════════════════════════════════════
+
 fn fire(r: &mut DebugRunner, timing: EffectTiming, handle: PermanentHandle) {
     r.game
         .enqueue_triggered(timing, TriggerSource::Permanent(handle));
     r.game.drain_effect_queue();
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 1 — Structural assertions
-// ═══════════════════════════════════════════════════════════════════════════
-
+/// Digivolving into BT9-070 mills the top 3 cards of the controller's deck.
+/// No player choice is exposed (mandatory, unconditional). BT9-070 itself
+/// must be the TOP card of the permanent (the carrier of the effect) — place
+/// it stacked on top of a base, mirroring the EX3-057 precedent.
 #[test]
-fn bt9_070_compiles_from_dsl_pack_with_correct_metadata() {
-    let runner = base_runner();
-    let card = runner.compiled_card(CARD_ID).expect("BT9-070 in pack");
-    assert_eq!(card.level, Some(3));
-    assert_eq!(card.cost, Some(3));
-    assert_eq!(card.dp, Some(3000));
-    assert!(
-        card.traits.iter().any(|t| t == "Mammal"),
-        "traits must include Mammal; got {:?}",
-        card.traits
-    );
-    assert!(
-        card.traits.iter().any(|t| t == "X Antibody"),
-        "traits must include X Antibody; got {:?}",
-        card.traits
-    );
-}
-
-/// Alt-path: "Digivolve: 0 from [Gazimon]" — name-gated, cost 0.
-#[test]
-fn bt9_070_has_gazimon_name_gated_cost_0_alt_path() {
-    let runner = base_runner();
-    let card = runner.compiled_card(CARD_ID).expect("BT9-070 in pack");
-    let alt = card.alt_paths.iter().find(|p| {
-        p.kind == CompiledAltPathKind::Digivolve
-            && matches!(p.cost, Some(CompiledCost::Literal(0)))
-            && p.from
-                .as_ref()
-                .is_some_and(|f| f.name_contains.as_deref() == Some("Gazimon"))
-    });
-    assert!(
-        alt.is_some(),
-        "must have a Gazimon-name-gated Digivolve alt-path at cost 0; paths: {:?}",
-        card.alt_paths
-            .iter()
-            .map(|p| (&p.kind, &p.cost))
-            .collect::<Vec<_>>()
-    );
-}
-
-/// Exactly one triggered clause: [When Digivolving] mill 3.
-#[test]
-fn bt9_070_has_exactly_one_triggered_clause() {
-    let runner = base_runner();
-    let card = runner.compiled_card(CARD_ID).expect("BT9-070 in pack");
-
-    let triggered: Vec<&CompiledTriggeredClause> = card
-        .effects
-        .iter()
-        .filter_map(|c| match c {
-            CompiledClause::Triggered(t) => Some(t),
-            _ => None,
-        })
-        .collect();
-    assert_eq!(
-        triggered.len(),
-        1,
-        "BT9-070 has exactly one triggered clause (When Digivolving mill 3)"
-    );
-}
-
-/// The triggered clause fires ONLY on WhenDigivolving (printed text has no
-/// [On Play] tag), is mandatory (no "you may"), is own-scope (not inherited),
-/// and has no [Once Per Turn] tag.
-#[test]
-fn bt9_070_clause_is_when_digivolving_only_mandatory_own_scope() {
-    let runner = base_runner();
-    let card = runner.compiled_card(CARD_ID).expect("BT9-070 in pack");
-
-    let clause = card
-        .effects
-        .iter()
-        .filter_map(|c| match c {
-            CompiledClause::Triggered(t) => Some(t),
-            _ => None,
-        })
-        .next()
-        .expect("the triggered clause must exist");
-
-    assert_eq!(
-        clause.when,
-        vec![CompiledTiming::WhenDigivolving],
-        "clause must fire on WhenDigivolving only — printed text has no [On Play]"
-    );
-    assert!(!clause.optional, "mandatory — no 'you may' in printed text");
-    assert!(
-        !clause.once_per_turn,
-        "no [Once Per Turn] tag in printed text"
-    );
-    assert_eq!(
-        clause.scope,
-        CompiledScope::FaceUp,
-        "own-scope effect, not inherited (this printing has no inherited text)"
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 2 — Behavioral: [When Digivolving] mills the top 3 deck cards
-// ═══════════════════════════════════════════════════════════════════════════
-
-/// POSITIVE: firing WhenDigivolving mills exactly 3 cards from the top of the
-/// deck into the trash, with no player selection involved (mandatory, no
-/// choice).
-#[test]
-fn bt9_070_when_digivolving_mills_top_3_cards() {
+fn bt9_070_when_digivolving_mills_top_3() {
     let mut r = base_runner();
-    let handle = r.place_on_field(0, CARD_ID, Some(0));
+    let stack = r.place_stack(0, &["EXACT-GAZIMON", CARD_ID]);
     let deck_before = r.deck_size(0);
     let trash_before = r.trash_size(0);
 
-    fire(&mut r, EffectTiming::WhenDigivolving, handle);
+    fire(&mut r, EffectTiming::WhenDigivolving, stack);
 
     assert!(
         r.game.pending_selection.is_none(),
-        "trash_from_top exposes no player choice — mandatory, no selection"
+        "mandatory unconditional mill exposes no player choice"
     );
     assert_eq!(
         r.deck_size(0),
         deck_before - 3,
-        "deck must shrink by exactly 3"
+        "deck must shrink by 3 from the mandatory mill"
     );
     assert_eq!(
         r.trash_size(0),
         trash_before + 3,
-        "trash must grow by exactly 3"
+        "3 cards must land in the trash"
     );
 }
 
-/// NEGATIVE: firing plain OnPlay (not digivolving) must NOT trigger the
-/// clause — the printed text has no [On Play] tag.
+/// Short deck: with fewer than 3 cards remaining, the mill naturally trashes
+/// only what's available and does not panic or block resolution.
 #[test]
-fn bt9_070_on_play_alone_does_not_mill() {
-    let mut r = base_runner();
-    let handle = r.place_on_field(0, CARD_ID, Some(0));
-    let deck_before = r.deck_size(0);
-    let trash_before = r.trash_size(0);
-
-    fire(&mut r, EffectTiming::OnPlay, handle);
-
-    assert_eq!(
-        r.deck_size(0),
-        deck_before,
-        "OnPlay alone must not mill — no [On Play] tag on the printed clause"
-    );
-    assert_eq!(r.trash_size(0), trash_before, "trash must be unchanged");
-}
-
-/// NEGATIVE: an unrelated timing (WhenAttacking) must not fire the clause.
-#[test]
-fn bt9_070_when_attacking_does_not_mill() {
-    let mut r = base_runner();
-    let handle = r.place_on_field(0, CARD_ID, Some(0));
-    let deck_before = r.deck_size(0);
-
-    fire(&mut r, EffectTiming::WhenAttacking, handle);
-
-    assert_eq!(
-        r.deck_size(0),
-        deck_before,
-        "WhenAttacking must not fire the mill clause"
-    );
-    assert!(r.game.pending_selection.is_none());
-}
-
-/// EDGE: an empty deck must not panic; trash_from_top naturally stops at 0
-/// cards available (DCGO's `Owner.LibraryCards.Count >= 1` guard is mirrored
-/// by the engine's `Ok(None) => break`).
-#[test]
-fn bt9_070_when_digivolving_with_empty_deck_no_panic_mills_zero() {
+fn bt9_070_when_digivolving_mills_short_deck_without_panic() {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
-        .expect("BT9-070 must be in embedded DSL pack")
-        .add_card(gazimon_base("GAZIMON-BASE-EMPTY"))
+        .expect("BT9-070 in embedded pack")
+        .add_card(make_exact_gazimon("EXACT-GAZIMON"))
+        .add_card(make_filler("FILL"))
         .hand(0, &[CARD_ID])
-        .memory(6)
+        .deck(0, &["FILL"]) // only 1 card in deck
+        .deck(1, &["FILL"])
+        .memory(10)
         .start();
 
-    let handle = r.place_on_field(0, CARD_ID, Some(0));
-    assert_eq!(r.deck_size(0), 0, "test setup: deck starts empty");
+    let stack = r.place_stack(0, &["EXACT-GAZIMON", CARD_ID]);
     let trash_before = r.trash_size(0);
 
-    fire(&mut r, EffectTiming::WhenDigivolving, handle);
+    fire(&mut r, EffectTiming::WhenDigivolving, stack);
 
-    assert_eq!(r.deck_size(0), 0, "deck stays empty, no panic");
+    assert_eq!(r.deck_size(0), 0, "deck is exhausted, not underflowed");
+    assert_eq!(
+        r.trash_size(0),
+        trash_before + 1,
+        "only the 1 available card is milled"
+    );
+}
+
+/// Empty deck: the mill naturally no-ops without panicking.
+#[test]
+fn bt9_070_when_digivolving_mills_empty_deck_without_panic() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT9-070 in embedded pack")
+        .add_card(make_exact_gazimon("EXACT-GAZIMON"))
+        .add_card(make_filler("FILL"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &[]) // empty deck
+        .deck(1, &["FILL"])
+        .memory(10)
+        .start();
+
+    let stack = r.place_stack(0, &["EXACT-GAZIMON", CARD_ID]);
+    let trash_before = r.trash_size(0);
+
+    fire(&mut r, EffectTiming::WhenDigivolving, stack);
+
+    assert_eq!(r.deck_size(0), 0);
     assert_eq!(
         r.trash_size(0),
         trash_before,
-        "nothing to mill from an empty deck"
+        "empty deck ⇒ no cards trashed, no panic"
     );
 }
 
-/// EDGE: a deck with fewer than 3 cards mills only what's available (deck
-/// exhausts partway through, matching `trash_from_top`'s `Ok(None) => break`).
+// ════════════════════════════════════════════════════════════════════════════
+// Section 3 — exact-name digivolve gate: positive / negative
+// ════════════════════════════════════════════════════════════════════════════
+
+/// POSITIVE: a base named exactly "Gazimon" qualifies for the cost-0
+/// alt-path via `Game::digivolve_from_hand`.
 #[test]
-fn bt9_070_when_digivolving_with_two_deck_cards_mills_only_two() {
-    let mut r = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("BT9-070 must be in embedded DSL pack")
-        .add_card(gazimon_base("GAZIMON-BASE-SHORT"))
-        .add_card(make_test_card("FILLER", "Filler"))
-        .hand(0, &[CARD_ID])
-        .deck(0, &["FILLER"; 2])
-        .memory(6)
-        .start();
-
-    let handle = r.place_on_field(0, CARD_ID, Some(0));
-    let trash_before = r.trash_size(0);
-    assert_eq!(r.deck_size(0), 2);
-
-    fire(&mut r, EffectTiming::WhenDigivolving, handle);
-
-    assert_eq!(r.deck_size(0), 0, "deck exhausts entirely");
-    assert_eq!(
-        r.trash_size(0),
-        trash_before + 2,
-        "only the 2 available cards are milled, no panic on running out"
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 3 — Cost-firing event log: Reveal + Trash events for each milled card
-// ═══════════════════════════════════════════════════════════════════════════
-
-/// The mill must emit a `GameEvent::Reveal` (TrashFromDeckTop) AND a
-/// `GameEvent::Trash` event for each of the 3 cards milled — the engine's
-/// `trash_from_top` routes through the canonical trash path so downstream
-/// observers (e.g. cards that react to `OnDiscard`/trash events) see it.
-#[test]
-fn bt9_070_mill_emits_reveal_and_trash_events_for_each_card() {
+fn bt9_070_alt_path_accepts_exact_gazimon_base_at_cost_0() {
     let mut r = base_runner();
-    let handle = r.place_on_field(0, CARD_ID, Some(0));
+    let base = r.place_on_field(0, "EXACT-GAZIMON", Some(0));
+    let mem_before = r.memory();
 
-    let cp = r.event_checkpoint();
-    fire(&mut r, EffectTiming::WhenDigivolving, handle);
-
-    let events = r.events_since(cp);
-    let reveal_count = events
-        .iter()
-        .filter(|e| matches!(e, GameEvent::Reveal { .. }))
-        .count();
-    let trash_count = events
-        .iter()
-        .filter(|e| matches!(e, GameEvent::Trash { .. }))
-        .count();
-
-    assert_eq!(
-        reveal_count, 3,
-        "one Reveal event must fire per milled card (3 total)"
-    );
-    assert_eq!(
-        trash_count, 3,
-        "one Trash event must fire per milled card (3 total)"
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 4 — Integrated: real digivolve action drives the clause
-// ═══════════════════════════════════════════════════════════════════════════
-
-/// INTEGRATED (positive): play a Gazimon-named base, drive the ACTUAL
-/// digivolve action via `Game::digivolve_from_hand` (not `place_on_field`
-/// followed by a manual `fire`), and confirm the mill fires end-to-end
-/// through the full digivolution flow (memory paid, card removed from hand,
-/// stacked on the base, `WhenDigivolving` triggers drained).
-#[test]
-fn bt9_070_real_digivolve_action_mills_top_3_via_full_flow() {
-    let mut r = base_runner();
-
-    // Player 0 plays the Gazimon-named base onto the field this turn.
-    let base = r.place_on_field(0, "GAZIMON-BASE", Some(0));
-    assert_eq!(base.index, 0);
-
-    // BT9-070 sits in hand[0] (only card in hand).
-    let deck_before = r.deck_size(0);
-    let trash_before = r.trash_size(0);
-    let field_before = r.battle_area_size(0);
-
+    let hand_idx = find_hand_index(&r, 0, CARD_ID).expect("BT9-070 in hand");
+    let ok = r
+        .game
+        .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
     assert!(
-        r.game
-            .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByHand),
-        "digivolving Gazimon into Gazimon (X Antibody) at cost 0 must succeed"
+        ok,
+        "digivolve_from_hand must succeed from an exact-name \"Gazimon\" base"
     );
     r.game.drain_effect_queue();
-    let _ = r.auto_resolve();
 
     assert_eq!(
+        r.memory(),
+        mem_before,
+        "cost-0 alt-path must not spend memory"
+    );
+    assert_eq!(
         r.battle_area_size(0),
-        field_before,
-        "digivolving replaces the top card in place — field size unchanged"
-    );
-    // `Game::digivolve_from_hand` also draws 1 card as part of the standard
-    // digivolution flow (separate from this card's own effect), so the deck
-    // shrinks by 1 (draw) + 3 (mill) = 4 total.
-    assert_eq!(
-        r.deck_size(0),
-        deck_before - 4,
-        "the real digivolve action must draw 1 (standard digivolve draw) then \
-         fire [When Digivolving] and mill 3 more (draw 1 + mill 3 = -4 total)"
-    );
-    assert_eq!(
-        r.trash_size(0),
-        trash_before + 3,
-        "3 cards land in the trash from the real digivolve flow (the drawn \
-         card goes to hand, not trash)"
+        1,
+        "the base is now the BT9-070 permanent (stacked, not a new permanent)"
     );
 }
 
-/// INTEGRATED (negative): digivolving onto a base NOT named Gazimon must be
-/// illegal via the cost-0 alt-path (the name gate blocks the action). This
-/// base has no other digivolution route (no printed evo_costs on the
-/// synthetic fixture, no alt-path match), so the attempt must fail outright.
+/// NEGATIVE: a base whose name merely CONTAINS "Gazimon" as a substring
+/// (e.g. "Gazimon (X Antibody)") must NOT qualify for the cost-0 alt-path.
+/// This is the reviewer-mandated regression guard for the
+/// name_contains → name_is faithfulness fix. SUB-GAZIMON is deliberately
+/// Lv.3 Red (not Lv.2 Purple), so it also fails to qualify for the standard
+/// circle — isolating the exact-name alt-path as the only possible route,
+/// and confirming `digivolve_from_hand` is rejected entirely.
 #[test]
-fn bt9_070_alt_path_rejects_non_gazimon_base() {
+fn bt9_070_alt_path_rejects_substring_gazimon_base_at_cost_0() {
     let mut r = base_runner();
+    let base = r.place_on_field(0, "SUB-GAZIMON", Some(0));
 
-    // Player 0 plays the NON-Gazimon-named base onto the field this turn.
-    let base = r.place_on_field(0, "NOT-GAZIMON-BASE", Some(0));
-    assert_eq!(base.index, 0);
-    let deck_before = r.deck_size(0);
-
-    let succeeded =
-        r.game
-            .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByHand);
+    let hand_idx = find_hand_index(&r, 0, CARD_ID).expect("BT9-070 in hand");
+    let ok = r
+        .game
+        .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
 
     assert!(
-        !succeeded,
-        "the cost-0 alt-path must reject a base not named Gazimon"
+        !ok,
+        "a substring-only \"Gazimon (X Antibody)\" base (Lv.3 Red, no \
+         qualifying standard circle) must NOT unlock the cost-0 alt-path — \
+         name_is requires an EXACT name match, not name_contains"
     );
-    assert_eq!(
-        r.deck_size(0),
-        deck_before,
-        "a rejected digivolve must not mill any cards"
+}
+
+/// NEGATIVE (structural control): an unrelated Lv.2 non-Purple, non-Gazimon
+/// base has no qualifying route at all — confirms the test fixtures
+/// themselves are discriminating correctly.
+#[test]
+fn bt9_070_rejects_unrelated_base_entirely() {
+    let mut r = base_runner();
+    let base = r.place_on_field(0, "UNRELATED", Some(0));
+
+    let hand_idx = find_hand_index(&r, 0, CARD_ID).expect("BT9-070 in hand");
+    let ok = r
+        .game
+        .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
+    assert!(
+        !ok,
+        "an unrelated Lv.2 non-Purple, non-Gazimon base must not permit digivolving BT9-070 onto it"
     );
 }

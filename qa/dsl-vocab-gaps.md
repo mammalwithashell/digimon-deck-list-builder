@@ -3885,3 +3885,6 @@ reason) so the authoring-parity guard stays green while documenting the omission
   (`controller_has_named`, `opponent_has_dp_gte`) and a colour-count predicate (`color_count_lt`).
 - **First test:** BT23-013 in hand over a Lv.5 base while the opponent has a 10000-DP Digimon → assert the
   cost-5 [Huckmon] route is offered; with no such opponent Digimon → not offered.
+
+## Binding-scoped exact-name predicate (`binding_card_name_is`)  [G-DSL-BINDING-CARD-NAME-EQUALS]  — OPEN 2026-07-03
+Consumer: BT21-087 Zenith ([On Play] reveal 3, choose 1 [Vemmon]-text card: if its name IS [Vemmon] → play-free-or-add choice, else add to hand). The `if:` branch needs to test the BOUND revealed card's exact printed name; the predicate surface has `binding_card_kind` (kind) and (filed 2026-07-02) `binding_card_color` (color) but no name analogue, so BT21-087 approximates via a nested re-select shape documented in its YAML header. Suggested: `binding_card_name_is: { binding: <name>, name: "<literal>" }` — sibling of `binding_card_kind`, resolving the named card binding and comparing the effective (synth-identity-aware) card name. Workaround shipped in BT21-087 is faithful for its single-pick flow but repeats per card; the leaf amortizes.

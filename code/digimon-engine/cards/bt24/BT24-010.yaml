@@ -1,0 +1,139 @@
+# BT24-010 Greymon — Digimon, Lv.4, Red/Black, DP 5000, Cost 5.
+# Traits: Dinosaur, Titan, TS. Attribute: Virus.
+#
+# Printed card text (official Bandai DB bundle — data/card_bundles/BT24-010.md
+# — outranks cards.json for digivolve circles per CLAUDE.md source-priority):
+#
+#   <Blocker> (This Digimon can block in the blocker timing.)
+#   [On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon. (Trash the
+#     top card. You can't trash past level 3 cards.)
+#
+# Inherited Effect:
+#
+#   <Raid> (When this Digimon attacks, you may switch the target of attack to
+#     1 of your opponent's unsuspended Digimon with the highest DP.)
+#
+# Digivolution requirements (official Bandai DB — AUTHORITATIVE):
+#   - Standard: Red Lv.3 / cost 3   (cards.json evo_costs carries this one —
+#     auto-lowered, no explicit alt_path needed)
+#   - Standard: Black Lv.3 / cost 3 (DROPPED by cards.json's lossy
+#     multi-colour evo_costs ingest — the classic drop CLAUDE.md warns about.
+#     Authored explicitly below, matching the BT24-014 fix precedent.)
+#   - Alt-digivolve (xros_req): "[Digivolve] Lv.3 w/[Agumon] in name or
+#     w/[TS] trait: Cost 2"
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT24/Red/BT24_010.cs
+#
+# DCGO cross-check:
+#   - Alternative Digivolution Condition (EffectTiming.None):
+#     AddSelfDigivolutionRequirementStaticEffect(permanentCondition:
+#       IsLevel3 && (ContainsCardName("Agumon") || HasTSTraits),
+#       digivolutionCost: 2, ignoreDigivolutionRequirement: false).
+#   - Blocker (EffectTiming.None): BlockerSelfStaticEffect(isInheritedEffect:
+#     false).
+#   - On Deletion (EffectTiming.OnDestroyedAnyone): ActivateClass with
+#     SetUpActivateClass(CanActivateCondition, ActivateCoroutine, -1, false,
+#     ...) — maxCountPerTurn -1 (NO OPT lockout), isOptional false
+#     (MANDATORY, canNoSelect: false on the SelectPermanentEffect).
+#     CanActivateCondition = CanActivateOnDeletion(...) &&
+#     HasMatchConditionPermanent(SelectableOpponentsDigimon) — gates on at
+#     least 1 opponent Digimon existing on the battle area. Then
+#     IDegeneration(permanent, 1, activateClass) = De-Digivolve 1.
+#   - Raid (EffectTiming.OnAllyAttack): RaidSelfEffect(isInheritedEffect:
+#     true) — INHERITED ONLY. No own-face Raid grant on this card (unlike
+#     BT24-011/BT24-017 which grant both own + inherited Raid).
+#
+# Faithfulness notes:
+#   - [On Deletion] is modelled as `when: on_deletion` with NO `optional:
+#     true` (DCGO isOptional: false) and NO `once_per_turn` (DCGO
+#     maxCountPerTurn: -1). The single `select_opponent_permanent` step IS
+#     the entire clause body — there is no sibling step after it that would
+#     be silently dropped if the select short-circuits on zero opponent
+#     Digimon (contrast the EX7-073/BT21-087-class bug where a mandatory
+#     tail follows a select that can no-op). Zero opponent Digimon → no
+#     selection installs → clause naturally no-ops, matching DCGO's
+#     HasMatchConditionPermanent outer gate.
+#   - `de_digivolve: { amount: 1, stop_at_level: 3 }` — De-Digivolve 1 with
+#     the "can't trash past level 3" floor is the standard keyword semantics
+#     (docs/digimon-rules/keyword-semantics.md: "<De-Digivolve x>" —
+#     Mandatory, targets opp Digimon, trash up to x from top, stops at
+#     Lv.3). 41 other cards in the pool already use `stop_at_level: 3` for
+#     this exact keyword reminder text (e.g. AD1-009, BT19-026, BT19-073).
+#   - The alt-digivolve `from` uses `all_of: [level_eq: 3, any_of:
+#     [name_contains: Agumon, trait_has: TS]]` — a genuine independent
+#     digivolve circle (DCGO ignoreDigivolutionRequirement: false), so
+#     `ignore_requirements` is omitted (defaults false), matching the
+#     BT24-011/BT24-034 sibling convention for standard "OR" alt-digivolve
+#     circles in this same set.
+
+card: BT24-010
+name: Greymon
+kind: digimon
+level: 4
+color: [red, black]
+cost: 5
+dp: 5000
+traits: [Dinosaur, Titan, TS]
+attribute: Virus
+
+alt_paths:
+  # Standard Black Lv.3 / cost 3 circle — cards.json evo_costs only carries
+  # the Red Lv.3/cost3 circle (auto-lowered, no explicit alt_path needed for
+  # it); the official Bandai DB bundle confirms BOTH Red and Black Lv.3/cost3
+  # circles are printed. This compensates for the dropped Black circle.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+
+  # Alt-digivolve: Lv.3 w/[Agumon] in name OR w/[TS] trait — cost 2.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - name_contains: "Agumon"
+            - trait_has: TS
+    cost: 2
+
+effects:
+  # ─── Declarative keywords ────────────────────────────────────────────────
+  #
+  # <Blocker> — own (face-up) only. DCGO: BlockerSelfStaticEffect on
+  # EffectTiming.None, isInheritedEffect: false.
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # <Raid> — INHERITED only (no own-face grant on this card). DCGO:
+  # RaidSelfEffect on OnAllyAttack, isInheritedEffect: true.
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Raid
+    summary: "Inherited <Raid>"
+
+  # ─── [On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon ──────────
+  #
+  # Mandatory (not optional), no OPT lockout. Fires when THIS Greymon is
+  # deleted, from any position (own or buried digivolution source — DCGO
+  # gates via CanTriggerOnDeletion, which fires for the carrier regardless
+  # of face-up/inherited position for On Deletion clauses authored without
+  # an explicit `scope: inherited`; this is the standard own-scope On
+  # Deletion idiom used across the pool, e.g. BT19-012/BT19-026/BT13-093).
+  #
+  # `select_opponent_permanent` naturally no-ops (installs no selection)
+  # when the opponent has zero Digimon — this IS the entire clause body, so
+  # there is no dropped mandatory tail (unlike the EX7-073/BT21-087-class
+  # bug where a sibling step after a short-circuiting select is silently
+  # skipped).
+  - when: on_deletion
+    summary: "[On Deletion] <De-Digivolve 1> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Select 1 of your opponent's Digimon to De-Digivolve 1"
+      - de_digivolve:
+          target: victim
+          amount: 1
+          stop_at_level: 3

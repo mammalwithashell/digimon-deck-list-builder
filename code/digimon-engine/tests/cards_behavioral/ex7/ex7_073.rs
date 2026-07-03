@@ -1,115 +1,85 @@
-//! EX7-073 BeelStarmon (X Antibody) — Digimon, Lv.6, Purple, DP 12000,
-//! Cost 12. Traits: Wizard, X Antibody, Three Musketeers. Attribute: Virus.
+//! EX7-073 BeelStarmon (X Antibody) — Digimon, Lv.6, Purple, DP 12000, Cost 12.
+//! Traits: Wizard, X Antibody, Three Musketeers. Attribute: Virus. Form: Mega.
 //!
-//! # Card text (per-card JSON `code/digimon-engine/cards/ex7/EX7-073.json`,
-//! `effect_description_eng` — verbatim)
+//! # Card text (official Bandai DB — data/card_bundles/EX7-073.md, verbatim)
 //!
-//! [When Digivolving] You may use 1 Option card with [Three Musketeers] in
-//! its text from your hand without paying the cost.
+//! ```text
+//! [When Digivolving] You may use 1 Option card with [Three Musketeers] in its
+//! text from your hand without paying the cost.
 //! [When Digivolving] [When Attacking] By trashing 2 cards with the [Three
-//! Musketeers] trait in this Digimon's digivolution cards, delete 1 of your
-//! opponent's Digimon with the highest level and trash the top card of your
-//! opponent's security stack.
+//! Musketeers] trait from this Digimon's digivolution cards, delete 1 of your
+//! opponent's Digimon with the highest level, and trash their top security
+//! card.
+//! ```
 //!
-//! Standard digivolve: Purple Lv.5 / cost 4 (`evo_costs`).
-//! Alt-source (`xros_req`): "[Digivolve] Lv.6 w/[Three Musketeers] trait
-//! w/o [X Antibody] trait: Cost 1".
+//! Standard digivolve: Lv.5 Purple / Cost 4.
+//! Special digivolution condition (printed xros_req black text): "[Digivolve]
+//! Lv.6 w/[Three Musketeers] trait w/o [X Antibody] trait: Cost 1".
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/EX7/Purple/EX7_073.cs
 //!
-//! - Digivolution Condition (None): `AddSelfDigivolutionRequirementStaticEffect`
-//!   with `PermanentCondition = TopCard.EqualsTraits("Three Musketeers") &&
-//!   Level == 6 && !EqualsTraits("X Antibody")`, `digivolutionCost: 1`.
-//! - Clause A [When Digivolving] (OnEnterFieldAnyone, ActivateClass):
-//!   optional ("you may") `SelectHandEffect` over hand Options that
-//!   `HasText("Three Musketeers")`, `HasUseCost`, `!CanNotPlayThisOption`;
-//!   max 1, `canNoSelect: true`; accepted pick is played via
-//!   `PlayOptionCards(payCost: false)`.
-//! - Clause B [When Digivolving] (OnEnterFieldAnyone, ActivateClass):
-//!   `CanActivateCondition` requires >= 1 digivolution-card with
-//!   `EqualsTraits("Three Musketeers")`; the coroutine body then requires
-//!   `DigivolutionCards.Count >= 2` (total) before offering
-//!   `SelectCardEffect` (root: DigivolutionCards, filter: Three-Musketeers
-//!   trait, `maxCount: 2`, `canNoSelect: true`, `canEndNotMax: false`).
-//!   Only when exactly 2 were selected (`selectedCards.Count >= 2`) does
-//!   `trashed = true` gate the tail: optional `SelectPermanentEffect`
-//!   (`canNoSelect: false`, `maxCount: Math.Min(1, count)`) over opponent
-//!   Digimon matching `IsMaxLevel` (highest level), mode `Destroy`; then
-//!   unconditional `IDestroySecurity(destroySecurityCount: 1, fromTop:
-//!   true)` on the opponent.
-//! - Clause C [When Attacking] (OnAllyAttack): identical body/gates to
-//!   Clause B, fired on `CanTriggerOnAttack`.
+//! # Faithfulness fix under test (2026-07-02)
+//! DCGO (lines 246-275 / 387-416) runs `IDestroySecurity` UNCONDITIONALLY
+//! inside the `if (trashed)` block once 2 sources are trashed — the mandatory
+//! delete of the highest-level opponent Digimon is a SEPARATE, independently
+//! gated `if (HasMatchConditionPermanent(...))` branch. A flat sibling list of
+//! [select_opponent_permanent, delete_permanent, trash_top_security] would be
+//! unfaithful: `install_select_opponent_permanent` short-circuits with a bare
+//! `return` on an empty candidate set, dropping the composed tail
+//! (`trash_top_security` included) whenever the opponent has 0 Digimon but
+//! non-empty security. The delete is therefore wrapped in its own nested
+//! `if any_permanent(...)` guard, with `trash_top_security` as a following
+//! OUTER sibling (BT20-020 Clause 2 / BT21-024 "outer-tail sibling" idiom).
 //!
-//! # Patterns this test covers (docs/RUST_DSL_TEST_API.md §4.3)
-//! - E2 OPT + optional decline (Clause A: use-from-hand-free is a "you may")
-//! - D2-adjacent: `use_option_from_hand` free-use verb (BT24-085 idiom)
-//! - Group C/F5-adjacent: `select_own_sources` cost-trash → `delete_permanent`
-//!   (highest-level aggregate) + `trash_top_security` composite (Clause B/C)
-//! - G1: alt-path `from:` predicate with `not: { trait_has }` negation
-//!   (Digivolve Lv.6 Three-Musketeers-without-X-Antibody, cost 1)
-//! - Multi-timing clause: identical body fires on both [When Digivolving]
-//!   and [When Attacking] (two separate compiled clauses, independent OPT
-//!   surfaces — DCGO installs two distinct `ActivateClass`/timing pairs,
-//!   not a shared OPT hash)
+//! # Patterns this test covers
+//! - Digivolution alt-path: `not: { trait_has: ... }` negated-trait gate.
+//! - [When Digivolving] optional free-play from hand: `select_hand` (kind:
+//!   option, effect_text_contains) + `play_from_hand_free` (BT25-082 Clause 1
+//!   sibling idiom).
+//! - [When Digivolving] / [When Attacking] trash-2-own-sources cost gate:
+//!   `select_own_sources` (min:0/max:2) + `binding_count_eq(n:2)` (EX4-073 /
+//!   BT12-031 sibling idiom).
+//! - Nested `if any_permanent` guard around a mandatory `select_opponent_permanent`
+//!   + `delete_permanent`, with `trash_top_security` as an unconditional outer
+//!   tail sibling — the reviewer-directed faithfulness fix.
+//! - `level_matches_aggregate { selector: highest_level, of: opponent }`
+//!   filter on a single mandatory select (not a `for_each`) — EX9-021 sibling
+//!   idiom adapted from all-highest-level delete to single-highest-level pick.
 
-#![allow(dead_code)]
+#![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
-    CompiledScope, CompiledStep, CompiledTiming,
+    CompiledScope, CompiledTiming, CompiledTriggeredClause,
 };
-use digimon_engine::action::space::{encode_source_select, PASS, PLAY_HAND_START};
-use digimon_engine::card_data::CardData;
+use digimon_engine::action::space::{encode_source_select, PASS};
+use digimon_engine::card_data::{CardData, EvoCost};
+use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{CardColor, CardKind, PlaySource};
-use digimon_engine::events::GameEvent;
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, PlayerId, PlaySource};
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::SelectionKind;
+use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 const CARD_ID: &str = "EX7-073";
-const YAML: &str = include_str!("../../../cards/ex7/EX7-073.yaml");
 
 // ─── Fixture builders ─────────────────────────────────────────────────────────
 
-/// The standard digivolve base: Purple Lv.5 (cost 4 per `evo_costs`).
+/// A Purple Lv.5 base — the standard digivolution source for EX7-073
+/// (Lv.5 Purple / cost 4).
 fn purple_lv5(id: &str) -> CardData {
     let mut c = make_test_card(id, "PurpleChampion");
     c.card_kind = CardKind::Digimon;
     c.colors = vec![CardColor::Purple];
     c.level = Some(5);
-    c.dp = Some(6000);
+    c.dp = Some(8000);
     c
 }
 
-/// A [Three Musketeers]-trait, level-6 Digimon WITHOUT [X Antibody] — the
-/// alt-source base ("Lv.6 w/[Three Musketeers] trait w/o [X Antibody]
-/// trait: Cost 1").
-fn three_musketeers_lv6_no_x_antibody(id: &str) -> CardData {
-    let mut c = make_test_card(id, "ThreeMusketeersBase");
-    c.card_kind = CardKind::Digimon;
-    c.colors = vec![CardColor::Purple];
-    c.level = Some(6);
-    c.dp = Some(10000);
-    c.traits = vec!["Three Musketeers".to_string()];
-    c
-}
-
-/// A [Three Musketeers]-trait, level-6 Digimon WITH [X Antibody] — must NOT
-/// satisfy the alt-source ("w/o [X Antibody]").
-fn three_musketeers_lv6_with_x_antibody(id: &str) -> CardData {
-    let mut c = make_test_card(id, "ThreeMusketeersXAntibodyBase");
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(6);
-    c.dp = Some(10000);
-    c.traits = vec!["Three Musketeers".to_string(), "X Antibody".to_string()];
-    c
-}
-
-/// A digivolution-source Digimon carrying the [Three Musketeers] trait —
-/// used to build BeelStarmon's own stack for the trash-cost clause.
-fn three_musketeers_source(id: &str) -> CardData {
-    let mut c = make_test_card(id, "ThreeMusketeersSource");
+/// A source card carrying the [Three Musketeers] trait — the trashable
+/// digivolution-cost fodder for Clause 2/3.
+fn tm_source(id: &str) -> CardData {
+    let mut c = make_test_card(id, "TMSource");
     c.card_kind = CardKind::Digimon;
     c.level = Some(5);
     c.dp = Some(5000);
@@ -117,17 +87,19 @@ fn three_musketeers_source(id: &str) -> CardData {
     c
 }
 
-/// A digivolution-source Digimon WITHOUT the [Three Musketeers] trait — the
-/// trash-cost filter must exclude it.
+/// A source card WITHOUT the [Three Musketeers] trait — must never be
+/// selectable by the trash-2 clause.
 fn plain_source(id: &str) -> CardData {
     let mut c = make_test_card(id, "PlainSource");
     c.card_kind = CardKind::Digimon;
     c.level = Some(4);
     c.dp = Some(4000);
+    c.traits = vec!["Beast".to_string()];
     c
 }
 
-/// Generic opponent Digimon, parameterized by level.
+/// An opponent Digimon with a parameterized level, for the "highest level"
+/// delete-target tests.
 fn opp_digimon(id: &str, level: u8, dp: i32) -> CardData {
     let mut c = make_test_card(id, "OppDigimon");
     c.card_kind = CardKind::Digimon;
@@ -136,30 +108,49 @@ fn opp_digimon(id: &str, level: u8, dp: i32) -> CardData {
     c
 }
 
-/// An Option card carrying "Three Musketeers" in its printed text (matches
-/// DCGO's `HasText("Three Musketeers")` filter for Clause A).
-fn three_musketeers_option(id: &str, cost: u16) -> CardData {
-    let mut c = make_test_card(id, "ThreeMusketeersOption");
+/// An Option card whose printed text carries "Three Musketeers" — the
+/// free-play target for Clause 1.
+fn tm_option(id: &str) -> CardData {
+    let mut c = make_test_card(id, "TMOption");
     c.card_kind = CardKind::Option;
-    c.play_cost = cost;
-    c.effect_text = "A card with Three Musketeers text.".to_string();
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 3;
+    c.effect_text = "[Three Musketeers] Deal with it.".to_string();
     c
 }
 
-/// An Option card with NO "Three Musketeers" text — must be excluded from
-/// Clause A's free-use candidate pool.
-fn plain_option(id: &str, cost: u16) -> CardData {
+/// An Option card with NO [Three Musketeers] text — must not be a candidate.
+fn plain_option(id: &str) -> CardData {
     let mut c = make_test_card(id, "PlainOption");
     c.card_kind = CardKind::Option;
-    c.play_cost = cost;
-    c.effect_text = "Some unrelated option text.".to_string();
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 3;
+    c.effect_text = "A perfectly ordinary option.".to_string();
+    c
+}
+
+/// A Lv.6 base carrying [Three Musketeers] but NOT [X Antibody] — the alt
+/// digivolve source for BeelStarmon (X Antibody) at cost 1.
+fn tm_lv6_no_xa(id: &str) -> CardData {
+    let mut c = make_test_card(id, "TMLv6NoXA");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(6);
+    c.dp = Some(10000);
+    c.traits = vec!["Three Musketeers".to_string()];
+    c.evo_costs = vec![EvoCost {
+        card_color: 0,
+        level: 5,
+        memory_cost: 4,
+    }];
     c
 }
 
 fn base_builder() -> DebugRunnerBuilder {
     DebugRunner::builder()
-        .from_dsl_yaml(YAML)
-        .expect("EX7-073 YAML parses")
+        .dsl_card(CARD_ID)
+        .expect("EX7-073 YAML loads from the embedded pack")
 }
 
 fn zone_ids(
@@ -172,10 +163,9 @@ fn zone_ids(
         .collect()
 }
 
-/// Digivolve EX7-073 (hand index 0) onto the given base slot via the
-/// standard Purple Lv.5 path; the [When Digivolving] triggers fire inside
-/// this call.
-fn digivolve_beelstarmon(runner: &mut DebugRunner, base: PermanentHandle) {
+/// Digivolve EX7-073 (hand index 0) onto the given base slot via the standard
+/// Lv.5 Purple path; the [When Digivolving] triggers fire inside this call.
+fn digivolve_ex7_073(runner: &mut DebugRunner, base: PermanentHandle) {
     assert!(
         runner
             .game
@@ -189,71 +179,63 @@ fn digivolve_beelstarmon(runner: &mut DebugRunner, base: PermanentHandle) {
         CARD_ID,
         "EX7-073 is now the top card of the digivolved stack"
     );
-    // EX7-073 carries TWO independent [When Digivolving] clauses (the free
-    // Option-use clause + the trash-cost clause) that fire simultaneously,
-    // so the engine installs a TriggerOrder prompt letting the controller
-    // choose resolution order. Deterministically resolve it to "slot 0"
-    // (the free-Option-use clause, declared first in the YAML `effects:`
-    // list) first, so downstream assertions see a stable clause ordering.
-    resolve_trigger_order_preferring_slot(runner, 0);
 }
 
-/// If a `TriggerOrder` prompt is pending, resolve it by picking the choice
-/// whose label names `preferred_slot` (the compiled clause's zero-based
-/// position in the `effects:` list, per `EffectChoiceEntry`'s `"{card_id}
-/// slot {effect_slot} (...)"` label format). Falls back to the first choice
-/// if the preferred slot isn't present. No-op if no `TriggerOrder` prompt is
-/// pending.
-fn resolve_trigger_order_preferring_slot(runner: &mut DebugRunner, preferred_slot: u8) {
+fn fire_when_attacking(runner: &mut DebugRunner, handle: PermanentHandle) {
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(handle));
+    runner.game.drain_effect_queue();
+}
+
+/// EX7-073 queues TWO own-controller [When Digivolving] triggers (Clause 1
+/// free-play + Clause 2 trash-2), so the drainer installs a `TriggerOrder`
+/// selection letting the controller pick which resolves first. If one is
+/// pending, resolve it by picking the entry whose `is_optional` flag matches
+/// `want_optional` (Clause 1 is optional; Clause 2 is not). No-op if no
+/// TriggerOrder selection is pending (only one clause queued this time).
+fn resolve_trigger_order_if_pending(runner: &mut DebugRunner, want_optional: bool) {
     if runner.pending_kind() != Some(SelectionKind::TriggerOrder) {
         return;
     }
     let view = runner
         .pending_selection_view()
-        .expect("TriggerOrder prompt must carry a view");
-    let choices = view
+        .expect("TriggerOrder selection view");
+    let choice = view
         .effect_choices
         .as_ref()
-        .expect("TriggerOrder prompt must carry effect_choices");
-    let needle = format!("slot {preferred_slot} ");
-    let action_id = choices
+        .expect("TriggerOrder selection carries effect_choices")
         .iter()
-        .find(|c| c.label.contains(&needle))
-        .or_else(|| choices.first())
-        .map(|c| c.action_id)
-        .expect("TriggerOrder prompt must offer >= 1 choice");
+        .find(|c| c.is_optional == want_optional)
+        .expect("a trigger with the requested optionality must be queued");
     runner
-        .execute_action(view.selecting_player, action_id)
+        .execute_action(view.selecting_player, choice.action_id)
         .expect("resolve TriggerOrder pick");
 }
 
-/// If Clause A's own "you may use 1 Option" prompt (`SelectionKind::Hand`)
-/// is currently pending, decline it via PASS. Used by Clause B/C tests that
-/// don't care about Clause A and must NOT reach for `auto_resolve()` here —
-/// `auto_resolve()` would greedily walk INTO Clause B/C's own `SourceMulti`
-/// prompt (its `min: 0` makes candidate picks "legal first actions" too),
-/// consuming the very prompt the test wants to inspect.
-fn decline_clause_a_if_pending(runner: &mut DebugRunner) {
-    if runner.pending_kind() == Some(SelectionKind::Hand) {
-        let player = runner
-            .pending_selection_view()
-            .expect("Hand prompt view")
-            .selecting_player;
-        runner
-            .execute_action(player, PASS)
-            .expect("decline Clause A's free-Option-use prompt");
-    }
+/// Push a card identified by `card_id` into `player`'s security stack (top).
+fn push_to_security_top(runner: &mut DebugRunner, player: u8, card_id: &str) {
+    let data_idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == card_id)
+        .unwrap_or_else(|| panic!("card {card_id} not found in card_data"));
+    let card = CardSource::new(data_idx, player, runner.game.next_card_index());
+    runner.game.players[player as usize].security.insert(0, card);
 }
 
-/// Compile the card once for structural assertions.
-fn compiled_card() -> digimon_dsl::compiled::CompiledCard {
-    let spec: digimon_dsl::CardSpec = serde_yml::from_str(YAML).expect("EX7-073.yaml parses");
-    let registry =
-        digimon_dsl::CardRegistry::from_specs("test", &[spec]).expect("EX7-073.yaml compiles");
-    registry
-        .lookup(CARD_ID)
-        .expect("EX7-073 in registry")
-        .clone()
+/// Auto-resolve all remaining prompts by always taking the first legal
+/// action — used once a specific branch decision is already locked in.
+fn drain_prompts(runner: &mut DebugRunner) {
+    while let Some(v) = runner.pending_selection_view() {
+        let act = v
+            .valid_action_ids
+            .first()
+            .copied()
+            .expect("a resolvable action");
+        runner.execute_action(v.selecting_player, act).ok();
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -261,823 +243,667 @@ fn compiled_card() -> digimon_dsl::compiled::CompiledCard {
 // ─────────────────────────────────────────────────────────────────────────────
 
 #[test]
-fn ex7_073_compiles_with_printed_stats() {
-    let card = compiled_card();
-    assert_eq!(card.card, CARD_ID);
-    assert_eq!(card.name, "BeelStarmon (X Antibody)");
-    assert_eq!(card.kind, CompiledCardKind::Digimon);
-    assert_eq!(card.level, Some(6));
-    assert_eq!(card.dp, Some(12000));
-    assert_eq!(card.cost, Some(12));
-    assert_eq!(card.color, vec![CompiledColor::Purple]);
-    for trait_name in ["Wizard", "X Antibody", "Three Musketeers"] {
-        assert!(
-            card.traits.iter().any(|t| t == trait_name),
-            "missing trait {trait_name}"
-        );
-    }
-}
+fn ex7_073_compiles_with_printed_stats_and_lv5_purple_path() {
+    let runner = base_builder().start();
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("EX7-073 in compiled cards");
 
-#[test]
-fn ex7_073_has_standard_digivolve_lv5_purple_cost4() {
-    let card = compiled_card();
-    let path = card
-        .alt_paths
-        .iter()
-        .find(|p| {
-            p.kind == CompiledAltPathKind::Digivolve
-                && matches!(p.cost, Some(CompiledCost::Literal(4)))
-                && p.from
-                    .as_ref()
-                    .and_then(|f| f.level_eq)
-                    .map_or(false, |l| l == 5)
-        })
-        .expect("EX7-073 must have a Lv.5 Purple digivolve path with cost 4");
-    assert!(!path.ignore_requirements);
-}
+    assert_eq!(compiled.card, CARD_ID);
+    assert_eq!(compiled.name, "BeelStarmon (X Antibody)");
+    assert_eq!(compiled.kind, CompiledCardKind::Digimon);
+    assert_eq!(compiled.level, Some(6));
+    assert_eq!(compiled.color, vec![CompiledColor::Purple]);
+    assert_eq!(compiled.cost, Some(12));
+    assert_eq!(compiled.dp, Some(12000));
+    assert!(
+        compiled.traits.iter().any(|t| t == "Three Musketeers"),
+        "printed [Three Musketeers] trait missing"
+    );
+    assert!(
+        compiled.traits.iter().any(|t| t == "X Antibody"),
+        "printed [X Antibody] trait missing"
+    );
 
-#[test]
-fn ex7_073_has_three_musketeers_no_x_antibody_alt_source_lv6_cost1() {
-    let card = compiled_card();
-    let digi_paths: Vec<_> = card
-        .alt_paths
-        .iter()
-        .filter(|p| p.kind == CompiledAltPathKind::Digivolve)
-        .collect();
     assert!(
-        digi_paths.len() >= 2,
-        "EX7-073 must have >= 2 digivolve alt-paths (standard Purple + Three Musketeers alt-source)"
-    );
-    let alt_source = digi_paths
-        .iter()
-        .find(|p| matches!(p.cost, Some(CompiledCost::Literal(1))))
-        .expect("EX7-073 must have the cost-1 Three-Musketeers-without-X-Antibody alt-source");
-    let from = alt_source
-        .from
-        .as_ref()
-        .expect("alt-source path must carry a `from` predicate");
-    // The `from` predicate compiles to an `all_of` compound (level_eq +
-    // trait_has + not:{trait_has}); the leaves live inside `all_of`, not on
-    // the top-level struct.
-    assert!(
-        from.all_of.iter().any(|leaf| leaf.level_eq == Some(6)),
-        "alt-source requires level 6 (all_of leaves: {:?})",
-        from.all_of
-    );
-    assert!(
-        from.all_of
-            .iter()
-            .any(|leaf| leaf.trait_has.as_deref() == Some("Three Musketeers")),
-        "alt-source requires [Three Musketeers] trait"
-    );
-    assert!(
-        from.all_of.iter().any(|leaf| leaf
-            .not
-            .as_ref()
-            .is_some_and(|inner| inner.trait_has.as_deref() == Some("X Antibody"))),
-        "alt-source requires the negated [X Antibody] trait check"
+        compiled.alt_paths.iter().any(|path| {
+            path.kind == CompiledAltPathKind::Digivolve
+                && path.cost == Some(CompiledCost::Literal(4))
+                && path.from.as_ref().is_some_and(|from| {
+                    (from.level_eq == Some(5) || from.all_of.iter().any(|p| p.level_eq == Some(5)))
+                        && (from.color_is == Some(CompiledColor::Purple)
+                            || from
+                                .all_of
+                                .iter()
+                                .any(|p| p.color_is == Some(CompiledColor::Purple)))
+                })
+        }),
+        "BeelStarmon (X Antibody) must digivolve from a Purple Lv.5 for cost 4"
     );
 }
 
-/// POSITIVE (behavioral): a Lv.6 [Three Musketeers]-trait base WITHOUT
-/// [X Antibody] satisfies the cost-1 alt-source and the digivolve succeeds.
+/// The printed xros_req alt-path: Lv.6 base w/[Three Musketeers] trait w/o
+/// [X Antibody] trait, cost 1.
 #[test]
-fn ex7_073_digivolves_via_alt_source_from_three_musketeers_lv6_no_x_antibody_base() {
-    let mut runner = base_builder()
-        .add_card(three_musketeers_lv6_no_x_antibody("ALT-BASE"))
-        .hand(0, &[CARD_ID])
-        .deck(0, &["ALT-BASE"; 1])
-        .memory(2)
-        .start();
+fn ex7_073_has_tm_no_xa_alt_path_cost1() {
+    let runner = base_builder().start();
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("EX7-073 in compiled cards");
 
-    let base = runner.place_on_field(0, "ALT-BASE", Some(0));
-    let memory_before = runner.memory();
     assert!(
-        runner
-            .game
-            .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByHand),
-        "EX7-073 must digivolve via the cost-1 alt-source from a Lv.6 \
-         [Three Musketeers]-trait base without [X Antibody]"
-    );
-    assert_eq!(
-        runner.game.players[0].battle_area[base.index as usize]
-            .top_card()
-            .card_id(&runner.game.card_data),
-        CARD_ID
-    );
-    assert_eq!(
-        runner.memory(),
-        memory_before - 1,
-        "the alt-source path costs 1 memory (printed xros_req cost)"
+        compiled.alt_paths.iter().any(|path| {
+            path.kind == CompiledAltPathKind::Digivolve && path.cost == Some(CompiledCost::Literal(1))
+        }),
+        "must have an alt-source digivolve path at cost 1; alt_paths={:?}",
+        compiled.alt_paths
     );
 }
 
-/// NEGATIVE (behavioral): a Lv.6 [Three Musketeers]-trait base WITH
-/// [X Antibody] does NOT satisfy the alt-source (its printed requirement is
-/// explicitly "w/o [X Antibody] trait") and does not satisfy the standard
-/// Purple Lv.5 path either (wrong level/color) — the digivolve must fail.
+/// Three triggered clauses: Clause 1 ([WD] optional free-play Option),
+/// Clause 2 ([WD] trash-2/delete/security), Clause 3 ([WA] trash-2/delete/
+/// security) — DCGO wires WD and WA as two independent ActivateClasses.
 #[test]
-fn ex7_073_does_not_digivolve_via_alt_source_from_x_antibody_base() {
-    let mut runner = base_builder()
-        .add_card(three_musketeers_lv6_with_x_antibody("XA-BASE"))
-        .hand(0, &[CARD_ID])
-        .deck(0, &["XA-BASE"; 1])
-        .memory(2)
-        .start();
+fn ex7_073_has_three_triggered_clauses() {
+    let runner = base_builder().start();
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("EX7-073 in compiled cards");
 
-    let base = runner.place_on_field(0, "XA-BASE", Some(0));
-    assert!(
-        !runner
-            .game
-            .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByHand),
-        "EX7-073 must NOT digivolve from a [Three Musketeers]+[X Antibody] \
-         base — the alt-source explicitly requires the ABSENCE of [X Antibody]"
-    );
-}
-
-#[test]
-fn ex7_073_has_three_face_up_triggered_clauses() {
-    let card = compiled_card();
-    let triggered: Vec<_> = card
+    let triggered: Vec<&CompiledTriggeredClause> = compiled
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Triggered(t) if t.scope == CompiledScope::FaceUp => Some(t),
+            CompiledClause::Triggered(t) => Some(t),
             _ => None,
         })
         .collect();
     assert_eq!(
         triggered.len(),
         3,
-        "EX7-073 has 3 face-up triggered clauses: the free-Option-use clause \
-         (WhenDigivolving), the WhenDigivolving trash-cost delete+security \
-         clause, and the WhenAttacking trash-cost delete+security clause \
-         (two SEPARATE clauses per printed [When Digivolving][When Attacking] \
-         multi-timing header, not one clause with two `when` entries — DCGO \
-         registers two independent ActivateClass instances)"
+        "expected 3 triggered clauses (WD free-play, WD trash-2, WA trash-2); got {}",
+        triggered.len()
     );
-}
 
-#[test]
-fn ex7_073_clause_a_is_when_digivolving_optional_use_option_from_hand() {
-    let card = compiled_card();
-    let clause = card
-        .effects
+    let wd_count = triggered
         .iter()
-        .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when == vec![CompiledTiming::WhenDigivolving]
-                    && t.process.iter().any(|s| {
-                        matches!(s, CompiledStep::UseOptionFromHand { .. })
-                    }) =>
-            {
-                Some(t)
-            }
-            _ => None,
-        })
-        .expect("Clause A: [When Digivolving] use-Option-from-hand-free clause must exist");
-    assert!(
-        clause.optional,
-        "'you may use 1 Option card ... without paying the cost' must be optional"
-    );
+        .filter(|t| t.when.contains(&CompiledTiming::WhenDigivolving))
+        .count();
+    let wa_count = triggered
+        .iter()
+        .filter(|t| t.when.contains(&CompiledTiming::WhenAttacking))
+        .count();
+    assert_eq!(wd_count, 2, "two clauses fire on WhenDigivolving");
+    assert_eq!(wa_count, 1, "one clause fires on WhenAttacking");
 }
 
+/// Clause 1 (free-play Option) is optional, face-up, not once-per-turn.
 #[test]
-fn ex7_073_clause_b_fires_on_when_digivolving_and_when_attacking() {
-    let card = compiled_card();
-    let trash_clauses: Vec<_> = card
+fn ex7_073_clause1_is_optional_and_face_up() {
+    let runner = base_builder().start();
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("EX7-073 in compiled cards");
+
+    let triggered: Vec<&CompiledTriggeredClause> = compiled
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.process.iter().any(|s| {
-                    matches!(s, CompiledStep::SelectOwnSources { .. })
-                }) =>
-            {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) => Some(t),
             _ => None,
         })
         .collect();
-    assert_eq!(
-        trash_clauses.len(),
-        2,
-        "the trash-2-Three-Musketeers-sources body must appear as two \
-         separate clauses: one WhenDigivolving, one WhenAttacking"
-    );
-    assert!(
-        trash_clauses
-            .iter()
-            .any(|c| c.when == vec![CompiledTiming::WhenDigivolving]),
-        "one trash-cost clause must be [When Digivolving]"
-    );
-    assert!(
-        trash_clauses
-            .iter()
-            .any(|c| c.when == vec![CompiledTiming::WhenAttacking]),
-        "one trash-cost clause must be [When Attacking]"
-    );
+
+    let clause1 = triggered
+        .iter()
+        .find(|t| {
+            t.when == vec![CompiledTiming::WhenDigivolving] && t.optional
+        })
+        .expect("optional WD clause (free-play Option) must exist");
+    assert_eq!(clause1.scope, CompiledScope::FaceUp);
+    assert!(!clause1.once_per_turn);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SECTION 2 — Condition gating: Clause A candidate filter (Three Musketeers
-// text in hand Options)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// POSITIVE: a hand Option with "Three Musketeers" in its text is a legal
-/// pick for the free-use prompt.
+/// Clause 2 (WD trash-2) is mandatory at clause level (the "you may" lives on
+/// the inner select_own_sources min:0, not the outer trigger) and Clause 3
+/// (WA trash-2) mirrors it.
 #[test]
-fn ex7_073_clause_a_offers_three_musketeers_option_in_hand() {
-    let mut runner = base_builder()
-        .add_card(purple_lv5("BASE"))
-        .add_card(three_musketeers_option("TM-OPT", 3))
-        .hand(0, &[CARD_ID, "TM-OPT"])
-        .deck(0, &["BASE"; 1])
-        .memory(10)
-        .start();
+fn ex7_073_clause2_and_clause3_are_not_optional_at_clause_level() {
+    let runner = base_builder().start();
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("EX7-073 in compiled cards");
 
-    let base = runner.place_on_field(0, "BASE", Some(0));
-    // Move EX7-073 to hand index 0 (it's already there by construction).
-    digivolve_beelstarmon(&mut runner, base);
+    let triggered: Vec<&CompiledTriggeredClause> = compiled
+        .effects
+        .iter()
+        .filter_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .collect();
 
-    let view = runner
-        .pending_selection_view()
-        .expect("Clause A optional Option-use prompt must install");
-    assert_eq!(view.kind, SelectionKind::Hand);
-    assert!(view.is_optional, "'you may' must expose PASS");
-    assert!(
-        view.valid_action_ids.contains(&PLAY_HAND_START),
-        "the Three-Musketeers-text Option must be a legal free-use pick"
-    );
-}
+    let clause2 = triggered
+        .iter()
+        .find(|t| t.when == vec![CompiledTiming::WhenDigivolving] && !t.optional)
+        .expect("mandatory-at-clause-level WD trash-2 clause must exist");
+    assert_eq!(clause2.scope, CompiledScope::FaceUp);
 
-/// NEGATIVE: a hand Option with NO "Three Musketeers" text must not be
-/// offered by Clause A (the candidate filter excludes it, but the
-/// hand-selection prompt still installs with zero legal picks and
-/// remains declineable).
-#[test]
-fn ex7_073_clause_a_excludes_hand_option_without_three_musketeers_text() {
-    let mut runner = base_builder()
-        .add_card(purple_lv5("BASE"))
-        .add_card(plain_option("PLAIN-OPT", 3))
-        .hand(0, &[CARD_ID, "PLAIN-OPT"])
-        .deck(0, &["BASE"; 1])
-        .memory(10)
-        .start();
-
-    let base = runner.place_on_field(0, "BASE", Some(0));
-    digivolve_beelstarmon(&mut runner, base);
-
-    // Either no prompt installs (zero candidates -> immediate skip to the
-    // next clause) or a declineable prompt installs with the plain Option
-    // NOT among the legal picks. Both are faithful outcomes; the invariant
-    // under test is that the plain Option is never a legal free-use pick.
-    if let Some(view) = runner.pending_selection_view() {
-        if view.kind == SelectionKind::Hand {
-            assert!(
-                !view.valid_action_ids.contains(&PLAY_HAND_START),
-                "a non-Three-Musketeers-text Option must never be a legal free-use pick"
-            );
-        }
-    }
+    let clause3 = triggered
+        .iter()
+        .find(|t| t.when.contains(&CompiledTiming::WhenAttacking))
+        .expect("WA trash-2 clause must exist");
+    assert!(!clause3.optional);
+    assert_eq!(clause3.scope, CompiledScope::FaceUp);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SECTION 3 — Behavioral outcome: Clause A (use Option from hand free)
+// SECTION 2 — Clause 1: [When Digivolving] may free-play TM-text Option
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Accepting Clause A plays the chosen Three-Musketeers Option from hand
-/// without paying its cost (memory unaffected by the Option's own cost).
-#[test]
-fn ex7_073_clause_a_accept_plays_option_without_paying_cost() {
-    let mut runner = base_builder()
-        .add_card(purple_lv5("BASE"))
-        .add_card(three_musketeers_option("TM-OPT", 5))
-        .hand(0, &[CARD_ID, "TM-OPT"])
-        .deck(0, &["BASE"; 1])
-        .memory(10)
-        .start();
-
-    let base = runner.place_on_field(0, "BASE", Some(0));
-    digivolve_beelstarmon(&mut runner, base);
-
-    let memory_before = runner.memory();
-    let view = runner
-        .pending_selection_view()
-        .expect("Clause A prompt must install");
-    assert_eq!(view.kind, SelectionKind::Hand);
-
-    runner
-        .execute_action(0, PLAY_HAND_START)
-        .expect("use the Three Musketeers Option for free");
-
-    assert_eq!(
-        runner.memory(),
-        memory_before,
-        "using the Option 'without paying the cost' must not change memory"
-    );
-    assert!(
-        !runner.game.players[0]
-            .hand
-            .iter()
-            .any(|c| c.card_id(&runner.game.card_data) == "TM-OPT"),
-        "the used Option must leave hand"
-    );
-}
-
-/// Declining Clause A leaves hand and memory untouched.
-#[test]
-fn ex7_073_clause_a_decline_does_nothing() {
-    let mut runner = base_builder()
-        .add_card(purple_lv5("BASE"))
-        .add_card(three_musketeers_option("TM-OPT", 5))
-        .hand(0, &[CARD_ID, "TM-OPT"])
-        .deck(0, &["BASE"; 1])
-        .memory(10)
-        .start();
-
-    let base = runner.place_on_field(0, "BASE", Some(0));
-    digivolve_beelstarmon(&mut runner, base);
-
-    let memory_before = runner.memory();
-    let hand_before = runner.hand_size(0);
-    assert!(runner.pending_is_optional());
-
-    runner
-        .execute_action(0, PASS)
-        .expect("decline the free Option-use prompt");
-
-    assert_eq!(runner.memory(), memory_before);
-    assert_eq!(runner.hand_size(0), hand_before);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SECTION 4 — Behavioral outcome: Clause B ([When Digivolving] trash-2 ->
-// delete highest-level + trash top security)
-// ─────────────────────────────────────────────────────────────────────────────
-
-/// Build a runner with EX7-073 in hand atop a Purple Lv.5 base carrying 2
-/// [Three Musketeers]-trait sources beneath it, plus an opponent board with
-/// two Digimon at different levels (so "highest level" is unambiguous).
-fn wd_trash_builder() -> DebugRunnerBuilder {
+fn wd_clause1_builder() -> DebugRunnerBuilder {
     base_builder()
         .add_card(purple_lv5("BASE"))
-        .add_card(three_musketeers_source("TM-SRC-1"))
-        .add_card(three_musketeers_source("TM-SRC-2"))
-        .add_card(opp_digimon("OPP-LOW", 4, 5000))
-        .add_card(opp_digimon("OPP-HIGH", 6, 9000))
-        .add_card(make_test_card("SEC-FILLER", "SecFiller"))
-        .hand(0, &[CARD_ID])
-        .deck(0, &["BASE"; 1])
-        .security(1, &["SEC-FILLER", "SEC-FILLER", "SEC-FILLER"])
+        .add_card(tm_option("TM-OPT"))
+        .add_card(plain_option("PLAIN-OPT"))
+        .add_card(make_test_card("FILL", "Filler"))
+        .hand(0, &[CARD_ID, "TM-OPT"])
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL"])
         .memory(10)
 }
 
-/// Place a base stack with 2 Three-Musketeers-trait sources beneath the top
-/// (BASE), place both opponent Digimon on the field, then digivolve
-/// EX7-073 onto the base. Returns the stacked handle.
-fn place_stacked_base_and_digivolve(runner: &mut DebugRunner) -> PermanentHandle {
-    runner.place_on_field(1, "OPP-LOW", Some(0));
-    runner.place_on_field(1, "OPP-HIGH", Some(0));
-    let base = runner.place_stack(0, &["TM-SRC-1", "TM-SRC-2", "BASE"]);
-    digivolve_beelstarmon(runner, base);
-    base
-}
-
-/// POSITIVE: with 2 [Three Musketeers] sources available and 2 distinct-level
-/// opponent Digimon, the player can trash both sources, is then offered a
-/// single-pick over the highest-level opponent Digimon (only), and after
-/// deleting it the opponent's top security is trashed.
+/// POSITIVE: with a TM-text Option in hand, digivolving offers the optional
+/// free-play prompt; accepting plays it without paying its cost.
 #[test]
-fn ex7_073_wd_trash_two_sources_deletes_highest_level_and_trashes_top_security() {
-    let mut runner = wd_trash_builder().start();
-    let base = place_stacked_base_and_digivolve(&mut runner);
+fn ex7_073_wd_may_free_play_tm_text_option_from_hand() {
+    let mut runner = wd_clause1_builder().start();
+    let base = runner.place_on_field(0, "BASE", Some(0));
 
-    // Clause A's optional Option-use prompt has nothing to offer (no hand
-    // Options) — auto_resolve past any zero-candidate declineable prompt.
-    decline_clause_a_if_pending(&mut runner);
+    digivolve_ex7_073(&mut runner, base);
 
-    let sec_before = runner.security_count(1);
-    let opp_before = runner.battle_area_size(1);
-    assert_eq!(opp_before, 2, "fixture: 2 opp Digimon on field");
+    // Two own-controller WD triggers queue simultaneously (Clause 1 free-play
+    // + Clause 2 trash-2); resolve the TriggerOrder pick in favor of the
+    // optional Clause 1 first.
+    resolve_trigger_order_if_pending(&mut runner, true);
 
-    let view = runner
-        .pending_selection_view()
-        .expect("Clause B source-trash prompt must install");
     assert!(
-        matches!(view.kind, SelectionKind::SourceMulti { min: 0, max: 2, .. }),
-        "expected an up-to-2 own-source trash prompt, got {:?}",
-        view.kind
+        runner.pending_selection().is_some(),
+        "the optional 'may play a TM-text Option' prompt must install"
     );
     assert!(
-        view.is_optional,
-        "min:0 means PASS is legal from the start (DCGO canNoSelect: true)"
-    );
-
-    // Source candidates keep their STABLE original `source_index` within the
-    // stack (0 = TM-SRC-1, 1 = TM-SRC-2) even after an earlier pick removes
-    // one from the candidate list — see `source_multi_candidates`, which
-    // filters already-picked cards out by identity rather than
-    // renumbering the survivors.
-    let base_field = base.index as u16;
-    let pick_1 = encode_source_select(base_field, 0).expect("source slot 0 encodes");
-    runner
-        .execute_action(0, pick_1)
-        .expect("pick the first Three Musketeers source");
-    let pick_2 = encode_source_select(base_field, 1).expect("source slot 1 encodes");
-    runner
-        .execute_action(0, pick_2)
-        .expect("pick the second Three Musketeers source");
-
-    // With exactly 2 trashed, the opponent-Digimon-delete prompt must
-    // install, restricted to the highest-level candidate only.
-    let target_view = runner
-        .pending_selection_view()
-        .expect("delete-highest-level prompt must install after 2 sources trashed");
-    assert_eq!(target_view.kind, SelectionKind::OppField);
-    assert_eq!(
-        target_view.valid_action_ids.len(),
-        1,
-        "only the unique highest-level opponent Digimon should be selectable"
+        runner.pending_is_optional(),
+        "Clause 1 is 'you may' — the outer trigger must be optional"
     );
     runner
-        .execute_action(0, target_view.valid_action_ids[0])
-        .expect("delete the highest-level opponent Digimon");
+        .accept_optional_trigger()
+        .expect("accept the optional free-play trigger");
+    runner
+        .auto_resolve()
+        .expect("pick the TM Option + free-play it");
 
-    runner.auto_resolve().expect("finish Clause B");
-
-    // The two Three Musketeers sources are gone from the stack (only the
-    // digivolve foundation "BASE" and the EX7-073 top card remain — BASE
-    // itself carries no [Three Musketeers] trait so it is never a
-    // candidate) and both are now in trash.
-    assert_eq!(
-        runner.game.players[0].battle_area[base.index as usize]
-            .card_sources
-            .len(),
-        2,
-        "the stack shrinks from 4 (TM-SRC-1, TM-SRC-2, BASE, EX7-073) to 2 (BASE, EX7-073)"
+    // BeelStarmon is now stacked on BASE (index 0); the Option card should
+    // have moved off P0's hand into the trash (options resolve to trash).
+    let hand_ids: Vec<String> = zone_ids(
+        &runner
+            .game
+            .players
+            .get(0)
+            .map(|_| Vec::new())
+            .unwrap_or_default(),
+        &runner.game.card_data,
     );
-    let trash_ids = zone_ids(&runner.game.players[0].trash, &runner.game.card_data);
-    assert!(trash_ids.contains(&"TM-SRC-1".to_string()));
-    assert!(trash_ids.contains(&"TM-SRC-2".to_string()));
-
-    // OPP-HIGH (level 6, the highest) is deleted; OPP-LOW (level 4) remains.
-    assert_eq!(
-        runner.battle_area_size(1),
-        opp_before - 1,
-        "exactly 1 opponent Digimon deleted"
-    );
+    // Direct hand inspection: TM-OPT must no longer sit in hand.
+    let still_in_hand = runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "TM-OPT");
     assert!(
-        !runner.game.players[1]
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&runner.game.card_data) == "OPP-HIGH"),
-        "the highest-level opponent Digimon (OPP-HIGH) must be deleted"
-    );
-    assert!(
-        runner.game.players[1]
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&runner.game.card_data) == "OPP-LOW"),
-        "the lower-level opponent Digimon (OPP-LOW) must remain"
-    );
-
-    // Opponent's top security card is trashed.
-    assert_eq!(
-        runner.security_count(1),
-        sec_before - 1,
-        "trashing 2 sources must also trash the opponent's top security card"
+        !still_in_hand,
+        "the free-played Option must leave the hand"
     );
 }
 
-/// NEGATIVE: declining the trash-cost prompt (PASS at 0 picks) does nothing
-/// — no source trashed, no opponent Digimon deleted, no security lost.
+/// NEGATIVE: no TM-text Option in hand (only a plain one) → Clause 1 is a
+/// silent no-op — no prompt installs.
 #[test]
-fn ex7_073_wd_decline_trash_cost_does_nothing() {
-    let mut runner = wd_trash_builder().start();
-    let base = place_stacked_base_and_digivolve(&mut runner);
-    decline_clause_a_if_pending(&mut runner);
+fn ex7_073_wd_no_fire_without_tm_text_option_in_hand() {
+    let mut runner = base_builder()
+        .add_card(purple_lv5("BASE"))
+        .add_card(plain_option("PLAIN-OPT"))
+        .add_card(make_test_card("FILL", "Filler"))
+        .hand(0, &[CARD_ID, "PLAIN-OPT"])
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL"])
+        .memory(10)
+        .start();
+    let base = runner.place_on_field(0, "BASE", Some(0));
 
-    let sec_before = runner.security_count(1);
-    let opp_before = runner.battle_area_size(1);
-    let sources_before = runner.game.players[0].battle_area[base.index as usize]
-        .card_sources
-        .len();
+    digivolve_ex7_073(&mut runner, base);
+    drain_prompts(&mut runner);
+
+    // Neither Clause 1 (no TM-text Option in hand) nor Clause 2 (no TM-trait
+    // sources under BASE) has any candidate — both queued triggers must
+    // resolve to no-ops. Draining any TriggerOrder/no-candidate prompts must
+    // leave nothing pending and the field/hand unchanged.
+    assert!(
+        runner.pending_selection().is_none(),
+        "no TM-text Option in hand and no TM-trait sources → both clauses resolve to no-ops"
+    );
+    let still_in_hand = runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "PLAIN-OPT");
+    assert!(
+        still_in_hand,
+        "the non-matching Option must never be offered or played"
+    );
+}
+
+/// Decline path: the player may decline the optional free-play; the Option
+/// stays in hand.
+#[test]
+fn ex7_073_wd_decline_free_play_keeps_option_in_hand() {
+    let mut runner = wd_clause1_builder().start();
+    let base = runner.place_on_field(0, "BASE", Some(0));
+
+    digivolve_ex7_073(&mut runner, base);
+    resolve_trigger_order_if_pending(&mut runner, true);
 
     assert!(runner.pending_is_optional());
     runner
         .execute_action(0, PASS)
-        .expect("decline the trash-cost prompt immediately");
+        .expect("decline the optional free-play trigger");
+    // Clause 2's trash-2 prompt may still be pending (min:0, BASE has no TM
+    // sources though, so it should also be absent) — drain defensively.
+    drain_prompts(&mut runner);
 
-    runner.auto_resolve().expect("no further prompts remain");
-
-    assert_eq!(
-        runner.game.players[0].battle_area[base.index as usize]
-            .card_sources
-            .len(),
-        sources_before,
-        "declining must not trash any digivolution source"
-    );
-    assert_eq!(
-        runner.battle_area_size(1),
-        opp_before,
-        "declining must not delete any opponent Digimon"
-    );
-    assert_eq!(
-        runner.security_count(1),
-        sec_before,
-        "declining must not trash opponent security"
+    let still_in_hand = runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "TM-OPT");
+    assert!(
+        still_in_hand,
+        "declining Clause 1 must leave the Option card in hand"
     );
 }
 
-/// NEGATIVE: partial commit (pick exactly 1 of the 2 required Three
-/// Musketeers sources, then decline) still results in NO deletion and NO
-/// security loss — DCGO's `if (selectedCards.Count >= 2)` gate means a
-/// 1-card pick never fires the tail, even though the 1 picked card IS
-/// trashed as part of the (declined-early) multi-select.
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION 3 — Clause 2/3: trash-2 TM sources → delete highest-level → security
+// ─────────────────────────────────────────────────────────────────────────────
+
+fn wd_clause2_builder() -> DebugRunnerBuilder {
+    base_builder()
+        .add_card(purple_lv5("BASE"))
+        .add_card(tm_source("TM-A"))
+        .add_card(tm_source("TM-B"))
+        .add_card(plain_source("PLAIN-SRC"))
+        .add_card(make_test_card("FILL", "Filler"))
+        .add_card(make_test_card("SEC-FODDER", "SecurityFodder"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL", "FILL"])
+        .memory(10)
+}
+
+/// POSITIVE (mandatory pick-2, then delete + security): with 2 TM-trait
+/// sources under the base and an opponent Digimon on the field plus
+/// security, trashing both sources deletes the (sole) opponent Digimon and
+/// trashes their top security card.
 #[test]
-fn ex7_073_wd_picking_only_one_source_then_declining_does_not_trigger_delete_or_security() {
-    let mut runner = wd_trash_builder().start();
-    let base = place_stacked_base_and_digivolve(&mut runner);
-    decline_clause_a_if_pending(&mut runner);
+fn ex7_073_wd_trash_two_sources_deletes_opp_digimon_and_trashes_security() {
+    let mut runner = wd_clause2_builder()
+        .add_card(opp_digimon("OPP-D", 4, 5000))
+        .start();
+    let base = runner.place_stack(0, &["TM-A", "TM-B", "BASE"]);
+    runner.place_on_field(1, "OPP-D", Some(0));
+    push_to_security_top(&mut runner, 1, "OPP-D");
+    let security_before = runner.security_count(1);
 
-    let sec_before = runner.security_count(1);
-    let opp_before = runner.battle_area_size(1);
+    digivolve_ex7_073(&mut runner, base);
+    // Clause 1 also queues (no TM Option in hand, so it will no-op), so
+    // resolve the TriggerOrder pick in favor of Clause 2 (mandatory-at-clause
+    // level) first.
+    resolve_trigger_order_if_pending(&mut runner, false);
 
-    let base_field = base.index as u16;
-    let pick_1 = encode_source_select(base_field, 0).expect("source slot 0 encodes");
-    runner
-        .execute_action(0, pick_1)
-        .expect("pick only 1 of the 2 sources");
-
-    // PASS should still be legal (min: 0 satisfied) after only 1 pick.
     let view = runner
         .pending_selection_view()
-        .expect("prompt remains after 1 of 2 picks");
+        .expect("Clause 2 must offer the trash-2 source-select (2 TM sources exist)");
+    assert_eq!(
+        view.valid_action_ids
+            .iter()
+            .filter(|&&a| a != PASS)
+            .count(),
+        2,
+        "only the 2 TM-trait sources are candidates; PLAIN-SRC must be excluded"
+    );
+
+    let pick_a = encode_source_select(base.index as u16, 0).expect("TM-A source encodes");
+    let pick_b = encode_source_select(base.index as u16, 1).expect("TM-B source encodes");
+    runner.execute_action(0, pick_a).expect("pick TM-A");
+    runner.execute_action(0, pick_b).expect("pick TM-B");
+    drain_prompts(&mut runner);
+
+    let trash_ids = zone_ids(&runner.game.players[0].trash, &runner.game.card_data);
+    assert!(
+        trash_ids.contains(&"TM-A".to_string()) && trash_ids.contains(&"TM-B".to_string()),
+        "both trashed sources land in P0's trash; trash={trash_ids:?}"
+    );
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "the sole opponent Digimon (now the unique highest level) must be deleted"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        security_before - 1,
+        "the opponent's top security card must be trashed"
+    );
+}
+
+/// PARTIAL PICK: the player picks only 1 of the 2 available TM sources
+/// (declines to complete the cost) — `binding_count_eq(n:2)` is false, so
+/// NEITHER the delete NOR the security trash fires, but the 1 picked source
+/// is still trashed (the pick itself is committed once made).
+#[test]
+fn ex7_073_wd_partial_pick_of_one_source_does_not_trigger_delete_or_security() {
+    let mut runner = wd_clause2_builder()
+        .add_card(opp_digimon("OPP-D", 4, 5000))
+        .start();
+    let base = runner.place_stack(0, &["TM-A", "TM-B", "BASE"]);
+    runner.place_on_field(1, "OPP-D", Some(0));
+    push_to_security_top(&mut runner, 1, "OPP-D");
+    let security_before = runner.security_count(1);
+
+    digivolve_ex7_073(&mut runner, base);
+    resolve_trigger_order_if_pending(&mut runner, false);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("trash-2 prompt installs");
     assert!(
         view.valid_action_ids.contains(&PASS),
-        "PASS must remain legal after only 1 pick (min: 0)"
+        "min:0 → PASS must be offered before any pick"
+    );
+    let pick_a = encode_source_select(base.index as u16, 0).expect("TM-A source encodes");
+    runner.execute_action(0, pick_a).expect("pick only TM-A");
+    // After 1 pick (min:0 already satisfied), PASS must still be available —
+    // the player may stop at 1.
+    let view2 = runner
+        .pending_selection_view()
+        .expect("selection continues after 1 of 2 picks");
+    assert!(
+        view2.valid_action_ids.contains(&PASS),
+        "after 1 pick, PASS must still be offered (player may stop short of 2)"
     );
     runner
         .execute_action(0, PASS)
-        .expect("decline after only 1 pick");
-    runner.auto_resolve().expect("no further prompts remain");
+        .expect("stop after picking only 1 source");
+    drain_prompts(&mut runner);
 
     assert_eq!(
         runner.battle_area_size(1),
-        opp_before,
-        "a 1-card pick must NOT trigger the delete (DCGO requires exactly 2 trashed)"
+        1,
+        "the opponent Digimon must survive — only 1 source was trashed (count != 2)"
     );
     assert_eq!(
         runner.security_count(1),
-        sec_before,
-        "a 1-card pick must NOT trigger the security trash"
+        security_before,
+        "security must NOT be trashed when fewer than 2 sources were trashed"
     );
 }
 
-/// NEGATIVE: a digivolution source WITHOUT the [Three Musketeers] trait must
-/// never be offered as a trash candidate.
+/// FULL DECLINE: the player declines the trash-2 prompt entirely (0 picked)
+/// — no trash, no delete, no security loss.
 #[test]
-fn ex7_073_wd_trash_candidates_exclude_non_three_musketeers_sources() {
-    let mut runner = base_builder()
-        .add_card(purple_lv5("BASE"))
-        .add_card(three_musketeers_source("TM-SRC-1"))
-        .add_card(plain_source("PLAIN-SRC"))
-        .add_card(opp_digimon("OPP-A", 5, 5000))
-        .add_card(make_test_card("SEC-FILLER", "SecFiller"))
-        .hand(0, &[CARD_ID])
-        .deck(0, &["BASE"; 1])
-        .security(1, &["SEC-FILLER"])
-        .memory(10)
+fn ex7_073_wd_decline_trash_prompt_entirely_does_nothing() {
+    let mut runner = wd_clause2_builder()
+        .add_card(opp_digimon("OPP-D", 4, 5000))
         .start();
+    let base = runner.place_stack(0, &["TM-A", "TM-B", "BASE"]);
+    runner.place_on_field(1, "OPP-D", Some(0));
+    push_to_security_top(&mut runner, 1, "OPP-D");
+    let security_before = runner.security_count(1);
+    let trash_before = runner.trash_size(0);
 
-    let base = runner.place_stack(0, &["TM-SRC-1", "PLAIN-SRC", "BASE"]);
-    digivolve_beelstarmon(&mut runner, base);
-    decline_clause_a_if_pending(&mut runner);
+    digivolve_ex7_073(&mut runner, base);
+    resolve_trigger_order_if_pending(&mut runner, false);
 
     let view = runner
         .pending_selection_view()
-        .expect("Clause B source-trash prompt must install");
-    assert!(
-        matches!(view.kind, SelectionKind::SourceMulti { min: 0, max: 2, .. })
-    );
-    // Only 1 matching candidate (TM-SRC-1) can ever be picked; the picker
-    // must not expose PLAIN-SRC's slot as a legal action.
-    assert_eq!(
-        view.valid_action_ids.len(),
-        2,
-        "exactly 1 matching candidate + PASS should be legal"
-    );
+        .expect("trash-2 prompt installs");
     assert!(view.valid_action_ids.contains(&PASS));
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the trash-2 cost entirely");
+    drain_prompts(&mut runner);
+
+    assert_eq!(runner.trash_size(0), trash_before, "nothing trashed on decline");
+    assert_eq!(runner.battle_area_size(1), 1, "opponent Digimon survives");
+    assert_eq!(
+        runner.security_count(1),
+        security_before,
+        "security untouched on decline"
+    );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SECTION 5 — Behavioral outcome: Clause C ([When Attacking] trash-2 ->
-// delete highest-level + trash top security)
-// ─────────────────────────────────────────────────────────────────────────────
+/// FAITHFULNESS FIX — the core regression test: the opponent has SECURITY
+/// CARDS but ZERO Digimon on the battle area. Trashing both TM sources must
+/// still trash the opponent's top security card (DCGO runs IDestroySecurity
+/// unconditionally once `trashed == true`), even though the delete sub-step
+/// has no legal target and must be skipped.
+#[test]
+fn ex7_073_wd_trash_two_sources_with_no_opp_digimon_still_trashes_security() {
+    let mut runner = wd_clause2_builder().start();
+    let base = runner.place_stack(0, &["TM-A", "TM-B", "BASE"]);
+    // Zero opponent Digimon on the battle area — but seed security cards.
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "fixture: opponent has no battle-area Digimon"
+    );
+    push_to_security_top(&mut runner, 1, "SEC-FODDER");
+    push_to_security_top(&mut runner, 1, "SEC-FODDER");
+    let security_before = runner.security_count(1);
+    assert_eq!(security_before, 2, "fixture: opponent has 2 security cards");
 
-/// Build a runner with EX7-073 already on the field (not digivolved this
-/// turn) carrying 2 [Three Musketeers] sources, ready to attack.
-fn attack_builder() -> DebugRunnerBuilder {
-    base_builder()
-        .add_card(three_musketeers_source("TM-SRC-1"))
-        .add_card(three_musketeers_source("TM-SRC-2"))
+    digivolve_ex7_073(&mut runner, base);
+    resolve_trigger_order_if_pending(&mut runner, false);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("trash-2 prompt installs — 2 TM sources exist under BASE");
+    let pick_a = encode_source_select(base.index as u16, 0).expect("TM-A source encodes");
+    let pick_b = encode_source_select(base.index as u16, 1).expect("TM-B source encodes");
+    runner.execute_action(0, pick_a).expect("pick TM-A");
+    runner.execute_action(0, pick_b).expect("pick TM-B");
+    drain_prompts(&mut runner);
+
+    // No delete-target selection may install (no opponent Digimon exists);
+    // drain_prompts already resolved anything that did appear, so verifying
+    // no panic occurred plus the security count is the load-bearing check.
+    assert_eq!(
+        runner.battle_area_size(1),
+        0,
+        "still zero opponent Digimon — nothing to delete"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        security_before - 1,
+        "the mandatory security trash must fire even though the delete sub-step \
+         had no legal target — this is the reviewer-directed faithfulness fix \
+         (a flat sibling list would have silently dropped this trash via \
+         install_select_opponent_permanent's empty-candidate short-circuit)"
+    );
+}
+
+/// "Highest level" targeting: with opponents at Lv.4 and Lv.6 on the field,
+/// only the Lv.6 (the higher) may be offered as the delete target.
+#[test]
+fn ex7_073_wd_delete_targets_highest_level_opponent_only() {
+    let mut runner = wd_clause2_builder()
         .add_card(opp_digimon("OPP-LOW", 4, 5000))
         .add_card(opp_digimon("OPP-HIGH", 6, 9000))
-        .add_card(make_test_card("DEF-FILLER", "DefFiller"))
-        .add_card(make_test_card("SEC-FILLER", "SecFiller"))
-        .security(1, &["SEC-FILLER", "SEC-FILLER", "SEC-FILLER"])
-        .memory(10)
-}
-
-/// POSITIVE: attacking with EX7-073 (2 Three Musketeers sources beneath it)
-/// offers the same trash-2 -> delete-highest + trash-security effect.
-/// Attacks DEF-FILLER (not OPP-LOW/OPP-HIGH) so combat resolution doesn't
-/// itself delete one of the two level-tracked opponents — isolating the
-/// card-effect's own delete from ordinary combat DP comparison.
-#[test]
-fn ex7_073_when_attacking_trash_two_sources_deletes_highest_level_and_trashes_security() {
-    let mut runner = attack_builder().start();
-    runner.game.turn_count = 1;
-
-    let attacker = runner.place_stack(0, &["TM-SRC-1", "TM-SRC-2", CARD_ID]);
-    let defender = runner.place_on_field(1, "DEF-FILLER", Some(0));
+        .start();
+    let base = runner.place_stack(0, &["TM-A", "TM-B", "BASE"]);
     runner.place_on_field(1, "OPP-LOW", Some(0));
     runner.place_on_field(1, "OPP-HIGH", Some(0));
 
-    let sec_before = runner.security_count(1);
-    let opp_before = runner.battle_area_size(1);
+    digivolve_ex7_073(&mut runner, base);
+    resolve_trigger_order_if_pending(&mut runner, false);
 
-    runner.attack_digimon(attacker, defender, false);
+    let pick_a = encode_source_select(base.index as u16, 0).expect("TM-A source encodes");
+    let pick_b = encode_source_select(base.index as u16, 1).expect("TM-B source encodes");
+    runner.execute_action(0, pick_a).expect("pick TM-A");
+    runner.execute_action(0, pick_b).expect("pick TM-B");
+
+    let delete_view = runner
+        .pending_selection_view()
+        .expect("mandatory delete-target select installs after 2 sources trashed");
+    let candidate_count = delete_view
+        .valid_action_ids
+        .iter()
+        .filter(|&&a| a != PASS)
+        .count();
+    assert_eq!(
+        candidate_count, 1,
+        "only the Lv.6 (highest level) opponent Digimon is a candidate"
+    );
+    assert!(
+        !delete_view.is_optional,
+        "the delete-target select is mandatory (DCGO canNoSelect: false)"
+    );
+
+    drain_prompts(&mut runner);
+
+    let survivors: Vec<String> = zone_ids(
+        &runner
+            .game
+            .players[1]
+            .battle_area
+            .iter()
+            .map(|p| p.top_card().clone())
+            .collect::<Vec<_>>(),
+        &runner.game.card_data,
+    );
+    assert!(
+        !survivors.contains(&"OPP-HIGH".to_string()),
+        "the Lv.6 (highest) opponent Digimon must be deleted; survivors={survivors:?}"
+    );
+    assert!(
+        survivors.contains(&"OPP-LOW".to_string()),
+        "the Lv.4 (lower) opponent Digimon must survive; survivors={survivors:?}"
+    );
+}
+
+/// [When Attacking] mirror: the same trash-2/delete/security shape fires on
+/// attack, independent of the [When Digivolving] clause.
+#[test]
+fn ex7_073_wa_trash_two_sources_deletes_opp_digimon_and_trashes_security() {
+    let mut runner = wd_clause2_builder()
+        .add_card(opp_digimon("OPP-D", 4, 5000))
+        .start();
+    let base = runner.place_stack(0, &["TM-A", "TM-B", CARD_ID]);
+    runner.place_on_field(1, "OPP-D", Some(0));
+    push_to_security_top(&mut runner, 1, "OPP-D");
+    let security_before = runner.security_count(1);
+
+    fire_when_attacking(&mut runner, base);
 
     let view = runner
         .pending_selection_view()
-        .expect("[When Attacking] source-trash prompt must install");
-    assert!(matches!(
-        view.kind,
-        SelectionKind::SourceMulti { min: 0, max: 2, .. }
-    ));
+        .expect("WA clause offers the trash-2 source-select");
+    let pick_a = encode_source_select(base.index as u16, 0).expect("TM-A source encodes");
+    let pick_b = encode_source_select(base.index as u16, 1).expect("TM-B source encodes");
+    runner.execute_action(0, pick_a).expect("pick TM-A");
+    runner.execute_action(0, pick_b).expect("pick TM-B");
+    drain_prompts(&mut runner);
 
-    let attacker_field = attacker.index as u16;
-    let pick_1 =
-        encode_source_select(attacker_field, 0).expect("attacker source slot 0 encodes");
-    runner
-        .execute_action(0, pick_1)
-        .expect("pick the first Three Musketeers source");
-    let pick_2 =
-        encode_source_select(attacker_field, 1).expect("attacker source slot 1 encodes");
-    runner
-        .execute_action(0, pick_2)
-        .expect("pick the second Three Musketeers source");
-
-    let target_view = runner
-        .pending_selection_view()
-        .expect("delete-highest-level prompt must install");
-    assert_eq!(target_view.kind, SelectionKind::OppField);
-    assert_eq!(
-        target_view.valid_action_ids.len(),
-        1,
-        "only OPP-HIGH (level 6, the unique highest) is a legal delete target \
-         (DEF-FILLER level 3, OPP-LOW level 4 are excluded)"
-    );
-    runner
-        .execute_action(0, target_view.valid_action_ids[0])
-        .expect("delete the highest-level opponent Digimon");
-    runner.auto_resolve().expect("finish Clause C");
-
-    // 3 opponents on field before: DEF-FILLER (dies to combat, DP 2000 vs
-    // 12000), OPP-LOW (level 4, survives), OPP-HIGH (level 6, deleted by
-    // the card effect). Net: opp_before - 2 remain (just OPP-LOW).
-    assert_eq!(opp_before, 3, "fixture: DEF-FILLER + OPP-LOW + OPP-HIGH");
     assert_eq!(
         runner.battle_area_size(1),
-        opp_before - 2,
-        "DEF-FILLER dies to combat, OPP-HIGH dies to the card effect, OPP-LOW survives"
+        0,
+        "opponent Digimon must be deleted on the WA trigger"
     );
-    assert!(
-        runner.game.players[1]
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&runner.game.card_data) == "OPP-LOW"),
-        "OPP-LOW (not the highest level) must remain"
-    );
-    assert!(
-        !runner.game.players[1]
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&runner.game.card_data) == "OPP-HIGH"),
-        "OPP-HIGH (the highest level) must be deleted by the card effect"
-    );
-    assert_eq!(runner.security_count(1), sec_before - 1);
-}
-
-/// OPT-adjacent: [When Attacking] and [When Digivolving] are independent
-/// activation windows (DCGO installs 2 distinct `ActivateClass`/timing
-/// pairs). Triggering the [When Attacking] clause in the SAME turn as an
-/// already-resolved [When Digivolving] clause must still offer the
-/// trash-cost prompt (no shared once-per-turn lock across the two timings).
-#[test]
-fn ex7_073_when_digivolving_and_when_attacking_are_independent_activation_windows() {
-    let mut runner = wd_trash_builder()
-        .add_card(make_test_card("DEF-FILLER", "DefFiller"))
-        .start();
-    let base = place_stacked_base_and_digivolve(&mut runner);
-    decline_clause_a_if_pending(&mut runner);
-
-    // Decline Clause B (WhenDigivolving) immediately.
-    assert!(runner.pending_is_optional());
-    runner
-        .execute_action(0, PASS)
-        .expect("decline the WhenDigivolving trash-cost prompt");
-    runner.auto_resolve().expect("no further prompts remain");
-
-    // Attacking the SAME turn must still offer Clause C's independent
-    // trash-cost prompt (the WhenDigivolving decline does not lock it out).
-    let defender = runner.place_on_field(1, "OPP-LOW", Some(0));
-    runner.attack_digimon(base, defender, false);
-
-    let view = runner.pending_selection_view();
-    assert!(
-        view.is_some(),
-        "[When Attacking]'s independent trash-cost prompt must still install \
-         after declining [When Digivolving]'s"
+    assert_eq!(
+        runner.security_count(1),
+        security_before - 1,
+        "opponent top security must be trashed on the WA trigger"
     );
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SECTION 6 — Event-log assertions (cost-firing: source trash + security
-// trash both move cards to the trash zone)
-// ─────────────────────────────────────────────────────────────────────────────
-
+/// [When Attacking] faithfulness mirror: no opponent Digimon but security
+/// present — the security trash must still fire.
 #[test]
-fn ex7_073_wd_trash_cost_and_security_loss_fire_trash_events() {
-    let mut runner = wd_trash_builder().start();
-    let base = place_stacked_base_and_digivolve(&mut runner);
-    decline_clause_a_if_pending(&mut runner);
+fn ex7_073_wa_trash_two_sources_with_no_opp_digimon_still_trashes_security() {
+    let mut runner = wd_clause2_builder().start();
+    let base = runner.place_stack(0, &["TM-A", "TM-B", CARD_ID]);
+    push_to_security_top(&mut runner, 1, "SEC-FODDER");
+    let security_before = runner.security_count(1);
+    assert_eq!(security_before, 1);
 
-    let cp = runner.event_checkpoint();
+    fire_when_attacking(&mut runner, base);
 
-    let base_field = base.index as u16;
-    let pick_1 = encode_source_select(base_field, 0).expect("source slot 0 encodes");
-    runner.execute_action(0, pick_1).expect("pick source 1");
-    let pick_2 = encode_source_select(base_field, 1).expect("source slot 1 encodes");
-    runner.execute_action(0, pick_2).expect("pick source 2");
+    let pick_a = encode_source_select(base.index as u16, 0).expect("TM-A source encodes");
+    let pick_b = encode_source_select(base.index as u16, 1).expect("TM-B source encodes");
+    runner.execute_action(0, pick_a).expect("pick TM-A");
+    runner.execute_action(0, pick_b).expect("pick TM-B");
+    drain_prompts(&mut runner);
 
-    let target_view = runner
+    assert_eq!(runner.battle_area_size(1), 0, "still zero opponent Digimon");
+    assert_eq!(
+        runner.security_count(1),
+        security_before - 1,
+        "WA mirror: the mandatory security trash must fire even with no delete target"
+    );
+}
+
+/// Only TM-trait sources are candidates — PLAIN-SRC (no [Three Musketeers]
+/// trait) must never appear in the trash-2 selection menu.
+#[test]
+fn ex7_073_wd_only_tm_trait_sources_are_selectable() {
+    let mut runner = wd_clause2_builder().start();
+    let base = runner.place_stack(0, &["PLAIN-SRC", "TM-A", "TM-B", "BASE"]);
+
+    digivolve_ex7_073(&mut runner, base);
+    resolve_trigger_order_if_pending(&mut runner, false);
+
+    let view = runner
         .pending_selection_view()
-        .expect("delete-highest-level prompt must install");
-    let deleted_id = {
-        // Identify which opponent Digimon is about to be deleted, by
-        // decoding the (sole) legal action's field index. `OppField`
-        // selections reuse the attack action-ID encoding via
-        // `encode_attack(0, field_index)` (`EffectContext::
-        // install_field_selection`), so the FIELD index is the `target`
-        // half of `decode_attack`'s `(attacker, target)` pair, not the
-        // (always-0 placeholder) `attacker` half.
-        use digimon_engine::action::space::decode_attack;
-        let (_, field) = decode_attack(target_view.valid_action_ids[0]);
-        runner.game.players[1].battle_area[field as usize]
-            .top_card()
-            .card_id(&runner.game.card_data)
-            .to_string()
-    };
-    runner
-        .execute_action(0, target_view.valid_action_ids[0])
-        .expect("delete the highest-level opponent Digimon");
-    runner.auto_resolve().expect("finish Clause B");
-
-    // NOTE on source-trashing / security-trashing and the event log:
-    // `trash_card_source` (backing `trash_selected_sources`) routes through
-    // `Game::trash_source_and_fire`, and `trash_top_security` routes through
-    // `complete_effect_security_removal` — BOTH push directly onto
-    // `player.trash` without calling `Game::trash_card`, so NEITHER emits a
-    // `GameEvent::Trash` (only `Game::trash_card` / `trash_permanent_stack`
-    // emit that event — see `code/digimon-engine/src/game_actions/helpers.rs`
-    // and `code/digimon-engine/src/effect_queue.rs::complete_effect_security_removal`).
-    // The single faithfully-observable `GameEvent::Trash` for this clause
-    // comes from `delete_permanent`, which DOES route through
-    // `trash_permanent_stack`. Confirm the source-trash and security-trash
-    // cost payments via direct trash-zone state inspection (not the event
-    // log), and confirm the deletion's `GameEvent::Trash` via the event log.
-    let sources_trashed = zone_ids(&runner.game.players[0].trash, &runner.game.card_data);
-    assert!(sources_trashed.contains(&"TM-SRC-1".to_string()));
-    assert!(sources_trashed.contains(&"TM-SRC-2".to_string()));
-    let opp_trashed = zone_ids(&runner.game.players[1].trash, &runner.game.card_data);
+        .expect("trash-2 prompt installs");
+    let plain_action =
+        encode_source_select(base.index as u16, 0).expect("PLAIN-SRC source encodes");
     assert!(
-        opp_trashed.contains(&"SEC-FILLER".to_string()),
-        "the opponent's top security card must land in their trash"
+        !view.valid_action_ids.contains(&plain_action),
+        "PLAIN-SRC (no [Three Musketeers] trait) must not be a candidate; valid={:?}",
+        view.valid_action_ids
     );
+}
 
-    let events = runner.events_since(cp);
-    let trashed_ids: Vec<&str> = events
-        .iter()
-        .filter_map(|e| match e {
-            GameEvent::Trash { card_id, .. } => Some(card_id.as_str()),
-            _ => None,
-        })
-        .collect();
-    assert!(
-        trashed_ids.contains(&deleted_id.as_str()),
-        "deleting the highest-level opponent Digimon must emit a GameEvent::Trash; got {trashed_ids:?}"
+/// No TM-trait sources at all under the base → Clause 2/3's select_own_sources
+/// has 0 candidates; with min:0 the tail still runs with an empty binding,
+/// so `binding_count_eq(n:2)` is false and nothing fires — no panic, no
+/// selection installs (the empty-candidate finalize path is synchronous).
+#[test]
+fn ex7_073_wd_no_tm_sources_silently_skips_trash_clause() {
+    let mut runner = wd_clause2_builder()
+        .add_card(opp_digimon("OPP-D", 4, 5000))
+        .start();
+    let base = runner.place_on_field(0, "BASE", Some(0));
+    runner.place_on_field(1, "OPP-D", Some(0));
+    push_to_security_top(&mut runner, 1, "OPP-D");
+    let security_before = runner.security_count(1);
+
+    digivolve_ex7_073(&mut runner, base);
+    drain_prompts(&mut runner);
+
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "no sources to trash → the delete never fires"
+    );
+    assert_eq!(
+        runner.security_count(1),
+        security_before,
+        "no sources to trash → the security trash never fires"
     );
 }

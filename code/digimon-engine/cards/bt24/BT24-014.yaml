@@ -1,6 +1,13 @@
 # BT24-014 Aegiochusmon — Digimon, Lv.5, Red/Yellow, DP 8000, Cost 8.
 # Traits: Shaman, Iliad, TS. Attribute: Vaccine.
-# Standard digivolution: Lv.4 Red / cost 4 (printed evo_costs).
+# Standard digivolution: Lv.4 Red / cost 4 AND Lv.4 Yellow / cost 4 (both
+# printed circles per the official Bandai DB — data/card_official.json lists
+# digivolve_costs for BOTH card_color 0 (Red) and card_color 2 (Yellow) at
+# level 4 / memory_cost 4; data/card_bundles/BT24-014.md confirms both "Red
+# Lv.4 / cost 4" and "Yellow Lv.4 / cost 4". cards.json's evo_costs dropped
+# the Yellow circle — the documented multi-colour-cost lossiness — so both
+# circles are authored explicitly here, matching the sibling BT25-025
+# (Blue/Purple) idiom.
 #
 # Printed card text (data/card_bundles/BT24-014.md — official Bandai DB,
 # outranks cards.json per source priority):
@@ -73,6 +80,7 @@
 # | Card-text element                                                | Status |
 # |-------------------------------------------------------------------|--------|
 # | Std digivolve Lv.4 Red / Cost 4                                  | IMPLEMENTED (printed evo_costs) |
+# | Std digivolve Lv.4 Yellow / Cost 4                               | IMPLEMENTED (official DB — 2nd printed circle, dropped by cards.json) |
 # | Special [Digivolve] [Aegiomon]: Cost 3                           | IMPLEMENTED (alt_paths name_contains) |
 # | <Security A. +1>                                                 | IMPLEMENTED (aura security_attack: 1) |
 # | <Decode ([Aegiomon])> own — play source on non-battle leave      | IMPLEMENTED (replacement + select_material + play_from_materials) |
@@ -94,6 +102,9 @@ attribute: Vaccine
 alt_paths:
   - kind: digivolve
     from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
     cost: 4
   - kind: digivolve
     from: { name_contains: "Aegiomon" }

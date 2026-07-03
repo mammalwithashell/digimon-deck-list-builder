@@ -1,7 +1,10 @@
 //! BT24-014 Aegiochusmon — Digimon, Lv.5, Red/Yellow, DP 8000, Cost 8.
 //! Traits: Shaman, Iliad, TS. (Rule) Trait: Has [Dragonkin] Type. Attribute: Vaccine.
-//! Standard digivolve: Lv.4 Red / cost 4 (printed evo_costs). Special digivolve
-//! condition: `[Digivolve] [Aegiomon]: Cost 3`.
+//! Standard digivolve: Lv.4 Red / cost 4 AND Lv.4 Yellow / cost 4 (both printed
+//! circles — data/card_official.json digivolve_costs lists card_color 0 (Red)
+//! AND card_color 2 (Yellow), both level 4 / memory_cost 4; cards.json's
+//! evo_costs dropped the Yellow circle). Special digivolve condition:
+//! `[Digivolve] [Aegiomon]: Cost 3`.
 //!
 //! # Card text (data/card_bundles/BT24-014.md — official Bandai DB, verbatim)
 //!
@@ -46,8 +49,8 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
+    CompiledScope, CompiledTiming,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
@@ -88,6 +91,18 @@ fn lv4_red_carrier(card_id: &str) -> CardData {
     c
 }
 
+/// A Lv.4 Yellow carrier BT24-014 can digivolve onto (2nd printed circle —
+/// official Bandai DB digivolve_costs card_color 2 (Yellow), level 4, cost 4;
+/// dropped from cards.json's evo_costs by the multi-colour-cost lossiness).
+fn lv4_yellow_carrier(card_id: &str) -> CardData {
+    let mut c = make_test_card_with_level(card_id, card_id, 4);
+    c.card_kind = CardKind::Digimon;
+    c.colors = vec![CardColor::Yellow];
+    c.dp = Some(4000);
+    c.play_cost = 4;
+    c
+}
+
 fn push_to_hand(runner: &mut DebugRunner, player: u8, card_id: &str) -> usize {
     let data_index = runner
         .game
@@ -111,6 +126,7 @@ fn base() -> DebugRunnerBuilder {
         .add_card(opp_digimon("OPP-3000", 3000))
         .add_card(aegiomon_source())
         .add_card(lv4_red_carrier("RED-CARRIER"))
+        .add_card(lv4_yellow_carrier("YELLOW-CARRIER"))
         .add_card(make_test_card("FILLER", "Filler"))
         .deck(0, &["FILLER"; 12])
         .deck(1, &["FILLER"; 12])
@@ -148,6 +164,63 @@ fn bt24_014_has_dragonkin_rule_trait() {
         assert!(
             card.traits.iter().any(|t| t.eq_ignore_ascii_case(expected)),
             "must still carry printed trait {expected}; got {:?}",
+            card.traits
+        );
+    }
+}
+
+/// Production `data/cards.json` must carry the (Rule) Dragonkin trait grant
+/// for BT24-014 (folded into `type_eng` at ingest time from
+/// `data/card_overrides.json`, per the BT21-024 / EX7-021 precedent). This is
+/// the genuinely discriminating check for the runtime gap: DebugRunner's
+/// `dsl_card()` fixture path (`card_data_from_compiled` in debug_runner.rs)
+/// synthesizes test `CardData` directly from the compiled YAML `traits:`
+/// field, so a DebugRunner-only assertion can NEVER distinguish "override
+/// applied" from "override missing" — it would trivially pass either way.
+/// Production `CardData` is instead built by `CardData::load_from_file` /
+/// `load_from_str` (card_data.rs) purely from `cards.json`'s
+/// `type_eng`/`form_eng`/`attribute_eng` fields; `card_overrides.json` only
+/// reaches `cards.json` via the `ingest_cards.py` merge step, so this test
+/// reads `data/cards.json` directly (BT12-022 idiom) to prove the trait
+/// actually reaches the field the real game runs on.
+#[test]
+fn bt24_014_data_cards_json_has_dragonkin_rule_trait() {
+    use digimon_engine::card_data::CardData;
+    use std::path::PathBuf;
+
+    // CARGO_MANIFEST_DIR = code/digimon-engine; data/cards.json is two
+    // levels up at the repo root.
+    let cards_json = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("..")
+        .join("..")
+        .join("data")
+        .join("cards.json");
+    if !cards_json.exists() {
+        eprintln!(
+            "Skipping: data/cards.json not found at {} — test only runs in a full repo checkout",
+            cards_json.display()
+        );
+        return;
+    }
+
+    let cards = CardData::load_from_file(&cards_json).expect("load data/cards.json");
+    let card = cards.get("BT24-014").expect("BT24-014 in data/cards.json");
+
+    assert!(
+        card.traits.iter().any(|t| t.eq_ignore_ascii_case("Dragonkin")),
+        "data/cards.json BT24-014.traits must carry the (Rule) Trait: Has \
+         [Dragonkin] Type grant — reconcile via \
+         code/tools/audit_digivolve/reconcile_traits.py into \
+         data/card_overrides.json (type_eng: [\"Shaman\", \"Iliad\", \"TS\", \
+         \"Dragonkin\"]) and re-ingest, per the BT21-024 / EX7-021 precedent; \
+         got traits={:?}",
+        card.traits
+    );
+    for expected in ["Shaman", "Iliad", "TS"] {
+        assert!(
+            card.traits.iter().any(|t| t.eq_ignore_ascii_case(expected)),
+            "data/cards.json BT24-014.traits must still carry printed trait \
+             {expected}; got {:?}",
             card.traits
         );
     }
@@ -215,10 +288,58 @@ fn bt24_014_standard_alt_path_is_level4_red_cost4() {
                 && p.cost == Some(CompiledCost::Literal(4))
                 && p.from
                     .as_ref()
-                    .is_some_and(|f| f.level_eq == Some(4) && f.color_is.is_some())
+                    .is_some_and(|f| f.level_eq == Some(4) && f.color_is == Some(CompiledColor::Red))
         }),
         "standard Lv.4 Red / cost 4 alt-path must exist; alt_paths: {:?}",
         card.alt_paths
+    );
+}
+
+#[test]
+fn bt24_014_standard_alt_path_is_level4_yellow_cost4() {
+    // Second printed digivolve circle (official Bandai DB digivolve_costs:
+    // card_color 0=Red AND card_color 2=Yellow, both level 4 / memory_cost 4;
+    // data/card_bundles/BT24-014.md confirms both "Red Lv.4 / cost 4" and
+    // "Yellow Lv.4 / cost 4"). cards.json's evo_costs drops the Yellow entry
+    // (documented multi-colour-cost lossiness) — this alt-path is authored
+    // explicitly to restore it, matching the BT25-025 (Blue/Purple) idiom.
+    let runner = base().memory(10).start();
+    let card = runner.compiled_card(CARD_ID).expect("BT24-014 present");
+    assert!(
+        card.alt_paths.iter().any(|p| {
+            p.kind == CompiledAltPathKind::Digivolve
+                && p.cost == Some(CompiledCost::Literal(4))
+                && p.from.as_ref().is_some_and(|f| {
+                    f.level_eq == Some(4) && f.color_is == Some(CompiledColor::Yellow)
+                })
+        }),
+        "standard Lv.4 Yellow / cost 4 alt-path must exist; alt_paths: {:?}",
+        card.alt_paths
+    );
+}
+
+#[test]
+fn bt24_014_digivolves_from_level4_yellow_carrier_for_cost4() {
+    // Behavioral confirmation: a Lv.4 Yellow Digimon can actually digivolve
+    // into BT24-014 in the engine for cost 4 (the second printed circle).
+    let mut runner = base().memory(10).start();
+    let hand_index = push_to_hand(&mut runner, 0, CARD_ID);
+    let carrier = runner.place_on_field(0, "YELLOW-CARRIER", Some(0));
+
+    let digivolved =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_index, carrier.index as usize, PlaySource::ByHand);
+    assert!(
+        digivolved,
+        "BT24-014 must digivolve onto a Lv.4 Yellow carrier for cost 4"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[carrier.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        CARD_ID,
+        "BT24-014 must be the new top of the stack after digivolving"
     );
 }
 

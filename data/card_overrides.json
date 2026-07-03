@@ -9111,6 +9111,12 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Shaman",
+      "Iliad",
+      "TS",
+      "Dragonkin"
     ]
   },
   "BT24-015": {

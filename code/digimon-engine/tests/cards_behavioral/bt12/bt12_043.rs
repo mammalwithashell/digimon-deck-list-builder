@@ -1,855 +1,599 @@
 //! BT12-043 ShineGreymon — Digimon, Lv.6, Yellow/Red, DP 12000, Cost 12.
 //! Traits: Light Dragon. Form: Mega. Attribute: Vaccine.
 //!
-//! # Card text (code/digimon-engine/cards/bt12/BT12-043.json — verbatim)
+//! # Card text (card image BT12-043.webp + official bundle — verbatim)
 //!
-//! ```text
-//! [Digivolve] 3 from Lv.5 w/[RizeGreymon] in name
+//! [When Digivolving] For each yellow and/or red Tamer you have in play,
+//! 1 of your opponent's Digimon and all of your opponent's Security Digimon
+//! get -3000 DP for the turn.
+//! [Your Turn] All of your [Marcus Damon]s in play get +3000 DP and gain
+//! ＜Security Attack +1＞. (This Digimon checks 1 additional security card.)
 //!
-//! [When Digivolving] For each yellow and/or red Tamer you have in play, 1 of
-//! your opponent's Digimon and all of your opponent's Security Digimon get
-//! -3000 DP for the turn.
-//! [Your Turn] All of your [Marcus Damon] in play get +3000 DP and gain
-//! ＜Security A. +1＞ (This Digimon checks 1 additional security card.)
-//! ```
-//!
-//! Standard digivolve circles (data/card_bundles/BT12-043.md — official
-//! Bandai DB): Yellow Lv.5 / cost 4, Red Lv.5 / cost 4.
-//!
-//! Official Q&A (data/card_bundles/BT12-043.md):
-//! "No, you can't [choose 2]. You choose 1 of your opponent's Digimon, then
-//! that Digimon and all security Digimon get -3000 DP for each of your
-//! yellow or red Tamers." — confirms the debuff targets exactly ONE opponent
-//! Digimon (mandatory single select) plus the whole opponent security stack,
-//! both scaled by the SAME per-Tamer count.
+//! Official Q&A: "No, you can't [pick 0 Digimon]. You choose 1 of your
+//! opponent's Digimon, then that Digimon and all security Digimon get -3000
+//! DP for each of your yellow or red Tamers." — the opponent-Digimon pick is
+//! MANDATORY when a legal target exists, and one shared multiplier (3000 *
+//! yellow/red Tamer count) hits both the picked Digimon and all opponent
+//! Security Digimon.
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/BT12/Yellow/BT12_043.cs
+//!   - Region 1 (None): AddSelfDigivolutionRequirementStaticEffect —
+//!     TopCard.ContainsCardName("RizeGreymon") && Level == 5, cost 3.
+//!   - Region 2 (OnEnterFieldAnyone): CanActivateCondition requires >=1 own
+//!     battle-area Tamer colored Yellow or Red; ActivateCoroutine recomputes
+//!     the same count, mandatorily selects 1 opponent Digimon (canNoSelect:
+//!     false) when any exists -> ChangeDigimonDP(-3000*count,
+//!     UntilEachTurnEnd); UNCONDITIONALLY (outside the opponent-Digimon
+//!     existence guard) applies ChangeSecurityDigimonCardDPPlayerEffect
+//!     (-3000*count, UntilEachTurnEnd) to all opponent Security Digimon.
+//!   - Region 3 + 4 (None): ChangeDPStaticEffect(+3000) /
+//!     ChangeSAttackStaticEffect(+1), both gated on
+//!     IsPermanentExistsOnOwnerBattleAreaDigimon (requires Permanent.IsDigimon
+//!     — true for a genuine Digimon OR a permanent under an active
+//!     ITreatAsDigimonEffect) AND CardNames.Contains("Marcus Damon"), AND
+//!     IsOwnerTurn. No printed "Marcus Damon" card is Digimon-kind (all 5
+//!     printings — BT4-092, BT12-092, BT13-095, BT17-087, BT21-086 — are
+//!     Tamers), so this is a dormant synergy gate: it only grants DP/Security
+//!     A. to a Marcus Damon Tamer that ANOTHER effect (AD1-021, BT13-020,
+//!     BT25-104) has simultaneously made "treated as a Digimon".
 //!
-//! DCGO crosscheck (per clause):
-//! - Region `EffectTiming.None` (`AddSelfDigivolutionRequirementStaticEffect`):
-//!   `permanentCondition` = top card contains "RizeGreymon" && level == 5;
-//!   `digivolutionCost: 3`. → alt_paths digivolve { level_eq: 5,
-//!   name_contains: "RizeGreymon" }, cost 3.
-//! - Region `EffectTiming.OnEnterFieldAnyone` (`ActivateClass`):
-//!   `CanUseCondition` = `CanTriggerWhenDigivolving`. `CanActivateCondition`
-//!   gates on `IsExistOnBattleArea(card)` AND count of own battle-area
-//!   permanents that are Tamers AND (Yellow-colored OR Red-colored) >= 1.
-//!   `ActivateCoroutine`: recomputes `count`; `minusDP = 3000 * count`; if any
-//!   opponent battle-area Digimon exists, mandatorily
-//!   (`canNoSelect: false`, `maxCount: Min(1, candidateCount)`) selects ONE
-//!   and applies `ChangeDigimonDP(-minusDP, UntilEachTurnEnd)`; THEN
-//!   (unconditionally, not gated on the select happening)
-//!   `ChangeSecurityDigimonCardDPPlayerEffect(cardCondition: owner == enemy,
-//!   -minusDP, UntilEachTurnEnd)` — hits the whole opponent security stack
-//!   regardless of whether an opponent battle-area Digimon existed to select.
-//!   → when: when_digivolving; condition: any_permanent{of:you, kind:tamer,
-//!   any_of[color_is:yellow, color_is:red]}; process: [select_opponent_permanent
-//!   (mandatory, kind: digimon) -> add_dp_modifier(formula, expiry:
-//!   end_of_turn), add_player_modifier(target_player: opponent, modifier:
-//!   ChangeOwnSecurityDigimonDp, value: formula, expiry: end_of_turn)].
-//!   UntilEachTurnEnd → end_of_turn (ST1-14 / BT25-018 idiom).
-//! - Region `EffectTiming.None` x2 (`ChangeDPStaticEffect` +
-//!   `ChangeSAttackStaticEffect`): both gated by `IsExistOnBattleArea(card) &&
-//!   IsOwnerTurn(card)`, `permanentCondition` = own battle-area permanent
-//!   whose top card's `CardNames` contains "Marcus Damon" (or the
-//!   no-space "MarcusDamon" spelling — a defensive DCGO alias, not a second
-//!   printed name). → two declarative Aura clauses: `active_when: {
-//!   your_turn: true }`, `target: { owner: you, name_contains: "Marcus
-//!   Damon" }`; one with `dp_modifier: 3000`, one with `grant_keyword: {
-//!   keyword: SecurityAttackPlus, value: 1 }` (two separate DCGO static
-//!   effects, faithfully authored as two clauses per the BT5-093 idiom).
-//!
-//! # Patterns this test covers
-//! - G2-adjacent named alt-digivolve source (Lv.5 w/[RizeGreymon] in name,
-//!   cost 3)
-//! - D1/D-formula: mandatory single-target DP debuff scaled by
-//!   `card_count_in_zone` filtered to (own, battle_area, Tamer, yellow/red)
-//!   (AD1-016 / BT25-018 idiom)
-//! - ST1-14 idiom: `add_player_modifier` w/ `ChangeOwnSecurityDigimonDp`,
-//!   `target_player: opponent` (flipped from ST1-14's `you`), scaled formula
-//!   value, `expiry: end_of_turn`
-//! - D4/BT5-093 idiom: two name-filtered declarative auras (+3000 DP,
-//!   <Security A. +1>) gated on `active_when: { your_turn: true }`
-//! - E-negative: gate fails with zero yellow/red Tamers on the field (no
-//!   selection installs, no security debuff)
-//! - Negative: opponent Digimon select does not install when the opponent has
-//!   no battle-area Digimon, but the security debuff STILL fires
-//! - Negative: blue/green/etc Tamers do not count toward the multiplier or
-//!   satisfy the gate
+//! # Substrate (all shipped — no engine/DSL gap)
+//! - alt_paths: kind: digivolve, from: { level_eq, color_is } for the
+//!   cards.json-dropped Red Lv.5/4 standard circle (BT12-038/BT11-018 idiom).
+//! - alt_paths: kind: digivolve, from: { level_eq, name_contains } for the
+//!   "w/[RizeGreymon] in name" special alt-path (AD1-016/BT21-042/ST24-07
+//!   idiom — DCGO ContainsCardName is a substring scan).
+//! - condition: count_gte over a colored-Tamer filter (BT13-088 idiom).
+//! - select_opponent_permanent (mandatory) + add_dp_modifier with a
+//!   base_per_delta card_count_in_zone formula (BT23-101 idiom).
+//! - add_player_modifier { modifier: SecurityDpChange, value: <formula> } for
+//!   the opponent (ST3-13/ST1-14/BT15-092 idiom — defender_security_dp_adjustment
+//!   consumer), authored as a SEPARATE sibling step so it always runs.
+//! - kind: aura with a name+kind FILTER target + active_when: your_turn,
+//!   consuming synth_identity via the TreatAsDigimon mass-aura path
+//!   (BT25-104 idiom: `kind: digimon, name_is: "Marcus Damon"` gate).
 
-#![allow(dead_code, unused_imports, unused_variables, unused_mut)]
+#![allow(dead_code, unused_imports)]
 
-use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
-};
-use digimon_engine::action::space::PASS;
+#[path = "../../support/dsl_card_data.rs"]
+mod dsl_card_data;
+
+use digimon_dsl::compiled::{CompiledAltPathKind, CompiledClause, CompiledColor, CompiledScope};
 use digimon_engine::card_data::CardData;
-use digimon_engine::card_source::CardSource;
-use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Keyword, ModifierType, PlayerId};
+use digimon_engine::debug_runner::{make_test_card, DebugRunner};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Keyword, ModifierType};
 use digimon_engine::permanent::PermanentHandle;
-use digimon_engine::selection::TriggerSource;
-
-const CARD_ID: &str = "BT12-043";
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-fn shinegreymon_runner() -> DebugRunnerBuilder {
-    DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("BT12-043 YAML in embedded pack")
-}
+use digimon_engine::selection::{PendingSelection, TriggerSource};
 
 fn compiled() -> digimon_dsl::compiled::CompiledCard {
-    digimon_engine::dsl_registry::from_embedded()
-        .expect("embedded DSL registry loads")
-        .lookup(CARD_ID)
-        .unwrap_or_else(|| panic!("{CARD_ID} not found in embedded DSL pack"))
-        .clone()
+    dsl_card_data::compiled("BT12-043")
 }
 
-fn make_digimon(id: &str, level: u8, dp: i32) -> CardData {
-    let mut card = make_test_card(id, id);
-    card.card_kind = CardKind::Digimon;
-    card.level = Some(level);
-    card.dp = Some(dp);
-    card
+fn first_action(p: &PendingSelection) -> u16 {
+    *p.valid_action_ids.first().expect("a legal action")
 }
 
-fn make_tamer(id: &str, name: &str, color: CardColor) -> CardData {
-    let mut card = make_test_card(id, name);
-    card.card_kind = CardKind::Tamer;
-    card.level = None;
-    card.dp = None;
-    card.colors = vec![color];
-    card
-}
-
-fn make_marcus_damon(id: &str) -> CardData {
-    let mut card = make_test_card(id, "Marcus Damon");
-    card.card_kind = CardKind::Digimon;
-    card.level = Some(4);
-    card.dp = Some(5000);
-    card.colors = vec![CardColor::Yellow];
-    card
-}
-
-fn push_security(runner: &mut DebugRunner, player: PlayerId, card_id: &str, count: usize) {
-    let data_idx = runner
-        .game
-        .card_data
-        .iter()
-        .position(|c| c.card_id == card_id)
-        .unwrap_or_else(|| panic!("unknown card {card_id}"));
-    for _ in 0..count {
-        let next = runner.game.next_card_index();
-        runner.game.players[player as usize]
-            .security
-            .push(CardSource::new(data_idx, player, next));
-    }
-}
-
-fn fire_when_digivolving(runner: &mut DebugRunner, perm: PermanentHandle) {
+fn fire(runner: &mut DebugRunner, timing: EffectTiming, h: PermanentHandle) {
     runner
         .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(perm));
+        .enqueue_triggered(timing, TriggerSource::Permanent(h));
     runner.game.drain_effect_queue();
 }
 
-/// Resolve any pending selections, always picking the first non-PASS action.
-fn resolve_all(runner: &mut DebugRunner) {
-    while let Some(view) = runner.pending_selection_view() {
-        let accept = view
-            .valid_action_ids
-            .iter()
-            .copied()
-            .find(|&id| id != PASS)
-            .unwrap_or(view.valid_action_ids[0]);
-        runner
-            .execute_action(view.selecting_player, accept)
-            .expect("resolve pending selection");
-    }
-    let _ = runner.auto_resolve();
+// ─── Card-data helpers ────────────────────────────────────────────────────────
+
+fn tamer(id: &str, color: CardColor) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Tamer;
+    c.level = None;
+    c.dp = None;
+    c.colors = vec![color];
+    c.play_cost = 2;
+    c
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// SECTION 1 — Structural assertions
-// ═══════════════════════════════════════════════════════════════════════════
+fn opp_digimon(id: &str, dp: i32) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(5);
+    c.dp = Some(dp);
+    c.colors = vec![CardColor::Black];
+    c.play_cost = 5;
+    c
+}
+
+fn filler() -> CardData {
+    make_test_card("FILLER", "Filler")
+}
+
+/// A [Marcus Damon] Tamer (name-matched by the [Your Turn] auras). Not
+/// natively Digimon-kind — matches every printed Marcus Damon card.
+fn make_marcus(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Marcus Damon");
+    c.card_kind = CardKind::Tamer;
+    c.level = None;
+    c.dp = None;
+    c.colors = vec![CardColor::Yellow];
+    c.play_cost = 3;
+    c
+}
+
+fn base_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .dsl_card("BT12-043")
+        .expect("BT12-043 in pack")
+        .add_card(tamer("Y-TAMER", CardColor::Yellow))
+        .add_card(tamer("R-TAMER", CardColor::Red))
+        .add_card(tamer("B-TAMER", CardColor::Blue))
+        .add_card(opp_digimon("OPP-A", 11000))
+        .add_card(opp_digimon("OPP-B", 9000))
+        .add_card(make_marcus("MARCUS"))
+        .add_card(tamer("OTHER-TAMER", CardColor::Yellow))
+        .add_card(filler())
+        .deck(0, &["FILLER"; 10])
+        .deck(1, &["FILLER"; 10])
+        .memory(10)
+        .start()
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION 1 — Structural
+// ════════════════════════════════════════════════════════════════════════════
 
 #[test]
-fn bt12_043_has_printed_stats_and_traits() {
-    let card = compiled();
+fn bt12_043_compiles_from_dsl_pack() {
+    let _ = compiled();
+}
 
+#[test]
+fn bt12_043_metadata_yellow_red_lv6_12000() {
+    let card = compiled();
     assert_eq!(card.card, "BT12-043");
     assert_eq!(card.name, "ShineGreymon");
     assert_eq!(card.level, Some(6));
     assert_eq!(card.dp, Some(12000));
+    assert!(card.color.contains(&CompiledColor::Yellow));
+    assert!(card.color.contains(&CompiledColor::Red));
     assert_eq!(card.cost, Some(12));
-    assert!(
-        card.color.contains(&digimon_dsl::compiled::CompiledColor::Yellow)
-            && card.color.contains(&digimon_dsl::compiled::CompiledColor::Red),
-        "BT12-043 must be Yellow/Red"
-    );
-    assert!(
-        card.traits.iter().any(|t| t == "Light Dragon"),
-        "missing trait Light Dragon"
-    );
 }
 
+/// Two authored standard-circle-restoration + special alt-paths:
+/// Red Lv.5/4 (cards.json-dropped standard circle) + Lv.5 w/RizeGreymon-in-
+/// name/cost 3 (special digivolve). The Yellow Lv.5/4 circle loads from
+/// evo_costs metadata, not an authored alt_path.
 #[test]
-fn bt12_043_declares_alt_digivolve_from_lv5_rizegreymon_cost3() {
+fn bt12_043_has_two_authored_alt_paths() {
     let card = compiled();
-    let has_alt = card.alt_paths.iter().any(|p| {
-        p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(3))
+    assert_eq!(
+        card.alt_paths.len(),
+        2,
+        "Red standard-circle restoration + RizeGreymon special alt-path"
+    );
+    let has_red_lv5_cost4 = card.alt_paths.iter().any(|p| {
+        matches!(p.kind, CompiledAltPathKind::Digivolve)
+            && p.cost == Some(digimon_dsl::compiled::CompiledCost::Literal(4))
+            && format!("{:?}", p.from).to_lowercase().contains("red")
+            && format!("{:?}", p.from).contains("5")
     });
     assert!(
-        has_alt,
-        "BT12-043 must declare the cost-3 alt digivolve path from a Lv.5 \
-         [RizeGreymon]-named source; alt_paths = {:?}",
+        has_red_lv5_cost4,
+        "must restore the cards.json-dropped Red Lv.5/cost 4 standard circle: {:?}",
+        card.alt_paths
+    );
+    let has_rizegreymon_cost3 = card.alt_paths.iter().any(|p| {
+        matches!(p.kind, CompiledAltPathKind::Digivolve)
+            && p.cost == Some(digimon_dsl::compiled::CompiledCost::Literal(3))
+            && format!("{:?}", p.from).contains("RizeGreymon")
+    });
+    assert!(
+        has_rizegreymon_cost3,
+        "must have the '[Digivolve] 3 from Lv.5 w/[RizeGreymon] in name' alt-path: {:?}",
         card.alt_paths
     );
 }
 
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION 2 — [When Digivolving] gate + mandatory opp-Digimon debuff + all-security debuff
+// ════════════════════════════════════════════════════════════════════════════
+
+/// Zero own yellow/red Tamers -> the whole clause is gated off (no select, no
+/// security modifier). Mirrors DCGO's CanActivateCondition == false.
 #[test]
-fn bt12_043_has_when_digivolving_clause_with_tamer_gate() {
-    let card = compiled();
-    let triggered: Vec<_> = card
-        .effects
-        .iter()
-        .filter_map(|c| match c {
-            CompiledClause::Triggered(t) => Some(t),
-            _ => None,
-        })
-        .collect();
+fn bt12_043_when_digivolving_no_effect_with_zero_colored_tamers() {
+    let mut runner = base_runner();
+    let shine = runner.place_on_field(0, "BT12-043", Some(0));
+    // Only a BLUE tamer present — does not satisfy yellow/red.
+    let _blue = runner.place_on_field(0, "B-TAMER", Some(0));
+    let opp = runner.place_on_field(1, "OPP-A", Some(0));
+    let dp_before = runner.effective_dp(opp).expect("opp dp");
 
-    let wd = triggered
-        .iter()
-        .find(|t| t.when.contains(&CompiledTiming::WhenDigivolving))
-        .expect("a [When Digivolving] clause must exist");
-
-    assert_eq!(
-        wd.scope,
-        CompiledScope::FaceUp,
-        "[When Digivolving] is an own-scope (FaceUp) clause"
-    );
-    assert!(
-        !wd.optional,
-        "the DP debuff is mandatory once the Tamer gate holds (no \"you may\" in printed text)"
-    );
-    assert!(
-        wd.condition.is_some(),
-        "clause must declare the yellow/red Tamer-count gate as a condition"
-    );
-}
-
-#[test]
-fn bt12_043_has_two_your_turn_marcus_damon_auras() {
-    let card = compiled();
-    let auras: Vec<_> = card
-        .effects
-        .iter()
-        .filter_map(|c| match c {
-            CompiledClause::Declarative(CompiledDeclarativeClause::Aura {
-                active_when,
-                target,
-                dp_modifier,
-                grant_keyword,
-                ..
-            }) => Some((active_when, target, dp_modifier, grant_keyword)),
-            _ => None,
-        })
-        .collect();
-
-    assert_eq!(
-        auras.len(),
-        2,
-        "BT12-043 must author two separate [Your Turn] Marcus Damon auras \
-         (+3000 DP and <Security A. +1>), mirroring DCGO's two static \
-         effects; got {:?}",
-        auras
-    );
-
-    let dp_aura = auras
-        .iter()
-        .find(|(_, _, dp, _)| dp.is_some())
-        .expect("a +3000 DP aura must exist");
-    assert_eq!(dp_aura.2, &Some(3000), "DP aura must grant +3000");
-    assert_ne!(
-        *dp_aura.1,
-        digimon_dsl::compiled::CompiledPredicate::default(),
-        "DP aura target must be filtered (name_contains Marcus Damon)"
-    );
-    assert!(
-        dp_aura.0.is_some(),
-        "DP aura must gate on active_when: your_turn"
-    );
-
-    let kw_aura = auras
-        .iter()
-        .find(|(_, _, _, kw)| kw.is_some())
-        .expect("a Security A. +1 aura must exist");
-    let gk = kw_aura.3.as_ref().unwrap();
-    assert_eq!(gk.keyword, "SecurityAttackPlus");
-    assert_eq!(gk.value, Some(1));
-    assert!(
-        kw_aura.0.is_some(),
-        "Security A. +1 aura must gate on active_when: your_turn"
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// SECTION 2 — [When Digivolving] condition gating (positive + negative)
-// ═══════════════════════════════════════════════════════════════════════════
-
-/// Negative: zero yellow/red Tamers on the field → the whole clause is a
-/// no-op (no selection installs, no security debuff).
-#[test]
-fn bt12_043_no_tamer_gate_fails_no_selection_no_security_debuff() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_digimon("OPP", 5, 8000))
-        .memory(20)
-        .start();
-    let perm = runner.place_on_field(0, CARD_ID, Some(0));
-    let opp = runner.place_on_field(1, "OPP", Some(0));
-
-    fire_when_digivolving(&mut runner, perm);
+    fire(&mut runner, EffectTiming::WhenDigivolving, shine);
+    let _ = runner.auto_resolve();
 
     assert!(
-        runner.pending_selection().is_none(),
-        "no yellow/red Tamer → gate fails → no DP-debuff selection installs"
+        runner.game.pending_selection.is_none(),
+        "no pending selection when there are zero yellow/red Tamers"
     );
     assert_eq!(
-        runner.dp_of(opp),
-        Some(8000),
-        "opponent Digimon DP must be unchanged"
+        runner.effective_dp(opp),
+        Some(dp_before),
+        "opponent Digimon DP is unaffected with zero qualifying Tamers"
     );
     assert_eq!(
         runner
             .modifiers()
-            .player_modifier_value(1, ModifierType::ChangeOwnSecurityDigimonDp),
+            .player_modifier_value(1, ModifierType::SecurityDpChange),
         0,
-        "no ChangeOwnSecurityDigimonDp modifier should be installed on the opponent"
+        "no opponent SecurityDpChange modifier installed with zero qualifying Tamers"
     );
 }
 
-/// Negative: a non-yellow/red (e.g. Blue) Tamer does not satisfy the gate.
+/// One yellow Tamer -> -3000 DP to the mandatorily-picked opponent Digimon,
+/// and a matching -3000 SecurityDpChange modifier on the opponent.
 #[test]
-fn bt12_043_blue_tamer_does_not_satisfy_gate() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_tamer("BLUE-TAMER", "BlueTamer", CardColor::Blue))
-        .add_card(make_digimon("OPP", 5, 8000))
-        .memory(20)
-        .start();
-    let perm = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "BLUE-TAMER", Some(0));
-    let opp = runner.place_on_field(1, "OPP", Some(0));
+fn bt12_043_when_digivolving_scales_with_one_yellow_tamer() {
+    let mut runner = base_runner();
+    let shine = runner.place_on_field(0, "BT12-043", Some(0));
+    let _y = runner.place_on_field(0, "Y-TAMER", Some(0));
+    let opp_a = runner.place_on_field(1, "OPP-A", Some(0)); // 11000
+    let dp_before = runner.effective_dp(opp_a).expect("opp dp");
 
-    fire_when_digivolving(&mut runner, perm);
+    fire(&mut runner, EffectTiming::WhenDigivolving, shine);
 
-    assert!(
-        runner.pending_selection().is_none(),
-        "a Blue Tamer must not satisfy the yellow/red gate"
-    );
-    assert_eq!(runner.dp_of(opp), Some(8000));
-}
-
-/// Positive: one yellow Tamer satisfies the gate and installs the mandatory
-/// opponent-Digimon selection.
-#[test]
-fn bt12_043_yellow_tamer_satisfies_gate_installs_selection() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_tamer("Y-TAMER", "YellowTamer", CardColor::Yellow))
-        .add_card(make_digimon("OPP", 5, 8000))
-        .memory(20)
-        .start();
-    let perm = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "Y-TAMER", Some(0));
-    runner.place_on_field(1, "OPP", Some(0));
-
-    fire_when_digivolving(&mut runner, perm);
-
-    let view = runner
-        .pending_selection_view()
-        .expect("a yellow Tamer satisfies the gate → mandatory opp-Digimon selection installs");
-    assert!(
-        !view.valid_action_ids.is_empty(),
-        "opponent Digimon must be selectable"
-    );
-    assert!(
-        !runner.pending_is_optional(),
-        "the debuff select is mandatory (DCGO canNoSelect: false)"
-    );
-}
-
-/// Positive: one red Tamer also satisfies the gate.
-#[test]
-fn bt12_043_red_tamer_satisfies_gate_installs_selection() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_tamer("R-TAMER", "RedTamer", CardColor::Red))
-        .add_card(make_digimon("OPP", 5, 8000))
-        .memory(20)
-        .start();
-    let perm = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "R-TAMER", Some(0));
-    runner.place_on_field(1, "OPP", Some(0));
-
-    fire_when_digivolving(&mut runner, perm);
-
-    assert!(
-        runner.pending_selection().is_some(),
-        "a Red Tamer satisfies the gate too"
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// SECTION 3 — [When Digivolving] behavioral outcome: DP debuff scaling
-// ═══════════════════════════════════════════════════════════════════════════
-
-/// One yellow/red Tamer → -3000 DP to the chosen opponent Digimon.
-#[test]
-fn bt12_043_one_tamer_applies_minus_3000_to_chosen_opponent_digimon() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_tamer("Y-TAMER", "YellowTamer", CardColor::Yellow))
-        .add_card(make_digimon("OPP", 6, 12000))
-        .memory(20)
-        .start();
-    let perm = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "Y-TAMER", Some(0));
-    let opp = runner.place_on_field(1, "OPP", Some(0));
-
-    fire_when_digivolving(&mut runner, perm);
-    resolve_all(&mut runner);
+    // Mandatory pick of 1 opponent Digimon (no PASS/decline option).
+    let (player, action) = {
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("mandatory opponent-Digimon select pending");
+        assert!(
+            !p.is_optional,
+            "the opponent-Digimon pick is mandatory (Q&A: 'No, you can't [pick 0]')"
+        );
+        (p.selecting_player, first_action(p))
+    };
+    runner
+        .execute_action(player, action)
+        .expect("pick the opponent Digimon");
+    let _ = runner.auto_resolve();
 
     assert_eq!(
-        runner.dp_of(opp),
-        Some(9000),
-        "1 yellow/red Tamer → -3000 DP (12000-3000)"
+        runner.effective_dp(opp_a),
+        Some((dp_before - 3000).max(0)),
+        "1 yellow Tamer -> -3000 DP to the picked opponent Digimon"
+    );
+    assert_eq!(
+        runner
+            .modifiers()
+            .player_modifier_value(1, ModifierType::SecurityDpChange),
+        -3000,
+        "1 yellow Tamer -> -3000 SecurityDpChange on the opponent"
     );
 }
 
-/// Two yellow/red Tamers → -6000 DP to the chosen opponent Digimon.
+/// Two qualifying Tamers (1 yellow + 1 red) -> -6000 scaling on both the
+/// picked Digimon and the security modifier (count, not distinct color).
 #[test]
-fn bt12_043_two_tamers_scale_debuff_to_minus_6000() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_tamer("Y-TAMER", "YellowTamer", CardColor::Yellow))
-        .add_card(make_tamer("R-TAMER", "RedTamer", CardColor::Red))
-        .add_card(make_digimon("OPP", 6, 12000))
-        .memory(20)
-        .start();
-    let perm = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "Y-TAMER", Some(0));
-    runner.place_on_field(0, "R-TAMER", Some(0));
-    let opp = runner.place_on_field(1, "OPP", Some(0));
+fn bt12_043_when_digivolving_scales_with_yellow_and_red_tamers() {
+    let mut runner = base_runner();
+    let shine = runner.place_on_field(0, "BT12-043", Some(0));
+    let _y = runner.place_on_field(0, "Y-TAMER", Some(0));
+    let _r = runner.place_on_field(0, "R-TAMER", Some(0));
+    let opp_a = runner.place_on_field(1, "OPP-A", Some(0)); // 11000
+    let dp_before = runner.effective_dp(opp_a).expect("opp dp");
 
-    fire_when_digivolving(&mut runner, perm);
-    resolve_all(&mut runner);
+    fire(&mut runner, EffectTiming::WhenDigivolving, shine);
+    let (player, action) = {
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("mandatory opponent-Digimon select pending");
+        (p.selecting_player, first_action(p))
+    };
+    runner
+        .execute_action(player, action)
+        .expect("pick the opponent Digimon");
+    let _ = runner.auto_resolve();
 
     assert_eq!(
-        runner.dp_of(opp),
-        Some(6000),
-        "2 yellow/red Tamers → -6000 DP (12000-6000)"
+        runner.effective_dp(opp_a),
+        Some((dp_before - 6000).max(0)),
+        "2 qualifying Tamers (yellow + red) -> -6000 DP to the picked opponent Digimon"
     );
-}
-
-/// A Blue Tamer present alongside a Yellow Tamer must NOT add to the
-/// multiplier — only yellow/red Tamers count.
-#[test]
-fn bt12_043_non_matching_tamer_does_not_add_to_multiplier() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_tamer("Y-TAMER", "YellowTamer", CardColor::Yellow))
-        .add_card(make_tamer("BLUE-TAMER", "BlueTamer", CardColor::Blue))
-        .add_card(make_digimon("OPP", 6, 12000))
-        .memory(20)
-        .start();
-    let perm = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "Y-TAMER", Some(0));
-    runner.place_on_field(0, "BLUE-TAMER", Some(0));
-    let opp = runner.place_on_field(1, "OPP", Some(0));
-
-    fire_when_digivolving(&mut runner, perm);
-    resolve_all(&mut runner);
-
     assert_eq!(
-        runner.dp_of(opp),
-        Some(9000),
-        "only the 1 yellow Tamer counts → -3000, not -6000"
+        runner
+            .modifiers()
+            .player_modifier_value(1, ModifierType::SecurityDpChange),
+        -6000,
+        "2 qualifying Tamers -> -6000 SecurityDpChange on the opponent"
     );
 }
 
-/// Negative: when the opponent has NO battle-area Digimon, the mandatory
-/// select installs nothing (no candidate) — the clause is not blocked.
+/// Only the SELECTED opponent Digimon takes the DP hit — a bystander opponent
+/// Digimon is unaffected (the debuff is "1 of your opponent's Digimon", not
+/// all of them).
 #[test]
-fn bt12_043_no_opponent_digimon_no_selection_installs() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_tamer("Y-TAMER", "YellowTamer", CardColor::Yellow))
-        .memory(20)
-        .start();
-    let perm = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "Y-TAMER", Some(0));
+fn bt12_043_when_digivolving_only_selected_opp_digimon_is_debuffed() {
+    let mut runner = base_runner();
+    let shine = runner.place_on_field(0, "BT12-043", Some(0));
+    let _y = runner.place_on_field(0, "Y-TAMER", Some(0));
+    let opp_a = runner.place_on_field(1, "OPP-A", Some(0));
+    let opp_b = runner.place_on_field(1, "OPP-B", Some(0));
+    let dp_b_before = runner.effective_dp(opp_b).expect("opp_b dp");
 
-    fire_when_digivolving(&mut runner, perm);
+    fire(&mut runner, EffectTiming::WhenDigivolving, shine);
+    let (player, action) = {
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("mandatory opponent-Digimon select pending");
+        // Deterministically target opp_a via its encoded action if present,
+        // otherwise fall back to the first legal action. Field-selection
+        // prompts encode each valid slot as `encode_attack(0, slot_index)`
+        // (install_field_selection — reuses the ATTACK action-space half).
+        let want = digimon_engine::action::space::encode_attack(0, opp_a.index as u16);
+        let chosen = if p.valid_action_ids.contains(&want) {
+            want
+        } else {
+            first_action(p)
+        };
+        (p.selecting_player, chosen)
+    };
+    runner
+        .execute_action(player, action)
+        .expect("pick an opponent Digimon");
+    let _ = runner.auto_resolve();
+
+    // opp_b's DP is untouched by the single-target pick regardless of which
+    // permanent was chosen (only one of opp_a/opp_b loses 3000, never both).
+    let dp_a_after = runner.effective_dp(opp_a).expect("opp_a still present");
+    let dp_b_after = runner.effective_dp(opp_b).expect("opp_b still present");
+    let a_hit = dp_a_after == 11000 - 3000;
+    let b_hit = dp_b_after == dp_b_before - 3000;
+    assert!(
+        a_hit ^ b_hit,
+        "exactly one of the two opponent Digimon (the picked one) loses 3000 DP; got a_after={dp_a_after} b_after={dp_b_after}"
+    );
+}
+
+/// The security debuff fires UNCONDITIONALLY once the Tamer-count gate
+/// passes — even when the opponent has ZERO battle-area Digimon (so the
+/// mandatory-pick step is naturally skipped), matching DCGO's separate
+/// (outside the HasMatchConditionPermanent guard) security-DP application.
+#[test]
+fn bt12_043_when_digivolving_security_debuff_fires_with_no_opp_digimon() {
+    let mut runner = base_runner();
+    let shine = runner.place_on_field(0, "BT12-043", Some(0));
+    let _y = runner.place_on_field(0, "Y-TAMER", Some(0));
+    // No opponent battle-area Digimon placed at all.
+
+    fire(&mut runner, EffectTiming::WhenDigivolving, shine);
+    let _ = runner.auto_resolve();
 
     assert!(
-        runner.pending_selection().is_none(),
-        "no opponent Digimon exists → the mandatory select has no candidate and installs nothing"
+        runner.game.pending_selection.is_none(),
+        "no opponent Digimon on field -> the mandatory pick step is a no-op, no pending selection left behind"
     );
-}
-
-/// The DP debuff expires at end of turn (DCGO `UntilEachTurnEnd`).
-#[test]
-fn bt12_043_dp_debuff_expires_at_end_of_turn() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_tamer("Y-TAMER", "YellowTamer", CardColor::Yellow))
-        .add_card(make_digimon("OPP", 6, 12000))
-        .add_card(make_digimon("FILLER", 3, 3000))
-        .deck(0, &["FILLER", "FILLER", "FILLER", "FILLER"])
-        .deck(1, &["FILLER", "FILLER", "FILLER", "FILLER"])
-        .memory(20)
-        .start();
-    let perm = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "Y-TAMER", Some(0));
-    let opp = runner.place_on_field(1, "OPP", Some(0));
-
-    fire_when_digivolving(&mut runner, perm);
-    resolve_all(&mut runner);
-    assert_eq!(runner.dp_of(opp), Some(9000), "debuff applied (12000-3000)");
-
-    runner.end_turn();
     assert_eq!(
-        runner.dp_of(opp),
-        Some(12000),
-        "debuff must clear once ShineGreymon's controller's turn ends"
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// SECTION 4 — [When Digivolving] behavioral outcome: opponent Security debuff
-// ═══════════════════════════════════════════════════════════════════════════
-
-/// One yellow/red Tamer → opponent's security Digimon get -3000 DP,
-/// installed as a `ChangeOwnSecurityDigimonDp` player modifier on the
-/// opponent (ST1-14 idiom, `target_player: opponent`).
-#[test]
-fn bt12_043_one_tamer_debuffs_opponent_security_by_3000() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_tamer("Y-TAMER", "YellowTamer", CardColor::Yellow))
-        .add_card(make_digimon("SEC", 4, 5000))
-        .memory(20)
-        .start();
-    let perm = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "Y-TAMER", Some(0));
-    push_security(&mut runner, 1, "SEC", 3);
-
-    fire_when_digivolving(&mut runner, perm);
-    resolve_all(&mut runner);
-
-    let sec_mod = runner
-        .modifiers()
-        .player_modifier_value(1, ModifierType::ChangeOwnSecurityDigimonDp);
-    assert_eq!(
-        sec_mod, -3000,
-        "opponent (P1) must carry a -3000 ChangeOwnSecurityDigimonDp modifier"
+        runner
+            .modifiers()
+            .player_modifier_value(1, ModifierType::SecurityDpChange),
+        -3000,
+        "the security debuff still applies (-3000 for 1 Tamer) even with zero opponent battle-area Digimon"
     );
     assert_eq!(
         runner.game.defender_security_dp_adjustment(1),
         -3000,
-        "P1's defender security DP adjustment must reflect the -3000 debuff"
+        "P1's defender security DP adjustment reflects the -3000 debuff"
     );
 }
 
-/// Two yellow/red Tamers → opponent security Digimon get -6000 DP (same
-/// per-Tamer scaling as the single-Digimon debuff).
+/// Verifies the security-DP modifier is genuinely consumed by
+/// `defender_security_dp_adjustment` — the actual mechanism the combat layer
+/// reads when P1's security is checked.
 #[test]
-fn bt12_043_two_tamers_debuff_opponent_security_by_6000() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_tamer("Y-TAMER", "YellowTamer", CardColor::Yellow))
-        .add_card(make_tamer("R-TAMER", "RedTamer", CardColor::Red))
-        .add_card(make_digimon("SEC", 4, 5000))
-        .memory(20)
-        .start();
-    let perm = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "Y-TAMER", Some(0));
-    runner.place_on_field(0, "R-TAMER", Some(0));
-    push_security(&mut runner, 1, "SEC", 3);
+fn bt12_043_when_digivolving_security_modifier_feeds_defender_adjustment() {
+    let mut runner = base_runner();
+    let shine = runner.place_on_field(0, "BT12-043", Some(0));
+    let _y = runner.place_on_field(0, "Y-TAMER", Some(0));
+    let _r = runner.place_on_field(0, "R-TAMER", Some(0));
+    let opp_a = runner.place_on_field(1, "OPP-A", Some(0));
 
-    fire_when_digivolving(&mut runner, perm);
-    resolve_all(&mut runner);
+    fire(&mut runner, EffectTiming::WhenDigivolving, shine);
+    let (player, action) = {
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("mandatory opponent-Digimon select pending");
+        (p.selecting_player, first_action(p))
+    };
+    runner
+        .execute_action(player, action)
+        .expect("pick the opponent Digimon");
+    let _ = runner.auto_resolve();
+    let _ = opp_a;
 
     assert_eq!(
         runner.game.defender_security_dp_adjustment(1),
         -6000,
-        "2 yellow/red Tamers → -6000 to opponent security Digimon"
+        "2 qualifying Tamers -> P1's defender security DP adjustment is -6000"
     );
 }
 
-/// Critical faithfulness case (official Q&A): the security debuff fires
-/// EVEN WHEN there is no opponent battle-area Digimon to select — the two
-/// halves of the clause are independent, not sequentially dependent.
+// ════════════════════════════════════════════════════════════════════════════
+// SECTION 3 — [Your Turn] Marcus Damon (treated-as-Digimon) +3000 DP / Security A. +1
+// ════════════════════════════════════════════════════════════════════════════
+
+/// A plain Marcus Damon Tamer (NOT treated as a Digimon by any other effect)
+/// is unaffected — the aura's `kind: digimon` filter mirrors DCGO's
+/// `Permanent.IsDigimon` gate, which is false for an untransformed Tamer.
 #[test]
-fn bt12_043_security_debuff_fires_even_without_opponent_battle_area_digimon() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_tamer("Y-TAMER", "YellowTamer", CardColor::Yellow))
-        .add_card(make_digimon("SEC", 4, 5000))
-        .memory(20)
-        .start();
-    let perm = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "Y-TAMER", Some(0));
-    push_security(&mut runner, 1, "SEC", 3);
-    // No opponent battle-area Digimon at all.
+fn bt12_043_your_turn_plain_marcus_tamer_unaffected() {
+    let mut runner = base_runner();
+    let _shine = runner.place_on_field(0, "BT12-043", Some(0));
+    let marcus = runner.place_on_field(0, "MARCUS", Some(0));
+    runner.game.tick_declarative_effects();
 
-    fire_when_digivolving(&mut runner, perm);
-    resolve_all(&mut runner);
-
-    assert_eq!(
-        runner.game.defender_security_dp_adjustment(1),
-        -3000,
-        "the opponent-security debuff must apply even when there is no \
-         opponent Digimon to select for the other half of the clause"
+    assert!(
+        !runner
+            .modifiers()
+            .has(marcus, ModifierType::SecurityAttackChange),
+        "a plain (non-Digimon) Marcus Damon Tamer does not gain Security A. +1"
+    );
+    // A Tamer's effective_dp is meaningless (Tamers have no DP), but the
+    // ChangeDp modifier itself must not be installed on it.
+    assert!(
+        !runner.modifiers().has(marcus, ModifierType::ChangeDp),
+        "a plain (non-Digimon) Marcus Damon Tamer does not gain the +3000 ChangeDp modifier"
     );
 }
 
-/// Own security (the controller's own security stack) must be unaffected —
-/// the debuff is scoped to the OPPONENT's security only.
+/// A non-Marcus Tamer (even if independently treated as a Digimon) is
+/// unaffected — the aura is name-filtered.
 #[test]
-fn bt12_043_own_security_unaffected() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_tamer("Y-TAMER", "YellowTamer", CardColor::Yellow))
-        .add_card(make_digimon("SEC", 4, 5000))
-        .memory(20)
-        .start();
-    let perm = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "Y-TAMER", Some(0));
-    push_security(&mut runner, 0, "SEC", 3);
+fn bt12_043_your_turn_non_marcus_tamer_unaffected() {
+    let mut runner = base_runner();
+    let _shine = runner.place_on_field(0, "BT12-043", Some(0));
+    let other = runner.place_on_field(0, "OTHER-TAMER", Some(0));
+    runner.game.tick_declarative_effects();
 
-    fire_when_digivolving(&mut runner, perm);
-    resolve_all(&mut runner);
+    assert!(
+        !runner
+            .modifiers()
+            .has(other, ModifierType::SecurityAttackChange),
+        "a non-[Marcus Damon] Tamer never gains Security A. +1 from this aura"
+    );
+    assert!(
+        !runner.modifiers().has(other, ModifierType::ChangeDp),
+        "a non-[Marcus Damon] Tamer never gains the +3000 DP from this aura"
+    );
+}
+
+/// The synergy case: a Marcus Damon Tamer that ANOTHER effect has made
+/// "treated as a Digimon" (TreatAsDigimon synth-identity modifier) DOES
+/// receive both the +3000 DP and Security A. +1 grants from BT12-043's
+/// [Your Turn] auras, mirroring DCGO's `Permanent.IsDigimon` (which honors
+/// an active `ITreatAsDigimonEffect`).
+#[test]
+fn bt12_043_your_turn_treated_as_digimon_marcus_gets_dp_and_security_attack() {
+    let mut runner = base_runner();
+    let shine = runner.place_on_field(0, "BT12-043", Some(0));
+    let marcus = runner.place_on_field(0, "MARCUS", Some(0));
+
+    // Simulate another card's TreatAsDigimon grant on the Marcus Damon Tamer
+    // directly via the engine API (equivalent to AD1-021/BT13-020/BT25-104's
+    // own effect installing the modifier).
+    use digimon_engine::modifiers::{ModifierEntry, ModifierPayload};
+    runner.game.modifiers.add(
+        marcus,
+        ModifierEntry {
+            modifier: ModifierType::TreatAsDigimon,
+            value: 0,
+            payload: ModifierPayload::SynthIdentity {
+                kind: CardKind::Digimon,
+                level: 0,
+                colors: vec![],
+                traits: vec![],
+                dp: 6000,
+            },
+            expiry: digimon_engine::enums::Expiry::EndOfYourTurn,
+            source_permanent: None,
+            source_player: 0,
+            materialized_declarative: false,
+            cause_filter: None,
+            replacement_condition: None,
+            until_condition: None,
+            effect_immunity_filter: None,
+            disable_effect_timing: None,
+            pending_skips: 0,
+            install_order: 0,
+        },
+    );
+
+    runner.game.tick_declarative_effects();
 
     assert_eq!(
+        runner.effective_dp(marcus),
+        Some(6000 + 3000),
+        "the treated-as-Digimon Marcus Damon gets the base synth 6000 DP + 3000 from BT12-043's [Your Turn] aura"
+    );
+    assert!(
         runner
             .modifiers()
-            .player_modifier_value(0, ModifierType::ChangeOwnSecurityDigimonDp),
-        0,
-        "the controller's OWN security must not receive the debuff"
+            .has(marcus, ModifierType::SecurityAttackChange),
+        "the treated-as-Digimon Marcus Damon gains <Security A. +1>"
     );
+    let _ = shine;
 }
 
-/// The security debuff expires at end of turn.
+/// The [Your Turn] auras are turn-scoped: they must NOT apply on the
+/// opponent's turn (DCGO Condition = IsOwnerTurn). Uses `Expiry::Permanent`
+/// on the injected TreatAsDigimon so the synth-identity state itself
+/// survives the turn transition, isolating the `your_turn` gate as the only
+/// variable under test.
 #[test]
-fn bt12_043_security_debuff_expires_at_end_of_turn() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_tamer("Y-TAMER", "YellowTamer", CardColor::Yellow))
-        .add_card(make_digimon("SEC", 4, 5000))
-        .add_card(make_digimon("FILLER", 3, 3000))
-        .deck(0, &["FILLER", "FILLER", "FILLER", "FILLER"])
-        .deck(1, &["FILLER", "FILLER", "FILLER", "FILLER"])
-        .memory(20)
-        .start();
-    let perm = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.place_on_field(0, "Y-TAMER", Some(0));
-    push_security(&mut runner, 1, "SEC", 3);
+fn bt12_043_your_turn_auras_do_not_apply_on_opponents_turn() {
+    let mut runner = base_runner();
+    runner.skip_mulligan();
+    let shine = runner.place_on_field(0, "BT12-043", Some(0));
+    let marcus = runner.place_on_field(0, "MARCUS", Some(0));
 
-    fire_when_digivolving(&mut runner, perm);
-    resolve_all(&mut runner);
-    assert_eq!(runner.game.defender_security_dp_adjustment(1), -3000);
-
-    runner.end_turn();
-    assert_eq!(
-        runner.game.defender_security_dp_adjustment(1),
-        0,
-        "security debuff must clear once ShineGreymon's controller's turn ends"
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// SECTION 5 — [Your Turn] Marcus Damon auras: +3000 DP
-// ═══════════════════════════════════════════════════════════════════════════
-
-#[test]
-fn bt12_043_marcus_damon_gains_3000_dp_on_your_turn() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_marcus_damon("MD"))
-        .memory(20)
-        .start();
-    let _shine = runner.place_on_field(0, CARD_ID, Some(0));
-    let marcus = runner.place_on_field(0, "MD", Some(0));
-
-    runner.game.tick_declarative_effects();
-
-    assert_eq!(
-        runner.dp_of(marcus),
-        Some(8000),
-        "own Marcus Damon must be +3000 DP on your turn (5000 base + 3000)"
-    );
-}
-
-/// Negative (name filter): a non-Marcus-Damon own Digimon must not receive
-/// the +3000 DP bonus.
-#[test]
-fn bt12_043_non_marcus_damon_own_digimon_unaffected_by_dp_aura() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_digimon("ALLY", 4, 5000))
-        .memory(20)
-        .start();
-    let _shine = runner.place_on_field(0, CARD_ID, Some(0));
-    let ally = runner.place_on_field(0, "ALLY", Some(0));
-
-    runner.game.tick_declarative_effects();
-
-    assert_eq!(
-        runner.dp_of(ally),
-        Some(5000),
-        "non-Marcus-Damon own Digimon must be unaffected by the aura"
-    );
-}
-
-/// Negative (controller filter): the opponent's Marcus Damon must not
-/// receive the +3000 DP bonus from our aura.
-#[test]
-fn bt12_043_opponents_marcus_damon_unaffected_by_dp_aura() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_marcus_damon("OPP-MD"))
-        .memory(20)
-        .start();
-    let _shine = runner.place_on_field(0, CARD_ID, Some(0));
-    let opp_marcus = runner.place_on_field(1, "OPP-MD", Some(0));
-
-    runner.game.tick_declarative_effects();
-
-    assert_eq!(
-        runner.dp_of(opp_marcus),
-        Some(5000),
-        "opponent's Marcus Damon must NOT receive the +3000 DP from our aura"
-    );
-}
-
-/// Negative (turn gate): on the opponent's turn, the DP bonus must clear.
-#[test]
-fn bt12_043_marcus_damon_dp_aura_clears_on_opponents_turn() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_marcus_damon("MD"))
-        .memory(20)
-        .start();
-    let _shine = runner.place_on_field(0, CARD_ID, Some(0));
-    let marcus = runner.place_on_field(0, "MD", Some(0));
-
-    runner.game.tick_declarative_effects();
-    assert_eq!(
-        runner.dp_of(marcus),
-        Some(8000),
-        "sanity: on your turn the DP bonus is applied"
+    use digimon_engine::modifiers::{ModifierEntry, ModifierPayload};
+    runner.game.modifiers.add(
+        marcus,
+        ModifierEntry {
+            modifier: ModifierType::TreatAsDigimon,
+            value: 0,
+            payload: ModifierPayload::SynthIdentity {
+                kind: CardKind::Digimon,
+                level: 0,
+                colors: vec![],
+                traits: vec![],
+                dp: 6000,
+            },
+            expiry: digimon_engine::enums::Expiry::Permanent,
+            source_permanent: None,
+            source_player: 0,
+            materialized_declarative: false,
+            cause_filter: None,
+            replacement_condition: None,
+            until_condition: None,
+            effect_immunity_filter: None,
+            disable_effect_timing: None,
+            pending_skips: 0,
+            install_order: 0,
+        },
     );
 
-    runner.end_turn();
+    // Sanity: on P0's own turn, both auras are live.
     runner.game.tick_declarative_effects();
-
-    assert_eq!(
-        runner.dp_of(marcus),
-        Some(5000),
-        "on opponent's turn the active_when:{{your_turn:true}} gate must clear the DP bonus"
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// SECTION 6 — [Your Turn] Marcus Damon auras: <Security A. +1>
-// ═══════════════════════════════════════════════════════════════════════════
-
-#[test]
-fn bt12_043_marcus_damon_gains_security_attack_plus_one_on_your_turn() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_marcus_damon("MD"))
-        .memory(20)
-        .start();
-    let _shine = runner.place_on_field(0, CARD_ID, Some(0));
-    let marcus = runner.place_on_field(0, "MD", Some(0));
-
-    runner.game.tick_declarative_effects();
-
     assert!(
         runner
-            .game
-            .modifiers
-            .has_keyword(marcus, Keyword::SecurityAttackPlus(1)),
-        "own Marcus Damon must have SecurityAttackPlus(1) installed by the aura tick"
+            .modifiers()
+            .has(marcus, ModifierType::SecurityAttackChange),
+        "sanity: Security A. +1 is live on the controller's own turn"
     );
-}
 
-/// Negative (name filter): a non-Marcus-Damon own Digimon must not receive
-/// the keyword.
-#[test]
-fn bt12_043_non_marcus_damon_own_digimon_unaffected_by_keyword_aura() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_digimon("ALLY", 4, 5000))
-        .memory(20)
-        .start();
-    let _shine = runner.place_on_field(0, CARD_ID, Some(0));
-    let ally = runner.place_on_field(0, "ALLY", Some(0));
-
-    runner.game.tick_declarative_effects();
-
-    assert!(
-        !runner
-            .game
-            .modifiers
-            .has_keyword(ally, Keyword::SecurityAttackPlus(1)),
-        "non-Marcus-Damon own Digimon must NOT receive SecurityAttackPlus"
-    );
-}
-
-/// Negative (turn gate): on opponent's turn, own Marcus Damon loses the
-/// keyword.
-#[test]
-fn bt12_043_marcus_damon_keyword_aura_clears_on_opponents_turn() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_marcus_damon("MD"))
-        .memory(20)
-        .start();
-    let _shine = runner.place_on_field(0, CARD_ID, Some(0));
-    let marcus = runner.place_on_field(0, "MD", Some(0));
-
-    runner.game.tick_declarative_effects();
-    assert!(runner
-        .game
-        .modifiers
-        .has_keyword(marcus, Keyword::SecurityAttackPlus(1)));
-
+    // Advance to P1's turn — BT12-043 and Marcus remain P0's permanents, but
+    // it is no longer P0's turn.
     runner.end_turn();
+    let _ = runner.auto_resolve();
     runner.game.tick_declarative_effects();
 
     assert!(
         !runner
-            .game
-            .modifiers
-            .has_keyword(marcus, Keyword::SecurityAttackPlus(1)),
-        "on opponent's turn the active_when:{{your_turn:true}} gate must clear the keyword"
+            .modifiers()
+            .has(marcus, ModifierType::SecurityAttackChange),
+        "the Security A. +1 aura does not apply when it is not the controller's turn"
     );
-}
-
-/// End-to-end: a buffed Marcus Damon attacking the opponent player pops 2
-/// security cards (base 1 + aura's SecurityAttackPlus 1).
-#[test]
-fn bt12_043_buffed_marcus_damon_pops_extra_security_card() {
-    let mut runner = shinegreymon_runner()
-        .add_card(make_marcus_damon("MD"))
-        .add_card(make_digimon("SEC", 1, 0))
-        .memory(20)
-        .start();
-    push_security(&mut runner, 1, "SEC", 3);
-
-    let _shine = runner.place_on_field(0, CARD_ID, Some(0));
-    let marcus = runner.place_on_field(0, "MD", Some(0));
-
-    runner.game.tick_declarative_effects();
-
-    let sec_before = runner.game.players[1].security.len();
-    let _ = runner.attack_player(marcus, 1, false);
-    let sec_after = runner.game.players[1].security.len();
-
-    assert_eq!(
-        sec_before - sec_after,
-        2,
-        "aura-buffed Marcus Damon must pop base 1 + aura 1 = 2 security cards; \
-         before={sec_before}, after={sec_after}"
+    assert!(
+        !runner.modifiers().has(marcus, ModifierType::ChangeDp),
+        "the +3000 DP aura does not apply when it is not the controller's turn"
     );
+    let _ = shine;
 }

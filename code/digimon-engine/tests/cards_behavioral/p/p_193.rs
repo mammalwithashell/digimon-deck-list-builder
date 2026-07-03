@@ -1,1259 +1,805 @@
-
-//! P-193 The Wicked God Emerges! — Option, Purple, Cost 3.
+//! P-193 The Wicked God Emerges! — Option, Cost 3, Purple, [Wicked God] trait.
 //!
-//! # Card text (code/digimon-engine/cards/p/P-193.json, official bundle
-//! # data/card_bundles/P-193.md — card image confirmed)
+//! # Card text (data/card_bundles/P-193.md — official Bandai DB)
 //!
 //! [Main] By trashing 1 card with the [Composite] or [Wicked God] trait from
 //! your hand, ＜Draw 2＞ (Draw 2 cards from your deck.) Then, place this card
 //! in the battle area.
-//!
 //! [End of All Turns] ＜Delay＞ (By trashing this card after the placing
 //! turn, activate the effect below.)
 //! ・By deleting 1 of your [Millenniummon], you may play 1 [Wicked God]
-//!   trait Digimon card from your hand or trash without paying the cost.
+//! trait Digimon card from your hand or trash without paying the cost.
 //!
-//! Inherited (Security Effect):
-//! [Security] Activate this card's [Main] effects.
+//! Security Effect [Security] Activate this card's [Main] effects.
 //!
-//! # Official Q&A
-//! "No, you can't. If you don't trash 1 card with the [Composite] or
-//! [Wicked God] trait from your hand, you can't use the part after 'then'
-//! in this card's [Main] effect to place this card in the battle area."
-//! → the Draw 2 AND the self-placement are BOTH gated behind actually
-//! trashing the cost card (`G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE`, the
-//! `select_hand { cost: true }` idiom, BT24-008 precedent).
+//! Official Q&A: declining/failing the hand-trash cost means NEITHER the
+//! draw NOR the battle-area placement happens (Clause A is a hard cost gate).
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/P/Purple/P_193.cs
 //!
-//! - `EffectTiming.OptionSkill` — Main clause. `SelectHandEffect` with
-//!   `mode: Discard`, `maxCount: 1`, `canNoSelect: true`. Only on a
-//!   successful discard does it `Draw(2)` then `PlaceDelayOptionCards`.
-//! - `EffectTiming.OnEndTurn` — the Delay body. `CanUseCondition:
-//!   CanDeclareOptionDelayEffect` (placing turn has passed — same gate as
-//!   every other `<Delay>` in the pool), `CanActivateCondition:
-//!   IsExistOnField`. This is the SAME player-choice-driven "trash this
-//!   card to activate" mechanic as the standard `[Main]<Delay>` (P-039,
-//!   P-107) and the sibling `[End of Your Turn]<Delay>` (BT21-097) —
-//!   DCGO's own `SetUpActivateClass(..., isOptional: true, ...)` and the
-//!   `CanDeclareOptionDelayEffect` gate are byte-for-byte identical to the
-//!   Main-phase-activated Delay pattern; only the *window* the activation
-//!   check runs in differs (End-of-Turn scan vs Main-phase action), which
-//!   the engine's `DelayTrigger::MainPhaseActivated` (`kind: delay,
-//!   trigger: delayed`) already models faithfully per the BT21-097
-//!   precedent (see file header there — `[End of Your Turn]<Delay>` is the
-//!   same `kind: delay` substrate). `[End of All Turns]` and `[End of Your
-//!   Turn]` are BOTH lowered as the standard controller-choice `<Delay>` —
-//!   confirmed against `docs/digimon-rules/keyword-semantics.md`'s `<Delay>`
-//!   row (16-16): "Trash this card to activate the linked effect; optional;
-//!   not the turn it entered the battle area."
-//! - `EffectTiming.SecuritySkill` — `AddActivateMainOptionSecurityEffect`,
-//!   the standard "[Security] Activate this card's [Main] effects" replay
-//!   (P-151 idiom).
-//!
 //! # Patterns this test file covers
-//! - E2: optional cost-as-trashing [Main] (`select_hand { cost: true }`,
-//!   BT24-008 idiom) gating BOTH Draw 2 and self-placement.
-//! - Standard `<Delay>` (`kind: delay, trigger: delayed`) — BT21-097 /
-//!   P-039 / P-107 idiom, here under the `[End of All Turns]` timing
-//!   prefix.
-//! - Delay body: optional `select_own_permanent` (name-filtered,
-//!   `name_is: "Millenniummon"`) → `delete_permanent`, then optional
-//!   `select_union_zone` (hand+trash, trait-filtered `Wicked God` +
-//!   `kind: digimon`) → `play_union_bound_free` (BT17-095 / AD1-016 idiom).
-//! - [Security] (inherited): "Activate this card's [Main] effects" — mirrors
-//!   the Main clause's process body (P-151 idiom).
+//!
+//! - Clause A (Main): `select_hand { cost: true }` trash-gated Draw 2, then
+//!   `place_self_as_delay_option`. The whole clause is skipped (no prompt)
+//!   when no [Composite]/[Wicked God] card is in hand (`condition: count_gte`).
+//! - Clause B (End of All Turns <Delay>): standard `trigger: delayed`
+//!   (`activate_delayed_option_main` performs the outer "trash this card"
+//!   activation cost automatically). The inner "By deleting 1 Millenniummon,
+//!   you may play..." is modelled as `select_own_permanent { optional: true,
+//!   then: [...] }` — the DSL's default `continue_on_decline: false` means
+//!   declining (or a zero-Millenniummon no-op) drops the ENTIRE `then:` tail,
+//!   so the free-play `select_union_zone` prompt is never installed unless a
+//!   Millenniummon is actually deleted.
+//! - Clause C (Security, mirrors the Main clause verbatim per DCGO
+//!   `AddActivateMainOptionSecurityEffect`).
 
 #![allow(unused_imports, dead_code)]
 
 use digimon_dsl::compiled::{
-    CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
+    CompiledCardKind, CompiledClause, CompiledColor, CompiledDeclarativeClause, CompiledScope,
+    CompiledStep, CompiledTiming,
 };
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
+use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger};
-use digimon_engine::events::GameEvent;
 use digimon_engine::permanent::OptionState;
 use digimon_engine::selection::SelectionKind;
 
-const CARD_ID: &str = "P-193";
+const P_193_YAML: &str = include_str!("../../../cards/p/P-193.yaml");
 
 // ─── Helper cards ────────────────────────────────────────────────────────────
 
-fn filler(id: &str) -> CardData {
+fn make_filler(id: &str) -> CardData {
     make_test_card(id, id)
 }
 
-/// A Purple Digimon used purely to satisfy the printed Option color
-/// requirement (16-10-ish: playing a colored Option requires a same-color
-/// Digimon/Tamer on the field/breeding area). P-193 carries no color-bypass
-/// clause, so every [Main]-from-hand test must seat one of these first.
-fn purple_color_anchor(id: &str) -> CardData {
-    let mut c = make_test_card(id, id);
+/// A hand/trash card carrying the [Composite] or [Wicked God] trait — the
+/// Clause A / Clause C trash-cost fodder.
+fn make_traited_digimon(id: &str, name: &str, trait_name: &str) -> CardData {
+    let mut c = make_test_card(id, name);
     c.card_kind = CardKind::Digimon;
-    c.level = Some(3);
-    c.dp = Some(2000);
-    c.play_cost = 3;
-    c.colors = vec![CardColor::Purple];
-    c
-}
-
-/// A hand-eligible Composite or Wicked God trait card usable as the [Main]
-/// cost (any card kind; DCGO's `CanSelectHandCondition` checks trait only).
-fn cost_card(id: &str, trait_name: &str) -> CardData {
-    let mut c = make_test_card(id, id);
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(3);
-    c.dp = Some(2000);
-    c.play_cost = 3;
     c.colors = vec![CardColor::Purple];
     c.traits = vec![trait_name.to_string()];
     c
 }
 
-/// A Digimon named exactly "Millenniummon" for the Delay-body deletion pick.
-fn millenniummon(id: &str) -> CardData {
+/// A Digimon named exactly "Millenniummon" (Clause B's delete-cost target).
+fn make_millenniummon(id: &str) -> CardData {
     let mut c = make_test_card(id, "Millenniummon");
     c.card_kind = CardKind::Digimon;
-    c.level = Some(6);
-    c.dp = Some(11000);
-    c.play_cost = 11;
     c.colors = vec![CardColor::Purple];
-    c
-}
-
-/// A non-Millenniummon own Digimon (negative-filter target).
-fn other_digimon(id: &str) -> CardData {
-    let mut c = make_test_card(id, "OtherDigimon");
-    c.card_kind = CardKind::Digimon;
     c.level = Some(6);
-    c.dp = Some(11000);
-    c.play_cost = 11;
-    c.colors = vec![CardColor::Purple];
-    c
-}
-
-/// A [Wicked God] trait Digimon card eligible for the free-play reward.
-fn wicked_god_digimon(id: &str) -> CardData {
-    let mut c = make_test_card(id, id);
-    c.card_kind = CardKind::Digimon;
-    c.level = Some(7);
     c.dp = Some(13000);
-    c.play_cost = 13;
-    c.colors = vec![CardColor::Purple];
-    c.traits = vec!["Wicked God".to_string()];
+    c.play_cost = 15;
     c
 }
 
-/// A Digimon WITHOUT the [Wicked God] trait (negative-filter target for the
-/// free-play reward).
-fn non_wicked_god_digimon(id: &str) -> CardData {
-    let mut c = make_test_card(id, id);
+/// A non-Millenniummon Digimon (negative control for the delete-cost filter).
+fn make_other_digimon(id: &str, name: &str) -> CardData {
+    let mut c = make_test_card(id, name);
     c.card_kind = CardKind::Digimon;
-    c.level = Some(4);
-    c.dp = Some(4000);
-    c.play_cost = 4;
     c.colors = vec![CardColor::Purple];
+    c
+}
+
+/// A [Wicked God] trait Digimon card (the free-play reward target).
+fn make_wicked_god_digimon(id: &str, name: &str) -> CardData {
+    let mut c = make_test_card(id, name);
+    c.card_kind = CardKind::Digimon;
+    c.colors = vec![CardColor::Purple];
+    c.level = Some(6);
+    c.dp = Some(12000);
+    c.play_cost = 14;
+    c.traits = vec!["Wicked God".to_string()];
     c
 }
 
 fn p193_runner() -> DebugRunner {
     DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
+        .from_dsl_yaml(P_193_YAML)
+        .expect("P-193 YAML must parse")
         .memory(10)
-        .build()
+        .start()
 }
 
-/// Seat P-193 as a Delay-Option permanent (past its placing turn) so its
-/// Delay body's Main-phase activation is legal, mirroring
-/// `seat_and_advance_to_activatable_delay` in bt21_097.rs.
-fn seat_and_advance_to_activatable_delay(
-    runner: &mut DebugRunner,
-) -> digimon_engine::permanent::PermanentHandle {
-    let handle = runner.place_on_field(0, CARD_ID, Some(0));
-    let placing_turn = runner.game.turn_count;
-    runner.game.player_mut(0).battle_area[handle.index as usize].option_state =
-        OptionState::Delayed {
-            owner: 0,
-            trash_on_turn: u16::MAX,
-            trigger: DelayTrigger::MainPhaseActivated,
-            placed_on_turn: placing_turn,
-        };
-    runner.end_turn();
-    runner.game.enter_main_phase();
-    runner.end_turn();
-    assert_eq!(runner.game.turn_player(), 0);
-    runner.game.enter_main_phase();
-    handle
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 1 — Structural assertions
-// ═══════════════════════════════════════════════════════════════════════════
-
-#[test]
-fn p193_yaml_loads_without_error() {
-    let _runner = p193_runner();
-}
-
-/// Three compiled clauses: [Main] (triggered), the Delay body (declarative
-/// Delay), [Security] (triggered, inherited scope).
-#[test]
-fn p193_has_three_clauses() {
-    let runner = p193_runner();
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card");
-
-    assert_eq!(
-        compiled.effects.len(),
-        3,
-        "P-193 must have exactly 3 compiled clauses (Main, Delay, Security); got {}",
-        compiled.effects.len()
-    );
-}
-
-/// [Main] clause: `main_from_hand` timing, optional (the whole tail is
-/// cost-gated), own (FaceUp) scope.
-#[test]
-fn p193_main_clause_is_optional_face_up() {
-    let runner = p193_runner();
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card");
-
-    let main_clause = compiled
-        .effects
+/// Push a card straight into a player's trash zone (bypassing hand/discard
+/// flow) — mirrors the seeding helper used by BT17-095's tests.
+fn seed_trash(runner: &mut DebugRunner, player: usize, card_id: &str) {
+    let data_index = runner
+        .game
+        .card_data
         .iter()
-        .filter_map(|c| match c {
-            CompiledClause::Triggered(t) => Some(t),
-            _ => None,
-        })
-        .find(|t| t.when.contains(&CompiledTiming::MainFromHand))
-        .expect("Main clause with MainFromHand timing must exist");
-
-    assert!(
-        main_clause.optional,
-        "P-193 Main clause must be optional (cost-gated 'By trashing…')"
-    );
-    assert_eq!(
-        main_clause.scope,
-        CompiledScope::FaceUp,
-        "P-193 Main clause must have FaceUp scope (Option played from hand)"
-    );
+        .position(|d| d.card_id == card_id)
+        .unwrap_or_else(|| panic!("{card_id} card data registered"));
+    let card_index = runner.game.next_card_index();
+    runner.game.players[player]
+        .trash
+        .push(CardSource::new(data_index, player as u8, card_index));
 }
 
-/// The Delay body is a declarative `Delay` clause with `CompiledTiming::Delayed`
-/// (standard controller-choice `<Delay>` — `DelayTrigger::MainPhaseActivated`).
-#[test]
-fn p193_has_standard_delay_clause() {
-    let runner = p193_runner();
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card");
+fn find_delayed_p193(runner: &DebugRunner, player: usize) -> Option<usize> {
+    runner.game.players[player]
+        .battle_area
+        .iter()
+        .position(|perm| {
+            perm.top_card().card_id(&runner.game.card_data) == "P-193"
+                && matches!(perm.option_state, OptionState::Delayed { .. })
+        })
+}
 
-    let delay = compiled
+/// Advance turns until the Delay option seated at `delay_idx` is legally
+/// activatable (`turn_count > placed_on_turn`), mirroring BT13-110's loop.
+fn advance_past_placing_turn(runner: &mut DebugRunner, player: usize, delay_idx: usize) {
+    let placed_on_turn = match runner.game.players[player].battle_area[delay_idx].option_state {
+        OptionState::Delayed { placed_on_turn, .. } => placed_on_turn,
+        _ => panic!("expected a Delay option at index {delay_idx}"),
+    };
+    for _ in 0..4 {
+        if runner.game.turn_count > placed_on_turn {
+            break;
+        }
+        runner.end_turn();
+        runner.game.enter_main_phase();
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Section 1 — structural / metadata
+// ═══════════════════════════════════════════════════════════════════════════
+
+#[test]
+fn p193_has_printed_metadata() {
+    let runner = p193_runner();
+    let card = runner.compiled_card("P-193").expect("P-193 present");
+    assert_eq!(card.name, "The Wicked God Emerges!");
+    assert_eq!(card.kind, CompiledCardKind::Option);
+    assert_eq!(card.cost, Some(3));
+    assert_eq!(card.color, vec![CompiledColor::Purple]);
+    assert!(card.traits.iter().any(|t| t == "Wicked God"));
+}
+
+#[test]
+fn p193_main_clause_is_optional_face_up_and_gated_on_hand_fodder() {
+    let runner = p193_runner();
+    let card = runner.compiled_card("P-193").expect("P-193 present");
+    let main = card
         .effects
         .iter()
         .find_map(|clause| match clause {
-            CompiledClause::Declarative(CompiledDeclarativeClause::Delay {
-                trigger,
-                process,
-                ..
-            }) => Some((trigger, process)),
+            CompiledClause::Triggered(triggered)
+                if triggered.when.contains(&CompiledTiming::MainFromHand) =>
+            {
+                Some(triggered)
+            }
             _ => None,
         })
-        .expect("standard <Delay> clause present");
+        .expect("[Main] clause exists");
+    assert!(
+        main.optional,
+        "printed 'By trashing X, <Draw 2>' is a cost-gated effect (declinable)"
+    );
+    assert_eq!(main.scope, CompiledScope::FaceUp);
+    assert!(
+        main.condition.is_some(),
+        "Main clause must gate on hand having an eligible Composite/Wicked God card"
+    );
+    assert!(main
+        .process
+        .iter()
+        .any(|step| matches!(step, CompiledStep::PlaceSelfAsDelayOption)));
+}
 
-    assert_eq!(
-        *delay.0,
-        CompiledTiming::Delayed,
-        "the [End of All Turns] <Delay> lowers to the standard controller-choice Delay trigger"
+#[test]
+fn p193_has_delay_clause_with_main_phase_trigger() {
+    let runner = p193_runner();
+    let card = runner.compiled_card("P-193").expect("P-193 present");
+    let has_delay = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Delay {
+                trigger: CompiledTiming::Delayed,
+                ..
+            })
+        )
+    });
+    assert!(
+        has_delay,
+        "P-193 must have a `kind: delay` clause with `trigger: delayed` \
+         (standard printed <Delay>, matching DCGO's CanDeclareOptionDelayEffect gate)"
     );
 }
 
-/// Security clause: `on_security` timing, optional (mirrors Main), Inherited
-/// scope.
 #[test]
-fn p193_security_clause_is_optional_inherited() {
+fn p193_security_clause_mirrors_main_and_is_optional() {
     let runner = p193_runner();
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card");
-
-    let sec_clause = compiled
+    let card = runner.compiled_card("P-193").expect("P-193 present");
+    let sec = card
         .effects
         .iter()
-        .filter_map(|c| match c {
+        .filter_map(|clause| match clause {
             CompiledClause::Triggered(t) => Some(t),
             _ => None,
         })
         .find(|t| t.when.contains(&CompiledTiming::OnSecurity))
-        .expect("Security clause with OnSecurity timing must exist");
-
+        .expect("[Security] clause exists");
     assert!(
-        sec_clause.optional,
-        "P-193 Security clause must be optional (mirrors the cost-gated Main body)"
+        sec.optional,
+        "Security mirrors the cost-gated Main effect (declinable)"
     );
-    assert_eq!(
-        sec_clause.scope,
-        CompiledScope::Inherited,
-        "P-193 Security clause must have Inherited scope"
-    );
+    assert!(sec
+        .process
+        .iter()
+        .any(|step| matches!(step, CompiledStep::PlaceSelfAsDelayOption)));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Section 2 — [Main]: positive branch (trashes a Composite/Wicked God card)
+// Section 2 — Clause A: [Main] trash-cost-gated Draw 2 + place self
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Happy path: hand has a [Composite]-trait card as the cost. Accepting the
-/// prompt trashes it, draws 2, and places P-193 in the battle area as a Delay
-/// Option.
 #[test]
-fn p193_main_composite_cost_trashes_draws_two_and_places_self() {
-    let composite = cost_card("P193-COMPOSITE", "Composite");
-    let fill = filler("FILL");
-    let anchor = purple_color_anchor("P193-ANCHOR");
+fn p193_main_trashing_fodder_draws_two_and_places_self() {
+    let composite = make_traited_digimon("P193-COMP", "CompositeGuy", "Composite");
+    let filler = make_filler("FILL");
 
     let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(composite)
-        .add_card(fill)
-        .add_card(anchor)
-        .hand(0, &[CARD_ID, "P193-COMPOSITE"])
+        .from_dsl_yaml(P_193_YAML)
+        .expect("P-193 YAML parses")
+        .add_card(composite.clone())
+        .add_card(filler.clone())
+        .memory(10)
+        .hand(0, &["P-193", "P193-COMP"])
+        .hand(1, &["FILL"])
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
-        .memory(10)
         .start();
 
-    // Printed Option color requirement: P-193 needs a Purple Digimon/Tamer
-    // on the field to be playable (no color-bypass clause on this card).
-    runner.place_on_field(0, "P193-ANCHOR", Some(0));
-
+    let hand_before = runner.hand_size(0);
     let deck_before = runner.deck_size(0);
-    let trash_before = runner.trash_size(0);
 
-    // P-193 is an Option — `runner.play()` routes through the generic
-    // Digimon/Tamer `OnPlay` path, which does NOT dispatch `MainFromHand` /
-    // `OptionMain` bodies. Options must go through `play_option_from_hand`
-    // (the BT21-097 precedent), which requires the Main phase.
-    runner.game.enter_main_phase();
-    let _ = runner.game.play_option_from_hand(0, 0);
+    let fired = runner.game.activate_hand_main(0, 0);
+    assert!(fired, "P-193 [Main] must activate from hand");
 
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::Hand),
-        "Main should install a Hand selection for the cost trash"
-    );
+    let view = runner
+        .pending_selection_view()
+        .expect("the trash-cost pick must install");
+    assert_eq!(view.kind, SelectionKind::Hand);
     assert!(
-        runner.pending_is_optional(),
-        "the cost-trash prompt must be optional (declinable)"
+        view.is_optional,
+        "the trash pick is declinable (cost: true)"
     );
-
+    // Two eligible cards: P-193 itself (hand index 0 — it carries the
+    // printed [Wicked God] trait and is still IN HAND at cost-payment time,
+    // matching DCGO's CanSelectHandCondition which scans the whole hand) and
+    // CompositeGuy (hand index 1). Explicitly target the Composite card via
+    // its PLAY_HAND_START-relative action id — do not rely on array order.
+    use digimon_engine::action::space::PLAY_HAND_START;
+    let composite_action = PLAY_HAND_START + 1;
+    assert!(
+        view.valid_action_ids.contains(&composite_action),
+        "CompositeGuy (hand index 1) must be a valid trash-cost target"
+    );
     runner
-        .auto_resolve()
-        .expect("resolve picks the eligible Composite card");
+        .game
+        .resolve_selection(view.selecting_player, composite_action)
+        .expect("accept the trash cost by discarding CompositeGuy");
 
+    // Drain: draw 2 + place self should follow automatically.
+    runner.game.drain_effect_queue();
+
+    // Net: -1 (CompositeGuy trashed) +2 (drawn) -1 (P-193 itself leaves hand
+    // to the battle area via place_self_as_delay_option) = net 0 vs before.
     assert_eq!(
-        runner.trash_size(0),
-        trash_before + 1,
-        "the Composite cost card must be trashed"
+        runner.hand_size(0),
+        hand_before,
+        "hand size unchanged overall: -1 trash, +2 draw, -1 P-193 leaves to battle area"
     );
     assert_eq!(
         runner.deck_size(0),
         deck_before - 2,
-        "deck shrinks by 2 after Draw 2"
+        "2 cards drawn from deck"
     );
-    let placed = runner
-        .game
-        .player(0)
-        .battle_area
-        .iter()
-        .find(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
-        .expect("P-193 must be placed in the battle area");
+    assert_eq!(runner.trash_size(0), 1, "the Composite card was trashed");
     assert!(
-        matches!(
-            placed.option_state,
-            OptionState::Delayed {
-                trigger: DelayTrigger::MainPhaseActivated,
-                ..
-            }
-        ),
-        "P-193 must park as a standard <Delay> Option after Main resolves"
+        find_delayed_p193(&runner, 0).is_some(),
+        "P-193 must be placed in the battle area as a Delay option"
     );
 }
 
-/// A [Wicked God]-trait card is also a valid cost (the printed "or").
+/// Faithfulness edge case: P-193 itself carries the printed [Wicked God]
+/// trait, so while it is still in hand (before the "then place this card in
+/// the battle area" tail resolves) it is itself a legal — if unusual — target
+/// for its own "trashing 1 [Composite]/[Wicked God] card" cost, matching
+/// DCGO's `CanSelectHandCondition` (which scans the whole hand, including the
+/// source card). Trashing itself pays the cost and Draws 2; the "then place
+/// this card in the battle area" tail then finds P-193 in the trash (its
+/// only remaining zone) and moves it onto the field as a Delay option —
+/// `place_self_as_delay_option`'s controller-zone fallback
+/// (`remove_source_option_from_controller_zones`) searches hand THEN trash
+/// unconditionally, so it recovers the just-self-discarded card. No panic,
+/// no illegal state; P-193 ends up seated as a Delay option, having paid its
+/// "cost" from its own printed traits.
 #[test]
-fn p193_main_wicked_god_cost_is_valid() {
-    let wg_cost = cost_card("P193-WG-COST", "Wicked God");
-    let fill = filler("FILL");
-    let anchor = purple_color_anchor("P193-ANCHOR2");
+fn p193_main_can_trash_itself_as_its_own_cost_and_still_draws() {
+    let filler = make_filler("FILL");
 
     let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(wg_cost)
-        .add_card(fill)
-        .add_card(anchor)
-        .hand(0, &[CARD_ID, "P193-WG-COST"])
+        .from_dsl_yaml(P_193_YAML)
+        .expect("P-193 YAML parses")
+        .add_card(filler.clone())
+        .memory(10)
+        .hand(0, &["P-193"])
+        .hand(1, &["FILL"])
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
-        .memory(10)
         .start();
-
-    runner.place_on_field(0, "P193-ANCHOR2", Some(0));
 
     let deck_before = runner.deck_size(0);
-    let trash_before = runner.trash_size(0);
 
-    // P-193 is an Option — `runner.play()` routes through the generic
-    // Digimon/Tamer `OnPlay` path, which does NOT dispatch `MainFromHand` /
-    // `OptionMain` bodies. Options must go through `play_option_from_hand`
-    // (the BT21-097 precedent), which requires the Main phase.
-    runner.game.enter_main_phase();
-    let _ = runner.game.play_option_from_hand(0, 0);
-
-    assert_eq!(
-        runner.pending_kind(),
-        Some(SelectionKind::Hand),
-        "Wicked God cost card must be offered as an eligible cost"
-    );
-    runner
-        .auto_resolve()
-        .expect("resolve picks the Wicked God cost card");
-
-    assert_eq!(runner.trash_size(0), trash_before + 1);
-    assert_eq!(runner.deck_size(0), deck_before - 2);
-    assert!(
-        runner
-            .game
-            .player(0)
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
-        "P-193 must be placed on field"
-    );
-}
-
-/// A card with neither trait is NOT offered as a cost.
-#[test]
-fn p193_main_ineligible_card_not_offered_as_cost() {
-    let ineligible = filler("P193-INELIGIBLE");
-    let composite = cost_card("P193-COMPOSITE2", "Composite");
-    let anchor = purple_color_anchor("P193-ANCHOR3");
-
-    let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(ineligible)
-        .add_card(composite)
-        .add_card(anchor)
-        .hand(0, &[CARD_ID, "P193-INELIGIBLE", "P193-COMPOSITE2"])
-        .deck(0, &["P193-COMPOSITE2"; 5])
-        .deck(1, &["P193-COMPOSITE2"; 5])
-        .memory(10)
-        .start();
-
-    runner.place_on_field(0, "P193-ANCHOR3", Some(0));
-
-    // P-193 is an Option — `runner.play()` routes through the generic
-    // Digimon/Tamer `OnPlay` path, which does NOT dispatch `MainFromHand` /
-    // `OptionMain` bodies. Options must go through `play_option_from_hand`
-    // (the BT21-097 precedent), which requires the Main phase.
-    runner.game.enter_main_phase();
-    let _ = runner.game.play_option_from_hand(0, 0);
+    let fired = runner.game.activate_hand_main(0, 0);
+    assert!(fired, "P-193 [Main] must activate from hand");
 
     let view = runner
         .pending_selection_view()
-        .expect("Main cost-trash prompt installs");
-    // Only the Composite-trait card (hand index shifts after P-193 leaves
-    // hand) should be a legal non-PASS pick — the ineligible filler must not
-    // appear among valid actions.
-    use digimon_engine::action::space::PASS as PASS_ACTION;
-    let non_pass_count = view
-        .valid_action_ids
-        .iter()
-        .filter(|&&a| a != PASS_ACTION)
-        .count();
-    assert_eq!(
-        non_pass_count, 1,
-        "only the Composite-trait card is a legal cost pick; got {:?}",
-        view.valid_action_ids
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 3 — [Main]: decline branch (official Q&A — decline aborts the tail)
-// ═══════════════════════════════════════════════════════════════════════════
-
-/// Decline branch: an eligible cost card exists in hand, but the player
-/// declines the prompt. Per official Q&A, Draw 2 must NOT occur, and the
-/// cost card must NOT be trashed — the `cost: true` decline-abort
-/// (`G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE`) correctly skips both.
-///
-/// The self-placement half of this same official-Q&A gate is a SEPARATE,
-/// confirmed engine gap — see `p193_main_decline_does_not_place_self`
-/// (ignored) below.
-#[test]
-fn p193_main_decline_does_not_trash_or_draw() {
-    let composite = cost_card("P193-COMPOSITE3", "Composite");
-    let anchor = purple_color_anchor("P193-ANCHOR4");
-
-    let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(composite)
-        .add_card(anchor)
-        .hand(0, &[CARD_ID, "P193-COMPOSITE3"])
-        .deck(0, &["P193-COMPOSITE3"])
-        .memory(10)
-        .start();
-
-    runner.place_on_field(0, "P193-ANCHOR4", Some(0));
-
-    let deck_before = runner.deck_size(0);
-    let trash_before = runner.trash_size(0);
-
-    // P-193 is an Option — `runner.play()` routes through the generic
-    // Digimon/Tamer `OnPlay` path, which does NOT dispatch `MainFromHand` /
-    // `OptionMain` bodies. Options must go through `play_option_from_hand`
-    // (the BT21-097 precedent), which requires the Main phase.
-    runner.game.enter_main_phase();
-    let _ = runner.game.play_option_from_hand(0, 0);
-
+        .expect("the trash-cost pick must install");
+    assert_eq!(view.kind, SelectionKind::Hand);
+    use digimon_engine::action::space::PLAY_HAND_START;
     assert!(
-        runner.pending_is_optional(),
-        "cost-trash prompt must allow decline"
+        view.valid_action_ids.contains(&PLAY_HAND_START),
+        "P-193 itself (hand index 0) is a legal trash-cost target — it \
+         carries the printed [Wicked God] trait and is still in hand"
     );
-    let player = runner.pending_selection().unwrap().selecting_player;
     runner
-        .execute_action(player, PASS)
-        .expect("PASS declines the cost");
+        .game
+        .resolve_selection(view.selecting_player, PLAY_HAND_START)
+        .expect("trash P-193 itself as the cost");
 
-    assert!(
-        runner.pending_selection().is_none(),
-        "no further selection after decline"
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.deck_size(0),
+        deck_before - 2,
+        "Draw 2 still resolves even though the cost card was P-193 itself"
     );
     assert_eq!(
         runner.trash_size(0),
-        trash_before,
-        "no card trashed on decline"
+        0,
+        "P-193 does not remain in the trash — place_self_as_delay_option \
+         recovers it from trash and seats it on the field"
     );
-    assert_eq!(
-        runner.deck_size(0),
-        deck_before,
-        "no cards drawn on decline (official Q&A: 'then' tail is cost-gated)"
-    );
-}
-
-/// **Engine gap — G-DELAY-DISPOSAL-IGNORES-CLAUSE-ABORT.**
-///
-/// Official Q&A: declining the [Main] cost must ALSO prevent "Then, place
-/// this card in the battle area." The DSL correctly aborts the process body
-/// (`dsl_clause_aborted`, verified above), but the REAL `play_option_from_hand`
-/// disposal pipeline (`Game::play_option_core` step 8 → `Game::dispose_option`,
-/// `code/digimon-engine/src/game_actions/options.rs`) determines an Option's
-/// end-of-play disposition from a STATIC `OptionSubtype` computed once at
-/// play time (`classify_option_modes`, `game_actions/mod.rs`) from the
-/// card's effect list — ANY effect with a `delay_trigger` (i.e. any
-/// `kind: delay` clause) makes the WHOLE card classify as
-/// `OptionSubtype::Delay`. `dispose_option`'s `Delay` branch (line ~1284)
-/// unconditionally pushes the in-flight `pending_option` onto the
-/// battle area as a `Delayed` permanent — it never consults
-/// `Game::dsl_clause_aborted`, so a cost-gated "Then, place this card in the
-/// battle area" that P-193's process body correctly skipped still happens
-/// via this separate, unconditional disposal path.
-///
-/// This is DISTINCT from the already-resolved `G-OPTION-PLACE-SELF-AS-DELAY-
-/// ON-PLAY-PATH` (which fixed the opposite direction: a Standard-subtype
-/// Option's body claiming `pending_option` to BECOME Delay). Here the card
-/// IS statically Delay-subtype (P-193 has a real `kind: delay` clause for
-/// its `[End of All Turns] <Delay>` body), and the gap is that the
-/// automatic Delay-disposal fallback has no way to be told "the [Main] body
-/// aborted before reaching its own `place_self_as_delay_option` step, so do
-/// NOT park this card — resolve it like an ordinary spent Option instead."
-///
-/// Fix shape: `dispose_option`'s `OptionSubtype::Delay` arm should check
-/// `self.dsl_clause_aborted` (or an equivalent explicit-placement marker)
-/// before parking, falling through to ordinary trash disposal when the
-/// process body never reached `place_self_as_delay_option` itself.
-#[test]
-#[ignore = "pending: G-DELAY-DISPOSAL-IGNORES-CLAUSE-ABORT — dispose_option's \
-            OptionSubtype::Delay branch (game_actions/options.rs) unconditionally \
-            parks the Option on decline, ignoring dsl_clause_aborted; the printed \
-            'Then, place this card in the battle area' is NOT actually cost-gated \
-            on the real play_option_from_hand path even though the DSL process body \
-            correctly skips its own place_self_as_delay_option step"]
-fn p193_main_decline_does_not_place_self() {
-    let composite = cost_card("P193-COMPOSITE3B", "Composite");
-    let anchor = purple_color_anchor("P193-ANCHOR4B");
-
-    let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(composite)
-        .add_card(anchor)
-        .hand(0, &[CARD_ID, "P193-COMPOSITE3B"])
-        .deck(0, &["P193-COMPOSITE3B"])
-        .memory(10)
-        .start();
-
-    runner.place_on_field(0, "P193-ANCHOR4B", Some(0));
-
-    runner.game.enter_main_phase();
-    let _ = runner.game.play_option_from_hand(0, 0);
-    let player = runner.pending_selection().unwrap().selecting_player;
-    runner
-        .execute_action(player, PASS)
-        .expect("PASS declines the cost");
-
     assert!(
-        !runner
-            .game
-            .player(0)
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
-        "P-193 is NOT placed in the battle area when the cost is declined (official Q&A)"
+        find_delayed_p193(&runner, 0).is_some(),
+        "P-193 ends up seated as a Delay option on the field, recovered \
+         from the trash it briefly occupied as its own cost payment"
     );
 }
 
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 4 — [Main]: no-eligible-card gate
-// ═══════════════════════════════════════════════════════════════════════════
-
-/// With no [Composite]/[Wicked God] card anywhere in hand, the clause-level
-/// `condition: count_gte` gate prevents the [Main] `OptionMain` effect from
-/// firing at all — no selection installs, and (critically) no Draw 2 occurs.
-/// This is the `condition` gate working as intended for a zero-candidate
-/// `select_hand` (which itself installs no prompt at all — see the YAML
-/// header comment on `G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE` zero-candidate
-/// interaction).
 #[test]
-fn p193_main_no_eligible_cost_card_no_draw() {
-    let non_eligible = filler("P193-NOELIG");
-    let anchor = purple_color_anchor("P193-ANCHOR5");
+fn p193_main_no_eligible_fodder_does_not_offer_activation() {
+    let filler = make_filler("FILL");
 
-    let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(non_eligible)
-        .add_card(anchor)
-        .hand(0, &[CARD_ID, "P193-NOELIG"])
-        .deck(0, &["P193-NOELIG"])
+    let runner = DebugRunner::builder()
+        .from_dsl_yaml(P_193_YAML)
+        .expect("P-193 YAML parses")
+        .add_card(filler.clone())
         .memory(10)
+        .hand(0, &["P-193", "FILL"])
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
         .start();
 
-    runner.place_on_field(0, "P193-ANCHOR5", Some(0));
-
-    let deck_before = runner.deck_size(0);
-    // P-193 is an Option — `runner.play()` routes through the generic
-    // Digimon/Tamer `OnPlay` path, which does NOT dispatch `MainFromHand` /
-    // `OptionMain` bodies. Options must go through `play_option_from_hand`
-    // (the BT21-097 precedent), which requires the Main phase.
-    runner.game.enter_main_phase();
-    let _ = runner.game.play_option_from_hand(0, 0);
-
-    if let Some(view) = runner.pending_selection_view() {
-        use digimon_engine::action::space::PASS as PASS_ACTION;
-        assert!(
-            view.valid_action_ids.iter().all(|&a| a == PASS_ACTION),
-            "with no eligible cost card, only PASS may be legal; got {:?}",
-            view.valid_action_ids
-        );
-        runner
-            .execute_action(view.selecting_player, PASS_ACTION)
-            .expect("PASS resolves the empty prompt");
-    }
-
-    assert_eq!(
-        runner.deck_size(0),
-        deck_before,
-        "no draw occurs when no eligible cost card exists"
-    );
-}
-
-/// **Engine gap — G-DELAY-DISPOSAL-IGNORES-CLAUSE-ABORT** (see
-/// `p193_main_decline_does_not_place_self` for the full gap writeup). With
-/// no eligible cost card, the clause-level `condition: count_gte` gate
-/// prevents the `OptionMain` effect from running at all — but the card's
-/// static `OptionSubtype::Delay` classification (driven by the sibling
-/// `kind: delay` clause) still causes `dispose_option` to unconditionally
-/// park the Option on the real `play_option_from_hand` path.
-#[test]
-#[ignore = "pending: G-DELAY-DISPOSAL-IGNORES-CLAUSE-ABORT — see \
-            p193_main_decline_does_not_place_self for the full writeup"]
-fn p193_main_no_eligible_cost_card_not_placed() {
-    let non_eligible = filler("P193-NOELIG2");
-    let anchor = purple_color_anchor("P193-ANCHOR5B");
-
-    let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(non_eligible)
-        .add_card(anchor)
-        .hand(0, &[CARD_ID, "P193-NOELIG2"])
-        .deck(0, &["P193-NOELIG2"])
-        .memory(10)
-        .start();
-
-    runner.place_on_field(0, "P193-ANCHOR5B", Some(0));
-
-    runner.game.enter_main_phase();
-    let _ = runner.game.play_option_from_hand(0, 0);
-
-    if let Some(view) = runner.pending_selection_view() {
-        use digimon_engine::action::space::PASS as PASS_ACTION;
-        runner
-            .execute_action(view.selecting_player, PASS_ACTION)
-            .expect("PASS resolves the empty prompt");
-    }
-
-    assert!(
-        !runner
-            .game
-            .player(0)
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
-        "P-193 is not placed when no eligible cost card exists"
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 5 — [Main]: event-log assertion for the cost trash
-// ═══════════════════════════════════════════════════════════════════════════
-
-/// Accepting the cost fires a Trash event for the cost card (cost-firing
-/// clause event-log coverage, test API §5 Section 4).
-///
-/// **Pre-existing engine gap (also open on BT24-008's identical pattern):**
-/// `Game::trash_from_hand_by_index` (`code/digimon-engine/src/game_actions/
-/// zones.rs`) moves the card directly (`player.trash.push(card)`) instead of
-/// routing through the canonical `Game::trash_card` helper — the latter is
-/// documented as "every individual card moving into a trash zone SHALL emit
-/// a Trash event" but `trash_from_hand_by_index` bypasses it entirely, so no
-/// `GameEvent::Trash` fires for this DSL step. Confirmed still open (not
-/// specific to P-193 — the shared verb is missing event emission).
-#[test]
-#[ignore = "pending: engine-trash-event-from-hand — Game::trash_from_hand_by_index \
-            (game_actions/zones.rs) does not route through Game::trash_card and so \
-            emits no GameEvent::Trash; same pre-existing gap noted in BT24-008's test"]
-fn p193_main_accept_emits_trash_event_for_cost_card() {
-    let composite = cost_card("P193-EVT-COST", "Composite");
-    let fill = filler("FILL-EVT");
-    let anchor = purple_color_anchor("P193-ANCHOR6");
-
-    let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(composite)
-        .add_card(fill)
-        .add_card(anchor)
-        .hand(0, &[CARD_ID, "P193-EVT-COST"])
-        .deck(0, &["FILL-EVT"; 3])
-        .deck(1, &["FILL-EVT"; 3])
-        .memory(10)
-        .start();
-
-    runner.place_on_field(0, "P193-ANCHOR6", Some(0));
-
-    // P-193 is an Option — `runner.play()` routes through the generic
-    // Digimon/Tamer `OnPlay` path, which does NOT dispatch `MainFromHand` /
-    // `OptionMain` bodies. Options must go through `play_option_from_hand`
-    // (the BT21-097 precedent), which requires the Main phase.
-    runner.game.enter_main_phase();
-    let _ = runner.game.play_option_from_hand(0, 0);
-
-    let cp = runner.event_checkpoint();
-    runner
-        .auto_resolve()
-        .expect("resolve picks the Composite cost card");
-
-    let events = runner.events_since(cp);
-    let trash_events: Vec<_> = events
+    // No [Composite]/[Wicked God] card in hand: the `condition: count_gte`
+    // gate should prevent the clause from being offered at all.
+    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
+    let p193_hand_index = runner.game.players[0]
+        .hand
         .iter()
-        .filter(|e| matches!(e, GameEvent::Trash { .. }))
-        .collect();
-
-    assert!(
-        !trash_events.is_empty(),
-        "a Trash event must fire when the cost card is trashed from hand: {events:?}"
+        .position(|c| c.card_id(&runner.game.card_data) == "P-193")
+        .expect("P-193 in hand");
+    use digimon_engine::action::space::PLAY_HAND_START;
+    assert_eq!(
+        mask[(PLAY_HAND_START as usize) + p193_hand_index],
+        0.0,
+        "P-193's [Main] activation must not be legal with zero eligible hand fodder"
     );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
-// Section 6 — Delay body: delete Millenniummon → free-play [Wicked God]
+// Section 3 — Clause B: [End of All Turns] <Delay> — delete-gated free play
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// Happy path: P-193 seated as an activatable Delay Option; controller has an
-/// own Digimon named "Millenniummon" on the field and a [Wicked God]-trait
-/// Digimon card in hand. Activating the Delay deletes the Millenniummon, then
-/// offers the free-play pick; accepting plays the Wicked God card without
-/// paying its cost.
+/// Place P-193 directly as a Delay option on the field (bypassing the Main
+/// clause) so Clause B tests can focus on the delay body alone.
+fn seat_p193_as_delay(runner: &mut DebugRunner, player: usize) -> usize {
+    let handle = runner.place_on_field(player as u8, "P-193", Some(0));
+    let perm = &mut runner.game.players[player].battle_area[handle.index as usize];
+    perm.option_state = OptionState::Delayed {
+        owner: player as u8,
+        trash_on_turn: u16::MAX,
+        trigger: DelayTrigger::MainPhaseActivated,
+        placed_on_turn: 0,
+    };
+    handle.index as usize
+}
+
 #[test]
-fn p193_delay_deletes_millenniummon_then_plays_wicked_god_from_hand_free() {
+fn p193_delay_deleting_millenniummon_offers_free_wicked_god_play_from_hand() {
+    let millenniummon = make_millenniummon("P193-MILL");
+    let wicked_god = make_wicked_god_digimon("P193-WG", "SomeWickedGod");
+    let filler = make_filler("FILL");
+
     let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(millenniummon("P193-MM"))
-        .add_card(wicked_god_digimon("P193-WG-HAND"))
-        .add_card(filler("FILL"))
-        .hand(0, &["P193-WG-HAND"])
-        .deck(0, &["FILL"; 6])
-        .deck(1, &["FILL"; 6])
+        .from_dsl_yaml(P_193_YAML)
+        .expect("P-193 YAML parses")
+        .add_card(millenniummon.clone())
+        .add_card(wicked_god.clone())
+        .add_card(filler.clone())
         .memory(10)
+        .hand(0, &["P193-WG"])
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
         .start();
 
-    let mm_handle = runner.place_on_field(0, "P193-MM", None);
-    let mm_card = runner.top_card(mm_handle);
+    let delay_idx = seat_p193_as_delay(&mut runner, 0);
+    runner.place_on_field(0, "P193-MILL", Some(0));
+    advance_past_placing_turn(&mut runner, 0, delay_idx);
 
-    let handle = seat_and_advance_to_activatable_delay(&mut runner);
-    runner.game.set_memory(10);
-
+    let delay_handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: delay_idx as u8,
+    };
     assert!(
-        runner.game.activate_field_main(0, handle.index as usize),
-        "the standard <Delay> [Main] must be activatable after the placing turn"
+        runner.game.activate_delayed_option_main(delay_handle),
+        "the <Delay> must be activatable after the placing turn"
     );
 
-    // First prompt: optional own-permanent pick (Millenniummon).
+    // The body installs a selection (the Millenniummon delete pick), so the
+    // outer "trash this card" activation cost is DEFERRED until the whole
+    // body resolves (`activate_delayed_option_main`'s documented
+    // MainPhaseActivation resume behavior) — P-193 is still physically on
+    // the field at this point; it trashes once the body (including the
+    // nested free-play tail) finishes.
     let view = runner
         .pending_selection_view()
-        .expect("delay body offers the Millenniummon delete pick");
-    assert!(
-        runner.pending_is_optional(),
-        "the deletion pick must be optional (declinable)"
-    );
-    let delete_action = view
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|&a| a != PASS)
-        .expect("a concrete Millenniummon delete action");
+        .expect("Millenniummon delete pick must install");
+    assert_eq!(view.kind, SelectionKind::OwnField);
+    assert!(view.is_optional, "the delete pick is declinable");
+    let (action, player) = (view.valid_action_ids[0], view.selecting_player);
     runner
-        .execute_action(view.selecting_player, delete_action)
-        .expect("choose the Millenniummon to delete");
-
-    // Second prompt: optional union-zone (hand/trash) free-play pick.
-    let view2 = runner
-        .pending_selection_view()
-        .expect("after deletion, the free-play union pick must install");
-    let play_action = view2
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|&a| a != PASS)
-        .expect("a concrete Wicked God free-play action");
-    runner
-        .execute_action(view2.selecting_player, play_action)
-        .expect("choose the Wicked God card to play free");
-    runner.auto_resolve().expect("settle the free play");
-
-    // Millenniummon was deleted (in trash).
-    assert!(
-        runner.game.players[0]
-            .trash
-            .iter()
-            .any(|c| c.handle() == mm_card),
-        "the Millenniummon must be deleted (trashed)"
-    );
-    // The Wicked God card is now on the field (played free from hand).
-    assert!(
-        runner.game.players[0]
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&runner.game.card_data) == "P193-WG-HAND"),
-        "the Wicked God card must be played onto the battle area"
-    );
-    // P-193 itself was trashed as the Delay activation cost.
-    assert!(
-        runner.game.players[0]
-            .trash
-            .iter()
-            .any(|c| c.card_id(&runner.game.card_data) == CARD_ID),
-        "P-193 must be trashed as the <Delay> activation cost"
-    );
-    // Memory was NOT spent (played "without paying the cost").
-    assert_eq!(
-        runner.memory(),
-        10,
-        "the free play must not consume memory"
-    );
-}
-
-/// The free-play reward also accepts a [Wicked God]-trait card from TRASH
-/// (the printed "hand or trash").
-#[test]
-fn p193_delay_plays_wicked_god_from_trash_free() {
-    let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(millenniummon("P193-MM2"))
-        .add_card(wicked_god_digimon("P193-WG-TRASH"))
-        .add_card(filler("FILL2"))
-        .deck(0, &["FILL2"; 6])
-        .deck(1, &["FILL2"; 6])
-        .memory(10)
-        .start();
-
-    let mm_handle = runner.place_on_field(0, "P193-MM2", None);
-    let mm_card = runner.top_card(mm_handle);
-
-    // Seed the Wicked God card directly into P0's trash (not hand).
-    let wg_data_index = runner
         .game
-        .card_data
-        .iter()
-        .position(|d| d.card_id == "P193-WG-TRASH")
-        .expect("Wicked God card data registered");
-    let wg_card_index = runner.game.next_card_index();
-    runner.game.players[0]
-        .trash
-        .push(digimon_engine::card_source::CardSource::new(
-            wg_data_index,
-            0,
-            wg_card_index,
-        ));
+        .resolve_selection(player, action)
+        .expect("delete the Millenniummon");
 
-    let handle = seat_and_advance_to_activatable_delay(&mut runner);
-    runner.game.set_memory(10);
-
-    assert!(runner.game.activate_field_main(0, handle.index as usize));
-
-    let view = runner
-        .pending_selection_view()
-        .expect("delay body offers the Millenniummon delete pick");
-    let delete_action = view
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|&a| a != PASS)
-        .expect("a concrete Millenniummon delete action");
-    runner
-        .execute_action(view.selecting_player, delete_action)
-        .expect("choose the Millenniummon to delete");
-
+    // Millenniummon deletion succeeded -> the free-play union prompt installs.
     let view2 = runner
         .pending_selection_view()
-        .expect("after deletion, the free-play union pick must install");
-    let play_action = view2
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|&a| a != PASS)
-        .expect("a concrete Wicked God free-play action from trash");
+        .expect("free-play union-zone prompt must install after a successful delete");
+    assert_eq!(
+        view2.kind,
+        SelectionKind::UnionZone {
+            zones: digimon_engine::selection::UnionZoneSet::HAND
+                | digimon_engine::selection::UnionZoneSet::TRASH
+        }
+    );
+    assert!(view2.is_optional, "the free play itself is 'you may'");
+    let (action2, player2) = (view2.valid_action_ids[0], view2.selecting_player);
     runner
-        .execute_action(view2.selecting_player, play_action)
-        .expect("choose the trash Wicked God card to play free");
-    runner.auto_resolve().expect("settle the free play");
+        .game
+        .resolve_selection(player2, action2)
+        .expect("play the Wicked God card free");
 
+    runner.game.drain_effect_queue();
+
+    // Now that the body has fully resolved, the deferred trash-self
+    // activation cost has been paid: P-193 is no longer a Delay permanent
+    // on the field.
     assert!(
-        runner.game.players[0]
-            .trash
-            .iter()
-            .any(|c| c.handle() == mm_card),
-        "the Millenniummon must be deleted"
+        find_delayed_p193(&runner, 0).is_none(),
+        "P-193 must have been trashed as the <Delay> activation cost"
     );
     assert!(
         runner.game.players[0]
             .battle_area
             .iter()
-            .any(|p| p.top_card().card_id(&runner.game.card_data) == "P193-WG-TRASH"),
-        "the trash-resident Wicked God card must be played onto the battle area"
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "P193-WG"),
+        "the Wicked God Digimon must be on the battle area, played for free"
+    );
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .all(|p| p.top_card().card_id(&runner.game.card_data) != "P193-MILL"),
+        "Millenniummon must have been deleted"
     );
 }
 
-/// The deletion pick is declinable ("may"). Declining leaves Millenniummon on
-/// the field and the free-play pick never installs (DCGO: `DeleteSuccessProcess`
-/// only runs after a successful delete).
+/// UNFAITHFUL-GATING REGRESSION GUARD: declining the Millenniummon delete
+/// pick must NOT expose the free-play prompt, even though an eligible
+/// [Wicked God] card sits in hand. This is the exact bug the reviewer's fix
+/// directive closes — the earlier flat (ungated) body let the union-zone
+/// prompt install unconditionally.
 #[test]
 fn p193_delay_declining_deletion_skips_free_play() {
+    let millenniummon = make_millenniummon("P193-MILL");
+    let wicked_god = make_wicked_god_digimon("P193-WG-DECLINE", "DeclinedWickedGod");
+    let filler = make_filler("FILL");
+
     let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(millenniummon("P193-MM3"))
-        .add_card(wicked_god_digimon("P193-WG-DECLINE"))
-        .add_card(filler("FILL3"))
-        .hand(0, &["P193-WG-DECLINE"])
-        .deck(0, &["FILL3"; 6])
-        .deck(1, &["FILL3"; 6])
+        .from_dsl_yaml(P_193_YAML)
+        .expect("P-193 YAML parses")
+        .add_card(millenniummon.clone())
+        .add_card(wicked_god.clone())
+        .add_card(filler.clone())
         .memory(10)
+        .hand(0, &["P193-WG-DECLINE"])
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
         .start();
 
-    let mm_handle = runner.place_on_field(0, "P193-MM3", None);
+    let delay_idx = seat_p193_as_delay(&mut runner, 0);
+    runner.place_on_field(0, "P193-MILL", Some(0));
+    advance_past_placing_turn(&mut runner, 0, delay_idx);
 
-    let handle = seat_and_advance_to_activatable_delay(&mut runner);
-    runner.game.set_memory(10);
-
-    assert!(runner.game.activate_field_main(0, handle.index as usize));
+    let delay_handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: delay_idx as u8,
+    };
+    assert!(runner.game.activate_delayed_option_main(delay_handle));
 
     let view = runner
         .pending_selection_view()
-        .expect("delay body offers the Millenniummon delete pick");
-    assert!(
-        runner.pending_is_optional(),
-        "the deletion pick must allow decline"
-    );
+        .expect("Millenniummon delete pick must install");
+    assert_eq!(view.kind, SelectionKind::OwnField);
+    assert!(view.is_optional);
     runner
-        .execute_action(view.selecting_player, PASS)
-        .expect("decline the deletion");
+        .game
+        .resolve_selection(view.selecting_player, PASS)
+        .expect("decline the Millenniummon delete pick");
 
-    // No follow-up free-play prompt should install after a decline.
+    runner.game.drain_effect_queue();
+
     assert!(
         runner.pending_selection().is_none(),
-        "declining the deletion must not surface the free-play prompt"
+        "declining the delete cost must abort the whole free-play tail — \
+         no union-zone prompt may install even though an eligible [Wicked \
+         God] card sits in hand"
     );
-    // Millenniummon remains on the field.
     assert!(
         runner.game.players[0]
             .battle_area
             .iter()
-            .any(|p| p.top_card().handle() == runner.top_card(mm_handle)),
-        "the Millenniummon must remain on the field when the deletion is declined"
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == "P193-MILL"),
+        "Millenniummon must NOT have been deleted after a decline"
     );
-    // Wicked God card remains in hand (not played).
     assert!(
         runner.game.players[0]
             .hand
             .iter()
             .any(|c| c.card_id(&runner.game.card_data) == "P193-WG-DECLINE"),
-        "the Wicked God card is never played when the deletion is declined"
-    );
-    // P-193's activation cost (self-trash) still fires — the <Delay>
-    // activation cost is independent of the body's internal decline.
-    assert!(
-        runner.game.players[0]
-            .trash
-            .iter()
-            .any(|c| c.card_id(&runner.game.card_data) == CARD_ID),
-        "P-193's Delay activation cost (self-trash) still applies even when the body declines"
+        "the Wicked God card must remain unplayed in hand"
     );
 }
 
-/// Negative: with no Digimon named "Millenniummon" on the field, the deletion
-/// pick has no eligible target (a non-matching own Digimon does not satisfy
-/// the name filter) — activating still trashes P-193 as the Delay cost, but
-/// installs no further selection.
+/// With no Millenniummon on the field, the delete pick itself must be a
+/// no-op (no eligible candidates) and the free-play tail must not run.
 #[test]
 fn p193_delay_no_millenniummon_on_field_skips_delete_and_free_play() {
+    let wicked_god = make_wicked_god_digimon("P193-WG-NOMILL", "NoMillWickedGod");
+    let filler = make_filler("FILL");
+
     let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(other_digimon("P193-OTHER"))
-        .add_card(filler("FILL4"))
-        .deck(0, &["FILL4"; 6])
-        .deck(1, &["FILL4"; 6])
+        .from_dsl_yaml(P_193_YAML)
+        .expect("P-193 YAML parses")
+        .add_card(wicked_god.clone())
+        .add_card(filler.clone())
         .memory(10)
+        .hand(0, &["P193-WG-NOMILL"])
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
         .start();
 
-    runner.place_on_field(0, "P193-OTHER", None);
+    let delay_idx = seat_p193_as_delay(&mut runner, 0);
+    // No Millenniummon anywhere on the field.
+    advance_past_placing_turn(&mut runner, 0, delay_idx);
 
-    let handle = seat_and_advance_to_activatable_delay(&mut runner);
-    runner.game.set_memory(10);
+    let delay_handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: delay_idx as u8,
+    };
+    assert!(runner.game.activate_delayed_option_main(delay_handle));
 
-    assert!(runner.game.activate_field_main(0, handle.index as usize));
-    runner.auto_resolve().ok();
+    runner.game.drain_effect_queue();
 
+    assert!(
+        runner.pending_selection().is_none(),
+        "with zero Millenniummon candidates, neither the delete pick nor \
+         the free-play prompt may install (no panic, no over-exposed choice)"
+    );
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "P193-WG-NOMILL"),
+        "the Wicked God card must remain unplayed in hand"
+    );
+}
+
+/// Deletion succeeds but the player may still decline the free play itself
+/// (the "you may play" leg is independently optional).
+#[test]
+fn p193_delay_deletion_succeeds_but_free_play_is_declinable() {
+    let millenniummon = make_millenniummon("P193-MILL");
+    let wicked_god = make_wicked_god_digimon("P193-WG2", "DeclineAfterDelete");
+    let filler = make_filler("FILL");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(P_193_YAML)
+        .expect("P-193 YAML parses")
+        .add_card(millenniummon.clone())
+        .add_card(wicked_god.clone())
+        .add_card(filler.clone())
+        .memory(10)
+        .hand(0, &["P193-WG2"])
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    let delay_idx = seat_p193_as_delay(&mut runner, 0);
+    runner.place_on_field(0, "P193-MILL", Some(0));
+    advance_past_placing_turn(&mut runner, 0, delay_idx);
+
+    let delay_handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: delay_idx as u8,
+    };
+    assert!(runner.game.activate_delayed_option_main(delay_handle));
+
+    let view = runner
+        .pending_selection_view()
+        .expect("Millenniummon delete pick must install");
+    runner
+        .game
+        .resolve_selection(view.selecting_player, view.valid_action_ids[0])
+        .expect("delete the Millenniummon");
+
+    let view2 = runner
+        .pending_selection_view()
+        .expect("free-play prompt installs after a successful delete");
+    assert!(view2.is_optional, "the free play is independently 'you may'");
+    runner
+        .game
+        .resolve_selection(view2.selecting_player, PASS)
+        .expect("decline the free play");
+
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .all(|p| p.top_card().card_id(&runner.game.card_data) != "P193-MILL"),
+        "Millenniummon was still deleted (that cost was already paid)"
+    );
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "P193-WG2"),
+        "the Wicked God card remains unplayed after declining the free play"
+    );
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .all(|p| p.top_card().card_id(&runner.game.card_data) != "P193-WG2"),
+        "the Wicked God card must not be on the battle area"
+    );
+}
+
+/// A non-Millenniummon Digimon on the field must not be offered as a delete
+/// target (exact-name filter, not a substring/trait match).
+#[test]
+fn p193_delay_non_millenniummon_digimon_is_not_a_valid_delete_target() {
+    let other = make_other_digimon("P193-OTHER", "NotMillenniummon");
+    let filler = make_filler("FILL");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(P_193_YAML)
+        .expect("P-193 YAML parses")
+        .add_card(other.clone())
+        .add_card(filler.clone())
+        .memory(10)
+        .hand(0, &["FILL"])
+        .hand(1, &["FILL"])
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .start();
+
+    let delay_idx = seat_p193_as_delay(&mut runner, 0);
+    runner.place_on_field(0, "P193-OTHER", Some(0));
+    advance_past_placing_turn(&mut runner, 0, delay_idx);
+
+    let delay_handle = digimon_engine::permanent::PermanentHandle {
+        player: 0,
+        index: delay_idx as u8,
+    };
+    assert!(runner.game.activate_delayed_option_main(delay_handle));
+
+    runner.game.drain_effect_queue();
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "a non-Millenniummon Digimon must not be a valid delete target — \
+         the clause must no-op cleanly"
+    );
     assert!(
         runner.game.players[0]
             .battle_area
             .iter()
             .any(|p| p.top_card().card_id(&runner.game.card_data) == "P193-OTHER"),
-        "the non-Millenniummon Digimon must remain on the field (name filter rejects)"
-    );
-    assert!(
-        runner.game.players[0]
-            .trash
-            .iter()
-            .any(|c| c.card_id(&runner.game.card_data) == CARD_ID),
-        "P-193 is still trashed as the Delay activation cost"
+        "the non-Millenniummon Digimon must remain on the field, untouched"
     );
 }
 
-/// Negative: after deleting a Millenniummon, a hand card WITHOUT the [Wicked
-/// God] trait is not offered for the free play.
+// ═══════════════════════════════════════════════════════════════════════════
+// Section 4 — Clause C: [Security] Activate [Main] effects
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Drives a REAL attack into P-193 seated as the top security card, so the
+/// engine's actual security-reveal machinery (`pending_security` +
+/// `SecuritySkill` dispatch) exercises Clause C end-to-end — mirroring the
+/// BT15-092 `run_security_effect` idiom (`attack_player` + `auto_resolve`).
+/// A manually-placed-on-field + `enqueue_triggered(SecuritySkill, ...)`
+/// simulation is NOT faithful here: `place_self_as_delay_option_permanent`'s
+/// already-on-field branch (`remove_source_card_from_permanent`) refuses to
+/// remove a permanent's own sole top card, so that shortcut silently no-ops
+/// instead of reproducing the real hand/trash-origin `pending_security` path.
 #[test]
-fn p193_delay_non_wicked_god_card_not_offered_for_free_play() {
+fn p193_security_trashing_fodder_draws_two_and_places_self() {
+    let composite = make_traited_digimon("P193-SEC-COMP", "SecCompositeGuy", "Wicked God");
+    let attacker_dgm = make_other_digimon("P193-ATK", "Attacker");
+
     let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(millenniummon("P193-MM5"))
-        .add_card(non_wicked_god_digimon("P193-PLAIN"))
-        .add_card(filler("FILL5"))
-        .hand(0, &["P193-PLAIN"])
-        .deck(0, &["FILL5"; 6])
-        .deck(1, &["FILL5"; 6])
+        .from_dsl_yaml(P_193_YAML)
+        .expect("P-193 YAML parses")
+        .add_card(composite.clone())
+        .add_card(attacker_dgm.clone())
         .memory(10)
+        .hand(0, &["P193-SEC-COMP"])
+        .security(0, &["P-193"])
         .start();
 
-    runner.place_on_field(0, "P193-MM5", None);
+    let attacker = runner.place_on_field(1, "P193-ATK", Some(0));
 
-    let handle = seat_and_advance_to_activatable_delay(&mut runner);
-    runner.game.set_memory(10);
+    let _ = runner.attack_player(attacker, 0, false);
 
-    assert!(runner.game.activate_field_main(0, handle.index as usize));
-
+    // Drive up to (and including) the trash-cost pick manually, so the test
+    // asserts on the exact selection surfaced rather than blindly trusting
+    // auto_resolve's `first()` pick.
     let view = runner
         .pending_selection_view()
-        .expect("delay body offers the Millenniummon delete pick");
-    let delete_action = view
-        .valid_action_ids
-        .iter()
-        .copied()
-        .find(|&a| a != PASS)
-        .expect("a concrete Millenniummon delete action");
+        .expect("the trash-cost pick must install from the real security reveal");
+    assert_eq!(view.kind, SelectionKind::Hand);
+    assert!(view.is_optional, "the trash pick is declinable (cost: true)");
     runner
-        .execute_action(view.selecting_player, delete_action)
-        .expect("choose the Millenniummon to delete");
+        .game
+        .resolve_selection(view.selecting_player, view.valid_action_ids[0])
+        .expect("accept the trash cost");
 
-    // The follow-up union-zone pick installs but with only PASS legal (no
-    // [Wicked God] trait card anywhere in hand or trash).
-    if let Some(view2) = runner.pending_selection_view() {
-        let non_pass_count = view2.valid_action_ids.iter().filter(|&&a| a != PASS).count();
-        assert_eq!(
-            non_pass_count, 0,
-            "no non-Wicked-God card may be offered for the free play; got {:?}",
-            view2.valid_action_ids
-        );
-        runner
-            .execute_action(view2.selecting_player, PASS)
-            .expect("PASS the empty free-play prompt");
-    }
+    // Let the rest of the attack (draw 2, place self, security resolution
+    // wrap-up) auto-resolve.
+    runner.auto_resolve().ok();
 
+    assert_eq!(runner.trash_size(0), 1, "the fodder card was trashed");
     assert!(
-        runner.game.players[0]
-            .hand
-            .iter()
-            .any(|c| c.card_id(&runner.game.card_data) == "P193-PLAIN"),
-        "the non-Wicked-God card must remain in hand (never played)"
-    );
-}
-
-/// The <Delay> activation is unavailable on the placing turn (16-16-3).
-#[test]
-fn p193_delay_not_activatable_on_placing_turn() {
-    let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(filler("FILL6"))
-        .deck(0, &["FILL6"; 3])
-        .deck(1, &["FILL6"; 3])
-        .memory(10)
-        .start();
-
-    let handle = runner.place_on_field(0, CARD_ID, Some(0));
-    runner.game.player_mut(0).battle_area[handle.index as usize].option_state =
-        OptionState::Delayed {
-            owner: 0,
-            trash_on_turn: u16::MAX,
-            trigger: DelayTrigger::MainPhaseActivated,
-            placed_on_turn: runner.game.turn_count,
-        };
-    runner.game.enter_main_phase();
-
-    assert!(
-        !runner
-            .game
-            .delayed_option_main_activation_available(handle),
-        "the <Delay> must NOT be activatable on the placing turn"
-    );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// Section 7 — [Security] (inherited): Activate this card's [Main] effects
-// ═══════════════════════════════════════════════════════════════════════════
-
-/// A real attack on the defender's security with P-193 face-up, no eligible
-/// cost card in hand: the mandatory-vs-optional shape still resolves without
-/// panicking, and since the cost cannot be paid, P-193 does not enter the
-/// defender's battle area.
-#[test]
-fn p193_security_no_eligible_cost_no_panic_and_no_self_placement() {
-    let mut attacker = filler("P193-SEC-ATK");
-    attacker.dp = Some(6000);
-
-    let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(attacker.clone())
-        .add_card(filler("FILL7"))
-        .memory(10)
-        .deck(0, &["FILL7"; 5])
-        .deck(1, &["FILL7"; 5])
-        .security(1, &[CARD_ID])
-        .start();
-
-    let attacker_handle = runner.place_on_field(0, "P193-SEC-ATK", Some(0));
-    assert_eq!(runner.hand_size(1), 0, "precondition: defender hand empty");
-    assert_eq!(
-        runner.security_count(1),
-        1,
-        "precondition: P-193 in security"
-    );
-
-    let _ = runner.attack_player(attacker_handle, 1, false);
-    runner.auto_resolve().expect("security selections resolve");
-
-    // No eligible cost card anywhere in defender's hand → the "then" tail
-    // (place self in battle area) cannot fire.
-    assert!(
-        !runner.game.players[1]
-            .battle_area
-            .iter()
-            .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
-        "P-193 must not enter the battle area when no eligible cost card exists"
-    );
-}
-
-/// Positive: defender's security reveals P-193, and the defender's hand has
-/// an eligible [Composite]/[Wicked God] card. The security clause mirrors the
-/// Main body: trashing the cost card draws 2 and places P-193 on the
-/// defender's field as a Delay Option.
-#[test]
-fn p193_security_with_eligible_cost_draws_two_and_places_self() {
-    let mut attacker = filler("P193-SEC-ATK2");
-    attacker.dp = Some(6000);
-    let composite = cost_card("P193-SEC-COST", "Composite");
-
-    let mut runner = DebugRunner::builder()
-        .dsl_card(CARD_ID)
-        .expect("P-193 must be in embedded pack")
-        .add_card(attacker.clone())
-        .add_card(composite)
-        .memory(10)
-        .deck(0, &["P193-SEC-COST"; 2])
-        .deck(1, &["P193-SEC-COST"; 6])
-        .security(1, &[CARD_ID])
-        .start();
-
-    // Give the defender an eligible cost card in hand.
-    let hand_seed = runner.game.players[1]
-        .deck
-        .pop()
-        .expect("cost-card seed in deck");
-    runner.game.players[1].hand.push(hand_seed);
-
-    let attacker_handle = runner.place_on_field(0, "P193-SEC-ATK2", Some(0));
-    let deck_before = runner.deck_size(1);
-
-    let _ = runner.attack_player(attacker_handle, 1, false);
-    runner.auto_resolve().expect("security selections resolve");
-
-    assert_eq!(
-        runner.deck_size(1),
-        deck_before - 2,
-        "defender's deck must shrink by 2 (Draw 2 from the Security-triggered Main body)"
-    );
-    let placed = runner.game.players[1]
-        .battle_area
-        .iter()
-        .find(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
-        .expect("P-193 must be placed on the defender's field");
-    assert!(
-        matches!(
-            placed.option_state,
-            OptionState::Delayed {
-                trigger: DelayTrigger::MainPhaseActivated,
-                ..
-            }
-        ),
-        "P-193 must park as a standard <Delay> Option after the Security-triggered Main body"
+        find_delayed_p193(&runner, 0).is_some(),
+        "P-193 must be placed in the battle area as a Delay option from security"
     );
 }

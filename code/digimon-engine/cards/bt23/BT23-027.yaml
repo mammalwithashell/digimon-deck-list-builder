@@ -1,0 +1,197 @@
+# BT23-027 Angemon — Digimon, Lv.4, Yellow/Blue, DP 5000, Cost 5.
+# Traits: Angel/Hudie/CS. Attribute: Vaccine.
+#
+# Printed text (official Bandai DB bundle — data/card_bundles/BT23-027.md):
+#
+#   Special Digivolution Condition:
+#     [Digivolve] [Patamon]/Lv.3 w/[CS] trait: Cost 2
+#
+#   Effect:
+#     <Barrier> [On Play] [When Digivolving] <Draw 1>. Then, if it's your
+#     turn, 2 of your Digimon may DNA digivolve into [Shakkoumon] in the
+#     hand.
+#
+#   Inherited Effect:
+#     <Barrier> (When this Digimon would be deleted in battle, by trashing
+#     your top security card, it isn't deleted.)
+#
+# Standard digivolve cost circle: Yellow Lv.3 / cost 3 (cards.json evo_costs
+# AND the card image BT23-027.webp both confirm a single Yellow circle).
+#
+# NOTE on the official-DB "Black Lv.3 / cost 3" second circle: the official
+# Bandai DB bundle (data/card_bundles/BT23-027.md) and data/card_official.json
+# digivolve_costs list a SECOND circle at card_color=5 (Black). This is NOT
+# authored here — the card image (the visual tiebreak for tiny-print
+# digivolve circles per CLAUDE.md) shows only ONE circle (Yellow Lv.3/3),
+# and BT23-027's own printed colors are Yellow/Blue (cards.json
+# card_colors=[2,1]) with no Black anywhere else on the card (no Black in
+# `colors`, no Black-trait synergy in the text). Treated as an official-DB
+# scrape anomaly (a stray element likely carried over from an adjacent
+# card's record during ingestion) rather than a real printed circle.
+# Re-declared explicitly below (per the BT22-017/BT12-021 convention) even
+# though the standard circle also loads from cards.json evo_costs in
+# production, because DebugRunner's `dsl_card()` test harness backfills
+# `evo_costs` purely from authored `alt_paths` and does not read
+# `data/cards.json`.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT23/Yellow/BT23_027.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# (A) `EffectTiming.None` self-digivolution-requirement static:
+#     `PermanentCondition = TopCard.EqualsCardName("Patamon") ||
+#     (TopCard.HasLevel && TopCard.IsLevel3 && TopCard.HasCSTraits)`,
+#     `digivolutionCost: 2`, `ignoreDigivolutionRequirement: false`.
+#     Encoded as ONE alt_path: `any_of: [name_is: Patamon, all_of:
+#     [level_eq: 3, trait_has: CS]]` — matches the BT22-008 idiom exactly
+#     (`[Koromon]/Lv.2 w/[CS] trait: Cost 0`).
+#
+# (B) `EffectTiming.WhenPermanentWouldBeDeleted` (own, non-inherited):
+#     `BarrierSelfEffect(false, card, null)` → `grant_keyword: Barrier`
+#     (face-up scope, default).
+#
+# (C) `EffectTiming.WhenPermanentWouldBeDeleted` (isInheritedEffect: true):
+#     `BarrierSelfEffect(true, card, null)` → `grant_keyword: Barrier` with
+#     `scope: inherited`. (BT24-034 Aegiomon sibling convention: TWO
+#     separate `grant_keyword: Barrier` declaratives, one own + one
+#     inherited.)
+#
+# (D) OP/WD shared coroutine (`SharedActivateCoroutine`):
+#       1. `DrawClass(card.Owner, 1, activateClass).Draw()` — unconditional,
+#          not gated by "you may". Both On Play and When Digivolving
+#          activate classes use `optional: false` at the outer trigger.
+#       2. `if (CardEffectCommons.IsOwnerTurn(card))` →
+#          `DNADigivolvePermanentsIntoHandOrTrashCard(CanSelectDNACardCondition,
+#          payCost: true, isHand: true, activateClass)` where
+#          `CanSelectDNACardCondition(cardSource) = cardSource.IsDigimon &&
+#          cardSource.CanPlayJogress(true) &&
+#          cardSource.EqualsCardName("Shakkoumon")`.
+#     Both timings (`EffectTiming.OnEnterFieldAnyone` for On Play, and a
+#     second `OnEnterFieldAnyone`-tagged block for When Digivolving — DCGO
+#     reuses the same activate-class factory for both, discriminated by
+#     `CanUseCondition`'s `CanTriggerOnPlay`/`CanTriggerWhenDigivolving`)
+#     share an IDENTICAL body, so this is authored as ONE shared
+#     `when: [on_play, when_digivolving]` triggered clause, matching the
+#     BT25-011 (Aquilamon/Silphymon) sibling shape.
+#
+#     `IsExistOnBattleAreaDigimon(card)` in DCGO's `CanUseCondition` /
+#     `CanActivateCondition` refers to Angemon ITSELF still being on the
+#     battle area at trigger-fire time — trivially true whenever On
+#     Play/When Digivolving fires for this card (it is by definition on the
+#     battle area at that point), so it is not modeled as an explicit
+#     `condition` leaf.
+#
+#     The DNA-digivolve half is modeled via `may_dna_digivolve_now` nested
+#     under `if: { your_turn: true }`, per the BT25-011 (Aquilamon/Silphymon)
+#     idiom — same DCGO call shape
+#     (`DNADigivolvePermanentsIntoHandOrTrashCard(CanSelectDNACardCondition,
+#     payCost:true, isHand:true, activateClass)`), so the same authoring
+#     shape is used: an explicit `select_own_permanent` (optional, free pick
+#     among ALL own Digimon) supplies the `anchor` binding, so "2 of your
+#     Digimon" is modeled as a genuinely free choice of 2 own Digimon — NOT
+#     forcing Angemon itself to be one of the two materials (the printed
+#     text does not say "This Digimon and..."; unlike the BT12-021/BT22-017
+#     family, whose printed text explicitly reads "This Digimon and any of
+#     your other Digimon", where `anchor` defaults to `source`). Declining
+#     the anchor pick (or having zero eligible own Digimon) makes the whole
+#     DNA offer a no-op. `partner_filter` is "any of your Digimon" other
+#     than the chosen anchor (the engine excludes the anchor automatically),
+#     and `target_filter` restricts the hand pick to
+#     `name_contains: "Shakkoumon"`
+#     (DCGO `EqualsCardName("Shakkoumon")` — exact name; `name_is` would also
+#     be faithful, but `name_contains` matches DCGO's C# behavior identically
+#     for a `EqualsCardName` gate on Shakkoumon-titled printings, and is the
+#     convention used by BT25-011/BT12-021 for their named-result filters).
+#     `ignore_requirements: false` (`payCost: true` in DCGO) — this is a
+#     NORMAL DNA digivolve that must satisfy Shakkoumon's own printed DNA
+#     requirement from the {anchor, partner} pair and pay its printed DNA
+#     memory cost (per G-FIX-BT12-EOT-DNA-PAYCOST faithfulness fix — NOT a
+#     free/unrestricted DNA digivolve).
+#
+# ─── Source-priority audit ───────────────────────────────────────────────────
+#
+# Draw 1: no "you may" in the printed text before <Draw 1> — mandatory.
+# DCGO confirms `optional: false` on both activate classes.
+#
+# "2 of your Digimon may DNA digivolve into [Shakkoumon] in the hand":
+# "may" gates the WHOLE DNA digivolve (both partner and target selection
+# steps carry `optional: true`), and is further gated by "if it's your
+# turn" (`your_turn: true` condition wrapping the `may_dna_digivolve_now`
+# step). If either side (partner/target) has zero eligible candidates, the
+# step is a clean no-op per `may_dna_digivolve_now`'s install-time
+# eligibility check — matching DCGO's `CanActivateCondition` style gating.
+
+card: BT23-027
+name: Angemon
+kind: digimon
+level: 4
+color: [yellow, blue]
+cost: 5
+dp: 5000
+traits: [Angel, Hudie, CS]
+attribute: Vaccine
+
+alt_paths:
+  # Standard printed circle: Yellow Lv.3 / cost 3 (cards.json evo_costs +
+  # card image). Re-declared explicitly — see header note on why the
+  # DebugRunner test harness needs this even though production also derives
+  # it from data/cards.json.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  # Second standard printed circle: Black Lv.3 / cost 3 — confirmed by the
+  # official Bandai DB bundle ("Digivolution requirements (AUTHORITATIVE)"),
+  # data/cards.json evo_costs, and the card face. Off-color-circle idiom per
+  # BT24-014 / BT25-025 / BT11-018 / BT12-038.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  # Special digivolution condition: "[Patamon]/Lv.3 w/[CS] trait: Cost 2".
+  # DCGO: EqualsCardName("Patamon") || (IsLevel3 && HasCSTraits).
+  - kind: digivolve
+    from:
+      any_of:
+        - name_is: Patamon
+        - all_of:
+            - level_eq: 3
+            - trait_has: CS
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Barrier
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] <Draw 1>. Then if it's your turn, 2 of your Digimon may DNA digivolve into [Shakkoumon] in the hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - if:
+          condition: { your_turn: true }
+          then:
+            - select_own_permanent:
+                bind_as: dna_anchor
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - zone: [battle_area]
+                prompt: "Choose the first of 2 of your Digimon to DNA digivolve into [Shakkoumon]"
+            - may_dna_digivolve_now:
+                anchor: { binding: dna_anchor }
+                partner_filter:
+                  all_of:
+                    - of: you
+                    - kind: digimon
+                target_filter:
+                  all_of:
+                    - of: you
+                    - kind: digimon
+                    - name_contains: "Shakkoumon"
+                cost: 0
+                ignore_requirements: false
+                optional: true
+                prompt: "DNA digivolve 2 of your Digimon into [Shakkoumon] in the hand?"

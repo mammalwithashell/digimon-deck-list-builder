@@ -10,7 +10,11 @@
 //! `Tamers becomes suspended, 1 of your opponent's Digimon gets -2000 DP for`
 //! `the turn.`
 //!
-//! Digivolve: 2 from Lv.3 w/[Agumon] in name and [Dinosaur] trait (alt-path;
+//! Digivolve: standard Yellow Lv.3 / cost 3 AND Red Lv.3 / cost 3 (BOTH
+//! confirmed by the card image and the official Bandai DB bundle
+//! data/card_bundles/BT12-038.md — cards.json evo_costs only carries the
+//! Yellow circle, so the Red circle is authored as an explicit alt_path);
+//! plus 2 from Lv.3 w/[Agumon] in name and [Dinosaur] trait (alt-path;
 //! `xros_req`).
 //!
 //! # DCGO C# reference
@@ -48,6 +52,13 @@
 //! - E2 OPT lockout + clear-next-turn.
 //! - Alt-path digivolve condition: Lv.3 w/"Agumon" in name AND [Dinosaur]
 //!   trait, cost 2.
+//! - Off-color standard-circle alt-path: Red Lv.3 / cost 3, authored to
+//!   compensate for cards.json's lossy multi-colour-digivolve-cost drop
+//!   (idiom: BT13-019 / BT13-030 / BT13-040). Behaviorally verified via
+//!   `digivolve_from_hand` (Section 1b) — this is the only standard circle
+//!   exercisable in the `DebugRunner` harness (G-DSL-FIXTURE-EVO-COSTS: DSL
+//!   fixtures never see cards.json, so the Yellow circle can only be
+//!   verified structurally/against the JSON, not behaviorally here).
 
 #![allow(dead_code, unused_imports)]
 
@@ -60,7 +71,7 @@ use digimon_dsl::compiled::{
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, PlayerId};
+use digimon_engine::enums::{CardColor, CardKind, PlayerId, PlaySource};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::PendingSelection;
 use digimon_engine::{EffectTiming, TriggerSource};
@@ -93,6 +104,26 @@ fn make_digimon(card_id: &str, dp: i32, color: CardColor) -> CardData {
     card.dp = Some(dp);
     card.level = Some(4);
     card
+}
+
+/// A plain Lv.3 Digimon base of the given color, for exercising the standard
+/// digivolve circles (Yellow Lv.3/3 from evo_costs, Red Lv.3/3 from the
+/// explicit alt_path added to compensate for cards.json's dropped circle).
+fn make_lv3_base(card_id: &str, color: CardColor) -> CardData {
+    let mut card = make_test_card(card_id, card_id);
+    card.card_kind = CardKind::Digimon;
+    card.colors = vec![color];
+    card.dp = Some(3000);
+    card.level = Some(3);
+    card
+}
+
+fn find_hand_index(runner: &DebugRunner, player: PlayerId, card_id: &str) -> Option<usize> {
+    let data = &runner.game.card_data;
+    runner.game.players[player as usize]
+        .hand
+        .iter()
+        .position(|c| c.card_id(data) == card_id)
 }
 
 fn player_of(p: &PendingSelection) -> PlayerId {
@@ -235,6 +266,90 @@ fn bt12_038_has_alt_digivolve_lv3_agumon_dinosaur_cost2() {
         "must declare a cost-2 Digivolve alt-path (Lv.3 w/[Agumon] in name \
          and [Dinosaur] trait); alt_paths={:?}",
         card.alt_paths
+    );
+}
+
+#[test]
+fn bt12_038_has_alt_digivolve_lv3_red_standard_circle_cost3() {
+    // The printed Red Lv.3 / cost 3 standard digivolve circle (confirmed by
+    // the card image and the official Bandai DB bundle) is dropped from
+    // cards.json evo_costs (only the Yellow Lv.3/3 circle survives the
+    // lossy multi-colour-digivolve-cost API ingest). This alt-path restores
+    // it explicitly — mirrors the BT13-019 / BT13-030 / BT13-040 idiom.
+    let card = geogreymon();
+    let found = card.alt_paths.iter().any(|p| {
+        let filter_debug = format!("{:?}", p.from);
+        p.kind == CompiledAltPathKind::Digivolve
+            && p.cost == Some(CompiledCost::Literal(3))
+            && filter_debug.contains("level_eq: Some(3)")
+            && filter_debug.contains("Red")
+    });
+    assert!(
+        found,
+        "must declare a cost-3 Digivolve alt-path gated on Lv.3 Red (the \
+         standard Red circle dropped from cards.json evo_costs); alt_paths={:?}",
+        card.alt_paths
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// SECTION 1b — Standard Red digivolve circle is actually playable in-engine
+//
+// NOTE: DSL-loaded `DebugRunner` fixtures never see `data/cards.json`
+// (G-DSL-FIXTURE-EVO-COSTS, code/digimon-engine/src/debug_runner.rs) — the
+// engine's evo-cost table for a `.dsl_card(...)` fixture is backfilled
+// SOLELY from `kind: digivolve` alt-paths whose `from` carries a literal
+// `level_eq` + `color_is`. The printed Yellow Lv.3/3 circle (loaded from
+// cards.json evo_costs in production) is therefore NOT exercisable through
+// this harness at all — there is no fixture-level way to prove it's wired,
+// so this section only behaviorally verifies the Red circle, which is
+// backfilled from the alt_path this fix adds and is the actual regression
+// guard for the reported gap. The Yellow circle's presence in evo_costs is
+// production data (data/cards.json), verified directly against the JSON
+// and the card image/bundle in the YAML header comment.
+// ─────────────────────────────────────────────────────────────────────────
+
+#[test]
+fn bt12_038_digivolves_from_red_lv3_base_for_cost_3() {
+    // The Red Lv.3/3 circle is the one dropped by cards.json evo_costs and
+    // restored via the explicit alt_path in this fix — this is the
+    // regression guard for that gap. (Backfilled into the DSL fixture's
+    // evo_costs per G-DSL-FIXTURE-EVO-COSTS, see the section note above.)
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT12-038")
+        .expect("BT12-038 in pack")
+        .add_card(make_lv3_base("RED-BASE", CardColor::Red))
+        .hand(0, &["BT12-038"])
+        .deck(0, &["RED-BASE"]) // rule draw on digivolve needs a non-empty deck
+        .memory(10)
+        .start();
+    let base = runner.place_on_field(0, "RED-BASE", Some(0));
+
+    let hand_idx = find_hand_index(&runner, 0, "BT12-038").expect("BT12-038 in hand");
+    let mem_before = runner.memory();
+
+    let ok =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByDigivolve);
+    assert!(
+        ok,
+        "BT12-038 must digivolve from a Red Lv.3 base (standard circle restored via the \
+         explicit alt_path, compensating for the circle cards.json evo_costs dropped)"
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.game.players[0].battle_area[base.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "BT12-038",
+        "the base stack's top card must become BT12-038"
+    );
+    assert_eq!(
+        mem_before - runner.memory(),
+        3,
+        "the standard Red Lv.3 circle costs 3 memory"
     );
 }
 

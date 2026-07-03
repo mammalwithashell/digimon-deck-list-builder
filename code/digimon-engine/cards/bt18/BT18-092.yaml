@@ -36,7 +36,8 @@
 #     card)` AND `permanent.DigivolutionCards.Count(CardNames == "Vemmon") >= 2`
 #     — the ATTACKER (owner's Digimon) must carry >= 2 Vemmon sources.
 #   CanActivateCondition: `CanActivateSuspendCostEffect(card)` — Zenith must be
-#     payable (unsuspended).
+#     payable (unsuspended AND not CannotSuspend). This is a REAL payability
+#     pre-check DCGO runs BEFORE offering the trigger at all.
 #   ActivateCoroutine:
 #     1. `SuspendPermanentsClass([card.PermanentOfThisCard()]).Tap()` — suspend
 #        Zenith FIRST (the cost fires before the re-check / selection).
@@ -84,10 +85,44 @@
 #   true }`. `event_target` for `on_ally_attack` resolves to the ATTACKING
 #   permanent (confirmed: `TriggerSource::PlayerBattleAreaAttack { attacker,
 #   .. }` sets `event_permanent = Some(attacker)` in effect_queue.rs — the
-#   same binding BT25-016 / EX11-069 rely on). Process:
-#     1. `suspend: { target: source }` — the Tamer's own suspend cost, first,
-#        exactly mirroring DCGO's literal `SuspendPermanentsClass.Tap()` call
-#        order.
+#   same binding BT25-016 / EX11-069 rely on).
+#
+#   PUPPETS-G023-style suspend-cost payability gate (2026-07-02 fix, reviewer
+#   directive): the printed activation cost "by suspending this Tamer" maps
+#   to DCGO's `CanActivateSuspendCostEffect(card)` — a REAL payability
+#   pre-check that must gate the trigger BEFORE it is even offered, exactly
+#   like BT13-101 / AD1-019 / BT21-084 / BT23-072. A plain `suspend: {
+#   target: source }` body step is idempotent (never aborts on an
+#   already-suspended carrier, ignores CannotSuspend), so it under-models the
+#   cost. Fixed by:
+#     (a) `condition: { source_is_unsuspended: true }` — mirrors
+#         `CanActivateSuspendCostEffect`'s "must currently be payable" check
+#         and (per the `effect_queue.rs` `needs_pre_cost_prompt` gate) blocks
+#         the outer accept/decline prompt itself from appearing when Zenith
+#         cannot pay (BT21-084's documented rationale: "Without this the
+#         outer-optional prompt fires even when [the Tamer] can't pay,
+#         violating DCGO semantics").
+#     (b) `activation_cost: { suspend_self: true }` as the FIRST process step
+#         (compile-validated leading position) — lifts onto
+#         `EffectBuilder::activation_cost`, which the queue drainer
+#         (`effect_queue.rs::run_queued_effect_inner`) invokes between the
+#         condition gate and the body process. `suspend_self_as_cost` (
+#         `effect_context/action/suspend.rs`) returns `false` — silently
+#         aborting the whole trigger, no body, no re-offer — when the source
+#         is already suspended OR carries `ModifierType::CannotSuspend`,
+#         exactly matching DCGO's `CanActivateSuspendCostEffect` -> `CanSuspend`.
+#   Together these close the reachable double-fire window a bare `suspend:`
+#   step left open: this clause is NOT once-per-turn (DCGO
+#   `SetUpActivateClass(..., -1, true, ...)`; no `once_per_turn` here either),
+#   so with two ally Digimon each carrying >=2 Vemmon attacking the same turn,
+#   the SECOND attack's trigger is now correctly refused once Zenith is
+#   already suspended from the first — matching DCGO's cost-unpayable
+#   refusal instead of granting a second free De-Digivolve.
+#
+#   Process (post-fix):
+#     1. `activation_cost: { suspend_self: true }` — the Tamer's own suspend
+#        cost, gated (see above), fires first exactly as DCGO's literal
+#        `SuspendPermanentsClass.Tap()` call order (and payability check).
 #     2. `select_own_sources: { from: event_target, filter: { name_contains:
 #        "Vemmon" }, min: 2, max: 2, bind_as: vemmon_sources }` — selects
 #        EXACTLY 2 Vemmon sources from the ATTACKER's digivolution stack (NOT
@@ -103,24 +138,29 @@
 #     4. `select_opponent_permanent: { bind_as: tgt, filter: { kind: digimon }
 #        }` — mandatory pick (BT23-096 idiom); the clause's own
 #        `condition: any_permanent { of: opponent, zone: [battle_area], kind:
-#        digimon }` gate governs whether this step (and therefore the whole
+#        digimon }` (ANDed with the new `source_is_unsuspended` gate via
+#        `all_of`) governs whether this step (and therefore the whole
 #        `<De-Digivolve 1>` tail) is offered at all, matching DCGO's outer
 #        `HasMatchConditionPermanent` skip when no opponent Digimon exists.
 #     5. `de_digivolve: { target: tgt, amount: 1, stop_at_level: 3 }`.
 #
 #   **Documented engine-idiom note (not a faithfulness gap):** unlike Clause
 #   1's `select_hand` (which IS covered by `first_step_candidate_guard`),
-#   `SelectOwnSources` as a clause's first step is explicitly NOT covered by
-#   that guard (`lower_triggered.rs` comment, citing EX10-034): "for an
-#   OPTIONAL TRIGGERED ability... fire and SILENTLY SKIP... when fewer than N
-#   sources exist — it triggers on an event, so it can't loop." Here `suspend`
-#   (not `select_own_sources`) is the clause's first step, so the outer
-#   accept/decline prompt (`SelectionKind::Replacement`, matching
-#   `st18_14.rs`) installs unconditionally once an ally attacks on the
-#   controller's turn — it is NOT pre-gated on the attacker's live Vemmon
-#   count the way DCGO's `CanUseCondition` pre-checks it. If the player
-#   accepts and the attacker turns out to have < 2 live Vemmon sources, the
-#   suspend cost is still paid (Zenith becomes suspended), and
+#   `SelectOwnSources` as a clause's first non-cost step is explicitly NOT
+#   covered by that guard (`lower_triggered.rs` comment, citing EX10-034):
+#   "for an OPTIONAL TRIGGERED ability... fire and SILENTLY SKIP... when
+#   fewer than N sources exist — it triggers on an event, so it can't loop."
+#   Here the outer accept/decline prompt (`SelectionKind::TriggerOrder` — the
+#   leading `activation_cost` step routes through the queue's pre-cost-prompt
+#   path, `effect_queue.rs::needs_pre_cost_prompt`, distinct from the bare
+#   `SelectionKind::Replacement` shape `st18_14.rs` uses) installs once an
+#   ally attacks on the controller's turn AND Zenith is unsuspended — it is
+#   NOT additionally pre-gated on the
+#   attacker's LIVE VEMMON COUNT the way DCGO's `CanUseCondition` pre-checks
+#   it (the DSL substrate has no predicate to count NAMED digivolution
+#   sources on a bound permanent (`event_target`) ahead of a cost step). If
+#   the player accepts and the attacker turns out to have < 2 live Vemmon
+#   sources, the suspend cost is still paid (Zenith becomes suspended), and
 #   `select_own_sources` (min 2, max 2) installs a `SourceMulti` prompt
 #   offering whatever live candidates DO exist (0 or 1) with NO PASS (PASS
 #   only becomes legal once `picked.len() >= min`). If exactly 1 candidate
@@ -137,17 +177,16 @@
 #   NET observable result (no source physically returned, no De-Digivolve)
 #   matches DCGO, but the suspend-cost payability window — and, with exactly
 #   1 live Vemmon, a forced-but-inert intermediate pick — is wider than
-#   DCGO's true pre-check. The DSL substrate has no predicate to count NAMED
-#   digivolution sources on a bound permanent (`event_target`) ahead of a
-#   cost step, so a tighter clause-level `condition:` gate is not currently
-#   expressible without approximating (e.g. a bare presence check would not
-#   verify the COUNT is >= 2). This is surfaced here for visibility per the
-#   no-approximations policy's spirit (no invented predicate, no stubbed
-#   count) — not filed as a blocking DSL/engine gap since the DESIGNED idiom
-#   already covers the exact-N-sources-from-an-event-bound-permanent case
-#   identically to the from-self case (EX10-034 precedent), and no player
-#   choice is auto-resolved or hidden: every pick the player makes is a real,
-#   fully-exposed `pending_selection`.
+#   DCGO's true pre-check on the ATTACKER'S Vemmon count specifically (the
+#   suspend-payability half of DCGO's gate — whether ZENITH can pay — IS now
+#   closed by the `source_is_unsuspended` condition + `activation_cost` pair
+#   above). This is surfaced here for visibility per the no-approximations
+#   policy's spirit (no invented predicate, no stubbed count) — not filed as
+#   a blocking DSL/engine gap since the DESIGNED idiom already covers the
+#   exact-N-sources-from-an-event-bound-permanent case identically to the
+#   from-self case (EX10-034 precedent), and no player choice is
+#   auto-resolved or hidden: every pick the player makes is a real, fully
+#   exposed `pending_selection`.
 #
 # Clause 3: `on_security`, `play_from_security: {}`.
 
@@ -185,13 +224,27 @@ effects:
     optional: true
     active_when: { your_turn: true }
     summary: "[Your Turn] When your Digimon attacks, by suspending this Tamer and returning 2 [Vemmon] from that Digimon's digivolution cards to the bottom of the deck, De-Digivolve 1 an opponent's Digimon"
+    # `source_is_unsuspended: true` — DCGO `CanActivateSuspendCostEffect(card)`
+    # payability pre-check: Zenith must currently be unsuspended for the
+    # suspend-self cost to even be offered. Combined (via `all_of`) with the
+    # existing opponent-Digimon existence gate that governs the trailing
+    # mandatory De-Digivolve target pick.
+    # Offer-time gate is PAYABILITY ONLY (DCGO CanUseCondition/
+    # CanActivateCondition never pre-check opponent-Digimon existence; the
+    # De-Digivolve target select simply fizzles with zero candidates after
+    # the cost is paid — silently dropping the legal cost-paying action by
+    # pre-gating on the opponent's board was a faithfulness divergence,
+    # review 2026-07-03).
     condition:
-      any_permanent:
-        of: opponent
-        zone: [battle_area]
-        kind: digimon
+      source_is_unsuspended: true
     process:
-      - suspend: { target: source }
+      # Cost: suspend this Tamer via the gated activation-cost step
+      # (PUPPETS-G023 / BT13-101 / BT21-084 idiom). Must be the leading body
+      # step (compile-validated); lifts onto `EffectBuilder::activation_cost`
+      # so the queue drainer can silently abort the whole trigger (no body,
+      # no re-offer) when the source is already suspended or CannotSuspend —
+      # exactly matching DCGO's `CanActivateSuspendCostEffect`.
+      - activation_cost: { suspend_self: true }
       - select_own_sources:
           from: event_target
           bind_as: vemmon_sources
