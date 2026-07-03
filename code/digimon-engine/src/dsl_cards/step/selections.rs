@@ -4309,6 +4309,14 @@ fn install_select_hand(
     let bindings_for_decline = bindings.clone();
     let runtime_for_decline = runtime.clone();
     let trigger_for_decline = trigger_context.clone();
+    // Resumable-VM captures (mirrors `install_select_trash`): the RunTail
+    // Hand decode arm needs its own copies since the closures move theirs.
+    let bind_as_for_resume = bind_as.clone();
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+    let override_pin = ctx.override_selecting_player();
     ctx.select_hand(
         target_player,
         &prompt,
@@ -4373,6 +4381,43 @@ fn install_select_hand(
                 );
             }));
         }
+    }
+    // Park the data frame alongside the closure (coexistence): if a selection
+    // was installed, `resolve_generic_selection` drives it via `run_resume`
+    // (the Hand decode arm), bypassing the closure. The `ResumeDecline`
+    // mirrors the optional on_decline above — same tail, `aborts_clause =
+    // cost`. (This installer was the clone-fuzz spike's one closure-only
+    // production finding — every other DSL step site was already flipped.)
+    if ctx.game.pending_selection.is_some() {
+        let decline = if optional {
+            crate::resume::ResumeDecline::RunTail {
+                tail: Arc::clone(&tail_for_resume),
+                aborts_clause: cost,
+            }
+        } else {
+            crate::resume::ResumeDecline::None
+        };
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller: player,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::Hand {
+                    of_player: target_player,
+                },
+                bind_as: bind_as_for_resume,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline,
+            }],
+        });
     }
 }
 
