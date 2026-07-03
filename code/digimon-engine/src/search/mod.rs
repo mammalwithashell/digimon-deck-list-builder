@@ -16,16 +16,20 @@
 //!   - `onnx_adapter` — `PolicyValueFn` for the task-0.3
 //!     `inference::BatchedPolicyValueEvaluator` (kept separate so the core
 //!     never touches `ort`).
+//!   - `determinized` — PIMC / IS-MCTS aggregation over Phase 1's
+//!     materialized worlds + the no-X-ray canonicalization (tasks 2.3/2.5).
 //!   - `dirichlet` — seeded Dirichlet root noise (Marsaglia–Tsang gamma;
 //!     no `rand_distr` dependency).
 //!
 //! Integration tests: `tests/search/` (perfect-information forced-win,
 //! same-player sign handling, determinism, mid-game robustness).
 
+mod determinized;
 mod dirichlet;
 mod evaluator;
 mod mcts;
 mod onnx_adapter;
 
+pub use determinized::{determinized_search, DeterminizationMode, DeterminizedConfig};
 pub use evaluator::{EvalRequest, Evaluation, PolicyValueFn, UniformEvaluator};
 pub use mcts::{decision_player, Mcts, SearchConfig, SearchResult};

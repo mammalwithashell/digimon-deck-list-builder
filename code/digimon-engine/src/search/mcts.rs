@@ -125,7 +125,7 @@ pub fn decision_player(game: &Game) -> PlayerId {
 /// decisions by the same player (pending selections, breeding → main) keep
 /// the sign; only an actual change of mover negates.
 #[inline]
-fn signed_value(value: f32, value_player: PlayerId, perspective: PlayerId) -> f32 {
+pub(super) fn signed_value(value: f32, value_player: PlayerId, perspective: PlayerId) -> f32 {
     if value_player == perspective {
         value
     } else {
@@ -134,7 +134,7 @@ fn signed_value(value: f32, value_player: PlayerId, perspective: PlayerId) -> f3
 }
 
 /// Terminal outcome of a finished game from `perspective`'s side.
-fn terminal_value(game: &Game, perspective: PlayerId) -> f32 {
+pub(super) fn terminal_value(game: &Game, perspective: PlayerId) -> f32 {
     match game.winner {
         Some(w) if w == perspective => 1.0,
         Some(_) => -1.0,
@@ -314,33 +314,11 @@ impl<'a> Mcts<'a> {
         evaluator: &mut dyn PolicyValueFn,
         config: &SearchConfig,
     ) -> (Node, f32) {
-        let mut mask = Vec::new();
-        if auto_advance {
-            // Granularity decision: collapse forced chains. Bounded so a
-            // no-op decode of a mis-masked action can't loop forever.
-            let mut forced_steps = 0u32;
-            while !game.game_over && forced_steps < config.max_decisions {
-                let pid = decision_player(&game);
-                mask = build_action_mask(&game, pid);
-                let mut only_action = None;
-                let mut legal_count = 0u32;
-                for (i, &m) in mask.iter().enumerate() {
-                    if m > 0.5 {
-                        legal_count += 1;
-                        if legal_count > 1 {
-                            break;
-                        }
-                        only_action = Some(i as u16);
-                    }
-                }
-                if legal_count != 1 {
-                    break;
-                }
-                game.decode_action(only_action.expect("single legal action"), pid);
-                mask.clear(); // state changed; recompute (or terminal)
-                forced_steps += 1;
-            }
-        }
+        let mut mask = if auto_advance {
+            advance_forced_chain(&mut game, config.max_decisions)
+        } else {
+            Vec::new()
+        };
 
         let mover = decision_player(&game);
         if game.game_over {
@@ -440,6 +418,39 @@ impl<'a> Mcts<'a> {
     }
 }
 
+/// Apply forced (single-legal-action) decision points until the state
+/// presents a real choice, terminates, or the defensive cap is hit — the
+/// documented search-granularity decision (module docs). Returns the action
+/// mask of the RESULTING state when it was the reason the chain stopped
+/// (>= 2 or 0 legal actions), or an empty `Vec` when the state is terminal
+/// or the cap fired (callers rebuild in that case).
+pub(super) fn advance_forced_chain(game: &mut Game, cap: u32) -> Vec<f32> {
+    let mut mask = Vec::new();
+    let mut forced_steps = 0u32;
+    while !game.game_over && forced_steps < cap {
+        let pid = decision_player(game);
+        mask = build_action_mask(game, pid);
+        let mut only_action = None;
+        let mut legal_count = 0u32;
+        for (i, &m) in mask.iter().enumerate() {
+            if m > 0.5 {
+                legal_count += 1;
+                if legal_count > 1 {
+                    break;
+                }
+                only_action = Some(i as u16);
+            }
+        }
+        if legal_count != 1 {
+            break;
+        }
+        game.decode_action(only_action.expect("single legal action"), pid);
+        mask.clear(); // state changed; recompute (or terminal)
+        forced_steps += 1;
+    }
+    mask
+}
+
 /// Standard PUCT selection: `argmax_a Q(s,a) + c * P(s,a) * sqrt(N(s)) / (1 + N(s,a))`
 /// with `Q` from the node mover's perspective (0.0 for unvisited edges) and
 /// `N(s)` the sum of the node's edge visits (+1 so the very first pick is
@@ -448,21 +459,29 @@ fn select_edge(node: &Node, c_puct: f32) -> usize {
     let stats: Vec<(f32, u32, f32)> = node
         .edges
         .iter()
-        .map(|e| (e.prior, e.visits, e.w))
+        .map(|e| {
+            let q = if e.visits > 0 {
+                e.w / e.visits as f32
+            } else {
+                0.0
+            };
+            (e.prior, e.visits, q)
+        })
         .collect();
-    select_from_stats(&stats, c_puct)
+    puct_argmax_q(&stats, c_puct)
 }
 
-/// Pure PUCT argmax over `(prior, visits, total_value)` edge stats.
-/// Split from [`select_edge`] so the scoring math is unit-testable without
-/// constructing `Game`s.
-fn select_from_stats(stats: &[(f32, u32, f32)], c_puct: f32) -> usize {
+/// Pure PUCT argmax over `(prior, visits, Q)` edge stats — Q is the MEAN
+/// action value already expressed in the selecting player's perspective
+/// (IS-MCTS converts stored perspectives before calling). Split out so the
+/// scoring math is unit-testable without constructing `Game`s and shareable
+/// with the determinized aggregation layer.
+pub(super) fn puct_argmax_q(stats: &[(f32, u32, f32)], c_puct: f32) -> usize {
     let total: u32 = stats.iter().map(|&(_, v, _)| v).sum();
     let sqrt_total = ((total + 1) as f32).sqrt();
     let mut best = 0usize;
     let mut best_score = f32::NEG_INFINITY;
-    for (i, &(prior, visits, w)) in stats.iter().enumerate() {
-        let q = if visits > 0 { w / visits as f32 } else { 0.0 };
+    for (i, &(prior, visits, q)) in stats.iter().enumerate() {
         let u = c_puct * prior * sqrt_total / (1.0 + visits as f32);
         let score = q + u;
         if score > best_score {
@@ -504,15 +523,16 @@ mod tests {
     }
 
     #[test]
-    fn select_from_stats_prefers_prior_when_unvisited_and_q_when_visited() {
+    fn puct_argmax_prefers_prior_when_unvisited_and_q_when_visited() {
+        // Stats are (prior, visits, mean Q).
         // Unvisited: the higher prior wins.
-        assert_eq!(select_from_stats(&[(0.7, 0, 0.0), (0.3, 0, 0.0)], 1.5), 0);
+        assert_eq!(puct_argmax_q(&[(0.7, 0, 0.0), (0.3, 0, 0.0)], 1.5), 0);
         // Once the high-prior edge accumulates terrible Q, the alternative
         // overtakes it.
-        assert_eq!(select_from_stats(&[(0.7, 10, -10.0), (0.3, 1, 0.5)], 1.5), 1);
+        assert_eq!(puct_argmax_q(&[(0.7, 10, -1.0), (0.3, 1, 0.5)], 1.5), 1);
         // A clearly winning visited edge stays selected over an unvisited
         // low-prior one at modest c_puct.
-        assert_eq!(select_from_stats(&[(0.5, 8, 7.5), (0.1, 0, 0.0)], 1.5), 0);
+        assert_eq!(puct_argmax_q(&[(0.5, 8, 0.94), (0.1, 0, 0.0)], 1.5), 0);
     }
 
     #[test]
