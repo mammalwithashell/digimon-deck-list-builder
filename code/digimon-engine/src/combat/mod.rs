@@ -3873,20 +3873,27 @@ impl Game {
             (a_dp, d_dp)
         };
 
-        let outcome = if a_value > d_value {
+        // Determine the battle WINNER handle for the board-wide observer
+        // (G-DSL-BATTLE-WINNER-BOARDWIDE). A tie has NO winner (mutual
+        // destruction), mirroring DCGO `CanTriggerWhenWinBattle`'s `!WasTie`
+        // gate. The winner survives (its opponent was deleted), so its
+        // battle-area handle is still valid after the loser's deletion — the
+        // combatants are on opposite sides, so the loser leaving does not
+        // shift the winner's index.
+        let (outcome, winner) = if a_value > d_value {
             // Attacker wins — defender is deleted.
             self.delete_permanent_with_cause(
                 defender,
                 crate::replacement::ReplacementCause::Battle,
             );
-            AttackResult::AttackerWins
+            (AttackResult::AttackerWins, Some(attacker))
         } else if a_value < d_value {
             // Defender wins — attacker is deleted.
             self.delete_permanent_with_cause(
                 attacker,
                 crate::replacement::ReplacementCause::Battle,
             );
-            AttackResult::DefenderWins
+            (AttackResult::DefenderWins, Some(defender))
         } else {
             // Tie — both are deleted. Delete in order: defender first to match
             // DCGO convention, with both bodies leaving as one batch before
@@ -3895,18 +3902,20 @@ impl Game {
                 vec![defender, attacker],
                 crate::replacement::ReplacementCause::Battle,
             );
-            AttackResult::MutualDestruction
+            (AttackResult::MutualDestruction, None)
         };
 
         // EndOfBattle: fires only when a Digimon-vs-Digimon battle resolves.
         // Direct player attacks with security loops skip this timing.
-        // Fire in every player's battle area, before EndOfAttack.
-        for pid in 0..self.players.len() {
-            self.enqueue_triggered(
-                crate::enums::EffectTiming::EndOfBattle,
-                crate::selection::TriggerSource::PlayerBattleArea(pid as PlayerId),
-            );
-        }
+        // `BattleResolved` fans out to every player's battle area, carrying the
+        // winner (owner + trait) so a board-wide observer can react to "any of
+        // your [X] Digimon win a battle" (BT25-020). `winner` is `None` on a
+        // tie. The carrier-scoped `source_deleted_battle_opponent` idiom is
+        // unaffected (it fires on the separate OnAnyDeletion path).
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::EndOfBattle,
+            crate::selection::TriggerSource::BattleResolved { winner },
+        );
         self.drain_effect_queue();
 
         // Phase 2f4 Task 2: drain ScheduledEffect entries scheduled for

@@ -508,6 +508,26 @@ fn ad1_012_opponents_turn_dna_into_omnimon_alters_then_redirects() {
     omni.level = Some(7);
     omni.dp = Some(13000);
     omni.card_kind = digimon_engine::enums::CardKind::Digimon;
+    // Printed DNA recipe — G-ENGINE-DNA-RECIPE-ENFORCEMENT now validates the
+    // material pair at commit. This test exercises the mid-attack-interrupt DNA
+    // flow (not recipe specifics), so the recipe is a permissive Lv6 + Lv6
+    // (any color) that every P0 Lv6 material satisfies — matching the real
+    // Omnimon Alter-S being a two-Lv6-material DNA (EX4-060/EX9-021: Lv6 Blue +
+    // Lv6 Red).
+    {
+        use digimon_engine::card_data::{DnaCost, DnaRequirement};
+        let any_lv6 = || DnaRequirement {
+            level: 6,
+            card_colors: Vec::new(),
+            name_contains: String::new(),
+            text_contains: String::new(),
+        };
+        omni.dna_costs = vec![DnaCost {
+            requirement1: any_lv6(),
+            requirement2: any_lv6(),
+            memory_cost: 0,
+        }];
+    }
 
     let mut runner = DebugRunner::builder()
         .dsl_card("AD1-012")

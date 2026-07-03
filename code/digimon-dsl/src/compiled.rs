@@ -308,6 +308,11 @@ pub struct CompiledPredicate {
     /// G-RETURNED-CARD-COLOR-BINDING — true when the candidate shares a color
     /// with a card this effect returned to deck (`returned_to_deck` log).
     pub color_matches_returned_card: Option<bool>,
+    /// G-DSL-COLOR-MATCHES-OWN-SOURCE-STACK — true when the candidate shares a
+    /// color with the effect carrier's NON-FLIPPED digivolution-source color set
+    /// (DCGO `DigivolutionCards.Filter(!IsFlipped).SelectMany(CardColors)
+    /// .Distinct()`). Driver EX9-074 Kimeramon.
+    pub color_matches_own_source_stack: Option<CompiledSourceStackScope>,
     pub trait_has: Option<String>,
     /// Substring sibling of `trait_has` — matches when any subject trait
     /// CONTAINS this token (case-insensitive). Mirrors DCGO
@@ -579,6 +584,19 @@ pub struct CompiledPredicate {
     pub event_target_owner: Option<CompiledPlayerRef>,
     /// `OnAddToHand` observer: the gaining player must match this ref.
     pub event_add_to_hand_player: Option<CompiledPlayerRef>,
+    /// `on_ally_won_battle`: the battle winner's controller must match this ref.
+    /// G-DSL-BATTLE-WINNER-BOARDWIDE.
+    pub event_winner_owner: Option<CompiledPlayerRef>,
+    /// `on_ally_won_battle`: the battle winner's top card must carry this trait.
+    pub event_winner_trait_has: Option<String>,
+    /// `on_discard_hand`: the trashing player (whose hand lost cards) must match.
+    /// G-ENGINE-ON-DISCARD-HAND.
+    pub event_discard_player: Option<CompiledPlayerRef>,
+    /// `on_discard_hand`: true when the causing effect is the observer's own.
+    pub event_caused_by_own_effect: Option<bool>,
+    /// True when this permanent was played by an effect (OnPlay firing).
+    /// G-ENGINE-ON-DISCARD-HAND.
+    pub played_by_effect: Option<bool>,
     /// Event-target permanent color-set intersection test.
     /// G-EVENT-TARGET-COLOR.
     pub event_target_color_any_of: Option<Vec<CompiledColor>>,
@@ -736,6 +754,15 @@ pub enum CompiledPlayerRef {
     Active,
 }
 
+/// Compiled scope for `color_matches_own_source_stack`
+/// (G-DSL-COLOR-MATCHES-OWN-SOURCE-STACK). Only `SelfCarrier` exists in the
+/// printed corpus (EX9-074 Kimeramon); the enum shape leaves room to widen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledSourceStackScope {
+    /// The effect's own carrier permanent (`source_permanent`).
+    SelfCarrier,
+}
+
 // ── Formulas ────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, strum_macros::EnumDiscriminants)]
@@ -836,6 +863,15 @@ pub enum CompiledPerSelector {
     PlayerMemory {
         of: CompiledPlayerRef,
     },
+    /// Total link cards across every one of `of`'s battle-area Digimon.
+    /// Drives BT25-075's "for each of your link cards, De-Digivolve 1 …".
+    /// G-DSL-FORMULA-OWN-LINK-CARD-COUNT.
+    OwnLinkCardCount {
+        of: CompiledPlayerRef,
+    },
+    /// Link cards on the effect carrier's OWN permanent (`ctx.source_permanent`).
+    /// Per-host sibling of `OwnLinkCardCount`. G-DSL-LINK-N-CARDS-PER-HOST.
+    SourceLinkCardCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -1101,6 +1137,16 @@ pub enum CompiledTiming {
     OnOpponentAttack,
     OnDeletion,
     OnAnyDeletion,
+    /// Board-wide battle-winner observer (`when: on_ally_won_battle`); lowers to
+    /// `EffectTiming::EndOfBattle` with NO forced self-filter. Scope-gate via
+    /// `active_when:` (`event_winner_owner`, `event_winner_trait_has`).
+    /// G-DSL-BATTLE-WINNER-BOARDWIDE.
+    OnAllyWonBattle,
+    /// Hand-discard observer (`when: on_discard_hand`); lowers to
+    /// `EffectTiming::OnDiscardHand`. Scope-gate via `active_when:`
+    /// (`event_discard_player`, `event_caused_by_own_effect`).
+    /// G-ENGINE-ON-DISCARD-HAND.
+    OnDiscardHand,
     OnEnterFieldAnyone,
     OnAnyDigimonPlayed,
     OnAllyPlayed,
@@ -1386,6 +1432,14 @@ pub enum CompiledStep {
     DeleteBoundPermanents {
         binding: String,
     },
+    /// G-DSL-DELETE-ONE-PER-DISTINCT-OPPONENT-COLOR (EX9-074 Kimeramon Branch B):
+    /// per game-color, a mandatory pick of 1 not-yet-chosen opponent Digimon of
+    /// that color, then batch-delete the accumulated picks. `filter` is an extra
+    /// AND-ed restriction (`None` = every opponent Digimon).
+    DeleteOnePerOpponentColor {
+        filter: Option<Box<CompiledPredicate>>,
+        prompt: Option<String>,
+    },
     TrashBreedingPermanent {
         target: CompiledBindingRef,
     },
@@ -1466,6 +1520,18 @@ pub enum CompiledStep {
     TrashBottomFaceDownSourcesUnderTamers {
         of: CompiledPlayerRef,
         count: u8,
+    },
+    /// Link-card-trash ACTIVATION cost (BT25-073 Dragomon): pick one of `of`'s
+    /// Digimon with ≥1 link card, then one of its link cards, trash it (firing
+    /// `OnLinkedCardTrashed`), and run the tail only if the trash happened.
+    /// Compiled from `trash_link_card_of_own_digimon`. `G-DSL-LINK-TRASH-AS-COST`.
+    TrashLinkCardOfOwnDigimon {
+        of: CompiledPlayerRef,
+        /// Declinable picks (PASS skips the trash AND the tail) — DCGO
+        /// `canNoSelect:true`. Plain (no `skip_serializing_if`): bincode packs
+        /// need every field in a fixed slot.
+        #[serde(default)]
+        optional: bool,
     },
     PlaceSelectedCardUnderTamer {
         card: CompiledBindingRef,

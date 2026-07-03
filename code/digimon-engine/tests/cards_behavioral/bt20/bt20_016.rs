@@ -90,43 +90,50 @@ fn ally_digimon() -> digimon_engine::card_data::CardData {
     card
 }
 
-/// Paildramon-named card for deletion observer tests.
+/// Paildramon-named card for deletion observer tests. Lv5 Purple so it
+/// satisfies Imperialdramon: Dragon Mode's printed DNA recipe (Lv5 Purple +
+/// Lv5 Red — cards.json BT20-076) as one of the two materials.
 fn paildramon_card() -> digimon_engine::card_data::CardData {
     let mut card = make_test_card("TST-PAILDRAMON", "Paildramon");
     card.card_kind = CardKind::Digimon;
     card.level = Some(5);
     card.dp = Some(8000);
+    card.colors = vec![digimon_engine::enums::CardColor::Purple];
     card
 }
 
-/// Dinobeemon-named card for deletion observer tests.
+/// Dinobeemon-named card for deletion observer tests. Lv5 Red — the other half
+/// of Imperialdramon: Dragon Mode's printed DNA recipe.
 fn dinobeemon_card() -> digimon_engine::card_data::CardData {
     let mut card = make_test_card("TST-DINOBEEMON", "Dinobeemon");
     card.card_kind = CardKind::Digimon;
     card.level = Some(5);
     card.dp = Some(6000);
+    card.colors = vec![digimon_engine::enums::CardColor::Red];
     card
 }
 
-/// Imperialdramon Dragon Mode–named card for DNA hand-selection tests.
+/// Imperialdramon Dragon Mode–named card for DNA hand-selection tests. Its
+/// printed DNA recipe mirrors cards.json BT20-076: Lv5 Purple + Lv5 Red.
+/// G-ENGINE-DNA-RECIPE-ENFORCEMENT now validates the material pair against this
+/// recipe at commit, so the materials MUST match (see paildramon/dinobeemon).
 fn imperialdramon_dm_card() -> digimon_engine::card_data::CardData {
     let mut card = make_test_card("TST-IMP-DM", "Imperialdramon: Dragon Mode");
     card.card_kind = CardKind::Digimon;
     card.level = Some(6);
     card.dp = Some(11000);
-    // DNA cost: Lv4 Red + Lv4 Purple / 0 memory — populated via DnaRequirement fields.
     use digimon_engine::card_data::{DnaCost, DnaRequirement};
     use digimon_engine::enums::CardColor;
     card.dna_costs = vec![DnaCost {
         requirement1: DnaRequirement {
-            level: 4,
-            card_colors: vec![CardColor::Red],
+            level: 5,
+            card_colors: vec![CardColor::Purple],
             name_contains: String::new(),
             text_contains: String::new(),
         },
         requirement2: DnaRequirement {
-            level: 4,
-            card_colors: vec![CardColor::Purple],
+            level: 5,
+            card_colors: vec![CardColor::Red],
             name_contains: String::new(),
             text_contains: String::new(),
         },
@@ -766,22 +773,36 @@ fn bt20_016_all_turns_does_not_fire_for_non_named_own_digimon_deletion() {
 /// original deletion still commits (non-cancelling observer).
 #[test]
 fn bt20_016_all_turns_offers_dna_into_imperialdramon_and_deletion_still_commits() {
+    // A Lv5 Purple material to pair with the Lv5 Red Dinobeemon — together they
+    // satisfy Imperialdramon: Dragon Mode's printed DNA recipe (Lv5 Purple +
+    // Lv5 Red). The now-enforced recipe (G-ENGINE-DNA-RECIPE-ENFORCEMENT)
+    // requires the two surviving materials to match.
+    let purple_mat = {
+        let mut card = make_test_card("TST-PURPLE-MAT", "Purple Material");
+        card.card_kind = CardKind::Digimon;
+        card.level = Some(5);
+        card.dp = Some(6000);
+        card.colors = vec![digimon_engine::enums::CardColor::Purple];
+        card
+    };
+
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(YAML)
         .expect("BT20-016 YAML loads")
         .add_card(paildramon_card())
         .add_card(dinobeemon_card())
         .add_card(imperialdramon_dm_card())
-        .add_card(ally_digimon())
+        .add_card(purple_mat)
         .memory(10)
         .hand(0, &["TST-IMP-DM"])
         .build();
 
     let _carrier = runner.place_on_field(0, "BT20-016", Some(0));
     let victim = runner.place_on_field(0, "TST-PAILDRAMON", Some(0));
-    // Two other own Digimon to serve as DNA materials.
+    // Two other own Digimon to serve as DNA materials (Lv5 Red + Lv5 Purple —
+    // the printed recipe of the result).
     runner.place_on_field(0, "TST-DINOBEEMON", Some(0));
-    runner.place_on_field(0, "ALLY-DIG", Some(0));
+    runner.place_on_field(0, "TST-PURPLE-MAT", Some(0));
 
     let victim_index = victim.index;
 

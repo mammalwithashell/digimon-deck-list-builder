@@ -125,6 +125,23 @@ pub enum Timing {
     OnOpponentAttack,
     OnDeletion,
     OnAnyDeletion,
+    /// Board-wide battle-winner observer: "[All Turns] When any of your [X]
+    /// Digimon win a battle, …" (`when: on_ally_won_battle`, BT25-020 Marsmon;
+    /// G-DSL-BATTLE-WINNER-BOARDWIDE). Rides the `EndOfBattle` dispatch with NO
+    /// forced self-filter (unlike the carrier-scoped
+    /// `source_deleted_battle_opponent` idiom on `on_any_deletion`). Gate scope
+    /// via `active_when:` — `event_winner_owner: you` (the winner's controller)
+    /// and `event_winner_trait_has: <trait>` (the winner's trait). Never fires
+    /// on a tie (mutual destruction — no winner) or a direct player attack.
+    OnAllyWonBattle,
+    /// Hand-discard observer: "[All Turns] When your hand is trashed from, …"
+    /// (`when: on_discard_hand`, BT25-080/084; ST16-14; G-ENGINE-ON-DISCARD-HAND).
+    /// Fires ONCE after an EFFECT trashes ≥1 card from a player's hand (a draw,
+    /// mulligan, or rule discard never fires it). Gate with
+    /// `event_discard_player: you` ("your hand", BT25-080/084) and, for
+    /// own-effect-only ("one of YOUR effects", ST16-14 Matt Ishida),
+    /// `event_caused_by_own_effect: true`.
+    OnDiscardHand,
     OnEnterFieldAnyone,
     OnAnyDigimonPlayed,
     OnAllyPlayed,

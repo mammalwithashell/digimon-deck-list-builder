@@ -448,6 +448,65 @@ impl<'a> EffectReadContext<'a> {
             .and_then(|trigger| trigger.deleted_object.as_ref())
     }
 
+    /// The battle WINNER carried by an `EndOfBattle` firing (board-wide
+    /// battle-winner observer, G-DSL-BATTLE-WINNER-BOARDWIDE). `None` on a tie
+    /// or a non-battle trigger.
+    pub fn battle_winner(&self) -> Option<PermanentHandle> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.battle_winner)
+    }
+
+    /// True when the battle winner is live and its top card carries
+    /// `trait_name` (case-insensitive).
+    pub fn battle_winner_has_trait(&self, trait_name: &str) -> bool {
+        let Some(handle) = self.battle_winner() else {
+            return false;
+        };
+        self.game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|perm| perm.has_trait(trait_name, self.card_data()))
+            .unwrap_or(false)
+    }
+
+    /// The player whose HAND lost cards in the current `OnDiscardHand` batch.
+    /// G-ENGINE-ON-DISCARD-HAND.
+    pub fn discard_hand_player(&self) -> Option<PlayerId> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.discard_hand_player)
+    }
+
+    /// The controller of the effect that caused the current `OnDiscardHand`.
+    pub fn discard_cause_controller(&self) -> Option<PlayerId> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.discard_cause_controller)
+    }
+
+    /// True when the current `OnDiscardHand` event was caused by an effect the
+    /// OBSERVER controls (ST16-14 Matt Ishida "one of YOUR effects").
+    pub fn discard_caused_by_own_effect(&self) -> bool {
+        self.discard_cause_controller()
+            .map(|controller| controller == self.player())
+            .unwrap_or(false)
+    }
+
+    /// True when the permanent carrying THIS effect was played by an effect
+    /// (`PlaySource::ByEffect`), read at the OnPlay firing (BT25-080).
+    pub fn played_by_effect(&self) -> bool {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.effect_initiated)
+            .unwrap_or(false)
+    }
+
     /// Pre-removal effective DP of the deleted permanent (modifier-aware).
     /// `None` when no `deleted_object` snapshot is on the current trigger
     /// context or when the permanent had no DP value (e.g. Tamer).
@@ -1161,6 +1220,54 @@ impl<'a> EffectContext<'a> {
             .current_trigger_context
             .as_ref()
             .and_then(|trigger| trigger.deleted_object.as_ref())
+    }
+
+    /// See [`EffectReadContext::battle_winner`]. G-DSL-BATTLE-WINNER-BOARDWIDE.
+    pub fn battle_winner(&self) -> Option<PermanentHandle> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.battle_winner)
+    }
+
+    /// See [`EffectReadContext::battle_winner_has_trait`].
+    pub fn battle_winner_has_trait(&self, trait_name: &str) -> bool {
+        let Some(handle) = self.battle_winner() else {
+            return false;
+        };
+        self.game
+            .player(handle.player)
+            .battle_area
+            .get(handle.index as usize)
+            .map(|perm| perm.has_trait(trait_name, &self.game.card_data))
+            .unwrap_or(false)
+    }
+
+    /// See [`EffectReadContext::discard_hand_player`]. G-ENGINE-ON-DISCARD-HAND.
+    pub fn discard_hand_player(&self) -> Option<PlayerId> {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.discard_hand_player)
+    }
+
+    /// See [`EffectReadContext::discard_caused_by_own_effect`].
+    pub fn discard_caused_by_own_effect(&self) -> bool {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.discard_cause_controller)
+            .map(|controller| controller == self.player)
+            .unwrap_or(false)
+    }
+
+    /// See [`EffectReadContext::played_by_effect`].
+    pub fn played_by_effect(&self) -> bool {
+        self.game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.effect_initiated)
+            .unwrap_or(false)
     }
 
     pub fn deleted_self_dp(&self) -> Option<i32> {

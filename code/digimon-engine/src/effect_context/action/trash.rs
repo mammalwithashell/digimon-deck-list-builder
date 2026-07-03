@@ -394,7 +394,17 @@ impl<'a> EffectContext<'a> {
             return None;
         }
 
-        self.game.trash_from_hand_by_index(player, hand_index)
+        let trashed = self.game.trash_from_hand_by_index(player, hand_index);
+        if trashed.is_some() {
+            // Effect-caused hand→trash: record into the OnDiscardHand batch
+            // window keyed on the causing effect's controller (this context's
+            // player). Fires once when the effect body completes
+            // (G-ENGINE-ON-DISCARD-HAND). `self.player` is the controller of
+            // the effect performing the discard.
+            let cause_controller = self.player;
+            self.game.note_effect_hand_discard(cause_controller, player);
+        }
+        trashed
     }
 
     /// Move a specific revealed card into `player`'s trash.

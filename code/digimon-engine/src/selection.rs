@@ -659,6 +659,28 @@ pub enum TriggerSource {
         card: CardHandle,
         cause: crate::trigger_context::EventCause,
     },
+    /// `EndOfBattle` observer fan-out carrying the battle WINNER so a
+    /// board-wide observer can react to "any of your [X] Digimon win a battle"
+    /// (BT25-020 Marsmon; G-DSL-BATTLE-WINNER-BOARDWIDE). Scans EVERY player's
+    /// battle area — the winner-owner/trait gate lives in the observer's
+    /// `active_when:`. `winner` is `None` on a tie (mutual destruction), which
+    /// has no winner. Fired only for Digimon-vs-Digimon battles (direct player
+    /// attacks route through the security loop and never fire `EndOfBattle`).
+    BattleResolved {
+        winner: Option<PermanentHandle>,
+    },
+    /// `OnDiscardHand` observer fan-out fired after an EFFECT trashes one or
+    /// more cards from a player's hand (G-ENGINE-ON-DISCARD-HAND). Scans EVERY
+    /// player's battle area so both own-side ("your hand is trashed from",
+    /// BT25-080/084) and own-effect-gated ("when one of your effects trashes a
+    /// card in your hand", ST16-14) observers can react. `player` is the
+    /// trashing player (whose hand lost cards); `cause_controller` is the
+    /// controller of the causing effect. Mirrors DCGO `DiscardHands()` firing
+    /// `OnDiscardHand` ONCE per discard batch with the causing `CardEffect`.
+    HandDiscarded {
+        player: PlayerId,
+        cause_controller: PlayerId,
+    },
 }
 
 /// Transient per-security-check state. Lives on `Game` from the moment the

@@ -265,6 +265,8 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnOpponentAttack => CompiledTiming::OnOpponentAttack,
         S::OnDeletion => CompiledTiming::OnDeletion,
         S::OnAnyDeletion => CompiledTiming::OnAnyDeletion,
+        S::OnAllyWonBattle => CompiledTiming::OnAllyWonBattle,
+        S::OnDiscardHand => CompiledTiming::OnDiscardHand,
         S::OnEnterFieldAnyone => CompiledTiming::OnEnterFieldAnyone,
         S::OnAnyDigimonPlayed => CompiledTiming::OnAnyDigimonPlayed,
         S::OnAllyPlayed => CompiledTiming::OnAllyPlayed,
@@ -429,6 +431,10 @@ fn compile_per_selector(
         S::PlayerMemory { of } => CompiledPerSelector::PlayerMemory {
             of: compile_player_ref(*of),
         },
+        S::OwnLinkCardCount { of } => CompiledPerSelector::OwnLinkCardCount {
+            of: compile_player_ref(*of),
+        },
+        S::SourceLinkCardCount => CompiledPerSelector::SourceLinkCardCount,
     }
 }
 
@@ -900,6 +906,11 @@ fn compile_predicate(
             .map(|s| compile_player_ref(s.player())),
         color_matches_binding: p.color_matches_binding.clone(),
         color_matches_returned_card: p.color_matches_returned_card,
+        color_matches_own_source_stack: p.color_matches_own_source_stack.map(|s| match s {
+            crate::predicate::SourceStackScope::Scoped {
+                of: crate::predicate::SourceStackScopeOf::SelfCarrier,
+            } => CompiledSourceStackScope::SelfCarrier,
+        }),
         trait_has: p.trait_has.clone(),
         trait_contains: p.trait_contains.clone(),
         form_is: p.form_is.clone(),
@@ -1174,6 +1185,11 @@ fn compile_predicate(
         attacker_trait_has: p.attacker_trait_has.clone(),
         event_target_owner: p.event_target_owner.map(compile_player_ref),
         event_add_to_hand_player: p.event_add_to_hand_player.map(compile_player_ref),
+        event_winner_owner: p.event_winner_owner.map(compile_player_ref),
+        event_winner_trait_has: p.event_winner_trait_has.clone(),
+        event_discard_player: p.event_discard_player.map(compile_player_ref),
+        event_caused_by_own_effect: p.event_caused_by_own_effect,
+        played_by_effect: p.played_by_effect,
         event_target_color_any_of: p
             .event_target_color_any_of
             .as_ref()
@@ -2526,6 +2542,17 @@ fn compile_step(
         S::DeleteBoundPermanents(a) => CompiledStep::DeleteBoundPermanents {
             binding: a.binding.clone(),
         },
+        S::DeleteOnePerOpponentColor(a) => CompiledStep::DeleteOnePerOpponentColor {
+            filter: a.filter.as_ref().map(|f| {
+                Box::new(compile_predicate(
+                    f,
+                    &format!("{prefix}.filter"),
+                    card_id,
+                    errors,
+                ))
+            }),
+            prompt: a.prompt.clone(),
+        },
         S::TrashBreedingPermanent(a) => CompiledStep::TrashBreedingPermanent {
             target: compile_binding_ref(&a.target),
         },
@@ -2668,6 +2695,10 @@ fn compile_step(
                 count: a.count,
             }
         }
+        S::TrashLinkCardOfOwnDigimon(a) => CompiledStep::TrashLinkCardOfOwnDigimon {
+            of: compile_player_ref(a.of),
+            optional: a.optional,
+        },
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
             source_refs: a.source_refs.clone(),
         },

@@ -446,6 +446,29 @@ pub(crate) fn run_resume(
                                 &runtime,
                             );
                         }
+                        Some(crate::resume::FieldPermanentPostAction::SelectAndTrashLinkCard {
+                            optional,
+                        }) => {
+                            // G-DSL-LINK-TRASH-AS-COST (BT25-073): the first pick
+                            // chose one of the controller's Digimon with ≥1 link
+                            // card (`h`). Install the SECOND selection over ITS
+                            // link cards, carrying `inner_tail` as the cost-gated
+                            // tail. The installer parks a
+                            // `TrashLinkCardOfDigimonSelection` frame; the frame's
+                            // own `outer_conts` compose onto that nested park via
+                            // `run_outer_conts` below (empty `outer_conts` passed
+                            // here — identical to the closure path).
+                            install_link_card_trash_second_selection(
+                                &mut ctx,
+                                h,
+                                optional,
+                                inner_tail.clone(),
+                                b.clone(),
+                                runtime.clone(),
+                                trigger_context.clone(),
+                                Vec::new(),
+                            );
+                        }
                     }
                     ctx.game.effect_source_player = previous_effect_source;
                 }
@@ -960,6 +983,9 @@ pub(crate) fn run_resume(
         ResumeFrame::CountCappedPermanentsStep(state) => {
             run_count_capped_permanent_step(game, state, action_id, is_pass);
         }
+        ResumeFrame::PerColorDeleteStep(state) => {
+            run_per_color_delete_step(game, state, action_id, is_pass);
+        }
         ResumeFrame::NonDslCountCappedStep(state) => {
             run_non_dsl_count_capped_step(game, state, action_id, is_pass);
         }
@@ -1228,6 +1254,9 @@ pub(crate) fn run_resume(
         }
         ResumeFrame::LinkCardLeaveSelection(state) => {
             run_link_card_leave_selection_step(game, state, action_id, is_pass);
+        }
+        ResumeFrame::TrashLinkCardOfDigimonSelection(state) => {
+            run_trash_link_card_of_digimon_selection_step(game, state, action_id, is_pass);
         }
         ResumeFrame::PlayOrUseDualChoice(state) => {
             run_play_or_use_dual_choice_step(game, state, action_id, is_pass);
@@ -1782,6 +1811,48 @@ fn run_link_card_leave_selection_step(
     run_outer_conts(ctx.game, state.outer_conts);
 }
 
+/// Resume the SECOND selection of the `trash_link_card_of_own_digimon` cost:
+/// trash the chosen link card of `host`, then run the cost-gated tail only if a
+/// card was trashed. On PASS (optional) nothing is trashed and the tail is
+/// skipped. Mirrors `install_link_card_trash_second_selection`'s closure.
+/// `G-DSL-LINK-TRASH-AS-COST`.
+fn run_trash_link_card_of_digimon_selection_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::TrashLinkCardOfDigimonSelectionState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        // Declined link-card pick: no trash, tail skipped; still run outer conts.
+        run_outer_conts(game, state.outer_conts);
+        return;
+    }
+    let choice = action_id.saturating_sub(crate::action::space::HAND_EFFECT_START) as usize;
+    let Some(card) = state.cards.get(choice).copied() else {
+        run_outer_conts(game, state.outer_conts);
+        return;
+    };
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    if ctx.game.trash_specific_link_card(state.host, card) {
+        let mut b = state.bindings.clone();
+        run_tail_preserving_trigger_context(
+            &mut ctx,
+            state.trigger_context,
+            &state.tail,
+            &mut b,
+            &state.runtime,
+        );
+    }
+    run_outer_conts(ctx.game, state.outer_conts);
+}
+
 fn run_play_or_use_dual_choice_step(
     game: &mut crate::game::Game,
     state: crate::resume::PlayOrUseDualChoiceState,
@@ -2287,6 +2358,262 @@ fn run_count_capped_permanent_step(
         return;
     }
     install_count_capped_permanent_resume_step(game, state);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// delete_one_per_opponent_color — per-color mandatory pick + batch delete
+// (G-DSL-DELETE-ONE-PER-DISTINCT-OPPONENT-COLOR, EX9-074 Kimeramon Branch B).
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// The fixed 7-color game order Branch B iterates (DCGO iterates
+/// `DataBase.CardColorNameDictionary.Values`; the concrete order only affects the
+/// per-color prompt sequence, never which Digimon end up deleted).
+const ALL_CARD_COLORS: [crate::enums::CardColor; 7] = [
+    crate::enums::CardColor::Red,
+    crate::enums::CardColor::Blue,
+    crate::enums::CardColor::Yellow,
+    crate::enums::CardColor::Green,
+    crate::enums::CardColor::White,
+    crate::enums::CardColor::Black,
+    crate::enums::CardColor::Purple,
+];
+
+/// Human name for a color, substituted into the per-color prompt (`{color}`).
+fn color_name(c: crate::enums::CardColor) -> &'static str {
+    use crate::enums::CardColor::*;
+    match c {
+        Red => "Red",
+        Blue => "Blue",
+        Yellow => "Yellow",
+        Green => "Green",
+        White => "White",
+        Black => "Black",
+        Purple => "Purple",
+    }
+}
+
+/// Re-derive the current color's candidates `(action_id, handle)`: opponent
+/// Digimon whose synth-identity colors CONTAIN `color`, matching `filter` (if
+/// any), excluding any permanent already in `picked`. Data-pure (read borrow
+/// released before returning), so the frame stays `Clone` (rule 28).
+fn per_color_delete_candidates(
+    game: &crate::game::Game,
+    state: &crate::resume::PerColorDeleteState,
+    color: crate::enums::CardColor,
+) -> Vec<(u16, PermanentHandle)> {
+    use crate::action::space::encode_attack;
+    let read = EffectReadContext::new_with_source_kind(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+    );
+    let mut out = Vec::new();
+    for index in 0..game.player(state.opponent).battle_area.len() {
+        let handle = PermanentHandle {
+            player: state.opponent,
+            index: index as u8,
+        };
+        if state.picked.contains(&handle) {
+            continue;
+        }
+        let perm = &game.player(state.opponent).battle_area[index];
+        // Digimon-only (DCGO `IsPermanentExistsOnOpponentBattleAreaDigimon`).
+        if !perm.is_digimon(&game.card_data) {
+            continue;
+        }
+        // Synth-aware color read (ChangeColor overlays respected) —
+        // `TopCard.CardColors.Contains(color)`.
+        let colors = perm.synth_identity(&game.card_data, &game.modifiers, handle).colors;
+        if !colors.contains(&color) {
+            continue;
+        }
+        // <Progress> / immunity: a Digimon the effect can't affect is no target.
+        if game.progress_excludes(handle, Some(state.prov.controller)) {
+            continue;
+        }
+        // Extra author restriction (default: none).
+        if let Some(filter) = &state.filter {
+            if !eval_predicate_with_bindings(
+                filter,
+                &read,
+                PredicateSubject::Permanent(handle),
+                Some(&state.filter_bindings),
+            ) {
+                continue;
+            }
+        }
+        out.push((encode_attack(state.opponent as u16, index as u16), handle));
+    }
+    out
+}
+
+/// Advance `state.color_index` to the next color with ≥1 legal candidate,
+/// filling `state.candidates`. Returns `true` if a pickable color was found
+/// (caller parks the mandatory pick); `false` if the color list is exhausted
+/// (caller runs the terminal). Colors with no legal target are skipped
+/// (DCGO's `if (HasMatchConditionPermanent(...))` gate).
+fn per_color_delete_advance(
+    game: &crate::game::Game,
+    state: &mut crate::resume::PerColorDeleteState,
+) -> bool {
+    while state.color_index < state.colors.len() {
+        let color = state.colors[state.color_index];
+        let candidates = per_color_delete_candidates(game, state, color);
+        if !candidates.is_empty() {
+            state.candidates = candidates;
+            return true;
+        }
+        state.color_index += 1;
+    }
+    false
+}
+
+/// Terminal: batch-delete every accumulated pick as a single unit (DCGO
+/// `DestroyPermanentsClass(permanentToDelete).Destroy()`), then run the tail.
+/// A granted/effect-driven deletion is the controller's own effect.
+fn run_per_color_delete_terminal(
+    game: &mut crate::game::Game,
+    state: crate::resume::PerColorDeleteState,
+) {
+    if !state.picked.is_empty() {
+        // Attribute the deletion to the controller's effect so the cause is the
+        // opponent's-Digimon-deleted-by-your-effect one DCGO uses (`OpponentEffect`
+        // from the target's perspective). Pin `effect_source_player` = controller
+        // for the batch (the resume terminal runs outside the queued-effect scope
+        // that normally sets it), then infer the cause exactly like
+        // `delete_permanent_with_effects`.
+        let prev_source = game.effect_source_player;
+        game.effect_source_player = Some(state.prov.controller);
+        let cause = game.infer_deletion_cause(state.picked[0]);
+        game.delete_permanents_batch(state.picked.clone(), cause);
+        game.effect_source_player = prev_source;
+    }
+    let mut ctx = EffectContext::new_with_source_kind_and_override(
+        game,
+        state.prov.source_card,
+        state.prov.source_permanent,
+        state.prov.source_kind,
+        state.prov.controller,
+        state.prov.override_pin,
+    );
+    let mut b = state.bindings;
+    run_tail_preserving_trigger_context(
+        &mut ctx,
+        state.trigger_context,
+        &state.inner_tail,
+        &mut b,
+        &state.runtime,
+    );
+    run_outer_conts(ctx.game, state.outer_conts);
+}
+
+/// Park (or re-park) the current color's MANDATORY OppField pick.
+fn install_per_color_delete_resume_step(
+    game: &mut crate::game::Game,
+    state: crate::resume::PerColorDeleteState,
+) {
+    let valid_action_ids: Vec<u16> = state.candidates.iter().map(|(a, _)| *a).collect();
+    let color = state.colors[state.color_index];
+    let prompt = state.prompt.replace("{color}", color_name(color));
+    game.current_phase = GamePhase::SelectTarget;
+    game.pending_selection = Some(PendingSelection {
+        zone_owner: None,
+        kind: SelectionKind::OppField,
+        selecting_player: state.selecting_player,
+        previous_phase: state.previous_phase,
+        valid_action_ids,
+        is_optional: false, // mandatory — DCGO `canNoSelect: false`
+        prompt,
+        effect_choices: None,
+        source_card: state.prov.source_card,
+        source_permanent: state.prov.source_permanent,
+        source_kind: state.prov.source_kind,
+        callback: Box::new(|_g, _a| {}),
+        on_decline: None,
+    });
+    game.pending_selection_resume = Some(crate::resume::ResumeStack {
+        frames: vec![crate::resume::ResumeFrame::PerColorDeleteStep(state)],
+    });
+}
+
+/// Entry point for `delete_one_per_opponent_color`: build the initial
+/// per-color-delete state and either park the FIRST color's mandatory pick or —
+/// if no opponent color has a legal target — run the terminal immediately
+/// (batch-delete an empty list = no-op, then the tail). See the frame docs on
+/// `crate::resume::PerColorDeleteState` for the full flow.
+fn install_delete_one_per_opponent_color(
+    ctx: &mut EffectContext<'_>,
+    filter: Option<CompiledPredicate>,
+    prompt: Option<String>,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    let opponent = ctx.game.next_clockwise(ctx.player);
+    let mut state = crate::resume::PerColorDeleteState {
+        prov: crate::resume::ResumeProvenance {
+            source_card: ctx.source_card,
+            source_permanent: ctx.source_permanent,
+            source_kind: ctx.source_kind,
+            controller: ctx.player,
+            override_pin: ctx.override_selecting_player(),
+        },
+        opponent,
+        selecting_player: ctx.override_selecting_player().unwrap_or(ctx.player),
+        previous_phase: ctx.game.current_phase,
+        colors: ALL_CARD_COLORS.to_vec(),
+        color_index: 0,
+        filter,
+        filter_bindings: bindings.clone(),
+        picked: Vec::new(),
+        candidates: Vec::new(),
+        prompt: prompt.unwrap_or_else(|| "Select 1 {color} Digimon to delete".to_string()),
+        inner_tail: Arc::new(tail),
+        bindings,
+        runtime,
+        trigger_context: ctx.game.current_trigger_context.clone(),
+        outer_conts: Vec::new(),
+    };
+    if per_color_delete_advance(ctx.game, &mut state) {
+        install_per_color_delete_resume_step(ctx.game, state);
+    } else {
+        run_per_color_delete_terminal(ctx.game, state);
+    }
+}
+
+/// Executor for one per-color pick. Decode the picked handle against the current
+/// color's snapshot, append to `picked`, advance to the next color-with-a-target,
+/// then re-park or run the terminal (batch-delete + tail).
+fn run_per_color_delete_step(
+    game: &mut crate::game::Game,
+    mut state: crate::resume::PerColorDeleteState,
+    action_id: u16,
+    is_pass: bool,
+) {
+    if is_pass {
+        // Mandatory pick — PASS is rejected upstream (is_optional=false), but be
+        // defensive: treat an unexpected PASS as "no more to do" and finalize.
+        run_per_color_delete_terminal(game, state);
+        return;
+    }
+    let Some((_, handle)) = state
+        .candidates
+        .iter()
+        .find(|(candidate_action, _)| *candidate_action == action_id)
+        .copied()
+    else {
+        return; // stale/invalid pick (defensive)
+    };
+    state.picked.push(handle);
+    // Move past the color we just resolved and find the next pickable color.
+    state.color_index += 1;
+    if per_color_delete_advance(game, &mut state) {
+        install_per_color_delete_resume_step(game, state);
+    } else {
+        run_per_color_delete_terminal(game, state);
+    }
 }
 
 /// Re-derive the source-multi candidates `(action_id, source_ref)` for a
@@ -3216,6 +3543,36 @@ pub fn try_install(
             // exists ⇒ ≥1 eligible Tamer), so this parks.
             selection_result(ctx)
         }
+        CompiledStep::TrashLinkCardOfOwnDigimon { of, optional } => {
+            // Link-card-trash ACTIVATION cost (BT25-073 Dragomon). Pre-filter the
+            // controller's Digimon that carry ≥1 link card (DCGO
+            // `CanSelectPermanentCondition = IsPermanentExistsOnOwnerBattleAreaDigimon
+            // && !HasNoLinkCards`). When none qualify the cost is unpayable — abort
+            // the clause (stop the dispatcher, do NOT run the tail).
+            let player = resolve_player(ctx, *of);
+            let candidates = own_digimon_with_link_cards(ctx, player);
+            if candidates.is_empty() {
+                // Same unpayable-abort contract as the face-down-trash cost:
+                // flag it so an interactive cost-reduction pay_cost is not
+                // credited for a cost that never resolved. G-DSL-LINK-TRASH-AS-COST
+                // / G-COST-REDUCTION-INTERACTIVE-PAY-COST.
+                ctx.cost_unpayable = true;
+                return InstallResult::TailAlreadyRan;
+            }
+            install_trash_link_card_of_own_digimon(
+                ctx,
+                player,
+                *optional,
+                tail.to_vec(),
+                bindings,
+                runtime.clone(),
+            );
+            // With ≥1 candidate the first `select_own_permanent` always installs a
+            // pending selection (single candidate is a 1-option select — no
+            // auto-resolve; `optional` adds a PASS), so this parks. On PASS the
+            // callback never runs → nothing trashed → tail skipped.
+            selection_result(ctx)
+        }
         CompiledStep::SelectOpponentPermanent {
             filter,
             bind_as,
@@ -3342,6 +3699,23 @@ pub fn try_install(
                 // cost-then-cancel guard: an unpayable cost aborts the whole
                 // process rather than letting the cancel fire for free.
                 debug_assert!(min_unpayable);
+                InstallResult::TailAlreadyRan
+            }
+        }
+        CompiledStep::DeleteOnePerOpponentColor { filter, prompt } => {
+            install_delete_one_per_opponent_color(
+                ctx,
+                filter.as_deref().cloned(),
+                prompt.clone(),
+                tail.to_vec(),
+                bindings,
+                runtime.clone(),
+            );
+            if ctx.game.pending_selection.is_some() {
+                InstallResult::Parked
+            } else {
+                // No opponent color had a legal target: the terminal already ran
+                // (batch-delete of an empty list is a no-op) and consumed the tail.
                 InstallResult::TailAlreadyRan
             }
         }
@@ -5224,6 +5598,230 @@ fn install_trash_bottom_face_down_source_under_tamer(
                 trigger_context: trigger_for_resume,
                 decline: crate::resume::ResumeDecline::None,
             }],
+        });
+    }
+}
+
+/// The controller's battle-area Digimon that carry ≥1 link card — the candidate
+/// set for the `trash_link_card_of_own_digimon` cost's first selection (DCGO
+/// `CanSelectPermanentCondition = IsPermanentExistsOnOwnerBattleAreaDigimon
+/// && !HasNoLinkCards`). No compiled predicate is used: `linked_cards` is a
+/// direct per-permanent field, so a manual scan is both simplest and avoids
+/// widening the predicate surface for a single cost step.
+fn own_digimon_with_link_cards(ctx: &EffectContext<'_>, player: PlayerId) -> Vec<PermanentHandle> {
+    ctx.game
+        .player(player)
+        .battle_area
+        .iter()
+        .enumerate()
+        .filter(|(_, perm)| perm.is_digimon(&ctx.game.card_data) && !perm.linked_cards.is_empty())
+        .map(|(index, _)| PermanentHandle {
+            player,
+            index: index as u8,
+        })
+        .collect()
+}
+
+/// Install the FIRST selection of the `trash_link_card_of_own_digimon`
+/// activation cost: pick one of `player`'s Digimon with ≥1 link card. On pick,
+/// [`install_link_card_trash_second_selection`] installs the SECOND selection
+/// (which of ITS link cards to trash). The whole thing is clone-safe: the first
+/// pick parks a `RunTail`/`FieldPermanent{post: SelectAndTrashLinkCard}` frame,
+/// and the second pick a `TrashLinkCardOfDigimonSelection` frame — no bespoke
+/// closure-only park. `G-DSL-LINK-TRASH-AS-COST`.
+fn install_trash_link_card_of_own_digimon(
+    ctx: &mut EffectContext<'_>,
+    player: PlayerId,
+    optional: bool,
+    tail: Vec<CompiledStep>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+) {
+    let tail = Arc::new(tail);
+    let trigger_context = ctx.game.current_trigger_context.clone();
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let controller = ctx.player;
+    let override_pin = ctx.override_selecting_player();
+
+    // Closure-path captures (non-cloned resolution).
+    let tail_cb = Arc::clone(&tail);
+    let bindings_cb = bindings.clone();
+    let runtime_cb = runtime.clone();
+    let trigger_cb = trigger_context.clone();
+
+    // Resume-frame captures (cloned resolution).
+    let tail_for_resume = Arc::clone(&tail);
+    let bindings_for_resume = bindings.clone();
+    let runtime_for_resume = runtime.clone();
+    let trigger_for_resume = trigger_context.clone();
+
+    ctx.select_own_permanent(
+        "Choose 1 of your Digimon to trash a link card from",
+        optional,
+        move |game, handle| {
+            game.player(handle.player)
+                .battle_area
+                .get(handle.index as usize)
+                .is_some_and(|perm| {
+                    perm.is_digimon(&game.card_data) && !perm.linked_cards.is_empty()
+                })
+        },
+        move |cb_ctx, host: PermanentHandle| {
+            install_link_card_trash_second_selection(
+                cb_ctx,
+                host,
+                optional,
+                Arc::clone(&tail_cb),
+                bindings_cb.clone(),
+                runtime_cb.clone(),
+                trigger_cb.clone(),
+                Vec::new(),
+            );
+        },
+    );
+    // Park the first-selection data frame alongside the closure (coexistence):
+    // driven by run_resume's FieldPermanent{post: SelectAndTrashLinkCard} arm,
+    // which installs the second selection identically to the closure above.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::RunTail {
+                prov: crate::resume::ResumeProvenance {
+                    source_card,
+                    source_permanent,
+                    source_kind,
+                    controller,
+                    override_pin,
+                },
+                select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
+                    of_player: player,
+                    post: Some(crate::resume::FieldPermanentPostAction::SelectAndTrashLinkCard {
+                        optional,
+                    }),
+                },
+                bind_as: None,
+                inner_tail: tail_for_resume,
+                outer_conts: Vec::new(),
+                bindings: bindings_for_resume,
+                runtime: runtime_for_resume,
+                trigger_context: trigger_for_resume,
+                decline: crate::resume::ResumeDecline::None,
+            }],
+        });
+    }
+}
+
+/// Install the SECOND selection of the `trash_link_card_of_own_digimon` cost:
+/// pick which of `host`'s link cards to trash, then run the cost-gated `tail`
+/// only if a card was trashed. Shared by the closure path
+/// ([`install_trash_link_card_of_own_digimon`]'s callback) and the resume path
+/// (the `SelectAndTrashLinkCard` post-action) so both drive it identically.
+/// Clone-safe: the selection parks a `TrashLinkCardOfDigimonSelection` frame
+/// (data-only) alongside the closure. `G-DSL-LINK-TRASH-AS-COST`.
+#[allow(clippy::too_many_arguments)]
+fn install_link_card_trash_second_selection(
+    ctx: &mut EffectContext<'_>,
+    host: PermanentHandle,
+    optional: bool,
+    tail: Arc<Vec<CompiledStep>>,
+    bindings: Bindings,
+    runtime: StepRuntime,
+    trigger_context: Option<crate::trigger_context::TriggerContext>,
+    outer_conts: Vec<crate::resume::OuterContinuation>,
+) {
+    let Some(perm) = ctx
+        .game
+        .player(host.player)
+        .battle_area
+        .get(host.index as usize)
+    else {
+        return;
+    };
+    if perm.linked_cards.is_empty() {
+        return;
+    }
+    let cards: Vec<crate::card_source::CardHandle> =
+        perm.linked_cards.iter().map(|c| c.handle()).collect();
+    let labels: Vec<String> = cards
+        .iter()
+        .map(|h| {
+            ctx.game
+                .card_data_for_handle(*h)
+                .map(|d| d.card_name.clone())
+                .unwrap_or_else(|| "Link card".to_string())
+        })
+        .collect();
+
+    let source_card = ctx.source_card;
+    let source_permanent = ctx.source_permanent;
+    let source_kind = ctx.source_kind;
+    let controller = ctx.player;
+    let override_pin = ctx.override_selecting_player();
+
+    // Closure-path captures.
+    let cards_cb = cards.clone();
+    let tail_cb = Arc::clone(&tail);
+    let bindings_cb = bindings.clone();
+    let runtime_cb = runtime.clone();
+    let trigger_cb = trigger_context.clone();
+    let outer_cb = outer_conts.clone();
+
+    ctx.select_effect_choice(
+        "Choose 1 link card to trash (activation cost)",
+        labels,
+        move |cb_ctx, idx| {
+            let Some(card) = cards_cb.get(idx).copied() else {
+                return;
+            };
+            // No-approximations cost gate: the tail runs ONLY if a link card was
+            // actually trashed. `trash_specific_link_card` fires OnLinkedCardTrashed.
+            if cb_ctx.game.trash_specific_link_card(host, card) {
+                let mut b = bindings_cb.clone();
+                run_tail_preserving_trigger_context(
+                    cb_ctx,
+                    trigger_cb.clone(),
+                    &tail_cb,
+                    &mut b,
+                    &runtime_cb,
+                );
+            }
+            run_outer_conts(cb_ctx.game, outer_cb.clone());
+        },
+    );
+    // Optional decline: PASS on the link-card pick skips the trash and the tail
+    // (DCGO `canNoSelect: true` on the SelectCardEffect). The `select_effect_choice`
+    // install exposes decline via `on_decline` when marked optional.
+    if optional {
+        if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            let outer_decline = outer_conts.clone();
+            pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
+                run_outer_conts(game, outer_decline.clone());
+            }));
+        }
+    }
+    // Park the data frame (clone-safe): driven by run_resume's
+    // TrashLinkCardOfDigimonSelection arm.
+    if ctx.game.pending_selection.is_some() {
+        ctx.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![crate::resume::ResumeFrame::TrashLinkCardOfDigimonSelection(
+                crate::resume::TrashLinkCardOfDigimonSelectionState {
+                    prov: crate::resume::ResumeProvenance {
+                        source_card,
+                        source_permanent,
+                        source_kind,
+                        controller,
+                        override_pin,
+                    },
+                    host,
+                    cards,
+                    tail,
+                    bindings,
+                    runtime,
+                    trigger_context,
+                    outer_conts,
+                },
+            )],
         });
     }
 }

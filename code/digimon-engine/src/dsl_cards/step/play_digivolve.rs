@@ -128,6 +128,67 @@ pub(crate) fn lower_cost_delta(
     }
 }
 
+/// Lower a DNA-digivolve step's `cost` (a `CompiledCostDelta`) to the final
+/// `i32` memory charge passed to the effect-initiated DNA primitives.
+///
+/// The DNA verbs take a fixed final cost (not a `CostDelta`), so the cost
+/// keywords are interpreted for the DNA path specifically:
+///
+///   `Printed`   → the RESULT card's printed DNA cost, resolved via
+///                 `printed_cost` against the chosen materials (DCGO
+///                 `payCost: true` → `condition.cost`). If the pair does not
+///                 satisfy any printed recipe (so no printed cost resolves),
+///                 fall back to 0 — the merge is then recipe-rejected anyway.
+///   `Free`      → 0 (free DNA digivolve).
+///   `Literal(n)`→ exactly `n` (an authored fixed cost, e.g. the shipped
+///                 `cost: 0` Omnimon users).
+///   `Reduce(n)` → 0 for `n == 0` (legacy `cost: printed` alias that older
+///                 authoring flattened to `Reduce(0)`); for `n > 0` a
+///                 printed-cost reduction: printed cost minus `n`, floored at 0.
+///   `ReduceFn`  → same as `Reduce(N)` with `N` the evaluated formula.
+///
+/// `printed_cost` is only invoked for the `Printed` / `Reduce` shapes that need
+/// the result card's printed DNA cost, so callers can pass a closure that
+/// borrows `ctx` for the lookup.
+fn lower_dna_cost(
+    cost: &digimon_dsl::compiled::CompiledCostDelta,
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+    printed_cost: impl Fn() -> Option<i32>,
+) -> i32 {
+    use digimon_dsl::compiled::CompiledCostDelta;
+    match cost {
+        CompiledCostDelta::Printed => printed_cost().unwrap_or(0).max(0),
+        CompiledCostDelta::Free => 0,
+        CompiledCostDelta::Literal(n) => (*n).max(0),
+        CompiledCostDelta::Reduce(n) => {
+            let reduce = (*n).max(0);
+            if reduce == 0 {
+                // Legacy `cost: printed` alias — pay the full printed DNA cost.
+                printed_cost().unwrap_or(0).max(0)
+            } else {
+                (printed_cost().unwrap_or(0) - reduce).max(0)
+            }
+        }
+        CompiledCostDelta::ReduceFn(formula) => {
+            let target = ctx
+                .source_permanent
+                .unwrap_or(crate::permanent::PermanentHandle {
+                    player: ctx.player,
+                    index: 0,
+                });
+            let reduce = crate::dsl_cards::formula_eval::evaluate_with_bindings(
+                formula,
+                ctx,
+                target,
+                Some(bindings),
+            )
+            .max(0);
+            (printed_cost().unwrap_or(0) - reduce).max(0)
+        }
+    }
+}
+
 /// Resolve a `source: CompiledBindingRef` to a `CardSourceRef`, defaulting the
 /// source-zone owner to `ctx.player` (the effect controller) for hand/trash
 /// binding kinds. Returns `None` if the binding can't be resolved or has an
@@ -825,24 +886,18 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 }
                 _ => return true,
             };
-            let cost = match lower_cost_delta(Some(cost), ctx, bindings) {
-                CostDelta::Free => 0,
-                CostDelta::Fixed(n) => n,
-                CostDelta::Reduce(n) => {
-                    // DNA effect path still takes a final i32 cost. Until the
-                    // engine primitive is widened, `Reduce(n)` is interpreted
-                    // as "reduce printed DNA cost"; DNA printed-cost lookup is
-                    // not available here, so clamp to zero and keep the shape
-                    // ready for the primitive follow-up.
-                    debug_assert!(n >= 0, "negative DNA cost reduction is not meaningful");
-                    0
-                }
-            };
+            // G-ENGINE-DNA-PRINTED-COST (gap 1): `cost: printed` pays the
+            // RESULT card's printed DNA cost against the chosen {a, b} pair
+            // (DCGO `payCost: true` → `condition.cost`). Look it up from the
+            // materials; if the pair doesn't satisfy the recipe there is no
+            // printed cost — the merge itself will then be recipe-rejected.
+            let dna_cost =
+                lower_dna_cost(cost, ctx, bindings, || ctx.printed_dna_cost_for_pair(a, b, from_card));
             let success = ctx.effect_initiated_dna_digivolve(
                 a,
                 b,
                 from_card,
-                cost as i32,
+                dna_cost,
                 *ignore_requirements,
             );
             if let Some(played) = success {
@@ -881,19 +936,17 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 }
                 _ => return true,
             };
-            let cost = match lower_cost_delta(Some(cost), ctx, bindings) {
-                CostDelta::Free => 0,
-                CostDelta::Fixed(n) => n,
-                CostDelta::Reduce(n) => {
-                    debug_assert!(n >= 0, "negative DNA cost reduction is not meaningful");
-                    0
-                }
-            };
+            // G-ENGINE-DNA-PRINTED-COST (gap 1): `cost: printed` pays the
+            // result card's printed DNA cost against the {field target, hand
+            // partner} pair (DCGO `payCost: true`).
+            let dna_cost = lower_dna_cost(cost, ctx, bindings, || {
+                ctx.printed_dna_cost_for_hand_partner(target_handle, partner_card, result_card)
+            });
             let success = ctx.effect_initiated_dna_digivolve_with_hand_partner(
                 target_handle,
                 partner_card,
                 result_card,
-                cost as i32,
+                dna_cost,
                 *ignore_requirements,
             );
             if let Some(played) = success {

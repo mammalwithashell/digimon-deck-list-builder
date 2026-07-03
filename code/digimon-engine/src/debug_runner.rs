@@ -1226,6 +1226,42 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
         }
     }
 
+    // Backfill `dna_costs` from compiled `dna_digivolve` alt-paths.
+    //
+    // In production, `data/cards.json` carries the printed DNA-cost table
+    // (`dna_costs`), which the effect-initiated DNA verbs
+    // (`effect_initiated_dna_digivolve` and friends) match against when they
+    // pay the result's printed DNA cost (`cost: printed`) or enforce its
+    // printed recipe (`ignore_requirements: false` — G-ENGINE-DNA-RECIPE-
+    // ENFORCEMENT). DSL-loaded fixtures never see cards.json, so without this
+    // backfill the table is empty and every recipe-checked DNA digivolve into
+    // such a card silently rejects. A `kind: dna_digivolve` alt-path with two
+    // `materials` filters IS a DNA-cost row: each material filter describes one
+    // recipe half, and the path's literal `cost` is the printed DNA cost.
+    // (G-DSL-FIXTURE-DNA-COSTS — the DNA sibling of the evo-cost backfill.)
+    let mut dna_costs: Vec<DnaCost> = Vec::new();
+    for ap in &card.alt_paths {
+        if !matches!(ap.kind, CompiledAltPathKind::DnaDigivolve) || ap.materials.len() != 2 {
+            continue;
+        }
+        let (Some(req1), Some(req2)) = (
+            material_to_dna_requirement(&ap.materials[0]),
+            material_to_dna_requirement(&ap.materials[1]),
+        ) else {
+            continue;
+        };
+        let memory_cost = match &ap.cost {
+            Some(CompiledCost::Literal(n)) => (*n).max(0) as i16,
+            None => 0,
+            _ => continue,
+        };
+        dna_costs.push(DnaCost {
+            requirement1: req1,
+            requirement2: req2,
+            memory_cost,
+        });
+    }
+
     // Build the dual face data before `evo_costs` is moved into the struct —
     // the Digimon face borrows the same backfilled table.
     let dual = card
@@ -1255,7 +1291,7 @@ fn card_data_from_compiled(card: &CompiledCard) -> CardData {
             .collect(),
         traits: card.traits.clone(),
         evo_costs,
-        dna_costs: Vec::new(),
+        dna_costs,
         effect_text: String::new(),
         inherited_text: String::new(),
         security_text: String::new(),
@@ -1296,6 +1332,49 @@ fn compiled_color_to_evo_code(color: CompiledColor) -> u8 {
         CompiledColor::Black => 5,
         CompiledColor::Purple => 6,
     }
+}
+
+/// Convert one compiled `dna_digivolve` material filter into a `DnaRequirement`
+/// (one half of a printed DNA recipe row). Recognises the leaf constraints a
+/// DNA material actually uses — `level_eq`, `color_is` / `color_only`,
+/// `name_is` / `name_contains`, and `effect_text_contains`. Requirements with
+/// no expressible leaf still produce an empty ("any") requirement so the row is
+/// authored; if a material can't be reduced to a static row at all (e.g. it
+/// requires a binding or a non-battle-area zone) the caller drops the whole
+/// alt-path. G-DSL-FIXTURE-DNA-COSTS.
+#[cfg(feature = "dsl-yaml-loader")]
+fn material_to_dna_requirement(
+    material: &digimon_dsl::compiled::CompiledMaterial,
+) -> Option<DnaRequirement> {
+    let f = &material.filter;
+    // A level bound expressed as a runtime binding cannot be a static row.
+    if f.level_eq_binding.is_some() {
+        return None;
+    }
+    let mut card_colors = Vec::new();
+    if let Some(color) = f.color_is {
+        card_colors.push(compiled_color_to_engine(color));
+    }
+    if let Some(colors) = f.color_only.as_ref() {
+        for c in colors {
+            let c = compiled_color_to_engine(*c);
+            if !card_colors.contains(&c) {
+                card_colors.push(c);
+            }
+        }
+    }
+    let name_contains = f
+        .name_is
+        .clone()
+        .or_else(|| f.name_contains.clone())
+        .unwrap_or_default();
+    let text_contains = f.effect_text_contains.clone().unwrap_or_default();
+    Some(DnaRequirement {
+        level: f.level_eq.unwrap_or(0),
+        card_colors,
+        name_contains,
+        text_contains,
+    })
 }
 
 #[cfg(feature = "dsl-yaml-loader")]

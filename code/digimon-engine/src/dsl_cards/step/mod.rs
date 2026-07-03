@@ -335,9 +335,11 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::KeywordAscensionChoice(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::FamiliarTokenOnDeletionSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::LinkCardLeaveSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::TrashLinkCardOfDigimonSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::PlayOrUseDualChoice(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::MayDnaPartnerSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::MayDnaResultSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::PerColorDeleteStep(s)) => s.outer_conts.push(cont),
             None => unreachable!("pending_selection_resume set but frame stack empty"),
         }
         game.pending_selection = Some(pending);

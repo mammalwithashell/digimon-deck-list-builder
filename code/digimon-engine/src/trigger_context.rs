@@ -168,6 +168,27 @@ pub struct TriggerContext {
     pub provenance_token: Option<ProvenanceToken>,
     pub was_security_skill: bool,
     pub option_last_field_state: Option<crate::option_lifecycle::OptionFieldState>,
+    /// The permanent that WON a Digimon-vs-Digimon battle (its opponent was
+    /// deleted in battle and it was NOT a tie). Set on the `EndOfBattle`
+    /// firing so a BOARD-WIDE observer can react to "any of your [X] Digimon
+    /// win a battle" (BT25-020 Marsmon; G-DSL-BATTLE-WINNER-BOARDWIDE). `None`
+    /// on a tie (mutual destruction) — a tie has no winner — and on a direct
+    /// player attack (which does not fire `EndOfBattle`). Distinct from the
+    /// carrier-scoped `source_deleted_battle_opponent` idiom, which fires on
+    /// the OnAnyDeletion path when the observer *is* the winner. Mirrors DCGO
+    /// `CardEffectCommons.CanTriggerWhenWinBattle` reading the battle
+    /// hashtable's `WinnerPermanents` while `WasTie == false`.
+    pub battle_winner: Option<PermanentHandle>,
+    /// The player whose HAND lost one or more cards to trash during an
+    /// effect-caused discard batch — the "your hand is trashed from" subject.
+    /// Set on the `OnDiscardHand` firing (G-ENGINE-ON-DISCARD-HAND). Mirrors
+    /// DCGO's `DiscardedCards` list owner in `CanTriggerOnTrashHand`.
+    pub discard_hand_player: Option<PlayerId>,
+    /// The controller of the EFFECT that caused the hand discard. Only set on
+    /// `OnDiscardHand`. Lets a card gate "when one of YOUR effects trashes a
+    /// card in your hand" (ST16-14 Matt Ishida) vs the opponent's effect.
+    /// Mirrors DCGO `CanTriggerOnTrashHand`'s `cardEffect.EffectSourceCard.Owner`.
+    pub discard_cause_controller: Option<PlayerId>,
 }
 
 impl From<crate::option_lifecycle::OptionTrashCause> for EventCause {

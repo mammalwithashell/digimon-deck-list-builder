@@ -143,6 +143,9 @@ pub enum StepSpec {
     /// `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST` (BT13-103).
     DeleteForCostReduction(TargetArg),
     DeleteBoundPermanents(DeleteBoundPermanentsArgs),
+    /// G-DSL-DELETE-ONE-PER-DISTINCT-OPPONENT-COLOR — per-color mandatory pick +
+    /// batch delete (EX9-074 Kimeramon Branch B).
+    DeleteOnePerOpponentColor(DeleteOnePerOpponentColorArgs),
     TrashBreedingPermanent(TrashBreedingPermanentArgs),
     ReturnToHand(TargetArg),
     ReturnToDeck(ReturnPermanentArgs),
@@ -197,6 +200,17 @@ pub enum StepSpec {
     /// BT25-035 Cougarmon's "by trashing 2 bottom face-down cards from under any
     /// of your Tamers" cost.
     TrashBottomFaceDownSourcesUnderTamers(TrashBottomFaceDownSourcesUnderTamersArgs),
+    /// G-DSL-LINK-TRASH-AS-COST (BT25-073 Dragomon) — the ACTIVATION-cost
+    /// sibling of the replacement-only `cost: { trash_own_link_card: true }`.
+    /// Picks one of `of`'s Digimon that carries ≥1 link card (first selection),
+    /// then one of ITS link cards (second selection), trashes it (firing
+    /// `OnLinkedCardTrashed`), and runs the step's tail ONLY if the trash
+    /// happened (no-approximations cost gate). When no own Digimon has a link
+    /// card the cost is unpayable → the clause's remaining steps are skipped
+    /// (`TailAlreadyRan`). DCGO `BT25_073.cs`: `SelectPermanentEffect`
+    /// (`!HasNoLinkCards`) → `SelectCardEffect Root.LinkedCards` →
+    /// `TrashLinkCardsAndProcessAccordingToResult` → `successProcess`.
+    TrashLinkCardOfOwnDigimon(TrashLinkCardOfOwnDigimonArgs),
     BindPermanentProperty(BindPermanentProperty),
     Hatch(PlayerArg),
     /// Move the specified player's eligible breeding-area Digimon to the
@@ -458,6 +472,9 @@ impl Serialize for StepSpec {
             StepSpec::DeletePermanent(v) => kv!(s, "delete_permanent", v),
             StepSpec::DeleteForCostReduction(v) => kv!(s, "delete_for_cost_reduction", v),
             StepSpec::DeleteBoundPermanents(v) => kv!(s, "delete_bound_permanents", v),
+            StepSpec::DeleteOnePerOpponentColor(v) => {
+                kv!(s, "delete_one_per_opponent_color", v)
+            }
             StepSpec::TrashBreedingPermanent(v) => kv!(s, "trash_breeding_permanent", v),
             StepSpec::ReturnToHand(v) => kv!(s, "return_to_hand", v),
             StepSpec::ReturnToDeck(v) => kv!(s, "return_to_deck", v),
@@ -493,6 +510,9 @@ impl Serialize for StepSpec {
             }
             StepSpec::TrashBottomFaceDownSourcesUnderTamers(v) => {
                 kv!(s, "trash_bottom_face_down_sources_under_tamers", v)
+            }
+            StepSpec::TrashLinkCardOfOwnDigimon(v) => {
+                kv!(s, "trash_link_card_of_own_digimon", v)
             }
             StepSpec::BindPermanentProperty(v) => kv!(s, "bind_permanent_property", v),
             StepSpec::Hatch(v) => kv!(s, "hatch", v),
@@ -721,6 +741,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "delete_permanent" => StepSpec::DeletePermanent(map.next_value()?),
             "delete_for_cost_reduction" => StepSpec::DeleteForCostReduction(map.next_value()?),
             "delete_bound_permanents" => StepSpec::DeleteBoundPermanents(map.next_value()?),
+            "delete_one_per_opponent_color" => {
+                StepSpec::DeleteOnePerOpponentColor(map.next_value()?)
+            }
             "trash_breeding_permanent" => StepSpec::TrashBreedingPermanent(map.next_value()?),
             "return_to_hand" => StepSpec::ReturnToHand(map.next_value()?),
             "return_to_deck" => StepSpec::ReturnToDeck(map.next_value()?),
@@ -756,6 +779,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             }
             "trash_bottom_face_down_sources_under_tamers" => {
                 StepSpec::TrashBottomFaceDownSourcesUnderTamers(map.next_value()?)
+            }
+            "trash_link_card_of_own_digimon" => {
+                StepSpec::TrashLinkCardOfOwnDigimon(map.next_value()?)
             }
             "bind_permanent_property" => StepSpec::BindPermanentProperty(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
@@ -946,6 +972,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "delete_permanent",
                         "delete_for_cost_reduction",
                         "delete_bound_permanents",
+                        "delete_one_per_opponent_color",
                         "trash_breeding_permanent",
                         "return_to_hand",
                         "return_to_deck",
@@ -963,6 +990,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "return_selected_sources_to_hand",
                         "trash_bottom_face_down_source_under_tamer",
                         "trash_bottom_face_down_sources_under_tamers",
+                        "trash_link_card_of_own_digimon",
                         "return_selected_sources_to_deck",
                         "bind_permanent_property",
                         "hatch",
@@ -1079,6 +1107,33 @@ pub enum BindingRef {
 #[serde(deny_unknown_fields)]
 pub struct DeleteBoundPermanentsArgs {
     pub binding: String,
+}
+
+/// Args for `delete_one_per_opponent_color`
+/// (G-DSL-DELETE-ONE-PER-DISTINCT-OPPONENT-COLOR). Iterates the game's colors;
+/// for each color that appears among the opponent's Digimon (matching `filter`,
+/// if any), drives a MANDATORY pick of 1 not-yet-chosen opponent Digimon of that
+/// color, accumulates the picks, and BATCH-deletes them after every color's pick
+/// resolves (DCGO `EX9_074.cs` Branch B: "delete 1 of each of your opponent's
+/// Digimon with different colors"). Colors with no legal target are skipped; a
+/// picked Digimon of a multi-color card is excluded from later colors' picks
+/// (so a two-color Digimon is deleted at most once). Every pick surfaces in the
+/// action space (no PASS — mandatory). Driver: EX9-074 Kimeramon.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DeleteOnePerOpponentColorArgs {
+    /// Extra restriction AND-ed onto "opponent Digimon of the current color".
+    /// Defaults to no extra restriction (every opponent Digimon is eligible),
+    /// matching EX9-074 Branch B. Authored as a `filter:` predicate block.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filter: Option<PredicateSpec>,
+    /// Prompt template. `{color}` is substituted with the current color name at
+    /// each per-color pick (DCGO `"Select 1 {deletableColor} Digimon to delete"`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+    /// Optional localization-key override for `prompt`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
 }
 
 /// Args for `reduce_link_cost` — reduce the cost of the link about to resolve
@@ -1264,6 +1319,23 @@ pub struct TrashBottomFaceDownSourcesUnderTamersArgs {
     pub of: PlayerRef,
     /// Total number of bottom-face-down sources to trash across Tamers.
     pub count: u8,
+}
+
+/// Args for `trash_link_card_of_own_digimon` — the link-card-trash ACTIVATION
+/// cost (BT25-073 Dragomon). Picks one of `of`'s Digimon with ≥1 link card, then
+/// one of its link cards, and trashes it; the step's tail runs only if the trash
+/// happened. `G-DSL-LINK-TRASH-AS-COST`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashLinkCardOfOwnDigimonArgs {
+    pub of: PlayerRef,
+    /// When `true`, BOTH picks (own Digimon and its link card) are DECLINABLE
+    /// (offer PASS) — modelling DCGO's `canNoSelect: true` on both selects for a
+    /// "By trashing 1 of your Digimon's link cards, you MAY …" clause. On decline
+    /// nothing is trashed and the step's tail does not run. Default `false`
+    /// leaves the decline to a clause-level `optional`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
 }
 
 /// Args for `move_self_option_under_permanent` — relocate THIS effect's source

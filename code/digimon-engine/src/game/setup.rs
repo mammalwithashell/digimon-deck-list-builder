@@ -231,6 +231,8 @@ impl Game {
             draining_deferred: 0,
             play_enters_suspended: false,
             on_play_suppressor: None,
+            pending_play_effect_initiated: false,
+            pending_hand_discard: None,
             until_condition_dirty: false,
             until_condition_last_cycle_evaluations: 0,
             until_condition_total_evaluations: 0,

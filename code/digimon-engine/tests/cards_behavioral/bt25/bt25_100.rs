@@ -89,14 +89,11 @@ fn bt25_100_structure_use_req_main_security_piercing_and_link_requirement() {
     )));
 }
 
-// Link-card inherited (ESS) effects — e.g. <Piercing> here — are not yet
-// aggregated onto the host. `Game::live_declarative_formula_sum` and the
-// effect-source collectors scan a permanent's `card_sources` (digivolution
-// stack) + breeding, but NOT its `linked_cards`. Tracked as engine gap
-// G-LINK-INHERITED-ESS. The YAML authors the clause faithfully; the host
-// will gain <Piercing> once the gap closes.
+// Link-card inherited (ESS) effects — e.g. <Piercing> here — are aggregated
+// onto the host as of G-LINK-INHERITED-ESS closure (2026-07): the collectors'
+// linked-card passes now fold a link card in as an inherited-style source, so a
+// `scope: inherited` `<Piercing>` grant on the linked Option reaches the host.
 #[test]
-#[ignore = "pending: G-LINK-INHERITED-ESS from docs/RUST_ENGINE_GAPS.md — link-card inherited effects not applied to host"]
 fn bt25_100_grants_inherited_piercing_to_host() {
     let mut runner = iron_runner()
         .hand(0, &["BT25-100"])

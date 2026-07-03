@@ -10,6 +10,7 @@ mod breeding_zone_movement;
 mod effect_attack_window;
 mod effect_digivolve_from_zones;
 mod effect_digivolve_union_zones;
+mod effect_dna_trash_partner;
 mod effect_initiated_dna_digivolve;
 mod effect_refiring;
 mod material_zone_select;

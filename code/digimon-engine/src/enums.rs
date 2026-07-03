@@ -396,6 +396,18 @@ pub enum EffectTiming {
     /// G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
     OnDigivolutionCardReturnedToDeckBottom,
 
+    /// Fires ONCE after an EFFECT trashes one or more cards from a player's
+    /// hand ("when your hand is trashed from"). Global observer — the trashing
+    /// player and the causing effect's controller are carried in the
+    /// `TriggerContext` (`discard_hand_player` / `discard_cause_controller`) so
+    /// card scripts gate own-side ("your hand", BT25-080/084) or own-effect
+    /// ("one of your effects trashes a card in your hand", ST16-14 Matt Ishida).
+    /// Only effect-caused discards fire this — a draw, mulligan, or rule
+    /// discard does NOT (mirrors DCGO `CanTriggerOnTrashHand`, which requires a
+    /// non-null causing `CardEffect`). A multi-card discard batch fires this
+    /// exactly ONCE (DCGO `DiscardHands()`). G-ENGINE-ON-DISCARD-HAND.
+    OnDiscardHand,
+
     // Special
     None,
 }

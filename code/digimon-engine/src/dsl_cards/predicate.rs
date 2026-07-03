@@ -1303,6 +1303,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.color_matches_any_field_digimon.is_none()
         && pred.color_matches_binding.is_none()
         && pred.color_matches_returned_card.is_none()
+        && pred.color_matches_own_source_stack.is_none()
         && pred.trait_has.is_none()
         && pred.trait_contains.is_none()
         && pred.form_is.is_none()
@@ -1668,6 +1669,84 @@ fn eval_event_fields(
             return false;
         };
         if !player_ref_matches(want, gaining_player, rctx) {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_winner_owner {
+        // on_ally_won_battle: the winner's controller must match the ref. A tie
+        // has no winner → no `battle_winner` → fail. G-DSL-BATTLE-WINNER-BOARDWIDE.
+        let Some(winner) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.battle_winner)
+        else {
+            return false;
+        };
+        if !player_ref_matches(want, winner.player, rctx) {
+            return false;
+        }
+    }
+    if let Some(ref trait_name) = pred.event_winner_trait_has {
+        // on_ally_won_battle: the winner's top card must carry the trait. The
+        // winner survives a non-tie battle, so read the live slot.
+        let matches = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.battle_winner)
+            .and_then(|winner| {
+                rctx.game
+                    .player(winner.player)
+                    .battle_area
+                    .get(winner.index as usize)
+            })
+            .map(|perm| perm.has_trait(trait_name, rctx.card_data()))
+            .unwrap_or(false);
+        if !matches {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_discard_player {
+        // on_discard_hand: the trashing player (whose hand lost cards) must
+        // match the ref ("your hand is trashed from" ⇒ you). G-ENGINE-ON-DISCARD-HAND.
+        let Some(trashing_player) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.discard_hand_player)
+        else {
+            return false;
+        };
+        if !player_ref_matches(want, trashing_player, rctx) {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_caused_by_own_effect {
+        // on_discard_hand: true when the causing effect belongs to the observer
+        // (ST16-14 Matt Ishida "one of YOUR effects"). Compare
+        // `discard_cause_controller` to the observer's controller.
+        let is_own = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.discard_cause_controller)
+            .map(|controller| controller == rctx.player())
+            .unwrap_or(false);
+        if is_own != want {
+            return false;
+        }
+    }
+    if let Some(want) = pred.played_by_effect {
+        // BT25-080 main clause tail: the OnPlay firing forwards whether the
+        // play was effect-driven into `effect_initiated`. G-ENGINE-ON-DISCARD-HAND.
+        let is_by_effect = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .map(|trigger| trigger.effect_initiated)
+            .unwrap_or(false);
+        if is_by_effect != want {
             return false;
         }
     }
@@ -2469,6 +2548,11 @@ fn eval_card_fields(
     {
         return false;
     }
+    if pred.color_matches_own_source_stack.is_some()
+        && !card_shares_color_with_own_source_stack(rctx, data)
+    {
+        return false;
+    }
     if let Some(ref t) = pred.trait_has {
         if !data.traits.iter().any(|x| x.eq_ignore_ascii_case(t)) {
             return false;
@@ -2873,6 +2957,41 @@ fn field_tamer_has_name(
         }
     }
     false
+}
+
+/// G-DSL-COLOR-MATCHES-OWN-SOURCE-STACK — true when the candidate card `data`
+/// shares ≥1 color with the effect CARRIER's NON-FLIPPED digivolution-source
+/// color set. The carrier is the effect's `source_permanent`; its source colors
+/// are extracted by the shared `non_flipped_source_colors` (the same extraction
+/// the branch-gating `DistinctColorsCount` uses). Empty carrier-color set (no
+/// face-up sources) matches nothing — mirrors the sibling color leaves. The
+/// candidate side is kind-aware exactly like `color_matches_binding`. Driver:
+/// EX9-074 Kimeramon.
+fn card_shares_color_with_own_source_stack(
+    rctx: &EffectReadContext<'_>,
+    data: &crate::card_data::CardData,
+) -> bool {
+    let Some(carrier) = rctx.source_permanent else {
+        return false;
+    };
+    let Some(perm) = permanent_for_handle(rctx, carrier) else {
+        return false;
+    };
+    let source_colors =
+        crate::dsl_cards::formula_eval::non_flipped_source_colors(perm, rctx.card_data());
+    if source_colors.is_empty() {
+        return false;
+    }
+    let candidate_colors = if kind_matches_card_search(CompiledCardKind::Digimon, data) {
+        data.digimon_colors()
+    } else if kind_matches_card_search(CompiledCardKind::Option, data) {
+        data.option_colors()
+    } else {
+        data.colors.as_slice()
+    };
+    candidate_colors
+        .iter()
+        .any(|candidate| source_colors.iter().any(|s| candidate == s))
 }
 
 fn card_shares_color_with_bound_permanent(

@@ -312,7 +312,14 @@ impl Game {
                 continue;
             };
             for effect in effects.iter() {
-                if !effect.linked || !effect.declarative {
+                // DigiLink Shape-B (G-LINK-INHERITED-ESS): materialize a link
+                // card's ESS declarative grant onto its HOST under BOTH scope
+                // conventions — `.linked()` (BT25-101) and `.inherited()`
+                // (BT25-100's `scope: inherited` `<Piercing>` grant_keyword).
+                // A clause is `.linked()` XOR `.inherited()` (scope-driven), so
+                // accepting either cannot double-materialize; the main pass
+                // above scans `card_sources` only, never `linked_cards`.
+                if !(effect.linked || effect.inherited) || !effect.declarative {
                     continue;
                 }
                 if !effect.materializes_declarative_state || effect.process.is_none() {

@@ -158,6 +158,20 @@ pub(crate) struct PendingWouldPlayResume {
     pub(crate) suppress_on_play: bool,
 }
 
+/// Open `OnDiscardHand` batch window (G-ENGINE-ON-DISCARD-HAND). Accumulates
+/// the trashing player(s) whose hand lost cards to an effect within a single
+/// effect body, plus the controller of the causing effect, so the trigger
+/// fires ONCE per batch (DCGO `DiscardHands()`).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct PendingHandDiscard {
+    /// The controller of the effect that opened this window (the "cause").
+    pub(crate) cause_controller: PlayerId,
+    /// Distinct trashing players who lost ≥1 hand card during this window, in
+    /// first-seen order. Almost always a single player, but an effect that
+    /// trashes from both hands in one body fires one event per affected owner.
+    pub(crate) trashed_players: Vec<PlayerId>,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum PendingWouldPlayOrigin {
     Hand,
@@ -916,6 +930,23 @@ pub struct Game {
     /// honoring the skip (judge-quiz Q28: Gankoomon X's protection lets the
     /// played Ciel's [On Play] activate through Dragomon's rider).
     pub(crate) on_play_suppressor: Option<(PlayerId, crate::enums::EffectSourceKind)>,
+
+    /// Transient: `true` while the OnPlay trigger for a just-played permanent
+    /// is being dispatched IF that play was effect-driven (`PlaySource::ByEffect`).
+    /// Read by the `OnPlay` trigger context so a card's `played_by_effect`
+    /// predicate can gate "if played by an effect, …" (BT25-080 Witchmon main
+    /// clause; G-ENGINE-ON-DISCARD-HAND). Set by `fire_play_event_triggers`
+    /// around `fire_on_play`, cleared immediately after. `false` for normal
+    /// hand plays and digivolutions. Mirrors DCGO `CardEffectCommons.IsByEffect`.
+    pub(crate) pending_play_effect_initiated: bool,
+
+    /// Open coalescing window for the `OnDiscardHand` batch trigger
+    /// (G-ENGINE-ON-DISCARD-HAND). While `Some`, effect-caused hand→trash calls
+    /// append the trashing player; the window is flushed (fires
+    /// `OnDiscardHand` once) when the effect body that opened it completes.
+    /// `None` outside a discard window. Mirrors DCGO `DiscardHands()` collecting
+    /// the whole discard list before firing the trigger once.
+    pub(crate) pending_hand_discard: Option<PendingHandDiscard>,
 
     until_condition_dirty: bool,
     until_condition_last_cycle_evaluations: usize,
@@ -1682,6 +1713,57 @@ impl Game {
         self.player_mut(player).trash.push(card);
     }
 
+    /// Record that an EFFECT (controlled by `cause_controller`) just trashed a
+    /// card from `trashing_player`'s hand, opening or extending the
+    /// `OnDiscardHand` batch window (G-ENGINE-ON-DISCARD-HAND). Called from
+    /// `EffectContext::trash_from_hand_by_index` — the single effect-caused
+    /// hand→trash choke point. The trigger is NOT fired here; it fires once when
+    /// the window is flushed (`flush_pending_hand_discard`) after the causing
+    /// effect body completes, mirroring DCGO `DiscardHands()` collecting the
+    /// full discard list before firing `OnDiscardHand`.
+    ///
+    /// A window already open with a DIFFERENT `cause_controller` is flushed
+    /// first, so two nested effect bodies never merge their discards.
+    pub(crate) fn note_effect_hand_discard(
+        &mut self,
+        cause_controller: crate::enums::PlayerId,
+        trashing_player: crate::enums::PlayerId,
+    ) {
+        if let Some(window) = self.pending_hand_discard.as_ref() {
+            if window.cause_controller != cause_controller {
+                self.flush_pending_hand_discard();
+            }
+        }
+        let window = self
+            .pending_hand_discard
+            .get_or_insert_with(|| crate::game::PendingHandDiscard {
+                cause_controller,
+                trashed_players: Vec::new(),
+            });
+        if !window.trashed_players.contains(&trashing_player) {
+            window.trashed_players.push(trashing_player);
+        }
+    }
+
+    /// Fire the `OnDiscardHand` batch trigger (once per affected owner) for the
+    /// open discard window, then close it. No-op if no window is open or it
+    /// recorded no discards. G-ENGINE-ON-DISCARD-HAND.
+    pub(crate) fn flush_pending_hand_discard(&mut self) {
+        let Some(window) = self.pending_hand_discard.take() else {
+            return;
+        };
+        let cause_controller = window.cause_controller;
+        for trashing_player in window.trashed_players {
+            self.enqueue_triggered(
+                crate::enums::EffectTiming::OnDiscardHand,
+                crate::selection::TriggerSource::HandDiscarded {
+                    player: trashing_player,
+                    cause_controller,
+                },
+            );
+        }
+    }
+
     /// Trash an entire permanent stack (top card + digi_sources + linked
     /// cards, in that physical movement order), emitting one
     /// [`crate::events::GameEvent::Trash`] per card.
@@ -2187,6 +2269,147 @@ impl Game {
         Some(merged_handle)
     }
 
+    /// DNA digivolve where ONE material lives on the field (`target`), the
+    /// OTHER material lives in `hand_owner`'s **trash** (`trash_index`), and the
+    /// merged permanent is topped with a **hand** card (`result_index`).
+    ///
+    /// This is the BT18-015 / BT18-073 `[On Deletion]` shape:
+    ///   "1 of your [Machinedramon] **in play** and 1 [Kimeramon] **in the
+    ///    trash** may DNA Digivolve into [Millenniummon] **in the hand**."
+    ///
+    /// DCGO (`BT18_015.cs` / `BT18_073.cs`) materialises the trash material via
+    /// `CardObjectController.CreateNewPermanent` — a **pure placement that fires
+    /// NO triggers** (no `[On Play]`, no `OnEnterField`) — then jogress-merges
+    /// with `PlayCardClass(..., payCost: true, activateETB: true)`.
+    ///
+    /// We fold the two steps into one atomic merge so the trash material never
+    /// exists as an independently-played permanent: it moves straight from
+    /// trash into the merged stack. This exactly reproduces DCGO's
+    /// observer-firing surface — only the merged TOP's `WhenDigivolving` /
+    /// `OnDnaDigivolve` / `OnDigivolve` fire (below), never the trash
+    /// material's own play triggers.
+    ///
+    /// ## Stacking order
+    ///
+    /// `target.card_sources ++ [trash_material] ++ [result]`. `target` is the
+    /// `requirement1` material; the trash material is `requirement2`. The merged
+    /// permanent stays at `target`'s index (no on-field permanent is removed).
+    ///
+    /// ## Triggers
+    ///
+    /// Identical to `dna_digivolve_hand_partner_inner`: `WhenDigivolving` →
+    /// `OnDnaDigivolve` → `OnDigivolve` (global), each followed by a queue
+    /// drain, all carrying the `dna_origin` marker.
+    ///
+    /// ## Returns
+    ///
+    /// `Some(merged_handle)` on success; `None` if `target` is out of range,
+    /// `trash_index` is out of range on `hand_owner`'s trash, `result_index` is
+    /// out of range on `hand_owner`'s hand, or `cost > 0` and `pay_memory`
+    /// fails.
+    pub(crate) fn dna_digivolve_trash_partner_inner(
+        &mut self,
+        target: PermanentHandle,
+        hand_owner: PlayerId,
+        trash_index: usize,
+        result_index: usize,
+        cost: u16,
+        effect_initiated: bool,
+    ) -> Option<PermanentHandle> {
+        use crate::enums::EffectTiming;
+        use crate::selection::TriggerSource;
+
+        if (target.index as usize) >= self.player(target.player).battle_area.len() {
+            return None;
+        }
+        if trash_index >= self.player(hand_owner).trash.len() {
+            return None;
+        }
+        if result_index >= self.player(hand_owner).hand.len() {
+            return None;
+        }
+
+        if cost > 0 && !self.pay_memory(cost) {
+            return None;
+        }
+
+        // Capture from_stack_top before the merge (for Digivolve event).
+        let from_stack_top = self
+            .player(target.player)
+            .battle_area
+            .get(target.index as usize)
+            .map(|p| p.top_card().card_id(&self.card_data).to_string())
+            .unwrap_or_default();
+
+        // Remove the trash material and the hand result. These live in distinct
+        // zones so index shifting between them is not a concern.
+        let trash_material = self.player_mut(hand_owner).trash.remove(trash_index);
+        let result_source = self.player_mut(hand_owner).hand.remove(result_index);
+
+        let top_card_id = result_source.card_id(&self.card_data).to_string();
+        let top_card_name = result_source.card_name(&self.card_data).to_string();
+
+        let turn = self.turn_count;
+        {
+            let perm = &mut self.player_mut(target.player).battle_area[target.index as usize];
+            perm.card_sources.push(trash_material);
+            perm.card_sources.push(result_source);
+            perm.turn_digivolved = turn;
+        }
+
+        let merged_handle = target;
+
+        let seq = self.next_event_seq();
+        self.events.push(crate::events::GameEvent::Digivolve {
+            seq,
+            player: merged_handle.player,
+            top_card_id,
+            card_name: top_card_name,
+            field_index: merged_handle.index,
+            from_stack_top,
+            was_dna: true,
+            was_blast_dna: false,
+            memory_paid: cost as i16,
+        });
+
+        self.enqueue_triggered(
+            EffectTiming::WhenDigivolving,
+            TriggerSource::Permanent(merged_handle),
+        );
+        self.drain_effect_queue_with_dna_origin(true);
+
+        self.enqueue_triggered(
+            EffectTiming::OnDnaDigivolve,
+            TriggerSource::Permanent(merged_handle),
+        );
+        self.drain_effect_queue_with_dna_origin(true);
+
+        let event_card = self
+            .player(merged_handle.player)
+            .battle_area
+            .get(merged_handle.index as usize)
+            .map(|perm| perm.top_card().handle())?;
+        self.enqueue_triggered(
+            EffectTiming::OnDigivolve,
+            TriggerSource::Digivolved {
+                player: merged_handle.player,
+                permanent: merged_handle,
+                card: event_card,
+                effect_initiated,
+                dna_origin: true,
+            },
+        );
+        self.drain_effect_queue();
+
+        // Reward-shaping counters — see `dna_digivolve_inner` for rationale.
+        if !effect_initiated {
+            self.n_digivolutions[merged_handle.player as usize] += 1;
+            self.n_dna_digivolutions[merged_handle.player as usize] += 1;
+        }
+
+        Some(merged_handle)
+    }
+
     /// Q3 (`G-DIGIVOLVE-TARGET-RESTRICTION`): a base permanent carrying one or
     /// more `CanOnlyDigivolveInto` modifiers may digivolve ONLY into a card whose
     /// name matches an allowed name. Returns `true` if `card` would be BLOCKED as
@@ -2506,7 +2729,13 @@ impl Game {
                 continue;
             };
             for effect in effects.iter() {
-                if !effect.declarative || !effect.linked {
+                // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's
+                // continuous DP / Security-Attack formula ESS reaches its HOST
+                // under BOTH the `.linked()` (BT25-101) and `.inherited()`
+                // conventions. A clause is `.linked()` XOR `.inherited()`, so
+                // accepting either cannot double-count; the `card_sources`
+                // walk above never touches `linked_cards`.
+                if !effect.declarative || !(effect.linked || effect.inherited) {
                     continue;
                 }
                 let Some(formula_fn) = (if security_attack {

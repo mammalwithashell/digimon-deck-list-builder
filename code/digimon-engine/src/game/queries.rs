@@ -116,6 +116,52 @@ impl Game {
                 return true;
             }
         }
+        // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's ESS keyword
+        // grant reaches its HOST. The `card_sources` walk above never scans
+        // `linked_cards`, so a linked Option's `<Piercing>` (BT25-100) or any
+        // other link-card keyword grant would not register at query time.
+        // Fold in every link card, treating it as an inherited-style source:
+        // both its PRINTED inherited keywords (`inherited_text`) and its
+        // `.inherited()` / `.linked()` `grant_keyword` clauses count. A single
+        // clause is `.inherited()` XOR `.linked()` (scope-driven), so accepting
+        // either cannot double-fire. (Materializing `grant_keyword` clauses also
+        // reach `modifiers.has_keyword` via `tick_declarative_effects`, checked
+        // first at the top of this fn; this pass additionally covers the
+        // non-materialized / printed-keyword path for link cards.)
+        let linked_ids: Vec<(usize, crate::card_source::CardHandle)> = perm
+            .linked_cards
+            .iter()
+            .map(|c| (c.data_index, c.handle()))
+            .collect();
+        for (data_index, linked_handle) in linked_ids {
+            if inherited_keywords(&self.card_data[data_index]).contains(&keyword) {
+                return true;
+            }
+            let linked_id = self.card_data[data_index].card_id.clone();
+            let Some(effects) = self.effects_for_card(&linked_id, linked_handle) else {
+                continue;
+            };
+            for effect in effects.iter() {
+                if !effect.declarative || !(effect.inherited || effect.linked) {
+                    continue;
+                }
+                if effect.granted_keyword != Some(keyword) {
+                    continue;
+                }
+                if let Some(cond) = &effect.condition {
+                    let ctx = crate::effect_context::EffectReadContext::new(
+                        self,
+                        linked_handle,
+                        Some(handle),
+                        handle.player,
+                    );
+                    if !cond(&ctx) {
+                        continue;
+                    }
+                }
+                return true;
+            }
+        }
         false
     }
 
@@ -321,7 +367,11 @@ impl Game {
                 continue;
             };
             for effect in effects.iter() {
-                if !effect.declarative || !effect.linked {
+                // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's static
+                // DP ESS reaches its host under BOTH the `.linked()` (BT25-101)
+                // and `.inherited()` conventions. XOR-scoped, so no double-count;
+                // the `card_sources` loop above never scans `linked_cards`.
+                if !effect.declarative || !(effect.linked || effect.inherited) {
                     continue;
                 }
                 if effect.materializes_declarative_state

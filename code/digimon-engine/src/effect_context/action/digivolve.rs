@@ -315,6 +315,18 @@ impl<'a> EffectContext<'a> {
             return None;
         }
 
+        // G-ENGINE-DNA-RECIPE-ENFORCEMENT (gap 2) — commit-time backstop. Unless
+        // the caller explicitly ignores requirements (DCGO cards that skip the
+        // jogressCondition), the {target_a, target_b} pair MUST satisfy the
+        // result's printed DNA recipe. An illegal pairing is rejected here with
+        // no state mutation. Mirrors DCGO `CanJogressFromTargetPermanents`
+        // guarding `PlayCardClass.PlayCard`.
+        if !ignore_requirements
+            && !self.dna_pair_satisfies_recipe(target_a, target_b, hand_owner, hand_index)
+        {
+            return None;
+        }
+
         let effective_cost: u16 = cost.max(0) as u16;
 
         // Memory: under ignore_requirements bypass the floor; otherwise let
@@ -335,6 +347,86 @@ impl<'a> EffectContext<'a> {
                 true,
             )
         }
+    }
+
+    /// Recipe oracle for the both-on-field DNA verb: do `target_a` and
+    /// `target_b` (battle-area permanents) satisfy the printed DNA recipe of
+    /// the result at `hand_owner`'s `hand_index`? DCGO
+    /// `CanJogressFromTargetPermanents`.
+    fn dna_pair_satisfies_recipe(
+        &self,
+        target_a: PermanentHandle,
+        target_b: PermanentHandle,
+        hand_owner: PlayerId,
+        hand_index: usize,
+    ) -> bool {
+        let Some(result) = self.game.player(hand_owner).hand.get(hand_index) else {
+            return false;
+        };
+        let Some(meta) = self.game.card_data.get(result.data_index) else {
+            return false;
+        };
+        let Some(perm_a) = self
+            .game
+            .player(target_a.player)
+            .battle_area
+            .get(target_a.index as usize)
+        else {
+            return false;
+        };
+        let Some(perm_b) = self
+            .game
+            .player(target_b.player)
+            .battle_area
+            .get(target_b.index as usize)
+        else {
+            return false;
+        };
+        crate::dna_digivolve::matching_dna_cost(meta, perm_a, perm_b, &self.game.card_data).is_some()
+    }
+
+    /// The printed DNA-digivolve memory cost the both-on-field pair `{target_a,
+    /// target_b}` would pay to DNA-digivolve into the hand card `from_hand`, or
+    /// `None` if the pair does not satisfy any of that card's printed DNA
+    /// requirements. This is what the DSL `cost: printed` lowering computes.
+    /// DCGO `condition.cost`.
+    pub fn printed_dna_cost_for_pair(
+        &self,
+        target_a: PermanentHandle,
+        target_b: PermanentHandle,
+        from_hand: CardHandle,
+    ) -> Option<i32> {
+        // Locate the result card + its hand owner.
+        for pid in 0..self.game.players.len() {
+            let player_id = pid as PlayerId;
+            if let Some(result) = self
+                .game
+                .player(player_id)
+                .hand
+                .iter()
+                .find(|c| c.handle() == from_hand)
+            {
+                let meta = self.game.card_data.get(result.data_index)?;
+                let perm_a = self
+                    .game
+                    .player(target_a.player)
+                    .battle_area
+                    .get(target_a.index as usize)?;
+                let perm_b = self
+                    .game
+                    .player(target_b.player)
+                    .battle_area
+                    .get(target_b.index as usize)?;
+                return crate::dna_digivolve::matching_dna_cost(
+                    meta,
+                    perm_a,
+                    perm_b,
+                    &self.game.card_data,
+                )
+                .map(|c| c.memory_cost as i32);
+            }
+        }
+        None
     }
 
     /// Effect-initiated DNA digivolve where ONE material is a battle-area
@@ -421,6 +513,17 @@ impl<'a> EffectContext<'a> {
             return None;
         }
 
+        // G-ENGINE-DNA-RECIPE-ENFORCEMENT (gap 2) — commit-time backstop for the
+        // hand-partner shape. Unless requirements are explicitly ignored, the
+        // {field target, hand partner} pair MUST satisfy the result's printed
+        // DNA recipe. DCGO `CanJogressFromTargetPermanent` after the partner is
+        // materialised.
+        if !ignore_requirements
+            && !self.field_and_card_satisfy_recipe(target, hand_owner, partner_index, result_index)
+        {
+            return None;
+        }
+
         let effective_cost: u16 = cost.max(0) as u16;
 
         if ignore_requirements && effective_cost > 0 {
@@ -445,6 +548,83 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// Recipe oracle for the field+card (hand or trash) DNA shape: does the
+    /// battle-area permanent `field` plus the card at `card_owner`'s
+    /// `card_index` (in `zone`) satisfy the printed DNA recipe of the result at
+    /// `card_owner`'s `result_index` (a hand card)? DCGO
+    /// `CanJogressFromTargetPermanent`.
+    fn field_and_card_satisfy_recipe(
+        &self,
+        field: PermanentHandle,
+        card_owner: PlayerId,
+        partner_hand_index: usize,
+        result_hand_index: usize,
+    ) -> bool {
+        let hand = &self.game.player(card_owner).hand;
+        let Some(result) = hand.get(result_hand_index) else {
+            return false;
+        };
+        let Some(partner) = hand.get(partner_hand_index) else {
+            return false;
+        };
+        let Some(result_meta) = self.game.card_data.get(result.data_index) else {
+            return false;
+        };
+        let Some(partner_meta) = self.game.card_data.get(partner.data_index) else {
+            return false;
+        };
+        let Some(field_perm) = self
+            .game
+            .player(field.player)
+            .battle_area
+            .get(field.index as usize)
+        else {
+            return false;
+        };
+        crate::dna_digivolve::matching_dna_cost_perm_and_card(
+            result_meta,
+            field_perm,
+            partner_meta,
+            &self.game.card_data,
+        )
+        .is_some()
+    }
+
+    /// The printed DNA cost the {field target, hand partner} pair would pay to
+    /// DNA-digivolve into `result_from_hand`. What the DSL `cost: printed`
+    /// lowering computes for the hand-partner verb. DCGO `condition.cost`.
+    pub fn printed_dna_cost_for_hand_partner(
+        &self,
+        target: PermanentHandle,
+        hand_partner: CardHandle,
+        result_from_hand: CardHandle,
+    ) -> Option<i32> {
+        // Both cards live in the SAME player's hand; find that player.
+        for pid in 0..self.game.players.len() {
+            let player_id = pid as PlayerId;
+            let hand = &self.game.player(player_id).hand;
+            let partner = hand.iter().find(|c| c.handle() == hand_partner);
+            let result = hand.iter().find(|c| c.handle() == result_from_hand);
+            if let (Some(partner), Some(result)) = (partner, result) {
+                let result_meta = self.game.card_data.get(result.data_index)?;
+                let partner_meta = self.game.card_data.get(partner.data_index)?;
+                let field_perm = self
+                    .game
+                    .player(target.player)
+                    .battle_area
+                    .get(target.index as usize)?;
+                return crate::dna_digivolve::matching_dna_cost_perm_and_card(
+                    result_meta,
+                    field_perm,
+                    partner_meta,
+                    &self.game.card_data,
+                )
+                .map(|c| c.memory_cost as i32);
+            }
+        }
+        None
+    }
+
     pub fn effect_initiated_dna_digivolve_with_provenance(
         &mut self,
         target_a: PermanentHandle,
@@ -462,6 +642,190 @@ impl<'a> EffectContext<'a> {
             ignore_requirements,
         )?;
         Some((permanent, token))
+    }
+
+    /// G-ENGINE-DNA-TRASH-MATERIAL (gap 3) — effect-initiated DNA digivolve
+    /// where ONE material is a battle-area permanent (`field_partner`), the
+    /// OTHER material lives in the controller's **trash** (`trash_partner`),
+    /// and the merged permanent is topped with `result_from_hand` (a **hand**
+    /// card). BT18-015 / BT18-073 `[On Deletion]` shape.
+    ///
+    /// DCGO materialises the trash material via `CreateNewPermanent` (a pure
+    /// placement that fires NO `[On Play]` / `OnEnterField`) then jogress-merges
+    /// with `payCost: true`. We reproduce that observer-firing surface exactly:
+    /// the trash material moves straight into the merged stack (never an
+    /// independently-played permanent), so only the merged TOP's DNA triggers
+    /// fire — see `Game::dna_digivolve_trash_partner_inner`.
+    ///
+    /// Composes with gaps 1+2: unless `ignore_requirements`, the {field, trash}
+    /// pair must satisfy the result's printed DNA recipe (else `None`), and the
+    /// caller passes the result's printed DNA cost (via
+    /// `printed_dna_cost_for_field_trash_pair`).
+    ///
+    /// ## Defensive validation
+    ///
+    /// Returns `None` if the field target is out of range, `trash_partner` /
+    /// `result_from_hand` are not both in the SAME player's zones (trash / hand
+    /// respectively), the owner has `CannotDigivolveDigimonByEffect`, the recipe
+    /// is unsatisfied (and requirements not ignored), or `cost > 0` and the
+    /// controller cannot pay.
+    pub fn effect_initiated_dna_digivolve_trash_partner(
+        &mut self,
+        field_partner: PermanentHandle,
+        trash_partner: CardHandle,
+        result_from_hand: CardHandle,
+        cost: i32,
+        ignore_requirements: bool,
+    ) -> Option<PermanentHandle> {
+        if (field_partner.index as usize)
+            >= self.game.player(field_partner.player).battle_area.len()
+        {
+            return None;
+        }
+
+        // The trash material and the hand result must belong to the SAME player.
+        let mut owner: Option<PlayerId> = None;
+        let mut trash_index: Option<usize> = None;
+        let mut result_index: Option<usize> = None;
+        for pid in 0..self.game.players.len() {
+            let player = &self.game.players[pid];
+            let t = player
+                .trash
+                .iter()
+                .position(|c| c.handle() == trash_partner);
+            let r = player
+                .hand
+                .iter()
+                .position(|c| c.handle() == result_from_hand);
+            if let (Some(t), Some(r)) = (t, r) {
+                owner = Some(pid as PlayerId);
+                trash_index = Some(t);
+                result_index = Some(r);
+                break;
+            }
+        }
+        let (owner, trash_index, result_index) = (owner?, trash_index?, result_index?);
+
+        if self
+            .game
+            .modifiers
+            .player_has(owner, ModifierType::CannotDigivolveDigimonByEffect)
+        {
+            return None;
+        }
+
+        // Recipe backstop (gap 2): the {field, trash} pair must satisfy the
+        // result's printed DNA recipe unless requirements are ignored.
+        if !ignore_requirements
+            && !self.field_and_trash_satisfy_recipe(
+                field_partner,
+                owner,
+                trash_index,
+                result_index,
+            )
+        {
+            return None;
+        }
+
+        let effective_cost: u16 = cost.max(0) as u16;
+
+        if ignore_requirements && effective_cost > 0 {
+            self.game.pay_memory_unchecked(effective_cost);
+            self.game.dna_digivolve_trash_partner_inner(
+                field_partner,
+                owner,
+                trash_index,
+                result_index,
+                0,
+                true,
+            )
+        } else {
+            self.game.dna_digivolve_trash_partner_inner(
+                field_partner,
+                owner,
+                trash_index,
+                result_index,
+                effective_cost,
+                true,
+            )
+        }
+    }
+
+    /// Recipe oracle for the field+trash DNA shape (gap 3): does `field` plus
+    /// the trash card at `owner`'s `trash_index` satisfy the printed DNA recipe
+    /// of the result at `owner`'s `result_index` (a hand card)?
+    fn field_and_trash_satisfy_recipe(
+        &self,
+        field: PermanentHandle,
+        owner: PlayerId,
+        trash_index: usize,
+        result_hand_index: usize,
+    ) -> bool {
+        let player = self.game.player(owner);
+        let Some(result) = player.hand.get(result_hand_index) else {
+            return false;
+        };
+        let Some(trash_material) = player.trash.get(trash_index) else {
+            return false;
+        };
+        let Some(result_meta) = self.game.card_data.get(result.data_index) else {
+            return false;
+        };
+        let Some(trash_meta) = self.game.card_data.get(trash_material.data_index) else {
+            return false;
+        };
+        let Some(field_perm) = self
+            .game
+            .player(field.player)
+            .battle_area
+            .get(field.index as usize)
+        else {
+            return false;
+        };
+        crate::dna_digivolve::matching_dna_cost_perm_and_card(
+            result_meta,
+            field_perm,
+            trash_meta,
+            &self.game.card_data,
+        )
+        .is_some()
+    }
+
+    /// The printed DNA cost the {field target, trash partner} pair would pay to
+    /// DNA-digivolve into `result_from_hand`. What the DSL `cost: printed`
+    /// lowering computes for the trash-partner verb. DCGO `condition.cost`.
+    pub fn printed_dna_cost_for_field_trash_pair(
+        &self,
+        field: PermanentHandle,
+        trash_partner: CardHandle,
+        result_from_hand: CardHandle,
+    ) -> Option<i32> {
+        for pid in 0..self.game.players.len() {
+            let player_id = pid as PlayerId;
+            let player = self.game.player(player_id);
+            let trash_material = player
+                .trash
+                .iter()
+                .find(|c| c.handle() == trash_partner);
+            let result = player.hand.iter().find(|c| c.handle() == result_from_hand);
+            if let (Some(trash_material), Some(result)) = (trash_material, result) {
+                let result_meta = self.game.card_data.get(result.data_index)?;
+                let trash_meta = self.game.card_data.get(trash_material.data_index)?;
+                let field_perm = self
+                    .game
+                    .player(field.player)
+                    .battle_area
+                    .get(field.index as usize)?;
+                return crate::dna_digivolve::matching_dna_cost_perm_and_card(
+                    result_meta,
+                    field_perm,
+                    trash_meta,
+                    &self.game.card_data,
+                )
+                .map(|c| c.memory_cost as i32);
+            }
+        }
+        None
     }
 
     /// G-DSL-EOT-DNA-INLINE — surface an inline DNA digivolve choice at

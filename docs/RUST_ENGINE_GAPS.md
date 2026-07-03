@@ -1344,6 +1344,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Related:** The `[Link]` subsystem (now wired — `attach_linked_card` + `OnLink`/`WhenWouldLink` dispatch in `game_actions.rs`) is the structural neighbor; App Fuse is a *field↔hand Digimon swap*, a different operation from link attachment and from DigiXros material assembly.
 
 ### `OnDiscardHand` / "when your hand is trashed from" trigger timing + "played by an effect" condition  [G-ENGINE-ON-DISCARD-HAND]
+- **Status: RESOLVED (2026-07-03, trigger-timings round 2).** `EffectTiming::OnDiscardHand` + `TriggerSource::HandDiscarded{player, cause_controller}`: batch-coalesced once per affected owner at the outer drain boundary (DCGO DiscardHands semantics); draw/mulligan/rule discards never fire it. Predicates `event_discard_player`, `event_caused_by_own_effect` (ST16-14), and the separate `played_by_effect` (BT25-080 tail, reads PlaySource::ByEffect). Tests: tests/on_discard_hand.rs (8). Driver YAML intentionally left to card authoring.
 - **Severity:** 🔴 BLOCKED — net-new trigger timing + dispatch hook, plus a new play-context condition. Not expressible by composing existing DSL vocabulary.
 - **Discovered in:** BT25 "titan" slice (2026-06-06). **Canonical home for this gap** (formerly also logged in `qa/archetype-qa/engine-gaps.md`, which now cross-refs here — fix-dsl-substrate-rot-and-bugs §6.4).
 - **Card(s):** **BT25-080 Witchmon** — inherited `[All Turns][Once Per Turn] When your hand is trashed from, if this Digimon has the [Titan] trait, delete 1 of your opponent's level 4 or lower Digimon`. DCGO `BT25_080.cs` consumes `EffectTiming.OnDiscardHand` via `CardEffectCommons.CanTriggerOnTrashHand(...)`. The hash string (`BT25_029_AT_ESS`) indicates **BT25-029** shares the same trigger. **BT25-084 Titamon** — inherited `[All Turns] When your hand is trashed from, delete 1 of your opponent's lowest DP Digimon` (DCGO `BT25_084.cs`, same `OnDiscardHand` ActivateClass; clause 3 omitted → BT25-084 verdict PARTIAL). Unblocks ≥3 cards (BT25-080 / BT25-029 / BT25-084).
@@ -1354,6 +1355,7 @@ Items where the existing primitive **likely works** but no behavioral test cover
 - **Related:** sibling `OnDigivolutionCardTrashed` / `OnOptionTrashed` / `OnLinkedCardTrashed` timings (this is the hand→trash counterpart); `PlaySource::ByEffect` already threaded through the play pipeline (the `played_by_effect` predicate just needs to read it).
 
 ### Link-card inherited (ESS) effects are not applied to the host  [G-LINK-INHERITED-ESS]
+- **Status: RESOLVED (2026-07-03, link-economy round 2).** linked_cards folded into all five effect-source collectors (has_keyword gained a linked pass; materialize_declaratives_full / live_declarative_formula_sum / static_dp_aura_bonus / enqueue_from_permanent widened to effect.linked || effect.inherited; scope conventions: linked XOR inherited, debug_assert-enforced; no double-count). bt25_100_grants_inherited_piercing_to_host un-ignored and green.
 - **Severity:** 🟡 PARTIAL — the link substrate exists (cards attach as `Permanent.linked_cards`, link/unlink/trash cascades fire `OnLinkedCardTrashed`), but a link card's **inherited effects do not flow onto its host Digimon**.
 - **Discovered in:** orphan-staples-6 slice (2026-06-06) implementing BT25-100 Iron Slash; its inherited `<Piercing>` does not appear on the Digimon hosting the linked Option.
 - **Card(s):** BT25-100 Iron Slash (inherited `<Piercing>`), BT25-093 Ignition Flare (inherited `[When Attacking][OPT]` delete), BT25-101 Divine Arms Version Ω (inherited `<Security A. +1>` / `<Reboot>`), and broadly every BT25 TS link-Option whose link-card half (ESS) grants a keyword or installs a triggered effect on the host. DCGO models these as link-ESS via `SetIsLinkedEffect(true)` clauses that fire while the card is a link card on a host.
@@ -1676,12 +1678,14 @@ Digivolving] trims "both players' security stacks so they have 3 cards left" —
 - **Tests:** `tests/cards_behavioral/app_fuse_primitive.rs` (8 primitive tests) + `tests/app_fuse_commit.rs` (zone-parameterized commit) + per-card app-fuse tests on the 5 cards. Spec: `docs/superpowers/specs/2026-06-13-effect-initiated-app-fuse-design.md`; plan: `docs/superpowers/plans/2026-06-13-effect-initiated-app-fuse.md`.
 
 ## Effect-initiated DNA digivolve does not pay the result card's printed DNA cost  [G-ENGINE-DNA-PRINTED-COST]
+**Status: RESOLVED (2026-07-03, DNA workstream).** `lower_dna_cost` routes `cost: printed` through printed-cost lookup (pair/hand-partner/field-trash variants); cost 0/free users unaffected. Tests: tests/dna_printed_cost_dsl.rs (4).
 Surfaced by: EX6-072 Mega Digimon Assembly! (migrate-examples-to-dsl, 2026-06-14); PRE-EXISTING, shared by EX3-008 (`cost: printed`) and BT17-095.
 `effect_initiated_dna_digivolve` / `effect_initiated_dna_digivolve_hand_partner` take a `cost: CostDelta`; `cost: printed` lowers via `lower_cost_delta` to `Reduce(0)` (play_digivolve.rs — "DNA printed-cost lookup is not available here"), so the result card's printed `dna_costs` are never deducted from memory. DCGO passes `payCost=true`.
 Fix: a `cost: printed`/`dna_printed` that resolves the result card's printed DNA digivolution cost and pays it for the effect-initiated DNA verbs.
 Status: open (pre-existing; affects all effect-initiated DNA cards).
 
 ## Effect-initiated DNA digivolve does not validate the result card's printed recipe  [G-ENGINE-DNA-RECIPE-ENFORCEMENT]
+**Status: RESOLVED (2026-07-03, DNA workstream).** Commit-time recipe backstop on all three effect-initiated DNA verbs (both orderings, slash-colours) + mask-level exclusion already via dna_pair_can_reach_hand_card (pinned). Also fixed the latent card_store fingerprint bug (dna_costs content now hashed).
 Surfaced by: EX6-072; PRE-EXISTING, shared by BT17-095 / EX3-008.
 `Game::dna_digivolve_hand_partner_inner` (game/mod.rs:1895) merges the two chosen materials unconditionally — it does NOT validate them against the result card's printed DNA recipe (`jogressCondition`). DCGO gates with `CardSource.CanJogressFromTargetPermanents` (each material vs the result's `jogressCondition.elements[i].EvoRootCondition`). DSL selection filters are static and cannot depend on the dynamically-chosen result, so enforcement must live in the engine primitive (validate/abort illegal pairings; ideally restrict the candidate set).
 Status: open (pre-existing; affects effect-initiated DNA cards).
@@ -1869,6 +1873,7 @@ Existing entries reconfirmed with NEW drivers (append, no re-file):
 - **Data fix:** BT18-073 / BT19-065 print `(Rule) Trait: Has [Composite]` — reconcile into `card_overrides.json` (API-dropped rule trait).
 
 ### Effect-initiated DNA digivolve with a TRASH material (field + trash pair, result card from hand)  [G-ENGINE-DNA-TRASH-MATERIAL]
+- **Status: RESOLVED (2026-07-03, DNA workstream).** `effect_initiated_dna_digivolve_trash_partner` -> `Game::dna_digivolve_trash_partner_inner`: trash material moves STRAIGHT into the merged stack (no independent play, no OnPlay — faithful to DCGO CreateNewPermanent); atomic + clone-safe. Composes with printed-cost + recipe enforcement. BT18-015/BT18-073 shapes proven via fixtures.
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Millenniummon (2026-07-02)
 - **Card(s):** BT18-015 Kimeramon ("[On Deletion] 1 of your [Machinedramon] and 1 [Kimeramon] in the trash may DNA digivolve into [Millenniummon] in the hand"), BT18-073 Machinedramon ("[On Deletion] 1 of your [Kimeramon] in play and 1 [Machinedramon] in the trash may DNA digivolve into [Millenniummon] in the hand")
@@ -1890,6 +1895,7 @@ Existing entries reconfirmed with NEW drivers (append, no re-file):
 - **Related:** G-DSL-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT (BT13-103 superset); G-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT (GAPS.md:1527).
 
 ### Predicate: candidate color ∈ carrier's digivolution-source color set  [G-DSL-COLOR-MATCHES-OWN-SOURCE-STACK]
+- **Status: RESOLVED (2026-07-03).** `color_matches_own_source_stack: {of: self}` — non-flipped source color set (shared extraction non_flipped_source_colors, also feeding the branch gate). Tests: tests/dsl/kimeramon_color_mass_delete.rs.
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Millenniummon (2026-07-02)
 - **Card(s):** EX9-074 Kimeramon (≤5-colour branch: "delete 1 of your opponent's Digimon with the same color as any of this Digimon's digivolution cards")
@@ -1900,6 +1906,7 @@ Existing entries reconfirmed with NEW drivers (append, no re-file):
 - **Related:** `color_matches_returned_card` (analogous result-log leaf); `DistinctColorsCount` formula (same extraction).
 
 ### Mass per-color deletion: delete 1 opponent Digimon of each distinct color present  [G-DSL-DELETE-ONE-PER-DISTINCT-OPPONENT-COLOR]
+- **Status: RESOLVED (2026-07-03).** Step `delete_one_per_opponent_color` on a new ResumeFrame::PerColorDeleteStep (per-color mandatory picks, already-picked excluded, batch delete via delete_permanents_batch, clone-safe test). EX9-074 branch B expressible; branch switch via the distinct-color gate.
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Millenniummon (2026-07-02)
 - **Card(s):** EX9-074 Kimeramon (6+-colour branch: "instead delete 1 of each of your opponent's Digimon with different colors"; official Q&A: one mandatory pick per color present, no repeats, batch delete)
@@ -1974,6 +1981,7 @@ Third and final wave (`qa/archetype-qa/store-champs-june-2026-scoping.md`). Fix 
 - Verify-at-implementation: Scapegoat-via-aura `grant_keyword` (BT25-097) — confirm aura grant installs the WhenWouldBeDeleted replacement; P-213's effect-driven optional attack step; BT8-107's `level_lte_binding` widening.
 
 ### Grant a triggered effect whose body declares an attack (selection-driving granted body)  [G-ENGINE-GRANTED-EFFECT-SELECTION-BODY]
+- **Status: RESOLVED as ALREADY-CLOSED (2026-07-03).** The v1 limitation note was stale — QueuedEffect::granted_effect_id already composes granted-body selections. BT23-032's shape proven: granted force_attack parks a mandatory attack at the opponent's start-of-main via the BeginAttack resume frame (clone-safe test), expiry drains the grant. Stale comment in grant_triggered.rs replaced. Tests: tests/dsl/granted_effect_selection_body.rs (4).
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** TS Angels (2026-07-02)
 - **Card(s):** BT23-032 Shakkoumon ("[When Digivolving] Until your opponent's turn ends, give 1 of their Digimon '[Start of Your Main Phase] This Digimon attacks.'")

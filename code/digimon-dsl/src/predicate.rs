@@ -64,6 +64,19 @@ pub struct PredicateSpec {
     /// `color_matches_binding`. G-RETURNED-CARD-COLOR-BINDING (driver EX10-068).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub color_matches_returned_card: Option<bool>,
+    /// True when the candidate card shares ≥1 color with the effect CARRIER's
+    /// NON-FLIPPED digivolution-source color set (the colors printed on the
+    /// carrier's face-up digivolution cards, excluding the carrier's own top
+    /// card). Mirrors DCGO `EX9_074.cs`:
+    /// `card.PermanentOfThisCard().DigivolutionCards.Filter(!IsFlipped)
+    /// .SelectMany(CardColors).Distinct()`. Authored as
+    /// `color_matches_own_source_stack: { of: self }` — `of: self` marks the
+    /// carrier (the effect's `source_permanent`); the scope is fixed there
+    /// (there is no "opponent's source stack" reading in the printed corpus).
+    /// The candidate side is kind-aware exactly like `color_matches_binding`.
+    /// G-DSL-COLOR-MATCHES-OWN-SOURCE-STACK. Driver: EX9-074 Kimeramon.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub color_matches_own_source_stack: Option<SourceStackScope>,
     #[serde(
         skip_serializing_if = "Option::is_none",
         alias = "trait",
@@ -545,6 +558,32 @@ pub struct PredicateSpec {
     /// relative to the observer (`you` / `opponent`). See G-ON-ADD-TO-HAND-OBSERVER.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_add_to_hand_player: Option<PlayerRef>,
+    /// For `on_ally_won_battle` observers: the battle WINNER's controller must
+    /// match this player-ref, resolved relative to the observer (`you` /
+    /// `opponent`). Reads `TriggerContext.battle_winner`. Never matches on a
+    /// tie (no winner). G-DSL-BATTLE-WINNER-BOARDWIDE.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_winner_owner: Option<PlayerRef>,
+    /// For `on_ally_won_battle` observers: the battle winner's top card must
+    /// carry this trait (case-insensitive). G-DSL-BATTLE-WINNER-BOARDWIDE.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_winner_trait_has: Option<String>,
+    /// For `on_discard_hand` observers: the player whose HAND was trashed
+    /// (`TriggerContext.discard_hand_player`) must match this player-ref
+    /// ("your hand is trashed from" ⇒ `you`). G-ENGINE-ON-DISCARD-HAND.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_discard_player: Option<PlayerRef>,
+    /// For `on_discard_hand` observers: true when the causing effect belongs to
+    /// the OBSERVER ("when one of YOUR effects trashes a card in your hand",
+    /// ST16-14 Matt Ishida). Compares `discard_cause_controller` to the
+    /// observer's controller. G-ENGINE-ON-DISCARD-HAND.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_caused_by_own_effect: Option<bool>,
+    /// True when the permanent carrying this effect was played by an effect
+    /// (`PlaySource::ByEffect`) — read at the OnPlay firing. Models BT25-080's
+    /// "if played by an effect, …" main-clause tail. G-ENGINE-ON-DISCARD-HAND.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub played_by_effect: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_is_player: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -1038,6 +1077,26 @@ pub enum EventCauseSpec {
 pub enum PlayerRefSelector {
     Player(PlayerRef),
     Scoped { of: PlayerRef },
+}
+
+/// Scope selector for `color_matches_own_source_stack`. The only reading in the
+/// printed corpus (EX9-074 Kimeramon) is the effect carrier's OWN source stack,
+/// so the sole variant is `SelfCarrier`, authored as `{ of: self }`. Kept as an
+/// enum (rather than a bare bool) so a future "opponent's source stack" reading
+/// can be added without a schema break.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(rename_all = "snake_case")]
+pub enum SourceStackScopeOf {
+    /// `of: self` — the effect's own carrier permanent (`source_permanent`).
+    #[serde(rename = "self")]
+    SelfCarrier,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(untagged)]
+pub enum SourceStackScope {
+    /// `{ of: self }` — the carrier's own non-flipped source stack.
+    Scoped { of: SourceStackScopeOf },
 }
 
 impl PlayerRefSelector {

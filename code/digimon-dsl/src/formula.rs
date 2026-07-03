@@ -232,6 +232,19 @@ pub enum PerSelector {
     /// opponent } }, delta: 1000 }`. G-DSL-FORMULA-PLAYER-MEMORY (driver
     /// BT25-086 / G-DSL-FORMULA-OPPONENT-MEMORY).
     PlayerMemory { of: PlayerRef },
+    /// Total number of **link cards** across every one of `of`'s battle-area
+    /// Digimon — `Σ over of.battle_area Digimon of permanent.linked_cards.len()`.
+    /// YAML form: `{ own_link_card_count: { of: you } }`. Drives BT25-075
+    /// Vulcanusmon's "for each of your link cards, ＜De-Digivolve 1＞ all of your
+    /// opponent's Digimon" — DCGO reads
+    /// `card.Owner.GetBattleAreaDigimons().Map(p => p.LinkedCards).Flat().Count()`.
+    /// Composes inside `base_per_delta`. G-DSL-FORMULA-OWN-LINK-CARD-COUNT.
+    OwnLinkCardCount { of: PlayerRef },
+    /// Number of link cards on the effect carrier's OWN permanent
+    /// (`ctx.source_permanent.linked_cards.len()`). YAML form:
+    /// `source_link_card_count`. The per-host sibling of `own_link_card_count`.
+    /// G-DSL-LINK-N-CARDS-PER-HOST (formula facet).
+    SourceLinkCardCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -309,6 +322,16 @@ impl Serialize for PerSelector {
                 outer.serialize_entry("player_memory", &PlayerMemoryPayload { of: *of })?;
                 outer.end()
             }
+            Self::OwnLinkCardCount { of } => {
+                let mut outer = serializer.serialize_map(Some(1))?;
+                #[derive(Serialize)]
+                struct OwnLinkPayload {
+                    of: PlayerRef,
+                }
+                outer.serialize_entry("own_link_card_count", &OwnLinkPayload { of: *of })?;
+                outer.end()
+            }
+            Self::SourceLinkCardCount => serializer.serialize_str("source_link_card_count"),
         }
     }
 }

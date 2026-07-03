@@ -491,6 +491,7 @@ pub(crate) fn body_first_step_installs_selection(body: &[CompiledStep]) -> bool 
     matches!(
         first,
         CompiledStep::TrashBottomFaceDownSourceUnderTamer { .. }
+            | CompiledStep::TrashLinkCardOfOwnDigimon { .. }
             | CompiledStep::SelectHand { .. }
             | CompiledStep::SelectTrash { .. }
             | CompiledStep::SelectReveal { .. }

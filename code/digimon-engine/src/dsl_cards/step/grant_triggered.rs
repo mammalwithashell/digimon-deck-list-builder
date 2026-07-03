@@ -5,12 +5,31 @@
 //! with a body closure that executes the compiled-step list via
 //! `run_steps`. DCGO `AddSkillClass.cs` analog.
 //!
-//! v1 limitation: granted bodies fire inline AFTER the carrier's
-//! printed observers drain (per Phase 4b's drain-hook). Bodies that
-//! install a `PendingSelection` will not compose with the surrounding
-//! firing sequence — the proper shape requires extending `QueuedEffect`
-//! with a granted-effect discriminator. EX1-068 Ice Wall! and similar
-//! "lose N memory" / "gain X" non-selection bodies work today.
+//! Selection-driving bodies (RESOLVED — `G-ENGINE-GRANTED-EFFECT-SELECTION-BODY`,
+//! round-2 gap closure): the old v1 note here claimed a granted body installing a
+//! `PendingSelection` "will not compose … requires extending `QueuedEffect` with a
+//! granted-effect discriminator". That extension LANDED with the Phase 4i queue
+//! dispatch (`QueuedEffect::granted_effect_id` at `effect_queue.rs`): granted
+//! bodies now ride the standard `QueuedEffect` queue and PARK selections exactly
+//! like printed effects, so the drain stops (`drain_effect_queue_inner` returns
+//! while `pending_selection.is_some()`), the player resolves, and the body's
+//! selection continues. The BT23-032 / EX10-034 shape — a granted
+//! `[Start of Your Main Phase] force_attack: { attacker: carrier }` (a MANDATORY
+//! attack, DCGO `SetCanNotSelectNotAttack`) — parks correctly, COMPOSES across
+//! multiple granted bodies (a `TriggerOrder` first, then each parks in turn), is
+//! CLONE-SAFE (the selection carries a `BeginAttack` resume frame — pure data —
+//! so a forked `Game` resolves it via the resumable VM, never the panic-stub
+//! closure; rule 28), and is cleaned up on expiry (`end_of_opponents_turn` drains
+//! the grant + prunes the body registry). Proof:
+//! `tests/dsl/granted_effect_selection_body.rs`. EX1-068 Ice Wall! and other
+//! non-selection bodies ("lose N memory" / "gain X") continue to work as before.
+//!
+//! Clone-safety contract (rule 28): the granted body itself is an `Arc<dyn Fn>`
+//! that clones as an Arc pointer, and any selection it installs must be driven
+//! through the resumable VM (a `ResumeFrame`) — which every DSL selection step
+//! (`force_attack`, `select_*`, …) already does. A granted body must NOT install
+//! a bespoke closure-only `pending_selection` with no resume frame, or a cloned
+//! `Game` would hit the panic-stub on resolve.
 
 use std::sync::Arc;
 

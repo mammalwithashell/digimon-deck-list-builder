@@ -708,3 +708,149 @@ fn modifier_formula_binding_dp_uses_current_step_bindings() {
         6000
     );
 }
+
+// ── G-DSL-FORMULA-OWN-LINK-CARD-COUNT (BT25-075 Vulcanusmon) ──────────────
+//
+// "for each of your link cards, ＜De-Digivolve 1＞ all of your opponent's
+// Digimon" — the magnitude is the TOTAL count of link cards across every one of
+// the controller's battle-area Digimon (DCGO:
+// `card.Owner.GetBattleAreaDigimons().Map(p => p.LinkedCards).Flat().Count()`).
+
+/// A link card fixture — a plain Option, attached via `push_linked_owned`.
+fn link_option(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Option;
+    c.dp = None;
+    c.level = None;
+    c
+}
+
+#[test]
+fn own_link_card_count_formula_sums_across_all_own_digimon() {
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon_card("SRC", 1000))
+        .add_card(digimon_card("OWN-A", 3000))
+        .add_card(digimon_card("OWN-B", 4000))
+        .add_card(digimon_card("OPP", 5000))
+        .add_card(link_option("LINK"))
+        .build();
+    let source = runner.place_on_field(0, "SRC", None);
+    let own_a = runner.place_on_field(0, "OWN-A", None);
+    let own_b = runner.place_on_field(0, "OWN-B", None);
+    let opp = runner.place_on_field(1, "OPP", None);
+
+    // 2 link cards on OWN-A, 1 on OWN-B, 0 on SRC → total for player 0 = 3.
+    // A link card on the OPPONENT's Digimon must NOT be counted for `of: you`.
+    runner.push_linked_owned(own_a, "LINK", 0);
+    runner.push_linked_owned(own_a, "LINK", 0);
+    runner.push_linked_owned(own_b, "LINK", 0);
+    runner.push_linked_owned(opp, "LINK", 1);
+
+    let src_card = runner.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+    let ctx = EffectContext::new(&mut runner.game, src_card, Some(source), 0);
+
+    // `base_per_delta` with `own_link_card_count { of: you }`, delta 1 → the
+    // raw De-Digivolve-repeat magnitude.
+    let you = CompiledFormula::BasePerDelta {
+        base: 0,
+        per: CompiledPerSelector::OwnLinkCardCount {
+            of: CompiledPlayerRef::You,
+        },
+        delta: 1,
+    };
+    assert_eq!(formula_eval::evaluate(&you, &ctx, source), 3);
+
+    // `of: opponent` counts only the single link card on the opponent's board.
+    let opponent = CompiledFormula::BasePerDelta {
+        base: 0,
+        per: CompiledPerSelector::OwnLinkCardCount {
+            of: CompiledPlayerRef::Opponent,
+        },
+        delta: 1,
+    };
+    assert_eq!(formula_eval::evaluate(&opponent, &ctx, source), 1);
+}
+
+#[test]
+fn source_link_card_count_formula_reads_carrier_only() {
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon_card("SRC", 1000))
+        .add_card(digimon_card("OTHER", 3000))
+        .add_card(link_option("LINK"))
+        .build();
+    let source = runner.place_on_field(0, "SRC", None);
+    let other = runner.place_on_field(0, "OTHER", None);
+
+    // 2 link cards on the CARRIER (SRC), 5 on another own Digimon — the per-host
+    // selector reads only the carrier.
+    runner.push_linked_owned(source, "LINK", 0);
+    runner.push_linked_owned(source, "LINK", 0);
+    for _ in 0..5 {
+        runner.push_linked_owned(other, "LINK", 0);
+    }
+
+    let src_card = runner.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+    let ctx = EffectContext::new(&mut runner.game, src_card, Some(source), 0);
+    let formula = CompiledFormula::BasePerDelta {
+        base: 0,
+        per: CompiledPerSelector::SourceLinkCardCount,
+        delta: 1,
+    };
+    assert_eq!(formula_eval::evaluate(&formula, &ctx, source), 2);
+}
+
+/// End-to-end gate shape: `de_digivolve` consumes `own_link_card_count` as its
+/// magnitude (`amount:`). Proves the formula composes into the mass-De-Digivolve
+/// clause BT25-075 needs (does NOT author the card).
+#[test]
+fn de_digivolve_amount_compiles_from_own_link_card_count_formula() {
+    let yaml = r#"
+card: T-G7-OWN-LINK-DEDIGI
+name: Own Link Card Count De-Digivolve
+kind: option
+color: [black]
+cost: 5
+effects:
+  - when: main_from_hand
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon"
+      - de_digivolve:
+          target: victim
+          amount:
+            base: 0
+            per:
+              own_link_card_count: { of: you }
+            delta: 1
+"#;
+    let compiled = compile_yaml(yaml);
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let dedigi = triggered
+        .process
+        .iter()
+        .find_map(|s| match s {
+            CompiledStep::DeDigivolve { amount_fn, .. } => Some(amount_fn),
+            _ => None,
+        })
+        .expect("de_digivolve step present");
+    assert!(
+        matches!(
+            dedigi,
+            Some(CompiledFormula::BasePerDelta {
+                per: CompiledPerSelector::OwnLinkCardCount {
+                    of: CompiledPlayerRef::You
+                },
+                ..
+            })
+        ),
+        "de_digivolve amount lowered to the own_link_card_count formula, got {dedigi:?}"
+    );
+}
