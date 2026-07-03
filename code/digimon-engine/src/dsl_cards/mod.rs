@@ -306,20 +306,50 @@ impl CardEffect for DslCardEffect {
                                 .then_some(digimon_dsl::compiled::CompiledFormula::Literal(0))
                         });
                         if let Some(amount_formula) = amount_formula {
-                            out.push(lower_cost_reduction::lower_with_formula(
-                                card,
-                                *scope,
-                                active_when.clone(),
-                                condition.clone(),
-                                *once_per_turn,
-                                Some(amount_formula),
-                                pay_cost.clone(),
-                                self.raw.clone(),
-                                *optional,
-                                *when_playing_this,
-                                when_any_ally_played.clone(),
-                                when_any_ally_digivolves_into.clone(),
-                            ));
+                            // `scope: both` on a cost reducer must emanate from
+                            // BOTH the active-top (FaceUp) and digivolution-source
+                            // (Inherited) positions — a card whose reducer reads
+                            // "[All Turns] … reduce … by N" applies whether it is
+                            // the top card or a source beneath a later digivolution.
+                            // Mirrors the FloodGate `Both → [FaceUp, Inherited]`
+                            // expansion below. When the clause is once-per-turn, the
+                            // two copies MUST share a single OPT accounting slot
+                            // (DCGO `SetHashString`) so the card cannot reduce a cost
+                            // once as a top and again the same turn as a source.
+                            // G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER.
+                            let scopes: &[CompiledScope] = match scope {
+                                CompiledScope::Both => {
+                                    &[CompiledScope::FaceUp, CompiledScope::Inherited]
+                                }
+                                other => std::slice::from_ref(other),
+                            };
+                            // Only the multi-copy `scope: both` case needs a shared
+                            // group. Single-scope reducers keep their per-slot key
+                            // (unchanged behavior). Disjoint keyspace: high bit set
+                            // so it never collides with a raw effect-slot index.
+                            let shared_opt_group: Option<u8> =
+                                if *once_per_turn && scopes.len() > 1 {
+                                    Some(0x80u8 | (clause_index as u8 & 0x7f))
+                                } else {
+                                    None
+                                };
+                            for sc in scopes {
+                                out.push(lower_cost_reduction::lower_with_formula(
+                                    card,
+                                    *sc,
+                                    active_when.clone(),
+                                    condition.clone(),
+                                    *once_per_turn,
+                                    Some(amount_formula.clone()),
+                                    pay_cost.clone(),
+                                    self.raw.clone(),
+                                    *optional,
+                                    *when_playing_this,
+                                    when_any_ally_played.clone(),
+                                    when_any_ally_digivolves_into.clone(),
+                                    shared_opt_group,
+                                ));
+                            }
                         }
                     }
                     CompiledDeclarativeClause::FloodGate {

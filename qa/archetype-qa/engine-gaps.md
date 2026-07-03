@@ -1257,3 +1257,6 @@ G-code below until fixed.
 
 - **Repro:** during Q30 pin development — while one replacement's outcome is parked (interruptive Partition's 2-pick on Chaosmon), a cascading second would-leave replacement that also parks (Medieval's [All Turns] re-activation deleting Imperialdramon, whose inherited <Partition> then fires) trips the `debug_assert` at `replacement.rs` run_candidate_inner ("nested replacement park; outer outcome would be lost ... extend ParkedReplacement into a Vec-stack").
 - **Shape of fix:** per the assert's own note — make `Game::parked_replacement` a stack. Real-cards trigger: chained Partitions / leave-replacements interleaved with would-play interrupts. The Q30 pin sidesteps it by declining the trailing optional re-activation (the judge line ends there).
+
+
+> **G-ENGINE-SECURITY-ZONE-SOURCED-FIELD-AURA — RESOLVED / NOT-A-GAP (2026-07-03).** The Track H §5 face-up security-zone declarative-aura walk (game/triggers.rs::materialize_declaratives_full) already emanates live field auras from face-up security cards; BT24-090 Abyss Sanctuary is the tested precedent (this doc's earlier BT24-094 reference was a typo). Flip-state verified vs DCGO (IsFlipped==false is face-UP). BT25-102 Factorial Area implemented via scope: security auras with ZERO engine changes — pinned by tests/cards_behavioral/bt25/bt25_102.rs (6).

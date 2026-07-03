@@ -804,3 +804,114 @@ fn summarize_deck_counts_duplicates() {
     assert_eq!(counts.get("A-1"), Some(&2));
     assert_eq!(counts.get("B-2"), Some(&1));
 }
+
+// ─── Copy-limit RAISE (card-printed "up to 50 copies" allowance) ───────
+//
+// BT11-061 Vemmon prints "You can include up to 50 copies of cards with
+// this card's card number in your deck." The intrinsic `max_count_in_deck`
+// (50) must RAISE the per-card cap above the format default of 4; bans /
+// restrictions still dominate downward. See G-DECK-COPY-LIMIT-RAISE.
+
+#[test]
+fn vemmon_intrinsic_max_count_is_fifty() {
+    let db = card_database();
+    let vemmon = db
+        .get("BT11-061")
+        .expect("BT11-061 Vemmon is in the card database");
+    assert_eq!(
+        vemmon.max_count_in_deck, 50,
+        "BT11-061's printed 'up to 50 copies' allowance must set max_count_in_deck=50"
+    );
+}
+
+#[test]
+fn validate_deck_accepts_fifty_copies_of_vemmon() {
+    // 50 identical BT11-061 in the main deck is legal precisely because the
+    // card prints its own 50-copy allowance. (BT11-061 is a Lv.3 Digimon =
+    // main deck, so 50 copies fills the 50-card main exactly.)
+    let deck: Vec<String> = std::iter::repeat("BT11-061".to_string()).take(50).collect();
+    let result = validate_deck(&deck);
+    assert!(
+        result.is_valid,
+        "50 copies of BT11-061 should be legal (card prints a 50-copy allowance): {:?}",
+        result.errors
+    );
+}
+
+#[test]
+fn validate_deck_rejects_five_copies_of_a_normal_card() {
+    // A normal 4-copy card is still capped at 4 — the RAISE is card-printed,
+    // not a blanket loosening. Build an otherwise-legal 50-card deck and
+    // bump one card to 5 copies (49 base + 1 extra of that card).
+    let db = card_database();
+    let mut candidates: Vec<&str> = db
+        .values()
+        .filter(|c| {
+            c.card_kind == 0 && c.max_count_in_deck == 4 && !is_banned_or_restricted(&c.card_id)
+        })
+        .map(|c| c.card_id.as_str())
+        .collect();
+    candidates.sort_unstable();
+    // 12 distinct cards × 4 = 48, plus one card at 5 copies wraps a 13th id.
+    let ids: Vec<&str> = candidates.into_iter().take(13).collect();
+    assert_eq!(ids.len(), 13, "need 13 unrestricted 4-copy Digimon");
+    let mut deck: Vec<String> = Vec::with_capacity(50);
+    // First card gets 5 copies (over the max); remaining 12 get 4, then trim.
+    for _ in 0..5 {
+        deck.push(ids[0].to_string());
+    }
+    for cid in &ids[1..] {
+        for _ in 0..4 {
+            if deck.len() < 50 {
+                deck.push((*cid).to_string());
+            }
+        }
+    }
+    assert_eq!(deck.len(), 50, "deck should be exactly 50 cards");
+    let result = validate_deck(&deck);
+    assert!(
+        !result.is_valid,
+        "5 copies of a normal 4-copy card must be rejected"
+    );
+    assert!(
+        result
+            .errors
+            .iter()
+            .any(|e| e.contains(ids[0]) && e.contains("exceeds max 4")),
+        "expected a copy-limit error for {}, got: {:?}",
+        ids[0],
+        result.errors
+    );
+}
+
+#[test]
+fn card_legality_reports_raised_cap_for_vemmon() {
+    // Per-card legality projection must surface the RAISED cap (50), not
+    // clamp it down to the format default of 4.
+    let leg = card_legality("BT11-061", "standard").unwrap();
+    assert!(leg.legal, "BT11-061 should be legal: {leg:?}");
+    assert_eq!(
+        leg.max_copies, 50,
+        "card_legality must RAISE max_copies to the card's intrinsic 50, not the format default 4"
+    );
+}
+
+#[test]
+fn card_legality_raised_cap_still_respects_singleton() {
+    // The RAISE must not override a downward format restriction: a singleton
+    // format still caps a 50-copy card at 1.
+    let leg = card_legality("BT11-061", "eden_singleton").unwrap();
+    assert!(leg.legal);
+    assert_eq!(
+        leg.max_copies, 1,
+        "singleton must clamp even a 50-copy card down to 1"
+    );
+}
+
+#[test]
+fn card_legality_does_not_raise_a_normal_card() {
+    // A regular card keeps the format default cap of 4.
+    let leg = card_legality("BT12-050", "standard").unwrap(); // Stingmon, normal 4-of.
+    assert!(leg.legal);
+    assert_eq!(leg.max_copies, 4);
+}

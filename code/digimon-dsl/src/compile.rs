@@ -3018,6 +3018,7 @@ fn compile_step(
                 card_id,
                 errors,
             ),
+            bind_count_as: a.bind_count_as.clone(),
         },
         S::SearchOwnSecurityStack(a) => CompiledStep::SearchOwnSecurityStack {
             filter: Box::new(compile_predicate(

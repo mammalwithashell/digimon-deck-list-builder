@@ -10,6 +10,8 @@
 
 mod app_fuse_primitive;
 mod de_digivolve;
+mod scope_both_shared_opt_reducer;
+mod trash_count_binding_primitive;
 #[path = "../support/dsl_card_data.rs"]
 mod dsl_card_data;
 mod dsl_omnimon_slice;

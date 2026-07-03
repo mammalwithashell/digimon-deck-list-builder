@@ -1778,6 +1778,7 @@ return-immunity modifiers" entry — verify at implementation; likely no longer 
 - **Related:** G-DSL-PER-SOURCE-STACK-COUNT-FILTERED (resolved formula form — extend to a condition comparator).
 
 ### Deck-construction per-card copy limit that RAISES the cap above the format default ("up to N copies")
+- **Status: RESOLVED (2026-07-03, small-batch round 2).** card_legality_for_descriptor: explicit format restriction dominates downward, else max(format_default, intrinsic); singleton still clamps to 1. BT11-061 max_count_in_deck: 50 populated in cards.json + card_overrides.json. Desktop Tauri path confirmed engine-owned (thin wrapper). Tests: deck_tools 49/0 incl. 7 new.
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Galacticmon (2026-07-02)
 - **Card(s):** BT11-061 Vemmon ("You can include up to 50 copies of cards with this card's card number in your deck."); generalizes to the "any number of copies" family.
@@ -1917,6 +1918,7 @@ Existing entries reconfirmed with NEW drivers (append, no re-file):
 - **Related:** "Mass-delete/for-each cannot exclude a chosen binding" (EX11-046 — same per-iteration-exclusion family); G-DSL-COLOR-MATCHES-OWN-SOURCE-STACK (sibling branch, same card).
 
 ### Result-count binding for "cards trashed by this effect" (floor-div riders)  [G-DSL-TRASH-COUNT-RESULT-BINDING]
+- **Status: RESOLVED (2026-07-03, small-batch round 2).** `bind_count_as` on trash_opponent_hand_to_count publishes the trashed count as a Literal binding (resume terminal + synchronous path), consumed via binding_value/floor_div. BT19-075's first printed sentence authored in its YAML (8/1 tests; residual ignore = its Composite leave-replacement clause, card-pass item). Provers: tests/cards_behavioral/trash_count_binding_primitive.rs (4).
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Millenniummon (2026-07-02)
 - **Card(s):** BT19-075 MoonMillenniummon ("Your opponent trashes cards in their hand until they have 5 left. For every 2 cards trashed by this effect, delete 1 of your opponent's Tamers.") — already flagged inline in `cards/bt19/BT19-075.yaml`'s TODO.
@@ -2045,6 +2047,7 @@ First test: `code/digimon-engine/tests/cards_behavioral/bt19/bt19_065.rs::bt19_0
 Status: open.
 
 ### Shared [Once Per Turn] counter across face_up+inherited self cost-reducer (`scope: both` for CostReduction)  [G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER]
+- **Status: RESOLVED (2026-07-03, small-batch round 2).** Finding: `scope: both` previously COLLAPSED to face-up-only for cost reducers (latent authoring bug, unreachable double-fire). Fixed properly: Both expands to [FaceUp, Inherited] sharing one OPT group (0x80|clause_index); cost path routes OPT accounting through Game::cost_reducer_opt_slot. BT18-060/BT11-061 should author scope: inherited (DCGO SetIsInheritedEffect). Provers: tests/cards_behavioral/scope_both_shared_opt_reducer.rs (3).
 - **Severity:** 🟡 PARTIAL
 - **Discovered in:** store-champs follow-up review (2026-07-03)
 - **Card(s):** BT18-060 Vemmon, BT11-061 Vemmon — both print an inherited `[Your Turn][Once Per Turn]` "reduce by 1 when this Digimon digivolves into a [Vemmon]-text card" whose printed OPT is ONE counter for the card, while the DSL `scope: both` expansion (face_up + inherited copies) gives each copy its OWN OPT counter — a latent double-reduction when the card is both a top card and, post-digivolve in the same turn, a source. DCGO shares one hash across both registrations.

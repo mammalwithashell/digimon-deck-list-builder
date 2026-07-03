@@ -1,0 +1,101 @@
+card: BT25-102
+name: Factorial Area
+kind: option
+color: [black, red]
+cost: 3
+traits: [Iliad, TS]
+
+# Printed text (official Bandai DB):
+#   While you have no face-up security cards, you can ignore this card's color
+#     requirements.
+#   {Security} [All Turns] All of your black or red [TS] trait Digimon gain
+#     ＜Blocker＞. While you have [Vulcanusmon], they also gain ＜Link +1＞.
+#   [Main] Add your bottom security card to the hand and place this card face up
+#     as the bottom security card. Then, you may play 1 black or red [TS] trait
+#     Digimon card from your hand with the play cost reduced by 3.
+#   [Security] You may play 1 level 4 or lower black or red [TS] trait Digimon
+#     card from your hand or trash without paying the cost.
+#
+# DCGO oracle: DCGO/Assets/Scripts/CardEffect/BT25/Black/BT25_102.cs
+#   - BlockerStaticEffect / ChangeLinkMaxStaticEffect at EffectTiming.None,
+#     gated on `IsExistInSecurity(card, false)` (== face-UP in security: DCGO
+#     `IsFlipped == false`; normal face-down security is `IsFlipped == true`).
+#   - `SecurityPermanentCondition`: opponent's? no — OWNER's battle-area Digimon
+#     that is Black OR Red AND HasTSTraits.
+#   - Link+1 additionally requires `HasMatchConditionOwnersPermanent(HasOXII)`
+#     where HasOXII = a permanent named "Vulcanusmon".
+#
+# Adjudication (G-ENGINE-SECURITY-ZONE-SOURCED-FIELD-AURA — NOT-A-GAP): the
+# security-zone-sourced field-aura substrate (Track H §5,
+# `game/triggers.rs::materialize_declaratives_full` — the face-up security
+# walk) already emanates a live field aura from a face-up security card. This
+# is the SAME path BT24-090 Sanctuary of Darkness uses (Blocker + conditional
+# Alliance). BT25-102 lowers identically: two `scope: security` auras, the
+# second gated on an `active_when: any_permanent name_is Vulcanusmon` board
+# condition. The earlier "no path for a security card to register a field aura"
+# blocker was resolved by Track H §5; the residual Link+1 value-carry is
+# handled by `modifier_value` (G-ENGINE-AURA-GRANT-LINK-MAX, resolved).
+
+use_requirement:
+  face_up_security_count_lte: 0
+
+effects:
+  # While you have no face-up security, ignore this card's color requirements.
+  # Mirrors BT24-090's IgnoreColorRequirement flood_gate (player-scoped modifier
+  # gated on the board condition).
+  - kind: flood_gate
+    active_when:
+      face_up_security_count_lte: 0
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT25-102" }
+    summary: "While you have no face-up security cards, ignore color requirements for this card"
+
+  # {Security} [All Turns] Your black/red [TS] Digimon gain <Blocker>.
+  - kind: aura
+    scope: security
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: TS
+      any_of:
+        - color_is: black
+        - color_is: red
+    grant_keyword: { keyword: Blocker }
+    summary: "[Security][All Turns] Your black/red [TS] Digimon gain Blocker"
+
+  # {Security} [All Turns] While you have [Vulcanusmon], they also gain
+  # <Link +1> (ChangeLinkMax +1).
+  - kind: aura
+    scope: security
+    active_when:
+      all_of:
+        - all_turns: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            name_is: "Vulcanusmon"
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: TS
+      any_of:
+        - color_is: black
+        - color_is: red
+    modifier: ChangeLinkMax
+    modifier_value: 1
+    summary: "[Security][All Turns] With Vulcanusmon, your black/red [TS] Digimon gain Link +1"
+
+  # ─── Omitted clauses (out of scope for this substrate-proof fixture) ───────
+  #
+  # [Main] Add bottom security to hand, place this face-up as bottom security,
+  #   then play a black/red [TS] Digimon for -3 — the exact shape BT24-090
+  #   authors (`add_bottom_security_to_hand` + `place_on_security face_up: true`
+  #   + `select_hand` + `play_from_hand cost_delta reduce:3`). Omitted here to
+  #   keep the fixture focused on the security-zone aura substrate adjudication;
+  #   the primitives all exist (see BT24-090.yaml).
+  # [Security] Play 1 level≤4 black/red [TS] Digimon from hand or trash free —
+  #   standard security trigger (BT24-090 authors the same shape).

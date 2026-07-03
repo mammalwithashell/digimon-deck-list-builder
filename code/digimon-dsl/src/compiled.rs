@@ -1817,6 +1817,9 @@ pub enum CompiledStep {
     TrashOpponentHandToCount {
         opponent: CompiledPlayerRef,
         target_count: CompiledFormula,
+        /// Named literal binding recording the count actually trashed.
+        /// G-DSL-TRASH-COUNT-RESULT-BINDING.
+        bind_count_as: Option<String>,
     },
     SearchOwnSecurityStack {
         filter: Box<CompiledPredicate>,

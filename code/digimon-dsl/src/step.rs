@@ -1971,6 +1971,15 @@ pub struct TrashTopNDigivolutionCardsOfEachArgs {
 pub struct TrashOpponentHandToCountArgs {
     pub opponent: PlayerRef,
     pub target_count: crate::formula::FormulaSpec,
+    /// Record the number of cards ACTUALLY trashed by this step into a named
+    /// literal binding, consumable by later steps via `{ binding_value: <name> }`
+    /// (e.g. `{ floor_div: [{ binding_value: trashed }, 2] }`). Defaults to
+    /// `None` (no binding). On the no-op path (opponent hand already ≤ target)
+    /// the binding is set to 0. G-DSL-TRASH-COUNT-RESULT-BINDING (BT19-075
+    /// "For every 2 cards trashed by this effect, delete 1 of your opponent's
+    /// Tamers").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_count_as: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

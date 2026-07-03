@@ -936,6 +936,11 @@ pub enum NonDslCountCappedTerminal {
     },
     TrashOpponentHandToCount {
         opponent: PlayerId,
+        /// When set, the terminal publishes the number of cards actually
+        /// trashed (`state.accum.len()`) into the resolving DSL tail's
+        /// bindings under this name (as a `Literal`), consumable by a later
+        /// step's `binding_value` formula. G-DSL-TRASH-COUNT-RESULT-BINDING.
+        bind_count_as: Option<String>,
     },
     Assembly {
         player: PlayerId,

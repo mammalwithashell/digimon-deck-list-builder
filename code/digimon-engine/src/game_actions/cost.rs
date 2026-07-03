@@ -1018,9 +1018,12 @@ impl Game {
         let Some(source) = key.source_permanent else {
             return;
         };
+        // Route through the shared OPT slot so the two `scope: both` copies
+        // record onto ONE per-turn counter. G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER.
+        let opt_slot = self.cost_reducer_opt_slot(key);
         if source.index == crate::action::space::BREEDING_TARGET as u8 {
             if let Some(perm) = self.player_mut(source.player).breeding_area.as_mut() {
-                perm.record_activation(key.source_card, key.effect_slot);
+                perm.record_activation(key.source_card, opt_slot);
             }
             return;
         }
@@ -1029,7 +1032,7 @@ impl Game {
             .battle_area
             .get_mut(source.index as usize)
         {
-            perm.record_activation(key.source_card, key.effect_slot);
+            perm.record_activation(key.source_card, opt_slot);
         }
     }
 

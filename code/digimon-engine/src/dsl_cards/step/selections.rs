@@ -1553,7 +1553,11 @@ fn finish_non_dsl_count_capped(
                 ctx.place_card_under_permanent_bottom(*source, tamer, false);
             }
         }
-        crate::resume::NonDslCountCappedTerminal::TrashOpponentHandToCount { opponent } => {
+        crate::resume::NonDslCountCappedTerminal::TrashOpponentHandToCount {
+            opponent,
+            bind_count_as,
+        } => {
+            let mut trashed = 0usize;
             for card_handle in &state.accum {
                 let idx = ctx
                     .game
@@ -1563,7 +1567,19 @@ fn finish_non_dsl_count_capped(
                     .position(|c| c.handle() == *card_handle);
                 if let Some(i) = idx {
                     ctx.trash_from_hand_by_index(opponent, i);
+                    trashed += 1;
                 }
+            }
+            // Publish the count actually trashed into the freshness channel so
+            // `run_outer_conts` merges it into the resolving DSL tail's bindings
+            // (consumed by a downstream `binding_value`/`floor_div`).
+            // G-DSL-TRASH-COUNT-RESULT-BINDING.
+            if let Some(name) = &bind_count_as {
+                let fresh = ctx
+                    .game
+                    .dsl_resolved_tail_bindings
+                    .get_or_insert_with(crate::dsl_cards::bindings::Bindings::new);
+                fresh.insert_literal(name, trashed as i64);
             }
         }
         crate::resume::NonDslCountCappedTerminal::Assembly {

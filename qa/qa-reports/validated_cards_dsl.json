@@ -7066,19 +7066,15 @@
     },
     "BT25-102": {
       "card_name": "Factorial Area",
-      "validated_date": "2026-06-07",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "engine",
-      "archetype": "BT25 link-finish-aura slice",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [
-        "H1",
-        "G4"
-      ],
-      "notes": "Re-adjudicated 2026-06-07. G-ENGINE-AURA-GRANT-LINK-MAX is RESOLVED (aura modifier_value threads +1 ChangeLinkMax), so the Link+1 sub-clause is now expressible. RESIDUAL blocker: the [Security][All Turns] clause is a continuous static aura SOURCED FROM A FACE-DOWN OPTION IN SECURITY granting Blocker/Link+1 to field Digimon (DCGO BT25_102.cs: static effects gated on IsExistInSecurity). No engine path for a security-zone card to register a field aura. New gap G-ENGINE-SECURITY-ZONE-SOURCED-FIELD-AURA in engine-gaps.md. The [Main] bottom-security swap + play-with-reduction and inherited [Security] play-from-hand/trash are individually expressible, but the core always-on board buff cannot ship."
+      "validated_date": "2026-07-03",
+      "report": "gap-closure round 2 (small-batch)",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "store-champs-june-2026 / Vulcanusmon",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-102.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_102.rs",
+      "test_count": 6,
+      "notes": "PARTIAL: {Security}[All Turns] auras + IgnoreColorRequirement landed (security-aura substrate adjudicated NOT-A-GAP, BT24-090 precedent); [Main]/[Security] play clauses still to author (primitives exist) \u2014 card-pass item."
     },
     "BT25-103": {
       "card_name": "GraceNovamon",
@@ -10599,6 +10595,18 @@
       "test_count": 18,
       "patterns": [],
       "notes": "IMPLEMENTED via DelaySelfTrashPlayFromHandFlow widening (lower_replacement + resume VM, clone-safe); breeding-area color-gate regression pinned"
+    },
+    "BT19-075": {
+      "card_name": "MoonMillenniummon",
+      "validated_date": "2026-07-03",
+      "report": "gap-closure round 2 (small-batch)",
+      "status": "PARTIAL",
+      "gap_kind": null,
+      "archetype": "store-champs-june-2026 / Millenniummon",
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-075.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_075.rs",
+      "test_count": 8,
+      "notes": "PARTIAL: hand-reduction + floor(trashed/2) Tamer-deletion clause authored (bind_count_as landed); residual = Composite leave-replacement clause (#[ignore]d, expressible via BT22-036 twin) \u2014 card-pass item."
     }
   }
 }

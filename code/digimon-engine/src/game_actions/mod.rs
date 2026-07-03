@@ -2084,22 +2084,44 @@ impl Game {
             .unwrap_or(EffectSourceKind::Rule)
     }
 
+    /// The per-turn OPT accounting slot for a cost reducer. When the effect
+    /// carries a `shared_opt_group` (the two `scope: both` copies, FaceUp +
+    /// Inherited), both copies map to that single group id so they share ONE
+    /// once-per-turn counter — a card can't reduce a cost once as an active
+    /// top and again the same turn as a digivolution source. Otherwise the raw
+    /// `effect_slot` (vec index) is the key, unchanged.
+    /// G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER (mirrors the triggered-queue
+    /// `Game::opt_slot_key`).
+    pub(crate) fn cost_reducer_opt_slot(&self, key: &CostReductionKey) -> u8 {
+        // `shared_opt_group` is `Copy` (`Option<u8>`), so extract it before the
+        // (possibly owned) effects collection is dropped.
+        let group = self
+            .effects_for_card(&key.card_id, key.source_card)
+            .and_then(|effects| {
+                effects
+                    .get(key.effect_slot as usize)
+                    .and_then(|effect| effect.shared_opt_group)
+            });
+        group.unwrap_or(key.effect_slot)
+    }
+
     fn cost_reducer_activation_count(&self, key: &CostReductionKey) -> u8 {
         let Some(source) = key.source_permanent else {
             return 0;
         };
+        let opt_slot = self.cost_reducer_opt_slot(key);
         if source.index == crate::action::space::BREEDING_TARGET as u8 {
             return self
                 .player(source.player)
                 .breeding_area
                 .as_ref()
-                .map(|perm| perm.activation_count(key.source_card, key.effect_slot))
+                .map(|perm| perm.activation_count(key.source_card, opt_slot))
                 .unwrap_or(0);
         }
         self.player(source.player)
             .battle_area
             .get(source.index as usize)
-            .map(|perm| perm.activation_count(key.source_card, key.effect_slot))
+            .map(|perm| perm.activation_count(key.source_card, opt_slot))
             .unwrap_or(0)
     }
 

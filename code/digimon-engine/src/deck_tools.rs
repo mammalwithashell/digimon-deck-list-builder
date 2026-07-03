@@ -568,8 +568,22 @@ pub fn card_legality_for_descriptor(card_id: &str, fmt: &FormatDescriptor) -> Ca
 
     let entity = db.get(card_id);
     let intrinsic = entity.map(|e| e.max_count_in_deck).unwrap_or(4);
-    let base = restriction_limit.unwrap_or(u32::from(fmt.default_max_copies));
-    let mut max_copies = base.min(intrinsic);
+    // Effective per-card cap, with the card-printed allowance able to RAISE
+    // above the format default (BT11-061 Vemmon prints "You can include up to
+    // 50 copies…"; its intrinsic `max_count_in_deck` is 50). Precedence:
+    //   * An EXPLICIT format restriction (`card_limits` entry) dominates
+    //     downward — a restricted/limited card stays clamped to its limit
+    //     regardless of the card's own printed allowance.
+    //   * Otherwise the cap is `max(format_default, intrinsic)` — the card's
+    //     printed allowance raises the default (a normal 4-of keeps 4; a
+    //     50-copy card gets 50). This mirrors `validate_deck_for_descriptor`,
+    //     which enforces the per-card cap straight off `max_count_in_deck`.
+    //   * Singleton still clamps to 1 (a hard downward format rule).
+    // See G-DECK-COPY-LIMIT-RAISE.
+    let mut max_copies = match restriction_limit {
+        Some(limit) => limit.min(intrinsic),
+        None => u32::from(fmt.default_max_copies).max(intrinsic),
+    };
     if fmt.singleton {
         max_copies = max_copies.min(1);
     }

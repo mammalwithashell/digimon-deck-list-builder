@@ -1225,6 +1225,10 @@ fn validate_step_binding_scope(
                 scope,
                 errors,
             );
+            // `bind_count_as` DECLARES a literal binding (the count trashed) for
+            // consumption by LATER steps' `binding_value` formulas.
+            // G-DSL-TRASH-COUNT-RESULT-BINDING.
+            declare_optional_binding(scope, &args.bind_count_as);
         }
         StepSpec::DeDigivolve(args) => {
             validate_binding_ref(&args.target, &format!("{prefix}.target"), card_id, errors);

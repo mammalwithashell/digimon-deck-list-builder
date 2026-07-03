@@ -58,6 +58,7 @@ pub fn lower(
         false,
         None,
         None,
+        None,
     )
 }
 
@@ -75,6 +76,12 @@ pub fn lower_with_formula(
     when_playing_this: bool,
     when_any_ally_played: Option<CompiledPredicate>,
     when_any_ally_digivolves_into: Option<CompiledPredicate>,
+    // When set, this reducer shares its once-per-turn accounting slot with any
+    // sibling reducer carrying the same group id. Used to give the two
+    // `scope: both` copies (FaceUp + Inherited) ONE shared OPT lockout so a
+    // card cannot reduce a cost once as an active top and again the same turn
+    // as a digivolution source. G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER.
+    shared_opt_group: Option<u8>,
 ) -> Effect {
     let active_when = active_when.map(Arc::new);
     let condition = condition.map(Arc::new);
@@ -91,6 +98,9 @@ pub fn lower_with_formula(
     }
     if once_per_turn {
         builder = builder.once_per_turn();
+    }
+    if let Some(group) = shared_opt_group {
+        builder = builder.shared_opt_group(group);
     }
     if optional {
         builder = builder.optional();

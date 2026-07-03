@@ -42276,7 +42276,8 @@
         "memory_cost": 0
       }
     ],
-    "xros_req": ""
+    "xros_req": "",
+    "max_count_in_deck": 50
   },
   "BT11-062": {
     "index": 1204,

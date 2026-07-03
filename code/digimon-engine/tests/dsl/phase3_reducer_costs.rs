@@ -122,6 +122,7 @@ fn cost_reduction_amount_fn_uses_formula_value() {
         false,
         None,
         None,
+        None,
     );
 
     let runner = DebugRunner::builder().build();
@@ -148,6 +149,7 @@ fn cost_reduction_amount_fn_uses_raw_formula_registry() {
         Arc::new(raw),
         false,
         false,
+        None,
         None,
         None,
     );
