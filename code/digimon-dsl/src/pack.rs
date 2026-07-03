@@ -394,6 +394,9 @@ fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTr
     if let Some(has_inherited) = &predicate.has_inherited {
         collect_predicate_raw_rust_fns(has_inherited, names);
     }
+    if let Some((filter, _)) = &predicate.source_count {
+        collect_predicate_raw_rust_fns(filter, names);
+    }
     for aggregate in [&predicate.count_lte, &predicate.count_gte]
         .into_iter()
         .flatten()

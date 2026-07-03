@@ -66,6 +66,40 @@ Surfaced: 2026-06-10, judge-quiz Q3 authoring. EX10-020 Puppetmon PARTIAL.
 > by `tests/cards_behavioral/ex3/ex3_014.rs` (scaling-cap behavioral tests).
 > G-DSL-PER-SOURCE-STACK-COUNT-FILTERED.
 
+> **`select_opponent_play_cost_budget.play_cost_budget` scalar → FormulaSpec — RESOLVED 2026-07-03**
+> (P-094 Destromon authoring). The play-cost-budget multi-select step
+> (`G-MULTI-SELECT-OPP-PLAY-COST-SUM`) previously took a plain `i32`
+> `play_cost_budget`. Widened to `crate::formula::FormulaSpec`, mirroring the
+> sibling `SelectOpponentDpBudgetArgs.dp_budget: FormulaSpec`. A bare integer YAML
+> literal still parses (FormulaSpec's first untagged variant is `Literal(i32)`),
+> so the existing scalar user EX4-073 is untouched (13/13 tests green). The formula
+> is evaluated once at install time against the effect context (both the installer
+> in `dsl_cards/step/selections.rs` and the replacement pre-check in
+> `dsl_cards/lower_replacement.rs`), exactly like the DP path. Lets P-094 model
+> "delete up to 3 play cost's total worth … for each [Vemmon] in this Digimon's
+> digivolution cards add 1 to the maximum" →
+> `play_cost_budget: { base: 3, per: { source_stack_count: { filter: { name_is:
+> "Vemmon" } } }, delta: 1 }`. Pinned by `tests/cards_behavioral/p/p_094.rs`
+> (baseline-3 + scaling-by-Vemmon behavioral tests). G-MULTI-SELECT-OPP-PLAY-COST-SUM.
+
+> **`source_count` predicate leaf (filtered digivolution-source count ≥ N) — RESOLVED 2026-07-03**
+> (P-094 Destromon authoring). New permanent-subject predicate leaf
+> `source_count: { filter: <predicate>, at_least: N }` — true when the candidate
+> carries ≥ N digivolution SOURCE cards (the cards beneath its top card) matching
+> `filter`. Models the DCGO `DigivolutionCards.Count(predicate) >= N` idiom, which
+> had no DSL expression (`materials_count_gte` counts ALL sources by raw stack
+> length, not a name/trait-filtered subset). The nested `filter` is a full
+> `PredicateSpec` evaluated per source card via `eval_card_fields` (source
+> subject), so it accepts `name_is`/`name_contains`/`trait_has`/`kind`/etc.
+> Threaded spec→compiled (`Option<(Box<CompiledPredicate>, u8)>`)→eval in BOTH the
+> battle-area and breeding-area permanent evaluators (`dsl_cards/predicate.rs`),
+> plus the permanent-only-leaf gates in `formula_eval.rs` +
+> `lower_replacement.rs`, the validator recursion, and the pack raw-rust-fn walk.
+> Gates P-094's inherited redirect: only a [Galacticmon] carrying ≥2 [Vemmon]
+> sources is offered for the return-2-Vemmon cost. Pinned by
+> `tests/cards_behavioral/p/p_094.rs` (`inherited_no_fire_without_galacticmon_
+> carrying_two_vemmon`). G-DSL-SOURCE-COUNT-FILTERED.
+
 > **`TreatAsDigimon` / `SynthIdentity` payload — RESOLVED 2026-05-30** (judge-quiz
 > cluster-B authoring, Greymon/Marcus line). The DSL `add_modifier` step now accepts
 > a structured `synth_identity:` block (`dp` required; `kind` defaults Digimon;

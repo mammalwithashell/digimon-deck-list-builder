@@ -272,6 +272,7 @@ fn predicate_reads_replacement_subject(pred: &CompiledPredicate) -> bool {
         || pred.stack_size_gte.is_some()
         || pred.materials_count_lte.is_some()
         || pred.materials_count_gte.is_some()
+        || pred.source_count.is_some()
         || pred.has_inherited.is_some()
         || pred.is_suspended.is_some()
         || pred.is_unsuspended.is_some()
@@ -469,7 +470,21 @@ fn required_selection_step_has_candidate(
             play_cost_budget,
             min_picks,
             ..
-        } => *min_picks == 0 || has_opponent_play_cost_budget_candidate(ctx, *play_cost_budget),
+        } => {
+            // Evaluate the (possibly scaling) budget formula, mirroring the
+            // `SelectOpponentDpBudget` arm above. Scalar users compile to a
+            // `CompiledFormula::Literal` and evaluate to that constant.
+            let budget = formula_eval::evaluate_read_with_bindings(
+                play_cost_budget,
+                ctx,
+                ctx.source_permanent.unwrap_or(PermanentHandle {
+                    player: ctx.player,
+                    index: u8::MAX,
+                }),
+                Some(bindings),
+            );
+            *min_picks == 0 || has_opponent_play_cost_budget_candidate(ctx, budget)
+        }
         CompiledStep::SelectOwnBreedingPermanent { filter, .. } => {
             if ctx.game.player(ctx.player).breeding_area.is_none() {
                 false

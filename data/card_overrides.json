@@ -6950,6 +6950,10 @@
         "level": 5,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Machine",
+      "Composite"
     ]
   },
   "BT18-075": {
@@ -7342,6 +7346,10 @@
         "level": 5,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Machine",
+      "Composite"
     ]
   },
   "BT19-066": {
@@ -15322,6 +15330,14 @@
         "level": 4,
         "memory_cost": 4
       }
+    ]
+  },
+  "P-213": {
+    "type_eng": [
+      "Shaman",
+      "Iliad",
+      "TS",
+      "Dragonkin"
     ]
   }
 }

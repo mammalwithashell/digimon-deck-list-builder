@@ -2775,7 +2775,14 @@ pub struct SelectOpponentDpBudgetArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectOpponentPlayCostBudgetArgs {
-    pub play_cost_budget: i32,
+    /// Running play-cost budget. Accepts a literal integer (`play_cost_budget:
+    /// 6`) or a formula such as `{ base: 3, per: { source_stack_count: { filter:
+    /// { name_is: "Vemmon" } } }, delta: 1 }` for "3 + 1 per [Vemmon] in this
+    /// Digimon's digivolution cards" (P-094 Destromon). Mirrors the
+    /// `dp_budget: FormulaSpec` field on `SelectOpponentDpBudgetArgs`. A bare
+    /// integer still parses because `FormulaSpec`'s first untagged variant is
+    /// `Literal(i32)`, so existing scalar users (EX4-073) are unaffected.
+    pub play_cost_budget: crate::formula::FormulaSpec,
     #[serde(default)]
     pub min_picks: u8,
     /// Optional per-candidate predicate. Only opponent permanents satisfying

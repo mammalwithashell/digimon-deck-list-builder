@@ -69522,7 +69522,8 @@
       6
     ],
     "type_eng": [
-      "Machine"
+      "Machine",
+      "Composite"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -73230,7 +73231,8 @@
       6
     ],
     "type_eng": [
-      "Machine"
+      "Machine",
+      "Composite"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -136820,7 +136822,8 @@
     "type_eng": [
       "Shaman",
       "Iliad",
-      "TS"
+      "TS",
+      "Dragonkin"
     ],
     "form_eng": [],
     "attribute_eng": [

@@ -905,6 +905,17 @@ fn compile_predicate(
         materials_count_lte,
         materials_count_gte,
         materials_count_eq,
+        source_count: p.source_count.as_ref().map(|sc| {
+            (
+                Box::new(compile_predicate(
+                    &sc.filter,
+                    &format!("{prefix}.source_count.filter"),
+                    card_id,
+                    errors,
+                )),
+                sc.at_least,
+            )
+        }),
         has_inherited: p.has_inherited.as_ref().map(|b| {
             Box::new(compile_predicate(
                 b,
@@ -3096,7 +3107,12 @@ fn compile_step(
                 .collect(),
         },
         S::SelectOpponentPlayCostBudget(a) => CompiledStep::SelectOpponentPlayCostBudget {
-            play_cost_budget: a.play_cost_budget,
+            play_cost_budget: compile_formula(
+                &a.play_cost_budget,
+                &format!("{prefix}.play_cost_budget"),
+                card_id,
+                errors,
+            ),
             min_picks: a.min_picks,
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),

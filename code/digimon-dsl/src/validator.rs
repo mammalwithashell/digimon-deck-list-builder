@@ -646,6 +646,15 @@ fn validate_predicate(
             errors,
         );
     }
+    if let Some(sc) = &pred.source_count {
+        validate_predicate(
+            &sc.filter,
+            &format!("{prefix}.source_count.filter"),
+            card_id,
+            ctx,
+            errors,
+        );
+    }
 }
 
 fn validate_step(
@@ -1350,6 +1359,29 @@ fn validate_step_binding_scope(
             declare_optional_binding(scope, &args.bind_as);
         }
         StepSpec::SelectOpponentDpBudget(args) => {
+            validate_predicate_binding_scope(
+                &args.filter,
+                &format!("{prefix}.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+            let mut child = scope.clone();
+            declare_optional_binding(&mut child, &args.bind_as);
+            validate_steps_binding_scope(
+                &args.then,
+                &format!("{prefix}.then"),
+                card_id,
+                &mut child,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        // Play-cost-budget sibling of the DP-budget branch above. Same
+        // binding-scope shape: `bind_as` is visible inside `then` and (once)
+        // after the step. Added alongside the `play_cost_budget: FormulaSpec`
+        // widening (P-094 Destromon).
+        StepSpec::SelectOpponentPlayCostBudget(args) => {
             validate_predicate_binding_scope(
                 &args.filter,
                 &format!("{prefix}.filter"),
@@ -2339,13 +2371,6 @@ pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
     "Save",
     "Fortitude",
     "Ascension",
-    // Phase F keyword (engine: `Keyword::Training`, keyword_effects.rs
-    // `Keyword::Training => ...` arm + tests/keyword_phase_f/training.rs).
-    // Shipped DSL carriers: EX9-008, EX9-060 (`grant_keyword: Training`).
-    // Was missing here, so dsl-lint rejected those cards with
-    // "unknown keyword: Training" — a validator-allowlist staleness, not an
-    // engine gap.
-    "Training",
     "Overclock",
     "Barrier",
     "Decoy",

@@ -2790,6 +2790,26 @@ fn eval_permanent_fields(
             return false;
         }
     }
+    // `source_count` — count digivolution SOURCE cards (everything below the top
+    // card) whose card satisfies the nested `filter`, and require the count to be
+    // ≥ `at_least`. DCGO `DigivolutionCards.Count(predicate) >= N`. The top card
+    // is `card_sources.last()`, so we scan `[..len-1]`. Each source is evaluated
+    // as a card subject (`eval_card_fields`), which is exactly how a
+    // `select_own_sources` filter reads a source. G-DSL-SOURCE-COUNT-FILTERED.
+    if let Some((filter, at_least)) = &pred.source_count {
+        let n = perm.card_sources.len();
+        let matching = if n <= 1 {
+            0
+        } else {
+            perm.card_sources[..n - 1]
+                .iter()
+                .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
+                .count()
+        };
+        if matching < usize::from(*at_least) {
+            return false;
+        }
+    }
     if !pred.zone.is_empty()
         && !pred.zone.contains(if in_breeding {
             &CompiledZone::Breeding
@@ -3054,6 +3074,23 @@ fn eval_breeding_permanent_fields(
     }
     if let Some(want) = &pred.materials_count_eq {
         if materials_count != eval_int_constraint(want, rctx, Some(handle), bindings) {
+            return false;
+        }
+    }
+    // `source_count` on a breeding-area Digimon — same filtered-source-count gate
+    // as the battle-area path (G-DSL-SOURCE-COUNT-FILTERED). Explicit here because
+    // the shared `eval_card_fields` card-subject path does not inspect sources.
+    if let Some((filter, at_least)) = &pred.source_count {
+        let n = perm.card_sources.len();
+        let matching = if n <= 1 {
+            0
+        } else {
+            perm.card_sources[..n - 1]
+                .iter()
+                .filter(|s| eval_card_fields(filter, rctx, s.handle(), false, None, bindings))
+                .count()
+        };
+        if matching < usize::from(*at_least) {
             return false;
         }
     }

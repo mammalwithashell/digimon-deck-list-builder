@@ -35,7 +35,7 @@ fn tamer_with_cost(id: &str, name: &str, play_cost: u16) -> CardData {
 
 fn budget_step(then: Vec<CompiledStep>) -> CompiledStep {
     CompiledStep::SelectOpponentPlayCostBudget {
-        play_cost_budget: 6,
+        play_cost_budget: digimon_dsl::compiled::CompiledFormula::Literal(6),
         min_picks: 0,
         filter: CompiledPredicate::default(),
         bind_as: Some("targets".to_string()),
@@ -157,7 +157,7 @@ fn play_cost_budget_filter_excludes_non_matching_kind() {
     digimon_only.kind = Some(digimon_dsl::compiled::CompiledCardKind::Digimon);
 
     let steps = vec![CompiledStep::SelectOpponentPlayCostBudget {
-        play_cost_budget: 6,
+        play_cost_budget: digimon_dsl::compiled::CompiledFormula::Literal(6),
         min_picks: 0,
         filter: digimon_only,
         bind_as: Some("targets".to_string()),

@@ -376,23 +376,67 @@ fn p193_main_can_trash_itself_as_its_own_cost_and_still_draws() {
     );
 }
 
+/// FALSE-GREEN FIX (reviewer directive): the previous version of this test
+/// staged NO Purple Digimon/Tamer anywhere for player 0, so the mask bit was
+/// forced to `0.0` by the independent §4.2 Option color requirement
+/// (`option_use_requirement_or_color_available` in `action/mask.rs`, checked
+/// immediately after — and regardless of — `option_has_active_main_effect`'s
+/// `condition: count_gte` fodder gate). The old assertion was therefore
+/// vacuously true: it passed even though the fodder-count condition was never
+/// actually exercised. Proven by direct experiment: staging a Purple anchor
+/// on the field while keeping the exact same "no external fodder" hand
+/// (`["P-193", "FILL"]`) flips the mask bit to `1.0` — i.e. the ONLY thing
+/// keeping the old test green was the missing color anchor, not the fodder
+/// gate it claimed to prove.
+///
+/// That experiment also surfaces the reason this card's `condition: count_gte
+/// { zone: [hand], n: 1 }` can never be observed blocking its OWN
+/// `PLAY_HAND_START` mask bit: P-193 prints the `[Wicked God]` trait itself
+/// (`traits: ["Wicked God"]` in P-193.yaml), and `count_matching` /
+/// `count_card_sources` (dsl_cards/predicate.rs) scan the ENTIRE hand zone
+/// with no self-exclusion for the card whose effect is being evaluated —
+/// exactly mirroring DCGO's `CanSelectHandCondition`, which the YAML's own
+/// doc comment notes "scans the whole hand, including the source card" (see
+/// also `p193_main_can_trash_itself_as_its_own_cost_and_still_draws` above,
+/// which exercises this same self-qualification for the trash-cost pick
+/// itself). So whenever P-193 sits in the hand being scanned, it always
+/// satisfies its own `n: 1` fodder floor — the Main-from-hand mask bit can
+/// never be legitimately forced to `0.0` by the fodder gate while P-193 is
+/// the very card in that hand slot.
+///
+/// This test instead genuinely isolates BOTH gates for the Main/mask path:
+/// - Positive control: color satisfied (Purple anchor on field) + hand
+///   containing P-193 alone (self-qualifying fodder, zero external fodder
+///   needed) -> mask bit legal. This proves the color gate is satisfied
+///   independently of any external Composite/Wicked-God card.
+/// - The genuine "zero eligible fodder" case for `count_gte` is proven below
+///   in Section 4 via the Security path (`p193_security_no_eligible_fodder_...`),
+///   where P-193 sits in the security zone rather than hand, so it cannot
+///   self-qualify and the fodder gate is cleanly isolated from the color gate
+///   (the §4.2 color requirement only gates hand-play legality, not security
+///   reveals — confirmed by `p193_security_trashing_fodder_draws_two_and_places_self`
+///   above, which never stages a color anchor and still fires from security).
 #[test]
-fn p193_main_no_eligible_fodder_does_not_offer_activation() {
+fn p193_main_color_satisfied_self_qualifying_fodder_offers_activation() {
+    let purple_anchor = make_other_digimon("P193-ANCHOR", "PurpleAnchor");
     let filler = make_filler("FILL");
 
-    let runner = DebugRunner::builder()
+    let mut runner = DebugRunner::builder()
         .from_dsl_yaml(P_193_YAML)
         .expect("P-193 YAML parses")
+        .add_card(purple_anchor.clone())
         .add_card(filler.clone())
         .memory(10)
-        .hand(0, &["P-193", "FILL"])
+        .hand(0, &["P-193"])
         .hand(1, &["FILL"])
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
         .start();
 
-    // No [Composite]/[Wicked God] card in hand: the `condition: count_gte`
-    // gate should prevent the clause from being offered at all.
+    // Satisfy the §4.2 Option color requirement independently of the printed
+    // trash-cost fodder: a Purple Digimon on the battle area.
+    runner.place_on_field(0, "P193-ANCHOR", Some(0));
+
     let mask = digimon_engine::action::mask::build_action_mask(&runner.game, 0);
     let p193_hand_index = runner.game.players[0]
         .hand
@@ -402,8 +446,10 @@ fn p193_main_no_eligible_fodder_does_not_offer_activation() {
     use digimon_engine::action::space::PLAY_HAND_START;
     assert_eq!(
         mask[(PLAY_HAND_START as usize) + p193_hand_index],
-        0.0,
-        "P-193's [Main] activation must not be legal with zero eligible hand fodder"
+        1.0,
+        "with the color requirement satisfied, P-193's [Main] must be legal: \
+         it self-qualifies as its own [Wicked God] trait fodder even with no \
+         external Composite/Wicked-God card in hand"
     );
 }
 
@@ -801,5 +847,66 @@ fn p193_security_trashing_fodder_draws_two_and_places_self() {
     assert!(
         find_delayed_p193(&runner, 0).is_some(),
         "P-193 must be placed in the battle area as a Delay option from security"
+    );
+}
+
+/// GENUINE fodder-gate isolation (replaces the false-green
+/// `p193_main_no_eligible_fodder_does_not_offer_activation`): here P-193 sits
+/// in the SECURITY zone, not hand, so it cannot self-qualify as its own
+/// `[Wicked God]` trait fodder the way it does when checked from hand (see
+/// `p193_main_color_satisfied_self_qualifying_fodder_offers_activation` above
+/// and `p193_main_can_trash_itself_as_its_own_cost_and_still_draws`). With
+/// zero [Composite]/[Wicked God] cards anywhere in the defender's hand, the
+/// `condition: count_gte` gate on the `[Security]` clause (which mirrors the
+/// `[Main]` clause's condition verbatim) must prevent the effect from firing
+/// at all: no trash-cost selection installs, no draw, no placement — P-193
+/// just resolves as an ordinary broken security card. Note this path does
+/// NOT depend on (and is not confounded by) the §4.2 Option color
+/// requirement, which only gates hand-play mask legality — the existing
+/// `p193_security_trashing_fodder_draws_two_and_places_self` positive control
+/// above already demonstrates the security-reveal path fires with no color
+/// anchor staged at all.
+#[test]
+fn p193_security_no_eligible_fodder_skips_activation() {
+    let filler = make_filler("FILL");
+    let attacker_dgm = make_other_digimon("P193-SEC-ATK", "SecAttacker");
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(P_193_YAML)
+        .expect("P-193 YAML parses")
+        .add_card(filler.clone())
+        .add_card(attacker_dgm.clone())
+        .memory(10)
+        .hand(0, &["FILL"])
+        .security(0, &["P-193"])
+        .start();
+
+    let attacker = runner.place_on_field(1, "P193-SEC-ATK", Some(0));
+
+    let _ = runner.attack_player(attacker, 0, false);
+    runner.auto_resolve().ok();
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "no trash-cost selection may install when the defender's hand has \
+         zero [Composite]/[Wicked God] cards"
+    );
+    assert_eq!(
+        runner.trash_size(0),
+        1,
+        "P-193 must resolve as an ordinary broken security card (trashed), \
+         with no Draw 2 and no battle-area placement"
+    );
+    assert!(
+        find_delayed_p193(&runner, 0).is_none(),
+        "P-193 must NOT be placed in the battle area as a Delay option when \
+         the [Security] clause's fodder condition is not met"
+    );
+    assert!(
+        runner.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "FILL"),
+        "the filler hand card must remain untouched (no trash-cost pick fired)"
     );
 }

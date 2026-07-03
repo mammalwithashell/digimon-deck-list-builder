@@ -134,6 +134,19 @@ pub struct PredicateSpec {
     pub materials_count_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub materials_count_gte: Option<DpConstraint>,
+    /// Permanent-subject predicate. True when the candidate carries at least
+    /// `at_least` digivolution SOURCE cards (the cards beneath its top card)
+    /// matching the nested `filter`. Unlike `materials_count_gte` (which counts
+    /// ALL sources by raw stack length), this counts only sources satisfying an
+    /// arbitrary card predicate — the DCGO
+    /// `DigivolutionCards.Count(predicate) >= N` idiom. Drives P-094 Destromon's
+    /// inherited gate: "1 of your [Galacticmon]'s digivolution cards" must carry
+    /// ≥2 [Vemmon] before the return-2-Vemmon cost is offered. The nested
+    /// `filter` is evaluated against each source card (source subject), so it
+    /// accepts `name_is` / `name_contains` / `trait_has` / `kind` / etc.
+    /// G-DSL-SOURCE-COUNT-FILTERED.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub source_count: Option<SourceCountPredicate>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub has_inherited: Option<Box<PredicateSpec>>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -855,6 +868,20 @@ pub struct MaterialCountAggregatePredicate {
     pub selector: AggregateSelector,
     #[serde(default = "default_level_aggregate_of")]
     pub of: PlayerRef,
+}
+
+/// Filter+threshold for the `source_count` predicate leaf — "carries at least
+/// `at_least` digivolution SOURCE cards matching `filter`". The nested `filter`
+/// is a full `PredicateSpec` evaluated per source card (source subject). Models
+/// DCGO `DigivolutionCards.Count(predicate) >= at_least`.
+/// G-DSL-SOURCE-COUNT-FILTERED.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SourceCountPredicate {
+    /// Predicate each candidate source card must satisfy to be counted.
+    pub filter: Box<PredicateSpec>,
+    /// Minimum number of matching sources required for the leaf to hold.
+    pub at_least: u8,
 }
 
 /// Identity filter for the `no_face_up_security_named` predicate leaf.

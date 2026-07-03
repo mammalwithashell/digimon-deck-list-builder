@@ -3856,15 +3856,21 @@ pub fn try_install(
             prompt,
             then,
         } => {
-            if !has_opponent_play_cost_budget_candidates(ctx, *play_cost_budget, filter, &bindings)
-            {
+            // Evaluate the (possibly scaling) budget formula against the running
+            // effect context, mirroring `SelectOpponentDpBudget` above. A bare
+            // integer literal compiles to `CompiledFormula::Literal` and evaluates
+            // to that constant, so scalar users (EX4-073) are unchanged. P-094
+            // Destromon uses `{ base: 3, per: { source_stack_count: { filter: {
+            // name_is: "Vemmon" } } }, delta: 1 }` → 3 + 1 per [Vemmon] source.
+            let play_cost_budget = formula_value(play_cost_budget, ctx, &bindings);
+            if !has_opponent_play_cost_budget_candidates(ctx, play_cost_budget, filter, &bindings) {
                 return InstallResult::Continue;
             }
             let mut inner_tail = then.clone();
             inner_tail.extend_from_slice(tail);
             install_select_opponent_play_cost_budget(
                 ctx,
-                *play_cost_budget,
+                play_cost_budget,
                 *min_picks,
                 filter.clone(),
                 bind_as.clone(),

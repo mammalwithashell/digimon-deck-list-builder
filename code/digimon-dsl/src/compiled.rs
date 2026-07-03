@@ -330,6 +330,11 @@ pub struct CompiledPredicate {
     pub materials_count_gte: Option<CompiledDpConstraint>,
     #[serde(default)]
     pub materials_count_eq: Option<CompiledDpConstraint>,
+    /// `(filter, at_least)` — count of digivolution sources matching `filter`
+    /// must be ≥ `at_least`. Compiled form of the `source_count` leaf.
+    /// G-DSL-SOURCE-COUNT-FILTERED.
+    #[serde(default)]
+    pub source_count: Option<(Box<CompiledPredicate>, u8)>,
     pub has_inherited: Option<Box<CompiledPredicate>>,
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
@@ -1790,9 +1795,13 @@ pub enum CompiledStep {
         then: Vec<CompiledStep>,
     },
     /// Play-cost-budget analog of `SelectOpponentDpBudget`.
-    /// G-MULTI-SELECT-OPP-PLAY-COST-SUM.
+    /// G-MULTI-SELECT-OPP-PLAY-COST-SUM. `play_cost_budget` is a
+    /// `CompiledFormula` (mirroring `SelectOpponentDpBudget.dp_budget`) so the
+    /// budget can scale at run time — e.g. P-094 Destromon's "3 + 1 per [Vemmon]
+    /// in this Digimon's digivolution cards". A bare integer YAML literal
+    /// compiles to `CompiledFormula::Literal`, preserving scalar users (EX4-073).
     SelectOpponentPlayCostBudget {
-        play_cost_budget: i32,
+        play_cost_budget: CompiledFormula,
         min_picks: u8,
         filter: CompiledPredicate,
         bind_as: Option<String>,
