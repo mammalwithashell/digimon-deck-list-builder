@@ -501,6 +501,9 @@ fn validate_predicate(
         ("own_memory_gte", &pred.own_memory_gte),
         ("security_count_lte", &pred.security_count_lte),
         ("security_count_gte", &pred.security_count_gte),
+        ("total_security_count_lte", &pred.total_security_count_lte),
+        ("total_security_count_gte", &pred.total_security_count_gte),
+        ("total_security_count_eq", &pred.total_security_count_eq),
         ("face_up_security_count_lte", &pred.face_up_security_count_lte),
         ("face_up_security_count_gte", &pred.face_up_security_count_gte),
     ] {
@@ -560,6 +563,24 @@ fn validate_predicate(
         validate_predicate(
             sub,
             &format!("{prefix}.returned_card_matching"),
+            card_id,
+            ctx,
+            errors,
+        );
+    }
+    if let Some(ssc) = &pred.self_source_count {
+        if let Some(filter) = &ssc.filter {
+            validate_predicate(
+                filter,
+                &format!("{prefix}.self_source_count.filter"),
+                card_id,
+                ctx,
+                errors,
+            );
+        }
+        validate_formula(
+            &ssc.value,
+            &format!("{prefix}.self_source_count.value"),
             card_id,
             ctx,
             errors,
@@ -650,6 +671,15 @@ fn validate_predicate(
         validate_predicate(
             &sc.filter,
             &format!("{prefix}.source_count.filter"),
+            card_id,
+            ctx,
+            errors,
+        );
+    }
+    if let Some(d) = &pred.distinct_named_count_gte {
+        validate_predicate(
+            &d.filter,
+            &format!("{prefix}.distinct_named_count_gte.filter"),
             card_id,
             ctx,
             errors,
@@ -1729,6 +1759,9 @@ fn validate_predicate_binding_scope(
         ("own_memory_gte", &pred.own_memory_gte),
         ("security_count_lte", &pred.security_count_lte),
         ("security_count_gte", &pred.security_count_gte),
+        ("total_security_count_lte", &pred.total_security_count_lte),
+        ("total_security_count_gte", &pred.total_security_count_gte),
+        ("total_security_count_eq", &pred.total_security_count_eq),
     ] {
         if let Some(crate::predicate::DpConstraint::Formula(formula)) = dp {
             validate_formula_binding_scope(
@@ -1809,6 +1842,24 @@ fn validate_predicate_binding_scope(
         validate_predicate_binding_scope(
             inh,
             &format!("{prefix}.has_inherited"),
+            card_id,
+            scope,
+            errors,
+        );
+    }
+    if let Some(ssc) = &pred.self_source_count {
+        if let Some(filter) = &ssc.filter {
+            validate_predicate_binding_scope(
+                filter,
+                &format!("{prefix}.self_source_count.filter"),
+                card_id,
+                scope,
+                errors,
+            );
+        }
+        validate_formula_binding_scope(
+            &ssc.value,
+            &format!("{prefix}.self_source_count.value"),
             card_id,
             scope,
             errors,
@@ -1938,7 +1989,8 @@ fn validate_formula_binding_scope(
         }
         FormulaSpec::Compound(CompoundFormula::FloorDiv(args))
         | FormulaSpec::Compound(CompoundFormula::Max(args))
-        | FormulaSpec::Compound(CompoundFormula::Min(args)) => {
+        | FormulaSpec::Compound(CompoundFormula::Min(args))
+        | FormulaSpec::Compound(CompoundFormula::Subtract(args)) => {
             for (i, arg) in args.iter().enumerate() {
                 validate_formula_binding_scope(
                     arg,
@@ -2083,7 +2135,8 @@ fn validate_formula(
         }
         FormulaSpec::Compound(CompoundFormula::FloorDiv(args))
         | FormulaSpec::Compound(CompoundFormula::Max(args))
-        | FormulaSpec::Compound(CompoundFormula::Min(args)) => {
+        | FormulaSpec::Compound(CompoundFormula::Min(args))
+        | FormulaSpec::Compound(CompoundFormula::Subtract(args)) => {
             for (i, arg) in args.iter().enumerate() {
                 validate_formula(arg, &format!("{prefix}[{i}]"), card_id, ctx, errors);
             }
@@ -2167,7 +2220,8 @@ fn formula_uses_dp_aggregate(formula: &crate::formula::FormulaSpec) -> bool {
         FormulaSpec::Compound(
             CompoundFormula::FloorDiv(args)
             | CompoundFormula::Max(args)
-            | CompoundFormula::Min(args),
+            | CompoundFormula::Min(args)
+            | CompoundFormula::Subtract(args),
         ) => args.iter().any(formula_uses_dp_aggregate),
         FormulaSpec::BasePerDelta { per, .. } => per_uses_dp_aggregate(per),
         FormulaSpec::SourceStackCount { .. } | FormulaSpec::SourceStackDpSum { .. } => false,

@@ -70,6 +70,30 @@ pub struct AltPathSpec {
     /// `From` for back-compat with existing YAML.
     #[serde(default, skip_serializing_if = "is_default_direction")]
     pub direction: AltPathDirection,
+
+    /// Gap 4 (BT18-065 Snatchmon) — conditionally-enabled extra material origin
+    /// zones for this DigiXros. Each entry grants its `zone` as a legal DigiXros
+    /// material source ONLY while its `while:` predicate holds at play-start
+    /// ("While you have no Digimon other than [Vemmon], cards in your trash can
+    /// also be placed for this card's DigiXros"). Evaluated once when the
+    /// transaction is built (DCGO `AddMaxTrashCountDigiXrosClass` + its
+    /// `CanUseCondition`); when true the zone is added to the transaction's
+    /// allowed zones on top of each material's static `zones:`. `digixros` only.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extra_material_zones: Vec<ConditionalMaterialZoneSpec>,
+}
+
+/// One `extra_material_zones:` entry (Gap 4). See
+/// [`AltPathSpec::extra_material_zones`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ConditionalMaterialZoneSpec {
+    /// The origin zone to conditionally enable (e.g. `trash`).
+    pub zone: crate::predicate::Zone,
+    /// Predicate that must hold (evaluated at play-start) for the zone to be
+    /// allowed. Renamed from the YAML key `while` (a Rust keyword).
+    #[serde(rename = "while")]
+    pub while_condition: PredicateSpec,
 }
 
 fn is_default_direction(d: &AltPathDirection) -> bool {

@@ -747,7 +747,6 @@ fn bt19_065_digixros_five_field_materials_reduce_cost_and_attach_sources() {
 /// numbers" requirement. Proven via the assertion below, which fails today
 /// (the second copy stays selectable) — see docs/RUST_ENGINE_GAPS.md.
 #[test]
-#[ignore = "pending: G-ENGINE-DIGIXROS-DISTINCT-BY from docs/RUST_ENGINE_GAPS.md"]
 fn bt19_065_digixros_rejects_duplicate_card_number() {
     // Two copies of the SAME card id ("different card numbers" constraint):
     // only one of the pair may be selected as a material.

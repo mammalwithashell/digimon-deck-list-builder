@@ -34,6 +34,9 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::OnOpponentSecurityRemoved => EffectTiming::OnOpponentSecurityRemoved,
         CompiledTiming::OnOwnSecurityRemoved => EffectTiming::OnOwnSecurityRemoved,
         CompiledTiming::OnDigivolutionCardTrashed => EffectTiming::OnDigivolutionCardTrashed,
+        CompiledTiming::OnDigivolutionCardReturnedToDeckBottom => {
+            EffectTiming::OnDigivolutionCardReturnedToDeckBottom
+        }
         CompiledTiming::OnSecurityCheck => EffectTiming::OnSecurityCheck,
         CompiledTiming::OnCheckFaceUpSecurity => EffectTiming::OnCheckFaceUpSecurity,
         CompiledTiming::OnLoseSecurity => EffectTiming::OnLoseSecurity,

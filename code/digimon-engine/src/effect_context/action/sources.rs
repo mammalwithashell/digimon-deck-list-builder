@@ -886,6 +886,13 @@ impl<'a> EffectContext<'a> {
     /// ordering of the remaining sources; and this is a *return*, NOT a trash,
     /// so it does **not** fire `OnDigivolutionCardTrashed`.
     ///
+    /// When `to_bottom` is true it DOES fire
+    /// `OnDigivolutionCardReturnedToDeckBottom` (carrying the former host + the
+    /// returned card as event context) — the observer BT21-058 / BT18-065
+    /// listen on ("when any [Vemmon] return to the bottom of the deck from this
+    /// Digimon's digivolution cards"). Top-of-deck returns fire nothing (the
+    /// printed observer is bottom-scoped).
+    ///
     /// Returns `true` when the source handle was found and moved; `false` if the
     /// permanent slot is gone or the card is not in its stack.
     pub fn return_card_source_to_deck(
@@ -914,8 +921,33 @@ impl<'a> EffectContext<'a> {
             };
             permanent.card_sources.remove(pos)
         };
+        let returned_card = removed.handle();
         self.move_card_to_deck(removed, to_bottom);
         let _ = self.cleanup_exposed_battle_area_digi_egg(perm);
+        // G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM: fire the
+        // "[Vemmon] returned to the bottom of the deck from this Digimon's
+        // digivolution cards" observer (BT21-058 / BT18-065). Only for the
+        // BOTTOM route — the printed observer is scoped to deck-BOTTOM returns.
+        // The host is the permanent's (still-standing) top card; if the return
+        // exposed a DigiEgg and the permanent was deleted (or the stack is gone),
+        // fall back to the returned card as host so the observer still carries a
+        // stable event handle.
+        if to_bottom {
+            let host_card = self
+                .game
+                .player(perm.player)
+                .battle_area
+                .get(perm.index as usize)
+                .map(|permanent| permanent.top_card().handle())
+                .unwrap_or(returned_card);
+            self.game.fire_digivolution_card_returned_to_deck_bottom(
+                perm.player,
+                perm,
+                host_card,
+                returned_card,
+                crate::trigger_context::EventCause::DeckBottom,
+            );
+        }
         true
     }
 

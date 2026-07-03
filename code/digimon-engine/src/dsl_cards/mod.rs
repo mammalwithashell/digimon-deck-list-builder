@@ -293,6 +293,18 @@ impl CardEffect for DslCardEffect {
                         let amount_formula = amount_fn.clone().or_else(|| {
                             (*amount).map(digimon_dsl::compiled::CompiledFormula::Literal)
                         });
+                        // A `pay_cost` whose reduction is driven ENTIRELY by an
+                        // in-cost `delete_for_cost_reduction` (BT13-103: "reduce
+                        // the play cost by the play cost of the deleted Digimon")
+                        // has no static `amount`/`amount_fn`; the amount is
+                        // credited at cost-resolution from the Game override. Lower
+                        // it with a literal-0 base so the reducer still installs
+                        // (previously a missing amount silently dropped the whole
+                        // clause). `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`.
+                        let amount_formula = amount_formula.or_else(|| {
+                            (!pay_cost.is_empty())
+                                .then_some(digimon_dsl::compiled::CompiledFormula::Literal(0))
+                        });
                         if let Some(amount_formula) = amount_formula {
                             out.push(lower_cost_reduction::lower_with_formula(
                                 card,

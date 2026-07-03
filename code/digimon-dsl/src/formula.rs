@@ -97,6 +97,9 @@ pub enum CompoundFormula {
     FloorDiv(Vec<FormulaSpec>),
     Max(Vec<FormulaSpec>),
     Min(Vec<FormulaSpec>),
+    /// Left-associative subtraction: `subtract: [a, b]` → `a - b`. YAML:
+    /// `{ subtract: [ {..}, {..} ] }`. G-DSL-FORMULA-SUBTRACT.
+    Subtract(Vec<FormulaSpec>),
     Aggregate(AggregateSelector),
     AggregateScoped(AggregateFormulaSpec),
     RawRust(String),
@@ -120,6 +123,7 @@ enum CompoundFormulaDeserialize {
     FloorDiv(Vec<FormulaSpec>),
     Max(Vec<FormulaSpec>),
     Min(Vec<FormulaSpec>),
+    Subtract(Vec<FormulaSpec>),
     Aggregate(AggregateFormulaPayload),
     AggregateScoped(AggregateFormulaSpec),
     RawRust(String),
@@ -142,6 +146,7 @@ impl<'de> Deserialize<'de> for CompoundFormula {
             CompoundFormulaDeserialize::FloorDiv(v) => Self::FloorDiv(v),
             CompoundFormulaDeserialize::Max(v) => Self::Max(v),
             CompoundFormulaDeserialize::Min(v) => Self::Min(v),
+            CompoundFormulaDeserialize::Subtract(v) => Self::Subtract(v),
             CompoundFormulaDeserialize::Aggregate(AggregateFormulaPayload::Legacy(selector)) => {
                 Self::Aggregate(selector)
             }
@@ -164,6 +169,7 @@ impl Serialize for CompoundFormula {
             Self::FloorDiv(v) => map.serialize_entry("floor_div", v)?,
             Self::Max(v) => map.serialize_entry("max", v)?,
             Self::Min(v) => map.serialize_entry("min", v)?,
+            Self::Subtract(v) => map.serialize_entry("subtract", v)?,
             Self::Aggregate(selector) => map.serialize_entry("aggregate", selector)?,
             Self::AggregateScoped(spec) => map.serialize_entry("aggregate", spec)?,
             Self::RawRust(name) => map.serialize_entry("raw_rust", name)?,
@@ -216,6 +222,16 @@ pub enum PerSelector {
     /// is a `per` selector. Sources are always those of `ctx.source_permanent`.
     /// G-DSL-PER-SOURCE-STACK-COUNT-FILTERED.
     SourceStackCount(SourceStackCountSpec),
+    /// A player's memory-gauge value as a scalar count, so a `base_per_delta`
+    /// can scale a numeric by memory. `of: you` reads the controller's signed
+    /// memory (the gauge when it is their turn, negated otherwise); `of:
+    /// opponent` reads the opponent's, clamped at 0 (DCGO `Math.Max(0,
+    /// Enemy.MemoryForPlayer)`). YAML: `per: { player_memory: { of: opponent } }`.
+    /// Drives BT25-086 Dan Yuki's "[for each memory your opponent has]"
+    /// +1000-DP grant: `base_per_delta { base: 0, per: { player_memory: { of:
+    /// opponent } }, delta: 1000 }`. G-DSL-FORMULA-PLAYER-MEMORY (driver
+    /// BT25-086 / G-DSL-FORMULA-OPPONENT-MEMORY).
+    PlayerMemory { of: PlayerRef },
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -282,6 +298,15 @@ impl Serialize for PerSelector {
             Self::SourceStackCount(spec) => {
                 let mut outer = serializer.serialize_map(Some(1))?;
                 outer.serialize_entry("source_stack_count", spec)?;
+                outer.end()
+            }
+            Self::PlayerMemory { of } => {
+                let mut outer = serializer.serialize_map(Some(1))?;
+                #[derive(Serialize)]
+                struct PlayerMemoryPayload {
+                    of: PlayerRef,
+                }
+                outer.serialize_entry("player_memory", &PlayerMemoryPayload { of: *of })?;
                 outer.end()
             }
         }

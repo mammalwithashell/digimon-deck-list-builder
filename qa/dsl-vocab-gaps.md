@@ -3920,5 +3920,21 @@ reason) so the authoring-parity guard stays green while documenting the omission
 - **First test:** BT23-013 in hand over a Lv.5 base while the opponent has a 10000-DP Digimon → assert the
   cost-5 [Huckmon] route is offered; with no such opponent Digimon → not offered.
 
-## Binding-scoped exact-name predicate (`binding_card_name_is`)  [G-DSL-BINDING-CARD-NAME-EQUALS]  — OPEN 2026-07-03
+## Binding-scoped exact-name predicate (`binding_card_name_is`)  [G-DSL-BINDING-CARD-NAME-EQUALS]  — RESOLVED 2026-07-03
+> **RESOLVED 2026-07-03 (leaves II):** `binding_card_name_is: {binding, name_is}` — effective-name (printed + also_treated_as) exact comparison. BT21-087's name-branch approximation can be replaced.
 Consumer: BT21-087 Zenith ([On Play] reveal 3, choose 1 [Vemmon]-text card: if its name IS [Vemmon] → play-free-or-add choice, else add to hand). The `if:` branch needs to test the BOUND revealed card's exact printed name; the predicate surface has `binding_card_kind` (kind) and (filed 2026-07-02) `binding_card_color` (color) but no name analogue, so BT21-087 approximates via a nested re-select shape documented in its YAML header. Suggested: `binding_card_name_is: { binding: <name>, name: "<literal>" }` — sibling of `binding_card_kind`, resolving the named card binding and comparing the effective (synth-identity-aware) card name. Workaround shipped in BT21-087 is faithful for its single-pick flow but repeats per card; the leaf amortizes.
+
+
+> **Interactive pay_cost delete reducers (fixed + variable) — RESOLVED 2026-07-03** (store-champs
+> round 1). `kind: cost_reduction` supports an interactive `pay_cost` selecting+deleting an own
+> permanent, static `amount:` (fixed) or omitted + `delete_for_cost_reduction` (variable = the
+> deleted permanent's printed play cost, rule-25 snapshot into
+> `Game::pending_cost_reduction_amount_override`). Clone-safe (resumable VM). Closes
+> G-DSL-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT and
+> G-DSL-BEFORE-PAY-COST-DELETE-OWN-FOR-VARIABLE-REDUCTION (BT25-076 Ghoulmon shape now
+> expressible). Drivers: BT18-073, BT13-083, BT13-103 (authored). Tests:
+> tests/cost_hooks/pay_cost_play_delete_reducer.rs.
+
+> **Memory-count formula (`player_memory`) — RESOLVED 2026-07-03** (store-champs leaves I). See
+> G-DSL-MEMORY-COUNT-FORMULA in docs/RUST_ENGINE_GAPS.md. BT25-086's End-of-Turn DP scaling is
+> now expressible via `dp_modifier_fn: {base: 0, per: {player_memory: {of: opponent}}, delta: 1000}`.

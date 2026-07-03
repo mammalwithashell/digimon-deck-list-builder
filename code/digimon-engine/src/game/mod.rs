@@ -626,6 +626,21 @@ pub struct Game {
     /// path's `player_reducer_resolved` flag. Reset once consumed.
     /// `G-COST-REDUCTION-INTERACTIVE-PAY-COST`.
     pub(crate) interactive_option_use_reducer_prompted: bool,
+
+    /// VARIABLE-amount interactive cost reduction driven by the printed play
+    /// cost of a permanent deleted DURING an interactive cost's `pay_cost`
+    /// (`G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`). BT13-103 Akihiro
+    /// Kurata: "by deleting 1 of your [Gizmon]-name Digimon, reduce the play
+    /// cost by the play cost of the deleted Digimon" (DCGO
+    /// `permanent.CostJustBeforeRemoveField`). The reduction amount is not known
+    /// up-front (`inspect_cost_reduction_candidate` runs BEFORE the interactive
+    /// select+delete), so the dedicated `delete_for_cost_reduction` pay_cost step
+    /// snapshots the deleted permanent's printed cost here (pre-removal, rule 25)
+    /// and the play-cost continuation adds it once the parked select resolves.
+    /// `Some(0)` from a 0-cost deletion credits nothing (DCGO `if (reduceCost <=
+    /// 0) yield break`). `None` means "no deferred variable reduction". Consumed
+    /// (`take`) by `resume_play_cost_continuation_after_pending`.
+    pub(crate) pending_cost_reduction_amount_override: Option<i32>,
     /// The digivolution route (cost + app-fusion-ness) the player CHOSE when a
     /// hand card offered more than one distinct-cost route over the target base
     /// (rule 17 — no auto-selection of the cheapest). Set by the cost-choice

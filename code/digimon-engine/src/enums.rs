@@ -386,6 +386,15 @@ pub enum EffectTiming {
     /// (cost payment, source-displacement effects, etc.). Rocks core
     /// archetype observer.
     OnDigivolutionCardTrashed,
+    /// Fires when a card is RETURNED from a permanent's digivolution stack to
+    /// the BOTTOM of a player's deck (a return, not a trash — distinct from
+    /// `OnDigivolutionCardTrashed`). Carries the former host + returned card as
+    /// event context so host-scoped observers ("from THIS Digimon's
+    /// digivolution cards") gate on `event_host_permanent_is_source` and
+    /// event-card observers on `event_card_name_contains`. Galacticmon /
+    /// Vemmon-LIBERATOR archetype observer (BT21-058, BT18-065).
+    /// G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
+    OnDigivolutionCardReturnedToDeckBottom,
 
     // Special
     None,

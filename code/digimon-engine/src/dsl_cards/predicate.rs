@@ -217,6 +217,32 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    // G-DSL-TOTAL-SECURITY-COUNT-PREDICATE: SUM of both players' security
+    // stacks (controller + opponent). BT13-106 "if there're 6 or fewer total
+    // cards in both players' security stacks". DCGO
+    // `card.Owner.SecurityCards.Count + card.Owner.Enemy.SecurityCards.Count`.
+    if pred.total_security_count_lte.is_some()
+        || pred.total_security_count_gte.is_some()
+        || pred.total_security_count_eq.is_some()
+    {
+        let total = (rctx.security_count(rctx.player) + rctx.security_count(rctx.opponent_id()))
+            as i32;
+        if let Some(cap) = &pred.total_security_count_lte {
+            if total > eval_int_constraint_read(cap, rctx, None, bindings) {
+                return false;
+            }
+        }
+        if let Some(floor) = &pred.total_security_count_gte {
+            if total < eval_int_constraint_read(floor, rctx, None, bindings) {
+                return false;
+            }
+        }
+        if let Some(want) = &pred.total_security_count_eq {
+            if total != eval_int_constraint_read(want, rctx, None, bindings) {
+                return false;
+            }
+        }
+    }
     if let Some(cap) = &pred.face_up_security_count_lte {
         if face_up_security_count(rctx, rctx.player) as i32
             > eval_int_constraint_read(cap, rctx, None, bindings)
@@ -347,6 +373,44 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(spec) = &pred.distinct_named_count_gte {
+        // G-DSL-DISTINCT-NAMED-PERMANENT-COUNT — count DISTINCT card names
+        // among `of`'s battle-area permanents matching `filter`, then require
+        // ≥ `n`. Names are synth-identity-aware (each permanent contributes its
+        // synth `card_names`, so a `ChangeBaseCardName` overlay or a multi-name
+        // card counts each distinct name). Driver: BT21-040 ("3 or more [Hero]
+        // trait Tamers with different names"). No-subject global leaf.
+        let mut names: Vec<String> = Vec::new();
+        for player in resolve_predicate_players(spec.of, rctx) {
+            let battle_len = rctx.game.player(player).battle_area.len();
+            for index in 0..battle_len {
+                let handle = PermanentHandle {
+                    player,
+                    index: index as u8,
+                };
+                if !eval_predicate_with_bindings(
+                    &spec.filter,
+                    rctx,
+                    PredicateSubject::Permanent(handle),
+                    bindings,
+                ) {
+                    continue;
+                }
+                let Some(perm) = permanent_for_handle(rctx, handle) else {
+                    continue;
+                };
+                let synth = perm.synth_identity(rctx.card_data(), &rctx.game.modifiers, handle);
+                for name in &synth.card_names {
+                    if !names.iter().any(|n| n == name) {
+                        names.push(name.clone());
+                    }
+                }
+            }
+        }
+        if names.len() < usize::from(spec.n) {
+            return false;
+        }
+    }
     if let Some(floor) = pred.face_down_sources_under_tamers_gte {
         // G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER: total face-down digivolution
         // sources across the observer's battle-area Tamers. Gates BT25-035's
@@ -375,6 +439,40 @@ pub fn eval_predicate_with_bindings(
         };
         let actual = opponent_perm.card_sources.len().saturating_sub(1) == 0;
         if actual != want {
+            return false;
+        }
+    }
+    if let Some(spec) = &pred.self_source_count {
+        // G-DSL-SELF-SOURCE-COUNT-THRESHOLD: count the effect carrier's OWN
+        // digivolution source cards (those beneath its top card) matching the
+        // optional filter, then compare with `value` under `op`. Reads
+        // `ctx.source_permanent` — a no-subject global predicate. Same
+        // source-counting logic as the `source_stack_count` formula
+        // (`card_sources.iter().rev().skip(1)` skips the top card), so the two
+        // agree. DCGO `PermanentOfThisCard().DigivolutionCards.Count(cond)`.
+        let count = rctx
+            .source_permanent
+            .and_then(|handle| permanent_for_handle(rctx, handle))
+            .map(|perm| {
+                perm.card_sources
+                    .iter()
+                    .rev()
+                    .skip(1)
+                    .filter(|source| {
+                        spec.filter.as_deref().is_none_or(|filter| {
+                            eval_predicate_with_bindings(
+                                filter,
+                                rctx,
+                                PredicateSubject::Card(source.handle()),
+                                bindings,
+                            )
+                        })
+                    })
+                    .count() as i32
+            })
+            .unwrap_or(0);
+        let threshold = eval_int_constraint_read(&spec.value, rctx, None, bindings);
+        if !spec.op.apply(count, threshold) {
             return false;
         }
     }
@@ -627,6 +725,45 @@ pub fn eval_predicate_with_bindings(
             return false;
         };
         if !kind_matches_field(binding_kind.kind, data.card_kind) {
+            return false;
+        }
+    }
+    if let Some(binding_color) = &pred.binding_card_color {
+        // G-DSL-BINDING-CARD-COLOR — resolve the named card binding and test
+        // whether its printed color set contains the requested color. Sibling
+        // of `binding_card_kind`. Driver: BT1-087 ("if THAT card is yellow,
+        // trigger <Recovery +1>"). Fails closed when the binding is unset or
+        // the card can't be resolved.
+        let Some(handle) = bindings.and_then(|b| b.get_card(&binding_color.binding)) else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(handle) else {
+            return false;
+        };
+        if !data
+            .colors
+            .iter()
+            .any(|c| color_matches(binding_color.color_is, *c))
+        {
+            return false;
+        }
+    }
+    if let Some((binding_name, want)) = &pred.binding_card_name_is {
+        // G-DSL-BINDING-CARD-NAME-EQUALS — resolve the named card binding and
+        // compare its effective name (printed `card_name` + static
+        // `also_treated_as` aliases) to `want`. Mirrors the static `name_is`
+        // leaf's exact match, extended over the identity aliases so a card
+        // "also treated as [X]" satisfies `name_is: X`. Sibling of
+        // `binding_card_kind`. Driver: BT21-087 ("play 1 [Vemmon]").
+        let Some(handle) = bindings.and_then(|b| b.get_card(binding_name)) else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(handle) else {
+            return false;
+        };
+        if !any_effective_name_matches(&data.card_name, None, &data.also_treated_as, |name| {
+            name == want.as_str()
+        }) {
             return false;
         }
     }
@@ -1155,6 +1292,8 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
     pred.kind.is_none()
         && pred.level_eq.is_none()
         && pred.level_eq_binding.is_none()
+        && pred.level_lte_binding.is_none()
+        && pred.level_gte_binding.is_none()
         && pred.level_lte.is_none()
         && pred.level_gte.is_none()
         && pred.level_matches_aggregate.is_none()
@@ -1171,6 +1310,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.name_is.is_none()
         && pred.name_contains.is_none()
         && pred.effect_text_contains.is_none()
+        && pred.in_text_contains.is_none()
         && pred.name_in.is_none()
         && pred.name_not_shared_by_field_digimon.is_none()
         && pred.name_not_shared_by_field_tamer.is_none()
@@ -1178,6 +1318,7 @@ fn eval_no_subject_fields(pred: &CompiledPredicate) -> bool {
         && pred.play_cost_lte.is_none()
         && pred.play_cost_gte.is_none()
         && pred.play_cost_eq.is_none()
+        && pred.play_cost_eq_binding.is_none()
         && pred.play_or_use_cost_lte.is_none()
         && pred.self_color_count_gte.is_none()
         && pred.dp_eq.is_none()
@@ -1369,6 +1510,59 @@ fn eval_event_fields(
             {
                 return false;
             }
+        }
+    }
+    if let Some(ref token) = pred.event_target_trait_contains {
+        // G-DSL-EVENT-TARGET-TRAIT-CONTAINS — substring / root-trait sibling of
+        // `event_target_trait_has`, tolerant of pluralization / compound traits
+        // (BT11-089 Q&A: "regardless of other words or pluralizations"). Mirrors
+        // the snapshot / live-target split. Case-insensitive substring match.
+        let needle = token.to_lowercase();
+        let matched = if let Some(snapshot) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.deleted_object.as_ref())
+        {
+            snapshot
+                .traits
+                .iter()
+                .any(|t| t.to_lowercase().contains(&needle))
+        } else {
+            let Some(card) = event_target_card(rctx) else {
+                return false;
+            };
+            let Some(data) = rctx.game.card_data_for_handle(card) else {
+                return false;
+            };
+            data.traits.iter().any(|t| t.to_lowercase().contains(&needle))
+        };
+        if !matched {
+            return false;
+        }
+    }
+    if let Some(want) = pred.event_target_has_digivolution_cards {
+        // G-DSL-EVENT-TARGET-SOURCE-COUNT — true when the event-target
+        // permanent has ≥1 digivolution card. `event_target_stack_size` reads
+        // the deletion snapshot's pre-removal count for a deletion event, or
+        // the live source stack otherwise. "Has a digivolution card" ⇔ stack
+        // size ≥ 2 (top card + ≥1 source). Fails closed when unresolvable.
+        let Some(stack_size) = event_target_stack_size(rctx) else {
+            return false;
+        };
+        let has_sources = stack_size >= 2;
+        if has_sources != want {
+            return false;
+        }
+    }
+    if let Some(min) = pred.event_target_stack_size_gte {
+        // G-DSL-EVENT-TARGET-SOURCE-COUNT — the event-target permanent's full
+        // stack size (top card + sources) must be ≥ N.
+        let Some(stack_size) = event_target_stack_size(rctx) else {
+            return false;
+        };
+        if stack_size < usize::from(min) {
+            return false;
         }
     }
     if let Some(want) = pred.event_target_level_eq {
@@ -1607,6 +1801,22 @@ fn eval_event_fields(
     }
     if let Some(ref needle) = pred.event_card_text_contains {
         if !rctx.event_card_text_contains(needle) {
+            return false;
+        }
+    }
+    if let Some(ref needle) = pred.event_card_in_text_contains {
+        // G-DSL-EVENT-CARD-IN-TEXT-CONTAINS — the broad whole-card scan
+        // (`card_in_text_contains`, DCGO `CardSource.HasText`) applied to the
+        // triggering event card. Resolves the event card's CardData exactly
+        // like `event_card_trait_has` above.
+        let matched = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.event_card)
+            .and_then(|card| rctx.game.card_data_for_handle(card))
+            .is_some_and(|data| card_in_text_contains(data, needle));
+        if !matched {
             return false;
         }
     }
@@ -1972,6 +2182,70 @@ fn event_target_level(rctx: &EffectReadContext<'_>) -> Option<u8> {
         .and_then(|data| data.level)
 }
 
+/// Total digivolution-stack size (top card + sources) of the event-target
+/// permanent. For a deletion event the field slot is already gone, so read the
+/// rule-25 deletion snapshot's `source_count_just_before` (sources BELOW the
+/// top) and add 1 for the top card. For a live event target, read the current
+/// `card_sources` length (already inclusive of the top card). Returns `None`
+/// when no event target resolves. G-DSL-EVENT-TARGET-SOURCE-COUNT.
+fn event_target_stack_size(rctx: &EffectReadContext<'_>) -> Option<usize> {
+    let trigger = rctx.game.current_trigger_context.as_ref()?;
+    if let Some(snapshot) = trigger.deleted_object.as_ref() {
+        return Some(snapshot.source_count_just_before + 1);
+    }
+    let handle = trigger
+        .event_permanent
+        .or(trigger.target_permanent)
+        .or(trigger.event_host_permanent)?;
+    let perm = permanent_for_handle(rctx, handle)?;
+    Some(perm.card_sources.len())
+}
+
+/// Resolve the reference play cost for `play_cost_eq_binding`. Order:
+/// 1. A named card binding → its printed play cost.
+/// 2. A named permanent binding → its top card's play cost.
+/// 3. The special `event_target` handle → the deletion snapshot's
+///    pre-removal cost (`cost_just_before`) for a deletion event, else the
+///    live event-target card's play cost.
+///
+/// Returns `None` when nothing resolves, so the caller fails closed rather
+/// than silently comparing against 0. G-DSL-COST-RELATIVE-TO-EVENT-SUBJECT.
+fn reference_play_cost(
+    binding: &str,
+    rctx: &EffectReadContext<'_>,
+    bindings: Option<&Bindings>,
+) -> Option<i32> {
+    if let Some(bindings) = bindings {
+        if let Some(card) = bindings.get_card(binding) {
+            return rctx
+                .game
+                .card_data_for_handle(card)
+                .map(|data| i32::from(data.play_cost));
+        }
+        if let Some(handle) = bindings.get_permanent(binding) {
+            return permanent_for_handle(rctx, handle)
+                .and_then(|perm| rctx.game.card_data_for_handle(perm.top_card().handle()))
+                .map(|data| i32::from(data.play_cost));
+        }
+    }
+    if binding == "event_target" {
+        if let Some(snapshot) = rctx
+            .game
+            .current_trigger_context
+            .as_ref()
+            .and_then(|trigger| trigger.deleted_object.as_ref())
+        {
+            return snapshot.cost_just_before.map(i32::from);
+        }
+        let card = event_target_card(rctx)?;
+        return rctx
+            .game
+            .card_data_for_handle(card)
+            .map(|data| i32::from(data.play_cost));
+    }
+    None
+}
+
 fn event_target_dp(rctx: &EffectReadContext<'_>) -> Option<i32> {
     let trigger = rctx.game.current_trigger_context.as_ref()?;
     if let Some(snapshot) = trigger.deleted_object.as_ref() {
@@ -2019,6 +2293,73 @@ fn any_effective_name_matches(
         || aliases.iter().any(|alias| matches(alias))
 }
 
+/// Whole-card "[X] in its text" scan (G-DSL-IN-TEXT-CONTAINS) — the broad DCGO
+/// `CardSource.HasText` surface (`CardSource.cs`). Case-insensitive substring.
+///
+/// The scanned surface, per the official ruling reproduced on BT21-098's Q&A
+/// ("name, traits, effects, inherited effects, (Rule), digivolution
+/// requirements, DNA digivolution, DigiXros requirements, burst digivolve, App
+/// Fusion, Link, or Assembly requirements"):
+///
+/// - **name** (`card_name`) and every static **also-treated-as** alias
+///   (`ChangeCardNamesClass` / "(Rule) also treated as [X]") and **DigiXros
+///   alias** (`digixros_aliases`) — DCGO scans only `CardName_ENG`, but our
+///   engine records the extra printed identities the API drops, so scanning
+///   them is a faithful superset.
+/// - **traits** (`traits`) — the Type line, INCLUDING the Rule-granted traits
+///   the digimoncard.io ingest drops (e.g. the [Three Musketeers] trait on
+///   BT6-017 / BT6-065 / ST14-09, which do NOT carry the literal string in
+///   their effect text; DCGO scans `Type_ENG` for exactly this reason). This
+///   is the load-bearing difference from `effect_text_contains`.
+/// - **all printed text**: effect / inherited / security, and — for a Dual —
+///   both faces (`text_for_search_all_faces`). The structured requirement
+///   strings the official ruling enumerates (digivolution / DNA / DigiXros /
+///   burst / App Fusion / Link / Assembly requirements) are carried inside the
+///   printed effect/inherited/security text on our CardData model — they are
+///   NOT separate free-text fields — so scanning the printed text covers them.
+///
+/// What is NOT separately scanned (documented for the tracker): the `attribute`
+/// line (DCGO adds `Attribute_ENG`) — our CardData has no attribute field yet
+/// (`attribute_is` is a no-op stub), so there is nothing to scan; and the
+/// numeric `evo_costs` / `dna_costs` structs, which carry integers, not the
+/// free-text requirement wording (that wording lives in the printed text, which
+/// IS scanned). If a future CardData gains a dedicated attribute field or
+/// free-text requirement strings, fold them in here.
+fn card_in_text_contains(data: &crate::card_data::CardData, needle: &str) -> bool {
+    let needle = needle.to_lowercase();
+    if needle.is_empty() {
+        return false;
+    }
+    // Name + identity aliases.
+    if data.card_name.to_lowercase().contains(&needle)
+        || data
+            .also_treated_as
+            .iter()
+            .any(|a| a.to_lowercase().contains(&needle))
+        || data
+            .digixros_aliases
+            .iter()
+            .any(|a| a.to_lowercase().contains(&needle))
+    {
+        return true;
+    }
+    // Traits (the Type line) — the [Three Musketeers]-trait regression.
+    // Scans the top-level trait list AND the Dual digimon-face traits (a Dual
+    // card's face may carry its own trait list distinct from `data.traits`).
+    if data
+        .traits
+        .iter()
+        .chain(data.dual.iter().flat_map(|d| d.digimon.traits.iter()))
+        .any(|t| t.to_lowercase().contains(&needle))
+    {
+        return true;
+    }
+    // All printed text (both dual faces via `text_for_search_all_faces`).
+    data.text_for_search_all_faces()
+        .to_lowercase()
+        .contains(&needle)
+}
+
 fn eval_card_fields(
     pred: &CompiledPredicate,
     rctx: &EffectReadContext<'_>,
@@ -2061,6 +2402,31 @@ fn eval_card_fields(
             return false;
         };
         if data.level.map(i64::from) != Some(want) {
+            return false;
+        }
+    }
+    if let Some(ref binding) = pred.level_lte_binding {
+        // Subject level <= the literal bound to `binding`. Sibling of
+        // `level_eq_binding`. Driver: BT8-107 ("level <= the deleted
+        // Digimon's level"). Fails closed when the binding or level is absent.
+        let Some(cap) = bindings.and_then(|b| b.get_literal(binding)) else {
+            return false;
+        };
+        let Some(level) = data.level else {
+            return false;
+        };
+        if i64::from(level) > cap {
+            return false;
+        }
+    }
+    if let Some(ref binding) = pred.level_gte_binding {
+        let Some(floor) = bindings.and_then(|b| b.get_literal(binding)) else {
+            return false;
+        };
+        let Some(level) = data.level else {
+            return false;
+        };
+        if i64::from(level) < floor {
             return false;
         }
     }
@@ -2170,6 +2536,23 @@ fn eval_card_fields(
             return false;
         }
     }
+    if let Some(ref n) = pred.in_text_contains {
+        // G-DSL-IN-TEXT-CONTAINS: the broad whole-card "[X] in its text"
+        // scan mirroring DCGO `CardSource.HasText` (`CardSource.cs`). Scans
+        // the card NAME + also-treated-as / DigiXros aliases + TRAITS (the
+        // Type line — this is where the [Three Musketeers]-trait regression
+        // lives) + all printed text (effect / inherited / security, both
+        // dual faces). Case-insensitive. This is the official-ruling surface
+        // ("name, traits, effects, inherited effects, (Rule), digivolution
+        // requirements, DNA digivolution, DigiXros requirements, burst
+        // digivolve, App Fusion, Link, or Assembly requirements"): the
+        // structured requirement strings the CardData model carries are
+        // embedded in the printed text scanned here, and traits are scanned
+        // directly. See `card_in_text_contains`.
+        if !card_in_text_contains(data, n) {
+            return false;
+        }
+    }
     if let Some(ref names) = pred.name_in {
         let overlay_name = overlay.and_then(|o| o.name.as_deref());
         if !any_effective_name_matches(
@@ -2226,6 +2609,25 @@ fn eval_card_fields(
     }
     if let Some(want) = &pred.play_cost_eq {
         if i32::from(data.play_cost) != eval_int_constraint(want, rctx, formula_target, bindings) {
+            return false;
+        }
+    }
+    if let Some(spec) = &pred.play_cost_eq_binding {
+        // G-DSL-COST-RELATIVE-TO-EVENT-SUBJECT — compare the candidate's play
+        // cost to a bound/event permanent's play cost plus an offset. Fails
+        // closed when the reference cost cannot be resolved (binding unset).
+        // Driver: BT19-099 ("play cost 1 higher than that [leaving] Digimon").
+        let Some(reference) = reference_play_cost(&spec.binding, rctx, bindings) else {
+            return false;
+        };
+        let threshold = reference + i32::from(spec.offset);
+        let candidate = i32::from(data.play_cost);
+        let ok = match spec.op {
+            digimon_dsl::compiled::CompiledComparatorOp::Eq => candidate == threshold,
+            digimon_dsl::compiled::CompiledComparatorOp::Gte => candidate >= threshold,
+            digimon_dsl::compiled::CompiledComparatorOp::Lte => candidate <= threshold,
+        };
+        if !ok {
             return false;
         }
     }
@@ -2605,6 +3007,23 @@ fn eval_permanent_fields(
             .iter()
             .any(|x| x.to_lowercase().contains(&needle))
     });
+    // G-DSL-IN-TEXT-CONTAINS honors Track C overlays (`ChangeTraits` /
+    // `ChangeBaseCardName`) the same way `trait_has` / `name_*` do: a
+    // ChangeTraits-granted trait or a name overlay must be visible to the
+    // whole-card text scan. The printed-text portion is unaffected by overlays,
+    // so only the overlay's traits + names participate here; the delegated
+    // card-field pass below still runs `card_in_text_contains` against the
+    // printed `CardData` (which covers name/aliases/traits/text), so clearing
+    // the field on an overlay match is correct only when the overlay itself
+    // satisfies it.
+    let in_text_contains_overlay_match = pred.in_text_contains.as_ref().is_some_and(|s| {
+        let needle = s.to_lowercase();
+        synth_identity
+            .traits
+            .iter()
+            .chain(synth_identity.card_names.iter())
+            .any(|x| x.to_lowercase().contains(&needle))
+    });
     let name_is_overlay_match = pred
         .name_is
         .as_ref()
@@ -2648,6 +3067,7 @@ fn eval_permanent_fields(
     let delegated_pred = if has_kind_constraint
         || trait_overlay_match
         || trait_contains_overlay_match
+        || in_text_contains_overlay_match
         || name_is_overlay_match
         || name_contains_overlay_match
         || name_in_overlay_match
@@ -2666,6 +3086,9 @@ fn eval_permanent_fields(
         }
         if trait_contains_overlay_match {
             p.trait_contains = None;
+        }
+        if in_text_contains_overlay_match {
+            p.in_text_contains = None;
         }
         if name_is_overlay_match {
             p.name_is = None;

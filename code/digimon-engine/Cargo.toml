@@ -133,6 +133,21 @@ path = "tests/debug_runner_dsl.rs"
 required-features = ["dsl-yaml-loader"]
 
 [[test]]
+name = "source_returned_to_deck_bottom_observer"
+path = "tests/source_returned_to_deck_bottom_observer.rs"
+required-features = ["dsl-yaml-loader"]
+
+[[test]]
+name = "return_own_sources_leave_replacement"
+path = "tests/return_own_sources_leave_replacement.rs"
+required-features = ["dsl-yaml-loader"]
+
+[[test]]
+name = "digixros_conditional_trash_zone"
+path = "tests/digixros_conditional_trash_zone.rs"
+required-features = ["dsl-yaml-loader"]
+
+[[test]]
 name = "effect_context"
 path = "tests/effect_context/main.rs"
 

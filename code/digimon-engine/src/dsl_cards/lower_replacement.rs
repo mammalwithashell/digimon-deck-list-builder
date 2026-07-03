@@ -536,8 +536,24 @@ fn required_selection_step_has_candidate(
             ..
         } => resolve_permanent_binding(of_permanent, bindings)
             .is_some_and(|perm| permanent_has_matching_materials(ctx, perm, filter, bindings)),
-        CompiledStep::SelectOwnSources { min, max, .. } => {
-            *min == 0 || (*max >= *min && has_own_source_candidates(ctx))
+        CompiledStep::SelectOwnSources {
+            target,
+            filter,
+            min,
+            max,
+            ..
+        } => {
+            if *min == 0 {
+                return true;
+            }
+            if *max < *min {
+                return false;
+            }
+            // Count sources matching `filter` under the `target` permanent (or,
+            // when unscoped, across all the controller's stacks). Gap 2 pay-in-
+            // full: the accept prompt is offered only when ≥ `min` such sources
+            // exist, so BT21-062's "return 4 [Vemmon]" is not offered with < 4.
+            matching_own_source_count(ctx, target.as_ref(), filter, bindings) >= *min as usize
         }
         CompiledStep::SelectOpponentDpBudget {
             dp_budget,
@@ -846,12 +862,69 @@ fn permanent_has_matching_materials(
         })
 }
 
-fn has_own_source_candidates(ctx: &EffectReadContext<'_>) -> bool {
-    ctx.game
-        .player(ctx.player)
-        .battle_area
-        .iter()
-        .any(|perm| perm.card_sources.len() > 1)
+/// Count the controller's digivolution sources (cards BELOW each stack's top)
+/// that match `filter`, restricted to the `target` permanent when one is given.
+/// Mirrors `select_own_sources`'s execution-time candidate rule
+/// (`source_multi_candidates_data`): candidates are the below-top sources,
+/// filtered on `PredicateSubject::Source`, optionally scoped to a single
+/// permanent. Used by the `SelectOwnSources` replacement-cost preflight so a
+/// pay-in-full cost (BT21-062 "return 4 [Vemmon]") is not offered with < min
+/// matching sources. `CompiledBindingRef::Source` resolves to the effect's own
+/// `source_permanent` (the leaving Digimon for a leave-field replacement).
+fn matching_own_source_count(
+    ctx: &EffectReadContext<'_>,
+    target: Option<&CompiledBindingRef>,
+    filter: &CompiledPredicate,
+    bindings: &Bindings,
+) -> usize {
+    let target_permanent = match target {
+        Some(CompiledBindingRef::Source) => ctx.source_permanent,
+        Some(other) => resolve_permanent_binding(other, bindings),
+        None => None,
+    };
+    // Any EXPLICIT target binding that fails to resolve means zero candidates
+    // (the picker would set `target_resolution_failed` and reject everything).
+    // `target: None` (unscoped) legitimately counts across all own stacks.
+    if target.is_some() && target_permanent.is_none() {
+        return 0;
+    }
+    let controller = ctx.player;
+    let mut count = 0usize;
+    for field_index in 0..ctx.game.player(controller).battle_area.len() {
+        let handle = PermanentHandle {
+            player: controller,
+            index: field_index as u8,
+        };
+        if target_permanent.is_some_and(|t| t != handle) {
+            continue;
+        }
+        let n = ctx.game.player(controller).battle_area[field_index]
+            .card_sources
+            .len();
+        if n <= 1 {
+            continue;
+        }
+        for source_index in 0..(n - 1) {
+            let card = ctx.game.player(controller).battle_area[field_index].card_sources
+                [source_index]
+                .handle();
+            let source = crate::selection::SourceSelectionRef {
+                permanent: handle,
+                field_index: field_index as u8,
+                source_index: source_index as u8,
+                card,
+            };
+            if eval_predicate_with_bindings(
+                filter,
+                ctx,
+                PredicateSubject::Source(source),
+                Some(bindings),
+            ) {
+                count += 1;
+            }
+        }
+    }
+    count
 }
 
 fn has_opponent_dp_budget_candidate(ctx: &EffectReadContext<'_>, dp_budget: i32) -> bool {

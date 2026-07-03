@@ -904,7 +904,10 @@ impl Game {
             return;
         }
         // The parked pay_cost resolved (the mandatory Tamer pick paid the cost).
-        self.pending_interactive_option_use_reduction += amount;
+        // Drain any VARIABLE `delete_for_cost_reduction` amount so it never leaks
+        // into a later cost. `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`.
+        let variable = self.pending_cost_reduction_amount_override.take().unwrap_or(0);
+        self.pending_interactive_option_use_reduction += amount + variable;
         let _ = self.play_option_core(player_id, source, Some(mode), cost_policy);
     }
 

@@ -102,6 +102,33 @@ pub fn lower_with_formula(
     let condition_condition = condition.clone();
     let condition_when_any = when_any_ally_played.clone();
     let condition_when_digivolve = when_any_ally_digivolves_into.clone();
+    // Pay-cost actionability guard (`G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`).
+    // DCGO gates an INTERACTIVE cost reducer's offer on
+    // `CanActivateCondition = HasMatchConditionPermanent(...)` — the reducer is
+    // not offered at all when the "by <verb> 1 of your ... Digimon" cost has no
+    // eligible target (e.g. BT18-073 / BT13-083 / BT13-103's "by deleting 1 of
+    // your [Composite/Gizmon/level-3] Digimon"). Without this gate the reducer
+    // would surface a spurious accept prompt and, worse, a MANDATORY
+    // `select_own_permanent` pay_cost with no candidates would run its tail
+    // (the delete) as a no-op and credit the reduction for a cost never paid.
+    // We derive the guard from the pay_cost's FIRST step (the cost selection);
+    // it fires only for the single-pick selection kinds `first_step_candidate_guard`
+    // recognises (`select_own/opponent/any_permanent`, `select_hand`,
+    // `select_trash`).
+    //
+    // ONLY applied when that first select is MANDATORY. A DECLINABLE first step
+    // (`pay_cost_self_gated` — e.g. BT12-112's optional "place 1 [Shoutmon]") is
+    // its own opt-in/opt-out surface (the inner PASS is the decline), so
+    // candidate-gating the OFFER there would change the self-gated flow; leave it
+    // alone. Purpose-built interactive steps (`trash_bottom_face_down_source_under_tamer`)
+    // are not recognised by `first_step_candidate_guard` and keep their runtime
+    // `cost_unpayable` abort — no behavior change for them either.
+    let pay_cost_guard = pay_cost
+        .first()
+        .filter(|_| {
+            !crate::dsl_cards::lower_triggered::body_first_step_is_declinable(pay_cost.as_ref())
+        })
+        .and_then(crate::dsl_cards::lower_triggered::first_step_candidate_guard);
     builder = builder.condition(move |rctx| {
         if let Some(aw) = &condition_active_when {
             let subject = rctx
@@ -135,6 +162,12 @@ pub fn lower_with_formula(
                 return false;
             };
             if !eval_predicate(wdi, rctx, PredicateSubject::Card(target)) {
+                return false;
+            }
+        }
+        // Do not offer when the interactive cost has no eligible target.
+        if let Some(guard) = &pay_cost_guard {
+            if !guard(rctx) {
                 return false;
             }
         }

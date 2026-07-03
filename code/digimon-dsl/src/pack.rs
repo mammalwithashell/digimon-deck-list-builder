@@ -381,6 +381,9 @@ fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTr
         &predicate.memory_gte,
         &predicate.security_count_lte,
         &predicate.security_count_gte,
+        &predicate.total_security_count_lte,
+        &predicate.total_security_count_gte,
+        &predicate.total_security_count_eq,
         &predicate.face_up_security_count_lte,
         &predicate.face_up_security_count_gte,
         &predicate.effect_deleted_opponent_digimon_dp_gte,
@@ -397,6 +400,17 @@ fn collect_predicate_raw_rust_fns(predicate: &CompiledPredicate, names: &mut BTr
     }
     if let Some((filter, _)) = &predicate.source_count {
         collect_predicate_raw_rust_fns(filter, names);
+    }
+    if let Some(ssc) = &predicate.self_source_count {
+        if let Some(filter) = &ssc.filter {
+            collect_predicate_raw_rust_fns(filter, names);
+        }
+        if let CompiledDpConstraint::Formula(formula) = &ssc.value {
+            collect_formula_raw_rust_fns(formula, names);
+        }
+    }
+    if let Some(distinct) = &predicate.distinct_named_count_gte {
+        collect_predicate_raw_rust_fns(&distinct.filter, names);
     }
     for aggregate in [&predicate.count_lte, &predicate.count_gte]
         .into_iter()
@@ -438,7 +452,8 @@ fn collect_formula_raw_rust_fns(formula: &CompiledFormula, names: &mut BTreeSet<
         }
         CompiledFormula::FloorDiv(args)
         | CompiledFormula::Max(args)
-        | CompiledFormula::Min(args) => {
+        | CompiledFormula::Min(args)
+        | CompiledFormula::Subtract(args) => {
             for arg in args {
                 collect_formula_raw_rust_fns(arg, names);
             }

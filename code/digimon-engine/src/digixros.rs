@@ -124,14 +124,22 @@ impl DigiXrosZoneAllowance {
 }
 
 /// A material selected into, or pre-attached to, a DigiXros transaction.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DigiXrosSelectedMaterial {
     pub origin: DigiXrosMaterialOrigin,
     pub recipe_slot: Option<usize>,
     pub cost_delta: i16,
+    /// Printed-identity signature captured at commit time, used by
+    /// `distinct_by` enforcement (G-ENGINE-DIGIXROS-DISTINCT-BY). `None` for
+    /// slot-independent pre-attached extras (`pre_attach_extra_material`,
+    /// `recipe_slot: None`), which never participate in a slot's distinctness
+    /// set.
+    pub identity: Option<MaterialIdentity>,
 }
 
 impl DigiXrosSelectedMaterial {
+    /// Slot-independent constructor with no captured identity — for
+    /// pre-attached extras that satisfy no recipe slot.
     pub fn new(
         origin: DigiXrosMaterialOrigin,
         recipe_slot: Option<usize>,
@@ -141,6 +149,24 @@ impl DigiXrosSelectedMaterial {
             origin,
             recipe_slot,
             cost_delta,
+            identity: None,
+        }
+    }
+
+    /// Constructor that captures the material's printed identity from
+    /// `CardData` — used on every slot-assigned commit so `distinct_by` can
+    /// compare without a `Game` lookup.
+    pub fn with_identity(
+        origin: DigiXrosMaterialOrigin,
+        recipe_slot: Option<usize>,
+        cost_delta: i16,
+        card: &CardData,
+    ) -> Self {
+        Self {
+            origin,
+            recipe_slot,
+            cost_delta,
+            identity: Some(MaterialIdentity::from_card(card)),
         }
     }
 }
@@ -213,6 +239,51 @@ pub enum DigiXrosMaterialValidationError {
     AlreadySelected,
     NoMatchingRecipeSlot,
     RecipeSlotFull,
+    /// The only matching recipe slot has `distinct_by: Some(mode)` and this
+    /// candidate's printed identity (card number / name / level per `mode`)
+    /// duplicates a material already committed to that slot. Mirrors DCGO's
+    /// `CanTargetCondition_ByPreSelecetedList` dedup on `CardID`
+    /// (G-ENGINE-DIGIXROS-DISTINCT-BY).
+    DistinctnessViolation,
+}
+
+/// The printed-identity signature of a committed DigiXros material, captured at
+/// commit time so `distinct_by` enforcement is a pure comparison over
+/// transaction state (no `Game`/`CardData` lookup — keeps the transaction
+/// self-contained and clone-safe). One field per [`DigiXrosDistinctBy`] mode.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MaterialIdentity {
+    /// `CardData::card_id` — the printed card number (`distinct_by: card_number`).
+    pub card_number: String,
+    /// `CardData::card_name` (`distinct_by: name`).
+    pub card_name: String,
+    /// `CardData::level` (`distinct_by: level`); `None` for level-less cards.
+    pub level: Option<u8>,
+}
+
+impl MaterialIdentity {
+    pub fn from_card(card: &CardData) -> Self {
+        Self {
+            card_number: card.card_id.clone(),
+            card_name: card.card_name.clone(),
+            level: card.level,
+        }
+    }
+
+    /// True if `self` and `other` collide under the given distinctness `mode`.
+    fn collides(&self, other: &Self, mode: DigiXrosDistinctBy) -> bool {
+        match mode {
+            DigiXrosDistinctBy::CardNumber => {
+                self.card_number.eq_ignore_ascii_case(&other.card_number)
+            }
+            DigiXrosDistinctBy::Name => self.card_name.eq_ignore_ascii_case(&other.card_name),
+            // Two level-less cards never collide by level (there is nothing to
+            // compare); DCGO's level dedup only fires on a concrete level match.
+            DigiXrosDistinctBy::Level => {
+                self.level.is_some() && self.level == other.level
+            }
+        }
+    }
 }
 
 /// First-class state for one pending DigiXros play before cost is paid.
@@ -285,10 +356,11 @@ impl DigiXrosTransaction {
         let resolution = self.resolve_material_origin(origin, card)?;
         let slot = resolution.slot_index;
         let cost_delta = self.recipe_slots[slot].cost_delta_per_material;
-        self.add_selected_material(DigiXrosSelectedMaterial::new(
+        self.add_selected_material(DigiXrosSelectedMaterial::with_identity(
             origin,
             Some(slot),
             cost_delta,
+            card,
         ));
         self.consume_wildcard_resolution(resolution);
         Ok(slot)
@@ -318,7 +390,9 @@ impl DigiXrosTransaction {
             return Err(DigiXrosMaterialValidationError::AlreadySelected);
         }
 
+        let candidate_identity = MaterialIdentity::from_card(card);
         let mut found_matching_full_slot = false;
+        let mut found_distinctness_violation = false;
         for slot in &self.recipe_slots {
             if !slot_accepts_card(slot, card) {
                 continue;
@@ -326,6 +400,18 @@ impl DigiXrosTransaction {
             if self.recipe_slot_is_full(slot.slot_index) {
                 found_matching_full_slot = true;
                 continue;
+            }
+            // G-ENGINE-DIGIXROS-DISTINCT-BY: a `distinct_by` slot rejects a
+            // candidate whose printed identity duplicates a material already
+            // committed to THAT slot (mask-level exclusion — DCGO
+            // `CanTargetCondition_ByPreSelecetedList`). Keep scanning: another
+            // slot may accept this card, and only if NO slot does do we surface
+            // the distinctness error.
+            if let Some(mode) = slot.distinct_by {
+                if self.slot_has_colliding_identity(slot.slot_index, &candidate_identity, mode) {
+                    found_distinctness_violation = true;
+                    continue;
+                }
             }
             return Ok(DigiXrosMaterialResolution {
                 slot_index: slot.slot_index,
@@ -343,11 +429,34 @@ impl DigiXrosTransaction {
             found_matching_full_slot = true;
         }
 
+        // Distinctness takes precedence over the generic "no matching slot"
+        // signal: the card DID match a slot by name/trait, it was refused only
+        // because it duplicates a committed material. Full-slot still ranks
+        // first (a full slot is a harder block than a same-identity dupe).
         if found_matching_full_slot {
             Err(DigiXrosMaterialValidationError::RecipeSlotFull)
+        } else if found_distinctness_violation {
+            Err(DigiXrosMaterialValidationError::DistinctnessViolation)
         } else {
             Err(DigiXrosMaterialValidationError::NoMatchingRecipeSlot)
         }
+    }
+
+    /// True if any material already committed to `slot_index` (selected or
+    /// pre-attached, with a captured identity) collides with `candidate` under
+    /// the distinctness `mode`. Pure over transaction state — no `Game` lookup.
+    fn slot_has_colliding_identity(
+        &self,
+        slot_index: usize,
+        candidate: &MaterialIdentity,
+        mode: DigiXrosDistinctBy,
+    ) -> bool {
+        self.selected_materials
+            .iter()
+            .chain(self.pre_attached_materials.iter())
+            .filter(|m| m.recipe_slot == Some(slot_index))
+            .filter_map(|m| m.identity.as_ref())
+            .any(|committed| candidate.collides(committed, mode))
     }
 
     pub fn add_pre_attached_material(&mut self, material: DigiXrosSelectedMaterial) {
@@ -363,10 +472,11 @@ impl DigiXrosTransaction {
     ) -> Result<usize, DigiXrosMaterialValidationError> {
         let resolution = self.resolve_material_origin(origin, card)?;
         let slot = resolution.slot_index;
-        self.add_pre_attached_material(DigiXrosSelectedMaterial::new(
+        self.add_pre_attached_material(DigiXrosSelectedMaterial::with_identity(
             origin,
             Some(slot),
             cost_delta,
+            card,
         ));
         self.consume_wildcard_resolution(resolution);
         Ok(slot)
@@ -597,12 +707,39 @@ impl Game {
                     digimon_dsl::compiled::CompiledAltPathKind::DigiXros
                 )
             })?;
+            let played_card = card.handle();
             let mut transaction = compiled_path_transaction(
-                card.handle(),
+                played_card,
                 player,
                 card.play_cost(&self.card_data),
                 path,
             );
+            // Gap 4 (BT18-065) — conditionally enable extra material origin
+            // zones. Each `extra_material_zones` entry's `while:` predicate is
+            // evaluated ONCE at transaction build (DCGO
+            // `AddMaxTrashCountDigiXrosClass` + `CanUseCondition`); when it
+            // holds, the zone becomes a legal DigiXros material source for this
+            // transaction on top of each material's static `zones:`.
+            if !path.extra_material_zones.is_empty() {
+                let rctx = crate::effect_context::EffectReadContext::new_with_source_kind(
+                    self,
+                    played_card,
+                    None,
+                    crate::enums::EffectSourceKind::Digimon,
+                    player,
+                );
+                for extra in &path.extra_material_zones {
+                    if let Some(zone) = compiled_zone_to_material_zone(extra.zone) {
+                        if crate::dsl_cards::predicate::eval_predicate(
+                            &extra.condition,
+                            &rctx,
+                            crate::dsl_cards::predicate::PredicateSubject::None,
+                        ) {
+                            transaction.allow_zone(DigiXrosZoneAllowance::unbounded(zone));
+                        }
+                    }
+                }
+            }
             self.apply_active_digixros_wildcards(&mut transaction);
             Some(transaction)
         }
@@ -873,6 +1010,23 @@ impl Game {
     }
 }
 
+/// Map a compiled DSL `zone:` (used by `extra_material_zones`) onto the
+/// DigiXros material-origin zone. Only zones that can source DigiXros materials
+/// map; others yield `None` (silently ignored). Gap 4.
+#[cfg(feature = "dsl-yaml-loader")]
+fn compiled_zone_to_material_zone(
+    zone: digimon_dsl::compiled::CompiledZone,
+) -> Option<DigiXrosMaterialZone> {
+    use digimon_dsl::compiled::CompiledZone;
+    match zone {
+        CompiledZone::Hand => Some(DigiXrosMaterialZone::Hand),
+        CompiledZone::BattleArea => Some(DigiXrosMaterialZone::BattleArea),
+        CompiledZone::Trash => Some(DigiXrosMaterialZone::Trash),
+        CompiledZone::Material => Some(DigiXrosMaterialZone::UnderTamer),
+        _ => None,
+    }
+}
+
 #[cfg(feature = "dsl-yaml-loader")]
 fn compiled_path_transaction(
     played_card: CardHandle,
@@ -1089,6 +1243,27 @@ mod tests {
     fn shoutmon_slot() -> DigiXrosRecipeSlot {
         let mut slot = DigiXrosRecipeSlot::new(0);
         slot.names.push("Shoutmon".to_string());
+        slot.allowed_zones.insert(DigiXrosMaterialZone::Hand);
+        slot.allowed_zones.insert(DigiXrosMaterialZone::BattleArea);
+        slot
+    }
+
+    /// A `test_card` variant that lets a test pick the printed level, so the
+    /// `distinct_by: level` mode can be exercised (`test_card` hardcodes Lv.3).
+    fn test_card_lvl(card_id: &str, name: &str, traits: &[&str], level: u8) -> CardData {
+        let mut card = test_card(card_id, name, traits);
+        card.level = Some(level);
+        card
+    }
+
+    /// An unbounded [Xros Heart] slot (min 0, no max) whose distinctness rule is
+    /// `mode` — mirrors the shipped BT12-112 / BT19-065 recipe shape.
+    fn distinct_xros_heart_slot(mode: DigiXrosDistinctBy) -> DigiXrosRecipeSlot {
+        let mut slot = DigiXrosRecipeSlot::new(0);
+        slot.traits.push("Xros Heart".to_string());
+        slot.min = 0;
+        slot.max = None;
+        slot.distinct_by = Some(mode);
         slot.allowed_zones.insert(DigiXrosMaterialZone::Hand);
         slot.allowed_zones.insert(DigiXrosMaterialZone::BattleArea);
         slot
@@ -1732,5 +1907,166 @@ alt_paths:
             .card_sources
             .iter()
             .any(|card| card.handle() == material_card));
+    }
+
+    // ── Gap 3 — DigiXros `distinct_by` runtime enforcement ──────────────────
+    // (G-ENGINE-DIGIXROS-DISTINCT-BY). `distinct_by` was threaded into the slot
+    // but never READ at material-validation time, so a recipe requiring
+    // "different card numbers / names / levels" silently accepted duplicates.
+    // These substrate tests exercise the transaction directly (the shipped
+    // BT12-112 recipe is `distinct_by: card_number`; BT19-065 is the same;
+    // EX3-014 is `distinct_by: name`).
+
+    /// BT19-065 / BT12-112 flavour: "different card numbers". Once a material
+    /// with card number `X` is committed to the slot, a second material with the
+    /// SAME card number is rejected — even a distinct card *handle* — while a
+    /// material with a different card number is still accepted.
+    #[test]
+    fn bt19_065_digixros_rejects_duplicate_card_number() {
+        let mut tx = DigiXrosTransaction::new(
+            handle(1),
+            0,
+            15,
+            vec![distinct_xros_heart_slot(DigiXrosDistinctBy::CardNumber)],
+        );
+        // Two DIFFERENT copies (different handles) of the SAME card number.
+        let machinedramon_a = test_card("BT19-065", "Machinedramon", &["Xros Heart"]);
+        let machinedramon_b = test_card("BT19-065", "Machinedramon", &["Xros Heart"]);
+        let greymon = test_card("BT19-099", "Greymon", &["Xros Heart"]);
+
+        let first = DigiXrosMaterialOrigin::Hand {
+            player: 0,
+            index: 0,
+            card: handle(2),
+        };
+        let dup = DigiXrosMaterialOrigin::Hand {
+            player: 0,
+            index: 1,
+            card: handle(3),
+        };
+        let distinct = DigiXrosMaterialOrigin::Hand {
+            player: 0,
+            index: 2,
+            card: handle(4),
+        };
+
+        assert_eq!(tx.try_select_material(first, &machinedramon_a), Ok(0));
+        // A second copy of the same card number must be refused (distinctness),
+        // NOT accepted as another material.
+        assert_eq!(
+            tx.validate_material_origin(dup, &machinedramon_b),
+            Err(DigiXrosMaterialValidationError::DistinctnessViolation)
+        );
+        // A different card number is still fine.
+        assert_eq!(tx.validate_material_origin(distinct, &greymon), Ok(0));
+        assert_eq!(tx.try_select_material(distinct, &greymon), Ok(0));
+    }
+
+    /// EX3-014 Dorbickmon flavour: "different names". Duplicate NAME rejected;
+    /// different name (even if it shared a card number, which it can't) accepted.
+    #[test]
+    fn digixros_distinct_by_name_rejects_duplicate_name() {
+        let mut tx = DigiXrosTransaction::new(
+            handle(1),
+            0,
+            15,
+            vec![distinct_xros_heart_slot(DigiXrosDistinctBy::Name)],
+        );
+        let agumon_a = test_card("BT1-010", "Agumon", &["Xros Heart"]);
+        let agumon_b = test_card("BT2-010", "Agumon", &["Xros Heart"]);
+        let gabumon = test_card("BT1-020", "Gabumon", &["Xros Heart"]);
+
+        let first = DigiXrosMaterialOrigin::Hand {
+            player: 0,
+            index: 0,
+            card: handle(2),
+        };
+        let dup_name = DigiXrosMaterialOrigin::Hand {
+            player: 0,
+            index: 1,
+            card: handle(3),
+        };
+        let distinct_name = DigiXrosMaterialOrigin::Hand {
+            player: 0,
+            index: 2,
+            card: handle(4),
+        };
+
+        assert_eq!(tx.try_select_material(first, &agumon_a), Ok(0));
+        assert_eq!(
+            tx.validate_material_origin(dup_name, &agumon_b),
+            Err(DigiXrosMaterialValidationError::DistinctnessViolation)
+        );
+        assert_eq!(tx.validate_material_origin(distinct_name, &gabumon), Ok(0));
+    }
+
+    /// Level-mode: duplicate printed LEVEL rejected, different level accepted.
+    #[test]
+    fn digixros_distinct_by_level_rejects_duplicate_level() {
+        let mut tx = DigiXrosTransaction::new(
+            handle(1),
+            0,
+            15,
+            vec![distinct_xros_heart_slot(DigiXrosDistinctBy::Level)],
+        );
+        let lvl5_a = test_card_lvl("BT1-100", "AAA", &["Xros Heart"], 5);
+        let lvl5_b = test_card_lvl("BT1-101", "BBB", &["Xros Heart"], 5);
+        let lvl6 = test_card_lvl("BT1-102", "CCC", &["Xros Heart"], 6);
+
+        let first = DigiXrosMaterialOrigin::Hand {
+            player: 0,
+            index: 0,
+            card: handle(2),
+        };
+        let dup_lvl = DigiXrosMaterialOrigin::Hand {
+            player: 0,
+            index: 1,
+            card: handle(3),
+        };
+        let distinct_lvl = DigiXrosMaterialOrigin::Hand {
+            player: 0,
+            index: 2,
+            card: handle(4),
+        };
+
+        assert_eq!(tx.try_select_material(first, &lvl5_a), Ok(0));
+        assert_eq!(
+            tx.validate_material_origin(dup_lvl, &lvl5_b),
+            Err(DigiXrosMaterialValidationError::DistinctnessViolation)
+        );
+        assert_eq!(tx.validate_material_origin(distinct_lvl, &lvl6), Ok(0));
+    }
+
+    /// Distinctness is slot-scoped: a duplicate against a DIFFERENT slot's
+    /// committed material is fine. Two `distinct_by: card_number` slots each
+    /// independently forbid duplicates within themselves.
+    #[test]
+    fn digixros_distinct_by_is_slot_scoped() {
+        let mut slot0 = distinct_xros_heart_slot(DigiXrosDistinctBy::CardNumber);
+        slot0.max = Some(1);
+        let mut slot1 = distinct_xros_heart_slot(DigiXrosDistinctBy::CardNumber);
+        slot1.slot_index = 1;
+        slot1.max = Some(1);
+        let mut tx = DigiXrosTransaction::new(handle(1), 0, 15, vec![slot0, slot1]);
+
+        let card_a = test_card("BT19-065", "Machinedramon", &["Xros Heart"]);
+        let card_b = test_card("BT19-065", "Machinedramon", &["Xros Heart"]);
+
+        let first = DigiXrosMaterialOrigin::Hand {
+            player: 0,
+            index: 0,
+            card: handle(2),
+        };
+        let second = DigiXrosMaterialOrigin::Hand {
+            player: 0,
+            index: 1,
+            card: handle(3),
+        };
+
+        // First copy fills slot 0.
+        assert_eq!(tx.try_select_material(first, &card_a), Ok(0));
+        // Second copy of the same number lands in slot 1 (a different slot's
+        // distinctness set does not see slot 0's material), so it is accepted.
+        assert_eq!(tx.validate_material_origin(second, &card_b), Ok(1));
     }
 }

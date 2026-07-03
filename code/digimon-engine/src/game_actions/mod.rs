@@ -1766,6 +1766,38 @@ impl Game {
         self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
+    /// Sibling of [`Self::fire_digivolution_card_trashed`], for the RETURN of a
+    /// digivolution source to the BOTTOM of a player's deck. Fires
+    /// `OnDigivolutionCardReturnedToDeckBottom` carrying the former host
+    /// (`host` / `host_card`) and the returned `card`, then drains synchronously
+    /// (same "observer sees each move one at a time" contract as the trash
+    /// sibling — a multi-source return, e.g. BT21-062's "return 4 [Vemmon]",
+    /// fires the observer once per source so a `once_per_turn` inherited clause
+    /// consumes its single use and stops).
+    /// G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
+    pub(crate) fn fire_digivolution_card_returned_to_deck_bottom(
+        &mut self,
+        player: PlayerId,
+        host: PermanentHandle,
+        host_card: crate::card_source::CardHandle,
+        card: crate::card_source::CardHandle,
+        cause: crate::trigger_context::EventCause,
+    ) {
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnDigivolutionCardReturnedToDeckBottom,
+            crate::selection::TriggerSource::SourceReturnedToDeckBottom {
+                player,
+                host,
+                host_card,
+                card,
+                cause,
+            },
+        );
+        self.drain_effect_queue();
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
+    }
+
     /// Battle-area field indices of `player`'s unsuspended Digimon — the
     /// legal suspend-cost targets for `G-PAY-COST-SELECT-ARBITRARY-SUSPEND`.
     fn suspendable_own_digimon(&self, player: PlayerId) -> Vec<usize> {

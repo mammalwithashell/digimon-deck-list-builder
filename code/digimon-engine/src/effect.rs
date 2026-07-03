@@ -579,6 +579,14 @@ impl Effect {
         EffectBuilder::new(card, EffectTiming::OnDigivolutionCardTrashed)
     }
 
+    /// Fires when a card is RETURNED from a permanent's digivolution stack to
+    /// the bottom of a player's deck (not trashed). Galacticmon /
+    /// Vemmon-LIBERATOR observer (BT21-058, BT18-065).
+    /// G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
+    pub fn on_digivolution_card_returned_to_deck_bottom(card: CardHandle) -> EffectBuilder {
+        EffectBuilder::new(card, EffectTiming::OnDigivolutionCardReturnedToDeckBottom)
+    }
+
     /// Fires after a persistent Option card is placed in the battle area.
     pub fn on_option_placed(card: CardHandle) -> EffectBuilder {
         EffectBuilder::new(card, EffectTiming::OnOptionPlaced)

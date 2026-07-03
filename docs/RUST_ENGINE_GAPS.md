@@ -1530,7 +1530,8 @@ Surfaced by BT11-033 MirageGaogamon (clause 2 BLOCKED, omitted from YAML per no-
 - **Suggested fix:** (1) fan `OnAddToHand` out to battle-area observers at each effect-initiated hand-gain commit (mirroring how `OnDrawCard` / `OnReturn` are fired), threading the gaining player + an `effect_initiated` flag into `TriggerContext`; (2) add the `on_add_to_hand` DSL trigger token + an `event_add_to_hand_player` predicate. Distinguish effect-initiated adds from normal draws (DCGO's `cardEffect != null` gate) so the clause does not over-fire on the draw step.
 - **Blocks:** BT11-033 (clause 2). `code/digimon-engine/cards/bt11/BT11-033.yaml` omits the clause; tests `bt11_033_memory_gain_is_floor_of_opp_hand_over_four` and `bt11_033_memory_observer_is_once_per_turn_and_clears_after_end_turn` are `#[ignore]`'d with this gap-id (and `bt11_033_does_not_author_the_blocked_memory_observer` guards against an approximation landing on the wrong trigger). Likely shared by every "when an effect adds cards to (a player's) hand" observer in the pool.
 
-## BeforePayCost reduction whose amount is set by an interactive in-cost selection  [G-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT]  — OPEN 2026-06-03
+## BeforePayCost reduction whose amount is set by an interactive in-cost selection  [G-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT]  — RESOLVED 2026-07-03
+**Status: RESOLVED (2026-07-03).** Interactive pay_cost park/resume existed (BT25-088); closed the two holes: (1) pay-cost actionability guard in lower_cost_reduction.rs (no phantom reduction when the sacrifice has no target, DCGO CanActivateCondition); (2) new DSL step `delete_for_cost_reduction` snapshots the deleted permanent's pre-removal printed cost (rule 25) into `Game::pending_cost_reduction_amount_override`, drained by the play/digivolve/option continuations. BT13-103 clause 1 authored + behavioral test un-ignored. Provers: tests/cost_hooks/pay_cost_play_delete_reducer.rs (10, incl. clone-mid-park).
 
 Surfaced by BT13-103 Akihiro Kurata (clause 1 BLOCKED, omitted from YAML per no-approximations). Hybrid engine + DSL gap. Clauses 2 ([End of Opponent's Turn][OPT] draw/trash/place-self/delete) and 3 ([Security]) are fully implemented; only clause 1 is blocked.
 
@@ -1729,6 +1730,7 @@ return-immunity modifiers" entry — verify at implementation; likely no longer 
 - **Related:** G-DSL-PROTECT-OTHER-BY-SELF-DELETE (qa/dsl-vocab-gaps.md, BT25-039); resolved `WhenWouldBeDeleted` leave-field replacement framework (self-scoped substrate this extends).
 
 ### Source-return-to-deck-bottom observer trigger (`OnDigivolutionCardReturnToDeckBottom`)
+- **Status: RESOLVED (2026-07-03).** `EffectTiming::OnDigivolutionCardReturnedToDeckBottom` + `TriggerSource::SourceReturnedToDeckBottom{player, host, host_card, card, cause=DeckBottom}` fired from `return_card_source_to_deck` (bottom route, per source, drained synchronously - OPT proven across multi-source returns). DSL `when: on_source_returned_to_deck_bottom`; host scope via `event_host_permanent_is_source`, name gate via `event_card_name_contains`. Provers: tests/source_returned_to_deck_bottom_observer.rs (4).
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Galacticmon (2026-07-02)
 - **Card(s):** BT21-058 Snatchmon (inherited "[All Turns][OPT] When any [Vemmon] are returned to the bottom of the deck from this Digimon's digivolution cards, delete 1 of your opponent's Digimon with a play cost of 4 or less."), BT18-065 Snatchmon (inherited "When any [Vemmon] return to the bottom of the deck from this Digimon's digivolution cards, this Digimon unsuspends and gains <Blocker> until the end of your opponent's turn.")
@@ -1739,6 +1741,7 @@ return-immunity modifiers" entry — verify at implementation; likely no longer 
 - **Related:** `return_selected_sources_to_deck` (emitter half, resolved 2026-06-14); sibling observer timings (`OnReturn`, `OnAnyDeletion`); the replacement-cost entry below (its payment must also fire this trigger).
 
 ### Leave-field replacement paid by returning N own digivolution sources to the deck bottom
+- **Status: RESOLVED (2026-07-03).** `ReplacementCostBody::return_own_sources_to_deck{filter, count, position}` lowers to SelectOwnSources(min=max=count, target=source) + ReturnSelectedSourcesToDeck + CancelReplacement; requires outcome: prevent + optional: true; not-offered-when-unpayable via the filter+count-aware SelectOwnSources preflight (`matching_own_source_count`); payment fires the source-return observer (cross-gap prover). Provers: tests/return_own_sources_leave_replacement.rs (4).
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Galacticmon (2026-07-02)
 - **Card(s):** BT21-062 Galacticmon ("[All Turns] When this Digimon would leave the battle area, by returning 4 [Vemmon] from its digivolution cards to the bottom of the deck, it doesn't leave.")
@@ -1749,6 +1752,7 @@ return-immunity modifiers" entry — verify at implementation; likely no longer 
 - **Related:** resolved leave-field replacement framework + link-card cost variants (BT25-066/073/101, EX11-027); the observer-trigger entry above.
 
 ### Mass-delete/for-each cannot exclude a chosen binding ("choose 1, delete all their OTHER Digimon")
+- **Status: RESOLVED as NOT-A-GAP (2026-07-03).** Already expressible: `select ... selector: highest_play_cost, bind_as: kept` + `for_each {over: {..., not_in_binding: kept}}`; the tie case is faithful (only the chosen permanent is excluded — pinned by `not_in_binding_excludes_only_the_chosen_binding_from_a_field_scan`). EX11-046 unblocked.
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Galacticmon (2026-07-02)
 - **Card(s):** EX11-046 Galacticmon ("Choose 1 of your opponent's highest play cost Digimon and delete all of their other Digimon.")
@@ -1759,6 +1763,7 @@ return-immunity modifiers" entry — verify at implementation; likely no longer 
 - **Related:** `FieldSelector::HighestPlayCost` (present); `color_matches_binding` (only existing binding-comparison leaf).
 
 ### Name/text-filtered digivolution-source count as a threshold predicate (condition gate)
+- **Status: RESOLVED (2026-07-03).** `self_source_count: {filter, op: gte|lte|eq, value}` no-subject leaf over the carrier's sources; BT21-006-shaped inline fixture proves +3000 at 4 [Vemmon] sources / none at 3 (tests/dsl/self_source_count_threshold.rs).
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Galacticmon (2026-07-02)
 - **Card(s):** BT21-006 Tsumemon ("[All Turns] This Digimon with 4 or more [Vemmon] digivolution cards gets +3000 DP.")
@@ -1779,6 +1784,7 @@ return-immunity modifiers" entry — verify at implementation; likely no longer 
 - **Related:** `deck_tools.rs` format descriptor / `restriction.card_limits` (downward-only path works).
 
 ### Whole-card "[X] in its text" predicate (DCGO `HasText` scope: name + traits + all requirement text)
+- **Status: RESOLVED (2026-07-03).** New leaf `in_text_contains` (+`event_card_in_text_contains`): case-insensitive over name + also_treated_as/DigiXros aliases + traits (incl. Rule-granted) + all printed text incl. dual faces (attribute line and numeric cost structs documented as not scanned; requirement wording lives in printed text). Trait-only regression (BT6-017/BT6-065/ST14-09) pinned. `effect_text_contains` intentionally NOT widened. Tests: tests/dsl/in_text_contains.rs.
 - **Severity:** 🟡 PARTIAL
 - **Discovered in:** Three Musketeers BeelStarmon (2026-07-02); Galacticmon (2026-07-02)
 - **Card(s):** BT25-005, EX7-051, EX7-008, EX7-048 (all "[Three Musketeers] in its text" filters); BT21-058, BT21-056, BT18-060, BT11-061, EX11-046, BT21-062, BT21-098, BT11-105 (all "[Vemmon] in its text" filters); generalizes to every DCGO `HasText` card.
@@ -1799,6 +1805,7 @@ return-immunity modifiers" entry — verify at implementation; likely no longer 
 - **Related:** `[Link]` subsystem entries (`link_cards` DSL step, `trash_own_link_card`).
 
 ### Conditional trash-origin enablement for DigiXros (board-state-gated material zone)
+- **Status: RESOLVED (2026-07-03).** Alt-path key `extra_material_zones: [{zone, while: <PredicateSpec>}]`, evaluated once at `build_digixros_transaction_for_hand_card` (DCGO AddMaxTrashCountDigiXrosClass + CanUseCondition) -> allow_zone. BT18-065 gate expressible. Provers: tests/digixros_conditional_trash_zone.rs (2).
 - **Severity:** 🟡 PARTIAL
 - **Discovered in:** Galacticmon (2026-07-02)
 - **Card(s):** BT18-065 Snatchmon ("While you have no Digimon other than [Vemmon], cards in your trash can also be placed for this card's DigiXros.")
@@ -1829,6 +1836,7 @@ return-immunity modifiers" entry — verify at implementation; likely no longer 
 - **Related:** resolved Rocks reveal verbs (`choose_from_reveal`/`order_remainder` — single-card precedent); resolved OnAllyPlayed observer context (single-permanent binding).
 
 ### `trash_top_security` cannot target a remaining count ("so it has N cards left") — no `Subtract` formula
+- **Status: RESOLVED (2026-07-03).** BOTH shipped: `subtract:` compound formula (left-associative) AND `leave: N` on trash_top_security (max(0, count-leave) from top, mask-accurate, mutually exclusive with count). BT21-098 unblocked.
 - **Severity:** 🟡 PARTIAL
 - **Discovered in:** Galacticmon (2026-07-02)
 - **Card(s):** BT21-098 Ragnarok Cannon ("trash the top cards of your opponent's security stack so that it has 1 card left")
@@ -1871,6 +1879,7 @@ Existing entries reconfirmed with NEW drivers (append, no re-file):
 - **Related:** G-ENGINE-DNA-PRINTED-COST, G-ENGINE-DNA-RECIPE-ENFORCEMENT (both apply — DCGO passes payCost:true); resolved G-DSL-DNA-FROM-HAND-PARTNER (field+hand sibling).
 
 ### BeforePayCost play-cost reduction paid by an interactive delete-own-permanent cost (fixed amount)  [G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST]
+- **Status: RESOLVED (2026-07-03).** See G-COST-REDUCTION-INTERACTIVE-PAYCOST-AMOUNT resolution (fixed + variable both shipped). BT18-073 clause 3 + BT13-083 clause 1 unblocked.
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Millenniummon (2026-07-02)
 - **Card(s):** BT18-073 Machinedramon ("When this card would be played, by deleting 1 of your Digimon with the [Composite] trait, reduce the play cost by 4"), BT13-083 Gizmon: AT ("When you would play this card, by deleting 1 of your level 3 Digimon, reduce the play cost by 4")
@@ -1911,6 +1920,7 @@ Existing entries reconfirmed with NEW drivers (append, no re-file):
 - **Related:** DCGO `BT19_075.cs` `FloorToInt(trashed.Count/2)`; `binding_value`/`floor_div` formulas (present); `bind_count_as` precedent on the under-Tamer steps.
 
 ### `event_target` predicate cannot read the deletion-subject's digivolution-source count  [G-DSL-EVENT-TARGET-SOURCE-COUNT]
+- **Status: RESOLVED (2026-07-03).** `event_target_has_digivolution_cards` + `event_target_stack_size_gte: N` read the rule-25 pre-removal snapshot (or live card_sources for non-deletion targets). EX1-066's gate now faithful.
 - **Severity:** 🟡 PARTIAL
 - **Discovered in:** Millenniummon (2026-07-02)
 - **Card(s):** EX1-066 Analog Youth ("[All Turns] When one of your level 5 or higher Digimon **with a digivolution card** is deleted, by suspending this Tamer, gain 1 memory…")
@@ -1921,6 +1931,7 @@ Existing entries reconfirmed with NEW drivers (append, no re-file):
 - **Related:** rule 25 deletion snapshot; `event_target_is_source`.
 
 ### Candidate play-cost filter relative to a bound/event permanent's cost (+offset)  [G-DSL-COST-RELATIVE-TO-EVENT-SUBJECT]
+- **Status: RESOLVED (2026-07-03).** `play_cost_eq_binding: {binding|event_target, offset, op}` (deletion snapshot cost_just_before for event targets); plus `level_lte_binding`/`level_gte_binding` siblings (BT8-107 verify-note closed). BT19-099 unblocked.
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Millenniummon (2026-07-02)
 - **Card(s):** BT19-099 The Wicked God Descends! ("…you may play 1 [Wicked God] trait Digimon card **with a play cost 1 higher than that Digimon** from your hand or trash without paying the cost" — "that Digimon" = the leaving [Millenniummon]-name Digimon)
@@ -1931,6 +1942,7 @@ Existing entries reconfirmed with NEW drivers (append, no re-file):
 - **Related:** `level_eq_binding` (extend); BT17-095 precedent; the binding-comparison family (EX11-046, BT8-107's level_lte_binding verify-note).
 
 ### Distinct-by-name count predicate over a filtered field set  [G-DSL-DISTINCT-NAMED-PERMANENT-COUNT]
+- **Status: RESOLVED (2026-07-03).** `distinct_named_count_gte: {of, filter, n}` — distinct synth-identity-aware names among filtered battle-area permanents. BT21-040 unblocked.
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** ShineGreymon (2026-07-02)
 - **Card(s):** BT21-040 Agumon ("[Your Turn] While your opponent has a level 6 or higher Digimon or you have 3 or more [Hero] trait Tamers **with different names**, this Digimon may digivolve into [ShineGreymon] in the hand for a cost of 4, ignoring digivolution requirements.")
@@ -1972,6 +1984,7 @@ Third and final wave (`qa/archetype-qa/store-champs-june-2026-scoping.md`). Fix 
 - **Related:** grant_triggered.rs v1 limitation note; `force_attack` step; G-ENGINE-GRANTED-ONBLOCK-CARRIER-GATE (adjacent granted-effect scoping issue).
 
 ### Combined both-players security-count predicate  [G-DSL-TOTAL-SECURITY-COUNT-PREDICATE]
+- **Status: RESOLVED (2026-07-03).** `total_security_count_lte/gte/eq` sums both players (both-players reading pinned by test). BT13-106 unblocked.
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** cross-deck staples (2026-07-02)
 - **Card(s):** BT13-106 Odin's Breath ("if there're 6 or fewer total cards in both players' security stacks, all of your opponent's Digimon gain <Security Attack -1>…")
@@ -1982,6 +1995,7 @@ Third and final wave (`qa/archetype-qa/store-champs-june-2026-scoping.md`). Fix 
 - **Related:** per-player security predicates; resolved `OnDiscardSecurity` timing.
 
 ### Memory-count as a scalar formula leaf  [G-DSL-MEMORY-COUNT-FORMULA]
+- **Status: RESOLVED (2026-07-03).** `PerSelector::PlayerMemory{of}` - `per: {player_memory: {of: opponent}}` (opponent clamped >=0 per DCGO Math.Max). BT25-086's clause now expressible; card to author.
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Time Strangers support (2026-07-02)
 - **Card(s):** BT25-086 Dan Yuki ("[End of Your Turn] By suspending this Tamer, 1 of your [TS] trait Digimon gets +1000 DP for the turn **for each memory your opponent has**. After, that Digimon may attack.")
@@ -1992,6 +2006,7 @@ Third and final wave (`qa/archetype-qa/store-champs-june-2026-scoping.md`). Fix 
 - **Related:** `own_memory_lte` predicate perspective handling; "Dynamic DP scaling modifier" (delivery vehicle).
 
 ### Predicate on a bound card's printed color  [G-DSL-BINDING-CARD-COLOR]
+- **Status: RESOLVED (2026-07-03).** `binding_card_color: {binding, color_is}` leaf (sibling of binding_card_kind); fails closed on unset binding. BT1-087 unblocked. Tests: tests/dsl/predicate_leaves_ii.rs.
 - **Severity:** 🟡 PARTIAL
 - **Discovered in:** cross-deck staples (2026-07-02)
 - **Card(s):** BT1-087 T.K. Takaishi ("reveal 1 card in [security] and add it to your hand. **If that card is yellow**, <Recovery +1 (Deck)>. Then shuffle…")
@@ -2002,6 +2017,7 @@ Third and final wave (`qa/archetype-qa/store-champs-june-2026-scoping.md`). Fix 
 - **Related:** `binding_card_kind`; BT11-042 Angewomon idiom (unconditional Recovery sibling).
 
 ### Substring/root trait match on the event-target permanent  [G-DSL-EVENT-TARGET-TRAIT-CONTAINS]
+- **Status: RESOLVED (2026-07-03).** `event_target_trait_contains: <token>` — case-insensitive substring over the event-target's traits (snapshot + live split); pluralization/compound tolerant per Q&A. BT11-089 unblocked.
 - **Severity:** 🟡 PARTIAL
 - **Discovered in:** cross-deck staples (2026-07-02)
 - **Card(s):** BT11-089 Akiho Rindou ("When an effect plays any of your red Digimon with [Avian], [Bird], [Beast], [Animal] or [Sovereign] in **any of their traits**, other than [Sea Animal]…" — official Q&A: "regardless of other words or pluralizations")
@@ -2012,6 +2028,7 @@ Third and final wave (`qa/archetype-qa/store-champs-june-2026-scoping.md`). Fix 
 - **Related:** `trait_contains` (card-subject sibling); `event_target_trait_has`; multi-Digimon single-effect play nuance (DCGO grants all with one suspend — note at implementation).
 
 ## DigiXros material `distinct_by` (card number / name / level) is compiled but never enforced at runtime  [G-ENGINE-DIGIXROS-DISTINCT-BY]
+**Status: RESOLVED (2026-07-03).** Enforced in `DigiXrosTransaction::resolve_material_origin` (single choke-point -> mask-level exclusion); `MaterialIdentity{card_number,name,level}` captured at commit (clone-safe data); slot-scoped, wildcards exempt; new error `DistinctnessViolation`. Provers: digixros.rs unit tests incl. `bt19_065_digixros_rejects_duplicate_card_number` + the behavioral prover in bt19_065.rs (un-ignored, green). Fixes shipped BT12-112/EX3-014 semantics.
 Surfaced by: BT19-065 Machinedramon (batch-implement-cards-rust-dsl, 2026-07-02); PRE-EXISTING, shared by every card whose `alt_paths: kind: digixros` material sets `distinct_by` (BT12-112 Shoutmon X7: Superior Mode `distinct_by: card_number`, EX3-014 Dorbickmon `distinct_by: name`, and the review-added BT19-070 DigiXros -1 path).
 `compiled_path_transaction` (`code/digimon-engine/src/digixros.rs:923-933`) correctly threads `material.distinct_by` into `DigiXrosRecipeSlot.distinct_by`, but that field is **never read anywhere else in the crate**. The runtime candidate filter (`slot_accepts_card`, `validate_material_origin` -> `resolve_material_origin`) checks only name/trait requirements and exact-handle dedup — so a recipe printed "5 cards w/different card numbers" currently accepts two copies of the identical card as two materials (no-approximations violation for decks running duplicates of a qualifying material).
 No existing behavioral test caught this: EX3-014's and BT12-112's DigiXros tests supply already-distinct materials.

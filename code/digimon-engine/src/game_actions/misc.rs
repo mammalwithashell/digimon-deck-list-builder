@@ -541,7 +541,7 @@ impl Game {
         source: PlaySource,
         origin: PendingWouldPlayOrigin,
         suppress_on_play: bool,
-        accumulated_reduction: i32,
+        mut accumulated_reduction: i32,
         processed: Vec<CostReductionKey>,
     ) {
         if self.pending_selection.is_some() {
@@ -557,6 +557,16 @@ impl Game {
                 processed,
             );
             return;
+        }
+        // VARIABLE-amount interactive delete cost
+        // (`G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`, BT13-103): a
+        // `delete_for_cost_reduction` step inside the just-resolved parked
+        // pay_cost recorded the deleted permanent's printed play cost here. Credit
+        // it now (the parked select has resolved and the delete has happened, so
+        // the amount is finally known) and clear the slot so it never leaks into a
+        // later play.
+        if let Some(extra) = self.pending_cost_reduction_amount_override.take() {
+            accumulated_reduction += extra;
         }
         let _ = self.continue_play_from_hand_cost_reduction_chain(
             player_id,

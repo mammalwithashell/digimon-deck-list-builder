@@ -138,6 +138,10 @@ pub enum StepSpec {
 
     // Field / permanent
     DeletePermanent(TargetArg),
+    /// `delete_for_cost_reduction: { target: <binding> }` — delete AS A COST and
+    /// reduce the in-flight cost by the deleted permanent's printed play cost.
+    /// `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST` (BT13-103).
+    DeleteForCostReduction(TargetArg),
     DeleteBoundPermanents(DeleteBoundPermanentsArgs),
     TrashBreedingPermanent(TrashBreedingPermanentArgs),
     ReturnToHand(TargetArg),
@@ -432,6 +436,7 @@ impl Serialize for StepSpec {
             StepSpec::OrderRemainder(v) => kv!(s, "order_remainder", v),
             // Field / permanent
             StepSpec::DeletePermanent(v) => kv!(s, "delete_permanent", v),
+            StepSpec::DeleteForCostReduction(v) => kv!(s, "delete_for_cost_reduction", v),
             StepSpec::DeleteBoundPermanents(v) => kv!(s, "delete_bound_permanents", v),
             StepSpec::TrashBreedingPermanent(v) => kv!(s, "trash_breeding_permanent", v),
             StepSpec::ReturnToHand(v) => kv!(s, "return_to_hand", v),
@@ -691,6 +696,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 
             // Field / permanent
             "delete_permanent" => StepSpec::DeletePermanent(map.next_value()?),
+            "delete_for_cost_reduction" => StepSpec::DeleteForCostReduction(map.next_value()?),
             "delete_bound_permanents" => StepSpec::DeleteBoundPermanents(map.next_value()?),
             "trash_breeding_permanent" => StepSpec::TrashBreedingPermanent(map.next_value()?),
             "return_to_hand" => StepSpec::ReturnToHand(map.next_value()?),
@@ -912,6 +918,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "choose_from_reveal",
                         "order_remainder",
                         "delete_permanent",
+                        "delete_for_cost_reduction",
                         "delete_bound_permanents",
                         "trash_breeding_permanent",
                         "return_to_hand",
@@ -1182,6 +1189,19 @@ pub struct TrashTopSecurityArgs {
     pub of: PlayerRef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub count: Option<crate::formula::FormulaSpec>,
+    /// "Trash the top cards … so that it has N cards left" — trashes from the
+    /// top of `of`'s security stack until exactly `leave` cards remain (i.e.
+    /// `max(0, security_count - leave)` cards, clamped so it never underflows /
+    /// over-trashes an already-short stack). Mutually exclusive with `count`
+    /// (specify one or the other — a spec carrying both is rejected by the
+    /// linter). Mask-accurate: the trash amount is computed at run time from
+    /// the actual stack size, so no illegal action is ever offered. Drives
+    /// BT21-098 Ragnarok Cannon's [Delay] "trash the top cards of your
+    /// opponent's security stack so that it has 1 card left" (`leave: 1`). DCGO
+    /// `IDestroySecurity(destroySecurityCount: Enemy.SecurityCards.Count - 1,
+    /// fromTop: true)`. G-DSL-TRASH-TOP-SECURITY-LEAVE (driver BT21-098).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub leave: Option<crate::formula::FormulaSpec>,
 }
 
 /// Args for `trash_bottom_face_down_source_under_tamer` — bundles "pick one of

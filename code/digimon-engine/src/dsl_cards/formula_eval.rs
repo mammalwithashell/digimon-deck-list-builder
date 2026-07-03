@@ -137,6 +137,16 @@ pub fn evaluate_with_bindings(
                 .min()
                 .unwrap_or(0)
         }
+        CompiledFormula::Subtract(args) => {
+            // Left-associative: a - b - c. Empty → 0; single operand → itself.
+            let mut it = args
+                .iter()
+                .map(|a| evaluate_with_bindings(a, ctx, target, bindings));
+            match it.next() {
+                None => 0,
+                Some(first) => it.fold(first, |acc, x| acc - x),
+            }
+        }
         CompiledFormula::Aggregate(sel) => evaluate_aggregate(*sel, CompiledPlayerRef::You, ctx),
         CompiledFormula::AggregateScoped { selector, scope } => {
             evaluate_aggregate(*selector, *scope, ctx)
@@ -307,6 +317,15 @@ fn evaluate_read_with_raw_and_bindings(
             .map(|a| evaluate_read_with_raw_and_bindings(a, ctx, target, raw, bindings))
             .min()
             .unwrap_or(0),
+        CompiledFormula::Subtract(args) => {
+            let mut it = args
+                .iter()
+                .map(|a| evaluate_read_with_raw_and_bindings(a, ctx, target, raw, bindings));
+            match it.next() {
+                None => 0,
+                Some(first) => it.fold(first, |acc, x| acc - x),
+            }
+        }
         CompiledFormula::Aggregate(sel) => {
             evaluate_aggregate_read(*sel, CompiledPlayerRef::You, ctx)
         }
@@ -467,6 +486,9 @@ fn evaluate_per(
             let read = ctx.as_read();
             source_stack_count_filtered(filter.as_deref(), &read, bindings)
         }
+        CompiledPerSelector::PlayerMemory { of } => {
+            player_memory_value(ctx.game, *of, ctx.player)
+        }
     }
 }
 
@@ -552,6 +574,9 @@ fn evaluate_per_read(
         }
         CompiledPerSelector::SourceStackCountFiltered { filter } => {
             source_stack_count_filtered(filter.as_deref(), ctx, bindings)
+        }
+        CompiledPerSelector::PlayerMemory { of } => {
+            player_memory_value(ctx.game, *of, ctx.player)
         }
     }
 }
@@ -818,6 +843,39 @@ fn players_for_ref_read(of: CompiledPlayerRef, ctx: &EffectReadContext<'_>) -> V
         CompiledPlayerRef::Active => vec![ctx.game.turn_player()],
         CompiledPlayerRef::Any => (0..ctx.game.players.len() as PlayerId).collect(),
     }
+}
+
+/// A single player's memory-gauge value as a signed scalar ("MemoryForPlayer").
+/// `game.memory` is stored from the turn player's perspective, so a player's
+/// signed memory is the gauge when it is their turn and the negated gauge
+/// otherwise (matches the `own_memory_lte`/`_gte` predicate reading in
+/// `dsl_cards::predicate`). When `of` is `Opponent`, the value is clamped at 0
+/// per DCGO `Math.Max(0, Enemy.MemoryForPlayer)` (BT25-086). For `You` /
+/// `Active` / `Any` the signed value is returned unclamped (a player can hold
+/// negative signed memory). G-DSL-FORMULA-PLAYER-MEMORY.
+fn player_memory_value(game: &crate::game::Game, of: CompiledPlayerRef, controller: PlayerId) -> i32 {
+    let players = match of {
+        CompiledPlayerRef::You => vec![controller],
+        CompiledPlayerRef::Opponent => vec![game.next_clockwise(controller)],
+        CompiledPlayerRef::Active => vec![game.turn_player()],
+        CompiledPlayerRef::Any => (0..game.players.len() as PlayerId).collect(),
+    };
+    let clamp = matches!(of, CompiledPlayerRef::Opponent);
+    players
+        .into_iter()
+        .map(|player| {
+            let signed = if game.turn_player() == player {
+                game.memory as i32
+            } else {
+                -(game.memory as i32)
+            };
+            if clamp {
+                signed.max(0)
+            } else {
+                signed
+            }
+        })
+        .sum()
 }
 
 fn shared_trash_count(ctx: &EffectContext<'_>) -> i32 {

@@ -616,6 +616,20 @@ pub enum TriggerSource {
         card: CardHandle,
         cause: crate::trigger_context::EventCause,
     },
+    /// Observer timing fired after a digivolution source is RETURNED to the
+    /// BOTTOM of a player's deck (not trashed). Sibling of
+    /// `SourceTrashedFromStack`: scans all players' battle areas while carrying
+    /// the former host (`host` / `host_card`) and the returned card (`card`) as
+    /// event context, so host-scoped ("this Digimon's digivolution cards") and
+    /// event-card-name ("[Vemmon] returned") observers can gate on it.
+    /// G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
+    SourceReturnedToDeckBottom {
+        player: PlayerId,
+        host: PermanentHandle,
+        host_card: CardHandle,
+        card: CardHandle,
+        cause: crate::trigger_context::EventCause,
+    },
     /// Observer timing fired after a card is removed from a player's security
     /// stack. `affected_player` owns the security stack; `observer_player`
     /// is the zone being scanned for either own-side or opponent-side

@@ -5,7 +5,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::predicate::PredicateSpec;
-use crate::step::{BindingRef, StepSpec};
+use crate::step::{BindingRef, StackPosition, StepSpec};
 
 /// A clause is either triggered or declarative. Untagged serde enum —
 /// presence of `when:` ⇒ triggered; presence of `kind:` ⇒ declarative.
@@ -146,6 +146,14 @@ pub enum Timing {
     OnOpponentSecurityRemoved,
     OnOwnSecurityRemoved,
     OnDigivolutionCardTrashed,
+    /// `[All Turns]`-style observer: a digivolution source was RETURNED to the
+    /// bottom of a player's deck (not trashed) — "when any [Vemmon] return to
+    /// the bottom of the deck from this Digimon's digivolution cards" (BT21-058,
+    /// BT18-065). Gate host-scope with `active_when:
+    /// { event_host_permanent_is_source: true }` and the returned card's name
+    /// with `event_card_name_contains:`. Distinct from
+    /// `on_digivolution_card_trashed`. G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
+    OnSourceReturnedToDeckBottom,
     OnSecurityCheck,
     OnCheckFaceUpSecurity,
     OnLoseSecurity,
@@ -569,6 +577,46 @@ pub struct ReplacementCostBody {
     /// to a single `PlaceLinkCardAsBottomSourceAndCancelLeave` step.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub place_link_card_as_bottom_digivolution: bool,
+
+    /// Gap 2 (BT21-062 Galacticmon) — pay a `when_would_leave_battle_area`
+    /// replacement by RETURNING `count` of the LEAVING permanent's OWN
+    /// digivolution sources matching `filter` to `position` of its owner's deck
+    /// ("by returning 4 [Vemmon] from its digivolution cards to the bottom of
+    /// the deck, it doesn't leave"). The declarative-cost sibling of
+    /// `select_own_sources` + `return_selected_sources_to_deck` +
+    /// `cancel_replacement` (BT13-075's hand-lowered shape). Only valid on a
+    /// `when_would_leave_battle_area` replacement; the clause must be
+    /// `optional: true`; owns `outcome: prevent`. Pay-in-full: the picker
+    /// requires exactly `count` sources (`min == max == count`), so it is
+    /// NOT offered unless ≥ `count` matching sources are under the leaving
+    /// Digimon. The chosen sources go to deck `position` — firing
+    /// `OnDigivolutionCardReturnedToDeckBottom` per source (Gap 1) for a
+    /// Snatchmon underneath — then the leave is cancelled. Lowers to
+    /// `SelectOwnSources{min:count,max:count} + ReturnSelectedSourcesToDeck +
+    /// CancelReplacement`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub return_own_sources_to_deck: Option<ReturnOwnSourcesToDeckCost>,
+}
+
+/// Body for `cost: { return_own_sources_to_deck: { filter, count, position } }`
+/// (Gap 2 — BT21-062). See [`ReplacementCostBody::return_own_sources_to_deck`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnOwnSourcesToDeckCost {
+    /// Which of the leaving Digimon's own digivolution sources qualify (e.g.
+    /// `{ name_contains: "Vemmon" }`). Empty ⇒ any source below the top.
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
+    /// Exactly this many sources must be returned to pay the cost.
+    pub count: u8,
+    /// Deck destination (top or bottom). Defaults to bottom — the only printed
+    /// shape (BT21-062 "to the bottom of the deck").
+    #[serde(default = "default_deck_bottom")]
+    pub position: StackPosition,
+}
+
+fn default_deck_bottom() -> StackPosition {
+    StackPosition::Bottom
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

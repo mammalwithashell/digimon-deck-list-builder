@@ -27,6 +27,18 @@ pub struct PredicateSpec {
     pub level_eq: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level_eq_binding: Option<String>,
+    /// Card/permanent-subject leaf: the subject's level must be `<=` the
+    /// literal value bound to `binding`. Sibling of `level_eq_binding` (which
+    /// tests equality). Driver: BT8-107 — "delete 1 opponent Digimon with a
+    /// level less than or equal to the deleted Digimon's level" (the deleted
+    /// Digimon's level captured into a literal binding).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub level_lte_binding: Option<String>,
+    /// Card/permanent-subject leaf: the subject's level must be `>=` the
+    /// literal value bound to `binding`. Sibling of `level_eq_binding` /
+    /// `level_lte_binding`.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub level_gte_binding: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub level_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -86,6 +98,28 @@ pub struct PredicateSpec {
     /// G-DSL-PREDICATE-TEXT-CONTAINS.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub effect_text_contains: Option<String>,
+    /// Whole-card "[X] in its text" scan — the broad DCGO
+    /// `CardSource.HasText` surface (`CardSource.cs`). Unlike
+    /// `effect_text_contains` (which scans ONLY effect / inherited /
+    /// security text of the top card), this scans the card's **name**,
+    /// **also-treated-as aliases**, **DigiXros aliases**, **traits (the
+    /// Type line, incl. Rule-granted traits)**, and **all printed text**
+    /// (effect / inherited / security, plus both dual faces). Case-
+    /// insensitive substring. Required for the official ruling that "[X] in
+    /// its text refers to a card that contains the text or icon in its name,
+    /// traits, effects, inherited effects, (Rule), digivolution
+    /// requirements, DNA digivolution, DigiXros requirements, burst
+    /// digivolve, App Fusion, Link, or Assembly requirements" — the
+    /// structured requirement strings the CardData model carries live inside
+    /// the printed text, and the trait line is scanned directly. Concrete
+    /// regression: the [Three Musketeers]-TRAIT cards (BT6-017 MagnaKidmon,
+    /// BT6-065 Gundramon, ST14-09 BeelStarmon) carry that trait but NOT the
+    /// literal string in effect text — `effect_text_contains` misses them;
+    /// `in_text_contains` matches via the trait scan. Driver family:
+    /// BT21-098 Ragnarok Cannon ("[Vemmon] in its text"), 12 store-champs
+    /// cards. G-DSL-IN-TEXT-CONTAINS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub in_text_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub name_in: Option<Vec<String>>,
     /// Card-subject leaf: true when NO battle-area Digimon belonging to the
@@ -183,6 +217,15 @@ pub struct PredicateSpec {
     /// have 3 or more total colors"). G-DSL-DISTINCT-TAMER-COLORS.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub distinct_tamer_colors_gte: Option<u8>,
+    /// True when the observer's battle-area permanents matching `filter`
+    /// include at least `n` DISTINCT (synth-identity-aware) card names. A
+    /// no-subject global predicate — does not inspect the candidate. Modeled
+    /// on `distinct_tamer_colors_gte`, but keyed on distinct card names among a
+    /// filtered permanent set rather than distinct Tamer colors. Driver:
+    /// BT21-040 — "you have 3 or more [Hero] trait Tamers with different
+    /// names". G-DSL-DISTINCT-NAMED-PERMANENT-COUNT.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub distinct_named_count_gte: Option<DistinctNamedCountPredicate>,
     /// True when the observer's battle-area Tamer permanents collectively
     /// carry at least N face-down digivolution sources. A no-subject global
     /// predicate — does not inspect the candidate. Gates the `[Then]` clause of
@@ -196,6 +239,20 @@ pub struct PredicateSpec {
     /// battle-only auras such as ST2-01 Tsunomon.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub battle_opponent_no_sources: Option<bool>,
+    /// Source-relative threshold predicate — compares the number of the
+    /// effect carrier's OWN digivolution source cards (those beneath its top
+    /// card) that match `filter` against `value` under `op`. A no-subject
+    /// global predicate: it does NOT inspect the candidate, it reads
+    /// `ctx.source_permanent`. Reuses the same source-counting logic as the
+    /// `source_stack_count` formula (`formula_eval`), so the two agree.
+    /// Gates a conditional self-aura: BT21-006 Tsumemon inherited
+    /// "[All Turns] This Digimon with 4 or more [Vemmon] digivolution cards
+    /// gets +3000 DP" is `active_when: { self_source_count: { filter:
+    /// { name_is: Vemmon }, op: gte, value: 4 } }`. DCGO
+    /// `card.PermanentOfThisCard().DigivolutionCards.Count(cond) >= N`.
+    /// G-DSL-SELF-SOURCE-COUNT-THRESHOLD (driver BT21-006).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub self_source_count: Option<SelfSourceCountPredicate>,
 
     // Leaf — zone / owner
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -223,6 +280,33 @@ pub struct PredicateSpec {
     /// the revealed opponent deck-top matches the declared category.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub binding_card_kind: Option<BindingCardKindPredicate>,
+    /// True when the card bound to `binding` shares ≥1 printed color with the
+    /// `color_is` set (printed-color-set intersection). Sibling of
+    /// `binding_card_kind` — resolves a named card binding (e.g. from a
+    /// `reveal`/`add_to_hand` step's `bind_as`) and tests its `CardData.colors`.
+    /// Fails closed when the binding is unset or the card can't be resolved.
+    /// Driver: BT1-087 — "add 1 revealed security card to hand; if THAT card is
+    /// yellow, trigger <Recovery +1>". G-DSL-BINDING-CARD-COLOR.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub binding_card_color: Option<BindingCardColorPredicate>,
+    /// True when the card bound to `binding` has the given name (exact,
+    /// case-insensitive), effective-name aware — the printed `card_name` and
+    /// every static `also_treated_as` identity alias are compared. Sibling of
+    /// `binding_card_kind`. Fails closed when the binding is unset or
+    /// unresolvable. Driver: BT21-087 — "play 1 [Vemmon] …" gating a bound
+    /// revealed card by name. G-DSL-BINDING-CARD-NAME-EQUALS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub binding_card_name_is: Option<BindingCardNamePredicate>,
+    /// Candidate-card play-cost comparator relative to a bound/event
+    /// permanent's play cost, with an integer offset:
+    /// `{ binding: replacement_subject|event_target|<name>, offset, op }`.
+    /// The candidate matches when `candidate.play_cost OP (subject.play_cost +
+    /// offset)`. Mirrors `level_eq_binding` resolution but for play cost and
+    /// with a comparator + offset. Driver: BT19-099 — "play 1 [Wicked God]
+    /// Digimon with a play cost 1 higher than that [leaving] Digimon".
+    /// G-DSL-COST-RELATIVE-TO-EVENT-SUBJECT.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub play_cost_eq_binding: Option<PlayCostBindingPredicate>,
 
     // Leaf — source-relative
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -310,6 +394,18 @@ pub struct PredicateSpec {
     pub opponent_security_count_lte: Option<DpConstraint>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub opponent_security_count_gte: Option<DpConstraint>,
+    /// True when the SUM of both players' security-stack card counts (the
+    /// controller's + the opponent's) is at most / at least / equal to this
+    /// threshold. Gates BT13-106 Odin's Breath's "[Then], if there're 6 or
+    /// fewer total cards in both players' security stacks, …" clause. DCGO
+    /// `card.Owner.SecurityCards.Count + card.Owner.Enemy.SecurityCards.Count
+    /// <= 6`. G-DSL-TOTAL-SECURITY-COUNT-PREDICATE (driver BT13-106).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_security_count_lte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_security_count_gte: Option<DpConstraint>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub total_security_count_eq: Option<DpConstraint>,
     /// True when the observer's face-up security-card count is at most this
     /// threshold. Face-up state lives in `Player.face_up_security`.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -352,6 +448,37 @@ pub struct PredicateSpec {
     pub event_target_kind: Option<CardKind>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_trait_has: Option<String>,
+    /// Substring / root-trait sibling of `event_target_trait_has`. Matches when
+    /// ANY of the event-target permanent's traits CONTAINS this token
+    /// (case-insensitive substring) — the observer-side analogue of the static
+    /// `trait_contains` leaf. Tolerant of pluralization / compound traits: the
+    /// token `Beast` matches `Beast`, `Beasts`, `Sea Beast`, etc. Works for
+    /// live event targets AND deletion-object snapshots. Driver: BT11-089 —
+    /// "when an effect plays any of your red Digimon with [Avian], [Bird],
+    /// [Beast], [Animal] or [Sovereign] … in any of their traits" (official
+    /// Q&A: "regardless of other words or pluralizations").
+    /// G-DSL-EVENT-TARGET-TRAIT-CONTAINS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_trait_contains: Option<String>,
+    /// Deletion-subject source-count gate. True when the event-target
+    /// permanent has at least one digivolution card (a non-empty source
+    /// stack below the top). For a deletion event, reads the PRE-REMOVAL
+    /// source count from the rule-25 deletion snapshot
+    /// (`source_count_just_before`); for a live event target, reads the
+    /// permanent's current `card_sources` stack. Driver: EX1-066 — "When one
+    /// of your level 5 or higher Digimon **with a digivolution card** is
+    /// deleted, …". G-DSL-EVENT-TARGET-SOURCE-COUNT.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_has_digivolution_cards: Option<bool>,
+    /// Deletion-subject source-count threshold. True when the event-target
+    /// permanent's digivolution-stack size (top card + sources) is at least
+    /// `N`. Reads the PRE-REMOVAL count from the rule-25 deletion snapshot for
+    /// a deletion event, or the live `card_sources` length otherwise. The
+    /// count includes the top card, so a lone card is stack size 1.
+    /// Companion of `event_target_has_digivolution_cards`.
+    /// G-DSL-EVENT-TARGET-SOURCE-COUNT.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_stack_size_gte: Option<u8>,
     /// Match the event-target permanent's printed level. Works for live
     /// event targets (played/digivolved/moved/suspended permanents) and
     /// deleted-object snapshots. G-EVENT-TARGET-LEVEL-LTE.
@@ -439,6 +566,15 @@ pub struct PredicateSpec {
     /// "when you play a card with <X> in its text". G-DSL-EVENT-CARD-TEXT-CONTAINS.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_text_contains: Option<String>,
+    /// Event-side analogue of the static `in_text_contains` — the BROAD
+    /// whole-card "[X] in its text" scan (DCGO `CardSource.HasText`) applied to
+    /// the triggering event card. Unlike `event_card_text_contains` (printed
+    /// text only) this also scans the event card's NAME, aliases, and TRAITS,
+    /// so an observer on "when you play a Digimon with [Knightmon]/[Lucemon]
+    /// in its text" matches a trait-only card. Consumer: AD1-018 LordKnightmon.
+    /// G-DSL-EVENT-CARD-IN-TEXT-CONTAINS.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_card_in_text_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_card_level_eq: Option<u8>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -682,6 +818,64 @@ pub struct BindingCardKindPredicate {
     pub kind: CardKind,
 }
 
+/// Payload for the `binding_card_color` predicate leaf — the card bound to
+/// `binding` must share ≥1 printed color with `color_is`.
+/// G-DSL-BINDING-CARD-COLOR.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BindingCardColorPredicate {
+    pub binding: String,
+    pub color_is: ColorSpec,
+}
+
+/// Payload for the `binding_card_name_is` predicate leaf — the card bound to
+/// `binding` must have this name (exact, case-insensitive, effective-name
+/// aware). G-DSL-BINDING-CARD-NAME-EQUALS.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct BindingCardNamePredicate {
+    pub binding: String,
+    pub name_is: String,
+}
+
+/// Payload for the `play_cost_eq_binding` predicate leaf — a candidate card's
+/// play cost compared (via `op`) against a bound/event permanent's play cost
+/// plus `offset`. G-DSL-COST-RELATIVE-TO-EVENT-SUBJECT.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlayCostBindingPredicate {
+    /// The reference permanent whose play cost the candidate is compared
+    /// against. A named permanent binding, or the special `replacement_subject`
+    /// / `event_target` handles resolved from the trigger/replacement context.
+    pub binding: String,
+    /// Integer added to the reference play cost before the comparison
+    /// (`candidate OP reference + offset`). Defaults to 0.
+    #[serde(default)]
+    pub offset: i16,
+    /// Comparison operator. Defaults to `eq`.
+    #[serde(default)]
+    pub op: ComparatorOp,
+}
+
+/// Payload for the `distinct_named_count_gte` predicate leaf — at least `n`
+/// distinct card names among the observer's battle-area permanents matching
+/// `filter`. G-DSL-DISTINCT-NAMED-PERMANENT-COUNT.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DistinctNamedCountPredicate {
+    /// Owner of the permanents to scan. Defaults to `you`.
+    #[serde(default = "default_distinct_named_of")]
+    pub of: PlayerRef,
+    /// Filter each battle-area permanent must satisfy to be counted.
+    pub filter: Box<PredicateSpec>,
+    /// Minimum number of DISTINCT (synth-identity-aware) card names required.
+    pub n: u8,
+}
+
+fn default_distinct_named_of() -> PlayerRef {
+    PlayerRef::You
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, schemars::JsonSchema)]
 #[serde(untagged)]
 pub enum DpConstraint {
@@ -716,9 +910,10 @@ impl<'de> Deserialize<'de> for DpConstraint {
 // ---------------------------------------------------------------------------
 
 /// Comparison operator for a [`Comparator`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ComparatorOp {
+    #[default]
     Eq,
     Gte,
     Lte,
@@ -917,6 +1112,25 @@ fn default_face_up_security_of() -> PlayerRef {
 pub struct BindingCountPredicate {
     pub binding: String,
     pub n: u8,
+}
+
+/// Payload for the `self_source_count` predicate leaf — compares the count of
+/// the effect carrier's OWN digivolution sources matching `filter` against
+/// `value` under `op`. G-DSL-SELF-SOURCE-COUNT-THRESHOLD (driver BT21-006).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct SelfSourceCountPredicate {
+    /// Card-shape filter each candidate source card must satisfy to be
+    /// counted. Omit to count every source. Evaluated as a `Card` subject
+    /// against each source beneath the carrier's top card.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filter: Option<Box<PredicateSpec>>,
+    /// Comparison operator applied as `count <op> value`.
+    pub op: ComparatorOp,
+    /// Right-hand threshold. A `FormulaSpec`, so a bare int (`value: 4`) is a
+    /// literal and a map is a runtime formula (uniform with the comparator
+    /// surface).
+    pub value: FormulaSpec,
 }
 
 fn default_level_aggregate_of() -> PlayerRef {

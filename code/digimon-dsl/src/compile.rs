@@ -206,6 +206,16 @@ fn compile_zone(z: crate::predicate::Zone) -> CompiledZone {
     }
 }
 
+fn compile_comparator_op(op: crate::predicate::ComparatorOp) -> crate::compiled::CompiledComparatorOp {
+    use crate::compiled::CompiledComparatorOp as C;
+    use crate::predicate::ComparatorOp as S;
+    match op {
+        S::Eq => C::Eq,
+        S::Gte => C::Gte,
+        S::Lte => C::Lte,
+    }
+}
+
 fn validate_digixros_wildcard_zone(
     zone: Option<crate::predicate::Zone>,
     prefix: &str,
@@ -270,6 +280,9 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnOpponentSecurityRemoved => CompiledTiming::OnOpponentSecurityRemoved,
         S::OnOwnSecurityRemoved => CompiledTiming::OnOwnSecurityRemoved,
         S::OnDigivolutionCardTrashed => CompiledTiming::OnDigivolutionCardTrashed,
+        S::OnSourceReturnedToDeckBottom => {
+            CompiledTiming::OnDigivolutionCardReturnedToDeckBottom
+        }
         S::OnSecurityCheck => CompiledTiming::OnSecurityCheck,
         S::OnCheckFaceUpSecurity => CompiledTiming::OnCheckFaceUpSecurity,
         S::OnLoseSecurity => CompiledTiming::OnLoseSecurity,
@@ -412,6 +425,9 @@ fn compile_per_selector(
                     errors,
                 ))
             }),
+        },
+        S::PlayerMemory { of } => CompiledPerSelector::PlayerMemory {
+            of: compile_player_ref(*of),
         },
     }
 }
@@ -609,6 +625,14 @@ fn compile_formula(
             v.iter()
                 .enumerate()
                 .map(|(i, f)| compile_formula(f, &format!("{prefix}.min[{i}]"), card_id, errors))
+                .collect(),
+        ),
+        FormulaSpec::Compound(CompoundFormula::Subtract(v)) => CompiledFormula::Subtract(
+            v.iter()
+                .enumerate()
+                .map(|(i, f)| {
+                    compile_formula(f, &format!("{prefix}.subtract[{i}]"), card_id, errors)
+                })
                 .collect(),
         ),
         FormulaSpec::Compound(CompoundFormula::Aggregate(a)) => CompiledFormula::AggregateScoped {
@@ -850,6 +874,8 @@ fn compile_predicate(
         kind: p.kind.map(compile_card_kind),
         level_eq,
         level_eq_binding: p.level_eq_binding.clone(),
+        level_lte_binding: p.level_lte_binding.clone(),
+        level_gte_binding: p.level_gte_binding.clone(),
         level_lte,
         level_gte,
         level_matches_aggregate: p.level_matches_aggregate.map(|m| {
@@ -881,6 +907,7 @@ fn compile_predicate(
         name_is: p.name_is.clone(),
         name_contains: p.name_contains.clone(),
         effect_text_contains: p.effect_text_contains.clone(),
+        in_text_contains: p.in_text_contains.clone(),
         name_in: p.name_in.clone(),
         name_not_shared_by_field_digimon: p
             .name_not_shared_by_field_digimon
@@ -932,8 +959,45 @@ fn compile_predicate(
         self_color_count_gte: p.self_color_count_gte,
         has_face_down_source: p.has_face_down_source,
         distinct_tamer_colors_gte: p.distinct_tamer_colors_gte,
+        distinct_named_count_gte: p.distinct_named_count_gte.as_ref().map(|d| {
+            crate::compiled::CompiledDistinctNamedCount {
+                of: compile_player_ref(d.of),
+                filter: Box::new(compile_predicate(
+                    &d.filter,
+                    &format!("{prefix}.distinct_named_count_gte.filter"),
+                    card_id,
+                    errors,
+                )),
+                n: d.n,
+            }
+        }),
         face_down_sources_under_tamers_gte: p.face_down_sources_under_tamers_gte,
         battle_opponent_no_sources: p.battle_opponent_no_sources,
+        self_source_count: p.self_source_count.as_ref().map(|s| {
+            crate::compiled::CompiledSelfSourceCountPredicate {
+                filter: s.filter.as_ref().map(|f| {
+                    Box::new(compile_predicate(
+                        f,
+                        &format!("{prefix}.self_source_count.filter"),
+                        card_id,
+                        errors,
+                    ))
+                }),
+                op: compile_comparator_op(s.op),
+                // Collapse a literal `value: N` to `Literal(N)` (matching the
+                // MetricComparators lowering) so the compiled IR is clean;
+                // anything else is a runtime formula.
+                value: match &s.value {
+                    crate::formula::FormulaSpec::Literal(n) => CompiledDpConstraint::Literal(*n),
+                    other => CompiledDpConstraint::Formula(compile_formula(
+                        other,
+                        &format!("{prefix}.self_source_count.value"),
+                        card_id,
+                        errors,
+                    )),
+                },
+            }
+        }),
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
         other: p.other,
@@ -951,6 +1015,23 @@ fn compile_predicate(
             crate::compiled::CompiledBindingCardKindPredicate {
                 binding: b.binding.clone(),
                 kind: compile_card_kind(b.kind),
+            }
+        }),
+        binding_card_color: p.binding_card_color.as_ref().map(|b| {
+            crate::compiled::CompiledBindingCardColorPredicate {
+                binding: b.binding.clone(),
+                color_is: compile_color(b.color_is),
+            }
+        }),
+        binding_card_name_is: p
+            .binding_card_name_is
+            .as_ref()
+            .map(|b| (b.binding.clone(), b.name_is.clone())),
+        play_cost_eq_binding: p.play_cost_eq_binding.as_ref().map(|b| {
+            crate::compiled::CompiledPlayCostBindingPredicate {
+                binding: b.binding.clone(),
+                offset: b.offset,
+                op: compile_comparator_op(b.op),
             }
         }),
         source_is_tamer: p.source_is_tamer,
@@ -994,6 +1075,30 @@ fn compile_predicate(
             compile_dp_constraint(
                 d,
                 &format!("{prefix}.opponent_security_count_gte"),
+                card_id,
+                errors,
+            )
+        }),
+        total_security_count_lte: p.total_security_count_lte.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.total_security_count_lte"),
+                card_id,
+                errors,
+            )
+        }),
+        total_security_count_gte: p.total_security_count_gte.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.total_security_count_gte"),
+                card_id,
+                errors,
+            )
+        }),
+        total_security_count_eq: p.total_security_count_eq.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.total_security_count_eq"),
                 card_id,
                 errors,
             )
@@ -1052,6 +1157,9 @@ fn compile_predicate(
         dna_origin: p.dna_origin,
         event_target_kind: p.event_target_kind.map(compile_card_kind),
         event_target_trait_has: p.event_target_trait_has.clone(),
+        event_target_trait_contains: p.event_target_trait_contains.clone(),
+        event_target_has_digivolution_cards: p.event_target_has_digivolution_cards,
+        event_target_stack_size_gte: p.event_target_stack_size_gte,
         event_target_level_eq,
         event_target_level_lte,
         event_target_level_gte,
@@ -1078,6 +1186,7 @@ fn compile_predicate(
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
         event_card_text_contains: p.event_card_text_contains.clone(),
+        event_card_in_text_contains: p.event_card_in_text_contains.clone(),
         event_card_level_eq: p.event_card_level_eq,
         event_card_level_gte: p.event_card_level_gte.as_ref().map(|d| {
             compile_dp_constraint(
@@ -1397,6 +1506,21 @@ fn compile_alt_path(
                 crate::compiled::CompiledAltPathDirection::Into
             }
         },
+        // Gap 4 (BT18-065) — conditional extra DigiXros material zones.
+        extra_material_zones: ap
+            .extra_material_zones
+            .iter()
+            .enumerate()
+            .map(|(i, z)| crate::compiled::CompiledConditionalMaterialZone {
+                zone: compile_zone(z.zone),
+                condition: compile_predicate(
+                    &z.while_condition,
+                    &format!("{prefix}.extra_material_zones[{i}].while"),
+                    card_id,
+                    errors,
+                ),
+            })
+            .collect(),
     }
 }
 
@@ -1616,6 +1740,66 @@ fn compile_replacement_process(
         }
         process.push(CompiledStep::PlaceLinkCardAsBottomSourceAndCancelLeave);
         return process;
+    }
+
+    // Gap 2 (BT21-062) — `cost: { return_own_sources_to_deck: { filter, count,
+    // position } }` lowers to the same shape BT13-075 hand-writes: pick exactly
+    // `count` of the LEAVING permanent's own digivolution sources (min == max ==
+    // count → pay-in-full; the improved `SelectOwnSources` preflight in
+    // lower_replacement.rs gates the accept on ≥ count matching sources so it is
+    // not offered when unpayable), return them to deck `position` (firing the
+    // Gap-1 `OnDigivolutionCardReturnedToDeckBottom` observer per source), then
+    // the trailing `outcome: prevent` handler appends `CancelReplacement`.
+    if let Some(ret) = r
+        .cost
+        .as_ref()
+        .and_then(|cost| cost.return_own_sources_to_deck.as_ref())
+    {
+        if !matches!(r.outcome, Some(crate::clause::ReplacementOutcome::Prevent)) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { return_own_sources_to_deck } requires outcome: prevent".into(),
+            });
+        }
+        if !r.optional {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { return_own_sources_to_deck } requires optional: true (\"by returning … it doesn't leave\" is a may-pay)"
+                    .into(),
+            });
+        }
+        if ret.count == 0 {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost.return_own_sources_to_deck.count"),
+                message: "count must be >= 1".into(),
+            });
+        }
+        process.push(CompiledStep::SelectOwnSources {
+            // Scope the picker to the LEAVING permanent's OWN sources. For a
+            // leave-field replacement the effect lives on the carrier, so
+            // `Source` (= this effect's `source_permanent`) IS the leaving
+            // Digimon — exactly BT13-075's hand-written `target: source`.
+            target: Some(CompiledBindingRef::Source),
+            filter: compile_predicate(
+                &ret.filter,
+                &format!("{prefix}.cost.return_own_sources_to_deck.filter"),
+                card_id,
+                errors,
+            ),
+            // Pay-in-full: exactly `count`.
+            min: ret.count,
+            max: ret.count,
+            bind_as: Some("returned_sources".into()),
+            prompt: format!("Return {} digivolution card(s) to the deck", ret.count),
+            then: Vec::new(),
+        });
+        process.push(CompiledStep::ReturnSelectedSourcesToDeck {
+            source_refs: "returned_sources".into(),
+            position: compile_stack_position(ret.position),
+        });
     }
 
     if r.cost.as_ref().is_some_and(|cost| cost.delay_self) {
@@ -2336,6 +2520,9 @@ fn compile_step(
         S::DeletePermanent(a) => CompiledStep::DeletePermanent {
             target: compile_binding_ref(&a.target),
         },
+        S::DeleteForCostReduction(a) => CompiledStep::DeleteForCostReduction {
+            target: compile_binding_ref(&a.target),
+        },
         S::DeleteBoundPermanents(a) => CompiledStep::DeleteBoundPermanents {
             binding: a.binding.clone(),
         },
@@ -2695,13 +2882,28 @@ fn compile_step(
             }
         }
 
-        S::TrashTopSecurity(a) => CompiledStep::TrashTopSecurity {
-            of: compile_player_ref(a.of),
-            count: a
-                .count
-                .as_ref()
-                .map(|f| compile_formula(f, &format!("{prefix}.count"), card_id, errors)),
-        },
+        S::TrashTopSecurity(a) => {
+            if a.count.is_some() && a.leave.is_some() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.trash_top_security"),
+                    message: "trash_top_security: `count` and `leave` are mutually exclusive \
+                              (specify one or the other)"
+                        .to_string(),
+                });
+            }
+            CompiledStep::TrashTopSecurity {
+                of: compile_player_ref(a.of),
+                count: a
+                    .count
+                    .as_ref()
+                    .map(|f| compile_formula(f, &format!("{prefix}.count"), card_id, errors)),
+                leave: a
+                    .leave
+                    .as_ref()
+                    .map(|f| compile_formula(f, &format!("{prefix}.leave"), card_id, errors)),
+            }
+        }
         S::TrashBottomSecurity(a) => CompiledStep::TrashBottomSecurity {
             of: compile_player_ref(a.of),
         },

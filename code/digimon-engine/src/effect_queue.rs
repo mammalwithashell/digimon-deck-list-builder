@@ -546,6 +546,28 @@ impl Game {
                     }
                 }
             }
+            TriggerSource::SourceReturnedToDeckBottom { .. } => {
+                // Sibling of SourceTrashedFromStack, but the card moved to the
+                // DECK (not trash), so there is no trashed-source zone to scan —
+                // only battle-area permanents observe it. The host-scoped
+                // observer (BT21-058 / BT18-065 inherited "from THIS Digimon's
+                // digivolution cards") lives on the permanent whose stack lost
+                // the source; its `event_host_permanent_is_source` predicate is
+                // satisfied by the carried `host` in the trigger context.
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
             TriggerSource::SecurityRemoved {
                 observer_player, ..
             } => {
@@ -1488,6 +1510,38 @@ impl Game {
                     cards: vec![card],
                     from: Some(crate::enums::Zone::BattleArea),
                     to: Some(crate::enums::Zone::Trash),
+                }],
+                ..TriggerContext::default()
+            },
+            // Sibling of SourceTrashedFromStack; the returned card moved to the
+            // DECK, so the `moved_card_sets` destination is `Deck` (bottom).
+            // Same host / event-card context so the host-scoped
+            // (`event_host_permanent_is_source`) and event-card-name
+            // (`event_card_name_contains`) observer gates resolve identically.
+            TriggerSource::SourceReturnedToDeckBottom {
+                player,
+                host,
+                host_card,
+                card,
+                cause,
+            } => TriggerContext {
+                subject: Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: crate::enums::Zone::Deck,
+                }),
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_card: Some(card),
+                event_source_card: Some(card),
+                event_host_card: Some(host_card),
+                event_host_permanent: Some(host),
+                affected_player: Some(player),
+                source_player: Some(player),
+                cause: Some(cause),
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: vec![card],
+                    from: Some(crate::enums::Zone::BattleArea),
+                    to: Some(crate::enums::Zone::Deck),
                 }],
                 ..TriggerContext::default()
             },
