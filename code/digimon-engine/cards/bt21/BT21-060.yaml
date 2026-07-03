@@ -1,0 +1,277 @@
+# BT21-060 Destromon — Digimon, Lv.5, Black, DP 10000, Cost 10.
+# Traits: Unknown/LIBERATOR. Form: Ultimate.
+# Standard digivolve: Lv.4 Black / Cost 5 (printed evo_costs).
+# Alt-source (printed xros_req): "[Digivolve] [Vemmon]: Cost 6" — any [Vemmon]
+# printing, at cost 6, standard digivolve rules apply (ignoreDigivolutionRequirement
+# is FALSE per DCGO, so `ignore_requirements` is omitted / left at its default false).
+#
+# Printed card text (data/card_bundles/BT21-060.md — official Bandai DB, verbatim):
+#
+#   [When Digivolving] Until your opponent's turn ends, their effects can't
+#   trash this Digimon's stacked cards. Then, to 1 of your opponent's Digimon,
+#   ＜De-Digivolve 1＞ for every 2 [Vemmon] in this Digimon's digivolution cards.
+#   [All Turns] When this Digimon would leave the battle area, you may play 1
+#   [Vemmon] from its digivolution cards without paying the cost.
+#
+#   Inherited: [Opponent's Turn] [Once Per Turn] When one of your opponent's
+#   Digimon attacks, by returning 2 [Vemmon] from this Digimon's digivolution
+#   cards to the bottom of the deck, end that attack.
+#
+#   Official Q&A: "This effect prevents cards stacked on top from being
+#   trashed by or other effects, and cards stacked on the bottom can't be
+#   trashed by effects such as those that trash digivolution cards." — i.e.
+#   the stack-trashing immunity covers the WHOLE stack (top-peel AND
+#   bottom-source trashing), not just one mechanic.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Black/BT21_060.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Alternative Digivolution Condition" (None) —
+#   AddSelfDigivolutionRequirementStaticEffect(TopCard.EqualsCardName("Vemmon"),
+#   digivolutionCost: 6, ignoreDigivolutionRequirement: false). Matches printed
+#   xros_req exactly: `kind: digivolve`, `from: { name_is: "Vemmon" }`, `cost: 6`.
+#
+# Region "When Digivolving" (OnEnterFieldAnyone, gated by CanTriggerWhenDigivolving) —
+#   CanActivateCondition is ONLY `IsExistOnBattleAreaDigimon(card)` — there is
+#   NO Vemmon-count gate on the whole clause. Body:
+#     (a) ImmuneStackTrashingClass installed via
+#         `selectedPermanent.UntilOpponentTurnEndEffects.Add(...)`, with
+#         `EffectCondition: IsOpponentEffect` (scoped to OPPONENT's effects
+#         only) and `PermanentCondition: permanent == selectedPermanent` (self
+#         only). Expiry: until the opponent's turn ends.
+#     (b) MANDATORY select 1 opponent Digimon (canNoSelect: false, maxCount 1);
+#         if the opponent has no Digimon the selection has zero legal targets
+#         and auto-skips (standard no-candidates behavior).
+#     (c) <De-Digivolve 1> applied `VemmonInSourceDividedBy2()` times on the
+#         selected target — i.e. floor(count of [Vemmon]-named sources in
+#         THIS Digimon's digivolution cards / 2). With 0 or 1 Vemmon sources
+#         this evaluates to 0 (de_digivolve amount 0 is a clean no-op; the
+#         mandatory target selection still happens per (b), matching DCGO
+#         exactly — the selection is unconditional, only the DEGREE scales).
+#
+#   ENGINE-GAP NOTE (narrow, does not block this card): the Rust engine's
+#   `ImmuneFromStackTrashing` modifier consult sites (`EffectContext::
+#   trash_top_source` / `trash_bottom_sources`, `effect_context/action/
+#   trash.rs`) call `ModifierRegistry::has(..)` unconditionally — cause-
+#   agnostic — rather than `blocks_opponent_effect(..)` (which already exists
+#   and is used by the sibling modifiers `CannotBeReturnedToHand` /
+#   `CannotBeReturnedToDeck` / `CannotBeDeDigivolved`, see `default_
+#   passive_cause_filter` in modifiers.rs). DCGO's `ImmuneStackTrashingClass`
+#   explicitly scopes to `IsOpponentEffect` — printed text says "their
+#   [opponent's] effects can't trash", not "effects can't trash". The DSL
+#   `add_modifier: { modifier: ImmuneFromStackTrashing }` step is the only
+#   available primitive and is used here (best-available, closest-faithful);
+#   it is slightly OVER-protective (also blocks a hypothetical own-effect
+#   stack-trash, which this card's own text never triggers, so no observable
+#   divergence for THIS card in isolation — but the modifier is cause-
+#   agnostic at the engine level, a latent gap for any future card needing
+#   true opponent-only stack-trash immunity while ALSO wanting to self-trash
+#   its own stack). Logged for the batch orchestrator's gap tracker
+#   (qa/archetype-qa/engine-gaps.md): "ImmuneFromStackTrashing consult sites
+#   need cause_filter/blocks_opponent_effect scoping, mirroring
+#   CannotBeReturnedToDeck et al."
+#
+# Region "All Turns" (WhenRemoveField, gated by CanTriggerWhenRemoveField) —
+#   CanActivateCondition requires at least one [Vemmon]-named source that
+#   `CanPlayAsNewPermanent(payCost:false)`. Body: optional (canNoSelect: true)
+#   pick 1 [Vemmon] source, then PlayPermanentCards(payCost:false). Matches
+#   the BT25-025 `<Decode>`-idiom shape exactly (non-cancelling replacement:
+#   `kind: replacement`, `trigger: when_would_leave_battle_area`, the leave
+#   ITSELF still proceeds — this clause never cancels the removal, it only
+#   rides along on it). No "other than in battle" restriction is printed
+#   (unlike BT25-025's <Decode>), so no `active_when: none_of battle_cause`
+#   gate is added — this fires on ANY would-leave, including battle deletion.
+#
+# Region "Opponent's Turn Inherited" (OnAllyAttack, inherited scope) —
+#   CanUseCondition: opponent's turn + an opponent Digimon is attacking.
+#   CanActivateCondition: >= 2 [Vemmon]-named sources exist in THIS Digimon's
+#   digivolution cards (hard gate on the WHOLE clause — distinct from the
+#   "When Digivolving" clause, which had no such gate). Body: the whole
+#   ActivateClass is `isOptional: true` (may decline to engage at all), but
+#   the inner SelectCardEffect for the 2 Vemmon is `canNoSelect: false,
+#   maxCount: 2, canEndNotMax: false` — once engaged, EXACTLY 2 must be
+#   selected (an atomic, all-or-nothing cost). `SetHashString("end-attack-
+#   BT21-060")` + maxCountPerTurn 1 → [Once Per Turn].
+#
+#   ENGINE-GAP / DSL-VOCAB-GAP — BLOCKED for this clause specifically (verified
+#   empirically, not speculatively):
+#   - `select_own_sources` (the only DSL verb that can multi-pick from OWN
+#     digivolution sources with a name filter) takes `min`/`max` as plain
+#     `u8` literals — NOT formula-capable and with NO `clamp_to_available`
+#     safety valve, unlike its already-shipped sibling `select_opponent_
+#     sources` (`SelectOpponentSourcesArgs`, which documents exactly this
+#     concern: "a min above the live candidate count clamps... never aborts
+#     for fewer than N available" when `clamp_to_available: true`).
+#   - EMPIRICAL PROOF (probe test run against `install_source_multi_selection`
+#     / `EffectContext::select_own_sources`, `effect_context/selections.rs`):
+#     with `min: 2, max: 2` and EXACTLY 1 matching (name_is: "Vemmon")
+#     candidate in the stack, the engine installs a `SourceMulti { min:2,
+#     max:2, picked:0 }` prompt offering the single legal pick (correct so
+#     far — DCGO would offer the same). But after that ONE pick,
+#     `source_multi_candidates` returns empty (no more Vemmon) while
+#     `picked.len() (1) < min (2)`; `install_source_multi_selection`
+#     (selections.rs ~line 2838) then hits `candidates.is_empty()` with
+#     `picked.len() < min`, so it neither re-installs a selection NOR invokes
+#     the captured callback/tail — `pending_selection` silently becomes
+#     `None` with the picked card's move NOT applied (verified: the physical
+#     stack is unmodified, so no state corruption) but the player's pick
+#     vanishes with no resulting effect and no further prompt. This is an
+#     illusory choice (the RL action space / a human player is offered and
+#     accepts a pick that is then silently discarded) — a no-approximations
+#     violation if shipped, distinct from DCGO's `CanActivateCondition`
+#     gate (>= 2 Vemmon), which never lets the player begin an unpayable
+#     cost in the first place.
+#   - No safe workaround exists in the current DSL vocabulary:
+#     * `active_when`/`condition` (both `PredicateSpec`) have no leaf that
+#       counts OWN digivolution sources filtered by NAME against a numeric
+#       threshold (`self_digivolution_sources_contain_name` is existence-only
+#       [>=1], `self_digivolution_sources_trait_has` is trait- not name-
+#       keyed and also existence-only, `materials_count_gte`/`stack_size_gte`
+#       /`count_gte` count unfiltered totals or scan permanents, not named
+#       sources). The `source_stack_count` FORMULA (used by BT20-021's
+#       `floor_div` amount) computes the exact count needed but there is no
+#       predicate leaf comparing a `FormulaSpec` against a literal threshold
+#       (`Comparator`/`MetricComparators` compare a FIXED metric against a
+#       formula VALUE, not two formulas against each other).
+#     * `select_materials` (the `max`-only, no-`min`, count-capped-backed
+#       sibling — confirmed safe, reuses the well-tested
+#       `install_select_count_capped_multi` "silently no-op when min
+#       unpayable" machinery) has no `min` at all (always "up to N"), so it
+#       cannot express "exactly 2 or nothing" directly; gating via a
+#       post-pick `binding_count_eq: { binding, n: 2 }` (the BT24-017 idiom)
+#       is safe for the GATE, but the picks bind as a `CardList` (plain
+#       `CardHandle`s with no `permanent`/`field_index`), and NEITHER
+#       `return_selected_sources_to_deck` (needs `SourceSelectionRef`s from
+#       `select_own_sources`) NOR any other zone-move verb accepts a
+#       `CardList` of digivolution-source cards for a deck-bottom return.
+#       `per_selected` CAN iterate a `CardList` (binding one `CardHandle`
+#       per iteration) but there is no single-card "return this digivolution
+#       source card to its owner's deck" DSL step to put in the loop body
+#       (only the batch `ReturnSelectedSourcesToDeck`, which is `SourceRefs`-
+#       typed).
+#     * Two sequential `select_own_sources` calls with `min:1,max:1` each
+#       (safe individually — no accumulation risk when min==max==1) cannot
+#       be composed atomically either: moving the first pick to the deck
+#       before attempting the second pick risks non-atomic partial payment
+#       if the second pick then fails (only 1 Vemmon actually existed), and
+#       there is no predicate to exclude an already-bound source card from
+#       the second call's filter without first moving it (permanent-subject
+#       -only `not_in_binding`; source-subject filters have no analogous
+#       leaf).
+#   - Verdict for this clause: BLOCKED, gap_kind: dsl (all referenced engine
+#     primitives — `end_attack`, `return_selected_sources_to_deck`,
+#     `select_own_sources` itself — already exist and work correctly within
+#     their current contracts; the DSL simply lacks (a) a name-filtered
+#     source-count comparator predicate to pre-gate the clause the way DCGO's
+#     `CanActivateCondition` does, and/or (b) a `clamp_to_available`/formula-
+#     min safety valve on `select_own_sources` mirroring its `select_
+#     opponent_sources` sibling). This clause is OMITTED from the YAML below
+#     rather than shipped as an approximation. Logged to
+#     qa/dsl-vocab-gaps.md by the orchestrator with gap-id
+#     G-DSL-SELECT-OWN-SOURCES-EXACT-N-GATE.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                        | Status |
+# |----------------------------------------------------------------------------|--------|
+# | Std digivolve Lv.4 Black / Cost 5                                        | IMPLEMENTED (printed evo_costs) |
+# | Alt-source [Vemmon] / Cost 6 (printed xros_req)                         | IMPLEMENTED (alt_paths kind: digivolve, name_is: Vemmon) |
+# | [When Digivolving] Opponent effects can't trash stack until their turn ends | IMPLEMENTED (add_modifier ImmuneFromStackTrashing, end_of_opponents_turn) — narrow cause-agnostic engine-gap noted above, does not change observable behavior for this card |
+# | [When Digivolving] Then, De-Digivolve floor(Vemmon-sources/2) to 1 opp Digimon | IMPLEMENTED (mandatory select_opponent_permanent + de_digivolve with floor_div/source_stack_count formula amount) |
+# | [All Turns] When would leave, may play 1 [Vemmon] source free            | IMPLEMENTED (replacement + select_material + play_from_materials, BT25-025 idiom) |
+# | Inherited [Opponent's Turn][OPT] return 2 [Vemmon] sources to deck bottom, end attack | BLOCKED (dsl) — see gap note above; omitted, not approximated |
+
+card: BT21-060
+name: Destromon
+kind: digimon
+level: 5
+color: [black]
+cost: 10
+dp: 10000
+traits: [Unknown, LIBERATOR]
+
+alt_paths:
+  # Standard printed evo circle (Black Lv.4 / cost 5). Re-declared explicitly
+  # per the shipping DSL-card convention (see BT25-025 §alt_paths) — the
+  # embedded pack's `CardData` (both the DebugRunner test harness and the
+  # production PyO3/Tauri registry merge path) does not otherwise carry a
+  # card's own printed evo_costs through the `dsl_card` lookup independent of
+  # this declaration.
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 5
+  # Alt-source (printed xros_req): "[Digivolve] [Vemmon]: Cost 6".
+  - kind: digivolve
+    from: { name_is: "Vemmon" }
+    cost: 6
+
+effects:
+  # ─── [When Digivolving] Stack-trash immunity (until opponent's turn ends) ──
+  #
+  # DCGO ImmuneStackTrashingClass, `UntilOpponentTurnEndEffects`. Best-
+  # available primitive: `add_modifier` with `ImmuneFromStackTrashing`,
+  # expiring `end_of_opponents_turn` ("until your opponent's turn ends").
+  # See the engine-gap note above re: cause-agnostic consult sites.
+  - when: when_digivolving
+    summary: "[When Digivolving] Until opponent's turn ends, their effects can't trash this Digimon's stacked cards"
+    process:
+      - add_modifier:
+          target: source
+          modifier: ImmuneFromStackTrashing
+          value: 1
+          expiry: end_of_opponents_turn
+
+  # ─── [When Digivolving] De-Digivolve floor(Vemmon sources / 2) ────────────
+  #
+  # DCGO: MANDATORY select 1 opponent Digimon (no Vemmon-count gate on the
+  # selection itself — it always happens when an opponent Digimon exists),
+  # then apply <De-Digivolve 1> floor(count of [Vemmon]-named sources in
+  # this Digimon's digivolution cards / 2) times. `de_digivolve.amount` is
+  # a runtime formula: `floor_div: [source_stack_count(name_is: Vemmon), 2]`
+  # (BT20-021 idiom). With 0 or 1 Vemmon sources this resolves to amount 0 —
+  # a clean no-op (verified: de_digivolve_core's `while popped < max` loop
+  # never executes when max=0) — matching DCGO's `for (i=0; i<0; i++)`.
+  - when: when_digivolving
+    summary: "[When Digivolving] To 1 opponent Digimon, <De-Digivolve 1> for every 2 [Vemmon] in this Digimon's digivolution cards"
+    process:
+      - select_opponent_permanent:
+          bind_as: dd_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to De-Digivolve"
+      - de_digivolve:
+          target: dd_target
+          amount:
+            floor_div:
+              - source_stack_count:
+                  target: source
+                  filter: { name_is: "Vemmon" }
+              - 2
+          stop_at_level: 3
+
+  # ─── [All Turns] When would leave, may play 1 [Vemmon] source free ────────
+  #
+  # Non-cancelling replacement: the leave ITSELF always proceeds (no
+  # "other than in battle" restriction is printed, unlike BT25-025's
+  # <Decode>, so no battle-cause exclusion is added). Accepting the optional
+  # play runs the side-effect (play a [Vemmon] source without paying), then
+  # the original leave proceeds. BT25-025 / BT22-015 idiom.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      replacement_subject_is_mine: true
+    summary: "[All Turns] When this Digimon would leave the battle area, may play 1 [Vemmon] from its digivolution cards free"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: vemmon_source
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: "Vemmon"
+          prompt: "Choose 1 [Vemmon] source to play without paying its cost"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: vemmon_source
+          cost_delta: free

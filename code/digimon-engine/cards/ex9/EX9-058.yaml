@@ -1,0 +1,105 @@
+# EX9-058 Gazimon — Digimon, Lv.3, Purple, DP 1000, Cost 3.
+# Traits: Mammal, DM, Ver.5. Attribute: Virus.
+#
+# Printed card text (code/digimon-engine/cards/ex9/EX9-058.json, confirmed
+# against data/card_bundles/EX9-058.md — official Bandai DB bundle):
+#   [On Play] Reveal the top 3 cards of your deck. Among them, add 1 card
+#   with the [DM] trait to the hand and place 1 card with the [Ver.5] trait
+#   face down as the bottom digivolution card of any of your Digimon with
+#   the [DM] trait. Return the rest to the bottom of the deck.
+#
+# Inherited: <Retaliation> (When this Digimon is deleted after losing a
+# battle, delete the Digimon it was battling.)
+#
+# Digivolution: standard Purple Lv.2 / cost 0 circle (evo_costs) PLUS the
+# alt-digivolve special condition (xros_req): "[Digivolve] Lv.2 w/[DM]
+# trait: Cost 0". Both are authored as separate `digivolve` alt_paths
+# (mirrors BT25-078 Gazimon's sibling shape — standard color circle +
+# trait-gated special, kept as two entries rather than folding the
+# standard circle into cards.json-only backing).
+#
+# DCGO: DCGO/Assets/Scripts/CardEffect/EX9/Purple/EX9_058.cs
+#   `SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3, ...)` with two
+#   sequential `SimplifiedSelectCardConditionClass` picks: bucket 1 ([DM]
+#   trait, mode AddHand, maxCount 1), bucket 2 ([Ver.5] trait, mode Custom,
+#   maxCount 1, captures `selectedCard`). Both picks are mandatory-when-a-
+#   candidate-exists and natural-fizzle-when-none (DCGO canNoSelect: false
+#   default). AFTER both picks resolve, IF the Ver.5 pick succeeded AND at
+#   least one of the controller's own battle-area Digimon carries the [DM]
+#   trait, a permanent-select prompt opens (canNoSelect: false) and the
+#   Ver.5 card is placed FACE DOWN as that chosen permanent's bottom
+#   digivolution card (`AddDigivolutionCardsBottom(isFacedown: true)`). If
+#   no [DM] Digimon exists, the Ver.5 pick is simply never placed (already
+#   removed from the reveal pool by the pick itself — matches DCGO's
+#   `AfterSelectCardCoroutine` accounting, which happens before the
+#   permanent-existence check).
+#
+# Official Q&A (data/card_bundles/EX9-058.md): the DM-to-hand pick and the
+# Ver.5-to-source pick must be two DIFFERENT physical cards — you choose
+# the hand card FIRST, then choose the source card from what remains.
+# Encoded here as two SEQUENTIAL `select_reveal` picks (not
+# `select_reveal_buckets`, whose bucket picks bind a `CardList` — which
+# `place_as_bottom_source`'s `source:` resolver does not accept). Because
+# `add_to_hand_from_reveal` removes the DM pick from `revealed_cards`
+# before the Ver.5 `select_reveal` step runs, the already-chosen card is
+# naturally excluded from the second pick's candidate pool — matching
+# DCGO's `no_duplicate_cards`/`mutualConditions` exclusion without needing
+# the bucket verb.
+#
+# `choose_from_reveal`'s `bottom_source_of` destination was NOT used for
+# the Ver.5 placement because that destination hardcodes `face_down: false`
+# (see `route_chosen_reveal` in
+# code/digimon-engine/src/dsl_cards/step/selections.rs) — this card
+# requires FACE DOWN placement. Instead: `select_reveal` (binds a plain
+# `Card`) -> `select_own_permanent` (binds the CHOSEN [DM] Digimon, not
+# `this`/`self`) -> `place_as_bottom_source` with `face_down: true` and
+# `target: target_perm` (the select_own_permanent binding).
+card: EX9-058
+name: Gazimon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 1000
+traits: [Mammal, DM, Ver.5]
+attribute: Virus
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0
+
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: DM }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [DM] card to hand and place 1 [Ver.5] card face down as the bottom digivolution card of a chosen [DM] Digimon; rest to bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: dm_pick
+          optional: false
+          filter: { trait_has: DM }
+          prompt: "Select 1 [DM] trait card to add to your hand"
+      - add_to_hand_from_reveal: { of: you, card: dm_pick }
+      - select_reveal:
+          of: you
+          bind_as: ver5_pick
+          optional: false
+          filter: { trait_has: "Ver.5" }
+          prompt: "Select 1 [Ver.5] trait card to place as a bottom digivolution card"
+      - select_own_permanent:
+          bind_as: target_perm
+          filter: { kind: digimon, trait_has: DM }
+          prompt: "Choose 1 of your [DM] trait Digimon to receive the [Ver.5] card"
+      - place_as_bottom_source:
+          source: ver5_pick
+          target: target_perm
+          face_down: true
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Retaliation

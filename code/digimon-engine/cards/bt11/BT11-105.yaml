@@ -1,0 +1,250 @@
+# BT11-105 Fusionize — Option, Black, Cost 1.
+#
+# Printed card text (card image BT11-105.webp — authoritative; cross-checked
+# data/card_bundles/BT11-105.md [official Bandai DB] + data/cards.json):
+#
+#   When you would use this card, if you have a [Snatchmon] in play, reduce
+#   the cost by 1.
+#   [Main] By placing 1 [Vemmon] or [Destromon] from your trash under 1 of
+#   your Digimon as its bottom digivolution card, you may digivolve 1 of
+#   your Digimon into 1 [Destromon] or [Galacticmon] from your trash for its
+#   digivolution cost.
+#
+# Security Effect (data/cards.json mis-files this under
+# `inherited_effect_description_eng`, matching the BT19-093 Queen Device
+# precedent — the card image confirms it is genuinely the Security Effect):
+#   [Security] You may reveal the top 3 cards of your deck. Play 1 [Vemmon]
+#   among them without paying the cost. Trash the rest.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT11/Black/BT11_105.cs
+#
+# ─── DCGO crosscheck (per clause) ─────────────────────────────────────────────
+#
+# Clause 0 — cost reduction. `EffectTiming.None` ChangeCostClass.
+#   CanUseCondition: `HasMatchConditionOwnersPermanent(card, perm =>
+#   perm.TopCard.CardNames.Contains("Snatchmon"))` — true while the
+#   controller has ANY permanent whose top card is (or is named) Snatchmon
+#   in the battle area. `ChangeCost` subtracts 1 when the condition holds
+#   and `cardSource == card` (scoped to playing THIS card).
+#
+# Clause 1 — [Main]. `EffectTiming.OptionSkill`.
+#   `CanUseCondition`: `CanTriggerOptionMainEffect` (standard "usable from
+#   hand as an Option Main effect" gate — no trash-count precheck at the
+#   clause level).
+#   `ActivateCoroutine`:
+#     1. `HasMatchConditionOwnersCardInTrash(card, CanSelectCardCondition)` —
+#        only proceeds with the placement pick if a [Vemmon]/[Destromon] is
+#        in trash. `SelectCardEffect` with `canNoSelect: () => true` (the
+#        printed "By placing 1 ..." cost is a may-pay: 0 or 1 cards, no
+#        forced pick even with an eligible card) picks ONE trash card.
+#     2. If a card was picked (`selectedCards.Count >= 1`):
+#        `SelectPermanentEffect` (`canNoSelect: true`) picks 1 of the
+#        controller's own Digimon → `AddDigivolutionCardsBottom` places the
+#        picked trash card as that Digimon's bottom source
+#        (`digivolutionCardAdded = true`).
+#     3. Only if step 2 succeeded (`digivolutionCardAdded`):
+#        `SelectPermanentEffect` (`canNoSelect: true`) picks 1 of the
+#        controller's own Digimon (any Digimon with a legal
+#        Destromon/Galacticmon target in trash) → `DigivolveIntoHandOrTrashCard`
+#        (`payCost: true`, `isHand: false` = trash-sourced) digivolves that
+#        Digimon into a [Destromon] or [Galacticmon] from trash paying its
+#        printed digivolution cost.
+#   The "you may" in the printed text scopes the WHOLE effect (declining the
+#   cost placement, per DCGO `canNoSelect: () => true` with no forced
+#   fallback, ends the clause with no effect); the digivolve step is
+#   INDEPENDENTLY optional even after a successful placement (DCGO's second
+#   `canNoSelect: true` on the digivolve-target Digimon select, plus a third
+#   implicit decline inside `DigivolveIntoHandOrTrashCard`'s own card pick).
+#
+# Clause 2 — [Security] (inherited scope; see the field-mislabeling note
+# above). `EffectTiming.SecuritySkill`, `SetIsSecurityEffect(true)`.
+#   `ActivateCoroutine`:
+#     1. `SetBoolSelection` — "Will you reveal your deck?" (the printed "you
+#        may reveal" — an explicit boolean accept/decline BEFORE the reveal
+#        itself). Declining ends the clause with no effect.
+#     2. `SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3, ...)` reveals
+#        the top 3 and offers ONE bucket (`maxCount: 1`) filtered to
+#        `CanPlayAsNewPermanent(payCost: false, ...) && CardNames.Contains
+#        ("Vemmon")` — i.e. a card literally named "Vemmon" that CAN be
+#        legally played (no color/legality issue) for free.
+#     3. The picked card (if any) plays via `PlayPermanentCards(payCost:
+#        false, root: Library, activateETB: true)`.
+#     4. `remainingCardsPlace: RemainingCardsPlace.Trash` — every OTHER
+#        revealed card (i.e. both unpicked cards, or all 3 if nothing was
+#        picked) is trashed.
+#
+# ─── Substrate notes ──────────────────────────────────────────────────────────
+#
+# - `kind: cost_reduction` + `when_playing_this: true` + `condition:
+#   { any_permanent: { of: you, zone: [battle_area], name_is: "Snatchmon" } }`
+#   is the shipped shape for "if you have [X] in play, reduce cost by N"
+#   (mirrors the general pattern: BT19-093's `no_permanent`/`name_is` used
+#   for the negated case; BT21-093's `condition:` for a board-state gate on
+#   a `when_playing_this` reduction). `Snatchmon` is a unique card name (no
+#   variant printings share it), so `name_is` (exact match) is precise —
+#   `name_contains` would be needed only for substring/variant matching.
+# - Clause 1's "By placing 1 ... under 1 of your Digimon" cost is
+#   `select_trash { optional: true, cost: true }` (BT13-075 Alphamon
+#   precedent: `cost: true` without `continue_on_decline` means DECLINING
+#   aborts the whole clause body via `dsl_clause_aborted`, matching DCGO's
+#   `canNoSelect: () => true` with no independent tail). `select_trash` with
+#   ZERO eligible candidates is a separate silent no-op (it does not install
+#   a selection AND does not set `dsl_clause_aborted`, so execution would
+#   otherwise fall through to later mandatory steps). A clause-level
+#   `condition: count_gte` precheck (the same BT13-075 pattern mirroring
+#   DCGO's `HasMatchConditionOwnersCardInTrash` clause gate) prevents that
+#   fallthrough by never enqueuing the clause at all when no
+#   [Vemmon]/[Destromon] exists in trash.
+#   `place_as_bottom_source { source: placed_source, target: dest_digimon }`
+#   where `dest_digimon` is a `select_own_permanent` pick (BT21-013 /
+#   EX10-032 precedent for a player-chosen — not `source`/self — bottom-
+#   source destination, since this Option has no battle-area presence of
+#   its own to default to).
+# - The independently-optional digivolve tail uses `select_own_permanent
+#   { optional: true }` (digivolve target) then, gated on
+#   `binding_present`, `select_trash { optional: true }` (the
+#   Destromon/Galacticmon source) then, gated on that binding,
+#   `effect_initiated_digivolve { cost: printed }`. `cost: printed` (not
+#   `ignore_requirements: true`) matches "for its digivolution cost" with NO
+#   "ignoring digivolution requirements" language in the printed text
+#   (EX3-063 Imperialdramon: Dragon Mode precedent for a plain "digivolve
+#   ... for its digivolution cost" tail). The DSL has no
+#   "only show Digimon with a legally payable Destromon/Galacticmon target"
+#   filter predicate (DCGO's `CanSelectPermanentCondition1` pre-filters this
+#   in its own UI layer); per the EX10-032 / EX3-063 pool convention this is
+#   exposed as an unfiltered own-Digimon pick and `effect_initiated_digivolve`
+#   silently no-ops (fizzles, no panic, no partial state) on an illegal
+#   target/source pairing — the CHOICE itself is still fully exposed to the
+#   RL action space, only a no-op outcome is unfiltered.
+# - Clause 2's outer "you may reveal" maps to `optional: true` at the
+#   triggered-clause level (mirrors DCGO's explicit `SetBoolSelection`
+#   accept/decline prompt gating the whole reveal). `select_reveal_buckets`
+#   (not `select_reveal`) is used so the trash-remainder tail always runs
+#   via the callback even when the player declines the bucket pick (min:0)
+#   — EX8-050 Gogmamon precedent.
+
+card: BT11-105
+name: Fusionize
+kind: option
+color: [black]
+cost: 1
+
+effects:
+  # ─── Clause 0 — cost reduction: -1 if you control a [Snatchmon] ────────────
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        name_is: "Snatchmon"
+    amount: 1
+    summary: "When you would use this card, if you have a [Snatchmon] in play, reduce the cost by 1"
+
+  # ─── Clause 1 — [Main] place trash source under a Digimon; may digivolve ───
+  - when: main_from_hand
+    summary: "[Main] By placing 1 [Vemmon]/[Destromon] from trash under 1 of your Digimon as its bottom digivolution card, you may digivolve 1 of your Digimon into 1 [Destromon]/[Galacticmon] from trash for its digivolution cost"
+    # Clause-level precheck mirrors DCGO's `HasMatchConditionOwnersCardInTrash`
+    # guard around the whole ActivateCoroutine body: with no eligible
+    # [Vemmon]/[Destromon] in trash, the clause does not enqueue at all. This
+    # also sidesteps the `select_trash` zero-candidate silent-fallthrough
+    # (a 0-match `select_trash` returns without installing a selection AND
+    # without setting `dsl_clause_aborted`, so later mandatory steps in the
+    # SAME process would otherwise run unguarded).
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          kind: digimon
+          any_of:
+            - name_is: "Vemmon"
+            - name_is: "Destromon"
+        n: 1
+    process:
+      # Cost: place 1 [Vemmon] or [Destromon] from trash under 1 of your
+      # Digimon. `cost: true` without `continue_on_decline` aborts the whole
+      # clause on decline (DCGO canNoSelect: () => true with no independent
+      # tail); the clause-level `condition` above already guarantees at
+      # least 1 candidate exists.
+      - select_trash:
+          of: you
+          bind_as: placed_source
+          optional: true
+          cost: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_is: "Vemmon"
+                  - name_is: "Destromon"
+          prompt: "Place 1 [Vemmon] or [Destromon] from your trash under 1 of your Digimon as its bottom digivolution card"
+      # DCGO's destination-Digimon SelectPermanentEffect is ALSO
+      # `canNoSelect: true` (independently declinable) — `AddDigivolutionCardsBottom`
+      # (and everything after it, including the digivolve tail) runs only
+      # `if (selectedPermanent != null)`. Default `continue_on_decline: false`
+      # matches this: declining drops the rest of the clause.
+      - select_own_permanent:
+          bind_as: dest_digimon
+          optional: true
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your Digimon to receive the placed digivolution card"
+      - place_as_bottom_source:
+          source: placed_source
+          target: dest_digimon
+      # Independently-optional tail: you MAY digivolve 1 of your Digimon into
+      # 1 [Destromon]/[Galacticmon] from trash for its digivolution cost.
+      - select_own_permanent:
+          bind_as: evo_target
+          optional: true
+          filter: { kind: digimon }
+          prompt: "You may choose 1 of your Digimon to digivolve into a [Destromon] or [Galacticmon] from your trash"
+      - if:
+          condition: { binding_present: evo_target }
+          then:
+            - select_trash:
+                of: you
+                bind_as: evo_source
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - name_is: "Destromon"
+                        - name_is: "Galacticmon"
+                prompt: "Choose 1 [Destromon] or [Galacticmon] from your trash to digivolve into"
+            - if:
+                condition: { binding_present: evo_source }
+                then:
+                  - effect_initiated_digivolve:
+                      target: evo_target
+                      from_hand: evo_source
+                      cost: printed
+
+  # ─── Clause 2 — [Security] (inherited scope) ────────────────────────────────
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security] You may reveal the top 3 cards of your deck. Play 1 [Vemmon] among them without paying the cost. Trash the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: play_pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - name_is: "Vemmon"
+          prompt: "Play 1 [Vemmon] among the revealed cards without paying the cost"
+      - play_from_revealed_free: { of: you, card: play_pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal:
+                of: you
+                card: rest

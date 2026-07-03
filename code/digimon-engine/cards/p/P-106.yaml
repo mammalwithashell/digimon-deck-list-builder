@@ -1,0 +1,165 @@
+card: P-106
+name: "Agility Training"
+kind: option
+color: [green]
+cost: 2
+
+# ─── Clause 0: [Main] ─────────────────────────────────────────────────────────
+#
+# "[Main] Reveal the top 2 cards of your deck. Add 1 green card among them to
+# your hand. Return the rest to the bottom of the deck. Then, place this card
+# in the battle area."
+#
+# DCGO (P_106.cs, EffectTiming.OptionSkill):
+#   SimplifiedRevealDeckTopCardsAndSelect(
+#     revealCount: 2,
+#     simplifiedSelectCardConditions: [ { canTargetCondition: HasCardColor(Green),
+#       message: "Select 1 green card.", mode: AddHand, maxCount: 1 } ],
+#     remainingCardsPlace: RemainingCardsPlace.DeckBottom)
+#   then PlaceDelayOptionCards(card, activateClass)
+#
+#   No `canNoSelect` argument is passed to SimplifiedRevealDeckTopCardsAndSelect
+#   (defaults to false) — when >=1 green card is present among the top 2,
+#   adding it to hand is MANDATORY, not "you may". Matches sibling P-105
+#   Physical Training's `optional: false`.
+#
+# DSL modelling:
+#   - when: main_from_hand  (OptionSkill / MainFromHand timing)
+#   - optional: false — printed text has no "you may" on the reveal step.
+#   - reveal_top_deck: { of: you, count: 2 }
+#   - select_reveal: { filter: { color_is: green }, optional: false, bind_as: picked }
+#     When no revealed card matches the green filter, select_reveal installs no
+#     selection regardless of `optional` (valid_action_ids is empty) → the
+#     runner advances to the sibling steps; add_to_hand_from_reveal no-ops on
+#     the absent `picked` binding and place_remainder_on_deck still returns
+#     all revealed cards to the bottom. When >=1 green card IS present,
+#     `optional: false` means PASS is not exposed — picking one is mandatory.
+#   - add_to_hand_from_reveal: { of: you, card: picked }
+#   - place_remainder_on_deck: { of: you, position: bottom }
+#   - "Then, place this card in the battle area" — place_self_as_delay_option.
+#     DCGO calls PlaceDelayOptionCards(card, activateClass). In the DSL the
+#     `place_self_as_delay_option` step removes this Option from the controller's
+#     hand and seats it in the battle area as an OptionState::Delayed permanent
+#     (G-PLACE-SELF-AS-OPTION-PERMANENT — resolved 2026-05-02).
+#
+# ─── Clause 1: [Main] <Delay> ────────────────────────────────────────────────
+#
+# "[Main] <Delay> (By trashing this card after the placing turn, activate the
+# effect below.) · 1 of your Digimon may digivolve into a green Digimon card
+# in your hand for its digivolution cost. When it would digivolve by this
+# effect, reduce the cost by 2."
+#
+# DCGO (EffectTiming.OnDeclaration):
+#   CanUseCondition: CanDeclareOptionDelayEffect(card)
+#   ActivateCoroutine:
+#     DeletePeremanentAndProcessAccordingToResult → if success:
+#       SelectPermanentEffect over owner's battle area (canNoSelect: true — optional)
+#       if selectedPermanent != null:
+#         DigivolveIntoHandOrTrashCard(
+#           targetPermanent: selectedPermanent,
+#           cardCondition: IsDigimon && HasCardColor(Green),
+#           payCost: true,
+#           reduceCostTuple: (reduceCost: 2, reduceCostCardCondition: null),
+#           isHand: true)
+#
+# DSL modelling:
+#   - kind: delay
+#     trigger: delayed  → CompiledTiming::Delayed → DelayTrigger::MainPhaseActivated.
+#     This is the standard printed <Delay> (RULES_CONTEXT 16-16): a
+#     player-visible [Main]-phase activation action. The controller trashes the
+#     parked Option on a later main phase to activate the body — it never
+#     auto-fires and cannot fire the placing turn. Matches sibling P-103 Offense
+#     Training and P-105 Physical Training.
+#   - process:
+#       select_own_permanent (optional: true, filter: kind: digimon)
+#       select_hand (filter: kind:digimon + color_is:green)
+#       effect_initiated_digivolve (cost: { reduce: 2 }, ignore_requirements: false)
+#
+# DCGO: canNoSelect: true on SelectPermanentEffect → optional: true in DSL
+# DCGO: isHand: true (only from hand, not trash) → standard select_hand
+# DCGO: reduceCostTuple: (2, null) → cost: { reduce: 2 } (no per-card condition)
+#
+# ─── Clause 2: [Security] (inherited) ────────────────────────────────────────
+#
+# "Security Effect [Security] Place this card in the battle area."
+#   (cards.json: inherited_effect_description_eng)
+#
+# DCGO (EffectTiming.SecuritySkill):
+#   CardEffectFactory.PlaceSelfDelayOptionSecurityEffect(card)
+#   → places the option card in battle area when it hits security (same
+#     persistent placement as Main's PlaceDelayOptionCards).
+#
+# DSL modelling:
+#   - scope: inherited (this is an inherited security effect per card layout)
+#   - when: on_security
+#   - process: [ place_self_as_delay_option: {} ] — the resolved verb removes the
+#     security-resolving Option from the security/digivolution-source context and
+#     places it in the owner's battle area as an OptionState::Delayed permanent,
+#     then dispatches OnOptionPlaced.
+
+effects:
+  # ─── Clause 0: [Main] ─────────────────────────────────────────────────────
+  # Reveal top 2, add 1 green card to hand (mandatory when a candidate exists),
+  # place rest at bottom, place self in battle area as a Delay-Option permanent.
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 2; add 1 green card to hand; place rest at bottom; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 2
+      # DCGO: canTargetCondition: HasCardColor(Green), maxCount: 1, mode: AddHand.
+      # No canNoSelect passed → mandatory pick when a green candidate exists.
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            color_is: green
+          prompt: "Add 1 green card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      # "Then, place this card in the battle area" — DCGO: PlaceDelayOptionCards.
+      - place_self_as_delay_option: {}
+
+  # ─── Clause 1: [Main] <Delay> ─────────────────────────────────────────────
+  # Standard printed <Delay>: the controller may trash this parked Option on a
+  # later main phase (after the placing turn) to activate the digivolve body.
+  # trigger: delayed → CompiledTiming::Delayed → DelayTrigger::MainPhaseActivated.
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> 1 of your Digimon may digivolve into a green Digimon in hand, cost -2"
+    process:
+      # DCGO: SelectPermanentEffect canNoSelect: true → optional
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+          prompt: "Choose 1 of your Digimon to digivolve"
+      # DCGO: cardCondition: IsDigimon && HasCardColor(Green)
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: green
+          prompt: "Choose a green Digimon card in your hand to digivolve into"
+      # DCGO: payCost: true, reduceCostTuple: (reduceCost: 2, null), isHand: true
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 2 }
+          ignore_requirements: false
+
+  # ─── Clause 2: [Security] (inherited) ─────────────────────────────────────
+  # "Security Effect [Security] Place this card in the battle area."
+  # DCGO: PlaceSelfDelayOptionSecurityEffect — places option as Delay permanent.
+  - scope: inherited
+    when: on_security
+    summary: "[Security][Inherited] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

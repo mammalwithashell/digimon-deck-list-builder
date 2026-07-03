@@ -1,0 +1,143 @@
+# ST20-14 Our Courage United — Option, Black, Cost 3.
+# Traits: ADVENTURE.
+#
+# Printed card text (code/digimon-engine/cards/st20/ST20-14.json — verbatim):
+#
+#   While you have an [ADVENTURE] trait Digimon or Tamer on the field, you
+#   can ignore this card's color requirements.
+#   [Main] ＜Draw 2＞ (Draw 2 cards from your deck.) Then, place this card
+#   in the battle area.
+#   [All Turns] When any of your level 5 or higher Digimon would leave the
+#   battle area, ＜Delay＞ (By trashing this card after the placing turn,
+#   activate the effect below.)
+#   ・You may play 1 level 5 or lower Digimon card with the [ADVENTURE]
+#   trait from your hand without paying the cost.
+#
+# Inherited (Security):
+#   Security Effect [Security] Place this card in the battle area.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/ST20/Black/ST20_14.cs
+#
+# See code/digimon-engine/cards/st20/ST20-14.yaml on disk for the full
+# annotated DCGO crosscheck / implementation-status / DSL-precedent comment
+# blocks (kept there verbatim; abbreviated here only to fit the response).
+
+card: ST20-14
+name: "Our Courage United"
+kind: option
+color: [black]
+cost: 3
+traits: [ADVENTURE]
+
+# Card-level Option-use requirement. Printed: "While you have an [ADVENTURE]
+# trait Digimon or Tamer on the field, you can ignore this card's color
+# requirements." This is the FROM-HAND play-time bypass — `use_requirement`
+# lowers onto the [Main] clause's `option_color_requirement_bypass`
+# condition, which the action mask consults in
+# `option_use_requirement_or_color_available`. It is card-scoped (only THIS
+# card's color requirement is bypassed), mirroring DCGO
+# `IgnoreColorConditionClass.SetUpIgnoreColorConditionClass(cardCondition:
+# cardSource == card)`. NOTE: this is `use_requirement:` rather than
+# `kind: flood_gate` because flood_gate's lowering only scans battle-area
+# permanents for its `target:` match and can never make a card sitting in
+# hand playable — use_requirement is the verified from-hand mechanism
+# (mirrors ST20-15 Island of Adventure).
+use_requirement:
+  any_of:
+    - any_permanent:
+        of: you
+        kind: digimon
+        trait_has: ADVENTURE
+    - any_permanent:
+        of: you
+        kind: tamer
+        trait_has: ADVENTURE
+
+effects:
+  # ─── Clause 1: [Main] <Draw 2>; then place self as Delay-Option ──────────────
+  #
+  # Printed: "[Main] ＜Draw 2＞ (Draw 2 cards from your deck.) Then, place
+  # this card in the battle area."
+  #
+  # Mandatory (DCGO `SetUpActivateClass(..., isOptional: false, ...)`; no
+  # "you may" in printed text). The trailing `place_self_as_delay_option: {}`
+  # step performs "Then, place this card in the battle area" — required
+  # explicitly here because Clause 2 below is `kind: replacement` (not
+  # `kind: delay`), so the engine's automatic Delay-Option auto-seat via
+  # `classify_option_modes` does not detect a `delay_trigger` on this card.
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Draw 2; then place self in battle area as a Delay-Option"
+    process:
+      - draw: { of: you, count: 2 }
+      - place_self_as_delay_option: {}
+
+  # ─── Clause 2: [All Turns] own Lv5+ Digimon would-leave <Delay> reward ────────
+  #
+  # Printed: "[All Turns] When any of your level 5 or higher Digimon would
+  # leave the battle area, ＜Delay＞ (By trashing this card after the
+  # placing turn, activate the effect below.) ・You may play 1 level 5 or
+  # lower Digimon card with the [ADVENTURE] trait from your hand without
+  # paying the cost."
+  #
+  # RK-G003 (Delay-cost payment via would-leave replacement) + RK-G004
+  # (non-cancelling would-leave observer with a free hand-play reward),
+  # both CLOSED precedents. `delete_permanent: { target: source }` pays the
+  # Delay cost (trashes THIS card from the field). The optional
+  # `select_hand` + mandatory `play_from_hand_free` reward mirrors
+  # BT20-091's non-cancelling shape — the process has NO
+  # `cancel_replacement` step, so the leaving level-5+ Digimon proceeds to
+  # leave the battle area regardless of the reward (matching DCGO, which
+  # never calls `Cancel` on the `WhenRemoveField` event here). With zero
+  # eligible hand cards, `select_hand`'s installer silently no-ops
+  # (matching DCGO's `HandCards.Count(...) >= 1` guard) — the Delay cost is
+  # still paid; there is simply no reward played.
+  #
+  # `replacement_subject_is_mine: true` mirrors "any of YOUR level 5 or
+  # higher Digimon". `level_gte: 5` mirrors `HasLevel && Level >= 5`. No
+  # `all_turns: true` gate is needed — `[All Turns]` is the default scope
+  # for a replacement clause with no turn-restriction predicate (see
+  # BT17-095 Clause B).
+  #
+  # No `once_per_turn` — printed text carries no [OPT] tag. A single
+  # ST20-14 in play can only fire this body ONCE total because the Delay
+  # cost trashes the carrier.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - level_gte: 5
+    summary: "[All Turns] Own Lv5+ Digimon would leave: <Delay> trash self, may play 1 Lv5-or-lower [ADVENTURE] Digimon from hand free"
+    process:
+      - delete_permanent: { target: source }
+      - select_hand:
+          of: you
+          bind_as: reward
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+              - trait_has: ADVENTURE
+          prompt: "You may play 1 level 5 or lower [ADVENTURE] Digimon card from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: reward
+
+  # ─── Clause 3: [Security] (inherited) place self in battle area ──────────────
+  #
+  # Printed inherited (security): "Security Effect [Security] Place this
+  # card in the battle area."
+  #
+  # DCGO: `CardEffectFactory.PlaceSelfDelayOptionSecurityEffect(card)` —
+  # same idiom as BT22-099 / ST20-15.
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security][Inherited] Place this card in the battle area (as a Delay-Option)"
+    process:
+      - place_self_as_delay_option: {}

@@ -1,0 +1,225 @@
+# BT18-060 Vemmon — Digimon, Lv.3, Black, DP 1000, Cost 3.
+# Traits: Unknown/LIBERATOR. Form: Rookie. Attribute: Unknown.
+# Evo costs (data/cards.json evo_costs / official bundle): Lv.2 Black / cost 0.
+#
+# Printed effect text (official Bandai DB — data/card_bundles/BT18-060.md,
+# verbatim):
+#   [On Play] Reveal the top 3 cards of your deck. Among them, add 1 card
+#   with [Vemmon] in its text to the hand and place 1 [Vemmon] as any of
+#   your Digimon's bottom digivolution card. Return the rest to the bottom
+#   of the deck.
+#
+# Printed inherited effect text (official bundle, verbatim):
+#   [Your Turn] [Once Per Turn] When this Digimon would digivolve into a
+#   Digimon card with [Vemmon] in its text, reduce the digivolution cost
+#   by 1.
+#
+# Official Q&A (bundle):
+#   Yes, you must add as many cards to your hand and place as bottom
+#   digivolution cards as possible.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT18/Black/BT18_060.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# (A) `EffectTiming.OnEnterFieldAnyone` — the [On Play] reveal-3 + 2-bucket
+#     selection. `SetUpActivateClass(..., -1, false, ...)` → outer trigger is
+#     MANDATORY (no "you may" in printed text; DCGO isOptional: false).
+#
+#     Bucket 1 (`SimplifiedSelectCardConditionClass`, mode: AddHand, maxCount
+#     1): `CanSelectCardCondition(cardSource) => cardSource.HasText("Vemmon")`
+#     — printed "[Vemmon] in its TEXT" is a substring scan of the candidate's
+#     printed effect / inherited / security text. Mapped to
+#     `effect_text_contains: "Vemmon"` (G-DSL-PREDICATE-TEXT-CONTAINS,
+#     RESOLVED — see BT22-017 for the identical idiom).
+#
+#     Bucket 2 (mode: Custom via `SelectCardCoroutine`, maxCount 1):
+#     `CanSelectCardCondition1(cardSource) => cardSource.CardNames.Contains
+#     ("Vemmon") && IsExistOnBattleArea(card)` — an EXACT card-name match
+#     ("1 [Vemmon]" refers to the card literally named Vemmon, not any card
+#     mentioning Vemmon in its text) gated on this permanent existing on the
+#     battle area (trivially true — BT18-060 just entered play). Mapped to
+#     `name_is: Vemmon`. On pick, DCGO installs a SECOND selection
+#     (`SelectPermanentEffect`, `canNoSelect: false` → MANDATORY) over
+#     `CanSelectOwnerDigimon` = `IsPermanentExistsOnOwnerBattleAreaDigimon` —
+#     ANY of the controller's own Digimon (the DCGO code comment's "1 of
+#     your Digimon" — no exclusion of self; BT18-060 itself, having just
+#     entered play, is always a legal target, so this selection can never
+#     lock even when the controller has no other Digimon). The picked
+#     Vemmon card is then placed via `permanent.AddDigivolutionCardsBottom`
+#     — the "as any of your Digimon's bottom digivolution card" text. Mapped
+#     to `select_own_permanent` (mandatory, `filter: { kind: digimon }`,
+#     no `other: true` — DCGO does not exclude self) → `place_as_bottom_
+#     source { source: vemmon_card, target: host_digi }` (see the `per_
+#     selected` note near the process body below for why the bucket's raw
+#     `vemmon_pick` binding is unwrapped into the singular `vemmon_card`
+#     first).
+#
+#     `SimplifiedRevealDeckTopCardsAndSelect`'s shared `RevealDeckTopCardsAnd
+#     Select` removes each bucket's chosen card(s) from the shared
+#     `revealedCards` pool before evaluating the next bucket's candidate
+#     count (`revealedCards.Remove(cardSource)` after each
+#     `AfterSelectCardCoroutine`) — a card consumed by bucket 1 is
+#     unconditionally excluded from bucket 2's candidate pool (and vice
+#     versa). Mapped to `no_duplicate_cards: true` (same idiom as BT22-017's
+#     `mutualConditions` cross-check).
+#
+#     Both buckets are declared with `maxCount: 1` and (per the official
+#     Q&A — "must add/place as many as possible") the printed text has no
+#     "you may" gate at either bucket: `min: 1, max: 1` on both. The
+#     `select_reveal_buckets` engine primitive auto-skips a bucket with zero
+#     matching candidates in the reveal even when `min > 0` (see
+#     `install_reveal_bucket_resume_step`: an empty `valid_action_ids` set
+#     finalizes the bucket with whatever was picked so far, rather than
+#     locking on an unsatisfiable minimum) — this is exactly the printed
+#     "among them" qualifier: you only add/place what is actually present in
+#     the 3-card reveal.
+#
+#     `remainingCardsPlace: RemainingCardsPlace.DeckBottom` → `place_
+#     remainder_on_deck { position: bottom }`.
+#
+# (B)+(C) Inherited digivolve-cost reducer — TWO DCGO constructs sharing one
+#     printed clause:
+#       - `activateClass2` (`EffectTiming.OnEnterFieldAnyone`,
+#         `SetIsInheritedEffect(true)`, `SetIsBackgroundProcess(true)`,
+#         `MaxCountPerTurn 1`) is a background/UI-less trigger that exists
+#         SOLELY to hold the "[Once Per Turn]" activation counter that the
+#         real reducer's `CanUseCondition` gate reads
+#         (`!isOverMaxCountPerTurn(activateClass2, 1)`).
+#       - `changeCostClass` (`EffectTiming.None`, `SetIsInheritedEffect(true)`)
+#         is the actual `ChangeCostClass` cost-modifier hook:
+#         `CardSourceCondition(cardSource) => cardSource.HasText("Vemmon")`
+#         (digivolve-target text scan — same `effect_text_contains: "Vemmon"`
+#         predicate as bucket 1 above) AND `PermanentCondition(targetPermanent)
+#         => targetPermanent == card.PermanentOfThisCard()` (the permanent
+#         being digivolved is THE SAME permanent BT18-060 belongs to,
+#         regardless of whether BT18-060 is currently that permanent's top
+#         card or a buried digivolution source) AND `IsOwnerTurn`.
+#
+#     `card.PermanentOfThisCard()` / `IsExistOnBattleAreaDigimon(card)` do
+#     NOT distinguish "is the top card" vs "is a digivolution source" — both
+#     resolve identically whether `card` (BT18-060) is on top or buried. This
+#     is the faithful reading of the printed "Inherited Effect" header
+#     (contrast with sibling self-reducers like BT21-055 / ST23-02 / P-117 /
+#     BT23-037, whose cost-reduction clause is printed under the CARD's
+#     *main* `effect_description_eng`, not a separate `inherited_effect_
+#     description_eng` section — those apply only while the card is the
+#     top/undigivolved permanent). The `kind: cost_reduction` DSL lowering's
+#     `scope` match is a strict `Inherited`-only check
+#     (`lower_cost_reduction.rs`: `if matches!(scope, CompiledScope::
+#     Inherited) { builder = builder.inherited(); }` — `CompiledScope::Both`
+#     is NOT special-cased for `CostReduction` the way it is for
+#     `FloodGate`), and the engine's `is_under` gate
+#     (`code/digimon-engine/src/game_actions/mod.rs::before_pay_cost_source_
+#     infos` / `cost.rs::inspect_cost_reduction_candidate`:
+#     `key.is_under != effect.inherited` ⇒ skip) requires an EXACT match
+#     between the clause's scope and the card's current top/buried position.
+#     A single `scope: inherited` clause would therefore only fire once
+#     BT18-060 is already buried under a later digivolution — missing the
+#     primary use case (digivolving BT18-060 itself, still on top, into the
+#     next Vemmon-text card). Faithfully modelled as TWO `kind: cost_
+#     reduction` clauses sharing an identical `active_when` / `amount` /
+#     `once_per_turn` body — one `scope: face_up` (top-card case) and one
+#     `scope: inherited` (buried-source case). Each clause's `is_under` gate
+#     is mutually exclusive for any given permanent state (a card is never
+#     simultaneously top AND buried), so the two clauses can never
+#     double-fire for the same digivolve event; each maintains its own
+#     `[Once Per Turn]` counter (`CostReductionKey` includes `effect_slot` +
+#     `is_under`), but since only one clause is ever eligible at a time for a
+#     given card instance this is behaviorally identical to DCGO's single
+#     shared counter. `source_is_cost_target_permanent: true` is the
+#     `PermanentCondition` check (Phase 2 Track H,
+#     G-BEFORE-PAY-COST-DIGIVOLVE-TARGET). `cost_target: { effect_text_
+#     contains: "Vemmon" }` is the `CardSourceCondition` text scan.
+
+card: BT18-060
+name: Vemmon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Unknown, LIBERATOR]
+form: Rookie
+attribute: Unknown
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+effects:
+  # ─── Clause A — [On Play] Reveal 3, add 1 [Vemmon]-text to hand, place 1 ────
+  #                [Vemmon] as bottom digivolution card of any own Digimon ────
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Vemmon]-text card to hand and place 1 [Vemmon] as any of your Digimon's bottom digivolution card; bottom the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: hand_pick
+              min: 1
+              max: 1
+              filter:
+                effect_text_contains: "Vemmon"
+            - bind_as: vemmon_pick
+              min: 1
+              max: 1
+              filter:
+                name_is: Vemmon
+          no_duplicate_cards: true
+          prompt: "Add 1 [Vemmon]-text card to hand and place 1 [Vemmon] as a bottom digivolution card"
+      - add_to_hand_from_reveal: { of: you, card: hand_pick }
+      # `per_selected` unwraps the (0-or-1-length, since bucket max: 1)
+      # `vemmon_pick` CardList into a singular `Card` binding per iteration —
+      # required because `place_as_bottom_source`'s `source:` resolves via
+      # `resolve_card_source_ref`, which only accepts a `ResolvedBinding::
+      # Card` (a bucket's raw CardList binding is NOT accepted directly; see
+      # `resolved_cards()` in `zone_moves.rs` for the sibling multi-card-move
+      # idiom). This also naturally no-ops the target-selection prompt when
+      # the bucket matched zero candidates (0 iterations) — no separate
+      # `binding_count_eq` gate needed.
+      - per_selected:
+          selection: vemmon_pick
+          bind_as: vemmon_card
+          body:
+            - select_own_permanent:
+                bind_as: host_digi
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your Digimon to receive [Vemmon] as its bottom digivolution card"
+            - place_as_bottom_source:
+                source: vemmon_card
+                target: host_digi
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Clause B — Inherited [Your Turn][Once Per Turn] digivolve-cost -1 ─────
+  #                (top-card case: BT18-060 is its permanent's own top card) ──
+  - kind: cost_reduction
+    scope: face_up
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            effect_text_contains: "Vemmon"
+    once_per_turn: true
+    amount: 1
+    summary: "[Your Turn][Once Per Turn] Inherited: when this Digimon would digivolve into a card with [Vemmon] in its text, reduce the digivolution cost by 1"
+
+  # ─── Clause C — Inherited [Your Turn][Once Per Turn] digivolve-cost -1 ─────
+  #                (buried-source case: BT18-060 is a digivolution source) ───
+  - kind: cost_reduction
+    scope: inherited
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            effect_text_contains: "Vemmon"
+    once_per_turn: true
+    amount: 1
+    summary: "[Your Turn][Once Per Turn] Inherited: when this Digimon would digivolve into a card with [Vemmon] in its text, reduce the digivolution cost by 1"

@@ -1,0 +1,132 @@
+# BT16-029 Agumon — Digimon, Lv.3, Yellow, DP 1000, Cost 3.
+# Traits: Dinosaur/Light Fang. Attribute: Vaccine.
+#
+# Digivolution requirements (AUTHORITATIVE — official Bandai DB /
+# data/card_bundles/BT16-029.md):
+#   - Standard circle: Yellow Lv.2 / Cost 0 (printed evo_costs).
+#   - Special condition: "[Digivolve] Lv.2 w/[Light Fang]/[Night Claw] trait:
+#     Cost 0" — any color, gated on the source's Lv.2 top card carrying either
+#     trait. Same dual-alt-path idiom as BT10-029 Starmons (standard circle +
+#     trait-gated any-color alt-path, both Lv.2/cost 0).
+#
+# Printed text (official Bandai DB — verbatim):
+#
+#   [On Play] Reveal the top 3 cards of your deck. Add 1 [Light Fang] trait
+#   card and 1 [Night Claw] trait or 1 2-color card among them to the hand.
+#   Return the rest to the bottom of the deck.
+#
+# Inherited effect text:
+#
+#   [Your Turn] All of your opponent's Security Digimon get -3000 DP.
+#
+# Official Q&A: "No, you can't. You can only add 1 [Night Claw] trait or 1
+# 2-color card to the hand." — confirms the second bucket is a single pick
+# satisfying EITHER condition (not one of each).
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT16/Yellow/BT16_029.cs
+#
+# ─── Clause layout ────────────────────────────────────────────────────────
+#
+# Clause 0 (alt-paths) — digivolution requirements:
+#   0a. Standard yellow Lv.2/cost-0 circle: IMPLEMENTED (`from: { level_eq: 2,
+#       color_is: yellow }`).
+#   0b. Special any-color Lv.2/cost-0 trait-gated path: IMPLEMENTED
+#       (`from: { all_of: [level_eq: 2, any_of: [trait_has: Light Fang,
+#       trait_has: Night Claw]] }`) — DCGO's PermanentCondition checks the
+#       top card is Lv.2 AND (Light Fang OR Night Claw trait, with the
+#       "LightFang"/"NightClaw" no-space variants folded in by DCGO's
+#       ContainsTraits normalization; the DSL's case-insensitive exact
+#       `trait_has` match on the canonical "Light Fang"/"Night Claw" spelling
+#       is the faithful equivalent since card_data traits are stored with the
+#       canonical spacing).
+#
+# Clause 1 — [On Play] reveal-3, two-bucket add-to-hand, bottom the rest:
+#   Reveal top 3 → bucket A (1 [Light Fang] trait card, max 1) + bucket B
+#   (1 [Night Claw] trait card OR 1 2-color card, max 1, `any_of`
+#   disjunction) → add each bucket's pick to hand → bottom the remainder.
+#   `no_duplicate_cards: true` enforces the official Q&A: a single revealed
+#   card cannot double-dip both buckets (mirrors ST19-03's idiom — DCGO's
+#   `SimplifiedRevealDeckTopCardsAndSelect` never offers an already-picked
+#   card to a later bucket). Bucket B's "1 2-color card" clause has no color
+#   restriction (any 2 colors) — faithful since no printed card exceeds 2
+#   colors, so `self_color_count_gte: 2` (card-subject leaf, evaluated via
+#   `eval_card_fields` against `PredicateSubject::RevealedCard`) exactly
+#   matches DCGO's `cardSource.CardColors.Count == 2`.
+#   IMPLEMENTED.
+#
+# Clause 2 — Inherited [Your Turn] opponent security DP aura:
+#   "All of your opponent's Security Digimon get -3000 DP."
+#   PUPPETS-G008 idiom (same as ST19-03/EX7-024 Shoemon): lowers via
+#   `applies_to_opponent_security_dp: true` to
+#   `EffectBuilder::applies_to_opponent_security_dp()` so the -3000 DP rides
+#   under the attacker's stack and surfaces during the security battle's
+#   `attacker_security_dp_adjustment`. IMPLEMENTED.
+#
+# ─── Implementation status ──────────────────────────────────────────────────
+#
+# | Card-text element                                              | Status      |
+# |------------------------------------------------------------------|------------|
+# | Standard yellow Lv.2/cost-0 digivolve circle                     | IMPLEMENTED |
+# | Special any-color Lv.2/cost-0 [Light Fang]/[Night Claw] alt-path | IMPLEMENTED |
+# | [On Play] reveal 3, add 1 Light Fang + 1 (Night Claw OR 2-color) | IMPLEMENTED |
+# | [Inherited][Your Turn] opponent Security Digimon -3000 DP        | IMPLEMENTED |
+
+card: BT16-029
+name: Agumon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+traits: [Dinosaur, Light Fang]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - any_of:
+            - trait_has: "Light Fang"
+            - trait_has: "Night Claw"
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal top 3; add 1 [Light Fang] trait card and 1 [Night Claw] trait or 2-color card; bottom the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: light_fang_pick
+              filter: { trait_has: "Light Fang" }
+              min: 1
+              max: 1
+            - bind_as: night_claw_or_two_color_pick
+              filter:
+                any_of:
+                  - trait_has: "Night Claw"
+                  - self_color_count_gte: 2
+              min: 1
+              max: 1
+      - add_to_hand_from_reveal: { of: you, card: light_fang_pick }
+      - add_to_hand_from_reveal: { of: you, card: night_claw_or_two_color_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # Inherited [Your Turn] "All of your opponent's Security Digimon get
+  # -3000 DP". PUPPETS-G008: lowers via `applies_to_opponent_security_dp:
+  # true` to `EffectBuilder::applies_to_opponent_security_dp()` so the
+  # -3000 DP rides under the attacker's stack and surfaces during the
+  # security battle's `attacker_security_dp_adjustment`.
+  - kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    dp_modifier: -3000
+    applies_to_opponent_security_dp: true
+    summary: "[Inherited][Your Turn] All opponent Security Digimon get -3000 DP"

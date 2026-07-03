@@ -1,0 +1,137 @@
+# BT24-063 Locomon — Digimon, Lv.5, Black, DP 7000, Cost 7.
+# Traits: Machine / Iliad / TS. Attribute: Data.
+# Standard digivolve (cards.json evo_costs): Lv.4 Black / cost 3.
+#
+# Printed card text (data/card_bundles/BT24-063.md — official Bandai DB,
+# cross-checked against data/cards.json effect_description_eng):
+#
+#   <Collision> (During this Digimon's attack, all of your opponent's Digimon
+#     gain <Blocker>, and must block if possible.)
+#   [On Play] [When Digivolving] Reveal the top 3 cards of your deck. You may
+#     play 1 play cost 5 or lower [Machine], [Cyborg] or [TS] trait card among
+#     them without paying the cost. Return the rest to the top or bottom of
+#     the deck.
+#
+# Inherited Effect:
+#   <Collision> (During this Digimon's attack, give all of your opponent's
+#     Digimon <Blocker>, and the opponent blocks if able.)
+#
+# Digivolution requirement (xros_req, official Bandai DB):
+#   "[Digivolve] Lv.4 w/[TS] trait: Cost 3"
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Black/BT24_063.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect gated on
+#   `TopCard.IsLevel4 && TopCard.HasTSTraits`, digivolutionCost: 3. Matches
+#   the printed xros_req ("[Digivolve] Lv.4 w/[TS] trait: Cost 3"). The
+#   standard printed Lv.4 Black / cost 3 route (cards.json evo_costs) is also
+#   authored as an alt_path so the route exists for DSL-loaded fixtures
+#   (G-DSL-FIXTURE-EVO-COSTS: compiled cards carry no printed evo_costs) —
+#   BT24-059 / BT19-073 "standard + special" idiom. Both land at cost 3 off a
+#   Lv.4 base.
+#
+# <Collision> — CollisionSelfStaticEffect(false, card, null) at
+#   EffectTiming.OnCounterTiming (face-up), AND
+#   CollisionSelfStaticEffect(isInheritedEffect: true, card, null) also at
+#   OnCounterTiming (inherited). → two grant_keyword declaratives: one own
+#   scope, one inherited scope (BT19-073 idiom, doubled here because the
+#   printed card ALSO reprints <Collision> as its own inherited-effect line —
+#   not merely inherited-because-face-up).
+#
+# Shared [On Play]/[When Digivolving] body
+#   (SimplifiedRevealDeckTopCardsAndSelect): reveal top 3, ONE bucket
+#   filtering `cardSource.GetCostItself <= 5 && cardSource.HasPlayCost &&
+#   (EqualsTraits(Machine) || EqualsTraits(Cyborg) || EqualsTraits(TS))`,
+#   canNoSelect: true ("you may play"). `HasPlayCost` = `!cardKind.Contains(
+#   Option) && PlayCost >= 0` (CEntity_Base.cs) — i.e. Digimon OR Tamer, never
+#   an Option (matches the printed "1 play cost 5 or lower ... trait CARD",
+#   Options don't carry a play cost). PlayPermanentCards(payCost: false,
+#   isTapped: false) — played UNSUSPENDED (unlike BT24-059's suspended play,
+#   whose card text explicitly says "play ... suspended"; Locomon's text has
+#   no such qualifier). remainingCardsPlace: RemainingCardsPlace.
+#   DeckTopOrBottom — a SINGLE player-elected top/bottom choice applied to
+#   the WHOLE leftover reveal pool (not per-card, not a fixed end — distinct
+#   from BT24-059's "trash the rest" and BT25-071's "return the rest to the
+#   BOTTOM").
+#   → reveal_top_deck(3) + select_reveal_buckets(min:0, max:1, filter: kind
+#     digimon|tamer AND (Machine|Cyborg|TS) AND cost<=5) +
+#     play_from_revealed_free + place_remainder_on_deck(position: choice).
+#   `place_remainder_on_deck` with `position: choice` is the verb whose
+#   executor installs a binary top/bottom EffectChoice for the whole
+#   remainder pool (§3.1 StackPosition::Choice; BT25-038 uses the same
+#   `position: choice` collapse on `place_on_security`).
+
+card: BT24-063
+name: Locomon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 7000
+traits: [Machine, Iliad, TS]
+attribute: Data
+
+alt_paths:
+  # Standard printed Lv.4 Black / cost 3 (cards.json evo_costs) — kept for
+  # DSL-loaded fixtures per G-DSL-FIXTURE-EVO-COSTS.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - color_is: black
+    cost: 3
+  # Special [Digivolve] Lv.4 w/[TS] trait: Cost 3 (official Bandai DB
+  # xros_req; DCGO PermanentCondition: IsLevel4 && HasTSTraits).
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - trait_has: TS
+    cost: 3
+
+effects:
+  # ─── <Collision> (face-up) ───────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Collision
+    summary: "<Collision>"
+
+  # ─── <Collision> (inherited — printed as its own Inherited Effect line) ──
+  - kind: grant_keyword
+    keyword: Collision
+    scope: inherited
+    summary: "Inherited: <Collision>"
+
+  # ─── Clause: [On Play][When Digivolving] reveal 3, may play 1 free, ─────
+  # ─── return rest to top or bottom of deck ────────────────────────────────
+  #
+  # Mandatory clause (no printed "may" gates the clause itself — the reveal
+  # and remainder placement always happen); only the play step is optional
+  # ("You may play"). `select_reveal_buckets` (min:0/max:1) models the
+  # optional single pick; the remainder is placed with a player-elected
+  # top/bottom choice via `place_remainder_on_deck { position: choice }`
+  # (fires regardless of whether the optional pick was taken).
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Reveal top 3; you may play 1 cost<=5 [Machine]/[Cyborg]/[TS] card free; return rest to top or bottom of deck"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: pick
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - any_of:
+                      - kind: digimon
+                      - kind: tamer
+                  - any_of:
+                      - trait_has: Machine
+                      - trait_has: Cyborg
+                      - trait_has: TS
+                  - play_cost_lte: 5
+          prompt: "Play 1 play cost 5 or lower [Machine], [Cyborg] or [TS] trait card without paying the cost"
+      - play_from_revealed_free: { of: you, card: pick }
+      - place_remainder_on_deck: { of: you, position: choice }

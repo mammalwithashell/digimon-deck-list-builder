@@ -1,0 +1,198 @@
+# BT9-041 RizeGreymon (X Antibody) — Digimon, Lv.5, Yellow/Red, DP 8000,
+# Cost 8, Cyborg/X Antibody, Attribute Vaccine.
+#
+# Printed text (official Bandai DB / data/card_bundles/BT9-041.md):
+#
+#   [When Digivolving] You may play 1 yellow or red Tamer card from your
+#   hand without paying its memory cost. Then, if [RizeGreymon] or
+#   [X Antibody] is in this Digimon's digivolution cards, 1 of your
+#   opponent's Digimon gets -2000 DP for the turn for each yellow or red
+#   Tamer you have in play.
+#   [Your Turn] For each Tamer you have in play, this Digimon gets +1000 DP.
+#
+# Special digivolution condition (xros_req / official DB):
+#   [Digivolve] 1 from [RizeGreymon]
+#
+# Official Q&A (data/card_bundles/BT9-041.md):
+#   "No. This effect specifies a card name, so you must have a card whose
+#   name is either [RizeGreymon] or [X Antibody] in this Digimon's
+#   digivolution cards. Having a card with [X Antibody] in its traits
+#   doesn't count." — the digivolution-cards check is a NAME match on the
+#   SOURCE cards beneath the carrier, never the carrier's own top-card name
+#   and never the trait grant.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT9/Yellow/BT9_041.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-path — `EffectTiming.None`, `AddSelfDigivolutionRequirementStaticEffect`:
+#   permanentCondition = targetPermanent.TopCard.CardNames.Contains("RizeGreymon"),
+#   digivolutionCost: 1, ignoreDigivolutionRequirement: false. Standard
+#   named-source digivolve path (any level "RizeGreymon" source), cost 1,
+#   normal requirements still apply (base digivolve rules — the printed
+#   "1 from [RizeGreymon]" leaves the usual color/timing rules intact).
+#
+# Clause (a) — `EffectTiming.OnEnterFieldAnyone` (When Digivolving):
+#   1. `SelectHandEffect` (canNoSelect: true) over hand cards that are
+#      Tamers AND (Yellow or Red) AND playable as a new permanent →
+#      `PlayPermanentCards(payCost: false)` — "you may play 1 yellow or red
+#      Tamer card from your hand without paying its memory cost."
+#   2. THEN (unconditionally sequenced after the free play, so the Tamer
+#      played in step 1 is already on the field when this evaluates):
+#      if `card.PermanentOfThisCard().DigivolutionCards.Count(name ==
+#      "RizeGreymon" || "X Antibody" || "XAntibody") >= 1`:
+#        `minusDP = 2000 * count(own battle-area permanents that are Tamer
+#        AND (Red or Yellow))` — counted AFTER the free play resolves.
+#        If `minusDP > 0` AND an opponent Digimon exists (existential
+#        guard, `HasMatchConditionPermanent`): mandatory
+#        `SelectPermanentEffect` (canNoSelect: false, maxCount:
+#        min(1, matchCount)) → `ChangeDigimonDP(-minusDP,
+#        EffectDuration.UntilEachTurnEnd)`.
+#
+# Clause (b) — `EffectTiming.None` (declarative self-aura, [Your Turn]):
+#   `ChangeSelfDPStaticEffect(changeValue: () => 1000 * count(), condition:
+#   IsExistOnBattleArea && IsOwnerTurn)` where `count()` = own battle-area
+#   permanents that `IsTamer` — ALL colors, unlike the debuff half's
+#   color-filtered count.
+#
+# DSL mapping:
+#   - Alt-path: `kind: digivolve`, `from: { name_contains: "RizeGreymon" }`,
+#     `cost: 1` — same idiom as BT20-102's "digivolution source's top card
+#     name contains X" alt-path and AD1-016/BT21-042's `name_contains:
+#     "RizeGreymon"` filter (matches DCGO's `TopCard.CardNames.Contains`).
+#   - Clause (a) is a SINGLE `when: when_digivolving` triggered clause
+#     (matching the single DCGO `OnEnterFieldAnyone` callback) with a
+#     sequenced process:
+#       1. `select_hand` (optional, filter: Tamer + any_of[yellow,red]) +
+#          `play_from_hand_free` (bind_as the played permanent) — the
+#          unconditional "you may play" half.
+#       2. `if:` step gating the debuff half on
+#          `self_digivolution_sources_contain_name: "RizeGreymon"` OR
+#          `"X Antibody"` (the sources-only scan — BT20-102's
+#          G-SELF-DIGIVOLUTION-CONTAINS-NAME-SOURCES-ONLY predicate; excludes
+#          the carrier's own top-card name per the official Q&A). Inside:
+#          `select_opponent_permanent` (mandatory; silently no-ops when no
+#          opponent Digimon exists — DCGO's `HasMatchConditionPermanent`
+#          guard) + `add_dp_modifier` with a `card_count_in_zone` formula
+#          counting own battle-area Tamers filtered to yellow/red,
+#          `delta: -2000`, `expiry: end_of_turn`.
+#     Because the `if:` step is evaluated AFTER the `play_from_hand_free`
+#     step in the same sequential process, the Tamer count for the debuff
+#     formula is read post-play — matching DCGO's ordering exactly.
+#   - Clause (b): `kind: aura`, self-target (`target: {}`), `active_when:
+#     { your_turn: true }`, `dp_modifier` formula counting ALL own
+#     battle-area Tamers (no color filter), `delta: 1000`.
+
+card: BT9-041
+name: RizeGreymon (X Antibody)
+kind: digimon
+level: 5
+color: [yellow, red]
+cost: 8
+dp: 8000
+traits: [Cyborg, X Antibody]
+attribute: Vaccine
+
+# ─── Alternate Digivolution Path ─────────────────────────────────────────────
+#
+# Printed alt-path text (xros_req): "[Digivolve] [RizeGreymon]: Cost 1"
+#
+# DCGO (BT9_041.cs, EffectTiming.None, AddSelfDigivolutionRequirementStaticEffect):
+#   permanentCondition: TopCard.CardNames.Contains("RizeGreymon"),
+#   digivolutionCost: 1, ignoreDigivolutionRequirement: false.
+alt_paths:
+  - kind: digivolve
+    from: { name_contains: "RizeGreymon" }
+    cost: 1
+
+effects:
+  # ─── Clause (a): [When Digivolving] free Tamer play + conditional DP debuff ─
+  - when: when_digivolving
+    summary: "[When Digivolving] May play 1 yellow/red Tamer free; then if RizeGreymon/X Antibody is in this Digimon's digivolution cards, 1 opponent Digimon gets -2000 DP per yellow/red Tamer you have in play"
+    process:
+      # Step 1: "You may play 1 yellow or red Tamer card from your hand
+      # without paying its memory cost."
+      - select_hand:
+          of: you
+          bind_as: tamer_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - any_of:
+                  - color_is: yellow
+                  - color_is: red
+          prompt: "You may play 1 yellow or red Tamer card from your hand without paying its memory cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: tamer_pick
+          bind_as: tamer_played
+      # Step 2: "Then, if [RizeGreymon] or [X Antibody] is in this
+      # Digimon's digivolution cards, 1 of your opponent's Digimon gets
+      # -2000 DP for the turn for each yellow or red Tamer you have in
+      # play." The Tamer count is read here — AFTER step 1 — so a Tamer
+      # played by step 1 already counts (matches DCGO's sequential order).
+      #
+      # DCGO also gates the whole select+debuff on `minusDP > 0` BEFORE
+      # installing the mandatory target prompt (`if (minusDP > 0) { if
+      # (HasMatchConditionPermanent(...)) { ... select ... } }`) — with
+      # zero yellow/red Tamers in play the debuff would be -0 DP and DCGO
+      # skips the prompt entirely rather than forcing a meaningless choice.
+      # The `count_gte` leaf reproduces that guard explicitly (the
+      # `card_count_in_zone` formula inside `add_dp_modifier` alone has no
+      # zero-check).
+      - if:
+          condition:
+            all_of:
+              - any_of:
+                  - self_digivolution_sources_contain_name: "RizeGreymon"
+                  - self_digivolution_sources_contain_name: "X Antibody"
+              - count_gte:
+                  filter:
+                    of: you
+                    zone: [battle_area]
+                    kind: tamer
+                    any_of:
+                      - color_is: yellow
+                      - color_is: red
+                  n: 1
+          then:
+            - select_opponent_permanent:
+                bind_as: debuffed
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your opponent's Digimon to get -2000 DP per yellow/red Tamer you have in play"
+            - add_dp_modifier:
+                target: debuffed
+                value:
+                  base: 0
+                  per:
+                    card_count_in_zone:
+                      of: you
+                      zone: battle_area
+                      filter:
+                        all_of:
+                          - kind: tamer
+                          - any_of:
+                              - color_is: yellow
+                              - color_is: red
+                  delta: -2000
+                expiry: end_of_turn
+
+  # ─── Clause (b): [Your Turn] declarative self-aura — +1000 DP per Tamer ───
+  #
+  # Printed text: "[Your Turn] For each Tamer you have in play, this
+  # Digimon gets +1000 DP." — ALL Tamer colors count (no yellow/red filter,
+  # unlike clause (a)'s debuff half). Own (non-inherited) printed effect —
+  # `scope` omitted, defaulting to `FaceUp`.
+  - kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier:
+      base: 0
+      per:
+        card_count_in_zone:
+          of: you
+          zone: battle_area
+          filter: { kind: tamer }
+      delta: 1000
+    summary: "[Your Turn] Carrier gets +1000 DP for each Tamer you have in play"

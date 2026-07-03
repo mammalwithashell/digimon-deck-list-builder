@@ -1,0 +1,58 @@
+# BT9-070 Gazimon (X Antibody) — Digimon, Lv.3, Purple, DP 3000, Cost 3.
+# Traits: Mammal / X Antibody. Form: Rookie. Attribute: Virus.
+# Standard digivolve (cards.json evo_costs): Lv.2 Purple / Cost 0.
+#
+# Printed card text (card image BT9-070.webp, authoritative; cards.json agrees):
+#
+#   Digivolve: 0 from [Gazimon]
+#   [When Digivolving] Trash the top 3 cards of your deck.
+#
+# No inherited effect, no security effect (per-card JSON + card image both
+# confirm empty inherited/security text on this printing).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT9/Purple/BT9_070.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# timing == EffectTiming.None:
+#   AddSelfDigivolutionRequirementStaticEffect(
+#     permanentCondition: TopCard.CardNames.Contains("Gazimon"),
+#     digivolutionCost: 0)
+#   → alt_path { kind: digivolve, from: { name_contains: "Gazimon" }, cost: 0 }
+#
+# timing == EffectTiming.OnEnterFieldAnyone (DCGO's CanUseCondition further
+#   gates via CanTriggerWhenDigivolving, so the effective firing window is
+#   When Digivolving only — matching the printed text, which carries no
+#   [On Play] tag):
+#   CanActivateCondition additionally requires Owner.LibraryCards.Count >= 1,
+#   then mandatory IAddTrashCardsFromLibraryTop(3, card.Owner, ...).
+#   No selection is exposed — unconditional top-3 mill.
+#   → when: when_digivolving; process: trash_from_top: { of: you, count: 3 }
+#   (trash_from_top naturally no-ops / stops early on an empty or
+#   under-3-card deck, matching DCGO's library-count guard.)
+#
+# ─── Clause layout ───────────────────────────────────────────────────────────
+#
+# Clause 1 — [When Digivolving] mandatory mill 3:
+#   IMPLEMENTED: trash_from_top: { of: you, count: 3 }
+
+card: BT9-070
+name: Gazimon (X Antibody)
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 3000
+traits: [Mammal, X Antibody]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { name_contains: "Gazimon" }
+    cost: 0
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Trash the top 3 cards of your deck"
+    process:
+      - trash_from_top: { of: you, count: 3 }

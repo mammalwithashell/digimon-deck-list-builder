@@ -1,0 +1,66 @@
+# BT19-006 Pagumon — Digi-Egg (In-Training), Lv.2, Purple, no DP, Cost 0.
+# Traits: [Lesser].
+#
+# Printed card text (data/card_bundles/BT19-006.md — official Bandai DB):
+#
+#   Inherited Effect
+#   [On Deletion] If deleted other than in battle, return 1 level 3 purple
+#   Digimon card from your trash to the hand.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT19/Purple/BT19_006.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# ONE inherited ActivateClass on `EffectTiming.OnDestroyedAnyone`
+# (`SetIsInheritedEffect(true)`):
+#   - `CanUseCondition`: `CardEffectCommons.CanTriggerOnDeletion(...)` AND
+#     `!CardEffectCommons.IsByBattle(...)` — "deleted other than in battle".
+#   - `CanActivateCondition`: `CanActivateOnDeletion(...)` AND
+#     `HasMatchConditionOwnersCardInTrash(card, PurpleLevelThree)` — the
+#     trigger only activates when a matching card exists in the trash; with
+#     no match it never fires (no prompt installs at all).
+#   - `ActivateCoroutine`: `SelectCardEffect` over the trash root, filter
+#     `PurpleLevelThree` (`HasCardColor(Purple) && IsLevel3`), `maxCount: 1`,
+#     `canNoSelect: () => false` — the inner pick is MANDATORY (no "you may"
+#     in the printed text), `mode: AddHand`.
+#
+# ─── Per-clause status ───────────────────────────────────────────────────────
+#
+#   | Clause                                                    | Status |
+#   |------------------------------------------------------------|--------|
+#   | Inherited [On Deletion] if not by battle, return 1 lv3     | PASS   |
+#   | purple Digimon from trash to hand (mandatory)               |        |
+#
+# DSL modelling — inherited on_deletion idiom (BT3-006), `not: { event_cause:
+# battle_deletion }` gate (EX11-020), mandatory `select_trash` that silently
+# short-circuits with no matching candidate (BT17-007 / LM-027), and
+# `add_to_hand_from_trash` payoff (BT21-007 / BT22-008).
+
+card: BT19-006
+name: Pagumon
+kind: digi_egg
+level: 2
+color: [purple]
+cost: 0
+traits: [Lesser]
+
+effects:
+  - scope: inherited
+    when: on_deletion
+    optional: false
+    condition:
+      not:
+        event_cause: battle_deletion
+    summary: "[Inherited][On Deletion] If deleted other than in battle, return 1 level 3 purple Digimon card from your trash to the hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: pick
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+              - color_is: purple
+          prompt: "Return 1 level 3 purple Digimon card from your trash to the hand"
+      - add_to_hand_from_trash: { of: you, card: pick }

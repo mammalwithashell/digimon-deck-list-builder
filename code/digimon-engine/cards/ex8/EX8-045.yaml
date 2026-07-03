@@ -1,0 +1,217 @@
+# EX8-045 Callismon — Digimon, Lv.6, Green/Purple, DP 12000, Cost 12.
+# Traits: Dark Animal, NSo. Attribute: Virus. Rarity: SP. Form: Mega.
+#
+# Printed card text (card image EX8-045 / official Bandai DB bundle
+# data/card_bundles/EX8-045.md — authoritative; cards.json agrees):
+#   Evo box: Lv.5 from green: Cost 4   (JSON evo_costs [{card_color:3, level:5, memory_cost:4}])
+#   Evo box: "Digivolve Lv.5 w/[NSo] trait: Cost 3"   (JSON xros_req)
+#   DNA Digivolve box: Green/Purple Lv.5 + Red/Yellow Lv.5: Cost 0
+#   [When Digivolving] Suspend 1 of your opponent's Digimon or Tamers. Then,
+#     return 1 of their suspended Tamers to the bottom of the deck.
+#   [Your Turn] For each color in this Digimon's digivolution cards, it gets
+#     +1000 DP. While your opponent has no Digimon with as much or more DP as
+#     this Digimon, this Digimon gains <Piercing> and <Security A. +1>.
+#   No separate inherited box — every clause above is face-up card text
+#     (confirmed on the card image: one white text box, no gold band).
+#
+# DCGO crosscheck (DCGO/Assets/Scripts/CardEffect/EX8/Green/EX8_045.cs,
+# resolved from the BASE repo per rule 29 — worktree DCGO/ is an empty
+# placeholder):
+#   Alternate Digivolution Requirement (None):
+#     AddSelfDigivolutionRequirementStaticEffect(permanentCondition:
+#     TopCard.IsLevel5 && TopCard.EqualsTraits("NSo"), digivolutionCost: 3,
+#     ignoreDigivolutionRequirement: false) → `from: { level_eq: 5,
+#     trait_has: NSo }`, cost 3.
+#   DNA Digivolution (None): AddJogressConditionClass — element 1: own
+#     Green/Purple Lv.5 Digimon; element 2: own Red/Yellow Lv.5 Digimon;
+#     JogressCondition default index 0 = stack and digivolve UNSUSPENDED
+#     (`stacks_unsuspended: true`).
+#   When Digivolving (OnEnterFieldAnyone): ActivateClass —
+#     CanActivateCondition: IsExistOnBattleAreaDigimon(card) &&
+#     HasMatchConditionPermanent(opp Digimon-or-Tamer) — the WHOLE effect
+#     (both steps) is skipped if the opponent has no Digimon or Tamer at all.
+#     Coroutine step 1 (always runs once the outer gate passes): mandatory
+#     SelectPermanentEffect (opp Digimon-or-Tamer, maxCount 1, canNoSelect:
+#     false, Mode.Tap) → suspend. Step 2 (its OWN independent
+#     HasMatchConditionPermanent gate — a fresh scan, not conditioned on step
+#     1's target): mandatory SelectPermanentEffect (opp Tamer AND
+#     IsSuspended, maxCount 1, canNoSelect: false,
+#     Mode.PutLibraryBottom) → move to bottom of deck.
+#   Your Turn (None): ChangeSelfDPStaticEffect(changeValue: () => 1000 *
+#     SourceCount(), condition: IsOwnerTurn && IsExistOnBattleAreaDigimon &&
+#     SourceCount() >= 1) where SourceCount() =
+#     card.PermanentOfThisCard().DigivolutionCardsColors.Count — the distinct
+#     colors among cards BENEATH the top card (source_color_count formula;
+#     the "DistinctColorsCount formula" cited by the assessment brief).
+#     ChangeSelfSAttackStaticEffect(+1, condition: KeywordCondition) where
+#     KeywordCondition = IsExistOnBattleAreaDigimon(card) && (opp has 0
+#     Digimon || self.DP > max(opp Digimon DP)). NOTE: KeywordCondition has
+#     NO IsOwnerTurn check — the printed "While..." sentence is grammatically
+#     separate from the "[Your Turn] ...+1000 DP." sentence and is a
+#     continuously-active gate, not scoped to the carrier's own turn. This
+#     matches DCGO exactly (it re-registers the identical KeywordCondition,
+#     sans IsOwnerTurn, a second time at OnDetermineDoSecurityCheck for
+#     PierceSelfEffect).
+#   Your Turn (OnDetermineDoSecurityCheck): PierceSelfEffect(condition: same
+#     KeywordCondition) — re-evaluated at the security-check-decision timing
+#     so Piercing governs the post-battle security check even if DP shifted
+#     mid-battle. The engine's `grant_keyword: Piercing` inside a
+#     continuously-ticked `kind: aura` clause is consumed directly by the
+#     combat resolver's Piercing check, matching this re-evaluation shape.
+#
+# ─── G-FORMULA-SOURCE-DP note (DP-comparative gate) ─────────────────────────
+#
+# "While your opponent has no Digimon with as much or more DP as this
+# Digimon" is modelled as `no_permanent: { of: opponent, zone: [battle_area],
+# kind: digimon, dp_gte: { formula: { source_dp: {} } } }` — the P-182 /
+# EX9-013 idiom (G-FORMULA-SOURCE-DP, resolved). `source_dp` reads
+# `ctx.source_permanent`'s EFFECTIVE DP (i.e. the printed 12000 PLUS the
+# carrier's own [Your Turn] color-count buff, since both auras tick fresh
+# each evaluation) — exactly DCGO's live `card.PermanentOfThisCard().DP`
+# read. `no_permanent(... dp_gte: self_dp)` = "NOT EXISTS(opp DP >= self DP)"
+# = "ALL opp DP < self DP" = DCGO's `self.DP > max(opp DP)` (equivalently,
+# opp has 0 Digimon vacuously satisfies both).
+#
+# ─── Authoring notes ─────────────────────────────────────────────────────────
+#
+# Two-step [When Digivolving] cluster: step 1 (suspend) and step 2 (return
+# suspended Tamer to bottom of deck) are authored as sequential steps in ONE
+# triggered clause (not two separate clauses) — DCGO's ActivateCoroutine is a
+# single activation firing both sub-selections back to back. Each
+# `select_opponent_permanent` naturally no-ops (skips the step and any
+# targetless follow-up) when its own filter has zero candidates, matching
+# DCGO's per-step HasMatchConditionPermanent guards. The outer clause-level
+# `condition:` mirrors DCGO's whole-effect CanActivateCondition (>=1 opponent
+# Digimon-or-Tamer) so the clause installs no selection at all when the
+# opponent's battle area is completely empty.
+#
+# Two SEPARATE declarative aura clauses for the [Your Turn] paragraph:
+#   (a) the DP buff — `dp_modifier_fn` using `source_color_count`, gated
+#       `your_turn: true` (only this sentence carries [Your Turn]).
+#   (b) the Piercing + Security A. +1 grant — bundled in one aura (EX8-023
+#       idiom) gated by the DP-comparative `no_permanent` predicate alone (NO
+#       `your_turn` gate — see the G-FORMULA-SOURCE-DP note above).
+# Splitting into two clauses (rather than cramming both effects into one
+# aura) keeps each clause's `active_when` gate faithful to its own printed
+# sentence.
+#
+# Implementation status (faithfulness diff):
+# | Std digivolve Lv.5 green / Cost 4                          | IMPLEMENTED (alt_paths + JSON evo_costs) |
+# | Alt digivolve Lv.5 w/[NSo] / Cost 3                        | IMPLEMENTED (alt_paths trait_has)        |
+# | DNA digivolve Green/Purple Lv.5 + Red/Yellow Lv.5 / Cost 0 | IMPLEMENTED (alt_paths dna_digivolve, stacks_unsuspended) |
+# | [WD] Suspend 1 opp Digimon/Tamer                           | IMPLEMENTED (select_opponent_permanent + suspend) |
+# | [WD] Then return 1 of their suspended Tamers to deck bottom| IMPLEMENTED (select_opponent_permanent is_suspended + return_to_deck bottom) |
+# | [Your Turn] +1000 DP per digivolution-card color           | IMPLEMENTED (aura dp_modifier_fn source_color_count, active_when your_turn) |
+# | While opp has no Digimon w/ DP >= self, gain Piercing + Security A.+1 | IMPLEMENTED (aura grant_keyword + security_attack, active_when no_permanent dp_gte source_dp) |
+
+card: EX8-045
+name: Callismon
+kind: digimon
+level: 6
+color: [green, purple]
+cost: 12
+dp: 12000
+traits: [Dark Animal, NSo]
+attribute: Virus
+form: Mega
+
+alt_paths:
+  # Standard printed evo box: Lv.5 green, cost 4.
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+  # Printed alt evo box: "Digivolve Lv.5 w/[NSo] trait: Cost 3". DCGO gates
+  # on TopCard.IsLevel5 && TopCard.EqualsTraits("NSo").
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: NSo }
+    cost: 3
+  # Printed DNA Digivolve box: Green/Purple Lv.5 + Red/Yellow Lv.5, cost 0.
+  # DCGO JogressCondition default index 0 = stack and digivolve unsuspended.
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 5, any_of: [ { color_is: green }, { color_is: purple } ] }
+      - { level_eq: 5, any_of: [ { color_is: red }, { color_is: yellow } ] }
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  # ─── Clause 1: [When Digivolving] suspend + return suspended Tamer ───────────
+  #
+  # "Suspend 1 of your opponent's Digimon or Tamers. Then, return 1 of their
+  #  suspended Tamers to the bottom of the deck."
+  #
+  # Clause-level condition mirrors DCGO's whole-effect CanActivateCondition:
+  # at least 1 opponent Digimon or Tamer must exist, or NEITHER step
+  # installs. Step 1 is mandatory (no printed "you may"; DCGO
+  # canNoSelect: false). Step 2 independently re-scans for ANY suspended
+  # opponent Tamer (including the one step 1 may have just suspended) and is
+  # itself mandatory when a candidate exists, silently skipped otherwise.
+  - when: when_digivolving
+    summary: "[When Digivolving] Suspend 1 opp Digimon/Tamer; then return 1 of their suspended Tamers to the bottom of the deck"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        any_of:
+          - kind: digimon
+          - kind: tamer
+    process:
+      - select_opponent_permanent:
+          bind_as: suspend_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Suspend 1 of your opponent's Digimon or Tamers"
+      - suspend: { target: suspend_target }
+      - select_opponent_permanent:
+          bind_as: return_target
+          filter:
+            all_of:
+              - kind: tamer
+              - is_suspended: true
+          prompt: "Return 1 of your opponent's suspended Tamers to the bottom of the deck"
+      - return_to_deck:
+          target: return_target
+          position: bottom
+
+  # ─── Clause 2: [Your Turn] +1000 DP per digivolution-card color ─────────────
+  #
+  # "For each color in this Digimon's digivolution cards, it gets +1000 DP."
+  #
+  # `source_color_count` reads the distinct colors among the cards BENEATH
+  # this permanent's top card (DCGO's DigivolutionCardsColors.Count) — the
+  # AD1-013 / BT19-014 idiom. Gated `your_turn: true` — only this sentence
+  # carries the printed [Your Turn] header.
+  - kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier_fn:
+      base: 0
+      per: source_color_count
+      delta: 1000
+    summary: "[Your Turn] +1000 DP for each color among this Digimon's digivolution cards"
+
+  # ─── Clause 3: DP-comparative Piercing + Security A. +1 ─────────────────────
+  #
+  # "While your opponent has no Digimon with as much or more DP as this
+  #  Digimon, this Digimon gains <Piercing> and <Security A. +1>."
+  #
+  # G-FORMULA-SOURCE-DP idiom (P-182 / EX9-013): `no_permanent` over opponent
+  # Digimon with `dp_gte: { formula: { source_dp: {} } }` — vacuously true
+  # when the opponent has zero Digimon. `source_dp` reads this permanent's
+  # live EFFECTIVE DP (printed 12000 + Clause 2's color buff), matching
+  # DCGO's `card.PermanentOfThisCard().DP` read. No `your_turn` gate — this
+  # sentence is grammatically separate from the [Your Turn] DP-buff sentence
+  # and DCGO's KeywordCondition carries no IsOwnerTurn check.
+  - kind: aura
+    target: {}
+    active_when:
+      no_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+        dp_gte: { formula: { source_dp: {} } }
+    grant_keyword: { keyword: Piercing }
+    security_attack: 1
+    summary: "While opponent has no Digimon with DP >= this Digimon, gains <Piercing> and <Security A. +1>"

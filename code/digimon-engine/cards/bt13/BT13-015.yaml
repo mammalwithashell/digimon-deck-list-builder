@@ -1,0 +1,192 @@
+# BT13-015 RizeGreymon — Digimon, Lv.5, Red/Yellow, DP 7000, Cost 7.
+# Traits: Cyborg. Attribute: Vaccine.
+# Standard digivolve (evo_costs, BT13-015.json): Red Lv.4/cost 4, Yellow
+# Lv.4/cost 4 (both routes exist per the two-circle printed digivolve art).
+#
+# Printed card text (BT13-015.json / official Bandai DB bundle):
+#
+#   [When Digivolving] You may play 1 [Marcus Damon] from your hand without
+#   paying its cost.
+#   [All Turns] [Once Per Turn] When one of your red or yellow Tamers is
+#   deleted, place 1 [Marcus Damon] from your trash on top of your security
+#   stack face down.
+#
+#   Inherited Effect:
+#   [All Turns] [Once Per Turn] When one of your red or yellow Tamers is
+#   deleted, place 1 [Marcus Damon] from your trash on top of your security
+#   stack face down.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT13/Red/BT13_015.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Clause A — timing == None (AddSelfDigivolutionRequirementStaticEffect):
+#   PermanentCondition checks TopCard.CardNames.Contains("GeoGreymon") on the
+#   stack; digivolutionCost 3, ignoreDigivolutionRequirement: false. Modeled
+#   as an alt_paths digivolve entry: from GeoGreymon by name, cost 3 — the
+#   same idiom as the near-identical BT21-044 sibling.
+#
+# Clause B — timing == OnEnterFieldAnyone (guarded by
+#   CardEffectCommons.CanTriggerWhenDigivolving -> fires on [When Digivolving]
+#   ONLY, unlike BT21-044/BT13-020 which ALSO fire on [On Play]):
+#   SelectHandEffect with canNoSelect: true (optional, "you may") over hand
+#   cards named "Marcus Damon"/"MarcusDamon" playable as a new permanent
+#   without paying cost -> PlayPermanentCards(payCost: false). NO follow-on
+#   TreatAsDigimon/Rush/CannotDigivolve grant on this card (unlike its
+#   BT13-020/BT21-044 siblings) — the clause is JUST the free play.
+#
+# Clause C — timing == OnDestroyedAnyone (own scope, hash
+#   "AddSecurity_BT13_015"): CanUseCondition gates ONLY on
+#   CanTriggerOnPermanentDeleted(PermanentCondition) where PermanentCondition
+#   requires an OWN Tamer colored red or yellow — it does NOT consult trash
+#   contents, so [Once Per Turn] (maxUsableCount: 1) is consumed even when no
+#   eligible Marcus Damon sits in trash. ActivateCoroutine additionally gates
+#   on card.Owner.CanAddSecurity(activateClass) and
+#   HasMatchConditionOwnersCardInTrash before installing the SelectCardEffect;
+#   that SelectCardEffect has canNoSelect: () => false — once installed, the
+#   pick is MANDATORY (the printed text has no "may" on this clause, unlike
+#   BT21-044's "you may place"). AddSecurityCard places on TOP; the printed
+#   text explicitly says "face down" (BT21-044's sibling places face UP —
+#   this is the other load-bearing divergence from that near-identical card).
+#
+# Clause D — timing == OnDestroyedAnyone, SetIsInheritedEffect(true), hash
+#   "AddSecurity_BT13_015_inherited": byte-identical body to Clause C, but a
+#   DISTINCT ActivateClass with its own hash string -> an INDEPENDENT
+#   [Once Per Turn] counter from Clause C's (own vs inherited scope OPT do
+#   not share a lockout).
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                            | Status      |
+# |---------------------------------------------------------------|------------|
+# | Standard digivolve Red Lv.4/cost 4, Yellow Lv.4/cost 4 (evo_costs) | IMPLEMENTED (printed) |
+# | Alt-digivolve [GeoGreymon]: Cost 3                            | IMPLEMENTED |
+# | [When Digivolving] may free-play 1 Marcus Damon from hand     | IMPLEMENTED |
+# | [All Turns][OPT] on red/yellow Tamer deletion -> mandatory place Marcus Damon from trash, TOP security, FACE DOWN (own) | IMPLEMENTED |
+# | Same, inherited scope with own OPT counter                    | IMPLEMENTED |
+#
+# Verdict: IMPLEMENTED — no engine or DSL gaps encountered.
+
+card: BT13-015
+name: "RizeGreymon"
+kind: digimon
+level: 5
+color: [red, yellow]
+cost: 7
+dp: 7000
+traits: [Cyborg]
+attribute: Vaccine
+
+# ─── Alternate Digivolution Paths ────────────────────────────────────────────
+#
+# Standard digivolve (printed evo_costs): from Lv.4 Red, cost 4 OR from Lv.4
+# Yellow, cost 4 (both exist per the digivolve-circle art). Alt (xros_req /
+# DCGO AddSelfDigivolutionRequirementStaticEffect, EffectTiming.None):
+#   TopCard.EqualsCardName("GeoGreymon") (actually .Contains, matched here via
+#   name_is since "GeoGreymon" is the exact printed name), digivolutionCost 3,
+#   ignoreDigivolutionRequirement: false.
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { name_is: "GeoGreymon" }
+    cost: 3
+
+effects:
+  # ─── Clause B: [When Digivolving] may free-play a Marcus Damon ─────────────
+  #
+  # "[When Digivolving] You may play 1 [Marcus Damon] from your hand without
+  # paying its cost." Fires ONLY on WhenDigivolving (DCGO's
+  # CanTriggerWhenDigivolving gate, not the OnPlay+WhenDigivolving dual timing
+  # its BT13-020/BT21-044 siblings use). No follow-on grant on the played
+  # Tamer — matches the BT13-020 idiom (select_hand optional + play_from_hand_free)
+  # minus the TreatAsDigimon/Rush/CannotDigivolve steps that card layers on.
+  - when: when_digivolving
+    summary: "[When Digivolving] You may play 1 [Marcus Damon] from your hand without paying its cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: marcus_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - name_contains: "Marcus Damon"
+          prompt: "You may play 1 [Marcus Damon] from your hand without paying its cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: marcus_pick
+          bind_as: marcus_played
+
+  # ─── Clause C: [All Turns] [Once Per Turn] (own) ────────────────────────────
+  #
+  # "When one of your red or yellow Tamers is deleted, place 1 [Marcus Damon]
+  # from your trash on top of your security stack face down."
+  #
+  # Observer on `on_any_deletion` (DCGO OnDestroyedAnyone). active_when
+  # all_turns ([All Turns]). once_per_turn ([Once Per Turn]). NOT optional —
+  # the printed text has no "may" on this clause (DCGO's SelectCardEffect has
+  # canNoSelect: () => false: once installed, the pick is mandatory). Condition
+  # gates on the DELETED OBJECT only (own Tamer, red or yellow) — matching
+  # DCGO's CanUseCondition, which does NOT consult trash contents, so the OPT
+  # slot is consumed even when the body finds no eligible Marcus Damon (the
+  # trash-emptiness check lives in ActivateCoroutine, i.e. inside `process`
+  # via `select_trash` finding no candidate -> `if binding_present` skips the
+  # place, but the clause still "fired").
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns][OPT] When your red/yellow Tamer is deleted, place a Marcus Damon from trash on top of security, face down"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [red, yellow]
+    process:
+      - select_trash:
+          of: you
+          bind_as: marcus_in_trash
+          filter: { name_contains: "Marcus Damon" }
+          prompt: "Place 1 [Marcus Damon] from your trash on top of your security stack face down"
+      - if:
+          condition: { binding_present: marcus_in_trash }
+          then:
+            - place_on_security:
+                of: you
+                source: { card: { binding: marcus_in_trash, zone: trash } }
+                position: top
+                face_up: false
+
+  # ─── Clause D: Inherited [All Turns] [Once Per Turn] ────────────────────────
+  #
+  # Identical printed body, inherited scope (DCGO duplicate ActivateClass with
+  # SetIsInheritedEffect(true), hash "AddSecurity_BT13_015_inherited" —
+  # INDEPENDENT OPT counter from Clause C's).
+  - scope: inherited
+    when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[Inherited][All Turns][OPT] When your red/yellow Tamer is deleted, place a Marcus Damon from trash on top of security, face down"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [red, yellow]
+    process:
+      - select_trash:
+          of: you
+          bind_as: marcus_in_trash
+          filter: { name_contains: "Marcus Damon" }
+          prompt: "Place 1 [Marcus Damon] from your trash on top of your security stack face down"
+      - if:
+          condition: { binding_present: marcus_in_trash }
+          then:
+            - place_on_security:
+                of: you
+                source: { card: { binding: marcus_in_trash, zone: trash } }
+                position: top
+                face_up: false

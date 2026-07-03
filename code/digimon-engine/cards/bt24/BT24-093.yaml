@@ -1,0 +1,165 @@
+# BT24-093 Temple of Beginnings — Option, Yellow, Cost 2. Traits: Iliad/TS.
+#
+# Printed text (data/card_bundles/BT24-093.md — official Bandai DB, verbatim):
+#
+#   [Main] Add your top security card to the hand and ＜Recovery +1 (Deck)＞
+#     (Place the top card of your deck on top of your security stack). Then,
+#     place this card in the battle area.
+#   [All Turns] When your security stack is removed from, ＜Delay＞ (By
+#     trashing this card after the placing turn, activate the effect below.)
+#     ・You may place the top stacked card of any of your Digimon with
+#     [Aegiochusmon] or [Jupitermon] in their names as the top security card.
+#
+# Security Effect:
+#   [Security] You may play 1 [Aegiomon] or [Elecmon] from your hand or trash
+#     without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Yellow/BT24_093.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Block 1 (EffectTiming.OptionSkill, [Main]):
+#   CanUseCondition: CardEffectCommons.CanTriggerOptionMainEffect (standard
+#     Option [Main] gate — playable from hand).
+#   ActivateCoroutine: if `card.Owner.SecurityCards.Count > 0`, add the top
+#     security card to hand (AddHandCards) then IReduceSecurity (this is the
+#     printed "remove 1 security card and add it to hand" half). THEN,
+#     unconditionally (outside that `if`), IRecovery(1) — place the deck top
+#     onto the security stack. Finally PlaceDelayOptionCards places this
+#     Option into the battle area as a Delay Option.
+#   → `when: main_from_hand`, mandatory (the clause always resolves once
+#     played; DCGO's inner `if` is honored by `add_top_security_to_hand`,
+#     which is itself a safe no-op on empty security — see
+#     `EffectContext::add_top_security_to_hand`). `recover: { count: 1 }` is
+#     unconditional, matching DCGO placing it after the `if` block closes.
+#     `place_self_as_delay_option` mirrors PlaceDelayOptionCards (BT24-089 /
+#     BT24-100 / ST20-15 idiom).
+#
+# Block 2 (EffectTiming.OnLoseSecurity, [All Turns]):
+#   CanUseCondition: CardEffectCommons.IsExistOnBattleArea (this Option is a
+#     placed permanent) + CanTriggerWhenLoseSecurity (fires when THIS
+#     player's security is removed from) + CanDeclareOptionDelayEffect (the
+#     standard printed <Delay> gate — past the placing turn). ActivateCoroutine
+#     first runs DeletePermanentAndProcessAccordingToResult on this card
+#     (the Delay's self-trash COST), then on success: if any own
+#     [Aegiochusmon]/[Jupitermon]-named permanent has
+#     `permanent.DigivolutionCards.Count > 0`, offers an OPTIONAL
+#     (canNoSelect: true) SelectPermanentEffect over exactly those
+#     candidates; on pick, RemoveDigivolveRootEffect (cosmetic UI-only —
+#     verified against Effects.cs: pure DOTween sprite animation, no state
+#     mutation) then `CardObjectController.AddSecurityCard(permanent.TopCard,
+#     toTop: true, faceUp: false)` — which (a) removes `permanent.TopCard`
+#     (the permanent's CURRENT visible top, i.e. de-digivolving it in place
+#     and leaving the rest of its digivolution stack on the battlefield —
+#     confirmed via `RemoveFromAllArea` → `permanent.RemoveCardSource(
+#     cardSource)` called with the TOP card specifically, not a lower
+#     material) and (b) inserts it face-down at the TOP of the controller's
+#     security stack.
+#   → **BLOCKED, not authored.** No `kind: delay` clause is emitted for this
+#     text. Two independent, compounding engine/DSL gaps on the SAME clause:
+#
+#     Gap 1 (traced fresh for this card): `kind: delay`'s `trigger:` →
+#       `DelayTrigger` mapping in
+#       `code/digimon-engine/src/dsl_cards/lower_delay.rs::lower_with_raw`
+#       only routes `OnSuspend | OnUnsuspend | OnAllyPlayed | OnAttack |
+#       OnAllyAttack | OnOpponentAttack` to `DelayTrigger::OnEvent(..)`;
+#       `OnOwnSecurityRemoved` (this card's printed trigger — "when your
+#       security stack is removed from") falls through the `_ =>
+#       DelayTrigger::EndOfYourNextTurn` catch-all, silently mis-firing on a
+#       fixed schedule instead of the security-removal event. Confirmed by
+#       reading every existing `kind: delay` card in the shipping pool (37
+#       files): none uses `trigger: on_own_security_removed` /
+#       `on_lose_security` today. Even were the mapping fixed, `Game::
+#       enqueue_triggered`'s event-gated-Delay fan-out
+#       (`enqueue_event_gated_delayed_options`, effect_queue.rs ~line 620)
+#       only runs for `TriggerSource::{EventObserved, PlayerBattleAreaAttack,
+#       AttackTargetChanged, BlockDeclared, EnteredField}` — NOT
+#       `TriggerSource::SecurityRemoved` (what actually carries
+#       `OnOwnSecurityRemoved`, per `complete_effect_security_removed`
+#       ~line 3302). Two independent wiring gaps on the same path.
+#
+#     Gap 2 (PRE-EXISTING, already tracked — `docs/RUST_ENGINE_GAPS.md` §
+#       "Digivolution-stack source extraction (`pop_top_source` from named
+#       permanent)" names THIS card, BT24-093, verbatim as the open residual
+#       after the BT20-084 `security_place_top_stacked_card` destination
+#       shape closed; the doc's own "Workaround" field reads "None —
+#       BLOCKED"). Re-confirmed independently here: `security_place_
+#       (top_)stacked_card` extracts `card_sources[len-2]` (the MATERIAL just
+#       below the visible top, via `CardSourceRef::Material`) — the wrong
+#       card for this printed text, which (per DCGO) removes the permanent's
+#       actual visible TOP card (`card_sources[len-1]`) while leaving
+#       everything below it in place. `place_on_security` with
+#       `SecuritySource::Permanent{..}` removes the WHOLE permanent from the
+#       battle area and trashes every stacked card below the top — also
+#       wrong (this card must leave the chosen Digimon on the field,
+#       de-digivolved by one, not remove it entirely). `de_digivolve` pops
+#       the correct card (`card_sources.last()`) but hardcodes the
+#       destination to trash (`game_actions/helpers.rs::de_digivolve_core`)
+#       with no security-routing option. No existing verb composes "pop a
+#       named permanent's own top card, keep the rest of its stack on the
+#       field, route the popped card to security."
+#
+#     Per the no-approximations policy, substituting any of the above
+#     mismatched verbs, or a different `trigger:`, would silently implement
+#     DIFFERENT game behavior rather than the printed text — worse than
+#     omitting the clause. The clause is left unauthored (not stubbed) until
+#     both gaps close. Gap 2 is already tracked in `docs/RUST_ENGINE_GAPS.md`
+#     (names this card verbatim); Gap 1 (the `lower_delay.rs` trigger
+#     whitelist + `effect_queue.rs` TriggerSource whitelist) is newly traced
+#     here and should be routed to `qa/dsl-vocab-gaps.md` by the orchestrator.
+#
+# Block 3 (EffectTiming.SecuritySkill, inherited [Security]):
+#   `activateClass.SetIsSecurityEffect(true)`. CanUseCondition:
+#   CardEffectCommons.CanTriggerSecurityEffect (standard security-reveal
+#   gate). ActivateCoroutine: checks `HasMatchConditionOwnersHand` (name ==
+#   "Aegiomon" or "Elecmon", playable-as-new-permanent) and
+#   `HasMatchConditionOwnersCardInTrash` (same filter, trash zone). If BOTH
+#   zones have a legal candidate, prompts a bool "From hand" / "From trash"
+#   zone choice; if only one zone qualifies, that zone is used directly
+#   (`SetBool(canSelectHand)` — no prompt). Either way then prompts a
+#   card-select (`canNoSelect: true` — the WHOLE effect is "you may") over
+#   the chosen zone's Aegiomon/Elecmon candidates, then
+#   `PlayPermanentCards(payCost: false, ...)`.
+#   → `select_union_zone` (hand ∪ trash, filter `name_is: Aegiomon` OR
+#     `name_is: Elecmon`, `optional: true`) models the masked, origin-
+#     preserving version of DCGO's two-step zone-then-card flow — the same
+#     idiom as BT24-089's inherited Security clause. `play_union_bound_free`
+#     then plays the picked card without paying its cost.
+
+card: BT24-093
+name: Temple of Beginnings
+kind: option
+color: [yellow]
+cost: 2
+traits: [Iliad, TS]
+
+effects:
+  # ─── Clause 0: [Main] ─────────────────────────────────────────────────────
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Add top security card to hand; <Recovery +1 (Deck)>; place this card in the battle area"
+    process:
+      - add_top_security_to_hand: { of: you }
+      - recover: { of: you, count: 1 }
+      - place_self_as_delay_option: {}
+
+  # ─── [All Turns] <Delay>: BLOCKED — see gap notes above. Not authored. ────
+
+  # ─── Clause 1: Inherited [Security] ───────────────────────────────────────
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security] You may play 1 [Aegiomon] or [Elecmon] from your hand or trash without paying the cost"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          filter:
+            any_of:
+              - name_is: Aegiomon
+              - name_is: Elecmon
+          bind_as: pick
+          optional: true
+          prompt: "You may play 1 [Aegiomon] or [Elecmon] from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: pick

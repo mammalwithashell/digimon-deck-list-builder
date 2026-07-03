@@ -1,0 +1,169 @@
+# BT12-092 Marcus Damon — Tamer, Yellow+Red, Cost 4.
+#
+# Printed card text (BT12-092.json / card image — both agree verbatim):
+#
+#   [Start of Your Main Phase] If you have a Digimon with [Agumon] or
+#   [Greymon] in its name in play, by paying 1 memory, for the turn, this
+#   Tamer is also treated as a 3000 DP Digimon that can't digivolve.
+#   [Your Turn] When this Tamer becomes suspended, 1 of your Digimon may
+#   digivolve into a yellow card with [Greymon] in its name in your hand
+#   without paying the cost.
+#
+# Inherited (security_effect_description_eng):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT12/Yellow/BT12_092.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — EffectTiming.OnStartMainPhase:
+#   CanUseCondition = IsExistOnBattleArea(card) && IsOwnerTurn(card).
+#   CanActivateCondition = HasMatchConditionOwnersPermanent(permanent =>
+#     permanent.IsDigimon && (permanent.TopCard.ContainsCardName("Agumon")
+#     || permanent.TopCard.HasGreymonName)) && card.Owner.MaxMemoryCost >= 1.
+#   ActivateCoroutine: AddMemory(-1, activateClass), then
+#   BecomeDigimonThatCantDigivolve(targetPermanent: card.PermanentOfThisCard(),
+#   DP: 3000, effectDuration: UntilEachTurnEnd). `SetUpActivateClass(...,
+#   -1, true, ...)` — isOptional: true → the whole ability is a "you may
+#   activate this cost-gated effect" clause (DCGO's UI pattern: no target
+#   selection, just an accept/decline before the (cost + grant) body runs).
+#   → `when: start_of_your_main_phase`, `optional: true` (no explicit
+#   select step as the first body step -> the outer accept/decline confirm
+#   prompt installs per G-OUTER-OPTIONAL-NOT-INSTALLED, the BT22-041
+#   Kentaurosmon idiom), `condition: any_permanent { of: you, zone:
+#   battle_area, kind: digimon, any_of: [name_contains: Agumon,
+#   name_contains: Greymon] }`, body: `lose_memory: 1` (the paid cost) then
+#   `add_modifier: TreatAsDigimon` (synth_identity dp: 3000, expiry:
+#   end_of_turn) + `add_modifier: CannotDigivolve` (expiry: end_of_turn).
+#   No [Once Per Turn] is printed on this clause.
+#
+# Clause 2 — EffectTiming.OnTappedAnyone:
+#   CanUseCondition = IsExistOnBattleArea(card) && IsOwnerTurn(card) &&
+#   CanTriggerWhenPermanentSuspends(hashtable, (permanent) => permanent ==
+#   card.PermanentOfThisCard()) — the suspended permanent must be THIS
+#   card's own permanent (self-scoped, not "any of your Tamers").
+#   CanActivateCondition = HasMatchConditionPermanent(CanSelectPermanentCondition)
+#   where CanSelectPermanentCondition checks an own battle-area Digimon that
+#   CAN host a hand card satisfying CanSelectCardCondition (yellow +
+#   HasGreymonName). ActivateCoroutine: SelectPermanentEffect (canNoSelect:
+#   true — "may") over the eligible own Digimon, then
+#   DigivolveIntoHandOrTrashCard(cardCondition: yellow + Greymon-name,
+#   payCost: false, isHand: true) — free, and (per BT21-013/BT22-013 idiom)
+#   effectively ignoring the target's own printed digivolution requirements
+#   since DCGO installs the digivolve unconditionally once both picks are
+#   made (no separate cost/requirement gate on the *target* base).
+#   → `when: on_suspend`, `active_when: { your_turn: true }` ([Your Turn]),
+#   `condition: event_permanent_is_source: true` (self-scope — the AD1-021 /
+#   BT22-041 idiom), body: `select_own_permanent` (mandatory pick — DCGO's
+#   inner canNoSelect:true is folded into this being the FIRST step of an
+#   `optional: true` clause, so the clause's own accept/decline covers "may");
+#   `select_hand` (yellow + Greymon-name filter, optional: true so an empty
+#   hand pool cleanly resolves as "no digivolve"); `effect_initiated_digivolve`
+#   with `cost: 0, ignore_requirements: true` targeting the selected
+#   permanent (the resolved gap G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-
+#   PERMANENT-TARGET — see docs/RUST_ENGINE_GAPS.md "Track F", BT22-013 /
+#   BT21-013 exemplars).
+#
+# Clause 3 (Security) — EffectTiming.SecuritySkill:
+#   CardEffectFactory.PlaySelfTamerSecurityEffect(card). Standard
+#   play_from_security pattern (AD1-019/AD1-021/BT22-084 sisters).
+#   Mandatory (no [Security] effect is opt-out per general_rule.pdf §16).
+
+card: BT12-092
+name: Marcus Damon
+kind: tamer
+color: [yellow, red]
+cost: 4
+
+effects:
+  # ─── Clause 1: [Start of Your Main Phase] pay 1 memory -> treat as 3000 DP ──
+  #
+  # "If you have a Digimon with [Agumon] or [Greymon] in its name in play, by
+  # paying 1 memory, for the turn, this Tamer is also treated as a 3000 DP
+  # Digimon that can't digivolve."
+  #
+  # `optional: true` with `lose_memory: 1` as the FIRST body step (not itself
+  # a declinable selection) installs the outer accept/decline confirm prompt
+  # per G-OUTER-OPTIONAL-NOT-INSTALLED — the BT22-041 Kentaurosmon
+  # "by trashing your top security card" idiom, here paying memory instead of
+  # trashing security. The whole ability (cost + grant) is declined together
+  # on PASS, matching DCGO's single isOptional:true ActivateClass with no
+  # further branch inside.
+  - when: start_of_your_main_phase
+    optional: true
+    summary: "[Start of Your Main Phase] If you have an [Agumon]/[Greymon]-named Digimon in play, you may pay 1 memory: for the turn, this Tamer is also treated as a 3000 DP Digimon that can't digivolve"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        any_of:
+          - name_contains: "Agumon"
+          - name_contains: "Greymon"
+    process:
+      - lose_memory: 1
+      - add_modifier:
+          target: source
+          modifier: TreatAsDigimon
+          value: 0
+          expiry: end_of_turn
+          synth_identity:
+            dp: 3000
+      - add_modifier:
+          target: source
+          modifier: CannotDigivolve
+          value: 0
+          expiry: end_of_turn
+
+  # ─── Clause 2: [Your Turn] self-suspend -> may digivolve into yellow Greymon ─
+  #
+  # "When this Tamer becomes suspended, 1 of your Digimon may digivolve into a
+  # yellow card with [Greymon] in its name in your hand without paying the
+  # cost."
+  #
+  # `event_permanent_is_source: true` scopes the OnSuspend observer to THIS
+  # exact Tamer suspending (BT22-041 / AD1-021 idiom) — not any Tamer/Digimon.
+  # `active_when: { your_turn: true }` for [Your Turn]. The whole clause is
+  # "may digivolve" (optional): `select_own_permanent` is the mandatory-once-
+  # offered first pick (folded under the clause-level optionality, matching
+  # DCGO's canNoSelect:true inner select as the sole body branch); the
+  # subsequent `select_hand` is itself `optional: true` so an empty-hand-pool
+  # case resolves cleanly as "nothing to digivolve into" without a forced
+  # prompt. `effect_initiated_digivolve` targets the selected permanent
+  # (`target: base`) with `cost: 0, ignore_requirements: true` — free,
+  # ignoring the target's own printed digivolution requirements (BT21-013 /
+  # BT22-013 idiom; G-EFFECT-INITIATED-DIGIVOLVE-FROM-HAND-WITH-PERMANENT-
+  # TARGET is RESOLVED, docs/RUST_ENGINE_GAPS.md "Track F").
+  - when: on_suspend
+    active_when: { your_turn: true }
+    optional: true
+    summary: "[Your Turn] When this Tamer becomes suspended, 1 of your Digimon may digivolve into a yellow [Greymon]-named hand card, free"
+    condition:
+      event_permanent_is_source: true
+    process:
+      - select_own_permanent:
+          bind_as: base
+          filter: { kind: digimon }
+          prompt: "Select 1 of your Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: yellow
+              - name_contains: "Greymon"
+          prompt: "Digivolve into a yellow card with [Greymon] in its name from your hand, free"
+      - effect_initiated_digivolve:
+          target: base
+          from_hand: evo
+          cost: 0
+          ignore_requirements: true
+
+  # ─── Clause 3: [Security] play self without paying the cost ─────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

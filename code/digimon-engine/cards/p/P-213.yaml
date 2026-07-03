@@ -1,0 +1,196 @@
+# P-213 Aegiochusmon — Digimon, Lv.5, Red, DP 7000, Cost 7.
+# Traits: Shaman, Iliad, TS, (Rule) Dragonkin. Attribute: Vaccine.
+# Standard digivolution: Lv.4 Red / cost 3 (printed evo_costs).
+#
+# Printed card text (official Bandai DB bundle — data/card_bundles/P-213.md):
+#
+#   ＜Raid＞ (When this Digimon attacks, you may switch the target of attack to
+#   1 of your opponent's unsuspended Digimon with the highest DP.)
+#   ＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area other
+#   than in battle, you may play 1 [Aegiomon] from its digivolution cards
+#   without paying the cost.)
+#   [When Digivolving] If you have 3 or fewer security cards, this Digimon
+#   gains ＜Rush＞ and +3000 DP until your opponent's turn ends. Then, this
+#   Digimon may attack.
+#   [Rule] Trait: Has [Dragonkin] Type.
+#
+#   Inherited Effect:
+#   ＜Decode ([Aegiomon])＞ (same text as above, inherited scope.)
+#
+# Official Q&A (data/card_bundles/P-213.md):
+#   "Yes, you can process it. Even if you don't have 3 or fewer security
+#   cards, this card's [When Digivolving] effect allows you to have this
+#   Digimon attack." — the "may attack" tail is UNCONDITIONAL, independent of
+#   the security-count gate on the Rush/DP grant.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Red/P_213.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Alternative Digivolution Condition" (None) —
+#   AddSelfDigivolutionRequirementStaticEffect(TopCard.EqualsCardName("Aegiomon"),
+#   3, false). A NAME-narrowed cost-3 alt-source on ANY level/color. Printed
+#   evo box (cards.json) is Lv.4 Red / cost 3. Per source priority (printed >
+#   DCGO) we author the printed standard alt-path AND the printed xros_req
+#   Aegiomon-named alt-path (both appear on the printed card / official DB —
+#   this is not an unprinted DCGO-only source, unlike the BT22-015/BT25-025
+#   analogues). Same shape as BT25-025's Aegiomon-named digivolve alt-path.
+#
+# Region "Raid" (OnAllyAttack) — RaidSelfEffect, isInheritedEffect: false.
+#   → kind: grant_keyword, keyword: Raid (face-up, native keyword — the
+#   engine's `Keyword::Raid` auto-installs the attack-target-switch prompt
+#   from the printed keyword; matches AD1-004's `grant_keyword: Raid` idiom).
+#
+# Region "Decode <[Aegiomon]>" (WhenRemoveField, isInheritedEffect: false) —
+#   DecodeSelfEffect with sourceCondition EqualsCardName("Aegiomon"). This is
+#   NOT the generic `Keyword::Decode` (which redirects the leaving permanent
+#   to hand) — it is the BT22-015/BT25-025-class "play a matching source from
+#   THIS card's digivolution cards without paying the cost" replacement:
+#   triggers on the would-leave-other-than-in-battle window, optionally plays
+#   the named source, and the original leave proceeds unassisted. Authored as
+#   `kind: replacement` + `trigger: when_would_leave_battle_area` + a
+#   non-battle cause filter + `select_material` (name_contains Aegiomon) +
+#   `play_from_materials` (free). Exact BT25-025 idiom (same card name,
+#   different color variant).
+#
+# Region "When Digivolving" (OnEnterFieldAnyone,
+#   CanTriggerWhenDigivolving) — body:
+#     if (SecurityCards.Count <= 3) {
+#       GainRush(UntilOpponentTurnEnd);
+#       ChangeDigimonDP(+3000, UntilOpponentTurnEnd);
+#     }
+#     if (CanAttack) { SelectAttackEffect (any target) }
+#   The "may attack" check runs OUTSIDE and AFTER the security-count `if`,
+#   independent of whether the buff sub-block executed — confirmed by the
+#   official Q&A. Authored as: `condition: security_count_lte: 3` wraps ONLY
+#   the Rush + DP grant (via a nested `if` step so the buff is gated), while
+#   `may_attack_now` sits as a TOP-LEVEL step in the clause's process,
+#   unconditional and always reached. `expiry: end_of_opponents_turn` maps
+#   "until your opponent's turn ends" (AD1-014 idiom). `attacker: source`
+#   (BT20-016/BT22-015 idiom — the digivolved permanent itself attacks, no
+#   "1 of your Digimon" selection).
+#
+# Region "Decode <[Aegiomon]> - ESS" (WhenRemoveField, isInheritedEffect:
+#   true) — identical shape to the own-scope Decode above, but
+#   `scope: inherited` so it fires when P-213 is buried under a later
+#   digivolution and the TOP permanent would leave the battle area outside
+#   battle. Same `select_material` (name_contains Aegiomon, scoped to
+#   `replacement_subject`'s own digivolution sources) + `play_from_materials`
+#   body.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                    | Status |
+# |------------------------------------------------------------------------|--------|
+# | Standard digivolve Lv.4 Red / Cost 3                                    | IMPLEMENTED (alt_paths kind: digivolve) |
+# | Alt-digivolve [Aegiomon]-named / Cost 3                                 | IMPLEMENTED (alt_paths kind: digivolve, name_contains) |
+# | <Raid>                                                                  | IMPLEMENTED (grant_keyword) |
+# | <Decode ([Aegiomon])> own                                               | IMPLEMENTED (replacement + select_material Aegiomon + play_from_materials) |
+# | <Decode ([Aegiomon])> inherited                                         | IMPLEMENTED (scope: inherited replacement) |
+# | [When Digivolving] if <=3 security: Rush + 3000 DP until opp turn end   | IMPLEMENTED (if-gated grant_keyword Rush + add_dp_modifier, expiry end_of_opponents_turn) |
+# | [When Digivolving] "Then, this Digimon may attack" (unconditional)      | IMPLEMENTED (may_attack_now, optional, attacker: source, outside the if-gate) |
+# | [Rule] Trait: Has [Dragonkin] Type                                      | IMPLEMENTED (folded into traits:) |
+
+card: P-213
+name: Aegiochusmon
+kind: digimon
+level: 5
+color: [red]
+cost: 7
+dp: 7000
+traits: [Shaman, Iliad, TS, Dragonkin]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from: { name_contains: "Aegiomon" }
+    cost: 3
+
+effects:
+  # ─── <Raid> ────────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  # ─── <Decode ([Aegiomon])> — own scope ─────────────────────────────────────
+  #
+  # Non-cancelling replacement: accepting the optional play runs the
+  # side-effect (play a named [Aegiomon] source without paying), then the
+  # original leave proceeds. BT22-015/BT25-025 idiom, narrowed by name.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode ([Aegiomon])> play 1 [Aegiomon] from sources when this would leave outside battle"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Aegiomon"
+          prompt: "Choose an [Aegiomon] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  # ─── <Decode ([Aegiomon])> — inherited scope ───────────────────────────────
+  #
+  # Same shape as the own-scope clause above, but fires when P-213 is buried
+  # under a later digivolution (scope: inherited) and the TOP permanent would
+  # leave the battle area outside battle.
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "[Inherited] <Decode ([Aegiomon])> play 1 [Aegiomon] from sources when this would leave outside battle"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source_inh
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Aegiomon"
+          prompt: "Choose an [Aegiomon] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source_inh
+          cost_delta: free
+
+  # ─── [When Digivolving] security-gated Rush + DP buff; unconditional may-attack ──
+  #
+  # Printed: "If you have 3 or fewer security cards, this Digimon gains
+  # <Rush> and +3000 DP until your opponent's turn ends. Then, this Digimon
+  # may attack."
+  #
+  # Official Q&A confirms the "may attack" tail is UNCONDITIONAL — it is NOT
+  # nested inside the security-count gate. Only the Rush + DP grant is gated.
+  - when: when_digivolving
+    summary: "[When Digivolving] If <=3 security, gain Rush + 3000 DP until opponent's turn ends; then this Digimon may attack (unconditional)"
+    process:
+      - if:
+          condition: { security_count_lte: 3 }
+          then:
+            - grant_keyword:
+                target: source
+                keyword: Rush
+                expiry: end_of_opponents_turn
+            - add_dp_modifier:
+                target: source
+                value: 3000
+                expiry: end_of_opponents_turn
+      - may_attack_now:
+          attacker: source
+          targets: any
+          optional: true

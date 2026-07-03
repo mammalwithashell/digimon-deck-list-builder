@@ -1,0 +1,171 @@
+# BT21-087 Zenith — Tamer, Black, Cost 4.
+#
+# Printed card text (data/cards.json / official bundle — verbatim):
+#
+#   [Start of Your Turn] If you have 2 or less memory, set it to 3.
+#   [On Play] Reveal the top 3 cards of your deck. Among them, play 1
+#   [Vemmon] without paying the cost or add 1 card with [Vemmon] in its
+#   text to the hand. Trash the rest.
+#
+# Inherited (Security):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Black/BT21_087.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartTurn` → `CardEffectFactory
+#   .SetMemoryTo3TamerEffect(card)`. Unconditional call; the "if memory <= 2"
+#   gate lives inside the factory (same shape as BT22-084 clause 1). DSL:
+#   `condition: { memory_lte: 2 }` + `process: [set_memory: 3]`. Not
+#   player-optional; no [Once Per Turn].
+#
+# Clause 2 — `EffectTiming.OnEnterFieldAnyone` `ActivateClass` with
+#   `SetUpActivateClass(canUseCondition, canActivateCondition, -1, false, ...)`
+#   — outer trigger MANDATORY (isOptional: false; printed text has no "you
+#   may" at the trigger level — the reveal always happens on play).
+#
+#   Body: `CardEffectCommons.SimplifiedRevealDeckTopCardsAndSelect(
+#     revealCount: 3,
+#     simplifiedSelectCardConditions: [ ONE bucket:
+#       canTargetCondition: cardSource.HasText("Vemmon"),
+#       mode: Custom, maxCount: 1 ],
+#     remainingCardsPlace: RemainingCardsPlace.Trash,
+#     canNoSelect: true)`.
+#
+#   A SINGLE unified bucket — not two filtered buckets. The pick itself is
+#   OPTIONAL (`canNoSelect: true`) even when an eligible candidate exists —
+#   "Among them, play ... or add ..." allows declining entirely. After the
+#   (optional) pick resolves, `SelectCardCoroutine` stores `selectedCard`;
+#   if non-null:
+#     - `selectedCard.EqualsCardName("Vemmon")` (EXACT name, case-sensitive
+#       equality) → binary `SetBoolSelection(["Play", "Add to your hand"])`.
+#       True → `CardEffectCommons.PlayPermanentCards(payCost: false, ...)`.
+#       False → `CardEffectCommons.AddThisCardToHand(...)`.
+#     - otherwise (admitted by `HasText("Vemmon")` via printed TEXT but not
+#       an exact name match) → straight to `AddThisCardToHand(...)`, no
+#       player choice offered.
+#   Unselected revealed cards → Trash (`RemainingCardsPlace.Trash`).
+#
+# Clause 3 (Security) — `EffectTiming.SecuritySkill` →
+#   `CardEffectFactory.PlaySelfTamerSecurityEffect(card)`. Standard
+#   play_from_security pattern (sister cards: BT22-084, BT22-094, BT18-087,
+#   BT21-015, BT9-092). Mandatory (no [Security] effect is opt-out per rules
+#   manual §16).
+#
+# ─── DSL modeling notes ──────────────────────────────────────────────────────
+#
+# In-text filter ("[Vemmon] in its text"): DCGO `HasText("Vemmon")` scans a
+# broad surface (card name, dual/effect/inherited/security text, attribute,
+# type/traits, DNA-jogress condition messages — CardSource.cs:2120). Every
+# real Vemmon-lineage card (BT11-061, BT11-065, BT11-070, BT18-060, BT21-056,
+# and the "Vemmon" printings themselves) carries "Vemmon" in EITHER its
+# printed name OR its printed effect/inherited/security text — none rely on
+# the trait/type/attribute-only surface. `any_of: [name_contains: "Vemmon",
+# effect_text_contains: "Vemmon"]` faithfully covers the realized candidate
+# pool. (Pre-flight audit brief: "any_of workaround + fidelity comment".)
+#
+# Single unified pick → post-pick name branch (G-DSL-BINDING-CARD-NAME-IS):
+# DCGO uses ONE selection bucket, not two — the player picks ANY ONE eligible
+# card from a single combined pool, and ONLY AFTER the pick is made does
+# `EqualsCardName("Vemmon")` decide whether a play/add choice or a forced add
+# follows. This is architecturally different from the "two filtered buckets +
+# no_duplicate_cards" idiom (BT22-017 / EX5-015 / BT20-100), which would
+# incorrectly force the player through a SEQUENTIAL two-prompt flow (deciding
+# on an exact-name Vemmon FIRST, only falling through to a text-only
+# candidate if none exists) instead of DCGO's single combined choice.
+#
+# Testing the ALREADY-PICKED card's exact name for a subsequent `if:` branch
+# needed a new DSL predicate leaf: `binding_card_name_is: { binding, name }`
+# — the direct sibling of the existing `binding_card_kind` leaf (driver:
+# LM-020 Quantumon), just testing printed name instead of printed kind.
+# Added in this change:
+#   - code/digimon-dsl/src/predicate.rs (`PredicateSpec::binding_card_name_is`
+#     + `BindingCardNameIsPredicate`)
+#   - code/digimon-dsl/src/compiled.rs (`CompiledPredicate::binding_card_name_is`
+#     + `CompiledBindingCardNameIsPredicate`)
+#   - code/digimon-dsl/src/compile.rs (lowering)
+#   - code/digimon-engine/src/dsl_cards/predicate.rs (evaluator — resolves the
+#     named binding via `bindings.get_ref`, accepting BOTH a scalar `Card` and
+#     a singleton `CardList` since `select_reveal_buckets` always produces a
+#     `CardList`, even for a `min:0,max:1` single-slot bucket; unlike
+#     `binding_card_kind`, which only reads a `Card`-typed binding).
+#
+# "Nothing picked" no-op: `min: 0` on the bucket lets the pick resolve with
+# zero cards (DCGO `canNoSelect: true`). `binding_card_name_is` fails closed
+# on an empty/absent binding, so the play/add branch never installs with no
+# pick. The "not exactly Vemmon" fallback branch is guarded by
+# `binding_count_eq: { binding: pick, n: 1 }` so it too only fires when a
+# card was actually picked (not on the empty-pick no-op).
+#
+# Trash the rest: `RemainingCardsPlace.Trash` — modeled via `per_selected`
+# over the `revealed` binding + `trash_from_reveal` (BT24-059 / EX8-050
+# idiom). The picked card is removed from `revealed`'s remaining candidate
+# pool by the reveal-bucket state machine once selected, so this naturally
+# trashes every OTHER revealed card regardless of which branch ran.
+
+card: BT21-087
+name: Zenith
+kind: tamer
+color: [black]
+cost: 4
+
+effects:
+  # ─── Clause 1: [Start of Your Turn] memory <= 2 → set to 3 ────────────────
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  # ─── Clause 2: [On Play] reveal 3; pick 1 [Vemmon]-text card; branch; trash rest ──
+  - when: on_play
+    summary: "[On Play] Reveal top 3; play 1 [Vemmon] free OR add 1 [Vemmon]-text card to hand; trash rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: pick
+              min: 0
+              max: 1
+              filter:
+                any_of:
+                  - name_contains: "Vemmon"
+                  - effect_text_contains: "Vemmon"
+          prompt: "Select 1 [Vemmon] or 1 card with [Vemmon] in its text (optional)"
+      - if:
+          condition:
+            binding_card_name_is: { binding: pick, name: "Vemmon" }
+          then:
+            - select_effect_choice:
+                labels: ["Play", "Add to your hand"]
+                bind_as: play_choice
+                prompt: "Will you play this card or add it to your hand?"
+            - if:
+                condition: { equals: [play_choice, 0] }
+                then:
+                  - play_from_revealed_free: { of: you, card: pick }
+            - if:
+                condition: { equals: [play_choice, 1] }
+                then:
+                  - add_to_hand_from_reveal: { of: you, card: pick }
+          else:
+            - if:
+                condition:
+                  binding_count_eq: { binding: pick, n: 1 }
+                then:
+                  - add_to_hand_from_reveal: { of: you, card: pick }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal:
+                of: you
+                card: rest
+
+  # ─── Clause 3: [Security] play self without paying the cost ───────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

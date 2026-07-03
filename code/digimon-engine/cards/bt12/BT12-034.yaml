@@ -1,0 +1,170 @@
+# BT12-034 Agumon — Digimon, Lv.3, Yellow/Red, DP 2000, Cost 3.
+# Traits: Dinosaur. Attribute: Vaccine.
+#
+# Printed alt-digivolve (official Bandai DB / data/card_bundles/BT12-034.md):
+#   [Digivolve] 0 from Koromon
+# Standard digivolve: Lv2 Yellow / cost 1 AND Lv2 Red / cost 1 (printed
+# evo_costs, handled by the engine's default digivolution flow — not modeled
+# here).
+#
+# Printed effect text:
+#   [On Play] Reveal the top 4 cards of your deck. Add 1 Digimon card with
+#   [Greymon] in its name and 1 [Marcus Damon] among them to your hand. Place
+#   the rest at the bottom of your deck in any order.
+#
+# Printed inherited effect text:
+#   [Your Turn][Once Per Turn] When one of your yellow or red Tamers becomes
+#   suspended, 1 of your opponent's Digimon gets -2000 DP for the turn.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT12/Yellow/BT12_034.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 0 (EffectTiming.None) — AddSelfDigivolutionRequirementStaticEffect:
+#   permanentCondition: TopCard.CardNames.Contains("Koromon")
+#   digivolutionCost: 0, ignoreDigivolutionRequirement: false.
+#
+# Clause 1 (EffectTiming.OnEnterFieldAnyone) — SimplifiedRevealDeckTopCardsAndSelect
+#   (revealCount: 4) with two buckets:
+#     - Bucket 1 (CanSelectCardCondition): IsDigimon && HasGreymonName.
+#     - Bucket 2 (CanSelectCardCondition1): CardNames.Contains("Marcus Damon")
+#       (or the no-space "MarcusDamon" variant — DCGO defensive alias for the
+#       same printed name; the DSL name_contains match on "Marcus Damon" is
+#       sufficient since real card data always uses the spaced form).
+#   mutualConditions: true → no_duplicate_cards: true.
+#   remainingCardsPlace: DeckBottom → place_remainder_on_deck { position: bottom }.
+#   SetUpActivateClass(..., -1, false, ...) — outer trigger NOT optional.
+#   CanActivateCondition: IsExistOnBattleArea && Owner.LibraryCards.Count >= 1
+#     — implicit in `reveal_top_deck` (reveals up to count, capped at deck
+#     size); no explicit DSL condition needed.
+#
+# Clause 2 (EffectTiming.OnTappedAnyone), SetIsInheritedEffect(true),
+#   SetHashString("DP-2000_BT12_034") — a single shared OPT hash regardless
+#   of which color Tamer triggers it:
+#   CanUseCondition: IsExistOnBattleArea && IsOwnerTurn &&
+#     CanTriggerWhenPermanentSuspends(PermanentCondition) where
+#     PermanentCondition = own Tamer with Red or Yellow color.
+#   CanActivateCondition: IsExistOnBattleArea(card) — the clause CAN activate
+#     once triggered; the mandatory-target gate lives in the coroutine itself
+#     (HasMatchConditionPermanent(CanSelectPermanentCondition)) — if the
+#     opponent has zero battle-area Digimon, no selection installs at all.
+#   ActivateCoroutine: mandatory (canNoSelect: false) SelectPermanentEffect
+#     over opponent battle-area Digimon, then
+#     ChangeDigimonDP(changeValue: -2000, effectDuration: UntilEachTurnEnd).
+#   UntilEachTurnEnd = DCGO's generic "expires at the end of the current
+#   turn" duration; since this inherited clause is [Your Turn]-gated, the
+#   current turn IS the controller's own turn → `expiry: end_of_turn`.
+#
+# ─── Source-priority audit (printed text vs DCGO) ────────────────────────────
+#
+# Clause 1: printed has no "you may" → outer trigger mandatory (matches DCGO
+# isOptional: false). Each bucket is mandatory IF a matching card is in the
+# reveal (DCGO single-bucket maxCount: 1, no canNoSelect override); resolves
+# silently when no candidate exists. `min: 1, max: 1` per bucket captures
+# this exactly (BT12-059 idiom — the closest sister card, reveal-4 + 2-bucket
+# shape, differing only in bucket filters).
+#
+# Clause 2: printed "gets -2000 DP for the turn" (no "may") → mandatory DP
+# debuff once the observer fires. `select_opponent_permanent` (no
+# `optional:`) installs a required pick over opponent Digimon — but ONLY
+# when at least one exists (the verb's own gate mirrors DCGO's
+# HasMatchConditionPermanent guard), so an opponent with no Digimon never
+# sees a dead prompt. The [Once Per Turn] lockout is a SINGLE counter shared
+# across both the yellow-Tamer-suspend and red-Tamer-suspend triggers
+# (DCGO's one shared hash string for the whole clause, not per-color) —
+# `when: on_suspend` with one `condition` (color_any_of [yellow, red]) and
+# one `once_per_turn: true` gives exactly that shared lockout (AD1-016's
+# `on_enter_field_anyone` + `on_suspend` shared-hash idiom generalizes the
+# same way to a single-timing, multi-color-branch condition).
+#
+# ─── Sister cards ─────────────────────────────────────────────────────────────
+#
+# Clause 1 shape: mirrors BT12-059 (Agumon, reveal-4 two-bucket, bottom
+# remainder) — same reveal-N pattern, differing only in bucket filters
+# (Greymon-name-only here vs Greymon-or-Omnimon there; exact-name "Marcus
+# Damon" here vs name-contains "Tai Kamiya" there — both are name_contains
+# predicates since DCGO uses ContainsCardName for both).
+#
+# Clause 2 shape: mirrors BT21-004 Koromon (inherited [Your Turn][OPT]
+# on_suspend observer gated on own Tamer color) and AD1-016 ShineGreymon
+# (mandatory select_opponent_permanent + add_dp_modifier literal debuff,
+# expiry end_of_turn/end_of_opponents_turn per printed duration wording).
+
+card: BT12-034
+name: Agumon
+kind: digimon
+level: 3
+color: [yellow, red]
+cost: 3
+dp: 2000
+traits: [Dinosaur]
+attribute: Vaccine
+
+# ─── Alternate Digivolution Path ─────────────────────────────────────────────
+#
+# Printed: "[Digivolve] 0 from Koromon".
+# DCGO (BT12_034.cs, EffectTiming.None, AddSelfDigivolutionRequirementStaticEffect):
+#   permanentCondition: targetPermanent.TopCard.CardNames.Contains("Koromon")
+#   digivolutionCost: 0, ignoreDigivolutionRequirement: false.
+alt_paths:
+  - kind: digivolve
+    from: { name_contains: "Koromon" }
+    cost: 0
+
+effects:
+  # ─── Clause 1 — [On Play] reveal 4 + two-bucket selection ──────────────────
+  #
+  # Printed text:
+  #   "[On Play] Reveal the top 4 cards of your deck. Add 1 Digimon card with
+  #   [Greymon] in its name and 1 [Marcus Damon] among them to your hand.
+  #   Place the rest at the bottom of your deck in any order."
+  - when: on_play
+    summary: "[On Play] Reveal 4; add one Greymon-name Digimon and one Marcus Damon; bottom the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 4, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: greymon_pick
+              min: 1
+              max: 1
+              filter:
+                all_of:
+                  - kind: digimon
+                  - name_contains: "Greymon"
+            - bind_as: marcus_damon_pick
+              min: 1
+              max: 1
+              filter:
+                name_contains: "Marcus Damon"
+          no_duplicate_cards: true
+          prompt: "Select 1 Digimon card with [Greymon] in its name and 1 [Marcus Damon]"
+      - add_to_hand_from_reveal: { of: you, card: greymon_pick }
+      - add_to_hand_from_reveal: { of: you, card: marcus_damon_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # ─── Clause 2 — Inherited [Your Turn][OPT] on_suspend DP debuff ────────────
+  #
+  # Printed: "[Your Turn][Once Per Turn] When one of your yellow or red
+  # Tamers becomes suspended, 1 of your opponent's Digimon gets -2000 DP for
+  # the turn."
+  - scope: inherited
+    when: on_suspend
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [yellow, red]
+    summary: "[Your Turn][Once Per Turn] When own yellow/red Tamer suspends, 1 opp Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -2000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -2000
+          expiry: end_of_turn

@@ -1,0 +1,146 @@
+# EX11-055 Chitose Horaiji — Tamer, Red+Purple, Cost 4.
+# Traits: LIBERATOR.
+#
+# Printed card text (data/card_bundles/EX11-055.md — official Bandai DB;
+# matches data/cards.json effect_description_eng / inherited_effect_description_eng
+# verbatim):
+#
+#   [On Play] [Start of Your Main Phase] By trashing 1 [Composite] or
+#   [Wicked God] trait card from your hand, ＜Draw 1＞ (Draw 1 card from your
+#   deck.) and gain 1 memory.
+#   [All Turns] When any of your [Composite] or [Wicked God] trait Digimon
+#   are deleted, by suspending this Tamer, you may play 1 [Gazimon] or
+#   [Gizamon] from your hand without paying the cost.
+#
+# Inherited (Security):
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX11/Red/EX11_055.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 (Shared On Play / Start of Your Main Phase) —
+#   `EffectTiming.OnEnterFieldAnyone` + `EffectTiming.OnStartMainPhase` both
+#   route to the same `SharedActivateCoroutine`:
+#     `SelectHandEffect` (`mode: Discard`, `maxCount: 1`, `canNoSelect: true`)
+#     over hand cards matching `EqualsTraits("Composite") ||
+#     EqualsTraits("Wicked God")`. `discarded` only flips true when the
+#     player actually picks a card (`cardSources.Count >= 1`). The
+#     draw-1-and-gain-1-memory tail runs ONLY `if (discarded)` — declining
+#     the discard prompt (or having nothing eligible) skips the whole reward.
+#   DSL: `select_hand` with `cost: true, optional: true` (mirrors DCGO's
+#   `canNoSelect: true` PLUS "declining aborts the whole clause" —
+#   G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE, same idiom as BT24-008 Elizamon's
+#   "[On Play] By trashing 1 [...] card from your hand, Draw 2"), then
+#   `trash_from_hand_by_index`, `draw: { count: 1 }`, `gain_memory: 1`.
+#   `when: [on_play, start_of_your_main_phase]` combines both timings into
+#   one clause body (ST23-13 / EX11-069 / AD1-019 sibling shape — DCGO
+#   itself shares one `SharedActivateCoroutine` across both timings).
+#
+# Clause 2 ([All Turns] deletion observer) — `EffectTiming.OnDestroyedAnyone`:
+#   `CanUseCondition` = `CanTriggerOnPermanentDeleted(hashtable,
+#   PermanentCondition)` where `PermanentCondition` requires the deleted
+#   permanent to be the controller's OWN battle-area Digimon whose top card
+#   `EqualsTraits("Composite") || EqualsTraits("Wicked God")`.
+#   `CanActivateCondition` = `CanActivateSuspendCostEffect(card)` — this
+#   Tamer must be on the battle area and unsuspended (mirrors EX11-060
+#   Arisa's `source_is_unsuspended: true` gate).
+#   `ActivateCoroutine`: `SuspendPermanentsClass(...).Tap()` — the "by
+#   suspending this Tamer" cost is paid immediately once the effect
+#   activates (there is no further accept/decline gate around the suspend
+#   itself; `CanActivateCondition` already ensures it's payable). THEN, only
+#   if `HasMatchConditionOwnersHand(card, CanSelectCardCondition)` (a
+#   `Gazimon`/`Gizamon` card exists in hand): `SelectHandEffect`
+#   (`mode: Custom`, `maxCount: 1`, `canNoSelect: true`) →
+#   `PlayPermanentCards(payCost: false)`. The printed "you may play" maps to
+#   this inner optional hand pick.
+#   DSL: `when: on_any_deletion`, `active_when: { all_turns: true }`,
+#   `condition`: `event_target_owner: you` + `any_of: [event_target_trait_has:
+#   Composite, event_target_trait_has: "Wicked God"]` + `source_is_unsuspended:
+#   true` (mirrors EX11-060's deleted-object event-context gate + suspend
+#   gate). `optional: true` at the clause level surfaces the outer
+#   accept/decline prompt DCGO's `SetUpActivateClass(..., -1, true, ...)`
+#   installs before the suspend cost is paid (identical outer-optional shape
+#   to EX11-060 clause 2 — see that card's
+#   `ex11_055_deletion_observer_declining_the_suspend_choice_does_nothing`
+#   analogue). `activation_cost: { suspend_self: true }` pays the visible
+#   "by suspending this Tamer" cost once the outer prompt is accepted. The
+#   inner `select_hand` (Gazimon/Gizamon by exact name — DCGO
+#   `EqualsCardName("Gazimon") || EqualsCardName("Gizamon")`, so `name_is`
+#   not `name_contains`) is `optional: true` (canNoSelect: true), then
+#   `play_from_hand_free`.
+#
+# Clause 3 ([Security], inherited) — `EffectTiming.SecuritySkill` →
+#   `CardEffectFactory.PlaySelfTamerSecurityEffect(card)`. Standard
+#   play_from_security pattern (sister cards AD1-019, EX11-060, BT22-084).
+#   Mandatory (no [Security] effect is opt-out per the rules manual §16).
+
+card: EX11-055
+name: "Chitose Horaiji"
+kind: tamer
+color: [red, purple]
+cost: 4
+traits: [LIBERATOR]
+
+effects:
+  # ─── Clause 1: [On Play][Start of Your Main Phase] shared body ────────────
+  #
+  # "By trashing 1 [Composite] or [Wicked God] trait card from your hand,
+  # <Draw 1> and gain 1 memory." — the cost (trash) gates the whole reward.
+  - when: [on_play, start_of_your_main_phase]
+    summary: "[On Play][Start of Your Main Phase] By trashing 1 [Composite]/[Wicked God] hand card, Draw 1 and gain 1 memory"
+    process:
+      # cost: true + optional: true — declining this prompt (or having no
+      # eligible card) skips the trash AND the draw/memory tail entirely.
+      # See G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE (BT24-008 idiom).
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            any_of:
+              - trait_has: Composite
+              - trait_has: "Wicked God"
+          prompt: "Trash 1 [Composite] or [Wicked God] card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - draw: { of: you, count: 1 }
+      - gain_memory: 1
+
+  # ─── Clause 2: [All Turns] on_any_deletion — suspend self, may play Gazimon/Gizamon ─
+  #
+  # "When any of your [Composite] or [Wicked God] trait Digimon are deleted,
+  # by suspending this Tamer, you may play 1 [Gazimon] or [Gizamon] from your
+  # hand without paying the cost."
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    optional: true
+    summary: "[All Turns] When your [Composite]/[Wicked God] Digimon is deleted, by suspending this Tamer you may play 1 [Gazimon]/[Gizamon] from hand free"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - any_of:
+            - event_target_trait_has: Composite
+            - event_target_trait_has: "Wicked God"
+        - source_is_unsuspended: true
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_hand:
+          of: you
+          bind_as: gazi
+          optional: true
+          filter:
+            any_of:
+              - name_is: "Gazimon"
+              - name_is: "Gizamon"
+          prompt: "Play 1 [Gazimon] or [Gizamon] from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: gazi
+
+  # ─── Clause 3: [Security] play self without paying the cost ───────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -1,0 +1,182 @@
+# EX7-073 BeelStarmon (X Antibody) — Digimon, Lv.6, Purple, DP 12000,
+# Cost 12, Wizard / X Antibody / Three Musketeers, Virus.
+#
+# Printed card text (per-card JSON `code/digimon-engine/cards/ex7/EX7-073.json`,
+# `effect_description_eng` — verbatim; card image agrees):
+#
+#   [When Digivolving] You may use 1 Option card with [Three Musketeers] in
+#   its text from your hand without paying the cost.
+#   [When Digivolving] [When Attacking] By trashing 2 cards with the [Three
+#   Musketeers] trait in this Digimon's digivolution cards, delete 1 of your
+#   opponent's Digimon with the highest level and trash the top card of your
+#   opponent's security stack.
+#
+# Standard digivolve (evo_costs): Purple Lv.5 / cost 4.
+# Alt-source (xros_req): "[Digivolve] Lv.6 w/[Three Musketeers] trait w/o
+# [X Antibody] trait: Cost 1".
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Purple/EX7_073.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Digivolution Condition (None):
+#   AddSelfDigivolutionRequirementStaticEffect(digivolutionCost: 1) with
+#   PermanentCondition = TopCard.EqualsTraits("Three Musketeers") &&
+#   TopCard.Level == 6 && !TopCard.EqualsTraits("X Antibody"). Encoded as an
+#   `alt_paths` digivolve entry with `from: { level_eq: 6, trait_has: "Three
+#   Musketeers", not: { trait_has: "X Antibody" } }, cost: 1`.
+#
+# Clause A [When Digivolving] (OnEnterFieldAnyone, ActivateClass):
+#   optional ("you may") SelectHandEffect over hand Options where
+#   `HasText("Three Musketeers")` (DCGO CardSource.HasText → DSL
+#   `effect_text_contains`), `HasUseCost`, `!CanNotPlayThisOption`; maxCount
+#   1, canNoSelect: true. Accepted pick is played via
+#   PlayOptionCards(payCost: false) — `use_option_from_hand` (BT24-085
+#   idiom), hand-only, no `use_cost_lte_opponent_memory` gate on this card
+#   (unlike BT24-085).
+#
+# Clause B [When Digivolving] / Clause C [When Attacking] (OnEnterFieldAnyone
+# / OnAllyAttack, identical bodies, two separate ActivateClass registrations
+# — NOT a shared OPT hash):
+#   CanActivateCondition requires >= 1 digivolution-card with
+#   EqualsTraits("Three Musketeers"). The coroutine body then requires
+#   DigivolutionCards.Count >= 2 (TOTAL, not just matching-trait) before
+#   offering SelectCardEffect (root: DigivolutionCards, filter:
+#   EqualsTraits("Three Musketeers"), maxCount: 2, canNoSelect: true,
+#   canEndNotMax: false). Net game-state outcome is identical whether the
+#   player declines at 0 sources or halts after picking exactly 1 (DCGO's
+#   `if (selectedCards.Count >= 2)` gate means the tail never fires below 2)
+#   — encoded here as `select_own_sources { target: source, min: 0, max: 2,
+#   filter: trait_has "Three Musketeers" }`, matching the EX7-021 / BT12-031
+#   / EX7-023 sibling idiom for DCGO's canNoSelect+canEndNotMax combination.
+#   Only when exactly 2 were trashed does the tail fire: mandatory
+#   single-pick SelectPermanentEffect over opponent Digimon matching
+#   IsMaxLevel (highest level; DSL `level_matches_aggregate { selector:
+#   highest_level, of: opponent }` — AD1-012/BT22-026/EX9-021 idiom), mode
+#   Destroy (`delete_permanent`); then unconditional
+#   IDestroySecurity(destroySecurityCount: 1, fromTop: true)
+#   (`trash_top_security`).
+#
+# ─── Clause layout ───────────────────────────────────────────────────────────
+#
+# Clause 1 — [When Digivolving] optional use-Option-from-hand-free:
+#   IMPLEMENTED (use_option_from_hand, optional: true, hand-only per shipped
+#   verb — DCGO SelectHandEffect root: Hand matches exactly).
+# Clause 2 — [When Digivolving] trash-2-Three-Musketeers-sources -> delete
+#   highest-level opp Digimon + trash top opp security: IMPLEMENTED
+#   (select_own_sources target: source + binding_count_eq gate +
+#   select_opponent_permanent w/ level_matches_aggregate highest_level +
+#   delete_permanent + trash_top_security).
+# Clause 3 — [When Attacking] identical body: IMPLEMENTED (separate clause,
+#   independent activation window from Clause 2 — DCGO registers 2 distinct
+#   ActivateClass instances under OnEnterFieldAnyone and OnAllyAttack).
+
+card: EX7-073
+name: BeelStarmon (X Antibody)
+kind: digimon
+level: 6
+color: [purple]
+cost: 12
+dp: 12000
+traits: [Wizard, X Antibody, Three Musketeers]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - trait_has: "Three Musketeers"
+        - not: { trait_has: "X Antibody" }
+    cost: 1
+
+effects:
+  # ─── Clause 1: [When Digivolving] optional use-Option-from-hand-free ───────
+  #
+  # "You may use 1 Option card with [Three Musketeers] in its text from your
+  #  hand without paying the cost."
+  - when: when_digivolving
+    optional: true
+    summary: "[When Digivolving] You may use 1 Option card with [Three Musketeers] in its text from your hand without paying the cost"
+    process:
+      - use_option_from_hand:
+          of: you
+          optional: true
+          filter:
+            all_of:
+              - kind: option
+              - effect_text_contains: "Three Musketeers"
+          prompt: "You may use 1 Option card with [Three Musketeers] in its text from your hand without paying the cost"
+
+  # ─── Clause 2: [When Digivolving] trash-2 -> delete highest + trash sec ────
+  #
+  # "By trashing 2 cards with the [Three Musketeers] trait in this Digimon's
+  #  digivolution cards, delete 1 of your opponent's Digimon with the highest
+  #  level and trash the top card of your opponent's security stack."
+  - when: when_digivolving
+    summary: "[When Digivolving] By trashing 2 [Three Musketeers] sources from this Digimon's digivolution cards, delete 1 opp highest-level Digimon and trash their top security"
+    process:
+      - select_own_sources:
+          target: source
+          bind_as: trashed
+          min: 0
+          max: 2
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Three Musketeers"
+          prompt: "Trash 2 cards with the [Three Musketeers] trait from this Digimon's digivolution cards"
+          then:
+            - if:
+                condition: { binding_count_eq: { binding: trashed, n: 2 } }
+                then:
+                  - trash_selected_sources: { source_refs: trashed }
+                  - select_opponent_permanent:
+                      bind_as: victim
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - level_matches_aggregate:
+                              selector: highest_level
+                              of: opponent
+                      prompt: "Delete 1 of your opponent's Digimon with the highest level"
+                  - delete_permanent: { target: victim }
+                  - trash_top_security: { of: opponent }
+
+  # ─── Clause 3: [When Attacking] identical body ─────────────────────────────
+  #
+  # Same printed sentence, independently-timed activation window (DCGO:
+  # separate ActivateClass under OnAllyAttack, not a shared OPT hash with
+  # Clause 2).
+  - when: when_attacking
+    summary: "[When Attacking] By trashing 2 [Three Musketeers] sources from this Digimon's digivolution cards, delete 1 opp highest-level Digimon and trash their top security"
+    process:
+      - select_own_sources:
+          target: source
+          bind_as: trashed
+          min: 0
+          max: 2
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Three Musketeers"
+          prompt: "Trash 2 cards with the [Three Musketeers] trait from this Digimon's digivolution cards"
+          then:
+            - if:
+                condition: { binding_count_eq: { binding: trashed, n: 2 } }
+                then:
+                  - trash_selected_sources: { source_refs: trashed }
+                  - select_opponent_permanent:
+                      bind_as: victim
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - level_matches_aggregate:
+                              selector: highest_level
+                              of: opponent
+                      prompt: "Delete 1 of your opponent's Digimon with the highest level"
+                  - delete_permanent: { target: victim }
+                  - trash_top_security: { of: opponent }

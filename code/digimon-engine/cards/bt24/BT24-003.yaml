@@ -1,0 +1,78 @@
+# BT24-003 Tsunomon — Digi-Egg, Lv.2, Yellow, Cost 0.
+# Traits: Lesser, Iliad, TS. Form: In-Training.
+#
+# Printed card text (per-card JSON `code/digimon-engine/cards/bt24/BT24-003.json`
+# — verbatim):
+#
+#   Inherited Effect [Your Turn] [Once Per Turn] When your security stack is
+#   removed from, this Digimon may digivolve into a [Shaman] trait Digimon
+#   card in the hand with the digivolution cost reduced by 1.
+#
+# No own-face or security-face text (both empty in the per-card JSON) — this
+# card has exactly one clause.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Yellow/BT24_003.cs
+#
+# ─── DCGO crosscheck ──────────────────────────────────────────────────────
+#
+# Region "Inherit" (EffectTiming.OnLoseSecurity, SetIsInheritedEffect(true)):
+#   `ActivateClass.SetUpActivateClass(CanActivateCondition, ActivateCoroutine,
+#   1, true, ...)` — the trailing `true` is `canNoSelect`, i.e. the digivolve
+#   is declinable ("may digivolve"); the `1` is the once-per-turn count.
+#   `CanUseCondition` = `IsExistOnBattleAreaDigimon(card) &&
+#   CanTriggerWhenLoseSecurity(hashtable, player => player == card.Owner) &&
+#   IsOwnerTurn(card)` — own security only, and gated to the OWNER's turn
+#   ([Your Turn], not [All Turns]). `SelectSourceCard` filters candidates to
+#   `IsDigimon && EqualsTraits("Shaman") && CanPlayCardTargetFrame(...)` — an
+#   exact-match Shaman trait check plus the standard digivolve-legality check
+#   against the current permanent frame. `ActivateCoroutine` runs
+#   `DigivolveIntoHandOrTrashCard(cardCondition: SelectSourceCard, payCost:
+#   true, reduceCostTuple: (reduceCost: 1, reduceCostCardCondition: null),
+#   isHand: true)` — an effect-initiated digivolve from the hand, honoring
+#   standard digivolution requirements (level/color alt-path matching, NOT
+#   `ignoreDigivolutionRequirementFixedCost`), with the cost reduced by 1.
+#
+#   → scope: inherited, when: on_own_security_removed, once_per_turn: true,
+#   optional: true, active_when: { your_turn: true } (BT12-016 /
+#   AD1-021 / AD1-017 idiom for [Your Turn] via DCGO IsOwnerTurn); process:
+#   select_hand (kind: digimon, trait_has: Shaman) → effect_initiated_digivolve
+#   (target: source, from_hand: <selected>, cost: { reduce: 1 }) — BT12-016
+#   idiom (target + from_hand + cost reduce, standard requirements enforced).
+#
+# ─── Implementation status (faithfulness diff) ────────────────────────────
+#
+# | Card-text element                                                    | Status |
+# |------------------------------------------------------------------------|--------|
+# | Inherited [Your Turn][OPT] own-security-removed → may digivolve into  | IMPLEMENTED |
+# | a [Shaman] trait hand card, cost reduced by 1                         |        |
+
+card: BT24-003
+name: Tsunomon
+kind: digi_egg
+level: 2
+color: [yellow]
+cost: 0
+traits: [Lesser, Iliad, TS]
+form: In-Training
+
+effects:
+  - scope: inherited
+    when: on_own_security_removed
+    once_per_turn: true
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][OPT] When your security stack is removed from, this Digimon may digivolve into a [Shaman] trait Digimon card in the hand with the digivolution cost reduced by 1"
+    process:
+      - select_hand:
+          of: you
+          bind_as: shaman_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Shaman
+          prompt: "Digivolve into a [Shaman] trait Digimon card in the hand (digivolution cost reduced by 1)"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: shaman_target
+          cost: { reduce: 1 }

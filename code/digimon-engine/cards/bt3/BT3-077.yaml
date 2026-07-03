@@ -1,0 +1,24 @@
+card: BT3-077
+name: Gazimon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 2000
+traits: [Mammal]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 2
+        - color_is: purple
+    cost: 0
+
+effects:
+  - kind: flood_gate
+    summary: "[All Turns] Opponent can't gain memory except from Tamer effects"
+    active_when: { all_turns: true }
+    target_player: opponent
+    modifier: CannotGainMemoryExceptFromTamers

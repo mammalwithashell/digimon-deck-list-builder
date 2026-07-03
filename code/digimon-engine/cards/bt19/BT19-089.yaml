@@ -1,0 +1,157 @@
+# BT19-089 Red Card — Option, Red, Cost 2. No traits.
+#
+# Printed card text (card image C:/Users/james/Documents/DCGO_Application/
+# Assets/Textures/Card/BT19-089.webp — authoritative; cross-checked
+# data/cards.json + data/card_bundles/BT19-089.md + DCGO C#):
+#
+#   While your opponent has a white Digimon or Tamer, you may ignore this
+#   card's color requirements.
+#   [Main] Until the end of your opponent's turn, 1 of your Digimon isn't
+#   affected by your opponent's Option cards and it can't have its DP
+#   reduced.
+#
+# Inherited (Security):
+#   Security Effect [Security] Add this card to the hand.
+#
+# Official Q&A (world.digimoncard.com): its DP becomes the value it would
+# have when unaffected by the DP reduction — e.g. base 5000, reduced -2000
+# to 3000, then chosen for this card's [Main] effect → back to 5000
+# (retroactive recompute at read-time, not a one-time snapshot).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT19/Red/BT19_089.cs
+#
+# ─── DCGO crosscheck (per clause) ─────────────────────────────────────────────
+#
+# Clause 0 — color bypass. `EffectTiming.None` IgnoreColorConditionClass.
+#   CanUseCondition: `HasMatchConditionOpponentsPermanent(card, perm =>
+#       (perm.IsDigimon || perm.IsTamer) &&
+#       perm.TopCard.CardColors.Contains(White))` — active while the
+#       OPPONENT has ANY Digimon or Tamer whose printed colors include White.
+#   CardCondition: `cardSource == card` — bypass scopes to THIS card only.
+#
+# Clause 1 — [Main]. `EffectTiming.OptionSkill`. `ActivateClass`,
+#   `SetUpActivateClass(null, ActivateCoroutine, -1, false, ...)` — outer
+#   trigger is NOT optional (no "you may" on the [Main] line itself — only
+#   the color-bypass line carries "you may", and that's the Clause 0 use-req,
+#   not this clause). `SelectPermanentEffect` over
+#   `IsPermanentExistsOnOwnerBattleAreaDigimon` (own battle-area Digimon
+#   only), `maxCount: Math.Min(1, count)`, `canNoSelect: false` — a mandatory
+#   single-target select. On a pick:
+#     - `GainImmuneFromDPMinus` (until opponent turn end) — DCGO's helper
+#       installs a bare `ImmuneFromDPMinus` grant with NO controller filter
+#       (unlike BT16-055's opponent-scoped narrow-protection bundle), so it
+#       suppresses negative ChangeDp deltas from ANY source. This matches
+#       the printed text: "its DP can't be reduced" carries no "by your
+#       opponent's effects" qualifier.
+#     - `CanNotAffectedClass` installed via `UntilOpponentTurnEndEffects`
+#       whose `SkillCondition` requires
+#       `cardEffect.EffectSourceCard.Owner == card.Owner.Enemy` (opponent-
+#       controlled) AND `!IsDigimonEffect && !IsTamerEffect` — i.e. scoped
+#       strictly to opponent-controlled NON-Digimon/Tamer effect sources,
+#       which in practice means Option cards (matching printed "your
+#       opponent's Option cards"). This is a single source_kind (Option),
+#       NOT the broader 4-source bundle (Digimon+Tamer+Option+Rule) used by
+#       EX6-011/BT16-102's "isn't affected by your opponent's effects".
+#
+# Clause 2 — Security (inherited). `EffectTiming.SecuritySkill`,
+#   `SetIsSecurityEffect(true)`. `CardEffectCommons.AddThisCardToHand(card,
+#   activateClass)` — mandatory (no canNoSelect parameter on this factory).
+#
+# ─── Source-priority / faithfulness audit ─────────────────────────────────────
+#
+# - The color-bypass condition is wired through the top-level
+#   `use_requirement:` field, NOT a `flood_gate` declarative clause.
+#   `Game::materialize_declaratives_full` (game/triggers.rs) only scans
+#   battle_area / breeding / face-up security — never the hand zone — so a
+#   `flood_gate` clause's materialized `IgnoreColorRequirement` modifier
+#   would never install while this card sits in hand. The actual from-hand
+#   legality gate (`action/mask.rs` `option_use_requirement_or_color_
+#   available`, consulted identically by `game_actions/options.rs`
+#   `play_option_core`) reads `effect.option_color_requirement_bypass`,
+#   which `dsl_cards/lower_triggered.rs` populates ONLY from the card-level
+#   `use_requirement:` predicate (via `option_use_requirement_for_card` in
+#   dsl_cards/mod.rs). Since Red Card never places itself on the battlefield
+#   (no "place this card in the battle area" clause — contrast BT19-093 /
+#   BT22-099 / BT21-097, which duplicate a `flood_gate` alongside
+#   `use_requirement` because they DO become persistent field Options later),
+#   a `flood_gate` clause here would be pure dead weight. `use_requirement:`
+#   alone is the complete, behaviorally-verified encoding — precedent:
+#   EX7-074 Vortex Resonance (also a plain non-persisting Option using
+#   `use_requirement:` for the identical DCGO `IgnoreColorConditionClass`
+#   shape).
+# - `add_modifier: ImmuneFromDPMinus` (no `effect_immunity_filter` payload —
+#   `AddModifierArgs` carries no source_kind/source_controller knobs) installs
+#   with the BROAD `Any` controller scope in `Game::effective_dp`
+#   (combat/dp.rs) — suppressing negative ChangeDp deltas from ANY source,
+#   matching DCGO's unscoped `GainImmuneFromDPMinus` and the printed text's
+#   unqualified "its DP can't be reduced".
+# - `grant_effect_immunity { source_kind: option, source_controller: opponent
+#   }` alone (not the 4-source bundle) mirrors DCGO's `SkillCondition`
+#   (`!IsDigimonEffect && !IsTamerEffect`, opponent-owned) — precedent:
+#   BT25-019's identical single-source-kind narrow grant.
+# - `select_own_permanent { filter: { kind: digimon } }` (no `optional`) is
+#   mandatory by DSL default, matching DCGO's `canNoSelect: false`.
+# - `add_this_option_to_hand: {}` for the inherited Security clause mirrors
+#   the minimal "[Security] Add this card to hand" shape (precedent: BT7-107
+#   Calling From the Darkness).
+
+card: BT19-089
+name: "Red Card"
+kind: option
+color: [red]
+cost: 2
+
+use_requirement:
+  any_permanent:
+    of: opponent
+    any_of:
+      - all_of:
+          - kind: digimon
+          - color_is: white
+      - all_of:
+          - kind: tamer
+          - color_is: white
+
+effects:
+  # ─── [Main] mandatory select + DP protection + Option-effect immunity ─────
+  #
+  # "[Main] Until the end of your opponent's turn, 1 of your Digimon isn't
+  # affected by your opponent's Option cards and it can't have its DP
+  # reduced."
+  #
+  # DCGO: mandatory single-target SelectPermanentEffect over own battle-area
+  # Digimon (canNoSelect: false), then GainImmuneFromDPMinus (unscoped —
+  # blocks reduction from ANY source) + a CanNotAffectedClass scoped to
+  # opponent-owned Option-card effect sources, both until end of opponent's
+  # turn.
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] 1 of your Digimon isn't affected by opponent Option cards and its DP can't be reduced, until end of opponent's turn"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Select 1 of your Digimon to protect from opponent Option cards and DP reduction"
+      - add_modifier:
+          target: { binding: target }
+          modifier: ImmuneFromDPMinus
+          value: 1
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: { binding: target }
+          source_kind: option
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+
+  # ─── [Security] (inherited) Add this card to the hand ─────────────────────
+  #
+  # "Security Effect [Security] Add this card to the hand."
+  #
+  # DCGO: SecuritySkill, AddThisCardToHand(card) — mandatory, no
+  # canNoSelect parameter on the factory.
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security][Inherited] Add this card to the hand"
+    process:
+      - add_this_option_to_hand: {}

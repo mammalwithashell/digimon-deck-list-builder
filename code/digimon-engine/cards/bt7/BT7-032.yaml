@@ -1,0 +1,66 @@
+# BT7-032 Pulsemon — Digimon, Lv.3, Yellow, DP 2000, Cost 3.
+# Traits: Beastkin. Form: Rookie. Attribute: Vaccine.
+# Standard digivolve (official Bandai DB / cards.json evo_costs): Lv.2 Yellow / Cost 0.
+#
+# Printed card text (official bundle data/card_bundles/BT7-032.md + card image,
+# verbatim):
+#
+#   Inherited Effect
+#   [When Attacking][Once Per Turn] If you have 3 security cards, gain 2 memory.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT7/Yellow/BT7_032.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Single inherited clause (SetIsInheritedEffect(true), timing OnAllyAttack):
+#   CanUseCondition: IsExistOnBattleArea + CanTriggerOnAttack (standard [When
+#   Attacking] gate — no security-count check here).
+#   CanActivateCondition: IsExistOnBattleArea only.
+#   ActivateCoroutine: `if (card.Owner.SecurityCards.Count == 3) AddMemory(2)
+#   else RemoveUse()`. EXACT equality (== 3), not >= 3 — matches the printed
+#   text "If you have 3 security cards" (no "or more"/"at least").
+#
+# OPT semantics: DCGO's turn loop calls RegisterUseEffectThisTurn BEFORE
+# ActivateCoroutine runs, so the OPT slot is provisionally marked used; the
+# coroutine's `RemoveUse()` in the else branch UN-records that mark when the
+# count check fails. Net effect: the once-per-turn slot is truly consumed
+# only when memory is actually gained — identical to the engine's standard
+# `once_per_turn: true` + clause-level `condition:` shape (the condition
+# gates BEFORE the OPT record in effect_queue.rs, so a failed condition never
+# consumes the slot). This mirrors sibling cards BT12-002 (DemiVeemon) and
+# BT12-016 (WarGrowlmon), whose DCGO coroutines perform an internal board-
+# state check with the identical provisional-register/RemoveUse-on-fail
+# shape, both authored here with a clause-level `condition:`. See the test
+# file's docstring for the full cross-check against
+# `docs/RUST_ENGINE_API.md`'s activation-cost OPT semantics (a genuinely
+# different case that does not apply to this card).
+#
+# `security_count` uses the DSL's canonical uniform comparator (`op: eq`) —
+# there is no legacy flat `security_count_eq` field, only `_lte`/`_gte`.
+
+card: BT7-032
+name: Pulsemon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+traits: [Beastkin]
+form: Rookie
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+
+effects:
+  # ─── Inherited [When Attacking][Once Per Turn] exactly 3 security → +2 memory ─
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition:
+      security_count: { op: eq, value: 3 }
+    summary: "Inherited [When Attacking][OPT] If you have exactly 3 security cards, gain 2 memory"
+    process:
+      - gain_memory: 2

@@ -1,0 +1,319 @@
+# P-205 Insane Synthetic Monster — Option, Purple, Cost 3.
+# Traits: DM.
+#
+# Printed card text (official Bandai DB / data/card_bundles/P-205.md):
+#
+#   While you have a Digimon or Tamer with the [DM] trait on the field, you
+#   can ignore this card's color requirements.
+#   [Main] ＜Draw 2＞ (Draw 2 cards from your deck.) and trash 2 cards in
+#   your hand. Then, place this card in the battle area.
+#   [Main] ＜Delay＞ (By trashing this card after the placing turn, activate
+#   the effect below.)
+#   ・By deleting 1 of your play cost 7 or lower Digimon, you may play 1
+#   Digimon card with [Kimeramon] or [Millenniummon] in its name from your
+#   trash with the play cost reduced by 3.
+#
+# Inherited (Security):
+#   Security Effect [Security] ＜Draw 2＞ and trash 2 cards in your hand.
+#   Then, place this card in the battle area.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Purple/P_205.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 0 — `EffectTiming.None` IgnoreColorConditionClass.
+#   CanUseCondition: HasMatchConditionPermanent over OWN field —
+#       (permanent.TopCard.Owner == card.Owner) && (IsTamer || IsDigimon) &&
+#       HasDMTraits.
+#   CardCondition: cardSource == card (THIS card only — bypass scopes to
+#       P-205's own color requirement).
+#   Mirror: BT22-099 Clause 0 — identical shape with CS trait swapped for DM.
+#
+# Clause 1 — `EffectTiming.OptionSkill` (= [Main] play). DCGO calls the
+#   shared `SharedActivateCoroutine`:
+#     `CardEffectCommons.DrawAndDiscardCards(drawAmount: 2, trashAmount: 2,
+#       card: card, activateClass: activateClass)`
+#     then `CardEffectCommons.PlaceDelayOptionCards(card, activateClass)`.
+#   `SetUpActivateClass(..., -1, false, ...)` — outer trigger NOT optional
+#   (no "you may" in printed text). The trash-2 is mandatory (DCGO's
+#   DrawAndDiscardCards degrades to Math.Min(2, hand.Count) when the hand
+#   has fewer than 2 cards — matches the BT21-071 draw/trash-2 idiom).
+#
+# Clause 2 — `EffectTiming.OnDeclaration` (Delay activation). DCGO
+#   `ActivateCoroutine`:
+#     1. `DeletePeremanentAndProcessAccordingToResult(card.PermanentOfThisCard())`
+#        — the STANDARD <Delay> self-trash cost (trashing P-205 itself). This
+#        is the engine's own `kind: delay` / `trigger: delayed` machinery
+#        (`activate_delayed_option_main` fires the body then trashes the
+#        source as the activation cost) — not modelled as an explicit step.
+#     2. `DeleteOptionSuccessProcess`: `SelectPermanentEffect` over own
+#        Digimon with `HasPlayCost && BasePlayCostFromEntity <= 7`,
+#        `canNoSelect: true` — the printed "By deleting 1 of your play cost
+#        7 or lower Digimon" cost. Per the Opt-cost→Mand rule
+#        (docs/digimon-rules/keyword-semantics.md: "By X-ing" costs are
+#        optional; once paid, the effect is mandatory), this selection is
+#        declinable.
+#     3. `DeleteDigimonSuccessProcess` (only reached if the deletion
+#        succeeded): `SelectCardEffect` over trash Digimon matching
+#        `CanSelectCardCondition`, `canNoSelect: true` — the printed
+#        "you may play" payoff, independently optional from the deletion
+#        cost. `int cost = selectedTrashCard.BasePlayCostFromEntity - 3;`
+#        then `PlayPermanentCards(payCost: true, fixedCost: cost)` — a
+#        REDUCE-3 cost delta (not free, not fixed-cost).
+#
+# Clause 3 (Security, inherited) — `EffectTiming.SecuritySkill`. DCGO reuses
+#   the SAME `SharedActivateCoroutine` as Clause 1 (DrawAndDiscardCards +
+#   PlaceDelayOptionCards) — the inherited-security path that places this
+#   Option as a Delay permanent from the security-resolution context.
+#
+# ─── Source-priority audit: DCGO operator-precedence bug (printed text wins) ──
+#
+# DCGO's `CanSelectCardCondition` (P_205.cs lines 101-106):
+#
+#   cardSource.IsDigimon
+#       && cardSource.ContainsCardName("Kimeramon") || cardSource.ContainsCardName("Millenniummon")
+#       && CardEffectCommons.CanPlayAsNewPermanent(cardSource, false, activateClass);
+#
+# Because C# `&&` binds tighter than `||`, this parses as:
+#
+#   (IsDigimon && ContainsCardName("Kimeramon"))
+#     || (ContainsCardName("Millenniummon") && CanPlayAsNewPermanent(...))
+#
+# i.e. a "Millenniummon"-named card does not require `IsDigimon` to be true
+# under DCGO's literal (buggy) precedence, and a "Kimeramon"-named card does
+# not require `CanPlayAsNewPermanent`. The printed text reads "1 Digimon card
+# with [Kimeramon] or [Millenniummon] in its name from your trash" — the
+# [Digimon] kind qualifier plainly governs BOTH names (there is no sane
+# reading where a Tamer named "Millenniummon Whisperer" would qualify). Per
+# CLAUDE.md source priority ("IMPLEMENT PER PRINTED TEXT" — the brief calls
+# this out explicitly), we implement:
+#
+#   kind: digimon AND (name_contains: "Kimeramon" OR name_contains: "Millenniummon")
+#
+# — `kind: digimon` ANDed across the whole `any_of` name disjunction, closing
+# the DCGO precedence gap rather than reproducing it.
+#
+# ─── DSL precedent ─────────────────────────────────────────────────────────────
+#
+# - Clause 0 (color bypass): BT22-099 Clause 0 — `kind: flood_gate` +
+#   `modifier: IgnoreColorRequirement` + `target: { card_number_is: ... }`,
+#   gated by `any_of` over (own DM Digimon | own DM Tamer). Direct swap of
+#   CS -> DM from the BT22-099 / P-151 precedent family.
+#
+# - Clause 1 (draw 2 / trash 2 / place self): BT21-071 Clause 3 idiom — two
+#   sequential mandatory `select_hand` + `trash_from_hand_by_index` steps
+#   following `draw: { count: 2 }`. Trailing `place_self_as_delay_option: {}`
+#   follows the P-035 / BT13-110 / BT22-099 "Then, place this card in the
+#   battle area" precedent — the engine's `classify_option_subtype` auto-seats
+#   the Option as a Delay permanent once the trailing `kind: delay` clause is
+#   present, but the explicit step is retained here to mirror P-035's
+#   authoring style (belt-and-suspenders; harmless if redundant with the
+#   auto-detection path).
+#
+# - Clause 2 (Delay: delete-cost -> optional trash-play payoff): BT9-108
+#   "Eye of the Gorgon" Clause 0 idiom — `select_own_permanent` (optional:
+#   true = the printed "By X-ing" cost is declinable) -> `delete_permanent`
+#   -> `if: { condition: { binding_present: <del binding> } }` gating a
+#   SEPARATE optional `select_trash` + `play_from_trash` payoff. The
+#   `trigger: delayed` maps to `CompiledTiming::Delayed` ->
+#   `DelayTrigger::MainPhaseActivated` — the standard player-visible <Delay>
+#   activation (matches P-035 / BT13-110 / BT22-099's `trigger: delayed`,
+#   NOT the auto-firing `end_of_your_next_turn` variant used by cards whose
+#   Delay window is a scheduled future timing rather than a player-declared
+#   Main-phase activation).
+#   `play_from_trash` (non-`_free` variant) with `cost_delta: { reduce: 3 }`
+#   is the standard verb for a reduced-cost (not free) play from trash — see
+#   BT15-096 Clause 2's `play_from_hand` sibling for the identical
+#   `cost_delta: { reduce: N }` shape applied to a different origin zone.
+#
+# - Clause 3 (inherited security mirror): identical Draw-2/Trash-2/place-self
+#   body to Clause 1, under `scope: inherited` + `when: on_security` — matches
+#   DCGO's shared `SharedActivateCoroutine` reuse between [Main] and
+#   [Security].
+#
+# ─── FROM-HAND color-bypass gap closure (top-level use_requirement) ──────────
+#
+# The `kind: flood_gate` Clause 0 below only installs
+# `ModifierType::IgnoreColorRequirement` onto matching BATTLE-AREA
+# permanents (`lower_flood_gate.rs` scans `battle_area` only) — it can never
+# apply to P-205 itself while P-205 is sitting in HAND, which is precisely
+# when the color-requirement check actually runs
+# (`option_use_requirement_or_color_available`, consulted from
+# `play_option_core` at play time). BT22-099's own YAML has this same gap
+# undocumented as a card-level fix (its flood_gate is real but leaves the
+# from-hand path unclosed); P-206 closes the equivalent gap via a top-level
+# `use_requirement:` predicate, which IS consulted at play time via
+# `option_color_requirement_bypass_condition` (`dsl_cards/lower_triggered.rs`).
+# Unlike P-206 (unconditional `all_turns: true`), P-205's bypass is
+# CONDITIONAL on the board state per printed text — so `use_requirement:`
+# mirrors Clause 0's `active_when` predicate exactly (own DM Digimon OR own
+# DM Tamer on the field). Both the `use_requirement:` (from-hand play-time
+# gate) and the `flood_gate` clause (battle-area/face-up scope, e.g. once
+# P-205 is already a Delay permanent on the field) are retained — they cover
+# non-overlapping zones and neither alone is fully faithful.
+
+card: P-205
+name: "Insane Synthetic Monster"
+kind: option
+color: [purple]
+cost: 3
+traits: [DM]
+
+# From-hand color-requirement bypass — conditional on board state (own DM
+# Digimon or Tamer). Consulted by `option_color_requirement_bypass_condition`
+# at Option-play time; the `kind: flood_gate` clause below covers the
+# separate battle-area/face-up scope. Mirrors Clause 0's active_when exactly.
+use_requirement:
+  any_of:
+    - any_permanent:
+        of: you
+        kind: digimon
+        trait_has: DM
+    - any_permanent:
+        of: you
+        kind: tamer
+        trait_has: DM
+
+effects:
+  # ─── Clause 0: Color bypass (conditional IgnoreColorRequirement) ──────────
+  #
+  # "While you have a Digimon or Tamer with the [DM] trait on the field, you
+  # can ignore this card's color requirements."
+  #
+  # DCGO: IgnoreColorConditionClass + CardCondition (cardSource == card)
+  #   -> bypass restricted to THIS card. Mirror of BT22-099 Clause 0 — same
+  #   flood_gate + IgnoreColorRequirement + any_of shape; CS swapped for DM.
+  - kind: flood_gate
+    active_when:
+      any_of:
+        - any_permanent:
+            of: you
+            kind: digimon
+            trait_has: DM
+        - any_permanent:
+            of: you
+            kind: tamer
+            trait_has: DM
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "P-205" }
+    summary: "While you have a DM Digimon or Tamer, ignore color requirements for this card"
+
+  # ─── Clause 1: [Main] Draw 2, trash 2, place self ─────────────────────────
+  #
+  # Printed: "[Main] ＜Draw 2＞ and trash 2 cards in your hand. Then, place
+  # this card in the battle area."
+  #
+  # Outer trigger is NOT optional (DCGO `SetUpActivateClass(..., false,
+  # ...)`; no "you may" in printed text). The trash-2 is two sequential
+  # mandatory select_hand + trash_from_hand_by_index steps (BT21-071 Clause
+  # 3 idiom) — each degrades to a no-op when the hand pool is exhausted,
+  # matching DCGO's Math.Min(2, hand.Count) discard-count behavior.
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Draw 2; trash 2 cards from hand; place self as Delay"
+    process:
+      - draw: { of: you, count: 2 }
+      - select_hand:
+          of: you
+          bind_as: trash_a
+          filter: {}
+          prompt: "Trash 1 of 2 cards from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_a }
+      - select_hand:
+          of: you
+          bind_as: trash_b
+          filter: {}
+          prompt: "Trash 2 of 2 cards from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_b }
+      # "Then, place this card in the battle area."
+      - place_self_as_delay_option: {}
+
+  # ─── Clause 2: [Main] <Delay> — delete cost -> optional trash-play payoff ─
+  #
+  # Printed: "[Main] ＜Delay＞ (By trashing this card after the placing turn,
+  # activate the effect below.) ・By deleting 1 of your play cost 7 or lower
+  # Digimon, you may play 1 Digimon card with [Kimeramon] or [Millenniummon]
+  # in its name from your trash with the play cost reduced by 3."
+  #
+  # trigger: delayed -> CompiledTiming::Delayed -> DelayTrigger::
+  # MainPhaseActivated. Standard player-declared <Delay> (RULES_CONTEXT
+  # 16-16): the controller trashes the parked Option on a later Main phase
+  # to activate the body; the trash-as-activation-cost is handled by the
+  # engine's `activate_delayed_option_main`, not an explicit step here.
+  #
+  # Body: optional deletion cost ("By deleting..." — Opt-cost->Mand per
+  # docs/digimon-rules/keyword-semantics.md, matches DCGO's
+  # SelectPermanentEffect canNoSelect: true) gating a SEPARATE optional
+  # trash-play payoff ("you may play..." — also independently declinable
+  # per DCGO's SelectCardEffect canNoSelect: true).
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> By deleting 1 own play-cost<=7 Digimon, may play 1 Kimeramon/Millenniummon-named Digimon from trash, cost -3"
+    process:
+      # Cost: "By deleting 1 of your play cost 7 or lower Digimon" — optional
+      # (Opt-cost->Mand). DCGO CanSelectPermanentCondition: IsPermanentExists
+      # OnOwnerBattleAreaDigimon && HasPlayCost && BasePlayCostFromEntity <= 7.
+      - select_own_permanent:
+          bind_as: del_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - play_cost_lte: 7
+          prompt: "By deleting 1 of your play cost 7 or lower Digimon..."
+      - delete_permanent: { target: del_target }
+      # Payoff only reachable if the deletion cost was actually paid (DCGO's
+      # DeleteOptionSuccessProcess only runs on delete success).
+      - if:
+          condition: { binding_present: del_target }
+          then:
+            # "you may play 1 Digimon card with [Kimeramon] or
+            # [Millenniummon] in its name from your trash" — independently
+            # optional. kind: digimon gates BOTH name branches (closes the
+            # DCGO C# operator-precedence bug — see header note; printed
+            # text wins).
+            - select_trash:
+                of: you
+                bind_as: revived
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - name_contains: "Kimeramon"
+                        - name_contains: "Millenniummon"
+                prompt: "You may play 1 Digimon card with [Kimeramon] or [Millenniummon] in its name from your trash (cost -3)"
+            # "with the play cost reduced by 3" — a REDUCE delta, not free.
+            - play_from_trash:
+                of: you
+                hand_index: revived
+                cost_delta: { reduce: 3 }
+
+  # ─── Clause 3: [Security] (inherited) — mirrors Clause 1 ──────────────────
+  #
+  # Printed inherited (security): "Security Effect [Security] ＜Draw 2＞ and
+  # trash 2 cards in your hand. Then, place this card in the battle area."
+  #
+  # DCGO: reuses the SAME `SharedActivateCoroutine` as Clause 1
+  # (DrawAndDiscardCards + PlaceDelayOptionCards) under
+  # `EffectTiming.SecuritySkill`. Mandatory (no canNoSelect on the DCGO
+  # activate class; [Security] effects are not opt-out per RULES_CONTEXT §16).
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security][Inherited] Draw 2; trash 2 cards from hand; place self as Delay"
+    process:
+      - draw: { of: you, count: 2 }
+      - select_hand:
+          of: you
+          bind_as: sec_trash_a
+          filter: {}
+          prompt: "Trash 1 of 2 cards from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: sec_trash_a }
+      - select_hand:
+          of: you
+          bind_as: sec_trash_b
+          filter: {}
+          prompt: "Trash 2 of 2 cards from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: sec_trash_b }
+      - place_self_as_delay_option: {}

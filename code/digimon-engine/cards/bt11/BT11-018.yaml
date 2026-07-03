@@ -1,0 +1,152 @@
+# BT11-018 Shoutmon DX — Digimon, Lv.6, Red/Blue, DP 12000, Cost 13.
+# Traits: Composite / Xros Heart / Blue Flare. Attribute: Data.
+# Standard digivolve (cards.json evo_costs): Lv.5 Red / Cost 4.
+#
+# Printed text (data/card_bundles/BT11-018.md — official Bandai DB, verbatim):
+#
+#   The name of this card/Digimon is also treated as [OmniShoutmon] and
+#   [ZeigGreymon]. ＜Material Save 2＞ (When this Digimon would be deleted,
+#   you may place 2 cards in this Digimon's DigiXros requirements from this
+#   Digimon's digivolution cards under 1 of your Tamers.)
+#   [On Play] Delete 1 of your opponent's Digimon with 8000 DP or less. 1 of
+#   your opponent's Digimon can't attack until the end of their turn.
+#   [End of Attack] By deleting this Digimon, gain 1 memory.
+#
+# Special Play Condition:
+#   DigiXros -3: [OmniShoutmon] x [ZeigGreymon] When you would play this
+#   card, you may place specified cards from your hand/battle area under
+#   it. Each placed card reduces the play cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT11/Red/BT11_018.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Name Rule — EffectTiming.None: ChangeCardNamesClass unconditionally adds
+#   "OmniShoutmon" and "ZeigGreymon" to this card's names.
+#   → top-level `also_treated_as: [OmniShoutmon, ZeigGreymon]` (BT23-077 /
+#     AD1-021 idiom).
+#
+# Material Save — EffectTiming.WhenPermanentWouldBeDeleted:
+#   CardEffectFactory.MaterialSaveEffect(card, materialSaveCount: 2).
+#   → `kind: grant_keyword, keyword: MaterialSave, value: 2` (BT10-009 /
+#     BT10-013 idiom) — the keyword parser installs the would-be-deleted
+#     replacement automatically.
+#
+# Clause 1 — EffectTiming.OnEnterFieldAnyone [On Play]:
+#   SetUpActivateClass(..., -1, false, ...) → isOptional=false (MANDATORY
+#   top-level; DCGO CanUseCondition = CanTriggerOnPlay). Two INDEPENDENT
+#   sub-pools inside ActivateCoroutine, each its own SelectPermanentEffect
+#   with canNoSelect:false (mandatory when a legal target exists in THAT
+#   pool):
+#     (a) CanSelectPermanentCondition: opponent battle-area Digimon with
+#         `permanent.DP <= 8000` → mode: Destroy (delete).
+#     (b) CanSelectPermanentCondition1: ANY opponent battle-area Digimon
+#         (no DP filter) → custom select → GainCanNotAttack(...,
+#         EffectDuration.UntilOpponentTurnEnd).
+#   Pool (b) fires regardless of whether pool (a) found/resolved a target —
+#   they are two separate `if <pool exists> then <mandatory select>` bodies
+#   in sequence, matching the BT25-071 / BT12-028 idiom for `CannotAttack` +
+#   `expiry: end_of_opponents_turn`.
+#   → on_play, mandatory (no `optional:` flag), two `if` blocks each gated
+#     by `any_permanent` existence and each containing a mandatory
+#     `select_opponent_permanent` + the respective mutation.
+#
+# Clause 2 — EffectTiming.OnEndAttack [End of Attack]:
+#   SetUpActivateClass(..., -1, true, ...) → isOptional=true. CanActivate
+#   Condition gates on `card.PermanentOfThisCard().CanBeDestroyedBySkill`.
+#   Body: DeletePeremanentAndProcessAccordingToResult(self) →
+#   successProcess: AddMemory(+1). "By deleting this Digimon, gain 1
+#   memory" is the printed may-cost-for-effect shape (BT21-021 idiom):
+#   `optional: true` clause; `delete_permanent: { target: source }` then
+#   `gain_memory: 1` — both only run if the player accepts (PASS available).
+#   → end_of_attack, optional: true, process: [delete_permanent(source),
+#     gain_memory(1)].
+#
+# DigiXros -3 — EffectTiming.None (2nd block): AddDigiXrosConditionClass →
+#   DigiXrosCondition(elements: [OmniShoutmon(count 1), ZeigGreymon(count
+#   1)], null, 3) — trailing ctor arg 3 = reduceCostPerCard (PER-MATERIAL
+#   cost delta), matching JSON `digixros_costs[0].reduce_cost_per_card: 3`
+#   and `max_materials: 2` (one of each named material, source_zones:
+#   hand/field). → `alt_paths: [{ kind: digixros, materials: [
+#   {filter:{name_contains: OmniShoutmon}, zones:[hand,battle_area],
+#   cost_delta:-3}, {filter:{name_contains: ZeigGreymon},
+#   zones:[hand,battle_area], cost_delta:-3} ], cost: 13 }]` (EX10-031
+#   idiom: name_contains material slots with per-slot cost_delta).
+
+card: BT11-018
+name: "Shoutmon DX"
+kind: digimon
+level: 6
+color: [red, blue]
+cost: 13
+dp: 12000
+traits: [Composite, Xros Heart, Blue Flare]
+attribute: Data
+
+also_treated_as: [OmniShoutmon, ZeigGreymon]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digixros
+    materials:
+      - filter: { name_contains: "OmniShoutmon" }
+        zones: [hand, battle_area]
+        cost_delta: -3
+      - filter: { name_contains: "ZeigGreymon" }
+        zones: [hand, battle_area]
+        cost_delta: -3
+    cost: 13
+
+effects:
+  - kind: grant_keyword
+    keyword: MaterialSave
+    value: 2
+
+  # ─── [On Play] two independent mandatory sub-pools ─────────────────────────
+  - when: on_play
+    summary: "[On Play] Delete 1 opponent Digimon with 8000 DP or less. 1 opponent Digimon can't attack until end of their turn"
+    process:
+      # (a) Delete pool: opponent Digimon with DP <= 8000.
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+              dp_lte: 8000
+          then:
+            - select_opponent_permanent:
+                bind_as: delete_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 8000
+                prompt: "Delete 1 of your opponent's Digimon with 8000 DP or less"
+            - delete_permanent: { target: delete_target }
+      # (b) Cannot-attack pool: ANY opponent Digimon (independent of pool a).
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - select_opponent_permanent:
+                bind_as: locked
+                filter: { kind: digimon }
+                prompt: "1 of your opponent's Digimon can't attack until the end of their turn"
+            - add_modifier:
+                target: locked
+                modifier: CannotAttack
+                value: 1
+                expiry: end_of_opponents_turn
+
+  # ─── [End of Attack] optional self-delete for memory ───────────────────────
+  - when: end_of_attack
+    optional: true
+    summary: "[End of Attack] By deleting this Digimon, gain 1 memory"
+    process:
+      - delete_permanent: { target: source }
+      - gain_memory: 1

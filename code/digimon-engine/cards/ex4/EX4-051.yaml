@@ -1,0 +1,191 @@
+# EX4-051 BlitzGreymon — Digimon, Lv.6, Black/Red, DP 12000, Cost 12.
+# Traits: Cyborg. Attribute: Virus.
+#
+# Printed card text (official Bandai DB — data/card_bundles/EX4-051.md,
+# verbatim):
+#
+#   [When Digivolving] Activate 1 of the effects below.
+#   ・ ＜De-Digivolve 1＞ 3 of your opponent's Digimon.
+#   ・ 1 of your other Digimon digivolves into a level 6 or lower Digimon
+#     card with [Garurumon] in its name in your hand without paying the
+#     cost.
+#   ・ This Digimon and one of your other Digimon may DNA digivolve into a
+#     Digimon card in your hand for the cost.
+#
+#   Inherited Effect [When Attacking][Once Per Turn]
+#   If this Digimon has [Omnimon] in its name, trash the top card of your
+#   opponent's security stack.
+#
+# Digivolve (official Bandai DB — authoritative for digivolution data):
+#   Standard: Black Lv.5 / cost 4, Red Lv.5 / cost 4 (dual-color circles,
+#   both print cost 4).
+#   Special (xros_req): [Digivolve] [MetalGreymon]: Cost 3.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX4/Black/EX4_051.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# EffectTiming.None: AddSelfDigivolutionRequirementStaticEffect with
+#   PermanentCondition `TopCard.CardNames.Contains("MetalGreymon")`,
+#   digivolutionCost: 3, ignoreDigivolutionRequirement: false → authored as
+#   the `kind: digivolve` alt-path with `name_contains: MetalGreymon`,
+#   `cost: 3`.
+#
+# EffectTiming.OnEnterFieldAnyone (gated CanTriggerWhenDigivolving):
+#   ActivateClass → SetIntSelection with 3 entries ("De-Digivolve" / "Your
+#   other 1 Digimon digivolves" / "DNA Digivolution"). Per-branch bodies:
+#
+#   case 0 — SelectPermanentEffect over
+#     IsPermanentExistsOnOpponentBattleAreaDigimon, maxCount: Min(3,
+#     candidates), canNoSelect: false (mandatory, no canEndNotMax override
+#     → fills to the cap). Then IDegeneration(permanent, 1, ...) per picked
+#     permanent (De-Digivolve 1 each). Authored via
+#     `select_count_capped_multi { clamp_to_available: true, max: 3 }` +
+#     `per_selected` + `de_digivolve { amount: 1, stop_at_level: 3 }` (the
+#     Lv.3 floor is the universal De-Digivolve rule, 16-11).
+#
+#   case 1 — SelectPermanentEffect over own OTHER battle-area Digimon that
+#     have a matching hand card (`CanPlayCardTargetFrame`), maxCount:
+#     Min(1, candidates), canNoSelect: true. Then
+#     DigivolveIntoHandOrTrashCard(payCost: false, ...) filtered by
+#     `IsDigimon && HasGarurumonName && Level <= 6 && HasLevel`. Authored
+#     via `select_own_permanent { other: true }` + `select_hand {
+#     level_lte: 6, name_contains: "Garurumon" }` +
+#     `effect_initiated_digivolve { cost: 0, ignore_requirements: true }`
+#     (free, ignoring digivolution requirements — matches "without paying
+#     the cost").
+#
+#   case 2 — gated on CanSelectCardCondition1 (own Digimon in hand that
+#     CanPlayJogress(true) against this permanent — i.e. a legal DNA
+#     target), then DNADigivolvePermanentsIntoHandOrTrashCard(payCost:
+#     true, ..., permanentConditions: [perm == this permanent]) — this
+#     Digimon is a FIXED anchor material; the other material is chosen from
+#     own field. `payCost: true` pays the target's printed DNA cost.
+#     Authored via `may_dna_digivolve_now` with the default `anchor:
+#     source` (this permanent) and `ignore_requirements: false` — the verb
+#     restricts the partner to eligible own-Digimon-other-than-anchor and
+#     restricts/charges the hand target by its real printed DNA
+#     requirements against {anchor, partner}, matching DCGO's
+#     requirement-checked + cost-paying path.
+#
+# EffectTiming.OnAllyAttack (isInheritedEffect: true,
+#   SetHashString("TrashSecurity_EX4_051")): gated on
+#   `card.PermanentOfThisCard().TopCard.ContainsCardName("Omnimon")`, then
+#   IDestroySecurity(opp, 1, fromTop: true). Authored identically to
+#   BT17-015's inherited clause (`source_name_contains: "Omnimon"` +
+#   `trash_top_security`).
+#
+# ─── Faithfulness note — DSL-GAP shared with BT17-015 ────────────────────────
+#
+# `source_name_contains` is the same predicate BT17-015's inherited clause
+# uses (G-DSL-SOURCE-NAME-CONTAINS, docs cross-referenced in bt17_015.rs)
+# and IS evaluated correctly for triggered-clause `condition:` blocks (see
+# bt17_015.rs's positive+negative test pair, which passes). No new gap here.
+
+card: EX4-051
+name: BlitzGreymon
+kind: digimon
+level: 6
+color: [black, red]
+cost: 12
+dp: 12000
+traits: [Cyborg]
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+
+  - kind: digivolve
+    from: { name_contains: "MetalGreymon" }
+    cost: 3
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Choose 1: De-Digivolve 1 up to 3 opp Digimon / free-digivolve another Digimon into a Lv6-or-lower [Garurumon] hand card / DNA digivolve this + another Digimon into a hand card (paying the cost)"
+    process:
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "De-Digivolve 1, 3 of your opponent's Digimon"
+            - "1 of your other Digimon digivolves into a [Garurumon] card (free)"
+            - "This Digimon and 1 other Digimon may DNA digivolve"
+          prompt: "Choose BlitzGreymon's effect"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - select_count_capped_multi:
+                of: opponent
+                zone: battle_area
+                max: 3
+                clamp_to_available: true
+                filter: { kind: digimon }
+                bind_as: dd_targets
+                prompt: "De-Digivolve 1, up to 3 of your opponent's Digimon"
+            - per_selected:
+                selection: dd_targets
+                bind_as: dd_target
+                body:
+                  - de_digivolve:
+                      target: dd_target
+                      amount: 1
+                      stop_at_level: 3
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - select_own_permanent:
+                bind_as: evo_base
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - other: true
+                prompt: "Choose 1 of your other Digimon to digivolve"
+                # DCGO EX4_051.cs:181 `canNoSelect: true` — the permanent pick
+                # itself is declinable even though the printed sentence has no
+                # explicit "may" (source priority: DCGO is the tiebreaker for
+                # this optionality nuance the printed grammar doesn't pin
+                # down). Default `continue_on_decline: false` means declining
+                # drops the rest of the branch (no select_hand / digivolve) —
+                # matches DCGO's early-return on a null selectedPermanent.
+                optional: true
+            - select_hand:
+                of: you
+                bind_as: evo_card
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 6
+                    - name_contains: "Garurumon"
+                prompt: "Choose a level 6 or lower [Garurumon] card in your hand"
+            - effect_initiated_digivolve:
+                target: evo_base
+                from_hand: evo_card
+                cost: 0
+                ignore_requirements: true
+      - if:
+          condition: { equals: [branch, 2] }
+          then:
+            - may_dna_digivolve_now:
+                partner_filter:
+                  all_of:
+                    - of: you
+                    - kind: digimon
+                target_filter:
+                  all_of:
+                    - of: you
+                    - kind: digimon
+                ignore_requirements: false
+                optional: true
+                prompt: "Choose 1 other Digimon to DNA digivolve with"
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    condition: { source_name_contains: "Omnimon" }
+    summary: "[Inherited][When Attacking][Once Per Turn] If this Digimon has [Omnimon] in its name, trash opponent's top security"
+    process:
+      - trash_top_security: { of: opponent }

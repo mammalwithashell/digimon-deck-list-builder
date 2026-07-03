@@ -1,0 +1,250 @@
+# BT24-097 Soul Fear — Option, Purple, Cost 5, Traits: TS.
+#
+# Printed card text (code/digimon-engine/cards/bt24/BT24-097.json — authoritative):
+#
+#   effect_description_eng:
+#     "While you have an [TS] trait Digimon or Tamer on the field, you can
+#     ignore this card's color requirements.
+#     [Security] Activate this card's [Main] effects.
+#     [Main] Delete 1 of your opponent's level 6 or higher Digimon. Then, you
+#     may link this card to 1 of your Digimon on the field without paying the
+#     cost."
+#
+#   inherited_effect_description_eng:
+#     "Link Requirements [Link] [TS] trait: Cost 3
+#     (Plug this card from the hand or battle area sideways into the
+#     specified Digimon in the battle area.)"
+#
+#   Link box (card image — not present in effect_description_eng, mirrors
+#   BT21-071/BT21-073/BT24-067/ST22-12's "DCGO handles link DP bonuses
+#   globally, not per-card" pattern):
+#     Link DP +2000
+#     [When Attacking][Once Per Turn] Delete 1 of your opponent's level 5 or
+#     lower Digimon.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT24/Purple/BT24_097.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# DCGO registers SIX clause builders:
+#   (1) `EffectTiming.None` → IgnoreColorConditionClass — CanUseCondition:
+#       owner has a Tamer-or-Digimon permanent with HasTSTraits; CardCondition:
+#       cardSource == card (only THIS card's color requirement bypassed).
+#       → Clause 1/2 below (use_requirement + face-up flood_gate), mirrors the
+#       BT24-091/BT24-095 TS-ignore-color idiom (same set, same trait).
+#   (2) `EffectTiming.None` → AddSelfLinkConditionStaticEffect
+#       (permanentCondition: targetPermanent.IsDigimon && HasTSTraits,
+#       linkCost: 3). → Clause 6 below — the inherited Link Requirements.
+#   (3) `EffectTiming.OnDeclaration` → LinkEffect — generic Link play mode
+#       declaration (the Link-Requirements play path; no separate clause).
+#   (4) `EffectTiming.SecuritySkill` → AddActivateMainOptionSecurityEffect —
+#       "[Security] Activate this card's [Main] effects." → Clause 4 below,
+#       mirrors the Main body (BT24-091/BT24-095 idiom: scope: inherited,
+#       when: on_security).
+#   (5) `EffectTiming.OptionSkill` → ActivateClass — the Standard [Main] play
+#       mode's body. Two sequential SelectPermanentEffect calls:
+#         a. CanSelectTargetCondition: opp Digimon, HasLevel, Level >= 6.
+#            maxCount Min(1, candidates), canNoSelect: false — MANDATORY,
+#            gated on `HasMatchConditionPermanent` (silently skips when no
+#            legal target exists). Mode: Destroy.
+#         b. CanSelectPermanentCondition: own Digimon eligible per
+#            `card.CanLinkToTargetPermanent` (the link condition from (2)).
+#            maxCount: 1, canNoSelect: true — OPTIONAL. Mode: Custom
+#            (AddLinkCard, no cost — "without paying the cost").
+#       → Clause 3 below (main_from_hand: mandatory delete + optional free
+#       link).
+#   (6) `EffectTiming.OnAllyAttack` → ActivateClass, `SetIsLinkedEffect(true)`,
+#       `SetHashString("WA_BT24-097")`, count: 1 (`[Once Per Turn]`).
+#       CanActivateCondition: `IsExistOnBattleAreaDigimon(card)` (the HOST
+#       Digimon is still on the field) `&& HasMatchConditionOpponentsPermanent`
+#       (opp Digimon, Level <= 5). CanSelectTargetCondition: opp Digimon,
+#       HasLevel, Level <= 5. maxCount Min(1, candidates), canNoSelect: false
+#       — MANDATORY (gated on candidate existence). Mode: Destroy.
+#       `SetIsLinkedEffect(true)` means this clause fires attributed to the
+#       HOST Digimon's own attack (Rust engine: `.linked()` builder flag —
+#       "the effect's timing is preserved... fires at the host's [timing]",
+#       `effect.rs::EffectBuilder::linked` docstring). The dispatch path:
+#       `combat/mod.rs::fire_on_attack` calls
+#       `enqueue_triggered(WhenAttacking, TriggerSource::Permanent(handle))`
+#       for the ATTACKING permanent, which calls
+#       `effect_queue.rs::enqueue_from_permanent(WhenAttacking, handle, ...)`
+#       — that function scans BOTH the attacker's own top-card effects AND
+#       the attacker's `linked_cards` for `.linked()` effects at the SAME
+#       timing. So `scope: linked, when: when_attacking` on BT24-097 fires
+#       exactly when the Digimon it's linked to (the host) attacks — the
+#       faithful DSL rendering of DCGO's `OnAllyAttack` + `SetIsLinkedEffect
+#       (true)` combination. → Clause 5 below.
+#
+# Link DP +2000 (card-image link box, not a DCGO CardEffect region — DCGO
+# handles link DP bonuses through a global link system rather than per-card
+# code, per the ST22-12/BT21-071/BT21-073/BT24-067 precedent) → Clause 7
+# below: scope: linked, kind: aura, target: {}, dp_modifier: 2000.
+#
+# ─── Dual-mode Plug-In Option ────────────────────────────────────────────────
+#
+# Like ST22-08/BT24-091/BT24-095, Soul Fear carries BOTH a Standard [Main]
+# body (Clause 3, a `when: main_from_hand` triggered clause) AND a
+# `kind: link_requirement` clause (Clause 6, the inherited Link Requirements
+# — TS trait, cost 3). `classify_option_modes` treats this as dual-mode:
+# playing it from hand surfaces a mode-select prompt ("Play as [Main]" vs
+# "Plug in via Link Requirements"). Each branch charges its own cost (5 vs 3)
+# and routes to its own disposal path.
+#
+# ─── Level-band split between Main and the linked ESS ───────────────────────
+#
+# Main deletes an opponent Digimon Level >= 6 (`level_gte: 6`); the linked
+# [When Attacking] ESS deletes an opponent Digimon Level <= 5 (`level_lte:
+# 5`) — these two effect sites are mutually exclusive by level band, matching
+# DCGO's independent per-clause CanSelectTargetCondition checks.
+
+card: BT24-097
+name: Soul Fear
+kind: option
+color: [purple]
+cost: 5
+traits: [TS]
+
+# ─── Clause 1 — conditional FROM-HAND color bypass: "While you have a [TS]
+#     trait Digimon or Tamer" ────────────────────────────────────────────────
+# `any_field_permanent { of: you, ... }` is true exactly while the controller
+# has a TS-trait Digimon or Tamer on the field. The action mask consults this
+# as the Option-use requirement, bypassing the purple color requirement.
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    any_of:
+      - all_of:
+          - kind: digimon
+          - trait_has: TS
+      - all_of:
+          - kind: tamer
+          - trait_has: TS
+
+effects:
+  # ─── Clause 2 — field-side color bypass (flood_gate) ────────────────────────
+  # Installs the IgnoreColorRequirement modifier on BT24-097 while it is a
+  # face-up permanent and a TS Digimon/Tamer is on the controller's field.
+  # Card-scoped via `target: { card_number_is: "BT24-097" }` — mirrors DCGO
+  # IgnoreColorConditionClass(cardCondition: cardSource == card).
+  - kind: flood_gate
+    active_when:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        any_of:
+          - all_of:
+              - kind: digimon
+              - trait_has: TS
+          - all_of:
+              - kind: tamer
+              - trait_has: TS
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT24-097" }
+    summary: "While you have a [TS] trait Digimon or Tamer, ignore this card's color requirements"
+
+  # ─── Clause 3 — [Main] mandatory delete (Lv6+), then optional free link ────
+  # Printed: "[Main] Delete 1 of your opponent's level 6 or higher Digimon.
+  # Then, you may link this card to 1 of your Digimon on the field without
+  # paying the cost."
+  # The delete is mandatory (DCGO canNoSelect: false); the select step itself
+  # silently skips when no Lv6+ opponent Digimon exists (DCGO
+  # HasMatchConditionPermanent gate). The free link is optional (DCGO
+  # canNoSelect: true) and free (DCGO AddLinkCard with no cost — "without
+  # paying the cost"). `filter: { kind: digimon, trait_has: TS }` is the Link
+  # Requirements' TS-trait host constraint (Clause 6) — it governs every link
+  # of this Plug-In, including this free [Main] link.
+  - when: main_from_hand
+    summary: "[Main] Delete 1 of your opponent's level 6 or higher Digimon; then you may link this card to 1 of your Digimon free"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_gte: 6
+          prompt: "Delete 1 of your opponent's level 6 or higher Digimon"
+      - delete_permanent: { target: victim }
+      - link_to_own_digimon:
+          optional: true
+          free: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TS
+
+  # ─── Clause 4 — Inherited [Security] Activate [Main] effects ────────────────
+  # Printed: "[Security] Activate this card's [Main] effects."
+  # DCGO: AddActivateMainOptionSecurityEffect — the security trigger re-runs
+  # the same Main process (mandatory delete, then optional free link).
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Activate [Main] effects: delete 1 opponent's level 6 or higher Digimon; then you may link this card free"
+    process:
+      - select_opponent_permanent:
+          bind_as: sec_victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_gte: 6
+          prompt: "Delete 1 of your opponent's level 6 or higher Digimon"
+      - delete_permanent: { target: sec_victim }
+      - link_to_own_digimon:
+          optional: true
+          free: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TS
+
+  # ─── Clause 5 — Link ESS: [When Attacking][Once Per Turn] delete Lv5- ──────
+  # Printed (link box): "[When Attacking][Once Per Turn] Delete 1 of your
+  # opponent's level 5 or lower Digimon."
+  # DCGO: EffectTiming.OnAllyAttack, SetIsLinkedEffect(true),
+  # SetHashString("WA_BT24-097"), count: 1. Mandatory delete (canNoSelect:
+  # false), gated on candidate existence. `scope: linked` + `when:
+  # when_attacking` fires attributed to the HOST's own attack (see the
+  # DCGO-crosscheck header note on `.linked()` + `enqueue_from_permanent`'s
+  # linked-card scan at WhenAttacking dispatch).
+  - scope: linked
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][Once Per Turn] Delete 1 of your opponent's level 5 or lower Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: wa_victim
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+          prompt: "Delete 1 of your opponent's level 5 or lower Digimon"
+      - delete_permanent: { target: wa_victim }
+
+  # ─── Clause 6 — Link Requirements [Link] [TS] trait: Cost 3 ─────────────────
+  # Printed (inherited): "Link Requirements [Link] [TS] trait: Cost 3 (Plug
+  # this card from the hand or battle area sideways into the specified
+  # Digimon in the battle area.)"
+  # `kind: link_requirement` with `cost: 3` and `filter: { kind: digimon,
+  # trait_has: TS }`. Together with Clause 3's [Main] body this makes
+  # BT24-097 dual-mode (ST22-08/BT24-091/BT24-095 idiom): the mode-select
+  # prompt offers "Play as a [Main] Option" (Cost 5) vs "Plug in via Link
+  # Requirements (Cost 3)".
+  - kind: link_requirement
+    scope: inherited
+    cost: 3
+    filter:
+      kind: digimon
+      trait_has: TS
+    summary: "[Link] [TS] trait: Cost 3"
+
+  # ─── Clause 7 — Link box: +2000 DP aura ─────────────────────────────────────
+  # Printed in the link box (card image): "Link DP +2000". DCGO handles link
+  # DP bonuses through a global link system rather than per-card code (absent
+  # from BT24_097.cs by design — same as ST22-12/BT21-071/BT21-073/BT24-067).
+  # Modeled as a scope:linked self-aura (target: {} = the host permanent).
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 2000
+    summary: "[Link] +2000 DP to the linked Digimon (host)"

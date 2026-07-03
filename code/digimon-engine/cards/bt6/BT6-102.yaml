@@ -1,0 +1,89 @@
+# BT6-102 Tropical Venom — Option, Green, Cost 0.
+# Traits: (none printed).
+#
+# Printed card text (card image / per-card JSON, authoritative):
+#
+#   [Main] 1 of your opponent's Digimon gains "[On Deletion] Lose 2 memory"
+#   until the end of their next turn.
+#
+# Security Effect: — (none; the card back's Security Effect box is blank per
+# the card image, and `security_effect_description_eng` is empty).
+#
+# Official Q&A (data/card_bundles/BT6-102.md):
+#   "Your opponent loses 2 memory, which means you gain 2 memory. If you use
+#   this card to give '[On Deletion] Lose 2 memory' to an opponent's Digimon,
+#   you gain 2 memory when that Digimon is deleted."
+#
+# ─── DCGO crosscheck (DCGO/Assets/Scripts/CardEffect/BT6/Green/BT6_102.cs) ───
+#
+# `EffectTiming.OptionSkill` (= [Main]):
+#   - Outer `ActivateClass` has no `canNoSelect` — mandatory activation
+#     (`CardEffectCommons.CanTriggerOptionMainEffect`).
+#   - Gated on `CardEffectCommons.HasMatchConditionPermanent` — an eligible
+#     opponent Digimon must exist before the picker installs.
+#   - `SelectPermanentEffect`, `canNoSelect: false`, `maxCount: 1`,
+#     `Mode.Custom`, over opponent battle-area Digimon — ONE mandatory pick.
+#   - On pick: `CardEffectCommons.AddEffectToPermanent(targetPermanent:
+#     selectedPermanent, effectDuration: EffectDuration.UntilOpponentTurnEnd,
+#     card: card, cardEffect: activateClass1, timing:
+#     EffectTiming.OnDestroyedAnyone)` — installs a granted [On Deletion]
+#     clause on the selected permanent, expiring at the end of the carrier's
+#     controller's (the opponent's) next turn.
+#   - Granted body gate: `CanActivateCondition1` requires
+#     `IsTopCardInTrashOnDeletion` — fires AFTER the carrier's top card has
+#     moved to trash, matching the engine's post-trash OnDeletion contract
+#     (rule 25 / `Game::delete_permanents_batch`).
+#   - Granted body: `_topCard.Owner.AddMemory(-2, activateClass1)` —
+#     `_topCard.Owner` is the CARRIER's controller (the opponent), so the
+#     opponent loses 2 memory (== the caster gains 2 memory per the Official
+#     Q&A above).
+#
+# ─── Modeling ─────────────────────────────────────────────────────────────
+#
+# `select_opponent_permanent` (mandatory — no `optional: true`; silently
+# no-ops with an empty candidate set, BT23-047 precedent) binds the single
+# chosen opponent Digimon, then `grant_triggered_effect` installs the
+# `[On Deletion] Lose 2 memory` clause on it with `expiry:
+# end_of_opponents_next_turn` ("until the end of their next turn").
+#
+# This is the BT3-109 idiom (`select_own_permanent` → `grant_triggered_effect
+# { timing: on_deletion, ... }`) with the target scope swapped to the
+# opponent, and the direct sibling of EX1-068 Ice Wall! (same DCGO source
+# family — `grant_triggered_effect` to ALL opponent Digimon at
+# `when_attacking` instead of ONE opponent Digimon at `on_deletion`).
+#
+# The granted body runs with `ctx.player = carrier.player`
+# (`Game::fire_granted_triggered_effects` / the queue-routed dispatch in
+# `enqueue_from_permanent`), so `lose_memory: 2` inside the body correctly
+# charges the carrier's controller (the opponent) with no extra `of:` clause
+# needed — the DSL-vocab gap this required (`G-DSL-GRANT-TRIGGERED-EFFECT-
+# TO-OPPONENT`) was resolved 2026-05-29 by the EX1-068 work.
+#
+# ─── Per-clause status ────────────────────────────────────────────────────
+# | Clause                                                              | Status |
+# |----------------------------------------------------------------------|--------|
+# | [Main] select 1 opp Digimon; grant "[On Deletion] Lose 2 memory"    | IMPLEMENTED |
+# | until the end of their next turn                                    |        |
+
+card: BT6-102
+name: Tropical Venom
+kind: option
+color: [green]
+cost: 0
+traits: []
+
+effects:
+  # ─── [Main] select 1 opponent Digimon, grant [On Deletion] lose 2 memory ──
+  - when: main_from_hand
+    summary: "[Main] 1 opponent Digimon gains '[On Deletion] Lose 2 memory' until end of their next turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: venom_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to gain '[On Deletion] Lose 2 memory' until the end of their next turn"
+      - grant_triggered_effect:
+          target: venom_target
+          timing: on_deletion
+          expiry: end_of_opponents_next_turn
+          body:
+            - lose_memory: 2

@@ -1,0 +1,146 @@
+# BT14-033 Patamon — Digimon, Lv.3, Yellow, DP 1000, Cost 3.
+# Traits: Mammal. Form: Rookie. Attribute: Data.
+# Standard digivolution: Lv.2 Yellow / cost 0 (cards.json evo_costs — no
+# bonus/special digivolve box is printed, so `alt_paths` is intentionally
+# omitted; the standard evo box auto-lowers from `evo_costs`).
+#
+# Printed card text (data/card_bundles/BT14-033.md — official Bandai DB,
+# verbatim; matches DCGO):
+#
+#   [Start of Your Main Phase] Search your security stack. This Digimon may
+#   digivolve into a yellow Digimon card with the [Vaccine] trait among them
+#   without paying the cost. Then, shuffle your security stack. If digivolved
+#   by this effect, you may place 1 yellow card with the [Vaccine] trait from
+#   your hand at the bottom of your security stack.
+#
+#   Inherited Effect [Your Turn][Once Per Turn]
+#   When a card is added to your security stack, gain 1 memory.
+#
+# Official Q&A: "Yes, you can choose to not digivolve. In such cases, you
+# shuffle all of the searched cards and return them to the security stack."
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT14/Yellow/BT14_033.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# OnStartMainPhase (single ActivateClass, maxCount -1 = not itself OPT-capped;
+# the "may" lives entirely inside the inner SelectCardEffect's canNoSelect):
+#   CanUseCondition: on battle area + owner's turn.
+#   CanActivateCondition: on battle area + SecurityCards.Count >= 1 — NOT
+#     gated on an eligible yellow/Vaccine card existing; the eligibility
+#     filter (CardTraits.Contains("Vaccine") && HasCardColor(Yellow) &&
+#     IsDigimon && CanPlayCardTargetFrame(..., PayCost:false)) is applied
+#     inside the picker (canNoSelect: true — the "may").
+#   Body (single coroutine, linear):
+#     1. SelectCardEffect over Root.Security, canNoSelect: true, filtered as
+#        above → `select_security { optional: true, filter: ... }`.
+#     2. `card.Owner.SecurityCards = ShuffledDeckCards(...)` — runs
+#        UNCONDITIONALLY, whether or not a card was picked → `shuffle_security`
+#        as a sibling top-level step (collapse §1: the dispatcher's implicit
+#        tail runs exactly once via `Continue` even when `select_security`
+#        finds nothing or the player declines).
+#     3. `if (selectedCard != null)`: play the picked security card onto this
+#        Digimon without paying cost (PlayCardClass payCost:false, root:
+#        Security) → `effect_initiated_digivolve { source: sec_pick, cost:
+#        free, ignore_requirements: true }`. `ignore_requirements: true`
+#        because the printed text carries NO level restriction (only
+#        color+trait, already enforced by the `select_security` filter) —
+#        the standard evo_costs level-match floor must be bypassed.
+#     4. `if (IsDigivolvedByTheEffect(...))`: offer 1 yellow+Vaccine hand card
+#        (SelectHandEffect, canNoSelect: true) to place at the BOTTOM of
+#        security (toTop: false) → same-clause `if binding_present: sec_pick`
+#        (the pick binding doubles as "digivolved by this effect" — the
+#        digivolve step above always succeeds once a card is picked, since
+#        cost is free and requirements are ignored) → optional `select_hand`
+#        + `place_on_security { position: bottom }`.
+# OnAddSecurity (inherited ActivateClass, maxCount 1, hash
+#   "Memory+1_BT14_033", SetIsInheritedEffect(true)):
+#   CanUseCondition: on battle area + owner's turn +
+#     CanTriggerWhenAddSecurity(player == card.Owner) (own security only).
+#   CanActivateCondition: on battle area (unconditional — no cost gate, unlike
+#     BT8-090's suspend-cost sibling).
+#   Body: AddMemory(1) — mandatory, no "may".
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                   | Status |
+# |-----------------------------------------------------------------------|--------|
+# | [SoMP] Search security; may digivolve into yellow [Vaccine], no cost | IMPLEMENTED (select_security + effect_initiated_digivolve, ignore_requirements) |
+# | Then, shuffle security (unconditional)                               | IMPLEMENTED (sibling shuffle_security step) |
+# | If digivolved, may place 1 yellow [Vaccine] hand card at bottom sec  | IMPLEMENTED (same-clause if binding_present + select_hand + place_on_security bottom) |
+# | Inherited [Your Turn][OPT] card added to security → gain 1 memory   | IMPLEMENTED (on_added_to_security, mandatory) |
+
+card: BT14-033
+name: Patamon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+traits: [Mammal]
+form: Rookie
+attribute: Data
+
+effects:
+  # ─── [Start of Your Main Phase] search + digivolve-from-security + shuffle +
+  #     conditional hand-to-bottom-security follow-up ────────────────────────
+  - when: start_of_your_main_phase
+    summary: "[SoMP] Search security; may digivolve into a yellow [Vaccine] Digimon among them without paying the cost; then shuffle; if digivolved, may place 1 yellow [Vaccine] hand card at the bottom of security"
+    process:
+      - select_security:
+          of: you
+          bind_as: sec_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: yellow
+              - trait_has: Vaccine
+          prompt: "Search your security stack. You may digivolve into a yellow [Vaccine] Digimon among them without paying the cost."
+      - if:
+          condition: { binding_present: sec_pick }
+          then:
+            - effect_initiated_digivolve:
+                target: source
+                source: sec_pick
+                cost: free
+                ignore_requirements: true
+      - shuffle_security: { of: you }
+      - if:
+          condition: { binding_present: sec_pick }
+          then:
+            - select_hand:
+                of: you
+                bind_as: hand_pick
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - color_is: yellow
+                    - trait_has: Vaccine
+                prompt: "If digivolved by this effect, you may place 1 yellow [Vaccine] card from your hand at the bottom of your security stack"
+            - if:
+                condition: { binding_present: hand_pick }
+                then:
+                  - place_on_security:
+                      of: you
+                      source: { card: { binding: hand_pick, zone: hand } }
+                      position: bottom
+                      face_up: false
+
+  # ─── Inherited [Your Turn][Once Per Turn] own-security-added → gain 1 memory
+  #
+  # `on_added_to_security` fires off TriggerSource::SecurityPlaced, which
+  # scans the security owner's battle area — a clause on Patamon's controller
+  # fires precisely on adds to YOUR OWN security (DCGO CanTriggerWhenAddSecurity
+  # gated on `player == card.Owner`). `active_when: your_turn` encodes the
+  # printed [Your Turn] gate (DCGO IsOwnerTurn). No `optional:` — the inherited
+  # text has no "may" (unlike BT8-090's suspend-cost sibling); mandatory
+  # `gain_memory: 1` (BT8-090 / BT25-038 idiom, minus the cost gate).
+  - scope: inherited
+    when: on_added_to_security
+    active_when: { your_turn: true }
+    once_per_turn: true
+    summary: "[Your Turn][OPT] When a card is added to your security stack, gain 1 memory"
+    process:
+      - gain_memory: 1
