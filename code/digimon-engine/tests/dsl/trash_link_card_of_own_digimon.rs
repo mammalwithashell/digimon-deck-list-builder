@@ -313,6 +313,74 @@ fn optional_decline_on_first_pick_skips_trash_and_tail() {
     );
 }
 
+#[test]
+fn optional_decline_on_second_pick_skips_trash_and_tail() {
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon("TST-TLCOD-OPT"))
+        .add_card(digimon("HOST-A"))
+        .add_card(link_option("LINK-A1"))
+        .hand(0, &["TST-TLCOD-OPT"])
+        .start();
+    let host_a = runner.place_on_field(0, "HOST-A", Some(0));
+    let _link = runner.push_linked_owned(host_a, "LINK-A1", 0);
+
+    let src_card: CardHandle = runner.game.players[0].hand[0].handle();
+    let memory_before = runner.game.memory;
+
+    run_on_play(&mut runner, YAML_OPTIONAL, src_card);
+
+    // ACCEPT the first pick (which own Digimon).
+    let (first_ids, first_player) = {
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("first selection installs");
+        (p.valid_action_ids.clone(), p.selecting_player)
+    };
+    let pick_a = digimon_engine::action::space::encode_attack(0, host_a.index as u16);
+    assert!(first_ids.contains(&pick_a), "HOST-A is a valid first pick");
+    runner
+        .game
+        .resolve_selection(first_player, pick_a)
+        .expect("accept first pick");
+
+    // The SECOND pick (which link card) must ALSO be declinable — DCGO
+    // BT25_073.cs:99 sets `canNoSelect: () => true` on the link-card
+    // SelectCardEffect. Regression: the installer wired `on_decline` but
+    // never flipped `pending.is_optional`, so PASS was rejected and the
+    // pick was silently mandatory (fixed 2026-07-04).
+    let (is_optional, second_player) = {
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("second selection installs");
+        (p.is_optional, p.selecting_player)
+    };
+    assert!(is_optional, "optional second pick is declinable");
+    runner
+        .game
+        .resolve_selection(second_player, digimon_engine::action::space::PASS)
+        .expect("decline second pick");
+
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "declining the second pick resolves the clause with no further selection"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[host_a.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "declining trashes no link card"
+    );
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "the tail must NOT run when the link-card trash is declined"
+    );
+}
+
 /// Clone-safety: after the FIRST selection installs, the game is `Clone`-able and
 /// the clone resolves both selections through the resumable VM (no closure-only
 /// park panics). Pins the make-engine-cloneable constraint for this cost step.

@@ -6188,10 +6188,14 @@ fn install_link_card_trash_second_selection(
         },
     );
     // Optional decline: PASS on the link-card pick skips the trash and the tail
-    // (DCGO `canNoSelect: true` on the SelectCardEffect). The `select_effect_choice`
-    // install exposes decline via `on_decline` when marked optional.
+    // (DCGO BT25_073.cs:99 `canNoSelect: () => true` on the SelectCardEffect).
+    // `select_effect_choice` installs `is_optional: false` by default and
+    // `resolve_generic_selection` rejects PASS on a non-optional selection, so
+    // the flag must be flipped alongside `on_decline` or the pick is silently
+    // mandatory (same bug class as the trash_option_from_own_stacks sibling).
     if optional {
         if let Some(pending) = ctx.game.pending_selection.as_mut() {
+            pending.is_optional = true;
             let outer_decline = outer_conts.clone();
             pending.on_decline = Some(Box::new(move |game: &mut crate::game::Game| {
                 run_outer_conts(game, outer_decline.clone());

@@ -536,23 +536,13 @@ fn bt25_073_decline_first_pick_skips_trash_and_tail() {
 }
 
 #[test]
-#[ignore = "ENGINE GAP (not fixable from cards/bt25/BT25-073.yaml or this \
-    test file alone): DCGO's SelectCardEffect for the which-link-card pick \
-    is canNoSelect:true (independently declinable, same as the which-Digimon \
-    pick), and `trash_link_card_of_own_digimon`'s `optional` flag is intended \
-    to thread through to both selections. But the second selection is \
-    installed via `EffectContext::select_effect_choice` \
-    (code/digimon-engine/src/effect_context/selections.rs), which hardcodes \
-    `is_optional: false` (\"effect choice must pick a branch\") and never \
-    appends PASS to valid_action_ids; `install_link_card_trash_second_selection` \
-    (code/digimon-engine/src/dsl_cards/step/selections.rs) wires an \
-    `on_decline` callback but never overrides `pending.is_optional`, so \
-    `resolve_generic_selection`'s `is_pass && !sel.is_optional` gate \
-    (code/digimon-engine/src/effect_queue.rs) rejects PASS before the \
-    on_decline handler is ever reached. Fix requires widening \
-    `select_effect_choice` (or the second-selection installer) to expose an \
-    optional/declinable effect-choice variant — out of scope for the \
-    2-file BT25-073 deliverable. Logged to qa/dsl-vocab-gaps.md."]
+// Was #[ignore]'d as an engine gap: `install_link_card_trash_second_selection`
+// wired `on_decline` but never flipped `pending.is_optional`, so
+// `resolve_generic_selection`'s `is_pass && !sel.is_optional` gate rejected
+// PASS and the pick was silently mandatory. Fixed 2026-07-04 (the installer
+// now sets `is_optional = true` alongside `on_decline`, matching DCGO
+// BT25_073.cs:99 `canNoSelect: () => true` and the trash_option_from_own_stacks
+// sibling).
 fn bt25_073_decline_second_pick_skips_trash_and_tail() {
     let mut r = base()
         .hand(0, &[CARD_ID])
