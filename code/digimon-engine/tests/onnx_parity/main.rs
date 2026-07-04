@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use digimon_engine::inference::load_policy;
+use digimon_engine::inference::{load_policy, BatchedPolicyValueEvaluator};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -22,12 +22,21 @@ struct LstmExpected {
 }
 
 #[derive(Deserialize)]
+struct MlpValueExpected {
+    batch_obs: Vec<Vec<f32>>,
+    masks: Vec<Vec<f32>>,
+    logits: Vec<Vec<f32>>,
+    values: Vec<f32>,
+}
+
+#[derive(Deserialize)]
 struct Expected {
     shapes: Shapes,
     obs: Vec<f32>,
     mask: Vec<f32>,
     mlp: MlpExpected,
     lstm: LstmExpected,
+    mlp_value: MlpValueExpected,
 }
 
 fn fixtures_dir() -> PathBuf {
@@ -105,6 +114,68 @@ fn lstm_reset_matches_fresh_policy() {
         fresh_action, after_reset_action,
         "reset() did not return policy to its fresh state"
     );
+}
+
+#[test]
+fn batched_evaluator_parity_with_python() {
+    let expected = load_expected();
+    let mv = &expected.mlp_value;
+    let mut evaluator = BatchedPolicyValueEvaluator::load(&fixtures_dir().join("mlp_tiny_value.onnx"))
+        .expect("load value-head MLP");
+
+    let obs_refs: Vec<&[f32]> = mv.batch_obs.iter().map(|r| r.as_slice()).collect();
+    let mask_refs: Vec<&[f32]> = mv.masks.iter().map(|r| r.as_slice()).collect();
+    let results = evaluator
+        .evaluate_batch(&obs_refs, &mask_refs)
+        .expect("evaluate batch");
+    assert_eq!(results.len(), mv.batch_obs.len());
+
+    for (i, res) in results.iter().enumerate() {
+        // Value parity with the Python baseline.
+        assert!(
+            (res.value - mv.values[i]).abs() < 1e-5,
+            "row {i}: value {} != python {}",
+            res.value,
+            mv.values[i]
+        );
+        // Policy respects the mask exactly and normalizes over legal actions.
+        let mut sum = 0.0f32;
+        for (a, (&p, &m)) in res.policy.iter().zip(mv.masks[i].iter()).enumerate() {
+            if m < 0.5 {
+                assert_eq!(p, 0.0, "row {i}: illegal action {a} has mass {p}");
+            }
+            sum += p;
+        }
+        assert!((sum - 1.0).abs() < 1e-5, "row {i}: policy sums to {sum}");
+        // Policy argmax agrees with the masked argmax of the Python logits.
+        let rust_best = res
+            .policy
+            .iter()
+            .enumerate()
+            .max_by(|a, b| a.1.partial_cmp(b.1).unwrap())
+            .unwrap()
+            .0;
+        let py_best = mv.logits[i]
+            .iter()
+            .zip(mv.masks[i].iter())
+            .enumerate()
+            .map(|(a, (&l, &m))| (a, if m < 0.5 { f32::NEG_INFINITY } else { l }))
+            .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
+            .unwrap()
+            .0;
+        assert_eq!(rust_best, py_best, "row {i}: policy argmax diverged");
+    }
+
+    // Rows differ (row 2 is a scaled copy of row 1) — catches layout bugs.
+    assert_ne!(results[0].value, results[1].value);
+}
+
+#[test]
+fn batched_evaluator_rejects_policy_only_graph() {
+    // The plain MLP fixture has no `value` output — the evaluator must
+    // refuse it rather than silently returning garbage values.
+    let err = BatchedPolicyValueEvaluator::load(&fixtures_dir().join("mlp_tiny.onnx"));
+    assert!(err.is_err());
 }
 
 #[test]

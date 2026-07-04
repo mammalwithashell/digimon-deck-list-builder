@@ -33,6 +33,19 @@ class TinyMlp(nn.Module):
         return self.fc(obs)
 
 
+class TinyMlpValue(nn.Module):
+    """Policy+value graph shaped like the task-0.2 MLP export (logits + value
+    outputs, dynamic batch axis) for the batched-evaluator parity test."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.fc = nn.Linear(OBS_SIZE, ACTION_SIZE)
+        self.vf = nn.Linear(OBS_SIZE, 1)
+
+    def forward(self, obs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        return self.fc(obs), self.vf(obs)
+
+
 class TinyLstm(nn.Module):
     def __init__(self) -> None:
         super().__init__()
@@ -63,6 +76,7 @@ def main() -> None:
 
     fixtures_dir = Path(__file__).parent
     mlp_path = fixtures_dir / "mlp_tiny.onnx"
+    mlp_value_path = fixtures_dir / "mlp_tiny_value.onnx"
     lstm_path = fixtures_dir / "lstm_tiny.onnx"
     expected_path = fixtures_dir / "expected.json"
 
@@ -84,6 +98,18 @@ def main() -> None:
         dynamo=False,
     )
 
+    mlp_value = TinyMlpValue()
+    torch.onnx.export(
+        mlp_value,
+        (torch.from_numpy(obs).unsqueeze(0),),
+        str(mlp_value_path),
+        input_names=["obs"],
+        output_names=["logits", "value"],
+        dynamic_axes={"obs": {0: "batch"}, "logits": {0: "batch"}, "value": {0: "batch"}},
+        opset_version=17,
+        dynamo=False,
+    )
+
     lstm = TinyLstm()
     h0 = torch.zeros(1, 1, HIDDEN_SIZE)
     c0 = torch.zeros(1, 1, HIDDEN_SIZE)
@@ -101,6 +127,14 @@ def main() -> None:
     mlp_sess = ort.InferenceSession(str(mlp_path), providers=["CPUExecutionProvider"])
     (mlp_logits,) = mlp_sess.run(["logits"], {"obs": obs.reshape(1, -1)})
     mlp_action = _masked_argmax(mlp_logits[0], mask)
+
+    # Batched policy+value fixture: two rows, second is a scaled copy so the
+    # per-row outputs differ and row-major layout bugs are caught.
+    batch_obs = np.stack([obs, obs * 0.5]).astype(np.float32)
+    mask2 = np.ones(ACTION_SIZE, dtype=np.float32)
+    mask2[[1, 2, 4, 5, 6, 8, 9, 10, 11, 13, 14, 15]] = 0.0  # only 0,3,7,12 legal
+    mv_sess = ort.InferenceSession(str(mlp_value_path), providers=["CPUExecutionProvider"])
+    mv_logits, mv_values = mv_sess.run(["logits", "value"], {"obs": batch_obs})
 
     lstm_sess = ort.InferenceSession(str(lstm_path), providers=["CPUExecutionProvider"])
     h = np.zeros((1, 1, HIDDEN_SIZE), dtype=np.float32)
@@ -135,9 +169,15 @@ def main() -> None:
             "step2_logits": lstm_logits_step2[0].tolist(),
             "step2_action": lstm_action_step2,
         },
+        "mlp_value": {
+            "batch_obs": batch_obs.tolist(),
+            "masks": [mask.tolist(), mask2.tolist()],
+            "logits": mv_logits.tolist(),
+            "values": mv_values.reshape(-1).tolist(),
+        },
     }
     expected_path.write_text(json.dumps(expected, indent=2))
-    print(f"Wrote {mlp_path}, {lstm_path}, {expected_path}")
+    print(f"Wrote {mlp_path}, {mlp_value_path}, {lstm_path}, {expected_path}")
 
 
 if __name__ == "__main__":

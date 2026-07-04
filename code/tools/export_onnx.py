@@ -39,23 +39,34 @@ from digimon_gym.tensor_profiles import get_tensor_profile
 # ---------------------------------------------------------------------------
 
 class MlpActorWrapper(nn.Module):
-    """Wraps SB3 MLP policy's actor path for ONNX export.
+    """Wraps SB3 MLP policy's actor + critic paths for ONNX export.
 
-    Forward: obs (batch, TENSOR_SIZE) -> logits (batch, ACTION_SPACE_SIZE)
+    Forward: obs (batch, TENSOR_SIZE) -> (logits (batch, ACTION_SPACE_SIZE),
+                                          value (batch, 1))
+
+    The value head shares the graph (one forward pass yields policy+value,
+    which is what MCTS leaf evaluation wants). Adding the extra output is
+    backward compatible: every consumer (onnx_policy.py, the engine's
+    inference module) fetches outputs by NAME and detects model type by
+    presence, not by exact output set.
     """
 
     def __init__(self, policy):
         super().__init__()
         self.features_extractor = policy.features_extractor
         self.pi_features_extractor = getattr(policy, "pi_features_extractor", None)
+        self.vf_features_extractor = getattr(policy, "vf_features_extractor", None)
         self.mlp_extractor_policy = policy.mlp_extractor.policy_net
+        self.mlp_extractor_value = policy.mlp_extractor.value_net
         self.action_net = policy.action_net
+        self.value_net = policy.value_net
 
-    def forward(self, obs: torch.Tensor) -> torch.Tensor:
-        extractor = self.pi_features_extractor or self.features_extractor
-        features = extractor(obs)
-        latent_pi = self.mlp_extractor_policy(features)
-        return self.action_net(latent_pi)
+    def forward(self, obs: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+        pi_extractor = self.pi_features_extractor or self.features_extractor
+        vf_extractor = self.vf_features_extractor or self.features_extractor
+        latent_pi = self.mlp_extractor_policy(pi_extractor(obs))
+        latent_vf = self.mlp_extractor_value(vf_extractor(obs))
+        return self.action_net(latent_pi), self.value_net(latent_vf)
 
 
 class LstmActorWrapper(nn.Module):
@@ -88,11 +99,61 @@ class LstmActorWrapper(nn.Module):
         return logits, h_out, c_out
 
 
+class LstmValueWrapper(nn.Module):
+    """Wraps the recurrent policy's CRITIC path for the companion value graph.
+
+    Forward: obs (1, TENSOR_SIZE), h (1, 1, H), c (1, 1, H)
+          -> value (1, 1), h_out (1, 1, H), c_out (1, 1, H)
+
+    Exported as a SEPARATE `<stem>.value.onnx` rather than extra outputs on
+    the main graph: with `enable_critic_lstm=True` (the training default)
+    the critic has its OWN LSTM state, so surfacing the value would add new
+    required inputs (h_vf/c_vf) to the main graph — which would break every
+    existing consumer that feeds exactly obs/h_in/c_in. The companion graph
+    keeps the main contract untouched; value callers thread critic state
+    independently of actor state.
+    """
+
+    def __init__(self, policy):
+        super().__init__()
+        self.features_extractor = policy.features_extractor
+        self.vf_features_extractor = getattr(policy, "vf_features_extractor", None)
+        lstm_critic = getattr(policy, "lstm_critic", None)
+        if lstm_critic is not None:
+            self.lstm = lstm_critic
+        elif getattr(policy, "shared_lstm", False):
+            self.lstm = policy.lstm_actor
+        else:
+            raise ValueError(
+                "Recurrent policy has neither a critic LSTM nor a shared "
+                "actor LSTM (enable_critic_lstm=False, shared_lstm=False); "
+                "value-head export for a feedforward critic is not supported."
+            )
+        self.mlp_extractor_value = policy.mlp_extractor.value_net
+        self.value_net = policy.value_net
+
+    def forward(
+        self,
+        obs: torch.Tensor,
+        h: torch.Tensor,
+        c: torch.Tensor,
+    ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        extractor = self.vf_features_extractor or self.features_extractor
+        features = extractor(obs)
+        lstm_in = features.unsqueeze(0)  # (1, batch, TENSOR_SIZE)
+        lstm_out, (h_out, c_out) = self.lstm(lstm_in, (h, c))
+        lstm_out = lstm_out.squeeze(0)
+        latent_vf = self.mlp_extractor_value(lstm_out)
+        return self.value_net(latent_vf), h_out, c_out
+
+
 # ---------------------------------------------------------------------------
 # Export functions
 # ---------------------------------------------------------------------------
 
-def write_export_metadata(output_path: str | Path, observation_layout) -> None:
+def write_export_metadata(
+    output_path: str | Path, observation_layout, value_head: str | None = None
+) -> None:
     """Write ONNX profile metadata next to the exported model."""
     metadata = {
         "observation_profile": observation_layout.id,
@@ -104,6 +165,10 @@ def write_export_metadata(output_path: str | Path, observation_layout) -> None:
         "card_registry_capacity": REGISTRY_CAPACITY,
         "embedding_dim": EMBEDDING_DIM,
     }
+    if value_head is not None:
+        # "inline" (MLP: `value` output on the main graph) or the companion
+        # filename (LSTM: separate graph threading critic state).
+        metadata["value_head"] = value_head
     meta_path = Path(f"{output_path}.meta.json")
     meta_path.write_text(json.dumps(metadata, indent=2, sort_keys=True) + "\n")
     print(f"Wrote ONNX metadata to {meta_path}")
@@ -178,7 +243,7 @@ def export_mlp(sb3_zip_path: str, output_path: str, observation_layout=None) -> 
     dummy_obs = torch.randn(1, tensor_size, dtype=torch.float32)
 
     with torch.no_grad():
-        logits_shape = tuple(wrapper(dummy_obs).shape)
+        logits_shape = tuple(wrapper(dummy_obs)[0].shape)
     if logits_shape != (1, ACTION_SPACE_SIZE):
         raise ValueError(
             f"MLP checkpoint produces logits shape {logits_shape}, expected "
@@ -191,8 +256,12 @@ def export_mlp(sb3_zip_path: str, output_path: str, observation_layout=None) -> 
         (dummy_obs,),
         output_path,
         input_names=["obs"],
-        output_names=["logits"],
-        dynamic_axes={"obs": {0: "batch"}, "logits": {0: "batch"}},
+        output_names=["logits", "value"],
+        dynamic_axes={
+            "obs": {0: "batch"},
+            "logits": {0: "batch"},
+            "value": {0: "batch"},
+        },
         opset_version=17,
         dynamo=False,
     )
@@ -200,7 +269,7 @@ def export_mlp(sb3_zip_path: str, output_path: str, observation_layout=None) -> 
 
     # Verify round-trip
     _verify_mlp(policy, wrapper, output_path, tensor_size)
-    write_export_metadata(output_path, observation_layout)
+    write_export_metadata(output_path, observation_layout, value_head="inline")
 
 
 def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) -> None:
@@ -246,9 +315,31 @@ def export_lstm(sb3_zip_path: str, output_path: str, observation_layout=None) ->
     )
     print(f"Exported LSTM model to {output_path}")
 
+    # Companion value graph: same (obs, h, c) signature, threads the
+    # CRITIC's own LSTM state (see LstmValueWrapper for why it is a
+    # separate file rather than extra outputs on the main graph).
+    value_path = Path(output_path).with_suffix(".value.onnx")
+    value_wrapper = LstmValueWrapper(policy)
+    value_wrapper.eval()
+    torch.onnx.export(
+        value_wrapper,
+        (dummy_obs, dummy_h.clone(), dummy_c.clone()),
+        str(value_path),
+        input_names=["obs", "h_in", "c_in"],
+        output_names=["value", "h_out", "c_out"],
+        dynamic_axes={
+            "obs": {0: "batch"},
+            "value": {0: "batch"},
+        },
+        opset_version=17,
+        dynamo=False,
+    )
+    print(f"Exported LSTM value head to {value_path}")
+
     # Verify round-trip
     _verify_lstm(policy, wrapper, output_path, tensor_size)
-    write_export_metadata(output_path, observation_layout)
+    _verify_lstm_value(value_wrapper, str(value_path), policy, tensor_size)
+    write_export_metadata(output_path, observation_layout, value_head=value_path.name)
 
 
 # ---------------------------------------------------------------------------
@@ -262,20 +353,36 @@ def _verify_mlp(policy, wrapper, onnx_path: str, tensor_size: int = TENSOR_SIZE)
     dummy_obs = torch.randn(1, tensor_size, dtype=torch.float32)
 
     with torch.no_grad():
-        pt_logits = wrapper(dummy_obs).numpy()
+        pt_logits, pt_value = wrapper(dummy_obs)
+        pt_logits = pt_logits.numpy()
+        pt_value = pt_value.numpy()
 
     sess = ort.InferenceSession(onnx_path)
-    ort_logits = sess.run(["logits"], {"obs": dummy_obs.numpy()})[0]
+    ort_logits, ort_value = sess.run(["logits", "value"], {"obs": dummy_obs.numpy()})
 
     if ort_logits.shape != (1, ACTION_SPACE_SIZE):
         raise ValueError(
             f"Exported ONNX logits shape {ort_logits.shape} != "
             f"(1, {ACTION_SPACE_SIZE})"
         )
+    if ort_value.shape != (1, 1):
+        raise ValueError(f"Exported ONNX value shape {ort_value.shape} != (1, 1)")
+
+    # Cross-check the wrapper's value path against SB3's own predict_values —
+    # guards against wiring the wrong extractor/latent into the value head.
+    with torch.no_grad():
+        sb3_value = policy.predict_values(dummy_obs).numpy()
 
     max_diff = np.max(np.abs(pt_logits - ort_logits))
-    print(f"  MLP verification: max logit diff = {max_diff:.6e}")
+    value_diff = np.max(np.abs(pt_value - ort_value))
+    sb3_diff = np.max(np.abs(sb3_value - ort_value))
+    print(
+        f"  MLP verification: max logit diff = {max_diff:.6e}, "
+        f"value diff = {value_diff:.6e}, vs predict_values = {sb3_diff:.6e}"
+    )
     assert max_diff < 1e-4, f"MLP output mismatch: max diff {max_diff}"
+    assert value_diff < 1e-4, f"MLP value mismatch: max diff {value_diff}"
+    assert sb3_diff < 1e-4, f"MLP value != policy.predict_values: {sb3_diff}"
 
 
 def _verify_lstm(policy, wrapper, onnx_path: str, tensor_size: int = TENSOR_SIZE) -> None:
@@ -310,6 +417,39 @@ def _verify_lstm(policy, wrapper, onnx_path: str, tensor_size: int = TENSOR_SIZE
     max_c_diff = np.max(np.abs(pt_c - ort_out[2]))
     print(f"  LSTM verification: logits diff={max_logit_diff:.6e}, h diff={max_h_diff:.6e}, c diff={max_c_diff:.6e}")
     assert max_logit_diff < 1e-4, f"LSTM logit mismatch: {max_logit_diff}"
+
+
+def _verify_lstm_value(
+    value_wrapper, value_onnx_path: str, policy, tensor_size: int = TENSOR_SIZE
+) -> None:
+    """Verify the companion value graph matches the torch critic path."""
+    import onnxruntime as ort
+
+    hidden_size = value_wrapper.lstm.hidden_size
+    dummy_obs = torch.randn(1, tensor_size, dtype=torch.float32)
+    dummy_h = torch.randn(1, 1, hidden_size, dtype=torch.float32)
+    dummy_c = torch.randn(1, 1, hidden_size, dtype=torch.float32)
+
+    with torch.no_grad():
+        pt_value, pt_h, pt_c = value_wrapper(dummy_obs, dummy_h, dummy_c)
+
+    sess = ort.InferenceSession(value_onnx_path)
+    ort_value, ort_h, ort_c = sess.run(
+        ["value", "h_out", "c_out"],
+        {"obs": dummy_obs.numpy(), "h_in": dummy_h.numpy(), "c_in": dummy_c.numpy()},
+    )
+
+    if ort_value.shape != (1, 1):
+        raise ValueError(f"Exported ONNX value shape {ort_value.shape} != (1, 1)")
+
+    value_diff = np.max(np.abs(pt_value.numpy() - ort_value))
+    h_diff = np.max(np.abs(pt_h.numpy() - ort_h))
+    c_diff = np.max(np.abs(pt_c.numpy() - ort_c))
+    print(
+        f"  LSTM value verification: value diff={value_diff:.6e}, "
+        f"h diff={h_diff:.6e}, c diff={c_diff:.6e}"
+    )
+    assert value_diff < 1e-4, f"LSTM value mismatch: {value_diff}"
 
 
 # ---------------------------------------------------------------------------

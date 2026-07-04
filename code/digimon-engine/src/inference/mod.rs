@@ -2,9 +2,11 @@ use std::path::Path;
 
 use ort::session::Session;
 
+pub mod evaluator;
 pub mod lstm;
 pub mod mlp;
 
+pub use evaluator::{masked_softmax, BatchedPolicyValueEvaluator, EvalResult};
 pub use lstm::OnnxLstmPolicy;
 pub use mlp::OnnxMlpPolicy;
 

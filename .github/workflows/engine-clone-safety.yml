@@ -92,3 +92,16 @@ jobs:
         env:
           RUST_MIN_STACK: "268435456"
         run: cargo test -p digimon-engine --test selection
+
+      # Clone-fuzz — random real-deck playouts (starter pairs + an Appmon
+      # link pair) that CLONE at every decision, resolve both copies, and
+      # fingerprint-compare (plus ship-of-Theseus swaps). This is the
+      # observational guard the source-level audits can't provide: it caught
+      # `install_select_hand` parking closure-only (2026-07-02) right after
+      # the caller-map audit declared zero production closure paths. Scale
+      # with CLONE_FUZZ_GAMES.
+      - name: Clone-fuzz (per-decision fork faithfulness on real playouts)
+        env:
+          RUST_MIN_STACK: "268435456"
+          CLONE_FUZZ_GAMES: "12"
+        run: cargo test -p digimon-engine --test clone_fuzz --features dsl-yaml-loader
