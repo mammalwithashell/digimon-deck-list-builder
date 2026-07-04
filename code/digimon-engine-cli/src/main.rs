@@ -18,6 +18,7 @@ use serde_json::Value;
 
 mod debug_repl;
 mod replay_view;
+mod selfplay;
 mod winprob;
 
 /// Top-level CLI parser.
@@ -111,6 +112,55 @@ enum Command {
         tensor_profile: Option<String>,
     },
 
+    /// Generate AlphaZero self-play training data: play search-driven
+    /// games (determinized MCTS on both seats) and write `(obs, π, z)`
+    /// shards + a manifest (add-determinized-search task 3.1).
+    Selfplay {
+        /// Path to the policy+value .onnx export (task-0.2, inline `value`
+        /// output). Mutually exclusive with --uniform.
+        #[arg(long)]
+        model: Option<PathBuf>,
+        /// Use the uniform stub evaluator (cold start / smoke runs).
+        #[arg(long)]
+        uniform: bool,
+        /// Deck-pool JSON: `[[card_ids...], ...]` or
+        /// `[{"name":..., "cards":[...]}, ...]`. Pair sampled per game.
+        #[arg(long)]
+        decks: PathBuf,
+        /// Games to play.
+        #[arg(long, default_value_t = 16)]
+        games: u32,
+        /// TOTAL simulations per decision (PIMC divides them across worlds).
+        #[arg(long, default_value_t = 160)]
+        sims: u32,
+        /// Sampled worlds K (PIMC only).
+        #[arg(long, default_value_t = 4)]
+        worlds: u32,
+        /// Determinization mode: `pimc` (default) or `ismcts`.
+        #[arg(long, default_value = "pimc")]
+        mode: String,
+        /// Master seed (deck sampling, shuffles, temperature, search).
+        #[arg(long, default_value_t = 0)]
+        seed: u64,
+        /// Output directory for shards + manifest.json.
+        #[arg(long)]
+        out: PathBuf,
+        /// τ=1 visit-sampling for this many non-forced decisions per game,
+        /// argmax after.
+        #[arg(long, default_value_t = 16)]
+        temperature_decisions: u32,
+        /// Hard per-game decision cap; truncated games score z=0.
+        #[arg(long, default_value_t = 600)]
+        decision_cap: u32,
+        /// Rows per shard flush (checked on game boundaries).
+        #[arg(long, default_value_t = 4096)]
+        shard_rows: usize,
+        /// Observation profile override. Defaults to the model's
+        /// `<model>.meta.json`, falling back to the engine default.
+        #[arg(long)]
+        tensor_profile: Option<String>,
+    },
+
     /// Print the card pool as a sorted JSON array of card IDs and exit.
     /// With the default `--pool implemented`, this is the set of cards the
     /// engine has a registered `CardEffect` for, intersected with
@@ -198,6 +248,45 @@ fn run() -> ExitCode {
                 }
             };
             winprob::run(recording, model, out, batch, tensor_profile, card_data)
+        }
+        Command::Selfplay {
+            model,
+            uniform,
+            decks,
+            games,
+            sims,
+            worlds,
+            mode,
+            seed,
+            out,
+            temperature_decisions,
+            decision_cap,
+            shard_rows,
+            tensor_profile,
+        } => {
+            let card_data = match load_card_data(&cli.cards_json, &cli.pool) {
+                Ok(cd) => cd,
+                Err(e) => {
+                    eprintln!("error loading card data: {}", e);
+                    return ExitCode::from(2);
+                }
+            };
+            selfplay::run(
+                model,
+                uniform,
+                decks,
+                games,
+                sims,
+                worlds,
+                mode,
+                seed,
+                out,
+                temperature_decisions,
+                decision_cap,
+                shard_rows,
+                tensor_profile,
+                card_data,
+            )
         }
         Command::Pool => {
             let card_data = match load_card_data(&cli.cards_json, &cli.pool) {

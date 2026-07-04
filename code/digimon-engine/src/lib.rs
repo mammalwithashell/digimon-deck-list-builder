@@ -54,6 +54,7 @@ pub mod runners;
 pub mod search;
 pub mod scheduled_effects;
 pub mod selection;
+pub mod selfplay;
 pub mod tensor_profiles;
 pub mod view;
 pub use tensor_profiles as tensor_profile;
