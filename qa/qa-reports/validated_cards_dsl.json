@@ -10652,6 +10652,18 @@
       "tests_passing": 22,
       "tests_ignored": 0,
       "notes": "All 3 printed clauses native DSL. Clause B ([All Turns] Millenniummon leave-watcher <Delay>) lowers onto the new recognised DelaySelfTrashPlayFromUnionFlow (G-ENGINE-DELAY-SELF-TRASH-THEN-FREE-PLAY-IN-LEAVE-REPLACEMENT, RESOLVED 2026-07-04): self-trash cost first (DCGO ActivateCoroutine order), owned leave finished by stable card handle (leave NOT prevented), cost+1 comparator via play_cost_eq_binding against the pre-leave top-card snapshot (DCGO BT19_099.cs:261). Offer installs even with zero reward candidates (DCGO CanUseCondition 205-219 has no candidate gate; candidate scan 275-277 is post-trash). Engine contract pinned in tests/dsl/delay_union_play_flow.rs (3)."
+    },
+    "EX7-048": {
+      "card_name": "Gundramon",
+      "validated_date": "2026-07-04",
+      "report": "single-card finish (worker draft + reviewer BLOCKING fix)",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "three-musketeers",
+      "yaml_path": "code/digimon-engine/cards/ex7/EX7-048.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_048.rs",
+      "test_count": 27,
+      "notes": "All printed clauses green: <Blocker> (face-up only), shared [On Play]/[When Digivolving] reveal-6 / use-1-3M-Option-free / remainder top-or-bottom choice (end-to-end with real EX7-070 Der Blitz), [All Turns] protect-3M-Digimon-by-trashing-Option replacement (incl. self-protection - no 'other' gate - and Digimon-only kind gate), 2 digivolve alt-paths at cost 4 (special path uses in_text_contains per printed 'w/[Three Musketeers] in text' / DCGO HasText, NOT trait_has). Engine fixes shipped with this card: (1) reviewer-directed widening of the UseOptionFromRevealed executor to accept the select_reveal_buckets CardList binding; (2) G-DSL-OUTER-TAIL-USED-OPTION-THEFT - a used Option's mid-body-parked remaining steps were stolen by the outer clause's tail drain (wrong order + wrong provenance; Der Blitz mis-disposed to trash) - fixed via compose_parked_used_option_body_tail. DSL regressions in tests/dsl/option_source_use_cluster.rs."
     }
   }
 }

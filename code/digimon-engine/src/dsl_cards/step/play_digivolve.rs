@@ -263,6 +263,46 @@ fn source_index_of(
     })
 }
 
+/// G-DSL-OUTER-TAIL-NESTED-PARK (effect-driven Option-USE facet).
+///
+/// When `use_option_from` parks (the used Option's `[Main]` body installed a
+/// selection), a body that parked MID-BODY — e.g. inside an `if` with steps
+/// still to run after it (EX7-070 Der Blitz: delete pick, THEN the
+/// `place_self_under_permanent` leg) — left those remaining steps in the
+/// GLOBAL `Game::dsl_outer_tail` slot. If we return to the outer `run_steps`
+/// loop with that slot still occupied, the outer scope's
+/// `run_tail_preserving_trigger_context` drains it as if it were the OUTER
+/// clause's own parked tail: the Option's remaining body steps get re-wrapped
+/// under the OUTER card's provenance and sequenced AFTER the outer clause's
+/// tail. Two observable corruptions (EX7-048 + EX7-070 end-to-end):
+///   1. ordering — the outer tail (remainder-to-deck placement) resolves in
+///      the MIDDLE of the Option's `[Main]`, and
+///   2. provenance — `place_self_under_permanent` runs with `source_card` =
+///      the outer card, so its `pending_option` claim fails and the used
+///      Option is mis-disposed to trash instead of seating itself.
+///
+/// Fix: immediately after the use, while the park is still fresh (before the
+/// outer loop's `park_pending_selection_tail` composes the outer tail),
+/// re-compose the slot onto the parked selection under the OPTION's own
+/// provenance. Frame `outer_conts` then hold [option-body-tail, outer-tail]
+/// in the correct order, and the body tail runs with the Option as
+/// `source_card` (its `pending_option` claim succeeds).
+///
+/// NOTE: the sibling verbs `use_option_from_sources` / `use_option_bound`
+/// and the from-hand bucket terminal (`run_reveal_bucket_use_option_
+/// terminal`) share this latent exposure but have no driver card exercising
+/// a mid-body park yet — see qa/archetype-qa/engine-gaps.md.
+fn compose_parked_used_option_body_tail(
+    ctx: &mut EffectContext<'_>,
+    option_card: CardHandle,
+    owner: crate::enums::PlayerId,
+) {
+    if ctx.game.pending_selection.is_some() && ctx.game.dsl_outer_tail.is_some() {
+        let mut option_ctx = EffectContext::new(ctx.game, option_card, None, owner);
+        crate::dsl_cards::step::drain_dsl_outer_tail(&mut option_ctx);
+    }
+}
+
 /// Try to handle `step` as a play / digivolve / placement variant.
 /// Returns `true` if the variant was matched (regardless of whether the
 /// underlying engine call succeeded).
@@ -393,12 +433,31 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             };
             // The `select_reveal` binding resolves to the reveal-pool card
             // handle; route it through the `OptionSource::Revealed` fork.
-            if let Some(ResolvedBinding::Card(handle)) = resolve_binding_ref(card, ctx, bindings) {
-                ctx.game.use_option_from(
-                    owner,
-                    crate::game_actions::OptionSource::Revealed(handle),
-                    delta,
-                );
+            // A `select_reveal_buckets` binding instead resolves to a
+            // `CardList` (0..N handles — 0 or 1 for a min:0/max:1 bucket);
+            // accept both shapes, mirroring `PlayFromRevealedFree` above
+            // (EX7-048 relies on the bucket shape so the mandatory
+            // remainder-placement tail still runs when the pick is declined).
+            match resolve_binding_ref(card, ctx, bindings) {
+                Some(ResolvedBinding::Card(handle)) => {
+                    ctx.game.use_option_from(
+                        owner,
+                        crate::game_actions::OptionSource::Revealed(handle),
+                        delta,
+                    );
+                    compose_parked_used_option_body_tail(ctx, handle, owner);
+                }
+                Some(ResolvedBinding::CardList(handles)) => {
+                    for handle in handles {
+                        ctx.game.use_option_from(
+                            owner,
+                            crate::game_actions::OptionSource::Revealed(handle),
+                            delta.clone(),
+                        );
+                        compose_parked_used_option_body_tail(ctx, handle, owner);
+                    }
+                }
+                _ => {}
             }
             true
         }
