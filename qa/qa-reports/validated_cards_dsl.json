@@ -10619,14 +10619,29 @@
       "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch)."
     },
     "EX7-071": {
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "date": "2026-07-03",
-      "notes": "store-champs wave A. [Main] triple delete + [Security] + memory-gain + color-ignore all green; self-placement tail pending DSL wiring of place_self_under_permanent (G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL); aspirational tests #[ignore]'d."
+      "notes": "store-champs wave A -> completed in the DSL-wiring round: [Main] triple delete + self-placement tail (place_self_under_permanent DSL verb, G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL resolved), [Security] (no tail), inherited memory-gain, color-ignore use_requirement all green. 17/17 behavioral tests."
     },
     "EX9-074": {
       "status": "PARTIAL",
       "date": "2026-07-03",
-      "notes": "store-champs wave A. DigiXros/on-play branches green; 6+-color mass-delete clause pending YAML-reachable threshold leaf (G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD); branch primitives proven in tests/dsl/kimeramon_color_mass_delete.rs."
+      "notes": "store-champs wave A -> mass-delete clause completed in the DSL-wiring round: both Part-2 branches authored via own_source_stack_color_count_gte (G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD resolved) + color_matches_own_source_stack / delete_one_per_opponent_color; 24/24 behavioral tests. Remaining PARTIAL is only the documented cosmetic G-DSL-PLACE-AS-TOP-SOURCE position divergence (bottom not top source; behaviorally inert for this card - BT13-088 precedent)."
+    },
+    "BT18-015": {
+      "card_name": "Kimeramon",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "test_count": 17,
+      "yaml_path": "code/digimon-engine/cards/bt18/BT18-015.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_015.rs",
+      "patterns": [
+        "E1",
+        "E2",
+        "DNA"
+      ],
+      "date": "2026-07-03",
+      "notes": "DSL-wiring round. [WD][WA] delete-own-cost -> delete opp lowest-DP; [On Deletion] Machinedramon(field)+Kimeramon(trash) DNA -> Millenniummon(hand) via the new effect_initiated_dna_digivolve_trash_partner DSL verb (G-DSL-DNA-TRASH-PARTNER resolved; engine G-ENGINE-DNA-TRASH-MATERIAL); inherited <Security A. +1> (ST1-07 idiom); 3 digivolve alt-paths (Red/Purple Lv.4 circles + Composite-trait Cost 3). 17/17 behavioral tests."
     }
   }
 }

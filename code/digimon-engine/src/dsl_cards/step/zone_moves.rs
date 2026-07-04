@@ -315,6 +315,25 @@ pub fn try_run(
             true
         }
 
+        CompiledStep::PlaceSelfUnderPermanent { target, face_down } => {
+            // G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL: place THIS effect's
+            // source Option as the bottom digivolution card of the chosen own
+            // permanent. Composes with the [Main] Option-play path — the
+            // engine primitive claims the in-flight `pending_option`, so the
+            // later `dispose_option` finds nothing and the Option is seated
+            // (face-up by default) instead of trashed. No-op (silent) when
+            // the target binding is unset / not a permanent — the preceding
+            // select self-skipped with no candidate (DCGO: the placement
+            // select is mandatory IF a candidate exists, silently skipped if
+            // none), and the Option then disposes normally.
+            if let Some(ResolvedBinding::Permanent(target_handle)) =
+                resolve_binding_ref(target, ctx, bindings)
+            {
+                let _ = ctx.place_self_under_permanent(target_handle, *face_down);
+            }
+            true
+        }
+
         CompiledStep::PlaceSelectedSourcesUnderTamer {
             source_refs,
             tamer,

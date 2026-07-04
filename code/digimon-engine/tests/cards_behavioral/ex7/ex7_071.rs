@@ -39,24 +39,20 @@
 //! - SecuritySkill ([Security]): the SAME triple independent delete, batch
 //!   destroyed, with NO trailing self-placement step.
 //!
-//! # DSL-GAP — self-placement tail BLOCKED [G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL]
+//! # Self-placement tail — G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL (✅ RESOLVED 2026-07-03)
 //!
 //! The printed [Main] tail "Then, place this card as the bottom digivolution
-//! card of 1 of your [Three Musketeers] trait Digimon" cannot be authored
-//! faithfully with the currently-shipped DSL vocabulary. The engine primitive
-//! (`EffectContext::place_self_under_permanent`,
-//! `code/digimon-engine/src/effect_context/action/lifecycle.rs`) exists and is
-//! purpose-built for this exact card (its own doc comment cites "P-180 /
-//! EX7-070 / EX7-071"), but no DSL step dispatches to it:
-//! - `place_as_bottom_source: { source: self, ... }` resolves `self` to
-//!   `ctx.source_card` then scans hand/trash/security/battle_area/reveal for
-//!   that handle — an in-flight `main_from_hand` Option (parked in
-//!   `pending_option`, not physically in any of those zones mid-resolution)
-//!   is never found, so the step silently no-ops.
-//! - `move_self_option_under_permanent` requires a live `source_permanent`
-//!   (a field Delay Option) — an in-flight hand-played Option has none.
-//! See the full gap writeup in `code/digimon-engine/cards/ex7/EX7-071.yaml`.
-//! Tests exercising this tail are `#[ignore]`'d citing this gap ID.
+//! card of 1 of your [Three Musketeers] trait Digimon" is authored via the
+//! `place_self_under_permanent` DSL step, which lowers to the purpose-built
+//! engine primitive (`EffectContext::place_self_under_permanent`,
+//! `code/digimon-engine/src/effect_context/action/lifecycle.rs` — its doc
+//! comment cites "P-180 / EX7-070 / EX7-071"). The primitive claims the
+//! in-flight `pending_option`, so the resolved Option is seated FACE-UP under
+//! the chosen Digimon instead of trashed; with no [Three Musketeers] Digimon
+//! the select self-skips and the Option disposes to trash normally.
+//! DSL-level substrate proof: `tests/dsl/option_lifecycle_cluster.rs`
+//! (gap1_* + gap1_dsl_*). See the resolution note in
+//! `code/digimon-engine/cards/ex7/EX7-071.yaml`.
 //!
 //! # Patterns this test covers
 //! - D3 Color ignore / bypass (`use_requirement`)
@@ -244,13 +240,11 @@ fn ex7_071_main_deletes_all_three_levels() {
     );
 }
 
-/// ASPIRATIONAL: after the triple delete, [Main] should place the resolved
-/// Option as the bottom digivolution card of a chosen [Three Musketeers]
-/// Digimon. BLOCKED — see G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL (no DSL
-/// step reaches `EffectContext::place_self_under_permanent`). Currently the
-/// card falls through to the engine's default Standard dispose (trashed).
+/// After the triple delete, [Main] places the resolved Option as the bottom
+/// digivolution card of a chosen [Three Musketeers] Digimon (the
+/// `place_self_under_permanent` DSL step — G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL,
+/// resolved 2026-07-03). The Option must NOT be trashed.
 #[test]
-#[ignore = "pending: G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL from qa/dsl-vocab-gaps.md"]
 fn ex7_071_main_self_places_as_bottom_source_of_tm_digimon() {
     let mut runner = main_builder().start();
     runner.place_on_field(0, "TM-OWN", Some(0));
@@ -420,14 +414,15 @@ fn ex7_071_main_level6_digimon_is_never_a_candidate() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// SECTION 3 — [Main] self-placement tail (BLOCKED — see gap notes above)
+// SECTION 3 — [Main] self-placement tail
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// CURRENT (honest) behavior: with no [Three Musketeers] trait Digimon of the
-/// controller's own, the resolved Option goes to trash like a normal Option —
-/// this happens to match the printed no-candidate fallback, but for the WRONG
-/// reason (the self-placement tail is not authored at all, not because it
-/// self-skipped a real candidate check).
+/// With no [Three Musketeers] trait Digimon of the controller's own, the
+/// mandatory placement select self-skips (zero candidates — DCGO's silent
+/// skip), the place step no-ops on the unset binding, and the resolved
+/// Option disposes to trash like a normal Standard Option. Same end state as
+/// before the tail was authored, but now for the RIGHT reason (a real
+/// candidate check self-skipping, not an unauthored clause).
 #[test]
 fn ex7_071_main_no_tm_digimon_falls_back_to_trash() {
     let mut runner = main_builder().start();
@@ -443,8 +438,9 @@ fn ex7_071_main_no_tm_digimon_falls_back_to_trash() {
         .any(|c| c.card_id(&runner.game.card_data) == CARD_ID);
     assert!(
         in_trash,
-        "without the self-placement tail authored, the resolved Option must \
-         go to trash via the engine's default Standard dispose"
+        "with no [Three Musketeers] candidate the placement select \
+         self-skips and the resolved Option goes to trash via the engine's \
+         default Standard dispose"
     );
     let plain_own = runner.game.players[0]
         .battle_area
@@ -461,13 +457,10 @@ fn ex7_071_main_no_tm_digimon_falls_back_to_trash() {
     );
 }
 
-/// ASPIRATIONAL: a plain (non-[Three Musketeers]) own Digimon must never be
-/// offered as a candidate for the self-placement pick, even when a TM Digimon
-/// coexists. BLOCKED — see G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL; no
-/// self-placement selection is authored yet, so no such prompt installs at
-/// all (this test cannot even reach its assertion under current behavior).
+/// A plain (non-[Three Musketeers]) own Digimon must never be offered as a
+/// candidate for the self-placement pick, even when a TM Digimon coexists
+/// (the select filter is `{ kind: digimon, trait_has: "Three Musketeers" }`).
 #[test]
-#[ignore = "pending: G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL from qa/dsl-vocab-gaps.md"]
 fn ex7_071_main_self_placement_only_offers_tm_trait_digimon() {
     let mut runner = main_builder().start();
     runner.place_on_field(0, "TM-OWN", Some(0));

@@ -546,5 +546,268 @@ fn per_color_delete_selection_is_clone_safe() {
     assert!(cloned.pending_selection.is_none());
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Gap 3 — `own_source_stack_color_count_gte` (the YAML-reachable branch gate)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// The no-subject predicate leaf backing the EX9-074 branch discriminant:
+/// `own_source_stack_color_count_gte: N` holds iff the CARRIER's non-flipped
+/// source color count (the shared `distinct_non_flipped_source_color_count`
+/// extraction proven above) is >= N. G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD.
+#[test]
+fn own_source_stack_color_count_gte_thresholds_on_non_flipped_source_colors() {
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon("TOP", "Top", &[CardColor::White]))
+        .add_card(digimon("S-R", "SrcR", &[CardColor::Red]))
+        .add_card(digimon("S-B", "SrcB", &[CardColor::Blue]))
+        .add_card(digimon("S-Y", "SrcY", &[CardColor::Yellow]))
+        .add_card(digimon("S-G", "SrcG", &[CardColor::Green]))
+        .add_card(digimon("S-K", "SrcK", &[CardColor::Black]))
+        .add_card(digimon("S-P", "SrcP", &[CardColor::Purple]))
+        .add_card(make_test_card("SRC", "Src"))
+        .hand(0, &["SRC"])
+        .build();
+
+    // 6 distinct non-flipped source colors, with a 7th source FLIPPED — the
+    // flipped Purple must not count (shared extraction with Gap 1).
+    let carrier = place_carrier_with_sources(
+        &mut runner,
+        "TOP",
+        &[
+            ("S-R", false),
+            ("S-B", false),
+            ("S-Y", false),
+            ("S-G", false),
+            ("S-K", false),
+            ("S-P", true), // flipped → excluded → count = 5
+        ],
+    );
+    let src = runner.game.players[0].hand[0].handle();
+    let rctx = EffectReadContext::new_with_source_kind(
+        &runner.game,
+        src,
+        Some(carrier),
+        EffectSourceKind::Digimon,
+        0,
+    );
+
+    let gte = |n: u8| CompiledPredicate {
+        own_source_stack_color_count_gte: Some(n),
+        ..Default::default()
+    };
+    assert!(
+        eval_predicate_with_bindings(&gte(5), &rctx, PredicateSubject::None, None),
+        "5 non-flipped distinct colors -> gte(5) holds"
+    );
+    assert!(
+        !eval_predicate_with_bindings(&gte(6), &rctx, PredicateSubject::None, None),
+        "the flipped Purple source is excluded -> gte(6) fails at 5 live colors"
+    );
+
+    // Un-flipped sibling carrier: 6 distinct colors → gte(6) holds.
+    let carrier6 = place_carrier_with_sources(
+        &mut runner,
+        "TOP",
+        &[
+            ("S-R", false),
+            ("S-B", false),
+            ("S-Y", false),
+            ("S-G", false),
+            ("S-K", false),
+            ("S-P", false),
+        ],
+    );
+    let rctx6 = EffectReadContext::new_with_source_kind(
+        &runner.game,
+        src,
+        Some(carrier6),
+        EffectSourceKind::Digimon,
+        0,
+    );
+    assert!(
+        eval_predicate_with_bindings(&gte(6), &rctx6, PredicateSubject::None, None),
+        "6 non-flipped distinct colors -> gte(6) holds (Branch B)"
+    );
+}
+
+/// No carrier (`source_permanent = None`) → the count is 0 → any floor >= 1
+/// fails rather than panicking.
+#[test]
+fn own_source_stack_color_count_gte_without_carrier_fails_closed() {
+    let runner = DebugRunner::builder()
+        .add_card(make_test_card("SRC", "Src"))
+        .hand(0, &["SRC"])
+        .build();
+    let src = runner.game.players[0].hand[0].handle();
+    let rctx = EffectReadContext::new_with_source_kind(
+        &runner.game,
+        src,
+        None,
+        EffectSourceKind::Digimon,
+        0,
+    );
+    let pred = CompiledPredicate {
+        own_source_stack_color_count_gte: Some(1),
+        ..Default::default()
+    };
+    assert!(
+        !eval_predicate_with_bindings(&pred, &rctx, PredicateSubject::None, None),
+        "no carrier -> empty color set -> the floor fails closed"
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Gap 3 — YAML-reachable end-to-end: the EX9-074 branch shape via `if:`
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// The EXACT EX9-074 Part-2 shape, authored in YAML: the `if:` gate reads the
+/// new leaf; Branch B (>=6) is `delete_one_per_opponent_color`, Branch A
+/// (else) is a mandatory same-color single delete filtered by
+/// `color_matches_own_source_stack`.
+const BRANCH_GATE_YAML: &str = r#"
+card: TEST-COLOR-BRANCH-GATE
+name: Color Branch Gate
+kind: digimon
+color: [white]
+level: 6
+cost: 12
+dp: 12000
+effects:
+  - when: on_play
+    process:
+      - if:
+          condition: { own_source_stack_color_count_gte: 6 }
+          then:
+            - delete_one_per_opponent_color:
+                prompt: "Delete 1 {color} Digimon"
+          else:
+            - select_opponent_permanent:
+                bind_as: same_color_victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - color_matches_own_source_stack: { of: self }
+                prompt: "Delete 1 same-color Digimon"
+            - delete_permanent: { target: same_color_victim }
+"#;
+
+fn branch_gate_runner() -> DebugRunner {
+    DebugRunner::builder()
+        .from_dsl_yaml(BRANCH_GATE_YAML)
+        .expect("branch-gate YAML parses + compiles")
+        .add_card(digimon("S-R", "SrcR", &[CardColor::Red]))
+        .add_card(digimon("S-B", "SrcB", &[CardColor::Blue]))
+        .add_card(digimon("S-Y", "SrcY", &[CardColor::Yellow]))
+        .add_card(digimon("S-G", "SrcG", &[CardColor::Green]))
+        .add_card(digimon("S-K", "SrcK", &[CardColor::Black]))
+        .add_card(digimon("S-P", "SrcP", &[CardColor::Purple]))
+        .add_card(digimon("O-RED", "Opp Red", &[CardColor::Red]))
+        .add_card(digimon("O-GREEN", "Opp Green", &[CardColor::Green]))
+        .add_card(make_test_card("FILL3", "Filler3"))
+        .deck(0, &["FILL3", "FILL3"])
+        .deck(1, &["FILL3", "FILL3"])
+        .memory(20)
+        .start()
+}
+
+fn fire_on_play(runner: &mut DebugRunner, source: PermanentHandle) {
+    use digimon_engine::enums::EffectTiming;
+    use digimon_engine::selection::TriggerSource;
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::OnPlay, TriggerSource::Permanent(source));
+    runner.game.drain_effect_queue();
+}
+
+/// Below-6 (5 distinct source colors) → the ELSE branch: ONE mandatory pick,
+/// only same-color opponent Digimon offered; the off-color one survives.
+#[test]
+fn yaml_branch_gate_below_six_takes_single_same_color_delete() {
+    let mut runner = branch_gate_runner();
+    // 5 distinct source colors: Red, Blue, Yellow, Black, Purple (no Green).
+    let carrier = place_carrier_with_sources(
+        &mut runner,
+        "TEST-COLOR-BRANCH-GATE",
+        &[
+            ("S-R", false),
+            ("S-B", false),
+            ("S-Y", false),
+            ("S-K", false),
+            ("S-P", false),
+        ],
+    );
+    let _red = place_digimon(&mut runner, 1, "O-RED"); // shares Red
+    let _green = place_digimon(&mut runner, 1, "O-GREEN"); // shares nothing
+
+    fire_on_play(&mut runner, carrier);
+
+    let pending = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("Branch A installs a single mandatory same-color pick");
+    assert!(!pending.is_optional, "Branch A's pick is mandatory");
+    // An `OppField` selection encodes candidates as `encode_attack(0, slot)`
+    // (`100 + slot`) — the side is carried by the kind (selection.rs).
+    assert_eq!(
+        pending.valid_action_ids,
+        vec![encode_attack(0, 0)],
+        "only the Red opponent Digimon (shares a source color) is offered; Green is not"
+    );
+    runner
+        .game
+        .resolve_selection(pending.selecting_player, encode_attack(0, 0))
+        .expect("Branch A pick resolves");
+    runner.game.drain_effect_queue();
+
+    assert!(runner.game.pending_selection.is_none(), "one pick only");
+    let survivors: Vec<String> = runner
+        .game
+        .player(1)
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        survivors,
+        vec!["O-GREEN".to_string()],
+        "Branch A deletes exactly the picked same-color Digimon"
+    );
+}
+
+/// 6+ distinct source colors → the THEN branch: one mandatory pick per color
+/// present among opponent Digimon, batch-deleted.
+#[test]
+fn yaml_branch_gate_six_or_more_takes_per_color_mass_delete() {
+    let mut runner = branch_gate_runner();
+    // 6 distinct source colors.
+    let carrier = place_carrier_with_sources(
+        &mut runner,
+        "TEST-COLOR-BRANCH-GATE",
+        &[
+            ("S-R", false),
+            ("S-B", false),
+            ("S-Y", false),
+            ("S-G", false),
+            ("S-K", false),
+            ("S-P", false),
+        ],
+    );
+    place_digimon(&mut runner, 1, "O-RED"); // idx 0
+    place_digimon(&mut runner, 1, "O-GREEN"); // idx 1
+
+    fire_on_play(&mut runner, carrier);
+
+    // Per-color picks: Red first, then Green (both mandatory).
+    resolve_pick(&mut runner, 0);
+    resolve_pick(&mut runner, 1);
+
+    assert!(runner.game.pending_selection.is_none());
+    assert!(
+        runner.game.player(1).battle_area.is_empty(),
+        "Branch B deletes one opponent Digimon per distinct color present"
+    );
+}
+
 #[allow(dead_code)]
 fn _unused(_c: CardHandle) {}

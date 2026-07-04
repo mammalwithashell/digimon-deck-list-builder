@@ -266,6 +266,21 @@ pub struct PredicateSpec {
     /// G-DSL-SELF-SOURCE-COUNT-THRESHOLD (driver BT21-006).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_source_count: Option<SelfSourceCountPredicate>,
+    /// True when the effect CARRIER's NON-FLIPPED digivolution-source color
+    /// set has at least N distinct colors. A no-subject, carrier-scoped
+    /// global predicate — it does NOT inspect the candidate, it reads
+    /// `ctx.source_permanent` and applies the SAME shared extraction as
+    /// `color_matches_own_source_stack` (`non_flipped_source_colors`: sources
+    /// beneath the top card, face-down/flipped excluded, deduplicated). The
+    /// YAML-reachable numeric branch discriminant for EX9-074 Kimeramon:
+    /// "If this Digimon has 6 or more colors in its digivolution cards,
+    /// instead delete 1 of each of your opponent's Digimon with different
+    /// colors" — `if: { condition: { own_source_stack_color_count_gte: 6 },
+    /// … }`. Mirrors DCGO `DigivolutionCards.Filter(!IsFlipped)
+    /// .SelectMany(CardColors).Distinct().Count >= N`.
+    /// G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD (driver EX9-074).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub own_source_stack_color_count_gte: Option<u8>,
 
     // Leaf — zone / owner
     #[serde(skip_serializing_if = "Vec::is_empty")]

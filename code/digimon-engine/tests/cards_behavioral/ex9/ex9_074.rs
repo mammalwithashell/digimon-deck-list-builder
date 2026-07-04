@@ -26,6 +26,10 @@
 //! - E1-adjacent: [On Play]/[When Digivolving] shared body, optional
 //!   (non-cost) select_trash + place_as_bottom_source
 //! - Formula-driven self DP aura (`source_color_count`, all-turns, symmetric)
+//! - Branch-gated deletion: `if: { own_source_stack_color_count_gte: 6 }` —
+//!   Branch A (<=5 colors) = mandatory single same-color delete
+//!   (`color_matches_own_source_stack` filter), Branch B (>=6 colors) =
+//!   `delete_one_per_opponent_color` per-color mandatory picks + batch delete
 //!
 //! # Known engine/DSL gaps affecting this card (see YAML header for the full
 //! writeup)
@@ -34,20 +38,14 @@
 //!   no "insert directly beneath the top card" placement verb exists; the
 //!   YAML uses `place_as_bottom_source` with a documented cosmetic-position
 //!   divergence (same resolution as BT13-088).
-//! - **G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD** (new, filed by this
-//!   pass): no YAML-reachable predicate/formula reads "distinct colors in
-//!   the effect carrier's own non-flipped source stack" as a numeric value,
-//!   so the printed "if this Digimon has 6 or more colors ... instead ..."
-//!   branch discriminant cannot be authored. Both branches' step-level
-//!   vocabulary (`color_matches_own_source_stack`, `delete_one_per_opponent_
-//!   color`) IS wired and confirmed present, but with no way to gate between
-//!   them, the ENTIRE delete clause is OMITTED from the YAML (not
-//!   half-implemented) per the no-approximations policy and the established
-//!   EX5-015 "omit rather than misfire" convention. This test file therefore
-//!   has NO tests for the delete clause (there is nothing shipped to test)
-//!   and instead has a structural test asserting the clause is indeed absent
-//!   (documents the gap mechanically rather than leaving it silently
-//!   untested).
+//! - **G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD** (✅ RESOLVED
+//!   2026-07-03): the `own_source_stack_color_count_gte` predicate leaf now
+//!   reads "distinct colors in the effect carrier's own non-flipped source
+//!   stack" as a no-subject numeric gate (shared extraction with
+//!   `color_matches_own_source_stack`), so the printed "if this Digimon has
+//!   6 or more colors ... instead ..." branch discriminant is authored
+//!   natively. Both branches ship; SECTION 6 exercises them behaviorally.
+//!   Substrate proof: tests/dsl/kimeramon_color_mass_delete.rs.
 
 #![allow(dead_code, unused_imports)]
 
@@ -202,10 +200,10 @@ fn ex9_074_has_assembly_minus_seven_alt_path() {
     );
 }
 
-/// Exactly one triggered clause (the shared [On Play]/[When Digivolving]
-/// optional placement body) — the delete sub-effect is OMITTED (see file
-/// header), so it does not add a second clause, and there is no [Security]
-/// clause on this card.
+/// Exactly one triggered clause — the shared [On Play]/[When Digivolving]
+/// body carries BOTH Part 1 (the optional trash placement) and Part 2 (the
+/// branch-gated deletion, nested inside its `if:` step), and there is no
+/// [Security] clause on this card.
 #[test]
 fn ex9_074_has_exactly_one_triggered_clause() {
     let runner = kimeramon_runner();
@@ -219,9 +217,8 @@ fn ex9_074_has_exactly_one_triggered_clause() {
     assert_eq!(
         triggered.len(),
         1,
-        "EX9-074 ships exactly one triggered clause (the optional trash-placement \
-         body); the delete sub-effect is OMITTED pending \
-         G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD"
+        "EX9-074 ships exactly one triggered clause (placement + branch-gated \
+         deletion share the single [On Play]/[When Digivolving] body)"
     );
 }
 
@@ -256,10 +253,13 @@ fn ex9_074_on_play_when_digivolving_clause_is_mandatory_faceup_dual_timing() {
 }
 
 /// The clause's process includes a `select_trash` step (the optional
-/// placement pick) and a `place_as_bottom_source` step (the placement
-/// itself — see the G-DSL-PLACE-AS-TOP-SOURCE fidelity note).
+/// placement pick), a `place_as_bottom_source` step (the placement itself —
+/// see the G-DSL-PLACE-AS-TOP-SOURCE fidelity note), and the Part-2 `if:`
+/// step gated on `own_source_stack_color_count_gte: 6` — Branch B (then) is
+/// `delete_one_per_opponent_color`, Branch A (else) is the mandatory
+/// same-color single delete.
 #[test]
-fn ex9_074_clause_process_has_select_trash_and_place_as_bottom_source() {
+fn ex9_074_clause_process_has_placement_and_branch_gated_delete() {
     let runner = kimeramon_runner();
     let card = runner.compiled_card("EX9-074").expect("compiles");
 
@@ -287,13 +287,35 @@ fn ex9_074_clause_process_has_select_trash_and_place_as_bottom_source() {
             .any(|s| matches!(s, CompiledStep::PlaceAsBottomSource { .. })),
         "must include a place_as_bottom_source step"
     );
+
+    let branch = clause
+        .process
+        .iter()
+        .find_map(|s| match s {
+            CompiledStep::If {
+                condition,
+                then,
+                else_branch,
+            } => Some((condition, then, else_branch)),
+            _ => None,
+        })
+        .expect("must include the Part-2 `if:` branch gate");
+    let (condition, then, else_branch) = branch;
+    assert_eq!(
+        condition.own_source_stack_color_count_gte,
+        Some(6),
+        "the branch discriminant is own_source_stack_color_count_gte: 6"
+    );
     assert!(
-        !clause
-            .process
-            .iter()
+        then.iter()
             .any(|s| matches!(s, CompiledStep::DeleteOnePerOpponentColor { .. })),
-        "the delete sub-effect (both branches) is OMITTED — no \
-         delete_one_per_opponent_color step should be present"
+        "Branch B (>=6 colors) is delete_one_per_opponent_color"
+    );
+    assert!(
+        else_branch
+            .iter()
+            .any(|s| matches!(s, CompiledStep::DeletePermanent { .. })),
+        "Branch A (<=5 colors) ends in a delete_permanent of the same-color pick"
     );
 }
 
@@ -671,5 +693,180 @@ fn ex9_074_all_turns_dp_boost_updates_live_when_source_added() {
         runner.effective_dp(kimera),
         Some(12000),
         "adding a 2nd distinct-color source must raise the live DP total to 12000"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECTION 6 — Part-2 branch-gated deletion
+// (own_source_stack_color_count_gte: 6 — resolved 2026-07-03)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// Six distinctly-colored [DM] materials — enough to flip the branch gate.
+fn add_six_color_materials(runner: &mut DebugRunner) {
+    use digimon_engine::enums::CardColor;
+    for (id, name, color) in [
+        ("MAT-BLUE", "Blue Material", CardColor::Blue),
+        ("MAT-YELLOW", "Yellow Material", CardColor::Yellow),
+        ("MAT-GREEN", "Green Material", CardColor::Green),
+        ("MAT-BLACK", "Black Material", CardColor::Black),
+        ("MAT-PURPLE", "Purple Material", CardColor::Purple),
+    ] {
+        runner.game.card_data.push(make_dm_material(id, name, color));
+    }
+    // MAT-RED already registered by kimeramon_runner().
+}
+
+/// Resolve the currently-pending mandatory opponent pick by taking the first
+/// legal action, asserting it is NOT optional.
+fn resolve_mandatory_pick(runner: &mut DebugRunner) {
+    let view = runner
+        .pending_selection_view()
+        .expect("a mandatory opponent pick must be pending");
+    assert!(
+        !runner.pending_is_optional(),
+        "the Part-2 deletion picks are MANDATORY (DCGO canNoSelect: false)"
+    );
+    let action = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != PASS)
+        .expect("a non-PASS pick must be available");
+    let player = view.selecting_player;
+    runner
+        .game
+        .resolve_selection(player, action)
+        .expect("pick resolves");
+    runner.game.drain_effect_queue();
+}
+
+/// Branch A (<=5 source colors): exactly ONE mandatory pick, offering only
+/// opponent Digimon that share a color with a non-flipped digivolution
+/// source; the off-color Digimon survives.
+#[test]
+fn ex9_074_on_play_below_six_colors_deletes_one_same_color_opponent_digimon() {
+    use digimon_engine::enums::CardColor;
+    let mut runner = kimeramon_runner();
+    runner
+        .game
+        .card_data
+        .push(make_opponent_digimon("OPP-RED", CardColor::Red));
+    runner
+        .game
+        .card_data
+        .push(make_opponent_digimon("OPP-GREEN", CardColor::Green));
+
+    // 1 red source (1 distinct color -> Branch A). Empty trash -> Part 1
+    // self-skips with no prompt, so the first prompt IS the Branch-A pick.
+    let kimera = runner.place_stack(0, &["MAT-RED", "EX9-074"]);
+    runner.place_on_field(1, "OPP-RED", Some(0));
+    runner.place_on_field(1, "OPP-GREEN", Some(1));
+
+    fire_on_play(&mut runner, kimera);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("Branch A installs the mandatory same-color pick");
+    let candidates = view
+        .valid_action_ids
+        .iter()
+        .filter(|&&a| a != PASS)
+        .count();
+    assert_eq!(
+        candidates, 1,
+        "only OPP-RED (shares Red with a source) may be offered; OPP-GREEN is excluded"
+    );
+    resolve_mandatory_pick(&mut runner);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "Branch A makes exactly ONE pick"
+    );
+    let survivors: Vec<String> = runner.game.players[1]
+        .battle_area
+        .iter()
+        .map(|p| p.top_card().card_id(&runner.game.card_data).to_string())
+        .collect();
+    assert_eq!(
+        survivors,
+        vec!["OPP-GREEN".to_string()],
+        "the same-color Digimon is deleted; the off-color one survives"
+    );
+}
+
+/// Branch A with NO same-color opponent Digimon (here: no digivolution
+/// sources at all -> empty color set): the mandatory pick self-skips (DCGO's
+/// HasMatchConditionOpponentsPermanent guard) and nothing is deleted.
+#[test]
+fn ex9_074_on_play_below_six_colors_no_same_color_target_self_skips() {
+    use digimon_engine::enums::CardColor;
+    let mut runner = kimeramon_runner();
+    runner
+        .game
+        .card_data
+        .push(make_opponent_digimon("OPP-GREEN", CardColor::Green));
+
+    let kimera = runner.place_on_field(0, "EX9-074", Some(0)); // no sources
+    runner.place_on_field(1, "OPP-GREEN", Some(0));
+
+    fire_on_play(&mut runner, kimera);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "empty source color set -> no legal same-color target -> the pick self-skips"
+    );
+    assert_eq!(
+        runner.game.players[1].battle_area.len(),
+        1,
+        "nothing is deleted when Branch A has no legal target"
+    );
+}
+
+/// Branch B (>=6 source colors): one MANDATORY pick per distinct color
+/// present among the opponent's Digimon, batch-deleted.
+#[test]
+fn ex9_074_on_play_six_plus_colors_deletes_one_per_distinct_opponent_color() {
+    use digimon_engine::enums::CardColor;
+    let mut runner = kimeramon_runner();
+    add_six_color_materials(&mut runner);
+    runner
+        .game
+        .card_data
+        .push(make_opponent_digimon("OPP-RED", CardColor::Red));
+    runner
+        .game
+        .card_data
+        .push(make_opponent_digimon("OPP-GREEN", CardColor::Green));
+
+    // 6 distinct source colors -> Branch B.
+    let kimera = runner.place_stack(
+        0,
+        &[
+            "MAT-RED",
+            "MAT-BLUE",
+            "MAT-YELLOW",
+            "MAT-GREEN",
+            "MAT-BLACK",
+            "MAT-PURPLE",
+            "EX9-074",
+        ],
+    );
+    runner.place_on_field(1, "OPP-RED", Some(0));
+    runner.place_on_field(1, "OPP-GREEN", Some(1));
+
+    fire_on_play(&mut runner, kimera);
+
+    // Two colors present among opponent Digimon (Red, Green) -> exactly two
+    // mandatory picks, then the batch delete fires.
+    resolve_mandatory_pick(&mut runner);
+    resolve_mandatory_pick(&mut runner);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "both colors resolved -> batch delete, no further prompt"
+    );
+    assert!(
+        runner.game.players[1].battle_area.is_empty(),
+        "Branch B deletes one opponent Digimon per distinct color present"
     );
 }

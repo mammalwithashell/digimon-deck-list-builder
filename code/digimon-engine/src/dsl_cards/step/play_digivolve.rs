@@ -954,6 +954,62 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        CompiledStep::EffectInitiatedDnaDigivolveTrashPartner {
+            target,
+            trash_partner,
+            from_hand,
+            cost,
+            ignore_requirements,
+        } => {
+            // G-DSL-DNA-TRASH-PARTNER: DNA digivolve where one material is a
+            // battle-area permanent and the other is a card in the
+            // controller's TRASH (BT18-015 / BT18-073 [On Deletion]). Lowers
+            // to `effect_initiated_dna_digivolve_trash_partner`
+            // (G-ENGINE-DNA-TRASH-MATERIAL): the trash material moves
+            // STRAIGHT into the merged stack — never an independently played
+            // permanent, no [On Play] fires (DCGO CreateNewPermanent).
+            let target_handle = match resolve_binding_ref(target, ctx, bindings) {
+                Some(ResolvedBinding::Permanent(h)) => h,
+                _ => return true,
+            };
+            let trash_card = match resolve_binding_ref(trash_partner, ctx, bindings) {
+                Some(ResolvedBinding::Card(h)) => h,
+                Some(ResolvedBinding::TrashIndex(owner, i)) => {
+                    match ctx.game.player(owner).trash.get(i as usize) {
+                        Some(cs) => cs.handle(),
+                        None => return true,
+                    }
+                }
+                _ => return true,
+            };
+            let result_card = match resolve_binding_ref(from_hand, ctx, bindings) {
+                Some(ResolvedBinding::Card(h)) => h,
+                Some(ResolvedBinding::HandIndex(owner, i)) => {
+                    match ctx.game.player(owner).hand.get(i as usize) {
+                        Some(cs) => cs.handle(),
+                        None => return true,
+                    }
+                }
+                _ => return true,
+            };
+            // G-ENGINE-DNA-PRINTED-COST: `cost: printed` pays the result
+            // card's printed DNA cost against the {field target, trash
+            // partner} pair (DCGO `payCost: true`).
+            let dna_cost = lower_dna_cost(cost, ctx, bindings, || {
+                ctx.printed_dna_cost_for_field_trash_pair(target_handle, trash_card, result_card)
+            });
+            let success = ctx.effect_initiated_dna_digivolve_trash_partner(
+                target_handle,
+                trash_card,
+                result_card,
+                dna_cost,
+                *ignore_requirements,
+            );
+            if let Some(played) = success {
+                bindings.record_digivolved(played);
+            }
+            true
+        }
 
         // ── Token / placement ─────────────────────────────────────────────
         CompiledStep::PlayToken {

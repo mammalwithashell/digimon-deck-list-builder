@@ -1714,6 +1714,7 @@ return-immunity modifiers" entry — verify at implementation; likely no longer 
 
 ### `move_self_option_under_permanent` doesn't compose with the standard Option [Main]-play path
 - **Status: ✅ RESOLVED (2026-07-03).** `EffectContext::place_self_under_permanent(target, face_down)` claims the in-flight `pending_option` (mirroring the resolved `place_self_as_delay_option_permanent` claim precedence: security → pending_option → hand/trash) and seats the Option FACE-UP (settable) via the shared `Game::seat_card_source_under_permanent` (stable-identity target re-resolution); claiming empties the slot so `dispose_option` skips the Standard trash; effect tails gate on the returned bool. Field-Option sources still route to `move_field_option_under_permanent`. Tests: `tests/dsl/option_lifecycle_cluster.rs` gap1_* (3/3). Unblocks the P-180/EX7-070/EX7-071 [Main] tail (cards still to author).
+- **DSL verb (2026-07-03):** `place_self_under_permanent: { target, face_down }` now dispatches to this primitive (G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL, qa/dsl-vocab-gaps.md — ✅ RESOLVED); EX7-071's [Main] tail is authored + green (`cards/ex7/EX7-071.yaml`).
 - **Severity (was):** 🔴 BLOCKING
 - **Discovered in:** Three Musketeers BeelStarmon (2026-07-02)
 - **Card(s):** P-180 Bind Red Trigger, EX7-071 Hurricane Screw Shot, EX7-070 Der Blitz — all [Main] Options ending "Then, place this card as the bottom digivolution card of 1 of your [Three Musketeers] trait Digimon."
@@ -1875,6 +1876,7 @@ Existing entries reconfirmed with NEW drivers (append, no re-file):
 
 ### Effect-initiated DNA digivolve with a TRASH material (field + trash pair, result card from hand)  [G-ENGINE-DNA-TRASH-MATERIAL]
 - **Status: RESOLVED (2026-07-03, DNA workstream).** `effect_initiated_dna_digivolve_trash_partner` -> `Game::dna_digivolve_trash_partner_inner`: trash material moves STRAIGHT into the merged stack (no independent play, no OnPlay — faithful to DCGO CreateNewPermanent); atomic + clone-safe. Composes with printed-cost + recipe enforcement. BT18-015/BT18-073 shapes proven via fixtures.
+- **DSL verb (2026-07-03):** `effect_initiated_dna_digivolve_trash_partner: { target, trash_partner, from_hand, cost, ignore_requirements }` now lowers to this primitive (G-DSL-DNA-TRASH-PARTNER, qa/dsl-vocab-gaps.md — ✅ RESOLVED); BT18-015 authored + green (`cards/bt18/BT18-015.yaml`), BT18-073's [On Deletion] clause is the remaining consumer.
 - **Severity:** 🔴 BLOCKING
 - **Discovered in:** Millenniummon (2026-07-02)
 - **Card(s):** BT18-015 Kimeramon ("[On Deletion] 1 of your [Machinedramon] and 1 [Kimeramon] in the trash may DNA digivolve into [Millenniummon] in the hand"), BT18-073 Machinedramon ("[On Deletion] 1 of your [Kimeramon] in play and 1 [Machinedramon] in the trash may DNA digivolve into [Millenniummon] in the hand")

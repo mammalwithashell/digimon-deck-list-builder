@@ -476,6 +476,31 @@ pub fn eval_predicate_with_bindings(
             return false;
         }
     }
+    if let Some(floor) = pred.own_source_stack_color_count_gte {
+        // G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD: distinct colors among
+        // the effect CARRIER's NON-FLIPPED digivolution sources (top card
+        // excluded, face-down sources excluded) — the SAME shared extraction
+        // as `color_matches_own_source_stack` (`non_flipped_source_colors`),
+        // so the branch gate and the Branch-A filter always agree. Reads
+        // `ctx.source_permanent` — a no-subject, carrier-scoped global leaf.
+        // The EX9-074 Kimeramon branch discriminant: "if this Digimon has 6
+        // or more colors in its digivolution cards, instead …" (DCGO
+        // `DigivolutionCards.Filter(!IsFlipped).SelectMany(CardColors)
+        // .Distinct().Count`). No carrier → count 0 → the floor fails.
+        let count = rctx
+            .source_permanent
+            .and_then(|handle| permanent_for_handle(rctx, handle))
+            .map(|perm| {
+                crate::dsl_cards::formula_eval::distinct_non_flipped_source_color_count(
+                    perm,
+                    rctx.card_data(),
+                )
+            })
+            .unwrap_or(0);
+        if count < i32::from(floor) {
+            return false;
+        }
+    }
     // G-BEFORE-PAY-COST-DIGIVOLVE-TARGET: when a `cost_target` sub-
     // predicate is present, evaluate it as a Card predicate against the
     // card whose cost is currently being inspected. Fails outside any

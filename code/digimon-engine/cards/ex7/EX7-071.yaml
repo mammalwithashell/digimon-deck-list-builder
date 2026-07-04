@@ -50,8 +50,9 @@
 #   equivalent: no OnDeletion timing in this card's text depends on
 #   simultaneity, and each `delete_permanent` call resolves immediately).
 #
-# ─── DSL-GAP — "Then, place this card as the bottom digivolution card of 1 of
-#     your [Three Musketeers] Digimon" [G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL] ─
+# ─── [Main] tail — "Then, place this card as the bottom digivolution card of
+#     1 of your [Three Musketeers] Digimon" (G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL,
+#     ✅ RESOLVED 2026-07-03) ────────────────────────────────────────────────
 #
 # DCGO: AFTER the triple delete resolves, a `CanSelectPermanentCondition`
 # select over the controller's own [Three Musketeers] trait Digimon
@@ -59,52 +60,25 @@
 # none) -> `AddDigivolutionCardsBottom` (face-up; DCGO does not pass
 # `isFacedown: true` here, unlike the EX9-058 Ver.5 idiom).
 #
-# The ENGINE primitive for this exists and is purpose-built for this exact
-# card group: `EffectContext::place_self_under_permanent` in
-# `code/digimon-engine/src/effect_context/action/lifecycle.rs` — its own doc
-# comment cites "P-180 / EX7-070 / EX7-071 (Gap 1,
-# G-OPTION-PLACE-SELF-UNDER-PERMANENT-ON-PLAY-PATH)" by name. It correctly
-# claims the in-flight `pending_option` (the Option card mid-[Main]-resolution
-# is NOT in hand/trash/battle_area — `play_option_core` parks it in the
-# single-occupancy `pending_option` slot before running the [Main] body), so
-# that the subsequent `dispose_option` (step 8 of `play_option_core`) finds
-# nothing to trash and the card ends up seated under `target` instead.
-#
-# BUT there is no DSL step wired to this primitive:
-#   - `place_as_bottom_source: { source: self, ... }` does NOT work here — its
-#     `self` binding resolves to `ResolvedBinding::Card(ctx.source_card)`, then
-#     `resolve_card_handle_source_ref` scans hand/trash/security/battle_area/
-#     reveal for that CardHandle. An in-flight Option mid-[Main] is in NONE of
-#     those zones (it is parked in `pending_option`), so the scan returns
-#     `None` and the step silently no-ops (confirmed via
-#     `ex7_071_main_deletes_all_three_levels_and_self_places` failing: the card
-#     fell through to normal `dispose_option` trash instead of being seated).
-#     This DSL step is correct for a DIFFERENT case — a battle-area permanent
-#     placing itself (e.g. BT20-083 Omekamon's `on_deletion` clause, where
-#     `self` resolves to a live top-of-stack card).
-#   - `move_self_option_under_permanent` also does NOT apply — its engine impl
-#     requires `self.source_permanent` (a live battle-area permanent); an
-#     in-flight `main_from_hand` Option has no `source_permanent` (per its own
-#     doc comment: "relocate THIS effect's source Option (an in-battle-area
-#     field Option) ... does NOT apply" to the play-path case, which is why
-#     `place_self_under_permanent` was written as its sibling).
-#   - No other shipped DSL step reaches `place_self_under_permanent`.
-#
-# Per the no-approximations policy (rule 17) and rule 28 (widen the substrate,
-# don't route around it — never invent a workaround for a missing verb), the
-# self-placement tail is OMITTED from this YAML rather than authored with a
-# step that silently no-ops. Closing this gap requires adding a
-# `place_self_under_permanent: { target: <binding>, face_down: <bool> }` DSL
-# step (spec: step.rs / compile.rs / compiled.rs) that dispatches to the
-# existing engine primitive — sibling of `move_self_option_under_permanent`'s
-# wiring. Once landed, add:
-#   - select_own_permanent:
-#       bind_as: tm_target
-#       filter: { kind: digimon, trait_has: "Three Musketeers" }
-#       prompt: "Place this card as the bottom digivolution card of 1 of your [Three Musketeers] Digimon"
-#   - place_self_under_permanent: { target: tm_target, face_down: false }
-# as the tail of the [Main] clause below. Tests for this clause are
-# `#[ignore]`'d under G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL.
+# Authored via the `place_self_under_permanent` DSL step (resolved gap
+# G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL, qa/dsl-vocab-gaps.md), which lowers
+# to the purpose-built engine primitive
+# `EffectContext::place_self_under_permanent`
+# (`code/digimon-engine/src/effect_context/action/lifecycle.rs` — its doc
+# comment cites "P-180 / EX7-070 / EX7-071" by name). The primitive claims the
+# in-flight `pending_option` (the Option card mid-[Main]-resolution is NOT in
+# hand/trash/battle_area — `play_option_core` parks it in the single-occupancy
+# `pending_option` slot before running the [Main] body), so the subsequent
+# `dispose_option` (step 8 of `play_option_core`) finds nothing to trash and
+# the card ends up seated FACE-UP under the chosen target instead. When the
+# select self-skips (no [Three Musketeers] Digimon in play), the binding
+# stays unset, the place step silently no-ops, and the Option disposes to
+# trash normally — matching DCGO's silent skip. Note the near-miss siblings
+# do NOT apply here: `place_as_bottom_source { source: self }` scans real
+# zones for the card (an in-flight Option is in none), and
+# `move_self_option_under_permanent` requires a live field-Option
+# `source_permanent`. DSL-level proof:
+# tests/dsl/option_lifecycle_cluster.rs (gap1_dsl_*).
 #
 # SecuritySkill ([Security]): the SAME three independent
 #   {select level 3 / level 4 / level 5 opponent Digimon -> accumulate}
@@ -130,16 +104,9 @@ use_requirement:
     trait_has: "Three Musketeers"
 
 effects:
-  # ─── [Main] triple level-filtered delete ────────────────────────────────────
-  #
-  # NOTE: the printed "Then, place this card as the bottom digivolution card
-  # of 1 of your [Three Musketeers] trait Digimon" tail is BLOCKED — see the
-  # G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL note above. Without it, the
-  # resolved Option falls through to the engine's default Standard dispose
-  # (trashed) instead of being seated under a chosen Digimon. This is a
-  # confirmed, logged gap — not a silent omission.
+  # ─── [Main] triple level-filtered delete + self-placement tail ─────────────
   - when: main_from_hand
-    summary: "[Main] Delete 1 opponent level 3, 1 level 4, and 1 level 5 Digimon (self-placement tail BLOCKED — G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL)"
+    summary: "[Main] Delete 1 opponent level 3, 1 level 4, and 1 level 5 Digimon. Then, place this card as the bottom digivolution card of 1 of your [Three Musketeers] Digimon"
     process:
       # Arm 1: delete 1 opponent level 3 Digimon. Self-skips if none exist.
       - select_opponent_permanent:
@@ -159,6 +126,16 @@ effects:
           filter: { kind: digimon, level_eq: 5 }
           prompt: "Delete 1 of your opponent's level 5 Digimon"
       - delete_permanent: { target: lv5_target }
+      # Tail: "Then, place this card as the bottom digivolution card of 1 of
+      # your [Three Musketeers] trait Digimon." Mandatory IF a candidate
+      # exists (DCGO canNoSelect: false), silently self-skips when none;
+      # seated FACE-UP (DCGO's AddDigivolutionCardsBottom passes no
+      # isFacedown). See the header note.
+      - select_own_permanent:
+          bind_as: tm_target
+          filter: { kind: digimon, trait_has: "Three Musketeers" }
+          prompt: "Place this card as the bottom digivolution card of 1 of your [Three Musketeers] Digimon"
+      - place_self_under_permanent: { target: tm_target, face_down: false }
 
   # ─── Inherited — gain 1 memory when trashed from digivolution cards ────────
   - scope: inherited

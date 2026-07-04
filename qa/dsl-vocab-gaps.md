@@ -3953,3 +3953,33 @@ Consumer: BT21-087 Zenith ([On Play] reveal 3, choose 1 [Vemmon]-text card: if i
 > **G-DSL-LINK-TRASH-AS-COST — RESOLVED 2026-07-03** (link-economy round 2). Cost step `trash_link_card_of_own_digimon {of, optional}`: two RL-visible selections (which Digimon with >=1 link card, which of its link cards), trashes via trash_specific_link_card (fires OnLinkedCardTrashed), unpayable => clause aborts. Clone-safe (TrashLinkCardOfDigimonSelection resume frame + clone test). Unblocks BT25-073 Dragomon. Tests: tests/dsl/trash_link_card_of_own_digimon.rs (11 w/ formula tests).
 
 > **G-DSL-FORMULA-OWN-LINK-CARD-COUNT (+ SourceLinkCardCount facet of G-DSL-LINK-N-CARDS-PER-HOST) — RESOLVED 2026-07-03** (link-economy round 2). PerSelector variants `own_link_card_count {of}` (board-wide sum) and `source_link_card_count` (per-host), usable in base_per_delta / de_digivolve amount_fn. Unblocks BT25-075 Vulcanusmon's mass De-Digivolve magnitude.
+
+> **G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL — ✅ RESOLVED (2026-07-03)** (DSL-wiring round). New step
+> `place_self_under_permanent: { target: <binding>, face_down: <bool, default false> }` — dispatches to the
+> already-shipped engine primitive `EffectContext::place_self_under_permanent` (claims the in-flight
+> `pending_option` on the [Main] Option-play path, so the Option is seated FACE-UP under the chosen own
+> permanent instead of trashed; a live field-Option source routes to `move_field_option_under_permanent`).
+> Silently no-ops on an unset target binding (the preceding select self-skipped — DCGO's silent skip).
+> Consumers: P-180 / EX7-070 / EX7-071 (the "Then, place this card as the bottom digivolution card of 1 of
+> your [Three Musketeers] Digimon" [Main] tail — EX7-071 authored + green this round). Tests:
+> tests/dsl/option_lifecycle_cluster.rs (gap1_dsl_*), tests/cards_behavioral/ex7/ex7_071.rs.
+
+> **G-DSL-DNA-TRASH-PARTNER — ✅ RESOLVED (2026-07-03)** (DSL-wiring round). New step
+> `effect_initiated_dna_digivolve_trash_partner: { target, trash_partner, from_hand, cost, ignore_requirements }`
+> — the trash-material sibling of `effect_initiated_dna_digivolve_hand_partner`, lowering to the engine
+> primitive `EffectContext::effect_initiated_dna_digivolve_trash_partner` (G-ENGINE-DNA-TRASH-MATERIAL,
+> resolved 2026-07-03: trash material moves STRAIGHT into the merged stack, no [On Play]; DCGO
+> CreateNewPermanent + jogress). `cost: printed` resolves via `printed_dna_cost_for_field_trash_pair`;
+> recipe enforcement composes. Consumers: BT18-015 (authored + green this round), BT18-073 (same shape,
+> still to author). Tests: tests/cards_behavioral/bt18/bt18_015.rs.
+
+> **G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD — ✅ RESOLVED (2026-07-03)** (DSL-wiring round). New
+> no-subject predicate leaf `own_source_stack_color_count_gte: <N>` — distinct colors among the effect
+> CARRIER's NON-FLIPPED digivolution sources (the shared `non_flipped_source_colors` extraction, same as
+> `color_matches_own_source_stack`, so the gate and the Branch-A filter always agree; top card and
+> face-down sources excluded; no carrier → fails closed). The YAML-reachable branch discriminant for
+> EX9-074 Kimeramon's "if this Digimon has 6 or more colors in its digivolution cards, instead …" —
+> authored as `if: { condition: { own_source_stack_color_count_gte: 6 }, then: [delete_one_per_opponent_color],
+> else: [same-color single delete] }`. Consumer: EX9-074 (both branches authored + green this round).
+> Tests: tests/dsl/kimeramon_color_mass_delete.rs (own_source_stack_* + yaml_branch_gate_*),
+> tests/cards_behavioral/ex9/ex9_074.rs (SECTION 6).

@@ -1,0 +1,294 @@
+# BT18-015 Kimeramon — Digimon, Lv.5, Red/Purple, DP 8000, Cost 8.
+# Traits: Composite. Attribute: Data. Form: Ultimate.
+#
+# Printed text (official Bandai DB / data/card_bundles/BT18-015.md —
+# card_overrides / cards.json agree in substance; card image confirmed):
+#
+#   [When Digivolving] [When Attacking] By deleting 1 of your Digimon, delete
+#   1 of your opponent's Digimon with the lowest DP.
+#   [On Deletion] 1 of your [Machinedramon] and 1 [Kimeramon] in the trash may
+#   DNA digivolve into [Millenniummon] in the hand.
+#
+# Inherited Effect (official Bandai DB bundle + card image + DCGO
+# `ChangeSelfSAttackStaticEffect(changeValue: 1, isInheritedEffect: true)`):
+#   ＜Security A. +1＞ (This Digimon checks 1 additional security card.)
+#
+# Digivolution (official Bandai DB bundle):
+#   Standard: Red Lv.4 / Cost 4; Purple Lv.4 / Cost 4 (both circles present in
+#   cards.json evo_costs — no lossy multi-colour drop here).
+#   Special digivolve condition (xros_req): "[Digivolve] Lv.4 w/[Composite]
+#   trait: Cost 3" — a from-base TRAIT alt-path, not a DNA/DigiXros shape.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT18/Red/BT18_015.cs
+#
+# ─── Card-face vs DCGO/JSON wording — role resolution ────────────────────────
+#
+# The official Bandai DB bundle's English rendering ("1 of your
+# [Machinedramon] and 1 [Kimeramon] in the trash") reads ambiguously as to
+# whether "in the trash" scopes both nouns or only the second. DCGO
+# (source-priority #2, the behavioral authority) resolves this unambiguously:
+#   - `HasMachinedramon(Permanent permanent)`: `IsPermanentExistsOnOwnerBattleAreaDigimon`
+#     (FIELD/battle-area scan) + name == "Machinedramon".
+#   - `HasKimeramon(CardSource source)`: `IsExistOnTrash` (TRASH scan) + name
+#     == "Kimeramon".
+# The raw per-card JSON's `effect_description_eng` (DCGO source ingest)
+# confirms this reading in English too: "1 of your [Machinedramon] **in
+# play** and 1 [Kimeramon] **in the trash** may DNA digivolve...". So:
+# Machinedramon = FIELD partner, Kimeramon = TRASH partner (the deleted
+# Kimeramon itself, or any other copy already in the trash, satisfies this —
+# DCGO's `HasKimeramon` has no self-exclusion, and rule 25's OnDeletion
+# batched-trash timing means the carrier is already IN the trash by the time
+# this clause's body runs).
+#
+# DNA recipe target: BT18-019 Millenniummon, dna_costs: requirement1
+# name_contains "Kimeramon", requirement2 name_contains "Machinedramon",
+# memory_cost 0 (data/cards.json). Order-agnostic pairing (Machinedramon on
+# field + Kimeramon in trash) is validated engine-side by
+# `matching_dna_cost_perm_and_card`.
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (EffectTiming.None): AddSelfDigivolutionRequirementStaticEffect
+#   — top card is Lv.4 AND has [Composite] trait, cost 3,
+#   ignoreDigivolutionRequirement: false. → `kind: digivolve` alt_path with
+#   `from: { level_eq: 4, trait_has: Composite }`, `cost: 3`.
+#
+# [When Digivolving] (EffectTiming.OnEnterFieldAnyone) and [When Attacking]
+#   (EffectTiming.OnAllyAttack): TWO separately-registered `ActivateClass`
+#   blocks with IDENTICAL bodies, no [OPT]/once-per-turn gating on either
+#   (each independently re-checks its own match-exists condition):
+#     1. `CanSelectPermanentCondition`: any of the controller's OWN
+#        battle-area Digimon (no `other: true` exclusion — Kimeramon itself
+#        IS a legal cost target). `canNoSelect: true` on this pick (the
+#        printed "By deleting 1 of your Digimon" cost step) — the player may
+#        decline, in which case NOTHING happens (DCGO's coroutine only
+#        proceeds `if (HasMatchConditionPermanent(...))` picks a permanent;
+#        a declined `SelectPermanentEffect` here does not reach the delete
+#        step at all — this is the classic accept/decline cost-and-effect
+#        pairing, not the `continue_on_decline` idiom).
+#     2. On a pick, `DeletePeremanentAndProcessAccordingToResult` deletes it,
+#        then on success, IF an opponent Digimon exists,
+#        `CanSelectPermanentCondition1` = `IsMinDP` (lowest DP among opponent
+#        battle-area Digimon) drives a MANDATORY (`canNoSelect: false`)
+#        `SelectPermanentEffect` Mode.Destroy.
+#   Modeled as ONE clause with `when: [when_digivolving, when_attacking]`
+#   (AD1-016 idiom — a single body shared by two independent timings, no
+#   shared OPT group since neither DCGO registration is OPT-gated).
+#   `select_own_permanent { optional: true, filter: { kind: digimon } }`
+#   (declining drops the rest of the clause — the default `continue_on_decline:
+#   false` — matching DCGO's cost-then-effect pairing exactly), then
+#   `delete_permanent`, then mandatory `select_opponent_permanent { selector:
+#   lowest_dp }` + `delete_permanent`.
+#
+# Inherited ＜Security A. +1＞ (EffectTiming.None):
+#   ChangeSelfSAttackStaticEffect(changeValue: 1, isInheritedEffect: true) —
+#   the carrier Digimon (top card) inherits SecurityAttackPlus(1) while this
+#   card sits in its digivolution stack. Modeled as `scope: inherited` +
+#   `kind: grant_keyword` (the ST1-07 / AD1-009 idiom, resolved via the
+#   has_keyword() stack-walk). NOT a face-up self-grant — a standalone
+#   BT18-015 permanent does not check 2.
+#
+# [On Deletion] (EffectTiming.OnDestroyedAnyone): `CanActivateOnDeletion` +
+#   `HasMatchConditionPermanent(HasMachinedramon)` (own field) +
+#   `HasMatchConditionOwnersCardInTrash(HasKimeramon)` (own trash) +
+#   `HasMatchConditionOwnersHand(HasMillenniummon)` (own hand, Millenniummon
+#   name + has a DNA recipe). All three gates are non-optional PRE-conditions
+#   (`CanActivateCondition`) — the clause only fires if ALL THREE candidate
+#   pools are non-empty. The activation itself, and each of its 3 picks, is
+#   "may" (DCGO: `SelectHandEffect`/`SelectPermanentEffect`/`SelectCardEffect`
+#   each `canNoSelect: false` for the Millenniummon+field picks but overall
+#   `activateClass.SetUpActivateClass(..., true, ...)` = isOptional TRUE at
+#   the top). Modeled with `optional: true` on the clause (the outer "may"
+#   gate — declining aborts the whole rider) plus a `condition:` requiring
+#   all three pools non-empty, then three MANDATORY selects (hand
+#   Millenniummon → field Machinedramon → trash Kimeramon) feeding the
+#   `effect_initiated_dna_digivolve_trash_partner` DSL step
+#   (G-DSL-DNA-TRASH-PARTNER, ✅ RESOLVED 2026-07-03 — lowers to the engine
+#   primitive `EffectContext::effect_initiated_dna_digivolve_trash_partner`,
+#   G-ENGINE-DNA-TRASH-MATERIAL; see `qa/dsl-vocab-gaps.md`).
+#
+# ─── Per-clause status ───────────────────────────────────────────────────────
+#
+#   | Clause                                                       | Status |
+#   |----------------------------------------------------------------|------|
+#   | Alt-digivolve Lv.4 w/[Composite] trait / Cost 3                | PASS |
+#   | Standard digivolve Red Lv.4 / Cost 4                           | PASS |
+#   | Standard digivolve Purple Lv.4 / Cost 4                        | PASS |
+#   | [When Digivolving][When Attacking] delete self, delete opp min-DP | PASS |
+#   | [On Deletion] Machinedramon(field)+Kimeramon(trash) DNA→Millenniummon(hand) | PASS |
+#   | Inherited ＜Security A. +1＞                                    | PASS |
+
+card: BT18-015
+name: "Kimeramon"
+kind: digimon
+level: 5
+color: [red, purple]
+cost: 8
+dp: 8000
+traits: [Composite]
+form: Ultimate
+attribute: Data
+
+alt_paths:
+  # Standard digivolve circles (official Bandai DB bundle).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 4
+  # Special digivolve condition (xros_req): "[Digivolve] Lv.4 w/[Composite]
+  # trait: Cost 3" — a from-base level+trait gate.
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: "Composite" }
+    cost: 3
+
+effects:
+  # ─── [When Digivolving][When Attacking] delete self, delete opp lowest DP ──
+  #
+  # "By deleting 1 of your Digimon, delete 1 of your opponent's Digimon with
+  # the lowest DP." No [OPT] tag — each timing independently re-fires (a
+  # digivolve into a second Kimeramon copy, or a later attack, can trigger
+  # this again in the same turn; DCGO has no shared lockout hash for this
+  # clause).
+  #
+  # `select_own_permanent { optional: true }` with NO `other: true` — the
+  # printed cost is "1 of your Digimon" with no exclusion, so Kimeramon
+  # itself is a legal (if unlikely) cost target. Declining (PASS) drops the
+  # rest of the clause — the default `continue_on_decline: false` — matching
+  # DCGO's cost-then-effect pairing (a declined `SelectPermanentEffect` never
+  # reaches the delete step).
+  - when: [when_digivolving, when_attacking]
+    summary: "[When Digivolving][When Attacking] By deleting 1 of your Digimon, delete 1 opponent's lowest-DP Digimon"
+    process:
+      - select_own_permanent:
+          bind_as: sacrifice
+          optional: true
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your Digimon to delete 1 of your opponent's Digimon with the lowest DP"
+      - delete_permanent: { target: sacrifice }
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - select_opponent_permanent:
+                bind_as: victim
+                selector: lowest_dp
+                filter: { kind: digimon }
+                prompt: "Delete 1 of your opponent's Digimon with the lowest DP"
+            - delete_permanent: { target: victim }
+
+  # ─── [On Deletion] Machinedramon(field) + Kimeramon(trash) DNA → Millenniummon(hand) ──
+  #
+  # "1 of your [Machinedramon] and 1 [Kimeramon] in the trash may DNA
+  # digivolve into [Millenniummon] in the hand." DCGO role split (see header
+  # note): Machinedramon = OWN FIELD; Kimeramon = OWN TRASH (the just-deleted
+  # Kimeramon itself, or any other trashed copy, qualifies — no
+  # self-exclusion in `HasKimeramon`).
+  #
+  # `condition:` gates the WHOLE clause on all three candidate pools being
+  # non-empty (own field Machinedramon, own trash Kimeramon-named card, own
+  # hand Millenniummon-named Digimon) — mirrors DCGO's `CanActivateCondition`
+  # AND of the three `HasMatchConditionPermanent`/`InTrash`/`InHand` checks.
+  #
+  # `optional: true` at the CLAUSE level is the outer "may" (DCGO
+  # `ActivateClass.SetUpActivateClass(..., isOptional: true, ...)` — a plain
+  # Yes/No "activate this effect?" confirm). Each of the three inner picks is
+  # `optional: false` (DCGO: `SelectHandEffect`/`SelectPermanentEffect`/
+  # `SelectCardEffect` all pass `canNoSelect: false`) — MANDATORY once
+  # activated. Since the body's first step (`select_hand`) is therefore NOT
+  # itself declinable, the DSL's `needs_outer_optional` lowering
+  # (`clause.optional && !body_first_step_is_declinable(body)`) automatically
+  # installs the separate Yes/No accept/decline prompt ahead of the picks —
+  # an exact mirror of DCGO's two-layer optional/mandatory split (BT11-018
+  # `[End of Attack]` idiom, `lower_triggered.rs`). Order of picks (hand
+  # result first, then field partner, then trash partner) mirrors DCGO's
+  # `ActivateCoroutine` sequence exactly (`SelectHandEffect` →
+  # `SelectPermanentEffect` → `SelectCardEffect` over `Root.Trash`).
+  #
+  # `effect_initiated_dna_digivolve_trash_partner` is the DSL step for the
+  # trash-material DNA shape (G-DSL-DNA-TRASH-PARTNER, resolved 2026-07-03);
+  # it lowers to the engine primitive
+  # `EffectContext::effect_initiated_dna_digivolve_trash_partner`
+  # (G-ENGINE-DNA-TRASH-MATERIAL — the trash material moves STRAIGHT into the
+  # merged stack, never an independently-played permanent, so no [On Play]
+  # fires; DCGO CreateNewPermanent + jogress). `cost: printed` resolves
+  # BT18-019's printed DNA cost (0) for the {field Machinedramon, trash
+  # Kimeramon} pair via `printed_dna_cost_for_field_trash_pair`;
+  # `ignore_requirements: false` lets the engine reject a
+  # non-recipe-satisfying pairing (defensive — in practice the name filters
+  # already constrain to the sole recipe).
+  - when: on_deletion
+    optional: true
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            name_contains: "Machinedramon"
+        - count_gte:
+            filter:
+              of: you
+              zone: [trash]
+              kind: digimon
+              name_contains: "Kimeramon"
+            n: 1
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              kind: digimon
+              name_contains: "Millenniummon"
+            n: 1
+    summary: "[On Deletion] 1 Machinedramon (field) + 1 Kimeramon (trash) may DNA digivolve into Millenniummon (hand)"
+    process:
+      - select_hand:
+          of: you
+          bind_as: result
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Millenniummon"
+          prompt: "Select 1 [Millenniummon] in your hand to DNA digivolve into"
+      - select_own_permanent:
+          bind_as: field_partner
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Machinedramon"
+          prompt: "Select 1 [Machinedramon] on your field as the DNA material"
+      - select_trash:
+          of: you
+          bind_as: trash_partner
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Kimeramon"
+          prompt: "Select 1 [Kimeramon] in your trash as the DNA material"
+      - effect_initiated_dna_digivolve_trash_partner:
+          target: field_partner
+          trash_partner: trash_partner
+          from_hand: result
+          cost: printed
+          ignore_requirements: false
+
+  # ─── Inherited ＜Security A. +1＞ ─────────────────────────────────────────────
+  #
+  # "＜Security A. +1＞ (This Digimon checks 1 additional security card.)" —
+  # printed on the Inherited Effect line (official Bandai DB bundle + card
+  # image; DCGO ChangeSelfSAttackStaticEffect(changeValue: 1,
+  # isInheritedEffect: true)). The ST1-07 / AD1-009 idiom: `scope: inherited`
+  # + `grant_keyword`, granted to the CARRIER via the has_keyword()
+  # stack-walk while this card is a digivolution source. A standalone
+  # face-up BT18-015 does NOT self-grant it.
+  - scope: inherited
+    kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1

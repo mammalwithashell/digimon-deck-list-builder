@@ -8913,6 +8913,12 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Mutant",
+      "Hudie",
+      "CS",
+      "Angel"
     ]
   },
   "BT23-036": {

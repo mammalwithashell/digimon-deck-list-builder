@@ -281,6 +281,13 @@ pub enum StepSpec {
     EffectInitiatedDigivolve(EffectDigivolveArgs),
     EffectInitiatedDnaDigivolve(EffectDnaDigivolveArgs),
     EffectInitiatedDnaDigivolveHandPartner(EffectDnaDigivolveHandPartnerArgs),
+    /// DNA digivolve where one material is a battle-area permanent (`target`)
+    /// and the other is a card in the controller's TRASH (`trash_partner`);
+    /// the merged permanent is topped with `from_hand` (the result card, from
+    /// hand). BT18-015 / BT18-073 `[On Deletion]` shape. Lowers to
+    /// `EffectContext::effect_initiated_dna_digivolve_trash_partner`
+    /// (G-ENGINE-DNA-TRASH-MATERIAL). G-DSL-DNA-TRASH-PARTNER.
+    EffectInitiatedDnaDigivolveTrashPartner(EffectDnaDigivolveTrashPartnerArgs),
 
     // Security
     TrashTopSecurity(TrashTopSecurityArgs),
@@ -295,6 +302,17 @@ pub enum StepSpec {
     /// "By placing this card from the battle area face down under any of your
     /// [BEATBREAK]/[DATA SQUAD] trait Tamers, …". G-MOVE-SELF-OPTION-UNDER-PERMANENT.
     MoveSelfOptionUnderPermanent(MoveSelfOptionUnderPermanentArgs),
+    /// Place THIS effect's source Option as the bottom digivolution card of a
+    /// chosen own permanent — the "[Main] … Then, place this card as the
+    /// bottom digivolution card of 1 of your … Digimon" tail on P-180 /
+    /// EX7-070 / EX7-071. Unlike `move_self_option_under_permanent` (which
+    /// requires a live field-Option `source_permanent`), this composes with
+    /// the standard Option [Main]-play path by claiming the in-flight
+    /// `pending_option`, so the subsequent `dispose_option` finds nothing and
+    /// the card is seated (FACE-UP by default) instead of trashed. Lowers to
+    /// `EffectContext::place_self_under_permanent`.
+    /// G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL.
+    PlaceSelfUnderPermanent(PlaceSelfUnderPermanentArgs),
     SecurityPlaceStackedCard(SecurityPlaceStackedCardArgs),
     SecurityPlaceTopStackedCard(SecurityPlaceTopStackedCardArgs),
     ReturnAllTrashToDeckBottom(PlayerArg),
@@ -555,6 +573,9 @@ impl Serialize for StepSpec {
             StepSpec::EffectInitiatedDnaDigivolveHandPartner(v) => {
                 kv!(s, "effect_initiated_dna_digivolve_hand_partner", v)
             }
+            StepSpec::EffectInitiatedDnaDigivolveTrashPartner(v) => {
+                kv!(s, "effect_initiated_dna_digivolve_trash_partner", v)
+            }
             // Security
             StepSpec::TrashTopSecurity(v) => kv!(s, "trash_top_security", v),
             StepSpec::TrashBottomSecurity(v) => kv!(s, "trash_bottom_security", v),
@@ -565,6 +586,9 @@ impl Serialize for StepSpec {
             StepSpec::BounceSelf(v) => kv!(s, "bounce_self", v),
             StepSpec::MoveSelfOptionUnderPermanent(v) => {
                 kv!(s, "move_self_option_under_permanent", v)
+            }
+            StepSpec::PlaceSelfUnderPermanent(v) => {
+                kv!(s, "place_self_under_permanent", v)
             }
             StepSpec::SecurityPlaceStackedCard(v) => kv!(s, "security_place_stacked_card", v),
             StepSpec::SecurityPlaceTopStackedCard(v) => {
@@ -830,6 +854,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "effect_initiated_dna_digivolve_hand_partner" => {
                 StepSpec::EffectInitiatedDnaDigivolveHandPartner(map.next_value()?)
             }
+            "effect_initiated_dna_digivolve_trash_partner" => {
+                StepSpec::EffectInitiatedDnaDigivolveTrashPartner(map.next_value()?)
+            }
 
             // Security
             "trash_top_security" => StepSpec::TrashTopSecurity(map.next_value()?),
@@ -841,6 +868,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "bounce_self" => StepSpec::BounceSelf(map.next_value()?),
             "move_self_option_under_permanent" => {
                 StepSpec::MoveSelfOptionUnderPermanent(map.next_value()?)
+            }
+            "place_self_under_permanent" => {
+                StepSpec::PlaceSelfUnderPermanent(map.next_value()?)
             }
             "security_place_stacked_card" => StepSpec::SecurityPlaceStackedCard(map.next_value()?),
             "security_place_top_stacked_card" => {
@@ -1028,6 +1058,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "effect_initiated_digivolve",
                         "effect_initiated_dna_digivolve",
                         "effect_initiated_dna_digivolve_hand_partner",
+                        "effect_initiated_dna_digivolve_trash_partner",
                         "app_fuse",
                         "trash_top_security",
                         "trash_bottom_security",
@@ -1035,6 +1066,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "trash_top_security_and_cancel_replacement",
                         "bounce_self",
                         "move_self_option_under_permanent",
+                        "place_self_under_permanent",
                         "security_place_stacked_card",
                         "security_place_top_stacked_card",
                         "return_all_trash_to_deck_bottom",
@@ -1391,6 +1423,22 @@ pub struct MoveSelfOptionUnderPermanentArgs {
 
 fn default_true() -> bool {
     true
+}
+
+/// Args for `place_self_under_permanent` — place THIS effect's source Option
+/// as the bottom digivolution card of a chosen own permanent, composing with
+/// the standard Option [Main]-play path (the in-flight `pending_option` is
+/// claimed, so the Option is seated instead of trashed). `target` names a
+/// binding (typically a prior `select_own_permanent` pick); `face_down`
+/// defaults to `false` — the P-180 / EX7-070 / EX7-071 tail places the card
+/// FACE-UP (DCGO `AddDigivolutionCardsBottom` without `isFacedown: true`).
+/// G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlaceSelfUnderPermanentArgs {
+    pub target: BindingRef,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub face_down: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema, Default)]
@@ -2463,6 +2511,29 @@ pub struct EffectDnaDigivolveHandPartnerArgs {
     pub target: BindingRef,
     /// The hand-card DNA material (`requirement2`).
     pub hand_partner: BindingRef,
+    /// The resulting evolved card, pulled from hand and stacked on top.
+    pub from_hand: BindingRef,
+    pub cost: CostDelta,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_requirements: bool,
+}
+
+/// `effect_initiated_dna_digivolve_trash_partner:` — DNA digivolve where one
+/// material is a battle-area permanent (`target`) and the other is a card in
+/// the controller's TRASH (`trash_partner`); the merged permanent is topped
+/// with `from_hand` (the result card, also from hand). BT18-015 / BT18-073
+/// `[On Deletion]` shape ("1 of your [Machinedramon] and 1 [Kimeramon] in the
+/// trash may DNA digivolve into [Millenniummon] in the hand"). The trash
+/// material moves STRAIGHT into the merged stack (never an independently
+/// played permanent — no `[On Play]` fires), mirroring DCGO
+/// `CreateNewPermanent` + jogress. G-DSL-DNA-TRASH-PARTNER.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct EffectDnaDigivolveTrashPartnerArgs {
+    /// The on-field DNA material (`requirement1`).
+    pub target: BindingRef,
+    /// The trash-card DNA material (`requirement2`).
+    pub trash_partner: BindingRef,
     /// The resulting evolved card, pulled from hand and stacked on top.
     pub from_hand: BindingRef,
     pub cost: CostDelta,

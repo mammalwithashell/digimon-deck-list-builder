@@ -12,6 +12,10 @@
 //! `move_self_option_under_permanent` early-returned (no `source_permanent`).
 //! The fix mirrors `place_self_as_delay_option_permanent`: claim `pending_option`
 //! and seat the Option FACE-UP as the target's bottom digivolution source.
+//! The `gap1_dsl_*` tests below exercise the YAML-reachable DSL verb
+//! `place_self_under_permanent: { target, face_down }`
+//! (G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL, resolved 2026-07-03), which
+//! lowers to the same primitive; EX7-071 is the first shipped consumer.
 //!
 //! ## Gap 2 — Option USE routed from non-hand origins (trash / revealed / bound source)
 //! BT25-083 ("use 1 [Three Musketeers] Option from your trash with the cost
@@ -34,7 +38,7 @@ use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::{run_steps, RunOutcome};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::effect_context::EffectContext;
-use digimon_engine::enums::{CardKind, CostDelta, PlayerId};
+use digimon_engine::enums::{CardColor, CardKind, CostDelta, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::OptionPlayResult;
 
@@ -226,6 +230,151 @@ fn gap1_place_self_under_permanent_noop_when_no_host_leaves_option_in_flight() {
         runner.game.players[1].battle_area[0].card_sources.len(),
         1,
         "the failed place must not seat the Option under the wrong permanent"
+    );
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Gap 1 — DSL verb: `place_self_under_permanent` (YAML-reachable)
+// ══════════════════════════════════════════════════════════════════════════════
+
+/// The P-180 / EX7-070 / EX7-071 [Main]-tail shape, authored END-TO-END in
+/// YAML: select an own [Three Musketeers] Digimon, then seat THIS Option
+/// under it via the `place_self_under_permanent` DSL step
+/// (G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL — the step dispatches to the
+/// engine primitive proven by the gap1_* tests above). `face_down` is
+/// intentionally OMITTED to prove the serde default (`false` — face-up).
+const PLACE_SELF_DSL_YAML: &str = r#"
+card: TEST-PLACE-SELF-DSL
+name: Place Self Under Permanent
+kind: option
+color: [purple]
+cost: 0
+effects:
+  - when: main_from_hand
+    summary: "[Main] Place this card as the bottom digivolution card of 1 of your [Three Musketeers] Digimon"
+    process:
+      - select_own_permanent:
+          bind_as: tm_target
+          filter: { kind: digimon, trait_has: "Three Musketeers" }
+          prompt: "Place this card as the bottom digivolution card of 1 of your [Three Musketeers] Digimon"
+      - place_self_under_permanent: { target: tm_target }
+"#;
+
+/// A purple [Three Musketeers] Digimon — satisfies both the Option's printed
+/// color requirement and the placement filter.
+fn purple_tm_digimon(id: &str) -> CardData {
+    let mut card = tm_digimon(id);
+    card.colors = vec![CardColor::Purple];
+    card
+}
+
+/// A purple NON-[Three Musketeers] Digimon — satisfies the Option's color
+/// requirement but must never be a placement candidate.
+fn purple_plain_digimon(id: &str) -> CardData {
+    let mut card = tm_digimon(id);
+    card.colors = vec![CardColor::Purple];
+    card.traits = vec!["Beast".to_string()];
+    card
+}
+
+#[test]
+fn gap1_dsl_place_self_under_permanent_seats_face_up_under_selected_host() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(PLACE_SELF_DSL_YAML)
+        .expect("place-self YAML parses + compiles")
+        .add_card(purple_tm_digimon("TM-HOST"))
+        .hand(1, &["TEST-PLACE-SELF-DSL"])
+        .memory(3)
+        .start();
+    runner.place_on_field(1, "TM-HOST", Some(0));
+
+    let result = runner.game.play_option_from_hand(1, 0);
+    assert_eq!(
+        result,
+        OptionPlayResult::Pending,
+        "the [Main] body parks on the mandatory placement pick"
+    );
+
+    // Resolve the (sole-candidate) own-field pick.
+    let (player, action) = {
+        let sel = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("placement pick pending");
+        assert!(
+            !sel.is_optional,
+            "the placement pick is MANDATORY when a candidate exists (DCGO canNoSelect: false)"
+        );
+        (sel.selecting_player, sel.valid_action_ids[0])
+    };
+    runner
+        .game
+        .resolve_selection(player, action)
+        .expect("placement pick resolves");
+    runner.game.drain_effect_queue();
+
+    // The Option MOVED under the host — bottom source, FACE-UP, not trashed.
+    assert!(
+        !runner.game.players[1]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "TEST-PLACE-SELF-DSL"),
+        "the placed Option must NOT be trashed"
+    );
+    let host = &runner.game.players[1].battle_area[0];
+    assert_eq!(host.card_sources.len(), 2, "host gained the Option as a source");
+    assert_eq!(
+        host.card_sources[0].card_id(&runner.game.card_data),
+        "TEST-PLACE-SELF-DSL",
+        "the Option is the BOTTOM digivolution source"
+    );
+    assert!(
+        !host.card_sources[0].face_down,
+        "omitted face_down defaults to FALSE — seated FACE-UP"
+    );
+    assert!(
+        runner.game.pending_option.is_none(),
+        "the in-flight pending_option slot was claimed by the place"
+    );
+}
+
+#[test]
+fn gap1_dsl_place_self_under_permanent_no_candidate_select_self_skips_to_trash() {
+    // Only a NON-[Three Musketeers] purple Digimon in play: the Option is
+    // color-usable, but the mandatory placement select has ZERO candidates →
+    // it self-skips (no prompt), the binding stays unset, the place step
+    // silently no-ops, and the Option disposes normally to trash.
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(PLACE_SELF_DSL_YAML)
+        .expect("place-self YAML parses + compiles")
+        .add_card(purple_plain_digimon("PLAIN-HOST"))
+        .hand(1, &["TEST-PLACE-SELF-DSL"])
+        .memory(3)
+        .start();
+    runner.place_on_field(1, "PLAIN-HOST", Some(0));
+
+    let result = runner.game.play_option_from_hand(1, 0);
+    assert_eq!(
+        result,
+        OptionPlayResult::Trashed,
+        "no placement candidate → the select self-skips and the play resolves synchronously"
+    );
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "a zero-candidate mandatory select must not park a prompt"
+    );
+    assert!(
+        runner.game.players[1]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "TEST-PLACE-SELF-DSL"),
+        "with no legal host the Option disposes to trash as a Standard Option"
+    );
+    assert_eq!(
+        runner.game.players[1].battle_area[0].card_sources.len(),
+        1,
+        "the non-[Three Musketeers] Digimon must never receive the placed card"
     );
 }
 

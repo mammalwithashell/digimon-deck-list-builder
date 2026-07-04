@@ -405,6 +405,16 @@ pub struct CompiledPredicate {
     /// value`. G-DSL-SELF-SOURCE-COUNT-THRESHOLD (driver BT21-006).
     #[serde(default)]
     pub self_source_count: Option<CompiledSelfSourceCountPredicate>,
+    /// True when the effect CARRIER's NON-FLIPPED digivolution-source color
+    /// set (the shared `non_flipped_source_colors` extraction — top card
+    /// excluded, face-down sources excluded) has at least N distinct colors.
+    /// A no-subject, carrier-scoped global leaf — the YAML-reachable branch
+    /// gate for EX9-074 Kimeramon's "if this Digimon has 6 or more colors in
+    /// its digivolution cards, instead …" discriminant.
+    /// G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD. `#[serde(default)]`
+    /// keeps older serialized packs deserializable.
+    #[serde(default)]
+    pub own_source_stack_color_count_gte: Option<u8>,
     pub zone: Vec<CompiledZone>,
     pub owner: Option<CompiledPlayerRef>,
     pub other: Option<bool>,
@@ -1583,6 +1593,17 @@ pub enum CompiledStep {
         target: CompiledBindingRef,
         face_down: bool,
     },
+    /// Place THIS effect's source Option as the bottom digivolution card of a
+    /// chosen own permanent, composing with the [Main] Option-play path (the
+    /// in-flight `pending_option` is claimed, so the Option is seated —
+    /// FACE-UP by default — instead of trashed). Compiled from
+    /// `place_self_under_permanent`; lowers to
+    /// `EffectContext::place_self_under_permanent`.
+    /// G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL (P-180 / EX7-070 / EX7-071).
+    PlaceSelfUnderPermanent {
+        target: CompiledBindingRef,
+        face_down: bool,
+    },
     PlaceSelectedSourcesUnderTamer {
         source_refs: String,
         tamer: CompiledBindingRef,
@@ -1757,6 +1778,19 @@ pub enum CompiledStep {
     EffectInitiatedDnaDigivolveHandPartner {
         target: CompiledBindingRef,
         hand_partner: CompiledBindingRef,
+        from_hand: CompiledBindingRef,
+        cost: CompiledCostDelta,
+        ignore_requirements: bool,
+    },
+    /// DNA digivolve where `target` is a battle-area permanent and
+    /// `trash_partner` is the second DNA material drawn from the controller's
+    /// TRASH; the merged permanent is topped with `from_hand` (the result
+    /// card, from hand). BT18-015 / BT18-073 `[On Deletion]` shape. Lowers to
+    /// `EffectContext::effect_initiated_dna_digivolve_trash_partner`
+    /// (G-ENGINE-DNA-TRASH-MATERIAL). G-DSL-DNA-TRASH-PARTNER.
+    EffectInitiatedDnaDigivolveTrashPartner {
+        target: CompiledBindingRef,
+        trash_partner: CompiledBindingRef,
         from_hand: CompiledBindingRef,
         cost: CompiledCostDelta,
         ignore_requirements: bool,

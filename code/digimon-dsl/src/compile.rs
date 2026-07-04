@@ -1009,6 +1009,7 @@ fn compile_predicate(
                 },
             }
         }),
+        own_source_stack_color_count_gte: p.own_source_stack_color_count_gte,
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
         other: p.other,
@@ -2777,6 +2778,10 @@ fn compile_step(
             target: compile_binding_ref(&a.target),
             face_down: a.face_down,
         },
+        S::PlaceSelfUnderPermanent(a) => CompiledStep::PlaceSelfUnderPermanent {
+            target: compile_binding_ref(&a.target),
+            face_down: a.face_down,
+        },
         S::PlaceSelectedSourcesUnderTamer(a) => CompiledStep::PlaceSelectedSourcesUnderTamer {
             source_refs: a.source_refs.clone(),
             tamer: compile_binding_ref(&a.tamer),
@@ -2995,6 +3000,15 @@ fn compile_step(
             CompiledStep::EffectInitiatedDnaDigivolveHandPartner {
                 target: compile_binding_ref(&a.target),
                 hand_partner: compile_binding_ref(&a.hand_partner),
+                from_hand: compile_binding_ref(&a.from_hand),
+                cost: compile_cost_delta(&a.cost, prefix, card_id, errors),
+                ignore_requirements: a.ignore_requirements,
+            }
+        }
+        S::EffectInitiatedDnaDigivolveTrashPartner(a) => {
+            CompiledStep::EffectInitiatedDnaDigivolveTrashPartner {
+                target: compile_binding_ref(&a.target),
+                trash_partner: compile_binding_ref(&a.trash_partner),
                 from_hand: compile_binding_ref(&a.from_hand),
                 cost: compile_cost_delta(&a.cost, prefix, card_id, errors),
                 ignore_requirements: a.ignore_requirements,
