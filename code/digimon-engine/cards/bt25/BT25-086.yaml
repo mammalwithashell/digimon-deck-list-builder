@@ -1,0 +1,155 @@
+# BT25-086 Dan Yuki — Tamer, Red, Play Cost 3.
+# Traits: ADAMAS/TS.
+#
+# Printed text (official Bandai DB — data/card_bundles/BT25-086.md, card image
+# authoritative, confirmed against C:\Users\james\Documents\DCGO_Application\Assets\Textures\Card\BT25-086.webp):
+#
+#   [Start of Your Main Phase] If you have 4 or less memory, gain 1 memory.
+#   [End of Your Turn] By suspending this Tamer, 1 of your [TS] trait Digimon
+#     gets +1000 DP for the turn for each memory your opponent has. After,
+#     that Digimon may attack.
+#
+#   Security Effect
+#   [Security] Play this card without paying the cost.
+#
+# Official Q&A:
+#   - It refers to when the memory gauge is at 4 or further to the right on
+#     your side (i.e. compares the CONTROLLER's own memory to 4, not a signed
+#     read).
+#
+# DCGO C# reference (behavioral authority):
+#   DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_086.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+#   Region "Start of Your Main Phase" (EffectTiming.OnStartMainPhase):
+#     CanUseCondition: IsExistOnBattleArea && IsOwnerTurn.
+#     Body: if (CanAddMemory && MemoryForPlayer <= 4) AddMemory(1).
+#     → condition: memory_lte: 4 (BT24-085 "Dan Yuki & Kanan Yuki" precedent —
+#       an evolved form of this same character/effect pair — uses the exact
+#       same clause shape); process: gain_memory: 1.
+#
+#   Region "End of Your Turn" (EffectTiming.OnEndTurn):
+#     CanUseCondition: IsExistOnBattleArea && IsOwnerTurn.
+#     CanActivateCondition: IsExistOnBattleArea && CanActivateSuspendCostEffect
+#       (the "by suspending this Tamer" activation cost gate — needs to be
+#       unsuspended). isOptional:true on the ActivateClass (the whole "by
+#       suspending..." clause is a "you may").
+#     Body:
+#       1. SuspendPermanentAndProcessAccordingToResult(this Tamer) — pays the
+#          suspend-self activation cost. On success:
+#       2. SelectPermanentEffect over own battle-area Digimon with
+#          HasTSTraits, maxCount = min(1, matching count), canNoSelect:false
+#          → mandatory pick of exactly 1 [TS] Digimon WHEN one exists (if zero
+#          match, the select installs 0 targets and naturally produces no
+#          pick — DCGO's maxCount=min(1,count) formalizes this).
+#       3. ChangeDigimonDP(+dpGain, UntilEachTurnEnd) where
+#          dpGain = Math.Max(0, opponent.MemoryForPlayer * 1000) — i.e. the
+#          scaling formula clamps at 0 (can be a genuine +0 DP grant when the
+#          opponent has 0 or negative memory).
+#       4. If selectedPermanent.CanAttack(): SelectAttackEffect (Mode default,
+#          not Mode.Custom — a real declinable "may attack" prompt; DCGO does
+#          not force-attack).
+#     → activation_cost: { suspend_self: true } (first step, printed
+#       "by suspending this Tamer" cost); select_own_permanent (mandatory
+#       when a [TS] Digimon exists, filter trait_has TS) bind_as buff_target;
+#       add_dp_modifier value = base_per_delta { base: 0, per: { player_memory:
+#       { of: opponent } }, delta: 1000 } expiry end_of_turn (the
+#       G-DSL-FORMULA-PLAYER-MEMORY selector, purpose-built for this card —
+#       Math.Max(0, Enemy.MemoryForPlayer) is exactly the engine's `of:
+#       opponent` clamp semantics); then may_attack_now on the same
+#       buff_target (P-213 / BT24-085 "1 of your Digimon may attack" idiom —
+#       a real declinable attack prompt, not a forced attack).
+#
+#   Region "Security" (EffectTiming.SecuritySkill):
+#     CardEffectFactory.PlaySelfTamerSecurityEffect(card).
+#     → on_security: play_from_security {} (standard "[Security] Play this
+#       card without paying the cost" Tamer idiom).
+#
+# ─── DSL modelling notes ─────────────────────────────────────────────────────
+#
+# Clause 1 ([Start of Your Main Phase]): identical shape to BT24-085's clause
+#   1 — `condition: { memory_lte: 4 }` reads the controller's OWN memory
+#   (matching the official Q&A: "memory gauge at 4 or further to the right on
+#   YOUR side"), then `gain_memory: 1`.
+#
+# Clause 2 ([End of Your Turn] suspend → scaled DP → may attack):
+#   - `activation_cost: { suspend_self: true }` as the mandatory first step
+#     (pays the "by suspending this Tamer" cost) — this is what makes the
+#     WHOLE clause a "you may" (DCGO isOptional:true on the ActivateClass);
+#     declining/being unable to pay (already suspended) means the clause does
+#     not fire at all.
+#   - `select_own_permanent` (NOT optional — DCGO canNoSelect:false) filtered
+#     to `trait_has: TS`, bound as buff_target. When zero own [TS] Digimon
+#     exist the `condition:` any_permanent gate (mirrors BT24-085's own
+#     `condition: all_of: [source_is_unsuspended, any_permanent trait_has TS]`)
+#     keeps the whole clause from being offered, so the mandatory select never
+#     encounters an empty candidate set.
+#   - `add_dp_modifier` with `value: { base_per_delta: { base: 0, per: {
+#     player_memory: { of: opponent } }, delta: 1000 } }`, `expiry: end_of_turn`
+#     — "gets +1000 DP for the turn for each memory your opponent has". The
+#     `of: opponent` selector clamps at 0 (engine `player_memory_value`,
+#     `formula_eval.rs`), matching DCGO's `Math.Max(0, Enemy.MemoryForPlayer)`
+#     exactly — this can be a real +0 grant when the opponent has no memory.
+#   - `may_attack_now` on the SAME `buff_target` binding, `optional: true` —
+#     "that Digimon may attack" is a genuinely declinable follow-up attack
+#     (BT24-085 / P-213 idiom), not a forced attack.
+#
+# Clause 3 ([Security] play self): standard `play_from_security {}` Tamer
+#   idiom (mandatory — DCGO's `PlaySelfTamerSecurityEffect` factory carries no
+#   optionality gate; "[Security] Play this card without paying the cost." is
+#   worded as a flat instruction, matching every other plain Tamer security
+#   clause in the pool).
+
+card: BT25-086
+name: Dan Yuki
+kind: tamer
+color: [red]
+cost: 3
+traits: [ADAMAS, TS]
+
+effects:
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory"
+    condition: { memory_lte: 4 }
+    process:
+      - gain_memory: 1
+
+  - when: end_of_your_turn
+    optional: true
+    summary: "[End of Your Turn] By suspending this Tamer, 1 of your [TS] Digimon gets +1000 DP for the turn for each memory your opponent has; after, that Digimon may attack"
+    condition:
+      all_of:
+        - source_is_unsuspended: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            trait_has: TS
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_own_permanent:
+          bind_as: buff_target
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TS
+          prompt: "Choose 1 of your [TS] Digimon to gain +1000 DP for the turn for each memory your opponent has"
+      - add_dp_modifier:
+          target: buff_target
+          value:
+            base: 0
+            per:
+              player_memory:
+                of: opponent
+            delta: 1000
+          expiry: end_of_turn
+      - may_attack_now:
+          attacker: buff_target
+          targets: any
+          optional: true
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

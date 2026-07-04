@@ -1,0 +1,116 @@
+# BT1-087 T.K. Takaishi — Tamer, Yellow, Cost 4.
+#
+# Printed card text (data/card_bundles/BT1-087.md — official Bandai DB, verbatim):
+#
+#   [Start of Your Turn] If you have 2 or less memory, set your memory to 3.
+#   [On Play] Look at your security stack, then reveal 1 card in it and add it
+#   to your hand. If that card is yellow, trigger ＜Recovery +1 (Deck)＞.
+#   (Place the top card of your deck on top of your security stack.) Then
+#   shuffle your security stack.
+#
+# Inherited / Security:
+#   [Security] Play this card without paying its memory cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT1/Yellow/BT1_087.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartTurn` → `SetMemoryTo3TamerEffect(card)`, the
+#   canonical "[Start of Your Turn] if memory <= 2, set it to 3" ramp idiom
+#   (sister cards BT1-085 Tai Kamiya, BT2-089, BT4-094, BT13-095, BT21-102).
+#   Authored as a StartOfYourTurn triggered clause gated on `memory_lte: 2`
+#   with a `set_memory: 3` process step. Official Q&A confirms this can be
+#   resolved in any order relative to other start-of-turn memory effects.
+#
+# Clause 2 — `EffectTiming.OnEnterFieldAnyone` → `ActivateClass` with
+#   `isOptional` NOT passed (defaults false / mandatory outer prompt is not
+#   used: `SetUpICardEffect`/`SetUpActivateClass` here has no optional flag),
+#   `CanActivateCondition` gated on `SecurityCards.Count >= 1`. Inside the
+#   coroutine: `SelectCardEffect` with `root: Security`, `maxCount: 1`,
+#   `canNoSelect: () => false` (a card MUST be picked — no decline once the
+#   security stack is non-empty), `canTargetCondition: (cardSource) => true`
+#   (UNFILTERED — any card in security qualifies, matching the printed
+#   "reveal 1 card" with no color/trait restriction), `mode: AddHand`. After
+#   the pick: `if (selectedCard.HasCardColor(Yellow)) → IRecovery(owner, 1)`.
+#   Then `ShuffledDeckCards(SecurityCards)` runs UNCONDITIONALLY (inside the
+#   `SecurityCards.Count >= 1` guard that gates the whole reveal branch, but
+#   with no further gate of its own — i.e. shuffle always follows a reveal).
+#
+#   Mapping:
+#     - `search_own_security_stack` with `filter: {}` (unfiltered — see the
+#       EX6-072 "any 1 card in hand" idiom for the `filter: {}` convention)
+#       and `optional: false` (mandatory: DCGO's `canNoSelect: () => false`).
+#       No `outer_prompt` — DCGO has no outer accept/decline gate here (unlike
+#       BT11-042's `isOptional: true` Angel/Archangel/Fallen-Angel search).
+#     - `bind_as: revealed` captures the picked security card's handle so the
+#       nested `if` can test its printed color via `binding_card_color`
+#       (G-DSL-BINDING-CARD-COLOR, resolved 2026-07-03 specifically to
+#       unblock this card).
+#     - `on_select`: `add_to_hand_from_security` (mirrors DCGO's `AddHand`
+#       mode + the `IReduceSecurity` follow-up that removes the picked card
+#       from the security zone), then the color-gated `if` wrapping `recover`
+#       (DCGO `IRecovery(owner, 1)` = deck-sourced Recovery +1 — no `else`
+#       branch: a non-yellow pick simply skips Recovery, matching DCGO's bare
+#       `if` with no alternate branch).
+#     - `shuffle_security` is nested as the LAST step INSIDE `on_select`
+#       (rather than a sibling top-level process step) so it only runs after
+#       a successful reveal — matching DCGO's structure exactly, where the
+#       whole reveal-add-recover-shuffle body is gated by ONE
+#       `SecurityCards.Count >= 1` check and the shuffle is the final
+#       statement inside that same guarded branch. On an empty security
+#       stack the mandatory search's precheck finds no match, `on_no_match`
+#       (omitted) no-ops, and the clause ends WITHOUT reaching the shuffle —
+#       matching DCGO exactly (the coroutine's own `SecurityCards.Count >= 1`
+#       guard covers the reveal-and-shuffle body as a single unit).
+#
+# Clause 3 (Security) — `EffectTiming.SecuritySkill` →
+#   `PlaySelfTamerSecurityEffect(card)`, the canonical "[Security] Play this
+#   card without paying the cost" Tamer idiom (sister BT1-085, BT5-093,
+#   BT22-084). Mandatory — no [Security] effect is opt-out per general_rule.pdf
+#   §16 (Security Effect timing).
+
+card: BT1-087
+name: T.K. Takaishi
+kind: tamer
+color: [yellow]
+cost: 4
+
+effects:
+  # ─── Clause 1: [Start of Your Turn] if memory <= 2, set it to 3 ──────────────
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  # ─── Clause 2: [On Play] reveal 1 security card (unfiltered), add to hand; ───
+  # ─── if yellow, Recovery +1 (Deck); then shuffle security ───────────────────
+  #
+  # NOTE: `shuffle_security` is nested INSIDE `on_select` (rather than a
+  # sibling top-level step) so it only runs after a successful reveal —
+  # matching DCGO's structure exactly, where the whole reveal-add-recover-
+  # shuffle body is gated by one `SecurityCards.Count >= 1` check and the
+  # shuffle is the final statement inside that same guarded branch. On an
+  # empty security stack the mandatory search has no match, `on_no_match`
+  # (omitted) no-ops, and the clause ends without touching security at all.
+  - when: on_play
+    summary: "[On Play] Look at your security, reveal 1 card and add it to hand; if yellow, Recovery +1 (Deck); then shuffle security"
+    process:
+      - search_own_security_stack:
+          filter: {}
+          optional: false
+          bind_as: revealed
+          prompt: "Reveal 1 card from your security and add it to your hand"
+          on_select:
+            - add_to_hand_from_security: { of: you, card: revealed }
+            - if:
+                condition: { binding_card_color: { binding: revealed, color_is: yellow } }
+                then:
+                  - recover: { of: you, count: 1 }
+            - shuffle_security: { of: you }
+
+  # ─── Clause 3: [Security] play self without paying the cost ──────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

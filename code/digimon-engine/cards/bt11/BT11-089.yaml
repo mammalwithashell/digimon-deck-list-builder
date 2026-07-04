@@ -1,0 +1,122 @@
+# BT11-089 Akiho Rindou — Tamer, Red, Cost 3. No traits, no digivolve.
+#
+# Printed text (official Bandai DB / card image; cards.json agrees):
+#
+#   [On Play] Reveal the top 4 cards of your deck. Add 1 red Digimon card with
+#   the [Vaccine] trait among them to your hand. Place the rest at the bottom
+#   of your deck in any order.
+#   [Your Turn] When an effect plays any of your red Digimon with [Avian],
+#   [Bird], [Beast], [Animal] or [Sovereign] in any of their traits (other
+#   than [Sea Animal] trait), by suspending this Tamer, those Digimon gain
+#   <Rush> for the turn.
+#
+#   Security Effect [Security] Play this card without paying the cost.
+#
+# Official Q&A: "Yes. Other than [Sea Animal], all traits with [Avian],
+# [Bird], [Beast], [Animal] or [Sovereign] are applicable regardless of other
+# words or pluralizations." → modeled with the substring/pluralization-
+# tolerant `event_target_trait_contains` leaf (G-DSL-EVENT-TARGET-TRAIT-CONTAINS,
+# landed specifically for this card), NOT the exact-match `event_target_trait_has`.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT11/Red/BT11_089.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ─────────────────────────────────────
+#
+# Clause 1 — [On Play]: `SimplifiedRevealDeckTopCardsAndSelect(revealCount: 4,
+#   ..., mode: AddHand, maxCount: 1, remainingCardsPlace: DeckBottom)`. Maps to
+#   `reveal_top_deck { count: 4 } -> choose_from_reveal { destination: hand } ->
+#   order_remainder { destinations: [deck_bottom] }`. The pick is MANDATORY
+#   when a candidate exists (DCGO has no explicit "may"); `choose_from_reveal`
+#   fizzles silently (no PendingSelection) when no candidate qualifies, and
+#   `order_remainder` always exposes the "in any order" placement as a real
+#   OrderedPermutation selection (never auto-determinism).
+#
+# Clause 2 — [Your Turn]: DCGO gates `IsOwnerTurn` + `CanTriggerOnPermanentPlay`
+#   (played permanent on OWN battle area, red, `HasAvianBeastAnimalTraits`) +
+#   `IsByEffect` (an EFFECT play, not a hard play) — maps to `on_any_digimon_played`
+#   + `active_when: { your_turn: true }` + `condition: { event_target_owner: you,
+#   event_target_kind: digimon, event_target_color_any_of: [red],
+#   event_is_effect_initiated: true, any_of: [5x event_target_trait_contains],
+#   not: { event_target_trait_has: "Sea Animal" } }`. Body:
+#   `SuspendPermanentsClass(card).Tap()` then `GainRush(EffectDuration.UntilEachTurnEnd)`
+#   on each matched played permanent → `activation_cost: { suspend_self: true }`
+#   then `grant_keyword: { target: event_target, keyword: Rush, expiry: end_of_turn }`.
+#   DCGO loops `Filter(PermanentCondition).Clone()` over every permanent from the
+#   SAME enter-field hashtable, but the engine's `TriggerSource::EnteredField`
+#   dispatch already fires the observer ONCE PER ENTERED PERMANENT (see
+#   `effect_queue.rs`), so a single clause with no inner loop and NO extra
+#   per-firing suspend-cost gate is a faithful match — two qualifying Digimon
+#   entering via the same effect call each get their own firing (and each pays
+#   its own suspend cost against Akiho, so only the first can pay if Akiho is
+#   a single Tamer).
+#
+# Clause 3 — [Security]: `CardEffectFactory.PlaySelfTamerSecurityEffect` →
+#   `on_security` + `play_from_security`.
+#
+# ─── Implementation status (faithfulness diff) ──────────────────────────────
+#
+# | Card-text element                                            | Status      |
+# |---------------------------------------------------------------|-------------|
+# | [On Play] reveal 4 / add 1 red Vaccine / bottom rest (any order)| IMPLEMENTED |
+# | [Your Turn] suspend-self → Rush grant on matched played Digimon | IMPLEMENTED |
+# | [Security] play self without paying cost                       | IMPLEMENTED |
+#
+# Verdict: IMPLEMENTED.
+
+card: BT11-089
+name: "Akiho Rindou"
+kind: tamer
+color: [red]
+cost: 3
+
+effects:
+  # ─── [On Play] reveal 4, add 1 red [Vaccine] Digimon, bottom the rest ─────
+  - when: on_play
+    summary: "[On Play] Reveal the top 4 cards of your deck. Add 1 red [Vaccine] Digimon card among them to your hand. Place the rest at the bottom of your deck in any order"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 4
+      - choose_from_reveal:
+          of: you
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: red
+              - trait_has: Vaccine
+          destination: hand
+          prompt: "Add 1 red [Vaccine] Digimon card to your hand"
+      - order_remainder:
+          of: you
+          destinations: [deck_bottom]
+
+  # ─── [Your Turn] effect-play observer → suspend self, grant Rush ─────────
+  - when: on_any_digimon_played
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_color_any_of: [red]
+        - event_is_effect_initiated: true
+        - any_of:
+            - event_target_trait_contains: Avian
+            - event_target_trait_contains: Bird
+            - event_target_trait_contains: Beast
+            - event_target_trait_contains: Animal
+            - event_target_trait_contains: Sovereign
+        - not:
+            event_target_trait_has: "Sea Animal"
+    summary: "[Your Turn] When an effect plays your red Digimon with [Avian]/[Bird]/[Beast]/[Animal]/[Sovereign] (other than [Sea Animal]) in any of its traits, by suspending this Tamer, it gains <Rush> for the turn"
+    process:
+      - activation_cost: { suspend_self: true }
+      - grant_keyword:
+          target: event_target
+          keyword: Rush
+          expiry: end_of_turn
+
+  # ─── [Security] play self without paying the cost ────────────────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

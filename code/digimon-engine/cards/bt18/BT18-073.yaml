@@ -1,0 +1,324 @@
+# BT18-073 Machinedramon — Digimon, Lv.6, Black/Purple, DP 11000, Cost 11.
+# Traits: Machine, (Rule) Composite (Rule-granted — see data/card_bundles/BT18-073.md
+# "(Rule) Trait: Has [Composite] Type."; already reconciled in data/cards.json's
+# type_eng == ["Machine"] plus the card_overrides pipeline per CLAUDE.md
+# source-priority — trait presence is asserted structurally below against the
+# compiled traits list, which the shared reconciliation step folds in).
+# Attribute: Virus. Form: Mega (implicit — omitted per convention when no
+# `form_eng` is printed).
+#
+# ─── Printed card text (official Bandai DB, data/card_bundles/BT18-073.md) ───
+#
+#   When this card would be played, by deleting 1 of your Digimon with the
+#   [Composite] trait, reduce the play cost by 4.
+#   [On Play] [When Digivolving] ＜De-Digivolve 1＞ all of your opponent's
+#   Digimon.
+#   [On Deletion] 1 of your [Kimeramon] and 1 [Machinedramon] in the trash may
+#   DNA digivolve into [Millenniummon] in the hand.
+#   (Rule) Trait: Has [Composite] Type.
+#
+#   Inherited Effect: [Opponent's Turn] [Once Per Turn] When any of your
+#   opponent's Digimon attack, you may change the attack target to 1 of your
+#   Digimon with the [Composite] or [Wicked God] trait.
+#
+#   Special digivolution condition (xros_req): "[Digivolve] Lv.5 w/[Composite]
+#   trait: Cost 3" — a from-base level+trait alt-path (identical shape to
+#   BT18-015 Kimeramon's own [Composite]-trait alt-digivolve route).
+#
+# ─── DCGO C# crosscheck ────────────────────────────────────────────────────
+#   DCGO/Assets/Scripts/CardEffect/BT18/Black/BT18_073.cs
+#
+#   1. Alternate Digivolution Requirement (EffectTiming.None):
+#      AddSelfDigivolutionRequirementStaticEffect — top card has [Composite]
+#      trait AND Level == 5, digivolutionCost: 3. -> alt_paths kind:
+#      digivolve, from: { level_eq: 5, trait_has: Composite }, cost: 3.
+#
+#   2. Cost Reduction (EffectTiming.BeforePayCost, "Delete 1 of your
+#      [Composite] trait digimon to get Play Cost -4"):
+#      `HasCompositeTraitInPlay` = owner's battle-area Digimon with
+#      [Composite] trait. `CanActivateCondition` gates the OFFER on
+#      `HasMatchConditionPermanent(HasCompositeTraitInPlay)` — the reducer is
+#      NOT offered when no Composite Digimon is in play (mirrored by the
+#      DSL's automatic `pay_cost_guard`, derived from the mandatory
+#      `select_own_permanent`'s candidate scan —
+#      G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST, BT13-103 precedent).
+#      `SelectPermanentEffect.canNoSelect: true` — the delete-as-cost pick
+#      itself is declinable (outer "Use this?" gate wraps the mandatory
+#      select per the `pay_cost_self_gated(false)` lowering, matching DCGO's
+#      accept/decline `ActivateClass`). On a successful delete,
+#      `ChangeCostClass` reduces the cost by a FLAT 4 — NOT the deleted
+#      Digimon's own printed cost (contrast BT13-103's
+#      `delete_for_cost_reduction`, which credits the VARIABLE deleted-cost;
+#      here the DCGO `ChangeCost` hardcodes `Cost -= 4` regardless of what
+#      was deleted). Modeled as `kind: cost_reduction` with a STATIC
+#      `amount: 4` (a `CompiledFormula::Literal`) plus a `pay_cost` of
+#      `[select_own_permanent{Composite}, delete_permanent]` — a PLAIN
+#      `delete_permanent` (not `delete_for_cost_reduction`), since the
+#      reduction amount here is fixed, not derived from the deleted
+#      permanent's cost. `when_playing_this: true` scopes the reducer to
+#      playing THIS card (DCGO `CardCondition: cardSource == card`).
+#
+#   3. On Play / When Digivolving (both EffectTiming.OnEnterFieldAnyone,
+#      separately-registered but identical bodies, no [OPT]/shared hash —
+#      each independently re-checks `CanActivateCondition`):
+#      `foreach (Permanent permanent in card.Owner.Enemy.GetBattleAreaDigimons())`
+#      → `IDegeneration(permanent, 1, ...).Degeneration()` for each —
+#      De-Digivolve 1 EVERY opponent Digimon (not a single pick). `CanUseCondition`
+#      requires >= 1 opponent battle-area Digimon (else the whole clause is
+#      skipped). Modeled with the BT9-112 `for_each` idiom: `for_each { over:
+#      { of: opponent, zone: [battle_area], kind: digimon }, bind_as: digi,
+#      body: [de_digivolve { target: digi, amount: 1, stop_at_level: 3 }] }`,
+#      gated by a `condition: any_permanent { of: opponent, zone:
+#      [battle_area], kind: digimon }` so the clause doesn't fire vacuously
+#      with no opponent Digimon on the board (mirrors DCGO's outer
+#      `card.Owner.Enemy.GetBattleAreaDigimons().Count >= 1` gate).
+#      `stop_at_level: 3` is the printed "(Trash the top card. You can't
+#      trash past level 3 cards.)" reminder text for the De-Digivolve
+#      keyword (§16 rules manual; keyword-semantics.md).
+#
+#   4. On Deletion (EffectTiming.OnDestroyedAnyone,
+#      `SetUpActivateClass(..., -1, true, ...)` → isOptional: true — the
+#      "may" gates at the OUTER accept/decline, not the inner picks):
+#      `HasKimeramon` = owner's BATTLE-AREA Digimon named "Kimeramon"
+#      (`IsPermanentExistsOnOwnerBattleAreaDigimon`) — FIELD partner.
+#      `HasMachinedramon` = owner's TRASH card named "Machinedramon"
+#      (`IsExistOnTrash`) — TRASH partner (the just-deleted BT18-073 itself,
+#      now in the trash per rule 25's post-trash OnDeletion timing, or any
+#      other trashed copy — no self-exclusion). `HasMillenniummon` = owner's
+#      HAND card named "Millenniummon" with `jogressCondition.Count > 0`
+#      (has a DNA recipe). `CanActivateCondition` ANDs all three
+#      non-empty-pool gates. Order of picks in `ActivateCoroutine`:
+#      SelectHandEffect (Millenniummon result) → SelectPermanentEffect
+#      (Kimeramon field partner) → SelectCardEffect over Root.Trash
+#      (Machinedramon trash partner) → `PlayCardClass...SetJogress(...)`.
+#      This is the ROLE-SWAPPED mirror of BT18-015 Kimeramon's own
+#      [On Deletion] clause (there: Machinedramon=field, Kimeramon=trash;
+#      here: Kimeramon=field, Machinedramon=trash — because BT18-073 IS
+#      Machinedramon, so it is always the TRASH-side material after its own
+#      deletion). Recipe target: BT18-019 Millenniummon (`dna_costs`:
+#      requirement1 name_contains "Kimeramon", requirement2 name_contains
+#      "Machinedramon", memory_cost 0 — order-agnostic pairing validated by
+#      `matching_dna_cost_perm_and_card`). Modeled with
+#      `effect_initiated_dna_digivolve_trash_partner` (G-DSL-DNA-TRASH-PARTNER,
+#      RESOLVED 2026-07-03 — the same primitive BT18-015 uses, with
+#      `target` = Kimeramon field partner, `trash_partner` = Machinedramon
+#      trash partner, `cost: printed`).
+#
+#   5. Opponents Turn - ESS (EffectTiming.OnAllyAttack, inherited,
+#      `SetHashString("SwitchTarget_BT18-073")` — the OPT identity this hash
+#      literally NAMES, and which BT19-065's sibling clause explicitly
+#      shares): `CanSelectPermanentCondition` = owner's Digimon with trait
+#      Composite OR Wicked God. Redirects the attack via `SwitchDefender`.
+#      Printed in the INHERITED effect text box (`SetIsInheritedEffect(true)`
+#      per DCGO and the card image), so `scope: inherited` (BT19-065
+#      corrected-pattern precedent — fires only while BT18-073 is buried as
+#      a digivolution SOURCE beneath another permanent, RULES 15-3-1;
+#      `Game::activation_counts_for_permanent`'s `is_under != effect.inherited`
+#      gate, game/mod.rs:2824).
+#
+# ─── Per-clause status ───────────────────────────────────────────────────────
+#
+#   | Clause                                                          | Status |
+#   |--------------------------------------------------------------------|------|
+#   | Alt-digivolve Lv.5 w/[Composite] trait / Cost 3                     | PASS |
+#   | BeforePayCost: delete 1 own [Composite] Digimon -> Play Cost -4     | PASS |
+#   | [On Play][When Digivolving] <De-Digivolve 1> ALL opp Digimon        | PASS |
+#   | [On Deletion] Kimeramon(field)+Machinedramon(trash) DNA->Millenniummon(hand) | PASS |
+#   | Inherited [Opp Turn][OPT] redirect attack to Composite/Wicked God   | PASS |
+#   | (Rule) Trait: Has [Composite] Type                                  | PASS (traits list) |
+#
+# Verdict: IMPLEMENTED — no approximations, no auto-selections; every choice
+# (cost-reduction delete target, DNA merge picks, redirect target) surfaces
+# through pending_selection.
+
+card: BT18-073
+name: Machinedramon
+kind: digimon
+level: 6
+color: [black, purple]
+cost: 11
+dp: 11000
+traits: [Machine, Composite]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: "Composite" }
+    cost: 3
+
+effects:
+  # ─── BeforePayCost: delete 1 own [Composite] Digimon -> flat Play Cost -4 ──
+  #
+  # "When this card would be played, by deleting 1 of your Digimon with the
+  # [Composite] trait, reduce the play cost by 4." The reduction is a FIXED
+  # 4 regardless of the deleted Digimon's own cost (DCGO hardcodes
+  # `Cost -= 4`), so this uses a STATIC `amount` (not
+  # `delete_for_cost_reduction`, which credits the deleted permanent's own
+  # printed cost — the BT13-103 shape, wrong here). The mandatory
+  # `select_own_permanent` pay_cost step drives the automatic
+  # `pay_cost_guard` (no offer without an eligible own Composite Digimon).
+  # `optional: true` at the clause level (mirroring BT13-103's own
+  # `optional: true` cost_reduction clause) is what installs the
+  # accept/decline gate — WITHOUT it, `on_decline` is never built
+  # (`candidate.optional.then(...)` in `game_actions/cost.rs`) and the
+  # reducer becomes unconditionally forced. This matches DCGO's
+  # `canNoSelect: true` cost pick behind a real "Use this?" decline surface.
+  - kind: cost_reduction
+    when_playing_this: true
+    optional: true
+    amount: 4
+    pay_cost:
+      - select_own_permanent:
+          bind_as: sacrifice
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Composite"
+          prompt: "Delete 1 of your [Composite] Digimon to reduce this card's play cost by 4"
+      - delete_permanent: { target: sacrifice }
+    summary: "When played, by deleting 1 of your [Composite] Digimon, reduce the play cost by 4"
+
+  # ─── [On Play][When Digivolving] <De-Digivolve 1> ALL opponent Digimon ─────
+  #
+  # "＜De-Digivolve 1＞ all of your opponent's Digimon." No [OPT] tag — each
+  # timing independently fires (mirrors BT9-112's identical shape). The
+  # `for_each` snapshots every opponent battle-area Digimon at trigger time
+  # and de-digivolves each by 1 (stopping at level 3, per the printed
+  # reminder text and De-Digivolve's keyword semantics).
+  - when: [on_play, when_digivolving]
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    summary: "[On Play][When Digivolving] <De-Digivolve 1> all of your opponent's Digimon"
+    process:
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+          bind_as: digi
+          body:
+            - de_digivolve:
+                target: digi
+                amount: 1
+                stop_at_level: 3
+
+  # ─── [On Deletion] Kimeramon(field) + Machinedramon(trash) DNA -> Millenniummon(hand) ──
+  #
+  # "1 of your [Kimeramon] and 1 [Machinedramon] in the trash may DNA
+  # digivolve into [Millenniummon] in the hand." DCGO role split (see header
+  # note): Kimeramon = OWN FIELD; Machinedramon = OWN TRASH (BT18-073 itself,
+  # having just been deleted and moved to trash per rule 25, or any other
+  # trashed copy — no self-exclusion in DCGO's `HasMachinedramon`).
+  #
+  # `condition:` gates the WHOLE clause on all three candidate pools being
+  # non-empty (own field Kimeramon-named card, own trash Machinedramon-named
+  # card, own hand Millenniummon-named Digimon) — mirrors DCGO's
+  # `CanActivateCondition` AND of the three `HasMatchConditionPermanent`/
+  # `InTrash`/`InHand` checks.
+  #
+  # `optional: true` at the CLAUSE level is the outer "may"
+  # (`SetUpActivateClass(..., -1, true, ...)`). Each of the three inner picks
+  # is mandatory once activated (DCGO `canNoSelect: false` throughout).
+  # Order of picks (hand result -> field partner -> trash partner) mirrors
+  # DCGO's `ActivateCoroutine` sequence exactly (SelectHandEffect ->
+  # SelectPermanentEffect -> SelectCardEffect over Root.Trash) — identical
+  # structure to BT18-015's sibling clause with Kimeramon/Machinedramon
+  # roles swapped.
+  - when: on_deletion
+    optional: true
+    condition:
+      all_of:
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            name_contains: "Kimeramon"
+        - count_gte:
+            filter:
+              of: you
+              zone: [trash]
+              kind: digimon
+              name_contains: "Machinedramon"
+            n: 1
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              kind: digimon
+              name_contains: "Millenniummon"
+            n: 1
+    summary: "[On Deletion] 1 Kimeramon (field) + 1 Machinedramon (trash) may DNA digivolve into Millenniummon (hand)"
+    process:
+      - select_hand:
+          of: you
+          bind_as: result
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Millenniummon"
+          prompt: "Select 1 [Millenniummon] in your hand to DNA digivolve into"
+      - select_own_permanent:
+          bind_as: field_partner
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Kimeramon"
+          prompt: "Select 1 [Kimeramon] on your field as the DNA material"
+      - select_trash:
+          of: you
+          bind_as: trash_partner
+          optional: false
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Machinedramon"
+          prompt: "Select 1 [Machinedramon] in your trash as the DNA material"
+      - effect_initiated_dna_digivolve_trash_partner:
+          target: field_partner
+          trash_partner: trash_partner
+          from_hand: result
+          cost: printed
+          ignore_requirements: false
+
+  # ─── Inherited [Opponent's Turn][Once Per Turn] redirect attack ────────────
+  #
+  # "[Opponent's Turn] [Once Per Turn] When any of your opponent's Digimon
+  # attack, you may change the attack target to 1 of your Digimon with the
+  # [Composite] or [Wicked God] trait." Printed in the INHERITED effect text
+  # box (card image + DCGO `SetIsInheritedEffect(true)`, shared OPT hash
+  # "SwitchTarget_BT18-073" — the very hash BT19-065's identical clause
+  # explicitly shares with THIS card). `scope: inherited` — fires only while
+  # BT18-073 is buried as a digivolution source beneath another permanent
+  # (RULES 15-3-1; `is_under != effect.inherited` gate, game/mod.rs:2824),
+  # per the BT19-065 corrected-pattern precedent (NOT the earlier
+  # mis-modeled FaceUp scope that precedent's header explicitly warns
+  # against).
+  - when: on_opponent_attack
+    scope: inherited
+    optional: true
+    once_per_turn: true
+    summary: "[Opponent's Turn][Once Per Turn] Switch attack target to 1 of your [Composite]/[Wicked God] Digimon"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        any_of:
+          - trait_has: "Composite"
+          - trait_has: "Wicked God"
+    process:
+      - select_own_permanent:
+          bind_as: redirect_target
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: "Composite"
+                  - trait_has: "Wicked God"
+          prompt: "Switch the attack target to 1 of your [Composite] or [Wicked God] Digimon"
+      - redirect_attack_target: { new_target: redirect_target }

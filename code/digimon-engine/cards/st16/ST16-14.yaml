@@ -1,0 +1,78 @@
+# ST16-14 Matt Ishida — Tamer, Cost 4. Colors: Purple.
+#
+# Printed card text (card image ST16-14 / data/card_bundles/ST16-14.md —
+# authoritative for printed text; verbatim):
+#   [Start of Your Turn] If you have 2 or fewer memory, set it to 3.
+#   [All Turns] When one of your effects trashes a card in your hand, by
+#     suspending this Tamer, gain 1 memory.
+#   Inherited: [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/ST16/Purple/ST16_14.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# [Start of Your Turn] (CardEffectFactory.SetMemoryTo3TamerEffect): unconditional
+#   helper that internally gates memory <= 2 -> set to 3 — same factory shape as
+#   ST18-14/ST19-14's opening clause. -> when: start_of_your_turn,
+#   condition: { memory_lte: 2 }, process: [ set_memory: 3 ].
+# [All Turns] (OnDiscardHand ActivateClass, NOT an automatic trigger — it is an
+#   activatable skill offered whenever legal):
+#   CanUseCondition = IsExistOnBattleArea(card) && CanTriggerOnTrashHand(
+#     hashtable, SkillCondition: cardEffect.EffectSourceCard.Owner == card.Owner,
+#     cardCondition: cardSource => cardSource.Owner == card.Owner)
+#   -> gates BOTH "your own hand" (the trashed card's owner == this Tamer's
+#   owner) AND "your own effect" (the causing effect's controller == this
+#   Tamer's owner) — matches printed "one of YOUR effects trashes a card in
+#   YOUR hand". Modeled as `event_discard_player: you` (own hand) +
+#   `event_caused_by_own_effect: true` (own effect) on `on_discard_hand`.
+#   CanActivateCondition = IsExistOnBattleArea(card) &&
+#     CanActivateSuspendCostEffect(card) (this Tamer must be unsuspended) ->
+#   optional: true (declinable activation, not a mandatory trigger).
+#   ActivateCoroutine: SuspendPermanentsClass(this Tamer).Tap() then
+#     AddMemory(1) -> activation_cost: { suspend_self: true } then gain_memory: 1.
+#   No OPT / max-count on the DCGO ActivateClass (maxCountPerTurn param is -1)
+#   -> no `once_per_turn` on this clause; the underlying window still only
+#   fires once per batch of hand-trashes (engine-level batching, not a card
+#   gate — G-ENGINE-ON-DISCARD-HAND).
+# [Security] (CardEffectFactory.PlaySelfTamerSecurityEffect) ->
+#   on_security + play_from_security.
+#
+# Implementation status (faithfulness diff):
+# | [Start of Your Turn] memory<=2 -> set to 3                | IMPLEMENTED |
+# | [All Turns] own-effect hand-trash -> suspend self -> +1 memory | IMPLEMENTED (on_discard_hand + event_caused_by_own_effect) |
+# | [Security] play self free                                  | IMPLEMENTED |
+
+card: ST16-14
+name: Matt Ishida
+kind: tamer
+color: [purple]
+cost: 4
+
+effects:
+  # ─── [Start of Your Turn] if memory <= 2, set to 3 ─────────────────────────
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If you have 2 or fewer memory, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  # ─── [All Turns] own-effect hand-trash -> suspend self -> gain 1 memory ────
+  # Gated on BOTH "your own hand" (event_discard_player: you) and "your own
+  # effect" (event_caused_by_own_effect: true) per DCGO CanTriggerOnTrashHand's
+  # two predicates. Declinable activation (ActivateClass), not a forced trigger.
+  - when: on_discard_hand
+    optional: true
+    active_when:
+      all_of:
+        - event_discard_player: you
+        - event_caused_by_own_effect: true
+    summary: "[All Turns] When one of your effects trashes a card in your hand, by suspending this Tamer, gain 1 memory"
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+
+  # ─── Inherited [Security] Play this card without paying the cost ──────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-07-03",
+  "last_updated": "2026-07-04",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -5948,17 +5948,9 @@
       "notes": "IMPLEMENTED \u2014 Jamming + [OP/WD] link 1 [TS] from trash to chosen own Digimon (link_card_to_self to: chosen_own_digimon) + inherited +1000 DP."
     },
     "BT25-073": {
-      "card_name": "Dragomon",
-      "validated_date": "2026-06-07",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "dsl",
-      "archetype": "BT25 link-finish-replacement slice",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [],
-      "notes": "BLOCKED (dsl) \u2014 G-DSL-LINK-TRASH-AS-COST. Main [On Play][When Digivolving] cost \"By trashing 1 of YOUR Digimon's link cards\" needs a step that selects an own Digimon, selects one of ITS link cards, and trashes it as an ACTIVATION cost (DCGO TrashLinkCardsAndProcessAccordingToResult), then a gated play/use of a TS cost<=5 card from hand free. The trash_own_link_card cost is replacement-only (cancels-leave, reads replacement_subject); no general activation-cost link-trash step exists. The inherited leave-replacement IS now expressible (gap-3a + scope:linked landed for BT25-101/066) and Jamming is declarative, but the defining Main clause is blocked, so the card ships no YAML. Cross-ref qa/dsl-vocab-gaps.md G-DSL-LINK-TRASH-AS-COST."
+      "status": "IMPLEMENTED",
+      "date": "2026-07-04",
+      "notes": "store-champs June-2026 resume wave A; Opus-approved."
     },
     "BT25-080": {
       "card_name": "Witchmon",
@@ -5974,17 +5966,9 @@
       "notes": "inherited OnDiscardHand trigger + main-clause played_by_effect condition \u2014 both missing. See docs/RUST_ENGINE_GAPS.md OnDiscardHand entry."
     },
     "BT25-083": {
-      "card_name": "LadyDevimon",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "hybrid",
-      "archetype": "titan (BT25)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [],
-      "notes": "bottom-source-from-hand/trash picker + trash-digivolution-option-as-cost + cost-reduced trash-option use. See qa/dsl-vocab-gaps.md BT25-083."
+      "status": "IMPLEMENTED",
+      "date": "2026-07-04",
+      "notes": "store-champs June-2026 resume wave A; Opus-approved."
     },
     "BT25-016": {
       "card_name": "GrapLeomon",
@@ -6524,17 +6508,9 @@
       "notes": "DigiLink Shape-B: link_condition (Appmon cost1) + alt-digivolve + [Start Main] optional trash-Appmon->draw+memory + when_linked CannotUnsuspend (end_of_opponents_turn). Prior BLOCKED reason now closed."
     },
     "BT25-086": {
-      "card_name": "Dan Yuki",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "dsl",
-      "archetype": "orphan-a (TS/Iliad rookies + Monodramon)",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [],
-      "notes": "[End of Your Turn] suspend-self -> 1 [TS] Digimon +1000 DP per opponent memory, then may attack: no formula source for opponent's memory-gauge value (G-DSL-FORMULA-OPPONENT-MEMORY). SOMP memory-floor + [Security] play are expressible. See qa/dsl-vocab-gaps.md."
+      "status": "IMPLEMENTED",
+      "date": "2026-07-04",
+      "notes": "store-champs June-2026 resume wave A; Opus-approved."
     },
     "BT25-002": {
       "card_name": "Wanyamon",
@@ -7171,17 +7147,9 @@
       "notes": "BLOCKED: G-DSL-PROTECT-OTHER-BY-SELF-DELETE (board-wide protect-other replacement) + G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER (security-zone EOT play Ceresmon + place self under). Inherited redirect + OnDeletion->security are expressible but card has un-expressible core clauses."
     },
     "BT25-020": {
-      "card_name": "Marsmon",
-      "validated_date": "2026-06-06",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "dsl",
-      "archetype": "aegiomon-1",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [],
-      "notes": "BLOCKED: G-DSL-BATTLE-WINNER-BOARDWIDE ([All Turns] when any of your [TS] Digimon win a battle -> trash opp top security; no board-wide battle-winner predicate). Cost reduction + [OP][WD][WA] +3000+may-battle are expressible."
+      "status": "IMPLEMENTED",
+      "date": "2026-07-04",
+      "notes": "store-champs June-2026 resume wave A; Opus-approved."
     },
     "BT25-043": {
       "card_name": "Habakirimon",
@@ -10642,6 +10610,46 @@
       ],
       "date": "2026-07-03",
       "notes": "DSL-wiring round. [WD][WA] delete-own-cost -> delete opp lowest-DP; [On Deletion] Machinedramon(field)+Kimeramon(trash) DNA -> Millenniummon(hand) via the new effect_initiated_dna_digivolve_trash_partner DSL verb (G-DSL-DNA-TRASH-PARTNER resolved; engine G-ENGINE-DNA-TRASH-MATERIAL); inherited <Security A. +1> (ST1-07 idiom); 3 digivolve alt-paths (Red/Purple Lv.4 circles + Composite-trait Cost 3). 17/17 behavioral tests."
+    },
+    "P-180": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-04",
+      "notes": "store-champs June-2026 resume wave A; Opus-approved (1 cosmetic note: redundant flood_gate ignore-color clause alongside use_requirement \u2014 inert)."
+    },
+    "BT21-058": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-04",
+      "notes": "store-champs June-2026 resume wave A; Opus-approved."
+    },
+    "ST16-14": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-04",
+      "notes": "store-champs June-2026 resume wave A; Opus-approved."
+    },
+    "BT18-073": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-04",
+      "notes": "store-champs June-2026 resume wave A; Opus-approved."
+    },
+    "BT1-087": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-04",
+      "notes": "store-champs June-2026 resume wave A; Opus-approved."
+    },
+    "BT11-089": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-04",
+      "notes": "store-champs June-2026 resume wave A; Opus-approved."
+    },
+    "EX7-070": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-04",
+      "notes": "store-champs June-2026 resume wave A; review fix applied at merge: [Main] placement tail swapped to place_self_under_permanent (in-flight pending_option claim; EX7-071 sibling); suite green."
+    },
+    "EX1-066": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-04",
+      "notes": "store-champs June-2026 resume wave A; review fix applied at merge: reveal add-to-hand pick made mandatory (optional:false, DCGO canNoSelect=false) + forced-pick assertion; suite green."
     }
   }
 }

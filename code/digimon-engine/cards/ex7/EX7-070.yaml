@@ -1,0 +1,229 @@
+# EX7-070 Der Blitz — Option, Black, Cost 6. Traits: [Three Musketeers].
+#
+# Printed card text (official Bandai DB — data/card_bundles/EX7-070.md,
+# verbatim; card image C:/Users/james/Documents/DCGO_Application/Assets/
+# Textures/Card/EX7-070.webp confirms):
+#
+#   When effects trash this card from digivolution cards, ＜De-Digivolve 1＞
+#   1 of your opponent's Digimon. While you have a [Three Musketeers] trait
+#   Digimon, you may ignore this card's color requirements. [Main] Delete 1
+#   of your opponent's Digimon with the lowest play cost. Then, place this
+#   card as the bottom digivolution card of 1 of your [Three Musketeers]
+#   trait Digimon.
+#
+#   Security Effect [Security] Delete 1 of your opponent's Digimon with the
+#   lowest play cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Black/EX7_070.cs
+#
+# ─── DCGO crosscheck (per clause) ─────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnDigivolutionCardDiscarded` (=
+#   `on_digivolution_card_trashed`). `SetIsInheritedEffect(true)` +
+#   `SetIsOptionEffect(true)` — OPTIONAL. CanUseCondition:
+#   `CanTriggerOnTrashSelfDigivolutionCard(hashtable, cardEffect => cardEffect
+#   != null, card)` — fires when an EFFECT trashes THIS SPECIFIC card as a
+#   digivolution source (any host, no host-trait gate — unlike the
+#   Mineral/Rock-gated EX10-025/EX10-032 siblings). CanActivateCondition:
+#   `IsExistOnTrash(card) && HasMatchConditionPermanent(opponent battle-area
+#   Digimon)`. Body: mandatory single-target select over opponent Digimon →
+#   `IDegeneration(permanent, 1, activateClass).Degeneration()` (De-Digivolve
+#   1, the standard stop-at-level-3 semantics per the parenthetical).
+#   → `when: on_digivolution_card_trashed`, `scope: inherited` (this is the
+#   card's own inherited/security-adjacent ability, mirrors EX10-025/032's
+#   `scope: inherited` sibling shape even though it's an Option not a
+#   Digimon), `optional: true`, `trashed_source_card_id_is: EX7-070` (this
+#   card's own identity — DCGO's `CanTriggerOnTrashSelfDigivolutionCard`),
+#   `event_target_owner: you` (the trashed-from host belongs to this card's
+#   controller — DCGO only wires this on cards already attached to the
+#   controller's own Digimon), gated on an opponent Digimon existing
+#   (`any_permanent`). `de_digivolve { amount: 1, stop_at_level: 3 }`.
+#
+# Clause 2 — Ignore-color (`EffectTiming.None`, `IgnoreColorConditionClass`).
+#   CanUseCondition: `HasMatchConditionOwnersPermanent(card,
+#   HasThreeMusketeersTrait)` — POSITIVE gate: "while you HAVE [Three
+#   Musketeers] trait Digimon" (permanent.IsDigimon &&
+#   TopCard.ContainsTraits("Three Musketeers")). CardCondition: `cardSource ==
+#   card` — bypass scopes to THIS card only.
+#   → `kind: flood_gate`, `active_when: any_permanent { of: you, zone:
+#   battle_area, kind: digimon, trait_has: "Three Musketeers" }`, `modifier:
+#   IgnoreColorRequirement`, `target: { card_number_is: "EX7-070" }`.
+#
+# Clause 3 — `[Main]`, `EffectTiming.OptionSkill` — the STANDARD "ordinary
+#   Option played from hand" activation (DCGO's `CanTriggerOptionMainEffect`
+#   stock helper — the same helper BT1's plain Options use; not a
+#   digivolution-source-only activation). Body is TWO independently-gated
+#   mandatory single-target selects, each self-contained behind its own
+#   `HasMatchConditionPermanent` check (so either half can fire alone if the
+#   other has no candidates):
+#     3a. `if (HasMatchConditionPermanent(opp Digimon at IsMinCost))`:
+#         mandatory SelectPermanentEffect (Destroy mode, canNoSelect: false)
+#         over the lowest-play-cost opponent Digimon.
+#     3b. `if (HasMatchConditionPermanent(own [Three Musketeers] Digimon))`:
+#         mandatory SelectPermanentEffect (Custom mode, canNoSelect: false)
+#         over own [Three Musketeers] Digimon → `AddDigivolutionCardsBottom`
+#         (place THIS card as that Digimon's bottom digivolution card).
+#   Both run unconditionally of each other (no "then" dependency — DCGO
+#   issues them as two independent `if` blocks in the same coroutine, per
+#   the printed "Then," which sequences but does not gate 3b on 3a finding a
+#   target).
+#   → `when: main_from_hand` (ordinary Option-from-hand [Main], EX7-074
+#   sibling idiom in this same set). 3a: `select_opponent_permanent { filter:
+#   { kind: digimon }, selector: lowest_play_cost }` wrapped in its own `if
+#   any_permanent(...)` guard (matches the EX8-070 Clause 2 / EX7-073
+#   "nested if guards a mandatory select" idiom — an unguarded
+#   `select_opponent_permanent` would itself silently no-op with 0
+#   candidates, but wrapping keeps the two halves visibly independent and
+#   matches DCGO's structure exactly) → `delete_permanent`. 3b:
+#   `select_own_permanent { filter: { kind: digimon, trait_has: "Three
+#   Musketeers" } }` wrapped in its own `if any_permanent(...)` guard →
+#   `place_self_under_permanent: { target: <picked>, face_down: false }` —
+#   the play-path verb that claims the in-flight `pending_option` (an Option
+#   mid-[Main] is in NO zone; `place_as_bottom_source: { source: self }`
+#   would scan hand/trash/reveal, find nothing, and silently no-op). Mirrors
+#   the confirmed-green sibling EX7-071.
+#
+# Clause 4 — Inherited `[Security]`, `EffectTiming.SecuritySkill`. Mandatory
+#   single-target select over the lowest-play-cost opponent Digimon →
+#   Destroy. Same target selector as Clause 3a, no placement tail (Security
+#   resolution trashes the card, per standard non-Tamer security disposition
+#   — no `add_this_option_to_hand` in the DCGO body).
+#   → `scope: inherited`, `when: on_security`, `select_opponent_permanent {
+#   filter: { kind: digimon }, selector: lowest_play_cost }` wrapped in its
+#   own `if any_permanent(...)` guard → `delete_permanent`.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                                | Status      |
+# |-------------------------------------------------------------------|-----------|
+# | [Inherited] self-source-trash → De-Digivolve 1 opp Digimon (OPT) | IMPLEMENTED |
+# | While-you-have-TM-Digimon color bypass                          | IMPLEMENTED |
+# | [Main] delete 1 opp lowest-play-cost Digimon (independent)       | IMPLEMENTED |
+# | [Main] place self as bottom source of 1 own TM Digimon (indep.) | IMPLEMENTED |
+# | [Security] delete 1 opp lowest-play-cost Digimon                 | IMPLEMENTED |
+
+card: EX7-070
+name: "Der Blitz"
+kind: option
+color: [black]
+cost: 6
+traits: [Three Musketeers]
+
+effects:
+  # ─── Clause 1: Inherited self-source-trash → De-Digivolve 1 opp Digimon ────
+  #
+  # "When effects trash this card from digivolution cards, <De-Digivolve 1>
+  # 1 of your opponent's Digimon." Optional (DCGO SetIsOptionEffect(true));
+  # no host-trait gate — fires regardless of which Digimon carried this card.
+  - scope: inherited
+    when: on_digivolution_card_trashed
+    optional: true
+    condition:
+      all_of:
+        - event_target_owner: you
+        - trashed_source_card_id_is: EX7-070
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+    summary: "[Inherited] When effects trash this card from digivolution cards, De-Digivolve 1 opponent Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dedigivolve_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 1"
+      - de_digivolve:
+          target: dedigivolve_target
+          amount: 1
+          stop_at_level: 3
+
+  # ─── Clause 2: Ignore color requirements while you have a TM Digimon ──────
+  #
+  # "While you have a [Three Musketeers] trait Digimon, you may ignore this
+  # card's color requirements." Positive gate (unlike BT19-093's negative
+  # "while you DON'T have" bypass) — mirrors EX7-074's LIBERATOR bypass shape
+  # in this same set.
+  - kind: flood_gate
+    active_when:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        trait_has: "Three Musketeers"
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "EX7-070" }
+    summary: "While you have a [Three Musketeers] trait Digimon, ignore this card's color requirements"
+
+  # ─── Clause 3: [Main] delete 1 opp lowest-cost Digimon; place self under a
+  #     TM Digimon (two independently-gated mandatory picks) ────────────────
+  #
+  # "[Main] Delete 1 of your opponent's Digimon with the lowest play cost.
+  # Then, place this card as the bottom digivolution card of 1 of your
+  # [Three Musketeers] trait Digimon."
+  #
+  # DCGO wires 3a and 3b as two independent `if (HasMatchConditionPermanent(...))`
+  # blocks in the same coroutine — each is a self-contained mandatory pick
+  # that only runs when ITS OWN candidate set is non-empty. Neither depends
+  # on the other's outcome (a resolved 3a is not a precondition for 3b).
+  - when: main_from_hand
+    summary: "[Main] Delete 1 opponent Digimon with the lowest play cost; then place this card as the bottom digivolution card of 1 of your [Three Musketeers] Digimon"
+    process:
+      # 3a: mandatory delete of the lowest-play-cost opponent Digimon —
+      # silently skipped if the opponent has no Digimon.
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - select_opponent_permanent:
+                bind_as: delete_target
+                filter: { kind: digimon }
+                selector: lowest_play_cost
+                prompt: "Delete 1 of your opponent's Digimon with the lowest play cost"
+            - delete_permanent: { target: delete_target }
+      # 3b: mandatory placement of this card as the bottom digivolution card
+      # of 1 of your [Three Musketeers] Digimon — silently skipped if you
+      # control no such Digimon. Independent of whether 3a found a target.
+      - if:
+          condition:
+            any_permanent:
+              of: you
+              zone: [battle_area]
+              kind: digimon
+              trait_has: "Three Musketeers"
+          then:
+            - select_own_permanent:
+                bind_as: place_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: "Three Musketeers"
+                prompt: "Place this card as the bottom digivolution card of 1 of your [Three Musketeers] Digimon"
+            - place_self_under_permanent:
+                target: place_target
+                face_down: false
+
+  # ─── Clause 4: Inherited [Security] delete 1 opp lowest-cost Digimon ──────
+  #
+  # "Security Effect [Security] Delete 1 of your opponent's Digimon with the
+  # lowest play cost." Mandatory, silently skipped if the opponent has no
+  # Digimon (no add-to-hand tail — standard non-Tamer security disposition).
+  - scope: inherited
+    when: on_security
+    summary: "[Security][Inherited] Delete 1 of your opponent's Digimon with the lowest play cost"
+    process:
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - select_opponent_permanent:
+                bind_as: sec_target
+                filter: { kind: digimon }
+                selector: lowest_play_cost
+                prompt: "Delete 1 of your opponent's Digimon with the lowest play cost"
+            - delete_permanent: { target: sec_target }
