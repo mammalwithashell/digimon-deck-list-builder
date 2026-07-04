@@ -159,8 +159,18 @@ fn pimc_search(
     evaluator: &mut dyn PolicyValueFn,
     config: &DeterminizedConfig,
 ) -> SearchResult {
-    let worlds = config.worlds.max(1);
-    let per_world = (config.search.simulations / worlds).max(1);
+    // Respect the TOTAL simulation budget. A naive `(sims / worlds).max(1)`
+    // per-world floor would overshoot (sims=1, worlds=8 → 8 sims), so clamp
+    // the world count to the available budget instead; the integer-division
+    // remainder is dropped as documented. `simulations == 0` runs a single
+    // 0-sim world so the result still enumerates the root's legal actions
+    // with zero visits (same semantic as the core searcher at 0 sims).
+    let (worlds, per_world) = if config.search.simulations == 0 {
+        (1, 0)
+    } else {
+        let w = config.worlds.max(1).min(config.search.simulations);
+        (w, config.search.simulations / w)
+    };
     let mcts = Mcts::new(registry);
 
     let mut ref_legal: Option<Vec<u16>> = None;

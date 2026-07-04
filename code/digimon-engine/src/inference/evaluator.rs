@@ -27,17 +27,18 @@ pub struct EvalResult {
 
 /// Masked softmax: probability mass only on entries whose mask is set.
 ///
-/// Max-subtracted over the LEGAL entries for numerical stability. Panics if
-/// logits/mask lengths differ; returns an error if no action is legal (a
-/// state with an empty mask is unreachable in a well-formed game).
+/// Max-subtracted over the LEGAL entries for numerical stability. Returns
+/// `ShapeMismatch` if logits/mask lengths differ (library/CLI-facing code —
+/// a stale model or a bad mask must not abort the process) or if no action
+/// is legal (an empty mask is unreachable in a well-formed game).
 pub fn masked_softmax(logits: &[f32], mask: &[f32]) -> Result<Vec<f32>, InferenceError> {
-    assert_eq!(
-        logits.len(),
-        mask.len(),
-        "logits/mask length mismatch: {} vs {}",
-        logits.len(),
-        mask.len()
-    );
+    if logits.len() != mask.len() {
+        return Err(InferenceError::ShapeMismatch(format!(
+            "masked_softmax: logits len {} != mask len {}",
+            logits.len(),
+            mask.len()
+        )));
+    }
     let mut max_legal = f32::NEG_INFINITY;
     for (&l, &m) in logits.iter().zip(mask.iter()) {
         if m >= 0.5 && l > max_legal {
@@ -203,6 +204,20 @@ mod tests {
         let logits = [1.0, 2.0];
         let mask = [0.0, 0.0];
         assert!(masked_softmax(&logits, &mask).is_err());
+    }
+
+    #[test]
+    fn masked_softmax_length_mismatch_errors_not_panics() {
+        // Library/CLI-facing: a stale model's logits width vs a current mask
+        // must surface as ShapeMismatch, never abort the process.
+        let logits = [1.0, 2.0, 3.0];
+        let mask = [1.0, 1.0];
+        match masked_softmax(&logits, &mask) {
+            Err(InferenceError::ShapeMismatch(msg)) => {
+                assert!(msg.contains("3") && msg.contains("2"), "unhelpful msg: {msg}");
+            }
+            other => panic!("expected ShapeMismatch, got {other:?}"),
+        }
     }
 
     #[test]

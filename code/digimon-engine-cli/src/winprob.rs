@@ -19,8 +19,43 @@ use std::process::ExitCode;
 use digimon_engine::card_data::CardData;
 use digimon_engine::enums::PlayerId;
 use digimon_engine::inference::BatchedPolicyValueEvaluator;
+use digimon_engine::observation::{
+    build_observation_tensor, default_observation_profile, parse_observation_profile,
+    ObservationProfileId,
+};
 use digimon_engine::runners::ReplaySession;
 use serde_json::{json, Value};
+
+/// Resolve the observation profile the model expects. Precedence:
+/// explicit `--tensor-profile` flag > the export's `<model>.meta.json`
+/// (`observation_profile` field, written by `code/tools/export_onnx.py`) >
+/// the engine default. Feeding a model tensors in a different profile than
+/// it was exported with is an ONNX input-shape error at best and silent
+/// garbage at worst.
+fn resolve_profile(
+    model_path: &std::path::Path,
+    flag: Option<&str>,
+) -> Result<ObservationProfileId, String> {
+    if let Some(raw) = flag {
+        return parse_observation_profile(raw);
+    }
+    let meta_path = std::path::PathBuf::from(format!("{}.meta.json", model_path.display()));
+    if let Ok(text) = std::fs::read_to_string(&meta_path) {
+        let meta: Value = serde_json::from_str(&text)
+            .map_err(|e| format!("malformed {}: {e}", meta_path.display()))?;
+        if let Some(raw) = meta.get("observation_profile").and_then(|v| v.as_str()) {
+            return parse_observation_profile(raw).map_err(|e| {
+                format!("{} names an unknown profile: {e}", meta_path.display())
+            });
+        }
+    }
+    eprintln!(
+        "note: no --tensor-profile and no readable {} — using the engine default profile ({})",
+        meta_path.display(),
+        default_observation_profile().as_str()
+    );
+    Ok(default_observation_profile())
+}
 
 struct Decision {
     step: u64,
@@ -38,8 +73,16 @@ pub fn run(
     model_path: PathBuf,
     out_path: Option<PathBuf>,
     batch: usize,
+    tensor_profile: Option<String>,
     card_data: HashMap<String, CardData>,
 ) -> ExitCode {
+    let profile = match resolve_profile(&model_path, tensor_profile.as_deref()) {
+        Ok(p) => p,
+        Err(e) => {
+            eprintln!("error resolving tensor profile: {e}");
+            return ExitCode::from(2);
+        }
+    };
     let text = match std::fs::read_to_string(&recording_path) {
         Ok(t) => t,
         Err(e) => {
@@ -106,7 +149,7 @@ pub fn run(
         let player_py = action["player_id"].as_u64().unwrap_or(1);
         let pid: PlayerId = player_py.saturating_sub(1) as PlayerId;
         let action_id = action["action_id"].as_u64().unwrap_or(0) as u16;
-        let obs = digimon_engine::tensor::build_tensor(&session.game, pid, &registry);
+        let obs = build_observation_tensor(&session.game, pid, &registry, profile);
         let mut mask = digimon_engine::build_action_mask(&session.game, pid);
         let mask_empty = !mask.iter().any(|&m| m > 0.5);
         if mask_empty {
@@ -189,6 +232,7 @@ pub fn run(
         "schema": "winprob-annotations-v1",
         "recording": recording_path.to_string_lossy(),
         "model": model_path.to_string_lossy(),
+        "observation_profile": profile.as_str(),
         "value_semantics": "SB3 value head: expected discounted shaped return for the player to move (viewer-relative). NOT a calibrated win probability.",
         "winner_id": winner_py,
         "decisions": records,

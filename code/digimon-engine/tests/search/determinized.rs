@@ -363,6 +363,25 @@ fn determinized_search_worlds_are_hygienic_and_respect_the_root_mask() {
         assert_eq!(result.simulations_run, 99, "3 worlds x 33 sims (remainder dropped)");
         let visit_sum: u32 = result.root_visits.iter().map(|(_, v)| *v).sum();
         assert_eq!(visit_sum, 99);
+
+        // Budget is a CEILING even when worlds > simulations: sims=1,
+        // worlds=8 must clamp to ONE 1-sim world, never 8 sims.
+        let tiny = pimc_config(1, 8, 5);
+        let mut evaluator = UniformEvaluator;
+        let result = determinized_search(&registry, &game, viewer, &mut evaluator, &tiny);
+        assert_eq!(
+            result.simulations_run, 1,
+            "worlds must clamp to the simulation budget"
+        );
+
+        // simulations=0 does no search work but still enumerates the root's
+        // legal actions with zero visits (matching the core searcher).
+        let zero = pimc_config(0, 8, 5);
+        let mut evaluator = UniformEvaluator;
+        let result = determinized_search(&registry, &game, viewer, &mut evaluator, &zero);
+        assert_eq!(result.simulations_run, 0);
+        assert!(!result.root_visits.is_empty(), "root edges still enumerated");
+        assert!(result.root_visits.iter().all(|(_, v)| *v == 0));
         for (action, _) in &result.root_visits {
             assert!(
                 legal.contains(action),

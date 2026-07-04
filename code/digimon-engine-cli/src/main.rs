@@ -104,6 +104,11 @@ enum Command {
         /// Evaluation batch size.
         #[arg(long, default_value_t = 256)]
         batch: usize,
+        /// Observation profile for the model's input tensors. Defaults to
+        /// the profile recorded in `<model>.meta.json` (written by the
+        /// exporter), falling back to the engine default.
+        #[arg(long)]
+        tensor_profile: Option<String>,
     },
 
     /// Print the card pool as a sorted JSON array of card IDs and exit.
@@ -183,6 +188,7 @@ fn run() -> ExitCode {
             model,
             out,
             batch,
+            tensor_profile,
         } => {
             let card_data = match load_card_data(&cli.cards_json, &cli.pool) {
                 Ok(cd) => cd,
@@ -191,7 +197,7 @@ fn run() -> ExitCode {
                     return ExitCode::from(2);
                 }
             };
-            winprob::run(recording, model, out, batch, card_data)
+            winprob::run(recording, model, out, batch, tensor_profile, card_data)
         }
         Command::Pool => {
             let card_data = match load_card_data(&cli.cards_json, &cli.pool) {
