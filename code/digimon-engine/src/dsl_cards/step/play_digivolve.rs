@@ -273,6 +273,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             of: _,
             hand_index,
             cost_delta,
+            bind_as,
         } => {
             if let Some(ResolvedBinding::HandIndex(owner, i)) =
                 resolve_binding_ref(hand_index, ctx, bindings)
@@ -280,6 +281,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 let delta = lower_cost_delta(cost_delta.as_ref(), ctx, bindings);
                 if let Some(played) = ctx.play_from_hand_with_cost(owner, i as usize, delta) {
                     bindings.record_played(played);
+                    // G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER: expose the
+                    // played permanent's handle to subsequent steps in the same
+                    // body (mirrors PlayFromHandFree's bind_as threading).
+                    if let Some(name) = bind_as {
+                        bind_played_with_provenance(bindings, ctx, name, played);
+                    }
                 }
             }
             true

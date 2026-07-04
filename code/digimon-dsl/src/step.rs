@@ -2191,6 +2191,15 @@ pub struct PlayFromHandArgs {
     /// behavior.
     #[serde(default, skip_serializing_if = "is_false")]
     pub suspended: bool,
+    /// Bind the resulting permanent handle for use in later steps in the
+    /// same body (mirrors `play_from_hand_free`'s `bind_as`, for the
+    /// cost-paying / cost-reduced play). Only honored by `play_from_hand`;
+    /// rejected at compile time on `play_from_trash` / `play_from_trash_free`
+    /// (which share these args) so it cannot silently no-op. None (the
+    /// default) preserves prior behavior.
+    /// G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER (BT25-039 Sirenmon).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 /// Free-play-from-hand args. Adds `bind_as` so the just-played permanent

@@ -892,6 +892,24 @@ impl Game {
             EffectTiming::EndOfYourTurn,
             crate::selection::TriggerSource::PlayerBattleArea(player),
         );
+        // G-ENGINE-SECURITY-STACK-END-OF-YOUR-TURN (BT25-039 Sirenmon):
+        // turn-boundary `{Security}[End of Your Turn]` effects on cards living
+        // in the ENDING player's persistent security stack. Mirrors
+        // `rotate_turn_player`'s existing `EndOfOpponentsTurn` security scan;
+        // `enqueue_from_security_stack_card` filters to `effect.security`
+        // (scope: security) so battle-area-only observers are unaffected.
+        let security_cards: Vec<_> = self
+            .player(player)
+            .security
+            .iter()
+            .map(|card| card.handle())
+            .collect();
+        for card in security_cards {
+            self.enqueue_triggered(
+                EffectTiming::EndOfYourTurn,
+                crate::selection::TriggerSource::SecurityStackCard { player, card },
+            );
+        }
         self.drain_effect_queue();
 
         // Phase 2f4 Task 2: drain ScheduledEffect entries scheduled for

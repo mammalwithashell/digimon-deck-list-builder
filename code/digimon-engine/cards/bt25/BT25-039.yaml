@@ -1,0 +1,267 @@
+# BT25-039 Sirenmon — Digimon, Lv.5, Yellow/Green, DP 6000, Cost 6.
+# Traits: Shaman, Iliad, TS. Form: Ultimate. Attribute: Data.
+# Standard digivolution: Lv.4 Yellow / cost 4 AND Lv.4 Green / cost 4 (printed
+# evo_costs — a genuine two-color evo circle, both encoded as alt_paths).
+#
+# Printed card text (data/card_bundles/BT25-039.md + card image — verbatim):
+#
+#   [Digivolve] Lv.4 w/[TS] trait: Cost 3   (alt-digivolution condition)
+#
+#   {Security} [End of Your Turn] You may play 1 [Ceresmon] from your hand
+#   with the cost reduced by 7. If this effect played, you may place this
+#   card as the played Digimon's bottom digivolution card.
+#   [All Turns] When any of your other [Shaman] or [Iliad] trait Digimon or
+#   Tamers would leave the battle area other than by your effects, by
+#   deleting this Digimon, they don't leave.
+#   [On Deletion] You may place this card face up as the bottom security card.
+#
+#   Inherited: [Opponent's Turn] [Once Per Turn] When one of your opponent's
+#   Digimon attacks, you may change the attack target to 1 of your suspended
+#   Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Yellow/BT25_039.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Alternate Digivolution Requirement" (None):
+#   AddSelfDigivolutionRequirementStaticEffect(level: 4, TopCard.HasTSTraits,
+#   digivolutionCost: 3). → alt_path Lv.4 [TS] cost 3.
+#
+# Region "End of your Turn - Security" (OnEndTurn):
+#   CanUseCondition: IsExistInSecurity(card, false) [this card is in the
+#   security stack, need not be face-up] && IsOwnerTurn(card). Skippable
+#   ActivateClass: SelectHandEffect(mode: PlayForCost, canNoSelect: true) over
+#   HasPlayCost && EqualsCardName("Ceresmon"); SetReducedCostTuple((7, null))
+#   — cost REDUCED by 7 (not forced free). If a card was actually played
+#   (`playedPermanent != null`), a Yes/No prompt ("Will you place Sirenmon
+#   under Ceresmon?"); on Yes, AddDigivolutionCardsBottom(this card,
+#   face-up) + ReduceSecurity() (fires OnLoseSecurity). This is a TURN-
+#   BOUNDARY [Security] trigger on a card that stays in the persistent
+#   security stack — NOT an on_discard_security dispatch (this card is not
+#   being trashed by an effect; it is a live face-down security card sitting
+#   through the owner's own End of Turn). `scope: security` +
+#   `when: end_of_your_turn` (G-ENGINE-SECURITY-STACK-END-OF-YOUR-TURN — see
+#   `docs/RUST_ENGINE_GAPS.md`: `fire_end_of_your_turn` needed a
+#   `SecurityStackCard` fan-out mirroring `rotate_turn_player`'s existing
+#   `EndOfOpponentsTurn` scan; added as part of this card).
+#   The play is authored `play_from_hand: { cost_delta: { reduce: 7 },
+#   bind_as: played_ceresmon }` — `bind_as` on `play_from_hand` is real DSL
+#   vocabulary landed WITH this card (PlayFromHandArgs → CompiledStep::
+#   PlayFromHand → executor mirrors `play_from_hand_free`'s
+#   `bind_played_with_provenance` threading; rejected on the trash play
+#   verbs so it cannot silently no-op). Needed because the play is
+#   cost-REDUCED, not free, and the tail must reference the specific
+#   played permanent. The bottom-placement tail resolves `source: self`
+#   (this card's OWN card handle, currently sitting in the security zone) via
+#   the existing zone-agnostic `place_as_bottom_source` step (already used by
+#   BT20-083 for a self-card-in-breeding placement) — `resolve_card_source_ref`
+#   scans hand/trash/security/materials for a `Card` binding, so `self` inside
+#   the security stack resolves to `CardSourceRef::Security(player, idx)`
+#   with no additional engine work.
+#
+# Region "All turns" (WhenRemoveField):
+#   CanUseCondition: CanTriggerWhenPermanentRemoveField(PermanentCondition)
+#   && !IsByEffect(IsOwnerEffect) [not caused by the OWNER's own effect —
+#   "other than by your effects"]. PermanentCondition: permanent != this
+#   card's own permanent && owner-battle-area && (IsDigimon || IsTamer) &&
+#   (HasShamanTraits || HasIliadTraits). No [Once Per Turn] tag (trigger
+#   limit -1). Body: DeletePeremanentAndProcessAccordingToResult(this card's
+#   own permanent) → on success, the threatened permanent(s)
+#   willBeRemoveField = false. → `kind: replacement`,
+#   `trigger: when_would_leave_battle_area`, `active_when: { all_of:
+#   [replacement_subject_is_mine: true, other: true, none_of:
+#   [replacement_cause: own_effect], any_of: [kind: digimon, kind: tamer],
+#   any_of: [trait_has: Shaman, trait_has: Iliad] } }` (BT19-075 idiom:
+#   `other: true` is the "your OTHER ... Digimon" self-exclusion — Sirenmon
+#   itself carries Shaman/Iliad and must not protect itself via this clause;
+#   `none_of: [replacement_cause: own_effect]` is the "other than by your
+#   effects" exclusion, BT20-056 Alphamon: Ouryuken idiom). The cost is the
+#   DECLARATIVE `cost: { delete_self: true }` + `outcome: prevent`, which
+#   compile_replacement_process lowers to the single self-contained
+#   `DeleteSelfAndCancelLeave` step (G-DSL-PROTECT-OTHER-BY-SELF-DELETE;
+#   GREEN fixture: tests/dsl/protect_others_leave_replacement.rs
+#   BT25_039_CARRIER). Do NOT author an explicit `process:
+#   [delete_permanent: {target: source}, cancel_replacement: {}]` — explicit
+#   lists bypass the cost synthesis and that exact 2-step shape is
+#   intercepted by `DelaySelfCancelFlow::from_process`, whose handler
+#   requires a delayed-OPTION source and silently no-ops for a Digimon.
+#
+# Region "On Deletion" (OnDestroyedAnyone):
+#   OnDeletionClass, optional: true, additionalActivateCondition:
+#   Owner.CanAddSecurity. Body: AddSecurityCard(card, toTop: false,
+#   faceUp: true) → face-up BOTTOM security placement. Rule 25 — OnDeletion
+#   handlers fire POST-TRASH, so the carrier is read from the deleted-object
+#   snapshot, not a live permanent. `place_self_at_security` requires a LIVE
+#   `source_permanent` (wrong here — it's for pre-trash "would leave"
+#   replacement windows like EX4-060/EX9-021) — the correct verb is the
+#   EX10-020 idiom: `place_on_security: { of: you, source: { card:
+#   event_card }, position: bottom, face_up: true }`, where `event_card`
+#   resolves to the deleted carrier's pre-removal top-card handle via
+#   `current_trigger_context.deleted_object` (already wired for on_deletion
+#   dispatch — no engine gap).
+#
+# Region "Opponent's Turn - ESS" (OnAllyAttack, isInheritedEffect, OPT):
+#   CanUseCondition: IsOpponentTurn && CanTriggerOnPermanentAttack(opponent
+#   permanent). CanActivateCondition: HasMatchConditionOwnersPermanent(own
+#   suspended Digimon). Body: optional SelectPermanentEffect(canNoSelect:
+#   true) over own suspended Digimon → SwitchDefender. Declining
+#   (selectedPermanent == null) → RemoveUse (no lockout consumed on decline).
+#   → identical shape to BT25-055's inherited redirect (already-shipped
+#   idiom): `scope: inherited`, `when: on_opponent_attack`,
+#   `once_per_turn: true`, `optional: true`,
+#   `active_when: { opponents_turn: true }`, `select_own_permanent` (own
+#   suspended Digimon) → `redirect_attack_target`.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                    | Status |
+# |-----------------------------------------------------------------------|--------|
+# | Std digivolve Lv.4 Yellow / Cost 4 AND Lv.4 Green / Cost 4            | IMPLEMENTED (printed evo_costs, both colors) |
+# | Alt-source Lv.4 [TS] / Cost 3                                        | IMPLEMENTED (alt_paths) |
+# | {Security}[End of Your Turn] may play Ceresmon at -7; may place self  | IMPLEMENTED (scope:security end_of_your_turn + place_as_bottom_source self) |
+#   under it as bottom digivolution card                                 |        |
+# | [All Turns] by deleting self, other Shaman/Iliad Digimon/Tamers      | IMPLEMENTED (replacement + cost delete_self + outcome prevent) |
+#   (other than by your effects) don't leave                             |        |
+# | [On Deletion] may place this card face up as bottom security         | IMPLEMENTED (on_deletion + place_on_security source:event_card bottom face_up) |
+# | Inherited [Opponent's Turn][OPT] redirect attack to 1 suspended own   | IMPLEMENTED (on_opponent_attack + redirect_attack_target, BT25-055 idiom) |
+
+card: BT25-039
+name: Sirenmon
+kind: digimon
+level: 5
+color: [yellow, green]
+cost: 6
+dp: 6000
+traits: [Shaman, Iliad, TS]
+form: Ultimate
+attribute: Data
+
+alt_paths:
+  # Standard digivolution: Lv.4 Yellow / cost 4 (printed evo box, color 1).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  # Standard digivolution: Lv.4 Green / cost 4 (printed evo box, color 2).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 4
+  # Alt-digivolution: Lv.4 with the [TS] trait / cost 3.
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: TS }
+    cost: 3
+
+effects:
+  # ─── {Security}[End of Your Turn] may play Ceresmon at -7; may place self ───
+  #     under the played Digimon as its bottom digivolution card. ─────────────
+  #
+  # This card need only be IN the (persistent) security stack — face-down is
+  # fine (DCGO IsExistInSecurity(card, false)). Fires at the END of the
+  # OWNER's own turn, every turn, while it remains in security. The play is
+  # cost-REDUCED by 7 (not forced free) — Ceresmon costs 12, so this is a net
+  # 5-cost play, not a freebie. The self-placement tail only offers when the
+  # play actually succeeded (gated on the `played_ceresmon` binding).
+  - when: end_of_your_turn
+    scope: security
+    summary: "{Security}[End of Your Turn] You may play 1 [Ceresmon] from hand at -7 cost; if played, you may place this card as its bottom digivolution card"
+    process:
+      - select_hand:
+          of: you
+          bind_as: ceresmon_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: "Ceresmon"
+          prompt: "You may play 1 [Ceresmon] from your hand with the cost reduced by 7"
+      - if:
+          condition: { binding_present: ceresmon_pick }
+          then:
+            - play_from_hand:
+                of: you
+                hand_index: ceresmon_pick
+                cost_delta: { reduce: 7 }
+                bind_as: played_ceresmon
+            - if:
+                condition: { binding_present: played_ceresmon }
+                then:
+                  - select_effect_choice:
+                      bind_as: place_under
+                      labels:
+                        - "Place this card as the played Digimon's bottom digivolution card"
+                        - "Don't place this card"
+                      prompt: "If this effect played [Ceresmon], you may place this card as the played Digimon's bottom digivolution card"
+                  - if:
+                      condition: { equals: [place_under, 0] }
+                      then:
+                        - place_as_bottom_source:
+                            source: self
+                            target: played_ceresmon
+                            face_down: false
+
+  # ─── [All Turns] delete self so other Shaman/Iliad Digimon/Tamers don't ────
+  #     leave the battle area (other than by your own effects). ──────────────
+  #
+  # "Your OTHER [Shaman]/[Iliad] trait Digimon or Tamers" — `other: true`
+  # excludes Sirenmon itself (which also carries Shaman/Iliad) from being the
+  # threatened subject of its own protection. "Other than by your effects" —
+  # `none_of: [replacement_cause: own_effect]` (BT20-056 Alphamon: Ouryuken
+  # idiom). No [Once Per Turn] tag in the printed text (DCGO trigger limit
+  # -1) — unlimited uses per turn. Declarative cost shape (delete_self +
+  # outcome prevent) per the GREEN BT25_039_CARRIER fixture — see the
+  # crosscheck note above for why an explicit process list must NOT be used.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - other: true
+        - any_of:
+            - all_of: [ { kind: digimon } ]
+            - all_of: [ { kind: tamer } ]
+        - any_of:
+            - trait_has: Shaman
+            - trait_has: Iliad
+        - none_of:
+            - replacement_cause: own_effect
+    summary: "[All Turns] By deleting this Digimon, your other [Shaman]/[Iliad] Digimon or Tamers don't leave the battle area (other than by your effects)"
+    cost:
+      delete_self: true
+    outcome: prevent
+
+  # ─── [On Deletion] may place this card face up as the bottom security ──────
+  #
+  # Post-trash (rule 25): `event_card` resolves the deleted carrier's
+  # pre-removal top-card handle via the on_deletion trigger context's
+  # `deleted_object` snapshot (EX10-020 idiom). Optional ("you may").
+  - when: on_deletion
+    optional: true
+    summary: "[On Deletion] You may place this card face up as the bottom security card"
+    process:
+      - place_on_security:
+          of: you
+          source: { card: event_card }
+          position: bottom
+          face_up: true
+
+  # ─── Inherited [Opponent's Turn][OPT] redirect opp attack to suspended own ──
+  - when: on_opponent_attack
+    scope: inherited
+    once_per_turn: true
+    optional: true
+    active_when: { opponents_turn: true }
+    summary: "[Inherited][Opponent's Turn][OPT] When opp Digimon attacks, you may change the attack target to 1 of your suspended Digimon"
+    process:
+      - select_own_permanent:
+          bind_as: redirect_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+              - is_suspended: true
+          prompt: "Change the attack target to 1 of your suspended Digimon"
+      - redirect_attack_target:
+          new_target: redirect_target
+          optional: true
+          prompt: "Change the attack target to 1 of your suspended Digimon"

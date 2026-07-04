@@ -2921,3 +2921,21 @@ fully closed.
 - **Effect text:** "[Link][All Turns] When this Digimon would leave the battle area, by placing 1 of its link cards as its bottom digivolution card, it doesn't leave."
 - **Resolution:** Added `cost: { place_link_card_as_bottom_digivolution: true }` (clause.rs) → `CompiledStep::PlaceLinkCardAsBottomSourceAndCancelLeave` → `EffectContext::place_link_card_as_bottom_source_and_cancel_leave` (player-chosen which link card via `select_effect_choice`, then `Game::place_specific_link_card_as_bottom_source` = remove from `linked_cards` → `Permanent::push_under`, no trash / no `OnLinkedCardTrashed`) + `cancel_leave`. Sibling of `trash_own_link_card`; same ≥1-link-card preflight gate (DCGO `Permanent.AddDigivolutionCardsBottom`).
 - **Coverage:** `--test option_flow -- place_link_card_as_bottom_source_leave_replacement ex11_027_linked_leave_prevention_places_link_card_as_bottom_source`.
+
+## G-DSL-PROTECT-OTHER-BY-SELF-DELETE — RESOLVED 2026-07-04
+
+- **Severity:** 🟡 DSL replacement gap (cross-permanent protect-others with a delete-self cost).
+- **Discovered in:** BT25-039 Sirenmon (aegiomon-1 slice, 2026-06-06); closed when BT25-039 shipped.
+- **Card(s):** `BT25-039` Sirenmon.
+- **Effect text:** "[All Turns] When any of your other [Shaman] or [Iliad] trait Digimon or Tamers would leave the battle area other than by your effects, by deleting this Digimon, they don't leave."
+- **Resolution:** Declarative replacement cost `cost: { delete_self: true }` + `outcome: prevent` (requires `optional: true`), lowered by `compile_replacement_process` to the single self-contained `CompiledStep::DeleteSelfAndCancelLeave`. The cross-permanent subject rides the EXISTING `when_would_leave_battle_area` trigger with `active_when: { replacement_subject_is_mine, other: true, kind digimon|tamer, trait Shaman|Iliad, none_of: [replacement_cause: own_effect] }` — no new trigger needed. Explicit `process: [delete_permanent{source}, cancel_replacement]` MUST NOT be used (bypasses cost synthesis; intercepted by the delayed-Option-only `DelaySelfCancelFlow` recognizer → silent no-op for a Digimon carrier).
+- **Coverage:** `--test dsl -- protect_others_leave_replacement` (GREEN fixture `BT25_039_CARRIER`, incl. clone-safety) + `--test cards_behavioral -- bt25_039` (28, green).
+
+## G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER — RESOLVED 2026-07-04
+
+- **Severity:** 🟡 DSL + engine gap (security-resident turn-boundary trigger; binding a cost-paying play).
+- **Discovered in:** BT25-039 Sirenmon (aegiomon-1 slice, 2026-06-06); closed when BT25-039 shipped.
+- **Card(s):** `BT25-039` Sirenmon.
+- **Effect text:** "{Security} [End of Your Turn] You may play 1 [Ceresmon] from your hand with the cost reduced by 7. If this effect played, you may place this card as the played Digimon's bottom digivolution card."
+- **Resolution:** (a) ENGINE: `fire_end_of_your_turn` (game_phases.rs) now fans `EndOfYourTurn` out to the ending player's security stack via `TriggerSource::SecurityStackCard`, mirroring `rotate_turn_player`'s `EndOfOpponentsTurn` security scan (`enqueue_from_security_stack_card` filters to `effect.security`, i.e. `scope: security`). (b) DSL: `bind_as: Option<String>` added to `play_from_hand` (PlayFromHandArgs → `CompiledStep::PlayFromHand` → executor threads `bind_played_with_provenance` exactly like `play_from_hand_free`; rejected at compile time on the trash play verbs sharing the args). (c) The self-placement tail is the EXISTING `place_as_bottom_source: { source: self, target: <binding> }` — `resolve_card_source_ref` resolves `self` in the security stack to `CardSourceRef::Security` and `place_as_bottom_source_observed` runs the security-removal lifecycle (DCGO `AddDigivolutionCardsBottom` + `ReduceSecurity`).
+- **Coverage:** `--test cards_behavioral -- bt25_039` (Section 2/3: fires in security, not outside; plays at 12−7=5 memory; place-under vs decline; no-Ceresmon clean no-op).

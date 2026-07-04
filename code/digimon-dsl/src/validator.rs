@@ -1572,6 +1572,19 @@ fn validate_step_binding_scope(
             // steps in the same body (e.g. `schedule_delete_played_at_turn_end`).
             declare_optional_binding(scope, &args.bind_as);
         }
+        StepSpec::PlayFromHand(args) => {
+            // Cost-paying sibling of PlayFromHandFree: `bind_as` (honored only
+            // on play_from_hand — the trash variants sharing these args reject
+            // it at compile time) exposes the played permanent to later steps.
+            // G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER (BT25-039).
+            declare_optional_binding(scope, &args.bind_as);
+        }
+        StepSpec::LinkCards(args) => {
+            // The linked card(s) `bind_as` (a CardList, created only when ≥1
+            // card is linked) gates downstream `if { binding_present }` tails
+            // (BT25-060 Rebootmon's "if linked" follow-up).
+            declare_optional_binding(scope, &args.bind_as);
+        }
         StepSpec::PlayFromRevealedFree(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }

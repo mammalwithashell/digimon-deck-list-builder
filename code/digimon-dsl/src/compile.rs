@@ -2843,6 +2843,7 @@ fn compile_step(
                     .cost_delta
                     .as_ref()
                     .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
+                bind_as: a.bind_as.clone(),
             }
         }
         S::PlayFromHandFree(a) => CompiledStep::PlayFromHandFree {
@@ -2917,6 +2918,17 @@ fn compile_step(
                         .to_string(),
                 });
             }
+            // `bind_as` is threaded only for `play_from_hand` (and the *_free
+            // play verbs that already carry it). Reject rather than silently
+            // dropping the binding (suppress_on_play precedent).
+            if a.bind_as.is_some() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.play_from_trash.bind_as"),
+                    message: "bind_as is not supported on play_from_trash (only play_from_hand / play_from_hand_free thread it)"
+                        .to_string(),
+                });
+            }
             CompiledStep::PlayFromTrash {
                 of: compile_player_ref(a.of),
                 trash_index: compile_binding_ref(&a.hand_index),
@@ -2926,12 +2938,22 @@ fn compile_step(
                     .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
             }
         }
-        S::PlayFromTrashFree(a) => CompiledStep::PlayFromTrashFree {
-            of: compile_player_ref(a.of),
-            trash_index: compile_binding_ref(&a.hand_index),
-            suppress_on_play: a.suppress_on_play,
-            suspended: a.suspended,
-        },
+        S::PlayFromTrashFree(a) => {
+            if a.bind_as.is_some() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.play_from_trash_free.bind_as"),
+                    message: "bind_as is not supported on play_from_trash_free (only play_from_hand / play_from_hand_free thread it)"
+                        .to_string(),
+                });
+            }
+            CompiledStep::PlayFromTrashFree {
+                of: compile_player_ref(a.of),
+                trash_index: compile_binding_ref(&a.hand_index),
+                suppress_on_play: a.suppress_on_play,
+                suspended: a.suspended,
+            }
+        }
         S::PlayUnionBoundFree(a) => CompiledStep::PlayUnionBoundFree {
             binding: a.binding.clone(),
             bind_as: a.bind_as.clone(),

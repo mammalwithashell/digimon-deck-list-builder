@@ -1629,6 +1629,12 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         hand_index: CompiledBindingRef,
         cost_delta: Option<CompiledCostDelta>,
+        /// Bind the just-played permanent handle for use in later steps.
+        /// `None` preserves prior behavior (no binding insert). Mirrors
+        /// `PlayFromHandFree::bind_as` for the cost-paying play.
+        /// G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER (BT25-039).
+        #[serde(default)]
+        bind_as: Option<String>,
     },
     PlayFromHandFree {
         of: CompiledPlayerRef,

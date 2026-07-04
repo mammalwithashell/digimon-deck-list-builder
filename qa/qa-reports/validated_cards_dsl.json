@@ -7133,18 +7133,19 @@
     },
     "BT25-039": {
       "card_name": "Sirenmon",
-      "validated_date": "2026-06-06",
+      "validated_date": "2026-07-04",
       "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "dsl",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
       "archetype": "aegiomon-1",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-039.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_039.rs",
+      "test_count": 28,
       "patterns": [
-        "F4"
+        "F4",
+        "F9"
       ],
-      "notes": "BLOCKED: G-DSL-PROTECT-OTHER-BY-SELF-DELETE (board-wide protect-other replacement) + G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER (security-zone EOT play Ceresmon + place self under). Inherited redirect + OnDeletion->security are expressible but card has un-expressible core clauses."
+      "notes": "Both prior gaps closed: G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER (bind_as added to play_from_hand + EndOfYourTurn SecurityStackCard fan-out in fire_end_of_your_turn + place_as_bottom_source source:self from security) and G-DSL-PROTECT-OTHER-BY-SELF-DELETE (declarative cost delete_self + outcome prevent -> DeleteSelfAndCancelLeave; GREEN fixture tests/dsl/protect_others_leave_replacement.rs). {Security}[EoYT] play Ceresmon at -7 then may place self under it; [All Turns] delete-self protect other Shaman/Iliad Digimon/Tamers (not by own effects); [On Deletion] face-up bottom security (event_card post-trash); inherited [OT][OPT] redirect to suspended own Digimon; alt Lv.4 [TS] cost 3 + both Lv.4 yellow/green cost-4 circles. DCGO BT25_039.cs. 28/28 tests pass, 0 ignored, incl. clone-safety mid-park."
     },
     "BT25-020": {
       "status": "IMPLEMENTED",
@@ -10346,7 +10347,7 @@
     "BT18-060": {
       "status": "IMPLEMENTED",
       "date": "2026-07-04",
-      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch). 2026-07-04: Clause 2 cost reducer scope corrected both->inherited — the round-2 scope:both rested on a misreading of DCGO evoRootTops (they are the PRE-digivolution tops) and OVER-applied a face-up discount that neither DCGO (Permanent.EffectList_ForCard excludes a top card's inherited effects from the cost pipeline) nor general_rule.pdf 15-3-1 allows; face-up over-application removed, pinned by bt18_060_face_up_digivolve_pays_full_cost_over_application_pin; suite 18/18."
+      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch). 2026-07-04: Clause 2 cost reducer scope corrected both->inherited \u2014 the round-2 scope:both rested on a misreading of DCGO evoRootTops (they are the PRE-digivolution tops) and OVER-applied a face-up discount that neither DCGO (Permanent.EffectList_ForCard excludes a top card's inherited effects from the cost pipeline) nor general_rule.pdf 15-3-1 allows; face-up over-application removed, pinned by bt18_060_face_up_digivolve_pays_full_cost_over_application_pin; suite 18/18."
     },
     "BT21-087": {
       "status": "IMPLEMENTED",

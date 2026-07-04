@@ -3216,7 +3216,27 @@ controlling engine gap for the cost-reduction clauses is
 - **Faithfulness impact:** BT25-020's other clauses (mandatory cost reduction; [OP][WD][WA] +3000 DP + may-battle) are fully expressible, but the card cannot ship faithfully until the board-wide battle-winner predicate exists. No YAML shipped.
 - **Verdict:** BT25-020 BLOCKED (gap_kind: dsl).
 
-## G-DSL-PROTECT-OTHER-BY-SELF-DELETE — board-wide "when another of your X would leave, by deleting THIS Digimon, they don't leave"
+## G-DSL-PROTECT-OTHER-BY-SELF-DELETE — board-wide "when another of your X would leave, by deleting THIS Digimon, they don't leave" — RESOLVED 2026-07-04
+
+> **RESOLVED 2026-07-04 (BT25-039 ships).** The substrate landed as the
+> declarative replacement cost `cost: { delete_self: true }` + `outcome:
+> prevent` (requires `optional: true`), lowered by
+> `compile_replacement_process` to the single self-contained
+> `CompiledStep::DeleteSelfAndCancelLeave` — NOT the suggested
+> `when_other_would_leave_battle_area` trigger: the existing
+> `when_would_leave_battle_area` replacement matches a CROSS-PERMANENT
+> subject via `active_when` (`replacement_subject_is_mine` + `other: true` +
+> kind/trait filters + `none_of: [replacement_cause: own_effect]`).
+> Do NOT author an explicit `process: [delete_permanent: {target: source},
+> cancel_replacement: {}]` — explicit lists bypass the cost synthesis and
+> that exact 2-step shape is intercepted by `DelaySelfCancelFlow`
+> (delayed-Option-only) and silently no-ops for a Digimon carrier.
+> GREEN fixture: `tests/dsl/protect_others_leave_replacement.rs`
+> (`BT25_039_CARRIER`, incl. clone-safety). Consumed by
+> `cards/bt25/BT25-039.yaml`; card suite
+> `tests/cards_behavioral/bt25/bt25_039.rs` (28, green).
+
+### Original entry (history)
 - **Discovered by:** BT25-039 Sirenmon (aegiomon-1 slice), 2026-06-06.
 - **Clause:** "[All Turns] When any of your other [Shaman] or [Iliad] trait Digimon or Tamers would leave the battle area other than by your effects, by deleting this Digimon, they don't leave."
 - **DCGO (BT25_039.cs):** `EffectTiming.WhenRemoveField` ActivateClass whose `CanUseCondition` matches when **another** owner permanent (Digimon or Tamer, Shaman/Iliad trait, `!IsByEffect(owner)`) would leave; the body deletes THIS permanent (`DeletePeremanentAndProcessAccordingToResult`) and, on success, sets `willBeRemoveField = false` on all such protected permanents (cancels their leave).
@@ -3240,7 +3260,31 @@ controlling engine gap for the cost-reduction clauses is
   ```
 - **Verdict:** contributes to BT25-039 BLOCKED (gap_kind: dsl).
 
-## G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER — security-zone End-of-Turn play of a named card at reduced cost, then place this security card as the played Digimon's bottom digivolution source
+## G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER — security-zone End-of-Turn play of a named card at reduced cost, then place this security card as the played Digimon's bottom digivolution source — RESOLVED 2026-07-04
+
+> **RESOLVED 2026-07-04 (BT25-039 ships).** Three pieces, none of them the
+> suggested bespoke verbs:
+> (a) the security-resident EOT trigger is plain `scope: security` + `when:
+> end_of_your_turn` — the missing half was ENGINE-side: `fire_end_of_your_turn`
+> (game_phases.rs) now fans `EndOfYourTurn` out to the ending player's
+> security stack via `TriggerSource::SecurityStackCard`, mirroring
+> `rotate_turn_player`'s existing `EndOfOpponentsTurn` security scan
+> (`enqueue_from_security_stack_card` filters to `effect.security`);
+> (b) binding the cost-REDUCED play: `bind_as: Option<String>` added to
+> `play_from_hand` (PlayFromHandArgs → `CompiledStep::PlayFromHand` →
+> executor threads `bind_played_with_provenance`, exactly like
+> `play_from_hand_free`; rejected at compile time on `play_from_trash` /
+> `play_from_trash_free`, which share the args, so it cannot silently no-op);
+> (c) the self-placement tail is the EXISTING zone-agnostic
+> `place_as_bottom_source: { source: self, target: <binding> }` —
+> `resolve_card_source_ref` resolves `self` inside the security stack to
+> `CardSourceRef::Security(player, idx)` and
+> `place_as_bottom_source_observed` materializes + fires the security-removal
+> lifecycle (DCGO `AddDigivolutionCardsBottom` + `ReduceSecurity`).
+> Consumed by `cards/bt25/BT25-039.yaml`; card suite
+> `tests/cards_behavioral/bt25/bt25_039.rs` (28, green).
+
+### Original entry (history)
 - **Discovered by:** BT25-039 Sirenmon (aegiomon-1 slice), 2026-06-06.
 - **Clause:** "[Security] [End of Your Turn] You may play 1 [Ceresmon] from your hand with the cost reduced by 7. If this effect played, you may place this card as the played Digimon's bottom digivolution card."
 - **DCGO (BT25_039.cs):** `EffectTiming.OnEndTurn` ActivateClass gated by `IsExistInSecurity(card, false)` (this card is face-up/in the security stack) `&& IsOwnerTurn`. Body: `SelectHandEffect` Mode.PlayForCost over `EqualsCardName("Ceresmon") && CanPlayAsNewPermanent(fixedCost: cost-7)` with `SetReducedCostTuple((7, null))`; then a Yes/No prompt to `AddDigivolutionCardsBottom([this])` onto the played Ceresmon and `ReduceSecurity()` (move self out of security under the new Digimon).
@@ -7202,7 +7246,27 @@ controlling engine gap for the cost-reduction clauses is
 - **Faithfulness impact:** BT25-020's other clauses (mandatory cost reduction; [OP][WD][WA] +3000 DP + may-battle) are fully expressible, but the card cannot ship faithfully until the board-wide battle-winner predicate exists. No YAML shipped.
 - **Verdict:** BT25-020 BLOCKED (gap_kind: dsl).
 
-## G-DSL-PROTECT-OTHER-BY-SELF-DELETE — board-wide "when another of your X would leave, by deleting THIS Digimon, they don't leave"
+## G-DSL-PROTECT-OTHER-BY-SELF-DELETE — board-wide "when another of your X would leave, by deleting THIS Digimon, they don't leave" — RESOLVED 2026-07-04
+
+> **RESOLVED 2026-07-04 (BT25-039 ships).** The substrate landed as the
+> declarative replacement cost `cost: { delete_self: true }` + `outcome:
+> prevent` (requires `optional: true`), lowered by
+> `compile_replacement_process` to the single self-contained
+> `CompiledStep::DeleteSelfAndCancelLeave` — NOT the suggested
+> `when_other_would_leave_battle_area` trigger: the existing
+> `when_would_leave_battle_area` replacement matches a CROSS-PERMANENT
+> subject via `active_when` (`replacement_subject_is_mine` + `other: true` +
+> kind/trait filters + `none_of: [replacement_cause: own_effect]`).
+> Do NOT author an explicit `process: [delete_permanent: {target: source},
+> cancel_replacement: {}]` — explicit lists bypass the cost synthesis and
+> that exact 2-step shape is intercepted by `DelaySelfCancelFlow`
+> (delayed-Option-only) and silently no-ops for a Digimon carrier.
+> GREEN fixture: `tests/dsl/protect_others_leave_replacement.rs`
+> (`BT25_039_CARRIER`, incl. clone-safety). Consumed by
+> `cards/bt25/BT25-039.yaml`; card suite
+> `tests/cards_behavioral/bt25/bt25_039.rs` (28, green).
+
+### Original entry (history)
 - **Discovered by:** BT25-039 Sirenmon (aegiomon-1 slice), 2026-06-06.
 - **Clause:** "[All Turns] When any of your other [Shaman] or [Iliad] trait Digimon or Tamers would leave the battle area other than by your effects, by deleting this Digimon, they don't leave."
 - **DCGO (BT25_039.cs):** `EffectTiming.WhenRemoveField` ActivateClass whose `CanUseCondition` matches when **another** owner permanent (Digimon or Tamer, Shaman/Iliad trait, `!IsByEffect(owner)`) would leave; the body deletes THIS permanent (`DeletePeremanentAndProcessAccordingToResult`) and, on success, sets `willBeRemoveField = false` on all such protected permanents (cancels their leave).
@@ -7226,7 +7290,31 @@ controlling engine gap for the cost-reduction clauses is
   ```
 - **Verdict:** contributes to BT25-039 BLOCKED (gap_kind: dsl).
 
-## G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER — security-zone End-of-Turn play of a named card at reduced cost, then place this security card as the played Digimon's bottom digivolution source
+## G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER — security-zone End-of-Turn play of a named card at reduced cost, then place this security card as the played Digimon's bottom digivolution source — RESOLVED 2026-07-04
+
+> **RESOLVED 2026-07-04 (BT25-039 ships).** Three pieces, none of them the
+> suggested bespoke verbs:
+> (a) the security-resident EOT trigger is plain `scope: security` + `when:
+> end_of_your_turn` — the missing half was ENGINE-side: `fire_end_of_your_turn`
+> (game_phases.rs) now fans `EndOfYourTurn` out to the ending player's
+> security stack via `TriggerSource::SecurityStackCard`, mirroring
+> `rotate_turn_player`'s existing `EndOfOpponentsTurn` security scan
+> (`enqueue_from_security_stack_card` filters to `effect.security`);
+> (b) binding the cost-REDUCED play: `bind_as: Option<String>` added to
+> `play_from_hand` (PlayFromHandArgs → `CompiledStep::PlayFromHand` →
+> executor threads `bind_played_with_provenance`, exactly like
+> `play_from_hand_free`; rejected at compile time on `play_from_trash` /
+> `play_from_trash_free`, which share the args, so it cannot silently no-op);
+> (c) the self-placement tail is the EXISTING zone-agnostic
+> `place_as_bottom_source: { source: self, target: <binding> }` —
+> `resolve_card_source_ref` resolves `self` inside the security stack to
+> `CardSourceRef::Security(player, idx)` and
+> `place_as_bottom_source_observed` materializes + fires the security-removal
+> lifecycle (DCGO `AddDigivolutionCardsBottom` + `ReduceSecurity`).
+> Consumed by `cards/bt25/BT25-039.yaml`; card suite
+> `tests/cards_behavioral/bt25/bt25_039.rs` (28, green).
+
+### Original entry (history)
 - **Discovered by:** BT25-039 Sirenmon (aegiomon-1 slice), 2026-06-06.
 - **Clause:** "[Security] [End of Your Turn] You may play 1 [Ceresmon] from your hand with the cost reduced by 7. If this effect played, you may place this card as the played Digimon's bottom digivolution card."
 - **DCGO (BT25_039.cs):** `EffectTiming.OnEndTurn` ActivateClass gated by `IsExistInSecurity(card, false)` (this card is face-up/in the security stack) `&& IsOwnerTurn`. Body: `SelectHandEffect` Mode.PlayForCost over `EqualsCardName("Ceresmon") && CanPlayAsNewPermanent(fixedCost: cost-7)` with `SetReducedCostTuple((7, null))`; then a Yes/No prompt to `AddDigivolutionCardsBottom([this])` onto the played Ceresmon and `ReduceSecurity()` (move self out of security under the new Digimon).
