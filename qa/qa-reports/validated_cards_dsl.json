@@ -10569,16 +10569,9 @@
       "notes": "IMPLEMENTED via DelaySelfTrashPlayFromHandFlow widening (lower_replacement + resume VM, clone-safe); breeding-area color-gate regression pinned"
     },
     "BT19-075": {
-      "card_name": "MoonMillenniummon",
-      "validated_date": "2026-07-03",
-      "report": "gap-closure round 2 (small-batch)",
-      "status": "PARTIAL",
-      "gap_kind": null,
-      "archetype": "store-champs-june-2026 / Millenniummon",
-      "yaml_path": "code/digimon-engine/cards/bt19/BT19-075.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_075.rs",
-      "test_count": 8,
-      "notes": "PARTIAL: hand-reduction + floor(trashed/2) Tamer-deletion clause authored (bind_count_as landed); residual = Composite leave-replacement clause (#[ignore]d, expressible via BT22-036 twin) \u2014 card-pass item."
+      "status": "IMPLEMENTED",
+      "date": "2026-07-03",
+      "notes": "store-champs wave A fix round: all 3 printed clauses native DSL (clause-3 on_any_deletion security-trash observer added after review rejection). 24/24 green + 1 honest #[ignore] pin on engine gap G-OPT-RESET-ONLY-TURN-PLAYER (All-Turns OPT re-arm delayed until controller's next turn \u2014 engine-side, card YAML faithful)."
     },
     "BT18-065": {
       "status": "IMPLEMENTED",
