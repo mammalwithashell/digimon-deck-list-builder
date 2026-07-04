@@ -22,9 +22,11 @@
 //!
 //! # Patterns this test covers
 //! - §1 Structural: 1 triggered OnPlay clause + 1 declarative CostReduction
-//!       clause authored with `scope: both` (auto-expands to a FaceUp + an
-//!       Inherited lowered `Effect` sharing ONE OPT budget — see the YAML
-//!       file-header "SHARED-OPT RESOLUTION (round 2)" note).
+//!       clause authored `scope: inherited` (a SINGLE Inherited lowered
+//!       `Effect` — the printed reducer is an INHERITED effect, dormant while
+//!       this card is the face-up top of its own permanent; general_rule.pdf
+//!       §15-3-1 + DCGO `Permanent.EffectList_ForCard`'s buried-only include
+//!       rule — see the YAML file-header Clause 2 + HISTORY notes).
 //! - §2 OnPlay condition gating: no own battle-area Digimon → no reveal.
 //! - §3 Behavioral reveal-search: bucket 1 (add [Vemmon]-in-text to hand,
 //!       incl. a NAME-only match with no self-referential body text — the
@@ -34,10 +36,12 @@
 //!       non-Vemmon card being left untouched.
 //! - §4 Cost-reduction structural: scope / once_per_turn / active_when shape,
 //!       incl. the widened `any_of` cost_target predicate.
-//! - §5 Cost-reduction behavioral: face_up positive/negative, inherited
-//!       positive, a NAME-only cost-target match, and the fixed
-//!       cross-position regression proving the shared OPT budget now caps
-//!       the printed effect at -1 per turn (G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER).
+//! - §5 Cost-reduction behavioral: face-up digivolve pays FULL cost (the
+//!       over-application pin for the reverted `scope: both` mis-migration),
+//!       buried positive (+ Digivolve event), a buried NAME-only cost-target
+//!       match, the non-Vemmon-target negative, and the cross-position
+//!       sequence proving the reduction comes from the BURIED position only
+//!       (the face-up leg pays full and does not burn the OPT budget).
 
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledPredicate, CompiledScope, CompiledStep,
@@ -100,20 +104,22 @@ fn make_vemmon_text_lv4(id: &str) -> CardData {
     c
 }
 
-/// A Lv.4 Digimon NAMED "Vemmon Prime" (name CONTAINS "Vemmon") with EMPTY
+/// A Lv.5 Digimon NAMED "Vemmon Prime" (name CONTAINS "Vemmon") with EMPTY
 /// effect text — cost-target NAME-only match for the widened `cost_target`
 /// `any_of` axes (proves the reducer's `name_contains` leaf, not just
-/// `effect_text_contains`, drives the reduction).
-fn make_vemmon_name_only_lv4(id: &str) -> CardData {
+/// `effect_text_contains`, drives the reduction). Lv.5 (digivolving from a
+/// Lv.4 carrier) so the reduction can be exercised from Vemmon's BURIED
+/// position — the only position where the inherited reducer is active.
+fn make_vemmon_name_only_lv5(id: &str) -> CardData {
     let mut c = make_test_card(id, "Vemmon Prime");
     c.card_kind = CardKind::Digimon;
-    c.level = Some(4);
-    c.dp = Some(3000);
-    c.play_cost = 4;
+    c.level = Some(5);
+    c.dp = Some(5000);
+    c.play_cost = 6;
     c.colors = vec![CardColor::Black];
     c.effect_text = String::new();
     c.evo_costs = vec![EvoCost {
-        level: 3,
+        level: 4,
         card_color: 5, // Black
         memory_cost: 2,
     }];
@@ -239,8 +245,8 @@ fn bt18_060_compiles_to_two_clauses() {
         card.effects.len(),
         2,
         "BT18-060 must compile to exactly 2 clauses: [On Play] triggered + \
-         1 CostReduction authored as `scope: both` (which lowers to 2 Effects \
-         sharing one OPT budget — see the next test); got {}",
+         1 CostReduction authored `scope: inherited` (a single Inherited \
+         lowered Effect — see the next tests); got {}",
         card.effects.len()
     );
 }
@@ -282,7 +288,7 @@ fn bt18_060_on_play_clause_is_face_up_and_gated_on_own_digimon() {
 }
 
 #[test]
-fn bt18_060_cost_reduction_clause_is_authored_as_scope_both() {
+fn bt18_060_cost_reduction_clause_is_authored_as_scope_inherited() {
     let runner = base_runner();
     let card = runner.compiled_card("BT18-060").expect("compiled");
 
@@ -302,17 +308,20 @@ fn bt18_060_cost_reduction_clause_is_authored_as_scope_both() {
         scopes.len(),
         1,
         "BT18-060 must have exactly 1 CostReduction CLAUSE in the compiled \
-         card (it lowers to 2 Effects — see the shared-OPT lowering test); \
-         got {}",
+         card; got {}",
         scopes.len()
     );
     assert_eq!(
         scopes[0],
-        CompiledScope::Both,
-        "the CostReduction clause must be authored `scope: both` so it \
-         auto-expands into a FaceUp + an Inherited Effect sharing one OPT \
-         budget (G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER) — the printed \
-         reducer applies whether Vemmon is face-up or buried"
+        CompiledScope::Inherited,
+        "the CostReduction clause must be authored `scope: inherited` — the \
+         printed reducer is an INHERITED effect, active only while this \
+         Vemmon is a buried digivolution source (general_rule.pdf §15-3-1: \
+         an inherited effect is gained by a Digimon FROM a digivolution \
+         card; DCGO Permanent.EffectList_ForCard excludes a top card's \
+         SetIsInheritedEffect(true) effects from the cost pipeline). The \
+         round-2 `scope: both` authoring was an over-application and was \
+         reverted — see the YAML HISTORY note"
     );
 }
 
@@ -362,11 +371,13 @@ fn bt18_060_cost_reduction_clause_is_once_per_turn_and_your_turn_gated() {
 }
 
 /// Directly re-lowers the BT18-060 YAML (mirroring
-/// `scope_both_shared_opt_reducer.rs`'s pattern) to inspect the two lowered
-/// `Effect`s' `shared_opt_group` — proving the FaceUp and Inherited copies
-/// draw on ONE shared per-turn budget, not two independent ones.
+/// `scope_both_shared_opt_reducer.rs`'s pattern) to prove `scope: inherited`
+/// produces exactly ONE Inherited BeforePayCost `Effect` — no FaceUp sibling
+/// (the printed reducer is dormant while Vemmon is the top card), and no
+/// `shared_opt_group` (a single copy keeps the default per-slot OPT keying,
+/// matching `scope_inherited_opt_reducer_has_no_shared_group`).
 #[test]
-fn bt18_060_scope_both_lowers_to_two_effects_sharing_one_opt_group() {
+fn bt18_060_scope_inherited_lowers_to_single_inherited_effect() {
     use digimon_engine::card_source::CardHandle;
     use digimon_engine::dsl_cards::DslCardEffect;
     use digimon_engine::enums::EffectTiming;
@@ -389,28 +400,23 @@ fn bt18_060_scope_both_lowers_to_two_effects_sharing_one_opt_group() {
         .collect();
     assert_eq!(
         reducers.len(),
-        2,
-        "scope: both must lower to exactly 2 BeforePayCost Effects (FaceUp + Inherited)"
+        1,
+        "scope: inherited must lower to exactly 1 BeforePayCost Effect (no \
+         FaceUp sibling — the inherited reducer is dormant while Vemmon is \
+         the face-up top; DCGO Permanent.EffectList_ForCard + rule 15-3-1)"
     );
 
-    let face_up = reducers.iter().find(|e| !e.inherited);
-    let inherited = reducers.iter().find(|e| e.inherited);
-    assert!(face_up.is_some(), "one lowered copy must be FaceUp (inherited == false)");
-    assert!(inherited.is_some(), "the other lowered copy must be Inherited");
-
-    let fg = face_up.unwrap().shared_opt_group;
-    let ig = inherited.unwrap().shared_opt_group;
+    let reducer = reducers[0];
     assert!(
-        fg.is_some(),
-        "the FaceUp copy must carry a shared_opt_group (once_per_turn: true + scope: both)"
+        reducer.inherited,
+        "the single lowered copy must be Inherited (buried-only)"
     );
     assert_eq!(
-        fg, ig,
-        "both lowered copies must share the SAME shared_opt_group id so they draw \
-         on ONE per-turn budget, matching DCGO's single activateClass2 counter"
+        reducer.shared_opt_group, None,
+        "a single inherited copy has no sibling to share an OPT budget with — \
+         it keeps the default per-slot once-per-turn keying"
     );
-    assert_eq!(face_up.unwrap().max_per_turn, 1);
-    assert_eq!(inherited.unwrap().max_per_turn, 1);
+    assert_eq!(reducer.max_per_turn, 1);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -909,17 +915,36 @@ fn bt18_060_cost_reduction_targets_vemmon_via_widened_any_of_cost_target() {
             );
         }
     }
-    assert_eq!(checked, 1, "expected exactly 1 CostReduction clause (authored scope: both)");
+    assert_eq!(
+        checked, 1,
+        "expected exactly 1 CostReduction clause (authored scope: inherited)"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Section 5 — Cost reduction: behavioral
 // ═══════════════════════════════════════════════════════════════════════════
 
-/// POSITIVE (face-up): Vemmon on top of its own permanent digivolves into a
-/// [Vemmon]-text Lv.4 → cost reduced by 1 (2 - 1 = 1 memory spent).
+/// OVER-APPLICATION PIN (face-up): Vemmon on top of its own permanent
+/// digivolving into a [Vemmon]-text Lv.4 pays the FULL printed cost — NO
+/// reduction. The reducer is an INHERITED effect, dormant while its card is
+/// the face-up top:
+///   - general_rule.pdf §15-3-1: "An inherited effect is an effect gained by
+///     a Digimon FROM A DIGIVOLUTION CARD" — a top card's inherited box
+///     grants nothing.
+///   - DCGO BT18_060.cs: the reducer `changeCostClass` carries
+///     `SetIsInheritedEffect(true)`, and the cost pipeline
+///     (`CardSource.GetChangedPayingCost` → `permanent.EffectList` →
+///     `Permanent.EffectList_ForCard`, Permanent.cs:1520-1541) EXCLUDES a top
+///     card's inherited effects; the OPT tripwire `activateClass2` also
+///     requires `!evoRootTops.Contains(card)` where `evoRootTops` are the
+///     PRE-digivolution tops (CardController.cs:1394-1397 captures the old
+///     top BEFORE `AddCardSource`), so it never fires for this case either.
+///
+/// This pins the reverted round-2 `scope: both` mis-migration, which granted
+/// a -1 discount here (an over-application vs both DCGO and the rules).
 #[test]
-fn bt18_060_face_up_cost_reduction_fires_digivolving_into_vemmon_text() {
+fn bt18_060_face_up_digivolve_pays_full_cost_over_application_pin() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT18-060")
         .expect("parses")
@@ -942,13 +967,18 @@ fn bt18_060_face_up_cost_reduction_fires_digivolving_into_vemmon_text() {
     );
     assert_eq!(
         runner.game.memory,
-        memory_before - 1,
-        "printed evo cost 2 - 1 (Vemmon's face-up reduction) = 1 memory spent"
+        memory_before - 2,
+        "face-up Vemmon's inherited reducer is DORMANT (rule 15-3-1; DCGO \
+         EffectList_ForCard buried-only include rule) — the full printed evo \
+         cost 2 must be paid, no reduction"
     );
 }
 
 /// NEGATIVE (face-up, no Vemmon text): digivolving into a target with no
-/// Vemmon text pays the full cost.
+/// Vemmon text pays the full cost. Doubly guaranteed post-revert: the target
+/// fails the `cost_target` text gate AND the inherited reducer is dormant
+/// while Vemmon is the face-up top anyway (see the over-application pin
+/// above) — kept as the cost_target-gate negative control.
 #[test]
 fn bt18_060_face_up_cost_reduction_does_not_fire_for_non_vemmon_text_target() {
     let mut runner = DebugRunner::builder()
@@ -977,9 +1007,14 @@ fn bt18_060_face_up_cost_reduction_does_not_fire_for_non_vemmon_text_target() {
 
 /// POSITIVE (inherited / buried): Vemmon is a digivolution SOURCE beneath a
 /// Lv.4 carrier; the carrier digivolves further into a [Vemmon]-text Lv.5 →
-/// the inherited clause fires, reducing the cost by 1.
+/// the inherited clause fires, reducing the cost by 1. Also asserts a
+/// `Digivolve` event fires for the reduced leg (folds in the retired
+/// standalone event test — the face-up variant was removed with the
+/// `scope: both` revert since the reduced path is now buried-only).
 #[test]
 fn bt18_060_inherited_cost_reduction_fires_when_buried() {
+    use digimon_engine::events::GameEvent;
+
     let mut runner = DebugRunner::builder()
         .dsl_card("BT18-060")
         .expect("parses")
@@ -1005,6 +1040,7 @@ fn bt18_060_inherited_cost_reduction_fires_when_buried() {
     // carrier) into the [Vemmon]-text Lv.5 target.
     let target_hand_idx = push_to_hand(&mut runner, 0, "F060-TARGET5");
     let memory_before = runner.game.memory;
+    let cp = runner.event_checkpoint();
     let target_evo =
         runner
             .game
@@ -1018,27 +1054,34 @@ fn bt18_060_inherited_cost_reduction_fires_when_buried() {
         memory_before - 1,
         "printed evo cost 2 - 1 (Vemmon's INHERITED/buried reduction) = 1 memory spent"
     );
+    let events = runner.events_since(cp);
+    let digivolve_count = events
+        .iter()
+        .filter(|e| matches!(e, GameEvent::Digivolve { .. }))
+        .count();
+    assert!(
+        digivolve_count >= 1,
+        "a Digivolve event must fire for the cost-reduced (buried) digivolve"
+    );
 }
 
-/// FIXED regression (round 2) — G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER.
+/// Cross-position sequence (post-revert): the reduction comes from the
+/// BURIED position ONLY, and the face-up leg neither reduces nor burns the
+/// OPT budget.
 ///
-/// DCGO shares ONE per-turn budget (`activateClass2`) between the face-up and
-/// buried positions, so digivolving Vemmon (face-up, -1) and THEN digivolving
-/// the result further (inherited, buried) in the SAME turn gets NO second
-/// reduction — DCGO's `isOverMaxCountPerTurn` refuses it.
+/// Leg 1 (face-up): Vemmon on top digivolves into a [Vemmon]-text Lv.4 —
+/// FULL cost paid (the inherited reducer is dormant while Vemmon is the top:
+/// rule 15-3-1; DCGO EffectList_ForCard). Because no reduction applied, the
+/// once-per-turn budget is untouched — mirroring DCGO, where the tripwire
+/// `activateClass2` skips this case via `!evoRootTops.Contains(card)`
+/// (Vemmon WAS the pre-digivolve top) so `isOverMaxCountPerTurn` stays clear.
 ///
-/// Previously this card was authored as two SEPARATE `CostReduction` clauses
-/// (`scope: face_up` + `scope: inherited`), each with its OWN once-per-turn
-/// budget, producing an over-permissive -2-per-turn bug (see git history /
-/// the retired `bt18_060_cross_position_double_reduction_is_a_known_gap`).
-/// The card is now authored as ONE `scope: both` clause, which lowers to the
-/// same two positional Effects but stamps them with a shared
-/// `shared_opt_group` (see `bt18_060_scope_both_lowers_to_two_effects_sharing_one_opt_group`
-/// for the structural proof). This test proves the BEHAVIORAL consequence:
-/// leg 1 (face-up) reduces, leg 2 (inherited, same turn) does NOT — capped at
-/// -1 total per turn, matching DCGO.
+/// Leg 2 (buried, SAME turn): the Lv.4 carrier (Vemmon now a digivolution
+/// source) digivolves further into a [Vemmon]-text Lv.5 — the inherited
+/// reducer fires, -1. Total reduction across both legs: exactly one, from
+/// the buried position.
 #[test]
-fn bt18_060_cross_position_double_reduction_is_now_capped_at_minus_one() {
+fn bt18_060_cross_position_face_up_pays_full_then_buried_reduces_once() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT18-060")
         .expect("parses")
@@ -1060,11 +1103,12 @@ fn bt18_060_cross_position_double_reduction_is_now_capped_at_minus_one() {
     let memory_after_leg1 = runner.game.memory;
     assert_eq!(
         memory_after_leg1,
-        memory_after_place - 1,
-        "leg 1 (face-up) reduction fires: printed cost 2 - 1 = 1 spent"
+        memory_after_place - 2,
+        "leg 1 (face-up): the inherited reducer is dormant — full printed \
+         cost 2 paid, no reduction"
     );
 
-    // Leg 2 (inherited, SAME turn): the Lv.4 carrier (with Vemmon now buried)
+    // Leg 2 (buried, SAME turn): the Lv.4 carrier (with Vemmon now buried)
     // digivolves further into a [Vemmon]-text Lv.5.
     let top_hand_idx = push_to_hand(&mut runner, 0, "F060-TOP");
     let leg2 =
@@ -1074,38 +1118,47 @@ fn bt18_060_cross_position_double_reduction_is_now_capped_at_minus_one() {
     assert!(leg2, "leg 2: the carrier digivolves into the Vemmon-text Lv.5");
     let memory_after_leg2 = runner.game.memory;
 
-    // FIXED ASSERTION: the inherited copy shares the face_up copy's OPT
-    // budget (already consumed by leg 1), so leg 2 pays the FULL printed
-    // cost 2 with NO further reduction this turn — capped at -1 total,
-    // matching DCGO's shared activateClass2 counter.
     assert_eq!(
         memory_after_leg2,
-        memory_after_leg1 - 2,
-        "FIXED: the shared OPT budget (already spent by leg 1's face-up \
-         reduction) blocks leg 2's inherited reduction in the same turn — \
-         leg 2 pays the full printed cost 2, capping the turn's total \
-         reduction at -1 (G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER)"
+        memory_after_leg1 - 1,
+        "leg 2 (buried): the inherited reduction fires — printed cost 2 - 1 \
+         = 1 spent. Leg 1 (face-up, no reduction) must NOT have consumed the \
+         once-per-turn budget (DCGO's tripwire only increments on \
+         buried-position digivolutions)"
     );
 }
 
-/// POSITIVE, NAME-only cost-target match (round-2 fidelity upgrade): a
-/// digivolve target named "Vemmon Prime" (name CONTAINS "Vemmon") with EMPTY
-/// effect text still triggers the reduction via the widened `any_of`
+/// POSITIVE (buried), NAME-only cost-target match (round-2 fidelity
+/// upgrade, restaged to the buried position with the `scope: both` revert):
+/// with Vemmon buried beneath a plain Lv.4 carrier, digivolving the carrier
+/// into a Lv.5 target named "Vemmon Prime" (name CONTAINS "Vemmon") with
+/// EMPTY effect text still triggers the reduction via the widened `any_of`
 /// `cost_target` (`name_contains`), even though `effect_text_contains` alone
 /// would find nothing in its blank body.
 #[test]
-fn bt18_060_face_up_cost_reduction_fires_for_name_only_cost_target() {
+fn bt18_060_buried_cost_reduction_fires_for_name_only_cost_target() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT18-060")
         .expect("parses")
-        .add_card(make_vemmon_name_only_lv4("F060-NAMEONLY-TARGET"))
+        .add_card(make_plain_lv4("F060-NAMEONLY-CARRIER"))
+        .add_card(make_vemmon_name_only_lv5("F060-NAMEONLY-TARGET"))
         .memory(10)
         .start();
     runner.game.turn_count = 1;
 
+    // Bury Vemmon: digivolve it into the plain Lv.4 carrier (no Vemmon text
+    // — no reduction on this leg; the face-up reducer is dormant anyway).
     let vemmon = runner.place_on_field(0, "BT18-060", None);
-    let hand_idx = push_to_hand(&mut runner, 0, "F060-NAMEONLY-TARGET");
+    let carrier_hand_idx = push_to_hand(&mut runner, 0, "F060-NAMEONLY-CARRIER");
+    let carrier_evo = runner.game.digivolve_from_hand(
+        0,
+        carrier_hand_idx,
+        vemmon.index as usize,
+        PlaySource::ByHand,
+    );
+    assert!(carrier_evo, "Vemmon must digivolve into the plain Lv.4 carrier");
 
+    let hand_idx = push_to_hand(&mut runner, 0, "F060-NAMEONLY-TARGET");
     let memory_before = runner.game.memory;
     let digivolved =
         runner
@@ -1113,46 +1166,13 @@ fn bt18_060_face_up_cost_reduction_fires_for_name_only_cost_target() {
             .digivolve_from_hand(0, hand_idx, vemmon.index as usize, PlaySource::ByHand);
     assert!(
         digivolved,
-        "Vemmon must digivolve into the name-only Vemmon-family Lv.4 target"
+        "the carrier (with buried Vemmon) must digivolve into the name-only \
+         Vemmon-family Lv.5 target"
     );
     assert_eq!(
         runner.game.memory,
         memory_before - 1,
-        "printed evo cost 2 - 1 (widened name_contains match) = 1 memory spent"
-    );
-}
-
-/// Integrated event-log check: a `Digivolve` event fires for the face-up
-/// cost-reduced path (confirms the digivolution actually completed).
-#[test]
-fn bt18_060_face_up_cost_reduction_digivolve_emits_digivolve_event() {
-    use digimon_engine::events::GameEvent;
-
-    let mut runner = DebugRunner::builder()
-        .dsl_card("BT18-060")
-        .expect("parses")
-        .add_card(make_vemmon_text_lv4("F060-EVT"))
-        .memory(10)
-        .start();
-    runner.game.turn_count = 1;
-
-    let vemmon = runner.place_on_field(0, "BT18-060", None);
-    let hand_idx = push_to_hand(&mut runner, 0, "F060-EVT");
-
-    let cp = runner.event_checkpoint();
-    let digivolved =
-        runner
-            .game
-            .digivolve_from_hand(0, hand_idx, vemmon.index as usize, PlaySource::ByHand);
-    assert!(digivolved, "digivolve must succeed");
-
-    let events = runner.events_since(cp);
-    let digivolve_count = events
-        .iter()
-        .filter(|e| matches!(e, GameEvent::Digivolve { .. }))
-        .count();
-    assert!(
-        digivolve_count >= 1,
-        "a Digivolve event must fire for the cost-reduced digivolve"
+        "printed evo cost 2 - 1 (widened name_contains match, buried \
+         position) = 1 memory spent"
     );
 }

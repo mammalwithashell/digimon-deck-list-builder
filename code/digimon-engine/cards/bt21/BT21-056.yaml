@@ -68,10 +68,16 @@
 # DCGO: TWO cooperating pieces, both `SetIsInheritedEffect(true)`:
 #   - `activateClass2` (EffectTiming.OnEnterFieldAnyone, background/no-UI,
 #     MaxCountPerTurn 1): gates on IsOwnerTurn + CanTriggerWhenDigivolving +
-#     "this card is not among the evo-root tops" (i.e. this source is being
-#     dug UNDER by the new digivolution, not itself the new top) + the NEW
+#     "this card is not among the evo-root tops" (`evoRootTops` = the OLD,
+#     PRE-digivolution tops — CardController.cs:1394-1397 captures
+#     `_targetPermanent.TopCard` BEFORE `AddCardSource` inserts the new top —
+#     so the check means this Vemmon was ALREADY buried before this
+#     digivolution, not the face-up top being digivolved over) + the NEW
 #     top card's TopCard.HasText("Vemmon"). This is the OPT gate/tripwire —
 #     it does not itself change cost, it feeds `isOverMaxCountPerTurn` below.
+#     It is OPT-budget hygiene (only burn the counter when the reduction
+#     could actually have applied, i.e. from the buried position), NOT a
+#     positional widening to face-up.
 #   - `changeCostClass` (EffectTiming.None = BeforePayCost): CanUseCondition
 #     = IsExistOnBattleArea + IsOwnerTurn + NOT isOverMaxCountPerTurn(gated
 #     by activateClass2's counter). ChangeCost: -1 when CardSourceCondition
@@ -87,9 +93,15 @@
 # DSL: single `kind: cost_reduction` clause, `scope: inherited` (this is an
 # INHERITED-only effect — `inherited_effect_description_eng`, not
 # `effect_description_eng` — matching DCGO's dual SetIsInheritedEffect(true)
-# on both activateClass2 and changeCostClass; no face-up counterpart exists
-# for this card, so there is no shared-OPT cross-position concern like
-# BT18-060's face_up+inherited duplication). Gated via
+# on both activateClass2 and changeCostClass). Inherited effects are active
+# only while the card is a buried digivolution source (general_rule.pdf
+# §15-3-1: "gained by a Digimon FROM A DIGIVOLUTION CARD"; DCGO's
+# `Permanent.EffectList_ForCard` excludes a top card's inherited effects
+# from the cost pipeline), so a face-up BT21-056 digivolving directly gets
+# NO discount — verified against DCGO 2026-07-04. BT18-060 (byte-identical
+# DCGO reducer region, same shared hash) is authored the same way; its brief
+# `scope: both` mis-migration was reverted 2026-07-04 (see that file's
+# HISTORY note). Gated via
 # `source_is_cost_target_permanent: true` (this permanent is the one being
 # digivolved FROM) + `cost_target: { in_text_contains: "Vemmon" }` (the
 # hand card being digivolved into has "[Vemmon]" in its text) — the proven

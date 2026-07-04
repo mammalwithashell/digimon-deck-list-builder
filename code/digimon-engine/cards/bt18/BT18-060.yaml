@@ -108,63 +108,57 @@
 #
 # ─── Clause 2 — Inherited [Your Turn][Once Per Turn] cost reduction ─────────
 #
-# Printed: reduce the digivolution cost by 1 when THIS Digimon (Vemmon,
-# BT18-060) would digivolve into a Digimon card with [Vemmon] in its text —
-# regardless of whether this card currently sits face-up (on top of its own
-# permanent) or buried as a digivolution source beneath a later digivolution.
-# DCGO authors this with ONE shared per-turn counter: a background
-# `activateClass2` (MaxCountPerTurn 1, `SetIsInheritedEffect(true)`) that both
-# (a) is added unconditionally at `OnEnterFieldAnyone` so it exists in the
-# effect list from both positions, and (b) gates the actual `ChangeCostClass`
-# reducer (also `SetIsInheritedEffect(true)`) via
-# `isOverMaxCountPerTurn(activateClass2, ...)` — ONE budget shared by both
-# the face-up and buried cases. (DCGO even reuses the literal hash string
-# `"DigivolutionCost-1_BT11_061"` on this card's `activateClass2`, confirming
-# it is the same shared-budget family as BT11-061/BT21-056 — identical
-# Vemmon-reducer wording.)
+# Printed: reduce the digivolution cost by 1 when THIS Digimon would
+# digivolve into a Digimon card with [Vemmon] in its text. This is an
+# INHERITED effect (printed in the Inherited Effect box): per
+# general_rule.pdf §15-3-1 an inherited effect is "an effect gained by a
+# Digimon FROM A DIGIVOLUTION CARD" — it is active ONLY while this Vemmon is
+# a buried digivolution source. While Vemmon is the face-up top of its own
+# permanent its inherited box is dormant, so digivolving a just-played
+# Vemmon directly into a [Vemmon]-text card pays FULL cost.
 #
-# ─── SHARED-OPT RESOLUTION (round 2) — `scope: both` on CostReduction ──────
+# DCGO agrees (BT18_060.cs, region "Your Turn - ESS" — byte-for-byte
+# identical to BT21_056.cs, same shared hash "DigivolutionCost-1_BT11_061"):
+#   - The reducer `changeCostClass` carries `SetIsInheritedEffect(true)`, and
+#     DCGO's cost pipeline (`CardSource.GetChangedPayingCost` →
+#     `permanent.EffectList(EffectTiming.None)` →
+#     `Permanent.EffectList_ForCard`, Permanent.cs:1520-1541) EXCLUDES a top
+#     card's inherited effects — the face-up case never reaches cost
+#     computation at all.
+#   - The OPT tripwire `activateClass2` (MaxCountPerTurn 1,
+#     `SetIsInheritedEffect(true)`) gates on `!evoRootTops.Contains(card)`.
+#     `evoRootTops` are the OLD (pre-digivolution) tops — captured BEFORE
+#     `AddCardSource` inserts the new top (CardController.cs:1394-1397;
+#     jogress path 1487/1502) — so the check means "this Vemmon was ALREADY
+#     buried before this digivolution". It is OPT-budget hygiene (only burn
+#     the counter when the reduction could actually have applied), NOT a
+#     positional widening: a face-up digivolve neither reduces nor
+#     increments the counter.
 #
-# The engine's OPT gate keys per-effect-slot on `key.is_under != effect.inherited`
-# (code/digimon-engine/src/game_actions/cost.rs:904): a `scope: face_up` copy
-# only ever matches while this source is the TOP of its stack (`is_under ==
-# false`) and a `scope: inherited` copy only matches while it is BURIED
-# (`is_under == true`). Vemmon's printed reducer applies from BOTH positions
-# (it says nothing restricting it to only-face-up or only-buried), so it
-# structurally REQUIRES two lowered copies (one FaceUp, one Inherited) to
-# cover both `is_under` states — a single `scope: inherited` clause alone
-# would never fire while Vemmon is still face-up (the common case right
-# after playing Vemmon and immediately digivolving it), which would be a
-# UNDER-application bug, not a fix. Both copies are required; what changes
-# below is how their OPT budgets are tied together.
+# The engine's `scope: inherited` lowering keys the reducer on the source
+# being buried (`key.is_under != effect.inherited` skip,
+# code/digimon-engine/src/game_actions/cost.rs — `is_under == true` required
+# for an Inherited effect), matching both authorities exactly.
 #
-# What WAS missing (and is now fixed): the DSL previously had no
-# `scope: both` expansion for `kind: cost_reduction` (`scope: both` was
-# FloodGate-only), so this card was hand-authored as two SEPARATE
-# `scope: face_up` / `scope: inherited` clauses, each getting its OWN
-# once-per-turn budget — producing an over-permissive -2-per-turn bug when
-# Vemmon reduces once face-up, gets buried by that very digivolution, then
-# is dug further the SAME turn (DCGO's shared `activateClass2` counter would
-# refuse the second reduction). The engine substrate has since been widened
-# (G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER,
-# code/digimon-engine/src/dsl_cards/mod.rs:308-353 +
-# code/digimon-engine/src/dsl_cards/lower_cost_reduction.rs +
-# code/digimon-engine/src/game_actions/mod.rs:2088-2126,
-# code/digimon-engine/tests/cards_behavioral/scope_both_shared_opt_reducer.rs):
-# a single `kind: cost_reduction` clause with `scope: both` now auto-expands
-# into BOTH a FaceUp and an Inherited lowered `Effect`, and — because the
-# clause is `once_per_turn: true` — both copies are stamped with the SAME
-# `shared_opt_group` id (`Game::cost_reducer_opt_slot` /
-# `cost_reducer_activation_count` key off `shared_opt_group.unwrap_or(effect_slot)`,
-# code/digimon-engine/src/game_actions/mod.rs:2095-2126), so they draw from
-# ONE shared per-turn counter — exactly matching DCGO's single
-# `activateClass2` budget. This card is rewritten below as ONE `scope: both`
-# clause (previously two separate `scope: face_up` + `scope: inherited`
-# clauses each with an independent OPT budget); see bt18_060.rs
-# `bt18_060_cross_position_double_reduction_is_now_capped_at_minus_one` for
-# the regression proving the fix (previously
-# `..._is_a_known_gap`, pinning the over-permissive -2 behavior; also
-# affects BT11-061, identical Vemmon reducer wording, tracked separately).
+# ─── HISTORY — `scope: both` mis-migration reverted (2026-07-04) ───────────
+#
+# A round-2 change (G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER) re-authored this
+# clause as `scope: both` on the belief that `evoRootTops` were the NEW tops
+# produced by the digivolution, which would have made DCGO's reducer
+# position-agnostic ("applies from BOTH positions"). That reading is refuted
+# by the DCGO source cited above (old-top capture + EffectList_ForCard's
+# buried-only include rule) and by rule §15-3-1, so `scope: both`
+# OVER-applied: it granted a -1 discount when digivolving the face-up Vemmon
+# directly — a discount neither DCGO nor the rules allow. Reverted to
+# `scope: inherited`. The `scope: both` + shared-OPT engine machinery itself
+# (dsl_cards/mod.rs expansion + Game::cost_reducer_opt_slot shared budget,
+# tests/cards_behavioral/scope_both_shared_opt_reducer.rs) remains valid for
+# cards that genuinely print a reducer in both boxes — BT18-060 just isn't
+# one of them (BT11-061/BT21-056, identical DCGO reducer regions, are
+# likewise authored `scope: inherited`). Over-application pin:
+# bt18_060.rs::bt18_060_face_up_digivolve_pays_full_cost_over_application_pin;
+# cross-position proof (face-up leg pays full and does not burn the OPT):
+# bt18_060.rs::bt18_060_cross_position_face_up_pays_full_then_buried_reduces_once.
 card: BT18-060
 name: Vemmon
 kind: digimon
@@ -234,23 +228,21 @@ effects:
                 target: dest
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  # ─── Clause 2: Inherited [Your Turn][OPT] cost reduction — BOTH positions,
-  # ONE shared per-turn budget ──────────────────────────────────────────────
-  # `scope: both` auto-expands into a FaceUp copy (fires while Vemmon is the
-  # active top card of its own permanent) and an Inherited copy (fires while
-  # Vemmon is a buried digivolution source beneath a later digivolution) —
-  # matching DCGO's single background `activateClass2` that is added
-  # unconditionally at `OnEnterFieldAnyone` regardless of position. Because
-  # `once_per_turn: true`, both lowered copies are stamped with the SAME
-  # `shared_opt_group` (see file-header "SHARED-OPT RESOLUTION" note), so a
-  # reduction in one position consumes the SAME budget the other position
-  # would draw from this turn — exactly matching DCGO's shared
-  # `isOverMaxCountPerTurn(activateClass2, ...)` gate. `cost_target` is
-  # widened to the same `any_of` HasText axes as bucket 1 (see file-header
-  # note) so a future Vemmon-named/trait target with no self-referential
-  # body text is still recognized.
+  # ─── Clause 2: Inherited [Your Turn][OPT] cost reduction — buried-only ────
+  # `scope: inherited` — the printed reducer lives in the Inherited Effect
+  # box and is active ONLY while this Vemmon is a buried digivolution source
+  # (general_rule.pdf §15-3-1; DCGO's `Permanent.EffectList_ForCard` excludes
+  # a top card's `SetIsInheritedEffect(true)` effects from the cost pipeline
+  # — see the file-header Clause 2 + HISTORY notes). A single Inherited
+  # lowered copy needs no `shared_opt_group`; the per-slot `once_per_turn`
+  # budget matches DCGO's `activateClass2` counter, whose
+  # `!evoRootTops.Contains(card)` gate only increments it on buried-position
+  # digivolutions (a face-up digivolve neither reduces nor burns the budget).
+  # `cost_target` keeps the widened `any_of` HasText axes as bucket 1 (see
+  # file-header note) so a future Vemmon-named/trait target with no
+  # self-referential body text is still recognized.
   - kind: cost_reduction
-    scope: both
+    scope: inherited
     reduction_timing: before_pay_cost
     once_per_turn: true
     active_when:

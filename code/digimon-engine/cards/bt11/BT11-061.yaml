@@ -77,10 +77,13 @@
 #     - `activateClass2` (EffectTiming.OnEnterFieldAnyone, background/no-UI,
 #       MaxCountPerTurn 1, hash "DigivolutionCost-1_BT11_061"): gates on
 #       `IsOwnerTurn` + `CanTriggerWhenDigivolving` + "this card is not among
-#       the evo-root tops" (i.e. this Vemmon source is being dug UNDER by the
-#       new digivolution, not itself the new top — G-DIGIVOLVE-COST-TARGET's
-#       "buried, not top" precondition, shared with BT21-056) + the NEW top
-#       card's `TopCard.CardNames.Contains("Destromon"|"Galacticmon")`. This
+#       the evo-root tops" (`evoRootTops` = the OLD, PRE-digivolution tops —
+#       CardController.cs:1394-1397 captures the old top BEFORE
+#       `AddCardSource` — so this Vemmon must have ALREADY been buried before
+#       this digivolution, not the face-up top being digivolved over —
+#       G-DIGIVOLVE-COST-TARGET's "buried, not top" precondition, shared with
+#       BT21-056) + the NEW top card's
+#       `TopCard.CardNames.Contains("Destromon"|"Galacticmon")`. This
 #       is the OPT tripwire feeding the shared `MaxCountPerTurn` counter.
 #     - `changeCostClass` (EffectTiming.None = BeforePayCost): `CanUseCondition`
 #       = `IsExistOnBattleArea` + `IsOwnerTurn` + NOT

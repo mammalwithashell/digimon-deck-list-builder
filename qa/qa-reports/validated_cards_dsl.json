@@ -10345,8 +10345,8 @@
     },
     "BT18-060": {
       "status": "IMPLEMENTED",
-      "date": "2026-07-03",
-      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch)."
+      "date": "2026-07-04",
+      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch). 2026-07-04: Clause 2 cost reducer scope corrected both->inherited — the round-2 scope:both rested on a misreading of DCGO evoRootTops (they are the PRE-digivolution tops) and OVER-applied a face-up discount that neither DCGO (Permanent.EffectList_ForCard excludes a top card's inherited effects from the cost pipeline) nor general_rule.pdf 15-3-1 allows; face-up over-application removed, pinned by bt18_060_face_up_digivolve_pays_full_cost_over_application_pin; suite 18/18."
     },
     "BT21-087": {
       "status": "IMPLEMENTED",
