@@ -429,28 +429,19 @@ fn replacement_process_has_payable_required_selection(
         return false;
     }
 
-    // ST20-14 shape: the first step is the Delay COST (`delete_permanent`
-    // {source}), so the reward's `select_hand` is the second step. The accept
-    // prompt must only be offered when the hand actually has a Lv5-
-    // [ADVENTURE] Digimon to play — DCGO `CanUseCondition` returns false (no
-    // response, no self-trash) when there is nothing to play. Look past the
-    // cost step to the reward `select_hand`.
-    if let Some(play_flow) = DelaySelfTrashPlayFromHandFlow::from_process(process) {
-        let read_ctx =
-            EffectReadContext::new(ctx.game, ctx.source_card, ctx.source_permanent, play_flow_player(ctx, play_flow.of));
-        return read_ctx
-            .game
-            .player(play_flow_player(ctx, play_flow.of))
-            .hand
-            .iter()
-            .any(|card| {
-                eval_predicate(
-                    &play_flow.filter,
-                    &read_ctx,
-                    PredicateSubject::Card(card.handle()),
-                )
-            });
-    }
+    // ST20-14 shape (`DelaySelfTrashPlayFromHandFlow`): the first step is the
+    // Delay COST (`delete_permanent {source}`), and the reward's `select_hand`
+    // is the second step. The accept prompt is NOT gated on the hand having an
+    // eligible candidate — DCGO ST20_14.cs:83-87 `CanUseCondition` is only
+    // `CanTriggerWhenPermanentRemoveField(subject matches) &&
+    // CanDeclareOptionDelayEffect(card)`, with no candidate check; the hand
+    // scan (`card.Owner.HandCards.Count(CanPlayAdventureCondition) >= 1`,
+    // ST20_14.cs:125) happens inside `ActivateCoroutine` AFTER the self-trash.
+    // So the offer installs even with zero eligible hand candidates; accepting
+    // pays the <Delay> cost (self-trash), the reward whiffs, and the leaver
+    // still leaves — same ungated-offer contract as the union-zone sibling
+    // `DelaySelfTrashPlayFromUnionFlow` (BT19-099). The generic first-step
+    // check below returns `true` for the `DeletePermanent` cost step.
 
     let Some(first) = process.first() else {
         return true;
@@ -460,11 +451,6 @@ fn replacement_process_has_payable_required_selection(
         bindings.insert_permanent("replacement_subject", subject);
     }
     required_selection_step_has_candidate(first, ctx, &bindings)
-}
-
-/// Resolve a `CompiledPlayerRef` to a concrete `PlayerId` in a read context.
-fn play_flow_player(ctx: &EffectReadContext<'_>, of: CompiledPlayerRef) -> PlayerId {
-    resolve_player_ref(ctx, of)
 }
 
 fn process_places_permanent_in_security(process: &[CompiledStep]) -> bool {

@@ -623,11 +623,17 @@ fn st20_14_does_not_fire_for_opponent_lv5_leaving() {
     assert!(field_contains(&r, 0, CARD_ID), "ST20-14 remains on the field");
 }
 
-/// With no eligible Lv5- [ADVENTURE] Digimon in hand, ST20-14 must NOT offer the
-/// response (the required play has no candidate). Because the <Delay> reward is
-/// unpayable, the leave proceeds and ST20-14 stays on the field.
+/// With no eligible Lv5- [ADVENTURE] Digimon in hand, the <Delay> accept prompt
+/// is STILL offered — DCGO ST20_14.cs:83-87 `CanUseCondition` is only
+/// `CanTriggerWhenPermanentRemoveField(..) && CanDeclareOptionDelayEffect(card)`
+/// (no hand-candidate gate); the candidate scan
+/// (`card.Owner.HandCards.Count(CanPlayAdventureCondition) >= 1`, line 125)
+/// happens inside `ActivateCoroutine` AFTER the self-trash. Accepting pays the
+/// <Delay> cost (ST20-14 self-trashes), the reward whiffs (nothing plays), and
+/// the leaving Digimon still completes its leave. Mirrors the union-flow sibling
+/// `bt19_099_offer_installs_even_with_zero_reward_candidates`.
 #[test]
-fn st20_14_no_response_when_no_eligible_adventure_in_hand() {
+fn st20_14_offer_installs_even_with_no_eligible_adventure_in_hand() {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("ST20-14 YAML loads")
@@ -644,18 +650,54 @@ fn st20_14_no_response_when_no_eligible_adventure_in_hand() {
     let opt = r.place_on_field(0, CARD_ID, Some(0));
     seat_as_delay_option(&mut r, opt);
     let leaver = r.place_on_field(0, "LV5-LEAVER", None);
+    let leaver_card = r.top_card(leaver);
 
     r.game
         .delete_permanent_with_cause(leaver, ReplacementCause::OwnEffect);
+
+    // The accept prompt installs even with zero eligible hand candidates
+    // (DCGO CanUseCondition has no candidate gate — ST20_14.cs:83-87).
+    let pending = r.game.pending_selection.as_ref().expect(
+        "the <Delay> accept prompt installs even with no eligible Lv5- \
+         [ADVENTURE] Digimon in hand",
+    );
+    assert_eq!(pending.kind, SelectionKind::Replacement);
+    assert!(pending.valid_action_ids.contains(&REPLACEMENT_ACCEPT));
+
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the <Delay> response");
     r.game.drain_effect_queue();
 
+    // Accepting pays the <Delay> cost even though nothing can be played
+    // (DCGO's post-trash candidate whiff — ST20_14.cs:125).
     assert!(
-        r.game.pending_selection.is_none(),
-        "with no eligible Lv5- [ADVENTURE] Digimon in hand, no <Delay> response is offered"
+        !field_contains(&r, 0, CARD_ID),
+        "accepting pays the <Delay> cost (self-trash) even though nothing can be played"
     );
     assert!(
-        field_contains(&r, 0, CARD_ID),
-        "ST20-14 stays on the field when the response isn't offered"
+        r.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == CARD_ID),
+        "the trashed ST20-14 is in its owner's trash"
+    );
+    // The reward whiffs: the ineligible hand card is NOT played.
+    assert!(
+        !field_contains(&r, 0, "BAD-HAND"),
+        "with zero eligible candidates nothing is played from hand"
+    );
+    assert!(
+        r.game.pending_selection.is_none(),
+        "with zero eligible candidates no reward prompt installs (DCGO post-trash whiff)"
+    );
+    // The leaving Lv5 Digimon still completes its leave.
+    assert!(
+        r.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.handle() == leaver_card),
+        "the leaving Lv5 Digimon still completes its leave to the trash"
     );
     assert!(
         !field_contains(&r, 0, "LV5-LEAVER"),
