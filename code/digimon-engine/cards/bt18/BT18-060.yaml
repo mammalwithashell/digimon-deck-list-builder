@@ -17,10 +17,48 @@
 # MANDATORY (not "you may") whenever an eligible candidate exists; only the
 # natural fizzle (no eligible candidate in the 3 revealed) skips a bucket.
 #
+# Official Q&A (data/card_bundles/BT21-056.md — the identical "[X] in its
+# text" wording used across the whole Vemmon-reducer family, incl. this
+# card): "It refers to a card that contains the specified text or icon in
+# its name, traits, effects, inherited effects, (Rule), digivolution
+# requirements, DNA digivolution, DigiXros requirements, burst digivolve,
+# App Fusion, Link, or Assembly requirements." — i.e. a whole-card scan, not
+# body-text-only.
+#
 # DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT18/Black/BT18_060.cs
 #
 # Standard digivolve circle: Black Lv.2 / cost 0 (single circle; no
 # secondary color circle dropped by the cards.json ingest for this card).
+#
+# ─── "[Vemmon] in its text" — whole-card HasText, NOT body-text-only ───────
+#
+# DCGO's `CanSelectCardCondition` (bucket 1) and `CardSourceCondition` (the
+# inherited cost reducer) both gate on `cardSource.HasText("Vemmon")`.
+# `CardSource.HasText` is a whole-card scan (name + traits + printed
+# effect/inherited/security text + rule text + digivolution/DNA/DigiXros/
+# App Fusion/Link/Assembly requirement text) — confirmed by the shared-
+# family official Q&A above (this card's own bundle omits the Q&A verbatim,
+# but the wording "[Vemmon] in its text" is identical printed phrasing to
+# BT21-056/BT11-061, which do carry it, and DCGO ships literally the same
+# `HasText` call). The DSL's `effect_text_contains` leaf ONLY scans the
+# candidate's `effect_text` / `inherited_text` / `security_text`
+# (code/digimon-engine/src/dsl_cards/predicate.rs — G-DSL-PREDICATE-TEXT-CONTAINS)
+# — it does NOT scan name or traits. Modelling "[Vemmon] in its text" as
+# `effect_text_contains: "Vemmon"` ALONE is therefore narrower than the
+# printed semantics: a Vemmon-NAMED card (or a future Vemmon-trait card)
+# whose own body text does not self-reference "[Vemmon]" would be silently
+# dropped. Both the bucket-1 reveal filter and the cost-reduction
+# `cost_target` filter below are widened to
+# `any_of: [effect_text_contains, trait_has, name_contains]` for "Vemmon" so
+# the name/traits axes of DCGO's HasText are covered (no Vemmon-trait card
+# exists in the pool today; the leaf is included for forward faithfulness
+# per the shared-family Q&A — this residual sliver is out of scope for a
+# leaf predicate and is not reachable by any currently printed Vemmon-family
+# card). Bucket 2 (the EXACT-name placement bucket) deliberately keeps
+# `name_is: "Vemmon"` — DCGO's `CanSelectCardCondition1` gates on
+# `CardNames.Contains("Vemmon")` (exact name), a DIFFERENT, narrower axis
+# than HasText, matching the printed "place 1 [Vemmon]" (no "in its text"
+# qualifier on that half of the sentence).
 #
 # ─── Clause 1 — [On Play] reveal-3, two-bucket ──────────────────────────────
 #
@@ -28,7 +66,8 @@
 # remainingCardsPlace: DeckBottom)` with two `SimplifiedSelectCardConditionClass`
 # buckets, evaluated in order:
 #   Bucket 1 — `CanSelectCardCondition`: `cardSource.HasText("Vemmon")`
-#     (text-scan — "1 card with [Vemmon] in its text") → AddHand, maxCount 1.
+#     (whole-card scan — "1 card with [Vemmon] in its text") → AddHand,
+#     maxCount 1.
 #   Bucket 2 — `CanSelectCardCondition1`: `cardSource.CardNames.Contains
 #     ("Vemmon")` (EXACT card name "Vemmon" — "place 1 [Vemmon]", not "in its
 #     text") AND `IsExistOnBattleArea(card)` (a legal own-Digimon target
@@ -68,45 +107,64 @@
 # code/digimon-engine/src/effect_context/selections.rs:1001-1003).
 #
 # ─── Clause 2 — Inherited [Your Turn][Once Per Turn] cost reduction ─────────
-# ─── KNOWN GAP: shared-OPT-across-positions is NOT enforced ────────────────
 #
-# Printed: reduce the digivolution cost by 1 when THIS Digimon (Vemmon, BT18-060)
-# would digivolve into a Digimon card with [Vemmon] in its text — regardless
-# of whether this card currently sits face-up (on top of its own permanent)
-# or buried as a digivolution source beneath a later digivolution. DCGO
-# authors this with ONE shared per-turn counter: a background `activateClass2`
-# (MaxCountPerTurn 1, `SetIsInheritedEffect(true)`) that both (a) is added
-# unconditionally at `OnEnterFieldAnyone` so it exists in the effect list from
-# both positions, and (b) gates the actual `ChangeCostClass` reducer via
-# `isOverMaxCountPerTurn(activateClass2, ...)` — ONE budget shared by both the
-# face-up and buried cases.
+# Printed: reduce the digivolution cost by 1 when THIS Digimon (Vemmon,
+# BT18-060) would digivolve into a Digimon card with [Vemmon] in its text —
+# regardless of whether this card currently sits face-up (on top of its own
+# permanent) or buried as a digivolution source beneath a later digivolution.
+# DCGO authors this with ONE shared per-turn counter: a background
+# `activateClass2` (MaxCountPerTurn 1, `SetIsInheritedEffect(true)`) that both
+# (a) is added unconditionally at `OnEnterFieldAnyone` so it exists in the
+# effect list from both positions, and (b) gates the actual `ChangeCostClass`
+# reducer (also `SetIsInheritedEffect(true)`) via
+# `isOverMaxCountPerTurn(activateClass2, ...)` — ONE budget shared by both
+# the face-up and buried cases. (DCGO even reuses the literal hash string
+# `"DigivolutionCost-1_BT11_061"` on this card's `activateClass2`, confirming
+# it is the same shared-budget family as BT11-061/BT21-056 — identical
+# Vemmon-reducer wording.)
 #
-# The DSL's `kind: cost_reduction` compiles a `scope: face_up` clause and a
-# `scope: inherited` clause into SEPARATE `Effect`s occupying distinct
-# effect_slots (code/digimon-engine/src/dsl_cards/mod.rs:255-292 does not
-# expand `CompiledScope::Both` for `CostReduction`, unlike `FloodGate`'s
-# `scope: both` — mod.rs:302-313), and the engine's OPT gate keys per-effect
-# (`key.is_under != effect.inherited` + `cost_reducer_activation_count(key)`,
-# code/digimon-engine/src/game_actions/cost.rs:900,903). Two clauses are
-# therefore REQUIRED to cover both positions (there is no `scope: both` for
-# CostReduction in the current DSL — widening that is an engine-substrate
-# change, not something a card script can route around), but each clause
-# gets its OWN once-per-turn budget instead of ONE shared budget.
+# ─── SHARED-OPT RESOLUTION (round 2) — `scope: both` on CostReduction ──────
 #
-# CONCRETE DIVERGENCE: digivolve BT18-060 (on top) into a Vemmon-text Lv.4 —
-# the face_up clause fires, -1, consuming the face_up OPT. SAME TURN,
-# digivolve that resulting Lv.4 (BT18-060 now buried beneath it) into another
-# Vemmon-text Lv.5 — the inherited clause is now eligible with a FRESH OPT
-# and fires AGAIN, -1. DCGO's shared counter would refuse the second
-# reduction (activateClass2 already at its max-count-per-turn); this engine
-# currently grants -2 total where the real game grants only -1. This is a
-# genuine faithfulness gap (no-approximations §17), NOT fixable at the card-
-# script layer without widening the CostReduction lowering to support a
-# shared-OPT `scope: both` (see FloodGate's precedent). Filed as
-# G-COST-REDUCTION-SHARED-OPT-BOTH-SCOPES; also affects BT11-061 (identical
-# Vemmon reducer wording). See bt18_060.rs
-# `bt18_060_cross_position_double_reduction_is_a_known_gap` for the pinned
-# regression proving the current (over-permissive) behavior.
+# The engine's OPT gate keys per-effect-slot on `key.is_under != effect.inherited`
+# (code/digimon-engine/src/game_actions/cost.rs:904): a `scope: face_up` copy
+# only ever matches while this source is the TOP of its stack (`is_under ==
+# false`) and a `scope: inherited` copy only matches while it is BURIED
+# (`is_under == true`). Vemmon's printed reducer applies from BOTH positions
+# (it says nothing restricting it to only-face-up or only-buried), so it
+# structurally REQUIRES two lowered copies (one FaceUp, one Inherited) to
+# cover both `is_under` states — a single `scope: inherited` clause alone
+# would never fire while Vemmon is still face-up (the common case right
+# after playing Vemmon and immediately digivolving it), which would be a
+# UNDER-application bug, not a fix. Both copies are required; what changes
+# below is how their OPT budgets are tied together.
+#
+# What WAS missing (and is now fixed): the DSL previously had no
+# `scope: both` expansion for `kind: cost_reduction` (`scope: both` was
+# FloodGate-only), so this card was hand-authored as two SEPARATE
+# `scope: face_up` / `scope: inherited` clauses, each getting its OWN
+# once-per-turn budget — producing an over-permissive -2-per-turn bug when
+# Vemmon reduces once face-up, gets buried by that very digivolution, then
+# is dug further the SAME turn (DCGO's shared `activateClass2` counter would
+# refuse the second reduction). The engine substrate has since been widened
+# (G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER,
+# code/digimon-engine/src/dsl_cards/mod.rs:308-353 +
+# code/digimon-engine/src/dsl_cards/lower_cost_reduction.rs +
+# code/digimon-engine/src/game_actions/mod.rs:2088-2126,
+# code/digimon-engine/tests/cards_behavioral/scope_both_shared_opt_reducer.rs):
+# a single `kind: cost_reduction` clause with `scope: both` now auto-expands
+# into BOTH a FaceUp and an Inherited lowered `Effect`, and — because the
+# clause is `once_per_turn: true` — both copies are stamped with the SAME
+# `shared_opt_group` id (`Game::cost_reducer_opt_slot` /
+# `cost_reducer_activation_count` key off `shared_opt_group.unwrap_or(effect_slot)`,
+# code/digimon-engine/src/game_actions/mod.rs:2095-2126), so they draw from
+# ONE shared per-turn counter — exactly matching DCGO's single
+# `activateClass2` budget. This card is rewritten below as ONE `scope: both`
+# clause (previously two separate `scope: face_up` + `scope: inherited`
+# clauses each with an independent OPT budget); see bt18_060.rs
+# `bt18_060_cross_position_double_reduction_is_now_capped_at_minus_one` for
+# the regression proving the fix (previously
+# `..._is_a_known_gap`, pinning the over-permissive -2 behavior; also
+# affects BT11-061, identical Vemmon reducer wording, tracked separately).
 card: BT18-060
 name: Vemmon
 kind: digimon
@@ -133,15 +191,20 @@ effects:
         kind: digimon
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
-      # Bucket 1 — add 1 card with [Vemmon] in its text to hand (text scan,
-      # DCGO HasText). Mandatory (Q&A: "you must add ... if possible");
-      # naturally fizzles if none of the 3 revealed cards qualify.
+      # Bucket 1 — add 1 card with [Vemmon] in its text to hand (whole-card
+      # HasText scan, widened per the file-header note to cover the
+      # name/traits axes DCGO's HasText also checks). Mandatory (Q&A: "you
+      # must add ... if possible"); naturally fizzles if none of the 3
+      # revealed cards qualify.
       - select_reveal:
           of: you
           bind_as: hand_pick
           optional: false
           filter:
-            effect_text_contains: "Vemmon"
+            any_of:
+              - effect_text_contains: "Vemmon"
+              - trait_has: "Vemmon"
+              - name_contains: "Vemmon"
           prompt: "Add 1 card with [Vemmon] in its text to your hand"
           then:
             - add_to_hand_from_reveal: { of: you, card: hand_pick }
@@ -171,15 +234,23 @@ effects:
                 target: dest
       - place_remainder_on_deck: { of: you, position: bottom }
 
-  # ─── Clause 2a: Inherited [Your Turn][OPT] cost reduction — FACE-UP ──────
-  # Fires while Vemmon is the active top card of its own permanent and that
-  # permanent is the one being digivolved into a Vemmon-text card. See the
-  # file-header "KNOWN GAP" note: this clause and Clause 2b (inherited) share
-  # the printed effect's single per-turn budget in DCGO but get SEPARATE OPT
-  # counters here (engine-forced two-clause split; no `scope: both` for
-  # CostReduction yet).
+  # ─── Clause 2: Inherited [Your Turn][OPT] cost reduction — BOTH positions,
+  # ONE shared per-turn budget ──────────────────────────────────────────────
+  # `scope: both` auto-expands into a FaceUp copy (fires while Vemmon is the
+  # active top card of its own permanent) and an Inherited copy (fires while
+  # Vemmon is a buried digivolution source beneath a later digivolution) —
+  # matching DCGO's single background `activateClass2` that is added
+  # unconditionally at `OnEnterFieldAnyone` regardless of position. Because
+  # `once_per_turn: true`, both lowered copies are stamped with the SAME
+  # `shared_opt_group` (see file-header "SHARED-OPT RESOLUTION" note), so a
+  # reduction in one position consumes the SAME budget the other position
+  # would draw from this turn — exactly matching DCGO's shared
+  # `isOverMaxCountPerTurn(activateClass2, ...)` gate. `cost_target` is
+  # widened to the same `any_of` HasText axes as bucket 1 (see file-header
+  # note) so a future Vemmon-named/trait target with no self-referential
+  # body text is still recognized.
   - kind: cost_reduction
-    scope: face_up
+    scope: both
     reduction_timing: before_pay_cost
     once_per_turn: true
     active_when:
@@ -187,23 +258,9 @@ effects:
         - your_turn: true
         - source_is_cost_target_permanent: true
         - cost_target:
-            effect_text_contains: "Vemmon"
+            any_of:
+              - effect_text_contains: "Vemmon"
+              - trait_has: "Vemmon"
+              - name_contains: "Vemmon"
     amount: 1
-    summary: "[Your Turn][OPT] (face-up) When this Digimon would digivolve into a [Vemmon]-text card, reduce the digivolution cost by 1"
-
-  # ─── Clause 2b: Inherited [Your Turn][OPT] cost reduction — BURIED ───────
-  # Fires while Vemmon is a buried digivolution source and the permanent it
-  # is attached to is the one being digivolved further into a Vemmon-text
-  # card. See file-header "KNOWN GAP" — separate OPT counter from Clause 2a.
-  - kind: cost_reduction
-    scope: inherited
-    reduction_timing: before_pay_cost
-    once_per_turn: true
-    active_when:
-      all_of:
-        - your_turn: true
-        - source_is_cost_target_permanent: true
-        - cost_target:
-            effect_text_contains: "Vemmon"
-    amount: 1
-    summary: "[Your Turn][OPT] (inherited) When this Digimon would digivolve into a [Vemmon]-text card, reduce the digivolution cost by 1"
+    summary: "[Your Turn][OPT] When this Digimon would digivolve into a [Vemmon]-text card, reduce the digivolution cost by 1"

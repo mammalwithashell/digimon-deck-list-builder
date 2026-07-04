@@ -21,18 +21,23 @@
 //! DCGO/Assets/Scripts/CardEffect/BT18/Black/BT18_060.cs
 //!
 //! # Patterns this test covers
-//! - §1 Structural: 1 triggered OnPlay clause + 2 declarative CostReduction
-//!       clauses (face_up + inherited — see the YAML file-header KNOWN GAP
-//!       note on why the OPT budget is not shared between them).
+//! - §1 Structural: 1 triggered OnPlay clause + 1 declarative CostReduction
+//!       clause authored with `scope: both` (auto-expands to a FaceUp + an
+//!       Inherited lowered `Effect` sharing ONE OPT budget — see the YAML
+//!       file-header "SHARED-OPT RESOLUTION (round 2)" note).
 //! - §2 OnPlay condition gating: no own battle-area Digimon → no reveal.
-//! - §3 Behavioral reveal-search: bucket 1 (add [Vemmon]-in-text to hand),
-//!       bucket 2 (place exact-name [Vemmon] as a chosen own Digimon's bottom
-//!       source), both buckets together, remainder to deck bottom, exact-name
-//!       vs. in-text gating, and a non-Vemmon card being left untouched.
-//! - §4 Cost-reduction structural: scope / once_per_turn / active_when shape.
+//! - §3 Behavioral reveal-search: bucket 1 (add [Vemmon]-in-text to hand,
+//!       incl. a NAME-only match with no self-referential body text — the
+//!       widened `any_of` HasText axes), bucket 2 (place exact-name [Vemmon]
+//!       as a chosen own Digimon's bottom source), both buckets together,
+//!       remainder to deck bottom, exact-name vs. in-text gating, and a
+//!       non-Vemmon card being left untouched.
+//! - §4 Cost-reduction structural: scope / once_per_turn / active_when shape,
+//!       incl. the widened `any_of` cost_target predicate.
 //! - §5 Cost-reduction behavioral: face_up positive/negative, inherited
-//!       positive, and the pinned cross-position double-reduction regression
-//!       documenting the known engine gap (G-COST-REDUCTION-SHARED-OPT-BOTH-SCOPES).
+//!       positive, a NAME-only cost-target match, and the fixed
+//!       cross-position regression proving the shared OPT budget now caps
+//!       the printed effect at -1 per turn (G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER).
 
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledPredicate, CompiledScope, CompiledStep,
@@ -63,6 +68,19 @@ fn make_vemmon_text_card(id: &str) -> CardData {
     c
 }
 
+/// A card named "Vemmon Prime" (name CONTAINS "Vemmon") with EMPTY effect
+/// text and no traits — eligible for bucket 1 ONLY via the widened
+/// `name_contains` axis, not `effect_text_contains` (which would find
+/// nothing in an empty body). Proves the "[Vemmon] in its text" whole-card
+/// HasText widening (name axis) actually does work, per the official Q&A
+/// covering the whole Vemmon-reducer family (BT21-056's bundle, restated in
+/// this card's file-header note).
+fn make_vemmon_name_only_card(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Vemmon Prime");
+    c.effect_text = String::new();
+    c
+}
+
 /// A Lv.4 Digimon whose card text contains "[Vemmon]" (digivolve-cost-target
 /// gate for Clause 2 tests) but which is NOT named "Vemmon" — a downstream
 /// Vemmon-line card (Snatchmon-shape).
@@ -74,6 +92,26 @@ fn make_vemmon_text_lv4(id: &str) -> CardData {
     c.play_cost = 4;
     c.colors = vec![CardColor::Black];
     c.effect_text = "[Vemmon] this Digimon's text mentions Vemmon.".to_string();
+    c.evo_costs = vec![EvoCost {
+        level: 3,
+        card_color: 5, // Black
+        memory_cost: 2,
+    }];
+    c
+}
+
+/// A Lv.4 Digimon NAMED "Vemmon Prime" (name CONTAINS "Vemmon") with EMPTY
+/// effect text — cost-target NAME-only match for the widened `cost_target`
+/// `any_of` axes (proves the reducer's `name_contains` leaf, not just
+/// `effect_text_contains`, drives the reduction).
+fn make_vemmon_name_only_lv4(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Vemmon Prime");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(4);
+    c.dp = Some(3000);
+    c.play_cost = 4;
+    c.colors = vec![CardColor::Black];
+    c.effect_text = String::new();
     c.evo_costs = vec![EvoCost {
         level: 3,
         card_color: 5, // Black
@@ -194,14 +232,15 @@ fn drive_first_choice_n_times(runner: &mut DebugRunner, max_steps: usize) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 #[test]
-fn bt18_060_compiles_to_three_clauses() {
+fn bt18_060_compiles_to_two_clauses() {
     let runner = base_runner();
     let card = runner.compiled_card("BT18-060").expect("compiled");
     assert_eq!(
         card.effects.len(),
-        3,
-        "BT18-060 must compile to exactly 3 clauses: [On Play] triggered + \
-         2 CostReduction (face_up + inherited); got {}",
+        2,
+        "BT18-060 must compile to exactly 2 clauses: [On Play] triggered + \
+         1 CostReduction authored as `scope: both` (which lowers to 2 Effects \
+         sharing one OPT budget — see the next test); got {}",
         card.effects.len()
     );
 }
@@ -243,7 +282,7 @@ fn bt18_060_on_play_clause_is_face_up_and_gated_on_own_digimon() {
 }
 
 #[test]
-fn bt18_060_has_two_cost_reduction_clauses_face_up_and_inherited() {
+fn bt18_060_cost_reduction_clause_is_authored_as_scope_both() {
     let runner = base_runner();
     let card = runner.compiled_card("BT18-060").expect("compiled");
 
@@ -261,22 +300,24 @@ fn bt18_060_has_two_cost_reduction_clauses_face_up_and_inherited() {
 
     assert_eq!(
         scopes.len(),
-        2,
-        "BT18-060 must have exactly 2 CostReduction clauses; got {}",
+        1,
+        "BT18-060 must have exactly 1 CostReduction CLAUSE in the compiled \
+         card (it lowers to 2 Effects — see the shared-OPT lowering test); \
+         got {}",
         scopes.len()
     );
-    assert!(
-        scopes.contains(&CompiledScope::FaceUp),
-        "one CostReduction clause must be FaceUp scope"
-    );
-    assert!(
-        scopes.contains(&CompiledScope::Inherited),
-        "one CostReduction clause must be Inherited scope"
+    assert_eq!(
+        scopes[0],
+        CompiledScope::Both,
+        "the CostReduction clause must be authored `scope: both` so it \
+         auto-expands into a FaceUp + an Inherited Effect sharing one OPT \
+         budget (G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER) — the printed \
+         reducer applies whether Vemmon is face-up or buried"
     );
 }
 
 #[test]
-fn bt18_060_both_cost_reduction_clauses_are_once_per_turn_and_your_turn_gated() {
+fn bt18_060_cost_reduction_clause_is_once_per_turn_and_your_turn_gated() {
     let runner = base_runner();
     let card = runner.compiled_card("BT18-060").expect("compiled");
 
@@ -317,7 +358,59 @@ fn bt18_060_both_cost_reduction_clauses_are_once_per_turn_and_your_turn_gated() 
             );
         }
     }
-    assert_eq!(checked, 2, "expected exactly 2 CostReduction clauses");
+    assert_eq!(checked, 1, "expected exactly 1 CostReduction clause");
+}
+
+/// Directly re-lowers the BT18-060 YAML (mirroring
+/// `scope_both_shared_opt_reducer.rs`'s pattern) to inspect the two lowered
+/// `Effect`s' `shared_opt_group` — proving the FaceUp and Inherited copies
+/// draw on ONE shared per-turn budget, not two independent ones.
+#[test]
+fn bt18_060_scope_both_lowers_to_two_effects_sharing_one_opt_group() {
+    use digimon_engine::card_source::CardHandle;
+    use digimon_engine::dsl_cards::DslCardEffect;
+    use digimon_engine::enums::EffectTiming;
+    use digimon_engine::CardEffect;
+    use std::sync::Arc;
+
+    let yaml = std::fs::read_to_string(concat!(
+        env!("CARGO_MANIFEST_DIR"),
+        "/cards/bt18/BT18-060.yaml"
+    ))
+    .expect("BT18-060.yaml reads");
+    let spec: digimon_dsl::CardSpec = serde_yml::from_str(&yaml).expect("YAML parses");
+    let compiled = digimon_dsl::compile::compile(&spec).expect("YAML compiles");
+    let dsl = DslCardEffect::new(Arc::new(compiled));
+    let effects = dsl.effects(CardHandle(99));
+
+    let reducers: Vec<_> = effects
+        .iter()
+        .filter(|e| e.timing == EffectTiming::BeforePayCost)
+        .collect();
+    assert_eq!(
+        reducers.len(),
+        2,
+        "scope: both must lower to exactly 2 BeforePayCost Effects (FaceUp + Inherited)"
+    );
+
+    let face_up = reducers.iter().find(|e| !e.inherited);
+    let inherited = reducers.iter().find(|e| e.inherited);
+    assert!(face_up.is_some(), "one lowered copy must be FaceUp (inherited == false)");
+    assert!(inherited.is_some(), "the other lowered copy must be Inherited");
+
+    let fg = face_up.unwrap().shared_opt_group;
+    let ig = inherited.unwrap().shared_opt_group;
+    assert!(
+        fg.is_some(),
+        "the FaceUp copy must carry a shared_opt_group (once_per_turn: true + scope: both)"
+    );
+    assert_eq!(
+        fg, ig,
+        "both lowered copies must share the SAME shared_opt_group id so they draw \
+         on ONE per-turn budget, matching DCGO's single activateClass2 counter"
+    );
+    assert_eq!(face_up.unwrap().max_per_turn, 1);
+    assert_eq!(inherited.unwrap().max_per_turn, 1);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -454,34 +547,44 @@ fn bt18_060_on_play_bucket1_adds_vemmon_text_card_to_hand() {
     );
 }
 
-/// POSITIVE bucket 2 only: an exact-name "Vemmon" card among the reveal is
-/// placed as a chosen own Digimon's bottom digivolution card; no [Vemmon]-
-/// in-text card is present (the exact-name card is filtered out of bucket 1's
-/// candidate set only if it lacks "Vemmon" in its own text — here it has
-/// "Vemmon" in its text too, so bucket 1 runs FIRST per DCGO's bucket order
-/// and would claim it; to isolate bucket 2 we give bucket-2's card an empty
-/// effect_text so only its EXACT NAME makes it eligible, and it is NOT
-/// text-eligible for bucket 1).
+/// POSITIVE bucket 2 (after bucket 1 claims a SEPARATE candidate): a card
+/// exact-named "Vemmon" is placed as a chosen own Digimon's bottom
+/// digivolution card. NOTE (round-2 fidelity correction): a card exact-named
+/// "Vemmon" is now ALWAYS ALSO eligible for bucket 1 under the widened
+/// whole-card HasText scan (`name_contains: "Vemmon"` — DCGO's own
+/// `HasText` includes the name), so it can no longer be isolated to bucket 2
+/// by giving it empty effect text (that was only valid under the old,
+/// narrower `effect_text_contains`-only modeling — the bug this round fixes).
+/// To reach bucket 2 on this card in the REAL game, bucket 1 must have
+/// ALREADY claimed its own (different) candidate first, per DCGO's
+/// bucket-order (bucket 1 runs before bucket 2 and the pool shrinks as each
+/// bucket claims a card) — so this test gives bucket 1 a separate
+/// [Vemmon]-in-text candidate to consume, leaving the exact-name "Vemmon"
+/// card as bucket 2's sole remaining pick.
 #[test]
 fn bt18_060_on_play_bucket2_places_exact_name_vemmon_as_chosen_digimon_source() {
     let mut exact = make_test_card("F060-EXACT", "Vemmon");
-    exact.effect_text = String::new(); // NOT eligible for bucket 1 (no text match)
-    let (mut runner, host) =
-        runner_with_own_digimon(vec![exact, make_filler("F060-C"), make_filler("F060-D")]);
+    exact.effect_text = String::new();
+    let (mut runner, host) = runner_with_own_digimon(vec![
+        make_vemmon_text_card("F060-BUCKET1-FODDER"),
+        exact,
+        make_filler("F060-D"),
+    ]);
     let src = runner.top_card(host);
     let hand_before = runner.game.players[0].hand.len();
     let sources_before = runner.game.players[0].battle_area[host.index as usize]
         .card_sources
         .len();
-    stack_deck_top(&mut runner, 0, &["F060-D", "F060-C", "F060-EXACT"]);
+    stack_deck_top(&mut runner, 0, &["F060-D", "F060-EXACT", "F060-BUCKET1-FODDER"]);
 
     let process = on_play_process(&runner);
     {
         let mut ctx = EffectContext::new(&mut runner.game, src, Some(host), 0);
         run_steps(&process, &mut ctx, &mut Bindings::new());
     }
-    // Drive: bucket-1 (fizzles, no eligible text-match candidate — no prompt),
-    // bucket-2 reveal pick, own-Digimon target pick, remainder ordering.
+    // Drive: bucket-1 claims F060-BUCKET1-FODDER (the only OTHER text-match
+    // candidate), bucket-2 reveal pick (F060-EXACT, the sole exact-name
+    // remaining), own-Digimon target pick, remainder ordering.
     drive_first_choice_n_times(&mut runner, 10);
 
     let perm = &runner.game.players[0].battle_area[host.index as usize];
@@ -504,10 +607,19 @@ fn bt18_060_on_play_bucket2_places_exact_name_vemmon_as_chosen_digimon_source() 
         "F060-EXACT",
         "placed card must be the BOTTOM digivolution card"
     );
+    let hand_ids: Vec<&str> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data))
+        .collect();
+    assert!(
+        hand_ids.contains(&"F060-BUCKET1-FODDER"),
+        "bucket 1 must have claimed its own separate candidate: {hand_ids:?}"
+    );
     assert_eq!(
         runner.game.players[0].hand.len(),
-        hand_before,
-        "bucket 1 fizzled — nothing added to hand"
+        hand_before + 1,
+        "exactly 1 card added to hand by bucket 1 (its own fodder, not F060-EXACT)"
     );
 }
 
@@ -663,23 +775,113 @@ fn bt18_060_on_play_text_only_card_not_eligible_for_bucket2_exact_name_gate() {
     );
 }
 
+/// POSITIVE bucket 1, NAME-only match (round-2 fidelity upgrade): a card
+/// named "Vemmon Prime" (name CONTAINS "Vemmon") with EMPTY effect text is
+/// still added to hand by bucket 1 via the widened `any_of` HasText axes
+/// (`name_contains`), even though `effect_text_contains` alone would find
+/// nothing in its blank body. Proves the "[Vemmon] in its text" whole-card
+/// scan (official Q&A, shared Vemmon-reducer family) is not narrowed to
+/// body-text-only.
+#[test]
+fn bt18_060_on_play_bucket1_name_only_match_is_eligible_via_widened_any_of() {
+    let (mut runner, host) = runner_with_own_digimon(vec![
+        make_vemmon_name_only_card("F060-NAMEONLY"),
+        make_filler("F060-NO-A"),
+        make_filler("F060-NO-B"),
+    ]);
+    let src = runner.top_card(host);
+    let hand_before = runner.game.players[0].hand.len();
+    stack_deck_top(&mut runner, 0, &["F060-NO-B", "F060-NO-A", "F060-NAMEONLY"]);
+
+    let process = on_play_process(&runner);
+    {
+        let mut ctx = EffectContext::new(&mut runner.game, src, Some(host), 0);
+        run_steps(&process, &mut ctx, &mut Bindings::new());
+    }
+    drive_first_choice_n_times(&mut runner, 10);
+
+    let hand_ids: Vec<&str> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data))
+        .collect();
+    assert!(
+        hand_ids.contains(&"F060-NAMEONLY"),
+        "a name-only (\"Vemmon Prime\", empty effect text) match must still be \
+         added to hand via the widened name_contains axis: {hand_ids:?}"
+    );
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        hand_before + 1,
+        "exactly 1 card added to hand"
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // Section 4 — Cost reduction: structural (see Section 1 for scope/OPT checks)
 // ═══════════════════════════════════════════════════════════════════════════
 
+/// Checks whether a `cost_target` predicate (or one of its `any_of`/`all_of`
+/// leaves) has an `effect_text_contains: "Vemmon"` leaf — the narrow,
+/// body-text-only axis.
+fn cost_target_has_effect_text_leaf(p: &CompiledPredicate) -> bool {
+    if let Some(ct) = &p.cost_target {
+        if predicate_has_effect_text_leaf(ct) {
+            return true;
+        }
+    }
+    p.all_of.iter().any(cost_target_has_effect_text_leaf)
+        || p.any_of.iter().any(cost_target_has_effect_text_leaf)
+}
+
+fn predicate_has_effect_text_leaf(p: &CompiledPredicate) -> bool {
+    p.effect_text_contains.as_deref() == Some("Vemmon")
+        || p.all_of.iter().any(predicate_has_effect_text_leaf)
+        || p.any_of.iter().any(predicate_has_effect_text_leaf)
+}
+
+/// Checks whether a `cost_target` predicate (or one of its `any_of`/`all_of`
+/// leaves) has a `name_contains: "Vemmon"` leaf — the widened whole-card
+/// HasText name axis (round-2 fidelity upgrade).
+fn cost_target_has_name_contains_leaf(p: &CompiledPredicate) -> bool {
+    if let Some(ct) = &p.cost_target {
+        if predicate_has_name_contains_leaf(ct) {
+            return true;
+        }
+    }
+    p.all_of.iter().any(cost_target_has_name_contains_leaf)
+        || p.any_of.iter().any(cost_target_has_name_contains_leaf)
+}
+
+fn predicate_has_name_contains_leaf(p: &CompiledPredicate) -> bool {
+    p.name_contains.as_deref() == Some("Vemmon")
+        || p.all_of.iter().any(predicate_has_name_contains_leaf)
+        || p.any_of.iter().any(predicate_has_name_contains_leaf)
+}
+
+/// Checks whether a `cost_target` predicate (or one of its `any_of`/`all_of`
+/// leaves) has a `trait_has: "Vemmon"` leaf — the widened whole-card HasText
+/// traits axis.
+fn cost_target_has_trait_has_leaf(p: &CompiledPredicate) -> bool {
+    if let Some(ct) = &p.cost_target {
+        if predicate_has_trait_has_leaf(ct) {
+            return true;
+        }
+    }
+    p.all_of.iter().any(cost_target_has_trait_has_leaf)
+        || p.any_of.iter().any(cost_target_has_trait_has_leaf)
+}
+
+fn predicate_has_trait_has_leaf(p: &CompiledPredicate) -> bool {
+    p.trait_has.as_deref() == Some("Vemmon")
+        || p.all_of.iter().any(predicate_has_trait_has_leaf)
+        || p.any_of.iter().any(predicate_has_trait_has_leaf)
+}
+
 #[test]
-fn bt18_060_cost_reduction_targets_vemmon_text_via_cost_target() {
+fn bt18_060_cost_reduction_targets_vemmon_via_widened_any_of_cost_target() {
     let runner = base_runner();
     let card = runner.compiled_card("BT18-060").expect("compiled");
-
-    fn cost_target_has_vemmon_text(p: &CompiledPredicate) -> bool {
-        if let Some(ct) = &p.cost_target {
-            if ct.effect_text_contains.as_deref() == Some("Vemmon") {
-                return true;
-            }
-        }
-        p.all_of.iter().any(cost_target_has_vemmon_text) || p.any_of.iter().any(cost_target_has_vemmon_text)
-    }
 
     let mut checked = 0;
     for c in &card.effects {
@@ -691,13 +893,23 @@ fn bt18_060_cost_reduction_targets_vemmon_text_via_cost_target() {
             checked += 1;
             let aw = active_when.as_ref().expect("active_when present");
             assert!(
-                cost_target_has_vemmon_text(aw),
+                cost_target_has_effect_text_leaf(aw),
                 "cost_target must gate on effect_text_contains: Vemmon (printed \
                  \"a Digimon card with [Vemmon] in its text\")"
             );
+            assert!(
+                cost_target_has_name_contains_leaf(aw),
+                "cost_target must ALSO gate on name_contains: Vemmon — the round-2 \
+                 whole-card HasText widening (name axis)"
+            );
+            assert!(
+                cost_target_has_trait_has_leaf(aw),
+                "cost_target must ALSO gate on trait_has: Vemmon — the round-2 \
+                 whole-card HasText widening (traits axis)"
+            );
         }
     }
-    assert_eq!(checked, 2);
+    assert_eq!(checked, 1, "expected exactly 1 CostReduction clause (authored scope: both)");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -808,27 +1020,25 @@ fn bt18_060_inherited_cost_reduction_fires_when_buried() {
     );
 }
 
-/// KNOWN GAP (pinned regression) — G-COST-REDUCTION-SHARED-OPT-BOTH-SCOPES.
+/// FIXED regression (round 2) — G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER.
 ///
 /// DCGO shares ONE per-turn budget (`activateClass2`) between the face-up and
 /// buried positions, so digivolving Vemmon (face-up, -1) and THEN digivolving
-/// the result further (inherited, buried) in the SAME turn should get NO
-/// second reduction — DCGO's `isOverMaxCountPerTurn` would refuse it.
+/// the result further (inherited, buried) in the SAME turn gets NO second
+/// reduction — DCGO's `isOverMaxCountPerTurn` refuses it.
 ///
-/// This engine currently authors the printed effect as two SEPARATE
-/// `CostReduction` clauses (face_up + inherited — required, since the DSL's
-/// `scope: both` expansion is FloodGate-only, not CostReduction; see the
-/// YAML file-header note), each with its OWN once-per-turn budget. There is
-/// no `scope: both` widening available for CostReduction without an
-/// engine-substrate change (`code/digimon-engine/src/dsl_cards/mod.rs` +
-/// `code/digimon-engine/src/game_actions/cost.rs`), which is out of scope for
-/// a card script. This test PINS the current (over-permissive) behavior: BOTH
-/// reductions fire in the same turn, granting -2 total where the real game
-/// grants only -1. It exists to make the divergence visible/trackable, not to
-/// assert correctness — flip this assertion the moment
-/// G-COST-REDUCTION-SHARED-OPT-BOTH-SCOPES closes.
+/// Previously this card was authored as two SEPARATE `CostReduction` clauses
+/// (`scope: face_up` + `scope: inherited`), each with its OWN once-per-turn
+/// budget, producing an over-permissive -2-per-turn bug (see git history /
+/// the retired `bt18_060_cross_position_double_reduction_is_a_known_gap`).
+/// The card is now authored as ONE `scope: both` clause, which lowers to the
+/// same two positional Effects but stamps them with a shared
+/// `shared_opt_group` (see `bt18_060_scope_both_lowers_to_two_effects_sharing_one_opt_group`
+/// for the structural proof). This test proves the BEHAVIORAL consequence:
+/// leg 1 (face-up) reduces, leg 2 (inherited, same turn) does NOT — capped at
+/// -1 total per turn, matching DCGO.
 #[test]
-fn bt18_060_cross_position_double_reduction_is_a_known_gap() {
+fn bt18_060_cross_position_double_reduction_is_now_capped_at_minus_one() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT18-060")
         .expect("parses")
@@ -864,15 +1074,51 @@ fn bt18_060_cross_position_double_reduction_is_a_known_gap() {
     assert!(leg2, "leg 2: the carrier digivolves into the Vemmon-text Lv.5");
     let memory_after_leg2 = runner.game.memory;
 
-    // KNOWN-GAP ASSERTION: the inherited clause fires AGAIN (separate OPT
-    // budget from the face_up clause), reducing leg 2's cost by 1 as well —
-    // -2 total this turn where DCGO's shared counter would only grant -1.
+    // FIXED ASSERTION: the inherited copy shares the face_up copy's OPT
+    // budget (already consumed by leg 1), so leg 2 pays the FULL printed
+    // cost 2 with NO further reduction this turn — capped at -1 total,
+    // matching DCGO's shared activateClass2 counter.
     assert_eq!(
         memory_after_leg2,
-        memory_after_leg1 - 1,
-        "KNOWN GAP: the inherited clause's SEPARATE once-per-turn budget still \
-         grants leg 2 a reduction in the same turn (DCGO's shared counter would \
-         refuse it — see G-COST-REDUCTION-SHARED-OPT-BOTH-SCOPES)"
+        memory_after_leg1 - 2,
+        "FIXED: the shared OPT budget (already spent by leg 1's face-up \
+         reduction) blocks leg 2's inherited reduction in the same turn — \
+         leg 2 pays the full printed cost 2, capping the turn's total \
+         reduction at -1 (G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER)"
+    );
+}
+
+/// POSITIVE, NAME-only cost-target match (round-2 fidelity upgrade): a
+/// digivolve target named "Vemmon Prime" (name CONTAINS "Vemmon") with EMPTY
+/// effect text still triggers the reduction via the widened `any_of`
+/// `cost_target` (`name_contains`), even though `effect_text_contains` alone
+/// would find nothing in its blank body.
+#[test]
+fn bt18_060_face_up_cost_reduction_fires_for_name_only_cost_target() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT18-060")
+        .expect("parses")
+        .add_card(make_vemmon_name_only_lv4("F060-NAMEONLY-TARGET"))
+        .memory(10)
+        .start();
+    runner.game.turn_count = 1;
+
+    let vemmon = runner.place_on_field(0, "BT18-060", None);
+    let hand_idx = push_to_hand(&mut runner, 0, "F060-NAMEONLY-TARGET");
+
+    let memory_before = runner.game.memory;
+    let digivolved =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, vemmon.index as usize, PlaySource::ByHand);
+    assert!(
+        digivolved,
+        "Vemmon must digivolve into the name-only Vemmon-family Lv.4 target"
+    );
+    assert_eq!(
+        runner.game.memory,
+        memory_before - 1,
+        "printed evo cost 2 - 1 (widened name_contains match) = 1 memory spent"
     );
 }
 

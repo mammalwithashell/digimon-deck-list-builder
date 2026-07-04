@@ -1,0 +1,210 @@
+# BT18-065 Snatchmon — Digimon, Lv.4, Black, DP 6000, Cost 6.
+# Traits: Unknown, LIBERATOR. Attribute: Unknown. Form: Champion.
+#
+# Printed text (official Bandai DB / data/card_bundles/BT18-065.md, matches
+# the card image BT18-065.webp):
+#
+#   While you have no Digimon other than [Vemmon], cards in your trash can
+#   also be placed for this card's DigiXros.
+#   [When Digivolving] You may place up to 2 [Vemmon] from your trash as this
+#   Digimon's bottom digivolution cards.
+#   [End of Your Turn] If this Digimon has 4 or more digivolution cards, it
+#   may digivolve into a Digimon card with [Vemmon] in its text in the hand.
+#
+# Special Play Condition: DigiXros -1: 4 [Vemmon]. When this would be played,
+#   you may place specified cards from the hand/battle area under it. Each
+#   one reduces the play cost.
+#
+# Inherited Effect:
+#   [All Turns] [Once Per Turn] When any [Vemmon] return to the bottom of the
+#   deck from this Digimon's digivolution cards, this Digimon unsuspends and
+#   gains <Blocker> until the end of your opponent's turn.
+#
+# Standard digivolve circle: Black Lv.3 / cost 3 (official Bandai DB bundle;
+# cards.json's `evo_costs` is empty for this card, dropped by the lossy API
+# ingest — the bundle is the authority here).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT18/Black/BT18_065.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# DigiXros -1: 4 [Vemmon] (AddDigiXrosConditionClass) — 4 repeated
+#   `CanSelectCardCondition1` elements requiring `cardSource.IsDigimon &&
+#   cardSource.CardNames_DigiXros.Contains("Vemmon")`, `reduceCostPerCard: 1`.
+#   Materials come from hand/battle-area (DCGO's SelectCardEffect root
+#   defaults). -> `alt_paths: kind: digixros`, one material entry
+#   `filter: { kind: digimon, name_is: "Vemmon" }`, `repeat: { min: 4, max: 4 }`,
+#   `zones: [hand, battle_area]`, `cost_delta: -1`. Precedent: P-094 Destromon
+#   (same family, same "[Vemmon] x 4" DigiXros recipe) uses the identical
+#   `repeat: { min: 4, max: 4 }` shape.
+#
+# DigiXros from trash (AddMaxTrashCountDigiXrosClass, `CanUseCondition`:
+#   `MatchConditionPermanentCount(non-Vemmon own Digimon) == 0`) — "While you
+#   have no Digimon other than [Vemmon], cards in your trash can also be
+#   placed for this card's DigiXros." -> Gap 4 substrate
+#   (`extra_material_zones`, built specifically for this card — see
+#   `code/digimon-dsl/src/alt_path.rs` header + the proof test
+#   `code/digimon-engine/tests/digixros_conditional_trash_zone.rs`):
+#   `extra_material_zones: [{ zone: trash, while: { no_permanent: { of: you,
+#   zone: [battle_area], kind: digimon, none_of: [{ name_contains: "Vemmon" }]
+#   } } }]`. Evaluated once at DigiXros transaction build time, matching
+#   DCGO's `CanUseCondition` check.
+#
+# Clause 1 ([When Digivolving], OnEnterFieldAnyone ActivateClass, isOptional
+#   at the pick level via `canNoSelect: true`) — "You may place up to 2
+#   [Vemmon] from your trash as this Digimon's bottom digivolution cards."
+#   `maxCount = min(2, TrashCards.Count(Vemmon))`, `canEndNotMax: true`
+#   (0..2 legal), then `AddDigivolutionCardsBottom` on THIS Digimon's own
+#   permanent (`card.PermanentOfThisCard()`). ->
+#   `select_count_capped_multi { of: you, zone: trash, max: 2,
+#   filter: { name_is: "Vemmon" }, optional_zero: true }` +
+#   `per_selected { body: [place_as_bottom_source { target: source }] }`.
+#   Precedent: EX8-067 Close uses this exact
+#   `select_count_capped_multi` + `per_selected` + `place_as_bottom_source`
+#   shape for an "up to 2 from trash" bottom-source placement.
+#
+# Clause 2 ([End of Your Turn], EffectTiming.OnEndTurn ActivateClass,
+#   CanActivateCondition: `DigivolutionCards.Count >= 4`) — "If this Digimon
+#   has 4 or more digivolution cards, this Digimon may digivolve into a
+#   Digimon card with [Vemmon] in its text in your hand." DCGO
+#   `DigivolveIntoHandOrTrashCard(cardCondition: cardSource.IsDigimon &&
+#   cardSource.HasText("Vemmon"), payCost: true, isHand: true)` — the result
+#   card is picked from hand (optional pick — DCGO's SelectCardEffect here is
+#   independently declinable), then digivolves for its OWN printed
+#   digivolution cost (payCost: true, no reduceCost/fixedCost override, and
+#   `ignoreDigivolutionRequirementFixedCost: -1` = do NOT ignore
+#   requirements). -> `condition: { self_source_count: { op: gte, value: 4 } }`
+#   (unfiltered digivolution-source count, no name filter — "4 or more
+#   digivolution cards" counts ALL sources, not just [Vemmon]), then
+#   `select_hand { optional: true, filter: { all_of: [kind: digimon,
+#   in_text_contains: "Vemmon"] } }` + `effect_initiated_digivolve { target:
+#   source, from_hand: <pick>, cost: printed }` (no `ignore_requirements` ->
+#   defaults false, matching DCGO's `-1` = "don't ignore"). `in_text_contains`
+#   is the DCGO `HasText` whole-card text-scan leaf (name + traits + all
+#   printed text), NOT the narrower `effect_text_contains` — proven by
+#   `code/digimon-engine/tests/dsl/in_text_contains.rs`.
+#
+# Inherited ESS (OnDigivolutionCardReturnToDeckBottom, isInheritedEffect
+#   true, MaxCountPerTurn 1) — "[All Turns][Once Per Turn] When [Vemmon]
+#   returns to the bottom of the deck from this Digimon's digivolution cards,
+#   unsuspend this Digimon and it gains <Blocker> until the end of your
+#   opponent's turn." -> Gap 1 substrate (`on_source_returned_to_deck_bottom`,
+#   proven by `code/digimon-engine/tests/source_returned_to_deck_bottom_observer.rs`,
+#   which names this exact card as one of its two blocked-card drivers):
+#   `scope: inherited, when: on_source_returned_to_deck_bottom,
+#   once_per_turn: true, active_when: { all_turns: true }, condition: {
+#   all_of: [event_host_permanent_is_source: true, event_card_name_contains:
+#   "Vemmon"] }`. Body: `unsuspend: { target: source }` (NOT `target: self`
+#   — the unsuspend lowering drops `self`; `source` resolves to the carrier
+#   permanent, per BT20-045's documented precedent) + `grant_keyword: {
+#   target: source, keyword: Blocker, expiry: end_of_opponents_turn }`.
+#
+# ─── Implementation status (faithfulness diff) ────────────────────────────────
+#
+# | Card-text element                                                         | Status |
+# |-----------------------------------------------------------------------------|--------|
+# | DigiXros -1: 4 [Vemmon] (hand/battle-area, cost_delta -1 each)             | IMPLEMENTED |
+# | Conditional trash-origin extension (no non-Vemmon own Digimon)            | IMPLEMENTED (Gap 4 extra_material_zones) |
+# | [When Digivolving] up to 2 [Vemmon] from trash as bottom sources           | IMPLEMENTED |
+# | [End of Your Turn] 4+ sources -> may digivolve into Vemmon-text hand card  | IMPLEMENTED |
+# | Inherited [All Turns][OPT] Vemmon returned to deck bottom -> unsuspend+Blocker | IMPLEMENTED (Gap 1 on_source_returned_to_deck_bottom) |
+
+card: BT18-065
+name: Snatchmon
+kind: digimon
+level: 4
+color: [black]
+cost: 6
+dp: 6000
+traits: [Unknown, LIBERATOR]
+attribute: Unknown
+
+alt_paths:
+  # Standard digivolve: Black Lv.3 / cost 3 (official Bandai DB bundle circle;
+  # cards.json's evo_costs is empty for this card — lossy API ingest).
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+
+  # DigiXros -1: 4 [Vemmon] from hand or battle area, each -1 cost.
+  # Conditionally extended to also allow trash-origin materials while the
+  # controller has no Digimon other than [Vemmon] (Gap 4).
+  - kind: digixros
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - name_is: "Vemmon"
+        repeat: { min: 4, max: 4 }
+        zones: [hand, battle_area]
+        cost_delta: -1
+    cost: 6
+    extra_material_zones:
+      - zone: trash
+        while:
+          no_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            none_of:
+              - name_contains: "Vemmon"
+
+effects:
+  # ─── Clause 1: [When Digivolving] up to 2 [Vemmon] from trash as bottom sources ──
+  - when: when_digivolving
+    summary: "[When Digivolving] You may place up to 2 [Vemmon] from your trash as this Digimon's bottom digivolution cards"
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: trash
+          max: 2
+          filter: { name_is: "Vemmon" }
+          bind_as: placed_vemmon
+          prompt: "Place up to 2 [Vemmon] from your trash as this Digimon's bottom digivolution cards"
+          optional_zero: true
+      - per_selected:
+          selection: placed_vemmon
+          bind_as: src
+          body:
+            - place_as_bottom_source:
+                source: src
+                target: source
+
+  # ─── Clause 2: [End of Your Turn] digivolve into a Vemmon-text hand card ────
+  - when: end_of_your_turn
+    summary: "[End of Your Turn] If this Digimon has 4+ digivolution cards, it may digivolve into a Digimon card with [Vemmon] in its text in the hand, paying the cost"
+    condition:
+      self_source_count:
+        op: gte
+        value: 4
+    process:
+      - select_hand:
+          of: you
+          bind_as: result
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - in_text_contains: "Vemmon"
+          prompt: "Digivolve this Digimon into a Digimon card with [Vemmon] in its text in your hand, paying the cost"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: result
+          cost: printed
+
+  # ─── Inherited ESS — [All Turns][OPT] Vemmon returned to deck bottom -> unsuspend + Blocker ──
+  - scope: inherited
+    when: on_source_returned_to_deck_bottom
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition:
+      all_of:
+        - event_host_permanent_is_source: true
+        - event_card_name_contains: "Vemmon"
+    summary: "[All Turns][OPT] When a [Vemmon] returns to the bottom of the deck from this Digimon's digivolution cards, unsuspend this Digimon and it gains <Blocker> until the end of your opponent's turn"
+    process:
+      - unsuspend: { target: source }
+      - grant_keyword:
+          target: source
+          keyword: Blocker
+          expiry: end_of_opponents_turn

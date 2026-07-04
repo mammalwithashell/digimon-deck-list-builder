@@ -1,0 +1,297 @@
+# BT23-032 Shakkoumon — Digimon, Lv.5, Yellow/Black, DP 8000, Cost 8.
+# Traits (printed): Mutant/Hudie/CS. Attribute: Free.
+# (Rule) Trait: Has [Angel] Type. — official Bandai DB (card image, bottom of
+#   effect box) grants this Rule trait; API-ingested `cards.json`/`type_eng`
+#   silently drops it (per CLAUDE.md source priority — official DB > cards.json
+#   for Rule-granted traits). Folded into `traits:` below.
+#
+# Digivolution requirements (official Bandai DB bundle — authoritative):
+#   Standard: Yellow Lv.4 / Cost 4  AND  Black Lv.4 / Cost 4 (two circles —
+#     card_overrides.json corrects cards.json's evo_costs, which only carried
+#     the Yellow entry, by adding the Black Lv.4/cost 4 circle).
+#   Alt-digivolve: Lv.4 w/[CS] trait / Cost 3 (card image "Digivolve Lv.4 w/
+#     [CS] trait: Cost 3").
+#   DNA Digivolve: Yellow Lv.4 + (Black or Blue) Lv.4 / Cost 0 (card image +
+#     dna_costs in the per-card JSON).
+#
+# Printed text (card image — authoritative):
+#
+#   [When Digivolving] Until your opponent's turn ends, give 1 of their
+#   Digimon "[Start of Your Main Phase] This Digimon attacks." Then, if DNA
+#   digivolving, ＜De-Digivolve 1＞ 1 of their Digimon. (Trash the top card.
+#   You can't trash past level 3 cards.)
+#   [All Turns] [Once Per Turn] When this Digimon would leave the battle area
+#   other than by your effects, you may play 1 level 4 or lower yellow, black
+#   or [CS] trait Digimon card from its digivolution cards without paying the
+#   cost.
+#
+# Inherited effect (card image — identical All-Turns OPT clause):
+#   [All Turns] [Once Per Turn] When this Digimon would leave the battle area
+#   other than by your effects, you may play 1 level 4 or lower yellow, black
+#   or [CS] trait Digimon card from its digivolution cards without paying the
+#   cost.
+#
+# DCGO C# reference:
+#   C:/Users/james/Documents/digimon-deck-list-builder-1/DCGO/Assets/Scripts/CardEffect/BT23/Yellow/BT23_032.cs
+#
+# ─── DCGO crosscheck (per region) ────────────────────────────────────────────
+#
+# Region "Alternative Digivolution Condition" (None):
+#   AddSelfDigivolutionRequirementStaticEffect(Level4 && HasCSTraits, cost 3,
+#   ignoreDigivolutionRequirement: false).
+#   → alt_paths: digivolve from { level_eq: 4, trait_has: CS } cost 3.
+#
+# Region "DNA Digivolution" (None):
+#   AddJogressConditionClass: element1 = Yellow Lv.4 ("a level 4 Yellow
+#   Digimon"), element2 = Black-or-Blue Lv.4 ("a level 4 Black or Blue
+#   Digimon"), memoryCost 0.
+#   → alt_paths: dna_digivolve materials [{level_eq:4, color_is:yellow},
+#     {level_eq:4, any_of:[color_is:black, color_is:blue]}], cost 0.
+#
+# Region "When Digivolving" (OnEnterFieldAnyone):
+#   CanUseCondition: IsExistOnBattleAreaDigimon && CanTriggerWhenDigivolving.
+#   ActivateCoroutine:
+#     1. If HasMatchConditionPermanent(opp Digimon exists): SelectPermanentEffect
+#        (mandatory — canNoSelect: false) picks 1 opp Digimon → installs an
+#        UntilOwnerTurnEndEffects entry that fires "[Start of Your Main Phase]
+#        Attack with this Digimon" (mandatory attack, SetCanNotSelectNotAttack)
+#        until the OPPONENT's (the granted Digimon owner's) turn ends.
+#        → select_opponent_permanent (mandatory) + grant_triggered_effect
+#          { timing: start_of_your_main_phase, expiry: end_of_opponents_turn,
+#            body: [force_attack{attacker:carrier, targets:any}] }.
+#          Verified substrate: tests/dsl/granted_effect_selection_body.rs
+#          (round-2 gap closure, written specifically for this card) + the
+#          EX10-034 Blastmon sibling clause (identical shape, shipped).
+#     2. If CardEffectCommons.IsJogress(hashtable) (this digivolve was DNA) AND
+#        a match-condition opp Digimon still exists: SelectPermanentEffect
+#        (mandatory) picks 1 opp Digimon → IDegeneration(count: 1) —
+#        <De-Digivolve 1>.
+#        → modeled as a SEPARATE `on_dna_digivolve` triggered clause (not a
+#        process-level `if { condition: { dna_origin: true } }` inside the
+#        when_digivolving clause) — the BT16-025 Paildramon precedent:
+#        `dna_origin` is not evaluated by the engine's process-step `if`
+#        condition evaluator (G-ENGINE-DNA-ORIGIN-PRED gap); `on_dna_digivolve`
+#        timing is semantically equivalent (fires iff the preceding digivolve
+#        was DNA) and avoids the gap entirely.
+#        → select_opponent_permanent (mandatory) + de_digivolve
+#          { amount: 1, stop_at_level: 3 } (printed parenthetical: "You can't
+#          trash past level 3 cards").
+#
+# Region "All Turns Shared" / "All Turns - OPT" / "All Turns - OPT - ESS"
+#   (WhenRemoveField):
+#   CanUseCondition: IsExistOnBattleAreaDigimon && CanTriggerWhenRemoveField &&
+#     !IsByEffect(effect => effect.EffectSourceCard.Owner == card.Owner)
+#     — i.e. "other than by YOUR (the carrier owner's) effects". This is the
+#     `ReplacementCause::OwnEffect` classification (relative to the carrier's
+#     controller) documented at `cards/keyword_effects.rs` Partition region —
+#     "IsOwnerEffect(cardEffect, card)" is exactly `own_effect` in our
+#     vocabulary. Modeled as a non-cancelling `kind: replacement` clause (no
+#     `cancel_replacement` step — the leave is NOT prevented, matching
+#     BT25-025 Aegiochusmon's `<Decode>` idiom and BT17-095's Clause B "value-
+#     add, not a prevention" precedent) with
+#     `active_when: { none_of: [replacement_cause: own_effect] }`.
+#   SharedActivateCoroutine: filters DigivolutionCards by
+#     IsDigimon && Level<=4 && (Yellow || Black || HasCSTraits) &&
+#     CanPlayAsNewPermanent(payCost:false); canNoSelect:true (the printed "you
+#     may"); SelectCardEffect over the carrier's own DigivolutionCards, root
+#     custom; PlayPermanentCards payCost:false, activateETB:true.
+#   → select_material { of_permanent: replacement_subject, optional: true,
+#       filter: { all_of: [kind:digimon, level_lte:4, any_of:[color_is:yellow,
+#       color_is:black, trait_has:CS]] } } + play_from_materials { target:
+#       replacement_subject, source_index: <picked>, cost_delta: free }.
+#   Face-up clause (`activateClass.SetHashString("BT23_032_AT")`) and inherited
+#   clause (`SetIsInheritedEffect(true)`, `SetHashString("BT23_032_AT_ESS")`)
+#   share the identical printed text and OPT gate — but DCGO installs them as
+#   TWO SEPARATE ActivateClass registrations on the SAME `WhenRemoveField`
+#   timing (one face-up-scoped, one inherited-scoped watching the carrier's
+#   TOP card specifically). Modeled as two `kind: replacement` clauses
+#   (`scope: face_up` implicit default + `scope: inherited`), each
+#   `once_per_turn: true` — DCGO's `SetHashString` gives each its own OPT
+#   bucket, so playing 1 source via the face-up clause does not lock out the
+#   inherited clause (and vice versa) within the same removal, mirroring two
+#   independently-tracked OPT counters. Both clauses observe the exact same
+#   `when_would_leave_battle_area` event on this permanent; DCGO's inherited
+#   guard additionally requires `permanent == TopCard.PermanentOfThisCard()`
+#   (i.e. the carrier is still this exact permanent when it fires) — captured
+#   implicitly by both clauses being anchored to the same carrier's own
+#   `replacement_subject`.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                     | Status |
+# |------------------------------------------------------------------------|--------|
+# | (Rule) Trait: Has [Angel] Type.                                       | IMPLEMENTED (folded into traits:) |
+# | Standard digivolve Yellow Lv.4 / Cost 4                               | IMPLEMENTED (printed evo_costs, override-corrected) |
+# | Standard digivolve Black Lv.4 / Cost 4                                | IMPLEMENTED (printed evo_costs, override-corrected) |
+# | Alt-digivolve Lv.4 w/[CS] trait / Cost 3                              | IMPLEMENTED (alt_paths digivolve trait_has CS) |
+# | DNA Digivolve Yellow Lv.4 + Black/Blue Lv.4 / Cost 0                  | IMPLEMENTED (alt_paths dna_digivolve) |
+# | [WD] give 1 opp Digimon mandatory Start-of-Main attack until opp EoT  | IMPLEMENTED (select_opponent_permanent + grant_triggered_effect + force_attack) |
+# | [WD] then if DNA: <De-Digivolve 1> 1 opp Digimon (stop at Lv.3)       | IMPLEMENTED (on_dna_digivolve + de_digivolve) |
+# | [All Turns][OPT] would-leave other than by own effects → play source | IMPLEMENTED (kind: replacement, non-cancelling, own_effect exclusion) |
+# | Inherited [All Turns][OPT] identical would-leave clause               | IMPLEMENTED (scope: inherited twin clause) |
+#
+# All clauses IMPLEMENTED — no remaining gaps.
+
+card: BT23-032
+name: Shakkoumon
+kind: digimon
+level: 5
+color: [yellow, black]
+cost: 8
+dp: 8000
+traits: [Mutant, Hudie, CS, Angel]
+attribute: Free
+
+alt_paths:
+  # ─── Standard digivolve: Yellow Lv.4 / Cost 4 ───────────────────────────────
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+
+  # ─── Standard digivolve: Black Lv.4 / Cost 4 ────────────────────────────────
+  # (card_overrides.json correction — cards.json's evo_costs only carried the
+  # Yellow circle; the official Bandai DB / card image show both.)
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+
+  # ─── Alt-digivolve: Lv.4 w/[CS] trait / Cost 3 ──────────────────────────────
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(Level4 && HasCSTraits, 3).
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: CS }
+    cost: 3
+
+  # ─── DNA Digivolve: Yellow Lv.4 + (Black or Blue) Lv.4 / Cost 0 ─────────────
+  - kind: dna_digivolve
+    materials:
+      - { level_eq: 4, color_is: yellow }
+      - filter:
+          all_of:
+            - level_eq: 4
+            - any_of:
+                - color_is: black
+                - color_is: blue
+    cost: 0
+
+effects:
+  # ─── Clause A: [When Digivolving] give 1 opp Digimon a mandatory Start-of- ──
+  # ─── Main attack until the opponent's turn ends ─────────────────────────────
+  #
+  # "[When Digivolving] Until your opponent's turn ends, give 1 of their
+  # Digimon '[Start of Your Main Phase] This Digimon attacks.'" — mandatory
+  # select (DCGO canNoSelect: false); the granted body itself is a mandatory
+  # attack (SetCanNotSelectNotAttack). EX10-034 Blastmon sibling clause —
+  # identical shape.
+  - when: when_digivolving
+    summary: "[When Digivolving] Give 1 opponent Digimon '[Start of Your Main Phase] This Digimon attacks.' until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: forced_target
+          filter:
+            kind: digimon
+          prompt: "Choose 1 of your opponent's Digimon to gain '[Start of Your Main Phase] This Digimon attacks.'"
+      - grant_triggered_effect:
+          target: forced_target
+          timing: start_of_your_main_phase
+          expiry: end_of_opponents_turn
+          body:
+            - force_attack:
+                attacker: carrier
+                targets: any
+                prompt: "This Digimon attacks"
+
+  # ─── Clause B: [On DNA Digivolve] <De-Digivolve 1> 1 opp Digimon ────────────
+  #
+  # "Then, if DNA digivolving, ＜De-Digivolve 1＞ 1 of their Digimon." Modeled
+  # as a separate `on_dna_digivolve` triggered clause (BT16-025 Paildramon
+  # precedent) rather than a `dna_origin` process-`if` condition inside Clause
+  # A, because that predicate leaf is not evaluated by the engine's process-
+  # step `if` evaluator (G-ENGINE-DNA-ORIGIN-PRED). `on_dna_digivolve` fires
+  # iff the preceding digivolve was via DNA — semantically identical to the
+  # printed "if DNA digivolving" branch. Mandatory select (DCGO canNoSelect:
+  # false); `stop_at_level: 3` is the printed parenthetical ("You can't trash
+  # past level 3 cards").
+  - when: on_dna_digivolve
+    summary: "[On DNA Digivolve] <De-Digivolve 1> 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dd_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to <De-Digivolve 1>"
+      - de_digivolve:
+          target: dd_target
+          amount: 1
+          stop_at_level: 3
+
+  # ─── Clause C: [All Turns][OPT] would-leave other than by own effects → ─────
+  # ─── may play 1 Lv.4- yellow/black/[CS] source free ─────────────────────────
+  #
+  # "[All Turns] [Once Per Turn] When this Digimon would leave the battle area
+  # other than by your effects, you may play 1 level 4 or lower yellow, black
+  # or [CS] trait Digimon card from its digivolution cards without paying the
+  # cost." Non-cancelling replacement (no `cancel_replacement` — the leave is
+  # NOT prevented; BT25-025 <Decode> / BT17-095 Clause B precedent). "Other
+  # than by your effects" = exclude `replacement_cause: own_effect` (DCGO
+  # `!IsByEffect(effect => effect.EffectSourceCard.Owner == card.Owner)` —
+  # cause classification is relative to the carrier's OWNER, matching the
+  # documented Partition `own_effect`/`opponent_effect` semantics in
+  # `cards/keyword_effects.rs`).
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    summary: "[All Turns][Once Per Turn] When this Digimon would leave other than by your effects, you may play 1 level 4 or lower yellow, black or [CS] trait Digimon card from its digivolution cards without paying the cost"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: source_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - color_is: yellow
+                  - color_is: black
+                  - trait_has: CS
+          prompt: "Choose a level 4 or lower yellow, black or [CS] trait Digimon card to play free"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: source_pick
+          cost_delta: free
+
+  # ─── Clause D: Inherited [All Turns][OPT] identical would-leave clause ─────
+  #
+  # DCGO installs this as a SEPARATE ActivateClass (SetIsInheritedEffect(true),
+  # its own SetHashString OPT bucket) on the same WhenRemoveField timing —
+  # a distinct OPT counter from Clause C's face-up scope.
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    once_per_turn: true
+    active_when:
+      none_of:
+        - replacement_cause: own_effect
+    summary: "[Inherited][All Turns][Once Per Turn] When this Digimon would leave other than by your effects, you may play 1 level 4 or lower yellow, black or [CS] trait Digimon card from its digivolution cards without paying the cost"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: source_pick_inh
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - color_is: yellow
+                  - color_is: black
+                  - trait_has: CS
+          prompt: "Choose a level 4 or lower yellow, black or [CS] trait Digimon card to play free"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: source_pick_inh
+          cost_delta: free

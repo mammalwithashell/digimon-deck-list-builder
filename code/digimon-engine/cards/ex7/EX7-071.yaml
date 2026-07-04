@@ -1,0 +1,192 @@
+# EX7-071 Hurricane Screw Shot — Option, Purple, Use cost 6.
+# Traits: Three Musketeers.
+#
+# Printed card text (official Bandai DB — data/card_bundles/EX7-071.md,
+# verbatim; confirmed against the card image):
+#
+#   When effects trash this card from digivolution cards, gain 1 memory.
+#   While you have a [Three Musketeers] trait Digimon, you may ignore this
+#   card's color requirements.
+#   [Main] Delete 1 of your opponent's level 3, 1 of their level 4, and 1 of
+#   their level 5 Digimon. Then, place this card as the bottom digivolution
+#   card of 1 of your [Three Musketeers] trait Digimon.
+#
+# Security Effect:
+#   [Security] Delete 1 of your opponent's level 3, 1 of their level 4, and
+#   1 of their level 5 Digimon.
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/EX7/Purple/EX7_071.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# OnDigivolutionCardDiscarded (inherited): CanUse =
+#   CanTriggerOnTrashSelfDigivolutionCard; CanActivate = IsExistOnTrash(card)
+#   && CanAddMemory -> AddMemory(1). Modelled as `scope: inherited`,
+#   `when: on_digivolution_card_trashed`, gated on
+#   `trashed_source_card_id_is: EX7-071` + `event_target_owner: you` (no
+#   host-trait restriction printed on THIS card — unlike the Mineral/Rock
+#   LIBERATOR sibling idiom, any own Digimon's stack qualifies).
+#
+# None timing — IgnoreColorConditionClass gated on
+#   `>=1 Three Musketeers Digimon on the battle area`, CardCondition restricted
+#   to `cardSource == card` (this card only). Functionally identical to the
+#   more common `UseRequirements` idiom (ST23-15 e-Pulse: "Use Req —
+#   UseRequirements(card, ...) -> use_requirement"), just wired through a
+#   different DCGO factory class for the same net effect (ignore THIS card's
+#   printed color requirement while a [Three Musketeers] Digimon is in play).
+#   Modelled as the top-level `use_requirement:` field.
+#
+# OptionSkill ([Main]): three INDEPENDENT sequential SelectPermanentEffect
+#   calls, each gated by its own HasMatchConditionPermanent (level 3 / level 4
+#   / level 5 opponent Digimon) and each naturally self-skipping when no
+#   candidate exists (mirrors EX4-073 Omnimon Alter-B's own documented
+#   precedent: "printed text grammatically reads as one mandatory sentence...
+#   but each arm independently no-ops if no legal target exists"). All three
+#   picks accumulate into one `selectedPermanents` list, destroyed together
+#   via a single `DestroyPermanentsClass(...).Destroy()` call AFTER all three
+#   selects resolve — modelled here as three back-to-back
+#   {select_opponent_permanent, delete_permanent} pairs (functionally
+#   equivalent: no OnDeletion timing in this card's text depends on
+#   simultaneity, and each `delete_permanent` call resolves immediately).
+#
+# ─── DSL-GAP — "Then, place this card as the bottom digivolution card of 1 of
+#     your [Three Musketeers] Digimon" [G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL] ─
+#
+# DCGO: AFTER the triple delete resolves, a `CanSelectPermanentCondition`
+# select over the controller's own [Three Musketeers] trait Digimon
+# (canNoSelect: false — mandatory IF a candidate exists, silently skipped if
+# none) -> `AddDigivolutionCardsBottom` (face-up; DCGO does not pass
+# `isFacedown: true` here, unlike the EX9-058 Ver.5 idiom).
+#
+# The ENGINE primitive for this exists and is purpose-built for this exact
+# card group: `EffectContext::place_self_under_permanent` in
+# `code/digimon-engine/src/effect_context/action/lifecycle.rs` — its own doc
+# comment cites "P-180 / EX7-070 / EX7-071 (Gap 1,
+# G-OPTION-PLACE-SELF-UNDER-PERMANENT-ON-PLAY-PATH)" by name. It correctly
+# claims the in-flight `pending_option` (the Option card mid-[Main]-resolution
+# is NOT in hand/trash/battle_area — `play_option_core` parks it in the
+# single-occupancy `pending_option` slot before running the [Main] body), so
+# that the subsequent `dispose_option` (step 8 of `play_option_core`) finds
+# nothing to trash and the card ends up seated under `target` instead.
+#
+# BUT there is no DSL step wired to this primitive:
+#   - `place_as_bottom_source: { source: self, ... }` does NOT work here — its
+#     `self` binding resolves to `ResolvedBinding::Card(ctx.source_card)`, then
+#     `resolve_card_handle_source_ref` scans hand/trash/security/battle_area/
+#     reveal for that CardHandle. An in-flight Option mid-[Main] is in NONE of
+#     those zones (it is parked in `pending_option`), so the scan returns
+#     `None` and the step silently no-ops (confirmed via
+#     `ex7_071_main_deletes_all_three_levels_and_self_places` failing: the card
+#     fell through to normal `dispose_option` trash instead of being seated).
+#     This DSL step is correct for a DIFFERENT case — a battle-area permanent
+#     placing itself (e.g. BT20-083 Omekamon's `on_deletion` clause, where
+#     `self` resolves to a live top-of-stack card).
+#   - `move_self_option_under_permanent` also does NOT apply — its engine impl
+#     requires `self.source_permanent` (a live battle-area permanent); an
+#     in-flight `main_from_hand` Option has no `source_permanent` (per its own
+#     doc comment: "relocate THIS effect's source Option (an in-battle-area
+#     field Option) ... does NOT apply" to the play-path case, which is why
+#     `place_self_under_permanent` was written as its sibling).
+#   - No other shipped DSL step reaches `place_self_under_permanent`.
+#
+# Per the no-approximations policy (rule 17) and rule 28 (widen the substrate,
+# don't route around it — never invent a workaround for a missing verb), the
+# self-placement tail is OMITTED from this YAML rather than authored with a
+# step that silently no-ops. Closing this gap requires adding a
+# `place_self_under_permanent: { target: <binding>, face_down: <bool> }` DSL
+# step (spec: step.rs / compile.rs / compiled.rs) that dispatches to the
+# existing engine primitive — sibling of `move_self_option_under_permanent`'s
+# wiring. Once landed, add:
+#   - select_own_permanent:
+#       bind_as: tm_target
+#       filter: { kind: digimon, trait_has: "Three Musketeers" }
+#       prompt: "Place this card as the bottom digivolution card of 1 of your [Three Musketeers] Digimon"
+#   - place_self_under_permanent: { target: tm_target, face_down: false }
+# as the tail of the [Main] clause below. Tests for this clause are
+# `#[ignore]`'d under G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL.
+#
+# SecuritySkill ([Security]): the SAME three independent
+#   {select level 3 / level 4 / level 5 opponent Digimon -> accumulate}
+#   sequence, batch-destroyed — but with NO trailing self-placement step (the
+#   printed [Security] text has no "place this card..." clause). Modelled as
+#   `when: on_security` with only the triple delete, no placement tail.
+
+card: EX7-071
+name: "Hurricane Screw Shot"
+kind: option
+color: [purple]
+cost: 6
+traits: [Three Musketeers]
+
+# "While you have a [Three Musketeers] trait Digimon, you may ignore this
+# card's color requirements." — a battle-area Three Musketeers Digimon
+# satisfies the Option's color requirement (ignore color).
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    kind: digimon
+    trait_has: "Three Musketeers"
+
+effects:
+  # ─── [Main] triple level-filtered delete ────────────────────────────────────
+  #
+  # NOTE: the printed "Then, place this card as the bottom digivolution card
+  # of 1 of your [Three Musketeers] trait Digimon" tail is BLOCKED — see the
+  # G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL note above. Without it, the
+  # resolved Option falls through to the engine's default Standard dispose
+  # (trashed) instead of being seated under a chosen Digimon. This is a
+  # confirmed, logged gap — not a silent omission.
+  - when: main_from_hand
+    summary: "[Main] Delete 1 opponent level 3, 1 level 4, and 1 level 5 Digimon (self-placement tail BLOCKED — G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL)"
+    process:
+      # Arm 1: delete 1 opponent level 3 Digimon. Self-skips if none exist.
+      - select_opponent_permanent:
+          bind_as: lv3_target
+          filter: { kind: digimon, level_eq: 3 }
+          prompt: "Delete 1 of your opponent's level 3 Digimon"
+      - delete_permanent: { target: lv3_target }
+      # Arm 2: delete 1 opponent level 4 Digimon. Self-skips if none exist.
+      - select_opponent_permanent:
+          bind_as: lv4_target
+          filter: { kind: digimon, level_eq: 4 }
+          prompt: "Delete 1 of your opponent's level 4 Digimon"
+      - delete_permanent: { target: lv4_target }
+      # Arm 3: delete 1 opponent level 5 Digimon. Self-skips if none exist.
+      - select_opponent_permanent:
+          bind_as: lv5_target
+          filter: { kind: digimon, level_eq: 5 }
+          prompt: "Delete 1 of your opponent's level 5 Digimon"
+      - delete_permanent: { target: lv5_target }
+
+  # ─── Inherited — gain 1 memory when trashed from digivolution cards ────────
+  - scope: inherited
+    when: on_digivolution_card_trashed
+    condition:
+      all_of:
+        - event_target_owner: you
+        - trashed_source_card_id_is: EX7-071
+    summary: "When an effect trashes this card from digivolution cards, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  # ─── [Security] same triple level-filtered delete, no self-placement ───────
+  - when: on_security
+    summary: "[Security] Delete 1 opponent level 3, 1 level 4, and 1 level 5 Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: sec_lv3_target
+          filter: { kind: digimon, level_eq: 3 }
+          prompt: "Delete 1 of your opponent's level 3 Digimon"
+      - delete_permanent: { target: sec_lv3_target }
+      - select_opponent_permanent:
+          bind_as: sec_lv4_target
+          filter: { kind: digimon, level_eq: 4 }
+          prompt: "Delete 1 of your opponent's level 4 Digimon"
+      - delete_permanent: { target: sec_lv4_target }
+      - select_opponent_permanent:
+          bind_as: sec_lv5_target
+          filter: { kind: digimon, level_eq: 5 }
+          prompt: "Delete 1 of your opponent's level 5 Digimon"
+      - delete_permanent: { target: sec_lv5_target }

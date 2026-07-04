@@ -1,0 +1,251 @@
+# EX11-046 Galacticmon — Digimon, Lv.6, Black, DP 14000, Cost 14.
+# Traits: Unknown / LIBERATOR. Form: Mega. Attribute: Unknown.
+#
+# Printed card text (card image EX11-046.webp + data/card_bundles/EX11-046.md
+# — official Bandai DB, authoritative; matches data/cards.json verbatim):
+#
+#   [On Play] [When Digivolving] Choose 1 of your opponent's highest play
+#   cost Digimon and delete all of their other Digimon. Then, if this
+#   Digimon has 4 or more [Vemmon] in its digivolution cards, until your
+#   opponent's turn ends, it gains <Blocker> (This Digimon can block in the
+#   blocker timing.) and isn't affected by their effects.
+#   [End of Opponent's Turn] This Digimon may digivolve into [Galacticmon]
+#   in the hand or trash, ignoring digivolution requirements and without
+#   paying the cost.
+#
+#   Assembly -6: 8 cards w/[Vemmon] in text.
+#
+# NOTE ON LEVEL: the task brief said "Lv7" but the printed card (image +
+# official Bandai DB bundle + cards.json) is unambiguously Lv.6 — the
+# printed face is the authority (CLAUDE.md "Look at the actual card") and
+# is used here.
+#
+# Standard digivolve box (data/card_bundles/EX11-046.md / cards.json
+# evo_costs): Black Lv.5 / cost 6.
+# Special digivolution conditions (card image + cards.json xros_req):
+#   [Digivolve] [Snatchmon]: Cost 9
+#   [Digivolve] [Galacticmon]: Cost 5
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX11/Black/EX11_046.cs
+#
+# ─── DCGO crosscheck ────────────────────────────────────────────────────────
+#
+# Alt digivolution conditions (EffectTiming.None,
+# AddSelfDigivolutionRequirementStaticEffect): TopCard.EqualsCardName
+# ("Snatchmon") -> cost 9; TopCard.EqualsCardName("Galacticmon") -> cost 5.
+# Both are exact-name gates (not level/color), modeled as `kind: digivolve`
+# `from: { name_is: "..." }` alt-paths (AD1-025 / P-220 precedent).
+#
+# Shared [On Play]/[When Digivolving] clause (`ActivateClassesForSharedEffects`,
+# onPlay: true, whenDigivolving: true, optional: false):
+#   1. `CanSelectHighestCostCondition` = `CardEffectCommons.IsMaxCost(...)`
+#      over the opponent's battle-area Digimon. If exactly 1 permanent
+#      matches, it is auto-selected (no UI); if >1 match (a play-cost tie),
+#      the controller (card.Owner, NOT the opponent) picks 1 via
+#      SelectPermanentEffect. Modeled as `select_opponent_permanent` with
+#      `selector: highest_play_cost` (G-HIGHEST-PLAY-COST-SELECTOR,
+#      EX11-044 precedent) — the engine always exposes even a 1-candidate
+#      select as a 1-option pick (no silent auto-resolve), which is more
+#      RL-faithful than DCGO's own UI shortcut while producing the same
+#      resolved outcome.
+#   2. Every other opponent Digimon is then deleted
+#      (`DestroyPermanentsClass` over `GetBattleAreaDigimons().Filter(perm
+#      != permanent)`). Modeled as `for_each { over: { of: opponent, kind:
+#      digimon, not_in_binding: kept }, body: delete_permanent }`
+#      (EX3-063 "keep 1, delete the rest" precedent).
+#      Official Q&A (data/card_bundles/EX11-046.md): "You can't choose your
+#      opponent's Digimon [that aren't the max-cost target], and all
+#      opponent's Digimon that can't be chosen are deleted." — confirms the
+#      selector-restricted-to-max-cost + delete-the-rest shape is correct;
+#      there is no separate "0 candidates -> delete everything" branch
+#      reachable in practice (the max-cost condition always matches >=1
+#      Digimon whenever the opponent has any Digimon at all; if the
+#      opponent has zero Digimon, `kept` is never bound and the `for_each`
+#      predicate's `not_in_binding` leaf conservatively evaluates false for
+#      every candidate, matching DCGO's synchronized behaviour of "nothing
+#      to delete when the opponent has no Digimon").
+#   3. "Then, if this Digimon has 4 or more [Vemmon] in its digivolution
+#      cards" — `card.PermanentOfThisCard().DigivolutionCards.Count(cs =>
+#      cs.EqualsCardName("Vemmon")) >= 4`. Modeled as an `if:` step gated on
+#      `self_source_count: { filter: { name_is: Vemmon }, op: gte, value: 4
+#      }` (G-DSL-SELF-SOURCE-COUNT-THRESHOLD, BT21-006 Tsumemon precedent —
+#      same "4+ [Vemmon] digivolution cards" idiom). NOTE: DCGO's own count
+#      predicate is `EqualsCardName("Vemmon")` (exact name), not the
+#      wider "[Vemmon] in text" HasText scan used by the Assembly/BT21-056
+#      "in its text" idiom — the printed clause here reads "has 4 or more
+#      [Vemmon] in its digivolution cards" (a source-card NAME count, not a
+#      text-contains count), so `name_is: Vemmon` is the faithful filter,
+#      distinct from the Assembly clause's "8 cards w/[Vemmon] in TEXT"
+#      (`in_text_contains`) below.
+#   4. On success: `CardEffectCommons.GainBlocker(..., UntilOpponentTurnEnd)`
+#      + a `CanNotAffectedClass` gated on `EffectSourceCard.Owner ==
+#      card.Owner.Enemy` (i.e. "isn't affected by THEIR [opponent's]
+#      effects") for the same duration. Modeled as `grant_keyword: Blocker`
+#      (expiry: end_of_opponents_turn) + the 4-source-kind opponent-only
+#      immunity idiom (`grant_effect_immunity` x4 over
+#      digimon/tamer/option/rule, source_controller: opponent, expiry:
+#      end_of_opponents_turn) — BT13-088 precedent, same "isn't affected by
+#      your opponent's effects until end of opp turn" shape.
+#
+# [End of Opponent's Turn] free digivolve into [Galacticmon] (EffectTiming.
+# OnEndTurn, gated IsOpponentTurn): `CanActivateCondition` checks the owner's
+# hand OR trash for a card named "Galacticmon"; if both zones have a match,
+# DCGO shows an explicit hand-vs-trash bool choice before
+# `DigivolveIntoHandOrTrashCard(payCost: false, ignoreRequirements: All)`.
+# Modeled as `select_union_zone { zones: [hand, trash], filter: { name_is:
+# "Galacticmon" }, optional: true }` feeding `effect_initiated_digivolve`
+# (`from_hand:` resolves a union-zone binding to its TRUE zone via
+# `resolve_card_source_ref` regardless of origin — EX10-068 precedent for
+# the union-zone-across-hand-and-trash idiom) with `cost: free` +
+# `ignore_requirements: true`. The union-zone single prompt is RL-equivalent
+# to DCGO's two-step "which zone, then which card" UI (there is only ever
+# one card name being searched, so the reachable outcome set is identical)
+# and is the more direct/faithful action-space exposure per CLAUDE.md §17.
+#
+# Assembly -6: 8 cards w/[Vemmon] in text (AddAssemblyConditionClass,
+# elementCount: 8, reduceCost: 6, CanSelectCardCondition = `cardSource.
+# HasText("Vemmon")` — the whole-card HasText scan: name + also-treated-as /
+# DigiXros aliases + traits + printed effect/inherited/security text).
+# Modeled as a single `materials:` entry with `repeat: { min: 8, max: 8 }`
+# over `in_text_contains: "Vemmon"` (G-DSL-IN-TEXT-CONTAINS — the dedicated
+# whole-card HasText-equivalent leaf; supersedes the older 3-axis `any_of:
+# [effect_text_contains, trait_has, name_contains]` approximation used by
+# BT21-056), `zones: [trash]` + `stack_under: true` (required shape for
+# `kind: assembly` materials per the engine's `resolve_eligible_assembly` —
+# AD1-025 / P-220 precedent), `cost: 6` (the printed cost REDUCTION amount,
+# 14 -> 8).
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                                  | Status      |
+# |----------------------------------------------------------------------|-------------|
+# | Standard digivolve box (Black Lv.5 / cost 6)                        | IMPLEMENTED |
+# | [Digivolve] [Snatchmon]: Cost 9 alt-path                            | IMPLEMENTED |
+# | [Digivolve] [Galacticmon]: Cost 5 alt-path                          | IMPLEMENTED |
+# | [OP][WD] choose opp highest-cost Digimon, delete all others         | IMPLEMENTED |
+# | [Then] 4+ Vemmon sources -> Blocker + opp-effect immunity until EOT | IMPLEMENTED |
+# | [End of Opponent's Turn] free digivolve into Galacticmon (hand/trash, ignoring reqs) | IMPLEMENTED |
+# | Assembly -6: 8 cards w/[Vemmon] in text                             | IMPLEMENTED |
+
+card: EX11-046
+name: Galacticmon
+kind: digimon
+level: 6
+color: [black]
+cost: 14
+dp: 14000
+traits: [Unknown, LIBERATOR]
+form: Mega
+attribute: Unknown
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 6
+
+  # "[Digivolve] [Snatchmon]: Cost 9" — DCGO
+  # AddSelfDigivolutionRequirementStaticEffect gated on
+  # TopCard.EqualsCardName("Snatchmon") (exact name, not level/color).
+  - kind: digivolve
+    from: { name_is: "Snatchmon" }
+    cost: 9
+
+  # "[Digivolve] [Galacticmon]: Cost 5" — same idiom, gated on
+  # TopCard.EqualsCardName("Galacticmon").
+  - kind: digivolve
+    from: { name_is: "Galacticmon" }
+    cost: 5
+
+  # Assembly -6: 8 cards w/[Vemmon] in text, from trash, stacked under this
+  # card. `repeat: {min:8, max:8}` on a single filter entry (BT19-070
+  # precedent for the count-on-one-filter shape); `zones: [trash]` +
+  # `stack_under: true` required for `kind: assembly` (AD1-025 / P-220).
+  # `in_text_contains` is the dedicated whole-card HasText-equivalent leaf
+  # (G-DSL-IN-TEXT-CONTAINS) — matches name/aliases/traits/printed text.
+  - kind: assembly
+    materials:
+      - filter:
+          in_text_contains: "Vemmon"
+        repeat: { min: 8, max: 8 }
+        zones: [trash]
+        stack_under: true
+    cost: 6
+
+effects:
+  # ─── [On Play][When Digivolving] choose opp's highest-cost Digimon, ────────
+  # delete all their other Digimon; then conditional Blocker + immunity ──────
+  - when: [on_play, when_digivolving]
+    summary: "[OP][WD] Choose 1 of opponent's highest play cost Digimon and delete all their other Digimon. Then, if 4+ [Vemmon] sources, gain Blocker + opp-effect immunity until end of opp turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: kept
+          filter: { kind: digimon }
+          selector: highest_play_cost
+          prompt: "Choose 1 of your opponent's highest play cost Digimon to keep"
+      - for_each:
+          over:
+            all_of:
+              - of: opponent
+              - zone: [battle_area]
+              - kind: digimon
+              - not_in_binding: kept
+          bind_as: victim
+          body:
+            - delete_permanent: { target: victim }
+      - if:
+          condition:
+            self_source_count:
+              filter: { name_is: "Vemmon" }
+              op: gte
+              value: 4
+          then:
+            - grant_keyword:
+                target: source
+                keyword: Blocker
+                expiry: end_of_opponents_turn
+            - grant_effect_immunity:
+                target: source
+                source_kind: digimon
+                source_controller: opponent
+                expiry: end_of_opponents_turn
+            - grant_effect_immunity:
+                target: source
+                source_kind: tamer
+                source_controller: opponent
+                expiry: end_of_opponents_turn
+            - grant_effect_immunity:
+                target: source
+                source_kind: option
+                source_controller: opponent
+                expiry: end_of_opponents_turn
+            - grant_effect_immunity:
+                target: source
+                source_kind: rule
+                source_controller: opponent
+                expiry: end_of_opponents_turn
+
+  # ─── [End of Opponent's Turn] free digivolve into Galacticmon ──────────────
+  # from hand or trash, ignoring digivolution requirements, no cost ─────────
+  - when: end_of_opponents_turn
+    summary: "[End of Opponent's Turn] This Digimon may digivolve into [Galacticmon] in the hand or trash, ignoring digivolution requirements and without paying the cost"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand, trash]
+          name_is: "Galacticmon"
+        n: 1
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: next_form
+          optional: true
+          filter:
+            name_is: "Galacticmon"
+          prompt: "You may digivolve this Digimon into [Galacticmon] in the hand or trash, ignoring digivolution requirements and without paying the cost"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: next_form
+          cost: free
+          ignore_requirements: true

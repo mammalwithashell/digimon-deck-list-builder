@@ -1,0 +1,150 @@
+# BT21-040 Agumon — Digimon, Lv.3, Yellow/Red, DP 1000, Cost 3.
+# Traits: Dinosaur/Hero. Attribute: Vaccine.
+#
+# Printed card text (data/card_bundles/BT21-040.md — official Bandai DB;
+# confirmed against the card image):
+#
+#   [Digivolve box / xros_req] [Koromon]/Lv.2 w/[Hero] trait: Cost 0
+#
+#   [Your Turn] While your opponent has a level 6 or higher Digimon or you
+#   have 3 or more [Hero] trait Tamers with different names, this Digimon
+#   may digivolve into [ShineGreymon] in the hand for a digivolution cost
+#   of 4, ignoring digivolution requirements.
+#
+#   Inherited: [Your Turn] This Digimon gets +2000 DP.
+#
+#   Standard evo_costs: Yellow Lv.2, cost 1 (cards.json `evo_costs`).
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT21/Yellow/BT21_040.cs
+#
+# ─── Source-priority cross-check (printed text > DCGO) ───────────────────────
+#
+# DCGO region "Alternative Digivolution Condition" (EffectTiming.None,
+# AddSelfDigivolutionRequirementStaticEffect):
+#   PermanentCondition = TopCard.EqualsCardName("Koromon")
+#     || (TopCard.HasHeroTraits && TopCard.IsLevel2);
+#   digivolutionCost: 0, ignoreDigivolutionRequirement: false.
+# This is the printed xros_req box — any-color Koromon OR any-color Lv.2
+# Hero-trait Digimon, cost 0, requirement-respecting (BT22-008 idiom, swap
+# CS -> Hero).
+#
+# DCGO region "Your Turn" (EffectTiming.None,
+# AddSelfDigivolutionRequirementStaticEffect — "warp" into ShineGreymon):
+#   Condition = IsOwnerTurn(card) && IsExistOnBattleAreaDigimon(card) &&
+#     ( HasMatchConditionOpponentsPermanent(Digimon && Level >= 6)
+#       || GetBattleAreaPermanents().Count(Tamer && HasHeroTraits) >= 3 ).
+#   PermanentCondition = target == card.PermanentOfThisCard() (source = self).
+#   CardCondition = hand card named "ShineGreymon".
+#   digivolutionCost: 4, ignoreDigivolutionRequirement: true.
+#
+#   NOTE (source priority — printed text overrides DCGO): DCGO's Tamer-count
+#   disjunct is a bare `Count(...) >= 3` with NO distinct-name check at all,
+#   but the PRINTED text reads "3 or more [Hero] trait Tamers with DIFFERENT
+#   NAMES". DCGO under-implements this clause; we follow the printed text
+#   and use `distinct_named_count_gte` (G-DSL-DISTINCT-NAMED-PERMANENT-COUNT,
+#   authored with BT21-040 as its driver card) instead of a bare count.
+#   DCGO also guards `card.Owner.LibraryCards.Count >= 1` on the Tamer-count
+#   branch — this has no basis in the printed card text (no "if you would
+#   draw" language anywhere on the card) and is not replicated; it reads as
+#   an incidental DCGO implementation safety-check, not part of the card's
+#   rules text.
+#
+# `direction: into` (ST20-10 precedent, G-ALT-PATH-DIRECTION-INTO /
+# G-ALT-PATH-CONDITION, both RESOLVED): the alt-path lives on the SOURCE card
+# (BT21-040, `target: self` in DCGO) and `from:` filters the destination hand
+# card (ShineGreymon). `condition:` carries the [Your Turn] + disjunctive
+# board-state gate.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                      | Status |
+# |--------------------------------------------------------------------------|--------|
+# | Alt digivolve [Koromon]/Lv.2 Hero trait / Cost 0 (requirement-respecting) | IMPLEMENTED (alt_paths kind: digivolve) |
+# | [Your Turn] warp into [ShineGreymon] hand card, cost 4, ignore reqs       | IMPLEMENTED (alt_paths direction: into; distinct_named_count_gte per printed text, NOT DCGO's bare count) |
+# | [Inherited][Your Turn] +2000 DP self-aura                                | IMPLEMENTED (BT21-042/EX9-012 idiom) |
+
+card: BT21-040
+name: Agumon
+kind: digimon
+level: 3
+color: [yellow, red]
+cost: 3
+dp: 1000
+traits: [Dinosaur, Hero]
+attribute: Vaccine
+
+alt_paths:
+  # ─── Alt-path 1 — xros_req box: [Koromon]/Lv.2 w/[Hero] trait, cost 0 ──────
+  #
+  # DCGO "Alternative Digivolution Condition": TopCard.EqualsCardName("Koromon")
+  # || (HasHeroTraits && IsLevel2). digivolutionCost: 0,
+  # ignoreDigivolutionRequirement: false — the trait/name filter REPLACES the
+  # standard color gate but standard cost-checking still applies (no
+  # ignore_requirements flag). BT22-008 idiom (Koromon-OR-Lv2-trait), swap
+  # CS -> Hero.
+  - kind: digivolve
+    from:
+      any_of:
+        - name_is: Koromon
+        - all_of:
+            - level_eq: 2
+            - trait_has: Hero
+    cost: 0
+
+  # ─── Alt-path 2 — [Your Turn] warp into [ShineGreymon] in hand, cost 4 ─────
+  #
+  # Printed: "[Your Turn] While your opponent has a level 6 or higher Digimon
+  # or you have 3 or more [Hero] trait Tamers with different names, this
+  # Digimon may digivolve into [ShineGreymon] in the hand for a digivolution
+  # cost of 4, ignoring digivolution requirements."
+  #
+  # `direction: into` (ST20-10 precedent) — the alt-path lives on THIS card
+  # (BT21-040 is the digivolve base / DCGO target = self) and `from:` filters
+  # the destination hand card (a Digimon named "ShineGreymon"). `condition:`
+  # carries [Your Turn] + the disjunctive board-state gate:
+  #   - opponent has a Digimon Lv.6+  -> any_permanent { of: opponent,
+  #     zone: [battle_area], kind: digimon, level_gte: 6 }
+  #   - you have 3+ DISTINCT-named Hero Tamers -> distinct_named_count_gte
+  #     { of: you, filter: { kind: tamer, trait_has: Hero }, n: 3 }
+  #     (printed "with different names"; DCGO's own count check omits the
+  #     distinct-name requirement entirely — printed text governs per source
+  #     priority, see header note).
+  - kind: digivolve
+    direction: into
+    from:
+      zone: [hand]
+      of: you
+      kind: digimon
+      name_is: "ShineGreymon"
+    cost: 4
+    ignore_requirements: true
+    condition:
+      all_of:
+        - your_turn: true
+        - any_of:
+            - any_permanent:
+                of: opponent
+                zone: [battle_area]
+                kind: digimon
+                level_gte: 6
+            - distinct_named_count_gte:
+                of: you
+                n: 3
+                filter: { kind: tamer, trait_has: Hero }
+
+effects:
+  # ─── Clause — [Inherited][Your Turn] +2000 DP self-aura ────────────────────
+  #
+  # Printed inherited: "[Your Turn] This Digimon gets +2000 DP."
+  # DCGO region "Inherit": ChangeSelfDPStaticEffect(changeValue: 2000,
+  # isInheritedEffect: true, condition: IsOwnerTurn). Standard self-aura
+  # (BT21-042 / EX9-012 idiom): empty target `{}` + `active_when: { your_turn:
+  # true }` + `scope: inherited`. `Game::source_dp_contribution` reads
+  # `dp_modifier` gated by `active_when`.
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: {}
+    dp_modifier: 2000
+    summary: "[Your Turn] This Digimon gets +2000 DP"

@@ -1,0 +1,315 @@
+# EX9-074 Kimeramon — Digimon, Lv.5, White, DP 10000, Cost 10.
+# Traits: Composite/DM/Ver.3. Attribute: Data.
+#
+# Printed card text (official Bandai DB — data/card_bundles/EX9-074.md +
+# card image EX9-074.webp, verbatim):
+#
+#   ＜Rush＞ ＜Security A. +1＞
+#   [On Play] [When Digivolving] You may place 1 level 4 or lower [DM] trait
+#     Digimon card from your trash as this Digimon's top digivolution card.
+#     Then, delete 1 of your opponent's Digimon with the same color as any of
+#     this Digimon's digivolution cards. If this Digimon has 6 or more colors
+#     in its digivolution cards, instead delete 1 of each of your opponent's
+#     Digimon with different colors.
+#   [All Turns] This Digimon gets +1000 DP for each color in its digivolution
+#     cards.
+#
+# Official Q&A (data/card_bundles/EX9-074.md):
+#   "... you choose and delete 1 of your opponent's Digimon with the same
+#   color as any of this Digimon's digivolution cards. If this Digimon has 6
+#   or more colors in its digivolution cards, you instead choose and delete 1
+#   of each of your opponent's Digimon with different colors. If you will
+#   delete 1 of each of your opponent's Digimon with different colors, you
+#   must choose 1 of your opponent's Digimon for each of the colors (red,
+#   blue, yellow, green, black, purple, and white) and delete it whenever
+#   possible."
+#
+# Special Play Condition (xros_req, printed):
+#   Assembly -7: 7 level 4 [DM] trait Digimon cards w/different names. When
+#   this would be played, by placing the specified cards from the trash under
+#   it, reduce the play cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX9/White/EX9_074.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Assembly (EffectTiming.None, AddAssemblyConditionClass):
+#   CanSelectCardCondition: owner's Digimon, level 4 (exact, or contained in
+#   Level_Assembly), HasDMTraits. CanTargetCondition_ByPreSelecetedList:
+#   reject a card if it shares ANY name with an already-picked card (so all 7
+#   picks have pairwise-different names). elementCount: 7, reduceCost: 7.
+#   -> `assembly: { count: 7, reduce_cost_per_card: 1 (i.e. reduces to 3),
+#   different_names: true, elements: [{ level_max: 4, trait_match: "DM" }] }`
+#   matching digixros_costs in code/digimon-engine/cards/ex9/EX9-074.json
+#   (reduce_cost_per_card: 7 total across 7 elements = 1 each, max_materials: 7).
+#
+# <Rush> / <Security A. +1> (EffectTiming.None, static keyword grants):
+#   RushSelfStaticEffect / ChangeSelfSAttackStaticEffect(+1). Standard
+#   declarative keyword + security-attack grants.
+#
+# [On Play] / [When Digivolving] (EffectTiming.OnEnterFieldAnyone, shared
+# body, two ActivateClass shells with the SAME EffectDiscription — CanUseCondition
+# CanTriggerOnPlay / CanTriggerWhenDigivolving respectively; no extra
+# CanActivateCondition beyond IsExistOnBattleArea, so the clause always fires
+# on-play / when-digivolving with no additional top-level gate):
+#
+#   Part 1 — optional place-from-trash:
+#     `if (HasMatchConditionOwnersCardInTrash(...))`: SelectCardEffect over
+#     trash, `canNoSelect: () => true` (a genuine "you may" pick — declining
+#     skips ONLY the placement, not the rest of the clause), maxCount
+#     Min(1, matchCount), root: Trash, CanSelectCardCondition = IsDigimon &&
+#     HasLevel && Level <= 4 && HasDMTraits. On a pick:
+#     `AddDigivolutionCardsTop` — inserted at index 1 (`cardSources.Insert(1,
+#     ...)`), i.e. directly beneath the top card = the TOP digivolution
+#     SOURCE position.
+#     G-DSL-PLACE-AS-TOP-SOURCE [OPEN, qa/dsl-vocab-gaps.md #3374-3379]: the
+#     DSL/engine ships only `place_as_bottom_source` (inserts at source index
+#     0 — the BOTTOM of the stack), no "insert directly beneath the top card"
+#     verb. Per the BT13-088 precedent (same gap), position is BEHAVIORALLY
+#     INERT for this card: the only consumer of the placed card's colors is
+#     `color_matches_own_source_stack` / the All-Turns DP formula, both of
+#     which read the color SET of every non-flipped source in the stack
+#     (`DigivolutionCards.Filter(!IsFlipped).SelectMany(CardColors).Distinct()`
+#     in DCGO; `non_flipped_source_colors` in the engine) — an aggregate over
+#     the WHOLE stack, order-independent. No mechanic on this card (or any
+#     other DCGO logic consulted) reads "the top digivolution source"
+#     specifically. So `place_as_bottom_source` is used with this documented
+#     cosmetic position divergence — shipped PARTIAL-for-this-clause, not
+#     BLOCKED, exactly as BT13-088.
+#
+#   Part 2 — branch-gated deletion (runs regardless of whether Part 1 placed
+#   a card — it is a SEPARATE, unconditional step in DCGO's coroutine, not
+#   inside the `if (selectedCard != null)` guard):
+#     `colours = DigivolutionCards.Filter(!IsFlipped).SelectMany(CardColors)
+#     .Distinct()` (computed AFTER any Part-1 placement).
+#     Branch A (colours.Count <= 5): SelectPermanentEffect, mandatory
+#     (canNoSelect: false) pick of 1 opponent Digimon whose TopCard colors
+#     intersect `colours`, mode Destroy. Skipped entirely if no opponent
+#     Digimon matches (DCGO's `HasMatchConditionOpponentsPermanent` guard).
+#     Branch B (colours.Count >= 6): for EACH of the 7 printed colors
+#     (red/blue/yellow/green/black/purple/white) that is actually PRESENT on
+#     >=1 opponent battle-area Digimon, a MANDATORY per-color pick (excluding
+#     Digimon already picked for an earlier color in this resolution, so a
+#     2-color Digimon is deleted at most once), batch-deleted together at the
+#     end. Colors absent from the opponent's board are skipped (no prompt).
+#
+#   DSL vocabulary landed specifically for this card (both confirmed present
+#   after worktree sync, code/digimon-dsl/src/predicate.rs +
+#   code/digimon-dsl/src/step.rs, and proven at the substrate level in
+#   code/digimon-engine/tests/dsl/kimeramon_color_mass_delete.rs):
+#     - `color_matches_own_source_stack: { of: self }`
+#       (G-DSL-COLOR-MATCHES-OWN-SOURCE-STACK) — true when a candidate shares
+#       >=1 color with the carrier's non-flipped source-stack color set.
+#       Would be used as Branch A's `select_opponent_permanent` filter.
+#     - `delete_one_per_opponent_color` (G-DSL-DELETE-ONE-PER-DISTINCT-OPPONENT-COLOR)
+#       — the exact per-color mandatory-pick-then-batch-delete step for
+#       Branch B, iterating every color present among the opponent's Digimon.
+#
+#   GAP (dsl, narrow — precise wiring, not the underlying primitives):
+#   the RUNTIME NUMERIC branch discriminant ("if this Digimon has 6 or more
+#   colors in its digivolution cards, INSTEAD ...") has no YAML-reachable
+#   predicate or formula. The engine already computes the exact count
+#   (`code/digimon-engine/src/dsl_cards/formula_eval.rs::
+#   distinct_non_flipped_source_color_count`, doc-commented as "the
+#   branch-gating DistinctColorsCount for EX9-074 Kimeramon" — i.e. authored
+#   FOR this card, and directly exercised as a raw Rust function call — NOT
+#   through any YAML surface — in kimeramon_color_mass_delete.rs's
+#   `branch_gate_distinct_source_color_count_switches_at_six` test) but that
+#   function is called from nowhere reachable via YAML: it is not a
+#   `PerSelector` / `FormulaSpec` / `PredicateSpec` variant, so no
+#   `condition:` (a subject-less `PredicateSpec`, confirmed via
+#   `PredicateSubject::None` in lower_triggered.rs) can read it.
+#   Exhaustively verified absent from the wired surface:
+#     - `FormulaSpec::SourceColorCount` / `PerSelector::SourceColorCount`
+#       (`source_color_count`) IS wired but calls `distinct_colors_in_sources`
+#       — the un-filtered-for-flip sibling extraction, not
+#       `non_flipped_source_colors`. (Behaviorally identical for THIS card
+#       specifically — see the All-Turns clause note below — but there is
+#       still no comparator predicate to gate a `condition:`/`if:` on it: no
+#       `source_color_count_lte`/`_gte` predicate leaf exists, and every
+#       `DpConstraint`-typed predicate field in `predicate.rs`
+#       (`stack_size_lte`, `materials_count_lte`, `dp_lte`, etc.) is a
+#       PER-CANDIDATE subject predicate, not a subject-less global gate.)
+#     - `PerSelector::DigivolutionColorCount` counts the WHOLE stack
+#       (including the top card) — wrong scope (would over-count by 1 color
+#       whenever the top card's own color isn't already in the source set).
+#     - `self_source_count` (`SelfSourceCountPredicate`,
+#       G-DSL-SELF-SOURCE-COUNT-THRESHOLD) is the closest existing "no-subject
+#       global carrier-scoped count vs. threshold" predicate (precedent:
+#       BT21-006) but it counts SOURCE CARDS matching a card-shape filter, not
+#       DISTINCT COLORS — it cannot express "count of distinct colors, dedup'd,
+#       thresholded" without adding a new leaf.
+#     - `distinct_tamer_colors_gte` / `Zone::Material`'s `distinct_colors_count`
+#       are both scoped to a PLAYER's whole battle area (all of that player's
+#       Digimon combined), not a single permanent's own digivolution stack —
+#       wrong scope (would double-count colors from a controller's OTHER
+#       Digimon).
+#   Per CLAUDE.md rule 28 ("widen the substrate, don't route around it") the
+#   correct fix is a new predicate/formula leaf (e.g.
+#   `own_source_stack_color_count_gte: u8` mirroring `self_source_count`'s
+#   shape but backed by `non_flipped_source_colors`) — filed to
+#   qa/dsl-vocab-gaps.md as G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD.
+#   Per the no-approximations policy (rule 17) and the established
+#   "OMIT rather than half-implement" convention (EX5-015's Clause C), the
+#   ENTIRE Part-2 deletion (both Branch A and Branch B) is OMITTED from this
+#   YAML: implementing only Branch A unconditionally would misfire whenever
+#   the true color count is >=6 (deleting 1 Digimon instead of one per
+#   present opponent color — a hard faithfulness violation, not a cosmetic
+#   one), and there is no way to gate between the two branches without the
+#   missing primitive. Both branches' step-level vocabulary (confirmed above)
+#   is otherwise ready to wire in the instant the threshold gap closes.
+#
+# [All Turns] DP boost (EffectTiming.None, ChangeSelfDPStaticEffect):
+#   `changeValue: () => 1000 * card.PermanentOfThisCard().DigivolutionCardsColors.Count`,
+#   condition: `count() >= 1` (else no modifier). DCGO core
+#   (Assets/Scripts/Script/Permanent.cs):
+#     `DigivolutionCards => cardSources.Filter(c => c != TopCard && !Linked...)`
+#     (materials beneath the top card — TOP CARD EXCLUDED), and
+#     `DigivolutionCardsColors` additionally `continue`s on `IsFlipped` cards.
+#   So `DigivolutionCardsColors.Count` == the SAME non-flipped-source-color
+#   count as the Part-2 branch gate (materials only, top card excluded,
+#   flip-filtered) — NOT the engine's `DigivolutionColorCount` PerSelector
+#   (which is the WHOLE stack including the top card, unfiltered by flip; see
+#   its doc comment in formula_eval.rs "distinct colors across all CardSource
+#   in the target's stack").
+#   Authored via the wired `FormulaSpec::SourceColorCount`
+#   (`source_color_count: {}`) — "distinct colors across source cards
+#   beneath the source permanent's top card" (`distinct_colors_in_sources`).
+#   This differs from DCGO's exact extraction only in NOT filtering
+#   face-down/flipped sources. That divergence is provably inert for this
+#   card: the DSL exposes no generic mechanism to flip a Digimon's OWN
+#   digivolution sources face-down (the only `face_down` idioms in
+#   code/digimon-dsl/src/step.rs — `TrashBottomFaceDownSource(s)UnderTamer`,
+#   `MoveSelfOptionUnderPermanentArgs.face_down` — are Tamer/Option-scoped
+#   "face-down under a Tamer" mechanics unrelated to a Digimon's own
+#   digivolution stack; `PlaceAsBottomSourceArgs.face_down` defaults `false`
+#   and this card's own text never places one face-down), so no reachable
+#   game state gives Kimeramon a face-down source. `source_color_count`
+#   therefore returns the SAME value as DCGO's `DigivolutionCardsColors.Count`
+#   for every state this card can reach. IMPLEMENTED (not a gap).
+#
+# ─── Implementation status ────────────────────────────────────────────────────
+#
+# | Card-text element                                                    | Status      |
+# |------------------------------------------------------------------------|------------|
+# | Assembly -7: 7 Lv.4 [DM] Digimon cards w/different names               | IMPLEMENTED |
+# | <Rush>                                                                 | IMPLEMENTED |
+# | <Security A. +1>                                                      | IMPLEMENTED |
+# | [OP][WD] you may place 1 Lv4- [DM] trash Digimon as digivolution source | PARTIAL (bottom not top source — G-DSL-PLACE-AS-TOP-SOURCE, cosmetic) |
+# | [OP][WD] delete 1 opp Digimon sharing a source color (<=5 colors)      | BLOCKED (branch-gate threshold — G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD) |
+# | [OP][WD] delete 1 opp Digimon per distinct color present (>=6 colors)  | BLOCKED (same gate) |
+# | [All Turns] +1000 DP per color in digivolution cards                   | IMPLEMENTED |
+
+card: EX9-074
+name: Kimeramon
+kind: digimon
+level: 5
+color: [white]
+cost: 10
+dp: 10000
+traits: [Composite, DM, Ver.3]
+attribute: Data
+
+# Assembly -7: 7 level 4 [DM] trait Digimon cards w/different names,
+# sourced from trash (printed xros_req + digixros_costs in
+# code/digimon-engine/cards/ex9/EX9-074.json: 7 elements, level_max 4,
+# trait_match DM, different_names: true, reduce_cost_per_card 7 total across
+# 7 elements = 1 each, max_materials 7 -> printed cost 10 reduces to 3 at
+# full Assembly). Modeled on the P-220 Millenniummon 3-material Assembly
+# idiom (`distinct_by: name` sibling of `distinct_by: level`), widened to 7
+# materials — each a separate `MaterialSpec` entry so all 7 picks are
+# individually RL-visible (no auto-select), matching DCGO's
+# `AddAssemblyConditionClass(elementCount: 7, reduceCost: 7)` with
+# `CanTargetCondition_ByPreSelecetedList` rejecting a repeat NAME across the
+# 7 picks.
+alt_paths:
+  - kind: assembly
+    materials:
+      - { level_eq: 4, trait_has: DM, zones: [trash], stack_under: true, distinct_by: name }
+      - { level_eq: 4, trait_has: DM, zones: [trash], stack_under: true, distinct_by: name }
+      - { level_eq: 4, trait_has: DM, zones: [trash], stack_under: true, distinct_by: name }
+      - { level_eq: 4, trait_has: DM, zones: [trash], stack_under: true, distinct_by: name }
+      - { level_eq: 4, trait_has: DM, zones: [trash], stack_under: true, distinct_by: name }
+      - { level_eq: 4, trait_has: DM, zones: [trash], stack_under: true, distinct_by: name }
+      - { level_eq: 4, trait_has: DM, zones: [trash], stack_under: true, distinct_by: name }
+    cost: 7
+
+effects:
+  # ─── <Rush> ────────────────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Rush
+
+  # ─── <Security A. +1> ───────────────────────────────────────────────────────
+  - kind: aura
+    target: { is_source_permanent: true }
+    security_attack: 1
+    summary: "<Security A. +1>"
+
+  # ─── [On Play] [When Digivolving] you may place 1 Lv.4- [DM] trash Digimon
+  #     as a digivolution source ────────────────────────────────────────────
+  #
+  # "You may place 1 level 4 or lower [DM] trait Digimon card from your trash
+  # as this Digimon's top digivolution card." A genuine "you may" pick
+  # (DCGO canNoSelect: () => true) that is NOT a cost gating anything else —
+  # nothing else in the printed text depends on whether this placement
+  # happens (the deletion clause that would have followed is OMITTED above
+  # pending G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD, and the All-Turns DP
+  # clause is a separate always-on aura). `optional: true` with no `cost:
+  # true` — decline just skips the placement itself; zero matching trash
+  # cards short-circuits the select with no prompt (standard empty-candidate
+  # select behavior, matching DCGO's `if
+  # (HasMatchConditionOwnersCardInTrash(...))` guard around Part 1 only).
+  #
+  # Position: `place_as_bottom_source` (see the top-of-file
+  # G-DSL-PLACE-AS-TOP-SOURCE note) — DCGO inserts directly beneath the top
+  # card ("top digivolution source"); the DSL only offers bottom-of-stack
+  # insertion. Documented cosmetic divergence — no consumer of this card's
+  # own logic reads source ORDER, only the source-stack color SET.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may place 1 level 4 or lower [DM] trait Digimon card from your trash as a digivolution source"
+    process:
+      - select_trash:
+          of: you
+          bind_as: material
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - trait_has: DM
+          prompt: "You may place 1 level 4 or lower [DM] trait Digimon card from your trash as this Digimon's top digivolution card"
+      - place_as_bottom_source:
+          source: material
+          target: source
+
+  # ─── [All Turns] +1000 DP per color in digivolution cards ──────────────────
+  #
+  # `source_color_count` = distinct colors among the sources beneath this
+  # Digimon's top card (materials only, top card excluded) — see the
+  # top-of-file note arguing this is exact-equivalent to DCGO's
+  # `DigivolutionCardsColors.Count` (also flip-filtered, but no reachable
+  # state gives this card a flipped source). DCGO gates the modifier's
+  # INSTALLATION on `count() >= 1`; here the `base_per_delta` formula itself
+  # naturally evaluates to 0 when there are zero materials (0 colors * 1000 =
+  # 0), which is a no-op DP delta — behaviorally identical to "no modifier
+  # installed" and re-evaluated every tick (symmetric: the boost tracks the
+  # live material color count up and down as sources are added/removed).
+  - kind: aura
+    target: { is_source_permanent: true }
+    dp_modifier:
+      base: 0
+      per: source_color_count
+      delta: 1000
+    summary: "[All Turns] This Digimon gets +1000 DP for each color in its digivolution cards"
+
+  # ─── Omitted clause ─────────────────────────────────────────────────────────
+  #
+  # [On Play][When Digivolving] "Then, delete 1 of your opponent's Digimon
+  # with the same color as any of this Digimon's digivolution cards. If this
+  # Digimon has 6 or more colors in its digivolution cards, instead delete 1
+  # of each of your opponent's Digimon with different colors." OMITTED in
+  # full (both branches) — see the detailed GAP note above
+  # (G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD). The step-level vocabulary
+  # for both branches (`color_matches_own_source_stack`,
+  # `delete_one_per_opponent_color`) is confirmed present and ready; only the
+  # numeric branch discriminant is missing.

@@ -7065,16 +7065,9 @@
       "notes": "Alliance primary aura is implementable, but the conditional secondary grant of <Scapegoat> (while a [Junomon]-named Digimon is present) to a security-aura TARGET SET is not behaviorally installable. Scapegoat is a replacement-effect keyword requiring an installed when_would_be_deleted effect on each target permanent; the aura grant_keyword path only registers has_keyword and does NOT synthesize the replacement auto-effect for aura-granted (esp. conditional) keywords on a target set (game.rs:4111-4129 explicitly skips conditional grants and only covers the source card via registry). G-ENGINE-AURA-GRANT-REPLACEMENT-KEYWORD."
     },
     "BT25-102": {
-      "card_name": "Factorial Area",
-      "validated_date": "2026-07-03",
-      "report": "gap-closure round 2 (small-batch)",
-      "status": "PARTIAL",
-      "gap_kind": null,
-      "archetype": "store-champs-june-2026 / Vulcanusmon",
-      "yaml_path": "code/digimon-engine/cards/bt25/BT25-102.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_102.rs",
-      "test_count": 6,
-      "notes": "PARTIAL: {Security}[All Turns] auras + IgnoreColorRequirement landed (security-aura substrate adjudicated NOT-A-GAP, BT24-090 precedent); [Main]/[Security] play clauses still to author (primitives exist) \u2014 card-pass item."
+      "status": "IMPLEMENTED",
+      "date": "2026-07-03",
+      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch)."
     },
     "BT25-103": {
       "card_name": "GraceNovamon",
@@ -10389,40 +10382,19 @@
       "notes": "follow-up wave, Opus-approved (or orchestrator-applied directives); merged-set green 2026-07-03"
     },
     "BT21-056": {
-      "card_name": "Vemmon",
-      "validated_date": "2026-07-03",
-      "report": "batch-implement-cards-rust-dsl (store-champs follow-up)",
       "status": "IMPLEMENTED",
-      "gap_kind": null,
-      "archetype": "store-champs-june-2026",
-      "yaml_path": "code/digimon-engine/cards/bt21/BT21-056.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_056.rs",
-      "test_count": null,
-      "notes": "follow-up wave, Opus-approved (or orchestrator-applied directives); merged-set green 2026-07-03"
+      "date": "2026-07-03",
+      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch)."
     },
     "BT18-060": {
-      "card_name": "Vemmon",
-      "validated_date": "2026-07-03",
-      "report": "batch-implement-cards-rust-dsl (store-champs follow-up)",
-      "status": "PARTIAL",
-      "gap_kind": null,
-      "archetype": "store-champs-june-2026",
-      "yaml_path": "code/digimon-engine/cards/bt18/BT18-060.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/bt18/bt18_060.rs",
-      "test_count": null,
-      "notes": "PARTIAL \u2014 shared-OPT double-reduction window pending G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER"
+      "status": "IMPLEMENTED",
+      "date": "2026-07-03",
+      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch)."
     },
     "BT21-087": {
-      "card_name": "Zenith",
-      "validated_date": "2026-07-03",
-      "report": "batch-implement-cards-rust-dsl (store-champs follow-up)",
-      "status": "PARTIAL",
-      "gap_kind": null,
-      "archetype": "store-champs-june-2026",
-      "yaml_path": "code/digimon-engine/cards/bt21/BT21-087.yaml",
-      "test_path": "code/digimon-engine/tests/cards_behavioral/bt21/bt21_087.rs",
-      "test_count": null,
-      "notes": "PARTIAL \u2014 name-branch approximation pending G-DSL-BINDING-CARD-NAME-EQUALS"
+      "status": "IMPLEMENTED",
+      "date": "2026-07-03",
+      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch)."
     },
     "EX7-073": {
       "card_name": "BeelStarmon (X Antibody)",
@@ -10607,6 +10579,61 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_075.rs",
       "test_count": 8,
       "notes": "PARTIAL: hand-reduction + floor(trashed/2) Tamer-deletion clause authored (bind_count_as landed); residual = Composite leave-replacement clause (#[ignore]d, expressible via BT22-036 twin) \u2014 card-pass item."
+    },
+    "BT18-065": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-03",
+      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch)."
+    },
+    "BT21-062": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-03",
+      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch)."
+    },
+    "BT21-006": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-03",
+      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch)."
+    },
+    "BT13-106": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-03",
+      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch)."
+    },
+    "BT21-040": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-03",
+      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch)."
+    },
+    "EX11-046": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-03",
+      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch)."
+    },
+    "BT13-083": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-03",
+      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch)."
+    },
+    "BT23-032": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-03",
+      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch)."
+    },
+    "BT11-061": {
+      "status": "IMPLEMENTED",
+      "date": "2026-07-03",
+      "notes": "store-champs June-2026 wave A (gap-unblocked); Opus image-grounded review approved; suite green (74/74 wave batch)."
+    },
+    "EX7-071": {
+      "status": "PARTIAL",
+      "date": "2026-07-03",
+      "notes": "store-champs wave A. [Main] triple delete + [Security] + memory-gain + color-ignore all green; self-placement tail pending DSL wiring of place_self_under_permanent (G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL); aspirational tests #[ignore]'d."
+    },
+    "EX9-074": {
+      "status": "PARTIAL",
+      "date": "2026-07-03",
+      "notes": "store-champs wave A. DigiXros/on-play branches green; 6+-color mass-delete clause pending YAML-reachable threshold leaf (G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD); branch primitives proven in tests/dsl/kimeramon_color_mass_delete.rs."
     }
   }
 }

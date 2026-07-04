@@ -26,24 +26,14 @@
 #
 # DCGO's `CanSelectCardCondition` (Clause 1) and `CardSourceCondition`
 # (Clause 2, the cost reducer) both gate on `cardSource.HasText("Vemmon")`.
-# `CardSource.HasText` is a whole-card scan (name + traits + printed
-# effect/inherited/security text + rule text + digivolution/DNA/DigiXros/
-# App Fusion/Link/Assembly requirement text) — confirmed by this card's own
-# official Q&A above. The DSL's `effect_text_contains` leaf ONLY scans the
-# candidate's `effect_text` / `inherited_text` / `security_text`
-# (code/digimon-engine/src/dsl_cards/predicate.rs — G-DSL-PREDICATE-TEXT-CONTAINS)
-# — it does NOT scan name or traits. Modelling "[Vemmon] in its text" as
-# `effect_text_contains: "Vemmon"` ALONE is therefore narrower than the
-# printed semantics: a Vemmon-NAMED card (or a future Vemmon-trait card)
-# whose own body text does not self-reference "[Vemmon]" would be silently
-# dropped. Both text filters below are widened to
-# `any_of: [effect_text_contains, trait_has, name_contains]` for "Vemmon" so
-# the name/traits axes of DCGO's HasText are covered (traits: no Vemmon-trait
-# card exists in the pool today, but the leaf is included for forward
-# faithfulness per the card's own Q&A; qa/dsl-vocab-gaps.md does not yet
-# model rule-text/digivolution-requirement-text scanning — that residual
-# sliver is out of scope for a leaf predicate and is not reachable by any
-# currently printed Vemmon-family card).
+# `CardSource.HasText` is a whole-card scan (name + aliases + traits +
+# printed effect/inherited/security text, both dual faces) — confirmed by
+# this card's own official Q&A above. The DSL's `in_text_contains` leaf
+# (code/digimon-engine/src/dsl_cards/predicate.rs —
+# G-DSL-IN-TEXT-CONTAINS, `card_in_text_contains`) is the direct match for
+# this whole-card scan: it checks name + also_treated_as/DigiXros aliases +
+# traits + all printed text in one leaf, so both text filters below use
+# `in_text_contains: "Vemmon"` directly.
 #
 # ─── Clause 1 — [On Play] trash-cost hand→trash→hand recursion ─────────────
 #
@@ -101,7 +91,7 @@
 # for this card, so there is no shared-OPT cross-position concern like
 # BT18-060's face_up+inherited duplication). Gated via
 # `source_is_cost_target_permanent: true` (this permanent is the one being
-# digivolved FROM) + `cost_target: { any_of: [...Vemmon text axes...] }` (the
+# digivolved FROM) + `cost_target: { in_text_contains: "Vemmon" }` (the
 # hand card being digivolved into has "[Vemmon]" in its text) — the proven
 # Phase 2 Track H substrate (P-117 / BT21-011 / BT21-055 exemplars).
 # `once_per_turn: true` matches `activateClass2.MaxCountPerTurn == 1`.
@@ -132,10 +122,7 @@ effects:
         filter:
           of: you
           zone: [hand]
-          any_of:
-            - effect_text_contains: "Vemmon"
-            - trait_has: "Vemmon"
-            - name_contains: "Vemmon"
+          in_text_contains: "Vemmon"
         n: 1
     process:
       # Cost: trash 1 [Vemmon]-text hand card. `cost: true` — declining this
@@ -147,10 +134,7 @@ effects:
           optional: true
           cost: true
           filter:
-            any_of:
-              - effect_text_contains: "Vemmon"
-              - trait_has: "Vemmon"
-              - name_contains: "Vemmon"
+            in_text_contains: "Vemmon"
           prompt: "Trash 1 [Vemmon]-text card from your hand"
       - trash_from_hand_by_index: { of: you, hand_index: discard }
       # Reward: may return 1 non-Digi-Egg [Vemmon]-text card from trash to
@@ -162,13 +146,9 @@ effects:
           bind_as: recovered
           optional: true
           filter:
-            all_of:
-              - any_of:
-                  - effect_text_contains: "Vemmon"
-                  - trait_has: "Vemmon"
-                  - name_contains: "Vemmon"
-              - none_of:
-                  - kind: digi_egg
+            in_text_contains: "Vemmon"
+            none_of:
+              - kind: digi_egg
           prompt: "You may return 1 non-Digi-Egg [Vemmon]-text card from your trash to your hand"
       - add_to_hand_from_trash: { of: you, card: recovered }
 
@@ -181,10 +161,7 @@ effects:
         - your_turn: true
         - source_is_cost_target_permanent: true
         - cost_target:
-            any_of:
-              - effect_text_contains: "Vemmon"
-              - trait_has: "Vemmon"
-              - name_contains: "Vemmon"
+            in_text_contains: "Vemmon"
     once_per_turn: true
     amount: 1
     summary: "[Your Turn][OPT] Inherited: when this Digimon would digivolve into a [Vemmon]-text card, reduce the digivolution cost by 1"

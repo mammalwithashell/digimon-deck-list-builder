@@ -1,0 +1,218 @@
+# BT21-062 Galacticmon — Digimon, Lv.6, Black, DP 14000, Cost 14.
+# Traits: Unknown/LIBERATOR. Form: Mega. Attribute: Unknown.
+#
+# Printed text (official Bandai DB / card image — authoritative, verbatim):
+#   [Digivolve] [Snatchmon]: Cost 9
+#   [When Digivolving] By placing 4 cards with [Vemmon] in their texts from
+#     your trash as this Digimon's bottom digivolution cards, you may use 1
+#     [Ragnarok Cannon] from your hand or trash without paying the cost.
+#   [Start of Your Main Phase] Delete 1 of your opponent's Digimon.
+#   [All Turns] When this Digimon would leave the battle area, by returning 4
+#     [Vemmon] from its digivolution cards to the bottom of the deck, it
+#     doesn't leave.
+#
+# NOTE on brief vs. printed text: the intake brief hinted "[Start of Opp
+# Main?]" for clause 2 — the card IMAGE and the official bundle
+# (data/card_bundles/BT21-062.md) both confirm "[Start of YOUR Main Phase]",
+# matching DCGO's `EffectTiming.OnStartMainPhase` + `CanUseCondition:
+# IsOwnerTurn(card)`. Authored per the card face, not the brief.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Black/BT21_062.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve (timing None): AddSelfDigivolutionRequirementStaticEffect(
+#   permanentCondition: TopCard.EqualsCardName("Snatchmon"), cost 9).
+#   -> alt_paths: from name_is Snatchmon, cost 9.
+#
+# Clause 1 (OnEnterFieldAnyone = When Digivolving):
+#   CanUseCondition: IsExistOnBattleAreaDigimon(card) && CanTriggerWhenDigivolving.
+#   CanActivateCondition: MatchConditionOwnersCardCountInTrash(HasText("Vemmon"))
+#     >= 4 -- i.e. the WHOLE activation (placement + option-use) is gated on
+#     >=4 Vemmon-text cards in trash, matching a `condition: count_gte { n: 4 }`
+#     precheck.
+#   ActivateCoroutine: a SelectCardEffect with maxCount:4, canNoSelect:() =>
+#     true, canEndNotMax:false -- i.e. the multi-pick is "decline entirely, OR
+#     commit and pick all 4" (no partial 1/2/3 stop). Modeled as 4 sequential
+#     `select_trash` picks: pick 1 is `optional: true, cost: true` (declining
+#     aborts the whole body per the shared cost-abort contract); picks 2-4 are
+#     mandatory, guaranteed payable because the `count_gte: 4` clause-level
+#     gate ensures >=4 candidates exist before pick 1 consumes one.
+#   AddDigivolutionCardsBottom -> `place_as_bottom_source` x4 (each pick placed
+#     immediately, matching DCGO placing progressively).
+#   `if (added)` -- the free-Ragnarok-Cannon offer ONLY runs after the 4-card
+#     placement actually completed (sequential process order gives this for
+#     free: the option-use steps come after all 4 placements).
+#   canSelectHand / canSelectTrash -> a `select_union_zone { zones: [hand,
+#     trash] }` scan for a [Ragnarok Cannon] with a use cost
+#     (`CanNotPlayThisOption` false == the option's use-requirement is met).
+#     Both the hand and trash SelectEffects carry `canNoSelect: true` -- the
+#     whole "you may use" pick is declinable -- modeled as `optional: true`
+#     on the `select_union_zone` step. `use_option_bound` with no `cost:`
+#     (payCost: false in DCGO) plays it for free from its true origin zone.
+#
+# Clause 2 (OnStartMainPhase = Start of Your Main Phase):
+#   CanUseCondition: IsExistOnBattleArea(card) && IsOwnerTurn(card).
+#   CanActivateCondition: IsExistOnBattleAreaDigimon(card) (mandatory --
+#     canNoSelect not set / false at the ActivateClass. maxCount capped to 1
+#     via Math.Min(1, MatchConditionPermanentCount) and
+#     SelectPermanentEffect(canNoSelect:false) -- a free choice among ALL
+#     opponent Digimon (Mode.Destroy), no selector qualifier (not
+#     lowest/highest DP)).
+#   -> `select_opponent_permanent { filter: { kind: digimon } }` (no
+#      `selector:` = free pick) + `delete_permanent`. The clause only fires
+#      when >=1 opponent Digimon exists to select (DCGO's
+#      HasMatchConditionPermanent gate) -- the DSL's select-with-no-candidates
+#      silent-skip covers this without an extra `condition:` block.
+#
+# Clause 3 (WhenRemoveField = All Turns, no OPT counter, no "by an effect" /
+#   battle-cause exclusion in DCGO -- CanTriggerWhenRemoveField is NOT gated
+#   on IsByEffect the way BT13-075's clause is, so this fires for ANY leave
+#   cause including battle):
+#   CanActivateCondition: DigivolutionCards.Count(name=="Vemmon") >= 4 (the
+#     `SelectOwnSources` preflight in the compiled
+#     `return_own_sources_to_deck` lowering enforces exactly this: the picker
+#     is min==max==4, so it silently isn't offered under 4 matching sources).
+#   ActivateCoroutine: SelectCardEffect canNoSelect:() => true (the WHOLE
+#     replacement is a may-pay -- `optional: true` at the clause level),
+#     maxCount:4; only when `selectedCards.Count == 4` does the leave get
+#     cancelled (`willBeRemoveField = false`). This is exactly the purpose-
+#     built `cost: { return_own_sources_to_deck: { filter, count: 4,
+#     position: bottom } }` declarative shortcut (Gap 2 / G-DSL notes in
+#     clause.rs), which lowers to SelectOwnSources{min:4,max:4} +
+#     ReturnSelectedSourcesToDeck{position:bottom} + CancelReplacement.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                                    | Status      |
+# |-----------------------------------------------------------------------|-------------|
+# | [Digivolve] [Snatchmon]: Cost 9 alt-path                               | IMPLEMENTED |
+# | [WD] place 4 [Vemmon]-text cards from trash as bottom sources (cost)   | IMPLEMENTED |
+# | [WD] may use 1 [Ragnarok Cannon] from hand/trash free                  | IMPLEMENTED |
+# | [Start of Your Main Phase] Delete 1 opponent Digimon                  | IMPLEMENTED |
+# | [All Turns] return 4 [Vemmon] sources to deck bottom -> doesn't leave  | IMPLEMENTED |
+
+card: BT21-062
+name: Galacticmon
+kind: digimon
+level: 6
+color: [black]
+cost: 14
+dp: 14000
+traits: [Unknown, LIBERATOR]
+attribute: Unknown
+form: Mega
+
+alt_paths:
+  - kind: digivolve
+    from: { name_is: "Snatchmon" }
+    cost: 9
+
+effects:
+  # ─── Clause 1 — [When Digivolving] place 4 Vemmon-text sources -> may use Ragnarok Cannon free ─
+  #
+  # "By placing 4 cards with [Vemmon] in their texts from your trash as this
+  #  Digimon's bottom digivolution cards, you may use 1 [Ragnarok Cannon] from
+  #  your hand or trash without paying the cost."
+  - when: when_digivolving
+    summary: "[WhenDigi] By placing 4 [Vemmon]-text cards from trash as bottom sources, you may use 1 [Ragnarok Cannon] from hand/trash free"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          in_text_contains: "Vemmon"
+        n: 4
+    process:
+      # Pick 1/4 — declinable (the whole cost, and thus the whole clause, is
+      # a may-pay per DCGO's `canNoSelect: () => true`).
+      - select_trash:
+          of: you
+          bind_as: vemmon_1
+          optional: true
+          cost: true
+          filter: { in_text_contains: "Vemmon" }
+          prompt: "Place 4 cards with [Vemmon] in their texts from your trash as this Digimon's bottom digivolution cards (1/4)"
+      - place_as_bottom_source:
+          source: vemmon_1
+          target: source
+      # Picks 2-4/4 — mandatory once engaged (DCGO `canEndNotMax: false`);
+      # guaranteed payable because the clause-level `count_gte: 4` gate
+      # ensures >=4 candidates existed before pick 1 consumed one.
+      - select_trash:
+          of: you
+          bind_as: vemmon_2
+          optional: false
+          filter: { in_text_contains: "Vemmon" }
+          prompt: "Place 4 cards with [Vemmon] in their texts from your trash as this Digimon's bottom digivolution cards (2/4)"
+      - place_as_bottom_source:
+          source: vemmon_2
+          target: source
+      - select_trash:
+          of: you
+          bind_as: vemmon_3
+          optional: false
+          filter: { in_text_contains: "Vemmon" }
+          prompt: "Place 4 cards with [Vemmon] in their texts from your trash as this Digimon's bottom digivolution cards (3/4)"
+      - place_as_bottom_source:
+          source: vemmon_3
+          target: source
+      - select_trash:
+          of: you
+          bind_as: vemmon_4
+          optional: false
+          filter: { in_text_contains: "Vemmon" }
+          prompt: "Place 4 cards with [Vemmon] in their texts from your trash as this Digimon's bottom digivolution cards (4/4)"
+      - place_as_bottom_source:
+          source: vemmon_4
+          target: source
+      # "you may use 1 [Ragnarok Cannon] from your hand or trash without
+      # paying the cost" — only reachable after the 4-card cost is fully
+      # paid (sequential process order). Declinable union pick (DCGO
+      # `canNoSelect: true` on both the hand and trash SelectEffects).
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: cannon_pick
+          optional: true
+          filter: { name_is: "Ragnarok Cannon" }
+          prompt: "You may use 1 [Ragnarok Cannon] from your hand or trash without paying the cost"
+      - use_option_bound:
+          binding: cannon_pick
+
+  # ─── Clause 2 — [Start of Your Main Phase] delete 1 opponent Digimon ────────
+  #
+  # "[Start of Your Main Phase] Delete 1 of your opponent's Digimon."
+  #
+  # Mandatory free choice (no selector qualifier) among all opponent Digimon.
+  # DCGO's `HasMatchConditionPermanent` gate (>=1 opponent Digimon) is covered
+  # by the select step's own empty-candidate silent-skip.
+  - when: start_of_your_main_phase
+    summary: "[Start of Your Main Phase] Delete 1 of your opponent's Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: target }
+
+  # ─── Clause 3 — [All Turns] would-leave: return 4 Vemmon sources to deck bottom ─
+  #
+  # "[All Turns] When this Digimon would leave the battle area, by returning 4
+  #  [Vemmon] from its digivolution cards to the bottom of the deck, it
+  #  doesn't leave."
+  #
+  # No "by an effect" / battle-cause exclusion in DCGO (`CanTriggerWhenRemoveField`
+  # is not gated on IsByEffect for this card) -- applies to ANY leave cause,
+  # including battle deletion. The purpose-built `return_own_sources_to_deck`
+  # declarative cost handles the exact-4 pay-in-full gating (not offered under
+  # 4 matching sources) and owns `outcome: prevent`.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    cost:
+      return_own_sources_to_deck:
+        filter: { name_is: "Vemmon" }
+        count: 4
+        position: bottom
+    outcome: prevent

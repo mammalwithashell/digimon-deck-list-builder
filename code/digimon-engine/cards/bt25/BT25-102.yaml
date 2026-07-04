@@ -35,6 +35,15 @@ traits: [Iliad, TS]
 # condition. The earlier "no path for a security card to register a field aura"
 # blocker was resolved by Track H §5; the residual Link+1 value-carry is
 # handled by `modifier_value` (G-ENGINE-AURA-GRANT-LINK-MAX, resolved).
+#
+# [Main]/[Security] clauses (2026-07-02 finish): authored identically to
+# BT24-090's MainFromHand + inherited on_security shapes
+# (`add_bottom_security_to_hand` + `place_on_security source: self_option,
+# face_up: true, position: bottom` + `select_hand cost_delta reduce:3`;
+# `select_union_zone` [hand, trash] + `play_union_bound_free`), swapping
+# blue/yellow for black/red per the printed card face and DCGO
+# `BT25_102.cs` (`CanSelectCardCondition` / `CanPlayCondition` both gate on
+# `HasDigimonColor(Black) || HasDigimonColor(Red)) && HasTSTraits`).
 
 use_requirement:
   face_up_security_count_lte: 0
@@ -89,13 +98,57 @@ effects:
     modifier_value: 1
     summary: "[Security][All Turns] With Vulcanusmon, your black/red [TS] Digimon gain Link +1"
 
-  # ─── Omitted clauses (out of scope for this substrate-proof fixture) ───────
-  #
-  # [Main] Add bottom security to hand, place this face-up as bottom security,
-  #   then play a black/red [TS] Digimon for -3 — the exact shape BT24-090
-  #   authors (`add_bottom_security_to_hand` + `place_on_security face_up: true`
-  #   + `select_hand` + `play_from_hand cost_delta reduce:3`). Omitted here to
-  #   keep the fixture focused on the security-zone aura substrate adjudication;
-  #   the primitives all exist (see BT24-090.yaml).
-  # [Security] Play 1 level≤4 black/red [TS] Digimon from hand or trash free —
-  #   standard security trigger (BT24-090 authors the same shape).
+  # [Main] Add your bottom security card to the hand and place this card face
+  # up as the bottom security card. Then, you may play 1 black or red [TS]
+  # trait Digimon card from your hand with the play cost reduced by 3.
+  # Mirrors BT24-090's MainFromHand shape exactly (colors black/red here).
+  - when: main_from_hand
+    summary: "[Main] Add bottom security to hand, place this face-up as bottom security, then may play a black/red [TS] Digimon for -3"
+    process:
+      - add_bottom_security_to_hand: { of: you }
+      - place_on_security:
+          source: self_option
+          position: bottom
+          face_up: true
+      - select_hand:
+          of: you
+          bind_as: picked_digimon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TS
+              - any_of:
+                  - color_is: black
+                  - color_is: red
+          prompt: "You may play 1 black or red [TS] Digimon card from hand with the play cost reduced by 3"
+      - play_from_hand:
+          of: you
+          hand_index: picked_digimon
+          cost_delta: { reduce: 3 }
+
+  # [Security] You may play 1 level 4 or lower black or red [TS] trait
+  # Digimon card from your hand or trash without paying the cost.
+  # (Printed as the card's inherited/security-triggered effect — same shape
+  # BT24-090 authors as scope: inherited, when: on_security.)
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security][Inherited] You may play 1 level 4 or lower black/red [TS] Digimon from hand or trash free"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: picked
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - trait_has: TS
+              - any_of:
+                  - color_is: black
+                  - color_is: red
+          prompt: "You may play 1 level 4 or lower black or red [TS] Digimon from hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: picked

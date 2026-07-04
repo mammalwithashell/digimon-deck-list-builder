@@ -19,10 +19,13 @@
 //! requirements, DNA digivolution, DigiXros requirements, burst digivolve,
 //! App Fusion, Link, or Assembly requirements." — i.e. "[Vemmon] in its
 //! text" is a whole-card scan (name + traits + body text), NOT body-text
-//! only. Both filters in the YAML are widened to
-//! `any_of: [effect_text_contains, trait_has, name_contains]` to cover the
-//! name/traits axes; several tests below pin the name-only match case
-//! specifically (a synthetic card whose ONLY "Vemmon" mention is its name).
+//! only. Both filters in the YAML use the `in_text_contains` leaf
+//! (code/digimon-engine/src/dsl_cards/predicate.rs —
+//! G-DSL-IN-TEXT-CONTAINS, `card_in_text_contains`), which scans name +
+//! aliases + traits + all printed text in one leaf — the direct match for
+//! DCGO's `CardSource.HasText`; several tests below pin the name-only match
+//! case specifically (a synthetic card whose ONLY "Vemmon" mention is its
+//! name).
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/BT21/Black/BT21_056.cs
@@ -31,8 +34,8 @@
 //! - E2: optional cost-as-trashing OnPlay (select_hand cost:true) with a
 //!   separately-optional trash→hand recovery (select_trash, no cost flag)
 //! - Digi-Egg exclusion on the recovery pool (`none_of: [{kind: digi_egg}]`)
-//! - Whole-card "[X] in its text" widening: name_contains / trait_has /
-//!   effect_text_contains, each pinned independently
+//! - Whole-card "[X] in its text" via the `in_text_contains` leaf: body-text,
+//!   trait-only, and name-only matches each pinned independently
 //! - Phase 2 Track H digivolve-cost reduction: `source_is_cost_target_permanent`
 //!   + `cost_target` gated on the SAME "Vemmon in its text" filter, `scope:
 //!   inherited`, `once_per_turn`, `active_when: { your_turn: true }`
@@ -77,8 +80,8 @@ fn vemmon_trait(id: &str) -> CardData {
 }
 
 /// A card whose ONLY "Vemmon" mention is its printed name — no body text,
-/// no trait. Proves the widened `name_contains` axis of "[Vemmon] in its
-/// text" per the card's own official Q&A.
+/// no trait. Proves the name axis of `in_text_contains` ("[Vemmon] in its
+/// text" per the card's own official Q&A).
 fn vemmon_named_only(id: &str) -> CardData {
     let mut c = make_test_card(id, "Vemmon Prime");
     c.colors = vec![CardColor::Black];
@@ -423,8 +426,9 @@ fn bt21_056_trait_only_match_is_valid_cost_and_recovery() {
 }
 
 /// A Vemmon-NAMED-only card (no body text, no trait) is a valid cost AND a
-/// valid recovery target — proves the `name_contains` axis, the core fix
-/// this directive requires (per the official Q&A whole-card HasText scan).
+/// valid recovery target — proves the name axis of `in_text_contains`, the
+/// core fix this directive requires (per the official Q&A whole-card
+/// HasText scan).
 #[test]
 fn bt21_056_name_only_match_is_valid_cost_and_recovery() {
     let mut runner = base_runner()
@@ -587,7 +591,7 @@ fn bt21_056_inherited_reduces_cost_when_buried_under_top_card() {
 
 /// A name-only Vemmon match ("Vemmon Prime") as the digivolve target also
 /// qualifies for the reduction — proves the `cost_target` gate uses the
-/// same widened any_of filter as Clause 1, not a narrower body-text-only
+/// same `in_text_contains` leaf as Clause 1, not a narrower body-text-only
 /// check.
 #[test]
 fn bt21_056_inherited_reduces_cost_for_name_only_vemmon_target() {

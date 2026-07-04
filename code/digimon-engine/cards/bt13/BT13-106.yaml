@@ -1,0 +1,170 @@
+# BT13-106 Odin's Breath — Option, Yellow, Cost 5.
+#
+# Printed card text (code/digimon-engine/cards/bt13/BT13-106.json +
+# data/card_bundles/BT13-106.md — authoritative; both agree verbatim):
+#
+#   effect_description_eng:
+#     "When an effect trashes this card from the security stack, activate
+#     this card's [Main] effect.
+#     [Main] 1 of your opponent's Digimon gets -3000 DP until the end of your
+#     opponent's turn. Then, if there're 6 or fewer total cards in both
+#     players' security stacks, all of your opponent's Digimon gain
+#     ＜Security A. -1＞ (This Digimon checks 1 fewer security card.) until
+#     the end of your opponent's turn."
+#
+#   inherited_effect_description_eng:
+#     "Security Effect [Security] Activate this card's [Main] effects."
+#
+#   Official Q&A (data/card_bundles/BT13-106.md):
+#     "No, you can't. You can only activate the 'when an effect trashes this
+#     card from the security stack' [effect] when this card is directly
+#     trashed from the security stack." — confirms OnDiscardSecurity is
+#     scoped to THIS exact card being the effect-trashed one (not any
+#     incidental co-trashed card).
+#
+# DCGO C# reference:
+#   DCGO/Assets/Scripts/CardEffect/BT13/Yellow/BT13_106.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# DCGO registers THREE clause builders, all funneling into the same
+# `OptionSkill` ([Main]) body:
+#   (1) `EffectTiming.OnDiscardSecurity` (CanTriggerOnTrashSelfSecurity):
+#       ActivateClass that re-runs `CardEffectCommons.OptionMainEffect(card)`
+#       — i.e. activates [Main]. → `when: on_discard_security` clause below,
+#       body = the same Main steps.
+#   (2) `EffectTiming.OptionSkill` ([Main] from hand): mandatory
+#       (`canNoSelect: false`) SelectPermanentEffect over 1 opponent Digimon,
+#       gated on `HasMatchConditionPermanent` (silently no-ops when the
+#       opponent controls no Digimon) → `ChangeDigimonDP(-3000,
+#       UntilOpponentTurnEnd)`. THEN, unconditionally (not gated on the DP
+#       select having found a target): `if (card.Owner.SecurityCards.Count +
+#       card.Owner.Enemy.SecurityCards.Count <= 6)` → mass
+#       `ChangeDigimonSAttackPlayerEffect` over ALL opponent battle-area
+#       Digimon, `-1`, `UntilOpponentTurnEnd`. → `when: main_from_hand` clause
+#       below.
+#   (3) `EffectTiming.SecuritySkill` ([Security]):
+#       `AddActivateMainOptionSecurityEffect` — re-runs the same [Main] body.
+#       → `scope: inherited, when: on_security` clause below (BT24-097 /
+#       BT24-091/095 idiom: security-triggered Main re-run).
+#
+# ─── Substrate (all shipped — no engine/DSL gap) ─────────────────────────────
+#
+#   - `on_discard_security` timing                → BT15-092 / BT25-034 / BT25-040
+#   - `add_dp_modifier` w/ `expiry: end_of_opponents_turn`
+#                                                  → BT13-095 (`add_dp_modifier`
+#                                                    idiom), BT25-040 (the
+#                                                    `end_of_opponents_turn`
+#                                                    expiry key)
+#   - `total_security_count_lte` predicate         → G-DSL-TOTAL-SECURITY-COUNT-
+#     -PREDICATE, added specifically for this card (sums BOTH players'
+#     security-stack counts, matching DCGO
+#     `card.Owner.SecurityCards.Count + card.Owner.Enemy.SecurityCards.Count`).
+#   - `add_modifier { continuous: true, modifier: SecurityAttackChange }`
+#     mass grant                                   → BT13-075 Alphamon idiom
+#     (`add_modifier{continuous:true}` → `Game::add_floating_mass_modifier`);
+#     `SecurityAttackChange` is the shipped modifier backing `<Security A.
+#     ±N>` (combat.rs / modifiers.rs / dsl_cards/modifier_map.rs).
+#
+# The mandatory delete-DP select is gated on candidate existence by the
+# select step itself (BT24-097 precedent: "the select step itself silently
+# skips when no eligible target exists"); the `total_security_count_lte: 6`
+# branch is independent — it fires regardless of whether the DP-select found
+# a target, matching DCGO's structure where the two `if` blocks are
+# sequential and unconditional on each other.
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Clause                                                            | Status      |
+# |--------------------------------------------------------------------|-------------|
+# | 1. OnDiscardSecurity -> activate [Main]                           | IMPLEMENTED |
+# | 2. [Main] -3000 DP to 1 opp Digimon until end of opp turn         | IMPLEMENTED |
+# | 3. [Main] then, if total security <= 6: opp Digimon <Sec.A -1>    | IMPLEMENTED |
+# | 4. [Security] Activate [Main] effects                             | IMPLEMENTED |
+
+card: BT13-106
+name: Odin's Breath
+kind: option
+color: [yellow]
+cost: 5
+
+effects:
+  # ─── Clause 1 — OnDiscardSecurity re-runs [Main] ─────────────────────────
+  # "When an effect trashes this card from the security stack, activate this
+  # card's [Main] effect." DCGO CanTriggerOnTrashSelfSecurity + re-run of
+  # OptionMainEffect. Body is the same Main steps as Clause 2/3 below.
+  - when: on_discard_security
+    summary: "[Security-trash] When an effect trashes this card from security, activate its [Main] effect (-3000 DP; then maybe <Security A. -1> to all opp Digimon)"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -3000 DP until the end of your opponent's turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -3000
+          expiry: end_of_opponents_turn
+      - if:
+          condition: { total_security_count_lte: 6 }
+          then:
+            - add_modifier:
+                continuous: true
+                target: { of: opponent, kind: digimon }
+                modifier: SecurityAttackChange
+                value: -1
+                expiry: end_of_opponents_turn
+
+  # ─── Clause 2 — [Main] from hand ─────────────────────────────────────────
+  # "[Main] 1 of your opponent's Digimon gets -3000 DP until the end of your
+  # opponent's turn. Then, if there're 6 or fewer total cards in both
+  # players' security stacks, all of your opponent's Digimon gain <Security
+  # A. -1> until the end of your opponent's turn."
+  # DCGO OptionSkill: mandatory select (silently skips when the opponent has
+  # no Digimon), THEN an unconditional total-security-count check gating a
+  # mass <Security A. -1> grant to every opponent Digimon.
+  - when: main_from_hand
+    summary: "[Main] 1 opponent Digimon gets -3000 DP until end of opp turn; then, if 6 or fewer total security cards, all opponent Digimon gain <Security A. -1> until end of opp turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -3000 DP until the end of your opponent's turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -3000
+          expiry: end_of_opponents_turn
+      - if:
+          condition: { total_security_count_lte: 6 }
+          then:
+            - add_modifier:
+                continuous: true
+                target: { of: opponent, kind: digimon }
+                modifier: SecurityAttackChange
+                value: -1
+                expiry: end_of_opponents_turn
+
+  # ─── Clause 3 — Inherited [Security] Activate [Main] effects ────────────
+  # "Security Effect [Security] Activate this card's [Main] effects." DCGO
+  # SecuritySkill -> AddActivateMainOptionSecurityEffect (BT24-097 idiom:
+  # scope: inherited, when: on_security, body mirrors Main).
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Activate [Main] effects: -3000 DP to 1 opp Digimon; then maybe <Security A. -1> to all opp Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -3000 DP until the end of your opponent's turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -3000
+          expiry: end_of_opponents_turn
+      - if:
+          condition: { total_security_count_lte: 6 }
+          then:
+            - add_modifier:
+                continuous: true
+                target: { of: opponent, kind: digimon }
+                modifier: SecurityAttackChange
+                value: -1
+                expiry: end_of_opponents_turn
