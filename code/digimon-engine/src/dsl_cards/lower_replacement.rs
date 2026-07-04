@@ -216,6 +216,66 @@ pub fn lower_with_raw(
         return Some(builder.build());
     }
 
+    // BT19-099 The Wicked God Descends! — Delay-cost trash-self then optionally
+    // PLAY a filtered card from HAND OR TRASH for free (union-zone reward),
+    // non-cancelling. Union-zone sibling of `DelaySelfTrashPlayFromHandFlow`
+    // with the same ownership contract: the generic step runner cannot thread
+    // the reward tail across the mid-process source self-trash, and the parked
+    // replacement's index-based Proceed commit deletes the WRONG permanent once
+    // the self-trash + reward play shift battle-area indices — the freshly
+    // played card got trashed and the leaving subject survived
+    // (G-ENGINE-DELAY-SELF-TRASH-THEN-FREE-PLAY-IN-LEAVE-REPLACEMENT). So:
+    // mark `handled()`, pay the self-trash, finish the OWNED leave by stable
+    // card handle, THEN run the reward steps through the generic runner with
+    // `replacement_subject` re-bound as the subject's stable TOP-CARD SNAPSHOT
+    // (a card binding) so a `play_cost_eq_binding` reward filter reads the
+    // pre-leave printed cost — DCGO BT19_099.cs:261 evaluates
+    // `permanent.TopCard.GetCostItself + 1 == candidate.GetCostItself` against
+    // the trigger-hashtable snapshot, not a live post-deletion lookup.
+    // Clone-safe: the reward select is the ordinary `select_union_zone`
+    // install (data-driven `RunTail` resume frame); the rare Pending case
+    // parks the data-driven `DelayPlayFromUnionAfterSelection` frame.
+    if let Some(union_flow) = DelaySelfTrashPlayFromUnionFlow::from_process(&process) {
+        let runtime_for_union = runtime.clone();
+        builder = builder.replacement_process(move |rctx| {
+            if !source_is_delayed_option(rctx.effect) {
+                return;
+            }
+
+            let player = resolve_player(rctx.effect, union_flow.of);
+            let Some(source) = rctx.effect.source_permanent else {
+                return;
+            };
+            let Some(source_card) = rctx.effect.permanent_top_card_handle(source) else {
+                return;
+            };
+            let subject_card = stable_replacement_subject_card(rctx.effect, rctx.subject);
+
+            let continuation = DelayPlayFromUnionContinuation {
+                source_player: source.player,
+                source_card,
+                subject: rctx.subject,
+                subject_card,
+                player,
+                reward_steps: union_flow.reward_steps.clone(),
+                runtime: runtime_for_union.clone(),
+            };
+
+            match rctx.effect.trash_delay_source_status() {
+                DelayCostStatus::Paid => {
+                    rctx.handled();
+                    install_delay_play_from_union_after_paid(rctx.effect, &continuation);
+                }
+                DelayCostStatus::Pending => {
+                    rctx.handled();
+                    arm_pending_delay_play_from_union_continuation(rctx.effect.game, continuation);
+                }
+                DelayCostStatus::Unpaid => {}
+            };
+        });
+        return Some(builder.build());
+    }
+
     if let Some(delay_flow) = DelayHandDigivolveFlow::from_process(&process) {
         builder = builder.replacement_process(move |rctx| {
             if !source_is_delayed_option(rctx.effect) {
@@ -1065,6 +1125,98 @@ pub(crate) struct DelayPlayFromHandSelectionState {
     pub(crate) outer_conts: Vec<crate::resume::OuterContinuation>,
 }
 
+/// BT19-099 The Wicked God Descends! — Delay-cost self-trash then optionally
+/// PLAY a filtered card from hand OR trash for free, without cancelling the
+/// leave. Union-zone sibling of [`DelaySelfTrashPlayFromHandFlow`].
+///
+/// Recognised process:
+/// ```text
+/// [ delete_permanent { target: source },      // pay the <Delay> cost
+///   select_union_zone { of, zones ⊆ [hand, trash], bind_as: <pick>,
+///                       optional: true, filter: ... },
+///   play_union_bound_free { binding: <pick> } ]
+/// ```
+struct DelaySelfTrashPlayFromUnionFlow {
+    of: CompiledPlayerRef,
+    /// The reward steps (`select_union_zone` + `play_union_bound_free`) —
+    /// exactly `process[1..]`, run verbatim through the generic step runner
+    /// after the cost + owned leave complete.
+    reward_steps: Arc<[CompiledStep]>,
+}
+
+impl DelaySelfTrashPlayFromUnionFlow {
+    fn from_process(process: &[CompiledStep]) -> Option<Self> {
+        let [CompiledStep::DeletePermanent { target }, CompiledStep::SelectUnionZone {
+            of,
+            zones,
+            material_of,
+            zone_filters,
+            material_carrier_filter,
+            bind_as,
+            optional,
+            cost,
+            then,
+            ..
+        }, CompiledStep::PlayUnionBoundFree { binding, .. }] = process
+        else {
+            return None;
+        };
+
+        let bind_as = bind_as.as_deref()?;
+        // Cost trashes THIS Option; the reward pick is the printed "you may
+        // play" (optional, not a clause-aborting cost); the play consumes the
+        // same union-bound card the select bound.
+        if !matches!(target, CompiledBindingRef::Source) {
+            return None;
+        }
+        if !*optional || *cost {
+            return None;
+        }
+        if binding != bind_as {
+            return None;
+        }
+        // Hand/trash zones only (the DCGO BT19-099 reference surface); a
+        // material zone, per-zone filter overrides, or a scoped `then:` tail
+        // fall back to the generic path.
+        if zones.is_empty()
+            || !zones
+                .iter()
+                .all(|z| matches!(z, CompiledZone::Hand | CompiledZone::Trash))
+        {
+            return None;
+        }
+        if material_of.is_some()
+            || material_carrier_filter.is_some()
+            || zone_filters.hand.is_some()
+            || zone_filters.trash.is_some()
+            || zone_filters.material.is_some()
+            || !then.is_empty()
+        {
+            return None;
+        }
+
+        Some(Self {
+            of: *of,
+            reward_steps: Arc::from(&process[1..]),
+        })
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct DelayPlayFromUnionContinuation {
+    source_player: PlayerId,
+    source_card: CardHandle,
+    /// The leaving subject (this flow `handled()` the replacement, so it owns
+    /// the leaver's deletion — see `install_delay_play_from_union_after_paid`).
+    subject: ReplacementSubject,
+    subject_card: Option<(PlayerId, CardHandle)>,
+    player: PlayerId,
+    /// `select_union_zone` + `play_union_bound_free`, run verbatim through
+    /// the generic step runner once the cost + owned leave are done.
+    reward_steps: Arc<[CompiledStep]>,
+    runtime: StepRuntime,
+}
+
 #[derive(Clone, Debug)]
 pub(crate) struct DelayCancelContinuation {
     source_player: PlayerId,
@@ -1750,6 +1902,114 @@ pub(crate) fn run_delay_play_from_hand_selection_step(
         play_delay_hand_card(game, source_card, source_permanent, source_kind, player, card);
     }
     crate::dsl_cards::step::selections::run_outer_conts(game, outer_conts);
+}
+
+// ─── BT19-099 — Delay-cost trash-self then optionally PLAY 1 from hand/trash ──
+
+/// Arm the BT19-099 Delay-cost union-PLAY reward onto a pending selection that
+/// was opened while paying the <Delay> cost (the rare `Pending` case — e.g. an
+/// interrupt around the self-trash) or while finishing the owned leave.
+/// Composes onto the resumable VM when the pending selection is already
+/// resume-driven, else onto its closure.
+fn arm_pending_delay_play_from_union_continuation(
+    game: &mut Game,
+    continuation: DelayPlayFromUnionContinuation,
+) {
+    let Some(mut selection) = game.pending_selection.take() else {
+        continue_delay_play_from_union_after_selection(game, continuation);
+        return;
+    };
+
+    if let Some(inner) = game.pending_selection_resume.take() {
+        game.pending_selection_resume = Some(crate::resume::ResumeStack {
+            frames: vec![
+                crate::resume::ResumeFrame::DelayPlayFromUnionAfterSelection {
+                    inner: Box::new(inner),
+                    continuation,
+                    outer_conts: Vec::new(),
+                },
+            ],
+        });
+        game.pending_selection = Some(selection);
+        return;
+    }
+
+    let original_callback = selection.callback;
+    let callback_continuation = continuation.clone();
+    selection.callback = Box::new(move |game, action_id| {
+        original_callback(game, action_id);
+        continue_delay_play_from_union_after_selection(game, callback_continuation);
+    });
+
+    let original_decline = selection.on_decline.take();
+    selection.on_decline = Some(Box::new(move |game| {
+        if let Some(original_decline) = original_decline {
+            original_decline(game);
+        }
+        continue_delay_play_from_union_after_selection(game, continuation);
+    }));
+
+    game.pending_selection = Some(selection);
+}
+
+pub(crate) fn continue_delay_play_from_union_after_selection(
+    game: &mut Game,
+    continuation: DelayPlayFromUnionContinuation,
+) {
+    if game.pending_selection.is_some() {
+        arm_pending_delay_play_from_union_continuation(game, continuation);
+        return;
+    }
+
+    let mut ctx = EffectContext::new(game, continuation.source_card, None, continuation.player);
+    install_delay_play_from_union_after_paid(&mut ctx, &continuation);
+}
+
+/// The <Delay> cost is paid (BT19-099 self-trashed). This flow `handled()` the
+/// replacement, so it OWNS the leaver's deletion. Finish the leave FIRST —
+/// the leaving Digimon is NOT prevented from leaving (DCGO BT19_099.cs places
+/// no Cancel on the WhenRemoveField event), and resolving it before the reward
+/// play means the play cannot collide with the leaver's battle-area slot.
+/// Then run the reward steps (`select_union_zone` + `play_union_bound_free`)
+/// through the generic step runner with `replacement_subject` re-bound as the
+/// subject's stable top-card SNAPSHOT (a card binding): a
+/// `play_cost_eq_binding` reward filter then reads the pre-leave printed cost
+/// (DCGO BT19_099.cs:261 — `permanent.TopCard.GetCostItself + 1 ==
+/// candidate.GetCostItself` against the trigger-hashtable snapshot). With
+/// zero eligible candidates the reward select no-ops — the cost is already
+/// paid and the leave already happened, matching DCGO's post-trash candidate
+/// check (BT19_099.cs:275-277).
+fn install_delay_play_from_union_after_paid(
+    ctx: &mut EffectContext<'_>,
+    continuation: &DelayPlayFromUnionContinuation,
+) {
+    // Finish the (owned) leave FIRST — even if the Delay-cost trash was itself
+    // replaced/prevented (source not in trash below), the subject's leave must
+    // still complete; only the reward is forfeit.
+    finish_owned_leave(ctx, continuation.subject, continuation.subject_card);
+
+    if !ctx.delay_source_card_in_trash(continuation.source_player, continuation.source_card) {
+        return;
+    }
+
+    // The owned-leave deletion can itself park a selection (another watcher's
+    // replacement window / trigger ordering). Re-arm and continue after it;
+    // the re-entry's `finish_owned_leave` no-ops (the subject is gone).
+    if ctx.game.pending_selection.is_some() {
+        arm_pending_delay_play_from_union_continuation(ctx.game, continuation.clone());
+        return;
+    }
+
+    let mut bindings = Bindings::new();
+    if let Some((_, subject_card)) = continuation.subject_card {
+        bindings.insert_card("replacement_subject", subject_card);
+    }
+    let _ = run_steps_with_runtime(
+        &continuation.reward_steps,
+        ctx,
+        &mut bindings,
+        &continuation.runtime,
+    );
 }
 
 fn arm_pending_delay_cost_continuation(game: &mut Game, continuation: DelayCostContinuation) {

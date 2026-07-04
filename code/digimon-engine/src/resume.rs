@@ -571,6 +571,16 @@ pub enum ResumeFrame {
     DelayPlayFromHandSelection(
         crate::dsl_cards::lower_replacement::DelayPlayFromHandSelectionState,
     ),
+    /// BT19-099 Delay replacement paid its trash-self cost (or finished its
+    /// owned leave) by resolving another selection first. Resolve that inner
+    /// selection as data, then continue the union-zone (hand/trash) free-PLAY
+    /// reward flow. The reward prompt itself is the ordinary
+    /// `select_union_zone` install (a data-driven `RunTail` frame).
+    DelayPlayFromUnionAfterSelection {
+        inner: Box<ResumeStack>,
+        continuation: crate::dsl_cards::lower_replacement::DelayPlayFromUnionContinuation,
+        outer_conts: Vec<OuterContinuation>,
+    },
     /// Effect-initiated App Fuse host prompt. Accept installs the result-card
     /// prompt; PASS declines without running any composed tail, matching the
     /// legacy prompt's absent `on_decline`.

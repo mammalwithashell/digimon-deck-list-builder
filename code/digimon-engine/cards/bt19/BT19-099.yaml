@@ -1,0 +1,209 @@
+
+# BT19-099 The Wicked God Descends! — Option, Purple, Cost 4.
+# Traits: [Wicked God].
+#
+# Printed card text (official Bandai DB / data/card_bundles/BT19-099.md):
+#
+#   [Main] You may play 1 [Composite] trait Digimon card from your trash with
+#   the play cost reduced by 4. Then, place this card in the battle area.
+#   [All Turns] When any of your Digimon with [Millenniummon] in their names
+#   would leave the battle area, ＜Delay＞.
+#   ・You may play 1 [Wicked God] trait Digimon card with a play cost 1 higher
+#   than that Digimon from your hand or trash without paying the cost.
+#
+# Inherited (Security):
+#   Security Effect [Security] Place this card in the battle area.
+#
+# Official Q&A:
+#   "You can choose 1 of your Digimon with [Millenniummon] in its name that
+#   was affected by the removal processing and play 1 [Wicked God] trait
+#   Digimon card with a play cost 1 higher than that Digimon." — confirms the
+#   "that Digimon" referent is the specific leaving Millenniummon-name subject
+#   (the replacement's own subject, not an independently re-selected target).
+#
+# ─── DCGO crosscheck (resolved this session) ──────────────────────────────────
+# DCGO/Assets/Scripts/CardEffect/BT19/Purple/BT19_099.cs:
+#
+# Clause A — `EffectTiming.OptionSkill` (= Main play):
+#   • If the owner's trash has a [Composite] Digimon (`HasMatchConditionOwners
+#     CardInTrash`), install a temporary -4 `ChangeCostClass` and present an
+#     optional trash select (`canNoSelect: () => true`); a pick is played with
+#     `payCost: true` under the -4 reduction.
+#   • `CardEffectCommons.PlaceDelayOptionCards` then runs UNCONDITIONALLY at
+#     the end of the coroutine — this card is placed in the battle area as a
+#     Delay-Option whether the trash play was taken, declined, or had zero
+#     candidates. The placement is the mandatory "Then, place this card"
+#     tail, NOT part of the optional play.
+#
+# Clause B — `EffectTiming.WhenRemoveField` (cross-permanent leave observer):
+#   • Offer gate (`CanUseCondition`, BT19_099.cs:205-219):
+#     `IsExistOnBattleArea(card)` + `CanTriggerWhenPermanentRemoveField(
+#     hashtable, PermanentCondition)` (an OWN permanent whose top card name
+#     contains "Millenniummon" is leaving) + `CanDeclareOptionDelayEffect(card)`
+#     (on the battle area AND `EnterFieldTurnCount != TurnCount` — the printed
+#     "after the placing turn" <Delay> window).
+#     There is NO reward-candidate check in the offer gate — the candidate
+#     scan (BT19_099.cs:275-277) happens inside `ActivateCoroutine`, AFTER the
+#     self-trash. Accepting the <Delay> with zero eligible [Wicked God]
+#     candidates trashes this Option and plays nothing.
+#   • Resolution order (`ActivateCoroutine`, BT19_099.cs:234-251): the <Delay>
+#     self-trash (`DeletePeremanentAndProcessAccordingToResult` on this
+#     Option's own permanent) runs FIRST; only on a successful deletion does
+#     the reward run.
+#   • Cost comparator (BT19_099.cs:261): `permanent.TopCard.GetCostItself + 1
+#     == cardSource.GetCostItself`, where `permanent` is drawn from the
+#     PRE-CAPTURED `WhenRemoveField` trigger hashtable
+#     (`GetPermanentsFromHashtable`) — a snapshot of the leaving subject, NOT
+#     a live post-deletion battle-area lookup. `GetCostItself` is the printed
+#     play cost of the card itself.
+#   • Zone routing: when both hand and trash hold candidates DCGO asks
+#     "From which area do you play a card?" then presents the zone's pick
+#     (hand pick `canNoSelect: true`, trash pick `canNoSelect: () => false`).
+#     Our single optional union-zone pick is the faithful action-space
+#     superset: every playable candidate in either zone is an individual
+#     action, plus PASS (the printed "You may play").
+#   • The leave is NOT prevented: no Cancel call on the WhenRemoveField event;
+#     the leaving Millenniummon-name Digimon still ends in the trash.
+#
+# Clause C — `EffectTiming.SecuritySkill`:
+#   `CardEffectFactory.PlaceSelfDelayOptionSecurityEffect(card)` — bare
+#   mandatory self-placement.
+#
+# ─── Engine notes ─────────────────────────────────────────────────────────────
+#
+# Clause B lowers onto the recognised `DelaySelfTrashPlayFromUnionFlow`
+# (lower_replacement.rs) — the union-zone sibling of ST20-14's
+# `DelaySelfTrashPlayFromHandFlow`:
+#   delete_permanent { target: source }  →  select_union_zone  →
+#   play_union_bound_free
+# The flow marks the replacement `handled()`, pays the <Delay> self-trash,
+# finishes the OWNED leave by the subject's stable card handle (the leaving
+# Digimon still leaves — resolved BEFORE the reward play so the play cannot
+# collide with the leaver's battle-area slot), then runs the reward steps with
+# `replacement_subject` re-bound as the subject's STABLE TOP-CARD SNAPSHOT so
+# the `play_cost_eq_binding` comparator reads the pre-leave printed cost —
+# exactly DCGO's hashtable-snapshot comparator above. Without this flow the
+# generic step runner's parked-replacement Proceed commit deletes by a STALE
+# battle-area index after the self-trash + reward play shift the vector — the
+# freshly played card got trashed and the subject survived
+# (G-ENGINE-DELAY-SELF-TRASH-THEN-FREE-PLAY-IN-LEAVE-REPLACEMENT, RESOLVED
+# 2026-07-04, docs/RUST_ENGINE_GAPS.md).
+#
+# `play_cost_eq_binding: { binding: replacement_subject, offset: 1, op: eq }`
+# is G-DSL-COST-RELATIVE-TO-EVENT-SUBJECT (RESOLVED 2026-07-03, filed for this
+# exact card).
+#
+# `once_per_turn` is NOT set — no [OPT] tag in printed text; a single BT19-099
+# can only fire once total in any case because the <Delay> cost trashes it
+# from the field.
+
+card: BT19-099
+name: "The Wicked God Descends!"
+kind: option
+color: [purple]
+cost: 4
+traits: [Wicked God]
+
+effects:
+  # ─── Clause A — [Main] play [Composite] from trash (cost -4); place self ──
+  #
+  # Printed: "[Main] You may play 1 [Composite] trait Digimon card from your
+  # trash with the play cost reduced by 4. Then, place this card in the
+  # battle area."
+  - when: main_from_hand
+    optional: true
+    summary: "[Main] You may play 1 [Composite] Digimon from trash (cost -4); then place self as Delay"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revived
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Composite
+          prompt: "You may play 1 [Composite] Digimon card from your trash (cost -4)"
+      - play_from_trash:
+          of: you
+          hand_index: revived
+          cost_delta: { reduce: 4 }
+      # "Then, place this card in the battle area." — mandatory tail. DCGO's
+      # PlaceDelayOptionCards runs UNCONDITIONALLY at the end of the Main
+      # coroutine: this step is reached whether the optional trash play was
+      # taken, declined (the optional select's decline path continues the
+      # remaining steps), or had zero candidates (the empty select no-ops and
+      # the step runner continues).
+      - place_self_as_delay_option: {}
+
+  # ─── Clause B — [All Turns] Millenniummon leave-watcher ──────────────────
+  #
+  # Printed: "[All Turns] When any of your Digimon with [Millenniummon] in
+  # their names would leave the battle area, ＜Delay＞. ・You may play 1
+  # [Wicked God] trait Digimon card with a play cost 1 higher than that
+  # Digimon from your hand or trash without paying the cost."
+  #
+  # `kind: replacement` with `trigger: when_would_leave_battle_area`, gated by
+  # `replacement_subject_is_mine: true` + name_contains "Millenniummon"
+  # (mirrors BT17-095 Clause B's cross-permanent subject filter). Unlike
+  # BT17-095, there is no "outside of a battle" restriction and no level
+  # requirement — unconditional on any of the controller's Millenniummon-name
+  # Digimon leaving the battle area by ANY means.
+  #
+  # Step order mirrors DCGO's ActivateCoroutine: the <Delay> self-trash cost
+  # FIRST (glossary.pdf: "By trashing this card ... activate the effect
+  # below"), then the optional union-zone free play. The comparator's
+  # `replacement_subject` reference resolves through the flow's pre-leave
+  # top-card snapshot (see Engine notes above), so paying the cost first
+  # cannot stale it.
+  #
+  # No `cancel_replacement` step: the printed effect is a pure reward with no
+  # prevention wording — the leaving Millenniummon-name Digimon proceeds to
+  # the trash (DCGO places no Cancel on the WhenRemoveField event).
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - name_contains: "Millenniummon"
+    summary: "[All Turns] When own Millenniummon-name Digimon would leave: <Delay> trash self, may play 1 [Wicked God] with cost = leaving Digimon's cost + 1 from hand/trash free"
+    process:
+      # Standard <Delay> self-trash cost — this card leaves the field to pay
+      # for the reward.
+      - delete_permanent: { target: source }
+      # "You may play 1 [Wicked God] trait Digimon card with a play cost 1
+      # higher than that Digimon from your hand or trash without paying the
+      # cost." Single independently-optional union-zone free play
+      # (G-DSL-UNION-PLAY-FREE substrate, BT17-095 precedent). "that Digimon"
+      # = the leaving Millenniummon-name subject captured by the replacement
+      # (confirmed by the official Q&A: "1 of your Digimon with [Millenniummon]
+      # in its name that was affected by the removal processing").
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: wicked_god_pick
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Wicked God
+              - play_cost_eq_binding:
+                  binding: replacement_subject
+                  offset: 1
+                  op: eq
+          prompt: "You may play 1 [Wicked God] Digimon with play cost 1 higher than the leaving Digimon, from hand or trash (free)"
+      - play_union_bound_free:
+          binding: wicked_god_pick
+
+  # ─── Clause C — [Security] (inherited) — bare self-placement ─────────────
+  #
+  # Printed inherited (security): "Security Effect [Security] Place this card
+  # in the battle area." A bare mandatory self-placement (DCGO:
+  # PlaceSelfDelayOptionSecurityEffect).
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security][Inherited] Place self in the battle area as a Delay-Option"
+    process:
+      - place_self_as_delay_option: {}

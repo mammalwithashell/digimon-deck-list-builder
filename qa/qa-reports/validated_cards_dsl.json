@@ -10639,6 +10639,18 @@
       "status": "IMPLEMENTED",
       "date": "2026-07-04",
       "notes": "store-champs June-2026 resume wave A; review fix applied at merge: reveal add-to-hand pick made mandatory (optional:false, DCGO canNoSelect=false) + forced-pick assertion; suite green."
+    },
+    "BT19-099": {
+      "card_name": "The Wicked God Descends!",
+      "status": "IMPLEMENTED",
+      "date": "2026-07-04",
+      "archetype": "Millenniummon",
+      "yaml_path": "code/digimon-engine/cards/bt19/BT19-099.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt19/bt19_099.rs",
+      "test_count": 22,
+      "tests_passing": 22,
+      "tests_ignored": 0,
+      "notes": "All 3 printed clauses native DSL. Clause B ([All Turns] Millenniummon leave-watcher <Delay>) lowers onto the new recognised DelaySelfTrashPlayFromUnionFlow (G-ENGINE-DELAY-SELF-TRASH-THEN-FREE-PLAY-IN-LEAVE-REPLACEMENT, RESOLVED 2026-07-04): self-trash cost first (DCGO ActivateCoroutine order), owned leave finished by stable card handle (leave NOT prevented), cost+1 comparator via play_cost_eq_binding against the pre-leave top-card snapshot (DCGO BT19_099.cs:261). Offer installs even with zero reward candidates (DCGO CanUseCondition 205-219 has no candidate gate; candidate scan 275-277 is post-trash). Engine contract pinned in tests/dsl/delay_union_play_flow.rs (3)."
     }
   }
 }

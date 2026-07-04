@@ -8,6 +8,7 @@ mod attack_history_predicate;
 mod collapse_then_tail;
 mod cross_check;
 mod delay;
+mod delay_union_play_flow;
 mod digixros_aliases;
 mod digixros_transaction_steps;
 mod effect_battle;
