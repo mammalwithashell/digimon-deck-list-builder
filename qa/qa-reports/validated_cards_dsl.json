@@ -7238,20 +7238,9 @@
       "notes": "Trash-1-hand -> delete all opp highest DP (+ effect-gated opp sec trash) + trash-2-hand leave-prevention IMPLEMENTED. Clause 3 (on-hand-trashed -> delete opp lowest DP) omitted \u2014 G-ENGINE-ON-DISCARD-HAND. Titamon-3-color cost-2 alt-path omitted \u2014 G-DSL-SELF-COLOR-COUNT-LTE. 7 tests."
     },
     "BT25-075": {
-      "card_name": "Vulcanusmon",
-      "validated_date": "2026-06-07",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "BLOCKED",
-      "gap_kind": "dsl",
-      "archetype": "BT25 link-finish-aura slice",
-      "yaml_path": null,
-      "test_path": null,
-      "test_count": 0,
-      "patterns": [
-        "G4",
-        "E2"
-      ],
-      "notes": "Re-adjudicated 2026-06-07. G-ENGINE-AURA-GRANT-LINK-MAX RESOLVED so the [All Turns] Rush + Link+1 aura is now expressible; the link-up-to-2-to-chosen-hosts half ships via the new link_cards step (from:[hand,trash], to:own_digimon, count:{up_to:2}, cost:free) which was authored partly for this card. RESIDUAL blocker: the De-Digivolve clause De-Digivolves all opp Digimon ONCE PER own link card (DCGO: degenerationCount = sum of LinkedCards across all own Digimon, then IMassDegeneration x N). No DSL FormulaSpec/PerSelector counts own link cards (engine has the data on Permanent.linked_cards; no DSL selector lowers to it). New gap G-DSL-FORMULA-OWN-LINK-CARD-COUNT in dsl-vocab-gaps.md. WhenLinked one-may-attack clause also depends on when_linked (exists) but the De-Digivolve magnitude is the wall."
+      "status": "IMPLEMENTED",
+      "date": "2026-07-04",
+      "notes": "store-champs resume wave; initial 2 test failures were TEST bugs (summoning-sick ally via turn_played_override misuse + helper eating the attack offer) \u2014 engine/YAML correct and faithful to DCGO's CanAttack trigger-gate; 22/22 green incl. new summoning-sick negative pin; minor over-exposure filed as G-DSL-EVENT-TARGET-CAN-ATTACK."
     },
     "P-104": {
       "card_name": "Mental Training",
