@@ -37,8 +37,9 @@ Phased; each phase independently testable. **Gate analysis REVISED 2026-07-01** 
 
 ## 4. Productionize the evaluator
 
-- [ ] 4.1 Embedded ONNX evaluator in Rust (`ort`, mirroring `code/src-tauri/src/inference_state.rs`) with leaf batching + virtual loss.
-- [ ] 4.2 (Profiled) structural-sharing / COW clone if clone cost dominates (depends on `make-engine-cloneable` D5).
+- [ ] 4.0 (NEW 2026-07-05, informed by the real-workload profile in `spike-throughput.md` "Real self-play profile") Quick pre-batching experiment: set `intra_op_num_threads=1` on the ONNX session and re-profile. Every MCTS leaf is currently a batch-of-1 call; ORT's default multi-threaded intra-op executor spends ~7-9% of total self-time in `SpinPause`/thread-dispatch machinery for work too small to amortize the parallelism. One-line config change, cheap to A/B before investing in 4.1.
+- [ ] 4.1 Embedded ONNX evaluator in Rust (`ort`, mirroring `code/src-tauri/src/inference_state.rs`) with leaf batching + virtual loss. **Now evidence-backed, not just planned**: a real self-play `perf` profile (8 games, gen-14 trained model, cpx62, see `spike-throughput.md`) shows ONNX Runtime's GEMM math alone at 51.7% self-time and the whole NN-eval path at ~55-60% — batching leaves is the single biggest lever for search throughput, full stop.
+- [ ] 4.2 (Profiled) structural-sharing / COW clone if clone cost dominates (depends on `make-engine-cloneable` D5). **Deprioritized by the same profile**: `Game::clone` and the entire determinization/materialization layer (`materialize`/`canonicalize_hidden`/`sample_world`) each measured ≤0.1% self-time in the real workload — clone is not the bottleneck here, NN evaluation is (see 4.0/4.1).
 
 ## 5. Game-review annotations
 

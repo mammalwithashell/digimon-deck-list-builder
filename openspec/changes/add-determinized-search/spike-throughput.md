@@ -49,3 +49,30 @@ Real-shape untrained MLP (standard_lite_v2: 8410 obs → 2192 logits + value), `
 - Greedy/random policies bound the step-cost range; a real search policy's action mix sits between.
 - NN eval excluded by design — combine with task 0.3's batched-evaluator evals/sec for the full sim price.
 - The clone-cost numbers are for games paused at *safe* points (the playout never parks mid-closure); once the non-DSL cutover lands, clone cost at interrupt prompts should be re-sampled.
+
+## Real self-play profile (post-Phase-3, supersedes the mask-build lever above)
+
+**Date:** 2026-07-05 · **Hardware:** Hetzner cpx62 (16 shared vCPU, idle/uncontended), debug-symbol release build (`CARGO_PROFILE_RELEASE_STRIP=false CARGO_PROFILE_RELEASE_DEBUG=1`) · **Harness:** `perf record -F 999 -g --call-graph=dwarf` over a single-process `digimon-engine-cli selfplay` run (8 games, `--sims 320 --worlds 4`, PIMC, the real trained gen-14 model from the `add-determinized-search` self-play run) · **290K samples, 383 decisions**
+
+The 0.1 spike above measured raw `step`+mask cost with **no search and no NN** and concluded mask-build was the #1 engine-side lever (~60% of a sim). That conclusion does **not** carry over to the real production workload (determinized PIMC search + a real trained-model evaluator per leaf). Flat self-time by symbol:
+
+| Component | Self-time | |
+|---|---|---|
+| ONNX Runtime — GEMM math (`MlasGemmFloatKernelAvx512F`) | **51.7%** | dominant |
+| ONNX Runtime — thread-pool spin-wait (`SpinPause` + `WorkerLoop`/`EndParallelSection`/etc.) | ~7–9% | overhead, not math |
+| malloc/cfree | ~2.8% | mostly per-call I/O tensor (re)allocation |
+| Rust engine — `effects_for_card` | 1.4% | known lever, still unimplemented |
+| Rust engine — MCTS tree (`make_node` + `Node` alloc/drop chain) | ~4–6% | node-arena churn |
+| Rust engine — `build_action_mask` | **0.05% self / 1.32% children** | negligible here |
+| Rust engine — `determinized_search`/`pimc_search`/`materialize`/`canonicalize_hidden`/`sample_world` | **≤0.1% each** | negligible |
+
+**Why the flip:** every MCTS leaf currently triggers its own **batch-of-1** ONNX inference call (`mcts.rs` doc: "the evaluator is called with batch = 1 for now"). Once a real trained-model NN evaluation sits on top of the engine, it swamps engine-side costs by an order of magnitude — mask-build and the entire Phase-1 determinization/materialization layer (the design's own flagged "novel correctness risk") turn out to be essentially free relative to the NN. The `SpinPause`/thread-pool share is a symptom of running ORT's default multi-threaded intra-op executor on calls too small to amortize the dispatch cost.
+
+### Updated optimization priority (supersedes the Section-above ranking for search workloads)
+
+1. **Leaf batching** (already tracked as task 4.1 — "embedded ONNX evaluator... with leaf batching + virtual loss"). Now has hard evidence behind it: batching leaves amortizes both the GEMM cost and the thread-dispatch tax, attacking the ~55–60% dominant slice directly.
+2. **Try `intra_op_num_threads=1`** on the ONNX session as a cheap pre-batching experiment — for batch=1 calls, ORT's internal parallelism is plausibly pure overhead. One-line config change, worth A/B-testing before investing in (1). More relevant than this single-process measurement suggests: production runs 6 of these processes concurrently on 16 shared cores, so 6 independently-spinning thread pools contending for physical cores likely costs more than shown here.
+3. `effects_for_card` memoization — small (~1.4%) but cheap, already known from prior profiling.
+4. Node-arena reuse across searches — modest, lower priority than 1–2.
+
+**Not worth touching right now:** mask-build, the determinization/materialization layer, MCTS dispatch code — all individually ≤2% in the real workload.
