@@ -850,7 +850,23 @@ impl Game {
         }
 
         let mut candidates = Vec::new();
-        for info in self.before_pay_cost_source_infos(acting_player, cost_target.map(|t| t.card)) {
+        // `when_playing_this` reducers are scoped to "when THIS card would be
+        // PLAYED" (or, for Options, used) — a DIGIVOLVE cost must not host the
+        // target hand card's own play-cost reducers. DCGO gates these with
+        // `CanTriggerWhenPermanentWouldPlay`, which a digivolve never fires
+        // (e.g. BT18-073 "When this card would be played, by deleting 1 of
+        // your [Composite] Digimon, reduce the play cost by 4" must not be
+        // offered when digivolving BT18-073 over a Lv.5 [Composite] base).
+        // Dropping the target here removes ONLY the target-hosted
+        // `when_playing_this` block from `before_pay_cost_source_infos`;
+        // field/breeding-hosted reducers still collect, and the full
+        // `cost_target` still threads into candidate inspection below so
+        // target-aware predicates keep firing. Caught by
+        // `tests/alt_path_reachability.rs` (BT18-073).
+        let source_scan_target = cost_target.filter(|t| !t.is_digivolve);
+        for info in
+            self.before_pay_cost_source_infos(acting_player, source_scan_target.map(|t| t.card))
+        {
             let key = CostReductionKey {
                 source_card: info.source_card,
                 source_permanent: info.source_permanent,
@@ -1067,7 +1083,18 @@ impl Game {
             // semantics; the Track H gap closure does not need it.)
             return;
         }
-        let infos = self.before_pay_cost_observer_infos(acting_player, cost_target.map(|t| t.card));
+        // Same play-only scoping as the reducer scan: a target-hosted
+        // `when_playing_this` observer ("when this card would be played, ...")
+        // must not fire for a DIGIVOLVE cost. Field-hosted observers (e.g.
+        // BT12-022's "when this Digimon would DNA digivolve into ..." — gated
+        // by `source_is_cost_target_permanent`, not `when_playing_this`) are
+        // unaffected; the full `cost_target` still threads into condition/body
+        // contexts below. No current observer sets `when_playing_this`, so
+        // this is future-proofing kept in lockstep with
+        // `collect_before_pay_cost_reducers`.
+        let observer_scan_target = cost_target.filter(|t| !t.is_digivolve);
+        let infos = self
+            .before_pay_cost_observer_infos(acting_player, observer_scan_target.map(|t| t.card));
         for info in infos {
             let Some(effects) = self.effects_for_card(&info.card_id, info.source_card) else {
                 continue;

@@ -44,6 +44,10 @@
 //!   `select_own_permanent{Composite}` pay_cost with automatic
 //!   `pay_cost_guard` (no offer without an eligible Composite Digimon) and
 //!   outer accept/decline gate.
+//! - Play-vs-digivolve scoping: the reducer is `when_playing_this` (DCGO
+//!   `CanTriggerWhenPermanentWouldPlay`) — a REAL `digivolve_from_hand` over
+//!   a Lv.5 [Composite] base must NOT offer it and commits at the alt cost 3
+//!   (regression for the `alt_path_reachability` guard failure).
 //! - on_play/when_digivolving: `for_each` De-Digivolve-1 over ALL opponent
 //!   battle-area Digimon (BT9-112 idiom), gated on >=1 opponent Digimon
 //!   existing.
@@ -72,7 +76,7 @@ use digimon_engine::combat::{AttackInitiator, AttackOpen, TargetConstraint};
 use digimon_engine::debug_runner::{
     make_test_card, make_test_card_with_level, DebugRunner, DebugRunnerBuilder,
 };
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Keyword, PlayerId};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, GamePhase, Keyword, PlaySource, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::{AttackTarget, SelectionKind, TriggerSource};
@@ -647,6 +651,77 @@ fn bt18_073_when_digivolving_de_digivolves_all_opponent_digimon() {
             .card_id(&runner.game.card_data),
         "BASE-OPP",
         "[When Digivolving] must also de-digivolve all opponent Digimon"
+    );
+}
+
+/// The play-cost reducer is PLAY-scoped ("When this card would be PLAYED,
+/// ... reduce the PLAY cost by 4" — DCGO gates it with
+/// `CanTriggerWhenPermanentWouldPlay`, which a digivolve never fires). A REAL
+/// `digivolve_from_hand` over a Lv.5 [Composite] base — the card's own
+/// trait-gated alt route, and a board state where the reducer's delete-cost
+/// has an eligible target (the base itself!) — must NOT offer the reducer:
+/// the digivolve commits directly at the alt cost 3 and the base survives as
+/// a digivolution source.
+///
+/// Regression: `tests/alt_path_reachability.rs` caught the reducer's
+/// EffectChoice ("Cost reduction (-4)") leaking into the digivolve cost scan
+/// via the target-hosted `when_playing_this` block in
+/// `before_pay_cost_source_infos`, blocking the alt path behind a bogus
+/// prompt (and, if accepted, deleting the digivolve base mid-digivolve).
+#[test]
+fn bt18_073_digivolve_over_composite_base_does_not_offer_play_cost_reducer() {
+    let mut runner = machinedramon_runner()
+        .add_card(make_composite_digimon("COMP-BASE", 5, 8000))
+        .hand(0, &[CARD_ID])
+        .memory(15)
+        .start();
+    runner.game.turn_count = 1;
+    runner.game.current_phase = GamePhase::Main;
+    let base = runner.place_on_field(0, "COMP-BASE", Some(0));
+
+    let events_before = runner.game.events.len();
+    let proceeded =
+        runner
+            .game
+            .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByHand);
+    assert!(
+        proceeded,
+        "digivolving over a Lv.5 [Composite] base must commit directly — the \
+         play-scoped cost reducer must not park the digivolve behind an \
+         EffectChoice (pending: {:?})",
+        runner
+            .game
+            .pending_selection
+            .as_ref()
+            .map(|s| (s.kind, s.prompt.clone()))
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[base.index as usize]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        CARD_ID,
+        "the evolver must be on top after the alt-path digivolve"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[base.index as usize]
+            .card_sources
+            .len(),
+        2,
+        "the [Composite] base must survive beneath as a digivolution source \
+         (NOT deleted by the play-cost reducer)"
+    );
+    let _ = runner.auto_resolve();
+    let paid: i16 = runner.game.events[events_before..]
+        .iter()
+        .filter_map(|e| match e {
+            digimon_engine::events::GameEvent::MemoryChange { delta, .. } => Some(*delta),
+            _ => None,
+        })
+        .sum();
+    assert_eq!(
+        paid, -3,
+        "the alt route costs exactly 3 — no -4 play-cost reduction may apply \
+         to a digivolution cost"
     );
 }
 
