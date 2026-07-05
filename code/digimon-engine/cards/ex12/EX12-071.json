@@ -1,0 +1,27 @@
+{
+  "card_id": "EX12-071",
+  "card_index": 71,
+  "card_name_eng": "Saneiketsu Invitation",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_071",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5,
+    1
+  ],
+  "type_eng": [
+    "Shambala",
+    "SW"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "＜Use Req. ([SW] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Main] By trashing 1 [SW] trait card from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.) After, place this card in the battle area.\r\n[All Turns] When any of your [SW] trait Digimon are played, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・1 of your [SW] trait Digimon may digivolve into a [Saneiketsu] trait Digimon card in the hand without paying the cost.",
+  "inherited_effect_description_eng": "[Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

@@ -1,0 +1,25 @@
+{
+  "card_id": "EX12-072",
+  "card_index": 72,
+  "card_name_eng": "Metal Empire",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_072",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "ME"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "＜Use Req. ([ME] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Security] [All Turns] All of your [ME] trait Digimon gain ＜Guard＞ (When any of your other Digimon would leave the battle area by your opponent's effects, by deleting this Digimon, they don't leave.)\r\n[Main] Add your bottom security card to the hand and place this card face up as the bottom security card.",
+  "inherited_effect_description_eng": "[Security] You may play 1 play cost 5 or lower [ME] trait card from your hand or trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

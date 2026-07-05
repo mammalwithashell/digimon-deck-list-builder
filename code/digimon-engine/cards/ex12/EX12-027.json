@@ -1,0 +1,35 @@
+{
+  "card_id": "EX12-027",
+  "card_index": 27,
+  "card_name_eng": "TeslaJellymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_027",
+  "play_cost": 5,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1,
+    2
+  ],
+  "type_eng": [
+    "Mollusk",
+    "DS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[Main] [Once Per Turn] You may play or use 1 card with [Jellymon] in its text or the [DS] trait from your hand with the cost reduced by 2.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] ＜Draw 1＞ (Draw 1 card from your deck.). Then, if your hand has 7 or more cards, trash 1 card in your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Jellymon]/Lv.3 w/[DS] trait: Cost 2"
+}

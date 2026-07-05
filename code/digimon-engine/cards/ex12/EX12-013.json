@@ -1,0 +1,35 @@
+{
+  "card_id": "EX12-013",
+  "card_index": 13,
+  "card_name_eng": "BetelGammamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_013",
+  "play_cost": 5,
+  "dp": 6000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [
+    "Dragonkin",
+    "VB"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Main] [Once Per Turn] You may play or use 1 card with [Gammamon] in its text or the [VB] trait from your hand with the cost reduced by 2.",
+  "inherited_effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 3,
+      "memory_cost": 3
+    }
+  ],
+  "xros_req": "[Digivolve] [Gammamon]/Lv.3 w/[VB] trait: Cost 2"
+}

@@ -42,9 +42,19 @@ KIND_MAP = {
     "Digimon": 0, "Tamer": 1, "Option": 2, "Digi-Egg": 3, "Dual": 4,
 }
 
+# Option-face colors for DUAL cards (the digimoncard.io API carries no
+# option_color fields). Ground truth = the printed card face; every shipped
+# DUAL so far prints the Option face in the card's own colors (verified against
+# the image-authored YAMLs: ST23-09 dual.option.colors [green, black],
+# ST24-07 [yellow], BT25-043/057/085 likewise). The former ST23-09 entry
+# ["Purple"] was an unexercised guess contradicting both the card face and the
+# shipped YAML — corrected 2026-07-05.
 DUAL_OPTION_COLOR_OVERRIDES = {
-    "ST23-09": ["Purple"],
+    "ST23-09": ["Green", "Black"],
     "ST24-07": ["Yellow"],
+    "EX12-018": ["Red", "Yellow"],
+    "EX12-033": ["Blue", "Yellow"],
+    "EX12-052": ["Green", "Black"],
 }
 
 RARITY_MAP = {

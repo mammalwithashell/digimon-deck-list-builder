@@ -1,0 +1,27 @@
+{
+  "card_id": "EX12-070",
+  "card_index": 70,
+  "card_name_eng": "Sanmyojin Arrival",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_070",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2,
+    3
+  ],
+  "type_eng": [
+    "Shambala",
+    "TB"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "＜Use Req. ([TB] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Main] By trashing 1 [TB] trait card from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.) After, place this card in the battle area.\r\n[All Turns] When any of your level 5 or higher [TB] trait Digimon would leave the battle area, ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・You may play 1 [Sanmyojin] trait Digimon card from your hand without paying the cost.",
+  "inherited_effect_description_eng": "[Security] Activate this card's [Main] effects.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

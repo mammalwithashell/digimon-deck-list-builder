@@ -1,0 +1,35 @@
+{
+  "card_id": "EX12-059",
+  "card_index": 59,
+  "card_name_eng": "Machinedramon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_059",
+  "play_cost": 7,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    5,
+    6
+  ],
+  "type_eng": [
+    "Machine",
+    "ME"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Hand] [Counter] ＜Blast Digivolve＞ (Your Digimon may digivolve into this card without paying the cost.)\r\n＜Reboot＞ (This Digimon also unsuspends in your opponent's unsuspend phase.)\r\n＜Fragment (2)＞ (When this Digimon would be deleted, by trashing any 2 of its digivolution cards, it isn't deleted.)\r\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] ＜De-Digivolve 3＞ 1 of your opponent's Digimon. (Trash up to 3 cards from the top. You can't trash past level 3 cards.) Then, by placing 2 level 5 or lower [Machine], [Cyborg] or [ME] trait cards from your hand or trash as this Digimon's bottom digivolution cards, your opponent's effects can't trash any of your Digimon's stacked cards until their turn ends.",
+  "inherited_effect_description_eng": "Ace Overflow ＜-4＞ (As this card moves from the field or under a card to an area other than those, lose 4 memory.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Cyborg]/[ME] trait: Cost 3"
+}

@@ -1,0 +1,25 @@
+{
+  "card_id": "EX12-069",
+  "card_index": 69,
+  "card_name_eng": "Virus Busters",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_069",
+  "play_cost": 2,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "VB"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "＜Use Req. ([VB] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Security] [Your Turn] When one of your level 4 or higher [VB] trait Digimon attacks, you may play 1 [VB] trait Digimon card of the same level from your hand with the cost reduced by 3.\r\n[Main] Add your bottom security card to the hand and place this card face up as the bottom security card.",
+  "inherited_effect_description_eng": "[Security] You may play 1 play cost 5 or lower [VB] trait card from your hand or trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

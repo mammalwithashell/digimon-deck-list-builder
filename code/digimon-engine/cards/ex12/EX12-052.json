@@ -1,0 +1,73 @@
+{
+  "card_id": "EX12-052",
+  "card_index": 52,
+  "card_name_eng": "Diarbbitmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_052",
+  "play_cost": 5,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 4,
+  "rarity": 3,
+  "card_colors": [
+    3,
+    5
+  ],
+  "type_eng": [
+    "Beast Knight",
+    "NSp"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon in battle, it checks security before the attack ends.)\r\n＜Vortex＞ (At the end of your turn, this Digimon may attack an opponent's Digimon. With this effect, it can attack the turn it was played.)\r\n[When Digivolving] Your opponent's Digimon effects don't affect 1 of your Digimon until their turn ends.\r\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] 1 of your Digimon gets +3000 DP until your opponent's turn ends, then it may battle 1 of their Digimon.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Angoramon] in text or w/[NSp] trait: Cost 3",
+  "dual": {
+    "digimon": {
+      "level": 6,
+      "dp": 12000,
+      "colors": [
+        "Green",
+        "Black"
+      ],
+      "traits": [
+        "Beast Knight",
+        "NSp"
+      ],
+      "evo_costs": [
+        {
+          "card_color": 3,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "effect_text": "＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon in battle, it checks security before the attack ends.)\r\n＜Vortex＞ (At the end of your turn, this Digimon may attack an opponent's Digimon. With this effect, it can attack the turn it was played.)\r\n[When Digivolving] Your opponent's Digimon effects don't affect 1 of your Digimon until their turn ends.\r\n[When Digivolving] [When Attacking] [Counter] [Once Per Turn] 1 of your Digimon gets +3000 DP until your opponent's turn ends, then it may battle 1 of their Digimon.",
+      "inherited_text": "",
+      "keywords": [
+        "ArtsDigivolve"
+      ]
+    },
+    "option": {
+      "use_cost": 5,
+      "colors": [
+        "Green",
+        "Black"
+      ],
+      "effect_text": "Use Requirement: NSp trait\r\n[Main] 1 of your Digimon may unsuspend. Then, suspend 2 of your opponent's Digimon. 2 of their Digimon or Tamers can't unsuspend until their turn ends.",
+      "security_text": "",
+      "keywords": [
+        "ArtsDigivolve"
+      ]
+    }
+  }
+}

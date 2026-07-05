@@ -1,0 +1,35 @@
+{
+  "card_id": "EX12-061",
+  "card_index": 61,
+  "card_name_eng": "Hanimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_061",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Puppet",
+    "Shambala",
+    "TB"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] By trashing 1 card with the [Puppet] or [TB] trait from your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] ＜Draw 1＞ (Draw 1 card from your deck.) and trash 1 card in your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Shambala] trait: Cost 0"
+}

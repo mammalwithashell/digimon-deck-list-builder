@@ -1,0 +1,37 @@
+{
+  "card_id": "EX12-076",
+  "card_index": 76,
+  "card_name_eng": "Susanoomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_076",
+  "play_cost": 16,
+  "dp": 16000,
+  "level": 7,
+  "card_kind": 0,
+  "rarity": 4,
+  "card_colors": [
+    2,
+    4
+  ],
+  "type_eng": [
+    "Shaman",
+    "Shambala",
+    "SW",
+    "TB"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Rush＞ (This Digimon can attack the turn it was played.)\r\n＜Raid＞ (When this Digimon attacks, you may switch the target of attack to 1 of your opponent's unsuspended Digimon with the highest DP.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] To all of your opponent's Digimon, give -3000 DP for the turn for each color in this Digimon's digivolution cards.\r\n[When Attacking] [Once Per Turn] Place 1 of your opponent's Digimon as the top security card. Then, if this Digimon has 4 or more colors in its digivolution cards, trash their top security card and ＜Recovery +1＞ (Place the top card of your deck as your top security card.)",
+  "inherited_effect_description_eng": "|applinkdp =",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 6,
+      "memory_cost": 6
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.6 w/[Hybrid]/[Shambala]/[TS] trait: Cost 5"
+}
