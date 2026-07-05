@@ -710,6 +710,10 @@ pub enum SecurityRemovalDestination {
         to_bottom: bool,
     },
     BottomSource(PermanentHandle),
+    /// Insert the removed security card as `target`'s TOP digivolution
+    /// source (directly beneath the active top card) — the top-position
+    /// sibling of `BottomSource`. G-DSL-PLACE-AS-TOP-SOURCE.
+    TopSource(PermanentHandle),
     Digivolve {
         player: PlayerId,
         target: PermanentHandle,

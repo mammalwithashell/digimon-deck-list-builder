@@ -7281,9 +7281,9 @@
     },
     "BT13-088": {
       "card_name": "Belphemon: Sleep Mode",
-      "status": "PARTIAL",
+      "status": "IMPLEMENTED",
       "gap_kind": null,
-      "test_count": 14,
+      "test_count": 15,
       "yaml_path": "code/digimon-engine/cards/bt13/BT13-088.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt13/bt13_088.rs",
       "patterns": [
@@ -7292,8 +7292,8 @@
         "F6",
         "OPT"
       ],
-      "notes": "Judge-quiz Q1. [OppTurn][OPT] trash 2 -> end attack (Q1-critical, fully faithful); [OnPlay/WhenDigivolving] place Belphemon: Rage Mode from trash + CannotAttack + 4-kind opp-effect immunity. PARTIAL: place_as_bottom_source used for Rage Mode (no top-source verb; position behaviorally inert).",
-      "validated_date": "2026-05-29",
+      "notes": "Judge-quiz Q1. [OppTurn][OPT] trash 2 -> end attack (Q1-critical, fully faithful); [OnPlay/WhenDigivolving] place Belphemon: Rage Mode from trash + CannotAttack + 4-kind opp-effect immunity. 2026-07-05: former PARTIAL cleared - Rage Mode is now placed via place_as_top_source (G-DSL-PLACE-AS-TOP-SOURCE resolved), matching the printed 'on top of this Digimon's digivolution cards' (position pinned in bt13_088_on_play_places_rage_at_top_source_position).",
+      "validated_date": "2026-07-05",
       "report": "batch-implement-cards-rust-dsl",
       "archetype": "judge-quiz first wave"
     },
@@ -8715,7 +8715,7 @@
       "archetype": "Bagra Army",
       "yaml_path": "code/digimon-engine/cards/ex10/EX10-059.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex10/ex10_059.rs",
-      "notes": "DigiXros -3 [Bagramon]x[DarkKnightmon] + std digivolve faithful (16-3-3=10 pinned; Q29 pins the Yuu Amano cost/order interaction); [OP][WD] blind-hand tuck OMITTED (G-DSL-BLIND-OPP-HAND-PLACE), place-3-as-TOP-sources cost OMITTED (G-DSL-PLACE-AS-TOP-SOURCE), [All Turns] gain-sources-effects OMITTED (G-DSL-GAIN-ALL-TURNS-FROM-SOURCES)."
+      "notes": "DigiXros -3 [Bagramon]x[DarkKnightmon] + std digivolve faithful (16-3-3=10 pinned; Q29 pins the Yuu Amano cost/order interaction); [OP][WD] blind-hand tuck OMITTED (G-DSL-BLIND-OPP-HAND-PLACE), place-3-as-TOP-sources cost OMITTED (place_as_top_source verb landed 2026-07-05 / G-DSL-PLACE-AS-TOP-SOURCE resolved, but the clause still needs the 3-pick trash-cost flow + a 'with cards under it' target filter), [All Turns] gain-sources-effects OMITTED (G-DSL-GAIN-ALL-TURNS-FROM-SOURCES)."
     },
     "BT20-036": {
       "card_name": "BanchoLeomon",
@@ -10582,9 +10582,9 @@
       "notes": "store-champs wave A -> completed in the DSL-wiring round: [Main] triple delete + self-placement tail (place_self_under_permanent DSL verb, G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL resolved), [Security] (no tail), inherited memory-gain, color-ignore use_requirement all green. 17/17 behavioral tests."
     },
     "EX9-074": {
-      "status": "PARTIAL",
-      "date": "2026-07-03",
-      "notes": "store-champs wave A -> mass-delete clause completed in the DSL-wiring round: both Part-2 branches authored via own_source_stack_color_count_gte (G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD resolved) + color_matches_own_source_stack / delete_one_per_opponent_color; 24/24 behavioral tests. Remaining PARTIAL is only the documented cosmetic G-DSL-PLACE-AS-TOP-SOURCE position divergence (bottom not top source; behaviorally inert for this card - BT13-088 precedent)."
+      "status": "IMPLEMENTED",
+      "date": "2026-07-05",
+      "notes": "store-champs wave A -> mass-delete clause completed in the DSL-wiring round: both Part-2 branches authored via own_source_stack_color_count_gte (G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD resolved) + color_matches_own_source_stack / delete_one_per_opponent_color. 2026-07-05: the last cosmetic divergence cleared - the placement now uses the new place_as_top_source verb (G-DSL-PLACE-AS-TOP-SOURCE resolved), landing the trash card as the printed TOP digivolution card (position pinned in ex9_074_on_play_accepting_placement_moves_card_to_source_stack). 24/24 behavioral tests."
     },
     "BT18-015": {
       "card_name": "Kimeramon",

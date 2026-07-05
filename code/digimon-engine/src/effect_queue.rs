@@ -3361,6 +3361,31 @@ impl Game {
                             self.player_mut(owner).trash.push(security.card);
                         }
                     }
+                    // Top-position sibling of BottomSource: insert directly
+                    // beneath the target's active top card
+                    // (`push_as_top_source`). Same fallbacks (missing target
+                    // → owner's trash). G-DSL-PLACE-AS-TOP-SOURCE.
+                    SecurityRemovalDestination::TopSource(target) => {
+                        if target.index == crate::action::space::BREEDING_TARGET as u8 {
+                            if let Some(breeding) =
+                                self.player_mut(target.player).breeding_area.as_mut()
+                            {
+                                breeding.push_as_top_source(security.card);
+                            } else {
+                                let owner = security.card.owner;
+                                self.player_mut(owner).trash.push(security.card);
+                            }
+                        } else if let Some(perm) = self
+                            .player_mut(target.player)
+                            .battle_area
+                            .get_mut(target.index as usize)
+                        {
+                            perm.push_as_top_source(security.card);
+                        } else {
+                            let owner = security.card.owner;
+                            self.player_mut(owner).trash.push(security.card);
+                        }
+                    }
                     SecurityRemovalDestination::Digivolve {
                         player: _,
                         target,

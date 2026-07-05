@@ -229,6 +229,21 @@ impl Game {
         self.place_as_bottom_source_observed(source, target, target.player, face_down)
     }
 
+    /// Insert a card as `target`'s TOP digivolution source — directly
+    /// beneath the active top card (`Permanent::push_as_top_source`, DCGO
+    /// `AddDigivolutionCardsTop`). The top-position sibling of
+    /// `place_as_bottom_source`; identical source zones, `face_down`
+    /// semantics (and the Security face-up caveat), and lifecycle.
+    /// G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05).
+    pub fn place_as_top_source(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        face_down: bool,
+    ) -> bool {
+        self.place_as_top_source_observed(source, target, target.player, face_down)
+    }
+
     pub fn place_permanent_as_bottom_sources(
         &mut self,
         source: PermanentHandle,

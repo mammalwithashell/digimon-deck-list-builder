@@ -126,6 +126,25 @@ impl<'a> EffectContext<'a> {
             .place_as_bottom_source_observed(source, target, self.player, face_down)
     }
 
+    /// Insert a card as `target`'s TOP digivolution source — directly
+    /// beneath the active top card. Top-position sibling of
+    /// `place_as_bottom_source` (same source zones, same Progress-gate
+    /// omission rationale, same `face_down` semantics / Security caveat,
+    /// same observer lifecycle via the shared
+    /// `Game::place_as_source_observed` body). DCGO
+    /// `Permanent.AddDigivolutionCardsTop`. Consumers: EX9-074 Kimeramon,
+    /// BT13-088 Belphemon: Sleep Mode.
+    /// G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05).
+    pub fn place_as_top_source(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        face_down: bool,
+    ) -> bool {
+        self.game
+            .place_as_top_source_observed(source, target, self.player, face_down)
+    }
+
     pub fn place_hand_card_under_tamer(
         &mut self,
         hand_index: usize,

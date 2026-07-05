@@ -3449,7 +3449,32 @@ Surfaced: 2026-05-29, judge-quiz first wave (`batch-implement-cards-rust-dsl`). 
 - **Card text:** LM-020 [When Digivolving] "... reveal all of your opponent's security cards, and place 1 card among them on top of your opponent's deck. Shuffle the rest and return them to the security stack." DCGO `LM_020.cs`: `IReduceSecurity` -> `AddLibraryTopCards` -> shuffle.
 - **Blocks:** LM-020 (Quantumon) -> judge-quiz Q18. (LM-020's `[Start of Opponent's Turn]` category-immunity clause is independently implementable; only the security->deck clause is blocked.) Likely shared by other "place a security card on top/bottom of deck" cards. Re-attempt LM-020 once the verb lands.
 
-## BT13-088 — place a card as the TOP digivolution source  [G-DSL-PLACE-AS-TOP-SOURCE]
+## BT13-088 — place a card as the TOP digivolution source  [G-DSL-PLACE-AS-TOP-SOURCE] — **RESOLVED 2026-07-05**
+
+> **RESOLVED 2026-07-05.** New DSL verb `place_as_top_source: { source, target, face_down? }`
+> (sibling of `place_as_bottom_source`, same args shape) lowers to the new
+> `EffectContext::place_as_top_source` → `Game::place_as_top_source_observed`
+> → `Permanent::push_as_top_source`, inserting DIRECTLY BENEATH the active
+> top card (this engine's `card_sources` is bottom-first / top-last, so
+> top-source = index `len - 1`) — exactly DCGO `Permanent.AddDigivolutionCardsTop`
+> (`cardSources.Insert(1, …)` in DCGO's top-first ordering). Shares the
+> bottom verb's full lifecycle via the position-parameterized
+> `Game::place_as_source_observed` body (security sources materialize and
+> route through `fire_effect_security_removal` with the new
+> `SecurityRemovalDestination::TopSource`; Material-carrier soft-remove
+> preserved). Consumers flipped to the new verb: **EX9-074 Kimeramon**
+> ("as this Digimon's top digivolution card" → IMPLEMENTED, position
+> divergence gone) and **BT13-088 Belphemon: Sleep Mode** ("on top of this
+> Digimon's digivolution cards"). Substrate proof:
+> `tests/dsl/place_as_top_source.rs` (4 tests — position with 2 pre-existing
+> sources, sourceless stack, face_down both ways); card-level position pins
+> in `tests/cards_behavioral/ex9/ex9_074.rs` +
+> `tests/cards_behavioral/bt13/bt13_088.rs`. EX10-059's sentence-2 cost can
+> now author its placement half but remains OMITTED on its other needs
+> (3-pick cost flow, "with cards under it" filter — see G-DSL-BLIND-OPP-HAND-PLACE
+> entry).
+
+### Original entry (history)
 
 Surfaced: 2026-05-29, judge-quiz first wave. BT13-088 Belphemon: Sleep Mode shipped PARTIAL.
 
@@ -3762,7 +3787,7 @@ Surfaced: judge-quiz Q15 authoring (BT17-016 first draft).
 ### EX10-059 — blind opponent-hand pick + cross-player tuck  [G-DSL-BLIND-OPP-HAND-PLACE]
 
 - **Card text:** "[On Play][When Digivolving] Choose 1 card in your opponent's hand without looking and place it as any of their Digimon's bottom digivolution card or under any of their Tamers."
-- **Gap:** no unrevealed/blind opponent-hand selection, and no cross-player tuck destination flow. Sentence 2 ("by placing 3 [Bagra Army] trait Digimon cards from your trash as this Digimon's TOP digivolution cards, delete 1 of their Digimon or Tamers with cards under it") additionally needs the pre-existing G-DSL-PLACE-AS-TOP-SOURCE (BT13-088). Both sentences OMITTED.
+- **Gap:** no unrevealed/blind opponent-hand selection, and no cross-player tuck destination flow. Sentence 2 ("by placing 3 [Bagra Army] trait Digimon cards from your trash as this Digimon's TOP digivolution cards, delete 1 of their Digimon or Tamers with cards under it") — the top-source placement verb now exists (`place_as_top_source`, G-DSL-PLACE-AS-TOP-SOURCE resolved 2026-07-05), but the sentence still needs a 3-pick trash-cost flow and a "with cards under it" target filter. Both sentences OMITTED.
 
 ### EX10-059 — gain sources' [All Turns] effects  [G-DSL-GAIN-ALL-TURNS-FROM-SOURCES]
 
@@ -7481,7 +7506,32 @@ Surfaced: 2026-05-29, judge-quiz first wave (`batch-implement-cards-rust-dsl`). 
 - **Card text:** LM-020 [When Digivolving] "... reveal all of your opponent's security cards, and place 1 card among them on top of your opponent's deck. Shuffle the rest and return them to the security stack." DCGO `LM_020.cs`: `IReduceSecurity` -> `AddLibraryTopCards` -> shuffle.
 - **Blocks:** LM-020 (Quantumon) -> judge-quiz Q18. (LM-020's `[Start of Opponent's Turn]` category-immunity clause is independently implementable; only the security->deck clause is blocked.) Likely shared by other "place a security card on top/bottom of deck" cards. Re-attempt LM-020 once the verb lands.
 
-## BT13-088 — place a card as the TOP digivolution source  [G-DSL-PLACE-AS-TOP-SOURCE]
+## BT13-088 — place a card as the TOP digivolution source  [G-DSL-PLACE-AS-TOP-SOURCE] — **RESOLVED 2026-07-05**
+
+> **RESOLVED 2026-07-05.** New DSL verb `place_as_top_source: { source, target, face_down? }`
+> (sibling of `place_as_bottom_source`, same args shape) lowers to the new
+> `EffectContext::place_as_top_source` → `Game::place_as_top_source_observed`
+> → `Permanent::push_as_top_source`, inserting DIRECTLY BENEATH the active
+> top card (this engine's `card_sources` is bottom-first / top-last, so
+> top-source = index `len - 1`) — exactly DCGO `Permanent.AddDigivolutionCardsTop`
+> (`cardSources.Insert(1, …)` in DCGO's top-first ordering). Shares the
+> bottom verb's full lifecycle via the position-parameterized
+> `Game::place_as_source_observed` body (security sources materialize and
+> route through `fire_effect_security_removal` with the new
+> `SecurityRemovalDestination::TopSource`; Material-carrier soft-remove
+> preserved). Consumers flipped to the new verb: **EX9-074 Kimeramon**
+> ("as this Digimon's top digivolution card" → IMPLEMENTED, position
+> divergence gone) and **BT13-088 Belphemon: Sleep Mode** ("on top of this
+> Digimon's digivolution cards"). Substrate proof:
+> `tests/dsl/place_as_top_source.rs` (4 tests — position with 2 pre-existing
+> sources, sourceless stack, face_down both ways); card-level position pins
+> in `tests/cards_behavioral/ex9/ex9_074.rs` +
+> `tests/cards_behavioral/bt13/bt13_088.rs`. EX10-059's sentence-2 cost can
+> now author its placement half but remains OMITTED on its other needs
+> (3-pick cost flow, "with cards under it" filter — see G-DSL-BLIND-OPP-HAND-PLACE
+> entry).
+
+### Original entry (history)
 
 Surfaced: 2026-05-29, judge-quiz first wave. BT13-088 Belphemon: Sleep Mode shipped PARTIAL.
 
@@ -7794,7 +7844,7 @@ Surfaced: judge-quiz Q15 authoring (BT17-016 first draft).
 ### EX10-059 — blind opponent-hand pick + cross-player tuck  [G-DSL-BLIND-OPP-HAND-PLACE]
 
 - **Card text:** "[On Play][When Digivolving] Choose 1 card in your opponent's hand without looking and place it as any of their Digimon's bottom digivolution card or under any of their Tamers."
-- **Gap:** no unrevealed/blind opponent-hand selection, and no cross-player tuck destination flow. Sentence 2 ("by placing 3 [Bagra Army] trait Digimon cards from your trash as this Digimon's TOP digivolution cards, delete 1 of their Digimon or Tamers with cards under it") additionally needs the pre-existing G-DSL-PLACE-AS-TOP-SOURCE (BT13-088). Both sentences OMITTED.
+- **Gap:** no unrevealed/blind opponent-hand selection, and no cross-player tuck destination flow. Sentence 2 ("by placing 3 [Bagra Army] trait Digimon cards from your trash as this Digimon's TOP digivolution cards, delete 1 of their Digimon or Tamers with cards under it") — the top-source placement verb now exists (`place_as_top_source`, G-DSL-PLACE-AS-TOP-SOURCE resolved 2026-07-05), but the sentence still needs a 3-pick trash-cost flow and a "with cards under it" target filter. Both sentences OMITTED.
 
 ### EX10-059 — gain sources' [All Turns] effects  [G-DSL-GAIN-ALL-TURNS-FROM-SOURCES]
 

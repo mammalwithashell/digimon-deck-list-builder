@@ -155,6 +155,16 @@ pub enum StepSpec {
     PlaceOnSecurity(PlaceOnSecurityArgs),
     PlayToken(PlayTokenArgs),
     PlaceAsBottomSource(PlaceAsBottomSourceArgs),
+    /// G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05): place a card as
+    /// `target`'s TOP digivolution source — inserted directly beneath the
+    /// active top card (DCGO `Permanent.AddDigivolutionCardsTop`, which
+    /// `Insert(1, …)`s into its top-first `cardSources`). The permanent's
+    /// top card / identity is unchanged (placing a digivolution card never
+    /// changes what the permanent IS). Sibling of `place_as_bottom_source`
+    /// with the same args shape. Consumers: EX9-074 Kimeramon ("as this
+    /// Digimon's top digivolution card"), BT13-088 Belphemon: Sleep Mode
+    /// ("on top of this Digimon's digivolution cards").
+    PlaceAsTopSource(PlaceAsTopSourceArgs),
     /// Phase 2 Track F (2026-05-17): move `target`'s top stacked card (the
     /// digivolution source immediately beneath the active top card) to the
     /// bottom of its own stack. Closes G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM
@@ -514,6 +524,7 @@ impl Serialize for StepSpec {
             StepSpec::PlaceOnSecurity(v) => kv!(s, "place_on_security", v),
             StepSpec::PlayToken(v) => kv!(s, "play_token", v),
             StepSpec::PlaceAsBottomSource(v) => kv!(s, "place_as_bottom_source", v),
+            StepSpec::PlaceAsTopSource(v) => kv!(s, "place_as_top_source", v),
             StepSpec::PlaceTopSourceAsBottom(v) => kv!(s, "place_top_source_as_bottom", v),
             StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
             StepSpec::TrashBottomSources(v) => kv!(s, "trash_bottom_sources", v),
@@ -792,6 +803,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "place_on_security" => StepSpec::PlaceOnSecurity(map.next_value()?),
             "play_token" => StepSpec::PlayToken(map.next_value()?),
             "place_as_bottom_source" => StepSpec::PlaceAsBottomSource(map.next_value()?),
+            "place_as_top_source" => StepSpec::PlaceAsTopSource(map.next_value()?),
             "place_top_source_as_bottom" => StepSpec::PlaceTopSourceAsBottom(map.next_value()?),
             "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
             "trash_bottom_sources" => StepSpec::TrashBottomSources(map.next_value()?),
@@ -1030,6 +1042,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "place_on_security",
                         "play_token",
                         "place_as_bottom_source",
+                        "place_as_top_source",
                         "place_top_source_as_bottom",
                         "trash_top_source",
                         "trash_bottom_sources",
@@ -2108,6 +2121,22 @@ pub struct PlaceAsBottomSourceArgs {
     pub target: BindingRef,
     /// When `true`, the placed bottom digivolution source is marked
     /// face-down. Omitted → face-up (the default).
+    #[serde(default)]
+    pub face_down: bool,
+}
+
+/// Args for `place_as_top_source` — same shape as
+/// `PlaceAsBottomSourceArgs`, but the card is inserted at the TOP-source
+/// position (directly beneath the permanent's active top card) instead of
+/// the bottom of the stack. G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlaceAsTopSourceArgs {
+    pub source: BindingRef,
+    pub target: BindingRef,
+    /// When `true`, the placed top digivolution source is marked face-down.
+    /// Omitted → face-up (the default; no current consumer sets this — it
+    /// exists for args-shape parity with `place_as_bottom_source`).
     #[serde(default)]
     pub face_down: bool,
 }

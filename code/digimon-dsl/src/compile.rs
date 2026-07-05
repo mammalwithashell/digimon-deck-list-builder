@@ -2732,6 +2732,11 @@ fn compile_step(
             target: compile_binding_ref(&a.target),
             face_down: a.face_down,
         },
+        S::PlaceAsTopSource(a) => CompiledStep::PlaceAsTopSource {
+            source: compile_binding_ref(&a.source),
+            target: compile_binding_ref(&a.target),
+            face_down: a.face_down,
+        },
         S::PlaceTopSourceAsBottom(a) => CompiledStep::PlaceTopSourceAsBottom {
             target: compile_binding_ref(&a.target),
         },

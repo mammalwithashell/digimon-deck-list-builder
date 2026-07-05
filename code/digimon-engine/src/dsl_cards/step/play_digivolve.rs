@@ -7,7 +7,7 @@
 //!   - `PlayFromMaterials`
 //!   - `EffectInitiatedDigivolve`, `EffectInitiatedDnaDigivolve`
 //!   - `PlayToken`
-//!   - `PlaceOnSecurity`, `PlaceAsBottomSource`, `TrashTopSource`
+//!   - `PlaceOnSecurity`, `PlaceAsBottomSource`, `PlaceAsTopSource`, `TrashTopSource`
 //!
 //! All variants are synchronous (no selection prompts). Engine primitives
 //! return `Option<PermanentHandle>` / `bool` — Phase 2f1 v1 discards the
@@ -1131,6 +1131,28 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 return true;
             };
             let _ = ctx.place_as_bottom_source(source_ref, target_handle, *face_down);
+            true
+        }
+        // Top-position sibling of PlaceAsBottomSource — the card lands as
+        // `target`'s TOP digivolution source (directly beneath the active
+        // top card). DCGO `AddDigivolutionCardsTop` explicitly cannot place
+        // a whole field permanent under a stack (its doc points at
+        // IPlacePermanentToDigivolutionCards for that), so unlike the bottom
+        // arm there is no permanent-source branch here — a binding that
+        // resolves to a Permanent is a no-op. G-DSL-PLACE-AS-TOP-SOURCE.
+        CompiledStep::PlaceAsTopSource {
+            source,
+            target,
+            face_down,
+        } => {
+            let target_handle = match resolve_binding_ref(target, ctx, bindings) {
+                Some(ResolvedBinding::Permanent(h)) => h,
+                _ => return true,
+            };
+            let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else {
+                return true;
+            };
+            let _ = ctx.place_as_top_source(source_ref, target_handle, *face_down);
             true
         }
         CompiledStep::PlaceTopSourceAsBottom { target } => {

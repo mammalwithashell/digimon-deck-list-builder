@@ -26,10 +26,13 @@
 # - [OP][WD] sentence 2 — "by placing 3 [Bagra Army] Digimon cards from
 #   your trash as this Digimon's TOP digivolution cards, delete 1 of their
 #   Digimon or Tamers with cards under it": ***OMITTED — PARTIAL.*** The
-#   cost needs the place-as-TOP-source verb — the pre-existing
-#   G-DSL-PLACE-AS-TOP-SOURCE gap (BT13-088); `place_as_bottom_source` is
-#   the wrong end of the stack and would corrupt Q29-style ordering
-#   semantics. NOT approximated.
+#   place-as-TOP-source verb now EXISTS (`place_as_top_source`,
+#   G-DSL-PLACE-AS-TOP-SOURCE resolved 2026-07-05), so the placement half
+#   of the cost is authorable. The clause remains omitted on its OTHER
+#   needs: a 3-card multi-pick trash cost bound to sequential top-source
+#   placements, and the "delete 1 of their Digimon or Tamers WITH CARDS
+#   UNDER IT" target filter. Re-attempt when those are vocabularied. NOT
+#   approximated.
 # - [All Turns] effect mirroring ("gains all [All Turns] effects on all
 #   level 6 [Bagra Army] cards in its digivolution cards"): ***OMITTED —
 #   PARTIAL.*** No DSL/engine machinery grants a permanent the text-box
@@ -44,10 +47,10 @@
 # |-----------------------------------------------------------|---------------|
 # | Std digivolve Lv.6 Purple/6 + DigiXros -3 alt paths       | IMPLEMENTED   |
 # | [OP][WD] blind hand pick → tuck under opponent stack      | OMITTED (G-DSL-BLIND-OPP-HAND-PLACE) |
-# | [OP][WD] place-3-as-top-sources cost → delete-with-under  | OMITTED (G-DSL-PLACE-AS-TOP-SOURCE) |
+# | [OP][WD] place-3-as-top-sources cost → delete-with-under  | OMITTED (place_as_top_source landed 2026-07-05; still needs the 3-pick cost flow + with-cards-under filter) |
 # | [All Turns] gain sources' [All Turns] effects             | OMITTED (G-DSL-GAIN-ALL-TURNS-FROM-SOURCES) |
 # Verdict: PARTIAL (Q29-relevant identity + DigiXros paths are faithful;
-# both text clauses blocked on missing vocabulary).
+# both text clauses omitted on missing vocabulary — see per-clause notes).
 
 card: EX10-059
 name: "DarknessBagramon"

@@ -35,18 +35,19 @@
 //!   "trash 2 cards in hand" cost to end the attack.
 //! - Alt-path metadata: the printed [Belphemon: Rage Mode] cost-1 alt-digivolve.
 //!
-//! # place_as_top_source resolution (PARTIAL note)
+//! # place_as_top_source resolution (RESOLVED 2026-07-05)
 //!
 //! DCGO places Rage Mode via `AddDigivolutionCardsTop` (topmost source, just
-//! below the face card). The engine/DSL has only `place_as_bottom_source`. The
-//! placement POSITION is behaviorally inert for this card: Belphemon's own
-//! effect only requires Rage Mode to be IN the digivolution stack so its
-//! inherited effect (BT13-091/EX10-022 "[End of Opp Turn] trash top card if
-//! [Belphemon: Sleep Mode]") becomes active — inherited effects fire from any
-//! source position. No mechanic on this card references the top/bottom source
-//! position. The YAML uses `place_as_bottom_source` with this documented
-//! cosmetic divergence; the tests assert Rage Mode is present as a source, not
-//! a specific stack index.
+//! below the face card). G-DSL-PLACE-AS-TOP-SOURCE — the gap this card
+//! originally surfaced — is closed: the YAML now uses `place_as_top_source`
+//! (engine `Permanent::push_as_top_source`, inserting directly beneath the
+//! top card), matching the printed "on top of this Digimon's digivolution
+//! cards" exactly. The position was always behaviorally inert for this card
+//! (its effect only needs Rage Mode IN the stack so its inherited effect —
+//! BT13-091/EX10-022 — becomes active, and inherited effects fire from any
+//! source position), but the printed position now matches too.
+//! `bt13_088_on_play_places_rage_at_top_source_position` pins the position;
+//! substrate proof in tests/dsl/place_as_top_source.rs.
 
 use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledCost, CompiledScope, CompiledTiming,
@@ -342,6 +343,45 @@ fn bt13_088_on_play_places_rage_and_grants_cannot_attack_plus_immunity() {
             "own {source_kind:?} effects must still affect Belphemon"
         );
     }
+}
+
+/// The placed Rage Mode lands at the printed TOP-source position — directly
+/// beneath Belphemon (the top card) — not at the bottom of the stack.
+/// Belphemon is staged with a pre-existing source so the two slots are
+/// distinguishable. G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05).
+#[test]
+fn bt13_088_on_play_places_rage_at_top_source_position() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT13-088")
+        .expect("BT13-088 YAML loads")
+        .add_card(make_rage_mode("RAGE"))
+        .add_card(make_filler("UNDER"))
+        .start();
+    push_to_trash(&mut runner, 0, "RAGE");
+
+    let belphemon = runner.place_stack(0, &["UNDER", "BT13-088"]);
+    fire_on_play(&mut runner, belphemon);
+
+    let view = runner
+        .pending_selection_view()
+        .expect("Rage Mode trash prompt");
+    runner
+        .execute_action(0, view.valid_action_ids[0])
+        .expect("place Rage Mode from trash");
+    runner.auto_resolve().expect("finish grant clause");
+
+    let stack_ids: Vec<&str> = runner.game.players[0].battle_area[belphemon.index as usize]
+        .card_sources
+        .iter()
+        .map(|src| src.card_id(&runner.game.card_data))
+        .collect();
+    assert_eq!(
+        stack_ids,
+        vec!["UNDER", "RAGE", "BT13-088"],
+        "Rage Mode must land as the TOP digivolution source (directly \
+         beneath Belphemon), with the pre-existing source and the top card \
+         unchanged — printed: 'on top of this Digimon's digivolution cards'"
+    );
 }
 
 /// The grant also fires on [When Digivolving] (shared body).

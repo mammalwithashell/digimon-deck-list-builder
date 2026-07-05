@@ -62,20 +62,14 @@
 #     `AddDigivolutionCardsTop` — inserted at index 1 (`cardSources.Insert(1,
 #     ...)`), i.e. directly beneath the top card = the TOP digivolution
 #     SOURCE position.
-#     G-DSL-PLACE-AS-TOP-SOURCE [OPEN, qa/dsl-vocab-gaps.md #3374-3379]: the
-#     DSL/engine ships only `place_as_bottom_source` (inserts at source index
-#     0 — the BOTTOM of the stack), no "insert directly beneath the top card"
-#     verb. Per the BT13-088 precedent (same gap), position is BEHAVIORALLY
-#     INERT for this card: the only consumer of the placed card's colors is
-#     `color_matches_own_source_stack` / the All-Turns DP formula, both of
-#     which read the color SET of every non-flipped source in the stack
-#     (`DigivolutionCards.Filter(!IsFlipped).SelectMany(CardColors).Distinct()`
-#     in DCGO; `non_flipped_source_colors` in the engine) — an aggregate over
-#     the WHOLE stack, order-independent. No mechanic on this card (or any
-#     other DCGO logic consulted) reads "the top digivolution source"
-#     specifically. So `place_as_bottom_source` is used with this documented
-#     cosmetic position divergence — shipped PARTIAL-for-this-clause, not
-#     BLOCKED, exactly as BT13-088.
+#     G-DSL-PLACE-AS-TOP-SOURCE — RESOLVED 2026-07-05: authored with the
+#     `place_as_top_source` verb (engine `Permanent::push_as_top_source`,
+#     insert at `len - 1` in this engine's bottom-first stack = directly
+#     beneath the top card), exactly matching DCGO's printed-position
+#     semantics. The former cosmetic bottom-position divergence (the
+#     BT13-088 precedent) is gone; substrate proof in
+#     tests/dsl/place_as_top_source.rs, card-level position pin in
+#     tests/cards_behavioral/ex9/ex9_074.rs.
 #
 #   Part 2 — branch-gated deletion (runs regardless of whether Part 1 placed
 #   a card — it is a SEPARATE, unconditional step in DCGO's coroutine, not
@@ -141,7 +135,8 @@
 #   code/digimon-dsl/src/step.rs — `TrashBottomFaceDownSource(s)UnderTamer`,
 #   `MoveSelfOptionUnderPermanentArgs.face_down` — are Tamer/Option-scoped
 #   "face-down under a Tamer" mechanics unrelated to a Digimon's own
-#   digivolution stack; `PlaceAsBottomSourceArgs.face_down` defaults `false`
+#   digivolution stack; `PlaceAsBottomSourceArgs.face_down` /
+#   `PlaceAsTopSourceArgs.face_down` default `false`
 #   and this card's own text never places one face-down), so no reachable
 #   game state gives Kimeramon a face-down source. `source_color_count`
 #   therefore returns the SAME value as DCGO's `DigivolutionCardsColors.Count`
@@ -154,7 +149,7 @@
 # | Assembly -7: 7 Lv.4 [DM] Digimon cards w/different names               | IMPLEMENTED |
 # | <Rush>                                                                 | IMPLEMENTED |
 # | <Security A. +1>                                                      | IMPLEMENTED |
-# | [OP][WD] you may place 1 Lv4- [DM] trash Digimon as digivolution source | PARTIAL (bottom not top source — G-DSL-PLACE-AS-TOP-SOURCE, cosmetic) |
+# | [OP][WD] you may place 1 Lv4- [DM] trash Digimon as TOP digivolution card | IMPLEMENTED (place_as_top_source — G-DSL-PLACE-AS-TOP-SOURCE resolved 2026-07-05) |
 # | [OP][WD] delete 1 opp Digimon sharing a source color (<=5 colors)      | IMPLEMENTED (own_source_stack_color_count_gte branch gate, resolved 2026-07-03) |
 # | [OP][WD] delete 1 opp Digimon per distinct color present (>=6 colors)  | IMPLEMENTED (same gate) |
 # | [All Turns] +1000 DP per color in digivolution cards                   | IMPLEMENTED |
@@ -217,11 +212,11 @@ effects:
   # empty-candidate select behavior, matching DCGO's `if
   # (HasMatchConditionOwnersCardInTrash(...))` guard around Part 1 only).
   #
-  # Position: `place_as_bottom_source` (see the top-of-file
-  # G-DSL-PLACE-AS-TOP-SOURCE note) — DCGO inserts directly beneath the top
-  # card ("top digivolution source"); the DSL only offers bottom-of-stack
-  # insertion. Documented cosmetic divergence — no consumer of this card's
-  # own logic reads source ORDER, only the source-stack color SET.
+  # Position: `place_as_top_source` — the card lands as the TOP digivolution
+  # source, directly beneath the top card, exactly as printed ("as this
+  # Digimon's top digivolution card") and as DCGO's AddDigivolutionCardsTop
+  # resolves. G-DSL-PLACE-AS-TOP-SOURCE resolved 2026-07-05 (see the
+  # top-of-file note).
   #
   # Part 2 — branch-gated deletion. The `if:` condition
   # (`own_source_stack_color_count_gte: 6` — the resolved threshold leaf, see
@@ -247,7 +242,7 @@ effects:
               - level_lte: 4
               - trait_has: DM
           prompt: "You may place 1 level 4 or lower [DM] trait Digimon card from your trash as this Digimon's top digivolution card"
-      - place_as_bottom_source:
+      - place_as_top_source:
           source: material
           target: source
       - if:

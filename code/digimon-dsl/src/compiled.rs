@@ -1489,6 +1489,17 @@ pub enum CompiledStep {
         target: CompiledBindingRef,
         face_down: bool,
     },
+    /// G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05) — insert a card at
+    /// the TOP-source position of `target`'s digivolution stack (directly
+    /// beneath the active top card; the top card itself is unchanged).
+    /// DCGO `Permanent.AddDigivolutionCardsTop`. Same args shape as
+    /// `PlaceAsBottomSource`; fields are plain (no `skip_serializing_if`)
+    /// because the compiled pack is bincode-serialized.
+    PlaceAsTopSource {
+        source: CompiledBindingRef,
+        target: CompiledBindingRef,
+        face_down: bool,
+    },
     /// Phase 2 Track F (2026-05-17) — deterministic "top stacked card →
     /// bottom" source-stack rotation. Closes G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM
     /// for BT23-008 / BT23-018 / BT24-079 / BT24-082-shape costs that read

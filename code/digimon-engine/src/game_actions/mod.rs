@@ -1889,6 +1889,41 @@ impl Game {
         observer_player: PlayerId,
         face_down: bool,
     ) -> bool {
+        self.place_as_source_observed(source, target, observer_player, face_down, false)
+    }
+
+    /// Top-position sibling of `place_as_bottom_source_observed`: the card is
+    /// inserted as `target`'s TOP digivolution source (directly beneath the
+    /// active top card — `Permanent::push_as_top_source`) instead of at the
+    /// bottom of the stack. Same source zones, same security-materialization
+    /// observers, same Material-carrier soft-remove lifecycle.
+    /// G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05).
+    pub(crate) fn place_as_top_source_observed(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        observer_player: PlayerId,
+        face_down: bool,
+    ) -> bool {
+        self.place_as_source_observed(source, target, observer_player, face_down, true)
+    }
+
+    /// Shared body for `place_as_bottom_source_observed` /
+    /// `place_as_top_source_observed`. `top: false` inserts at the bottom of
+    /// the digivolution stack (`Permanent::push_under`, source index 0);
+    /// `top: true` inserts at the top-source position
+    /// (`Permanent::push_as_top_source`, directly beneath the top card).
+    /// Both fire the identical lifecycle: security sources materialize and
+    /// route through `fire_effect_security_removal`, and Material-source
+    /// extraction soft-removes an emptied carrier.
+    fn place_as_source_observed(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        observer_player: PlayerId,
+        face_down: bool,
+        top: bool,
+    ) -> bool {
         if let crate::enums::CardSourceRef::Security(defender, index) = source {
             if target.index == crate::action::space::BREEDING_TARGET as u8 {
                 if self.player(target.player).breeding_area.is_none() {
@@ -1915,13 +1950,18 @@ impl Game {
             let card = player.security.remove(index);
             player.face_up_security.remove(&card.card_index);
             let cause = crate::trigger_context::EventCause::from(self.infer_effect_cause(defender));
+            let destination = if top {
+                crate::selection::SecurityRemovalDestination::TopSource(target)
+            } else {
+                crate::selection::SecurityRemovalDestination::BottomSource(target)
+            };
             self.fire_effect_security_removal(
                 defender,
                 observer_player,
                 observer_player,
                 cause,
                 card,
-                crate::selection::SecurityRemovalDestination::BottomSource(target),
+                destination,
             );
             return true;
         }
@@ -1937,7 +1977,11 @@ impl Game {
             };
             let mut card = taken.card;
             card.face_down = face_down;
-            breeding.push_under(card);
+            if top {
+                breeding.push_as_top_source(card);
+            } else {
+                breeding.push_under(card);
+            }
             // Soft-remove the carrier slot if Material extraction emptied it.
             // Target is in breeding (not battle_area), so no shift needed.
             // Sibling of the digivolve-from-material fix landed in PR #533.
@@ -1956,7 +2000,11 @@ impl Game {
         }
         let mut card = taken.card;
         card.face_down = face_down;
-        target_player.battle_area[target.index as usize].push_under(card);
+        if top {
+            target_player.battle_area[target.index as usize].push_as_top_source(card);
+        } else {
+            target_player.battle_area[target.index as usize].push_under(card);
+        }
         // Soft-remove the carrier slot if Material extraction emptied it.
         // Sibling of the digivolve-from-material fix landed in PR #533. The
         // soft-remove runs AFTER push_under so the target index is still

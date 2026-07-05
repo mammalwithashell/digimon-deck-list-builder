@@ -24,7 +24,7 @@
 //! - Assembly alt-path (7 different-named Lv.4 [DM] materials from trash)
 //! - Declarative keyword grant (<Rush>) + declarative aura (<Security A. +1>)
 //! - E1-adjacent: [On Play]/[When Digivolving] shared body, optional
-//!   (non-cost) select_trash + place_as_bottom_source
+//!   (non-cost) select_trash + place_as_top_source
 //! - Formula-driven self DP aura (`source_color_count`, all-turns, symmetric)
 //! - Branch-gated deletion: `if: { own_source_stack_color_count_gte: 6 }` —
 //!   Branch A (<=5 colors) = mandatory single same-color delete
@@ -34,10 +34,13 @@
 //! # Known engine/DSL gaps affecting this card (see YAML header for the full
 //! writeup)
 //!
-//! - **G-DSL-PLACE-AS-TOP-SOURCE** (qa/dsl-vocab-gaps.md #3374-3379, open):
-//!   no "insert directly beneath the top card" placement verb exists; the
-//!   YAML uses `place_as_bottom_source` with a documented cosmetic-position
-//!   divergence (same resolution as BT13-088).
+//! - **G-DSL-PLACE-AS-TOP-SOURCE** (✅ RESOLVED 2026-07-05): the
+//!   `place_as_top_source` verb now inserts directly beneath the top card
+//!   (engine `Permanent::push_as_top_source`), so the printed "as this
+//!   Digimon's top digivolution card" position is exact — the former
+//!   cosmetic bottom-position divergence (BT13-088 precedent) is gone.
+//!   Substrate proof: tests/dsl/place_as_top_source.rs; position pinned
+//!   here in `ex9_074_on_play_accepting_placement_moves_card_to_source_stack`.
 //! - **G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD** (✅ RESOLVED
 //!   2026-07-03): the `own_source_stack_color_count_gte` predicate leaf now
 //!   reads "distinct colors in the effect carrier's own non-flipped source
@@ -253,9 +256,10 @@ fn ex9_074_on_play_when_digivolving_clause_is_mandatory_faceup_dual_timing() {
 }
 
 /// The clause's process includes a `select_trash` step (the optional
-/// placement pick), a `place_as_bottom_source` step (the placement itself —
-/// see the G-DSL-PLACE-AS-TOP-SOURCE fidelity note), and the Part-2 `if:`
-/// step gated on `own_source_stack_color_count_gte: 6` — Branch B (then) is
+/// placement pick), a `place_as_top_source` step (the placement itself, at
+/// the printed TOP-source position — G-DSL-PLACE-AS-TOP-SOURCE resolved
+/// 2026-07-05), and the Part-2 `if:` step gated on
+/// `own_source_stack_color_count_gte: 6` — Branch B (then) is
 /// `delete_one_per_opponent_color`, Branch A (else) is the mandatory
 /// same-color single delete.
 #[test]
@@ -284,8 +288,17 @@ fn ex9_074_clause_process_has_placement_and_branch_gated_delete() {
         clause
             .process
             .iter()
+            .any(|s| matches!(s, CompiledStep::PlaceAsTopSource { .. })),
+        "must include a place_as_top_source step (printed: 'as this \
+         Digimon's top digivolution card')"
+    );
+    assert!(
+        !clause
+            .process
+            .iter()
             .any(|s| matches!(s, CompiledStep::PlaceAsBottomSource { .. })),
-        "must include a place_as_bottom_source step"
+        "must NOT use place_as_bottom_source — the printed position is TOP \
+         (G-DSL-PLACE-AS-TOP-SOURCE resolved 2026-07-05)"
     );
 
     let branch = clause
@@ -516,15 +529,22 @@ fn ex9_074_on_play_filter_rejects_non_digimon() {
 }
 
 /// Accepting the placement moves the trash card into Kimeramon's
-/// digivolution-source stack and removes it from trash. Position (bottom vs
-/// top) is the documented G-DSL-PLACE-AS-TOP-SOURCE divergence.
+/// digivolution-source stack — at the printed TOP-source position, directly
+/// beneath the top card (G-DSL-PLACE-AS-TOP-SOURCE resolved 2026-07-05).
+/// Kimeramon starts with two pre-existing sources so the top-source slot is
+/// distinguishable from both the bottom and any middle slot.
 #[test]
 fn ex9_074_on_play_accepting_placement_moves_card_to_source_stack() {
+    use digimon_engine::enums::CardColor;
     let mut runner = kimeramon_runner();
+    runner
+        .game
+        .card_data
+        .push(make_dm_material("MAT-BLUE", "Blue Material", CardColor::Blue));
     push_to_trash(&mut runner, 0, "MAT-RED");
     let trash_before = runner.trash_size(0);
 
-    let kimera = runner.place_on_field(0, "EX9-074", Some(0));
+    let kimera = runner.place_stack(0, &["MAT-BLUE", "FILL", "EX9-074"]);
     fire_on_play(&mut runner, kimera);
 
     let view = runner
@@ -540,13 +560,17 @@ fn ex9_074_on_play_accepting_placement_moves_card_to_source_stack() {
         trash_before - 1,
         "the placed material must leave the trash"
     );
-    let is_source = runner.game.players[0].battle_area[kimera.index as usize]
+    let stack_ids: Vec<&str> = runner.game.players[0].battle_area[kimera.index as usize]
         .card_sources
         .iter()
-        .any(|src| src.card_id(&runner.game.card_data) == "MAT-RED");
-    assert!(
-        is_source,
-        "MAT-RED must now be a digivolution source under Kimeramon"
+        .map(|src| src.card_id(&runner.game.card_data))
+        .collect();
+    assert_eq!(
+        stack_ids,
+        vec!["MAT-BLUE", "FILL", "MAT-RED", "EX9-074"],
+        "MAT-RED must land as the TOP digivolution source — directly beneath \
+         the top card, with the pre-existing sources' order and the top card \
+         unchanged (printed: 'as this Digimon's top digivolution card')"
     );
 }
 

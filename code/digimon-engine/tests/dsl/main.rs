@@ -117,6 +117,7 @@ mod phase4_raw_rust_step;
 mod phase4_retirement_guard;
 mod place_as_bottom_source_deck_top;
 mod place_as_bottom_source_face_down;
+mod place_as_top_source;
 mod play_cost_budget;
 mod play_token_bind_as;
 mod predicate_face_down_stack_position;
