@@ -216,6 +216,10 @@ pub enum CompiledAltPathKind {
     AppFusion,
     Assembly,
     ActivatedDigivolve,
+    /// Cast-time stack construction (BT15-102). See
+    /// `alt_path::AltPathKind::CastTimeAssembly`. Appended at the tail so
+    /// bincode variant indices of prior kinds are stable.
+    CastTimeAssembly,
 }
 
 impl CompiledAltPathKind {
@@ -251,6 +255,7 @@ impl CompiledAltPathKind {
             CompiledAltPathKind::AppFusion => "app_fusion",
             CompiledAltPathKind::Assembly => "assembly",
             CompiledAltPathKind::ActivatedDigivolve => "activated_digivolve",
+            CompiledAltPathKind::CastTimeAssembly => "cast_time_assembly",
         }
     }
 }
@@ -1317,6 +1322,11 @@ pub enum CompiledStep {
     TrashFromTop {
         of: CompiledPlayerRef,
         count: u8,
+        /// Runtime-formula count (`count:` map form). When present, `count`
+        /// is 0 and this formula is evaluated at resolution time.
+        /// `#[serde(default)]` — NOT `skip_serializing_if` — bincode rule.
+        #[serde(default)]
+        count_fn: Option<Box<CompiledFormula>>,
     },
     AddToHandFromDeck {
         of: CompiledPlayerRef,
@@ -1488,6 +1498,11 @@ pub enum CompiledStep {
         source: CompiledBindingRef,
         target: CompiledBindingRef,
         face_down: bool,
+        /// Bind the placed card's `CardHandle` after a successful placement
+        /// (`bind_placed_as:` in YAML). `#[serde(default)]` — NOT
+        /// `skip_serializing_if` — so bincode round-trips (Compiled* rule).
+        #[serde(default)]
+        bind_placed_as: Option<String>,
     },
     /// G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05) — insert a card at
     /// the TOP-source position of `target`'s digivolution stack (directly
@@ -2425,6 +2440,14 @@ pub enum CompiledStep {
         source: CompiledBindingRef,
         timing: String,
         optional: bool,
+    },
+    /// Foreign-card refire (BT15-102): activate a timing-filtered effect
+    /// printed on a bound CARD OBJECT that is currently a digivolution source
+    /// of this effect's carrier, running it with the carrier as "this
+    /// Digimon". See `StepSpec::RefireCardEffect`.
+    RefireCardEffect {
+        card: CompiledBindingRef,
+        timing: String,
     },
     EndAttack {
         enabled: bool,

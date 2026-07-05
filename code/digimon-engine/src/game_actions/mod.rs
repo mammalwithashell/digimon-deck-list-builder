@@ -482,14 +482,28 @@ impl Game {
         &self,
         player_id: PlayerId,
     ) -> Vec<(u16, DigiXrosMaterialOrigin)> {
+        let Some(transaction) = self.pending_digixros_transaction.as_ref() else {
+            return Vec::new();
+        };
+        self.digixros_material_candidates_for(transaction, player_id)
+    }
+
+    /// Candidate material origins (with their selection action ids) for a
+    /// DigiXros / cast-time-assembly `transaction`, in the mask's selection
+    /// order. Extracted from `pending_digixros_material_candidates` so the
+    /// mask-time availability probe (`cast_time_assembly_play_reduction_for_
+    /// hand_card`) can enumerate against a scratch transaction that is not
+    /// (yet) the pending one.
+    fn digixros_material_candidates_for(
+        &self,
+        transaction: &crate::digixros::DigiXrosTransaction,
+        player_id: PlayerId,
+    ) -> Vec<(u16, DigiXrosMaterialOrigin)> {
         use crate::action::space::{
             encode_source_select, HAND_EFFECT_START, HAND_MAIN_LIMIT, MAX_FIELD_SLOTS,
             TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
         };
 
-        let Some(transaction) = self.pending_digixros_transaction.as_ref() else {
-            return Vec::new();
-        };
         if transaction.controller != player_id {
             return Vec::new();
         }
@@ -693,6 +707,74 @@ impl Game {
             let _ = (player_id, hand_index);
         }
         0
+    }
+
+    /// The maximum cost reduction a `cast_time_assembly` alt-path (BT15-102
+    /// Apocalymon) could realize for hand card `hand_index` right now, or `0`
+    /// when the card has no such path. Mirrors DCGO's hidden availability
+    /// `ChangeCostClass` (`isCheckAvailability: true` — `min(3, unique-name
+    /// candidate count) × 4`): the action mask offers the play under
+    /// declare-then-pay legality against the REDUCED cost, exactly like the
+    /// `[Assembly]` reduction above.
+    ///
+    /// Computed by greedily filling a scratch transaction from the same
+    /// candidate enumeration the real selection loop uses, so distinct-name
+    /// masking, zone allowances, and slot caps all apply. Greedy fill is
+    /// exact for a single recipe slot (the whole `cast_time_assembly` corpus
+    /// today); a future multi-slot path with overlapping filters would need
+    /// a matching pass instead.
+    ///
+    /// Printed-[DigiXros] paths return 0 — their mask affordability keeps the
+    /// pre-existing printed-cost behavior.
+    pub(crate) fn cast_time_assembly_play_reduction_for_hand_card(
+        &self,
+        player_id: PlayerId,
+        hand_index: usize,
+    ) -> i32 {
+        // Cheap pre-gate: only cards whose FIRST matching transaction path is
+        // `cast_time_assembly` pay for the scratch-transaction probe below
+        // (the mask hot loop calls this for every hand card; printed-DigiXros
+        // hosts return 0 without building a transaction).
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            use digimon_dsl::compiled::CompiledAltPathKind as K;
+            let Some(card) = self.player(player_id).hand.get(hand_index) else {
+                return 0;
+            };
+            let card_id = card.card_id(&self.card_data);
+            let is_cast_time = self.alt_path_registry.get(card_id).is_some_and(|paths| {
+                paths
+                    .iter()
+                    .find(|path| matches!(path.kind, K::DigiXros | K::CastTimeAssembly))
+                    .is_some_and(|path| matches!(path.kind, K::CastTimeAssembly))
+            });
+            if !is_cast_time {
+                return 0;
+            }
+        }
+        let Some(mut transaction) =
+            self.build_digixros_transaction_for_hand_card(player_id, hand_index)
+        else {
+            return 0;
+        };
+        if transaction.is_digixros {
+            return 0;
+        }
+        let base = transaction.final_cost() as i32;
+        loop {
+            let candidates = self.digixros_material_candidates_for(&transaction, player_id);
+            let Some((_, origin)) = candidates.first().copied() else {
+                break;
+            };
+            let Some(card_data) = self.card_data_for_handle(origin.card()) else {
+                break;
+            };
+            let card_data = card_data.clone();
+            if transaction.try_select_material(origin, &card_data).is_err() {
+                break;
+            }
+        }
+        (base - transaction.final_cost() as i32).max(0)
     }
 
     /// True when each assembly element can be matched to a DISTINCT card in

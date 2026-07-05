@@ -299,6 +299,13 @@ pub struct DigiXrosTransaction {
     pub wildcard_substitutions: Vec<DigiXrosWildcardSubstitution>,
     pub one_shot_cost_delta: i16,
     pub digixros_count: u8,
+    /// `true` for a printed-[DigiXros] play; `false` for a non-DigiXros
+    /// cast-time assembly (BT15-102 Apocalymon) that rides the same
+    /// transaction substrate. The semantic firewall: `was_digixros()` /
+    /// `digixros_count()` on the effect contexts report `false` / `0` for a
+    /// non-DigiXros transaction so DigiXros-keyed effects never see an
+    /// Apocalymon-style placement as a DigiXros.
+    pub is_digixros: bool,
 }
 
 impl DigiXrosTransaction {
@@ -328,6 +335,7 @@ impl DigiXrosTransaction {
             wildcard_substitutions: Vec::new(),
             one_shot_cost_delta: 0,
             digixros_count: 0,
+            is_digixros: true,
         }
     }
 
@@ -701,10 +709,14 @@ impl Game {
         {
             let card = self.player(player).hand.get(hand_index)?;
             let card_id = card.card_id(&self.card_data);
+            // A printed [DigiXros] recipe and a non-DigiXros cast-time
+            // assembly (BT15-102) share the transaction substrate; the
+            // `is_digixros` flag below keeps the semantic firewall.
             let path = self.alt_path_registry.get(card_id)?.iter().find(|path| {
                 matches!(
                     path.kind,
                     digimon_dsl::compiled::CompiledAltPathKind::DigiXros
+                        | digimon_dsl::compiled::CompiledAltPathKind::CastTimeAssembly
                 )
             })?;
             let played_card = card.handle();
@@ -713,6 +725,10 @@ impl Game {
                 player,
                 card.play_cost(&self.card_data),
                 path,
+            );
+            transaction.is_digixros = matches!(
+                path.kind,
+                digimon_dsl::compiled::CompiledAltPathKind::DigiXros
             );
             // Gap 4 (BT18-065) — conditionally enable extra material origin
             // zones. Each `extra_material_zones` entry's `while:` predicate is
@@ -740,7 +756,12 @@ impl Game {
                     }
                 }
             }
-            self.apply_active_digixros_wildcards(&mut transaction);
+            // DigiXros wildcard substitutions ("this card can be used as a
+            // DigiXros material") are keyed on the DigiXros mechanic; a
+            // non-DigiXros cast-time assembly must not consume them.
+            if transaction.is_digixros {
+                self.apply_active_digixros_wildcards(&mut transaction);
+            }
             Some(transaction)
         }
         #[cfg(not(feature = "dsl-yaml-loader"))]

@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-07-04",
+  "last_updated": "2026-07-05",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -10664,6 +10664,24 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/ex7/ex7_048.rs",
       "test_count": 27,
       "notes": "All printed clauses green: <Blocker> (face-up only), shared [On Play]/[When Digivolving] reveal-6 / use-1-3M-Option-free / remainder top-or-bottom choice (end-to-end with real EX7-070 Der Blitz), [All Turns] protect-3M-Digimon-by-trashing-Option replacement (incl. self-protection - no 'other' gate - and Digimon-only kind gate), 2 digivolve alt-paths at cost 4 (special path uses in_text_contains per printed 'w/[Three Musketeers] in text' / DCGO HasText, NOT trait_has). Engine fixes shipped with this card: (1) reviewer-directed widening of the UseOptionFromRevealed executor to accept the select_reveal_buckets CardList binding; (2) G-DSL-OUTER-TAIL-USED-OPTION-THEFT - a used Option's mid-body-parked remaining steps were stolen by the outer clause's tail drain (wrong order + wrong provenance; Der Blitz mis-disposed to trash) - fixed via compose_parked_used_option_body_tail. DSL regressions in tests/dsl/option_source_use_cluster.rs."
+    },
+    "BT15-102": {
+      "card_name": "Apocalymon",
+      "validated_date": "2026-07-05",
+      "report": "bt15-102-apocalymon-substrate-landing",
+      "status": "IMPLEMENTED",
+      "gap_kind": null,
+      "archetype": "Dark Masters (store-champs June-2026 deferred card)",
+      "yaml_path": "code/digimon-engine/cards/bt15/BT15-102.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt15/bt15_102.rs",
+      "test_count": 13,
+      "patterns": [
+        "CAST-TIME-ASSEMBLY-ALT-PATH",
+        "FOREIGN-CARD-REFIRE",
+        "FORMULA-TRASH-FROM-TOP",
+        "BIND-PLACED-AS"
+      ],
+      "notes": "Both printed clauses green with 0 ignores. Clause (a) cast-time assembly: kind: cast_time_assembly alt-path over the DigiXros transaction substrate (is_digixros=false firewall; DCGO CanNoSelect payability gate on the stop; mask declare-then-pay vs unique-name potential reduction; battle-area picks take TOP card only per official Q&A, remainder stack trashed). Clause (b) End of Your Turn OPT: mandatory trigger w/ declinable trash pick (DCGO isOptional=false + canNoSelect=true), place_as_bottom_source.bind_placed_as -> refire_card_effect (foreign OnPlay with Apocalymon as this Digimon; mandatory EffectChoice on >1), then formula mill 2x per lv6 digivolution card runs even on decline (DCGO parity). Substrate tests: tests/cast_time_assembly.rs (8), effect_context/effect_refiring.rs foreign-card tests (5), dsl/effect_refiring.rs verb tests (2). Clone-safety proven mid-assembly-select and mid-refire-choice."
     }
   }
 }

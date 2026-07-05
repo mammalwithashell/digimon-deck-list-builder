@@ -128,6 +128,17 @@ pub enum AltPathKind {
     AppFusion,
     Assembly,
     ActivatedDigivolve,
+    /// Cast-time stack construction (BT15-102 Apocalymon): "When this card
+    /// would be played, by placing up to N <filter> cards … from your
+    /// battle area or trash under it, reduce the play cost by X for each
+    /// one." Rides the DigiXros transaction substrate (count-capped
+    /// multi-select over the material `zones:`, `distinct_by` mask-level
+    /// uniqueness, per-material `cost_delta`, post-payment placement under
+    /// the played card, OnPlay drained after assembly) but is NOT a
+    /// DigiXros: `was_digixros()` / `digixros_count()` stay 0 for the
+    /// pending play. Source zones are parametric per material so the
+    /// security-stack sibling (EX10-061) composes later.
+    CastTimeAssembly,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

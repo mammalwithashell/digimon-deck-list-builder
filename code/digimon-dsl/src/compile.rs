@@ -1454,6 +1454,9 @@ fn compile_alt_path(
     card_id: &str,
     errors: &mut Vec<ValidationError>,
 ) -> CompiledAltPath {
+    if matches!(ap.kind, crate::alt_path::AltPathKind::CastTimeAssembly) {
+        validate_cast_time_assembly_shape(ap, prefix, card_id, errors);
+    }
     CompiledAltPath {
         kind: compile_alt_path_kind(ap.kind),
         from: ap.from.as_ref().map(|p| {
@@ -1541,6 +1544,93 @@ fn compile_alt_path(
     }
 }
 
+/// Shape validation for `kind: cast_time_assembly` (BT15-102 Apocalymon).
+/// The path rides the DigiXros transaction substrate, so the compiled shape
+/// must stay inside what that substrate implements: at least one material,
+/// each with explicit `zones:` drawn from the supported origin set and an
+/// explicit `cost_delta:` (the DigiXros default of -1 would silently
+/// mis-price the placement). Structure fields that belong to other path
+/// kinds (`from`, `marker`, `stacks_unsuspended`, `ignore_requirements`,
+/// `direction: into`) are rejected rather than ignored.
+fn validate_cast_time_assembly_shape(
+    ap: &crate::alt_path::AltPathSpec,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) {
+    use crate::predicate::Zone;
+    let mut push = |path: String, message: String| {
+        errors.push(ValidationError {
+            card_id: card_id.to_string(),
+            path,
+            message,
+        });
+    };
+    if ap.materials.is_empty() {
+        push(
+            format!("{prefix}.materials"),
+            "cast_time_assembly requires at least one material entry".to_string(),
+        );
+    }
+    for (i, m) in ap.materials.iter().enumerate() {
+        if m.zones.is_empty() {
+            push(
+                format!("{prefix}.materials[{i}].zones"),
+                "cast_time_assembly materials need explicit zones (e.g. [battle_area, trash])"
+                    .to_string(),
+            );
+        }
+        for zone in &m.zones {
+            if !matches!(zone, Zone::Hand | Zone::BattleArea | Zone::Trash) {
+                push(
+                    format!("{prefix}.materials[{i}].zones"),
+                    format!(
+                        "cast_time_assembly zone {zone:?} is not supported yet — the DigiXros \
+                         transaction substrate implements hand / battle_area / trash origins \
+                         (the security-stack variant for EX10-061 is a tracked engine gap)"
+                    ),
+                );
+            }
+        }
+        if m.cost_delta.is_none() {
+            push(
+                format!("{prefix}.materials[{i}].cost_delta"),
+                "cast_time_assembly materials require an explicit cost_delta (e.g. -4)"
+                    .to_string(),
+            );
+        }
+        if m.stack_under {
+            push(
+                format!("{prefix}.materials[{i}].stack_under"),
+                "cast_time_assembly always stacks materials under the played card — omit \
+                 stack_under (it is an `assembly`-kind field)"
+                    .to_string(),
+            );
+        }
+    }
+    if ap.from.is_some() {
+        push(
+            format!("{prefix}.from"),
+            "cast_time_assembly does not take a `from:` filter".to_string(),
+        );
+    }
+    if ap.marker || ap.stacks_unsuspended || ap.ignore_requirements {
+        push(
+            prefix.to_string(),
+            "cast_time_assembly does not support marker / stacks_unsuspended / \
+             ignore_requirements"
+                .to_string(),
+        );
+    }
+    if matches!(ap.direction, crate::alt_path::AltPathDirection::Into) {
+        push(
+            format!("{prefix}.direction"),
+            "cast_time_assembly is always registered on the played card (direction: from)"
+                .to_string(),
+        );
+    }
+}
+
 fn compile_alt_path_kind(k: crate::alt_path::AltPathKind) -> CompiledAltPathKind {
     use crate::alt_path::AltPathKind as S;
     match k {
@@ -1552,6 +1642,7 @@ fn compile_alt_path_kind(k: crate::alt_path::AltPathKind) -> CompiledAltPathKind
         S::AppFusion => CompiledAltPathKind::AppFusion,
         S::Assembly => CompiledAltPathKind::Assembly,
         S::ActivatedDigivolve => CompiledAltPathKind::ActivatedDigivolve,
+        S::CastTimeAssembly => CompiledAltPathKind::CastTimeAssembly,
     }
 }
 
@@ -2441,10 +2532,22 @@ fn compile_step(
             of: compile_player_ref(a.of),
             count: a.count,
         },
-        S::TrashFromTop(a) => CompiledStep::TrashFromTop {
-            of: compile_player_ref(a.of),
-            count: a.count,
-        },
+        S::TrashFromTop(a) => {
+            let (count_lit, count_fn) = match split_scalar_formula(
+                &a.count,
+                &format!("{prefix}.trash_from_top.count"),
+                card_id,
+                errors,
+            ) {
+                Ok(n) => (n.clamp(0, u8::MAX as i32) as u8, None),
+                Err(formula) => (0, Some(Box::new(formula))),
+            };
+            CompiledStep::TrashFromTop {
+                of: compile_player_ref(a.of),
+                count: count_lit,
+                count_fn,
+            }
+        }
         S::AddToHandFromDeck(a) => CompiledStep::AddToHandFromDeck {
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
@@ -2731,6 +2834,7 @@ fn compile_step(
             source: compile_binding_ref(&a.source),
             target: compile_binding_ref(&a.target),
             face_down: a.face_down,
+            bind_placed_as: a.bind_placed_as.clone(),
         },
         S::PlaceAsTopSource(a) => CompiledStep::PlaceAsTopSource {
             source: compile_binding_ref(&a.source),
@@ -3889,6 +3993,25 @@ fn compile_step(
                 optional: a.optional,
             }
         }
+        S::RefireCardEffect(a) => CompiledStep::RefireCardEffect {
+            card: compile_binding_ref(&a.card),
+            timing: if matches!(
+                a.timing.as_str(),
+                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+            ) {
+                a.timing.clone()
+            } else {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.refire_card_effect.timing"),
+                    message: format!(
+                        "refire_card_effect only supports timing: on_play, when_digivolving, or on_play_or_when_digivolving, got {}",
+                        a.timing
+                    ),
+                });
+                "on_play".to_string()
+            },
+        },
         S::EndAttack(enabled) => CompiledStep::EndAttack { enabled: *enabled },
         S::CancelReplacement(_) => CompiledStep::CancelReplacement,
         S::HandleReplacement(_) => CompiledStep::HandleReplacement,

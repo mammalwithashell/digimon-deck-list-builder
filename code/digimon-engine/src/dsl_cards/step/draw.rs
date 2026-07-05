@@ -12,9 +12,29 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
             ctx.draw(p, *count);
             true
         }
-        CompiledStep::TrashFromTop { of, count } => {
+        CompiledStep::TrashFromTop {
+            of,
+            count,
+            count_fn,
+        } => {
             let p = resolve_player(ctx, *of);
-            ctx.trash_from_top(p, *count);
+            let n = match count_fn {
+                None => *count as usize,
+                Some(formula) => {
+                    // Formula counts (BT15-102: "trash the top 2 cards …
+                    // for each of this Digimon's level 6 digivolution
+                    // cards") evaluate against the effect carrier so
+                    // `source_stack_*` leaves read "this Digimon".
+                    let target =
+                        ctx.source_permanent
+                            .unwrap_or(crate::permanent::PermanentHandle {
+                                player: ctx.player,
+                                index: 0,
+                            });
+                    crate::dsl_cards::formula_eval::evaluate(formula, ctx, target).max(0) as usize
+                }
+            };
+            ctx.trash_from_top(p, n.min(u8::MAX as usize) as u8);
             true
         }
         CompiledStep::ShuffleDeck { of } => {

@@ -757,6 +757,22 @@ fn validate_step(
                 });
             }
         }
+        StepSpec::RefireCardEffect(args) => {
+            validate_binding_ref(&args.card, &format!("{prefix}.card"), card_id, errors);
+            if !matches!(
+                args.timing.as_str(),
+                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+            ) {
+                errors.push(ValidationError {
+                    card_id: card_id.into(),
+                    path: format!("{prefix}.timing"),
+                    message: format!(
+                        "refire_card_effect only supports timing: on_play, when_digivolving, or on_play_or_when_digivolving, got {}",
+                        args.timing
+                    ),
+                });
+            }
+        }
         StepSpec::AddDpModifier(args) => {
             validate_modifier_value(
                 &args.value,

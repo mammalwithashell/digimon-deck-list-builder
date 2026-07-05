@@ -81,7 +81,7 @@ pub enum StepSpec {
 
     // Draw / deck / hand / trash
     Draw(DrawArgs),
-    TrashFromTop(DrawArgs),
+    TrashFromTop(TrashFromTopArgs),
     AddToHandFromDeck(HandleMoveArgs),
     AddToHandFromTrash(HandleMoveArgs),
     AddToHandFromSecurity(HandleMoveArgs),
@@ -428,6 +428,18 @@ pub enum StepSpec {
     /// clause; a no-op elsewhere. G-OPT-REFUND-ON-DECLINE.
     RefundOpt(EmptyArgs),
     RefireEffect(RefireEffectArgs),
+    /// Activate a timing-filtered effect printed on a CARD OBJECT (not a
+    /// battle-area permanent's top card) — the foreign-card refire variant
+    /// (BT15-102 Apocalymon: "activate 1 [On Play] effect on that card as an
+    /// effect of this Digimon"). The `card` binding is a `CardHandle`
+    /// (typically bound by `place_as_bottom_source.bind_placed_as`), and the
+    /// card must currently be a digivolution source of this effect's carrier
+    /// permanent. The chosen effect runs with the CARRIER as "this Digimon"
+    /// (DCGO `EffectList_ForCard(timing, card)` — the foreign card's effect
+    /// bodies are constructed against the carrier's card), one EffectChoice
+    /// surfaces when the card has >1 eligible effect, and the pick is
+    /// mandatory (DCGO `canNoSelect: () => false`).
+    RefireCardEffect(RefireCardEffectArgs),
     EndAttack(bool),
     CancelReplacement(EmptyArgs),
     HandleReplacement(EmptyArgs),
@@ -697,6 +709,7 @@ impl Serialize for StepSpec {
             StepSpec::OpenCounterWindow(v) => kv!(s, "open_counter_window", v),
             StepSpec::RefundOpt(v) => kv!(s, "refund_opt", v),
             StepSpec::RefireEffect(v) => kv!(s, "refire_effect", v),
+            StepSpec::RefireCardEffect(v) => kv!(s, "refire_card_effect", v),
             StepSpec::EndAttack(v) => kv!(s, "end_attack", v),
             StepSpec::CancelReplacement(v) => kv!(s, "cancel_replacement", v),
             StepSpec::HandleReplacement(v) => kv!(s, "handle_replacement", v),
@@ -982,6 +995,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "open_counter_window" => StepSpec::OpenCounterWindow(map.next_value()?),
             "refund_opt" => StepSpec::RefundOpt(map.next_value()?),
             "refire_effect" => StepSpec::RefireEffect(map.next_value()?),
+            "refire_card_effect" => StepSpec::RefireCardEffect(map.next_value()?),
             "end_attack" => StepSpec::EndAttack(map.next_value()?),
             "cancel_replacement" => StepSpec::CancelReplacement(map.next_value()?),
             "handle_replacement" => StepSpec::HandleReplacement(map.next_value()?),
@@ -1135,6 +1149,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "cancel_attack",
                         "open_counter_window",
                         "refire_effect",
+                        "refire_card_effect",
                         "end_attack",
                         "cancel_replacement",
                         "handle_replacement",
@@ -1668,6 +1683,17 @@ pub struct RefireEffectArgs {
     pub optional: bool,
 }
 
+/// Args for `refire_card_effect` — see [`StepSpec::RefireCardEffect`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RefireCardEffectArgs {
+    /// Binding holding the `CardHandle` of the card whose effect fires. The
+    /// card must be a digivolution source of this effect's carrier.
+    pub card: BindingRef,
+    /// `on_play`, `when_digivolving`, or `on_play_or_when_digivolving`.
+    pub timing: String,
+}
+
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema, Default,
 )]
@@ -1696,6 +1722,18 @@ pub struct SubstituteReplacementArgs {
 pub struct DrawArgs {
     pub of: PlayerRef,
     pub count: u8,
+}
+
+/// Args for `trash_from_top` — mill `count` cards from the top of `of`'s
+/// deck. `count` is a `FormulaSpec` (unify-dsl-scalar-and-comparators): a
+/// bare int `count: 2` is a literal, a map is a runtime formula (e.g.
+/// BT15-102's "trash the top 2 cards … for each of this Digimon's level 6
+/// digivolution cards" = `{ base: 0, per: source_stack_count_filtered, … }`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashFromTopArgs {
+    pub of: PlayerRef,
+    pub count: FormulaSpec,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -2123,6 +2161,13 @@ pub struct PlaceAsBottomSourceArgs {
     /// face-down. Omitted → face-up (the default).
     #[serde(default)]
     pub face_down: bool,
+    /// Bind the placed card's `CardHandle` under this name AFTER a
+    /// successful placement (absent on a failed / skipped placement, so a
+    /// downstream consumer like `refire_card_effect` silently no-ops when
+    /// nothing was placed). Survives the zone move — unlike the shifting
+    /// trash/hand index bound by the upstream select step.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_placed_as: Option<String>,
 }
 
 /// Args for `place_as_top_source` — same shape as

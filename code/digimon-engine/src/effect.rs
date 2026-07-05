@@ -1233,6 +1233,73 @@ pub trait CardEffect: Send + Sync {
     fn effects(&self, card: CardHandle) -> Vec<Effect>;
 }
 
+/// Foreign-card variant of [`enumerate_refireable_effects`] (BT15-102
+/// Apocalymon): enumerate the refireable effects PRINTED ON `card_id` — a
+/// card object that is a digivolution source of `carrier`, not a battle-area
+/// top card — constructed AGAINST the carrier, so the effect bodies read the
+/// carrier as "this Digimon".
+///
+/// DCGO parity: `selectedCard.EffectList_ForCard(timing, card)` builds the
+/// selected card's effect list with `card` = the CARRIER's card source, so
+/// every closure captured "this card" is the carrier; the placed card only
+/// contributes its printed text. We mirror that exactly by querying
+/// `game.effects_for_card(card_id, carrier_top_handle)` — the registry entry
+/// for the foreign `card_id` instantiated with the carrier's top-card handle.
+///
+/// The returned entries carry `card_id` = the foreign card and
+/// `source_card` / `source` = the carrier's top card / permanent, which is
+/// precisely the pair `run_queued_effect` re-resolves at execution time
+/// (liveness = "carrier top card is still live", effect list = the foreign
+/// card's, "this Digimon" = the carrier).
+pub fn enumerate_refireable_effects_for_card(
+    game: &crate::game::Game,
+    card_id: &str,
+    carrier: PermanentHandle,
+    timing_key: &str,
+) -> Vec<ReFireableEffect> {
+    let Some(perm) = game
+        .players
+        .get(carrier.player as usize)
+        .and_then(|p| p.battle_area.get(carrier.index as usize))
+    else {
+        return Vec::new();
+    };
+    let top = perm.top_card();
+    let carrier_card = top.handle();
+    let source_kind = match top.card_kind(&game.card_data) {
+        crate::enums::CardKind::Digimon
+        | crate::enums::CardKind::DigiEgg
+        | crate::enums::CardKind::Dual => crate::enums::EffectSourceKind::Digimon,
+        crate::enums::CardKind::Tamer => crate::enums::EffectSourceKind::Tamer,
+        crate::enums::CardKind::Option => crate::enums::EffectSourceKind::Option,
+        crate::enums::CardKind::Token => crate::enums::EffectSourceKind::Rule,
+    };
+
+    let Some(effects) = game.effects_for_card(card_id, carrier_card) else {
+        return Vec::new();
+    };
+
+    effects
+        .iter()
+        .enumerate()
+        .filter(|(_, effect)| effect.timing_key() == timing_key)
+        .filter(|(_, effect)| effect.can_be_refired())
+        .map(|(slot, effect)| ReFireableEffect {
+            effect_id: slot as EffectId,
+            source_card: carrier_card,
+            source: carrier,
+            source_kind,
+            attribution_source_card: None,
+            attribution_source_kind: None,
+            bypass_once_per_turn: false,
+            controller: carrier.player,
+            card_id: card_id.to_string(),
+            timing: effect.timing,
+            timing_key: timing_key.to_string(),
+        })
+        .collect()
+}
+
 pub fn enumerate_refireable_effects(
     game: &crate::game::Game,
     source: PermanentHandle,

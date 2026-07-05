@@ -215,6 +215,27 @@ fn resolve_card_source_ref(
     }
 }
 
+/// Read the stable `CardHandle` a `CardSourceRef` currently addresses,
+/// WITHOUT moving the card. Used by `PlaceAsBottomSource.bind_placed_as` to
+/// capture the placed card's identity before the zone move invalidates the
+/// upstream index binding.
+fn peek_card_source_ref_handle(ctx: &EffectContext<'_>, source: CardSourceRef) -> Option<CardHandle> {
+    match source {
+        CardSourceRef::Hand(p, i) => ctx.game.player(p).hand.get(i).map(|c| c.handle()),
+        CardSourceRef::Trash(p, i) => ctx.game.player(p).trash.get(i).map(|c| c.handle()),
+        CardSourceRef::DeckTop(p) => ctx.game.player(p).deck.last().map(|c| c.handle()),
+        CardSourceRef::Security(p, i) => ctx.game.player(p).security.get(i).map(|c| c.handle()),
+        CardSourceRef::Material(h, i) => ctx
+            .game
+            .players
+            .get(h.player as usize)
+            .and_then(|p| p.battle_area.get(h.index as usize))
+            .and_then(|perm| perm.card_sources.get(i))
+            .map(|c| c.handle()),
+        CardSourceRef::Reveal(h) => Some(h),
+    }
+}
+
 fn resolve_card_handle_source_ref(ctx: &EffectContext<'_>, h: CardHandle) -> Option<CardSourceRef> {
     for pid in 0..ctx.game.players.len() {
         let player_id = pid as crate::enums::PlayerId;
@@ -1116,6 +1137,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             source,
             target,
             face_down,
+            bind_placed_as,
         } => {
             let target_handle = match resolve_binding_ref(target, ctx, bindings) {
                 Some(ResolvedBinding::Permanent(h)) => h,
@@ -1125,12 +1147,25 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 resolve_binding_ref(source, ctx, bindings)
             {
                 let _ = ctx.place_permanent_as_bottom_sources(source_handle, target_handle);
+                // `bind_placed_as` is a card-object binding; the whole-
+                // permanent branch moves a stack, not one card, so nothing
+                // is bound here (no current YAML combines the two).
                 return true;
             }
             let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else {
                 return true;
             };
-            let _ = ctx.place_as_bottom_source(source_ref, target_handle, *face_down);
+            // Peek the placed card's stable handle BEFORE the zone move so a
+            // successful placement can bind it (`bind_placed_as`) — the
+            // upstream select's index binding goes stale the moment the card
+            // leaves its zone.
+            let placed_handle = peek_card_source_ref_handle(ctx, source_ref);
+            let placed = ctx.place_as_bottom_source(source_ref, target_handle, *face_down);
+            if placed {
+                if let (Some(name), Some(handle)) = (bind_placed_as.as_ref(), placed_handle) {
+                    bindings.insert_card(name, handle);
+                }
+            }
             true
         }
         // Top-position sibling of PlaceAsBottomSource — the card lands as

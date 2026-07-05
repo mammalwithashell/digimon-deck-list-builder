@@ -95,6 +95,7 @@ fn place_as_bottom_source_step_tucks_hand_card_under_target_permanent() {
         source: CompiledBindingRef::Named("src".into()),
         target: CompiledBindingRef::Named("tgt".into()),
         face_down: false,
+        bind_placed_as: None,
     };
 
     {
@@ -151,6 +152,7 @@ fn place_as_bottom_source_uses_bound_hand_owner() {
         source: CompiledBindingRef::Named("src".into()),
         target: CompiledBindingRef::Named("tgt".into()),
         face_down: false,
+        bind_placed_as: None,
     };
 
     {
@@ -219,6 +221,7 @@ fn place_as_bottom_source_accepts_breeding_permanent_target_from_hand_source() {
         source: CompiledBindingRef::Named("src".into()),
         target: CompiledBindingRef::Named("kd".into()),
         face_down: false,
+        bind_placed_as: None,
     };
 
     {

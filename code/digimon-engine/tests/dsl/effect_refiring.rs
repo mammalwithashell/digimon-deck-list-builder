@@ -127,3 +127,89 @@ effects:
         .iter()
         .any(|e| e.path.ends_with(".optional") && e.message.contains("optional: true")));
 }
+
+// ─── refire_card_effect (foreign-card refire — BT15-102) ────────────────────
+
+#[test]
+fn refire_card_effect_yaml_lowers_with_bound_card_and_timing() {
+    let yaml = r#"
+card: TEST-REFIRE-CARD
+name: Refire Card Test
+kind: digimon
+color: [white]
+level: 7
+cost: 12
+dp: 12000
+effects:
+  - when: end_of_your_turn
+    process:
+      - select_trash:
+          of: you
+          bind_as: pick
+          optional: true
+          filter: { level_lte: 6 }
+          prompt: "Place 1 level 6 or lower card"
+      - place_as_bottom_source:
+          source: pick
+          target: source
+          bind_placed_as: placed
+      - refire_card_effect:
+          card: placed
+          timing: on_play
+      - trash_from_top:
+          of: opponent
+          count:
+            base: 0
+            per:
+              source_stack_count:
+                filter: { level_eq: 6 }
+            delta: 2
+"#;
+    let spec: CardSpec = serde_yml::from_str(yaml).expect("yaml parses");
+    let compiled = compile(&spec).expect("yaml compiles");
+    let CompiledClause::Triggered(clause) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    assert!(matches!(
+        &clause.process[1],
+        CompiledStep::PlaceAsBottomSource { bind_placed_as: Some(name), .. } if name == "placed"
+    ));
+    assert!(matches!(
+        &clause.process[2],
+        CompiledStep::RefireCardEffect { timing, .. } if timing == "on_play"
+    ));
+    assert!(matches!(
+        &clause.process[3],
+        CompiledStep::TrashFromTop { count_fn: Some(_), .. }
+    ));
+
+    let registry = StubRegistry::empty();
+    let ctx = ValidationContext {
+        raw_rust: &registry,
+    };
+    validate(&spec, &ctx).expect("refire_card_effect validates");
+}
+
+#[test]
+fn refire_card_effect_rejects_unknown_timing() {
+    let yaml = r#"
+card: TEST-REFIRE-CARD-BAD
+name: Refire Card Bad Timing
+kind: digimon
+color: [white]
+level: 7
+cost: 12
+dp: 12000
+effects:
+  - when: end_of_your_turn
+    process:
+      - refire_card_effect:
+          card: placed
+          timing: on_deletion
+"#;
+    let spec: CardSpec = serde_yml::from_str(yaml).expect("yaml parses");
+    assert!(
+        compile(&spec).is_err(),
+        "refire_card_effect must reject timings outside on_play / when_digivolving"
+    );
+}

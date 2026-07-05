@@ -138,7 +138,13 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     let printed = card.play_cost(&game.card_data) as i16;
                     let assembly_reduction =
                         game.assembly_play_reduction_for_hand_card(player_id, i) as i16;
-                    let cost = (printed - assembly_reduction).max(0);
+                    // Cast-time assembly (BT15-102): like `[Assembly]`, the
+                    // potential place-under reduction participates in
+                    // declare-then-pay legality (DCGO's hidden availability
+                    // ChangeCostClass). 0 for every other card.
+                    let cast_time_reduction =
+                        game.cast_time_assembly_play_reduction_for_hand_card(player_id, i) as i16;
+                    let cost = (printed - assembly_reduction - cast_time_reduction).max(0);
                     if (game.memory - cost) < game.rules.memory_range.0 {
                         continue;
                     }

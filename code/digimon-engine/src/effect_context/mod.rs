@@ -242,12 +242,17 @@ impl<'a> EffectReadContext<'a> {
     }
 
     pub fn was_digixros(&self) -> bool {
-        self.game.pending_digixros_transaction().is_some()
+        // Semantic firewall: a non-DigiXros cast-time assembly (BT15-102)
+        // rides the same pending transaction but is NOT a DigiXros.
+        self.game
+            .pending_digixros_transaction()
+            .is_some_and(|transaction| transaction.is_digixros)
     }
 
     pub fn digixros_count(&self) -> u8 {
         self.game
             .pending_digixros_transaction()
+            .filter(|transaction| transaction.is_digixros)
             .map(|transaction| transaction.digixros_count)
             .unwrap_or(0)
     }
@@ -1001,12 +1006,17 @@ impl<'a> EffectContext<'a> {
     }
 
     pub fn was_digixros(&self) -> bool {
-        self.game.pending_digixros_transaction().is_some()
+        // Semantic firewall: a non-DigiXros cast-time assembly (BT15-102)
+        // rides the same pending transaction but is NOT a DigiXros.
+        self.game
+            .pending_digixros_transaction()
+            .is_some_and(|transaction| transaction.is_digixros)
     }
 
     pub fn digixros_count(&self) -> u8 {
         self.game
             .pending_digixros_transaction()
+            .filter(|transaction| transaction.is_digixros)
             .map(|transaction| transaction.digixros_count)
             .unwrap_or(0)
     }
