@@ -2485,6 +2485,7 @@ pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
     "ArmorPurge",
     "Fragment",
     "Retaliation",
+    "Training",
     // Validator-only sigil (engine side dispatches via clause kind, not a
     // runtime `Keyword` variant). Allowlisted on the engine parity test.
     "Delay",
