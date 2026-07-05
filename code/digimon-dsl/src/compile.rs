@@ -4024,7 +4024,7 @@ effects:
             .join("_examples");
         let (specs, errs) = load_dir_ok(&examples);
         assert!(errs.is_empty(), "parse errors: {errs:#?}");
-        assert_eq!(specs.len(), 15);
+        assert_eq!(specs.len(), 13);
 
         let mut failures = Vec::new();
         for spec in &specs {

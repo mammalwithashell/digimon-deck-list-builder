@@ -226,7 +226,32 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                         }
                         DeclarativeKind::Aura => {
                             if let crate::clause::TypedDeclarativeBody::Aura(b) = &body {
-                                if b.target.is_none() && b.target_player.is_none() {
+                                // PUPPETS-G008 security-DP auras ("all of your
+                                // opponent's Security Digimon get -3000 DP",
+                                // ST19-03 / EX7-024 / ST3-12 idiom) are NOT
+                                // target-permanent auras: lowering
+                                // (digimon-engine `lower_aura.rs::lower_all`)
+                                // routes them to the attacker's
+                                // `security_dp_adjustment` chain and IGNORES
+                                // `target`/`target_player` entirely — its doc
+                                // says "the YAML author should leave them
+                                // unset". So the target requirement is waived
+                                // for that shape, and conversely a target on
+                                // that shape is dead YAML worth flagging.
+                                let is_security_dp_aura = b.applies_to_opponent_security_dp
+                                    == Some(true)
+                                    || b.applies_to_own_security_dp == Some(true);
+                                if is_security_dp_aura {
+                                    if b.target.is_some() || b.target_player.is_some() {
+                                        errors.push(ValidationError {
+                                            card_id: spec.card.clone(),
+                                            path: format!("{prefix}.target"),
+                                            message: "security-DP aura (applies_to_*_security_dp) \
+                                                      ignores target/target_player — leave them unset"
+                                                .to_string(),
+                                        });
+                                    }
+                                } else if b.target.is_none() && b.target_player.is_none() {
                                     errors.push(ValidationError {
                                         card_id: spec.card.clone(),
                                         path: format!("{prefix}.target"),
@@ -1660,7 +1685,17 @@ fn validate_step_binding_scope(
                     &mut else_scope,
                     errors,
                 );
+                scope.extend(else_scope);
             }
+            // Bindings declared inside `then`/`else` stay visible to LATER
+            // steps: the runtime `Bindings` map is flat, so a `bind_as` in a
+            // branch that executed is readable afterwards, and if the branch
+            // didn't run the binding is simply absent — which is exactly what
+            // trailing `binding_exists` / `binding_absent` guards test (see
+            // AD1-024's executed-flag `refund_opt` guard). This mirrors the
+            // maybe-bound visibility the optional Select*-with-`then` steps
+            // already grant via their post-step `declare_optional_binding`.
+            scope.extend(then_scope);
         }
         StepSpec::ForEach(args) => {
             validate_predicate_binding_scope(
@@ -1977,7 +2012,7 @@ fn validate_formula_binding_scope(
         FormulaSpec::SourceStackDpSum {
             source_stack_dp_sum,
         } => {
-            report_if_undeclared_binding(
+            report_if_undeclared_formula_target(
                 &source_stack_dp_sum.target,
                 &format!("{prefix}.source_stack_dp_sum.target"),
                 card_id,
@@ -1997,7 +2032,7 @@ fn validate_formula_binding_scope(
         FormulaSpec::SourceStackCount {
             source_stack_count,
         } => {
-            report_if_undeclared_binding(
+            report_if_undeclared_formula_target(
                 &source_stack_count.target,
                 &format!("{prefix}.source_stack_count.target"),
                 card_id,
@@ -2059,6 +2094,27 @@ fn validate_per_selector_binding_scope(
             );
         }
     }
+}
+
+/// Formula `target:` strings (SourceStackCount / SourceStackDpSum) are
+/// resolved at runtime by `resolve_formula_target` (digimon-engine
+/// `dsl_cards/formula_eval.rs`), which reserves `"self"` / `"target"` /
+/// `"source"` as magic names — `"source"` is the effect's source permanent,
+/// `"self"`/`"target"` the formula's fallback target — and only falls back to
+/// the user-binding map for other names. Only non-reserved names must
+/// therefore resolve to a declared binding (BT20-037's `target: source` is
+/// valid with no binding in scope).
+fn report_if_undeclared_formula_target(
+    target: &str,
+    path: &str,
+    card_id: &str,
+    scope: &BTreeSet<String>,
+    errors: &mut Vec<ValidationError>,
+) {
+    if matches!(target, "self" | "target" | "source") {
+        return;
+    }
+    report_if_undeclared_binding(target, path, card_id, scope, errors);
 }
 
 fn report_if_undeclared_binding(
@@ -2485,6 +2541,16 @@ pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
     "ArmorPurge",
     "Fragment",
     "Retaliation",
+    // Training — real engine keyword (`Keyword::Training`, Phase F `[Main]`
+    // active skill in digimon-engine `cards/keyword_effects.rs` + the
+    // breeding-area emitter in `action/main_effect_select.rs`). Like
+    // `Ascension` above, it is NOT mapped by `modifier_map::lookup_keyword`:
+    // the runtime behavior is driven by the PRINTED keyword parse
+    // (`card_data.rs::parse_printed_keywords`), so `lower_grant_keyword`
+    // intentionally drops the DSL clause (returns None). The `grant_keyword:
+    // Training` clause on cards like EX9-008 / EX9-060 exists as the visible
+    // compiled-DSL declaration of the printed keyword (their behavioral
+    // tests assert the compiled clause is present).
     "Training",
     // Validator-only sigil (engine side dispatches via clause kind, not a
     // runtime `Keyword` variant). Allowlisted on the engine parity test.
@@ -2769,5 +2835,241 @@ effects:
         assert!(errs.iter().any(|e| e
             .message
             .contains("synth_identity is only valid for modifier TreatAsDigimon")));
+    }
+
+    /// PUPPETS-G008 security-DP auras (ST19-03 / EX7-024 / ST3-12 idiom):
+    /// lowering ignores `target`/`target_player` on that path and documents
+    /// that authors should leave them unset, so the target requirement is
+    /// waived.
+    #[test]
+    fn security_dp_aura_without_target_is_accepted() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+effects:
+  - kind: aura
+    scope: inherited
+    active_when: { your_turn: true }
+    dp_modifier: -3000
+    applies_to_opponent_security_dp: true
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        assert!(validate(&spec, &ValidationContext { raw_rust: &reg }).is_ok());
+    }
+
+    /// The inverse guard: a `target` on the security-DP path is dead YAML
+    /// (ignored by `lower_aura::lower_all`) and must be flagged.
+    #[test]
+    fn security_dp_aura_with_target_is_rejected() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+effects:
+  - kind: aura
+    scope: inherited
+    target: { kind: digimon }
+    dp_modifier: -3000
+    applies_to_opponent_security_dp: true
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs
+            .iter()
+            .any(|e| e.message.contains("ignores target/target_player")));
+    }
+
+    /// A plain aura (no security-DP flag) still requires an explicit target
+    /// or target_player — self-auras say `target: {}` (AD1-002 idiom).
+    #[test]
+    fn plain_aura_without_target_is_still_rejected() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 1000
+effects:
+  - kind: aura
+    dp_modifier: 1000
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs
+            .iter()
+            .any(|e| e.message.contains("aura requires target or target_player")));
+    }
+
+    /// Training is a real engine keyword (Phase F `[Main]` active skill)
+    /// whose runtime behavior rides on the printed-keyword parse; the DSL
+    /// `grant_keyword: Training` clause (EX9-008 / EX9-060) is the visible
+    /// declaration and must validate.
+    #[test]
+    fn grant_keyword_training_is_accepted() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 1000
+effects:
+  - kind: grant_keyword
+    keyword: Training
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        assert!(validate(&spec, &ValidationContext { raw_rust: &reg }).is_ok());
+    }
+
+    /// Bindings declared by `bind_as` inside an `if.then` branch stay
+    /// visible to later steps (the runtime `Bindings` map is flat); trailing
+    /// `binding_absent` guards over maybe-bound branch bindings are the
+    /// AD1-024 executed-flag `refund_opt` idiom.
+    #[test]
+    fn binding_declared_in_if_then_is_visible_to_later_steps() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+effects:
+  - when: on_play
+    process:
+      - if:
+          condition: { your_turn: true }
+          then:
+            - select_opponent_permanent:
+                bind_as: branch_pick
+                optional: true
+                filter: { kind: digimon }
+                prompt: Pick
+      - if:
+          condition: { binding_absent: branch_pick }
+          then:
+            - gain_memory: 1
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        assert!(validate(&spec, &ValidationContext { raw_rust: &reg }).is_ok());
+    }
+
+    /// A binding never declared anywhere earlier is still rejected — the
+    /// if-branch propagation must not weaken the typo guard.
+    #[test]
+    fn binding_never_declared_is_still_rejected_after_if() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 1000
+effects:
+  - when: on_play
+    process:
+      - if:
+          condition: { your_turn: true }
+          then:
+            - gain_memory: 1
+      - if:
+          condition: { binding_absent: never_bound }
+          then:
+            - gain_memory: 1
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs.iter().any(|e| e
+            .message
+            .contains("undeclared binding referenced before declaration: never_bound")));
+    }
+
+    /// `source` / `self` / `target` are reserved formula-target names
+    /// (`resolve_formula_target` in digimon-engine `formula_eval.rs`) — not
+    /// user bindings. BT20-037's `source_stack_count: { target: source }`
+    /// shape.
+    #[test]
+    fn source_stack_count_reserved_target_names_are_accepted() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 7
+color: [yellow]
+cost: 15
+dp: 15000
+effects:
+  - when: when_digivolving
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max:
+            formula:
+              source_stack_count:
+                target: source
+                filter: { level_eq: 6 }
+          filter: { kind: digimon }
+          bind_as: suspended
+          prompt: Pick
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        assert!(validate(&spec, &ValidationContext { raw_rust: &reg }).is_ok());
+    }
+
+    /// A non-reserved formula target must still resolve to a declared
+    /// binding.
+    #[test]
+    fn source_stack_count_unknown_target_binding_is_still_rejected() {
+        let yaml = r#"
+card: X-1
+name: Test
+kind: digimon
+level: 7
+color: [yellow]
+cost: 15
+dp: 15000
+effects:
+  - when: when_digivolving
+    process:
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max:
+            formula:
+              source_stack_count:
+                target: not_a_binding
+                filter: { level_eq: 6 }
+          filter: { kind: digimon }
+          bind_as: suspended
+          prompt: Pick
+"#;
+        let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+        let reg = StubRegistry::empty();
+        let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
+        assert!(errs.iter().any(|e| e
+            .message
+            .contains("undeclared binding referenced before declaration: not_a_binding")));
     }
 }
