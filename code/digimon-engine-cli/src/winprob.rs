@@ -32,7 +32,7 @@ use serde_json::{json, Value};
 /// the engine default. Feeding a model tensors in a different profile than
 /// it was exported with is an ONNX input-shape error at best and silent
 /// garbage at worst.
-fn resolve_profile(
+pub(crate) fn resolve_profile(
     model_path: &std::path::Path,
     flag: Option<&str>,
 ) -> Result<ObservationProfileId, String> {
