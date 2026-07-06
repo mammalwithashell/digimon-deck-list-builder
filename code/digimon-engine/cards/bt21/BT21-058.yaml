@@ -1,0 +1,214 @@
+# BT21-058 Snatchmon — Digimon, Lv.4, Black, DP 6000, Cost 6.
+# Traits: Unknown, LIBERATOR. Attribute: Unknown. Form: Champion.
+#
+# Printed text (official Bandai DB bundle data/card_bundles/BT21-058.md,
+# cross-checked against the card image Card/BT21-058.webp):
+#
+#   [On Play] [When Digivolving] Reveal the top 3 cards of your deck. Add 1
+#   card with [Vemmon] in its text among them to the hand. Trash the rest.
+#   Then, you may place up to 2 [Vemmon] from your trash as 1 of your
+#   Digimon's bottom digivolution cards.
+#
+#   Inherited [All Turns] [Once Per Turn] When any [Vemmon] are returned to
+#   the bottom of the deck from this Digimon's digivolution cards, delete 1
+#   of your opponent's Digimon with a play cost of 4 or less.
+#
+# Standard digivolve circle (official Bandai DB — card_official.json /
+# BT21-058.json evo_costs): Black Lv.3 / cost 3 (single circle; no DigiXros
+# box printed on this card — contrast the BT18-065 reprint of Snatchmon,
+# which DOES carry a [DigiXros -1] 4x[Vemmon] box; BT21-058 has none).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Black/BT21_058.cs
+# (present in the working DCGO checkout). Cross-checked against the printed
+# text + card image; DCGO's clause 1 flow:
+#   - `SimplifiedRevealDeckTopCardsAndSelect` with `canNoSelect: false` for
+#     the hand bucket — matches the mandatory reveal-search shape below.
+#   - The trash-placement select block is gated on
+#     `HasMatchConditionOwnersCardInTrash(card, IsVemmon)` BEFORE any prompt
+#     surfaces (not even the target-Digimon pick appears with 0 Vemmon in
+#     trash) — modeled below via an `if: { condition: { count_gte: ... } }`
+#     wrap around the whole tail (see the placement-tail comment).
+#   - The target-Digimon pick (`SelectPermanentEffect`, `canNoSelect: true`)
+#     is only surfaced by DCGO when the owner has >1 battle-area Digimon
+#     (`Count(HasDigimonOnOwnerBattleArea) > 1`); with exactly 1 Digimon on
+#     the field DCGO auto-targets it (`FirstOrDefault()`) without a prompt.
+#     Per rule 17 (no auto-selections — every choice must surface to the RL
+#     action space) this auto-pick-when-unambiguous shortcut is NOT
+#     replicated: the DSL always offers the (optional) target pick once ≥1
+#     Vemmon is in trash, even with only 1 own Digimon on the field. This is
+#     a strictly MORE faithful/exposed choice than DCGO's UI shortcut, never
+#     a behavioral divergence in outcome (there is only ever 1 legal target
+#     to pick in that case).
+#   - Each of the (up to 2) trash-Vemmon picks is `canNoSelect: () => true`
+#     (optional — "you may place up to 2") — matches the two independent
+#     `optional: true` select_trash steps below.
+#   - Inherited clause 2 (`OnDigivolutionCardReturnToDeckBottom`,
+#     `SetIsInheritedEffect(true)`, `SetHashString(...)` OPT key) matches
+#     1:1 with the DSL's `scope: inherited` + `once_per_turn: true` clause.
+#
+# ─── Clause 1 — [On Play][When Digivolving] reveal-3 / hand-1 / trash-rest,
+#      then place up to 2 [Vemmon] from trash as bottom source ────────────
+#
+# "Reveal the top 3 cards... Add 1 card with [Vemmon] in its text... to the
+# hand. Trash the rest." is a MANDATORY single-bucket reveal-search (no
+# "may" qualifier on the add-to-hand step) with a text-scan filter
+# (`in_text_contains`, the BROAD name/traits/effect-text scan — DCGO's
+# `CardSource.HasText` — matches "[Vemmon] in its text" wording, which
+# unlike the narrower static `effect_text_contains` also matches a card
+# whose only "Vemmon" occurrence is in its own NAME or TRAITS, e.g. Vemmon
+# itself or Snatchmon's own reprint. See G-DSL-IN-TEXT-CONTAINS in
+# code/digimon-dsl/src/predicate.rs). Modelled as a 2-bucket `reveal_search`:
+#   Bucket 1 (mandatory, max 1): `in_text_contains: Vemmon` → hand.
+#   Bucket 2 (mandatory, max 3, catch-all empty filter): whatever bucket 1
+#     did NOT claim → trash. Cross-bucket de-dup (built into
+#     `reveal_search`/`select_reveal_buckets`) guarantees bucket 2 never
+#     re-offers the card bucket 1 already took, so this faithfully encodes
+#     "the rest" without a `RevealRemainder::Trash` variant (which does not
+#     exist — `RevealRemainder` is only Top/Bottom/Choose; per-bucket
+#     `RevealSearchDest::Trash` supplies the trash destination instead).
+#   `remainder: bottom` is a structurally-required no-op tail (bucket 2's
+#   max=3 empty filter always claims everything left in the 3-card reveal,
+#   so the remainder-placement step never has any cards to move).
+#
+# "Then, you may place up to 2 [Vemmon] from your trash as 1 of your
+# Digimon's bottom digivolution cards" — EXACT-NAME "Vemmon" (not the
+# broader "in its text" scan; this bucket says "[Vemmon]" bare, matching the
+# printed-card convention of naming the exact card), optional (the "you
+# may"), up to 2, both placed on the SAME chosen target Digimon ("1 of your
+# Digimon's bottom digivolution cards" — singular target, matches the
+# EX10-025 Sunarizamon idiom: pick target once, then 2 independent optional
+# trash picks each immediately placed via `place_as_bottom_source`).
+#
+# [When Digivolving] scope: DCGO/DSL convention for a clause printed with
+# both [On Play] and [When Digivolving] qualifiers is `when: [on_play,
+# on_digivolve]` sharing one clause body (TimingSet accepts multiple
+# timings); this card has ONLY that shared body (no per-timing condition
+# split needed — the process is identical from either timing).
+#
+# ─── Clause 2 — Inherited [All Turns][Once Per Turn] delete on Vemmon
+#      returned to deck bottom from THIS Digimon's digivolution cards ─────
+#
+# Uses the engine substrate built specifically for this card (see
+# code/digimon-engine/src/effect_context/action/sources.rs
+# `return_card_source_to_deck` doc-comment: "the observer BT21-058 / BT18-065
+# listen on") and code/digimon-dsl/src/clause.rs's `OnSourceReturnedToDeckBottom`
+# timing doc: "Gate host-scope with `event_host_permanent_is_source: true`
+# and the returned card's name with `event_card_name_contains:`." Proven
+# end-to-end (without authoring this card) by
+# code/digimon-engine/tests/source_returned_to_deck_bottom_observer.rs,
+# whose inline observer YAML is copied verbatim as this card's shape:
+#   - `scope: inherited` — the effect rides on whichever position in the
+#     stack this printed text is attached to (matches the card's own
+#     "Inherited Effect" box).
+#   - `event_host_permanent_is_source: true` — "from THIS Digimon's
+#     digivolution cards" (the returned source must belong to the permanent
+#     this inherited effect's carrier is embedded in).
+#   - `event_card_name_contains: "Vemmon"` — "any [Vemmon]" (bracket-name
+#     gate on the returned card).
+#   - `once_per_turn: true` + `active_when: { all_turns: true }` — printed
+#     [All Turns][Once Per Turn].
+#   - Body: select 1 opponent Digimon with play cost <= 4, delete it — "delete
+#     1 of your opponent's Digimon with a play cost of 4 or less" (mandatory
+#     target pick when an eligible Digimon exists; no eligible target →
+#     natural fizzle via the `any_permanent` existence gate in `condition`).
+
+card: BT21-058
+name: Snatchmon
+kind: digimon
+level: 4
+color: [black]
+cost: 6
+dp: 6000
+traits: [Unknown, LIBERATOR]
+attribute: Unknown
+
+effects:
+  # ─── Clause 1: [On Play][When Digivolving] reveal-3 hand-1 trash-rest,
+  #      then optionally place up to 2 trash Vemmon as 1 Digimon's source ──
+  - when: [on_play, on_digivolve]
+    summary: "[On Play][When Digivolving] Reveal top 3; add 1 [Vemmon]-in-text card to hand; trash the rest. Then you may place up to 2 [Vemmon] from trash as 1 Digimon's bottom digivolution cards"
+    process:
+      - reveal_search:
+          of: you
+          count: 3
+          buckets:
+            - filter:
+                in_text_contains: "Vemmon"
+              to: hand
+              max: 1
+              optional: false
+              prompt: "Add 1 card with [Vemmon] in its text to your hand"
+            - filter: {}
+              to: trash
+              max: 3
+              optional: false
+              prompt: "Trash the rest"
+          remainder: bottom
+      # "Then, you may place up to 2 [Vemmon] from your trash as 1 of your
+      # Digimon's bottom digivolution cards." DCGO gates the ENTIRE select
+      # block on `HasMatchConditionOwnersCardInTrash(card, IsVemmon)` — with
+      # zero [Vemmon] anywhere in trash, no prompt (not even the target pick)
+      # is ever offered. Modeled as an `if:` existence gate
+      # (`count_gte: { filter: { zone: [trash], name_is: Vemmon }, n: 1 }`)
+      # wrapping the whole tail. Inside the gate: target picked once
+      # (optional — "you may" — declining skips both trash placements); each
+      # trash pick is independently optional so 0, 1, or 2 [Vemmon] may be
+      # placed once a target is chosen.
+      - if:
+          condition:
+            count_gte:
+              filter:
+                owner: you
+                zone: [trash]
+                name_is: "Vemmon"
+              n: 1
+          then:
+            - select_own_permanent:
+                bind_as: dest
+                optional: true
+                filter:
+                  kind: digimon
+                prompt: "Choose 1 of your Digimon to receive up to 2 [Vemmon] from trash as bottom digivolution cards"
+            - select_trash:
+                of: you
+                bind_as: source1
+                optional: true
+                filter:
+                  name_is: "Vemmon"
+                prompt: "Choose the first [Vemmon] from your trash to place (0-2)"
+            - place_as_bottom_source:
+                source: source1
+                target: dest
+            - select_trash:
+                of: you
+                bind_as: source2
+                optional: true
+                filter:
+                  name_is: "Vemmon"
+                prompt: "Choose the second [Vemmon] from your trash to place (0-2)"
+            - place_as_bottom_source:
+                source: source2
+                target: dest
+
+  # ─── Clause 2: Inherited [All Turns][Once Per Turn] delete on Vemmon
+  #      returned to deck bottom from this Digimon's digivolution cards ────
+  - scope: inherited
+    when: on_source_returned_to_deck_bottom
+    once_per_turn: true
+    active_when: { all_turns: true }
+    condition:
+      all_of:
+        - event_host_permanent_is_source: true
+        - event_card_name_contains: "Vemmon"
+        - any_permanent:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+            play_cost_lte: 4
+    summary: "[All Turns][Once Per Turn] When any [Vemmon] are returned to the bottom of the deck from this Digimon's digivolution cards, delete 1 opponent Digimon with play cost 4 or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter: { kind: digimon, play_cost_lte: 4 }
+          prompt: "Choose 1 opponent Digimon with play cost 4 or less to delete"
+      - delete_permanent: { target: target }

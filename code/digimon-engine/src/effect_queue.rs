@@ -546,6 +546,28 @@ impl Game {
                     }
                 }
             }
+            TriggerSource::SourceReturnedToDeckBottom { .. } => {
+                // Sibling of SourceTrashedFromStack, but the card moved to the
+                // DECK (not trash), so there is no trashed-source zone to scan —
+                // only battle-area permanents observe it. The host-scoped
+                // observer (BT21-058 / BT18-065 inherited "from THIS Digimon's
+                // digivolution cards") lives on the permanent whose stack lost
+                // the source; its `event_host_permanent_is_source` predicate is
+                // satisfied by the carried `host` in the trigger context.
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
+            }
             TriggerSource::SecurityRemoved {
                 observer_player, ..
             } => {
@@ -608,6 +630,28 @@ impl Game {
                     card,
                     Some(trigger_context),
                 );
+            }
+            TriggerSource::BattleResolved { .. } | TriggerSource::HandDiscarded { .. } => {
+                // Board-wide observer fan-out: scan EVERY player's battle area
+                // so both own-side and opponent-reactive observers see the
+                // event. The winner/owner/trait (BattleResolved) or trashing
+                // player / causing-effect controller (HandDiscarded) is carried
+                // in the per-handle `TriggerContext` (see
+                // `trigger_context_for_source`); the scope gate lives in each
+                // observer's `active_when:` predicate. Mirrors `HandGained`.
+                for player in 0..self.players.len() {
+                    let player = player as PlayerId;
+                    let count = self.player(player).battle_area.len();
+                    for i in 0..count {
+                        let handle = PermanentHandle {
+                            player,
+                            index: i as u8,
+                        };
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, Some(handle), timing);
+                        self.enqueue_from_permanent(timing, handle, Some(trigger_context));
+                    }
+                }
             }
         }
         // Fan event dispatches out to placed event-gated Delay Options.
@@ -914,6 +958,27 @@ impl Game {
         }
         self.drain_effect_queue_inner();
         if self.effect_drain_depth == 1 {
+            // Flush the OnDiscardHand batch window (G-ENGINE-ON-DISCARD-HAND):
+            // the causing effect body has finished, so the whole discard batch
+            // is known. Fire the trigger ONCE per affected owner (DCGO
+            // `DiscardHands()`), then drain the newly-enqueued observers.
+            // Deferred to the outermost drain only, and only when not parked on
+            // a selection (a park means the effect body is not finished — the
+            // resuming drain flushes it). Loop-guarded because an OnDiscardHand
+            // observer can itself trash a hand (a nested batch).
+            if self.pending_selection.is_none() {
+                let mut discard_guard: u16 = 0;
+                while self.pending_hand_discard.is_some() && self.pending_selection.is_none() {
+                    self.flush_pending_hand_discard();
+                    if !self.effect_queue.is_empty() {
+                        self.drain_effect_queue_inner();
+                    }
+                    discard_guard += 1;
+                    if discard_guard > MAX_CHAIN_DEPTH {
+                        break;
+                    }
+                }
+            }
             let mut guard: u16 = 0;
             loop {
                 if self.pending_selection.is_some() {
@@ -1243,6 +1308,13 @@ impl Game {
                 cause: (timing == EffectTiming::OnDeletion)
                     .then(|| self.observed_deletion_event_cause())
                     .flatten(),
+                // For the OnPlay firing, forward whether the play was
+                // effect-driven so `played_by_effect` can read it (BT25-080
+                // "if played by an effect"). `pending_play_effect_initiated`
+                // is set by `fire_play_event_triggers` only around the OnPlay
+                // enqueue; it is `false` for every other timing/source.
+                effect_initiated: timing == EffectTiming::OnPlay
+                    && self.pending_play_effect_initiated,
                 ..TriggerContext::default()
             },
             TriggerSource::PlayerBattleArea(player) => TriggerContext {
@@ -1491,6 +1563,38 @@ impl Game {
                 }],
                 ..TriggerContext::default()
             },
+            // Sibling of SourceTrashedFromStack; the returned card moved to the
+            // DECK, so the `moved_card_sets` destination is `Deck` (bottom).
+            // Same host / event-card context so the host-scoped
+            // (`event_host_permanent_is_source`) and event-card-name
+            // (`event_card_name_contains`) observer gates resolve identically.
+            TriggerSource::SourceReturnedToDeckBottom {
+                player,
+                host,
+                host_card,
+                card,
+                cause,
+            } => TriggerContext {
+                subject: Some(crate::trigger_context::EventSubject::Card {
+                    card,
+                    zone: crate::enums::Zone::Deck,
+                }),
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                event_card: Some(card),
+                event_source_card: Some(card),
+                event_host_card: Some(host_card),
+                event_host_permanent: Some(host),
+                affected_player: Some(player),
+                source_player: Some(player),
+                cause: Some(cause),
+                moved_card_sets: vec![crate::trigger_context::MovedCardSet {
+                    cards: vec![card],
+                    from: Some(crate::enums::Zone::BattleArea),
+                    to: Some(crate::enums::Zone::Deck),
+                }],
+                ..TriggerContext::default()
+            },
             TriggerSource::SecurityRemoved {
                 affected_player,
                 source_player,
@@ -1557,6 +1661,33 @@ impl Game {
                     from: Some(crate::enums::Zone::Security),
                     to: Some(crate::enums::Zone::Trash),
                 }],
+                ..TriggerContext::default()
+            },
+            TriggerSource::BattleResolved { winner } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                // The battle winner (owner + trait read by the observer's
+                // `event_winner_*` predicates). `None` on a tie — no winner.
+                battle_winner: winner,
+                event_permanent: winner,
+                cause: Some(crate::trigger_context::EventCause::BattleDeletion),
+                ..TriggerContext::default()
+            },
+            TriggerSource::HandDiscarded {
+                player,
+                cause_controller,
+            } => TriggerContext {
+                target_permanent: source_permanent,
+                target_card: source_permanent.and_then(|h| self.top_card_handle(h)),
+                // The player whose hand lost cards ("your hand is trashed
+                // from") and the controller of the causing effect ("one of YOUR
+                // effects"). `source_player` mirrors the trashing player for
+                // callers that read the generic source-player field.
+                discard_hand_player: Some(player),
+                discard_cause_controller: Some(cause_controller),
+                affected_player: Some(player),
+                source_player: Some(cause_controller),
+                effect_initiated: true,
                 ..TriggerContext::default()
             },
         };
@@ -2040,7 +2171,16 @@ impl Game {
                 continue;
             };
             for (slot, effect) in effects.iter().enumerate() {
-                if !effect.linked {
+                // DigiLink Shape-B (G-LINK-INHERITED-ESS): a link card's ESS
+                // triggered clause fires from its HOST. Accept BOTH the
+                // `.linked()` convention (BT25-101) AND the `.inherited()`
+                // convention (BT25-093's `scope: inherited` [When Attacking]
+                // delete): a link card behaves as an inherited-style source. A
+                // clause is `.linked()` XOR `.inherited()`, so this never
+                // double-enqueues. (The top-card scan above and the below-top
+                // `card_sources` scan never touch `linked_cards`, so there is
+                // no cross-pass overlap either.)
+                if !(effect.linked || effect.inherited) {
                     continue;
                 }
                 if !timing_flag_matches(effect, timing) {
@@ -3216,6 +3356,31 @@ impl Game {
                             .get_mut(target.index as usize)
                         {
                             perm.push_under(security.card);
+                        } else {
+                            let owner = security.card.owner;
+                            self.player_mut(owner).trash.push(security.card);
+                        }
+                    }
+                    // Top-position sibling of BottomSource: insert directly
+                    // beneath the target's active top card
+                    // (`push_as_top_source`). Same fallbacks (missing target
+                    // → owner's trash). G-DSL-PLACE-AS-TOP-SOURCE.
+                    SecurityRemovalDestination::TopSource(target) => {
+                        if target.index == crate::action::space::BREEDING_TARGET as u8 {
+                            if let Some(breeding) =
+                                self.player_mut(target.player).breeding_area.as_mut()
+                            {
+                                breeding.push_as_top_source(security.card);
+                            } else {
+                                let owner = security.card.owner;
+                                self.player_mut(owner).trash.push(security.card);
+                            }
+                        } else if let Some(perm) = self
+                            .player_mut(target.player)
+                            .battle_area
+                            .get_mut(target.index as usize)
+                        {
+                            perm.push_as_top_source(security.card);
                         } else {
                             let owner = security.card.owner;
                             self.player_mut(owner).trash.push(security.card);

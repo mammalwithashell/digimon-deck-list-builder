@@ -1,0 +1,25 @@
+{
+  "card_id": "EX12-068",
+  "card_index": 68,
+  "card_name_eng": "Ruli Tsukiyono",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_068",
+  "play_cost": 4,
+  "dp": null,
+  "level": null,
+  "card_kind": 1,
+  "rarity": 2,
+  "card_colors": [
+    3
+  ],
+  "type_eng": [
+    "NSp"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "[Start of Your Turn] If you have 2 or less memory, set it to 3.\r\n[Your Turn] When one of your Digimon with [Angoramon] in its text or the [NSp] trait attacks, by suspending this Tamer, activate 1 of the effects below:\r\n· It may digivolve into a level 6 or lower card with [Angoramon] in its text or the [NSp] trait in the hand with the cost reduced by 1.\r\n· You may use 1 Option card with [Angoramon] in its text or the [NSp] trait from your hand with the cost reduced by 2.",
+  "inherited_effect_description_eng": "[Security] Play this card without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

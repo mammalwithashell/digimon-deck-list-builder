@@ -1,0 +1,195 @@
+# EX7-048 Gundramon — Digimon, Lv.6, Black, DP 12000, Cost 12.
+# Traits: Machine / Three Musketeers. Attribute: Virus.
+#
+# Printed card text (data/card_bundles/EX7-048.md — official Bandai DB,
+# cross-checked against data/cards.json effect_description_eng and the card
+# image):
+#
+#   <Blocker> (This Digimon can block in the blocker timing.)
+#   [On Play] [When Digivolving] Reveal the top 6 cards of your deck. You may
+#     use 1 [Three Musketeers] trait Option card among them without paying the
+#     cost. Return the rest to the top or bottom of the deck.
+#   [All Turns] When any of your [Three Musketeers] trait Digimon would leave
+#     the battle area other than by your effects, by trashing 1 Option card in
+#     this Digimon's digivolution cards, they don't leave.
+#
+# Digivolution requirement (xros_req, official Bandai DB):
+#   "[Digivolve] Lv.5 w/[Three Musketeers] in text: Cost 4" — coincides with
+#   the standard printed Lv.5 Black / cost 4 route (cards.json evo_costs).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Black/EX7_048.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect gated on
+#   `TopCard.HasText("Three Musketeers")`, digivolutionCost: 4, level: 5.
+#   Matches the printed xros_req. NOTE the printed condition is "w/[Three
+#   Musketeers] IN TEXT" (a whole-card HasText scan), NOT "w/[Three
+#   Musketeers] trait" — so the filter is `in_text_contains` (the DCGO
+#   `CardSource.HasText` analogue: scans name + traits + all printed text;
+#   trait carriers like BT6-065 still match via the trait scan,
+#   G-DSL-IN-TEXT-CONTAINS), not the narrower `trait_has`. Same idiom as
+#   BT21-072's "w/＜Save＞ in text" path. The standard printed Lv.5 Black /
+#   cost 4 route (cards.json evo_costs) is ALSO authored as an alt_path so
+#   the route exists for DSL-loaded fixtures (G-DSL-FIXTURE-EVO-COSTS:
+#   compiled cards carry no printed evo_costs) — BT24-063 "standard +
+#   special" idiom. Both land at cost 4 off a Lv.5 base. DCGO passes
+#   `ignoreDigivolutionRequirement: false` → no `ignore_requirements`.
+#
+# <Blocker> — BlockerSelfStaticEffect(isInheritedEffect: false, card, null) at
+#   EffectTiming.None (face-up only — no separate Inherited Effect line
+#   reprints it on this card).
+#
+# Shared [On Play]/[When Digivolving] body
+#   (SimplifiedRevealDeckTopCardsAndSelect): reveal top 6, ONE Mode.Custom slot
+#   filtering `cardSource.IsOption && !cardSource.CanNotPlayThisOption &&
+#   cardSource.ContainsTraits("Three Musketeers")`, canNoSelect: true ("you may
+#   use"). The selected card is routed through PlayOptionCards(payCost: false,
+#   root: Library) — a USE of an Option (not a play-as-permanent).
+#   remainingCardsPlace: RemainingCardsPlace.DeckTopOrBottom — a SINGLE
+#   player-elected top/bottom choice for the whole leftover reveal pool, which
+#   must fire REGARDLESS of whether the optional use was taken or declined.
+#   → reveal_top_deck(6) + select_reveal_buckets(min:0,max:1, filter: kind
+#     option AND trait_has Three Musketeers) + use_option_from_revealed(free)
+#     + place_remainder_on_deck(position: choice).
+#   `select_reveal_buckets` (rather than the singular `select_reveal`) is
+#   required here: `select_reveal`'s decline path is `ResumeDecline::None` —
+#   PASS drops the ENTIRE remaining process tail, which would silently skip
+#   the mandatory remainder placement whenever the player declines an
+#   available Option (an unfaithful approximation). `select_reveal_buckets`
+#   always continues into the clause's remaining steps once bucket selection
+#   is exhausted (BT24-063's proven idiom), so the remainder step is
+#   guaranteed on both branches. `use_option_from_revealed`'s `card:` binding
+#   was widened (this change) to also accept the `CardList` a bucket produces
+#   (0 or 1 entries for a min:0/max:1 bucket), mirroring the existing
+#   `play_from_revealed_free` handling of both binding shapes.
+#   `place_remainder_on_deck` with `position: choice` is the verb whose
+#   executor installs a binary top/bottom EffectChoice for the whole remainder
+#   pool (§3.1 StackPosition::Choice; BT24-063/BT25-038 use the same idiom).
+#
+# [All Turns] protect-own-[Three Musketeers]-by-trashing-Option
+#   (G-DSL-PROTECT-OTHER-BY-TRASH-OPTION, resolved round-3 —
+#   tests/dsl/protect_others_leave_replacement.rs): CanUseCondition =
+#   IsExistOnBattleAreaDigimon(card) && CanTriggerWhenPermanentRemoveField(
+#   IsOwnerPermanent w/ Three Musketeers trait) && !IsByEffect(IsOwnerEffect)
+#   ("other than by your effects"). CanActivateCondition requires >=1 Option in
+#   this Digimon's DigivolutionCards. ActivateCoroutine: SelectPermanentEffect
+#   (canNoSelect: true) over matching willBeRemoveField permanents ->
+#   SelectCardEffect(Mode.Custom, maxCount:1) over
+#   thisCardPermanent.DigivolutionCards filtered IsOption -> trash -> set
+#   willBeRemoveField = false. Note the printed text has NO "OTHER" qualifier
+#   (unlike the BT25-039 sibling shape) — Gundramon itself, if it is a [Three
+#   Musketeers] Digimon leaving, can protect itself by trashing its own Option
+#   digivolution card.
+#   → kind: replacement, trigger: when_would_leave_battle_area, optional: true,
+#     active_when: { replacement_subject_is_mine: true, trait_has: "Three
+#     Musketeers", none_of: [replacement_cause: own_effect] },
+#     cost: { trash_option_from_own_digivolution_cards: true },
+#     outcome: prevent.
+#   This lowers to the single self-contained
+#   TrashOptionFromOwnDigivolutionCardsAndCancelLeave step, which owns both the
+#   cost and outcome — no separate cancel_replacement step follows, and the
+#   picker naturally self-gates on carrier Option availability (unpayable →
+#   not offered).
+
+card: EX7-048
+name: Gundramon
+kind: digimon
+level: 6
+color: [black]
+cost: 12
+dp: 12000
+traits: [Machine, Three Musketeers]
+attribute: Virus
+
+alt_paths:
+  # Standard printed Lv.5 Black / cost 4 (cards.json evo_costs) — kept for
+  # DSL-loaded fixtures per G-DSL-FIXTURE-EVO-COSTS.
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - color_is: black
+    cost: 4
+  # Special [Digivolve] Lv.5 w/[Three Musketeers] in text: Cost 4 (official
+  # Bandai DB xros_req; DCGO PermanentCondition: TopCard.HasText("Three
+  # Musketeers")). "In text" = whole-card HasText scan (name + traits + all
+  # printed text), so `in_text_contains`, NOT `trait_has` (see header note).
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - in_text_contains: "Three Musketeers"
+    cost: 4
+
+effects:
+  # ─── <Blocker> (face-up only) ───────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── Clause: [On Play][When Digivolving] reveal 6, may use 1 free, ─────────
+  # ─── return rest to top or bottom of deck ──────────────────────────────────
+  #
+  # Mandatory clause (no printed "may" gates the clause itself — the reveal
+  # and remainder placement always happen); only the Option-use step is
+  # optional ("You may use"). `select_reveal_buckets` (min:0/max:1) models
+  # the optional pick; the remainder is placed with a player-elected
+  # top/bottom choice via `place_remainder_on_deck { position: choice }`
+  # (fires regardless of whether the optional pick was taken).
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Reveal top 6; you may use 1 [Three Musketeers] Option free; return rest to top or bottom of deck"
+    process:
+      - reveal_top_deck: { of: you, count: 6, bind_as: revealed }
+      # Select (optionally) 1 [Three Musketeers] Option from the reveal pool
+      # to use. DCGO: canTargetCondition: IsOption && !CanNotPlayThisOption &&
+      # ContainsTraits("Three Musketeers"), mode: Custom, maxCount: 1,
+      # canNoSelect: true ("you may use"). A bucket (min:0/max:1), not a bare
+      # select_reveal, so the remainder placement below always runs even when
+      # the player declines an available pick (see header note).
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: picked
+              min: 0
+              max: 1
+              filter:
+                all_of:
+                  - kind: option
+                  - trait_has: "Three Musketeers"
+          prompt: "You may use 1 [Three Musketeers] trait Option card among them without paying the cost"
+      # Use the picked Option for free (DCGO: PlayOptionCards(payCost: false,
+      # root: Library)). cost omitted = free.
+      - use_option_from_revealed:
+          of: you
+          card: picked
+      # Return remaining revealed cards to top OR bottom of deck (single
+      # player-elected choice for the whole remainder pool — DCGO
+      # RemainingCardsPlace.DeckTopOrBottom). Fires regardless of whether the
+      # optional Option-use above was taken or declined.
+      - place_remainder_on_deck: { of: you, position: choice }
+
+  # ─── Clause: [All Turns] protect own [Three Musketeers] by trashing Option ──
+  # "When any of your [Three Musketeers] trait Digimon would leave the battle
+  # area other than by your effects, by trashing 1 Option card in this
+  # Digimon's digivolution cards, they don't leave."
+  # Subject filter: printed "your [Three Musketeers] trait DIGIMON" — DCGO
+  # gates on IsPermanentExistsOnOwnerBattleAreaDigimon (Digimon-only), so a
+  # trait-bearing Tamer is NOT protected → `kind: digimon` is required. No
+  # `other: true` gate — the printed text has no "other" qualifier (unlike
+  # BT25-039), so Gundramon can protect ITSELF by trashing its own Option
+  # digivolution card.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - trait_has: "Three Musketeers"
+        - none_of:
+            - replacement_cause: own_effect
+    cost:
+      trash_option_from_own_digivolution_cards: true
+    outcome: prevent
+    summary: "[All Turns] When any of your [Three Musketeers] Digimon would leave the battle area other than by your effects, by trashing 1 Option card in this Digimon's digivolution cards, they don't leave"

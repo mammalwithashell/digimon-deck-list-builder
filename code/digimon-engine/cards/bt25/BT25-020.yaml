@@ -1,0 +1,210 @@
+# BT25-020 Marsmon — Digimon, Lv.6, Red/Green, DP 12000, Cost 12.
+# Traits: Shaman, Olympos XII, Iliad, TS. Attribute: Vaccine. Form: Mega.
+#
+# No per-card JSON exists yet for BT25-020 (this is the first authoring pass);
+# card data below is sourced from the official Bandai DB bundle
+# (data/card_bundles/BT25-020.md) + the card image
+# (DCGO_Application/Assets/Textures/Card/BT25-020.webp) + DCGO C#, per the
+# project's printed-data source-priority (official DB outranks cards.json).
+#
+# Printed text (official Bandai DB bundle — verbatim):
+#
+#   When this card would be played, if there is a Digimon with 13000 DP or
+#   more, reduce the cost by 5.
+#   [On Play] [When Digivolving] [When Attacking] 1 of your Digimon gets
+#   +3000 DP for the turn. Then, 1 of your Digimon may battle 1 of your
+#   opponent's Digimon.
+#   [All Turns] [Once Per Turn] When any of your [TS] trait Digimon win a
+#   battle, trash your opponent's top security card.
+#
+# Digivolve box:
+#   Standard: Red Lv.5 / cost 4; Green Lv.5 / cost 4.
+#   Alt: [Digivolve] Lv.5 w/[TS] trait: Cost 3.
+#
+# Official Q&A: "This effect directly performs a battle. If this effect is
+# activated, the chosen Digimon battle, as with the standard rules." — i.e.
+# the "may battle" clause is a `battle:` step (no security check), not
+# `may_attack_now`.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Red/BT25_020.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt Digivolution (EffectTiming.None):
+#   AddSelfDigivolutionRequirementStaticEffect(PermanentCondition:
+#   TopCard.EqualsTraits("TS"), digivolutionCost: 3, ignoreDigivolutionRequirement:
+#   true, level: 5). EqualsTraits is an exact-trait-membership check (CardSource.cs
+#   `EqualsTraits`), identical in meaning to the DSL `trait_has` predicate used by
+#   the BT25-058 sibling's analogous alt-path. → alt_paths digivolve from
+#   { level_eq: 5, trait_has: TS }, cost 3, ignore_requirements: true.
+#
+# Reduce Play Cost (EffectTiming.None):
+#   Condition(): HasMatchConditionPermanent(WouldPlayCondition) where
+#   WouldPlayCondition = IsPermanentExistsOnBattleArea && HasDP && DP >= 13000
+#   (either player's field — no owner restriction in the condition).
+#   MandatorySelfPlayCostReduction(5, card, Condition) — a FLAT/fixed reduction
+#   of 5, unconditional on trash count (unlike the P-186/BT13-111 siblings'
+#   per-5-trash formula). → kind: cost_reduction, reduction_timing:
+#   before_pay_cost, when_playing_this: true, condition: any_permanent
+#   { of: any, zone: [battle_area], kind: digimon, dp_gte: 13000 }, amount: 5
+#   (P-186 idiom for the gate; BT25-020's amount is the literal 5, not a
+#   per-trash formula).
+#
+# Shared OnPlay/WhenDigivolving/WhenAttacking (ActivateClassesForSharedEffects,
+# optional: false outer, maxCountPerTurn: none — NOT once-per-turn (DCGO does
+# not set an OPT hash here; contrast with BT25-058's shared clause which IS
+# maxCountPerTurn:1)):
+#   1. SelectPermanentEffect over own battle-area Digimon (canNoSelect: false —
+#      MANDATORY if ≥1 own Digimon exists) → ChangeDigimonDP(+3000,
+#      EffectDuration.UntilEachTurnEnd = "for the turn").
+#   2. If the owner has an opponent Digimon to target: SelectPermanentEffect
+#      over own Digimon for the ATTACKER (canNoSelect: true → OPTIONAL — "1 of
+#      your Digimon MAY battle"), then, if an attacker was chosen,
+#      SelectPermanentEffect over opponent Digimon for the DEFENDER
+#      (canNoSelect: true → also declinable), then IBattle(...).Battle() — a
+#      direct battle, NOT IAttack (no security check; matches the Official
+#      Q&A). → select_own_permanent (mandatory) for the DP buff →
+#      add_dp_modifier value 3000 expiry end_of_turn; then select_own_permanent
+#      (optional) bind attacker_pick → select_opponent_permanent (optional,
+#      nested under `if binding_present: attacker_pick`) bind defender_pick →
+#      battle { attacker: attacker_pick, defender: defender_pick } (the
+#      `battle` step itself no-ops gracefully if either binding is absent, so
+#      the nested `if` mirrors DCGO's short-circuit: no attacker chosen ⇒ the
+#      defender prompt never installs).
+#
+# All Turns (EffectTiming.OnEndBattle, OPT via SetUpActivateClass(...,
+# maxCountPerTurn: 1, ...), hashed "BT25_020_AT"):
+#   CanUseCondition: IsExistOnBattleArea(card) &&
+#   CanTriggerWhenWinBattle(winnerCondition: TopCard.Owner == card.Owner &&
+#   TopCard.HasTSTraits) — i.e. ANY of the controller's [TS] Digimon winning a
+#   battle (not necessarily this card itself), gated on Marsmon itself still
+#   being on the field. A tie (WasTie) has no winner and never satisfies
+#   CanTriggerWhenWinBattle. Body: IDestroySecurity(enemy, 1, fromTop: true).
+#   → when: on_ally_won_battle (G-DSL-BATTLE-WINNER-BOARDWIDE, purpose-built
+#   for this card — see docs/RUST_ENGINE_GAPS.md / battle_winner_boardwide.rs),
+#   once_per_turn: true, active_when: { all_of: [event_winner_owner: you,
+#   event_winner_trait_has: TS] }, process: trash_top_security { of: opponent }.
+#   `on_ally_won_battle` rides the EndOfBattle dispatch, which is inherently
+#   turn-agnostic (no `active_when: all_turns` needed — mirrors the
+#   `on_any_deletion` win-battle idiom on BT25-054/051, which also omit it).
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                | Status |
+# |--------------------------------------------------------------------|--------|
+# | Std digivolve Red Lv.5/cost4, Green Lv.5/cost4                     | IMPLEMENTED (printed evo_costs) |
+# | Alt-source Lv.5 [TS] / Cost 3, ignore reqs                         | IMPLEMENTED (alt_paths) |
+# | Cost -5 when a 13000+ DP Digimon exists (either field)             | IMPLEMENTED (cost_reduction, flat amount 5) |
+# | [OP][WD][WA] mandatory +3000 DP to 1 own Digimon "for the turn"    | IMPLEMENTED (select_own_permanent mandatory + add_dp_modifier end_of_turn) |
+# | [OP][WD][WA] then 1 own Digimon may battle 1 opp Digimon           | IMPLEMENTED (optional attacker + optional defender + battle step) |
+# | [All Turns][OPT] any ally [TS] Digimon wins a battle → trash opp top security | IMPLEMENTED (on_ally_won_battle board-wide observer) |
+
+card: BT25-020
+name: Marsmon
+kind: digimon
+level: 6
+color: [red, green]
+cost: 12
+dp: 12000
+traits: [Shaman, Olympos XII, Iliad, TS]
+attribute: Vaccine
+form: Mega
+
+alt_paths:
+  # Standard digivolution: Red Lv.5 / cost 4 (printed evo block).
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  # Standard digivolution: Green Lv.5 / cost 4 (printed evo block).
+  - kind: digivolve
+    from: { level_eq: 5, color_is: green }
+    cost: 4
+  # Alt-digivolution: Lv.5 with [TS] trait / cost 3, ignoring requirements
+  # (printed "[Digivolve] Lv.5 w/[TS] trait: Cost 3" digivolve box).
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: TS }
+    cost: 3
+    ignore_requirements: true
+
+effects:
+  # ─── Clause A: BeforePayCost cost reduction ─────────────────────────────────
+  #
+  # "When this card would be played, if there is a Digimon with 13000 DP or
+  #  more, reduce the cost by 5." Flat reduction (not a per-trash formula) —
+  # gate mirrors the P-186 idiom (`any_permanent` over EITHER field).
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      any_permanent:
+        of: any
+        zone: [battle_area]
+        kind: digimon
+        dp_gte: 13000
+    amount: 5
+    summary: "Cost -5 when played, if a Digimon with 13000+ DP exists (either field)"
+
+  # ─── Clause B: [On Play][When Digivolving][When Attacking] +3000 DP then may battle ─
+  #
+  # "1 of your Digimon gets +3000 DP for the turn. Then, 1 of your Digimon may
+  #  battle 1 of your opponent's Digimon."
+  #
+  # Step 1 is mandatory (DCGO canNoSelect: false) whenever the controller has a
+  # Digimon. Step 2/3 are both optional/declinable (DCGO canNoSelect: true on
+  # both the attacker and defender picks) — an effect BATTLE, not an attack
+  # (Official Q&A: performs a battle "as with the standard rules", no security
+  # check). Not once_per_turn — DCGO does not hash this shared clause as OPT.
+  - when: [on_play, when_digivolving, when_attacking]
+    summary: "[OP][WD][WA] 1 of your Digimon gets +3000 DP for the turn; then 1 of your Digimon may battle 1 of your opponent's Digimon"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+    process:
+      # "1 of your Digimon gets +3000 DP for the turn." — mandatory pick.
+      - select_own_permanent:
+          bind_as: buff_target
+          filter: { kind: digimon }
+          prompt: "Select 1 of your Digimon to gain +3000 DP for the turn"
+      - add_dp_modifier:
+          target: buff_target
+          value: 3000
+          expiry: end_of_turn
+      # "Then, 1 of your Digimon may battle 1 of your opponent's Digimon." —
+      # both the attacker and the defender picks are declinable; the `battle`
+      # step itself no-ops if either binding is absent, and nesting the
+      # defender pick under `binding_present: attacker_pick` mirrors DCGO's
+      # short-circuit (no attacker chosen ⇒ defender prompt never installs).
+      - select_own_permanent:
+          bind_as: attacker_pick
+          optional: true
+          filter: { kind: digimon }
+          prompt: "You may choose 1 of your Digimon to battle 1 of your opponent's Digimon"
+      - if:
+          condition: { binding_present: attacker_pick }
+          then:
+            - select_opponent_permanent:
+                bind_as: defender_pick
+                optional: true
+                filter: { kind: digimon }
+                prompt: "Choose 1 of your opponent's Digimon to battle"
+            - battle:
+                attacker: attacker_pick
+                defender: defender_pick
+
+  # ─── Clause C: [All Turns][OPT] any ally [TS] Digimon wins a battle → trash opp top security ─
+  #
+  # "When any of your [TS] trait Digimon win a battle, trash your opponent's
+  #  top security card." Board-wide observer (G-DSL-BATTLE-WINNER-BOARDWIDE) —
+  # fires when ANY of the controller's [TS] Digimon wins a battle, not only
+  # Marsmon itself. A tie (mutual destruction) has no winner and never fires.
+  - when: on_ally_won_battle
+    once_per_turn: true
+    active_when:
+      all_of:
+        - event_winner_owner: you
+        - event_winner_trait_has: TS
+    summary: "[All Turns][OPT] When any of your [TS] trait Digimon win a battle, trash your opponent's top security card"
+    process:
+      - trash_top_security: { of: opponent }

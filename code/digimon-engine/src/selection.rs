@@ -616,6 +616,20 @@ pub enum TriggerSource {
         card: CardHandle,
         cause: crate::trigger_context::EventCause,
     },
+    /// Observer timing fired after a digivolution source is RETURNED to the
+    /// BOTTOM of a player's deck (not trashed). Sibling of
+    /// `SourceTrashedFromStack`: scans all players' battle areas while carrying
+    /// the former host (`host` / `host_card`) and the returned card (`card`) as
+    /// event context, so host-scoped ("this Digimon's digivolution cards") and
+    /// event-card-name ("[Vemmon] returned") observers can gate on it.
+    /// G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
+    SourceReturnedToDeckBottom {
+        player: PlayerId,
+        host: PermanentHandle,
+        host_card: CardHandle,
+        card: CardHandle,
+        cause: crate::trigger_context::EventCause,
+    },
     /// Observer timing fired after a card is removed from a player's security
     /// stack. `affected_player` owns the security stack; `observer_player`
     /// is the zone being scanned for either own-side or opponent-side
@@ -644,6 +658,28 @@ pub enum TriggerSource {
         source_player: PlayerId,
         card: CardHandle,
         cause: crate::trigger_context::EventCause,
+    },
+    /// `EndOfBattle` observer fan-out carrying the battle WINNER so a
+    /// board-wide observer can react to "any of your [X] Digimon win a battle"
+    /// (BT25-020 Marsmon; G-DSL-BATTLE-WINNER-BOARDWIDE). Scans EVERY player's
+    /// battle area — the winner-owner/trait gate lives in the observer's
+    /// `active_when:`. `winner` is `None` on a tie (mutual destruction), which
+    /// has no winner. Fired only for Digimon-vs-Digimon battles (direct player
+    /// attacks route through the security loop and never fire `EndOfBattle`).
+    BattleResolved {
+        winner: Option<PermanentHandle>,
+    },
+    /// `OnDiscardHand` observer fan-out fired after an EFFECT trashes one or
+    /// more cards from a player's hand (G-ENGINE-ON-DISCARD-HAND). Scans EVERY
+    /// player's battle area so both own-side ("your hand is trashed from",
+    /// BT25-080/084) and own-effect-gated ("when one of your effects trashes a
+    /// card in your hand", ST16-14) observers can react. `player` is the
+    /// trashing player (whose hand lost cards); `cause_controller` is the
+    /// controller of the causing effect. Mirrors DCGO `DiscardHands()` firing
+    /// `OnDiscardHand` ONCE per discard batch with the causing `CardEffect`.
+    HandDiscarded {
+        player: PlayerId,
+        cause_controller: PlayerId,
     },
 }
 
@@ -674,6 +710,10 @@ pub enum SecurityRemovalDestination {
         to_bottom: bool,
     },
     BottomSource(PermanentHandle),
+    /// Insert the removed security card as `target`'s TOP digivolution
+    /// source (directly beneath the active top card) — the top-position
+    /// sibling of `BottomSource`. G-DSL-PLACE-AS-TOP-SOURCE.
+    TopSource(PermanentHandle),
     Digivolve {
         player: PlayerId,
         target: PermanentHandle,
@@ -730,6 +770,10 @@ pub struct PendingOption {
 pub enum OptionUseSource {
     Hand,
     Trash,
+    /// Used from the transient reveal pool (`Game::revealed_cards`).
+    Revealed,
+    /// Used from a permanent's digivolution-source stack (BT25-085).
+    Source,
 }
 
 impl OptionUseSource {
@@ -737,6 +781,8 @@ impl OptionUseSource {
         match self {
             OptionUseSource::Hand => crate::enums::Zone::Hand,
             OptionUseSource::Trash => crate::enums::Zone::Trash,
+            OptionUseSource::Revealed => crate::enums::Zone::Reveal,
+            OptionUseSource::Source => crate::enums::Zone::BattleArea,
         }
     }
 }

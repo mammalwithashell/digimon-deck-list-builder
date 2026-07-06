@@ -137,6 +137,16 @@ pub fn evaluate_with_bindings(
                 .min()
                 .unwrap_or(0)
         }
+        CompiledFormula::Subtract(args) => {
+            // Left-associative: a - b - c. Empty → 0; single operand → itself.
+            let mut it = args
+                .iter()
+                .map(|a| evaluate_with_bindings(a, ctx, target, bindings));
+            match it.next() {
+                None => 0,
+                Some(first) => it.fold(first, |acc, x| acc - x),
+            }
+        }
         CompiledFormula::Aggregate(sel) => evaluate_aggregate(*sel, CompiledPlayerRef::You, ctx),
         CompiledFormula::AggregateScoped { selector, scope } => {
             evaluate_aggregate(*selector, *scope, ctx)
@@ -307,6 +317,15 @@ fn evaluate_read_with_raw_and_bindings(
             .map(|a| evaluate_read_with_raw_and_bindings(a, ctx, target, raw, bindings))
             .min()
             .unwrap_or(0),
+        CompiledFormula::Subtract(args) => {
+            let mut it = args
+                .iter()
+                .map(|a| evaluate_read_with_raw_and_bindings(a, ctx, target, raw, bindings));
+            match it.next() {
+                None => 0,
+                Some(first) => it.fold(first, |acc, x| acc - x),
+            }
+        }
         CompiledFormula::Aggregate(sel) => {
             evaluate_aggregate_read(*sel, CompiledPlayerRef::You, ctx)
         }
@@ -467,7 +486,32 @@ fn evaluate_per(
             let read = ctx.as_read();
             source_stack_count_filtered(filter.as_deref(), &read, bindings)
         }
+        CompiledPerSelector::PlayerMemory { of } => {
+            player_memory_value(ctx.game, *of, ctx.player)
+        }
+        CompiledPerSelector::OwnLinkCardCount { of } => players_for_ref(*of, ctx)
+            .into_iter()
+            .map(|player| own_link_card_count(&ctx.game.player(player).battle_area))
+            .sum(),
+        CompiledPerSelector::SourceLinkCardCount => ctx
+            .source_permanent
+            .and_then(|handle| target_permanent(ctx, handle))
+            .map(|perm| perm.linked_cards.len() as i32)
+            .unwrap_or(0),
     }
+}
+
+/// Σ over a battle area's Digimon of `permanent.linked_cards.len()`. Tamers /
+/// Options also carry no link cards in practice, but `linked_cards` is a flat
+/// per-permanent Vec so counting every permanent is equivalent and cheaper than
+/// filtering to Digimon (DCGO's `GetBattleAreaDigimons` yields Digimon only, but
+/// only Digimon are ever link hosts, so the totals match). Shared by the write
+/// and read evaluators.
+fn own_link_card_count(battle_area: &[crate::permanent::Permanent]) -> i32 {
+    battle_area
+        .iter()
+        .map(|perm| perm.linked_cards.len() as i32)
+        .sum()
 }
 
 fn evaluate_per_read(
@@ -553,6 +597,18 @@ fn evaluate_per_read(
         CompiledPerSelector::SourceStackCountFiltered { filter } => {
             source_stack_count_filtered(filter.as_deref(), ctx, bindings)
         }
+        CompiledPerSelector::PlayerMemory { of } => {
+            player_memory_value(ctx.game, *of, ctx.player)
+        }
+        CompiledPerSelector::OwnLinkCardCount { of } => players_for_ref_read(*of, ctx)
+            .into_iter()
+            .map(|player| own_link_card_count(&ctx.game.player(player).battle_area))
+            .sum(),
+        CompiledPerSelector::SourceLinkCardCount => ctx
+            .source_permanent
+            .and_then(|handle| target_permanent_read(ctx, handle))
+            .map(|perm| perm.linked_cards.len() as i32)
+            .unwrap_or(0),
     }
 }
 
@@ -642,6 +698,49 @@ fn distinct_colors_in_sources(perm: &Permanent, data: &[crate::card_data::CardDa
         }
     }
     seen.count_ones() as i32
+}
+
+/// The distinct color set of a permanent's NON-FLIPPED digivolution sources —
+/// the cards beneath the top card that are face-up (`!face_down`). This is the
+/// single shared extraction for EX9-074 Kimeramon:
+///   * `color_matches_own_source_stack` (G-DSL-COLOR-MATCHES-OWN-SOURCE-STACK)
+///     tests an opponent Digimon's colors against this set;
+///   * the branch gate uses its `count` (`distinct_non_flipped_source_color_count`)
+///     as the `DistinctColorsCount` (<=5 = single-target, >=6 = per-color).
+///
+/// Mirrors DCGO `card.PermanentOfThisCard().DigivolutionCards.Filter(!IsFlipped)
+/// .SelectMany(CardColors).Distinct()`. `face_down` is the engine's `IsFlipped`
+/// analog (`<Training>` flips sources face-down). The top card is excluded
+/// (`rev().skip(1)`) — it is not a digivolution *source*.
+pub fn non_flipped_source_colors(
+    perm: &Permanent,
+    data: &[crate::card_data::CardData],
+) -> Vec<crate::enums::CardColor> {
+    let mut seen: u8 = 0;
+    let mut out = Vec::new();
+    for source in perm.card_sources.iter().rev().skip(1) {
+        if source.face_down {
+            continue;
+        }
+        for color in source.colors(data) {
+            let bit = 1u8 << (*color as u8);
+            if seen & bit == 0 {
+                seen |= bit;
+                out.push(*color);
+            }
+        }
+    }
+    out
+}
+
+/// The count of `non_flipped_source_colors` — the branch-gating
+/// `DistinctColorsCount` for EX9-074 Kimeramon (<=5 = single-target Branch A,
+/// >=6 = per-color Branch B). Shares the exact extraction above.
+pub fn distinct_non_flipped_source_color_count(
+    perm: &Permanent,
+    data: &[crate::card_data::CardData],
+) -> i32 {
+    non_flipped_source_colors(perm, data).len() as i32
 }
 
 fn source_stack_count(
@@ -818,6 +917,39 @@ fn players_for_ref_read(of: CompiledPlayerRef, ctx: &EffectReadContext<'_>) -> V
         CompiledPlayerRef::Active => vec![ctx.game.turn_player()],
         CompiledPlayerRef::Any => (0..ctx.game.players.len() as PlayerId).collect(),
     }
+}
+
+/// A single player's memory-gauge value as a signed scalar ("MemoryForPlayer").
+/// `game.memory` is stored from the turn player's perspective, so a player's
+/// signed memory is the gauge when it is their turn and the negated gauge
+/// otherwise (matches the `own_memory_lte`/`_gte` predicate reading in
+/// `dsl_cards::predicate`). When `of` is `Opponent`, the value is clamped at 0
+/// per DCGO `Math.Max(0, Enemy.MemoryForPlayer)` (BT25-086). For `You` /
+/// `Active` / `Any` the signed value is returned unclamped (a player can hold
+/// negative signed memory). G-DSL-FORMULA-PLAYER-MEMORY.
+fn player_memory_value(game: &crate::game::Game, of: CompiledPlayerRef, controller: PlayerId) -> i32 {
+    let players = match of {
+        CompiledPlayerRef::You => vec![controller],
+        CompiledPlayerRef::Opponent => vec![game.next_clockwise(controller)],
+        CompiledPlayerRef::Active => vec![game.turn_player()],
+        CompiledPlayerRef::Any => (0..game.players.len() as PlayerId).collect(),
+    };
+    let clamp = matches!(of, CompiledPlayerRef::Opponent);
+    players
+        .into_iter()
+        .map(|player| {
+            let signed = if game.turn_player() == player {
+                game.memory as i32
+            } else {
+                -(game.memory as i32)
+            };
+            if clamp {
+                signed.max(0)
+            } else {
+                signed
+            }
+        })
+        .sum()
 }
 
 fn shared_trash_count(ctx: &EffectContext<'_>) -> i32 {
@@ -1218,6 +1350,7 @@ fn predicate_has_card_zone_unsupported_leaf(pred: &CompiledPredicate) -> bool {
         || pred.stack_size_gte.is_some()
         || pred.materials_count_lte.is_some()
         || pred.materials_count_gte.is_some()
+        || pred.source_count.is_some()
         || pred.has_inherited.is_some()
         || pred.is_suspended.is_some()
         || pred.is_unsuspended.is_some()

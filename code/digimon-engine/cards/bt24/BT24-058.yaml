@@ -1,0 +1,144 @@
+# BT24-058 Blimpmon — Digimon, Lv.4, Black, DP 5000, Cost 5.
+# Traits: Machine, Iliad, TS. Attribute: Data.
+#
+# ─── Printed card text (data/card_bundles/BT24-058.md — official Bandai DB) ──
+#
+# Digivolve: Black Lv.3 / Cost 2 (standard circle)
+# Special digivolution condition: [Digivolve] Lv.3 w/[TS] trait: Cost 2
+#
+# [On Play] [When Digivolving] Reveal the top 3 cards of your deck. Among
+# them, add 1 [Machine], [Cyborg] or [TS] Digimon card or Tamer card to the
+# hand or place it as any of your [Machine], [Cyborg] or [TS] trait Digimon's
+# bottom digivolution card. Return the rest to the top or bottom of the deck.
+#
+# Inherited Effect: ＜Reboot＞ (This Digimon also unsuspends in your
+# opponent's unsuspend phase.)
+#
+# ─── Source-priority audit ────────────────────────────────────────────────
+#
+# 1. Printed text governs.
+# 2. DCGO BT24/Black/BT24_058.cs confirms behavior:
+#    - Alt digivolve: AddSelfDigivolutionRequirementStaticEffect gated on
+#      Lv.3 + HasTSTraits, cost 2. Mirrors BT24-011's identical
+#      `trait_has: TS` alt-path shape (two alt_paths entries, same cost;
+#      the TS-trait path uses ignore_requirements so it isn't ALSO gated on
+#      color, matching a genuinely separate printed condition).
+#    - Shared On Play / When Digivolving body: reveal top 3 (mandatory —
+#      SetUpActivateClass isOptional=false, maxCountPerTurn=-1). Filter:
+#      (Digimon OR Tamer) AND (Machine OR Cyborg OR TS trait). The pick is
+#      `canNoSelect:false` / `maxCount:1` — mandatory whenever ≥1 eligible
+#      card is among the revealed 3 (natural fizzle when none match — no
+#      approximated auto-decline).
+#    - For the picked card: a 2-way bool choice ("Add to hand" / "Add to
+#      digivolution cards"). Hand branch → AddHandCards. Source branch →
+#      SelectPermanentEffect over (Machine/Cyborg/TS trait) own Digimon,
+#      `canNoSelect:false`, `maxCount = Min(1, matching count)` → mandatory
+#      whenever ≥1 valid own Digimon exists (Blimpmon itself always
+#      qualifies while on the field — it has the TS trait — so this can
+#      never structurally hit zero targets in a reachable game state) →
+#      AddDigivolutionCardsBottom.
+#    - Remainder: RemainingCardsPlace.DeckTopOrBottom — ONE shared "top or
+#      bottom" choice for the whole remainder pile (not per-card).
+#
+# ─── DSL authoring note ────────────────────────────────────────────────────
+#
+# `choose_from_reveal`'s `bottom_source_of: { target: <binding> }` resolves
+# the target permanent at INSTALL time, so the destination Digimon must be
+# selected BEFORE the choose_from_reveal step that routes to it. This is a
+# faithful reordering of DCGO's UI sequence (pick card -> hand/source choice
+# -> permanent pick): the printed text only constrains the final state (1
+# eligible card ends up in hand OR as an eligible Digimon's bottom source),
+# not the prompt order. Both branches share the SAME eligibility filter
+# ((Digimon OR Tamer) AND Machine/Cyborg/TS trait) for the picked card,
+# unlike the P-167/BT25-078 idiom where each branch has a distinct filter.
+#
+# The post-choice inner pick is mandatory (no `optional: true` on either
+# choose_from_reveal) per the no-approximations reveal-pick contract (see
+# P-167's `fix-qa-bugs-aura-tick-reveal-picks` regression note): the printed
+# text carries no "may" at the pick itself.
+
+card: BT24-058
+name: Blimpmon
+kind: digimon
+level: 4
+color: [black]
+cost: 5
+dp: 5000
+traits: [Machine, Iliad, TS]
+attribute: Data
+
+alt_paths:
+  # Standard Black Lv.3 digivolve (evo_costs: Black Lv.3, cost 2).
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 2
+  # Special digivolution condition: any Lv.3 with the [TS] trait, cost 2.
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: TS }
+    cost: 2
+    ignore_requirements: true
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Reveal 3; add 1 Machine/Cyborg/TS Digimon-or-Tamer to hand or place as bottom source of a Machine/Cyborg/TS Digimon; rest to top or bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_effect_choice:
+          labels: ["Add to hand", "Place as bottom digivolution card"]
+          bind_as: dest_choice
+          prompt: "Add the picked card to your hand or place it as a [Machine]/[Cyborg]/[TS] trait Digimon's bottom digivolution card?"
+      - if:
+          condition: { equals: [dest_choice, 0] }
+          then:
+            - choose_from_reveal:
+                of: you
+                filter:
+                  all_of:
+                    - any_of:
+                        - kind: digimon
+                        - kind: tamer
+                    - any_of:
+                        - trait_has: Machine
+                        - trait_has: Cyborg
+                        - trait_has: TS
+                destination: hand
+                bind_as: hand_pick
+                prompt: "Add 1 [Machine], [Cyborg] or [TS] trait Digimon or Tamer card to your hand"
+      - if:
+          condition: { equals: [dest_choice, 1] }
+          then:
+            - select_own_permanent:
+                bind_as: place_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - any_of:
+                        - trait_has: Machine
+                        - trait_has: Cyborg
+                        - trait_has: TS
+                prompt: "Choose any of your [Machine], [Cyborg] or [TS] trait Digimon to receive the placed card"
+            - if:
+                condition: { binding_present: place_target }
+                then:
+                  - choose_from_reveal:
+                      of: you
+                      filter:
+                        all_of:
+                          - any_of:
+                              - kind: digimon
+                              - kind: tamer
+                          - any_of:
+                              - trait_has: Machine
+                              - trait_has: Cyborg
+                              - trait_has: TS
+                      destination:
+                        bottom_source_of: { target: place_target }
+                      bind_as: source_pick
+                      prompt: "Place 1 [Machine], [Cyborg] or [TS] trait Digimon or Tamer card as the chosen Digimon's bottom digivolution card"
+      - order_remainder:
+          of: you
+          destinations: [deck_top, deck_bottom]
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Reboot

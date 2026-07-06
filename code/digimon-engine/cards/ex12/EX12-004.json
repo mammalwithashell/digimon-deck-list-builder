@@ -1,0 +1,27 @@
+{
+  "card_id": "EX12-004",
+  "card_index": 4,
+  "card_name_eng": "Onibimon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_004",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    6
+  ],
+  "type_eng": [
+    "Ghost",
+    "Shambala",
+    "TB"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [Your Turn] This Digimon with the [TB] trait gains ＜Execute＞ (At the end of your turn, this Digimon may attack. At the end of that attack, delete this Digimon. Your opponent's unsuspended Digimon can also be attacked with this effect.)",
+  "inherited_effect_description_eng": "This Digimon with the [TB] trait gains",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

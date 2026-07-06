@@ -1,0 +1,35 @@
+{
+  "card_id": "EX12-020",
+  "card_index": 20,
+  "card_name_eng": "Gasamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_020",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Mollusk",
+    "Shambala",
+    "TB"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [TB] trait, reduce the cost by 1.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If your hand has 7 or fewer cards, ＜Draw 1＞ (Draw 1 card from your deck.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[Shambala] trait: Cost 0"
+}

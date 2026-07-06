@@ -1,0 +1,35 @@
+{
+  "card_id": "EX12-023",
+  "card_index": 23,
+  "card_name_eng": "Jellymon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_023",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 2,
+  "card_colors": [
+    1,
+    2
+  ],
+  "type_eng": [
+    "Mollusk",
+    "DS"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with [Jellymon] in its text and 1 card with the [DS] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] ＜Draw 1＞ (Draw 1 card from your deck.). Then, if your hand has 7 or more cards, trash 1 card in your hand.",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 2,
+      "memory_cost": 1
+    }
+  ],
+  "xros_req": "[Digivolve] [Puyoyomon]/Lv.2 w/[DS] trait: Cost 0"
+}

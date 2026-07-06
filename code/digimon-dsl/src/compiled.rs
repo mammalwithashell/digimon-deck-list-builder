@@ -182,6 +182,21 @@ pub struct CompiledAltPath {
     /// filters the destination hand-card candidate. ST20-10 warp-shape.
     #[serde(default)]
     pub direction: CompiledAltPathDirection,
+    /// Gap 4 (BT18-065) — conditionally-enabled extra DigiXros material zones,
+    /// each gated by a play-start predicate. See
+    /// [`CompiledConditionalMaterialZone`].
+    #[serde(default)]
+    pub extra_material_zones: Vec<CompiledConditionalMaterialZone>,
+}
+
+/// A conditionally-enabled DigiXros material origin zone (Gap 4). When
+/// `condition` holds at transaction-build time, `zone` is added to the
+/// transaction's allowed material zones. Lowered from
+/// `alt_path::ConditionalMaterialZoneSpec`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledConditionalMaterialZone {
+    pub zone: CompiledZone,
+    pub condition: CompiledPredicate,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
@@ -201,6 +216,10 @@ pub enum CompiledAltPathKind {
     AppFusion,
     Assembly,
     ActivatedDigivolve,
+    /// Cast-time stack construction (BT15-102). See
+    /// `alt_path::AltPathKind::CastTimeAssembly`. Appended at the tail so
+    /// bincode variant indices of prior kinds are stable.
+    CastTimeAssembly,
 }
 
 impl CompiledAltPathKind {
@@ -236,6 +255,7 @@ impl CompiledAltPathKind {
             CompiledAltPathKind::AppFusion => "app_fusion",
             CompiledAltPathKind::Assembly => "assembly",
             CompiledAltPathKind::ActivatedDigivolve => "activated_digivolve",
+            CompiledAltPathKind::CastTimeAssembly => "cast_time_assembly",
         }
     }
 }
@@ -276,6 +296,14 @@ pub struct CompiledPredicate {
     pub kind: Option<CompiledCardKind>,
     pub level_eq: Option<u8>,
     pub level_eq_binding: Option<String>,
+    /// Subject level `<=` the literal bound to this binding. Sibling of
+    /// `level_eq_binding`. `#[serde(default)]` keeps older packs loadable.
+    #[serde(default)]
+    pub level_lte_binding: Option<String>,
+    /// Subject level `>=` the literal bound to this binding. Sibling of
+    /// `level_eq_binding`.
+    #[serde(default)]
+    pub level_gte_binding: Option<String>,
     pub level_lte: Option<CompiledDpConstraint>,
     pub level_gte: Option<CompiledDpConstraint>,
     pub color_is: Option<CompiledColor>,
@@ -285,6 +313,11 @@ pub struct CompiledPredicate {
     /// G-RETURNED-CARD-COLOR-BINDING — true when the candidate shares a color
     /// with a card this effect returned to deck (`returned_to_deck` log).
     pub color_matches_returned_card: Option<bool>,
+    /// G-DSL-COLOR-MATCHES-OWN-SOURCE-STACK — true when the candidate shares a
+    /// color with the effect carrier's NON-FLIPPED digivolution-source color set
+    /// (DCGO `DigivolutionCards.Filter(!IsFlipped).SelectMany(CardColors)
+    /// .Distinct()`). Driver EX9-074 Kimeramon.
+    pub color_matches_own_source_stack: Option<CompiledSourceStackScope>,
     pub trait_has: Option<String>,
     /// Substring sibling of `trait_has` — matches when any subject trait
     /// CONTAINS this token (case-insensitive). Mirrors DCGO
@@ -298,6 +331,13 @@ pub struct CompiledPredicate {
     /// concatenated printed text (`effect_text` + `inherited_text` +
     /// `security_text`). G-DSL-PREDICATE-TEXT-CONTAINS.
     pub effect_text_contains: Option<String>,
+    /// Whole-card "[X] in its text" scan — the broad DCGO
+    /// `CardSource.HasText` surface: name + also-treated-as / DigiXros
+    /// aliases + traits (Type line) + all printed text (both dual faces).
+    /// `#[serde(default)]` keeps older serialized packs deserializable.
+    /// G-DSL-IN-TEXT-CONTAINS.
+    #[serde(default)]
+    pub in_text_contains: Option<String>,
     pub name_in: Option<Vec<String>>,
     /// G-UNION-HAND-TRASH-NAME-EXCLUSION (Phase 2 Track J Task S2.2) —
     /// card-subject leaf: true when no battle-area Digimon of the scoped
@@ -330,6 +370,11 @@ pub struct CompiledPredicate {
     pub materials_count_gte: Option<CompiledDpConstraint>,
     #[serde(default)]
     pub materials_count_eq: Option<CompiledDpConstraint>,
+    /// `(filter, at_least)` — count of digivolution sources matching `filter`
+    /// must be ≥ `at_least`. Compiled form of the `source_count` leaf.
+    /// G-DSL-SOURCE-COUNT-FILTERED.
+    #[serde(default)]
+    pub source_count: Option<(Box<CompiledPredicate>, u8)>,
     pub has_inherited: Option<Box<CompiledPredicate>>,
     pub is_suspended: Option<bool>,
     pub is_unsuspended: Option<bool>,
@@ -349,12 +394,32 @@ pub struct CompiledPredicate {
     /// True when the observer's battle-area Tamers collectively have at
     /// least N distinct colors. G-DSL-DISTINCT-TAMER-COLORS.
     pub distinct_tamer_colors_gte: Option<u8>,
+    /// True when the observer's battle-area permanents matching the inner
+    /// filter include ≥ N distinct (synth-identity-aware) card names.
+    /// G-DSL-DISTINCT-NAMED-PERMANENT-COUNT. `#[serde(default)]` keeps older
+    /// packs loadable.
+    #[serde(default)]
+    pub distinct_named_count_gte: Option<CompiledDistinctNamedCount>,
     /// True when the observer's battle-area Tamers collectively carry at least
     /// N face-down digivolution sources. G-TRASH-N-BOTTOM-FACE-DOWN-UNDER-TAMER.
     pub face_down_sources_under_tamers_gte: Option<u8>,
     /// Battle-context leaf: true when the effect's carrier is battling an
     /// opposing Digimon with zero digivolution source cards.
     pub battle_opponent_no_sources: Option<bool>,
+    /// Source-relative threshold: `count(carrier sources matching filter) <op>
+    /// value`. G-DSL-SELF-SOURCE-COUNT-THRESHOLD (driver BT21-006).
+    #[serde(default)]
+    pub self_source_count: Option<CompiledSelfSourceCountPredicate>,
+    /// True when the effect CARRIER's NON-FLIPPED digivolution-source color
+    /// set (the shared `non_flipped_source_colors` extraction — top card
+    /// excluded, face-down sources excluded) has at least N distinct colors.
+    /// A no-subject, carrier-scoped global leaf — the YAML-reachable branch
+    /// gate for EX9-074 Kimeramon's "if this Digimon has 6 or more colors in
+    /// its digivolution cards, instead …" discriminant.
+    /// G-DSL-OWN-SOURCE-STACK-COLOR-COUNT-THRESHOLD. `#[serde(default)]`
+    /// keeps older serialized packs deserializable.
+    #[serde(default)]
+    pub own_source_stack_color_count_gte: Option<u8>,
     pub zone: Vec<CompiledZone>,
     pub owner: Option<CompiledPlayerRef>,
     pub other: Option<bool>,
@@ -365,6 +430,18 @@ pub struct CompiledPredicate {
     pub not_in_binding: Option<String>,
     pub binding_owner: Option<CompiledBindingOwnerPredicate>,
     pub binding_card_kind: Option<CompiledBindingCardKindPredicate>,
+    /// The card bound to `.0` shares ≥1 printed color with `.1`.
+    /// G-DSL-BINDING-CARD-COLOR. `#[serde(default)]` keeps older packs loadable.
+    #[serde(default)]
+    pub binding_card_color: Option<CompiledBindingCardColorPredicate>,
+    /// The card bound to `.0` has the effective name `.1` (case-insensitive,
+    /// `also_treated_as` aware). G-DSL-BINDING-CARD-NAME-EQUALS.
+    #[serde(default)]
+    pub binding_card_name_is: Option<(String, String)>,
+    /// Candidate play-cost comparator vs a bound/event permanent's play cost
+    /// plus offset. G-DSL-COST-RELATIVE-TO-EVENT-SUBJECT.
+    #[serde(default)]
+    pub play_cost_eq_binding: Option<CompiledPlayCostBindingPredicate>,
     pub source_is_tamer: Option<bool>,
     pub source_is_unsuspended: Option<bool>,
     pub is_source_permanent: Option<bool>,
@@ -391,6 +468,15 @@ pub struct CompiledPredicate {
     pub security_count_eq: Option<CompiledDpConstraint>,
     pub opponent_security_count_lte: Option<CompiledDpConstraint>,
     pub opponent_security_count_gte: Option<CompiledDpConstraint>,
+    /// Sum of BOTH players' security-stack card counts vs a threshold.
+    /// `#[serde(default)]` keeps older serialized packs deserializable.
+    /// G-DSL-TOTAL-SECURITY-COUNT-PREDICATE (driver BT13-106).
+    #[serde(default)]
+    pub total_security_count_lte: Option<CompiledDpConstraint>,
+    #[serde(default)]
+    pub total_security_count_gte: Option<CompiledDpConstraint>,
+    #[serde(default)]
+    pub total_security_count_eq: Option<CompiledDpConstraint>,
     pub face_up_security_count_lte: Option<CompiledDpConstraint>,
     pub face_up_security_count_gte: Option<CompiledDpConstraint>,
     /// True when the named player has no face-up security card matching the
@@ -409,6 +495,19 @@ pub struct CompiledPredicate {
     pub dna_origin: Option<bool>,
     pub event_target_kind: Option<CompiledCardKind>,
     pub event_target_trait_has: Option<String>,
+    /// Substring / root-trait sibling of `event_target_trait_has`.
+    /// G-DSL-EVENT-TARGET-TRAIT-CONTAINS. `#[serde(default)]` keeps older
+    /// packs loadable.
+    #[serde(default)]
+    pub event_target_trait_contains: Option<String>,
+    /// Deletion-subject source-count gate: event target has ≥1 digivolution
+    /// card (non-empty source stack below the top). G-DSL-EVENT-TARGET-SOURCE-COUNT.
+    #[serde(default)]
+    pub event_target_has_digivolution_cards: Option<bool>,
+    /// Deletion-subject stack-size threshold: event target's stack (top card +
+    /// sources) is ≥ N. G-DSL-EVENT-TARGET-SOURCE-COUNT.
+    #[serde(default)]
+    pub event_target_stack_size_gte: Option<u8>,
     pub event_target_level_eq: Option<u8>,
     pub event_target_level_lte: Option<CompiledDpConstraint>,
     pub event_target_level_gte: Option<CompiledDpConstraint>,
@@ -428,6 +527,12 @@ pub struct CompiledPredicate {
     /// Case-insensitive substring scan against the triggering event card's
     /// printed text (effect / inherited / security). G-DSL-EVENT-CARD-TEXT-CONTAINS.
     pub event_card_text_contains: Option<String>,
+    /// Broad whole-card "[X] in its text" scan (DCGO `CardSource.HasText`)
+    /// applied to the triggering event card — name + aliases + traits + text.
+    /// `#[serde(default)]` keeps older serialized packs deserializable.
+    /// G-DSL-EVENT-CARD-IN-TEXT-CONTAINS.
+    #[serde(default)]
+    pub event_card_in_text_contains: Option<String>,
     pub event_card_level_eq: Option<u8>,
     pub event_card_level_gte: Option<CompiledDpConstraint>,
     /// Every color of the triggering event card must be within this set.
@@ -494,6 +599,19 @@ pub struct CompiledPredicate {
     pub event_target_owner: Option<CompiledPlayerRef>,
     /// `OnAddToHand` observer: the gaining player must match this ref.
     pub event_add_to_hand_player: Option<CompiledPlayerRef>,
+    /// `on_ally_won_battle`: the battle winner's controller must match this ref.
+    /// G-DSL-BATTLE-WINNER-BOARDWIDE.
+    pub event_winner_owner: Option<CompiledPlayerRef>,
+    /// `on_ally_won_battle`: the battle winner's top card must carry this trait.
+    pub event_winner_trait_has: Option<String>,
+    /// `on_discard_hand`: the trashing player (whose hand lost cards) must match.
+    /// G-ENGINE-ON-DISCARD-HAND.
+    pub event_discard_player: Option<CompiledPlayerRef>,
+    /// `on_discard_hand`: true when the causing effect is the observer's own.
+    pub event_caused_by_own_effect: Option<bool>,
+    /// True when this permanent was played by an effect (OnPlay firing).
+    /// G-ENGINE-ON-DISCARD-HAND.
+    pub played_by_effect: Option<bool>,
     /// Event-target permanent color-set intersection test.
     /// G-EVENT-TARGET-COLOR.
     pub event_target_color_any_of: Option<Vec<CompiledColor>>,
@@ -567,10 +685,63 @@ pub struct CompiledBindingCardKindPredicate {
     pub kind: CompiledCardKind,
 }
 
+/// Compiled `binding_card_color`. G-DSL-BINDING-CARD-COLOR.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledBindingCardColorPredicate {
+    pub binding: String,
+    pub color_is: CompiledColor,
+}
+
+/// Compiled `play_cost_eq_binding`. G-DSL-COST-RELATIVE-TO-EVENT-SUBJECT.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledPlayCostBindingPredicate {
+    pub binding: String,
+    pub offset: i16,
+    pub op: CompiledComparatorOp,
+}
+
+/// Compiled `distinct_named_count_gte`. G-DSL-DISTINCT-NAMED-PERMANENT-COUNT.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledDistinctNamedCount {
+    pub of: CompiledPlayerRef,
+    pub filter: Box<CompiledPredicate>,
+    pub n: u8,
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct CompiledCountAggregate {
     pub filter: Box<CompiledPredicate>,
     pub n: CompiledDpConstraint,
+}
+
+/// Compiled comparison operator. Compiled analogue of `predicate::ComparatorOp`.
+/// Kept as a distinct compiled type so the pack IR does not depend on the DSL
+/// parse enum.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum CompiledComparatorOp {
+    Eq,
+    Gte,
+    Lte,
+}
+
+impl CompiledComparatorOp {
+    /// Apply this operator to `lhs <op> rhs`.
+    pub fn apply(self, lhs: i32, rhs: i32) -> bool {
+        match self {
+            Self::Eq => lhs == rhs,
+            Self::Gte => lhs >= rhs,
+            Self::Lte => lhs <= rhs,
+        }
+    }
+}
+
+/// Compiled form of `self_source_count` — `count(carrier sources matching
+/// filter) <op> value`. G-DSL-SELF-SOURCE-COUNT-THRESHOLD (driver BT21-006).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct CompiledSelfSourceCountPredicate {
+    pub filter: Option<Box<CompiledPredicate>>,
+    pub op: CompiledComparatorOp,
+    pub value: CompiledDpConstraint,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -598,6 +769,15 @@ pub enum CompiledPlayerRef {
     Active,
 }
 
+/// Compiled scope for `color_matches_own_source_stack`
+/// (G-DSL-COLOR-MATCHES-OWN-SOURCE-STACK). Only `SelfCarrier` exists in the
+/// printed corpus (EX9-074 Kimeramon); the enum shape leaves room to widen.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub enum CompiledSourceStackScope {
+    /// The effect's own carrier permanent (`source_permanent`).
+    SelfCarrier,
+}
+
 // ── Formulas ────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, strum_macros::EnumDiscriminants)]
@@ -613,6 +793,10 @@ pub enum CompiledFormula {
     FloorDiv(Vec<CompiledFormula>),
     Max(Vec<CompiledFormula>),
     Min(Vec<CompiledFormula>),
+    /// Left-associative subtraction: `subtract(a, b, c) = a - b - c`. Binary in
+    /// practice (`a - b`). Composes with the other compounds so a card can
+    /// express e.g. "N minus your Digimon count". G-DSL-FORMULA-SUBTRACT.
+    Subtract(Vec<CompiledFormula>),
     Aggregate(CompiledAggregateSelector),
     AggregateScoped {
         selector: CompiledAggregateSelector,
@@ -688,6 +872,21 @@ pub enum CompiledPerSelector {
     SourceStackCountFiltered {
         filter: Option<Box<CompiledPredicate>>,
     },
+    /// A player's memory-gauge value as a scalar. `of: You` = controller's
+    /// signed memory; `of: Opponent` = opponent's, clamped at 0.
+    /// G-DSL-FORMULA-PLAYER-MEMORY (driver BT25-086).
+    PlayerMemory {
+        of: CompiledPlayerRef,
+    },
+    /// Total link cards across every one of `of`'s battle-area Digimon.
+    /// Drives BT25-075's "for each of your link cards, De-Digivolve 1 …".
+    /// G-DSL-FORMULA-OWN-LINK-CARD-COUNT.
+    OwnLinkCardCount {
+        of: CompiledPlayerRef,
+    },
+    /// Link cards on the effect carrier's OWN permanent (`ctx.source_permanent`).
+    /// Per-host sibling of `OwnLinkCardCount`. G-DSL-LINK-N-CARDS-PER-HOST.
+    SourceLinkCardCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -953,6 +1152,16 @@ pub enum CompiledTiming {
     OnOpponentAttack,
     OnDeletion,
     OnAnyDeletion,
+    /// Board-wide battle-winner observer (`when: on_ally_won_battle`); lowers to
+    /// `EffectTiming::EndOfBattle` with NO forced self-filter. Scope-gate via
+    /// `active_when:` (`event_winner_owner`, `event_winner_trait_has`).
+    /// G-DSL-BATTLE-WINNER-BOARDWIDE.
+    OnAllyWonBattle,
+    /// Hand-discard observer (`when: on_discard_hand`); lowers to
+    /// `EffectTiming::OnDiscardHand`. Scope-gate via `active_when:`
+    /// (`event_discard_player`, `event_caused_by_own_effect`).
+    /// G-ENGINE-ON-DISCARD-HAND.
+    OnDiscardHand,
     OnEnterFieldAnyone,
     OnAnyDigimonPlayed,
     OnAllyPlayed,
@@ -968,6 +1177,10 @@ pub enum CompiledTiming {
     OnOpponentSecurityRemoved,
     OnOwnSecurityRemoved,
     OnDigivolutionCardTrashed,
+    /// A digivolution source RETURNED to the bottom of a player's deck (not
+    /// trashed). Galacticmon / Vemmon-LIBERATOR observer (BT21-058, BT18-065).
+    /// G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
+    OnDigivolutionCardReturnedToDeckBottom,
     OnSecurityCheck,
     OnCheckFaceUpSecurity,
     OnLoseSecurity,
@@ -1109,6 +1322,11 @@ pub enum CompiledStep {
     TrashFromTop {
         of: CompiledPlayerRef,
         count: u8,
+        /// Runtime-formula count (`count:` map form). When present, `count`
+        /// is 0 and this formula is evaluated at resolution time.
+        /// `#[serde(default)]` — NOT `skip_serializing_if` — bincode rule.
+        #[serde(default)]
+        count_fn: Option<Box<CompiledFormula>>,
     },
     AddToHandFromDeck {
         of: CompiledPlayerRef,
@@ -1220,8 +1438,27 @@ pub enum CompiledStep {
     DeletePermanent {
         target: CompiledBindingRef,
     },
+    /// Delete `target` AS AN INTERACTIVE COST and reduce the in-flight play/
+    /// digivolve/option cost by the deleted permanent's printed play cost
+    /// (snapshotted PRE-removal, rule 25 — DCGO `permanent.CostJustBeforeRemoveField`).
+    /// Only meaningful inside a `cost_reduction` `pay_cost`; drives the VARIABLE
+    /// amount of BT13-103 Akihiro Kurata's "reduce the play cost by the play cost
+    /// of the deleted Digimon". Records the amount into
+    /// `Game::pending_cost_reduction_amount_override` for the cost-continuation to
+    /// credit. `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`.
+    DeleteForCostReduction {
+        target: CompiledBindingRef,
+    },
     DeleteBoundPermanents {
         binding: String,
+    },
+    /// G-DSL-DELETE-ONE-PER-DISTINCT-OPPONENT-COLOR (EX9-074 Kimeramon Branch B):
+    /// per game-color, a mandatory pick of 1 not-yet-chosen opponent Digimon of
+    /// that color, then batch-delete the accumulated picks. `filter` is an extra
+    /// AND-ed restriction (`None` = every opponent Digimon).
+    DeleteOnePerOpponentColor {
+        filter: Option<Box<CompiledPredicate>>,
+        prompt: Option<String>,
     },
     TrashBreedingPermanent {
         target: CompiledBindingRef,
@@ -1258,6 +1495,22 @@ pub enum CompiledStep {
         bind_as: Option<String>,
     },
     PlaceAsBottomSource {
+        source: CompiledBindingRef,
+        target: CompiledBindingRef,
+        face_down: bool,
+        /// Bind the placed card's `CardHandle` after a successful placement
+        /// (`bind_placed_as:` in YAML). `#[serde(default)]` — NOT
+        /// `skip_serializing_if` — so bincode round-trips (Compiled* rule).
+        #[serde(default)]
+        bind_placed_as: Option<String>,
+    },
+    /// G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05) — insert a card at
+    /// the TOP-source position of `target`'s digivolution stack (directly
+    /// beneath the active top card; the top card itself is unchanged).
+    /// DCGO `Permanent.AddDigivolutionCardsTop`. Same args shape as
+    /// `PlaceAsBottomSource`; fields are plain (no `skip_serializing_if`)
+    /// because the compiled pack is bincode-serialized.
+    PlaceAsTopSource {
         source: CompiledBindingRef,
         target: CompiledBindingRef,
         face_down: bool,
@@ -1304,6 +1557,54 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         count: u8,
     },
+    /// Link-card-trash ACTIVATION cost (BT25-073 Dragomon): pick one of `of`'s
+    /// Digimon with ≥1 link card, then one of its link cards, trash it (firing
+    /// `OnLinkedCardTrashed`), and run the tail only if the trash happened.
+    /// Compiled from `trash_link_card_of_own_digimon`. `G-DSL-LINK-TRASH-AS-COST`.
+    TrashLinkCardOfOwnDigimon {
+        of: CompiledPlayerRef,
+        /// Declinable picks (PASS skips the trash AND the tail) — DCGO
+        /// `canNoSelect:true`. Plain (no `skip_serializing_if`): bincode packs
+        /// need every field in a fixed slot.
+        #[serde(default)]
+        optional: bool,
+    },
+    /// Trash-Option-from-{digivolution|link}-cards ACTIVATION cost (BT25-085
+    /// BeelStarmon): pick one of `of`'s Digimon whose digivolution cards (sources
+    /// below the top) OR link cards contain ≥1 Option, then one such Option, and
+    /// trash it — a digivolution-source Option fires `OnDigivolutionCardTrashed`,
+    /// a link-card Option fires `OnLinkedCardTrashed` — running the tail only if
+    /// the trash happened. Compiled from `trash_option_from_own_stacks`. The
+    /// union-of-sources sibling of `TrashLinkCardOfOwnDigimon`.
+    /// `G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST`.
+    TrashOptionFromOwnStacks {
+        of: CompiledPlayerRef,
+        /// Declinable picks (PASS skips the trash AND the tail) — DCGO
+        /// `canNoSelect:true`. Plain (no `skip_serializing_if`): bincode packs
+        /// need every field in a fixed slot.
+        #[serde(default)]
+        optional: bool,
+    },
+    /// Trash-1-Option-from-the-CARRIER'S-digivolution-cards leave cost (EX7-048
+    /// Gundramon clause 2): the single-carrier variant of `TrashOptionFromOwnStacks`
+    /// scoped to the effect's own `source_permanent`. Pick one Option among the
+    /// carrier's digivolution cards (below the top), trash it (firing
+    /// `OnDigivolutionCardTrashed`), and cancel the parked leave — it owns the
+    /// `outcome: prevent`, so no separate `CancelReplacement` follows. Synthesized
+    /// from `cost: { trash_option_from_own_digivolution_cards: true }` +
+    /// `outcome: prevent` on a `when_would_leave_battle_area` replacement.
+    /// `G-DSL-PROTECT-OTHER-BY-TRASH-OPTION`.
+    TrashOptionFromOwnDigivolutionCardsAndCancelLeave,
+    /// Delete-the-CARRIER leave cost (BT25-039 Sirenmon clause 3): delete the
+    /// effect's own `source_permanent` (the carrier) as the cost, then cancel the
+    /// parked leave — which prevents the replacement SUBJECT's leave (the
+    /// framework applies the outcome to the subject, not the carrier). A single
+    /// self-contained step so it does NOT collide with the Delay-cost recognizer's
+    /// `[DeletePermanent{source}, CancelReplacement]` shape (that path requires a
+    /// Delayed-Option source). Synthesized from `cost: { delete_self: true }` +
+    /// `outcome: prevent` on a `when_would_leave_battle_area` replacement.
+    /// `G-DSL-PROTECT-OTHER-BY-SELF-DELETE`.
+    DeleteSelfAndCancelLeave,
     PlaceSelectedCardUnderTamer {
         card: CompiledBindingRef,
         tamer: CompiledBindingRef,
@@ -1315,6 +1616,17 @@ pub enum CompiledStep {
     /// distinct from trashing. Compiled from `move_self_option_under_permanent`.
     /// G-MOVE-SELF-OPTION-UNDER-PERMANENT.
     MoveSelfOptionUnderPermanent {
+        target: CompiledBindingRef,
+        face_down: bool,
+    },
+    /// Place THIS effect's source Option as the bottom digivolution card of a
+    /// chosen own permanent, composing with the [Main] Option-play path (the
+    /// in-flight `pending_option` is claimed, so the Option is seated —
+    /// FACE-UP by default — instead of trashed). Compiled from
+    /// `place_self_under_permanent`; lowers to
+    /// `EffectContext::place_self_under_permanent`.
+    /// G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL (P-180 / EX7-070 / EX7-071).
+    PlaceSelfUnderPermanent {
         target: CompiledBindingRef,
         face_down: bool,
     },
@@ -1343,6 +1655,12 @@ pub enum CompiledStep {
         of: CompiledPlayerRef,
         hand_index: CompiledBindingRef,
         cost_delta: Option<CompiledCostDelta>,
+        /// Bind the just-played permanent handle for use in later steps.
+        /// `None` preserves prior behavior (no binding insert). Mirrors
+        /// `PlayFromHandFree::bind_as` for the cost-paying play.
+        /// G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER (BT25-039).
+        #[serde(default)]
+        bind_as: Option<String>,
     },
     PlayFromHandFree {
         of: CompiledPlayerRef,
@@ -1358,6 +1676,50 @@ pub enum CompiledStep {
         use_cost_lte_opponent_memory: bool,
         optional: bool,
         prompt: Option<String>,
+    },
+    /// Effect-driven Option USE from the controller's trash with a cost delta
+    /// (Gap 2, `G-DSL-USE-OPTION-FROM-SOURCES`). Trash analogue of
+    /// `UseOptionFromHand`. `cost_delta: None` = pay printed use cost.
+    UseOptionFromTrash {
+        of: CompiledPlayerRef,
+        filter: CompiledPredicate,
+        cost_delta: Option<CompiledCostDelta>,
+        optional: bool,
+        prompt: Option<String>,
+    },
+    /// Effect-driven Option USE of a reveal-pool pick — consumes a
+    /// `select_reveal` binding (`card` → the reveal-pool card handle) and routes
+    /// it through the shared `Game::use_option_from` pipeline
+    /// (`OptionSource::Revealed`). Non-parking: the upstream `select_reveal`
+    /// already parked; this step consumes its binding synchronously. Driver
+    /// EX7-048 clause 1 ("reveal top 6 … use 1 [Three Musketeers] Option among
+    /// them free"). `cost_delta: None` = free. `G-DSL-USE-OPTION-FROM-SOURCES`.
+    UseOptionFromRevealed {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+        cost_delta: Option<CompiledCostDelta>,
+    },
+    /// Effect-driven Option USE from a permanent's digivolution stack —
+    /// consumes a `select_own_sources` binding (`card` → a `SourceRefs`
+    /// binding) and routes it through `Game::use_option_from`
+    /// (`OptionSource::Source`, which resolves both `card_sources` and
+    /// `linked_cards`). Non-parking. Driver BT25-085 ("use 1 [3M]/[TS] Option
+    /// from … this Digimon's digivolution cards free"). `cost_delta: None` =
+    /// free. `G-DSL-USE-OPTION-FROM-SOURCES`.
+    UseOptionFromSources {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+        cost_delta: Option<CompiledCostDelta>,
+    },
+    /// Effect-driven Option USE of a `select_union_zone{hand,trash}` pick —
+    /// consumes the named union binding and dispatches to the picked Option's
+    /// TRUE origin zone (hand → `OptionSource::Hand`, trash →
+    /// `OptionSource::Trash`) through `Game::use_option_from`. Non-parking.
+    /// Driver BT21-062 ("use 1 [Ragnarok Cannon] from your hand or trash without
+    /// paying the cost"). `cost_delta: None` = free. `G-DSL-USE-OPTION-FROM-SOURCES`.
+    UseOptionBound {
+        binding: String,
+        cost_delta: Option<CompiledCostDelta>,
     },
     /// Unified play-or-use of a `select_hand`-bound card with a cost
     /// adjustment. `G-PLAY-OR-USE-FROM-HAND`.
@@ -1452,11 +1814,30 @@ pub enum CompiledStep {
         cost: CompiledCostDelta,
         ignore_requirements: bool,
     },
+    /// DNA digivolve where `target` is a battle-area permanent and
+    /// `trash_partner` is the second DNA material drawn from the controller's
+    /// TRASH; the merged permanent is topped with `from_hand` (the result
+    /// card, from hand). BT18-015 / BT18-073 `[On Deletion]` shape. Lowers to
+    /// `EffectContext::effect_initiated_dna_digivolve_trash_partner`
+    /// (G-ENGINE-DNA-TRASH-MATERIAL). G-DSL-DNA-TRASH-PARTNER.
+    EffectInitiatedDnaDigivolveTrashPartner {
+        target: CompiledBindingRef,
+        trash_partner: CompiledBindingRef,
+        from_hand: CompiledBindingRef,
+        cost: CompiledCostDelta,
+        ignore_requirements: bool,
+    },
     TrashTopSecurity {
         of: CompiledPlayerRef,
         /// Number of top security cards to trash, as a run-time formula.
         /// `None` trashes exactly one (the historical behavior).
         count: Option<CompiledFormula>,
+        /// "so that it has N cards left" — trash from the top until `leave`
+        /// cards remain. Mutually exclusive with `count`. `#[serde(default)]`
+        /// keeps older serialized packs deserializable.
+        /// G-DSL-TRASH-TOP-SECURITY-LEAVE (driver BT21-098).
+        #[serde(default)]
+        leave: Option<CompiledFormula>,
     },
     TrashBottomSecurity {
         of: CompiledPlayerRef,
@@ -1538,6 +1919,9 @@ pub enum CompiledStep {
     TrashOpponentHandToCount {
         opponent: CompiledPlayerRef,
         target_count: CompiledFormula,
+        /// Named literal binding recording the count actually trashed.
+        /// G-DSL-TRASH-COUNT-RESULT-BINDING.
+        bind_count_as: Option<String>,
     },
     SearchOwnSecurityStack {
         filter: Box<CompiledPredicate>,
@@ -1790,9 +2174,13 @@ pub enum CompiledStep {
         then: Vec<CompiledStep>,
     },
     /// Play-cost-budget analog of `SelectOpponentDpBudget`.
-    /// G-MULTI-SELECT-OPP-PLAY-COST-SUM.
+    /// G-MULTI-SELECT-OPP-PLAY-COST-SUM. `play_cost_budget` is a
+    /// `CompiledFormula` (mirroring `SelectOpponentDpBudget.dp_budget`) so the
+    /// budget can scale at run time — e.g. P-094 Destromon's "3 + 1 per [Vemmon]
+    /// in this Digimon's digivolution cards". A bare integer YAML literal
+    /// compiles to `CompiledFormula::Literal`, preserving scalar users (EX4-073).
     SelectOpponentPlayCostBudget {
-        play_cost_budget: i32,
+        play_cost_budget: CompiledFormula,
         min_picks: u8,
         filter: CompiledPredicate,
         bind_as: Option<String>,
@@ -2052,6 +2440,14 @@ pub enum CompiledStep {
         source: CompiledBindingRef,
         timing: String,
         optional: bool,
+    },
+    /// Foreign-card refire (BT15-102): activate a timing-filtered effect
+    /// printed on a bound CARD OBJECT that is currently a digivolution source
+    /// of this effect's carrier, running it with the carrier as "this
+    /// Digimon". See `StepSpec::RefireCardEffect`.
+    RefireCardEffect {
+        card: CompiledBindingRef,
+        timing: String,
     },
     EndAttack {
         enabled: bool,

@@ -97,6 +97,9 @@ pub enum CompoundFormula {
     FloorDiv(Vec<FormulaSpec>),
     Max(Vec<FormulaSpec>),
     Min(Vec<FormulaSpec>),
+    /// Left-associative subtraction: `subtract: [a, b]` → `a - b`. YAML:
+    /// `{ subtract: [ {..}, {..} ] }`. G-DSL-FORMULA-SUBTRACT.
+    Subtract(Vec<FormulaSpec>),
     Aggregate(AggregateSelector),
     AggregateScoped(AggregateFormulaSpec),
     RawRust(String),
@@ -120,6 +123,7 @@ enum CompoundFormulaDeserialize {
     FloorDiv(Vec<FormulaSpec>),
     Max(Vec<FormulaSpec>),
     Min(Vec<FormulaSpec>),
+    Subtract(Vec<FormulaSpec>),
     Aggregate(AggregateFormulaPayload),
     AggregateScoped(AggregateFormulaSpec),
     RawRust(String),
@@ -142,6 +146,7 @@ impl<'de> Deserialize<'de> for CompoundFormula {
             CompoundFormulaDeserialize::FloorDiv(v) => Self::FloorDiv(v),
             CompoundFormulaDeserialize::Max(v) => Self::Max(v),
             CompoundFormulaDeserialize::Min(v) => Self::Min(v),
+            CompoundFormulaDeserialize::Subtract(v) => Self::Subtract(v),
             CompoundFormulaDeserialize::Aggregate(AggregateFormulaPayload::Legacy(selector)) => {
                 Self::Aggregate(selector)
             }
@@ -164,6 +169,7 @@ impl Serialize for CompoundFormula {
             Self::FloorDiv(v) => map.serialize_entry("floor_div", v)?,
             Self::Max(v) => map.serialize_entry("max", v)?,
             Self::Min(v) => map.serialize_entry("min", v)?,
+            Self::Subtract(v) => map.serialize_entry("subtract", v)?,
             Self::Aggregate(selector) => map.serialize_entry("aggregate", selector)?,
             Self::AggregateScoped(spec) => map.serialize_entry("aggregate", spec)?,
             Self::RawRust(name) => map.serialize_entry("raw_rust", name)?,
@@ -216,6 +222,29 @@ pub enum PerSelector {
     /// is a `per` selector. Sources are always those of `ctx.source_permanent`.
     /// G-DSL-PER-SOURCE-STACK-COUNT-FILTERED.
     SourceStackCount(SourceStackCountSpec),
+    /// A player's memory-gauge value as a scalar count, so a `base_per_delta`
+    /// can scale a numeric by memory. `of: you` reads the controller's signed
+    /// memory (the gauge when it is their turn, negated otherwise); `of:
+    /// opponent` reads the opponent's, clamped at 0 (DCGO `Math.Max(0,
+    /// Enemy.MemoryForPlayer)`). YAML: `per: { player_memory: { of: opponent } }`.
+    /// Drives BT25-086 Dan Yuki's "[for each memory your opponent has]"
+    /// +1000-DP grant: `base_per_delta { base: 0, per: { player_memory: { of:
+    /// opponent } }, delta: 1000 }`. G-DSL-FORMULA-PLAYER-MEMORY (driver
+    /// BT25-086 / G-DSL-FORMULA-OPPONENT-MEMORY).
+    PlayerMemory { of: PlayerRef },
+    /// Total number of **link cards** across every one of `of`'s battle-area
+    /// Digimon — `Σ over of.battle_area Digimon of permanent.linked_cards.len()`.
+    /// YAML form: `{ own_link_card_count: { of: you } }`. Drives BT25-075
+    /// Vulcanusmon's "for each of your link cards, ＜De-Digivolve 1＞ all of your
+    /// opponent's Digimon" — DCGO reads
+    /// `card.Owner.GetBattleAreaDigimons().Map(p => p.LinkedCards).Flat().Count()`.
+    /// Composes inside `base_per_delta`. G-DSL-FORMULA-OWN-LINK-CARD-COUNT.
+    OwnLinkCardCount { of: PlayerRef },
+    /// Number of link cards on the effect carrier's OWN permanent
+    /// (`ctx.source_permanent.linked_cards.len()`). YAML form:
+    /// `source_link_card_count`. The per-host sibling of `own_link_card_count`.
+    /// G-DSL-LINK-N-CARDS-PER-HOST (formula facet).
+    SourceLinkCardCount,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -284,6 +313,25 @@ impl Serialize for PerSelector {
                 outer.serialize_entry("source_stack_count", spec)?;
                 outer.end()
             }
+            Self::PlayerMemory { of } => {
+                let mut outer = serializer.serialize_map(Some(1))?;
+                #[derive(Serialize)]
+                struct PlayerMemoryPayload {
+                    of: PlayerRef,
+                }
+                outer.serialize_entry("player_memory", &PlayerMemoryPayload { of: *of })?;
+                outer.end()
+            }
+            Self::OwnLinkCardCount { of } => {
+                let mut outer = serializer.serialize_map(Some(1))?;
+                #[derive(Serialize)]
+                struct OwnLinkPayload {
+                    of: PlayerRef,
+                }
+                outer.serialize_entry("own_link_card_count", &OwnLinkPayload { of: *of })?;
+                outer.end()
+            }
+            Self::SourceLinkCardCount => serializer.serialize_str("source_link_card_count"),
         }
     }
 }

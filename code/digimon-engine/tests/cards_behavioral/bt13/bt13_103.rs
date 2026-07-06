@@ -27,25 +27,18 @@
 //!    cost** (`permanent.CostJustBeforeRemoveField`). The reduction amount is
 //!    therefore determined by an *interactive selection made during the cost*.
 //!
-//!    ── BLOCKED (gap_kind: engine-primitive + dsl-vocab) ──────────────────────
-//!    The DSL `kind: cost_reduction` declarative clause cannot express this:
-//!      (a) `amount_fn` (read-only, runs in `cost_reduction_fn`) is evaluated by
-//!          `apply_cost_reduction_candidate` (`game_actions.rs:5848`) BEFORE the
-//!          `pay_cost_fn` runs, and the two callbacks use SEPARATE `Bindings`
-//!          (`lower_cost_reduction.rs:194` builds a fresh `Bindings` for
-//!          `pay_cost`). So a Gizmon selected inside `pay_cost` is invisible to
-//!          `amount_fn`, and no `FormulaSpec` reads "the cost of the permanent
-//!          deleted as the cost" (`formula.rs` has `BindingPlayCost` over a
-//!          `bind_as` binding only — unreachable here).
-//!      (b) `pay_cost_fn` is gated to `RunOutcome::Synchronous`
-//!          (`lower_cost_reduction.rs:195`); an interactive `select_own_permanent`
-//!          parks (non-synchronous) and the cost is treated as failed, so the
-//!          required player choice cannot surface through `pending_selection`.
-//!          Auto-selecting a Gizmon would violate the no-approximations policy
-//!          (rule 17 / 28).
-//!    The expressible parts (Clauses 2 & 3) ARE authored in the YAML; Clause 1
-//!    is documented as BLOCKED in the YAML and logged to the gap trackers. The
-//!    Clause-1 behavioral test below is `#[ignore]`d pending the gap fix.
+//!    ── IMPLEMENTED 2026-07-03 (G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST) ─
+//!    The DSL `kind: cost_reduction` clause now expresses this via a `pay_cost`
+//!    of `[select_own_permanent{Gizmon} + delete_for_cost_reduction]` with NO
+//!    static `amount`: the interactive select parks on the resumable data VM
+//!    (clone-safe, rule 28); `delete_for_cost_reduction` snapshots the deleted
+//!    permanent's printed play cost (pre-removal, rule 25) into
+//!    `Game::pending_cost_reduction_amount_override`; and the play-from-hand cost
+//!    continuation credits it once the park resolves. The reducer's `condition`
+//!    carries a pay-cost actionability guard (DCGO `CanActivateCondition`), so it
+//!    is not offered when no Gizmon is in play. Substrate tests:
+//!    `code/digimon-engine/tests/cost_hooks/pay_cost_play_delete_reducer.rs`.
+//!    The Clause-1 behavioral test below is now active (no longer `#[ignore]`d).
 //!
 //! 2. **[End of Opponent's Turn] [Once Per Turn]** (DCGO `EffectTiming.OnEndTurn`,
 //!    `IsOpponentTurn`, `SetUpActivateClass(..., 1, false, ...)` → OPT lockout,
@@ -459,26 +452,25 @@ fn bt13_103_eot_is_once_per_turn() {
 //                          (BLOCKED — see header; ignored pending gap fix)
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// BLOCKED: when the controller plays a [Belphemon]-name card on their turn,
-/// they may delete 1 of their [Gizmon]-name Digimon to reduce the play cost by
-/// that Digimon's printed play cost. Requires an interactive selection during
-/// the cost whose chosen permanent's cost drives the reduction amount — not
-/// expressible by the current `kind: cost_reduction` declarative clause (split
-/// `amount_fn` / `pay_cost` callbacks, isolated bindings, synchronous-only
-/// pay_cost). Ignored until the gap (engine-primitive + dsl-vocab) is closed.
+/// IMPLEMENTED (2026-07-03, G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST):
+/// when the controller plays a [Belphemon]-name card on their turn, they may
+/// delete 1 of their [Gizmon]-name Digimon to reduce the play cost by that
+/// deleted Digimon's printed play cost. The interactive select parks on the
+/// resumable data VM; the `delete_for_cost_reduction` step snapshots the deleted
+/// permanent's cost and the play-cost continuation credits it. (Costs kept small
+/// so the memory cap (10) does not clamp the observation.)
 #[test]
-#[ignore = "BLOCKED: cost-reduction amount driven by an interactive in-cost deletion is not expressible (see header + qa/dsl-vocab-gaps.md, docs/RUST_ENGINE_GAPS.md)"]
 fn bt13_103_belphemon_play_cost_reduced_by_deleted_gizmon_cost() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT13-103 in embedded DSL pack")
-        .add_card(make_belphemon("BELPH", "Belphemon: Rage Mode", 12))
-        .add_card(make_gizmon("GIZMON", "Gizmon: AT", 4))
+        .add_card(make_belphemon("BELPH", "Belphemon: Rage Mode", 5))
+        .add_card(make_gizmon("GIZMON", "Gizmon: AT", 3))
         .add_card(make_filler("FILLER"))
         .deck(0, &["FILLER", "FILLER", "FILLER"])
         .deck(1, &["FILLER"])
         .hand(0, &["BELPH"])
-        .memory(20)
+        .memory(10)
         .start();
 
     runner.place_on_field(0, CARD_ID, Some(0));
@@ -486,14 +478,18 @@ fn bt13_103_belphemon_play_cost_reduced_by_deleted_gizmon_cost() {
 
     let mem_before = runner.memory();
     let _ = runner.play(0, 0); // play the Belphemon-name card
+    assert!(
+        runner.pending_selection_view().is_some(),
+        "playing a [Belphemon] card offers the optional delete-Gizmon reducer"
+    );
     drive_accept(&mut runner, 0); // accept the optional delete-Gizmon cost
     let _ = runner.auto_resolve();
 
-    // Belphemon cost 12 reduced by deleted Gizmon's cost 4 → effective 8.
+    // Belphemon cost 5 reduced by deleted Gizmon's cost 3 → effective 2.
     let cost_paid = mem_before - runner.memory();
     assert_eq!(
-        cost_paid, 8,
-        "Belphemon (cost 12) reduced by deleted Gizmon's cost (4) → 8; got {cost_paid}"
+        cost_paid, 2,
+        "Belphemon (cost 5) reduced by deleted Gizmon's cost (3) → 2; got {cost_paid}"
     );
     // The Gizmon must have been deleted as the cost.
     let gizmon_present = runner.game.players[0]
@@ -501,6 +497,35 @@ fn bt13_103_belphemon_play_cost_reduced_by_deleted_gizmon_cost() {
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "GIZMON");
     assert!(!gizmon_present, "GIZMON must be deleted as the cost");
+}
+
+/// Negative: with no [Gizmon] in play, the clause-1 reducer is NOT offered
+/// (DCGO CanActivateCondition = HasMatchConditionPermanent) — the [Belphemon]
+/// card plays at full cost.
+#[test]
+fn bt13_103_no_gizmon_no_reducer_offered() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT13-103 in embedded DSL pack")
+        .add_card(make_belphemon("BELPH", "Belphemon: Rage Mode", 5))
+        .add_card(make_filler("FILLER"))
+        .deck(0, &["FILLER", "FILLER", "FILLER"])
+        .deck(1, &["FILLER"])
+        .hand(0, &["BELPH"])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, CARD_ID, Some(0));
+
+    let mem_before = runner.memory();
+    let _ = runner.play(0, 0);
+    // No Gizmon → no reducer prompt; the play completes at full cost.
+    let _ = runner.auto_resolve();
+    assert_eq!(
+        mem_before - runner.memory(),
+        5,
+        "no [Gizmon] in play → clause-1 reducer not offered, full cost 5 paid"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

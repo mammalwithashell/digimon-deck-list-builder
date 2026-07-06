@@ -1,0 +1,179 @@
+# BT21-087 Zenith — Tamer, Black, Cost 4.
+# Traits: LIBERATOR
+#
+# Printed card text (card image / official Bandai DB bundle — authoritative):
+#   [Start of Your Turn] If you have 2 or less memory, set it to 3.
+#   [On Play] Reveal the top 3 cards of your deck. Among them, play 1
+#     [Vemmon] without paying the cost or add 1 card with [Vemmon] in its
+#     text to the hand. Trash the rest.
+#   [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Black/BT21_087.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartTurn` → `CardEffectFactory.SetMemoryTo3TamerEffect(card)`,
+#   the canonical "[Start of Your Turn] if memory <= 2, set it to 3" ramp idiom
+#   (same as BT1-085, BT21-084, BT21-102, BT22-084 Nokia). Mandatory (no "you may").
+#
+# Clause 2 — `EffectTiming.OnEnterFieldAnyone` (`CanUseCondition`:
+#   `CardEffectCommons.CanTriggerOnPlay`). Body (`ActivateCoroutine`, lines
+#   52-123):
+#     1. `SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3, ...,
+#        remainingCardsPlace: Trash, canNoSelect: true)` with ONE
+#        `SimplifiedSelectCardConditionClass` (`canTargetCondition:
+#        cardSource.HasText("Vemmon")`, `maxCount: 1`, `mode: Custom`). This is
+#        a SINGLE select-at-most-1 over the WHOLE 3-card reveal pool, pooling
+#        both "named exactly Vemmon" and "has [Vemmon] in its printed text"
+#        candidates together (DCGO `HasText` scans `CardName_ENG` +
+#        `EffectDiscription_ENG` + `InheritedEffectDiscription_ENG` +
+#        `SecurityEffectDiscription_ENG` — see `CardSource.cs:2120-2140`). This
+#        is exactly the DSL's `in_text_contains` leaf (`G-DSL-IN-TEXT-CONTAINS`
+#        — see the official Q&A reproduced on this card's own bundle,
+#        `data/card_bundles/BT21-087.md`), which scans name + aliases + traits
+#        + all printed text — a faithful (and, per the official ruling, exact)
+#        match for DCGO's `HasText`. Encoded via a single `select_reveal_buckets`
+#        bucket (min:0, max:1, `filter: { in_text_contains: Vemmon }`) — NOT
+#        `select_reveal` (singular pick): `select_reveal`'s PASS/decline path
+#        has no `on_decline`/`then` continuation wired for this shape, so
+#        declining drops the REST of the process body outright (the mandatory
+#        "trash the rest" would never run — verified against the resumable-VM
+#        `ResumeFrame::RunTail` decline arm, `code/digimon-engine/src/
+#        dsl_cards/step/selections.rs`: "`ResumeDecline::None` mirrors a select
+#        with no on_decline: PASS runs nothing, so the outer conts are
+#        dropped"). `select_reveal_buckets`'s bucket-advance state machine
+#        (`run_reveal_bucket_step` / `run_reveal_bucket_terminal`) always
+#        reaches its terminal and runs the captured tail regardless of
+#        decline — matching BT24-059's shipped "reveal 3, optional single-pick
+#        bucket, trash rest" clause, whose decline test
+#        (`bt24_059_on_deletion_decline_trashes_all_three`) proves the
+#        continuation fires even when nothing is picked.
+#
+#     A bucket pick binds a `CardList` (0 or 1 elements), but the downstream
+#     `binding_card_name_is` leaf resolves only a singular `Card` binding
+#     (`Bindings::get_card`). `per_selected { selection: vemmon_pick, bind_as:
+#     picked, body: [...] }` unwraps the 0-or-1-element CardList into a
+#     singular `Card` binding for each element (running 0 or 1 times — see
+#     `PerSelected`'s `ResolvedBinding::CardList` arm, `code/digimon-engine/
+#     src/dsl_cards/step/iteration.rs`), so the name-gated Play/Add branch runs
+#     exactly when a card was actually picked, and is skipped cleanly on
+#     decline.
+#     2. If a card was selected (line 81 `if (selectedCard != null)`):
+#        a. If `selectedCard.EqualsCardName("Vemmon")` (line 83, EXACT name
+#           match) → present a binary Play/Add-to-hand choice
+#           (`SelectionElement<bool>` "Play" vs "Add to your hand", lines
+#           85-98). Encoded via `select_effect_choice` gated behind an `if:
+#           { binding_card_name_is: { binding: vemmon_pick, name_is: Vemmon } }`
+#           (G-DSL-BINDING-CARD-NAME-EQUALS — RESOLVED).
+#        b. Else (has "Vemmon" in text but is NOT named exactly "Vemmon" —
+#           e.g. Snatchmon/Destromon/Galacticmon/Tsumemon/Ragnarok Cannon/Xeno,
+#           which all reference "[Vemmon]" in their own printed text without
+#           being named Vemmon) → `playCard` stays `false`, no choice is
+#           offered; the card is unconditionally added to hand (line 118-121,
+#           `CardEffectCommons.AddThisCardToHand`). Encoded via the `else:`
+#           branch of the same `if:` → `add_to_hand_from_reveal` directly.
+#        c. If `playCard == true` (only reachable via 2a's Play branch):
+#           `CardEffectCommons.CanPlayAsNewPermanent(...)` gates a free play
+#           (`PlayPermanentCards(payCost: false)`); if that check fails (e.g.
+#           no open battle-area slot) the card is TRASHED instead
+#           (`ITrashDeckCards`, line 115) rather than added to hand or left in
+#           the reveal pool. The engine's `play_from_revealed_with_cost`
+#           already reproduces this: on a failed play it reinserts the card
+#           into `revealed_cards` (not the hand) rather than erroring, so the
+#           unconditional "trash the rest" `per_selected` loop over `revealed`
+#           below naturally catches it — no extra authoring needed for this
+#           edge (mirrors the `play_from_revealed_free` contract documented in
+#           BT24-059's shipped YAML).
+#        d. If `playCard == false` (2b, or the "Add to hand" pick in 2a) →
+#           add to hand (line 120). Encoded via `add_to_hand_from_reveal` on
+#           both the Add-to-hand branch of the choice and the `else:` (2b) arm.
+#     3. Any revealed card never selected in step 1 is trashed
+#        (`per_selected { selection: revealed, bind_as: rest, body:
+#        [trash_from_reveal] }` — the shipped "trash the rest" idiom, same
+#        shape as BT24-059's On Deletion clause).
+#
+# Clause 3 — `EffectTiming.SecuritySkill` → `CardEffectFactory.PlaySelfTamerSecurityEffect(card)`,
+#   the canonical "[Security] Play this card without paying the cost" idiom
+#   (same as BT21-084, BT18-087, BT21-015, BT22-084).
+#
+# ─── G-DSL-BINDING-CARD-NAME-EQUALS — RESOLVED ───────────────────────────────
+#
+# Previously BLOCKED: printed text requires selecting AT MOST 1 card from a
+# 3-card reveal pool where eligibility is the union of "named exactly Vemmon"
+# and "has [Vemmon] in its printed text" (DCGO `HasText`), and THEN branching
+# later behavior (offer a Play/Hand choice vs. unconditionally add to hand) on
+# whether the SPECIFIC card that was picked is exactly named "Vemmon". This
+# needed a predicate that reads the NAME of an already-bound `Card`/`CardList`
+# binding (the reveal-bucket pick) inside a downstream `if:` condition. The
+# `binding_card_name_is` leaf (analogous to `binding_card_kind`) now exists —
+# see `code/digimon-dsl/src/predicate.rs` (`BindingCardNamePredicate`),
+# `code/digimon-engine/src/dsl_cards/predicate.rs`, and coverage in
+# `code/digimon-engine/tests/dsl/predicate_leaves_ii.rs` (Leaf 2,
+# `binding_card_name_is_matches_printed_and_alias_names`) — matches on the
+# printed name AND `also_treated_as` aliases, fail-closed when the binding is
+# unset. Clause 2 is now fully authored below. Verdict: IMPLEMENTED.
+
+card: BT21-087
+name: Zenith
+kind: tamer
+color: [black]
+cost: 4
+traits: [LIBERATOR]
+
+effects:
+  # ─── Clause 1: [Start of Your Turn] if memory <= 2, set it to 3 ──────────────
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If you have 2 or less memory, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  # ─── Clause 2: [On Play] reveal-3, single Vemmon-text bucket, name-gated ────
+  # play-or-add choice, trash rest ─────────────────────────────────────────────
+  - when: on_play
+    summary: "[On Play] Reveal 3; play 1 [Vemmon] free or add 1 [Vemmon]-text card to hand; trash rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          buckets:
+            - bind_as: vemmon_pick
+              min: 0
+              max: 1
+              filter:
+                in_text_contains: "Vemmon"
+          prompt: "Select 1 [Vemmon] or 1 card with [Vemmon] in its text"
+      - per_selected:
+          selection: vemmon_pick
+          bind_as: picked
+          body:
+            - if:
+                condition: { binding_card_name_is: { binding: picked, name_is: Vemmon } }
+                then:
+                  - select_effect_choice:
+                      bind_as: play_or_hand
+                      labels:
+                        - "Play"
+                        - "Add to your hand"
+                      prompt: "Will you play this card or add it to your hand?"
+                  - if:
+                      condition: { equals: [play_or_hand, 0] }
+                      then:
+                        - play_from_revealed_free: { of: you, card: picked }
+                      else:
+                        - add_to_hand_from_reveal: { of: you, card: picked }
+                else:
+                  - add_to_hand_from_reveal: { of: you, card: picked }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal:
+                of: you
+                card: rest
+
+  # ─── Clause 3: [Security] play this card without paying the cost ────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

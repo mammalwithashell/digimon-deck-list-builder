@@ -23,20 +23,153 @@ alt_paths:
 # [All Turns] [Once Per Turn] When other Digimon or Tamers are deleted, trash
 # your opponent's top security card.
 #
-# Track E slice: the forced opponent hand-reduction verb is now native YAML.
-# Remaining card-local gaps:
-# - Tamer deletion rider needs a result count binding ("cards trashed by this effect").
-# - Leave replacement needs Composite self-side delete cost plus replacement cancel.
-# - Deleted observer body needs broad OnAnyDeletion fan-out/card-local tests.
+# Track E slice: the forced opponent hand-reduction verb + the Tamer-deletion
+# result-count rider are now native YAML (G-DSL-TRASH-COUNT-RESULT-BINDING).
+# Track F: the [All Turns] Composite self-side delete-cost leave replacement is
+# authored below, following the BT24-018 clause (g) / BT22-036
+# inherited-Puppet shape (kind: replacement, generic select_own_permanent +
+# delete_permanent + cancel_replacement steps — G-DSL-EVENT-TARGET-OWNER /
+# replacement-context predicate lowering, both already resolved).
+# Track G (this revision): the [All Turns][Once Per Turn] deletion observer is
+# authored below via the production `on_any_deletion` timing (BT16-101 clause-3
+# / BT22-002 idiom). All three printed clauses are now authored — no card-local
+# gaps remain.
 
 effects:
-  # Track E verb now available for the first printed sentence:
+  # ─── [On Play][When Digivolving] shared — trash to 5, delete floor(N/2) Tamers ─
   #
-  # - when: [on_play, when_digivolving]
-  #   process:
-  #     - trash_opponent_hand_to_count:
-  #         opponent: opponent
-  #         target_count: 5
+  # DCGO BT19_075.cs (two identical OnEnterFieldAnyone blocks):
+  #   1. Opponent trashes `hand - 5` cards (mandatory, canNoSelect:false).
+  #   2. `maxDeletes = min(floor(trashed/2), opponentTamerCount)`; the CARD's
+  #      controller picks that many opponent Tamers to delete (mandatory), only
+  #      when `trashed >= 2`.
   #
-  # Kept load-only until the "for every 2 cards trashed by this effect"
-  # result binding and Tamer-deletion rider can land with this clause.
+  # `bind_count_as: trashed` records the number ACTUALLY trashed; the downstream
+  # `select_count_capped_multi.max` reads `floor(trashed / 2)`. When that is 0
+  # (fewer than 2 trashed, or the no-op path) the select cleanly no-ops, matching
+  # DCGO's `trashed.Count >= 2` guard. `clamp_to_available: true` mirrors
+  # `min(.., opponentTamerCount)`.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Opponent trashes hand to 5; delete 1 opp Tamer per 2 trashed"
+    process:
+      - trash_opponent_hand_to_count:
+          opponent: opponent
+          target_count: 5
+          bind_count_as: trashed
+      - select_count_capped_multi:
+          of: opponent
+          zone: battle_area
+          max:
+            formula:
+              floor_div:
+                - { binding_value: trashed }
+                - 2
+          clamp_to_available: true
+          filter: { kind: tamer }
+          bind_as: doomed_tamers
+          prompt: "Choose opponent Tamers to delete"
+          optional_zero: false
+      - per_selected:
+          selection: doomed_tamers
+          bind_as: t
+          body:
+            - delete_permanent: { target: t }
+
+  # ─── [All Turns] leave replacement — Composite self-delete cost ────────────
+  #
+  # Printed: "When this Digimon would leave the battle area, by deleting 1 of
+  # your [Composite] trait Digimon, it doesn't leave."
+  #
+  # DCGO BT19_075.cs (WhenRemoveField block): `CanActivateCondition` only
+  # requires the carrier to still be an own-battle-area Digimon AND at least
+  # one own Composite-trait Digimon to exist as a cost target — there is NO
+  # `replacement_cause` exclusion (unlike the Puppet/Token inherited pattern,
+  # which excludes `own_effect`) and NO `[Once Per Turn]` tag (the trigger
+  # limit is `-1`, i.e. unlimited uses per turn) — matching the printed text,
+  # which carries neither restriction. The delete-selection is set up with
+  # `canNoSelect: true`, i.e. the controller may decline and let the leave
+  # proceed — modelled as `optional: true` on the clause (same optionality
+  # shape as BT24-018 clause (g) / BT22-036's inherited Puppet-cost clause,
+  # neither of which has an explicit "may" in the printed text either — the
+  # "by doing X, it doesn't leave" replacement-cost phrasing is inherently a
+  # payable-or-not choice).
+  #
+  # Printed text says "When THIS Digimon would leave" (not "any of your ...
+  # Digimon", unlike BT24-018's broader Reptile/Dragonkin class) — so the
+  # replacement subject must be constrained to the carrier itself, not just
+  # any own Digimon. `is_source: true` in `active_when` is the "this Digimon"
+  # constraint (mirror of `other: true`; matches the subject permanent against
+  # `rctx.source_permanent`, i.e. the permanent hosting this ability —
+  # `eval_permanent_fields`, dsl_cards/predicate.rs). `replacement_subject_is_mine`
+  # is technically redundant once `is_source` pins the subject to the carrier
+  # (which is always its own controller's permanent) but is kept for
+  # readability/defense-in-depth, matching the established idiom.
+  # The cost pool is "1 of your Digimon with the [Composite] trait" —
+  # MoonMillenniummon itself has no Composite trait (traits: [Wicked God]), so
+  # it can never appear in its own cost pool; no `other: true` filter is
+  # needed on the cost select (matches DCGO's `HasCompositeTrait`, which has
+  # no self-exclusion either). When no own Composite-trait Digimon exists, the
+  # cost is unpayable and the replacement prompt does not install.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - is_source: true
+        - kind: digimon
+    summary: "[All Turns] By deleting 1 of your Composite Digimon, this Digimon doesn't leave"
+    process:
+      - select_own_permanent:
+          bind_as: composite_cost
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Composite
+          prompt: "Delete 1 of your Composite trait Digimon so this Digimon doesn't leave"
+      - delete_permanent: { target: composite_cost }
+      - cancel_replacement: {}
+
+  # ─── [All Turns][Once Per Turn] deletion observer — trash opp top security ──
+  #
+  # Printed: "[All Turns] [Once Per Turn] When other Digimon or Tamers are
+  # deleted, trash your opponent's top security card."
+  #
+  # DCGO BT19_075.cs (OnDestroyedAnyone block, hash "TrashSecurity_BT19-075"):
+  #   - Trigger limit 1, isOptional false → `once_per_turn: true`, mandatory
+  #     (no "you may" in the printed text; the condition gates firing — same
+  #     shape as BT16-101 clause 3).
+  #   - `OtherPermanentDeleted`: the deleted permanent is a Digimon or Tamer
+  #     and not the carrier itself. There is NO owner filter — the printed
+  #     text has no "your"/"your opponent's" qualifier, so EITHER player's
+  #     deletions fire it (do not add `event_target_owner`).
+  #   - "other" — the carrier's own deletion does NOT count →
+  #     `event_permanent_is_source: false` (BT22-002 inherited-Puppet idiom).
+  #     (DCGO writes `IsDigimon || IsTamer && != self`, a C# precedence quirk
+  #     its on-battle-area trigger gate renders moot — a deleted carrier is
+  #     off the field and cannot observe its own deletion. The printed text's
+  #     "other Digimon or Tamers" applies the exclusion to both kinds.)
+  #   - `CanActivateCondition`: carrier still on battle area AND
+  #     `card.Owner.Enemy.SecurityCards.Count > 0` — at 0 opponent security
+  #     the effect cleanly does nothing (`trash_top_security` no-ops on an
+  #     empty stack; no crash, no lingering selection).
+  #   - Body: `IDestroySecurity(player: card.Owner.Enemy, count: 1,
+  #     fromTop: true)` → `trash_top_security: { of: opponent }`.
+  #
+  # Known ENGINE-side nuance (not card-local — the YAML below is faithful):
+  # the engine resets OPT counters only at the CARRIER CONTROLLER's turn
+  # start, so this [All Turns][OPT] re-arms one turn later than rule
+  # 15-14-1-2 / DCGO allow (should re-arm on EVERY turn change). See
+  # G-OPT-RESET-ONLY-TURN-PLAYER in docs/RUST_ENGINE_GAPS.md.
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    once_per_turn: true
+    summary: "[All Turns][Once Per Turn] When other Digimon or Tamers are deleted, trash your opponent's top security card"
+    condition:
+      all_of:
+        - event_permanent_is_source: false
+        - any_of:
+            - event_target_kind: digimon
+            - event_target_kind: tamer
+    process:
+      - trash_top_security: { of: opponent }

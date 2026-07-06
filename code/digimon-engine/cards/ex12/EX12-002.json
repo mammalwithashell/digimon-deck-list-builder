@@ -1,0 +1,27 @@
+{
+  "card_id": "EX12-002",
+  "card_index": 2,
+  "card_name_eng": "Mococomon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_002",
+  "play_cost": 0,
+  "dp": null,
+  "level": 2,
+  "card_kind": 3,
+  "rarity": 1,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Smoke",
+    "Shambala",
+    "SW"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "Inherited Effect [Your Turn] [Once Per Turn] When any of your other [SW] trait Digimon are played, this Digimon may digivolve into an [SW] trait Digimon card in the hand with the cost reduced by 2.",
+  "inherited_effect_description_eng": "[Once Per Turn] When any of your other [SW] trait Digimon are played, this Digimon may digivolve into an [SW] trait Digimon card in the hand with the cost reduced by 2.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

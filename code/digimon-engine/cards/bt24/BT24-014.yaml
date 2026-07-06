@@ -1,0 +1,188 @@
+# BT24-014 Aegiochusmon — Digimon, Lv.5, Red/Yellow, DP 8000, Cost 8.
+# Traits: Shaman, Iliad, TS. Attribute: Vaccine.
+# Standard digivolution: Lv.4 Red / cost 4 AND Lv.4 Yellow / cost 4 (both
+# printed circles per the official Bandai DB — data/card_official.json lists
+# digivolve_costs for BOTH card_color 0 (Red) and card_color 2 (Yellow) at
+# level 4 / memory_cost 4; data/card_bundles/BT24-014.md confirms both "Red
+# Lv.4 / cost 4" and "Yellow Lv.4 / cost 4". cards.json's evo_costs dropped
+# the Yellow circle — the documented multi-colour-cost lossiness — so both
+# circles are authored explicitly here, matching the sibling BT25-025
+# (Blue/Purple) idiom.
+#
+# Printed card text (data/card_bundles/BT24-014.md — official Bandai DB,
+# outranks cards.json per source priority):
+#
+#   ＜Security A. +1＞ (This Digimon checks 1 additional security card.)
+#   ＜Decode ([Aegiomon])＞ (When this Digimon would leave the battle area
+#   other than in battle, you may play 1 [Aegiomon] from its digivolution
+#   cards without paying the cost.)
+#   [When Digivolving] 1 of your opponent's Digimon gets -5000 DP for the
+#   turn. Then, if you have 3 or fewer security cards, delete 1 of your
+#   opponent's Digimon with 7000 DP or less.
+#   (Rule) Trait: Has [Dragonkin] Type.
+#
+#   Inherited Effect:
+#   ＜Decode ([Aegiomon])＞ (same text as own — When this Digimon would leave
+#   the battle area other than in battle, you may play 1 [Aegiomon] from its
+#   digivolution cards without paying the cost.)
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Red/BT24_014.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Alternative Digivolution Condition" (None) —
+#   AddSelfDigivolutionRequirementStaticEffect(TopCard.EqualsCardName("Aegiomon"),
+#   digivolutionCost: 3, ignoreDigivolutionRequirement: false). A NAME-narrowed
+#   cost-3 alt-source on ANY level, matching the printed
+#   "[Digivolve] [Aegiomon]: Cost 3" black text (xros_req in cards.json).
+#
+# Region "Security A. +1" (None) — ChangeSelfSAttackStaticEffect(+1,
+#   isInheritedEffect: false). Own (face-up) scope keyword aura,
+#   `security_attack: 1`, matching the BT10-013 idiom (`target: {}` = self).
+#
+# Region "Decode <[Aegiomon]>" (WhenRemoveField, own) — DecodeSelfEffect with
+#   sourceCondition EqualsCardName("Aegiomon"), isInheritedEffect: false. This
+#   is NOT the generic native `Keyword::Decode` (which redirects the leaving
+#   permanent to hand) — it is the BT22-015/BT25-025-class "play a matching
+#   source from THIS card's digivolution cards without paying the cost"
+#   replacement: triggers on the would-leave (other than in battle) window,
+#   optionally plays a named [Aegiomon] source, and the original leave
+#   proceeds. Authored as `kind: replacement` + `trigger:
+#   when_would_leave_battle_area` + non-battle cause filter +
+#   `select_material` (Aegiomon-named) + `play_from_materials` (free).
+#
+# Region "When Digivolving" (OnEnterFieldAnyone) — ActivateClass, mandatory
+#   (canNoSelect: false everywhere):
+#     Step 1: SelectPermanentEffect over opponent battle-area Digimon
+#       (CanSelectPermanentCondition_DPReduce), maxCount = min(1, count) →
+#       exactly 1 target when any exist. Applies
+#       ChangeDigimonDP(changeValue: -5000, EffectDuration.UntilEachTurnEnd) →
+#       `add_dp_modifier: { value: -5000, expiry: end_of_turn }`.
+#     Step 2 (gated): if `card.Owner.SecurityCards.Count <= 3` →
+#       `security_count_lte: 3` on the observer/controller (not the opponent).
+#       Then SelectPermanentEffect (mode Destroy) over opponent battle-area
+#       Digimon whose LIVE `permanent.DP <= 7000`
+#       (CanSelectPermanentCondition_Delete reads the post-modifier DP — the
+#       DSL `dp_lte` predicate reads `game.effective_dp`, which already
+#       reflects the -5000 modifier from Step 1) → `select_opponent_permanent`
+#       with `dp_lte: 7000` then `delete_permanent`. Both selects are
+#       mandatory (canNoSelect: false) but only install when a legal target
+#       exists (maxCount = min(1, count)), matching the DSL convention that a
+#       mandatory select with zero legal targets simply does not prompt.
+#
+# Region "Decode - ESS" (WhenRemoveField, inherited) — DecodeSelfEffect,
+#   isInheritedEffect: true. The inherited mirror of the own Decode clause,
+#   reaching the host permanent when BT24-014 is buried in a digivolution
+#   stack (scope: inherited).
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                | Status |
+# |-------------------------------------------------------------------|--------|
+# | Std digivolve Lv.4 Red / Cost 4                                  | IMPLEMENTED (printed evo_costs) |
+# | Std digivolve Lv.4 Yellow / Cost 4                               | IMPLEMENTED (official DB — 2nd printed circle, dropped by cards.json) |
+# | Special [Digivolve] [Aegiomon]: Cost 3                           | IMPLEMENTED (alt_paths name_contains) |
+# | <Security A. +1>                                                 | IMPLEMENTED (aura security_attack: 1) |
+# | <Decode ([Aegiomon])> own — play source on non-battle leave      | IMPLEMENTED (replacement + select_material + play_from_materials) |
+# | [WD] -5000 DP to 1 opp Digimon (mandatory, turn-scoped)          | IMPLEMENTED (add_dp_modifier expiry: end_of_turn) |
+# | [WD][Then] if <=3 security, delete 1 opp Digimon DP<=7000        | IMPLEMENTED (if security_count_lte: 3 -> select dp_lte: 7000 -> delete; dp measured post-modifier via effective_dp) |
+# | (Rule) Trait: [Dragonkin]                                        | IMPLEMENTED (folded into traits:) |
+# | Inherited <Decode ([Aegiomon])>                                  | IMPLEMENTED (scope: inherited replacement) |
+
+card: BT24-014
+name: Aegiochusmon
+kind: digimon
+level: 5
+color: [red, yellow]
+cost: 8
+dp: 8000
+traits: [Shaman, Iliad, TS, Dragonkin]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { name_contains: "Aegiomon" }
+    cost: 3
+
+effects:
+  # ─── <Security A. +1> (own) ────────────────────────────────────────────────
+  - kind: aura
+    target: {}
+    security_attack: 1
+    summary: "<Security A. +1>"
+
+  # ─── <Decode ([Aegiomon])> — own scope: play Aegiomon source on non-battle leave ──
+  #
+  # Non-cancelling replacement: accepting the optional play runs the
+  # side-effect (play a named [Aegiomon] source without paying), then the
+  # original leave proceeds. BT25-025 / BT22-015 idiom, narrowed by name.
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode ([Aegiomon])> play 1 [Aegiomon] from sources when this would leave outside battle"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Aegiomon"
+          prompt: "Choose an [Aegiomon] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  # ─── [When Digivolving] -5000 DP; then if <=3 security, delete <=7000 DP ──
+  - when: when_digivolving
+    summary: "[When Digivolving] 1 opp Digimon gets -5000 DP for the turn; then if you have 3 or fewer security cards, delete 1 opp Digimon with 7000 DP or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_reduce_target
+          filter: { kind: digimon }
+          prompt: "1 of your opponent's Digimon gets -5000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_reduce_target
+          value: -5000
+          expiry: end_of_turn
+      - if:
+          condition: { security_count_lte: 3 }
+          then:
+            - select_opponent_permanent:
+                bind_as: delete_target
+                filter: { kind: digimon, dp_lte: 7000 }
+                prompt: "Delete 1 of your opponent's Digimon with 7000 DP or less"
+            - delete_permanent: { target: delete_target }
+
+  # ─── Inherited <Decode ([Aegiomon])> — reaches the host when buried ───────
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "[Inherited] <Decode ([Aegiomon])> play 1 [Aegiomon] from sources when this would leave outside battle"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source_inh
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Aegiomon"
+          prompt: "Choose an [Aegiomon] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source_inh
+          cost_delta: free

@@ -22,11 +22,11 @@
 #
 # | Clause                                                       | Status      |
 # |--------------------------------------------------------------|-------------|
-# | 1. [Your Turn] BeforePayCost reduce-by-deleted-Gizmon-cost   | BLOCKED     |
+# | 1. [Your Turn] BeforePayCost reduce-by-deleted-Gizmon-cost   | IMPLEMENTED |
 # | 2. [End of Opp Turn][OPT] draw1+trash1, place self, delete   | IMPLEMENTED |
 # | 3. [Security] play this card free                            | IMPLEMENTED |
 #
-# ─── Clause 1 — BLOCKED (gap_kind: engine-primitive + dsl-vocab) ─────────────
+# ─── Clause 1 — IMPLEMENTED 2026-07-03 (G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST) ─
 #
 # Printed: "[Your Turn] When you would play a card with [Belphemon] in its
 # name, by deleting 1 of your Digimon with [Gizmon] in its name, reduce the
@@ -35,29 +35,20 @@
 # DCGO (EffectTiming.BeforePayCost): the controller MAY (isOptional/canNoSelect)
 # select 1 of their own [Gizmon]-name Digimon, delete it, and the play cost is
 # then reduced by THAT deleted Digimon's printed cost
-# (permanent.CostJustBeforeRemoveField). The reduction amount is determined by
-# an INTERACTIVE selection made DURING the cost.
+# (permanent.CostJustBeforeRemoveField). DCGO gates the offer on
+# CanActivateCondition = HasMatchConditionPermanent (a Gizmon must be in play)
+# and credits nothing for a 0-cost deletion (`if reduceCost <= 0 yield break`).
 #
-# The DSL `kind: cost_reduction` declarative clause cannot express this:
-#   (a) `amount_fn` is evaluated in `cost_reduction_fn` (read context) BEFORE
-#       the `pay_cost_fn` runs — `apply_cost_reduction_candidate`
-#       (game_actions.rs:5848 → inspect amount, THEN run pay_cost). The two
-#       callbacks build SEPARATE `Bindings` (lower_cost_reduction.rs:194), so a
-#       Gizmon bound inside `pay_cost` is invisible to `amount_fn`. No
-#       `FormulaSpec` reads "the play cost of the permanent deleted as the
-#       cost" (`formula.rs` `BindingPlayCost` reads a *prior* `bind_as`
-#       binding only, which is unreachable from the isolated pay_cost scope).
-#   (b) `pay_cost_fn` is gated to `RunOutcome::Synchronous`
-#       (lower_cost_reduction.rs:195); an interactive `select_own_permanent`
-#       parks (non-synchronous) → the cost reads as failed → the reduction is
-#       skipped. Auto-selecting a Gizmon to keep it synchronous would violate
-#       the no-approximations policy (rule 17 / 28).
-#
-# Both gaps are logged: `qa/dsl-vocab-gaps.md` (a cost_reduction whose amount is
-# driven by the permanent chosen+deleted during an interactive pay_cost) and
-# `docs/RUST_ENGINE_GAPS.md` (BeforePayCost reduction needs an interactive,
-# selection-amount-coupled pay_cost). When the substrate is widened, add the
-# Clause-1 declarative here and un-`#[ignore]` the Clause-1 test.
+# Implemented via `pay_cost: [select_own_permanent{Gizmon} + delete_for_cost_reduction]`
+# with NO static `amount` — the VARIABLE reduction is the deleted permanent's
+# printed play cost, snapshotted pre-removal (rule 25) into
+# `Game::pending_cost_reduction_amount_override` by the `delete_for_cost_reduction`
+# step and credited by the play-from-hand cost continuation once the parked
+# Gizmon pick resolves. The interactive select parks on the resumable data VM
+# (clone-safe, rule 28). The reducer's `condition` carries a pay-cost
+# actionability guard (mirrors DCGO CanActivateCondition), so it is not offered
+# when no Gizmon is in play. Substrate tests:
+# `code/digimon-engine/tests/cost_hooks/pay_cost_play_delete_reducer.rs`.
 
 card: BT13-103
 name: Akihiro Kurata
@@ -66,6 +57,22 @@ color: [purple]
 cost: 3
 
 effects:
+  # ─── Clause 1: [Your Turn] reduce a played [Belphemon] card's cost by the
+  #     printed cost of a deleted [Gizmon]-name Digimon ────────────────────────
+  - kind: cost_reduction
+    active_when: { your_turn: true }
+    when_any_ally_played: { name_contains: "Belphemon" }
+    optional: true
+    pay_cost:
+      - select_own_permanent:
+          bind_as: gizmon
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Gizmon"
+          prompt: "Delete 1 of your [Gizmon] Digimon to reduce the [Belphemon] play cost"
+      - delete_for_cost_reduction: { target: gizmon }
+    summary: "[Your Turn] When you would play a [Belphemon] card, by deleting 1 of your [Gizmon] Digimon, reduce the play cost by the deleted Digimon's play cost"
   # ─── Clause 2: [End of Opponent's Turn] [Once Per Turn] ──────────────────
   #
   # Printed: "<Draw 1> and trash 1 card in your hand. Then, by placing this

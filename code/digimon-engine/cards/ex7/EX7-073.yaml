@@ -1,0 +1,308 @@
+# EX7-073 BeelStarmon (X Antibody) — Digimon, Lv.6, Purple, DP 12000, Cost 12.
+# Traits: Wizard, X Antibody, Three Musketeers. Attribute: Virus. Form: Mega.
+#
+# Standard digivolve: Lv.5 Purple / Cost 4 (official Bandai DB — data/card_bundles/EX7-073.md).
+# Special digivolution condition (printed xros_req black text):
+#   "[Digivolve] Lv.6 w/[Three Musketeers] trait w/o [X Antibody] trait: Cost 1"
+#
+# Printed card text (official Bandai DB — data/card_bundles/EX7-073.md, verbatim):
+#
+#   [When Digivolving] You may use 1 Option card with [Three Musketeers] in its
+#   text from your hand without paying the cost.
+#   [When Digivolving] [When Attacking] By trashing 2 cards with the [Three
+#   Musketeers] trait from this Digimon's digivolution cards, delete 1 of your
+#   opponent's Digimon with the highest level, and trash their top security
+#   card.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX7/Purple/EX7_073.cs
+#
+# ─── Clause layout ────────────────────────────────────────────────────────────
+#
+#   alt-path 1: Standard digivolve (Lv.5 Purple / Cost 4)                IMPLEMENTED
+#   alt-path 2: Alt digivolve (Lv.6 w/[Three Musketeers] w/o [X Antibody] / Cost 1) IMPLEMENTED
+#   Clause 1:  [When Digivolving] may free-play 1 TM-text Option from hand  IMPLEMENTED
+#   Clause 2:  [When Digivolving] trash 2 TM-trait digi-sources → delete    IMPLEMENTED
+#              highest-level opp Digimon (if any) → trash opp top security
+#   Clause 3:  [When Attacking] same trash-2/delete/security trigger        IMPLEMENTED
+#              (separate clause — DCGO wires it as an independent
+#              OnAllyAttack ActivateClass, not a shared timing list)
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Digivolution Condition (EffectTiming.None):
+#   AddSelfDigivolutionRequirementStaticEffect(permanentCondition:
+#   TopCard.EqualsTraits("Three Musketeers") && TopCard.HasLevel &&
+#   TopCard.Level == 6 && !TopCard.EqualsTraits("X Antibody"),
+#   digivolutionCost: 1, ignoreDigivolutionRequirement: false).
+#   → `kind: digivolve` alt-path; `from: { level_eq: 6, trait_has: "Three
+#     Musketeers", not: { trait_has: "X Antibody" } }`, cost 1. No
+#     `ignore_requirements` — DCGO's `false` means the standard colour gate
+#     (Purple) still applies alongside the added predicate, mirroring the
+#     BT25-082 alt-source idiom (predicate ADDS to, does not replace, the
+#     printed-box colour check).
+#
+# Clause 1 ([When Digivolving], EffectTiming.OnEnterFieldAnyone):
+#   ActivateClass, CanUseCondition/CanActivateCondition both gated on
+#   IsExistOnBattleAreaDigimon(card) (self on field) — the printed "may" is
+#   the SelectHandEffect's canNoSelect: true / canEndNotMax: false (pick 0 or
+#   1). CanSelectCardCondition: cardSource.IsOption &&
+#   cardSource.HasText("Three Musketeers") && cardSource.HasUseCost &&
+#   !cardSource.CanNotPlayThisOption. Selected card is played via
+#   PlayOptionCards(payCost: false).
+#   → `when: when_digivolving`, `optional: true` (outer "you may"),
+#     `select_hand` (kind: option, effect_text_contains: "Three Musketeers",
+#     `optional: true` on the STEP itself too — see note below), then
+#     `play_from_hand_free` — BT25-082 Clause 1 sibling idiom, adapted for
+#     `kind: option` instead of `kind: tamer`.
+#
+#   NOTE on step-level `optional: true`: this card also queues Clause 2 (a
+#   second own-controller [When Digivolving] trigger) simultaneously, so the
+#   engine installs a `TriggerOrder` selection letting the controller choose
+#   which fires first. `install_trigger_order_selection`'s callback resolves
+#   the chosen entry via `Game::run_queued_effect` DIRECTLY — bypassing the
+#   `bundle.len() == 1`-only `needs_outer_optional_prompt` gate that would
+#   otherwise install a separate accept/decline prompt before the body runs.
+#   Putting `optional: true` on `select_hand` itself (DCGO's `canNoSelect:
+#   true` lives on the atomic SelectHandEffect, not some outer wrapper) makes
+#   the "you may" decline self-contained and correct regardless of whether a
+#   TriggerOrder pick preceded it — the lowering's own outer-optional-prompt
+#   suppression ("when the first step IS an optional selection, the inner
+#   PASS already provides the decline path") means this does not introduce a
+#   double-prompt in the single-trigger case either. `cost: true` is also set
+#   on the step (G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE) so a decline
+#   short-circuits the clause tail instead of running `play_from_hand_free`
+#   with an unset `option_pick` binding — the free-play IS the effect, not a
+#   cost paid to unlock a separate downstream effect, but the same abort
+#   mechanism is required to prevent the flat sibling `play_from_hand_free`
+#   step from firing on an empty pick.
+#
+# Clause 2 / Clause 3 (shared shape — [When Digivolving] / [When Attacking]):
+#   ActivateClass, CanActivateCondition requires
+#   `DigivolutionCards.Count(TM-trait && !CanNotTrashFromDigivolutionCards) >= 1`
+#   (at least 1 eligible source — the trigger CAN surface with only 1
+#   candidate, offering a partial/decline pick). SelectCardEffect: maxCount 2,
+#   canNoSelect: () => true, canEndNotMax: false, over THIS permanent's
+#   digivolution cards filtered by EqualsTraits("Three Musketeers").
+#   `bool trashed = selectedCards.Count >= 2` — the "if you trashed 2 cards"
+#   equivalent is baked into requiring >= 2 picks (the printed cost is a flat
+#   "trashing 2 cards", not an up-to-N ladder like EX4-073's "up to 3").
+#   `if (trashed)`:
+#     - `if (HasMatchConditionPermanent(opp Digimon, IsMaxLevel))`: mandatory
+#       SelectPermanentEffect (Destroy mode, canNoSelect: false, maxCount
+#       Min(1, count)) over the highest-level opp Digimon.
+#     - UNCONDITIONALLY (outside the HasMatchConditionPermanent gate):
+#       IDestroySecurity(opp, count: 1, fromTop: true).
+#
+#   FAITHFULNESS FIX (2026-07-02, reviewer-directed): the security trash is
+#   NOT gated on an opponent Digimon existing — DCGO runs it unconditionally
+#   once `trashed == true`, independent of whether the delete sub-step found
+#   a target. A flat sibling list of
+#   [trash_selected_sources, select_opponent_permanent, delete_permanent,
+#   trash_top_security] is UNFAITHFUL: the engine's
+#   `install_select_opponent_permanent` short-circuits with a bare `return`
+#   when candidates is empty (code/digimon-engine/src/dsl_cards/step/
+#   selections.rs, `install_select_opponent_permanent`), which drops the
+#   ENTIRE composed tail — silently skipping the mandatory security trash
+#   whenever the opponent has 0 Digimon but security cards remain (reachable
+#   post-boardwipe / early game). The delete sub-step is therefore wrapped in
+#   its OWN nested `if any_permanent(...)` guard so it is a self-contained
+#   sub-run (`run_steps_with_runtime`, control_flow.rs), and
+#   `trash_top_security` is kept as a following OUTER sibling that always
+#   fires once `binding_count_eq(trashed, 2)` is true — matching BT20-020
+#   Clause 2's "outer if, inner select+delete, sibling tail" idiom and
+#   BT21-024's documented "outer-tail sibling" pattern (comment at
+#   BT21-024.yaml lines 31-38).
+#
+#   `select_own_sources` (min: 0, max: 2) mirrors DCGO's canNoSelect: true /
+#   canEndNotMax: false — the clause offers up to 2 picks but the player may
+#   decline entirely (0 picked); a partial pick (1 of 2 available) also
+#   yields `binding_count_eq(trashed, 2) == false`, correctly skipping the
+#   delete+security tail (DCGO's `trashed = selectedCards.Count >= 2` gate).
+#   This is the `select_own_sources min:0 + binding_count_eq` optional-cost
+#   idiom, sibling of BT12-031 Clause 0 Step B (a genuinely optional "you
+#   may" alt-cost gated the same way) and EX4-073 Clause C (same trash-then-
+#   gated-tail shape, though EX4-073's ladder is up-to-N with a `then:`-based
+#   per-trash loop rather than a flat 2-for-2 cost).
+#
+# ─── Implementation status ────────────────────────────────────────────────────
+#
+# | Card-text element                                                    | Status      |
+# |------------------------------------------------------------------------|-----------|
+# | Std digivolve Lv.5 Purple / Cost 4                                    | IMPLEMENTED |
+# | Alt digivolve Lv.6 w/TM trait w/o X-Antibody trait / Cost 1           | IMPLEMENTED |
+# | [When Digivolving] may free-play 1 TM-text Option from hand           | IMPLEMENTED |
+# | [When Digivolving] trash 2 TM-trait sources → delete highest-level    | IMPLEMENTED |
+# | opp Digimon (if any) → trash opp top security (unconditional once paid)| IMPLEMENTED |
+# | [When Attacking] same trash-2/delete/security trigger                 | IMPLEMENTED |
+
+card: EX7-073
+name: "BeelStarmon (X Antibody)"
+kind: digimon
+level: 6
+color: [purple]
+cost: 12
+dp: 12000
+traits: [Wizard, X Antibody, Three Musketeers]
+attribute: Virus
+
+alt_paths:
+  # ─── Standard digivolve: Lv.5 Purple / Cost 4 (official Bandai DB). ──────────
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - color_is: purple
+    cost: 4
+
+  # ─── Printed xros_req alt-source: Lv.6 base carrying the [Three Musketeers]
+  # trait but NOT the [X Antibody] trait, cost 1. DCGO's
+  # `ignoreDigivolutionRequirement: false` means the added predicate ADDS to
+  # (not replaces) the standard colour requirement — the Purple colour check
+  # still applies, matching the BT25-082 alt-source idiom (no
+  # `ignore_requirements`). ────────────────────────────────────────────────────
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - trait_has: "Three Musketeers"
+        - not: { trait_has: "X Antibody" }
+    cost: 1
+
+effects:
+  # ─── Clause 1 — [When Digivolving] may free-play 1 TM-text Option ───────────
+  #
+  # Printed: "[When Digivolving] You may use 1 Option card with [Three
+  # Musketeers] in its text from your hand without paying the cost."
+  #
+  # `optional: true` installs the outer accept/decline (DCGO SelectHandEffect
+  # canNoSelect: true). The inner `select_hand` picks an Option card whose
+  # printed text contains "Three Musketeers" (DCGO cardSource.HasText); once
+  # picked, `play_from_hand_free` plays it without paying its cost (DCGO
+  # PlayOptionCards(payCost: false)). BT25-082 Clause 1 sibling idiom
+  # (optional + select_hand + play_from_hand_free), adapted to `kind: option`.
+  - when: when_digivolving
+    optional: true
+    summary: "[When Digivolving] May play 1 Option card with [Three Musketeers] in its text from hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: option_pick
+          optional: true
+          cost: true
+          filter:
+            all_of:
+              - kind: option
+              - effect_text_contains: "Three Musketeers"
+          prompt: "Play 1 Option card with [Three Musketeers] in its text from your hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: option_pick }
+
+  # ─── Clause 2 — [When Digivolving] trash-2 TM sources → delete → security ───
+  #
+  # Printed: "[When Digivolving] [When Attacking] By trashing 2 cards with the
+  # [Three Musketeers] trait from this Digimon's digivolution cards, delete 1
+  # of your opponent's Digimon with the highest level, and trash their top
+  # security card."
+  #
+  # `select_own_sources` (min: 0, max: 2) over THIS Digimon's own digivolution
+  # sources carrying the [Three Musketeers] trait — mirrors DCGO's
+  # canNoSelect: true (decline entirely) / canEndNotMax: false (no stopping
+  # short of 2 once started; a lone available source still surfaces as an
+  # up-to-2 pick, per candidate availability). The `then:` tail gates on
+  # `binding_count_eq(trashed_sources_wd, 2)` — DCGO's `trashed =
+  # selectedCards.Count >= 2` — so a decline (0 picked) or a partial pick (1
+  # of 2 available) correctly skips the whole delete+security tail.
+  #
+  # Inside the count==2 gate: `trash_selected_sources` pays the cost first
+  # (DCGO ITrashDigivolutionCards runs before the `if (trashed)` branch).
+  # Then a NESTED `if any_permanent(opp Digimon)` guard wraps ONLY the
+  # mandatory delete sub-step (self-contained sub-run — control_flow.rs
+  # `run_steps_with_runtime`); `trash_top_security` sits as the following
+  # OUTER sibling so it fires unconditionally once the cost is paid, exactly
+  # matching DCGO's unconditional `IDestroySecurity` call outside the
+  # `HasMatchConditionPermanent` branch. This is the BT20-020 Clause 2 /
+  # BT21-024 "outer-tail sibling" idiom — see the FAITHFULNESS FIX note in
+  # the header above for why a flat sibling list is unfaithful here
+  # (`select_opponent_permanent`'s empty-candidate short-circuit drops any
+  # composed tail).
+  - when: when_digivolving
+    summary: "[When Digivolving] By trashing 2 [Three Musketeers]-trait own digivolution sources, delete 1 opp Digimon with the highest level (if any) and trash opp top security"
+    process:
+      - select_own_sources:
+          from: source
+          min: 0
+          max: 2
+          filter:
+            trait_has: "Three Musketeers"
+          bind_as: trashed_sources_wd
+          prompt: "Trash 2 cards with the [Three Musketeers] trait in this Digimon's digivolution cards"
+          then:
+            - if:
+                condition:
+                  binding_count_eq:
+                    binding: trashed_sources_wd
+                    n: 2
+                then:
+                  - trash_selected_sources: { source_refs: trashed_sources_wd }
+                  - if:
+                      condition:
+                        any_permanent:
+                          of: opponent
+                          zone: [battle_area]
+                          kind: digimon
+                      then:
+                        - select_opponent_permanent:
+                            bind_as: victim_wd
+                            filter:
+                              all_of:
+                                - kind: digimon
+                                - level_matches_aggregate:
+                                    selector: highest_level
+                                    of: opponent
+                            prompt: "Delete 1 of your opponent's Digimon with the highest level"
+                        - delete_permanent: { target: victim_wd }
+                  - trash_top_security: { of: opponent }
+
+  # ─── Clause 3 — [When Attacking] same trash-2/delete/security trigger ───────
+  #
+  # DCGO wires this as an INDEPENDENT ActivateClass at OnAllyAttack (a
+  # separate `#region When Attacking` block, not a shared timing list on one
+  # ActivateClass) — same body shape as Clause 2, so it is authored as its
+  # own triggered clause rather than `when: [when_digivolving,
+  # when_attacking]` on one process.
+  - when: when_attacking
+    summary: "[When Attacking] By trashing 2 [Three Musketeers]-trait own digivolution sources, delete 1 opp Digimon with the highest level (if any) and trash opp top security"
+    process:
+      - select_own_sources:
+          from: source
+          min: 0
+          max: 2
+          filter:
+            trait_has: "Three Musketeers"
+          bind_as: trashed_sources_wa
+          prompt: "Trash 2 cards with the [Three Musketeers] trait in this Digimon's digivolution cards"
+          then:
+            - if:
+                condition:
+                  binding_count_eq:
+                    binding: trashed_sources_wa
+                    n: 2
+                then:
+                  - trash_selected_sources: { source_refs: trashed_sources_wa }
+                  - if:
+                      condition:
+                        any_permanent:
+                          of: opponent
+                          zone: [battle_area]
+                          kind: digimon
+                      then:
+                        - select_opponent_permanent:
+                            bind_as: victim_wa
+                            filter:
+                              all_of:
+                                - kind: digimon
+                                - level_matches_aggregate:
+                                    selector: highest_level
+                                    of: opponent
+                            prompt: "Delete 1 of your opponent's Digimon with the highest level"
+                        - delete_permanent: { target: victim_wa }
+                  - trash_top_security: { of: opponent }

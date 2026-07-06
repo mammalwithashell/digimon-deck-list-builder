@@ -1,0 +1,272 @@
+# BT18-092 Zenith — Tamer, Black, Cost 4.
+# Traits: LIBERATOR
+#
+# Printed card text (data/card_bundles/BT18-092.md — official Bandai DB,
+# confirmed against card image BT18-092.webp):
+#
+#   [Start of Your Main Phase] By trashing 1 [Vemmon] in your hand,
+#   ＜Draw 1＞ (Draw 1 card from your deck.) and gain 1 memory.
+#   [Your Turn] When any of your Digimon attack, by suspending this Tamer
+#   and returning 2 [Vemmon] from that Digimon's digivolution cards to the
+#   bottom of the deck, ＜De-Digivolve 1＞ 1 of your opponent's Digimon.
+#   (Trash the top card. You can't trash past level 3 cards.)
+#
+# Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT18/Black/BT18_092.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OnStartMainPhase`:
+#   CanUseCondition: card on battle area + owner's turn.
+#   CanActivateCondition: `HasMatchConditionOwnersHand(CanSelectCardCondition)`
+#     where CanSelectCardCondition = `CardNames.Equals("Vemmon")` — at least 1
+#     Vemmon in hand.
+#   ActivateCoroutine: `SelectHandEffect` (canNoSelect: true — optional cost,
+#     maxCount: 1) filtered to Vemmon. `AfterSelectCardCoroutine` only runs
+#     when >= 1 card was picked: `AddMemory(1)` then `DrawClass(...).Draw()`.
+#   `SetUpActivateClass(..., -1, false, ...)` = not once-per-turn (no [OPT]
+#   printed), outer NOT forced-skippable beyond the inner SelectHandEffect's
+#   own canNoSelect.
+#
+# Clause 2 — `EffectTiming.OnAllyAttack`:
+#   CanUseCondition: `IsOwnerTurn(card)` +
+#     `CanTriggerOnPermanentAttack(hashtable, PermanentCondition)` where
+#     PermanentCondition = `IsPermanentExistsOnOwnerBattleAreaDigimon(permanent,
+#     card)` AND `permanent.DigivolutionCards.Count(CardNames == "Vemmon") >= 2`
+#     — the ATTACKER (owner's Digimon) must carry >= 2 Vemmon sources.
+#   CanActivateCondition: `CanActivateSuspendCostEffect(card)` — Zenith must be
+#     payable (unsuspended AND not CannotSuspend). This is a REAL payability
+#     pre-check DCGO runs BEFORE offering the trigger at all.
+#   ActivateCoroutine:
+#     1. `SuspendPermanentsClass([card.PermanentOfThisCard()]).Tap()` — suspend
+#        Zenith FIRST (the cost fires before the re-check / selection).
+#     2. Re-check `AttackingPermanent != null` + `TopCard != null` +
+#        `DigivolutionCards.Count(Contains "Vemmon") >= 2` +
+#        `DigivolutionCards.Count(CanSelectCardCondition) >= 2` (live
+#        re-validation after the suspend).
+#     3. `SelectCardEffect` over `AttackingPermanent.DigivolutionCards`
+#        filtered to Vemmon, `maxCount: 2`, `canEndNotMax: false` (must reach
+#        exactly 2 once any picks begin), `canNoSelect: () => true` (the whole
+#        thing is skippable at 0 picks — matches the outer optional cost).
+#     4. `ReturnToLibraryBottomDigivolutionCardsClass` — the 2 selected source
+#        cards go to the BOTTOM of the OWNER's deck (not the controller's, but
+#        for a Vemmon source under your own Digimon, owner == controller).
+#     5. IFF exactly 2 were selected+returned: `SelectPermanentEffect` over
+#        `IsPermanentExistsOnOpponentBattleAreaDigimon`, `maxCount: 1`,
+#        `canNoSelect: false` (mandatory — matching DCGO's outer
+#        `HasMatchConditionPermanent` gate that skips the whole select when no
+#        opponent Digimon exists), then `IDegeneration(selectedPermanent, 1,
+#        ...)` = De-Digivolve 1 (stop at level 3, per keyword semantics 16-11).
+#
+# Clause 3 — `EffectTiming.SecuritySkill`: `PlaySelfTamerSecurityEffect` —
+#   standard play-self-free security (BT21-102 / BT18-087 / BT22-084 idiom).
+#
+# ─── DSL modelling notes ─────────────────────────────────────────────────────
+#
+# Clause 1: `start_of_your_main_phase`, `optional: true` (the "By Xing" cost).
+#   `select_hand` (`optional: true`, `filter: { name_contains: "Vemmon" }`)
+#   binds `pick` -> `trash_from_hand_by_index` -> `gain_memory: 1` ->
+#   `draw: { of: you, count: 1 }`. DCGO's own execution order is AddMemory
+#   then Draw; the printed text lists Draw before "and gain 1 memory" but the
+#   two numeric effects are simultaneous with no observable ordering
+#   interaction (no card reads "memory changed" mid-resolution here), so
+#   DCGO's literal call order is followed per source priority (DCGO > printed
+#   surface ordering when there is no rules-visible difference). `condition:
+#   count_gte { of: you, zone: [hand], name_contains: Vemmon, n: 1 }`-style
+#   gating is naturally subsumed by `select_hand`'s own candidate scan (no
+#   Vemmon in hand -> the SelectHand step has zero candidates and — because it
+#   is the clause's own first step, and `optional: true`'s outer-prompt guard
+#   (`first_step_candidate_guard`) DOES cover `SelectHand` — no outer prompt
+#   or selection installs at all, matching DCGO's `HasMatchConditionOwnersHand`
+#   pre-check).
+#
+# Clause 2: `on_ally_attack`, `optional: true`, `active_when: { your_turn:
+#   true }`. `event_target` for `on_ally_attack` resolves to the ATTACKING
+#   permanent (confirmed: `TriggerSource::PlayerBattleAreaAttack { attacker,
+#   .. }` sets `event_permanent = Some(attacker)` in effect_queue.rs — the
+#   same binding BT25-016 / EX11-069 rely on).
+#
+#   PUPPETS-G023-style suspend-cost payability gate (2026-07-02 fix, reviewer
+#   directive): the printed activation cost "by suspending this Tamer" maps
+#   to DCGO's `CanActivateSuspendCostEffect(card)` — a REAL payability
+#   pre-check that must gate the trigger BEFORE it is even offered, exactly
+#   like BT13-101 / AD1-019 / BT21-084 / BT23-072. A plain `suspend: {
+#   target: source }` body step is idempotent (never aborts on an
+#   already-suspended carrier, ignores CannotSuspend), so it under-models the
+#   cost. Fixed by:
+#     (a) `condition: { source_is_unsuspended: true }` — mirrors
+#         `CanActivateSuspendCostEffect`'s "must currently be payable" check
+#         and (per the `effect_queue.rs` `needs_pre_cost_prompt` gate) blocks
+#         the outer accept/decline prompt itself from appearing when Zenith
+#         cannot pay (BT21-084's documented rationale: "Without this the
+#         outer-optional prompt fires even when [the Tamer] can't pay,
+#         violating DCGO semantics").
+#     (b) `activation_cost: { suspend_self: true }` as the FIRST process step
+#         (compile-validated leading position) — lifts onto
+#         `EffectBuilder::activation_cost`, which the queue drainer
+#         (`effect_queue.rs::run_queued_effect_inner`) invokes between the
+#         condition gate and the body process. `suspend_self_as_cost` (
+#         `effect_context/action/suspend.rs`) returns `false` — silently
+#         aborting the whole trigger, no body, no re-offer — when the source
+#         is already suspended OR carries `ModifierType::CannotSuspend`,
+#         exactly matching DCGO's `CanActivateSuspendCostEffect` -> `CanSuspend`.
+#   Together these close the reachable double-fire window a bare `suspend:`
+#   step left open: this clause is NOT once-per-turn (DCGO
+#   `SetUpActivateClass(..., -1, true, ...)`; no `once_per_turn` here either),
+#   so with two ally Digimon each carrying >=2 Vemmon attacking the same turn,
+#   the SECOND attack's trigger is now correctly refused once Zenith is
+#   already suspended from the first — matching DCGO's cost-unpayable
+#   refusal instead of granting a second free De-Digivolve.
+#
+#   Process (post-fix):
+#     1. `activation_cost: { suspend_self: true }` — the Tamer's own suspend
+#        cost, gated (see above), fires first exactly as DCGO's literal
+#        `SuspendPermanentsClass.Tap()` call order (and payability check).
+#     2. `select_own_sources: { from: event_target, filter: { name_contains:
+#        "Vemmon" }, min: 2, max: 2, bind_as: vemmon_sources }` — selects
+#        EXACTLY 2 Vemmon sources from the ATTACKER's digivolution stack (NOT
+#        Zenith's own stack — Zenith is a Tamer with no stack). `from:` is a
+#        `BindingRef` resolved via the shared `resolve_binding_ref`, which
+#        handles `CompiledBindingRef::EventTarget` generically (verified in
+#        `binding_ref.rs`), so `event_target` is a valid `from:` target the
+#        same way `EX8-070`'s `from: target_digi` targets a non-carrier
+#        permanent bound earlier in the same clause.
+#     3. `return_selected_sources_to_deck: { source_refs: vemmon_sources,
+#        position: bottom }` — BT13-075's precedent verb for exactly this
+#        "returning N sources to the BOTTOM of the deck" cost shape.
+#     4. `select_opponent_permanent: { bind_as: tgt, filter: { kind: digimon }
+#        }` — mandatory pick (BT23-096 idiom); the clause's own
+#        `condition: any_permanent { of: opponent, zone: [battle_area], kind:
+#        digimon }` (ANDed with the new `source_is_unsuspended` gate via
+#        `all_of`) governs whether this step (and therefore the whole
+#        `<De-Digivolve 1>` tail) is offered at all, matching DCGO's outer
+#        `HasMatchConditionPermanent` skip when no opponent Digimon exists.
+#     5. `de_digivolve: { target: tgt, amount: 1, stop_at_level: 3 }`.
+#
+#   **Documented engine-idiom note (not a faithfulness gap):** unlike Clause
+#   1's `select_hand` (which IS covered by `first_step_candidate_guard`),
+#   `SelectOwnSources` as a clause's first non-cost step is explicitly NOT
+#   covered by that guard (`lower_triggered.rs` comment, citing EX10-034):
+#   "for an OPTIONAL TRIGGERED ability... fire and SILENTLY SKIP... when
+#   fewer than N sources exist — it triggers on an event, so it can't loop."
+#   Here the outer accept/decline prompt (`SelectionKind::TriggerOrder` — the
+#   leading `activation_cost` step routes through the queue's pre-cost-prompt
+#   path, `effect_queue.rs::needs_pre_cost_prompt`, distinct from the bare
+#   `SelectionKind::Replacement` shape `st18_14.rs` uses) installs once an
+#   ally attacks on the controller's turn AND Zenith is unsuspended — it is
+#   NOT additionally pre-gated on the
+#   attacker's LIVE VEMMON COUNT the way DCGO's `CanUseCondition` pre-checks
+#   it (the DSL substrate has no predicate to count NAMED digivolution
+#   sources on a bound permanent (`event_target`) ahead of a cost step). If
+#   the player accepts and the attacker turns out to have < 2 live Vemmon
+#   sources, the suspend cost is still paid (Zenith becomes suspended), and
+#   `select_own_sources` (min 2, max 2) installs a `SourceMulti` prompt
+#   offering whatever live candidates DO exist (0 or 1) with NO PASS (PASS
+#   only becomes legal once `picked.len() >= min`). If exactly 1 candidate
+#   exists, the player is walked through that 1 forced pick (staged, not yet
+#   physically moved — `install_source_multi_selection`,
+#   `selections.rs:2837-2842`); the pool is then exhausted
+#   (`candidates.is_empty()`) with `picked.len() (1) < min (2)`, so the
+#   RECURSIVE re-install returns WITHOUT installing any further selection and
+#   WITHOUT invoking the `then:`-equivalent tail — the staged pick is
+#   discarded (never physically returned to the deck), and the De-Digivolve
+#   step never runs. With 0 candidates, the very first install call already
+#   sees `candidates.is_empty()` and returns immediately (matches EX10-034's
+#   `ex10_034_clause_b_no_source_multi_when_zero_own_sources`). Either way the
+#   NET observable result (no source physically returned, no De-Digivolve)
+#   matches DCGO, but the suspend-cost payability window — and, with exactly
+#   1 live Vemmon, a forced-but-inert intermediate pick — is wider than
+#   DCGO's true pre-check on the ATTACKER'S Vemmon count specifically (the
+#   suspend-payability half of DCGO's gate — whether ZENITH can pay — IS now
+#   closed by the `source_is_unsuspended` condition + `activation_cost` pair
+#   above). This is surfaced here for visibility per the no-approximations
+#   policy's spirit (no invented predicate, no stubbed count) — not filed as
+#   a blocking DSL/engine gap since the DESIGNED idiom already covers the
+#   exact-N-sources-from-an-event-bound-permanent case identically to the
+#   from-self case (EX10-034 precedent), and no player choice is
+#   auto-resolved or hidden: every pick the player makes is a real, fully
+#   exposed `pending_selection`.
+#
+# Clause 3: `on_security`, `play_from_security: {}`.
+
+card: BT18-092
+name: Zenith
+kind: tamer
+color: [black]
+cost: 4
+traits: [LIBERATOR]
+
+effects:
+  # ─── Clause 1: [Start of Your Main Phase] trash 1 Vemmon -> draw 1 + gain 1 memory ─
+  - when: start_of_your_main_phase
+    optional: true
+    summary: "[Start of Your Main Phase] By trashing 1 [Vemmon] in hand, Draw 1 and gain 1 memory"
+    process:
+      # `cost: true` — the printed text is "By trashing 1 [Vemmon]... <Draw
+      # 1>... and gain 1 memory." Declining this prompt declines the whole
+      # cost, so the trash, draw, and memory gain must NOT run (matches the
+      # BT24-008 idiom; G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE).
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            name_contains: "Vemmon"
+          prompt: "Trash 1 [Vemmon] in your hand to draw 1 and gain 1 memory"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - gain_memory: 1
+      - draw: { of: you, count: 1 }
+
+  # ─── Clause 2: [Your Turn] ally attacks -> suspend + return 2 Vemmon -> De-Digivolve 1 opp Digimon ─
+  - when: on_ally_attack
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn] When your Digimon attacks, by suspending this Tamer and returning 2 [Vemmon] from that Digimon's digivolution cards to the bottom of the deck, De-Digivolve 1 an opponent's Digimon"
+    # `source_is_unsuspended: true` — DCGO `CanActivateSuspendCostEffect(card)`
+    # payability pre-check: Zenith must currently be unsuspended for the
+    # suspend-self cost to even be offered. Combined (via `all_of`) with the
+    # existing opponent-Digimon existence gate that governs the trailing
+    # mandatory De-Digivolve target pick.
+    # Offer-time gate is PAYABILITY ONLY (DCGO CanUseCondition/
+    # CanActivateCondition never pre-check opponent-Digimon existence; the
+    # De-Digivolve target select simply fizzles with zero candidates after
+    # the cost is paid — silently dropping the legal cost-paying action by
+    # pre-gating on the opponent's board was a faithfulness divergence,
+    # review 2026-07-03).
+    condition:
+      source_is_unsuspended: true
+    process:
+      # Cost: suspend this Tamer via the gated activation-cost step
+      # (PUPPETS-G023 / BT13-101 / BT21-084 idiom). Must be the leading body
+      # step (compile-validated); lifts onto `EffectBuilder::activation_cost`
+      # so the queue drainer can silently abort the whole trigger (no body,
+      # no re-offer) when the source is already suspended or CannotSuspend —
+      # exactly matching DCGO's `CanActivateSuspendCostEffect`.
+      - activation_cost: { suspend_self: true }
+      - select_own_sources:
+          from: event_target
+          bind_as: vemmon_sources
+          min: 2
+          max: 2
+          filter:
+            name_contains: "Vemmon"
+          prompt: "Return 2 [Vemmon] from the attacking Digimon's digivolution cards to the bottom of the deck"
+      - return_selected_sources_to_deck:
+          source_refs: vemmon_sources
+          position: bottom
+      - select_opponent_permanent:
+          bind_as: tgt
+          filter: { kind: digimon }
+          prompt: "Select 1 of your opponent's Digimon to De-Digivolve 1"
+      - de_digivolve:
+          target: tgt
+          amount: 1
+          stop_at_level: 3
+
+  # ─── Clause 3: [Security] Play this card without paying the cost ────────────
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

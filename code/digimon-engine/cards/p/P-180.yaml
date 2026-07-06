@@ -1,0 +1,105 @@
+card: P-180
+name: "Bind Red Trigger"
+kind: option
+color: [red]
+cost: 6
+traits: [Three Musketeers]
+
+# "While you have a [Three Musketeers] trait Digimon, you can ignore this
+# card's color requirements." — a LIVE board condition (re-evaluated at
+# play time by `option_color_requirement_bypass`), not an unconditional
+# always-true marker (contrast P-206 / P-236's self-trait Use Req., which
+# IS unconditionally true because those cards themselves carry the matching
+# trait).
+use_requirement:
+  any_permanent:
+    of: you
+    zone: [battle_area]
+    kind: digimon
+    trait_has: "Three Musketeers"
+
+effects:
+  # ─── Clause 0: Trigger [OnDigivolutionCardTrashed] — own-card observer ─────
+  # "When effects trash this card from digivolution cards, delete 1 of your
+  # opponent's 7000 DP or lower Digimon."
+  - scope: inherited
+    when: on_digivolution_card_trashed
+    condition:
+      all_of:
+        - event_target_owner: you
+        - trashed_source_card_id_is: P-180
+    summary: "[Trigger] When effects trash this card from digivolution cards, delete 1 opp Digimon DP<=7000"
+    process:
+      - select_opponent_permanent:
+          bind_as: trigger_victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 7000
+          prompt: "Delete 1 of your opponent's Digimon with 7000 DP or less"
+      - delete_permanent: { target: trigger_victim }
+
+  # ─── Clause 1: Board-gated ignore-color (battle-area / face-up scope) ─────
+  # "While you have a [Three Musketeers] trait Digimon, you can ignore this
+  # card's color requirements." The from-hand play-time bypass is carried by
+  # the card-level `use_requirement` above (re-evaluated live); this
+  # flood_gate additionally covers the battle-area / face-up scope with the
+  # SAME live board condition (BT24-090/094/095/097/100/091 idiom).
+  - kind: flood_gate
+    scope: face_up
+    active_when:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: digimon
+        trait_has: "Three Musketeers"
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "P-180" }
+    summary: "While you have a [Three Musketeers] Digimon, ignore this card's color requirements"
+
+  # ─── Clause 2: [Main] Trash opp top security; place self under a TM Digimon ─
+  # "[Main] Trash your opponent's top security card. Then, place this card as
+  # the bottom digivolution card of 1 of your [Three Musketeers] trait
+  # Digimon." No "may" anywhere in this clause — both the security trash and
+  # the placement are mandatory. The placement pick is a mandatory
+  # `select_own_permanent`; if no [Three Musketeers] Digimon exists, the
+  # pick installs no prompt (zero legal candidates) and the tail
+  # (`place_self_under_permanent`) never runs — the Option then disposes to
+  # trash via the standard post-[Main] pipeline (no approximation: the
+  # engine's own established mandatory-select-with-empty-candidates fizzle
+  # contract, identical to every other mandatory `select_own_permanent`).
+  - when: main_from_hand
+    summary: "[Main] Trash opponent's top security; then place this card as the bottom digivolution card of 1 of your [Three Musketeers] Digimon"
+    process:
+      - trash_top_security: { of: opponent }
+      - select_own_permanent:
+          bind_as: tm_host
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: "Three Musketeers"
+          prompt: "Place this card as the bottom digivolution card of 1 of your [Three Musketeers] Digimon"
+      - place_self_under_permanent:
+          target: tm_host
+          face_down: false
+
+  # ─── Clause 3: [Security] (inherited) Delete opp Digimon with highest DP ───
+  # "Security Effect [Security] Delete 1 of your opponent's Digimon with the
+  # highest DP." Mandatory (no "may"); the `highest_dp` aggregate selector
+  # scopes to the opponent's battle area (BT18-013 idiom). Fizzles silently
+  # if the opponent has no Digimon.
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Delete 1 of your opponent's Digimon with the highest DP"
+    process:
+      - select_opponent_permanent:
+          bind_as: sec_victim
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_gte:
+                  aggregate:
+                    selector: highest_dp
+                    scope: opponent
+          prompt: "Delete 1 of your opponent's Digimon with the highest DP"
+      - delete_permanent: { target: sec_victim }

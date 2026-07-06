@@ -200,6 +200,7 @@ impl Game {
             pending_interactive_digivolve_reduction: 0,
             pending_interactive_option_use_reduction: 0,
             interactive_option_use_reducer_prompted: false,
+            pending_cost_reduction_amount_override: None,
             pending_digivolve_route_choice: None,
             replacement_fired: std::collections::HashSet::new(),
             in_replacement_commit: false,
@@ -230,6 +231,8 @@ impl Game {
             draining_deferred: 0,
             play_enters_suspended: false,
             on_play_suppressor: None,
+            pending_play_effect_initiated: false,
+            pending_hand_discard: None,
             until_condition_dirty: false,
             until_condition_last_cycle_evaluations: 0,
             until_condition_total_evaluations: 0,
@@ -335,6 +338,7 @@ impl Game {
         self.pending_interactive_digivolve_reduction = 0;
         self.pending_interactive_option_use_reduction = 0;
         self.interactive_option_use_reducer_prompted = false;
+        self.pending_cost_reduction_amount_override = None;
         self.replacement_fired = std::collections::HashSet::new();
         self.in_replacement_commit = false;
         self.effect_source_player = None;

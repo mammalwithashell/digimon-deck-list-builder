@@ -229,6 +229,21 @@ impl Game {
         self.place_as_bottom_source_observed(source, target, target.player, face_down)
     }
 
+    /// Insert a card as `target`'s TOP digivolution source — directly
+    /// beneath the active top card (`Permanent::push_as_top_source`, DCGO
+    /// `AddDigivolutionCardsTop`). The top-position sibling of
+    /// `place_as_bottom_source`; identical source zones, `face_down`
+    /// semantics (and the Security face-up caveat), and lifecycle.
+    /// G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05).
+    pub fn place_as_top_source(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        face_down: bool,
+    ) -> bool {
+        self.place_as_top_source_observed(source, target, target.player, face_down)
+    }
+
     pub fn place_permanent_as_bottom_sources(
         &mut self,
         source: PermanentHandle,
@@ -294,6 +309,94 @@ impl Game {
             return false;
         };
         target_perm.card_sources.splice(0..0, cards);
+        true
+    }
+
+    /// Return one digivolution source from `perm`'s stack to its owner's deck
+    /// (bottom when `to_bottom`, else top; Digi-Eggs route to the digitama
+    /// deck). This is a *return*, NOT a trash — it does not fire
+    /// `OnDigivolutionCardTrashed`. Bottom-route returns fire
+    /// `OnDigivolutionCardReturnedToDeckBottom` (BT21-058 / BT18-065's
+    /// bottom-scoped observer); top-of-deck returns fire nothing. If removing
+    /// the source exposes a Digi-Egg top card, the permanent is deleted (same
+    /// exposed-egg cleanup as the trash path).
+    ///
+    /// Returns `true` when the source handle was found and moved.
+    pub(crate) fn return_card_source_to_deck(
+        &mut self,
+        perm: PermanentHandle,
+        card: CardHandle,
+        to_bottom: bool,
+    ) -> bool {
+        let removed = {
+            let permanent = match self
+                .player_mut(perm.player)
+                .battle_area
+                .get_mut(perm.index as usize)
+            {
+                Some(p) => p,
+                None => return false,
+            };
+            let pos = match permanent
+                .card_sources
+                .iter()
+                .position(|c| c.handle() == card)
+            {
+                Some(pos) => pos,
+                None => return false,
+            };
+            permanent.card_sources.remove(pos)
+        };
+        let returned_card = removed.handle();
+
+        // Deck routing (deck bottom = index 0; Digi-Eggs -> digitama deck).
+        let owner = removed.owner;
+        let is_egg = removed.card_kind(&self.card_data) == CardKind::DigiEgg;
+        {
+            let player = self.player_mut(owner);
+            let deck = if is_egg {
+                &mut player.digitama_deck
+            } else {
+                &mut player.deck
+            };
+            if to_bottom {
+                deck.insert(0, removed);
+            } else {
+                deck.push(removed);
+            }
+        }
+
+        // Exposed-Digi-Egg cleanup (mirrors the facade trash path).
+        let exposed = self
+            .player(perm.player)
+            .battle_area
+            .get(perm.index as usize)
+            .is_some_and(|permanent| {
+                permanent.top_card().card_kind(&self.card_data) == CardKind::DigiEgg
+            });
+        if exposed {
+            self.delete_permanent_with_effects(perm);
+        }
+
+        // G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM: bottom-route
+        // observer. The host is the permanent's (still-standing) top card; if
+        // the return exposed a Digi-Egg and the permanent was deleted, fall
+        // back to the returned card so the observer carries a stable handle.
+        if to_bottom {
+            let host_card = self
+                .player(perm.player)
+                .battle_area
+                .get(perm.index as usize)
+                .map(|permanent| permanent.top_card().handle())
+                .unwrap_or(returned_card);
+            self.fire_digivolution_card_returned_to_deck_bottom(
+                perm.player,
+                perm,
+                host_card,
+                returned_card,
+                crate::trigger_context::EventCause::DeckBottom,
+            );
+        }
         true
     }
 }

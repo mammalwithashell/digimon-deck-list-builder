@@ -251,6 +251,7 @@ fn trash_from_top_moves_deck_to_trash() {
             &CompiledStep::TrashFromTop {
                 of: CompiledPlayerRef::You,
                 count: 1,
+                count_fn: None,
             },
             &mut ctx,
             &mut b,

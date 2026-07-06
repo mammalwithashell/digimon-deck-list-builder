@@ -1,0 +1,115 @@
+card: EX1-066
+name: "Analog Youth"
+kind: tamer
+color: [white]
+cost: 2
+
+# ─── Clause 1: [On Play] reveal 3, add 1 Digimon, trash the rest ───────────
+#
+# Printed text (official Bandai DB / data/card_bundles/EX1-066.md):
+#   "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card among
+#    them to your hand. Trash the remaining cards."
+#
+# DCGO (EX1_066.cs, OnEnterFieldAnyone): CardEffectCommons.
+#   SimplifiedRevealDeckTopCardsAndSelect(revealCount: 3, conditions: [
+#     canTargetCondition: cardSource.IsDigimon, mode: AddHand, maxCount: 1 ],
+#     remainingCardsPlace: Trash). Same composite idiom as BT21-097/BT25-098's
+#   "reveal N, add 1 [filter] to hand, trash the rest" clause, generalized to
+#   `kind: digimon` (no trait restriction).
+#
+# `optional: false` on `select_reveal` (matching the BT25-098 note verbatim):
+# the printed text has no "may" — the pick is MANDATORY whenever >=1 revealed
+# card is a Digimon (DCGO EX1_066.cs calls SimplifiedRevealDeckTopCardsAndSelect
+# without canNoSelect, which defaults to false = forced pick). The
+# zero-candidate case needs no `optional` escape: `select_reveal` fizzles via
+# its own is_empty() early-return. `per_selected: { selection: revealed }`
+# then routes every un-picked card (all 3 if nothing was eligible) to trash.
+#
+# ─── Clause 2: [All Turns] Lv.5+-with-source deletion → may suspend for ────
+#     memory + hatch
+#
+# Printed text:
+#   "[All Turns] When one of your level 5 or higher Digimon with a
+#    digivolution card is deleted, you may suspend this Tamer. If you do,
+#    gain 1 memory, then hatch 1 Digi-Egg card to your Breeding Area if it's
+#    empty."
+#
+# Official Q&A (card_bundles/EX1-066.md): "Yes, you can [suspend even if you
+# can't hatch]. You can't hatch a Digi-Egg card, however." — i.e. the suspend
+# + memory gain are NOT gated on `can_hatch`; only the hatch sub-step is.
+#
+# DCGO (EX1_066.cs, OnDestroyedAnyone):
+#   PermanentCondition: IsPermanentExistsOnOwnerBattleAreaDigimon (your own
+#     Digimon) && !HasNoDigivolutionCards (has >=1 digivolution card) &&
+#     Level >= 5.
+#   ActivateCoroutine: SuspendPermanentsClass(self).Tap() (unconditional once
+#     the optional activation-cost gate is accepted) -> AddMemory(1) ->
+#     if (CanHatch) HatchDigiEggClass(...).Hatch().
+#
+# DSL mapping:
+#   - event_target_owner: you            — "one of YOUR ... Digimon"
+#   - event_target_kind: digimon         — "Digimon" (not Tamer/Option)
+#   - event_target_level_gte: 5          — "level 5 or higher"
+#   - event_target_has_digivolution_cards: true
+#                                          — "with a digivolution card"
+#   - source_is_unsuspended: true        — the suspend cost must be payable
+#     (parity with BT8-094's on_any_deletion clause; `suspend_self_as_cost`
+#     also fails closed if already suspended, this is belt-and-suspenders for
+#     mask fidelity).
+#   - optional: true                      — "you may suspend this Tamer"
+#     (`.optional()` surfaces PASS BEFORE the activation cost — see
+#     RUST_ENGINE_API.md §"Activation-cost helpers").
+#   - activation_cost: { suspend_self: true }
+#                                          — "by suspending this Tamer"
+#   - gain_memory: 1                      — unconditional once the cost is
+#     paid (no can_hatch gate — matches Q&A + DCGO's unconditional AddMemory
+#     call before the CanHatch check).
+#   - if: { condition: { can_hatch: you }, then: [ hatch: { of: you } ] }
+#                                          — "hatch ... if it's empty" is
+#     ALSO enforced by the engine's `Player::hatch` (a no-op when the
+#     breeding slot is occupied or the digitama deck is empty), so the
+#     `can_hatch` gate here is a faithfulness mirror of DCGO's explicit
+#     `CanHatch` check rather than a strict runtime requirement.
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal top 3; add 1 Digimon card to hand; trash the rest"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            kind: digimon
+          prompt: "Add 1 Digimon card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - per_selected:
+          selection: revealed
+          bind_as: rest
+          body:
+            - trash_from_reveal: { of: you, card: rest }
+
+  - when: on_any_deletion
+    active_when: { all_turns: true }
+    optional: true
+    summary: "[All Turns] When your Lv.5+ Digimon with a digivolution card is deleted, may suspend self for 1 memory + hatch if empty"
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: digimon
+        - event_target_level_gte: 5
+        - event_target_has_digivolution_cards: true
+        - source_is_unsuspended: true
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+      - if:
+          condition: { can_hatch: you }
+          then:
+            - hatch: { of: you }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

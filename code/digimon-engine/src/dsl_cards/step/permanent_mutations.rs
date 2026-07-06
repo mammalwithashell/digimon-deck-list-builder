@@ -41,6 +41,46 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
+        // `delete_for_cost_reduction`: delete AS A COST and record the deleted
+        // permanent's PRINTED play cost (snapshotted PRE-removal, rule 25 — DCGO
+        // `permanent.CostJustBeforeRemoveField`) into the Game override so the
+        // cost-reduction continuation credits it as the VARIABLE reduction amount
+        // (BT13-103). `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`.
+        CompiledStep::DeleteForCostReduction { target } => {
+            if let Some(ResolvedBinding::Permanent(h)) = resolve_binding_ref(target, ctx, bindings)
+            {
+                let existed = ctx
+                    .game
+                    .player(h.player)
+                    .battle_area
+                    .get(h.index as usize)
+                    .is_some();
+                if existed {
+                    // Pre-removal printed play cost of the deleted permanent's
+                    // top card (the same reduction DCGO reads via
+                    // `CostJustBeforeRemoveField`). DCGO credits nothing for a
+                    // 0-cost deletion (`if (reduceCost <= 0) yield break`).
+                    let cost = ctx
+                        .game
+                        .player(h.player)
+                        .battle_area
+                        .get(h.index as usize)
+                        .map(|perm| perm.top_card().play_cost(&ctx.game.card_data))
+                        .unwrap_or(0) as i32;
+                    let dp = ctx.game.effective_dp(h);
+                    ctx.delete_permanent(h);
+                    bindings.record_deleted(h, dp);
+                    if cost > 0 {
+                        let acc = ctx
+                            .game
+                            .pending_cost_reduction_amount_override
+                            .get_or_insert(0);
+                        *acc += cost;
+                    }
+                }
+            }
+            true
+        }
         CompiledStep::DeleteBoundPermanents { binding } => {
             if let Some(mut handles) = bindings.get_permanent_list(binding) {
                 handles.sort_by_key(|h| (h.player, h.index));

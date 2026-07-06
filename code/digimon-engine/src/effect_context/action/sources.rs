@@ -126,6 +126,25 @@ impl<'a> EffectContext<'a> {
             .place_as_bottom_source_observed(source, target, self.player, face_down)
     }
 
+    /// Insert a card as `target`'s TOP digivolution source — directly
+    /// beneath the active top card. Top-position sibling of
+    /// `place_as_bottom_source` (same source zones, same Progress-gate
+    /// omission rationale, same `face_down` semantics / Security caveat,
+    /// same observer lifecycle via the shared
+    /// `Game::place_as_source_observed` body). DCGO
+    /// `Permanent.AddDigivolutionCardsTop`. Consumers: EX9-074 Kimeramon,
+    /// BT13-088 Belphemon: Sleep Mode.
+    /// G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05).
+    pub fn place_as_top_source(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        face_down: bool,
+    ) -> bool {
+        self.game
+            .place_as_top_source_observed(source, target, self.player, face_down)
+    }
+
     pub fn place_hand_card_under_tamer(
         &mut self,
         hand_index: usize,
@@ -886,6 +905,13 @@ impl<'a> EffectContext<'a> {
     /// ordering of the remaining sources; and this is a *return*, NOT a trash,
     /// so it does **not** fire `OnDigivolutionCardTrashed`.
     ///
+    /// When `to_bottom` is true it DOES fire
+    /// `OnDigivolutionCardReturnedToDeckBottom` (carrying the former host + the
+    /// returned card as event context) — the observer BT21-058 / BT18-065
+    /// listen on ("when any [Vemmon] return to the bottom of the deck from this
+    /// Digimon's digivolution cards"). Top-of-deck returns fire nothing (the
+    /// printed observer is bottom-scoped).
+    ///
     /// Returns `true` when the source handle was found and moved; `false` if the
     /// permanent slot is gone or the card is not in its stack.
     pub fn return_card_source_to_deck(
@@ -894,29 +920,9 @@ impl<'a> EffectContext<'a> {
         card: CardHandle,
         to_bottom: bool,
     ) -> bool {
-        let removed = {
-            let permanent = match self
-                .game
-                .player_mut(perm.player)
-                .battle_area
-                .get_mut(perm.index as usize)
-            {
-                Some(p) => p,
-                None => return false,
-            };
-            let pos = match permanent
-                .card_sources
-                .iter()
-                .position(|c| c.handle() == card)
-            {
-                Some(pos) => pos,
-                None => return false,
-            };
-            permanent.card_sources.remove(pos)
-        };
-        self.move_card_to_deck(removed, to_bottom);
-        let _ = self.cleanup_exposed_battle_area_digi_egg(perm);
-        true
+        // Tier-2 delegation (facade placement rule, RUST_ENGINE_API.md §3):
+        // the mutation + observer dispatch live in game_actions/sources.rs.
+        self.game.return_card_source_to_deck(perm, card, to_bottom)
     }
 
     /// `Vec`-taking convenience wrapper over `return_card_source_to_deck`,

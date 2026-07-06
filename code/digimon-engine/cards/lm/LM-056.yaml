@@ -1,0 +1,95 @@
+card: LM-056
+name: "Image Training"
+kind: option
+color: [purple, blue]
+cost: 2
+
+# "While you don't have [Image Training] in the battle area, you can ignore
+# this card's color requirements."
+#
+# `use_requirement` is consulted by the Option action mask and execution path
+# before normal color matching. `no_permanent` scans your battle area only,
+# matching the printed "don't have ... in the battle area" condition.
+use_requirement:
+  no_permanent:
+    of: you
+    card_number_is: LM-056
+
+effects:
+  # [Main] Reveal the top 2 cards of your deck. Add 1 blue or purple card among
+  # them to the hand. Return the rest to the bottom of deck. Then, place this
+  # card in the battle area.
+  - when: main_from_hand
+    optional: false
+    summary: "[Main] Reveal top 2; add 1 blue or purple card; place rest bottom; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 2
+      - select_reveal:
+          of: you
+          bind_as: picked
+          optional: false
+          filter:
+            any_of:
+              - color_is: purple
+              - color_is: blue
+          prompt: "Add 1 blue or purple card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  # [Main] <Delay> 1 of your Digimon may digivolve into a blue or purple
+  # Digimon card in your hand for its digivolution cost, reduced by 2.
+  #
+  # `trigger: delayed` — player-visible [Main]-phase activation (PUPPETS-G009):
+  # the controller trashes the parked Option to activate the body on a later
+  # main phase; the body never auto-fires (RULES_CONTEXT 16-16; processing
+  # optional, never the placing turn).
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> 1 of your Digimon may digivolve into a blue or purple Digimon in hand, cost -2"
+    process:
+      - select_own_permanent:
+          bind_as: target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+          prompt: "Choose 1 of your Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - color_is: purple
+                  - color_is: blue
+          prompt: "Choose a blue or purple Digimon card in your hand to digivolve into"
+      - effect_initiated_digivolve:
+          target: target
+          from_hand: evo
+          cost: { reduce: 2 }
+          ignore_requirements: false
+
+  - scope: inherited
+    when: on_security
+    optional: false
+    summary: "[Security] Reveal top 2; add 1 blue or purple card; bottom rest; place self in battle area"
+    process:
+      - reveal_top_deck:
+          of: you
+          count: 2
+      - select_reveal:
+          of: you
+          bind_as: sec_picked
+          optional: false
+          filter:
+            any_of:
+              - color_is: purple
+              - color_is: blue
+          prompt: "Add 1 blue or purple card to your hand"
+      - add_to_hand_from_reveal: { of: you, card: sec_picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}

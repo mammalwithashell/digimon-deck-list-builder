@@ -109,7 +109,26 @@ fn fingerprint(all_card_data: &HashMap<String, CardData>) -> u64 {
         d.security_text.len().hash(&mut h);
         d.effect_class_name.len().hash(&mut h);
         d.evo_costs.len().hash(&mut h);
-        d.dna_costs.len().hash(&mut h);
+        // `dna_costs` are hashed by discriminating CONTENT, not just length.
+        // The effect-initiated DNA verbs (G-ENGINE-DNA-PRINTED-COST /
+        // -RECIPE-ENFORCEMENT) read `dna_costs[].memory_cost` and each
+        // requirement's level + colors at resolution time, so two synthetic DBs
+        // that differ ONLY in a DNA cost's amount or recipe (a common test
+        // shape) MUST re-key — otherwise a cache hit serves the wrong DNA cost.
+        // `dna_costs` is tiny (≤2 entries), so folding the fields is cheap.
+        // (`DnaCost`/`DnaRequirement` don't derive `Hash`, so project the fields.)
+        for cost in &d.dna_costs {
+            cost.memory_cost.hash(&mut h);
+            for req in [&cost.requirement1, &cost.requirement2] {
+                req.level.hash(&mut h);
+                (req.card_colors.len() as u8).hash(&mut h);
+                for c in &req.card_colors {
+                    (*c as u8).hash(&mut h);
+                }
+                req.name_contains.len().hash(&mut h);
+                req.text_contains.len().hash(&mut h);
+            }
+        }
         d.digixros_aliases.len().hash(&mut h);
         d.also_treated_as.len().hash(&mut h);
         sum = sum.wrapping_add(h.finish());

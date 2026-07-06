@@ -1,0 +1,34 @@
+{
+  "card_id": "EX12-040",
+  "card_index": 40,
+  "card_name_eng": "Salamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_040",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    2
+  ],
+  "type_eng": [
+    "Mammal",
+    "VB"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "[Your Turn] When this Digimon would digivolve into a Digimon card with the [Holy Beast] or [VB] trait, reduce the cost by 1.",
+  "inherited_effect_description_eng": "＜Barrier＞ (When this Digimon would be deleted in battle, by trashing your top security card, it isn't deleted.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 2,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] [Nyaromon]/Lv.2 w/[VB] trait: Cost 0"
+}

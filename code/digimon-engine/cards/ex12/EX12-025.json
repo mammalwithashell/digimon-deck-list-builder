@@ -1,0 +1,35 @@
+{
+  "card_id": "EX12-025",
+  "card_index": 25,
+  "card_name_eng": "Gawappamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_025",
+  "play_cost": 5,
+  "dp": 5000,
+  "level": 4,
+  "card_kind": 0,
+  "rarity": 0,
+  "card_colors": [
+    1
+  ],
+  "type_eng": [
+    "Cyborg",
+    "Shambala",
+    "SW"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [On Deletion] You may return 1 of your opponent's level 4 or lower Digimon to the hand.",
+  "inherited_effect_description_eng": "[When Attacking] [Once Per Turn] If your hand has 7 or fewer cards, ＜Draw 1＞ (Draw 1 card from your deck.).",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 1,
+      "level": 3,
+      "memory_cost": 2
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.3 w/[Shambala] trait: Cost 2"
+}

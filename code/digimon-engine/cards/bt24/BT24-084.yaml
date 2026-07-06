@@ -1,0 +1,105 @@
+# BT24-084 Inori Misono — Tamer, Cost 3, Yellow. Traits: [TS].
+#
+# Printed text (official Bandai DB — data/card_bundles/BT24-084.md):
+#
+#   [Start of Your Main Phase] If you have 4 or less memory, gain 1 memory.
+#   [All Turns] When your security stack is removed from, by suspending this
+#   Tamer, 1 of your [Aegiomon] may digivolve into a Digimon card with
+#   [Aegiochusmon] in its name in the hand without paying the cost.
+#
+# Inherited Security Effect: [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Yellow/BT24_084.cs
+#
+# ─── DCGO crosscheck ──────────────────────────────────────────────────────────
+#
+# Clause 0 — `EffectTiming.OnStartMainPhase`. `ActivateClass` with
+#   `maxCountPerTurn = -1` (unlimited — no [Once Per Turn] tag),
+#   `isOptional = false`. `ActivateCoroutine` checks `MemoryForPlayer <= 4`
+#   (per the Official Q&A: "when the memory gauge is at 4 or further to the
+#   right on your side") and gains 1 memory. Not player-optional — the
+#   condition itself gates activation, not a "you may" choice.
+#
+# Clause 1 — `EffectTiming.OnLoseSecurity`. `maxCountPerTurn = -1` (again
+#   unlimited; the practical once-per-turn ceiling comes from the suspend
+#   cost — an already-suspended Tamer can't pay it again until it untaps),
+#   `isOptional = true` ("1 of your [Aegiomon] MAY digivolve").
+#   `CanUseCondition` gates on `CanTriggerWhenLoseSecurity` (own security
+#   removal) — modeled as `on_own_security_removed` + `active_when:
+#   { all_turns: true }` (AD1-017 / BT20-083 idiom). `CanActivateCondition`
+#   gates on `CanActivateSuspendCostEffect` (source unsuspended) — modeled as
+#   `condition: { source_is_unsuspended: true }` (AD1-019 idiom).
+#   `ActivateCoroutine`:
+#     1. `SuspendPermanentsClass(...).Tap()` — pays "by suspending this
+#        Tamer" as `activation_cost: { suspend_self: true }` (first process
+#        step, lifted out to the clause's activation cost — AD1-019 idiom).
+#     2. `SelectPermanentEffect` with `CanSelectPermanentCondition` =
+#        `permanent.TopCard.EqualsCardName("Aegiomon")` and `canNoSelect:
+#        true` — modeled as `select_own_permanent` filtered to
+#        `name_contains: "Aegiomon"`, `optional: true`.
+#     3. `DigivolveIntoHandOrTrashCard` with `cardCondition` =
+#        `cardSource.ContainsCardName("Aegiochusmon")`, `isHand: true`,
+#        `payCost: false`, `ignoreDigivolutionRequirementFixedCost: -1`
+#        (i.e. digivolution requirements are NOT ignored — only the cost is
+#        waived) — modeled as `select_hand` filtered to `name_contains:
+#        "Aegiochusmon"` followed by `effect_initiated_digivolve` with
+#        `cost: free`, `ignore_requirements: false` (BT17-097 / BT24-089
+#        idiom).
+#
+# Clause 2 — `EffectTiming.SecuritySkill`. `CardEffectFactory.
+#   PlaySelfTamerSecurityEffect(card)` — canonical Tamer [Security] play-self
+#   idiom (AD1-019 / AD1-021 / P-241 shape): `when: on_security`,
+#   `play_from_security: {}`, not optional.
+
+card: BT24-084
+name: Inori Misono
+kind: tamer
+color: [yellow]
+cost: 3
+traits: [TS]
+
+effects:
+  # ─── Clause 0 — [Start of Your Main Phase] gain 1 memory at <=4 ────────────
+  - when: start_of_your_main_phase
+    condition: { memory_lte: 4 }
+    summary: "[Start of Your Main Phase] If you have 4 or less memory, gain 1 memory"
+    process:
+      - gain_memory: 1
+
+  # ─── Clause 1 — [All Turns] own-security-removed suspend digivolve ────────
+  - when: on_own_security_removed
+    active_when: { all_turns: true }
+    optional: true
+    condition: { source_is_unsuspended: true }
+    summary: "[All Turns] When your security stack is removed from, by suspending this Tamer, 1 of your [Aegiomon] may digivolve into an [Aegiochusmon]-name hand card without paying the cost"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_own_permanent:
+          bind_as: aegiomon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - zone: [battle_area]
+              - name_contains: "Aegiomon"
+          prompt: "1 of your [Aegiomon] may digivolve"
+      - select_hand:
+          of: you
+          bind_as: evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - name_contains: "Aegiochusmon"
+          prompt: "Choose a Digimon card with [Aegiochusmon] in its name to digivolve into"
+      - effect_initiated_digivolve:
+          target: aegiomon
+          from_hand: evo
+          cost: free
+          ignore_requirements: false
+
+  # ─── Clause 2 — Inherited [Security]: play this card without paying cost ──
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

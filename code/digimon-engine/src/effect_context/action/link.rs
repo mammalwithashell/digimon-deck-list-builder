@@ -212,6 +212,87 @@ impl<'a> EffectContext<'a> {
         }
     }
 
+    /// EX7-048 Gundramon — pay a `WhenWouldLeaveBattleArea` replacement by
+    /// trashing 1 Option from `host`'s DIGIVOLUTION cards ("by trashing 1 Option
+    /// card from this Digimon's digivolution cards, they don't leave"). The
+    /// carrier-scoped, digivolution-only sibling of
+    /// [`Self::trash_own_link_card_and_cancel_leave`]: the player chooses WHICH
+    /// Option (exposed to the RL action space, never auto-selected), the chosen
+    /// card is trashed via `Game::trash_specific_source_card` (firing
+    /// `OnDigivolutionCardTrashed`), then the parked leave is cancelled — which
+    /// prevents the replacement SUBJECT's leave (the framework applies the
+    /// outcome to the subject, not the carrier).
+    ///
+    /// Candidates are the below-top digivolution sources that are Option cards
+    /// (DCGO `thisCardPermanent.DigivolutionCards.Where(IsOption)`). The caller
+    /// (replacement preflight) MUST gate on ≥1 such Option so this is never
+    /// reached with nothing to trash; with exactly one a single-option selection
+    /// still installs (faithful to DCGO's `SelectCardEffect` flow — the choice is
+    /// surfaced even when forced). Clone-safe: parks a `LinkCardLeaveSelection`
+    /// frame with mode `TrashDigivolutionOptionAndCancel`.
+    /// `G-DSL-PROTECT-OTHER-BY-TRASH-OPTION`.
+    pub fn trash_own_digivolution_option_and_cancel_leave(&mut self, host: PermanentHandle) {
+        let Some(perm) = self
+            .game
+            .player(host.player)
+            .battle_area
+            .get(host.index as usize)
+        else {
+            return;
+        };
+        let cards: Vec<crate::card_source::CardHandle> = own_digivolution_option_handles(
+            perm,
+            &self.game.card_data,
+        );
+        if cards.is_empty() {
+            return;
+        }
+        let labels: Vec<String> = cards
+            .iter()
+            .map(|h| {
+                self.game
+                    .card_data_for_handle(*h)
+                    .map(|d| d.card_name.clone())
+                    .unwrap_or_else(|| "Option".to_string())
+            })
+            .collect();
+
+        let cards_for_resume = cards.clone();
+        let prov = crate::resume::ResumeProvenance {
+            source_card: self.source_card,
+            source_permanent: self.source_permanent,
+            source_kind: self.source_kind,
+            controller: self.player,
+            override_pin: self.override_selecting_player(),
+        };
+
+        self.select_effect_choice(
+            "Choose 1 Option to trash from this Digimon's digivolution cards (it doesn't leave)",
+            labels,
+            move |cb_ctx, idx| {
+                let Some(card) = cards.get(idx).copied() else {
+                    return;
+                };
+                if cb_ctx.game.trash_specific_source_card(host, card) {
+                    cb_ctx.cancel_leave();
+                }
+            },
+        );
+        if self.game.pending_selection.is_some() {
+            self.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                frames: vec![crate::resume::ResumeFrame::LinkCardLeaveSelection(
+                    crate::resume::LinkCardLeaveSelectionState {
+                        prov,
+                        host,
+                        cards: cards_for_resume,
+                        mode: crate::resume::LinkCardLeaveMode::TrashDigivolutionOptionAndCancel,
+                        outer_conts: Vec::new(),
+                    },
+                )],
+            });
+        }
+    }
+
     /// Facet #9 — link a chosen card from a non-battle-area zone (hand /
     /// trash / a permanent's digivolution sources) onto `host`'s linked cards
     /// (DCGO `ILinkCard.LinkCard` with `root != None`). The card is lifted out
@@ -227,4 +308,24 @@ impl<'a> EffectContext<'a> {
     ) -> bool {
         self.game.link_chosen_card_into_host(host, card, from)
     }
+}
+
+/// The below-top digivolution sources of `perm` that are Option cards — the
+/// candidate set for [`EffectContext::trash_own_digivolution_option_and_cancel_leave`]
+/// (EX7-048 "1 Option card from this Digimon's digivolution cards"). The top
+/// card is excluded (it is the Digimon itself, not a digivolution source).
+fn own_digivolution_option_handles(
+    perm: &crate::permanent::Permanent,
+    data: &[crate::card_data::CardData],
+) -> Vec<CardHandle> {
+    let n = perm.card_sources.len();
+    if n <= 1 {
+        return Vec::new();
+    }
+    perm.card_sources
+        .iter()
+        .take(n - 1)
+        .filter(|s| s.is_option(data))
+        .map(|s| s.handle())
+        .collect()
 }

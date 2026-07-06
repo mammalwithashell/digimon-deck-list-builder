@@ -592,6 +592,7 @@ fn observer_cost_reduction_preserves_compiled_optional_flag() {
         false,
         Some(observer),
         None,
+        None,
     );
 
     assert!(

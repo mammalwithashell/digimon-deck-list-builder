@@ -1,0 +1,105 @@
+# EX10-040 DemiDevimon — Digimon, Lv.3, Purple, DP 1000, Cost 3.
+# Traits: Evil. Form: Rookie. Attribute: Virus.
+# Standard digivolve (cards.json evo_costs / official DB): Lv.2 Purple / Cost 0.
+#
+# Printed card text (data/card_bundles/EX10-040.md + card image — verbatim):
+#
+#   [Start of Your Main Phase] If your opponent has 10 or fewer cards in
+#   their trash, trash the top 2 cards of both players' decks. Then, if
+#   they have 10 or more cards in their trash, gain 1 memory.
+#
+#   Inherited [When Attacking] [Once Per Turn] Trash the top card of both
+#   players' decks.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/EX10/Purple/EX10_040.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Clause 1 — [Start of Your Main Phase] (EffectTiming.OnStartMainPhase):
+#   `SetUpActivateClass(CanActivateCondition, ActivateCoroutine, -1, false, ...)`
+#   — isOptional: false (mandatory; no "may" in the printed text).
+#   `CanActivateCondition` only requires the carrier to exist on the
+#   controller's battle area + it being the controller's turn — the
+#   "opponent trash <= 10" gate lives INSIDE `ActivateCoroutine`, so the
+#   trigger always fires but the mill body is itself conditional.
+#   `ActivateCoroutine`:
+#     if (card.Owner.Enemy.TrashCards.Count <= 10):
+#       mill 2 from EACH player's deck (turn-player-then-opponent order),
+#       each individually gated by `player.LibraryCards.Count >= 1`
+#       (partial mill on a near-empty deck; matches `trash_from_top`'s
+#       natural stop-on-empty semantics — no extra gate needed).
+#     THEN — unconditionally re-evaluated, independent of the mill branch —
+#     if (card.Owner.Enemy.TrashCards.Count >= 10): AddMemory(1).
+#   The memory check is a FRESH RE-READ of the opponent trash count taken
+#   AFTER the mill runs (the mill can push it from <=10 up to >=10 in the
+#   same resolution — printed "Then, if..." confirms sequential
+#   re-evaluation). Authored as two sequential `if` steps: the first gates
+#   `trash_from_top` (you, opponent) on `count_lte { of: opponent, zone:
+#   trash }`; the second — evaluated AFTER the mill steps, so it reads the
+#   post-mill trash — gates `gain_memory: 1` on `count_gte { of: opponent,
+#   zone: trash }`.
+#
+# Clause 2 (inherited) — [When Attacking] [Once Per Turn]
+#   (EffectTiming.OnAllyAttack): `SetUpActivateClass(..., 1, false, ...)` —
+#   isOptional: false (mandatory; no "may"). `ActivateCoroutine` mills 1
+#   from EACH player's deck, same per-player `LibraryCards.Count >= 1`
+#   gate, with NO condition on trash counts at all. → inherited, when:
+#   when_attacking, once_per_turn: true, optional: false;
+#   trash_from_top(you, 1) + trash_from_top(opponent, 1).
+
+card: EX10-040
+name: DemiDevimon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 1000
+traits: [Evil]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0
+
+effects:
+  # ─── Clause 1 — [Start of Your Main Phase]: conditional mill 2 both decks,
+  #     then conditional (re-read AFTER mill) memory gain ─────────────────
+  - when: start_of_your_main_phase
+    optional: false
+    summary: "[Start of Your Main Phase] If opponent trash <= 10, trash top 2 of both players' decks. Then, if opponent trash >= 10, gain 1 memory"
+    process:
+      - if:
+          condition:
+            count_lte:
+              filter:
+                of: opponent
+                zone: [trash]
+              n: 10
+          then:
+            - trash_from_top: { of: you, count: 2 }
+            - trash_from_top: { of: opponent, count: 2 }
+      # Re-evaluated AFTER the mill above — the DCGO-critical nuance: this
+      # reads the opponent's trash count POST-mill, not a cached pre-mill
+      # snapshot (the mill can push opponent trash from <10 to >=10 in the
+      # same resolution).
+      - if:
+          condition:
+            count_gte:
+              filter:
+                of: opponent
+                zone: [trash]
+              n: 10
+          then:
+            - gain_memory: 1
+
+  # ─── Clause 2 — Inherited [When Attacking][Once Per Turn]: unconditional
+  #     mandatory mill 1 of both players' decks ───────────────────────────
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: false
+    summary: "Inherited [When Attacking][Once Per Turn] Trash the top card of both players' decks"
+    process:
+      - trash_from_top: { of: you, count: 1 }
+      - trash_from_top: { of: opponent, count: 1 }

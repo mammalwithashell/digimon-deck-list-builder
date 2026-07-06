@@ -1,0 +1,109 @@
+# BT14-084 T.K. Takaishi — Tamer, Yellow, Cost 3.
+#
+# Printed card text (per-card JSON `code/digimon-engine/cards/bt14/BT14-084.json`
+# — authoritative; verbatim match against the printed card image and the
+# official Bandai DB bundle `data/card_bundles/BT14-084.md`):
+#
+#   [On Play] By returning the top card of your security stack to your hand,
+#   you may place 1 yellow card with the [Vaccine] trait from your hand at
+#   the bottom of your security stack.
+#   [Your Turn] When a card is added to your security stack, you may suspend
+#   this Tamer to gain 1 memory.
+#
+# Inherited: Security Effect [Security] Play this card without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT14/Yellow/BT14_084.cs
+#
+# DCGO crosscheck (three timings):
+#   OnEnterFieldAnyone — unconditional `AddHandCards(SecurityCards[0])` +
+#     `IReduceSecurity` (the "By returning..." cost; gated only on
+#     `SecurityCards.Count >= 1`, NOT a player choice — CanActivateCondition).
+#     Then, only if a legal hand card exists, an optional (canNoSelect: true)
+#     SelectHandEffect over `CardTraits.Contains("Vaccine") &&
+#     HasCardColor(Yellow)`, placing the pick at the BOTTOM
+#     (AddSecurityCard(toTop: false)).
+#   OnAddSecurity — CanUseCondition: IsExistOnBattleArea + IsOwnerTurn +
+#     CanTriggerWhenAddSecurity(player == card.Owner) (own security, [Your
+#     Turn] only). CanActivateCondition: CanActivateSuspendCostEffect
+#     (payable suspend cost). ActivateCoroutine: SuspendPermanentsClass(...)
+#     .Tap() then AddMemory(1).
+#   SecuritySkill — CardEffectFactory.PlaySelfTamerSecurityEffect(card).
+#
+# This is the BT8-090 Kari Kamiya twin for the [Your Turn] own-security-added
+# observer (identical text, identical DCGO shape) — see
+# code/digimon-engine/cards/bt8/BT8-090.yaml.
+#
+# Modelling notes:
+#   - "By returning..." is a mandatory cost with no player choice (DCGO gates
+#     only on security.Count >= 1) — `add_top_security_to_hand` runs
+#     unconditionally as the first process step, matching the BT25-037 /
+#     BT24-034 / ST23-03 exemplar pattern for this exact printed-text idiom.
+#   - "you may place..." is the real optional choice — `select_hand` with
+#     `optional: true` exposes PASS.
+#   - DCGO's `CardSource.CardTraits` (the "[Vaccine] trait" check) is a UNION
+#     of Form_ENG + Attribute_ENG + Type_ENG (CardSource.cs region "traits").
+#     The Rust production loader (`CardData::load_from_str`) mirrors this
+#     exactly: `traits = form_eng + attribute_eng + type_eng`. So "[Vaccine]
+#     trait" is `trait_has: Vaccine`, NOT the DSL's `attribute_is` leaf
+#     (which is currently unconditionally false for every card — orthogonal
+#     engine gap, not touched by this card).
+#   - Placement is at the BOTTOM only (no top/bottom choice, unlike
+#     BT25-037) — `place_on_security { position: bottom }`. No printed
+#     face-up override, so `face_up: false` (default).
+
+card: BT14-084
+name: T.K. Takaishi
+kind: tamer
+color: [yellow]
+cost: 3
+
+effects:
+  - when: on_play
+    condition: { security_count_gte: 1 }
+    summary: "[On Play] Add top security to hand; then you may place 1 yellow [Vaccine] card from hand at the bottom of security"
+    process:
+      - add_top_security_to_hand: { of: you }
+      - select_hand:
+          of: you
+          bind_as: pick
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - color_is: yellow
+              - trait_has: Vaccine
+          prompt: "You may place 1 yellow [Vaccine] card from your hand at the bottom of your security stack"
+      - if:
+          condition: { binding_present: pick }
+          then:
+            - place_on_security:
+                of: you
+                source: { card: { binding: pick, zone: hand } }
+                position: bottom
+                face_up: false
+
+  # ─── [Your Turn] own-security-added observer ──────────────────────────────
+  #
+  # Printed: "[Your Turn] When a card is added to your security stack, you
+  # may suspend this Tamer to gain 1 memory." — verbatim BT8-090 clause; see
+  # code/digimon-engine/cards/bt8/BT8-090.yaml for the full derivation
+  # comment (on_added_to_security fires off TriggerSource::SecurityPlaced,
+  # scoped to the security owner's battle area; active_when: your_turn
+  # encodes [Your Turn]; optional: true exposes the accept/decline PASS for
+  # "you may"; source_is_unsuspended mirrors DCGO's
+  # CanActivateSuspendCostEffect so the suspend cost is only offered when
+  # payable; the suspend cost lifts to EffectBuilder::activation_cost
+  # (suspend self), then the body gains 1 memory).
+  - when: on_added_to_security
+    active_when: { your_turn: true }
+    optional: true
+    summary: "[Your Turn] When a card is added to your security, may suspend self to gain 1 memory"
+    condition: { source_is_unsuspended: true }
+    process:
+      - activation_cost: { suspend_self: true }
+      - gain_memory: 1
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

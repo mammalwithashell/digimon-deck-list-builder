@@ -64,6 +64,7 @@ fn play_from_hand_step_with_free_cost_delta_consumes_hand_and_keeps_memory() {
         of: CompiledPlayerRef::You,
         hand_index: CompiledBindingRef::Named("idx".into()),
         cost_delta: Some(CompiledCostDelta::Free),
+        bind_as: None,
     };
 
     {
@@ -112,6 +113,7 @@ fn play_from_hand_step_parks_tail_behind_pending_cost_reducer() {
             of: CompiledPlayerRef::You,
             hand_index: CompiledBindingRef::Named("idx".into()),
             cost_delta: Some(CompiledCostDelta::Printed),
+            bind_as: None,
         },
         CompiledStep::GainMemory(3),
     ];

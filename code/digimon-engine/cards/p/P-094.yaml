@@ -1,0 +1,212 @@
+# P-094 Destromon — Digimon, Lv.5, Black, DP 10000, Cost 10.
+# Form: Ultimate. Type/Traits: Unknown. Attribute: Unknown.
+# Evo: Lv.4 Black / Cost 5 (official Bandai DB).
+#
+# ─── Printed text (official Bandai DB — data/card_bundles/P-094.md) ────────────
+#
+#   [On Play][When Digivolving] Delete up to 3 play cost's total worth of your
+#     opponent's Digimon and Tamers. For each [Vemmon] in this Digimon's
+#     digivolution cards, add 1 to this effect's play cost maximum.
+#
+#   Special Play Condition — DigiXros -1: [Snatchmon] × 1 + [Vemmon] × 4
+#     When this would be played, you may place specified cards from your
+#     hand/battle area under it. Each one reduces the cost.
+#
+#   [Inherited] [Opponent's Turn][Once Per Turn] When one of your opponent's
+#     Digimon attacks, by returning 2 [Vemmon] from any of your [Galacticmon]'s
+#     digivolution cards to the bottom of the deck, change the attack target to
+#     this Digimon.
+#
+# ─── DCGO C# reference ────────────────────────────────────────────────────────
+#   DCGO/Assets/Scripts/CardEffect/P/Black/P_094.cs
+#
+# ─── Source-priority cross-check (printed text + general_rule.pdf > DCGO) ──────
+#
+# Printed text governs; DCGO matches it on every clause:
+#
+# Block "Deletion Play Cost Calculation" (DCGO `maxCost()`):
+#     maxCost = 3 + card.PermanentOfThisCard().DigivolutionCards.Count(EqualsCardName("Vemmon"))
+#   → authored as the budget FormulaSpec
+#       { base: 3, per: { source_stack_count: { filter: { name_is: "Vemmon" } } }, delta: 1 }
+#   DCGO `EqualsCardName` is an EXACT name match → `name_is` (not `name_contains`).
+#
+# Block On Play / When Digivolving (DCGO two ActivateClass at OnEnterFieldAnyone,
+#   gated by CanTriggerOnPlay / CanTriggerWhenDigivolving; shared body):
+#     - SharedCanSelectPermanentCondition: opp battle-area permanent that
+#       (IsDigimon || IsTamer) AND HasPlayCost AND GetCostItself <= maxCost().
+#     - SelectPermanentEffect mode Destroy, multi-pick, canNoSelect: false,
+#       canEndNotMax: true, running-sum cap `sumCost <= maxCost()`; each candidate
+#       pre-capped by `GetCostItself <= maxCost()` (no single permanent over cap).
+#   → `select_opponent_play_cost_budget` with the scaling `play_cost_budget`
+#     formula. `min_picks: 1` mirrors DCGO `canNoSelect: false` (the outer
+#     ActivateClass only fires when ≥1 candidate exists — SharedCanActivate — and
+#     the pick is then mandatory; the running-sum + per-card cap semantics let the
+#     player stop after 1). `filter` accepts BOTH Digimon and Tamer (printed
+#     "Digimon and Tamers"). Body deletes each picked permanent.
+#
+# Block Inherited — Switch Attack Target (DCGO OnAllyAttack ActivateClass,
+#   isOptional: true, [Once Per Turn], IsInheritedEffect, gated by
+#   IsOpponentTurn + CanTriggerOnPermanentAttack(IsOpponentPermanent)):
+#     - CanActivate: ≥1 own [Galacticmon] permanent whose DigivolutionCards
+#       contain ≥2 [Vemmon] (CardNames.Contains — includes DigiXros/also-named).
+#     - Select 1 such [Galacticmon] (SelectPermanentEffect, maxCount Min(1, N)).
+#     - Select 2 [Vemmon] from THAT [Galacticmon]'s DigivolutionCards.
+#     - ReturnToLibraryBottomDigivolutionCards(selected 2) → deck bottom.
+#     - If exactly 2 returned: SwitchDefender to this Digimon.
+#   → `scope: inherited`, `when: on_opponent_attack`, `once_per_turn`, optional,
+#     `active_when: { opponents_turn: true }`. Cost = choose 1 own [Galacticmon]
+#     (select_own_permanent) then return 2 [Vemmon] from ITS sources
+#     (select_own_sources with `from:` the chosen Galacticmon — a FOREIGN carrier
+#     binding; the source-multi candidate universe scans all own permanents and
+#     the `from` binding restricts to that carrier). Then redirect the attack to
+#     self (`redirect_attack_target` defaults to the carrier when new_target is
+#     omitted). `min: 2 / max: 2` makes the 2-Vemmon return a mandatory cost —
+#     when fewer than 2 exist the outer condition already gated the clause out.
+#
+# ─── Implementation status (faithfulness diff) ────────────────────────────────
+#
+# | Card-text element                                                        | Status |
+# |--------------------------------------------------------------------------|--------|
+# | Standard digivolve Lv.4 Black / Cost 5                                   | IMPLEMENTED (alt_paths kind: digivolve) |
+# | DigiXros -1: [Snatchmon]×1 + [Vemmon]×4 (materials Digimon-only)         | IMPLEMENTED (alt_paths kind: digixros, per-material kind: digimon) |
+# | [On Play][When Digivolving] delete opp Digi/Tamers ≤ (3 + #Vemmon) cost  | IMPLEMENTED (select_opponent_play_cost_budget w/ scaling formula) |
+# | [Inherited][Opp Turn][OPT] return 2 Vemmon from a Galacticmon → redirect | IMPLEMENTED (select_own_permanent + select_own_sources from: + return_to_deck bottom + redirect_attack_target) |
+
+card: P-094
+name: "Destromon"
+kind: digimon
+level: 5
+color: [black]
+cost: 10
+dp: 10000
+# Type/Traits + Attribute are "Unknown" on this card (no printed trait line).
+
+alt_paths:
+  # Standard digivolve: Lv.4 Black / Cost 5 (official Bandai DB evo circle).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 5
+
+  # DigiXros -1: [Snatchmon] × 1 + [Vemmon] × 4. Each material reduces the play
+  # cost by 1 (metadata reduce_cost_per_card: 1). Materials come from hand OR
+  # battle area (DCGO CanSelectCardCondition: Owner == card.Owner). DCGO gates
+  # every material on `cardSource.IsDigimon` — so each filter requires
+  # `kind: digimon` in addition to the name (EX10-056 idiom). No `cost:` override
+  # → base_cost = printed play cost 10; the five `cost_delta: -1` slots supply
+  # the DigiXros -1 per-material reduction.
+  - kind: digixros
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - name_is: "Snatchmon"
+        zones: [hand, battle_area]
+        cost_delta: -1
+      - filter:
+          all_of:
+            - kind: digimon
+            - name_is: "Vemmon"
+        repeat: { min: 4, max: 4 }
+        zones: [hand, battle_area]
+        cost_delta: -1
+
+effects:
+  # ─── [On Play][When Digivolving] — budgeted delete ──────────────────────────
+  #
+  # Printed: "Delete up to 3 play cost's total worth of your opponent's Digimon
+  # and Tamers. For each [Vemmon] in this Digimon's digivolution cards, add 1 to
+  # this effect's play cost maximum."
+  #
+  # The budget is 3 + (# [Vemmon] in this Digimon's digivolution cards),
+  # evaluated at run time by the scaling `play_cost_budget` formula (the substrate
+  # widening that carries this card: `play_cost_budget` is now a FormulaSpec, the
+  # play-cost analog of `dp_budget`). `filter` admits Digimon AND Tamers.
+  # `min_picks: 1` — the outer `condition` only lets the clause fire when ≥1
+  # opponent permanent is within the budget, and the pick is then mandatory
+  # (DCGO canNoSelect: false); the running-sum + per-card cap let the player stop
+  # after the first pick.
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete opponent Digimon/Tamers with total play cost up to 3 + number of [Vemmon] in this Digimon's digivolution cards"
+    condition:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        any_of:
+          - kind: digimon
+          - kind: tamer
+    process:
+      - select_opponent_play_cost_budget:
+          play_cost_budget:
+            base: 3
+            per:
+              source_stack_count:
+                filter: { name_is: "Vemmon" }
+            delta: 1
+          min_picks: 1
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          bind_as: deleted_targets
+          prompt: "Delete opponent Digimon/Tamers with total play cost up to 3 + [Vemmon] in this Digimon's digivolution cards"
+          then:
+            - delete_bound_permanents: { binding: deleted_targets }
+
+  # ─── Inherited — [Opponent's Turn][OPT] return 2 Vemmon → redirect attack ────
+  #
+  # Printed (inherited): "[Opponent's Turn][Once Per Turn] When one of your
+  # opponent's Digimon attacks, by returning 2 [Vemmon] from any of your
+  # [Galacticmon]'s digivolution cards to the bottom of the deck, change the
+  # attack target to this Digimon."
+  #
+  # Cost-then-effect. The outer `condition` requires an own [Galacticmon] carrying
+  # ≥2 [Vemmon] sources so the return cost is payable (DCGO CanActivateCondition).
+  # 1) Choose 1 such [Galacticmon] (select_own_permanent).
+  # 2) Return exactly 2 [Vemmon] from THAT Galacticmon's digivolution cards to the
+  #    deck bottom. `select_own_sources` with `from: chosen_galacticmon` points at
+  #    a FOREIGN carrier (not this Digimon) — the source-multi candidate universe
+  #    scans every own permanent and the `from` binding restricts picks to the
+  #    chosen Galacticmon's stack. `min: 2 / max: 2` is a mandatory cost.
+  # 3) Redirect the attack to this Digimon (redirect_attack_target defaults to the
+  #    inherited carrier when `new_target` is omitted).
+  - scope: inherited
+    when: on_opponent_attack
+    once_per_turn: true
+    optional: true
+    active_when: { opponents_turn: true }
+    summary: "Inherited: [Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, return 2 [Vemmon] from 1 of your [Galacticmon]'s digivolution cards to deck bottom → switch the attack target to this Digimon"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        all_of:
+          - name_contains: "Galacticmon"
+          - source_count:
+              filter: { name_contains: "Vemmon" }
+              at_least: 2
+    process:
+      # 1) Choose 1 of your [Galacticmon] that carries ≥2 [Vemmon] sources.
+      - select_own_permanent:
+          bind_as: chosen_galacticmon
+          filter:
+            all_of:
+              - name_contains: "Galacticmon"
+              - source_count:
+                  filter: { name_contains: "Vemmon" }
+                  at_least: 2
+          prompt: "Choose 1 of your [Galacticmon] to return 2 [Vemmon] from"
+      # 2) Return 2 [Vemmon] from that Galacticmon's digivolution cards to deck
+      #    bottom (the return-cost). `from:` points at the chosen foreign carrier.
+      - select_own_sources:
+          from: chosen_galacticmon
+          filter: { name_contains: "Vemmon" }
+          min: 2
+          max: 2
+          bind_as: returned_vemmon
+          prompt: "Return 2 [Vemmon] from this [Galacticmon]'s digivolution cards to the bottom of the deck"
+          then:
+            - return_selected_sources_to_deck:
+                source_refs: returned_vemmon
+                position: bottom
+            # 3) Switch the attack target to this Digimon.
+            - redirect_attack_target: {}

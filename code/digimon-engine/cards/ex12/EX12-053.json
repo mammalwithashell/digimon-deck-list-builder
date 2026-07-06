@@ -1,0 +1,34 @@
+{
+  "card_id": "EX12-053",
+  "card_index": 53,
+  "card_name_eng": "Hagurumon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_053",
+  "play_cost": 3,
+  "dp": 2000,
+  "level": 3,
+  "card_kind": 0,
+  "rarity": 1,
+  "card_colors": [
+    5
+  ],
+  "type_eng": [
+    "Machine",
+    "ME"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
+  "effect_description_eng": "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the [Machine], [Cyborg] or [Mutant] trait and 1 card with the [ME] trait among them to the hand. Return the rest to the bottom of the deck.",
+  "inherited_effect_description_eng": "＜Blocker＞ (This Digimon can block in the blocker timing.)",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 5,
+      "level": 2,
+      "memory_cost": 0
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.2 w/[ME] trait: Cost 0"
+}

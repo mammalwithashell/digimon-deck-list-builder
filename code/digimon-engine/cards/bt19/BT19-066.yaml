@@ -1,0 +1,94 @@
+# BT19-066 Gizamon — Digimon, Lv.3, Purple/Black, DP 1000, cost 3.
+# Traits: Sea Animal. Attribute: Virus. Form: Rookie.
+#
+# Printed card text (official Bandai DB / cards.json):
+#   [On Play] By trashing 1 card with the [Composite] or [Wicked God] trait in
+#     your hand, ＜Draw 2＞ (Draw 2 cards from your deck.)
+#   Inherited Effect: ＜Blocker＞ (This Digimon can block in the blocker
+#     timing.)
+#   Digivolve: [Pagumon]: Cost 0.
+#
+# Standard digivolve circles (official Bandai DB — data/card_bundles/BT19-066.md):
+#   Purple Lv.2 / cost 1
+#   Black Lv.2 / cost 1
+# `data/cards.json::evo_costs` only carries the Purple circle (API-ingest
+# drop of the second circle, per CLAUDE.md source-priority note); both are
+# authored explicitly below from the official bundle.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT19/Purple/BT19_066.cs
+#   - Digivolution Condition (EffectTiming.None):
+#     AddSelfDigivolutionRequirementStaticEffect, top card name ==
+#     "Pagumon", digivolutionCost 0, ignoreDigivolutionRequirement false.
+#   - On Play (EffectTiming.OnEnterFieldAnyone):
+#     CanActivateCondition = IsExistOnBattleAreaDigimon(card) [self still on
+#     field — automatically true for a normal OnPlay path] AND
+#     HasMatchConditionOwnersHand(card, HasCompositeInTrait) [>=1 hand card
+#     with Composite OR Wicked God trait]. SelectHandEffect Mode.Discard,
+#     canNoSelect: true (declinable even with a valid target), maxCount 1.
+#     AfterSelectCardCoroutine: if (cardSources.Count > 0) Draw 2 — the draw
+#     only fires when a card was actually trashed.
+#   - Blocker - ESS (EffectTiming.None): BlockerSelfStaticEffect(isInherited:
+#     true) — unconditional inherited Blocker grant.
+
+card: BT19-066
+name: Gizamon
+kind: digimon
+level: 3
+color: [purple, black]
+cost: 3
+dp: 1000
+traits: [Sea Animal]
+attribute: Virus
+
+alt_paths:
+  # [Digivolve] [Pagumon]: Cost 0 — activated alt-digivolve from a named base.
+  - kind: digivolve
+    from: { name_is: "Pagumon" }
+    cost: 0
+  # Standard printed routes (official bundle — both digivolve circles; the
+  # DSL fixture loader has no printed evo_costs, so both are authored here;
+  # see BT19-035/BT19-073 for the same convention in this set).
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 1
+
+effects:
+  # ─── [On Play] By trashing 1 [Composite]/[Wicked God] hand card, Draw 2 ────
+  #
+  # `select_hand` with `optional: true, cost: true` is the "By Xing, do Y"
+  # cost-then-effect idiom (AD1-002 / BT13-088): declining aborts the Draw 2
+  # entirely. `cost: true` also matches DCGO's canNoSelect: true (declinable
+  # even with a legal target). The engine's `first_step_candidate_guard`
+  # (lower_triggered.rs) auto-suppresses the whole prompt when no hand card
+  # matches the filter — mirroring DCGO's CanActivateCondition
+  # HasMatchConditionOwnersHand gate; no explicit `condition:` block needed.
+  - when: on_play
+    summary: "[On Play] By trashing 1 [Composite]/[Wicked God] hand card, Draw 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            any_of:
+              - trait_has: "Composite"
+              - trait_has: "Wicked God"
+          prompt: "You may trash 1 [Composite] or [Wicked God] trait card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - draw: { of: you, count: 2 }
+
+  # ─── Inherited: ＜Blocker＞ ─────────────────────────────────────────────────
+  #
+  # Unconditional inherited Blocker grant (DCGO BlockerSelfStaticEffect,
+  # isInherited: true). Common idiom — see ST23-10/ST23-11/P-215/EX8-046/ST5-11.
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "Inherited <Blocker>"

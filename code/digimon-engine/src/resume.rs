@@ -285,6 +285,19 @@ pub enum FieldPermanentPostAction {
     /// exactly like `AddTopToHand` / the redirect arm. Host pick is mandatory
     /// (`select_own_permanent(.., false, ..)`) → decline `None`.
     AbsorbStandingAsLink { source: PermanentHandle },
+    /// `trash_link_card_of_own_digimon` (BT25-073): the picked permanent is one
+    /// of the controller's Digimon with ≥1 link card. Install the SECOND
+    /// selection over its link cards (`TrashLinkCardOfDigimonSelection`) carrying
+    /// the frame's `inner_tail` as the cost-gated tail. `optional` makes the
+    /// link-card pick declinable. `G-DSL-LINK-TRASH-AS-COST`.
+    SelectAndTrashLinkCard { optional: bool },
+    /// `trash_option_from_own_stacks` (BT25-085): the picked permanent is one of
+    /// the controller's Digimon whose digivolution cards OR link cards carry ≥1
+    /// Option. Install the SECOND selection over the UNION of its digivolution-
+    /// source Options + link-card Options (`TrashOptionFromStackSelection`)
+    /// carrying the frame's `inner_tail` as the cost-gated tail. `optional` makes
+    /// the Option pick declinable. `G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST`.
+    SelectAndTrashStackOption { optional: bool },
 }
 
 /// Post-action run on an `EffectChoice` resolve, keyed on the chosen label
@@ -449,6 +462,10 @@ pub enum ResumeFrame {
     /// `drain_or_rewrap_pending_tail` (which threads it onto the nested frame)
     /// rather than run inline. See [`UseOptionFromHandState`].
     UseOptionFromHandStep(UseOptionFromHandState),
+    /// `use_option_from_trash` (Gap 2) — the trash analogue of
+    /// `UseOptionFromHandStep`. Same nested-park + composed-tail semantics;
+    /// carries the `cost_delta` applied to the Option's printed use cost.
+    UseOptionFromTrashStep(UseOptionFromTrashState),
     /// One pick stage of the recursive `link_cards` loop (`link 1..N cards from
     /// hand/trash/digivolution-sources to a Digimon`). The state carries the
     /// loop's spec (Arc) + `pick_index` + a per-stage enum; `run_link_pick_step`
@@ -540,6 +557,30 @@ pub enum ResumeFrame {
     /// Delay-cost two-stage hand-DNA reward prompt. The same frame type covers
     /// both the result-card and partner-card stages.
     DelayDnaCardSelection(crate::dsl_cards::lower_replacement::DelayDnaCardSelectionState),
+    /// ST20-14 Delay replacement paid its trash-self cost by resolving another
+    /// selection first. Resolve that inner selection as data, then continue the
+    /// hand-PLAY reward flow.
+    DelayPlayFromHandAfterSelection {
+        inner: Box<ResumeStack>,
+        continuation: crate::dsl_cards::lower_replacement::DelayPlayFromHandContinuation,
+        outer_conts: Vec<OuterContinuation>,
+    },
+    /// ST20-14 Delay-cost hand-PLAY reward prompt. Accept plays the chosen Lv5-
+    /// [ADVENTURE] Digimon from hand for free; PASS declines. The leave still
+    /// proceeds either way.
+    DelayPlayFromHandSelection(
+        crate::dsl_cards::lower_replacement::DelayPlayFromHandSelectionState,
+    ),
+    /// BT19-099 Delay replacement paid its trash-self cost (or finished its
+    /// owned leave) by resolving another selection first. Resolve that inner
+    /// selection as data, then continue the union-zone (hand/trash) free-PLAY
+    /// reward flow. The reward prompt itself is the ordinary
+    /// `select_union_zone` install (a data-driven `RunTail` frame).
+    DelayPlayFromUnionAfterSelection {
+        inner: Box<ResumeStack>,
+        continuation: crate::dsl_cards::lower_replacement::DelayPlayFromUnionContinuation,
+        outer_conts: Vec<OuterContinuation>,
+    },
     /// Effect-initiated App Fuse host prompt. Accept installs the result-card
     /// prompt; PASS declines without running any composed tail, matching the
     /// legacy prompt's absent `on_decline`.
@@ -616,6 +657,19 @@ pub enum ResumeFrame {
     /// Effect-action helper prompt to pay a leave replacement by choosing one
     /// linked card, then either trashing it or moving it under the carrier.
     LinkCardLeaveSelection(LinkCardLeaveSelectionState),
+    /// Second selection of the `trash_link_card_of_own_digimon` ACTIVATION cost
+    /// (BT25-073): after picking which own Digimon (the first `select_own_permanent`
+    /// via `FieldPermanentPostAction::SelectAndTrashLinkCard`), pick one of ITS
+    /// link cards, trash it, and run the cost-gated tail only if a card was
+    /// trashed. `G-DSL-LINK-TRASH-AS-COST`.
+    TrashLinkCardOfDigimonSelection(TrashLinkCardOfDigimonSelectionState),
+    /// Second selection of the `trash_option_from_own_stacks` ACTIVATION cost
+    /// (BT25-085): after picking which own Digimon (the first `select_own_permanent`
+    /// via `FieldPermanentPostAction::SelectAndTrashStackOption`), pick one Option
+    /// among the UNION of ITS digivolution-source Options + link-card Options,
+    /// trash it (firing the correct per-zone observer), and run the cost-gated
+    /// tail only if a card was trashed. `G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST`.
+    TrashOptionFromStackSelection(TrashOptionFromStackSelectionState),
     /// Effect-action helper prompt for Dual cards that can be played as a
     /// Digimon or used as an Option.
     PlayOrUseDualChoice(PlayOrUseDualChoiceState),
@@ -625,6 +679,50 @@ pub enum ResumeFrame {
     MayDnaPartnerSelection(MayDnaPartnerSelectionState),
     /// `may_dna_digivolve_now` result-card prompt after a partner was chosen.
     MayDnaResultSelection(MayDnaResultSelectionState),
+    /// Per-opponent-color mandatory-delete accumulator
+    /// (`delete_one_per_opponent_color`, G-DSL-DELETE-ONE-PER-DISTINCT-OPPONENT-COLOR,
+    /// EX9-074 Kimeramon Branch B). Walks the game colors; for each color present
+    /// among the opponent's Digimon it parks a MANDATORY OppField pick of 1
+    /// not-yet-chosen Digimon of that color, accumulates the pick, and BATCH-deletes
+    /// the accumulated list at the terminal (all colors done). Colors with no legal
+    /// candidate are skipped; a chosen multi-color Digimon is excluded from later
+    /// colors. See [`PerColorDeleteState`].
+    PerColorDeleteStep(PerColorDeleteState),
+}
+
+/// In-flight state of a `delete_one_per_opponent_color` per-color accumulator, as
+/// data. Re-parked once per color that has a legal candidate; the terminal fires
+/// when the color list is exhausted (batch-delete `picked`, then run the tail).
+/// Candidates are re-derived each step from `filter` + the current color against
+/// a read context (data-pure), minus `picked` — so no runtime closure is parked
+/// and the whole frame is `Clone` (rule 28).
+#[derive(Debug, Clone)]
+pub struct PerColorDeleteState {
+    pub prov: ResumeProvenance,
+    pub opponent: PlayerId,
+    pub selecting_player: PlayerId,
+    pub previous_phase: GamePhase,
+    /// Every game color in the fixed 7-color order; `color_index` walks it.
+    pub colors: Vec<crate::enums::CardColor>,
+    pub color_index: usize,
+    /// Extra restriction AND-ed onto "opponent Digimon of the current color".
+    pub filter: Option<CompiledPredicate>,
+    pub filter_bindings: Bindings,
+    /// Permanents picked so far (batch-deleted at the terminal). Also used to
+    /// EXCLUDE already-chosen Digimon from later colors' candidate sets.
+    pub picked: Vec<PermanentHandle>,
+    /// This color's candidate snapshot `(action_id, handle)`; carried so a
+    /// resolving `action_id` decodes to the SAME handle the install offered.
+    pub candidates: Vec<(u16, PermanentHandle)>,
+    pub prompt: String,
+    // ── data terminal (batch-delete the picked list, then run the tail) ──
+    pub inner_tail: Arc<Vec<CompiledStep>>,
+    pub bindings: Bindings,
+    pub runtime: StepRuntime,
+    pub trigger_context: Option<TriggerContext>,
+    /// Outer-tail continuations composed when nested inside another clause. Run at
+    /// the TERMINAL (after batch-delete + inner_tail), in push order.
+    pub outer_conts: Vec<OuterContinuation>,
 }
 
 #[derive(Debug, Clone)]
@@ -768,6 +866,10 @@ pub struct FamiliarTokenOnDeletionSelectionState {
 pub enum LinkCardLeaveMode {
     TrashAndCancel,
     PlaceAsBottomSourceAndCancel,
+    /// EX7-048 — trash the chosen Option from the CARRIER's digivolution cards
+    /// (via `Game::trash_specific_source_card`, firing `OnDigivolutionCardTrashed`)
+    /// and cancel the leave. `G-DSL-PROTECT-OTHER-BY-TRASH-OPTION`.
+    TrashDigivolutionOptionAndCancel,
 }
 
 #[derive(Debug, Clone)]
@@ -776,6 +878,59 @@ pub struct LinkCardLeaveSelectionState {
     pub host: PermanentHandle,
     pub cards: Vec<CardHandle>,
     pub mode: LinkCardLeaveMode,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+/// Second selection of the `trash_link_card_of_own_digimon` activation cost:
+/// pick which link card of the already-chosen `host` Digimon to trash, then run
+/// the cost-gated `tail` only if a card was trashed. `G-DSL-LINK-TRASH-AS-COST`.
+#[derive(Debug, Clone)]
+pub struct TrashLinkCardOfDigimonSelectionState {
+    pub prov: ResumeProvenance,
+    /// The own Digimon chosen by the first selection — its link cards are the
+    /// candidate set.
+    pub host: PermanentHandle,
+    /// Link-card handles of `host`, snapshot at install time (one option each).
+    pub cards: Vec<CardHandle>,
+    /// The cost-gated tail (the rest of the clause — e.g. Dragomon's play/use).
+    pub tail: Arc<Vec<CompiledStep>>,
+    pub bindings: Bindings,
+    pub runtime: StepRuntime,
+    pub trigger_context: Option<TriggerContext>,
+    pub outer_conts: Vec<OuterContinuation>,
+}
+
+/// Which zone a `trash_option_from_own_stacks` candidate Option lives in on the
+/// host — determines which trash primitive (and observer) fires.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum StackOptionZone {
+    /// A digivolution source (below the stack top). Trashed via
+    /// `Game::trash_specific_source_card` → fires `OnDigivolutionCardTrashed`.
+    Digivolution,
+    /// A link card. Trashed via `Game::trash_specific_link_card` → fires
+    /// `OnLinkedCardTrashed`.
+    Link,
+}
+
+/// Second selection of the `trash_option_from_own_stacks` activation cost: pick
+/// which Option (among the already-chosen `host` Digimon's digivolution-source
+/// Options + link-card Options) to trash, then run the cost-gated `tail` only if
+/// a card was trashed. Each candidate carries its `StackOptionZone` so the run
+/// step routes to the correct per-zone trash primitive.
+/// `G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST`.
+#[derive(Debug, Clone)]
+pub struct TrashOptionFromStackSelectionState {
+    pub prov: ResumeProvenance,
+    /// The own Digimon chosen by the first selection.
+    pub host: PermanentHandle,
+    /// Candidate `(Option handle, which zone)` pairs of `host`, snapshot at
+    /// install time (one selectable option each, digivolution + link cards).
+    pub cards: Vec<(CardHandle, StackOptionZone)>,
+    /// The cost-gated tail (the rest of the clause — e.g. BeelStarmon's unsuspend).
+    pub tail: Arc<Vec<CompiledStep>>,
+    pub bindings: Bindings,
+    pub runtime: StepRuntime,
+    pub trigger_context: Option<TriggerContext>,
     pub outer_conts: Vec<OuterContinuation>,
 }
 
@@ -843,6 +998,11 @@ pub enum NonDslCountCappedTerminal {
     },
     TrashOpponentHandToCount {
         opponent: PlayerId,
+        /// When set, the terminal publishes the number of cards actually
+        /// trashed (`state.accum.len()`) into the resolving DSL tail's
+        /// bindings under this name (as a `Literal`), consumable by a later
+        /// step's `binding_value` formula. G-DSL-TRASH-COUNT-RESULT-BINDING.
+        bind_count_as: Option<String>,
     },
     Assembly {
         player: PlayerId,
@@ -874,6 +1034,24 @@ pub struct UseOptionFromHandState {
     pub outer_conts: Vec<OuterContinuation>,
     /// Whether the select was optional (PASS reaches the decline arm only then;
     /// `resolve_generic_selection` rejects PASS on a non-optional select).
+    pub optional: bool,
+}
+
+/// Resumable-VM frame for `use_option_from_trash` (Gap 2). Trash analogue of
+/// [`UseOptionFromHandState`]; `cost_delta` is applied to the Option's printed
+/// use cost when the trash pick is used.
+#[derive(Debug, Clone)]
+pub struct UseOptionFromTrashState {
+    pub prov: ResumeProvenance,
+    /// Trash owner the option is used from (the installer's `target_player`).
+    pub of_player: PlayerId,
+    /// The cost applied to the picked Option's printed use cost.
+    pub cost_delta: crate::enums::CostDelta,
+    pub tail: Arc<Vec<CompiledStep>>,
+    pub bindings: Bindings,
+    pub runtime: StepRuntime,
+    pub trigger_context: Option<TriggerContext>,
+    pub outer_conts: Vec<OuterContinuation>,
     pub optional: bool,
 }
 

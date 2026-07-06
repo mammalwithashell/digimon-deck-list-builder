@@ -1,0 +1,176 @@
+# BT13-008 Agumon — Digimon, Lv.3, Red+Yellow, DP 2000, Cost 3.
+# Traits: Dinosaur. Attribute: Vaccine.
+#
+# Printed card text (data/card_bundles/BT13-008.md — official Bandai DB;
+# matches code/digimon-engine/cards/bt13/BT13-008.json verbatim):
+#
+#   [Main][Once Per Turn] For the turn, 1 of your [Marcus Damon]s is also
+#   treated as a 3000 DP Digimon and can't digivolve.
+#
+#   Inherited Effect:
+#   [Your Turn][Once Per Turn] When one of your red or yellow Tamers becomes
+#   suspended, you may delete 1 of your opponent's Digimon with 3000 DP or
+#   less.
+#
+#   Digivolution requirements (official Bandai DB):
+#     Standard: Red Lv.2 / cost 1, Yellow Lv.2 / cost 1.
+#     Special: [Digivolve] 0 from [Koromon].
+#
+#   Official Q&A: "It causes that card to also be treated as a Digimon with
+#   X000 DP. For example, if a Tamer is also treated as a Digimon, it can
+#   attack like a standard Digimon, and it will gain inherited effects from
+#   cards stacked under it. However, even if a Tamer is played and then
+#   treated as a Digimon in the same turn, it can't attack during that turn."
+#
+# DCGO C# reference (READ-ONLY):
+#   DCGO/Assets/Scripts/CardEffect/BT13/Red/BT13_008.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Name Rule (EffectTiming.None): none — no [Rule] alias on this card (unlike
+#   AD1-021's "[Rule] Name: Also treated as [Marcus Damon]"). No
+#   `also_treated_as` needed.
+#
+# Alt-path (EffectTiming.None): AddSelfDigivolutionRequirementStaticEffect —
+#   `TopCard.CardNames.Contains("Koromon")`, digivolutionCost: 0. ->
+#   `alt_paths: [{ kind: digivolve, from: { name_is: Koromon }, cost: 0 }]`.
+#
+# Clause 1 (own, EffectTiming.OnDeclaration, hash
+#   "BecomeDigimon_BT13_008"): CanUseCondition = own battle-area exists AND
+#   >=1 own battle-area permanent whose top card name contains "Marcus
+#   Damon" (or "MarcusDamon"). Body: mandatory (canNoSelect:false) select 1
+#   of up to `Math.Min(1, count)` matching Marcus Damons ->
+#   `CardEffectCommons.BecomeDigimonThatCantDigivolve(DP: 3000,
+#   EffectDuration.UntilEachTurnEnd)`. That shared helper
+#   (TamerBecomesDigimonThatCanNotDigivolve.cs) explicitly grants THREE
+#   effects to the target, all UntilEachTurnEnd, even though the target is a
+#   Tamer: TreatAsDigimonStaticEffect, ChangeBaseDPStaticEffect(3000), and
+#   CanNotDigivolveStaticEffect. -> the entire [Main] activation is gated on
+#   >=1 own Marcus Damon (`condition: any_permanent { name_contains: "Marcus
+#   Damon" }`), then a mandatory `select_own_permanent` (not optional — the
+#   printed text has no "you may" and DCGO's outer select is
+#   `canNoSelect:false`) -> `add_modifier: TreatAsDigimon` with
+#   `synth_identity: { dp: 3000 }` (the "treated as a 3000 DP Digimon"
+#   payload; G-DSL-AURA-TREAT-AS-DIGIMON-SYNTH idiom, BT21-044/AD1-021
+#   precedent) + `add_modifier: CannotDigivolve`, both `expiry: end_of_turn`
+#   ("for the turn").
+#
+# Clause 2 (inherited, EffectTiming.OnTappedAnyone, hash
+#   "Delete_BT13_008"): CanUseCondition = own battle-area exists AND owner's
+#   turn AND `CanTriggerWhenPermanentSuspends` where the suspended permanent
+#   is an own Tamer whose colors contain Red or Yellow.
+#   CanActivateCondition/ActivateCoroutine: if an opponent battle-area
+#   Digimon exists with DP <= MaxDP_DeleteEffect(3000), optional
+#   (canNoSelect:true) SelectPermanentEffect (Mode.Destroy, maxCount 1)
+#   deletes it. -> `when: on_suspend`, `scope: inherited`, `optional: true`,
+#   `once_per_turn: true`, `active_when: { your_turn: true }`, condition
+#   `event_target_owner: you` + `event_target_kind: tamer` +
+#   `event_target_color_any_of: [red, yellow]`; process:
+#   `select_opponent_permanent` (optional, filter `kind: digimon` +
+#   `dp_lte: 3000`) + `delete_permanent`. Identical shape to BT13-012's
+#   inherited clause (word-for-word same printed text; both closed gaps
+#   G-OPT-TRIGGERED and G-PRED-DP-LTE verified live via BT13-012's 17/17
+#   green suite).
+
+card: BT13-008
+name: Agumon
+kind: digimon
+level: 3
+color: [red, yellow]
+cost: 3
+dp: 2000
+traits: [Dinosaur]
+attribute: Vaccine
+
+# ─── Alternate Digivolution Path ─────────────────────────────────────────────
+# "[Digivolve] 0 from [Koromon]" (official Bandai DB xros_req / DCGO
+# AddSelfDigivolutionRequirementStaticEffect, EffectTiming.None).
+alt_paths:
+  - kind: digivolve
+    from: { name_is: "Koromon" }
+    cost: 0
+
+effects:
+  # ─── Clause 1 (own) — [Main][Once Per Turn] ─────────────────────────────────
+  #
+  # "For the turn, 1 of your [Marcus Damon]s is also treated as a 3000 DP
+  # Digimon and can't digivolve."
+  #
+  # Whole-clause condition gate (DCGO CanUseCondition): the [Main] activation
+  # itself is only offered when >=1 own Marcus Damon exists on the battle
+  # area — mirrors BT25-014/P-156's `condition:` gating idiom for
+  # `main_on_field` clauses (as opposed to BT21-044's nested `if`, which
+  # guards only part of a multi-part clause; here the WHOLE ability requires
+  # a Marcus Damon per DCGO).
+  #
+  # The select is MANDATORY (no "you may" in the printed text; DCGO's outer
+  # SelectPermanentEffect uses canNoSelect:false) — the mask only offers the
+  # [Main] action when a legal target exists, and once activated the player
+  # must pick one of the (possibly several) own Marcus Damons.
+  #
+  # TreatAsDigimon + synth_identity{dp:3000} + CannotDigivolve, both
+  # end_of_turn ("for the turn"), per the shared DCGO helper
+  # BecomeDigimonThatCantDigivolve — same idiom as BT21-044/AD1-021.
+  - when: main_on_field
+    once_per_turn: true
+    summary: "[Main][OPT] For the turn, 1 of your [Marcus Damon]s is also treated as a 3000 DP Digimon and can't digivolve"
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        name_contains: "Marcus Damon"
+    process:
+      - select_own_permanent:
+          bind_as: marcus
+          filter:
+            all_of:
+              - kind: tamer
+              - name_contains: "Marcus Damon"
+          prompt: "Select 1 of your [Marcus Damon]s to also treat as a 3000 DP Digimon"
+      - add_modifier:
+          target: marcus
+          modifier: TreatAsDigimon
+          value: 0
+          expiry: end_of_turn
+          synth_identity:
+            dp: 3000
+      - add_modifier:
+          target: marcus
+          modifier: CannotDigivolve
+          value: 0
+          expiry: end_of_turn
+
+  # ─── Clause 2 (inherited) — [Your Turn][Once Per Turn] on Tamer suspend ─────
+  #
+  # "When one of your red or yellow Tamers becomes suspended, you may delete
+  # 1 of your opponent's Digimon with 3000 DP or less."
+  #
+  # Identical printed text to BT13-012's inherited clause. Predicates:
+  #   - event_target_owner: you
+  #   - event_target_kind: tamer
+  #   - event_target_color_any_of: [red, yellow]
+  #   - your_turn: true ([Your Turn] scoping)
+  # `dp_lte: 3000` filters the opponent-permanent select; an empty mandatory
+  # select is skipped (no useless prompt when the opponent has no Digimon).
+  - scope: inherited
+    when: on_suspend
+    optional: true
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [red, yellow]
+    summary: "[Your Turn][OPT] When one of your red or yellow Tamers becomes suspended, you may delete 1 opp Digimon DP≤3000"
+    process:
+      - select_opponent_permanent:
+          bind_as: tgt
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 3000
+          prompt: "Delete 1 of your opponent's Digimon with 3000 DP or less"
+      - delete_permanent: { target: tgt }

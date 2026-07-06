@@ -1,0 +1,94 @@
+# BT7-032 Pulsemon — Digimon, Lv.3, Yellow, DP 2000, Cost 3.
+# Traits: Beastkin. Form: Rookie. Attribute: Vaccine.
+# Standard digivolve (cards.json evo_costs / official Bandai DB bundle):
+#   Yellow Lv.2 / cost 0.
+#
+# Printed card text (card image + data/card_bundles/BT7-032.md, verbatim):
+#
+#   Inherited Effect [When Attacking][Once Per Turn] If you have 3 security
+#   cards, gain 2 memory.
+#
+# No [On Play]/[When Digivolving]/[Security] text, no DigiXros/DNA/Assembly,
+# no Rule-granted traits. Single inherited clause.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT7/Yellow/BT7_032.cs
+#
+# ─── DCGO crosscheck ──────────────────────────────────────────────────────
+#
+# `EffectTiming.OnAllyAttack` ActivateClass, `SetIsInheritedEffect(true)`,
+# `SetUpActivateClass(CanActivateCondition, ActivateCoroutine, maxUsableCount:
+# 1, isOptional:false, ...)` → mandatory, [Once Per Turn].
+#
+#   CanUseCondition:  IsExistOnBattleArea(card) && CanTriggerOnAttack(hashtable, card)
+#     CanTriggerOnAttack → CanTriggerOnPermanentAttack(hashtable,
+#       permanent => permanent.cardSources.Contains(card)) — true only when
+#       the ATTACKING permanent's own card-source stack contains this card
+#       (i.e. this card's stack IS the attacker). This is the engine's
+#       carrier-scoped `WhenAttacking` semantics ("when THIS Digimon
+#       attacks"), NOT the ally-observer `OnAllyAttack` fan-out — see
+#       combat.rs lines 3750-3758: "WhenAttacking: the `[When Attacking]`
+#       keyword is carrier-scoped ... it must fire ONLY for the attacker's
+#       own stack ... Cross-Digimon 'when one of your (other) Digimon
+#       attacks' observers are a DIFFERENT timing (OnAllyAttack)." DCGO's own
+#       naming (`EffectTiming.OnAllyAttack`) does not map 1:1 onto this
+#       engine's `OnAllyAttack`/`WhenAttacking` split — the DCGO condition
+#       function is what disambiguates, and it is carrier-scoped. So this
+#       card is authored with `when: when_attacking` (carrier-scoped),
+#       matching `CanTriggerOnAttack`'s `cardSources.Contains(card)` check.
+#   CanActivateCondition: IsExistOnBattleArea(card) — payability re-check
+#     immediately before firing; no additional gate.
+#   ActivateCoroutine:
+#     if (card.Owner.SecurityCards.Count == 3) → AddMemory(2)
+#     else → activateClass.RemoveUse() — rolls back the provisional OPT
+#       registration so a turn where the condition never held at exactly 3
+#       security does not burn the [Once Per Turn] slot.
+#
+# Modeled as: `scope: inherited`, `when: when_attacking`, `once_per_turn:
+# true`, `condition: { security_count: { op: eq, value: 3 } }` (exactly 3,
+# not >=3 or <=3 — DCGO's `== 3` check), `process: [gain_memory: 2]`.
+# `security_count_eq` (via the canonical `security_count:` comparator field)
+# reads `rctx.security_count(rctx.player)` — the effect controller's own
+# security-stack size — exactly matching `card.Owner.SecurityCards.Count`.
+#
+# OPT/condition ordering: the engine's `run_queued_effect_inner` checks the
+# `once_per_turn` activation count BEFORE evaluating `condition`
+# (effect_queue.rs ~2595-2620: `if effect.max_per_turn > 0 && ... { check
+# activation_count >= max_per_turn }` runs first, and `record_activation`
+# only fires after a successful body run) — so a turn where the security
+# count is never exactly 3 never consumes the OPT slot, net-equivalent to
+# DCGO's provisional-register + `RemoveUse()` rollback. No separate
+# `RemoveUse` step is needed in the DSL model.
+
+card: BT7-032
+name: Pulsemon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+traits: [Beastkin]
+attribute: Vaccine
+
+alt_paths:
+  # Standard printed route (official Bandai DB bundle: Yellow Lv.2 / cost 0)
+  # — authored as an alt_path so the route exists for DSL-loaded fixtures
+  # (G-DSL-FIXTURE-EVO-COSTS: compiled cards carry no printed evo_costs).
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+
+effects:
+  # ─── Inherited [When Attacking][Once Per Turn] ────────────────────────────
+  # "If you have 3 security cards, gain 2 memory."
+  # Carrier-scoped (see DCGO crosscheck above): fires only when THIS card's
+  # own stack is the attacker, matching `cardSources.Contains(card)`.
+  # Mandatory (DCGO isOptional:false — no "you may" in the printed text, no
+  # activation cost, no player choice to expose).
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][OPT] If you have exactly 3 security cards, gain 2 memory"
+    condition:
+      security_count: { op: eq, value: 3 }
+    process:
+      - gain_memory: 2

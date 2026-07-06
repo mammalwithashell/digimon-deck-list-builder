@@ -55,6 +55,55 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
             }
             true
         }
+        // Foreign-card refire (BT15-102 Apocalymon): activate a timing-
+        // filtered effect printed on a bound CARD OBJECT that is currently a
+        // digivolution source of this effect's carrier. The bound handle is
+        // typically produced by `place_as_bottom_source.bind_placed_as`; an
+        // absent binding (nothing was placed — the optional pick was
+        // declined) is a silent no-op so the rest of the clause (the "Then,"
+        // tail) still runs.
+        CompiledStep::RefireCardEffect { card, timing } => {
+            let Some(ResolvedBinding::Card(card_handle)) =
+                resolve_binding_ref(card, ctx, bindings)
+            else {
+                return true;
+            };
+            let Some(carrier) = ctx.source_permanent else {
+                return true;
+            };
+            // The card must (still) be a digivolution source of the carrier
+            // — "activate 1 [On Play] effect ON THAT CARD as an effect of
+            // this Digimon" is scoped to the just-placed source.
+            let is_carrier_source = ctx
+                .game
+                .players
+                .get(carrier.player as usize)
+                .and_then(|p| p.battle_area.get(carrier.index as usize))
+                .is_some_and(|perm| {
+                    perm.card_sources
+                        .iter()
+                        .rev()
+                        .skip(1)
+                        .any(|c| c.handle() == card_handle)
+                });
+            if !is_carrier_source {
+                return true;
+            }
+            let Some(card_id) = ctx
+                .game
+                .card_data_for_handle(card_handle)
+                .map(|cd| cd.card_id.clone())
+            else {
+                return true;
+            };
+            let timing_filter = match timing.as_str() {
+                "on_play" => TimingFilter::OnPlay,
+                "when_digivolving" => TimingFilter::WhenDigivolving,
+                _ => TimingFilter::Either,
+            };
+            let _ = ctx.activate_foreign_card_effect(&card_id, carrier, timing_filter, ctx.player);
+            true
+        }
         // G-COST-REDUCE-ALLY-DIGIVOLVE — install a player-scoped one-shot
         // future-digivolve cost reducer (BT3-103 Hidden Potential Discovered!).
         CompiledStep::ArmDigivolveCostReducer {

@@ -12,18 +12,16 @@
 #
 # DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT13/Purple/BT13_088.cs
 #
-# ── place_as_top_source resolution (PARTIAL) ────────────────────────────────
+# ── place_as_top_source resolution (RESOLVED 2026-07-05) ────────────────────
 # DCGO places Rage Mode with `AddDigivolutionCardsTop` (topmost digivolution
-# SOURCE, just below the face card). The DSL/engine ships only
-# `place_as_bottom_source` — there is no "place as top source" verb. The
-# placement POSITION is behaviorally inert for this card: Belphemon's own
-# effect only needs Rage Mode IN the digivolution stack so Rage Mode's
-# inherited effect (BT13-091 / EX10-022 "[End of Opp Turn] trash top card if
-# [Belphemon: Sleep Mode]") becomes active, and inherited effects fire from
-# ANY source position. No mechanic on this card references the top/bottom
-# source slot. So `place_as_bottom_source` is used with this documented
-# cosmetic position divergence (a top-source verb would only matter for cards
-# that read "top digivolution card"; this card does not).
+# SOURCE, just below the face card). G-DSL-PLACE-AS-TOP-SOURCE — the gap this
+# card originally surfaced — is now closed: the `place_as_top_source` verb
+# (engine `Permanent::push_as_top_source`) inserts directly beneath the top
+# card, and this card uses it, matching the printed "on top of this Digimon's
+# digivolution cards" exactly. (The position was always behaviorally inert
+# for this card — its effect only needs Rage Mode IN the stack so Rage Mode's
+# inherited effect becomes active — but the printed position now matches
+# too.) Substrate proof: tests/dsl/place_as_top_source.rs.
 
 card: BT13-088
 name: "Belphemon: Sleep Mode"
@@ -75,7 +73,7 @@ effects:
           cost: true
           filter: { name_is: "Belphemon: Rage Mode" }
           prompt: "Place 1 Belphemon: Rage Mode from trash on this Digimon's digivolution cards"
-      - place_as_bottom_source:
+      - place_as_top_source:
           source: rage
           target: source
       - add_modifier:

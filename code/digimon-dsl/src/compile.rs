@@ -206,6 +206,16 @@ fn compile_zone(z: crate::predicate::Zone) -> CompiledZone {
     }
 }
 
+fn compile_comparator_op(op: crate::predicate::ComparatorOp) -> crate::compiled::CompiledComparatorOp {
+    use crate::compiled::CompiledComparatorOp as C;
+    use crate::predicate::ComparatorOp as S;
+    match op {
+        S::Eq => C::Eq,
+        S::Gte => C::Gte,
+        S::Lte => C::Lte,
+    }
+}
+
 fn validate_digixros_wildcard_zone(
     zone: Option<crate::predicate::Zone>,
     prefix: &str,
@@ -255,6 +265,8 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnOpponentAttack => CompiledTiming::OnOpponentAttack,
         S::OnDeletion => CompiledTiming::OnDeletion,
         S::OnAnyDeletion => CompiledTiming::OnAnyDeletion,
+        S::OnAllyWonBattle => CompiledTiming::OnAllyWonBattle,
+        S::OnDiscardHand => CompiledTiming::OnDiscardHand,
         S::OnEnterFieldAnyone => CompiledTiming::OnEnterFieldAnyone,
         S::OnAnyDigimonPlayed => CompiledTiming::OnAnyDigimonPlayed,
         S::OnAllyPlayed => CompiledTiming::OnAllyPlayed,
@@ -270,6 +282,9 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnOpponentSecurityRemoved => CompiledTiming::OnOpponentSecurityRemoved,
         S::OnOwnSecurityRemoved => CompiledTiming::OnOwnSecurityRemoved,
         S::OnDigivolutionCardTrashed => CompiledTiming::OnDigivolutionCardTrashed,
+        S::OnSourceReturnedToDeckBottom => {
+            CompiledTiming::OnDigivolutionCardReturnedToDeckBottom
+        }
         S::OnSecurityCheck => CompiledTiming::OnSecurityCheck,
         S::OnCheckFaceUpSecurity => CompiledTiming::OnCheckFaceUpSecurity,
         S::OnLoseSecurity => CompiledTiming::OnLoseSecurity,
@@ -413,6 +428,13 @@ fn compile_per_selector(
                 ))
             }),
         },
+        S::PlayerMemory { of } => CompiledPerSelector::PlayerMemory {
+            of: compile_player_ref(*of),
+        },
+        S::OwnLinkCardCount { of } => CompiledPerSelector::OwnLinkCardCount {
+            of: compile_player_ref(*of),
+        },
+        S::SourceLinkCardCount => CompiledPerSelector::SourceLinkCardCount,
     }
 }
 
@@ -609,6 +631,14 @@ fn compile_formula(
             v.iter()
                 .enumerate()
                 .map(|(i, f)| compile_formula(f, &format!("{prefix}.min[{i}]"), card_id, errors))
+                .collect(),
+        ),
+        FormulaSpec::Compound(CompoundFormula::Subtract(v)) => CompiledFormula::Subtract(
+            v.iter()
+                .enumerate()
+                .map(|(i, f)| {
+                    compile_formula(f, &format!("{prefix}.subtract[{i}]"), card_id, errors)
+                })
                 .collect(),
         ),
         FormulaSpec::Compound(CompoundFormula::Aggregate(a)) => CompiledFormula::AggregateScoped {
@@ -850,6 +880,8 @@ fn compile_predicate(
         kind: p.kind.map(compile_card_kind),
         level_eq,
         level_eq_binding: p.level_eq_binding.clone(),
+        level_lte_binding: p.level_lte_binding.clone(),
+        level_gte_binding: p.level_gte_binding.clone(),
         level_lte,
         level_gte,
         level_matches_aggregate: p.level_matches_aggregate.map(|m| {
@@ -874,6 +906,11 @@ fn compile_predicate(
             .map(|s| compile_player_ref(s.player())),
         color_matches_binding: p.color_matches_binding.clone(),
         color_matches_returned_card: p.color_matches_returned_card,
+        color_matches_own_source_stack: p.color_matches_own_source_stack.map(|s| match s {
+            crate::predicate::SourceStackScope::Scoped {
+                of: crate::predicate::SourceStackScopeOf::SelfCarrier,
+            } => CompiledSourceStackScope::SelfCarrier,
+        }),
         trait_has: p.trait_has.clone(),
         trait_contains: p.trait_contains.clone(),
         form_is: p.form_is.clone(),
@@ -881,6 +918,7 @@ fn compile_predicate(
         name_is: p.name_is.clone(),
         name_contains: p.name_contains.clone(),
         effect_text_contains: p.effect_text_contains.clone(),
+        in_text_contains: p.in_text_contains.clone(),
         name_in: p.name_in.clone(),
         name_not_shared_by_field_digimon: p
             .name_not_shared_by_field_digimon
@@ -905,6 +943,17 @@ fn compile_predicate(
         materials_count_lte,
         materials_count_gte,
         materials_count_eq,
+        source_count: p.source_count.as_ref().map(|sc| {
+            (
+                Box::new(compile_predicate(
+                    &sc.filter,
+                    &format!("{prefix}.source_count.filter"),
+                    card_id,
+                    errors,
+                )),
+                sc.at_least,
+            )
+        }),
         has_inherited: p.has_inherited.as_ref().map(|b| {
             Box::new(compile_predicate(
                 b,
@@ -921,8 +970,46 @@ fn compile_predicate(
         self_color_count_gte: p.self_color_count_gte,
         has_face_down_source: p.has_face_down_source,
         distinct_tamer_colors_gte: p.distinct_tamer_colors_gte,
+        distinct_named_count_gte: p.distinct_named_count_gte.as_ref().map(|d| {
+            crate::compiled::CompiledDistinctNamedCount {
+                of: compile_player_ref(d.of),
+                filter: Box::new(compile_predicate(
+                    &d.filter,
+                    &format!("{prefix}.distinct_named_count_gte.filter"),
+                    card_id,
+                    errors,
+                )),
+                n: d.n,
+            }
+        }),
         face_down_sources_under_tamers_gte: p.face_down_sources_under_tamers_gte,
         battle_opponent_no_sources: p.battle_opponent_no_sources,
+        self_source_count: p.self_source_count.as_ref().map(|s| {
+            crate::compiled::CompiledSelfSourceCountPredicate {
+                filter: s.filter.as_ref().map(|f| {
+                    Box::new(compile_predicate(
+                        f,
+                        &format!("{prefix}.self_source_count.filter"),
+                        card_id,
+                        errors,
+                    ))
+                }),
+                op: compile_comparator_op(s.op),
+                // Collapse a literal `value: N` to `Literal(N)` (matching the
+                // MetricComparators lowering) so the compiled IR is clean;
+                // anything else is a runtime formula.
+                value: match &s.value {
+                    crate::formula::FormulaSpec::Literal(n) => CompiledDpConstraint::Literal(*n),
+                    other => CompiledDpConstraint::Formula(compile_formula(
+                        other,
+                        &format!("{prefix}.self_source_count.value"),
+                        card_id,
+                        errors,
+                    )),
+                },
+            }
+        }),
+        own_source_stack_color_count_gte: p.own_source_stack_color_count_gte,
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
         other: p.other,
@@ -940,6 +1027,23 @@ fn compile_predicate(
             crate::compiled::CompiledBindingCardKindPredicate {
                 binding: b.binding.clone(),
                 kind: compile_card_kind(b.kind),
+            }
+        }),
+        binding_card_color: p.binding_card_color.as_ref().map(|b| {
+            crate::compiled::CompiledBindingCardColorPredicate {
+                binding: b.binding.clone(),
+                color_is: compile_color(b.color_is),
+            }
+        }),
+        binding_card_name_is: p
+            .binding_card_name_is
+            .as_ref()
+            .map(|b| (b.binding.clone(), b.name_is.clone())),
+        play_cost_eq_binding: p.play_cost_eq_binding.as_ref().map(|b| {
+            crate::compiled::CompiledPlayCostBindingPredicate {
+                binding: b.binding.clone(),
+                offset: b.offset,
+                op: compile_comparator_op(b.op),
             }
         }),
         source_is_tamer: p.source_is_tamer,
@@ -983,6 +1087,30 @@ fn compile_predicate(
             compile_dp_constraint(
                 d,
                 &format!("{prefix}.opponent_security_count_gte"),
+                card_id,
+                errors,
+            )
+        }),
+        total_security_count_lte: p.total_security_count_lte.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.total_security_count_lte"),
+                card_id,
+                errors,
+            )
+        }),
+        total_security_count_gte: p.total_security_count_gte.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.total_security_count_gte"),
+                card_id,
+                errors,
+            )
+        }),
+        total_security_count_eq: p.total_security_count_eq.as_ref().map(|d| {
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.total_security_count_eq"),
                 card_id,
                 errors,
             )
@@ -1041,6 +1169,9 @@ fn compile_predicate(
         dna_origin: p.dna_origin,
         event_target_kind: p.event_target_kind.map(compile_card_kind),
         event_target_trait_has: p.event_target_trait_has.clone(),
+        event_target_trait_contains: p.event_target_trait_contains.clone(),
+        event_target_has_digivolution_cards: p.event_target_has_digivolution_cards,
+        event_target_stack_size_gte: p.event_target_stack_size_gte,
         event_target_level_eq,
         event_target_level_lte,
         event_target_level_gte,
@@ -1055,6 +1186,11 @@ fn compile_predicate(
         attacker_trait_has: p.attacker_trait_has.clone(),
         event_target_owner: p.event_target_owner.map(compile_player_ref),
         event_add_to_hand_player: p.event_add_to_hand_player.map(compile_player_ref),
+        event_winner_owner: p.event_winner_owner.map(compile_player_ref),
+        event_winner_trait_has: p.event_winner_trait_has.clone(),
+        event_discard_player: p.event_discard_player.map(compile_player_ref),
+        event_caused_by_own_effect: p.event_caused_by_own_effect,
+        played_by_effect: p.played_by_effect,
         event_target_color_any_of: p
             .event_target_color_any_of
             .as_ref()
@@ -1067,6 +1203,7 @@ fn compile_predicate(
         event_card_trait_has: p.event_card_trait_has.clone(),
         event_card_name_contains: p.event_card_name_contains.clone(),
         event_card_text_contains: p.event_card_text_contains.clone(),
+        event_card_in_text_contains: p.event_card_in_text_contains.clone(),
         event_card_level_eq: p.event_card_level_eq,
         event_card_level_gte: p.event_card_level_gte.as_ref().map(|d| {
             compile_dp_constraint(
@@ -1317,6 +1454,9 @@ fn compile_alt_path(
     card_id: &str,
     errors: &mut Vec<ValidationError>,
 ) -> CompiledAltPath {
+    if matches!(ap.kind, crate::alt_path::AltPathKind::CastTimeAssembly) {
+        validate_cast_time_assembly_shape(ap, prefix, card_id, errors);
+    }
     CompiledAltPath {
         kind: compile_alt_path_kind(ap.kind),
         from: ap.from.as_ref().map(|p| {
@@ -1386,6 +1526,108 @@ fn compile_alt_path(
                 crate::compiled::CompiledAltPathDirection::Into
             }
         },
+        // Gap 4 (BT18-065) — conditional extra DigiXros material zones.
+        extra_material_zones: ap
+            .extra_material_zones
+            .iter()
+            .enumerate()
+            .map(|(i, z)| crate::compiled::CompiledConditionalMaterialZone {
+                zone: compile_zone(z.zone),
+                condition: compile_predicate(
+                    &z.while_condition,
+                    &format!("{prefix}.extra_material_zones[{i}].while"),
+                    card_id,
+                    errors,
+                ),
+            })
+            .collect(),
+    }
+}
+
+/// Shape validation for `kind: cast_time_assembly` (BT15-102 Apocalymon).
+/// The path rides the DigiXros transaction substrate, so the compiled shape
+/// must stay inside what that substrate implements: at least one material,
+/// each with explicit `zones:` drawn from the supported origin set and an
+/// explicit `cost_delta:` (the DigiXros default of -1 would silently
+/// mis-price the placement). Structure fields that belong to other path
+/// kinds (`from`, `marker`, `stacks_unsuspended`, `ignore_requirements`,
+/// `direction: into`) are rejected rather than ignored.
+fn validate_cast_time_assembly_shape(
+    ap: &crate::alt_path::AltPathSpec,
+    prefix: &str,
+    card_id: &str,
+    errors: &mut Vec<ValidationError>,
+) {
+    use crate::predicate::Zone;
+    let mut push = |path: String, message: String| {
+        errors.push(ValidationError {
+            card_id: card_id.to_string(),
+            path,
+            message,
+        });
+    };
+    if ap.materials.is_empty() {
+        push(
+            format!("{prefix}.materials"),
+            "cast_time_assembly requires at least one material entry".to_string(),
+        );
+    }
+    for (i, m) in ap.materials.iter().enumerate() {
+        if m.zones.is_empty() {
+            push(
+                format!("{prefix}.materials[{i}].zones"),
+                "cast_time_assembly materials need explicit zones (e.g. [battle_area, trash])"
+                    .to_string(),
+            );
+        }
+        for zone in &m.zones {
+            if !matches!(zone, Zone::Hand | Zone::BattleArea | Zone::Trash) {
+                push(
+                    format!("{prefix}.materials[{i}].zones"),
+                    format!(
+                        "cast_time_assembly zone {zone:?} is not supported yet — the DigiXros \
+                         transaction substrate implements hand / battle_area / trash origins \
+                         (the security-stack variant for EX10-061 is a tracked engine gap)"
+                    ),
+                );
+            }
+        }
+        if m.cost_delta.is_none() {
+            push(
+                format!("{prefix}.materials[{i}].cost_delta"),
+                "cast_time_assembly materials require an explicit cost_delta (e.g. -4)"
+                    .to_string(),
+            );
+        }
+        if m.stack_under {
+            push(
+                format!("{prefix}.materials[{i}].stack_under"),
+                "cast_time_assembly always stacks materials under the played card — omit \
+                 stack_under (it is an `assembly`-kind field)"
+                    .to_string(),
+            );
+        }
+    }
+    if ap.from.is_some() {
+        push(
+            format!("{prefix}.from"),
+            "cast_time_assembly does not take a `from:` filter".to_string(),
+        );
+    }
+    if ap.marker || ap.stacks_unsuspended || ap.ignore_requirements {
+        push(
+            prefix.to_string(),
+            "cast_time_assembly does not support marker / stacks_unsuspended / \
+             ignore_requirements"
+                .to_string(),
+        );
+    }
+    if matches!(ap.direction, crate::alt_path::AltPathDirection::Into) {
+        push(
+            format!("{prefix}.direction"),
+            "cast_time_assembly is always registered on the played card (direction: from)"
+                .to_string(),
+        );
     }
 }
 
@@ -1400,6 +1642,7 @@ fn compile_alt_path_kind(k: crate::alt_path::AltPathKind) -> CompiledAltPathKind
         S::AppFusion => CompiledAltPathKind::AppFusion,
         S::Assembly => CompiledAltPathKind::Assembly,
         S::ActivatedDigivolve => CompiledAltPathKind::ActivatedDigivolve,
+        S::CastTimeAssembly => CompiledAltPathKind::CastTimeAssembly,
     }
 }
 
@@ -1586,6 +1829,37 @@ fn compile_replacement_process(
         return process;
     }
 
+    // EX7-048 — `cost: { trash_option_from_own_digivolution_cards: true }` is the
+    // carrier-scoped Option-trash sibling of `trash_own_link_card`: a single
+    // self-contained step that trashes a chosen Option from the CARRIER's
+    // digivolution cards AND cancels the leave (so it owns the `outcome:
+    // prevent`). Board-wide protect-OTHERS shape; the leaving subject is a
+    // filtered OTHER (or self) own permanent per the clause `active_when`.
+    let trash_option_from_own_digivolution_cards = r
+        .cost
+        .as_ref()
+        .is_some_and(|cost| cost.trash_option_from_own_digivolution_cards);
+    if trash_option_from_own_digivolution_cards {
+        if !matches!(r.outcome, Some(crate::clause::ReplacementOutcome::Prevent)) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { trash_option_from_own_digivolution_cards } requires outcome: prevent"
+                    .into(),
+            });
+        }
+        if !r.optional {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { trash_option_from_own_digivolution_cards } requires optional: true (\"by trashing … they don't leave\" is a may-pay)"
+                    .into(),
+            });
+        }
+        process.push(CompiledStep::TrashOptionFromOwnDigivolutionCardsAndCancelLeave);
+        return process;
+    }
+
     // EX11-027 — `cost: { place_link_card_as_bottom_digivolution: true }` is the
     // place-link-as-bottom-source sibling of `trash_own_link_card`: a single
     // self-contained step that places a chosen link card under the carrier AND
@@ -1604,6 +1878,96 @@ fn compile_replacement_process(
             });
         }
         process.push(CompiledStep::PlaceLinkCardAsBottomSourceAndCancelLeave);
+        return process;
+    }
+
+    // Gap 2 (BT21-062) — `cost: { return_own_sources_to_deck: { filter, count,
+    // position } }` lowers to the same shape BT13-075 hand-writes: pick exactly
+    // `count` of the LEAVING permanent's own digivolution sources (min == max ==
+    // count → pay-in-full; the improved `SelectOwnSources` preflight in
+    // lower_replacement.rs gates the accept on ≥ count matching sources so it is
+    // not offered when unpayable), return them to deck `position` (firing the
+    // Gap-1 `OnDigivolutionCardReturnedToDeckBottom` observer per source), then
+    // the trailing `outcome: prevent` handler appends `CancelReplacement`.
+    if let Some(ret) = r
+        .cost
+        .as_ref()
+        .and_then(|cost| cost.return_own_sources_to_deck.as_ref())
+    {
+        if !matches!(r.outcome, Some(crate::clause::ReplacementOutcome::Prevent)) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { return_own_sources_to_deck } requires outcome: prevent".into(),
+            });
+        }
+        if !r.optional {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { return_own_sources_to_deck } requires optional: true (\"by returning … it doesn't leave\" is a may-pay)"
+                    .into(),
+            });
+        }
+        if ret.count == 0 {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost.return_own_sources_to_deck.count"),
+                message: "count must be >= 1".into(),
+            });
+        }
+        process.push(CompiledStep::SelectOwnSources {
+            // Scope the picker to the LEAVING permanent's OWN sources. For a
+            // leave-field replacement the effect lives on the carrier, so
+            // `Source` (= this effect's `source_permanent`) IS the leaving
+            // Digimon — exactly BT13-075's hand-written `target: source`.
+            target: Some(CompiledBindingRef::Source),
+            filter: compile_predicate(
+                &ret.filter,
+                &format!("{prefix}.cost.return_own_sources_to_deck.filter"),
+                card_id,
+                errors,
+            ),
+            // Pay-in-full: exactly `count`.
+            min: ret.count,
+            max: ret.count,
+            bind_as: Some("returned_sources".into()),
+            prompt: format!("Return {} digivolution card(s) to the deck", ret.count),
+            then: Vec::new(),
+        });
+        process.push(CompiledStep::ReturnSelectedSourcesToDeck {
+            source_refs: "returned_sources".into(),
+            position: compile_stack_position(ret.position),
+        });
+    }
+
+    // BT25-039 — `cost: { delete_self: true }` on a protect-OTHERS leave
+    // replacement: delete the CARRIER as the cost, then cancel the parked leave
+    // (which prevents the SUBJECT's leave — the framework applies the outcome to
+    // the replacement subject, not the carrier). Lowers to a single self-contained
+    // `DeleteSelfAndCancelLeave` step — NOT `[DeletePermanent{source},
+    // CancelReplacement]`, which the `DelaySelfCancelFlow` recognizer intercepts
+    // (that path requires a Delayed-Option source and would no-op for a Digimon
+    // carrier). It owns the `outcome: prevent`, so we emit only this step and
+    // return (suppress the trailing `CancelReplacement`).
+    let delete_self = r.cost.as_ref().is_some_and(|cost| cost.delete_self);
+    if delete_self {
+        if !matches!(r.outcome, Some(crate::clause::ReplacementOutcome::Prevent)) {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { delete_self } requires outcome: prevent".into(),
+            });
+        }
+        if !r.optional {
+            errors.push(ValidationError {
+                card_id: card_id.into(),
+                path: format!("{prefix}.cost"),
+                message: "cost: { delete_self } requires optional: true (\"by deleting … they don't leave\" is a may-pay)"
+                    .into(),
+            });
+        }
+        process.push(CompiledStep::DeleteSelfAndCancelLeave);
         return process;
     }
 
@@ -2168,10 +2532,22 @@ fn compile_step(
             of: compile_player_ref(a.of),
             count: a.count,
         },
-        S::TrashFromTop(a) => CompiledStep::TrashFromTop {
-            of: compile_player_ref(a.of),
-            count: a.count,
-        },
+        S::TrashFromTop(a) => {
+            let (count_lit, count_fn) = match split_scalar_formula(
+                &a.count,
+                &format!("{prefix}.trash_from_top.count"),
+                card_id,
+                errors,
+            ) {
+                Ok(n) => (n.clamp(0, u8::MAX as i32) as u8, None),
+                Err(formula) => (0, Some(Box::new(formula))),
+            };
+            CompiledStep::TrashFromTop {
+                of: compile_player_ref(a.of),
+                count: count_lit,
+                count_fn,
+            }
+        }
         S::AddToHandFromDeck(a) => CompiledStep::AddToHandFromDeck {
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
@@ -2325,8 +2701,22 @@ fn compile_step(
         S::DeletePermanent(a) => CompiledStep::DeletePermanent {
             target: compile_binding_ref(&a.target),
         },
+        S::DeleteForCostReduction(a) => CompiledStep::DeleteForCostReduction {
+            target: compile_binding_ref(&a.target),
+        },
         S::DeleteBoundPermanents(a) => CompiledStep::DeleteBoundPermanents {
             binding: a.binding.clone(),
+        },
+        S::DeleteOnePerOpponentColor(a) => CompiledStep::DeleteOnePerOpponentColor {
+            filter: a.filter.as_ref().map(|f| {
+                Box::new(compile_predicate(
+                    f,
+                    &format!("{prefix}.filter"),
+                    card_id,
+                    errors,
+                ))
+            }),
+            prompt: a.prompt.clone(),
         },
         S::TrashBreedingPermanent(a) => CompiledStep::TrashBreedingPermanent {
             target: compile_binding_ref(&a.target),
@@ -2444,6 +2834,12 @@ fn compile_step(
             source: compile_binding_ref(&a.source),
             target: compile_binding_ref(&a.target),
             face_down: a.face_down,
+            bind_placed_as: a.bind_placed_as.clone(),
+        },
+        S::PlaceAsTopSource(a) => CompiledStep::PlaceAsTopSource {
+            source: compile_binding_ref(&a.source),
+            target: compile_binding_ref(&a.target),
+            face_down: a.face_down,
         },
         S::PlaceTopSourceAsBottom(a) => CompiledStep::PlaceTopSourceAsBottom {
             target: compile_binding_ref(&a.target),
@@ -2470,6 +2866,14 @@ fn compile_step(
                 count: a.count,
             }
         }
+        S::TrashLinkCardOfOwnDigimon(a) => CompiledStep::TrashLinkCardOfOwnDigimon {
+            of: compile_player_ref(a.of),
+            optional: a.optional,
+        },
+        S::TrashOptionFromOwnStacks(a) => CompiledStep::TrashOptionFromOwnStacks {
+            of: compile_player_ref(a.of),
+            optional: a.optional,
+        },
         S::TrashSelectedSources(a) => CompiledStep::TrashSelectedSources {
             source_refs: a.source_refs.clone(),
         },
@@ -2480,6 +2884,10 @@ fn compile_step(
             bind_as: a.bind_as.clone(),
         },
         S::MoveSelfOptionUnderPermanent(a) => CompiledStep::MoveSelfOptionUnderPermanent {
+            target: compile_binding_ref(&a.target),
+            face_down: a.face_down,
+        },
+        S::PlaceSelfUnderPermanent(a) => CompiledStep::PlaceSelfUnderPermanent {
             target: compile_binding_ref(&a.target),
             face_down: a.face_down,
         },
@@ -2544,6 +2952,7 @@ fn compile_step(
                     .cost_delta
                     .as_ref()
                     .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
+                bind_as: a.bind_as.clone(),
             }
         }
         S::PlayFromHandFree(a) => CompiledStep::PlayFromHandFree {
@@ -2557,6 +2966,39 @@ fn compile_step(
             use_cost_lte_opponent_memory: a.use_cost_lte_opponent_memory,
             optional: a.optional,
             prompt: a.prompt.clone(),
+        },
+        S::UseOptionFromTrash(a) => CompiledStep::UseOptionFromTrash {
+            of: compile_player_ref(a.of),
+            filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
+            cost_delta: a
+                .cost
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
+            optional: a.optional,
+            prompt: a.prompt.clone(),
+        },
+        S::UseOptionFromRevealed(a) => CompiledStep::UseOptionFromRevealed {
+            of: compile_player_ref(a.of),
+            card: compile_binding_ref(&a.card),
+            cost_delta: a
+                .cost
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
+        },
+        S::UseOptionFromSources(a) => CompiledStep::UseOptionFromSources {
+            of: compile_player_ref(a.of),
+            card: compile_binding_ref(&a.card),
+            cost_delta: a
+                .cost
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
+        },
+        S::UseOptionBound(a) => CompiledStep::UseOptionBound {
+            binding: a.binding.clone(),
+            cost_delta: a
+                .cost
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
         },
         S::PlayOrUseFromHand(a) => CompiledStep::PlayOrUseFromHand {
             of: compile_player_ref(a.of),
@@ -2585,6 +3027,17 @@ fn compile_step(
                         .to_string(),
                 });
             }
+            // `bind_as` is threaded only for `play_from_hand` (and the *_free
+            // play verbs that already carry it). Reject rather than silently
+            // dropping the binding (suppress_on_play precedent).
+            if a.bind_as.is_some() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.play_from_trash.bind_as"),
+                    message: "bind_as is not supported on play_from_trash (only play_from_hand / play_from_hand_free thread it)"
+                        .to_string(),
+                });
+            }
             CompiledStep::PlayFromTrash {
                 of: compile_player_ref(a.of),
                 trash_index: compile_binding_ref(&a.hand_index),
@@ -2594,12 +3047,22 @@ fn compile_step(
                     .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
             }
         }
-        S::PlayFromTrashFree(a) => CompiledStep::PlayFromTrashFree {
-            of: compile_player_ref(a.of),
-            trash_index: compile_binding_ref(&a.hand_index),
-            suppress_on_play: a.suppress_on_play,
-            suspended: a.suspended,
-        },
+        S::PlayFromTrashFree(a) => {
+            if a.bind_as.is_some() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.play_from_trash_free.bind_as"),
+                    message: "bind_as is not supported on play_from_trash_free (only play_from_hand / play_from_hand_free thread it)"
+                        .to_string(),
+                });
+            }
+            CompiledStep::PlayFromTrashFree {
+                of: compile_player_ref(a.of),
+                trash_index: compile_binding_ref(&a.hand_index),
+                suppress_on_play: a.suppress_on_play,
+                suspended: a.suspended,
+            }
+        }
         S::PlayUnionBoundFree(a) => CompiledStep::PlayUnionBoundFree {
             binding: a.binding.clone(),
             bind_as: a.bind_as.clone(),
@@ -2673,14 +3136,38 @@ fn compile_step(
                 ignore_requirements: a.ignore_requirements,
             }
         }
+        S::EffectInitiatedDnaDigivolveTrashPartner(a) => {
+            CompiledStep::EffectInitiatedDnaDigivolveTrashPartner {
+                target: compile_binding_ref(&a.target),
+                trash_partner: compile_binding_ref(&a.trash_partner),
+                from_hand: compile_binding_ref(&a.from_hand),
+                cost: compile_cost_delta(&a.cost, prefix, card_id, errors),
+                ignore_requirements: a.ignore_requirements,
+            }
+        }
 
-        S::TrashTopSecurity(a) => CompiledStep::TrashTopSecurity {
-            of: compile_player_ref(a.of),
-            count: a
-                .count
-                .as_ref()
-                .map(|f| compile_formula(f, &format!("{prefix}.count"), card_id, errors)),
-        },
+        S::TrashTopSecurity(a) => {
+            if a.count.is_some() && a.leave.is_some() {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.trash_top_security"),
+                    message: "trash_top_security: `count` and `leave` are mutually exclusive \
+                              (specify one or the other)"
+                        .to_string(),
+                });
+            }
+            CompiledStep::TrashTopSecurity {
+                of: compile_player_ref(a.of),
+                count: a
+                    .count
+                    .as_ref()
+                    .map(|f| compile_formula(f, &format!("{prefix}.count"), card_id, errors)),
+                leave: a
+                    .leave
+                    .as_ref()
+                    .map(|f| compile_formula(f, &format!("{prefix}.leave"), card_id, errors)),
+            }
+        }
         S::TrashBottomSecurity(a) => CompiledStep::TrashBottomSecurity {
             of: compile_player_ref(a.of),
         },
@@ -2741,6 +3228,7 @@ fn compile_step(
                 card_id,
                 errors,
             ),
+            bind_count_as: a.bind_count_as.clone(),
         },
         S::SearchOwnSecurityStack(a) => CompiledStep::SearchOwnSecurityStack {
             filter: Box::new(compile_predicate(
@@ -3096,7 +3584,12 @@ fn compile_step(
                 .collect(),
         },
         S::SelectOpponentPlayCostBudget(a) => CompiledStep::SelectOpponentPlayCostBudget {
-            play_cost_budget: a.play_cost_budget,
+            play_cost_budget: compile_formula(
+                &a.play_cost_budget,
+                &format!("{prefix}.play_cost_budget"),
+                card_id,
+                errors,
+            ),
             min_picks: a.min_picks,
             filter: compile_predicate(&a.filter, &format!("{prefix}.filter"), card_id, errors),
             bind_as: a.bind_as.clone(),
@@ -3500,6 +3993,25 @@ fn compile_step(
                 optional: a.optional,
             }
         }
+        S::RefireCardEffect(a) => CompiledStep::RefireCardEffect {
+            card: compile_binding_ref(&a.card),
+            timing: if matches!(
+                a.timing.as_str(),
+                "on_play" | "when_digivolving" | "on_play_or_when_digivolving"
+            ) {
+                a.timing.clone()
+            } else {
+                errors.push(ValidationError {
+                    card_id: card_id.to_string(),
+                    path: format!("{prefix}.refire_card_effect.timing"),
+                    message: format!(
+                        "refire_card_effect only supports timing: on_play, when_digivolving, or on_play_or_when_digivolving, got {}",
+                        a.timing
+                    ),
+                });
+                "on_play".to_string()
+            },
+        },
         S::EndAttack(enabled) => CompiledStep::EndAttack { enabled: *enabled },
         S::CancelReplacement(_) => CompiledStep::CancelReplacement,
         S::HandleReplacement(_) => CompiledStep::HandleReplacement,
@@ -3635,7 +4147,7 @@ effects:
             .join("_examples");
         let (specs, errs) = load_dir_ok(&examples);
         assert!(errs.is_empty(), "parse errors: {errs:#?}");
-        assert_eq!(specs.len(), 15);
+        assert_eq!(specs.len(), 13);
 
         let mut failures = Vec::new();
         for spec in &specs {

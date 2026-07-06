@@ -7,7 +7,7 @@
 //!   - `PlayFromMaterials`
 //!   - `EffectInitiatedDigivolve`, `EffectInitiatedDnaDigivolve`
 //!   - `PlayToken`
-//!   - `PlaceOnSecurity`, `PlaceAsBottomSource`, `TrashTopSource`
+//!   - `PlaceOnSecurity`, `PlaceAsBottomSource`, `PlaceAsTopSource`, `TrashTopSource`
 //!
 //! All variants are synchronous (no selection prompts). Engine primitives
 //! return `Option<PermanentHandle>` / `bool` — Phase 2f1 v1 discards the
@@ -99,7 +99,7 @@ fn bind_played_with_provenance(
 ///                         resolution time (G-FORMULA-COST-DELTA). A negative
 ///                         result is clamped to 0 — a "reduction" can only
 ///                         lower, never raise, the printed cost.
-fn lower_cost_delta(
+pub(crate) fn lower_cost_delta(
     d: Option<&digimon_dsl::compiled::CompiledCostDelta>,
     ctx: &EffectContext<'_>,
     bindings: &Bindings,
@@ -128,6 +128,67 @@ fn lower_cost_delta(
     }
 }
 
+/// Lower a DNA-digivolve step's `cost` (a `CompiledCostDelta`) to the final
+/// `i32` memory charge passed to the effect-initiated DNA primitives.
+///
+/// The DNA verbs take a fixed final cost (not a `CostDelta`), so the cost
+/// keywords are interpreted for the DNA path specifically:
+///
+///   `Printed`   → the RESULT card's printed DNA cost, resolved via
+///                 `printed_cost` against the chosen materials (DCGO
+///                 `payCost: true` → `condition.cost`). If the pair does not
+///                 satisfy any printed recipe (so no printed cost resolves),
+///                 fall back to 0 — the merge is then recipe-rejected anyway.
+///   `Free`      → 0 (free DNA digivolve).
+///   `Literal(n)`→ exactly `n` (an authored fixed cost, e.g. the shipped
+///                 `cost: 0` Omnimon users).
+///   `Reduce(n)` → 0 for `n == 0` (legacy `cost: printed` alias that older
+///                 authoring flattened to `Reduce(0)`); for `n > 0` a
+///                 printed-cost reduction: printed cost minus `n`, floored at 0.
+///   `ReduceFn`  → same as `Reduce(N)` with `N` the evaluated formula.
+///
+/// `printed_cost` is only invoked for the `Printed` / `Reduce` shapes that need
+/// the result card's printed DNA cost, so callers can pass a closure that
+/// borrows `ctx` for the lookup.
+fn lower_dna_cost(
+    cost: &digimon_dsl::compiled::CompiledCostDelta,
+    ctx: &EffectContext<'_>,
+    bindings: &Bindings,
+    printed_cost: impl Fn() -> Option<i32>,
+) -> i32 {
+    use digimon_dsl::compiled::CompiledCostDelta;
+    match cost {
+        CompiledCostDelta::Printed => printed_cost().unwrap_or(0).max(0),
+        CompiledCostDelta::Free => 0,
+        CompiledCostDelta::Literal(n) => (*n).max(0),
+        CompiledCostDelta::Reduce(n) => {
+            let reduce = (*n).max(0);
+            if reduce == 0 {
+                // Legacy `cost: printed` alias — pay the full printed DNA cost.
+                printed_cost().unwrap_or(0).max(0)
+            } else {
+                (printed_cost().unwrap_or(0) - reduce).max(0)
+            }
+        }
+        CompiledCostDelta::ReduceFn(formula) => {
+            let target = ctx
+                .source_permanent
+                .unwrap_or(crate::permanent::PermanentHandle {
+                    player: ctx.player,
+                    index: 0,
+                });
+            let reduce = crate::dsl_cards::formula_eval::evaluate_with_bindings(
+                formula,
+                ctx,
+                target,
+                Some(bindings),
+            )
+            .max(0);
+            (printed_cost().unwrap_or(0) - reduce).max(0)
+        }
+    }
+}
+
 /// Resolve a `source: CompiledBindingRef` to a `CardSourceRef`, defaulting the
 /// source-zone owner to `ctx.player` (the effect controller) for hand/trash
 /// binding kinds. Returns `None` if the binding can't be resolved or has an
@@ -151,6 +212,27 @@ fn resolve_card_source_ref(
             .map(|source| CardSourceRef::Material(source.permanent, source.source_index as usize)),
         // Other kinds (permanent / list): not addressable as a card source.
         _ => None,
+    }
+}
+
+/// Read the stable `CardHandle` a `CardSourceRef` currently addresses,
+/// WITHOUT moving the card. Used by `PlaceAsBottomSource.bind_placed_as` to
+/// capture the placed card's identity before the zone move invalidates the
+/// upstream index binding.
+fn peek_card_source_ref_handle(ctx: &EffectContext<'_>, source: CardSourceRef) -> Option<CardHandle> {
+    match source {
+        CardSourceRef::Hand(p, i) => ctx.game.player(p).hand.get(i).map(|c| c.handle()),
+        CardSourceRef::Trash(p, i) => ctx.game.player(p).trash.get(i).map(|c| c.handle()),
+        CardSourceRef::DeckTop(p) => ctx.game.player(p).deck.last().map(|c| c.handle()),
+        CardSourceRef::Security(p, i) => ctx.game.player(p).security.get(i).map(|c| c.handle()),
+        CardSourceRef::Material(h, i) => ctx
+            .game
+            .players
+            .get(h.player as usize)
+            .and_then(|p| p.battle_area.get(h.index as usize))
+            .and_then(|perm| perm.card_sources.get(i))
+            .map(|c| c.handle()),
+        CardSourceRef::Reveal(h) => Some(h),
     }
 }
 
@@ -202,6 +284,46 @@ fn source_index_of(
     })
 }
 
+/// G-DSL-OUTER-TAIL-NESTED-PARK (effect-driven Option-USE facet).
+///
+/// When `use_option_from` parks (the used Option's `[Main]` body installed a
+/// selection), a body that parked MID-BODY — e.g. inside an `if` with steps
+/// still to run after it (EX7-070 Der Blitz: delete pick, THEN the
+/// `place_self_under_permanent` leg) — left those remaining steps in the
+/// GLOBAL `Game::dsl_outer_tail` slot. If we return to the outer `run_steps`
+/// loop with that slot still occupied, the outer scope's
+/// `run_tail_preserving_trigger_context` drains it as if it were the OUTER
+/// clause's own parked tail: the Option's remaining body steps get re-wrapped
+/// under the OUTER card's provenance and sequenced AFTER the outer clause's
+/// tail. Two observable corruptions (EX7-048 + EX7-070 end-to-end):
+///   1. ordering — the outer tail (remainder-to-deck placement) resolves in
+///      the MIDDLE of the Option's `[Main]`, and
+///   2. provenance — `place_self_under_permanent` runs with `source_card` =
+///      the outer card, so its `pending_option` claim fails and the used
+///      Option is mis-disposed to trash instead of seating itself.
+///
+/// Fix: immediately after the use, while the park is still fresh (before the
+/// outer loop's `park_pending_selection_tail` composes the outer tail),
+/// re-compose the slot onto the parked selection under the OPTION's own
+/// provenance. Frame `outer_conts` then hold [option-body-tail, outer-tail]
+/// in the correct order, and the body tail runs with the Option as
+/// `source_card` (its `pending_option` claim succeeds).
+///
+/// NOTE: the sibling verbs `use_option_from_sources` / `use_option_bound`
+/// and the from-hand bucket terminal (`run_reveal_bucket_use_option_
+/// terminal`) share this latent exposure but have no driver card exercising
+/// a mid-body park yet — see qa/archetype-qa/engine-gaps.md.
+fn compose_parked_used_option_body_tail(
+    ctx: &mut EffectContext<'_>,
+    option_card: CardHandle,
+    owner: crate::enums::PlayerId,
+) {
+    if ctx.game.pending_selection.is_some() && ctx.game.dsl_outer_tail.is_some() {
+        let mut option_ctx = EffectContext::new(ctx.game, option_card, None, owner);
+        crate::dsl_cards::step::drain_dsl_outer_tail(&mut option_ctx);
+    }
+}
+
 /// Try to handle `step` as a play / digivolve / placement variant.
 /// Returns `true` if the variant was matched (regardless of whether the
 /// underlying engine call succeeded).
@@ -212,6 +334,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             of: _,
             hand_index,
             cost_delta,
+            bind_as,
         } => {
             if let Some(ResolvedBinding::HandIndex(owner, i)) =
                 resolve_binding_ref(hand_index, ctx, bindings)
@@ -219,6 +342,12 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 let delta = lower_cost_delta(cost_delta.as_ref(), ctx, bindings);
                 if let Some(played) = ctx.play_from_hand_with_cost(owner, i as usize, delta) {
                     bindings.record_played(played);
+                    // G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER: expose the
+                    // played permanent's handle to subsequent steps in the same
+                    // body (mirrors PlayFromHandFree's bind_as threading).
+                    if let Some(name) = bind_as {
+                        bind_played_with_provenance(bindings, ctx, name, played);
+                    }
                 }
             }
             true
@@ -297,6 +426,137 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                     }
                 }
                 _ => {}
+            }
+            true
+        }
+
+        // ── Option-source USE (binding-consuming, non-parking) ────────────
+        // These consume a binding produced by an upstream select step
+        // (`select_reveal` / `select_own_sources` / `select_union_zone`) and
+        // route the picked Option through the SHARED round-1
+        // `Game::use_option_from` pipeline (`play_option_core` [Main]
+        // resolution + `dispose_option`) — only the `OptionSource` origin
+        // differs. The upstream select already parked; this step is a
+        // synchronous-family verb. The Option's own body may install a
+        // data-driven resume frame if it parks (composed by the outer
+        // `run_steps` loop); no bespoke closure is installed here, so the step
+        // is clone-safe. `cost_delta: None` = FREE (mirrors PlayFromRevealedFree).
+        // `G-DSL-USE-OPTION-FROM-SOURCES`.
+        CompiledStep::UseOptionFromRevealed {
+            of,
+            card,
+            cost_delta,
+        } => {
+            let owner = resolve_player(ctx, *of);
+            let delta = match cost_delta {
+                None => CostDelta::Free,
+                Some(_) => lower_cost_delta(cost_delta.as_ref(), ctx, bindings),
+            };
+            // The `select_reveal` binding resolves to the reveal-pool card
+            // handle; route it through the `OptionSource::Revealed` fork.
+            // A `select_reveal_buckets` binding instead resolves to a
+            // `CardList` (0..N handles — 0 or 1 for a min:0/max:1 bucket);
+            // accept both shapes, mirroring `PlayFromRevealedFree` above
+            // (EX7-048 relies on the bucket shape so the mandatory
+            // remainder-placement tail still runs when the pick is declined).
+            match resolve_binding_ref(card, ctx, bindings) {
+                Some(ResolvedBinding::Card(handle)) => {
+                    ctx.game.use_option_from(
+                        owner,
+                        crate::game_actions::OptionSource::Revealed(handle),
+                        delta,
+                    );
+                    compose_parked_used_option_body_tail(ctx, handle, owner);
+                }
+                Some(ResolvedBinding::CardList(handles)) => {
+                    for handle in handles {
+                        ctx.game.use_option_from(
+                            owner,
+                            crate::game_actions::OptionSource::Revealed(handle),
+                            delta.clone(),
+                        );
+                        compose_parked_used_option_body_tail(ctx, handle, owner);
+                    }
+                }
+                _ => {}
+            }
+            true
+        }
+        CompiledStep::UseOptionFromSources {
+            of,
+            card,
+            cost_delta,
+        } => {
+            let owner = resolve_player(ctx, *of);
+            let delta = match cost_delta {
+                None => CostDelta::Free,
+                Some(_) => lower_cost_delta(cost_delta.as_ref(), ctx, bindings),
+            };
+            // A `select_own_sources` binding yields one or more
+            // `SourceSelectionRef`s (carrier permanent + card handle). Use the
+            // first — the driver clauses pick exactly one. The engine
+            // `OptionSource::Source` fork resolves both `card_sources` and
+            // `linked_cards`.
+            if let Some(ResolvedBinding::SourceRefs(refs)) = resolve_binding_ref(card, ctx, bindings)
+            {
+                if let Some(sref) = refs.first() {
+                    ctx.game.use_option_from(
+                        owner,
+                        crate::game_actions::OptionSource::Source {
+                            host: sref.permanent,
+                            card: sref.card,
+                        },
+                        delta,
+                    );
+                }
+            }
+            true
+        }
+        CompiledStep::UseOptionBound { binding, cost_delta } => {
+            let delta = match cost_delta {
+                None => CostDelta::Free,
+                Some(_) => lower_cost_delta(cost_delta.as_ref(), ctx, bindings),
+            };
+            // Resolve the `select_union_zone` binding: the picked Option, its
+            // origin zone (hand or trash), and that zone's owner. Route to the
+            // matching origin through `Game::use_option_from`. A `Material`
+            // origin is not a legal Option-use zone (no driver uses it) — silent
+            // no-op. The binding is read directly (not via `resolve_binding_ref`)
+            // so the origin tag is preserved.
+            if let Some((card, origin, owner)) = bindings.get_union_card(binding) {
+                match origin {
+                    UnionZoneOrigin::Hand => {
+                        if let Some(idx) = ctx
+                            .game
+                            .player(owner)
+                            .hand
+                            .iter()
+                            .position(|c| c.handle() == card)
+                        {
+                            ctx.game.use_option_from(
+                                owner,
+                                crate::game_actions::OptionSource::Hand(idx),
+                                delta,
+                            );
+                        }
+                    }
+                    UnionZoneOrigin::Trash => {
+                        if let Some(idx) = ctx
+                            .game
+                            .player(owner)
+                            .trash
+                            .iter()
+                            .position(|c| c.handle() == card)
+                        {
+                            ctx.game.use_option_from(
+                                owner,
+                                crate::game_actions::OptionSource::Trash(idx),
+                                delta,
+                            );
+                        }
+                    }
+                    UnionZoneOrigin::Material { .. } => {}
+                }
             }
             true
         }
@@ -713,24 +973,18 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 }
                 _ => return true,
             };
-            let cost = match lower_cost_delta(Some(cost), ctx, bindings) {
-                CostDelta::Free => 0,
-                CostDelta::Fixed(n) => n,
-                CostDelta::Reduce(n) => {
-                    // DNA effect path still takes a final i32 cost. Until the
-                    // engine primitive is widened, `Reduce(n)` is interpreted
-                    // as "reduce printed DNA cost"; DNA printed-cost lookup is
-                    // not available here, so clamp to zero and keep the shape
-                    // ready for the primitive follow-up.
-                    debug_assert!(n >= 0, "negative DNA cost reduction is not meaningful");
-                    0
-                }
-            };
+            // G-ENGINE-DNA-PRINTED-COST (gap 1): `cost: printed` pays the
+            // RESULT card's printed DNA cost against the chosen {a, b} pair
+            // (DCGO `payCost: true` → `condition.cost`). Look it up from the
+            // materials; if the pair doesn't satisfy the recipe there is no
+            // printed cost — the merge itself will then be recipe-rejected.
+            let dna_cost =
+                lower_dna_cost(cost, ctx, bindings, || ctx.printed_dna_cost_for_pair(a, b, from_card));
             let success = ctx.effect_initiated_dna_digivolve(
                 a,
                 b,
                 from_card,
-                cost as i32,
+                dna_cost,
                 *ignore_requirements,
             );
             if let Some(played) = success {
@@ -769,19 +1023,73 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 }
                 _ => return true,
             };
-            let cost = match lower_cost_delta(Some(cost), ctx, bindings) {
-                CostDelta::Free => 0,
-                CostDelta::Fixed(n) => n,
-                CostDelta::Reduce(n) => {
-                    debug_assert!(n >= 0, "negative DNA cost reduction is not meaningful");
-                    0
-                }
-            };
+            // G-ENGINE-DNA-PRINTED-COST (gap 1): `cost: printed` pays the
+            // result card's printed DNA cost against the {field target, hand
+            // partner} pair (DCGO `payCost: true`).
+            let dna_cost = lower_dna_cost(cost, ctx, bindings, || {
+                ctx.printed_dna_cost_for_hand_partner(target_handle, partner_card, result_card)
+            });
             let success = ctx.effect_initiated_dna_digivolve_with_hand_partner(
                 target_handle,
                 partner_card,
                 result_card,
-                cost as i32,
+                dna_cost,
+                *ignore_requirements,
+            );
+            if let Some(played) = success {
+                bindings.record_digivolved(played);
+            }
+            true
+        }
+        CompiledStep::EffectInitiatedDnaDigivolveTrashPartner {
+            target,
+            trash_partner,
+            from_hand,
+            cost,
+            ignore_requirements,
+        } => {
+            // G-DSL-DNA-TRASH-PARTNER: DNA digivolve where one material is a
+            // battle-area permanent and the other is a card in the
+            // controller's TRASH (BT18-015 / BT18-073 [On Deletion]). Lowers
+            // to `effect_initiated_dna_digivolve_trash_partner`
+            // (G-ENGINE-DNA-TRASH-MATERIAL): the trash material moves
+            // STRAIGHT into the merged stack — never an independently played
+            // permanent, no [On Play] fires (DCGO CreateNewPermanent).
+            let target_handle = match resolve_binding_ref(target, ctx, bindings) {
+                Some(ResolvedBinding::Permanent(h)) => h,
+                _ => return true,
+            };
+            let trash_card = match resolve_binding_ref(trash_partner, ctx, bindings) {
+                Some(ResolvedBinding::Card(h)) => h,
+                Some(ResolvedBinding::TrashIndex(owner, i)) => {
+                    match ctx.game.player(owner).trash.get(i as usize) {
+                        Some(cs) => cs.handle(),
+                        None => return true,
+                    }
+                }
+                _ => return true,
+            };
+            let result_card = match resolve_binding_ref(from_hand, ctx, bindings) {
+                Some(ResolvedBinding::Card(h)) => h,
+                Some(ResolvedBinding::HandIndex(owner, i)) => {
+                    match ctx.game.player(owner).hand.get(i as usize) {
+                        Some(cs) => cs.handle(),
+                        None => return true,
+                    }
+                }
+                _ => return true,
+            };
+            // G-ENGINE-DNA-PRINTED-COST: `cost: printed` pays the result
+            // card's printed DNA cost against the {field target, trash
+            // partner} pair (DCGO `payCost: true`).
+            let dna_cost = lower_dna_cost(cost, ctx, bindings, || {
+                ctx.printed_dna_cost_for_field_trash_pair(target_handle, trash_card, result_card)
+            });
+            let success = ctx.effect_initiated_dna_digivolve_trash_partner(
+                target_handle,
+                trash_card,
+                result_card,
+                dna_cost,
                 *ignore_requirements,
             );
             if let Some(played) = success {
@@ -829,6 +1137,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             source,
             target,
             face_down,
+            bind_placed_as,
         } => {
             let target_handle = match resolve_binding_ref(target, ctx, bindings) {
                 Some(ResolvedBinding::Permanent(h)) => h,
@@ -838,12 +1147,47 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 resolve_binding_ref(source, ctx, bindings)
             {
                 let _ = ctx.place_permanent_as_bottom_sources(source_handle, target_handle);
+                // `bind_placed_as` is a card-object binding; the whole-
+                // permanent branch moves a stack, not one card, so nothing
+                // is bound here (no current YAML combines the two).
                 return true;
             }
             let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else {
                 return true;
             };
-            let _ = ctx.place_as_bottom_source(source_ref, target_handle, *face_down);
+            // Peek the placed card's stable handle BEFORE the zone move so a
+            // successful placement can bind it (`bind_placed_as`) — the
+            // upstream select's index binding goes stale the moment the card
+            // leaves its zone.
+            let placed_handle = peek_card_source_ref_handle(ctx, source_ref);
+            let placed = ctx.place_as_bottom_source(source_ref, target_handle, *face_down);
+            if placed {
+                if let (Some(name), Some(handle)) = (bind_placed_as.as_ref(), placed_handle) {
+                    bindings.insert_card(name, handle);
+                }
+            }
+            true
+        }
+        // Top-position sibling of PlaceAsBottomSource — the card lands as
+        // `target`'s TOP digivolution source (directly beneath the active
+        // top card). DCGO `AddDigivolutionCardsTop` explicitly cannot place
+        // a whole field permanent under a stack (its doc points at
+        // IPlacePermanentToDigivolutionCards for that), so unlike the bottom
+        // arm there is no permanent-source branch here — a binding that
+        // resolves to a Permanent is a no-op. G-DSL-PLACE-AS-TOP-SOURCE.
+        CompiledStep::PlaceAsTopSource {
+            source,
+            target,
+            face_down,
+        } => {
+            let target_handle = match resolve_binding_ref(target, ctx, bindings) {
+                Some(ResolvedBinding::Permanent(h)) => h,
+                _ => return true,
+            };
+            let Some(source_ref) = resolve_card_source_ref(source, ctx, bindings) else {
+                return true;
+            };
+            let _ = ctx.place_as_top_source(source_ref, target_handle, *face_down);
             true
         }
         CompiledStep::PlaceTopSourceAsBottom { target } => {

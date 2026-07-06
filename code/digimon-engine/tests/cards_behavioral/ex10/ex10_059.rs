@@ -9,9 +9,11 @@
 //! cards from your trash as this Digimon's top digivolution cards, delete 1
 //! of their Digimon or Tamers with cards under it.
 //! — ***BOTH SENTENCES OMITTED (PARTIAL)***: blind opponent-hand pick +
-//! cross-player tuck (G-DSL-BLIND-OPP-HAND-PLACE) and place-as-TOP-source
-//! (G-DSL-PLACE-AS-TOP-SOURCE, pre-existing BT13-088 gap). See
-//! qa/dsl-vocab-gaps.md. NOT stubbed.
+//! cross-player tuck (G-DSL-BLIND-OPP-HAND-PLACE); sentence 2's
+//! place-as-TOP-source verb now exists (`place_as_top_source`,
+//! G-DSL-PLACE-AS-TOP-SOURCE resolved 2026-07-05) but the clause still
+//! needs the 3-pick trash-cost flow + the "with cards under it" target
+//! filter. See qa/dsl-vocab-gaps.md. NOT stubbed.
 //!
 //! [All Turns] This Digimon gains all [All Turns] effects on all level 6
 //! [Bagra Army] trait Digimon cards in its digivolution cards.

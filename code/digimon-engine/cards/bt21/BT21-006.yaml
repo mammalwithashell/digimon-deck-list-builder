@@ -1,0 +1,57 @@
+# BT21-006 Tsumemon — Digi-Egg (In-Training), Lv.2, Black, Cost 0, no DP.
+# Traits: Unidentified, LIBERATOR.
+#
+# Printed card text (card image + bundle — authoritative; cards.json matches):
+#   Inherited Effect
+#   [All Turns] This Digimon with 4 or more [Vemmon] digivolution cards
+#   gets +3000 DP.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Black/BT21_006.cs
+#   - EffectTiming.None (a static aura, not an event trigger).
+#   - Condition(): IsExistOnBattleAreaDigimon(card) &&
+#       card.PermanentOfThisCard().DigivolutionCards.Count(EqualsCardName("Vemmon")) >= 4
+#   - ChangeSelfDPStaticEffect(changeValue: 3000, isInheritedEffect: true, condition: Condition)
+#   - No turn restriction in the C# condition — matches the printed [All Turns].
+#
+# DSL modelling:
+#   - scope: inherited  → the aura rides under the host's digivolution stack
+#       (Tsumemon is a Digi-Egg source, not necessarily the top card).
+#   - kind: aura, target: {}  → self-aura on the effect's own carrier (the host
+#       Digimon), mirroring ST4-01 Motimon's inherited self-aura shape.
+#   - active_when: { self_source_count: { filter: { name_is: Vemmon }, op: gte,
+#       value: 4 } }  → G-DSL-SELF-SOURCE-COUNT-THRESHOLD, reads
+#       ctx.source_permanent's own digivolution sources (a no-subject global
+#       predicate), counting sources whose card name is exactly "Vemmon".
+#       Matches DCGO's `DigivolutionCards.Count(EqualsCardName("Vemmon")) >= 4`.
+#   - No `your_turn`/`opponent_turn` wrapper → [All Turns], always active while
+#       the threshold is met (re-evaluated continuously, symmetric on
+#       true→false and false→true, per aura semantics).
+#   - dp_modifier: 3000  → the flat +3000 DP grant.
+#
+# No main effect, no security effect. kind: digi_egg (card_kind 3 in cards.json).
+#
+# Exemplar: ST4-01.yaml (inherited self-aura, `level_gte` condition instead of
+# `self_source_count`); tests/dsl/self_source_count_threshold.rs (predicate
+# landed specifically for this card, BT21-006 shape reference).
+
+card: BT21-006
+name: Tsumemon
+kind: digi_egg
+level: 2
+color: [black]
+cost: 0
+traits: [Unidentified, LIBERATOR]
+form: In-Training
+
+effects:
+  # ─── Inherited [All Turns] self-aura: +3000 DP with 4+ [Vemmon] sources ─────
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when:
+      self_source_count:
+        filter: { name_is: Vemmon }
+        op: gte
+        value: 4
+    dp_modifier: 3000
+    summary: "[All Turns] This Digimon with 4 or more [Vemmon] digivolution cards gets +3000 DP"

@@ -121,3 +121,23 @@ fn parse_can_hatch_predicate_leaf() {
     let p = parse("can_hatch: you");
     assert_eq!(p.can_hatch, Some(PlayerRef::You));
 }
+
+#[test]
+fn parse_battle_winner_and_discard_hand_predicate_leaves() {
+    // G-DSL-BATTLE-WINNER-BOARDWIDE — board-wide battle-winner gate.
+    let p = parse("event_winner_owner: you");
+    assert_eq!(p.event_winner_owner, Some(PlayerRef::You));
+
+    let p = parse("event_winner_trait_has: TS");
+    assert_eq!(p.event_winner_trait_has.as_deref(), Some("TS"));
+
+    // G-ENGINE-ON-DISCARD-HAND — hand-discard gates.
+    let p = parse("event_discard_player: you");
+    assert_eq!(p.event_discard_player, Some(PlayerRef::You));
+
+    let p = parse("event_caused_by_own_effect: true");
+    assert_eq!(p.event_caused_by_own_effect, Some(true));
+
+    let p = parse("played_by_effect: true");
+    assert_eq!(p.played_by_effect, Some(true));
+}

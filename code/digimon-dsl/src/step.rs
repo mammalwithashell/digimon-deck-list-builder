@@ -81,7 +81,7 @@ pub enum StepSpec {
 
     // Draw / deck / hand / trash
     Draw(DrawArgs),
-    TrashFromTop(DrawArgs),
+    TrashFromTop(TrashFromTopArgs),
     AddToHandFromDeck(HandleMoveArgs),
     AddToHandFromTrash(HandleMoveArgs),
     AddToHandFromSecurity(HandleMoveArgs),
@@ -138,7 +138,14 @@ pub enum StepSpec {
 
     // Field / permanent
     DeletePermanent(TargetArg),
+    /// `delete_for_cost_reduction: { target: <binding> }` — delete AS A COST and
+    /// reduce the in-flight cost by the deleted permanent's printed play cost.
+    /// `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST` (BT13-103).
+    DeleteForCostReduction(TargetArg),
     DeleteBoundPermanents(DeleteBoundPermanentsArgs),
+    /// G-DSL-DELETE-ONE-PER-DISTINCT-OPPONENT-COLOR — per-color mandatory pick +
+    /// batch delete (EX9-074 Kimeramon Branch B).
+    DeleteOnePerOpponentColor(DeleteOnePerOpponentColorArgs),
     TrashBreedingPermanent(TrashBreedingPermanentArgs),
     ReturnToHand(TargetArg),
     ReturnToDeck(ReturnPermanentArgs),
@@ -148,6 +155,16 @@ pub enum StepSpec {
     PlaceOnSecurity(PlaceOnSecurityArgs),
     PlayToken(PlayTokenArgs),
     PlaceAsBottomSource(PlaceAsBottomSourceArgs),
+    /// G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05): place a card as
+    /// `target`'s TOP digivolution source — inserted directly beneath the
+    /// active top card (DCGO `Permanent.AddDigivolutionCardsTop`, which
+    /// `Insert(1, …)`s into its top-first `cardSources`). The permanent's
+    /// top card / identity is unchanged (placing a digivolution card never
+    /// changes what the permanent IS). Sibling of `place_as_bottom_source`
+    /// with the same args shape. Consumers: EX9-074 Kimeramon ("as this
+    /// Digimon's top digivolution card"), BT13-088 Belphemon: Sleep Mode
+    /// ("on top of this Digimon's digivolution cards").
+    PlaceAsTopSource(PlaceAsTopSourceArgs),
     /// Phase 2 Track F (2026-05-17): move `target`'s top stacked card (the
     /// digivolution source immediately beneath the active top card) to the
     /// bottom of its own stack. Closes G-DSL-PLACE-TOP-SOURCE-AS-BOTTOM
@@ -193,6 +210,29 @@ pub enum StepSpec {
     /// BT25-035 Cougarmon's "by trashing 2 bottom face-down cards from under any
     /// of your Tamers" cost.
     TrashBottomFaceDownSourcesUnderTamers(TrashBottomFaceDownSourcesUnderTamersArgs),
+    /// G-DSL-LINK-TRASH-AS-COST (BT25-073 Dragomon) — the ACTIVATION-cost
+    /// sibling of the replacement-only `cost: { trash_own_link_card: true }`.
+    /// Picks one of `of`'s Digimon that carries ≥1 link card (first selection),
+    /// then one of ITS link cards (second selection), trashes it (firing
+    /// `OnLinkedCardTrashed`), and runs the step's tail ONLY if the trash
+    /// happened (no-approximations cost gate). When no own Digimon has a link
+    /// card the cost is unpayable → the clause's remaining steps are skipped
+    /// (`TailAlreadyRan`). DCGO `BT25_073.cs`: `SelectPermanentEffect`
+    /// (`!HasNoLinkCards`) → `SelectCardEffect Root.LinkedCards` →
+    /// `TrashLinkCardsAndProcessAccordingToResult` → `successProcess`.
+    TrashLinkCardOfOwnDigimon(TrashLinkCardOfOwnDigimonArgs),
+    /// Trash-Option-from-{digivolution|link}-cards ACTIVATION cost (BT25-085
+    /// BeelStarmon): pick one of `of`'s Digimon whose digivolution cards OR link
+    /// cards carry ≥1 Option, then one such Option, and trash it — the correct
+    /// observer fires per zone (`OnDigivolutionCardTrashed` for a digivolution
+    /// source, `OnLinkedCardTrashed` for a link card). The tail runs only if a
+    /// card was trashed. When no own Digimon has an Option in its
+    /// digivolution/link cards the cost is unpayable → the clause's remaining
+    /// steps are skipped (`TailAlreadyRan`). DCGO `BT25_085.cs`:
+    /// `SelectPermanentEffect(PermanentWithTrashableCard)` → `SelectCardEffect
+    /// Mode.Discard` over `permanent.DigivolutionOrLinkCards.Any(IsOption)`.
+    /// The union-of-sources sibling of `TrashLinkCardOfOwnDigimon`.
+    TrashOptionFromOwnStacks(TrashOptionFromOwnStacksArgs),
     BindPermanentProperty(BindPermanentProperty),
     Hatch(PlayerArg),
     /// Move the specified player's eligible breeding-area Digimon to the
@@ -205,6 +245,30 @@ pub enum StepSpec {
     PlayFromHand(PlayFromHandArgs),
     PlayFromHandFree(PlayFromHandFreeArgs),
     UseOptionFromHand(UseOptionFromHandArgs),
+    /// Effect-driven Option USE from the controller's trash with a cost delta
+    /// (Gap 2, `G-DSL-USE-OPTION-FROM-SOURCES`). Trash analogue of
+    /// `use_option_from_hand`.
+    UseOptionFromTrash(UseOptionFromTrashArgs),
+    /// Use an Option previously picked from the game-level reveal pool by a
+    /// `select_reveal` step, applying `cost` to its printed use cost (omitted =
+    /// free), preserving the full Option lifecycle. `card` names the reveal-pool
+    /// binding. Driver EX7-048 "reveal top 6, use 1 [Three Musketeers] Option
+    /// among them free"; the remaining revealed cards are handled by the
+    /// enclosing reveal step. `G-DSL-USE-OPTION-FROM-SOURCES`.
+    UseOptionFromRevealed(UseOptionFromRevealedArgs),
+    /// Use an Option from a permanent's digivolution stack (a
+    /// `select_own_sources` binding), applying `cost` to its printed use cost
+    /// (omitted = free). `card` names the source-refs binding. Driver BT25-085
+    /// "use 1 [Three Musketeers]/[TS] Option from your hand or this Digimon's
+    /// digivolution cards free" (the digivolution-cards origin — the engine
+    /// `OptionSource::Source` fork resolves both `card_sources` and
+    /// `linked_cards`). `G-DSL-USE-OPTION-FROM-SOURCES`.
+    UseOptionFromSources(UseOptionFromSourcesArgs),
+    /// Use a `select_union_zone{hand,trash}`-bound Option from its true origin
+    /// zone, applying `cost` to its printed use cost (omitted = free). Driver
+    /// BT21-062 "use 1 [Ragnarok Cannon] from your hand or trash without paying
+    /// the cost". `G-DSL-USE-OPTION-FROM-SOURCES`.
+    UseOptionBound(UseOptionBoundArgs),
     /// Unified "play OR use 1 card from hand" — inspects the bound hand card's
     /// kind and routes Digimon/Tamer → play and Option → use (a DUAL card
     /// surfaces a "Play as Digimon / Use as Option" face choice). The card is
@@ -227,6 +291,13 @@ pub enum StepSpec {
     EffectInitiatedDigivolve(EffectDigivolveArgs),
     EffectInitiatedDnaDigivolve(EffectDnaDigivolveArgs),
     EffectInitiatedDnaDigivolveHandPartner(EffectDnaDigivolveHandPartnerArgs),
+    /// DNA digivolve where one material is a battle-area permanent (`target`)
+    /// and the other is a card in the controller's TRASH (`trash_partner`);
+    /// the merged permanent is topped with `from_hand` (the result card, from
+    /// hand). BT18-015 / BT18-073 `[On Deletion]` shape. Lowers to
+    /// `EffectContext::effect_initiated_dna_digivolve_trash_partner`
+    /// (G-ENGINE-DNA-TRASH-MATERIAL). G-DSL-DNA-TRASH-PARTNER.
+    EffectInitiatedDnaDigivolveTrashPartner(EffectDnaDigivolveTrashPartnerArgs),
 
     // Security
     TrashTopSecurity(TrashTopSecurityArgs),
@@ -241,6 +312,17 @@ pub enum StepSpec {
     /// "By placing this card from the battle area face down under any of your
     /// [BEATBREAK]/[DATA SQUAD] trait Tamers, …". G-MOVE-SELF-OPTION-UNDER-PERMANENT.
     MoveSelfOptionUnderPermanent(MoveSelfOptionUnderPermanentArgs),
+    /// Place THIS effect's source Option as the bottom digivolution card of a
+    /// chosen own permanent — the "[Main] … Then, place this card as the
+    /// bottom digivolution card of 1 of your … Digimon" tail on P-180 /
+    /// EX7-070 / EX7-071. Unlike `move_self_option_under_permanent` (which
+    /// requires a live field-Option `source_permanent`), this composes with
+    /// the standard Option [Main]-play path by claiming the in-flight
+    /// `pending_option`, so the subsequent `dispose_option` finds nothing and
+    /// the card is seated (FACE-UP by default) instead of trashed. Lowers to
+    /// `EffectContext::place_self_under_permanent`.
+    /// G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL.
+    PlaceSelfUnderPermanent(PlaceSelfUnderPermanentArgs),
     SecurityPlaceStackedCard(SecurityPlaceStackedCardArgs),
     SecurityPlaceTopStackedCard(SecurityPlaceTopStackedCardArgs),
     ReturnAllTrashToDeckBottom(PlayerArg),
@@ -346,6 +428,18 @@ pub enum StepSpec {
     /// clause; a no-op elsewhere. G-OPT-REFUND-ON-DECLINE.
     RefundOpt(EmptyArgs),
     RefireEffect(RefireEffectArgs),
+    /// Activate a timing-filtered effect printed on a CARD OBJECT (not a
+    /// battle-area permanent's top card) — the foreign-card refire variant
+    /// (BT15-102 Apocalymon: "activate 1 [On Play] effect on that card as an
+    /// effect of this Digimon"). The `card` binding is a `CardHandle`
+    /// (typically bound by `place_as_bottom_source.bind_placed_as`), and the
+    /// card must currently be a digivolution source of this effect's carrier
+    /// permanent. The chosen effect runs with the CARRIER as "this Digimon"
+    /// (DCGO `EffectList_ForCard(timing, card)` — the foreign card's effect
+    /// bodies are constructed against the carrier's card), one EffectChoice
+    /// surfaces when the card has >1 eligible effect, and the pick is
+    /// mandatory (DCGO `canNoSelect: () => false`).
+    RefireCardEffect(RefireCardEffectArgs),
     EndAttack(bool),
     CancelReplacement(EmptyArgs),
     HandleReplacement(EmptyArgs),
@@ -428,7 +522,11 @@ impl Serialize for StepSpec {
             StepSpec::OrderRemainder(v) => kv!(s, "order_remainder", v),
             // Field / permanent
             StepSpec::DeletePermanent(v) => kv!(s, "delete_permanent", v),
+            StepSpec::DeleteForCostReduction(v) => kv!(s, "delete_for_cost_reduction", v),
             StepSpec::DeleteBoundPermanents(v) => kv!(s, "delete_bound_permanents", v),
+            StepSpec::DeleteOnePerOpponentColor(v) => {
+                kv!(s, "delete_one_per_opponent_color", v)
+            }
             StepSpec::TrashBreedingPermanent(v) => kv!(s, "trash_breeding_permanent", v),
             StepSpec::ReturnToHand(v) => kv!(s, "return_to_hand", v),
             StepSpec::ReturnToDeck(v) => kv!(s, "return_to_deck", v),
@@ -438,6 +536,7 @@ impl Serialize for StepSpec {
             StepSpec::PlaceOnSecurity(v) => kv!(s, "place_on_security", v),
             StepSpec::PlayToken(v) => kv!(s, "play_token", v),
             StepSpec::PlaceAsBottomSource(v) => kv!(s, "place_as_bottom_source", v),
+            StepSpec::PlaceAsTopSource(v) => kv!(s, "place_as_top_source", v),
             StepSpec::PlaceTopSourceAsBottom(v) => kv!(s, "place_top_source_as_bottom", v),
             StepSpec::TrashTopSource(v) => kv!(s, "trash_top_source", v),
             StepSpec::TrashBottomSources(v) => kv!(s, "trash_bottom_sources", v),
@@ -465,6 +564,12 @@ impl Serialize for StepSpec {
             StepSpec::TrashBottomFaceDownSourcesUnderTamers(v) => {
                 kv!(s, "trash_bottom_face_down_sources_under_tamers", v)
             }
+            StepSpec::TrashLinkCardOfOwnDigimon(v) => {
+                kv!(s, "trash_link_card_of_own_digimon", v)
+            }
+            StepSpec::TrashOptionFromOwnStacks(v) => {
+                kv!(s, "trash_option_from_own_stacks", v)
+            }
             StepSpec::BindPermanentProperty(v) => kv!(s, "bind_permanent_property", v),
             StepSpec::Hatch(v) => kv!(s, "hatch", v),
             StepSpec::MoveFromBreeding(v) => kv!(s, "move_from_breeding", v),
@@ -472,6 +577,10 @@ impl Serialize for StepSpec {
             StepSpec::PlayFromHand(v) => kv!(s, "play_from_hand", v),
             StepSpec::PlayFromHandFree(v) => kv!(s, "play_from_hand_free", v),
             StepSpec::UseOptionFromHand(v) => kv!(s, "use_option_from_hand", v),
+            StepSpec::UseOptionFromTrash(v) => kv!(s, "use_option_from_trash", v),
+            StepSpec::UseOptionFromRevealed(v) => kv!(s, "use_option_from_revealed", v),
+            StepSpec::UseOptionFromSources(v) => kv!(s, "use_option_from_sources", v),
+            StepSpec::UseOptionBound(v) => kv!(s, "use_option_bound", v),
             StepSpec::PlayOrUseFromHand(v) => kv!(s, "play_or_use_from_hand", v),
             StepSpec::PlayFromRevealedFree(v) => kv!(s, "play_from_revealed_free", v),
             StepSpec::PlayFromTrash(v) => kv!(s, "play_from_trash", v),
@@ -487,6 +596,9 @@ impl Serialize for StepSpec {
             StepSpec::EffectInitiatedDnaDigivolveHandPartner(v) => {
                 kv!(s, "effect_initiated_dna_digivolve_hand_partner", v)
             }
+            StepSpec::EffectInitiatedDnaDigivolveTrashPartner(v) => {
+                kv!(s, "effect_initiated_dna_digivolve_trash_partner", v)
+            }
             // Security
             StepSpec::TrashTopSecurity(v) => kv!(s, "trash_top_security", v),
             StepSpec::TrashBottomSecurity(v) => kv!(s, "trash_bottom_security", v),
@@ -497,6 +609,9 @@ impl Serialize for StepSpec {
             StepSpec::BounceSelf(v) => kv!(s, "bounce_self", v),
             StepSpec::MoveSelfOptionUnderPermanent(v) => {
                 kv!(s, "move_self_option_under_permanent", v)
+            }
+            StepSpec::PlaceSelfUnderPermanent(v) => {
+                kv!(s, "place_self_under_permanent", v)
             }
             StepSpec::SecurityPlaceStackedCard(v) => kv!(s, "security_place_stacked_card", v),
             StepSpec::SecurityPlaceTopStackedCard(v) => {
@@ -594,6 +709,7 @@ impl Serialize for StepSpec {
             StepSpec::OpenCounterWindow(v) => kv!(s, "open_counter_window", v),
             StepSpec::RefundOpt(v) => kv!(s, "refund_opt", v),
             StepSpec::RefireEffect(v) => kv!(s, "refire_effect", v),
+            StepSpec::RefireCardEffect(v) => kv!(s, "refire_card_effect", v),
             StepSpec::EndAttack(v) => kv!(s, "end_attack", v),
             StepSpec::CancelReplacement(v) => kv!(s, "cancel_replacement", v),
             StepSpec::HandleReplacement(v) => kv!(s, "handle_replacement", v),
@@ -686,7 +802,11 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
 
             // Field / permanent
             "delete_permanent" => StepSpec::DeletePermanent(map.next_value()?),
+            "delete_for_cost_reduction" => StepSpec::DeleteForCostReduction(map.next_value()?),
             "delete_bound_permanents" => StepSpec::DeleteBoundPermanents(map.next_value()?),
+            "delete_one_per_opponent_color" => {
+                StepSpec::DeleteOnePerOpponentColor(map.next_value()?)
+            }
             "trash_breeding_permanent" => StepSpec::TrashBreedingPermanent(map.next_value()?),
             "return_to_hand" => StepSpec::ReturnToHand(map.next_value()?),
             "return_to_deck" => StepSpec::ReturnToDeck(map.next_value()?),
@@ -696,6 +816,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "place_on_security" => StepSpec::PlaceOnSecurity(map.next_value()?),
             "play_token" => StepSpec::PlayToken(map.next_value()?),
             "place_as_bottom_source" => StepSpec::PlaceAsBottomSource(map.next_value()?),
+            "place_as_top_source" => StepSpec::PlaceAsTopSource(map.next_value()?),
             "place_top_source_as_bottom" => StepSpec::PlaceTopSourceAsBottom(map.next_value()?),
             "trash_top_source" => StepSpec::TrashTopSource(map.next_value()?),
             "trash_bottom_sources" => StepSpec::TrashBottomSources(map.next_value()?),
@@ -723,6 +844,12 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "trash_bottom_face_down_sources_under_tamers" => {
                 StepSpec::TrashBottomFaceDownSourcesUnderTamers(map.next_value()?)
             }
+            "trash_link_card_of_own_digimon" => {
+                StepSpec::TrashLinkCardOfOwnDigimon(map.next_value()?)
+            }
+            "trash_option_from_own_stacks" => {
+                StepSpec::TrashOptionFromOwnStacks(map.next_value()?)
+            }
             "bind_permanent_property" => StepSpec::BindPermanentProperty(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
             "move_from_breeding" => StepSpec::MoveFromBreeding(map.next_value()?),
@@ -731,6 +858,10 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "play_from_hand" => StepSpec::PlayFromHand(map.next_value()?),
             "play_from_hand_free" => StepSpec::PlayFromHandFree(map.next_value()?),
             "use_option_from_hand" => StepSpec::UseOptionFromHand(map.next_value()?),
+            "use_option_from_trash" => StepSpec::UseOptionFromTrash(map.next_value()?),
+            "use_option_from_revealed" => StepSpec::UseOptionFromRevealed(map.next_value()?),
+            "use_option_from_sources" => StepSpec::UseOptionFromSources(map.next_value()?),
+            "use_option_bound" => StepSpec::UseOptionBound(map.next_value()?),
             "play_or_use_from_hand" => StepSpec::PlayOrUseFromHand(map.next_value()?),
             "play_from_revealed_free" => StepSpec::PlayFromRevealedFree(map.next_value()?),
             "play_from_trash" => StepSpec::PlayFromTrash(map.next_value()?),
@@ -748,6 +879,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "effect_initiated_dna_digivolve_hand_partner" => {
                 StepSpec::EffectInitiatedDnaDigivolveHandPartner(map.next_value()?)
             }
+            "effect_initiated_dna_digivolve_trash_partner" => {
+                StepSpec::EffectInitiatedDnaDigivolveTrashPartner(map.next_value()?)
+            }
 
             // Security
             "trash_top_security" => StepSpec::TrashTopSecurity(map.next_value()?),
@@ -759,6 +893,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "bounce_self" => StepSpec::BounceSelf(map.next_value()?),
             "move_self_option_under_permanent" => {
                 StepSpec::MoveSelfOptionUnderPermanent(map.next_value()?)
+            }
+            "place_self_under_permanent" => {
+                StepSpec::PlaceSelfUnderPermanent(map.next_value()?)
             }
             "security_place_stacked_card" => StepSpec::SecurityPlaceStackedCard(map.next_value()?),
             "security_place_top_stacked_card" => {
@@ -858,6 +995,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "open_counter_window" => StepSpec::OpenCounterWindow(map.next_value()?),
             "refund_opt" => StepSpec::RefundOpt(map.next_value()?),
             "refire_effect" => StepSpec::RefireEffect(map.next_value()?),
+            "refire_card_effect" => StepSpec::RefireCardEffect(map.next_value()?),
             "end_attack" => StepSpec::EndAttack(map.next_value()?),
             "cancel_replacement" => StepSpec::CancelReplacement(map.next_value()?),
             "handle_replacement" => StepSpec::HandleReplacement(map.next_value()?),
@@ -906,7 +1044,9 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "choose_from_reveal",
                         "order_remainder",
                         "delete_permanent",
+                        "delete_for_cost_reduction",
                         "delete_bound_permanents",
+                        "delete_one_per_opponent_color",
                         "trash_breeding_permanent",
                         "return_to_hand",
                         "return_to_deck",
@@ -916,6 +1056,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "place_on_security",
                         "play_token",
                         "place_as_bottom_source",
+                        "place_as_top_source",
                         "place_top_source_as_bottom",
                         "trash_top_source",
                         "trash_bottom_sources",
@@ -924,12 +1065,15 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "return_selected_sources_to_hand",
                         "trash_bottom_face_down_source_under_tamer",
                         "trash_bottom_face_down_sources_under_tamers",
+                        "trash_link_card_of_own_digimon",
+                        "trash_option_from_own_stacks",
                         "return_selected_sources_to_deck",
                         "bind_permanent_property",
                         "hatch",
                         "play_from_hand",
                         "play_from_hand_free",
                         "use_option_from_hand",
+                        "use_option_from_trash",
                         "play_or_use_from_hand",
                         "play_from_revealed_free",
                         "play_from_trash",
@@ -941,6 +1085,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "effect_initiated_digivolve",
                         "effect_initiated_dna_digivolve",
                         "effect_initiated_dna_digivolve_hand_partner",
+                        "effect_initiated_dna_digivolve_trash_partner",
                         "app_fuse",
                         "trash_top_security",
                         "trash_bottom_security",
@@ -948,6 +1093,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "trash_top_security_and_cancel_replacement",
                         "bounce_self",
                         "move_self_option_under_permanent",
+                        "place_self_under_permanent",
                         "security_place_stacked_card",
                         "security_place_top_stacked_card",
                         "return_all_trash_to_deck_bottom",
@@ -1003,6 +1149,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "cancel_attack",
                         "open_counter_window",
                         "refire_effect",
+                        "refire_card_effect",
                         "end_attack",
                         "cancel_replacement",
                         "handle_replacement",
@@ -1039,6 +1186,33 @@ pub enum BindingRef {
 #[serde(deny_unknown_fields)]
 pub struct DeleteBoundPermanentsArgs {
     pub binding: String,
+}
+
+/// Args for `delete_one_per_opponent_color`
+/// (G-DSL-DELETE-ONE-PER-DISTINCT-OPPONENT-COLOR). Iterates the game's colors;
+/// for each color that appears among the opponent's Digimon (matching `filter`,
+/// if any), drives a MANDATORY pick of 1 not-yet-chosen opponent Digimon of that
+/// color, accumulates the picks, and BATCH-deletes them after every color's pick
+/// resolves (DCGO `EX9_074.cs` Branch B: "delete 1 of each of your opponent's
+/// Digimon with different colors"). Colors with no legal target are skipped; a
+/// picked Digimon of a multi-color card is excluded from later colors' picks
+/// (so a two-color Digimon is deleted at most once). Every pick surfaces in the
+/// action space (no PASS — mandatory). Driver: EX9-074 Kimeramon.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct DeleteOnePerOpponentColorArgs {
+    /// Extra restriction AND-ed onto "opponent Digimon of the current color".
+    /// Defaults to no extra restriction (every opponent Digimon is eligible),
+    /// matching EX9-074 Branch B. Authored as a `filter:` predicate block.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub filter: Option<PredicateSpec>,
+    /// Prompt template. `{color}` is substituted with the current color name at
+    /// each per-color pick (DCGO `"Select 1 {deletableColor} Digimon to delete"`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+    /// Optional localization-key override for `prompt`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
 }
 
 /// Args for `reduce_link_cost` — reduce the cost of the link about to resolve
@@ -1175,6 +1349,19 @@ pub struct TrashTopSecurityArgs {
     pub of: PlayerRef,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub count: Option<crate::formula::FormulaSpec>,
+    /// "Trash the top cards … so that it has N cards left" — trashes from the
+    /// top of `of`'s security stack until exactly `leave` cards remain (i.e.
+    /// `max(0, security_count - leave)` cards, clamped so it never underflows /
+    /// over-trashes an already-short stack). Mutually exclusive with `count`
+    /// (specify one or the other — a spec carrying both is rejected by the
+    /// linter). Mask-accurate: the trash amount is computed at run time from
+    /// the actual stack size, so no illegal action is ever offered. Drives
+    /// BT21-098 Ragnarok Cannon's [Delay] "trash the top cards of your
+    /// opponent's security stack so that it has 1 card left" (`leave: 1`). DCGO
+    /// `IDestroySecurity(destroySecurityCount: Enemy.SecurityCards.Count - 1,
+    /// fromTop: true)`. G-DSL-TRASH-TOP-SECURITY-LEAVE (driver BT21-098).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub leave: Option<crate::formula::FormulaSpec>,
 }
 
 /// Args for `trash_bottom_face_down_source_under_tamer` — bundles "pick one of
@@ -1213,6 +1400,41 @@ pub struct TrashBottomFaceDownSourcesUnderTamersArgs {
     pub count: u8,
 }
 
+/// Args for `trash_link_card_of_own_digimon` — the link-card-trash ACTIVATION
+/// cost (BT25-073 Dragomon). Picks one of `of`'s Digimon with ≥1 link card, then
+/// one of its link cards, and trashes it; the step's tail runs only if the trash
+/// happened. `G-DSL-LINK-TRASH-AS-COST`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashLinkCardOfOwnDigimonArgs {
+    pub of: PlayerRef,
+    /// When `true`, BOTH picks (own Digimon and its link card) are DECLINABLE
+    /// (offer PASS) — modelling DCGO's `canNoSelect: true` on both selects for a
+    /// "By trashing 1 of your Digimon's link cards, you MAY …" clause. On decline
+    /// nothing is trashed and the step's tail does not run. Default `false`
+    /// leaves the decline to a clause-level `optional`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+}
+
+/// Args for `trash_option_from_own_stacks` — the trash-Option-from-{digivolution|
+/// link}-cards ACTIVATION cost (BT25-085 BeelStarmon). Picks one of `of`'s
+/// Digimon whose digivolution cards OR link cards carry ≥1 Option, then one such
+/// Option, and trashes it (the correct observer fires per zone); the step's tail
+/// runs only if the trash happened. `G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashOptionFromOwnStacksArgs {
+    pub of: PlayerRef,
+    /// When `true`, BOTH picks (own Digimon and its Option) are DECLINABLE
+    /// (offer PASS) — DCGO's `canNoSelect: true` on both selects for a "By
+    /// trashing 1 Option …, this Digimon MAY …" clause. On decline nothing is
+    /// trashed and the step's tail does not run. Default `false` leaves the
+    /// decline to a clause-level `optional`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub optional: bool,
+}
+
 /// Args for `move_self_option_under_permanent` — relocate THIS effect's source
 /// Option (an in-battle-area field Option) face-down under a chosen own
 /// permanent. `target` names a binding (typically a prior `select_own_permanent`
@@ -1229,6 +1451,22 @@ pub struct MoveSelfOptionUnderPermanentArgs {
 
 fn default_true() -> bool {
     true
+}
+
+/// Args for `place_self_under_permanent` — place THIS effect's source Option
+/// as the bottom digivolution card of a chosen own permanent, composing with
+/// the standard Option [Main]-play path (the in-flight `pending_option` is
+/// claimed, so the Option is seated instead of trashed). `target` names a
+/// binding (typically a prior `select_own_permanent` pick); `face_down`
+/// defaults to `false` — the P-180 / EX7-070 / EX7-071 tail places the card
+/// FACE-UP (DCGO `AddDigivolutionCardsBottom` without `isFacedown: true`).
+/// G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlaceSelfUnderPermanentArgs {
+    pub target: BindingRef,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub face_down: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema, Default)]
@@ -1445,6 +1683,17 @@ pub struct RefireEffectArgs {
     pub optional: bool,
 }
 
+/// Args for `refire_card_effect` — see [`StepSpec::RefireCardEffect`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RefireCardEffectArgs {
+    /// Binding holding the `CardHandle` of the card whose effect fires. The
+    /// card must be a digivolution source of this effect's carrier.
+    pub card: BindingRef,
+    /// `on_play`, `when_digivolving`, or `on_play_or_when_digivolving`.
+    pub timing: String,
+}
+
 #[derive(
     Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema, Default,
 )]
@@ -1473,6 +1722,18 @@ pub struct SubstituteReplacementArgs {
 pub struct DrawArgs {
     pub of: PlayerRef,
     pub count: u8,
+}
+
+/// Args for `trash_from_top` — mill `count` cards from the top of `of`'s
+/// deck. `count` is a `FormulaSpec` (unify-dsl-scalar-and-comparators): a
+/// bare int `count: 2` is a literal, a map is a runtime formula (e.g.
+/// BT15-102's "trash the top 2 cards … for each of this Digimon's level 6
+/// digivolution cards" = `{ base: 0, per: source_stack_count_filtered, … }`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct TrashFromTopArgs {
+    pub of: PlayerRef,
+    pub count: FormulaSpec,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1846,6 +2107,15 @@ pub struct TrashTopNDigivolutionCardsOfEachArgs {
 pub struct TrashOpponentHandToCountArgs {
     pub opponent: PlayerRef,
     pub target_count: crate::formula::FormulaSpec,
+    /// Record the number of cards ACTUALLY trashed by this step into a named
+    /// literal binding, consumable by later steps via `{ binding_value: <name> }`
+    /// (e.g. `{ floor_div: [{ binding_value: trashed }, 2] }`). Defaults to
+    /// `None` (no binding). On the no-op path (opponent hand already ≤ target)
+    /// the binding is set to 0. G-DSL-TRASH-COUNT-RESULT-BINDING (BT19-075
+    /// "For every 2 cards trashed by this effect, delete 1 of your opponent's
+    /// Tamers").
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_count_as: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -1889,6 +2159,29 @@ pub struct PlaceAsBottomSourceArgs {
     pub target: BindingRef,
     /// When `true`, the placed bottom digivolution source is marked
     /// face-down. Omitted → face-up (the default).
+    #[serde(default)]
+    pub face_down: bool,
+    /// Bind the placed card's `CardHandle` under this name AFTER a
+    /// successful placement (absent on a failed / skipped placement, so a
+    /// downstream consumer like `refire_card_effect` silently no-ops when
+    /// nothing was placed). Survives the zone move — unlike the shifting
+    /// trash/hand index bound by the upstream select step.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_placed_as: Option<String>,
+}
+
+/// Args for `place_as_top_source` — same shape as
+/// `PlaceAsBottomSourceArgs`, but the card is inserted at the TOP-source
+/// position (directly beneath the permanent's active top card) instead of
+/// the bottom of the stack. G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlaceAsTopSourceArgs {
+    pub source: BindingRef,
+    pub target: BindingRef,
+    /// When `true`, the placed top digivolution source is marked face-down.
+    /// Omitted → face-up (the default; no current consumer sets this — it
+    /// exists for args-shape parity with `place_as_bottom_source`).
     #[serde(default)]
     pub face_down: bool,
 }
@@ -1972,6 +2265,15 @@ pub struct PlayFromHandArgs {
     /// behavior.
     #[serde(default, skip_serializing_if = "is_false")]
     pub suspended: bool,
+    /// Bind the resulting permanent handle for use in later steps in the
+    /// same body (mirrors `play_from_hand_free`'s `bind_as`, for the
+    /// cost-paying / cost-reduced play). Only honored by `play_from_hand`;
+    /// rejected at compile time on `play_from_trash` / `play_from_trash_free`
+    /// (which share these args) so it cannot silently no-op. None (the
+    /// default) preserves prior behavior.
+    /// G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER (BT25-039 Sirenmon).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
 }
 
 /// Free-play-from-hand args. Adds `bind_as` so the just-played permanent
@@ -2051,6 +2353,80 @@ pub struct UseOptionFromHandArgs {
     pub optional: bool,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt: Option<String>,
+}
+
+/// `use_option_from_trash:` args — effect-driven Option USE from the
+/// controller's TRASH, with `cost` applied to the printed use cost (Gap 2,
+/// `G-DSL-USE-OPTION-FROM-SOURCES`). Trash analogue of `use_option_from_hand`.
+///
+/// Drivers: BT25-083 ("use 1 [Three Musketeers] Option from your trash with the
+/// cost reduced by 3" → `cost: { reduce: 3 }`), BT21-062's trash leg
+/// ("use 1 [Ragnarok Cannon] from … trash without paying the cost" → `cost: free`).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct UseOptionFromTrashArgs {
+    pub of: PlayerRef,
+    pub filter: crate::predicate::PredicateSpec,
+    /// Cost applied to the Option's printed USE cost. `free` = pay nothing;
+    /// `{ reduce: N }` = pay `max(0, use_cost - field_reductions - N)`; `printed`
+    /// / omitted = pay the printed use cost (less field reductions). Reuses the
+    /// shared `CostDelta` shape (same as the play half's `cost:`).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<CostDelta>,
+    #[serde(default, skip_serializing_if = "is_false")]
+    pub optional: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt: Option<String>,
+}
+
+/// `use_option_from_revealed:` args — use an Option previously picked from the
+/// reveal pool (a `select_reveal` binding) with `cost` applied to its printed
+/// use cost (omitted = free). The `card` binding resolves to the reveal-pool
+/// card handle at run time. Driver EX7-048 clause 1.
+/// `G-DSL-USE-OPTION-FROM-SOURCES`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct UseOptionFromRevealedArgs {
+    pub of: PlayerRef,
+    /// The `select_reveal` binding naming the Option to use.
+    pub card: BindingRef,
+    /// Cost applied to the Option's printed USE cost. `free` / omitted = pay
+    /// nothing; `{ reduce: N }` = pay `max(0, use_cost - field_reductions - N)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<CostDelta>,
+}
+
+/// `use_option_from_sources:` args — use an Option from a permanent's
+/// digivolution stack (a `select_own_sources` binding) with `cost` applied to
+/// its printed use cost (omitted = free). `card` names the source-refs binding;
+/// its carrier permanent + card handle are recovered from the binding. The
+/// engine `OptionSource::Source` fork resolves both `card_sources` and
+/// `linked_cards`. Driver BT25-085. `G-DSL-USE-OPTION-FROM-SOURCES`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct UseOptionFromSourcesArgs {
+    pub of: PlayerRef,
+    /// The `select_own_sources` binding naming the source Option to use.
+    pub card: BindingRef,
+    /// Cost applied to the Option's printed USE cost. `free` / omitted = pay
+    /// nothing; `{ reduce: N }` = pay `max(0, use_cost - field_reductions - N)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<CostDelta>,
+}
+
+/// `use_option_bound:` args — use a `select_union_zone{hand,trash}`-bound Option
+/// from its true origin zone, with `cost` applied to its printed use cost
+/// (omitted = free). Driver BT21-062 "use 1 [Ragnarok Cannon] from your hand or
+/// trash without paying the cost". `G-DSL-USE-OPTION-FROM-SOURCES`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct UseOptionBoundArgs {
+    /// The `select_union_zone` `bind_as` naming the picked Option.
+    pub binding: String,
+    /// Cost applied to the Option's printed USE cost. `free` / omitted = pay
+    /// nothing; `{ reduce: N }` = pay `max(0, use_cost - field_reductions - N)`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cost: Option<CostDelta>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
@@ -2218,6 +2594,29 @@ pub struct EffectDnaDigivolveHandPartnerArgs {
     pub target: BindingRef,
     /// The hand-card DNA material (`requirement2`).
     pub hand_partner: BindingRef,
+    /// The resulting evolved card, pulled from hand and stacked on top.
+    pub from_hand: BindingRef,
+    pub cost: CostDelta,
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub ignore_requirements: bool,
+}
+
+/// `effect_initiated_dna_digivolve_trash_partner:` — DNA digivolve where one
+/// material is a battle-area permanent (`target`) and the other is a card in
+/// the controller's TRASH (`trash_partner`); the merged permanent is topped
+/// with `from_hand` (the result card, also from hand). BT18-015 / BT18-073
+/// `[On Deletion]` shape ("1 of your [Machinedramon] and 1 [Kimeramon] in the
+/// trash may DNA digivolve into [Millenniummon] in the hand"). The trash
+/// material moves STRAIGHT into the merged stack (never an independently
+/// played permanent — no `[On Play]` fires), mirroring DCGO
+/// `CreateNewPermanent` + jogress. G-DSL-DNA-TRASH-PARTNER.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct EffectDnaDigivolveTrashPartnerArgs {
+    /// The on-field DNA material (`requirement1`).
+    pub target: BindingRef,
+    /// The trash-card DNA material (`requirement2`).
+    pub trash_partner: BindingRef,
     /// The resulting evolved card, pulled from hand and stacked on top.
     pub from_hand: BindingRef,
     pub cost: CostDelta,
@@ -2775,7 +3174,14 @@ pub struct SelectOpponentDpBudgetArgs {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
 #[serde(deny_unknown_fields)]
 pub struct SelectOpponentPlayCostBudgetArgs {
-    pub play_cost_budget: i32,
+    /// Running play-cost budget. Accepts a literal integer (`play_cost_budget:
+    /// 6`) or a formula such as `{ base: 3, per: { source_stack_count: { filter:
+    /// { name_is: "Vemmon" } } }, delta: 1 }` for "3 + 1 per [Vemmon] in this
+    /// Digimon's digivolution cards" (P-094 Destromon). Mirrors the
+    /// `dp_budget: FormulaSpec` field on `SelectOpponentDpBudgetArgs`. A bare
+    /// integer still parses because `FormulaSpec`'s first untagged variant is
+    /// `Literal(i32)`, so existing scalar users (EX4-073) are unaffected.
+    pub play_cost_budget: crate::formula::FormulaSpec,
     #[serde(default)]
     pub min_picks: u8,
     /// Optional per-candidate predicate. Only opponent permanents satisfying

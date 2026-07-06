@@ -1,0 +1,78 @@
+{
+  "card_id": "EX12-018",
+  "card_index": 18,
+  "card_name_eng": "Siriusmon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_018",
+  "play_cost": 5,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 4,
+  "rarity": 3,
+  "card_colors": [
+    0,
+    2
+  ],
+  "type_eng": [
+    "Light Dragon",
+    "VB"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Vaccine"
+  ],
+  "effect_description_eng": "＜Progress＞ (While attacking, your opponent's effects don't affect this Digimon.)\r\n＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon in battle, it checks security before the attack ends.)\r\n＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may place up to 2 Digimon cards with [Gammamon] in its text or the [VB] trait from your hand or trash as this Digimon's top or bottom digivolution cards. If this effect placed, to 1 of your opponent's Digimon, give -2000 DP until their turn ends for each of this Digimon's digivolution cards.",
+  "inherited_effect_description_eng": "",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 0,
+      "level": 5,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 2,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Gammamon] in text or w/[VB] trait: Cost 3",
+  "dual": {
+    "digimon": {
+      "level": 6,
+      "dp": 12000,
+      "colors": [
+        "Red",
+        "Yellow"
+      ],
+      "traits": [
+        "Light Dragon",
+        "VB"
+      ],
+      "evo_costs": [
+        {
+          "card_color": 0,
+          "level": 5,
+          "memory_cost": 4
+        }
+      ],
+      "effect_text": "＜Progress＞ (While attacking, your opponent's effects don't affect this Digimon.)\r\n＜Piercing＞ (When this Digimon attacks and deletes an opponent's Digimon in battle, it checks security before the attack ends.)\r\n＜Security A. +1＞ (This Digimon checks 1 additional security card.)\r\n[When Digivolving] [When Attacking] [Once Per Turn] You may place up to 2 Digimon cards with [Gammamon] in its text or the [VB] trait from your hand or trash as this Digimon's top or bottom digivolution cards. If this effect placed, to 1 of your opponent's Digimon, give -2000 DP until their turn ends for each of this Digimon's digivolution cards.",
+      "inherited_text": "",
+      "keywords": [
+        "ArtsDigivolve"
+      ]
+    },
+    "option": {
+      "use_cost": 5,
+      "colors": [
+        "Red",
+        "Yellow"
+      ],
+      "effect_text": "Use Requirement: VB trait\r\n[Main] Delete 1 of your opponent's highest DP Digimon. Then, 1 of your Digimon may attack.",
+      "security_text": "",
+      "keywords": [
+        "ArtsDigivolve"
+      ]
+    }
+  }
+}

@@ -50,6 +50,54 @@ effects:
 }
 
 #[test]
+fn parse_new_trigger_timings_battle_winner_and_discard_hand() {
+    // G-DSL-BATTLE-WINNER-BOARDWIDE — board-wide "when any of your [X] win a battle".
+    let yaml = r#"
+card: BT25-020
+name: Marsmon
+kind: digimon
+level: 6
+color: [red]
+cost: 12
+dp: 12000
+effects:
+  - when: on_ally_won_battle
+    once_per_turn: true
+    active_when:
+      all_of:
+        - event_winner_owner: you
+        - event_winner_trait_has: TS
+    process:
+      - trash_top_security: { of: opponent }
+"#;
+    let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+    let t = spec.effects[0].as_triggered().unwrap();
+    assert!(matches!(t.when, TimingSet::Single(Timing::OnAllyWonBattle)));
+    assert!(t.once_per_turn);
+
+    // G-ENGINE-ON-DISCARD-HAND — inherited "when your hand is trashed from".
+    let yaml = r#"
+card: BT25-084
+name: Titamon
+kind: digimon
+level: 6
+color: [purple]
+cost: 12
+dp: 12000
+effects:
+  - scope: inherited
+    when: on_discard_hand
+    active_when: { event_discard_player: you }
+    process:
+      - gain_memory: 1
+"#;
+    let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
+    let t = spec.effects[0].as_triggered().unwrap();
+    assert!(matches!(t.when, TimingSet::Single(Timing::OnDiscardHand)));
+    assert_eq!(t.scope, ClauseScope::Inherited);
+}
+
+#[test]
 fn parse_inherited_scope_clause() {
     let yaml = r#"
 card: BT17-015

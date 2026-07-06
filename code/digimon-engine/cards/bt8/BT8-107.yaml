@@ -1,0 +1,117 @@
+# BT8-107 Pandemonium Flame — Option, Cost 2, Purple.
+# No traits, no evo_costs (DigiEgg/Lv.2-base only alt-paths — N/A for an Option).
+#
+# Printed card text (data/card_bundles/BT8-107.md — official Bandai DB;
+# matches data/cards.json and the card image verbatim):
+#
+#   [Main] You may delete 1 of your Digimon to delete 1 of your opponent's
+#   unsuspended Digimon with a level less than or equal to the deleted
+#   Digimon's level.
+#
+#   Security Effect [Security] Delete 1 of your opponent's unsuspended
+#   Digimon.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT8/Purple/BT8_107.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Clause 1 — `EffectTiming.OptionSkill` ([Main]):
+#   `CanSelectPermanentCondition` = any own battle-area Digimon.
+#   `SelectPermanentEffect` #1: `canNoSelect: true` (the printed "you may
+#   delete" — decline is legal). On accept, `SuccessProcess` computes a
+#   SECOND `CanSelectPermanentCondition1` gating a mandatory
+#   (`canNoSelect: false`, `mode: Destroy`) SelectPermanentEffect over
+#   opponent battle-area Digimon where:
+#     - `IsPermanentExistsOnOpponentBattleAreaDigimon`
+#     - `permanent1.Level <= permanent.LevelJustBeforeRemoveField` (the
+#       DELETED Digimon's level, captured just before it left the field —
+#       DCGO reads a level SNAPSHOT because the deleted permanent no longer
+#       resolves afterward)
+#     - `!permanent1.IsSuspended`
+#   Both selects install ONLY when a legal candidate exists
+#   (`HasMatchConditionPermanent`).
+#
+#   Rust DSL mapping: `select_own_permanent { optional: true, filter: {
+#   kind: digimon } }` (declining aborts the rest of the clause — the
+#   historical `continue_on_decline: false` select-decline semantic, exactly
+#   the printed "you may X to Y" cost-gate shape; P-169 idiom). Because the
+#   deleted permanent's handle is unresolvable once removed, its level is
+#   captured as a LITERAL binding via `bind_permanent_property { property:
+#   level }` BEFORE `delete_permanent` runs (BT17-078 idiom). The opponent
+#   select then filters on `level_lte: { formula: { binding_value: <level
+#   binding> } } }` + `is_unsuspended: true` + `kind: digimon`.
+#
+# Clause 2 — `EffectTiming.SecuritySkill` ([Security]):
+#   `CanSelectPermanentCondition` = opponent battle-area Digimon that is
+#   unsuspended — NO level cap (this is a fresh, unrelated condition; no own
+#   Digimon is deleted as a cost for the Security check). `canNoSelect:
+#   false` — mandatory (Security effects have no opt-out, rules §16;
+#   BT9-108 idiom).
+#
+#   Rust DSL mapping: `select_opponent_permanent { filter: { kind: digimon,
+#   is_unsuspended: true } }` (no `optional:`) → `delete_permanent`.
+#
+# ─── Faithfulness diff vs. card text ─────────────────────────────────────────
+#
+# | Card-text element                                                     | Status      |
+# |------------------------------------------------------------------------|-------------|
+# | [Main] you may delete 1 own Digimon                                   | IMPLEMENTED |
+# | [Main] -> delete 1 opp UNSUSPENDED Digimon, level <= deleted's level   | IMPLEMENTED |
+# | [Security] delete 1 opp unsuspended Digimon (no level cap)            | IMPLEMENTED |
+#
+# Verdict: IMPLEMENTED.
+
+card: BT8-107
+name: Pandemonium Flame
+kind: option
+color: [purple]
+cost: 2
+
+effects:
+  # ─── Clause 1 — [Main] optional own-Digimon delete-as-cost, then delete an
+  #     opponent UNSUSPENDED Digimon with level <= the deleted Digimon's level ──
+  - when: main_from_hand
+    summary: "[Main] You may delete 1 of your Digimon to delete 1 opponent's unsuspended Digimon with level <= the deleted Digimon's level"
+    process:
+      # "You may delete 1 of your Digimon" — the cost. Declining aborts the
+      # whole clause (continue_on_decline defaults to false).
+      - select_own_permanent:
+          bind_as: to_delete
+          filter: { kind: digimon }
+          optional: true
+          prompt: "You may delete 1 of your Digimon"
+      # Snapshot the about-to-be-deleted Digimon's level as a literal
+      # binding BEFORE it leaves the field — the handle is unresolvable
+      # after delete_permanent runs.
+      - bind_permanent_property:
+          from: to_delete
+          property: level
+          bind_as: to_delete_level
+      - delete_permanent: { target: to_delete }
+      # "delete 1 of your opponent's unsuspended Digimon with a level less
+      # than or equal to the deleted Digimon's level" — mandatory once the
+      # cost is paid (DCGO canNoSelect: false on this second select).
+      - select_opponent_permanent:
+          bind_as: opp_target
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+              - level_lte:
+                  formula:
+                    binding_value: to_delete_level
+          prompt: "Delete 1 of your opponent's unsuspended Digimon with a level less than or equal to the deleted Digimon's level"
+      - delete_permanent: { target: opp_target }
+
+  # ─── Clause 2 — [Security] mandatory delete of an unsuspended opp Digimon ──
+  - when: on_security
+    summary: "[Security] Delete 1 of your opponent's unsuspended Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: sec_target
+          filter:
+            all_of:
+              - kind: digimon
+              - is_unsuspended: true
+          prompt: "Delete 1 of your opponent's unsuspended Digimon"
+      - delete_permanent: { target: sec_target }

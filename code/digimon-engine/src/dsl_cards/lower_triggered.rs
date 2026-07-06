@@ -491,6 +491,7 @@ pub(crate) fn body_first_step_installs_selection(body: &[CompiledStep]) -> bool 
     matches!(
         first,
         CompiledStep::TrashBottomFaceDownSourceUnderTamer { .. }
+            | CompiledStep::TrashLinkCardOfOwnDigimon { .. }
             | CompiledStep::SelectHand { .. }
             | CompiledStep::SelectTrash { .. }
             | CompiledStep::SelectReveal { .. }
@@ -554,7 +555,7 @@ fn digi_burst_main_activation_guard(
     }
 }
 
-fn first_step_candidate_guard(
+pub(crate) fn first_step_candidate_guard(
     step: &CompiledStep,
 ) -> Option<Box<dyn Fn(&crate::effect_context::EffectReadContext<'_>) -> bool + Send + Sync>> {
     match step {
@@ -683,6 +684,9 @@ fn new_builder(card: CardHandle, timing: EffectTiming) -> EffectBuilder {
         EffectTiming::OnOpponentSecurityRemoved => Effect::on_opponent_security_removed(card),
         EffectTiming::OnOwnSecurityRemoved => Effect::on_own_security_removed(card),
         EffectTiming::OnDigivolutionCardTrashed => Effect::on_digivolution_card_trashed(card),
+        EffectTiming::OnDigivolutionCardReturnedToDeckBottom => {
+            Effect::on_digivolution_card_returned_to_deck_bottom(card)
+        }
         EffectTiming::OnSecurityCheck => Effect::on_security_check(card),
         EffectTiming::OnCheckFaceUpSecurity => {
             EffectBuilder::new(card, EffectTiming::OnCheckFaceUpSecurity)

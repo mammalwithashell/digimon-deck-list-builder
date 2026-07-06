@@ -1,0 +1,175 @@
+# BT12-038 GeoGreymon — Digimon, Lv.4, Yellow/Red, DP 5000, Cost 5.
+# Traits: Dinosaur. Form: Champion. Attribute: Vaccine.
+#
+# Printed card text (BT12-038.json / official Bandai DB bundle
+# data/card_bundles/BT12-038.md — agree):
+#
+#   [When Digivolving] If you don't have [Marcus Damon] in play, you may
+#   play 1 [Marcus Damon] from your hand without paying the cost.
+#
+#   Inherited: [Your Turn] [Once Per Turn] When one of your yellow or red
+#   Tamers becomes suspended, 1 of your opponent's Digimon gets -2000 DP for
+#   the turn.
+#
+# Digivolution requirements (official Bandai DB bundle + card image, both
+# confirmed showing TWO standard circles):
+#   Standard: Yellow Lv.3 / cost 3, Red Lv.3 / cost 3.
+#   xros_req: "[Digivolve] Lv.3 w/[Agumon] in name and [Dinosaur] trait:
+#     Cost 2" — modeled as an alt_path (cards.json evo_costs does not carry
+#     this alt condition; DCGO confirms it below).
+#
+#   IMPORTANT — cards.json/BT12-038.json `evo_costs` only carries a SINGLE
+#   entry: {card_color: 2 (Yellow), level: 3, memory_cost: 3}. The Red Lv.3 /
+#   cost 3 circle was silently dropped by the lossy multi-colour-digivolve-
+#   cost API ingest (the exact drop CLAUDE.md and the
+#   project_bg_imperial_evo_cost_color_gap memory warn about) and is NOT
+#   present in data/card_overrides.json either. Because the engine's
+#   standard-digivolve legality (`can_basic_digivolve`,
+#   code/digimon-engine/src/action/mask.rs) reads `card.digivolution_costs()`
+#   — which for a non-Dual card is exactly the raw evo_costs list — ONLY the
+#   Yellow Lv.3/3 circle loads automatically. The Red Lv.3/3 circle is
+#   authored explicitly below as a `kind: digivolve` alt_path (the
+#   established off-color-standard-circle idiom; precedents: BT13-019 /
+#   BT13-030 / BT13-040 `from: { level_eq: N, color_is: <color> }, cost: N`)
+#   to compensate for the data-layer drop and restore the printed path.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT12/Yellow/BT12_038.cs
+#
+# ─── DCGO crosscheck (clause-by-clause) ──────────────────────────────────────
+#
+# Alt-digivolve (EffectTiming.None, AddSelfDigivolutionRequirementStaticEffect):
+#   PermanentCondition = TopCard.ContainsCardName("Agumon") &&
+#   TopCard.CardTraits.Contains("Dinosaur") && TopCard.HasLevel &&
+#   TopCard.Level == 3; digivolutionCost: 2; ignoreDigivolutionRequirement:
+#   false. → `from: { all_of: [level_eq: 3, name_contains: "Agumon",
+#   trait_has: "Dinosaur"] }`, cost 2.
+#
+# Clause 1 — [When Digivolving] (OnEnterFieldAnyone, own/face-up scope):
+#   CanActivateCondition = IsExistOnBattleArea(card) && hand.Count >= 1 &&
+#   zero of the owner's battle-area permanents have TopCard.CardNames
+#   containing "Marcus Damon" — this whole gate runs BEFORE the
+#   SelectHandEffect is even constructed, so with a Marcus Damon already in
+#   play there is NO prompt at all (not merely an unselectable one). Then a
+#   SelectHandEffect (canNoSelect: true — "you may") over the owner's hand
+#   cards named "Marcus Damon" playable as a new permanent →
+#   PlayPermanentCards(payCost: false).
+#   → clause-level `condition: { no_permanent: { of: you, kind: tamer,
+#     name_contains: "Marcus Damon" } }` (battle-area-only existential scan,
+#     matching DCGO's GetBattleAreaPermanents() count check) gates the WHOLE
+#     clause activation (BT22-088 / BT24-082 idiom). Inside: `select_hand`
+#     (optional: true) filtered to `{ kind: tamer, name_contains: "Marcus
+#     Damon" }` surfaces the "you may" decline to the action space, then
+#     `play_from_hand_free` plays it without paying cost (BT13-020 idiom —
+#     the closest exemplar, same [When Digivolving] free-Marcus-play shape).
+#
+# Clause 2 — Inherited [Your Turn][Once Per Turn] (OnTappedAnyone):
+#   CanUseCondition = IsExistOnBattleArea(card) && IsOwnerTurn(card) &&
+#   CanTriggerWhenPermanentSuspends(PermanentCondition) where
+#   PermanentCondition = the suspending permanent is on the OWNER's battle
+#   area, IsTamer, and its colors contain Red OR Yellow. maxUsableCount: 1
+#   → [Once Per Turn]. CanActivateCondition is unconditional
+#   (IsExistOnBattleArea only) — the mandatory select itself is a no-op when
+#   HasMatchConditionPermanent(opponent Digimon) is empty, so the clause
+#   silently produces no prompt with zero opponent Digimon (no auto-pick).
+#   ActivateCoroutine: mandatory (canNoSelect: false) select 1 opponent
+#   battle-area Digimon → ChangeDigimonDP(-2000, UntilEachTurnEnd).
+#   → `scope: inherited`, `when: on_suspend`, `once_per_turn: true`,
+#     `active_when: { your_turn: true }` ([Your Turn]), `condition: {
+#     event_target_owner: you, event_target_kind: tamer,
+#     event_target_color_any_of: [yellow, red] }` (BT21-004 / BT13-020
+#     clause-2 idiom — exact predicate triple, own yellow/red Tamer suspend).
+#     Body: `select_opponent_permanent { kind: digimon }` (mandatory —
+#     default `optional: false`) then `add_dp_modifier` value -2000,
+#     expiry: end_of_turn ("for the turn" — ST3-08 / AD1-016 idiom).
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                | Status      |
+# |--------------------------------------------------------------------|-----------|
+# | Standard digivolve Yellow Lv.3 / cost 3 (cards.json evo_costs)     | IMPLEMENTED |
+# | Standard digivolve Red Lv.3 / cost 3 (explicit alt_path — see note | IMPLEMENTED |
+# | above; cards.json evo_costs dropped this circle)                   |             |
+# | Alt-digivolve Lv.3 w/[Agumon] in name and [Dinosaur] trait: cost 2 | IMPLEMENTED |
+# | [When Digivolving] no_permanent(Marcus Damon)-gated may-free-play  | IMPLEMENTED |
+# | Inherited [Your Turn][OPT] own yellow/red Tamer suspend -2000 DP   | IMPLEMENTED |
+#
+# Verdict: IMPLEMENTED.
+
+card: BT12-038
+name: GeoGreymon
+kind: digimon
+level: 4
+color: [yellow, red]
+cost: 5
+dp: 5000
+traits: [Dinosaur]
+form: Champion
+attribute: Vaccine
+
+alt_paths:
+  # Standard Red Lv.3 / cost 3 circle — cards.json evo_costs only carries the
+  # Yellow Lv.3/3 entry (card_color: 2); the Red circle was dropped by the
+  # lossy multi-colour-digivolve-cost API ingest (confirmed against both the
+  # card image and the official Bandai DB bundle, which both show BOTH
+  # circles). Authored explicitly here to restore the printed path (idiom:
+  # BT13-019 / BT13-030 / BT13-040).
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+
+  # "[Digivolve] Lv.3 w/[Agumon] in name and [Dinosaur] trait: Cost 2"
+  # (DCGO: ContainsCardName("Agumon") && CardTraits.Contains("Dinosaur") &&
+  # Level == 3).
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - name_contains: "Agumon"
+        - trait_has: "Dinosaur"
+    cost: 2
+
+effects:
+  # ─── Clause 1 — [When Digivolving] no_permanent(Marcus Damon)-gated free
+  #     play ────────────────────────────────────────────────────────────────
+  - when: when_digivolving
+    condition:
+      no_permanent:
+        of: you
+        kind: tamer
+        name_contains: "Marcus Damon"
+    summary: "[When Digivolving] If you don't have [Marcus Damon] in play, may play 1 [Marcus Damon] from hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: marcus_pick
+          optional: true
+          filter:
+            all_of:
+              - kind: tamer
+              - name_contains: "Marcus Damon"
+          prompt: "You may play 1 [Marcus Damon] from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: marcus_pick
+
+  # ─── Clause 2 — Inherited [Your Turn][Once Per Turn] own yellow/red Tamer
+  #     suspend → 1 opponent Digimon gets -2000 DP for the turn ─────────────
+  - scope: inherited
+    when: on_suspend
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      all_of:
+        - event_target_owner: you
+        - event_target_kind: tamer
+        - event_target_color_any_of: [yellow, red]
+    summary: "[Your Turn][Once Per Turn] When own yellow/red Tamer suspends, 1 opponent Digimon gets -2000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to get -2000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -2000
+          expiry: end_of_turn

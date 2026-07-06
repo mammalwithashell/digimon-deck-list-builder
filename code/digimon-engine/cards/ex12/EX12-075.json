@@ -1,0 +1,27 @@
+{
+  "card_id": "EX12-075",
+  "card_index": 75,
+  "card_name_eng": "Kunlun's Imperial Decree",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_075",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 2,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Shambala",
+    "SW",
+    "TB"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "＜Use Req. ([Shambala] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Main] Reveal the top 3 cards of your deck. Add 1 [Shambala] trait card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
+  "inherited_effect_description_eng": "[Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

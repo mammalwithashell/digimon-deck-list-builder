@@ -174,6 +174,14 @@ impl Game {
 
     /// Trash a specific hand card by index. Returns the trashed card's handle
     /// on success, None if the index is out of range.
+    ///
+    /// Routes through [`Game::trash_card`] so a [`crate::events::GameEvent::Trash`]
+    /// fires — per the `engine-event-emission` capability spec, every
+    /// individual card moving into a trash zone SHALL emit a `Trash` event.
+    /// Previously pushed directly onto `player.trash`, silently skipping the
+    /// event; discovered via BT19-069's cost-firing event-log test (every
+    /// caller of this primitive is a "by trashing 1 card in your hand"-style
+    /// cost, so the fix is general, not card-specific).
     pub fn trash_from_hand_by_index(
         &mut self,
         player_id: PlayerId,
@@ -185,7 +193,7 @@ impl Game {
         }
         let card = player.hand.remove(hand_index);
         let h = card.handle();
-        player.trash.push(card);
+        self.trash_card(player_id, card);
         Some(h)
     }
 

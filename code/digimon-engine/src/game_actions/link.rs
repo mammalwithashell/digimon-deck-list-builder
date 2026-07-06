@@ -558,6 +558,49 @@ impl Game {
         true
     }
 
+    /// Trash one specific DIGIVOLUTION SOURCE off `host` (addressed by `card`
+    /// handle — a source BELOW the stack top), routing it to its owner's trash
+    /// and firing `OnDigivolutionCardTrashed` globally. Returns `true` if the
+    /// card was found among `host.card_sources` (below the top) and trashed;
+    /// `false` otherwise (host gone / card not a below-top source / card IS the
+    /// top card — never decapitate the host).
+    ///
+    /// The digivolution-source sibling of [`Self::trash_specific_link_card`].
+    /// Used by the `trash_option_from_own_stacks` activation cost (BT25-085
+    /// BeelStarmon) and the EX7-048 protect-others leave cost, both of which
+    /// trash an Option from a permanent's digivolution cards. DCGO trashes a
+    /// `DigivolutionCards` entry via `ITrashDigivolutionCards` (fires the
+    /// `OnDigivolutionCardTrashed` observer). Routes through
+    /// [`Self::trash_source_and_fire`] so the `host_card` (the top card AFTER
+    /// removal) and the standard effect cause are derived uniformly.
+    pub fn trash_specific_source_card(
+        &mut self,
+        host: PermanentHandle,
+        card: crate::card_source::CardHandle,
+    ) -> bool {
+        let Some(perm) = self
+            .player_mut(host.player)
+            .battle_area
+            .get_mut(host.index as usize)
+        else {
+            return false;
+        };
+        let Some(pos) = perm.card_sources.iter().position(|c| c.handle() == card) else {
+            return false;
+        };
+        // Never pull the TOP card (that is the Digimon itself, not a
+        // digivolution source) — decapitating the host is not a source trash.
+        if pos + 1 == perm.card_sources.len() {
+            return false;
+        }
+        let removed = perm.card_sources.remove(pos);
+        let owner = removed.owner;
+        // The host card AFTER removal is the (possibly promoted) top card.
+        let host_card = perm.top_card().handle();
+        self.trash_source_and_fire(owner, host, removed, host_card);
+        true
+    }
+
     /// Move one specific link card off `host` (addressed by `card` handle) into
     /// `host`'s digivolution sources as its BOTTOM card (DCGO
     /// `Permanent.AddDigivolutionCardsBottom`). Unlike `trash_specific_link_card`

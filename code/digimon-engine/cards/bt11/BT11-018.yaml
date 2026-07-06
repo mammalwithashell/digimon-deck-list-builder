@@ -1,0 +1,211 @@
+# BT11-018 Shoutmon DX — Digimon, Lv.6, Red+Blue, DP 12000, Cost 13.
+# Traits: Composite / Xros Heart / Blue Flare. Attribute: Data.
+#
+# Printed card text (data/card_bundles/BT11-018.md — official Bandai DB;
+# authoritative, cards.json effect_description_eng agrees verbatim):
+#
+#   The name of this card/Digimon is also treated as [OmniShoutmon] and
+#   [ZeigGreymon]. <Material Save 2> [On Play] Delete 1 of your opponent's
+#   Digimon with 8000 DP or less. 1 of your opponent's Digimon can't attack
+#   until the end of their turn. [End of Attack] By deleting this Digimon,
+#   gain 1 memory.
+#
+#   Special Play Condition: DigiXros -3: [OmniShoutmon] x [ZeigGreymon] —
+#   When you would play this card, you may place specified cards from your
+#   hand/battle area under it. Each placed card reduces the play cost.
+#
+# Standard digivolve cost circles (official Bandai DB bundle — AUTHORITATIVE,
+# cards.json evo_costs is LOSSY here and drops the Blue circle):
+#   - Red  Lv.5 / cost 4  (present in cards.json evo_costs)
+#   - Blue Lv.6 / cost 3  (DROPPED by cards.json's lossy multi-colour
+#     digivolve-cost ingest — the exact failure mode CLAUDE.md's source-
+#     priority section warns about; confirmed against the card image and the
+#     official Bandai DB bundle, both showing TWO standard digivolve circles).
+#     Authored explicitly below as a second `kind: digivolve` alt_path so a
+#     Blue Lv.6 Digimon can digivolve into Shoutmon DX for cost 3, matching
+#     the printed circle (idiom: BT10-111 / BT14-009 off-color-circle style).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT11/Red/BT11_018.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Name Rule (EffectTiming.None): ChangeCardNamesClass unconditionally
+#   (CanUseCondition always true) adds "OmniShoutmon" and "ZeigGreymon" to
+#   this card's CardNames. → top-level `also_treated_as: [OmniShoutmon,
+#   ZeigGreymon]` (BT23-077 / AD1-021 idiom).
+#
+# <Material Save 2> (EffectTiming.WhenPermanentWouldBeDeleted):
+#   CardEffectFactory.MaterialSaveEffect(card, materialSaveCount: 2).
+#   → `kind: grant_keyword, keyword: MaterialSave, value: 2` (BT10-009 idiom).
+#
+# [On Play] (EffectTiming.OnEnterFieldAnyone): CanUseCondition =
+#   CanTriggerOnPlay. Body is TWO INDEPENDENT mandatory (canNoSelect: false)
+#   sub-pools, each individually gated on its own match existing
+#   (CanActivateCondition ORs the two HasMatchConditionPermanent checks so the
+#   whole clause fires if EITHER pool has a candidate; each SelectPermanentEffect
+#   is only entered if THAT pool's HasMatchConditionPermanent is true):
+#     1. Delete 1 opponent battle-area Digimon with DP <= 8000
+#        (MaxDP_DeleteEffect-adjusted, but no such static reducer applies here
+#        → flat `dp_lte: 8000`), mode Destroy.
+#     2. Select 1 opponent battle-area Digimon (no DP filter — the SEPARATE
+#        CanSelectPermanentCondition1 has no DP gate) and
+#        GainCanNotAttack(..., EffectDuration.UntilOpponentTurnEnd) — "can't
+#        attack until the end of their turn".
+#   Because `select_opponent_permanent` silently drops its composed tail when
+#   candidates are empty (no PendingSelection installs, `return` short-
+#   circuits — verified code/digimon-engine/src/dsl_cards/step/selections.rs:
+#   5137-5159), each sub-pool is wrapped in its OWN `if: <candidates exist>`
+#   guard so pool 2 (cannot-attack) is NOT silently dropped when pool 1 (the
+#   DP<=8000 delete) has zero eligible targets, and vice versa — the two
+#   sub-effects are independent, exactly mirroring DCGO's two separate
+#   HasMatchConditionPermanent-gated SelectPermanentEffect calls.
+#
+# [End of Attack] (EffectTiming.OnEndAttack): ActivateClass with isOptional
+#   TRUE (SetUpActivateClass(..., -1, true, ...)) — a plain Yes/No "you may"
+#   activation (DCGO SelectPermanentEffect is NOT used here; the delete target
+#   is always the carrier itself via DeletePeremanentAndProcessAccordingToResult,
+#   gated on CanBeDestroyedBySkill). On success, AddMemory(1). → clause-level
+#   `optional: true` with a plain (non-declinable) `delete_permanent: {target:
+#   source}` first body step; the DSL's outer-optional lowering
+#   (`needs_outer_optional = optional && !body_first_step_is_declinable(...)`,
+#   code/digimon-engine/src/dsl_cards/lower_triggered.rs:149-150) automatically
+#   installs the Yes/No confirm since `delete_permanent` is not itself
+#   declinable — an exact match for DCGO's plain bool-optional ActivateClass
+#   (AD1-002 EX9-024 `cost: true` idiom is for a PLAYER-CHOSEN target; here the
+#   "target" is fixed to the carrier, so the outer-prompt auto-insertion is the
+#   correct idiom, not a `cost: true` select step).
+#
+# DigiXros -3 [OmniShoutmon] x [ZeigGreymon] (EffectTiming.None):
+#   AddDigiXrosConditionClass — TWO named elements, CanSelectCardCondition
+#   checks `cardSource.CardNames_DigiXros.Contains("OmniShoutmon")` /
+#   `.Contains("ZeigGreymon")` (exact-name membership including
+#   ChangeCardNamesClass aliases — NOT substring), each contributing
+#   reduceCostPerCard 3 (DigiXrosCondition(elements, null, 3)), sourced from
+#   hand OR battle_area (digixros_costs.source_zones = [hand, field]).
+#   → `kind: digixros` alt_path with two `materials:` entries, each
+#   `name_is:` (exact match — `name_is` resolves `also_treated_as`, so a card
+#   whose printed name is "OmniShoutmon" OR whose Rule-name is added via
+#   another card's `also_treated_as` still matches — EX10-059 idiom, the
+#   sibling DigiXros -3 two-named-element card), `zones: [hand, battle_area]`,
+#   `cost_delta: -3` each.
+#
+# ─── Per-clause status ───────────────────────────────────────────────────────
+#
+#   | Clause                                                    | Status |
+#   |------------------------------------------------------------|--------|
+#   | [Rule] Name: also treated as OmniShoutmon/ZeigGreymon      | PASS   |
+#   | <Material Save 2>                                          | PASS   |
+#   | [On Play] delete opp Digimon DP<=8000 (independent pool)   | PASS   |
+#   | [On Play] 1 opp Digimon can't attack until end of turn     | PASS   |
+#   | [End of Attack] you may delete self, gain 1 memory         | PASS   |
+#   | Standard digivolve Red Lv.5 / cost 4                       | PASS   |
+#   | Standard digivolve Blue Lv.6 / cost 3 (added — fix)        | PASS   |
+#   | DigiXros -3 [OmniShoutmon] x [ZeigGreymon]                 | PASS   |
+
+card: BT11-018
+name: "Shoutmon DX"
+kind: digimon
+level: 6
+color: [red, blue]
+cost: 13
+dp: 12000
+traits: [Composite, Xros Heart, Blue Flare]
+attribute: Data
+
+# [Rule] Name: also treated as [OmniShoutmon] and [ZeigGreymon]
+# (DCGO ChangeCardNamesClass, unconditional).
+also_treated_as: [OmniShoutmon, ZeigGreymon]
+
+alt_paths:
+  # 1) Standard digivolve circle: Red Lv.5 / cost 4 (cards.json evo_costs).
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+
+  # 2) Standard digivolve circle: Blue Lv.6 / cost 3 (official Bandai DB —
+  #    cards.json evo_costs dropped this circle; see header note).
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 3
+
+  # 3) DigiXros -3: [OmniShoutmon] x [ZeigGreymon], each reducing cost 3,
+  #    sourced from hand or battle area (digixros_costs.source_zones).
+  - kind: digixros
+    materials:
+      - filter: { name_is: "OmniShoutmon" }
+        zones: [hand, battle_area]
+        cost_delta: -3
+      - filter: { name_is: "ZeigGreymon" }
+        zones: [hand, battle_area]
+        cost_delta: -3
+    cost: 13
+
+effects:
+  # ─── <Material Save 2> ──────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: MaterialSave
+    value: 2
+    summary: "<Material Save 2>"
+
+  # ─── [On Play] two independent mandatory sub-pools ─────────────────────
+  #
+  # "Delete 1 of your opponent's Digimon with 8000 DP or less. 1 of your
+  # opponent's Digimon can't attack until the end of their turn."
+  #
+  # Each sub-pool is wrapped in its own `if: <candidates exist>` guard so a
+  # missing target in ONE pool never silently drops the other (see header
+  # note on select_opponent_permanent's empty-candidates short-circuit).
+  - when: on_play
+    summary: "[On Play] Delete 1 opp Digimon with DP<=8000; independently, 1 opp Digimon can't attack until end of their turn"
+    process:
+      # Sub-pool 1: delete 1 opponent Digimon with DP <= 8000.
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+              dp_lte: 8000
+          then:
+            - select_opponent_permanent:
+                bind_as: del_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - dp_lte: 8000
+                prompt: "Delete 1 of your opponent's Digimon with 8000 DP or less"
+            - delete_permanent: { target: del_target }
+      # Sub-pool 2: 1 opponent Digimon can't attack until the end of their
+      # turn (no DP filter — DCGO's second CanSelectPermanentCondition1 has
+      # none).
+      - if:
+          condition:
+            any_permanent:
+              of: opponent
+              zone: [battle_area]
+              kind: digimon
+          then:
+            - select_opponent_permanent:
+                bind_as: lock_target
+                filter: { kind: digimon }
+                prompt: "Select 1 of your opponent's Digimon that can't attack until the end of their turn"
+            - add_modifier:
+                target: lock_target
+                modifier: CannotAttack
+                value: 0
+                expiry: end_of_opponents_turn
+
+  # ─── [End of Attack] you may delete this Digimon, gain 1 memory ─────────
+  #
+  # "By deleting this Digimon, gain 1 memory." DCGO ActivateClass isOptional
+  # TRUE — a plain Yes/No activation whose target is always the carrier
+  # (DeletePeremanentAndProcessAccordingToResult, no player pick). The
+  # `optional: true` clause with a non-declinable first step
+  # (`delete_permanent`) automatically installs the outer accept/decline
+  # confirm (lower_triggered.rs needs_outer_optional), matching DCGO exactly.
+  - when: end_of_attack
+    optional: true
+    summary: "[End of Attack] By deleting this Digimon, gain 1 memory"
+    process:
+      - delete_permanent: { target: source }
+      - gain_memory: 1

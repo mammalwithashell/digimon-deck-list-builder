@@ -278,7 +278,15 @@ impl Game {
             // which no-ops while `draining_deferred > 0` — so OnPlay
             // triggers enqueue but don't drain until the outer
             // `exit_deferred_drain_and_flush` below.
+            //
+            // Expose the effect-driven play source to the OnPlay trigger
+            // context so a `played_by_effect` predicate can gate "if played
+            // by an effect, …" (BT25-080). The flag is consumed when the
+            // `Permanent` OnPlay trigger context is built; clear it right
+            // after enqueue so no later trigger inherits it.
+            self.pending_play_effect_initiated = effect_initiated;
             self.fire_on_play(player_id, field_index);
+            self.pending_play_effect_initiated = false;
         }
         self.enqueue_triggered(
             EffectTiming::OnEnterFieldAnyone,

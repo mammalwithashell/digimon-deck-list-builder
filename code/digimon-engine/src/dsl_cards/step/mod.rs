@@ -274,6 +274,7 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::NonDslCountCappedStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::RevealBucketStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::UseOptionFromHandStep(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::UseOptionFromTrashStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::LinkPickStep(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::DigivolveCostChoice(_))
             | Some(ResumeFrame::DigivolveReducerPrompt(_))
@@ -297,6 +298,13 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::DelayDnaAfterSelection { outer_conts, .. }) => outer_conts.push(cont),
             Some(ResumeFrame::DelayHandDigivolveSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::DelayDnaCardSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::DelayPlayFromHandAfterSelection { outer_conts, .. }) => {
+                outer_conts.push(cont)
+            }
+            Some(ResumeFrame::DelayPlayFromHandSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::DelayPlayFromUnionAfterSelection { outer_conts, .. }) => {
+                outer_conts.push(cont)
+            }
             Some(ResumeFrame::AppFuseHostSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::AppFuseResultSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::ArtsDigivolveSelection(s)) => s.outer_conts.push(cont),
@@ -330,9 +338,12 @@ fn wrap_pending_selection_with_tail(
             Some(ResumeFrame::KeywordAscensionChoice(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::FamiliarTokenOnDeletionSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::LinkCardLeaveSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::TrashLinkCardOfDigimonSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::TrashOptionFromStackSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::PlayOrUseDualChoice(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::MayDnaPartnerSelection(s)) => s.outer_conts.push(cont),
             Some(ResumeFrame::MayDnaResultSelection(s)) => s.outer_conts.push(cont),
+            Some(ResumeFrame::PerColorDeleteStep(s)) => s.outer_conts.push(cont),
             None => unreachable!("pending_selection_resume set but frame stack empty"),
         }
         game.pending_selection = Some(pending);

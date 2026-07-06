@@ -1,0 +1,224 @@
+# BT21-060 Destromon — Digimon, Lv.5, Black, DP 10000, Play Cost 10.
+# Type/Traits: Unknown / LIBERATOR. Form: Ultimate. Attribute: Unknown.
+# Colors: Black (card_colors [5]).
+#
+# Printed text (official Bandai DB — data/card_bundles/BT21-060.md, card image authoritative):
+#
+#   Digivolution requirements:
+#     - Standard: Black Lv.4 / Cost 5 (printed evo_costs).
+#     - [Digivolve] [Vemmon]: Cost 6 (xros_req alt-digivolve from a Vemmon-topped Digimon).
+#
+#   [When Digivolving] Until your opponent's turn ends, their effects can't trash
+#     this Digimon's stacked cards. Then, to 1 of your opponent's Digimon,
+#     <De-Digivolve 1> for every 2 [Vemmon] in this Digimon's digivolution cards.
+#   [All Turns] When this Digimon would leave the battle area, you may play 1
+#     [Vemmon] from its digivolution cards without paying the cost.
+#
+#   Inherited Effect
+#   [Opponent's Turn] [Once Per Turn] When one of your opponent's Digimon attacks,
+#     by returning 2 [Vemmon] from this Digimon's digivolution cards to the bottom
+#     of the deck, end that attack.
+#
+# DCGO C# reference (behavioral authority):
+#   DCGO/Assets/Scripts/CardEffect/BT21/Black/BT21_060.cs
+#
+# ─── DCGO crosscheck ─────────────────────────────────────────────────────────
+#
+#   Region "Alternative Digivolution Condition" (EffectTiming.None):
+#     AddSelfDigivolutionRequirementStaticEffect(TopCard.EqualsCardName("Vemmon"),
+#       digivolutionCost: 6, ignoreDigivolutionRequirement: false).
+#     → alt_paths: digivolve from { name_is: Vemmon } cost 6.
+#
+#   Region "When Digivolving" (EffectTiming.OnEnterFieldAnyone):
+#     CanActivateCondition: IsExistOnBattleAreaDigimon(card).
+#     Body (ActivateCoroutine):
+#       1. Install ImmuneStackTrashingClass on this permanent via
+#          UntilOpponentTurnEndEffects — its EffectCondition is IsOpponentEffect
+#          (opponent's effects can't trash the stacked cards), PermanentCondition
+#          restricts it to THIS permanent, lasting until opponent's turn ends.
+#          → add_modifier: ImmuneFromStackTrashing on self, expiry
+#            end_of_opponents_turn (opponent-scoped block; the modifier's engine
+#            semantics already gate to opponent-sourced stack trashing).
+#       2. SelectPermanentEffect over opponent's Digimon (maxCount 1,
+#          canNoSelect: false → mandatory when an opponent Digimon exists;
+#          CanActivateCondition gated on card being on the battle area).
+#          → select_opponent_permanent (mandatory).
+#       3. For i in 0..VemmonInSourceDividedBy2(): IDegeneration(permanent, 1).
+#          VemmonInSourceDividedBy2 = count of "Vemmon" in DigivolutionCards / 2
+#          (integer division). Repeated <De-Digivolve 1> on the SAME target =
+#          <De-Digivolve N> where N = floor(vemmon_sources / 2).
+#          → de_digivolve amount = floor_div([source_stack_count Vemmon, 2]).
+#          source_stack_count skips the top card (= DCGO DigivolutionCards),
+#          matching "Vemmon in this Digimon's digivolution cards".
+#
+#   Region "All Turns" (EffectTiming.WhenRemoveField):
+#     SetUpActivateClass(..., -1 /*not OPT*/, true /*isOptional "you may"*/, ...).
+#     CanActivateCondition: IsExistOnBattleAreaDigimon(card) &&
+#       DigivolutionCards.Some(cardSource == "Vemmon" && CanPlayAsNewPermanent(payCost:false)).
+#     Body: SelectCardEffect over DigivolutionCards filtered to name=="Vemmon"
+#       (canNoSelect: () => true → the whole play is a "you may"), then
+#       PlayPermanentCards(payCost: false, activateETB: true).
+#     The Digimon STILL leaves — this is a NON-cancelling would-leave side-effect
+#     (DCGO plays the Vemmon out of the digivolution stack that is intact in the
+#     would-leave window). Modeled as the <Decode>-family idiom
+#     (BT25-025 / BT25-053): kind: replacement + trigger: when_would_leave_battle_area
+#     + optional (accept/decline) + select_material over the leaving permanent's
+#     Vemmon sources + play_from_materials free, with NO cancel_replacement so the
+#     original leave proceeds. Unlike <Decode>, BT21-060 has NO "other than in
+#     battle" restriction → fires on ALL leave causes (no replacement_cause gate).
+#
+#   Region "Opponent's Turn Inherited" (EffectTiming.OnAllyAttack, isInheritedEffect):
+#     SetUpActivateClass(..., 1 /*OPT*/, true, ...); SetIsInheritedEffect(true).
+#     CanUseCondition: IsExistOnBattleAreaDigimon && IsOpponentTurn &&
+#       CanTriggerOnPermanentAttack(opponent's permanent attacking).
+#     CanActivateCondition: DigivolutionCards.Count("Vemmon") >= 2.
+#     Body: SelectCardEffect over DigivolutionCards filtered to "Vemmon"
+#       (maxCount 2, canNoSelect: () => false → mandatory once triggered), then
+#       ReturnToLibraryBottomDigivolutionCards(selected), then EndAttack().
+#     → scope: inherited, when: on_opponent_attack, once_per_turn, active_when
+#       opponents_turn; select_own_sources min:2 max:2 Vemmon →
+#       return_selected_sources_to_deck bottom → cancel_attack.
+#     "by returning 2 [Vemmon]" is a hard cost of exactly 2 (mandatory once the
+#     trigger fires and >=2 Vemmon exist) — DCGO EX10-003 nested-then idiom.
+#
+# ─── Implementation status ─────────────────────────────────────────────────
+#
+# | Card-text element                                              | Status      |
+# |----------------------------------------------------------------|-------------|
+# | Std digivolve Black Lv.4 / Cost 5                              | IMPLEMENTED (alt_paths digivolve) |
+# | [Digivolve] [Vemmon]: Cost 6                                    | IMPLEMENTED (alt_paths digivolve name_is Vemmon) |
+# | [WD] ImmuneFromStackTrashing self until opp turn ends          | IMPLEMENTED (add_modifier) |
+# | [WD] <De-Digivolve 1> per 2 Vemmon sources to 1 opp Digimon    | IMPLEMENTED (select_opponent + de_digivolve floor_div formula) |
+# | [All Turns] would-leave may play 1 Vemmon source free          | IMPLEMENTED (non-cancelling replacement + play_from_materials) |
+# | Inherited [Opp Turn][OPT] return 2 Vemmon to deck bottom, end  | IMPLEMENTED (select_own_sources 2 + return_to_deck_bottom + cancel_attack) |
+
+card: BT21-060
+name: Destromon
+kind: digimon
+level: 5
+color: [black]
+cost: 10
+dp: 10000
+traits: [Unknown, LIBERATOR]
+attribute: Unknown
+
+alt_paths:
+  # ─── Standard digivolve: Black Lv.4 / Cost 5 (printed evo_costs) ────────────
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 5
+
+  # ─── [Digivolve] [Vemmon]: Cost 6 (xros_req alt-digivolve) ──────────────────
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(TopCard.EqualsCardName("Vemmon"),
+  #   digivolutionCost: 6). No level gate.
+  - kind: digivolve
+    from: { name_is: Vemmon }
+    cost: 6
+
+effects:
+  # ─── [When Digivolving] stack-trash immunity + scaled De-Digivolve ──────────
+  # DCGO Region "When Digivolving" (OnEnterFieldAnyone), CanTriggerWhenDigivolving.
+  #   Step 1: ImmuneFromStackTrashing on self until opponent's turn ends.
+  #   Step 2: mandatory select 1 opponent Digimon (canNoSelect: false).
+  #   Step 3: <De-Digivolve 1> repeated floor(Vemmon-sources / 2) times on it.
+  # The whole clause is mandatory when an opponent Digimon exists (no "you may").
+  - when: when_digivolving
+    summary: "[When Digivolving] Until opp turn ends, opp effects can't trash this Digimon's stacked cards; then <De-Digivolve 1> for every 2 [Vemmon] source to 1 opp Digimon"
+    process:
+      # Step 1 — opponent effects can't trash this Digimon's stacked cards until
+      # the opponent's turn ends. ImmuneFromStackTrashing is opponent-scoped by
+      # the engine; expiry end_of_opponents_turn = DCGO UntilOpponentTurnEnd.
+      - add_modifier:
+          target: source
+          modifier: ImmuneFromStackTrashing
+          value: 1
+          expiry: end_of_opponents_turn
+      # Step 2 — select 1 opponent Digimon (mandatory when any exists).
+      - select_opponent_permanent:
+          bind_as: dd_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 of your opponent's Digimon to <De-Digivolve> for every 2 [Vemmon] in this Digimon's digivolution cards"
+      # Step 3 — <De-Digivolve floor(Vemmon-sources / 2)> on the chosen Digimon.
+      # The `per: source_stack_count` selector counts THIS effect carrier's
+      # (ctx.source_permanent's) digivolution cards — the sources beneath its
+      # top card, exactly DCGO DigivolutionCards — matching `name_is: Vemmon`.
+      # `base: 0, delta: 1` makes the base_per_delta equal the raw count, then
+      # floor_div by 2 = DCGO's `vemmonCounter / 2` integer division.
+      # (The top-level `source_stack_count: { target: source }` FormulaSpec is
+      # avoided here: `source` is not a declared binding in a scope-checked
+      # `amount`, whereas the `per` selector reads the carrier with no binding —
+      # EX3-014 idiom.)
+      - de_digivolve:
+          target: dd_target
+          amount:
+            floor_div:
+              - base: 0
+                per:
+                  source_stack_count:
+                    filter: { name_is: Vemmon }
+                delta: 1
+              - 2
+
+  # ─── [All Turns] would-leave: may play 1 [Vemmon] source free ───────────────
+  # DCGO Region "All Turns" (WhenRemoveField): a NON-cancelling "you may play 1
+  # Vemmon from its digivolution cards without paying the cost" side-effect fired
+  # when this Digimon would leave the battle area. The Digimon STILL leaves.
+  # Modeled as the <Decode>-family non-cancelling replacement (BT25-025 idiom):
+  # optional accept/decline, select an intact Vemmon source, play it free, and
+  # DO NOT cancel_replacement so the original leave proceeds. No cause gate —
+  # BT21-060 fires on ALL leaves (unlike <Decode>, which excludes battle).
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    summary: "[All Turns] When this Digimon would leave the battle area, you may play 1 [Vemmon] from its digivolution cards without paying the cost"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: vemmon_source
+          filter:
+            all_of:
+              - kind: digimon
+              - name_is: Vemmon
+          prompt: "Choose 1 [Vemmon] from this Digimon's digivolution cards to play without paying the cost"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: vemmon_source
+          cost_delta: free
+
+  # ─── Inherited [Opponent's Turn][OPT] return 2 Vemmon → deck bottom, end atk ─
+  # DCGO Region "Opponent's Turn Inherited" (OnAllyAttack, isInheritedEffect):
+  #   IsOpponentTurn + an opponent's Digimon attacks + DigivolutionCards has >=2
+  #   Vemmon. Mandatory once triggered (canNoSelect: false): select exactly 2
+  #   Vemmon sources, return them to the bottom of the deck, then end the attack.
+  # scope: inherited so it lives on the digivolution card beneath a later evo.
+  # active_when opponents_turn = DCGO IsOpponentTurn. EX10-003 nested-then idiom.
+  - scope: inherited
+    when: on_opponent_attack
+    once_per_turn: true
+    active_when: { opponents_turn: true }
+    # DCGO CanActivateCondition: DigivolutionCards.Count("Vemmon") >= 2 — the
+    # cost is a hard "return 2", so the clause must not fire (or offer a partial
+    # pick) unless the carrier holds ≥2 Vemmon sources. `zone: [material]` counts
+    # rctx.source_permanent's digivolution cards (top card excluded), scoped to
+    # the carrier hosting this inherited effect — exactly DigivolutionCards.
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [material]
+          name_is: Vemmon
+        n: 2
+    summary: "[Opponent's Turn][Once Per Turn] When an opponent's Digimon attacks, by returning 2 [Vemmon] from this Digimon's digivolution cards to the bottom of the deck, end that attack"
+    process:
+      - select_own_sources:
+          target: source
+          bind_as: returned_vemmon
+          min: 2
+          max: 2
+          filter: { name_is: Vemmon }
+          prompt: "Return 2 [Vemmon] from this Digimon's digivolution cards to the bottom of the deck to end the attack"
+          then:
+            - return_selected_sources_to_deck:
+                source_refs: returned_vemmon
+                position: bottom
+            - cancel_attack: {}

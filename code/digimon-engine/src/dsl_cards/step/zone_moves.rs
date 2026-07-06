@@ -315,6 +315,25 @@ pub fn try_run(
             true
         }
 
+        CompiledStep::PlaceSelfUnderPermanent { target, face_down } => {
+            // G-OPTION-PLACE-SELF-UNDER-PERMANENT-DSL: place THIS effect's
+            // source Option as the bottom digivolution card of the chosen own
+            // permanent. Composes with the [Main] Option-play path — the
+            // engine primitive claims the in-flight `pending_option`, so the
+            // later `dispose_option` finds nothing and the Option is seated
+            // (face-up by default) instead of trashed. No-op (silent) when
+            // the target binding is unset / not a permanent — the preceding
+            // select self-skipped with no candidate (DCGO: the placement
+            // select is mandatory IF a candidate exists, silently skipped if
+            // none), and the Option then disposes normally.
+            if let Some(ResolvedBinding::Permanent(target_handle)) =
+                resolve_binding_ref(target, ctx, bindings)
+            {
+                let _ = ctx.place_self_under_permanent(target_handle, *face_down);
+            }
+            true
+        }
+
         CompiledStep::PlaceSelectedSourcesUnderTamer {
             source_refs,
             tamer,
@@ -700,10 +719,25 @@ pub fn try_run(
         CompiledStep::TrashOpponentHandToCount {
             opponent,
             target_count,
+            bind_count_as,
         } => {
             let opponent = resolve_player(ctx, *opponent);
             let target_count = formula_to_u8(target_count, ctx, bindings);
-            let _ = ctx.trash_opponent_hand_to_count(opponent, target_count);
+            let installed = ctx.trash_opponent_hand_to_count_bound(
+                opponent,
+                target_count,
+                bind_count_as.clone(),
+            );
+            // No selection installed (hand already ≤ target) → the DSL body
+            // continues synchronously with THIS `bindings` env, so bind the
+            // 0-count here. When a selection installs, the count is published
+            // at the resume terminal via `dsl_resolved_tail_bindings` instead.
+            // G-DSL-TRASH-COUNT-RESULT-BINDING.
+            if !installed {
+                if let Some(name) = bind_count_as {
+                    bindings.insert_literal(name, 0);
+                }
+            }
             true
         }
         CompiledStep::SearchOwnSecurityStack {

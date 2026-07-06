@@ -77,3 +77,58 @@ fn parse_raw_rust_formula() {
         _ => panic!("expected RawRust"),
     }
 }
+
+// G-DSL-FORMULA-OWN-LINK-CARD-COUNT — total link cards across all own Digimon.
+#[test]
+fn parse_base_per_own_link_card_count() {
+    let yaml = r#"
+base: 0
+per:
+  own_link_card_count:
+    of: you
+delta: 1
+"#;
+    match parse(yaml) {
+        FormulaSpec::BasePerDelta {
+            base, per, delta, ..
+        } => {
+            assert_eq!((base, delta), (0, 1));
+            assert_eq!(per, PerSelector::OwnLinkCardCount { of: PlayerRef::You });
+        }
+        _ => panic!("expected BasePerDelta"),
+    }
+}
+
+#[test]
+fn round_trip_own_link_card_count() {
+    let per = PerSelector::OwnLinkCardCount {
+        of: PlayerRef::You,
+    };
+    let json = serde_json::to_value(&per).unwrap();
+    let back: PerSelector = serde_json::from_value(json).unwrap();
+    assert_eq!(per, back);
+}
+
+// G-DSL-LINK-N-CARDS-PER-HOST (formula facet) — per-host link-card count.
+#[test]
+fn parse_base_per_source_link_card_count() {
+    let yaml = r#"
+base: 0
+per: source_link_card_count
+delta: 1
+"#;
+    match parse(yaml) {
+        FormulaSpec::BasePerDelta { per, .. } => {
+            assert_eq!(per, PerSelector::SourceLinkCardCount);
+        }
+        _ => panic!("expected BasePerDelta"),
+    }
+}
+
+#[test]
+fn round_trip_source_link_card_count() {
+    let per = PerSelector::SourceLinkCardCount;
+    let json = serde_json::to_value(&per).unwrap();
+    let back: PerSelector = serde_json::from_value(json).unwrap();
+    assert_eq!(per, back);
+}

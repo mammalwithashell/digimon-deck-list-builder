@@ -410,3 +410,192 @@ fn refire_target_effect_bypass_once_per_turn_invokes_consumed_slot() {
         "bypass_once_per_turn should invoke even after the target effect slot was consumed"
     );
 }
+
+// ─── Foreign-card refire (BT15-102 Apocalymon — source-card variant) ────────
+//
+// `activate_foreign_card_effect(card_id, carrier, timing, chooser)` fires an
+// effect PRINTED ON a card object that is a digivolution source of `carrier`
+// (not a battle-area top card), with the CARRIER as "this Digimon" — DCGO
+// `selectedCard.EffectList_ForCard(EffectTiming.OnEnterFieldAnyone, card)`
+// followed by `Activate_Optional_Effect_Execute` (BT15_102.cs End of Turn).
+
+#[derive(Clone)]
+struct TwoOnPlayEffects;
+
+impl CardEffect for TwoOnPlayEffects {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![
+            Effect::on_play(card)
+                .name("gain one")
+                .process(|ctx| ctx.gain_memory(1))
+                .build(),
+            Effect::on_play(card)
+                .name("gain three")
+                .process(|ctx| ctx.gain_memory(3))
+                .build(),
+        ]
+    }
+}
+
+#[test]
+fn activate_foreign_card_effect_runs_placed_on_play_with_carrier_as_this_digimon() {
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("APOC-CARRIER", "Apocalymon Carrier"))
+        .add_card(make_test_card("FOREIGN-ONPLAY", "Foreign On Play"))
+        .memory(0)
+        .start();
+    r.register_effect(
+        "FOREIGN-ONPLAY",
+        Arc::new(SourceRecordingOnPlay {
+            seen: Arc::clone(&seen),
+        }),
+    );
+
+    // FOREIGN-ONPLAY sits UNDER the carrier top — a digivolution source, the
+    // position a just-placed bottom card occupies.
+    let carrier = r.place_stack(0, &["FOREIGN-ONPLAY", "APOC-CARRIER"]);
+    let carrier_top = r.top_card(carrier);
+
+    let fired = {
+        let mut ctx = EffectContext::new(&mut r.game, carrier_top, Some(carrier), 0);
+        ctx.activate_foreign_card_effect("FOREIGN-ONPLAY", carrier, TimingFilter::OnPlay, 0)
+    };
+
+    assert!(fired, "one eligible [On Play] effect runs directly");
+    assert_eq!(r.memory(), 1, "the foreign body executed");
+    assert_eq!(
+        *seen.lock().unwrap(),
+        vec![(carrier_top, Some(carrier))],
+        "the refired body must see the CARRIER as source card + permanent \
+         ('as an effect of this Digimon')"
+    );
+    assert!(r.game.pending_selection.is_none());
+}
+
+#[test]
+fn activate_foreign_card_effect_with_two_effects_surfaces_mandatory_choice() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("APOC-CARRIER", "Apocalymon Carrier"))
+        .add_card(make_test_card("FOREIGN-TWO", "Foreign Two Effects"))
+        .memory(0)
+        .start();
+    r.register_effect("FOREIGN-TWO", Arc::new(TwoOnPlayEffects));
+
+    let carrier = r.place_stack(0, &["FOREIGN-TWO", "APOC-CARRIER"]);
+    let carrier_top = r.top_card(carrier);
+
+    let fired = {
+        let mut ctx = EffectContext::new(&mut r.game, carrier_top, Some(carrier), 0);
+        ctx.activate_foreign_card_effect("FOREIGN-TWO", carrier, TimingFilter::OnPlay, 0)
+    };
+    assert!(fired);
+
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("two eligible effects surface an EffectChoice");
+    assert!(
+        !sel.is_optional,
+        "the pick is mandatory once the placement committed (DCGO canNoSelect: false)"
+    );
+    let choices = sel.effect_choices.as_ref().expect("choice entries");
+    assert_eq!(choices.len(), 2);
+    assert!(
+        choices[0].label.contains("FOREIGN-TWO"),
+        "choices are labeled with the FOREIGN card id: {}",
+        choices[0].label
+    );
+
+    r.game
+        .resolve_selection(0, HAND_EFFECT_START + 1)
+        .expect("pick the second effect");
+    assert_eq!(r.memory(), 3, "the chosen (second) foreign body executed");
+}
+
+#[test]
+fn activate_foreign_card_effect_returns_false_with_no_eligible_effect() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("APOC-CARRIER", "Apocalymon Carrier"))
+        .add_card(make_test_card("FOREIGN-VANILLA", "Foreign Vanilla"))
+        .memory(0)
+        .start();
+
+    let carrier = r.place_stack(0, &["FOREIGN-VANILLA", "APOC-CARRIER"]);
+    let carrier_top = r.top_card(carrier);
+
+    let fired = {
+        let mut ctx = EffectContext::new(&mut r.game, carrier_top, Some(carrier), 0);
+        ctx.activate_foreign_card_effect("FOREIGN-VANILLA", carrier, TimingFilter::OnPlay, 0)
+    };
+    assert!(!fired, "a card with no [On Play] text fires nothing");
+    assert_eq!(r.memory(), 0);
+    assert!(r.game.pending_selection.is_none());
+}
+
+#[test]
+fn activate_foreign_card_effect_filters_by_timing() {
+    let seen = Arc::new(Mutex::new(Vec::new()));
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("APOC-CARRIER", "Apocalymon Carrier"))
+        .add_card(make_test_card("FOREIGN-WD", "Foreign When Digivolving"))
+        .memory(0)
+        .start();
+    // The foreign card's only effect is [When Digivolving] — an OnPlay-scoped
+    // refire must not fire it.
+    r.register_effect(
+        "FOREIGN-WD",
+        Arc::new(SourceRecordingWhenDigivolving {
+            seen: Arc::clone(&seen),
+        }),
+    );
+
+    let carrier = r.place_stack(0, &["FOREIGN-WD", "APOC-CARRIER"]);
+    let carrier_top = r.top_card(carrier);
+
+    let fired = {
+        let mut ctx = EffectContext::new(&mut r.game, carrier_top, Some(carrier), 0);
+        ctx.activate_foreign_card_effect("FOREIGN-WD", carrier, TimingFilter::OnPlay, 0)
+    };
+    assert!(!fired, "[When Digivolving] text is not an [On Play] effect");
+    assert!(seen.lock().unwrap().is_empty());
+    assert_eq!(r.memory(), 0);
+}
+
+#[test]
+fn clone_mid_foreign_refire_choice_resolves_on_the_clone() {
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("APOC-CARRIER", "Apocalymon Carrier"))
+        .add_card(make_test_card("FOREIGN-TWO", "Foreign Two Effects"))
+        .memory(0)
+        .start();
+    r.register_effect("FOREIGN-TWO", Arc::new(TwoOnPlayEffects));
+
+    let carrier = r.place_stack(0, &["FOREIGN-TWO", "APOC-CARRIER"]);
+    let carrier_top = r.top_card(carrier);
+
+    {
+        let mut ctx = EffectContext::new(&mut r.game, carrier_top, Some(carrier), 0);
+        assert!(ctx.activate_foreign_card_effect(
+            "FOREIGN-TWO",
+            carrier,
+            TimingFilter::OnPlay,
+            0
+        ));
+    }
+    assert!(r.game.pending_selection.is_some());
+
+    // Clone while the EffectChoice is parked (data-driven RefireEffectChoice
+    // frame — make-engine-cloneable): the clone must resolve independently.
+    let mut clone = r.game.clone();
+    clone
+        .resolve_selection(0, HAND_EFFECT_START)
+        .expect("clone picks the first effect");
+    assert_eq!(clone.memory, 1, "clone ran 'gain one'");
+
+    r.game
+        .resolve_selection(0, HAND_EFFECT_START + 1)
+        .expect("original picks the second effect");
+    assert_eq!(r.memory(), 3, "original ran 'gain three' independently");
+}

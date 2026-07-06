@@ -5,6 +5,7 @@ mod cost_reduction_fn;
 mod interactive_digivolve_reducer;
 mod interactive_option_use_reducer;
 mod pay_cost_before_pay;
+mod pay_cost_play_delete_reducer;
 mod pay_cost_selection;
 mod pay_cost_triggered;
 mod player_digivolve_reducer;

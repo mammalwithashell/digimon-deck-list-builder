@@ -1748,6 +1748,190 @@ fn linked_card_dp_formula_and_static_ess_reach_host() {
     );
 }
 
+// ─── G-LINK-INHERITED-ESS — `scope: inherited` link-ESS convention ───────
+//
+// BT25-100 (`<Piercing>`) and BT25-093 ([When Attacking] delete) author their
+// link-card ESS as `scope: inherited` (`.inherited()`), NOT `scope: linked`.
+// Before the fix, the collectors' linked-card passes gated on `effect.linked`,
+// so an `.inherited()` clause on a LINK card never reached the host (the
+// `card_sources` inherited walk never scans `linked_cards`). The fix folds a
+// link card in as an inherited-style source: each linked pass now accepts
+// `.linked() || .inherited()`. These inline fixtures pin every collector for
+// the `.inherited()` convention.
+
+/// A link card whose ESS is authored with `.inherited()` (the BT25-100/093
+/// convention): a materializing `<Piercing>` keyword grant + a +1000 DP grant.
+struct InheritedKeywordAndDpLinkEss;
+impl CardEffect for InheritedKeywordAndDpLinkEss {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        use digimon_engine::enums::{Expiry, Keyword};
+        vec![
+            Effect::declarative(card)
+                .name("Inherited ESS: Piercing")
+                .granted_keyword(Keyword::Piercing)
+                .materializes_declarative_state()
+                .inherited()
+                .process(|ctx| {
+                    if let Some(h) = ctx.source_permanent {
+                        ctx.grant_declarative_keyword(h, Keyword::Piercing, Expiry::Permanent);
+                    }
+                })
+                .build(),
+            Effect::declarative(card)
+                .name("Inherited ESS: +1000 DP")
+                .materializes_declarative_state()
+                .inherited()
+                .process(|ctx| {
+                    if let Some(h) = ctx.source_permanent {
+                        ctx.add_declarative_dp_modifier(h, 1000, Expiry::Permanent);
+                    }
+                })
+                .build(),
+        ]
+    }
+}
+
+/// G-LINK-INHERITED-ESS keyword/DP slice, `.inherited()` convention:
+/// a link card's `scope: inherited` keyword + DP grants must materialize onto
+/// the host (mirrors `d7_linked_ess_keyword_and_dp_grant_reach_the_host`, but
+/// with `.inherited()` instead of `.linked()`).
+#[test]
+fn inherited_scope_link_ess_keyword_and_dp_reach_the_host() {
+    use digimon_engine::enums::Keyword;
+    use digimon_engine::permanent::PermanentHandle;
+
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("LINK-HOST", CardColor::Red))
+        .add_card(digimon_card("PIERCE-ESS", CardColor::Red))
+        .memory(0)
+        .start();
+    r.register_effect("PIERCE-ESS", Arc::new(InheritedKeywordAndDpLinkEss));
+
+    let host: PermanentHandle = r.place_on_field(0, "LINK-HOST", Some(0));
+    let base_dp = r.game.effective_dp(host).expect("host has DP");
+    assert!(
+        !r.game.has_keyword(host, Keyword::Piercing),
+        "baseline: host has no Piercing before linking"
+    );
+
+    r.push_linked_owned(host, "PIERCE-ESS", 0);
+    r.game.tick_declarative_effects();
+
+    assert!(
+        r.game.has_keyword(host, Keyword::Piercing),
+        "linked `scope: inherited` ESS grants Piercing to the host"
+    );
+    assert_eq!(
+        r.game.effective_dp(host),
+        Some(base_dp + 1000),
+        "linked `scope: inherited` ESS grants +1000 DP to the host"
+    );
+}
+
+/// A link card whose ESS is a `.inherited()` continuous DP + Security-Attack
+/// FORMULA (not a materializing grant) — exercises the two formula collectors
+/// `live_declarative_formula_sum` / `static_dp_aura_bonus` on the `.inherited()`
+/// convention.
+struct InheritedFormulaLinkEss;
+impl CardEffect for InheritedFormulaLinkEss {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![
+            Effect::declarative(card)
+                .name("inherited dynamic +2000 DP")
+                .inherited()
+                .dp_modifier_fn(|_ctx, _target| Some(2000))
+                .build(),
+            Effect::declarative(card)
+                .name("inherited static +500 DP")
+                .inherited()
+                .dp_modifier(500)
+                .build(),
+            Effect::declarative(card)
+                .name("inherited Security A. +1")
+                .inherited()
+                .security_attack_fn(|_ctx, _target| Some(1))
+                .build(),
+        ]
+    }
+}
+
+/// G-LINK-INHERITED-ESS formula slice, `.inherited()` convention.
+#[test]
+fn inherited_scope_link_ess_dp_formula_and_static_reach_host() {
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .add_card(digimon_card("DP-ESS-I", CardColor::Red))
+        .memory(0)
+        .start();
+    r.register_effect("DP-ESS-I", Arc::new(InheritedFormulaLinkEss));
+    let host = r.place_on_field(0, "HOST", Some(0));
+    let base = r.game.effective_dp(host).expect("host DP");
+
+    r.push_linked_owned(host, "DP-ESS-I", 0);
+
+    assert_eq!(
+        r.game.effective_dp(host),
+        Some(base + 2500),
+        "linked `scope: inherited` dynamic (+2000) and static (+500) DP ESS reach the host"
+    );
+    assert_eq!(
+        r.game.dynamic_security_attack_aura_bonus(host),
+        Some(1),
+        "linked `scope: inherited` Security Attack formula ESS reaches the host"
+    );
+}
+
+/// A link card whose ESS is a `.inherited()` TRIGGERED clause: on the host's
+/// StartOfYourTurn, increment a witness. Proves the `enqueue_from_permanent`
+/// linked-card pass fires `.inherited()` triggered clauses (BT25-093's
+/// `scope: inherited` [When Attacking] delete uses this path).
+struct InheritedTriggeredLinkEss(Arc<Mutex<u32>>);
+impl CardEffect for InheritedTriggeredLinkEss {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        let slot = self.0.clone();
+        vec![Effect::start_of_your_turn(card)
+            .name("inherited sideways start-of-turn")
+            .inherited()
+            .process(move |_ctx| {
+                *slot.lock().unwrap() += 1;
+            })
+            .build()]
+    }
+}
+
+/// G-LINK-INHERITED-ESS triggered slice, `.inherited()` convention.
+#[test]
+fn inherited_scope_link_ess_triggered_clause_fires_via_host() {
+    use digimon_engine::permanent::PermanentHandle;
+
+    let witness = Arc::new(Mutex::new(0u32));
+    let mut r = DebugRunner::builder()
+        .add_card(digimon_card("HOST", CardColor::Red))
+        .add_card(digimon_card("TRIG-ESS", CardColor::Red))
+        .add_card(digimon_card("FILLER", CardColor::Red))
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .memory(0)
+        .start();
+    r.register_effect("TRIG-ESS", Arc::new(InheritedTriggeredLinkEss(witness.clone())));
+
+    let host: PermanentHandle = r.place_on_field(0, "HOST", Some(0));
+    r.push_linked_owned(host, "TRIG-ESS", 0);
+    assert_eq!(*witness.lock().unwrap(), 0, "not fired yet");
+
+    // Advance a full turn cycle so P0's StartOfYourTurn fires again.
+    r.end_turn(); // → P1
+    r.game.enter_main_phase();
+    r.end_turn(); // → P0, StartOfYourTurn dispatches at start
+    let _ = r.auto_resolve();
+
+    assert_eq!(
+        *witness.lock().unwrap(),
+        1,
+        "linked `scope: inherited` triggered clause fires via the host's timing dispatch"
+    );
+}
+
 // ─── Gap 2: `link_cards` DSL step ────────────────────────────────────────
 //
 // The authoring verb over the shipped `link_chosen_card_into_host` primitive.

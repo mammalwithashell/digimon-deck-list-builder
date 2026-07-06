@@ -5,7 +5,7 @@ use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
 use crate::predicate::PredicateSpec;
-use crate::step::{BindingRef, StepSpec};
+use crate::step::{BindingRef, StackPosition, StepSpec};
 
 /// A clause is either triggered or declarative. Untagged serde enum —
 /// presence of `when:` ⇒ triggered; presence of `kind:` ⇒ declarative.
@@ -125,6 +125,23 @@ pub enum Timing {
     OnOpponentAttack,
     OnDeletion,
     OnAnyDeletion,
+    /// Board-wide battle-winner observer: "[All Turns] When any of your [X]
+    /// Digimon win a battle, …" (`when: on_ally_won_battle`, BT25-020 Marsmon;
+    /// G-DSL-BATTLE-WINNER-BOARDWIDE). Rides the `EndOfBattle` dispatch with NO
+    /// forced self-filter (unlike the carrier-scoped
+    /// `source_deleted_battle_opponent` idiom on `on_any_deletion`). Gate scope
+    /// via `active_when:` — `event_winner_owner: you` (the winner's controller)
+    /// and `event_winner_trait_has: <trait>` (the winner's trait). Never fires
+    /// on a tie (mutual destruction — no winner) or a direct player attack.
+    OnAllyWonBattle,
+    /// Hand-discard observer: "[All Turns] When your hand is trashed from, …"
+    /// (`when: on_discard_hand`, BT25-080/084; ST16-14; G-ENGINE-ON-DISCARD-HAND).
+    /// Fires ONCE after an EFFECT trashes ≥1 card from a player's hand (a draw,
+    /// mulligan, or rule discard never fires it). Gate with
+    /// `event_discard_player: you` ("your hand", BT25-080/084) and, for
+    /// own-effect-only ("one of YOUR effects", ST16-14 Matt Ishida),
+    /// `event_caused_by_own_effect: true`.
+    OnDiscardHand,
     OnEnterFieldAnyone,
     OnAnyDigimonPlayed,
     OnAllyPlayed,
@@ -146,6 +163,14 @@ pub enum Timing {
     OnOpponentSecurityRemoved,
     OnOwnSecurityRemoved,
     OnDigivolutionCardTrashed,
+    /// `[All Turns]`-style observer: a digivolution source was RETURNED to the
+    /// bottom of a player's deck (not trashed) — "when any [Vemmon] return to
+    /// the bottom of the deck from this Digimon's digivolution cards" (BT21-058,
+    /// BT18-065). Gate host-scope with `active_when:
+    /// { event_host_permanent_is_source: true }` and the returned card's name
+    /// with `event_card_name_contains:`. Distinct from
+    /// `on_digivolution_card_trashed`. G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
+    OnSourceReturnedToDeckBottom,
     OnSecurityCheck,
     OnCheckFaceUpSecurity,
     OnLoseSecurity,
@@ -569,6 +594,79 @@ pub struct ReplacementCostBody {
     /// to a single `PlaceLinkCardAsBottomSourceAndCancelLeave` step.
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub place_link_card_as_bottom_digivolution: bool,
+
+    /// Gap 2 (BT21-062 Galacticmon) — pay a `when_would_leave_battle_area`
+    /// replacement by RETURNING `count` of the LEAVING permanent's OWN
+    /// digivolution sources matching `filter` to `position` of its owner's deck
+    /// ("by returning 4 [Vemmon] from its digivolution cards to the bottom of
+    /// the deck, it doesn't leave"). The declarative-cost sibling of
+    /// `select_own_sources` + `return_selected_sources_to_deck` +
+    /// `cancel_replacement` (BT13-075's hand-lowered shape). Only valid on a
+    /// `when_would_leave_battle_area` replacement; the clause must be
+    /// `optional: true`; owns `outcome: prevent`. Pay-in-full: the picker
+    /// requires exactly `count` sources (`min == max == count`), so it is
+    /// NOT offered unless ≥ `count` matching sources are under the leaving
+    /// Digimon. The chosen sources go to deck `position` — firing
+    /// `OnDigivolutionCardReturnedToDeckBottom` per source (Gap 1) for a
+    /// Snatchmon underneath — then the leave is cancelled. Lowers to
+    /// `SelectOwnSources{min:count,max:count} + ReturnSelectedSourcesToDeck +
+    /// CancelReplacement`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub return_own_sources_to_deck: Option<ReturnOwnSourcesToDeckCost>,
+
+    /// BT25-039 Sirenmon (clause 3) — pay a `when_would_leave_battle_area`
+    /// replacement by DELETING the CARRIER ("by deleting this Digimon, they
+    /// don't leave"). The board-wide protect-OTHERS shape: the leaving subject
+    /// is a FILTERED OTHER own permanent (see the clause `active_when`), and the
+    /// cost is the carrier's own deletion. Lowers to `DeletePermanent { target:
+    /// source }`; the trailing `outcome: prevent` appends `CancelReplacement`,
+    /// which prevents the SUBJECT's leave (the framework applies the outcome to
+    /// the replacement subject, not the carrier). Only valid on a
+    /// `when_would_leave_battle_area` replacement; the clause must be `optional:
+    /// true` ("by deleting … they don't leave" is a may-pay). No unpayability
+    /// gate is needed — the carrier is always deletable while it is on the field
+    /// (the replacement's own `source_permanent_is_still_active` guard ensures
+    /// the carrier exists). `G-DSL-PROTECT-OTHER-BY-SELF-DELETE`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub delete_self: bool,
+
+    /// EX7-048 Gundramon (clause 2) — pay a `when_would_leave_battle_area`
+    /// replacement by TRASHING 1 Option card from the CARRIER's digivolution
+    /// cards ("by trashing 1 Option card from this Digimon's digivolution cards,
+    /// they don't leave"). The single-carrier variant of
+    /// `trash_option_from_own_stacks`, scoped to the effect's own
+    /// `source_permanent`. The player chooses WHICH Option (exposed to the RL
+    /// action space); the chosen card goes to trash (firing
+    /// `OnDigivolutionCardTrashed`) and the leave is cancelled. Only valid on a
+    /// `when_would_leave_battle_area` replacement; the clause must be `optional:
+    /// true`. Gated so it is not offered when the carrier has 0 Option
+    /// digivolution sources. Lowers to a single
+    /// `TrashOptionFromOwnDigivolutionCardsAndCancelLeave` step (it owns both the
+    /// cost and the `outcome: prevent`, so no separate `CancelReplacement`
+    /// follows). `G-DSL-PROTECT-OTHER-BY-TRASH-OPTION`.
+    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
+    pub trash_option_from_own_digivolution_cards: bool,
+}
+
+/// Body for `cost: { return_own_sources_to_deck: { filter, count, position } }`
+/// (Gap 2 — BT21-062). See [`ReplacementCostBody::return_own_sources_to_deck`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ReturnOwnSourcesToDeckCost {
+    /// Which of the leaving Digimon's own digivolution sources qualify (e.g.
+    /// `{ name_contains: "Vemmon" }`). Empty ⇒ any source below the top.
+    #[serde(default, skip_serializing_if = "PredicateSpec::is_empty")]
+    pub filter: PredicateSpec,
+    /// Exactly this many sources must be returned to pay the cost.
+    pub count: u8,
+    /// Deck destination (top or bottom). Defaults to bottom — the only printed
+    /// shape (BT21-062 "to the bottom of the deck").
+    #[serde(default = "default_deck_bottom")]
+    pub position: StackPosition,
+}
+
+fn default_deck_bottom() -> StackPosition {
+    StackPosition::Bottom
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

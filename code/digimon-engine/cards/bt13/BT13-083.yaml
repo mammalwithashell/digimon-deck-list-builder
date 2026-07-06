@@ -1,0 +1,249 @@
+# BT13-083 Gizmon: AT — Digimon, Lv.4, Purple, DP 6000, Cost 6.
+# Traits: none printed (type_eng ["Unknown"] in cards.json / official bundle).
+# Form: Champion. Attribute: Unknown.
+#
+# Printed card text (official Bandai DB bundle `data/card_bundles/BT13-083.md`,
+# confirmed against the card image and `effect_description_eng`):
+#
+#   When you would play this card, by deleting 1 of your level 3 Digimon,
+#     reduce the play cost by 4.
+#   [On Play] ＜Draw 2＞ (Draw 2 cards from your deck.) Then, trash 2 cards in
+#     your hand.
+#   [All Turns] This Digimon can't digivolve.
+#   [On Deletion] By returning 2 cards with [Gizmon] in their names from your
+#     trash to the bottom of the deck in any order, you may play 1 [Gizmon:
+#     XT] from your trash without paying the cost.
+#
+# evo_costs: [] (official DB: no standard digivolve circles — DigiEgg/Lv.2
+# base only, or DNA/special; no alt_paths block is authored here, matching the
+# BT13-103 precedent for an evo_costs-empty card).
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT13/Purple/BT13_083.cs
+#
+# ─── IMPLEMENTATION STATUS ───────────────────────────────────────────────────
+#
+# | Clause                                                        | Status      |
+# |----------------------------------------------------------------|-------------|
+# | 1. When-played interactive cost reducer (delete own Lv.3, -4)  | IMPLEMENTED |
+# | 2. [On Play] <Draw 2>, trash 2 from hand                       | IMPLEMENTED |
+# | 3. [All Turns] this can't digivolve                            | IMPLEMENTED |
+# | 4. [On Deletion] return 2 [Gizmon], may play Gizmon:XT free     | IMPLEMENTED |
+#
+# ─── Clause 1 — When-played FIXED interactive cost reducer ──────────────────
+#
+# DCGO (EffectTiming.BeforePayCost, ActivateClass "Delete your 1 level 3
+# Digimon to get Play Cost -4"):
+#   CanUseCondition: CanTriggerWhenPermanentWouldPlay(hashtable, cardSource ==
+#     card) — i.e. fires only when THIS card is the one being played
+#     (`when_playing_this`, not `when_any_ally_played`).
+#   CanActivateCondition: HasMatchConditionPermanent(own battle-area Digimon,
+#     Level == 3, TopCard.HasLevel, !CanNotBeAffected, CanBeDestroyedBySkill)
+#     — i.e. an eligible level-3 Digimon must already be on the controller's
+#     field for the reducer to be offered at all.
+#   ActivateCoroutine: SelectPermanentEffect with `canNoSelect` computed from
+#     whether paying the FULL cost is already affordable — DCGO's
+#     `CanNoSelect` here is not "player free choice", it degrades to a forced
+#     pick only when the full cost can't be paid; the DSL substrate's
+#     `optional: true` on the `cost_reduction` clause surfaces the accept/
+#     decline uniformly (matches the accept/decline shape proven by the
+#     `pay_cost_play_delete_reducer.rs` FIXED_REDUCER_YAML/SELF_REDUCER_YAML
+#     substrate tests — BT13-083 is cited by name in that file's header as a
+#     FIXED −4 driver alongside BT18-073 Machinedramon). On accept, 1 of the
+#     controller's own level-3 Digimon is selected and deleted
+#     (`delete_permanent`), then the play cost of THIS card is reduced by the
+#     FIXED amount 4 (`Cost -= 4`, unconditional on WHICH level-3 Digimon was
+#     deleted — unlike BT13-103's variable-by-deleted-cost sibling).
+#
+# Implemented via `kind: cost_reduction`, `when_playing_this: true`,
+# `optional: true`, `amount: 4`, `pay_cost: [select_own_permanent{level_eq:
+# 3} + delete_permanent]` — the exact `SELF_REDUCER_YAML` shape from
+# `code/digimon-engine/tests/cost_hooks/pay_cost_play_delete_reducer.rs`
+# (fixed amount, hosted on the card being played, clone-safe resumable park
+# per rule 28). No trait restriction on the deleted Digimon — DCGO's
+# `CanSelectPermanentCondition` only checks `Level == 3` (own battle area,
+# `HasLevel`, not immune, not un-deletable) — no name/trait/color gate.
+#
+# ─── Clause 2 — [On Play] <Draw 2>, trash 2 cards in hand ───────────────────
+#
+# DCGO (EffectTiming.OnEnterFieldAnyone, CanTriggerOnPlay): mandatory
+# (`canNoSelect: false`) Draw 2, then discard
+# `Math.Min(2, HandCards.Count)` cards via SelectHandEffect Mode.Discard.
+# Modeled with the P-205 / BT21-071 idiom: `draw: {count: 2}` followed by TWO
+# sequential mandatory `select_hand` + `trash_from_hand_by_index` steps (each
+# silently no-ops once the hand pool is exhausted, faithfully reproducing the
+# `Math.Min(2, hand.Count)` degrade — no unpayable-cost gate here since this
+# is a mandatory on-play effect, not a cost).
+#
+# ─── Clause 3 — [All Turns] this Digimon can't digivolve ────────────────────
+#
+# DCGO (EffectTiming.None, CardEffectFactory.CanNotDigivolveStaticSelfEffect,
+# condition IsExistOnBattleArea(card)): a permanent (no expiry), self-only
+# static restriction — this specific card instance cannot digivolve while on
+# the battle area, in either player's turn ("[All Turns]"). Modeled as
+# `kind: flood_gate`, `modifier: CannotDigivolve`, `target: { card_number_is:
+# "BT13-083" }` — the BT25-102 idiom for a card-intrinsic self-restriction
+# (flood_gate scans all battle-area permanents; `card_number_is` narrows the
+# match to copies of this exact printed card, which is precisely DCGO's
+# self-only check since every copy of BT13-083 independently carries and
+# re-installs this same restriction on itself). No `active_when` gate is
+# needed — "[All Turns]" is the always-active default (no turn-scoping
+# predicate), matching DCGO's unconditional `EffectTiming.None` static.
+#
+# ─── Clause 4 — [On Deletion] return 2 [Gizmon], may play [Gizmon: XT] free ─
+#
+# DCGO (EffectTiming.OnDestroyedAnyone, CanTriggerOnDeletion +
+# CanActivateOnDeletion): gated on >= 2 own trash cards whose CardSource
+# contains the name "Gizmon" (`ContainsCardName`, i.e. substring match, not
+# exact-name — matches `name_contains`). ActivateCoroutine:
+#   1. SelectCardEffect over own trash, `canNoSelect: () => false` (mandatory
+#      once activated), `maxCount: 2`, mode Custom → moves exactly the 2
+#      selected cards to the bottom of the deck in the order chosen ("in any
+#      order" = the player's own pick order — no forced sort).
+#   2. Only `if (returned)` (both cards actually moved): a SEPARATE optional
+#      (`canNoSelect: () => true`) SelectCardEffect over own trash filtered to
+#      `CanPlayAsNewPermanent && CardNames contains "Gizmon: XT" (or
+#      "Gizmon:XT")`, maxCount 1 → PlayPermanentCards(payCost: false) — play 1
+#      [Gizmon: XT] from trash free.
+#
+# Modeled with rule 25's post-trash OnDeletion contract (`when: on_deletion`
+# fires AFTER this permanent has moved to trash) + `optional: true` at the
+# clause level (the WHOLE clause is "by returning ..., you may play ..." — a
+# cost-then-optional-payoff, matching BT18-019's on_deletion clause shape
+# exactly). `select_count_capped_multi { of: you, zone: trash, min: 2, max:
+# 2, filter: { name_contains: "Gizmon" }, optional_zero: false }` is the
+# BT24-017 idiom for "by returning 2 cards" as an unpayable-cost gate (< 2
+# eligible trash cards → the whole clause no-ops, matching DCGO's `>= 2`
+# activation gate); `return_trash_list_to_deck_bottom` moves exactly the
+# picked list to the deck bottom. The `binding_count_eq: 2` gate then guards
+# the optional (`select_trash` `optional: true`) [Gizmon: XT] pick +
+# `play_from_trash_free`. `name_is: "Gizmon: XT"` matches the printed name
+# exactly (DCGO checks both "Gizmon: XT" and "Gizmon:XT" spacing variants;
+# `cards.json`/the official DB print the space-colon form).
+#
+# Clause-level `condition: { count_gte: { filter: { zone: [trash], owner:
+# you, name_contains: "Gizmon" }, n: 2 } }` is REQUIRED in addition to the
+# inner `min: 2` on the multi-select: unlike a single-pick `select_trash`
+# (whose candidate-count is pre-evaluated by
+# `lower_triggered::first_step_candidate_guard` so an unpayable single pick
+# suppresses the outer accept/decline prompt entirely), `SelectCountCappedMulti`
+# is NOT one of the guarded first-step kinds — the outer "you may" prompt for
+# an `optional: true` clause whose first body step is a count-capped multi
+# select installs UNCONDITIONALLY (verified against the engine; see
+# `first_step_candidate_guard`'s match arms in
+# `code/digimon-engine/src/dsl_cards/lower_triggered.rs`). Without this
+# clause-level `condition`, BT13-083 would show a spurious "you may" prompt
+# with <2 eligible [Gizmon] trash cards that immediately resolves to nothing
+# on accept — diverging from DCGO's `CanActivateOnDeletion` gate, which
+# requires `TrashCards.Count(CanSelectCardCondition) >= 2` BEFORE installing
+# any selection at all. The `condition:` reproduces that gate faithfully.
+
+card: BT13-083
+name: "Gizmon: AT"
+kind: digimon
+level: 4
+color: [purple]
+cost: 6
+dp: 6000
+
+effects:
+  # ─── Clause 1: when-played FIXED interactive cost reducer ──────────────────
+  #
+  # "When you would play this card, by deleting 1 of your level 3 Digimon,
+  # reduce the play cost by 4."
+  - kind: cost_reduction
+    when_playing_this: true
+    optional: true
+    amount: 4
+    pay_cost:
+      - select_own_permanent:
+          bind_as: sacrifice
+          filter:
+            all_of:
+              - kind: digimon
+              - level_eq: 3
+          prompt: "Delete 1 of your level 3 Digimon to reduce this card's play cost by 4"
+      - delete_permanent: { target: sacrifice }
+    summary: "When you would play this card, by deleting 1 of your level 3 Digimon, reduce the play cost by 4"
+
+  # ─── Clause 2: [On Play] <Draw 2>, trash 2 cards in hand ───────────────────
+  #
+  # Mandatory. Draw 2, then trash 2 cards from hand via two sequential
+  # mandatory select_hand + trash_from_hand_by_index steps (P-205 / BT21-071
+  # idiom) — each degrades to a no-op once the hand is exhausted, matching
+  # DCGO's `Math.Min(2, HandCards.Count)` discard-count behavior.
+  - when: on_play
+    optional: false
+    summary: "[On Play] <Draw 2>. Then, trash 2 cards in your hand"
+    process:
+      - draw: { of: you, count: 2 }
+      - select_hand:
+          of: you
+          bind_as: trash_a
+          filter: {}
+          prompt: "Trash 1 of 2 cards from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_a }
+      - select_hand:
+          of: you
+          bind_as: trash_b
+          filter: {}
+          prompt: "Trash 2 of 2 cards from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: trash_b }
+
+  # ─── Clause 3: [All Turns] this Digimon can't digivolve ────────────────────
+  #
+  # Permanent (no expiry) self-only static restriction — DCGO
+  # CanNotDigivolveStaticSelfEffect, EffectTiming.None, unconditional while on
+  # the battle area. `card_number_is` narrows the flood_gate's battle-area
+  # scan to copies of this exact printed card (BT25-102 idiom).
+  - kind: flood_gate
+    modifier: CannotDigivolve
+    target: { card_number_is: "BT13-083" }
+    summary: "[All Turns] This Digimon can't digivolve"
+
+  # ─── Clause 4: [On Deletion] return 2 [Gizmon], may play [Gizmon: XT] free ─
+  #
+  # "By returning 2 cards with [Gizmon] in their names from your trash to the
+  # bottom of the deck in any order, you may play 1 [Gizmon: XT] from your
+  # trash without paying the cost." Whole clause is optional (the cost-then-
+  # payoff "by returning ..., you may play ..." shape). `on_deletion` fires
+  # post-trash per rule 25 (this permanent has already moved to trash by the
+  # time this clause resolves; it does not need pre-removal snapshot state).
+  - when: on_deletion
+    optional: true
+    condition:
+      count_gte:
+        filter:
+          zone: [trash]
+          owner: you
+          name_contains: "Gizmon"
+        n: 2
+    summary: "[On Deletion] By returning 2 [Gizmon] cards from trash to deck bottom, may play 1 [Gizmon: XT] from trash free"
+    process:
+      - select_count_capped_multi:
+          of: you
+          zone: trash
+          min: 2
+          max: 2
+          filter: { name_contains: "Gizmon" }
+          bind_as: gizmon_returns
+          optional_zero: false
+          prompt: "Return 2 [Gizmon] cards from your trash to the bottom of your deck (in any order)"
+      - return_trash_list_to_deck_bottom:
+          of: you
+          cards: gizmon_returns
+      - if:
+          condition:
+            binding_count_eq:
+              binding: gizmon_returns
+              n: 2
+          then:
+            - select_trash:
+                of: you
+                bind_as: xt_pick
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - name_is: "Gizmon: XT"
+                prompt: "You may play 1 [Gizmon: XT] from your trash without paying the cost"
+            - play_from_trash_free: { of: you, hand_index: xt_pick }

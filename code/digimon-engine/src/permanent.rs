@@ -460,6 +460,20 @@ impl Permanent {
         self.card_sources.insert(0, card);
     }
 
+    /// Insert `card` as the TOP digivolution source — directly beneath the
+    /// active top card. The top card (and thus the permanent's identity)
+    /// remains unchanged; a placed digivolution card never changes what the
+    /// permanent IS. Matches DCGO `Permanent.AddDigivolutionCardsTop`
+    /// (`cardSources.Insert(1, …)` in DCGO's top-first ordering; this
+    /// engine's `card_sources` is bottom-first with the top card LAST, so
+    /// the top-source position is `len - 1`). On a stack with only the top
+    /// card, the placed card becomes the sole source (simultaneously top
+    /// and bottom source). G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05).
+    pub fn push_as_top_source(&mut self, card: crate::card_source::CardSource) {
+        let idx = self.card_sources.len().saturating_sub(1);
+        self.card_sources.insert(idx, card);
+    }
+
     /// Reset per-turn state.
     pub fn new_turn(&mut self) {
         self.attacks_this_turn = 0;

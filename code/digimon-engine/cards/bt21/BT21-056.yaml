@@ -1,0 +1,179 @@
+# BT21-056 Vemmon — Digimon, Lv.3, Black, DP 1000, Cost 3.
+# Traits: Unknown / LIBERATOR. Attribute: Unknown.
+# Evo costs: Lv.2 Black / cost 0 (cards.json evo_costs — single circle, no
+# multi-colour drop for this card).
+#
+# Printed effect text (data/card_bundles/BT21-056.md — official Bandai DB):
+#   [On Play] By trashing 1 card with [Vemmon] in its text from your hand,
+#   you may return 1 non-Digi-Egg card with [Vemmon] in its text from your
+#   trash to the hand.
+#
+# Printed inherited effect text:
+#   [Your Turn] [Once Per Turn] When this Digimon would digivolve into a
+#   Digimon card with [Vemmon] in its text, reduce the digivolution cost by 1.
+#
+# Official Q&A (data/card_bundles/BT21-056.md):
+#   "It refers to a card that contains the specified text or icon in its
+#   name, traits, effects, inherited effects, (Rule), digivolution
+#   requirements, DNA digivolution, DigiXros requirements, burst digivolve,
+#   App Fusion, Link, or Assembly requirements. For example, a card with
+#   [Knightmon] in its text would include cards with the name [DarkKnightmon]
+#   and cards with the text [Knightmon] in their effects."
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT21/Black/BT21_056.cs
+#
+# ─── "[Vemmon] in its text" — whole-card HasText, NOT body-text-only ────────
+#
+# DCGO's `CanSelectCardCondition` (Clause 1) and `CardSourceCondition`
+# (Clause 2, the cost reducer) both gate on `cardSource.HasText("Vemmon")`.
+# `CardSource.HasText` is a whole-card scan (name + aliases + traits +
+# printed effect/inherited/security text, both dual faces) — confirmed by
+# this card's own official Q&A above. The DSL's `in_text_contains` leaf
+# (code/digimon-engine/src/dsl_cards/predicate.rs —
+# G-DSL-IN-TEXT-CONTAINS, `card_in_text_contains`) is the direct match for
+# this whole-card scan: it checks name + also_treated_as/DigiXros aliases +
+# traits + all printed text in one leaf, so both text filters below use
+# `in_text_contains: "Vemmon"` directly.
+#
+# ─── Clause 1 — [On Play] trash-cost hand→trash→hand recursion ─────────────
+#
+# DCGO (EffectTiming.OnEnterFieldAnyone, ActivateClass, SetUpActivateClass(...,
+# -1, false, ...) = unlimited fires per turn, NOT declined at the top level):
+#   CanActivateCondition: card is on own battle area AND owner has >=1 hand
+#     card (a loose pre-check; the real gate is inside the coroutine).
+#   ActivateCoroutine:
+#     1. SelectHandEffect (mode Discard), canTargetCondition =
+#        HasText("Vemmon") (own hand cards only), canNoSelect: true,
+#        maxCount: 1 — the trash is itself declinable ("you may" is really
+#        attached to the whole cost+reward here per DCGO's canNoSelect on
+#        the cost pick).
+#     2. If a card was discarded AND the owner has a matching non-Digi-Egg
+#        card in trash: SelectCardEffect (mode AddHand, root Trash),
+#        canTargetCondition = HasText("Vemmon") && !IsDigiEgg, canNoSelect:
+#        true, maxCount: min(1, matches) — the return is separately
+#        declinable ("you may return").
+#
+# DSL modelling: `select_hand { optional: true, cost: true }` for the
+# trash-cost pick (declining aborts the whole clause —
+# G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE, BT24-008 idiom). Then
+# `trash_from_hand_by_index` pays the cost. Then a SEPARATE
+# `select_trash { optional: true }` for the "you may return" half (declining
+# just skips the return — no cost flag, matches DCGO's second independent
+# canNoSelect: true). `condition: count_gte` on the outer clause gates
+# activation on the hand actually containing an eligible Vemmon-text card
+# (mirrors `HandCards.Count(CanSelectCardCondition) >= 1`).
+#
+# ─── Clause 2 — Inherited [Your Turn][OPT] digivolve-cost -1 ───────────────
+#
+# DCGO: TWO cooperating pieces, both `SetIsInheritedEffect(true)`:
+#   - `activateClass2` (EffectTiming.OnEnterFieldAnyone, background/no-UI,
+#     MaxCountPerTurn 1): gates on IsOwnerTurn + CanTriggerWhenDigivolving +
+#     "this card is not among the evo-root tops" (`evoRootTops` = the OLD,
+#     PRE-digivolution tops — CardController.cs:1394-1397 captures
+#     `_targetPermanent.TopCard` BEFORE `AddCardSource` inserts the new top —
+#     so the check means this Vemmon was ALREADY buried before this
+#     digivolution, not the face-up top being digivolved over) + the NEW
+#     top card's TopCard.HasText("Vemmon"). This is the OPT gate/tripwire —
+#     it does not itself change cost, it feeds `isOverMaxCountPerTurn` below.
+#     It is OPT-budget hygiene (only burn the counter when the reduction
+#     could actually have applied, i.e. from the buried position), NOT a
+#     positional widening to face-up.
+#   - `changeCostClass` (EffectTiming.None = BeforePayCost): CanUseCondition
+#     = IsExistOnBattleArea + IsOwnerTurn + NOT isOverMaxCountPerTurn(gated
+#     by activateClass2's counter). ChangeCost: -1 when CardSourceCondition
+#     (the digivolving-FROM card source HasText("Vemmon") — trivially true,
+#     it's this card itself checking its own identity as the material) AND
+#     PermanentsCondition (targetPermanents contains THIS permanent, i.e.
+#     "this Digimon" is the one being digivolved) — the ACTUAL text-match on
+#     the new top card happens inside `activateClass2`'s CanUseCondition,
+#     which gates whether the OPT counter's underlying trigger is even
+#     eligible to increment; functionally the visible net effect is
+#     "-1 when digivolving BT21-056 into a Vemmon-text card, once per turn".
+#
+# DSL: single `kind: cost_reduction` clause, `scope: inherited` (this is an
+# INHERITED-only effect — `inherited_effect_description_eng`, not
+# `effect_description_eng` — matching DCGO's dual SetIsInheritedEffect(true)
+# on both activateClass2 and changeCostClass). Inherited effects are active
+# only while the card is a buried digivolution source (general_rule.pdf
+# §15-3-1: "gained by a Digimon FROM A DIGIVOLUTION CARD"; DCGO's
+# `Permanent.EffectList_ForCard` excludes a top card's inherited effects
+# from the cost pipeline), so a face-up BT21-056 digivolving directly gets
+# NO discount — verified against DCGO 2026-07-04. BT18-060 (byte-identical
+# DCGO reducer region, same shared hash) is authored the same way; its brief
+# `scope: both` mis-migration was reverted 2026-07-04 (see that file's
+# HISTORY note). Gated via
+# `source_is_cost_target_permanent: true` (this permanent is the one being
+# digivolved FROM) + `cost_target: { in_text_contains: "Vemmon" }` (the
+# hand card being digivolved into has "[Vemmon]" in its text) — the proven
+# Phase 2 Track H substrate (P-117 / BT21-011 / BT21-055 exemplars).
+# `once_per_turn: true` matches `activateClass2.MaxCountPerTurn == 1`.
+
+card: BT21-056
+name: Vemmon
+kind: digimon
+level: 3
+color: [black]
+cost: 3
+dp: 1000
+traits: [Unknown, LIBERATOR]
+attribute: Unknown
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+effects:
+  # ─── Clause 1 — [On Play] trash a Vemmon-text hand card, may return a
+  # non-Digi-Egg Vemmon-text card from trash to hand ──────────────────────
+  - when: on_play
+    optional: true
+    summary: "[On Play] By trashing 1 [Vemmon]-text card from hand, may return 1 non-Digi-Egg [Vemmon]-text card from trash to hand"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          in_text_contains: "Vemmon"
+        n: 1
+    process:
+      # Cost: trash 1 [Vemmon]-text hand card. `cost: true` — declining this
+      # pick aborts the whole clause (DCGO canNoSelect: true on the discard
+      # select; G-OPTIONAL-COST-DECLINE-ABORTS-CLAUSE).
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            in_text_contains: "Vemmon"
+          prompt: "Trash 1 [Vemmon]-text card from your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }
+      # Reward: may return 1 non-Digi-Egg [Vemmon]-text card from trash to
+      # hand. Separately optional (DCGO's second, independent canNoSelect:
+      # true on the AddHand-from-Trash select) — declining here only skips
+      # the return, the trash cost above has already been paid.
+      - select_trash:
+          of: you
+          bind_as: recovered
+          optional: true
+          filter:
+            in_text_contains: "Vemmon"
+            none_of:
+              - kind: digi_egg
+          prompt: "You may return 1 non-Digi-Egg [Vemmon]-text card from your trash to your hand"
+      - add_to_hand_from_trash: { of: you, card: recovered }
+
+  # ─── Clause 2 — Inherited [Your Turn][OPT] digivolve-cost -1 ──────────────
+  - kind: cost_reduction
+    scope: inherited
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            in_text_contains: "Vemmon"
+    once_per_turn: true
+    amount: 1
+    summary: "[Your Turn][OPT] Inherited: when this Digimon would digivolve into a [Vemmon]-text card, reduce the digivolution cost by 1"

@@ -386,6 +386,27 @@ pub enum EffectTiming {
     /// (cost payment, source-displacement effects, etc.). Rocks core
     /// archetype observer.
     OnDigivolutionCardTrashed,
+    /// Fires when a card is RETURNED from a permanent's digivolution stack to
+    /// the BOTTOM of a player's deck (a return, not a trash — distinct from
+    /// `OnDigivolutionCardTrashed`). Carries the former host + returned card as
+    /// event context so host-scoped observers ("from THIS Digimon's
+    /// digivolution cards") gate on `event_host_permanent_is_source` and
+    /// event-card observers on `event_card_name_contains`. Galacticmon /
+    /// Vemmon-LIBERATOR archetype observer (BT21-058, BT18-065).
+    /// G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
+    OnDigivolutionCardReturnedToDeckBottom,
+
+    /// Fires ONCE after an EFFECT trashes one or more cards from a player's
+    /// hand ("when your hand is trashed from"). Global observer — the trashing
+    /// player and the causing effect's controller are carried in the
+    /// `TriggerContext` (`discard_hand_player` / `discard_cause_controller`) so
+    /// card scripts gate own-side ("your hand", BT25-080/084) or own-effect
+    /// ("one of your effects trashes a card in your hand", ST16-14 Matt Ishida).
+    /// Only effect-caused discards fire this — a draw, mulligan, or rule
+    /// discard does NOT (mirrors DCGO `CanTriggerOnTrashHand`, which requires a
+    /// non-null causing `CardEffect`). A multi-card discard batch fires this
+    /// exactly ONCE (DCGO `DiscardHands()`). G-ENGINE-ON-DISCARD-HAND.
+    OnDiscardHand,
 
     // Special
     None,

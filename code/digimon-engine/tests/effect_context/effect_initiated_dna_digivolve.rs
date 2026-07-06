@@ -15,11 +15,57 @@
 //! (added in Phase 2f1 Task 4). The user-action two-stage selection
 //! chain is covered by `tests/dna_digivolve_user_action.rs`.
 
+use digimon_engine::card_data::{CardData, DnaCost, DnaRequirement};
 use digimon_engine::card_source::{CardHandle, CardSource};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect};
 use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::{CardColor, CardKind};
 use std::sync::Arc;
+
+// ─── Helpers for the DNA-workstream gaps (printed cost + recipe enforcement) ──
+
+/// A leveled/colored Digimon material with no DNA cost of its own.
+fn material(id: &str, level: u8, color: CardColor) -> CardData {
+    let mut d = make_test_card(id, id);
+    d.card_kind = CardKind::Digimon;
+    d.level = Some(level);
+    d.dp = Some(4000);
+    d.colors = vec![color];
+    d
+}
+
+/// A named DNA requirement half.
+fn req(level: u8, color: CardColor) -> DnaRequirement {
+    DnaRequirement {
+        level,
+        card_colors: vec![color],
+        name_contains: String::new(),
+        text_contains: String::new(),
+    }
+}
+
+/// A DNA-digivolve result card with a single printed DNA recipe:
+/// `requirement1` = (req1_level, req1_color), `requirement2` = (req2_level,
+/// req2_color), paying `memory_cost` printed DNA cost.
+fn dna_result(
+    id: &str,
+    name: &str,
+    req1: DnaRequirement,
+    req2: DnaRequirement,
+    memory_cost: i16,
+) -> CardData {
+    let mut d = make_test_card(id, name);
+    d.card_kind = CardKind::Digimon;
+    d.level = Some(7);
+    d.dp = Some(14000);
+    d.dna_costs = vec![DnaCost {
+        memory_cost,
+        requirement1: req1,
+        requirement2: req2,
+    }];
+    d
+}
 
 #[test]
 fn effect_initiated_dna_digivolve_merges_two_permanents_with_hand_top() {
@@ -348,5 +394,241 @@ fn effect_initiated_dna_digivolve_fires_on_dna_digivolve_trigger() {
          (memory before={}, after={}, expected delta=+1)",
         before,
         after
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// G-ENGINE-DNA-RECIPE-ENFORCEMENT (gap 2) — the engine primitive validates
+// the result's printed DNA recipe against the two materials, and ABORTS an
+// illegal pairing at commit as a backstop. DCGO parity:
+// `CardSource.CanJogressFromTargetPermanents`.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// A material pair that DOES satisfy the result's printed recipe (Lv4 Red +
+/// Lv4 Purple) merges normally when `ignore_requirements == false`.
+#[test]
+fn dna_recipe_valid_pair_merges() {
+    let mut runner = DebugRunner::builder()
+        .add_card(material("MAT-RED", 4, CardColor::Red))
+        .add_card(material("MAT-PUR", 4, CardColor::Purple))
+        .add_card(dna_result(
+            "RES",
+            "Result",
+            req(4, CardColor::Red),
+            req(4, CardColor::Purple),
+            0,
+        ))
+        .hand(0, &["RES"])
+        .memory(5)
+        .start();
+
+    let a = runner.place_on_field(0, "MAT-RED", None);
+    let b = runner.place_on_field(0, "MAT-PUR", None);
+    let res = runner.game.players[0].hand[0].handle();
+
+    let merged = {
+        let mut ctx = EffectContext::new(&mut runner.game, res, None, 0);
+        // ignore_requirements=false → the recipe MUST be checked and satisfied.
+        ctx.effect_initiated_dna_digivolve(a, b, res, 0, false)
+    };
+    assert!(
+        merged.is_some(),
+        "a recipe-satisfying material pair (Lv4 Red + Lv4 Purple) must merge"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area.len(),
+        1,
+        "the two materials merged into one permanent"
+    );
+}
+
+/// A material pair that does NOT satisfy the result's printed recipe (both Red)
+/// is REJECTED at commit — the primitive returns None and mutates nothing.
+#[test]
+fn dna_recipe_illegal_pair_is_rejected_at_commit() {
+    let mut runner = DebugRunner::builder()
+        .add_card(material("MAT-RED-1", 4, CardColor::Red))
+        .add_card(material("MAT-RED-2", 4, CardColor::Red))
+        .add_card(dna_result(
+            "RES",
+            "Result",
+            req(4, CardColor::Red),
+            req(4, CardColor::Purple),
+            0,
+        ))
+        .hand(0, &["RES"])
+        .memory(5)
+        .start();
+
+    let a = runner.place_on_field(0, "MAT-RED-1", None);
+    let b = runner.place_on_field(0, "MAT-RED-2", None);
+    let res = runner.game.players[0].hand[0].handle();
+
+    let merged = {
+        let mut ctx = EffectContext::new(&mut runner.game, res, None, 0);
+        // ignore_requirements=false → the recipe MUST reject an illegal pairing.
+        ctx.effect_initiated_dna_digivolve(a, b, res, 0, false)
+    };
+    assert!(
+        merged.is_none(),
+        "an illegal material pair (Red + Red, recipe wants Red + Purple) must be REJECTED"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area.len(),
+        2,
+        "battle area unchanged — no merge on an illegal pairing"
+    );
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        1,
+        "result card must remain in hand when the pairing is illegal"
+    );
+}
+
+/// The recipe backstop is ONLY active when `ignore_requirements == false`.
+/// `ignore_requirements == true` (DCGO cards that skip the requirement, e.g.
+/// the shipped cost-0 Omnimon users) must still merge an off-recipe pair.
+#[test]
+fn dna_recipe_ignore_requirements_bypasses_recipe() {
+    let mut runner = DebugRunner::builder()
+        .add_card(material("MAT-RED-1", 4, CardColor::Red))
+        .add_card(material("MAT-RED-2", 4, CardColor::Red))
+        .add_card(dna_result(
+            "RES",
+            "Result",
+            req(4, CardColor::Red),
+            req(4, CardColor::Purple),
+            0,
+        ))
+        .hand(0, &["RES"])
+        .memory(5)
+        .start();
+
+    let a = runner.place_on_field(0, "MAT-RED-1", None);
+    let b = runner.place_on_field(0, "MAT-RED-2", None);
+    let res = runner.game.players[0].hand[0].handle();
+
+    let merged = {
+        let mut ctx = EffectContext::new(&mut runner.game, res, None, 0);
+        // ignore_requirements=true → recipe NOT checked (escape hatch).
+        ctx.effect_initiated_dna_digivolve(a, b, res, 0, true)
+    };
+    assert!(
+        merged.is_some(),
+        "ignore_requirements=true must bypass the recipe backstop (escape hatch)"
+    );
+}
+
+/// The recipe accepts EITHER ordering of the two materials (DCGO enumerates
+/// both permutations). A Purple + Red pair still satisfies a req1=Red/req2=Purple
+/// recipe.
+#[test]
+fn dna_recipe_accepts_either_material_ordering() {
+    let mut runner = DebugRunner::builder()
+        .add_card(material("MAT-PUR", 4, CardColor::Purple))
+        .add_card(material("MAT-RED", 4, CardColor::Red))
+        .add_card(dna_result(
+            "RES",
+            "Result",
+            req(4, CardColor::Red),
+            req(4, CardColor::Purple),
+            0,
+        ))
+        .hand(0, &["RES"])
+        .memory(5)
+        .start();
+
+    // Place Purple first, Red second — the reverse of req1/req2 order.
+    let a = runner.place_on_field(0, "MAT-PUR", None);
+    let b = runner.place_on_field(0, "MAT-RED", None);
+    let res = runner.game.players[0].hand[0].handle();
+
+    let merged = {
+        let mut ctx = EffectContext::new(&mut runner.game, res, None, 0);
+        ctx.effect_initiated_dna_digivolve(a, b, res, 0, false)
+    };
+    assert!(
+        merged.is_some(),
+        "recipe must accept (Purple, Red) for a req1=Red/req2=Purple recipe (either ordering)"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// G-ENGINE-DNA-PRINTED-COST (gap 1) — the effect-initiated DNA verb pays the
+// result card's printed `dna_costs[].memory_cost` when the DSL requests
+// `cost: printed`. DCGO parity: `PlayCardClass(..., payCost: true)` pays
+// `condition.cost`.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/// The `pay_printed_dna_cost` primitive helper: with a recipe-satisfying pair,
+/// the merge pays the result's printed DNA cost (here 3), so memory drops by 3.
+#[test]
+fn dna_printed_cost_is_paid_by_primitive() {
+    let mut runner = DebugRunner::builder()
+        .add_card(material("MAT-RED", 4, CardColor::Red))
+        .add_card(material("MAT-PUR", 4, CardColor::Purple))
+        .add_card(dna_result(
+            "RES",
+            "Result",
+            req(4, CardColor::Red),
+            req(4, CardColor::Purple),
+            3, // printed DNA cost = 3
+        ))
+        .hand(0, &["RES"])
+        .memory(5)
+        .start();
+
+    let a = runner.place_on_field(0, "MAT-RED", None);
+    let b = runner.place_on_field(0, "MAT-PUR", None);
+    let res = runner.game.players[0].hand[0].handle();
+    let before = runner.game.memory;
+
+    let merged = {
+        let mut ctx = EffectContext::new(&mut runner.game, res, None, 0);
+        // Pass the printed cost explicitly (this is what the DSL `cost: printed`
+        // lowering will compute for us). ignore_requirements=false so the
+        // recipe is validated first.
+        let cost = ctx
+            .printed_dna_cost_for_pair(a, b, res)
+            .expect("recipe-satisfying pair resolves a printed DNA cost");
+        ctx.effect_initiated_dna_digivolve(a, b, res, cost, false)
+    };
+    assert!(merged.is_some(), "recipe-satisfying pair merges");
+    assert_eq!(
+        before - runner.game.memory,
+        3,
+        "memory must drop by the result's printed DNA cost (3)"
+    );
+}
+
+/// `printed_dna_cost_for_pair` returns `None` for an illegal pairing — so a
+/// DSL `cost: printed` never charges when the recipe is unsatisfied.
+#[test]
+fn dna_printed_cost_none_for_illegal_pair() {
+    let mut runner = DebugRunner::builder()
+        .add_card(material("MAT-RED-1", 4, CardColor::Red))
+        .add_card(material("MAT-RED-2", 4, CardColor::Red))
+        .add_card(dna_result(
+            "RES",
+            "Result",
+            req(4, CardColor::Red),
+            req(4, CardColor::Purple),
+            3,
+        ))
+        .hand(0, &["RES"])
+        .memory(5)
+        .start();
+
+    let a = runner.place_on_field(0, "MAT-RED-1", None);
+    let b = runner.place_on_field(0, "MAT-RED-2", None);
+    let res = runner.game.players[0].hand[0].handle();
+
+    let cost = {
+        let ctx = EffectContext::new(&mut runner.game, res, None, 0);
+        ctx.printed_dna_cost_for_pair(a, b, res)
+    };
+    assert!(
+        cost.is_none(),
+        "illegal pair must resolve NO printed DNA cost (recipe unsatisfied)"
     );
 }

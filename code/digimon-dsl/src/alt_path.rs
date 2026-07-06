@@ -70,6 +70,30 @@ pub struct AltPathSpec {
     /// `From` for back-compat with existing YAML.
     #[serde(default, skip_serializing_if = "is_default_direction")]
     pub direction: AltPathDirection,
+
+    /// Gap 4 (BT18-065 Snatchmon) — conditionally-enabled extra material origin
+    /// zones for this DigiXros. Each entry grants its `zone` as a legal DigiXros
+    /// material source ONLY while its `while:` predicate holds at play-start
+    /// ("While you have no Digimon other than [Vemmon], cards in your trash can
+    /// also be placed for this card's DigiXros"). Evaluated once when the
+    /// transaction is built (DCGO `AddMaxTrashCountDigiXrosClass` + its
+    /// `CanUseCondition`); when true the zone is added to the transaction's
+    /// allowed zones on top of each material's static `zones:`. `digixros` only.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub extra_material_zones: Vec<ConditionalMaterialZoneSpec>,
+}
+
+/// One `extra_material_zones:` entry (Gap 4). See
+/// [`AltPathSpec::extra_material_zones`].
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct ConditionalMaterialZoneSpec {
+    /// The origin zone to conditionally enable (e.g. `trash`).
+    pub zone: crate::predicate::Zone,
+    /// Predicate that must hold (evaluated at play-start) for the zone to be
+    /// allowed. Renamed from the YAML key `while` (a Rust keyword).
+    #[serde(rename = "while")]
+    pub while_condition: PredicateSpec,
 }
 
 fn is_default_direction(d: &AltPathDirection) -> bool {
@@ -104,6 +128,17 @@ pub enum AltPathKind {
     AppFusion,
     Assembly,
     ActivatedDigivolve,
+    /// Cast-time stack construction (BT15-102 Apocalymon): "When this card
+    /// would be played, by placing up to N <filter> cards … from your
+    /// battle area or trash under it, reduce the play cost by X for each
+    /// one." Rides the DigiXros transaction substrate (count-capped
+    /// multi-select over the material `zones:`, `distinct_by` mask-level
+    /// uniqueness, per-material `cost_delta`, post-payment placement under
+    /// the played card, OnPlay drained after assembly) but is NOT a
+    /// DigiXros: `was_digixros()` / `digixros_count()` stay 0 for the
+    /// pending play. Source zones are parametric per material so the
+    /// security-stack sibling (EX10-061) composes later.
+    CastTimeAssembly,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

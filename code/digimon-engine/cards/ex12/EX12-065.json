@@ -1,0 +1,42 @@
+{
+  "card_id": "EX12-065",
+  "card_index": 65,
+  "card_name_eng": "Kaguyamon",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_065",
+  "play_cost": 12,
+  "dp": 12000,
+  "level": 6,
+  "card_kind": 0,
+  "rarity": 3,
+  "card_colors": [
+    6,
+    3
+  ],
+  "type_eng": [
+    "Puppet",
+    "Sanmyojin",
+    "Tentei Hachibushu",
+    "Shambala"
+  ],
+  "form_eng": [],
+  "attribute_eng": [
+    "Data"
+  ],
+  "effect_description_eng": "＜Fortitude＞ (When this Digimon with digivolution cards is deleted, play this card without paying the cost.)\r\n[On Play] [When Digivolving] [When Attacking] [Once Per Turn] You may play 1 play cost 5 or lower [Puppet] or [Shambala] trait card from your trash without paying the cost.\r\n[All Turns] All of your [Puppet] or [TB] trait Digimon gain ＜Blocker＞ (This Digimon can block in the blocker timing.) and ＜Retaliation＞ (When only this Digimon is deleted in battle, delete the Digimon it battled.) \r\n[On Deletion] Return 1 of your opponent's lowest level Digimon to the bottom of the deck.",
+  "inherited_effect_description_eng": "|applinkdp =",
+  "security_effect_description_eng": "",
+  "evo_costs": [
+    {
+      "card_color": 6,
+      "level": 5,
+      "memory_cost": 4
+    },
+    {
+      "card_color": 3,
+      "level": 5,
+      "memory_cost": 4
+    }
+  ],
+  "xros_req": "[Digivolve] Lv.5 w/[Puppet]/[Shambala] trait: Cost 3"
+}

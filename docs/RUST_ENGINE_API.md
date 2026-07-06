@@ -274,6 +274,62 @@ returning `true` only when every ref moved. Drives BT12-031 Imperialdramon:
 Fighter Mode's "By returning 1 [Imperialdramon: Dragon Mode] from this
 Digimon's digivolution cards to its owner's hand" alt-cost.
 
+```
+ctx.return_card_source_to_deck(perm, card, to_bottom: bool) -> bool   // return one source by handle to its OWNER's deck (top/bottom)
+ctx.return_selected_sources_to_deck(selected: Vec<SourceSelectionRef>, to_bottom: bool) -> bool
+```
+
+`return_card_source_to_deck` (`effect_context/action/sources.rs`) is the
+deck-routing sibling of `return_card_source_to_hand`: it removes one source
+(anywhere in the stack) and routes it to `removed.owner`'s deck at top or
+bottom. When `to_bottom == true` it fires the
+**`OnDigivolutionCardReturnedToDeckBottom`** observer
+(G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM) — carrying the former host
+(`event_host_permanent` / `event_host_card`) and the returned card
+(`event_card`) as event context, drained synchronously per source. This is the
+observer BT21-058 Snatchmon (inherited "[All Turns][OPT] when any [Vemmon] are
+returned to the bottom of the deck from this Digimon's digivolution cards,
+delete 1 opp Digimon cost 4 or less") and BT18-065 listen on. Gate host-scope
+with `event_host_permanent_is_source: true` and the returned card with
+`event_card_name_contains:` inside `active_when:`; DSL `when:
+on_source_returned_to_deck_bottom`. A top-of-deck return fires nothing (the
+printed observer is bottom-scoped). It is still a **return, not a trash** — it
+never fires `OnDigivolutionCardTrashed`.
+
+**DSL: leave-field "return N own sources to deck" replacement cost (BT21-062).**
+A `kind: replacement` clause with `trigger: when_would_leave_battle_area`,
+`optional: true`, `outcome: prevent`, and
+`cost: { return_own_sources_to_deck: { filter, count, position: bottom } }`
+lowers to `select_own_sources{ target: source, min: count, max: count } →
+return_selected_sources_to_deck → cancel_replacement`. Pay-in-full: exactly
+`count` filtered sources under the LEAVING Digimon are picked (each choice
+surfaced to the action space), and the replacement's accept prompt is
+**not offered** unless ≥ `count` matching sources exist (the `SelectOwnSources`
+replacement preflight now counts filtered sources under the target). Because the
+cost routes through `return_selected_sources_to_deck`, payment fires the
+`OnDigivolutionCardReturnedToDeckBottom` observer above per source — so a
+Snatchmon underneath triggers. (The equivalent hand-lowered shape —
+`select_own_sources` + `return_selected_sources_to_deck` + `cancel_replacement`
+— still works and is what BT13-075 Alphamon uses for `count: 1`.)
+
+**DSL: conditional DigiXros material zone (BT18-065).** A `kind: digixros`
+alt-path may carry
+`extra_material_zones: [{ zone: trash, while: <PredicateSpec> }]`. Each entry's
+`while:` predicate is evaluated ONCE at transaction build; when it holds, the
+`zone` becomes a legal DigiXros material source on top of each material's static
+`zones:` ("While you have no Digimon other than [Vemmon], cards in your trash
+can also be placed for this card's DigiXros"). DCGO
+`AddMaxTrashCountDigiXrosClass` + its `CanUseCondition`.
+
+**DigiXros `distinct_by` is enforced at material validation
+(G-ENGINE-DIGIXROS-DISTINCT-BY).** A recipe slot's
+`distinct_by: card_number | name | level` now rejects a candidate whose printed
+identity duplicates a material already committed to that slot (mask-level
+exclusion, mirroring DCGO `CanTargetCondition_ByPreSelecetedList`). The
+committed identity signature is captured at commit time
+(`DigiXrosSelectedMaterial::identity`), so the check is a pure comparison over
+transaction state (clone-safe). Distinctness is slot-scoped.
+
 `delete_permanent` removes the permanent and moves all cards in its stack to trash. It also clears modifiers attached to that handle. **Does not fire OnDeletion** — use `Game::delete_permanent_with_effects` for that when you're calling from combat paths. From a card script, `ctx.delete_permanent` is usually what you want (OnDeletion is handled by combat, not effect).
 
 `de_digivolve` (`effect_context/mod.rs:1966`) pops up to `amount` sources off
@@ -1386,7 +1442,8 @@ DelayEffect, OnLink, OnLinkedCardTrashed, OnUnlink, OnTrainingTrash
 MainFromHand, MainOnField, MainFromTrash
 
 // Archetype observers
-OnOpponentSecurityRemoved, OnOwnSecurityRemoved, OnDigivolutionCardTrashed
+OnOpponentSecurityRemoved, OnOwnSecurityRemoved, OnDigivolutionCardTrashed,
+OnDigivolutionCardReturnedToDeckBottom   // source returned to deck BOTTOM (BT21-058 / BT18-065); DSL `when: on_source_returned_to_deck_bottom`
 
 None
 ```
@@ -2009,6 +2066,43 @@ Effect::before_pay_cost(card)
 ```
 
 Note: `pay_cost_fn` fires before `cost_reduction_fn` is accumulated (gate → pay → then contribute the reduction if true). The deck-size check prevents paying a cost the player cannot afford; returning `false` leaves deck and memory untouched.
+
+---
+
+### Interactive `pay_cost` (DSL) — "by <verb>-ing 1 of your Digimon, reduce the cost" (G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST)
+
+The v1 constraint above ("`pay_cost_fn` must NOT install a `PendingSelection`") is lifted for the **DSL `kind: cost_reduction`** path when the cost body is an interactive selection. The DSL body is authored under `pay_cost:` and, when its first step installs a selection (e.g. `select_own_permanent`, `trash_bottom_face_down_source_under_tamer`), the lowering marks the effect `pay_cost_interactive`. The play-from-hand / digivolve / Option-use cost chains then **park** on that selection (on the resumable data VM — clone-safe, rule 28) and credit the reduction only once it resolves (the cost was actually paid). Declining an optional reducer, or an unpayable cost (`ctx.cost_unpayable`), credits nothing.
+
+Two DSL shapes for the "by deleting 1 of your ... Digimon, reduce the cost" family (BT18-073 Machinedramon, BT13-083 Gizmon:AT, BT13-103 Akihiro Kurata):
+
+- **FIXED amount** — a static `amount:` plus a `pay_cost` that selects and deletes:
+
+  ```yaml
+  - kind: cost_reduction
+    active_when: { your_turn: true }
+    when_any_ally_played: { trait_has: "Composite" }
+    optional: true                       # "by deleting …" is a declinable cost
+    amount: 4
+    pay_cost:
+      - select_own_permanent: { bind_as: sac, filter: { all_of: [ { kind: digimon }, { trait_has: "Composite" } ] }, prompt: "…" }
+      - delete_permanent: { target: sac }
+  ```
+
+- **VARIABLE amount = the deleted permanent's printed play cost** — omit `amount:` and use `delete_for_cost_reduction` instead of `delete_permanent`:
+
+  ```yaml
+  - kind: cost_reduction
+    active_when: { your_turn: true }
+    when_any_ally_played: { name_contains: "Belphemon" }
+    optional: true
+    pay_cost:
+      - select_own_permanent: { bind_as: gizmon, filter: { all_of: [ { kind: digimon }, { name_contains: "Gizmon" } ] }, prompt: "…" }
+      - delete_for_cost_reduction: { target: gizmon }
+  ```
+
+  `delete_for_cost_reduction` deletes its target AND snapshots the target's **printed play cost pre-removal** (rule 25 — DCGO `permanent.CostJustBeforeRemoveField`) into `Game::pending_cost_reduction_amount_override`. The play-cost continuation (`resume_play_cost_continuation_after_pending`) credits that override once the parked select resolves; a 0-cost deletion credits nothing (DCGO `if reduceCost <= 0 yield break`).
+
+**Offer gating (DCGO `CanActivateCondition`).** An interactive `cost_reduction` whose `pay_cost` begins with a single-pick selection carries an automatic actionability guard in its `condition`: the reducer is **not offered** when that first select has no eligible target (mirrors `HasMatchConditionPermanent`). This prevents a spurious accept prompt and a no-op delete that would otherwise credit a reduction for a cost never paid. The guard is derived from `first_step_candidate_guard` and covers `select_own/opponent/any_permanent`, `select_hand`, `select_trash`; purpose-built interactive steps (`trash_bottom_face_down_source_under_tamer`) keep their runtime `cost_unpayable` abort instead.
 
 ---
 
@@ -3676,6 +3770,21 @@ Use `bind_permanent_property` when text chooses one permanent and later compares
 
 `property: level` reads the selected permanent's current top-card level at process time and stores it as a literal binding. `level_eq_binding` compares a later predicate subject's level to that bound value. This is the canonical shape for "choose 1, affect all with the same level" text such as BT17-078.
 
+`level_lte_binding` / `level_gte_binding` are the inequality siblings — the subject's level must be `<=` / `>=` the literal bound to `binding`. Used by BT8-107 ("delete 1 opponent Digimon with a level less than or equal to the deleted Digimon's level").
+
+#### Binding / event-scoped predicate leaves II (store-champs)
+
+These leaves read a *named card/permanent binding* or the *trigger event target* rather than the candidate subject alone:
+
+- **`binding_card_color: { binding, color_is }`** — the card bound to `binding` shares ≥1 printed color with `color_is`. Sibling of `binding_card_kind`. Fails closed when the binding is unset. BT1-087 ("if THAT [added security] card is yellow, trigger `<Recovery +1>`"). G-DSL-BINDING-CARD-COLOR.
+- **`binding_card_name_is: { binding, name_is }`** — the bound card's effective name (printed `card_name` + static `also_treated_as` aliases) equals `name_is`. BT21-087 ("play 1 [Vemmon]"). G-DSL-BINDING-CARD-NAME-EQUALS.
+- **`event_target_trait_contains: <token>`** — substring / root-trait sibling of `event_target_trait_has`, tolerant of pluralization / compound traits (BT11-089 Q&A: "regardless of other words or pluralizations"). Reads the deletion snapshot's `traits` for a deletion event, else the live event-target card. G-DSL-EVENT-TARGET-TRAIT-CONTAINS.
+- **`event_target_has_digivolution_cards: <bool>`** / **`event_target_stack_size_gte: <N>`** — deletion-subject source-count gates. For a deletion event they read the rule-25 snapshot's `source_count_just_before` (+1 for the top card = full stack size); for a live event target they read the permanent's `card_sources.len()`. `has_digivolution_cards` ⇔ stack size ≥ 2. EX1-066 ("When one of your … Digimon **with a digivolution card** is deleted"). G-DSL-EVENT-TARGET-SOURCE-COUNT.
+- **`distinct_named_count_gte: { of, filter, n }`** — a no-subject global leaf; ≥ `n` DISTINCT (synth-identity-aware) card names among `of`'s battle-area permanents matching `filter`. Modeled on `distinct_tamer_colors_gte`. BT21-040 ("3 or more [Hero] trait Tamers with different names"). G-DSL-DISTINCT-NAMED-PERMANENT-COUNT.
+- **`play_cost_eq_binding: { binding, offset, op }`** — a candidate card's play cost compared (`op` ∈ `eq`/`gte`/`lte`) against a reference permanent's play cost plus `offset`. `binding` resolves a named card/permanent binding, or the special `event_target` handle (deletion snapshot's `cost_just_before`, else the live event-target card). Fails closed when the reference cannot be resolved. BT19-099 ("play 1 [Wicked God] Digimon with a play cost 1 higher than that [leaving] Digimon"). G-DSL-COST-RELATIVE-TO-EVENT-SUBJECT.
+
+**Excluding a chosen binding from a mass op (EX11-046)** — "Choose 1 of your opponent's highest play cost Digimon and delete all of their **other** Digimon" needs no new leaf: bind the pick with `select_opponent_permanent { selector: highest_play_cost, bind_as: kept }`, then `for_each { over: { of: opponent, kind: digimon, not_in_binding: kept } }`. Because `not_in_binding` on a single-permanent binding excludes ONLY the chosen permanent, the tie case is faithful — a second Digimon tied for highest cost is still deleted.
+
 ### DSL Formula Predicate Thresholds
 
 Cost, DP, level, stack/material-count, memory, security-count, and general
@@ -3804,6 +3913,64 @@ The predicate evaluator carries source-stack metadata into source-subject leaves
 through a new `PredicateSubject::Source` variant (`permanent`, `field_index`,
 `source_index`, `card`), alongside the existing field/card/player subjects.
 
+### DSL Store-champs predicate/formula leaves (2026-07-03)
+
+New vocabulary for the June-2026 store-champs audit — each mirrors a DCGO
+`CardSource` / `CEntity` primitive.
+
+- **`in_text_contains: <str>`** (predicate leaf, card/permanent subject;
+  G-DSL-IN-TEXT-CONTAINS) — the broad whole-card **"[X] in its text"** scan
+  mirroring DCGO `CardSource.HasText`. Case-insensitive substring over the card
+  **name + also-treated-as / DigiXros aliases + traits (the Type line) + all
+  printed text** (effect / inherited / security, both dual faces). Distinct from
+  `effect_text_contains`, which scans ONLY the top card's effect/inherited/
+  security text and so **misses trait-only matches** — e.g. the
+  `[Three Musketeers]`-TRAIT cards (BT6-017 / BT6-065 / ST14-09) carry the trait
+  but not the string in effect text. Honors Track C `ChangeTraits` /
+  `ChangeBaseCardName` overlays on a permanent subject. Event-side sibling
+  `event_card_in_text_contains: <str>` gates observers on "when you play a card
+  with [X] in its text" (AD1-018). Driver family: BT21-098 Ragnarok Cannon
+  (`in_text_contains: Vemmon`).
+  ```yaml
+  filter: { in_text_contains: "Vemmon" }
+  ```
+
+- **`self_source_count: { filter?, op, value }`** (predicate leaf, no-subject;
+  G-DSL-SELF-SOURCE-COUNT-THRESHOLD) — compares the count of the effect
+  **carrier's OWN digivolution sources** (beneath its top card) matching
+  `filter` against `value` under `op` (`gte` / `lte` / `eq`). Reads
+  `ctx.source_permanent`; reuses the `source_stack_count` counting logic. Gates
+  a conditional self-aura via `active_when`. Driver: BT21-006 Tsumemon
+  ("This Digimon with 4 or more [Vemmon] digivolution cards gets +3000 DP").
+  ```yaml
+  active_when:
+    self_source_count: { filter: { name_is: Vemmon }, op: gte, value: 4 }
+  ```
+
+- **`total_security_count_{lte,gte,eq}: <DpConstraint>`** (predicate leaf;
+  G-DSL-TOTAL-SECURITY-COUNT-PREDICATE) — the SUM of **both players'**
+  security-stack card counts. Driver: BT13-106 Odin's Breath ("if there're 6 or
+  fewer total cards in both players' security stacks").
+
+- **`per: { player_memory: { of } }`** (formula `PerSelector`;
+  G-DSL-FORMULA-PLAYER-MEMORY) — a player's memory gauge as a scalar for
+  `base_per_delta`. `of: you` = controller's signed memory; `of: opponent` =
+  opponent's, **clamped at 0** (DCGO `Math.Max(0, Enemy.MemoryForPlayer)`).
+  Driver: BT25-086 Dan Yuki (`+1000 × opponent_memory`).
+  ```yaml
+  dp_modifier_fn: { base: 0, per: { player_memory: { of: opponent } }, delta: 1000 }
+  ```
+
+- **`subtract: [a, b, ...]`** (compound formula; G-DSL-FORMULA-SUBTRACT) —
+  left-associative `a - b - c`. Composes with the other compounds.
+
+- **`trash_top_security: { of, leave: N }`** (step param;
+  G-DSL-TRASH-TOP-SECURITY-LEAVE) — "trash the top cards … so that it has N cards
+  left": trashes `max(0, security_count - leave)` from the top. Mask-accurate
+  (amount computed at run time from the actual stack; clamped so an already-short
+  stack trashes nothing). Mutually exclusive with `count`. Driver: BT21-098
+  Ragnarok Cannon (`leave: 1`).
+
 ---
 
 ## 14. Zone Manipulation (Phase 2)
@@ -3837,6 +4004,11 @@ pub enum CardSourceRef {
 | `play_from_trash_with_cost(player, trash_index, CostDelta) -> Option<PermanentHandle>` | Play from trash. Same cost-delta contract. |
 | `use_option_from_hand_with_cost(player, hand_index, CostDelta) -> OptionPlayResult` | USE an Option from hand at a computed use cost (full OnUseOption / OptionMain / disposal lifecycle). The Option-USE analogue of `play_from_hand_with_cost`. The Main-phase gate is LIFTED for the duration — an effect that grants "play or use" may fire from any timing. `G-PLAY-OR-USE-FROM-HAND`. |
 | `play_or_use_from_hand_with_cost(player, hand_index, CostDelta)` | Unified "**play or use** 1 card from hand" (Aces/BEATBREAK wording). Inspects `CardKind`: Digimon/Tamer/DigiEgg → play, Option → use, **Dual** → a `SelectionKind::EffectChoice` `["Play as Digimon", "Use as Option"]` face choice (§17 — no auto-select). DSL verb: `play_or_use_from_hand: { of, hand_index: <select_hand binding>, cost_delta }`. `G-PLAY-OR-USE-FROM-HAND`. |
+| `use_option_from_trash(player, trash_index, CostDelta) -> OptionPlayResult` | USE an Option from **trash** at a computed use cost — the trash origin of the Option-USE family. Honors `CannotPlayFromTrash`; otherwise the full lifecycle (OnUseOption / OptionMain / disposal) as the hand variant. DSL verb `use_option_from_trash: { of, filter, cost, optional }` (`cost: free` / `{ reduce: N }` / `printed`). Drivers BT25-083, BT21-062 (trash leg). `G-DSL-USE-OPTION-FROM-SOURCES` (Gap 2). |
+| `use_option_from_revealed(card: CardHandle, CostDelta) -> OptionPlayResult` | USE an Option from the transient **reveal pool** (`Game::revealed_cards`), identified by stable handle. Same lifecycle; the used card leaves the reveal pool. DSL verb `use_option_from_revealed: { of, card: <select_reveal binding>, cost }` — consumes an upstream `select_reveal` pick and routes it through `Game::use_option_from` (non-parking; `cost` omitted = free). Driver EX7-048 (clause 1). `G-DSL-USE-OPTION-FROM-SOURCES` (Gap 2). |
+| `use_option_from_source(host: PermanentHandle, card: CardHandle, CostDelta) -> OptionPlayResult` | USE an Option sitting under `host` as a **digivolution source** (`card_sources`, never the top card — guarded) **OR a linked card** (`linked_cards`) — both origins resolved by handle. The Option is pulled out of that zone and disposed per its subtype. DSL verb `use_option_from_sources: { of, card: <select_own_sources binding>, cost }` — consumes an upstream `select_own_sources` pick (non-parking; `cost` omitted = free). Driver BT25-085 (facet 1: both `card_sources` and `linked_cards` origins). `G-DSL-USE-OPTION-FROM-SOURCES` (Gap 2). |
+| DSL verb `use_option_bound: { binding, cost }` | USE a `select_union_zone{hand,trash}`-bound Option from its **true origin zone** — dispatches hand → `OptionSource::Hand`, trash → `OptionSource::Trash` through `Game::use_option_from` (non-parking; `cost` omitted = free). A `Material` origin is not a legal Option-use zone (silent no-op). Driver BT21-062 ("use 1 [Ragnarok Cannon] from your hand or trash without paying the cost" — the union-use verb). `G-DSL-USE-OPTION-FROM-SOURCES` (Gap 2). |
+| `place_self_under_permanent(target: PermanentHandle, face_down: bool) -> bool` | Place THIS effect's source Option as the bottom digivolution card of `target` on the standard [Main]-play path — the "Then, place this card as the bottom digivolution card of 1 of your … Digimon" tail (P-180 / EX7-070 / EX7-071). Claims the in-flight `pending_option` (mirrors `place_self_as_delay_option_permanent`), seating it FACE-UP by default; fires no `OnOptionTrashed`. Distinct from `move_self_option_under_permanent`, which relocates an already-on-**field** Option. `G-OPTION-PLACE-SELF-UNDER-PERMANENT-ON-PLAY-PATH` (Gap 1). |
 
 Example — free play from hand inside an OnPlay effect:
 

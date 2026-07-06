@@ -1,0 +1,27 @@
+{
+  "card_id": "EX12-074",
+  "card_index": 74,
+  "card_name_eng": "Genshi Continent & Ashino Island",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_074",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 1,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "Shambala",
+    "SW",
+    "TB"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "＜Use Req. ([Shambala] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Security] [Your Turn] [Once Per Turn] When one of your [Shambala] trait Digimon attacks, it may digivolve into a [Shambala] trait Digimon card in the hand with the cost reduced by 1.\r\n[Main] Add your bottom security card to the hand and place this card face up as the bottom security card. Then, you may play 1 [Shambala] trait card from your hand with the cost reduced by 3.",
+  "inherited_effect_description_eng": "[Security] You may play 1 play cost 5 or lower [Shambala] trait card from your hand or trash without paying the cost.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

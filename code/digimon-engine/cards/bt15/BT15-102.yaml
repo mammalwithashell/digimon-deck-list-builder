@@ -1,0 +1,120 @@
+card: BT15-102
+name: Apocalymon
+kind: digimon
+level: 7
+color: [white]
+cost: 15
+dp: 15000
+traits: [Unidentified]
+
+# Printed text (official Bandai DB / data/card_bundles/BT15-102.md — card
+# face verified against DCGO_Application/.../Card/BT15-102.webp):
+#
+#   "When this card would be played, by placing up to 3 [Dark Masters] trait
+#    cards with different names from your battle area or trash under it,
+#    reduce the play cost by 4 for each one."
+#   "[End of Your Turn] [Once Per Turn] By placing 1 level 6 or lower card
+#    from your trash as this Digimon's bottom digivolution card, activate 1
+#    [On Play] effect on that card as an effect of this Digimon. Then, trash
+#    the top 2 cards of your opponent's deck for each of this Digimon's
+#    level 6 digivolution cards."
+#
+# Standard digivolve circles (Blue/Green/Black/Purple Lv.6 cost 6) are the
+# printed evo_costs entries (data/card_overrides.json) — not alt_paths.
+#
+# DCGO behavioral authority: BT15_102.cs.
+#
+# ─── Clause 0 — cast-time stack construction (BeforePayCost) ────────────────
+#
+# DCGO: `ActivateClass` at `EffectTiming.BeforePayCost` (mandatory trigger,
+# `isOptional: false` — the optionality lives in the placement selection) +
+# a hidden `ChangeCostClass` at `EffectTiming.None` with
+# `isCheckAvailability: true` so the play is OFFERED against the potential
+# reduction (`min(3, GetUniqueNameCardCount(candidates)) * 4`).
+#
+# Lowered as a `cast_time_assembly` alt-path riding the DigiXros transaction
+# substrate (Track E closure, docs/RUST_ENGINE_GAPS.md):
+#   - iterative count-capped multi-select over battle-area tops + trash
+#     (battle-area picks take the permanent's TOP card only — official Q&A;
+#     the leaving permanent's own digivolution cards go to trash);
+#   - `distinct_by: name` = mask-level uniqueness over the CHOSEN set (DCGO
+#     `CanTargetCondition_ByPreSelecetedList` → `GetUniqueNameCardCount`);
+#   - the stop/finish option is masked while the remaining reduced cost is
+#     unpayable (DCGO `CanNoSelect`: `PayingCost - 4*placed <= MaxMemoryCost`);
+#   - cost is paid AFTER selection at the reduced value; the chosen cards
+#     become this permanent's digivolution sources BEFORE [On Play] drains;
+#   - NOT a DigiXros: `was_digixros()` / `digixros_count()` stay false/0
+#     (transaction `is_digixros = false`).
+#
+# Substrate tests: code/digimon-engine/tests/cast_time_assembly.rs.
+alt_paths:
+  - kind: cast_time_assembly
+    materials:
+      - filter: { trait_has: "Dark Masters" }
+        repeat: { min: 0, max: 3 }
+        distinct_by: name
+        zones: [battle_area, trash]
+        cost_delta: -4
+
+effects:
+  # ─── Clause 1 — [End of Your Turn] [Once Per Turn] ──────────────────────────
+  #
+  # DCGO: `SetUpActivateClass(CanActivateCondition, ActivateCoroutine, 1,
+  # false, …)` — maxCountPerTurn 1, isOptional FALSE: the trigger is
+  # MANDATORY whenever a level ≤6 card is in the trash
+  # (`HasMatchConditionOwnersCardInTrash(card, HasLevel && Level <= 6)`).
+  # The choice lives in the placement pick (`canNoSelect: () => true` —
+  # declinable), and the trailing deck-trash runs UNCONDITIONALLY once the
+  # effect fires — even when the placement was declined (DCGO runs the
+  # `IAddTrashCardsFromLibraryTop` after the `if (selectedCard != null)`
+  # block; the ". Then," clause does not depend on the placement).
+  #
+  # So: `select_trash` is `optional: true` WITHOUT `cost: true` — declining
+  # skips placement + refire (their bindings stay absent → silent no-ops)
+  # but the mill still runs.
+  #
+  # "activate 1 [On Play] effect on that card as an effect of this Digimon"
+  # → `refire_card_effect` (foreign-card refire, Track K source-card
+  # variant): enumerates the [On Play] effects PRINTED ON the placed card,
+  # constructed against THIS carrier (DCGO `EffectList_ForCard(
+  # OnEnterFieldAnyone, card)` — "this Digimon" in the refired body reads
+  # Apocalymon), with a mandatory EffectChoice when the card has >1
+  # (DCGO `canNoSelect: () => false`), and nothing when it has none.
+  #
+  # "for each of this Digimon's level 6 digivolution cards" — DCGO counts
+  # `cardSources.Filter(cs => cs != card && cs.HasLevel && cs.Level == 6)`,
+  # i.e. every source beneath the top (including the card just placed and
+  # any Dark Masters placed at cast time). `source_stack_count` skips the
+  # top card, matching exactly.
+  - when: end_of_your_turn
+    once_per_turn: true
+    summary: "[End of Your Turn][OPT] Place 1 lv6-or-lower card from trash as bottom digivolution card, activate 1 of its [On Play] effects as this Digimon's; then trash opponent's top 2 per lv6 digivolution card"
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          level_lte: 6
+        n: 1
+    process:
+      - select_trash:
+          of: you
+          bind_as: placed_pick
+          optional: true
+          filter: { level_lte: 6 }
+          prompt: "Place 1 level 6 or lower card from your trash as this Digimon's bottom digivolution card"
+      - place_as_bottom_source:
+          source: placed_pick
+          target: source
+          bind_placed_as: placed_card
+      - refire_card_effect:
+          card: placed_card
+          timing: on_play
+      - trash_from_top:
+          of: opponent
+          count:
+            base: 0
+            per:
+              source_stack_count:
+                filter: { level_eq: 6 }
+            delta: 2

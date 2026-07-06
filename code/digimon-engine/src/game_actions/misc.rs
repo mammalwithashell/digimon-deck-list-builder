@@ -541,7 +541,7 @@ impl Game {
         source: PlaySource,
         origin: PendingWouldPlayOrigin,
         suppress_on_play: bool,
-        accumulated_reduction: i32,
+        mut accumulated_reduction: i32,
         processed: Vec<CostReductionKey>,
     ) {
         if self.pending_selection.is_some() {
@@ -557,6 +557,16 @@ impl Game {
                 processed,
             );
             return;
+        }
+        // VARIABLE-amount interactive delete cost
+        // (`G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`, BT13-103): a
+        // `delete_for_cost_reduction` step inside the just-resolved parked
+        // pay_cost recorded the deleted permanent's printed play cost here. Credit
+        // it now (the parked select has resolved and the delete has happened, so
+        // the amount is finally known) and clear the slot so it never leaks into a
+        // later play.
+        if let Some(extra) = self.pending_cost_reduction_amount_override.take() {
+            accumulated_reduction += extra;
         }
         let _ = self.continue_play_from_hand_cost_reduction_chain(
             player_id,
@@ -641,6 +651,20 @@ impl Game {
             return false;
         }
 
+        // DCGO `CanNoSelect` (BT15_102.cs): the player may STOP selecting
+        // materials only while the remaining reduced cost is payable
+        // (`PayingCost - 4*placed <= MaxMemoryCost`). For a printed-DigiXros
+        // host the mask already gated the play on the printed cost, and
+        // adding materials only lowers it, so `can_stop` stays true there —
+        // this only bites cast-time-assembly plays whose printed cost
+        // exceeds the payable range (BT15-102's 15). With no candidates left
+        // the stop must stay legal regardless (the selection would otherwise
+        // have no legal action); an unpayable commit then routes through the
+        // declare-then-pay return-to-hand flow.
+        let stop_cost = (transaction.final_cost() as i32 - total_reduction).max(0);
+        let can_stop = candidates.is_empty()
+            || (self.memory as i32 - stop_cost) >= self.rules.memory_range.0 as i32;
+
         let valid_action_ids = candidates
             .iter()
             .map(|(action_id, _)| *action_id)
@@ -654,7 +678,7 @@ impl Game {
             selecting_player: player_id,
             previous_phase,
             valid_action_ids,
-            is_optional: true,
+            is_optional: can_stop,
             prompt: "Select DigiXros material".to_string(),
             effect_choices: None,
             source_card: target_card,

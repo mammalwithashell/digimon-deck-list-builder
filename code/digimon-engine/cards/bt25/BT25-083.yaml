@@ -1,0 +1,227 @@
+# BT25-083 LadyDevimon — Digimon, Lv.5, Purple, DP 7000, Cost 7.
+# Traits: Fallen Angel, Titan, TS. Attribute: Virus.
+#
+# Printed card text (data/card_bundles/BT25-083.md — official Bandai DB,
+# matches data/cards.json `effect_description_eng`):
+#
+#   [On Play] [When Digivolving] By placing 1 [Three Musketeers] trait card
+#   from your hand or trash as any of your Digimon's bottom digivolution
+#   cards, ＜Draw 1＞.
+#   [When Digivolving] [When Attacking] [Once Per Turn] By trashing 1 Option
+#   card from any of your Digimon's digivolution cards, you may use 1 [Three
+#   Musketeers] trait Option card from your trash with the cost reduced by 3.
+#
+# Inherited Effect (inherited_effect_description_eng):
+#   [On Deletion] You may play 1 level 4 or lower Digimon card with [Three
+#   Musketeers] in its text from your trash without paying the cost.
+#
+# Special digivolution condition (official Bandai DB):
+#   [Digivolve] Lv.4 w/[Three Musketeers] in text or w/[TS] trait: Cost 3.
+# Standard evo box (evo_costs in cards.json): Purple Lv.4 / cost 3.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Purple/BT25_083.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Region "Alt Digivolution" (EffectTiming.None):
+#   AddSelfDigivolutionRequirementStaticEffect(PermanentCondition:
+#   TopCard.HasTSTraits || TopCard.HasText("Three Musketeers"), cost 3,
+#   ignoreDigivolutionRequirement: false, level: 4). This is the printed evo
+#   box — a requirement-respecting alt-source from a Lv.4 base whose top card
+#   carries [Three Musketeers] text (or via the trait scan — the [TS] trait
+#   itself, per the whole-card HasText/in_text_contains semantics) OR the
+#   [TS] trait explicitly, cost 3.
+#   → `kind: digivolve` alt-path; `from: { level_eq: 4, any_of: [in_text_
+#     contains: "Three Musketeers", trait_has: TS] }`, cost 3, NO
+#     ignore_requirements (the standard colour check still applies).
+#   NOTE: `in_text_contains` per G-DSL-IN-TEXT-CONTAINS already scans traits
+#   (so a [TS]-trait card would also match "Three Musketeers"-in-text if it
+#   printed that string) but the "or w/[TS] trait" branch is a DISTINCT
+#   condition (some cards may carry [TS] without ever printing "Three
+#   Musketeers"), so both any_of legs are kept — mirrors BT25-082's own
+#   alt-source idiom (`any_of: [effect_text_contains, trait_has: TS]`,
+#   upgraded here to `in_text_contains` per the official ruling that "[X] in
+#   its text" scans name/traits/all printed text, not just effect text).
+#
+# Region "OP/WD Shared" (onPlay: true, whenDigivolving: true; DCGO's shared
+#   3-way SetIntSelection is "Hand / Trash / Don't place" with canNoSelect:
+#   true on both inner picks):
+#   AdditionalActivateCondition = TM-trait card exists in owner's hand OR
+#   trash (HasMatchConditionOwnersHand || HasMatchConditionOwnersCardInTrash).
+#   Body: choose hand-or-trash (or decline), pick 1 [Three Musketeers]-trait
+#   card, pick which own Digimon receives it (any on-field Digimon —
+#   IsPermanentExistsOnOwnerBattleAreaDigimon with no trait restriction),
+#   AddDigivolutionCardsBottom, then Draw 1.
+#   → ONE `select_union_zone { zones: [hand, trash] }` step models the
+#   DCGO 3-way branch as a single player-visible union pick (optional: true
+#   is the "Don't place" decline) — same idiom as EX11-038/EX11-065's
+#   hand-or-own-sources union cost, applied here to hand-or-trash. Then
+#   `select_own_permanent { filter: kind: digimon }` picks ANY own Digimon
+#   (P-169/EX9-058 "any of your Digimon" idiom — no trait restriction, unlike
+#   BT25-082's inherited WA clause which targets only the carrier itself).
+#   Then `place_as_bottom_source` + `draw: 1`.
+#
+# Region "WD/WA Shared" (whenDigivolving: true, whenAttacking: true,
+#   maxCountPerTurn: 1, oncePerTurn hash "BT25_083_WD_WA"):
+#   AdditionalActivateCondition2 = HasMatchConditionOwnersPermanent(
+#   CanSelectDigimonCondition) where CanSelectDigimonCondition = own Digimon
+#   AND `permanent.DigivolutionCards.Exists(IsOption)`. Body: select the
+#   Digimon whose digivolution stack holds an Option card (own Digimon,
+#   canNoSelect: true), select+trash 1 Option card from THAT permanent's
+#   digivolution cards (ITrashDigivolutionCards — this is the cost), THEN
+#   IF a [Three Musketeers]-trait Option with a payable use cost exists in
+#   trash, offer to use it (canNoSelect: true) with cost -3
+#   (ChangeCostClass, PlayOptionCards from Root.Trash). `hasUsed` is tracked
+#   only for RemoveUse bookkeeping (DCGO-internal activation accounting, not
+#   part of the printed effect) — no engine equivalent needed.
+#   → The two-step "pick a Digimon, then pick an Option from its stack" is
+#   modeled as ONE `select_union_zone { zones: [material] }` step: with
+#   `material_of` omitted the material scan spans EVERY own battle-area
+#   Digimon's digivolution-card stacks (G-UNION-HAND-SOURCE-PLAY /
+#   `install_select_union_zone`'s `material_of: None` branch — confirmed to
+#   scan `self.game.player(of_player).battle_area` for every carrier with
+#   `card_sources.len() > 1`), collapsing DCGO's "which Digimon, then which
+#   Option" into a single Option-card-level pick that already encodes both
+#   choices (the engine's `encode_source_select(carrier_index,
+#   source_index)` action space distinguishes candidates by carrier). This
+#   is behaviourally identical to DCGO (every (Digimon, Option) pair is
+#   independently reachable) without adding a two-hop UI prompt. `filter:
+#   { kind: option }` selects only Option-kind sources. `trash_union_bound`
+#   pays the cost. Then `use_option_from_trash { filter: trait_has: "Three
+#   Musketeers", cost: { reduce: 3 }, optional: true }` models the "you may
+#   use ... with the cost reduced by 3" follow-up — the DSL step naturally
+#   installs no prompt when no [Three Musketeers] Option is in trash
+#   (`select_trash` returns without installing on zero eligible candidates),
+#   matching DCGO's own `HasMatchConditionOwnersCardInTrash(CanSelect3MOption
+#   Card)` gate.
+#
+# Region "Inherited" (OnDestroyedAnyone):
+#   canTargetCondition: cardSource.HasLevel && Level <= 4 &&
+#   cardSource.HasText("Three Musketeers") && IsDigimon. Mode: PlayForFree
+#   from Root.Trash, canNoSelect: true (the outer "you may").
+#   → `scope: inherited`, `when: on_deletion`, `optional: true`,
+#     `select_trash { filter: { kind: digimon, level_lte: 4, in_text_
+#     contains: "Three Musketeers" } }` → `play_from_trash_free`.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                       | Status |
+# |---------------------------------------------------------------------------|--------|
+# | Alt-source Lv.4 w/[Three Musketeers] text or [TS] trait / Cost 3          | IMPLEMENTED (alt_paths kind: digivolve, any_of[in_text_contains, trait_has]) |
+# | [On Play][When Digivolving] place TM card from hand/trash as any Digimon's bottom source, Draw 1 | IMPLEMENTED (select_union_zone[hand,trash] + select_own_permanent + place_as_bottom_source + draw) |
+# | [When Digivolving][When Attacking][OPT] trash Option from any Digimon's sources -> may use TM Option from trash, cost -3 | IMPLEMENTED (select_union_zone[material] + trash_union_bound + use_option_from_trash cost:{reduce:3}) |
+# | Inherited [On Deletion] may play lv<=4 TM-text Digimon from trash free    | IMPLEMENTED (select_trash + play_from_trash_free) |
+
+card: BT25-083
+name: LadyDevimon
+kind: digimon
+level: 5
+color: [purple]
+cost: 7
+dp: 7000
+traits: [Fallen Angel, Titan, TS]
+attribute: Virus
+
+alt_paths:
+  # ─── Printed evo box alt-source: Lv.4 base w/[Three Musketeers] in text or
+  # w/[TS] trait, cost 3 (requirement-respecting — colour check still
+  # applies). ───────────────────────────────────────────────────────────────
+  - kind: digivolve
+    from:
+      level_eq: 4
+      any_of:
+        - in_text_contains: "Three Musketeers"
+        - trait_has: TS
+    cost: 3
+
+effects:
+  # ─── Clause 1: [On Play][When Digivolving] place TM card as bottom source,
+  # Draw 1 ──────────────────────────────────────────────────────────────────
+  #
+  # "By placing 1 [Three Musketeers] trait card from your hand or trash as
+  # any of your Digimon's bottom digivolution cards, <Draw 1>."
+  #
+  # `select_union_zone` over {hand, trash} models DCGO's 3-way "Hand / Trash /
+  # Don't place" branch as one player-visible pick (`optional: true` is the
+  # "Don't place" decline). `select_own_permanent { kind: digimon }` then
+  # picks ANY own Digimon (no trait restriction — unlike BT25-082's inherited
+  # WA clause, which only targets the carrier itself).
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Place 1 [Three Musketeers] card from hand/trash as any of your Digimon's bottom source -> Draw 1"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: tm_card
+          filter:
+            trait_has: "Three Musketeers"
+          prompt: "Place 1 [Three Musketeers] trait card from your hand or trash as any of your Digimon's bottom digivolution cards"
+          then:
+            - select_own_permanent:
+                bind_as: bottom_target
+                filter:
+                  kind: digimon
+                prompt: "Choose 1 of your Digimon to receive the [Three Musketeers] card as its bottom digivolution card"
+            - place_as_bottom_source:
+                source: tm_card
+                target: bottom_target
+            - draw: { of: you, count: 1 }
+
+  # ─── Clause 2: [When Digivolving][When Attacking][Once Per Turn] trash
+  # Option from any Digimon's sources -> may use TM Option from trash, -3 ────
+  #
+  # "By trashing 1 Option card from any of your Digimon's digivolution
+  # cards, you may use 1 [Three Musketeers] trait Option card from your
+  # trash with the cost reduced by 3."
+  #
+  # Cost: `select_union_zone { zones: [material] }` with `material_of`
+  # omitted scans every own battle-area Digimon's digivolution-card stacks
+  # (G-UNION-HAND-SOURCE-PLAY material_of:None semantics) filtered to
+  # `kind: option`, then `trash_union_bound` pays it. Body: `use_option_
+  # from_trash` offers the reduced-cost use — its own `optional: true`
+  # models "you may use", and it naturally installs no prompt when no
+  # [Three Musketeers] Option exists in trash (no-approximations: the cost
+  # is paid regardless, matching DCGO's `hasUsed` bookkeeping).
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    optional: true
+    summary: "[When Digivolving][When Attacking][OPT] Trash 1 Option from any of your Digimon's digivolution cards -> may use 1 [Three Musketeers] Option from trash, cost -3"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [material]
+          bind_as: option_source
+          filter:
+            kind: option
+          prompt: "Trash 1 Option card from any of your Digimon's digivolution cards"
+      - trash_union_bound:
+          binding: option_source
+      - use_option_from_trash:
+          of: you
+          filter:
+            trait_has: "Three Musketeers"
+          cost:
+            reduce: 3
+          optional: true
+          prompt: "You may use 1 [Three Musketeers] trait Option card from your trash with the cost reduced by 3"
+
+  # ─── Inherited [On Deletion] ──────────────────────────────────────────────
+  #
+  # "You may play 1 level 4 or lower Digimon card with [Three Musketeers] in
+  # its text from your trash without paying the cost."
+  - scope: inherited
+    when: on_deletion
+    optional: true
+    summary: "[Inherited][On Deletion] Play 1 level 4 or lower [Three Musketeers]-in-text Digimon from trash free"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revive_pick
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - in_text_contains: "Three Musketeers"
+          prompt: "Play 1 level 4 or lower Digimon card with [Three Musketeers] in its text from your trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: revive_pick }

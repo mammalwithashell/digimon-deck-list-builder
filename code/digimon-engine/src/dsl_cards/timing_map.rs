@@ -19,6 +19,14 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::OnOpponentAttack => EffectTiming::OnOpponentAttack,
         CompiledTiming::OnDeletion => EffectTiming::OnDeletion,
         CompiledTiming::OnAnyDeletion => EffectTiming::OnAnyDeletion,
+        // Board-wide battle-winner observer rides the `EndOfBattle` dispatch
+        // (fired via `TriggerSource::BattleResolved`, carrying the winner). No
+        // forced self-filter — scope is gated by `active_when:` (`event_winner_*`).
+        // G-DSL-BATTLE-WINNER-BOARDWIDE.
+        CompiledTiming::OnAllyWonBattle => EffectTiming::EndOfBattle,
+        // Hand-discard observer maps 1:1 to the new engine timing.
+        // G-ENGINE-ON-DISCARD-HAND.
+        CompiledTiming::OnDiscardHand => EffectTiming::OnDiscardHand,
         CompiledTiming::OnEnterFieldAnyone => EffectTiming::OnEnterFieldAnyone,
         CompiledTiming::OnAnyDigimonPlayed => EffectTiming::OnEnterFieldAnyone,
         CompiledTiming::OnAllyPlayed => EffectTiming::OnAllyPlayed,
@@ -34,6 +42,9 @@ pub fn compiled_timing_to_engine(t: CompiledTiming) -> Option<EffectTiming> {
         CompiledTiming::OnOpponentSecurityRemoved => EffectTiming::OnOpponentSecurityRemoved,
         CompiledTiming::OnOwnSecurityRemoved => EffectTiming::OnOwnSecurityRemoved,
         CompiledTiming::OnDigivolutionCardTrashed => EffectTiming::OnDigivolutionCardTrashed,
+        CompiledTiming::OnDigivolutionCardReturnedToDeckBottom => {
+            EffectTiming::OnDigivolutionCardReturnedToDeckBottom
+        }
         CompiledTiming::OnSecurityCheck => EffectTiming::OnSecurityCheck,
         CompiledTiming::OnCheckFaceUpSecurity => EffectTiming::OnCheckFaceUpSecurity,
         CompiledTiming::OnLoseSecurity => EffectTiming::OnLoseSecurity,

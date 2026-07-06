@@ -1,0 +1,187 @@
+# BT24-094 Central Town: Throne Room — Option, Green/Yellow, Cost 3.
+# Traits: Iliad, TS.
+#
+# Printed card text (data/cards.json effect_description_eng / official Bandai
+# DB bundle data/card_bundles/BT24-094.md — verbatim):
+#
+#   While you have no face-up security cards, you can ignore this card's color
+#   requirements.
+#   [Security] [All Turns] All of your green or yellow [TS] trait Digimon get
+#   +2000 DP. While you have [Merukimon] or [Minervamon], all of your green or
+#   yellow [TS] trait Digimon gain ＜Alliance＞ (When this Digimon attacks, by
+#   suspending 1 of your other Digimon, add the suspended Digimon's DP to this
+#   Digimon and it gains ＜Security A. +1＞ for the attack.)
+#   [Main] Add your bottom security card to the hand and place this card face
+#   up as the bottom security card. Then, you may play 1 green or yellow [TS]
+#   trait Digimon card from your hand with the play cost reduced by 3.
+#
+# Inherited (Security) effect (inherited_effect_description_eng):
+#   [Security] You may play 1 level 4 or lower green or yellow [TS] trait
+#   Digimon card from your hand or trash without paying the cost.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Green/BT24_094.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# This card is the "Throne Room" sibling family alongside BT24-090 (Abyss
+# Sanctuary: Throne Room, blue/yellow, Blocker + name-gated Alliance) and
+# BT25-095 (Paradise Colosseum, red/green, +2000 DP + name-gated Rush).
+# BT24-094 combines both patterns: the unconditional aura is +2000 DP (like
+# BT25-095/BT24-090's Blocker slot) and the name-gated conditional aura grants
+# Alliance (like BT24-090), gated on Merukimon/Minervamon instead of
+# Neptunemon/Venusmon.
+#
+# Region "Ignore Color Requirement" (None): IgnoreColorConditionClass gated on
+#   `card.Owner.SecurityCards.Count(!IsFlipped) == 0`. → `kind: flood_gate`,
+#   `modifier: IgnoreColorRequirement`, `target: { card_number_is: BT24-094 }`,
+#   `active_when: { face_up_security_count_lte: 0 }`. Mirrored on
+#   `use_requirement` so the option itself can be played ignoring color while
+#   no face-up security exists (CanUseCondition on the play gate reads the
+#   same `face_up_security_count_lte: 0`).
+#
+# Region "All Turns - Security DP" (None): ChangeDPStaticEffect(+2000),
+#   permanentCondition = owner battle-area Digimon that are (Green || Yellow)
+#   && HasTSTraits, gated on `IsExistInSecurity(card, false)` (this card is in
+#   the security stack, face-up or face-down — the gate only checks presence
+#   in the security zone, not flip state). → `kind: aura`, `scope: security`,
+#   `dp_modifier: 2000`, target green/yellow TS own battle-area Digimon.
+#
+# Region "All Turns - Security Alliance" (OnAllyAttack): AllianceStaticEffect
+#   over the same target set, gated on `IsExistInSecurity(card, false)` AND
+#   `HasMatchConditionOwnersPermanent(card, HasOXII)` where HasOXII checks
+#   `EqualsCardName("Merukimon")` OR `EqualsCardName("Minervamon")`. → `kind:
+#   aura`, `scope: security`, `grant_keyword: Alliance`, same target, plus an
+#   `active_when` existential for a Merukimon/Minervamon-named own permanent
+#   (mirrors BT24-090's Neptunemon/Venusmon-gated Alliance grant exactly).
+#
+# Region "Main Effect" (OptionSkill): ReplaceBottomSecurityWithFaceUpOption-
+#   Effect(card) then SelectHandEffect over green/yellow TS Digimon,
+#   PlayForCost with reduced cost (-3), canNoSelect: true (canEndNotMax:
+#   false, maxCount capped at 1 eligible card). → `when: main_from_hand`,
+#   `add_bottom_security_to_hand` + `place_on_security` (self_option, bottom,
+#   face_up) + optional `select_hand` (green/yellow TS Digimon) +
+#   `play_from_hand` with `cost_delta: { reduce: 3 }`. (BT24-090/BT25-095
+#   idiom.)
+#
+# Region "Security Effect" (SecuritySkill): SelectHand/SelectCard over level
+#   4- green/yellow TS Digimon from hand OR trash, PlayForFree, canNoSelect:
+#   true. → `scope: inherited`, `when: on_security`, `optional: true`,
+#   `select_union_zone` (hand, trash) + `play_union_bound_free`. (BT24-090/
+#   BT25-095 idiom.)
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                                    | Status |
+# |------------------------------------------------------------------------|--------|
+# | Ignore colour requirements while no face-up security                  | IMPLEMENTED (use_requirement + flood_gate) |
+# | [Security][All Turns] green/yellow TS +2000 DP                        | IMPLEMENTED (security aura dp_modifier 2000) |
+# | [Security][All Turns] + <Alliance> while Merukimon/Minervamon         | IMPLEMENTED (security aura grant_keyword Alliance, conditional) |
+# | [Main] add bottom sec to hand + place self face-up + play green/yellow TS -3 | IMPLEMENTED (add_bottom_security_to_hand + place_on_security + play_from_hand reduce 3) |
+# | [Security][Inherited] play lvl4- green/yellow TS from hand/trash free  | IMPLEMENTED (select_union_zone + play_union_bound_free) |
+
+card: BT24-094
+name: "Central Town: Throne Room"
+kind: option
+color: [green, yellow]
+cost: 3
+traits: [Iliad, TS]
+
+use_requirement:
+  face_up_security_count_lte: 0
+
+effects:
+  # ─── Color-ignore floodgate (no face-up security) ──────────────────────────
+  - kind: flood_gate
+    active_when:
+      face_up_security_count_lte: 0
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "BT24-094" }
+    summary: "While you have no face-up security cards, ignore color requirements for this card"
+
+  # ─── [Security][All Turns] green/yellow TS get +2000 DP ────────────────────
+  - kind: aura
+    scope: security
+    active_when: { all_turns: true }
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: TS
+      any_of:
+        - color_is: green
+        - color_is: yellow
+    dp_modifier: 2000
+    summary: "[Security][All Turns] Your green or yellow [TS] Digimon get +2000 DP"
+
+  # ─── [Security][All Turns] + <Alliance> while Merukimon or Minervamon ──────
+  - kind: aura
+    scope: security
+    active_when:
+      all_of:
+        - all_turns: true
+        - any_permanent:
+            of: you
+            zone: [battle_area]
+            kind: digimon
+            any_of:
+              - name_is: "Merukimon"
+              - name_is: "Minervamon"
+    target:
+      owner: you
+      zone: [battle_area]
+      kind: digimon
+      trait_has: TS
+      any_of:
+        - color_is: green
+        - color_is: yellow
+    grant_keyword: { keyword: Alliance }
+    summary: "[Security][All Turns] With Merukimon or Minervamon, your green or yellow [TS] Digimon gain <Alliance>"
+
+  # ─── [Main] replace bottom security with self + play green/yellow TS -3 ────
+  - when: main_from_hand
+    summary: "[Main] Add bottom security to hand, place this face-up as bottom security, then may play a green/yellow TS Digimon for -3"
+    process:
+      - add_bottom_security_to_hand: { of: you }
+      - place_on_security:
+          source: self_option
+          position: bottom
+          face_up: true
+      - select_hand:
+          of: you
+          bind_as: picked_digimon
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TS
+              - any_of:
+                  - color_is: green
+                  - color_is: yellow
+          prompt: "You may play 1 green or yellow [TS] Digimon card from hand with the play cost reduced by 3"
+      - play_from_hand:
+          of: you
+          hand_index: picked_digimon
+          cost_delta: { reduce: 3 }
+
+  # ─── [Security][Inherited] play lvl4- green/yellow TS from hand/trash free ──
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security][Inherited] You may play 1 level 4 or lower green/yellow TS Digimon from hand or trash free"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: picked
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - trait_has: TS
+              - any_of:
+                  - color_is: green
+                  - color_is: yellow
+          prompt: "You may play 1 level 4 or lower green or yellow [TS] Digimon from hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: picked

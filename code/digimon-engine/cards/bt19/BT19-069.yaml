@@ -1,0 +1,164 @@
+# BT19-069 Deltamon — Digimon, Lv.4, Purple+Black, DP 5000, Cost 5.
+# Traits: Composite. Attribute: Virus.
+# Standard digivolve (data/card_bundles/BT19-069.md evo_costs): Purple Lv.3 /
+#   cost 3, Black Lv.3 / cost 3.
+#
+# Printed card text (official Bandai DB — data/card_bundles/BT19-069.md):
+#
+#   [On Play] [When Digivolving] [On Deletion] By trashing 1 card in your
+#   hand, delete 1 of your opponent's level 4 or lower Digimon.
+#
+# Inherited Effect:
+#   <Blocker> (This Digimon can block in the blocker timing.)
+#
+# Special digivolution condition (card image digivolve box):
+#   [Digivolve] [Gazimon]/[Gizamon]: Cost 2
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT19/Purple/BT19_069.cs
+#
+# ─── DCGO crosscheck ──────────────────────────────────────────────────────
+#
+#   (1) EffectTiming.None: AddSelfDigivolutionRequirementStaticEffect
+#       (permanentCondition: top card name == "Gazimon" || "Gizamon",
+#       digivolutionCost: 2). → alt_paths: kind: digivolve, from:
+#       { name_in: [Gazimon, Gizamon] }, cost: 2.
+#
+#   (2) Shared body, registered identically under THREE timings
+#       (OnEnterFieldAnyone for both OnPlay and WhenDigivolving,
+#       OnDestroyedAnyone for OnDeletion — one closure reused across three
+#       `cardEffects.Add` calls):
+#         - CanActivateConditionShared gates on
+#           `card.Owner.HandCards.Count >= 1` — an eligibility pre-check so
+#           the effect doesn't even attempt to fire with an empty hand (the
+#           DSL's `optional: true` select_hand with an empty hand simply
+#           yields no candidates and the whole clause is a no-op — same
+#           observable behavior).
+#         - SelectHandEffect (Mode.Discard, `canNoSelect: true`) — "by
+#           trashing 1 card in your hand" is a fully OPTIONAL/declinable
+#           cost. `discarded = cardSources.Count > 0` records whether the
+#           player actually paid it.
+#         - Only when `discarded == true` AND
+#           `CanSelectOpponentPermanentConditionShared` matches at least one
+#           permanent (opponent Digimon, `HasLevel && Level <= 4`) does a
+#           SECOND, MANDATORY (`canNoSelect: false`) SelectPermanentEffect
+#           (Destroy) run. Declining the trash, or having no eligible
+#           opponent target after trashing, skips the delete — no
+#           half-paid cost, no forced delete without a valid target.
+#         - OnDeletion additionally re-checks `card.Owner.HandCards.Count >=
+#           1` inside `CanActivateCondition` (redundant with the shared
+#           gate above) — behaviorally identical to the OnPlay/
+#           WhenDigivolving paths.
+#
+#   (3) Blocker - ESS: BlockerSelfStaticEffect(isInheritedEffect: true, card,
+#       condition: null). Per `CardEffectFactory/KeyWordEffects/Blocker.cs`,
+#       `PermanentCondition(Permanent p) => p == card.PermanentOfThisCard()`
+#       — this grants Blocker to whichever permanent BT19-069 currently
+#       belongs to, WHETHER IT IS THE TOP CARD OR A BURIED DIGIVOLUTION
+#       SOURCE. `isInheritedEffect: true` only flags that DCGO's own engine
+#       ALSO exposes this via the "Inherited Effect" printed-text channel
+#       (so a card digivolving OVER Deltamon inherits the grant too) — it
+#       does not mean Deltamon loses Blocker while it is itself the active
+#       top card. Authored as `scope: both` (installs from both the
+#       face_up/top-card position AND the digivolution-source/inherited
+#       position — mirrors the `FloodGate` `scope: both` idiom used for
+#       BT24-062's self-lock; `GrantKeyword` gained `Both`-scope expansion
+#       for this card, see `code/digimon-engine/src/dsl_cards/mod.rs`).
+#
+# ─── DSL modelling notes ──────────────────────────────────────────────────
+#
+# Single clause with `when: [on_play, when_digivolving, on_deletion]`
+# (BT24-041 Minervamon idiom) expresses the identical-shared-body structure
+# faithfully — one process runs for all three timings, matching DCGO's reuse
+# of a single ActivateCoroutine closure.
+#
+# "By trashing 1 card in your hand, delete ..." is modelled with the
+# top-level select+trash-then-gated-delete idiom (BT25-017 Flaremon,
+# BT12-016 WarGrowlmon): `select_hand` (optional: true, empty filter — any
+# hand card) binds `trashed`; `if { binding_present: trashed }` gates BOTH
+# the actual trash step and the delete sub-flow, so declining the cost
+# never fires the delete and an empty hand is a silent no-op (no candidate
+# to select). The delete target is gated to `kind: digimon` + `level_lte:
+# 4` on the opponent's battle area — `level_lte` inherently excludes
+# Tamers / no-level cards (matches DCGO's `TopCard.HasLevel` guard).
+#
+# <Blocker> is authored as a `scope: both` `grant_keyword` clause (see the
+# DCGO crosscheck above) rather than relying on native printed-keyword
+# parsing — the `dsl_card()` DebugRunner test path never populates
+# `inherited_text` (that only happens in production via `cards.json`), and
+# even in production the native "top card face" reading only consults
+# `effect_text`, never `inherited_text`, for a card standing alone. The
+# scripted `Both`-scope grant is required for BT19-069 to have Blocker while
+# it is itself the active permanent (see the Blocker crosscheck above).
+
+card: BT19-069
+name: Deltamon
+kind: digimon
+level: 4
+color: [purple, black]
+cost: 5
+dp: 5000
+traits: [Composite]
+attribute: Virus
+
+alt_paths:
+  # ─── Standard digivolve: Purple Lv.3 / cost 3 ────────────────────────────
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+  # ─── Standard digivolve: Black Lv.3 / cost 3 ─────────────────────────────
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  # ─── Alt-digivolve: [Gazimon]/[Gizamon] name-gated / cost 2 ─────────────
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(top card name ==
+  # "Gazimon" || "Gizamon", digivolutionCost: 2). `name_in` matches the
+  # printed card name exactly (list-membership), mirroring DCGO's
+  # EqualsCardName OR check.
+  - kind: digivolve
+    from: { name_in: [Gazimon, Gizamon] }
+    cost: 2
+
+effects:
+  # ─── Shared [On Play][When Digivolving][On Deletion] body ───────────────
+  #
+  # Printed: "By trashing 1 card in your hand, delete 1 of your opponent's
+  # level 4 or lower Digimon."
+  - when: [on_play, when_digivolving, on_deletion]
+    summary: "[OP][WD][OD] By trashing 1 hand card, delete 1 opponent Digimon lvl 4 or lower"
+    process:
+      # "By trashing 1 card in your hand, ..." — optional cost (DCGO
+      # `canNoSelect: true`). Empty filter: any hand card is eligible.
+      - select_hand:
+          of: you
+          bind_as: trashed
+          optional: true
+          filter: {}
+          prompt: "You may trash 1 card from your hand to delete an opponent's Digimon (level 4 or lower)"
+      - if:
+          condition: { binding_present: trashed }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: trashed }
+            # "delete 1 of your opponent's level 4 or lower Digimon." —
+            # mandatory once the cost is paid AND an eligible target exists
+            # (an empty candidate set silently skips the select+delete).
+            - select_opponent_permanent:
+                bind_as: victim
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 4
+                prompt: "Delete 1 of your opponent's Digimon with level 4 or lower"
+            - delete_permanent: { target: victim }
+
+  # ─── <Blocker> (self, both top-card AND buried-source positions) ────────
+  # Printed inherited text: "<Blocker> (This Digimon can block in the
+  # blocker timing.)" — DCGO: BlockerSelfStaticEffect(isInheritedEffect:
+  # true), PermanentCondition targets `card.PermanentOfThisCard()` (true
+  # whether this card is the top card or buried). `scope: both` installs
+  # the grant from both positions so BT19-069 has Blocker while it is
+  # itself the active permanent, AND still grants Blocker to whatever
+  # digivolves on top of it later.
+  - scope: both
+    kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker> (self + inherited when buried)"

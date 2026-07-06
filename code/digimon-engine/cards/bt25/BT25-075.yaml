@@ -1,0 +1,186 @@
+# BT25-075 Vulcanusmon — Digimon, Lv.6, Black/Red, DP 12000, Cost 12.
+# Traits: Shaman / Olympos XII / Iliad / TS. Form: Mega. Attribute: Data.
+#
+# Printed text (official Bandai DB bundle + card image — authoritative):
+#   Digivolve: Lv.5 / Cost 4 (standard box; dual-color — Black OR Red Lv.5).
+#   [Digivolve] Lv.5 w/[TS] trait: Cost 3.
+#   When this card would be played, if you have fewer Digimon than your
+#     opponent, reduce the cost by 5.
+#   [On Play] [When Digivolving] You may link up to 2 cards from your hand or
+#     trash to any of your Digimon without paying the cost. Then, for each of
+#     your link cards, <De-Digivolve 1> all of your opponent's Digimon.
+#   [All Turns] All of your [TS] trait Digimon gain <Rush> and <Link +1>.
+#   [Your Turn] When your Digimon get linked, one of them may attack.
+#
+# NOTE (cards.json lossy-ingest, CLAUDE.md source-priority #3): cards.json's
+# evo_costs carries only ONE entry (card_color 5 = Black). The official Bandai
+# DB bundle (data/card_bundles/BT25-075.md) and card image both show the
+# standard box as a DUAL-color circle (Black Lv.5/4 AND Red Lv.5/4) — the
+# already-known "dropped cross-colour evo cost" API gap (project memory:
+# BG-Imperial evo-cost colour gap). data/card_overrides.json:9441 already
+# reconciles this (card_color 5 Black + card_color 0 Red, both Lv.5/cost 4).
+# The YAML `alt_paths` below authors BOTH standard-color boxes directly,
+# independent of the evo_costs override, matching the BT25-057/BT25-069
+# pattern of explicitly authoring every printed digivolve circle.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Black/BT25_075.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect(PermanentCondition:
+#   TopCard.EqualsTraits("TS"), cost 3, level: 5).
+#
+# Cost reduction — MandatorySelfPlayCostReduction(5, card, Condition) where
+#   Condition = Owner.GetBattleAreaDigimons().Count < Enemy.GetBattleAreaDigimons().Count.
+#   Mandatory (no "you may"). `kind: cost_reduction`, `when_playing_this: true`,
+#   `condition: { count_gte: { filter: { owner: opponent, kind: digimon },
+#   n: { base: 1, per: { card_count_in_zone: { of: you, zone: battle_area,
+#   filter: { kind: digimon } } }, delta: 1 } } }` — "opponent's Digimon count
+#   >= my count + 1" == "I have fewer Digimon than my opponent".
+#
+# Shared [On Play]/[When Digivolving] — ActivateClassesForSharedEffects:
+#   1. Link up to 2 cards from hand/trash to ANY of your Digimon, free
+#      (per-card zone choice -> card select -> host select, looping up to 2;
+#      DCGO's SetIntSelection "from Hand / from Trash / Do not link" ==
+#      `link_cards { from: [hand, trash], to: own_digimon, count: {up_to: 2},
+#      cost: free }` — this exact step + card comment names BT25-075 as a
+#      driver in step.rs's LinkCardsTo::OwnDigimon doc comment).
+#   2. Then: `int degenerationCount = Owner.GetBattleAreaDigimons()
+#      .Map(p => p.LinkedCards).Flat().Count();` followed by
+#      `IMassDegeneration(Enemy Digimon, 1)` repeated `degenerationCount` times.
+#      Proven equivalent (per-target immunity recheck in de_digivolve_core is
+#      target-scoped, not global — see game_actions/helpers.rs de_digivolve_core)
+#      to `for_each opp digimon { de_digivolve amount: <total own link card
+#      count> } }` — a SINGLE de_digivolve call per target with the formula
+#      magnitude, instead of N repeated mass-passes. Magnitude formula:
+#      `base_per_delta { base: 0, per: { own_link_card_count: { of: you } },
+#      delta: 1 }` (G-DSL-FORMULA-OWN-LINK-CARD-COUNT, landed + proven
+#      end-to-end for exactly this card: tests/dsl/group7_formula_batch.rs
+#      `de_digivolve_amount_compiles_from_own_link_card_count_formula`).
+#      Read AFTER the link step resolves (for_each snapshots opponent Digimon
+#      at that point; own_link_card_count reads the live board at
+#      resolution time, which is post-link).
+#
+# [All Turns] — RushStaticEffect(PermanentCondition: own + HasTSTraits) +
+#   ChangeLinkMaxStaticEffect(PermanentCondition, +1) — both gated on
+#   `IsExistOnBattleArea(card)` (source on field). One `kind: aura` clause,
+#   `target: { of: you, kind: digimon, trait_has: TS }`, carrying BOTH
+#   `grant_keyword: { keyword: Rush }` and `modifier: ChangeLinkMax` +
+#   `modifier_value: 1` (BT25-104's Marcus-Damon aura precedent proves a
+#   single aura body can carry a keyword grant + a valued modifier together).
+#
+# [Your Turn] — EffectTiming.WhenLinked board-wide (CanTriggerWhenLinked,
+#   IsOwnerTurn), `GetAttacker(hashtable)` = the specific permanent that just
+#   got linked -> `SelectAttackEffect` (skippable). DSL: `when: on_any_link`
+#   (G-DSL-WHEN-ANY-OWN-DIGIMON-LINKED, resolved 2026-06-12 — its own note
+#   explicitly names "BT25-075's observer sub-clause" as an unblocked
+#   consumer), `active_when: { your_turn: true, event_target_owner: you }`,
+#   body `may_attack_now: { attacker: event_target, targets: any, optional:
+#   true }`. `event_target` resolves to the just-linked HOST permanent for an
+#   `on_any_link`/OnLink trigger (binding_ref.rs: "for on_any_link the trigger
+#   sets event_permanent = host ... target: event_target resolves to a
+#   Permanent handle").
+#   Attack-capability gate: DCGO's `PermanentCondition` ANDs
+#   `permanent.CanAttack(activateClass)` into `CanTriggerWhenLinked` — the
+#   trigger does not even fire for a host that cannot attack (notably a
+#   summoning-sick host: `Permanent.CanAttackTargetDigimon` returns false when
+#   `EnterFieldTurnCount == TurnCount && !HasRush`). The DSL has no
+#   `event_target_can_attack` predicate (logged in qa/dsl-vocab-gaps.md), so
+#   this clause reaches the same user-visible outcome via `may_attack_now`'s
+#   empty-candidate no-op (effect_attack_target_action_ids applies the full
+#   can_attack check incl. summoning sickness; empty → no prompt installs, and
+#   the declinable first step means no outer prompt either). Only divergence:
+#   a same-chooser TriggerOrder bundle could list this trigger as a no-op
+#   entry where DCGO would omit it.
+
+card: BT25-075
+name: Vulcanusmon
+kind: digimon
+level: 6
+color: [black, red]
+cost: 12
+dp: 12000
+traits: [Shaman, "Olympos XII", Iliad, TS]
+attribute: Data
+
+alt_paths:
+  # Standard box (dual-color circle): Lv.5 Black OR Red, cost 4.
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  # Printed alt box: "[Digivolve] Lv.5 w/[TS] trait: Cost 3" — trait-gated,
+  # no color restriction, cheaper than the standard box.
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: TS }
+    cost: 3
+
+effects:
+  # ─── When played, if you have fewer Digimon than your opponent, -5 cost ────
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    when_playing_this: true
+    condition:
+      count_gte:
+        filter: { owner: opponent, kind: digimon }
+        n:
+          base: 1
+          per:
+            card_count_in_zone:
+              of: you
+              zone: battle_area
+              filter: { kind: digimon }
+          delta: 1
+    amount: 5
+    summary: "When played, if you have fewer Digimon than your opponent, reduce the cost by 5"
+
+  # ─── [On Play][When Digivolving] link up to 2 free, then <De-Digivolve 1>
+  #     all opponent Digimon per own link card ──────────────────────────────
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may link up to 2 cards from your hand or trash to any of your Digimon without paying the cost. Then, for each of your link cards, <De-Digivolve 1> all of your opponent's Digimon"
+    process:
+      - link_cards:
+          from: [hand, trash]
+          to: own_digimon
+          count: { up_to: 2 }
+          cost: free
+          prompt: "Link up to 2 cards from your hand or trash to any of your Digimon"
+      - for_each:
+          over:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+          bind_as: victim
+          body:
+            - de_digivolve:
+                target: victim
+                amount:
+                  base: 0
+                  per:
+                    own_link_card_count: { of: you }
+                  delta: 1
+
+  # ─── [All Turns] All your [TS] trait Digimon gain <Rush> and <Link +1> ─────
+  - kind: aura
+    target: { of: you, kind: digimon, trait_has: TS }
+    grant_keyword: { keyword: Rush }
+    modifier: ChangeLinkMax
+    modifier_value: 1
+    summary: "[All Turns] All of your [TS] trait Digimon gain <Rush> and <Link +1>"
+
+  # ─── [Your Turn] When your Digimon get linked, one of them may attack ──────
+  - when: on_any_link
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+    process:
+      - may_attack_now:
+          attacker: event_target
+          targets: any
+          optional: true
+          prompt: "The linked Digimon may attack"
+    summary: "[Your Turn] When your Digimon get linked, one of them may attack"

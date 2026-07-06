@@ -1,0 +1,112 @@
+# BT25-073 Dragomon — Digimon, Lv.5, Black, DP 7000, Cost 7.
+# Trait line: Aquabeast/Titan/TS. Attribute: Virus.
+#
+# Printed card text (data/card_bundles/BT25-073.md — official Bandai DB;
+# confirmed vs card image + DCGO):
+#   ＜Jamming＞ [On Play] [When Digivolving] By trashing 1 of your Digimon's
+#     link cards, you may play or use 1 [TS] trait card with a play or use
+#     cost of 5 or less from your hand without paying the cost.
+#   Inherited: [All Turns] When this Digimon would leave the battle area, by
+#     trashing 1 of its link cards, it doesn't leave.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT25/Black/BT25_073.cs
+#
+# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect(level: 4,
+#   TopCard.EqualsTraits("TS"), digivolutionCost: 3) → alt_paths digivolve
+#   from { level_eq: 4, trait_has: TS } cost 3.
+# Jamming — JammingSelfStaticEffect(isInheritedEffect: false) → grant_keyword
+#   Jamming (self, non-inherited).
+# Main OP/WD clause — G-DSL-LINK-TRASH-AS-COST (CLOSED): additionalActivate
+#   Condition = HasMatchConditionPermanent(CanSelectPermanentCondition =
+#   IsPermanentExistsOnOwnerBattleAreaDigimon && !HasNoLinkCards) gates
+#   engagement; SharedActivateCoroutine: SelectPermanentEffect (own Digimon,
+#   canNoSelect true) → SelectCardEffect Root.LinkedCards (maxCount 1,
+#   canNoSelect true) → TrashLinkCardsAndProcessAccordingToResult →
+#   successProcess: SelectHandEffect (canNoSelect true) over cards satisfying
+#   EqualsTraits("TS") && GetCostItself<=5 && (playable Option OR playable
+#   Digimon/Tamer) → PlayOptionCards/PlayPermanentCards with payCost:false.
+#   Both selections (which Digimon, which link card) are independently
+#   declinable (canNoSelect:true on both) and the hand pick is also
+#   canNoSelect:true — modelled as `trash_link_card_of_own_digimon` with
+#   `optional: true` (both cost picks declinable) feeding a `select_hand`
+#   with its own `optional: true`, then the unified `play_or_use_from_hand`
+#   verb (kind-routes Digimon/Tamer → play, Option → use) at cost_delta free.
+#   When no own Digimon carries a link card the step is unpayable and the
+#   whole clause aborts (no selection installs) — matches DCGO's
+#   HasMatchConditionPermanent gate.
+# Inherited [All Turns] leave-replacement — trash 1 of ITS OWN link cards
+#   (not "any Digimon's") to not leave: G-DSL-LINK-TRASH-AS-REPLACEMENT-COST
+#   (CLOSED) `cost: { trash_own_link_card: true }` on a
+#   `when_would_leave_battle_area` replacement, `outcome: prevent`,
+#   `optional: true` (SetIsSkippable(true) — decline lets it leave),
+#   surfacing the WHICH-link-card choice even for a single card.
+#
+# KNOWN ENGINE GAP (tracked, not fixable from this YAML): DCGO's
+#   SelectCardEffect for the which-link-card pick (both here in the main
+#   clause and in trash_own_link_card_and_cancel_leave) is canNoSelect:true —
+#   independently declinable, same as the which-Digimon pick. The engine's
+#   shared second-selection installer
+#   (dsl_cards/step/selections.rs::install_link_card_trash_second_selection)
+#   routes through EffectContext::select_effect_choice, which hardcodes
+#   `is_optional: false` and never appends PASS to valid_action_ids; the
+#   installer wires an `on_decline` callback but never overrides
+#   `pending.is_optional`, so `resolve_generic_selection`'s
+#   `is_pass && !sel.is_optional` gate rejects PASS before on_decline ever
+#   fires. See tests/cards_behavioral/bt25/bt25_073.rs's
+#   `#[ignore]`-with-reason on bt25_073_decline_second_pick_skips_trash_and_tail
+#   and qa/dsl-vocab-gaps.md for the full writeup.
+
+card: BT25-073
+name: Dragomon
+kind: digimon
+level: 5
+color: [black]
+cost: 7
+dp: 7000
+traits: [Aquabeast, Titan, TS]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: TS }
+    cost: 3
+
+effects:
+  # ─── <Jamming> (self) ───────────────────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Jamming
+    summary: "<Jamming>"
+
+  # ─── [On Play][When Digivolving] by trashing 1 of your Digimon's link
+  #     cards, you may play or use 1 [TS] cost<=5 card from hand free ────────
+  - when: [on_play, when_digivolving]
+    process:
+      - trash_link_card_of_own_digimon:
+          of: you
+          optional: true
+      - select_hand:
+          of: you
+          bind_as: ts_pick
+          optional: true
+          filter:
+            all_of:
+              - trait_has: TS
+              - play_or_use_cost_lte: 5
+          prompt: "Play or use 1 [TS] card (play/use cost <=5) from your hand without paying the cost"
+      - play_or_use_from_hand:
+          of: you
+          hand_index: ts_pick
+          cost_delta: free
+    summary: "[On Play][When Digivolving] By trashing 1 of your Digimon's link cards, you may play or use 1 [TS] trait card with a play or use cost of 5 or less from your hand without paying the cost"
+
+  # ─── Inherited [All Turns] leave-replacement: trash 1 of ITS OWN link
+  #     cards → doesn't leave ──────────────────────────────────────────────────
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    cost: { trash_own_link_card: true }
+    outcome: prevent
+    summary: "[Inherited][All Turns] When this Digimon would leave the battle area, by trashing 1 of its link cards, it doesn't leave"

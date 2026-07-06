@@ -1,0 +1,88 @@
+# BT16-004 Minomon — Digi-Egg, Lv.2, Green, DP —, Cost 0.
+# Traits: Larva.
+#
+# Printed card text (code/digimon-engine/cards/bt16/BT16-004.json — verbatim):
+#
+#   Inherited Effect [All Turns] [Once Per Turn] When this Digimon deletes an
+#   opponent's Digimon in battle, if this Digimon has 2 or more colors, gain
+#   1 memory.
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT16/Green/BT16_004.cs
+#
+# ─── DCGO crosscheck ──────────────────────────────────────────────────────────
+#
+# `EffectTiming.OnDestroyedAnyone` (on_any_deletion), `SetIsInheritedEffect
+# (true)`, `SetHashString("Memory+1_BT16_004")` + maxCount 1 (OPT).
+#
+# `CanUseCondition`:
+#   - `CanTriggerOnPermanentDeleted` gated to opponent-battle-area deletions.
+#   - `CanTriggerWhenDeleteOpponentDigimonByBattle`:
+#       WinnerCondition:      permanent.cardSources.Contains(card) — this card
+#                              is present in the winning permanent's stack.
+#       WinnerRealCondition:  permanent.TopCard.CardColors.Count >= 2 — the
+#                              carrier's TOP card has 2+ colors.
+#       LoserCondition:       the deleted permanent is on the opponent's
+#                              battle area.
+#       isOnlyWinnerSurvive:  false — the winning permanent does NOT need to
+#                              survive the battle for the trigger to fire.
+#
+# `CanActivateCondition`: IsExistOnBattleArea(card) — trivially true given
+# OnDestroyedAnyone timing context (mirrors BT25-015 clause B / ST17-07
+# clause 2 / ST4-11's idiom).
+#
+# Body: `card.Owner.AddMemory(1, activateClass)` — unconditional +1 memory
+# once the gate passes (no further choice; mandatory).
+#
+# ─── DSL mapping ──────────────────────────────────────────────────────────────
+#
+# `scope: inherited` — printed "Inherited Effect".
+# `when: [on_any_deletion]` — OnDestroyedAnyone.
+# `active_when: { all_turns: true }` — printed "[All Turns]" (fires on either
+#   player's turn; BT25-015 clause-B idiom).
+# `once_per_turn: true` — printed "[Once Per Turn]".
+# `condition: { source_deleted_battle_opponent: true }` — "this Digimon
+#   deletes an opponent's Digimon in battle": the carrier is the battle
+#   winner and the deleted permanent is the battle-opponent (predicate
+#   evaluates the trigger-context battle cause, not live board presence, so
+#   `isOnlyWinnerSurvive: false` is faithfully preserved — see
+#   docs/RUST_DSL_TEST_API.md exemplar BT25-015 / ST17-07 / ST4-11).
+#   `self_color_count_gte: 2` — "if this Digimon has 2 or more colors":
+#   evaluated against the carrier's synthesized TOP-card colors (P-117 /
+#   BT12-031 idiom), matching DCGO's `TopCard.CardColors.Count >= 2` exactly.
+# `gain_memory: 1` — "gain 1 memory". No `optional: true` — mandatory, no
+#   "you may" in the printed text.
+#
+# ─── Implementation status (faithfulness diff) ───────────────────────────────
+#
+# | Card-text element                                              | Status |
+# |------------------------------------------------------------------|--------|
+# | Inherited Effect                                                  | IMPLEMENTED (scope: inherited) |
+# | [All Turns]                                                       | IMPLEMENTED (active_when: all_turns) |
+# | [Once Per Turn]                                                   | IMPLEMENTED (once_per_turn) |
+# | "deletes an opponent's Digimon in battle"                         | IMPLEMENTED (on_any_deletion + source_deleted_battle_opponent) |
+# | "if this Digimon has 2 or more colors"                            | IMPLEMENTED (self_color_count_gte: 2, top-card colors) |
+# | "gain 1 memory"                                                   | IMPLEMENTED (gain_memory: 1, mandatory) |
+# | isOnlyWinnerSurvive: false (carrier need not survive)             | IMPLEMENTED (predicate is trigger-context-based, not live-board-based) |
+
+card: BT16-004
+name: Minomon
+kind: digi_egg
+level: 2
+color: [green]
+cost: 0
+traits: [Larva]
+form: In-Training
+
+effects:
+  # ─── Inherited [All Turns][OPT] battle-delete → gain 1 memory ───────────────
+  - scope: inherited
+    when: [on_any_deletion]
+    active_when: { all_turns: true }
+    once_per_turn: true
+    condition:
+      all_of:
+        - source_deleted_battle_opponent: true
+        - self_color_count_gte: 2
+    summary: "[Inherited][All Turns][OPT] When this Digimon deletes an opponent's Digimon in battle, if this Digimon has 2 or more colors, gain 1 memory"
+    process:
+      - gain_memory: 1

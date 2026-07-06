@@ -1,0 +1,69 @@
+# BT9-070 Gazimon (X Antibody) — Digimon, Lv.3, Purple, DP 3000, Cost 3.
+# Traits: Mammal / X Antibody. Form: Rookie. Attribute: Virus.
+# Standard digivolve (cards.json evo_costs): Lv.2 Purple / Cost 0.
+#
+# Printed card text (card image + official Bandai DB bundle — verbatim):
+#
+#   Digivolve: 0 from [Gazimon]
+#   [When Digivolving] Trash the top 3 cards of your deck.
+#
+# No inherited/security effect, no [Once Per Turn], no [On Play].
+#
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT9/Purple/BT9_070.cs
+#
+# ─── DCGO crosscheck ──────────────────────────────────────────────────────
+#
+# Alt-digivolve — AddSelfDigivolutionRequirementStaticEffect:
+#   PermanentCondition `TopCard.CardNames.Contains("Gazimon")`, cost 0.
+#   `CardNames` is a `List<string>` of the base's exact effective name(s)
+#   (printed name + any "also treated as" aliases); `List<string>.Contains`
+#   is EXACT element-membership, NOT a substring scan. So a base whose name
+#   merely CONTAINS "Gazimon" (e.g. this very card, "Gazimon (X Antibody)",
+#   or a hypothetical "BlackGazimon") does NOT satisfy the check — only a
+#   base whose effective name is exactly "Gazimon" (BT3-077, and any future
+#   card carrying an `also_treated_as: ["Gazimon"]` alias) qualifies.
+#   → alt_path `from: { name_is: "Gazimon" }`, cost 0 — matching the
+#   `name_is` exact-match idiom (predicate.rs `any_effective_name_matches`,
+#   which checks printed name / reveal-overlay name / `also_treated_as`
+#   aliases for equality) and the sibling BT18-013 convention for the
+#   identical "[Digivolve] [Gazimon]: Cost 2" requirement.
+#
+#   NOTE: an earlier draft used `name_contains: "Gazimon"` (case-insensitive
+#   substring). That is a faithfulness bug — `name_contains` compiles to
+#   `name.to_lowercase().contains(needle)` (predicate.rs), which would let
+#   BT9-070 itself ("Gazimon (X Antibody)") illegally satisfy its own
+#   cost-0 alt-path. `name_is` is required here.
+#
+# Clause 1 — [When Digivolving] (OnEnterFieldAnyone): mandatory, unconditional
+#   `IAddTrashCardsFromLibraryTop(3, ...)` gated only on `IsExistOnBattleArea`
+#   (always true when the trigger fires post-digivolve) and
+#   `LibraryCards.Count >= 1` (naturally no-ops on an empty/short deck — the
+#   engine's `trash_from_top` mills up to `count` available cards). No player
+#   choice is exposed; matches ST6-01 / EX3-057 `trash_from_top` precedent.
+
+card: BT9-070
+name: Gazimon (X Antibody)
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 3000
+traits: [Mammal, X Antibody]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { name_is: "Gazimon" }
+    cost: 0
+  # Standard printed route (cards.json evo_costs: Lv.2 Purple / 0) — also
+  # authored as an alt_path so the route exists for DSL-loaded fixtures
+  # (G-DSL-FIXTURE-EVO-COSTS: compiled cards carry no printed evo_costs).
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0
+
+effects:
+  - when: when_digivolving
+    summary: "[When Digivolving] Trash the top 3 cards of your deck"
+    process:
+      - trash_from_top: { of: you, count: 3 }

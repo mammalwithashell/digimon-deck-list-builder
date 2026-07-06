@@ -41,11 +41,27 @@ mod zones;
 
 /// Source zone for `play_option_core`. Private to this module — the public
 /// API is the pair of `play_option_from_hand` / `play_option_from_trash`
-/// entry points.
+/// entry points, plus the effect-driven origin-parameterized
+/// `use_option_from_*` helpers (Gap 2, `G-DSL-USE-OPTION-FROM-SOURCES`).
+///
+/// Every variant routes through the SAME `play_option_core` pipeline (correct
+/// [Main] resolution + `dispose_option`); only source validation (step 2) and
+/// removal-from-source (step 5) fork on the variant.
 #[derive(Clone, Copy, Debug)]
 pub(crate) enum OptionSource {
     Hand(usize),
     Trash(usize),
+    /// A card currently exposed in `Game::revealed_cards` (EX7-048: "reveal top
+    /// 6 … you may use 1 Option among them free"). Identified by stable
+    /// `CardHandle` — the reveal-pool index shifts as cards are consumed.
+    Revealed(crate::card_source::CardHandle),
+    /// A card sitting in `host`'s digivolution stack as a source (BT25-085:
+    /// "use 1 Option from this Digimon's digivolution cards free"). Identified
+    /// by `(host, card)` so a battle-area index shift can't misroute it.
+    Source {
+        host: crate::permanent::PermanentHandle,
+        card: crate::card_source::CardHandle,
+    },
 }
 
 /// Source zone for the result (fusing-in) card in an effect-initiated App Fuse
@@ -112,6 +128,8 @@ impl OptionSource {
         match self {
             OptionSource::Hand(_) => OptionUseSource::Hand,
             OptionSource::Trash(_) => OptionUseSource::Trash,
+            OptionSource::Revealed(_) => OptionUseSource::Revealed,
+            OptionSource::Source { .. } => OptionUseSource::Source,
         }
     }
 }
@@ -464,14 +482,28 @@ impl Game {
         &self,
         player_id: PlayerId,
     ) -> Vec<(u16, DigiXrosMaterialOrigin)> {
+        let Some(transaction) = self.pending_digixros_transaction.as_ref() else {
+            return Vec::new();
+        };
+        self.digixros_material_candidates_for(transaction, player_id)
+    }
+
+    /// Candidate material origins (with their selection action ids) for a
+    /// DigiXros / cast-time-assembly `transaction`, in the mask's selection
+    /// order. Extracted from `pending_digixros_material_candidates` so the
+    /// mask-time availability probe (`cast_time_assembly_play_reduction_for_
+    /// hand_card`) can enumerate against a scratch transaction that is not
+    /// (yet) the pending one.
+    fn digixros_material_candidates_for(
+        &self,
+        transaction: &crate::digixros::DigiXrosTransaction,
+        player_id: PlayerId,
+    ) -> Vec<(u16, DigiXrosMaterialOrigin)> {
         use crate::action::space::{
             encode_source_select, HAND_EFFECT_START, HAND_MAIN_LIMIT, MAX_FIELD_SLOTS,
             TRASH_EFFECT_START, TRASH_MAIN_LIMIT,
         };
 
-        let Some(transaction) = self.pending_digixros_transaction.as_ref() else {
-            return Vec::new();
-        };
         if transaction.controller != player_id {
             return Vec::new();
         }
@@ -675,6 +707,74 @@ impl Game {
             let _ = (player_id, hand_index);
         }
         0
+    }
+
+    /// The maximum cost reduction a `cast_time_assembly` alt-path (BT15-102
+    /// Apocalymon) could realize for hand card `hand_index` right now, or `0`
+    /// when the card has no such path. Mirrors DCGO's hidden availability
+    /// `ChangeCostClass` (`isCheckAvailability: true` — `min(3, unique-name
+    /// candidate count) × 4`): the action mask offers the play under
+    /// declare-then-pay legality against the REDUCED cost, exactly like the
+    /// `[Assembly]` reduction above.
+    ///
+    /// Computed by greedily filling a scratch transaction from the same
+    /// candidate enumeration the real selection loop uses, so distinct-name
+    /// masking, zone allowances, and slot caps all apply. Greedy fill is
+    /// exact for a single recipe slot (the whole `cast_time_assembly` corpus
+    /// today); a future multi-slot path with overlapping filters would need
+    /// a matching pass instead.
+    ///
+    /// Printed-[DigiXros] paths return 0 — their mask affordability keeps the
+    /// pre-existing printed-cost behavior.
+    pub(crate) fn cast_time_assembly_play_reduction_for_hand_card(
+        &self,
+        player_id: PlayerId,
+        hand_index: usize,
+    ) -> i32 {
+        // Cheap pre-gate: only cards whose FIRST matching transaction path is
+        // `cast_time_assembly` pay for the scratch-transaction probe below
+        // (the mask hot loop calls this for every hand card; printed-DigiXros
+        // hosts return 0 without building a transaction).
+        #[cfg(feature = "dsl-yaml-loader")]
+        {
+            use digimon_dsl::compiled::CompiledAltPathKind as K;
+            let Some(card) = self.player(player_id).hand.get(hand_index) else {
+                return 0;
+            };
+            let card_id = card.card_id(&self.card_data);
+            let is_cast_time = self.alt_path_registry.get(card_id).is_some_and(|paths| {
+                paths
+                    .iter()
+                    .find(|path| matches!(path.kind, K::DigiXros | K::CastTimeAssembly))
+                    .is_some_and(|path| matches!(path.kind, K::CastTimeAssembly))
+            });
+            if !is_cast_time {
+                return 0;
+            }
+        }
+        let Some(mut transaction) =
+            self.build_digixros_transaction_for_hand_card(player_id, hand_index)
+        else {
+            return 0;
+        };
+        if transaction.is_digixros {
+            return 0;
+        }
+        let base = transaction.final_cost() as i32;
+        loop {
+            let candidates = self.digixros_material_candidates_for(&transaction, player_id);
+            let Some((_, origin)) = candidates.first().copied() else {
+                break;
+            };
+            let Some(card_data) = self.card_data_for_handle(origin.card()) else {
+                break;
+            };
+            let card_data = card_data.clone();
+            if transaction.try_select_material(origin, &card_data).is_err() {
+                break;
+            }
+        }
+        (base - transaction.final_cost() as i32).max(0)
     }
 
     /// True when each assembly element can be matched to a DISTINCT card in
@@ -1748,6 +1848,38 @@ impl Game {
         self.reevaluate_until_condition_modifiers_if_dirty();
     }
 
+    /// Sibling of [`Self::fire_digivolution_card_trashed`], for the RETURN of a
+    /// digivolution source to the BOTTOM of a player's deck. Fires
+    /// `OnDigivolutionCardReturnedToDeckBottom` carrying the former host
+    /// (`host` / `host_card`) and the returned `card`, then drains synchronously
+    /// (same "observer sees each move one at a time" contract as the trash
+    /// sibling — a multi-source return, e.g. BT21-062's "return 4 [Vemmon]",
+    /// fires the observer once per source so a `once_per_turn` inherited clause
+    /// consumes its single use and stops).
+    /// G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM.
+    pub(crate) fn fire_digivolution_card_returned_to_deck_bottom(
+        &mut self,
+        player: PlayerId,
+        host: PermanentHandle,
+        host_card: crate::card_source::CardHandle,
+        card: crate::card_source::CardHandle,
+        cause: crate::trigger_context::EventCause,
+    ) {
+        self.enqueue_triggered(
+            crate::enums::EffectTiming::OnDigivolutionCardReturnedToDeckBottom,
+            crate::selection::TriggerSource::SourceReturnedToDeckBottom {
+                player,
+                host,
+                host_card,
+                card,
+                cause,
+            },
+        );
+        self.drain_effect_queue();
+        self.mark_until_condition_dirty();
+        self.reevaluate_until_condition_modifiers_if_dirty();
+    }
+
     /// Battle-area field indices of `player`'s unsuspended Digimon — the
     /// legal suspend-cost targets for `G-PAY-COST-SELECT-ARBITRARY-SUSPEND`.
     fn suspendable_own_digimon(&self, player: PlayerId) -> Vec<usize> {
@@ -1839,6 +1971,41 @@ impl Game {
         observer_player: PlayerId,
         face_down: bool,
     ) -> bool {
+        self.place_as_source_observed(source, target, observer_player, face_down, false)
+    }
+
+    /// Top-position sibling of `place_as_bottom_source_observed`: the card is
+    /// inserted as `target`'s TOP digivolution source (directly beneath the
+    /// active top card — `Permanent::push_as_top_source`) instead of at the
+    /// bottom of the stack. Same source zones, same security-materialization
+    /// observers, same Material-carrier soft-remove lifecycle.
+    /// G-DSL-PLACE-AS-TOP-SOURCE (resolved 2026-07-05).
+    pub(crate) fn place_as_top_source_observed(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        observer_player: PlayerId,
+        face_down: bool,
+    ) -> bool {
+        self.place_as_source_observed(source, target, observer_player, face_down, true)
+    }
+
+    /// Shared body for `place_as_bottom_source_observed` /
+    /// `place_as_top_source_observed`. `top: false` inserts at the bottom of
+    /// the digivolution stack (`Permanent::push_under`, source index 0);
+    /// `top: true` inserts at the top-source position
+    /// (`Permanent::push_as_top_source`, directly beneath the top card).
+    /// Both fire the identical lifecycle: security sources materialize and
+    /// route through `fire_effect_security_removal`, and Material-source
+    /// extraction soft-removes an emptied carrier.
+    fn place_as_source_observed(
+        &mut self,
+        source: crate::enums::CardSourceRef,
+        target: PermanentHandle,
+        observer_player: PlayerId,
+        face_down: bool,
+        top: bool,
+    ) -> bool {
         if let crate::enums::CardSourceRef::Security(defender, index) = source {
             if target.index == crate::action::space::BREEDING_TARGET as u8 {
                 if self.player(target.player).breeding_area.is_none() {
@@ -1865,13 +2032,18 @@ impl Game {
             let card = player.security.remove(index);
             player.face_up_security.remove(&card.card_index);
             let cause = crate::trigger_context::EventCause::from(self.infer_effect_cause(defender));
+            let destination = if top {
+                crate::selection::SecurityRemovalDestination::TopSource(target)
+            } else {
+                crate::selection::SecurityRemovalDestination::BottomSource(target)
+            };
             self.fire_effect_security_removal(
                 defender,
                 observer_player,
                 observer_player,
                 cause,
                 card,
-                crate::selection::SecurityRemovalDestination::BottomSource(target),
+                destination,
             );
             return true;
         }
@@ -1887,7 +2059,11 @@ impl Game {
             };
             let mut card = taken.card;
             card.face_down = face_down;
-            breeding.push_under(card);
+            if top {
+                breeding.push_as_top_source(card);
+            } else {
+                breeding.push_under(card);
+            }
             // Soft-remove the carrier slot if Material extraction emptied it.
             // Target is in breeding (not battle_area), so no shift needed.
             // Sibling of the digivolve-from-material fix landed in PR #533.
@@ -1906,7 +2082,11 @@ impl Game {
         }
         let mut card = taken.card;
         card.face_down = face_down;
-        target_player.battle_area[target.index as usize].push_under(card);
+        if top {
+            target_player.battle_area[target.index as usize].push_as_top_source(card);
+        } else {
+            target_player.battle_area[target.index as usize].push_under(card);
+        }
         // Soft-remove the carrier slot if Material extraction emptied it.
         // Sibling of the digivolve-from-material fix landed in PR #533. The
         // soft-remove runs AFTER push_under so the target index is still
@@ -2034,22 +2214,44 @@ impl Game {
             .unwrap_or(EffectSourceKind::Rule)
     }
 
+    /// The per-turn OPT accounting slot for a cost reducer. When the effect
+    /// carries a `shared_opt_group` (the two `scope: both` copies, FaceUp +
+    /// Inherited), both copies map to that single group id so they share ONE
+    /// once-per-turn counter — a card can't reduce a cost once as an active
+    /// top and again the same turn as a digivolution source. Otherwise the raw
+    /// `effect_slot` (vec index) is the key, unchanged.
+    /// G-ENGINE-SHARED-OPT-SCOPE-BOTH-REDUCER (mirrors the triggered-queue
+    /// `Game::opt_slot_key`).
+    pub(crate) fn cost_reducer_opt_slot(&self, key: &CostReductionKey) -> u8 {
+        // `shared_opt_group` is `Copy` (`Option<u8>`), so extract it before the
+        // (possibly owned) effects collection is dropped.
+        let group = self
+            .effects_for_card(&key.card_id, key.source_card)
+            .and_then(|effects| {
+                effects
+                    .get(key.effect_slot as usize)
+                    .and_then(|effect| effect.shared_opt_group)
+            });
+        group.unwrap_or(key.effect_slot)
+    }
+
     fn cost_reducer_activation_count(&self, key: &CostReductionKey) -> u8 {
         let Some(source) = key.source_permanent else {
             return 0;
         };
+        let opt_slot = self.cost_reducer_opt_slot(key);
         if source.index == crate::action::space::BREEDING_TARGET as u8 {
             return self
                 .player(source.player)
                 .breeding_area
                 .as_ref()
-                .map(|perm| perm.activation_count(key.source_card, key.effect_slot))
+                .map(|perm| perm.activation_count(key.source_card, opt_slot))
                 .unwrap_or(0);
         }
         self.player(source.player)
             .battle_area
             .get(source.index as usize)
-            .map(|perm| perm.activation_count(key.source_card, key.effect_slot))
+            .map(|perm| perm.activation_count(key.source_card, opt_slot))
             .unwrap_or(0)
     }
 

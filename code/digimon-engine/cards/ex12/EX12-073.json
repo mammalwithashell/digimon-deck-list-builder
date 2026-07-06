@@ -1,0 +1,28 @@
+{
+  "card_id": "EX12-073",
+  "card_index": 73,
+  "card_name_eng": "Giant Meat",
+  "card_name_jpn": "",
+  "card_effect_class_name": "EX12_073",
+  "play_cost": 3,
+  "dp": null,
+  "level": null,
+  "card_kind": 2,
+  "rarity": 0,
+  "card_colors": [
+    4
+  ],
+  "type_eng": [
+    "NSp",
+    "DS",
+    "NSo",
+    "WG"
+  ],
+  "form_eng": [],
+  "attribute_eng": [],
+  "effect_description_eng": "＜Use Req. ([NSp]/[DS]/[NSo]/[WG]/[ME]/[VB] trait)＞ (Specified cards let you ignore color requirements.)\r\n[Main] Reveal the top 3 cards of your deck. Add 1 [NSp], [DS], [NSo], [WG], [ME] or [VB] trait card among them to the hand. Return the rest to the bottom of the deck. Then, place this card in the battle area.\r\n[Main] ＜Delay＞ (By trashing this card after the placing turn, activate the effect below.)\r\n・Gain 2 memory.",
+  "inherited_effect_description_eng": "[Security] Place this card in the battle area.",
+  "security_effect_description_eng": "",
+  "evo_costs": [],
+  "xros_req": ""
+}

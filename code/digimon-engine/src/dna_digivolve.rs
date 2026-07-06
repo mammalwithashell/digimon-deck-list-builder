@@ -1304,6 +1304,37 @@ pub fn matching_dna_cost<'a>(
     None
 }
 
+/// Returns the first DNA cost on `evo_meta` satisfied by a `(field_perm,
+/// card_material)` pair — one material is a battle-area permanent, the other a
+/// card (in hand or trash). Accepts either printed material order. This is the
+/// recipe oracle for the hand-partner (BT17-095) and trash-partner
+/// (BT18-015/073) DNA verbs, where the second material is not yet a permanent.
+/// DCGO parity: `CanJogressFromTargetPermanent` after `CreateNewPermanent`
+/// materialises the card as a temp permanent — we match the card's `CardData`
+/// against the requirement directly rather than round-tripping through a
+/// permanent.
+pub fn matching_dna_cost_perm_and_card<'a>(
+    evo_meta: &'a CardData,
+    field_perm: &Permanent,
+    card_material: &CardData,
+    data: &[CardData],
+) -> Option<&'a DnaCost> {
+    for cost in &evo_meta.dna_costs {
+        let orderings = [
+            (&cost.requirement1, &cost.requirement2),
+            (&cost.requirement2, &cost.requirement1),
+        ];
+        for (r_field, r_card) in orderings {
+            if perm_matches_req(field_perm, r_field, data)
+                && card_data_matches_req(card_material, r_card)
+            {
+                return Some(cost);
+            }
+        }
+    }
+    None
+}
+
 /// Returns true if any unordered pair in `battle_area` is a valid DNA pair
 /// for `evo_meta`. O(n²) but `battle_area` is tiny (≤ FIELD_SLOTS).
 pub fn has_valid_dna_targets(

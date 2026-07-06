@@ -73,7 +73,13 @@ effects:
   # dp_modifier_fn: 1000 (Literal formula) is picked up live by
   # live_declarative_formula_sum so effective_dp reflects the bonus without
   # requiring a declarative tick.
+  # `target: {}` = explicit self-aura ("THIS Digimon gets +1000 DP" — official
+  # bundle data/card_bundles/BT16-055.md), the AD1-002 idiom. Identical
+  # lowering to an omitted target (both compile to the default predicate,
+  # which `lower_aura.rs` treats as self); stated explicitly for the
+  # validator's "aura requires target or target_player" intent check.
   - scope: inherited
     kind: aura
+    target: {}
     active_when: { all_turns: true, rules_text_contains: "[Pulsemon]" }
     dp_modifier_fn: 1000

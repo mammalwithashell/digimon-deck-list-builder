@@ -394,7 +394,17 @@ impl<'a> EffectContext<'a> {
             return None;
         }
 
-        self.game.trash_from_hand_by_index(player, hand_index)
+        let trashed = self.game.trash_from_hand_by_index(player, hand_index);
+        if trashed.is_some() {
+            // Effect-caused hand→trash: record into the OnDiscardHand batch
+            // window keyed on the causing effect's controller (this context's
+            // player). Fires once when the effect body completes
+            // (G-ENGINE-ON-DISCARD-HAND). `self.player` is the controller of
+            // the effect performing the discard.
+            let cause_controller = self.player;
+            self.game.note_effect_hand_discard(cause_controller, player);
+        }
+        trashed
     }
 
     /// Move a specific revealed card into `player`'s trash.
@@ -773,6 +783,23 @@ impl<'a> EffectContext<'a> {
     /// "until they have N" cards typically allow the opponent to control
     /// the cadence as long as the floor is reached.
     pub fn trash_opponent_hand_to_count(&mut self, opponent: PlayerId, target_count: u8) -> bool {
+        self.trash_opponent_hand_to_count_bound(opponent, target_count, None)
+    }
+
+    /// As [`Self::trash_opponent_hand_to_count`], but tags the resumable
+    /// selection's terminal with `bind_count_as` so that, once the opponent
+    /// finishes trashing, the number of cards actually trashed is published
+    /// into the resolving DSL tail's bindings (a `Literal`) for a downstream
+    /// `binding_value` formula to read. Returns `false` (no selection
+    /// installed) when the opponent's hand is already ≤ `target_count`; the
+    /// caller is responsible for binding 0 on that synchronous no-op path.
+    /// G-DSL-TRASH-COUNT-RESULT-BINDING.
+    pub fn trash_opponent_hand_to_count_bound(
+        &mut self,
+        opponent: PlayerId,
+        target_count: u8,
+        bind_count_as: Option<String>,
+    ) -> bool {
         let current = self.game.player(opponent).hand.len();
         let target = target_count as usize;
         if current <= target {
@@ -830,6 +857,7 @@ impl<'a> EffectContext<'a> {
                         terminal:
                             crate::resume::NonDslCountCappedTerminal::TrashOpponentHandToCount {
                                 opponent,
+                                bind_count_as,
                             },
                         outer_conts: Vec::new(),
                     },

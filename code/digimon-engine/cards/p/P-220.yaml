@@ -1,0 +1,291 @@
+# P-220 Millenniummon — Digimon, Lv.7, Red/Black, DP 14000, Cost 14.
+# Traits: [Composite, DM, Ver.3, Ver.5]. Attribute: Virus.
+#
+# Printed card text (official Bandai DB — data/card_bundles/P-220.md,
+# cross-checked against code/digimon-engine/cards/p/P-220.json and the
+# printed card image):
+#
+#   <Reboot> (Unsuspend this Digimon during your opponent's unsuspend phase.)
+#   <Blocker> (This Digimon can block in the blocker timing.)
+#   [On Play] [When Digivolving] <De-Digivolve 2> 1 of your opponent's
+#   Digimon. Then, you may delete 1 Digimon.
+#   [On Deletion] By returning 3 [Composite], [Wicked God] or [DM] cards
+#   from your trash to the bottom of the deck, you may play 2 level 6 or
+#   lower [Composite], [Ver.3] or [Ver.5] Digimon cards from your trash
+#   without paying the costs. This effect can't play cards of the same
+#   level.
+#
+#   Digivolve: [Kimeramon] — Cost 6
+#   DNA Digivolve: [Kimeramon] + [Machinedramon] — Cost 0 (stack unsuspended)
+#   Assembly -6: 3 [Composite]/[Ver.3]/[Ver.5] trait Digimon cards
+#   w/different levels
+#
+# DCGO C# reference (base repo — rule 29):
+#   DCGO/Assets/Scripts/CardEffect/P/Red/P_220.cs
+#
+# ─── Clause layout ─────────────────────────────────────────────────────────
+#
+# Clause 0 (face-up, native keywords): <Reboot>, <Blocker>.
+#
+# Clause 1 ([On Play][When Digivolving], MANDATORY shared body — DCGO
+#   `ActivateClassesForSharedEffects(..., optional: false, ...)`):
+#     Step A: <De-Digivolve 2> exactly 1 opponent Digimon. DCGO gates the
+#       WHOLE select on `HasMatchConditionPermanent` (opponent has >=1
+#       Digimon) — if none, this step is skipped entirely (no prompt). Once
+#       offered, the pick itself is mandatory (`canNoSelect: false`).
+#       Modeled as `select_opponent_permanent` (auto-skips with 0 legal
+#       targets) + `de_digivolve` amount 2, stop_at_level 3 (De-Digivolve
+#       floor per keyword semantics / general_rule.pdf).
+#     Step B: "you may delete 1 Digimon" — DCGO's
+#       `PermanentSelectCondition1` is `IsPermanentExistsOnBattleAreaDigimon`
+#       with NO owner filter, so this targets EITHER player's Digimon.
+#       Modeled as `select_any_permanent` (optional) + `delete_permanent`.
+#
+# Clause 2 ([On Deletion], optional cost-gated multi-step effect):
+#   DCGO `CanActivateCondition` additionally requires
+#   `TrashCards.Count(CardSelectCondition) >= 3` (Composite / Wicked God /
+#   any-DM-trait) before the whole effect is even offered — modeled as a
+#   `condition: count_gte` guard (AD1-017 idiom) so the clause is a no-op
+#   with < 3 eligible cards, matching "no prompt at all" rather than an
+#   unpayable prompt.
+#     Step A (cost): return exactly 3 [Composite]/[Wicked God]/[DM] trait
+#       cards from trash to the bottom of the deck — `select_count_capped_multi`
+#       min 3 / max 3 (exact-N; DCGO requires `selectedCards.Count == 3` or
+#       the whole effect aborts) + `return_trash_list_to_deck_bottom`
+#       (destination defaults to bottom). The clause-level `optional: true`
+#       installs an outer accept/decline prompt (G-OUTER-OPTIONAL-NOT-
+#       INSTALLED, since the exact-3 select is not itself declinable —
+#       see the note further down), honoring DCGO's `canNoSelect: () => true`.
+#     Step B (reward, gated on paying the cost): optional up-to-2 pick of
+#       level<=6 [Composite]/[Ver.3]/[Ver.5] trait Digimon cards from trash,
+#       DIFFERENT LEVELS per pick — `select_count_capped_multi` max 2,
+#       distinct_by: level, optional_zero — feeding `per_selected` +
+#       `play_from_trash_free` (their own On Play DOES fire per DCGO
+#       `activateETB: true`; no suppress_on_play).
+#
+# ─── Alt-path layout ────────────────────────────────────────────────────────
+#
+# Standard digivolve box: Red Lv.6/cost 4, Black Lv.6/cost 4 (from evo_costs
+# in code/digimon-engine/cards/p/P-220.json / official DB bundle) — encoded
+# explicitly per the Ice-Snow-siblings precedent (P-215.yaml), since
+# cards.json evo_costs are not loaded on the DSL-only path.
+#
+# Special digivolution conditions:
+#   [Digivolve] [Kimeramon]: Cost 6 — `kind: digivolve`, `from: { name_is:
+#     "Kimeramon" }` (DCGO `TopCard.EqualsCardName("Kimeramon")` — exact
+#     name, not substring), `cost: 6`.
+#   [DNA Digivolve] [Kimeramon] + [Machinedramon]: Cost 0 — `kind:
+#     dna_digivolve`, materials `{ name_is: "Kimeramon" }` +
+#     `{ name_is: "Machinedramon" }`, `cost: 0`, `stacks_unsuspended: true`
+#     (printed: "Stack the 2 specified Digimon and digivolve unsuspended").
+#   Assembly -6: 3 [Composite]/[Ver.3]/[Ver.5] trait Digimon cards
+#     w/different levels — `kind: assembly`, 3 materials each
+#     `{ any_of: [trait_has: Composite, trait_has: Ver.3, trait_has: Ver.5] }`
+#     with `distinct_by: level` (DCGO `CanTargetCondition_ByPreSelecetedList`
+#     dedupes on `Level`), `cost: 6` (reduces printed cost 14 -> 8, matching
+#     DCGO `reduceCost: 6`).
+#
+# ─── Implementation status ───────────────────────────────────────────────────
+#
+# | Card-text element                                                | Status      |
+# |-------------------------------------------------------------------|-------------|
+# | <Reboot> / <Blocker>                                              | IMPLEMENTED |
+# | [On Play][When Digivolving] De-Digivolve 2 opponent Digimon       | IMPLEMENTED |
+# | Then, you may delete 1 Digimon (either player's)                 | IMPLEMENTED |
+# | [On Deletion] cost-gated 3-card return to deck bottom             | IMPLEMENTED |
+# | [On Deletion] optional up-to-2 different-level free play          | IMPLEMENTED |
+# | Standard digivolve box (Red/Black Lv.6, cost 4)                   | IMPLEMENTED |
+# | [Digivolve] [Kimeramon]: Cost 6                                   | IMPLEMENTED |
+# | [DNA Digivolve] [Kimeramon]+[Machinedramon]: Cost 0, unsuspended  | IMPLEMENTED |
+# | Assembly -6 (3 different-level Composite/Ver.3/Ver.5)             | IMPLEMENTED |
+
+card: P-220
+name: Millenniummon
+kind: digimon
+level: 7
+color: [red, black]
+cost: 14
+dp: 14000
+traits: [Composite, DM, Ver.3, Ver.5]
+attribute: Virus
+
+alt_paths:
+  # Standard digivolve box (printed cost circles).
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 6, color_is: black }
+    cost: 4
+
+  # "[Digivolve] [Kimeramon]: Cost 6" — exact-name gate (DCGO
+  # TopCard.EqualsCardName), not a trait/colour route.
+  - kind: digivolve
+    from: { name_is: "Kimeramon" }
+    cost: 6
+
+  # "[DNA Digivolve] [Kimeramon] + [Machinedramon]: Cost 0" — stack
+  # unsuspended per printed text.
+  - kind: dna_digivolve
+    materials:
+      - { name_is: "Kimeramon" }
+      - { name_is: "Machinedramon" }
+    cost: 0
+    stacks_unsuspended: true
+
+  # "Assembly -6: 3 [Composite]/[Ver.3]/[Ver.5] trait Digimon cards
+  # w/different levels" — 3 materials, pairwise-different levels, reduces
+  # the printed cost by 6 (14 -> 8).
+  - kind: assembly
+    materials:
+      - filter:
+          any_of:
+            - trait_has: Composite
+            - trait_has: Ver.3
+            - trait_has: Ver.5
+        distinct_by: level
+      - filter:
+          any_of:
+            - trait_has: Composite
+            - trait_has: Ver.3
+            - trait_has: Ver.5
+        distinct_by: level
+      - filter:
+          any_of:
+            - trait_has: Composite
+            - trait_has: Ver.3
+            - trait_has: Ver.5
+        distinct_by: level
+    cost: 6
+
+effects:
+  # ─── Clause 0: face-up keywords ────────────────────────────────────────
+  - kind: grant_keyword
+    keyword: Reboot
+    summary: "<Reboot>"
+
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  # ─── Clause 1: [On Play][When Digivolving] De-Digivolve 2 + may delete 1 ──
+  #
+  # DCGO ActivateClassesForSharedEffects(..., optional: false, ...) — the
+  # WHOLE activation is mandatory; only the inner delete step is a "may".
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] <De-Digivolve 2> 1 opponent Digimon. Then, you may delete 1 Digimon."
+    process:
+      # Step A: De-Digivolve 2 exactly 1 opponent Digimon. select_opponent_permanent
+      # auto-skips (no prompt) when the opponent has no Digimon, matching
+      # DCGO's HasMatchConditionPermanent gate. The pick itself is mandatory.
+      - select_opponent_permanent:
+          bind_as: dedigivolve_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to De-Digivolve 2"
+      - de_digivolve:
+          target: dedigivolve_target
+          amount: 2
+          stop_at_level: 3
+
+      # Step B: "you may delete 1 Digimon" — either player's field, no
+      # owner filter (DCGO PermanentSelectCondition1).
+      - select_any_permanent:
+          bind_as: delete_target
+          optional: true
+          filter: { kind: digimon }
+          prompt: "You may delete 1 Digimon"
+      - if:
+          condition: { binding_exists: delete_target }
+          then:
+            - delete_permanent: { target: delete_target }
+
+  # ─── Clause 2: [On Deletion] cost-gated return + optional free play ──────
+  #
+  # DCGO CanActivateCondition additionally requires >=3 eligible trash
+  # cards before the effect is even offered — modeled as a `condition:
+  # count_gte` guard so the clause is a total no-op (no prompt at all) with
+  # fewer than 3 eligible cards.
+  #
+  # Faithfulness note on `canNoSelect: () => true`: per G-SELECT-MULTI-MIN
+  # (`code/digimon-engine/src/effect_context/selections.rs`
+  # `select_count_capped_multi_min`), `optional_zero` only relaxes the PASS
+  # floor when `min == 0` — with `min: 3` the floor is fixed at 3 regardless
+  # of `optional_zero`, so the exact-3 multi-select itself is NOT declinable
+  # mid-pick once installed (matching the established sibling precedent for
+  # the identical DCGO shape: BT23-057 Sistermon Ciel / BT24-017 Megidramon,
+  # `min: N, max: N, optional_zero: false`). DCGO's "you may" decline surface
+  # is instead honored by the clause-level `optional: true` +
+  # G-OUTER-OPTIONAL-NOT-INSTALLED: because the first body step (the exact-3
+  # select) is not itself declinable, the lowering pass installs an explicit
+  # OUTER accept/decline prompt (`SelectionKind::Replacement`) BEFORE the
+  # multi-select — accepting it commits to the mandatory exact-3 pick;
+  # declining it skips the whole clause. This is faithfully equivalent to
+  # DCGO's `canNoSelect: () => true` at the point of activation.
+  - when: on_deletion
+    optional: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [trash]
+          any_of:
+            - trait_has: Composite
+            - trait_has: Wicked God
+            - trait_has: DM
+        n: 3
+    summary: "[On Deletion] Return 3 [Composite]/[Wicked God]/[DM] cards to deck bottom; you may play 2 different-level level<=6 [Composite]/[Ver.3]/[Ver.5] Digimon cards from trash free"
+    process:
+      # Step A (cost): return EXACTLY 3 eligible trash cards to the deck
+      # bottom. Auto-fires once the >=3 condition gate passes (see note
+      # above); no separate decline prompt.
+      - select_count_capped_multi:
+          of: you
+          zone: trash
+          min: 3
+          max: 3
+          optional_zero: false
+          filter:
+            any_of:
+              - trait_has: Composite
+              - trait_has: Wicked God
+              - trait_has: DM
+          bind_as: returned
+          prompt: "Return 3 [Composite]/[Wicked God]/[DM] cards from your trash to the bottom of your deck"
+      - if:
+          condition: { binding_exists: returned }
+          then:
+            # return_trash_list_to_deck_bottom (NOT return_to_deck_from_reveal
+            # — that verb only operates on the `revealed_cards` reveal-pool
+            # zone, not on cards selected directly from trash via
+            # select_count_capped_multi). destination defaults to bottom,
+            # matching the unconditional printed "to the bottom of the deck".
+            - return_trash_list_to_deck_bottom:
+                of: you
+                cards: returned
+
+            # Step B (reward): optional up-to-2 pick of level<=6
+            # Composite/Ver.3/Ver.5 Digimon cards from trash, DIFFERENT
+            # LEVELS per pick, played free (their own On Play fires).
+            - select_count_capped_multi:
+                of: you
+                zone: trash
+                max: 2
+                optional_zero: true
+                distinct_by: level
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 6
+                    - any_of:
+                        - trait_has: Composite
+                        - trait_has: Ver.3
+                        - trait_has: Ver.5
+                bind_as: to_play
+                prompt: "You may play up to 2 level 6 or lower [Composite]/[Ver.3]/[Ver.5] Digimon cards (different levels) from your trash without paying the costs"
+            - per_selected:
+                selection: to_play
+                bind_as: p
+                body:
+                  - play_from_trash_free:
+                      of: you
+                      hand_index: p
