@@ -920,54 +920,9 @@ impl<'a> EffectContext<'a> {
         card: CardHandle,
         to_bottom: bool,
     ) -> bool {
-        let removed = {
-            let permanent = match self
-                .game
-                .player_mut(perm.player)
-                .battle_area
-                .get_mut(perm.index as usize)
-            {
-                Some(p) => p,
-                None => return false,
-            };
-            let pos = match permanent
-                .card_sources
-                .iter()
-                .position(|c| c.handle() == card)
-            {
-                Some(pos) => pos,
-                None => return false,
-            };
-            permanent.card_sources.remove(pos)
-        };
-        let returned_card = removed.handle();
-        self.move_card_to_deck(removed, to_bottom);
-        let _ = self.cleanup_exposed_battle_area_digi_egg(perm);
-        // G-ENGINE-DIGIVOLUTION-CARD-RETURNED-TO-DECK-BOTTOM: fire the
-        // "[Vemmon] returned to the bottom of the deck from this Digimon's
-        // digivolution cards" observer (BT21-058 / BT18-065). Only for the
-        // BOTTOM route — the printed observer is scoped to deck-BOTTOM returns.
-        // The host is the permanent's (still-standing) top card; if the return
-        // exposed a DigiEgg and the permanent was deleted (or the stack is gone),
-        // fall back to the returned card as host so the observer still carries a
-        // stable event handle.
-        if to_bottom {
-            let host_card = self
-                .game
-                .player(perm.player)
-                .battle_area
-                .get(perm.index as usize)
-                .map(|permanent| permanent.top_card().handle())
-                .unwrap_or(returned_card);
-            self.game.fire_digivolution_card_returned_to_deck_bottom(
-                perm.player,
-                perm,
-                host_card,
-                returned_card,
-                crate::trigger_context::EventCause::DeckBottom,
-            );
-        }
-        true
+        // Tier-2 delegation (facade placement rule, RUST_ENGINE_API.md §3):
+        // the mutation + observer dispatch live in game_actions/sources.rs.
+        self.game.return_card_source_to_deck(perm, card, to_bottom)
     }
 
     /// `Vec`-taking convenience wrapper over `return_card_source_to_deck`,
