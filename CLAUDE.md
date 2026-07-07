@@ -77,6 +77,7 @@ agent config, runtime data, and project-level configs.
 ├── .github/                       # CI workflows
 ├── .claude/                       # Agent skills + worktrees
 ├── .codex/                        # Codex skills, including Rust DSL archetype readiness assessment
+├── openspec/                      # OpenSpec change workflow — active changes/<slug>/ (proposal, design, tasks, specs) + archive/
 ├── DCGO/                          # Git submodule — DCGO C# source (behavioral reference)
 ├── data/                          # Shared game data — source of truth for both engines
 │   ├── cards.json                 # Full card metadata (~4085 cards)
@@ -106,6 +107,7 @@ agent config, runtime data, and project-level configs.
     │   │   ├── card_data.rs, card_registry.rs, cards.rs  # Metadata + effect registry
     │   │   ├── effect.rs              # Effect + EffectBuilder + CardEffect trait
     │   │   ├── effect_context.rs      # EffectContext — curated card-scripting API
+    │   │   ├── game_actions/          # Tier-2 game-action facades (play, digivolve, sources, zones, ...) — enforced by facade-placement-lint
     │   │   ├── effect_queue.rs        # Triggered-effect queue + drainer
     │   │   ├── modifiers.rs           # ModifierRegistry (typed + expiry)
     │   │   ├── combat.rs              # Attack state machine + interrupts (Alliance/Counter/Block)
@@ -127,6 +129,11 @@ agent config, runtime data, and project-level configs.
     │   ├── pyproject.toml         # maturin build backend, module name "digimon_engine"
     │   └── src/lib.rs             # RustHeadlessGame class; Python player-ID convention (1/2 ↔ 0/1)
     ├── digimon-dsl/               # Card-scripting DSL crate (lowering to Effect/CardEffect)
+    ├── digimon-engine-cli/        # Debug REPL + recording replay viewer + selfplay driver (Cargo binary)
+    ├── digimon-engine-mcp/        # Read-only per-game engine forensics MCP (Cargo binary)
+    ├── digimon-scenario-mcp/      # Write-capable dev/test scenario-authoring MCP (Python)
+    ├── digimon-training-mcp/      # Read-only training-runs inspection MCP (Python)
+    ├── landing/                   # Static landing page (deployed by landing-page.yml)
     ├── digimon_gym/               # RL only — no FastAPI, no DB
     │   ├── digimon_gym.py         # DigimonEnv (Gymnasium)
     │   ├── agents/                # RL training modules
@@ -354,6 +361,7 @@ Key references:
 - **Tools**: `docs/TOOLS.md` — card pipeline, transpiler, Pinecone, model export, new-set workflow
 - **Training**: `docs/TRAINING_RUNBOOK.md` + `AGENTS.md` (wrapper chain, gauntlet, pipeline)
 - **Model evaluation**: `docs/MODEL_EVALUATION.md` — why the in-run win rate lies (degenerate under self-play), the anchored reference frame (greedy + frozen champions, seat-balanced), the layered eval stack, the Elo ladder + champion registry + exploiter tools, gated self-play, and the equilibrium-methods horizon (depends on `make-engine-cloneable`). See rule 30.
+- **Determinized search + AlphaZero self-play**: `openspec/changes/add-determinized-search/` (proposal/design/tasks) — PUCT-MCTS over determinized worlds sampled from the acting player's infoset (no X-ray vision; `Infoset` extraction + `SamplingRevealSource` + world materializer), PIMC and IS-MCTS modes, ONNX `PolicyValueFn` leaf evaluator, and the self-play generation loop (`digimon-engine-cli selfplay` → sparse-π shards → `azero_trainer.py` → per-generation ONNX re-export via `run_selfplay_generation.py`). Built on `Game: Clone` (rule 28's clone-safety constraint exists for this). Phases 0–3 landed; productionization (leaf batching) and game-review annotations are in flight — read the tasks file for current state before extending it.
 - **Cloud training**: `docs/CLOUD_TRAINING.md` — Path A (RunPod GPU, LSTM/self-play) vs Path B (Hetzner/DO CPU, MLP-vs-greedy); published `Dockerfile.training` image, the `docker-compose.watch.yml` TensorBoard sidecar, and the `scripts/sync_cloud_runs.sh` run-mirror; local VRAM mitigations
 - **Rules**: `Digimon TCG resources/general_rule.pdf` — **canonical** rules source of truth (+ `glossary.pdf` for keywords); base-repo only (rule 32). Verified, committed derivations live in `docs/digimon-rules/` (`keyword-semantics.md`, `rules-index.json`, `digest.md`) and are surfaced by the `/digimon-rules` skill + the SessionStart/UserPromptSubmit rules hooks. These **replace** the retired `docs/RULES_CONTEXT.md` (now a pointer). See "Source priority" + rule 32.
 - **Hosted-API deployment**: `docs/DEPLOYMENT.md` — DigitalOcean topology, env vars, bootstrap
@@ -368,6 +376,10 @@ Key references:
 - **Cross-engine parity**: `docs/RUST_PYTHON_PARITY.md` — live divergence tracker and per-phase progress; transitional, retired when the Python engine is
 
 **Rust card scripting (DSL-first — see rule 28)**: cards are authored as YAML specs in `code/digimon-engine/cards/<set>/`, lowered by the `digimon-dsl` crate, with per-card DebugRunner tests in `code/digimon-engine/tests/cards_behavioral/<set>/`. Drive the work with `/batch-implement-cards-rust-dsl` or `/implement-rust-dsl-archetype`; run `/assess-archetype-rust` first to audit which engine/DSL primitives an archetype needs. The DSL schema is generated by `code/tools/dsl-schema-export/` and linted by `code/tools/dsl-lint/`. For the rare card the DSL can't express, hand-write a `CardEffect` in `src/cards/raw_rust/` per the TDD walkthrough in `RUST_ENGINE_API.md` (driven by `/batch-implement-cards-rust`). To author an **entire release set** (a booster like BT17/EX12 rather than a single archetype), use `/author-set <SET>`: it refreshes the set from digimoncard.io, runs the DCGO-oracle keyword gate (auto-ingest keywords DCGO implements, flag-for-human those it doesn't) *before* implementation, clusters the ~100 cards into archetype slices, then fans out the per-slice authoring/combo-test skills via the `author-set` Workflow. Tooling: `code/tools/author_set/` (see its README); design: `openspec/changes/add-author-set-workflow/`.
+
+## OpenSpec Change Workflow
+
+Multi-week initiatives are planned and tracked as **OpenSpec changes** under `openspec/changes/<slug>/` (`proposal.md`, `design.md`, `tasks.md`, `specs/`); completed changes move to `openspec/archive/`. Rules and docs cite changes by slug (e.g. `add-determinized-search`, `make-engine-cloneable`, `harden-training-pipeline`) — when a rule references a slug, the change's design doc is the authoritative rationale. Drive the lifecycle with the skills: `/opsx:propose` (preferred; `/openspec-propose` is the older variant) to create a change, `/opsx:explore` to think through one, `/opsx:apply` to implement its tasks, `/opsx:archive` to finalize. Check `tasks.md` checkboxes for current state before extending an in-flight change.
 
 ## QA Artifacts
 
