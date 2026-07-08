@@ -10,7 +10,7 @@ The engine SHALL model ＜Engage＞ as a first-class `Keyword` variant distinct 
 - **THEN** the card's parsed keyword set contains `Keyword::Engage` and does NOT contain `Keyword::Vortex`
 
 ### Requirement: Engage end-of-turn optional attack
-A Digimon with ＜Engage＞ SHALL be offered an optional attack at the end of its controller's turn ("At the end of your turn, this Digimon may attack."). The offer MUST be declinable and exposed through the pending-selection surface; the attack, if taken, resolves through the standard attack state machine. Target legality and any played-this-turn allowance SHALL follow confirmed official rulings; where a ruling is absent, the implementation SHALL follow the literal reminder text and the open point MUST be pinned in the keyword test file and the gap tracker rather than extrapolated from Vortex.
+A Digimon with ＜Engage＞ SHALL be offered an optional attack at the end of its controller's turn ("At the end of your turn, this Digimon may attack."). The offer MUST be declinable and exposed through the pending-selection surface; the attack, if taken, resolves through the standard attack state machine. Per the DCGO behavioral oracle (`Engage.cs`, cross-checked against official rulings — a contradicting ruling wins), the attack MAY target the opponent player or an opponent's Digimon, and the carrier receives NO played-this-turn allowance (normal summoning-sickness rules apply, unlike ＜Vortex＞).
 
 #### Scenario: Engage offers an attack at end of controller's turn
 - **WHEN** the controller's turn reaches the end-of-turn window and an unsuspended Engage carrier is able to attack

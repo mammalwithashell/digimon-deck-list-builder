@@ -21,7 +21,7 @@ Each implemented Shambala card SHALL have a DebugRunner behavioral test suite in
 - **THEN** `cargo test --test cards_behavioral -- <card_id_lower>` passes with zero failures and zero unexplained ignores
 
 ### Requirement: New token species registered
-Token species summoned by Shambala cards (at minimum [Paishu] — Yellow, 6000 DP, ＜Blocker＞ ＜Guard＞ — and [Kotenken] if confirmed on the EX12-034 scan) SHALL be registered in the token registry with their printed stats and keywords carried through the same keyword parse as printed cards.
+Token species summoned by Shambala cards (at minimum [Paishu] — Yellow, 6000 DP, ＜Blocker＞ ＜Guard＞ — and [Kotenken] — Black, 9000 DP, ＜Blocker＞ per DCGO EX12_034, confirmed against the EX12-034 scan) SHALL be registered in the token registry with their printed stats and keywords carried through the same keyword parse as printed cards.
 
 #### Scenario: Paishu token carries its keywords
 - **WHEN** EX12-057 plays a [Paishu] token
