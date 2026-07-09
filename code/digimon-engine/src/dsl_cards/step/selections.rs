@@ -1931,9 +1931,13 @@ fn run_play_or_use_dual_choice_step(
     if let Some(source_ref) = state.source_ref {
         match choice {
             0 => {
-                let _ = ctx
-                    .game
-                    .play_source_refs_from_effect_without_cost(vec![source_ref]);
+                if source_ref.permanent.player == state.player {
+                    let _ = ctx.play_from_materials(
+                        source_ref.permanent,
+                        source_ref.source_index as usize,
+                        state.cost_delta,
+                    );
+                }
             }
             _ => {
                 let _ = ctx.game.use_option_from(

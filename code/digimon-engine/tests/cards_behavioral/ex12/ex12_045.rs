@@ -1,3 +1,4 @@
+use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::enums::CardColor;
 
 use super::support::{
@@ -6,6 +7,33 @@ use super::support::{
 };
 
 const CARD_ID: &str = "EX12-045";
+
+#[test]
+fn ex12_045_inherited_when_attacking_is_not_optional_after_trigger() {
+    let runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-045 YAML loads")
+        .start();
+    let card = runner.compiled_card(CARD_ID).expect("compiled EX12-045");
+    let inherited = card
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
+            CompiledClause::Triggered(triggered)
+                if triggered.scope == CompiledScope::Inherited
+                    && triggered.when.contains(&CompiledTiming::WhenAttacking) =>
+            {
+                Some(triggered)
+            }
+            _ => None,
+        })
+        .expect("printed inherited [When Attacking] clause");
+
+    assert!(
+        !inherited.optional,
+        "printed inherited body has no 'you may' after the trigger resolves"
+    );
+}
 
 #[test]
 fn ex12_045_on_play_adds_top_security_then_recovers_when_at_two_or_less() {

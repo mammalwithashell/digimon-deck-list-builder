@@ -9,22 +9,22 @@ const CARD_ID: &str = "EX12-031";
 
 #[test]
 fn ex12_031_on_play_places_matching_hand_card_as_bottom_source_then_bounces_low_source_digimon() {
-    let aqua = super::support::digimon("AQUA-HAND", CardColor::Blue, 4, 4, 5000, &["Aqua"]);
+    let aqua = super::support::digimon("AQUATIC-HAND", CardColor::Blue, 4, 4, 5000, &["Aquatic"]);
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("EX12-031 YAML loads")
         .add_card(aqua)
         .add_card(plain_digimon("OPP-SRC", CardColor::Blue, 3, 3000))
         .add_card(plain_digimon("OPP-TOP", CardColor::Blue, 4, 5000))
-        .hand(0, &[CARD_ID, "AQUA-HAND"])
+        .hand(0, &[CARD_ID, "AQUATIC-HAND"])
         .memory(10)
         .start();
     runner.place_stack(1, &["OPP-SRC", "OPP-TOP"]);
 
     let play_slot = hand_index(&runner, 0, CARD_ID);
     runner.play(0, play_slot).expect("play EX12-031");
-    select_hand_card(&mut runner, 0, "AQUA-HAND");
-    assert_eq!(bottom_source_id(&runner, 0, 0), "AQUA-HAND");
+    select_hand_card(&mut runner, 0, "AQUATIC-HAND");
+    assert_eq!(bottom_source_id(&runner, 0, 0), "AQUATIC-HAND");
     select_first_non_pass(&mut runner);
     runner.auto_resolve().expect("finish bounce");
 

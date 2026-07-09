@@ -44,7 +44,11 @@ fn ex12_037_when_digivolving_repeats_mode_per_five_sources() {
     choose_pending_index(&mut runner, 1);
     runner.auto_resolve().expect("resolve repeated mode");
 
-    assert_eq!(runner.security_count(1), 0, "mode 1 trashes opponent security");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "mode 1 trashes opponent security"
+    );
     assert_eq!(
         runner.security_count(0),
         own_security_before + 1,

@@ -1,6 +1,9 @@
 use digimon_engine::enums::{CardColor, Keyword};
 
-use super::support::{hand_index, plain_digimon, red_sw, select_first_non_pass, DebugRunner};
+use super::support::{
+    hand_index, plain_digimon, play_declining_optional_materials, red_sw, select_first_non_pass,
+    DebugRunner,
+};
 
 const CARD_ID: &str = "EX12-015";
 
@@ -21,7 +24,7 @@ fn ex12_015_on_play_reduces_dp_then_grants_alliance_and_attack_prompt_to_other_s
     let opp = runner.place_on_field(1, "OPP", Some(0));
 
     let play_slot = hand_index(&runner, 0, CARD_ID);
-    runner.play(0, play_slot).expect("play EX12-015");
+    play_declining_optional_materials(&mut runner, 0, play_slot);
     select_first_non_pass(&mut runner);
     assert_eq!(runner.effective_dp(opp), Some(2000), "target gets -4000 DP");
 

@@ -23,14 +23,10 @@ alt_paths:
     cost: 3
   - kind: dna_digivolve
     materials:
-      - level_eq: 5
-        any_of:
-          - color_is: blue
-          - color_is: yellow
-      - level_eq: 5
-        any_of:
-          - color_is: purple
-          - color_is: red
+      - level_eq: 4
+        color_only: [blue, yellow]
+      - level_eq: 4
+        color_only: [purple, red]
     cost: 0
     stacks_unsuspended: true
 

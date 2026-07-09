@@ -13,6 +13,9 @@ alt_paths:
     from: { level_eq: 3, color_is: red }
     cost: 3
   - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
     from:
       all_of:
         - level_eq: 3

@@ -5,6 +5,11 @@ color: [white]
 cost: 3
 traits: [Shambala, SW, TB]
 
+use_requirement:
+  any_field_permanent:
+    of: you
+    trait_has: Shambala
+
 effects:
   - when: main_from_hand
     summary: "[Main] Reveal top 3; add 1 [Shambala] card; bottom the rest. Then, place this card in the battle area"

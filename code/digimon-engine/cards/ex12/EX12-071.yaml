@@ -5,6 +5,11 @@ color: [black, blue]
 cost: 3
 traits: [Shambala, SW]
 
+use_requirement:
+  any_field_permanent:
+    of: you
+    trait_has: SW
+
 effects:
   - when: main_from_hand
     summary: "[Main] By trashing 1 [SW] card from hand, draw 2. Then, place this card in the battle area"

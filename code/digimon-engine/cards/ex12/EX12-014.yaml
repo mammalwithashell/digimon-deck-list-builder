@@ -68,15 +68,15 @@ effects:
             - place_as_bottom_source:
                 source: placed_source
                 target: source
-            - select_own_permanent:
-                bind_as: attack_target
-                optional: true
-                filter: { kind: digimon }
-                prompt: "1 of your Digimon may attack"
-            - may_attack_now:
-                attacker: attack_target
-                targets: any
-                optional: true
+      - select_own_permanent:
+          bind_as: attack_target
+          optional: true
+          filter: { kind: digimon }
+          prompt: "1 of your Digimon may attack"
+      - may_attack_now:
+          attacker: attack_target
+          targets: any
+          optional: true
 
   - scope: inherited
     kind: replacement

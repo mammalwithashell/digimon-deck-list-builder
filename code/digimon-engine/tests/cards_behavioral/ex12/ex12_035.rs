@@ -2,7 +2,7 @@ use digimon_dsl::compiled::{CompiledAltPathKind, CompiledCost, CompiledPredicate
 use digimon_engine::action::space::PASS;
 use digimon_engine::enums::CardColor;
 
-use super::support::{field_contains, plain_digimon, select_first_non_pass, DebugRunner};
+use super::support::{plain_digimon, select_first_non_pass, DebugRunner};
 
 const CARD_ID: &str = "EX12-035";
 
@@ -11,10 +11,7 @@ fn pred_any<F: Fn(&CompiledPredicate) -> bool + Copy>(pred: &CompiledPredicate, 
         || pred.all_of.iter().any(|child| pred_any(child, f))
         || pred.any_of.iter().any(|child| pred_any(child, f))
         || pred.none_of.iter().any(|child| pred_any(child, f))
-        || pred
-            .not
-            .as_deref()
-            .is_some_and(|child| pred_any(child, f))
+        || pred.not.as_deref().is_some_and(|child| pred_any(child, f))
 }
 
 #[test]
@@ -82,14 +79,35 @@ fn ex12_035_on_play_bottom_decks_opponent_with_lte_source_count() {
     runner.fire_on_play(0, metalgarurumon.index as usize);
     let view = runner
         .pending_selection_view()
-        .expect("source-trash prompt should be optional");
-    assert!(view.valid_action_ids.contains(&PASS));
-    runner
-        .execute_action(view.selecting_player, PASS)
-        .expect("decline source trash");
+        .expect("source-trash prompt should require 4 sources");
+    assert!(
+        !view.valid_action_ids.contains(&PASS),
+        "printed 'Trash any 4 digivolution cards' should not expose a zero-trash PASS"
+    );
+    for _ in 0..4 {
+        select_first_non_pass(&mut runner);
+    }
     select_first_non_pass(&mut runner);
     runner.auto_resolve().expect("resolve EX12-035 on-play");
 
-    assert!(field_contains(&runner, 1, "OPP-HIGH"));
-    assert!(!field_contains(&runner, 1, "OPP-LOW"));
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "one eligible opponent Digimon should be bottom-decked after trashing 4 sources"
+    );
+    assert_eq!(
+        runner.game.players[1].battle_area[0].card_sources.len(),
+        1,
+        "all selected opponent sources should be trashed before the bottom-deck selection"
+    );
+    let bottomed = runner.game.players[1]
+        .deck
+        .last()
+        .expect("bottom-decked opponent Digimon")
+        .card_id(&runner.game.card_data)
+        .to_string();
+    assert!(
+        bottomed == "OPP-HIGH" || bottomed == "OPP-LOW",
+        "bottom-decked card should be one of the eligible opponent Digimon, got {bottomed}"
+    );
 }

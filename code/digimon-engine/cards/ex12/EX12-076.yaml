@@ -2,16 +2,38 @@ card: EX12-076
 name: Susanoomon
 kind: digimon
 level: 7
-color: [yellow, white]
+color: [yellow, white, red]
 cost: 16
 dp: 16000
-traits: [Shaman, Shambala, SW, TB]
+traits: [Shaman, Shambala, SW, TB, TS]
 attribute: Vaccine
 
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 6, color_is: red }
+    from: { level_eq: 6, self_color_count_gte: 2 }
     cost: 6
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - any_of:
+            - trait_has: Hybrid
+            - form_is: Hybrid
+            - trait_has: Shambala
+            - trait_has: TS
+    cost: 5
+  - kind: assembly
+    materials:
+      - filter:
+          any_of:
+            - trait_has: Hybrid
+            - form_is: Hybrid
+            - trait_has: Shambala
+        repeat: { min: 8, max: 8 }
+        distinct_by: name
+        zones: [trash]
+        stack_under: true
+    cost: 9
 
 effects:
   - kind: grant_keyword

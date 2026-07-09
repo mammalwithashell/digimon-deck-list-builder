@@ -1,12 +1,11 @@
 use digimon_dsl::compiled::{
-    CompiledCountBound, CompiledFormula, CompiledModifierValue, CompiledPerSelector,
-    CompiledStep,
+    CompiledCountBound, CompiledFormula, CompiledModifierValue, CompiledPerSelector, CompiledStep,
 };
 use digimon_dsl::{compile::compile, spec::CardSpec};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::dsl_cards::formula_eval;
 use digimon_engine::dsl_cards::bindings::Bindings;
+use digimon_engine::dsl_cards::formula_eval;
 use digimon_engine::dsl_cards::step::{run_steps, RunOutcome};
 use digimon_engine::effect_context::{EffectContext, SourceSelectionRef};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
@@ -120,14 +119,8 @@ effects:
         "one same-level source pair should satisfy the predicate"
     );
 
-    let without_pair = runner.place_stack(
-        0,
-        &[
-            "SRC-4A",
-            "SRC-5",
-            "TEST-SAME-LEVEL-SOURCE-PAIR-GATE",
-        ],
-    );
+    let without_pair =
+        runner.place_stack(0, &["SRC-4A", "SRC-5", "TEST-SAME-LEVEL-SOURCE-PAIR-GATE"]);
     assert_eq!(
         runner.game.effective_dp(without_pair),
         Some(7000),

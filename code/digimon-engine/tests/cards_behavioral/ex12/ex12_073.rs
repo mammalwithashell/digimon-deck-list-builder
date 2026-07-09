@@ -1,3 +1,4 @@
+use crate::dsl_card_data::card_data_from_compiled;
 use digimon_engine::enums::CardColor;
 use digimon_engine::permanent::OptionState;
 
@@ -7,6 +8,12 @@ use super::support::{
 };
 
 const CARD_ID: &str = "EX12-073";
+
+#[test]
+fn ex12_073_is_white_option() {
+    let data = card_data_from_compiled(CARD_ID);
+    assert_eq!(data.colors, vec![CardColor::White]);
+}
 
 fn is_delayed_option_on_field(runner: &DebugRunner, player: u8, card_id: &str) -> bool {
     runner.game.players[player as usize]
@@ -35,6 +42,13 @@ fn ex12_073_main_searches_trait_card_and_places_delay_option() {
     runner.place_on_field(0, "VB-ENABLER", Some(0));
     let option_slot = hand_index(&runner, 0, CARD_ID);
     assert!(runner.game.activate_hand_main(0, option_slot));
+    assert!(
+        !runner
+            .pending_selection_view()
+            .expect("Giant Meat should require choosing a revealed trait card")
+            .is_optional,
+        "printed add-1 reveal effect is mandatory when a hit is revealed"
+    );
     select_first_non_pass(&mut runner);
     runner.auto_resolve().expect("resolve Giant Meat main");
 

@@ -1,12 +1,20 @@
 card: EX12-073
 name: Giant Meat
 kind: option
-color: [blue]
+color: [white]
 cost: 3
 traits: [NSp, DS, NSo, WG, ME, VB]
 
 use_requirement:
-  all_turns: true
+  any_field_permanent:
+    of: you
+    any_of:
+      - trait_has: NSp
+      - trait_has: DS
+      - trait_has: NSo
+      - trait_has: WG
+      - trait_has: ME
+      - trait_has: VB
 
 effects:
   - kind: flood_gate
@@ -23,7 +31,7 @@ effects:
       - select_reveal:
           of: you
           bind_as: meat_pick
-          optional: true
+          optional: false
           filter:
             any_of:
               - trait_has: NSp

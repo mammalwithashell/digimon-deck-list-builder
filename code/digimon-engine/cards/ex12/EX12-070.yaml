@@ -5,6 +5,11 @@ color: [yellow, green]
 cost: 3
 traits: [Shambala, TB]
 
+use_requirement:
+  any_field_permanent:
+    of: you
+    trait_has: TB
+
 effects:
   - when: main_from_hand
     summary: "[Main] By trashing 1 [TB] card from hand, draw 2. Then, place this card in the battle area"

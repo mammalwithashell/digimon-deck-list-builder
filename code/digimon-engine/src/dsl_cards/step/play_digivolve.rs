@@ -408,10 +408,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             true
         }
         CompiledStep::PlayOrUseFromSources {
-            of: _,
+            of,
             card,
             cost_delta,
         } => {
+            let owner = resolve_player(ctx, *of);
             let delta = match cost_delta {
                 None => CostDelta::Free,
                 Some(_) => lower_cost_delta(cost_delta.as_ref(), ctx, bindings),
@@ -420,7 +421,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 resolve_binding_ref(card, ctx, bindings)
             {
                 if let Some(source_ref) = refs.first() {
-                    ctx.play_or_use_from_source_with_cost(*source_ref, delta);
+                    ctx.play_or_use_from_source_with_cost(owner, *source_ref, delta);
                 }
             }
             true

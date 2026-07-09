@@ -1,6 +1,6 @@
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
-    CompiledStep, CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledCostDelta,
+    CompiledDeclarativeClause, CompiledPredicate, CompiledScope, CompiledStep, CompiledTiming,
 };
 use digimon_engine::enums::{CardColor, Keyword};
 use digimon_engine::selection::SelectionKind;
@@ -24,12 +24,36 @@ fn ex12_017_has_security_attack_plus_decode_counter_and_dna_paths() {
     assert!(runner
         .game
         .has_keyword(wargreymon, Keyword::SecurityAttackPlus(1)));
-    assert!(
-        card.alt_paths.iter().any(|path| {
+    let dna_path = card
+        .alt_paths
+        .iter()
+        .find(|path| {
             path.kind == CompiledAltPathKind::DnaDigivolve
                 && path.cost == Some(CompiledCost::Literal(0))
-        }),
-        "printed Red/Yellow Lv.5 + Black/Purple Lv.5 DNA digivolve path"
+        })
+        .expect("printed Red/Yellow Lv.5 + Black/Purple Lv.5 DNA digivolve path");
+    assert_eq!(dna_path.materials.len(), 2);
+    assert_eq!(dna_path.materials[0].filter.level_eq, Some(5));
+    assert!(
+        dna_path.materials[0]
+            .filter
+            .color_only
+            .as_ref()
+            .is_some_and(|colors| {
+                colors.contains(&CompiledColor::Red) && colors.contains(&CompiledColor::Yellow)
+            }),
+        "first DNA material is Red/Yellow Lv.5"
+    );
+    assert_eq!(dna_path.materials[1].filter.level_eq, Some(5));
+    assert!(
+        dna_path.materials[1]
+            .filter
+            .color_only
+            .as_ref()
+            .is_some_and(|colors| {
+                colors.contains(&CompiledColor::Black) && colors.contains(&CompiledColor::Purple)
+            }),
+        "second DNA material is Black/Purple Lv.5"
     );
 
     let decode_replacements = card
@@ -43,10 +67,10 @@ fn ex12_017_has_security_attack_plus_decode_counter_and_dna_paths() {
         })
         .count();
     assert_eq!(
-        decode_replacements, 2,
-        "WarGreymon has Decode on its face and inherited text"
+        decode_replacements, 1,
+        "WarGreymon has only its face-up Decode; the ingested inherited field is not printed text"
     );
-    assert!(card.effects.iter().any(|clause| matches!(
+    assert!(!card.effects.iter().any(|clause| matches!(
         clause,
         CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
             scope: CompiledScope::Inherited,
@@ -72,14 +96,24 @@ fn ex12_017_has_security_attack_plus_decode_counter_and_dna_paths() {
         .process
         .iter()
         .any(|step| matches!(step, CompiledStep::SelectHand { .. })));
+    let counter_target_filter =
+        find_select_hand_filter(&counter.process).expect("Counter chooses the DNA target in hand");
+    assert!(
+        predicate_has_name_is(counter_target_filter, "Omnimon"),
+        "printed bracketed [Omnimon] target must be exact-name, not substring"
+    );
+    assert!(
+        !predicate_has_name_contains(counter_target_filter, "Omnimon"),
+        "`name_contains: Omnimon` would also match non-printed Omnimon variants"
+    );
     assert!(walk_steps(
         &counter.process.iter().collect::<Vec<_>>(),
         |step| { matches!(step, CompiledStep::SelectDnaPair { .. }) }
     ));
-    assert!(walk_steps(
-        &counter.process.iter().collect::<Vec<_>>(),
-        |step| { matches!(step, CompiledStep::EffectInitiatedDnaDigivolve { .. }) }
-    ));
+    assert!(
+        effect_dna_cost_is_printed(&counter.process),
+        "counter DNA digivolve should pay the selected result's printed DNA cost"
+    );
     assert!(walk_steps(
         &counter.process.iter().collect::<Vec<_>>(),
         |step| { matches!(step, CompiledStep::RedirectAttackTarget { .. }) }
@@ -160,6 +194,111 @@ fn ex12_017_when_digivolving_de_digivolves_two_then_deletes_lowest_dp() {
     assert!(trash_contains(&runner, 1, "OPP-MID"));
     assert!(!field_contains(&runner, 1, "OPP-LOW"));
     assert!(field_contains(&runner, 1, "OPP-BASE"));
+}
+
+fn find_select_hand_filter(steps: &[CompiledStep]) -> Option<&CompiledPredicate> {
+    for step in steps {
+        if let CompiledStep::SelectHand { filter, .. } = step {
+            return Some(filter);
+        }
+        if let Some(found) = match step {
+            CompiledStep::If {
+                then, else_branch, ..
+            } => find_select_hand_filter(then).or_else(|| find_select_hand_filter(else_branch)),
+            CompiledStep::Optional(body)
+            | CompiledStep::AsSelectingPlayer { body, .. }
+            | CompiledStep::ForEach { body, .. }
+            | CompiledStep::PerSelected { body, .. }
+            | CompiledStep::ScheduleDelayed { body, .. } => find_select_hand_filter(body),
+            CompiledStep::SelectOwnPermanent { then, .. }
+            | CompiledStep::SelectOpponentPermanent { then, .. }
+            | CompiledStep::SelectAnyPermanent { then, .. }
+            | CompiledStep::SelectTrash { then, .. }
+            | CompiledStep::SelectOwnSources { then, .. }
+            | CompiledStep::SelectOpponentSources { then, .. }
+            | CompiledStep::SelectOpponentDpBudget { then, .. }
+            | CompiledStep::SelectOpponentPlayCostBudget { then, .. }
+            | CompiledStep::SelectOwnBreedingPermanent { then, .. }
+            | CompiledStep::SelectReveal { then, .. }
+            | CompiledStep::SelectSecurity { then, .. }
+            | CompiledStep::SelectUnionZone { then, .. } => find_select_hand_filter(then),
+            CompiledStep::SearchOwnSecurityStack {
+                on_select,
+                on_no_match,
+                ..
+            } => find_select_hand_filter(on_select)
+                .or_else(|| on_no_match.as_deref().and_then(find_select_hand_filter)),
+            _ => None,
+        } {
+            return Some(found);
+        }
+    }
+
+    None
+}
+
+fn effect_dna_cost_is_printed(steps: &[CompiledStep]) -> bool {
+    steps.iter().any(|step| match step {
+        CompiledStep::EffectInitiatedDnaDigivolve { cost, .. } => {
+            *cost == CompiledCostDelta::Printed
+        }
+        CompiledStep::If {
+            then, else_branch, ..
+        } => effect_dna_cost_is_printed(then) || effect_dna_cost_is_printed(else_branch),
+        CompiledStep::Optional(body)
+        | CompiledStep::AsSelectingPlayer { body, .. }
+        | CompiledStep::ForEach { body, .. }
+        | CompiledStep::PerSelected { body, .. }
+        | CompiledStep::ScheduleDelayed { body, .. } => effect_dna_cost_is_printed(body),
+        CompiledStep::SelectOwnPermanent { then, .. }
+        | CompiledStep::SelectOpponentPermanent { then, .. }
+        | CompiledStep::SelectAnyPermanent { then, .. }
+        | CompiledStep::SelectHand { then, .. }
+        | CompiledStep::SelectTrash { then, .. }
+        | CompiledStep::SelectOwnSources { then, .. }
+        | CompiledStep::SelectOpponentSources { then, .. }
+        | CompiledStep::SelectOpponentDpBudget { then, .. }
+        | CompiledStep::SelectOpponentPlayCostBudget { then, .. }
+        | CompiledStep::SelectOwnBreedingPermanent { then, .. }
+        | CompiledStep::SelectReveal { then, .. }
+        | CompiledStep::SelectSecurity { then, .. }
+        | CompiledStep::SelectUnionZone { then, .. } => effect_dna_cost_is_printed(then),
+        CompiledStep::SearchOwnSecurityStack {
+            on_select,
+            on_no_match,
+            ..
+        } => {
+            effect_dna_cost_is_printed(on_select)
+                || on_no_match
+                    .as_deref()
+                    .is_some_and(effect_dna_cost_is_printed)
+        }
+        _ => false,
+    })
+}
+
+fn predicate_has_name_is(predicate: &CompiledPredicate, needle: &str) -> bool {
+    predicate.name_is.as_deref() == Some(needle)
+        || predicate
+            .all_of
+            .iter()
+            .any(|nested| predicate_has_name_is(nested, needle))
+        || predicate
+            .any_of
+            .iter()
+            .any(|nested| predicate_has_name_is(nested, needle))
+}
+
+fn predicate_has_name_contains(predicate: &CompiledPredicate, needle: &str) -> bool {
+    predicate.name_contains.as_deref() == Some(needle)
+        || predicate
+            .all_of
+            .iter()
+            .any(|nested| predicate_has_name_contains(nested, needle))
+        || predicate
+            .any_of
+            .iter()
+            .any(|nested| predicate_has_name_contains(nested, needle))
 }
 
 fn walk_steps<F>(steps: &[&CompiledStep], pred: F) -> bool

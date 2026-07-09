@@ -6,17 +6,22 @@ color: [red, yellow]
 cost: 3
 dp: 2000
 traits: [Ceratopsian, VB]
-attribute: Vaccine
+attribute: Virus
 
 alt_paths:
   - kind: digivolve
     from: { level_eq: 2, color_is: red }
-    cost: 0
+    cost: 1
   - kind: digivolve
     from: { level_eq: 2, color_is: yellow }
-    cost: 0
+    cost: 1
   - kind: digivolve
-    from: { level_eq: 2, trait_has: VB }
+    from:
+      any_of:
+        - name_is: Gurimon
+        - all_of:
+            - level_eq: 2
+            - trait_has: VB
     cost: 0
 
 effects:

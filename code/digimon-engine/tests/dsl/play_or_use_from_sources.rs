@@ -36,6 +36,54 @@ effects:
                 cost: free
 "#;
 
+const REDUCED_SELECTOR_YAML: &str = r#"
+card: TEST-POU-SOURCES
+name: Play Or Use From Sources
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    process:
+      - select_own_sources:
+          min: 1
+          max: 1
+          bind_as: picked
+          filter: { play_or_use_cost_lte: 10 }
+          prompt: "Choose a source card to play or use"
+          then:
+            - play_or_use_from_sources:
+                of: you
+                card: picked
+                cost: { reduce: 2 }
+"#;
+
+const OPPONENT_OF_SELECTOR_YAML: &str = r#"
+card: TEST-POU-SOURCES
+name: Play Or Use From Sources
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 3000
+effects:
+  - when: on_play
+    process:
+      - select_own_sources:
+          min: 1
+          max: 1
+          bind_as: picked
+          filter: { play_or_use_cost_lte: 10 }
+          prompt: "Choose a source card to play or use"
+          then:
+            - play_or_use_from_sources:
+                of: opponent
+                card: picked
+                cost: free
+"#;
+
 struct OptionMainDraw;
 
 impl CardEffect for OptionMainDraw {
@@ -95,16 +143,23 @@ fn dual(id: &str, play_cost: u16, use_cost: u16) -> CardData {
 }
 
 fn base() -> DebugRunner {
-    DebugRunner::builder()
-        .from_dsl_yaml(SELECTOR_YAML)
+    base_with_selector(SELECTOR_YAML, None)
+}
+
+fn base_with_selector(selector_yaml: &str, memory: Option<i16>) -> DebugRunner {
+    let mut builder = DebugRunner::builder()
+        .from_dsl_yaml(selector_yaml)
         .expect("selector YAML compiles")
         .add_card(make_test_card("DECK-PAD", "Deck Pad"))
         .add_card(digimon("HOST", 3))
         .add_card(digimon("SRC-DIGI", 5))
         .add_card(option("SRC-OPT", 5))
         .add_card(dual("SRC-DUAL", 5, 5))
-        .deck(0, &["DECK-PAD"; 5])
-        .start()
+        .deck(0, &["DECK-PAD"; 5]);
+    if let Some(memory) = memory {
+        builder = builder.memory(memory);
+    }
+    builder.start()
 }
 
 fn fire_selector(runner: &mut DebugRunner) {
@@ -175,6 +230,59 @@ fn play_or_use_from_sources_plays_selected_digimon_source_free() {
             .len(),
         1,
         "selected source should leave the original stack"
+    );
+}
+
+#[test]
+fn play_or_use_from_sources_plays_selected_digimon_source_with_reduced_cost() {
+    let mut runner = base_with_selector(REDUCED_SELECTOR_YAML, Some(10));
+    runner.place_stack(0, &["SRC-DIGI", "HOST"]);
+    let memory_before = runner.memory();
+
+    fire_selector(&mut runner);
+    choose_first_source(&mut runner);
+
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "SRC-DIGI"),
+        "selected Digimon source should be played as a new permanent"
+    );
+    assert_eq!(
+        runner.memory(),
+        memory_before - 3,
+        "play cost 5 reduced by 2 should pay 3 memory"
+    );
+}
+
+#[test]
+fn play_or_use_from_sources_honors_of_player_for_source_owner() {
+    let mut runner = base_with_selector(OPPONENT_OF_SELECTOR_YAML, Some(10));
+    let host = runner.place_stack(0, &["SRC-DIGI", "HOST"]);
+    let memory_before = runner.memory();
+
+    fire_selector(&mut runner);
+    choose_first_source(&mut runner);
+
+    assert!(
+        !runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "SRC-DIGI"),
+        "`of: opponent` must not play a source selected from your own stack"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[host.index as usize]
+            .card_sources
+            .len(),
+        2,
+        "rejected source play should leave the original stack intact"
+    );
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "rejected source play should not pay memory"
     );
 }
 

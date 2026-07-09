@@ -8,12 +8,16 @@ fn round_trip_registry_through_temp_pack_file() {
 
 #[test]
 fn pack_file_loader_rejects_missing_manifest_raw_rust_requirements() {
-    run_pack_file_loader_guard(check_pack_file_loader_rejects_missing_manifest_raw_rust_requirements);
+    run_pack_file_loader_guard(
+        check_pack_file_loader_rejects_missing_manifest_raw_rust_requirements,
+    );
 }
 
 #[test]
 fn pack_file_loader_accepts_present_manifest_raw_rust_requirements() {
-    run_pack_file_loader_guard(check_pack_file_loader_accepts_present_manifest_raw_rust_requirements);
+    run_pack_file_loader_guard(
+        check_pack_file_loader_accepts_present_manifest_raw_rust_requirements,
+    );
 }
 
 fn run_pack_file_loader_guard(f: fn()) {

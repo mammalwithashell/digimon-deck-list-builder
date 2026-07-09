@@ -1,3 +1,5 @@
+use crate::dsl_card_data::compiled;
+
 use super::support::{
     field_contains, hand_contains, hand_index, plain_digimon, select_first_non_pass, tb_digimon,
     DebugRunner,
@@ -6,6 +8,22 @@ use digimon_engine::enums::CardColor;
 use digimon_engine::permanent::OptionState;
 
 const CARD_ID: &str = "EX12-075";
+
+#[test]
+fn ex12_075_has_shambala_use_requirement() {
+    let card = compiled(CARD_ID);
+    let requirement = card
+        .use_requirement
+        .as_ref()
+        .and_then(|pred| pred.any_field_permanent.as_ref())
+        .expect("EX12-075 prints Use Req. ([Shambala] trait)");
+
+    assert_eq!(
+        requirement.predicate.trait_has.as_deref(),
+        Some("Shambala"),
+        "Use Req. should look for an own [Shambala] trait permanent"
+    );
+}
 
 #[test]
 fn ex12_075_main_adds_shambala_from_reveal_and_places_delay_option() {

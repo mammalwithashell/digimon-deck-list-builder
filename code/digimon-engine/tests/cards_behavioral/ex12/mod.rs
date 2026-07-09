@@ -1,5 +1,6 @@
 mod support;
 
+mod alt_paths;
 mod ex12_001;
 mod ex12_002;
 mod ex12_004;
@@ -33,8 +34,8 @@ mod ex12_037;
 mod ex12_039;
 mod ex12_040;
 mod ex12_042;
-mod ex12_044;
 mod ex12_043;
+mod ex12_044;
 mod ex12_045;
 mod ex12_046;
 mod ex12_047;

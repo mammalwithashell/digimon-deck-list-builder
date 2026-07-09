@@ -1,3 +1,5 @@
+use crate::dsl_card_data::compiled;
+
 use digimon_engine::enums::CardColor;
 use digimon_engine::selection::OptionPlayResult;
 use digimon_engine::selection::SelectionKind;
@@ -8,6 +10,22 @@ use super::support::{
 };
 
 const CARD_ID: &str = "EX12-074";
+
+#[test]
+fn ex12_074_has_shambala_use_requirement() {
+    let card = compiled(CARD_ID);
+    let requirement = card
+        .use_requirement
+        .as_ref()
+        .and_then(|pred| pred.any_field_permanent.as_ref())
+        .expect("EX12-074 prints Use Req. ([Shambala] trait)");
+
+    assert_eq!(
+        requirement.predicate.trait_has.as_deref(),
+        Some("Shambala"),
+        "Use Req. should look for an own [Shambala] trait permanent"
+    );
+}
 
 #[test]
 fn ex12_074_main_moves_bottom_security_places_self_face_up_and_plays_shambala() {

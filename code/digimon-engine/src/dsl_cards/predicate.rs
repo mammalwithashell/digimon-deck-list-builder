@@ -1,7 +1,5 @@
 //! Predicate evaluator. Phase 1c Task 3: leaf fields + combinators + existentials.
 
-use std::collections::BTreeMap;
-
 use digimon_dsl::compiled::{
     CompiledAggregateSelector, CompiledBindingCompare, CompiledCardKind, CompiledColor,
     CompiledCountAggregate, CompiledDpConstraint, CompiledEventCause, CompiledExistential,
@@ -12,6 +10,7 @@ use crate::card_source::{CardHandle, CardSource};
 use crate::dsl_cards::bindings::{BindingValue, Bindings};
 use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::modifier_map::lookup_keyword;
+use crate::dsl_cards::source_stats::same_level_pairs_in_sources;
 use crate::effect_context::EffectReadContext;
 use crate::enums::{CardColor, CardKind, PlayerId};
 use crate::permanent::PermanentHandle;
@@ -3427,19 +3426,6 @@ fn eval_permanent_fields(
         }
     }
     true
-}
-
-fn same_level_pairs_in_sources(
-    perm: &crate::permanent::Permanent,
-    data: &[crate::card_data::CardData],
-) -> i32 {
-    let mut counts: BTreeMap<u8, i32> = BTreeMap::new();
-    for source in perm.card_sources.iter().rev().skip(1) {
-        if let Some(level) = source.level(data) {
-            *counts.entry(level).or_default() += 1;
-        }
-    }
-    counts.values().map(|count| count / 2).sum()
 }
 
 fn eval_dp_constraints(

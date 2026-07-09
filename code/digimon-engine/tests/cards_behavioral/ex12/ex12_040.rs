@@ -40,7 +40,10 @@ fn ex12_040_reduces_digivolve_into_holy_beast_or_vb_by_1() {
 
     assert!(digivolved, "Salamon should digivolve into the Holy Beast");
     assert_eq!(runner.memory(), memory_before, "cost 1 should reduce to 0");
-    assert_eq!(top_card_id(&runner, 0, salamon.index as usize), "HOLY-BEAST-LV4");
+    assert_eq!(
+        top_card_id(&runner, 0, salamon.index as usize),
+        "HOLY-BEAST-LV4"
+    );
 }
 
 #[test]
@@ -68,7 +71,10 @@ fn ex12_040_does_not_reduce_non_holy_beast_or_vb_digivolve() {
             .game
             .digivolve_from_hand(0, slot, salamon.index as usize, PlaySource::ByHand);
 
-    assert!(digivolved, "normal yellow Lv4 digivolution should still be legal");
+    assert!(
+        digivolved,
+        "normal yellow Lv4 digivolution should still be legal"
+    );
     assert_eq!(memory_before - runner.memory(), 1);
 }
 

@@ -7,7 +7,8 @@
 use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::DebugRunner;
-use digimon_engine::enums::Keyword;
+use digimon_engine::enums::{Expiry, Keyword, ModifierType};
+use digimon_engine::modifiers::ModifierEntry;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::replacement::ReplacementCause;
 
@@ -57,6 +58,103 @@ fn guard_accept_deletes_carrier_and_prevents_other_digimon_leaving() {
             .iter()
             .any(|c| c.card_id(&r.game.card_data) == "GUARD"),
         "Guard carrier should be in trash after paying the replacement cost"
+    );
+}
+
+#[test]
+fn guard_accept_saves_all_simultaneous_matching_digimon_and_keeps_indices_stable() {
+    let mut r = DebugRunner::builder()
+        .add_card(guard_card("GUARD"))
+        .add_card(plain_digimon("ALLY-A"))
+        .add_card(plain_digimon("ALLY-B"))
+        .add_card(plain_digimon("BYSTANDER"))
+        .start();
+
+    let guard = r.place_on_field(0, "GUARD", Some(0));
+    let ally_a = r.place_on_field(0, "ALLY-A", Some(0));
+    let ally_b = r.place_on_field(0, "ALLY-B", Some(0));
+    let _bystander = r.place_on_field(0, "BYSTANDER", Some(0));
+    assert_ne!(guard, ally_a);
+    assert_ne!(guard, ally_b);
+
+    let outcome = r
+        .game
+        .delete_permanents_batch(vec![ally_a, ally_b], ReplacementCause::OpponentEffect);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "Guard should offer one optional replacement for the simultaneous leave batch"
+    );
+    assert!(
+        outcome.completed.is_empty(),
+        "batch should park before trashing any permanent"
+    );
+
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept Guard replacement");
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "one Guard acceptance should settle the simultaneous matching leave batch"
+    );
+    assert_eq!(
+        field_ids(&r, 0),
+        vec![
+            "ALLY-A".to_string(),
+            "ALLY-B".to_string(),
+            "BYSTANDER".to_string()
+        ],
+        "Guard should delete only the carrier, save both simultaneous allies, and not corrupt shifted indices"
+    );
+    let trash_ids: Vec<_> = r.game.players[0]
+        .trash
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data).to_string())
+        .collect();
+    assert!(
+        trash_ids.contains(&"GUARD".to_string()),
+        "Guard carrier should be the only trashed card from the batch"
+    );
+    assert!(
+        !trash_ids.contains(&"ALLY-A".to_string())
+            && !trash_ids.contains(&"ALLY-B".to_string())
+            && !trash_ids.contains(&"BYSTANDER".to_string()),
+        "protected allies and unrelated bystander must not be trashed"
+    );
+}
+
+#[test]
+fn guard_does_not_prompt_when_carrier_cannot_be_deleted_to_pay_cost() {
+    let mut r = DebugRunner::builder()
+        .add_card(guard_card("GUARD"))
+        .add_card(plain_digimon("ALLY"))
+        .start();
+
+    let guard = r.place_on_field(0, "GUARD", Some(0));
+    let ally = r.place_on_field(0, "ALLY", Some(0));
+    r.game.modifiers.add(
+        guard,
+        ModifierEntry::simple(ModifierType::CannotBeDestroyed, 0, Expiry::Permanent, 0),
+    );
+
+    r.game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+
+    assert!(
+        r.game.pending_selection.is_none(),
+        "Guard should not offer an impossible replacement when the carrier cannot be deleted"
+    );
+    assert_eq!(
+        field_ids(&r, 0),
+        vec!["GUARD".to_string()],
+        "the original Digimon should leave when the Guard cost cannot be paid"
+    );
+    assert!(
+        r.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "ALLY"),
+        "the unprotected ally should be trashed"
     );
 }
 

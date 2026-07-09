@@ -1,3 +1,4 @@
+use digimon_dsl::compiled::{CompiledClause, CompiledTiming};
 use digimon_engine::enums::{CardColor, ModifierType};
 
 use super::support::{
@@ -6,6 +7,34 @@ use super::support::{
 };
 
 const CARD_ID: &str = "EX12-046";
+
+#[test]
+fn ex12_046_security_removed_effect_is_not_once_per_turn() {
+    let runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-046 YAML loads")
+        .start();
+    let card = runner.compiled_card(CARD_ID).expect("compiled EX12-046");
+    let effect = card
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
+            CompiledClause::Triggered(triggered)
+                if triggered
+                    .when
+                    .contains(&CompiledTiming::OnOpponentSecurityRemoved) =>
+            {
+                Some(triggered)
+            }
+            _ => None,
+        })
+        .expect("printed opponent-security-removed effect");
+
+    assert!(
+        !effect.once_per_turn,
+        "printed effect has no [Once Per Turn] tag"
+    );
+}
 
 #[test]
 fn ex12_046_on_play_gives_security_attack_minus_and_dp_minus_until_opponent_turn_end() {

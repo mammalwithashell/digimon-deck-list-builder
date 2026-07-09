@@ -111,10 +111,10 @@
 
 use crate::card_source::CardHandle;
 use crate::effect::Effect;
-use crate::effect_context::{CountCappedZone, EffectContext};
+use crate::effect_context::{CountCappedZone, EffectContext, EffectReadContext};
 use crate::enums::{EffectTiming, Expiry, Keyword, ModifierType, Zone};
 use crate::modifiers::ModifierEntry;
-use crate::replacement::ReplacementSubject;
+use crate::replacement::{ReplacementCause, ReplacementSubject};
 use crate::resume::{
     KeywordAscensionChoiceState, KeywordMaterialSaveTamerSelectionState,
     KeywordMindLinkSelectionState, KeywordSaveSelectionState, KeywordScapegoatSelectionState,
@@ -137,6 +137,57 @@ fn park_keyword_frame(ctx: &mut EffectContext<'_>, frame: ResumeFrame) {
             frames: vec![frame],
         });
     }
+}
+
+fn guard_carrier_can_be_deleted_for_cost(
+    game: &crate::game::Game,
+    carrier: crate::permanent::PermanentHandle,
+) -> bool {
+    let subject = ReplacementSubject::Permanent(carrier);
+    let cause = ReplacementCause::OwnEffect;
+    let subject_controller = subject.controller(game);
+
+    for entry in game.modifiers.permanent_modifiers_iter(carrier) {
+        if crate::replacement::passive_modifier_to_would(entry.modifier)
+            != Some(EffectTiming::WhenWouldBeDeleted)
+        {
+            continue;
+        }
+        if entry.cause_filter.is_some_and(|filter| filter != cause) {
+            continue;
+        }
+        if let Some(cond) = &entry.replacement_condition {
+            let read_ctx =
+                EffectReadContext::new(game, CardHandle(0), Some(carrier), carrier.player)
+                    .with_replacement_context(cause, game.effect_source_player, subject_controller);
+            if !cond(&read_ctx, &subject) {
+                continue;
+            }
+        }
+        return false;
+    }
+
+    for entry in game.modifiers.player_modifiers_iter(carrier.player) {
+        if crate::replacement::passive_modifier_to_would(entry.modifier)
+            != Some(EffectTiming::WhenWouldBeDeleted)
+        {
+            continue;
+        }
+        if entry.cause_filter.is_some_and(|filter| filter != cause) {
+            continue;
+        }
+        if let Some(cond) = &entry.replacement_condition {
+            let read_ctx =
+                EffectReadContext::new(game, CardHandle(0), Some(carrier), carrier.player)
+                    .with_replacement_context(cause, game.effect_source_player, subject_controller);
+            if !cond(&read_ctx, &subject) {
+                continue;
+            }
+        }
+        return false;
+    }
+
+    true
 }
 
 fn park_keyword_count_capped_frame(
@@ -1620,9 +1671,10 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                     return false;
                 }
                 ctx.game.permanent_is_digimon_for_rules(*subject)
+                    && guard_carrier_can_be_deleted_for_cost(ctx.game, me)
             })
             .replacement_process(|rctx| {
-                use crate::replacement::{ReplacementCause, ReplacementSubject};
+                use crate::replacement::ReplacementSubject;
                 let Some(me) = rctx.effect.source_permanent else {
                     return;
                 };
@@ -1636,10 +1688,16 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 if !rctx.effect.game.permanent_is_digimon_for_rules(subject) {
                     return;
                 }
-                rctx.effect
+                if !guard_carrier_can_be_deleted_for_cost(rctx.effect.game, me) {
+                    return;
+                }
+                let outcome = rctx
+                    .effect
                     .game
-                    .delete_permanent_with_cause(me, ReplacementCause::OwnEffect);
-                rctx.cancel();
+                    .delete_permanents_batch(vec![me], ReplacementCause::OwnEffect);
+                if outcome.completed.contains(&me) {
+                    rctx.cancel();
+                }
             })
             .build()],
 

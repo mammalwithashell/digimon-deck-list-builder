@@ -4165,6 +4165,17 @@ effects:
             .join("\n")
     }
 
+    fn run_example_suite_test(test: impl FnOnce() + Send + 'static) {
+        let handle = std::thread::Builder::new()
+            .name("digimon-dsl-example-suite".into())
+            .stack_size(32 * 1024 * 1024)
+            .spawn(test)
+            .expect("spawn example-suite test");
+        if let Err(payload) = handle.join() {
+            std::panic::resume_unwind(payload);
+        }
+    }
+
     fn high_level_delay_replacement_body(timing_line: &str) -> String {
         format!(
             r#"    {timing_line}
@@ -4190,28 +4201,30 @@ effects:
 
     #[test]
     fn every_example_compiles() {
-        // digimon-dsl is the CWD at test time; fixtures live under
-        // ../digimon-engine/cards/_examples/.
-        let examples = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("..")
-            .join("digimon-engine")
-            .join("cards")
-            .join("_examples");
-        let (specs, errs) = load_dir_ok(&examples);
-        assert!(errs.is_empty(), "parse errors: {errs:#?}");
-        assert_eq!(specs.len(), 13);
+        run_example_suite_test(|| {
+            // digimon-dsl is the CWD at test time; fixtures live under
+            // ../digimon-engine/cards/_examples/.
+            let examples = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+                .join("..")
+                .join("digimon-engine")
+                .join("cards")
+                .join("_examples");
+            let (specs, errs) = load_dir_ok(&examples);
+            assert!(errs.is_empty(), "parse errors: {errs:#?}");
+            assert_eq!(specs.len(), 13);
 
-        let mut failures = Vec::new();
-        for spec in &specs {
-            if let Err(e) = compile(spec) {
-                failures.push(format!("{}: {e:#?}", spec.card));
+            let mut failures = Vec::new();
+            for spec in &specs {
+                if let Err(e) = compile(spec) {
+                    failures.push(format!("{}: {e:#?}", spec.card));
+                }
             }
-        }
-        assert!(
-            failures.is_empty(),
-            "compile failures:\n{}",
-            failures.join("\n")
-        );
+            assert!(
+                failures.is_empty(),
+                "compile failures:\n{}",
+                failures.join("\n")
+            );
+        });
     }
 
     #[test]

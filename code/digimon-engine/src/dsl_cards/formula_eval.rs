@@ -47,7 +47,6 @@
 //!   — e.g. a Tamer or Option permanent — are skipped). The legacy
 //!   payload-less aggregate variant scans the controller for compatibility.
 
-use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::sync::OnceLock;
 
@@ -60,6 +59,7 @@ use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::predicate::{eval_predicate_with_bindings, PredicateSubject};
 use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
+use crate::dsl_cards::source_stats::same_level_pairs_in_sources;
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{CardColor, PlayerId};
 use crate::permanent::{Permanent, PermanentHandle};
@@ -674,16 +674,6 @@ fn target_permanent_read<'a>(
         .player(target.player)
         .battle_area
         .get(target.index as usize)
-}
-
-fn same_level_pairs_in_sources(perm: &Permanent, data: &[crate::card_data::CardData]) -> i32 {
-    let mut counts: BTreeMap<u8, i32> = BTreeMap::new();
-    for source in perm.card_sources.iter().rev().skip(1) {
-        if let Some(level) = source.level(data) {
-            *counts.entry(level).or_default() += 1;
-        }
-    }
-    counts.values().map(|count| count / 2).sum()
 }
 
 fn distinct_colors_in_stack(perm: &Permanent, data: &[crate::card_data::CardData]) -> i32 {

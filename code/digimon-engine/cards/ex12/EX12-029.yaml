@@ -13,8 +13,23 @@ alt_paths:
     from: { level_eq: 4, color_is: blue }
     cost: 4
   - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
     from: { level_eq: 4, trait_has: Shambala }
     cost: 3
+  - kind: digixros
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_lte: 5
+            - any_of:
+                - in_text_contains: Gokuumon
+                - trait_has: SW
+        zones: [hand, battle_area]
+        cost_delta: -2
+    cost: 7
 
 effects:
   - kind: grant_keyword
@@ -60,12 +75,10 @@ effects:
   - scope: inherited
     when: when_attacking
     once_per_turn: true
-    optional: true
     summary: "[Inherited][When Attacking][OPT] Trash bottom 2 sources of 1 opponent Digimon; then 1 sourceless opponent Digimon can't suspend until their turn ends"
     process:
       - select_opponent_permanent:
           bind_as: source_target
-          optional: true
           filter: { kind: digimon }
           prompt: "Trash the bottom 2 digivolution cards of 1 opponent Digimon"
       - if:

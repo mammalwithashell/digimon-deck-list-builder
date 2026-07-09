@@ -1,7 +1,8 @@
 use digimon_engine::enums::{CardColor, Keyword};
 
 use super::support::{
-    black_sw, hand_index, plain_digimon, select_first_non_pass, top_card_id, DebugRunner,
+    black_sw, hand_index, plain_digimon, play_declining_optional_materials, select_first_non_pass,
+    top_card_id, DebugRunner,
 };
 
 const CARD_ID: &str = "EX12-056";
@@ -39,7 +40,7 @@ fn ex12_056_on_play_de_digivolves_then_grants_alliance_and_attack_prompt() {
     let opp = runner.place_stack(1, &["SRC", "OPP-LV4"]);
 
     let play_slot = hand_index(&runner, 0, CARD_ID);
-    runner.play(0, play_slot).expect("play EX12-056");
+    play_declining_optional_materials(&mut runner, 0, play_slot);
     select_first_non_pass(&mut runner);
     assert_eq!(
         top_card_id(&runner, 1, opp.index as usize),

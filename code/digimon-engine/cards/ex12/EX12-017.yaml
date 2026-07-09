@@ -13,6 +13,9 @@ alt_paths:
     from: { level_eq: 5, color_is: red }
     cost: 4
   - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
     from:
       all_of:
         - level_eq: 5
@@ -24,15 +27,47 @@ alt_paths:
   - kind: dna_digivolve
     materials:
       - level_eq: 5
-        any_of:
-          - color_is: red
-          - color_is: yellow
+        color_only: [red, yellow]
       - level_eq: 5
-        any_of:
-          - color_is: black
-          - color_is: purple
+        color_only: [black, purple]
     cost: 0
     stacks_unsuspended: true
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 5
+            - any_of:
+                - name_contains: Agumon
+                - name_contains: Greymon
+                - trait_has: ME
+                - trait_has: VB
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 4
+            - any_of:
+                - name_contains: Agumon
+                - name_contains: Greymon
+                - trait_has: ME
+                - trait_has: VB
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 3
+            - any_of:
+                - name_contains: Agumon
+                - name_contains: Greymon
+                - trait_has: ME
+                - trait_has: VB
+        zones: [trash]
+        stack_under: true
+    cost: 6
 
 effects:
   - kind: grant_keyword
@@ -98,7 +133,7 @@ effects:
             all_of:
               - kind: digimon
               - any_of:
-                  - name_contains: Omnimon
+                  - name_is: Omnimon
                   - trait_has: ME
                   - trait_has: VB
           prompt: "Select [Omnimon] or [ME]/[VB] Digimon in hand to DNA digivolve into"
@@ -125,7 +160,7 @@ effects:
                       target_a: dna_a
                       target_b: dna_b
                       from_hand: dna_card
-                      cost: 0
+                      cost: printed
                       ignore_requirements: false
                   - select_own_permanent:
                       bind_as: redirect_target
@@ -136,30 +171,3 @@ effects:
                       new_target: redirect_target
                       optional: true
                       prompt: "Change the attack target to 1 of your Digimon"
-
-  - scope: inherited
-    kind: replacement
-    trigger: when_would_leave_battle_area
-    optional: true
-    active_when:
-      none_of:
-        - replacement_cause: battle
-    summary: "[Inherited] <Decode (Lv.5 or lower w/[Agumon]/[Greymon] in name or [ME]/[VB])>"
-    process:
-      - select_material:
-          of_permanent: replacement_subject
-          bind_as: decode_source_inherited
-          filter:
-            all_of:
-              - kind: digimon
-              - level_lte: 5
-              - any_of:
-                  - name_contains: Agumon
-                  - name_contains: Greymon
-                  - trait_has: ME
-                  - trait_has: VB
-          prompt: "Choose a level 5 or lower [Agumon]/[Greymon]/[ME]/[VB] source to play"
-      - play_from_materials:
-          target: replacement_subject
-          source_index: decode_source_inherited
-          cost_delta: free

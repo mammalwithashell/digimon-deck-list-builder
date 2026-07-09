@@ -1,6 +1,7 @@
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
 };
+use digimon_engine::action::space::PASS;
 use digimon_engine::enums::CardColor;
 use digimon_engine::selection::SelectionKind;
 
@@ -134,4 +135,40 @@ fn ex12_014_when_digivolving_places_source_then_offers_any_own_digimon_attack() 
         security_before - 1,
         "accepting the follow-up attack should perform a security check"
     );
+}
+
+#[test]
+fn ex12_014_declining_source_placement_still_offers_attack() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-014 YAML loads")
+        .add_card(vb_digimon("VB-FUEL", CardColor::Red, 4, 5000))
+        .add_card(vb_text_digimon("ATTACKER", CardColor::Yellow, 4, 6000))
+        .hand(0, &["VB-FUEL"])
+        .memory(5)
+        .start();
+    runner.game.turn_count = 1;
+
+    let canoweiss = runner.place_on_field(0, CARD_ID, Some(0));
+    runner.place_on_field(0, "ATTACKER", Some(0));
+
+    fire_when_digivolving(&mut runner, canoweiss);
+    let place_prompt = runner
+        .pending_selection_view()
+        .expect("source placement prompt should be pending");
+    assert!(matches!(place_prompt.kind, SelectionKind::UnionZone { .. }));
+    assert!(place_prompt.is_optional);
+    runner
+        .execute_action(place_prompt.selecting_player, PASS)
+        .expect("decline source placement");
+
+    let choose_attacker = runner
+        .pending_selection_view()
+        .expect("declining source placement should still offer the then-attack");
+    assert_eq!(
+        choose_attacker.kind,
+        SelectionKind::OwnField,
+        "the printed attack is after 'Then' and is not conditional on placing a source"
+    );
+    assert!(choose_attacker.is_optional);
 }

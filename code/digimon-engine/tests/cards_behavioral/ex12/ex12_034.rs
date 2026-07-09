@@ -1,3 +1,4 @@
+use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause};
 use digimon_engine::enums::{CardColor, CardKind};
 
 use super::support::{
@@ -5,6 +6,29 @@ use super::support::{
 };
 
 const CARD_ID: &str = "EX12-034";
+
+#[test]
+fn ex12_034_leave_replacement_is_once_per_turn() {
+    let runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-034 YAML loads")
+        .start();
+    let card = runner.compiled_card(CARD_ID).expect("compiled EX12-034");
+    let replacement = card
+        .effects
+        .iter()
+        .find_map(|clause| match clause {
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
+                trigger,
+                once_per_turn,
+                ..
+            }) if trigger == "when_would_leave_battle_area" => Some(*once_per_turn),
+            _ => None,
+        })
+        .expect("printed leave-area replacement");
+
+    assert!(replacement, "printed leave replacement is [Once Per Turn]");
+}
 
 #[test]
 fn ex12_034_on_play_may_play_kotenken_token() {

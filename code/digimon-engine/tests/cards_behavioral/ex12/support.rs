@@ -286,6 +286,38 @@ pub(super) fn select_first_non_pass(runner: &mut DebugRunner) {
         .expect("select first legal action");
 }
 
+pub(super) fn play_declining_optional_materials(
+    runner: &mut DebugRunner,
+    player: u8,
+    hand_index: usize,
+) -> usize {
+    if let Some(field_index) = runner.play(player, hand_index) {
+        return field_index;
+    }
+
+    let view = runner
+        .pending_selection_view()
+        .expect("DigiXros-capable play should install an optional material prompt");
+    assert_eq!(
+        view.kind,
+        SelectionKind::Material,
+        "expected a material prompt before ordinary play"
+    );
+    assert!(
+        view.is_optional,
+        "ordinary play requires the material prompt to be declinable"
+    );
+    runner
+        .execute_action(view.selecting_player, PASS)
+        .expect("decline optional material selection");
+
+    runner.game.players[player as usize]
+        .battle_area
+        .len()
+        .checked_sub(1)
+        .expect("card should be on the field after declining materials")
+}
+
 pub(super) fn fire_own_security_removed(runner: &mut DebugRunner, affected_player: u8) {
     let removed_card = runner.game.players[affected_player as usize]
         .security

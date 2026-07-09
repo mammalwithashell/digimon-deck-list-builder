@@ -1,10 +1,10 @@
-use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledStep, CompiledTiming};
-use digimon_engine::enums::CardColor;
-use digimon_engine::selection::SelectionKind;
 use super::support::{
     fire_when_digivolving, plain_digimon, select_first_non_pass, vb_digimon, vb_text_digimon,
     DebugRunner,
 };
+use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledStep, CompiledTiming};
+use digimon_engine::enums::CardColor;
+use digimon_engine::selection::SelectionKind;
 
 const CARD_ID: &str = "EX12-018";
 
@@ -42,7 +42,11 @@ fn ex12_018_is_dual_with_digimon_and_option_face_effects() {
         "Option face must carry Arts Digivolve"
     );
     assert_eq!(dual.option.security_text, "");
-    assert_eq!(dual.option.effects.len(), 1, "Option face should only have [Main]");
+    assert_eq!(
+        dual.option.effects.len(),
+        1,
+        "Option face should only have [Main]"
+    );
 }
 
 #[test]

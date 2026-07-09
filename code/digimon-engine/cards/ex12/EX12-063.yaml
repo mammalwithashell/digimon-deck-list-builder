@@ -11,7 +11,10 @@ attribute: Data
 alt_paths:
   - kind: digivolve
     from: { level_eq: 4, color_is: purple }
-    cost: 3
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: green }
+    cost: 4
   - kind: digivolve
     from:
       all_of:
@@ -22,6 +25,18 @@ alt_paths:
             - trait_has: Puppet
             - trait_has: Shambala
     cost: 3
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_lte: 4
+            - any_of:
+                - trait_has: Puppet
+                - trait_has: TB
+        zones: [trash]
+        stack_under: true
+    cost: 2
 
 effects:
   - when: [on_play, when_digivolving]

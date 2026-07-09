@@ -12,6 +12,17 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: blue }
     cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - trait_has: Aquatic
+            - trait_has: Shambala
+    cost: 3
 
 effects:
   - kind: grant_keyword
@@ -40,8 +51,8 @@ effects:
               - kind: digimon
               - level_lte: 5
               - any_of:
-                  - trait_has: Aqua
-                  - trait_has: "Sea Animal"
+                  - trait_contains: Aqua
+                  - trait_contains: "Sea Animal"
                   - trait_has: TB
           prompt: "Decode: play 1 level 5 or lower [Aqua]/[Sea Animal]/[TB] source"
       - play_from_materials:
@@ -62,8 +73,8 @@ effects:
             all_of:
               - level_lte: 6
               - any_of:
-                  - trait_has: Aqua
-                  - trait_has: "Sea Animal"
+                  - trait_contains: Aqua
+                  - trait_contains: "Sea Animal"
                   - trait_has: TB
           prompt: "Place 1 level 6 or lower [Aqua]/[Sea Animal]/[TB] card from hand as this Digimon's bottom source"
       - if:

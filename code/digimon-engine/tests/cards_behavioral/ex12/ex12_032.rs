@@ -8,6 +8,32 @@ use super::support::{
 
 const CARD_ID: &str = "EX12-032";
 
+#[test]
+fn ex12_032_dna_materials_are_printed_level4_pairs() {
+    let runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-032 YAML loads")
+        .start();
+    let card = runner
+        .game
+        .card_data
+        .iter()
+        .find(|card| card.card_id == CARD_ID)
+        .expect("EX12-032 card data registered");
+    let dna = card
+        .dna_costs
+        .first()
+        .expect("EX12-032 should expose its DNA digivolve route");
+
+    assert_eq!(dna.requirement1.level, 4);
+    assert_eq!(dna.requirement2.level, 4);
+    assert_eq!(dna.memory_cost, 0);
+    assert!(dna.requirement1.card_colors.contains(&CardColor::Blue));
+    assert!(dna.requirement1.card_colors.contains(&CardColor::Yellow));
+    assert!(dna.requirement2.card_colors.contains(&CardColor::Purple));
+    assert!(dna.requirement2.card_colors.contains(&CardColor::Red));
+}
+
 fn fire_when_attacking(runner: &mut DebugRunner, handle: PermanentHandle) {
     runner.game.enqueue_triggered(
         EffectTiming::WhenAttacking,

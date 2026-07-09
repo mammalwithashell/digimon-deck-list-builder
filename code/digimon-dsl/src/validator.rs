@@ -1161,7 +1161,13 @@ fn validate_step(
             }
         }
         StepSpec::RepeatEffectChoice(args) => {
-            validate_formula(&args.count, &format!("{prefix}.count"), card_id, ctx, errors);
+            validate_formula(
+                &args.count,
+                &format!("{prefix}.count"),
+                card_id,
+                ctx,
+                errors,
+            );
             for (k, s) in args.body.iter().enumerate() {
                 validate_step(s, &format!("{prefix}.body[{k}]"), card_id, ctx, errors);
             }

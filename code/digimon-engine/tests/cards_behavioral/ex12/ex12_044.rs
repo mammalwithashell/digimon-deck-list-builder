@@ -4,8 +4,8 @@ use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 use super::support::{
-    plain_digimon, select_first_non_pass, select_hand_card, top_card_id, vb_digimon,
-    with_evo_cost, DebugRunner,
+    plain_digimon, select_first_non_pass, select_hand_card, top_card_id, vb_digimon, with_evo_cost,
+    DebugRunner,
 };
 
 const CARD_ID: &str = "EX12-044";
@@ -66,7 +66,10 @@ fn ex12_044_when_attacking_with_same_level_source_pair_digivolves_from_hand_cost
     let offer = runner
         .pending_selection_view()
         .expect("same-level source pair should offer hand digivolution");
-    assert!(offer.is_optional, "printed 'may digivolve' must be optional");
+    assert!(
+        offer.is_optional,
+        "printed 'may digivolve' must be optional"
+    );
     select_first_non_pass(&mut runner);
     select_hand_card(&mut runner, 0, "VB-LV6");
     runner

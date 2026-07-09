@@ -2335,8 +2335,8 @@ pub struct PlayOrUseFromSourcesArgs {
     pub of: PlayerRef,
     /// Names the `select_own_sources` binding carrying the chosen source ref.
     pub card: BindingRef,
-    /// EX12 uses `cost: free`. The play half uses the existing free
-    /// source-play primitive; the Option half applies this cost delta.
+    /// EX12 uses `cost: free`, but non-free deltas are also honored by both
+    /// the play and Option-use halves.
     #[serde(default, skip_serializing_if = "Option::is_none", alias = "cost_delta")]
     pub cost: Option<CostDelta>,
 }

@@ -457,14 +457,18 @@ impl<'a> EffectContext<'a> {
     /// Source-origin sibling of `play_or_use_from_hand_with_cost`.
     ///
     /// Digimon/Tamer/DigiEgg cards are played from the selected source stack
-    /// without paying the cost, Option cards are used from that source stack,
-    /// and DUAL cards surface the same face choice as the hand-origin helper.
+    /// with the supplied cost adjustment, Option cards are used from that
+    /// source stack, and DUAL cards surface the same face choice as the
+    /// hand-origin helper.
     pub fn play_or_use_from_source_with_cost(
         &mut self,
+        player: PlayerId,
         source_ref: crate::selection::SourceSelectionRef,
         cost_delta: crate::enums::CostDelta,
     ) {
-        let player = source_ref.permanent.player;
+        if source_ref.permanent.player != player {
+            return;
+        }
         let Some(card_data) = self.game.card_data_for_handle(source_ref.card) else {
             return;
         };
@@ -472,9 +476,11 @@ impl<'a> EffectContext<'a> {
             crate::enums::CardKind::Digimon
             | crate::enums::CardKind::Tamer
             | crate::enums::CardKind::DigiEgg => {
-                let _ = self
-                    .game
-                    .play_source_refs_from_effect_without_cost(vec![source_ref]);
+                let _ = self.play_from_materials(
+                    source_ref.permanent,
+                    source_ref.source_index as usize,
+                    cost_delta,
+                );
             }
             crate::enums::CardKind::Option => {
                 let _ = self.game.use_option_from(
@@ -500,9 +506,11 @@ impl<'a> EffectContext<'a> {
                     vec!["Play as Digimon".to_string(), "Use as Option".to_string()],
                     move |cb_ctx, choice| match choice {
                         0 => {
-                            let _ = cb_ctx
-                                .game
-                                .play_source_refs_from_effect_without_cost(vec![source_ref]);
+                            let _ = cb_ctx.play_from_materials(
+                                source_ref.permanent,
+                                source_ref.source_index as usize,
+                                cost_delta,
+                            );
                         }
                         _ => {
                             let _ = cb_ctx.game.use_option_from(

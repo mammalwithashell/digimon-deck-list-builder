@@ -106,7 +106,7 @@ effects:
     summary: "[On Play][When Digivolving] Trash any 4 opponent sources, then bottom-deck 1 opponent Digimon with <= this Digimon's sources"
     process:
       - select_opponent_sources:
-          min: 0
+          min: 4
           max: 4
           bind_as: trashed_sources
           prompt: "Trash any 4 digivolution cards from your opponent's Digimon"

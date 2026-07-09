@@ -6,7 +6,9 @@ cost: 2
 traits: [VB]
 
 use_requirement:
-  all_turns: true
+  any_field_permanent:
+    of: you
+    trait_has: VB
 
 effects:
   - kind: flood_gate
@@ -18,7 +20,6 @@ effects:
 
   - scope: security
     when: on_ally_attack
-    once_per_turn: true
     optional: true
     active_when:
       all_of:
@@ -26,7 +27,7 @@ effects:
         - event_target_owner: you
         - event_target_level_gte: 4
         - event_target_trait_has: VB
-    summary: "[Security][Your Turn][OPT] When your level 4 or higher [VB] Digimon attacks, you may play 1 [VB] Digimon of the same level from your hand with cost reduced by 3"
+    summary: "[Security][Your Turn] When your level 4 or higher [VB] Digimon attacks, you may play 1 [VB] Digimon of the same level from your hand with cost reduced by 3"
     process:
       - bind_permanent_property:
           from: event_target
@@ -71,18 +72,18 @@ effects:
   - scope: inherited
     when: on_security
     optional: true
-    summary: "[Security] You may play 1 play cost 5 or lower [VB] Digimon from your hand or trash without paying the cost"
+    summary: "[Security] You may play 1 level 5 or lower [VB] Digimon from your hand without paying the cost"
     process:
-      - select_union_zone:
+      - select_hand:
           of: you
-          zones: [hand, trash]
           bind_as: vb_free
           optional: true
           filter:
             all_of:
               - kind: digimon
               - trait_has: VB
-              - play_cost_lte: 5
-          prompt: "Play 1 play cost 5 or lower [VB] Digimon card from your hand or trash without paying the cost"
-      - play_union_bound_free:
-          binding: vb_free
+              - level_lte: 5
+          prompt: "Play 1 level 5 or lower [VB] Digimon card from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: vb_free

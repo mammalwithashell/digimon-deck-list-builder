@@ -21,13 +21,13 @@ fn ex12_036_has_barrier_and_evade() {
 
 #[test]
 fn ex12_036_places_matching_hand_card_as_bottom_source_then_unsuspends_ally() {
-    let aqua = super::support::digimon("AQUA-HAND", CardColor::Blue, 4, 4, 5000, &["Aqua"]);
+    let aqua = super::support::digimon("AQUATIC-HAND", CardColor::Blue, 4, 4, 5000, &["Aquatic"]);
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("EX12-036 YAML loads")
         .add_card(aqua)
         .add_card(plain_digimon("ALLY", CardColor::Blue, 4, 5000))
-        .hand(0, &[CARD_ID, "AQUA-HAND"])
+        .hand(0, &[CARD_ID, "AQUATIC-HAND"])
         .memory(12)
         .start();
     let ally = runner.place_on_field(0, "ALLY", Some(0));
@@ -35,8 +35,8 @@ fn ex12_036_places_matching_hand_card_as_bottom_source_then_unsuspends_ally() {
 
     let play_slot = hand_index(&runner, 0, CARD_ID);
     runner.play(0, play_slot).expect("play EX12-036");
-    select_hand_card(&mut runner, 0, "AQUA-HAND");
-    assert_eq!(bottom_source_id(&runner, 0, 1), "AQUA-HAND");
+    select_hand_card(&mut runner, 0, "AQUATIC-HAND");
+    assert_eq!(bottom_source_id(&runner, 0, 1), "AQUATIC-HAND");
     select_first_non_pass(&mut runner);
     runner.auto_resolve().expect("resolve unsuspend");
 

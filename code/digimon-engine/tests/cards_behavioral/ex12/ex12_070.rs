@@ -1,9 +1,27 @@
+use crate::dsl_card_data::compiled;
+
 use digimon_engine::permanent::OptionState;
 
 use super::support::{field_contains, hand_index, select_hand_card, tb_digimon, DebugRunner};
 use digimon_engine::enums::CardColor;
 
 const CARD_ID: &str = "EX12-070";
+
+#[test]
+fn ex12_070_has_tb_use_requirement() {
+    let card = compiled(CARD_ID);
+    let requirement = card
+        .use_requirement
+        .as_ref()
+        .and_then(|pred| pred.any_field_permanent.as_ref())
+        .expect("EX12-070 prints Use Req. ([TB] trait)");
+
+    assert_eq!(
+        requirement.predicate.trait_has.as_deref(),
+        Some("TB"),
+        "Use Req. should look for an own [TB] trait permanent"
+    );
+}
 
 #[test]
 fn ex12_070_main_trashes_tb_card_draws_two_and_places_delay_option() {
