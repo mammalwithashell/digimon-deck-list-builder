@@ -1734,12 +1734,12 @@ impl Game {
                 self.flush_pending_hand_discard();
             }
         }
-        let window = self
-            .pending_hand_discard
-            .get_or_insert_with(|| crate::game::PendingHandDiscard {
-                cause_controller,
-                trashed_players: Vec::new(),
-            });
+        let window =
+            self.pending_hand_discard
+                .get_or_insert_with(|| crate::game::PendingHandDiscard {
+                    cause_controller,
+                    trashed_players: Vec::new(),
+                });
         if !window.trashed_players.contains(&trashing_player) {
             window.trashed_players.push(trashing_player);
         }

@@ -53,10 +53,7 @@ impl Default for ReplayConfig {
 pub enum ReplayOutcome {
     /// Action stream fully consumed and winner matches. The parity oracle's
     /// happy path.
-    Pass {
-        steps_consumed: u32,
-        winner: u8,
-    },
+    Pass { steps_consumed: u32, winner: u8 },
     /// The harness halted before reaching `game_end`, but not because of an
     /// engine-vs-recording disagreement. Typical cause: an unencoded
     /// selection (`encoder_failure` row).
@@ -86,10 +83,7 @@ pub enum ReplayFail {
     /// The Game constructor or step path returned an engine-level error.
     /// Usually a deck-data issue (card ID unknown to our pool) or a
     /// step taken past game_over.
-    EngineError {
-        step: Option<u32>,
-        message: String,
-    },
+    EngineError { step: Option<u32>, message: String },
     /// Opaque-deck mode: the supplied `RevealQueue` and the engine's
     /// reveal requests went out of alignment. Common causes:
     ///   - Recording's `reveal` row tagged `draw` but engine requested a
@@ -100,10 +94,7 @@ pub enum ReplayFail {
     ///   - Recording's reveal card ID not present in the opaque pile's
     ///     multiset (recording bug — supplier returned a card the
     ///     decklist didn't contain).
-    OpaqueRevealError {
-        step: Option<u32>,
-        message: String,
-    },
+    OpaqueRevealError { step: Option<u32>, message: String },
 }
 
 #[derive(Debug, Clone)]
@@ -161,9 +152,15 @@ pub fn replay_recording(
             // deck-data / engine construction error.
             let message = e.to_string();
             return if is_opaque {
-                ReplayOutcome::Fail(ReplayFail::OpaqueRevealError { step: None, message })
+                ReplayOutcome::Fail(ReplayFail::OpaqueRevealError {
+                    step: None,
+                    message,
+                })
             } else {
-                ReplayOutcome::Fail(ReplayFail::EngineError { step: None, message })
+                ReplayOutcome::Fail(ReplayFail::EngineError {
+                    step: None,
+                    message,
+                })
             };
         }
     };
@@ -258,11 +255,17 @@ fn map_divergence(div: &Divergence) -> ReplayFail {
         }
         DivergenceKind::Memory { recorded, replayed } => ReplayFail::EngineError {
             step: Some(div.step),
-            message: format!("memory divergence: recorded={} replayed={}", recorded, replayed),
+            message: format!(
+                "memory divergence: recorded={} replayed={}",
+                recorded, replayed
+            ),
         },
         DivergenceKind::Phase { recorded, replayed } => ReplayFail::EngineError {
             step: Some(div.step),
-            message: format!("phase divergence: recorded={} replayed={}", recorded, replayed),
+            message: format!(
+                "phase divergence: recorded={} replayed={}",
+                recorded, replayed
+            ),
         },
     }
 }

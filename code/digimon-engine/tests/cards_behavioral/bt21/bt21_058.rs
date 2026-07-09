@@ -397,14 +397,19 @@ fn bt21_058_clause1_placement_tail_is_gated_on_vemmon_in_trash_existence() {
         .expect("clause 1 present");
 
     let has_gate = clause1.process.iter().any(|s| {
-        let CompiledStep::If { condition, then, .. } = s else {
+        let CompiledStep::If {
+            condition, then, ..
+        } = s
+        else {
             return false;
         };
         let gates_on_trash_vemmon_count = condition
             .count_gte
             .as_ref()
             .map(|agg| {
-                agg.filter.zone.contains(&digimon_dsl::compiled::CompiledZone::Trash)
+                agg.filter
+                    .zone
+                    .contains(&digimon_dsl::compiled::CompiledZone::Trash)
                     && agg.filter.name_is.as_deref() == Some("Vemmon")
             })
             .unwrap_or(false);
@@ -704,7 +709,10 @@ fn bt21_058_declining_target_pick_skips_entire_placement_tail() {
         "expected the optional target-Digimon pick to be pending"
     );
     let sel = r.pending_selection().expect("pending");
-    assert!(sel.is_optional, "target pick must be optional (\"you may\")");
+    assert!(
+        sel.is_optional,
+        "target pick must be optional (\"you may\")"
+    );
     let player = sel.selecting_player;
     r.execute_action(player, PASS).expect("decline succeeds");
 
@@ -823,7 +831,8 @@ fn bt21_058_inherited_observer_fires_on_own_vemmon_returned_to_deck_bottom() {
 
     {
         let top = r.top_card(host);
-        let mut ctx = digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
+        let mut ctx =
+            digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
         assert!(
             ctx.return_card_source_to_deck(host, vemmon_source, true),
             "the Vemmon source must be found in the stack and returned to deck bottom"
@@ -869,7 +878,8 @@ fn bt21_058_inherited_observer_does_not_fire_for_non_vemmon_source() {
 
     {
         let top = r.top_card(host);
-        let mut ctx = digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
+        let mut ctx =
+            digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
         assert!(ctx.return_card_source_to_deck(host, agumon_source, true));
     }
 
@@ -954,7 +964,8 @@ fn bt21_058_inherited_observer_does_not_fire_on_deck_top_return() {
 
     {
         let top = r.top_card(host);
-        let mut ctx = digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
+        let mut ctx =
+            digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
         assert!(ctx.return_card_source_to_deck(host, vemmon_source, /* to_bottom */ false));
     }
 
@@ -991,7 +1002,8 @@ fn bt21_058_inherited_observer_fizzles_with_no_eligible_opponent_target() {
 
     {
         let top = r.top_card(host);
-        let mut ctx = digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
+        let mut ctx =
+            digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
         assert!(ctx.return_card_source_to_deck(host, vemmon_source, true));
     }
 
@@ -1031,7 +1043,8 @@ fn bt21_058_inherited_observer_opt_lockout_same_turn() {
     // First return fires and must be resolvable.
     {
         let top = r.top_card(host);
-        let mut ctx = digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
+        let mut ctx =
+            digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
         assert!(ctx.return_card_source_to_deck(host, src_a, true));
     }
     assert_eq!(
@@ -1045,7 +1058,8 @@ fn bt21_058_inherited_observer_opt_lockout_same_turn() {
     // Second return, SAME turn, must NOT fire again.
     {
         let top = r.top_card(host);
-        let mut ctx = digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
+        let mut ctx =
+            digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
         assert!(ctx.return_card_source_to_deck(host, src_b, true));
     }
     assert!(
@@ -1087,7 +1101,8 @@ fn bt21_058_inherited_observer_opt_clears_next_turn() {
 
     {
         let top = r.top_card(host);
-        let mut ctx = digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
+        let mut ctx =
+            digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
         assert!(ctx.return_card_source_to_deck(host, src_a, true));
     }
     r.auto_resolve().expect("first delete resolves");
@@ -1099,7 +1114,8 @@ fn bt21_058_inherited_observer_opt_clears_next_turn() {
 
     {
         let top = r.top_card(host);
-        let mut ctx = digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
+        let mut ctx =
+            digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
         assert!(ctx.return_card_source_to_deck(host, src_b, true));
     }
     assert_eq!(
@@ -1137,7 +1153,8 @@ fn bt21_058_inherited_observer_fires_on_opponents_turn() {
 
     {
         let top = r.top_card(host);
-        let mut ctx = digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
+        let mut ctx =
+            digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
         assert!(ctx.return_card_source_to_deck(host, vemmon_source, true));
     }
 
@@ -1176,7 +1193,8 @@ fn bt21_058_inherited_observer_delete_emits_event() {
     let cp = r.event_checkpoint();
     {
         let top = r.top_card(host);
-        let mut ctx = digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
+        let mut ctx =
+            digimon_engine::effect_context::EffectContext::new(&mut r.game, top, Some(host), 0);
         assert!(ctx.return_card_source_to_deck(host, vemmon_source, true));
     }
     r.auto_resolve().expect("delete resolves");

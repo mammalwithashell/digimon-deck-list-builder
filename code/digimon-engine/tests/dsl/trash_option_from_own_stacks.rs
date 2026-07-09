@@ -183,10 +183,16 @@ fn payable_trash_digivolution_source_option_fires_onsource_and_runs_tail() {
         1,
         "only the own Digimon carrying a stack/link Option is offered"
     );
-    assert_eq!(runner.game.memory, memory_before, "tail deferred until cost paid");
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "tail deferred until cost paid"
+    );
 
     let pick_host = digimon_engine::action::space::encode_attack(0, host.index as u16);
-    assert!(first_ids.contains(&pick_host), "HOST is the valid first pick");
+    assert!(
+        first_ids.contains(&pick_host),
+        "HOST is the valid first pick"
+    );
     runner
         .game
         .resolve_selection(first_player, pick_host)
@@ -216,7 +222,10 @@ fn payable_trash_digivolution_source_option_fires_onsource_and_runs_tail() {
         .resolve_selection(second_player, trash_id)
         .expect("resolve second selection");
 
-    assert!(runner.game.pending_selection.is_none(), "both selections resolved");
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "both selections resolved"
+    );
 
     // The Option left the host's digivolution stack and is in the controller's
     // trash. The host and its remaining stack survive.
@@ -275,7 +284,11 @@ fn payable_trash_link_card_option_fires_onlinked_and_runs_tail() {
 
     // FIRST selection → pick HOST-A.
     let (first_ids, first_player) = {
-        let p = runner.game.pending_selection.as_ref().expect("first selection");
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("first selection");
         (p.valid_action_ids.clone(), p.selecting_player)
     };
     assert_eq!(first_ids.len(), 1, "only HOST-A carries a link Option");
@@ -287,7 +300,11 @@ fn payable_trash_link_card_option_fires_onlinked_and_runs_tail() {
 
     // SECOND selection → trash the link Option.
     let (second_ids, second_player) = {
-        let p = runner.game.pending_selection.as_ref().expect("second selection");
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("second selection");
         (p.valid_action_ids.clone(), p.selecting_player)
     };
     assert_eq!(second_ids.len(), 1, "HOST-A has 1 link Option");
@@ -301,7 +318,11 @@ fn payable_trash_link_card_option_fires_onlinked_and_runs_tail() {
 
     // The link Option left HOST-A and is in the controller's trash.
     let host_perm = &runner.game.players[0].battle_area[host_a.index as usize];
-    assert_eq!(host_perm.linked_cards.len(), 0, "HOST-A lost its link Option");
+    assert_eq!(
+        host_perm.linked_cards.len(),
+        0,
+        "HOST-A lost its link Option"
+    );
     assert!(
         runner.game.players[0]
             .trash
@@ -345,7 +366,12 @@ fn second_selection_spans_union_of_digivolution_and_link_options() {
     let src_card: CardHandle = runner.game.players[0].hand[0].handle();
     run_on_play(&mut runner, YAML, src_card);
 
-    let first_player = runner.game.pending_selection.as_ref().unwrap().selecting_player;
+    let first_player = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .unwrap()
+        .selecting_player;
     let pick_host = digimon_engine::action::space::encode_attack(0, host.index as u16);
     runner
         .game
@@ -450,7 +476,11 @@ fn optional_decline_on_first_pick_skips_trash_and_tail() {
     run_on_play(&mut runner, YAML_OPTIONAL, src_card);
 
     let (is_optional, selecting_player) = {
-        let p = runner.game.pending_selection.as_ref().expect("first selection");
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("first selection");
         (p.is_optional, p.selecting_player)
     };
     assert!(is_optional, "optional first pick is declinable");
@@ -459,7 +489,10 @@ fn optional_decline_on_first_pick_skips_trash_and_tail() {
         .resolve_selection(selecting_player, digimon_engine::action::space::PASS)
         .expect("decline first pick");
 
-    assert!(runner.game.pending_selection.is_none(), "declined; resolved");
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "declined; resolved"
+    );
     assert_eq!(
         runner.game.players[0].battle_area[host.index as usize]
             .card_sources
@@ -514,5 +547,9 @@ fn clone_safe_across_both_selections() {
             .any(|c| c.card_id(&cloned.card_data) == "STACK-OPT"),
         "clone trashed the Option via the resumable VM"
     );
-    assert_eq!(cloned.memory, memory_before + 1, "clone ran the cost-gated tail");
+    assert_eq!(
+        cloned.memory,
+        memory_before + 1,
+        "clone ran the cost-gated tail"
+    );
 }

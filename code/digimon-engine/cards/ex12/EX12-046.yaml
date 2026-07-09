@@ -1,0 +1,74 @@
+card: EX12-046
+name: Shishimamon
+kind: digimon
+level: 5
+color: [yellow, red]
+cost: 7
+dp: 7000
+traits: [Holy Beast, Shambala, TB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: Shambala }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 opponent Digimon gets Security Attack -1 and -3000 DP until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: debuff_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get Security Attack -1 and -3000 DP"
+      - add_modifier:
+          target: debuff_target
+          modifier: SecurityAttackChange
+          value: -1
+          expiry: end_of_opponents_turn
+      - add_dp_modifier:
+          target: debuff_target
+          value: -3000
+          expiry: end_of_opponents_turn
+
+  - when: on_opponent_security_removed
+    once_per_turn: true
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][OPT] When opponent security is removed, this Digimon may digivolve into a [TB] Digimon in hand with cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: tb_evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TB
+          prompt: "Digivolve this Digimon into a [TB] Digimon card in hand with the cost reduced by 2"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: tb_evo
+          cost: { reduce: 2 }
+          ignore_requirements: false
+
+  - scope: inherited
+    when: end_of_attack
+    once_per_turn: true
+    optional: true
+    summary: "[Inherited][End of Attack][OPT] Play 1 [TB] Digimon with 5000 DP or less from hand free"
+    process:
+      - select_hand:
+          of: you
+          bind_as: tb_play
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TB
+              - dp_lte: 5000
+          prompt: "Play 1 [TB] Digimon with 5000 DP or less from hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: tb_play }

@@ -240,10 +240,8 @@ impl<'a> EffectContext<'a> {
         else {
             return;
         };
-        let cards: Vec<crate::card_source::CardHandle> = own_digivolution_option_handles(
-            perm,
-            &self.game.card_data,
-        );
+        let cards: Vec<crate::card_source::CardHandle> =
+            own_digivolution_option_handles(perm, &self.game.card_data);
         if cards.is_empty() {
             return;
         }

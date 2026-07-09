@@ -1,5 +1,7 @@
 //! Predicate evaluator. Phase 1c Task 3: leaf fields + combinators + existentials.
 
+use std::collections::BTreeMap;
+
 use digimon_dsl::compiled::{
     CompiledAggregateSelector, CompiledBindingCompare, CompiledCardKind, CompiledColor,
     CompiledCountAggregate, CompiledDpConstraint, CompiledEventCause, CompiledExistential,
@@ -225,8 +227,8 @@ pub fn eval_predicate_with_bindings(
         || pred.total_security_count_gte.is_some()
         || pred.total_security_count_eq.is_some()
     {
-        let total = (rctx.security_count(rctx.player) + rctx.security_count(rctx.opponent_id()))
-            as i32;
+        let total =
+            (rctx.security_count(rctx.player) + rctx.security_count(rctx.opponent_id())) as i32;
         if let Some(cap) = &pred.total_security_count_lte {
             if total > eval_int_constraint_read(cap, rctx, None, bindings) {
                 return false;
@@ -473,6 +475,20 @@ pub fn eval_predicate_with_bindings(
             .unwrap_or(0);
         let threshold = eval_int_constraint_read(&spec.value, rctx, None, bindings);
         if !spec.op.apply(count, threshold) {
+            return false;
+        }
+    }
+    if let Some(floor) = pred.self_same_level_source_pairs_gte {
+        // G-DSL-SELF-SAME-LEVEL-SOURCE-PAIRS: count pairs among the effect
+        // carrier's own source cards below its top card. This mirrors the
+        // `same_level_pairs_in_sources` formula selector so trigger predicates
+        // and formula counts agree.
+        let count = rctx
+            .source_permanent
+            .and_then(|handle| permanent_for_handle(rctx, handle))
+            .map(|perm| same_level_pairs_in_sources(perm, rctx.card_data()))
+            .unwrap_or(0);
+        if count < i32::from(floor) {
             return false;
         }
     }
@@ -1561,7 +1577,9 @@ fn eval_event_fields(
             let Some(data) = rctx.game.card_data_for_handle(card) else {
                 return false;
             };
-            data.traits.iter().any(|t| t.to_lowercase().contains(&needle))
+            data.traits
+                .iter()
+                .any(|t| t.to_lowercase().contains(&needle))
         };
         if !matched {
             return false;
@@ -1671,6 +1689,17 @@ fn eval_event_fields(
             if !data.card_name.to_lowercase().contains(&want) {
                 return false;
             }
+        }
+    }
+    if let Some(ref needle) = pred.event_target_in_text_contains {
+        let Some(card) = event_target_card(rctx) else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if !card_in_text_contains(data, needle) {
+            return false;
         }
     }
     if let Some(want) = pred.event_target_owner {
@@ -3398,6 +3427,19 @@ fn eval_permanent_fields(
         }
     }
     true
+}
+
+fn same_level_pairs_in_sources(
+    perm: &crate::permanent::Permanent,
+    data: &[crate::card_data::CardData],
+) -> i32 {
+    let mut counts: BTreeMap<u8, i32> = BTreeMap::new();
+    for source in perm.card_sources.iter().rev().skip(1) {
+        if let Some(level) = source.level(data) {
+            *counts.entry(level).or_default() += 1;
+        }
+    }
+    counts.values().map(|count| count / 2).sum()
 }
 
 fn eval_dp_constraints(

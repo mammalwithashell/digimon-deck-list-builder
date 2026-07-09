@@ -200,7 +200,10 @@ fn ex7_071_has_main_inherited_and_security_clauses() {
         .iter()
         .any(|t| t.when.contains(&CompiledTiming::OnSecurity));
 
-    assert!(has_main, "EX7-071 must carry a [Main] (main_from_hand) clause");
+    assert!(
+        has_main,
+        "EX7-071 must carry a [Main] (main_from_hand) clause"
+    );
     assert!(
         has_inherited,
         "EX7-071 must carry an inherited on_digivolution_card_trashed clause"
@@ -368,11 +371,7 @@ fn ex7_071_main_multiple_same_level_candidates_offers_choice_deletes_only_one() 
     let view = runner
         .pending_selection_view()
         .expect("the level 3 arm must offer a choice between OPP-3 and OPP-3B");
-    let candidate_count = view
-        .valid_action_ids
-        .iter()
-        .filter(|&&a| a != PASS)
-        .count();
+    let candidate_count = view.valid_action_ids.iter().filter(|&&a| a != PASS).count();
     assert_eq!(
         candidate_count, 2,
         "both level 3 Digimon must be legal candidates for the single pick"
@@ -472,11 +471,7 @@ fn ex7_071_main_self_placement_only_offers_tm_trait_digimon() {
     let view = runner
         .pending_selection_view()
         .expect("the self-placement pick must install (TM-OWN exists)");
-    let candidate_count = view
-        .valid_action_ids
-        .iter()
-        .filter(|&&a| a != PASS)
-        .count();
+    let candidate_count = view.valid_action_ids.iter().filter(|&&a| a != PASS).count();
     assert_eq!(
         candidate_count, 1,
         "only TM-OWN (the [Three Musketeers] Digimon) may be offered; \

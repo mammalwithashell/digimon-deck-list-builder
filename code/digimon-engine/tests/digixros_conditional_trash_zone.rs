@@ -88,7 +88,11 @@ fn trash_material_exposed_when_only_vemmon_on_field() {
     runner.place_on_field(0, "VEMMON-FIELD", None);
     push_to_trash(&mut runner, 0, "VEMMON-TRASH");
 
-    assert_eq!(runner.play(0, 0), None, "DigiXros play installs a material prompt");
+    assert_eq!(
+        runner.play(0, 0),
+        None,
+        "DigiXros play installs a material prompt"
+    );
     let prompt = runner
         .pending_selection()
         .expect("DigiXros material selection installs");
@@ -115,7 +119,11 @@ fn trash_material_hidden_when_non_vemmon_digimon_present() {
     runner.place_on_field(0, "AGUMON", None);
     push_to_trash(&mut runner, 0, "VEMMON-TRASH");
 
-    assert_eq!(runner.play(0, 0), None, "DigiXros play installs a material prompt");
+    assert_eq!(
+        runner.play(0, 0),
+        None,
+        "DigiXros play installs a material prompt"
+    );
     let prompt = runner
         .pending_selection()
         .expect("DigiXros material selection installs");

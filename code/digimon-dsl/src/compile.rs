@@ -112,7 +112,10 @@ fn compile_dual(
     let mut option_keywords = dual.option.keywords.clone();
     if dual.option.arts_digivolve
         && !option_keywords.iter().any(|k| {
-            matches!(k.as_str(), "ArtsDigivolve" | "Arts Digivolve" | "arts_digivolve")
+            matches!(
+                k.as_str(),
+                "ArtsDigivolve" | "Arts Digivolve" | "arts_digivolve"
+            )
         })
     {
         option_keywords.push("ArtsDigivolve".to_string());
@@ -206,7 +209,9 @@ fn compile_zone(z: crate::predicate::Zone) -> CompiledZone {
     }
 }
 
-fn compile_comparator_op(op: crate::predicate::ComparatorOp) -> crate::compiled::CompiledComparatorOp {
+fn compile_comparator_op(
+    op: crate::predicate::ComparatorOp,
+) -> crate::compiled::CompiledComparatorOp {
     use crate::compiled::CompiledComparatorOp as C;
     use crate::predicate::ComparatorOp as S;
     match op {
@@ -282,9 +287,7 @@ fn compile_timing(t: crate::clause::Timing) -> CompiledTiming {
         S::OnOpponentSecurityRemoved => CompiledTiming::OnOpponentSecurityRemoved,
         S::OnOwnSecurityRemoved => CompiledTiming::OnOwnSecurityRemoved,
         S::OnDigivolutionCardTrashed => CompiledTiming::OnDigivolutionCardTrashed,
-        S::OnSourceReturnedToDeckBottom => {
-            CompiledTiming::OnDigivolutionCardReturnedToDeckBottom
-        }
+        S::OnSourceReturnedToDeckBottom => CompiledTiming::OnDigivolutionCardReturnedToDeckBottom,
         S::OnSecurityCheck => CompiledTiming::OnSecurityCheck,
         S::OnCheckFaceUpSecurity => CompiledTiming::OnCheckFaceUpSecurity,
         S::OnLoseSecurity => CompiledTiming::OnLoseSecurity,
@@ -385,6 +388,7 @@ fn compile_per_selector(
         },
         S::DigivolutionColorCount => CompiledPerSelector::DigivolutionColorCount,
         S::SourceColorCount => CompiledPerSelector::SourceColorCount,
+        S::ReturnedCardColorCount => CompiledPerSelector::ReturnedCardColorCount,
         S::SameLevelPairsInSources => CompiledPerSelector::SameLevelPairsInSources,
         S::SharedTrashCount { bucket } => CompiledPerSelector::SharedTrashCount { bucket: *bucket },
         S::CardCountInZone(spec) => {
@@ -501,8 +505,12 @@ fn compile_cost_delta(
         CostDelta::Keyword(CostDeltaKeyword::Printed) => CompiledCostDelta::Printed,
         CostDelta::Literal(n) => CompiledCostDelta::Literal(*n),
         CostDelta::Reduce { reduce } => {
-            match split_scalar_formula(reduce, &format!("{prefix}.cost_delta.reduce"), card_id, errors)
-            {
+            match split_scalar_formula(
+                reduce,
+                &format!("{prefix}.cost_delta.reduce"),
+                card_id,
+                errors,
+            ) {
                 Ok(n) => CompiledCostDelta::Reduce(n),
                 Err(formula) => CompiledCostDelta::ReduceFn(formula),
             }
@@ -800,7 +808,14 @@ fn compile_predicate(
 ) -> CompiledPredicate {
     // §2 — level metrics fold through the u8-eq variant.
     let (level_eq, level_lte, level_gte) = resolve_level_comparators(
-        &p.level_eq, &p.level_lte, &p.level_gte, &p.level, prefix, "level", card_id, errors,
+        &p.level_eq,
+        &p.level_lte,
+        &p.level_gte,
+        &p.level,
+        prefix,
+        "level",
+        card_id,
+        errors,
     );
     let (event_target_level_eq, event_target_level_lte, event_target_level_gte) =
         resolve_level_comparators(
@@ -818,17 +833,16 @@ fn compile_predicate(
     let (dp_eq, dp_lte, dp_gte) = resolve_metric_comparators(
         &p.dp_eq, &p.dp_lte, &p.dp_gte, &p.dp, prefix, "dp", card_id, errors,
     );
-    let (event_target_dp_eq, event_target_dp_lte, event_target_dp_gte) =
-        resolve_metric_comparators(
-            &p.event_target_dp_eq,
-            &p.event_target_dp_lte,
-            &p.event_target_dp_gte,
-            &p.event_target_dp,
-            prefix,
-            "event_target_dp",
-            card_id,
-            errors,
-        );
+    let (event_target_dp_eq, event_target_dp_lte, event_target_dp_gte) = resolve_metric_comparators(
+        &p.event_target_dp_eq,
+        &p.event_target_dp_lte,
+        &p.event_target_dp_gte,
+        &p.event_target_dp,
+        prefix,
+        "event_target_dp",
+        card_id,
+        errors,
+    );
     // Metrics whose legacy flat surface lacked `_eq` — the canonical comparator
     // supplies it (§2.4); there is no legacy `_eq` field, so pass `&None`.
     let (play_cost_eq, play_cost_lte, play_cost_gte) = resolve_metric_comparators(
@@ -851,17 +865,16 @@ fn compile_predicate(
         card_id,
         errors,
     );
-    let (materials_count_eq, materials_count_lte, materials_count_gte) =
-        resolve_metric_comparators(
-            &None,
-            &p.materials_count_lte,
-            &p.materials_count_gte,
-            &p.materials_count,
-            prefix,
-            "materials_count",
-            card_id,
-            errors,
-        );
+    let (materials_count_eq, materials_count_lte, materials_count_gte) = resolve_metric_comparators(
+        &None,
+        &p.materials_count_lte,
+        &p.materials_count_gte,
+        &p.materials_count,
+        prefix,
+        "materials_count",
+        card_id,
+        errors,
+    );
     let (security_count_eq, security_count_lte, security_count_gte) = resolve_metric_comparators(
         &None,
         &p.security_count_lte,
@@ -931,7 +944,12 @@ fn compile_predicate(
         play_cost_gte,
         play_cost_eq,
         play_or_use_cost_lte: p.play_or_use_cost_lte.as_ref().map(|d| {
-            compile_dp_constraint(d, &format!("{prefix}.play_or_use_cost_lte"), card_id, errors)
+            compile_dp_constraint(
+                d,
+                &format!("{prefix}.play_or_use_cost_lte"),
+                card_id,
+                errors,
+            )
         }),
         can_digivolve_from_source: p.can_digivolve_from_source,
         dp_eq,
@@ -1009,6 +1027,7 @@ fn compile_predicate(
                 },
             }
         }),
+        self_same_level_source_pairs_gte: p.self_same_level_source_pairs_gte,
         own_source_stack_color_count_gte: p.own_source_stack_color_count_gte,
         zone: p.zone.iter().map(|z| compile_zone(*z)).collect(),
         owner: p.owner.map(compile_player_ref),
@@ -1179,6 +1198,7 @@ fn compile_predicate(
         event_target_dp_lte,
         event_target_dp_gte,
         event_target_name_contains: p.event_target_name_contains.clone(),
+        event_target_in_text_contains: p.event_target_in_text_contains.clone(),
         event_target_is_player: p.event_target_is_player,
         event_target_is_source: p.event_target_is_source,
         event_target_was_self: p.event_target_was_self,
@@ -1595,8 +1615,7 @@ fn validate_cast_time_assembly_shape(
         if m.cost_delta.is_none() {
             push(
                 format!("{prefix}.materials[{i}].cost_delta"),
-                "cast_time_assembly materials require an explicit cost_delta (e.g. -4)"
-                    .to_string(),
+                "cast_time_assembly materials require an explicit cost_delta (e.g. -4)".to_string(),
             );
         }
         if m.stack_under {
@@ -1813,10 +1832,7 @@ fn compile_replacement_process(
     // self-contained step that trashes a chosen link card AND cancels the
     // leave. It owns the `outcome: prevent`, so we emit only this step (and
     // suppress the trailing `CancelReplacement` below).
-    let trash_own_link_card = r
-        .cost
-        .as_ref()
-        .is_some_and(|cost| cost.trash_own_link_card);
+    let trash_own_link_card = r.cost.as_ref().is_some_and(|cost| cost.trash_own_link_card);
     if trash_own_link_card {
         if !matches!(r.outcome, Some(crate::clause::ReplacementOutcome::Prevent)) {
             errors.push(ValidationError {
@@ -1844,8 +1860,9 @@ fn compile_replacement_process(
             errors.push(ValidationError {
                 card_id: card_id.into(),
                 path: format!("{prefix}.cost"),
-                message: "cost: { trash_option_from_own_digivolution_cards } requires outcome: prevent"
-                    .into(),
+                message:
+                    "cost: { trash_option_from_own_digivolution_cards } requires outcome: prevent"
+                        .into(),
             });
         }
         if !r.optional {
@@ -1873,8 +1890,9 @@ fn compile_replacement_process(
             errors.push(ValidationError {
                 card_id: card_id.into(),
                 path: format!("{prefix}.cost"),
-                message: "cost: { place_link_card_as_bottom_digivolution } requires outcome: prevent"
-                    .into(),
+                message:
+                    "cost: { place_link_card_as_bottom_digivolution } requires outcome: prevent"
+                        .into(),
             });
         }
         process.push(CompiledStep::PlaceLinkCardAsBottomSourceAndCancelLeave);
@@ -2103,97 +2121,101 @@ fn compile_declarative(
 
     match body {
         B::Aura(a) => {
-        let (dp_modifier, dp_modifier_fn) =
-            split_opt_scalar_formula(&a.dp_modifier, &format!("{prefix}.dp_modifier"), card_id, errors);
-        let (security_attack, security_attack_fn) = split_opt_scalar_formula(
-            &a.security_attack,
-            &format!("{prefix}.security_attack"),
-            card_id,
-            errors,
-        );
-        CompiledDeclarativeClause::Aura {
-            scope,
-            active_when,
-            target: a
-                .target
-                .as_ref()
-                .map(|target| {
-                    compile_predicate(target, &format!("{prefix}.target"), card_id, errors)
-                })
-                .unwrap_or_default(),
-            target_player: a.target_player.map(compile_player_ref),
-            dp_modifier,
-            dp_modifier_fn,
-            security_attack,
-            security_attack_fn,
-            grant_keyword: a.grant_keyword.map(|gk| CompiledGrantKeywordValue {
-                keyword: gk.keyword,
-                value: gk.value,
-            }),
-            modifier: a.modifier,
-            modifier_value: a.modifier_value,
-            modifier_name: a.modifier_name,
-            synth_identity: a.synth_identity.as_ref().map(compile_synth_identity),
-            while_condition: a.while_condition.as_ref().map(|p| {
-                compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
-            }),
-            applies_to_opponent_security_dp: a.applies_to_opponent_security_dp.unwrap_or(false),
-            applies_to_own_security_dp: a.applies_to_own_security_dp.unwrap_or(false),
-            effect_immunity: a.effect_immunity.map(|imm| CompiledAuraEffectImmunity {
-                source_kind: imm.source_kind.map(compile_effect_source_kind),
-                source_controller: compile_effect_controller(imm.source_controller),
-            }),
-            summary,
-            summary_key,
-        }
+            let (dp_modifier, dp_modifier_fn) = split_opt_scalar_formula(
+                &a.dp_modifier,
+                &format!("{prefix}.dp_modifier"),
+                card_id,
+                errors,
+            );
+            let (security_attack, security_attack_fn) = split_opt_scalar_formula(
+                &a.security_attack,
+                &format!("{prefix}.security_attack"),
+                card_id,
+                errors,
+            );
+            CompiledDeclarativeClause::Aura {
+                scope,
+                active_when,
+                target: a
+                    .target
+                    .as_ref()
+                    .map(|target| {
+                        compile_predicate(target, &format!("{prefix}.target"), card_id, errors)
+                    })
+                    .unwrap_or_default(),
+                target_player: a.target_player.map(compile_player_ref),
+                dp_modifier,
+                dp_modifier_fn,
+                security_attack,
+                security_attack_fn,
+                grant_keyword: a.grant_keyword.map(|gk| CompiledGrantKeywordValue {
+                    keyword: gk.keyword,
+                    value: gk.value,
+                }),
+                modifier: a.modifier,
+                modifier_value: a.modifier_value,
+                modifier_name: a.modifier_name,
+                synth_identity: a.synth_identity.as_ref().map(compile_synth_identity),
+                while_condition: a.while_condition.as_ref().map(|p| {
+                    compile_predicate(p, &format!("{prefix}.while_condition"), card_id, errors)
+                }),
+                applies_to_opponent_security_dp: a.applies_to_opponent_security_dp.unwrap_or(false),
+                applies_to_own_security_dp: a.applies_to_own_security_dp.unwrap_or(false),
+                effect_immunity: a.effect_immunity.map(|imm| CompiledAuraEffectImmunity {
+                    source_kind: imm.source_kind.map(compile_effect_source_kind),
+                    source_controller: compile_effect_controller(imm.source_controller),
+                }),
+                summary,
+                summary_key,
+            }
         }
         B::CostReduction(c) => {
-        let (amount, amount_fn) =
-            split_opt_scalar_formula(&c.amount, &format!("{prefix}.amount"), card_id, errors);
-        CompiledDeclarativeClause::CostReduction {
-            scope,
-            active_when,
-            reduction_timing: c.reduction_timing,
-            when_playing_this: c.when_playing_this,
-            when_any_ally_played: c.when_any_ally_played.as_ref().map(|p| {
-                compile_predicate(
-                    p,
-                    &format!("{prefix}.when_any_ally_played"),
-                    card_id,
-                    errors,
-                )
-            }),
-            when_any_ally_digivolves_into: c.when_any_ally_digivolves_into.as_ref().map(|p| {
-                compile_predicate(
-                    p,
-                    &format!("{prefix}.when_any_ally_digivolves_into"),
-                    card_id,
-                    errors,
-                )
-            }),
-            condition: c
-                .condition
-                .as_ref()
-                .map(|p| compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)),
-            optional: c.optional,
-            once_per_turn: c.once_per_turn,
-            amount,
-            amount_fn,
-            pay_cost: c
-                .pay_cost
-                .as_ref()
-                .map(|v| {
-                    v.iter()
-                        .enumerate()
-                        .map(|(i, s)| {
-                            compile_step(s, &format!("{prefix}.pay_cost[{i}]"), card_id, errors)
-                        })
-                        .collect()
-                })
-                .unwrap_or_default(),
-            summary,
-            summary_key,
-        }
+            let (amount, amount_fn) =
+                split_opt_scalar_formula(&c.amount, &format!("{prefix}.amount"), card_id, errors);
+            CompiledDeclarativeClause::CostReduction {
+                scope,
+                active_when,
+                reduction_timing: c.reduction_timing,
+                when_playing_this: c.when_playing_this,
+                when_any_ally_played: c.when_any_ally_played.as_ref().map(|p| {
+                    compile_predicate(
+                        p,
+                        &format!("{prefix}.when_any_ally_played"),
+                        card_id,
+                        errors,
+                    )
+                }),
+                when_any_ally_digivolves_into: c.when_any_ally_digivolves_into.as_ref().map(|p| {
+                    compile_predicate(
+                        p,
+                        &format!("{prefix}.when_any_ally_digivolves_into"),
+                        card_id,
+                        errors,
+                    )
+                }),
+                condition: c
+                    .condition
+                    .as_ref()
+                    .map(|p| compile_predicate(p, &format!("{prefix}.condition"), card_id, errors)),
+                optional: c.optional,
+                once_per_turn: c.once_per_turn,
+                amount,
+                amount_fn,
+                pay_cost: c
+                    .pay_cost
+                    .as_ref()
+                    .map(|v| {
+                        v.iter()
+                            .enumerate()
+                            .map(|(i, s)| {
+                                compile_step(s, &format!("{prefix}.pay_cost[{i}]"), card_id, errors)
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default(),
+                summary,
+                summary_key,
+            }
         }
         B::Replacement(r) => {
             let trigger = compile_replacement_trigger(&r, prefix, card_id, errors);
@@ -2614,7 +2636,9 @@ fn compile_step(
             position: compile_stack_position(a.position),
         },
         S::RevealSearch(a) => {
-            use crate::compiled::{CompiledRevealRemainder, CompiledRevealSearchBucket, CompiledRevealSearchDest};
+            use crate::compiled::{
+                CompiledRevealRemainder, CompiledRevealSearchBucket, CompiledRevealSearchDest,
+            };
             use crate::step::{RevealRemainder, RevealSearchDest};
             if a.buckets.is_empty() {
                 errors.push(ValidationError {
@@ -3008,6 +3032,14 @@ fn compile_step(
                 .as_ref()
                 .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
         },
+        S::PlayOrUseFromSources(a) => CompiledStep::PlayOrUseFromSources {
+            of: compile_player_ref(a.of),
+            card: compile_binding_ref(&a.card),
+            cost_delta: a
+                .cost
+                .as_ref()
+                .map(|c| compile_cost_delta(c, prefix, card_id, errors)),
+        },
         S::PlayFromRevealedFree(a) => CompiledStep::PlayFromRevealedFree {
             of: compile_player_ref(a.of),
             card: compile_binding_ref(&a.card),
@@ -3116,7 +3148,12 @@ fn compile_step(
                 crate::step::AppFuseZone::Trash => crate::compiled::CompiledAppFuseZone::Trash,
             },
             result_filter: a.result_filter.as_ref().map(|p| {
-                compile_predicate(p, &format!("{prefix}.app_fuse.result_filter"), card_id, errors)
+                compile_predicate(
+                    p,
+                    &format!("{prefix}.app_fuse.result_filter"),
+                    card_id,
+                    errors,
+                )
             }),
             optional: a.optional,
         },
@@ -3355,8 +3392,7 @@ fn compile_step(
                     errors.push(ValidationError {
                         card_id: card_id.to_string(),
                         path: format!("{prefix}.grant_effect_immunity"),
-                        message: "continuous: true requires `targets` and no `target`"
-                            .to_string(),
+                        message: "continuous: true requires `targets` and no `target`".to_string(),
                     });
                 }
             } else if a.target.is_none() {
@@ -3664,7 +3700,12 @@ fn compile_step(
                 .as_ref()
                 .map(|zf| crate::compiled::CompiledUnionZoneFilters {
                     hand: zf.hand.as_ref().map(|p| {
-                        compile_predicate(p, &format!("{prefix}.zone_filters.hand"), card_id, errors)
+                        compile_predicate(
+                            p,
+                            &format!("{prefix}.zone_filters.hand"),
+                            card_id,
+                            errors,
+                        )
                     }),
                     trash: zf.trash.as_ref().map(|p| {
                         compile_predicate(
@@ -3728,6 +3769,19 @@ fn compile_step(
             bind_as: a.bind_as.clone(),
             prompt: a.prompt.clone(),
             prompt_key: a.prompt_key.clone(),
+        },
+        S::RepeatEffectChoice(a) => CompiledStep::RepeatEffectChoice {
+            count: compile_formula(&a.count, &format!("{prefix}.count"), card_id, errors),
+            labels: a.labels.clone(),
+            bind_as: a.bind_as.clone(),
+            prompt: a.prompt.clone(),
+            prompt_key: a.prompt_key.clone(),
+            body: a
+                .body
+                .iter()
+                .enumerate()
+                .map(|(i, s)| compile_step(s, &format!("{prefix}.body[{i}]"), card_id, errors))
+                .collect(),
         },
         S::AsSelectingPlayer(a) => CompiledStep::AsSelectingPlayer {
             of: compile_player_ref(a.of),
@@ -3816,9 +3870,7 @@ fn compile_step(
         }
         S::ReduceLinkCost(a) => CompiledStep::ReduceLinkCost { amount: a.amount },
         S::LinkCards(a) => {
-            use crate::compiled::{
-                CompiledLinkCount, CompiledLinkSourceZone, CompiledLinkTo,
-            };
+            use crate::compiled::{CompiledLinkCount, CompiledLinkSourceZone, CompiledLinkTo};
             use crate::step::{LinkCardSourceZone, LinkCardsCost, LinkCardsCount, LinkCardsTo};
 
             if a.from.is_empty() {

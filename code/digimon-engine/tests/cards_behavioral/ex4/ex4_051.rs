@@ -369,7 +369,9 @@ fn ex4_051_branch0_condition_installs_with_opp_digimon_present() {
     let blitz = runner.place_on_field(0, CARD_ID, None);
 
     fire_when_digivolving(&mut runner, blitz);
-    let kind = runner.pending_kind().expect("branch-choice prompt installs");
+    let kind = runner
+        .pending_kind()
+        .expect("branch-choice prompt installs");
     assert_eq!(kind, SelectionKind::EffectChoice);
 
     runner.execute_branch(0).expect("pick De-Digivolve branch");
@@ -394,7 +396,9 @@ fn ex4_051_branch0_no_opp_digimon_no_targets_selected() {
     let blitz = runner.place_on_field(0, CARD_ID, None);
 
     fire_when_digivolving(&mut runner, blitz);
-    let kind = runner.pending_kind().expect("branch-choice prompt installs");
+    let kind = runner
+        .pending_kind()
+        .expect("branch-choice prompt installs");
     assert_eq!(kind, SelectionKind::EffectChoice);
 
     runner.execute_branch(0).expect("pick De-Digivolve branch");
@@ -513,7 +517,9 @@ fn ex4_051_branch1_digivolves_other_digimon_into_garurumon_free() {
     let mem_before = runner.memory();
 
     fire_when_digivolving(&mut runner, blitz);
-    runner.execute_branch(1).expect("pick free-digivolve branch");
+    runner
+        .execute_branch(1)
+        .expect("pick free-digivolve branch");
     let _ = runner.auto_resolve();
 
     let top = runner.game.players[0].battle_area[other.index as usize].top_card();
@@ -550,7 +556,9 @@ fn ex4_051_branch1_filter_excludes_non_garurumon_name() {
     let blitz = runner.place_on_field(0, CARD_ID, None);
 
     fire_when_digivolving(&mut runner, blitz);
-    runner.execute_branch(1).expect("pick free-digivolve branch");
+    runner
+        .execute_branch(1)
+        .expect("pick free-digivolve branch");
     let _ = runner.auto_resolve();
 
     let top = runner.game.players[0].battle_area[other.index as usize].top_card();
@@ -582,7 +590,9 @@ fn ex4_051_branch1_filter_excludes_garurumon_above_level_6() {
     let blitz = runner.place_on_field(0, CARD_ID, None);
 
     fire_when_digivolving(&mut runner, blitz);
-    runner.execute_branch(1).expect("pick free-digivolve branch");
+    runner
+        .execute_branch(1)
+        .expect("pick free-digivolve branch");
     let _ = runner.auto_resolve();
 
     let top = runner.game.players[0].battle_area[other.index as usize].top_card();
@@ -609,7 +619,9 @@ fn ex4_051_branch1_cannot_target_self_as_the_digivolving_permanent() {
     let blitz = runner.place_on_field(0, CARD_ID, None);
 
     fire_when_digivolving(&mut runner, blitz);
-    runner.execute_branch(1).expect("pick free-digivolve branch");
+    runner
+        .execute_branch(1)
+        .expect("pick free-digivolve branch");
     let _ = runner.auto_resolve();
 
     let top = runner.game.players[0].battle_area[blitz.index as usize].top_card();
@@ -644,7 +656,9 @@ fn ex4_051_branch1_permanent_pick_is_declinable_and_decline_is_a_no_op() {
     let blitz = runner.place_on_field(0, CARD_ID, None);
 
     fire_when_digivolving(&mut runner, blitz);
-    runner.execute_branch(1).expect("pick free-digivolve branch");
+    runner
+        .execute_branch(1)
+        .expect("pick free-digivolve branch");
 
     assert!(
         runner.pending_selection().is_some(),

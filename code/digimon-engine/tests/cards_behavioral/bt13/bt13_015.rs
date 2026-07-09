@@ -373,9 +373,10 @@ fn bt13_015_deletion_observers_gate_on_own_red_yellow_tamer() {
 /// Helper: place RizeGreymon atop a GeoGreymon stack and fire WhenDigivolving.
 fn digivolve_rize(runner: &mut DebugRunner) -> PermanentHandle {
     let rize = runner.place_stack(0, &["GEO", "BT13-015"]);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(rize));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(rize),
+    );
     runner.game.drain_effect_queue();
     rize
 }
@@ -395,10 +396,7 @@ fn bt13_015_when_digivolving_installs_optional_marcus_select_when_in_hand() {
         .as_ref()
         .expect("a selection must install: you may play the Marcus Damon from hand");
     assert_eq!(pending.selecting_player, 0);
-    assert!(
-        pending.is_optional,
-        "'you may play' -> PASS must be legal"
-    );
+    assert!(pending.is_optional, "'you may play' -> PASS must be legal");
 }
 
 /// POSITIVE: accepting the selection plays the Marcus Damon from hand without

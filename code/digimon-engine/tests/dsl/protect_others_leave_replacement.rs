@@ -310,12 +310,18 @@ fn bt25_039_clone_safe_mid_park() {
     runner
         .game
         .delete_permanent_with_cause(subject, ReplacementCause::OpponentEffect);
-    assert!(runner.game.pending_selection.is_some(), "parked accept prompt");
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "parked accept prompt"
+    );
 
     // Clone the parked game and drive the clone to accept — no closure-park panic.
     let mut cloned = runner.game.clone();
     let (aid, sp) = {
-        let p = cloned.pending_selection.as_ref().expect("clone kept the prompt");
+        let p = cloned
+            .pending_selection
+            .as_ref()
+            .expect("clone kept the prompt");
         (p.valid_action_ids[0], p.selecting_player)
     };
     cloned.resolve_selection(sp, aid).expect("clone accepts");
@@ -412,7 +418,10 @@ fn ex7_048_accept_trashes_carrier_option_and_protects_the_subject() {
             .expect("nested Option-of-carrier-digivolution pick installs");
         (p.valid_action_ids[0], p.selecting_player)
     };
-    runner.game.resolve_selection(opt_sp, opt_id).expect("trash the Option");
+    runner
+        .game
+        .resolve_selection(opt_sp, opt_id)
+        .expect("trash the Option");
 
     assert!(runner.game.pending_selection.is_none(), "resolved");
     // The carrier's digivolution Option went to trash; the carrier stays.
@@ -516,7 +525,10 @@ fn ex7_048_battle_cause_fires_and_protects() {
             .expect("nested Option pick");
         (p.valid_action_ids[0], p.selecting_player)
     };
-    runner.game.resolve_selection(opt_sp, opt_id).expect("trash");
+    runner
+        .game
+        .resolve_selection(opt_sp, opt_id)
+        .expect("trash");
 
     assert!(
         runner.game.players[0]

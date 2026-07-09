@@ -1,0 +1,46 @@
+card: EX12-006
+name: Kakamon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+traits: [Beast, Shambala, SW]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Shambala }
+    cost: 0
+
+effects:
+  - when: start_of_your_main_phase
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand], trait_has: SW }
+        n: 1
+    summary: "[Start of Your Main Phase] By trashing 1 [SW] card from hand, draw 1 and gain 1 memory"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter: { trait_has: SW }
+          prompt: "Trash 1 card with the [SW] trait from your hand to draw 1 and gain 1 memory"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 1 }
+            - gain_memory: 1
+
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

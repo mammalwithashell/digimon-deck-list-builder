@@ -244,9 +244,10 @@ fn bt24_058_reveal_clause_uses_reveal_effect_choice_and_order_remainder() {
         .process
         .iter()
         .any(|s| matches!(s, CompiledStep::SelectEffectChoice { .. }));
-    let has_choose_from_reveal = walk_steps_for_variant(&clause.process.iter().collect::<Vec<_>>(), |s| {
-        matches!(s, CompiledStep::ChooseFromReveal { .. })
-    });
+    let has_choose_from_reveal =
+        walk_steps_for_variant(&clause.process.iter().collect::<Vec<_>>(), |s| {
+            matches!(s, CompiledStep::ChooseFromReveal { .. })
+        });
     let has_order_remainder = clause
         .process
         .iter()
@@ -332,7 +333,9 @@ fn bt24_058_on_play_no_eligible_candidate_reveals_and_skips_the_pick_prompt() {
     let deck_before = runner.game.players[0].deck.len();
 
     runner.play(0, 0).expect("play Blimpmon");
-    runner.auto_resolve().expect("resolve reveal clause with no eligible candidates");
+    runner
+        .auto_resolve()
+        .expect("resolve reveal clause with no eligible candidates");
 
     let hand_ids = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
     assert!(
@@ -430,7 +433,9 @@ fn bt24_058_on_play_hand_branch_adds_eligible_machine_digimon_to_hand() {
 
     runner.play(0, 0).expect("play Blimpmon");
     runner.execute_branch(0).expect("branch 0 = Add to hand");
-    runner.auto_resolve().expect("resolve reveal pick + order_remainder");
+    runner
+        .auto_resolve()
+        .expect("resolve reveal pick + order_remainder");
 
     let hand_ids = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
     assert!(
@@ -460,7 +465,9 @@ fn bt24_058_on_play_hand_branch_adds_eligible_ts_tamer_to_hand() {
 
     runner.play(0, 0).expect("play Blimpmon");
     runner.execute_branch(0).expect("branch 0 = Add to hand");
-    runner.auto_resolve().expect("resolve reveal pick + order_remainder");
+    runner
+        .auto_resolve()
+        .expect("resolve reveal pick + order_remainder");
 
     let hand_ids = zone_ids(&runner.game.players[0].hand, &runner.game.card_data);
     assert!(
@@ -659,9 +666,10 @@ fn bt24_058_when_digivolving_also_fires_the_shared_reveal_clause() {
     // WhenDigivolving trigger directly, mirroring the bt24_017-style idiom
     // for behavioral WhenDigivolving coverage.
     let blimpmon = runner.place_on_field(0, "BT24-058", Some(0));
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(blimpmon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(blimpmon),
+    );
     runner.game.drain_effect_queue();
 
     let kind = runner
@@ -701,12 +709,17 @@ fn bt24_058_on_play_reveal_emits_three_reveal_events_and_never_trashes() {
     let cp = runner.event_checkpoint();
     runner.play(0, 0).expect("play Blimpmon");
     runner.execute_branch(0).expect("branch 0 = Add to hand");
-    runner.auto_resolve().expect("resolve reveal pick + order_remainder");
+    runner
+        .auto_resolve()
+        .expect("resolve reveal pick + order_remainder");
 
     let reveal_count = runner
         .events_of_kind(cp, |e| matches!(e, GameEvent::Reveal { .. }))
         .len();
-    assert_eq!(reveal_count, 3, "all 3 top-deck cards must emit a Reveal event");
+    assert_eq!(
+        reveal_count, 3,
+        "all 3 top-deck cards must emit a Reveal event"
+    );
 
     let trash_count = runner
         .events_of_kind(cp, |e| matches!(e, GameEvent::Trash { .. }))

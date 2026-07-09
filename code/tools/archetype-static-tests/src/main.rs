@@ -69,7 +69,10 @@ fn parse_combo_arg(s: &str) -> Result<Combo, String> {
     if cards.is_empty() {
         return Err(format!("combo '{name}' lists no cards"));
     }
-    Ok(Combo { name: name.trim().to_string(), cards })
+    Ok(Combo {
+        name: name.trim().to_string(),
+        cards,
+    })
 }
 
 fn main() {
@@ -86,7 +89,12 @@ fn run() -> Result<(), String> {
     let card_data = load_card_data(&root)?;
     let deck_library = load_json(&root.join("data").join("deck_library.json"))?;
     let aliases = load_json(&root.join("data").join("archetype_aliases.json"))?;
-    let validated = load_json(&root.join("qa").join("qa-reports").join("validated_cards_dsl.json"))?;
+    let validated = load_json(
+        &root
+            .join("qa")
+            .join("qa-reports")
+            .join("validated_cards_dsl.json"),
+    )?;
 
     let pool = resolve_pool(&args.archetype, &deck_library, &aliases)?;
 
@@ -99,11 +107,19 @@ fn run() -> Result<(), String> {
         let v = load_json(path)?;
         let arr = v.as_array().ok_or("combos-file must be a JSON array")?;
         for entry in arr {
-            let name = entry.get("name").and_then(|n| n.as_str()).unwrap_or("(unnamed)").to_string();
+            let name = entry
+                .get("name")
+                .and_then(|n| n.as_str())
+                .unwrap_or("(unnamed)")
+                .to_string();
             let cards: Vec<String> = entry
                 .get("cards")
                 .and_then(|c| c.as_array())
-                .map(|a| a.iter().filter_map(|x| x.as_str().map(|s| s.to_string())).collect())
+                .map(|a| {
+                    a.iter()
+                        .filter_map(|x| x.as_str().map(|s| s.to_string()))
+                        .collect()
+                })
                 .unwrap_or_default();
             combos.push(Combo { name, cards });
         }
@@ -126,9 +142,16 @@ fn run() -> Result<(), String> {
             "results": results,
             "combos_tested": combos_tested,
         });
-        println!("{}", serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?);
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&out).map_err(|e| e.to_string())?
+        );
     } else {
-        println!("archetype: {} ({} unique cards)", pool.name, pool.unique_cards.len());
+        println!(
+            "archetype: {} ({} unique cards)",
+            pool.name,
+            pool.unique_cards.len()
+        );
         for r in &results {
             println!("  [{}] {:<16} {}", mark(r), r.name, r.detail);
         }
@@ -136,13 +159,27 @@ fn run() -> Result<(), String> {
 
     if !args.no_write {
         let path = tracker_path(&root);
-        let existing = if path.is_file() { Some(load_json(&path)?) } else { None };
-        let doc = record_run(existing, &pool.name, &results, &combos_tested, &[], &timestamp);
+        let existing = if path.is_file() {
+            Some(load_json(&path)?)
+        } else {
+            None
+        };
+        let doc = record_run(
+            existing,
+            &pool.name,
+            &results,
+            &combos_tested,
+            &[],
+            &timestamp,
+        );
         if let Some(parent) = path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
-        std::fs::write(&path, serde_json::to_string_pretty(&doc).map_err(|e| e.to_string())?)
-            .map_err(|e| format!("writing {}: {}", path.display(), e))?;
+        std::fs::write(
+            &path,
+            serde_json::to_string_pretty(&doc).map_err(|e| e.to_string())?,
+        )
+        .map_err(|e| format!("writing {}: {}", path.display(), e))?;
         if !args.json {
             println!("recorded → {}", path.display());
         }

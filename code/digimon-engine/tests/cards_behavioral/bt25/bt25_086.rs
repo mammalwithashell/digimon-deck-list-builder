@@ -63,9 +63,10 @@ fn non_ts_digimon(id: &str, dp: i32) -> digimon_engine::CardData {
 }
 
 fn enqueue_start_of_main(runner: &mut DebugRunner, tamer: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::StartOfYourMainPhase, TriggerSource::Permanent(tamer));
+    runner.game.enqueue_triggered(
+        EffectTiming::StartOfYourMainPhase,
+        TriggerSource::Permanent(tamer),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -143,7 +144,10 @@ fn bt25_086_end_of_turn_clause_is_optional_and_has_expected_steps() {
         })
         .expect("EndOfYourTurn clause exists");
 
-    assert!(eot.optional, "the 'by suspending this Tamer' clause must be a 'you may'");
+    assert!(
+        eot.optional,
+        "the 'by suspending this Tamer' clause must be a 'you may'"
+    );
     assert!(
         eot.process
             .iter()
@@ -396,7 +400,8 @@ fn bt25_086_after_dp_grant_may_attack_is_a_real_declinable_prompt() {
         attack_view.is_optional,
         "the printed 'may attack' follow-up must remain declineable"
     );
-    let mask = digimon_engine::action::mask::build_action_mask(&runner.game, attack_view.selecting_player);
+    let mask =
+        digimon_engine::action::mask::build_action_mask(&runner.game, attack_view.selecting_player);
     assert_eq!(
         mask[digimon_engine::action::space::PASS as usize],
         1.0,
@@ -433,7 +438,10 @@ fn bt25_086_declining_may_attack_leaves_digimon_unattacked() {
         .pending_selection_view()
         .expect("may_attack_now prompt must be exposed");
     runner
-        .execute_action(attack_view.selecting_player, digimon_engine::action::space::PASS)
+        .execute_action(
+            attack_view.selecting_player,
+            digimon_engine::action::space::PASS,
+        )
         .expect("decline the may-attack follow-up");
 
     assert!(

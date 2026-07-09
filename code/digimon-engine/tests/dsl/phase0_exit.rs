@@ -12,6 +12,18 @@ fn examples_dir() -> PathBuf {
 
 #[test]
 fn phase_0_exit_criteria() {
+    // This pack-wide validation / round-trip guard is stack-heavy on the
+    // default Windows libtest thread. Keep the mitigation local to the test
+    // instead of relying on a process-wide RUST_MIN_STACK override.
+    std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(check_phase_0_exit_criteria)
+        .expect("spawn large-stack thread")
+        .join()
+        .expect("phase 0 exit guard thread panicked");
+}
+
+fn check_phase_0_exit_criteria() {
     let (specs, errors) = loader::load_dir_ok(&examples_dir());
     assert!(errors.is_empty(), "parse errors: {errors:#?}");
     assert!(

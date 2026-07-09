@@ -160,8 +160,16 @@ fn dna_trash_partner_merges_field_and_trash_into_hand_result() {
     );
 
     // Trash material left the trash; result left the hand.
-    assert_eq!(runner.game.players[0].trash.len(), 0, "trash material consumed");
-    assert_eq!(runner.game.players[0].hand.len(), 0, "result consumed from hand");
+    assert_eq!(
+        runner.game.players[0].trash.len(),
+        0,
+        "trash material consumed"
+    );
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        0,
+        "result consumed from hand"
+    );
 }
 
 /// The materialize step must NOT fire the trash material's own `[On Play]`.
@@ -277,8 +285,16 @@ fn dna_trash_partner_rejects_illegal_recipe() {
         1,
         "field partner untouched on rejection"
     );
-    assert_eq!(runner.game.players[0].trash.len(), 1, "trash material untouched");
-    assert_eq!(runner.game.players[0].hand.len(), 1, "result untouched in hand");
+    assert_eq!(
+        runner.game.players[0].trash.len(),
+        1,
+        "trash material untouched"
+    );
+    assert_eq!(
+        runner.game.players[0].hand.len(),
+        1,
+        "result untouched in hand"
+    );
 }
 
 /// The result's own `WhenDigivolving` fires on the merged permanent (the

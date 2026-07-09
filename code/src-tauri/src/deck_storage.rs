@@ -219,7 +219,11 @@ fn ensure_default_folders(path: &Path) -> Result<LibraryMetadata, String> {
 }
 
 fn deck_summary(deck: Deck) -> DeckSummary {
-    let deck_icon_card_id = summary_icon_card_id(&deck.main_deck, &deck.egg_deck, deck.commander_id.as_deref());
+    let deck_icon_card_id = summary_icon_card_id(
+        &deck.main_deck,
+        &deck.egg_deck,
+        deck.commander_id.as_deref(),
+    );
     DeckSummary {
         id: deck.id,
         name: deck.name,
@@ -251,7 +255,9 @@ fn summary_icon_card_id(
     commander_id: Option<&str>,
 ) -> Option<String> {
     if let Some(commander_id) = commander_id {
-        if main_deck.iter().any(|id| id == commander_id) || egg_deck.iter().any(|id| id == commander_id) {
+        if main_deck.iter().any(|id| id == commander_id)
+            || egg_deck.iter().any(|id| id == commander_id)
+        {
             return Some(commander_id.to_string());
         }
     }
@@ -293,7 +299,10 @@ pub fn decks_list(app: AppHandle) -> Result<Vec<DeckSummary>, String> {
 
 #[tauri::command]
 pub fn decks_get(app: AppHandle, deck_id: String) -> Result<Deck, String> {
-    if let Some(deck) = builtin_starter_decks().into_iter().find(|d| d.id == deck_id) {
+    if let Some(deck) = builtin_starter_decks()
+        .into_iter()
+        .find(|d| d.id == deck_id)
+    {
         return Ok(deck);
     }
     let path = decks_dir(&app)?.join(format!("{deck_id}.json"));

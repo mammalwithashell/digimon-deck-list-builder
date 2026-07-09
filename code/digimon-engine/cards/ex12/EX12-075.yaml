@@ -1,0 +1,34 @@
+card: EX12-075
+name: "Kunlun's Imperial Decree"
+kind: option
+color: [white]
+cost: 3
+traits: [Shambala, SW, TB]
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] Reveal top 3; add 1 [Shambala] card; bottom the rest. Then, place this card in the battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - choose_from_reveal:
+          of: you
+          bind_as: picked
+          destination: hand
+          optional: false
+          filter: { trait_has: Shambala }
+          prompt: "Add 1 [Shambala] card to hand"
+      - add_to_hand_from_reveal: { of: you, card: picked }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}
+
+  - kind: delay
+    trigger: delayed
+    summary: "[Main] Delay: Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

@@ -1,0 +1,84 @@
+card: EX12-063
+name: Karakurumon
+kind: digimon
+level: 5
+color: [purple, green]
+cost: 7
+dp: 7000
+traits: [Puppet, Shambala, TB]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: purple }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - none_of:
+            - color_is: white
+        - any_of:
+            - trait_has: Puppet
+            - trait_has: Shambala
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Suspend 1 opponent Digimon or Tamer; then 1 opponent Digimon or Tamer can't unsuspend until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: suspend_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Suspend 1 opponent Digimon or Tamer"
+      - suspend: { target: suspend_target }
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Choose 1 opponent Digimon or Tamer that can't unsuspend until their turn ends"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotUnsuspend
+          value: 1
+          expiry: end_of_opponents_turn
+
+  - when: on_deletion
+    optional: true
+    summary: "[On Deletion][OPT] Play 1 level 4 or lower [Puppet] or [TB] Digimon from trash free"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revive_pick
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_has: Puppet
+                  - trait_has: TB
+          prompt: "Play 1 level 4 or lower [Puppet] or [TB] Digimon from trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: revive_pick }
+
+  - scope: inherited
+    when: on_deletion
+    optional: true
+    summary: "[Inherited][On Deletion][OPT] Play 1 level 4 or lower [Puppet] or [TB] Digimon from trash free"
+    process:
+      - select_trash:
+          of: you
+          bind_as: revive_pick_inh
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_has: Puppet
+                  - trait_has: TB
+          prompt: "Play 1 level 4 or lower [Puppet] or [TB] Digimon from trash without paying the cost"
+      - play_from_trash_free: { of: you, hand_index: revive_pick_inh }

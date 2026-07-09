@@ -239,9 +239,7 @@ fn bt12_092_clause2_is_on_suspend() {
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSuspend) => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSuspend) => Some(t),
             _ => None,
         })
         .next()
@@ -270,9 +268,7 @@ fn bt12_092_clause2_gates_on_event_permanent_is_source() {
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSuspend) => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSuspend) => Some(t),
             _ => None,
         })
         .next()
@@ -404,7 +400,9 @@ fn bt12_092_accepting_pays_memory_and_treats_as_3000_dp_digimon() {
         "Marcus must be treated as a 3000 DP Digimon"
     );
     assert!(
-        runner.modifiers().has(marcus, ModifierType::CannotDigivolve),
+        runner
+            .modifiers()
+            .has(marcus, ModifierType::CannotDigivolve),
         "Marcus must gain CannotDigivolve"
     );
 }

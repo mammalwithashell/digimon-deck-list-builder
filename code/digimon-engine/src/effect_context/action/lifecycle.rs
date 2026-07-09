@@ -273,11 +273,7 @@ impl<'a> EffectContext<'a> {
     /// the in-flight Option is not OUR source card, `target` is not an own live
     /// permanent, or no claimable Option source exists. The caller (DSL step /
     /// clause tail) gates any follow-up on the returned `bool`.
-    pub fn place_self_under_permanent(
-        &mut self,
-        target: PermanentHandle,
-        face_down: bool,
-    ) -> bool {
+    pub fn place_self_under_permanent(&mut self, target: PermanentHandle, face_down: bool) -> bool {
         // The target must be a battle-area permanent the controller owns.
         if target.player != self.player {
             return false;
@@ -296,11 +292,7 @@ impl<'a> EffectContext<'a> {
         // `move_self_option_under_permanent` — that path pops the field
         // permanent and fires no trash observers.
         if let Some(source_perm) = self.source_permanent {
-            if self
-                .game
-                .option_field_state(source_perm)
-                .is_some()
-            {
+            if self.game.option_field_state(source_perm).is_some() {
                 return self
                     .game
                     .move_field_option_under_permanent(source_perm, target, face_down);

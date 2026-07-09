@@ -44,9 +44,8 @@ pub(crate) fn resolve_profile(
         let meta: Value = serde_json::from_str(&text)
             .map_err(|e| format!("malformed {}: {e}", meta_path.display()))?;
         if let Some(raw) = meta.get("observation_profile").and_then(|v| v.as_str()) {
-            return parse_observation_profile(raw).map_err(|e| {
-                format!("{} names an unknown profile: {e}", meta_path.display())
-            });
+            return parse_observation_profile(raw)
+                .map_err(|e| format!("{} names an unknown profile: {e}", meta_path.display()));
         }
     }
     eprintln!(
@@ -86,7 +85,11 @@ pub fn run(
     let text = match std::fs::read_to_string(&recording_path) {
         Ok(t) => t,
         Err(e) => {
-            eprintln!("error reading recording {}: {}", recording_path.display(), e);
+            eprintln!(
+                "error reading recording {}: {}",
+                recording_path.display(),
+                e
+            );
             return ExitCode::from(2);
         }
     };

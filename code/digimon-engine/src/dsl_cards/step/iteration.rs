@@ -10,6 +10,7 @@ use digimon_dsl::compiled::{CompiledBindingRef, CompiledStep};
 use crate::card_source::CardHandle;
 use crate::dsl_cards::binding_ref::{resolve_binding_ref, ResolvedBinding};
 use crate::dsl_cards::bindings::Bindings;
+use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::step::permanent_scan::scan;
 use crate::dsl_cards::step::{run_steps_with_runtime, RunOutcome, StepRuntime};
 use crate::effect_context::EffectContext;
@@ -43,6 +44,49 @@ fn resolve_by_top_card(ctx: &EffectContext<'_>, stable_id: CardHandle) -> Option
         }
     }
     None
+}
+
+fn repeat_formula_target(ctx: &EffectContext<'_>) -> PermanentHandle {
+    ctx.source_permanent.unwrap_or(PermanentHandle {
+        player: ctx.player,
+        index: 0,
+    })
+}
+
+fn run_repeated_effect_choice(
+    remaining: u8,
+    labels: &[String],
+    bind_as: &Option<String>,
+    prompt: &str,
+    prompt_key: &Option<String>,
+    body: &[CompiledStep],
+    ctx: &mut EffectContext<'_>,
+    bindings: &mut Bindings,
+    runtime: &StepRuntime,
+) -> RunOutcome {
+    if remaining == 0 {
+        return RunOutcome::Synchronous;
+    }
+
+    let mut steps = Vec::with_capacity(body.len() + 2);
+    steps.push(CompiledStep::SelectEffectChoice {
+        labels: labels.to_vec(),
+        bind_as: bind_as.clone(),
+        prompt: prompt.to_string(),
+        prompt_key: prompt_key.clone(),
+    });
+    steps.extend_from_slice(body);
+    if remaining > 1 {
+        steps.push(CompiledStep::RepeatEffectChoiceRemaining {
+            remaining: remaining - 1,
+            labels: labels.to_vec(),
+            bind_as: bind_as.clone(),
+            prompt: prompt.to_string(),
+            prompt_key: prompt_key.clone(),
+            body: body.to_vec(),
+        });
+    }
+    run_steps_with_runtime(&steps, ctx, bindings, runtime)
 }
 
 /// Returns `Some(RunOutcome)` if `step` is an iteration verb. Returns
@@ -171,6 +215,31 @@ pub fn try_run(
             }
             Some(RunOutcome::Synchronous)
         }
+        CompiledStep::RepeatEffectChoice {
+            count,
+            labels,
+            bind_as,
+            prompt,
+            prompt_key,
+            body,
+        } => {
+            let target = repeat_formula_target(ctx);
+            let n = formula_eval::evaluate_with_bindings(count, ctx, target, Some(bindings))
+                .clamp(0, u8::MAX as i32) as u8;
+            Some(run_repeated_effect_choice(
+                n, labels, bind_as, prompt, prompt_key, body, ctx, bindings, runtime,
+            ))
+        }
+        CompiledStep::RepeatEffectChoiceRemaining {
+            remaining,
+            labels,
+            bind_as,
+            prompt,
+            prompt_key,
+            body,
+        } => Some(run_repeated_effect_choice(
+            *remaining, labels, bind_as, prompt, prompt_key, body, ctx, bindings, runtime,
+        )),
         _ => None,
     }
 }

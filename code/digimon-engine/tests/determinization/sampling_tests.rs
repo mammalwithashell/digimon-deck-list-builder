@@ -34,7 +34,11 @@ fn deterministic_per_seed() {
             .collect()
     };
     assert_eq!(drain(42), drain(42), "same seed must replay the same draws");
-    assert_ne!(drain(42), drain(43), "different seeds should diverge on a 20-card pool");
+    assert_ne!(
+        drain(42),
+        drain(43),
+        "different seeds should diverge on a 20-card pool"
+    );
 }
 
 #[test]
@@ -47,8 +51,12 @@ fn clone_box_replays_identical_future_draws() {
     a.next_reveal(RevealKind::Draw).unwrap();
     a.next_reveal(RevealKind::Security).unwrap();
     let mut b = a.clone_box();
-    let rest_a: Vec<String> = (0..13).map(|_| a.next_reveal(RevealKind::Draw).unwrap()).collect();
-    let rest_b: Vec<String> = (0..13).map(|_| b.next_reveal(RevealKind::Draw).unwrap()).collect();
+    let rest_a: Vec<String> = (0..13)
+        .map(|_| a.next_reveal(RevealKind::Draw).unwrap())
+        .collect();
+    let rest_b: Vec<String> = (0..13)
+        .map(|_| b.next_reveal(RevealKind::Draw).unwrap())
+        .collect();
     assert_eq!(rest_a, rest_b, "cloned source must replay identical draws");
 }
 

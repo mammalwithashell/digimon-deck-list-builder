@@ -1,0 +1,104 @@
+card: EX12-014
+name: Canoweissmon
+kind: digimon
+level: 5
+color: [red, yellow]
+cost: 7
+dp: 7000
+traits: ["Sky Dragon", VB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from:
+      level_eq: 4
+      any_of:
+        - in_text_contains: Gammamon
+        - trait_has: VB
+    cost: 3
+
+effects:
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode (Lv.4 or lower w/[Gammamon] in text or [VB])>"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - in_text_contains: Gammamon
+                  - trait_has: VB
+          prompt: "Choose a level 4 or lower [Gammamon]-text or [VB] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may place 1 level 5 or lower [Gammamon]-text/[VB] card from hand/trash as bottom source; then 1 of your Digimon may attack"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          bind_as: placed_source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+              - any_of:
+                  - in_text_contains: Gammamon
+                  - trait_has: VB
+          prompt: "Place 1 level 5 or lower [Gammamon]-text or [VB] card from your hand or trash as this Digimon's bottom digivolution card"
+          then:
+            - place_as_bottom_source:
+                source: placed_source
+                target: source
+            - select_own_permanent:
+                bind_as: attack_target
+                optional: true
+                filter: { kind: digimon }
+                prompt: "1 of your Digimon may attack"
+            - may_attack_now:
+                attacker: attack_target
+                targets: any
+                optional: true
+
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "[Inherited] <Decode (Lv.4 or lower w/[Gammamon] in text or [VB])>"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source_inh
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - in_text_contains: Gammamon
+                  - trait_has: VB
+          prompt: "Choose a level 4 or lower [Gammamon]-text or [VB] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source_inh
+          cost_delta: free

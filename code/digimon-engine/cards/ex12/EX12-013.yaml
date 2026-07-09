@@ -1,0 +1,57 @@
+card: EX12-013
+name: BetelGammamon
+kind: digimon
+level: 4
+color: [red, yellow]
+cost: 5
+dp: 6000
+traits: [Dragonkin, VB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { name_is: Gammamon }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: VB }
+    cost: 2
+
+effects:
+  - when: main_on_field
+    once_per_turn: true
+    optional: true
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - in_text_contains: Gammamon
+            - trait_has: VB
+        n: 1
+    summary: "[Main][OPT] You may play or use 1 card with [Gammamon] in its text or [VB] from hand with cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: vb_pick
+          optional: true
+          filter:
+            any_of:
+              - in_text_contains: Gammamon
+              - trait_has: VB
+          prompt: "Play or use 1 card with [Gammamon] in its text or the [VB] trait from your hand with the cost reduced by 2"
+      - play_or_use_from_hand:
+          of: you
+          hand_index: vb_pick
+          cost_delta: { reduce: 2 }
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier
+    summary: "[Inherited] <Barrier>"

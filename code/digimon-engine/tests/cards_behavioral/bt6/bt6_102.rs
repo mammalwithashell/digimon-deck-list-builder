@@ -244,7 +244,10 @@ fn bt6_102_no_selection_installs_with_no_opponent_digimon() {
         .start();
 
     let fired = r.game.activate_hand_main(0, 0);
-    assert!(fired, "BT6-102 [Main] must fire (mandatory, no condition gate on the option itself)");
+    assert!(
+        fired,
+        "BT6-102 [Main] must fire (mandatory, no condition gate on the option itself)"
+    );
     let _ = r.auto_resolve();
 
     assert!(

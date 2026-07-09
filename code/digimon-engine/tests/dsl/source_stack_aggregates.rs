@@ -1,11 +1,12 @@
 use digimon_dsl::compiled::{
-    CompiledCountBound, CompiledFormula, CompiledModifierValue, CompiledPerSelector, CompiledStep,
+    CompiledCountBound, CompiledFormula, CompiledModifierValue, CompiledPerSelector,
+    CompiledStep,
 };
 use digimon_dsl::{compile::compile, spec::CardSpec};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::formula_eval;
+use digimon_engine::dsl_cards::bindings::Bindings;
 use digimon_engine::dsl_cards::step::{run_steps, RunOutcome};
 use digimon_engine::effect_context::{EffectContext, SourceSelectionRef};
 use digimon_engine::enums::{CardColor, CardKind, EffectTiming};
@@ -62,6 +63,76 @@ fn source_stack_aggregate_formula_reads_source_levels() {
     };
 
     assert_eq!(formula_eval::evaluate(&formula, &ctx, target), 1);
+}
+
+#[test]
+fn self_same_level_source_pairs_gte_predicate_reads_source_stack_levels() {
+    let yaml = r#"
+card: TEST-SAME-LEVEL-SOURCE-PAIR-GATE
+name: Same Level Source Pair Gate
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 7000
+effects:
+  - kind: aura
+    target: {}
+    active_when:
+      self_same_level_source_pairs_gte: 1
+    dp_modifier: 3000
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("register DSL card")
+        .add_card({
+            let mut card = make_test_card("SRC-4A", "Source 4A");
+            card.level = Some(4);
+            card.card_kind = CardKind::Digimon;
+            card
+        })
+        .add_card({
+            let mut card = make_test_card("SRC-4B", "Source 4B");
+            card.level = Some(4);
+            card.card_kind = CardKind::Digimon;
+            card
+        })
+        .add_card({
+            let mut card = make_test_card("SRC-5", "Source 5");
+            card.level = Some(5);
+            card.card_kind = CardKind::Digimon;
+            card
+        })
+        .start();
+
+    let with_pair = runner.place_stack(
+        0,
+        &[
+            "SRC-4A",
+            "SRC-4B",
+            "SRC-5",
+            "TEST-SAME-LEVEL-SOURCE-PAIR-GATE",
+        ],
+    );
+    assert_eq!(
+        runner.game.effective_dp(with_pair),
+        Some(10000),
+        "one same-level source pair should satisfy the predicate"
+    );
+
+    let without_pair = runner.place_stack(
+        0,
+        &[
+            "SRC-4A",
+            "SRC-5",
+            "TEST-SAME-LEVEL-SOURCE-PAIR-GATE",
+        ],
+    );
+    assert_eq!(
+        runner.game.effective_dp(without_pair),
+        Some(7000),
+        "different-level sources should not satisfy the predicate"
+    );
 }
 
 #[test]

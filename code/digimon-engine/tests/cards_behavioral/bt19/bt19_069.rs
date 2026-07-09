@@ -274,7 +274,10 @@ fn bt19_069_on_play_no_eligible_target_skips_delete_prompt_after_trashing() {
     let hand_prompt = runner
         .pending_selection_view()
         .expect("optional hand-trash cost prompt must install even with no opponent target");
-    assert!(hand_prompt.is_optional, "the trash cost is a 'by trashing' optional cost");
+    assert!(
+        hand_prompt.is_optional,
+        "the trash cost is a 'by trashing' optional cost"
+    );
     runner
         .execute_action(0, PLAY_HAND_START)
         .expect("trash the fodder hand card");
@@ -357,7 +360,9 @@ fn bt19_069_when_digivolving_trashing_hand_deletes_eligible_opponent() {
 
     let opp_count_before = runner.battle_area_size(1);
     fire_when_digivolving(&mut runner, deltamon);
-    runner.auto_resolve().expect("resolve when-digivolving flow");
+    runner
+        .auto_resolve()
+        .expect("resolve when-digivolving flow");
 
     assert_eq!(
         runner.battle_area_size(1),
@@ -376,7 +381,9 @@ fn bt19_069_when_digivolving_cannot_delete_opponent_above_level_4() {
 
     let opp_count_before = runner.battle_area_size(1);
     fire_when_digivolving(&mut runner, deltamon);
-    runner.auto_resolve().expect("resolve when-digivolving flow");
+    runner
+        .auto_resolve()
+        .expect("resolve when-digivolving flow");
 
     assert_eq!(
         runner.battle_area_size(1),

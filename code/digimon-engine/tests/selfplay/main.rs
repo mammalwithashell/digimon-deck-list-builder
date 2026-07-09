@@ -63,10 +63,8 @@ fn run_test() {
     let decks = vec![owned(D1), owned(D2)];
     let names = vec!["ST-1".to_string(), "ST-5".to_string()];
 
-    let out_dir = std::env::temp_dir().join(format!(
-        "digimon_selfplay_test_{}",
-        std::process::id()
-    ));
+    let out_dir =
+        std::env::temp_dir().join(format!("digimon_selfplay_test_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&out_dir);
 
     let mut config = SelfPlayConfig {
@@ -174,7 +172,10 @@ fn run_test() {
             assert!(visits[s..e].iter().all(|&v| v >= 0.0));
         }
 
-        let z = npy::read(&dir.join("z.npy")).expect("z").as_f32().expect("f32");
+        let z = npy::read(&dir.join("z.npy"))
+            .expect("z")
+            .as_f32()
+            .expect("f32");
         assert_eq!(z.len(), rows);
         assert!(
             z.iter().all(|&v| v == 1.0 || v == -1.0),

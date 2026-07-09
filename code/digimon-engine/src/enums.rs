@@ -511,6 +511,16 @@ pub enum Keyword {
     /// upcoming attack window and queues an `EndOfAttack` self-deletion.
     Execute,
 
+    /// `Engage` — at End of Your Turn, this Digimon may attack using normal
+    /// attack legality. Unlike Vortex, it does not bypass played-this-turn
+    /// restrictions or restrict targets to opponent Digimon.
+    Engage,
+
+    /// `Guard` — when another of your Digimon would leave the battle area by
+    /// an opponent's effect, optionally delete this Digimon to prevent that
+    /// Digimon from leaving.
+    Guard,
+
     /// DCGO `Iceclad` — passive (RULES_CONTEXT 16-34). When this Digimon
     /// is in a Digimon-vs-Digimon battle (NOT a security-Digimon battle),
     /// compare digivolution-card count instead of DP. Higher count wins;
@@ -967,6 +977,7 @@ pub enum CardSourceRef {
     Trash(PlayerId, usize),
     DeckTop(PlayerId),
     Security(PlayerId, usize),
+    PendingSecurity,
     Material(crate::permanent::PermanentHandle, usize),
     Reveal(CardHandle),
 }

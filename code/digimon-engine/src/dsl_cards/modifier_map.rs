@@ -415,6 +415,10 @@ pub fn lookup_keyword(name: &str, value: Option<i32>) -> Option<Keyword> {
         "DrawX" => Keyword::DrawX(value.unwrap_or(1) as u8),
         "Fragment" => Keyword::Fragment(value.unwrap_or(1) as u8),
         "Progress" => Keyword::Progress,
+        "Execute" => Keyword::Execute,
+        "Engage" => Keyword::Engage,
+        "Guard" => Keyword::Guard,
+        "Ascension" => Keyword::Ascension,
         // Retaliation — trigger-type keyword (delete-the-winner-in-battle).
         // `Keyword::Retaliation` is fully wired behaviorally
         // (cards/keyword_effects.rs, tests/keyword_phase_e/retaliation.rs); the

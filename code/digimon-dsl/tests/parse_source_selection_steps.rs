@@ -337,7 +337,10 @@ effects:
                 matches!(max, CompiledCountBound::Formula(_)),
                 "max must compile to a formula bound, got {max:?}"
             );
-            assert!(*clamp_to_available, "clamp_to_available: true must survive lowering");
+            assert!(
+                *clamp_to_available,
+                "clamp_to_available: true must survive lowering"
+            );
             assert_eq!(bind_as.as_deref(), Some("picks"));
             assert_eq!(
                 then,

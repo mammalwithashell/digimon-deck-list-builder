@@ -1,0 +1,104 @@
+card: EX12-032
+name: WereGarurumon
+kind: digimon
+level: 5
+color: [blue, purple]
+cost: 7
+dp: 7000
+traits: [Beastkin, NSo, VB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - name_contains: Garurumon
+            - trait_has: NSo
+            - trait_has: VB
+    cost: 3
+  - kind: dna_digivolve
+    materials:
+      - level_eq: 5
+        any_of:
+          - color_is: blue
+          - color_is: yellow
+      - level_eq: 5
+        any_of:
+          - color_is: purple
+          - color_is: red
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 opponent Digimon/Tamer can't suspend until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter:
+            any_of:
+              - kind: digimon
+              - kind: tamer
+          prompt: "Choose 1 opponent Digimon or Tamer that can't suspend until their turn ends"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn
+
+  - when: when_attacking
+    optional: true
+    active_when:
+      self_same_level_source_pairs_gte: 1
+    summary: "[When Attacking] If this stack has 2+ same-level source cards, may digivolve into [Garurumon]/[NSo]/[VB] in trash with cost -2"
+    process:
+      - select_trash:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: Garurumon
+                  - trait_has: NSo
+                  - trait_has: VB
+          prompt: "Digivolve into [Garurumon]/[NSo]/[VB] from trash with cost reduced by 2"
+      - effect_initiated_digivolve:
+          target: source
+          source: evo
+          cost: { reduce: 2 }
+          ignore_requirements: false
+
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - none_of:
+            - replacement_cause: battle
+    summary: "[Inherited] <Decode (Lv.4 or lower w/[Gabumon]/[Garurumon] in name or [NSo]/[VB])>"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - name_contains: Gabumon
+                  - name_contains: Garurumon
+                  - trait_has: NSo
+                  - trait_has: VB
+          prompt: "Decode: play 1 level 4 or lower [Gabumon]/[Garurumon]/[NSo]/[VB] source"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free

@@ -101,9 +101,7 @@ delta: 1
 
 #[test]
 fn round_trip_own_link_card_count() {
-    let per = PerSelector::OwnLinkCardCount {
-        of: PlayerRef::You,
-    };
+    let per = PerSelector::OwnLinkCardCount { of: PlayerRef::You };
     let json = serde_json::to_value(&per).unwrap();
     let back: PerSelector = serde_json::from_value(json).unwrap();
     assert_eq!(per, back);

@@ -13,7 +13,7 @@ static CARDS_PACK: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/cards.pack"
 
 /// Load the card registry from the bytes embedded at build time.
 pub fn from_embedded() -> Result<CardRegistry, String> {
-    CardRegistry::from_pack_bytes(CARDS_PACK)
+    load_embedded_pack_with_stack()
 }
 
 /// Process-cached `from_embedded()`. The embedded pack is static, so parse it
@@ -34,7 +34,26 @@ pub fn from_embedded_cached() -> Result<&'static CardRegistry, String> {
 pub fn from_embedded_with_raw_registry(
     raw_rust: &dyn RawRustRegistry,
 ) -> Result<CardRegistry, String> {
-    CardRegistry::from_pack_bytes_with_raw_registry(CARDS_PACK, raw_rust)
+    std::thread::scope(|scope| {
+        let handle = std::thread::Builder::new()
+            .stack_size(16 * 1024 * 1024)
+            .spawn_scoped(scope, || {
+                CardRegistry::from_pack_bytes_with_raw_registry(CARDS_PACK, raw_rust)
+            })
+            .map_err(|e| format!("spawn DSL pack loader: {e}"))?;
+        handle
+            .join()
+            .map_err(|_| "DSL pack loader panicked".to_string())?
+    })
+}
+
+fn load_embedded_pack_with_stack() -> Result<CardRegistry, String> {
+    std::thread::Builder::new()
+        .stack_size(16 * 1024 * 1024)
+        .spawn(|| CardRegistry::from_pack_bytes(CARDS_PACK))
+        .map_err(|e| format!("spawn DSL pack loader: {e}"))?
+        .join()
+        .map_err(|_| "DSL pack loader panicked".to_string())?
 }
 
 /// Load the card registry from a cache-directory pack file — used by

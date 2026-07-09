@@ -1,0 +1,66 @@
+card: EX12-045
+name: Sanzomon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+traits: [Monk, Shambala, SW]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: Shambala }
+    cost: 3
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may add your top security card to hand; then if you have 2 or fewer security, Recovery +1"
+    process:
+      - may_add_top_security_to_hand: { of: you }
+      - if:
+          condition: { security_count_lte: 2 }
+          then:
+            - recover: { of: you, count: 1 }
+
+  - when: on_own_security_removed
+    once_per_turn: true
+    optional: true
+    active_when: { your_turn: true }
+    summary: "[Your Turn][OPT] When your security is removed, play 1 card with [Gokuumon] in text or [SW] trait from hand with cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: play_card
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - any_of:
+                  - trait_has: SW
+                  - in_text_contains: Gokuumon
+          prompt: "Play 1 card with [Gokuumon] in its text or the [SW] trait from hand with the cost reduced by 2"
+      - play_from_hand:
+          of: you
+          hand_index: play_card
+          cost_delta: { reduce: 2 }
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: true
+    summary: "[Inherited][When Attacking][OPT] 1 opponent Digimon gets -4000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -4000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -4000
+          expiry: end_of_turn

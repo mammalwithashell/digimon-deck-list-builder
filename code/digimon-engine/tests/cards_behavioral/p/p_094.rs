@@ -110,7 +110,9 @@ fn make_it_player_ones_turn(r: &mut DebugRunner) {
 #[test]
 fn p_094_yaml_compiles_and_has_printed_metadata() {
     let r = base_runner();
-    let card = r.compiled_card("P-094").expect("P-094 present in embedded pack");
+    let card = r
+        .compiled_card("P-094")
+        .expect("P-094 present in embedded pack");
     assert_eq!(card.name, "Destromon");
     assert_eq!(card.kind, CompiledCardKind::Digimon);
     assert_eq!(card.level, Some(5));
@@ -138,8 +140,7 @@ fn p_094_has_digivolve_and_digixros_paths_with_digimon_only_materials() {
     // `all_of: [{ kind: digimon }, { name_is: X }]`, so the kind constraint is
     // nested in `all_of` (DCGO `cardSource.IsDigimon`).
     fn predicate_requires_digimon(p: &CompiledPredicate) -> bool {
-        p.kind == Some(CompiledCardKind::Digimon)
-            || p.all_of.iter().any(predicate_requires_digimon)
+        p.kind == Some(CompiledCardKind::Digimon) || p.all_of.iter().any(predicate_requires_digimon)
     }
     fn predicate_names(p: &CompiledPredicate) -> Vec<String> {
         let mut out = Vec::new();
@@ -168,7 +169,10 @@ fn p_094_has_digivolve_and_digixros_paths_with_digimon_only_materials() {
         .materials
         .iter()
         .any(|m| predicate_names(&m.filter).iter().any(|n| n == "Vemmon"));
-    assert!(has_snatchmon && has_vemmon, "recipe has Snatchmon + Vemmon slots");
+    assert!(
+        has_snatchmon && has_vemmon,
+        "recipe has Snatchmon + Vemmon slots"
+    );
 }
 
 /// The [On Play][When Digivolving] deletion clause and the inherited attack
@@ -215,8 +219,14 @@ fn p_094_has_deletion_clause_and_inherited_redirect() {
             _ => None,
         })
         .expect("inherited [Opp Turn] redirect clause");
-    assert!(inherited.once_per_turn, "inherited clause is [Once Per Turn]");
-    assert!(inherited.optional, "inherited clause is a 'by paying' optional");
+    assert!(
+        inherited.once_per_turn,
+        "inherited clause is [Once Per Turn]"
+    );
+    assert!(
+        inherited.optional,
+        "inherited clause is a 'by paying' optional"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

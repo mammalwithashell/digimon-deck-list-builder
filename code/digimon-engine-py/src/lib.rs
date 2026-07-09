@@ -814,7 +814,13 @@ impl RustHeadlessGame {
         // indexed by Rust 0-based PlayerId (Python 1/2 mapping is
         // owner-side).
         d.set_item("turn_count", game.turn_count)?;
-        let driven = PyList::new_bound(py, [game.n_digivolve_driven_attacks[0], game.n_digivolve_driven_attacks[1]]);
+        let driven = PyList::new_bound(
+            py,
+            [
+                game.n_digivolve_driven_attacks[0],
+                game.n_digivolve_driven_attacks[1],
+            ],
+        );
         d.set_item("n_digivolve_driven_attacks", driven)?;
         Ok(d.into_py(py))
     }
@@ -886,7 +892,8 @@ impl RustHeadlessGame {
     /// when the queried player is not the current decision player.
     fn legal_decoded_actions(&self, py: Python) -> PyResult<PyObject> {
         let pid = self.inner.current_decision_player();
-        let actions = ::digimon_engine::action::explain::legal_decoded_actions(&self.inner.game, pid);
+        let actions =
+            ::digimon_engine::action::explain::legal_decoded_actions(&self.inner.game, pid);
         let value = serde_json::to_value(&actions)
             .map_err(|e| pyo3::exceptions::PyValueError::new_err(e.to_string()))?;
         json_to_pyobject(py, &value)
@@ -1255,10 +1262,7 @@ impl RustDebugGame {
         }
     }
 
-    fn get_events_since_last_step<'py>(
-        &mut self,
-        py: Python<'py>,
-    ) -> PyResult<Bound<'py, PyList>> {
+    fn get_events_since_last_step<'py>(&mut self, py: Python<'py>) -> PyResult<Bound<'py, PyList>> {
         let drained = self.inner.game.drain_events();
         let list = PyList::empty_bound(py);
         for ev in drained {

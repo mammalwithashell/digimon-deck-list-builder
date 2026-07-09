@@ -67,8 +67,7 @@
 #![allow(dead_code)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledScope, CompiledTiming,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -132,7 +131,13 @@ fn base_runner() -> DebugRunner {
         .add_card(blue_lv5("BLU-A"))
         .add_card(tamer("OPP-TAMER", "OppTamer"))
         .add_card(tamer("OPP-TAMER-2", "OppTamer2"))
-        .add_card(digimon("OPP-DIGI", "OppDigimon", 4, 4000, vec![CardColor::Red]))
+        .add_card(digimon(
+            "OPP-DIGI",
+            "OppDigimon",
+            4,
+            4000,
+            vec![CardColor::Red],
+        ))
         .memory(20)
         .start()
 }
@@ -256,17 +261,15 @@ fn ex8_045_has_dna_digivolve_green_purple_lv5_red_yellow_lv5_cost0() {
 
     let has_green_purple_material = path.materials.iter().any(|m| {
         m.filter.level_eq == Some(5)
-            && m.filter
-                .color_only
-                .as_ref()
-                .is_some_and(|cs| cs.contains(&CompiledColor::Green) && cs.contains(&CompiledColor::Purple))
+            && m.filter.color_only.as_ref().is_some_and(|cs| {
+                cs.contains(&CompiledColor::Green) && cs.contains(&CompiledColor::Purple)
+            })
     });
     let has_red_yellow_material = path.materials.iter().any(|m| {
         m.filter.level_eq == Some(5)
-            && m.filter
-                .color_only
-                .as_ref()
-                .is_some_and(|cs| cs.contains(&CompiledColor::Red) && cs.contains(&CompiledColor::Yellow))
+            && m.filter.color_only.as_ref().is_some_and(|cs| {
+                cs.contains(&CompiledColor::Red) && cs.contains(&CompiledColor::Yellow)
+            })
     });
 
     assert!(
@@ -422,8 +425,12 @@ fn ex8_045_when_digivolving_suspends_digimon_and_returns_suspended_tamer() {
     assert_eq!(view.kind, SelectionKind::OppField);
     // Choose whichever candidate corresponds to the opp Digimon slot 0.
     let action_id = view.valid_action_ids[0];
-    runner.execute_action(0, action_id).expect("select suspend target");
-    runner.auto_resolve().expect("resolve suspend + return steps");
+    runner
+        .execute_action(0, action_id)
+        .expect("select suspend target");
+    runner
+        .auto_resolve()
+        .expect("resolve suspend + return steps");
 
     // Step 2 must have returned the (pre-suspended) opp Tamer to the bottom
     // of the opponent's deck — it must no longer be on the battle area. Do
@@ -463,7 +470,12 @@ fn ex8_045_when_digivolving_suspends_digimon_and_returns_suspended_tamer() {
     let _ = digi_suspended_after;
     let _ = opp_digi;
     assert_eq!(
-        runner.game.player(1).deck.first().map(|c| c.card_id(&runner.game.card_data)),
+        runner
+            .game
+            .player(1)
+            .deck
+            .first()
+            .map(|c| c.card_id(&runner.game.card_data)),
         Some("OPP-TAMER"),
         "the returned Tamer must be at index 0 (deck bottom)"
     );
@@ -506,8 +518,12 @@ fn ex8_045_when_digivolving_return_step_fires_for_a_pre_suspended_tamer() {
         .pending_selection_view()
         .expect("step 1 selection installs — opp Tamer is a legal Digimon-or-Tamer target");
     let action_id = view.valid_action_ids[0];
-    runner.execute_action(0, action_id).expect("select suspend target");
-    runner.auto_resolve().expect("resolve suspend + return steps");
+    runner
+        .execute_action(0, action_id)
+        .expect("select suspend target");
+    runner
+        .auto_resolve()
+        .expect("resolve suspend + return steps");
 
     assert!(
         runner.game.players[1]
@@ -553,7 +569,13 @@ fn ex8_045_when_digivolving_no_suspended_tamer_skips_return_step() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("EX8-045 found in embedded DSL pack")
-        .add_card(digimon("OPP-DIGI", "OppDigimon", 4, 4000, vec![CardColor::Red]))
+        .add_card(digimon(
+            "OPP-DIGI",
+            "OppDigimon",
+            4,
+            4000,
+            vec![CardColor::Red],
+        ))
         .memory(20)
         .start();
 
@@ -570,7 +592,9 @@ fn ex8_045_when_digivolving_no_suspended_tamer_skips_return_step() {
         .pending_selection_view()
         .expect("step 1 selection installs — opp Digimon is a legal target");
     let action_id = view.valid_action_ids[0];
-    runner.execute_action(0, action_id).expect("select suspend target");
+    runner
+        .execute_action(0, action_id)
+        .expect("select suspend target");
     runner
         .auto_resolve()
         .expect("resolve — step 2 must skip cleanly (no suspended Tamer)");
@@ -594,7 +618,13 @@ fn ex8_045_your_turn_dp_scales_with_distinct_source_colors() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("EX8-045 found in embedded DSL pack")
-        .add_card(digimon("SRC-GRN", "SrcGreen", 5, 5000, vec![CardColor::Green]))
+        .add_card(digimon(
+            "SRC-GRN",
+            "SrcGreen",
+            5,
+            5000,
+            vec![CardColor::Green],
+        ))
         .add_card(digimon("SRC-RED", "SrcRed", 5, 5000, vec![CardColor::Red]))
         .memory(20)
         .start();
@@ -632,7 +662,13 @@ fn ex8_045_your_turn_dp_bonus_absent_on_opponents_turn() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("EX8-045 found in embedded DSL pack")
-        .add_card(digimon("SRC-GRN2", "SrcGreen2", 5, 5000, vec![CardColor::Green]))
+        .add_card(digimon(
+            "SRC-GRN2",
+            "SrcGreen2",
+            5,
+            5000,
+            vec![CardColor::Green],
+        ))
         .memory(20)
         .start();
 
@@ -683,7 +719,13 @@ fn ex8_045_aura_grants_piercing_when_opp_digimon_has_lower_dp() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("EX8-045 found in embedded DSL pack")
-        .add_card(digimon("OPP-WEAK", "OppWeak", 5, 5000, vec![CardColor::Red]))
+        .add_card(digimon(
+            "OPP-WEAK",
+            "OppWeak",
+            5,
+            5000,
+            vec![CardColor::Red],
+        ))
         .memory(20)
         .start();
 
@@ -715,7 +757,13 @@ fn ex8_045_aura_off_when_opp_digimon_has_equal_dp() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("EX8-045 found in embedded DSL pack")
-        .add_card(digimon("OPP-EQUAL", "OppEqual", 6, 12000, vec![CardColor::Red]))
+        .add_card(digimon(
+            "OPP-EQUAL",
+            "OppEqual",
+            6,
+            12000,
+            vec![CardColor::Red],
+        ))
         .memory(20)
         .start();
 
@@ -748,7 +796,13 @@ fn ex8_045_aura_off_when_opp_digimon_has_higher_dp() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("EX8-045 found in embedded DSL pack")
-        .add_card(digimon("OPP-STRONG", "OppStrong", 6, 13000, vec![CardColor::Red]))
+        .add_card(digimon(
+            "OPP-STRONG",
+            "OppStrong",
+            6,
+            13000,
+            vec![CardColor::Red],
+        ))
         .memory(20)
         .start();
 
@@ -809,7 +863,13 @@ fn ex8_045_aura_uses_live_dp_including_source_color_bonus() {
         .dsl_card(CARD_ID)
         .expect("EX8-045 found in embedded DSL pack")
         .add_card(digimon("SRC-G3", "SrcG3", 5, 5000, vec![CardColor::Green]))
-        .add_card(digimon("OPP-12500", "Opp12500", 6, 12500, vec![CardColor::Red]))
+        .add_card(digimon(
+            "OPP-12500",
+            "Opp12500",
+            6,
+            12500,
+            vec![CardColor::Red],
+        ))
         .memory(20)
         .start();
 
@@ -823,7 +883,10 @@ fn ex8_045_aura_uses_live_dp_including_source_color_bonus() {
     runner.game.tick_declarative_effects();
 
     let dp = runner.effective_dp(carrier).expect("carrier has DP");
-    assert_eq!(dp, 13000, "live DP must include the +1000 source-color bonus");
+    assert_eq!(
+        dp, 13000,
+        "live DP must include the +1000 source-color bonus"
+    );
 
     assert!(
         runner.game.has_keyword(carrier, Keyword::Piercing),

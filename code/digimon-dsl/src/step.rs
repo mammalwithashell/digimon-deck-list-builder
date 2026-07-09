@@ -274,6 +274,8 @@ pub enum StepSpec {
     /// surfaces a "Play as Digimon / Use as Option" face choice). The card is
     /// bound by an upstream `select_hand` step. `G-PLAY-OR-USE-FROM-HAND`.
     PlayOrUseFromHand(PlayOrUseFromHandArgs),
+    /// Unified source-origin play/use of a selected digivolution source.
+    PlayOrUseFromSources(PlayOrUseFromSourcesArgs),
     PlayFromRevealedFree(PlayFromRevealedFreeArgs),
     PlayFromTrash(PlayFromHandArgs),
     PlayFromTrashFree(PlayFromHandArgs),
@@ -381,6 +383,7 @@ pub enum StepSpec {
     SelectOrderedPermutation(SelectPermutationArgs),
     SelectCountCappedMulti(SelectCountCappedArgs),
     SelectEffectChoice(SelectEffectChoiceArgs),
+    RepeatEffectChoice(RepeatEffectChoiceArgs),
     AsSelectingPlayer(AsSelectingPlayerArgs),
 
     // Control flow
@@ -582,6 +585,7 @@ impl Serialize for StepSpec {
             StepSpec::UseOptionFromSources(v) => kv!(s, "use_option_from_sources", v),
             StepSpec::UseOptionBound(v) => kv!(s, "use_option_bound", v),
             StepSpec::PlayOrUseFromHand(v) => kv!(s, "play_or_use_from_hand", v),
+            StepSpec::PlayOrUseFromSources(v) => kv!(s, "play_or_use_from_sources", v),
             StepSpec::PlayFromRevealedFree(v) => kv!(s, "play_from_revealed_free", v),
             StepSpec::PlayFromTrash(v) => kv!(s, "play_from_trash", v),
             StepSpec::PlayFromTrashFree(v) => kv!(s, "play_from_trash_free", v),
@@ -684,6 +688,7 @@ impl Serialize for StepSpec {
             StepSpec::SelectOrderedPermutation(v) => kv!(s, "select_ordered_permutation", v),
             StepSpec::SelectCountCappedMulti(v) => kv!(s, "select_count_capped_multi", v),
             StepSpec::SelectEffectChoice(v) => kv!(s, "select_effect_choice", v),
+            StepSpec::RepeatEffectChoice(v) => kv!(s, "repeat_effect_choice", v),
             StepSpec::AsSelectingPlayer(v) => kv!(s, "as_selecting_player", v),
             // Control flow
             StepSpec::If(v) => kv!(s, "if", v),
@@ -767,12 +772,8 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             // The old YAML wrapped the formula in `{ formula: <FormulaSpec> }`
             // (FormulaStepArgs); the new canonical shape takes the formula
             // directly, so unwrap the legacy wrapper here.
-            "gain_memory_fn" => {
-                StepSpec::GainMemory(map.next_value::<FormulaStepArgs>()?.formula)
-            }
-            "lose_memory_fn" => {
-                StepSpec::LoseMemory(map.next_value::<FormulaStepArgs>()?.formula)
-            }
+            "gain_memory_fn" => StepSpec::GainMemory(map.next_value::<FormulaStepArgs>()?.formula),
+            "lose_memory_fn" => StepSpec::LoseMemory(map.next_value::<FormulaStepArgs>()?.formula),
 
             // Draw / deck / hand / trash
             "draw" => StepSpec::Draw(map.next_value()?),
@@ -847,9 +848,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "trash_link_card_of_own_digimon" => {
                 StepSpec::TrashLinkCardOfOwnDigimon(map.next_value()?)
             }
-            "trash_option_from_own_stacks" => {
-                StepSpec::TrashOptionFromOwnStacks(map.next_value()?)
-            }
+            "trash_option_from_own_stacks" => StepSpec::TrashOptionFromOwnStacks(map.next_value()?),
             "bind_permanent_property" => StepSpec::BindPermanentProperty(map.next_value()?),
             "hatch" => StepSpec::Hatch(map.next_value()?),
             "move_from_breeding" => StepSpec::MoveFromBreeding(map.next_value()?),
@@ -863,6 +862,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "use_option_from_sources" => StepSpec::UseOptionFromSources(map.next_value()?),
             "use_option_bound" => StepSpec::UseOptionBound(map.next_value()?),
             "play_or_use_from_hand" => StepSpec::PlayOrUseFromHand(map.next_value()?),
+            "play_or_use_from_sources" => StepSpec::PlayOrUseFromSources(map.next_value()?),
             "play_from_revealed_free" => StepSpec::PlayFromRevealedFree(map.next_value()?),
             "play_from_trash" => StepSpec::PlayFromTrash(map.next_value()?),
             "play_from_trash_free" => StepSpec::PlayFromTrashFree(map.next_value()?),
@@ -894,9 +894,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "move_self_option_under_permanent" => {
                 StepSpec::MoveSelfOptionUnderPermanent(map.next_value()?)
             }
-            "place_self_under_permanent" => {
-                StepSpec::PlaceSelfUnderPermanent(map.next_value()?)
-            }
+            "place_self_under_permanent" => StepSpec::PlaceSelfUnderPermanent(map.next_value()?),
             "security_place_stacked_card" => StepSpec::SecurityPlaceStackedCard(map.next_value()?),
             "security_place_top_stacked_card" => {
                 StepSpec::SecurityPlaceTopStackedCard(map.next_value()?)
@@ -966,6 +964,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "select_ordered_permutation" => StepSpec::SelectOrderedPermutation(map.next_value()?),
             "select_count_capped_multi" => StepSpec::SelectCountCappedMulti(map.next_value()?),
             "select_effect_choice" => StepSpec::SelectEffectChoice(map.next_value()?),
+            "repeat_effect_choice" => StepSpec::RepeatEffectChoice(map.next_value()?),
             "as_selecting_player" => StepSpec::AsSelectingPlayer(map.next_value()?),
 
             // Control flow
@@ -981,9 +980,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
             "app_fuse" => StepSpec::AppFuse(map.next_value()?),
             "reduce_link_cost" => StepSpec::ReduceLinkCost(map.next_value()?),
             "link_cards" => StepSpec::LinkCards(map.next_value()?),
-            "relink_self_to_own_digimon" => {
-                StepSpec::RelinkSelfToOwnDigimon(map.next_value()?)
-            }
+            "relink_self_to_own_digimon" => StepSpec::RelinkSelfToOwnDigimon(map.next_value()?),
             "optional" => StepSpec::Optional(map.next_value()?),
 
             // Combat / replacement process outcomes
@@ -1075,6 +1072,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "use_option_from_hand",
                         "use_option_from_trash",
                         "play_or_use_from_hand",
+                        "play_or_use_from_sources",
                         "play_from_revealed_free",
                         "play_from_trash",
                         "play_from_trash_free",
@@ -1131,6 +1129,7 @@ impl<'de> Visitor<'de> for StepSpecVisitor {
                         "select_ordered_permutation",
                         "select_count_capped_multi",
                         "select_effect_choice",
+                        "repeat_effect_choice",
                         "as_selecting_player",
                         "if",
                         "for_each",
@@ -2012,7 +2011,10 @@ pub struct PlaceOnSecurityArgs {
     /// Replacement-system interaction (permanent sources only). `cancel`
     /// requires `position: bottom` (the engine cancel-via-security tuck is
     /// bottom-only); `observed` may set `include_sources`.
-    #[serde(default, skip_serializing_if = "SecurityReplacementDisposition::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "SecurityReplacementDisposition::is_none"
+    )]
     pub disposition: SecurityReplacementDisposition,
     #[serde(default, skip_serializing_if = "std::ops::Not::not")]
     pub include_sources: bool,
@@ -2050,7 +2052,9 @@ pub enum SecuritySelfMarker {
 
 /// Replacement-system disposition for a permanent placed on security as it
 /// leaves the field. Only legal with `source: permanent` (validated at compile).
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema)]
+#[derive(
+    Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize, schemars::JsonSchema,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum SecurityReplacementDisposition {
     /// Plain placement; no replacement interaction.
@@ -2315,6 +2319,26 @@ pub struct PlayOrUseFromHandArgs {
     /// plays/uses at full printed cost; `{ reduce: 3 }` is the shipped shape.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cost_delta: Option<CostDelta>,
+}
+
+/// `play_or_use_from_sources:` args — the unified source-origin sibling of
+/// `play_or_use_from_hand`. The source card is bound by an upstream
+/// `select_own_sources` step. At resolution the verb inspects the selected
+/// source card's kind: Digimon/Tamer cards are played from their stack without
+/// paying the cost, Option cards are used from that stack, and DUAL cards
+/// surface a "Play as Digimon / Use as Option" face choice.
+///
+/// EX12-077 shape. `G-DSL-PLAY-OR-USE-FROM-SOURCES`.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct PlayOrUseFromSourcesArgs {
+    pub of: PlayerRef,
+    /// Names the `select_own_sources` binding carrying the chosen source ref.
+    pub card: BindingRef,
+    /// EX12 uses `cost: free`. The play half uses the existing free
+    /// source-play primitive; the Option half applies this cost delta.
+    #[serde(default, skip_serializing_if = "Option::is_none", alias = "cost_delta")]
+    pub cost: Option<CostDelta>,
 }
 
 /// Play a card currently in the transient reveal pool without paying its
@@ -3355,6 +3379,20 @@ pub struct SelectEffectChoiceArgs {
     /// positionally from `(card_id, clause_index, step_path)`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub prompt_key: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]
+#[serde(deny_unknown_fields)]
+pub struct RepeatEffectChoiceArgs {
+    pub count: crate::formula::FormulaSpec,
+    pub labels: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bind_as: Option<String>,
+    #[serde(default)]
+    pub prompt: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub prompt_key: Option<String>,
+    pub body: Vec<StepSpec>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, schemars::JsonSchema)]

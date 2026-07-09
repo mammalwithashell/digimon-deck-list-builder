@@ -77,10 +77,8 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>) -> bool {
             } else {
                 match count {
                     None => 1,
-                    Some(formula) => {
-                        crate::dsl_cards::formula_eval::evaluate(formula, ctx, target).max(0)
-                            as usize
-                    }
+                    Some(formula) => crate::dsl_cards::formula_eval::evaluate(formula, ctx, target)
+                        .max(0) as usize,
                 }
             };
             for _ in 0..n {

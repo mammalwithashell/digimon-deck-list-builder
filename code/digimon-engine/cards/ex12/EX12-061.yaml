@@ -1,0 +1,59 @@
+card: EX12-061
+name: Hanimon
+kind: digimon
+level: 3
+color: [purple]
+cost: 3
+dp: 2000
+traits: [Puppet, Shambala, TB]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Shambala }
+    cost: 0
+
+effects:
+  - when: on_play
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - trait_has: Puppet
+            - trait_has: TB
+        n: 1
+    summary: "[On Play] By trashing 1 [Puppet] or [TB] card from hand, draw 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            any_of:
+              - trait_has: Puppet
+              - trait_has: TB
+          prompt: "Trash 1 [Puppet] or [TB] trait card from your hand to draw 2"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][OPT] Draw 1, then trash 1 card in hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }

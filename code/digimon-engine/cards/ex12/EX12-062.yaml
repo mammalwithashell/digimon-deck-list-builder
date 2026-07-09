@@ -1,0 +1,57 @@
+card: EX12-062
+name: Kokeshimon
+kind: digimon
+level: 4
+color: [purple]
+cost: 4
+dp: 5000
+traits: [Puppet, Shambala, TB]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 2
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - trait_has: Puppet
+            - trait_has: Shambala
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] By deleting 1 of your Digimon, delete 1 opponent level 4 or lower Digimon"
+    process:
+      - select_own_permanent:
+          bind_as: cost_digimon
+          optional: true
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your Digimon to delete 1 opponent level 4 or lower Digimon"
+      - if:
+          condition: { binding_present: cost_digimon }
+          then:
+            - delete_permanent: { target: cost_digimon }
+            - select_opponent_permanent:
+                bind_as: delete_target
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 4
+                prompt: "Delete 1 opponent level 4 or lower Digimon"
+            - delete_permanent: { target: delete_target }
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][OPT] Draw 1, then trash 1 card in hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }

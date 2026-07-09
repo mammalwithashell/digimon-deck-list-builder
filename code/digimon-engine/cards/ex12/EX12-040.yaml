@@ -1,0 +1,43 @@
+card: EX12-040
+name: Salamon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+traits: [Mammal, VB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+  - kind: digivolve
+    from:
+      any_of:
+        - name_contains: Nyaromon
+        - all_of:
+            - level_eq: 2
+            - trait_has: VB
+    cost: 0
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Holy Beast
+                  - trait_has: VB
+    amount: 1
+    summary: "[Your Turn] When this Digimon would digivolve into a [Holy Beast] or [VB] Digimon, reduce the cost by 1"
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier
+    summary: "[Inherited] <Barrier>"

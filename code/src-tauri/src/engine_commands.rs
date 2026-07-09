@@ -527,7 +527,11 @@ fn perm_sources_dto(
             SourceCardDto {
                 card_id: cd.card_id.clone(),
                 card_name: cd.card_name.clone(),
-                colors: cd.colors.iter().map(|&c| color_str(c).to_string()).collect(),
+                colors: cd
+                    .colors
+                    .iter()
+                    .map(|&c| color_str(c).to_string())
+                    .collect(),
                 main_effect_text: cd.effect_text.clone(),
                 inherited_effect_text: cd.inherited_text.clone(),
             }
@@ -536,9 +540,7 @@ fn perm_sources_dto(
 }
 
 fn perm_dto(game: &Game, player: PlayerId, index: usize) -> PermanentDto {
-    use digimon_engine::serialization::{
-        modifier_type_str, expiry_str, DISPLAY_KEYWORDS,
-    };
+    use digimon_engine::serialization::{expiry_str, modifier_type_str, DISPLAY_KEYWORDS};
 
     let perm = &game.player(player).battle_area[index];
     let data = &game.card_data;
@@ -959,9 +961,7 @@ pub async fn rust_attack_player(
 
 /// End the current turn.
 #[tauri::command]
-pub async fn rust_end_turn(
-    engine: tauri::State<'_, EngineHandle>,
-) -> Result<GameStateDto, String> {
+pub async fn rust_end_turn(engine: tauri::State<'_, EngineHandle>) -> Result<GameStateDto, String> {
     engine
         .run(move |world| -> Result<GameStateDto, String> {
             let game = world.game.as_mut().ok_or("No active game")?;
@@ -1599,9 +1599,18 @@ pub async fn rust_submit_action(
             // executes per request so the frontend can render each beat (the
             // pacing driver keeps calling `rust_step_game { paced: true }` while
             // `agent_pending`).
-            let max_agent_actions = if paced.unwrap_or(false) { Some(1) } else { None };
+            let max_agent_actions = if paced.unwrap_or(false) {
+                Some(1)
+            } else {
+                None
+            };
             let mut action_traces = vec![human_trace];
-            action_traces.extend(run_agent_steps(game, session, inference, max_agent_actions)?);
+            action_traces.extend(run_agent_steps(
+                game,
+                session,
+                inference,
+                max_agent_actions,
+            )?);
             let events = drain_events(game);
             let mask = action_mask_bytes(game);
             let is_over = game.game_over;
@@ -1644,7 +1653,11 @@ pub async fn rust_step_game(
             // Paced mode executes exactly one agent action per invoke; this command
             // doubles as the "advance one beat" call the frontend pacing driver
             // repeats while `agent_pending` is true.
-            let max_agent_actions = if paced.unwrap_or(false) { Some(1) } else { None };
+            let max_agent_actions = if paced.unwrap_or(false) {
+                Some(1)
+            } else {
+                None
+            };
             let action_traces = run_agent_steps(game, session, inference, max_agent_actions)?;
             // Drain the events the agent's action(s) produced this beat so the
             // frontend streams them live (security-reveal overlay + the
@@ -2044,7 +2057,10 @@ mod tests {
         println!("FIRST_PLAYER_DIST p0={p0} p1={p1}");
         // A correct random first-player split is ~50/50; generous slack guards
         // against a regression to "always the same seat goes first".
-        assert!(p0 > 120 && p1 > 120, "first player should vary: p0={p0} p1={p1}");
+        assert!(
+            p0 > 120 && p1 > 120,
+            "first player should vary: p0={p0} p1={p1}"
+        );
     }
 
     // ─── engine worker thread (desktop-engine-worker-thread) ────────────
@@ -2099,7 +2115,10 @@ mod tests {
         );
 
         // The worker is still alive — the next job runs normally.
-        let ok = engine.run(|_world| 7u32).await.expect("worker survived panic");
+        let ok = engine
+            .run(|_world| 7u32)
+            .await
+            .expect("worker survived panic");
         assert_eq!(ok, 7);
     }
 
@@ -2277,7 +2296,9 @@ mod tests {
             .iter()
             .position(|c| c.card_id == "TRASHED-A")
             .unwrap();
-        runner.game.players[0].trash.push(CardSource::new(idx_a, 0, next_a));
+        runner.game.players[0]
+            .trash
+            .push(CardSource::new(idx_a, 0, next_a));
         let next_b = runner.game.next_card_index();
         let idx_b = runner
             .game
@@ -2285,7 +2306,9 @@ mod tests {
             .iter()
             .position(|c| c.card_id == "TRASHED-B")
             .unwrap();
-        runner.game.players[0].trash.push(CardSource::new(idx_b, 0, next_b));
+        runner.game.players[0]
+            .trash
+            .push(CardSource::new(idx_b, 0, next_b));
 
         let dto = player_dto(&runner.game, 0);
         let ids: Vec<&str> = dto.trash.iter().map(|c| c.card_id.as_str()).collect();

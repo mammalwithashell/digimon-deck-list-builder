@@ -939,6 +939,7 @@ pub struct PlayOrUseDualChoiceState {
     pub prov: ResumeProvenance,
     pub player: PlayerId,
     pub hand_index: usize,
+    pub source_ref: Option<SourceSelectionRef>,
     pub cost_delta: CostDelta,
     pub outer_conts: Vec<OuterContinuation>,
 }

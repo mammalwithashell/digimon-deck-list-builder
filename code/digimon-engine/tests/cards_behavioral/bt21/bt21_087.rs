@@ -63,9 +63,7 @@
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
-use digimon_dsl::compiled::{
-    CompiledCardKind, CompiledClause, CompiledStep, CompiledTiming,
-};
+use digimon_dsl::compiled::{CompiledCardKind, CompiledClause, CompiledStep, CompiledTiming};
 use digimon_engine::action::space::{PASS, SEL_REVEAL_START};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
@@ -202,7 +200,10 @@ fn bt21_087_on_play_clause_shape() {
         })
         .expect("On Play clause");
 
-    assert!(!on_play.optional, "reveal+trash are mandatory at clause level");
+    assert!(
+        !on_play.optional,
+        "reveal+trash are mandatory at clause level"
+    );
 
     assert!(
         on_play
@@ -238,7 +239,9 @@ fn bt21_087_on_play_clause_shape() {
         for s in steps {
             out.push(s);
             match s {
-                CompiledStep::If { then, else_branch, .. } => {
+                CompiledStep::If {
+                    then, else_branch, ..
+                } => {
                     out.extend(steps_flat(then));
                     out.extend(steps_flat(else_branch));
                 }
@@ -252,9 +255,10 @@ fn bt21_087_on_play_clause_shape() {
     }
     let flat = steps_flat(&on_play.process);
     let has_name_gate = flat.iter().any(|s| match s {
-        CompiledStep::If { condition, .. } => {
-            condition.binding_card_name_is.as_ref().is_some_and(|(_, name)| name == "Vemmon")
-        }
+        CompiledStep::If { condition, .. } => condition
+            .binding_card_name_is
+            .as_ref()
+            .is_some_and(|(_, name)| name == "Vemmon"),
         _ => false,
     });
     assert!(
@@ -270,12 +274,18 @@ fn bt21_087_on_play_clause_shape() {
     let has_play_from_reveal = flat
         .iter()
         .any(|s| matches!(s, CompiledStep::PlayFromRevealedFree { .. }));
-    assert!(has_play_from_reveal, "must play the picked card free from the reveal pool");
+    assert!(
+        has_play_from_reveal,
+        "must play the picked card free from the reveal pool"
+    );
 
     let has_add_to_hand = flat
         .iter()
         .any(|s| matches!(s, CompiledStep::AddToHandFromReveal { .. }));
-    assert!(has_add_to_hand, "must add the picked card to hand on the non-Play path(s)");
+    assert!(
+        has_add_to_hand,
+        "must add the picked card to hand on the non-Play path(s)"
+    );
 
     let has_trash_rest = on_play.process.iter().any(|s| match s {
         CompiledStep::PerSelected { body, .. } => body
@@ -364,7 +374,10 @@ fn bt21_087_on_play_installs_optional_reveal_bucket_with_vemmon_eligible() {
         .pending_selection_view()
         .expect("reveal bucket selection installs");
     assert!(matches!(view.kind, SelectionKind::RevealBucket { .. }));
-    assert!(runner.pending_is_optional(), "'canNoSelect: true' → optional");
+    assert!(
+        runner.pending_is_optional(),
+        "'canNoSelect: true' → optional"
+    );
     assert!(
         view.valid_action_ids.contains(&SEL_REVEAL_START),
         "the Vemmon at reveal index 0 must be a legal pick"

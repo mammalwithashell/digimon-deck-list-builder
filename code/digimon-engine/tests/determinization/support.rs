@@ -148,7 +148,8 @@ pub fn zone_ids(cards: &[CardSource], game: &Game) -> Vec<String> {
 pub fn zone_multiset(cards: &[CardSource], game: &Game) -> BTreeMap<String, usize> {
     let mut ms = BTreeMap::new();
     for c in cards {
-        *ms.entry(c.card_id(&game.card_data).to_string()).or_insert(0) += 1;
+        *ms.entry(c.card_id(&game.card_data).to_string())
+            .or_insert(0) += 1;
     }
     ms
 }
@@ -171,7 +172,8 @@ pub fn full_zone_dump(game: &Game) -> Vec<Vec<String>> {
 /// through this so the checker runs on every sampled world.
 pub fn materialize_checked(game: &Game, viewer: PlayerId, seed: u64) -> Game {
     let world = materialize(game, viewer, seed);
-    check_world_invariants(game, viewer, &world)
-        .unwrap_or_else(|e| panic!("world invariants violated (viewer {viewer}, seed {seed}): {e}"));
+    check_world_invariants(game, viewer, &world).unwrap_or_else(|e| {
+        panic!("world invariants violated (viewer {viewer}, seed {seed}): {e}")
+    });
     world
 }

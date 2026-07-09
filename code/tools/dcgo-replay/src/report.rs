@@ -133,7 +133,7 @@ fn attribute_card(recording: &RecordingV1, fail: &ReplayFail) -> Option<String> 
         _ => return None,
     };
 
-    use digimon_engine::action::space as space;
+    use digimon_engine::action::space;
     let aid = illegal.action_id;
 
     // Play-from-hand range: action ID IS the hand index. We don't know the

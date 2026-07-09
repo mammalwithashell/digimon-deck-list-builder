@@ -320,16 +320,19 @@ fn bt25_083_op_places_tm_card_from_hand_and_draws() {
     // Fire the OnPlay trigger directly via the effect queue (place_on_field
     // skips OnPlay dispatch — see RUST_DSL_TEST_API anti-pattern #11 — so
     // enqueue the timing explicitly).
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnPlay, digimon_engine::selection::TriggerSource::Permanent(ladydevimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnPlay,
+        digimon_engine::selection::TriggerSource::Permanent(ladydevimon),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
         runner.pending_selection().is_some(),
         "OnPlay clause must install the place-bottom-source union prompt"
     );
-    runner.auto_resolve().expect("resolve hand/trash pick + target pick + draw");
+    runner
+        .auto_resolve()
+        .expect("resolve hand/trash pick + target pick + draw");
 
     let sources_after = runner.game.players[0].battle_area[target.index as usize]
         .card_sources
@@ -364,7 +367,9 @@ fn bt25_083_op_places_tm_card_from_trash_and_draws() {
             .position(|c| c.card_id == "TM-TRAIT-CARD")
             .unwrap();
         let ci = runner.game.next_card_index();
-        runner.game.players[0].trash.push(CardSource::new(idx, 0, ci));
+        runner.game.players[0]
+            .trash
+            .push(CardSource::new(idx, 0, ci));
     }
 
     let sources_before = runner.game.players[0].battle_area[target.index as usize]
@@ -372,16 +377,19 @@ fn bt25_083_op_places_tm_card_from_trash_and_draws() {
         .len();
     let trash_before = runner.trash_size(0);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnPlay, digimon_engine::selection::TriggerSource::Permanent(ladydevimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnPlay,
+        digimon_engine::selection::TriggerSource::Permanent(ladydevimon),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
         runner.pending_selection().is_some(),
         "OnPlay clause must install the place-bottom-source union prompt"
     );
-    runner.auto_resolve().expect("resolve trash pick + target pick + draw");
+    runner
+        .auto_resolve()
+        .expect("resolve trash pick + target pick + draw");
 
     let sources_after = runner.game.players[0].battle_area[target.index as usize]
         .card_sources
@@ -406,9 +414,10 @@ fn bt25_083_op_no_fire_without_tm_card() {
 
     let ladydevimon = runner.place_on_field(0, CARD_ID, Some(0));
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnPlay, digimon_engine::selection::TriggerSource::Permanent(ladydevimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnPlay,
+        digimon_engine::selection::TriggerSource::Permanent(ladydevimon),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
@@ -435,13 +444,16 @@ fn bt25_083_op_decline_leaves_field_unchanged() {
         .card_sources
         .len();
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::OnPlay, digimon_engine::selection::TriggerSource::Permanent(ladydevimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::OnPlay,
+        digimon_engine::selection::TriggerSource::Permanent(ladydevimon),
+    );
     runner.game.drain_effect_queue();
 
     assert!(runner.pending_selection().is_some(), "prompt installed");
-    runner.execute_action(0, PASS).expect("decline the union-zone prompt");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the union-zone prompt");
 
     let sources_after = runner.game.players[0].battle_area[target.index as usize]
         .card_sources
@@ -486,12 +498,15 @@ fn bt25_083_wd_wa_trashes_option_source_then_offers_reduced_use() {
             .position(|c| c.card_id == "TM-OPT-TRASH")
             .unwrap();
         let ci = runner.game.next_card_index();
-        runner.game.players[0].trash.push(CardSource::new(idx, 0, ci));
+        runner.game.players[0]
+            .trash
+            .push(CardSource::new(idx, 0, ci));
     }
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, digimon_engine::selection::TriggerSource::Permanent(ladydevimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(ladydevimon),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
@@ -506,13 +521,16 @@ fn bt25_083_wd_wa_trashes_option_source_then_offers_reduced_use() {
     // clause 2's reduced-use pick (accept it here).
     resolve_trigger_order_if_present(&mut runner);
     decline_clause1_union_pick_if_present(&mut runner);
-    runner.auto_resolve().expect("pay cost + use reduced Option");
+    runner
+        .auto_resolve()
+        .expect("pay cost + use reduced Option");
 
     let host_sources_after = runner.game.players[0].battle_area[host.index as usize]
         .card_sources
         .len();
     assert_eq!(
-        host_sources_after, 1, // just the top card remains (card_sources includes the top)
+        host_sources_after,
+        1, // just the top card remains (card_sources includes the top)
         "the Option digivolution source must have been trashed as the cost"
     );
     // The used [Three Musketeers] Option returns to trash after resolution —
@@ -551,7 +569,9 @@ fn resolve_trigger_order_if_present(runner: &mut DebugRunner) {
             .first()
             .copied()
             .expect("TriggerOrder always has a valid action");
-        runner.execute_action(0, act).expect("resolve TriggerOrder pick");
+        runner
+            .execute_action(0, act)
+            .expect("resolve TriggerOrder pick");
     }
 }
 
@@ -587,9 +607,10 @@ fn bt25_083_wd_wa_no_fire_without_option_source() {
         .card_sources
         .len();
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, digimon_engine::selection::TriggerSource::Permanent(ladydevimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(ladydevimon),
+    );
     runner.game.drain_effect_queue();
 
     // Two clauses share the [When Digivolving] timing (clause 1 OP/WD and
@@ -637,9 +658,10 @@ fn bt25_083_wd_wa_opt_locks_second_activation_same_turn() {
     runner.push_source(host, "STACK-OPT-1");
     runner.push_source(host, "STACK-OPT-2");
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, digimon_engine::selection::TriggerSource::Permanent(ladydevimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(ladydevimon),
+    );
     runner.game.drain_effect_queue();
     assert!(
         runner.pending_selection().is_some(),
@@ -648,9 +670,10 @@ fn bt25_083_wd_wa_opt_locks_second_activation_same_turn() {
     runner.auto_resolve().expect("resolve first activation");
 
     // Second attempt same turn (When Attacking leg) must not re-fire.
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, digimon_engine::selection::TriggerSource::Permanent(ladydevimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        digimon_engine::selection::TriggerSource::Permanent(ladydevimon),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
@@ -683,12 +706,15 @@ fn bt25_083_wd_wa_declining_reduced_use_still_pays_cost() {
             .position(|c| c.card_id == "TM-OPT-TRASH")
             .unwrap();
         let ci = runner.game.next_card_index();
-        runner.game.players[0].trash.push(CardSource::new(idx, 0, ci));
+        runner.game.players[0]
+            .trash
+            .push(CardSource::new(idx, 0, ci));
     }
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, digimon_engine::selection::TriggerSource::Permanent(ladydevimon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        digimon_engine::selection::TriggerSource::Permanent(ladydevimon),
+    );
     runner.game.drain_effect_queue();
 
     // Two clauses share [When Digivolving] (clause 1 OP/WD, clause 2 WD/WA);
@@ -720,7 +746,9 @@ fn bt25_083_wd_wa_declining_reduced_use_still_pays_cost() {
         .first()
         .copied()
         .expect("the Option source is a valid cost pick");
-    runner.execute_action(0, cost_act).expect("pay the trash-Option-source cost");
+    runner
+        .execute_action(0, cost_act)
+        .expect("pay the trash-Option-source cost");
 
     // Step 2: the follow-up reduced-cost Option-use prompt (select_trash) —
     // decline it.
@@ -776,7 +804,9 @@ fn bt25_083_inherited_od_plays_lv4_tm_text_digimon_free() {
         runner.game.card_data.push(card);
         let idx = runner.game.card_data.len() - 1;
         let ci = runner.game.next_card_index();
-        runner.game.players[0].trash.push(CardSource::new(idx, 0, ci));
+        runner.game.players[0]
+            .trash
+            .push(CardSource::new(idx, 0, ci));
     }
 
     let battle_area_before = runner.battle_area_size(0);
@@ -787,8 +817,12 @@ fn bt25_083_inherited_od_plays_lv4_tm_text_digimon_free() {
         runner.pending_selection().is_some(),
         "inherited OnDeletion clause must install the play-from-trash-free prompt"
     );
-    runner.accept_optional_trigger().expect("accept the OnDeletion trigger");
-    runner.auto_resolve().expect("pick + play the TM-text Digimon free");
+    runner
+        .accept_optional_trigger()
+        .expect("accept the OnDeletion trigger");
+    runner
+        .auto_resolve()
+        .expect("pick + play the TM-text Digimon free");
 
     assert_eq!(
         runner.battle_area_size(0),
@@ -810,7 +844,9 @@ fn bt25_083_inherited_od_no_fire_for_level5_tm_text() {
         runner.game.card_data.push(card);
         let idx = runner.game.card_data.len() - 1;
         let ci = runner.game.next_card_index();
-        runner.game.players[0].trash.push(CardSource::new(idx, 0, ci));
+        runner.game.players[0]
+            .trash
+            .push(CardSource::new(idx, 0, ci));
     }
 
     runner.game.delete_permanent_with_effects(stack);
@@ -837,7 +873,9 @@ fn bt25_083_inherited_od_no_fire_without_tm_text() {
             .position(|c| c.card_id == "LV4-PLAIN")
             .unwrap();
         let ci = runner.game.next_card_index();
-        runner.game.players[0].trash.push(CardSource::new(idx, 0, ci));
+        runner.game.players[0]
+            .trash
+            .push(CardSource::new(idx, 0, ci));
     }
 
     runner.game.delete_permanent_with_effects(stack);
@@ -860,7 +898,9 @@ fn bt25_083_inherited_od_decline_leaves_trash_unchanged() {
         runner.game.card_data.push(card);
         let idx = runner.game.card_data.len() - 1;
         let ci = runner.game.next_card_index();
-        runner.game.players[0].trash.push(CardSource::new(idx, 0, ci));
+        runner.game.players[0]
+            .trash
+            .push(CardSource::new(idx, 0, ci));
     }
 
     let trash_before = runner.trash_size(0);
@@ -868,7 +908,9 @@ fn bt25_083_inherited_od_decline_leaves_trash_unchanged() {
     runner.game.delete_permanent_with_effects(stack);
 
     assert!(runner.pending_selection().is_some(), "prompt installed");
-    runner.decline_optional_trigger().expect("decline the OnDeletion trigger");
+    runner
+        .decline_optional_trigger()
+        .expect("decline the OnDeletion trigger");
 
     // trash_before was captured before LadyDevimon itself trashed; declining
     // must not remove the TM-text Digimon from trash.

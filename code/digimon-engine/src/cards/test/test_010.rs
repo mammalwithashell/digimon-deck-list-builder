@@ -16,9 +16,7 @@ use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::step::StepRuntime;
 use crate::effect::{CardEffect, Effect};
-use crate::resume::{
-    ResumeDecline, ResumeFrame, ResumeProvenance, ResumeSelectKind, ResumeStack,
-};
+use crate::resume::{ResumeDecline, ResumeFrame, ResumeProvenance, ResumeSelectKind, ResumeStack};
 
 pub struct Test010;
 

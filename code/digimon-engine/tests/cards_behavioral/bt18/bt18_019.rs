@@ -81,9 +81,7 @@
 //! - A5: trash -> deck recursion (return_trash cards + play_from_trash_free)
 //! - E2-adjacent: optional cost-gated multi-step On Deletion body
 
-use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledScope, CompiledTiming,
-};
+use digimon_dsl::compiled::{CompiledAltPathKind, CompiledClause, CompiledScope, CompiledTiming};
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -264,7 +262,9 @@ fn bt18_019_on_play_deletes_one_opponent_digimon_via_play_action() {
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("delete the opponent Digimon");
-    runner.auto_resolve().expect("resolve rest (no DNA on a fresh play)");
+    runner
+        .auto_resolve()
+        .expect("resolve rest (no DNA on a fresh play)");
 
     assert_eq!(
         runner.battle_area_size(1),
@@ -298,10 +298,9 @@ fn bt18_019_standard_digivolve_deletes_but_does_not_offer_dna_return() {
     let millen = runner.place_on_field(0, "BT18-019", Some(0));
     let opp = runner.place_on_field(1, "OPP-A", Some(0));
     let kim_in_trash = runner.place_on_field(1, "KIMERAMON", Some(0));
-    runner.game.delete_permanent_with_cause(
-        kim_in_trash,
-        ReplacementCause::OpponentEffect,
-    );
+    runner
+        .game
+        .delete_permanent_with_cause(kim_in_trash, ReplacementCause::OpponentEffect);
 
     fire_when_digivolving(&mut runner, millen, false);
 
@@ -311,7 +310,9 @@ fn bt18_019_standard_digivolve_deletes_but_does_not_offer_dna_return() {
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("delete the opponent Digimon");
-    runner.auto_resolve().expect("no DNA branch on standard digivolve");
+    runner
+        .auto_resolve()
+        .expect("no DNA branch on standard digivolve");
 
     assert_eq!(runner.battle_area_size(1), 0, "OPP-A deleted");
     // OPP-A joins Kimeramon in trash when deleted; the pre-existing Kimeramon
@@ -322,7 +323,11 @@ fn bt18_019_standard_digivolve_deletes_but_does_not_offer_dna_return() {
         trash.contains(&"KIMERAMON".to_string()),
         "opponent's trash Kimeramon must NOT be returned on a non-DNA digivolve; trash={trash:?}"
     );
-    assert_eq!(deck_top_id(&runner, 1), None, "no card was returned to the opponent's deck");
+    assert_eq!(
+        deck_top_id(&runner, 1),
+        None,
+        "no card was returned to the opponent's deck"
+    );
     let _ = opp;
 }
 
@@ -420,9 +425,7 @@ fn bt18_019_dna_digivolve_returning_cards_moves_to_opponent_deck_top_and_gains_m
         .expect("DNA return multi-select installs");
     // Pick the first available candidate (one level).
     let first_action = view.valid_action_ids[0];
-    runner
-        .execute_action(0, first_action)
-        .expect("pick 1 card");
+    runner.execute_action(0, first_action).expect("pick 1 card");
     // Commit with just 1 pick.
     runner.execute_action(0, PASS).expect("stop picking");
     runner.auto_resolve().expect("finish resolving");
@@ -589,10 +592,16 @@ fn bt18_019_on_deletion_paying_cost_returns_both_named_cards_to_deck_bottom() {
         .pending_selection_view()
         .expect("free-play prompt offers the just-deleted Millenniummon");
     assert!(view3.is_optional, "free play is a 'may'");
-    runner.execute_action(0, PASS).expect("decline the free play");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the free play");
 
     assert_eq!(
-        runner.game.players[0].deck.first().unwrap().card_id(&runner.game.card_data),
+        runner.game.players[0]
+            .deck
+            .first()
+            .unwrap()
+            .card_id(&runner.game.card_data),
         "MACHINEDRAMON",
         "cards go to the BOTTOM of the deck (deck[0] is the bottom)"
     );

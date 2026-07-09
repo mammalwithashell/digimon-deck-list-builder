@@ -327,12 +327,12 @@ impl CardEffect for DslCardEffect {
                             // group. Single-scope reducers keep their per-slot key
                             // (unchanged behavior). Disjoint keyspace: high bit set
                             // so it never collides with a raw effect-slot index.
-                            let shared_opt_group: Option<u8> =
-                                if *once_per_turn && scopes.len() > 1 {
-                                    Some(0x80u8 | (clause_index as u8 & 0x7f))
-                                } else {
-                                    None
-                                };
+                            let shared_opt_group: Option<u8> = if *once_per_turn && scopes.len() > 1
+                            {
+                                Some(0x80u8 | (clause_index as u8 & 0x7f))
+                            } else {
+                                None
+                            };
                             for sc in scopes {
                                 out.push(lower_cost_reduction::lower_with_formula(
                                     card,

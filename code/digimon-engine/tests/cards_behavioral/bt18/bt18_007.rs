@@ -346,7 +346,10 @@ fn bt18_007_digivolves_from_pagumon_stack_for_cost_zero() {
         pagumon.index as usize,
         PlaySource::ByDigivolve,
     );
-    assert!(ok, "Gazimon must digivolve from Pagumon via the bonus cost-0 path");
+    assert!(
+        ok,
+        "Gazimon must digivolve from Pagumon via the bonus cost-0 path"
+    );
     let _ = runner.auto_resolve();
 
     assert_eq!(

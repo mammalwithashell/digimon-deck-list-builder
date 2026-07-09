@@ -1,0 +1,83 @@
+card: EX12-034
+name: Erlangmon
+kind: digimon
+level: 6
+color: [blue, black]
+cost: 12
+dp: 12000
+traits: [Shaman, Saneiketsu, Tentei Hachibushu, Shambala]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+
+effects:
+  - when: [on_play, when_digivolving]
+    optional: true
+    summary: "[On Play][When Digivolving] You may play 1 [Kotenken] Token"
+    process:
+      - play_token:
+          controller: you
+          token_name: kotenken
+
+  - when: on_ally_played
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When any of your Digimon are played, return opponent's lowest-level Digimon to deck bottom"
+    process:
+      - select_opponent_permanent:
+          bind_as: bottom_target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_matches_aggregate: { selector: lowest_level, of: opponent }
+          prompt: "Return 1 of your opponent's lowest level Digimon to the bottom of the deck"
+      - return_to_deck: { target: bottom_target, position: bottom }
+
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - replacement_subject_is_mine: true
+        - kind: digimon
+    summary: "[All Turns][OPT] When any own Digimon would leave, play 1 level 5 or lower [SW] from hand or this Digimon's sources free"
+    process:
+      - select_effect_choice:
+          bind_as: play_zone
+          labels: ["Hand", "Sources"]
+          prompt: "Play a level 5 or lower [SW] card from hand or this Digimon's digivolution cards?"
+      - if:
+          condition: { equals: [play_zone, 0] }
+          then:
+            - select_hand:
+                of: you
+                bind_as: sw_hand
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 5
+                    - trait_has: SW
+                prompt: "Play 1 level 5 or lower [SW] Digimon from hand without paying the cost"
+            - play_from_hand_free: { of: you, hand_index: sw_hand }
+      - if:
+          condition: { equals: [play_zone, 1] }
+          then:
+            - select_material:
+                of_permanent: source
+                bind_as: sw_source
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - level_lte: 5
+                    - trait_has: SW
+                prompt: "Play 1 level 5 or lower [SW] Digimon from this Digimon's sources without paying the cost"
+            - play_from_materials:
+                target: source
+                source_index: sw_source
+                cost_delta: free

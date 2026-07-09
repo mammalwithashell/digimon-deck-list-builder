@@ -26,9 +26,7 @@ use digimon_engine::dsl_cards::predicate::{eval_predicate_with_bindings, Predica
 use digimon_engine::effect_context::EffectReadContext;
 use digimon_engine::enums::{CardColor, CardKind};
 use digimon_engine::permanent::{Permanent, PermanentHandle};
-use digimon_engine::trigger_context::{
-    DeletedObjectSnapshot, EventCause, TriggerContext,
-};
+use digimon_engine::trigger_context::{DeletedObjectSnapshot, EventCause, TriggerContext};
 
 fn parse_compile(yaml: &str) -> digimon_dsl::compiled::CompiledCard {
     let spec: digimon_dsl::CardSpec = serde_yml::from_str(yaml).expect("parse yaml");
@@ -112,12 +110,7 @@ fn binding_card_color_matches_when_bound_card_shares_color() {
 
     // Fail closed when the binding is unset.
     assert!(
-        !eval_predicate_with_bindings(
-            &pred,
-            &rctx,
-            PredicateSubject::None,
-            Some(&Bindings::new())
-        ),
+        !eval_predicate_with_bindings(&pred, &rctx, PredicateSubject::None, Some(&Bindings::new())),
         "missing binding fails closed"
     );
 }
@@ -452,7 +445,11 @@ fn event_target_has_digivolution_cards_reads_live_permanent_stack() {
     let stacked = {
         let g = runner.game_mut();
         let turn = g.turn_count;
-        let base_idx = g.card_data.iter().position(|c| c.card_id == "BASE").unwrap();
+        let base_idx = g
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "BASE")
+            .unwrap();
         let top_idx = g.card_data.iter().position(|c| c.card_id == "TOP").unwrap();
         let base_src = CardSource::new(base_idx, 0, g.next_card_index());
         let top_src = CardSource::new(top_idx, 0, g.next_card_index());

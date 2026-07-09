@@ -2123,3 +2123,25 @@ Surfaced by BT25-039 Sirenmon clause 2 ("{Security} [End of Your Turn] You may p
 - **Fix:** `fire_end_of_your_turn` now mirrors that scan for the ENDING player: after the battle-area enqueue and before the drain, it enqueues `EndOfYourTurn` with `TriggerSource::SecurityStackCard { player, card }` for every card in the ending player's security stack. `enqueue_from_security_stack_card` (effect_queue.rs) already filters collection to `effect.security` (the DSL `scope: security` lowering → `EffectBuilder::security_zone`), so battle-area-only `EndOfYourTurn` observers are unaffected.
 - **Tests:** `tests/cards_behavioral/bt25/bt25_039.rs` Section 2/3 (fires while in security; does NOT fire from hand; plays Ceresmon at 12−7=5 real memory; place-self-under vs decline; clean no-op without a Ceresmon).
 - **Verdict:** RESOLVED; consumed by `cards/bt25/BT25-039.yaml` (with the DSL-side `play_from_hand.bind_as` — see `qa/resolved-gaps.md` G-DSL-SECURITY-EOT-PLAY-AND-PLACE-SELF-UNDER).
+
+## EX12 Shambala / Virus Busters keyword gaps (RESOLVED 2026-07-08)
+
+Surfaced by the manual fallback audit for `implement-ex12-shambala-virus-busters`
+after Claude workflow `wf_6f7700f2-6c5` produced no usable verdicts. See
+`qa/archetype-qa/ex12-shambala-virus-busters-scoping.md`.
+
+### `G-KEYWORD-GUARD` — native Guard keyword parse, grant, and leave-replacement runtime
+
+- **Status:** RESOLVED 2026-07-08.
+- **Consumers:** EX12-056 Cho-Hakkaimon, EX12-057 Paishu Token; adjacent OpenSpec consumer EX12-072.
+- **Rules authority:** Comprehensive Rules Manual 16-45: Guard is an optional immediate-type effect. When another of a player's Digimon would leave the battle area by an opponent's effect, deleting the Guard carrier prevents that Digimon from leaving.
+- **Resolution:** `Keyword::Guard` is wired through the engine enum, printed-keyword parser, DSL keyword lookup/validator, serialization, and runtime auto-effect synthesis. Printed and granted Guard carriers now install the same optional, clone-safe opponent-effect leave replacement; token-carried Guard works through token card data and printed-keyword auto-effects.
+- **Regression tests:** `keyword_parsing::parser_ex12_guard_and_engage_keywords`; `keyword_phase_f::guard::*`; `cards_behavioral::tokens::paishu_token_guard_protects_another_digimon`; DSL keyword map/validator coverage.
+
+### `G-KEYWORD-ENGAGE` — native Engage keyword parse, grant, and End-of-Your-Turn attack runtime
+
+- **Status:** RESOLVED 2026-07-08.
+- **Consumers:** EX12-019 Nezhamon; adjacent OpenSpec consumer EX12-060.
+- **Rules authority:** Comprehensive Rules Manual 16-44: Engage is an optional trigger at End of Your Turn that lets the Digimon attack.
+- **Resolution:** `Keyword::Engage` is wired through the engine enum, printed-keyword parser, DSL keyword lookup/validator, serialization, keyword auto-effects, and the end-of-turn attack mask/decode path. Engage uses normal attack legality rather than Vortex target or played-this-turn exceptions.
+- **Regression tests:** `keyword_parsing::parser_ex12_guard_and_engage_keywords`; `keyword_phase_f::engage::*`; DSL keyword map/validator coverage.

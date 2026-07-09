@@ -1,0 +1,78 @@
+card: EX12-074
+name: Genshi Continent & Ashino Island
+kind: option
+color: [white]
+cost: 3
+traits: [Shambala, SW, TB]
+
+effects:
+  - scope: security
+    when: on_ally_attack
+    once_per_turn: true
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+        - event_target_trait_has: Shambala
+    summary: "[Security][Your Turn][OPT] When your [Shambala] Digimon attacks, it may digivolve into a [Shambala] Digimon in hand with cost reduced by 1"
+    process:
+      - select_hand:
+          of: you
+          bind_as: shambala_evo
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Shambala
+          prompt: "Digivolve the attacking [Shambala] Digimon into a [Shambala] Digimon in hand with the cost reduced by 1"
+      - effect_initiated_digivolve:
+          target: event_target
+          from_hand: shambala_evo
+          cost: { reduce: 1 }
+          ignore_requirements: false
+
+  - when: main_from_hand
+    summary: "[Main] Add bottom security to hand, place this card face up as bottom security, then may play 1 [Shambala] card from hand with cost reduced by 3"
+    process:
+      - add_bottom_security_to_hand: { of: you }
+      - place_on_security:
+          source: self_option
+          position: bottom
+          face_up: true
+      - select_hand:
+          of: you
+          bind_as: shambala_play
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - trait_has: Shambala
+          prompt: "Play 1 [Shambala] card from your hand with the play cost reduced by 3"
+      - play_from_hand:
+          of: you
+          hand_index: shambala_play
+          cost_delta: { reduce: 3 }
+
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security] You may play 1 play cost 5 or lower [Shambala] card from hand or trash free"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          bind_as: shambala_free
+          optional: true
+          filter:
+            all_of:
+              - any_of:
+                  - kind: digimon
+                  - kind: tamer
+              - trait_has: Shambala
+              - play_cost_lte: 5
+          prompt: "Play 1 play cost 5 or lower [Shambala] card from your hand or trash without paying the cost"
+      - play_union_bound_free:
+          binding: shambala_free

@@ -22,8 +22,7 @@ pub struct SharedCardStore {
     /// Enriched flat store: the DB's cards (in `all_card_data` iteration order)
     /// followed by the absorbed global token rows. Indexed by `data_index`.
     pub data: Arc<Vec<CardData>>,
-    /// `card_id -> data_index` for the DB cards (NOT tokens — matching the prior
-    /// `data_index_map`, which token absorption deliberately did not extend).
+    /// `card_id -> data_index` for DB cards and absorbed global token rows.
     pub index: Arc<HashMap<String, usize>>,
     /// Compiled DSL alt-paths keyed by card_id (only the DSL-loader build has it).
     #[cfg(feature = "dsl-yaml-loader")]
@@ -192,11 +191,13 @@ pub fn build_shared_card_store(all_card_data: &HashMap<String, CardData>) -> Sha
         data.push(effective_card_data[card_id].clone());
     }
 
-    // Absorb the global (deck-independent) token rows — appended to `data` only,
-    // NOT to `index` (matching the prior in-`Game::new` behavior). See
-    // `EffectContext::play_token` for how token rows are resolved.
+    // Absorb the global (deck-independent) token rows. They also need index
+    // entries so `card_data_by_id` and printed-keyword auto-effect synthesis
+    // can resolve token card IDs.
     let token_registry = crate::token_registry::build_registry();
     for def in token_registry.iter() {
+        let idx = data.len();
+        index.insert(def.card_id.clone(), idx);
         data.push(def.to_card_data());
     }
 

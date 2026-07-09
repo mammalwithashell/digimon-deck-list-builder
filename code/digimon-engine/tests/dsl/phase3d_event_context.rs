@@ -1827,6 +1827,70 @@ effects:
 }
 
 #[test]
+fn ally_attack_event_target_in_text_contains_matches_attacking_digimon_text() {
+    let yaml = r#"
+card: DSL-HIRO-LIKE
+name: Hiro Like Observer
+kind: tamer
+color: [red]
+cost: 0
+effects:
+  - when: on_ally_attack
+    active_when: { your_turn: true }
+    condition:
+      event_target_in_text_contains: Gammamon
+    process:
+      - gain_memory: 1
+"#;
+
+    let mut gammamon_text = digimon_card("TEXT-ATTACKER", "Text Attacker", &[], 4000);
+    gammamon_text.level = Some(4);
+    gammamon_text.effect_text = "This card has [Gammamon] in its text.".to_string();
+    let mut plain = digimon_card("PLAIN-ATTACKER", "Plain Attacker", &[], 4000);
+    plain.level = Some(4);
+
+    let mut matching = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(gammamon_text)
+        .add_card(digimon_card("SEC", "Security", &[], 2000))
+        .security(1, &["SEC"])
+        .memory(0)
+        .start();
+    matching.set_turn(1);
+    matching.place_on_field(0, "DSL-HIRO-LIKE", Some(0));
+    let attacker = matching.place_on_field(0, "TEXT-ATTACKER", Some(0));
+    matching.attack_player(attacker, 1, false);
+    matching.auto_resolve().expect("resolve matching attack");
+    assert_eq!(
+        matching.memory(),
+        1,
+        "attacking Digimon with [Gammamon] in text should satisfy the event-target predicate"
+    );
+
+    let mut non_matching = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .unwrap()
+        .add_card(plain)
+        .add_card(digimon_card("SEC", "Security", &[], 2000))
+        .security(1, &["SEC"])
+        .memory(0)
+        .start();
+    non_matching.set_turn(1);
+    non_matching.place_on_field(0, "DSL-HIRO-LIKE", Some(0));
+    let attacker = non_matching.place_on_field(0, "PLAIN-ATTACKER", Some(0));
+    non_matching.attack_player(attacker, 1, false);
+    non_matching
+        .auto_resolve()
+        .expect("resolve non-matching attack");
+    assert_eq!(
+        non_matching.memory(),
+        0,
+        "plain attacking Digimon must not satisfy event_target_in_text_contains"
+    );
+}
+
+#[test]
 fn security_removed_payload_exposes_removed_card_and_cause() {
     let yaml = r#"
 card: DSL-SEC-REMOVED

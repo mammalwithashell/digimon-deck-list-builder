@@ -1,0 +1,65 @@
+card: EX12-070
+name: Sanmyojin Arrival
+kind: option
+color: [yellow, green]
+cost: 3
+traits: [Shambala, TB]
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] By trashing 1 [TB] card from hand, draw 2. Then, place this card in the battle area"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter: { trait_has: TB }
+          prompt: "Trash 1 [TB] card from hand to draw 2"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+            - place_self_as_delay_option: {}
+
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - kind: digimon
+        - level_gte: 5
+        - trait_has: TB
+    summary: "[All Turns] When own Lv5+ [TB] would leave, Delay: play 1 [Sanmyojin] Digimon from hand free"
+    process:
+      - delete_permanent: { target: source }
+      - select_hand:
+          of: you
+          bind_as: sanmyojin
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Sanmyojin
+          prompt: "Play 1 [Sanmyojin] Digimon from hand without paying the cost"
+      - play_from_hand_free: { of: you, hand_index: sanmyojin }
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effect"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter: { trait_has: TB }
+          prompt: "Trash 1 [TB] card from hand to draw 2"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+            - place_self_as_delay_option: {}

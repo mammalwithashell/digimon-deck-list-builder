@@ -718,7 +718,10 @@ fn p193_delay_deletion_succeeds_but_free_play_is_declinable() {
     let view2 = runner
         .pending_selection_view()
         .expect("free-play prompt installs after a successful delete");
-    assert!(view2.is_optional, "the free play is independently 'you may'");
+    assert!(
+        view2.is_optional,
+        "the free play is independently 'you may'"
+    );
     runner
         .game
         .resolve_selection(view2.selecting_player, PASS)
@@ -833,7 +836,10 @@ fn p193_security_trashing_fodder_draws_two_and_places_self() {
         .pending_selection_view()
         .expect("the trash-cost pick must install from the real security reveal");
     assert_eq!(view.kind, SelectionKind::Hand);
-    assert!(view.is_optional, "the trash pick is declinable (cost: true)");
+    assert!(
+        view.is_optional,
+        "the trash pick is declinable (cost: true)"
+    );
     runner
         .game
         .resolve_selection(view.selecting_player, view.valid_action_ids[0])

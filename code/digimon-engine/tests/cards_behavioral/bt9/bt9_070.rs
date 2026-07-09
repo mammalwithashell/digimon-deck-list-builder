@@ -147,8 +147,7 @@ fn bt9_070_has_gazimon_name_gated_cost_0_alt_path() {
     let exact_name_cost0 = card.alt_paths.iter().any(|p| {
         p.kind == CompiledAltPathKind::Digivolve
             && p.cost == Some(digimon_dsl::compiled::CompiledCost::Literal(0))
-            && p
-                .from
+            && p.from
                 .as_ref()
                 .and_then(|f| f.name_is.as_deref())
                 .map(|n| n == "Gazimon")
@@ -163,8 +162,7 @@ fn bt9_070_has_gazimon_name_gated_cost_0_alt_path() {
     let uses_substring_gate = card.alt_paths.iter().any(|p| {
         p.kind == CompiledAltPathKind::Digivolve
             && p.cost == Some(digimon_dsl::compiled::CompiledCost::Literal(0))
-            && p
-                .from
+            && p.from
                 .as_ref()
                 .and_then(|f| f.name_contains.as_deref())
                 .map(|n| n.eq_ignore_ascii_case("Gazimon"))
@@ -193,17 +191,12 @@ fn bt9_070_has_standard_lvl2_purple_cost_0_alt_path() {
     let standard_route = card.alt_paths.iter().any(|p| {
         p.kind == CompiledAltPathKind::Digivolve
             && p.cost == Some(digimon_dsl::compiled::CompiledCost::Literal(0))
-            && p
-                .from
+            && p.from
                 .as_ref()
                 .and_then(|f| f.level_eq)
                 .map(|l| l == 2)
                 .unwrap_or(false)
-            && p
-                .from
-                .as_ref()
-                .and_then(|f| f.color_is)
-                .is_some()
+            && p.from.as_ref().and_then(|f| f.color_is).is_some()
     });
     assert!(
         standard_route,

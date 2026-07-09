@@ -1,0 +1,73 @@
+card: EX12-071
+name: Saneiketsu Invitation
+kind: option
+color: [black, blue]
+cost: 3
+traits: [Shambala, SW]
+
+effects:
+  - when: main_from_hand
+    summary: "[Main] By trashing 1 [SW] card from hand, draw 2. Then, place this card in the battle area"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter: { trait_has: SW }
+          prompt: "Trash 1 [SW] card from hand to draw 2"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+            - place_self_as_delay_option: {}
+
+  - kind: delay
+    trigger: on_ally_played
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_owner: you
+        - event_card_trait_has: SW
+    summary: "[All Turns] When your [SW] Digimon is played, Delay: 1 [SW] Digimon may digivolve into [Saneiketsu] in hand free"
+    process:
+      - select_own_permanent:
+          bind_as: sw_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: SW
+          prompt: "Choose 1 [SW] Digimon to digivolve"
+      - select_hand:
+          of: you
+          bind_as: saneiketsu
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: Saneiketsu
+          prompt: "Choose a [Saneiketsu] Digimon card in hand"
+      - effect_initiated_digivolve:
+          target: sw_target
+          from_hand: saneiketsu
+          cost: 0
+          ignore_requirements: false
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Activate this card's [Main] effect"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter: { trait_has: SW }
+          prompt: "Trash 1 [SW] card from hand to draw 2"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+            - place_self_as_delay_option: {}

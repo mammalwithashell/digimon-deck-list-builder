@@ -46,8 +46,8 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause,
-    CompiledScope, CompiledStep, CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
+    CompiledStep, CompiledTiming,
 };
 use digimon_engine::action;
 use digimon_engine::card_data::{CardData, EvoCost};
@@ -168,7 +168,11 @@ fn bt25_020_has_standard_red_and_green_lv5_cost4_alt_paths() {
     );
     for p in &cost4_paths {
         let from = p.from.as_ref().expect("alt-path has a from: filter");
-        assert_eq!(from.level_eq, Some(5), "standard alt-path base must be Lv.5");
+        assert_eq!(
+            from.level_eq,
+            Some(5),
+            "standard alt-path base must be Lv.5"
+        );
     }
 }
 
@@ -455,7 +459,10 @@ fn bt25_020_dp_buff_adds_3000_for_the_turn() {
     // that SOME own Digimon gained +3000 DP after resolving, rather than
     // pinning which one auto_resolve chooses.
     runner
-        .execute_action(runner.pending_selection().unwrap().selecting_player, action_id)
+        .execute_action(
+            runner.pending_selection().unwrap().selecting_player,
+            action_id,
+        )
         .expect("resolve DP buff target");
 
     // Check immediately — before resolving the shared clause's optional
@@ -550,10 +557,7 @@ fn bt25_020_choosing_attacker_and_defender_resolves_a_battle() {
 /// battle trashes the opponent's top security card.
 #[test]
 fn bt25_020_trashes_opp_top_security_when_a_separate_ally_ts_wins() {
-    let mut runner = base()
-        .security(1, &["FILL", "FILL"])
-        .memory(20)
-        .start();
+    let mut runner = base().security(1, &["FILL", "FILL"]).memory(20).start();
     let _marsmon = place_marsmon(&mut runner);
     // Placed on turn 0 (like `place_marsmon`) so it is NOT summoning-sick on
     // the actual game turn (1) — `Some(1)` would make `turn_played ==
@@ -576,10 +580,7 @@ fn bt25_020_trashes_opp_top_security_when_a_separate_ally_ts_wins() {
 /// Negative: the winning ally Digimon lacks the [TS] trait -> no trash fires.
 #[test]
 fn bt25_020_does_not_fire_when_winner_lacks_ts_trait() {
-    let mut runner = base()
-        .security(1, &["FILL", "FILL"])
-        .memory(20)
-        .start();
+    let mut runner = base().security(1, &["FILL", "FILL"]).memory(20).start();
     let _marsmon = place_marsmon(&mut runner);
     let ally_plain = runner.place_on_field(0, "OWN-B", Some(0)); // 4500 DP, no TS
     let weak_def = runner.place_on_field(1, "OPP-WEAK", Some(0)); // 1000 DP
@@ -600,10 +601,7 @@ fn bt25_020_does_not_fire_when_winner_lacks_ts_trait() {
 /// player).
 #[test]
 fn bt25_020_does_not_fire_when_opponent_ts_digimon_wins() {
-    let mut runner = base()
-        .security(0, &["FILL", "FILL"])
-        .memory(20)
-        .start();
+    let mut runner = base().security(0, &["FILL", "FILL"]).memory(20).start();
     let _marsmon = place_marsmon(&mut runner);
     let own_weak = runner.place_on_field(0, "OWN-A", Some(1)); // 4000 DP
     let opp_ts = runner.place_on_field(1, "OWN-TS", Some(0)); // 9000 DP, TS-trait
@@ -623,10 +621,7 @@ fn bt25_020_does_not_fire_when_opponent_ts_digimon_wins() {
 /// Negative: a tie (mutual destruction) has no winner -> no trash fires.
 #[test]
 fn bt25_020_does_not_fire_on_a_tie() {
-    let mut runner = base()
-        .security(1, &["FILL", "FILL"])
-        .memory(20)
-        .start();
+    let mut runner = base().security(1, &["FILL", "FILL"]).memory(20).start();
     let _marsmon = place_marsmon(&mut runner);
     let ally_ts_equal = runner.place_on_field(0, "OWN-TS", Some(0)); // 9000 DP
     let equal_def = runner.place_on_field(1, "BIG-13K", Some(0)); // matched: use dp equal case
@@ -671,9 +666,7 @@ fn bt25_020_opt_locks_after_first_win_same_turn() {
     );
 
     // Unsuspend the attacker to fight again in the SAME turn.
-    if let Some(perm) = runner
-        .game
-        .players[0]
+    if let Some(perm) = runner.game.players[0]
         .battle_area
         .get_mut(ally_ts.index as usize)
     {
@@ -709,9 +702,7 @@ fn bt25_020_opt_clears_next_turn() {
     runner.end_turn(); // -> player 1's turn
     runner.end_turn(); // -> player 0's turn again
 
-    if let Some(perm) = runner
-        .game
-        .players[0]
+    if let Some(perm) = runner.game.players[0]
         .battle_area
         .get_mut(ally_ts.index as usize)
     {
@@ -732,10 +723,7 @@ fn bt25_020_opt_clears_next_turn() {
 /// battle) is not a "battle win" and must not trigger the clause.
 #[test]
 fn bt25_020_does_not_fire_on_direct_player_attack() {
-    let mut runner = base()
-        .security(1, &["FILL"])
-        .memory(20)
-        .start();
+    let mut runner = base().security(1, &["FILL"]).memory(20).start();
     let _marsmon = place_marsmon(&mut runner);
     let ally_ts = runner.place_on_field(0, "OWN-TS", Some(0));
 

@@ -179,7 +179,11 @@ fn bt11_105_main_has_optional_cost_trash_select() {
     let has_cost_select = main.process.iter().any(|s| {
         matches!(
             s,
-            CompiledStep::SelectTrash { optional: true, cost: true, .. }
+            CompiledStep::SelectTrash {
+                optional: true,
+                cost: true,
+                ..
+            }
         )
     });
     assert!(
@@ -594,7 +598,10 @@ fn bt11_105_main_declining_placement_does_nothing_further() {
         .get(target.index as usize)
         .map(|p| p.card_sources.len())
         .unwrap_or(0);
-    assert_eq!(stack_before, 1, "sanity: fresh permanent starts with 1 source");
+    assert_eq!(
+        stack_before, 1,
+        "sanity: fresh permanent starts with 1 source"
+    );
 
     let _ = runner.play(0, 0);
     runner.game.drain_effect_queue();

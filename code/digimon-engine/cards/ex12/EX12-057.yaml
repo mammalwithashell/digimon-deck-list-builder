@@ -1,0 +1,46 @@
+card: EX12-057
+name: Takutoumon
+kind: digimon
+level: 6
+color: [black, yellow]
+cost: 12
+dp: 12000
+traits: [Shaman, Saneiketsu, Tentei Hachibushu, Shambala]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+
+effects:
+  - when: [on_play, when_digivolving, counter]
+    once_per_turn: true
+    optional: true
+    summary: "[On Play][When Digivolving][Counter][OPT] You may play 1 [Paishu] Token"
+    process:
+      - play_token:
+          controller: you
+          token_name: paishu
+
+  - when: on_ally_played
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When any of your Digimon are played, De-Digivolve 2 one opponent Digimon; then 1 opponent Digimon gets -6000 DP"
+    process:
+      - select_opponent_permanent:
+          bind_as: degen_target
+          filter: { kind: digimon }
+          prompt: "De-Digivolve 2 one opponent Digimon"
+      - de_digivolve:
+          target: degen_target
+          amount: 2
+          stop_at_level: 3
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -6000 DP"
+      - add_dp_modifier:
+          target: dp_target
+          value: -6000
+          expiry: end_of_opponents_turn

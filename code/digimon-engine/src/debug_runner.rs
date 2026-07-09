@@ -171,7 +171,11 @@ impl DebugRunner {
             .position(|c| c.card_id == card_id)
             .unwrap_or_else(|| panic!("place_on_field: unknown card_id {}", card_id));
         let next_idx = self.game.next_card_index();
-        let mut card = CardSource::new(data_idx, player, next_idx);
+        let mut card = if self.game.card_data[data_idx].card_kind == CardKind::Token {
+            CardSource::new_token(data_idx, player, next_idx)
+        } else {
+            CardSource::new(data_idx, player, next_idx)
+        };
         card.card_index = next_idx;
         let turn = turn_played_override.unwrap_or(self.game.turn_count);
         let perm = crate::permanent::Permanent::new(card, turn);

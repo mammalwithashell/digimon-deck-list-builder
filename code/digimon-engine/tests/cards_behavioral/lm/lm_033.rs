@@ -402,7 +402,14 @@ fn lm_033_main_adds_red_digimon_from_top_3_to_hand() {
         .hand(0, &["LM-033"])
         .deck(
             0,
-            &["FILL", "FILL", "FILL", "YELLOW-DIGI-2", "YELLOW-DIGI-1", "RED-DIGI"],
+            &[
+                "FILL",
+                "FILL",
+                "FILL",
+                "YELLOW-DIGI-2",
+                "YELLOW-DIGI-1",
+                "RED-DIGI",
+            ],
         )
         .deck(1, &["FILL"])
         .memory(10)

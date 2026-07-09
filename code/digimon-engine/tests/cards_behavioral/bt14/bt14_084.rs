@@ -663,7 +663,10 @@ fn bt14_084_security_effect_plays_self_without_paying_cost() {
     let mut ctx = EffectContext::new(&mut runner.game, handle, None, 1);
     let played = ctx.play_from_security(1);
 
-    assert!(played.is_some(), "Security Effect must place T.K. onto the battle area");
+    assert!(
+        played.is_some(),
+        "Security Effect must place T.K. onto the battle area"
+    );
     assert_eq!(
         runner.battle_area_size(1),
         field_before + 1,

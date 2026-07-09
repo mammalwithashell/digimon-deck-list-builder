@@ -283,10 +283,7 @@ fn bt1_087_start_of_turn_does_not_change_memory_above_two() {
 /// Security-kind selection over that single slot.
 #[test]
 fn bt1_087_on_play_installs_mandatory_security_selection_when_non_empty() {
-    let mut runner = base()
-        .memory(10)
-        .security(0, &["SEC-YELLOW"])
-        .start();
+    let mut runner = base().memory(10).security(0, &["SEC-YELLOW"]).start();
     let tk = runner.place_on_field(0, CARD_ID, None);
 
     fire_timing(&mut runner, EffectTiming::OnPlay, tk);

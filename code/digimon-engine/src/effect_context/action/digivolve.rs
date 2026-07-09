@@ -382,7 +382,8 @@ impl<'a> EffectContext<'a> {
         else {
             return false;
         };
-        crate::dna_digivolve::matching_dna_cost(meta, perm_a, perm_b, &self.game.card_data).is_some()
+        crate::dna_digivolve::matching_dna_cost(meta, perm_a, perm_b, &self.game.card_data)
+            .is_some()
     }
 
     /// The printed DNA-digivolve memory cost the both-on-field pair `{target_a,
@@ -717,12 +718,7 @@ impl<'a> EffectContext<'a> {
         // Recipe backstop (gap 2): the {field, trash} pair must satisfy the
         // result's printed DNA recipe unless requirements are ignored.
         if !ignore_requirements
-            && !self.field_and_trash_satisfy_recipe(
-                field_partner,
-                owner,
-                trash_index,
-                result_index,
-            )
+            && !self.field_and_trash_satisfy_recipe(field_partner, owner, trash_index, result_index)
         {
             return None;
         }
@@ -803,10 +799,7 @@ impl<'a> EffectContext<'a> {
         for pid in 0..self.game.players.len() {
             let player_id = pid as PlayerId;
             let player = self.game.player(player_id);
-            let trash_material = player
-                .trash
-                .iter()
-                .find(|c| c.handle() == trash_partner);
+            let trash_material = player.trash.iter().find(|c| c.handle() == trash_partner);
             let result = player.hand.iter().find(|c| c.handle() == result_from_hand);
             if let (Some(trash_material), Some(result)) = (trash_material, result) {
                 let result_meta = self.game.card_data.get(result.data_index)?;

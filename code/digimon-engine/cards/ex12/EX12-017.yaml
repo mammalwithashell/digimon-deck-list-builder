@@ -1,0 +1,165 @@
+card: EX12-017
+name: WarGreymon
+kind: digimon
+level: 6
+color: [red, black]
+cost: 12
+dp: 12000
+traits: [Dragonkin, ME, VB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - name_contains: Greymon
+            - trait_has: ME
+            - trait_has: VB
+    cost: 3
+  - kind: dna_digivolve
+    materials:
+      - level_eq: 5
+        any_of:
+          - color_is: red
+          - color_is: yellow
+      - level_eq: 5
+        any_of:
+          - color_is: black
+          - color_is: purple
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode (Lv.5 or lower w/[Agumon]/[Greymon] in name or [ME]/[VB])>"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+              - any_of:
+                  - name_contains: Agumon
+                  - name_contains: Greymon
+                  - trait_has: ME
+                  - trait_has: VB
+          prompt: "Choose a level 5 or lower [Agumon]/[Greymon]/[ME]/[VB] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  - when: [on_play, when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[On Play][When Digivolving][When Attacking][OPT] De-Digivolve 2 one opponent Digimon, then delete 1 opponent lowest-DP Digimon"
+    process:
+      - select_opponent_permanent:
+          bind_as: degen_target
+          filter: { kind: digimon }
+          prompt: "De-Digivolve 2 one opponent Digimon"
+      - de_digivolve:
+          target: degen_target
+          amount: 2
+          stop_at_level: 3
+      - select_opponent_permanent:
+          bind_as: delete_target
+          selector: lowest_dp
+          filter: { kind: digimon }
+          prompt: "Delete 1 opponent lowest-DP Digimon"
+      - delete_permanent: { target: delete_target }
+
+  - when: counter
+    once_per_turn: true
+    optional: true
+    summary: "[Counter][OPT] 2 of your Digimon may DNA digivolve into [Omnimon] or [ME]/[VB] in hand; then may redirect attack"
+    process:
+      - select_hand:
+          of: you
+          bind_as: dna_card
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: Omnimon
+                  - trait_has: ME
+                  - trait_has: VB
+          prompt: "Select [Omnimon] or [ME]/[VB] Digimon in hand to DNA digivolve into"
+      - if:
+          condition: { binding_present: dna_card }
+          then:
+            - select_dna_pair:
+                left_filter:
+                  all_of:
+                    - kind: digimon
+                    - of: you
+                right_filter:
+                  all_of:
+                    - kind: digimon
+                    - of: you
+                bind_left_as: dna_a
+                bind_right_as: dna_b
+                prompt: "Select 2 of your Digimon to DNA digivolve"
+                optional: true
+            - if:
+                condition: { binding_present: dna_a }
+                then:
+                  - effect_initiated_dna_digivolve:
+                      target_a: dna_a
+                      target_b: dna_b
+                      from_hand: dna_card
+                      cost: 0
+                      ignore_requirements: false
+                  - select_own_permanent:
+                      bind_as: redirect_target
+                      optional: true
+                      filter: { kind: digimon }
+                      prompt: "Change the attack target to 1 of your Digimon"
+                  - redirect_attack_target:
+                      new_target: redirect_target
+                      optional: true
+                      prompt: "Change the attack target to 1 of your Digimon"
+
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "[Inherited] <Decode (Lv.5 or lower w/[Agumon]/[Greymon] in name or [ME]/[VB])>"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source_inherited
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+              - any_of:
+                  - name_contains: Agumon
+                  - name_contains: Greymon
+                  - trait_has: ME
+                  - trait_has: VB
+          prompt: "Choose a level 5 or lower [Agumon]/[Greymon]/[ME]/[VB] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source_inherited
+          cost_delta: free
