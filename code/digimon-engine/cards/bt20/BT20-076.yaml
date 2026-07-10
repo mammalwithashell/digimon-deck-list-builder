@@ -15,7 +15,11 @@ alt_paths:
     cost: 4
   - kind: blast_dna_digivolve
     materials:
-      - { kind: digimon, name_is: "DinoBeemon" }
+      # Printed: <Blast DNA Digivolve ([Dinobeemon] + [Paildramon])>. All
+      # printings (BT3-055 .. BT20-074) and DCGO spell it "Dinobeemon" -
+      # `name_is` is an exact (case-sensitive) match, so the previous
+      # "DinoBeemon" casing could never match any real card.
+      - { kind: digimon, name_is: "Dinobeemon" }
       - { kind: digimon, name_is: "Paildramon" }
     cost: 0
     stacks_unsuspended: true

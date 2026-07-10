@@ -6,10 +6,14 @@ color: [red]
 cost: 4
 dp: 4000
 traits: [Reptile, LIBERATOR]
+# Printed digivolve circle (official Bandai DB / data/card_bundles/BT21-017.md):
+# Red Lv.3 / cost 2 — the card's ONLY digivolve requirement. A bare
+# level-only cost-0 path here was the free-digivolve bug (any-colour Lv.3
+# digivolved for 0); see tests/alt_path_printed_cost_guard.rs.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3 }
-    cost: 0
+    from: { level_eq: 3, color_is: red }
+    cost: 2
 
 effects:
   # [When Digivolving] If you have 1 or fewer Tamers, you may play 1

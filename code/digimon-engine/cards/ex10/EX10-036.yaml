@@ -5,7 +5,7 @@ level: 7
 color: [black]
 cost: 14
 dp: 14000
-traits: [Rock Dragon, LIBERATOR]
+traits: [Rock Dragon, LIBERATOR, Mineral]
 attribute: Virus
 alt_paths:
   - kind: digivolve

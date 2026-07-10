@@ -549,6 +549,7 @@ impl Game {
             declaration_committed: false,
             cancelled: false,
             battle_occurred: false,
+            battle_defender_deleted: false,
             return_phase,
             state: AttackState::Declared,
             counter_depth: 0,
@@ -770,41 +771,56 @@ impl Game {
                     // Phase 9 Task 6 — `<Piercing>` post-battle security
                     // check. Fires iff the just-resolved battle was a
                     // Digimon-vs-Digimon match in which the attacker
-                    // survived, the defender was wiped, AND the attacker
-                    // has `<Piercing>`. We re-check survival here because
-                    // OnDeletion / EndOfBattle triggers that ran inside
-                    // `resolve_battle` may have deleted the attacker.
+                    // survived, the defender was DELETED in the battle
+                    // (`battle_defender_deleted` — recorded by
+                    // `resolve_battle` from the deletion-batch outcome;
+                    // never re-probed via the defender's slot-based handle,
+                    // which a bystander may have shifted into), AND the
+                    // attacker has `<Piercing>`. Survival is re-checked
+                    // here because OnDeletion / EndOfBattle triggers that
+                    // ran inside `resolve_battle` may have deleted the
+                    // attacker. Applies to both attack shapes: declared on
+                    // a Digimon, or declared on the player and blocked
+                    // (glossary: "This effect also works if an attack is
+                    // blocked"; §16-6-2).
                     //
                     // The security pipeline may park on a
                     // `PendingSelection`; in that case we return
                     // `InProgress` and `advance_security_resolution`
                     // finalizes via `cleanup_attack` when the chain clears.
                     if outcome == AttackResult::AttackerWins {
+                        // Refresh declarative state before the keyword gate:
+                        // a conditional aura's `<Piercing>` may turn ON at
+                        // this exact timing (EX11-016's inherited "[Your
+                        // Turn] while your opponent has no Digimon with
+                        // digivolution cards" becomes true when the battle
+                        // deletes that last sourced Digimon — official Q&A:
+                        // the freshly gained keyword DOES trigger). Same
+                        // staleness rationale as `current_security_strike`.
+                        self.tick_declarative_effects();
                         if let Some(pa) = self.pending_attack.as_ref() {
                             let attacker_h = pa.attacker;
-                            let defender_handle = match pa.effective_target {
-                                AttackTarget::Digimon(h) => Some(h),
-                                AttackTarget::Player(_) => None,
-                            };
-                            if let Some(defender_h) = defender_handle {
-                                let defender_wiped = !self.handle_valid(defender_h);
-                                let attacker_alive = self.handle_valid(attacker_h);
-                                if defender_wiped
-                                    && attacker_alive
-                                    && self.has_keyword(attacker_h, Keyword::Piercing)
+                            let defender_deleted = pa.battle_defender_deleted;
+                            if defender_deleted
+                                && self.handle_still_attacking(attacker_h)
+                                && self.has_keyword(attacker_h, Keyword::Piercing)
+                            {
+                                self.transition_attack_state(AttackState::PostBattle);
+                                // §16-6-4: `<Piercing>` is pending processing
+                                // that resolves AFTER effects triggered by
+                                // the battle. If the battle's OnDeletion /
+                                // EndOfBattle chain parked a selection or
+                                // still has queued effects, yield; the
+                                // post-selection resume hook re-enters
+                                // `advance_pending_attack`, and the
+                                // `PostBattle` arm below fires the check
+                                // once the chain has cleared.
+                                if self.pending_selection.is_some()
+                                    || !self.effect_queue.is_empty()
                                 {
-                                    self.transition_attack_state(AttackState::PostBattle);
-                                    let piercing_outcome =
-                                        self.enter_piercing_security_check(attacker_h);
-                                    match piercing_outcome {
-                                        AttackResult::InProgress => {
-                                            return AttackResult::InProgress;
-                                        }
-                                        terminal => {
-                                            return self.cleanup_attack(terminal);
-                                        }
-                                    }
+                                    return AttackResult::InProgress;
                                 }
+                                return self.fire_piercing_or_finish(attacker_h);
                             }
                         }
                     }
@@ -812,15 +828,21 @@ impl Game {
                     return self.cleanup_attack(outcome);
                 }
                 AttackState::PostBattle => {
-                    // Defensive: the Battle arm handles PostBattle inline
-                    // (transition + fire + return). If we land here it's
-                    // because a selection callback re-entered
-                    // `advance_pending_attack` while the security pipeline
-                    // is still in flight — but in that case
-                    // `advance_security_resolution` is responsible for
-                    // finalizing via `cleanup_attack`. Just yield so the
-                    // in-flight security resolution can continue.
-                    return AttackResult::InProgress;
+                    // Two ways to land here:
+                    //
+                    // 1. The security pipeline (Piercing follow-up) is in
+                    //    flight — `advance_security_resolution` owns
+                    //    completion and finalizes via `cleanup_attack`.
+                    //    Yield.
+                    // 2. The Battle arm deferred an owed `<Piercing>` check
+                    //    because battle-triggered effects were still
+                    //    resolving (§16-6-4). Those have now cleared (the
+                    //    loop-top guard yields while a selection or queued
+                    //    effect is pending), so fire the check now.
+                    if self.security_resolution.is_some() {
+                        return AttackResult::InProgress;
+                    }
+                    return self.fire_piercing_or_finish(attacker);
                 }
                 AttackState::Cleanup => {
                     // Shouldn't normally reach here — cleanup_attack is
@@ -2797,6 +2819,39 @@ impl Game {
         }
     }
 
+    /// Fire the owed `<Piercing>` follow-up security check, or finish the
+    /// attack when the check can no longer be performed.
+    ///
+    /// Preconditions re-validated here (they may have changed while
+    /// battle-triggered effects resolved, §16-6-4):
+    /// - the attacker is still the in-flight attacking Digimon;
+    /// - it still has `<Piercing>`;
+    /// - the defending player has ≥ 1 security card — §16-6-6: with 0
+    ///   security the check "can't be performed" at all, and in particular
+    ///   Piercing must NOT win the game (the 0-security game-win arm is
+    ///   exclusive to unblocked player attacks, §11-5-1-2; DCGO parity:
+    ///   `DetermineAttackOutcome` gates the post-battle check on
+    ///   `SecurityCards.Count >= 1` and only ends the game on the
+    ///   no-defender arm).
+    fn fire_piercing_or_finish(&mut self, attacker: PermanentHandle) -> AttackResult {
+        // Keyword state may have changed while battle-triggered effects
+        // resolved — refresh the materialized aura grants before the gate
+        // (same rationale as `current_security_strike`).
+        self.tick_declarative_effects();
+        let defender_player: PlayerId = 1 - attacker.player;
+        if self.handle_still_attacking(attacker)
+            && self.has_keyword(attacker, Keyword::Piercing)
+            && !self.player(defender_player).security.is_empty()
+        {
+            match self.enter_piercing_security_check(attacker) {
+                AttackResult::InProgress => AttackResult::InProgress,
+                terminal => self.cleanup_attack(terminal),
+            }
+        } else {
+            self.cleanup_attack(AttackResult::AttackerWins)
+        }
+    }
+
     /// Phase 9 Task 6 — fire the `<Piercing>` follow-up security check.
     /// Reuses the standard security-resolution pipeline: counts +
     /// `SecurityAttackChange` modifier sum, honors `Jamming` on the
@@ -3674,6 +3729,45 @@ impl Game {
             .unwrap_or(false)
     }
 
+    /// Re-key the in-flight attack's slot-based handles after one battle-area
+    /// permanent was removed (companion to
+    /// `ModifierRegistry::shift_after_battle_area_remove`). Without this, a
+    /// removal below the attacker (e.g. EX8-028 paying a lower-indexed ally
+    /// into security mid-attack) leaves `pending_attack.attacker` pointing at
+    /// the WRONG slot — `handle_still_attacking` then fails and the attack
+    /// silently fizzles before its security check.
+    ///
+    /// A handle that pointed AT the removed slot is left UNCHANGED: it acts
+    /// as an identity token for in-flight handlers (Retaliation's
+    /// `battle_opponent_of` compares the deleted carrier's pre-removal
+    /// handle against `pending_attack.attacker` mid-OnDeletion), and the
+    /// battle outcome no longer relies on re-probing it (see
+    /// `PendingAttack::battle_defender_deleted`).
+    pub(crate) fn shift_pending_attack_after_battle_area_remove(
+        &mut self,
+        player: PlayerId,
+        removed_index: u8,
+    ) {
+        let Some(pa) = self.pending_attack.as_mut() else {
+            return;
+        };
+        let shift = |h: &mut PermanentHandle| {
+            if h.player == player && h.index > removed_index {
+                h.index -= 1;
+            }
+        };
+        shift(&mut pa.attacker);
+        if let AttackTarget::Digimon(h) = &mut pa.original_target {
+            shift(h);
+        }
+        if let AttackTarget::Digimon(h) = &mut pa.effective_target {
+            shift(h);
+        }
+        if let Some(h) = pa.blocker.as_mut() {
+            shift(h);
+        }
+    }
+
     fn handle_still_attacking(&self, handle: PermanentHandle) -> bool {
         self.player(handle.player)
             .battle_area
@@ -3881,11 +3975,30 @@ impl Game {
         // combatants are on opposite sides, so the loser leaving does not
         // shift the winner's index.
         let (outcome, winner) = if a_value > d_value {
-            // Attacker wins — defender is deleted.
-            self.delete_permanent_with_cause(
-                defender,
+            // Attacker wins — defender is deleted. Record on the in-flight
+            // attack (when this battle IS the attack's battle) whether the
+            // deletion actually committed: the `<Piercing>` gate in the
+            // `Battle` arm must not re-probe the defender's slot-based
+            // handle after removal — a higher-indexed bystander shifts
+            // down into the freed slot and reads as a "surviving"
+            // defender, silently suppressing Piercing.
+            // Capture the "this battle IS the attack's battle" match BEFORE
+            // the deletion — the removal re-keys `pending_attack`'s handles
+            // (a same-side removal below either combatant shifts its index),
+            // so a post-deletion comparison could fail to match.
+            let is_attacks_own_battle = self.pending_attack.as_ref().is_some_and(|pa| {
+                pa.attacker == attacker && pa.effective_target == AttackTarget::Digimon(defender)
+            });
+            let batch_outcome = self.delete_permanents_batch(
+                vec![defender],
                 crate::replacement::ReplacementCause::Battle,
             );
+            let defender_deleted = batch_outcome.completed.contains(&defender);
+            if is_attacks_own_battle {
+                if let Some(pa) = self.pending_attack.as_mut() {
+                    pa.battle_defender_deleted = defender_deleted;
+                }
+            }
             (AttackResult::AttackerWins, Some(attacker))
         } else if a_value < d_value {
             // Defender wins — attacker is deleted.

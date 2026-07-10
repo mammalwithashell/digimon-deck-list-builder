@@ -128,6 +128,75 @@ describe('dtoToGameState', () => {
     expect(state.player1.handCards[0]?.cardKind).toBe(2);
   });
 
+  // "Digivolution cards" are the cards UNDER the top card — the top card is
+  // not one of them. The desktop DTO's `stack_size` counts the whole stack
+  // (top + sources), so `sourceCount` must be `stack_size - 1`; mapping it
+  // 1:1 made a Digimon with 2 sources render an "x3" badge.
+  it('derives sourceCount as stack_size minus the top card', () => {
+    const source = (id: string, name: string) => ({
+      card_id: id,
+      card_name: name,
+      colors: ['Red'],
+    });
+    const state = dtoToGameState({
+      turn_count: 1,
+      turn_player: 0,
+      first_player: 0,
+      current_phase: 'Main',
+      memory: 0,
+      game_over: false,
+      winner: null,
+      mulligan_current_player: null,
+      mulligan_used: [false, false],
+      players: [
+        {
+          id: 0,
+          hand: [],
+          battle_area: [
+            {
+              field_index: 0,
+              top_card: {
+                card_id: 'BT1-025',
+                card_name: 'Greymon',
+                card_kind: 'Digimon' as const,
+                level: 4,
+                dp: 5000,
+                play_cost: 4,
+                colors: ['Red'],
+              },
+              effective_dp: 5000,
+              is_suspended: false,
+              // 3-card stack: top + 2 digivolution cards underneath.
+              stack_size: 3,
+              turn_played: 1,
+              sources: [source('BT1-009', 'Koromon'), source('BT1-010', 'Agumon')],
+            },
+          ],
+          breeding: null,
+          deck_count: 45,
+          trash_count: 0,
+          security_count: 5,
+          is_eliminated: false,
+        },
+        {
+          id: 1,
+          hand: [],
+          battle_area: [],
+          breeding: null,
+          deck_count: 50,
+          trash_count: 0,
+          security_count: 5,
+          is_eliminated: false,
+        },
+      ],
+    });
+
+    const perm = state.player1.battleArea[0]!;
+    expect(perm.sourceCount).toBe(2);
+    // The rendered stack list still carries all 3 cards (top + sources).
+    expect(perm.sources).toHaveLength(3);
+  });
+
   // The engine reports `winner` as a raw Rust player id (0/1), but the UI
   // (ResultOverlay/PhaseIndicator `localPlayer={1}`, playerLabels `{1,2}`) is
   // 1-indexed. Without the +1 conversion, the local human (engine 0) winning

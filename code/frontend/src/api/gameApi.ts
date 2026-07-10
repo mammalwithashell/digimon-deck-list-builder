@@ -290,7 +290,10 @@ function toPermanentInfo(perm: PermanentDto): PermanentInfo {
     dp: perm.effective_dp ?? 0,
     level: top.level,
     isSuspended: perm.is_suspended,
-    sourceCount: perm.stack_size,
+    // Digivolution cards only — the top card is not a digivolution card, so
+    // a 3-card stack has 2 sources. Mirrors the browser wire's `sourceCount`
+    // (`serialization.rs` emits `stack_size - 1`).
+    sourceCount: Math.max(0, perm.stack_size - 1),
     keywords: perm.keywords ?? [],
     keywordBreakdown: perm.keyword_breakdown ?? { innate: [], gained: [] },
     securityAttackModifier: perm.security_attack_modifier ?? 0,

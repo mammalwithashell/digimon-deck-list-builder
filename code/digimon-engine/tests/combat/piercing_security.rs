@@ -11,6 +11,7 @@
 //! Spec: docs/superpowers/specs/2026-04-21-combat-interrupt-completion-design.md
 //! §4.3. Plan: Task 6 (lines 533-594).
 
+use digimon_engine::action::space::encode_attack;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, Expiry, Keyword, ModifierType};
@@ -258,4 +259,342 @@ fn piercing_does_nothing_when_attacker_wiped() {
         sec_before,
         "Piercing must not fire when attacker is wiped"
     );
+}
+
+// ─── Blocked-player-attack path (glossary: "This effect also works if an
+//     attack is blocked"; rules §16-6-1/-2) ─────────────────────────────
+//
+// The canonical real-game Piercing scenario: attack the PLAYER, the
+// opponent blocks, the attacker deletes the blocker in battle and
+// survives → the security check still happens (mandatory, §16-6-3).
+
+/// Same CardData shape as `big_digimon` but with `<Piercing>` printed on
+/// the card face (fullwidth brackets, as ingested card text uses).
+fn piercing_digimon(id: &str, dp: i32) -> CardData {
+    let mut c = big_digimon(id, dp);
+    c.effect_text = "\u{ff1c}Piercing\u{ff1e} (When this Digimon attacks and deletes an opponent's Digimon and survives the battle, it performs any security checks it normally would.)".to_string();
+    c.keywords = vec![Keyword::Piercing];
+    c
+}
+
+/// Source card whose inherited text grants `<Piercing>`.
+fn inherited_piercing_source(id: &str) -> CardData {
+    let mut c = big_digimon(id, 3000);
+    c.level = Some(4);
+    c.inherited_text = "\u{ff1c}Piercing\u{ff1e}".to_string();
+    c
+}
+
+/// Drive: P0 attacks P1's player, P1 declares `blk` as blocker, battle
+/// resolves. Returns nothing; callers assert on state.
+fn attack_player_and_block(r: &mut DebugRunner, atk: digimon_engine::PermanentHandle, blk: digimon_engine::PermanentHandle) {
+    let result = r.attack_player(atk, 1, false);
+    assert_eq!(
+        result,
+        digimon_engine::combat::AttackResult::InProgress,
+        "block window must open (blocker candidate exists)"
+    );
+    let sel = r
+        .pending_selection()
+        .expect("BlockTiming selection installed");
+    assert_eq!(sel.selecting_player, 1, "defender declares the blocker");
+    r.game
+        .resolve_selection(1, encode_attack(0, blk.index as u16))
+        .expect("declaring the blocker must be legal");
+}
+
+/// Canonical: modifier-granted <Piercing>, player attack blocked, blocker
+/// wiped, attacker survives → exactly one mandatory security check.
+#[test]
+fn piercing_fires_when_player_attack_is_blocked_modifier_grant() {
+    let mut r = DebugRunner::builder()
+        .add_card(big_digimon("ATK", 8000))
+        .add_card(big_digimon("BLK", 3000))
+        .add_card(filler_option("OPT"))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .deck(1, &["FILLER"; 5])
+        .security(1, &["OPT", "OPT", "OPT"])
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let blk = r.place_on_field(1, "BLK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Piercing, Expiry::Permanent, 0);
+    r.game
+        .modifiers
+        .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
+
+    let sec_before = r.security_count(1);
+    attack_player_and_block(&mut r, atk, blk);
+
+    assert_eq!(r.battle_area_size(1), 0, "blocker (3000) wiped by 8000");
+    assert!(
+        r.battle_area_size(0) > 0,
+        "attacker survives the battle with the blocker"
+    );
+    assert_eq!(
+        r.security_count(1),
+        sec_before - 1,
+        "Piercing must perform the security check after a blocked player \
+         attack (glossary: 'This effect also works if an attack is blocked')"
+    );
+    // No prompt: the Piercing check is mandatory (§16-6-3).
+    assert!(
+        r.pending_selection().is_none(),
+        "no player prompt — the Piercing security check is mandatory"
+    );
+    assert!(r.game.pending_attack.is_none(), "attack fully cleaned up");
+    // Blocker (+1) and consumed security card (+1) both in P1 trash.
+    assert_eq!(r.trash_size(1), 2);
+}
+
+/// Printed keyword on the card face (parsed from effect text) must be
+/// honored on the blocked path — not just registry-granted keywords.
+#[test]
+fn piercing_fires_when_player_attack_is_blocked_printed_keyword() {
+    let mut r = DebugRunner::builder()
+        .add_card(piercing_digimon("PRC", 8000))
+        .add_card(big_digimon("BLK", 3000))
+        .add_card(filler_option("OPT"))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .deck(1, &["FILLER"; 5])
+        .security(1, &["OPT", "OPT"])
+        .start();
+
+    let atk = r.place_on_field(0, "PRC", Some(0));
+    let blk = r.place_on_field(1, "BLK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
+
+    attack_player_and_block(&mut r, atk, blk);
+
+    assert_eq!(r.battle_area_size(1), 0, "blocker wiped");
+    assert_eq!(
+        r.security_count(1),
+        1,
+        "printed <Piercing> must trigger the security check when blocked"
+    );
+}
+
+/// Inherited `<Piercing>` from a digivolution source must be honored on
+/// the blocked path.
+#[test]
+fn piercing_fires_when_player_attack_is_blocked_inherited_keyword() {
+    let mut r = DebugRunner::builder()
+        .add_card(big_digimon("TOP", 8000))
+        .add_card(inherited_piercing_source("SRC"))
+        .add_card(big_digimon("BLK", 3000))
+        .add_card(filler_option("OPT"))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .deck(1, &["FILLER"; 5])
+        .security(1, &["OPT", "OPT"])
+        .start();
+
+    // SRC under TOP: inherited <Piercing> active.
+    let atk = r.place_stack(0, &["SRC", "TOP"]);
+    let blk = r.place_on_field(1, "BLK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
+
+    attack_player_and_block(&mut r, atk, blk);
+
+    assert_eq!(r.battle_area_size(1), 0, "blocker wiped");
+    assert_eq!(
+        r.security_count(1),
+        1,
+        "inherited <Piercing> must trigger the security check when blocked"
+    );
+}
+
+/// Negative: the blocker WINS the battle (attacker deleted) → no check.
+#[test]
+fn piercing_does_not_fire_when_blocker_wins_battle() {
+    let mut r = DebugRunner::builder()
+        .add_card(big_digimon("ATK", 3000))
+        .add_card(big_digimon("BLK", 9000))
+        .add_card(filler_option("OPT"))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .deck(1, &["FILLER"; 5])
+        .security(1, &["OPT", "OPT"])
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let blk = r.place_on_field(1, "BLK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Piercing, Expiry::Permanent, 0);
+    r.game
+        .modifiers
+        .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
+
+    attack_player_and_block(&mut r, atk, blk);
+
+    assert_eq!(r.battle_area_size(0), 0, "attacker (3000) deleted by 9000");
+    assert_eq!(
+        r.security_count(1),
+        2,
+        "no Piercing check when the attacker loses the battle"
+    );
+}
+
+/// Negative: blocker survives (attacker can't delete it — tie goes to
+/// mutual KO, so use CannotBeDestroyedByBattle on the blocker) → no check.
+#[test]
+fn piercing_does_not_fire_when_blocker_survives() {
+    let mut r = DebugRunner::builder()
+        .add_card(big_digimon("ATK", 8000))
+        .add_card(big_digimon("BLK", 3000))
+        .add_card(filler_option("OPT"))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .deck(1, &["FILLER"; 5])
+        .security(1, &["OPT", "OPT"])
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let blk = r.place_on_field(1, "BLK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Piercing, Expiry::Permanent, 0);
+    r.game
+        .modifiers
+        .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
+    // Blocker cannot be deleted in battle → it survives the losing battle.
+    r.game.modifiers.add(
+        blk,
+        digimon_engine::modifiers::ModifierEntry::simple(
+            ModifierType::CannotBeDestroyedByBattle,
+            1,
+            Expiry::Permanent,
+            1,
+        ),
+    );
+
+    attack_player_and_block(&mut r, atk, blk);
+
+    assert_eq!(
+        r.battle_area_size(1),
+        1,
+        "blocker survives via CannotBeDestroyedByBattle"
+    );
+    assert_eq!(
+        r.security_count(1),
+        2,
+        "no Piercing check when the battling Digimon was not deleted"
+    );
+}
+
+/// Slot-shift regression (user report "Piercing not working"): the wiped
+/// defender was NOT the highest-indexed permanent, so a bystander shifts
+/// down into its battle-area slot after deletion. The piercing gate must
+/// not mistake the shifted bystander for a surviving defender.
+/// Direct-attack variant.
+#[test]
+fn piercing_fires_when_wiped_defender_has_higher_slot_bystander() {
+    let mut r = DebugRunner::builder()
+        .add_card(big_digimon("ATK", 8000))
+        .add_card(big_digimon("DEF", 3000))
+        .add_card(big_digimon("BYSTANDER", 12000))
+        .add_card(filler_option("OPT"))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .deck(1, &["FILLER"; 5])
+        .security(1, &["OPT", "OPT"])
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let def = r.place_on_field(1, "DEF", Some(0)); // index 0
+    let _bystander = r.place_on_field(1, "BYSTANDER", Some(0)); // index 1
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Piercing, Expiry::Permanent, 0);
+
+    let _ = r.attack_digimon(atk, def, false);
+
+    assert_eq!(
+        r.battle_area_size(1),
+        1,
+        "DEF wiped; only the bystander remains"
+    );
+    assert_eq!(
+        r.security_count(1),
+        1,
+        "Piercing must fire even though a bystander shifted into the \
+         wiped defender's battle-area slot"
+    );
+}
+
+/// Slot-shift regression, blocked-player-attack variant: blocker at slot 0
+/// dies, bystander at slot 1 shifts down into slot 0.
+#[test]
+fn piercing_fires_when_blocked_with_higher_slot_bystander() {
+    let mut r = DebugRunner::builder()
+        .add_card(big_digimon("ATK", 8000))
+        .add_card(big_digimon("BLK", 3000))
+        .add_card(big_digimon("BYSTANDER", 12000))
+        .add_card(filler_option("OPT"))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .deck(1, &["FILLER"; 5])
+        .security(1, &["OPT", "OPT"])
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let blk = r.place_on_field(1, "BLK", Some(0)); // index 0
+    let _bystander = r.place_on_field(1, "BYSTANDER", Some(0)); // index 1
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Piercing, Expiry::Permanent, 0);
+    r.game
+        .modifiers
+        .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
+
+    attack_player_and_block(&mut r, atk, blk);
+
+    assert_eq!(
+        r.battle_area_size(1),
+        1,
+        "blocker wiped; only the bystander remains"
+    );
+    assert_eq!(
+        r.security_count(1),
+        1,
+        "Piercing must fire after a blocked player attack even when a \
+         bystander shifted into the wiped blocker's slot"
+    );
+}
+
+/// §16-6-6: with 0 security cards the Piercing check can't be performed —
+/// and, critically, it must NOT win the game (unlike an unblocked player
+/// attack under §11-5-1-2). DCGO parity: `DetermineAttackOutcome` only
+/// ends the game on the DefendingPermanent == null arm; the post-battle
+/// security check is gated on `SecurityCards.Count >= 1`.
+#[test]
+fn piercing_with_zero_security_does_not_win_game() {
+    let mut r = DebugRunner::builder()
+        .add_card(big_digimon("ATK", 8000))
+        .add_card(big_digimon("BLK", 3000))
+        .add_card(make_test_card("FILLER", "Filler"))
+        .deck(1, &["FILLER"; 5])
+        .start();
+
+    let atk = r.place_on_field(0, "ATK", Some(0));
+    let blk = r.place_on_field(1, "BLK", Some(0));
+    r.game
+        .modifiers
+        .grant_keyword(atk, Keyword::Piercing, Expiry::Permanent, 0);
+    r.game
+        .modifiers
+        .grant_keyword(blk, Keyword::Blocker, Expiry::Permanent, 1);
+
+    assert_eq!(r.security_count(1), 0, "P1 staged with empty security");
+    attack_player_and_block(&mut r, atk, blk);
+
+    assert_eq!(r.battle_area_size(1), 0, "blocker wiped");
+    assert!(
+        !r.game_over(),
+        "Piercing with 0 opposing security must not end the game \
+         (§16-6-6: the check can't be performed at all)"
+    );
+    assert!(r.game.pending_attack.is_none(), "attack cleaned up normally");
 }

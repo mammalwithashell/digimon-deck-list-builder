@@ -64,7 +64,7 @@ level: 5
 color: [green, black]
 cost: 8
 dp: 8000
-traits: [Shaman, Iliad, TS]
+traits: [Shaman, Iliad, TS, Vegetation]
 
 alt_paths:
   - kind: digivolve

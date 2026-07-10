@@ -989,6 +989,16 @@ pub struct PendingAttack {
     /// security attacks leave this `false`, matching the Python semantics
     /// where EndOfBattle only fires for Digimon-vs-Digimon battles.
     pub battle_occurred: bool,
+    /// Set by `resolve_battle` when the attack's own Digimon-vs-Digimon
+    /// battle (attacker == `pending_attack.attacker`, defender ==
+    /// `effective_target`) actually DELETED the defending Digimon (the
+    /// deletion batch completed — not cancelled/substituted by a
+    /// replacement). This is the `<Piercing>` trigger condition (rules
+    /// §16-6-2). Stored explicitly because battle-area handles are
+    /// slot-based: after the defender's removal a higher-indexed bystander
+    /// shifts down into its slot, so re-probing `effective_target` with
+    /// `handle_valid` misreads the bystander as a surviving defender.
+    pub battle_defender_deleted: bool,
     /// Phase to return to once the attack finishes (`Main` for normal
     /// attacks, `EndOfTurnAction` for end-of-turn vortex attacks, etc.).
     pub return_phase: GamePhase,

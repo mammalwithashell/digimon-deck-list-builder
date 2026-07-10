@@ -55,6 +55,12 @@ alt_paths:
 effects:
   # ─── Clause 0: [When Moving][On Play] trash up to 2 [Iliad]/[TS] → draw per ──
   - when: [on_play, on_move]
+    # [When Moving] is self-scoped ("when THIS Digimon moves from breeding");
+    # the engine's on_move dispatch is a board-wide observer scan, so gate the
+    # on_move timing on the moved permanent being this Digimon (EX11-038 idiom).
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
     summary: "[OnPlay/WhenMoving] By trashing up to 2 [Iliad]/[TS] cards from hand, draw 1 per trashed"
     process:
       - select_hand:

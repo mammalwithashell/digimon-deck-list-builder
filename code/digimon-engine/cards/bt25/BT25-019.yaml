@@ -41,7 +41,7 @@ level: 6
 color: [white, black]
 cost: 13
 dp: 13000
-traits: [Cyborg, X Antibody, Titan, TS]
+traits: [Cyborg, X Antibody, Titan, TS, Dinosaur]
 
 alt_paths:
   - kind: digivolve

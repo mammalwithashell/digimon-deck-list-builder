@@ -5,7 +5,7 @@ level: 5
 color: [black, blue]
 cost: 7
 dp: 7000
-traits: [Cyborg, Titan, TS]
+traits: [Cyborg, Titan, TS, Aquatic]
 attribute: Virus
 
 # ─── Printed card text (data/cards.json — verbatim) ──────────────────────────

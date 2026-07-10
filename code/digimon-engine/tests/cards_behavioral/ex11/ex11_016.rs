@@ -1009,6 +1009,66 @@ fn ex11_016_inherited_aura_off_when_carrier_lacks_ice_snow_trait() {
     );
 }
 
+/// OFFICIAL Q&A + full-attack integration (regression for the "Piercing not
+/// working" report): the carrier attacks the opponent's ONLY sourced Digimon.
+/// At declaration the aura is OFF (that Digimon has a digivolution card). The
+/// battle deletes it — at that same timing the opponent no longer has any
+/// Digimon with digivolution cards, the [Your Turn] aura turns ON, and per
+/// the official Q&A ("Yes, it triggers ... at the same timing as when your
+/// opponent's Digimon is deleted in battle") the freshly gained <Piercing>
+/// performs the post-battle security check — with <Security A. +1> also
+/// live, consuming TWO security cards.
+#[test]
+fn ex11_016_piercing_gained_mid_battle_triggers_two_security_checks() {
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX11-016 found in embedded DSL pack")
+        .add_card(ice_snow_carrier("ICE-CARRIER"))
+        .add_card(opp_digimon("OPP-DEF", 4000))
+        .add_card(source_filler("OPP-SRC"))
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .security(0, &["FILL", "FILL", "FILL"])
+        .security(1, &["FILL", "FILL", "FILL"])
+        .start();
+    let tp = r.game.turn_player();
+    let opp = 1 - tp;
+
+    let carrier = r.place_stack(tp, &[CARD_ID, "ICE-CARRIER"]);
+    // The opponent's ONLY Digimon carries a digivolution card → aura OFF.
+    let defender = r.place_stack(opp, &["OPP-SRC", "OPP-DEF"]);
+
+    r.game.enter_main_phase();
+    r.game.tick_declarative_effects();
+    assert!(
+        !r.game.has_keyword(carrier, Keyword::Piercing),
+        "aura must be OFF at attack declaration (the defender is sourced)"
+    );
+
+    let sec_before = r.game.players[opp as usize].security.len();
+    let _ = r.attack_digimon(carrier, defender, false);
+
+    assert_eq!(
+        r.game.players[opp as usize].battle_area.len(),
+        0,
+        "the sourced defender (4000 DP) is deleted by the 11000-DP carrier"
+    );
+    assert_eq!(
+        r.game.players[opp as usize].security.len(),
+        sec_before - 2,
+        "mid-battle-gained <Piercing> must fire the post-battle security \
+         check, and the simultaneously gained <Security A. +1> makes it \
+         check 2 cards (official EX11-016 Q&A: the effect gained at the \
+         deletion timing does trigger)"
+    );
+    assert!(
+        r.game.pending_attack.is_none() && r.game.pending_selection.is_none(),
+        "the attack must fully resolve without wedging"
+    );
+    assert!(!r.game_over(), "the game continues");
+}
+
 /// AURA OFF: [Your Turn] — on the opponent's turn the grants are absent even
 /// with the board condition satisfied.
 #[test]

@@ -26,9 +26,15 @@
 
 #![allow(unused_imports)]
 
+use std::sync::Arc;
+
 use digimon_dsl::compiled::{CompiledClause, CompiledDeclarativeClause, CompiledScope};
-use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::Keyword;
+use digimon_engine::card_source::CardHandle;
+use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner};
+use digimon_engine::effect::{CardEffect, Effect};
+use digimon_engine::effect_context::EffectContext;
+use digimon_engine::enums::{Expiry, Keyword, ModifierType};
+use digimon_engine::permanent::PermanentHandle;
 
 // ─── Helper ───────────────────────────────────────────────────────────────────
 
@@ -298,6 +304,57 @@ fn st1_07_inherited_security_attack_plus_not_double_counted_with_printed_text() 
     );
 }
 
+/// End-to-end pin for the user report "gaining extra security from inherited
+/// effects (observed on ST1-07)": with production-shaped printed inherited
+/// text present, the carrier's effective security STRIKE must be exactly 2
+/// (base 1 + Greymon's inherited <Security A. +1>) — not 3. This pins the
+/// same double-count fixed by `st1_07_..._not_double_counted_with_printed_text`
+/// at the combat-strike level that the player actually observes.
+#[test]
+fn st1_07_carrier_strike_is_exactly_two_with_printed_text() {
+    let lv5_card = make_test_card("PLAIN-LV5", "PlainLv5");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST1-07")
+        .expect("ST1-07 in pack")
+        .add_card(lv5_card)
+        .memory(10)
+        .start();
+
+    // Mirror production cards.json: printed inherited keyword text present.
+    {
+        let game = runner.game_mut();
+        for cd in game.card_data.iter_mut() {
+            if cd.card_id == "ST1-07" {
+                cd.inherited_text =
+                    "＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+                        .to_string();
+            }
+        }
+    }
+
+    let _greymon = runner.place_on_field(0, "ST1-07", Some(0));
+    let greymon_source = {
+        let game = runner.game_mut();
+        game.players[0].battle_area[0].top_card().clone()
+    };
+    let carrier = runner.place_on_field(0, "PLAIN-LV5", Some(0));
+    {
+        let game = runner.game_mut();
+        game.players[0].battle_area[carrier.index as usize]
+            .card_sources
+            .insert(0, greymon_source);
+    }
+
+    runner.game_mut().tick_declarative_effects();
+    assert_eq!(
+        runner.game.effective_security_strike(carrier),
+        2,
+        "carrier with ST1-07 buried checks exactly 2 security cards \
+         (base 1 + inherited <Security A. +1>) — never 3"
+    );
+}
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 3 — Runtime modifier installation (pending G-DECLARATIVE-KEYWORD)
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -328,5 +385,323 @@ fn st1_07_security_attack_plus_installed_on_field_via_modifier() {
     assert!(
         installed,
         "ST1-07 must have SecurityAttackPlus(1) installed via modifier when face-up on field"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 4 — Inherited grant EXPIRES when the source leaves the stack
+// (regression: "Sec +1 lasting after inherited source is removed by trashing")
+// ═══════════════════════════════════════════════════════════════════════════════
+//
+// Rules ground truth (`docs/digimon-rules/digest.md`; `general_rule.pdf`):
+// an inherited effect applies only WHILE its card is a digivolution card of
+// the Digimon. Removing the source — by trashing (De-Digivolve, Digi-Burst /
+// cost trashes, bottom-source strips) or by returning it to hand/deck — must
+// end the grant IMMEDIATELY.
+//
+// The bug: inherited grants are materialized into the modifier registry by
+// `tick_declarative_effects`, but the source-removal paths mutated
+// `card_sources` without re-materializing — so every read surface that does
+// not tick (`effective_security_strike` → the UI's securityAttackModifier,
+// `has_keyword`, `security_attack_keyword_bonus`, and the
+// `OnDigivolutionCardTrashed` observer window) kept seeing the departed
+// source's ＜Security A. +1＞ until some later decode-boundary tick.
+//
+// The fix re-materializes declarative state at the source-removal
+// chokepoints (`fire_digivolution_card_trashed`,
+// `fire_digivolution_card_returned_to_deck_bottom`,
+// `return_card_source_to_hand`, `return_card_source_to_deck`, and the
+// observer-silent partition trash). These tests deliberately DO NOT call
+// `tick_declarative_effects` after the removal — the engine must be
+// consistent on its own.
+
+/// Build a carrier stack [ST1-07 (source), PLAIN-LV5 (top)] with the grant
+/// verified live, WITHOUT relying on any manual post-removal tick.
+fn stack_with_greymon_source() -> (DebugRunner, PermanentHandle) {
+    let lv5 = make_test_card_with_level("PLAIN-LV5", "PlainLv5", 5);
+    // Distinct low-DP security fodder: the real-attack test pins the
+    // carrier's DP high via `force_base_dp("PLAIN-LV5", ...)`, which must
+    // NOT also raise the security cards' DP (a security battle that deletes
+    // the attacker after check 1 would mask a stale strike of 2).
+    let fodder = make_test_card_with_level("FODDER-LV3", "Fodder", 3);
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST1-07")
+        .expect("ST1-07 in pack")
+        .add_card(lv5)
+        .add_card(fodder)
+        .memory(10)
+        .security(1, &["FODDER-LV3", "FODDER-LV3", "FODDER-LV3", "FODDER-LV3"])
+        .start();
+    let carrier = runner.place_stack(0, &["ST1-07", "PLAIN-LV5"]);
+    runner.game_mut().tick_declarative_effects();
+    assert_eq!(
+        runner.game.effective_security_strike(carrier),
+        2,
+        "precondition: carrier with a ST1-07 source checks 2 security"
+    );
+    assert!(
+        runner
+            .game
+            .has_keyword(carrier, Keyword::SecurityAttackPlus(1)),
+        "precondition: SecurityAttackPlus(1) live while ST1-07 is a source"
+    );
+    (runner, carrier)
+}
+
+/// Assert every non-ticking read surface agrees the grant is gone.
+fn assert_sec_plus_gone(runner: &DebugRunner, carrier: PermanentHandle, context: &str) {
+    assert_eq!(
+        runner.game.effective_security_strike(carrier),
+        1,
+        "{context}: effective_security_strike must drop back to 1 without a manual tick"
+    );
+    assert!(
+        !runner
+            .game
+            .has_keyword(carrier, Keyword::SecurityAttackPlus(1)),
+        "{context}: SecurityAttackPlus(1) must be gone without a manual tick"
+    );
+    assert_eq!(
+        runner.game.security_attack_keyword_bonus(carrier),
+        0,
+        "{context}: security_attack_keyword_bonus must read 0 without a manual tick"
+    );
+}
+
+/// Trashing the source off the bottom of the stack (ST2-06-style strip)
+/// must end the inherited ＜Security A. +1＞ immediately.
+#[test]
+fn st1_07_sec_plus_expires_when_source_trashed_bottom_strip() {
+    let (mut runner, carrier) = stack_with_greymon_source();
+    runner.trash_one_source(carrier); // removes bottom = ST1-07 → owner's trash
+    assert_sec_plus_gone(&runner, carrier, "bottom-strip trash");
+}
+
+/// Trashing the source as a COST (Digi-Burst-style `trash_bottom_sources`)
+/// must end the inherited ＜Security A. +1＞ immediately.
+#[test]
+fn st1_07_sec_plus_expires_when_source_trashed_by_cost() {
+    let (mut runner, carrier) = stack_with_greymon_source();
+    {
+        let src = runner.top_card(carrier);
+        let mut ctx = EffectContext::new(&mut runner.game, src, Some(carrier), 0);
+        assert_eq!(ctx.trash_bottom_sources(carrier, 1), 1);
+    }
+    assert_sec_plus_gone(&runner, carrier, "cost trash (trash_bottom_sources)");
+}
+
+/// Trashing the source by handle (`trash_card_source`, the primitive under
+/// the DSL's selected-source trashes / ＜Digi-Burst＞) must end the grant.
+#[test]
+fn st1_07_sec_plus_expires_when_source_trashed_by_handle() {
+    let (mut runner, carrier) = stack_with_greymon_source();
+    let greymon_handle = runner.game.players[0].battle_area[carrier.index as usize].card_sources
+        [0]
+    .handle();
+    {
+        let src = runner.top_card(carrier);
+        let mut ctx = EffectContext::new(&mut runner.game, src, Some(carrier), 0);
+        assert!(ctx.trash_card_source(carrier, greymon_handle));
+    }
+    assert_sec_plus_gone(&runner, carrier, "handle trash (trash_card_source)");
+}
+
+/// De-Digivolve trashes the TOP card, exposing ST1-07 as the new top. Its
+/// inherited clause no longer applies (it is now the face card), so the
+/// strike must read 1 immediately.
+#[test]
+fn st1_07_sec_plus_expires_when_de_digivolve_exposes_source_as_top() {
+    let (mut runner, carrier) = stack_with_greymon_source();
+    {
+        let src = runner.top_card(carrier);
+        let mut ctx = EffectContext::new(&mut runner.game, src, Some(carrier), 0);
+        assert_eq!(ctx.de_digivolve(carrier, Some(3), Some(1)), 1);
+    }
+    // ST1-07 is now the top card; its inherited grant must not self-apply.
+    assert_sec_plus_gone(&runner, carrier, "De-Digivolve exposing the source");
+}
+
+/// Returning the source to its owner's hand (BT12-031-style return, NOT a
+/// trash) must also end the grant immediately.
+#[test]
+fn st1_07_sec_plus_expires_when_source_returned_to_hand() {
+    let (mut runner, carrier) = stack_with_greymon_source();
+    let greymon_handle = runner.game.players[0].battle_area[carrier.index as usize].card_sources
+        [0]
+    .handle();
+    {
+        let src = runner.top_card(carrier);
+        let mut ctx = EffectContext::new(&mut runner.game, src, Some(carrier), 0);
+        assert!(ctx.return_card_source_to_hand(carrier, greymon_handle));
+    }
+    assert_sec_plus_gone(&runner, carrier, "return to hand");
+}
+
+/// Returning the source to the bottom (and top) of its owner's deck must
+/// also end the grant immediately.
+#[test]
+fn st1_07_sec_plus_expires_when_source_returned_to_deck() {
+    for to_bottom in [true, false] {
+        let (mut runner, carrier) = stack_with_greymon_source();
+        let greymon_handle = runner.game.players[0].battle_area[carrier.index as usize]
+            .card_sources[0]
+            .handle();
+        {
+            let src = runner.top_card(carrier);
+            let mut ctx = EffectContext::new(&mut runner.game, src, Some(carrier), 0);
+            assert!(ctx.return_card_source_to_deck(carrier, greymon_handle, to_bottom));
+        }
+        assert_sec_plus_gone(
+            &runner,
+            carrier,
+            if to_bottom {
+                "return to deck bottom"
+            } else {
+                "return to deck top"
+            },
+        );
+    }
+}
+
+/// Whole-stack event: deleting the carrier clears every registry entry for
+/// its handle — no ＜Security A.＞ ghost may survive on the slot.
+#[test]
+fn st1_07_sec_plus_registry_cleared_when_carrier_deleted() {
+    let (mut runner, carrier) = stack_with_greymon_source();
+    runner.game_mut().delete_permanent_with_effects(carrier);
+    assert_eq!(
+        runner
+            .game
+            .modifiers
+            .granted_security_attack_keyword_bonus(carrier),
+        0,
+        "deleting the whole stack must clear the carrier's granted-keyword entries"
+    );
+}
+
+/// Production mirror: with the printed inherited text present (as loaded
+/// from cards.json), the trash must heal every surface too.
+#[test]
+fn st1_07_sec_plus_expires_after_trash_with_printed_text() {
+    let lv5 = make_test_card_with_level("PLAIN-LV5", "PlainLv5", 5);
+    let mut runner = DebugRunner::builder()
+        .dsl_card("ST1-07")
+        .expect("ST1-07 in pack")
+        .add_card(lv5)
+        .memory(10)
+        .start();
+    {
+        let game = runner.game_mut();
+        for cd in game.card_data.iter_mut() {
+            if cd.card_id == "ST1-07" {
+                cd.inherited_text =
+                    "＜Security A. +1＞ (This Digimon checks 1 additional security card.)"
+                        .to_string();
+            }
+        }
+    }
+    let carrier = runner.place_stack(0, &["ST1-07", "PLAIN-LV5"]);
+    runner.game_mut().tick_declarative_effects();
+    assert_eq!(runner.game.effective_security_strike(carrier), 2);
+
+    runner.trash_one_source(carrier);
+    assert_sec_plus_gone(&runner, carrier, "printed-text trash");
+}
+
+/// End-to-end: a REAL player attack after the source trash checks exactly
+/// one security card. The carrier's DP is pinned high so the first security
+/// battle cannot delete it (which would mask a stale strike of 2).
+#[test]
+fn st1_07_real_attack_after_source_trash_checks_one_security() {
+    let (mut runner, carrier) = stack_with_greymon_source();
+    runner.force_base_dp("PLAIN-LV5", 12000);
+    runner.trash_one_source(carrier);
+
+    let before = runner.security_count(1);
+    runner.attack_player(carrier, 1, false);
+    let after = runner.security_count(1);
+    assert_eq!(
+        before - after,
+        1,
+        "post-trash attack must check exactly 1 security card"
+    );
+}
+
+// ─── Mechanism generality: the fix is not ＜Security A.＞-specific ─────────────
+//
+// A synthetic inherited declarative that materializes BOTH a
+// `SecurityAttackChange` MODIFIER (the flat `security_attack: N` aura shape,
+// e.g. EX7-021) and a granted `Blocker` KEYWORD must ALSO expire the moment
+// its source card is trashed — pinning that the recomputation covers every
+// materialized entry kind, not just the SecurityAttackPlus keyword path.
+
+struct SyntheticInheritedGrants;
+
+impl CardEffect for SyntheticInheritedGrants {
+    fn effects(&self, card: CardHandle) -> Vec<Effect> {
+        vec![Effect::declarative(card)
+            .name("Synthetic inherited SecurityAttackChange + Blocker")
+            .inherited()
+            .materializes_declarative_state()
+            .process(|ctx| {
+                let Some(handle) = ctx.source_permanent else {
+                    return;
+                };
+                ctx.add_declarative_modifier(
+                    handle,
+                    ModifierType::SecurityAttackChange,
+                    1,
+                    Expiry::Permanent,
+                );
+                ctx.grant_declarative_keyword(handle, Keyword::Blocker, Expiry::Permanent);
+            })
+            .build()]
+    }
+}
+
+#[test]
+fn inherited_modifier_and_keyword_grants_expire_when_source_trashed() {
+    let src_card = make_test_card_with_level("SYN-SRC", "SynSource", 4);
+    let lv5 = make_test_card_with_level("PLAIN-LV5", "PlainLv5", 5);
+    let mut runner = DebugRunner::builder()
+        .add_card(src_card)
+        .add_card(lv5)
+        .memory(10)
+        .start();
+    runner.register_effect("SYN-SRC", Arc::new(SyntheticInheritedGrants));
+
+    let carrier = runner.place_stack(0, &["SYN-SRC", "PLAIN-LV5"]);
+    runner.game_mut().tick_declarative_effects();
+    assert_eq!(
+        runner
+            .game
+            .modifiers
+            .sum(carrier, ModifierType::SecurityAttackChange),
+        1,
+        "precondition: inherited SecurityAttackChange modifier materialized"
+    );
+    assert!(
+        runner.game.has_keyword(carrier, Keyword::Blocker),
+        "precondition: inherited Blocker keyword materialized"
+    );
+
+    runner.trash_one_source(carrier);
+
+    assert_eq!(
+        runner
+            .game
+            .modifiers
+            .sum(carrier, ModifierType::SecurityAttackChange),
+        0,
+        "trashing the source must immediately end its inherited MODIFIER grant"
+    );
+    assert!(
+        !runner.game.has_keyword(carrier, Keyword::Blocker),
+        "trashing the source must immediately end its inherited KEYWORD grant"
+    );
+    assert_eq!(
+        runner.game.effective_security_strike(carrier),
+        1,
+        "strike must read 1 after the source trash without a manual tick"
     );
 }

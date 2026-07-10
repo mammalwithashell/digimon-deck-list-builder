@@ -37,7 +37,7 @@ use digimon_dsl::compiled::{
     CompiledPlayerRef, CompiledPredicate, CompiledScope, CompiledStackPosition, CompiledStep,
     CompiledTiming,
 };
-use digimon_engine::action::space::PASS;
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
@@ -753,11 +753,27 @@ fn p_228_delay_triggers_after_suzune_is_played_and_offers_reduced_cost_digivolve
         "Suzune Kazuki must be playable"
     );
 
-    // The <Delay> fires: choose the digivolve base (only BASE is a Digimon).
+    // The <Delay> timing is reached: first the optional ACTIVATION choice
+    // (16-16-2) — accept it to activate the Delay.
     {
         let view = runner
             .pending_selection_view()
-            .expect("playing Suzune Kazuki should fire P-228's delayed digivolve");
+            .expect("playing Suzune Kazuki should offer P-228's Delay activation");
+        assert_eq!(view.kind, SelectionKind::Replacement);
+        assert!(
+            runner.pending_is_optional(),
+            "the <Delay> activation itself is optional (16-16-2)"
+        );
+        runner
+            .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+            .expect("accept the Delay activation");
+    }
+
+    // Then the body: choose the digivolve base (only BASE is a Digimon).
+    {
+        let view = runner
+            .pending_selection_view()
+            .expect("accepting the Delay should expose the delayed digivolve");
         assert_eq!(view.kind, SelectionKind::OwnField);
         assert!(
             runner.pending_is_optional(),
@@ -916,6 +932,130 @@ fn p_228_delay_does_not_fire_when_a_non_suzune_is_played() {
     );
 }
 
+/// Rules manual 16-16-2: "The processing from <Delay> is optional." When a
+/// [Suzune Kazuki] play reaches the <Delay> timing, the controller must be
+/// offered an ACTIVATION choice (activate = trash P-228 + run the body /
+/// decline = do nothing). Declining must leave P-228 parked in the battle
+/// area, un-trashed, and still able to fire on a LATER matching event.
+/// DCGO crosscheck: P_228.cs registers the Delay trigger with
+/// `SetUpActivateClass(..., isOptional: true, ...)` — the player is asked.
+#[test]
+fn p_228_delay_activation_is_optional_and_declining_leaves_it_parked() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&p_228_yaml())
+        .expect("P-228 YAML parses")
+        .add_card(ice_snow_digimon("ICE"))
+        .add_card(liberator_option("LIB"))
+        .add_card(suzune("SUZUNE"))
+        .add_card(suzune("SUZUNE2"))
+        .add_card(base_digimon("BASE"))
+        .add_card(liberator_evo("EVO"))
+        .add_card(filler("FILL"))
+        .hand(0, &["P-228", "SUZUNE", "SUZUNE2", "EVO"])
+        .deck(
+            0,
+            &["FILL", "FILL", "FILL", "FILL", "FILL", "ICE", "LIB", "FILL"],
+        )
+        .deck(1, &["FILL"; 10])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "BASE", Some(0));
+    runner.game.enter_main_phase();
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    runner.auto_resolve().expect("resolve Main and placement");
+
+    // Advance past the placing turn.
+    runner.end_turn();
+    runner.game.enter_main_phase();
+    runner.end_turn();
+    assert_eq!(runner.game.turn_player(), 0);
+    runner.game.enter_main_phase();
+
+    // Play a [Suzune Kazuki]. The <Delay> timing is reached — the engine must
+    // ask "activate P-228's <Delay>?" rather than force the activation.
+    let suzune_idx = hand_index_of(&runner, 0, "SUZUNE");
+    assert!(runner.game.play_from_hand(0, suzune_idx).is_some());
+
+    let view = runner
+        .pending_selection_view()
+        .expect("reaching the Delay timing must surface an activation choice");
+    assert_eq!(
+        view.kind,
+        SelectionKind::Replacement,
+        "the FIRST choice must be the outer <Delay> activation accept/decline, \
+         not the body's digivolve pick"
+    );
+    assert!(
+        runner.pending_is_optional(),
+        "16-16-2: the <Delay> activation is optional — PASS must be legal"
+    );
+    assert_eq!(
+        view.valid_action_ids,
+        vec![REPLACEMENT_ACCEPT],
+        "accept is the single non-PASS action"
+    );
+
+    // DECLINE the activation.
+    runner
+        .execute_action(view.selecting_player, PASS)
+        .expect("declining the Delay activation must be a legal action");
+    runner.auto_resolve().expect("settle the declined Delay");
+
+    // Declining leaves everything untouched: P-228 parked, nothing trashed,
+    // no digivolve.
+    assert!(
+        battle_area_contains(&runner, 0, "P-228"),
+        "declining the <Delay> must leave P-228 in the battle area"
+    );
+    assert!(
+        !trash_contains(&runner, 0, "P-228"),
+        "declining the <Delay> must not trash P-228"
+    );
+    assert!(
+        matches!(
+            p_228_delayed_option(&runner, 0),
+            OptionState::Delayed {
+                trigger: DelayTrigger::OnEvent(EffectTiming::OnAllyPlayed),
+                ..
+            }
+        ),
+        "P-228 stays parked as an event-gated Delayed Option after declining"
+    );
+    assert!(
+        hand_contains(&runner, 0, "EVO"),
+        "the evolution card stays in hand — the declined body never ran"
+    );
+
+    // The declined <Delay> re-arms: a LATER matching event offers the choice
+    // again, and accepting drives the full activation (trash + digivolve).
+    let suzune2_idx = hand_index_of(&runner, 0, "SUZUNE2");
+    assert!(runner.game.play_from_hand(0, suzune2_idx).is_some());
+
+    let view = runner
+        .pending_selection_view()
+        .expect("a later Suzune play must re-offer the declined Delay");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+        .expect("accept the Delay activation");
+
+    runner
+        .auto_resolve()
+        .expect("drive the accepted Delay body to completion");
+    assert!(
+        trash_contains(&runner, 0, "P-228"),
+        "accepting the <Delay> trashes P-228 as the activation cost"
+    );
+    assert!(
+        battle_area_contains(&runner, 0, "EVO"),
+        "accepting the <Delay> lets the digivolve resolve"
+    );
+}
+
 /// Cost-firing clause: the `<Delay>` activation cost is "by trashing this
 /// card". When a [Suzune Kazuki] play fires the Delay after the placing turn,
 /// P-228 is trashed even if the optional digivolve body is declined — the
@@ -957,10 +1097,19 @@ fn p_228_delay_trashes_self_as_cost_even_when_digivolve_is_declined() {
     let suzune_idx = hand_index_of(&runner, 0, "SUZUNE");
     assert!(runner.game.play_from_hand(0, suzune_idx).is_some());
 
-    // The Delay fires; decline the optional digivolve with PASS.
+    // ACCEPT the (optional, 16-16-2) Delay activation itself...
     let view = runner
         .pending_selection_view()
-        .expect("playing Suzune after the placing turn fires the Delay body");
+        .expect("playing Suzune after the placing turn offers the Delay activation");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+        .expect("accept the Delay activation");
+
+    // ...then decline the optional digivolve body with PASS.
+    let view = runner
+        .pending_selection_view()
+        .expect("accepting the Delay activation exposes the digivolve body");
     assert_eq!(view.kind, SelectionKind::OwnField);
     assert!(
         runner.pending_is_optional(),

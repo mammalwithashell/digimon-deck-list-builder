@@ -88,6 +88,17 @@ impl Game {
         if let Some(chosen) = state.routes.get(idx).copied() {
             self.pending_digivolve_route_choice = Some(chosen);
         }
+        // `field_index == BREEDING_TARGET` is the breeding-area sentinel: the
+        // cost choice was installed by `digivolve_from_hand_onto_breeding`
+        // and must re-enter it (the battle-area path rejects the sentinel).
+        if state.field_index == crate::action::space::BREEDING_TARGET as usize {
+            self.digivolve_from_hand_onto_breeding(
+                state.acting_player,
+                state.hand_index,
+                state.source,
+            );
+            return;
+        }
         self.digivolve_from_hand_inner(
             state.acting_player,
             state.hand_index,
@@ -619,6 +630,12 @@ impl Game {
                 let idx = action_id.saturating_sub(HAND_EFFECT_START) as usize;
                 if let Some(chosen) = routes.get(idx).copied() {
                     game.pending_digivolve_route_choice = Some(chosen);
+                }
+                // BREEDING_TARGET field-index sentinel → the choice belongs
+                // to a breeding-area digivolve; re-enter that path.
+                if field_index == crate::action::space::BREEDING_TARGET as usize {
+                    game.digivolve_from_hand_onto_breeding(acting_player, hand_index, source);
+                    return;
                 }
                 game.digivolve_from_hand_inner(
                     acting_player,

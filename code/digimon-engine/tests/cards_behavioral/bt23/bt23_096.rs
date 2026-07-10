@@ -616,7 +616,7 @@ fn bt23_096_your_turn_cs_attack_delay_dedigi4() {
     runner.attack_digimon(attacker, delay_target, false);
     runner
         .auto_resolve()
-        .expect("resolve Comet Hammer Delay target selection");
+        .expect("resolve Comet Hammer Delay activation + target selection");
 
     assert!(
         runner.game.players[0]
@@ -625,11 +625,23 @@ fn bt23_096_your_turn_cs_attack_delay_dedigi4() {
             .any(|c| c.card_id(&runner.game.card_data) == CARD_ID),
         "BT23-096 should trash itself as the Delay cost"
     );
-    let target = &runner.game.players[1].battle_area[delay_target.index as usize];
-    assert_eq!(
-        target.stack_size(),
-        1,
-        "Delay target should be de-digivolved down to its level-3 base"
+    // <Delay> here is a [When Attacking]-timing trigger (printed: "[Your
+    // Turn] When one of your [CS] trait Digimon attacks"), so the
+    // <De-Digivolve 4> resolves BEFORE the battle: the defender is stripped
+    // to its level-3 base (DELAY-L5/DELAY-L4 trashed as digivolution cards),
+    // and the 4000 DP attacker then deletes the 3000 DP base in the battle.
+    for card in ["DELAY-L5", "DELAY-L4", "DELAY-L3"] {
+        assert!(
+            runner.game.players[1]
+                .trash
+                .iter()
+                .any(|c| c.card_id(&runner.game.card_data) == card),
+            "{card} should be in the opponent's trash (de-digivolve strip, then battle deletion)"
+        );
+    }
+    assert!(
+        runner.game.players[1].battle_area.is_empty(),
+        "the de-digivolved 3000 DP base loses the battle to the 4000 DP attacker"
     );
 }
 

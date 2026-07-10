@@ -28,6 +28,12 @@ effects:
     keyword: Barrier
 
   - when: [on_move, on_play, when_digivolving]
+    # [When Moving] is self-scoped ("when THIS Digimon moves from breeding");
+    # the engine's on_move dispatch is a board-wide observer scan, so gate the
+    # on_move timing on the moved permanent being this Digimon (EX11-038 idiom).
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
     condition:
       all_of:
         - security_count_gte: 1

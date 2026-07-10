@@ -84,6 +84,8 @@ export interface PermanentInfo {
   dp: number;
   level: number | null;
   isSuspended: boolean;
+  /** Number of DIGIVOLUTION CARDS (cards under the top card). The top card
+   *  itself is not a digivolution card, so a 3-card stack has 2. */
   sourceCount: number;
   keywords: string[];
   keywordBreakdown: KeywordBreakdown;

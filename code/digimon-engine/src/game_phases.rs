@@ -245,7 +245,27 @@ impl Game {
     }
 
     /// Advance from breeding to main phase.
+    ///
+    /// Park-aware (user bug 2026-07-09): if a breeding-action trigger drain
+    /// (e.g. EX11-008 Elizamon's `[When Moving]` pick fired by
+    /// `move_from_breeding`, or an `OnHatch` observer) left a
+    /// `PendingSelection` installed, advancing the phase NOW would race the
+    /// selection's `previous_phase` restore — `resolve_selection` would later
+    /// clobber the phase back to `Breeding`, producing a phantom second
+    /// Breeding phase and a doubled `StartOfYourMainPhase` fan-out. Instead,
+    /// park the advance and let `resume_pending_enter_main` (called from the
+    /// `resolve_selection` tail) perform it once the selection settles. This
+    /// also gives the correct rules ordering: the breeding action's triggered
+    /// effect finishes resolving before the main phase begins.
     pub fn enter_main_phase(&mut self) {
+        if self.pending_selection.is_some() {
+            self.pending_enter_main_after_selection = true;
+            self.logger.log(
+                "[Phase] enter_main_phase parked: selection pending; \
+                 will enter Main after it resolves",
+            );
+            return;
+        }
         let tp = self.turn_player();
         self.set_turn_phase(GamePhase::Main);
         // StartOfYourMainPhase fires after Draw/Breeding, before the turn player
@@ -457,6 +477,23 @@ impl Game {
         }
         let ending_player = self.turn_player();
         self.rotate_turn_player(ending_player);
+    }
+
+    /// Perform a parked Breeding → Main advance once the selection that
+    /// blocked it has resolved. No-op unless `enter_main_phase` parked while
+    /// a selection was pending. Called from the `resolve_selection` tail.
+    pub(crate) fn resume_pending_enter_main(&mut self) {
+        if self.pending_selection.is_some() {
+            return;
+        }
+        if !self.pending_enter_main_after_selection {
+            return;
+        }
+        self.pending_enter_main_after_selection = false;
+        if self.game_over {
+            return;
+        }
+        self.enter_main_phase();
     }
 
     pub(crate) fn resume_pending_end_turn(&mut self) {

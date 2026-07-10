@@ -954,6 +954,81 @@ fn ex8_028_pay_own_digimon_goes_to_own_security_bottom_and_unsuspends() {
     );
 }
 
+/// NO-WEDGE regression (user report: "EX8-028 breaks the game due to the
+/// when attacking effect"; resolved in 0.4.0 — the pay pick was routed with
+/// the wrong SelectionKind, leaving a mandatory selection unanswerable).
+/// Drives the FULL attack with the [When Attacking] effect resolving through
+/// real selections and asserts the attack completes, the security check on
+/// the defending player still happens, no selection is left dangling, and
+/// the turn can end normally afterwards.
+#[test]
+fn ex8_028_when_attacking_effect_resolves_and_attack_completes_without_wedge() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX8-028 found in embedded DSL pack")
+        .add_card(board_digimon("ALLY-BARE", 4000))
+        .add_card(source_filler("SRC-A"))
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .security(0, &["FILL"])
+        .security(1, &["FILL", "FILL"])
+        .start();
+    runner.game.turn_count = 2;
+
+    let ally = runner.place_on_field(0, "ALLY-BARE", Some(0));
+    let skadimon = runner.place_stack(0, &["SRC-A", CARD_ID]);
+    let opp_security_before = runner.game.players[1].security.len();
+
+    let _ = runner.attack_player(skadimon, 1, false);
+
+    // [When Attacking] by-cost clause: accept, then pay with the bare ally.
+    drive_to_kind(&mut runner, 0, SelectionKind::Replacement);
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accept the pay-unsuspend clause");
+    drive_to_kind(&mut runner, 0, SelectionKind::AnyField);
+    let pay_action = encode_attack(u16::from(ally.player), u16::from(ally.index));
+    runner
+        .execute_action(0, pay_action)
+        .expect("the pay target must be selectable (0.4.0 softlock regression)");
+    runner
+        .auto_resolve()
+        .expect("the attack must resolve to completion");
+
+    // The attack was NOT wedged: it ran through to the security check and
+    // fully cleaned up.
+    assert_eq!(
+        runner.game.players[1].security.len(),
+        opp_security_before - 1,
+        "the player attack must continue into the security check after the \
+         [When Attacking] effect resolves"
+    );
+    assert!(
+        runner.game.pending_attack.is_none(),
+        "no attack left in flight"
+    );
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no selection left dangling"
+    );
+    assert!(!runner.game_over(), "the game continues");
+
+    // Skadimon unsuspended via the effect and the game can proceed normally.
+    let skadimon_perm = &runner.game.players[0].battle_area
+        [find_permanent(&runner, 0, CARD_ID).index as usize];
+    assert!(
+        !skadimon_perm.is_suspended,
+        "Skadimon unsuspends after paying the cost"
+    );
+    runner.end_turn();
+    assert_eq!(
+        runner.game.turn_player(),
+        1,
+        "the turn passes normally after the attack"
+    );
+}
+
 /// OPPONENT-SIDE PAY: choosing the OPPONENT's bare Digimon places its card at
 /// the bottom of the OPPONENT's security stack (DCGO routes the card to
 /// topCard.Owner's stack), not the controller's.

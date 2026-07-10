@@ -238,3 +238,47 @@ fn terminal_outcome_reason_concede_renders_as_concede() {
     assert_eq!(TerminalOutcomeReason::Concede.as_str(), "concede");
     assert_eq!(TerminalOutcomeReason::Concede.result(), "win");
 }
+
+/// Winner attribution must depend ONLY on who conceded — never on whose
+/// turn it is or which side of the gauge the memory sits on. Regression
+/// guard for the "surrendering shows a victory screen" bug report (the
+/// user suspected memory involvement; the engine primitive must be
+/// invariant across the full turn × memory × conceder matrix).
+#[test]
+fn concede_winner_is_opponent_regardless_of_turn_and_memory() {
+    for turn_player in [0u8, 1u8] {
+        for memory in [-5i16, 0, 5] {
+            for conceder in [0u8, 1u8] {
+                let mut runner = DebugRunner::builder().start();
+                runner.game.current_phase = GamePhase::Main;
+                runner.game.turn_order = vec![0, 1];
+                runner.game.turn_player_idx = turn_player as usize;
+                runner.game.memory = memory;
+
+                runner.game.concede(conceder);
+
+                let expected_winner = 1 - conceder;
+                assert!(runner.game.game_over);
+                assert_eq!(
+                    runner.game.winner,
+                    Some(expected_winner),
+                    "conceder={conceder} turn_player={turn_player} memory={memory}: \
+                     winner must be the conceder's opponent"
+                );
+                assert_eq!(
+                    runner.game.terminal_outcome_reason,
+                    Some(TerminalOutcomeReason::Concede)
+                );
+
+                // Rule-16 ordering holds in every cell of the matrix.
+                let concede_seq =
+                    find_event_seq(&runner, |ev| matches!(ev, GameEvent::Concede { .. }))
+                        .expect("Concede event present");
+                let game_over_seq =
+                    find_event_seq(&runner, |ev| matches!(ev, GameEvent::GameOver { .. }))
+                        .expect("GameOver event present");
+                assert!(concede_seq < game_over_seq);
+            }
+        }
+    }
+}

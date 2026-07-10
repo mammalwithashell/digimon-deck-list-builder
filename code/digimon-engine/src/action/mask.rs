@@ -293,9 +293,20 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                         mask[encode_digivolve(h as u16, f as u16) as usize] = 1.0;
                     }
                 }
-                // Breeding-area digivolve
-                if let Some(ref breeding) = me.breeding_area {
-                    if can_basic_digivolve(card, breeding, &game.card_data) {
+                // Breeding-area digivolve — consult the SAME route enumeration
+                // as the battle area (printed circles + DSL alt-digivolve
+                // paths) via the `BREEDING_TARGET` sentinel handle, so printed
+                // "[Digivolve] [Name]: Cost N" alt evo boxes (e.g. EX11-014
+                // Penguinmon over a breeding Hiyarimon) are honored.
+                if me.breeding_area.is_some() {
+                    let breeding_handle = PermanentHandle {
+                        player: player_id,
+                        index: BREEDING_TARGET as u8,
+                    };
+                    if game
+                        .normal_digivolve_route_for_hand_card(player_id, h, breeding_handle)
+                        .is_some()
+                    {
                         mask[encode_digivolve(h as u16, BREEDING_TARGET) as usize] = 1.0;
                     }
                 }
@@ -738,13 +749,27 @@ pub(crate) fn option_use_requirement_or_color_available(
     })
 }
 
-/// An Option hand/trash use must have a currently active `OptionMain` body.
-/// This prevents partial Security-only YAML from becoming a legal no-effect
-/// hand play, and lets card-level conditions preflight mandatory Main choices.
+/// An Option hand/trash use must have an authored `OptionMain` body. This
+/// prevents partial Security-only YAML from becoming a legal no-effect hand
+/// play (an implementation-completeness guard, not a rules gate).
+///
+/// Deliberately does NOT evaluate the effect's `condition`: Option use
+/// legality is phase + cost payable (rule 1-3-11-1) + the color requirement —
+/// never the availability of effect targets. Effects are performed "whenever
+/// possible" (15-1-5); with no eligible target the `[Main]` body simply does
+/// nothing and the card is still used and trashed. DCGO agrees: its generic
+/// `CanTriggerOptionMainEffect` gate is identity plumbing only, and each
+/// card's target check lives INSIDE `ActivateCoroutine`
+/// (`HasMatchConditionPermanent`). Card-level `condition:` clauses on
+/// `main_from_hand` remain honored at RESOLUTION time — the effect-queue
+/// drainer (`run_queued_effect_inner`) skips a false-condition body silently
+/// — so they still guard mandatory selects against zero candidates without
+/// over-restricting playability (the "can't use options if there aren't any
+/// targets" regression, observed on ST1-15).
 pub(crate) fn option_has_active_main_effect(
     card: &crate::card_source::CardSource,
     game: &Game,
-    player_id: PlayerId,
+    _player_id: PlayerId,
 ) -> bool {
     let card_id = card.card_id(&game.card_data);
     let Some(effects) = game.effects_for_card(card_id, card.handle()) else {
@@ -753,27 +778,12 @@ pub(crate) fn option_has_active_main_effect(
     if effects.is_empty() {
         return true;
     }
-    let ctx = EffectReadContext::new_with_source_kind(
-        game,
-        card.handle(),
-        None,
-        EffectSourceKind::Option,
-        player_id,
-    );
     effects.iter().any(|effect| {
-        if effect.delay_trigger.is_some() {
-            return true;
-        }
-        if !matches!(
-            effect.timing,
-            EffectTiming::OptionMain | EffectTiming::MainFromHand
-        ) {
-            return false;
-        }
-        effect
-            .condition
-            .as_ref()
-            .is_none_or(|condition| condition(&ctx))
+        effect.delay_trigger.is_some()
+            || matches!(
+                effect.timing,
+                EffectTiming::OptionMain | EffectTiming::MainFromHand
+            )
     })
 }
 
@@ -973,45 +983,6 @@ pub(crate) fn effect_attack_target_action_ids_with_options(
     }
 
     action_ids
-}
-
-/// Basic digivolve eligibility: hand card has an evo_cost matching the base
-/// permanent's color and level. Full validation (alt-digi, color modifiers,
-/// CANNOT_DIGIVOLVE) deferred.
-fn can_basic_digivolve(
-    card: &crate::card_source::CardSource,
-    base: &crate::permanent::Permanent,
-    card_data: &[CardData],
-) -> bool {
-    let base_top = base.top_card();
-    let base_meta = &card_data[base_top.data_index];
-
-    // Base must be Digimon or DigiEgg
-    if !base_top.is_digimon_card_for_search(card_data) && base_meta.card_kind != CardKind::DigiEgg {
-        return false;
-    }
-
-    let base_level = match base_top.digimon_level(card_data) {
-        Some(l) => l,
-        None => return false,
-    };
-    let base_colors = base_top.digimon_colors(card_data);
-
-    // Find a matching evo_cost
-    for evo in card.digivolution_costs(card_data) {
-        if evo.level != base_level {
-            continue;
-        }
-        let color = match evo_color(evo.card_color) {
-            Some(c) => c,
-            None => continue,
-        };
-        if !base_colors.contains(&color) {
-            continue;
-        }
-        return true;
-    }
-    false
 }
 
 /// §4.7d FORCE_ATTACK global mask replacement. If any friendly Digimon

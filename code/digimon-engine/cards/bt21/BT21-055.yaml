@@ -5,7 +5,7 @@ level: 3
 color: [black]
 cost: 3
 dp: 1000
-traits: [Reptile, LIBERATOR]
+traits: [Reptile, LIBERATOR, Mineral]
 attribute: Virus
 alt_paths:
   - kind: digivolve

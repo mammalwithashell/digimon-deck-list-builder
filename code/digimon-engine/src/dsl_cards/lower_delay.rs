@@ -93,6 +93,28 @@ pub fn lower_with_raw(
             let mut bindings = Bindings::new();
             let _ = run_steps_with_runtime(&process_arc, ctx, &mut bindings, &runtime);
         });
+    // Rules manual 16-16-2: "The processing from <Delay> is optional." An
+    // event-gated `<Delay>` (P-228 / P-229 / BT22-098 / BT23-096 / BT24-089 /
+    // EX10-069) reaches its timing when the gating event is observed
+    // — at that point the CONTROLLER chooses whether to activate (trash the
+    // Option + run the body) or decline (the Option stays parked and can fire
+    // on a later matching event). DCGO registers these triggers with
+    // `SetUpActivateClass(..., isOptional: true, ...)` and shows a bool
+    // prompt. Mark the effect optional and force the outer accept/decline
+    // prompt so the choice surfaces through `pending_selection` (the
+    // no-approximations policy forbids the previous mandatory auto-fire).
+    // The prompt is unconditional (no first-step candidate guard): DCGO
+    // prompts whenever the event condition matches, and accepting trashes
+    // the Option even when the body then finds no legal target — declining
+    // the trash is itself the meaningful choice.
+    //
+    // `MainPhaseActivated` needs no flag (activation IS an explicit player
+    // `[Main]` action — flagging it would double-prompt), and the turn-
+    // scheduled triggers fire through `resolve_delayed_options_matching`
+    // (game_phases.rs), which bypasses the queue's optional machinery.
+    if matches!(delay_trigger, DelayTrigger::OnEvent(_)) {
+        builder = builder.optional().needs_outer_optional_prompt();
+    }
     if let Some(predicate) = active_when {
         builder =
             builder.condition(move |ctx| eval_predicate(&predicate, ctx, PredicateSubject::None));

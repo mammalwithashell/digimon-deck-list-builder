@@ -35,7 +35,7 @@ use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledCostDelta, CompiledDeclarativeClause,
     CompiledPlayerRef, CompiledPredicate, CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::PASS;
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
@@ -466,11 +466,26 @@ fn ex10_069_delay_after_close_suspend_exposes_base_then_hand_evo_choices() {
 
     runner.game.suspend(close);
 
-    // First selection: [Mineral]/[Rock] base Digimon (optional).
+    // Accept the optional <Delay> activation (16-16-2) first.
     {
         let view = runner
             .pending_selection_view()
-            .expect("Close suspend should fire the Delay base selection");
+            .expect("Close suspend should offer the Delay activation");
+        assert_eq!(view.kind, SelectionKind::Replacement);
+        assert!(
+            runner.pending_is_optional(),
+            "the <Delay> activation itself is optional (16-16-2)"
+        );
+        runner
+            .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+            .expect("accept the Delay activation");
+    }
+
+    // First body selection: [Mineral]/[Rock] base Digimon (optional).
+    {
+        let view = runner
+            .pending_selection_view()
+            .expect("accepting the Delay should fire the base selection");
         assert_eq!(view.kind, SelectionKind::OwnField);
         assert!(
             runner.pending_is_optional(),
@@ -555,9 +570,18 @@ fn ex10_069_delay_accepts_rock_trait_digimon_as_base() {
 
     runner.game.suspend(close);
 
+    // Accept the optional <Delay> activation (16-16-2) first.
     let view = runner
         .pending_selection_view()
-        .expect("Close suspend fires the Delay base selection");
+        .expect("Close suspend offers the Delay activation");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+        .expect("accept the Delay activation");
+
+    let view = runner
+        .pending_selection_view()
+        .expect("accepting the Delay fires the base selection");
     assert_eq!(view.kind, SelectionKind::OwnField);
     assert!(
         view.valid_action_ids.len() >= 1,
@@ -713,10 +737,19 @@ fn ex10_069_delay_trashes_self_as_cost_even_when_digivolve_is_declined() {
 
     runner.game.suspend(close);
 
-    // The Delay fires; decline the optional base digivolve with PASS.
+    // ACCEPT the (optional, 16-16-2) Delay activation itself...
     let view = runner
         .pending_selection_view()
-        .expect("Close suspend after the placing turn fires the Delay body");
+        .expect("Close suspend after the placing turn offers the Delay activation");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+        .expect("accept the Delay activation");
+
+    // ...then decline the optional base digivolve body with PASS.
+    let view = runner
+        .pending_selection_view()
+        .expect("accepting the Delay activation exposes the digivolve body");
     assert_eq!(view.kind, SelectionKind::OwnField);
     assert!(
         runner.pending_is_optional(),

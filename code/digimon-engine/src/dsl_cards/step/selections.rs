@@ -1574,6 +1574,12 @@ fn finish_non_dsl_count_capped(
                 ctx.game.player_mut(owner).trash.push(removed);
                 extracted.push(*handle);
             }
+            // Sources left the stack without the trash observer (partition
+            // trashes are intentionally observer-silent) — still refresh
+            // materialized declaratives so grants sourced from the departed
+            // cards stop applying before the follow-up plays below (same
+            // contract as `fire_digivolution_card_trashed`).
+            ctx.game.tick_declarative_effects();
             let mut iter = extracted.into_iter();
             if let Some(first) = iter.next() {
                 let second = iter.next();

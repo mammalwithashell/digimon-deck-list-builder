@@ -43,7 +43,7 @@ use digimon_dsl::compiled::{
     CompiledPlayerRef, CompiledPredicate, CompiledScope, CompiledStackPosition, CompiledStep,
     CompiledTiming,
 };
-use digimon_engine::action::space::PASS;
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger, EffectTiming};
@@ -700,11 +700,27 @@ fn p_229_delay_triggers_after_mirai_is_played_and_offers_reduced_cost_digivolve(
         "Mirai Kinosaki must be playable"
     );
 
-    // The <Delay> fires: choose the digivolve base (only BASE is a Digimon).
+    // The <Delay> timing is reached: first the optional ACTIVATION choice
+    // (16-16-2) — accept it to activate the Delay.
     {
         let view = runner
             .pending_selection_view()
-            .expect("playing Mirai Kinosaki should fire P-229's delayed digivolve");
+            .expect("playing Mirai Kinosaki should offer P-229's Delay activation");
+        assert_eq!(view.kind, SelectionKind::Replacement);
+        assert!(
+            runner.pending_is_optional(),
+            "the <Delay> activation itself is optional (16-16-2)"
+        );
+        runner
+            .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+            .expect("accept the Delay activation");
+    }
+
+    // Then the body: choose the digivolve base (only BASE is a Digimon).
+    {
+        let view = runner
+            .pending_selection_view()
+            .expect("accepting the Delay should expose the delayed digivolve");
         assert_eq!(view.kind, SelectionKind::OwnField);
         assert!(
             runner.pending_is_optional(),
@@ -905,10 +921,19 @@ fn p_229_delay_trashes_self_as_cost_even_when_digivolve_is_declined() {
     let mirai_idx = hand_index_of(&runner, 0, "MIRAI");
     assert!(runner.game.play_from_hand(0, mirai_idx).is_some());
 
-    // The Delay fires; decline the optional digivolve with PASS.
+    // ACCEPT the (optional, 16-16-2) Delay activation itself...
     let view = runner
         .pending_selection_view()
-        .expect("playing Mirai after the placing turn fires the Delay body");
+        .expect("playing Mirai after the placing turn offers the Delay activation");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+        .expect("accept the Delay activation");
+
+    // ...then decline the optional digivolve body with PASS.
+    let view = runner
+        .pending_selection_view()
+        .expect("accepting the Delay activation exposes the digivolve body");
     assert_eq!(view.kind, SelectionKind::OwnField);
     assert!(
         runner.pending_is_optional(),

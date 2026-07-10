@@ -52,20 +52,26 @@ cost: 4
 dp: 8000
 traits: [Cyborg, Glowing Dawn, BEATBREAK]
 
-# Digimon-face digivolution box. The printed box is trait-gated
-# ("Lv.4 w/ [Glowing Dawn]: Cost 3"); the engine's basic-digivolve gate
-# (`can_digivolve` / `can_basic_digivolve`) is color+level only (the
-# "Full validation (alt-digi) deferred" TODO — trait-gated `can_digivolve`
-# is a SEPARATE pre-existing engine limitation, not this gap). We author BOTH:
-#   1. the color form that matches the printed card's color (green Lv.4) — this
-#      backfills the static evo_cost so digivolve-as-Digimon AND the Arts
-#      `can_digivolve` gate work (this is the table cards.json would carry); and
-#   2. the trait form, which expresses the printed [Glowing Dawn] restriction
-#      for the fuller alt-path validation lane.
+# Digimon-face digivolution box (official Bandai DB / data/card_bundles/
+# BT25-057.md — authoritative for printed data):
+#   Standard circles: Green Lv.4 / cost 4 and Black Lv.4 / cost 4.
+#   Special condition: "Lv.4 w/ [Glowing Dawn] trait: Cost 3" (the ONLY cost-3
+#   route; DCGO BT25_057.cs registers exactly this one requirement).
+# The colour forms are authored at the PRINTED cost 4 — they mirror the
+# circles cards.json already carries (production dedups the equal-cost route)
+# and backfill the static evo_cost table for DSL-loaded fixtures so
+# digivolve-as-Digimon AND the Arts `can_digivolve` gate work in DebugRunner.
+# Do NOT author a colour form cheaper than the printed circle: it would grant
+# any green Lv.4 WITHOUT [Glowing Dawn] the trait-gated cost-3 route in
+# production (the BT21-015/017 free-digivolve bug class; see
+# tests/alt_path_printed_cost_guard.rs).
 alt_paths:
   - kind: digivolve
     from: { level_eq: 4, color_is: green }
-    cost: 3
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
   - kind: digivolve
     from:
       all_of:

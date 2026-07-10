@@ -31,6 +31,7 @@ mod in_text_contains;
 mod kimeramon_color_mass_delete;
 mod link;
 mod loader;
+mod official_rule_grants;
 mod option_effect_use;
 mod option_lifecycle_cluster;
 mod option_security_disposition;

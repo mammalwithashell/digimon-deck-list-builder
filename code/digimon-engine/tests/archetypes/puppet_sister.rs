@@ -334,14 +334,31 @@ fn combo1_fable_waltz_delay_fires_on_later_arisa_suspend() {
     // Suspend the real Arisa — the gating OnSuspend event for the armed Delay.
     runner.game.suspend(arisa);
 
-    // The armed Delay opens on the Puppet-base digivolve-source selection.
+    // Rules manual 16-16-2: the <Delay> activation itself is optional — the
+    // event first opens the outer accept/decline prompt. Accept it.
+    let activation_view = runner
+        .pending_selection_view()
+        .expect("the later Arisa suspend must offer Fable Waltz's Delay activation");
+    assert_eq!(
+        activation_view.kind,
+        SelectionKind::Replacement,
+        "the armed Delay opens on the optional activation prompt (16-16-2)"
+    );
+    runner
+        .execute_action(
+            activation_view.selecting_player,
+            digimon_engine::action::space::REPLACEMENT_ACCEPT,
+        )
+        .expect("accept the Delay activation");
+
+    // The armed Delay then opens on the Puppet-base digivolve-source selection.
     let base_view = runner
         .pending_selection_view()
-        .expect("the later Arisa suspend must fire Fable Waltz's armed Delay base selection");
+        .expect("accepting the Delay must fire Fable Waltz's armed Delay base selection");
     assert_eq!(
         base_view.kind,
         SelectionKind::OwnField,
-        "the armed Delay opens on the Puppet-base digivolve-source selection"
+        "the armed Delay body opens on the Puppet-base digivolve-source selection"
     );
     let base_pick = base_view
         .valid_action_ids
@@ -416,7 +433,19 @@ fn combo1_fable_waltz_delay_digivolves_base_into_ex11_022() {
     let before = snapshot(&runner);
 
     runner.game.suspend(arisa);
-    // Base pick → EX11-022 hand pick → cost-reduced digivolve.
+    // Activation accept (16-16-2) → base pick → EX11-022 hand pick →
+    // cost-reduced digivolve.
+    {
+        let view = runner
+            .pending_selection_view()
+            .expect("Delay activation prompt");
+        runner
+            .execute_action(
+                view.selecting_player,
+                digimon_engine::action::space::REPLACEMENT_ACCEPT,
+            )
+            .expect("accept the Delay activation");
+    }
     {
         let view = runner
             .pending_selection_view()

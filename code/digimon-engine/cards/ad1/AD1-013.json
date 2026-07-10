@@ -17,10 +17,13 @@
   ],
   "type_eng": [
     "Cyborg",
-    "Blue Flare"
+    "Blue Flare",
+    "Xros Heart"
   ],
   "form_eng": [],
-  "attribute_eng": [],
+  "attribute_eng": [
+    "Virus"
+  ],
   "effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with the fewest digivolution cards.\r\n[All Turns] When this Digimon would leave the battle area other than by DigiXros, you may play 1 level 5 or lower [Blue Flare] or [Xros Heart] trait Digimon card from its digivolution cards without paying the cost.",
   "inherited_effect_description_eng": "[All Turns] For each color in this [Blue Flare] or [Xros Heart] trait Digimon's digivolution cards, it gets +1000 DP.",
   "security_effect_description_eng": "",

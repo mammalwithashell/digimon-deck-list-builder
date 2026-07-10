@@ -10,12 +10,22 @@ alt_paths:
   - kind: digivolve
     from: { level_eq: 6, color_is: red }
     cost: 4
+  # Printed alt evo box: "[Digivolve] While you have [Owen Dreadnought],
+  # [Lamiamon]: Cost 6". DCGO BT24_018.cs: `permanentCondition:
+  # targetPermanent.TopCard.EqualsCardName("Lamiamon")` (the digivolve SOURCE
+  # — exact name, no level/color restriction) gated by `condition:
+  # HasMatchConditionOwnersPermanent(HasOwenDreadnought)` (an [Owen
+  # Dreadnought] on YOUR battle area — a condition, NOT a second
+  # digivolve-from path). Same Owen gate idiom as sibling BT24-016.
   - kind: digivolve
-    from: { name_contains: "Owen Dreadnought" }
+    from: { name_is: "Lamiamon" }
     cost: 6
-  - kind: digivolve
-    from: { name_contains: "Lamiamon" }
-    cost: 6
+    condition:
+      any_permanent:
+        of: you
+        zone: [battle_area]
+        kind: tamer
+        name_is: "Owen Dreadnought"
 
 effects:
   # Clause (a) — Progress keyword

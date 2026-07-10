@@ -869,6 +869,12 @@ impl<'a> EffectContext<'a> {
         };
         let owner = removed.owner;
         self.game.player_mut(owner).hand.push(removed);
+        // The source has left the stack — refresh materialized declaratives so
+        // continuous grants sourced from the departed card stop applying
+        // immediately (same contract as `fire_digivolution_card_trashed`).
+        // Returns fire no trash observer, so this is the only recomputation
+        // before the next decode-boundary tick.
+        self.game.tick_declarative_effects();
         let _ = self.cleanup_exposed_battle_area_digi_egg(perm);
         self.game.fire_on_add_to_hand_by_effect(owner);
         true

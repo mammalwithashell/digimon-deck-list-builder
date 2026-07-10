@@ -84,7 +84,7 @@ level: 7
 color: [white, blue]
 cost: 9
 dp: 16000
-traits: [Ancient Holy Warrior]
+traits: [Ancient Holy Warrior, Free]
 
 attribute: Vaccine
 # ─── Inherited: Ace Overflow <-5> ────────────────────────────────────────────

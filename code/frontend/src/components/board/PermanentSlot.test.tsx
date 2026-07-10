@@ -11,7 +11,7 @@ function makePerm(overrides: Partial<PermanentInfo> = {}): PermanentInfo {
     dp: 2000,
     level: 3,
     isSuspended: false,
-    sourceCount: 1,
+    sourceCount: 0,
     keywords: [],
     keywordBreakdown: { innate: [], gained: [] },
     securityAttackModifier: 0,
@@ -63,6 +63,47 @@ describe('PermanentSlot right-click inspect', () => {
     // No inspect handler → default not prevented, no click fired.
     expect(evt.defaultPrevented).toBe(false);
     expect(onClick).not.toHaveBeenCalled();
+  });
+});
+
+describe('PermanentSlot digivolution-card count badge', () => {
+  // `sourceCount` is the number of DIGIVOLUTION CARDS (cards under the top
+  // card) — the top card itself is not a digivolution card. A Digimon with
+  // 2 sources must show "x2", not "x3" (the old badge displayed the total
+  // stack size).
+  it('shows the digivolution-card count, excluding the top card', () => {
+    const { container } = render(
+      <PermanentSlot
+        perm={makePerm({ sourceCount: 2 })}
+        slotIndex={0}
+        isOpponent={false}
+      />,
+    );
+    const badge = container.querySelector('.ib-source-count');
+    expect(badge).toBeInTheDocument();
+    expect(badge).toHaveTextContent('x2');
+  });
+
+  it('shows the badge for a single digivolution card', () => {
+    const { container } = render(
+      <PermanentSlot
+        perm={makePerm({ sourceCount: 1 })}
+        slotIndex={0}
+        isOpponent={false}
+      />,
+    );
+    expect(container.querySelector('.ib-source-count')).toHaveTextContent('x1');
+  });
+
+  it('hides the badge when there are no digivolution cards', () => {
+    const { container } = render(
+      <PermanentSlot
+        perm={makePerm({ sourceCount: 0 })}
+        slotIndex={0}
+        isOpponent={false}
+      />,
+    );
+    expect(container.querySelector('.ib-source-count')).toBeNull();
   });
 });
 

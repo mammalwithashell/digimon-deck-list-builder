@@ -894,6 +894,15 @@ pub struct Game {
     /// Continuation for the regular EndTurn state machine when an
     /// EndOfYourTurn effect parks a player selection.
     pub(crate) pending_end_turn_resume: Option<EndTurnResume>,
+    /// Parked Breeding → Main phase advance. Set by `enter_main_phase` when a
+    /// breeding-action trigger (e.g. an `[When Moving]` selection fired by
+    /// `move_from_breeding`) parked a `PendingSelection` before the phase
+    /// advance ran. Without this, `enter_main_phase` would set the phase to
+    /// Main mid-selection and the selection's `previous_phase = Breeding`
+    /// restore would later drop the turn machine back into a phantom second
+    /// Breeding phase (double `StartOfYourMainPhase` — user bug 2026-07-09).
+    /// Re-entered from `resolve_selection` via `resume_pending_enter_main`.
+    pub(crate) pending_enter_main_after_selection: bool,
 
     /// Deferred-drain depth counter (post-2026-05-23 architectural change).
     ///
@@ -2574,6 +2583,7 @@ impl Game {
             .delete_permanent(src.index as usize);
         self.modifiers
             .shift_after_battle_area_remove(src.player, src.index);
+        self.shift_pending_attack_after_battle_area_remove(src.player, src.index);
 
         // Linked cards lose their host → trash + OnLinkedCardTrashed observer.
         // Matches the linked-card flow in `trash_single_for_batch`
@@ -3283,6 +3293,7 @@ mod current_attacker_tests {
             declaration_committed: true,
             cancelled: false,
             battle_occurred: false,
+            battle_defender_deleted: false,
             return_phase: crate::enums::GamePhase::Main,
             state: crate::selection::AttackState::Declared,
             counter_depth: 0,
@@ -3322,6 +3333,7 @@ mod current_attacker_tests {
             declaration_committed: true,
             cancelled: false,
             battle_occurred: false,
+            battle_defender_deleted: false,
             return_phase: crate::enums::GamePhase::Main,
             state: crate::selection::AttackState::Declared,
             counter_depth: 0,

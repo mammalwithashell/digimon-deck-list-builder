@@ -177,6 +177,25 @@ impl Game {
         }
     }
 
+    /// Resolve the digivolve BASE permanent for `handle`, honoring the
+    /// `BREEDING_TARGET` sentinel index. Breeding-area digivolves route
+    /// through the same requirement enumeration as battle-area ones —
+    /// DCGO's `CardSource.CostList(targetPermanent, …)` applies
+    /// `AddSelfDigivolutionRequirementStaticEffect` costs (the printed
+    /// "[Digivolve] [Name]: Cost N" alt evo boxes) to ANY target permanent,
+    /// with no battle-area-only gate.
+    pub(crate) fn digivolve_base_permanent(
+        &self,
+        handle: PermanentHandle,
+    ) -> Option<&Permanent> {
+        let player = self.players.get(handle.player as usize)?;
+        if handle.index == crate::action::space::BREEDING_TARGET as u8 {
+            player.breeding_area.as_ref()
+        } else {
+            player.battle_area.get(handle.index as usize)
+        }
+    }
+
     pub(crate) fn normal_digivolve_route_for_hand_card(
         &self,
         player: PlayerId,
@@ -225,14 +244,18 @@ impl Game {
         // Q3 (G-DIGIVOLVE-TARGET-RESTRICTION): a base carrying a
         // `CanOnlyDigivolveInto` restriction (e.g. EX10-020 "can only digivolve
         // into [Apocalymon]") offers NO digivolve route into a non-matching card.
-        if self.digivolve_target_blocked_by_restriction(base_handle, card) {
+        //
+        // Judge-quiz Q3 carve-out: the restriction does NOT apply to a
+        // BREEDING-AREA base. Effects of Digimon in the breeding area don't
+        // function (DCGO gates EX10-020's aura with `IsExistOnBattleArea`),
+        // but the declarative materializer includes breeding-area sources
+        // (needed for [Training]-class grants), so the breeding Digimon's own
+        // inactive restriction can still sit on the sentinel handle — skip it.
+        let is_breeding_base = base_handle.index == crate::action::space::BREEDING_TARGET as u8;
+        if !is_breeding_base && self.digivolve_target_blocked_by_restriction(base_handle, card) {
             return Vec::new();
         }
-        let Some(base) = self
-            .players
-            .get(base_handle.player as usize)
-            .and_then(|p| p.battle_area.get(base_handle.index as usize))
-        else {
+        let Some(base) = self.digivolve_base_permanent(base_handle) else {
             return Vec::new();
         };
 
@@ -280,11 +303,7 @@ impl Game {
         {
             let card_id = card.card_id(&self.card_data);
             let rctx = EffectReadContext::new(self, card.handle(), Some(base_handle), card.owner);
-            let Some(base) = self
-                .players
-                .get(base_handle.player as usize)
-                .and_then(|p| p.battle_area.get(base_handle.index as usize))
-            else {
+            let Some(base) = self.digivolve_base_permanent(base_handle) else {
                 return Vec::new();
             };
             let base_top = base.top_card();
@@ -461,11 +480,7 @@ impl Game {
             let Some(paths) = self.alt_path_registry.get(card_id) else {
                 return Vec::new();
             };
-            let Some(base) = self
-                .players
-                .get(base_handle.player as usize)
-                .and_then(|p| p.battle_area.get(base_handle.index as usize))
-            else {
+            let Some(base) = self.digivolve_base_permanent(base_handle) else {
                 return Vec::new();
             };
 

@@ -8132,3 +8132,12 @@ Surfaced: 2026-07-04, BT25-075 Vulcanusmon on_any_link debugging.
 - **Consumers:** BT25-075 (shipped with the no-op fallback; behavior pinned by
   `tests/cards_behavioral/bt25/bt25_075.rs::bt25_075_on_any_link_no_attack_offer_for_summoning_sick_host`).
   Any future "when X, it may attack" observer shares the shape.
+
+## `on_move` is ungated-by-default — self-scoped [When Moving] needs a manual gate  [G-DSL-ON-MOVE-SELF-VS-OBSERVER]  — OPEN 2026-07-09 (footgun, workaround exists)
+
+Surfaced: 2026-07-09 bug-list faithfulness campaign (user-reported: "certain timing effects trigger when a different digimon resolves the timing", observed on P-215).
+
+- **What's wrong:** the `on_move` timing dispatches via a deliberate board-wide observer scan (`TriggerSource::MovedFromBreeding`, effect_queue.rs) so that "when one of your Digimon moves" observers (P-123, P-130, BT16-082, BT8-094) work. A printed self-scoped **[When Moving]** ("when THIS Digimon moves") must therefore be gated per-timing with `timing_conditions: [{when: on_move, condition: {event_permanent_is_source: true}}]` (EX11-038 idiom; DCGO gates with `permanent == card.PermanentOfThisCard()`).
+- **Evidence it's a footgun:** 8 of 13 `on_move` users were mis-authored without the gate (P-215, ST24-04, ST23-06, BT25-008, EX11-008, BT24-034, BT25-063, BT25-078 — all fixed + regression-tested this campaign). Their effects fired when ANY Digimon (even the opponent's) moved from breeding.
+- **Suggested vocabulary:** split the timing into `when_moving` (self-scoped, implies the event_permanent_is_source gate) vs `on_any_move` (observer scan, current semantics), or make `on_move` default to self-scope with an explicit `observe: any` opt-out. Lowering: same dispatch, gate injected at lower time.
+- **Consumers today:** all 13 current `on_move` cards compile against the workaround; new cards keep paying the tax until the split lands.

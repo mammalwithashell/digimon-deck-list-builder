@@ -228,6 +228,7 @@ impl Game {
             pending_delayed_option_lifecycle: None,
             pending_delayed_option_lifecycle_stack: Vec::new(),
             pending_end_turn_resume: None,
+            pending_enter_main_after_selection: false,
             draining_deferred: 0,
             play_enters_suspended: false,
             on_play_suppressor: None,
@@ -364,6 +365,7 @@ impl Game {
         self.pending_delayed_option_lifecycle = None;
         self.pending_delayed_option_lifecycle_stack = Vec::new();
         self.pending_end_turn_resume = None;
+        self.pending_enter_main_after_selection = false;
         self.draining_deferred = 0;
         self.until_condition_dirty = false;
         self.until_condition_last_cycle_evaluations = 0;

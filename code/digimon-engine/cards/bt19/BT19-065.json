@@ -16,7 +16,8 @@
     6
   ],
   "type_eng": [
-    "Machine"
+    "Machine",
+    "Composite"
   ],
   "form_eng": [],
   "attribute_eng": [

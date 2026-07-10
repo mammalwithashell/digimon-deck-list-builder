@@ -1763,11 +1763,93 @@ pub fn run_agent_steps(
             action_u16,
             optional_tensor_summary_for(game, pid, session.registry.as_ref(), &mask_before),
         ));
+
+        // No-progress tripwire (user report: "bot malfunctioned, chose to
+        // not do anything"). `decode_action` silently drops illegal /
+        // unfulfillable actions; both agent kinds are deterministic, so a
+        // dropped action means the SAME action gets picked forever. Unpaced
+        // that spun `MAX_AGENT_STEPS` times; paced (cap 1) it returned a
+        // "successful" beat every time and the UI showed a bot doing
+        // nothing until the human gave up and surrendered. Snapshot state,
+        // dispatch, and fail loudly (with the offending action decoded) if
+        // nothing advanced.
+        let before = agent_progress_probe(game);
+        // Mirror `LiveGame::step`'s rescue: a MANDATORY pending selection
+        // whose single remaining option is unfulfillable is an engine wedge
+        // — fizzle it instead of erroring, matching the engine's
+        // fizzle-on-empty convention at install time.
+        let fizzle_candidate = game
+            .pending_selection
+            .as_ref()
+            .filter(|sel| !sel.is_optional && sel.valid_action_ids.len() == 1)
+            .map(|sel| (sel.previous_phase, sel.source_permanent));
+
         game.decode_action(action_u16, pid);
+
+        if agent_progress_probe(game) == before {
+            if let Some((previous_phase, source_permanent)) = fizzle_candidate {
+                game.pending_selection = None;
+                game.current_phase = previous_phase;
+                let seq = game.next_event_seq();
+                game.events.push(GameEvent::EffectFizzled {
+                    seq,
+                    source_permanent,
+                    reason: "no executable target (agent-loop fizzle)".into(),
+                });
+                continue;
+            }
+            let decoded = explain_action(game, pid, action_u16);
+            return Err(format!(
+                "agent no-progress tripwire: {actor} (player {pid}) chose action {action_u16} \
+                 ({label}, kind {kind:?}) in phase {phase:?}, but the engine did not advance — \
+                 the mask/policy offered an action the decoder refuses, which would loop \
+                 forever. This is a mask/decode mismatch; please report this board state.",
+                label = decoded.label,
+                kind = decoded.kind,
+                phase = before.phase,
+            ));
+        }
     }
     Err(format!(
         "agent step loop exceeded {MAX_AGENT_STEPS} iterations; possible mask bug"
     ))
+}
+
+/// Compact observable-progress fingerprint used by [`run_agent_steps`]'s
+/// no-progress tripwire. Mirrors the probe `LiveGame::step` uses for its
+/// silent-no-op detection (event seq / phase / pending-selection identity),
+/// plus memory, turn count, and the current decider so decision handoffs
+/// that emit no event (e.g. a mulligan keep passing to the other seat)
+/// still count as progress.
+#[derive(PartialEq)]
+struct AgentProgressProbe {
+    event_seq: u64,
+    phase: GamePhase,
+    memory: i16,
+    turn_count: u16,
+    decider: PlayerId,
+    /// `(prompt, kind, valid_action_ids, is_optional)` — the engine mutates
+    /// `pending_selection` in place when partially consumed, so identity is
+    /// tracked by content.
+    pending: Option<(String, String, Vec<u16>, bool)>,
+}
+
+fn agent_progress_probe(game: &Game) -> AgentProgressProbe {
+    AgentProgressProbe {
+        event_seq: game.event_seq,
+        phase: game.current_phase,
+        memory: game.memory,
+        turn_count: game.turn_count,
+        decider: current_decision_player(game),
+        pending: game.pending_selection.as_ref().map(|sel| {
+            (
+                sel.prompt.clone(),
+                format!("{:?}", sel.kind),
+                sel.valid_action_ids.clone(),
+                sel.is_optional,
+            )
+        }),
+    }
 }
 
 /// Sanity-check obs/mask sizes before feeding them to the policy so a
@@ -1895,6 +1977,56 @@ pub async fn rust_get_log(engine: tauri::State<'_, EngineHandle>) -> Result<Vec<
         .await?
 }
 
+/// Core of [`rust_surrender`], factored out so unit tests can exercise it
+/// without fabricating a `tauri::State`.
+///
+/// `player_id` arrives in the FRONTEND 1/2 convention (1 = local human,
+/// 2 = opponent) — the same convention the browser wire's
+/// `POST /games/{id}/surrender` documents ("Player IDs are 1 or 2") —
+/// because both wires are fed by the same
+/// `gameApi.surrenderGame(gameId, playerId)` caller. It is translated to
+/// the Rust 0/1 convention HERE, at the boundary.
+///
+/// The pre-fix code interpreted the id as a Rust 0/1 id
+/// (`if player_id == 0 { 1 } else { 0 }`), so the human's `playerId = 1`
+/// computed winner = Rust 0 = the human — the surrendering player saw
+/// "Victory!" on every desktop surrender. Ids outside 1/2 are rejected
+/// loudly rather than guessed at, because that silent ambiguity was the
+/// bug.
+pub fn perform_surrender(
+    game: &mut Game,
+    player_id: PlayerId,
+) -> Result<SurrenderResponseDto, String> {
+    let rust_pid: PlayerId = match player_id {
+        1 => 0,
+        2 => 1,
+        other => {
+            return Err(format!(
+                "surrender: player_id must be 1 or 2 (frontend convention), got {other}"
+            ))
+        }
+    };
+    // Route through the concede primitive (NOT a bare `declare_winner`):
+    // it attributes the win to the conceder's OPPONENT, emits the Concede
+    // event before GameOver (CLAUDE.md rule 16), clears any pending
+    // selection, and drops the effect queue.
+    game.concede(rust_pid);
+    // Drain the Concede + GameOver events into the response so the
+    // frontend's event-derived game log sees the surrender.
+    let events = drain_events(game);
+    let mask = action_mask_bytes(game);
+    Ok(SurrenderResponseDto {
+        state: game_state_dto(game),
+        action_mask: mask,
+        logs: Vec::new(),
+        events,
+        is_game_over: game.game_over,
+        // Echoed back in the caller's (frontend 1/2) convention, matching
+        // the browser wire's `surrendered_by`.
+        surrendered_by: player_id,
+    })
+}
+
 /// Surrender ends the game with the opposing player as winner.
 #[tauri::command]
 pub async fn rust_surrender(
@@ -1904,17 +2036,7 @@ pub async fn rust_surrender(
     engine
         .run(move |world| -> Result<SurrenderResponseDto, String> {
             let game = world.game.as_mut().ok_or("No active game")?;
-            let winner = if player_id == 0 { 1 } else { 0 };
-            game.declare_winner(winner);
-            let mask = action_mask_bytes(game);
-            Ok(SurrenderResponseDto {
-                state: game_state_dto(game),
-                action_mask: mask,
-                logs: Vec::new(),
-                events: Vec::new(),
-                is_game_over: true,
-                surrendered_by: player_id,
-            })
+            perform_surrender(game, player_id)
         })
         .await?
 }
@@ -2877,6 +2999,203 @@ mod tests {
         assert!(
             err.contains("not loaded") || err.contains("nope"),
             "error message should call out the missing model, got {err:?}"
+        );
+    }
+
+    // ─── surrender attribution (user report: "surrendering can result in
+    //     a victory screen") ────────────────────────────────────────────
+    //
+    // The frontend calls `surrenderGame(gameId, 1)` with `playerId` in ITS
+    // 1/2 convention (1 = local human) on BOTH wires. The browser wire's
+    // `/games/{id}/surrender` translates 1/2 → Rust 0/1 at the PyO3
+    // boundary; the Tauri wire must do the same. Interpreting `1` as a
+    // Rust id declared the SURRENDERING human the winner (Rust 0 → DTO
+    // winner 0 → frontend +1 → winner 1 = "YOU" → "Victory!").
+
+    fn started_game(seed: u64) -> Game {
+        let db = test_card_db();
+        let decks = vec![test_deck(), test_deck()];
+        let mut game = Game::new(&decks, &db, Rules::standard(), Some(seed)).unwrap();
+        game.start_game();
+        while let Some(p) = game.mulligan_current_player() {
+            game.accept_mulligan(p, /* keep */ true).unwrap();
+        }
+        game
+    }
+
+    #[test]
+    fn surrender_declares_the_opponent_winner_for_both_seats() {
+        // Seed parity picks the first player (`Game::new` uses seed % 2),
+        // covering "on either player's turn"; the memory axis covers the
+        // reporter's "[might be based on what the memory is?]" hypothesis.
+        for seed in [42u64, 43] {
+            for memory in [-4i16, 0, 4] {
+                for frontend_pid in [1u8, 2u8] {
+                    let mut game = started_game(seed);
+                    game.memory = memory;
+
+                    let resp = perform_surrender(&mut game, frontend_pid).unwrap();
+
+                    let conceder_rust = frontend_pid - 1;
+                    let expected_winner_rust = 1 - conceder_rust;
+                    assert!(resp.is_game_over);
+                    assert_eq!(
+                        game.winner,
+                        Some(expected_winner_rust),
+                        "seed={seed} memory={memory} frontend_pid={frontend_pid}: \
+                         the surrendering player must LOSE"
+                    );
+                    // The DTO carries the raw Rust 0/1 id; the frontend's
+                    // `dtoToGameState` +1 maps it into its 1/2 convention.
+                    assert_eq!(resp.state.winner, Some(expected_winner_rust));
+                    assert_eq!(
+                        game.terminal_outcome_reason,
+                        Some(digimon_engine::game::TerminalOutcomeReason::Concede),
+                        "desktop surrender must route through the concede primitive"
+                    );
+                    // Echoed back in the caller's (frontend 1/2) convention,
+                    // matching the browser wire's `surrendered_by`.
+                    assert_eq!(resp.surrendered_by, frontend_pid);
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn surrender_emits_concede_before_game_over_and_drains_events() {
+        // CLAUDE.md rule 16: the surrender/concede event must precede the
+        // terminal game-over notification, and the response must carry the
+        // drained events so the frontend log shows the concede.
+        let mut game = started_game(42);
+        let resp = perform_surrender(&mut game, 1).unwrap();
+
+        let types: Vec<&str> = resp
+            .events
+            .iter()
+            .map(|e| e.event_type.as_str())
+            .collect();
+        let concede_pos = types
+            .iter()
+            .position(|t| *t == "Concede")
+            .unwrap_or_else(|| panic!("Concede event missing from surrender response: {types:?}"));
+        let game_over_pos = types
+            .iter()
+            .position(|t| *t == "GameOver")
+            .unwrap_or_else(|| panic!("GameOver event missing from surrender response: {types:?}"));
+        assert!(
+            concede_pos < game_over_pos,
+            "rule 16: Concede must precede GameOver, got {types:?}"
+        );
+        // Event DTOs are in the Python/frontend 1-based convention.
+        assert_eq!(resp.events[concede_pos].player, 1, "conceder is frontend player 1");
+        assert_eq!(
+            resp.events[game_over_pos].meta["winner"], 2,
+            "winner in the GameOver event is frontend player 2 (the opponent)"
+        );
+    }
+
+    #[test]
+    fn surrender_rejects_out_of_convention_player_ids() {
+        // 0 is a RUST-convention id; accepting it silently is exactly the
+        // ambiguity that produced the wrong-winner bug. Reject loudly.
+        let mut game = started_game(42);
+        assert!(perform_surrender(&mut game, 0).is_err());
+        assert!(perform_surrender(&mut game, 3).is_err());
+        assert!(
+            !game.game_over,
+            "a rejected surrender must not end the game"
+        );
+    }
+
+    // ─── agent no-progress tripwire (user report: "bot malfunctioned,
+    //     chose to not do anything") ────────────────────────────────────
+
+    /// Policy that always returns the same raw action id regardless of the
+    /// mask — models a policy/mask/decode mismatch where the chosen action
+    /// is silently dropped by `decode_action` (the class of bug behind the
+    /// CannotAttack no-op loop).
+    struct StuckActionPolicy(usize);
+
+    impl OnnxPolicy for StuckActionPolicy {
+        fn predict(&mut self, _obs: &[f32], _mask: &[f32]) -> Result<usize, InferenceError> {
+            Ok(self.0)
+        }
+        fn reset(&mut self) {}
+    }
+
+    #[test]
+    fn run_agent_steps_trips_no_progress_tripwire_instead_of_spinning() {
+        let (mut game, registry) = build_playable_game();
+        let pid = current_decision_player(&game);
+
+        // An attack action id during the Breeding phase: `decode_breeding`
+        // silently ignores everything but HATCH / MOVE / PASS, so this
+        // action produces NO state change. Pre-tripwire behavior: unpaced
+        // runs spun 10k iterations before erroring; paced runs (cap 1)
+        // returned Ok every beat, so the UI showed a bot that "chose to
+        // not do anything" forever.
+        let stuck_action = digimon_engine::action::space::ATTACK_START as usize + 7;
+        assert_eq!(
+            game.current_phase,
+            GamePhase::Breeding,
+            "test setup expects the opening Breeding phase"
+        );
+
+        let inference = InferenceState::default();
+        inference.insert_for_test("stuck", Box::new(StuckActionPolicy(stuck_action)));
+
+        let mut kinds = vec![PlayerKind::Human; 2];
+        kinds[pid as usize] = PlayerKind::Trained;
+        let mut model_ids: Vec<Option<String>> = vec![None; 2];
+        model_ids[pid as usize] = Some("stuck".into());
+        let session = GameSession {
+            registry: Some(registry),
+            player_kinds: kinds,
+            player_model_ids: model_ids,
+        };
+
+        let err = run_agent_steps(&mut game, &session, &inference, None)
+            .expect_err("a no-progress agent action must trip the tripwire");
+        assert!(
+            err.contains("tripwire"),
+            "error should identify the no-progress tripwire, got: {err}"
+        );
+        assert!(
+            err.contains(&stuck_action.to_string()),
+            "error should include the offending action id, got: {err}"
+        );
+        assert!(!game.game_over, "the tripwire must not end the game itself");
+
+        // Paced mode (cap 1) must surface the SAME error immediately —
+        // this is the path that previously stalled the UI silently.
+        let (mut paced_game, registry2) = build_playable_game();
+        let paced_pid = current_decision_player(&paced_game);
+        let mut kinds2 = vec![PlayerKind::Human; 2];
+        kinds2[paced_pid as usize] = PlayerKind::Trained;
+        let mut model_ids2: Vec<Option<String>> = vec![None; 2];
+        model_ids2[paced_pid as usize] = Some("stuck".into());
+        let session2 = GameSession {
+            registry: Some(registry2),
+            player_kinds: kinds2,
+            player_model_ids: model_ids2,
+        };
+        // The very first beat may legitimately advance state once (e.g. a
+        // declarative-effect tick); the wedge must surface within a few
+        // beats rather than looping forever like the pre-fix behavior.
+        let mut tripped = false;
+        for _ in 0..3 {
+            match run_agent_steps(&mut paced_game, &session2, &inference, Some(1)) {
+                Err(paced_err) => {
+                    assert!(paced_err.contains("tripwire"), "got: {paced_err}");
+                    tripped = true;
+                    break;
+                }
+                Ok(_) => continue,
+            }
+        }
+        assert!(
+            tripped,
+            "paced no-progress beats must error within a few beats, not stall silently"
         );
     }
 

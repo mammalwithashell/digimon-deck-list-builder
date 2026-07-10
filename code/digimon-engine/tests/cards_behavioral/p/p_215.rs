@@ -757,6 +757,112 @@ fn p_215_when_digivolving_fires_effect() {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// Section 9 — [When Moving] scope: fires ONLY when THIS Digimon moves
+//
+// The printed timing is [When Moving] — "when this Digimon moves from the
+// breeding area to the battle area". DCGO P_215.cs gates the OnMove trigger
+// with `permanent == card.PermanentOfThisCard()`. The engine's OnMove dispatch
+// (`TriggerSource::MovedFromBreeding`) is a deliberate BOARD-WIDE observer
+// scan (needed by "when one of your Digimon moves" cards like P-123 / P-130 /
+// BT16-082), so a self-scoped [When Moving] clause must gate itself with
+// `event_permanent_is_source: true` (the EX11-038 idiom).
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Positive direction: P-215 ITSELF moves from breeding to battle → its
+/// [When Moving] fires and installs the UnionZone cost selection.
+#[test]
+fn p_215_when_moving_fires_when_itself_moves_from_breeding() {
+    let cost_card = make_ice_snow_lv3("COST-SELFMOVE");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("P-215")
+        .expect("P-215 YAML parses and compiles")
+        .add_card(cost_card)
+        .hand(0, &["COST-SELFMOVE"])
+        .memory(10)
+        .start();
+
+    runner.place_in_breeding(0, "P-215");
+    assert!(
+        runner.move_from_breeding(0),
+        "P-215 (level 4) must be able to move from breeding to battle"
+    );
+
+    let kind = runner
+        .pending_kind()
+        .expect("[When Moving] must fire when P-215 itself moves from breeding");
+    assert!(
+        matches!(kind, SelectionKind::UnionZone { .. }),
+        "P-215 when_moving must install the UnionZone cost selection, got {kind:?}"
+    );
+}
+
+/// Bug repro (user report): a DIFFERENT Digimon of the same player moves from
+/// breeding — P-215's [When Moving] must NOT fire.
+#[test]
+fn p_215_when_moving_does_not_fire_when_another_own_digimon_moves() {
+    let cost_card = make_ice_snow_lv3("COST-OTHERMOVE");
+    let mover = make_ice_snow_lv3("MOVER-OWN"); // level 3 → movable from breeding
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("P-215")
+        .expect("P-215 YAML parses and compiles")
+        .add_card(cost_card)
+        .add_card(mover)
+        .hand(0, &["COST-OTHERMOVE"])
+        .memory(10)
+        .start();
+
+    // P-215 already sits on the battle area (an eligible cost card is in hand,
+    // so a mis-scoped trigger WOULD prompt).
+    runner.place_on_field(0, "P-215", None);
+    runner.place_in_breeding(0, "MOVER-OWN");
+    assert!(
+        runner.move_from_breeding(0),
+        "the other Digimon must move from breeding to battle"
+    );
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "P-215's [When Moving] must NOT fire when a DIFFERENT Digimon moves \
+         from breeding (printed scope is 'this Digimon'), but a selection \
+         was installed: {:?}",
+        runner.pending_kind()
+    );
+}
+
+/// Bug repro (worse direction): an OPPONENT's Digimon moves from breeding —
+/// P-215's [When Moving] must NOT fire either.
+#[test]
+fn p_215_when_moving_does_not_fire_when_opponents_digimon_moves() {
+    let cost_card = make_ice_snow_lv3("COST-OPPMOVE");
+    let mover = make_ice_snow_lv3("MOVER-OPP");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("P-215")
+        .expect("P-215 YAML parses and compiles")
+        .add_card(cost_card)
+        .add_card(mover)
+        .hand(0, &["COST-OPPMOVE"])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "P-215", None);
+    runner.place_in_breeding(1, "MOVER-OPP");
+    assert!(
+        runner.move_from_breeding(1),
+        "the opponent's Digimon must move from breeding to battle"
+    );
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "P-215's [When Moving] must NOT fire when an OPPONENT's Digimon moves \
+         from breeding, but a selection was installed: {:?}",
+        runner.pending_kind()
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // Section 8 — Cost card from trash
 // ═══════════════════════════════════════════════════════════════════════════════
 

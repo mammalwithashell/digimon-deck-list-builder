@@ -691,10 +691,16 @@ fn ex10_025_on_play_own_field_selection_excludes_non_mineral_rock_digimon() {
         Some(SelectionKind::OwnField),
         "OwnField selection must install"
     );
+    // EX10-025 itself prints "(Rule) Trait: Has [Mineral] Type." (official Bandai
+    // DB + card image), so the just-played Sunarizamon is ALSO a legal
+    // destination: the Mineral host + itself = 2 offered; the plain Digimon is
+    // excluded. (This expectation was 1 before the Rule-granted trait was
+    // reconciled into the card data — the missing-grant bug.)
     assert_eq!(
         runner.pending_action_count(),
-        1,
-        "only the 1 Mineral/Rock Digimon must be offered; plain Digimon must be excluded"
+        2,
+        "the Mineral host AND the rule-granted-Mineral EX10-025 itself must be \
+         offered; the plain Digimon must be excluded"
     );
 }
 

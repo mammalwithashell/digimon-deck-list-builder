@@ -50,7 +50,7 @@ use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledCostDelta, CompiledDeclarativeClause,
     CompiledPlayerRef, CompiledPredicate, CompiledScope, CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::PASS;
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -562,10 +562,25 @@ fn bt22_098_delay_after_arisa_suspend_exposes_base_then_hand_evo_choices() {
 
     runner.game.suspend(arisa);
 
+    // First the optional <Delay> ACTIVATION choice (16-16-2) — accept it.
     {
         let view = runner
             .pending_selection_view()
-            .expect("Arisa suspend should fire the delayed Puppet base selection");
+            .expect("Arisa suspend should offer the Delay activation");
+        assert_eq!(view.kind, SelectionKind::Replacement);
+        assert!(
+            runner.pending_is_optional(),
+            "the <Delay> activation itself is optional (16-16-2)"
+        );
+        runner
+            .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+            .expect("accept the Delay activation");
+    }
+
+    {
+        let view = runner
+            .pending_selection_view()
+            .expect("accepting the Delay should expose the Puppet base selection");
         assert_eq!(view.kind, SelectionKind::OwnField);
         assert!(
             runner.pending_is_optional(),
@@ -741,10 +756,19 @@ fn bt22_098_delay_trashes_self_as_cost_even_when_digivolve_is_declined() {
 
     runner.game.suspend(arisa);
 
-    // The Delay fires; decline the optional Puppet-base digivolve with PASS.
+    // ACCEPT the (optional, 16-16-2) Delay activation itself...
     let view = runner
         .pending_selection_view()
-        .expect("Arisa suspend after the placing turn fires the Delay body");
+        .expect("Arisa suspend after the placing turn offers the Delay activation");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    runner
+        .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+        .expect("accept the Delay activation");
+
+    // ...then decline the optional Puppet-base digivolve body with PASS.
+    let view = runner
+        .pending_selection_view()
+        .expect("accepting the Delay activation exposes the digivolve body");
     assert_eq!(view.kind, SelectionKind::OwnField);
     assert!(
         runner.pending_is_optional(),

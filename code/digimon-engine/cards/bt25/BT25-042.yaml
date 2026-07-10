@@ -39,7 +39,7 @@ level: 6
 color: [yellow, black]
 cost: 12
 dp: 12000
-traits: [Virtue, Iliad, TS]
+traits: [Virtue, Iliad, TS, Angel]
 
 # Alt-digivolve: Lv.5 with [Angel]/[Archangel] trait OR [TS] trait / cost 3.
 alt_paths:

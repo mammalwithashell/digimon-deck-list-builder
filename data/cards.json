@@ -510,10 +510,13 @@
     ],
     "type_eng": [
       "Cyborg",
-      "Blue Flare"
+      "Blue Flare",
+      "Xros Heart"
     ],
     "form_eng": [],
-    "attribute_eng": [],
+    "attribute_eng": [
+      "Virus"
+    ],
     "effect_description_eng": "＜Reboot＞ (Unsuspend this Digimon during your opponent's unsuspend phase.)\r\n＜Blocker＞ (This Digimon can block in the blocker timing.)\r\n[On Play] [When Digivolving] Delete 1 of your opponent's Digimon with the fewest digivolution cards.\r\n[All Turns] When this Digimon would leave the battle area other than by DigiXros, you may play 1 level 5 or lower [Blue Flare] or [Xros Heart] trait Digimon card from its digivolution cards without paying the cost.",
     "inherited_effect_description_eng": "[All Turns] For each color in this [Blue Flare] or [Xros Heart] trait Digimon's digivolution cards, it gets +1000 DP.",
     "security_effect_description_eng": "",
@@ -60398,7 +60401,8 @@
       5
     ],
     "type_eng": [
-      "Authority"
+      "Authority",
+      "Angel"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -60439,7 +60443,9 @@
       5
     ],
     "type_eng": [
-      "Unique"
+      "Unique",
+      "Boss",
+      "D-Brigade"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -60689,7 +60695,8 @@
       3
     ],
     "type_eng": [
-      "Machine"
+      "Machine",
+      "Insectoid"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -61485,7 +61492,8 @@
       2
     ],
     "type_eng": [
-      "Mutant"
+      "Mutant",
+      "Angel"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -63786,7 +63794,8 @@
       6
     ],
     "type_eng": [
-      "Wizard"
+      "Wizard",
+      "Dark Animal"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -67292,7 +67301,8 @@
       1
     ],
     "type_eng": [
-      "Crustacean"
+      "Crustacean",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -67369,7 +67379,8 @@
       0
     ],
     "type_eng": [
-      "Beastkin"
+      "Beastkin",
+      "Ice-Snow"
     ],
     "form_eng": [
       "Hybrid"
@@ -67411,7 +67422,8 @@
       1
     ],
     "type_eng": [
-      "Fairy"
+      "Fairy",
+      "Aquatic"
     ],
     "form_eng": [
       "Hybrid"
@@ -67486,7 +67498,8 @@
       0
     ],
     "type_eng": [
-      "Beast"
+      "Beast",
+      "Ice-Snow"
     ],
     "form_eng": [
       "Hybrid"
@@ -67529,7 +67542,8 @@
       0
     ],
     "type_eng": [
-      "Cyborg"
+      "Cyborg",
+      "Ice-Snow"
     ],
     "form_eng": [
       "Hybrid"
@@ -67608,7 +67622,8 @@
     ],
     "type_eng": [
       "Ancient Animal",
-      "Ten Warriors"
+      "Ten Warriors",
+      "Ice-Snow"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -68033,7 +68048,8 @@
       2
     ],
     "type_eng": [
-      "Principality"
+      "Principality",
+      "Angel"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -68381,7 +68397,8 @@
     "type_eng": [
       "Cyborg",
       "X Antibody",
-      "Royal Base"
+      "Royal Base",
+      "Insectoid"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -68421,7 +68438,8 @@
       3
     ],
     "type_eng": [
-      "Cyborg"
+      "Cyborg",
+      "Vegetation"
     ],
     "form_eng": [
       "Hybrid"
@@ -68619,7 +68637,8 @@
     "type_eng": [
       "Cyborg",
       "X Antibody",
-      "Royal Base"
+      "Royal Base",
+      "Insectoid"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -68849,7 +68868,8 @@
     "type_eng": [
       "Cyborg",
       "X Antibody",
-      "Royal Base"
+      "Royal Base",
+      "Insectoid"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -69440,7 +69460,8 @@
       2
     ],
     "type_eng": [
-      "Seraph"
+      "Seraph",
+      "Three Great Angels"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -69482,7 +69503,8 @@
     ],
     "type_eng": [
       "Ancient Insect",
-      "Ten Warriors"
+      "Ten Warriors",
+      "Insectoid"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -70550,7 +70572,9 @@
     "type_eng": [
       "Shaman"
     ],
-    "form_eng": [],
+    "form_eng": [
+      "Hybrid"
+    ],
     "attribute_eng": [
       "Vaccine"
     ],
@@ -71280,7 +71304,8 @@
     ],
     "type_eng": [
       "Mollusk",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Aquatic"
     ],
     "form_eng": [
       "Rookie"
@@ -71317,7 +71342,8 @@
       1
     ],
     "type_eng": [
-      "Tropical Fish"
+      "Tropical Fish",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -71353,7 +71379,8 @@
     ],
     "type_eng": [
       "Mollusk",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -71430,7 +71457,8 @@
       1
     ],
     "type_eng": [
-      "Avian"
+      "Avian",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -71543,7 +71571,8 @@
     ],
     "type_eng": [
       "Mollusk",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -71696,7 +71725,8 @@
     ],
     "type_eng": [
       "Mollusk",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -71736,7 +71766,8 @@
       1
     ],
     "type_eng": [
-      "Holy Bird"
+      "Holy Bird",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -72522,7 +72553,8 @@
       "Cyborg",
       "X Antibody",
       "Royal Base",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Insectoid"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -72680,7 +72712,8 @@
       "Cyborg",
       "X Antibody",
       "Royal Base",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Insectoid"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -72724,7 +72757,8 @@
       "Cyborg",
       "X Antibody",
       "Royal Base",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Insectoid"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -73377,7 +73411,8 @@
     ],
     "type_eng": [
       "Unidentified",
-      "Twilight"
+      "Twilight",
+      "Composite"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -75513,7 +75548,8 @@
     ],
     "type_eng": [
       "Cyborg",
-      "X Antibody"
+      "X Antibody",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -77052,7 +77088,8 @@
       6
     ],
     "type_eng": [
-      "Flame"
+      "Flame",
+      "Ghost"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -77488,7 +77525,8 @@
     ],
     "type_eng": [
       "Cyborg",
-      "X Antibody"
+      "X Antibody",
+      "Ghost"
     ],
     "form_eng": [
       "Ultimate"
@@ -77596,7 +77634,8 @@
     ],
     "type_eng": [
       "Cyborg",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Dark Dragon"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -77741,7 +77780,8 @@
       5
     ],
     "type_eng": [
-      "Cyborg"
+      "Cyborg",
+      "Ghost"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -78461,7 +78501,8 @@
     "type_eng": [
       "Magic Knight",
       "Vortex Warriors",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Bird Dragon"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -79621,7 +79662,8 @@
     ],
     "type_eng": [
       "Mollusk",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -79939,7 +79981,8 @@
     ],
     "type_eng": [
       "Mythical Beast",
-      "WG"
+      "WG",
+      "Avian"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -80437,7 +80480,8 @@
     ],
     "type_eng": [
       "Puppet",
-      "WG"
+      "WG",
+      "Vegetation"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -82863,7 +82907,8 @@
     ],
     "type_eng": [
       "Mollusk",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -82970,7 +83015,8 @@
     ],
     "type_eng": [
       "Mollusk",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -83078,7 +83124,8 @@
     ],
     "type_eng": [
       "Mollusk",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -83192,7 +83239,8 @@
     ],
     "type_eng": [
       "Mollusk",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -84534,7 +84582,8 @@
     ],
     "type_eng": [
       "Cyborg",
-      "X Antibody"
+      "X Antibody",
+      "Dinosaur"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -87559,7 +87608,8 @@
       "Cyborg",
       "X Antibody",
       "Royal Base",
-      "CS"
+      "CS",
+      "Insectoid"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -87603,7 +87653,8 @@
       "Cyborg",
       "X Antibody",
       "Royal Base",
-      "CS"
+      "CS",
+      "Insectoid"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -87683,7 +87734,9 @@
       "Cyborg",
       "X Antibody",
       "Royal Base",
-      "Zaxon"
+      "Zaxon",
+      "CS",
+      "Insectoid"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -90306,7 +90359,8 @@
     "type_eng": [
       "Cyborg",
       "Iliad",
-      "TS"
+      "TS",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -90541,7 +90595,8 @@
     "type_eng": [
       "Mollusk",
       "Iliad",
-      "TS"
+      "TS",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -90579,7 +90634,8 @@
     "type_eng": [
       "Ice-Snow",
       "Titan",
-      "TS"
+      "TS",
+      "Demon"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -90621,7 +90677,8 @@
     "type_eng": [
       "Fairy",
       "Titan",
-      "TS"
+      "TS",
+      "Aquatic"
     ],
     "form_eng": [
       "Hybrid"
@@ -92208,7 +92265,8 @@
       6
     ],
     "type_eng": [
-      "Reptile"
+      "Reptile",
+      "Evil"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -92474,7 +92532,8 @@
       6
     ],
     "type_eng": [
-      "Undead"
+      "Undead",
+      "Fallen Angel"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -92512,7 +92571,8 @@
     "type_eng": [
       "Undead",
       "Titan",
-      "TS"
+      "TS",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -92590,7 +92650,8 @@
       6
     ],
     "type_eng": [
-      "Cyborg"
+      "Cyborg",
+      "Dark Dragon"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -92787,7 +92848,8 @@
       "Shaman",
       "Olympos XII",
       "Titan",
-      "TS"
+      "TS",
+      "Demon"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -97332,7 +97394,8 @@
     "type_eng": [
       "Galaxy",
       "Iliad",
-      "TS"
+      "TS",
+      "Olympos XII"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -110918,7 +110981,8 @@
       1
     ],
     "type_eng": [
-      "Avian"
+      "Avian",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -110988,7 +111052,8 @@
       1
     ],
     "type_eng": [
-      "Holy Bird"
+      "Holy Bird",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -111202,7 +111267,8 @@
       2
     ],
     "type_eng": [
-      "Principality"
+      "Principality",
+      "Angel"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -111699,7 +111765,8 @@
       2
     ],
     "type_eng": [
-      "Dominion"
+      "Dominion",
+      "Angel"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -113827,7 +113894,8 @@
       1
     ],
     "type_eng": [
-      "Dinosaur"
+      "Dinosaur",
+      "Ice-Snow"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -113899,7 +113967,8 @@
     ],
     "type_eng": [
       "Wizard",
-      "Witchelny"
+      "Witchelny",
+      "Ice-Snow"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -114415,7 +114484,8 @@
     ],
     "type_eng": [
       "Ankylosaur",
-      "NSp"
+      "NSp",
+      "Dinosaur"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -114488,7 +114558,8 @@
     ],
     "type_eng": [
       "Ceratopsian",
-      "NSp"
+      "NSp",
+      "Dinosaur"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -114525,7 +114596,8 @@
     "type_eng": [
       "Magic Knight",
       "Vortex Warriors",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Bird Dragon"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -114671,7 +114743,8 @@
       5
     ],
     "type_eng": [
-      "Bird Dragon"
+      "Bird Dragon",
+      "Machine Dragon"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -115341,7 +115414,8 @@
     ],
     "type_eng": [
       "Cyborg",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Dark Dragon"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -116857,7 +116931,8 @@
     ],
     "type_eng": [
       "Cyborg",
-      "DS"
+      "DS",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -116987,7 +117062,8 @@
     ],
     "type_eng": [
       "Cyborg",
-      "DS"
+      "DS",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -117583,7 +117659,8 @@
       5
     ],
     "type_eng": [
-      "Cyborg"
+      "Cyborg",
+      "Dinosaur"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -120754,7 +120831,8 @@
     "type_eng": [
       "Undead",
       "DM",
-      "Ver.5"
+      "Ver.5",
+      "Cyborg"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -121860,7 +121938,8 @@
     ],
     "type_eng": [
       "Demon Lord",
-      "Seven Great Demon Lords"
+      "Seven Great Demon Lords",
+      "Fallen Angel"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -123456,7 +123535,8 @@
       6
     ],
     "type_eng": [
-      "Undead"
+      "Undead",
+      "Fallen Angel"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -124847,7 +124927,8 @@
     ],
     "type_eng": [
       "Mollusk",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -125052,7 +125133,8 @@
     ],
     "type_eng": [
       "Mollusk",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -125525,7 +125607,8 @@
       "Cyborg",
       "X Antibody",
       "Royal Base",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Insectoid"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -125569,7 +125652,8 @@
       "Cyborg",
       "X Antibody",
       "Royal Base",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Insectoid"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -125686,7 +125770,8 @@
       "Cyborg",
       "X Antibody",
       "Royal Base",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Insectoid"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -125728,7 +125813,8 @@
     "type_eng": [
       "Magic Knight",
       "Vortex Warriors",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Bird Dragon"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -126311,7 +126397,8 @@
     ],
     "type_eng": [
       "Cyborg",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Dark Dragon"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -128560,7 +128647,8 @@
       2
     ],
     "type_eng": [
-      "Beastkin"
+      "Beastkin",
+      "Sea Beast"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -128643,7 +128731,8 @@
       2
     ],
     "type_eng": [
-      "Throne"
+      "Throne",
+      "Three Great Angels"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -128726,7 +128815,8 @@
       6
     ],
     "type_eng": [
-      "Demon Lord"
+      "Demon Lord",
+      "Fallen Angel"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -135056,7 +135146,8 @@
     ],
     "type_eng": [
       "Mollusk",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Aquatic"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -135254,7 +135345,8 @@
       6
     ],
     "type_eng": [
-      "Dragonkin"
+      "Dragonkin",
+      "Three Musketeers"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -136734,7 +136826,8 @@
     "type_eng": [
       "Shaman",
       "Titan",
-      "TS"
+      "TS",
+      "Demon"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -147594,7 +147687,8 @@
       3
     ],
     "type_eng": [
-      "Ancient Bird"
+      "Ancient Bird",
+      "Vegetation"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -147700,7 +147794,8 @@
       3
     ],
     "type_eng": [
-      "Avian"
+      "Avian",
+      "Vegetation"
     ],
     "form_eng": [],
     "attribute_eng": [
@@ -147809,7 +147904,8 @@
     "type_eng": [
       "Magic Knight",
       "Vortex Warriors",
-      "LIBERATOR"
+      "LIBERATOR",
+      "Bird Dragon"
     ],
     "form_eng": [],
     "attribute_eng": [

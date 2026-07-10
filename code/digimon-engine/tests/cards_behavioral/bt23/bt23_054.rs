@@ -1,4 +1,5 @@
-//! BT23-054 Magnamon - Digimon, Lv.4, White/Blue.
+//! BT23-054 Magnamon - Digimon, Lv.4, Black/Blue (official Bandai DB /
+//! data/card_bundles/BT23-054.md).
 //!
 //! Supported slice:
 //! - Printed metadata and digivolve routes.
@@ -83,18 +84,25 @@ fn bt23_054_has_printed_metadata_routes_and_blocker() {
     assert_eq!(card.level, Some(4));
     assert_eq!(card.cost, Some(7));
     assert_eq!(card.dp, Some(7000));
-    assert_eq!(card.color, vec![CompiledColor::White, CompiledColor::Blue]);
+    assert_eq!(card.color, vec![CompiledColor::Black, CompiledColor::Blue]);
     assert!(card.traits.iter().any(|name| name == "Royal Knight"));
     assert!(card.traits.iter().any(|name| name == "CS"));
     assert_eq!(card.attribute.as_deref(), Some("Free"));
 
-    assert!(card.alt_paths.iter().any(|path| {
-        path.kind == CompiledAltPathKind::Digivolve
-            && path.cost == Some(CompiledCost::Literal(4))
-            && path.from.as_ref().is_some_and(|from| {
-                from.level_eq == Some(3) && from.color_is == Some(CompiledColor::White)
-            })
-    }));
+    // Printed circles: Black Lv.3 / cost 4 and Blue Lv.3 / cost 4
+    // (official Bandai DB — the card was previously mis-authored White).
+    for circle_color in [CompiledColor::Black, CompiledColor::Blue] {
+        assert!(
+            card.alt_paths.iter().any(|path| {
+                path.kind == CompiledAltPathKind::Digivolve
+                    && path.cost == Some(CompiledCost::Literal(4))
+                    && path.from.as_ref().is_some_and(|from| {
+                        from.level_eq == Some(3) && from.color_is == Some(circle_color)
+                    })
+            }),
+            "printed {circle_color:?} Lv.3 / cost 4 circle present"
+        );
+    }
     assert!(card.alt_paths.iter().any(|path| {
         path.kind == CompiledAltPathKind::Digivolve
             && path.cost == Some(CompiledCost::Literal(3))

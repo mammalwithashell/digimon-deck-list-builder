@@ -296,7 +296,7 @@ impl Game {
         &mut self,
         player_id: PlayerId,
         hand_index: usize,
-        _source: PlaySource,
+        source: PlaySource,
     ) -> bool {
         if self.current_phase != GamePhase::Main {
             self.logger.log(&format!(
@@ -314,48 +314,70 @@ impl Game {
             ));
             return false;
         }
-        let Some(breeding) = player.breeding_area.as_ref() else {
+        if player.breeding_area.is_none() {
             self.logger
                 .log("[Rejected] digivolve_breeding: breeding area is empty");
             return false;
-        };
-
-        let card = player.hand[hand_index].clone();
-        if !self.can_digivolve(&card, breeding) {
-            self.logger.log(&format!(
-                "[Rejected] digivolve_breeding: card {} cannot digivolve onto breeding {} (evo-cost mismatch)",
-                card.card_id(&self.card_data),
-                breeding.top_card().card_id(&self.card_data),
-            ));
-            return false;
         }
 
-        let base_top = breeding.top_card();
-        let base_level = base_top.digimon_level(&self.card_data).unwrap();
-        let base_colors = base_top.digimon_colors(&self.card_data);
-        let printed_cost = card
-            .digivolution_costs(&self.card_data)
-            .iter()
-            .filter(|ec| {
-                ec.level == base_level
-                    && crate::action::mask::evo_color(ec.card_color)
-                        .map(|c| base_colors.contains(&c))
-                        .unwrap_or(false)
-            })
-            .map(|ec| ec.memory_cost)
-            .min()
-            .expect("can_digivolve guarantees at least one matching evo_cost");
+        let card = player.hand[hand_index].clone();
+        // Route enumeration mirrors the battle-area digivolve: printed evo-cost
+        // circles PLUS the DSL alt-digivolve paths (printed "[Digivolve]
+        // [Name]: Cost N" alt evo boxes — e.g. EX11-014 Penguinmon over a
+        // breeding Hiyarimon for cost 0). DCGO applies
+        // `AddSelfDigivolutionRequirementStaticEffect` costs to ANY target
+        // permanent (`CardSource.CostList`), with no battle-area-only gate.
+        // App Fusion is excluded: its host gate needs LINKED cards, which
+        // breeding permanents cannot have (and its commit path consumes them).
+        let breeding_handle = PermanentHandle {
+            player: player_id,
+            index: crate::action::space::BREEDING_TARGET as u8,
+        };
+        let routes: Vec<crate::dna_digivolve::DigivolveRouteMatch> = self
+            .all_digivolve_routes_for_card(&card, breeding_handle)
+            .into_iter()
+            .filter(|route| !route.app_fusion)
+            .collect();
+        let Some(min_route) = routes.iter().min_by_key(|r| r.memory_cost).copied() else {
+            self.logger.log(&format!(
+                "[Rejected] digivolve_breeding: card {} cannot digivolve onto breeding {} (no applicable route)",
+                card.card_id(&self.card_data),
+                self.player(player_id)
+                    .breeding_area
+                    .as_ref()
+                    .map(|b| b.top_card().card_id(&self.card_data))
+                    .unwrap_or(""),
+            ));
+            return false;
+        };
+
+        // Rule 17 — when the breeding base satisfies MORE THAN ONE
+        // distinct-cost route and the player has not yet chosen, prompt for
+        // WHICH cost to pay rather than auto-selecting the cheapest (same
+        // contract as `digivolve_from_hand_inner`). The choice re-enters this
+        // function via the `BREEDING_TARGET` field-index sentinel.
+        if self.pending_digivolve_route_choice.is_none() && routes.len() > 1 {
+            self.install_digivolve_cost_choice_prompt(
+                player_id,
+                hand_index,
+                crate::action::space::BREEDING_TARGET as usize,
+                source,
+                routes,
+            );
+            return false;
+        }
+        let route = self
+            .pending_digivolve_route_choice
+            .take()
+            .unwrap_or(min_route);
+        let printed_cost = route.memory_cost;
 
         // Pass the breeding-target hand card as the cost-target so
         // target-aware predicates can fire (G-BEFORE-PAY-COST-DIGIVOLVE-TARGET).
         // Note: breeding digivolve does not have a battle-area target
         // permanent — the breeding permanent is the source. Mark the
-        // breeding handle as the target permanent so self-scoped
-        // predicates work analogously.
-        let breeding_handle = PermanentHandle {
-            player: player_id,
-            index: crate::action::space::BREEDING_TARGET as u8,
-        };
+        // breeding handle (sentinel, built above) as the target permanent so
+        // self-scoped predicates work analogously.
         let target = CostTargetContext {
             card: card.handle(),
             from_hand: true,
