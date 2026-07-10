@@ -70,10 +70,23 @@ jobs:
           RUST_MIN_STACK: "268435456"
         run: cargo test -p digimon-engine --test cards_behavioral --no-run
 
-      - name: Both-path parity (cards_behavioral)
+      # Libtest filters are substring based. These three commands partition the
+      # full suite without overlap: BT tests, non-BT EX tests, then everything
+      # containing neither marker.
+      - name: Both-path parity (BT cards)
         env:
           RUST_MIN_STACK: "268435456"
-        run: cargo test -p digimon-engine --test cards_behavioral -- --test-threads=8
+        run: cargo test -p digimon-engine --test cards_behavioral bt -- --test-threads=8
+
+      - name: Both-path parity (EX cards)
+        env:
+          RUST_MIN_STACK: "268435456"
+        run: cargo test -p digimon-engine --test cards_behavioral ex -- --test-threads=8 --skip bt
+
+      - name: Both-path parity (remaining cards)
+        env:
+          RUST_MIN_STACK: "268435456"
+        run: cargo test -p digimon-engine --test cards_behavioral -- --test-threads=8 --skip bt --skip ex
 
       # The DSL behavioral + archetype/interaction tests round out the gate.
       - name: DSL behavioral tests
