@@ -1,0 +1,410 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import shlex
+import subprocess
+import sys
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
+
+ROOT = Path(__file__).resolve().parents[1]
+PYTHON = sys.executable
+STACK_ENV = {"RUST_MIN_STACK": "268435456"}
+SERIAL_ENV = {"RUST_MIN_STACK": "268435456", "RUST_TEST_THREADS": "1"}
+
+
+@dataclass
+class Suite:
+    tier: int
+    name: str
+    command: list[str]
+    env: dict[str, str] = field(default_factory=dict)
+    required: bool = True
+    kind: str = "command"
+
+    def to_json(self) -> dict[str, Any]:
+        return {
+            "tier": self.tier,
+            "name": self.name,
+            "kind": self.kind,
+            "required": self.required,
+            "command": self.command,
+            "env": self.env,
+        }
+
+
+@dataclass
+class Result:
+    suite: Suite
+    status: str
+    seconds: float
+    returncode: int
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser(description="Run the Digimon engine verification ladder.")
+    parser.add_argument("--tier", type=int, choices=[0, 1, 2, 3], required=True)
+    parser.add_argument("--path", action="append", default=[], help="Changed path for tier-2 impact scope.")
+    parser.add_argument("--base", help="Base ref for impact_scope.py when --path is omitted.")
+    parser.add_argument("--head", help="Head ref for impact_scope.py when --path is omitted.")
+    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--json", action="store_true", help="Emit machine-readable plan/results.")
+    parser.add_argument("--continue-on-failure", action="store_true")
+    args = parser.parse_args()
+
+    suites, metadata = build_plan(args)
+    if args.dry_run:
+        payload = {
+            "requested_tier": args.tier,
+            "mode": "dry_run",
+            "metadata": metadata,
+            "suites": [suite.to_json() for suite in suites],
+        }
+        if args.json:
+            print(json.dumps(payload, indent=2))
+        else:
+            print_plan(suites, metadata)
+        return 0
+
+    results: list[Result] = []
+    failed = False
+    for suite in suites:
+        result = run_suite(suite)
+        results.append(result)
+        if result.returncode != 0 and suite.required:
+            failed = True
+            if not args.continue_on_failure:
+                break
+
+    if args.json:
+        print(
+            json.dumps(
+                {
+                    "requested_tier": args.tier,
+                    "mode": "run",
+                    "metadata": metadata,
+                    "results": [
+                        {
+                            **result.suite.to_json(),
+                            "status": result.status,
+                            "seconds": result.seconds,
+                            "returncode": result.returncode,
+                        }
+                        for result in results
+                    ],
+                },
+                indent=2,
+            )
+        )
+    else:
+        print_summary(results, skipped=len(suites) - len(results))
+
+    return 1 if failed else 0
+
+
+def build_plan(args: argparse.Namespace) -> tuple[list[Suite], dict[str, Any]]:
+    suites: list[Suite] = []
+    metadata: dict[str, Any] = {}
+    if args.tier >= 0:
+        suites.extend(tier0_suites())
+    if args.tier >= 1:
+        suites.extend(load_manifest(ROOT / "qa/verification/tier1_suites.json"))
+    if args.tier >= 2:
+        impact_suite, impact_result = impact_scope(args)
+        suites.append(impact_suite)
+        metadata["impact_scope"] = impact_result
+        suites.extend(tier2_suites(impact_result))
+    if args.tier >= 3:
+        suites.extend(tier3_suites())
+    return suites, metadata
+
+
+def tier0_suites() -> list[Suite]:
+    return [
+        py_suite(
+            0,
+            "impact_index_check",
+            "code/tools/impact_index.py",
+            "--cards-dir",
+            "code/digimon-engine/cards",
+            "--out",
+            "qa/impact/dsl_impact_index.json",
+            "--check",
+        ),
+        py_suite(
+            0,
+            "impact_lowering_map_check",
+            "code/tools/impact_lowering_map.py",
+            "--map",
+            "qa/impact/lowering_verb_map.json",
+            "--check",
+        ),
+        py_suite(
+            0,
+            "keyword_semantics_matrix_check",
+            "code/tools/keyword_semantics_matrix.py",
+            "--source",
+            "docs/digimon-rules/keyword-semantics.md",
+            "--engine-enum",
+            "code/digimon-engine/src/enums.rs",
+            "--out",
+            "qa/rules/keyword_semantics_matrix.json",
+            "--check",
+        ),
+        py_suite(
+            0,
+            "faq_conformance_check",
+            "code/tools/faq_conformance_generator.py",
+            "--cases",
+            "qa/rules/faq_conformance_cases.json",
+            "--out",
+            "code/digimon-engine/tests/rules_faq/generated_conformance.rs",
+            "--check",
+        ),
+        Suite(
+            tier=0,
+            name="verification_tool_tests",
+            kind="python",
+            command=[
+                PYTHON,
+                "-m",
+                "pytest",
+                "code/tests/tools/test_impact_index.py",
+                "code/tests/tools/test_impact_lowering_map.py",
+                "code/tests/tools/test_impact_scope.py",
+                "code/tests/tools/test_keyword_semantics_matrix.py",
+                "code/tests/tools/test_faq_conformance_generator.py",
+                "code/tests/tools/test_verification_tier_manifest.py",
+                "code/tests/tools/test_nextest_config.py",
+                "code/tests/tools/test_verify_script.py",
+                "-q",
+            ],
+        ),
+    ]
+
+
+def tier2_suites(scope: dict[str, Any]) -> list[Suite]:
+    suites: list[Suite] = []
+    cards = scope.get("cards", [])
+    if scope.get("full_suite_required"):
+        suites.append(cargo_suite(2, "cards_behavioral_full_required", "cards_behavioral", env=SERIAL_ENV))
+    elif cards:
+        if len(cards) <= 8:
+            for card in cards:
+                suites.append(
+                    cargo_suite(
+                        2,
+                        f"cards_behavioral_{card_filter(card)}",
+                        "cards_behavioral",
+                        card_filter(card),
+                        env=SERIAL_ENV,
+                    )
+                )
+        else:
+            suites.append(
+                Suite(
+                    tier=2,
+                    name="cards_behavioral_large_scope_notice",
+                    kind="python",
+                    required=False,
+                    command=[
+                        PYTHON,
+                        "-c",
+                        (
+                            "print('impact_scope mapped more than 8 cards; "
+                            "use cards_behavioral_filter from the dry-run JSON for manual batching')"
+                        ),
+                    ],
+                )
+            )
+
+    for binary in scope.get("side_binaries", []):
+        suites.append(cargo_suite(2, f"side_{binary}", binary, env=SERIAL_ENV))
+
+    suites.extend(
+        [
+            Suite(
+                tier=2,
+                name="replay_goldens_verify",
+                kind="cargo",
+                env=SERIAL_ENV,
+                command=[
+                    "cargo",
+                    "run",
+                    "--manifest-path",
+                    "code/digimon-engine/Cargo.toml",
+                    "--bin",
+                    "replay_corpus",
+                    "--",
+                    "verify",
+                    "--goldens",
+                    "qa/replay-goldens",
+                    "--cards",
+                    "data/cards.json",
+                ],
+            ),
+            cargo_suite(2, "invariant_fuzz", "invariant_fuzz", env=SERIAL_ENV),
+        ]
+    )
+    return suites
+
+
+def tier3_suites() -> list[Suite]:
+    return [
+        cargo_suite(3, "cards_behavioral_full_cargo", "cards_behavioral", env=SERIAL_ENV),
+        nextest_suite(3, "cards_behavioral_full_nextest", "cards_behavioral"),
+        cargo_suite(3, "dsl_dual_harness_cargo", "dsl", env=SERIAL_ENV),
+        nextest_suite(3, "dsl_dual_harness_nextest", "dsl"),
+        cargo_suite(3, "archetypes", "archetypes", env=SERIAL_ENV),
+        Suite(
+            tier=3,
+            name="dcgo_replay_corpus",
+            kind="cargo",
+            env=SERIAL_ENV,
+            command=["cargo", "test", "-p", "dcgo-replay"],
+        ),
+    ]
+
+
+def impact_scope(args: argparse.Namespace) -> tuple[Suite, dict[str, Any]]:
+    command = [PYTHON, "code/tools/impact_scope.py", "--json"]
+    for path in args.path:
+        command.extend(["--path", path])
+    if args.base:
+        command.extend(["--base", args.base])
+    if args.head:
+        command.extend(["--head", args.head])
+
+    suite = Suite(tier=2, name="impact_scope", kind="python", command=command)
+    completed = subprocess.run(
+        command,
+        cwd=ROOT,
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    return suite, json.loads(completed.stdout)
+
+
+def load_manifest(path: Path) -> list[Suite]:
+    manifest = json.loads(path.read_text(encoding="utf-8"))
+    env = {str(k): str(v) for k, v in manifest.get("environment", {}).items()}
+    tier = int(manifest["tier"])
+    suites = []
+    for row in manifest["suites"]:
+        command = [str(part) for part in row["command"]]
+        kind = "cargo" if command and command[0] == "cargo" else "command"
+        suites.append(
+            Suite(
+                tier=tier,
+                name=str(row["name"]),
+                kind=kind,
+                required=bool(row.get("required", True)),
+                command=command,
+                env=env,
+            )
+        )
+    return suites
+
+
+def py_suite(tier: int, name: str, script: str, *args: str) -> Suite:
+    return Suite(tier=tier, name=name, kind="python", command=[PYTHON, script, *args])
+
+
+def cargo_suite(
+    tier: int,
+    name: str,
+    test_binary: str,
+    *filters: str,
+    env: dict[str, str] | None = None,
+) -> Suite:
+    return Suite(
+        tier=tier,
+        name=name,
+        kind="cargo",
+        env=env or STACK_ENV,
+        command=[
+            "cargo",
+            "test",
+            "--manifest-path",
+            "code/digimon-engine/Cargo.toml",
+            "--test",
+            test_binary,
+            *filters,
+        ],
+    )
+
+
+def nextest_suite(tier: int, name: str, test_binary: str) -> Suite:
+    return Suite(
+        tier=tier,
+        name=name,
+        kind="cargo",
+        env=SERIAL_ENV,
+        command=[
+            "cargo",
+            "nextest",
+            "run",
+            "--profile",
+            "ci",
+            "-p",
+            "digimon-engine",
+            "--test",
+            test_binary,
+        ],
+    )
+
+
+def card_filter(card_id: str) -> str:
+    return card_id.lower().replace("-", "_")
+
+
+def run_suite(suite: Suite) -> Result:
+    env = os.environ.copy()
+    env.update(suite.env)
+    print(f"==> tier {suite.tier}: {suite.name}")
+    print(f"    {format_command(suite.command)}")
+    start = time.monotonic()
+    completed = subprocess.run(suite.command, cwd=ROOT, env=env)
+    seconds = time.monotonic() - start
+    status = "ok" if completed.returncode == 0 else "failed"
+    print(f"    {status} in {seconds:.1f}s")
+    return Result(suite=suite, status=status, seconds=seconds, returncode=completed.returncode)
+
+
+def print_plan(suites: list[Suite], metadata: dict[str, Any]) -> None:
+    if metadata:
+        print(json.dumps({"metadata": metadata}, indent=2))
+    for suite in suites:
+        env = " ".join(f"{key}={value}" for key, value in sorted(suite.env.items()))
+        prefix = f"{env} " if env else ""
+        required = "required" if suite.required else "optional"
+        print(f"[tier {suite.tier}] {suite.name} ({required})")
+        print(f"  {prefix}{format_command(suite.command)}")
+
+
+def print_summary(results: list[Result], skipped: int) -> None:
+    print()
+    print("Verification summary")
+    for result in results:
+        print(
+            f"- tier {result.suite.tier} {result.suite.name}: "
+            f"{result.status} ({result.seconds:.1f}s)"
+        )
+    if skipped:
+        print(f"- skipped after failure: {skipped}")
+
+
+def format_command(command: list[str]) -> str:
+    return " ".join(shlex.quote(part) for part in command)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

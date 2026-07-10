@@ -25,7 +25,7 @@ from typing import Optional
 
 from .clusterer import Partition, cluster
 from .gap_router import cards_using_keyword, cards_using_subsystem_keyword
-from .ingest_diff import SetDiff
+from .ingest_diff import SetDiff, scoped_test_source_command
 from .keyword_gate import KeywordGateReport, triage_set_from_artifacts
 from .set_resolver import normalize_prefix, resolve_set
 
@@ -107,6 +107,11 @@ class SetReport:
         lines.append("")
         lines.append("Phase 3 — slice partition:")
         lines.append(self.partition.format())
+        lines.append("")
+        lines.append("Verification after authoring merge:")
+        lines.append(f"  scoped-test source: `{scoped_test_source_command()}`")
+        lines.append("  use `cards_behavioral_filter` and `side_binaries`; if "
+                     "`full_suite_required` is true, run the broader suite.")
         lines.append("")
         excluded = self.excluded_cards
         if self.keywords.flag_for_human:

@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "tier": 1,
+  "description": "Fast semantic canaries for engine-affecting changes. scripts/verify will consume this manifest when tier assembly lands.",
+  "environment": {
+    "RUST_MIN_STACK": "268435456"
+  },
+  "suites": [
+    {
+      "name": "dsl",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "dsl"
+      ]
+    },
+    {
+      "name": "judge_quiz",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "judge_quiz"
+      ]
+    },
+    {
+      "name": "rules_faq",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "rules_faq"
+      ]
+    },
+    {
+      "name": "keyword_semantics_matrix",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "keyword_semantics_matrix"
+      ]
+    },
+    {
+      "name": "determinism_guard",
+      "required": true,
+      "command": [
+        "cargo",
+        "test",
+        "--manifest-path",
+        "code/digimon-engine/Cargo.toml",
+        "--test",
+        "infra",
+        "determinism_guard"
+      ]
+    }
+  ]
+}

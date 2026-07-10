@@ -989,6 +989,7 @@ mod staging;
 mod suspend;
 mod triggers;
 mod until_condition;
+mod verification;
 
 impl Game {
     /// Internal: request one reveal for `pid` and append the materialized

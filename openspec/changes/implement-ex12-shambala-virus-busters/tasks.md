@@ -2,18 +2,18 @@
 
 ## 1. Gap assessment (54 cards)
 
-- [x] 1.1 Manual fallback audit completed because workflow run `wf_6f7700f2-6c5` returned no usable verdicts; collected per-card SUPPORTED/PARTIAL/BLOCKED verdicts + consolidated gap entries
+- [x] 1.1 Manual fallback audit completed because workflow run `wf_6f7700f2-6c5` returned no usable verdicts; collected per-card SUPPORTED/PARTIAL/BLOCKED verdicts + consolidated gap entries, with static DCGO/card-list consultation used during implementation after the 2026-07-07 submodule bump
 - [x] 1.2 Merge consolidated gap entries into `docs/RUST_ENGINE_GAPS.md` / `qa/dsl-vocab-gaps.md` (dedup vs existing entries; keep G-KEYWORD-GUARD / G-KEYWORD-ENGAGE ids); write the audit-index table into `qa/archetype-qa/` scoping doc
-- [x] 1.3 Resolve the Engage open questions from official rules/card-list sources (target legality; played-this-turn) and the [Kotenken] token stats (EX12-034); record answers in the scoping doc
+- [x] 1.3 Confirm the DCGO/card-list answers (design.md Open Questions): Engage target legality and played-this-turn handling; [Kotenken] token stats; record answers in the scoping doc
 - [x] 1.4 Extend the `dsl-card-scripting-vocabulary` delta spec with any assessment-surfaced vocabulary (per spec requirement) before closure begins
 
 ## 2. Keyword substrate: Guard + Engage (TDD)
 
 - [x] 2.1 `Keyword::Guard` + printed parse (`＜Guard＞`/`<Guard>`) with parse tests; validator allowlist entry (`KNOWN_KEYWORD_KEYS`) per the native-printed-keyword pattern
 - [x] 2.2 Guard behavior: auto-emitted protect-others leave replacement (delete_self cost, prevent outcome, opponent-effect cause scope), clone-safe; engine tests per the keyword-guard spec scenarios (accept/decline/own-effect negative/carrier-not-protected/clone-safety)
-- [x] 2.3 `Keyword::Engage` + printed parse + validator entry; end-of-your-turn optional attack window per confirmed rulings (or literal reminder text with the open point pinned); engine tests per the keyword-engage spec scenarios
+- [x] 2.3 `Keyword::Engage` + printed parse + validator entry; end-of-your-turn optional attack window per DCGO `Engage.cs` semantics cross-checked against rulings; engine tests per the keyword-engage spec scenarios
 - [x] 2.4 Aura-granted Guard/Engage parity test (grant via aura behaves like printed — EX12-072 shape)
-- [x] 2.5 Token registry: [Paishu] (Yellow/6000/Blocker+Guard) + [Kotenken] (per 1.3) with token-carried keyword tests
+- [x] 2.5 Token registry: [Paishu] (Yellow/6000/Blocker+Guard) + [Kotenken] (Black/9000/Blocker per DCGO, scan-confirmed via 1.3) with token-carried keyword tests
 - [ ] 2.6 Schema regen + vocab-doc drift gate; mark G-KEYWORD-GUARD / G-KEYWORD-ENGAGE RESOLVED in trackers; commit the keyword round
 
 ## 3. Gap-closure rounds (assessment findings)
@@ -64,4 +64,4 @@ pass.
 - [ ] 6.1 Full `cards_behavioral` + `dsl` seal suites over the completed slices; full-pool dsl-lint exit 0
 - [ ] 6.2 Shambala interaction capstone: archetype model doc + interaction tests + four static archetype tests; verdict in `qa/qa-reports/archetype_interactions.json`
 - [ ] 6.3 Virus Busters interaction capstone: same shape (partner-line combos incl. Gammamon→Siriusmon and Omnimon assembly)
-- [ ] 6.4 Reconcile any scan-vs-JSON text divergences found during review into `data/card_overrides.json`; final commit; tag a DCGO re-audit follow-up for when the community implementation ships EX12
+- [ ] 6.4 Reconcile any scan-vs-JSON text divergences found during review into `data/card_overrides.json`; final commit; tag a `dcgo-replay` parity follow-up for when EX12 JSONL recordings exist (static DCGO C# consultation already happened per wave — see design D2)

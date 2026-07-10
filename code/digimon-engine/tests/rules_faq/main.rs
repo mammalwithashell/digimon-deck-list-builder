@@ -27,6 +27,7 @@ mod loader;
 
 mod deck_creation;
 mod effect_resolution;
+mod generated_conformance;
 mod in_its_text;
 mod keyword_identity;
 mod main_phase;

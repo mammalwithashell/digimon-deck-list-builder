@@ -31,6 +31,7 @@ use crate::events::GameEvent;
 use crate::game::Game;
 use crate::modifiers::ModifierRegistry;
 use crate::permanent::PermanentHandle;
+use crate::recorder::GameRecorder;
 use crate::rules::Rules;
 use crate::selection::{PendingSelection, PendingSelectionView, SelectionError, SelectionKind};
 
@@ -737,6 +738,21 @@ impl DebugRunner {
         action_id: u16,
     ) -> Result<(), SelectionError> {
         self.game.resolve_selection(player, action_id)
+    }
+
+    /// Apply an action-id through `Game::decode_action` while appending the
+    /// before/after action metadata and verification digest to `recorder`.
+    /// This keeps DebugRunner-based repros on the same recording hook as
+    /// HeadlessRunner without forcing every test helper to own a recorder.
+    pub fn decode_recorded_action(
+        &mut self,
+        recorder: &mut GameRecorder,
+        player: PlayerId,
+        action_id: u16,
+    ) {
+        let idx = recorder.record_action(&self.game, action_id, player);
+        self.game.decode_action(action_id, player);
+        recorder.finalize_action(idx, &self.game);
     }
 
     /// Accept a pending outer optional-trigger prompt (`SelectionKind::

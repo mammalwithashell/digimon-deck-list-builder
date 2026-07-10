@@ -47,6 +47,7 @@ pub mod player_cost_reducer;
 pub mod policies;
 pub mod recorder;
 pub mod replacement;
+pub mod replay_corpus;
 pub(crate) mod resource_flow;
 pub mod resume;
 pub mod rules;

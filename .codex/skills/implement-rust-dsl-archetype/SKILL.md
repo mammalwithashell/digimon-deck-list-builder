@@ -57,7 +57,7 @@ Load these references as soon as they become relevant:
    - Fix review findings and targeted test failures before advancing.
    - Continue automatically to the next batch until the planned queue is exhausted or a true stop condition applies.
 7. Update trackers after each batch, but keep interim user-facing updates brief. Do not ask the user to confirm the next batch.
-8. Verify before completion with targeted Rust tests, broader suites for any touched shared surface, full engine tests after a full archetype or multi-batch run unless scoped narrower, and `git diff --check`.
+8. Verify before completion with `python scripts/verify --tier 2` after card YAML, DSL lowering, or shared engine edits. Pass touched files with repeated `--path` when needed. This runs tiers 0-2 cumulatively, including `impact_scope.py`, replay goldens, and invariant fuzz; if it reports `full_suite_required`, run or explicitly report the broader suite requirement. Finish with `git diff --check`.
 
 ## Task Requirements
 

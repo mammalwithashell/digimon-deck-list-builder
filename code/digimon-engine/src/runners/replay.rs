@@ -50,6 +50,7 @@ use crate::card_source::CardSource;
 use crate::enums::{GamePhase, PlayerId};
 use crate::game::Game;
 use crate::player::Player;
+use crate::recorder::{ReplayDeckRef, VerificationReplayRecording};
 use crate::rules::Rules;
 
 /// Result of a single replay step.
@@ -79,6 +80,30 @@ pub struct DivergenceReport {
     pub field: &'static str,
     pub recorded: String,
     pub replayed: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum VerificationReplayCheck {
+    Actor,
+    Legality,
+    Digest,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct VerificationReplayDivergence {
+    pub game: String,
+    pub step: u32,
+    pub check_type: VerificationReplayCheck,
+    pub recorded: String,
+    pub replayed: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct VerificationReplayReport {
+    pub game: String,
+    pub checked_steps: u32,
+    pub divergence: Option<VerificationReplayDivergence>,
 }
 
 /// How a [`ReplaySession`] applies each recorded step.
@@ -529,6 +554,7 @@ pub struct StepSpec {
     pub memory_after: Option<i64>,
     pub turn: Option<u64>,
     pub is_game_over: Option<bool>,
+    pub expected_digest: Option<u64>,
 }
 
 /// A pluggable replay source. Knows how to build the initial post-mulligan
@@ -629,6 +655,7 @@ impl NativeAdapter {
                     memory_after: a.get("memory_after").and_then(|v| v.as_i64()),
                     turn: a.get("turn").and_then(|v| v.as_u64()),
                     is_game_over: a.get("is_game_over").and_then(|v| v.as_bool()),
+                    expected_digest: None,
                 });
             }
         }
@@ -765,6 +792,7 @@ impl DcgoAdapter {
                     memory_after: None,
                     turn: None,
                     is_game_over: None,
+                    expected_digest: None,
                 }),
                 // Can't fabricate an unencoded selection — the replayable
                 // prefix ends here (matches the batch harness's PartialPass).
@@ -853,6 +881,123 @@ impl RecordingSource for DcgoAdapter {
 
     fn default_policy(&self) -> StepPolicy {
         StepPolicy::CheckThenApply
+    }
+}
+
+/// [`RecordingSource`] over the compact verification-ladder replay format.
+/// This source replays from `(seed, inline deck refs, actions)` rather than a
+/// post-mulligan zone snapshot, so mulligan actions remain part of the stream.
+pub struct VerificationReplayAdapter {
+    recording: VerificationReplayRecording,
+    deck1: Vec<String>,
+    deck2: Vec<String>,
+    steps: Vec<StepSpec>,
+    card_data: HashMap<String, CardData>,
+}
+
+impl VerificationReplayAdapter {
+    pub fn from_recording(
+        recording: VerificationReplayRecording,
+        card_data: &HashMap<String, CardData>,
+    ) -> Result<Self, ReplayError> {
+        if recording.actions.len() != recording.digests.len() {
+            return Err(ReplayError::MalformedRecording(format!(
+                "verification replay has {} actions but {} digests",
+                recording.actions.len(),
+                recording.digests.len()
+            )));
+        }
+
+        let deck1 = resolve_inline_deck_ref("player1", &recording.deck_refs.player1)?;
+        let deck2 = resolve_inline_deck_ref("player2", &recording.deck_refs.player2)?;
+        validate_deck_cards(&deck1, card_data)?;
+        validate_deck_cards(&deck2, card_data)?;
+
+        let steps = recording
+            .actions
+            .iter()
+            .zip(recording.digests.iter())
+            .map(|(action, digest)| StepSpec {
+                actor: action.seat,
+                action_id: action.action_id,
+                phase: String::new(),
+                source: "verification_replay".to_string(),
+                memory_after: None,
+                turn: None,
+                is_game_over: None,
+                expected_digest: Some(*digest),
+            })
+            .collect();
+
+        Ok(Self {
+            recording,
+            deck1,
+            deck2,
+            steps,
+            card_data: card_data.clone(),
+        })
+    }
+}
+
+impl RecordingSource for VerificationReplayAdapter {
+    fn build_initial_game(
+        &self,
+        _card_data: &HashMap<String, CardData>,
+    ) -> Result<Game, ReplayError> {
+        let mut game = Game::new(
+            &[self.deck1.clone(), self.deck2.clone()],
+            &self.card_data,
+            Rules::standard(),
+            self.recording.seed,
+        )
+        .map_err(ReplayError::GameConstruction)?;
+        // HeadlessRunner records from the RL surface, which exposes turn 1
+        // during mulligan. Mirror that construction contract so the digest
+        // stream is replayed from the same pre-action state.
+        game.turn_count = 1;
+        Ok(game)
+    }
+
+    fn relay_initial_state(&self, game: &mut Game) -> Result<(), ReplayError> {
+        *game = self.build_initial_game(&self.card_data)?;
+        Ok(())
+    }
+
+    fn steps(&self) -> &[StepSpec] {
+        &self.steps
+    }
+
+    fn default_policy(&self) -> StepPolicy {
+        StepPolicy::CheckThenApply
+    }
+}
+
+fn resolve_inline_deck_ref(
+    label: &str,
+    deck_ref: &ReplayDeckRef,
+) -> Result<Vec<String>, ReplayError> {
+    match deck_ref {
+        ReplayDeckRef::Inline { cards } => Ok(cards.clone()),
+        ReplayDeckRef::Decklist { id } => Err(ReplayError::MalformedRecording(format!(
+            "{label} deck ref `{id}` requires an external decklist resolver; inline deck refs are supported by the core runner"
+        ))),
+    }
+}
+
+fn validate_deck_cards(
+    deck: &[String],
+    card_data: &HashMap<String, CardData>,
+) -> Result<(), ReplayError> {
+    let mut missing: Vec<String> = Vec::new();
+    for card_id in deck {
+        if !card_data.contains_key(card_id) && !missing.iter().any(|id| id == card_id) {
+            missing.push(card_id.clone());
+        }
+    }
+    if missing.is_empty() {
+        Ok(())
+    } else {
+        Err(ReplayError::UnknownCard(missing))
     }
 }
 
@@ -1046,7 +1191,7 @@ impl ReplayDriver {
         }
 
         let cur = self.cursor as usize;
-        let (action_id, actor, phase_rec, mem_after_rec, turn_rec, game_over_rec) = {
+        let (action_id, actor, phase_rec, mem_after_rec, turn_rec, game_over_rec, expected_digest) = {
             let s = &self.source.steps()[cur];
             (
                 s.action_id,
@@ -1055,6 +1200,7 @@ impl ReplayDriver {
                 s.memory_after,
                 s.turn,
                 s.is_game_over,
+                s.expected_digest,
             )
         };
 
@@ -1157,6 +1303,18 @@ impl ReplayDriver {
                     });
                 }
             }
+            if let Some(recorded) = expected_digest {
+                let replayed = game.verification_digest();
+                if recorded != replayed {
+                    result.divergences.push(DivergenceReport {
+                        step: result.step_number,
+                        field: "verification_digest",
+                        recorded: recorded.to_string(),
+                        replayed: replayed.to_string(),
+                    });
+                    self.paused = true;
+                }
+            }
         }
 
         result
@@ -1223,6 +1381,56 @@ impl ReplaySession {
     ) -> Result<Self, ReplayError> {
         let adapter = DcgoAdapter::from_recording(recording, all_card_data)?;
         Self::with_source(Box::new(adapter), all_card_data, verify)
+    }
+
+    /// Construct from a compact verification-ladder replay recording.
+    pub fn from_verification_recording(
+        recording: VerificationReplayRecording,
+        all_card_data: &HashMap<String, CardData>,
+        verify: bool,
+    ) -> Result<Self, ReplayError> {
+        let adapter = VerificationReplayAdapter::from_recording(recording, all_card_data)?;
+        Self::with_source(Box::new(adapter), all_card_data, verify)
+    }
+
+    /// Replay a verification recording with actor/mask pre-checks and digest
+    /// comparisons, returning only the first divergence for the game.
+    pub fn verify_verification_recording<S: Into<String>>(
+        game_id: S,
+        recording: VerificationReplayRecording,
+        all_card_data: &HashMap<String, CardData>,
+    ) -> Result<VerificationReplayReport, ReplayError> {
+        let game = game_id.into();
+        let mut session = Self::from_verification_recording(recording, all_card_data, true)?;
+
+        while !session.is_complete() && !session.is_game_over() && !session.is_paused() {
+            let result = session.step();
+            if let Some(divergence) = session.divergences().first() {
+                return Ok(report_from_differential_divergence(
+                    &game,
+                    session.current_step(),
+                    divergence,
+                ));
+            }
+            if let Some(divergence) = result
+                .divergences
+                .iter()
+                .find(|d| d.field == "verification_digest")
+                .or_else(|| result.divergences.first())
+            {
+                return Ok(report_from_step_divergence(
+                    &game,
+                    session.current_step(),
+                    divergence,
+                ));
+            }
+        }
+
+        Ok(VerificationReplayReport {
+            game,
+            checked_steps: session.current_step(),
+            divergence: None,
+        })
     }
 
     /// Construct from any [`RecordingSource`] (native, DCGO, …).
@@ -1299,6 +1507,65 @@ impl ReplaySession {
 
     pub fn run_to_completion(&mut self) {
         self.driver.run_to_completion(&mut self.game)
+    }
+}
+
+fn report_from_differential_divergence(
+    game: &str,
+    checked_steps: u32,
+    divergence: &Divergence,
+) -> VerificationReplayReport {
+    let (check_type, recorded, replayed) = match &divergence.kind {
+        DivergenceKind::Actor { expected, recorded } => (
+            VerificationReplayCheck::Actor,
+            format!("actor {}", recorded),
+            format!("expected actor {}", expected),
+        ),
+        DivergenceKind::MaskMiss { sample_legal_ids } => (
+            VerificationReplayCheck::Legality,
+            format!("action_id {}", divergence.action_id),
+            format!("legal action sample {:?}", sample_legal_ids),
+        ),
+        other => (
+            VerificationReplayCheck::Legality,
+            format!("{:?}", other),
+            "differential replay divergence".to_string(),
+        ),
+    };
+
+    VerificationReplayReport {
+        game: game.to_string(),
+        checked_steps,
+        divergence: Some(VerificationReplayDivergence {
+            game: game.to_string(),
+            step: divergence.step,
+            check_type,
+            recorded,
+            replayed,
+        }),
+    }
+}
+
+fn report_from_step_divergence(
+    game: &str,
+    checked_steps: u32,
+    divergence: &DivergenceReport,
+) -> VerificationReplayReport {
+    let check_type = if divergence.field == "verification_digest" {
+        VerificationReplayCheck::Digest
+    } else {
+        VerificationReplayCheck::Digest
+    };
+    VerificationReplayReport {
+        game: game.to_string(),
+        checked_steps,
+        divergence: Some(VerificationReplayDivergence {
+            game: game.to_string(),
+            step: divergence.step,
+            check_type,
+            recorded: divergence.recorded.clone(),
+            replayed: divergence.replayed.clone(),
+        }),
     }
 }
 
