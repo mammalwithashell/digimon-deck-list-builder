@@ -63,11 +63,17 @@ jobs:
       # The full per-card behavioral suite is the both-path parity gate: it runs
       # resume-flipped installers through the data VM and the rest through the
       # legacy closure executor in the same process.
+      # Compile separately so the test process stays below GitHub's long-running
+      # step cancellation window on cold runners.
+      - name: Compile both-path parity suite
+        env:
+          RUST_MIN_STACK: "268435456"
+        run: cargo test -p digimon-engine --test cards_behavioral --no-run
+
       - name: Both-path parity (cards_behavioral)
         env:
           RUST_MIN_STACK: "268435456"
-          RUST_TEST_THREADS: "8"
-        run: cargo test -p digimon-engine --test cards_behavioral
+        run: cargo test -p digimon-engine --test cards_behavioral -- --test-threads=8
 
       # The DSL behavioral + archetype/interaction tests round out the gate.
       - name: DSL behavioral tests
