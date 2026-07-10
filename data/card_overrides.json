@@ -11684,6 +11684,13 @@
     ]
   },
   "EX12-065": {
+    "type_eng": [
+      "Puppet",
+      "Sanmyojin",
+      "Tentei Hachibushu",
+      "Shambala",
+      "TB"
+    ],
     "evo_costs": [
       {
         "card_color": 6,
@@ -11695,6 +11702,16 @@
         "level": 5,
         "memory_cost": 4
       }
+    ]
+  },
+  "EX12-076": {
+    "type_eng": [
+      "Shaman",
+      "Shambala",
+      "SW",
+      "TB",
+      "Hybrid",
+      "TS"
     ]
   },
   "EX2-012": {

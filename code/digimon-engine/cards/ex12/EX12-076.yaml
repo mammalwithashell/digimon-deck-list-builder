@@ -5,7 +5,7 @@ level: 7
 color: [yellow, white, red]
 cost: 16
 dp: 16000
-traits: [Shaman, Shambala, SW, TB, TS]
+traits: [Shaman, Hybrid, Shambala, SW, TB, TS]
 attribute: Vaccine
 
 alt_paths:

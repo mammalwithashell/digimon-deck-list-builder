@@ -41,11 +41,7 @@ fn synthetic_card(case: &TextScopeCase<'_>) -> CardData {
         dp: case.dp,
         play_cost: case.play_cost,
         colors: case.colors.to_vec(),
-        traits: case
-            .traits
-            .iter()
-            .map(|trait_name| (*trait_name).to_string())
-            .collect(),
+        traits: case.traits.iter().map(|trait_name| (*trait_name).to_string()).collect(),
         evo_costs: Vec::new(),
         dna_costs: Vec::new(),
         effect_text: case.effect_text.to_string(),
