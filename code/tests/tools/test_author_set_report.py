@@ -25,6 +25,8 @@ def test_dry_run_bt17_resolves_triages_and_clusters():
     text = rep.format()
     assert "/author-set BT17" in text
     assert "keyword gate" in text
+    assert "scoped-test source" in text
+    assert "code/tools/impact_scope.py" in text
 
 
 def test_dry_run_blocks_flag_property_consistent():

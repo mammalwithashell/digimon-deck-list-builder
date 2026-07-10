@@ -716,7 +716,10 @@ impl Game {
         // `delete_for_cost_reduction` in the pay_cost stages a VARIABLE amount in
         // `pending_cost_reduction_amount_override` (drained here so it never
         // leaks into a later cost). `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`.
-        let variable = self.pending_cost_reduction_amount_override.take().unwrap_or(0);
+        let variable = self
+            .pending_cost_reduction_amount_override
+            .take()
+            .unwrap_or(0);
         self.pending_interactive_digivolve_reduction += amount + variable;
         self.digivolve_from_hand_inner(acting_player, hand_index, field_index, source, true);
     }

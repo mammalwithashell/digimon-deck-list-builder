@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "cases": [
+    {
+      "id": "bt25_082_in_text_scope_store_champs",
+      "approved": true,
+      "scenario_kind": "text_scope_contains",
+      "source": "data/card_bundles/BT25-082.md",
+      "cards": ["BT25-082"],
+      "ruling_text": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements. For example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+      "card": {
+        "card_id": "BT25-082",
+        "name": "BlackGatomon",
+        "kind": "Digimon",
+        "level": 4,
+        "dp": 6000,
+        "play_cost": 6,
+        "colors": ["Purple", "Black"],
+        "traits": ["Dark Animal", "Iliad", "TS"],
+        "effect_text": "[On Play] [When Digivolving] If you have 1 or fewer Tamers, you may play 1 Tamer card with [Three Musketeers] in its text from your hand without paying the cost. [All Turns] While you have a Tamer with [Three Musketeers] in its text, this Digimon may digivolve into a [Three Musketeers] trait Digimon card for a digivolution cost of 4, ignoring digivolution requirements.",
+        "inherited_text": "[When Attacking] [Once Per Turn] By placing 1 [Three Musketeers] trait card from your hand or trash as this Digimon's bottom digivolution card, <Draw 1>.",
+        "security_text": "",
+        "rule_text": "",
+        "requirement_text": "[Digivolve] Lv.3 w/[Three Musketeers] in text or w/[TS] trait: Cost 2"
+      },
+      "positive_needles": ["BlackGatomon", "Three Musketeers", "TS"],
+      "negative_needles": ["Gammamon"]
+    },
+    {
+      "id": "ex12_018_in_text_scope_mirrored",
+      "approved": true,
+      "scenario_kind": "text_scope_contains",
+      "source": "data/card_bundles/EX12-018.md",
+      "cards": ["EX12-018"],
+      "ruling_text": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolve requirements, DNA Digivolve, DigiXros requirements, Burst Digivolve, App Fusion, Link, or Assembly requirements. For example, \"a card with [Knightmon] in its text\" would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+      "card": {
+        "card_id": "EX12-018",
+        "name": "Siriusmon",
+        "kind": "Digimon",
+        "level": 6,
+        "dp": 12000,
+        "play_cost": 12,
+        "colors": ["Red", "Yellow"],
+        "traits": ["Light Dragon", "VB"],
+        "effect_text": "<Progress> <Piercing> <Security A. +1> [When Digivolving] [When Attacking] [Once Per Turn] You may place up to 2 Digimon cards with [Gammamon] in their texts or the [VB] trait from your hand or trash as this Digimon's top or bottom digivolution cards.",
+        "inherited_text": "",
+        "security_text": "",
+        "rule_text": "<Arts Digivolve> (Instead of trashing after use, your cards may digivolve into this card without paying the cost.)",
+        "requirement_text": "[Digivolve] Lv.5 w/[Gammamon] in text or w/[VB] trait: Cost 3"
+      },
+      "positive_needles": ["Siriusmon", "Gammamon", "VB", "Arts Digivolve"],
+      "negative_needles": ["Three Musketeers"]
+    },
+    {
+      "id": "ex12_048_in_text_scope_mirrored",
+      "approved": true,
+      "scenario_kind": "text_scope_contains",
+      "source": "data/card_bundles/EX12-048.md",
+      "cards": ["EX12-048"],
+      "ruling_text": "It refers to a card that contains the specified text or icon in its name, traits, effects, inherited effects, (Rule), digivolution requirements, DNA digivolution, DigiXros requirements, burst digivolve, App Fusion, Link, or Assembly requirements. For example, a card with [Knightmon] in its text would include cards with the name [DarkKnightmon] and cards with the text [Knightmon] in their effects.",
+      "card": {
+        "card_id": "EX12-048",
+        "name": "SeitenGokuumon",
+        "kind": "Digimon",
+        "level": 6,
+        "dp": 13000,
+        "play_cost": 13,
+        "colors": ["Yellow", "Red", "Blue"],
+        "traits": ["Tathagata", "Shambala", "SW"],
+        "effect_text": "<Rush> <Raid> <Piercing> <Security A. +1> [On Play] [When Digivolving] 1 of your opponent's Digimon gets -8000 DP until their turn ends. [All Turns] When this Digimon would leave the battle area other than by your effects, you may play 2 level 5 cards with [Gokuumon] in their texts or the [SW] trait from its digivolution cards without paying the costs.",
+        "inherited_text": "",
+        "security_text": "",
+        "rule_text": "Assembly -6: 3 [Gokuumon]/[Sagomon]/[Cho-Hakkaimon]/[Sanzomon] w/different names",
+        "requirement_text": "[Digivolve] Lv.5 w/[Gokuumon] in text or w/[Shambala] trait: Cost 4"
+      },
+      "positive_needles": ["SeitenGokuumon", "Gokuumon", "Shambala", "Assembly"],
+      "negative_needles": ["Gammamon"]
+    }
+  ]
+}

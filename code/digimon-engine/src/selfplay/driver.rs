@@ -191,8 +191,7 @@ pub fn run_self_play(
     if decks.is_empty() {
         return Err("empty deck pool".into());
     }
-    std::fs::create_dir_all(out_dir)
-        .map_err(|e| format!("creating {}: {e}", out_dir.display()))?;
+    std::fs::create_dir_all(out_dir).map_err(|e| format!("creating {}: {e}", out_dir.display()))?;
 
     // One registry for the whole run (registry construction is the deep /
     // expensive part; HeadlessRunner rebuilds it per game, we must not).

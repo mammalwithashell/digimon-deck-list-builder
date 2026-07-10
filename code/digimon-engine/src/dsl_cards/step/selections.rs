@@ -469,9 +469,11 @@ pub(crate) fn run_resume(
                                 Vec::new(),
                             );
                         }
-                        Some(crate::resume::FieldPermanentPostAction::SelectAndTrashStackOption {
-                            optional,
-                        }) => {
+                        Some(
+                            crate::resume::FieldPermanentPostAction::SelectAndTrashStackOption {
+                                optional,
+                            },
+                        ) => {
                             // G-DSL-TRASH-OPTION-FROM-SOURCES-AS-COST (BT25-085):
                             // the first pick chose one of the controller's Digimon
                             // whose digivolution/link cards carry an Option (`h`).
@@ -2480,7 +2482,9 @@ fn per_color_delete_candidates(
         }
         // Synth-aware color read (ChangeColor overlays respected) —
         // `TopCard.CardColors.Contains(color)`.
-        let colors = perm.synth_identity(&game.card_data, &game.modifiers, handle).colors;
+        let colors = perm
+            .synth_identity(&game.card_data, &game.modifiers, handle)
+            .colors;
         if !colors.contains(&color) {
             continue;
         }
@@ -5760,13 +5764,19 @@ fn own_digimon_with_link_cards(ctx: &EffectContext<'_>, player: PlayerId) -> Vec
 fn stack_option_candidates(
     perm: &crate::permanent::Permanent,
     data: &[crate::card_data::CardData],
-) -> Vec<(crate::card_source::CardHandle, crate::resume::StackOptionZone)> {
+) -> Vec<(
+    crate::card_source::CardHandle,
+    crate::resume::StackOptionZone,
+)> {
     let mut out = Vec::new();
     let n = perm.card_sources.len();
     if n > 1 {
         for source in perm.card_sources.iter().take(n - 1) {
             if source.is_option(data) {
-                out.push((source.handle(), crate::resume::StackOptionZone::Digivolution));
+                out.push((
+                    source.handle(),
+                    crate::resume::StackOptionZone::Digivolution,
+                ));
             }
         }
     }
@@ -6048,9 +6058,7 @@ fn run_trash_option_from_stack_selection_step(
         crate::resume::StackOptionZone::Digivolution => {
             ctx.game.trash_specific_source_card(state.host, card)
         }
-        crate::resume::StackOptionZone::Link => {
-            ctx.game.trash_specific_link_card(state.host, card)
-        }
+        crate::resume::StackOptionZone::Link => ctx.game.trash_specific_link_card(state.host, card),
     };
     if trashed {
         let mut b = state.bindings.clone();
@@ -6139,9 +6147,11 @@ fn install_trash_link_card_of_own_digimon(
                 },
                 select_kind: crate::resume::ResumeSelectKind::FieldPermanent {
                     of_player: player,
-                    post: Some(crate::resume::FieldPermanentPostAction::SelectAndTrashLinkCard {
-                        optional,
-                    }),
+                    post: Some(
+                        crate::resume::FieldPermanentPostAction::SelectAndTrashLinkCard {
+                            optional,
+                        },
+                    ),
                 },
                 bind_as: None,
                 inner_tail: tail_for_resume,

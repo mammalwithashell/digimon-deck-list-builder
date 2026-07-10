@@ -14,7 +14,7 @@ use crate::observation::{
     build_observation_tensor, default_observation_profile, observation_layout,
     parse_observation_profile, ObservationProfileId,
 };
-use crate::recorder::GameRecorder;
+use crate::recorder::{GameRecorder, ReplayDeckRefs, VerificationReplayRecording};
 use crate::rules::Rules;
 use crate::tensor::TENSOR_SIZE;
 
@@ -42,6 +42,7 @@ pub struct HeadlessRunner {
     /// Original deck lists retained for lazy `capture_initial_state`.
     deck1_ids: Vec<String>,
     deck2_ids: Vec<String>,
+    seed: Option<u64>,
 }
 
 impl HeadlessRunner {
@@ -85,6 +86,7 @@ impl HeadlessRunner {
             recorder,
             deck1_ids,
             deck2_ids,
+            seed,
         })
     }
 
@@ -230,6 +232,23 @@ impl HeadlessRunner {
     ///   tensor_snapshots }`. Player IDs use the Python 1/2 convention.
     pub fn get_recording(&self) -> Option<serde_json::Value> {
         self.recorder.as_ref().map(|r| r.to_json())
+    }
+
+    /// Return the canonical verification-ladder replay recording, or `None`
+    /// when action recording is disabled.
+    pub fn get_verification_replay_recording<S: Into<String>>(
+        &self,
+        cards_hash: S,
+    ) -> Option<VerificationReplayRecording> {
+        let cards_hash = cards_hash.into();
+        self.recorder.as_ref().map(|r| {
+            r.to_verification_replay(
+                &self.game,
+                ReplayDeckRefs::inline(self.deck1_ids.clone(), self.deck2_ids.clone()),
+                self.seed,
+                cards_hash,
+            )
+        })
     }
 
     pub fn is_game_over(&self) -> bool {

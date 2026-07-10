@@ -666,9 +666,7 @@ pub enum TriggerSource {
     /// `active_when:`. `winner` is `None` on a tie (mutual destruction), which
     /// has no winner. Fired only for Digimon-vs-Digimon battles (direct player
     /// attacks route through the security loop and never fire `EndOfBattle`).
-    BattleResolved {
-        winner: Option<PermanentHandle>,
-    },
+    BattleResolved { winner: Option<PermanentHandle> },
     /// `OnDiscardHand` observer fan-out fired after an EFFECT trashes one or
     /// more cards from a player's hand (G-ENGINE-ON-DISCARD-HAND). Scans EVERY
     /// player's battle area so both own-side ("your hand is trashed from",

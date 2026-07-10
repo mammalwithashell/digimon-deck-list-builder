@@ -22,7 +22,8 @@ fn header(descr: &str, shape: &[usize]) -> Vec<u8> {
             format!("({})", inner.join(", "))
         }
     };
-    let mut dict = format!("{{'descr': '{descr}', 'fortran_order': False, 'shape': {shape_str}, }}");
+    let mut dict =
+        format!("{{'descr': '{descr}', 'fortran_order': False, 'shape': {shape_str}, }}");
     // total = MAGIC(8) + len(2) + dict + '\n', padded to a multiple of 64.
     let unpadded = MAGIC.len() + 2 + dict.len() + 1;
     let pad = (64 - unpadded % 64) % 64;
@@ -37,8 +38,8 @@ fn header(descr: &str, shape: &[usize]) -> Vec<u8> {
 }
 
 fn write_all(path: &Path, head: &[u8], body: &[u8]) -> Result<(), String> {
-    let mut f = std::fs::File::create(path)
-        .map_err(|e| format!("creating {}: {e}", path.display()))?;
+    let mut f =
+        std::fs::File::create(path).map_err(|e| format!("creating {}: {e}", path.display()))?;
     f.write_all(head)
         .and_then(|()| f.write_all(body))
         .map_err(|e| format!("writing {}: {e}", path.display()))

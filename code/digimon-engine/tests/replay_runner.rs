@@ -11,8 +11,9 @@ use std::collections::HashMap;
 
 use digimon_engine::card_data::CardData;
 use digimon_engine::dcgo_recording::{ActionRow, GameEnd, GameStart, RecordingV1, RevealRow, Row};
+use digimon_engine::recorder::VerificationReplayRecording;
 use digimon_engine::runners::replay::{
-    DivergenceKind, ReplayError, ReplayRunner, ReplaySession, StepPolicy,
+    DivergenceKind, ReplayError, ReplayRunner, ReplaySession, StepPolicy, VerificationReplayCheck,
 };
 use digimon_engine::HeadlessRunner;
 
@@ -68,6 +69,22 @@ fn record_game(n_post_mulligan_steps: usize) -> serde_json::Value {
         r.step(62); // PASS
     }
     r.get_recording().expect("recording present")
+}
+
+fn record_verification_game(n_post_mulligan_steps: usize) -> VerificationReplayRecording {
+    let db = minimal_db();
+    let deck = test_deck();
+    let mut r = HeadlessRunner::new(deck.clone(), deck, &db, false, true, false, Some(42))
+        .expect("headless runner constructs");
+
+    r.step(0);
+    r.step(0);
+    for _ in 0..n_post_mulligan_steps {
+        r.step(62);
+    }
+
+    r.get_verification_replay_recording("sha256:test-cards")
+        .expect("verification recording present")
 }
 
 #[test]
@@ -419,6 +436,59 @@ fn replay_session_trust_ignores_illegality() {
         s.total_steps(),
         "Trust advances through all steps"
     );
+}
+
+// ── Verification replay recordings ────────────────────────────────────────
+
+#[test]
+fn replay_session_verification_recording_round_trips_with_digest_checks() {
+    let db = minimal_db();
+    let recording = record_verification_game(3);
+    let total = recording.actions.len() as u32;
+    let report =
+        ReplaySession::verify_verification_recording("valid-golden", recording, &db).unwrap();
+
+    assert!(
+        report.divergence.is_none(),
+        "valid recording should not diverge: {:?}",
+        report.divergence
+    );
+    assert_eq!(report.game, "valid-golden");
+    assert_eq!(report.checked_steps, total);
+}
+
+#[test]
+fn verification_recording_reports_first_mask_legality_divergence() {
+    let db = minimal_db();
+    let mut recording = record_verification_game(2);
+    recording.actions[0].action_id = 999;
+
+    let report = ReplaySession::verify_verification_recording("bad-mask", recording, &db).unwrap();
+    let divergence = report.divergence.expect("expected first divergence");
+
+    assert_eq!(divergence.game, "bad-mask");
+    assert_eq!(divergence.step, 0);
+    assert_eq!(divergence.check_type, VerificationReplayCheck::Legality);
+    assert!(divergence.recorded.contains("999"));
+    assert!(divergence.replayed.contains("legal"));
+    assert_eq!(report.checked_steps, 0);
+}
+
+#[test]
+fn verification_recording_reports_first_digest_divergence() {
+    let db = minimal_db();
+    let mut recording = record_verification_game(2);
+    recording.digests[0] = recording.digests[0].wrapping_add(1);
+
+    let report =
+        ReplaySession::verify_verification_recording("bad-digest", recording, &db).unwrap();
+    let divergence = report.divergence.expect("expected digest divergence");
+
+    assert_eq!(divergence.game, "bad-digest");
+    assert_eq!(divergence.step, 1);
+    assert_eq!(divergence.check_type, VerificationReplayCheck::Digest);
+    assert_ne!(divergence.recorded, divergence.replayed);
+    assert_eq!(report.checked_steps, 1);
 }
 
 // ── Group 4: DcgoAdapter (bot + opaque) ─────────────────────────────────────

@@ -180,14 +180,10 @@ impl Game {
         source: OptionSource,
     ) -> Option<crate::card_source::CardSource> {
         match source {
-            OptionSource::Hand(i) => {
-                (i < self.player(player_id).hand.len())
-                    .then(|| self.player_mut(player_id).hand.remove(i))
-            }
-            OptionSource::Trash(i) => {
-                (i < self.player(player_id).trash.len())
-                    .then(|| self.player_mut(player_id).trash.remove(i))
-            }
+            OptionSource::Hand(i) => (i < self.player(player_id).hand.len())
+                .then(|| self.player_mut(player_id).hand.remove(i)),
+            OptionSource::Trash(i) => (i < self.player(player_id).trash.len())
+                .then(|| self.player_mut(player_id).trash.remove(i)),
             OptionSource::Revealed(h) => {
                 let pos = self.revealed_cards.iter().position(|c| c.handle() == h)?;
                 Some(self.revealed_cards.remove(pos))
@@ -927,7 +923,10 @@ impl Game {
         // The parked pay_cost resolved (the mandatory Tamer pick paid the cost).
         // Drain any VARIABLE `delete_for_cost_reduction` amount so it never leaks
         // into a later cost. `G-ENGINE-COST-REDUCTION-INTERACTIVE-DELETE-COST`.
-        let variable = self.pending_cost_reduction_amount_override.take().unwrap_or(0);
+        let variable = self
+            .pending_cost_reduction_amount_override
+            .take()
+            .unwrap_or(0);
         self.pending_interactive_option_use_reduction += amount + variable;
         let _ = self.play_option_core(player_id, source, Some(mode), cost_policy);
     }

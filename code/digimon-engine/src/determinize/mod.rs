@@ -34,8 +34,7 @@ mod materialize;
 mod sample;
 
 pub use infoset::{
-    CardMultiset, DeckPrior, HiddenModel, Infoset, OwnHiddenModel, PermanentView,
-    PublicPlayerView,
+    CardMultiset, DeckPrior, HiddenModel, Infoset, OwnHiddenModel, PermanentView, PublicPlayerView,
 };
 pub use invariants::{check_world_invariants, reconcile_opaque_books};
 pub use materialize::materialize;

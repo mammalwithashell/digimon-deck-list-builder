@@ -279,9 +279,7 @@ impl MaterialIdentity {
             DigiXrosDistinctBy::Name => self.card_name.eq_ignore_ascii_case(&other.card_name),
             // Two level-less cards never collide by level (there is nothing to
             // compare); DCGO's level dedup only fires on a concrete level match.
-            DigiXrosDistinctBy::Level => {
-                self.level.is_some() && self.level == other.level
-            }
+            DigiXrosDistinctBy::Level => self.level.is_some() && self.level == other.level,
         }
     }
 }

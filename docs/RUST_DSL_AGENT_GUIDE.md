@@ -25,6 +25,7 @@ Before authoring a card:
 5. Write or update a failing Rust behavioral test before changing card behavior.
 6. Prefer a DSL primitive. Use hand-written Rust only when the reusable engine primitive exists but no DSL vocabulary can lower to it yet, and document that as a DSL gap.
 7. Update the relevant gap tracker when a reusable blocker closes, narrows, or turns out to be card-local authoring.
+8. After card YAML, DSL lowering, or shared engine edits, run `python scripts/verify --tier 2` as the default pre-commit ladder. Pass touched files with repeated `--path` when the diff is not yet applied. The script runs `impact_scope.py`, targeted side binaries, replay-golden verification, and invariant fuzz; if it reports `full_suite_required`, run or report the broader suite instead of inventing a narrower filter.
 
 Do not expand `ACTION_SPACE_SIZE`, tensor layouts, PyO3 contracts, frontend constants, or RL wrappers as a side effect of card unlock work. If a new choice cannot fit the existing pending-selection machinery, stop and plan an action/tensor contract change.
 

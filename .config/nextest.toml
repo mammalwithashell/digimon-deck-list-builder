@@ -1,0 +1,23 @@
+[profile.default]
+failure-output = "immediate-final"
+slow-timeout = { period = "120s", terminate-after = 2 }
+
+[profile.ci]
+inherits = "default"
+fail-fast = false
+
+[test-groups]
+engine-heavy = { max-threads = 1 }
+
+[[profile.default.overrides]]
+filter = 'binary(dsl) | binary(cards_behavioral)'
+test-group = 'engine-heavy'
+threads-required = 1
+slow-timeout = { period = "300s", terminate-after = 2 }
+
+[scripts.rust-min-stack]
+command = "python scripts/nextest_rust_min_stack.py"
+
+[[profile.default.scripts]]
+filter = 'binary(dsl) | binary(cards_behavioral)'
+run-wrapper = "rust-min-stack"

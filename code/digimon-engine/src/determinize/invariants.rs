@@ -93,7 +93,8 @@ fn all_zone_multiset(game: &Game, pid: PlayerId) -> CardMultiset {
             if c.is_token || c.is_opaque_placeholder {
                 continue;
             }
-            *ms.entry(c.card_id(&game.card_data).to_string()).or_insert(0) += 1;
+            *ms.entry(c.card_id(&game.card_data).to_string())
+                .or_insert(0) += 1;
         }
     };
     add_all(&p.hand, &mut ms);
@@ -130,11 +131,7 @@ fn decklist_multiset(p: &Player) -> BTreeMap<String, usize> {
 /// Verify a (source game, viewer, sampled world) triple. See module docs
 /// for the checked invariants. Returns a descriptive error on the first
 /// violation.
-pub fn check_world_invariants(
-    source: &Game,
-    viewer: PlayerId,
-    world: &Game,
-) -> Result<(), String> {
+pub fn check_world_invariants(source: &Game, viewer: PlayerId, world: &Game) -> Result<(), String> {
     if world.reveal_source.is_some() {
         return Err("world carries a live reveal_source (must be None)".into());
     }
@@ -227,7 +224,9 @@ pub fn check_world_invariants(
                 || zone_ids(&sperm.linked_cards, source) != zone_ids(&wperm.linked_cards, world)
                 || sperm.is_suspended != wperm.is_suspended
             {
-                return Err(format!("player {pid} battle-area permanent {i} (public) drifted"));
+                return Err(format!(
+                    "player {pid} battle-area permanent {i} (public) drifted"
+                ));
             }
         }
         if let (Some(sperm), Some(wperm)) = (&sp.breeding_area, &wp.breeding_area) {

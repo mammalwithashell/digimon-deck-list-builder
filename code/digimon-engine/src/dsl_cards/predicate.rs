@@ -225,8 +225,8 @@ pub fn eval_predicate_with_bindings(
         || pred.total_security_count_gte.is_some()
         || pred.total_security_count_eq.is_some()
     {
-        let total = (rctx.security_count(rctx.player) + rctx.security_count(rctx.opponent_id()))
-            as i32;
+        let total =
+            (rctx.security_count(rctx.player) + rctx.security_count(rctx.opponent_id())) as i32;
         if let Some(cap) = &pred.total_security_count_lte {
             if total > eval_int_constraint_read(cap, rctx, None, bindings) {
                 return false;
@@ -1561,7 +1561,9 @@ fn eval_event_fields(
             let Some(data) = rctx.game.card_data_for_handle(card) else {
                 return false;
             };
-            data.traits.iter().any(|t| t.to_lowercase().contains(&needle))
+            data.traits
+                .iter()
+                .any(|t| t.to_lowercase().contains(&needle))
         };
         if !matched {
             return false;

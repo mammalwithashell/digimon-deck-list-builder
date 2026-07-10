@@ -80,6 +80,75 @@ the `CardEffect` trait, and registers itself via the set's `register` fn.
 
 ---
 
+## Verification Ladder Replay Goldens
+
+Run the cumulative verification ladder through `scripts/verify`:
+
+```bash
+python scripts/verify --tier 0
+python scripts/verify --tier 1
+python scripts/verify --tier 2 --path code/digimon-engine/cards/ex12/EX12-018.yaml
+python scripts/verify --tier 3
+```
+
+Tier meanings:
+
+- Tier 0: static/drift gates for generated impact/rules artifacts and tool tests.
+- Tier 1: fast semantic canaries (`dsl`, `judge_quiz`, FAQ conformance,
+  keyword matrix, determinism guard).
+- Tier 2: change-scoped behavior from `impact_scope.py`, replay-golden
+  verification, and invariant fuzz.
+- Tier 3: full seal, including full `cards_behavioral`, archetype/static
+  coverage, dcgo-replay, and a cargo/nextest dual harness for `cards_behavioral`
+  and `dsl`.
+
+`scripts/verify --tier N` is cumulative: tier 2 runs tiers 0 and 1 first.
+Cargo suites run with `RUST_MIN_STACK=268435456`; tier-2 and tier-3 heavy
+suites also cap `RUST_TEST_THREADS=1`.
+
+Tier-2 verification goldens live under `qa/replay-goldens/*.replay.json`.
+They are compact, engine-native replays: cards.json content hash, inline deck
+refs or decklist refs, deterministic seed, zero-based per-seat action IDs, one
+post-action verification digest per action, and the final digest. The replay
+runner checks actor and action-mask legality before applying an action, then
+compares the recorded digest stream.
+
+Verify the active corpus without mutation:
+
+```bash
+cargo run --manifest-path code/digimon-engine/Cargo.toml --bin replay_corpus -- verify --goldens qa/replay-goldens --cards data/cards.json
+```
+
+Generate the deterministic greedy corpus:
+
+```bash
+cargo run --manifest-path code/digimon-engine/Cargo.toml --bin replay_corpus -- generate --deck-library data/deck_library.json --cards data/cards.json --out qa/replay-goldens
+```
+
+Bless intended behavior changes:
+
+```bash
+cargo run --manifest-path code/digimon-engine/Cargo.toml --bin replay_corpus -- bless --goldens qa/replay-goldens --cards data/cards.json
+```
+
+Convert reconstructible legacy training recordings:
+
+```bash
+cargo run --manifest-path code/digimon-engine/Cargo.toml --bin replay_corpus -- convert-runs --runs runs --cards data/cards.json --out qa/replay-goldens
+```
+
+Review convention:
+
+- Digest changes are reviewed like source changes. A bless must preserve the
+  recorded action path; actor mismatches and illegal actions retire the replay
+  instead of being force-written.
+- Retired games are written as `*.retired.json` review records with the original
+  replay payload and a reason. Do not silently delete unreconstructible games.
+- Generated corpus updates should state the command, game count, max-step
+  budget, and seed used to produce them.
+
+---
+
 ## 2. Writing a card effect
 
 > **Performance — `effects_for_card` is memoized (2026-06-22).** `CardEffect::effects(&self, handle)`

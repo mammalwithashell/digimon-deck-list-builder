@@ -180,13 +180,13 @@ After each batch:
 
 1. Copy or apply only the approved YAML and per-card test files.
 2. Reconcile pre-wired `mod.rs` and `main.rs` registrations.
-3. Run targeted tests:
-   - `cargo test --manifest-path code/digimon-engine/Cargo.toml --test cards_behavioral -- <set_or_card_filter> --nocapture`
-4. If targeted tests fail, run one bounded fix pass for the same card paths. If they still fail, stop and report the failure.
-5. Update `qa/qa-reports/validated_cards_dsl.json` if present.
-6. Append gap entries to `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md`, or `qa/archetype-qa/engine-gaps.md` as appropriate.
-7. Append a batch row/table to `qa/archetype-qa/dsl/<archetype_slug>.md` or the relevant QA artifact.
-8. Record the batch summary for final reporting, but continue to the next batch immediately:
+3. Run `python scripts/verify --tier 2` from the repo root. For worker-local patches that have not been applied to the main worktree yet, pass touched paths explicitly with repeated `--path`.
+4. If the ladder reports `full_suite_required`, run or report the broader suite requirement instead of narrowing by hand.
+5. If targeted tests fail, run one bounded fix pass for the same card paths. If they still fail, stop and report the failure.
+6. Update `qa/qa-reports/validated_cards_dsl.json` if present.
+7. Append gap entries to `docs/RUST_ENGINE_GAPS.md`, `qa/dsl-vocab-gaps.md`, or `qa/archetype-qa/engine-gaps.md` as appropriate.
+8. Append a batch row/table to `qa/archetype-qa/dsl/<archetype_slug>.md` or the relevant QA artifact.
+9. Record the batch summary for final reporting, but continue to the next batch immediately:
 
 ```text
 Batch <N> complete (<processed>/<total> cards)
@@ -202,11 +202,12 @@ Only surface this table before the final response when the batch is blocked, rev
 
 After all batches:
 
-1. Re-run targeted tests for every changed card and primitive.
-2. Run broader suites for touched shared surfaces:
+1. Run `python scripts/verify --tier 2` and treat it as the default pre-commit ladder for changed cards, DSL lowering files, and shared engine surfaces.
+2. Re-run any extra targeted tests needed for review findings that are narrower than the ladder output.
+3. Run broader suites for touched shared surfaces or when the ladder reports `full_suite_required`:
    - DSL parser/lowering: `cargo test --manifest-path code\digimon-engine\Cargo.toml --test dsl -- <pattern> --nocapture`
    - Selection/action masks: relevant `selection`, `mask_and_tensor`, or `action` tests.
    - Card behavior: `cargo test --manifest-path code\digimon-engine\Cargo.toml --test cards_behavioral -- <card_or_set> --nocapture`
-3. Re-scan for placeholders:
+4. Re-scan for placeholders:
    - `rg "process: \\[\\]|raw_rust|TODO|BLOCKED" code/digimon-engine/cards/<sets> code/digimon-engine/tests/cards_behavioral/<sets>`
-4. Run `git diff --check`.
+5. Run `git diff --check`.

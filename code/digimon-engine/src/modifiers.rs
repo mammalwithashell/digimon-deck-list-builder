@@ -920,6 +920,84 @@ impl ModifierRegistry {
         out
     }
 
+    /// Canonical modifier-state summary for replay verification digests.
+    ///
+    /// The registry is backed by `HashMap`s, so callers must not hash by raw
+    /// iteration order. This intentionally excludes memo fields and monotonic
+    /// install counters; it captures the active gameplay modifiers/keywords in
+    /// a sorted, deterministic representation.
+    pub(crate) fn verification_summary(&self) -> Vec<String> {
+        let mut out = Vec::new();
+        for (handle, entries) in &self.permanent_modifiers {
+            for entry in entries {
+                out.push(format!(
+                    "PM|{}|{}|{:?}|{}|{:?}|{:?}|{}|{}|{:?}|{}|{:?}|{:?}|{}",
+                    handle.player,
+                    handle.index,
+                    entry.modifier,
+                    entry.value,
+                    entry.payload,
+                    entry.expiry,
+                    entry.source_player,
+                    entry.materialized_declarative,
+                    entry.source_permanent,
+                    entry.until_condition.is_some(),
+                    entry.cause_filter,
+                    entry.effect_immunity_filter,
+                    entry.pending_skips,
+                ));
+            }
+        }
+        for (handle, entries) in &self.permanent_keywords {
+            for entry in entries {
+                out.push(format!(
+                    "KW|{}|{}|{:?}|{:?}|{}|{:?}|{}|{}",
+                    handle.player,
+                    handle.index,
+                    entry.keyword,
+                    entry.expiry,
+                    entry.source_player,
+                    entry.source_permanent,
+                    entry.materialized_declarative,
+                    entry.until_condition.is_some(),
+                ));
+            }
+        }
+        for (player, entries) in &self.player_modifiers {
+            for entry in entries {
+                out.push(format!(
+                    "PL|{}|{:?}|{}|{:?}|{:?}|{}|{}|{:?}|{}|{:?}|{:?}",
+                    player,
+                    entry.modifier,
+                    entry.value,
+                    entry.payload,
+                    entry.expiry,
+                    entry.source_player,
+                    entry.materialized_declarative,
+                    entry.source_permanent,
+                    entry.until_condition.is_some(),
+                    entry.cause_filter,
+                    entry.effect_immunity_filter,
+                ));
+            }
+        }
+        for (handle, entries) in &self.granted_triggered {
+            for entry in entries {
+                out.push(format!(
+                    "GT|{}|{}|{:?}|{}|{}|{:?}",
+                    handle.player,
+                    handle.index,
+                    entry.timing,
+                    entry.source_card.0,
+                    entry.source_player,
+                    entry.expiry,
+                ));
+            }
+        }
+        out.sort();
+        out
+    }
+
     /// Add a modifier to a permanent.
     pub fn add(&mut self, target: PermanentHandle, mut entry: ModifierEntry) {
         guard_install(

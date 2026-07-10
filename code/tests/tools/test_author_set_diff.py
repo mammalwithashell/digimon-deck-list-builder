@@ -5,7 +5,12 @@ set must report the missing cards as `added` so authoring never proceeds against
 a stale snapshot.
 """
 
-from tools.author_set.ingest_diff import SetDiff, diff_sets, merge_diff
+from tools.author_set.ingest_diff import (
+    SetDiff,
+    diff_sets,
+    merge_diff,
+    scoped_test_source_command,
+)
 
 
 def _card(cid, **over):
@@ -89,3 +94,8 @@ def test_offline_diff_summary():
     d = SetDiff(set_prefix="EX12", offline=True)
     assert d.offline
     assert "OFFLINE" in d.summary()
+
+
+def test_authoring_merge_declares_impact_scope_as_test_source():
+    command = scoped_test_source_command()
+    assert command == "python code/tools/impact_scope.py"
