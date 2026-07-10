@@ -63,8 +63,7 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &Bind
         // declined) is a silent no-op so the rest of the clause (the "Then,"
         // tail) still runs.
         CompiledStep::RefireCardEffect { card, timing } => {
-            let Some(ResolvedBinding::Card(card_handle)) =
-                resolve_binding_ref(card, ctx, bindings)
+            let Some(ResolvedBinding::Card(card_handle)) = resolve_binding_ref(card, ctx, bindings)
             else {
                 return true;
             };

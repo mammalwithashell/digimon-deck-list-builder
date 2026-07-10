@@ -205,7 +205,11 @@ pub(crate) fn security_pins(p: &Player, game: &Game) -> Vec<(usize, String)> {
 fn public_view(game: &Game, pid: PlayerId) -> PublicPlayerView {
     let p = &game.players[pid as usize];
     PublicPlayerView {
-        battle_area: p.battle_area.iter().map(|x| permanent_view(x, game)).collect(),
+        battle_area: p
+            .battle_area
+            .iter()
+            .map(|x| permanent_view(x, game))
+            .collect(),
         breeding: p.breeding_area.as_ref().map(|x| permanent_view(x, game)),
         trash: zone_ids(&p.trash, game),
         hand_count: p.hand.len(),
@@ -288,7 +292,9 @@ impl Infoset {
                 .as_ref()
                 .map(|s| (s.selecting_player, format!("{:?}", s.kind))),
             pending_attack: game.pending_attack.is_some(),
-            public: (0..2).map(|pid| public_view(game, pid as PlayerId)).collect(),
+            public: (0..2)
+                .map(|pid| public_view(game, pid as PlayerId))
+                .collect(),
             own: OwnHiddenModel {
                 hand: zone_ids(&me.hand, game),
                 unseen_pool: own_pool,

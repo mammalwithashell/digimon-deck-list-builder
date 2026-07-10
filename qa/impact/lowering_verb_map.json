@@ -1,0 +1,207 @@
+{
+  "schema_version": 1,
+  "files": {
+    "code/digimon-engine/src/dsl_cards/step/as_selecting_player.rs": [
+      "as_selecting_player"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/combat.rs": [
+      "battle",
+      "cancel_attack",
+      "end_attack",
+      "force_attack",
+      "may_attack_now",
+      "open_counter_window",
+      "redirect_attack_target"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/control_flow.rs": [
+      "if",
+      "optional"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/digixros_transaction.rs": [
+      "add_digixros_cost_delta",
+      "add_digixros_wildcard_to_pending_transaction",
+      "allow_digixros_material_zone",
+      "preattach_digixros_material",
+      "register_digixros_wildcard_for_turn"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/dna_digivolve.rs": [
+      "may_dna_digivolve_now"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/draw.rs": [
+      "draw",
+      "hatch",
+      "move_from_breeding",
+      "shuffle_deck",
+      "shuffle_security",
+      "trash_bottom_security",
+      "trash_from_top",
+      "trash_top_security"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/effects.rs": [
+      "arm_digivolve_cost_reducer",
+      "refire_card_effect",
+      "refire_effect"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/grant_triggered.rs": [
+      "grant_triggered_effect"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/iteration.rs": [
+      "for_each",
+      "per_selected"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/link_cards.rs": [
+      "link_cards",
+      "relink_self_to_own_digimon"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/memory.rs": [
+      "gain_memory",
+      "lose_memory",
+      "set_memory"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/mod.rs": [
+      "activation_cost",
+      "link_to_own_digimon",
+      "place_self_as_delay_option",
+      "raw_rust",
+      "refund_opt"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/modifiers.rs": [
+      "add_dp_modifier",
+      "add_modifier",
+      "add_player_modifier",
+      "grant_effect_immunity",
+      "grant_keyword",
+      "grant_narrow_opponent_effect_protection"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/permanent_mutations.rs": [
+      "bind_permanent_property",
+      "de_digivolve",
+      "delete_bound_permanents",
+      "delete_for_cost_reduction",
+      "delete_permanent",
+      "place_on_security",
+      "return_to_deck",
+      "return_to_hand",
+      "suspend",
+      "trash_all_sources",
+      "trash_breeding_permanent",
+      "unsuspend"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/play_digivolve.rs": [
+      "app_fuse",
+      "effect_initiated_digivolve",
+      "effect_initiated_dna_digivolve",
+      "effect_initiated_dna_digivolve_hand_partner",
+      "effect_initiated_dna_digivolve_trash_partner",
+      "place_as_bottom_source",
+      "place_as_top_source",
+      "place_on_security",
+      "place_top_source_as_bottom",
+      "play_from_hand",
+      "play_from_hand_free",
+      "play_from_materials",
+      "play_from_revealed_free",
+      "play_from_security",
+      "play_from_trash",
+      "play_from_trash_free",
+      "play_or_use_from_hand",
+      "play_security_card",
+      "play_token",
+      "play_under_tamer_source",
+      "play_union_bound_free",
+      "return_selected_security_to_deck",
+      "schedule_delete_played_at_turn_end",
+      "trash_bottom_sources",
+      "trash_selected_security",
+      "trash_top_source",
+      "use_option_bound",
+      "use_option_from_revealed",
+      "use_option_from_sources"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/replacement_outcome.rs": [
+      "cancel_replacement",
+      "handle_replacement",
+      "redirect_replacement",
+      "reduce_link_cost",
+      "substitute_replacement",
+      "trash_top_security_and_cancel_replacement"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/schedule_delayed.rs": [
+      "schedule_delayed"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/selections.rs": [
+      "choose_from_reveal",
+      "delete_one_per_opponent_color",
+      "digi_burst",
+      "order_remainder",
+      "place_on_security",
+      "place_remainder_on_deck",
+      "reveal_search",
+      "select_any_permanent",
+      "select_count_capped_multi",
+      "select_dna_pair",
+      "select_effect_choice",
+      "select_hand",
+      "select_material",
+      "select_materials",
+      "select_opponent_dp_budget",
+      "select_opponent_permanent",
+      "select_opponent_play_cost_budget",
+      "select_opponent_sources",
+      "select_ordered_permutation",
+      "select_own_breeding_permanent",
+      "select_own_permanent",
+      "select_own_sources",
+      "select_reveal",
+      "select_reveal_buckets",
+      "select_security",
+      "select_trash",
+      "select_under_tamer_sources",
+      "select_union_zone",
+      "trash_bottom_face_down_source_under_tamer",
+      "trash_bottom_face_down_sources_under_tamers",
+      "trash_link_card_of_own_digimon",
+      "trash_option_from_own_stacks",
+      "use_option_from_hand",
+      "use_option_from_trash"
+    ],
+    "code/digimon-engine/src/dsl_cards/step/zone_moves.rs": [
+      "add_bottom_security_to_hand",
+      "add_this_option_to_hand",
+      "add_to_hand_from_deck",
+      "add_to_hand_from_reveal",
+      "add_to_hand_from_security",
+      "add_to_hand_from_trash",
+      "add_top_security_to_hand",
+      "bounce_self",
+      "flip_security_face_up",
+      "mark_security_face_up",
+      "may_add_top_security_to_hand",
+      "move_matching_sources_under_tamer",
+      "move_self_option_under_permanent",
+      "move_trash_card_to_deck_top",
+      "place_remainder_on_deck",
+      "place_selected_card_under_tamer",
+      "place_selected_sources_under_tamer",
+      "place_self_under_permanent",
+      "play_selected_sources_free",
+      "recover",
+      "return_all_trash_to_deck_bottom",
+      "return_selected_sources_to_deck",
+      "return_selected_sources_to_hand",
+      "return_to_deck_from_reveal",
+      "return_trash_list_to_deck_bottom",
+      "reveal_top_deck",
+      "search_own_security_stack",
+      "security_place_stacked_card",
+      "security_place_top_stacked_card",
+      "trash_from_hand_by_index",
+      "trash_from_reveal",
+      "trash_opponent_hand_to_count",
+      "trash_selected_sources",
+      "trash_top_n_digivolution_cards_of_each",
+      "trash_top_stacked_sources",
+      "trash_union_bound"
+    ]
+  }
+}

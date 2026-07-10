@@ -119,7 +119,8 @@ fn redeal_hidden(world: &mut Game, pid: PlayerId, resample_hand: bool, rng: &mut
 
     if resample_hand {
         for _ in 0..hand_count {
-            p.hand.push(pool.pop().expect("re-deal pool underflow (hand)"));
+            p.hand
+                .push(pool.pop().expect("re-deal pool underflow (hand)"));
         }
     }
     for slot in slots.iter_mut() {

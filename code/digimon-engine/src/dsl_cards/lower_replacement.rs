@@ -1662,11 +1662,13 @@ fn arm_pending_delay_play_from_hand_continuation(
 
     if let Some(inner) = game.pending_selection_resume.take() {
         game.pending_selection_resume = Some(crate::resume::ResumeStack {
-            frames: vec![crate::resume::ResumeFrame::DelayPlayFromHandAfterSelection {
-                inner: Box::new(inner),
-                continuation,
-                outer_conts: Vec::new(),
-            }],
+            frames: vec![
+                crate::resume::ResumeFrame::DelayPlayFromHandAfterSelection {
+                    inner: Box::new(inner),
+                    continuation,
+                    outer_conts: Vec::new(),
+                },
+            ],
         });
         game.pending_selection = Some(selection);
         return;
@@ -1721,8 +1723,12 @@ fn install_delay_play_from_hand_after_paid(
     // BEFORE the reward play so the play cannot collide with the leaver's slot.
     finish_owned_leave(ctx, continuation.subject, continuation.subject_card);
 
-    let candidates =
-        matching_hand_candidates(ctx, continuation.player, &continuation.filter, HAND_MAIN_LIMIT);
+    let candidates = matching_hand_candidates(
+        ctx,
+        continuation.player,
+        &continuation.filter,
+        HAND_MAIN_LIMIT,
+    );
     if candidates.is_empty() {
         return;
     }
@@ -1816,7 +1822,14 @@ fn install_delay_play_from_hand_selection(
             let Some(card) = candidates.get(idx).copied() else {
                 return;
             };
-            play_delay_hand_card(game, source_card, source_permanent, source_kind, player, card);
+            play_delay_hand_card(
+                game,
+                source_card,
+                source_permanent,
+                source_kind,
+                player,
+                card,
+            );
         }),
         on_decline: None,
     });
@@ -1855,8 +1868,13 @@ fn play_delay_hand_card(
     else {
         return;
     };
-    let mut ctx =
-        EffectContext::new_with_source_kind(game, source_card, source_permanent, source_kind, player);
+    let mut ctx = EffectContext::new_with_source_kind(
+        game,
+        source_card,
+        source_permanent,
+        source_kind,
+        player,
+    );
     let _ = ctx.play_from_hand_free(player, hand_index);
 }
 
@@ -1885,7 +1903,14 @@ pub(crate) fn run_delay_play_from_hand_selection_step(
         return;
     };
     if let Some(card) = candidates.get(idx).copied() {
-        play_delay_hand_card(game, source_card, source_permanent, source_kind, player, card);
+        play_delay_hand_card(
+            game,
+            source_card,
+            source_permanent,
+            source_kind,
+            player,
+            card,
+        );
     }
     crate::dsl_cards::step::selections::run_outer_conts(game, outer_conts);
 }

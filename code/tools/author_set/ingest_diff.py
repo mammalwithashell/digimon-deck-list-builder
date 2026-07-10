@@ -8,6 +8,8 @@ begin with a pull -> diff -> merge rather than trusting the snapshot.
 Structure:
 - ``diff_sets``      — PURE: compare a local cards dict vs pulled rows. No I/O.
 - ``merge_diff``     — PURE: apply added/changed onto a copy of the local dict.
+- ``scoped_test_source_command`` — canonical scoped-test source after authoring
+                                  merges and YAML/DSL edits.
 - ``pull_and_diff``  — network wrapper around ``ingest_cards.fetch_set_by_card_prefix``
                        with a loud offline fallback to the local snapshot.
 
@@ -40,6 +42,8 @@ SIGNIFICANT_FIELDS = (
     "inherited_effect_description_eng",
     "security_effect_description_eng",
 )
+
+SCOPED_TEST_SOURCE_COMMAND = "python code/tools/impact_scope.py"
 
 
 @dataclass
@@ -118,6 +122,15 @@ def merge_diff(local_cards: dict, pulled_cards: list[dict], diff: SetDiff) -> tu
             merged[cid] = pulled[cid]
             written += 1
     return merged, written
+
+
+def scoped_test_source_command() -> str:
+    """Return the default scoped-test source for post-merge authoring work.
+
+    The command reads ``git diff`` by default and reports the behavioral-card
+    filter, side binaries, or full-suite escalation for the current change.
+    """
+    return SCOPED_TEST_SOURCE_COMMAND
 
 
 def pull_and_diff(set_prefix: str, local_cards: dict) -> tuple[SetDiff, list[dict]]:

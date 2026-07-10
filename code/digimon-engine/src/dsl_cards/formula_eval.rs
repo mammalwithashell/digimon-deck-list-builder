@@ -486,9 +486,7 @@ fn evaluate_per(
             let read = ctx.as_read();
             source_stack_count_filtered(filter.as_deref(), &read, bindings)
         }
-        CompiledPerSelector::PlayerMemory { of } => {
-            player_memory_value(ctx.game, *of, ctx.player)
-        }
+        CompiledPerSelector::PlayerMemory { of } => player_memory_value(ctx.game, *of, ctx.player),
         CompiledPerSelector::OwnLinkCardCount { of } => players_for_ref(*of, ctx)
             .into_iter()
             .map(|player| own_link_card_count(&ctx.game.player(player).battle_area))
@@ -597,9 +595,7 @@ fn evaluate_per_read(
         CompiledPerSelector::SourceStackCountFiltered { filter } => {
             source_stack_count_filtered(filter.as_deref(), ctx, bindings)
         }
-        CompiledPerSelector::PlayerMemory { of } => {
-            player_memory_value(ctx.game, *of, ctx.player)
-        }
+        CompiledPerSelector::PlayerMemory { of } => player_memory_value(ctx.game, *of, ctx.player),
         CompiledPerSelector::OwnLinkCardCount { of } => players_for_ref_read(*of, ctx)
             .into_iter()
             .map(|player| own_link_card_count(&ctx.game.player(player).battle_area))
@@ -927,7 +923,11 @@ fn players_for_ref_read(of: CompiledPlayerRef, ctx: &EffectReadContext<'_>) -> V
 /// per DCGO `Math.Max(0, Enemy.MemoryForPlayer)` (BT25-086). For `You` /
 /// `Active` / `Any` the signed value is returned unclamped (a player can hold
 /// negative signed memory). G-DSL-FORMULA-PLAYER-MEMORY.
-fn player_memory_value(game: &crate::game::Game, of: CompiledPlayerRef, controller: PlayerId) -> i32 {
+fn player_memory_value(
+    game: &crate::game::Game,
+    of: CompiledPlayerRef,
+    controller: PlayerId,
+) -> i32 {
     let players = match of {
         CompiledPlayerRef::You => vec![controller],
         CompiledPlayerRef::Opponent => vec![game.next_clockwise(controller)],

@@ -219,7 +219,10 @@ fn resolve_card_source_ref(
 /// WITHOUT moving the card. Used by `PlaceAsBottomSource.bind_placed_as` to
 /// capture the placed card's identity before the zone move invalidates the
 /// upstream index binding.
-fn peek_card_source_ref_handle(ctx: &EffectContext<'_>, source: CardSourceRef) -> Option<CardHandle> {
+fn peek_card_source_ref_handle(
+    ctx: &EffectContext<'_>,
+    source: CardSourceRef,
+) -> Option<CardHandle> {
     match source {
         CardSourceRef::Hand(p, i) => ctx.game.player(p).hand.get(i).map(|c| c.handle()),
         CardSourceRef::Trash(p, i) => ctx.game.player(p).trash.get(i).map(|c| c.handle()),
@@ -497,7 +500,8 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             // first — the driver clauses pick exactly one. The engine
             // `OptionSource::Source` fork resolves both `card_sources` and
             // `linked_cards`.
-            if let Some(ResolvedBinding::SourceRefs(refs)) = resolve_binding_ref(card, ctx, bindings)
+            if let Some(ResolvedBinding::SourceRefs(refs)) =
+                resolve_binding_ref(card, ctx, bindings)
             {
                 if let Some(sref) = refs.first() {
                     ctx.game.use_option_from(
@@ -512,7 +516,10 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             }
             true
         }
-        CompiledStep::UseOptionBound { binding, cost_delta } => {
+        CompiledStep::UseOptionBound {
+            binding,
+            cost_delta,
+        } => {
             let delta = match cost_delta {
                 None => CostDelta::Free,
                 Some(_) => lower_cost_delta(cost_delta.as_ref(), ctx, bindings),
@@ -978,15 +985,11 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
             // (DCGO `payCost: true` → `condition.cost`). Look it up from the
             // materials; if the pair doesn't satisfy the recipe there is no
             // printed cost — the merge itself will then be recipe-rejected.
-            let dna_cost =
-                lower_dna_cost(cost, ctx, bindings, || ctx.printed_dna_cost_for_pair(a, b, from_card));
-            let success = ctx.effect_initiated_dna_digivolve(
-                a,
-                b,
-                from_card,
-                dna_cost,
-                *ignore_requirements,
-            );
+            let dna_cost = lower_dna_cost(cost, ctx, bindings, || {
+                ctx.printed_dna_cost_for_pair(a, b, from_card)
+            });
+            let success =
+                ctx.effect_initiated_dna_digivolve(a, b, from_card, dna_cost, *ignore_requirements);
             if let Some(played) = success {
                 bindings.record_digivolved(played);
             }

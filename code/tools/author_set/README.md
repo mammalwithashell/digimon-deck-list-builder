@@ -12,6 +12,7 @@ design in `openspec/changes/add-author-set-workflow/`.
 | `dcgo_manifest.py` | 2 | extract DCGO keyword surface + diff vs Rust `Keyword` enum |
 | `lexicons.py` | 2 | complete trait + card-name lexicons (whole DB, never a sample) |
 | `keyword_gate.py` | 2 | bracket scan → set-subtraction → positional trait denoise → DCGO triage |
+| `../impact_scope.py` | verify | default scoped-test source after authoring merge/YAML/DSL edits |
 
 Tests: `code/tests/tools/test_author_set_*.py`.
 
@@ -41,6 +42,22 @@ core-modeled allowlist (`SecurityAttack±`, `DrawX`, `DeDigivolve`, `DigiBurst`)
 If a DCGO rebase moves a keyword's representation, re-audit per
 `openspec/changes/add-author-set-workflow/design.md` § "Fidelity audit" and
 update `CORE_MODELED_ALLOWLIST` / `DCGO_TO_RUST_ALIAS` as needed.
+
+## Scoped verification after authoring merge
+
+After Phase 1 ingest merges card-data drift and after any generated YAML/DSL
+authoring output is merged into the worktree, use the verification-ladder impact
+scope as the default scoped-test source:
+
+```bash
+python code/tools/impact_scope.py
+```
+
+The command reads `git diff` by default and emits `cards_behavioral_filter`,
+`side_binaries`, and `full_suite_required`. Use those fields to choose the
+targeted behavioral test filter and side binaries. If `full_suite_required` is
+true, the authoring flow must run or report the broader suite requirement
+instead of narrowing manually.
 
 ## Known limitations
 

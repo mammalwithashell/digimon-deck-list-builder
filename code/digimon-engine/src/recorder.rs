@@ -13,9 +13,69 @@
 
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+use sha2::{Digest, Sha256};
 
 use crate::enums::PlayerId;
 use crate::game::Game;
+
+pub const VERIFICATION_REPLAY_FORMAT_VERSION: u32 = 1;
+pub const VERIFICATION_ENGINE_SCHEMA_VERSION: u32 = 1;
+
+/// Deck references embedded in a canonical verification replay. Goldens may
+/// use stable decklist ids when available, or inline card-id lists for
+/// self-contained/generated cases.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ReplayDeckRefs {
+    pub player1: ReplayDeckRef,
+    pub player2: ReplayDeckRef,
+}
+
+impl ReplayDeckRefs {
+    pub fn inline(player1: Vec<String>, player2: Vec<String>) -> Self {
+        Self {
+            player1: ReplayDeckRef::Inline { cards: player1 },
+            player2: ReplayDeckRef::Inline { cards: player2 },
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(tag = "kind", rename_all = "snake_case")]
+pub enum ReplayDeckRef {
+    Decklist { id: String },
+    Inline { cards: Vec<String> },
+}
+
+impl ReplayDeckRef {
+    pub fn inline_cards(&self) -> Option<&[String]> {
+        match self {
+            Self::Inline { cards } => Some(cards),
+            Self::Decklist { .. } => None,
+        }
+    }
+}
+
+/// A single engine-native replay action. `seat` is the zero-based Rust player
+/// seat; this format intentionally avoids Python's legacy 1/2 player-id
+/// convention.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VerificationReplayAction {
+    pub seat: PlayerId,
+    pub action_id: u16,
+}
+
+/// Compact golden replay format for `qa/replay-goldens/*.replay.json`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct VerificationReplayRecording {
+    pub format_version: u32,
+    pub engine_schema_version: u32,
+    pub cards_hash: String,
+    pub deck_refs: ReplayDeckRefs,
+    pub seed: Option<u64>,
+    pub actions: Vec<VerificationReplayAction>,
+    pub digests: Vec<u64>,
+    pub final_digest: u64,
+}
 
 /// Post-shuffle deck/hand/security ordering for one player. Captured
 /// once, right after `Game::start_game` completes.
@@ -80,6 +140,7 @@ pub struct GameRecorder {
     pub record_tensors: bool,
     initial: Option<InitialState>,
     actions: Vec<RecordedAction>,
+    digests: Vec<u64>,
     tensor_snapshots: Vec<TensorSnapshot>,
     step_counter: u32,
 }
@@ -90,6 +151,7 @@ impl GameRecorder {
             record_tensors,
             initial: None,
             actions: Vec::new(),
+            digests: Vec::new(),
             tensor_snapshots: Vec::new(),
             step_counter: 0,
         }
@@ -163,6 +225,7 @@ impl GameRecorder {
         rec.memory_after = game.memory;
         rec.is_game_over = game.game_over;
         rec.winner_id = game.winner;
+        self.digests.push(game.verification_digest());
     }
 
     /// Capture tensor snapshot. No-op when `record_tensors` is false.
@@ -180,6 +243,44 @@ impl GameRecorder {
 
     pub fn actions(&self) -> &[RecordedAction] {
         &self.actions
+    }
+
+    pub fn digests(&self) -> &[u64] {
+        &self.digests
+    }
+
+    /// Project the recorder's action stream into the pinned, compact replay
+    /// format used by the verification ladder. Unlike [`Self::to_json`], this
+    /// surface is engine-native: seats are zero-based and the digest stream is
+    /// part of the contract.
+    pub fn to_verification_replay<S: Into<String>>(
+        &self,
+        game: &Game,
+        deck_refs: ReplayDeckRefs,
+        seed: Option<u64>,
+        cards_hash: S,
+    ) -> VerificationReplayRecording {
+        VerificationReplayRecording {
+            format_version: VERIFICATION_REPLAY_FORMAT_VERSION,
+            engine_schema_version: VERIFICATION_ENGINE_SCHEMA_VERSION,
+            cards_hash: cards_hash.into(),
+            deck_refs,
+            seed,
+            actions: self
+                .actions
+                .iter()
+                .map(|action| VerificationReplayAction {
+                    seat: action.player_id,
+                    action_id: action.action_id,
+                })
+                .collect(),
+            digests: self.digests.clone(),
+            final_digest: self
+                .digests
+                .last()
+                .copied()
+                .unwrap_or_else(|| game.verification_digest()),
+        }
     }
 
     /// Serialize to JSON matching Python's `GameRecorder.to_dict` shape:
@@ -263,6 +364,23 @@ impl GameRecorder {
         }
         Value::Object(result)
     }
+}
+
+/// Return the canonical content hash string for a `cards.json` byte stream.
+/// The `sha256:` prefix keeps the algorithm explicit in committed goldens.
+pub fn cards_json_content_hash(bytes: &[u8]) -> String {
+    let digest = Sha256::digest(bytes);
+    format!("sha256:{}", hex_lower(&digest))
+}
+
+fn hex_lower(bytes: &[u8]) -> String {
+    const HEX: &[u8; 16] = b"0123456789abcdef";
+    let mut out = String::with_capacity(bytes.len() * 2);
+    for byte in bytes {
+        out.push(HEX[(byte >> 4) as usize] as char);
+        out.push(HEX[(byte & 0x0f) as usize] as char);
+    }
+    out
 }
 
 fn player_initial_json(p: &PlayerInitialState, py_pid: &dyn Fn(PlayerId) -> i64) -> Value {

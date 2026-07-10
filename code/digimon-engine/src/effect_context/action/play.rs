@@ -337,8 +337,11 @@ impl<'a> EffectContext<'a> {
         cost_delta: crate::enums::CostDelta,
     ) -> crate::selection::OptionPlayResult {
         let player = self.player;
-        self.game
-            .use_option_from(player, crate::game_actions::OptionSource::Revealed(card), cost_delta)
+        self.game.use_option_from(
+            player,
+            crate::game_actions::OptionSource::Revealed(card),
+            cost_delta,
+        )
     }
 
     /// Effect-driven Option USE from a permanent's digivolution-source stack —

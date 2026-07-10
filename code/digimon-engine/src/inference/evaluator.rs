@@ -143,9 +143,10 @@ impl BatchedPolicyValueEvaluator {
             .try_extract_tensor::<f32>()
             .map_err(|e| InferenceError::RuntimeFailed(e.to_string()))?;
 
-        let action_size = *logits_shape.last().ok_or_else(|| {
-            InferenceError::ShapeMismatch("logits output has no shape".into())
-        })? as usize;
+        let action_size = *logits_shape
+            .last()
+            .ok_or_else(|| InferenceError::ShapeMismatch("logits output has no shape".into()))?
+            as usize;
         if logits.len() != obs.len() * action_size {
             return Err(InferenceError::ShapeMismatch(format!(
                 "logits len {} != batch {} x actions {}",
@@ -214,7 +215,10 @@ mod tests {
         let mask = [1.0, 1.0];
         match masked_softmax(&logits, &mask) {
             Err(InferenceError::ShapeMismatch(msg)) => {
-                assert!(msg.contains("3") && msg.contains("2"), "unhelpful msg: {msg}");
+                assert!(
+                    msg.contains("3") && msg.contains("2"),
+                    "unhelpful msg: {msg}"
+                );
             }
             other => panic!("expected ShapeMismatch, got {other:?}"),
         }

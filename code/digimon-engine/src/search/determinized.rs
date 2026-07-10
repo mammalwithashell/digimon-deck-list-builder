@@ -126,7 +126,11 @@ pub fn determinized_search(
     evaluator: &mut dyn PolicyValueFn,
     config: &DeterminizedConfig,
 ) -> SearchResult {
-    assert_eq!(root.players.len(), 2, "determinized search is 2-player only");
+    assert_eq!(
+        root.players.len(),
+        2,
+        "determinized search is 2-player only"
+    );
     assert!((viewer as usize) < 2, "viewer out of range");
     if root.game_over {
         return SearchResult {
