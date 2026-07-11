@@ -41,6 +41,7 @@ use digimon_dsl::compiled::{
     CompiledClause, CompiledCostDelta, CompiledDeclarativeClause, CompiledPlayerRef,
     CompiledPredicate, CompiledScope, CompiledStep, CompiledTiming,
 };
+use digimon_engine::action::space::REPLACEMENT_ACCEPT;
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -935,12 +936,25 @@ fn bt24_089_delay_opens_when_owen_dreadnought_suspends() {
     assert_eq!(runner.game.turn_player(), 0);
     runner.game.enter_main_phase();
 
-    // Owen Dreadnought suspends — opens the event-gated Delay.
+    // Owen Dreadnought suspends — opens the event-gated Delay with the
+    // optional ACTIVATION choice first (16-16-2).
     runner.game.suspend(owen);
 
     let view = runner
         .pending_selection_view()
-        .expect("Owen Dreadnought suspend must open the Delay base selection");
+        .expect("Owen Dreadnought suspend must offer the Delay activation");
+    assert_eq!(view.kind, SelectionKind::Replacement);
+    assert!(
+        runner.pending_is_optional(),
+        "the <Delay> activation itself is optional (16-16-2)"
+    );
+    runner
+        .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+        .expect("accept the Delay activation");
+
+    let view = runner
+        .pending_selection_view()
+        .expect("accepting the Delay must open the base selection");
     assert_eq!(view.kind, SelectionKind::OwnField);
     assert!(
         runner.pending_is_optional(),
@@ -1027,11 +1041,22 @@ fn bt24_089_delay_body_digivolves_reptile_dragonkin_with_cost_reduction() {
 
     runner.game.suspend(owen);
 
+    // Accept the optional Delay activation (16-16-2).
+    {
+        let view = runner
+            .pending_selection_view()
+            .expect("Owen suspend should offer the Delay activation");
+        assert_eq!(view.kind, SelectionKind::Replacement);
+        runner
+            .execute_action(view.selecting_player, REPLACEMENT_ACCEPT)
+            .expect("accept the Delay activation");
+    }
+
     // Base selection: choose the Reptile Digimon.
     {
         let view = runner
             .pending_selection_view()
-            .expect("Owen suspend should fire the Reptile/Dragonkin base selection");
+            .expect("accepting the Delay should fire the Reptile/Dragonkin base selection");
         assert_eq!(view.kind, SelectionKind::OwnField);
         assert_eq!(
             view.valid_action_ids.len(),

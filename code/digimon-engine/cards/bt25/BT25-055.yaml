@@ -43,7 +43,7 @@ level: 5
 color: [green]
 cost: 6
 dp: 6000
-traits: [Avian, Iliad, TS]
+traits: [Avian, Iliad, TS, Vegetation]
 
 # Alt-digivolve: Lv.4 with the [TS] trait / cost 3.
 alt_paths:

@@ -33,7 +33,7 @@ use digimon_dsl::compiled::{
 use digimon_engine::action::space::{encode_attack, PASS};
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming, Keyword};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, GamePhase, Keyword, PlaySource};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{OptionPlayResult, SelectionKind, TriggerSource};
 
@@ -310,5 +310,123 @@ fn st23_09_arts_digivolve_arms_and_stacks_onto_base() {
         r.trash_size(0),
         trash_before,
         "Arts prevented the normal Option trash"
+    );
+}
+
+// ─── Printed digivolution routes (cheaper-than-printed guard, per card) ───────
+// Official Bandai DB (data/card_bundles/ST23-09.md): standard circles are
+// Green Lv.5 / cost 4 and Black Lv.5 / cost 4; the ONLY cost-3 route is the
+// special condition "Lv.5 w/[Glowing Dawn] trait: Cost 3" (DCGO ST23_09.cs
+// AddSelfDigivolutionRequirementStaticEffect(HasGlowingDawnTraits, 3, level 5)).
+
+/// A green Lv.5 WITHOUT the [Glowing Dawn] trait — only the printed Green
+/// Lv.5 circle (cost 4) may apply to it.
+fn plain_green_lv5(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(5);
+    c.dp = Some(6000);
+    c.play_cost = 5;
+    c.colors = vec![CardColor::Green];
+    c.traits = vec!["Insectoid".to_string()];
+    c
+}
+
+/// Stage `base` on the field with ST23-09 in hand, Main phase, memory 15.
+fn digivolve_runner(base: CardData) -> (DebugRunner, usize) {
+    let base_id = base.card_id.clone();
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("ST23-09 in embedded DSL pack")
+        .add_card(base)
+        .hand(0, &[CARD_ID])
+        .memory(15)
+        .start();
+    r.game.turn_count = 1;
+    r.game.current_phase = GamePhase::Main;
+    let slot = r.place_on_field(0, &base_id, Some(0)).index as usize;
+    (r, slot)
+}
+
+/// A green Lv.5 WITHOUT [Glowing Dawn] must pay the PRINTED circle cost (4).
+/// A cost-3 route for it would be cheaper than any printed requirement — the
+/// BT21-015/017 free-digivolve bug class.
+#[test]
+fn st23_09_green_lv5_without_glowing_dawn_pays_printed_cost_4() {
+    let (mut r, slot) = digivolve_runner(plain_green_lv5("PLAIN-G5"));
+    let mem_before = r.game.memory;
+    let proceeded = r.game.digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
+    assert!(
+        proceeded,
+        "exactly one distinct-cost route (the printed Green Lv.5 circle) applies to a \
+         non-[Glowing Dawn] green Lv.5 → the digivolve must commit without a cost choice"
+    );
+    assert_eq!(
+        r.game.players[0].battle_area[slot]
+            .top_card()
+            .card_id(&r.game.card_data),
+        CARD_ID,
+        "ST23-09 stacked onto the base"
+    );
+    assert_eq!(
+        mem_before - r.game.memory,
+        4,
+        "the printed Green Lv.5 circle costs 4 — the cost-3 route is [Glowing Dawn]-gated \
+         and must NOT apply to a base without the trait"
+    );
+}
+
+/// A green Lv.5 WITH [Glowing Dawn] satisfies BOTH the printed circle (4) and
+/// the trait special condition (3) → the engine must surface the cost CHOICE
+/// (rule 17, no auto-selection) and honor a cost-3 pick.
+#[test]
+fn st23_09_glowing_dawn_green_lv5_offers_cost_3_vs_4_choice() {
+    let (mut r, slot) = digivolve_runner(green_base("GD-CHOICE"));
+    let mem_before = r.game.memory;
+    let proceeded = r.game.digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
+    assert!(
+        !proceeded,
+        "a [Glowing Dawn] green Lv.5 satisfies two distinct costs (3 and 4) — the \
+         digivolve must PAUSE for a cost choice, not auto-pay"
+    );
+    let view = r
+        .pending_selection_view()
+        .expect("a cost-choice selection must be pending");
+    assert_eq!(view.kind, SelectionKind::EffectChoice);
+    let choices = view
+        .effect_choices
+        .clone()
+        .expect("the cost choice carries effect_choices");
+    let labels: Vec<String> = choices.iter().map(|c| c.label.to_lowercase()).collect();
+    assert_eq!(
+        choices.len(),
+        2,
+        "exactly two distinct costs (3 trait / 4 circle) must be offered; got {labels:?}"
+    );
+    assert!(
+        labels.iter().any(|l| l.contains("cost 3")),
+        "the [Glowing Dawn] cost-3 special condition must be offered (labels {labels:?})"
+    );
+    assert!(
+        labels.iter().any(|l| l.contains("cost 4")),
+        "the printed cost-4 circle must be offered (labels {labels:?})"
+    );
+    let cost3 = choices
+        .iter()
+        .find(|c| c.label.to_lowercase().contains("cost 3"))
+        .unwrap();
+    r.execute_action(0, cost3.action_id)
+        .expect("resolve the cost-3 option");
+    assert_eq!(
+        r.game.players[0].battle_area[slot]
+            .top_card()
+            .card_id(&r.game.card_data),
+        CARD_ID,
+        "ST23-09 stacked onto the [Glowing Dawn] base"
+    );
+    assert_eq!(
+        mem_before - r.game.memory,
+        3,
+        "the trait route pays exactly 3"
     );
 }

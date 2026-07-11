@@ -68,6 +68,12 @@ effects:
   # ─── [When Moving][On Play] Reveal 3; add 1 [Glowing Dawn] to hand AND place
   #     1 such card face down under a [Glowing Dawn] Tamer; rest to deck bottom ─
   - when: [on_play, on_move]
+    # [When Moving] is self-scoped ("when THIS Digimon moves from breeding");
+    # the engine's on_move dispatch is a board-wide observer scan, so gate the
+    # on_move timing on the moved permanent being this Digimon (EX11-038 idiom).
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
     summary: "[When Moving][On Play] Reveal 3; add 1 [Glowing Dawn] to hand + place 1 face down under a [Glowing Dawn] Tamer; rest to deck bottom"
     process:
       - reveal_top_deck: { of: you, count: 3, bind_as: revealed }

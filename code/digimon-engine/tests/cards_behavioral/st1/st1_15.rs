@@ -12,11 +12,12 @@
 //! `encode_attack(0, slot)` = `ATTACK_START + slot` ids, disambiguated to the
 //! opponent's side purely by the `OppField` kind.
 
+use digimon_engine::action::mask::build_action_mask;
 use digimon_engine::action::space::encode_attack;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind};
-use digimon_engine::selection::SelectionKind;
+use digimon_engine::selection::{OptionPlayResult, SelectionKind};
 
 fn opp_digimon(card_id: &str, name: &str, dp: i32) -> CardData {
     let mut card = make_test_card(card_id, name);
@@ -34,6 +35,7 @@ fn runner() -> DebugRunner {
         .expect("ST1-15 YAML loads")
         .add_card(opp_digimon("OPP-SMALL", "Small Opp", 2000))
         .add_card(opp_digimon("OPP-BIG", "Big Opp", 6000))
+        .add_card(opp_digimon("MY-RED", "My Red Digimon", 3000))
         .hand(0, &["ST1-15"])
         .memory(10)
         .start()
@@ -74,5 +76,92 @@ fn st1_15_main_exposes_opponent_targets_as_oppfield_field_slots() {
         !valid.contains(&encode_attack(0, 1)),
         "ineligible 6000-DP Digimon must not be a target; got {:?}",
         valid,
+    );
+}
+
+/// Regression (user report): "can't use options if there aren't any targets".
+///
+/// Rules: an Option's use legality is phase + cost payable (1-3-11-1) + the
+/// color requirement — never the availability of effect targets. Effects are
+/// performed "whenever possible" (15-1-5); with no eligible target the [Main]
+/// effect simply does nothing and the card is still used and trashed. DCGO
+/// agrees: ST1_15.cs `CanUseCondition` is the generic
+/// `CanTriggerOptionMainEffect` (identity plumbing only); the target check
+/// lives INSIDE `ActivateCoroutine` (`if (HasMatchConditionPermanent(...))`).
+///
+/// Here the opponent's only Digimon has 6000 DP (> 4000), so zero targets are
+/// eligible — the Option must still be offered by the action mask and resolve
+/// as a no-op.
+#[test]
+fn st1_15_usable_with_no_eligible_targets_and_resolves_as_noop() {
+    let mut runner = runner();
+    // A red Digimon of our own satisfies the Option color requirement — the
+    // ONLY use requirement besides phase + cost.
+    runner.place_on_field(0, "MY-RED", Some(0));
+    // Only an INELIGIBLE opponent Digimon (6000 DP > 4000) on the field.
+    runner.place_on_field(1, "OPP-BIG", Some(0));
+
+    // 1. The action mask must offer the hand play (color req is met by the
+    //    opponent-independent check further down the pipeline; the missing
+    //    piece was the synthetic target-availability condition gating use).
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[0], 1.0,
+        "ST1-15 must be usable from hand with zero eligible targets \
+         (option use legality = phase + cost + color, per 1-3-11-1 + DCGO)"
+    );
+
+    // 2. Playing it through the production Option pipeline succeeds: cost
+    //    paid, card leaves hand, no selection installs, nothing is deleted,
+    //    the Option is trashed. (`play_option_from_hand` is what the action
+    //    decoder invokes for the masked bit.)
+    let hand_before = runner.hand_size(0);
+    let mem_before = runner.memory();
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert!(
+        !matches!(result, OptionPlayResult::Invalid),
+        "the Option pipeline must accept the use with zero eligible targets; got {result:?}"
+    );
+    runner.game.drain_effect_queue();
+
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before - 1,
+        "the Option must actually be used (leave the hand)"
+    );
+    assert_eq!(
+        runner.memory(),
+        mem_before - 6,
+        "the printed use cost (6) must be paid"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "with zero eligible targets no delete selection may install"
+    );
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "the ineligible 6000-DP Digimon must survive"
+    );
+    assert!(
+        runner.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&runner.game.card_data) == "ST1-15"),
+        "the used Option must be placed in its owner's trash"
+    );
+}
+
+/// Same report, empty opponent field: usable even with NO opponent Digimon at
+/// all (e.g. to thin the hand / trigger "when you use an Option" effects).
+#[test]
+fn st1_15_usable_with_empty_opponent_field() {
+    let mut runner = runner();
+    // Color requirement satisfied; the opponent's field stays empty.
+    runner.place_on_field(0, "MY-RED", Some(0));
+    let mask = build_action_mask(&runner.game, 0);
+    assert_eq!(
+        mask[0], 1.0,
+        "ST1-15 must be usable from hand even when the opponent controls no Digimon"
     );
 }

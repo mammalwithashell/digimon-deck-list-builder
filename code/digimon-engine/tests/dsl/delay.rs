@@ -202,6 +202,38 @@ fn delay_event_trigger_lowers_to_on_event_delay() {
         effects[0].condition.is_some(),
         "Delay active_when should lower to a runtime condition"
     );
+    // Rules manual 16-16-2: "The processing from <Delay> is optional." The
+    // event-gated Delay must queue as an OPTIONAL trigger with the outer
+    // accept/decline activation prompt (declining leaves the Option parked).
+    assert!(
+        effects[0].optional,
+        "event-gated <Delay> must be optional (16-16-2)"
+    );
+    assert!(
+        effects[0].needs_outer_optional_prompt,
+        "event-gated <Delay> must install the outer activation prompt"
+    );
+}
+
+/// The standard `trigger: delayed` (`MainPhaseActivated`) `<Delay>` is
+/// activated by an explicit player `[Main]` action — optionality is inherent
+/// in the action, so the lowering must NOT add the outer prompt (it would
+/// double-prompt after the player already chose to activate).
+#[test]
+fn delay_main_phase_activated_does_not_double_prompt() {
+    let dsl = DslCardEffect::new(Arc::new(fixture_delay(
+        CompiledScope::FaceUp,
+        CompiledTiming::Delayed,
+    )));
+    let effects = dsl.effects(CardHandle(0));
+    assert!(
+        !effects[0].optional,
+        "MainPhaseActivated Delay must not be marked optional"
+    );
+    assert!(
+        !effects[0].needs_outer_optional_prompt,
+        "MainPhaseActivated Delay must not install an outer prompt"
+    );
 }
 
 #[test]
@@ -221,6 +253,10 @@ fn delay_attack_triggers_lower_to_on_event_delay() {
             effects[0].delay_trigger,
             Some(DelayTrigger::OnEvent(expected)),
             "{compiled:?} must lower to an event-backed Delay trigger"
+        );
+        assert!(
+            effects[0].optional && effects[0].needs_outer_optional_prompt,
+            "{compiled:?}: event-gated <Delay> must be optional with an outer prompt (16-16-2)"
         );
     }
 }

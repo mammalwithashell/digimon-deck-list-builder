@@ -128,6 +128,7 @@ fn select_opponent_permanent_excludes_progress_attacker() {
         declaration_committed: true,
         cancelled: false,
         battle_occurred: false,
+        battle_defender_deleted: false,
         return_phase: GamePhase::Main,
         state: AttackState::Declared,
         counter_depth: 0,

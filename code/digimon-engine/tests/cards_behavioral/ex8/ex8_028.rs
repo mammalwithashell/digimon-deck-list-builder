@@ -1,6 +1,8 @@
 //! EX8-028 Skadimon — Digimon, Lv.6, Blue/Yellow, DP 12000, Cost 12.
 //! Traits: Ice-Snow, LIBERATOR. Form: Mega. Attribute: Vaccine. Rarity: SR.
-//! Standard digivolution: Lv.5 blue for 4 memory (printed evo box).
+//! Standard digivolution (official Bandai DB digivolve_costs — THREE circles;
+//! cards.json keeps only the blue half): Blue Lv.5 / cost 4, Yellow Lv.5 /
+//! cost 4, Purple Lv.5 / cost 4.
 //! Alt digivolution (printed evo box): "Digivolve Lv.5 w/[Ice-Snow] trait: Cost 3".
 //!
 //! # Card text (card image EX8-028.webp — authoritative; cards.json agrees)
@@ -142,8 +144,21 @@ fn source_filler(id: &str) -> CardData {
     c
 }
 
+/// A plain (non-[Ice-Snow]) Lv.5 Digimon of the given color — matches ONLY a
+/// standard evo circle of that color, never the [Ice-Snow] alt path.
+fn plain_lv5(id: &str, color: CardColor) -> CardData {
+    let mut c = make_test_card(id, "Plain Lv5");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(5);
+    c.dp = Some(7000);
+    c.play_cost = 7;
+    c.colors = vec![color];
+    c.traits = vec!["Beast".to_string()];
+    c
+}
+
 /// A RED Lv.5 [Ice-Snow] Digimon — matches ONLY Skadimon's printed alt evo box
-/// ("Lv.5 w/[Ice-Snow] trait: Cost 3"), not the standard Lv.5-blue path.
+/// ("Lv.5 w/[Ice-Snow] trait: Cost 3"), no standard circle (blue/yellow/purple).
 fn red_ice_snow_lv5(id: &str) -> CardData {
     let mut c = make_test_card(id, "Red IceSnow Lv5");
     c.card_kind = CardKind::Digimon;
@@ -299,23 +314,32 @@ fn ex8_028_compiles_with_printed_stats_and_digivolve_paths() {
         );
     }
 
-    // Standard printed evo box: Lv.5 blue for 4 memory.
-    assert!(
-        compiled.alt_paths.iter().any(|path| {
-            path.kind == CompiledAltPathKind::Digivolve
-                && path.cost == Some(CompiledCost::Literal(4))
-                && path.from.as_ref().is_some_and(|from| {
-                    (from.level_eq == Some(5)
-                        || from.all_of.iter().any(|pred| pred.level_eq == Some(5)))
-                        && (from.color_is == Some(CompiledColor::Blue)
-                            || from
-                                .all_of
-                                .iter()
-                                .any(|pred| pred.color_is == Some(CompiledColor::Blue)))
-                })
-        }),
-        "Skadimon must digivolve from a blue Lv.5 for cost 4 (printed evo box)"
-    );
+    // Standard printed evo box — THREE circles per the official Bandai DB
+    // (digivolve_costs card_color 1/2/6): Blue, Yellow, AND Purple Lv.5, each
+    // for 4 memory. cards.json's lossy ingest keeps only the blue half.
+    for color in [
+        CompiledColor::Blue,
+        CompiledColor::Yellow,
+        CompiledColor::Purple,
+    ] {
+        assert!(
+            compiled.alt_paths.iter().any(|path| {
+                path.kind == CompiledAltPathKind::Digivolve
+                    && path.cost == Some(CompiledCost::Literal(4))
+                    && path.from.as_ref().is_some_and(|from| {
+                        (from.level_eq == Some(5)
+                            || from.all_of.iter().any(|pred| pred.level_eq == Some(5)))
+                            && (from.color_is == Some(color)
+                                || from
+                                    .all_of
+                                    .iter()
+                                    .any(|pred| pred.color_is == Some(color)))
+                    })
+            }),
+            "Skadimon must digivolve from a {color:?} Lv.5 for cost 4 \
+             (official Bandai DB standard evo circle)"
+        );
+    }
 
     // Printed alt evo box: Lv.5 with [Ice-Snow] trait for 3 memory.
     assert!(
@@ -334,6 +358,79 @@ fn ex8_028_compiles_with_printed_stats_and_digivolve_paths() {
         }),
         "Skadimon must digivolve from a Lv.5 [Ice-Snow] Digimon for cost 3 (printed alt evo box)"
     );
+}
+
+/// BEHAVIORAL: the yellow and purple standard evo circles work — Skadimon
+/// digivolves over a plain (non-[Ice-Snow]) yellow or purple Lv.5 base for
+/// exactly 4 memory. cards.json's lossy ingest drops these two circles, so
+/// this guards the explicit alt_paths encoding (official Bandai DB
+/// digivolve_costs card_color 2 and 6). The base is non-[Ice-Snow], so the
+/// cost-3 alt path cannot match — no cost-choice prompt fires.
+#[test]
+fn ex8_028_digivolves_over_yellow_and_purple_lv5_for_cost_4() {
+    for (base_id, color) in [("YEL-5", CardColor::Yellow), ("PUR-5", CardColor::Purple)] {
+        let mut runner = DebugRunner::builder()
+            .dsl_card(CARD_ID)
+            .expect("EX8-028 found in embedded DSL pack")
+            .add_card(plain_lv5(base_id, color))
+            .add_card(filler("FILL"))
+            .deck(0, &["FILL", "FILL", "FILL"])
+            .deck(1, &["FILL"])
+            .memory(8)
+            .start();
+        runner.game.turn_count = 1;
+
+        let base = runner.place_on_field(0, base_id, Some(0));
+        let hand_idx = put_in_hand(&mut runner, 0, CARD_ID);
+
+        let memory_before = runner.game.memory;
+        assert!(
+            runner
+                .game
+                .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByHand),
+            "Skadimon must digivolve over a plain {color:?} Lv.5 via the \
+             official-DB standard evo circle"
+        );
+        assert_eq!(
+            runner.game.memory,
+            memory_before - 4,
+            "the {color:?} standard circle charges its printed cost 4 \
+             (the non-[Ice-Snow] base cannot match the cost-3 alt path)"
+        );
+
+        // Both [When Digivolving] clauses trigger simultaneously, so the
+        // turn player first orders them (TriggerOrder — rules-correct even
+        // though both will no-op: the engine cannot pre-resolve that free
+        // play has no [Ice-Snow] candidate and pay-unsuspend has no
+        // sourceless Digimon). Resolve the ordering, then both clauses are
+        // candidate-suppressed with no effect prompts.
+        runner.game.drain_effect_queue();
+        if let Some(sel) = runner.game.pending_selection.as_ref() {
+            assert_eq!(
+                sel.kind,
+                digimon_engine::selection::SelectionKind::TriggerOrder,
+                "the only prompt allowed here is the simultaneous-trigger ordering"
+            );
+            let first = sel.valid_action_ids[0];
+            runner
+                .game
+                .resolve_selection(0, first)
+                .expect("order the two WD triggers");
+            runner.game.drain_effect_queue();
+        }
+        assert!(
+            runner.pending_selection_view().is_none(),
+            "no WD effect prompt: free play has no [Ice-Snow] candidate and the \
+             pay-unsuspend clause has no sourceless Digimon"
+        );
+        assert!(
+            runner.game.players[0]
+                .battle_area
+                .iter()
+                .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
+            "Skadimon sits on top of the {color:?} base"
+        );
+    }
 }
 
 /// The printed <Iceclad> and <Barrier> keywords are encoded as face-up
@@ -703,8 +800,8 @@ fn ex8_028_wd_free_play_cap_scales_to_5_with_one_sourceless_opponent() {
     assert_eq!(
         runner.game.memory,
         memory_before - 3,
-        "the alt path charges its printed cost 3 (the Lv.5-blue path does \
-         not match a red base)"
+        "the alt path charges its printed cost 3 (no standard circle — \
+         blue/yellow/purple — matches a red base)"
     );
 
     runner.game.drain_effect_queue();
@@ -951,6 +1048,81 @@ fn ex8_028_pay_own_digimon_goes_to_own_security_bottom_and_unsuspends() {
     assert!(
         !skadimon_perm.is_suspended,
         "this Digimon unsuspends after paying the cost"
+    );
+}
+
+/// NO-WEDGE regression (user report: "EX8-028 breaks the game due to the
+/// when attacking effect"; resolved in 0.4.0 — the pay pick was routed with
+/// the wrong SelectionKind, leaving a mandatory selection unanswerable).
+/// Drives the FULL attack with the [When Attacking] effect resolving through
+/// real selections and asserts the attack completes, the security check on
+/// the defending player still happens, no selection is left dangling, and
+/// the turn can end normally afterwards.
+#[test]
+fn ex8_028_when_attacking_effect_resolves_and_attack_completes_without_wedge() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX8-028 found in embedded DSL pack")
+        .add_card(board_digimon("ALLY-BARE", 4000))
+        .add_card(source_filler("SRC-A"))
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL"; 5])
+        .deck(1, &["FILL"; 5])
+        .security(0, &["FILL"])
+        .security(1, &["FILL", "FILL"])
+        .start();
+    runner.game.turn_count = 2;
+
+    let ally = runner.place_on_field(0, "ALLY-BARE", Some(0));
+    let skadimon = runner.place_stack(0, &["SRC-A", CARD_ID]);
+    let opp_security_before = runner.game.players[1].security.len();
+
+    let _ = runner.attack_player(skadimon, 1, false);
+
+    // [When Attacking] by-cost clause: accept, then pay with the bare ally.
+    drive_to_kind(&mut runner, 0, SelectionKind::Replacement);
+    runner
+        .execute_action(0, REPLACEMENT_ACCEPT)
+        .expect("accept the pay-unsuspend clause");
+    drive_to_kind(&mut runner, 0, SelectionKind::AnyField);
+    let pay_action = encode_attack(u16::from(ally.player), u16::from(ally.index));
+    runner
+        .execute_action(0, pay_action)
+        .expect("the pay target must be selectable (0.4.0 softlock regression)");
+    runner
+        .auto_resolve()
+        .expect("the attack must resolve to completion");
+
+    // The attack was NOT wedged: it ran through to the security check and
+    // fully cleaned up.
+    assert_eq!(
+        runner.game.players[1].security.len(),
+        opp_security_before - 1,
+        "the player attack must continue into the security check after the \
+         [When Attacking] effect resolves"
+    );
+    assert!(
+        runner.game.pending_attack.is_none(),
+        "no attack left in flight"
+    );
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "no selection left dangling"
+    );
+    assert!(!runner.game_over(), "the game continues");
+
+    // Skadimon unsuspended via the effect and the game can proceed normally.
+    let skadimon_perm = &runner.game.players[0].battle_area
+        [find_permanent(&runner, 0, CARD_ID).index as usize];
+    assert!(
+        !skadimon_perm.is_suspended,
+        "Skadimon unsuspends after paying the cost"
+    );
+    runner.end_turn();
+    assert_eq!(
+        runner.game.turn_player(),
+        1,
+        "the turn passes normally after the attack"
     );
 }
 

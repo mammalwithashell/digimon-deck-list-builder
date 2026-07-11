@@ -1827,6 +1827,19 @@ impl Game {
         card: crate::card_source::CardHandle,
         cause: crate::trigger_context::EventCause,
     ) {
+        // A digivolution card just LEFT the stack (every source-trash path —
+        // De-Digivolve, Digi-Burst / cost trashes, bottom-source strips,
+        // armor purge — fires this AFTER the `card_sources` mutation).
+        // Re-materialize declarative state NOW so continuous grants sourced
+        // from the departed card (e.g. an inherited ＜Security A. +1＞
+        // grant_keyword, a flat inherited `security_attack` aura) stop
+        // applying immediately: the observers enqueued below, and any read
+        // surface consulted before the next decode-boundary tick
+        // (`effective_security_strike`, `has_keyword`,
+        // `security_attack_keyword_bonus`), must not see the stale
+        // materialized entry. Cheap when nothing changed (fingerprint memo);
+        // after a real removal this is exactly one full rebuild.
+        self.tick_declarative_effects();
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnDigivolutionCardTrashed,
             crate::selection::TriggerSource::SourceTrashedFromStack {
@@ -1866,6 +1879,10 @@ impl Game {
         card: crate::card_source::CardHandle,
         cause: crate::trigger_context::EventCause,
     ) {
+        // Same contract as `fire_digivolution_card_trashed`: the source has
+        // already left the stack, so refresh materialized declaratives before
+        // observers (and any pre-tick read) run.
+        self.tick_declarative_effects();
         self.enqueue_triggered(
             crate::enums::EffectTiming::OnDigivolutionCardReturnedToDeckBottom,
             crate::selection::TriggerSource::SourceReturnedToDeckBottom {
@@ -2654,6 +2671,15 @@ impl Game {
         // shifts indices. Mirrors `attach_tamer_to_digimon`.
         self.clear_permanent_full(target);
         self.modifiers.expire_player_on_permanent_leave(target);
+        // The `remove()` above shifted every higher-indexed permanent down;
+        // re-key the modifier registry and the in-flight attack's handles
+        // (EX8-028 pays a battle-area Digimon into security MID-ATTACK —
+        // without these, higher-indexed permanents' modifiers migrate to the
+        // wrong permanent and the attacker's handle goes stale, fizzling the
+        // attack before its security check).
+        self.modifiers
+            .shift_after_battle_area_remove(target.player, target.index);
+        self.shift_pending_attack_after_battle_area_remove(target.player, target.index);
 
         // Sources-below-top → each source's owner's trash. Per source: push,
         // enqueue OnDigivolutionCardTrashed for each player, drain queue.
@@ -2780,6 +2806,12 @@ impl Game {
 
         self.clear_permanent_full(target);
         self.modifiers.expire_player_on_permanent_leave(target);
+        // Re-key the modifier registry and the in-flight attack's handles
+        // after the `remove()` shift (EX8-028 pays a battle-area Digimon
+        // into security MID-ATTACK).
+        self.modifiers
+            .shift_after_battle_area_remove(target.player, target.index);
+        self.shift_pending_attack_after_battle_area_remove(target.player, target.index);
 
         let had_linked = !permanent.linked_cards.is_empty();
         for linked in permanent.linked_cards {
@@ -2953,6 +2985,8 @@ impl Game {
         let Some(top) = permanent.card_sources.pop() else {
             return false;
         };
+        // Re-key the in-flight attack's handles after the `remove()` shift.
+        self.shift_pending_attack_after_battle_area_remove(target.player, target.index);
         let top_handle = top.handle();
         let face_up_key = top.card_index;
 
@@ -3023,6 +3057,8 @@ impl Game {
 
         self.clear_permanent_full(target);
         self.modifiers.expire_player_on_permanent_leave(target);
+        self.modifiers
+            .shift_after_battle_area_remove(target.player, target.index);
         self.fire_on_place_security(player_id, observer_player, top_handle);
         true
     }

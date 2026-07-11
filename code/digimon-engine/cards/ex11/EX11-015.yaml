@@ -1,11 +1,14 @@
 # EX11-015 Frigimon — Digimon, Lv.4, Blue/Yellow, DP 6000, Cost 5.
 # Traits: Ice-Snow, LIBERATOR. Attribute: Vaccine. Form: Champion. Rarity: U.
 #
-# Printed card text (card image EX11-015.webp, authoritative; cards.json
-# agrees):
+# Printed card text (official Bandai DB bundle data/card_bundles/EX11-015.md,
+# authoritative; card image EX11-015.webp confirms):
 #
-#   Evo box: Lv.3 from blue: Cost 3
-#     (JSON evo_costs [{card_color:1, level:3, memory_cost:3}])
+#   Evo box: SPLIT-COLOR circle — Blue Lv.3: Cost 3 AND Yellow Lv.3: Cost 3
+#     (official DB lists both circles; the printed circle is half-blue/
+#     half-yellow. cards.json evo_costs is lossy and carries only the blue
+#     half [{card_color:1, level:3, memory_cost:3}] — do not trust it for
+#     dual-color circles.)
 #   Evo box: "Digivolve Lv.3 w/[Ice-Snow] trait: Cost 2"  (JSON xros_req)
 #
 #   [When Digivolving] If you have 1 or fewer Tamers, you may play 1
@@ -71,10 +74,16 @@ attribute: Vaccine
 form: Champion
 
 alt_paths:
-  # Printed standard evo box: Lv.3 from blue, cost 3 (encoded explicitly like
-  # sibling EX11-014 so DSL-only loads carry the printed cost table).
+  # Printed standard evo box (SPLIT-COLOR circle, official Bandai DB):
+  # "Blue Lv.3 / cost 3" AND "Yellow Lv.3 / cost 3" — one half-blue/
+  # half-yellow circle covering both colors. Encoded as two paths so
+  # DSL-only loads carry the full printed cost table (cards.json drops the
+  # yellow half).
   - kind: digivolve
     from: { level_eq: 3, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
     cost: 3
   # Printed alt evo box: "Digivolve Lv.3 w/[Ice-Snow] trait: Cost 2".
   # DCGO gates on EqualsTraits("Ice-Snow") && IsLevel3 — no color restriction.

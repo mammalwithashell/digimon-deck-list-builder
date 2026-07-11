@@ -30,6 +30,9 @@ digimon-dsl = { path = "../digimon-dsl" }
 [dev-dependencies]
 # serde_yml is used directly in DSL test files (e.g. serde_yml::from_str).
 serde_yml = "0.0.12"
+# serde_json is used by tests/alt_path_printed_cost_guard.rs to read the
+# official Bandai DB mirror (data/card_official.json).
+serde_json = "1"
 strum = "0.26"
 
 # Tests are grouped by domain into 7 binaries. Each binary's entry point is

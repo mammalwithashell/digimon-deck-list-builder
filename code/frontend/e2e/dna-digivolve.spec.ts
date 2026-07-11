@@ -97,7 +97,9 @@ test.describe('DNA digivolve — rendered UI', () => {
       });
       expect(merged.fieldCount, JSON.stringify(merged)).toBe(1);
       expect(merged.top).toContain('Paildramon');
-      expect(merged.sources).toBe(3);
+      // `sourceCount` counts digivolution cards only (the top card is not
+      // one): Paildramon on top of ExVeemon + Stingmon → 2 sources.
+      expect(merged.sources).toBe(2);
     } finally {
       await game.delete();
     }

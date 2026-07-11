@@ -1,6 +1,9 @@
 //! EX8-023 PolarBearmon — Digimon, Lv.5, Blue/Yellow, DP 7000, Cost 7.
 //! Traits: Ice-Snow, LIBERATOR. Attribute: Vaccine. Rarity: U.
-//! Standard digivolution: Lv.4 blue for 4 memory (printed evo box).
+//! Standard digivolution (official Bandai DB, data/card_bundles/EX8-023.md —
+//! dual-color SPLIT circle): Lv.4 blue for 4 memory AND Lv.4 yellow for 4
+//! memory (cards.json evo_costs and DCGO's JSON both drop the yellow half;
+//! the official DB outranks them for printed digivolution data).
 //! Alt digivolution (printed evo box): "Digivolve Lv.4 w/[Ice-Snow] trait: Cost 3".
 //!
 //! # Card text (card image EX8-023 — authoritative)
@@ -97,6 +100,20 @@ fn blue_lv4(id: &str) -> CardData {
     c.dp = Some(4000);
     c.play_cost = 4;
     c.colors = vec![CardColor::Blue];
+    c
+}
+
+/// A YELLOW Lv.4 Digimon WITHOUT the [Ice-Snow] trait — a legal base ONLY for
+/// the YELLOW half of the printed dual-color split evo circle (Lv.4 yellow:
+/// cost 4, per the official Bandai DB), matching neither the blue circle nor
+/// the Ice-Snow alt path.
+fn yellow_lv4(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Yellow Lv4");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(4);
+    c.dp = Some(4000);
+    c.play_cost = 4;
+    c.colors = vec![CardColor::Yellow];
     c
 }
 
@@ -275,6 +292,27 @@ fn ex8_023_compiles_with_printed_stats_and_digivolve_paths() {
                 })
         }),
         "PolarBearmon must digivolve from a blue Lv.4 for cost 4 (printed evo box)"
+    );
+
+    // Printed standard evo box, YELLOW half of the dual-color split circle:
+    // Lv.4 yellow for 4 memory. Official Bandai DB lists BOTH Blue Lv.4/4 AND
+    // Yellow Lv.4/4; cards.json evo_costs drops the yellow half.
+    assert!(
+        compiled.alt_paths.iter().any(|path| {
+            path.kind == CompiledAltPathKind::Digivolve
+                && path.cost == Some(CompiledCost::Literal(4))
+                && path.from.as_ref().is_some_and(|from| {
+                    (from.level_eq == Some(4)
+                        || from.all_of.iter().any(|pred| pred.level_eq == Some(4)))
+                        && (from.color_is == Some(CompiledColor::Yellow)
+                            || from
+                                .all_of
+                                .iter()
+                                .any(|pred| pred.color_is == Some(CompiledColor::Yellow)))
+                })
+        }),
+        "PolarBearmon must digivolve from a yellow Lv.4 for cost 4 (yellow half \
+         of the printed dual-color split evo circle — official Bandai DB)"
     );
 
     // Printed alt evo box: Lv.4 with [Ice-Snow] trait for 3 memory.
@@ -944,6 +982,52 @@ fn ex8_023_when_digivolving_via_ice_snow_alt_path_costs_3_and_fires_effect() {
     runner.auto_resolve().expect("finish the WD effect");
 
     assert_locked(&runner, opp_a);
+}
+
+/// YELLOW half of the printed dual-color split evo circle (official Bandai
+/// DB: Blue Lv.4/4 AND Yellow Lv.4/4 — cards.json/DCGO drop the yellow half):
+/// PolarBearmon digivolves over a YELLOW Lv.4 base (matching neither the blue
+/// circle nor the [Ice-Snow] alt path) for its printed cost 4.
+#[test]
+fn ex8_023_digivolves_over_yellow_lv4_via_printed_yellow_circle_cost_4() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX8-023 found in embedded DSL pack")
+        .add_card(yellow_lv4("YELLOWBASE"))
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(8)
+        .start();
+    runner.game.turn_count = 1;
+
+    let base = runner.place_on_field(0, "YELLOWBASE", Some(0));
+    let hand_idx = put_in_hand(&mut runner, 0, CARD_ID);
+
+    let memory_before = runner.game.memory;
+    let digivolved =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByHand);
+    assert!(
+        digivolved,
+        "PolarBearmon must digivolve over a yellow Lv.4 base via the yellow \
+         half of the printed dual-color split evo circle (official Bandai DB; \
+         the base is neither blue nor [Ice-Snow], so no other path matches)"
+    );
+    assert_eq!(
+        runner.game.memory,
+        memory_before - 4,
+        "the yellow standard circle charges its printed cost 4"
+    );
+
+    // Clause-gate sanity: no opponent Digimon on board, so the
+    // [When Digivolving] effect's condition fails and nothing installs.
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.pending_selection().is_none(),
+        "no opponent Digimon — the [When Digivolving] clause gate must fail"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

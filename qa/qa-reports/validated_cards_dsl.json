@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-07-05",
+  "last_updated": "2026-07-10",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -2649,9 +2649,9 @@
     },
     "BT17-077": {
       "card_name": "Imperialdramon: Paladin Mode",
-      "validated_date": "2026-06-14",
-      "report": "royal-knights-audit-2026-06-14",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Royal Knights",
       "yaml_path": "code/digimon-engine/cards/bt17/BT17-077.yaml",
@@ -2663,7 +2663,7 @@
         "ROYAL-KNIGHTS-POOL-SLICE",
         "GAP-STUB"
       ],
-      "notes": "Re-authored: clause 1b player-choice trash via select_effect_choice; clause 1c via returned_card_matching.",
+      "notes": "Drift fixed: missing GREEN color + green Lv.6/6 circle (tri-color); form added",
       "audit_note": "Re-audited FAITHFUL 2026-06-14 (all printed clauses implemented + asserting tests); prior tracker verdict was stale."
     },
     "BT20-020": {
@@ -3379,9 +3379,9 @@
     },
     "P-215": {
       "card_name": "Icemon",
-      "validated_date": "2026-05-22",
-      "report": "complete-rocks-archetype (Phase A)",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Rocks",
       "yaml_path": "code/digimon-engine/cards/p/P-215.yaml",
@@ -3390,7 +3390,7 @@
       "patterns": [
         "KEYWORD"
       ],
-      "notes": "[WM]/[OnPlay]/[WD] place-from-hand-or-trash + return/de-digivolve protection authored."
+      "notes": "Drift fixed: form Champion; [When Moving] gate + Mineral trait fixes intact; opponent-cause scoping gap documented"
     },
     "ST13-08": {
       "card_name": "Chikurimon",
@@ -5800,9 +5800,9 @@
     },
     "BT25-004": {
       "card_name": "Tapmon",
-      "validated_date": "2026-06-07",
-      "report": "batch-implement-cards-rust-dsl (link-finish-appmon slice)",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "BT25 link-finish-appmon slice",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-004.yaml",
@@ -5812,7 +5812,7 @@
         "G-DSL-DIGILINK",
         "Gap5-WhenWouldLink-reducer"
       ],
-      "notes": "RE-ADJUDICATED from BLOCKED->IMPLEMENTED: facet #10 host-filtered WhenWouldLink reducer LANDED (Gap 5). Inherited [Your Turn][OPT] when_would_link_to_this + would_link_card_trait_any_of [Social,Tool,Game] + reduce_link_cost 1. Sole clause. 5 tests (struct + positive Social-reduce-on-accept + negative trait-gate)."
+      "notes": "Drift fixed: kind digimon->digi_egg, traits/attribute folds; vacuous negative test rebuilt"
     },
     "BT25-005": {
       "card_name": "Pagumon",
@@ -5829,9 +5829,9 @@
     },
     "BT25-007": {
       "card_name": "Gatchmon",
-      "validated_date": "2026-06-07",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "link-appmon-1 (BT25)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-007.yaml",
@@ -5844,13 +5844,13 @@
         "alt_digivolve",
         "delete_by_dp"
       ],
-      "notes": "DigiLink Shape-B landed (G-DSL-DIGILINK 2026-06-06): link_condition (Appmon cost1) + alt-digivolve + OnPlay reveal-3 two-bucket add + when_linked delete opp DP<=3000. Prior BLOCKED reason (link subsystem) now closed."
+      "notes": "Drift fixed: missing std circle, missing linked +2000 DP, attribute Data->Social, traits; +8 tests"
     },
     "BT25-045": {
       "card_name": "Onmon",
-      "validated_date": "2026-06-07",
-      "report": "batch-implement-cards-rust-dsl (link-finish-appmon slice)",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "BT25 link-finish-appmon slice",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-045.yaml",
@@ -5861,7 +5861,7 @@
         "Gap5-WhenWouldLink-reducer",
         "when_linked"
       ],
-      "notes": "RE-ADJUDICATED from BLOCKED->IMPLEMENTED: facet #10 reducer LANDED. alt-digivolve Lv.2 Appmon cost0 + link_condition Appmon cost1 + face-up when_would_link_to_this reducer (Social/Tool/Game, optional OPT) + [When Linking] suspend 1 opp Digimon (linked scope). cards.json inherited field is a mis-slot of the same When-Linking box. 6 tests."
+      "notes": "Drift fixed: missing std circle, missing linked +2000 DP, attribute Free->Game, traits"
     },
     "BT25-006": {
       "card_name": "Dorimon",
@@ -6378,8 +6378,8 @@
     },
     "BT25-098": {
       "card_name": "Cyber Engage",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
       "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "appmon",
@@ -6390,14 +6390,14 @@
         "A1",
         "D3"
       ],
-      "notes": "AUDIT: reveal-3/add-Appmon(now mandatory, drift fixed optional:true->false)/trash-rest/place-self + Delay play Appmon -3 + Security place + IgnoreColorRequirement use-req. 15 tests. Review APPROVED."
+      "notes": "Minor drift fixed: flood_gate scope widened to field incl. breeding; +3 tests"
     },
     "BT25-089": {
       "card_name": "Kazuki & Itsuki",
-      "validated_date": "2026-06-13",
-      "report": "effect-initiated-app-fuse plan",
-      "status": "PARTIAL",
-      "gap_kind": "dsl",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
+      "gap_kind": null,
       "archetype": "BT25 link-ts slice",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-089.yaml",
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_089.rs",
@@ -6406,20 +6406,20 @@
         "B1",
         "B3"
       ],
-      "notes": "App-fuse [EoT][OPT] rider now SHIPPED (app_fuse from: hand). Residual PARTIAL: the [Main] link source \"from your Digimon digivolution cards\" (G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES) is still omitted \u2014 unrelated to App Fuse."
+      "notes": "Prior PARTIAL closed: own_digimon_sources link zone consumed; cost reduce:2; traits added"
     },
     "BT25-052": {
       "card_name": "Logimon",
-      "validated_date": "2026-06-07",
-      "report": "link_card_to_self facet#9 step (G-DSL-LINK-CARD-FROM-ZONE LANDED)",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "link-appmon-1 (BT25)",
-      "yaml_path": null,
-      "test_path": null,
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-052.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_052.rs",
       "test_count": 0,
       "patterns": [],
-      "notes": "IMPLEMENTED \u2014 [Main] self-link (-1) via link_card_to_self + [Your Turn] when-linked play Kazuki&Itsuki free + inherited When-Linking suspend + alt-digi + link-condition. App Fuse OMITTED (no primitive)."
+      "notes": "Drift fixed: dead Stnd. gate, missing App Fusion, missing linked +3000 DP, missing [Your Turn] gate, traits; tests 3->28"
     },
     "BT25-047": {
       "card_name": "Floramon",
@@ -6491,9 +6491,9 @@
     },
     "BT25-061": {
       "card_name": "Offmon",
-      "validated_date": "2026-06-07",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "link-appmon-1 (BT25)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-061.yaml",
@@ -6505,7 +6505,7 @@
         "start_of_your_main_phase",
         "CannotUnsuspend"
       ],
-      "notes": "DigiLink Shape-B: link_condition (Appmon cost1) + alt-digivolve + [Start Main] optional trash-Appmon->draw+memory + when_linked CannotUnsuspend (end_of_opponents_turn). Prior BLOCKED reason now closed."
+      "notes": "Drift fixed: color purple->BLACK, attribute Virus->Game, missing Stnd. trait, missing std circle, missing linked +2000 DP"
     },
     "BT25-086": {
       "status": "IMPLEMENTED",
@@ -6638,35 +6638,35 @@
     },
     "BT25-056": {
       "card_name": "Bootmon",
-      "validated_date": "2026-06-07",
-      "report": "link_card_to_self facet#9 step (G-DSL-LINK-CARD-FROM-ZONE LANDED)",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "BT25 link-appmon-2 slice",
-      "yaml_path": null,
-      "test_path": null,
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-056.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_056.rs",
       "test_count": 0,
       "patterns": [],
-      "notes": "IMPLEMENTED \u2014 Barrier + shared OP/WD/WA self-link from hand/sources + when-linked suspend + inherited When-Linking return-to-deck-bottom + alt-digi + link-condition. App Fuse OMITTED (no primitive)."
+      "notes": "Drift fixed: color green/blue->green/YELLOW, dead Super-App path, missing App Fusion, missing linked +4000 DP, bounce-sources bug; tests 4->15"
     },
     "BT25-072": {
       "card_name": "Shutmon",
-      "validated_date": "2026-06-07",
-      "report": "link_card_to_self facet#9 step (G-DSL-LINK-CARD-FROM-ZONE LANDED)",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "BT25 link-appmon-2 slice",
-      "yaml_path": null,
-      "test_path": null,
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-072.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_072.rs",
       "test_count": 0,
       "patterns": [],
-      "notes": "IMPLEMENTED \u2014 Jamming + shared OP/WD/WA self-link from trash/sources + [All Turns] when-linked deny-digivolve + inherited When-Linking cant-unsuspend x2 + alt-digi + link-condition. App Fuse OMITTED (no primitive)."
+      "notes": "Drift fixed: 2 missing circles, dead Super-App gate, missing App Fusion, missing linked +4000 DP, traits; tests 5->20"
     },
     "BT25-060": {
       "card_name": "Rebootmon",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21/BT23/BT25 wave)",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-060.yaml",
@@ -6677,7 +6677,7 @@
         "H5",
         "G2"
       ],
-      "notes": "RE-ADJUDICATED BLOCKED->IMPLEMENTED: App Fusion alt-play resolves now (stale 2026-06-07 block cleared). SecA+1/Reboot/Link+1; App Fusion Bootmon&Shutmon (stacks+consumes link); [WD][WA][OPT] link Appmon free -> unsuspend ally (gated on link); [All Turns][OPT] dual-timing (when_card_linked_to_this+on_unsuspend) grant Piercing+Blocker+effect-immunity until EoT; Ult. alt digivolve. Review APPROVED."
+      "notes": "Drift fixed: missing white color, ungated on_unsuspend (P-215 class), missing refund_opt on declined link"
     },
     "BT25-085": {
       "card_name": "BeelStarmon",
@@ -6782,16 +6782,16 @@
       "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_040.rs"
     },
     "BT25-070": {
-      "validated_date": "2026-06-07",
-      "report": "link_card_to_self facet#9 step (G-DSL-LINK-CARD-FROM-ZONE LANDED)",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
       "archetype": "BT25 link-appmon-2 slice",
       "gap_kind": null,
       "card_name": "Logamon",
-      "status": "IMPLEMENTED",
+      "status": "AUDITED-OK",
       "patterns": [],
-      "notes": "IMPLEMENTED \u2014 [Main] self-link from trash/sources (-1) + [Your Turn] when-linked delete cost<=4 + inherited When-Linking cant-unsuspend + alt-digi + link-condition. App Fuse OMITTED (no primitive).",
-      "yaml_path": null,
-      "test_path": null
+      "notes": "Drift fixed: 7 drifts (color, traits, 2 circles, dead gate, App Fusion, linked DP); tests 3->21",
+      "yaml_path": "code/digimon-engine/cards/bt25/BT25-070.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt25/bt25_070.rs"
     },
     "BT25-088": {
       "card_name": "Kyo Sawashiro",
@@ -6969,9 +6969,9 @@
     },
     "BT25-036": {
       "card_name": "Craftmon",
-      "validated_date": "2026-06-07",
-      "report": "batch-implement-cards-rust-dsl (link-finish-appmon slice)",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "BT25 link-finish-appmon slice",
       "yaml_path": "code/digimon-engine/cards/bt25/BT25-036.yaml",
@@ -6983,7 +6983,7 @@
         "when_linked",
         "recovery"
       ],
-      "notes": "RE-ADJUDICATED from BLOCKED(App Fuse)->IMPLEMENTED: App Fusion implemented end-to-end (alt_paths app_fusion -> app_fusion_digivolve_route_for_card; stacks on top + drains linked cards under). link_condition Appmon cost2 + alt-digivolve Lv.2 Stnd. cost2 + app_fusion Kabemon/Gomimon/Ecomon/Puzzlemon cost0 + [Security] play-self-after-battle + [On Play][When Digivolving] add top security + Recovery+1 + [When Linking] trash 1 Appmon -> Draw 2. cards.json inherited field is mis-slot of When-Linking box. 9 tests."
+      "notes": "Drift fixed: missing yellow circle, spurious Stnd. level gate, missing linked +3000 DP, traits"
     },
     "BT25-094": {
       "card_name": "Cosmic Area",
@@ -8763,9 +8763,9 @@
     },
     "BT21-009": {
       "card_name": "Gatchmon",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21 wave)",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-009.yaml",
@@ -8776,13 +8776,13 @@
         "C1",
         "E2"
       ],
-      "notes": "when_card_linked_to_this OPT + tamer count_lte gate + play Haru Shinkai free; full link box (link_condition c1, +2000 linked dp aura, linked Raid grant). Review APPROVED."
+      "notes": "Drift fixed: missing standard Red Lv.2/0 circle; +4 tests"
     },
     "BT21-018": {
       "card_name": "DoGatchmon",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21 wave)",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-018.yaml",
@@ -8794,13 +8794,13 @@
         "C1",
         "E2"
       ],
-      "notes": "Rush+Raid, when-linked may_attack_now (host OPT) + [When Linking] host attack (scope:linked), App Fusion Gatchmon/Navimon/Tweetmon, Stnd. alt digivolve (review fix: no level gate), +3000 linked dp aura. Review NEEDS-FIX applied."
+      "notes": "Drift fixed: missing Red+Green Lv.3/3 circles; 2 stub tests replaced"
     },
     "ST22-12": {
       "card_name": "DoGatchmon",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21 wave)",
       "yaml_path": "code/digimon-engine/cards/st22/ST22-12.yaml",
@@ -8811,13 +8811,13 @@
         "E2",
         "C3"
       ],
-      "notes": "WhenAttacking OPT link_card_to_self union-zone Social/Navi/Tool (link cost reduced by 2 -> cost 0 per fixture precedent), [When Linking] return opp <=5000 DP to deck bottom, +3000 linked dp aura. Engine fix: LinkCardToSelf declinable-first-step. Review APPROVED."
+      "notes": "Drift fixed: deck-bounce no longer carries sources (DCGO trashes them); link cost reduce:2"
     },
     "BT21-023": {
       "card_name": "Globemon",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21 wave)",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-023.yaml",
@@ -8828,13 +8828,13 @@
         "E2",
         "C3"
       ],
-      "notes": "SecA+1, OnPlay/WhenDigivolving free link lv<=4, when-linked OPT delete dp_lte source_dp, [When Linking] host-DP-ceiling delete, +4000 linked dp aura. Engine fix: static_dp_aura_bonus .linked self-application guard. Review APPROVED."
+      "notes": "Drift fixed: missing Yellow Lv.4/4 circle; +3 tests"
     },
     "AD1-005": {
       "card_name": "Gaiamon ACE",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21 wave)",
       "yaml_path": "code/digimon-engine/cards/ad1/AD1-005.yaml",
@@ -8847,13 +8847,13 @@
         "H4",
         "E2"
       ],
-      "notes": "ACE Overflow -4; Blast Digivolve; SecA+1/Blocker/Link+1 (ChangeLinkMax aura, first YAML use of modifier_value); 3-timing shared-OPT link up to 2 Social/Navi/Tool (no kind:digimon restriction) + dp_lte source_dp delete; App Fusion Globemon&Charismon; Ult. alt digivolve. Review APPROVED."
+      "notes": "Drift fixed: color red->red/white dual, red gate on std circle; 2 stub tests rewritten"
     },
     "BT21-101": {
       "card_name": "Gaiamon",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21 wave)",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-101.yaml",
@@ -8864,13 +8864,13 @@
         "C1",
         "E2"
       ],
-      "notes": "Blocker/Link+1; [WD][WA] link 1 Appmon to chosen_own_digimon free; on_any_link board-wide observer (unsuspend-self cost, gate source_is_unsuspended:false) -> trash opp top security; App Fusion; Ult. alt digivolve. First on_any_link production user. Review APPROVED."
+      "notes": "Drift fixed: dual White/Red color restored"
     },
     "BT21-084": {
       "card_name": "Haru Shinkai",
-      "validated_date": "2026-06-13",
-      "report": "effect-initiated-app-fuse plan",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21 wave)",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-084.yaml",
@@ -8880,13 +8880,13 @@
         "B1",
         "B3"
       ],
-      "notes": "App-fuse rider now shipped (app_fuse from: hand after Draw 1). Memory ramp + on_any_link suspend-cost + security play. Full card implemented."
+      "notes": "Faithful; stale PARTIAL header corrected"
     },
     "P-217": {
       "card_name": "Haru Shinkai",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21 wave)",
       "yaml_path": "code/digimon-engine/cards/p/P-217.yaml",
@@ -8897,13 +8897,13 @@
         "A2",
         "B3"
       ],
-      "notes": "On Play reveal-3 two-bucket (Social + Creation/Navi/Tool) add+bottom; on_any_link observer with event_card_trait_has 4-trait filter (Creation included per printed text; DCGO drops it - DCGO bug) + suspend-self cost -> gain 1 memory; security play-free. Review APPROVED."
+      "notes": "Drift fixed: link observer wrongly included [Creation] (lossy cards.json); printed = Social/Navi/Tool only"
     },
     "BT21-005": {
       "card_name": "Swipemon",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21/BT24 wave)",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-005.yaml",
@@ -8914,13 +8914,13 @@
         "B3",
         "E2"
       ],
-      "notes": "Digi-Egg inherited [Your Turn][OPT] when_card_linked_to_this -> Draw 1. Review APPROVED."
+      "notes": "Drift fixed: form In-Training->Appmon; +2 tests"
     },
     "BT21-047": {
       "card_name": "Navimon",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21/BT24 wave)",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-047.yaml",
@@ -8931,13 +8931,13 @@
         "A2",
         "H3"
       ],
-      "notes": "On Play reveal-3 two-bucket (Appmon + App Driver) add+bottom; link box: link_condition c1 + linked +2000 DP aura + linked Piercing grant; Lv.2 Appmon alt digivolve. Review APPROVED."
+      "notes": "Faithful; 4 tests tightened"
     },
     "BT24-067": {
       "card_name": "Hackmon",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21/BT24 wave)",
       "yaml_path": "code/digimon-engine/cards/bt24/BT24-067.yaml",
@@ -8948,13 +8948,13 @@
         "E2",
         "F-Retaliation"
       ],
-      "notes": "Twin of BT21-009: when_card_linked_to_this OPT + count_lte tamer -> play Rei Katsura free; link box: link_condition c1 + linked +2000 DP aura (review fix: was omitted) + linked Retaliation grant; Lv.2 Appmon alt digivolve. Review NEEDS-FIX applied."
+      "notes": "Drift fixed: missing standard Purple Lv.2/0 circle; +5 tests"
     },
     "BT24-087": {
       "card_name": "Rei Katsura",
-      "validated_date": "2026-06-13",
-      "report": "effect-initiated-app-fuse plan",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21/BT24 wave)",
       "yaml_path": "code/digimon-engine/cards/bt24/BT24-087.yaml",
@@ -8964,13 +8964,13 @@
         "B1",
         "B3"
       ],
-      "notes": "App-fuse-into-trash rider now shipped (app_fuse from: trash + System/Life/Transmutation filter). Start-of-main memory + on_any_link suspend-cost Draw1+trash1 + app_fuse + security play. Full card implemented."
+      "notes": "Faithful; comment fixes + test hardening"
     },
     "BT21-059": {
       "card_name": "Timemon",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21 wave)",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-059.yaml",
@@ -8981,13 +8981,13 @@
         "C1",
         "F-DeDigivolve"
       ],
-      "notes": "Blocker; host when_card_linked_to_this De-Digivolve 1 (mandatory, OPT/your-turn) + linked when_linked De-Digivolve 1; link box link_condition c2 + linked +3000 DP aura; App Fusion Watchmon/Savemon/Calendamon; Stnd. alt digivolve. Review APPROVED."
+      "notes": "Faithful; no changes"
     },
     "BT21-070": {
       "card_name": "Gossipmon",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21 wave)",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-070.yaml",
@@ -8997,13 +8997,13 @@
         "A4",
         "C1"
       ],
-      "notes": "Security end-of-battle play; On Play/WhenDigivolving optional return Appmon Digimon from trash + linked when_linked same; link box link_condition c2 + linked +3000 DP aura (review-added); Stnd. alt digivolve. Review APPROVED."
+      "notes": "Faithful; broken test helper fixed, +2 tests"
     },
     "BT21-071": {
       "card_name": "Scopemon",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21 wave)",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-071.yaml",
@@ -9013,13 +9013,13 @@
         "A6",
         "C1"
       ],
-      "notes": "On Play/WhenDigivolving place Appmon/3Musketeers as bottom source -> gain memory; link box link_condition c2 + linked +3000 DP aura (review-added) + linked when_linked Draw2+trash2; alt digivolve std + Stnd. + 3Musketeers-in-text (effect_text_contains). Review APPROVED."
+      "notes": "Drift fixed: 3 alt-path fixes (color gate, level gate, in_text predicate); 2 stubs replaced"
     },
     "BT21-043": {
       "card_name": "Sociamon",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21 wave)",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-043.yaml",
@@ -9029,13 +9029,13 @@
         "D1",
         "C1"
       ],
-      "notes": "Security end-of-battle play; On Play/WhenDigivolving -2000 DP until opp turn ends (deletes <=2000 DP) + linked when_linked same; link box link_condition c2 + linked +3000 DP aura; Stnd. alt digivolve. Review APPROVED."
+      "notes": "Faithful; tests tightened"
     },
     "BT21-073": {
       "card_name": "Charismon",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21/BT23/BT25 wave)",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-073.yaml",
@@ -9046,13 +9046,13 @@
         "F1",
         "C1"
       ],
-      "notes": "Blocker; OnPlay/WhenDigivolving free-link lv<=4 from trash/sources; when_card_linked_to_this grant opponent Digimon forced-attack (grant_triggered_effect+force_attack, BT25-054 precedent) until opp turn ends; link box link_condition c3 + linked +4000 DP aura + scope:linked leave-replacement (trash link card); App Fusion Sociamon&Gossipmon; Sup. alt digivolve. Review APPROVED."
+      "notes": "Drift fixed: missing Black Lv.4/4 circle + missing OPT on linked leave-replacement"
     },
     "BT21-097": {
       "card_name": "App Link",
-      "validated_date": "2026-06-12",
-      "report": "batch-implement-cards-rust-dsl",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21/BT23/BT25 wave)",
       "yaml_path": "code/digimon-engine/cards/bt21/BT21-097.yaml",
@@ -9062,13 +9062,13 @@
         "A1",
         "D3"
       ],
-      "notes": "OPTION (JSON mislabels Tamer). Color-ignore use-req gated on board Appmon; [Main] reveal-3 add Appmon/AppDriver trash-rest place-self; [EoT] Delay trash-self -> link 1 hand card to own Digimon free; [Security] place self. DSL fix: LinkCardsCount untagged struct variants (link_cards in kind:delay bodies). Review APPROVED."
+      "notes": "Drift fixed: Delay re-timed [Main]->[End of Your Turn]; reveal-add mandatory; 1 test gap-pinned G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN"
     },
     "BT23-079": {
       "card_name": "Eri Karan",
-      "validated_date": "2026-06-13",
-      "report": "effect-initiated-app-fuse plan",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (BT21/BT23/BT25 wave)",
       "yaml_path": "code/digimon-engine/cards/bt23/BT23-079.yaml",
@@ -9078,13 +9078,13 @@
         "B1",
         "B3"
       ],
-      "notes": "App-fuse rider now shipped (app_fuse from: hand after +3000 DP to event-host). Full card implemented."
+      "notes": "YAML faithful; stale PARTIAL header fixed, +2 tests"
     },
     "P-241": {
       "card_name": "Yujin Ozora",
-      "validated_date": "2026-06-13",
-      "report": "effect-initiated-app-fuse plan",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Appmon (promo)",
       "yaml_path": "code/digimon-engine/cards/p/P-241.yaml",
@@ -9094,13 +9094,13 @@
         "B1",
         "B3"
       ],
-      "notes": "App-fuse rider now shipped (app_fuse from: hand after Vortex+3000 DP grant to a chosen Appmon Digimon). Full card implemented."
+      "notes": "Behavior faithful; false DCGO-ABSENT + stale PARTIAL headers corrected; +2 tests"
     },
     "EX11-002": {
       "card_name": "Hiyarimon",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/ex11/EX11-002.yaml",
@@ -9108,13 +9108,13 @@
       "test_count": 6,
       "tests_ignored": 0,
       "patterns": [],
-      "notes": "Digi-egg; inherited conditional aura: CanAttackUnsuspended while opp has no sourced Digimon, gated your_turn + carrier Ice-Snow."
+      "notes": "Faithful; no changes"
     },
     "EX7-016": {
       "card_name": "Bulucomon",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/ex7/EX7-016.yaml",
@@ -9122,13 +9122,13 @@
       "test_count": 11,
       "tests_ignored": 0,
       "patterns": [],
-      "notes": "[OnPlay] reveal-3 two mandatory buckets (Paledramon/Hexeblaumon-name + Ice-Snow) rest to bottom; inherited [WA][OPT] trash_top_stacked_sources."
+      "notes": "Faithful; Rule-trait fix confirmed live"
     },
     "EX11-014": {
       "card_name": "Penguinmon",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/ex11/EX11-014.yaml",
@@ -9136,13 +9136,13 @@
       "test_count": 12,
       "tests_ignored": 0,
       "patterns": [],
-      "notes": "[OnPlay] reveal-3 buckets (Suzune Kazuki + Ice-Snow Digimon); inherited Jamming. Rule-box Ice-Snow added to traits."
+      "notes": "Drift fixed: missing Yellow Lv.2/1 split-circle half; breeding name-route fix intact"
     },
     "EX8-019": {
       "card_name": "Penguinmon",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/ex8/EX8-019.yaml",
@@ -9150,13 +9150,13 @@
       "test_count": 9,
       "tests_ignored": 0,
       "patterns": [],
-      "notes": "[Your Turn] before_pay_cost -1 digivolve into Ice-Snow; inherited [WA] SecurityAttackChange -1 EoOT. Hiyarimon alt-evo + rule-box Ice-Snow."
+      "notes": "Drift fixed: missing yellow split-circle half; Rule-trait + Hiyarimon fixes intact"
     },
     "EX7-020": {
       "card_name": "Paledramon",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/ex7/EX7-020.yaml",
@@ -9164,13 +9164,13 @@
       "test_count": 11,
       "tests_ignored": 0,
       "patterns": [],
-      "notes": "[WD] trash_bottom_sources 2; if opp sourceless self gains Jamming+Blocker EoOT; inherited [WA][OPT] trash top source. Rule-box Ice-Snow."
+      "notes": "Drift fixed: missing form Champion"
     },
     "EX11-015": {
       "card_name": "Frigimon",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/ex11/EX11-015.yaml",
@@ -9178,13 +9178,13 @@
       "test_count": 14,
       "tests_ignored": 0,
       "patterns": [],
-      "notes": "[WD] if <=1 Tamer may play Suzune Kazuki from hand free; inherited Jamming. Ice-Snow alt-evo."
+      "notes": "Drift fixed: missing Yellow Lv.3/3 split-circle half"
     },
     "EX8-022": {
       "card_name": "Frigimon",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/ex8/EX8-022.yaml",
@@ -9194,13 +9194,13 @@
       "patterns": [
         "ICECLAD"
       ],
-      "notes": "Iceclad; [OP][WD] trash_bottom_sources 2 then if opp sourceless gain 1 memory; inherited [WA] SecurityAttackChange -1. Closed Iceclad DSL keyword mapping."
+      "notes": "Drift fixed: missing Yellow Lv.3/3 split-circle half"
     },
     "EX7-021": {
       "card_name": "CrysPaledramon",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/ex7/EX7-021.yaml",
@@ -9210,13 +9210,13 @@
       "patterns": [
         "ICECLAD"
       ],
-      "notes": "Iceclad; [WD] trash any 2 cross-permanent (min-clamp ladder) then if opp sourceless unsuspend self; inherited [Your Turn] Piercing + S.A.+1."
+      "notes": "Faithful; 16 tests"
     },
     "EX11-016": {
       "card_name": "PolarBearmon",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/ex11/EX11-016.yaml",
@@ -9226,13 +9226,13 @@
       "patterns": [
         "ICECLAD"
       ],
-      "notes": "Iceclad; [OP][WD] trash any 2 cross-permanent then may place a sourceless opp Digimon top/bottom of opp security (select_effect_choice); inherited [Your Turn] Piercing + S.A.+1."
+      "notes": "Drift fixed: missing Yellow Lv.4/4 circle; mid-battle Piercing Q&A regression intact"
     },
     "EX8-023": {
       "card_name": "PolarBearmon",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/ex8/EX8-023.yaml",
@@ -9242,13 +9242,13 @@
       "patterns": [
         "ICECLAD"
       ],
-      "notes": "Iceclad; [OP][WD] trash any 2 cross-permanent then lock 1 sourceless opp Digimon (CannotSuspend + CannotActivateWhenDigivolvingEffects) EoOT; inherited [Your Turn] Piercing + S.A.+1. CannotSuspend now engine-enforced."
+      "notes": "Drift fixed: missing Yellow Lv.4/4 split-circle half"
     },
     "EX7-023": {
       "card_name": "Hexeblaumon",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/ex7/EX7-023.yaml",
@@ -9258,13 +9258,13 @@
       "patterns": [
         "ICECLAD"
       ],
-      "notes": "S.A.+1 + Iceclad face-up; [WD] trash any 4 cross-permanent then if opp sourceless return 1 opp Tamer to deck bottom; [Opp Turn] aura: opp Digimon with <= source count can't suspend. CannotSuspend enforcement landed (ignored test un-ignored)."
+      "notes": "Faithful; stale engine-gap comments corrected"
     },
     "EX11-017": {
       "card_name": "Skadimon",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/ex11/EX11-017.yaml",
@@ -9274,13 +9274,13 @@
       "patterns": [
         "ICECLAD"
       ],
-      "notes": "Iceclad + Barrier; [OP][WD][WA][OPT shared] play Suzune Kazuki or <=Lv4 Ice-Snow free; [All Turns][OPT] on other play/digivolve trash any 3 then lock sourceless opp Digimon. CannotSuspend enforcement landed (ignored test un-ignored)."
+      "notes": "Drift fixed: missing Yellow Lv.5/4 split-circle half"
     },
     "EX8-028": {
       "card_name": "Skadimon",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/ex8/EX8-028.yaml",
@@ -9290,13 +9290,13 @@
       "patterns": [
         "ICECLAD"
       ],
-      "notes": "Iceclad + Barrier; [WD] play <=Lv(4+X) Ice-Snow free (formula level cap, X=opp sourceless count); [WD][WA][OPT] by placing a sourceless Digimon bottom security unsuspend self."
+      "notes": "Drift fixed: missing Yellow AND Purple Lv.5/4 circles; mid-attack fizzle regression intact"
     },
     "P-228": {
       "card_name": "Unique Emblem: Frozen Crown",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/p/P-228.yaml",
@@ -9304,13 +9304,13 @@
       "test_count": 14,
       "tests_ignored": 0,
       "patterns": [],
-      "notes": "[Main]/[Security] reveal-3 buckets (Ice-Snow Digimon + LIBERATOR) place self as Delay option; trigger-gated Delay on Suzune Kazuki play -> digivolve into <=Lv6 LIBERATOR from hand cost -3."
+      "notes": "Faithful; Delay-optionality fix intact; +2 tests"
     },
     "EX8-066": {
       "card_name": "Suzune Kazuki",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/ex8/EX8-066.yaml",
@@ -9318,13 +9318,13 @@
       "test_count": 19,
       "tests_ignored": 0,
       "patterns": [],
-      "notes": "[SoMP] +1 memory if opp has Digimon; [All Turns] on own Ice-Snow Digimon play/digivolve, by suspending trash any 1 opp source; [Security] self-play."
+      "notes": "Faithful; no changes"
     },
     "EX11-057": {
       "card_name": "Suzune Kazuki",
-      "validated_date": "2026-06-13",
-      "report": "iceclad-liberator-pool-2026-06-13",
-      "status": "IMPLEMENTED",
+      "validated_date": "2026-07-10",
+      "report": "buglist-faithfulness-campaign-2026-07",
+      "status": "AUDITED-OK",
       "gap_kind": null,
       "archetype": "Iceclad Liberator",
       "yaml_path": "code/digimon-engine/cards/ex11/EX11-057.yaml",
@@ -9334,7 +9334,7 @@
       "patterns": [
         "FORMULA-COUNT-SOURCE-SELECT"
       ],
-      "notes": "[SoMP] +1 memory if opp has Digimon; [OnPlay] per own Ice-Snow Digimon trash any 1 opp source (formula-count source select); [All Turns] on effects trashing opp sources, by suspending gain 1 memory; [Security] self-play. Closed G-DSL-SELECT-SOURCES-FORMULA-COUNT."
+      "notes": "Faithful; no changes"
     },
     "BT25-003": {
       "card_name": "Frimon",

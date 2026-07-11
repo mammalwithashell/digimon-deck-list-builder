@@ -1,5 +1,7 @@
-//! AD1-005 Gaiamon ACE — Digimon, Lv.6, Red, DP 12000, Play Cost 7.
+//! AD1-005 Gaiamon ACE — Digimon, Lv.6, Red/White, DP 12000, Play Cost 7.
 //! Traits: [God, Appmon, Creation]. Attribute: God.
+//! Colors: RED + WHITE (official bundle "Colors: Red White"; dual-color name
+//! plate on the card image; DCGO card_colors [0, 4]).
 //!
 //! # Corrected printed card text (card image — authoritative)
 //!
@@ -30,6 +32,10 @@
 //!   condition `targetPermanent.TopCard.EqualsTraits("Ult.")`, cost 4.
 //!
 //! # Patterns this test file covers
+//! - Dual-color identity (Red + White — campaign drift pattern 5)
+//! - Standard digivolve circle color gate (RED Lv.5 / 4 — red rim on the card
+//!   image; a non-red Lv.5 base must be rejected; the rainbow "Ult. / 4"
+//!   circle stays color-agnostic — campaign drift pattern 1)
 //! - H5  Blocker (face-up declarative grant_keyword)
 //! - SecurityAttackPlus +1 (face-up declarative grant_keyword, value 1)
 //! - BlastDigivolve (hand counter marker grant_keyword)
@@ -52,10 +58,11 @@
 #![allow(dead_code, unused_imports)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
+    CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::space::{encode_digivolve, PASS};
+use digimon_engine::build_action_mask;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, GamePhase, PlaySource};
@@ -188,6 +195,24 @@ fn ad1_005_metadata_matches_printed_text() {
         Some("God"),
         "attribute must be God (image shows form 'God/Appmon', attribute 'God')"
     );
+    // Dual-color identity — official bundle "Colors: Red White"; the card
+    // image's name plate is red+white; DCGO card_colors [0, 4].
+    assert_eq!(
+        c.color.len(),
+        2,
+        "Gaiamon ACE is a two-color (Red+White) Digimon; got {:?}",
+        c.color
+    );
+    assert!(
+        c.color.contains(&CompiledColor::Red),
+        "Gaiamon ACE must be Red; got {:?}",
+        c.color
+    );
+    assert!(
+        c.color.contains(&CompiledColor::White),
+        "Gaiamon ACE must be White (bundle: 'Colors: Red White'); got {:?}",
+        c.color
+    );
 }
 
 /// ACE Overflow <-4> via top-level ace_overflow field.
@@ -201,20 +226,26 @@ fn ad1_005_ace_overflow_is_minus_4() {
     );
 }
 
-/// Standard Lv.5 digivolve alt-path (from cards.json evo_costs).
+/// Standard digivolve circle: RED Lv.5 / Cost 4 (red-rimmed circle on the
+/// card image; official bundle "Red Lv.5 / cost 4"). The `from` filter MUST
+/// carry the red color gate — a color-less `level_eq: 5` would wrongly admit
+/// any-color Lv.5 bases.
 #[test]
-fn ad1_005_has_standard_lv5_digivolve_alt_path_cost_4() {
+fn ad1_005_has_standard_red_lv5_digivolve_alt_path_cost_4() {
     let c = compiled("AD1-005");
     let standard = c.alt_paths.iter().find(|p| {
         p.kind == CompiledAltPathKind::Digivolve
             && matches!(p.cost, Some(CompiledCost::Literal(4)))
-            && p.from
-                .as_ref()
-                .is_some_and(|f| f.level_eq == Some(5) && f.trait_has.is_none())
+            && p.from.as_ref().is_some_and(|f| {
+                f.level_eq == Some(5)
+                    && f.trait_has.is_none()
+                    && f.color_is == Some(CompiledColor::Red)
+            })
     });
     assert!(
         standard.is_some(),
-        "must have a standard Digivolve path at Lv.5 / Cost 4; paths: {:?}",
+        "must have a standard Digivolve path at RED Lv.5 / Cost 4 \
+         (printed circle is red-rimmed); paths: {:?}",
         c.alt_paths
             .iter()
             .map(|p| (&p.kind, &p.cost))
@@ -222,7 +253,9 @@ fn ad1_005_has_standard_lv5_digivolve_alt_path_cost_4() {
     );
 }
 
-/// Ult. digivolve alt-path (DCGO EqualsTraits("Ult."), cost 4).
+/// Ult. digivolve alt-path (DCGO EqualsTraits("Ult."), cost 4). The printed
+/// circle has a RAINBOW rim — it is deliberately color-agnostic, so the
+/// `from` filter must NOT carry a color gate.
 #[test]
 fn ad1_005_has_ult_trait_digivolve_alt_path_cost_4() {
     let c = compiled("AD1-005");
@@ -233,10 +266,17 @@ fn ad1_005_has_ult_trait_digivolve_alt_path_cost_4() {
                 .as_ref()
                 .is_some_and(|f| f.trait_has.as_deref() == Some("Ult."))
     });
-    assert!(
-        ult_path.is_some(),
+    let ult_path = ult_path.expect(
         "must have a Ult.-trait Digivolve path at Cost 4 \
-         (DCGO AddSelfDigivolutionRequirementStaticEffect EqualsTraits(\"Ult.\"))"
+         (DCGO AddSelfDigivolutionRequirementStaticEffect EqualsTraits(\"Ult.\"))",
+    );
+    assert!(
+        ult_path
+            .from
+            .as_ref()
+            .is_some_and(|f| f.color_is.is_none()),
+        "the Ult. circle is rainbow-rimmed (any color) — no color gate allowed \
+         (DCGO condition checks the trait only)"
     );
 }
 
@@ -382,6 +422,108 @@ fn ad1_005_three_timing_opt_clause_structure() {
     // (DCGO SharedCanActivateCondition gates activation, not clause optional).
     // NOTE: This may depend on whether active_when is set; either form is fine.
     // The important invariant is once_per_turn: true (checked above).
+}
+
+// ─── SECTION 1b — Digivolve-circle behavior (color gates) ────────────────────
+
+/// A Lv.5 Digimon base with an explicit color and no Ult. trait (so only the
+/// standard circle can admit it).
+fn lv5_base_colored(id: &str, color: CardColor) -> CardData {
+    let mut c = make_test_card_with_level(id, id, 5);
+    c.card_kind = CardKind::Digimon;
+    c.dp = Some(5000);
+    c.colors = vec![color];
+    c.traits = vec!["Beast".to_string()];
+    c
+}
+
+/// Stage AD1-005 in hand above `base` on the battle area (Main phase, turn 1).
+/// Returns (runner, base field slot).
+fn digivolve_runner(base: CardData) -> (DebugRunner, usize) {
+    let base_id = base.card_id.clone();
+    let mut r = DebugRunner::builder()
+        .dsl_card("AD1-005")
+        .expect("AD1-005 in pack")
+        .add_card(base)
+        .hand(0, &["AD1-005"])
+        .memory(10)
+        .start();
+    r.game.turn_count = 1;
+    r.game.current_phase = GamePhase::Main;
+    let slot = r.place_on_field(0, &base_id, Some(0)).index as usize;
+    (r, slot)
+}
+
+/// Standard circle positive: a RED Lv.5 base is offered in the mask and the
+/// digivolve pays exactly the printed 4 memory.
+#[test]
+fn ad1_005_standard_digivolve_accepts_red_lv5_base_paying_4() {
+    let (mut r, slot) = digivolve_runner(lv5_base_colored("RED-LV5", CardColor::Red));
+
+    let mask = build_action_mask(&r.game, 0);
+    let action = encode_digivolve(0, slot as u16) as usize;
+    assert_eq!(
+        mask[action], 1.0,
+        "mask must offer AD1-005 digivolve over a red Lv.5 base (printed circle: Red Lv.5 / 4)"
+    );
+
+    let mem_before = r.game.memory;
+    let ok = r.game.digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
+    assert!(ok, "digivolving over a red Lv.5 base must succeed");
+    assert_eq!(
+        mem_before - r.game.memory,
+        4,
+        "the standard circle costs exactly 4 memory"
+    );
+}
+
+/// Standard circle negative: an off-color (blue) Lv.5 base without the Ult.
+/// trait matches NO circle — the mask must not offer the digivolve and the
+/// action must be rejected. (Campaign drift pattern 1: a color-less
+/// `level_eq: 5` filter would wrongly accept this base.)
+#[test]
+fn ad1_005_standard_digivolve_rejects_off_color_lv5_base() {
+    let (mut r, slot) = digivolve_runner(lv5_base_colored("BLUE-LV5", CardColor::Blue));
+
+    let mask = build_action_mask(&r.game, 0);
+    let action = encode_digivolve(0, slot as u16) as usize;
+    assert_eq!(
+        mask[action], 0.0,
+        "mask must NOT offer AD1-005 digivolve over a blue Lv.5 base \
+         (the printed circle is RED Lv.5 / 4)"
+    );
+
+    let mem_before = r.game.memory;
+    let ok = r.game.digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
+    assert!(!ok, "digivolving over a blue non-Ult. Lv.5 base must be rejected");
+    assert_eq!(r.game.memory, mem_before, "no memory is paid on rejection");
+}
+
+/// Ult. circle positive: the rainbow "Ult. / 4" circle is color-agnostic — a
+/// BLUE base with the [Ult.] trait digivolves for 4 (DCGO EqualsTraits("Ult.")
+/// checks the trait only).
+#[test]
+fn ad1_005_ult_circle_accepts_any_color_ult_base_paying_4() {
+    let mut base = lv5_base_colored("BLUE-ULT", CardColor::Blue);
+    base.traits = vec!["Ult.".to_string()];
+    let (mut r, slot) = digivolve_runner(base);
+
+    let mask = build_action_mask(&r.game, 0);
+    let action = encode_digivolve(0, slot as u16) as usize;
+    assert_eq!(
+        mask[action], 1.0,
+        "mask must offer AD1-005 digivolve over a blue [Ult.] base \
+         (the Ult. circle is rainbow / any-color)"
+    );
+
+    let mem_before = r.game.memory;
+    let ok = r.game.digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
+    assert!(ok, "digivolving over a blue [Ult.] base must succeed");
+    assert_eq!(
+        mem_before - r.game.memory,
+        4,
+        "the Ult. circle costs exactly 4 memory"
+    );
 }
 
 // ─── SECTION 2 — Link +1 aura ────────────────────────────────────────────────
@@ -643,26 +785,40 @@ fn ad1_005_delete_accepts_digimon_at_exactly_12000_dp() {
         .start();
 
     let gaiamon = runner.place_on_field(0, "AD1-005", Some(0));
-    let weak_field = runner.place_on_field(1, "OPP-12K", None);
+    let _weak_field = runner.place_on_field(1, "OPP-12K", None);
     let _strong_field = runner.place_on_field(1, "OPP-13K", None);
 
     runner.fire_on_play(0, gaiamon.index as usize);
     runner.game.drain_effect_queue();
 
-    if let Some(p) = runner.game.pending_selection.as_ref() {
-        // The 12000 DP Digimon should be valid; the 13000 DP Digimon must NOT be.
-        let valid_ids = p.valid_action_ids.clone();
-        let selecting_player = p.selecting_player;
+    // No linkable cards → the delete prompt is next. The 12000 DP Digimon is
+    // eligible (dp_lte source_dp: 12000 <= 12000), so the prompt MUST install.
+    let p = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("delete prompt must install: OPP-12K (12000 DP) is exactly at the ceiling");
+    assert!(
+        p.valid_action_ids.iter().any(|&a| a != PASS),
+        "the selection must offer at least one non-PASS target (OPP-12K)"
+    );
 
-        // Check which permanent indices are valid.
-        use digimon_engine::action::space::encode_attack;
-        assert!(
-            valid_ids.contains(&encode_attack(0, weak_field.index as u16))
-                || !valid_ids.iter().all(|&a| a == PASS),
-            "the 12000 DP opponent Digimon must be in the delete selection \
-             (dp_lte: source_dp means <=, 12000 <= 12000 is true)"
-        );
-    }
+    // Accept: the only eligible target is OPP-12K — it is deleted; the
+    // 13000 DP Digimon must survive.
+    pick_first(&mut runner);
+    let _ = runner.auto_resolve();
+    assert_eq!(
+        runner.battle_area_size(1),
+        1,
+        "exactly one opponent Digimon (OPP-12K) must be deleted"
+    );
+    assert_eq!(
+        runner.game.players[1].battle_area[0]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "OPP-13K",
+        "the surviving Digimon must be the 13000 DP one (above the <= 12000 ceiling)"
+    );
 }
 
 /// Delete arm: opponent Digimon with DP > 12000 is NOT eligible.
@@ -756,6 +912,10 @@ fn ad1_005_opt_locked_after_on_play_fires_same_turn() {
 }
 
 /// OPT resets: after end_turn / new turn, [When Attacking] fires again.
+/// Turn 0: [On Play] fires with TOOL-MON in hand; the link prompt is DECLINED
+/// (so TOOL-MON stays in hand) — the OPT is still consumed by the activation.
+/// Next own turn: attacking must re-fire the clause and re-offer the link
+/// prompt, proving the per-turn reset (DCGO hash counters clear each turn).
 #[test]
 fn ad1_005_opt_resets_after_end_turn() {
     let mut runner = DebugRunner::builder()
@@ -764,28 +924,44 @@ fn ad1_005_opt_resets_after_end_turn() {
         .add_card(digimon_with_trait("TOOL-MON", "Tool"))
         .add_card(lv5_base("LV5-BASE"))
         .hand(0, &["TOOL-MON"])
+        // P1 needs security so the two player-attacks don't end the game
+        // (DebugRunner defaults to an EMPTY security stack → instant win),
+        // and BOTH players need decks so the end_turn draws don't deck out.
+        .security(1, &["LV5-BASE", "LV5-BASE"])
+        .deck(0, &["LV5-BASE"; 4])
+        .deck(1, &["LV5-BASE"; 4])
         .memory(15)
         .start();
 
     let gaiamon = runner.place_on_field(0, "AD1-005", Some(0));
 
-    // Consume OPT in turn 0 via on_play.
+    // Consume OPT in turn 0 via on_play; decline every prompt so TOOL-MON
+    // remains in hand for the next turn.
     runner.fire_on_play(0, gaiamon.index as usize);
-    let _ = runner.auto_resolve();
+    while runner.game.pending_selection.is_some() {
+        decline_pending(&mut runner);
+    }
+    // OPT is consumed: attacking in the SAME turn must stay silent.
+    runner.attack_player(gaiamon, 1, false);
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.game.pending_selection.is_none(),
+        "same-turn when_attacking must be locked after on_play consumed the OPT"
+    );
 
     // Advance to the next turn (P0's turn via two end_turns).
     runner.end_turn(); // P1's turn
     runner.end_turn(); // back to P0's turn
 
-    // OPT should be reset: attacking now should fire the clause.
+    // OPT reset: attacking now must fire the clause again, and TOOL-MON is
+    // still in hand, so the link prompt must install.
     runner.attack_player(gaiamon, 1, false);
     runner.game.drain_effect_queue();
-
-    // If a Tool card is still in hand, the link prompt should appear.
-    // (After end_turn the hand is replenished unless drawn, so TOOL-MON may
-    // have been drawn. We just assert no panic and the engine is alive.)
-    // The main assertion is that the game proceeds without crashing.
-    // This proves the OPT reset contract.
+    assert!(
+        runner.game.pending_selection.is_some(),
+        "when_attacking on the NEXT turn must re-fire the OPT clause and \
+         re-offer the link prompt (TOOL-MON is still in hand)"
+    );
 }
 
 // ─── SECTION 6 — Blast Digivolve counter window ──────────────────────────────

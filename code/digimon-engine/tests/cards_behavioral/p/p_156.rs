@@ -104,7 +104,7 @@ fn p_156_yaml_parses_and_compiles() {
 }
 
 #[test]
-fn p_156_is_black_option_cost_2_with_tamer_use_requirement() {
+fn p_156_is_white_option_cost_2_with_tamer_use_requirement() {
     let runner = runner();
     let compiled = runner.compiled_card("P-156").expect("compiled card");
 
@@ -281,7 +281,12 @@ fn p_156_main_chooses_tamer_then_filters_hand_or_trash_digimon_by_bound_tamer_co
 }
 
 #[test]
-fn p_156_main_requires_at_least_one_tamer_choice_before_option_is_legal() {
+fn p_156_not_legal_without_tamer_white_color_never_matches() {
+    // P-156 is WHITE: no battle-area permanent can color-match it, so the
+    // ONLY route to legality is the printed Use Req. ("While you have a
+    // Tamer, you may ignore this card's color requirements"). Option use
+    // legality is otherwise phase + cost + color (rule 1-3-11-1) — never
+    // effect-target availability.
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(&yaml())
         .expect("P-156 YAML parses")
@@ -298,7 +303,7 @@ fn p_156_main_requires_at_least_one_tamer_choice_before_option_is_legal() {
     let mask = build_action_mask(&runner.game, 0);
     assert_eq!(
         mask[PLAY_HAND_START as usize], 0.0,
-        "P-156 should not be legal when its mandatory Tamer choice has no candidates"
+        "white P-156 with no Tamer: color never matches and the Use Req. bypass is unmet"
     );
     assert_eq!(
         runner.game.play_option_from_hand(0, 0),
@@ -308,11 +313,16 @@ fn p_156_main_requires_at_least_one_tamer_choice_before_option_is_legal() {
 }
 
 #[test]
-fn p_156_main_can_choose_opponent_tamer_when_only_opponent_has_tamer() {
+fn p_156_main_can_choose_opponents_tamer() {
+    // The [Main] "Choose 1 Tamer" is side-agnostic (official Q&A: it refers
+    // to a card sharing a color with the CHOSEN card, wherever it is). The
+    // user still needs their OWN Tamer to use white P-156 at all (Use Req.
+    // bypass) — here a BLUE one, whose color matches nothing in hand, so the
+    // hand filter proves the chosen OPPONENT Tamer's color drives it.
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(&yaml())
         .expect("P-156 YAML parses")
-        .add_card(digimon("BLACK-SOURCE", CardColor::Black, 3))
+        .add_card(tamer("BLUE-TAMER", CardColor::Blue))
         .add_card(tamer("RED-TAMER", CardColor::Red))
         .add_card(digimon("RED-HAND", CardColor::Red, 3))
         .add_card(digimon("YELLOW-HAND", CardColor::Yellow, 3))
@@ -322,7 +332,7 @@ fn p_156_main_can_choose_opponent_tamer_when_only_opponent_has_tamer() {
         .deck(1, &["FILL"])
         .memory(10)
         .start();
-    runner.place_on_field(0, "BLACK-SOURCE", Some(0));
+    runner.place_on_field(0, "BLUE-TAMER", Some(0));
     runner.place_on_field(1, "RED-TAMER", Some(0));
     runner.game.enter_main_phase();
 
@@ -332,17 +342,22 @@ fn p_156_main_can_choose_opponent_tamer_when_only_opponent_has_tamer() {
     );
     let tamer_choice = runner
         .pending_selection_view()
-        .expect("opponent Tamer selection");
+        .expect("Tamer selection");
     assert_eq!(
         tamer_choice.valid_action_ids.len(),
-        1,
-        "the opponent Tamer should be the only available Tamer choice"
+        2,
+        "both the own and the opponent Tamer should be choosable"
     );
+    // AnyField selections encode candidates as
+    // `100 + player * TARGETS_PER_ATTACKER + index` — pick player 1's Tamer.
+    let opp_base = 100 + digimon_engine::action::space::TARGETS_PER_ATTACKER;
+    let opp_tamer_id = *tamer_choice
+        .valid_action_ids
+        .iter()
+        .find(|id| **id >= opp_base)
+        .expect("opponent Tamer should be a legal choice");
     runner
-        .execute_action(
-            tamer_choice.selecting_player,
-            tamer_choice.valid_action_ids[0],
-        )
+        .execute_action(tamer_choice.selecting_player, opp_tamer_id)
         .expect("choose opponent red Tamer");
     runner.execute_branch(0).expect("choose hand branch");
 

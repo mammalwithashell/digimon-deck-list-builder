@@ -1,6 +1,6 @@
 //! BT21-017 Dimetromon — Digimon, Lv.4, Red, DP 4000, Cost 4.
 //! Traits: Reptile, LIBERATOR
-//! Evo: Lv3 / 0 memory
+//! Evo: Red Lv.3 / 2 memory (standard circle — official Bandai DB / cards.json)
 //!
 //! # Card text (cards.json)
 //!
@@ -26,10 +26,10 @@
 //!   test is live.
 
 use digimon_dsl::compiled::{CompiledClause, CompiledScope, CompiledTiming};
-use digimon_engine::card_data::CardData;
+use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardKind, EffectTiming};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, GamePhase, PlaySource};
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 const DIMETROMON_YAML: &str = include_str!("../../../cards/bt21/BT21-017.yaml");
@@ -630,5 +630,181 @@ fn bt21_017_inherited_opt_blocks_second_trigger_same_turn() {
     assert!(
         second_delta < first_delta,
         "OPT must block second trigger; first_delta={first_delta}, second_delta={second_delta}"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Section 6 — Digivolve cost fidelity (user-reported bug 2026-07-09)
+//
+// Reported: "Digivolving to play a tamer for free made the digivolution free
+// (observed on BT21-017)". Root cause: the YAML mis-authored the printed
+// standard circle (Red Lv.3 / cost 2 — official Bandai DB + cards.json agree)
+// as an ungated `alt_paths: kind: digivolve, from: {level_eq: 3}, cost: 0`,
+// which `collect_dsl_alt_digivolve_routes` surfaces as a phantom FREE digivolve
+// route from ANY-colour Lv.3. The [When Digivolving] free tamer play is
+// innocent: `commit_digivolve_from_hand_no_replace` pays memory BEFORE the
+// trigger fires, so `play_from_hand_free` cannot retroactively unpay it.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// A red Lv.3 Digimon matching BT21-017's printed digivolve circle.
+fn make_red_lv3(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(3);
+    c.colors = vec![CardColor::Red];
+    c.dp = Some(2000);
+    c
+}
+
+/// A blue Lv.3 Digimon — NOT a legal base for BT21-017 (circle is Red-only).
+fn make_blue_lv3(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(3);
+    c.colors = vec![CardColor::Blue];
+    c.dp = Some(2000);
+    c
+}
+
+/// Inject BT21-017's PRINTED evo-cost table (Red Lv.3 / cost 2) into the
+/// runner's card store. DSL-loaded fixtures never see cards.json, which is
+/// where the printed circle lives in production — this mirrors that state.
+fn inject_printed_evo_cost(runner: &mut DebugRunner) {
+    let idx = runner
+        .game
+        .card_data
+        .iter()
+        .position(|c| c.card_id == "BT21-017")
+        .expect("BT21-017 in card_data");
+    runner.game.card_data[idx].evo_costs = vec![EvoCost {
+        card_color: 0, // Red
+        level: 3,
+        memory_cost: 2,
+    }];
+}
+
+/// End-to-end reproduction of the reported bug: digivolve BT21-017 over a red
+/// Lv.3, accept the free Owen Dreadnought play, and assert
+///   (a) the DIGIVOLUTION cost (2) WAS paid in memory, and
+///   (b) the TAMER's cost was NOT paid (total spend == 2 exactly).
+///
+/// Pre-fix this failed: the bogus cost-0 alt-path made the engine offer a
+/// second (free) digivolve route, so the digivolve paused on a cost-choice
+/// prompt that includes an illegal cost-0 option.
+#[test]
+fn bt21_017_digivolve_pays_printed_cost_and_only_tamer_is_free() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(DIMETROMON_YAML)
+        .expect("BT21-017 YAML parses")
+        .add_card(make_red_lv3("BASE-RED3"))
+        .add_card(make_owen("OWEN-1"))
+        .add_card(make_filler("FILLER-DECK"))
+        .hand(0, &["BT21-017", "OWEN-1"])
+        .deck(0, &["FILLER-DECK", "FILLER-DECK", "FILLER-DECK"])
+        .memory(10)
+        .start();
+    inject_printed_evo_cost(&mut runner);
+    runner.game.turn_count = 1;
+    runner.game.current_phase = GamePhase::Main;
+    runner.place_on_field(0, "BASE-RED3", Some(0));
+
+    let mem_before = runner.memory();
+    let proceeded = runner.game.digivolve_from_hand(0, 0, 0, PlaySource::ByHand);
+
+    // The card prints exactly ONE digivolve requirement (Red Lv.3 / cost 2),
+    // so there must be NO cost-choice prompt — a prompt here means a phantom
+    // route (the bug: an ungated cost-0 alt-path) leaked into the route set.
+    if let Some(view) = runner.pending_selection_view() {
+        assert_ne!(
+            view.kind,
+            SelectionKind::EffectChoice,
+            "BT21-017 has exactly one printed digivolve route (Red Lv.3 / 2); \
+             a digivolve cost-choice prompt means a phantom route leaked in: {:?}",
+            view.effect_choices
+        );
+    }
+    assert!(
+        proceeded,
+        "digivolve must proceed directly at the single printed cost"
+    );
+
+    // (a) The digivolution cost was paid: exactly 2 memory.
+    assert_eq!(
+        runner.memory(),
+        mem_before - 2,
+        "the digivolve cost (2) must be paid in memory"
+    );
+
+    // WhenDigivolving fires → optional Owen hand pick. Accept it.
+    let view = runner
+        .pending_selection_view()
+        .expect("WhenDigivolving must offer the Owen Dreadnought hand pick");
+    let pick = view
+        .valid_action_ids
+        .iter()
+        .copied()
+        .find(|&a| a != digimon_engine::action::space::PASS)
+        .expect("a selectable Owen action id");
+    runner.execute_action(0, pick).expect("select Owen");
+    let _ = runner.auto_resolve();
+
+    // (b) Owen was played WITHOUT paying its cost: total spend is still
+    // exactly the digivolve cost.
+    assert_eq!(
+        runner.memory(),
+        mem_before - 2,
+        "playing Owen free must not change memory — total spend == digivolve cost only"
+    );
+
+    // Owen is on the field (digivolved stack + Owen = 2 permanents), hand empty.
+    assert_eq!(
+        runner.battle_area_size(0),
+        2,
+        "field must hold the digivolved Digimon and the freely played Owen"
+    );
+    // Both staged hand cards were used; the digivolve itself drew 1 card.
+    assert_eq!(
+        runner.hand_size(0),
+        1,
+        "BT21-017 digivolved and Owen was played; only the digivolve draw remains in hand"
+    );
+}
+
+/// The printed circle is Red-only: a BLUE Lv.3 base must NOT be digivolvable
+/// into BT21-017 at all. Pre-fix the ungated `{level_eq: 3} / cost 0` alt-path
+/// made this succeed — for FREE.
+#[test]
+fn bt21_017_cannot_digivolve_from_off_color_base() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(DIMETROMON_YAML)
+        .expect("BT21-017 YAML parses")
+        .add_card(make_blue_lv3("BASE-BLUE3"))
+        .add_card(make_filler("FILLER-DECK"))
+        .hand(0, &["BT21-017"])
+        .deck(0, &["FILLER-DECK", "FILLER-DECK", "FILLER-DECK"])
+        .memory(10)
+        .start();
+    inject_printed_evo_cost(&mut runner);
+    runner.game.turn_count = 1;
+    runner.game.current_phase = GamePhase::Main;
+    runner.place_on_field(0, "BASE-BLUE3", Some(0));
+
+    let mem_before = runner.memory();
+    let proceeded = runner.game.digivolve_from_hand(0, 0, 0, PlaySource::ByHand);
+
+    assert!(
+        !proceeded,
+        "a blue Lv.3 base does not satisfy BT21-017's Red Lv.3 circle — digivolve must be rejected"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "no prompt of any kind for an illegal digivolve"
+    );
+    assert_eq!(runner.memory(), mem_before, "no memory paid");
+    assert_eq!(runner.hand_size(0), 1, "BT21-017 stays in hand");
+    assert_eq!(
+        runner.battle_area_size(0),
+        1,
+        "the blue base is untouched (no digivolution happened)"
     );
 }

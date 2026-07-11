@@ -1,5 +1,5 @@
 # BT25-007 Gatchmon — Digimon, Lv.3, Red, DP 2000, Cost 3.
-# Trait line: Search (App Name) — Appmon.
+# Trait line (image): Stnd./Appmon | Social | Search
 #
 # DCGO BT25_007.cs (authoritative — cards.json mis-slots the WhenLinked clause
 # as the card's "inherited" text):
@@ -14,6 +14,22 @@
 #   - WhenLinked (SetIsLinkedEffect true): delete 1 opp Digimon DP<=3000.
 #       → scope: linked, when: when_linked, delete via select_opponent_permanent
 #         filter dp_lte 3000.
+#   - Link box DP (image + official DB "Link DP: DP+2000"; DCGO applies it via
+#     the generic LinkEffect factory) → scope: linked, kind: aura, dp_modifier 2000.
+#
+# Notes (audit 2026-07-10, mirrors sibling BT21-009):
+#   - The card prints BOTH digivolution requirements (card image + official
+#     Bandai DB bundle data/card_bundles/BT25-007.md):
+#       (a) a standard circle "Red Lv.2 / cost 0", authored below as the bare
+#           {level_eq, color_is} alt_path per the printed-circle convention
+#           (tests/alt_path_printed_cost_guard.rs);
+#       (b) the black-text special condition "[Digivolve] Lv.2 w/[Appmon]
+#           trait: Cost 0", authored as the trait-gated alt_path.
+#     A plain red Lv.2 without [Appmon] digivolves via (a) only, so the trait
+#     gate alone under-modelled the card (fixed 2026-07-10).
+#   - `attribute: Social` (image + official DB "Attribute: Social") — was
+#     mis-authored as Data; kept for attribute_is predicates (separate from traits).
+#   - Traits include all segments from the image: Stnd., Appmon, Social, Search.
 
 card: BT25-007
 name: Gatchmon
@@ -22,10 +38,17 @@ level: 3
 color: [red]
 cost: 3
 dp: 2000
-traits: [Search, Appmon]
-attribute: Data
+traits: ["Stnd.", Appmon, Social, Search]
+attribute: Social
 
 alt_paths:
+  # Printed standard circle: "Red Lv.2 / cost 0" (card image digivolve circle;
+  # official DB "Standard digivolve cost circles: Red Lv.2 / cost 0").
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  # Printed special condition: "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+  # (DCGO AddSelfDigivolutionRequirementStaticEffect: HasAppmonTraits, lvl 2, cost 0).
   - kind: digivolve
     from: { level_eq: 2, trait_has: Appmon }
     cost: 0
@@ -35,6 +58,14 @@ effects:
   - kind: link_condition
     cost: 1
     filter: { trait_has: Appmon }
+
+  # ─── [Link] +2000 DP to the host while linked ───────────────────────────────
+  # Printed link box "DP +2000" (card image + official DB "Link DP: DP+2000").
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 2000
+    summary: "[Link] +2000 DP to the linked Digimon"
 
   # ─── [On Play] reveal 3; add 1 Appmon + 1 Social/Tool/Reboot/Creation ──────
   - when: on_play

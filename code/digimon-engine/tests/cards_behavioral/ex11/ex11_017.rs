@@ -1,7 +1,10 @@
 //! EX11-017 Skadimon — Digimon, Lv.6, Blue/Yellow, DP 12000, Cost 12.
 //! Traits: Ice-Snow, LIBERATOR. Form: Mega. Attribute: Vaccine. Rarity: R.
-//! Standard digivolution: Lv.5 blue for 4 memory (printed evo box; cards.json
-//! evo_costs [{card_color:1, level:5, memory_cost:4}]).
+//! Standard digivolution: SPLIT blue/yellow circle "Lv.5: Cost 4" — the
+//! official Bandai DB (data/card_bundles/EX11-017.md, authoritative for
+//! printed data) lists TWO circles: Blue Lv.5 / cost 4 AND Yellow Lv.5 /
+//! cost 4. cards.json evo_costs [{card_color:1, level:5, memory_cost:4}] is
+//! lossy — it dropped the yellow half of the split circle.
 //! Alt digivolution (printed rule box): "Digivolve Lv.5 w/[Ice-Snow] trait:
 //! Cost 3" (cards.json xros_req).
 //!
@@ -159,6 +162,21 @@ fn red_ice_snow_lv5(id: &str) -> CardData {
     c.play_cost = 7;
     c.colors = vec![CardColor::Red];
     c.traits = vec!["Ice-Snow".to_string()];
+    c
+}
+
+/// A YELLOW Lv.5 non-[Ice-Snow] Digimon — matches ONLY the YELLOW half of
+/// Skadimon's printed split standard circle ("Yellow Lv.5 / cost 4" per the
+/// official Bandai DB): not blue, and without [Ice-Snow] the cost-3 alt box
+/// cannot shadow the standard cost.
+fn yellow_lv5(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Yellow Lv5");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(5);
+    c.dp = Some(7000);
+    c.play_cost = 7;
+    c.colors = vec![CardColor::Yellow];
+    c.traits = vec!["Fairy".to_string()];
     c
 }
 
@@ -327,9 +345,11 @@ fn assert_locked(runner: &DebugRunner, handle: PermanentHandle) {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /// EX11-017 compiles with its printed stats: Lv.6 blue/yellow Digimon, cost
-/// 12, DP 12000, traits Ice-Snow + LIBERATOR, the standard Lv.5-blue cost-4
-/// evo path, and the printed "Digivolve Lv.5 w/[Ice-Snow] trait: Cost 3" alt
-/// path (DCGO gates on EqualsTraits("Ice-Snow") && IsLevel5 — no color).
+/// 12, DP 12000, traits Ice-Snow + LIBERATOR, BOTH halves of the printed
+/// split standard circle (Blue Lv.5 / cost 4 AND Yellow Lv.5 / cost 4 — the
+/// official Bandai DB lists both; cards.json dropped the yellow half), and
+/// the printed "Digivolve Lv.5 w/[Ice-Snow] trait: Cost 3" alt path (DCGO
+/// gates on EqualsTraits("Ice-Snow") && IsLevel5 — no color).
 #[test]
 fn ex11_017_compiles_with_printed_stats_and_digivolve_paths() {
     let runner = DebugRunner::builder()
@@ -377,6 +397,26 @@ fn ex11_017_compiles_with_printed_stats_and_digivolve_paths() {
         "Skadimon must digivolve from a blue Lv.5 for cost 4 (printed evo box)"
     );
 
+    // Yellow half of the split standard circle: Lv.5 yellow for 4 memory
+    // (official Bandai DB "Yellow Lv.5 / cost 4"; dropped by cards.json).
+    assert!(
+        compiled.alt_paths.iter().any(|path| {
+            path.kind == CompiledAltPathKind::Digivolve
+                && path.cost == Some(CompiledCost::Literal(4))
+                && path.from.as_ref().is_some_and(|from| {
+                    (from.level_eq == Some(5)
+                        || from.all_of.iter().any(|pred| pred.level_eq == Some(5)))
+                        && (from.color_is == Some(CompiledColor::Yellow)
+                            || from
+                                .all_of
+                                .iter()
+                                .any(|pred| pred.color_is == Some(CompiledColor::Yellow)))
+                })
+        }),
+        "Skadimon must digivolve from a YELLOW Lv.5 for cost 4 (yellow half \
+         of the printed split circle — official Bandai DB)"
+    );
+
     // Printed alt evo box: Lv.5 with [Ice-Snow] trait for 3 memory.
     assert!(
         compiled.alt_paths.iter().any(|path| {
@@ -393,6 +433,44 @@ fn ex11_017_compiles_with_printed_stats_and_digivolve_paths() {
                 })
         }),
         "Skadimon must digivolve from a Lv.5 [Ice-Snow] Digimon for cost 3 (printed alt evo box)"
+    );
+}
+
+/// YELLOW HALF OF THE SPLIT CIRCLE (behavioral): Skadimon digivolves over a
+/// YELLOW Lv.5 non-[Ice-Snow] base — only the yellow standard circle matches
+/// (not blue; no [Ice-Snow] so the cost-3 alt box can't apply) — charging
+/// the printed cost 4.
+#[test]
+fn ex11_017_digivolves_over_yellow_lv5_for_cost_4() {
+    let mut runner = base_builder().add_card(yellow_lv5("YEL-5")).start();
+    runner.game.turn_count = 1;
+
+    let base = runner.place_on_field(0, "YEL-5", Some(0));
+    let hand_idx = put_in_hand(&mut runner, 0, CARD_ID);
+
+    let memory_before = runner.game.memory;
+    assert!(
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByHand),
+        "Skadimon must digivolve over a yellow Lv.5 via the yellow half of \
+         the printed split standard circle"
+    );
+    assert_eq!(
+        runner.game.memory,
+        memory_before - 4,
+        "the yellow standard circle charges its printed cost 4 (the blue \
+         half does not match a yellow base, and without [Ice-Snow] the \
+         cost-3 alt box cannot shadow it)"
+    );
+    let _ = runner.auto_resolve();
+
+    assert!(
+        runner.game.players[0]
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID),
+        "Skadimon sits on top of the digivolved stack"
     );
 }
 

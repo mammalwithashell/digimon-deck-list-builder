@@ -1,4 +1,5 @@
-//! BT23-058 Craniamon - Digimon, Lv.6, White.
+//! BT23-058 Craniamon - Digimon, Lv.6, Black (official Bandai DB /
+//! data/card_bundles/BT23-058.md).
 //!
 //! Supported slice:
 //! - Printed metadata and digivolve routes.
@@ -73,16 +74,18 @@ fn bt23_058_has_printed_metadata_routes_reboot_and_blocker() {
     assert_eq!(card.level, Some(6));
     assert_eq!(card.cost, Some(11));
     assert_eq!(card.dp, Some(11000));
-    assert_eq!(card.color, vec![CompiledColor::White]);
+    assert_eq!(card.color, vec![CompiledColor::Black]);
     assert!(card.traits.iter().any(|name| name == "Royal Knight"));
     assert!(card.traits.iter().any(|name| name == "CS"));
     assert_eq!(card.attribute.as_deref(), Some("Data"));
 
+    // Printed circle: Black Lv.5 / cost 3 (official Bandai DB — the card was
+    // previously mis-authored White).
     assert!(card.alt_paths.iter().any(|path| {
         path.kind == CompiledAltPathKind::Digivolve
             && path.cost == Some(CompiledCost::Literal(3))
             && path.from.as_ref().is_some_and(|from| {
-                from.level_eq == Some(5) && from.color_is == Some(CompiledColor::White)
+                from.level_eq == Some(5) && from.color_is == Some(CompiledColor::Black)
             })
     }));
     assert!(card.alt_paths.iter().any(|path| {

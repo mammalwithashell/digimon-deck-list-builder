@@ -1,8 +1,12 @@
 # EX10-020 Puppetmon — Digimon, Lv.6, Green, DP 11000, Cost 11.
 # Traits: Puppet / Dark Masters. Attribute: Virus.
-# Standard digivolve (card image): Lv.5 Green / Cost 3 — authored as an
-# alt_path below because cards.json's EX10-020 entry is MISSING evo_costs
-# (the printed route would otherwise not exist for DSL-loaded fixtures).
+# NO standard digivolve circles: the official Bandai DB
+# (data/card_bundles/EX10-020.md) and the card image agree the card prints
+# NO digivolution requirements at all (cards.json's empty evo_costs is
+# CORRECT, not a gap). The card enters play only by being played ([Hand]
+# [Main] reduced-cost self-play / normal play / played from security) —
+# nothing may digivolve into it. Do NOT author a digivolve alt_path here;
+# DCGO EX10_020.cs registers no AddSelfDigivolutionRequirementStaticEffect.
 #
 # Printed card text (card image, judge-quiz PDF p.5 + cards.json — agree):
 #
@@ -73,7 +77,7 @@
 #
 # | Card-text element                                          | Status        |
 # |------------------------------------------------------------|---------------|
-# | Standard digivolve Lv.5 Green / Cost 3 (as alt_path)       | IMPLEMENTED   |
+# | (no printed digivolve circles — none authored)             | N/A           |
 # | [Hand][Main] reduced-cost self-play + EoT delete           | OMITTED (G-DSL-HAND-MAIN-SELF-PLAY-REDUCED) |
 # | [On Play][When Attacking] bottom-deck a suspended opp      | IMPLEMENTED   |
 # | [All Turns] can only digivolve into [Apocalymon]           | IMPLEMENTED   |
@@ -92,13 +96,6 @@ cost: 11
 dp: 11000
 traits: [Puppet, Dark Masters]
 attribute: Virus
-
-# Standard printed digivolve route (cards.json evo_costs MISSING for this
-# card — authored here so the route exists; card image: Lv.5 / 3).
-alt_paths:
-  - kind: digivolve
-    from: { level_eq: 5, color_is: green }
-    cost: 3
 
 effects:
   # ─── Clause 2 — [On Play][When Attacking] bottom-deck a suspended opp ──────

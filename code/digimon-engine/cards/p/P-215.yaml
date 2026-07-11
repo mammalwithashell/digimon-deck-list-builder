@@ -5,7 +5,9 @@ level: 4
 color: [blue, black]
 cost: 5
 dp: 6000
-traits: [Ice-Snow]
+traits: [Ice-Snow, Mineral]
+# Official Bandai DB: "Form: Champion  Attribute: Data" (data/card_bundles/P-215.md).
+form: Champion
 attribute: Data
 alt_paths:
   # Printed standard evo box: Lv.3 from blue/black, cost 3 (the digivolve circle;
@@ -63,10 +65,25 @@ alt_paths:
 # | Cost: place level≤4 Ice-Snow/Mineral/Rock from hand or trash   | IMPLEMENTED   |
 # |   as this Digimon's bottom digivolution card                   |               |
 # | Effect: select 1 own Ice-Snow/Mineral/Rock Digimon             | IMPLEMENTED   |
-# | Grant CannotBeReturnedToHand until EoOT                        | IMPLEMENTED   |
-# | Grant CannotBeReturnedToDeck until EoOT                        | IMPLEMENTED   |
-# | Grant CannotBeDeDigivolved until EoOT                          | IMPLEMENTED   |
+# | Grant CannotBeReturnedToHand until EoOT                        | IMPLEMENTED*  |
+# | Grant CannotBeReturnedToDeck until EoOT                        | IMPLEMENTED*  |
+# | Grant CannotBeDeDigivolved until EoOT                          | IMPLEMENTED*  |
 # | Inherited <Blocker>                                            | IMPLEMENTED   |
+#
+# (*) SCOPING CAVEAT — printed text is "THEIR effects can't return ... or
+#     affect it with <De-Digivolve> effects" (OPPONENT-only; DCGO P_215.cs
+#     gates the hand/deck-return halves with `IsOpponentEffect`). The DSL
+#     `add_modifier` step lowers via `ModifierEntry::simple` → `cause_filter:
+#     None`, which is CAUSE-AGNOSTIC: the protected player's OWN return /
+#     De-Digivolve effects are also blocked for the window. The engine already
+#     has the correctly-scoped primitive
+#     (`EffectContext::grant_zone_return_immunity_to_opponent_effects`, which
+#     installs `ModifierEntry::passive_replacement` with the
+#     `ReplacementCause::OpponentEffect` default filter) but the DSL exposes
+#     no `cause:` knob on `add_modifier` and no bundle step for it — DSL
+#     VOCAB GAP, shared by every sibling user of these modifiers (EX8-070,
+#     BT18-064, BT19-051, BT23-054, ST17-07). Do not hack around it here;
+#     when the vocab lands, scope these three grants to opponent effects.
 
 effects:
   # ─── Clause 0: [When Moving][On Play][When Digivolving] ──────────────────
@@ -79,6 +96,16 @@ effects:
   # grant it return immunity + De-Digivolve immunity until end of opponent's turn.
   - when: [on_play, when_digivolving, on_move]
     optional: true
+    # [When Moving] is SELF-scoped ("when this Digimon moves from the breeding
+    # area to the battle area" — DCGO P_215.cs gates OnMove with
+    # `permanent == card.PermanentOfThisCard()`). The engine's on_move dispatch
+    # is a board-wide observer scan (for "when one of your Digimon moves" cards
+    # like P-123/P-130/BT16-082), so the on_move timing must be gated with
+    # `event_permanent_is_source: true` (EX11-038 idiom) or P-215 fires when a
+    # DIFFERENT Digimon — even the opponent's — moves from breeding.
+    timing_conditions:
+      - when: on_move
+        condition: { event_permanent_is_source: true }
     summary: "[When Moving][On Play][When Digivolving] Place level≤4 Ice-Snow/Mineral/Rock from hand or trash as bottom digi-source; protect 1 Ice-Snow/Mineral/Rock Digimon until EoOT"
     process:
       # Step 0: Cost — pick a level 4 or lower Ice-Snow / Mineral / Rock card
@@ -125,6 +152,9 @@ effects:
                 prompt: "Choose 1 of your [Ice-Snow], [Mineral] or [Rock] Digimon to protect until your opponent's turn ends"
 
             # Steps 3–5: Grant return immunity and De-Digivolve immunity until EoOT.
+            # Printed scope is "THEIR effects" (opponent-only) — see the
+            # SCOPING CAVEAT in the status table above (DSL vocab gap: no
+            # cause filter on add_modifier; currently cause-agnostic).
             - add_modifier:
                 target: protect_target
                 modifier: CannotBeReturnedToHand

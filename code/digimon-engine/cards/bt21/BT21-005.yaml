@@ -1,5 +1,5 @@
-# BT21-005 Swipemon — Digi-Egg (In-Training), Lv.2, Green, Cost 0, no DP.
-# Traits: Appmon, Social, Swipe. Attribute: Social.
+# BT21-005 Swipemon — Digi-Egg, Lv.2, Green, Cost 0, no DP.
+# Traits: Appmon, Social, Swipe. Form: Appmon. Attribute: Social.
 #
 # Printed card text (card image — authoritative; cards.json matches):
 #   Inherited Effect [Your Turn] [Once Per Turn]
@@ -37,7 +37,11 @@ color: [green]
 cost: 0
 traits: [Appmon, Social, Swipe]
 attribute: Social
-form: In-Training
+# Official Bandai DB (data/card_bundles/BT21-005.md "Form: Appmon"; DCGO
+# BT21-005.json form_eng: ["Appmon"]): Swipemon's printed form is the Appmon
+# mechanic form, NOT In-Training — the digimoncard.io API drops the form field
+# and "In-Training" was an incorrect backfill. Fixed 2026-07-10.
+form: Appmon
 
 effects:
   # ─── Inherited [Your Turn][OPT] When this Digimon gets linked, Draw 1 ───────

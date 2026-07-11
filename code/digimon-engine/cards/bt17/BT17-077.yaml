@@ -1,8 +1,12 @@
-# BT17-077 Imperialdramon: Paladin Mode — Digimon, Lv.7, White/Blue, DP 16000, Cost 9.
-# Traits: Ancient Holy Warrior.
-# Evo: Lv.6 Blue / Cost 6 (standard, per cards.json evo_costs).
+# BT17-077 Imperialdramon: Paladin Mode — Digimon, Lv.7, White/Blue/Green, DP 16000, Cost 9.
+# Traits: Ancient Holy Warrior. Form: Mega. Attribute: Vaccine + (Rule) [Free].
+# Evo (official Bandai DB, data/card_bundles/BT17-077.md — the card image shows a
+#   single SPLIT blue/green digivolve circle, which the official DB decomposes
+#   into two standard circles; cards.json lossily drops the green half):
+#   - Lv.6 Blue  / Cost 6 (standard)
+#   - Lv.6 Green / Cost 6 (standard)
 #
-# Printed card text (data/cards.json, authoritative):
+# Printed card text (official Bandai DB via data/card_bundles/BT17-077.md):
 #
 # [Hand] [Counter] <Blast Digivolve>
 #   (Your Digimon may digivolve into this card without paying the cost.)
@@ -24,8 +28,9 @@
 #
 # ─── DCGO crosscheck ─────────────────────────────────────────────────────────
 #
-# Alt-path 1: Standard digivolve from Lv.6 Blue / Cost 6 (cards.json
-#   evo_costs: card_color=1, level=6, memory_cost=6).
+# Alt-path 1: Standard digivolve circles — Lv.6 Blue / Cost 6 AND Lv.6 Green /
+#   Cost 6 (official Bandai DB; printed as one split blue/green circle on the
+#   card face). cards.json evo_costs only carries the blue half (lossy ingest).
 #
 # Alt-path 2: DCGO `AddSelfDigivolutionRequirementStaticEffect` at
 #   EffectTiming.None — digivolve from Lv.6 [Imperialdramon]-named at cost 5,
@@ -81,11 +86,17 @@ card: BT17-077
 name: "Imperialdramon: Paladin Mode"
 kind: digimon
 level: 7
-color: [white, blue]
+# Colors per official Bandai DB (data/card_bundles/BT17-077.md): White Blue Green.
+# (cards.json / DCGO carry only White/Blue — the official DB governs printed data.)
+color: [white, blue, green]
 cost: 9
 dp: 16000
-traits: [Ancient Holy Warrior]
+# Printed trait line: Ancient Holy Warrior. `Free` is the (Rule)-granted
+# attribute — "(Rule) Trait: Has [Free] attribute." — kept in `traits:` per the
+# campaign's Rule-trait convention. Do not remove.
+traits: [Ancient Holy Warrior, Free]
 
+form: Mega
 attribute: Vaccine
 # ─── Inherited: Ace Overflow <-5> ────────────────────────────────────────────
 # Printed: "Ace Overflow <-5> (As this card moves from the field or under a
@@ -95,9 +106,17 @@ ace_overflow: -5
 
 # ─── Alt-paths ────────────────────────────────────────────────────────────────
 alt_paths:
-  # 1) Standard digivolve: Lv.6 Blue / Cost 6 (per cards.json evo_costs).
+  # 1) Standard digivolve circles (official Bandai DB — the card face prints one
+  #    SPLIT blue/green circle = two standard circles):
+  #    Lv.6 Blue / Cost 6.
   - kind: digivolve
     from: { level_eq: 6, color_is: blue }
+    cost: 6
+
+  #    Lv.6 Green / Cost 6 (green half of the split circle; dropped by
+  #    cards.json's lossy ingest — official DB governs printed data).
+  - kind: digivolve
+    from: { level_eq: 6, color_is: green }
     cost: 6
 
   # 2) Named-ancestor bonus: Lv.6 [Imperialdramon]-named / Cost 5.

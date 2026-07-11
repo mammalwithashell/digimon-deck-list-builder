@@ -4021,6 +4021,17 @@ impl Game {
         if self.pending_selection.is_none() {
             self.resume_pending_end_turn();
         }
+        // Parked Breeding → Main advance (user bug 2026-07-09): a breeding
+        // action (HATCH / MOVE_FROM_BREEDING) whose trigger drain installed a
+        // selection deferred `enter_main_phase`. Now that the selection has
+        // settled (and any nested drains above did not re-park), perform the
+        // advance so the turn machine never re-exposes a phantom second
+        // Breeding phase. Runs BEFORE the final `check_turn_end` so a
+        // negative-memory swing observed after entering Main still ends the
+        // turn through the normal Main-phase path.
+        if self.pending_selection.is_none() {
+            self.resume_pending_enter_main();
+        }
         // Some attack-time selections, especially optional pre-declare
         // replacements, park `pending_attack` before declaration commits. Once
         // the selection callback and any nested drains settle, resume the

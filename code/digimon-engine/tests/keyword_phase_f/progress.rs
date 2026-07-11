@@ -90,6 +90,7 @@ fn inject_attacker(r: &mut DebugRunner, attacker: PermanentHandle) {
         declaration_committed: true,
         cancelled: false,
         battle_occurred: false,
+        battle_defender_deleted: false,
         return_phase: digimon_engine::enums::GamePhase::Main,
         state: AttackState::Declared,
         counter_depth: 0,

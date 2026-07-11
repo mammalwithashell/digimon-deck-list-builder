@@ -6,10 +6,14 @@ color: [red]
 cost: 5
 dp: 5000
 traits: [Dragonkin]
+# Printed digivolve circle (official Bandai DB / data/card_bundles/BT21-015.md):
+# Red Lv.3 / cost 2 — the card's ONLY digivolve requirement. A bare
+# level-only cost-0 path here was the free-digivolve bug (any-colour Lv.3
+# digivolved for 0); see tests/alt_path_printed_cost_guard.rs.
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 3 }
-    cost: 0
+    from: { level_eq: 3, color_is: red }
+    cost: 2
 
 # Clause 1 — [Security] At the end of the battle, play this card without paying the cost.
 # DSL: when: on_security → play_from_security: {}

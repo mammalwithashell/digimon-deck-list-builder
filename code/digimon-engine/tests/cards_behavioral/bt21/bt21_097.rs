@@ -32,20 +32,32 @@
 //! # Patterns this test covers
 //! - D3 color-ignore / Use Req. flood gate (IgnoreColorRequirement, Appmon
 //!   Digimon or Tamer gated)
-//! - Group E: reveal-3, add 1 [Appmon] or [App Driver] to hand, trash the rest
-//! - Option pipeline: [Main] places self as a standard <Delay> battle-area
-//!   Option via `place_self_as_delay_option`
-//! - Standard <Delay> (end-of-your-turn activation): self-trash cost + optional
-//!   "you may link 1 card from hand to own Digimon free"
-//! - Inherited [Security] places self in battle area
+//! - Group E: reveal-3, MANDATORY add of 1 [Appmon] or [App Driver] to hand
+//!   (printed text has no "may"), trash the rest
+//! - Option pipeline: [Main] places self as a scheduled <Delay> battle-area
+//!   Option via `place_self_as_delay_option` (trigger EndOfYourNextTurn —
+//!   printed timing header is [End of Your Turn], NOT [Main], so no
+//!   main-phase activation action may be exposed)
+//! - Scheduled <Delay>: fires at the end of the owner's NEXT turn (first
+//!   legal window per rule 16-16-3), self-trash + optional "you may link 1
+//!   card from hand to own Digimon free". The mandatory-scan residual
+//!   (decline cannot keep the Option parked) is the OPEN engine gap
+//!   G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN — pinned by an `#[ignore]`d
+//!   faithful test below.
+//! - Inherited [Security] places self in battle area (behavioral, via a real
+//!   security check)
 
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep,
     CompiledTiming,
 };
-use digimon_engine::action::space::PASS;
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{
+    EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_MAIN, FIELD_EFFECT_START, PASS,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
+use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::enums::{CardColor, CardKind, DelayTrigger};
 use digimon_engine::permanent::OptionState;
@@ -228,7 +240,7 @@ fn bt21_097_main_reveals_three_adds_appmon_or_appdriver_trashes_rest_places_self
 }
 
 #[test]
-fn bt21_097_has_standard_delay_clause_with_link_cards_step() {
+fn bt21_097_has_scheduled_end_of_turn_delay_clause_with_link_cards_step() {
     let runner = runner();
     let card = runner.compiled_card(CARD_ID).expect("compiled");
     let delay = card
@@ -244,10 +256,16 @@ fn bt21_097_has_standard_delay_clause_with_link_cards_step() {
         })
         .expect("standard <Delay> clause present");
 
+    // Printed timing header is [End of Your Turn] (DCGO EffectTiming.OnEndTurn
+    // gated on IsOwnerTurn) — NOT [Main]. `CompiledTiming::Delayed`
+    // (MainPhaseActivated) would expose a main-phase activation, letting the
+    // link land before attacks; the faithful engine trigger is the scheduled
+    // owner-turn-end scan, whose first legal window is the end of the owner's
+    // next turn (rule 16-16-3).
     assert_eq!(
         *delay.0,
-        CompiledTiming::Delayed,
-        "the <Delay> is a standard end-of-your-turn delay (MainPhaseActivated trigger)"
+        CompiledTiming::EndOfYourNextTurn,
+        "the <Delay> is a scheduled [End of Your Turn] delay (EndOfYourNextTurn trigger), not a [Main]-activated one"
     );
     // The body links a hand card to an own Digimon for free.
     assert!(
@@ -301,6 +319,7 @@ fn bt21_097_main_adds_appmon_trashes_rest_then_parks_as_delay() {
     // Top-3 (last pushed = top): PLAIN-C, PLAIN-B, APP-A.
     stack_deck_top(&mut runner, &["PLAIN-C", "PLAIN-B", "APP-A"]);
     let trash_before = runner.trash_size(0);
+    let placing_turn = runner.game.turn_count;
 
     assert_eq!(
         runner.game.play_option_from_hand(0, 0),
@@ -316,6 +335,10 @@ fn bt21_097_main_adds_appmon_trashes_rest_then_parks_as_delay() {
         view.valid_action_ids.len(),
         1,
         "only the [Appmon] card (APP-A) is eligible to add"
+    );
+    assert!(
+        !runner.pending_is_optional(),
+        "printed 'Add 1 card ... to the hand' has no 'may' — the add is mandatory (no PASS)"
     );
     runner
         .execute_action(view.selecting_player, view.valid_action_ids[0])
@@ -341,8 +364,10 @@ fn bt21_097_main_adds_appmon_trashes_rest_then_parks_as_delay() {
         "exactly the two non-added reveals leave to trash"
     );
 
-    // "Then, place this card in the battle area" — parked as a standard
-    // <Delay> Option (MainPhaseActivated trigger).
+    // "Then, place this card in the battle area" — parked as a scheduled
+    // [End of Your Turn] <Delay> Option. Placed on the owner's own turn, the
+    // first legal activation window (16-16-3: not the placing turn) is the
+    // end of the owner's NEXT turn = placing_turn + 2 in 2-player rotation.
     let placed = runner
         .game
         .player(0)
@@ -350,13 +375,25 @@ fn bt21_097_main_adds_appmon_trashes_rest_then_parks_as_delay() {
         .iter()
         .find(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
         .expect("BT21-097 placed in the battle area after the [Main] body");
-    assert!(matches!(
-        placed.option_state,
+    match placed.option_state {
         OptionState::Delayed {
-            trigger: DelayTrigger::MainPhaseActivated,
+            trigger,
+            trash_on_turn,
             ..
+        } => {
+            assert_eq!(
+                trigger,
+                DelayTrigger::EndOfYourNextTurn,
+                "printed [End of Your Turn] <Delay> parks with the scheduled owner-turn-end trigger"
+            );
+            assert_eq!(
+                trash_on_turn,
+                placing_turn + 2,
+                "the <Delay> is scheduled for the end of the owner's next turn (16-16-3)"
+            );
         }
-    ));
+        other => panic!("BT21-097 must park as OptionState::Delayed; got {other:?}"),
+    }
 }
 
 #[test]
@@ -392,6 +429,10 @@ fn bt21_097_main_adds_app_driver_trashes_rest_then_parks_as_delay() {
         view.valid_action_ids.len(),
         1,
         "only the [App Driver] card (DRIVER-A) is eligible to add"
+    );
+    assert!(
+        !runner.pending_is_optional(),
+        "printed 'Add 1 card ... to the hand' has no 'may' — the add is mandatory (no PASS)"
     );
     runner
         .execute_action(view.selecting_player, view.valid_action_ids[0])
@@ -481,35 +522,32 @@ fn bt21_097_use_requirement_targets_appmon_digimon_or_tamer() {
     );
 }
 
-// ── Section 4: Behavioral — <Delay> activation ────────────────────────────
+// ── Section 4: Behavioral — <Delay> fires at the end of the owner's next turn ─
 
-/// Place BT21-097 as a standard <Delay> Option already past the placing turn,
-/// then advance to the controller's next main phase so the standard delay
-/// gate (16-16-3) is satisfied and [Main] activation becomes legal.
-fn seat_and_advance_to_activatable_delay(
-    runner: &mut DebugRunner,
-) -> digimon_engine::permanent::PermanentHandle {
+/// Seat BT21-097 on P0's field as a scheduled [End of Your Turn] <Delay>
+/// Option placed THIS turn. In 2-player rotation the first legal activation
+/// window (16-16-3: not the placing turn) is the end of P0's next turn =
+/// `turn_count + 2` (skip P1's turn) — the same schedule
+/// `place_self_as_delay_option` computes for a [Main] placement.
+fn seat_as_scheduled_end_delay(runner: &mut DebugRunner) {
     let handle = runner.place_on_field(0, CARD_ID, Some(0));
     let placing_turn = runner.game.turn_count;
     runner.game.player_mut(0).battle_area[handle.index as usize].option_state =
         OptionState::Delayed {
             owner: 0,
-            trash_on_turn: u16::MAX,
-            trigger: DelayTrigger::MainPhaseActivated,
+            trash_on_turn: placing_turn + 2,
+            trigger: DelayTrigger::EndOfYourNextTurn,
             placed_on_turn: placing_turn,
         };
-    // Advance past the placing turn so the delay gate is satisfied.
-    runner.end_turn();
-    runner.game.enter_main_phase();
-    runner.end_turn();
-    assert_eq!(runner.game.turn_player(), 0);
-    runner.game.enter_main_phase();
-    handle
 }
 
-/// The standard <Delay> links 1 hand card to 1 own Digimon for free.
+/// The full printed timing arc: the <Delay> does NOT fire at the end of the
+/// placing turn (16-16-3), exposes NO main-phase activation action (the
+/// printed timing header is [End of Your Turn], not [Main]), then fires at
+/// the end of the owner's next turn and links 1 hand card to 1 own Digimon
+/// for free.
 #[test]
-fn bt21_097_delay_links_hand_card_to_own_digimon_free() {
+fn bt21_097_delay_fires_at_end_of_owners_next_turn_and_links_hand_card_free() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT21-097 YAML loads")
@@ -523,28 +561,58 @@ fn bt21_097_delay_links_hand_card_to_own_digimon_free() {
         .start();
 
     let field_digimon = runner.place_on_field(0, "APP-FIELD", Some(0));
-    let handle = seat_and_advance_to_activatable_delay(&mut runner);
-    runner.game.set_memory(10);
+    seat_as_scheduled_end_delay(&mut runner);
 
-    // Activate the standard <Delay> [Main] on the delay option's field slot.
+    // 16-16-3 gate: ending the PLACING turn must not fire the <Delay>.
+    runner.end_turn();
     assert!(
-        runner.game.activate_field_main(0, handle.index as usize),
-        "the standard <Delay> [Main] is activatable after the placing turn"
+        runner.game.pending_selection.is_none(),
+        "the <Delay> must not fire at the end of the placing turn (16-16-3)"
+    );
+    assert!(
+        field_contains(&runner, 0, CARD_ID),
+        "BT21-097 stays parked through the placing turn's end"
     );
 
-    // The optional "you may link 1 card from hand" surfaces.
-    // NOTE: by this point player 0 has drawn 1 FILL card on their second turn
-    // (the two `end_turn()` calls in `seat_and_advance_to_activatable_delay`
-    // advance to player 0's next turn, which draws from the deck). Hand is
-    // therefore [APP-LINK, FILL].
+    // P1's turn passes; the delay only cares about the OWNER's turn end.
+    runner.end_turn();
+    assert_eq!(runner.game.turn_player(), 0);
+    assert!(
+        field_contains(&runner, 0, CARD_ID),
+        "BT21-097 stays parked through the opponent's turn end"
+    );
+
+    // On the owner's next turn, NO main-phase activation is exposed — the
+    // printed timing is [End of Your Turn], not a [Main] <Delay> action.
+    runner.game.enter_main_phase();
+    let delay_idx = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .position(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
+        .expect("BT21-097 still parked on the owner's next turn");
+    let main_bit = (FIELD_EFFECT_START
+        + delay_idx as u16 * EFFECTS_PER_PERMANENT
+        + FIELD_EFFECT_SLOT_FOR_MAIN) as usize;
+    assert_eq!(
+        build_action_mask(&runner.game, 0)[main_bit],
+        0.0,
+        "an [End of Your Turn] <Delay> must not offer a main-phase activation action"
+    );
+
+    // End of the owner's next turn — the <Delay> fires: optional link pick.
+    // NOTE: P0 drew 1 FILL at the start of this turn, so the hand is
+    // [APP-LINK, FILL].
+    runner.end_turn();
     let view = runner
         .pending_selection_view()
-        .expect("delay body offers the optional link");
+        .expect("the <Delay> body offers the optional link at the owner's turn end");
     assert!(
         runner.pending_is_optional(),
         "printed 'You may link' keeps PASS legal"
     );
-    // APP-LINK is at hand[0] (drawn first); pick the first non-PASS action.
+    // APP-LINK is at hand[0]; pick the first non-PASS action.
     let link_card_action = view
         .valid_action_ids
         .iter()
@@ -570,7 +638,7 @@ fn bt21_097_delay_links_hand_card_to_own_digimon_free() {
         .expect("choose APP-FIELD as link target");
     runner.auto_resolve().expect("settle the link");
 
-    // BT21-097 trashed (self-trash cost).
+    // BT21-097 trashed (self-trash cost of the <Delay> activation).
     assert!(
         trash_ids(&runner, 0).contains(&CARD_ID.to_string()),
         "the <Delay> cost trashes BT21-097: {:?}",
@@ -582,7 +650,8 @@ fn bt21_097_delay_links_hand_card_to_own_digimon_free() {
     );
 
     // APP-LINK was linked to APP-FIELD — confirm it's in the field Digimon's
-    // link sources.
+    // link sources. APP-FIELD was placed before the option, so its index is
+    // stable across the option's trash.
     let host = runner
         .game
         .player(0)
@@ -598,19 +667,22 @@ fn bt21_097_delay_links_hand_card_to_own_digimon_free() {
         link_ids.contains(&"APP-LINK".to_string()),
         "APP-LINK is linked to APP-FIELD: {link_ids:?}"
     );
-    // APP-LINK must have been removed from hand. The hand may still contain
-    // the FILL card drawn on player 0's second turn, but APP-LINK is gone.
+    // APP-LINK must have been removed from hand (the drawn FILL may remain).
     assert!(
         !hand_ids(&runner, 0).contains(&"APP-LINK".to_string()),
         "APP-LINK was consumed from hand: {:?}",
         hand_ids(&runner, 0)
     );
-
-    let _ = field_digimon;
 }
 
-/// The <Delay> link is optional: the owner can decline it.
-/// The self-trash cost is still paid when the delay activates.
+/// The link itself is optional ("You may link"): the owner can PASS.
+///
+/// Under the current scheduled-scan machinery the Option is trashed even
+/// when the link is declined — the mandatory-scan residual tracked as
+/// G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN (docs/RUST_ENGINE_GAPS.md).
+/// The faithful decline-keeps-it-parked behavior is pinned by the
+/// `#[ignore]`d test below; this test locks the link optionality plus the
+/// current engine trash semantics so a silent behavior change is visible.
 #[test]
 fn bt21_097_delay_link_can_be_declined() {
     let mut runner = DebugRunner::builder()
@@ -626,13 +698,18 @@ fn bt21_097_delay_link_can_be_declined() {
         .start();
 
     runner.place_on_field(0, "APP-FIELD", Some(0));
-    let handle = seat_and_advance_to_activatable_delay(&mut runner);
-    runner.game.set_memory(10);
-    assert!(runner.game.activate_field_main(0, handle.index as usize));
+    seat_as_scheduled_end_delay(&mut runner);
+
+    // Advance to the end of the owner's next turn (placing turn → P1's turn
+    // → owner's next turn end, where the scheduled <Delay> fires).
+    runner.end_turn();
+    runner.end_turn();
+    assert_eq!(runner.game.turn_player(), 0);
+    runner.end_turn();
 
     let view = runner
         .pending_selection_view()
-        .expect("delay body offers the optional link");
+        .expect("the <Delay> body offers the optional link");
     assert!(runner.pending_is_optional());
     runner
         .execute_action(view.selecting_player, PASS)
@@ -644,9 +721,127 @@ fn bt21_097_delay_link_can_be_declined() {
         hand_ids(&runner, 0).contains(&"APP-LINK".to_string()),
         "declined target stays in hand"
     );
-    // Self-trash cost is still paid.
+    // Current engine semantics: the scheduled scan still trashes the Option
+    // (G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN — mandatory fire).
     assert!(
         trash_ids(&runner, 0).contains(&CARD_ID.to_string()),
-        "the self-trash cost is paid even when the link is declined"
+        "under the mandatory scheduled scan the Option is trashed even on a declined link"
     );
+}
+
+/// FAITHFUL (§16-16-2, DCGO OnEndTurn isOptional: true): declining the
+/// <Delay> at the owner's turn end must keep the Option parked in the battle
+/// area, re-offerable at a later owner turn end. Blocked on the OPEN engine
+/// gap G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN (the scheduled scan fires
+/// mandatorily and trashes the Option); un-ignore when the scan routes
+/// through the outer accept/decline prompt.
+#[test]
+#[ignore = "G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN — scheduled <Delay> scan is mandatory; decline cannot keep the Option parked yet"]
+fn bt21_097_declining_delay_keeps_option_parked_for_a_later_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT21-097 YAML loads")
+        .add_card(appmon_digimon("APP-FIELD", 5))
+        .add_card(appmon_digimon("APP-LINK", 4))
+        .add_card(plain_digimon("FILL", 3))
+        .hand(0, &["APP-LINK"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "APP-FIELD", Some(0));
+    seat_as_scheduled_end_delay(&mut runner);
+
+    runner.end_turn();
+    runner.end_turn();
+    assert_eq!(runner.game.turn_player(), 0);
+    runner.end_turn();
+
+    // Decline everything the boundary offers (the accept/decline prompt once
+    // the gap fix lands; today only the inner link pick surfaces).
+    while runner.game.pending_selection.is_some() {
+        let view = runner
+            .pending_selection_view()
+            .expect("pending selection view");
+        runner
+            .execute_action(view.selecting_player, PASS)
+            .expect("decline the <Delay>");
+    }
+    runner.auto_resolve().expect("finish the turn boundary");
+
+    // Rules 16-16-2: the processing from <Delay> is optional — declining
+    // keeps the Option in the battle area for a later owner turn end.
+    assert!(
+        field_contains(&runner, 0, CARD_ID),
+        "a declined [End of Your Turn] <Delay> stays parked in the battle area"
+    );
+    assert!(
+        !trash_ids(&runner, 0).contains(&CARD_ID.to_string()),
+        "a declined <Delay> is not trashed"
+    );
+}
+
+// ── Section 5: Behavioral — [Security] places self in battle area ─────────
+
+/// A real security check on BT21-097 places it into the owner's battle area
+/// as a parked <Delay> Option (DCGO PlaceSelfDelayOptionSecurityEffect)
+/// instead of trashing it. Placed during the OPPONENT's turn, its scheduled
+/// window is the end of the owner's next turn (turn_count + 1).
+#[test]
+fn bt21_097_security_check_places_self_in_battle_area_as_delay_option() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT21-097 YAML loads")
+        .add_card(plain_digimon("ATTACKER", 4))
+        .add_card(plain_digimon("FILL", 3))
+        .security(1, &[CARD_ID])
+        .deck(0, &["FILL"; 4])
+        .deck(1, &["FILL"; 4])
+        .memory(10)
+        .start();
+
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    let check_turn = runner.game.turn_count;
+
+    let result = runner.attack_player(attacker, 1, false);
+
+    assert_eq!(result, AttackResult::SecurityCheckSurvived);
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "BT21-097 leaves the security stack"
+    );
+    assert!(
+        !trash_ids(&runner, 1).contains(&CARD_ID.to_string()),
+        "BT21-097 is placed in the battle area instead of trashed"
+    );
+    let placed = runner
+        .game
+        .player(1)
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == CARD_ID)
+        .expect("BT21-097 placed as a battle-area <Delay> Option");
+    match placed.option_state {
+        OptionState::Delayed {
+            trigger,
+            trash_on_turn,
+            ..
+        } => {
+            assert_eq!(
+                trigger,
+                DelayTrigger::EndOfYourNextTurn,
+                "the security placement parks the printed [End of Your Turn] <Delay>"
+            );
+            // Placed during the opponent's (P0's) turn, the owner's next turn
+            // end is turn_count + 1 — a legal window (not the placing turn).
+            assert_eq!(
+                trash_on_turn,
+                check_turn + 1,
+                "security placement schedules the end of the owner's next turn"
+            );
+        }
+        other => panic!("BT21-097 must park as OptionState::Delayed; got {other:?}"),
+    }
 }

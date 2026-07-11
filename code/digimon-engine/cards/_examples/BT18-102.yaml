@@ -5,7 +5,7 @@ level: 7
 color: [white]
 cost: 9
 dp: 16000
-traits: [Shaman]
+traits: [Shaman, Hybrid]
 ace_overflow: -5
 alt_paths:
   - kind: assembly

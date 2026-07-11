@@ -1,4 +1,6 @@
-# AD1-005 Gaiamon ACE — Digimon, Lv.6, Red, DP 12000, Play Cost 7.
+# AD1-005 Gaiamon ACE — Digimon, Lv.6, Red/White, DP 12000, Play Cost 7.
+# Official bundle (data/card_bundles/AD1-005.md): "Colors: Red White"; DCGO
+#   card data card_colors [0, 4] = Red + White; image name plate is red+white.
 # Traits: [God, Appmon, Creation] — image: form "God/Appmon", attribute "God",
 #   type "Creation".
 #
@@ -53,7 +55,9 @@ card: AD1-005
 name: Gaiamon ACE
 kind: digimon
 level: 6
-color: [red]
+# Printed colors: Red + White (official Bandai DB "Colors: Red White";
+# dual-color name plate on the card image; DCGO card_colors [0, 4]).
+color: [red, white]
 cost: 7
 dp: 12000
 traits: [God, Appmon, Creation]
@@ -62,16 +66,20 @@ attribute: God
 ace_overflow: -4
 
 alt_paths:
-  # ─── Standard digivolve: Lv.5 / Cost 4 ──────────────────────────────────────
-  # Per cards.json evo_costs: card_color=red, level=5, memory_cost=4.
+  # ─── Standard digivolve: Red Lv.5 / Cost 4 ──────────────────────────────────
+  # Printed circle (card image, red rim: "Lv.5 / 4"; official bundle:
+  # "Red Lv.5 / cost 4"; cards.json evo_costs card_color=red, level=5,
+  # memory_cost=4). The circle gates on RED — `color_is` matches any of the
+  # base's printed colors, so a dual-color red/X base qualifies.
   - kind: digivolve
-    from: { level_eq: 5 }
+    from: { level_eq: 5, color_is: red }
     cost: 4
 
   # ─── Ult. digivolve: any Digimon with [Ult.] trait / Cost 4 ──────────────────
-  # DCGO: AddSelfDigivolutionRequirementStaticEffect(
+  # Printed circle (card image, RAINBOW rim: "Ult. / 4") — grade gate only,
+  # deliberately color-agnostic. DCGO: AddSelfDigivolutionRequirementStaticEffect(
   #   permanentCondition: p.TopCard.EqualsTraits("Ult."), cost 4,
-  #   ignoreDigivolutionRequirement: false).
+  #   ignoreDigivolutionRequirement: false) — no color check.
   - kind: digivolve
     from: { trait_has: "Ult." }
     cost: 4
@@ -143,6 +151,15 @@ effects:
   #    first pick when no candidates remain in either zone).
   # 5. from: [hand, self_sources] — self_sources = this Digimon's digivolution
   #    cards (DCGO thisPermanent.DigivolutionCards).
+  # 6. KNOWN MICRO-DIVERGENCE (documented, not modeled): DCGO's
+  #    SharedCanActivateCondition suppresses ACTIVATION entirely when there is
+  #    neither a linkable candidate (hand/sources) nor a DP-eligible opponent
+  #    Digimon — in DCGO the shared OPT is then NOT consumed. Here the clause
+  #    fires (silently no-ops) and consumes the OPT. Reachable only in the rare
+  #    case where all three resource pools are empty at one timing but populated
+  #    at a later same-turn timing. Expressing the gate needs a zone-scoped
+  #    "candidate exists" active_when leaf (hand/self_sources card match) the
+  #    predicate vocabulary lacks today.
   - when: [on_play, when_digivolving, when_attacking]
     once_per_turn: true
     summary: "[On Play][When Digivolving][When Attacking][OPT] Link up to 2 Social/Navi/Tool from hand/sources, then may delete 1 opp Digimon with DP <= self"

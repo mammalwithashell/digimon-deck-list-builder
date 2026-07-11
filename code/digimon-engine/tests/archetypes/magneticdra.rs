@@ -698,29 +698,25 @@ fn c4_defense_training_delay_cost_reduced_digivolve() {
 ///   source fires "trash → delete opp cost ≤4", deleting a SECOND opp Digimon.
 ///   Board diff: opp battle area −2 Digimon, opp security −1.
 ///
-///   FAITHFULNESS / MODEL CORRECTION (filed, matches `Rocks-model.md` C1
-///   correction): **EX8-047's traits are `[Reptile, LIBERATOR]`**
-///   (`cards/ex8/EX8-047.yaml`), NOT Mineral/Rock. Magneticdramon's cost filter
-///   is `trait_has: Mineral|Rock` (`cards/ex10/EX10-036.yaml`), so EX8-047 is
-///   **never selectable** as one of the 3 trashed sources via this line — its
-///   inherited delete therefore cannot fire from Magneticdramon's cost. To
-///   produce the faithful double-delete the trashed inherited source must itself
-///   be Mineral/Rock-trait. EX8-048 Landramon (Mineral-trait, same cost-≤4
-///   inherited body) is the correct partner; the Rocks exemplar's C1 already
-///   pins exactly this with EX8-048. This test therefore loads the model-named
-///   EX8-047 AND uses a Mineral-trait inherited-delete carrier source so the
-///   faithful double-delete is reproducible without weakening the assertion, and
-///   asserts EX8-047 cannot participate.
+///   FAITHFULNESS RE-CORRECTION (Rule-granted traits reconciled from the
+///   official Bandai DB): EX8-047 prints **"(Rule) Trait: Has [Mineral] Type."**
+///   (official DB bundle `data/card_bundles/EX8-047.md` + card image), so its
+///   full trait set is `[Reptile, LIBERATOR, Mineral]`. The earlier "model
+///   correction" claiming EX8-047 is not Mineral was an artifact of the lossy
+///   digimoncard.io ingest dropping Rule grants — the exact bug the
+///   `official_rule_grants` guard now pins. EX8-047 therefore IS selectable as
+///   one of Magneticdramon's 3 trashed Mineral/Rock sources and its inherited
+///   delete CAN fire from that cost. This test keeps EX8-048 Landramon (also
+///   Mineral, same cost-≤4 inherited body) as the stacked payload and asserts
+///   EX8-047 carries the rule-granted Mineral trait.
 /// - Rules/keyword basis: "by trashing 3 … sources" = cost; source trash
 ///   dispatches each inherited `OnDigivolutionCardTrashed`; Fragment(3) §16-36.
 ///   Impl: `cards/ex10/EX10-036.yaml`, inherited `cards/ex8/EX8-047.yaml`.
 #[test]
 fn c5_magneticdramon_source_trash_double_removal() {
-    // A Mineral-trait inherited-delete source that CAN be trashed by
-    // Magneticdramon's Mineral/Rock cost filter and carries the same cost-≤4
-    // delete body as EX8-047. (EX8-048 Landramon is the faithful partner; the
-    // model named EX8-047 which is Reptile-trait and cannot participate — see the
-    // doc-comment correction. We load EX8-047 too, to assert it is excluded.)
+    // EX8-048 Landramon is the stacked Mineral-trait inherited-delete payload;
+    // EX8-047 Sunarizamon (loaded below) is ALSO Mineral via its printed rule box
+    // "(Rule) Trait: Has [Mineral] Type." — see the doc-comment re-correction.
     let mut runner = DebugRunner::builder()
         .dsl_card("EX10-036")
         .expect("EX10-036 (Magneticdramon) in embedded DSL pack")
@@ -746,8 +742,9 @@ fn c5_magneticdramon_source_trash_double_removal() {
         .start();
     runner.game.turn_count = 1;
 
-    // EX8-047 is Reptile/LIBERATOR — confirm it is NOT Mineral/Rock, so it can
-    // never satisfy Magneticdramon's trait-filtered cost.
+    // EX8-047 prints "(Rule) Trait: Has [Mineral] Type." — confirm the rule-
+    // granted trait is visible (it makes EX8-047 a legal Magneticdramon cost
+    // source, the interaction the archetype model originally described).
     let suna = runner
         .game
         .card_data
@@ -755,9 +752,9 @@ fn c5_magneticdramon_source_trash_double_removal() {
         .find(|c| c.card_id == "EX8-047")
         .expect("EX8-047 loaded");
     assert!(
-        !suna.traits.iter().any(|t| t == "Mineral" || t == "Rock"),
-        "EX8-047 must be Reptile/LIBERATOR (not Mineral/Rock) — it cannot be a \
-         Magneticdramon cost source; traits={:?}",
+        suna.traits.iter().any(|t| t == "Mineral"),
+        "EX8-047 must carry the rule-granted [Mineral] trait (official Bandai DB \
+         + card image); traits={:?}",
         suna.traits
     );
 

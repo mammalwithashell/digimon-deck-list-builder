@@ -85,8 +85,10 @@ export function PermanentSlot({
           ✓
         </div>
       )}
-      {/* Source count badge */}
-      {perm.sourceCount > 1 && (
+      {/* Digivolution-card count badge — `sourceCount` counts only the cards
+          UNDER the top card (the top card is not a digivolution card), so it
+          renders whenever there is at least one source. */}
+      {perm.sourceCount > 0 && (
         <div className="ib-source-count">
           x{perm.sourceCount}
         </div>

@@ -1,49 +1,113 @@
-# BT25-056 Bootmon — Digimon, Lv.5, Green/Blue, DP 7000, Cost 7.
-# Trait line: Super Boot (App Name) — Tool. Attribute: ? (Ult.).
+# BT25-056 Bootmon — Digimon, Lv.5, Green/Yellow, DP 7000, Cost 7.
+# Trait line (official Bandai DB / card image): Ult./Appmon | Tool | Super Boot.
 #
-# DCGO BT25_056.cs (authoritative):
-#   - AddSelfDigivolutionRequirementStaticEffect(HasSuperAppTraits, cost 3) — alt-digivolve.
-#   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 3) — self link-condition.
-#   - App Fusion (Logimon & Craftmon) — BLOCKED (no App Fuse primitive). OMITTED.
+# Printed sources: data/card_bundles/BT25-056.md (authoritative) + card image.
+# Digivolve circles (card image): one split Green/Yellow "Lv.4 / cost 4"
+# circle (the official DB lists it as two standard rows: Green Lv.4/4 AND
+# Yellow Lv.4/4 — both restored into production evo_costs by the official-DB
+# circle recovery and regression-pinned by
+# tests/digivolve_color_requirements.rs) plus a rainbow-ring "Sup. / cost 3"
+# circle (any colour, Appmon Super-grade form gate).
+#
+# DCGO BT25_056.cs (authoritative for behavior):
+#   - AddSelfDigivolutionRequirementStaticEffect(HasSuperAppTraits, cost 3) —
+#     the printed "Sup. / 3" circle. HasSuperAppTraits = EqualsTraits("Sup.")
+#     (CardSource.cs) — NO level gate, NO colour gate.
+#   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 3) — the
+#     printed <Link> [Appmon] trait: Cost 3 box.
+#   - AddAppfuseMethodByName(["Logimon", "Craftmon"]) — [App Fusion]
+#     [Logimon] & [Craftmon]: Cost 0.
 #   - Barrier (self, non-inherited).
-#   - Shared [On Play]/[When Digivolving]/[When Attacking]: if your turn, you may
-#     link 1 [Social]/[Tool]/[Game] Digimon card from your HAND or this Digimon's
-#     digivolution cards to THIS Digimon, cost reduced by 2.
-#   - [All Turns] When this Digimon gets linked: suspend 1 opp Digimon/Tamer.
-#   - Inherited [When Linking] (link-source effect): return 1 opp suspended
-#     Digimon to the bottom of the deck.
+#   - Shared [On Play]/[When Digivolving]/[When Attacking] (optional: false,
+#     isSkippable: true → the trigger fires, the link itself is declinable):
+#     "If it's your turn, you may link 1 [Social], [Tool] or [Game] trait
+#     Digimon card from your hand or this Digimon's digivolution cards to
+#     this Digimon with the cost reduced by 2."
+#   - [All Turns] When this Digimon gets linked: suspend 1 opp Digimon/Tamer
+#     (canNoSelect: false → mandatory when a target exists; no OPT tag).
+#   - Link box [When Linking] (SetIsLinkedEffect(true)): "Return 1 of your
+#     opponent's suspended Digimon to the bottom of the deck."
+#     (canNoSelect: false → mandatory when a target exists.)
+#   - Link box DP "+4000" (card image + official DB "Link DP: DP+4000") —
+#     applied by DCGO's data-driven link system, not per-card C#; authored
+#     here as a scope:linked dp aura per pool convention (BT21-009/BT25-061).
 #
-# Cost-modeling note (shared by all link_card_to_self cards): "reduced by 2" is a
-# reduction on the LINKED card's own link cost. DSL fixtures carry no engine-side
-# link cost on the linked candidate, so we model the paid cost as `cost: 0`
-# (the -2 reduction makes the typical cost-1/2 link free in practice). The flat
-# `ChangeLinkCost` path (facet #10) covers any nonzero residual when present.
+# Cost-modeling note (shared by the link_card_to_self family — BT25-052/072/
+# 089): "reduced by 2" reduces the LINKED card's own link cost. DSL fixtures
+# carry no engine-side link cost on the linked candidate, so both `free` and
+# `{ reduce: N }` currently lower to a paid cost of 0; `{ reduce: 2 }` is the
+# faithful declaration (see LinkCardsCost in digimon-dsl/src/step.rs) and
+# picks up real residual costs if the lowering ever learns base link costs.
+# Known shared simplification (same as siblings): DCGO additionally gates
+# candidates on CanLinkToTargetPermanent (the candidate's own link condition
+# must accept this host); the DSL predicate vocabulary has no candidate-
+# linkability leaf yet, so the filter is trait/kind-only.
 
 card: BT25-056
 name: Bootmon
 kind: digimon
 level: 5
-color: [green, blue]
+color: [green, yellow] # printed: Green/Yellow (bundle + card image; was mis-authored green/blue)
 cost: 7
 dp: 7000
-traits: [Super Boot, Tool]
+traits: ["Ult.", Appmon, Tool, Super Boot] # form Ult./Appmon + attribute Tool + type Super Boot (production trait merge)
+attribute: Tool
 
 alt_paths:
+  # ─── Printed standard circles: split Green/Yellow Lv.4 / cost 4 ─────────────
+  # The official DB lists the split circle as two standard rows (Green Lv.4/4
+  # AND Yellow Lv.4/4). Authored as equal-cost alt_paths per pool convention
+  # (backfills DebugRunner fixtures' evo_costs; production dedupes against the
+  # cards.json rows) — same shape as BT21-073's split purple/black circle.
   - kind: digivolve
-    from: { level_eq: 4, trait_has: Super App }
+    from: { level_eq: 4, color_is: green }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+
+  # ─── Printed "Sup. / cost 3" circle (any colour) ────────────────────────────
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(HasSuperAppTraits, 3);
+  # HasSuperAppTraits = EqualsTraits("Sup.") — the Appmon Super-grade form
+  # trait, no level/colour gate. (Was mis-authored as level_eq 4 + the
+  # nonexistent "Super App" trait, which matches no production card — the
+  # production trait merge carries the form as "Sup.".)
+  - kind: digivolve
+    from: { trait_has: "Sup." }
     cost: 3
 
+  # ─── [App Fusion] [Logimon] & [Craftmon]: Cost 0 ────────────────────────────
+  # Printed: "If 2 such cards are linked together, stack the link card on top
+  # and digivolve." DCGO: AddAppfuseMethodByName(["Logimon","Craftmon"]).
+  # Same authoring as AD1-005 / BT21-018 / BT21-101.
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Logimon, Craftmon]
+    cost: 0
+
 effects:
-  # ─── Self link-condition: link onto an [Appmon] host for cost 3 ─────────────
+  # ─── Self link-condition: <Link> [Appmon] trait: Cost 3 ─────────────────────
   - kind: link_condition
     cost: 3
     filter: { trait_has: Appmon }
+
+  # ─── Link box DP "+4000" (card image + official DB "Link DP: DP+4000") ──────
+  # Applies to the host while this card is linked (target: {} = the host).
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 4000
+    summary: "[Link] +4000 DP to the linked Digimon (host)"
 
   # ─── <Barrier> (self) ───────────────────────────────────────────────────────
   - kind: grant_keyword
     keyword: Barrier
 
-  # ─── Shared [On Play]/[When Digivolving]/[When Attacking] self-link from hand ─
+  # ─── Shared [On Play]/[When Digivolving]/[When Attacking] self-link ─────────
+  # Printed: "If it's your turn, you may link 1 [Social], [Tool] or [Game]
+  # trait Digimon card from your hand or this Digimon's digivolution cards to
+  # this Digimon with the cost reduced by 2."
   - when: [on_play, when_digivolving, when_attacking]
     active_when: { your_turn: true }
     summary: "[OP/WD/WA] If your turn, you may link 1 [Social]/[Tool]/[Game] Digimon card from hand or digivolution cards to this Digimon (-2)"
@@ -58,10 +122,11 @@ effects:
                   - trait_has: Tool
                   - trait_has: Game
           to: self
-          count: { up_to: 1 }
-          cost: free
+          count: { up_to: 1 } # "you may link 1" — declinable (DCGO isSkippable)
+          cost: { reduce: 2 } # printed "-2" on the linked card's link cost
 
   # ─── [All Turns] When this Digimon gets linked: suspend 1 opp ───────────────
+  # Mandatory (no "you may"; DCGO canNoSelect: false); no OPT — every link.
   - when: when_card_linked_to_this
     summary: "[All Turns] When this Digimon gets linked, suspend 1 of your opponent's Digimon or Tamers"
     process:
@@ -74,7 +139,10 @@ effects:
           prompt: "Suspend 1 of your opponent's Digimon or Tamers"
       - suspend: { target: suspend_target }
 
-  # ─── [When Linking] (link-source): return 1 opp suspended Digimon to deck bottom ──
+  # ─── [When Linking] (link-source effect): bottom-deck 1 opp suspended ───────
+  # DCGO DeckBottomBounceClass runs permanent.DiscardEvoRoots() first: the
+  # target's digivolution cards go to TRASH and only the top card is placed on
+  # the deck bottom — so include_sources stays at its default (false).
   - scope: linked
     when: when_linked
     summary: "[When Linking] Return 1 of your opponent's suspended Digimon to the bottom of the deck"
@@ -86,4 +154,4 @@ effects:
               - kind: digimon
               - is_suspended: true
           prompt: "Return 1 of your opponent's suspended Digimon to the bottom of the deck"
-      - return_to_deck: { target: bounce_target, position: bottom, include_sources: true }
+      - return_to_deck: { target: bounce_target, position: bottom }

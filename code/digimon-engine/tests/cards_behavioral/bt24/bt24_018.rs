@@ -787,3 +787,146 @@ fn accept_replacement(runner: &mut DebugRunner) {
         .execute_action(0, view.valid_action_ids[0])
         .expect("accept replacement");
 }
+
+// ─── SECTION — Alt digivolve "[Digivolve] While you have [Owen Dreadnought],
+//     [Lamiamon]: Cost 6" ─────────────────────────────────────────────────────
+//
+// Official evo box (card_bundles/BT24-018.md): the alt path digivolves FROM a
+// [Lamiamon] (Lv.5 red — the standard Lv.6-red circle does NOT cover it) for
+// cost 6, gated on having [Owen Dreadnought] on your battle area. DCGO
+// BT24_018.cs: `condition: HasMatchConditionOwnersPermanent(card,
+// HasOwenDreadnought)` (IsPermanentExistsOnOwnerBattleArea + TopCard.
+// EqualsCardName("Owen Dreadnought")), `permanentCondition: targetPermanent.
+// TopCard.EqualsCardName("Lamiamon")` — EXACT names on both gates, and the
+// Owen check is a CONDITION, not a second digivolve-from path.
+
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::encode_digivolve;
+use digimon_engine::enums::{CardColor, CardKind, GamePhase, PlaySource};
+
+/// A Lamiamon-shaped base: Lv.5 red Digimon named exactly "Lamiamon"
+/// (BT24-016 / BT21-025 print Lv.5 red Dragonkin/LIBERATOR).
+fn lamiamon(id: &str) -> digimon_engine::card_data::CardData {
+    let mut c = make_test_card(id, "Lamiamon");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(5);
+    c.dp = Some(7000);
+    c.colors = vec![CardColor::Red];
+    c.traits = vec!["Dragonkin".to_string(), "LIBERATOR".to_string()];
+    c
+}
+
+/// An [Owen Dreadnought] Tamer (BT18-087 / BT21-081 / BT24-082 / EX11-054).
+fn owen(id: &str) -> digimon_engine::card_data::CardData {
+    let mut c = make_test_card(id, "Owen Dreadnought");
+    c.card_kind = CardKind::Tamer;
+    c.level = None;
+    c.dp = None;
+    c.play_cost = 3;
+    c.colors = vec![CardColor::Red];
+    c.traits = vec!["LIBERATOR".to_string()];
+    c
+}
+
+/// Runner: BT24-018 in hand, the given permanents placed on player 0's field
+/// (in order, slots 0..). Returns the runner.
+fn alt_path_runner(field: Vec<digimon_engine::card_data::CardData>) -> DebugRunner {
+    let ids: Vec<String> = field.iter().map(|c| c.card_id.clone()).collect();
+    let mut b = DebugRunner::builder()
+        .dsl_card("BT24-018")
+        .expect("BT24-018 YAML loads");
+    for c in field {
+        b = b.add_card(c);
+    }
+    let mut r = b.hand(0, &["BT24-018"]).memory(10).start();
+    r.game.turn_count = 1;
+    r.game.current_phase = GamePhase::Main;
+    for id in &ids {
+        r.place_on_field(0, id, Some(0));
+    }
+    r
+}
+
+/// Positive: with [Owen Dreadnought] on the field, Styracomon digivolves from
+/// [Lamiamon] (Lv.5 — unreachable via the standard Lv.6-red circle) for 6.
+#[test]
+fn bt24_018_digivolves_from_lamiamon_with_owen_for_cost_6() {
+    let mut runner = alt_path_runner(vec![lamiamon("LAMIA"), owen("OWEN")]);
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert!(
+        mask[encode_digivolve(0, 0) as usize] > 0.0,
+        "with Owen Dreadnought present, the [Lamiamon] alt digivolve must be \
+         offered in the action mask"
+    );
+
+    let mem_before = runner.game.memory;
+    let proceeded = runner
+        .game
+        .digivolve_from_hand(0, 0, 0, PlaySource::ByHand);
+    assert!(
+        proceeded,
+        "the single applicable route (alt path, cost 6) must digivolve directly"
+    );
+    assert_eq!(
+        runner.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&runner.game.card_data),
+        "BT24-018",
+        "Styracomon must be stacked on Lamiamon"
+    );
+    assert_eq!(
+        mem_before - runner.game.memory,
+        6,
+        "the [Lamiamon] alt path costs exactly 6 memory"
+    );
+}
+
+/// Gate negative: WITHOUT [Owen Dreadnought], the [Lamiamon] alt path is not
+/// available — no digivolve route exists onto the Lv.5 Lamiamon at all.
+#[test]
+fn bt24_018_not_offered_from_lamiamon_without_owen() {
+    let mut runner = alt_path_runner(vec![lamiamon("LAMIA")]);
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert!(
+        mask[encode_digivolve(0, 0) as usize] == 0.0,
+        "the alt path is gated on \"While you have [Owen Dreadnought]\" — with \
+         no Owen on the field the digivolve must NOT be offered"
+    );
+    assert!(
+        !runner.game.digivolve_from_hand(0, 0, 0, PlaySource::ByHand),
+        "executing the digivolve without Owen must be rejected"
+    );
+}
+
+/// Exact-name negative: DCGO gates the source with EqualsCardName("Lamiamon").
+/// A base named "Lamiamon X" must NOT satisfy the alt path.
+#[test]
+fn bt24_018_not_offered_from_near_name_lamiamon_base() {
+    let mut lamia_x = lamiamon("LAMIA-X");
+    lamia_x.card_name = "Lamiamon X".to_string();
+    let runner = alt_path_runner(vec![lamia_x, owen("OWEN")]);
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert!(
+        mask[encode_digivolve(0, 0) as usize] == 0.0,
+        "\"Lamiamon X\" must NOT satisfy the exact-name [Lamiamon] gate \
+         (DCGO EqualsCardName)"
+    );
+}
+
+/// The Owen requirement is a CONDITION, not a digivolve-from target: the alt
+/// path must never offer digivolving Styracomon FROM the Owen Dreadnought
+/// Tamer itself.
+#[test]
+fn bt24_018_not_offered_from_owen_dreadnought_itself() {
+    let runner = alt_path_runner(vec![owen("OWEN"), lamiamon("LAMIA")]);
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert!(
+        mask[encode_digivolve(0, 0) as usize] == 0.0,
+        "Owen Dreadnought is the alt path's CONDITION, not its source — \
+         digivolving from the Tamer must not be offered"
+    );
+}

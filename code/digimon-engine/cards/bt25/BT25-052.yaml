@@ -1,21 +1,52 @@
-# BT25-052 Logimon — Digimon, Lv.4, Green/Red, DP 6000, Cost 5.
-# Trait line: Login (App Name) — Social. Form: Sup.
+# BT25-052 Logimon — Digimon, Lv.4, Green/Red dual, DP 6000, Cost 5.
+# Trait line (card image — authoritative): Sup./Appmon | Social | Login
+#   → traits: ["Sup.", Appmon, Social, Login], attribute: Social.
+#   (BT21-059 / BT25-007 convention: every trait-line segment goes in traits,
+#    since predicate `trait_has` consults only `traits`.)
 #
-# DCGO BT25_052.cs (authoritative):
-#   - AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits, cost 2) — alt-digivolve.
-#   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 2) — self link-condition.
-#   - App Fusion (Onmon & Gatchmon) — BLOCKED (no App Fuse primitive). OMITTED.
-#   - [Main][OPT][Once Per Turn]: you may link 1 [Social]/[Tool]/[Game] Digimon
-#     card from your hand or this Digimon's digivolution cards to THIS Digimon,
-#     cost reduced by 1. → main_on_field once_per_turn + link_card_to_self.
-#   - [Your Turn][OPT][Once Per Turn] When this Digimon gets linked: if you have
-#     1 or fewer Tamers, you may play 1 [Kazuki & Itsuki] from hand free.
-#   - [When Linking] (link-source / inherited): Suspend 1 opp Digimon or Tamer.
-#     (cards.json mis-labels this as the card's inherited text.)
-#
-# Cost-modeling note: "cost reduced by 1" is a reduction on the linked card's
-# own link cost; DSL fixtures carry no engine link cost, so we use cost: 0
-# (see BT25-072/056 notes). The flat ChangeLinkCost path covers nonzero residual.
+# Printed clauses (official bundle data/card_bundles/BT25-052.md + card image
+# + DCGO BT25_052.cs):
+#   1. Standard digivolve circles: Green Lv.3 / cost 3 AND Red Lv.3 / cost 3
+#      (one dual-ring circle on the card face). Present in production
+#      cards.json (official-DB reconciliation, regression-pinned in
+#      tests/digivolve_color_requirements.rs); ALSO authored as equal-cost
+#      alt_paths at the printed costs per convention (backfills the DebugRunner
+#      fixture's empty evo_costs; production dedupes the equal-cost route).
+#   2. "Stnd." circle / Cost 2 (rainbow ring — ANY colour, NO level).
+#      DCGO AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits, 2)
+#      with no level parameter; HasStandardAppTraits == EqualsTraits("Stnd.").
+#      → alt_paths digivolve from { trait_has: "Stnd." }, cost 2.
+#      (Was mis-authored as { level_eq: 3, trait_has: Standard App } — the
+#      trait string "Standard App" matches no card and DCGO has no level gate.)
+#   3. [App Fusion] [Onmon] & [Gatchmon]: Cost 0 — "If 2 such cards are linked
+#      together, stack the link card on top and digivolve."
+#      DCGO AddAppfuseMethodByName(["Onmon","Gatchmon"]).
+#      → alt_paths app_fusion (previously OMITTED as BLOCKED; the app_fusion
+#      alt-play primitive has since landed — BT25-036/BT25-060 precedent).
+#   4. Link box: "[Link] [Appmon] trait: Cost 2" → kind: link_condition
+#      (DCGO AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 2)).
+#   5. Link box "+DP 3000" — host gets +3000 DP while this card is linked.
+#      → scope: linked aura dp_modifier 3000 (BT21-073 idiom).
+#   6. [Main][Once Per Turn] "You may link 1 [Social], [Tool] or [Game] trait
+#      Digimon card from your hand or this Digimon's digivolution cards to
+#      this Digimon with the cost reduced by 1."
+#      → main_on_field once_per_turn + link_cards from [hand, self_sources],
+#      cost: { reduce: 1 } (printed "-1"; the cards this step links carry a
+#      base link cost of 0 in this context, so it pays 0 today — the reduce
+#      form is threaded faithfully for a future non-zero base, see step.rs
+#      LinkCardsCost and BT25-089 precedent).
+#   7. [Your Turn][Once Per Turn] "When this Digimon gets linked, if you have
+#      1 or fewer Tamers, you may play 1 [Kazuki & Itsuki] from your hand
+#      without paying the cost."
+#      DCGO: WhenLinked ActivateClass, CanTriggerWhenLinked(perm == this);
+#      Tamer count is the OWNER's Tamers (<= 1), checked at activation.
+#      → when_card_linked_to_this + active_when { your_turn, count_lte } +
+#      optional select_hand (you may) → play_from_hand_free.
+#      (Was missing the [Your Turn] gate — BT21-073/BT21-059 idiom.)
+#   8. [When Linking] "Suspend 1 of your opponent's Digimon or Tamers."
+#      Link-source effect (DCGO SetIsLinkedEffect(true); cards.json mis-slots
+#      it as the inherited text) → scope: linked, when: when_linked,
+#      mandatory select (DCGO canNoSelect: false) + suspend.
 
 card: BT25-052
 name: Logimon
@@ -24,20 +55,54 @@ level: 4
 color: [green, red]
 cost: 5
 dp: 6000
-traits: [Login, Social]
+traits: ["Sup.", Appmon, Social, Login]
+attribute: Social
 
 alt_paths:
+  # ─── Standard digivolution: Green Lv.3 / cost 3 (printed circle, colour 1) ──
   - kind: digivolve
-    from: { level_eq: 3, trait_has: Standard App }
+    from: { level_eq: 3, color_is: green }
+    cost: 3
+
+  # ─── Standard digivolution: Red Lv.3 / cost 3 (printed circle, colour 2) ────
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+
+  # ─── [Digivolve] "Stnd." circle: Cost 2 (any colour, trait gate only) ───────
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits, 2)
+  # — no level parameter → no level_eq gate. HasStandardAppTraits == "Stnd.".
+  - kind: digivolve
+    from: { trait_has: "Stnd." }
     cost: 2
+
+  # ─── [App Fusion] [Onmon] & [Gatchmon]: Cost 0 ──────────────────────────────
+  # DCGO: AddAppfuseMethodByName(["Onmon","Gatchmon"]).
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Onmon, Gatchmon]
+    cost: 0
 
 effects:
   # ─── Self link-condition: link onto an [Appmon] host for cost 2 ─────────────
+  # Printed: "[Link] [Appmon] trait: Cost 2".
   - kind: link_condition
     cost: 2
     filter: { trait_has: Appmon }
 
+  # ─── Link box +3000 DP: host gets +3000 DP while this card is linked ────────
+  # Printed link box: "+DP 3000". BT21-073 linked-aura idiom.
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] This Digimon's host gets +3000 DP while Logimon is linked"
+
   # ─── [Main][OPT][Once Per Turn] link from hand/sources to this (-1) ─────────
+  # Printed: "You may link 1 [Social], [Tool] or [Game] trait Digimon card from
+  # your hand or this Digimon's digivolution cards to this Digimon with the
+  # cost reduced by 1."
   - when: main_on_field
     once_per_turn: true
     summary: "[Main][OPT] You may link 1 [Social]/[Tool]/[Game] Digimon card from hand or digivolution cards to this Digimon (-1)"
@@ -53,18 +118,24 @@ effects:
                   - trait_has: Game
           to: self
           count: { up_to: 1 }
-          cost: free
+          cost: { reduce: 1 }
 
   # ─── [Your Turn][OPT] When linked: if <=1 Tamers, play 1 Kazuki & Itsuki free ──
+  # Printed: "[Your Turn] [Once Per Turn] When this Digimon gets linked, if you
+  # have 1 or fewer Tamers, you may play 1 [Kazuki & Itsuki] from your hand
+  # without paying the cost."
   - when: when_card_linked_to_this
     once_per_turn: true
+    optional: true
     active_when:
-      count_lte:
-        filter:
-          owner: you
-          zone: [battle_area]
-          kind: tamer
-        n: 1
+      all_of:
+        - your_turn: true
+        - count_lte:
+            filter:
+              owner: you
+              zone: [battle_area]
+              kind: tamer
+            n: 1
     summary: "[Your Turn][OPT] When this Digimon gets linked, if <=1 Tamers, may play 1 [Kazuki & Itsuki] from hand free"
     process:
       - select_hand:
@@ -80,6 +151,8 @@ effects:
             - play_from_hand_free: { of: you, hand_index: kazuki }
 
   # ─── [When Linking] (link-source): suspend 1 opp Digimon or Tamer ───────────
+  # Printed: "Suspend 1 of your opponent's Digimon or Tamers." Mandatory
+  # (DCGO canNoSelect: false); skips silently when no target exists.
   - scope: linked
     when: when_linked
     summary: "[When Linking] Suspend 1 of your opponent's Digimon or Tamers"

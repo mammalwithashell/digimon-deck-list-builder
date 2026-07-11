@@ -1,7 +1,11 @@
 card: P-156
 name: "Future Potential!"
 kind: option
-color: [black]
+# Printed color is WHITE (official Bandai DB + cards.json color id 4). White
+# never color-matches a battle-area permanent, so without a Tamer the card is
+# unusable — exactly the printed gate: "While you have a Tamer, you may
+# ignore this card's color requirements" (modeled as use_requirement below).
+color: [white]
 cost: 2
 
 # "While you have a Tamer, you can ignore this card's color requirements."

@@ -474,7 +474,12 @@ fn perm_data(
         "dp": base_dp,
         "level": level,
         "isSuspended": perm.is_suspended,
-        "sourceCount": stack_size,
+        // Digivolution cards only — the top card is NOT a digivolution card
+        // (rules manual: "digivolution cards" are the cards under the top
+        // card). A 3-card stack has 2 digivolution cards. The UI badge and
+        // any source-counting effects (Fragment, Material Save, Iceclad)
+        // must see this count, not the total stack size.
+        "sourceCount": stack_size.saturating_sub(1),
         "keywords": keywords,
         "keywordBreakdown": json!({ "innate": innate, "gained": gained }),
         "securityAttackModifier": security_attack_modifier,

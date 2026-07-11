@@ -7,7 +7,10 @@ use digimon_engine::enums::{CardColor, GamePhase};
 
 #[test]
 fn bt20_076_counter_blast_dna_uses_dinobeemon_and_paildramon() {
-    let mut dinobeemon = make_test_card_with_level("TEST-DINOBEEMON", "DinoBeemon", 5);
+    // Real printed name "Dinobeemon" (BT3-055 .. BT20-074; DCGO
+    // EqualsCardName("Dinobeemon")) — the material gate is an exact
+    // case-sensitive `name_is`, so the synthetic must use the pool spelling.
+    let mut dinobeemon = make_test_card_with_level("TEST-DINOBEEMON", "Dinobeemon", 5);
     dinobeemon.colors = vec![CardColor::Purple];
     dinobeemon.dp = Some(8000);
 

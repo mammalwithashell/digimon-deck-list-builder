@@ -1,6 +1,10 @@
 //! EX8-019 Penguinmon — Digimon, Lv.3, Blue/Yellow, DP 1000, Cost 3.
 //! Traits: Avian, LIBERATOR. Attribute: Vaccine. Rarity: C.
-//! Standard digivolution: Lv.2 blue for 1 memory (printed evo box).
+//! Standard digivolution: Lv.2 for 1 memory from blue OR yellow — the printed
+//! evo box is a SPLIT half-blue/half-yellow circle; the official Bandai DB
+//! (data/card_bundles/EX8-019.md) lists it as two rows (Blue Lv.2/1 AND
+//! Yellow Lv.2/1). cards.json evo_costs drops the yellow half (lossy ingest),
+//! so the YAML alt_paths carry it.
 //! Alt digivolution (printed evo box): "[Digivolve] [Hiyarimon]: Cost 0".
 //! Rule box (card image): "Rule: Trait: Has [Ice-Snow] Type." — the card has
 //! the [Ice-Snow] trait everywhere, in addition to Avian/LIBERATOR.
@@ -52,11 +56,15 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledCardKind, CompiledClause, CompiledColor, CompiledCost,
     CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{encode_digivolve, BREEDING_TARGET};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming, ModifierType, PlaySource};
+use digimon_engine::enums::{
+    CardColor, CardKind, EffectTiming, GamePhase, ModifierType, PlaySource,
+};
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
 // ─── Fixture builders ─────────────────────────────────────────────────────────
@@ -230,24 +238,30 @@ fn ex8_019_compiles_with_printed_stats_and_digivolve_paths() {
         "Penguinmon must digivolve from [Hiyarimon] for cost 0"
     );
 
-    // Standard printed evo box: Lv.2 blue for 1 memory (encoded as an explicit
-    // alt path like neighbor EX8 specs so DSL-only loads carry it).
-    assert!(
-        compiled.alt_paths.iter().any(|path| {
-            path.kind == CompiledAltPathKind::Digivolve
-                && path.cost == Some(CompiledCost::Literal(1))
-                && path.from.as_ref().is_some_and(|from| {
-                    (from.level_eq == Some(2)
-                        || from.all_of.iter().any(|pred| pred.level_eq == Some(2)))
-                        && (from.color_is == Some(CompiledColor::Blue)
-                            || from
-                                .all_of
-                                .iter()
-                                .any(|pred| pred.color_is == Some(CompiledColor::Blue)))
-                })
-        }),
-        "Penguinmon must digivolve from a blue Lv.2 for cost 1 (printed evo box)"
-    );
+    // Standard printed evo box: a SPLIT half-blue/half-yellow Lv.2 circle,
+    // cost 1 — the official Bandai DB lists it as TWO rows (Blue Lv.2/1 AND
+    // Yellow Lv.2/1). Both halves must be present as alt paths; cards.json
+    // evo_costs only carries the blue half (lossy ingest drops the off-color
+    // half of split circles), so the YAML is the sole carrier of the yellow row.
+    for color in [CompiledColor::Blue, CompiledColor::Yellow] {
+        assert!(
+            compiled.alt_paths.iter().any(|path| {
+                path.kind == CompiledAltPathKind::Digivolve
+                    && path.cost == Some(CompiledCost::Literal(1))
+                    && path.from.as_ref().is_some_and(|from| {
+                        (from.level_eq == Some(2)
+                            || from.all_of.iter().any(|pred| pred.level_eq == Some(2)))
+                            && (from.color_is == Some(color)
+                                || from
+                                    .all_of
+                                    .iter()
+                                    .any(|pred| pred.color_is == Some(color)))
+                    })
+            }),
+            "Penguinmon must digivolve from a {color:?} Lv.2 for cost 1 \
+             (printed split blue/yellow circle — official Bandai DB)"
+        );
+    }
 }
 
 /// Clause 1: the cost-reduction clause fires at `before_pay_cost`, reduces by
@@ -383,6 +397,62 @@ fn ex8_019_cost_reduction_reduces_digivolving_into_ice_snow_by_one() {
         runner.game.memory,
         memory_before - 1,
         "digivolving into an [Ice-Snow] Digimon must cost 1 memory (2 printed - 1 reduction)"
+    );
+}
+
+/// PRODUCTION-DATA repro of the reported "Rule to give types not working" bug
+/// (observed on EX8-019 / EX7-016 / EX7-023): BT18-025 Korikakumon prints
+/// "(Rule) Trait: Has [Ice-Snow] Type." (official Bandai DB / card image), but
+/// the digimoncard.io ingest drops Rule grants, so the PRODUCTION CardData
+/// built from cards.json historically lacked the trait — and EX8-019's
+/// digivolve-into-[Ice-Snow] cost reduction silently failed in real games
+/// while the synthetic-fixture tests above stayed green.
+///
+/// This test digivolves EX8-019 into the REAL production BT18-025 (printed
+/// Lv.3-blue evo cost 4): the reduction must apply, so memory drops by 3.
+#[test]
+fn ex8_019_cost_reduction_sees_rule_granted_ice_snow_on_production_korikakumon() {
+    let korikakumon = digimon_engine::deck_tools::full_card_data()
+        .get("BT18-025")
+        .expect("BT18-025 Korikakumon in cards.json")
+        .clone();
+    assert!(
+        korikakumon
+            .evo_costs
+            .iter()
+            .any(|e| e.level == 3 && e.card_color == 1 && e.memory_cost == 4),
+        "precondition: BT18-025 prints a Lv.3-blue cost-4 digivolve circle"
+    );
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("EX8-019")
+        .expect("EX8-019 found in embedded DSL pack")
+        .add_card(korikakumon)
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(8)
+        .start();
+    runner.game.turn_count = 1;
+
+    let penguinmon = runner.place_on_field(0, "EX8-019", Some(0));
+    let hand_idx = put_in_hand(&mut runner, 0, "BT18-025");
+
+    let memory_before = runner.game.memory;
+    let digivolved =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, penguinmon.index as usize, PlaySource::ByHand);
+    assert!(
+        digivolved,
+        "EX8-019 must digivolve into production BT18-025 Korikakumon"
+    );
+
+    assert_eq!(
+        runner.game.memory,
+        memory_before - 3,
+        "BT18-025 carries [Ice-Snow] via its printed rule box — production CardData \
+         must expose it so EX8-019's reduction applies (4 printed - 1 = 3 memory)"
     );
 }
 
@@ -623,5 +693,273 @@ fn ex8_019_inherited_when_attacking_skips_with_no_opponent_digimon() {
         runner.pending_selection().is_none(),
         "no opponent Digimon — the mandatory selection must be silently skipped, \
          not parked as an empty prompt"
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION — Alt digivolve "[Digivolve] [Hiyarimon]: Cost 0" on a BREEDING base
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Hiyarimon is a Lv.2 Digi-Egg card — in a real game it exists ONLY in the
+// breeding area. The printed alt evo box must be honored there, alongside the
+// standard "Lv.2 from blue: Cost 1" circle, surfacing a rule-17 cost choice
+// {0, 1} exactly as the battle-area path does. DCGO's
+// `AddSelfDigivolutionRequirementStaticEffect` costs apply to ANY target
+// permanent (`CardSource.CostList(targetPermanent, …)`) — no battle-area gate.
+// EX8-019's DCGO gate is `ContainsCardName("Hiyarimon")` — substring, unlike
+// sibling EX11-014's EqualsCardName.
+
+/// A hatched Hiyarimon: Lv.2 blue Digi-Egg-kind card named "Hiyarimon".
+fn hiyarimon_egg(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Hiyarimon");
+    c.card_kind = CardKind::DigiEgg;
+    c.level = Some(2);
+    c.dp = Some(1000);
+    c.colors = vec![CardColor::Blue];
+    c.traits = vec!["Lesser".to_string()];
+    c
+}
+
+/// A Lv.2 blue in-training NOT named anything containing "Hiyarimon".
+fn other_egg(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Chillymon");
+    c.card_kind = CardKind::DigiEgg;
+    c.level = Some(2);
+    c.dp = Some(1000);
+    c.colors = vec![CardColor::Blue];
+    c.traits = vec!["Lesser".to_string()];
+    c
+}
+
+/// Runner with `base` hatched in the breeding area and EX8-019 in hand.
+fn breeding_runner(base: CardData) -> DebugRunner {
+    let base_id = base.card_id.clone();
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX8-019")
+        .expect("EX8-019 found in embedded DSL pack")
+        .add_card(base)
+        .add_card(filler("PAD-A"))
+        .add_card(filler("PAD-B"))
+        .hand(0, &["EX8-019"])
+        .deck(0, &["PAD-A", "PAD-B"])
+        .memory(5)
+        .start();
+    r.game.turn_count = 1;
+    r.game.current_phase = GamePhase::Main;
+    r.place_in_breeding(0, &base_id);
+    r
+}
+
+/// The mask offers the breeding digivolve, and executing it surfaces the
+/// rule-17 cost CHOICE between the [Hiyarimon] cost-0 alt path and the
+/// standard Lv.2-blue cost-1 circle; picking the cost-0 option pays 0.
+#[test]
+fn ex8_019_breeding_hiyarimon_offers_cost_0_alt_route() {
+    let mut runner = breeding_runner(hiyarimon_egg("HIYARI"));
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert!(
+        mask[encode_digivolve(0, BREEDING_TARGET) as usize] > 0.0,
+        "the breeding digivolve action must be offered"
+    );
+
+    let mem_before = runner.game.memory;
+    let proceeded = runner
+        .game
+        .digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByHand);
+    assert!(
+        !proceeded,
+        "breeding Hiyarimon satisfies BOTH the [Hiyarimon] cost-0 alt path and \
+         the standard Lv.2-blue cost-1 circle — the digivolve must PAUSE for a \
+         rule-17 cost choice, not auto-pay the printed circle"
+    );
+    let view = runner
+        .pending_selection_view()
+        .expect("a cost-choice selection must be pending");
+    let choices = view
+        .effect_choices
+        .as_ref()
+        .expect("the cost choice must carry effect_choices");
+    let labels: Vec<String> = choices.iter().map(|c| c.label.to_lowercase()).collect();
+    assert!(
+        labels.iter().any(|l| l.contains("cost 0")),
+        "an option for the [Hiyarimon] cost-0 route (labels {labels:?})"
+    );
+    assert!(
+        labels.iter().any(|l| l.contains("cost 1")),
+        "an option for the standard cost-1 circle (labels {labels:?})"
+    );
+
+    let cost0 = choices
+        .iter()
+        .find(|c| c.label.to_lowercase().contains("cost 0"))
+        .expect("cost-0 option present")
+        .action_id;
+    runner
+        .execute_action(0, cost0)
+        .expect("resolve the cost-0 choice");
+
+    let breeding = runner.game.players[0]
+        .breeding_area
+        .as_ref()
+        .expect("breeding permanent remains");
+    assert_eq!(
+        breeding.top_card().card_id(&runner.game.card_data),
+        "EX8-019",
+        "EX8-019 must be stacked on the breeding Hiyarimon"
+    );
+    assert_eq!(
+        runner.game.memory, mem_before,
+        "the [Hiyarimon] alt route costs 0 memory"
+    );
+}
+
+/// Name-substring fidelity: DCGO gates EX8-019's alt path with
+/// ContainsCardName("Hiyarimon"), so a breeding base named "Hiyarimon X"
+/// ALSO qualifies for the cost-0 route (unlike EX11-014's exact-name gate).
+#[test]
+fn ex8_019_breeding_name_containing_hiyarimon_also_gets_cost_0() {
+    let mut hiya_x = hiyarimon_egg("HIYA-X");
+    hiya_x.card_name = "Hiyarimon X".to_string();
+    let mut runner = breeding_runner(hiya_x);
+
+    let proceeded = runner
+        .game
+        .digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByHand);
+    assert!(
+        !proceeded,
+        "ContainsCardName(\"Hiyarimon\") matches \"Hiyarimon X\" — both routes \
+         apply, so the cost choice must surface"
+    );
+    let view = runner
+        .pending_selection_view()
+        .expect("a cost-choice selection must be pending");
+    let labels: Vec<String> = view
+        .effect_choices
+        .as_ref()
+        .expect("effect_choices")
+        .iter()
+        .map(|c| c.label.to_lowercase())
+        .collect();
+    assert!(
+        labels.iter().any(|l| l.contains("cost 0")),
+        "the substring-matched cost-0 route must be offered (labels {labels:?})"
+    );
+}
+
+/// Negative: a breeding base NOT named Hiyarimon gets only the standard
+/// circle — the digivolve completes immediately at cost 1, no prompt.
+#[test]
+fn ex8_019_breeding_non_hiyarimon_pays_standard_cost_1_no_prompt() {
+    let mut runner = breeding_runner(other_egg("CHILLY"));
+
+    let mem_before = runner.game.memory;
+    let proceeded = runner
+        .game
+        .digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByHand);
+    assert!(
+        proceeded,
+        "only the standard circle applies — the digivolve completes immediately"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "no cost choice for a single applicable route"
+    );
+    assert_eq!(
+        mem_before - runner.game.memory,
+        1,
+        "a non-[Hiyarimon] base pays the standard cost 1"
+    );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SECTION — Yellow half of the printed split blue/yellow Lv.2 circle
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// The printed standard evo box is a SPLIT half-blue/half-yellow circle: the
+// official Bandai DB (data/card_bundles/EX8-019.md) lists TWO standard rows —
+// Blue Lv.2 / cost 1 AND Yellow Lv.2 / cost 1. cards.json evo_costs drops the
+// yellow half (lossy API ingest), so the YAML alt_path is its only carrier and
+// this coverage is the regression guard for the off-color split-circle drift.
+
+/// A Lv.2 YELLOW in-training NOT named anything containing "Hiyarimon" — only
+/// the yellow half of the split circle can route it.
+fn yellow_egg(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Sunmon");
+    c.card_kind = CardKind::DigiEgg;
+    c.level = Some(2);
+    c.dp = Some(1000);
+    c.colors = vec![CardColor::Yellow];
+    c.traits = vec!["Lesser".to_string()];
+    c
+}
+
+/// A Lv.2 RED in-training — matches NO printed route (blue half, yellow half,
+/// or the [Hiyarimon] alt path), so the digivolve must not be offered.
+fn red_egg(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Hotmon");
+    c.card_kind = CardKind::DigiEgg;
+    c.level = Some(2);
+    c.dp = Some(1000);
+    c.colors = vec![CardColor::Red];
+    c.traits = vec!["Lesser".to_string()];
+    c
+}
+
+/// POSITIVE (yellow half): a breeding YELLOW Lv.2 base routes through the
+/// yellow half of the printed split circle — the digivolve completes
+/// immediately at cost 1, no prompt (only one applicable route).
+#[test]
+fn ex8_019_breeding_yellow_lv2_pays_standard_cost_1_via_split_circle() {
+    let mut runner = breeding_runner(yellow_egg("SUNNY"));
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert!(
+        mask[encode_digivolve(0, BREEDING_TARGET) as usize] > 0.0,
+        "the yellow half of the printed split blue/yellow circle must offer \
+         the breeding digivolve"
+    );
+
+    let mem_before = runner.game.memory;
+    let proceeded = runner
+        .game
+        .digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByHand);
+    assert!(
+        proceeded,
+        "only the yellow circle half applies — the digivolve completes immediately"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "no cost choice for a single applicable route"
+    );
+    assert_eq!(
+        mem_before - runner.game.memory,
+        1,
+        "a yellow Lv.2 base pays the printed cost 1 (yellow half of the split circle)"
+    );
+    let breeding = runner.game.players[0]
+        .breeding_area
+        .as_ref()
+        .expect("breeding permanent remains");
+    assert_eq!(
+        breeding.top_card().card_id(&runner.game.card_data),
+        "EX8-019",
+        "EX8-019 must be stacked on the breeding yellow Lv.2"
+    );
+}
+
+/// NEGATIVE (identity of the from-gates): a RED Lv.2 base matches none of the
+/// printed routes (blue half, yellow half, [Hiyarimon] alt), so the breeding
+/// digivolve must not be offered at all. Guards against the color gates being
+/// dead (e.g. a colorless `level_eq: 2` circle that would route any egg).
+#[test]
+fn ex8_019_breeding_red_lv2_has_no_route() {
+    let runner = breeding_runner(red_egg("HOT"));
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert!(
+        mask[encode_digivolve(0, BREEDING_TARGET) as usize] == 0.0,
+        "a red Lv.2 base satisfies no printed route — the breeding digivolve \
+         must not be offered"
     );
 }

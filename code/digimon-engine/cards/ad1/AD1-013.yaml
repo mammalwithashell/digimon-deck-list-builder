@@ -5,7 +5,7 @@ level: 6
 color: [blue, purple]
 cost: 11
 dp: 11000
-traits: [Cyborg, Blue Flare]
+traits: [Cyborg, Blue Flare, Xros Heart]
 
 alt_paths:
   - kind: digivolve

@@ -1,9 +1,10 @@
-//! BT21-101 Gaiamon — Digimon, Lv.6, White, DP 13000, Play Cost 13.
+//! BT21-101 Gaiamon — Digimon, Lv.6, White/Red (dual), DP 13000, Play Cost 13.
 //! Traits: God, Appmon, Creation. Attribute: God.
+//! Official Bandai DB: "Colors: White Red" (per-card JSON card_colors [4, 0]).
 //!
 //! # Card text (card image — authoritative)
 //!
-//! Digivolve: standard evo_costs (Lv.5, White, cost 5) + alt "Ult." trait → cost 5.
+//! Digivolve: standard evo_costs (Lv.5, RED, cost 5) + alt "Ult." trait → cost 5.
 //! App Fusion [Globemon] & [Charismon]: Cost 0.
 //! <Blocker>
 //! <Link +1> (Add 1 to this Digimon's maximum links.)
@@ -38,8 +39,8 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
+    CompiledScope, CompiledTiming,
 };
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
@@ -149,6 +150,20 @@ fn bt21_101_yaml_compiles() {
     assert_eq!(card.name, "Gaiamon");
     assert_eq!(card.level, Some(6));
     assert_eq!(card.dp, Some(13000));
+}
+
+/// Printed color is White/Red DUAL — official Bandai DB "Colors: White Red";
+/// per-card JSON card_colors [4, 0] = [White, Red]. Regression for the
+/// mono-white drift found in the faithfulness audit.
+#[test]
+fn bt21_101_is_white_red_dual_color() {
+    let runner = base().start();
+    let card = runner.compiled_card(CARD_ID).unwrap();
+    assert_eq!(
+        card.color,
+        vec![CompiledColor::White, CompiledColor::Red],
+        "BT21-101 must be White/Red dual color (official DB: \"Colors: White Red\")"
+    );
 }
 
 /// Must declare a Blocker keyword grant.

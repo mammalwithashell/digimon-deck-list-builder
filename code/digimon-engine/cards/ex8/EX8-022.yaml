@@ -3,7 +3,12 @@
 #
 # Printed card text (card image EX8-022 — authoritative; cards.json agrees on
 # the face text, but see the inherited-text contradiction note below):
-#   Evo box: Lv.3 from blue: Cost 3   (JSON evo_costs [{card_color:1, level:3, memory_cost:3}])
+#   Evo box: SPLIT half-blue/half-yellow circle, Lv.3: Cost 3 — the official
+#     Bandai DB (data/card_bundles/EX8-022.md) decomposes it as TWO standard
+#     circles: "Blue Lv.3 / cost 3" AND "Yellow Lv.3 / cost 3". cards.json's
+#     evo_costs [{card_color:1, level:3, memory_cost:3}] DROPPED the yellow
+#     half (known lossy multi-colour digivolve-cost ingest — CLAUDE.md source
+#     priority note); both halves are encoded as alt_paths below.
 #   Evo box: "Digivolve Lv.3 w/[Ice-Snow] trait: Cost 2"   (JSON xros_req)
 #   <Iceclad> (Other than against Security Digimon, compare the number of
 #     digivolution cards instead of DP in this Digimon's battles.)
@@ -73,6 +78,7 @@
 #
 # Implementation status (faithfulness diff):
 # | Std digivolve Lv.3 blue / Cost 3                       | IMPLEMENTED (alt_paths + JSON evo_costs) |
+# | Std digivolve Lv.3 YELLOW / Cost 3 (split circle)      | IMPLEMENTED (alt_paths; dropped by JSON) |
 # | Alt digivolve Lv.3 w/[Ice-Snow] / Cost 2               | IMPLEMENTED (alt_paths trait_has)        |
 # | <Iceclad>                                              | IMPLEMENTED (grant_keyword)              |
 # | [OP][WD] trash bottom 2 sources of 1 opp Digimon       | IMPLEMENTED (trash_bottom_sources)       |
@@ -89,10 +95,16 @@ dp: 5000
 traits: [Ice-Snow, LIBERATOR]
 attribute: Vaccine
 alt_paths:
-  # Printed standard evo box: Lv.3 from blue, cost 3 (encoded explicitly like
-  # neighbor EX8 specs so DSL-only loads carry the printed cost table).
+  # Printed standard evo box: SPLIT half-blue/half-yellow circle, Lv.3 cost 3.
+  # Official Bandai DB decomposes it as "Blue Lv.3 / cost 3" + "Yellow Lv.3 /
+  # cost 3" (data/card_bundles/EX8-022.md); cards.json dropped the yellow half.
+  # Encoded explicitly like neighbor EX8 specs so DSL-only loads carry the
+  # printed cost table.
   - kind: digivolve
     from: { level_eq: 3, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
     cost: 3
   # Printed alt evo box: "Digivolve Lv.3 w/[Ice-Snow] trait: Cost 2". DCGO
   # gates on EqualsTraits("Ice-Snow") && Level == 3.

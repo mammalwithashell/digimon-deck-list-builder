@@ -6,7 +6,12 @@
 #   [Your Turn] When any of your Digimon get linked, by suspending this Tamer,
 #     <Draw 1> (Draw 1 card from your deck.) and trash 1 card in your hand.
 #     Then, 1 of your Digimon may app fuse into a Digimon card with the [System],
-#     [Life] or [Transmutation (App Name)] trait in the trash.
+#     [Life] or [Transmutation] trait in the trash.
+#
+# Official Q&A (world.digimoncard.com): if this Tamer is not suspended (the
+# cost can't be paid), nothing after "by suspending this Tamer" resolves —
+# including the part after "Then". Enforced via condition:
+# source_is_unsuspended + activation_cost: suspend_self as the first step.
 #   [Security] Play this card without paying the cost.
 #
 # DCGO C# reference: DCGO/Assets/Scripts/CardEffect/BT24/Purple/BT24_087.cs
@@ -40,8 +45,8 @@
 # ─── IMPLEMENTED (2026-06-13) ─────────────────────────────────────────────────
 #
 # The tail of Clause 2 — "Then, 1 of your Digimon may app fuse into a Digimon
-# card with the [System], [Life] or [Transmutation (App Name)] trait in the
-# trash." — now ships via the effect-initiated `app_fuse` step
+# card with the [System], [Life] or [Transmutation] trait in the trash." —
+# now ships via the effect-initiated `app_fuse` step
 # (`EffectContext::initiate_effect_app_fuse`, from: trash + result-trait filter).
 
 card: BT24-087

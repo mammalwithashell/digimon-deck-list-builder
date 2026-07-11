@@ -18,6 +18,18 @@
 # Near-twin: BT21-009 Gatchmon (Red; identical structure except Haru Shinkai + Raid +
 #   dual Appmon/Hero alt-digi condition). Hackmon: Purple, single Appmon alt-digi,
 #   Rei Katsura, Retaliation.
+#
+# Notes:
+#   - The card prints BOTH digivolution requirements (card image + official
+#     Bandai DB bundle data/card_bundles/BT24-067.md):
+#       (a) a standard circle "Purple Lv.2 / cost 0" — the JSON `evo_costs` row
+#           is correct; authored below as the bare {level_eq, color_is} alt_path
+#           per the printed-circle convention (tests/alt_path_printed_cost_guard.rs);
+#       (b) the black-text special condition "[Digivolve] Lv.2 w/[Appmon] trait:
+#           Cost 0", authored as the trait-gated alt_path.
+#     A plain purple Lv.2 without [Appmon] digivolves via (a) only, so the
+#     trait gate alone under-modelled the card (fixed 2026-07-10, mirroring
+#     the BT21-009 fix).
 
 card: BT24-067
 name: Hackmon
@@ -30,7 +42,13 @@ traits: ["Stnd.", Appmon, System, Hacking]
 attribute: System
 
 alt_paths:
-  # Digivolve from Lv.2 with [Appmon] trait for cost 0
+  # Printed standard circle: "Purple Lv.2 / cost 0" (card image digivolve circle;
+  # official DB "Standard digivolve cost circles: Purple Lv.2 / cost 0").
+  - kind: digivolve
+    from: { level_eq: 2, color_is: purple }
+    cost: 0
+  # Printed special condition: "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+  # (DCGO AddSelfDigivolutionRequirementStaticEffect: IsLevel2 && EqualsTraits("Appmon")).
   - kind: digivolve
     from: { level_eq: 2, trait_has: Appmon }
     cost: 0

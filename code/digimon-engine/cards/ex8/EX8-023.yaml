@@ -1,8 +1,13 @@
 # EX8-023 PolarBearmon — Digimon, Lv.5, Blue/Yellow, DP 7000, Cost 7.
 # Traits: Ice-Snow, LIBERATOR. Attribute: Vaccine. Rarity: U.
 #
-# Printed card text (card image EX8-023 — authoritative; cards.json agrees):
-#   Evo box: Lv.4 from blue: Cost 4   (JSON evo_costs [{card_color:1, level:4, memory_cost:4}])
+# Printed card text (card image EX8-023 + official Bandai DB bundle
+# data/card_bundles/EX8-023.md — authoritative):
+#   Evo box (dual-color split circle — official DB lists BOTH halves):
+#     Blue Lv.4: Cost 4  AND  Yellow Lv.4: Cost 4
+#     (cards.json evo_costs [{card_color:1, level:4, memory_cost:4}] is lossy
+#      and drops the yellow half — official DB outranks it AND DCGO for
+#      printed digivolution data)
 #   Evo box: "Digivolve Lv.4 w/[Ice-Snow] trait: Cost 3"   (JSON xros_req)
 #   <Iceclad> (Other than against Security Digimon, compare the number of
 #     digivolution cards instead of DP in this Digimon's battles.)
@@ -81,6 +86,7 @@
 #
 # Implementation status (faithfulness diff):
 # | Std digivolve Lv.4 blue / Cost 4                          | IMPLEMENTED (alt_paths + JSON evo_costs) |
+# | Std digivolve Lv.4 yellow / Cost 4 (split-circle half)    | IMPLEMENTED (alt_paths; dropped by cards.json/DCGO — official Bandai DB) |
 # | Alt digivolve Lv.4 w/[Ice-Snow] / Cost 3                  | IMPLEMENTED (alt_paths trait_has)        |
 # | <Iceclad>                                                 | IMPLEMENTED (grant_keyword)              |
 # | [OP][WD] trash any 2 sources of opp Digimon (cross-perm)  | IMPLEMENTED (select_opponent_sources + clamp ladder) |
@@ -99,10 +105,19 @@ traits: [Ice-Snow, LIBERATOR]
 attribute: Vaccine
 form: Ultimate
 alt_paths:
-  # Printed standard evo box: Lv.4 from blue, cost 4 (encoded explicitly like
-  # neighbor EX8 specs so DSL-only loads carry the printed cost table).
+  # Printed standard evo box (dual-color split circle, blue half): Lv.4 from
+  # blue, cost 4 (encoded explicitly like neighbor EX8 specs so DSL-only
+  # loads carry the printed cost table).
   - kind: digivolve
     from: { level_eq: 4, color_is: blue }
+    cost: 4
+  # Printed standard evo box (dual-color split circle, YELLOW half): Lv.4
+  # from yellow, cost 4. Official Bandai DB (data/card_bundles/EX8-023.md):
+  # "Standard digivolve cost circles: Blue Lv.4 / cost 4, Yellow Lv.4 /
+  # cost 4". cards.json's evo_costs and DCGO's JSON both drop this half —
+  # the official DB is authoritative for printed digivolution data.
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
     cost: 4
   # Printed alt evo box: "Digivolve Lv.4 w/[Ice-Snow] trait: Cost 3". DCGO
   # gates on EqualsTraits("Ice-Snow") && Level == 4.

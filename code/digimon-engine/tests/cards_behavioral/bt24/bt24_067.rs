@@ -2,7 +2,8 @@
 //! Traits: Stnd./Appmon | System | Hacking. Attribute: System.
 //!
 //! # Card text (transcribed from card image + DCGO BT24_067.cs, authoritative)
-//! Digivolve box: "Digivolve: Lv.2 w/[Appmon] trait: Cost 0"
+//! Digivolve circle (standard, card image top-left): "Purple Lv.2 / cost 0"
+//! Digivolve box (special condition): "Digivolve: Lv.2 w/[Appmon] trait: Cost 0"
 //!
 //! Main effect:
 //! [Your Turn] [Once Per Turn] When this Digimon gets linked, if you have 1 or
@@ -26,13 +27,15 @@
 //! - H9  Retaliation keyword grant via linked scope
 //!
 //! Near-twin of BT21-009 Gatchmon; differs: Purple, Rei Katsura, Retaliation,
-//! single Appmon alt-digi, no DP aura.
+//! single Appmon alt-digi condition. Both cards print the +2000 Link DP box
+//! AND a standard color Lv.2 / cost 0 digivolve circle alongside the
+//! trait-gated special condition (both authored — see Section 6).
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming, CompiledTriggeredClause,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
+    CompiledScope, CompiledTiming, CompiledTriggeredClause,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
@@ -134,17 +137,46 @@ fn bt24_067_traits_contain_appmon_system_hacking_stnd() {
     }
 }
 
-/// Alt-path: digivolve from Lv.2 with [Appmon] trait for cost 0.
+/// Special condition (black text): "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+/// — a trait-gated Lv.2 alt-digivolve path at cost 0.
 #[test]
 fn bt24_067_has_alt_digivolve_from_lv2_appmon_cost0() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
     let has = card.alt_paths.iter().any(|p| {
-        matches!(p.kind, CompiledAltPathKind::Digivolve) && p.cost == Some(CompiledCost::Literal(0))
+        matches!(p.kind, CompiledAltPathKind::Digivolve)
+            && p.cost == Some(CompiledCost::Literal(0))
+            && p.from.as_ref().is_some_and(|f| {
+                f.level_eq == Some(2) && f.trait_has.as_deref() == Some("Appmon")
+            })
     });
     assert!(
         has,
-        "BT24-067 has a Lv.2 [Appmon] alt-digivolve path with cost 0"
+        "BT24-067 has the trait-gated Lv.2 w/[Appmon] alt-digivolve path at cost 0"
+    );
+}
+
+/// Printed standard circle: "Purple Lv.2 / cost 0" (card image digivolve circle +
+/// official Bandai DB). Authored as a bare {level_eq, color_is} alt-path per the
+/// printed-circle convention (tests/alt_path_printed_cost_guard.rs).
+#[test]
+fn bt24_067_has_standard_purple_lv2_cost0_circle() {
+    let runner = base().deck(0, &["DECK-PAD"; 12]).start();
+    let card = runner.compiled_card(CARD_ID).expect("present");
+    let has = card.alt_paths.iter().any(|p| {
+        matches!(p.kind, CompiledAltPathKind::Digivolve)
+            && p.cost == Some(CompiledCost::Literal(0))
+            && p.from.as_ref().is_some_and(|f| {
+                f.level_eq == Some(2)
+                    && f.color_is == Some(CompiledColor::Purple)
+                    && f.any_of.is_empty()
+                    && f.trait_has.is_none()
+            })
+    });
+    assert!(
+        has,
+        "BT24-067 prints a standard Purple Lv.2 / cost 0 digivolve circle — it must be \
+         authored alongside the trait-gated special condition"
     );
 }
 
@@ -505,4 +537,100 @@ fn bt24_067_when_linked_opt_resets_after_end_turn() {
         r.game.pending_selection.is_some(),
         "OPT must clear after end_turn cycle — second link should fire again"
     );
+}
+
+// ── Section 6: digivolve-route fidelity ──────────────────────────────────────
+// The card prints BOTH requirements (card image + official DB bundle):
+//   (a) standard circle  "Purple Lv.2 / cost 0"
+//   (b) special condition "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+// Pre-fix (2026-07-10) only (b) was authored, so a plain purple Lv.2 without
+// [Appmon] had NO digivolve route into BT24-067.
+
+/// A Lv.2 base Digimon with explicit colors/traits for digivolve-route tests.
+fn make_lv2_base(
+    id: &str,
+    color: digimon_engine::enums::CardColor,
+    traits: &[&str],
+) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(2);
+    c.dp = Some(1000);
+    c.play_cost = 1;
+    c.colors = vec![color];
+    c.traits = traits.iter().map(|t| t.to_string()).collect();
+    c
+}
+
+/// Digivolve BT24-067 from hand over the given base; returns (proceeded, memory delta).
+fn try_digivolve_over(base_card: CardData) -> (bool, i16) {
+    use digimon_engine::enums::{GamePhase, PlaySource};
+    let base_id = base_card.card_id.clone();
+    let mut r = base()
+        .add_card(base_card)
+        .hand(0, &[CARD_ID])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    r.game.turn_count = 1;
+    r.game.current_phase = GamePhase::Main;
+    r.place_on_field(0, &base_id, Some(0));
+
+    let mem_before = r.game.memory;
+    let proceeded = r.game.digivolve_from_hand(0, 0, 0, PlaySource::ByHand);
+    r.game.drain_effect_queue();
+    (proceeded, r.game.memory - mem_before)
+}
+
+/// Standard circle (a): a plain purple Lv.2 with NO [Appmon] trait digivolves
+/// into BT24-067 for the printed circle cost (0).
+/// Pre-fix this failed: the YAML only authored the trait-gated condition.
+#[test]
+fn bt24_067_digivolves_from_plain_purple_lv2_for_0() {
+    use digimon_engine::enums::CardColor;
+    let (proceeded, delta) = try_digivolve_over(make_lv2_base(
+        "PURPLE-LV2-PLAIN",
+        CardColor::Purple,
+        &[],
+    ));
+    assert!(
+        proceeded,
+        "printed standard circle Purple Lv.2 / cost 0: a plain purple Lv.2 must be a legal base"
+    );
+    assert_eq!(delta, 0, "the printed circle cost is 0 — no memory paid");
+}
+
+/// Special condition (b): an off-colour (red) Lv.2 with the [Appmon] trait
+/// digivolves into BT24-067 for 0 via the trait-gated path.
+#[test]
+fn bt24_067_digivolves_from_offcolor_appmon_lv2_for_0() {
+    use digimon_engine::enums::CardColor;
+    let (proceeded, delta) = try_digivolve_over(make_lv2_base(
+        "RED-LV2-APPMON",
+        CardColor::Red,
+        &["Appmon"],
+    ));
+    assert!(
+        proceeded,
+        "special condition Lv.2 w/[Appmon]: an off-colour Appmon Lv.2 must be a legal base"
+    );
+    assert_eq!(delta, 0, "the special-condition cost is 0 — no memory paid");
+}
+
+/// Negative: an off-colour Lv.2 with NO [Appmon] trait matches neither
+/// printed requirement — no digivolve route may exist.
+#[test]
+fn bt24_067_no_route_from_offcolor_traitless_lv2() {
+    use digimon_engine::enums::CardColor;
+    let (proceeded, delta) = try_digivolve_over(make_lv2_base(
+        "RED-LV2-PLAIN",
+        CardColor::Red,
+        &[],
+    ));
+    assert!(
+        !proceeded,
+        "a red traitless Lv.2 matches neither the purple circle nor the [Appmon] gate — \
+         digivolve must be refused"
+    );
+    assert_eq!(delta, 0, "refused digivolve must not spend memory");
 }

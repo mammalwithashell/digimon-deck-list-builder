@@ -79,7 +79,7 @@ level: 5
 color: [yellow, black]
 cost: 8
 dp: 8000
-traits: [Mutant, Iliad, TS]
+traits: [Mutant, Iliad, TS, Angel]
 attribute: Free
 
 alt_paths:

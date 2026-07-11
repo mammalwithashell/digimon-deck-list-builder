@@ -44,7 +44,16 @@ CARDS = os.path.join(ROOT, "data", "cards.json")
 OVERRIDES = os.path.join(ROOT, "data", "card_overrides.json")
 CARDS_YAML_GLOB = os.path.join(ROOT, "code", "digimon-engine", "cards", "**", "*.yaml")
 
-_RULE = re.compile(r"\(?Rule\)?\s*Trait:\s*Has\s*\[([^\]]+)\]\s*(Type|attribute)", re.IGNORECASE)
+# Matches every observed printed form of the rule box (see the guard test
+# `official_rule_grants.rs` for the same list in Rust):
+#   (Rule) Trait: Has [Ice-Snow] Type.        [Rule] Trait: Has [Dragonkin] Type.
+#   (Rule) Trait: Has [Free] attribute.       (Rule) Trait: Has [Hybrid] Form.
+#   (Rule) Trait: Has [Olympos XII].          (Rule) Trait: Has [Boss] and [D-Brigade].
+_RULE = re.compile(
+    r"[\(\[]Rule[\)\]]\s*Trait:\s*Has\s*((?:\[[^\]]+\]\s*(?:and\s*)?)+)\s*(Types?|attribute|Form)?",
+    re.IGNORECASE,
+)
+_RULE_NAME = re.compile(r"\[([^\]]+)\]")
 _YAML_TRAITS = re.compile(r"^traits:\s*\[([^\]]*)\]", re.M)
 
 # Engine maps each field into the single merged `traits` list.
@@ -87,12 +96,19 @@ def authored_yaml_traits():
 
 
 def rule_grants(official_card):
-    """(granted_types, granted_attributes) parsed from official text."""
+    """(granted_types, granted_attributes, granted_forms) parsed from official text.
+
+    A grant with no field word (`Has [Olympos XII].`) is a type grant — the
+    engine merges form/attribute/type into one `traits` list, so the bucket
+    only decides which cards.json field carries the correction.
+    """
     text = " ".join(s.get("text", "") for s in official_card.get("text_sections", []))
-    types, attrs = [], []
+    types, attrs, forms = [], [], []
     for m in _RULE.finditer(text):
-        (types if m.group(2).lower() == "type" else attrs).append(m.group(1).strip())
-    return types, attrs
+        suffix = (m.group(2) or "type").lower()
+        bucket = attrs if suffix.startswith("attr") else (forms if suffix.startswith("form") else types)
+        bucket.extend(name.strip() for name in _RULE_NAME.findall(m.group(1)))
+    return types, attrs, forms
 
 
 def production_traits(cj):
@@ -110,27 +126,36 @@ def reconcile(official_cards, cards, authored):
         cj = cards.get(cid)
         if not cj:
             continue
-        g_types, g_attrs = rule_grants(oc)
+        g_types, g_attrs, g_forms = rule_grants(oc)
         off = {f: split_line(oc.get(OFFICIAL_FIELD[f])) for f in FIELDS}
         prod = {t.lower() for t in production_traits(cj)}
         ytr = authored.get(cid, [])
         ytr_missing = [t for t in ytr if t.lower() not in prod]
 
         is_appmon = any(t.lower() == "appmon" for t in off["form_eng"])
-        in_scope = bool(g_types or g_attrs) or is_appmon or bool(ytr_missing)
+        in_scope = bool(g_types or g_attrs or g_forms) or is_appmon or bool(ytr_missing)
         if not in_scope:
             continue
 
         # Reconcile the gameplay-trait fields (type/attribute) toward the official DB.
         # `form_eng` carries the evolutionary STAGE (Rookie/Champion/...) which is not a
-        # match-on trait — only touch it for Appmon cards, where it also carries the
-        # gameplay-relevant `Appmon` mechanic trait (+ grade).
-        reconcile_fields = ("type_eng", "attribute_eng") + (("form_eng",) if is_appmon else ())
+        # match-on trait — only touch it for Appmon cards (where it also carries the
+        # gameplay-relevant `Appmon` mechanic trait + grade) or when a rule box grants a
+        # Form trait outright (`(Rule) Trait: Has [Hybrid] Form.`); in the latter case
+        # inject ONLY the granted name, not the official stage line.
+        reconcile_form = is_appmon or bool(g_forms)
+        reconcile_fields = ("type_eng", "attribute_eng") + (("form_eng",) if reconcile_form else ())
         proposed = {}
         for f in reconcile_fields:
             cur = list(cj.get(f) or [])
-            grant = g_types if f == "type_eng" else (g_attrs if f == "attribute_eng" else [])
-            new = union_preserve(cur, off[f], grant)
+            if f == "type_eng":
+                new = union_preserve(cur, off[f], g_types)
+            elif f == "attribute_eng":
+                new = union_preserve(cur, off[f], g_attrs)
+            elif is_appmon:
+                new = union_preserve(cur, off[f], g_forms)
+            else:
+                new = union_preserve(cur, g_forms)
             if [x.lower() for x in new] != [x.lower() for x in cur]:
                 proposed[f] = new
         if proposed:
@@ -142,7 +167,7 @@ def reconcile(official_cards, cards, authored):
         # status so the two cases are distinguishable.
         new_prod = {t.lower() for t in production_traits({**cj, **proposed})}
         official_all = {t.lower() for fld in off.values() for t in fld} | \
-                       {t.lower() for t in g_types + g_attrs}
+                       {t.lower() for t in g_types + g_attrs + g_forms}
         unresolved = [t for t in ytr if t.lower() not in new_prod]
         if unresolved:
             yaml_errors[cid] = {

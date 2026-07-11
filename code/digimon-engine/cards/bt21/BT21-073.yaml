@@ -5,9 +5,12 @@
 #
 # CORRECTED printed card text (card image — authoritative):
 #
-#   Digivolve: Lv.4 Purple / Cost 4 (standard, JSON evo_costs).
-#              "Sup.": Cost 4 (alt-digivolve, DCGO AddSelfDigivolutionRequirementStaticEffect
-#              EqualsTraits("Sup."), cost 4).
+#   Digivolve: Lv.4 Purple / Cost 4 AND Lv.4 Black / Cost 4 (one split
+#              purple/black circle on the card face; official Bandai DB bundle
+#              lists BOTH "Purple Lv.4 / cost 4" and "Black Lv.4 / cost 4" —
+#              the per-card JSON evo_costs is lossy and only carries purple).
+#              "Sup.": Cost 4 (rainbow any-color grade circle; DCGO
+#              AddSelfDigivolutionRequirementStaticEffect EqualsTraits("Sup."), cost 4).
 #
 #   App Fusion [Sociamon] & [Gossipmon]: Cost 0.
 #
@@ -70,7 +73,9 @@
 #     SelectCardEffect from linked cards (SelectCardEffect.Root.Custom = linked cards, canNoSelect: true).
 #     If trashed 1 link card: willBeRemoveField = false → Charismon stays.
 #     → scope: linked, kind: replacement, trigger: when_would_leave_battle_area,
-#       optional: true, cost: { trash_own_link_card: true }, outcome: prevent.
+#       optional: true, once_per_turn: true (printed [Once Per Turn]; DCGO
+#       maxCount 1 + hash "AllTurns_BT21_073"), cost: { trash_own_link_card: true },
+#       outcome: prevent.
 #     (BT25-101 precedent. SetIsLinkedEffect(true) → scope: linked.)
 #
 #   Link box +4000 DP bonus (continuous, while linked):
@@ -80,7 +85,8 @@
 #
 # | Card-text element                                              | Status       |
 # |----------------------------------------------------------------|--------------|
-# | Std digivolve Lv.4 Purple / Cost 4                            | IMPLEMENTED (printed evo_costs) |
+# | Std digivolve Lv.4 Purple / Cost 4                            | IMPLEMENTED (printed evo_costs + alt_path) |
+# | Std digivolve Lv.4 Black / Cost 4 (split circle)              | IMPLEMENTED (alt_path; official DB — JSON evo_costs drops it) |
 # | Alt-digivolve from "Sup." form / Cost 4                       | IMPLEMENTED (alt_paths digivolve trait_has "Sup.") |
 # | App Fusion [Sociamon] & [Gossipmon]: Cost 0                   | IMPLEMENTED (alt_paths app_fusion) |
 # | <Blocker>                                                      | IMPLEMENTED (grant_keyword Blocker) |
@@ -88,7 +94,7 @@
 # | [Your Turn][OPT] when_card_linked_to_this taunt 1 opp Digimon | IMPLEMENTED (BT25-054 idiom) |
 # | Link box [Appmon]: Cost 3                                      | IMPLEMENTED (link_condition) |
 # | Link box +4000 DP aura                                         | IMPLEMENTED (scope: linked aura dp_modifier 4000) |
-# | Link box leave-replacement (trash 1 link card → stay)         | IMPLEMENTED (scope: linked replacement) |
+# | Link box leave-replacement [All Turns][OPT] (trash 1 link card → stay) | IMPLEMENTED (scope: linked replacement, once_per_turn) |
 
 card: BT21-073
 name: Charismon
@@ -104,6 +110,16 @@ alt_paths:
   # ─── Standard digivolve: Lv.4 Purple / Cost 4 (printed evo_costs) ──────────
   - kind: digivolve
     from: { level_eq: 4, color_is: purple }
+    cost: 4
+
+  # ─── Standard digivolve: Lv.4 Black / Cost 4 ────────────────────────────────
+  # The card face prints ONE split purple/black Lv.4 circle at cost 4; the
+  # official Bandai DB (authoritative for printed circles) lists it as two
+  # standard circles: "Purple Lv.4 / cost 4" AND "Black Lv.4 / cost 4". The
+  # API-ingested JSON evo_costs only carries the purple half, so the black
+  # circle is authored here as an equal-cost alt_path (batch convention).
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
     cost: 4
 
   # ─── Alt-digivolve: from a "Sup." form Digimon / Cost 4 ─────────────────────
@@ -145,13 +161,18 @@ effects:
   # ─── Link box leave-replacement: trash 1 link card → Charismon doesn't leave ─
   # DCGO: Region "Link effect" (WhenRemoveField, SetIsLinkedEffect(true)).
   # SetIsLinkedEffect(true) → scope: linked. Modeling per BT25-101.
+  # Printed: "[All Turns] [Once Per Turn] When this Digimon would leave the
+  # battle area, by trashing 1 of this Digimon's link cards, it doesn't leave."
+  # DCGO: SetUpActivateClass(..., maxCount 1, ...) + SetHashString("AllTurns_BT21_073")
+  # → once per turn.
   - scope: linked
     kind: replacement
     trigger: when_would_leave_battle_area
     optional: true
+    once_per_turn: true
     cost: { trash_own_link_card: true }
     outcome: prevent
-    summary: "[Link][All Turns] When this Digimon would leave the battle area, by trashing 1 of this Digimon's link cards, it doesn't leave"
+    summary: "[Link][All Turns][Once Per Turn] When this Digimon would leave the battle area, by trashing 1 of this Digimon's link cards, it doesn't leave"
 
   # ─── [On Play][When Digivolving] may link Lv.4- Digimon from trash/sources ──
   # DCGO: Region "On Play"/"When Digivolving" (OnEnterFieldAnyone).

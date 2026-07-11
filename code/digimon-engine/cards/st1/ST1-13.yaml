@@ -25,18 +25,26 @@ effects:
 
   # [Security] All of your Digimon gain <Security A. +1> until the end of your
   # next turn.
+  #
+  # "All of your Digimon ... until <window>" is OVERALL processing over the
+  # LIVE set (general_rule.pdf 15-11-2-2 / 15-11-2-3): Digimon that enter the
+  # battle area during the window gain the effect too. DCGO agrees —
+  # ST1_13.cs SecuritySkill installs ChangeDigimonSAttackPlayerEffect, a
+  # player-scoped continuous effect whose owner-battle-area predicate is
+  # re-evaluated live. A one-shot `for_each` grant at resolution time (the
+  # previous authoring) missed later-played Digimon. The continuous mass
+  # `add_modifier` (→ `Game::add_floating_mass_modifier`, BT13-075 idiom)
+  # re-scans the candidate set every declarative tick; `SecurityAttackChange`
+  # is the shipped modifier backing <Security A. ±N> (summed alongside the
+  # keyword bonus in `raw_security_strike`).
   - when: on_security
     summary: "[Security] All of your Digimon gain SecurityAttackPlus +1 until end of your next turn"
     process:
-      - for_each:
-          over:
+      - add_modifier:
+          continuous: true
+          target:
             of: you
-            zone: [battle_area]
             kind: digimon
-          bind_as: target
-          body:
-            - grant_keyword:
-                target: target
-                keyword: SecurityAttackPlus
-                value: 1
-                expiry: end_of_your_next_turn
+          modifier: SecurityAttackChange
+          value: 1
+          expiry: end_of_your_next_turn

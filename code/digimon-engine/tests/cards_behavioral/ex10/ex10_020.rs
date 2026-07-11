@@ -94,6 +94,67 @@ fn ex10_020_metadata_is_green_lv6_11000() {
         .contains(&digimon_dsl::compiled::CompiledColor::Green));
 }
 
+// ─── SECTION 1b — NO digivolve routes INTO Puppetmon ────────────────────────
+// Official Bandai DB (data/card_bundles/EX10-020.md) and the card image agree:
+// EX10-020 prints NO standard digivolve circles at all (only "Play 11" and the
+// [Hand][Main] reduced-cost self-play). Nothing may digivolve into it — an
+// authored digivolve alt_path here would INVENT a circle the card doesn't have
+// (the BT21-015/017 cheaper/wider-than-printed bug class).
+
+#[test]
+fn ex10_020_prints_no_digivolve_circles_nothing_digivolves_into_it() {
+    // Structural: the compiled card must carry no digivolve alt paths.
+    let card = compiled();
+    assert!(
+        !card.alt_paths.iter().any(|ap| matches!(
+            ap.kind,
+            digimon_dsl::compiled::CompiledAltPathKind::Digivolve
+        )),
+        "EX10-020 prints NO digivolve circles (official DB + card image) — a digivolve \
+         alt_path invents a route the card does not have; got {:?}",
+        card.alt_paths
+    );
+
+    // Behavioral: a green Lv.5 base (the invented route's `from` gate) must NOT
+    // be able to digivolve into Puppetmon.
+    let mut green_lv5 = make_test_card("GREEN-LV5", "GreenLv5");
+    green_lv5.card_kind = CardKind::Digimon;
+    green_lv5.level = Some(5);
+    green_lv5.dp = Some(6000);
+    green_lv5.colors = vec![CardColor::Green];
+    let mut r = DebugRunner::builder()
+        .dsl_card("EX10-020")
+        .expect("EX10-020 in pack")
+        .add_card(green_lv5)
+        .hand(0, &["EX10-020"])
+        .memory(15)
+        .start();
+    r.game.turn_count = 1;
+    r.game.current_phase = GamePhase::Main;
+    let slot = r.place_on_field(0, "GREEN-LV5", Some(0)).index as usize;
+
+    let mem_before = r.game.memory;
+    let proceeded = r
+        .game
+        .digivolve_from_hand(0, 0, slot, PlaySource::ByHand);
+    assert!(
+        !proceeded,
+        "EX10-020 has no digivolve requirements — digivolve_from_hand must reject"
+    );
+    assert!(
+        r.game.pending_selection.is_none(),
+        "no cost-choice or other selection may park for a route that doesn't exist"
+    );
+    assert_eq!(r.game.memory, mem_before, "no memory paid");
+    assert_eq!(
+        r.game.players[0].battle_area[slot]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "GREEN-LV5",
+        "the base is unchanged — Puppetmon can only be PLAYED, never digivolved into"
+    );
+}
+
 // ─── SECTION 2 — [On Play][When Attacking] bottom-deck a suspended opp ──────
 
 #[test]

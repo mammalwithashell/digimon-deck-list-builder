@@ -112,6 +112,20 @@ fn dp_breakdown_neutral_without_modifier() {
 }
 
 #[test]
+fn source_count_excludes_the_top_card() {
+    // "Digivolution cards" are the cards UNDER the top card — the top card
+    // itself is not one (the UI badge showed the total stack size, so a
+    // Digimon with 1 source rendered as "x2").
+    let r = runner_with_stack();
+    let v = to_ui_json(&r.game);
+    let p = perm0(&v);
+    // 2-card stack (SRC under TOP) → exactly 1 digivolution card.
+    assert_eq!(p["sourceCount"], serde_json::json!(1));
+    // The full stack (top + sources) is still serialized in `sources`.
+    assert_eq!(p["sources"].as_array().unwrap().len(), 2);
+}
+
+#[test]
 fn security_attack_modifier_default_zero() {
     let r = runner_with_stack();
     let v = to_ui_json(&r.game);

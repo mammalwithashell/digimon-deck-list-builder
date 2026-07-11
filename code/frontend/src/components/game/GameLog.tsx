@@ -30,6 +30,7 @@ function parseLogLine(line: string, onCardClick: (cardId: string) => void): Reac
     parts.push(
       <button
         key={`${cardId}-${matchIdx}`}
+        type="button"
         onClick={() => onCardClick(cardId)}
         className="text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer font-medium"
         title={cardId}
@@ -50,11 +51,18 @@ function parseLogLine(line: string, onCardClick: (cardId: string) => void): Reac
 }
 
 export function GameLog({ logs }: GameLogProps) {
-  const endRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const setHoveredCard = useGameStore((s) => s.setHoveredCard);
 
   useEffect(() => {
-    endRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // Scroll ONLY the log's own container. `scrollIntoView` scrolls every
+    // scrollable ancestor to reveal the target — including the game board's
+    // `overflow-hidden` container the log drawer is absolutely positioned in
+    // (overflow:hidden boxes are still programmatically scrollable), so
+    // opening/clicking the log shifted the whole board and the user had no
+    // way to scroll it back.
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [logs.length]);
 
   const handleCardClick = (cardId: string) => {
@@ -66,7 +74,11 @@ export function GameLog({ logs }: GameLogProps) {
       <div className="px-2 py-1 bg-[var(--ib-panel-2)] text-xs text-[var(--ib-bone-dd)] border-b border-[var(--ib-line)]">
         Game Log
       </div>
-      <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
+      <div
+        ref={scrollRef}
+        data-testid="game-log-scroll"
+        className="flex-1 overflow-y-auto p-2 space-y-0.5"
+      >
         {logs.map((log, i) => (
           <div key={i} className="text-[11px] text-[var(--ib-bone-dd)] leading-relaxed">
             {parseLogLine(log, handleCardClick)}
@@ -75,7 +87,6 @@ export function GameLog({ logs }: GameLogProps) {
         {logs.length === 0 && (
           <div className="text-xs text-[var(--ib-bone-dd)]">No log entries yet</div>
         )}
-        <div ref={endRef} />
       </div>
     </div>
   );

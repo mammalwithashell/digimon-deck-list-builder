@@ -287,6 +287,16 @@ impl Player {
         }
     }
 
+    /// Reset only the [Once Per Turn] activation counters. "Per turn" means
+    /// per GAME turn, so an [All Turns][Once Per Turn] effect re-arms at the
+    /// start of EVERY turn — including the opponent's — while attack
+    /// counters remain owner-turn-scoped (cleared via `new_turn`).
+    pub fn reset_effect_activations(&mut self) {
+        for perm in &mut self.battle_area {
+            perm.effect_activations.clear();
+        }
+    }
+
     /// Unsuspend all permanents (start of turn).
     pub fn unsuspend_all(&mut self) {
         for perm in &mut self.battle_area {

@@ -21,9 +21,15 @@
 #   + tamer count gate + select_hand + play_from_hand_free), BT25-101 (linked grant_keyword)
 #
 # Notes:
-#   - The JSON `evo_costs` has a red Lv.2 entry with cost 0. However, the printed
-#     card text says "Lv.2 w/[Appmon]/[Hero] trait: Cost 0" — this is a trait-gated
-#     digivolve, not a simple color digivolve. Model it as an alt_path with trait filter.
+#   - The card prints BOTH digivolution requirements (card image + official
+#     Bandai DB bundle data/card_bundles/BT21-009.md):
+#       (a) a standard circle "Red Lv.2 / cost 0" — the JSON `evo_costs` row is
+#           correct; authored below as the bare {level_eq, color_is} alt_path
+#           per the printed-circle convention (tests/alt_path_printed_cost_guard.rs);
+#       (b) the black-text special condition "[Digivolve] Lv.2 w/[Appmon]/[Hero]
+#           trait: Cost 0", authored as the trait-gated alt_path.
+#     A plain red Lv.2 without [Appmon]/[Hero] digivolves via (a) only, so the
+#     trait gate alone under-modelled the card (fixed 2026-07-10).
 #   - `attribute: Social` is kept for attribute_is predicates (separate from traits).
 #   - Traits include all segments from the image: Stnd., Appmon, Social, Search, Hero.
 
@@ -38,7 +44,13 @@ traits: ["Stnd.", Appmon, Social, Search, Hero]
 attribute: Social
 
 alt_paths:
-  # Digivolve from Lv.2 with [Appmon] or [Hero] trait for cost 0
+  # Printed standard circle: "Red Lv.2 / cost 0" (card image digivolve circle;
+  # official DB "Standard digivolve cost circles: Red Lv.2 / cost 0").
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  # Printed special condition: "[Digivolve] Lv.2 w/[Appmon]/[Hero] trait: Cost 0"
+  # (DCGO AddSelfDigivolutionRequirementStaticEffect: IsLevel2 && (Appmon || Hero)).
   - kind: digivolve
     from:
       level_eq: 2

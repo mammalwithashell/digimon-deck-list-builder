@@ -1444,6 +1444,14 @@
         "level": 5,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "Blue Flare",
+      "Xros Heart"
+    ],
+    "attribute_eng": [
+      "Virus"
     ]
   },
   "AD1-014": {
@@ -5770,6 +5778,10 @@
         "level": 5,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Authority",
+      "Angel"
     ]
   },
   "BT16-036": {
@@ -5784,6 +5796,11 @@
         "level": 6,
         "memory_cost": 5
       }
+    ],
+    "type_eng": [
+      "Unique",
+      "Boss",
+      "D-Brigade"
     ]
   },
   "BT16-041": {
@@ -5924,6 +5941,10 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Mutant",
+      "Angel"
     ]
   },
   "BT16-064": {
@@ -6162,6 +6183,10 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Wizard",
+      "Dark Animal"
     ]
   },
   "BT17-026": {
@@ -6601,6 +6626,10 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Beastkin",
+      "Ice-Snow"
     ]
   },
   "BT18-025": {
@@ -6615,6 +6644,10 @@
         "level": 3,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Beast",
+      "Ice-Snow"
     ]
   },
   "BT18-026": {
@@ -6629,6 +6662,10 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "Ice-Snow"
     ]
   },
   "BT18-028": {
@@ -6643,6 +6680,11 @@
         "level": 5,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Ancient Animal",
+      "Ten Warriors",
+      "Ice-Snow"
     ]
   },
   "BT18-030": {
@@ -6764,6 +6806,12 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Royal Base",
+      "Insectoid"
     ]
   },
   "BT18-048": {
@@ -6806,6 +6854,12 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Royal Base",
+      "Insectoid"
     ]
   },
   "BT18-053": {
@@ -6848,6 +6902,12 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Royal Base",
+      "Insectoid"
     ]
   },
   "BT18-057": {
@@ -6936,6 +6996,10 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Seraph",
+      "Three Great Angels"
     ]
   },
   "BT18-072": {
@@ -6950,6 +7014,11 @@
         "level": 5,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Ancient Insect",
+      "Ten Warriors",
+      "Insectoid"
     ]
   },
   "BT18-073": {
@@ -7145,6 +7214,11 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Mollusk",
+      "LIBERATOR",
+      "Aquatic"
     ]
   },
   "BT19-030": {
@@ -7266,6 +7340,13 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Royal Base",
+      "LIBERATOR",
+      "Insectoid"
     ]
   },
   "BT19-052": {
@@ -7280,6 +7361,13 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Royal Base",
+      "LIBERATOR",
+      "Insectoid"
     ]
   },
   "BT19-053": {
@@ -7304,6 +7392,13 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Royal Base",
+      "LIBERATOR",
+      "Insectoid"
     ]
   },
   "BT19-058": {
@@ -7392,6 +7487,11 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Unidentified",
+      "Twilight",
+      "Composite"
     ]
   },
   "BT19-069": {
@@ -7616,6 +7716,11 @@
         "level": 5,
         "memory_cost": 5
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Aquatic"
     ]
   },
   "BT20-029": {
@@ -8041,6 +8146,11 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Ghost"
     ]
   },
   "BT20-074": {
@@ -8069,6 +8179,11 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "LIBERATOR",
+      "Dark Dragon"
     ]
   },
   "BT20-077": {
@@ -8097,6 +8212,10 @@
         "level": 5,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "Ghost"
     ]
   },
   "BT20-080": {
@@ -8120,6 +8239,12 @@
         "level": 5,
         "memory_cost": 5
       }
+    ],
+    "type_eng": [
+      "Magic Knight",
+      "Vortex Warriors",
+      "LIBERATOR",
+      "Bird Dragon"
     ]
   },
   "BT21-010": {
@@ -8204,6 +8329,11 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Mythical Beast",
+      "WG",
+      "Avian"
     ]
   },
   "BT21-040": {
@@ -8260,6 +8390,11 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Puppet",
+      "WG",
+      "Vegetation"
     ]
   },
   "BT21-052": {
@@ -8587,6 +8722,11 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Dinosaur"
     ]
   },
   "BT22-063": {
@@ -8985,6 +9125,13 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Royal Base",
+      "CS",
+      "Insectoid"
     ]
   },
   "BT23-043": {
@@ -8999,6 +9146,13 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Royal Base",
+      "CS",
+      "Insectoid"
     ]
   },
   "BT23-045": {
@@ -9013,6 +9167,14 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Royal Base",
+      "Zaxon",
+      "CS",
+      "Insectoid"
     ]
   },
   "BT23-048": {
@@ -9201,6 +9363,12 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Ice-Snow",
+      "Titan",
+      "TS",
+      "Demon"
     ]
   },
   "BT24-028": {
@@ -9359,6 +9527,12 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Undead",
+      "Titan",
+      "TS",
+      "Aquatic"
     ]
   },
   "BT24-078": {
@@ -9382,6 +9556,13 @@
         "level": 6,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Shaman",
+      "Olympos XII",
+      "Titan",
+      "TS",
+      "Demon"
     ]
   },
   "BT25-020": {
@@ -9508,6 +9689,12 @@
         "level": 6,
         "memory_cost": 5
       }
+    ],
+    "type_eng": [
+      "Galaxy",
+      "Iliad",
+      "TS",
+      "Olympos XII"
     ]
   },
   "BT25-104": {
@@ -11148,6 +11335,11 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Demon Lord",
+      "Seven Great Demon Lords",
+      "Fallen Angel"
     ]
   },
   "EX10-011": {
@@ -11484,6 +11676,13 @@
         "level": 3,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Royal Base",
+      "LIBERATOR",
+      "Insectoid"
     ]
   },
   "EX11-031": {
@@ -11498,6 +11697,13 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Royal Base",
+      "LIBERATOR",
+      "Insectoid"
     ]
   },
   "EX11-034": {
@@ -11512,6 +11718,13 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "X Antibody",
+      "Royal Base",
+      "LIBERATOR",
+      "Insectoid"
     ]
   },
   "EX11-037": {
@@ -11620,6 +11833,11 @@
         "level": 4,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "LIBERATOR",
+      "Dark Dragon"
     ]
   },
   "EX11-052": {
@@ -13354,6 +13572,10 @@
         "level": 2,
         "memory_cost": 0
       }
+    ],
+    "type_eng": [
+      "Dinosaur",
+      "Ice-Snow"
     ]
   },
   "EX7-029": {
@@ -13415,6 +13637,10 @@
         "level": 2,
         "memory_cost": 0
       }
+    ],
+    "type_eng": [
+      "Bird Dragon",
+      "Machine Dragon"
     ]
   },
   "EX7-042": {
@@ -13485,6 +13711,11 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "LIBERATOR",
+      "Dark Dragon"
     ]
   },
   "EX7-062": {
@@ -13640,6 +13871,11 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "DS",
+      "Aquatic"
     ]
   },
   "EX8-027": {
@@ -13673,6 +13909,11 @@
         "level": 6,
         "memory_cost": 5
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "DS",
+      "Aquatic"
     ]
   },
   "EX8-033": {
@@ -13743,6 +13984,10 @@
         "level": 4,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Cyborg",
+      "Dinosaur"
     ]
   },
   "EX8-045": {
@@ -14051,6 +14296,10 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Beastkin",
+      "Sea Beast"
     ]
   },
   "LM-041": {
@@ -14079,6 +14328,10 @@
         "level": 5,
         "memory_cost": 4
       }
+    ],
+    "type_eng": [
+      "Throne",
+      "Three Great Angels"
     ]
   },
   "LM-043": {
@@ -14456,6 +14709,10 @@
         "level": 5,
         "memory_cost": 5
       }
+    ],
+    "type_eng": [
+      "Dragonkin",
+      "Three Musketeers"
     ]
   },
   "P-171": {
@@ -14657,6 +14914,12 @@
         "level": 5,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Shaman",
+      "Titan",
+      "TS",
+      "Demon"
     ]
   },
   "P-220": {
@@ -15185,6 +15448,12 @@
         "level": 5,
         "memory_cost": 3
       }
+    ],
+    "type_eng": [
+      "Magic Knight",
+      "Vortex Warriors",
+      "LIBERATOR",
+      "Bird Dragon"
     ]
   },
   "ST21-10": {
@@ -15381,6 +15650,277 @@
     "type_eng": [
       "ADAMAS",
       "TS"
+    ]
+  },
+  "BT16-042": {
+    "type_eng": [
+      "Machine",
+      "Insectoid"
+    ]
+  },
+  "BT18-020": {
+    "type_eng": [
+      "Crustacean",
+      "Aquatic"
+    ]
+  },
+  "BT18-023": {
+    "type_eng": [
+      "Fairy",
+      "Aquatic"
+    ]
+  },
+  "BT18-038": {
+    "type_eng": [
+      "Principality",
+      "Angel"
+    ]
+  },
+  "BT18-047": {
+    "type_eng": [
+      "Cyborg",
+      "Vegetation"
+    ]
+  },
+  "BT18-102": {
+    "form_eng": [
+      "Hybrid"
+    ]
+  },
+  "BT19-017": {
+    "type_eng": [
+      "Mollusk",
+      "LIBERATOR",
+      "Aquatic"
+    ]
+  },
+  "BT19-018": {
+    "type_eng": [
+      "Tropical Fish",
+      "Aquatic"
+    ]
+  },
+  "BT19-019": {
+    "type_eng": [
+      "Mollusk",
+      "LIBERATOR",
+      "Aquatic"
+    ]
+  },
+  "BT19-021": {
+    "type_eng": [
+      "Avian",
+      "Aquatic"
+    ]
+  },
+  "BT19-024": {
+    "type_eng": [
+      "Mollusk",
+      "LIBERATOR",
+      "Aquatic"
+    ]
+  },
+  "BT19-028": {
+    "type_eng": [
+      "Holy Bird",
+      "Aquatic"
+    ]
+  },
+  "BT20-062": {
+    "type_eng": [
+      "Flame",
+      "Ghost"
+    ]
+  },
+  "BT21-031": {
+    "type_eng": [
+      "Mollusk",
+      "LIBERATOR",
+      "Aquatic"
+    ]
+  },
+  "BT22-018": {
+    "type_eng": [
+      "Mollusk",
+      "LIBERATOR",
+      "Aquatic"
+    ]
+  },
+  "BT22-021": {
+    "type_eng": [
+      "Mollusk",
+      "LIBERATOR",
+      "Aquatic"
+    ]
+  },
+  "BT22-024": {
+    "type_eng": [
+      "Mollusk",
+      "LIBERATOR",
+      "Aquatic"
+    ]
+  },
+  "BT22-027": {
+    "type_eng": [
+      "Mollusk",
+      "LIBERATOR",
+      "Aquatic"
+    ]
+  },
+  "BT24-019": {
+    "type_eng": [
+      "Cyborg",
+      "Iliad",
+      "TS",
+      "Aquatic"
+    ]
+  },
+  "BT24-025": {
+    "type_eng": [
+      "Mollusk",
+      "Iliad",
+      "TS",
+      "Aquatic"
+    ]
+  },
+  "BT24-027": {
+    "type_eng": [
+      "Fairy",
+      "Titan",
+      "TS",
+      "Aquatic"
+    ]
+  },
+  "BT24-066": {
+    "type_eng": [
+      "Reptile",
+      "Evil"
+    ]
+  },
+  "BT24-073": {
+    "type_eng": [
+      "Undead",
+      "Fallen Angel"
+    ]
+  },
+  "BT24-076": {
+    "type_eng": [
+      "Cyborg",
+      "Dark Dragon"
+    ]
+  },
+  "EX10-049": {
+    "type_eng": [
+      "Undead",
+      "Fallen Angel"
+    ]
+  },
+  "EX11-013": {
+    "type_eng": [
+      "Mollusk",
+      "LIBERATOR",
+      "Aquatic"
+    ]
+  },
+  "EX11-018": {
+    "type_eng": [
+      "Mollusk",
+      "LIBERATOR",
+      "Aquatic"
+    ]
+  },
+  "EX11-035": {
+    "type_eng": [
+      "Magic Knight",
+      "Vortex Warriors",
+      "LIBERATOR",
+      "Bird Dragon"
+    ]
+  },
+  "EX6-013": {
+    "type_eng": [
+      "Avian",
+      "Aquatic"
+    ]
+  },
+  "EX6-015": {
+    "type_eng": [
+      "Holy Bird",
+      "Aquatic"
+    ]
+  },
+  "EX6-021": {
+    "type_eng": [
+      "Principality",
+      "Angel"
+    ]
+  },
+  "EX6-030": {
+    "type_eng": [
+      "Dominion",
+      "Angel"
+    ]
+  },
+  "EX7-019": {
+    "type_eng": [
+      "Wizard",
+      "Witchelny",
+      "Ice-Snow"
+    ]
+  },
+  "EX7-033": {
+    "type_eng": [
+      "Ankylosaur",
+      "NSp",
+      "Dinosaur"
+    ]
+  },
+  "EX7-035": {
+    "type_eng": [
+      "Ceratopsian",
+      "NSp",
+      "Dinosaur"
+    ]
+  },
+  "EX7-036": {
+    "type_eng": [
+      "Magic Knight",
+      "Vortex Warriors",
+      "LIBERATOR",
+      "Bird Dragon"
+    ]
+  },
+  "EX9-052": {
+    "type_eng": [
+      "Undead",
+      "DM",
+      "Ver.5",
+      "Cyborg"
+    ]
+  },
+  "LM-044": {
+    "type_eng": [
+      "Demon Lord",
+      "Fallen Angel"
+    ]
+  },
+  "P-164": {
+    "type_eng": [
+      "Mollusk",
+      "LIBERATOR",
+      "Aquatic"
+    ]
+  },
+  "ST18-06": {
+    "type_eng": [
+      "Ancient Bird",
+      "Vegetation"
+    ]
+  },
+  "ST18-09": {
+    "type_eng": [
+      "Avian",
+      "Vegetation"
     ]
   }
 }

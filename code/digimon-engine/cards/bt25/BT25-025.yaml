@@ -64,17 +64,19 @@ card: BT25-025
 name: "Aegiochusmon: Blue"
 kind: digimon
 level: 5
-color: [blue, purple]
+color: [blue, black]
 cost: 8
 dp: 8000
-traits: [Shaman, Iliad, TS]
+traits: [Shaman, Iliad, TS, Cyborg]
 
 alt_paths:
   - kind: digivolve
     from: { level_eq: 4, color_is: blue }
     cost: 4
+  # (black circle per the official DB — previously mis-authored as purple;
+  # see tests/alt_path_printed_cost_guard.rs)
   - kind: digivolve
-    from: { level_eq: 4, color_is: purple }
+    from: { level_eq: 4, color_is: black }
     cost: 4
   - kind: digivolve
     from: { name_contains: "Aegiomon" }

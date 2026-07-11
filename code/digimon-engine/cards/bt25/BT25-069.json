@@ -11,7 +11,8 @@
   "type_eng": [
     "Undead",
     "Titan",
-    "TS"
+    "TS",
+    "Cyborg"
   ],
   "evo_costs": [
     {
@@ -26,5 +27,6 @@
   ],
   "effect_description_eng": "＜Jamming＞ (This Digimon can't be deleted in battles against Security Digimon.)\r\n[On Play] [When Digivolving] You may link 1 [TS] trait card from your trash to 1 of your Digimon without paying the cost.",
   "inherited_effect_description_eng": "[All Turns] This Digimon gets +1000 DP.",
-  "security_effect_description_eng": ""
+  "security_effect_description_eng": "",
+  "form_eng": []
 }

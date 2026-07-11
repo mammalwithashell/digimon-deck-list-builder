@@ -1,6 +1,6 @@
 //! BT21-015 Cyclonemon — Digimon, Lv.4, Red, DP 5000, Cost 5.
 //! Traits: Dragonkin
-//! Evo: Lv3 / 0 memory
+//! Evo: Red Lv.3 / 2 memory (standard circle — official Bandai DB / cards.json)
 //!
 //! # Card text (cards.json)
 //!
@@ -576,5 +576,77 @@ fn bt21_015_top_card_slot_does_not_carry_inherited_dp() {
     assert_eq!(
         contribution, 0,
         "the top-card slot must not carry Cyclonemon's inherited buff"
+    );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Digivolve cost fidelity (sister of the BT21-017 free-digivolve bug,
+// 2026-07-09). The YAML mis-authored the printed standard circle
+// (Red Lv.3 / cost 2 — official Bandai DB + cards.json agree) as an ungated
+// `alt_paths: {level_eq: 3} / cost 0`, creating a phantom FREE digivolve
+// route from any-colour Lv.3.
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/// Digivolving BT21-015 over a red Lv.3 must pay exactly the printed cost (2):
+/// no cost-choice prompt (single printed route) and no free route.
+#[test]
+fn bt21_015_digivolve_pays_printed_cost() {
+    use digimon_engine::card_data::EvoCost;
+    use digimon_engine::enums::{CardColor, CardKind, GamePhase, PlaySource};
+
+    let mut base = make_test_card("BASE-RED3", "BaseRed3");
+    base.card_kind = CardKind::Digimon;
+    base.level = Some(3);
+    base.colors = vec![CardColor::Red];
+    base.dp = Some(2000);
+
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(CYCLONEMON_YAML)
+        .expect("BT21-015 YAML parses")
+        .add_card(base)
+        .add_card(make_test_card("FILLER-DECK", "FILLER-DECK"))
+        .hand(0, &["BT21-015"])
+        .deck(0, &["FILLER-DECK", "FILLER-DECK", "FILLER-DECK"])
+        .memory(10)
+        .start();
+    {
+        let idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "BT21-015")
+            .expect("BT21-015 in card_data");
+        runner.game.card_data[idx].evo_costs = vec![EvoCost {
+            card_color: 0, // Red
+            level: 3,
+            memory_cost: 2,
+        }];
+    }
+    runner.game.turn_count = 1;
+    runner.game.current_phase = GamePhase::Main;
+    runner.place_on_field(0, "BASE-RED3", Some(0));
+
+    let mem_before = runner.game.memory;
+    let proceeded = runner.game.digivolve_from_hand(0, 0, 0, PlaySource::ByHand);
+
+    if let Some(view) = runner.pending_selection_view() {
+        assert_ne!(
+            view.kind,
+            SelectionKind::EffectChoice,
+            "BT21-015 has exactly one printed digivolve route (Red Lv.3 / 2); \
+             a cost-choice prompt means a phantom route leaked in: {:?}",
+            view.effect_choices
+        );
+    }
+    assert!(
+        proceeded,
+        "digivolve must proceed directly at the single printed cost"
+    );
+    // ([When Digivolving] delete ≤4000 DP has no opponent target here → no prompt.)
+    let _ = runner.auto_resolve();
+    assert_eq!(
+        runner.game.memory,
+        mem_before - 2,
+        "the digivolve cost (2) must be paid in memory — not free"
     );
 }

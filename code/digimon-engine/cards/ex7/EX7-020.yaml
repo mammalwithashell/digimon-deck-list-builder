@@ -90,6 +90,11 @@ color: [blue]
 cost: 5
 dp: 5000
 traits: [Dragon, Ice-Snow]
+# Official Bandai DB (card_bundles/EX7-020.md): "Form: Champion". cards.json's
+# form_eng is [] (the API ingest drops form — known lossy gap), so the form is
+# taken from the official bundle; `form_is: champion` gates elsewhere depend
+# on it being present here.
+form: Champion
 attribute: Data
 
 alt_paths:

@@ -1,30 +1,32 @@
-//! BT25-089 Kazuki & Itsuki — Tamer, GREEN, Cost 4.
+//! BT25-089 Kazuki & Itsuki — Tamer, GREEN, Cost 4. Traits: App Driver/Appmon.
 //!
-//! # Card text (card image + DCGO BT25_089.cs — authoritative)
+//! # Card text (official Bandai DB bundle + DCGO BT25_089.cs — authoritative)
 //! [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
 //! [Main] By suspending this Tamer, you may link 1 [Appmon] trait Digimon card
 //!   from your hand or your Digimon's digivolution cards to 1 of your Digimon
 //!   with the cost reduced by 2.
 //! [End of Your Turn][Once Per Turn] 1 of your Digimon may app fuse into a
-//!   Digimon card in the hand. — BLOCKED (no App Fuse primitive). OMITTED.
-//! Inherited [Security]: Play this card without paying the cost.
+//!   Digimon card in the hand.
+//! [Security] Play this card without paying the cost.
 //!
-//! # PARTIAL verdict — residual gaps
-//! (1) App Fuse clause BLOCKED: no engine App Fuse primitive.
-//! (2) [Main] link source "from your Digimon's digivolution cards" OMITTED:
-//!     `link_card_to_self` anchors its digivolution_sources to its own
-//!     permanent, but the Tamer has no Digimon under it. Residual gap
-//!     G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES.
-//! The hand-source path and chosen-host link are authored and tested.
-//!
-//! # COLOR DRIFT (AUDITED)
-//! The YAML declares `color: [purple]` but the card image (green border) and
-//! cards.json (`card_colors: [3]` = Green) and DCGO path (BT25/Green/) all
-//! confirm the card is **Green**. The YAML metadata must be corrected. A
-//! dedicated ignored test documents this drift.
+//! # 2026-07-10 audit — prior PARTIAL closed
+//! (1) The [End of Your Turn][OPT] App Fuse clause shipped 2026-06-13 via the
+//!     `app_fuse` step (effect-initiated App Fuse) — tested below.
+//! (2) The [Main] link source "from your Digimon's digivolution cards"
+//!     (G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES) is now authored via
+//!     `from: [hand, own_digimon_sources]`. When BOTH zones hold an eligible
+//!     card the engine first prompts the zone choice ("From hand" / "From your
+//!     Digimon's digivolution cards") — DCGO SetIntSelection parity. The
+//!     printed "-2" is threaded as `cost: { reduce: 2 }` (paid amount resolves
+//!     to 0 since link cards carry no base link cost in this context).
+//! Color drift (`[purple]` → `[green]`) was corrected 2026-06-12 and remains
+//! guarded by a dedicated test.
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/BT25/Green/BT25_089.cs
+//! (Note: DCGO's [Main] description string says "[Once Per Turn]" but its
+//! ActivateClass maxUseCount is -1 and the official printed text has no OPT on
+//! the [Main] — the YAML correctly declares no `once_per_turn` there.)
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -62,6 +64,8 @@ fn base() -> DebugRunnerBuilder {
         .expect("BT25-089 YAML parses and compiles")
         .add_card(make_test_card("DECK-PAD", "Filler"))
         .add_card(make_digimon("APPMON-IN-HAND", 4, 4000, 4, &["Appmon"]))
+        .add_card(make_digimon("APPMON-UNDER", 3, 3000, 3, &["Appmon"]))
+        .add_card(make_digimon("DONOR", 4, 4000, 4, &["Beast"]))
         .add_card(make_digimon("MY-HOST", 4, 4000, 4, &["Beast"]))
         .add_card(make_digimon("OPP-DIGI", 4, 4000, 4, &["Beast"]))
         .deck(1, &["DECK-PAD"; 12])
@@ -86,6 +90,12 @@ fn bt25_089_yaml_printed_metadata() {
     let card = runner.compiled_card(CARD_ID).expect("present in pack");
     assert_eq!(card.name, "Kazuki & Itsuki");
     assert_eq!(card.kind, CompiledCardKind::Tamer);
+    // Official DB: Type/Traits "App Driver/Appmon".
+    assert_eq!(
+        card.traits,
+        vec!["App Driver".to_string(), "Appmon".to_string()],
+        "printed traits (official Bandai DB: App Driver/Appmon)"
+    );
 }
 
 #[test]
@@ -158,6 +168,159 @@ fn bt25_089_main_links_appmon_from_hand_to_chosen_digimon() {
             .len(),
         1,
         "the Appmon card from hand linked onto the chosen Digimon"
+    );
+}
+
+// ─── [Main] "or your Digimon's digivolution cards" source (gap closed) ───────
+
+/// With no linkable card in hand but an [Appmon] Digimon card under one of
+/// your Digimon, the [Main] link draws from that Digimon's digivolution cards
+/// (single eligible zone → no zone-choice prompt) and attaches it to a
+/// DIFFERENT chosen Digimon — the cross-permanent source scan of
+/// G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES.
+#[test]
+fn bt25_089_main_links_appmon_from_own_digimon_sources() {
+    use digimon_engine::action::space::{encode_attack, encode_source_select};
+
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(10).start();
+    let kazuki = r.place_on_field(0, CARD_ID, Some(0));
+    let donor = r.place_on_field(0, "DONOR", Some(0));
+    let my_host = r.place_on_field(0, "MY-HOST", Some(0));
+    // Bury an Appmon Digimon card under DONOR (below the top card).
+    r.push_source(donor, "APPMON-UNDER");
+    let donor_sources_before = r.game.player(0).battle_area[donor.index as usize]
+        .card_sources
+        .len();
+    advance_to_main(&mut r);
+
+    assert!(
+        fire_main(&mut r, 0, kazuki.index as usize),
+        "[Main] installs a selection"
+    );
+
+    let source_action =
+        encode_source_select(donor.index as u16, 0).expect("source-select action encodes");
+    let host_action = encode_attack(0, my_host.index as u16);
+    for _ in 0..5 {
+        let Some(sel) = r.game.pending_selection.as_ref() else {
+            break;
+        };
+        let ids = sel.valid_action_ids.clone();
+        let action = if ids.contains(&host_action) {
+            host_action
+        } else if ids.contains(&source_action) {
+            source_action
+        } else {
+            // Optional-use accept prompt: accept (first non-decline action).
+            ids[0]
+        };
+        let _ = r.game.resolve_selection(0, action);
+        if action == host_action {
+            break;
+        }
+    }
+
+    assert_eq!(
+        r.game.player(0).battle_area[my_host.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "the Appmon card from DONOR's digivolution cards linked onto MY-HOST"
+    );
+    assert_eq!(
+        r.game.player(0).battle_area[donor.index as usize]
+            .card_sources
+            .len(),
+        donor_sources_before - 1,
+        "the linked card left DONOR's digivolution cards"
+    );
+}
+
+/// When BOTH the hand and a Digimon's digivolution cards hold an eligible
+/// [Appmon] card, the engine first asks WHICH zone to link from — the printed
+/// "from your hand or your Digimon's digivolution cards" choice (DCGO
+/// SetIntSelection "From which area will you link a card?" parity). Choosing
+/// the sources zone links from under the Digimon and leaves the hand intact.
+#[test]
+fn bt25_089_main_zone_choice_when_hand_and_sources_both_eligible() {
+    use digimon_engine::action::space::{encode_attack, encode_source_select};
+    use digimon_engine::selection::SelectionKind;
+
+    let mut r = base()
+        .hand(0, &["APPMON-IN-HAND"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    let kazuki = r.place_on_field(0, CARD_ID, Some(0));
+    let donor = r.place_on_field(0, "DONOR", Some(0));
+    let my_host = r.place_on_field(0, "MY-HOST", Some(0));
+    r.push_source(donor, "APPMON-UNDER");
+    let hand_before = r.game.player(0).hand.len();
+    advance_to_main(&mut r);
+
+    assert!(
+        fire_main(&mut r, 0, kazuki.index as usize),
+        "[Main] installs a selection"
+    );
+
+    let source_action =
+        encode_source_select(donor.index as u16, 0).expect("source-select action encodes");
+    let host_action = encode_attack(0, my_host.index as u16);
+    let mut saw_zone_choice = false;
+    for _ in 0..6 {
+        let Some(view) = r.pending_selection_view() else {
+            break;
+        };
+        // Zone-choice prompt: an EffectChoice offering the sources zone.
+        let zone_entry = view.effect_choices.as_ref().and_then(|choices| {
+            choices
+                .iter()
+                .find(|c| c.label == "From your Digimon's digivolution cards")
+                .map(|c| c.action_id)
+        });
+        let action = if let Some(zone_action) = zone_entry {
+            assert_eq!(view.kind, SelectionKind::EffectChoice);
+            let labels: Vec<&str> = view
+                .effect_choices
+                .as_ref()
+                .unwrap()
+                .iter()
+                .map(|c| c.label.as_str())
+                .collect();
+            assert!(
+                labels.contains(&"From hand"),
+                "zone choice must also offer the hand zone; got {labels:?}"
+            );
+            saw_zone_choice = true;
+            zone_action
+        } else if view.valid_action_ids.contains(&host_action) {
+            host_action
+        } else if view.valid_action_ids.contains(&source_action) {
+            source_action
+        } else {
+            view.valid_action_ids[0]
+        };
+        let _ = r.game.resolve_selection(0, action);
+        if action == host_action {
+            break;
+        }
+    }
+
+    assert!(
+        saw_zone_choice,
+        "with candidates in both zones, the zone-choice prompt must surface"
+    );
+    assert_eq!(
+        r.game.player(0).battle_area[my_host.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "the sources-zone Appmon linked onto MY-HOST"
+    );
+    assert_eq!(
+        r.game.player(0).hand.len(),
+        hand_before,
+        "hand untouched — the link came from the digivolution cards"
     );
 }
 

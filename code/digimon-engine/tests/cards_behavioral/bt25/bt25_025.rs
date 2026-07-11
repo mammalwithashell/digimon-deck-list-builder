@@ -1,4 +1,4 @@
-//! BT25-025 Aegiochusmon: Blue — Digimon, Lv.5, Blue/Purple, DP 8000, Cost 8.
+//! BT25-025 Aegiochusmon: Blue — Digimon, Lv.5, Blue/Black (official Bandai DB), DP 8000, Cost 8.
 //! Traits: Shaman, Iliad, TS.
 //!
 //! # Card text (cards.json — verbatim)

@@ -2,7 +2,11 @@
 # Traits: Ice-Snow, LIBERATOR. Attribute: Vaccine. Rarity: U.
 #
 # Printed card text (card image EX11-016 — authoritative; cards.json agrees):
-#   Evo box: Lv.4 from blue: Cost 4   (JSON evo_costs [{card_color:1, level:4, memory_cost:4}])
+#   Evo box (official Bandai DB, data/card_bundles/EX11-016.md — AUTHORITATIVE
+#     for printed data): TWO standard circles on this dual-color card —
+#     "Blue Lv.4 / cost 4" AND "Yellow Lv.4 / cost 4". cards.json evo_costs
+#     carries ONLY the blue half ([{card_color:1, level:4, memory_cost:4}]) —
+#     the documented lossy multi-color-circle drop.
 #   Evo box: "Digivolve Lv.4 w/[Ice-Snow] trait: Cost 3"   (JSON xros_req)
 #   <Iceclad> (Other than against Security Digimon, compare the number of
 #     digivolution cards instead of DP in this Digimon's battles.)
@@ -104,6 +108,7 @@
 #
 # Implementation status (faithfulness diff):
 # | Std digivolve Lv.4 blue / Cost 4                          | IMPLEMENTED (alt_paths + JSON evo_costs) |
+# | Std digivolve Lv.4 YELLOW / Cost 4 (official-DB circle)   | IMPLEMENTED (alt_paths; ABSENT from cards.json evo_costs) |
 # | Alt digivolve Lv.4 w/[Ice-Snow] / Cost 3                  | IMPLEMENTED (alt_paths trait_has)        |
 # | <Iceclad>                                                 | IMPLEMENTED (grant_keyword)              |
 # | [OP][WD] trash any 2 sources of opp Digimon (cross-perm)  | IMPLEMENTED (select_opponent_sources + clamp ladder) |
@@ -126,6 +131,14 @@ alt_paths:
   # sibling EX8-023 so DSL-only loads carry the printed cost table).
   - kind: digivolve
     from: { level_eq: 4, color_is: blue }
+    cost: 4
+  # Printed standard evo box, YELLOW half: Lv.4 from yellow, cost 4. The
+  # official Bandai DB (data/card_bundles/EX11-016.md) lists BOTH standard
+  # circles ("Blue Lv.4 / cost 4" and "Yellow Lv.4 / cost 4"); cards.json
+  # dropped the yellow one (lossy multi-color ingest), so it MUST be encoded
+  # here explicitly or yellow Lv.4 bases are illegally rejected.
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
     cost: 4
   # Printed alt evo box: "Digivolve Lv.4 w/[Ice-Snow] trait: Cost 3". DCGO
   # gates on EqualsTraits("Ice-Snow") && IsLevel4.

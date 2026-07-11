@@ -4,6 +4,14 @@ kind: option
 color: [yellow]
 cost: 3
 traits: [Appmon]
+# Printed: "<Use Req. ([Appmon] trait)> (Specified cards let you ignore color
+# requirements.)" — an ignore-color RIDER, not a hard use gate: the engine ORs
+# this predicate with the normal color requirement
+# (option_use_requirement_or_color_available), matching DCGO's additive
+# IgnoreColorConditionClass. DCGO's UseRequirements factory scans the owner's
+# battle area AND breeding area, restricted to Digimon/Tamer permanents
+# ((IsDigimon || IsTamer) && trait check) — `any_field_permanent` mirrors that
+# battle+breeding scan exactly.
 use_requirement:
   any_field_permanent:
     of: you
@@ -12,11 +20,20 @@ use_requirement:
       - kind: digimon
       - kind: tamer
 effects:
+  # Belt-and-braces companion of `use_requirement` (BT25 Use-Req idiom; the
+  # functional play-legality path is the use_requirement above). active_when
+  # mirrors the same battle+breeding Digimon/Tamer scan so the two never
+  # disagree (re-audit 2026-07-10: was battle-area-only `any_permanent`,
+  # inconsistent with the use_requirement and DCGO's
+  # HasMatchConditionOwnersBreedingPermanent).
   - kind: flood_gate
     active_when:
-      any_of:
-        - any_permanent: { of: you, kind: digimon, trait_has: Appmon }
-        - any_permanent: { of: you, kind: tamer, trait_has: Appmon }
+      any_field_permanent:
+        of: you
+        trait_has: Appmon
+        any_of:
+          - kind: digimon
+          - kind: tamer
     modifier: IgnoreColorRequirement
     target: { card_number_is: "BT25-098" }
     summary: "While you have an Appmon Digimon or Tamer, ignore color requirements for this card"
@@ -40,6 +57,13 @@ effects:
           body:
             - trash_from_reveal: { of: you, card: rest }
       - place_self_as_delay_option: {}
+  # Card face prints the delay header as "[Main] <Delay>" (verified on the
+  # image, re-audit 2026-07-10) — the standard Main-phase-activated shape:
+  # `trigger: delayed` → CompiledTiming::Delayed → DelayTrigger::
+  # MainPhaseActivated. Activation itself is the player's [Main] action (no
+  # extra machinery prompt); the printed body "・You may play 1 [Appmon] trait
+  # card from your hand with the cost reduced by 3." carries its own "you may",
+  # hence `optional: true` on the hand pick.
   - kind: delay
     trigger: delayed
     summary: "[Main]<Delay> Play 1 Appmon from hand with cost reduced by 3"

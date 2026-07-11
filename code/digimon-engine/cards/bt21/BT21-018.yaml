@@ -1,10 +1,18 @@
 # BT21-018 DoGatchmon — Digimon, Lv.4, Red/Green, DP 6000, Cost 6.
 # Trait line (card image): Sup./Appmon | Social | Super Search/Hero
 #
-# DCGO BT21_018.cs (authoritative):
+# Printed digivolve circles (official Bandai DB / data/card_bundles/BT21-018.md):
+#   Red Lv.3 / cost 3  AND  Green "Stnd." icon / cost 3 (official DB grades the
+#   Stnd. form icon as Green Lv.3 / cost 3). Both authored as alt_paths below —
+#   printed circles at PRINTED costs is the established convention
+#   (alt_path_printed_cost_guard.rs; also backfills DebugRunner fixtures'
+#   evo_costs). card_overrides.json carries the same two rows for production.
+#
+# DCGO BT21_018.cs (authoritative for behavior):
 #   - AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits, cost 3)
-#       → alt_paths digivolve from { level_eq: 3, trait_has: "Stnd." } cost 3.
-#         (HasStandardAppTraits == trait "Stnd."; DCGO imposes NO level gate.)
+#       → alt_paths digivolve from { trait_has: "Stnd." } cost 3.
+#         (HasStandardAppTraits == trait "Stnd."; DCGO imposes NO level or
+#         colour gate — kept as the DCGO-parity reading of the Stnd. circle.)
 #   - RaidSelfEffect → grant_keyword Raid (non-inherited, FaceUp).
 #   - RushSelfStaticEffect → grant_keyword Rush (non-inherited, FaceUp).
 #   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 2)
@@ -39,9 +47,22 @@ traits: ["Sup.", Appmon, Social, "Super Search", Hero]
 attribute: Social
 
 alt_paths:
-  # ─── [Digivolve] Lv.3 w/[Stnd.] trait: Cost 3 ──────────────────────────────
+  # ─── Printed standard circle #1: Red Lv.3 / Cost 3 ──────────────────────────
+  # Official Bandai DB (data/card_bundles/BT21-018.md): "Red Lv.3 / cost 3".
+  # Card image: red "Lv.3" circle, cost 3.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+  # ─── Printed standard circle #2: Green "Stnd." / Cost 3 ─────────────────────
+  # Official Bandai DB: "Green Lv.3 / cost 3" (the DB grades the Stnd. form
+  # icon as Lv.3). Card image: green circle with the "Stnd." form icon, cost 3.
+  - kind: digivolve
+    from: { level_eq: 3, color_is: green }
+    cost: 3
+  # ─── [Digivolve] w/[Stnd.] form trait: Cost 3 (DCGO behavioral reading) ─────
   # DCGO: AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits, 3)
-  # HasStandardAppTraits → "Stnd." trait. No level gate in DCGO.
+  # HasStandardAppTraits → "Stnd." trait. No level or colour gate in DCGO —
+  # pool convention for Stnd. circles (BT21-043/-059/-070, ST22-12, BT22-009).
   - kind: digivolve
     from: { trait_has: "Stnd." }
     cost: 3

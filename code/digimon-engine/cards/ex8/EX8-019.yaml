@@ -1,8 +1,13 @@
 # EX8-019 Penguinmon — Digimon, Lv.3, Blue/Yellow, DP 1000, Cost 3.
 # Traits: Avian, LIBERATOR (+ rule-box [Ice-Snow]). Attribute: Vaccine. Rarity: C.
 #
-# Printed card text (card image EX8-019 — authoritative; cards.json agrees):
-#   Evo box: Lv.2 from blue: Cost 1   (JSON evo_costs [{card_color:1, level:2, memory_cost:1}])
+# Printed card text (card image EX8-019 — authoritative):
+#   Evo box: Lv.2, Cost 1, SPLIT blue/yellow circle (official Bandai DB lists it
+#     as TWO standard rows: "Blue Lv.2 / cost 1" AND "Yellow Lv.2 / cost 1" —
+#     data/card_bundles/EX8-019.md; the card image shows one half-blue/half-yellow
+#     circle). cards.json evo_costs carries ONLY the blue half
+#     ([{card_color:1, level:2, memory_cost:1}]) — the API ingest drops the
+#     off-color half of split circles, so the yellow row is encoded here.
 #   Evo box: "Digivolve [Hiyarimon]: Cost 0"   (JSON xros_req)
 #   [Your Turn] When this Digimon would digivolve into a Digimon card with the
 #     [Ice-Snow] trait, reduce the digivolution cost by 1.
@@ -49,7 +54,8 @@
 #     shape as P-134's on_play clause, scoped inherited + when_attacking.
 #
 # Implementation status (faithfulness diff):
-# | Std digivolve Lv.2 blue / Cost 1                       | IMPLEMENTED (alt_paths + JSON evo_costs) |
+# | Std digivolve Lv.2 blue / Cost 1 (split-circle half)   | IMPLEMENTED (alt_paths + JSON evo_costs) |
+# | Std digivolve Lv.2 yellow / Cost 1 (split-circle half) | IMPLEMENTED (alt_paths; official DB — JSON evo_costs drops it) |
 # | Alt digivolve [Hiyarimon] / Cost 0                     | IMPLEMENTED (alt_paths name_contains)    |
 # | Rule: Trait: Has [Ice-Snow] Type                       | IMPLEMENTED (traits:)                    |
 # | [Your Turn] digivolve-into-Ice-Snow cost -1            | IMPLEMENTED (cost_reduction)             |
@@ -65,10 +71,20 @@ dp: 1000
 traits: [Avian, LIBERATOR, Ice-Snow]
 attribute: Vaccine
 alt_paths:
-  # Printed standard evo box: Lv.2 from blue, cost 1 (encoded explicitly like
-  # neighbor EX8 specs so DSL-only loads carry the printed cost table).
+  # Printed standard evo box: SPLIT blue/yellow circle — Lv.2 from blue OR
+  # yellow, cost 1. The official Bandai DB (data/card_bundles/EX8-019.md) lists
+  # it as two rows: "Blue Lv.2 / cost 1" AND "Yellow Lv.2 / cost 1"; the card
+  # image shows a single half-blue/half-yellow Lv.2 circle. Encoded explicitly
+  # like neighbor EX8 specs so DSL-only loads carry the printed cost table
+  # (dual-color-circle idiom per BT25-075).
   - kind: digivolve
     from: { level_eq: 2, color_is: blue }
+    cost: 1
+  # Yellow half of the split circle — cards.json evo_costs DROPS this row
+  # (lossy API ingest keeps only the blue half), so this alt_path is the only
+  # carrier of the printed yellow Lv.2 / cost 1 route.
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
     cost: 1
   # Printed alt evo box: "Digivolve [Hiyarimon]: Cost 0". DCGO gates on
   # ContainsCardName("Hiyarimon") only — no level/color restriction.

@@ -17,7 +17,7 @@ level: 4
 color: [purple]
 cost: 4
 dp: 4000
-traits: [Undead, Titan, TS]
+traits: [Undead, Titan, TS, Cyborg]
 attribute: Virus
 
 alt_paths:

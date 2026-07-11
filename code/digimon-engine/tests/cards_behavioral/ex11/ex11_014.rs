@@ -2,9 +2,12 @@
 //! Traits: Avian, LIBERATOR (+ rule-box [Ice-Snow]). Attribute: Vaccine.
 //! Form: Rookie. Rarity: C.
 //!
-//! # Card text (card image EX11-014.webp, authoritative; cards.json agrees)
+//! # Card text (card image EX11-014.webp + official Bandai DB bundle
+//! # data/card_bundles/EX11-014.md, authoritative)
 //!
-//! Evo box: Lv.2 from blue: Cost 1.
+//! Evo box: Lv.2 from blue OR yellow: Cost 1 — a blue/yellow SPLIT circle
+//! (official DB lists both "Blue Lv.2 / cost 1" and "Yellow Lv.2 / cost 1";
+//! cards.json `evo_costs` lossily carries only the blue half).
 //! Evo box: "Digivolve [Hiyarimon]: Cost 0" (cards.json `xros_req`).
 //!
 //! [On Play] Reveal the top 3 cards of your deck. Add 1 [Suzune Kazuki] and
@@ -40,17 +43,19 @@
 //! - Mandatory bucket picks (no PASS in the mask) — P-228 §mandatory idiom.
 //! - Inherited static keyword grant (<Jamming>) verified in a real losing
 //!   security-Digimon battle — security_effects.rs combat idiom.
-//! - Alt digivolve recipe registration (standard Lv.2 blue + [Hiyarimon]).
+//! - Alt digivolve recipe registration (standard Lv.2 blue + Lv.2 yellow
+//!   split halves + [Hiyarimon]) and the yellow-half battle-area digivolve.
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
+    CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::PASS;
+use digimon_engine::action::mask::build_action_mask;
+use digimon_engine::action::space::{encode_digivolve, BREEDING_TARGET, PASS};
 use digimon_engine::card_data::CardData;
 use digimon_engine::combat::AttackResult;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, Keyword};
+use digimon_engine::enums::{CardColor, CardKind, GamePhase, Keyword, PlaySource};
 
 const CARD_ID: &str = "EX11-014";
 
@@ -249,15 +254,33 @@ fn ex11_014_registers_standard_and_hiyarimon_digivolve_paths() {
         .compiled_card(CARD_ID)
         .expect("EX11-014 compiled card present");
 
-    let digivolve_paths = card
+    let digivolve_paths: Vec<_> = card
         .alt_paths
         .iter()
         .filter(|p| matches!(p.kind, CompiledAltPathKind::Digivolve))
-        .count();
+        .collect();
     assert_eq!(
-        digivolve_paths, 2,
-        "EX11-014 must register the standard Lv.2-blue path and the \
+        digivolve_paths.len(),
+        3,
+        "EX11-014 must register BOTH halves of the printed blue/yellow split \
+         circle (official DB: Blue Lv.2/1 + Yellow Lv.2/1) plus the \
          [Hiyarimon] cost-0 alt path"
+    );
+
+    // Cost table: two cost-1 circles (the split halves) + one cost-0 alt.
+    let mut costs: Vec<i32> = digivolve_paths
+        .iter()
+        .map(|p| match p.cost.as_ref() {
+            Some(CompiledCost::Literal(v)) => *v,
+            other => panic!("EX11-014 digivolve paths must carry literal costs, got {other:?}"),
+        })
+        .collect();
+    costs.sort_unstable();
+    assert_eq!(
+        costs,
+        vec![0, 1, 1],
+        "printed cost table: [Hiyarimon] cost 0 + blue Lv.2 cost 1 + yellow \
+         Lv.2 cost 1"
     );
 }
 
@@ -573,6 +596,241 @@ fn ex11_014_inherited_jamming_keeps_carrier_alive_vs_security_digimon() {
         "the carrier stays on the field"
     );
     assert_eq!(runner.trash_size(1), 1, "the security card still trashes");
+}
+
+// ─── Section 4: Behavioral — alt digivolve "[Hiyarimon]: Cost 0" ───────────
+//
+// Hiyarimon (BT8-002 / EX7-002 / EX11-002) is a Lv.2 Digi-Egg card — in a
+// real game it exists ONLY in the breeding area (hatched from the egg deck).
+// The printed alt evo box "Digivolve [Hiyarimon]: Cost 0" must therefore be
+// honored on a BREEDING-AREA base, alongside the standard "Lv.2 from blue:
+// Cost 1" circle — surfacing a rule-17 cost choice {0, 1}, exactly as the
+// battle-area path does (digivolve_cost_choice_archetypes.rs). DCGO applies
+// `AddSelfDigivolutionRequirementStaticEffect` costs to ANY target permanent
+// (`CardSource.CostList(targetPermanent, …)`) — no battle-area-only gate.
+
+/// A hatched Hiyarimon: Lv.2 blue Digi-Egg-kind card named exactly
+/// "Hiyarimon" (DCGO EX11_014.cs gates on EqualsCardName("Hiyarimon")).
+fn hiyarimon(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Hiyarimon");
+    c.card_kind = CardKind::DigiEgg;
+    c.level = Some(2);
+    c.dp = Some(1000);
+    c.colors = vec![CardColor::Blue];
+    c.traits = vec!["Lesser".to_string()];
+    c
+}
+
+/// A Lv.2 blue in-training whose name merely CONTAINS "Hiyarimon" — must NOT
+/// satisfy EX11-014's exact-name alt path (DCGO uses EqualsCardName here,
+/// unlike sibling EX8-019's ContainsCardName).
+fn near_hiyarimon(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Hiyarimon X");
+    c.card_kind = CardKind::DigiEgg;
+    c.level = Some(2);
+    c.dp = Some(1000);
+    c.colors = vec![CardColor::Blue];
+    c.traits = vec!["Lesser".to_string()];
+    c
+}
+
+/// Runner with `base` hatched in the breeding area and EX11-014 in hand.
+fn breeding_runner(base: CardData) -> DebugRunner {
+    let base_id = base.card_id.clone();
+    let mut r = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX11-014 YAML loads from embedded DSL pack")
+        .add_card(base)
+        .add_card(filler("PAD-A"))
+        .add_card(filler("PAD-B"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["PAD-A", "PAD-B"])
+        .memory(5)
+        .start();
+    r.game.turn_count = 1;
+    r.game.current_phase = GamePhase::Main;
+    r.place_in_breeding(0, &base_id);
+    r
+}
+
+/// The mask offers the breeding digivolve, and executing it surfaces the
+/// rule-17 cost CHOICE between the [Hiyarimon] cost-0 alt path and the
+/// standard Lv.2-blue cost-1 circle; picking the cost-0 option pays 0.
+#[test]
+fn ex11_014_breeding_hiyarimon_offers_cost_0_alt_route() {
+    let mut runner = breeding_runner(hiyarimon("HIYARI"));
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert!(
+        mask[encode_digivolve(0, BREEDING_TARGET) as usize] > 0.0,
+        "the breeding digivolve action must be offered"
+    );
+
+    let mem_before = runner.game.memory;
+    let proceeded = runner
+        .game
+        .digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByHand);
+    assert!(
+        !proceeded,
+        "breeding Hiyarimon satisfies BOTH the [Hiyarimon] cost-0 alt path and \
+         the standard Lv.2-blue cost-1 circle — the digivolve must PAUSE for a \
+         rule-17 cost choice, not auto-pay the printed circle"
+    );
+    let view = runner
+        .pending_selection_view()
+        .expect("a cost-choice selection must be pending");
+    let choices = view
+        .effect_choices
+        .as_ref()
+        .expect("the cost choice must carry effect_choices");
+    let labels: Vec<String> = choices.iter().map(|c| c.label.to_lowercase()).collect();
+    assert!(
+        labels.iter().any(|l| l.contains("cost 0")),
+        "an option for the [Hiyarimon] cost-0 route (labels {labels:?})"
+    );
+    assert!(
+        labels.iter().any(|l| l.contains("cost 1")),
+        "an option for the standard cost-1 circle (labels {labels:?})"
+    );
+
+    let cost0 = choices
+        .iter()
+        .find(|c| c.label.to_lowercase().contains("cost 0"))
+        .expect("cost-0 option present")
+        .action_id;
+    runner
+        .execute_action(0, cost0)
+        .expect("resolve the cost-0 choice");
+
+    let breeding = runner.game.players[0]
+        .breeding_area
+        .as_ref()
+        .expect("breeding permanent remains");
+    assert_eq!(
+        breeding.top_card().card_id(&runner.game.card_data),
+        CARD_ID,
+        "EX11-014 must be stacked on the breeding Hiyarimon"
+    );
+    assert_eq!(
+        runner.game.memory, mem_before,
+        "the [Hiyarimon] alt route costs 0 memory"
+    );
+}
+
+/// Exact-name fidelity at runtime: a breeding base named "Hiyarimon X" does
+/// NOT satisfy the exact-name alt path — only the standard Lv.2-blue circle
+/// applies, so the digivolve completes immediately at cost 1 (no prompt).
+#[test]
+fn ex11_014_breeding_near_name_pays_standard_cost_1_no_prompt() {
+    let mut runner = breeding_runner(near_hiyarimon("NEAR-HIYA"));
+
+    let mem_before = runner.game.memory;
+    let proceeded = runner
+        .game
+        .digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByHand);
+    assert!(
+        proceeded,
+        "only the standard circle applies — the digivolve completes immediately"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "no cost choice for a single applicable route"
+    );
+    assert_eq!(
+        mem_before - runner.game.memory,
+        1,
+        "\"Hiyarimon X\" must NOT satisfy the exact-name cost-0 path (DCGO \
+         EqualsCardName) — the standard circle costs 1"
+    );
+}
+
+// ─── Section 5: Behavioral — the YELLOW half of the split circle ────────────
+//
+// The printed evo circle is a blue/yellow SPLIT (official Bandai DB bundle:
+// "Blue Lv.2 / cost 1" AND "Yellow Lv.2 / cost 1"). cards.json's evo_costs
+// lossily carries only the blue half, so the yellow half exists ONLY via the
+// YAML alt_path — these tests pin it.
+
+/// A hatched yellow Lv.2 — matches ONLY the yellow half of the split circle
+/// (not blue, not named "Hiyarimon").
+fn yellow_lv2(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::DigiEgg;
+    c.level = Some(2);
+    c.dp = Some(1000);
+    c.colors = vec![CardColor::Yellow];
+    c.traits = vec!["Lesser".to_string()];
+    c
+}
+
+/// A hatched red Lv.2 — matches NO route (off-colour for both split halves,
+/// wrong name for the [Hiyarimon] path).
+fn red_lv2(id: &str) -> CardData {
+    let mut c = make_test_card(id, id);
+    c.card_kind = CardKind::DigiEgg;
+    c.level = Some(2);
+    c.dp = Some(1000);
+    c.colors = vec![CardColor::Red];
+    c.traits = vec!["Lesser".to_string()];
+    c
+}
+
+/// The yellow half of the printed split circle: a yellow Lv.2 base is a
+/// legal digivolve target at cost 1. Only one route applies (blue half fails
+/// colour, [Hiyarimon] path fails the exact name), so the digivolve completes
+/// immediately with no rule-17 cost prompt.
+#[test]
+fn ex11_014_yellow_lv2_base_digivolves_at_cost_1() {
+    let mut runner = breeding_runner(yellow_lv2("YEL-BASE"));
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert!(
+        mask[encode_digivolve(0, BREEDING_TARGET) as usize] > 0.0,
+        "the yellow half of the split circle must offer the breeding digivolve"
+    );
+
+    let mem_before = runner.game.memory;
+    let proceeded = runner
+        .game
+        .digivolve_from_hand_onto_breeding(0, 0, PlaySource::ByHand);
+    assert!(
+        proceeded,
+        "only the yellow circle applies — the digivolve completes immediately"
+    );
+    assert!(
+        runner.pending_selection().is_none(),
+        "no cost choice for a single applicable route"
+    );
+    assert_eq!(
+        mem_before - runner.game.memory,
+        1,
+        "the yellow Lv.2 half of the split circle costs 1 (official DB: \
+         Yellow Lv.2 / cost 1)"
+    );
+    let breeding = runner.game.players[0]
+        .breeding_area
+        .as_ref()
+        .expect("breeding permanent remains");
+    assert_eq!(
+        breeding.top_card().card_id(&runner.game.card_data),
+        CARD_ID,
+        "EX11-014 must be stacked on the yellow Lv.2 base"
+    );
+}
+
+/// Off-colour negative: a red Lv.2 base satisfies NO route (neither split
+/// half nor the [Hiyarimon] name gate) — the breeding digivolve is not
+/// offered at all.
+#[test]
+fn ex11_014_red_lv2_base_has_no_digivolve_route() {
+    let runner = breeding_runner(red_lv2("RED-BASE"));
+
+    let mask = build_action_mask(&runner.game, 0);
+    assert!(
+        !(mask[encode_digivolve(0, BREEDING_TARGET) as usize] > 0.0),
+        "a red Lv.2 base matches neither the blue nor the yellow half of the \
+         split circle, nor the [Hiyarimon] path — no digivolve action"
+    );
 }
 
 /// Baseline: the same carrier WITHOUT EX11-014 stacked dies to the same

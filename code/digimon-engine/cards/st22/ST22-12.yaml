@@ -45,7 +45,8 @@
 #       canNoSelect: false, PermanentCondition: opp Digimon, permanent.DP <= 5000,
 #       mode: PutLibraryBottom.
 #       → scope: linked, when: when_linked, select_opponent_permanent
-#         (kind: digimon, dp_lte: 5000), return_to_deck bottom include_sources.
+#         (kind: digimon, dp_lte: 5000), return_to_deck bottom (top card only;
+#         sources trashed via DCGO DiscardEvoRoots).
 #
 # The +3000 DP link bonus is printed in the link box on the card image and
 # is modeled as a scope:linked kind:aura dp_modifier:3000 (same pattern as
@@ -55,9 +56,10 @@
 # ─── Cost modeling (link cost reduction) ────────────────────────────────────
 #
 # "link cost reduced by 2" → `GrantedReduceLinkCostClass(reducedCost: 2)` in
-# DCGO applies transiently (removed after the coroutine). DSL test fixtures
-# carry no engine-side link cost on linked candidates, so `cost: 0` models the
-# fully-reduced outcome (same idiom as BT25-056, BT25-070).
+# DCGO applies transiently (removed after the coroutine). Modeled as
+# `cost: { reduce: 2 }` (BT25-089 idiom) — the printed reduction is threaded
+# faithfully; the cards this step serves carry no base link cost in this
+# context, so the paid amount currently resolves to 0 either way.
 
 card: ST22-12
 name: DoGatchmon
@@ -103,8 +105,9 @@ effects:
   # ─── [When Attacking][OPT] link 1 Social/Navi/Tool from hand or sources ─────
   # DCGO: ActivateClass SetHashString("WA_ST22-12"), once-per-turn OPT, optional
   # (canNoSelect: true). GrantedReduceLinkCostClass(reducedCost: 2) applied
-  # transiently → modeled as cost: 0. Eligible cards: Digimon with Social/Navi/Tool
-  # trait that can link to this Digimon (Appmon host gate is from link_condition).
+  # transiently → "with the link cost reduced by 2" = cost: { reduce: 2 }.
+  # Eligible cards: Digimon with Social/Navi/Tool trait that can link to this
+  # Digimon (Appmon host gate is from link_condition).
   - when: when_attacking
     once_per_turn: true
     optional: true
@@ -121,7 +124,9 @@ effects:
                   - trait_has: Tool
           to: self
           count: { up_to: 1 }
-          cost: free
+          # "with the link cost reduced by 2" (printed) — DCGO
+          # GrantedReduceLinkCostClass(reducedCost: 2).
+          cost: { reduce: 2 }
 
   # ─── [When Linking] return opp ≤5000 DP Digimon to bottom of deck ───────────
   # DCGO: ActivateClass SetIsLinkedEffect(true), WhenLinked timing,
@@ -130,6 +135,9 @@ effects:
   # CanActivateCondition gates on HasMatchConditionPermanent — if no valid target
   # exists the effect silently skips (no prompt). The DSL select step mirrors
   # this: an empty candidate set produces no prompt.
+  # NO include_sources: only the top card goes to the deck bottom; digivolution
+  # cards are trashed (DCGO DeckBottomBounceClass: `permanent.DiscardEvoRoots()`
+  # then only `topCard` → AddLibraryBottomCards; standard leave-field rule).
   - scope: linked
     when: when_linked
     summary: "[When Linking] Return 1 of your opponent's 5000 DP or lower Digimon to the bottom of the deck"
@@ -141,7 +149,7 @@ effects:
               - kind: digimon
               - dp_lte: 5000
           prompt: "Return 1 of your opponent's 5000 DP or lower Digimon to the bottom of the deck"
-      - return_to_deck: { target: bounce_target, position: bottom, include_sources: true }
+      - return_to_deck: { target: bounce_target, position: bottom }
 
   # ─── [Link] +3000 DP (link-box aura) ────────────────────────────────────────
   # Printed in the link box on the card image: +3000 DP.

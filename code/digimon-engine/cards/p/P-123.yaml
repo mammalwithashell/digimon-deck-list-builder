@@ -6,9 +6,14 @@ color: [white]
 cost: 3
 dp: 2000
 traits: [Ancient Fairy]
+# Printed digivolve circle (card image P-123.webp — visual tiebreak for
+# circles): a RAINBOW (any-colour) "Lv.2: cost 0" circle, like BT16-082.
+# The official-DB mirror can't represent a rainbow circle (no rows) and
+# cards.json approximates it as red-only; the colour-free level gate below is
+# the faithful authoring (allowlisted in tests/alt_path_printed_cost_guard.rs).
 alt_paths:
   - kind: digivolve
-    from: { level_eq: 2, color_is: red }
+    from: { level_eq: 2 }
     cost: 0
 
 # Printed text (cards.json):

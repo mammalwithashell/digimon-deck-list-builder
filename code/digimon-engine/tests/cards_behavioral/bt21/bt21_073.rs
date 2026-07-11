@@ -1,9 +1,10 @@
 //! BT21-073 Charismon — Digimon, Lv.5, Purple/Black, DP 8000, Cost 8.
 //! Traits: "Ult.", Appmon, Social, "Mind Control". Attribute: Social.
 //!
-//! # Card text (card image — authoritative)
+//! # Card text (official Bandai DB bundle + card image — authoritative)
 //!
-//! Digivolve: Lv.4 Purple / Cost 4; and alt "Sup.": Cost 4.
+//! Digivolve: split purple/black circle → Lv.4 Purple / Cost 4 AND
+//!   Lv.4 Black / Cost 4; plus rainbow grade circle "Sup." / Cost 4.
 //! App Fusion [Sociamon] & [Gossipmon]: Cost 0.
 //! <Blocker>
 //! [On Play][When Digivolving] You may link 1 level 4 or lower Digimon card
@@ -18,6 +19,7 @@
 //!   Link DP bonus: +4000 DP
 //!   [All Turns][Once Per Turn] When this Digimon would leave the battle area,
 //!     by trashing 1 of this Digimon's link cards, it doesn't leave.
+//!     (OPT — DCGO maxCount 1 + hash "AllTurns_BT21_073".)
 //!
 //! # DCGO C# reference (READ-ONLY)
 //! C:/Users/james/Documents/digimon-deck-list-builder-1/DCGO/Assets/Scripts/CardEffect/BT21/Purple/BT21_073.cs
@@ -25,20 +27,24 @@
 //! # Patterns covered
 //! - link_condition (cost 3, Appmon trait host filter)
 //! - app_fusion alt-path (Sociamon & Gossipmon)
-//! - alt-digivolve from Sup. trait, cost 4
+//! - printed digivolve circles as alt_paths: Purple Lv.4/4 + Black Lv.4/4
+//!   (split circle) + any-color Sup./4 grade circle
 //! - grant_keyword Blocker
 //! - link_card_to_self from [trash, digivolution_sources] (optional, cost 0) — on_play/when_digivolving
 //! - when_card_linked_to_this OPT [Your Turn]: grant_triggered_effect force_attack on opponent Digimon
 //!   until end_of_opponents_turn (taunt — BT25-054 idiom)
-//! - scope: linked leave-replacement by trashing own link card (SetIsLinkedEffect(true) in DCGO)
+//! - scope: linked leave-replacement by trashing own link card, [All Turns]
+//!   [Once Per Turn] (SetIsLinkedEffect(true) + maxCount 1 in DCGO) — accept /
+//!   decline / OPT lockout / next-turn reset
 //! - scope: linked aura +4000 DP (link box DP bonus)
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
+    CompiledScope, CompiledTiming,
 };
+use digimon_engine::action::space::{PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
@@ -131,16 +137,46 @@ fn bt21_073_has_app_fusion_altpath() {
 }
 
 #[test]
-fn bt21_073_has_sup_altdigivolve_path() {
+fn bt21_073_has_all_printed_digivolve_circles() {
+    // Card face: ONE split purple/black "Lv.4 / 4" circle (official Bandai DB
+    // lists it as Purple Lv.4 / cost 4 AND Black Lv.4 / cost 4) plus the
+    // rainbow any-color "Sup. / 4" grade circle. All three must be authored
+    // as digivolve alt_paths at the printed cost 4.
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let has = card
+    let digivolve_paths: Vec<_> = card
         .alt_paths
         .iter()
-        .any(|p| matches!(p.kind, CompiledAltPathKind::Digivolve));
+        .filter(|p| matches!(p.kind, CompiledAltPathKind::Digivolve))
+        .collect();
+
+    let has_circle = |color: CompiledColor| {
+        digivolve_paths.iter().any(|p| {
+            p.cost == Some(CompiledCost::Literal(4))
+                && p.from.as_ref().is_some_and(|f| {
+                    f.level_eq == Some(4) && f.color_is == Some(color)
+                })
+        })
+    };
     assert!(
-        has,
-        "BT21-073 must have an alt-digivolve path (Sup. trait gate, cost 4)"
+        has_circle(CompiledColor::Purple),
+        "BT21-073 must have the printed Purple Lv.4 / cost 4 digivolve circle as an alt_path"
+    );
+    assert!(
+        has_circle(CompiledColor::Black),
+        "BT21-073 must have the printed Black Lv.4 / cost 4 digivolve circle as an alt_path \
+         (split purple/black circle; official DB lists both — JSON evo_costs drops black)"
+    );
+
+    let has_sup = digivolve_paths.iter().any(|p| {
+        p.cost == Some(CompiledCost::Literal(4))
+            && p.from.as_ref().is_some_and(|f| {
+                f.trait_has.as_deref() == Some("Sup.") && f.color_is.is_none()
+            })
+    });
+    assert!(
+        has_sup,
+        "BT21-073 must have the rainbow (no color gate) Sup. / cost 4 grade circle as an alt_path"
     );
 }
 
@@ -199,16 +235,23 @@ fn bt21_073_has_linked_leave_replacement() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
     // The leave-replacement is a linked-scope declarative clause (SetIsLinkedEffect(true) in DCGO).
+    // Printed: "[All Turns] [Once Per Turn] ... by trashing 1 of this Digimon's
+    // link cards, it doesn't leave" → optional AND once_per_turn (DCGO maxCount 1).
     let has = card.effects.iter().any(|c| {
         matches!(
             c,
-            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { scope, .. })
-                if *scope == CompiledScope::Linked
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement {
+                scope,
+                optional,
+                once_per_turn,
+                ..
+            }) if *scope == CompiledScope::Linked && *optional && *once_per_turn
         )
     });
     assert!(
         has,
-        "BT21-073 must have a scope:Linked Replacement clause for the leave-prevention link effect"
+        "BT21-073 must have a scope:Linked, optional, once_per_turn Replacement clause \
+         for the leave-prevention link effect (printed [All Turns][Once Per Turn])"
     );
 }
 
@@ -548,7 +591,185 @@ fn bt21_073_linked_dp_aura_increases_host_effective_dp() {
     );
 }
 
-// ─── Section 6 — Event log: link fires events ────────────────────────────────
+// ─── Section 6 — Link-ESS leave-replacement (scope: linked, [All Turns][OPT]) ─
+//
+// While Charismon is a LINK CARD on a host, when that host would leave the
+// battle area, the host's controller may trash 1 of the host's link cards to
+// prevent the leave. Printed [All Turns] [Once Per Turn]. BT25-101 pattern.
+
+#[test]
+fn bt21_073_linked_leave_replacement_accept_prevents_leave() {
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(0).start();
+    let host = r.place_on_field(0, "APPMON-LV4", Some(0));
+    r.push_linked_owned(host, CARD_ID, 0);
+    advance_to_main(&mut r);
+
+    let trash_before = r.trash_size(0);
+    r.game.delete_permanent_with_effects(host);
+
+    // "by trashing ... it doesn't leave" is a may — optional accept prompt.
+    assert!(
+        r.game.pending_selection.is_some(),
+        "linked leave-replacement offers the optional accept prompt"
+    );
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the replacement");
+
+    // The WHICH-link-card choice surfaces even with a single link card.
+    let pick = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("which-link-card prompt")
+        .valid_action_ids[0];
+    r.game.resolve_selection(0, pick).expect("pick link card");
+
+    assert_eq!(r.battle_area_size(0), 1, "the host did NOT leave");
+    assert_eq!(
+        r.game.player(0).battle_area[host.index as usize]
+            .linked_cards
+            .len(),
+        0,
+        "the chosen link card (Charismon) was trashed as the cost"
+    );
+    assert_eq!(
+        r.trash_size(0),
+        trash_before + 1,
+        "exactly the link card went to trash"
+    );
+}
+
+#[test]
+fn bt21_073_linked_leave_replacement_declined_lets_host_leave() {
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(0).start();
+    let host = r.place_on_field(0, "APPMON-LV4", Some(0));
+    r.push_linked_owned(host, CARD_ID, 0);
+    advance_to_main(&mut r);
+
+    r.game.delete_permanent_with_effects(host);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "the optional accept prompt is offered"
+    );
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline the replacement");
+
+    assert_eq!(r.battle_area_size(0), 0, "declined → the host leaves");
+}
+
+#[test]
+fn bt21_073_linked_leave_replacement_opt_lockout_same_turn() {
+    // Printed [Once Per Turn]: after the replacement prevents one leave, a
+    // second would-leave in the SAME turn must not be offered again.
+    // Link a filler card FIRST (linked index 0) and Charismon SECOND so the
+    // first accept can trash the filler while keeping Charismon (the effect
+    // carrier) linked.
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(0).start();
+    let host = r.place_on_field(0, "APPMON-LV4", Some(0));
+    r.push_linked_owned(host, "NON-APPMON-LV4", 0);
+    r.push_linked_owned(host, CARD_ID, 0);
+    advance_to_main(&mut r);
+
+    // First leave attempt: accept, trash the filler (choice 0 = linked index 0).
+    r.game.delete_permanent_with_effects(host);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "first leave attempt offers the replacement"
+    );
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept the replacement");
+    let pick = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("which-link-card prompt")
+        .valid_action_ids[0];
+    r.game.resolve_selection(0, pick).expect("trash the filler");
+
+    assert_eq!(r.battle_area_size(0), 1, "the host did NOT leave");
+    // Guard: Charismon (the carrier of the linked replacement) must still be linked.
+    let still_linked: Vec<String> = r.game.player(0).battle_area[host.index as usize]
+        .linked_cards
+        .iter()
+        .filter_map(|c| {
+            r.game
+                .card_data_for_handle(c.handle())
+                .map(|d| d.card_id.clone())
+        })
+        .collect();
+    assert_eq!(
+        still_linked,
+        vec![CARD_ID.to_string()],
+        "the filler was trashed; Charismon remains linked so its OPT state is testable"
+    );
+
+    // Second leave attempt SAME turn: [Once Per Turn] → not offered, host leaves.
+    r.game.delete_permanent_with_effects(host);
+    assert!(
+        r.game.pending_selection.is_none(),
+        "OPT lockout: the linked leave-replacement must NOT be offered twice in one turn"
+    );
+    assert_eq!(
+        r.battle_area_size(0),
+        0,
+        "with the OPT spent, the host leaves normally"
+    );
+}
+
+#[test]
+fn bt21_073_linked_leave_replacement_offered_again_next_turn() {
+    // [All Turns] + [Once Per Turn]: the OPT resets at turn end, so a leave in
+    // the NEXT turn (opponent's) is offered again.
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(0).start();
+    let host = r.place_on_field(0, "APPMON-LV4", Some(0));
+    r.push_linked_owned(host, "NON-APPMON-LV4", 0);
+    r.push_linked_owned(host, CARD_ID, 0);
+    advance_to_main(&mut r);
+
+    // Spend the OPT this turn (accept, trash the filler at linked index 0).
+    r.game.delete_permanent_with_effects(host);
+    assert!(r.game.pending_selection.is_some(), "first offer");
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept");
+    let pick = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("which-link-card prompt")
+        .valid_action_ids[0];
+    r.game.resolve_selection(0, pick).expect("trash the filler");
+    assert_eq!(r.battle_area_size(0), 1, "host stayed");
+
+    // Move to the opponent's turn — the OPT clears; [All Turns] still applies.
+    r.end_turn();
+
+    r.game.delete_permanent_with_effects(host);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "next turn ([All Turns]): the leave-replacement is offered again after the OPT resets"
+    );
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept on the opponent's turn");
+    let pick2 = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("which-link-card prompt (Charismon itself)")
+        .valid_action_ids[0];
+    r.game.resolve_selection(0, pick2).expect("trash Charismon");
+    assert_eq!(
+        r.battle_area_size(0),
+        1,
+        "the host survives again by trashing Charismon itself"
+    );
+}
+
+// ─── Section 7 — Event log: link fires events ────────────────────────────────
 
 #[test]
 fn bt21_073_when_linked_taunt_grant_fires_cleanly() {

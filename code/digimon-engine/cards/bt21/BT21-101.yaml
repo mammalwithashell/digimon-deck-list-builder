@@ -1,12 +1,15 @@
-# BT21-101 Gaiamon — Digimon, Lv.6, White, DP 13000, Play Cost 13.
+# BT21-101 Gaiamon — Digimon, Lv.6, White/Red (dual), DP 13000, Play Cost 13.
 # Traits: God, Appmon, Creation. Attribute: God.
+# Official Bandai DB (card_bundles/BT21-101.md): "Colors: White Red";
+# per-card JSON card_colors [4, 0] = [White, Red].
 #
 # ─── DCGO C# reference (authoritative): BT21/White/BT21_101.cs ──────────────
 #
 # ─── Printed text (card image — authoritative) ───────────────────────────────
 #
 # Digivolve boxes:
-#   Standard: printed evo_costs (Lv.5, white, cost 5) — represented in cards.json.
+#   Standard: printed evo_costs (Lv.5, RED, cost 5) — official bundle "Red Lv.5 /
+#     cost 5"; represented in the per-card JSON (evo_costs card_color: 0 = Red).
 #   Alt (Ult.): "Ult." trait on the host permanent → cost 5.
 #     DCGO: AddSelfDigivolutionRequirementStaticEffect(EqualsTraits("Ult."), 5,
 #           ignoreDigivolutionRequirement: false). No level gate — only trait gate.
@@ -81,7 +84,8 @@ card: BT21-101
 name: Gaiamon
 kind: digimon
 level: 6
-color: [white]
+# Printed color: White/Red dual (official DB "Colors: White Red"; JSON [4, 0]).
+color: [white, red]
 cost: 13
 dp: 13000
 traits: [God, Appmon, Creation]
@@ -116,8 +120,8 @@ effects:
     summary: "<Link +1> Gaiamon's maximum links raised by 1"
 
   # ─── Clause (c): [WD][WA] optional link 1 Appmon from hand/digivolve-sources ─
-  # Fires on [When Digivolving] AND [When Attacking]. The two timings share one
-  # OPT-group key (via shared_opt_group in lower_triggered multi-timing logic).
+  # Fires on [When Digivolving] AND [When Attacking]. No [Once Per Turn] tag in
+  # printed text → once_per_turn: false (each qualifying trigger fires).
   # optional: true — "you may" (canNoSelect:true in DCGO).
   # from: [hand, digivolution_sources] — mirrors DCGO's hasInHand + hasInSources.
   # to: chosen_own_digimon — DCGO SelectPermanentEffect over own battle-area Digimon.

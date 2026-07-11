@@ -40,14 +40,25 @@ cost: 5
 dp: 12000
 traits: [Mutant, Glowing Dawn, BEATBREAK]
 
-# Digimon-face digivolution. Color form (green Lv.5 — the cards.json evo table)
-# backfills the static evo_cost; the trait form expresses the printed
-# [Glowing Dawn] restriction. (Trait-gated `can_digivolve` is a separate
-# pre-existing engine limitation; see BT25-057.yaml note.)
+# Digimon-face digivolution (official Bandai DB / data/card_bundles/ST23-09.md
+# — authoritative for printed data):
+#   Standard circles: Green Lv.5 / cost 4 and Black Lv.5 / cost 4.
+#   Special condition: "Lv.5 w/ [Glowing Dawn] trait: Cost 3" (the ONLY cost-3
+#   route; DCGO ST23_09.cs registers exactly this one requirement).
+# Colour forms at the PRINTED cost 4 mirror the cards.json circles (production
+# dedups the equal-cost route) and backfill the static evo_cost table for
+# DSL-loaded fixtures (digivolve-as-Digimon + the Arts `can_digivolve` gate).
+# Do NOT author a colour form cheaper than the printed circle — that leaks a
+# trait-free cost-3 route into production (see
+# tests/alt_path_printed_cost_guard.rs and docs/examples/ST23-09-dual-card.yaml,
+# which authors exactly this shape).
 alt_paths:
   - kind: digivolve
     from: { level_eq: 5, color_is: green }
-    cost: 3
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
   - kind: digivolve
     from:
       all_of:

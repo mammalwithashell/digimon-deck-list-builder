@@ -209,15 +209,18 @@ fn bt21_043_on_play_when_digivolving_clause_is_not_optional() {
 fn bt21_043_has_link_condition_appmon_cost_2() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let has = card.effects.iter().any(|c| {
-        matches!(
-            c,
-            CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition { cost, .. }) if *cost == 2
-        )
+    // Printed link box: "[Appmon] trait: Cost 2" — assert BOTH the cost and the
+    // host filter (trait_has: Appmon), per DCGO AddSelfLinkConditionStaticEffect(
+    // HasAppmonTraits, linkCost: 2).
+    let has = card.effects.iter().any(|c| match c {
+        CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition {
+            cost, filter, ..
+        }) => *cost == 2 && filter.trait_has.as_deref() == Some("Appmon"),
+        _ => false,
     });
     assert!(
         has,
-        "BT21-043 must have a self link-condition with cost 2 (filter: Appmon)"
+        "BT21-043 must have a self link-condition with cost 2 and host filter trait_has: Appmon"
     );
 }
 

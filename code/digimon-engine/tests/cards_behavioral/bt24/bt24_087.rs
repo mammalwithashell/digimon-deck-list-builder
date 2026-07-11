@@ -6,20 +6,22 @@
 //! [Your Turn] When any of your Digimon get linked, by suspending this Tamer,
 //!   <Draw 1> (Draw 1 card from your deck.) and trash 1 card in your hand.
 //!   Then, 1 of your Digimon may app fuse into a Digimon card with the [System],
-//!   [Life] or [Transmutation (App Name)] trait in the trash.
+//!   [Life] or [Transmutation] trait in the trash.
 //! [Security] Play this card without paying the cost.
 //!
-//! # Gaps and omissions
-//! The "Then, 1 of your Digimon may app fuse into a Digimon card with the
-//! [System], [Life] or [Transmutation (App Name)] trait in the trash."
-//! rider is OMITTED — no engine primitive for effect-initiated App Fusion
-//! (`EffectContext::effect_initiated_app_fuse` / DSL `app_fuse` step).
-//! Gap: effect-initiated app fuse — see docs/RUST_ENGINE_GAPS.md (App Fuse entry).
-//! Same gap keeps BT21-084 and BT25-089 PARTIAL.
+//! # Coverage
+//! All clauses implemented, including the "Then, 1 of your Digimon may app
+//! fuse into a Digimon card with the [System], [Life] or [Transmutation]
+//! trait in the trash." rider — shipped via the effect-initiated `app_fuse`
+//! DSL step (`EffectContext::initiate_effect_app_fuse`, 2026-06-13).
 //!
-//! The "<Draw 1> and trash 1 card in your hand" portion IS implemented.
+//! Known substrate nuance (not YAML-fixable): DCGO makes the result-card
+//! pick mandatory once a host permanent is chosen (`canNoSelect: () => false`);
+//! our shared `initiate_effect_app_fuse` exposes PASS at both selection
+//! steps when `optional: true`. Trash is public information, so this only
+//! adds a redundant decline point to the action space.
 //!
-//! # Verdict: PARTIAL
+//! # Verdict: FULL
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/BT24/Purple/BT24_087.cs
@@ -86,6 +88,13 @@ fn bt24_087_yaml_printed_metadata() {
     let card = runner.compiled_card(CARD_ID).expect("present in pack");
     assert_eq!(card.name, "Rei Katsura");
     assert_eq!(card.kind, CompiledCardKind::Tamer);
+    // Printed: Purple, play cost 3, traits App Driver / Appmon.
+    assert_eq!(card.cost, Some(3), "printed play cost is 3");
+    assert_eq!(
+        card.traits,
+        vec!["App Driver".to_string(), "Appmon".to_string()],
+        "printed traits: App Driver / Appmon"
+    );
 }
 
 #[test]
@@ -285,6 +294,13 @@ fn bt24_087_accept_suspend_draw_then_trash_one_hand_card() {
         r.game.players[0].trash.len(),
         trash_before + 1,
         "trash must grow by exactly 1"
+    );
+    // Nothing app-fuse-eligible in trash → the "Then, ... may app fuse" tail
+    // silently no-ops (DCGO HasMatchConditionOwnersPermanent guard) and the
+    // effect completes with no lingering prompt.
+    assert!(
+        r.pending_selection().is_none(),
+        "no app-fuse-eligible card in trash → effect must end cleanly after the trash step"
     );
 }
 
@@ -592,5 +608,70 @@ alt_paths:
             .valid_action_ids
             .contains(&(TRASH_EFFECT_START + plain_pos as u16)),
         "the no-trait result is filtered out"
+    );
+}
+
+/// The app-fuse tail is "may" (optional): PASS at the host selection declines
+/// the fuse — the host keeps its top card and the result stays in the trash,
+/// while the already-resolved suspend/draw/trash portions stand.
+#[test]
+fn bt24_087_app_fuse_decline_via_pass() {
+    use digimon_engine::action::space::PASS;
+
+    let mut r = base()
+        .from_dsl_yaml(APP_FUSE_RESULT_SYSTEM)
+        .expect("APP_FUSE_RESULT_SYSTEM compiles")
+        .add_card(named_material("TEST-KABEMON", "Kabemon"))
+        .add_card(named_material("TEST-GOMIMON", "Gomimon"))
+        .deck(0, &["DECK-PAD"; 12])
+        .hand(0, &["HAND-CARD"])
+        .memory(5)
+        .start();
+    let rei = r.place_on_field(0, CARD_ID, Some(0));
+    let host = r.place_on_field(0, "TEST-KABEMON", Some(0));
+    seed_trash(&mut r, 0, "TEST-APPFUSE-SYS");
+    r.game.enter_main_phase();
+
+    let host_handle = r.perm_handle(0, host.index as usize);
+    fire_link_event(&mut r, 0, host_handle, "TEST-GOMIMON");
+
+    // Accept outer optional prompt, then resolve mandatory trash-1-hand.
+    for _ in 0..2 {
+        let sel = r.game.pending_selection.as_ref().expect("prompt");
+        let action = sel.valid_action_ids[0];
+        let _ = r.game.resolve_selection(0, action);
+        r.game.drain_effect_queue();
+    }
+
+    // App-fuse host selection is installed and optional → PASS declines.
+    assert!(
+        r.pending_selection().is_some(),
+        "app-fuse host selection must be installed"
+    );
+    let _ = r.game.resolve_selection(0, PASS);
+    r.game.drain_effect_queue();
+
+    assert_eq!(
+        r.game.players[0].battle_area[host.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "TEST-KABEMON",
+        "declining the app fuse must leave the host unchanged"
+    );
+    assert!(
+        r.game.players[0]
+            .trash
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "TEST-APPFUSE-SYS"),
+        "declining the app fuse must leave the result card in the trash"
+    );
+    // The suspend/draw/trash portions already resolved and must stand.
+    assert!(
+        r.game.players[0].battle_area[rei.index as usize].is_suspended,
+        "Rei stays suspended — the activation cost was already paid"
+    );
+    assert!(
+        r.pending_selection().is_none(),
+        "declining the app fuse ends the effect cleanly"
     );
 }

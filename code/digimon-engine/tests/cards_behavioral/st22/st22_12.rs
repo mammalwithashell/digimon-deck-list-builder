@@ -29,16 +29,18 @@
 //! # Patterns this test covers
 //! - H9  <Raid>
 //! - E2  [When Attacking][OPT] optional decline
-//! - C   link_card_to_self from hand / digivolution_sources
+//! - C   link_card_to_self from hand / digivolution_sources (cost: reduce 2)
 //! - Link box: link_condition (Appmon host, cost 2) + DP aura +3000
-//! - scope: linked when_linked return-to-bottom mechanic
+//! - scope: linked when_linked return-to-bottom mechanic (top card only;
+//!   digivolution sources trashed — DCGO DeckBottomBounceClass parity)
 //! - App Fusion alt-path structural check
+//! - Stnd. alt-digivolve circle structural check (cost 3, no level gate)
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
-    CompiledTriggeredClause,
+    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
+    CompiledTiming, CompiledTriggeredClause,
 };
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
@@ -206,6 +208,46 @@ fn st22_12_has_link_condition_appmon_cost_2() {
     assert!(
         has_lc,
         "ST22-12 must declare a self link-condition with cost 2"
+    );
+}
+
+/// The [Stnd.] trait alt-digivolve circle: kind Digivolve, cost 3, gated on
+/// the "Stnd." trait with NO level gate and no color gate (the rainbow
+/// "Stnd. / 3" circle on the card face; DCGO
+/// AddSelfDigivolutionRequirementStaticEffect(EqualsTraits("Stnd."), cost 3)).
+#[test]
+fn st22_12_has_stnd_alt_digivolve_path_cost_3_no_level_gate() {
+    let r = stddecks(base()).start();
+    let card = r.compiled_card(CARD_ID).expect("present");
+    let digivolve_paths: Vec<_> = card
+        .alt_paths
+        .iter()
+        .filter(|ap| ap.kind == CompiledAltPathKind::Digivolve)
+        .collect();
+    assert_eq!(
+        digivolve_paths.len(),
+        1,
+        "exactly one alt digivolve path (the Stnd. circle); \
+         standard Lv.3 red/blue circles live in evo_costs metadata"
+    );
+    let ap = digivolve_paths[0];
+    assert_eq!(
+        ap.cost,
+        Some(CompiledCost::Literal(3)),
+        "Stnd. circle digivolve cost is 3"
+    );
+    let from = ap
+        .from
+        .as_ref()
+        .expect("Stnd. alt path must carry a from predicate");
+    assert_eq!(
+        from.trait_has.as_deref(),
+        Some("Stnd."),
+        "gate is the Stnd. trait"
+    );
+    assert!(
+        from.level_eq.is_none(),
+        "no level gate on the Stnd. circle (DCGO has trait-only condition)"
     );
 }
 
@@ -605,12 +647,20 @@ fn st22_12_opt_clears_after_end_turn() {
 
 /// Directly linking ST22-12 onto a host via the engine primitive fires the
 /// [When Linking] return-to-deck prompt targeting opponent's ≤5000 DP Digimon.
+///
+/// The bounced Digimon carries a digivolution source: per the standard
+/// leave-field rule (and DCGO DeckBottomBounceClass — `DiscardEvoRoots()`
+/// then only `topCard` → AddLibraryBottomCards), ONLY the top card goes to
+/// the deck bottom; the source is trashed.
 #[test]
 fn st22_12_when_linked_prompts_return_opp_le5000_dp_digimon() {
     let mut r = base().hand(0, &[CARD_ID]).memory(10).start();
     // P1 has a weak (4000 DP) and a strong (6000 DP) Digimon on field.
-    let _opp_weak_perm = r.place_on_field(1, "OPP-WEAK", Some(0));
+    let opp_weak_perm = r.place_on_field(1, "OPP-WEAK", Some(0));
     let _opp_strong_perm = r.place_on_field(1, "OPP-STRONG", Some(0));
+    // Give the weak Digimon a digivolution source — it must be TRASHED on the
+    // bounce, not returned to the deck.
+    r.push_source(opp_weak_perm, "FILLER");
     // P0 has a host Digimon.
     let host = r.place_on_field(0, "HOST", Some(0));
     r.game.enter_main_phase();
@@ -638,6 +688,8 @@ fn st22_12_when_linked_prompts_return_opp_le5000_dp_digimon() {
     );
 
     let prev_battle = r.game.player(1).battle_area.len();
+    let prev_deck = r.game.player(1).deck.len();
+    let prev_trash = r.game.player(1).trash.len();
     let ret_action = valid[0];
     let _ = r.game.resolve_selection(0, ret_action);
 
@@ -646,10 +698,16 @@ fn st22_12_when_linked_prompts_return_opp_le5000_dp_digimon() {
         prev_battle - 1,
         "selected opp Digimon must leave the battle area"
     );
-    // The deck received the bounced Digimon (+ its sources).
-    assert!(
-        r.game.player(1).deck.len() >= 1,
-        "bounced Digimon must appear on the deck"
+    // Top card only to the deck bottom; the digivolution source to the trash.
+    assert_eq!(
+        r.game.player(1).deck.len(),
+        prev_deck + 1,
+        "exactly the TOP card of the bounced Digimon goes to the deck bottom"
+    );
+    assert_eq!(
+        r.game.player(1).trash.len(),
+        prev_trash + 1,
+        "the bounced Digimon's digivolution source must be trashed, not decked"
     );
 }
 

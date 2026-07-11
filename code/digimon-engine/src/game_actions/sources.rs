@@ -388,6 +388,13 @@ impl Game {
             }
         }
 
+        // The source has left the stack — refresh materialized declaratives so
+        // continuous grants sourced from the departed card stop applying
+        // immediately (same contract as `fire_digivolution_card_trashed`).
+        // The top-of-deck route fires no observer, so this is its only
+        // recomputation before the next decode-boundary tick.
+        self.tick_declarative_effects();
+
         // Exposed-Digi-Egg cleanup (mirrors the facade trash path).
         let exposed = self
             .player(perm.player)
