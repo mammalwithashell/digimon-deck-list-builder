@@ -31,7 +31,7 @@ use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardHandle;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
 use digimon_engine::effect::{CardEffect, Effect, EffectBuilder};
-use digimon_engine::enums::{CardKind, CostDelta, EffectTiming, PlayerId, PlaySource};
+use digimon_engine::enums::{CardKind, CostDelta, EffectTiming, PlaySource, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 use std::sync::{Arc, Mutex};
 
@@ -129,8 +129,20 @@ fn fires_when_own_effect_trashes_own_hand() {
         .deck(1, &["F"; 10])
         .memory(10)
         .start();
-    r.register_effect("OBS", Arc::new(DiscardHandObserver { own_only: true, fired: fired.clone() }));
-    r.register_effect("TRIG", Arc::new(DiscardTrigger { count: 1, trash_opponent: false }));
+    r.register_effect(
+        "OBS",
+        Arc::new(DiscardHandObserver {
+            own_only: true,
+            fired: fired.clone(),
+        }),
+    );
+    r.register_effect(
+        "TRIG",
+        Arc::new(DiscardTrigger {
+            count: 1,
+            trash_opponent: false,
+        }),
+    );
     r.game.turn_count = 1;
     r.game.turn_player_idx = 0;
 
@@ -161,8 +173,20 @@ fn does_not_fire_for_own_only_when_opponent_effect_trashes_your_hand() {
         .deck(1, &["F"; 10])
         .memory(10)
         .start();
-    r.register_effect("OBS", Arc::new(DiscardHandObserver { own_only: true, fired: fired.clone() }));
-    r.register_effect("TRIG-OPP", Arc::new(DiscardTrigger { count: 1, trash_opponent: true }));
+    r.register_effect(
+        "OBS",
+        Arc::new(DiscardHandObserver {
+            own_only: true,
+            fired: fired.clone(),
+        }),
+    );
+    r.register_effect(
+        "TRIG-OPP",
+        Arc::new(DiscardTrigger {
+            count: 1,
+            trash_opponent: true,
+        }),
+    );
     r.game.turn_count = 1;
     r.game.turn_player_idx = 1;
 
@@ -195,8 +219,20 @@ fn hand_owner_gate_fires_when_your_hand_trashed_by_opponent_effect() {
         .deck(1, &["F"; 10])
         .memory(10)
         .start();
-    r.register_effect("OBS", Arc::new(DiscardHandObserver { own_only: false, fired: fired.clone() }));
-    r.register_effect("TRIG-OPP", Arc::new(DiscardTrigger { count: 1, trash_opponent: true }));
+    r.register_effect(
+        "OBS",
+        Arc::new(DiscardHandObserver {
+            own_only: false,
+            fired: fired.clone(),
+        }),
+    );
+    r.register_effect(
+        "TRIG-OPP",
+        Arc::new(DiscardTrigger {
+            count: 1,
+            trash_opponent: true,
+        }),
+    );
     r.game.turn_count = 1;
     r.game.turn_player_idx = 1;
 
@@ -228,8 +264,20 @@ fn does_not_fire_when_opponents_hand_is_trashed() {
         .deck(1, &["F"; 10])
         .memory(10)
         .start();
-    r.register_effect("OBS", Arc::new(DiscardHandObserver { own_only: false, fired: fired.clone() }));
-    r.register_effect("TRIG-OPP", Arc::new(DiscardTrigger { count: 1, trash_opponent: true }));
+    r.register_effect(
+        "OBS",
+        Arc::new(DiscardHandObserver {
+            own_only: false,
+            fired: fired.clone(),
+        }),
+    );
+    r.register_effect(
+        "TRIG-OPP",
+        Arc::new(DiscardTrigger {
+            count: 1,
+            trash_opponent: true,
+        }),
+    );
     r.game.turn_count = 1;
     r.game.turn_player_idx = 0;
 
@@ -260,8 +308,20 @@ fn multi_card_discard_fires_one_batch_event() {
         .deck(1, &["F"; 10])
         .memory(10)
         .start();
-    r.register_effect("OBS", Arc::new(DiscardHandObserver { own_only: false, fired: fired.clone() }));
-    r.register_effect("TRIG3", Arc::new(DiscardTrigger { count: 3, trash_opponent: false }));
+    r.register_effect(
+        "OBS",
+        Arc::new(DiscardHandObserver {
+            own_only: false,
+            fired: fired.clone(),
+        }),
+    );
+    r.register_effect(
+        "TRIG3",
+        Arc::new(DiscardTrigger {
+            count: 3,
+            trash_opponent: false,
+        }),
+    );
     r.game.turn_count = 1;
     r.game.turn_player_idx = 0;
 
@@ -290,7 +350,13 @@ fn does_not_fire_on_mulligan_redraw() {
         .deck(0, &["F"; 20])
         .deck(1, &["F"; 20])
         .build();
-    r.register_effect("OBS", Arc::new(DiscardHandObserver { own_only: false, fired: fired.clone() }));
+    r.register_effect(
+        "OBS",
+        Arc::new(DiscardHandObserver {
+            own_only: false,
+            fired: fired.clone(),
+        }),
+    );
     // Place the observer so it could react if the redraw wrongly fired the event.
     let _obs = r.place_on_field(0, "OBS", Some(0));
 
@@ -336,7 +402,12 @@ fn played_by_effect_is_true_when_played_by_an_effect() {
         .deck(1, &["F"; 10])
         .memory(10)
         .start();
-    r.register_effect("SUBJECT", Arc::new(PlayedByEffectRecorder { saw_by_effect: saw.clone() }));
+    r.register_effect(
+        "SUBJECT",
+        Arc::new(PlayedByEffectRecorder {
+            saw_by_effect: saw.clone(),
+        }),
+    );
     r.game.turn_count = 1;
     r.game.turn_player_idx = 0;
 
@@ -363,7 +434,12 @@ fn played_by_effect_is_false_for_a_normal_hand_play() {
         .deck(1, &["F"; 10])
         .memory(10)
         .start();
-    r.register_effect("SUBJECT", Arc::new(PlayedByEffectRecorder { saw_by_effect: saw.clone() }));
+    r.register_effect(
+        "SUBJECT",
+        Arc::new(PlayedByEffectRecorder {
+            saw_by_effect: saw.clone(),
+        }),
+    );
     r.game.turn_count = 1;
     r.game.turn_player_idx = 0;
 

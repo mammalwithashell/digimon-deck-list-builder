@@ -297,8 +297,7 @@ fn bt18_060_cost_reduction_clause_is_authored_as_scope_inherited() {
         .iter()
         .filter_map(|c| match c {
             CompiledClause::Declarative(CompiledDeclarativeClause::CostReduction {
-                scope,
-                ..
+                scope, ..
             }) => Some(*scope),
             _ => None,
         })
@@ -581,7 +580,11 @@ fn bt18_060_on_play_bucket2_places_exact_name_vemmon_as_chosen_digimon_source() 
     let sources_before = runner.game.players[0].battle_area[host.index as usize]
         .card_sources
         .len();
-    stack_deck_top(&mut runner, 0, &["F060-D", "F060-EXACT", "F060-BUCKET1-FODDER"]);
+    stack_deck_top(
+        &mut runner,
+        0,
+        &["F060-D", "F060-EXACT", "F060-BUCKET1-FODDER"],
+    );
 
     let process = on_play_process(&runner);
     {
@@ -637,8 +640,7 @@ fn bt18_060_on_play_both_buckets_fire_independently_same_resolution() {
     let text_card = make_vemmon_text_card("F060-TEXT2");
     let mut exact = make_test_card("F060-EXACT2", "Vemmon");
     exact.effect_text = String::new();
-    let (mut runner, host) =
-        runner_with_own_digimon(vec![text_card, exact, make_filler("F060-E")]);
+    let (mut runner, host) = runner_with_own_digimon(vec![text_card, exact, make_filler("F060-E")]);
     let src = runner.top_card(host);
     let sources_before = runner.game.players[0].battle_area[host.index as usize]
         .card_sources
@@ -993,10 +995,9 @@ fn bt18_060_face_up_cost_reduction_does_not_fire_for_non_vemmon_text_target() {
     let hand_idx = push_to_hand(&mut runner, 0, "F060-PLAIN-TARGET");
 
     let memory_before = runner.game.memory;
-    let _ =
-        runner
-            .game
-            .digivolve_from_hand(0, hand_idx, vemmon.index as usize, PlaySource::ByHand);
+    let _ = runner
+        .game
+        .digivolve_from_hand(0, hand_idx, vemmon.index as usize, PlaySource::ByHand);
 
     assert_eq!(
         runner.game.memory,
@@ -1034,17 +1035,22 @@ fn bt18_060_inherited_cost_reduction_fires_when_buried() {
         vemmon.index as usize,
         PlaySource::ByHand,
     );
-    assert!(carrier_evo, "Vemmon must digivolve into the plain Lv.4 carrier");
+    assert!(
+        carrier_evo,
+        "Vemmon must digivolve into the plain Lv.4 carrier"
+    );
 
     // Now digivolve the resulting permanent (Vemmon buried beneath the Lv.4
     // carrier) into the [Vemmon]-text Lv.5 target.
     let target_hand_idx = push_to_hand(&mut runner, 0, "F060-TARGET5");
     let memory_before = runner.game.memory;
     let cp = runner.event_checkpoint();
-    let target_evo =
-        runner
-            .game
-            .digivolve_from_hand(0, target_hand_idx, vemmon.index as usize, PlaySource::ByHand);
+    let target_evo = runner.game.digivolve_from_hand(
+        0,
+        target_hand_idx,
+        vemmon.index as usize,
+        PlaySource::ByHand,
+    );
     assert!(
         target_evo,
         "the carrier (with buried Vemmon) must digivolve into the [Vemmon]-text Lv.5"
@@ -1115,7 +1121,10 @@ fn bt18_060_cross_position_face_up_pays_full_then_buried_reduces_once() {
         runner
             .game
             .digivolve_from_hand(0, top_hand_idx, vemmon.index as usize, PlaySource::ByHand);
-    assert!(leg2, "leg 2: the carrier digivolves into the Vemmon-text Lv.5");
+    assert!(
+        leg2,
+        "leg 2: the carrier digivolves into the Vemmon-text Lv.5"
+    );
     let memory_after_leg2 = runner.game.memory;
 
     assert_eq!(
@@ -1156,7 +1165,10 @@ fn bt18_060_buried_cost_reduction_fires_for_name_only_cost_target() {
         vemmon.index as usize,
         PlaySource::ByHand,
     );
-    assert!(carrier_evo, "Vemmon must digivolve into the plain Lv.4 carrier");
+    assert!(
+        carrier_evo,
+        "Vemmon must digivolve into the plain Lv.4 carrier"
+    );
 
     let hand_idx = push_to_hand(&mut runner, 0, "F060-NAMEONLY-TARGET");
     let memory_before = runner.game.memory;

@@ -286,8 +286,14 @@ fn bt18_013_has_gazimon_gizamon_alt_digivolve_path() {
                 .as_ref()
                 .is_some_and(|f| f.name_is.as_deref() == Some("Gizamon"))
     });
-    assert!(has_gazimon, "must have a Gazimon → cost 2 alt-digivolve path");
-    assert!(has_gizamon, "must have a Gizamon → cost 2 alt-digivolve path");
+    assert!(
+        has_gazimon,
+        "must have a Gazimon → cost 2 alt-digivolve path"
+    );
+    assert!(
+        has_gizamon,
+        "must have a Gizamon → cost 2 alt-digivolve path"
+    );
 }
 
 // ─── SECTION 2 — Runtime keyword presence (grant_keyword materialization) ────
@@ -582,9 +588,10 @@ fn bt18_013_when_digivolving_also_offers_the_trash_cost() {
     let deltamon = place_deltamon(&mut runner);
     let _fodder = push_to_hand(&mut runner, 0, "FILLER");
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(deltamon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(deltamon),
+    );
     runner.game.drain_effect_queue();
 
     assert!(
@@ -600,9 +607,10 @@ fn bt18_013_when_digivolving_no_prompt_with_empty_hand() {
     let deltamon = place_deltamon(&mut runner);
     // Hand is empty.
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(deltamon));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(deltamon),
+    );
     runner.game.drain_effect_queue();
 
     assert!(

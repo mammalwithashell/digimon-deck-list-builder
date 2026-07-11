@@ -64,7 +64,10 @@ fn search_finds_forced_win_over_losing_pass() {
     run_big_stack(|| {
         let mut cards = HashMap::new();
         cards.insert("ATK".to_string(), make_digimon("ATK", CardColor::Red, 5000));
-        cards.insert("DEF".to_string(), make_digimon("DEF", CardColor::Blue, 3000));
+        cards.insert(
+            "DEF".to_string(),
+            make_digimon("DEF", CardColor::Blue, 3000),
+        );
 
         let mut r = DebugRunner::builder()
             .with_card_data(cards.clone())
@@ -83,7 +86,10 @@ fn search_finds_forced_win_over_losing_pass() {
         assert_eq!(r.security_count(opp), 0);
         let mask = digimon_engine::build_action_mask(&r.game, tp);
         let win_action = encode_attack(0, SECURITY_TARGET);
-        assert_eq!(mask[win_action as usize], 1.0, "attack-player must be legal");
+        assert_eq!(
+            mask[win_action as usize], 1.0,
+            "attack-player must be legal"
+        );
         assert_eq!(mask[PASS as usize], 1.0, "PASS must be legal");
 
         let registry = CardRegistry::from_cards(&cards);
@@ -139,7 +145,10 @@ fn q_does_not_flip_across_consecutive_same_player_decisions() {
     run_big_stack(|| {
         let mut cards = HashMap::new();
         cards.insert("ATK".to_string(), make_digimon("ATK", CardColor::Red, 5000));
-        cards.insert("DEF".to_string(), make_digimon("DEF", CardColor::Blue, 3000));
+        cards.insert(
+            "DEF".to_string(),
+            make_digimon("DEF", CardColor::Blue, 3000),
+        );
         cards.insert("EGG".to_string(), make_test_egg("EGG", "Test Egg"));
 
         let mut r = DebugRunner::builder()

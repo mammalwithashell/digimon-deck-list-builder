@@ -35,6 +35,7 @@ on:
 jobs:
   clone-safety-and-both-path:
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -62,10 +63,30 @@ jobs:
       # The full per-card behavioral suite is the both-path parity gate: it runs
       # resume-flipped installers through the data VM and the rest through the
       # legacy closure executor in the same process.
-      - name: Both-path parity (cards_behavioral)
+      # Compile separately so the test process stays below GitHub's long-running
+      # step cancellation window on cold runners.
+      - name: Compile both-path parity suite
         env:
           RUST_MIN_STACK: "268435456"
-        run: cargo test -p digimon-engine --test cards_behavioral
+        run: cargo test -p digimon-engine --test cards_behavioral --no-run
+
+      # Libtest filters are substring based. These three commands partition the
+      # full suite without overlap: BT tests, non-BT EX tests, then everything
+      # containing neither marker.
+      - name: Both-path parity (BT cards)
+        env:
+          RUST_MIN_STACK: "268435456"
+        run: cargo test -p digimon-engine --test cards_behavioral bt -- --test-threads=8
+
+      - name: Both-path parity (EX cards)
+        env:
+          RUST_MIN_STACK: "268435456"
+        run: cargo test -p digimon-engine --test cards_behavioral ex -- --test-threads=8 --skip bt
+
+      - name: Both-path parity (remaining cards)
+        env:
+          RUST_MIN_STACK: "268435456"
+        run: cargo test -p digimon-engine --test cards_behavioral -- --test-threads=8 --skip bt --skip ex
 
       # The DSL behavioral + archetype/interaction tests round out the gate.
       - name: DSL behavioral tests

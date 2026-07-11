@@ -326,8 +326,8 @@ fn zenith_with_two_attackers_two_vemmon_sources_each() -> DebugRunner {
         .deck(
             0,
             &[
-                "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD",
-                "DECK-PAD", "DECK-PAD",
+                "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD", "DECK-PAD",
+                "DECK-PAD",
             ],
         )
         .memory(10)
@@ -340,7 +340,10 @@ fn zenith_with_two_attackers_two_vemmon_sources_each() -> DebugRunner {
     // Give the opponent's Digimon an extra digivolution source so it can
     // absorb a De-Digivolve without being deleted at level floor.
     runner.push_source(
-        digimon_engine::permanent::PermanentHandle { player: 1, index: 0 },
+        digimon_engine::permanent::PermanentHandle {
+            player: 1,
+            index: 0,
+        },
         "OPP-DEF",
     );
     runner

@@ -378,7 +378,11 @@ fn bt23_027_alt_digivolve_from_named_patamon_at_cost_2() {
     let before = runner.memory();
     runner.game.decode_action(action, 0);
 
-    assert_eq!(runner.memory(), before - 2, "cost-2 alt path must be charged");
+    assert_eq!(
+        runner.memory(),
+        before - 2,
+        "cost-2 alt path must be charged"
+    );
     assert_eq!(
         runner.game.players[0].battle_area[base_perm.index as usize]
             .top_card()
@@ -402,7 +406,11 @@ fn bt23_027_alt_digivolve_from_lv3_cs_trait_at_cost_2() {
     let before = runner.memory();
     runner.game.decode_action(action, 0);
 
-    assert_eq!(runner.memory(), before - 2, "cost-2 alt path must be charged");
+    assert_eq!(
+        runner.memory(),
+        before - 2,
+        "cost-2 alt path must be charged"
+    );
 }
 
 #[test]
@@ -420,7 +428,11 @@ fn bt23_027_standard_digivolve_from_yellow_lv3_at_cost_3() {
     let before = runner.memory();
     runner.game.decode_action(action, 0);
 
-    assert_eq!(runner.memory(), before - 3, "standard path must charge cost 3");
+    assert_eq!(
+        runner.memory(),
+        before - 3,
+        "standard path must charge cost 3"
+    );
 }
 
 #[test]
@@ -506,10 +518,7 @@ fn bt23_027_on_play_draws_one_card_unconditionally() {
 /// matching the printed "2 of your Digimon" (no forced "this Digimon").
 #[test]
 fn bt23_027_on_play_your_turn_installs_dna_anchor_prompt_when_eligible() {
-    let mut runner = base()
-        .hand(0, &[CARD_ID, "SHAKKOUMON"])
-        .memory(10)
-        .start();
+    let mut runner = base().hand(0, &[CARD_ID, "SHAKKOUMON"]).memory(10).start();
     runner.place_on_field(0, "OWN-PARTNER", Some(0));
 
     runner.play(0, 0).expect("play Angemon");
@@ -526,10 +535,7 @@ fn bt23_027_on_play_your_turn_installs_dna_anchor_prompt_when_eligible() {
 /// (Angemon, OWN-PARTNER) pair.
 #[test]
 fn bt23_027_on_play_your_turn_dna_digivolve_completes_into_shakkoumon() {
-    let mut runner = base()
-        .hand(0, &[CARD_ID, "SHAKKOUMON"])
-        .memory(10)
-        .start();
+    let mut runner = base().hand(0, &[CARD_ID, "SHAKKOUMON"]).memory(10).start();
     let partner = runner.place_on_field(0, "OWN-PARTNER", Some(0));
 
     let angemon_field_idx = runner.play(0, 0).expect("play Angemon");
@@ -540,7 +546,9 @@ fn bt23_027_on_play_your_turn_dna_digivolve_completes_into_shakkoumon() {
         .expect("DNA anchor OwnField selection");
     assert_eq!(anchor_view.kind, SelectionKind::OwnField);
     assert!(
-        anchor_view.valid_action_ids.contains(&encode_permanent(angemon)),
+        anchor_view
+            .valid_action_ids
+            .contains(&encode_permanent(angemon)),
         "the played Angemon must be a legal anchor candidate"
     );
     assert!(
@@ -564,7 +572,9 @@ fn bt23_027_on_play_your_turn_dna_digivolve_completes_into_shakkoumon() {
         "OWN-PARTNER must be offered as the DNA partner"
     );
     assert!(
-        !partner_view.valid_action_ids.contains(&encode_permanent(angemon)),
+        !partner_view
+            .valid_action_ids
+            .contains(&encode_permanent(angemon)),
         "the chosen anchor must be excluded from its own partner prompt"
     );
     runner
@@ -621,10 +631,7 @@ fn bt23_027_dna_offer_excludes_non_shakkoumon_hand_card() {
 /// -> no eligible partner -> DNA step is a silent no-op.
 #[test]
 fn bt23_027_dna_offer_skipped_with_no_eligible_partner() {
-    let mut runner = base()
-        .hand(0, &[CARD_ID, "SHAKKOUMON"])
-        .memory(10)
-        .start();
+    let mut runner = base().hand(0, &[CARD_ID, "SHAKKOUMON"]).memory(10).start();
 
     runner.play(0, 0).expect("play Angemon");
     runner.auto_resolve().ok();
@@ -659,9 +666,10 @@ fn bt23_027_when_digivolving_on_opponents_turn_skips_dna_offer_but_still_draws()
     runner.end_turn(); // now it's player 1's turn
 
     let deck_before = runner.deck_size(0);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(stack));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(stack),
+    );
     runner.game.drain_effect_queue();
     runner.auto_resolve().ok();
 

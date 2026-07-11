@@ -71,7 +71,7 @@ use digimon_dsl::compiled::{
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{CardColor, CardKind, PlayerId, PlaySource};
+use digimon_engine::enums::{CardColor, CardKind, PlaySource, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::PendingSelection;
 use digimon_engine::{EffectTiming, TriggerSource};
@@ -186,7 +186,9 @@ fn bt12_038_metadata_matches_printed() {
         "must be Red"
     );
     assert!(
-        card.traits.iter().any(|t| t.eq_ignore_ascii_case("Dinosaur")),
+        card.traits
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case("Dinosaur")),
         "must have Dinosaur trait; got {:?}",
         card.traits
     );
@@ -241,9 +243,7 @@ fn bt12_038_clause2_is_inherited_on_suspend_opt() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSuspend) => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSuspend) => Some(t),
             _ => None,
         })
         .expect("an OnSuspend clause must exist");
@@ -392,7 +392,11 @@ fn bt12_038_when_digivolving_no_marcus_in_hand_installs_no_prompt() {
     let mut runner = DebugRunner::builder()
         .dsl_card("BT12-038")
         .expect("BT12-038 in pack")
-        .add_card(make_tamer("OTHER-TAMER", "Some Other Tamer", CardColor::Yellow))
+        .add_card(make_tamer(
+            "OTHER-TAMER",
+            "Some Other Tamer",
+            CardColor::Yellow,
+        ))
         .hand(0, &["OTHER-TAMER"])
         .memory(10)
         .start();

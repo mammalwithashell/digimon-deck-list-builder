@@ -1,0 +1,124 @@
+card: EX12-016
+name: MetalGreymon
+kind: digimon
+level: 5
+color: [red, black]
+cost: 7
+dp: 7000
+traits: [Cyborg, ME, VB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - name_contains: Greymon
+            - trait_has: ME
+            - trait_has: VB
+    cost: 3
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_lte: 4
+            - any_of:
+                - name_contains: Agumon
+                - name_contains: Greymon
+                - trait_has: ME
+                - trait_has: VB
+        zones: [trash]
+        stack_under: true
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode (Lv.4 or lower w/[Agumon]/[Greymon] in name or [ME]/[VB])>"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - name_contains: Agumon
+                  - name_contains: Greymon
+                  - trait_has: ME
+                  - trait_has: VB
+          prompt: "Choose a level 4 or lower [Agumon]/[Greymon]/[ME]/[VB] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 opponent Digimon with 6000 DP or less; then give 1 of their Digimon a mandatory Start-of-Main attack"
+    process:
+      - select_opponent_permanent:
+          bind_as: delete_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 6000
+          prompt: "Delete 1 opponent Digimon with 6000 DP or less"
+      - delete_permanent: { target: delete_target }
+      - select_opponent_permanent:
+          bind_as: forced_target
+          filter: { kind: digimon }
+          prompt: "Give 1 opponent Digimon '[Start of Your Main Phase] This Digimon attacks.'"
+      - grant_triggered_effect:
+          target: forced_target
+          timing: start_of_your_main_phase
+          expiry: end_of_opponents_turn
+          body:
+            - force_attack:
+                attacker: carrier
+                targets: any
+                prompt: "This Digimon attacks"
+
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "[Inherited] <Decode (Lv.4 or lower w/[Agumon]/[Greymon] in name or [ME]/[VB])>"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source_inherited
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - name_contains: Agumon
+                  - name_contains: Greymon
+                  - trait_has: ME
+                  - trait_has: VB
+          prompt: "Choose a level 4 or lower [Agumon]/[Greymon]/[ME]/[VB] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source_inherited
+          cost_delta: free

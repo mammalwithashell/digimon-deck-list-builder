@@ -65,6 +65,70 @@ fn source_stack_aggregate_formula_reads_source_levels() {
 }
 
 #[test]
+fn self_same_level_source_pairs_gte_predicate_reads_source_stack_levels() {
+    let yaml = r#"
+card: TEST-SAME-LEVEL-SOURCE-PAIR-GATE
+name: Same Level Source Pair Gate
+kind: digimon
+level: 5
+color: [blue]
+cost: 7
+dp: 7000
+effects:
+  - kind: aura
+    target: {}
+    active_when:
+      self_same_level_source_pairs_gte: 1
+    dp_modifier: 3000
+"#;
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(yaml)
+        .expect("register DSL card")
+        .add_card({
+            let mut card = make_test_card("SRC-4A", "Source 4A");
+            card.level = Some(4);
+            card.card_kind = CardKind::Digimon;
+            card
+        })
+        .add_card({
+            let mut card = make_test_card("SRC-4B", "Source 4B");
+            card.level = Some(4);
+            card.card_kind = CardKind::Digimon;
+            card
+        })
+        .add_card({
+            let mut card = make_test_card("SRC-5", "Source 5");
+            card.level = Some(5);
+            card.card_kind = CardKind::Digimon;
+            card
+        })
+        .start();
+
+    let with_pair = runner.place_stack(
+        0,
+        &[
+            "SRC-4A",
+            "SRC-4B",
+            "SRC-5",
+            "TEST-SAME-LEVEL-SOURCE-PAIR-GATE",
+        ],
+    );
+    assert_eq!(
+        runner.game.effective_dp(with_pair),
+        Some(10000),
+        "one same-level source pair should satisfy the predicate"
+    );
+
+    let without_pair =
+        runner.place_stack(0, &["SRC-4A", "SRC-5", "TEST-SAME-LEVEL-SOURCE-PAIR-GATE"]);
+    assert_eq!(
+        runner.game.effective_dp(without_pair),
+        Some(7000),
+        "different-level sources should not satisfy the predicate"
+    );
+}
+
+#[test]
 fn source_color_count_formula_reads_distinct_live_source_stack_colors() {
     let yaml = r#"
 card: TEST-SOURCE-COLOR-COUNT

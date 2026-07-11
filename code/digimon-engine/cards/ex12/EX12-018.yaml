@@ -1,0 +1,203 @@
+card: EX12-018
+name: Siriusmon
+kind: dual
+level: 6
+color: [red, yellow]
+cost: 5
+dp: 12000
+traits: ["Light Dragon", VB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - in_text_contains: Gammamon
+            - trait_has: VB
+    cost: 3
+
+dual:
+  digimon:
+    level: 6
+    dp: 12000
+    colors: [red, yellow]
+    traits: ["Light Dragon", VB]
+    effect_text: "<Progress> <Piercing> <Security A. +1>. [When Digivolving][When Attacking][Once Per Turn] You may place up to 2 Digimon cards with [Gammamon] in text or [VB] from hand or trash as this Digimon's top or bottom digivolution cards. If placed, 1 opponent Digimon gets -2000 DP per source until their turn ends."
+    inherited_text: ""
+    effects:
+      - kind: grant_keyword
+        keyword: Progress
+
+      - kind: grant_keyword
+        keyword: Piercing
+
+      - kind: grant_keyword
+        keyword: SecurityAttackPlus
+        value: 1
+
+      - when: [when_digivolving, when_attacking]
+        once_per_turn: true
+        summary: "[When Digivolving][When Attacking][OPT] Place up to 2 [Gammamon-text]/[VB] Digimon cards from hand/trash as top/bottom sources; if placed, -2000 DP per source"
+        process:
+          - select_union_zone:
+              of: you
+              zones: [hand, trash]
+              optional: true
+              bind_as: placed_first
+              filter:
+                all_of:
+                  - kind: digimon
+                  - any_of:
+                      - in_text_contains: Gammamon
+                      - trait_has: VB
+              prompt: "You may place a [Gammamon]-text or [VB] Digimon from hand or trash as this Digimon's source"
+          - if:
+              condition:
+                binding_count_eq:
+                  binding: placed_first
+                  n: 1
+              then:
+                - select_effect_choice:
+                    bind_as: first_position
+                    labels: ["Top", "Bottom"]
+                    prompt: "Place the selected card as a top or bottom digivolution card?"
+          - if:
+              condition:
+                all_of:
+                  - binding_count_eq:
+                      binding: placed_first
+                      n: 1
+                  - equals: [first_position, 0]
+              then:
+                - place_as_top_source:
+                    source: placed_first
+                    target: source
+          - if:
+              condition:
+                all_of:
+                  - binding_count_eq:
+                      binding: placed_first
+                      n: 1
+                  - equals: [first_position, 1]
+              then:
+                - place_as_bottom_source:
+                    source: placed_first
+                    target: source
+          - if:
+              condition:
+                binding_count_eq:
+                  binding: placed_first
+                  n: 1
+              then:
+                - select_union_zone:
+                    of: you
+                    zones: [hand, trash]
+                    optional: true
+                    bind_as: placed_second
+                    filter:
+                      all_of:
+                        - kind: digimon
+                        - any_of:
+                            - in_text_contains: Gammamon
+                            - trait_has: VB
+                    prompt: "You may place another [Gammamon]-text or [VB] Digimon from hand or trash as this Digimon's source"
+          - if:
+              condition:
+                binding_count_eq:
+                  binding: placed_second
+                  n: 1
+              then:
+                - select_effect_choice:
+                    bind_as: second_position
+                    labels: ["Top", "Bottom"]
+                    prompt: "Place the selected card as a top or bottom digivolution card?"
+          - if:
+              condition:
+                all_of:
+                  - binding_count_eq:
+                      binding: placed_second
+                      n: 1
+                  - equals: [second_position, 0]
+              then:
+                - place_as_top_source:
+                    source: placed_second
+                    target: source
+          - if:
+              condition:
+                all_of:
+                  - binding_count_eq:
+                      binding: placed_second
+                      n: 1
+                  - equals: [second_position, 1]
+              then:
+                - place_as_bottom_source:
+                    source: placed_second
+                    target: source
+          - if:
+              condition:
+                binding_count_eq:
+                  binding: placed_first
+                  n: 1
+              then:
+                - select_opponent_permanent:
+                    bind_as: dp_target
+                    filter: { kind: digimon }
+                    prompt: "1 opponent Digimon gets -2000 DP for each of this Digimon's digivolution cards"
+                - add_dp_modifier:
+                    target: dp_target
+                    value:
+                      formula:
+                        base: 0
+                        per:
+                          source_stack_count: {}
+                        delta: -2000
+                    expiry: end_of_opponents_turn
+  option:
+    use_cost: 5
+    colors: [red, yellow]
+    use_requirement:
+      any_field_permanent:
+        of: you
+        trait_has: VB
+    effect_text: "Use Requirement: [VB] trait. [Main] Delete 1 of your opponent's highest DP Digimon. Then, 1 of your Digimon may attack."
+    security_text: ""
+    arts_digivolve: true
+    effects:
+      - when: main
+        summary: "[Main] Delete 1 opponent highest-DP Digimon; then 1 of your Digimon may attack"
+        process:
+          - select_opponent_permanent:
+              bind_as: victim
+              selector: highest_dp
+              filter: { kind: digimon }
+              prompt: "Delete 1 of your opponent's highest DP Digimon"
+          - delete_permanent: { target: victim }
+          - if:
+              condition:
+                any_permanent:
+                  of: you
+                  kind: digimon
+              then:
+                - select_effect_choice:
+                    bind_as: main_attack_choice
+                    labels: ["Attack", "Decline"]
+                    prompt: "1 of your Digimon may attack"
+                - if:
+                    condition: { equals: [main_attack_choice, 0] }
+                    then:
+                      - select_own_permanent:
+                          bind_as: attack_target
+                          filter: { kind: digimon }
+                          prompt: "Choose 1 of your Digimon to attack"
+                      - may_attack_now:
+                          attacker: attack_target
+                          targets: any
+                          optional: true

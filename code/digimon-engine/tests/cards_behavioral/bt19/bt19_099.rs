@@ -1,4 +1,3 @@
-
 //! BT19-099 The Wicked God Descends! — Option, Cost 4, Purple.
 //! Traits: [Wicked God].
 //!
@@ -55,7 +54,9 @@
 use digimon_dsl::compiled::{
     CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::{PASS, PLAY_HAND_START, REPLACEMENT_ACCEPT, TRASH_EFFECT_START};
+use digimon_engine::action::space::{
+    PASS, PLAY_HAND_START, REPLACEMENT_ACCEPT, TRASH_EFFECT_START,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
@@ -310,7 +311,9 @@ fn bt19_099_replacement_clause_matches_recognised_union_flow_shape() {
             }) if trigger == "when_would_leave_battle_area" => Some(process),
             _ => None,
         })
-        .expect("BT19-099 must have a declarative `when_would_leave_battle_area` replacement clause");
+        .expect(
+            "BT19-099 must have a declarative `when_would_leave_battle_area` replacement clause",
+        );
 
     assert!(
         matches!(
@@ -772,7 +775,10 @@ fn bt19_099_replacement_delay_then_plays_wicked_god_at_cost_plus_one_free() {
         },
         "the reward prompt must be the union-zone pick"
     );
-    assert!(sel.is_optional, "the reward pick is the printed 'you may play'");
+    assert!(
+        sel.is_optional,
+        "the reward pick is the printed 'you may play'"
+    );
 
     // Accept: play the Wicked God Digimon (hand slot 0 → PLAY_HAND_START).
     let action = sel

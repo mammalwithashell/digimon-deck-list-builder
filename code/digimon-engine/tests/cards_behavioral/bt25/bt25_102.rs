@@ -91,7 +91,11 @@ fn filler(id: &str) -> CardData {
     make_test_card(id, id)
 }
 
-fn hand_action_for_id(runner: &DebugRunner, player: digimon_engine::enums::PlayerId, id: &str) -> u16 {
+fn hand_action_for_id(
+    runner: &DebugRunner,
+    player: digimon_engine::enums::PlayerId,
+    id: &str,
+) -> u16 {
     runner
         .game
         .player(player)
@@ -525,5 +529,9 @@ fn bt25_102_security_effect_is_optional() {
             .any(|perm| perm.top_card().card_id(&runner.game.card_data) == "HAND-TS"),
         "declined Digimon must not be played"
     );
-    assert_eq!(runner.memory(), memory_before, "no memory spent when declining");
+    assert_eq!(
+        runner.memory(),
+        memory_before,
+        "no memory spent when declining"
+    );
 }

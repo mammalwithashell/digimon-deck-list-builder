@@ -105,13 +105,17 @@ fn flatten_predicate_tree<'a>(pred: &'a CompiledPredicate, out: &mut Vec<&'a Com
 fn predicate_tree_has_name_contains(pred: &CompiledPredicate, needle: &str) -> bool {
     let mut leaves = Vec::new();
     flatten_predicate_tree(pred, &mut leaves);
-    leaves.iter().any(|p| p.name_contains.as_deref() == Some(needle))
+    leaves
+        .iter()
+        .any(|p| p.name_contains.as_deref() == Some(needle))
 }
 
 fn predicate_tree_has_trait_has(pred: &CompiledPredicate, needle: &str) -> bool {
     let mut leaves = Vec::new();
     flatten_predicate_tree(pred, &mut leaves);
-    leaves.iter().any(|p| p.trait_has.as_deref() == Some(needle))
+    leaves
+        .iter()
+        .any(|p| p.trait_has.as_deref() == Some(needle))
 }
 
 /// Build a runner with BT24-010 (Greymon) loaded from the embedded DSL pack.
@@ -328,7 +332,10 @@ fn bt24_010_alt_paths_contain_black_standard_circle() {
     let black_circle = digivolve_paths.iter().find(|p| {
         p.from
             .as_ref()
-            .map(|f| f.level_eq == Some(3) && f.color_is == Some(digimon_dsl::compiled::CompiledColor::Black))
+            .map(|f| {
+                f.level_eq == Some(3)
+                    && f.color_is == Some(digimon_dsl::compiled::CompiledColor::Black)
+            })
             .unwrap_or(false)
     });
     assert!(
@@ -362,7 +369,9 @@ fn bt24_010_alt_paths_contain_agumon_or_ts_lv3_cost2() {
         p.cost == Some(CompiledCost::Literal(2))
             && p.from
                 .as_ref()
-                .map(|f| f.level_eq == Some(3) || f.all_of.iter().any(|sub| sub.level_eq == Some(3)))
+                .map(|f| {
+                    f.level_eq == Some(3) || f.all_of.iter().any(|sub| sub.level_eq == Some(3))
+                })
                 .unwrap_or(false)
     });
     let alt_path = alt_path.expect(
@@ -380,7 +389,9 @@ fn bt24_010_alt_paths_contain_agumon_or_ts_lv3_cost2() {
     flatten_predicate_tree(from, &mut leaves);
 
     assert!(
-        leaves.iter().any(|p| p.name_contains.as_deref() == Some("Agumon")),
+        leaves
+            .iter()
+            .any(|p| p.name_contains.as_deref() == Some("Agumon")),
         "alt-digivolve predicate tree must contain name_contains: Agumon"
     );
     assert!(
@@ -718,7 +729,9 @@ fn bt24_010_alt_digivolve_rejects_non_agumon_non_ts_lv3() {
     let alt_path = compiled
         .alt_paths
         .iter()
-        .find(|p| p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(2)))
+        .find(|p| {
+            p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(2))
+        })
         .expect("cost-2 alt-digivolve path exists");
     let from = alt_path.from.as_ref().expect("has from filter");
 

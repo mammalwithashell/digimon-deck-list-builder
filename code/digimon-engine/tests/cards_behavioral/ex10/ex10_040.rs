@@ -83,11 +83,9 @@ fn seed_trash(runner: &mut DebugRunner, player: u8, count: usize) {
         .expect("TRASH-FILLER must be registered via add_card before seed_trash");
     for _ in 0..count {
         let next = runner.game.next_card_index();
-        runner.game.players[player as usize]
-            .trash
-            .push(digimon_engine::card_source::CardSource::new(
-                data_idx, player, next,
-            ));
+        runner.game.players[player as usize].trash.push(
+            digimon_engine::card_source::CardSource::new(data_idx, player, next),
+        );
     }
 }
 

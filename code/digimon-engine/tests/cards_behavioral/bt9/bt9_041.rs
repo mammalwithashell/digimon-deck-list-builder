@@ -122,9 +122,10 @@ fn first_action(p: &PendingSelection) -> u16 {
 /// [When Digivolving] clause.
 fn fire_when_digivolving_bare(runner: &mut DebugRunner) -> PermanentHandle {
     let carrier = runner.place_on_field(0, "BT9-041", Some(0));
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(carrier));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(carrier),
+    );
     runner.game.drain_effect_queue();
     carrier
 }
@@ -135,9 +136,10 @@ fn fire_when_digivolving_stacked(runner: &mut DebugRunner, source_ids: &[&str]) 
     let mut stack: Vec<&str> = source_ids.to_vec();
     stack.push("BT9-041");
     let carrier = runner.place_stack(0, &stack);
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(carrier));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(carrier),
+    );
     runner.game.drain_effect_queue();
     carrier
 }
@@ -217,7 +219,11 @@ fn bt9_041_has_declarative_your_turn_aura_clause() {
             dp_modifier_fn,
             active_when,
             ..
-        }) => Some((dp_modifier.clone(), dp_modifier_fn.is_some(), active_when.clone())),
+        }) => Some((
+            dp_modifier.clone(),
+            dp_modifier_fn.is_some(),
+            active_when.clone(),
+        )),
         _ => None,
     });
 
@@ -454,7 +460,9 @@ fn bt9_041_no_debuff_prompt_when_no_source_stack() {
             .as_ref()
             .expect("play prompt installed"),
     );
-    runner.execute_action(player, PASS).expect("decline resolves");
+    runner
+        .execute_action(player, PASS)
+        .expect("decline resolves");
     let _ = runner.auto_resolve();
 
     assert!(
@@ -465,7 +473,10 @@ fn bt9_041_no_debuff_prompt_when_no_source_stack() {
         runner.game.pending_selection
     );
     assert_eq!(
-        runner.effective_dp(PermanentHandle { player: 1, index: 0 }),
+        runner.effective_dp(PermanentHandle {
+            player: 1,
+            index: 0
+        }),
         Some(5000),
         "opponent Digimon DP must be untouched"
     );
@@ -484,11 +495,20 @@ fn bt9_041_no_debuff_prompt_when_unrelated_source_in_stack() {
         .start();
     runner.place_on_field(1, "OPP-1", Some(0));
     {
-        let mut card = runner.game.card_data
-            [runner.game.card_data.iter().position(|c| c.card_id == "TEST-PLAIN-SOURCE").unwrap()]
+        let mut card = runner.game.card_data[runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "TEST-PLAIN-SOURCE")
+            .unwrap()]
         .clone();
         card.card_name = "WarGreymon".to_string();
-        let idx = runner.game.card_data.iter().position(|c| c.card_id == "TEST-PLAIN-SOURCE").unwrap();
+        let idx = runner
+            .game
+            .card_data
+            .iter()
+            .position(|c| c.card_id == "TEST-PLAIN-SOURCE")
+            .unwrap();
         runner.game.card_data[idx] = card;
     }
 
@@ -502,7 +522,10 @@ fn bt9_041_no_debuff_prompt_when_unrelated_source_in_stack() {
         runner.game.pending_selection
     );
     assert_eq!(
-        runner.effective_dp(PermanentHandle { player: 1, index: 0 }),
+        runner.effective_dp(PermanentHandle {
+            player: 1,
+            index: 0
+        }),
         Some(5000),
         "opponent Digimon DP must be untouched"
     );
@@ -641,7 +664,10 @@ fn bt9_041_debuff_scales_by_red_yellow_tamer_count_after_free_play() {
     // 2 red/yellow Tamers in play (TAMER-Y1 placed + TAMER-R2 freshly played)
     // → -2000 * 2 = -4000 DP.
     assert_eq!(
-        runner.effective_dp(PermanentHandle { player: 1, index: 0 }),
+        runner.effective_dp(PermanentHandle {
+            player: 1,
+            index: 0
+        }),
         Some(5000),
         "opponent Digimon must lose 2000 DP per red/yellow Tamer in play \
          (2 Tamers → -4000 DP; 9000 - 4000 = 5000)"
@@ -681,7 +707,10 @@ fn bt9_041_no_debuff_prompt_when_condition_met_but_no_tamer_in_play() {
         runner.game.pending_selection
     );
     assert_eq!(
-        runner.effective_dp(PermanentHandle { player: 1, index: 0 }),
+        runner.effective_dp(PermanentHandle {
+            player: 1,
+            index: 0
+        }),
         Some(5000),
         "opponent Digimon DP must be untouched when minusDP is 0"
     );
@@ -757,7 +786,10 @@ fn bt9_041_debuff_expires_at_end_of_turn() {
     let _ = runner.auto_resolve();
 
     assert_eq!(
-        runner.effective_dp(PermanentHandle { player: 1, index: 0 }),
+        runner.effective_dp(PermanentHandle {
+            player: 1,
+            index: 0
+        }),
         Some(7000),
         "1 red/yellow Tamer in play → -2000 DP; 9000 - 2000 = 7000"
     );
@@ -767,7 +799,10 @@ fn bt9_041_debuff_expires_at_end_of_turn() {
     let _ = runner.auto_resolve();
 
     assert_eq!(
-        runner.effective_dp(PermanentHandle { player: 1, index: 0 }),
+        runner.effective_dp(PermanentHandle {
+            player: 1,
+            index: 0
+        }),
         Some(9000),
         "the DP debuff must expire at end of turn"
     );

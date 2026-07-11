@@ -508,7 +508,7 @@ fn bt18_015_on_deletion_does_not_fire_without_machinedramon_on_field() {
     let kimeramon = runner.place_on_field(0, "BT18-015", Some(0));
     push_to_trash(&mut runner, 0, "BT18-015"); // a spare Kimeramon-named copy in trash
     push_to_hand(&mut runner, 0, "BT18-019"); // Millenniummon in hand
-                                               // NO Machinedramon on field.
+                                              // NO Machinedramon on field.
 
     runner.game.delete_permanent_with_cause(
         kimeramon,
@@ -536,7 +536,7 @@ fn bt18_015_on_deletion_does_not_fire_without_millenniummon_in_hand() {
     let mut runner = kimeramon_runner().memory(10).start();
     let kimeramon = runner.place_on_field(0, "BT18-015", Some(0));
     runner.place_on_field(0, "ST5-12", None); // Machinedramon on field
-                                               // No Millenniummon in hand.
+                                              // No Millenniummon in hand.
 
     runner.game.delete_permanent_with_cause(
         kimeramon,
@@ -610,7 +610,10 @@ fn bt18_015_on_deletion_dna_digivolves_into_millenniummon_using_self_as_trash_ma
         "Machinedramon must be a digivolution source under the merged Millenniummon"
     );
     assert!(
-        merged.card_sources.iter().any(|s| s.handle() == kimeramon_card),
+        merged
+            .card_sources
+            .iter()
+            .any(|s| s.handle() == kimeramon_card),
         "the deleted Kimeramon (now in trash) must be the trash material consumed into the merge"
     );
     assert_eq!(
@@ -646,7 +649,11 @@ fn bt18_015_on_deletion_offers_trash_pick_among_multiple_kimeramon_copies() {
 
     // Accept the outer "may".
     {
-        let sel = runner.game.pending_selection.as_ref().expect("outer accept prompt");
+        let sel = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("outer accept prompt");
         let action = sel
             .valid_action_ids
             .iter()
@@ -659,7 +666,11 @@ fn bt18_015_on_deletion_offers_trash_pick_among_multiple_kimeramon_copies() {
     }
     // Pick the Millenniummon result (only one in hand).
     {
-        let sel = runner.game.pending_selection.as_ref().expect("hand result prompt");
+        let sel = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("hand result prompt");
         let action = sel
             .valid_action_ids
             .iter()
@@ -672,7 +683,11 @@ fn bt18_015_on_deletion_offers_trash_pick_among_multiple_kimeramon_copies() {
     }
     // Pick the Machinedramon field partner (only one on field).
     {
-        let sel = runner.game.pending_selection.as_ref().expect("field partner prompt");
+        let sel = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("field partner prompt");
         let action = sel
             .valid_action_ids
             .iter()
@@ -714,7 +729,11 @@ fn bt18_015_on_deletion_declining_leaves_board_untouched() {
     );
     runner.game.drain_effect_queue();
 
-    let sel = runner.game.pending_selection.as_ref().expect("outer accept prompt");
+    let sel = runner
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("outer accept prompt");
     let player = sel.selecting_player;
     runner.game.resolve_selection(player, PASS).ok();
     runner.game.drain_effect_queue();

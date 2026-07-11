@@ -162,7 +162,10 @@ fn payable_two_selections_trash_fires_onlinked_and_runs_tail() {
         "both own Digimon carrying link cards are offered"
     );
     // Tail has NOT run yet.
-    assert_eq!(runner.game.memory, memory_before, "tail deferred until cost paid");
+    assert_eq!(
+        runner.game.memory, memory_before,
+        "tail deferred until cost paid"
+    );
 
     // Pick HOST-A (encode_attack(0, host_a.index)). The valid_action_ids are the
     // two field targets; choose the one decoding to host_a.
@@ -417,7 +420,10 @@ fn clone_safe_across_both_selections() {
 
     assert!(cloned.pending_selection.is_none(), "clone fully resolved");
     assert!(
-        cloned.players[0].trash.iter().any(|c| c.handle() == link_a1),
+        cloned.players[0]
+            .trash
+            .iter()
+            .any(|c| c.handle() == link_a1),
         "clone trashed the link card via the resumable VM"
     );
     assert_eq!(

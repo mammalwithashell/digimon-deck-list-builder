@@ -218,7 +218,10 @@ pub fn spawn_min_version_check(app: AppHandle) {
                         info.latest_version
                     );
                 } else {
-                    log::info!("startup update probe: up to date ({})", info.current_version);
+                    log::info!(
+                        "startup update probe: up to date ({})",
+                        info.current_version
+                    );
                 }
             }
             Err(e) => log::warn!("startup update probe failed (ignoring): {e}"),
@@ -343,7 +346,10 @@ mod tests {
         assert_eq!(manifest.min_version, "0.2.0");
         assert_eq!(manifest.notes.as_deref(), Some("Game: fixes."));
         assert_eq!(
-            manifest.platforms.get("windows-x86_64").map(|p| p.url.as_str()),
+            manifest
+                .platforms
+                .get("windows-x86_64")
+                .map(|p| p.url.as_str()),
             Some("https://example/win-setup.exe")
         );
     }

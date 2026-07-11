@@ -68,7 +68,10 @@ fn main() -> ExitCode {
         }
     };
     if recording_paths.is_empty() {
-        eprintln!("error: no .jsonl files found under {}", args.input.display());
+        eprintln!(
+            "error: no .jsonl files found under {}",
+            args.input.display()
+        );
         return ExitCode::from(2);
     }
 
@@ -155,8 +158,7 @@ fn collect_recording_paths(path: &Path) -> Result<Vec<PathBuf>, String> {
     // user can co-locate misc files next to a `recordings/` subdir without
     // surprises.
     let mut out = Vec::new();
-    let entries = fs::read_dir(path)
-        .map_err(|e| format!("read_dir {}: {}", path.display(), e))?;
+    let entries = fs::read_dir(path).map_err(|e| format!("read_dir {}: {}", path.display(), e))?;
     for entry in entries {
         let entry = entry.map_err(|e| format!("dir entry: {}", e))?;
         let p = entry.path();
@@ -168,18 +170,15 @@ fn collect_recording_paths(path: &Path) -> Result<Vec<PathBuf>, String> {
     Ok(out)
 }
 
-fn load_card_data(
-    cards_json: Option<&Path>,
-) -> Result<HashMap<String, CardData>, String> {
+fn load_card_data(cards_json: Option<&Path>) -> Result<HashMap<String, CardData>, String> {
     let path = match cards_json {
         Some(p) => p.to_path_buf(),
         None => default_cards_json_path()
             .ok_or_else(|| "no --cards-json provided and no data/cards.json found".to_string())?,
     };
-    let bytes =
-        fs::read(&path).map_err(|e| format!("reading {}: {}", path.display(), e))?;
-    let text = std::str::from_utf8(&bytes)
-        .map_err(|e| format!("cards.json is not valid UTF-8: {}", e))?;
+    let bytes = fs::read(&path).map_err(|e| format!("reading {}: {}", path.display(), e))?;
+    let text =
+        std::str::from_utf8(&bytes).map_err(|e| format!("cards.json is not valid UTF-8: {}", e))?;
     CardData::load_from_str(text).map_err(|e| format!("parsing cards.json: {}", e))
 }
 

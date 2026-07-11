@@ -209,7 +209,10 @@ fn place_as_top_source_face_down_true_marks_source_face_down() {
         .iter()
         .find(|c| c.handle() == tuck_handle)
         .expect("placed card is in the stack");
-    assert!(placed.face_down, "face_down: true → the placed source is face-down");
+    assert!(
+        placed.face_down,
+        "face_down: true → the placed source is face-down"
+    );
 }
 
 /// Omitting `face_down` defaults the placed top source to face-up.

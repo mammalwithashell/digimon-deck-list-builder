@@ -180,7 +180,10 @@ effects:
     ));
     assert!(matches!(
         &clause.process[3],
-        CompiledStep::TrashFromTop { count_fn: Some(_), .. }
+        CompiledStep::TrashFromTop {
+            count_fn: Some(_),
+            ..
+        }
     ));
 
     let registry = StubRegistry::empty();

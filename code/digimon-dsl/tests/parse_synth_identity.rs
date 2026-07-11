@@ -99,9 +99,7 @@ effects:
     );
     let step = compile_first_step(&yaml);
     match step {
-        CompiledStep::AddModifier {
-            synth_identity, ..
-        } => {
+        CompiledStep::AddModifier { synth_identity, .. } => {
             assert_eq!(
                 synth_identity,
                 Some(CompiledSynthIdentity {
@@ -133,9 +131,7 @@ effects:
     );
     let step = compile_first_step(&yaml);
     match step {
-        CompiledStep::AddModifier {
-            synth_identity, ..
-        } => assert_eq!(synth_identity, None),
+        CompiledStep::AddModifier { synth_identity, .. } => assert_eq!(synth_identity, None),
         other => panic!("expected AddModifier, got {other:?}"),
     }
 }

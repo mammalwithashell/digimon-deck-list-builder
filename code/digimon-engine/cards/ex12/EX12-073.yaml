@@ -1,0 +1,58 @@
+card: EX12-073
+name: Giant Meat
+kind: option
+color: [white]
+cost: 3
+traits: [NSp, DS, NSo, WG, ME, VB]
+
+use_requirement:
+  any_field_permanent:
+    of: you
+    any_of:
+      - trait_has: NSp
+      - trait_has: DS
+      - trait_has: NSo
+      - trait_has: WG
+      - trait_has: ME
+      - trait_has: VB
+
+effects:
+  - kind: flood_gate
+    scope: face_up
+    active_when: { your_turn: true }
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "EX12-073" }
+    summary: "<Use Req. ([NSp]/[DS]/[NSo]/[WG]/[ME]/[VB] trait)> — ignore this card's color requirements"
+
+  - when: main_from_hand
+    summary: "[Main] Reveal top 3; add 1 [NSp]/[DS]/[NSo]/[WG]/[ME]/[VB] card to hand; rest to bottom; place self in battle area"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal:
+          of: you
+          bind_as: meat_pick
+          optional: false
+          filter:
+            any_of:
+              - trait_has: NSp
+              - trait_has: DS
+              - trait_has: NSo
+              - trait_has: WG
+              - trait_has: ME
+              - trait_has: VB
+          prompt: "Add 1 [NSp]/[DS]/[NSo]/[WG]/[ME]/[VB] card among them to your hand"
+      - add_to_hand_from_reveal: { of: you, card: meat_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+      - place_self_as_delay_option: {}
+
+  - kind: delay
+    trigger: delayed
+    summary: "[Main]<Delay> Gain 2 memory"
+    process:
+      - gain_memory: 2
+
+  - scope: inherited
+    when: on_security
+    summary: "[Security] Place this card in the battle area"
+    process:
+      - place_self_as_delay_option: {}

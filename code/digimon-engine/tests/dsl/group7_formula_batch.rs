@@ -225,6 +225,95 @@ fn distinct_colors_count_formula_counts_filtered_tamer_colors() {
 }
 
 #[test]
+fn returned_card_color_count_formula_reads_returned_to_deck_result_log() {
+    let mut red_yellow = digimon_card("RED-YELLOW", 3000);
+    red_yellow.colors = vec![CardColor::Red, CardColor::Yellow];
+    let mut yellow = digimon_card("YELLOW", 3000);
+    yellow.colors = vec![CardColor::Yellow];
+    let mut blue = digimon_card("BLUE-NOT-RETURNED", 3000);
+    blue.colors = vec![CardColor::Blue];
+
+    let mut runner = DebugRunner::builder()
+        .add_card(digimon_card("SRC", 1000))
+        .add_card(red_yellow)
+        .add_card(yellow)
+        .add_card(blue)
+        .build();
+    let source = runner.place_on_field(0, "SRC", None);
+    push_card_to_trash(&mut runner, 1, "RED-YELLOW");
+    push_card_to_trash(&mut runner, 1, "YELLOW");
+    push_card_to_trash(&mut runner, 1, "BLUE-NOT-RETURNED");
+    let returned = runner.game.players[1].trash[0..2]
+        .iter()
+        .map(|card| card.handle())
+        .collect();
+
+    let src_card = runner.game.players[0].battle_area[source.index as usize]
+        .top_card()
+        .handle();
+    let mut ctx = EffectContext::new(&mut runner.game, src_card, Some(source), 0);
+    let mut bindings = Bindings::new();
+    bindings.insert_card_list("returned", returned);
+    run_steps(
+        &[CompiledStep::ReturnTrashListToDeckBottom {
+            of: CompiledPlayerRef::Opponent,
+            cards: CompiledBindingRef::Named("returned".to_string()),
+            to_top: false,
+        }],
+        &mut ctx,
+        &mut bindings,
+    );
+
+    let formula = CompiledFormula::BasePerDelta {
+        base: 0,
+        per: CompiledPerSelector::ReturnedCardColorCount,
+        delta: -5000,
+    };
+
+    assert_eq!(
+        formula_eval::evaluate_with_bindings(&formula, &ctx, source, Some(&bindings)),
+        -10000,
+        "only distinct colors among cards returned by this effect are counted"
+    );
+}
+
+#[test]
+fn returned_card_color_count_formula_compiles_from_yaml_per_selector() {
+    let yaml = r#"
+card: T-G7-RETURNED-COLOR-COUNT
+name: Returned Color Count Formula
+kind: option
+color: [yellow]
+cost: 0
+effects:
+  - when: main_from_hand
+    process:
+      - add_dp_modifier:
+          target: source
+          value:
+            formula:
+              base: 0
+              per: returned_card_color_count
+              delta: -5000
+          expiry: end_of_turn
+"#;
+    let compiled = compile_yaml(yaml);
+    let CompiledClause::Triggered(triggered) = &compiled.effects[0] else {
+        panic!("expected triggered clause");
+    };
+    let CompiledStep::AddDpModifier { value, .. } = &triggered.process[0] else {
+        panic!("expected add_dp_modifier");
+    };
+    assert!(matches!(
+        value,
+        CompiledModifierValue::Formula(CompiledFormula::BasePerDelta {
+            per: CompiledPerSelector::ReturnedCardColorCount,
+            ..
+        })
+    ));
+}
+
+#[test]
 fn level_is_lowest_among_opponent_digimon_filters_only_lowest_level_digimon() {
     let mut runner = DebugRunner::builder()
         .add_card(digimon_card_with_level("SRC", 3000, 3))

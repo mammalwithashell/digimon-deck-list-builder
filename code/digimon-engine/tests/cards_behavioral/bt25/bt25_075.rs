@@ -207,7 +207,9 @@ fn drive_link_up_to(
                 // but never the observer's may-attack offer.
                 if let Some(next) = r.game.pending_selection.as_ref() {
                     if next.is_optional && !is_attack_offer(next) {
-                        let _ = r.game.resolve_selection(player, digimon_engine::action::space::PASS);
+                        let _ = r
+                            .game
+                            .resolve_selection(player, digimon_engine::action::space::PASS);
                         break;
                     }
                 }
@@ -216,7 +218,9 @@ fn drive_link_up_to(
             continue;
         }
         if linked >= stop_after && sel.is_optional {
-            let _ = r.game.resolve_selection(player, digimon_engine::action::space::PASS);
+            let _ = r
+                .game
+                .resolve_selection(player, digimon_engine::action::space::PASS);
             break;
         }
         let ids = sel.valid_action_ids.clone();
@@ -457,7 +461,10 @@ fn bt25_075_on_play_links_one_from_hand_then_de_digivolves_opponents_once() {
     let opp_sources_before = r.game.player(1).battle_area[opp.index as usize]
         .card_sources
         .len();
-    assert_eq!(opp_sources_before, 2, "precondition: opponent stack has 2 sources");
+    assert_eq!(
+        opp_sources_before, 2,
+        "precondition: opponent stack has 2 sources"
+    );
 
     fire_on_play(&mut r, 0, vulcan.index as usize);
     assert!(
@@ -836,7 +843,11 @@ fn bt25_075_on_any_link_no_attack_offer_for_summoning_sick_host() {
     // (OWN-ALLY is a plain Beast — Vulcanusmon's TS aura does not apply).
     let ally = r.place_on_field(0, "OWN-ALLY", Some(1));
     advance_to_main(&mut r);
-    assert_eq!(r.turn_count(), 1, "precondition: ally entered play this turn");
+    assert_eq!(
+        r.turn_count(),
+        1,
+        "precondition: ally entered play this turn"
+    );
 
     fire_on_play(&mut r, 0, vulcan.index as usize);
     let linked = drive_link_up_to(&mut r, 0, ally.index, 1);

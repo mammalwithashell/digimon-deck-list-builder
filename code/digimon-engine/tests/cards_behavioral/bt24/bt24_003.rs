@@ -222,9 +222,13 @@ fn bt24_003_fires_on_controllers_own_turn() {
         .position(|c| c.card_id == "FILLER-DECK")
         .unwrap();
     let sec_idx = runner.game.next_card_index();
-    runner.game.players[0].security.push(
-        digimon_engine::card_source::CardSource::new(sec_data_idx, 0, sec_idx),
-    );
+    runner.game.players[0]
+        .security
+        .push(digimon_engine::card_source::CardSource::new(
+            sec_data_idx,
+            0,
+            sec_idx,
+        ));
 
     assert_eq!(runner.game.turn_player(), 0, "default turn player is P0");
 
@@ -585,9 +589,13 @@ fn bt24_003_integrated_attack_breaks_security_and_offers_digivolve() {
             .position(|c| c.card_id == "FILLER-DECK")
             .unwrap();
         let sec_idx = runner.game.next_card_index();
-        runner.game.players[0].security.push(
-            digimon_engine::card_source::CardSource::new(sec_data_idx, 0, sec_idx),
-        );
+        runner.game.players[0]
+            .security
+            .push(digimon_engine::card_source::CardSource::new(
+                sec_data_idx,
+                0,
+                sec_idx,
+            ));
     }
 
     // The [Your Turn] gate reads against the CONTROLLER (player 0), so the

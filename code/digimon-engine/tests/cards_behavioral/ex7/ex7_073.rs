@@ -57,7 +57,7 @@ use digimon_engine::action::space::{encode_source_select, PASS};
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming, PlayerId, PlaySource};
+use digimon_engine::enums::{CardColor, CardKind, EffectTiming, PlaySource, PlayerId};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::{SelectionKind, TriggerSource};
 
@@ -182,9 +182,10 @@ fn digivolve_ex7_073(runner: &mut DebugRunner, base: PermanentHandle) {
 }
 
 fn fire_when_attacking(runner: &mut DebugRunner, handle: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenAttacking, TriggerSource::Permanent(handle));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenAttacking,
+        TriggerSource::Permanent(handle),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -222,7 +223,9 @@ fn push_to_security_top(runner: &mut DebugRunner, player: u8, card_id: &str) {
         .position(|c| c.card_id == card_id)
         .unwrap_or_else(|| panic!("card {card_id} not found in card_data"));
     let card = CardSource::new(data_idx, player, runner.game.next_card_index());
-    runner.game.players[player as usize].security.insert(0, card);
+    runner.game.players[player as usize]
+        .security
+        .insert(0, card);
 }
 
 /// Auto-resolve all remaining prompts by always taking the first legal
@@ -293,7 +296,8 @@ fn ex7_073_has_tm_no_xa_alt_path_cost1() {
 
     assert!(
         compiled.alt_paths.iter().any(|path| {
-            path.kind == CompiledAltPathKind::Digivolve && path.cost == Some(CompiledCost::Literal(1))
+            path.kind == CompiledAltPathKind::Digivolve
+                && path.cost == Some(CompiledCost::Literal(1))
         }),
         "must have an alt-source digivolve path at cost 1; alt_paths={:?}",
         compiled.alt_paths
@@ -356,9 +360,7 @@ fn ex7_073_clause1_is_optional_and_face_up() {
 
     let clause1 = triggered
         .iter()
-        .find(|t| {
-            t.when == vec![CompiledTiming::WhenDigivolving] && t.optional
-        })
+        .find(|t| t.when == vec![CompiledTiming::WhenDigivolving] && t.optional)
         .expect("optional WD clause (free-play Option) must exist");
     assert_eq!(clause1.scope, CompiledScope::FaceUp);
     assert!(!clause1.once_per_turn);
@@ -458,10 +460,7 @@ fn ex7_073_wd_may_free_play_tm_text_option_from_hand() {
         .hand
         .iter()
         .any(|c| c.card_id(&runner.game.card_data) == "TM-OPT");
-    assert!(
-        !still_in_hand,
-        "the free-played Option must leave the hand"
-    );
+    assert!(!still_in_hand, "the free-played Option must leave the hand");
 }
 
 /// NEGATIVE: no TM-text Option in hand (only a plain one) → Clause 1 is a
@@ -570,10 +569,7 @@ fn ex7_073_wd_trash_two_sources_deletes_opp_digimon_and_trashes_security() {
         .pending_selection_view()
         .expect("Clause 2 must offer the trash-2 source-select (2 TM sources exist)");
     assert_eq!(
-        view.valid_action_ids
-            .iter()
-            .filter(|&&a| a != PASS)
-            .count(),
+        view.valid_action_ids.iter().filter(|&&a| a != PASS).count(),
         2,
         "only the 2 TM-trait sources are candidates; PLAIN-SRC must be excluded"
     );
@@ -678,7 +674,11 @@ fn ex7_073_wd_decline_trash_prompt_entirely_does_nothing() {
         .expect("decline the trash-2 cost entirely");
     drain_prompts(&mut runner);
 
-    assert_eq!(runner.trash_size(0), trash_before, "nothing trashed on decline");
+    assert_eq!(
+        runner.trash_size(0),
+        trash_before,
+        "nothing trashed on decline"
+    );
     assert_eq!(runner.battle_area_size(1), 1, "opponent Digimon survives");
     assert_eq!(
         runner.security_count(1),
@@ -777,9 +777,7 @@ fn ex7_073_wd_delete_targets_highest_level_opponent_only() {
     drain_prompts(&mut runner);
 
     let survivors: Vec<String> = zone_ids(
-        &runner
-            .game
-            .players[1]
+        &runner.game.players[1]
             .battle_area
             .iter()
             .map(|p| p.top_card().clone())

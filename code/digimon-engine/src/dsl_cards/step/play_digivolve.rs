@@ -228,6 +228,12 @@ fn peek_card_source_ref_handle(
         CardSourceRef::Trash(p, i) => ctx.game.player(p).trash.get(i).map(|c| c.handle()),
         CardSourceRef::DeckTop(p) => ctx.game.player(p).deck.last().map(|c| c.handle()),
         CardSourceRef::Security(p, i) => ctx.game.player(p).security.get(i).map(|c| c.handle()),
+        CardSourceRef::PendingSecurity => ctx
+            .game
+            .pending_security
+            .as_ref()
+            .filter(|pending| !pending.played)
+            .map(|pending| pending.card.handle()),
         CardSourceRef::Material(h, i) => ctx
             .game
             .players
@@ -266,6 +272,15 @@ fn resolve_card_handle_source_ref(ctx: &EffectContext<'_>, h: CardHandle) -> Opt
     }
     if ctx.game.revealed_cards.iter().any(|c| c.handle() == h) {
         return Some(CardSourceRef::Reveal(h));
+    }
+    if ctx
+        .game
+        .pending_security
+        .as_ref()
+        .filter(|pending| !pending.played)
+        .is_some_and(|pending| pending.card.handle() == h)
+    {
+        return Some(CardSourceRef::PendingSecurity);
     }
     None
 }
@@ -389,6 +404,25 @@ pub fn try_run(step: &CompiledStep, ctx: &mut EffectContext<'_>, bindings: &mut 
                 // Digimon's handle is recorded for any later step; the Option /
                 // Dual-Option path manages its own lifecycle internally.
                 ctx.play_or_use_from_hand_with_cost(owner, i as usize, delta);
+            }
+            true
+        }
+        CompiledStep::PlayOrUseFromSources {
+            of,
+            card,
+            cost_delta,
+        } => {
+            let owner = resolve_player(ctx, *of);
+            let delta = match cost_delta {
+                None => CostDelta::Free,
+                Some(_) => lower_cost_delta(cost_delta.as_ref(), ctx, bindings),
+            };
+            if let Some(ResolvedBinding::SourceRefs(refs)) =
+                resolve_binding_ref(card, ctx, bindings)
+            {
+                if let Some(source_ref) = refs.first() {
+                    ctx.play_or_use_from_source_with_cost(owner, *source_ref, delta);
+                }
             }
             true
         }

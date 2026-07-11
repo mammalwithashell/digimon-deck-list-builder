@@ -1,0 +1,149 @@
+card: EX12-077
+name: Proximamon
+kind: digimon
+level: 7
+color: [white, red]
+cost: 15
+dp: 15000
+traits: [Unique, VB]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - any_of:
+            - color_is: red
+            - in_text_contains: Gammamon
+            - trait_has: VB
+    cost: 5
+  - kind: dna_digivolve
+    materials:
+      - all_of:
+          - level_eq: 6
+          - any_of:
+              - color_is: red
+              - color_is: blue
+      - all_of:
+          - level_eq: 6
+          - any_of:
+              - color_is: black
+              - color_is: purple
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+
+  - kind: grant_keyword
+    keyword: Blocker
+
+  - when: [on_play, when_digivolving]
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand, trash]
+          any_of:
+            - in_text_contains: Gammamon
+            - trait_has: VB
+        n: 2
+    summary: "[On Play][When Digivolving] By placing 2 [Gammamon-text]/[VB] cards from hand/trash as one Digimon's top/bottom sources, delete 1 opponent Digimon or Tamer"
+    process:
+      - select_union_zone:
+          of: you
+          zones: [hand, trash]
+          optional: true
+          cost: true
+          bind_as: placed_first
+          filter:
+            any_of:
+              - in_text_contains: Gammamon
+              - trait_has: VB
+          prompt: "Place 2 [Gammamon]-text or [VB] cards from hand or trash as one Digimon's digivolution cards to delete an opponent Digimon or Tamer"
+          then:
+            - select_own_permanent:
+                bind_as: source_host
+                filter: { kind: digimon }
+                prompt: "Choose the Digimon that gets the placed cards"
+            - select_effect_choice:
+                bind_as: first_position
+                labels: ["Top", "Bottom"]
+                prompt: "Place the first card as a top or bottom digivolution card?"
+            - if:
+                condition: { equals: [first_position, 0] }
+                then:
+                  - place_as_top_source:
+                      source: placed_first
+                      target: source_host
+            - if:
+                condition: { equals: [first_position, 1] }
+                then:
+                  - place_as_bottom_source:
+                      source: placed_first
+                      target: source_host
+            - select_union_zone:
+                of: you
+                zones: [hand, trash]
+                bind_as: placed_second
+                filter:
+                  any_of:
+                    - in_text_contains: Gammamon
+                    - trait_has: VB
+                prompt: "Place the second [Gammamon]-text or [VB] card from hand or trash"
+                then:
+                  - select_effect_choice:
+                      bind_as: second_position
+                      labels: ["Top", "Bottom"]
+                      prompt: "Place the second card as a top or bottom digivolution card?"
+                  - if:
+                      condition: { equals: [second_position, 0] }
+                      then:
+                        - place_as_top_source:
+                            source: placed_second
+                            target: source_host
+                  - if:
+                      condition: { equals: [second_position, 1] }
+                      then:
+                        - place_as_bottom_source:
+                            source: placed_second
+                            target: source_host
+                  - select_opponent_permanent:
+                      bind_as: victim
+                      filter:
+                        any_of:
+                          - kind: digimon
+                          - kind: tamer
+                      prompt: "Delete 1 of your opponent's Digimon or Tamers"
+                  - delete_permanent: { target: victim }
+
+  - when: [on_play, when_digivolving, when_attacking, counter]
+    once_per_turn: true
+    summary: "[On Play][When Digivolving][When Attacking][Counter][OPT] You may play or use one cost-10-or-lower [Gammamon-text]/[VB] source free"
+    process:
+      - select_own_sources:
+          min: 0
+          max: 1
+          bind_as: source_card
+          filter:
+            all_of:
+              - host_kind_is: digimon
+              - play_or_use_cost_lte: 10
+              - any_of:
+                  - in_text_contains: Gammamon
+                  - trait_has: VB
+          prompt: "You may play or use 1 cost 10 or lower [Gammamon]-text or [VB] source without paying the cost"
+          then:
+            - if:
+                condition:
+                  binding_count_eq:
+                    binding: source_card
+                    n: 1
+                then:
+                  - play_or_use_from_sources:
+                      of: you
+                      card: source_card
+                      cost: free

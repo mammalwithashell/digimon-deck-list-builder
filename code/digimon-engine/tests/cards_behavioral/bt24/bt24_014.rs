@@ -54,7 +54,9 @@ use digimon_dsl::compiled::{
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
-use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner, DebugRunnerBuilder};
+use digimon_engine::debug_runner::{
+    make_test_card, make_test_card_with_level, DebugRunner, DebugRunnerBuilder,
+};
 use digimon_engine::enums::{CardColor, CardKind, PlaySource};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::selection::SelectionKind;
@@ -155,7 +157,9 @@ fn bt24_014_has_dragonkin_rule_trait() {
     let runner = base().memory(10).start();
     let card = runner.compiled_card(CARD_ID).expect("BT24-014 present");
     assert!(
-        card.traits.iter().any(|t| t.eq_ignore_ascii_case("Dragonkin")),
+        card.traits
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case("Dragonkin")),
         "must carry the (Rule) Dragonkin trait grant; got {:?}",
         card.traits
     );
@@ -207,7 +211,9 @@ fn bt24_014_data_cards_json_has_dragonkin_rule_trait() {
     let card = cards.get("BT24-014").expect("BT24-014 in data/cards.json");
 
     assert!(
-        card.traits.iter().any(|t| t.eq_ignore_ascii_case("Dragonkin")),
+        card.traits
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case("Dragonkin")),
         "data/cards.json BT24-014.traits must carry the (Rule) Trait: Has \
          [Dragonkin] Type grant — reconcile via \
          code/tools/audit_digivolve/reconcile_traits.py into \
@@ -235,24 +241,35 @@ fn bt24_014_grants_security_attack_plus_one() {
         CompiledClause::Declarative(CompiledDeclarativeClause::Aura { security_attack: Some(1), scope, .. })
             if *scope == CompiledScope::FaceUp
     ));
-    assert!(has, "own <Security A. +1> aura; effects: {:?}", card.effects);
+    assert!(
+        has,
+        "own <Security A. +1> aura; effects: {:?}",
+        card.effects
+    );
 }
 
 #[test]
 fn bt24_014_has_own_and_inherited_decode_replacement_clauses() {
     let runner = base().memory(10).start();
     let card = runner.compiled_card(CARD_ID).expect("BT24-014 present");
-    let own = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { scope, .. })
-            if *scope == CompiledScope::FaceUp
-    ));
-    let inherited = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { scope, .. })
-            if *scope == CompiledScope::Inherited
-    ));
-    assert!(own, "own <Decode ([Aegiomon])> replacement clause must exist");
+    let own = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { scope, .. })
+                if *scope == CompiledScope::FaceUp
+        )
+    });
+    let inherited = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::Replacement { scope, .. })
+                if *scope == CompiledScope::Inherited
+        )
+    });
+    assert!(
+        own,
+        "own <Decode ([Aegiomon])> replacement clause must exist"
+    );
     assert!(
         inherited,
         "inherited <Decode ([Aegiomon])> replacement clause must exist"
@@ -286,9 +303,9 @@ fn bt24_014_standard_alt_path_is_level4_red_cost4() {
         card.alt_paths.iter().any(|p| {
             p.kind == CompiledAltPathKind::Digivolve
                 && p.cost == Some(CompiledCost::Literal(4))
-                && p.from
-                    .as_ref()
-                    .is_some_and(|f| f.level_eq == Some(4) && f.color_is == Some(CompiledColor::Red))
+                && p.from.as_ref().is_some_and(|f| {
+                    f.level_eq == Some(4) && f.color_is == Some(CompiledColor::Red)
+                })
         }),
         "standard Lv.4 Red / cost 4 alt-path must exist; alt_paths: {:?}",
         card.alt_paths
@@ -373,7 +390,9 @@ fn bt24_014_security_attack_bonus_is_one_at_runtime() {
     // declarative tick, not a one-shot OnPlay/OnDigivolve trigger.
     runner.game.tick_declarative_effects();
 
-    let bonus = runner.modifiers().sum(handle, ModifierType::SecurityAttackChange);
+    let bonus = runner
+        .modifiers()
+        .sum(handle, ModifierType::SecurityAttackChange);
     assert_eq!(
         bonus, 1,
         "own <Security A. +1> must grant a +1 SecurityAttackChange modifier at runtime"
@@ -454,7 +473,9 @@ fn bt24_014_when_digivolving_applies_minus_5000_dp_to_chosen_target() {
         .iter()
         .find(|&&a| a != digimon_engine::action::space::PASS)
         .expect("a legal non-PASS target action must exist");
-    runner.execute_action(0, action).expect("choose DP-reduce target");
+    runner
+        .execute_action(0, action)
+        .expect("choose DP-reduce target");
     runner.auto_resolve().ok();
 
     let dp_after = runner.effective_dp(opp).expect("opp still on field");
@@ -489,7 +510,9 @@ fn bt24_014_delete_gate_blocked_with_more_than_three_security() {
         .iter()
         .find(|&&a| a != digimon_engine::action::space::PASS)
         .expect("legal target action");
-    runner.execute_action(0, action).expect("choose DP-reduce target");
+    runner
+        .execute_action(0, action)
+        .expect("choose DP-reduce target");
     runner.auto_resolve().ok();
 
     assert!(
@@ -527,14 +550,18 @@ fn bt24_014_delete_gate_fires_with_three_or_fewer_security() {
         .iter()
         .find(|&&a| a != digimon_engine::action::space::PASS)
         .expect("legal target action");
-    runner.execute_action(0, action).expect("choose DP-reduce target");
+    runner
+        .execute_action(0, action)
+        .expect("choose DP-reduce target");
 
     // Delete prompt: OPP-7000 is now 2000 DP (<= 7000) and must be a legal target.
     let delete_view = runner
         .pending_selection_view()
         .expect("delete prompt must install (security <= 3)");
     assert!(
-        !delete_view.valid_action_ids.contains(&digimon_engine::action::space::PASS)
+        !delete_view
+            .valid_action_ids
+            .contains(&digimon_engine::action::space::PASS)
             || delete_view.valid_action_ids.len() > 1,
         "the delete pick is mandatory when a legal target exists"
     );
@@ -586,7 +613,9 @@ fn bt24_014_delete_target_filter_uses_post_debuff_dp_excludes_high_dp_non_target
         .iter()
         .find(|&&a| a != digimon_engine::action::space::PASS)
         .expect("legal target action");
-    runner.execute_action(0, action).expect("reduce OPP-12000 by 5000");
+    runner
+        .execute_action(0, action)
+        .expect("reduce OPP-12000 by 5000");
 
     let dp_after = runner.effective_dp(high).expect("still on field");
     assert_eq!(dp_after, 7000, "12000 - 5000 = 7000");
@@ -611,9 +640,7 @@ fn bt24_014_decode_prompts_on_non_battle_leave_with_aegiomon_source() {
     let handle = runner.place_stack(0, &["AEGIOMON-SRC", CARD_ID]);
 
     // Trigger a non-battle leave (return-to-hand) to reach the would-leave window.
-    runner
-        .game
-        .return_to_hand(handle);
+    runner.game.return_to_hand(handle);
 
     assert_eq!(
         runner.pending_kind(),
@@ -632,9 +659,7 @@ fn bt24_014_decode_declined_leaves_proceeds_without_playing_source() {
     let handle = runner.place_stack(0, &["AEGIOMON-SRC", CARD_ID]);
     let field_len_before = runner.game.players[0].battle_area.len();
 
-    runner
-        .game
-        .return_to_hand(handle);
+    runner.game.return_to_hand(handle);
     assert_eq!(runner.pending_kind(), Some(SelectionKind::Replacement));
 
     runner
@@ -658,9 +683,7 @@ fn bt24_014_decode_accepted_plays_aegiomon_source_without_paying_cost() {
     let handle = runner.place_stack(0, &["AEGIOMON-SRC", CARD_ID]);
     let memory_before = runner.game.memory;
 
-    runner
-        .game
-        .return_to_hand(handle);
+    runner.game.return_to_hand(handle);
     assert_eq!(runner.pending_kind(), Some(SelectionKind::Replacement));
 
     let view = runner.pending_selection_view().expect("replacement view");
@@ -697,9 +720,7 @@ fn bt24_014_inherited_decode_fires_when_buried_under_another_permanent() {
     // De-digivolve the top of the stack (RED-CARRIER) off, isolating whether
     // BT24-014's OWN would-leave fires — instead, directly trigger a
     // non-battle leave on the whole stack to exercise the inherited Decode.
-    runner
-        .game
-        .return_to_hand(handle);
+    runner.game.return_to_hand(handle);
 
     assert_eq!(
         runner.pending_kind(),

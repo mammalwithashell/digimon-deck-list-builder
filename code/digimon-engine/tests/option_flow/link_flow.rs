@@ -1913,7 +1913,10 @@ fn inherited_scope_link_ess_triggered_clause_fires_via_host() {
         .deck(1, &["FILLER"; 5])
         .memory(0)
         .start();
-    r.register_effect("TRIG-ESS", Arc::new(InheritedTriggeredLinkEss(witness.clone())));
+    r.register_effect(
+        "TRIG-ESS",
+        Arc::new(InheritedTriggeredLinkEss(witness.clone())),
+    );
 
     let host: PermanentHandle = r.place_on_field(0, "HOST", Some(0));
     r.push_linked_owned(host, "TRIG-ESS", 0);

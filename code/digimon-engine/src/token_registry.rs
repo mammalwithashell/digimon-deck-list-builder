@@ -111,8 +111,9 @@ impl TokenRegistry {
 
 /// Build the default token registry. Currently: Petrification (Medusamon),
 /// Familiar (TS Olympos), Atho/René/Por (Royal Knights — BT20-017 Jesmon,
-/// BT23-013 Jesmon CS), Hinukamuy (Royal Knights — BT23-057 Gankoomon).
-/// Additional tokens land as their archetypes are ported.
+/// BT23-013 Jesmon CS), Hinukamuy (Royal Knights — BT23-057 Gankoomon),
+/// Kotenken (EX12-034), and Paishu (EX12-057). Additional tokens land as
+/// their archetypes are ported.
 pub fn build_registry() -> TokenRegistry {
     let mut r = TokenRegistry::new();
     r.insert(TokenDef {
@@ -163,6 +164,30 @@ pub fn build_registry() -> TokenRegistry {
         level: None,
         traits: Vec::new(),
         keywords: vec![Keyword::Alliance, Keyword::Reboot, Keyword::Blocker],
+    });
+    // [Kotenken] — printed stats from EX12-034 Erlangmon:
+    // "(Digimon/Black/9000 DP/<Blocker>)".
+    r.insert(TokenDef {
+        name: "kotenken".to_string(),
+        card_id: "TOKEN_KOTENKEN".to_string(),
+        card_name: "Kotenken Token".to_string(),
+        colors: vec![CardColor::Black],
+        dp: Some(9000),
+        level: None,
+        traits: Vec::new(),
+        keywords: vec![Keyword::Blocker],
+    });
+    // [Paishu] — printed stats from EX12-057 Takutoumon:
+    // "(Digimon/Yellow/6000 DP/<Blocker> <Guard>)".
+    r.insert(TokenDef {
+        name: "paishu".to_string(),
+        card_id: "TOKEN_PAISHU".to_string(),
+        card_name: "Paishu Token".to_string(),
+        colors: vec![CardColor::Yellow],
+        dp: Some(6000),
+        level: None,
+        traits: Vec::new(),
+        keywords: vec![Keyword::Blocker, Keyword::Guard],
     });
     r
 }
@@ -259,5 +284,30 @@ mod tests {
         assert!(cd.keywords.contains(&Keyword::Alliance));
         assert!(cd.keywords.contains(&Keyword::Reboot));
         assert!(cd.keywords.contains(&Keyword::Blocker));
+    }
+
+    #[test]
+    fn ex12_kotenken_registered_with_printed_stats_and_keywords() {
+        let r = build_registry();
+        let def = r.get("kotenken").expect("Kotenken missing");
+        assert_eq!(def.card_id, "TOKEN_KOTENKEN");
+        assert_eq!(def.card_name, "Kotenken Token");
+        assert_eq!(def.colors, vec![CardColor::Black]);
+        assert_eq!(def.dp, Some(9000));
+        assert!(def.level.is_none());
+        assert!(def.keywords.contains(&Keyword::Blocker));
+    }
+
+    #[test]
+    fn ex12_paishu_registered_with_printed_stats_and_keywords() {
+        let r = build_registry();
+        let def = r.get("paishu").expect("Paishu missing");
+        assert_eq!(def.card_id, "TOKEN_PAISHU");
+        assert_eq!(def.card_name, "Paishu Token");
+        assert_eq!(def.colors, vec![CardColor::Yellow]);
+        assert_eq!(def.dp, Some(6000));
+        assert!(def.level.is_none());
+        assert!(def.keywords.contains(&Keyword::Blocker));
+        assert!(def.keywords.contains(&Keyword::Guard));
     }
 }

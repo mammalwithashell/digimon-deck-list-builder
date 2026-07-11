@@ -76,7 +76,9 @@ fn bt15_006_trashing_level5_digimon_draws_two() {
     let host = place_host_over_egg(&mut runner);
     let hand_before = runner.hand_size(0);
     let deck_before = runner.deck_size(0);
-    runner.game.delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
     let view = runner.pending_selection_view().unwrap();
     assert!(runner.pending_is_optional());
     let trash_action = *view.valid_action_ids.first().unwrap();
@@ -90,12 +92,17 @@ fn bt15_006_trashing_level5_digimon_draws_two() {
 fn bt15_006_trashing_level6_digimon_also_qualifies() {
     let mut runner = runner_with_hand(&["LV6-DIGI"]);
     let host = place_host_over_egg(&mut runner);
-    runner.game.delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
     let view = runner.pending_selection_view().unwrap();
     let trash_action = *view.valid_action_ids.first().unwrap();
     runner.execute_action(0, trash_action).unwrap();
     let _ = runner.auto_resolve();
-    assert!(!runner.game.players[0].hand.iter().any(|c| c.card_id(&runner.game.card_data) == "LV6-DIGI"));
+    assert!(!runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "LV6-DIGI"));
 }
 
 #[test]
@@ -104,14 +111,19 @@ fn bt15_006_declining_trash_skips_draw() {
     let host = place_host_over_egg(&mut runner);
     let hand_before = runner.hand_size(0);
     let deck_before = runner.deck_size(0);
-    runner.game.delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
     runner.pending_selection_view().unwrap();
     assert!(runner.pending_is_optional());
     runner.execute_action(0, PASS).unwrap();
     let _ = runner.auto_resolve();
     assert_eq!(runner.hand_size(0), hand_before);
     assert_eq!(runner.deck_size(0), deck_before);
-    assert!(runner.game.players[0].hand.iter().any(|c| c.card_id(&runner.game.card_data) == "LV5-DIGI"));
+    assert!(runner.game.players[0]
+        .hand
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "LV5-DIGI"));
 }
 
 #[test]
@@ -120,7 +132,9 @@ fn bt15_006_no_level5_plus_digimon_in_hand_skips_prompt_entirely() {
     let host = place_host_over_egg(&mut runner);
     let hand_before = runner.hand_size(0);
     let deck_before = runner.deck_size(0);
-    runner.game.delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
     let _ = runner.auto_resolve();
     assert!(runner.pending_selection().is_none());
     assert_eq!(runner.hand_size(0), hand_before);
@@ -132,7 +146,9 @@ fn bt15_006_empty_hand_skips_prompt_entirely() {
     let mut runner = runner_with_hand(&[]);
     let host = place_host_over_egg(&mut runner);
     let deck_before = runner.deck_size(0);
-    runner.game.delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
     let _ = runner.auto_resolve();
     assert!(runner.pending_selection().is_none());
     assert_eq!(runner.deck_size(0), deck_before);
@@ -142,15 +158,25 @@ fn bt15_006_empty_hand_skips_prompt_entirely() {
 fn bt15_006_multiple_eligible_cards_offers_choice_of_which_to_trash() {
     let mut runner = runner_with_hand(&["LV5-DIGI", "LV6-DIGI", "LV3-DIGI"]);
     let host = place_host_over_egg(&mut runner);
-    runner.game.delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
     let view = runner.pending_selection_view().unwrap();
     assert_eq!(view.valid_action_ids.len(), 2);
-    let hand_index_of_lv6 = runner.game.players[0].hand.iter().position(|c| c.card_id(&runner.game.card_data) == "LV6-DIGI").unwrap();
+    let hand_index_of_lv6 = runner.game.players[0]
+        .hand
+        .iter()
+        .position(|c| c.card_id(&runner.game.card_data) == "LV6-DIGI")
+        .unwrap();
     let lv6_action = digimon_engine::action::space::PLAY_HAND_START + hand_index_of_lv6 as u16;
     assert!(view.valid_action_ids.contains(&lv6_action));
     runner.execute_action(0, lv6_action).unwrap();
     let _ = runner.auto_resolve();
-    let hand_ids: Vec<String> = runner.game.players[0].hand.iter().map(|c| c.card_id(&runner.game.card_data).to_string()).collect();
+    let hand_ids: Vec<String> = runner.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&runner.game.card_data).to_string())
+        .collect();
     assert!(!hand_ids.contains(&"LV6-DIGI".to_string()));
     assert!(hand_ids.contains(&"LV5-DIGI".to_string()));
     assert!(hand_ids.contains(&"LV3-DIGI".to_string()));
@@ -160,21 +186,28 @@ fn bt15_006_multiple_eligible_cards_offers_choice_of_which_to_trash() {
 fn bt15_006_trashing_moves_the_discarded_card_into_trash() {
     let mut runner = runner_with_hand(&["LV5-DIGI"]);
     let host = place_host_over_egg(&mut runner);
-    runner.game.delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
     let trash_before = runner.game.players[0].trash.len();
     let view = runner.pending_selection_view().unwrap();
     let trash_action = *view.valid_action_ids.first().unwrap();
     runner.execute_action(0, trash_action).unwrap();
     let _ = runner.auto_resolve();
     assert_eq!(runner.game.players[0].trash.len() - trash_before, 1);
-    assert!(runner.game.players[0].trash.iter().any(|c| c.card_id(&runner.game.card_data) == "LV5-DIGI"));
+    assert!(runner.game.players[0]
+        .trash
+        .iter()
+        .any(|c| c.card_id(&runner.game.card_data) == "LV5-DIGI"));
 }
 
 #[test]
 fn bt15_006_declining_trash_moves_no_card_into_trash() {
     let mut runner = runner_with_hand(&["LV5-DIGI"]);
     let host = place_host_over_egg(&mut runner);
-    runner.game.delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
     let trash_before = runner.game.players[0].trash.len();
     runner.pending_selection_view().unwrap();
     runner.execute_action(0, PASS).unwrap();
@@ -186,13 +219,19 @@ fn bt15_006_declining_trash_moves_no_card_into_trash() {
 fn bt15_006_game_event_trash_fires_for_the_level5_hand_discard_cost() {
     let mut runner = runner_with_hand(&["LV5-DIGI"]);
     let host = place_host_over_egg(&mut runner);
-    runner.game.delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
     let checkpoint = runner.event_checkpoint();
     let view = runner.pending_selection_view().unwrap();
     let trash_action = *view.valid_action_ids.first().unwrap();
     runner.execute_action(0, trash_action).unwrap();
     let _ = runner.auto_resolve();
-    let trash_events: Vec<&GameEvent> = runner.events_since(checkpoint).iter().filter(|e| matches!(e, GameEvent::Trash { .. })).collect();
+    let trash_events: Vec<&GameEvent> = runner
+        .events_since(checkpoint)
+        .iter()
+        .filter(|e| matches!(e, GameEvent::Trash { .. }))
+        .collect();
     // The level-5 hand discard is a cost paid via trash_from_hand_by_index,
     // which routes through Game::trash_card and MUST emit GameEvent::Trash
     // (engine event-emission contract, fixed 2026-07-02 alongside BT19-069).
@@ -206,7 +245,9 @@ fn bt15_006_game_event_trash_fires_for_the_level5_hand_discard_cost() {
 fn bt15_006_pass_is_legal_when_eligible_target_exists() {
     let mut runner = runner_with_hand(&["LV5-DIGI"]);
     let host = place_host_over_egg(&mut runner);
-    runner.game.delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
+    runner
+        .game
+        .delete_permanent_with_cause(host, ReplacementCause::OpponentEffect);
     runner.pending_selection_view().unwrap();
     assert!(runner.pending_is_optional());
     runner.execute_action(0, PASS).unwrap();

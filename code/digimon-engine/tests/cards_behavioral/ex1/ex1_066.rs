@@ -111,9 +111,7 @@ fn ex1_066_has_security_play_from_security_clause() {
         .effects
         .iter()
         .find_map(|clause| match clause {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity) => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity) => Some(t),
             _ => None,
         })
         .expect("EX1-066 must have a [Security] clause");
@@ -239,9 +237,7 @@ fn ex1_066_on_play_adds_the_lone_digimon_and_trashes_the_rest() {
     runner
         .execute_action(view.selecting_player, view.valid_action_ids[0])
         .expect("add the lone Digimon to hand");
-    runner
-        .auto_resolve()
-        .expect("resolve trash-the-rest");
+    runner.auto_resolve().expect("resolve trash-the-rest");
 
     assert!(
         hand_ids(&runner, 0).contains(&"EX1066-DIGI-A".to_string()),

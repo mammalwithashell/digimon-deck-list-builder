@@ -10,13 +10,13 @@
 
 mod app_fuse_primitive;
 mod de_digivolve;
-mod scope_both_shared_opt_reducer;
-mod trash_count_binding_primitive;
 #[path = "../support/dsl_card_data.rs"]
 mod dsl_card_data;
 mod dsl_omnimon_slice;
+mod scope_both_shared_opt_reducer;
 mod test_cards;
 mod tokens;
+mod trash_count_binding_primitive;
 
 // Sample template for forthcoming hand-written production card tests.
 // Currently ignored pending the engine gaps that BT17-015 depends on.
@@ -52,6 +52,7 @@ mod bt9;
 mod ex1;
 mod ex10;
 mod ex11;
+mod ex12;
 mod ex3;
 mod ex4;
 mod ex5;

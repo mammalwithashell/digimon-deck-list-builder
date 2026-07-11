@@ -1,0 +1,43 @@
+card: EX12-043
+name: Hakubamon
+kind: digimon
+level: 4
+color: [yellow]
+cost: 5
+dp: 6000
+traits: [Holy Beast, Shambala, SW]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: Shambala }
+    cost: 2
+
+effects:
+  - when: main_on_field
+    once_per_turn: true
+    optional: true
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand], trait_has: SW }
+        n: 1
+    summary: "[Main][OPT] You may play or use 1 [SW] card from hand with cost reduced by 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: sw_pick
+          optional: true
+          filter: { trait_has: SW }
+          prompt: "Play or use 1 [SW] card from your hand with the cost reduced by 2"
+      - play_or_use_from_hand:
+          of: you
+          hand_index: sw_pick
+          cost_delta: { reduce: 2 }
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier
+    summary: "[Inherited] <Barrier>"

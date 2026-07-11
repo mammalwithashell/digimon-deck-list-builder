@@ -302,11 +302,7 @@ fn st16_14_own_effect_trashes_own_hand_offers_activation_and_gains_memory() {
         runner.game.players[0].battle_area[matt.index as usize].is_suspended,
         "Matt pays the printed suspend-self activation cost"
     );
-    assert_eq!(
-        runner.memory(),
-        mem_before + 1,
-        "accepting gains 1 memory"
-    );
+    assert_eq!(runner.memory(), mem_before + 1, "accepting gains 1 memory");
 }
 
 /// The activation can be declined — no suspend, no memory gain.

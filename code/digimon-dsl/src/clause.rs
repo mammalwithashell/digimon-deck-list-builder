@@ -392,7 +392,11 @@ pub struct AuraBody {
     /// `dp_modifier_fn` key survives as a deserialize alias. At compile time a
     /// literal routes to the compiled `dp_modifier` integer and any other
     /// formula to `dp_modifier_fn`, byte-identical to the pre-unification form.
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "dp_modifier_fn")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "dp_modifier_fn"
+    )]
     pub dp_modifier: Option<crate::formula::FormulaSpec>,
     /// Flat `Security A. ±N` grant. Track H §1 — `AuraGrant::SecurityAttack(i32)`.
     /// Installs `ModifierType::SecurityAttackChange` carrying the delta on each
@@ -400,7 +404,11 @@ pub struct AuraBody {
     /// ("your Olympos XII Digimon get Security Attack +1"); a map is computed
     /// dynamically over board state. The retired `security_attack_fn` key
     /// survives as a deserialize alias.
-    #[serde(default, skip_serializing_if = "Option::is_none", alias = "security_attack_fn")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        alias = "security_attack_fn"
+    )]
     pub security_attack: Option<crate::formula::FormulaSpec>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grant_keyword: Option<GrantKeywordValue>,

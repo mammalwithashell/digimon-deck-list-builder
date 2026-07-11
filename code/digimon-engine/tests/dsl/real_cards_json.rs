@@ -34,6 +34,18 @@ fn real_adapter_cross_checks_st2_13_fixture() {
 
 #[test]
 fn real_adapter_all_fixtures_cross_check() {
+    // Cross-checking every fixture against cards.json is stack-heavy on the
+    // default Windows libtest thread. Keep the mitigation local to this guard
+    // instead of requiring a process-wide RUST_MIN_STACK override.
+    std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(check_real_adapter_all_fixtures_cross_check)
+        .expect("spawn large-stack thread")
+        .join()
+        .expect("real cards cross-check guard thread panicked");
+}
+
+fn check_real_adapter_all_fixtures_cross_check() {
     use digimon_engine::dsl::loader;
     let examples = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("cards/_examples");
     let (specs, errs) = loader::load_dir_ok(&examples);

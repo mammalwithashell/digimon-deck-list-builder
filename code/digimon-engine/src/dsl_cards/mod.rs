@@ -21,6 +21,7 @@ pub mod lower_triggered;
 pub mod modifier_map;
 pub mod predicate;
 pub mod raw_rust;
+pub(crate) mod source_stats;
 pub mod step;
 pub mod timing_map;
 pub mod trigger_map;

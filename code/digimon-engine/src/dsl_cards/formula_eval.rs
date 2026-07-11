@@ -47,7 +47,6 @@
 //!   — e.g. a Tamer or Option permanent — are skipped). The legacy
 //!   payload-less aggregate variant scans the controller for compatibility.
 
-use std::collections::BTreeMap;
 use std::collections::HashSet;
 use std::sync::OnceLock;
 
@@ -60,6 +59,7 @@ use crate::card_source::CardHandle;
 use crate::dsl_cards::bindings::Bindings;
 use crate::dsl_cards::predicate::{eval_predicate_with_bindings, PredicateSubject};
 use crate::dsl_cards::raw_rust::EngineRawRustRegistry;
+use crate::dsl_cards::source_stats::same_level_pairs_in_sources;
 use crate::effect_context::{EffectContext, EffectReadContext};
 use crate::enums::{CardColor, PlayerId};
 use crate::permanent::{Permanent, PermanentHandle};
@@ -451,6 +451,11 @@ fn evaluate_per(
             .and_then(|handle| target_permanent(ctx, handle))
             .map(|perm| distinct_colors_in_sources(perm, &ctx.game.card_data))
             .unwrap_or(0),
+        CompiledPerSelector::ReturnedCardColorCount => bindings
+            .map(|bindings| {
+                distinct_colors_in_returned_cards(ctx.game, &bindings.result_log().returned_to_deck)
+            })
+            .unwrap_or(0),
         CompiledPerSelector::SameLevelPairsInSources => target_permanent(ctx, target)
             .map(|perm| same_level_pairs_in_sources(perm, &ctx.game.card_data))
             .unwrap_or(0),
@@ -566,6 +571,11 @@ fn evaluate_per_read(
             .and_then(|handle| target_permanent_read(ctx, handle))
             .map(|perm| distinct_colors_in_sources(perm, ctx.card_data()))
             .unwrap_or(0),
+        CompiledPerSelector::ReturnedCardColorCount => bindings
+            .map(|bindings| {
+                distinct_colors_in_returned_cards(ctx.game, &bindings.result_log().returned_to_deck)
+            })
+            .unwrap_or(0),
         CompiledPerSelector::SameLevelPairsInSources => target_permanent_read(ctx, target)
             .map(|perm| same_level_pairs_in_sources(perm, ctx.card_data()))
             .unwrap_or(0),
@@ -666,16 +676,6 @@ fn target_permanent_read<'a>(
         .get(target.index as usize)
 }
 
-fn same_level_pairs_in_sources(perm: &Permanent, data: &[crate::card_data::CardData]) -> i32 {
-    let mut counts: BTreeMap<u8, i32> = BTreeMap::new();
-    for source in perm.card_sources.iter().rev().skip(1) {
-        if let Some(level) = source.level(data) {
-            *counts.entry(level).or_default() += 1;
-        }
-    }
-    counts.values().map(|count| count / 2).sum()
-}
-
 fn distinct_colors_in_stack(perm: &Permanent, data: &[crate::card_data::CardData]) -> i32 {
     let mut seen: u8 = 0;
     for source in &perm.card_sources {
@@ -690,6 +690,19 @@ fn distinct_colors_in_sources(perm: &Permanent, data: &[crate::card_data::CardDa
     let mut seen: u8 = 0;
     for source in perm.card_sources.iter().rev().skip(1) {
         for color in source.colors(data) {
+            seen |= 1u8 << (*color as u8);
+        }
+    }
+    seen.count_ones() as i32
+}
+
+fn distinct_colors_in_returned_cards(game: &crate::game::Game, handles: &[CardHandle]) -> i32 {
+    let mut seen: u8 = 0;
+    for handle in handles {
+        let Some(card) = game.card_data_for_handle(*handle) else {
+            continue;
+        };
+        for color in &card.colors {
             seen |= 1u8 << (*color as u8);
         }
     }

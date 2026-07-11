@@ -204,6 +204,11 @@ pub enum PerSelector {
     },
     DigivolutionColorCount,
     SourceColorCount,
+    /// Number of distinct colors among cards this effect returned to the deck.
+    /// Reads the current effect result log, so it is meaningful only after a
+    /// return-to-deck step in the same process. YAML form:
+    /// `per: returned_card_color_count`.
+    ReturnedCardColorCount,
     SameLevelPairsInSources,
     SharedTrashCount {
         #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -231,7 +236,9 @@ pub enum PerSelector {
     /// +1000-DP grant: `base_per_delta { base: 0, per: { player_memory: { of:
     /// opponent } }, delta: 1000 }`. G-DSL-FORMULA-PLAYER-MEMORY (driver
     /// BT25-086 / G-DSL-FORMULA-OPPONENT-MEMORY).
-    PlayerMemory { of: PlayerRef },
+    PlayerMemory {
+        of: PlayerRef,
+    },
     /// Total number of **link cards** across every one of `of`'s battle-area
     /// Digimon — `Σ over of.battle_area Digimon of permanent.linked_cards.len()`.
     /// YAML form: `{ own_link_card_count: { of: you } }`. Drives BT25-075
@@ -239,7 +246,9 @@ pub enum PerSelector {
     /// opponent's Digimon" — DCGO reads
     /// `card.Owner.GetBattleAreaDigimons().Map(p => p.LinkedCards).Flat().Count()`.
     /// Composes inside `base_per_delta`. G-DSL-FORMULA-OWN-LINK-CARD-COUNT.
-    OwnLinkCardCount { of: PlayerRef },
+    OwnLinkCardCount {
+        of: PlayerRef,
+    },
     /// Number of link cards on the effect carrier's OWN permanent
     /// (`ctx.source_permanent.linked_cards.len()`). YAML form:
     /// `source_link_card_count`. The per-host sibling of `own_link_card_count`.
@@ -282,6 +291,7 @@ impl Serialize for PerSelector {
             }
             Self::DigivolutionColorCount => serializer.serialize_str("digivolution_color_count"),
             Self::SourceColorCount => serializer.serialize_str("source_color_count"),
+            Self::ReturnedCardColorCount => serializer.serialize_str("returned_card_color_count"),
             Self::SameLevelPairsInSources => {
                 serializer.serialize_str("same_level_pairs_in_sources")
             }

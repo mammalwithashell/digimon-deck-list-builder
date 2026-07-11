@@ -115,7 +115,10 @@ fn gap1_place_self_under_permanent_on_play_path_seats_face_up_no_trash() {
         .memory(3)
         .start();
     runner.place_on_field(1, "TM-DIGI", Some(0)); // host at index 0
-    runner.register_effect("TM-OPT", Arc::new(PlaceSelfUnderFirstDigimon { face_down: false }));
+    runner.register_effect(
+        "TM-OPT",
+        Arc::new(PlaceSelfUnderFirstDigimon { face_down: false }),
+    );
 
     // Sanity: host starts as a lone top card (no digivolution sources).
     assert_eq!(
@@ -171,7 +174,10 @@ fn gap1_place_self_under_permanent_face_down_axis_settable() {
         .memory(3)
         .start();
     runner.place_on_field(1, "TM-DIGI", Some(0));
-    runner.register_effect("TM-OPT", Arc::new(PlaceSelfUnderFirstDigimon { face_down: true }));
+    runner.register_effect(
+        "TM-OPT",
+        Arc::new(PlaceSelfUnderFirstDigimon { face_down: true }),
+    );
 
     let _ = runner.game.play_option_from_hand(1, 0);
     let host = &runner.game.players[1].battle_area[0];
@@ -323,7 +329,11 @@ fn gap1_dsl_place_self_under_permanent_seats_face_up_under_selected_host() {
         "the placed Option must NOT be trashed"
     );
     let host = &runner.game.players[1].battle_area[0];
-    assert_eq!(host.card_sources.len(), 2, "host gained the Option as a source");
+    assert_eq!(
+        host.card_sources.len(),
+        2,
+        "host gained the Option as a source"
+    );
     assert_eq!(
         host.card_sources[0].card_id(&runner.game.card_data),
         "TEST-PLACE-SELF-DSL",
@@ -530,8 +540,7 @@ fn gap2_use_option_from_digivolution_source_free() {
 
     let before = runner.game.memory;
     {
-        let mut ctx =
-            EffectContext::new(&mut runner.game, source_card, Some(host_handle), 1);
+        let mut ctx = EffectContext::new(&mut runner.game, source_card, Some(host_handle), 1);
         let result = ctx.use_option_from_source(host_handle, opt_source, CostDelta::Free);
         assert_eq!(
             result,
@@ -539,7 +548,10 @@ fn gap2_use_option_from_digivolution_source_free() {
             "digivolution-source-origin free use resolves to Trashed"
         );
     }
-    assert_eq!(runner.game.memory, before, "source-origin free use pays nothing");
+    assert_eq!(
+        runner.game.memory, before,
+        "source-origin free use pays nothing"
+    );
     // The Option left the host's stack and went to trash.
     assert_eq!(
         runner.game.players[1].battle_area[0].card_sources.len(),

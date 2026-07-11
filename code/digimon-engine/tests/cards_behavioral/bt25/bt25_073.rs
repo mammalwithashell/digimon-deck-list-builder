@@ -29,7 +29,9 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
     CompiledStep, CompiledTiming,
 };
-use digimon_engine::action::space::{encode_attack, HAND_EFFECT_START, PASS, PLAY_HAND_START, REPLACEMENT_ACCEPT};
+use digimon_engine::action::space::{
+    encode_attack, HAND_EFFECT_START, PASS, PLAY_HAND_START, REPLACEMENT_ACCEPT,
+};
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
@@ -264,13 +266,17 @@ fn bt25_073_on_play_trash_link_card_then_play_ts_digimon_free() {
         .as_ref()
         .expect("hand pick installs after the cost is paid");
     let want = PLAY_HAND_START + ts_hand_idx as u16;
-    assert!(p.valid_action_ids.contains(&want), "TS-DIGI-5 is a legal pick");
+    assert!(
+        p.valid_action_ids.contains(&want),
+        "TS-DIGI-5 is a legal pick"
+    );
     r.game
         .resolve_selection(0, want)
         .expect("resolve hand pick");
 
     assert!(
-        r.game.player(0)
+        r.game
+            .player(0)
             .battle_area
             .iter()
             .any(|perm| perm.top_card().card_id(&r.game.card_data) == "TS-DIGI-5"),
@@ -350,7 +356,10 @@ fn bt25_073_when_digivolving_trash_link_card_then_use_ts_option_free() {
         .as_ref()
         .expect("hand pick installs");
     let want = PLAY_HAND_START + opt_hand_idx as u16;
-    assert!(p.valid_action_ids.contains(&want), "TS-OPT-5 is a legal pick");
+    assert!(
+        p.valid_action_ids.contains(&want),
+        "TS-OPT-5 is a legal pick"
+    );
     r.game.resolve_selection(0, want).unwrap();
 
     assert!(
@@ -518,8 +527,13 @@ fn bt25_073_decline_first_pick_skips_trash_and_tail() {
         .pending_selection
         .as_ref()
         .expect("first selection installs");
-    assert!(p.is_optional, "the first pick (which Digimon) is declinable");
-    r.game.resolve_selection(0, PASS).expect("decline first pick");
+    assert!(
+        p.is_optional,
+        "the first pick (which Digimon) is declinable"
+    );
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline first pick");
 
     assert!(
         r.game.pending_selection.is_none(),
@@ -568,7 +582,9 @@ fn bt25_073_decline_second_pick_skips_trash_and_tail() {
         p.is_optional,
         "the second pick (which link card) is declinable"
     );
-    r.game.resolve_selection(0, PASS).expect("decline second pick");
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline second pick");
 
     assert!(
         r.game.pending_selection.is_none(),
@@ -630,7 +646,9 @@ fn bt25_073_decline_hand_pick_after_paying_cost_still_trashes_link_card() {
         .as_ref()
         .expect("hand pick installs");
     assert!(p.is_optional, "the hand pick itself is declinable");
-    r.game.resolve_selection(0, PASS).expect("decline hand pick");
+    r.game
+        .resolve_selection(0, PASS)
+        .expect("decline hand pick");
 
     assert_eq!(
         r.battle_area_size(0),

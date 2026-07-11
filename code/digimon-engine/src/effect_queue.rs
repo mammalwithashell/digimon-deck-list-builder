@@ -511,6 +511,24 @@ impl Game {
                         self.trigger_context_for_source(&source, Some(handle), timing);
                     self.enqueue_from_permanent(timing, handle, Some(trigger_context));
                 }
+                if timing == EffectTiming::OnAllyAttack {
+                    let security_cards: Vec<_> = self
+                        .player(player)
+                        .security
+                        .iter()
+                        .map(|card| card.handle())
+                        .collect();
+                    for card in security_cards {
+                        let trigger_context =
+                            self.trigger_context_for_source(&source, None, timing);
+                        self.enqueue_from_security_stack_card(
+                            timing,
+                            player,
+                            card,
+                            Some(trigger_context),
+                        );
+                    }
+                }
             }
             TriggerSource::EventObserved { .. }
             | TriggerSource::AttackTargetChanged { .. }

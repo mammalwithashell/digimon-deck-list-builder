@@ -1,0 +1,41 @@
+card: EX12-011
+name: Seasarmon
+kind: digimon
+level: 4
+color: [red]
+cost: 5
+dp: 5000
+traits: [Holy Beast, Shambala, TB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: Shambala }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete 1 opponent Digimon with 5000 DP or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: delete_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 5000
+          prompt: "Delete 1 opponent Digimon with 5000 DP or less"
+      - delete_permanent: { target: delete_target }
+
+  - scope: inherited
+    kind: aura
+    active_when: { your_turn: true }
+    target: { source: true }
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

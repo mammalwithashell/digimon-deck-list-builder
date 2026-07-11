@@ -211,7 +211,10 @@ fn p_220_has_face_up_reboot_grant_keyword() {
             }) if keyword == "Reboot"
         )
     });
-    assert!(reboot, "P-220 must declare a face-up GrantKeyword(Reboot) clause");
+    assert!(
+        reboot,
+        "P-220 must declare a face-up GrantKeyword(Reboot) clause"
+    );
 }
 
 #[test]
@@ -229,7 +232,10 @@ fn p_220_has_face_up_blocker_grant_keyword() {
             }) if keyword == "Blocker"
         )
     });
-    assert!(blocker, "P-220 must declare a face-up GrantKeyword(Blocker) clause");
+    assert!(
+        blocker,
+        "P-220 must declare a face-up GrantKeyword(Blocker) clause"
+    );
 }
 
 #[test]
@@ -245,7 +251,8 @@ fn p_220_has_on_play_when_digivolving_mandatory_shared_clause() {
             _ => None,
         })
         .find(|t| {
-            t.when.contains(&CompiledTiming::OnPlay) && t.when.contains(&CompiledTiming::WhenDigivolving)
+            t.when.contains(&CompiledTiming::OnPlay)
+                && t.when.contains(&CompiledTiming::WhenDigivolving)
         })
         .expect("P-220 must have a triggered clause covering OnPlay + WhenDigivolving");
 
@@ -271,7 +278,8 @@ fn p_220_on_play_clause_contains_de_digivolve_two_step() {
             _ => None,
         })
         .find(|t| {
-            t.when.contains(&CompiledTiming::OnPlay) && t.when.contains(&CompiledTiming::WhenDigivolving)
+            t.when.contains(&CompiledTiming::OnPlay)
+                && t.when.contains(&CompiledTiming::WhenDigivolving)
         })
         .expect("shared clause exists");
 
@@ -348,7 +356,11 @@ fn p_220_alt_paths_cover_digivolve_dna_and_assembly() {
         .expect("Kimeramon + Machinedramon DNA alt path");
     assert_eq!(dna.materials.len(), 2, "DNA needs exactly 2 materials");
     assert!(dna.stacks_unsuspended, "DNA digivolve stacks unsuspended");
-    assert_eq!(dna.cost, Some(CompiledCost::Literal(0)), "DNA Digivolve cost 0");
+    assert_eq!(
+        dna.cost,
+        Some(CompiledCost::Literal(0)),
+        "DNA Digivolve cost 0"
+    );
 
     let assembly = card
         .alt_paths
@@ -476,7 +488,9 @@ fn p_220_on_play_optional_delete_offers_any_field_and_decline_is_a_no_op() {
     runner.play(0, idx);
 
     // Resolve the mandatory De-Digivolve pick first.
-    let v1 = runner.pending_selection_view().expect("De-Digivolve prompt");
+    let v1 = runner
+        .pending_selection_view()
+        .expect("De-Digivolve prompt");
     assert_eq!(v1.kind, SelectionKind::OppField);
     let de_digivolve_target = v1.valid_action_ids[0];
     runner
@@ -527,13 +541,17 @@ fn p_220_on_play_optional_delete_can_target_own_digimon() {
     let idx = hand_index_of(&runner, 0, "P-220");
     runner.play(0, idx);
 
-    let v1 = runner.pending_selection_view().expect("De-Digivolve prompt");
+    let v1 = runner
+        .pending_selection_view()
+        .expect("De-Digivolve prompt");
     runner
         .execute_action(v1.selecting_player, v1.valid_action_ids[0])
         .expect("resolve De-Digivolve target");
     runner.game.drain_effect_queue();
 
-    let v2 = runner.pending_selection_view().expect("optional delete prompt");
+    let v2 = runner
+        .pending_selection_view()
+        .expect("optional delete prompt");
     let own_action = encode_attack(0, own.index as u16);
     let own_field_before = runner.battle_area_size(0);
     runner
@@ -555,9 +573,10 @@ fn p_220_when_digivolving_fires_same_shared_body() {
     let opp = runner.place_on_field(1, "FILLER-L3", Some(0));
     let millen = runner.place_on_field(0, "P-220", None);
 
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(millen));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(millen),
+    );
     runner.game.drain_effect_queue();
 
     assert_eq!(
@@ -616,7 +635,10 @@ fn p_220_on_deletion_offers_outer_accept_then_exact_three_return_selection() {
         Some(SelectionKind::Replacement),
         "the optional On Deletion effect installs an outer accept/decline prompt"
     );
-    assert!(runner.pending_is_optional(), "the outer prompt must be declinable");
+    assert!(
+        runner.pending_is_optional(),
+        "the outer prompt must be declinable"
+    );
 
     runner
         .accept_optional_trigger()
@@ -625,7 +647,12 @@ fn p_220_on_deletion_offers_outer_accept_then_exact_three_return_selection() {
     assert!(
         matches!(
             runner.pending_kind(),
-            Some(SelectionKind::CountCappedMultiSelect { min: 3, max: 3, picked: 0, .. })
+            Some(SelectionKind::CountCappedMultiSelect {
+                min: 3,
+                max: 3,
+                picked: 0,
+                ..
+            })
         ),
         "after accepting, must prompt an exact-3 trash return selection; got {:?}",
         runner.pending_kind()
@@ -887,8 +914,12 @@ fn p_220_on_deletion_cannot_play_two_cards_of_the_same_level() {
             // After one level-4 pick, no further pick of a DIFFERENT
             // level-4 card should be legal — only PASS (distinct_by: level).
             if let Some(v2) = runner.pending_selection_view() {
-                let non_pass: Vec<u16> =
-                    v2.valid_action_ids.iter().copied().filter(|&a| a != PASS).collect();
+                let non_pass: Vec<u16> = v2
+                    .valid_action_ids
+                    .iter()
+                    .copied()
+                    .filter(|&a| a != PASS)
+                    .collect();
                 assert!(
                     non_pass.is_empty(),
                     "no second same-level pick should be legal; got {non_pass:?}"

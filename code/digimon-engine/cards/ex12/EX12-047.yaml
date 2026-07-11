@@ -1,0 +1,102 @@
+card: EX12-047
+name: Amaterasumon
+kind: digimon
+level: 6
+color: [yellow, red]
+cost: 12
+dp: 12000
+traits: [Shaman, Sanmyojin, Tentei Hachibushu, Shambala]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: Shambala }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+
+  - kind: grant_keyword
+    keyword: SecurityAttackPlus
+    value: 1
+    summary: "<Security A. +1>"
+
+  - kind: grant_keyword
+    keyword: Ascension
+    summary: "<Ascension>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Delete opponent's lowest-DP Digimon; then return 2 trash for +6000 DP and -5000 DP per returned card color"
+    process:
+      - select_opponent_permanent:
+          bind_as: victim
+          filter: { kind: digimon }
+          selector: lowest_dp
+          prompt: "Delete 1 of your opponent's lowest DP Digimon"
+      - delete_permanent: { target: victim }
+      - as_selecting_player:
+          of: you
+          body:
+            - select_count_capped_multi:
+                of: opponent
+                zone: trash
+                min: 2
+                max: 2
+                filter: {}
+                bind_as: returned_cards
+                optional_zero: false
+                prompt: "Return 2 cards from your opponent's trash to the bottom of their deck"
+            - return_trash_list_to_deck_bottom:
+                of: opponent
+                cards: returned_cards
+            - if:
+                condition:
+                  binding_count_eq:
+                    binding: returned_cards
+                    n: 2
+                then:
+                  - add_dp_modifier:
+                      target: source
+                      value: 6000
+                      expiry: end_of_turn
+                  - select_opponent_permanent:
+                      bind_as: dp_target
+                      filter: { kind: digimon }
+                      prompt: "Choose 1 opponent Digimon to get -5000 DP for each returned card color"
+                  - add_dp_modifier:
+                      target: dp_target
+                      value:
+                        formula:
+                          base: 0
+                          per: returned_card_color_count
+                          delta: -5000
+                      expiry: end_of_turn
+
+  - when: on_deletion
+    summary: "[On Deletion] You may return 1 [TB] card from trash to hand, then may play 1 level 5 or lower [TB] Digimon from hand free"
+    process:
+      - select_trash:
+          of: you
+          bind_as: tb_return
+          optional: true
+          filter: { trait_has: TB }
+          prompt: "Return 1 [TB] card from your trash to your hand"
+      - add_to_hand_from_trash: { of: you, card: tb_return }
+      - select_hand:
+          of: you
+          bind_as: tb_play
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: TB
+              - level_lte: 5
+          prompt: "Play 1 level 5 or lower [TB] Digimon from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: tb_play

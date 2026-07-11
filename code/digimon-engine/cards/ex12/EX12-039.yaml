@@ -1,0 +1,36 @@
+card: EX12-039
+name: Takinmon
+kind: digimon
+level: 3
+color: [yellow]
+cost: 3
+dp: 2000
+traits: [Beast, Shambala, SW]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Shambala }
+    cost: 0
+
+effects:
+  - kind: cost_reduction
+    reduction_timing: before_pay_cost
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_cost_target_permanent: true
+        - cost_target:
+            all_of:
+              - kind: digimon
+              - trait_has: SW
+    amount: 1
+    summary: "[Your Turn] When this Digimon would digivolve into an [SW] Digimon, reduce the cost by 1"
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier
+    summary: "[Inherited] <Barrier>"

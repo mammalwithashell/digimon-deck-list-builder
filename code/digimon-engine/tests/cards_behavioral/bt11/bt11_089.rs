@@ -239,7 +239,9 @@ fn bt11_089_your_turn_observer_gates_on_suspend_self_activation_cost() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnAnyDigimonPlayed) => {
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::OnAnyDigimonPlayed) =>
+            {
                 Some(t)
             }
             _ => None,
@@ -423,7 +425,9 @@ fn bt11_089_effect_play_of_red_avian_grants_rush_via_suspend_cost() {
         .play_from_hand_free(0, 0)
         .expect("effect plays RED-AVIAN from hand");
 
-    runner.auto_resolve().expect("resolve suspend-cost + Rush grant");
+    runner
+        .auto_resolve()
+        .expect("resolve suspend-cost + Rush grant");
 
     assert!(
         runner.game.player(0).battle_area[akiho.index as usize].is_suspended,
@@ -459,7 +463,9 @@ fn bt11_089_pluralized_trait_token_still_matches_substring() {
     let played = ctx
         .play_from_hand_free(0, 0)
         .expect("effect plays RED-BIRDS from hand");
-    runner.auto_resolve().expect("resolve suspend-cost + Rush grant");
+    runner
+        .auto_resolve()
+        .expect("resolve suspend-cost + Rush grant");
 
     assert!(
         runner.game.has_keyword(played, Keyword::Rush),
@@ -493,7 +499,9 @@ fn bt11_089_compound_trait_sea_beast_matches_beast_substring() {
     let played = ctx
         .play_from_hand_free(0, 0)
         .expect("effect plays RED-SEABEAST from hand");
-    runner.auto_resolve().expect("resolve suspend-cost + Rush grant");
+    runner
+        .auto_resolve()
+        .expect("resolve suspend-cost + Rush grant");
 
     assert!(
         runner.game.has_keyword(played, Keyword::Rush),
@@ -571,10 +579,7 @@ fn bt11_089_non_matching_trait_does_not_trigger() {
 fn bt11_089_hard_play_by_the_controller_does_not_trigger_observer() {
     // A normal (non-effect) play from hand must NOT satisfy
     // `event_is_effect_initiated: true`.
-    let mut runner = akiho_runner()
-        .hand(0, &["RED-AVIAN"])
-        .memory(10)
-        .start();
+    let mut runner = akiho_runner().hand(0, &["RED-AVIAN"]).memory(10).start();
     let akiho = runner.place_on_field(0, CARD_ID, Some(0));
 
     runner.play(0, 0).expect("hard play RED-AVIAN from hand");
@@ -584,7 +589,10 @@ fn bt11_089_hard_play_by_the_controller_does_not_trigger_observer() {
         !runner.game.player(0).battle_area[akiho.index as usize].is_suspended,
         "Akiho must not suspend for a normal (non-effect) play"
     );
-    let played = runner.game.player(0).battle_area
+    let played = runner
+        .game
+        .player(0)
+        .battle_area
         .iter()
         .find(|p| p.top_card().card_id(&runner.game.card_data) == "RED-AVIAN")
         .expect("RED-AVIAN is on field");

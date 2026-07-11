@@ -495,7 +495,10 @@ fn ex9_060_inherited_on_deletion_offers_level_4_or_lower_target() {
     let opp_lv4 = runner.place_on_field(1, "OPP-LV4", Some(0));
     let _opp_lv6 = runner.place_on_field(1, "OPP-LV6", Some(0));
 
-    runner.game.delete_permanent_with_cause(carrier_handle, digimon_engine::replacement::ReplacementCause::OpponentEffect);
+    runner.game.delete_permanent_with_cause(
+        carrier_handle,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
 
     let kind = runner
         .pending_kind()
@@ -535,19 +538,20 @@ fn ex9_060_inherited_on_deletion_deletes_chosen_target() {
 
     let opp_field_size_before = runner.game.players[1].battle_area.len();
 
-    runner.game.delete_permanent_with_cause(carrier_handle, digimon_engine::replacement::ReplacementCause::OpponentEffect);
+    runner.game.delete_permanent_with_cause(
+        carrier_handle,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
 
     let action = digimon_engine::action::space::encode_attack(0, opp.index as u16);
-    runner
-        .execute_action(1, action)
-        .unwrap_or_else(|_| {
-            // The selecting player for a self-triggered On Deletion effect is
-            // the deleted permanent's controller (player 0), not the target's
-            // controller. Retry with player 0 if player 1 was rejected.
-            runner
-                .execute_action(0, action)
-                .expect("delete the chosen opponent Digimon")
-        });
+    runner.execute_action(1, action).unwrap_or_else(|_| {
+        // The selecting player for a self-triggered On Deletion effect is
+        // the deleted permanent's controller (player 0), not the target's
+        // controller. Retry with player 0 if player 1 was rejected.
+        runner
+            .execute_action(0, action)
+            .expect("delete the chosen opponent Digimon")
+    });
 
     assert_eq!(
         runner.game.players[1].battle_area.len(),
@@ -578,7 +582,10 @@ fn ex9_060_inherited_on_deletion_no_target_when_all_opponents_above_level_4() {
 
     let opp_field_size_before = runner.game.players[1].battle_area.len();
 
-    runner.game.delete_permanent_with_cause(carrier_handle, digimon_engine::replacement::ReplacementCause::OpponentEffect);
+    runner.game.delete_permanent_with_cause(
+        carrier_handle,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
 
     assert!(
         runner.pending_selection().is_none(),
@@ -609,7 +616,10 @@ fn ex9_060_inherited_on_deletion_does_not_fire_when_deleted_alone() {
     let devidramon = runner.place_on_field(0, "EX9-060", Some(0));
     let _opp = runner.place_on_field(1, "OPP-LV2", Some(0));
 
-    runner.game.delete_permanent_with_cause(devidramon, digimon_engine::replacement::ReplacementCause::OpponentEffect);
+    runner.game.delete_permanent_with_cause(
+        devidramon,
+        digimon_engine::replacement::ReplacementCause::OpponentEffect,
+    );
 
     assert!(
         runner.pending_selection().is_none(),

@@ -1928,6 +1928,31 @@ fn run_play_or_use_dual_choice_step(
         state.prov.controller,
         state.prov.override_pin,
     );
+    if let Some(source_ref) = state.source_ref {
+        match choice {
+            0 => {
+                if source_ref.permanent.player == state.player {
+                    let _ = ctx.play_from_materials(
+                        source_ref.permanent,
+                        source_ref.source_index as usize,
+                        state.cost_delta,
+                    );
+                }
+            }
+            _ => {
+                let _ = ctx.game.use_option_from(
+                    state.player,
+                    crate::game_actions::OptionSource::Source {
+                        host: source_ref.permanent,
+                        card: source_ref.card,
+                    },
+                    state.cost_delta,
+                );
+            }
+        }
+        run_outer_conts(ctx.game, state.outer_conts);
+        return;
+    }
     if ctx
         .game
         .player(state.player)

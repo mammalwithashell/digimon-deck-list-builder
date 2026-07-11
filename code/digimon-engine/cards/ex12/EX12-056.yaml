@@ -1,0 +1,78 @@
+card: EX12-056
+name: Cho-Hakkaimon
+kind: digimon
+level: 5
+color: [black, yellow]
+cost: 7
+dp: 7000
+traits: [Puppet, Shambala, SW]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: Shambala }
+    cost: 3
+  - kind: digixros
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_lte: 5
+            - any_of:
+                - in_text_contains: Gokuumon
+                - trait_has: SW
+        zones: [hand, battle_area]
+        cost_delta: -2
+    cost: 7
+
+effects:
+  - kind: grant_keyword
+    keyword: Guard
+    summary: "<Guard>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] De-Digivolve 1 one opponent Digimon; then 1 other [SW] Digimon may gain Alliance and attack"
+    process:
+      - select_opponent_permanent:
+          bind_as: degen_target
+          filter: { kind: digimon }
+          prompt: "De-Digivolve 1 one opponent Digimon"
+      - de_digivolve:
+          target: degen_target
+          amount: 1
+          stop_at_level: 3
+      - select_own_permanent:
+          bind_as: sw_attacker
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: SW
+              - other: true
+          prompt: "Choose 1 other [SW] Digimon to gain Alliance and attack"
+      - if:
+          condition: { binding_present: sw_attacker }
+          then:
+            - grant_keyword:
+                target: sw_attacker
+                keyword: Alliance
+                expiry: end_of_turn
+            - may_attack_now:
+                attacker: sw_attacker
+                targets: any
+                optional: true
+
+  - scope: inherited
+    when: on_opponent_attack
+    once_per_turn: true
+    optional: true
+    active_when: { opponents_turn: true }
+    summary: "[Inherited][Opponent's Turn][OPT] When an opponent Digimon attacks, you may change the attack target to this Digimon"
+    process:
+      - redirect_attack_target: { new_target: source }

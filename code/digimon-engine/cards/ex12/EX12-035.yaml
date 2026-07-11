@@ -1,0 +1,145 @@
+card: EX12-035
+name: MetalGarurumon
+kind: digimon
+level: 6
+color: [blue, purple]
+cost: 12
+dp: 12000
+traits: [Cyborg, ME, VB]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 5
+        - any_of:
+            - name_contains: Garurumon
+            - trait_has: ME
+            - trait_has: VB
+    cost: 3
+  - kind: dna_digivolve
+    materials:
+      - level_eq: 5
+        any_of:
+          - color_is: blue
+          - color_is: black
+      - level_eq: 5
+        any_of:
+          - color_is: purple
+          - color_is: yellow
+    cost: 0
+    stacks_unsuspended: true
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 5
+            - any_of:
+                - name_contains: Gabumon
+                - name_contains: Garurumon
+                - trait_has: ME
+                - trait_has: VB
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 4
+            - any_of:
+                - name_contains: Gabumon
+                - name_contains: Garurumon
+                - trait_has: ME
+                - trait_has: VB
+        zones: [trash]
+        stack_under: true
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_eq: 3
+            - any_of:
+                - name_contains: Gabumon
+                - name_contains: Garurumon
+                - trait_has: ME
+                - trait_has: VB
+        zones: [trash]
+        stack_under: true
+    cost: 6
+effects:
+  - kind: grant_keyword
+    keyword: Evade
+    summary: "<Evade>"
+
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - none_of:
+            - replacement_cause: battle
+    summary: "<Decode (Lv.5 or lower w/[Gabumon]/[Garurumon] in name or [ME]/[VB])>"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 5
+              - any_of:
+                  - name_contains: Gabumon
+                  - name_contains: Garurumon
+                  - trait_has: ME
+                  - trait_has: VB
+          prompt: "Decode: play 1 level 5 or lower [Gabumon]/[Garurumon]/[ME]/[VB] source"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] Trash any 4 opponent sources, then bottom-deck 1 opponent Digimon with <= this Digimon's sources"
+    process:
+      - select_opponent_sources:
+          min: 4
+          max: 4
+          bind_as: trashed_sources
+          prompt: "Trash any 4 digivolution cards from your opponent's Digimon"
+          then:
+            - trash_selected_sources: { source_refs: trashed_sources }
+      - select_opponent_permanent:
+          bind_as: bottom_target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte:
+                  formula:
+                    source_material_count: {}
+          prompt: "Return 1 opponent Digimon with as many or fewer digivolution cards as this Digimon to the bottom of the deck"
+      - return_to_deck:
+          target: bottom_target
+          position: bottom
+          include_sources: false
+
+  - when: [on_enter_field_anyone, on_digivolve]
+    once_per_turn: true
+    active_when:
+      all_of:
+        - all_turns: true
+        - event_target_kind: digimon
+    summary: "[All Turns][OPT] When any Digimon are played/digivolve, 1 opponent Digimon can't suspend until their turn ends"
+    process:
+      - select_opponent_permanent:
+          bind_as: lock_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon that can't suspend until their turn ends"
+      - add_modifier:
+          target: lock_target
+          modifier: CannotSuspend
+          value: 1
+          expiry: end_of_opponents_turn

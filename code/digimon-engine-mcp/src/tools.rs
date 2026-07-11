@@ -654,7 +654,9 @@ fn tool_new_game_debug(
     };
     // Optional zone map (returns empty HashMap if missing, errors only on bad shape).
     let parse_optional_zone_map = |key: &str| -> Result<HashMap<u8, Vec<String>>, String> {
-        let Some(obj) = args.get(key) else { return Ok(HashMap::new()); };
+        let Some(obj) = args.get(key) else {
+            return Ok(HashMap::new());
+        };
         if obj.is_null() {
             return Ok(HashMap::new());
         }
@@ -670,7 +672,11 @@ fn tool_new_game_debug(
                 .as_array()
                 .ok_or_else(|| format!("{}.{} must be an array", key, k))?
                 .iter()
-                .map(|s| s.as_str().map(String::from).ok_or_else(|| format!("non-string in {}.{}", key, k)))
+                .map(|s| {
+                    s.as_str()
+                        .map(String::from)
+                        .ok_or_else(|| format!("non-string in {}.{}", key, k))
+                })
                 .collect::<Result<Vec<_>, _>>()?;
             out.insert(pid, cards);
         }
@@ -730,8 +736,7 @@ fn tool_load_recording(
             other => RecordingInput::NativeValue(other.clone()),
         }
     } else if let Some(path) = args.get("recording_path").and_then(|v| v.as_str()) {
-        let text =
-            std::fs::read_to_string(path).map_err(|e| format!("reading {}: {}", path, e))?;
+        let text = std::fs::read_to_string(path).map_err(|e| format!("reading {}: {}", path, e))?;
         RecordingInput::Text(text)
     } else {
         return Err("provide recording_json or recording_path".into());
@@ -740,41 +745,43 @@ fn tool_load_recording(
     // Resolve (format, constructed LiveGame). Detection: a native recording is
     // a single JSON object carrying `actions`/`initial_state`; a DCGO recording
     // is JSONL (one object per line, leading `game_start` row).
-    let (lg_result, source_format): (Result<LiveGame, LiveGameError>, &'static str) =
-        match (explicit_format, input) {
-            (Some("native"), RecordingInput::NativeValue(v)) => {
+    let (lg_result, source_format): (Result<LiveGame, LiveGameError>, &'static str) = match (
+        explicit_format,
+        input,
+    ) {
+        (Some("native"), RecordingInput::NativeValue(v)) => {
+            (LiveGame::from_recording(v, card_data), "native")
+        }
+        (Some("native"), RecordingInput::Text(t)) => {
+            let v: Value =
+                serde_json::from_str(&t).map_err(|e| format!("parsing native recording: {}", e))?;
+            (LiveGame::from_recording(v, card_data), "native")
+        }
+        (Some("dcgo"), RecordingInput::Text(t)) => match parse_jsonl(&t) {
+            Ok(rec) => (LiveGame::from_dcgo_recording(rec, card_data), "dcgo"),
+            Err(e) => return Ok(err_value(format!("parsing DCGO recording: {}", e))),
+        },
+        (Some("dcgo"), RecordingInput::NativeValue(_)) => {
+            return Err(
+                "source_format=dcgo requires JSONL text (recording_json string or recording_path)"
+                    .into(),
+            );
+        }
+        (Some(other), _) => {
+            return Err(format!("unknown source_format: {}", other));
+        }
+        // Auto-detect.
+        (None, RecordingInput::NativeValue(v)) => {
+            (LiveGame::from_recording(v, card_data), "native")
+        }
+        (None, RecordingInput::Text(t)) => {
+            let as_native: Option<Value> = serde_json::from_str(&t)
+                .ok()
+                .filter(|v: &Value| v.get("actions").is_some() || v.get("initial_state").is_some());
+            if let Some(v) = as_native {
                 (LiveGame::from_recording(v, card_data), "native")
-            }
-            (Some("native"), RecordingInput::Text(t)) => {
-                let v: Value = serde_json::from_str(&t)
-                    .map_err(|e| format!("parsing native recording: {}", e))?;
-                (LiveGame::from_recording(v, card_data), "native")
-            }
-            (Some("dcgo"), RecordingInput::Text(t)) => match parse_jsonl(&t) {
-                Ok(rec) => (LiveGame::from_dcgo_recording(rec, card_data), "dcgo"),
-                Err(e) => return Ok(err_value(format!("parsing DCGO recording: {}", e))),
-            },
-            (Some("dcgo"), RecordingInput::NativeValue(_)) => {
-                return Err(
-                    "source_format=dcgo requires JSONL text (recording_json string or recording_path)"
-                        .into(),
-                );
-            }
-            (Some(other), _) => {
-                return Err(format!("unknown source_format: {}", other));
-            }
-            // Auto-detect.
-            (None, RecordingInput::NativeValue(v)) => {
-                (LiveGame::from_recording(v, card_data), "native")
-            }
-            (None, RecordingInput::Text(t)) => {
-                let as_native: Option<Value> = serde_json::from_str(&t)
-                    .ok()
-                    .filter(|v: &Value| v.get("actions").is_some() || v.get("initial_state").is_some());
-                if let Some(v) = as_native {
-                    (LiveGame::from_recording(v, card_data), "native")
-                } else {
-                    match parse_jsonl(&t) {
+            } else {
+                match parse_jsonl(&t) {
                         Ok(rec) => (LiveGame::from_dcgo_recording(rec, card_data), "dcgo"),
                         Err(e) => {
                             return Ok(err_value(format!(
@@ -783,9 +790,9 @@ fn tool_load_recording(
                             )))
                         }
                     }
-                }
             }
-        };
+        }
+    };
 
     match lg_result {
         Ok(lg) => {
@@ -1058,7 +1065,10 @@ fn tool_step(args: Value, registry: &mut GameRegistry) -> Result<Value, String> 
     }
 }
 
-fn parse_handle(v: &Value, key: &str) -> Result<digimon_engine::permanent::PermanentHandle, String> {
+fn parse_handle(
+    v: &Value,
+    key: &str,
+) -> Result<digimon_engine::permanent::PermanentHandle, String> {
     let obj = v
         .get(key)
         .and_then(|x| x.as_object())
@@ -1308,7 +1318,10 @@ mod tests {
             !view["legal_now"].as_array().unwrap().is_empty(),
             "legal_now should list the engine's offered actions"
         );
-        assert!(view["delta"].is_object(), "forward step should carry a delta");
+        assert!(
+            view["delta"].is_object(),
+            "forward step should carry a delta"
+        );
     }
 
     #[test]
@@ -1327,13 +1340,7 @@ mod tests {
     fn seek_and_restore_checkpoint_move_the_cursor() {
         let db = minimal_db();
         let (mut reg, id, _) = load_game(native_recording(11));
-        let seek = dispatch(
-            "seek",
-            json!({ "game_id": id, "step_n": 3 }),
-            &mut reg,
-            &db,
-        )
-        .unwrap();
+        let seek = dispatch("seek", json!({ "game_id": id, "step_n": 3 }), &mut reg, &db).unwrap();
         assert_eq!(seek["view"]["cursor"], 3);
         let restore = dispatch(
             "restore_checkpoint",
@@ -1387,6 +1394,9 @@ mod tests {
         let id = made["game_id"].as_str().unwrap().to_string();
         let resp = dispatch("step_forward", json!({ "game_id": id }), &mut reg, &db).unwrap();
         assert_eq!(resp["ok"], false);
-        assert!(resp["error"].as_str().unwrap().contains("not constructed from a recording"));
+        assert!(resp["error"]
+            .as_str()
+            .unwrap()
+            .contains("not constructed from a recording"));
     }
 }

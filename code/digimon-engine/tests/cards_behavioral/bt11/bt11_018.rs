@@ -29,9 +29,7 @@
 //! - Standard digivolve alt-paths: Red Lv.5/cost4 AND Blue Lv.6/cost3
 //! - DigiXros -3 [OmniShoutmon] x [ZeigGreymon] alt-path materials
 
-use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledTiming,
-};
+use digimon_dsl::compiled::{CompiledAltPathKind, CompiledClause, CompiledCost, CompiledTiming};
 use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner};
 use digimon_engine::enums::{CardColor, EffectTiming, ModifierType, PlaySource};
 use digimon_engine::selection::TriggerSource;
@@ -375,7 +373,10 @@ fn bt11_018_on_play_no_low_dp_target_still_locks_high_dp_opponent() {
         "OPP-HIGH must survive — no DP<=8000 delete target exists"
     );
     assert!(
-        runner.game.modifiers.has(opp_high, ModifierType::CannotAttack),
+        runner
+            .game
+            .modifiers
+            .has(opp_high, ModifierType::CannotAttack),
         "cannot-attack sub-pool must fire independently even when the delete \
          sub-pool has no eligible target"
     );
@@ -419,10 +420,9 @@ fn bt11_018_end_of_attack_installs_optional_prompt() {
     let mut runner = dx();
     let dx_perm = runner.place_on_field(0, "BT11-018", Some(0));
 
-    runner.game.enqueue_triggered(
-        EffectTiming::EndOfAttack,
-        TriggerSource::Permanent(dx_perm),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfAttack, TriggerSource::Permanent(dx_perm));
     runner.game.drain_effect_queue();
 
     assert!(
@@ -450,10 +450,9 @@ fn bt11_018_end_of_attack_decline_leaves_self_and_memory_unchanged() {
     let dx_perm = runner.place_on_field(0, "BT11-018", Some(0));
     let mem_before = runner.memory();
 
-    runner.game.enqueue_triggered(
-        EffectTiming::EndOfAttack,
-        TriggerSource::Permanent(dx_perm),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfAttack, TriggerSource::Permanent(dx_perm));
     runner.game.drain_effect_queue();
 
     runner
@@ -489,10 +488,9 @@ fn bt11_018_end_of_attack_accept_deletes_self_and_gains_1_memory() {
     let dx_perm = runner.place_on_field(0, "BT11-018", Some(0));
     let mem_before = runner.memory();
 
-    runner.game.enqueue_triggered(
-        EffectTiming::EndOfAttack,
-        TriggerSource::Permanent(dx_perm),
-    );
+    runner
+        .game
+        .enqueue_triggered(EffectTiming::EndOfAttack, TriggerSource::Permanent(dx_perm));
     runner.game.drain_effect_queue();
 
     let view = runner
@@ -506,7 +504,9 @@ fn bt11_018_end_of_attack_accept_deletes_self_and_gains_1_memory() {
     runner
         .execute_action(0, accept_action)
         .expect("accept end_of_attack");
-    runner.auto_resolve().expect("resolve self-delete + memory gain");
+    runner
+        .auto_resolve()
+        .expect("resolve self-delete + memory gain");
 
     assert!(
         !runner.game.players[0]

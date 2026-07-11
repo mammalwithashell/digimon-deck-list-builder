@@ -276,11 +276,8 @@ pub fn validate(spec: &CardSpec, ctx: &ValidationContext<'_>) -> Result<(), Vec<
                                 // self-aura declarative-tick path
                                 // (G-DSL-AURA-EFFECT-IMMUNITY).
                                 if b.effect_immunity.is_some() {
-                                    let is_self_target = b
-                                        .target
-                                        .as_ref()
-                                        .map(|t| t.is_empty())
-                                        .unwrap_or(true);
+                                    let is_self_target =
+                                        b.target.as_ref().map(|t| t.is_empty()).unwrap_or(true);
                                     if !is_self_target || b.target_player.is_some() {
                                         errors.push(ValidationError {
                                             card_id: spec.card.clone(),
@@ -529,8 +526,14 @@ fn validate_predicate(
         ("total_security_count_lte", &pred.total_security_count_lte),
         ("total_security_count_gte", &pred.total_security_count_gte),
         ("total_security_count_eq", &pred.total_security_count_eq),
-        ("face_up_security_count_lte", &pred.face_up_security_count_lte),
-        ("face_up_security_count_gte", &pred.face_up_security_count_gte),
+        (
+            "face_up_security_count_lte",
+            &pred.face_up_security_count_lte,
+        ),
+        (
+            "face_up_security_count_gte",
+            &pred.face_up_security_count_gte,
+        ),
     ] {
         if let Some(crate::predicate::DpConstraint::Formula(formula)) = dp {
             validate_formula(formula, &format!("{prefix}.{field}"), card_id, ctx, errors);
@@ -1157,6 +1160,18 @@ fn validate_step(
                 );
             }
         }
+        StepSpec::RepeatEffectChoice(args) => {
+            validate_formula(
+                &args.count,
+                &format!("{prefix}.count"),
+                card_id,
+                ctx,
+                errors,
+            );
+            for (k, s) in args.body.iter().enumerate() {
+                validate_step(s, &format!("{prefix}.body[{k}]"), card_id, ctx, errors);
+            }
+        }
         StepSpec::If(i) => {
             if let Ok(condition) =
                 serde_yml::from_value::<crate::predicate::PredicateSpec>(i.condition.clone())
@@ -1573,6 +1588,25 @@ fn validate_step_binding_scope(
         StepSpec::SelectEffectChoice(args) => {
             declare_optional_binding(scope, &args.bind_as);
         }
+        StepSpec::RepeatEffectChoice(args) => {
+            validate_formula_binding_scope(
+                &args.count,
+                &format!("{prefix}.count"),
+                card_id,
+                scope,
+                errors,
+            );
+            let mut child = scope.clone();
+            declare_optional_binding(&mut child, &args.bind_as);
+            validate_steps_binding_scope(
+                &args.body,
+                &format!("{prefix}.body"),
+                card_id,
+                &mut child,
+                errors,
+            );
+            declare_optional_binding(scope, &args.bind_as);
+        }
         StepSpec::SearchOwnSecurityStack(args) => {
             validate_predicate_binding_scope(
                 &args.filter,
@@ -1663,6 +1697,9 @@ fn validate_step_binding_scope(
                 scope,
                 errors,
             );
+        }
+        StepSpec::PlayOrUseFromSources(args) => {
+            validate_binding_ref(&args.card, &format!("{prefix}.card"), card_id, errors);
         }
         StepSpec::BindPermanentProperty(args) => {
             scope.insert(args.bind_as.clone());
@@ -2045,9 +2082,7 @@ fn validate_formula_binding_scope(
                 );
             }
         }
-        FormulaSpec::SourceStackCount {
-            source_stack_count,
-        } => {
+        FormulaSpec::SourceStackCount { source_stack_count } => {
             report_if_undeclared_formula_target(
                 &source_stack_count.target,
                 &format!("{prefix}.source_stack_count.target"),
@@ -2256,9 +2291,7 @@ fn validate_formula(
                 );
             }
         }
-        FormulaSpec::SourceStackCount {
-            source_stack_count,
-        } => {
+        FormulaSpec::SourceStackCount { source_stack_count } => {
             if let Some(filter) = &source_stack_count.filter {
                 validate_predicate(
                     filter,
@@ -2557,6 +2590,9 @@ pub const KNOWN_KEYWORD_KEYS: &[&str] = &[
     "ArmorPurge",
     "Fragment",
     "Retaliation",
+    "Execute",
+    "Engage",
+    "Guard",
     // Training — real engine keyword (`Keyword::Training`, Phase F `[Main]`
     // active skill in digimon-engine `cards/keyword_effects.rs` + the
     // breeding-area emitter in `action/main_effect_select.rs`). Like
@@ -2819,9 +2855,9 @@ effects:
         let spec: CardSpec = serde_yml::from_str(yaml).unwrap();
         let reg = StubRegistry::empty();
         let errs = validate(&spec, &ValidationContext { raw_rust: &reg }).unwrap_err();
-        assert!(errs
-            .iter()
-            .any(|e| e.message.contains("TreatAsDigimon requires a synth_identity")));
+        assert!(errs.iter().any(|e| e
+            .message
+            .contains("TreatAsDigimon requires a synth_identity")));
     }
 
     #[test]

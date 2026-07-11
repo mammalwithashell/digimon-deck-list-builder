@@ -577,12 +577,7 @@ fn clone_mid_foreign_refire_choice_resolves_on_the_clone() {
 
     {
         let mut ctx = EffectContext::new(&mut r.game, carrier_top, Some(carrier), 0);
-        assert!(ctx.activate_foreign_card_effect(
-            "FOREIGN-TWO",
-            carrier,
-            TimingFilter::OnPlay,
-            0
-        ));
+        assert!(ctx.activate_foreign_card_effect("FOREIGN-TWO", carrier, TimingFilter::OnPlay, 0));
     }
     assert!(r.game.pending_selection.is_some());
 

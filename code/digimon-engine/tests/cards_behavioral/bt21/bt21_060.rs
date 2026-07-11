@@ -116,12 +116,14 @@ fn bt21_060_yaml_has_printed_metadata() {
 fn bt21_060_has_when_digivolving_clause() {
     let runner = base().start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let wd = card.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.scope == CompiledScope::FaceUp
-                && t.when.contains(&CompiledTiming::WhenDigivolving)
-    ));
+    let wd = card.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.scope == CompiledScope::FaceUp
+                    && t.when.contains(&CompiledTiming::WhenDigivolving)
+        )
+    });
     assert!(wd, "When Digivolving clause present (face-up scope)");
 }
 
@@ -172,7 +174,9 @@ fn bt21_060_clause_scopes_are_distinct() {
     let inherited = card
         .effects
         .iter()
-        .filter(|c| matches!(c, CompiledClause::Triggered(t) if t.scope == CompiledScope::Inherited))
+        .filter(
+            |c| matches!(c, CompiledClause::Triggered(t) if t.scope == CompiledScope::Inherited),
+        )
         .count();
     let faceup_triggered = card
         .effects
@@ -439,9 +443,7 @@ fn bt21_060_would_leave_decline_plays_nothing() {
         .game
         .delete_permanent_with_cause(carrier, ReplacementCause::OpponentEffect);
 
-    let view = runner
-        .pending_selection_view()
-        .expect("replacement prompt");
+    let view = runner.pending_selection_view().expect("replacement prompt");
     assert_eq!(view.kind, SelectionKind::Replacement);
     runner
         .execute_action(0, PASS)
@@ -452,10 +454,7 @@ fn bt21_060_would_leave_decline_plays_nothing() {
         .battle_area
         .iter()
         .any(|p| p.top_card().card_id(&runner.game.card_data) == "VEMMON");
-    assert!(
-        !vemmon_on_field,
-        "declining plays no Vemmon"
-    );
+    assert!(!vemmon_on_field, "declining plays no Vemmon");
 }
 
 /// No Vemmon among the sources → the would-leave play is never offered.
@@ -631,4 +630,3 @@ fn bt21_060_inherited_opt_locks_second_attack_same_turn() {
         "[Once Per Turn] locks the inherited clause for the rest of the opponent's turn"
     );
 }
-

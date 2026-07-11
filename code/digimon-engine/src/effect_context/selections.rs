@@ -1563,9 +1563,10 @@ impl<'a> EffectContext<'a> {
     /// `Vec<CardHandle>` of picked items in pick order.
     ///
     /// **PASS availability** (no-approximations policy — every branch is RL-visible):
-    /// - `is_optional_zero = false`: PASS becomes available only after `picked >= 1`.
-    /// - `is_optional_zero = true`:  PASS is available even at `picked == 0`,
-    ///   allowing the player to select nothing.
+    /// - PASS becomes available only after `picked >= effective_min`, where
+    ///   `effective_min = max(min, if is_optional_zero {0} else {1})`.
+    /// - `is_optional_zero = true` with `min == 0` allows the player to select
+    ///   nothing.
     /// Encoded via `PendingSelection::is_optional` so the mask builder gates
     /// PASS correctly on each step.
     ///

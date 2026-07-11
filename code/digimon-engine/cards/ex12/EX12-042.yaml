@@ -1,0 +1,40 @@
+card: EX12-042
+name: Gatomon
+kind: digimon
+level: 4
+color: [yellow, green]
+cost: 4
+dp: 4000
+traits: [Holy Beast, NSp, VB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - name_contains: Salamon
+            - trait_has: NSp
+            - trait_has: VB
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: [on_play, when_attacking]
+    once_per_turn: true
+    summary: "[On Play][When Attacking][OPT] Add your top security card to the hand. Then, <Recovery +1>"
+    process:
+      - add_top_security_to_hand: { of: you }
+      - recover: { of: you, count: 1 }
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Barrier
+    summary: "[Inherited] <Barrier>"

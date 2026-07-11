@@ -211,7 +211,11 @@ pub(crate) fn stage_into(world: &mut EngineWorld, fixture: &Value) -> Result<Val
         decks
             .get(key)
             .and_then(Value::as_array)
-            .map(|a| a.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .map(|a| {
+                a.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
             .ok_or_else(|| format!("fixture missing decks['{key}']"))
     };
     let deck1 = deck("1")?;
@@ -264,7 +268,10 @@ struct InjectCardBody {
 }
 
 async fn inject_card(State(s): State<BridgeState>, Json(b): Json<InjectCardBody>) -> BridgeResult {
-    let pid = b.player_id.checked_sub(1).ok_or_else(|| bad("player_id must be 1/2"))?;
+    let pid = b
+        .player_id
+        .checked_sub(1)
+        .ok_or_else(|| bad("player_id must be 1/2"))?;
     let dto = s
         .engine
         .run(move |world| -> Result<Value, String> {
@@ -341,7 +348,10 @@ struct NavigateBody {
 /// `DebugBridgeNav` listener consumes; the engine state is untouched.
 async fn navigate(State(s): State<BridgeState>, Json(b): Json<NavigateBody>) -> BridgeResult {
     s.app
-        .emit("debug:navigate", json!({ "route": b.route, "theme": b.theme }))
+        .emit(
+            "debug:navigate",
+            json!({ "route": b.route, "theme": b.theme }),
+        )
         .map_err(bad)?;
     Ok(Json(json!({ "ok": true })))
 }
@@ -396,7 +406,10 @@ mod tests {
         });
 
         let dto = stage_into(&mut world, &fixture).expect("staging must succeed");
-        assert!(dto.get("players").is_some(), "DTO must carry the desktop players shape");
+        assert!(
+            dto.get("players").is_some(),
+            "DTO must carry the desktop players shape"
+        );
 
         let game = world.game.as_ref().expect("a game must be installed");
         let snap = game.to_scenario();
@@ -432,6 +445,9 @@ mod tests {
     fn stage_into_rejects_a_fixture_without_decks() {
         let mut world = EngineWorld::default();
         let err = stage_into(&mut world, &json!({ "zones": {} })).unwrap_err();
-        assert!(err.contains("decks"), "expected a decks diagnostic, got: {err}");
+        assert!(
+            err.contains("decks"),
+            "expected a decks diagnostic, got: {err}"
+        );
     }
 }

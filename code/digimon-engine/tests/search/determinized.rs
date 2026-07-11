@@ -96,10 +96,16 @@ fn most_visited(result: &SearchResult) -> u16 {
 /// DebugRunner boards are staged outside the normal deal, so
 /// `Player::original_deck` (which the Phase 1 invariant checker audits copy
 /// limits against) starts empty — declare the fixture's decklist explicitly.
-fn forced_win_board() -> (DebugRunner, HashMap<String, digimon_engine::card_data::CardData>) {
+fn forced_win_board() -> (
+    DebugRunner,
+    HashMap<String, digimon_engine::card_data::CardData>,
+) {
     let mut cards = HashMap::new();
     cards.insert("ATK".to_string(), make_digimon("ATK", CardColor::Red, 5000));
-    cards.insert("DEF".to_string(), make_digimon("DEF", CardColor::Blue, 3000));
+    cards.insert(
+        "DEF".to_string(),
+        make_digimon("DEF", CardColor::Blue, 3000),
+    );
     let mut r = DebugRunner::builder()
         .with_card_data(cards.clone())
         .deck(0, &["DEF", "DEF", "DEF", "DEF"])
@@ -245,7 +251,10 @@ fn determinized_search_is_deterministic_per_seed() {
                 };
                 determinized_search(&registry, &game, viewer, &mut e, &cfg) != a
             });
-            assert!(differs, "{mode:?}: different seeds should change the result");
+            assert!(
+                differs,
+                "{mode:?}: different seeds should change the result"
+            );
         }
     });
 }
@@ -279,7 +288,8 @@ fn search_is_invariant_to_hidden_permutation_but_not_public_change() {
             let mut found = None;
             'outer: for (hi, hc) in p.hand.iter().enumerate() {
                 for (di, dc) in p.deck.iter().enumerate() {
-                    if hc.card_id(&hidden_variant.card_data) != dc.card_id(&hidden_variant.card_data)
+                    if hc.card_id(&hidden_variant.card_data)
+                        != dc.card_id(&hidden_variant.card_data)
                     {
                         found = Some((hi, di));
                         break 'outer;
@@ -360,7 +370,10 @@ fn determinized_search_worlds_are_hygienic_and_respect_the_root_mask() {
         let config = pimc_config(100, 3, 5);
         let mut evaluator = UniformEvaluator;
         let result = determinized_search(&registry, &game, viewer, &mut evaluator, &config);
-        assert_eq!(result.simulations_run, 99, "3 worlds x 33 sims (remainder dropped)");
+        assert_eq!(
+            result.simulations_run, 99,
+            "3 worlds x 33 sims (remainder dropped)"
+        );
         let visit_sum: u32 = result.root_visits.iter().map(|(_, v)| *v).sum();
         assert_eq!(visit_sum, 99);
 
@@ -380,7 +393,10 @@ fn determinized_search_worlds_are_hygienic_and_respect_the_root_mask() {
         let mut evaluator = UniformEvaluator;
         let result = determinized_search(&registry, &game, viewer, &mut evaluator, &zero);
         assert_eq!(result.simulations_run, 0);
-        assert!(!result.root_visits.is_empty(), "root edges still enumerated");
+        assert!(
+            !result.root_visits.is_empty(),
+            "root edges still enumerated"
+        );
         assert!(result.root_visits.iter().all(|(_, v)| *v == 0));
         for (action, _) in &result.root_visits {
             assert!(
@@ -396,7 +412,10 @@ fn determinized_search_worlds_are_hygienic_and_respect_the_root_mask() {
         let result = determinized_search(&registry, &game, viewer, &mut evaluator, &config);
         assert_eq!(result.simulations_run, 40);
         let visit_sum: u32 = result.root_visits.iter().map(|(_, v)| *v).sum();
-        assert_eq!(visit_sum, 39, "IS-MCTS spends its first sim on the root eval");
+        assert_eq!(
+            visit_sum, 39,
+            "IS-MCTS spends its first sim on the root eval"
+        );
         for (action, _) in &result.root_visits {
             assert!(
                 legal.contains(action),

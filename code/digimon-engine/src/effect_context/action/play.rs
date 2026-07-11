@@ -443,6 +443,95 @@ impl<'a> EffectContext<'a> {
                                 prov,
                                 player,
                                 hand_index,
+                                source_ref: None,
+                                cost_delta,
+                                outer_conts: Vec::new(),
+                            },
+                        )],
+                    });
+                }
+            }
+        }
+    }
+
+    /// Source-origin sibling of `play_or_use_from_hand_with_cost`.
+    ///
+    /// Digimon/Tamer/DigiEgg cards are played from the selected source stack
+    /// with the supplied cost adjustment, Option cards are used from that
+    /// source stack, and DUAL cards surface the same face choice as the
+    /// hand-origin helper.
+    pub fn play_or_use_from_source_with_cost(
+        &mut self,
+        player: PlayerId,
+        source_ref: crate::selection::SourceSelectionRef,
+        cost_delta: crate::enums::CostDelta,
+    ) {
+        if source_ref.permanent.player != player {
+            return;
+        }
+        let Some(card_data) = self.game.card_data_for_handle(source_ref.card) else {
+            return;
+        };
+        match card_data.card_kind {
+            crate::enums::CardKind::Digimon
+            | crate::enums::CardKind::Tamer
+            | crate::enums::CardKind::DigiEgg => {
+                let _ = self.play_from_materials(
+                    source_ref.permanent,
+                    source_ref.source_index as usize,
+                    cost_delta,
+                );
+            }
+            crate::enums::CardKind::Option => {
+                let _ = self.game.use_option_from(
+                    player,
+                    crate::game_actions::OptionSource::Source {
+                        host: source_ref.permanent,
+                        card: source_ref.card,
+                    },
+                    cost_delta,
+                );
+            }
+            crate::enums::CardKind::Token => {}
+            crate::enums::CardKind::Dual => {
+                let prov = crate::resume::ResumeProvenance {
+                    source_card: self.source_card,
+                    source_permanent: self.source_permanent,
+                    source_kind: self.source_kind,
+                    controller: self.player,
+                    override_pin: self.override_selecting_player(),
+                };
+                self.select_effect_choice(
+                    "Play as Digimon or use as Option",
+                    vec!["Play as Digimon".to_string(), "Use as Option".to_string()],
+                    move |cb_ctx, choice| match choice {
+                        0 => {
+                            let _ = cb_ctx.play_from_materials(
+                                source_ref.permanent,
+                                source_ref.source_index as usize,
+                                cost_delta,
+                            );
+                        }
+                        _ => {
+                            let _ = cb_ctx.game.use_option_from(
+                                player,
+                                crate::game_actions::OptionSource::Source {
+                                    host: source_ref.permanent,
+                                    card: source_ref.card,
+                                },
+                                cost_delta,
+                            );
+                        }
+                    },
+                );
+                if self.game.pending_selection.is_some() {
+                    self.game.pending_selection_resume = Some(crate::resume::ResumeStack {
+                        frames: vec![crate::resume::ResumeFrame::PlayOrUseDualChoice(
+                            crate::resume::PlayOrUseDualChoiceState {
+                                prov,
+                                player,
+                                hand_index: 0,
+                                source_ref: Some(source_ref),
                                 cost_delta,
                                 outer_conts: Vec::new(),
                             },

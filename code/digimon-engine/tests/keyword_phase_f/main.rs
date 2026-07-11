@@ -1,4 +1,6 @@
+mod engage;
 mod execute;
+mod guard;
 mod helpers;
 mod iceclad;
 mod mind_link;

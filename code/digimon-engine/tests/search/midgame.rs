@@ -105,7 +105,10 @@ fn search_completes_and_respects_mask_on_midgame_states() {
             let mover = decision_player(&game);
             let root_mask = digimon_engine::build_action_mask(&game, mover);
             let legal = legal_actions(&root_mask);
-            assert!(!legal.is_empty(), "non-terminal state must have legal actions");
+            assert!(
+                !legal.is_empty(),
+                "non-terminal state must have legal actions"
+            );
 
             let mut evaluator = UniformEvaluator;
             let config = SearchConfig {

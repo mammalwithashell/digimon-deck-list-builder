@@ -1,0 +1,88 @@
+card: EX12-037
+name: Omnimon
+kind: digimon
+level: 7
+color: [blue, yellow, red]
+cost: 15
+dp: 15000
+traits: [Holy Warrior, Royal Knight, ME, VB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, color_is: blue }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: yellow }
+    cost: 5
+  - kind: digivolve
+    from: { level_eq: 6, color_is: red }
+    cost: 5
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - any_of:
+            - trait_has: ME
+            - trait_has: VB
+    cost: 5
+  - kind: dna_digivolve
+    materials:
+      - level_eq: 6
+        any_of:
+          - color_is: blue
+          - color_is: yellow
+      - level_eq: 6
+        any_of:
+          - color_is: red
+          - color_is: black
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+  - kind: grant_keyword
+    keyword: Barrier
+    summary: "<Barrier>"
+
+  - when: [when_digivolving, when_attacking]
+    once_per_turn: true
+    summary: "[When Digivolving][When Attacking][OPT] Delete 1 opponent Digimon, then choose 1 mode per 5 digivolution cards"
+    process:
+      - select_opponent_permanent:
+          bind_as: delete_target
+          filter: { kind: digimon }
+          prompt: "Delete 1 of your opponent's Digimon"
+      - delete_permanent: { target: delete_target }
+      - repeat_effect_choice:
+          count:
+            floor_div:
+              - source_material_count: {}
+              - 5
+          labels:
+            - "1 opponent Digimon gets -13000 DP"
+            - "Trash opponent top security, then Recovery +1"
+          bind_as: mode
+          prompt: "Choose 1 effect to activate"
+          body:
+            - if:
+                condition: { equals: [mode, 0] }
+                then:
+                  - select_opponent_permanent:
+                      bind_as: dp_target
+                      filter: { kind: digimon }
+                      prompt: "Choose 1 opponent Digimon to get -13000 DP"
+                  - add_dp_modifier:
+                      target: dp_target
+                      value: -13000
+                      expiry: end_of_opponents_turn
+            - if:
+                condition: { equals: [mode, 1] }
+                then:
+                  - trash_top_security: { of: opponent }
+                  - recover: { of: you, count: 1 }

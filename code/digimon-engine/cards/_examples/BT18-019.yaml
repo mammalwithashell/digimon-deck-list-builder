@@ -33,8 +33,8 @@ effects:
                 filter: { kind: digimon }
                 distinct_by: level
                 prompt: "Return cards (different levels each)"
-            - for_each:
-                over: { binding: returns }
+            - per_selected:
+                selection: returns
                 bind_as: c
                 body:
                   - return_to_deck_from_reveal: { of: opponent, card: c, position: top }

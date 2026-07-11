@@ -84,6 +84,30 @@ PARAMETERIZED_KEYWORDS = {
 
 EXTENSION_ROWS = [
     {
+        "keyword_id": "Engage",
+        "display": "<Engage>",
+        "kind": "optional",
+        "type_when": "End of your turn",
+        "semantics": (
+            "At the end of the controller's turn, this Digimon may attack "
+            "using normal attack legality."
+        ),
+        "rule": "engine-extension:engage",
+        "source": "engine_extension",
+    },
+    {
+        "keyword_id": "Guard",
+        "display": "<Guard>",
+        "kind": "optional_cost_then_mandatory",
+        "type_when": "Another own Digimon would leave by an opponent's effect",
+        "semantics": (
+            "By deleting this Digimon, prevent that other Digimon from "
+            "leaving the battle area."
+        ),
+        "rule": "engine-extension:guard",
+        "source": "engine_extension",
+    },
+    {
         "keyword_id": "ArtsDigivolve",
         "display": "<Arts Digivolve>",
         "kind": "optional",

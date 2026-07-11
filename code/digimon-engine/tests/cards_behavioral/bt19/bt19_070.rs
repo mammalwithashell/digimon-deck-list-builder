@@ -275,14 +275,19 @@ fn bt19_070_has_on_play_and_when_digivolving_triple_delete_clause() {
         })
         .expect("On Play / When Digivolving clause exists");
     assert_eq!(clause.scope, CompiledScope::FaceUp);
-    assert!(clause.optional, "\"By deleting\" own-Digimon cost is optional");
+    assert!(
+        clause.optional,
+        "\"By deleting\" own-Digimon cost is optional"
+    );
     assert!(!clause.once_per_turn, "not printed [Once Per Turn]");
 
     // The first process step must be an optional own-permanent select (the
     // delete-1-of-your-Digimon cost).
     let first = clause.process.first().expect("clause has a first step");
     match first {
-        CompiledStep::SelectOwnPermanent { optional, filter, .. } => {
+        CompiledStep::SelectOwnPermanent {
+            optional, filter, ..
+        } => {
             assert!(*optional, "own-delete cost must be optional (\"you may\")");
             assert!(
                 predicate_has_kind_digimon(filter),
@@ -310,18 +315,21 @@ fn bt19_070_has_on_deletion_clause() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnDeletion) => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnDeletion) => Some(t),
             _ => None,
         })
         .expect("On Deletion clause exists");
     assert_eq!(clause.scope, CompiledScope::FaceUp);
-    assert!(clause.optional, "\"By deleting\" own-Digimon cost is optional");
+    assert!(
+        clause.optional,
+        "\"By deleting\" own-Digimon cost is optional"
+    );
 
     let first = clause.process.first().expect("clause has a first step");
     match first {
-        CompiledStep::SelectOwnPermanent { optional, filter, .. } => {
+        CompiledStep::SelectOwnPermanent {
+            optional, filter, ..
+        } => {
             assert!(*optional, "own-delete cost must be optional");
             assert!(
                 predicate_has_level_lte(filter, 4),
@@ -360,7 +368,10 @@ fn bt19_070_has_inherited_security_attack_plus_one() {
             }) if keyword == "SecurityAttackPlus" && *value == Some(1)
         )
     });
-    assert!(found, "Inherited GrantKeyword(SecurityAttackPlus, value=1) must be present");
+    assert!(
+        found,
+        "Inherited GrantKeyword(SecurityAttackPlus, value=1) must be present"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -391,9 +402,7 @@ fn bt19_070_on_play_declining_own_delete_installs_no_further_prompt() {
         "declining the cost must not surface any opponent-delete prompts"
     );
     assert!(
-        runner
-            .game
-            .players[1]
+        runner.game.players[1]
             .battle_area
             .iter()
             .any(|p| p.top_card().card_id(&runner.game.card_data) == "OPP-L3"),
@@ -415,7 +424,9 @@ fn bt19_070_on_play_with_only_self_on_field_offers_kimeramon_as_the_own_delete_t
         .memory(15)
         .start();
 
-    runner.play(0, 0).expect("play Kimeramon onto an otherwise-empty field");
+    runner
+        .play(0, 0)
+        .expect("play Kimeramon onto an otherwise-empty field");
 
     let view = runner
         .pending_selection_view()
@@ -433,7 +444,9 @@ fn bt19_070_on_play_declining_with_only_self_on_field_leaves_kimeramon_on_the_fi
         .memory(15)
         .start();
 
-    runner.play(0, 0).expect("play Kimeramon onto an otherwise-empty field");
+    runner
+        .play(0, 0)
+        .expect("play Kimeramon onto an otherwise-empty field");
     decline(&mut runner);
     runner.auto_resolve().expect("settle after decline");
 
@@ -526,7 +539,9 @@ fn bt19_070_on_play_missing_level_target_skips_only_that_level() {
     // No level-4 target exists, so the next pending prompt (if any) must be
     // for level 5, not level 4. Drive it directly.
     choose_opp_field_by_id(&mut runner, 1, "OPP-L5");
-    runner.auto_resolve().expect("settle after level-4 self-skip");
+    runner
+        .auto_resolve()
+        .expect("settle after level-4 self-skip");
 
     assert!(
         runner.game.players[1]
@@ -557,7 +572,9 @@ fn bt19_070_on_play_with_no_opponent_targets_only_deletes_own_digimon() {
 
     runner.play(0, 0).expect("play Kimeramon");
     choose_own_field_by_id(&mut runner, 0, "OWN-A");
-    runner.auto_resolve().expect("settle with no legal opponent targets");
+    runner
+        .auto_resolve()
+        .expect("settle with no legal opponent targets");
 
     assert!(
         runner.pending_selection().is_none(),
@@ -600,19 +617,21 @@ fn bt19_070_when_digivolving_accepting_cost_deletes_one_of_each_level() {
         .position(|c| c.card_id == CARD_ID)
         .expect("BT19-070 registered");
     let instance_id = runner.game.next_card_index();
-    let kimeramon_card =
-        digimon_engine::card_source::CardSource::new(data_index, 0, instance_id);
+    let kimeramon_card = digimon_engine::card_source::CardSource::new(data_index, 0, instance_id);
     let turn = runner.game.turn_count;
     {
-        let perm = runner.game.player_mut(0)
+        let perm = runner
+            .game
+            .player_mut(0)
             .battle_area
             .get_mut(platform.index as usize)
             .expect("platform on field");
         perm.digivolve(kimeramon_card, turn);
     }
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::WhenDigivolving, TriggerSource::Permanent(platform));
+    runner.game.enqueue_triggered(
+        EffectTiming::WhenDigivolving,
+        TriggerSource::Permanent(platform),
+    );
     runner.game.drain_effect_queue();
 
     choose_own_field_by_id(&mut runner, 0, "OWN-A");
@@ -648,7 +667,11 @@ fn bt19_070_on_deletion_declining_own_delete_installs_no_further_prompt() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT19-070 YAML loads")
-        .add_card(own_purple_or_red_digimon("OWN-PURPLE", 4, CardColor::Purple))
+        .add_card(own_purple_or_red_digimon(
+            "OWN-PURPLE",
+            4,
+            CardColor::Purple,
+        ))
         .add_card(machinedramon())
         .memory(15)
         .start();
@@ -668,18 +691,14 @@ fn bt19_070_on_deletion_declining_own_delete_installs_no_further_prompt() {
         "declining the On Deletion cost must not offer the Machinedramon play"
     );
     assert!(
-        runner
-            .game
-            .players[0]
+        runner.game.players[0]
             .battle_area
             .iter()
             .any(|p| p.top_card().card_id(&runner.game.card_data) == "OWN-PURPLE"),
         "the level-4 purple Digimon must survive when the cost is declined"
     );
     assert!(
-        runner
-            .game
-            .players[0]
+        runner.game.players[0]
             .battle_area
             .iter()
             .all(|p| p.top_card().card_id(&runner.game.card_data) != "MACHINEDRAMON-FIXTURE"),
@@ -708,7 +727,9 @@ fn bt19_070_on_deletion_accepting_cost_then_declining_play_leaves_machinedramon_
 
     // Machinedramon play is separately optional — decline it.
     decline(&mut runner);
-    runner.auto_resolve().expect("settle after declining the free play");
+    runner
+        .auto_resolve()
+        .expect("settle after declining the free play");
 
     assert!(
         runner.game.players[0]
@@ -731,7 +752,11 @@ fn bt19_070_on_deletion_accepting_both_plays_machinedramon_free() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT19-070 YAML loads")
-        .add_card(own_purple_or_red_digimon("OWN-PURPLE", 4, CardColor::Purple))
+        .add_card(own_purple_or_red_digimon(
+            "OWN-PURPLE",
+            4,
+            CardColor::Purple,
+        ))
         .add_card(machinedramon())
         .memory(15)
         .start();
@@ -786,7 +811,11 @@ fn bt19_070_on_deletion_only_offers_own_permanent_level_lte_4_purple_or_red() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT19-070 YAML loads")
-        .add_card(own_purple_or_red_digimon("TOO-HIGH-LEVEL", 5, CardColor::Purple))
+        .add_card(own_purple_or_red_digimon(
+            "TOO-HIGH-LEVEL",
+            5,
+            CardColor::Purple,
+        ))
         .add_card(own_purple_or_red_digimon("WRONG-COLOR", 3, CardColor::Blue))
         .memory(15)
         .start();
@@ -810,7 +839,11 @@ fn bt19_070_on_deletion_trash_play_only_offers_machinedramon_by_exact_name() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("BT19-070 YAML loads")
-        .add_card(own_purple_or_red_digimon("OWN-PURPLE", 4, CardColor::Purple))
+        .add_card(own_purple_or_red_digimon(
+            "OWN-PURPLE",
+            4,
+            CardColor::Purple,
+        ))
         .add_card(not_machinedramon())
         .memory(15)
         .start();
@@ -906,7 +939,9 @@ fn bt19_070_inherited_security_attack_plus_one_applies_to_carrier() {
     let carrier = runner.place_stack(0, &[CARD_ID, "PLATFORM"]);
 
     assert!(
-        runner.game.has_keyword(carrier, Keyword::SecurityAttackPlus(1)),
+        runner
+            .game
+            .has_keyword(carrier, Keyword::SecurityAttackPlus(1)),
         "the carrier with BT19-070 on top must have Security A. +1"
     );
 }
@@ -917,21 +952,39 @@ fn bt19_070_inherited_security_attack_plus_one_applies_to_carrier() {
 
 fn predicate_has_level_eq(predicate: &CompiledPredicate, level: u8) -> bool {
     predicate.level_eq == Some(level)
-        || predicate.any_of.iter().any(|p| predicate_has_level_eq(p, level))
-        || predicate.all_of.iter().any(|p| predicate_has_level_eq(p, level))
+        || predicate
+            .any_of
+            .iter()
+            .any(|p| predicate_has_level_eq(p, level))
+        || predicate
+            .all_of
+            .iter()
+            .any(|p| predicate_has_level_eq(p, level))
 }
 
 fn predicate_has_level_lte(predicate: &CompiledPredicate, level: u8) -> bool {
     use digimon_dsl::compiled::CompiledDpConstraint;
     predicate.level_lte == Some(CompiledDpConstraint::Literal(level as i32))
-        || predicate.any_of.iter().any(|p| predicate_has_level_lte(p, level))
-        || predicate.all_of.iter().any(|p| predicate_has_level_lte(p, level))
+        || predicate
+            .any_of
+            .iter()
+            .any(|p| predicate_has_level_lte(p, level))
+        || predicate
+            .all_of
+            .iter()
+            .any(|p| predicate_has_level_lte(p, level))
 }
 
 fn predicate_has_trait(predicate: &CompiledPredicate, trait_name: &str) -> bool {
     predicate.trait_has.as_deref() == Some(trait_name)
-        || predicate.any_of.iter().any(|p| predicate_has_trait(p, trait_name))
-        || predicate.all_of.iter().any(|p| predicate_has_trait(p, trait_name))
+        || predicate
+            .any_of
+            .iter()
+            .any(|p| predicate_has_trait(p, trait_name))
+        || predicate
+            .all_of
+            .iter()
+            .any(|p| predicate_has_trait(p, trait_name))
 }
 
 fn predicate_has_color(predicate: &CompiledPredicate, color: &str) -> bool {
@@ -942,8 +995,14 @@ fn predicate_has_color(predicate: &CompiledPredicate, color: &str) -> bool {
         _ => return false,
     };
     predicate.color_is == Some(target)
-        || predicate.any_of.iter().any(|p| predicate_has_color(p, color))
-        || predicate.all_of.iter().any(|p| predicate_has_color(p, color))
+        || predicate
+            .any_of
+            .iter()
+            .any(|p| predicate_has_color(p, color))
+        || predicate
+            .all_of
+            .iter()
+            .any(|p| predicate_has_color(p, color))
 }
 
 fn predicate_has_kind_digimon(predicate: &CompiledPredicate) -> bool {
@@ -954,7 +1013,9 @@ fn predicate_has_kind_digimon(predicate: &CompiledPredicate) -> bool {
 }
 
 fn process_contains_opponent_level_select(steps: &[CompiledStep], level: u8) -> bool {
-    steps.iter().any(|step| step_contains_opponent_level_select(step, level))
+    steps
+        .iter()
+        .any(|step| step_contains_opponent_level_select(step, level))
 }
 
 fn step_contains_opponent_level_select(step: &CompiledStep, level: u8) -> bool {
@@ -963,7 +1024,9 @@ fn step_contains_opponent_level_select(step: &CompiledStep, level: u8) -> bool {
             predicate_has_level_eq(filter, level)
                 || process_contains_opponent_level_select(then, level)
         }
-        CompiledStep::If { then, else_branch, .. } => {
+        CompiledStep::If {
+            then, else_branch, ..
+        } => {
             process_contains_opponent_level_select(then, level)
                 || process_contains_opponent_level_select(else_branch, level)
         }
@@ -976,7 +1039,9 @@ fn process_contains_machinedramon_select(steps: &[CompiledStep]) -> bool {
         CompiledStep::SelectTrash { filter, then, .. } => {
             predicate_name_is_machinedramon(filter) || process_contains_machinedramon_select(then)
         }
-        CompiledStep::If { then, else_branch, .. } => {
+        CompiledStep::If {
+            then, else_branch, ..
+        } => {
             process_contains_machinedramon_select(then)
                 || process_contains_machinedramon_select(else_branch)
         }
@@ -993,8 +1058,12 @@ fn predicate_name_is_machinedramon(predicate: &CompiledPredicate) -> bool {
 fn process_contains_play_from_trash_free_anywhere(steps: &[CompiledStep]) -> bool {
     steps.iter().any(|step| match step {
         CompiledStep::PlayFromTrashFree { .. } => true,
-        CompiledStep::SelectTrash { then, .. } => process_contains_play_from_trash_free_anywhere(then),
-        CompiledStep::If { then, else_branch, .. } => {
+        CompiledStep::SelectTrash { then, .. } => {
+            process_contains_play_from_trash_free_anywhere(then)
+        }
+        CompiledStep::If {
+            then, else_branch, ..
+        } => {
             process_contains_play_from_trash_free_anywhere(then)
                 || process_contains_play_from_trash_free_anywhere(else_branch)
         }

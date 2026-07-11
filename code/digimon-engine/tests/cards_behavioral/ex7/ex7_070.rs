@@ -145,7 +145,10 @@ fn ex7_070_compiles_with_printed_stats() {
 
     assert_eq!(compiled.card, CARD_ID);
     assert_eq!(compiled.name, "Der Blitz");
-    assert_eq!(compiled.kind, digimon_dsl::compiled::CompiledCardKind::Option);
+    assert_eq!(
+        compiled.kind,
+        digimon_dsl::compiled::CompiledCardKind::Option
+    );
     assert_eq!(compiled.cost, Some(6));
     assert!(
         compiled.traits.iter().any(|t| t == "Three Musketeers"),
@@ -191,14 +194,19 @@ fn ex7_070_clause1_is_inherited_optional_source_trash() {
         .compiled_card(CARD_ID)
         .expect("EX7-070 in compiled cards");
 
-    let found = compiled.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.scope == CompiledScope::Inherited
-                && t.optional
-                && t.when == vec![CompiledTiming::OnDigivolutionCardTrashed]
-    ));
-    assert!(found, "Clause 1 must be inherited + optional + on_digivolution_card_trashed");
+    let found = compiled.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.scope == CompiledScope::Inherited
+                    && t.optional
+                    && t.when == vec![CompiledTiming::OnDigivolutionCardTrashed]
+        )
+    });
+    assert!(
+        found,
+        "Clause 1 must be inherited + optional + on_digivolution_card_trashed"
+    );
 }
 
 /// Clause 2 is a flood_gate declarative granting IgnoreColorRequirement.
@@ -209,12 +217,17 @@ fn ex7_070_clause2_is_ignore_color_flood_gate() {
         .compiled_card(CARD_ID)
         .expect("EX7-070 in compiled cards");
 
-    let found = compiled.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { modifier, .. })
-            if modifier.contains("IgnoreColorRequirement")
-    ));
-    assert!(found, "Clause 2 must be a flood_gate granting IgnoreColorRequirement");
+    let found = compiled.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { modifier, .. })
+                if modifier.contains("IgnoreColorRequirement")
+        )
+    });
+    assert!(
+        found,
+        "Clause 2 must be a flood_gate granting IgnoreColorRequirement"
+    );
 }
 
 /// Clause 3 fires on MainFromHand, is not scoped inherited, not optional at
@@ -227,11 +240,13 @@ fn ex7_070_clause3_is_main_from_hand() {
         .compiled_card(CARD_ID)
         .expect("EX7-070 in compiled cards");
 
-    let found = compiled.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.when == vec![CompiledTiming::MainFromHand] && t.scope == CompiledScope::FaceUp
-    ));
+    let found = compiled.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.when == vec![CompiledTiming::MainFromHand] && t.scope == CompiledScope::FaceUp
+        )
+    });
     assert!(found, "Clause 3 must be a face-up MainFromHand clause");
 }
 
@@ -243,12 +258,14 @@ fn ex7_070_clause4_is_inherited_security() {
         .compiled_card(CARD_ID)
         .expect("EX7-070 in compiled cards");
 
-    let found = compiled.effects.iter().any(|c| matches!(
-        c,
-        CompiledClause::Triggered(t)
-            if t.scope == CompiledScope::Inherited
-                && t.when == vec![CompiledTiming::OnSecurity]
-    ));
+    let found = compiled.effects.iter().any(|c| {
+        matches!(
+            c,
+            CompiledClause::Triggered(t)
+                if t.scope == CompiledScope::Inherited
+                    && t.when == vec![CompiledTiming::OnSecurity]
+        )
+    });
     assert!(found, "Clause 4 must be inherited on_security");
 }
 
@@ -436,10 +453,7 @@ fn ex7_070_source_trash_no_fire_when_host_owned_by_opponent() {
     let opp_host = plain_digimon("OPP-HOST", 5, 6000);
     let opp_top = lvl_digimon("OPP-TOP-OWN", 4, 4000);
 
-    let mut runner = base_builder()
-        .add_card(opp_host)
-        .add_card(opp_top)
-        .build();
+    let mut runner = base_builder().add_card(opp_host).add_card(opp_top).build();
 
     // Host is controlled by player 1; EX7-070 is seated under it as a
     // FOREIGN source still owned by player 0 (its actual controller).
@@ -484,9 +498,9 @@ fn ex7_070_flood_gate_scoped_to_this_card_only() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate { target, .. }) => {
-                Some(target)
-            }
+            CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate {
+                target, ..
+            }) => Some(target),
             _ => None,
         })
         .expect("flood_gate clause must exist");
@@ -513,7 +527,8 @@ fn ex7_070_flood_gate_requires_three_musketeers_digimon() {
         .iter()
         .find_map(|c| match c {
             CompiledClause::Declarative(CompiledDeclarativeClause::FloodGate {
-                active_when, ..
+                active_when,
+                ..
             }) => Some(active_when),
             _ => None,
         })
@@ -588,7 +603,9 @@ fn ex7_070_main_deletes_lowest_cost_and_places_self_under_tm_digimon() {
         !place_view.is_optional,
         "the placement pick is mandatory once a TM Digimon exists"
     );
-    runner.auto_resolve().expect("resolve placement-target pick");
+    runner
+        .auto_resolve()
+        .expect("resolve placement-target pick");
 
     let stack = &runner.game.player(0).battle_area[tm_handle.index as usize].card_sources;
     assert!(
@@ -695,7 +712,9 @@ fn ex7_070_main_place_only_when_no_opp_digimon() {
     let view = runner
         .pending_selection_view()
         .expect("placement-target selection must install (no opponent Digimon exists)");
-    runner.auto_resolve().expect("resolve placement-target pick");
+    runner
+        .auto_resolve()
+        .expect("resolve placement-target pick");
 
     let stack = &runner.game.player(0).battle_area[tm_handle.index as usize].card_sources;
     assert!(
@@ -710,10 +729,7 @@ fn ex7_070_main_place_only_when_no_opp_digimon() {
 /// Digimon — the whole clause is a silent no-op with no pending selection.
 #[test]
 fn ex7_070_main_no_selection_when_neither_condition_met() {
-    let mut runner = base_builder()
-        .hand(0, &[CARD_ID])
-        .memory(10)
-        .start();
+    let mut runner = base_builder().hand(0, &[CARD_ID]).memory(10).start();
 
     runner.play(0, 0).expect("EX7-070 plays from hand");
 

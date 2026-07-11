@@ -47,7 +47,9 @@ use digimon_dsl::compiled::{
 use digimon_engine::action::space::{HAND_EFFECT_START, PASS, REPLACEMENT_ACCEPT};
 use digimon_engine::card_data::CardData;
 use digimon_engine::combat::{AttackInitiator, AttackOpen, TargetConstraint};
-use digimon_engine::debug_runner::{make_test_card, make_test_card_with_level, DebugRunner, DebugRunnerBuilder};
+use digimon_engine::debug_runner::{
+    make_test_card, make_test_card_with_level, DebugRunner, DebugRunnerBuilder,
+};
 use digimon_engine::enums::CardColor;
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::replacement::ReplacementCause;
@@ -145,17 +147,22 @@ fn bt25_039_has_both_color_standard_digivolve_paths() {
         p.kind == CompiledAltPathKind::Digivolve
             && p.cost == Some(CompiledCost::Literal(4))
             && p.from.as_ref().is_some_and(|f| {
-                f.level_eq == Some(4) && f.color_is == Some(digimon_dsl::compiled::CompiledColor::Yellow)
+                f.level_eq == Some(4)
+                    && f.color_is == Some(digimon_dsl::compiled::CompiledColor::Yellow)
             })
     });
     let has_green = card.alt_paths.iter().any(|p| {
         p.kind == CompiledAltPathKind::Digivolve
             && p.cost == Some(CompiledCost::Literal(4))
             && p.from.as_ref().is_some_and(|f| {
-                f.level_eq == Some(4) && f.color_is == Some(digimon_dsl::compiled::CompiledColor::Green)
+                f.level_eq == Some(4)
+                    && f.color_is == Some(digimon_dsl::compiled::CompiledColor::Green)
             })
     });
-    assert!(has_yellow, "BT25-039 must have a Lv.4 Yellow -> cost 4 path");
+    assert!(
+        has_yellow,
+        "BT25-039 must have a Lv.4 Yellow -> cost 4 path"
+    );
     assert!(has_green, "BT25-039 must have a Lv.4 Green -> cost 4 path");
 }
 
@@ -334,9 +341,7 @@ fn bt25_039_end_of_turn_no_ceresmon_in_hand_is_a_clean_no_op() {
             .expect("decline must be legal when nothing else qualifies");
     }
     assert!(
-        runner
-            .game
-            .players[0]
+        runner.game.players[0]
             .hand
             .iter()
             .any(|c| c.card_id(&runner.game.card_data) == "OTHER-DIGI"),
@@ -371,7 +376,9 @@ fn bt25_039_accepting_pick_plays_ceresmon_at_reduced_cost() {
 
     // Pick Ceresmon (the only hand card offered).
     let ceresmon_action = view.valid_action_ids[0];
-    runner.execute_action(0, ceresmon_action).expect("pick Ceresmon");
+    runner
+        .execute_action(0, ceresmon_action)
+        .expect("pick Ceresmon");
     // Net cost is 12 - 7 = 5, NOT free (0). Memory must have decreased by 5
     // at the moment of the play, before any further cascade/rotation.
     assert_eq!(
@@ -412,9 +419,7 @@ fn bt25_039_declining_pick_plays_nothing() {
         .expect("declining the optional Ceresmon pick is legal");
 
     assert!(
-        runner
-            .game
-            .players[0]
+        runner.game.players[0]
             .hand
             .iter()
             .any(|c| c.card_id(&runner.game.card_data) == "CERESMON"),
@@ -438,7 +443,9 @@ fn bt25_039_accepting_placement_moves_self_under_played_ceresmon() {
         .start();
     runner.end_turn();
 
-    let view = runner.pending_selection_view().expect("hand pick installed");
+    let view = runner
+        .pending_selection_view()
+        .expect("hand pick installed");
     runner.game.set_memory(20);
     runner
         .execute_action(0, view.valid_action_ids[0])
@@ -447,7 +454,9 @@ fn bt25_039_accepting_placement_moves_self_under_played_ceresmon() {
     // Follow-up: EffectChoice "place under" (label 0) vs "don't place" (label 1).
     let kind = runner.pending_kind().expect("follow-up placement prompt");
     assert_eq!(kind, SelectionKind::EffectChoice);
-    runner.execute_branch(0).expect("choose to place under Ceresmon");
+    runner
+        .execute_branch(0)
+        .expect("choose to place under Ceresmon");
 
     let security_after = runner.game.players[0].security.len();
     assert_eq!(
@@ -479,7 +488,9 @@ fn bt25_039_declining_placement_leaves_self_in_security() {
         .start();
     runner.end_turn();
 
-    let view = runner.pending_selection_view().expect("hand pick installed");
+    let view = runner
+        .pending_selection_view()
+        .expect("hand pick installed");
     runner.game.set_memory(20);
     runner
         .execute_action(0, view.valid_action_ids[0])
@@ -515,9 +526,7 @@ fn bt25_039_non_ceresmon_hand_card_is_not_offered() {
         runner.execute_action(0, PASS).ok();
     }
     assert!(
-        runner
-            .game
-            .players[0]
+        runner.game.players[0]
             .hand
             .iter()
             .any(|c| c.card_id(&runner.game.card_data) == "OTHER-DIGI"),
@@ -807,9 +816,7 @@ fn bt25_039_on_deletion_decline_leaves_self_in_trash() {
         .expect("decline the [On Deletion] self-security placement");
 
     assert!(
-        runner
-            .game
-            .players[0]
+        runner.game.players[0]
             .trash
             .iter()
             .any(|c| c.card_id(&runner.game.card_data) == CARD_ID),
@@ -894,9 +901,7 @@ fn bt25_039_inherited_redirect_switches_attack_to_suspended_own_digimon() {
         "redirecting the attack must prevent the security check"
     );
     assert!(
-        !runner
-            .game
-            .players[0]
+        !runner.game.players[0]
             .battle_area
             .iter()
             .any(|p| p.top_card().card_id(&runner.game.card_data) == "SHAMAN-A"),

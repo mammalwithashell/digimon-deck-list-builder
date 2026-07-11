@@ -23,8 +23,7 @@ use crate::winprob::resolve_profile;
 /// Deck-pool file: either `[["ST1-01", ...], ...]` or
 /// `[{"name": "...", "cards": ["ST1-01", ...]}, ...]`.
 fn load_deck_pool(path: &std::path::Path) -> Result<(Vec<Vec<String>>, Vec<String>), String> {
-    let bytes =
-        std::fs::read(path).map_err(|e| format!("reading {}: {e}", path.display()))?;
+    let bytes = std::fs::read(path).map_err(|e| format!("reading {}: {e}", path.display()))?;
     let v: serde_json::Value =
         serde_json::from_slice(&bytes).map_err(|e| format!("parsing {}: {e}", path.display()))?;
     let arr = v
@@ -120,11 +119,7 @@ pub fn run(
                     }
                 };
                 match BatchedPolicyValueEvaluator::load(path) {
-                    Ok(e) => (
-                        Box::new(e),
-                        path.to_string_lossy().to_string(),
-                        profile,
-                    ),
+                    Ok(e) => (Box::new(e), path.to_string_lossy().to_string(), profile),
                     Err(e) => {
                         eprintln!(
                             "error loading policy+value model {} (needs a task-0.2 export \

@@ -92,5 +92,8 @@ effects:
             )
         })
     });
-    assert!(found, "compiled card contains CompiledStep::AppFuse(Trash, optional)");
+    assert!(
+        found,
+        "compiled card contains CompiledStep::AppFuse(Trash, optional)"
+    );
 }

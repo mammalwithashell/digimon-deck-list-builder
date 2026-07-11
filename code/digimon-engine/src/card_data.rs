@@ -619,6 +619,8 @@ pub fn parse_printed_keywords(
                 ("Mind Link", Keyword::MindLink),
                 ("Iceclad", Keyword::Iceclad),
                 ("Execute", Keyword::Execute),
+                ("Engage", Keyword::Engage),
+                ("Guard", Keyword::Guard),
                 ("Training", Keyword::Training),
                 ("Arts Digivolve", Keyword::ArtsDigivolve),
                 ("Ascension", Keyword::Ascension),

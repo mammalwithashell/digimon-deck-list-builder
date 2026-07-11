@@ -170,7 +170,9 @@ fn battle_area_contains(runner: &DebugRunner, player: usize, card_id: &str) -> b
 #[test]
 fn bt24_097_has_use_requirement_and_color_bypass_flood_gate() {
     let runner = soul_fear_runner().start();
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card present");
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("compiled card present");
 
     assert_eq!(compiled.card, "BT24-097");
     assert_eq!(compiled.name, "Soul Fear");
@@ -191,15 +193,15 @@ fn bt24_097_has_use_requirement_and_color_bypass_flood_gate() {
 #[test]
 fn bt24_097_has_main_from_hand_clause_with_delete_then_optional_free_link() {
     let runner = soul_fear_runner().start();
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card present");
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("compiled card present");
 
     let main = compiled
         .effects
         .iter()
         .find_map(|clause| match clause {
-            CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::MainFromHand] => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::MainFromHand] => Some(t),
             _ => None,
         })
         .expect("MainFromHand clause");
@@ -232,7 +234,9 @@ fn bt24_097_has_main_from_hand_clause_with_delete_then_optional_free_link() {
 #[test]
 fn bt24_097_has_inherited_on_security_clause_activating_main() {
     let runner = soul_fear_runner().start();
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card present");
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("compiled card present");
 
     assert!(compiled.effects.iter().any(|clause| matches!(
         clause,
@@ -244,7 +248,9 @@ fn bt24_097_has_inherited_on_security_clause_activating_main() {
 #[test]
 fn bt24_097_has_link_requirement_ts_trait_cost_3() {
     let runner = soul_fear_runner().start();
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card present");
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("compiled card present");
 
     assert!(compiled.effects.iter().any(|clause| matches!(
         clause,
@@ -256,7 +262,9 @@ fn bt24_097_has_link_requirement_ts_trait_cost_3() {
 #[test]
 fn bt24_097_has_linked_dp_aura_plus_2000() {
     let runner = soul_fear_runner().start();
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card present");
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("compiled card present");
 
     assert!(compiled.effects.iter().any(|clause| matches!(
         clause,
@@ -271,7 +279,9 @@ fn bt24_097_has_linked_dp_aura_plus_2000() {
 #[test]
 fn bt24_097_has_linked_when_attacking_opt_delete_clause() {
     let runner = soul_fear_runner().start();
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card present");
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("compiled card present");
 
     let linked_wa = compiled.effects.iter().find_map(|clause| match clause {
         CompiledClause::Triggered(t)
@@ -312,7 +322,9 @@ fn bt24_097_has_linked_when_attacking_opt_delete_clause() {
 fn bt24_097_flood_gate_inactive_without_ts_permanent() {
     let mut runner = soul_fear_runner().hand(0, &[CARD_ID]).memory(20).start();
     // No TS Digimon/Tamer on P0's field — active_when predicate must be false.
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card present");
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("compiled card present");
     let active_when = compiled
         .effects
         .iter()
@@ -341,7 +353,10 @@ fn bt24_097_use_requirement_satisfied_with_ts_permanent_on_field() {
     // With a TS Digimon present, playing Soul Fear (a Purple card, and the
     // fixture Digimon is Green — the color bypass is what makes this legal)
     // must succeed and install the Main body's mandatory delete prompt.
-    assert_eq!(play_soul_fear_standard(&mut runner), OptionPlayResult::Pending);
+    assert_eq!(
+        play_soul_fear_standard(&mut runner),
+        OptionPlayResult::Pending
+    );
     let view = runner
         .pending_selection_view()
         .expect("Main body must install the mandatory delete-target prompt");
@@ -357,7 +372,10 @@ fn bt24_097_main_deletes_selected_level_6_plus_opponent_digimon() {
     let target = runner.place_on_field(1, "OPP-LV6", Some(0));
     runner.game.enter_main_phase();
 
-    assert_eq!(play_soul_fear_standard(&mut runner), OptionPlayResult::Pending);
+    assert_eq!(
+        play_soul_fear_standard(&mut runner),
+        OptionPlayResult::Pending
+    );
     let view = runner
         .pending_selection_view()
         .expect("Main delete-target prompt");
@@ -368,10 +386,7 @@ fn bt24_097_main_deletes_selected_level_6_plus_opponent_digimon() {
         "the level 6 opponent Digimon must be a legal delete target"
     );
     runner
-        .execute_action(
-            view.selecting_player,
-            encode_attack(0, target.index as u16),
-        )
+        .execute_action(view.selecting_player, encode_attack(0, target.index as u16))
         .expect("delete the level 6+ opponent Digimon");
 
     assert!(
@@ -388,7 +403,10 @@ fn bt24_097_main_delete_target_excludes_level_5_or_lower() {
     let high = runner.place_on_field(1, "OPP-LV7", Some(0));
     runner.game.enter_main_phase();
 
-    assert_eq!(play_soul_fear_standard(&mut runner), OptionPlayResult::Pending);
+    assert_eq!(
+        play_soul_fear_standard(&mut runner),
+        OptionPlayResult::Pending
+    );
     let view = runner
         .pending_selection_view()
         .expect("Main delete-target prompt");
@@ -413,7 +431,10 @@ fn bt24_097_main_no_prompt_when_no_level_6_plus_target_exists() {
     runner.place_on_field(1, "OPP-LV3", Some(0));
     runner.game.enter_main_phase();
 
-    assert_eq!(play_soul_fear_standard(&mut runner), OptionPlayResult::Pending);
+    assert_eq!(
+        play_soul_fear_standard(&mut runner),
+        OptionPlayResult::Pending
+    );
     // The mandatory delete select must silently skip (DCGO
     // HasMatchConditionPermanent gate); the next thing offered is the
     // optional free link, or nothing at all if no own Digimon is eligible.
@@ -439,7 +460,10 @@ fn bt24_097_main_can_decline_the_optional_free_link() {
     let target = runner.place_on_field(1, "OPP-LV6", Some(0));
     runner.game.enter_main_phase();
 
-    assert_eq!(play_soul_fear_standard(&mut runner), OptionPlayResult::Pending);
+    assert_eq!(
+        play_soul_fear_standard(&mut runner),
+        OptionPlayResult::Pending
+    );
     let delete_view = runner.pending_selection_view().expect("delete prompt");
     runner
         .execute_action(
@@ -452,7 +476,10 @@ fn bt24_097_main_can_decline_the_optional_free_link() {
         .pending_selection_view()
         .expect("optional free link prompt follows the delete");
     assert_eq!(link_view.kind, SelectionKind::OwnField);
-    assert!(runner.pending_is_optional(), "the link pick must be optional (You may link)");
+    assert!(
+        runner.pending_is_optional(),
+        "the link pick must be optional (You may link)"
+    );
     runner
         .execute_action(link_view.selecting_player, PASS)
         .expect("decline the optional free link");
@@ -468,7 +495,10 @@ fn bt24_097_main_accepting_link_attaches_the_option_to_a_ts_digimon() {
     let target = runner.place_on_field(1, "OPP-LV6", Some(0));
     runner.game.enter_main_phase();
 
-    assert_eq!(play_soul_fear_standard(&mut runner), OptionPlayResult::Pending);
+    assert_eq!(
+        play_soul_fear_standard(&mut runner),
+        OptionPlayResult::Pending
+    );
     let delete_view = runner.pending_selection_view().expect("delete prompt");
     runner
         .execute_action(
@@ -484,7 +514,10 @@ fn bt24_097_main_accepting_link_attaches_the_option_to_a_ts_digimon() {
         .valid_action_ids
         .contains(&encode_attack(0, host.index as u16)));
     runner
-        .execute_action(link_view.selecting_player, encode_attack(0, host.index as u16))
+        .execute_action(
+            link_view.selecting_player,
+            encode_attack(0, host.index as u16),
+        )
         .expect("link Soul Fear to the TS Digimon");
 
     let linked = &runner.game.player(0).battle_area[host.index as usize].linked_cards;
@@ -502,7 +535,10 @@ fn bt24_097_free_link_target_excludes_non_ts_digimon() {
     let target = runner.place_on_field(1, "OPP-LV6", Some(0));
     runner.game.enter_main_phase();
 
-    assert_eq!(play_soul_fear_standard(&mut runner), OptionPlayResult::Pending);
+    assert_eq!(
+        play_soul_fear_standard(&mut runner),
+        OptionPlayResult::Pending
+    );
     let delete_view = runner.pending_selection_view().expect("delete prompt");
     runner
         .execute_action(
@@ -552,10 +588,7 @@ fn bt24_097_security_activates_main_and_deletes_level_6_plus_target() {
         .expect("[Security] must activate [Main]'s mandatory delete prompt");
     assert_eq!(view.kind, SelectionKind::OppField);
     runner
-        .execute_action(
-            view.selecting_player,
-            encode_attack(0, target.index as u16),
-        )
+        .execute_action(view.selecting_player, encode_attack(0, target.index as u16))
         .expect("delete the level 6+ opponent Digimon via [Security] Activate [Main]");
 
     assert!(

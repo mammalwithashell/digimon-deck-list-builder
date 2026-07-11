@@ -192,7 +192,9 @@ fn ex9_074_has_assembly_minus_seven_alt_path() {
             "material {i} must stack under the evolved card"
         );
         assert!(
-            material.zones.contains(&digimon_dsl::compiled::CompiledZone::Trash),
+            material
+                .zones
+                .contains(&digimon_dsl::compiled::CompiledZone::Trash),
             "material {i} must be sourced from trash"
         );
     }
@@ -359,7 +361,10 @@ fn ex9_074_has_three_declarative_clauses() {
     let has_rush_grant = declarative
         .iter()
         .any(|d| matches!(d, CompiledDeclarativeClause::GrantKeyword { .. }));
-    assert!(has_rush_grant, "must have a grant_keyword declarative (Rush)");
+    assert!(
+        has_rush_grant,
+        "must have a grant_keyword declarative (Rush)"
+    );
 
     let aura_count = declarative
         .iter()
@@ -537,10 +542,11 @@ fn ex9_074_on_play_filter_rejects_non_digimon() {
 fn ex9_074_on_play_accepting_placement_moves_card_to_source_stack() {
     use digimon_engine::enums::CardColor;
     let mut runner = kimeramon_runner();
-    runner
-        .game
-        .card_data
-        .push(make_dm_material("MAT-BLUE", "Blue Material", CardColor::Blue));
+    runner.game.card_data.push(make_dm_material(
+        "MAT-BLUE",
+        "Blue Material",
+        CardColor::Blue,
+    ));
     push_to_trash(&mut runner, 0, "MAT-RED");
     let trash_before = runner.trash_size(0);
 
@@ -669,19 +675,22 @@ fn ex9_074_all_turns_dp_boost_one_color_material_adds_1000() {
 fn ex9_074_all_turns_dp_boost_three_distinct_colors_adds_3000() {
     use digimon_engine::enums::CardColor;
     let mut runner = kimeramon_runner();
-    runner
-        .game
-        .card_data
-        .push(make_dm_material("MAT-BLUE", "Blue Material", CardColor::Blue));
-    runner
-        .game
-        .card_data
-        .push(make_dm_material("MAT-YELLOW", "Yellow Material", CardColor::Yellow));
+    runner.game.card_data.push(make_dm_material(
+        "MAT-BLUE",
+        "Blue Material",
+        CardColor::Blue,
+    ));
+    runner.game.card_data.push(make_dm_material(
+        "MAT-YELLOW",
+        "Yellow Material",
+        CardColor::Yellow,
+    ));
     // A second red material must NOT add a 4th distinct color (dedup).
-    runner
-        .game
-        .card_data
-        .push(make_dm_material("MAT-RED2", "Red Material 2", CardColor::Red));
+    runner.game.card_data.push(make_dm_material(
+        "MAT-RED2",
+        "Red Material 2",
+        CardColor::Red,
+    ));
 
     let kimera = runner.place_stack(
         0,
@@ -703,10 +712,11 @@ fn ex9_074_all_turns_dp_boost_three_distinct_colors_adds_3000() {
 fn ex9_074_all_turns_dp_boost_updates_live_when_source_added() {
     use digimon_engine::enums::CardColor;
     let mut runner = kimeramon_runner();
-    runner
-        .game
-        .card_data
-        .push(make_dm_material("MAT-GREEN", "Green Material", CardColor::Green));
+    runner.game.card_data.push(make_dm_material(
+        "MAT-GREEN",
+        "Green Material",
+        CardColor::Green,
+    ));
 
     let kimera = runner.place_stack(0, &["MAT-RED", "EX9-074"]);
     assert_eq!(runner.effective_dp(kimera), Some(11000));
@@ -735,7 +745,10 @@ fn add_six_color_materials(runner: &mut DebugRunner) {
         ("MAT-BLACK", "Black Material", CardColor::Black),
         ("MAT-PURPLE", "Purple Material", CardColor::Purple),
     ] {
-        runner.game.card_data.push(make_dm_material(id, name, color));
+        runner
+            .game
+            .card_data
+            .push(make_dm_material(id, name, color));
     }
     // MAT-RED already registered by kimeramon_runner().
 }
@@ -791,11 +804,7 @@ fn ex9_074_on_play_below_six_colors_deletes_one_same_color_opponent_digimon() {
     let view = runner
         .pending_selection_view()
         .expect("Branch A installs the mandatory same-color pick");
-    let candidates = view
-        .valid_action_ids
-        .iter()
-        .filter(|&&a| a != PASS)
-        .count();
+    let candidates = view.valid_action_ids.iter().filter(|&&a| a != PASS).count();
     assert_eq!(
         candidates, 1,
         "only OPP-RED (shares Red with a source) may be offered; OPP-GREEN is excluded"

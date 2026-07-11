@@ -234,9 +234,7 @@ fn bt19_089_has_main_clause_mandatory_and_security_clause() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity) => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnSecurity) => Some(t),
             _ => None,
         })
         .expect("must have an OnSecurity clause");
@@ -274,7 +272,8 @@ fn bt19_089_negative_no_white_opponent_permanent_blocks_off_color_play() {
 
     let mask = digimon_engine::action::build_action_mask(&runner.game, 0);
     assert_eq!(
-        mask[digimon_engine::action::space::PLAY_HAND_START as usize], 0.0,
+        mask[digimon_engine::action::space::PLAY_HAND_START as usize],
+        0.0,
         "Red Card must NOT be playable — no white opponent permanent and no \
          own red battle-area/breeding source"
     );
@@ -308,7 +307,8 @@ fn bt19_089_positive_opponent_white_digimon_enables_off_color_play() {
 
     let mask = digimon_engine::action::build_action_mask(&runner.game, 0);
     assert_eq!(
-        mask[digimon_engine::action::space::PLAY_HAND_START as usize], 1.0,
+        mask[digimon_engine::action::space::PLAY_HAND_START as usize],
+        1.0,
         "Red Card must be playable — opponent has a white Digimon"
     );
 
@@ -335,7 +335,8 @@ fn bt19_089_positive_opponent_white_tamer_enables_off_color_play() {
 
     let mask = digimon_engine::action::build_action_mask(&runner.game, 0);
     assert_eq!(
-        mask[digimon_engine::action::space::PLAY_HAND_START as usize], 1.0,
+        mask[digimon_engine::action::space::PLAY_HAND_START as usize],
+        1.0,
         "Red Card must be playable — opponent has a white Tamer"
     );
 }
@@ -358,7 +359,8 @@ fn bt19_089_negative_opponent_non_white_digimon_does_not_bypass() {
 
     let mask = digimon_engine::action::build_action_mask(&runner.game, 0);
     assert_eq!(
-        mask[digimon_engine::action::space::PLAY_HAND_START as usize], 0.0,
+        mask[digimon_engine::action::space::PLAY_HAND_START as usize],
+        0.0,
         "a non-white opponent Digimon must NOT satisfy the color bypass"
     );
     let result = runner.game.play_option_from_hand(0, 0);
@@ -544,8 +546,12 @@ fn bt19_089_main_dp_protection_is_broad_blocks_own_and_opponent_reduction() {
         let source_card = runner.game.players[0].battle_area[ally.index as usize]
             .top_card()
             .handle();
-        let mut ctx =
-            digimon_engine::effect_context::EffectContext::new(&mut runner.game, source_card, None, 1);
+        let mut ctx = digimon_engine::effect_context::EffectContext::new(
+            &mut runner.game,
+            source_card,
+            None,
+            1,
+        );
         ctx.add_dp_modifier(ally, -2000, Expiry::EndOfTurn);
     }
     assert_eq!(
@@ -560,8 +566,12 @@ fn bt19_089_main_dp_protection_is_broad_blocks_own_and_opponent_reduction() {
         let source_card = runner.game.players[0].battle_area[ally.index as usize]
             .top_card()
             .handle();
-        let mut ctx =
-            digimon_engine::effect_context::EffectContext::new(&mut runner.game, source_card, None, 0);
+        let mut ctx = digimon_engine::effect_context::EffectContext::new(
+            &mut runner.game,
+            source_card,
+            None,
+            0,
+        );
         ctx.add_dp_modifier(ally, -1000, Expiry::EndOfTurn);
     }
     assert_eq!(
@@ -593,8 +603,12 @@ fn bt19_089_qa_retroactive_recompute_reverts_prior_reduction() {
         let source_card = runner.game.players[0].battle_area[ally.index as usize]
             .top_card()
             .handle();
-        let mut ctx =
-            digimon_engine::effect_context::EffectContext::new(&mut runner.game, source_card, None, 1);
+        let mut ctx = digimon_engine::effect_context::EffectContext::new(
+            &mut runner.game,
+            source_card,
+            None,
+            1,
+        );
         ctx.add_dp_modifier(ally, -2000, Expiry::EndOfTurn);
     }
     assert_eq!(runner.effective_dp(ally), Some(3000));
