@@ -223,6 +223,96 @@ fn test_031_play_token_spawns_hinukamuy_with_printed_keywords() {
 }
 
 #[test]
+fn ex12_tokens_materialize_with_printed_stats_and_keywords() {
+    use digimon_engine::enums::{CardColor, Keyword};
+
+    let mut r = DebugRunner::builder().start();
+
+    let kotenken = r.place_on_field(0, "TOKEN_KOTENKEN", Some(0));
+    let paishu = r.place_on_field(0, "TOKEN_PAISHU", Some(0));
+
+    let kotenken_perm = &r.game.player(0).battle_area[kotenken.index as usize];
+    assert_eq!(
+        kotenken_perm.top_card().card_name(&r.game.card_data),
+        "Kotenken Token"
+    );
+    assert_eq!(
+        kotenken_perm.top_card().card_kind(&r.game.card_data),
+        CardKind::Token
+    );
+    assert_eq!(kotenken_perm.base_dp(&r.game.card_data), Some(9000));
+    assert_eq!(
+        kotenken_perm.top_card().digimon_colors(&r.game.card_data),
+        vec![CardColor::Black]
+    );
+    assert!(r.game.has_keyword(kotenken, Keyword::Blocker));
+
+    let paishu_perm = &r.game.player(0).battle_area[paishu.index as usize];
+    assert_eq!(
+        paishu_perm.top_card().card_name(&r.game.card_data),
+        "Paishu Token"
+    );
+    assert_eq!(
+        paishu_perm.top_card().card_kind(&r.game.card_data),
+        CardKind::Token
+    );
+    assert_eq!(paishu_perm.base_dp(&r.game.card_data), Some(6000));
+    assert_eq!(
+        paishu_perm.top_card().digimon_colors(&r.game.card_data),
+        vec![CardColor::Yellow]
+    );
+    assert!(r.game.has_keyword(paishu, Keyword::Blocker));
+    assert!(r.game.has_keyword(paishu, Keyword::Guard));
+}
+
+#[test]
+fn paishu_token_guard_protects_another_digimon() {
+    use digimon_engine::action::space::REPLACEMENT_ACCEPT;
+    use digimon_engine::permanent::PermanentHandle;
+    use digimon_engine::replacement::ReplacementCause;
+
+    let mut r = DebugRunner::builder()
+        .add_card(make_test_card("ALLY", "Ally"))
+        .start();
+
+    r.place_on_field(0, "TOKEN_PAISHU", Some(0));
+    let ally = r.place_on_field(0, "ALLY", Some(0));
+
+    r.game
+        .delete_permanent_with_cause(ally, ReplacementCause::OpponentEffect);
+    assert!(
+        r.game.pending_selection.is_some(),
+        "Paishu Token's carried Guard keyword should offer the replacement"
+    );
+    r.game
+        .resolve_selection(0, REPLACEMENT_ACCEPT)
+        .expect("accept Paishu Guard replacement");
+
+    assert_eq!(r.battle_area_size(0), 1);
+    assert_eq!(
+        r.game.players[0].battle_area[0]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "ALLY",
+        "Paishu should leave and the protected Digimon should remain"
+    );
+    assert!(
+        r.game.players[0]
+            .trash
+            .iter()
+            .all(|card| card.card_id(&r.game.card_data) != "TOKEN_PAISHU"),
+        "tokens are removed from game rather than trashed when paid as Guard cost"
+    );
+    assert_eq!(
+        r.game.effective_dp(PermanentHandle {
+            player: 0,
+            index: 0
+        }),
+        Some(2000)
+    );
+}
+
+#[test]
 fn familiar_on_deletion_prompts_opponent_target_and_applies_minus_3000() {
     use digimon_engine::action::build_action_mask;
     use digimon_engine::action::space::{encode_attack, PASS};

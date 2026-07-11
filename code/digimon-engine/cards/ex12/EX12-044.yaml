@@ -1,0 +1,119 @@
+card: EX12-044
+name: Angewomon
+kind: digimon
+level: 5
+color: [yellow]
+cost: 7
+dp: 7000
+traits: [Archangel, NSp, VB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - trait_has: NSp
+            - trait_has: VB
+    cost: 3
+  - kind: dna_digivolve
+    materials:
+      - level_eq: 4
+        any_of:
+          - color_is: yellow
+          - color_is: blue
+      - level_eq: 4
+        any_of:
+          - color_is: green
+          - color_is: black
+    cost: 0
+    stacks_unsuspended: true
+
+effects:
+  - when: [on_play, when_digivolving, when_attacking]
+    active_when:
+      any_permanent:
+        of: opponent
+        zone: [battle_area]
+        kind: digimon
+    summary: "[On Play][When Digivolving][When Attacking] 1 opponent Digimon gets -4000 DP for the turn"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -4000 DP for the turn"
+      - add_dp_modifier:
+          target: dp_target
+          value: -4000
+          expiry: end_of_turn
+
+  - when: when_attacking
+    optional: true
+    active_when:
+      all_of:
+        - self_same_level_source_pairs_gte: 1
+        - count_gte:
+            filter:
+              of: you
+              zone: [hand]
+              all_of:
+                - kind: digimon
+                - any_of:
+                    - trait_has: Angel
+                    - trait_has: Holy Dragon
+                    - trait_has: Three Great Angels
+                    - trait_has: NSp
+                    - trait_has: VB
+            n: 1
+    summary: "[When Attacking] If this stack has 2+ same-level cards, may digivolve into an [Angel]/[Holy Dragon]/[Three Great Angels]/[NSp]/[VB] Digimon in hand with cost -2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: evo
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - trait_has: Angel
+                  - trait_has: Holy Dragon
+                  - trait_has: Three Great Angels
+                  - trait_has: NSp
+                  - trait_has: VB
+          prompt: "Digivolve into an [Angel]/[Holy Dragon]/[Three Great Angels]/[NSp]/[VB] Digimon from your hand with the cost reduced by 2"
+      - effect_initiated_digivolve:
+          target: source
+          from_hand: evo
+          cost: { reduce: 2 }
+          ignore_requirements: false
+
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      all_of:
+        - replacement_subject_is_mine: true
+        - none_of:
+            - replacement_cause: battle
+    summary: "[Inherited] <Decode (Lv.4 or lower w/[Holy Beast]/[NSp]/[VB] trait])>"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_has: Holy Beast
+                  - trait_has: NSp
+                  - trait_has: VB
+          prompt: "Decode: play 1 level 4 or lower [Holy Beast]/[NSp]/[VB] source"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free

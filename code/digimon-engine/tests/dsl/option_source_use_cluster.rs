@@ -106,7 +106,11 @@ fn use_option_from_revealed_plays_body_free_and_consumes_only_that_card() {
     {
         let mut ctx = EffectContext::new(&mut runner.game, source_card, None, 1);
         let result = ctx.use_option_from_revealed(opt, CostDelta::Free);
-        assert_eq!(result, OptionPlayResult::Trashed, "standard option resolves");
+        assert_eq!(
+            result,
+            OptionPlayResult::Trashed,
+            "standard option resolves"
+        );
     }
 
     // The body ran (drew 1 card) and no use cost (4) was paid.
@@ -330,7 +334,10 @@ fn dsl_use_option_from_revealed_uses_picked_option_free() {
     {
         let mut ctx = EffectContext::new(&mut runner.game, src, None, 1);
         let mut bindings = Bindings::new();
-        assert_eq!(run_steps(&steps, &mut ctx, &mut bindings), RunOutcome::Parked);
+        assert_eq!(
+            run_steps(&steps, &mut ctx, &mut bindings),
+            RunOutcome::Parked
+        );
     }
 
     // Clone-safety (make-engine-cloneable §28): the parked select carries a
@@ -365,7 +372,10 @@ fn dsl_use_option_from_revealed_uses_picked_option_free() {
         );
         (pending.valid_action_ids[0], pending.selecting_player)
     };
-    runner.game.resolve_selection(sp, action_id).expect("resolve");
+    runner
+        .game
+        .resolve_selection(sp, action_id)
+        .expect("resolve");
 
     // The option was used free (body drew 1), left the pool, and disposed to
     // trash. The non-option revealed card stays in the pool.
@@ -448,7 +458,10 @@ fn dsl_use_option_from_revealed_accepts_bucket_cardlist_binding() {
         let mut ctx = EffectContext::new(&mut runner.game, src, None, 1);
         let mut bindings = Bindings::new();
         bindings.insert_card_list("revealed", vec![digi, opt]);
-        assert_eq!(run_steps(&steps, &mut ctx, &mut bindings), RunOutcome::Parked);
+        assert_eq!(
+            run_steps(&steps, &mut ctx, &mut bindings),
+            RunOutcome::Parked
+        );
     }
 
     // Clone-safety (make-engine-cloneable §28): the parked bucket carries a
@@ -566,7 +579,10 @@ fn dsl_use_option_from_revealed_empty_bucket_cardlist_noops() {
         let mut ctx = EffectContext::new(&mut runner.game, src, None, 1);
         let mut bindings = Bindings::new();
         bindings.insert_card_list("revealed", vec![opt]);
-        assert_eq!(run_steps(&steps, &mut ctx, &mut bindings), RunOutcome::Parked);
+        assert_eq!(
+            run_steps(&steps, &mut ctx, &mut bindings),
+            RunOutcome::Parked
+        );
     }
 
     let sp = runner
@@ -652,6 +668,18 @@ effects:
 ///      `card_sources`, NOT in trash).
 #[test]
 fn dsl_use_option_from_revealed_mid_body_park_resolves_before_outer_tail() {
+    // This continuation-composition regression drives a deep nested selection /
+    // resume chain that overflows the default Windows libtest stack. Keep the
+    // guard self-contained instead of depending on RUST_MIN_STACK.
+    std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(check_dsl_use_option_from_revealed_mid_body_park_resolves_before_outer_tail)
+        .expect("spawn large-stack thread")
+        .join()
+        .expect("mid-body parked option-use guard thread panicked");
+}
+
+fn check_dsl_use_option_from_revealed_mid_body_park_resolves_before_outer_tail() {
     let mut runner = DebugRunner::builder()
         .from_dsl_yaml(MID_PARK_OPTION)
         .unwrap()
@@ -711,15 +739,25 @@ fn dsl_use_option_from_revealed_mid_body_park_resolves_before_outer_tail() {
         let mut ctx = EffectContext::new(&mut runner.game, src, None, 1);
         let mut bindings = Bindings::new();
         bindings.insert_card_list("revealed", vec![opt]);
-        assert_eq!(run_steps(&steps, &mut ctx, &mut bindings), RunOutcome::Parked);
+        assert_eq!(
+            run_steps(&steps, &mut ctx, &mut bindings),
+            RunOutcome::Parked
+        );
     }
 
     // 1. Bucket pick — take the Option.
     let (aid, sp) = {
-        let p = runner.game.pending_selection.as_ref().expect("bucket parked");
+        let p = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("bucket parked");
         (p.valid_action_ids[0], p.selecting_player)
     };
-    runner.game.resolve_selection(sp, aid).expect("pick the option");
+    runner
+        .game
+        .resolve_selection(sp, aid)
+        .expect("pick the option");
 
     // 2. The Option's [Main] first leg: the mandatory delete pick.
     let (aid, sp) = {
@@ -754,7 +792,10 @@ fn dsl_use_option_from_revealed_mid_body_park_resolves_before_outer_tail() {
         runner.game.memory, mem_before,
         "the outer tail (gain_memory) must NOT run while the option's [Main] is still resolving"
     );
-    runner.game.resolve_selection(sp, aid).expect("place under host");
+    runner
+        .game
+        .resolve_selection(sp, aid)
+        .expect("place under host");
 
     assert!(runner.game.pending_selection.is_none(), "flow resolved");
     // PROVENANCE: the option seated itself under the host (claim succeeded)…
@@ -847,14 +888,24 @@ fn dsl_use_option_bound_uses_union_picked_option_free_from_trash() {
     {
         let mut ctx = EffectContext::new(&mut runner.game, src, None, 1);
         let mut bindings = Bindings::new();
-        assert_eq!(run_steps(&steps, &mut ctx, &mut bindings), RunOutcome::Parked);
+        assert_eq!(
+            run_steps(&steps, &mut ctx, &mut bindings),
+            RunOutcome::Parked
+        );
     }
 
     let (action_id, sp) = {
-        let pending = runner.game.pending_selection.as_ref().expect("union select");
+        let pending = runner
+            .game
+            .pending_selection
+            .as_ref()
+            .expect("union select");
         (pending.valid_action_ids[0], pending.selecting_player)
     };
-    runner.game.resolve_selection(sp, action_id).expect("resolve");
+    runner
+        .game
+        .resolve_selection(sp, action_id)
+        .expect("resolve");
 
     assert_eq!(
         runner.game.players[1].hand.len(),
@@ -934,7 +985,10 @@ fn dsl_use_option_from_sources_uses_picked_source_option_free() {
     {
         let mut ctx = EffectContext::new(&mut runner.game, src, Some(host), 1);
         let mut bindings = Bindings::new();
-        assert_eq!(run_steps(&steps, &mut ctx, &mut bindings), RunOutcome::Parked);
+        assert_eq!(
+            run_steps(&steps, &mut ctx, &mut bindings),
+            RunOutcome::Parked
+        );
     }
 
     let (action_id, sp) = {
@@ -945,7 +999,10 @@ fn dsl_use_option_from_sources_uses_picked_source_option_free() {
             .expect("source select");
         (pending.valid_action_ids[0], pending.selecting_player)
     };
-    runner.game.resolve_selection(sp, action_id).expect("resolve");
+    runner
+        .game
+        .resolve_selection(sp, action_id)
+        .expect("resolve");
 
     assert_eq!(
         runner.game.players[1].hand.len(),

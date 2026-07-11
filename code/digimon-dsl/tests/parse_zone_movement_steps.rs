@@ -193,7 +193,10 @@ fn lose_memory_fn_alias_with_literal_normalizes_to_literal_step() {
             delta: 1
 "#,
     );
-    assert!(matches!(&formula_steps[0], CompiledStep::LoseMemoryFn { .. }));
+    assert!(matches!(
+        &formula_steps[0],
+        CompiledStep::LoseMemoryFn { .. }
+    ));
 }
 
 #[test]

@@ -1,0 +1,51 @@
+card: EX12-022
+name: Kamemon
+kind: digimon
+level: 3
+color: [blue]
+cost: 3
+dp: 2000
+traits: [Cyborg, Shambala, SW]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: blue }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Shambala }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Shambala] card and 1 [SW] card; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: shambala_pick
+              min: 1
+              max: 1
+              filter: { trait_has: Shambala }
+            - bind_as: sw_pick
+              min: 1
+              max: 1
+              filter: { trait_has: SW }
+          prompt: "Select 1 [Shambala] trait card and 1 [SW] trait card"
+      - add_to_hand_from_reveal: { of: you, card: shambala_pick }
+      - add_to_hand_from_reveal: { of: you, card: sw_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    active_when: { your_turn: true }
+    condition:
+      count_lte:
+        filter: { of: you, zone: [hand] }
+        n: 7
+    summary: "[Inherited][When Attacking][OPT] If your hand has 7 or fewer cards, draw 1"
+    process:
+      - draw: { of: you, count: 1 }

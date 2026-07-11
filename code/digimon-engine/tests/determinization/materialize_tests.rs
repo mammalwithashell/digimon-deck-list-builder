@@ -68,7 +68,10 @@ fn materialized_worlds_are_playable() {
                 && g.mulligan_current_player().is_none()
             {
                 let mut world = materialize_checked(&g, viewer, 1000 + decision as u64);
-                assert!(world.reveal_source.is_none(), "world must carry no reveal source");
+                assert!(
+                    world.reveal_source.is_none(),
+                    "world must carry no reveal source"
+                );
                 // Clone the world once to prove it's cloneable, then play the
                 // clone to completion/cap.
                 let mut fork = world.clone();
@@ -85,7 +88,10 @@ fn materialized_worlds_are_playable() {
             advance_random(&mut g, &mut lcg, 1);
             decision += 1;
         }
-        assert!(worlds_played >= 5, "too few worlds played ({worlds_played})");
+        assert!(
+            worlds_played >= 5,
+            "too few worlds played ({worlds_played})"
+        );
     });
 }
 

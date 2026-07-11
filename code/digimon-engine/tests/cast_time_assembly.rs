@@ -123,10 +123,7 @@ fn play_cost_paid_events(runner: &DebugRunner) -> Vec<(String, i16)> {
 
 #[test]
 fn assembly_select_surfaces_optional_zero_and_decline_plays_at_full_cost() {
-    let mut runner = builder_with_cta()
-        .hand(0, &["TEST-CTA"])
-        .memory(10)
-        .start();
+    let mut runner = builder_with_cta().hand(0, &["TEST-CTA"]).memory(10).start();
     runner.inject_trash(0, "DM-PIED");
     runner.inject_trash(0, "DM-METAL");
     let machine = runner.place_stack(0, &["VANILLA", "DM-MACHINE"]);
@@ -153,7 +150,10 @@ fn assembly_select_surfaces_optional_zero_and_decline_plays_at_full_cost() {
     assert!(sel.valid_action_ids.contains(&(TRASH_EFFECT_START + 1)));
     assert_eq!(sel.valid_action_ids.len(), 3);
     let mask = build_action_mask(&runner.game, 0);
-    assert_eq!(mask[PASS as usize], 1.0, "PASS (place 0) must be mask-legal");
+    assert_eq!(
+        mask[PASS as usize], 1.0,
+        "PASS (place 0) must be mask-legal"
+    );
 
     runner.execute_action(0, PASS).expect("decline placement");
 
@@ -163,7 +163,10 @@ fn assembly_select_surfaces_optional_zero_and_decline_plays_at_full_cost() {
     assert_eq!(runner.game.turn_player(), 1, "overpay passes the turn");
     let (top, below) = cta_sources(&runner, 0);
     assert_eq!(top, "TEST-CTA");
-    assert!(below.is_empty(), "no cards placed under on decline: {below:?}");
+    assert!(
+        below.is_empty(),
+        "no cards placed under on decline: {below:?}"
+    );
     assert_eq!(
         trash_ids(&runner, 0),
         vec!["DM-PIED".to_string(), "DM-METAL".to_string()],
@@ -184,10 +187,7 @@ fn assembly_select_surfaces_optional_zero_and_decline_plays_at_full_cost() {
 
 #[test]
 fn picking_a_name_masks_out_same_named_candidates() {
-    let mut runner = builder_with_cta()
-        .hand(0, &["TEST-CTA"])
-        .memory(10)
-        .start();
+    let mut runner = builder_with_cta().hand(0, &["TEST-CTA"]).memory(10).start();
     runner.inject_trash(0, "DM-PUPPET");
     runner.inject_trash(0, "DM-PUPPET-ALT");
     runner.inject_trash(0, "DM-PIED");
@@ -230,10 +230,7 @@ fn picking_a_name_masks_out_same_named_candidates() {
 
 #[test]
 fn full_assembly_pays_reduced_cost_places_sources_and_trashes_material_stack() {
-    let mut runner = builder_with_cta()
-        .hand(0, &["TEST-CTA"])
-        .memory(10)
-        .start();
+    let mut runner = builder_with_cta().hand(0, &["TEST-CTA"]).memory(10).start();
     runner.inject_trash(0, "DM-PIED");
     runner.inject_trash(0, "DM-METAL");
     let machine = runner.place_stack(0, &["VANILLA", "DM-MACHINE"]);
@@ -252,7 +249,10 @@ fn full_assembly_pays_reduced_cost_places_sources_and_trashes_material_stack() {
     // Slot cap (3) reached — the finishing prompt has no candidates left and
     // must therefore be declinable regardless of payability.
     let sel = runner.pending_selection().expect("finishing prompt");
-    assert!(sel.valid_action_ids.is_empty(), "no candidates past the cap");
+    assert!(
+        sel.valid_action_ids.is_empty(),
+        "no candidates past the cap"
+    );
     assert!(sel.is_optional);
     runner.execute_action(0, PASS).expect("finish placing");
 
@@ -291,10 +291,7 @@ fn full_assembly_pays_reduced_cost_places_sources_and_trashes_material_stack() {
 
 #[test]
 fn stop_is_masked_until_placements_make_the_cost_payable() {
-    let mut runner = builder_with_cta()
-        .hand(0, &["TEST-CTA"])
-        .memory(0)
-        .start();
+    let mut runner = builder_with_cta().hand(0, &["TEST-CTA"]).memory(0).start();
     runner.inject_trash(0, "DM-PIED");
     runner.inject_trash(0, "DM-METAL");
     runner.inject_trash(0, "DM-MACHINE");
@@ -303,7 +300,8 @@ fn stop_is_masked_until_placements_make_the_cost_payable() {
     // the potential reduction 3×4 = 12 makes the play offerable (cost 3).
     let mask = build_action_mask(&runner.game, 0);
     assert_eq!(
-        mask[(PLAY_HAND_START) as usize], 1.0,
+        mask[(PLAY_HAND_START) as usize],
+        1.0,
         "declare-then-pay legality must be computed against the reduced cost"
     );
 
@@ -342,7 +340,9 @@ fn stop_is_masked_until_placements_make_the_cost_payable() {
         sel.is_optional,
         "2 placed → cost 7 → 0-7 >= -10: stopping becomes legal"
     );
-    runner.execute_action(0, PASS).expect("stop at two placements");
+    runner
+        .execute_action(0, PASS)
+        .expect("stop at two placements");
 
     // 0 - 7 = -7 → turn passes; memory renormalizes to +7 for the opponent.
     assert_eq!(runner.memory(), 7, "cost 15 - 2×4 = 7 paid from memory 0");
@@ -361,16 +361,14 @@ fn stop_is_masked_until_placements_make_the_cost_payable() {
 fn mask_availability_counts_unique_names_only() {
     // Two same-named Puppetmon → unique-name potential = 1 × 4 → cost 11 →
     // unpayable at memory 0 → the play must NOT be offered.
-    let mut runner = builder_with_cta()
-        .hand(0, &["TEST-CTA"])
-        .memory(0)
-        .start();
+    let mut runner = builder_with_cta().hand(0, &["TEST-CTA"]).memory(0).start();
     runner.inject_trash(0, "DM-PUPPET");
     runner.inject_trash(0, "DM-PUPPET-ALT");
 
     let mask = build_action_mask(&runner.game, 0);
     assert_eq!(
-        mask[(PLAY_HAND_START) as usize], 0.0,
+        mask[(PLAY_HAND_START) as usize],
+        0.0,
         "same-named candidates count once: potential 4 → cost 11 → unpayable at memory 0"
     );
 
@@ -378,20 +376,19 @@ fn mask_availability_counts_unique_names_only() {
     runner.inject_trash(0, "DM-PIED");
     let mask = build_action_mask(&runner.game, 0);
     assert_eq!(
-        mask[(PLAY_HAND_START) as usize], 1.0,
+        mask[(PLAY_HAND_START) as usize],
+        1.0,
         "two unique names → potential 8 → cost 7 → payable at memory 0"
     );
 }
 
 #[test]
 fn mask_hides_play_with_no_candidates_and_unpayable_cost() {
-    let runner = builder_with_cta()
-        .hand(0, &["TEST-CTA"])
-        .memory(0)
-        .start();
+    let runner = builder_with_cta().hand(0, &["TEST-CTA"]).memory(0).start();
     let mask = build_action_mask(&runner.game, 0);
     assert_eq!(
-        mask[(PLAY_HAND_START) as usize], 0.0,
+        mask[(PLAY_HAND_START) as usize],
+        0.0,
         "no Dark Masters anywhere → no reduction → cost 15 unpayable at memory 0"
     );
 }
@@ -420,10 +417,7 @@ impl CardEffect for DigiXrosProbeOnPlay {
 #[test]
 fn assembly_play_is_not_marked_digixros_and_on_play_drains_after_placement() {
     let seen = Arc::new(Mutex::new(Vec::new()));
-    let mut runner = builder_with_cta()
-        .hand(0, &["TEST-CTA"])
-        .memory(10)
-        .start();
+    let mut runner = builder_with_cta().hand(0, &["TEST-CTA"]).memory(10).start();
     runner.register_effect(
         "TEST-CTA",
         Arc::new(DigiXrosProbeOnPlay {
@@ -462,10 +456,7 @@ fn assembly_play_is_not_marked_digixros_and_on_play_drains_after_placement() {
 
 #[test]
 fn clone_mid_assembly_selection_resolves_on_the_clone() {
-    let mut runner = builder_with_cta()
-        .hand(0, &["TEST-CTA"])
-        .memory(10)
-        .start();
+    let mut runner = builder_with_cta().hand(0, &["TEST-CTA"]).memory(10).start();
     runner.inject_trash(0, "DM-PIED");
     runner.inject_trash(0, "DM-METAL");
 
@@ -493,5 +484,9 @@ fn clone_mid_assembly_selection_resolves_on_the_clone() {
     assert_eq!(runner.memory(), 10);
     assert_eq!(runner.trash_size(0), 2);
     runner.execute_action(0, PASS).expect("original still live");
-    assert_eq!(runner.memory(), 5, "original pays full 15 → turn passes, +5 for opponent");
+    assert_eq!(
+        runner.memory(),
+        5,
+        "original pays full 15 → turn passes, +5 for opponent"
+    );
 }

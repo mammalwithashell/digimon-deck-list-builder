@@ -140,9 +140,10 @@ fn bt19_066_inherited_blocker_keyword_present() {
 fn bt19_066_alt_digivolve_from_pagumon_cost_zero_present() {
     let runner = base_runner();
     let compiled = runner.compiled_card(CARD_ID).unwrap();
-    let found = compiled.alt_paths.iter().any(|p| {
-        matches!(p.kind, CompiledAltPathKind::Digivolve)
-    });
+    let found = compiled
+        .alt_paths
+        .iter()
+        .any(|p| matches!(p.kind, CompiledAltPathKind::Digivolve));
     assert!(
         found,
         "a Digivolve alt-path (from Pagumon, cost 0) must be present"

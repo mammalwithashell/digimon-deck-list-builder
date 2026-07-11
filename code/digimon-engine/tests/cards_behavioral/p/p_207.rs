@@ -164,7 +164,10 @@ fn p_207_has_printed_metadata() {
     let compiled = runner.compiled_card(CARD_ID).expect("P-207 compiled");
 
     assert_eq!(compiled.name, "Minervamon");
-    assert_eq!(compiled.kind, digimon_dsl::compiled::CompiledCardKind::Digimon);
+    assert_eq!(
+        compiled.kind,
+        digimon_dsl::compiled::CompiledCardKind::Digimon
+    );
     assert_eq!(compiled.level, Some(6));
     assert_eq!(compiled.cost, Some(12));
     assert_eq!(compiled.dp, Some(12000));
@@ -242,9 +245,7 @@ fn p_207_when_attacking_clause_is_optional_and_once_per_turn() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when == vec![CompiledTiming::WhenAttacking] =>
-            {
+            CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::WhenAttacking] => {
                 Some(t)
             }
             _ => None,
@@ -278,16 +279,20 @@ fn p_207_alt_paths_present_yellow_purple_standard_beastkin_and_ts() {
         digivolve_paths.len()
     );
 
-    let has_cost = |cost: &Option<CompiledCost>, n: i64| {
-        matches!(cost, Some(CompiledCost::Literal(v)) if *v as i64 == n)
-    };
+    let has_cost = |cost: &Option<CompiledCost>, n: i64| matches!(cost, Some(CompiledCost::Literal(v)) if *v as i64 == n);
     assert_eq!(
-        digivolve_paths.iter().filter(|p| has_cost(&p.cost, 4)).count(),
+        digivolve_paths
+            .iter()
+            .filter(|p| has_cost(&p.cost, 4))
+            .count(),
         2,
         "must have exactly 2 cost-4 alt-paths (Yellow + Purple standard circles)"
     );
     assert_eq!(
-        digivolve_paths.iter().filter(|p| has_cost(&p.cost, 3)).count(),
+        digivolve_paths
+            .iter()
+            .filter(|p| has_cost(&p.cost, 3))
+            .count(),
         2,
         "must have exactly 2 cost-3 alt-paths (Beastkin, TS special circle)"
     );
@@ -361,20 +366,15 @@ fn digivolve_and_get_free_play_prompt(traits: &[&str], level: u8) -> DebugRunner
     runner.game.players[0].hand.push(cand_card);
 
     let base = runner.place_on_field(0, "YBASE", Some(0));
-    let hand_idx = runner
-        .game
-        .players[0]
+    let hand_idx = runner.game.players[0]
         .hand
         .iter()
         .position(|c| c.card_id(&runner.game.card_data) == CARD_ID)
         .expect("Minervamon in hand");
     assert!(
-        runner.game.digivolve_from_hand(
-            0,
-            hand_idx,
-            base.index as usize,
-            PlaySource::ByHand,
-        ),
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByHand,),
         "P-207 must digivolve from a Yellow Lv.5 base for cost 4"
     );
     runner
@@ -393,38 +393,56 @@ fn p_207_on_play_offers_avian_trait_candidate() {
 #[test]
 fn p_207_on_play_offers_bird_trait_candidate() {
     let runner = digivolve_and_get_free_play_prompt(&["Bird"], 4);
-    assert!(runner.pending_selection().is_some(), "Bird-trait candidate must be offered");
+    assert!(
+        runner.pending_selection().is_some(),
+        "Bird-trait candidate must be offered"
+    );
 }
 
 #[test]
 fn p_207_on_play_offers_beast_trait_candidate() {
     let runner = digivolve_and_get_free_play_prompt(&["Beast"], 4);
-    assert!(runner.pending_selection().is_some(), "Beast-trait candidate must be offered");
+    assert!(
+        runner.pending_selection().is_some(),
+        "Beast-trait candidate must be offered"
+    );
 }
 
 #[test]
 fn p_207_on_play_offers_animal_trait_candidate() {
     let runner = digivolve_and_get_free_play_prompt(&["Animal"], 4);
-    assert!(runner.pending_selection().is_some(), "Animal-trait candidate must be offered");
+    assert!(
+        runner.pending_selection().is_some(),
+        "Animal-trait candidate must be offered"
+    );
 }
 
 #[test]
 fn p_207_on_play_offers_sovereign_trait_candidate() {
     let runner = digivolve_and_get_free_play_prompt(&["Sovereign"], 4);
-    assert!(runner.pending_selection().is_some(), "Sovereign-trait candidate must be offered");
+    assert!(
+        runner.pending_selection().is_some(),
+        "Sovereign-trait candidate must be offered"
+    );
 }
 
 #[test]
 fn p_207_on_play_offers_ts_trait_candidate_even_without_other_traits() {
     let runner = digivolve_and_get_free_play_prompt(&["TS"], 4);
-    assert!(runner.pending_selection().is_some(), "TS-trait candidate must be offered");
+    assert!(
+        runner.pending_selection().is_some(),
+        "TS-trait candidate must be offered"
+    );
 }
 
 #[test]
 fn p_207_on_play_offers_level_4_or_lower_candidate() {
     // Level 1 candidate is still <= 4.
     let runner = digivolve_and_get_free_play_prompt(&["Beast"], 1);
-    assert!(runner.pending_selection().is_some(), "level 1 Beast candidate must be offered");
+    assert!(
+        runner.pending_selection().is_some(),
+        "level 1 Beast candidate must be offered"
+    );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -526,9 +544,7 @@ fn p_207_on_play_accepting_plays_the_candidate_free_and_unsuspended() {
         "the play must be free — memory must not change"
     );
 
-    let candidate_handle = runner
-        .game
-        .players[0]
+    let candidate_handle = runner.game.players[0]
         .battle_area
         .iter()
         .enumerate()
@@ -549,7 +565,9 @@ fn p_207_on_play_declining_leaves_candidate_in_hand() {
     let mut runner = digivolve_and_get_free_play_prompt(&["Beast"], 4);
     assert!(runner.pending_is_optional(), "the pick must be declinable");
 
-    runner.execute_action(0, PASS).expect("decline the free play");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the free play");
     let _ = runner.auto_resolve();
 
     assert!(
@@ -581,9 +599,7 @@ fn p_207_when_digivolving_offers_the_same_free_play() {
         .start();
 
     let base = runner.place_on_field(0, "BASE", Some(0));
-    let hand_idx = runner
-        .game
-        .players[0]
+    let hand_idx = runner.game.players[0]
         .hand
         .iter()
         .position(|c| c.card_id(&runner.game.card_data) == CARD_ID)
@@ -598,8 +614,7 @@ fn p_207_when_digivolving_offers_the_same_free_play() {
     let _ = runner.auto_resolve();
 
     assert!(
-        runner.pending_selection().is_some()
-            || field_contains(&runner, 0, "CAND"),
+        runner.pending_selection().is_some() || field_contains(&runner, 0, "CAND"),
         "When Digivolving must offer (or the auto_resolve must have already \
          accepted) the free-play prompt for the Beast candidate"
     );
@@ -698,7 +713,9 @@ fn attack_and_get_trash_prompt(traits: &[&str], level: u8) -> DebugRunner {
     let next = runner.game.next_card_index();
     runner.game.players[0]
         .trash
-        .push(digimon_engine::card_source::CardSource::new(data_idx, 0, next));
+        .push(digimon_engine::card_source::CardSource::new(
+            data_idx, 0, next,
+        ));
 
     let mine = runner.place_on_field(0, CARD_ID, Some(0));
     runner.attack_player(mine, 1, false);
@@ -845,7 +862,9 @@ fn p_207_when_attacking_opt_clears_after_end_turn() {
     let next = runner.game.next_card_index();
     runner.game.players[0]
         .trash
-        .push(digimon_engine::card_source::CardSource::new(data_idx, 0, next));
+        .push(digimon_engine::card_source::CardSource::new(
+            data_idx, 0, next,
+        ));
     let fill_idx = runner
         .game
         .card_data

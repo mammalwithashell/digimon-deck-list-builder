@@ -92,9 +92,10 @@ fn source_ids_bottom_up(runner: &DebugRunner, handle: PermanentHandle) -> Vec<St
 }
 
 fn fire_end_of_your_turn(runner: &mut DebugRunner, carrier: PermanentHandle) {
-    runner
-        .game
-        .enqueue_triggered(EffectTiming::EndOfYourTurn, TriggerSource::Permanent(carrier));
+    runner.game.enqueue_triggered(
+        EffectTiming::EndOfYourTurn,
+        TriggerSource::Permanent(carrier),
+    );
     runner.game.drain_effect_queue();
 }
 
@@ -291,7 +292,10 @@ fn bt15_102_mask_offers_play_at_memory_zero_only_via_potential_reduction() {
     // Masters the potential -12 makes it offerable (declare-then-pay).
     let mut runner = runner_builder().hand(0, &["BT15-102"]).memory(0).start();
     let mask = build_action_mask(&runner.game, 0);
-    assert_eq!(mask[PLAY_HAND_START as usize], 0.0, "no reduction available");
+    assert_eq!(
+        mask[PLAY_HAND_START as usize], 0.0,
+        "no reduction available"
+    );
 
     runner.inject_trash(0, "DM-PIED");
     runner.inject_trash(0, "DM-METAL");
@@ -397,7 +401,16 @@ fn bt15_102_eot_decline_still_mills_per_printed_then_clause() {
     // DCGO: the deck-trash runs after the `if (selectedCard != null)` block —
     // declining the placement does NOT skip the ". Then, trash…" clause.
     let mut runner = runner_builder()
-        .deck(1, &["DECK-FILL", "DECK-FILL", "DECK-FILL", "DECK-FILL", "DECK-FILL"])
+        .deck(
+            1,
+            &[
+                "DECK-FILL",
+                "DECK-FILL",
+                "DECK-FILL",
+                "DECK-FILL",
+                "DECK-FILL",
+            ],
+        )
         .memory(0)
         .start();
     let apoc = runner.place_stack(0, &["DM-PIED", "DM-METAL", "BT15-102"]);
@@ -407,7 +420,9 @@ fn bt15_102_eot_decline_still_mills_per_printed_then_clause() {
     fire_end_of_your_turn(&mut runner, apoc);
     let sel = runner.pending_selection().expect("placement pick");
     assert!(sel.is_optional);
-    runner.execute_action(0, PASS).expect("decline the placement");
+    runner
+        .execute_action(0, PASS)
+        .expect("decline the placement");
 
     assert_eq!(runner.trash_size(0), 1, "nothing placed");
     assert_eq!(
@@ -473,7 +488,16 @@ fn bt15_102_eot_pick_excludes_level_seven_and_levelless_cards() {
 #[test]
 fn bt15_102_eot_is_once_per_turn() {
     let mut runner = runner_builder()
-        .deck(1, &["DECK-FILL", "DECK-FILL", "DECK-FILL", "DECK-FILL", "DECK-FILL"])
+        .deck(
+            1,
+            &[
+                "DECK-FILL",
+                "DECK-FILL",
+                "DECK-FILL",
+                "DECK-FILL",
+                "DECK-FILL",
+            ],
+        )
         .memory(0)
         .start();
     let apoc = runner.place_stack(0, &["DM-PIED", "BT15-102"]);
@@ -509,7 +533,16 @@ fn bt15_102_eot_two_on_play_effects_surface_mandatory_choice_then_mill_runs() {
     two_onplay.traits = vec![];
     let mut runner = runner_builder()
         .add_card(two_onplay)
-        .deck(1, &["DECK-FILL", "DECK-FILL", "DECK-FILL", "DECK-FILL", "DECK-FILL"])
+        .deck(
+            1,
+            &[
+                "DECK-FILL",
+                "DECK-FILL",
+                "DECK-FILL",
+                "DECK-FILL",
+                "DECK-FILL",
+            ],
+        )
         .memory(0)
         .start();
     runner.register_effect("EOT-TWO", Arc::new(TwoOnPlayEffects));
@@ -551,7 +584,16 @@ fn bt15_102_eot_two_on_play_effects_surface_mandatory_choice_then_mill_runs() {
 #[test]
 fn bt15_102_eot_clone_mid_placement_pick_resolves_on_the_clone() {
     let mut runner = runner_builder()
-        .deck(1, &["DECK-FILL", "DECK-FILL", "DECK-FILL", "DECK-FILL", "DECK-FILL"])
+        .deck(
+            1,
+            &[
+                "DECK-FILL",
+                "DECK-FILL",
+                "DECK-FILL",
+                "DECK-FILL",
+                "DECK-FILL",
+            ],
+        )
         .memory(0)
         .start();
     let apoc = runner.place_stack(0, &["DM-PIED", "DM-METAL", "BT15-102"]);

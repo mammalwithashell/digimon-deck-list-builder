@@ -1,0 +1,53 @@
+card: EX12-010
+name: Greymon
+kind: digimon
+level: 4
+color: [red, black]
+cost: 5
+dp: 5000
+traits: [Dinosaur, ME, VB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 3
+  - kind: digivolve
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - name_contains: Agumon
+            - trait_has: ME
+            - trait_has: VB
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] You may return 1 Digimon card with [Greymon] in name or [ME]/[VB] trait from trash to hand"
+    process:
+      - select_trash:
+          of: you
+          bind_as: recursion_target
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - any_of:
+                  - name_contains: Greymon
+                  - trait_has: ME
+                  - trait_has: VB
+          prompt: "Return 1 Digimon card with [Greymon] in name or [ME]/[VB] trait from trash to hand"
+      - add_to_hand_from_trash: { of: you, card: recursion_target }
+
+  - scope: inherited
+    kind: grant_keyword
+    keyword: Raid
+    summary: "[Inherited] <Raid>"

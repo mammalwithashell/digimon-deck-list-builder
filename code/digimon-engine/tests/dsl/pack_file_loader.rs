@@ -3,6 +3,36 @@
 
 #[test]
 fn round_trip_registry_through_temp_pack_file() {
+    run_pack_file_loader_guard(check_round_trip_registry_through_temp_pack_file);
+}
+
+#[test]
+fn pack_file_loader_rejects_missing_manifest_raw_rust_requirements() {
+    run_pack_file_loader_guard(
+        check_pack_file_loader_rejects_missing_manifest_raw_rust_requirements,
+    );
+}
+
+#[test]
+fn pack_file_loader_accepts_present_manifest_raw_rust_requirements() {
+    run_pack_file_loader_guard(
+        check_pack_file_loader_accepts_present_manifest_raw_rust_requirements,
+    );
+}
+
+fn run_pack_file_loader_guard(f: fn()) {
+    // Loading + compiling a pack from the DSL examples is stack-heavy on the
+    // Windows libtest thread. Keep the guard self-contained instead of relying
+    // on a process-wide RUST_MIN_STACK override.
+    std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(f)
+        .expect("spawn large-stack thread")
+        .join()
+        .expect("pack-file loader guard thread panicked");
+}
+
+fn check_round_trip_registry_through_temp_pack_file() {
     use digimon_dsl::{loader, CardPack};
     use std::path::PathBuf;
 
@@ -36,8 +66,7 @@ fn round_trip_registry_through_temp_pack_file() {
     let _ = std::fs::remove_file(&temp);
 }
 
-#[test]
-fn pack_file_loader_rejects_missing_manifest_raw_rust_requirements() {
+fn check_pack_file_loader_rejects_missing_manifest_raw_rust_requirements() {
     use digimon_dsl::{loader, CardPack};
     use digimon_engine::dsl::raw_rust_registry::StubRegistry;
     use std::path::PathBuf;
@@ -71,8 +100,7 @@ fn pack_file_loader_rejects_missing_manifest_raw_rust_requirements() {
     let _ = std::fs::remove_file(&temp);
 }
 
-#[test]
-fn pack_file_loader_accepts_present_manifest_raw_rust_requirements() {
+fn check_pack_file_loader_accepts_present_manifest_raw_rust_requirements() {
     use digimon_dsl::{loader, CardPack};
     use digimon_engine::dsl::raw_rust_registry::StubRegistry;
     use std::path::PathBuf;

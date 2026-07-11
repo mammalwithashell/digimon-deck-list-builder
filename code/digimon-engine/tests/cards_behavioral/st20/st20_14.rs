@@ -107,7 +107,8 @@ fn field_contains(r: &DebugRunner, player: u8, card_id: &str) -> bool {
 }
 
 fn field_has_delay_option(r: &DebugRunner, player: u8) -> bool {
-    r.game.player(player)
+    r.game
+        .player(player)
         .battle_area
         .iter()
         .any(|perm| matches!(perm.option_state, OptionState::Delayed { .. }))
@@ -242,7 +243,13 @@ fn st20_14_color_bypass_counts_breeding_area_adventure_digimon() {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("ST20-14 YAML loads")
-        .add_card(digimon("ADV-BREED", "Adventure Breeder", 3, CardColor::Red, &["ADVENTURE"]))
+        .add_card(digimon(
+            "ADV-BREED",
+            "Adventure Breeder",
+            3,
+            CardColor::Red,
+            &["ADVENTURE"],
+        ))
         .add_card(filler("FILL"))
         .hand(0, &[CARD_ID])
         .deck(0, &["FILL"; 5])
@@ -274,7 +281,13 @@ fn st20_14_color_bypass_counts_battle_area_adventure_digimon() {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("ST20-14 YAML loads")
-        .add_card(digimon("ADV-FIELD", "Adventure Field", 4, CardColor::Red, &["ADVENTURE"]))
+        .add_card(digimon(
+            "ADV-FIELD",
+            "Adventure Field",
+            4,
+            CardColor::Red,
+            &["ADVENTURE"],
+        ))
         .add_card(filler("FILL"))
         .hand(0, &[CARD_ID])
         .deck(0, &["FILL"; 5])
@@ -298,7 +311,12 @@ fn st20_14_color_bypass_counts_adventure_tamer() {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("ST20-14 YAML loads")
-        .add_card(tamer("ADV-TAMER", "Adventure Tamer", CardColor::Red, &["ADVENTURE"]))
+        .add_card(tamer(
+            "ADV-TAMER",
+            "Adventure Tamer",
+            CardColor::Red,
+            &["ADVENTURE"],
+        ))
         .add_card(filler("FILL"))
         .hand(0, &[CARD_ID])
         .deck(0, &["FILL"; 5])
@@ -350,7 +368,13 @@ fn st20_14_ordinary_color_match_still_works() {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("ST20-14 YAML loads")
-        .add_card(digimon("BLACK-PLAIN", "Black Plain", 3, CardColor::Black, &[]))
+        .add_card(digimon(
+            "BLACK-PLAIN",
+            "Black Plain",
+            3,
+            CardColor::Black,
+            &[],
+        ))
         .add_card(filler("FILL"))
         .hand(0, &[CARD_ID])
         .deck(0, &["FILL"; 5])
@@ -378,7 +402,13 @@ fn st20_14_main_draws_two_and_places_self_as_delay_option() {
         .dsl_card(CARD_ID)
         .expect("ST20-14 YAML loads")
         // Seat an ADVENTURE permanent so the color-bypass allows the play.
-        .add_card(digimon("ADV-FIELD", "Adventure Field", 4, CardColor::Red, &["ADVENTURE"]))
+        .add_card(digimon(
+            "ADV-FIELD",
+            "Adventure Field",
+            4,
+            CardColor::Red,
+            &["ADVENTURE"],
+        ))
         .add_card(filler("FILL"))
         .hand(0, &[CARD_ID])
         .deck(0, &["FILL"; 5])
@@ -425,10 +455,7 @@ fn st20_14_main_draws_two_and_places_self_as_delay_option() {
 /// Clause B `when_would_leave_battle_area` replacement can fire on a later
 /// turn. Placing via `place_on_field` yields a Standard option, so the Delayed
 /// state is set here directly (mirrors BT17-095's `seat_as_delay_option`).
-fn seat_as_delay_option(
-    r: &mut DebugRunner,
-    handle: digimon_engine::permanent::PermanentHandle,
-) {
+fn seat_as_delay_option(r: &mut DebugRunner, handle: digimon_engine::permanent::PermanentHandle) {
     let turn = r.game.turn_count;
     let perm = &mut r.game.players[handle.player as usize].battle_area[handle.index as usize];
     perm.option_state = OptionState::Delayed {
@@ -448,8 +475,20 @@ fn st20_14_delay_plays_adventure_from_hand_when_own_lv5_leaves() {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("ST20-14 YAML loads")
-        .add_card(digimon("LV5-LEAVER", "Big Adventure", 5, CardColor::Black, &[]))
-        .add_card(digimon("ADV-HAND", "Small Adventure", 4, CardColor::Black, &["ADVENTURE"]))
+        .add_card(digimon(
+            "LV5-LEAVER",
+            "Big Adventure",
+            5,
+            CardColor::Black,
+            &[],
+        ))
+        .add_card(digimon(
+            "ADV-HAND",
+            "Small Adventure",
+            4,
+            CardColor::Black,
+            &["ADVENTURE"],
+        ))
         .add_card(filler("FILL"))
         .hand(0, &["ADV-HAND"])
         .deck(0, &["FILL"; 5])
@@ -525,8 +564,20 @@ fn st20_14_decline_delay_keeps_option_and_plays_nothing() {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("ST20-14 YAML loads")
-        .add_card(digimon("LV5-LEAVER", "Big Adventure", 5, CardColor::Black, &[]))
-        .add_card(digimon("ADV-HAND", "Small Adventure", 4, CardColor::Black, &["ADVENTURE"]))
+        .add_card(digimon(
+            "LV5-LEAVER",
+            "Big Adventure",
+            5,
+            CardColor::Black,
+            &[],
+        ))
+        .add_card(digimon(
+            "ADV-HAND",
+            "Small Adventure",
+            4,
+            CardColor::Black,
+            &["ADVENTURE"],
+        ))
         .add_card(filler("FILL"))
         .hand(0, &["ADV-HAND"])
         .deck(0, &["FILL"; 5])
@@ -566,8 +617,20 @@ fn st20_14_does_not_fire_for_own_lv4_leaving() {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("ST20-14 YAML loads")
-        .add_card(digimon("LV4-LEAVER", "Low Adventure", 4, CardColor::Black, &[]))
-        .add_card(digimon("ADV-HAND", "Small Adventure", 4, CardColor::Black, &["ADVENTURE"]))
+        .add_card(digimon(
+            "LV4-LEAVER",
+            "Low Adventure",
+            4,
+            CardColor::Black,
+            &[],
+        ))
+        .add_card(digimon(
+            "ADV-HAND",
+            "Small Adventure",
+            4,
+            CardColor::Black,
+            &["ADVENTURE"],
+        ))
         .add_card(filler("FILL"))
         .hand(0, &["ADV-HAND"])
         .deck(0, &["FILL"; 5])
@@ -600,7 +663,13 @@ fn st20_14_does_not_fire_for_opponent_lv5_leaving() {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("ST20-14 YAML loads")
-        .add_card(digimon("OPP-LV5", "Enemy Adventure", 5, CardColor::Black, &[]))
+        .add_card(digimon(
+            "OPP-LV5",
+            "Enemy Adventure",
+            5,
+            CardColor::Black,
+            &[],
+        ))
         .add_card(filler("FILL"))
         .deck(0, &["FILL"; 5])
         .deck(1, &["FILL"; 5])
@@ -620,7 +689,10 @@ fn st20_14_does_not_fire_for_opponent_lv5_leaving() {
         "an OPPONENT's Lv5 Digimon leaving must NOT fire ST20-14 \
          (replacement_subject_is_mine rejects)"
     );
-    assert!(field_contains(&r, 0, CARD_ID), "ST20-14 remains on the field");
+    assert!(
+        field_contains(&r, 0, CARD_ID),
+        "ST20-14 remains on the field"
+    );
 }
 
 /// With no eligible Lv5- [ADVENTURE] Digimon in hand, the <Delay> accept prompt
@@ -637,9 +709,21 @@ fn st20_14_offer_installs_even_with_no_eligible_adventure_in_hand() {
     let mut r = DebugRunner::builder()
         .dsl_card(CARD_ID)
         .expect("ST20-14 YAML loads")
-        .add_card(digimon("LV5-LEAVER", "Big Adventure", 5, CardColor::Black, &[]))
+        .add_card(digimon(
+            "LV5-LEAVER",
+            "Big Adventure",
+            5,
+            CardColor::Black,
+            &[],
+        ))
         // A hand Digimon that is NOT [ADVENTURE] and Lv6 (both filters fail).
-        .add_card(digimon("BAD-HAND", "No Adventure", 6, CardColor::Black, &[]))
+        .add_card(digimon(
+            "BAD-HAND",
+            "No Adventure",
+            6,
+            CardColor::Black,
+            &[],
+        ))
         .add_card(filler("FILL"))
         .hand(0, &["BAD-HAND"])
         .deck(0, &["FILL"; 5])
@@ -729,7 +813,11 @@ fn st20_14_security_places_self_in_defender_battle_area() {
         .start();
 
     let atk = r.place_on_field(0, "ATK", Some(0));
-    assert_eq!(r.security_count(1), 1, "precondition: ST20-14 in defender security");
+    assert_eq!(
+        r.security_count(1),
+        1,
+        "precondition: ST20-14 in defender security"
+    );
 
     let _ = r.attack_player(atk, 1, false);
     r.auto_resolve().expect("security selections resolve");

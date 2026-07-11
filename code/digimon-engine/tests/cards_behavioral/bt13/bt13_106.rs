@@ -114,7 +114,9 @@ fn play_odins_breath(runner: &mut DebugRunner) -> OptionPlayResult {
 #[test]
 fn bt13_106_compiles_as_yellow_option_cost_5() {
     let runner = odins_breath_runner().start();
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card present");
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("compiled card present");
 
     assert_eq!(compiled.card, CARD_ID);
     assert_eq!(compiled.kind, CompiledCardKind::Option);
@@ -125,7 +127,9 @@ fn bt13_106_compiles_as_yellow_option_cost_5() {
 #[test]
 fn bt13_106_has_on_discard_security_clause_with_dp_and_conditional_security_attack() {
     let runner = odins_breath_runner().start();
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card present");
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("compiled card present");
 
     let clause = compiled
         .effects
@@ -169,15 +173,15 @@ fn bt13_106_has_on_discard_security_clause_with_dp_and_conditional_security_atta
 #[test]
 fn bt13_106_has_main_from_hand_clause() {
     let runner = odins_breath_runner().start();
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card present");
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("compiled card present");
 
     let clause = compiled
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::MainFromHand] => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when == vec![CompiledTiming::MainFromHand] => Some(t),
             _ => None,
         })
         .expect("BT13-106 must have a main_from_hand triggered clause");
@@ -195,7 +199,9 @@ fn bt13_106_has_main_from_hand_clause() {
 #[test]
 fn bt13_106_has_inherited_on_security_clause_activating_main() {
     let runner = odins_breath_runner().start();
-    let compiled = runner.compiled_card(CARD_ID).expect("compiled card present");
+    let compiled = runner
+        .compiled_card(CARD_ID)
+        .expect("compiled card present");
 
     let clause = compiled
         .effects
@@ -304,7 +310,10 @@ fn bt13_106_main_grants_security_attack_minus_1_when_total_security_lte_6() {
     runner.auto_resolve().ok();
 
     assert_eq!(
-        runner.game.modifiers.sum(target, ModifierType::SecurityAttackChange),
+        runner
+            .game
+            .modifiers
+            .sum(target, ModifierType::SecurityAttackChange),
         -1,
         "6 total security cards: the DP-target opponent Digimon must also gain <Security A. -1>"
     );
@@ -339,7 +348,10 @@ fn bt13_106_main_no_security_attack_grant_when_total_security_gt_6() {
     runner.auto_resolve().ok();
 
     assert_eq!(
-        runner.game.modifiers.sum(target, ModifierType::SecurityAttackChange),
+        runner
+            .game
+            .modifiers
+            .sum(target, ModifierType::SecurityAttackChange),
         0,
         "8 total security cards (> 6): no <Security A. -1> grant should apply"
     );
@@ -430,11 +442,18 @@ fn bt13_106_normal_attack_security_check_does_not_double_fire_on_discard_securit
     assert_eq!(view.kind, SelectionKind::OppField);
     let base_dp = runner.effective_dp(dp_target).expect("dp_target has DP");
     runner
-        .execute_action(view.selecting_player, encode_attack(0, dp_target.index as u16))
+        .execute_action(
+            view.selecting_player,
+            encode_attack(0, dp_target.index as u16),
+        )
         .expect("resolve the single Main activation");
     runner.auto_resolve().ok();
 
-    assert_eq!(runner.security_count(0), 0, "the security card was checked and trashed to trash");
+    assert_eq!(
+        runner.security_count(0),
+        0,
+        "the security card was checked and trashed to trash"
+    );
     assert_eq!(runner.game.players[0].trash.len(), 1);
     // Only ONE Main activation occurred: only `dp_target` (the selected
     // target) carries the -3000 DP modifier; nothing double-applied.

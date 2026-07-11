@@ -465,7 +465,11 @@ pub async fn models_resolve_starter(
         return Ok(None);
     }
     // Download if not already cached.
-    if manager.local_meta(&model.id).map_err(|e| e.to_string())?.is_none() {
+    if manager
+        .local_meta(&model.id)
+        .map_err(|e| e.to_string())?
+        .is_none()
+    {
         if manager.download(&model).await.is_err() {
             return Ok(None);
         }
@@ -513,7 +517,11 @@ pub async fn models_resolve_for_deck(
         return Ok(None);
     };
     // Download if not already cached.
-    if manager.local_meta(&model.id).map_err(|e| e.to_string())?.is_none() {
+    if manager
+        .local_meta(&model.id)
+        .map_err(|e| e.to_string())?
+        .is_none()
+    {
         if manager.download(&model).await.is_err() {
             return Ok(None);
         }
@@ -590,7 +598,10 @@ mod tests {
             "starter_deck": "starter_st3_heavens_yellow", "notes": null,
         }))
         .unwrap();
-        assert_eq!(with.starter_deck.as_deref(), Some("starter_st3_heavens_yellow"));
+        assert_eq!(
+            with.starter_deck.as_deref(),
+            Some("starter_st3_heavens_yellow")
+        );
 
         // Older servers omit the field entirely.
         let without: ManifestModel = serde_json::from_value(serde_json::json!({
@@ -614,8 +625,16 @@ mod tests {
             dummy_specialist("st2", "starter_st2_cocytus_blue"),
         ];
         // Picks the compatible st1 specialist, not the shape-mismatched one.
-        assert_eq!(pick_specialist(&models, "starter_st1_gaia_red").unwrap().id, "st1");
-        assert_eq!(pick_specialist(&models, "starter_st2_cocytus_blue").unwrap().id, "st2");
+        assert_eq!(
+            pick_specialist(&models, "starter_st1_gaia_red").unwrap().id,
+            "st1"
+        );
+        assert_eq!(
+            pick_specialist(&models, "starter_st2_cocytus_blue")
+                .unwrap()
+                .id,
+            "st2"
+        );
         // No specialist published for this deck -> greedy fallback (None).
         assert!(pick_specialist(&models, "starter_st6_venomous_violet").is_none());
     }

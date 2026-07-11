@@ -76,9 +76,8 @@ fn gain_memory_literal_keeps_integer_fast_path() {
 fn gain_memory_accepts_a_formula_without_the_fn_twin() {
     // The canonical unified form: a formula directly in `gain_memory`, no
     // `gain_memory_fn` verb and no `{ formula: }` wrapper.
-    let yaml = format!(
-        "{MEMORY_HEADER}      - gain_memory: {{ base: 0, per: ally_count, delta: 1 }}\n"
-    );
+    let yaml =
+        format!("{MEMORY_HEADER}      - gain_memory: {{ base: 0, per: ally_count, delta: 1 }}\n");
     assert!(matches!(
         first_triggered_step(&parse(&yaml)),
         CompiledStep::GainMemoryFn { .. }
@@ -92,9 +91,8 @@ fn lose_memory_accepts_literal_and_formula() {
         first_triggered_step(&parse(&lit)),
         CompiledStep::LoseMemory(1)
     ));
-    let formula = format!(
-        "{MEMORY_HEADER}      - lose_memory: {{ base: 0, per: ally_count, delta: 1 }}\n"
-    );
+    let formula =
+        format!("{MEMORY_HEADER}      - lose_memory: {{ base: 0, per: ally_count, delta: 1 }}\n");
     assert!(matches!(
         first_triggered_step(&parse(&formula)),
         CompiledStep::LoseMemoryFn { .. }
@@ -179,7 +177,9 @@ effects:
 "#,
     );
     match first_declarative(&formula) {
-        CompiledDeclarativeClause::CostReduction { amount, amount_fn, .. } => {
+        CompiledDeclarativeClause::CostReduction {
+            amount, amount_fn, ..
+        } => {
             assert!(amount.is_none());
             assert!(amount_fn.is_some());
         }
@@ -317,7 +317,10 @@ fn canonical_comparator_completes_missing_eq_for_identity_metrics() {
 
     // Non-eq ops still route to their existing compiled fields; eq stays None.
     let mc = aura_target(&dp_aura("materials_count: { op: gte, value: 1 }"));
-    assert_eq!(mc.materials_count_gte, Some(CompiledDpConstraint::Literal(1)));
+    assert_eq!(
+        mc.materials_count_gte,
+        Some(CompiledDpConstraint::Literal(1))
+    );
     assert!(mc.materials_count_eq.is_none());
 
     // Legacy flat key and the canonical lte lower to the IDENTICAL compiled field.

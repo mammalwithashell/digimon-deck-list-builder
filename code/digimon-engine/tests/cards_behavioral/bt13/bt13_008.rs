@@ -182,7 +182,9 @@ fn bt13_008_metadata_matches_printed() {
         "Agumon must be Yellow"
     );
     assert!(
-        card.traits.iter().any(|t| t.eq_ignore_ascii_case("Dinosaur")),
+        card.traits
+            .iter()
+            .any(|t| t.eq_ignore_ascii_case("Dinosaur")),
         "Agumon must have the Dinosaur trait; got {:?}",
         card.traits
     );
@@ -195,7 +197,9 @@ fn bt13_008_has_koromon_alt_path_cost0() {
     let koromon = card
         .alt_paths
         .iter()
-        .find(|p| p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(0)))
+        .find(|p| {
+            p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(0))
+        })
         .expect("must have a Koromon cost-0 digivolve alt-path");
     assert_eq!(koromon.cost, Some(CompiledCost::Literal(0)));
 }
@@ -326,12 +330,14 @@ fn bt13_008_main_installs_marcus_select() {
     let action = field_main_action_id(agumon.index as usize);
     runner.game.decode_action(action, 0);
 
-    let pending = runner
-        .game
-        .pending_selection
-        .as_ref()
-        .expect("a mandatory selection must install: pick the Marcus Damon to treat as a Digimon");
-    assert_eq!(pending.selecting_player, 0, "you select your own Marcus Damon");
+    let pending =
+        runner.game.pending_selection.as_ref().expect(
+            "a mandatory selection must install: pick the Marcus Damon to treat as a Digimon",
+        );
+    assert_eq!(
+        pending.selecting_player, 0,
+        "you select your own Marcus Damon"
+    );
     assert!(
         !pending.is_optional,
         "the outer select is mandatory once the [Main] activates (DCGO canNoSelect: false)"
@@ -355,7 +361,9 @@ fn bt13_008_main_treats_marcus_as_3000_digimon_cannot_digivolve() {
         "Marcus must not start treated as a Digimon"
     );
     assert!(
-        !runner.modifiers().has(marcus, ModifierType::CannotDigivolve),
+        !runner
+            .modifiers()
+            .has(marcus, ModifierType::CannotDigivolve),
         "Marcus must not start with CannotDigivolve"
     );
 
@@ -385,7 +393,9 @@ fn bt13_008_main_treats_marcus_as_3000_digimon_cannot_digivolve() {
         "Marcus must be treated as a 3000 DP Digimon"
     );
     assert!(
-        runner.modifiers().has(marcus, ModifierType::CannotDigivolve),
+        runner
+            .modifiers()
+            .has(marcus, ModifierType::CannotDigivolve),
         "Marcus must gain CannotDigivolve"
     );
 }
@@ -410,7 +420,9 @@ fn bt13_008_main_grants_expire_at_end_of_turn() {
     let _ = runner.auto_resolve();
 
     assert!(runner.modifiers().has(marcus, ModifierType::TreatAsDigimon));
-    assert!(runner.modifiers().has(marcus, ModifierType::CannotDigivolve));
+    assert!(runner
+        .modifiers()
+        .has(marcus, ModifierType::CannotDigivolve));
 
     runner.game.end_turn(); // P0 -> P1
     runner.game.end_turn(); // P1 -> P0
@@ -420,7 +432,9 @@ fn bt13_008_main_grants_expire_at_end_of_turn() {
         "TreatAsDigimon must expire at end of turn"
     );
     assert!(
-        !runner.modifiers().has(marcus, ModifierType::CannotDigivolve),
+        !runner
+            .modifiers()
+            .has(marcus, ModifierType::CannotDigivolve),
         "CannotDigivolve must expire at end of turn"
     );
 }

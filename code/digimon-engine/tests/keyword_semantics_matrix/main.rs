@@ -90,6 +90,8 @@ fn keyword_for_id(keyword_id: &str) -> Keyword {
         "Retaliation" => Keyword::Retaliation,
         "Scapegoat" => Keyword::Scapegoat,
         "Execute" => Keyword::Execute,
+        "Engage" => Keyword::Engage,
+        "Guard" => Keyword::Guard,
         "Iceclad" => Keyword::Iceclad,
         "MindLink" => Keyword::MindLink,
         "Training" => Keyword::Training,

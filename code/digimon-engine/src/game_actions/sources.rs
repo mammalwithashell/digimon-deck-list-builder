@@ -78,6 +78,7 @@ impl Game {
     ) -> Option<TakenCardSource> {
         use crate::enums::CardSourceRef;
         let mut face_up_security = None;
+        let mut pending_security_defender = None;
         let card = match source {
             CardSourceRef::Hand(p, i) => {
                 let player = self.player_mut(p);
@@ -128,6 +129,15 @@ impl Game {
                 }
                 card
             }
+            CardSourceRef::PendingSecurity => {
+                let pending = self.pending_security.take()?;
+                if pending.played {
+                    self.pending_security = Some(pending);
+                    return None;
+                }
+                pending_security_defender = Some(pending.defender);
+                pending.card
+            }
             CardSourceRef::Material(h, i) => {
                 let perm = self
                     .player_mut(h.player)
@@ -148,6 +158,7 @@ impl Game {
         Some(TakenCardSource {
             card,
             restore_face_up_security_for: face_up_security,
+            restore_pending_security_for: pending_security_defender,
         })
     }
 
@@ -179,6 +190,17 @@ impl Game {
                 let player = self.player_mut(p);
                 let idx = i.min(player.security.len());
                 player.security.insert(idx, taken.card);
+                true
+            }
+            CardSourceRef::PendingSecurity => {
+                let Some(defender) = taken.restore_pending_security_for else {
+                    return false;
+                };
+                self.pending_security = Some(PendingSecurity {
+                    defender,
+                    card: taken.card,
+                    played: false,
+                });
                 true
             }
             CardSourceRef::Material(h, i) => {

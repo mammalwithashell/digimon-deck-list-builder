@@ -76,6 +76,7 @@ pub enum AppFuseSourceZone {
 struct TakenCardSource {
     card: CardSource,
     restore_face_up_security_for: Option<PlayerId>,
+    restore_pending_security_for: Option<PlayerId>,
 }
 
 /// Captured state for resuming `run_digixros_leave_windows_then_commit` after a
@@ -1967,6 +1968,17 @@ impl Game {
                 .security
                 .get(i)
                 .map(|c| (c.handle(), c.data_index, Zone::Security)),
+            CardSourceRef::PendingSecurity => self
+                .pending_security
+                .as_ref()
+                .filter(|pending| !pending.played)
+                .map(|pending| {
+                    (
+                        pending.card.handle(),
+                        pending.card.data_index,
+                        Zone::Security,
+                    )
+                }),
             CardSourceRef::Material(h, i) => self
                 .player(h.player)
                 .battle_area

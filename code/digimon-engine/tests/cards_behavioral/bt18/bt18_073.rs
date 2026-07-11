@@ -76,7 +76,9 @@ use digimon_engine::combat::{AttackInitiator, AttackOpen, TargetConstraint};
 use digimon_engine::debug_runner::{
     make_test_card, make_test_card_with_level, DebugRunner, DebugRunnerBuilder,
 };
-use digimon_engine::enums::{CardColor, CardKind, EffectTiming, GamePhase, Keyword, PlaySource, PlayerId};
+use digimon_engine::enums::{
+    CardColor, CardKind, EffectTiming, GamePhase, Keyword, PlaySource, PlayerId,
+};
 use digimon_engine::permanent::PermanentHandle;
 use digimon_engine::replacement::ReplacementCause;
 use digimon_engine::selection::{AttackTarget, SelectionKind, TriggerSource};
@@ -680,10 +682,9 @@ fn bt18_073_digivolve_over_composite_base_does_not_offer_play_cost_reducer() {
     let base = runner.place_on_field(0, "COMP-BASE", Some(0));
 
     let events_before = runner.game.events.len();
-    let proceeded =
-        runner
-            .game
-            .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByHand);
+    let proceeded = runner
+        .game
+        .digivolve_from_hand(0, 0, base.index as usize, PlaySource::ByHand);
     assert!(
         proceeded,
         "digivolving over a Lv.5 [Composite] base must commit directly — the \
@@ -736,12 +737,11 @@ fn bt18_073_on_deletion_does_not_fire_without_kimeramon_on_field() {
     let mut runner = machinedramon_runner().memory(20).start();
     let machinedramon = runner.place_on_field(0, CARD_ID, Some(0));
     push_to_hand(&mut runner, 0, "BT18-019"); // Millenniummon in hand
-                                               // NO Kimeramon on field.
+                                              // NO Kimeramon on field.
 
-    runner.game.delete_permanent_with_cause(
-        machinedramon,
-        ReplacementCause::OwnEffect,
-    );
+    runner
+        .game
+        .delete_permanent_with_cause(machinedramon, ReplacementCause::OwnEffect);
     runner.game.drain_effect_queue();
 
     assert!(
@@ -757,12 +757,11 @@ fn bt18_073_on_deletion_does_not_fire_without_millenniummon_in_hand() {
     let mut runner = machinedramon_runner().memory(20).start();
     let machinedramon = runner.place_on_field(0, CARD_ID, Some(0));
     runner.place_on_field(0, "BT18-015", None); // Kimeramon on field
-                                                 // No Millenniummon in hand.
+                                                // No Millenniummon in hand.
 
-    runner.game.delete_permanent_with_cause(
-        machinedramon,
-        ReplacementCause::OwnEffect,
-    );
+    runner
+        .game
+        .delete_permanent_with_cause(machinedramon, ReplacementCause::OwnEffect);
     runner.game.drain_effect_queue();
 
     assert!(
@@ -790,10 +789,9 @@ fn bt18_073_on_deletion_dna_digivolves_into_millenniummon_using_self_as_trash_ma
     runner.place_on_field(0, "BT18-015", None); // Kimeramon on field
     push_to_hand(&mut runner, 0, "BT18-019"); // Millenniummon in hand
 
-    runner.game.delete_permanent_with_cause(
-        machinedramon,
-        ReplacementCause::OwnEffect,
-    );
+    runner
+        .game
+        .delete_permanent_with_cause(machinedramon, ReplacementCause::OwnEffect);
     runner.game.drain_effect_queue();
 
     // Machinedramon must now be in the trash (post-trash OnDeletion timing).
@@ -863,10 +861,9 @@ fn bt18_073_on_deletion_offers_trash_pick_among_multiple_machinedramon_copies() 
     push_to_hand(&mut runner, 0, "BT18-019");
     push_to_trash(&mut runner, 0, CARD_ID); // a second Machinedramon-named copy already in trash
 
-    runner.game.delete_permanent_with_cause(
-        machinedramon,
-        ReplacementCause::OwnEffect,
-    );
+    runner
+        .game
+        .delete_permanent_with_cause(machinedramon, ReplacementCause::OwnEffect);
     runner.game.drain_effect_queue();
 
     // Accept the outer "may".
@@ -945,10 +942,9 @@ fn bt18_073_on_deletion_declining_leaves_board_untouched() {
     runner.place_on_field(0, "BT18-015", None);
     push_to_hand(&mut runner, 0, "BT18-019");
 
-    runner.game.delete_permanent_with_cause(
-        machinedramon,
-        ReplacementCause::OwnEffect,
-    );
+    runner
+        .game
+        .delete_permanent_with_cause(machinedramon, ReplacementCause::OwnEffect);
     runner.game.drain_effect_queue();
 
     let sel = runner
@@ -994,10 +990,9 @@ fn bt18_073_on_deletion_merge_pays_printed_dna_cost_of_zero() {
 
     let memory_before = runner.memory();
 
-    runner.game.delete_permanent_with_cause(
-        machinedramon,
-        ReplacementCause::OwnEffect,
-    );
+    runner
+        .game
+        .delete_permanent_with_cause(machinedramon, ReplacementCause::OwnEffect);
     runner.game.drain_effect_queue();
     resolve_all_picking_first_non_pass(&mut runner);
 
@@ -1058,9 +1053,9 @@ fn bt18_073_inherited_redirect_installs_when_buried_and_composite_target_exists(
         cost_upgrade: None,
     });
 
-    runner
-        .accept_optional_trigger()
-        .expect("accept the outer optional-trigger prompt (buried Machinedramon's inherited clause fires)");
+    runner.accept_optional_trigger().expect(
+        "accept the outer optional-trigger prompt (buried Machinedramon's inherited clause fires)",
+    );
 
     let pending = runner
         .game

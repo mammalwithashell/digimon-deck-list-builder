@@ -63,7 +63,11 @@ fn place_carrier_with_sources(
     let turn = g.turn_count;
     // Bottom source is the Permanent's base card.
     let (bottom_id, bottom_fd) = sources[0];
-    let bottom_idx = g.card_data.iter().position(|c| c.card_id == bottom_id).unwrap();
+    let bottom_idx = g
+        .card_data
+        .iter()
+        .position(|c| c.card_id == bottom_id)
+        .unwrap();
     let mut bottom = CardSource::new(bottom_idx, 0, g.next_card_index());
     bottom.face_down = bottom_fd;
     let mut perm = Permanent::new(bottom, turn);
@@ -75,7 +79,11 @@ fn place_carrier_with_sources(
         perm.card_sources.push(s);
     }
     // Top card.
-    let top_idx = g.card_data.iter().position(|c| c.card_id == top_id).unwrap();
+    let top_idx = g
+        .card_data
+        .iter()
+        .position(|c| c.card_id == top_id)
+        .unwrap();
     let top = CardSource::new(top_idx, 0, g.next_card_index());
     perm.card_sources.push(top);
     g.players[0].battle_area.push(perm);
@@ -105,8 +113,11 @@ fn color_matches_own_source_stack_matches_shared_non_flipped_source_color() {
         .hand(0, &["SRC"])
         .build();
 
-    let carrier =
-        place_carrier_with_sources(&mut runner, "KIMERA", &[("RED-BASE", false), ("BLUE-MID", false)]);
+    let carrier = place_carrier_with_sources(
+        &mut runner,
+        "KIMERA",
+        &[("RED-BASE", false), ("BLUE-MID", false)],
+    );
     let opp_blue = place_digimon(&mut runner, 1, "OPP-BLUE");
     let opp_green = place_digimon(&mut runner, 1, "OPP-GREEN");
 
@@ -252,7 +263,11 @@ fn per_color_setup() -> DebugRunner {
         .add_card(digimon("O-BLUE", "Opp Blue", &[CardColor::Blue]))
         .add_card(digimon("O-BLUE2", "Opp Blue 2", &[CardColor::Blue]))
         .add_card(digimon("O-GREEN", "Opp Green", &[CardColor::Green]))
-        .add_card(digimon("O-RB", "Opp RedBlue", &[CardColor::Red, CardColor::Blue]))
+        .add_card(digimon(
+            "O-RB",
+            "Opp RedBlue",
+            &[CardColor::Red, CardColor::Blue],
+        ))
         .add_card(make_test_card("FILL2", "Filler2"))
         .hand(0, &["TEST-PER-COLOR-DELETE"])
         .deck(0, &["FILL2", "FILL2", "FILL2"])
@@ -401,7 +416,10 @@ fn per_color_delete_every_pick_surfaces_in_action_space() {
     let pending = runner.game.pending_selection.as_ref().expect("first pick");
     assert_eq!(pending.kind, SelectionKind::OppField);
     let (p, _) = decode_attack(pending.valid_action_ids[0]);
-    assert_eq!(p as u8, 1, "pick action decodes to an opponent-field target");
+    assert_eq!(
+        p as u8, 1,
+        "pick action decodes to an opponent-field target"
+    );
     resolve_pick(&mut runner, 0);
 
     // Second pick (Green).
@@ -482,7 +500,10 @@ fn branch_gate_distinct_source_color_count_switches_at_six() {
     {
         let perm = &runner.game.player(0).battle_area[six.index as usize];
         let n = distinct_non_flipped_source_color_count(perm, &runner.game.card_data);
-        assert_eq!(n, 6, "6 distinct non-flipped source colors → Branch B (>=6)");
+        assert_eq!(
+            n, 6,
+            "6 distinct non-flipped source colors → Branch B (>=6)"
+        );
         assert!(n >= 6, "the >=6 branch predicate holds");
     }
 

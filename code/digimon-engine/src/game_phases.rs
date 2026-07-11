@@ -561,8 +561,9 @@ impl Game {
             {
                 return true;
             }
-            // MayAttack — normal can_attack (not vortex-exempt).
-            if self.modifiers.has(handle, ModifierType::MayAttack)
+            // MayAttack / Engage — normal can_attack (not vortex-exempt).
+            if (self.modifiers.has(handle, ModifierType::MayAttack)
+                || self.has_keyword(handle, Keyword::Engage))
                 && self.can_attack(handle, /* vortex = */ false)
             {
                 return true;

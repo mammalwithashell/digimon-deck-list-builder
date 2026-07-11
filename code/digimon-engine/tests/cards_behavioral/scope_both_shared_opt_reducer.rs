@@ -105,7 +105,10 @@ fn scope_both_opt_reducer_lowers_to_two_copies_sharing_one_opt_group() {
     // One copy is face-up (inherited == false), the other is inherited.
     let face_up = reducers.iter().find(|e| !e.inherited);
     let inherited = reducers.iter().find(|e| e.inherited);
-    assert!(face_up.is_some(), "one copy must be the FaceUp (top) position");
+    assert!(
+        face_up.is_some(),
+        "one copy must be the FaceUp (top) position"
+    );
     assert!(
         inherited.is_some(),
         "the other copy must be the Inherited (source) position"

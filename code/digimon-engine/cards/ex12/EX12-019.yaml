@@ -1,0 +1,60 @@
+card: EX12-019
+name: Nezhamon
+kind: digimon
+level: 6
+color: [red, black]
+cost: 12
+dp: 12000
+traits: [Cyborg, Saneiketsu, Tentei Hachibushu, Shambala]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 5, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: black }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, trait_has: Shambala }
+    cost: 3
+
+effects:
+  - kind: grant_keyword
+    keyword: Rush
+    summary: "<Rush>"
+  - kind: grant_keyword
+    keyword: Collision
+    summary: "<Collision>"
+  - kind: grant_keyword
+    keyword: Piercing
+    summary: "<Piercing>"
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+  - kind: grant_keyword
+    keyword: Engage
+    summary: "<Engage>"
+
+  - when: on_attack_target_change
+    once_per_turn: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When attack targets change, self gets +4000 DP and ignores opponent Digimon effects until their turn ends"
+    process:
+      - add_dp_modifier:
+          target: source
+          value: 4000
+          expiry: end_of_opponents_turn
+      - grant_effect_immunity:
+          target: source
+          source_kind: digimon
+          source_controller: opponent
+          expiry: end_of_opponents_turn
+
+  - when: [on_own_security_removed, on_opponent_security_removed]
+    once_per_turn: true
+    optional: true
+    active_when: { all_turns: true }
+    summary: "[All Turns][OPT] When security stacks are removed from, this Digimon may unsuspend"
+    process:
+      - unsuspend: { target: source }

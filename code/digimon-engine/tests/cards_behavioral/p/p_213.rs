@@ -224,8 +224,14 @@ fn p_213_has_own_and_inherited_decode_replacement_clauses() {
             )
         })
         .count();
-    assert_eq!(own_count, 1, "exactly one FACE-UP Decode replacement clause");
-    assert_eq!(inherited_count, 1, "exactly one INHERITED Decode replacement clause");
+    assert_eq!(
+        own_count, 1,
+        "exactly one FACE-UP Decode replacement clause"
+    );
+    assert_eq!(
+        inherited_count, 1,
+        "exactly one INHERITED Decode replacement clause"
+    );
 }
 
 #[test]
@@ -695,7 +701,10 @@ fn p_213_own_decode_decline_leaves_no_source_played() {
         .pending_selection_view()
         .expect("Decode outer accept prompt should install");
     assert_eq!(accept.kind, SelectionKind::Replacement);
-    assert!(accept.is_optional, "Decode accept prompt must be declinable");
+    assert!(
+        accept.is_optional,
+        "Decode accept prompt must be declinable"
+    );
 
     runner
         .execute_action(0, PASS)

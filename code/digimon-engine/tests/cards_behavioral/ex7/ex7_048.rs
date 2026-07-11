@@ -324,7 +324,10 @@ fn ex7_048_shared_clause_reveals_6_and_uses_option_with_remainder_choice() {
                 && buckets[0].min == 0
                 && buckets[0].max == 1)
     });
-    assert!(bucket_ok, "must offer exactly one optional single-pick bucket");
+    assert!(
+        bucket_ok,
+        "must offer exactly one optional single-pick bucket"
+    );
     assert!(
         shared
             .process
@@ -397,7 +400,10 @@ fn ex7_048_has_optional_leave_replacement() {
         })
         .expect("must declare a replacement clause");
     assert_eq!(replacement.0, "when_would_leave_battle_area");
-    assert!(replacement.1, "\"by trashing ... they don't leave\" is optional");
+    assert!(
+        replacement.1,
+        "\"by trashing ... they don't leave\" is optional"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -819,7 +825,10 @@ fn ex7_048_tm_digimon_not_eligible_kind_gate() {
 fn ex7_048_no_eligible_pick_still_returns_all_six() {
     let mut runner = with_fillers(gundramon_runner())
         .add_card(make_filler("FILL-6"))
-        .deck(0, &["FILL-6", "FILL-5", "FILL-4", "FILL-3", "FILL-2", "FILL-1"])
+        .deck(
+            0,
+            &["FILL-6", "FILL-5", "FILL-4", "FILL-3", "FILL-2", "FILL-1"],
+        )
         .memory(0)
         .start();
 
@@ -930,7 +939,10 @@ fn ex7_048_protect_accept_trashes_option_and_saves_subject() {
             .expect("nested Option-digivolution-card pick installs");
         (p.valid_action_ids[0], p.selecting_player)
     };
-    runner.game.resolve_selection(sp, aid).expect("trash the Option");
+    runner
+        .game
+        .resolve_selection(sp, aid)
+        .expect("trash the Option");
 
     assert!(runner.game.pending_selection.is_none(), "resolved");
     assert!(

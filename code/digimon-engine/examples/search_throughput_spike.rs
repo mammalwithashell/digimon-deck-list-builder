@@ -50,7 +50,10 @@ fn build(
 struct Lcg(u64);
 impl Lcg {
     fn next(&mut self) -> u64 {
-        self.0 = self.0.wrapping_mul(6364136223846793005).wrapping_add(1442695040888963407);
+        self.0 = self
+            .0
+            .wrapping_mul(6364136223846793005)
+            .wrapping_add(1442695040888963407);
         self.0 >> 33
     }
     fn pick(&mut self, mask: &[f32]) -> u16 {
@@ -92,9 +95,33 @@ fn main() {
     let (mut steps, mut games) = (0u64, 1u64);
     let mut step_t = 0f64;
     let mut buckets = [
-        DepthBucket { label: "early (<50 steps)", lo: 0, hi: 50, clone_ns: 0.0, clone_n: 0, replay_ns: 0.0, replay_n: 0 },
-        DepthBucket { label: "mid   (50-150)    ", lo: 50, hi: 150, clone_ns: 0.0, clone_n: 0, replay_ns: 0.0, replay_n: 0 },
-        DepthBucket { label: "late  (150+)      ", lo: 150, hi: u64::MAX, clone_ns: 0.0, clone_n: 0, replay_ns: 0.0, replay_n: 0 },
+        DepthBucket {
+            label: "early (<50 steps)",
+            lo: 0,
+            hi: 50,
+            clone_ns: 0.0,
+            clone_n: 0,
+            replay_ns: 0.0,
+            replay_n: 0,
+        },
+        DepthBucket {
+            label: "mid   (50-150)    ",
+            lo: 50,
+            hi: 150,
+            clone_ns: 0.0,
+            clone_n: 0,
+            replay_ns: 0.0,
+            replay_n: 0,
+        },
+        DepthBucket {
+            label: "late  (150+)      ",
+            lo: 150,
+            hi: u64::MAX,
+            clone_ns: 0.0,
+            clone_n: 0,
+            replay_ns: 0.0,
+            replay_n: 0,
+        },
     ];
 
     let wall = Instant::now();
@@ -195,11 +222,21 @@ fn main() {
     // ---- Report.
     let step_us = step_t * 1e6 / steps as f64;
     let rstep_us = rtotal * 1e6 / rsteps as f64; // includes mask build (rollouts need it)
-    eprintln!("=== search_throughput_spike: {steps} greedy steps / {games} games / {total:.1}s ===");
-    eprintln!("greedy playout : {:.1} steps/game, engine step {:.1} us => {:.0} steps/sec (step only)",
-        steps as f64 / games as f64, step_us, 1e6 / step_us);
-    eprintln!("random playout : {:.1} steps/game, {:.1} us/step incl. mask => {:.0} steps/sec",
-        rsteps as f64 / rgames as f64, rstep_us, 1e6 / rstep_us);
+    eprintln!(
+        "=== search_throughput_spike: {steps} greedy steps / {games} games / {total:.1}s ==="
+    );
+    eprintln!(
+        "greedy playout : {:.1} steps/game, engine step {:.1} us => {:.0} steps/sec (step only)",
+        steps as f64 / games as f64,
+        step_us,
+        1e6 / step_us
+    );
+    eprintln!(
+        "random playout : {:.1} steps/game, {:.1} us/step incl. mask => {:.0} steps/sec",
+        rsteps as f64 / rgames as f64,
+        rstep_us,
+        1e6 / rstep_us
+    );
     eprintln!("--- fork cost by depth (sampled every 10 steps) ---");
     for b in &buckets {
         if b.clone_n == 0 {
@@ -209,7 +246,12 @@ fn main() {
         let replay_us = b.replay_ns / b.replay_n as f64 / 1000.0;
         eprintln!(
             "{}: clone {:9.1} us (n={:4})   reset-replay {:10.1} us (n={:4})   ratio {:6.0}x",
-            b.label, clone_us, b.clone_n, replay_us, b.replay_n, replay_us / clone_us
+            b.label,
+            clone_us,
+            b.clone_n,
+            replay_us,
+            b.replay_n,
+            replay_us / clone_us
         );
     }
     // MCTS sim = one clone + step to a leaf (~1 step for tree reuse,
@@ -220,7 +262,15 @@ fn main() {
         let sim1 = clone_us + rstep_us;
         let sim10 = clone_us + 10.0 * rstep_us;
         eprintln!("--- derived (mid-game, NN eval EXCLUDED) ---");
-        eprintln!("sim = clone + 1 step : {:.1} us => {:.0} sims/sec/core", sim1, 1e6 / sim1);
-        eprintln!("sim = clone + 10 steps: {:.1} us => {:.0} sims/sec/core", sim10, 1e6 / sim10);
+        eprintln!(
+            "sim = clone + 1 step : {:.1} us => {:.0} sims/sec/core",
+            sim1,
+            1e6 / sim1
+        );
+        eprintln!(
+            "sim = clone + 10 steps: {:.1} us => {:.0} sims/sec/core",
+            sim10,
+            1e6 / sim10
+        );
     }
 }

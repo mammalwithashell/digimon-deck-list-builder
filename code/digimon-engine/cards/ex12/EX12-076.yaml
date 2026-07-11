@@ -1,0 +1,81 @@
+card: EX12-076
+name: Susanoomon
+kind: digimon
+level: 7
+color: [yellow, white, red]
+cost: 16
+dp: 16000
+traits: [Shaman, Hybrid, Shambala, SW, TB, TS]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 6, self_color_count_gte: 2 }
+    cost: 6
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 6
+        - any_of:
+            - trait_has: Hybrid
+            - form_is: Hybrid
+            - trait_has: Shambala
+            - trait_has: TS
+    cost: 5
+  - kind: assembly
+    materials:
+      - filter:
+          any_of:
+            - trait_has: Hybrid
+            - form_is: Hybrid
+            - trait_has: Shambala
+        repeat: { min: 8, max: 8 }
+        distinct_by: name
+        zones: [trash]
+        stack_under: true
+    cost: 9
+
+effects:
+  - kind: grant_keyword
+    keyword: Rush
+    summary: "<Rush>"
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+  - kind: grant_keyword
+    keyword: Blocker
+    summary: "<Blocker>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] All opponent Digimon get -3000 DP for each source color"
+    process:
+      - add_modifier:
+          target:
+            of: opponent
+            zone: [battle_area]
+            kind: digimon
+          modifier: ChangeDp
+          value:
+            formula:
+              base: 0
+              per: source_color_count
+              delta: -3000
+          expiry: end_of_turn
+
+  - when: when_attacking
+    once_per_turn: true
+    summary: "[When Attacking][OPT] Place 1 opponent Digimon as top security; if 4+ source colors, trash top security and Recovery +1"
+    process:
+      - select_opponent_permanent:
+          bind_as: security_target
+          filter: { kind: digimon }
+          prompt: "Place 1 opponent Digimon as the top security card"
+      - place_on_security:
+          source: { permanent: security_target }
+          of: opponent
+          position: top
+      - if:
+          condition: { own_source_stack_color_count_gte: 4 }
+          then:
+            - trash_top_security: { of: opponent }
+            - recover: { of: you, count: 1 }

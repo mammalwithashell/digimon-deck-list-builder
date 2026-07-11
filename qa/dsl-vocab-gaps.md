@@ -8170,3 +8170,54 @@ Surfaced: 2026-07-09 bug-list faithfulness campaign (user-reported: "certain tim
 - **What's wrong:** `PredicateSpec` deserializes without `deny_unknown_fields`, so a typo'd or never-implemented predicate key parses as a NO-OP and the gate silently vanishes. Concrete casualties: `color_includes:` on BT24-017, EX11-012, EX11-074 — their circle color gates are UNENFORCED in production.
 - **Fix shape:** (a) add `#[serde(deny_unknown_fields)]` to `PredicateSpec` (and audit other Spec structs), or (b) a dsl-lint rule diffing YAML keys against the schema; then sweep and fix the three known casualties (+ whatever the sweep finds).
 - **Priority:** high — this converts authoring typos into silent rules violations, defeating the no-approximations policy invisibly. (An earlier note at ~L3705 flagged the same class; this entry adds the concrete casualties.)
+
+## EX12 Shambala / Virus Busters vocabulary gaps (PARTIAL 2026-07-08)
+
+Surfaced by the manual fallback audit for `implement-ex12-shambala-virus-busters`.
+See `qa/archetype-qa/ex12-shambala-virus-busters-scoping.md`.
+
+### `G-KEYWORD-GUARD` — DSL keyword allowlist/lowering for native Guard
+
+- **Status:** RESOLVED 2026-07-08.
+- **Consumers:** EX12-056, EX12-057 token authoring; adjacent EX12-072 security grant.
+- **Resolution:** `grant_keyword: Guard` is accepted by the validator and lowers through `modifier_map::lookup_keyword`; aura-granted Guard activates the same native leave-replacement behavior as printed Guard.
+- **Regression tests:** `dsl::phase1c_lowering::keyword_map_covers_aura_grants_used_by_examples`; `dsl::validator::validate_ex12_guard_and_engage_grant_keywords_pass`; `keyword_phase_f::guard::aura_granted_guard_behaves_like_printed_guard`.
+
+### `G-KEYWORD-ENGAGE` — DSL keyword allowlist/lowering for native Engage
+
+- **Status:** RESOLVED 2026-07-08.
+- **Consumers:** EX12-019 authoring; adjacent EX12-060.
+- **Resolution:** `grant_keyword: Engage` is accepted by the validator and lowers through `modifier_map::lookup_keyword`; aura-granted Engage activates the same native End-of-Your-Turn normal attack trigger as printed Engage.
+- **Regression tests:** `dsl::phase1c_lowering::keyword_map_covers_aura_grants_used_by_examples`; `dsl::validator::validate_ex12_guard_and_engage_grant_keywords_pass`; `keyword_phase_f::engage::aura_granted_engage_parks_normal_end_of_turn_attack`.
+
+### `G-DSL-PLAY-OR-USE-FROM-SOURCES` — unified play/use routing from digivolution sources
+
+- **Status:** RESOLVED 2026-07-08.
+- **Consumer:** EX12-077 Proximamon.
+- **Card text shape:** "[On Play] [When Digivolving] [When Attacking] [Counter] [Once Per Turn] You may play or use 1 play or use cost 10 or lower card with [Gammamon] in its text or the [VB] trait from any of your Digimon's digivolution cards without paying the cost."
+- **Resolution:** Added `play_or_use_from_sources` to the DSL/compiled step surface and runtime executor. It consumes a selected `SourceSelectionRef`, plays Digimon/Tamer/Digi-Egg cards from source stacks, uses Option cards from source stacks, and exposes the same DUAL face choice as the hand-origin play/use path.
+- **Regression tests:** `dsl::play_or_use_from_sources::{play_or_use_from_sources_compiles_from_yaml, play_or_use_from_sources_plays_selected_digimon_source_free, play_or_use_from_sources_uses_selected_option_source_free, play_or_use_from_sources_dual_source_exposes_face_choice}`; `cards_behavioral::ex12::ex12_077::*`.
+
+### `G-DSL-REPEAT-EFFECT-CHOICE` — formula-count repeated player-visible modal choices
+
+- **Status:** RESOLVED 2026-07-08.
+- **Consumer:** EX12-037 Omnimon.
+- **Card text shape:** "[On Play] [When Digivolving] For every 5 cards in this Digimon's digivolution cards, activate 1 of the effects below. 1 of your opponent's Digimon gets -8000 DP for the turn. Return 1 of your opponent's level 5 or lower Digimon to the hand. Trash the top card of your opponent's security stack."
+- **Resolution:** Added `repeat_effect_choice` as a formula-count control-flow step. It snapshots the repeat count at activation time, exposes each modal pick through `pending_selection`, and resumes correctly after nested selections before prompting for the next repetition.
+- **Regression tests:** `dsl::phase2e_select_effect_choice::repeat_effect_choice_repeats_count_and_resumes_after_nested_selection`; `cards_behavioral::ex12::ex12_037::*`.
+
+### `G-DSL-SELF-SAME-LEVEL-SOURCE-PAIRS` — carrier source-stack same-level pair predicate
+
+- **Status:** RESOLVED 2026-07-08.
+- **Consumer:** EX12-032 WereGarurumon.
+- **Card text shape:** "[When Attacking] If this Digimon's stack has 2 or more same-level cards, it may digivolve into a Digimon card with [Garurumon] in its name or the [NSo] or [VB] trait in the trash with cost reduced by 2."
+- **Resolution:** Added `self_same_level_source_pairs_gte: N`, a carrier-scoped predicate that counts pairs of same-level Digimon source cards below the top card and fails closed without a source permanent. EX12-032 uses it to gate the optional trash digivolve prompt.
+- **Regression tests:** `dsl::source_stack_aggregates::self_same_level_source_pairs_gte_predicate_reads_source_stack_levels`; `cards_behavioral::ex12::ex12_032::*`.
+
+### `G-DSL-EVENT-TARGET-IN-TEXT-CONTAINS` — event-target whole-card text predicate
+
+- **Status:** RESOLVED 2026-07-08.
+- **Consumer:** EX12-066 Hiro Amanokawa.
+- **Card text shape:** "[Your Turn] When one of your Digimon with [Gammamon] in its text or the [VB] trait attacks..."
+- **Resolution:** Added `event_target_in_text_contains`, the event-target sibling of `in_text_contains`. It reuses the whole-card text scan (name, aliases, traits, and printed text), works against both live event-target cards and deleted-object snapshots, and fails closed when no event-target card is present.
+- **Regression tests:** `dsl::phase3d_event_context::ally_attack_event_target_in_text_contains_matches_attacking_digimon_text`; `cards_behavioral::ex12::ex12_066::*`.

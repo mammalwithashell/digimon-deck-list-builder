@@ -130,52 +130,69 @@ mod tests {
             .join("digimon-engine/cards/_examples")
     }
 
-    #[test]
-    fn registry_from_specs_compiles_all_examples() {
-        let (specs, errs) = load_dir_ok(&examples_dir());
-        assert!(errs.is_empty());
-        let registry = CardRegistry::from_specs("phase1b-test", &specs).expect("compile");
-        assert_eq!(registry.len(), 13);
-        assert!(registry.lookup("BT17-015").is_some());
-    }
-
-    #[test]
-    fn registry_round_trips_through_bytes() {
-        let (specs, _) = load_dir_ok(&examples_dir());
-        let registry = CardRegistry::from_specs("phase1b-test", &specs).unwrap();
-
-        let pack = CardPack {
-            manifest: registry.manifest.clone(),
-            cards: registry.iter().map(|(_, c)| c.clone()).collect(),
-        };
-        let bytes = pack.to_bytes().unwrap();
-
-        let reparsed = CardRegistry::from_pack_bytes(&bytes).unwrap();
-        assert_eq!(reparsed.len(), registry.len());
-        for (card_id, card) in registry.iter() {
-            assert_eq!(reparsed.lookup(card_id), Some(card));
+    fn run_example_suite_test(test: impl FnOnce() + Send + 'static) {
+        let handle = std::thread::Builder::new()
+            .name("digimon-dsl-example-suite".into())
+            .stack_size(32 * 1024 * 1024)
+            .spawn(test)
+            .expect("spawn example-suite test");
+        if let Err(payload) = handle.join() {
+            std::panic::resume_unwind(payload);
         }
     }
 
     #[test]
+    fn registry_from_specs_compiles_all_examples() {
+        run_example_suite_test(|| {
+            let (specs, errs) = load_dir_ok(&examples_dir());
+            assert!(errs.is_empty());
+            let registry = CardRegistry::from_specs("phase1b-test", &specs).expect("compile");
+            assert_eq!(registry.len(), 13);
+            assert!(registry.lookup("BT17-015").is_some());
+        });
+    }
+
+    #[test]
+    fn registry_round_trips_through_bytes() {
+        run_example_suite_test(|| {
+            let (specs, _) = load_dir_ok(&examples_dir());
+            let registry = CardRegistry::from_specs("phase1b-test", &specs).unwrap();
+
+            let pack = CardPack {
+                manifest: registry.manifest.clone(),
+                cards: registry.iter().map(|(_, c)| c.clone()).collect(),
+            };
+            let bytes = pack.to_bytes().unwrap();
+
+            let reparsed = CardRegistry::from_pack_bytes(&bytes).unwrap();
+            assert_eq!(reparsed.len(), registry.len());
+            for (card_id, card) in registry.iter() {
+                assert_eq!(reparsed.lookup(card_id), Some(card));
+            }
+        });
+    }
+
+    #[test]
     fn registry_from_pack_file_round_trip() {
-        let (specs, _) = load_dir_ok(&examples_dir());
-        let registry = CardRegistry::from_specs("file-test", &specs).unwrap();
-        let pack = CardPack {
-            manifest: registry.manifest.clone(),
-            cards: registry.iter().map(|(_, c)| c.clone()).collect(),
-        };
-        let bytes = pack.to_bytes().unwrap();
+        run_example_suite_test(|| {
+            let (specs, _) = load_dir_ok(&examples_dir());
+            let registry = CardRegistry::from_specs("file-test", &specs).unwrap();
+            let pack = CardPack {
+                manifest: registry.manifest.clone(),
+                cards: registry.iter().map(|(_, c)| c.clone()).collect(),
+            };
+            let bytes = pack.to_bytes().unwrap();
 
-        let mut temp = std::env::temp_dir();
-        temp.push("digimon-dsl-registry-test.pack");
-        std::fs::write(&temp, &bytes).unwrap();
+            let mut temp = std::env::temp_dir();
+            temp.push("digimon-dsl-registry-test.pack");
+            std::fs::write(&temp, &bytes).unwrap();
 
-        let loaded = CardRegistry::from_pack_file(&temp).unwrap();
-        assert_eq!(loaded.len(), registry.len());
-        assert_eq!(loaded.manifest.pack_id, "file-test");
+            let loaded = CardRegistry::from_pack_file(&temp).unwrap();
+            assert_eq!(loaded.len(), registry.len());
+            assert_eq!(loaded.manifest.pack_id, "file-test");
 
-        let _ = std::fs::remove_file(&temp);
+            let _ = std::fs::remove_file(&temp);
+        });
     }
 
     #[test]

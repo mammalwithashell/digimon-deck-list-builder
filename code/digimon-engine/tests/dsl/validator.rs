@@ -122,6 +122,33 @@ effects:
 }
 
 #[test]
+fn validate_ex12_keyword_grants_pass() {
+    let spec = parse(
+        r#"
+card: X-EX12-KW
+name: Test
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+effects:
+  - kind: grant_keyword
+    keyword: Execute
+  - kind: grant_keyword
+    keyword: Guard
+  - kind: grant_keyword
+    keyword: Engage
+"#,
+    );
+    let reg = StubRegistry::empty();
+    assert!(
+        validate(&spec, &ctx(&reg)).is_ok(),
+        "Execute, Guard, and Engage must be accepted as native keyword declarations"
+    );
+}
+
+#[test]
 fn validate_overclock_cost_filter_on_non_overclock_grant_keyword_fails() {
     let spec = parse(
         r#"

@@ -556,19 +556,20 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     continue;
                 }
 
-                // §4.6 attack bits: Vortex / MayAttack / ForceAttack all
-                // share the 100-399 attack range and the same target loop
-                // (any enemy Digimon + security, subject to
-                // CannotAttackTarget). Vortex uses the summoning-sickness
-                // exemption; the other two use normal `can_attack`.
+                // §4.6 attack bits: Vortex / MayAttack / ForceAttack / Engage
+                // all share the 100-399 attack range. Vortex keeps its special
+                // opponent-Digimon targeting; normal MayAttack/ForceAttack and
+                // Engage use the same suspended / Raid / CanAttackUnsuspended
+                // target legality as Main-phase attacks.
                 let vortex = game.has_keyword(handle, Keyword::Vortex);
                 let may_attack = game.modifiers.has(handle, ModifierType::MayAttack);
                 let force_attack = game.modifiers.has(handle, ModifierType::ForceAttack);
-                if !vortex && !may_attack && !force_attack {
+                let engage = game.has_keyword(handle, Keyword::Engage);
+                if !vortex && !may_attack && !force_attack && !engage {
                     continue;
                 }
                 let vortex_can_attack = vortex && game.can_attack(handle, /* vortex = */ true);
-                let normal_eot_can_attack = (may_attack || force_attack)
+                let normal_eot_can_attack = (may_attack || force_attack || engage)
                     && game.can_attack(handle, /* vortex = */ false);
                 if !vortex_can_attack && !normal_eot_can_attack {
                     continue;
@@ -584,6 +585,33 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                 {
                     mask[encode_attack(i as u16, SECURITY_TARGET) as usize] = 1.0;
                 }
+
+                let can_attack_unsuspended = game
+                    .modifiers
+                    .has(handle, ModifierType::CanAttackUnsuspended);
+                let has_raid = game.has_keyword(handle, Keyword::Raid);
+                let raid_max_dp = if normal_eot_can_attack && has_raid && !can_attack_unsuspended {
+                    let mut best: Option<i32> = None;
+                    for j in 0..max_opp {
+                        let target = &opp.battle_area[j];
+                        let target_handle = PermanentHandle {
+                            player: opp_id,
+                            index: j as u8,
+                        };
+                        if target.is_suspended
+                            || !game.permanent_is_digimon_for_rules(target_handle)
+                        {
+                            continue;
+                        }
+                        if let Some(dp) = game.effective_dp(target_handle) {
+                            best = Some(best.map_or(dp, |b| b.max(dp)));
+                        }
+                    }
+                    best
+                } else {
+                    None
+                };
+
                 for j in 0..max_opp {
                     let t_handle = PermanentHandle {
                         player: opp_id,
@@ -600,6 +628,15 @@ pub fn build_action_mask(game: &Game, player_id: PlayerId) -> Vec<f32> {
                     // continue emitting the bit so the granted attack
                     // remains usable.
                     if game.attack_target_blocked_by_modifier(handle, t_handle) {
+                        continue;
+                    }
+                    let normal_target_legal = normal_eot_can_attack
+                        && (game.player(opp_id).battle_area[j].is_suspended
+                            || can_attack_unsuspended
+                            || raid_max_dp.is_some_and(|max_dp| {
+                                game.effective_dp(t_handle).is_some_and(|dp| dp == max_dp)
+                            }));
+                    if !vortex_can_attack && !normal_target_legal {
                         continue;
                     }
                     mask[encode_attack(i as u16, j as u16) as usize] = 1.0;

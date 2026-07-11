@@ -1,0 +1,84 @@
+card: EX12-015
+name: Gokuumon
+kind: digimon
+level: 5
+color: [red, yellow]
+cost: 7
+dp: 7000
+traits: [Beastkin, Shambala, SW]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, trait_has: Shambala }
+    cost: 3
+  - kind: digixros
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_lte: 5
+            - any_of:
+                - in_text_contains: Gokuumon
+                - trait_has: SW
+        zones: [hand, battle_area]
+        cost_delta: -2
+    cost: 7
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  - when: [on_play, when_digivolving]
+    summary: "[On Play][When Digivolving] 1 opponent Digimon gets -4000 DP until their turn ends; then 1 other [SW] Digimon may gain Alliance and attack"
+    process:
+      - select_opponent_permanent:
+          bind_as: dp_target
+          filter: { kind: digimon }
+          prompt: "Choose 1 opponent Digimon to get -4000 DP until their turn ends"
+      - add_dp_modifier:
+          target: dp_target
+          value: -4000
+          expiry: end_of_opponents_turn
+      - select_own_permanent:
+          bind_as: sw_attacker
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: SW
+              - other: true
+          prompt: "Choose 1 other [SW] Digimon to gain Alliance and attack"
+      - if:
+          condition: { binding_present: sw_attacker }
+          then:
+            - grant_keyword:
+                target: sw_attacker
+                keyword: Alliance
+                expiry: end_of_turn
+            - may_attack_now:
+                attacker: sw_attacker
+                targets: any
+                optional: true
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    optional: true
+    summary: "[Inherited][When Attacking][OPT] You may delete 1 opponent Digimon with 6000 DP or less"
+    process:
+      - select_opponent_permanent:
+          bind_as: delete_target
+          filter:
+            all_of:
+              - kind: digimon
+              - dp_lte: 6000
+          prompt: "Delete 1 opponent Digimon with 6000 DP or less"
+      - delete_permanent: { target: delete_target }

@@ -13,7 +13,11 @@ fn game_past_mulligan(seed: u64) -> digimon_engine::game::Game {
     while g.mulligan_current_player().is_some() {
         advance_random(&mut g, &mut lcg, 1);
     }
-    assert_eq!(g.players[0].security.len(), 5, "security dealt after mulligan");
+    assert_eq!(
+        g.players[0].security.len(),
+        5,
+        "security dealt after mulligan"
+    );
     g
 }
 
@@ -46,7 +50,10 @@ fn infoset_invariant_to_opponent_concealed_positions() {
             std::mem::swap(&mut hand[hi], &mut deck[di]);
         }
         let after = Infoset::extract(&g, 0);
-        assert_eq!(before, after, "hidden-to-hidden swap leaked into the infoset");
+        assert_eq!(
+            before, after,
+            "hidden-to-hidden swap leaked into the infoset"
+        );
 
         // A PUBLIC change (hand card into trash) must change the infoset.
         {
@@ -55,7 +62,10 @@ fn infoset_invariant_to_opponent_concealed_positions() {
             p.trash.push(c);
         }
         let public_change = Infoset::extract(&g, 0);
-        assert_ne!(before, public_change, "public trash change must be observable");
+        assert_ne!(
+            before, public_change,
+            "public trash change must be observable"
+        );
     });
 }
 
@@ -174,7 +184,10 @@ fn face_up_security_is_pinned_and_excluded_from_hidden_pools() {
         assert_eq!(prior, &full, "pinned card must be excluded from the prior");
 
         // Own pin: known to the owner, excluded from the own joint pool.
-        assert_eq!(info.public[0].security_pins, vec![(own_idx, own_id.clone())]);
+        assert_eq!(
+            info.public[0].security_pins,
+            vec![(own_idx, own_id.clone())]
+        );
         assert_eq!(
             info.own.face_down_security_count,
             g.players[0].security.len() - 1
@@ -207,7 +220,10 @@ fn public_state_is_captured() {
             let p = &g.players[pid];
             assert_eq!(info.public[pid].trash, zone_ids(&p.trash, &g));
             assert_eq!(info.public[pid].battle_area.len(), p.battle_area.len());
-            assert_eq!(info.public[pid].breeding.is_some(), p.breeding_area.is_some());
+            assert_eq!(
+                info.public[pid].breeding.is_some(),
+                p.breeding_area.is_some()
+            );
             assert_eq!(info.public[pid].hand_count, p.hand.len());
             assert_eq!(info.public[pid].deck_count, p.deck.len());
             assert_eq!(info.public[pid].security_count, p.security.len());

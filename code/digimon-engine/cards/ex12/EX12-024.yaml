@@ -1,0 +1,54 @@
+card: EX12-024
+name: Garurumon
+kind: digimon
+level: 4
+color: [blue, purple]
+cost: 4
+dp: 4000
+traits: [Beast, NSo, VB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: blue }
+    cost: 3
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 3
+        - any_of:
+            - name_contains: Gabumon
+            - trait_has: NSo
+            - trait_has: VB
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Jamming
+    summary: "<Jamming>"
+
+  - when: [on_play, when_attacking]
+    once_per_turn: true
+    summary: "[On Play][When Attacking][OPT] Return 1 opponent level 4 or lower Digimon to hand"
+    process:
+      - select_opponent_permanent:
+          bind_as: target
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+          prompt: "Return 1 of your opponent's level 4 or lower Digimon to the hand"
+      - return_to_hand: { target: target }
+
+  - scope: inherited
+    when: when_attacking
+    once_per_turn: true
+    summary: "[Inherited][When Attacking][OPT] <Draw 1>, then trash 1 card in hand"
+    process:
+      - draw: { of: you, count: 1 }
+      - select_hand:
+          of: you
+          bind_as: discard
+          filter: {}
+          prompt: "Trash 1 card in your hand"
+      - trash_from_hand_by_index: { of: you, hand_index: discard }

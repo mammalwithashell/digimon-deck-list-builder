@@ -1,0 +1,49 @@
+card: EX12-012
+name: Apemon
+kind: digimon
+level: 4
+color: [red]
+cost: 4
+dp: 4000
+traits: [Beastkin, Shambala, SW]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 3, color_is: red }
+    cost: 2
+  - kind: digivolve
+    from: { level_eq: 3, trait_has: Shambala }
+    cost: 2
+
+effects:
+  - kind: grant_keyword
+    keyword: Raid
+    summary: "<Raid>"
+
+  - when: [on_play, when_digivolving]
+    condition:
+      count_gte:
+        filter: { of: you, zone: [hand], trait_has: SW }
+        n: 1
+    summary: "[On Play][When Digivolving] By trashing 1 [SW] card from hand, draw 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter: { trait_has: SW }
+          prompt: "Trash 1 [SW] card from your hand to draw 2"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

@@ -2139,3 +2139,25 @@ Surfaced: 2026-07-09 bug-list faithfulness campaign, while fixing "Delay trigger
 - **What's wrong:** `activate_delayed_option_main` resolves the Delay BODY first, then trashes the Option card (cause=Cost). DCGO trashes the Option FIRST and only runs the body on trash success (§16-16: "trash this card to activate the linked effect" — the trash is the cost). Divergence surfaces when the trash can be replaced/prevented (e.g. an effect protecting Options in the battle area) or when the body cares about the Option's zone.
 - **Scope:** shared machinery for all MainPhaseActivated Delay options (P-035/037/039/103–107/193/205/235/236, LM-033/035/037/047/049/054/056, BT13-110, BT21-097, BT25-098, ST12-15).
 - **Fix shape:** reorder in `activate_delayed_option_main`: pay the trash cost (through the replacement pipeline) first; abort the body if the Option did not actually leave.
+
+## EX12 Shambala / Virus Busters keyword gaps (RESOLVED 2026-07-08)
+
+Surfaced by the manual fallback audit for `implement-ex12-shambala-virus-busters`
+after Claude workflow `wf_6f7700f2-6c5` produced no usable verdicts. See
+`qa/archetype-qa/ex12-shambala-virus-busters-scoping.md`.
+
+### `G-KEYWORD-GUARD` — native Guard keyword parse, grant, and leave-replacement runtime
+
+- **Status:** RESOLVED 2026-07-08.
+- **Consumers:** EX12-056 Cho-Hakkaimon, EX12-057 Paishu Token; adjacent OpenSpec consumer EX12-072.
+- **Rules authority:** Comprehensive Rules Manual 16-45: Guard is an optional immediate-type effect. When another of a player's Digimon would leave the battle area by an opponent's effect, deleting the Guard carrier prevents that Digimon from leaving.
+- **Resolution:** `Keyword::Guard` is wired through the engine enum, printed-keyword parser, DSL keyword lookup/validator, serialization, and runtime auto-effect synthesis. Printed and granted Guard carriers now install the same optional, clone-safe opponent-effect leave replacement; token-carried Guard works through token card data and printed-keyword auto-effects.
+- **Regression tests:** `keyword_parsing::parser_ex12_guard_and_engage_keywords`; `keyword_phase_f::guard::*`; `cards_behavioral::tokens::paishu_token_guard_protects_another_digimon`; DSL keyword map/validator coverage.
+
+### `G-KEYWORD-ENGAGE` — native Engage keyword parse, grant, and End-of-Your-Turn attack runtime
+
+- **Status:** RESOLVED 2026-07-08.
+- **Consumers:** EX12-019 Nezhamon; adjacent OpenSpec consumer EX12-060.
+- **Rules authority:** Comprehensive Rules Manual 16-44: Engage is an optional trigger at End of Your Turn that lets the Digimon attack.
+- **Resolution:** `Keyword::Engage` is wired through the engine enum, printed-keyword parser, DSL keyword lookup/validator, serialization, keyword auto-effects, and the end-of-turn attack mask/decode path. Engage uses normal attack legality rather than Vortex target or played-this-turn exceptions.
+- **Regression tests:** `keyword_parsing::parser_ex12_guard_and_engage_keywords`; `keyword_phase_f::engage::*`; DSL keyword map/validator coverage.

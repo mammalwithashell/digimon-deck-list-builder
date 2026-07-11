@@ -415,7 +415,12 @@ fn lm_047_main_adds_yellow_digimon_from_top_3_to_hand() {
         .deck(
             0,
             &[
-                "FILL", "FILL", "FILL", "RED-DIGI-2", "RED-DIGI-1", "YELLOW-DIGI",
+                "FILL",
+                "FILL",
+                "FILL",
+                "RED-DIGI-2",
+                "RED-DIGI-1",
+                "YELLOW-DIGI",
             ],
         )
         .deck(1, &["FILL"])
@@ -452,7 +457,14 @@ fn lm_047_main_with_no_eligible_digimon_in_top_3_adds_nothing() {
         .hand(0, &["LM-047"])
         .deck(
             0,
-            &["FILL", "FILL", "FILL", "RED-OPT", "RED-DIGI-2", "RED-DIGI-1"],
+            &[
+                "FILL",
+                "FILL",
+                "FILL",
+                "RED-OPT",
+                "RED-DIGI-2",
+                "RED-DIGI-1",
+            ],
         )
         .deck(1, &["FILL"])
         .memory(10)

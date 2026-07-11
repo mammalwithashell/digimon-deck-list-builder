@@ -109,17 +109,47 @@ fn total_security_count_sums_both_players() {
     let subject = PredicateSubject::Card(src);
 
     // <= 6 : true at 6.
-    assert!(eval_predicate_with_bindings(&total_security("lte", 6), &rctx, subject, None));
+    assert!(eval_predicate_with_bindings(
+        &total_security("lte", 6),
+        &rctx,
+        subject,
+        None
+    ));
     // <= 5 : false at 6.
-    assert!(!eval_predicate_with_bindings(&total_security("lte", 5), &rctx, subject, None));
+    assert!(!eval_predicate_with_bindings(
+        &total_security("lte", 5),
+        &rctx,
+        subject,
+        None
+    ));
     // >= 6 : true at 6.
-    assert!(eval_predicate_with_bindings(&total_security("gte", 6), &rctx, subject, None));
+    assert!(eval_predicate_with_bindings(
+        &total_security("gte", 6),
+        &rctx,
+        subject,
+        None
+    ));
     // >= 7 : false at 6.
-    assert!(!eval_predicate_with_bindings(&total_security("gte", 7), &rctx, subject, None));
+    assert!(!eval_predicate_with_bindings(
+        &total_security("gte", 7),
+        &rctx,
+        subject,
+        None
+    ));
     // == 6 : true.
-    assert!(eval_predicate_with_bindings(&total_security("eq", 6), &rctx, subject, None));
+    assert!(eval_predicate_with_bindings(
+        &total_security("eq", 6),
+        &rctx,
+        subject,
+        None
+    ));
     // == 5 : false.
-    assert!(!eval_predicate_with_bindings(&total_security("eq", 5), &rctx, subject, None));
+    assert!(!eval_predicate_with_bindings(
+        &total_security("eq", 5),
+        &rctx,
+        subject,
+        None
+    ));
 }
 
 #[test]
@@ -130,7 +160,12 @@ fn total_security_count_is_not_own_only() {
     let src = runner.game.players[0].hand[0].handle();
     let rctx = EffectReadContext::new(&runner.game, src, None, 0);
     let subject = PredicateSubject::Card(src);
-    assert!(!eval_predicate_with_bindings(&total_security("lte", 6), &rctx, subject, None));
+    assert!(!eval_predicate_with_bindings(
+        &total_security("lte", 6),
+        &rctx,
+        subject,
+        None
+    ));
 }
 
 // ===========================================================================
@@ -254,8 +289,14 @@ fn subtract_formula_evaluates_left_associative() {
     let ctx = EffectContext::new(&mut runner.game, top, Some(handle), 0);
 
     // subtract(10, 3) = 7
-    let f = CompiledFormula::Subtract(vec![CompiledFormula::Literal(10), CompiledFormula::Literal(3)]);
-    assert_eq!(digimon_engine::dsl_cards::formula_eval::evaluate(&f, &ctx, handle), 7);
+    let f = CompiledFormula::Subtract(vec![
+        CompiledFormula::Literal(10),
+        CompiledFormula::Literal(3),
+    ]);
+    assert_eq!(
+        digimon_engine::dsl_cards::formula_eval::evaluate(&f, &ctx, handle),
+        7
+    );
 
     // subtract(10, 3, 2) = 5  (left-associative)
     let f3 = CompiledFormula::Subtract(vec![
@@ -263,11 +304,18 @@ fn subtract_formula_evaluates_left_associative() {
         CompiledFormula::Literal(3),
         CompiledFormula::Literal(2),
     ]);
-    assert_eq!(digimon_engine::dsl_cards::formula_eval::evaluate(&f3, &ctx, handle), 5);
+    assert_eq!(
+        digimon_engine::dsl_cards::formula_eval::evaluate(&f3, &ctx, handle),
+        5
+    );
 
     // subtract() = 0, subtract(4) = 4
     assert_eq!(
-        digimon_engine::dsl_cards::formula_eval::evaluate(&CompiledFormula::Subtract(vec![]), &ctx, handle),
+        digimon_engine::dsl_cards::formula_eval::evaluate(
+            &CompiledFormula::Subtract(vec![]),
+            &ctx,
+            handle
+        ),
         0
     );
     assert_eq!(
@@ -319,9 +367,7 @@ effects:
 /// game where the opponent (player 1) holds `opp_security` security cards,
 /// then assert how many remain.
 fn run_leave_step(opp_security: usize, leave: i32) -> usize {
-    let ids: Vec<String> = (0..opp_security)
-        .map(|i| format!("SEC{i}"))
-        .collect();
+    let ids: Vec<String> = (0..opp_security).map(|i| format!("SEC{i}")).collect();
     let refs: Vec<&str> = ids.iter().map(|s| s.as_str()).collect();
     let yaml = format!(
         r#"

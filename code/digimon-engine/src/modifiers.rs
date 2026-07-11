@@ -1141,6 +1141,19 @@ impl ModifierRegistry {
             .unwrap_or(false)
     }
 
+    /// Active keywords granted to a permanent by modifiers/declarative auras.
+    pub fn granted_keywords(&self, target: PermanentHandle) -> Vec<Keyword> {
+        let mut out = Vec::new();
+        if let Some(entries) = self.permanent_keywords.get(&target) {
+            for entry in entries {
+                if !out.contains(&entry.keyword) {
+                    out.push(entry.keyword);
+                }
+            }
+        }
+        out
+    }
+
     /// Net `<Security A. +N>` / `<Security A. -N>` contributed by *granted*
     /// keyword entries on `target` (e.g. an aura's
     /// `grant_keyword: SecurityAttackPlus`). Printed face/inherited keywords

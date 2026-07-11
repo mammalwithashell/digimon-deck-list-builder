@@ -1,0 +1,54 @@
+card: EX12-007
+name: Gammamon
+kind: digimon
+level: 3
+color: [red, yellow]
+cost: 3
+dp: 2000
+traits: [Ceratopsian, VB]
+attribute: Virus
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
+    cost: 1
+  - kind: digivolve
+    from:
+      any_of:
+        - name_is: Gurimon
+        - all_of:
+            - level_eq: 2
+            - trait_has: VB
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 card with [Gammamon] in its text and 1 [VB] card; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: gammamon_text_pick
+              min: 1
+              max: 1
+              filter: { in_text_contains: Gammamon }
+            - bind_as: vb_pick
+              min: 1
+              max: 1
+              filter: { trait_has: VB }
+          prompt: "Select 1 card with [Gammamon] in its text and 1 [VB] trait card"
+      - add_to_hand_from_reveal: { of: you, card: gammamon_text_pick }
+      - add_to_hand_from_reveal: { of: you, card: vb_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

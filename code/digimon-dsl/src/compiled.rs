@@ -410,6 +410,11 @@ pub struct CompiledPredicate {
     /// value`. G-DSL-SELF-SOURCE-COUNT-THRESHOLD (driver BT21-006).
     #[serde(default)]
     pub self_source_count: Option<CompiledSelfSourceCountPredicate>,
+    /// Source-relative threshold: the effect carrier has at least N same-level
+    /// source-card pairs below its top card. G-DSL-SELF-SAME-LEVEL-SOURCE-PAIRS
+    /// (driver EX12-032).
+    #[serde(default)]
+    pub self_same_level_source_pairs_gte: Option<u8>,
     /// True when the effect CARRIER's NON-FLIPPED digivolution-source color
     /// set (the shared `non_flipped_source_colors` extraction — top card
     /// excluded, face-down sources excluded) has at least N distinct colors.
@@ -517,6 +522,10 @@ pub struct CompiledPredicate {
     /// Case-insensitive substring scan against the event-target
     /// permanent's card name. G-EVENT-TARGET-NAME-CONTAINS.
     pub event_target_name_contains: Option<String>,
+    /// Broad whole-card "[X] in its text" scan applied to the event-target
+    /// card — name + aliases + traits + printed text.
+    #[serde(default)]
+    pub event_target_in_text_contains: Option<String>,
     pub event_target_is_player: Option<bool>,
     pub event_target_is_source: Option<bool>,
     pub event_target_was_self: Option<bool>,
@@ -846,6 +855,7 @@ pub enum CompiledPerSelector {
     },
     DigivolutionColorCount,
     SourceColorCount,
+    ReturnedCardColorCount,
     SameLevelPairsInSources,
     SharedTrashCount {
         bucket: Option<u32>,
@@ -1728,6 +1738,11 @@ pub enum CompiledStep {
         hand_index: CompiledBindingRef,
         cost_delta: Option<CompiledCostDelta>,
     },
+    PlayOrUseFromSources {
+        of: CompiledPlayerRef,
+        card: CompiledBindingRef,
+        cost_delta: Option<CompiledCostDelta>,
+    },
     PlayFromRevealedFree {
         of: CompiledPlayerRef,
         card: CompiledBindingRef,
@@ -2309,6 +2324,22 @@ pub enum CompiledStep {
         bind_as: Option<String>,
         prompt: String,
         prompt_key: Option<String>,
+    },
+    RepeatEffectChoice {
+        count: CompiledFormula,
+        labels: Vec<String>,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        body: Vec<CompiledStep>,
+    },
+    RepeatEffectChoiceRemaining {
+        remaining: u8,
+        labels: Vec<String>,
+        bind_as: Option<String>,
+        prompt: String,
+        prompt_key: Option<String>,
+        body: Vec<CompiledStep>,
     },
     AsSelectingPlayer {
         of: CompiledPlayerRef,

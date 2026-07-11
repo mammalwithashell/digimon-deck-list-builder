@@ -345,6 +345,18 @@ fn parser_fragment_bare_digit() {
     assert_eq!(kws, vec![Keyword::Fragment(2)]);
 }
 
+#[test]
+fn parser_ex12_guard_and_engage_keywords() {
+    use digimon_engine::enums::Keyword;
+    let kws = parse_printed_keywords(
+        "＜Engage＞ (At the end of your turn, this Digimon may attack.)\r\n\
+         ＜Guard＞ (When another of your Digimon would leave, by deleting this Digimon, it doesn't leave.)",
+        "",
+        "",
+    );
+    assert_eq!(kws, vec![Keyword::Engage, Keyword::Guard]);
+}
+
 // ─── Game::has_keyword integration tests ───────────────────────────────────
 
 use digimon_engine::card_data::CardData;

@@ -94,7 +94,12 @@ fn setup() -> DebugRunner {
             "[Your Turn] Cards with [Three Musketeers] in their text get +1000 DP.",
         ))
         // The string only appears in the name.
-        .add_card(digimon("NAME-ONLY", "Vemmon", &["Unknown"], "[On Play] Draw 1."))
+        .add_card(digimon(
+            "NAME-ONLY",
+            "Vemmon",
+            &["Unknown"],
+            "[On Play] Draw 1.",
+        ))
         // Nothing matches "Vemmon"/"Three Musketeers".
         .add_card(digimon(
             "UNRELATED",

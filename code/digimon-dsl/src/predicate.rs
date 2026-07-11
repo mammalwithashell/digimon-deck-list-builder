@@ -266,6 +266,14 @@ pub struct PredicateSpec {
     /// G-DSL-SELF-SOURCE-COUNT-THRESHOLD (driver BT21-006).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub self_source_count: Option<SelfSourceCountPredicate>,
+    /// True when the effect carrier has at least N pairs of same-level
+    /// digivolution source cards below its top card. Each pair consumes two
+    /// source cards from the same level bucket (`count / 2` per level), matching
+    /// the existing `same_level_pairs_in_sources` formula selector. Driver:
+    /// EX12-032 WereGarurumon — "[When Attacking] If this Digimon's stack has 2
+    /// or more same-level cards...".
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub self_same_level_source_pairs_gte: Option<u8>,
     /// True when the effect CARRIER's NON-FLIPPED digivolution-source color
     /// set has at least N distinct colors. A no-subject, carrier-scoped
     /// global predicate — it does NOT inspect the candidate, it reads
@@ -532,6 +540,12 @@ pub struct PredicateSpec {
     /// G-EVENT-TARGET-NAME-CONTAINS.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_name_contains: Option<String>,
+    /// Broad whole-card "[X] in its text" scan (DCGO `CardSource.HasText`)
+    /// applied to the event target — name + aliases + traits + text. This is
+    /// the event-target sibling of `in_text_contains`, used by EX12-066's
+    /// Hiro-style attack observer.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub event_target_in_text_contains: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub event_target_owner: Option<PlayerRef>,
     /// Match when the *event target* permanent's printed color set
@@ -964,7 +978,9 @@ impl<'de> Deserialize<'de> for DpConstraint {
 // ---------------------------------------------------------------------------
 
 /// Comparison operator for a [`Comparator`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema)]
+#[derive(
+    Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize, schemars::JsonSchema,
+)]
 #[serde(rename_all = "snake_case")]
 pub enum ComparatorOp {
     #[default]
@@ -1017,10 +1033,12 @@ impl<'de> Deserialize<'de> for MetricComparators {
     where
         D: serde::Deserializer<'de>,
     {
-        Ok(match MetricComparatorsDeserialize::deserialize(deserializer)? {
-            MetricComparatorsDeserialize::Single(c) => MetricComparators(vec![c]),
-            MetricComparatorsDeserialize::Many(v) => MetricComparators(v),
-        })
+        Ok(
+            match MetricComparatorsDeserialize::deserialize(deserializer)? {
+                MetricComparatorsDeserialize::Single(c) => MetricComparators(vec![c]),
+                MetricComparatorsDeserialize::Many(v) => MetricComparators(v),
+            },
+        )
     }
 }
 

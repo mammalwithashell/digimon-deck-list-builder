@@ -165,7 +165,10 @@ pub struct CardLegalityDto {
 /// "format-legal only" filter and per-card ban/limit/anomaly badges. Mirrors
 /// `GET /decks/card-legality`.
 #[tauri::command]
-pub fn rust_card_legality(card_id: String, game_mode: Option<String>) -> Result<CardLegalityDto, String> {
+pub fn rust_card_legality(
+    card_id: String,
+    game_mode: Option<String>,
+) -> Result<CardLegalityDto, String> {
     let mode = game_mode.unwrap_or_else(|| "standard".to_string());
     let leg = engine_card_legality(&card_id, &mode)?;
     Ok(CardLegalityDto {

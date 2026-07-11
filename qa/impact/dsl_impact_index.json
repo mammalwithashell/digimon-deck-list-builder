@@ -11588,6 +11588,1396 @@
         "select_opponent_permanent"
       ]
     },
+    "EX12-001": {
+      "path": "ex12/EX12-001.yaml",
+      "predicates": [
+        "source_permanent_trait_has"
+      ],
+      "timings": [
+        "end_of_your_turn"
+      ],
+      "verbs": [
+        "may_attack_now",
+        "may_dna_digivolve_now"
+      ]
+    },
+    "EX12-002": {
+      "path": "ex12/EX12-002.yaml",
+      "predicates": [
+        "all_of",
+        "binding_present",
+        "event_target_is_source",
+        "event_target_kind",
+        "event_target_owner",
+        "event_target_trait_has",
+        "kind",
+        "trait_has",
+        "your_turn"
+      ],
+      "timings": [
+        "on_ally_played"
+      ],
+      "verbs": [
+        "effect_initiated_digivolve",
+        "if",
+        "select_hand"
+      ]
+    },
+    "EX12-004": {
+      "path": "ex12/EX12-004.yaml",
+      "predicates": [
+        "all_of",
+        "source_permanent_trait_has",
+        "your_turn"
+      ],
+      "timings": [],
+      "verbs": []
+    },
+    "EX12-005": {
+      "path": "ex12/EX12-005.yaml",
+      "predicates": [
+        "any_of",
+        "binding_present",
+        "color_is",
+        "count_gte",
+        "level_eq",
+        "name_contains",
+        "name_is",
+        "owner",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "on_play"
+      ],
+      "verbs": [
+        "draw",
+        "if",
+        "select_hand",
+        "trash_from_hand_by_index"
+      ]
+    },
+    "EX12-006": {
+      "path": "ex12/EX12-006.yaml",
+      "predicates": [
+        "binding_present",
+        "color_is",
+        "count_gte",
+        "level_eq",
+        "owner",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "start_of_your_main_phase"
+      ],
+      "verbs": [
+        "draw",
+        "gain_memory",
+        "if",
+        "select_hand",
+        "trash_from_hand_by_index"
+      ]
+    },
+    "EX12-007": {
+      "path": "ex12/EX12-007.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "in_text_contains",
+        "level_eq",
+        "name_is",
+        "trait_has",
+        "your_turn"
+      ],
+      "timings": [
+        "on_play"
+      ],
+      "verbs": [
+        "add_to_hand_from_reveal",
+        "place_remainder_on_deck",
+        "reveal_top_deck",
+        "select_reveal_buckets"
+      ]
+    },
+    "EX12-009": {
+      "path": "ex12/EX12-009.yaml",
+      "predicates": [
+        "color_is",
+        "level_eq",
+        "trait_has",
+        "your_turn"
+      ],
+      "timings": [
+        "on_play"
+      ],
+      "verbs": [
+        "add_to_hand_from_reveal",
+        "place_remainder_on_deck",
+        "reveal_top_deck",
+        "select_reveal_buckets"
+      ]
+    },
+    "EX12-010": {
+      "path": "ex12/EX12-010.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "kind",
+        "level_eq",
+        "name_contains",
+        "trait_has"
+      ],
+      "timings": [
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_to_hand_from_trash",
+        "select_trash"
+      ]
+    },
+    "EX12-011": {
+      "path": "ex12/EX12-011.yaml",
+      "predicates": [
+        "all_of",
+        "color_is",
+        "dp_lte",
+        "kind",
+        "level_eq",
+        "trait_has",
+        "your_turn"
+      ],
+      "timings": [
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "delete_permanent",
+        "select_opponent_permanent"
+      ]
+    },
+    "EX12-012": {
+      "path": "ex12/EX12-012.yaml",
+      "predicates": [
+        "binding_present",
+        "color_is",
+        "count_gte",
+        "level_eq",
+        "owner",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "draw",
+        "if",
+        "select_hand",
+        "trash_from_hand_by_index"
+      ]
+    },
+    "EX12-013": {
+      "path": "ex12/EX12-013.yaml",
+      "predicates": [
+        "any_of",
+        "color_is",
+        "count_gte",
+        "in_text_contains",
+        "level_eq",
+        "name_is",
+        "owner",
+        "trait_has",
+        "zone"
+      ],
+      "timings": [
+        "main_on_field"
+      ],
+      "verbs": [
+        "play_or_use_from_hand",
+        "select_hand"
+      ]
+    },
+    "EX12-014": {
+      "path": "ex12/EX12-014.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "in_text_contains",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "none_of",
+        "replacement_cause",
+        "trait_has"
+      ],
+      "timings": [
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "may_attack_now",
+        "place_as_bottom_source",
+        "play_from_materials",
+        "select_material",
+        "select_own_permanent",
+        "select_union_zone"
+      ]
+    },
+    "EX12-015": {
+      "path": "ex12/EX12-015.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "binding_present",
+        "color_is",
+        "dp_lte",
+        "in_text_contains",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "other",
+        "trait_has"
+      ],
+      "timings": [
+        "on_play",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_dp_modifier",
+        "delete_permanent",
+        "grant_keyword",
+        "if",
+        "may_attack_now",
+        "select_opponent_permanent",
+        "select_own_permanent"
+      ]
+    },
+    "EX12-016": {
+      "path": "ex12/EX12-016.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "dp_lte",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "name_contains",
+        "none_of",
+        "replacement_cause",
+        "trait_has"
+      ],
+      "timings": [
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "delete_permanent",
+        "force_attack",
+        "grant_triggered_effect",
+        "play_from_materials",
+        "select_material",
+        "select_opponent_permanent"
+      ]
+    },
+    "EX12-017": {
+      "path": "ex12/EX12-017.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "binding_present",
+        "color_is",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "name_contains",
+        "name_is",
+        "none_of",
+        "owner",
+        "replacement_cause",
+        "trait_has"
+      ],
+      "timings": [
+        "counter",
+        "on_play",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "de_digivolve",
+        "delete_permanent",
+        "effect_initiated_dna_digivolve",
+        "if",
+        "play_from_materials",
+        "redirect_attack_target",
+        "select_dna_pair",
+        "select_hand",
+        "select_material",
+        "select_opponent_permanent",
+        "select_own_permanent"
+      ]
+    },
+    "EX12-018": {
+      "path": "ex12/EX12-018.yaml",
+      "predicates": [
+        "all_of",
+        "any_field_permanent",
+        "any_of",
+        "any_permanent",
+        "binding_count_eq",
+        "color_is",
+        "equals",
+        "in_text_contains",
+        "kind",
+        "level_eq",
+        "owner",
+        "trait_has"
+      ],
+      "timings": [
+        "main",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_dp_modifier",
+        "delete_permanent",
+        "if",
+        "may_attack_now",
+        "place_as_bottom_source",
+        "place_as_top_source",
+        "select_effect_choice",
+        "select_opponent_permanent",
+        "select_own_permanent",
+        "select_union_zone"
+      ]
+    },
+    "EX12-019": {
+      "path": "ex12/EX12-019.yaml",
+      "predicates": [
+        "all_turns",
+        "color_is",
+        "level_eq",
+        "trait_has"
+      ],
+      "timings": [
+        "on_attack_target_change",
+        "on_opponent_security_removed",
+        "on_own_security_removed"
+      ],
+      "verbs": [
+        "add_dp_modifier",
+        "grant_effect_immunity",
+        "unsuspend"
+      ]
+    },
+    "EX12-020": {
+      "path": "ex12/EX12-020.yaml",
+      "predicates": [
+        "all_of",
+        "color_is",
+        "cost_target",
+        "count_lte",
+        "kind",
+        "level_eq",
+        "owner",
+        "source_is_cost_target_permanent",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "when_attacking"
+      ],
+      "verbs": [
+        "draw"
+      ]
+    },
+    "EX12-021": {
+      "path": "ex12/EX12-021.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "binding_present",
+        "color_is",
+        "count_gte",
+        "count_lte",
+        "level_eq",
+        "name_contains",
+        "owner",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "start_of_your_main_phase",
+        "when_attacking"
+      ],
+      "verbs": [
+        "draw",
+        "gain_memory",
+        "if",
+        "select_hand",
+        "trash_from_hand_by_index"
+      ]
+    },
+    "EX12-022": {
+      "path": "ex12/EX12-022.yaml",
+      "predicates": [
+        "color_is",
+        "count_lte",
+        "level_eq",
+        "owner",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "on_play",
+        "when_attacking"
+      ],
+      "verbs": [
+        "add_to_hand_from_reveal",
+        "draw",
+        "place_remainder_on_deck",
+        "reveal_top_deck",
+        "select_reveal_buckets"
+      ]
+    },
+    "EX12-024": {
+      "path": "ex12/EX12-024.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "name_contains",
+        "trait_has"
+      ],
+      "timings": [
+        "on_play",
+        "when_attacking"
+      ],
+      "verbs": [
+        "draw",
+        "return_to_hand",
+        "select_hand",
+        "select_opponent_permanent",
+        "trash_from_hand_by_index"
+      ]
+    },
+    "EX12-025": {
+      "path": "ex12/EX12-025.yaml",
+      "predicates": [
+        "all_of",
+        "binding_present",
+        "color_is",
+        "count_lte",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "owner",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "on_deletion",
+        "on_play",
+        "when_attacking"
+      ],
+      "verbs": [
+        "draw",
+        "if",
+        "return_to_hand",
+        "select_opponent_permanent"
+      ]
+    },
+    "EX12-026": {
+      "path": "ex12/EX12-026.yaml",
+      "predicates": [
+        "all_of",
+        "color_is",
+        "count_lte",
+        "kind",
+        "level_eq",
+        "materials_count_lte",
+        "owner",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "on_play",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_modifier",
+        "draw",
+        "select_opponent_permanent",
+        "trash_bottom_sources"
+      ]
+    },
+    "EX12-029": {
+      "path": "ex12/EX12-029.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "binding_present",
+        "color_is",
+        "in_text_contains",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "materials_count_lte",
+        "other",
+        "trait_has"
+      ],
+      "timings": [
+        "on_play",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_modifier",
+        "grant_keyword",
+        "if",
+        "may_attack_now",
+        "select_opponent_permanent",
+        "select_own_permanent",
+        "trash_bottom_sources"
+      ]
+    },
+    "EX12-031": {
+      "path": "ex12/EX12-031.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "count_gte",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "materials_count_lte",
+        "none_of",
+        "owner",
+        "replacement_cause",
+        "trait_contains",
+        "trait_has",
+        "zone"
+      ],
+      "timings": [
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "place_as_bottom_source",
+        "play_from_materials",
+        "return_to_hand",
+        "select_hand",
+        "select_material",
+        "select_opponent_permanent"
+      ]
+    },
+    "EX12-032": {
+      "path": "ex12/EX12-032.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "name_contains",
+        "none_of",
+        "replacement_cause",
+        "replacement_subject_is_mine",
+        "self_same_level_source_pairs_gte",
+        "trait_has"
+      ],
+      "timings": [
+        "on_play",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_modifier",
+        "effect_initiated_digivolve",
+        "play_from_materials",
+        "select_material",
+        "select_opponent_permanent",
+        "select_trash"
+      ]
+    },
+    "EX12-034": {
+      "path": "ex12/EX12-034.yaml",
+      "predicates": [
+        "all_of",
+        "all_turns",
+        "color_is",
+        "equals",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "level_matches_aggregate",
+        "owner",
+        "replacement_subject_is_mine",
+        "trait_has"
+      ],
+      "timings": [
+        "on_ally_played",
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "if",
+        "play_from_hand_free",
+        "play_from_materials",
+        "play_token",
+        "return_to_deck",
+        "select_effect_choice",
+        "select_hand",
+        "select_material",
+        "select_opponent_permanent"
+      ]
+    },
+    "EX12-035": {
+      "path": "ex12/EX12-035.yaml",
+      "predicates": [
+        "all_of",
+        "all_turns",
+        "any_of",
+        "color_is",
+        "event_target_kind",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "materials_count_lte",
+        "name_contains",
+        "none_of",
+        "replacement_cause",
+        "replacement_subject_is_mine",
+        "trait_has"
+      ],
+      "timings": [
+        "on_digivolve",
+        "on_enter_field_anyone",
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_modifier",
+        "play_from_materials",
+        "return_to_deck",
+        "select_material",
+        "select_opponent_permanent",
+        "select_opponent_sources",
+        "trash_selected_sources"
+      ]
+    },
+    "EX12-036": {
+      "path": "ex12/EX12-036.yaml",
+      "predicates": [
+        "all_of",
+        "all_turns",
+        "any_of",
+        "binding_present",
+        "color_is",
+        "event_target_owner",
+        "is_suspended",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "none_of",
+        "replacement_cause",
+        "replacement_subject_is_mine",
+        "trait_contains",
+        "trait_has"
+      ],
+      "timings": [
+        "on_ally_played",
+        "on_digivolve",
+        "on_play",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_modifier",
+        "if",
+        "place_as_bottom_source",
+        "play_from_materials",
+        "select_hand",
+        "select_material",
+        "select_opponent_permanent",
+        "select_own_permanent",
+        "unsuspend"
+      ]
+    },
+    "EX12-037": {
+      "path": "ex12/EX12-037.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "equals",
+        "kind",
+        "level_eq",
+        "trait_has"
+      ],
+      "timings": [
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_dp_modifier",
+        "delete_permanent",
+        "if",
+        "recover",
+        "repeat_effect_choice",
+        "select_opponent_permanent",
+        "trash_top_security"
+      ]
+    },
+    "EX12-039": {
+      "path": "ex12/EX12-039.yaml",
+      "predicates": [
+        "all_of",
+        "color_is",
+        "cost_target",
+        "kind",
+        "level_eq",
+        "source_is_cost_target_permanent",
+        "trait_has",
+        "your_turn"
+      ],
+      "timings": [],
+      "verbs": []
+    },
+    "EX12-040": {
+      "path": "ex12/EX12-040.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "cost_target",
+        "kind",
+        "level_eq",
+        "name_contains",
+        "source_is_cost_target_permanent",
+        "trait_has",
+        "your_turn"
+      ],
+      "timings": [],
+      "verbs": []
+    },
+    "EX12-042": {
+      "path": "ex12/EX12-042.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "level_eq",
+        "name_contains",
+        "trait_has"
+      ],
+      "timings": [
+        "on_play",
+        "when_attacking"
+      ],
+      "verbs": [
+        "add_top_security_to_hand",
+        "recover"
+      ]
+    },
+    "EX12-043": {
+      "path": "ex12/EX12-043.yaml",
+      "predicates": [
+        "color_is",
+        "count_gte",
+        "level_eq",
+        "owner",
+        "trait_has",
+        "zone"
+      ],
+      "timings": [
+        "main_on_field"
+      ],
+      "verbs": [
+        "play_or_use_from_hand",
+        "select_hand"
+      ]
+    },
+    "EX12-044": {
+      "path": "ex12/EX12-044.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "any_permanent",
+        "color_is",
+        "count_gte",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "none_of",
+        "owner",
+        "replacement_cause",
+        "replacement_subject_is_mine",
+        "self_same_level_source_pairs_gte",
+        "trait_has",
+        "zone"
+      ],
+      "timings": [
+        "on_play",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_dp_modifier",
+        "effect_initiated_digivolve",
+        "play_from_materials",
+        "select_hand",
+        "select_material",
+        "select_opponent_permanent"
+      ]
+    },
+    "EX12-045": {
+      "path": "ex12/EX12-045.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "in_text_contains",
+        "kind",
+        "level_eq",
+        "security_count_lte",
+        "trait_has",
+        "your_turn"
+      ],
+      "timings": [
+        "on_own_security_removed",
+        "on_play",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_dp_modifier",
+        "if",
+        "may_add_top_security_to_hand",
+        "play_from_hand",
+        "recover",
+        "select_hand",
+        "select_opponent_permanent"
+      ]
+    },
+    "EX12-046": {
+      "path": "ex12/EX12-046.yaml",
+      "predicates": [
+        "all_of",
+        "color_is",
+        "dp_lte",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "trait_has",
+        "your_turn"
+      ],
+      "timings": [
+        "end_of_attack",
+        "on_opponent_security_removed",
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_dp_modifier",
+        "add_modifier",
+        "effect_initiated_digivolve",
+        "play_from_hand_free",
+        "select_hand",
+        "select_opponent_permanent"
+      ]
+    },
+    "EX12-047": {
+      "path": "ex12/EX12-047.yaml",
+      "predicates": [
+        "all_of",
+        "binding_count_eq",
+        "color_is",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "trait_has"
+      ],
+      "timings": [
+        "on_deletion",
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_dp_modifier",
+        "add_to_hand_from_trash",
+        "as_selecting_player",
+        "delete_permanent",
+        "if",
+        "play_from_hand_free",
+        "return_trash_list_to_deck_bottom",
+        "select_count_capped_multi",
+        "select_hand",
+        "select_opponent_permanent",
+        "select_trash"
+      ]
+    },
+    "EX12-048": {
+      "path": "ex12/EX12-048.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "in_text_contains",
+        "kind",
+        "level_eq",
+        "name_in",
+        "none_of",
+        "replacement_cause",
+        "replacement_subject_is_mine",
+        "trait_has"
+      ],
+      "timings": [
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_dp_modifier",
+        "may_attack_now",
+        "play_from_materials",
+        "select_material",
+        "select_opponent_permanent"
+      ]
+    },
+    "EX12-056": {
+      "path": "ex12/EX12-056.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "binding_present",
+        "color_is",
+        "in_text_contains",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "opponents_turn",
+        "other",
+        "trait_has"
+      ],
+      "timings": [
+        "on_opponent_attack",
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "de_digivolve",
+        "grant_keyword",
+        "if",
+        "may_attack_now",
+        "redirect_attack_target",
+        "select_opponent_permanent",
+        "select_own_permanent"
+      ]
+    },
+    "EX12-057": {
+      "path": "ex12/EX12-057.yaml",
+      "predicates": [
+        "all_turns",
+        "color_is",
+        "kind",
+        "level_eq",
+        "trait_has"
+      ],
+      "timings": [
+        "counter",
+        "on_ally_played",
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_dp_modifier",
+        "de_digivolve",
+        "play_token",
+        "select_opponent_permanent"
+      ]
+    },
+    "EX12-061": {
+      "path": "ex12/EX12-061.yaml",
+      "predicates": [
+        "any_of",
+        "binding_present",
+        "color_is",
+        "count_gte",
+        "level_eq",
+        "owner",
+        "trait_has",
+        "zone"
+      ],
+      "timings": [
+        "on_play",
+        "when_attacking"
+      ],
+      "verbs": [
+        "draw",
+        "if",
+        "select_hand",
+        "trash_from_hand_by_index"
+      ]
+    },
+    "EX12-062": {
+      "path": "ex12/EX12-062.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "binding_present",
+        "color_is",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "trait_has"
+      ],
+      "timings": [
+        "on_play",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "delete_permanent",
+        "draw",
+        "if",
+        "select_hand",
+        "select_opponent_permanent",
+        "select_own_permanent",
+        "trash_from_hand_by_index"
+      ]
+    },
+    "EX12-063": {
+      "path": "ex12/EX12-063.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "color_is",
+        "kind",
+        "level_eq",
+        "level_lte",
+        "none_of",
+        "trait_has"
+      ],
+      "timings": [
+        "on_deletion",
+        "on_play",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_modifier",
+        "play_from_trash_free",
+        "select_opponent_permanent",
+        "select_trash",
+        "suspend"
+      ]
+    },
+    "EX12-065": {
+      "path": "ex12/EX12-065.yaml",
+      "predicates": [
+        "all_of",
+        "all_turns",
+        "any_of",
+        "color_is",
+        "kind",
+        "level_eq",
+        "level_matches_aggregate",
+        "owner",
+        "play_cost_lte",
+        "trait_has"
+      ],
+      "timings": [
+        "on_deletion",
+        "on_play",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "play_from_trash_free",
+        "return_to_deck",
+        "select_opponent_permanent",
+        "select_trash"
+      ]
+    },
+    "EX12-066": {
+      "path": "ex12/EX12-066.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "count_gte",
+        "equals",
+        "event_target_in_text_contains",
+        "event_target_owner",
+        "event_target_trait_has",
+        "in_text_contains",
+        "kind",
+        "level_lte",
+        "memory_lte",
+        "owner",
+        "source_is_unsuspended",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "on_ally_attack",
+        "on_security",
+        "start_of_your_turn"
+      ],
+      "verbs": [
+        "activation_cost",
+        "effect_initiated_digivolve",
+        "if",
+        "play_from_security",
+        "play_or_use_from_hand",
+        "select_effect_choice",
+        "select_hand",
+        "set_memory"
+      ]
+    },
+    "EX12-069": {
+      "path": "ex12/EX12-069.yaml",
+      "predicates": [
+        "all_of",
+        "any_field_permanent",
+        "card_number_is",
+        "count_gte",
+        "event_target_level_gte",
+        "event_target_owner",
+        "event_target_trait_has",
+        "kind",
+        "level_eq_binding",
+        "level_lte",
+        "owner",
+        "trait_has",
+        "your_turn",
+        "zone"
+      ],
+      "timings": [
+        "main_from_hand",
+        "on_ally_attack",
+        "on_security"
+      ],
+      "verbs": [
+        "add_bottom_security_to_hand",
+        "bind_permanent_property",
+        "if",
+        "place_on_security",
+        "play_from_hand",
+        "play_from_hand_free",
+        "select_hand"
+      ]
+    },
+    "EX12-070": {
+      "path": "ex12/EX12-070.yaml",
+      "predicates": [
+        "all_of",
+        "any_field_permanent",
+        "binding_present",
+        "kind",
+        "level_gte",
+        "owner",
+        "replacement_subject_is_mine",
+        "trait_has"
+      ],
+      "timings": [
+        "main_from_hand",
+        "on_security"
+      ],
+      "verbs": [
+        "delete_permanent",
+        "draw",
+        "if",
+        "place_self_as_delay_option",
+        "play_from_hand_free",
+        "select_hand",
+        "trash_from_hand_by_index"
+      ]
+    },
+    "EX12-071": {
+      "path": "ex12/EX12-071.yaml",
+      "predicates": [
+        "all_of",
+        "all_turns",
+        "any_field_permanent",
+        "binding_present",
+        "event_card_trait_has",
+        "event_target_owner",
+        "kind",
+        "owner",
+        "trait_has"
+      ],
+      "timings": [
+        "main_from_hand",
+        "on_security"
+      ],
+      "verbs": [
+        "draw",
+        "effect_initiated_digivolve",
+        "if",
+        "place_self_as_delay_option",
+        "select_hand",
+        "select_own_permanent",
+        "trash_from_hand_by_index"
+      ]
+    },
+    "EX12-073": {
+      "path": "ex12/EX12-073.yaml",
+      "predicates": [
+        "any_field_permanent",
+        "any_of",
+        "card_number_is",
+        "owner",
+        "trait_has",
+        "your_turn"
+      ],
+      "timings": [
+        "main_from_hand",
+        "on_security"
+      ],
+      "verbs": [
+        "add_to_hand_from_reveal",
+        "gain_memory",
+        "place_remainder_on_deck",
+        "place_self_as_delay_option",
+        "reveal_top_deck",
+        "select_reveal"
+      ]
+    },
+    "EX12-074": {
+      "path": "ex12/EX12-074.yaml",
+      "predicates": [
+        "all_of",
+        "any_field_permanent",
+        "any_of",
+        "event_target_owner",
+        "event_target_trait_has",
+        "kind",
+        "owner",
+        "play_cost_lte",
+        "trait_has",
+        "your_turn"
+      ],
+      "timings": [
+        "main_from_hand",
+        "on_ally_attack",
+        "on_security"
+      ],
+      "verbs": [
+        "add_bottom_security_to_hand",
+        "effect_initiated_digivolve",
+        "place_on_security",
+        "play_from_hand",
+        "play_union_bound_free",
+        "select_hand",
+        "select_union_zone"
+      ]
+    },
+    "EX12-075": {
+      "path": "ex12/EX12-075.yaml",
+      "predicates": [
+        "any_field_permanent",
+        "owner",
+        "trait_has"
+      ],
+      "timings": [
+        "main_from_hand",
+        "on_security"
+      ],
+      "verbs": [
+        "add_to_hand_from_reveal",
+        "choose_from_reveal",
+        "gain_memory",
+        "place_remainder_on_deck",
+        "place_self_as_delay_option",
+        "reveal_top_deck"
+      ]
+    },
+    "EX12-076": {
+      "path": "ex12/EX12-076.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "form_is",
+        "kind",
+        "level_eq",
+        "own_source_stack_color_count_gte",
+        "owner",
+        "self_color_count_gte",
+        "trait_has",
+        "zone"
+      ],
+      "timings": [
+        "on_play",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "add_modifier",
+        "if",
+        "place_on_security",
+        "recover",
+        "select_opponent_permanent",
+        "trash_top_security"
+      ]
+    },
+    "EX12-077": {
+      "path": "ex12/EX12-077.yaml",
+      "predicates": [
+        "all_of",
+        "any_of",
+        "binding_count_eq",
+        "color_is",
+        "count_gte",
+        "equals",
+        "host_kind_is",
+        "in_text_contains",
+        "kind",
+        "level_eq",
+        "owner",
+        "play_or_use_cost_lte",
+        "trait_has",
+        "zone"
+      ],
+      "timings": [
+        "counter",
+        "on_play",
+        "when_attacking",
+        "when_digivolving"
+      ],
+      "verbs": [
+        "delete_permanent",
+        "if",
+        "place_as_bottom_source",
+        "place_as_top_source",
+        "play_or_use_from_sources",
+        "select_effect_choice",
+        "select_opponent_permanent",
+        "select_own_permanent",
+        "select_own_sources",
+        "select_union_zone"
+      ]
+    },
     "EX3-008": {
       "path": "ex3/EX3-008.yaml",
       "predicates": [
@@ -17818,6 +19208,47 @@
       "EX11-065",
       "EX11-069",
       "EX11-071",
+      "EX12-002",
+      "EX12-004",
+      "EX12-007",
+      "EX12-010",
+      "EX12-011",
+      "EX12-014",
+      "EX12-015",
+      "EX12-016",
+      "EX12-017",
+      "EX12-018",
+      "EX12-020",
+      "EX12-021",
+      "EX12-024",
+      "EX12-025",
+      "EX12-026",
+      "EX12-029",
+      "EX12-031",
+      "EX12-032",
+      "EX12-034",
+      "EX12-035",
+      "EX12-036",
+      "EX12-037",
+      "EX12-039",
+      "EX12-040",
+      "EX12-042",
+      "EX12-044",
+      "EX12-045",
+      "EX12-046",
+      "EX12-047",
+      "EX12-048",
+      "EX12-056",
+      "EX12-062",
+      "EX12-063",
+      "EX12-065",
+      "EX12-066",
+      "EX12-069",
+      "EX12-070",
+      "EX12-071",
+      "EX12-074",
+      "EX12-076",
+      "EX12-077",
       "EX3-008",
       "EX3-014",
       "EX3-057",
@@ -18102,6 +19533,13 @@
       "EX11-055",
       "EX11-060",
       "EX11-065",
+      "EX12-019",
+      "EX12-034",
+      "EX12-035",
+      "EX12-036",
+      "EX12-057",
+      "EX12-065",
+      "EX12-071",
       "EX5-015",
       "EX8-030",
       "EX8-074",
@@ -18125,6 +19563,13 @@
       "BT25-104",
       "EX11-016",
       "EX11-017",
+      "EX12-018",
+      "EX12-069",
+      "EX12-070",
+      "EX12-071",
+      "EX12-073",
+      "EX12-074",
+      "EX12-075",
       "EX4-074",
       "EX7-023",
       "EX8-022",
@@ -18378,6 +19823,38 @@
       "EX11-065",
       "EX11-069",
       "EX11-071",
+      "EX12-005",
+      "EX12-007",
+      "EX12-010",
+      "EX12-013",
+      "EX12-014",
+      "EX12-015",
+      "EX12-016",
+      "EX12-017",
+      "EX12-018",
+      "EX12-021",
+      "EX12-024",
+      "EX12-029",
+      "EX12-031",
+      "EX12-032",
+      "EX12-035",
+      "EX12-036",
+      "EX12-037",
+      "EX12-040",
+      "EX12-042",
+      "EX12-044",
+      "EX12-045",
+      "EX12-048",
+      "EX12-056",
+      "EX12-061",
+      "EX12-062",
+      "EX12-063",
+      "EX12-065",
+      "EX12-066",
+      "EX12-073",
+      "EX12-074",
+      "EX12-076",
+      "EX12-077",
       "EX3-014",
       "EX4-005",
       "EX4-038",
@@ -18579,6 +20056,8 @@
       "EX11-057",
       "EX11-061",
       "EX11-065",
+      "EX12-018",
+      "EX12-044",
       "EX3-057",
       "EX4-005",
       "EX4-073",
@@ -18687,6 +20166,9 @@
       "BT12-031",
       "BT13-083",
       "BT24-017",
+      "EX12-018",
+      "EX12-047",
+      "EX12-077",
       "EX4-073",
       "EX7-073"
     ],
@@ -18754,6 +20236,21 @@
       "BT9-108",
       "EX11-020",
       "EX11-021",
+      "EX12-002",
+      "EX12-005",
+      "EX12-006",
+      "EX12-012",
+      "EX12-015",
+      "EX12-017",
+      "EX12-021",
+      "EX12-025",
+      "EX12-029",
+      "EX12-036",
+      "EX12-056",
+      "EX12-061",
+      "EX12-062",
+      "EX12-070",
+      "EX12-071",
       "EX9-024",
       "P-186",
       "P-205",
@@ -18818,6 +20315,8 @@
       "EX10-010",
       "EX10-063",
       "EX11-065",
+      "EX12-069",
+      "EX12-073",
       "EX7-070",
       "EX7-074",
       "EX8-067",
@@ -19065,6 +20564,49 @@
       "EX11-038",
       "EX11-044",
       "EX11-046",
+      "EX12-005",
+      "EX12-006",
+      "EX12-007",
+      "EX12-009",
+      "EX12-010",
+      "EX12-011",
+      "EX12-012",
+      "EX12-013",
+      "EX12-014",
+      "EX12-015",
+      "EX12-016",
+      "EX12-017",
+      "EX12-018",
+      "EX12-019",
+      "EX12-020",
+      "EX12-021",
+      "EX12-022",
+      "EX12-024",
+      "EX12-025",
+      "EX12-026",
+      "EX12-029",
+      "EX12-031",
+      "EX12-032",
+      "EX12-034",
+      "EX12-035",
+      "EX12-036",
+      "EX12-037",
+      "EX12-039",
+      "EX12-040",
+      "EX12-042",
+      "EX12-043",
+      "EX12-044",
+      "EX12-045",
+      "EX12-046",
+      "EX12-047",
+      "EX12-048",
+      "EX12-056",
+      "EX12-057",
+      "EX12-061",
+      "EX12-062",
+      "EX12-063",
+      "EX12-065",
+      "EX12-077",
       "EX3-008",
       "EX3-014",
       "EX3-057",
@@ -19254,6 +20796,9 @@
       "BT23-005",
       "BT23-037",
       "BT25-010",
+      "EX12-020",
+      "EX12-039",
+      "EX12-040",
       "EX7-024",
       "EX8-019",
       "P-117",
@@ -19319,6 +20864,18 @@
       "EX11-046",
       "EX11-053",
       "EX11-069",
+      "EX12-005",
+      "EX12-006",
+      "EX12-012",
+      "EX12-013",
+      "EX12-021",
+      "EX12-031",
+      "EX12-043",
+      "EX12-044",
+      "EX12-061",
+      "EX12-066",
+      "EX12-069",
+      "EX12-077",
       "EX4-006",
       "EX7-021",
       "EX7-023",
@@ -19369,6 +20926,11 @@
       "EX11-015",
       "EX11-021",
       "EX11-069",
+      "EX12-020",
+      "EX12-021",
+      "EX12-022",
+      "EX12-025",
+      "EX12-026",
       "EX4-061",
       "EX7-025",
       "EX8-048",
@@ -19465,6 +21027,10 @@
       "BT8-109",
       "EX11-012",
       "EX11-022",
+      "EX12-011",
+      "EX12-015",
+      "EX12-016",
+      "EX12-046",
       "EX3-014",
       "EX3-057",
       "EX4-060",
@@ -19568,6 +21134,11 @@
       "EX11-027",
       "EX11-060",
       "EX11-065",
+      "EX12-018",
+      "EX12-034",
+      "EX12-037",
+      "EX12-066",
+      "EX12-077",
       "EX3-008",
       "EX4-051",
       "EX4-061",
@@ -19632,6 +21203,7 @@
       "BT13-087",
       "BT24-004",
       "BT25-067",
+      "EX12-071",
       "P-217"
     ],
     "event_cause": [
@@ -19723,6 +21295,9 @@
     "event_target_has_digivolution_cards": [
       "EX1-066"
     ],
+    "event_target_in_text_contains": [
+      "EX12-066"
+    ],
     "event_target_is_player": [
       "BT25-065",
       "ST18-14",
@@ -19733,7 +21308,8 @@
       "BT13-087",
       "BT20-017",
       "BT23-013",
-      "BT25-055"
+      "BT25-055",
+      "EX12-002"
     ],
     "event_target_kind": [
       "AD1-014",
@@ -19788,6 +21364,8 @@
       "EX11-055",
       "EX11-060",
       "EX11-061",
+      "EX12-002",
+      "EX12-035",
       "EX4-003",
       "EX4-005",
       "EX4-038",
@@ -19820,6 +21398,7 @@
     ],
     "event_target_level_gte": [
       "EX1-066",
+      "EX12-069",
       "RB1-035"
     ],
     "event_target_level_lte": [
@@ -19904,6 +21483,12 @@
       "EX11-060",
       "EX11-061",
       "EX11-065",
+      "EX12-002",
+      "EX12-036",
+      "EX12-066",
+      "EX12-069",
+      "EX12-071",
+      "EX12-074",
       "EX4-003",
       "EX4-005",
       "EX4-038",
@@ -19967,6 +21552,10 @@
       "EX11-060",
       "EX11-061",
       "EX11-065",
+      "EX12-002",
+      "EX12-066",
+      "EX12-069",
+      "EX12-074",
       "EX8-066",
       "EX8-067",
       "P-136",
@@ -19990,6 +21579,9 @@
       "BT25-095",
       "BT25-099",
       "BT25-102"
+    ],
+    "form_is": [
+      "EX12-076"
     ],
     "has_alt_path": [
       "BT10-087",
@@ -20016,6 +21608,9 @@
     ],
     "has_security_attack_change": [
       "BT10-042"
+    ],
+    "host_kind_is": [
+      "EX12-077"
     ],
     "host_permanent_trait_has": [
       "BT21-055",
@@ -20044,6 +21639,17 @@
       "BT21-087",
       "BT25-083",
       "EX11-046",
+      "EX12-007",
+      "EX12-013",
+      "EX12-014",
+      "EX12-015",
+      "EX12-018",
+      "EX12-029",
+      "EX12-045",
+      "EX12-048",
+      "EX12-056",
+      "EX12-066",
+      "EX12-077",
       "EX7-048"
     ],
     "is_source": [
@@ -20074,6 +21680,7 @@
       "BT25-081",
       "BT5-106",
       "EX10-020",
+      "EX12-036",
       "EX8-045",
       "ST23-09",
       "ST4-16",
@@ -20492,6 +22099,44 @@
       "EX11-061",
       "EX11-069",
       "EX11-074",
+      "EX12-002",
+      "EX12-010",
+      "EX12-011",
+      "EX12-014",
+      "EX12-015",
+      "EX12-016",
+      "EX12-017",
+      "EX12-018",
+      "EX12-020",
+      "EX12-024",
+      "EX12-025",
+      "EX12-026",
+      "EX12-029",
+      "EX12-031",
+      "EX12-032",
+      "EX12-034",
+      "EX12-035",
+      "EX12-036",
+      "EX12-037",
+      "EX12-039",
+      "EX12-040",
+      "EX12-044",
+      "EX12-045",
+      "EX12-046",
+      "EX12-047",
+      "EX12-048",
+      "EX12-056",
+      "EX12-057",
+      "EX12-062",
+      "EX12-063",
+      "EX12-065",
+      "EX12-066",
+      "EX12-069",
+      "EX12-070",
+      "EX12-071",
+      "EX12-074",
+      "EX12-076",
+      "EX12-077",
       "EX3-008",
       "EX3-014",
       "EX3-057",
@@ -20990,6 +22635,50 @@
       "EX11-046",
       "EX11-061",
       "EX11-074",
+      "EX12-005",
+      "EX12-006",
+      "EX12-007",
+      "EX12-009",
+      "EX12-010",
+      "EX12-011",
+      "EX12-012",
+      "EX12-013",
+      "EX12-014",
+      "EX12-015",
+      "EX12-016",
+      "EX12-017",
+      "EX12-018",
+      "EX12-019",
+      "EX12-020",
+      "EX12-021",
+      "EX12-022",
+      "EX12-024",
+      "EX12-025",
+      "EX12-026",
+      "EX12-029",
+      "EX12-031",
+      "EX12-032",
+      "EX12-034",
+      "EX12-035",
+      "EX12-036",
+      "EX12-037",
+      "EX12-039",
+      "EX12-040",
+      "EX12-042",
+      "EX12-043",
+      "EX12-044",
+      "EX12-045",
+      "EX12-046",
+      "EX12-047",
+      "EX12-048",
+      "EX12-056",
+      "EX12-057",
+      "EX12-061",
+      "EX12-062",
+      "EX12-063",
+      "EX12-065",
+      "EX12-076",
+      "EX12-077",
       "EX3-008",
       "EX3-014",
       "EX3-057",
@@ -21169,7 +22858,8 @@
       "ST9-06"
     ],
     "level_eq_binding": [
-      "BT17-078"
+      "BT17-078",
+      "EX12-069"
     ],
     "level_gte": [
       "BT10-093",
@@ -21181,6 +22871,7 @@
       "BT24-097",
       "BT25-028",
       "BT5-093",
+      "EX12-070",
       "EX4-060",
       "EX4-073",
       "EX6-072",
@@ -21233,6 +22924,26 @@
       "EX11-023",
       "EX11-024",
       "EX11-060",
+      "EX12-014",
+      "EX12-015",
+      "EX12-016",
+      "EX12-017",
+      "EX12-024",
+      "EX12-025",
+      "EX12-029",
+      "EX12-031",
+      "EX12-032",
+      "EX12-034",
+      "EX12-035",
+      "EX12-036",
+      "EX12-044",
+      "EX12-046",
+      "EX12-047",
+      "EX12-056",
+      "EX12-062",
+      "EX12-063",
+      "EX12-066",
+      "EX12-069",
       "EX4-051",
       "EX5-060",
       "EX6-057",
@@ -21259,6 +22970,8 @@
       "BT24-091",
       "BT25-029",
       "EX11-023",
+      "EX12-034",
+      "EX12-065",
       "EX7-073",
       "EX9-021",
       "EX9-033"
@@ -21289,6 +23002,10 @@
       "BT25-028",
       "EX11-016",
       "EX11-017",
+      "EX12-026",
+      "EX12-029",
+      "EX12-031",
+      "EX12-035",
       "EX8-023",
       "EX8-028",
       "ST2-08",
@@ -21329,6 +23046,7 @@
       "BT8-090",
       "EX11-054",
       "EX11-060",
+      "EX12-066",
       "EX8-067",
       "P-196",
       "P-197",
@@ -21460,6 +23178,16 @@
       "BT9-041",
       "EX11-020",
       "EX11-021",
+      "EX12-005",
+      "EX12-010",
+      "EX12-016",
+      "EX12-017",
+      "EX12-021",
+      "EX12-024",
+      "EX12-032",
+      "EX12-035",
+      "EX12-040",
+      "EX12-042",
       "EX3-057",
       "EX3-063",
       "EX4-038",
@@ -21507,6 +23235,7 @@
       "BT21-101",
       "BT25-036",
       "BT25-060",
+      "EX12-048",
       "ST22-12"
     ],
     "name_is": [
@@ -21602,6 +23331,10 @@
       "EX11-053",
       "EX11-055",
       "EX11-071",
+      "EX12-005",
+      "EX12-007",
+      "EX12-013",
+      "EX12-017",
       "EX4-005",
       "EX4-006",
       "EX5-015",
@@ -21667,6 +23400,16 @@
       "BT25-053",
       "EX11-022",
       "EX11-023",
+      "EX12-014",
+      "EX12-016",
+      "EX12-017",
+      "EX12-031",
+      "EX12-032",
+      "EX12-035",
+      "EX12-036",
+      "EX12-044",
+      "EX12-048",
+      "EX12-063",
       "EX4-060",
       "EX5-015",
       "EX6-057",
@@ -21738,6 +23481,7 @@
       "EX10-031",
       "EX11-020",
       "EX11-021",
+      "EX12-056",
       "EX6-057",
       "EX7-023",
       "EX8-050",
@@ -21763,6 +23507,9 @@
       "EX11-021",
       "EX11-022",
       "EX11-023",
+      "EX12-015",
+      "EX12-029",
+      "EX12-056",
       "EX3-008",
       "EX3-057",
       "EX4-051",
@@ -21778,6 +23525,7 @@
       "EX8-073"
     ],
     "own_source_stack_color_count_gte": [
+      "EX12-076",
       "EX9-074"
     ],
     "owner": [
@@ -21999,6 +23747,32 @@
       "EX11-061",
       "EX11-065",
       "EX11-069",
+      "EX12-005",
+      "EX12-006",
+      "EX12-012",
+      "EX12-013",
+      "EX12-017",
+      "EX12-018",
+      "EX12-020",
+      "EX12-021",
+      "EX12-022",
+      "EX12-025",
+      "EX12-026",
+      "EX12-031",
+      "EX12-034",
+      "EX12-043",
+      "EX12-044",
+      "EX12-061",
+      "EX12-065",
+      "EX12-066",
+      "EX12-069",
+      "EX12-070",
+      "EX12-071",
+      "EX12-073",
+      "EX12-074",
+      "EX12-075",
+      "EX12-076",
+      "EX12-077",
       "EX3-057",
       "EX3-063",
       "EX4-005",
@@ -22163,6 +23937,8 @@
       "EX10-028",
       "EX10-044",
       "EX10-068",
+      "EX12-065",
+      "EX12-074",
       "EX7-074",
       "EX8-047",
       "EX8-048",
@@ -22181,6 +23957,7 @@
     ],
     "play_or_use_cost_lte": [
       "BT25-073",
+      "EX12-077",
       "ST24-06"
     ],
     "replacement_cause": [
@@ -22201,6 +23978,15 @@
       "BT25-053",
       "EX11-022",
       "EX11-023",
+      "EX12-014",
+      "EX12-016",
+      "EX12-017",
+      "EX12-031",
+      "EX12-032",
+      "EX12-035",
+      "EX12-036",
+      "EX12-044",
+      "EX12-048",
       "EX4-060",
       "EX5-015",
       "EX6-057",
@@ -22235,6 +24021,13 @@
       "BT25-043",
       "BT25-084",
       "EX11-022",
+      "EX12-032",
+      "EX12-034",
+      "EX12-035",
+      "EX12-036",
+      "EX12-044",
+      "EX12-048",
+      "EX12-070",
       "EX5-015",
       "EX6-057",
       "EX7-027",
@@ -22290,6 +24083,7 @@
       "BT25-044",
       "BT25-053",
       "EX11-053",
+      "EX12-045",
       "P-213",
       "ST3-09"
     ],
@@ -22297,6 +24091,7 @@
       "BT12-031",
       "BT16-004",
       "BT16-029",
+      "EX12-076",
       "P-117"
     ],
     "self_digivolution_contains_name": [
@@ -22323,6 +24118,10 @@
       "BT16-101",
       "BT16-102",
       "BT25-038"
+    ],
+    "self_same_level_source_pairs_gte": [
+      "EX12-032",
+      "EX12-044"
     ],
     "self_source_count": [
       "BT18-065",
@@ -22353,6 +24152,9 @@
       "BT23-037",
       "BT25-010",
       "BT25-048",
+      "EX12-020",
+      "EX12-039",
+      "EX12-040",
       "EX7-024",
       "EX8-019",
       "P-117",
@@ -22386,6 +24188,7 @@
       "EX11-060",
       "EX11-061",
       "EX11-069",
+      "EX12-066",
       "EX8-066",
       "P-217",
       "P-241",
@@ -22428,6 +24231,8 @@
       "BT25-027",
       "BT25-041",
       "EX1-014",
+      "EX12-001",
+      "EX12-004",
       "ST23-04",
       "ST23-08",
       "ST24-06",
@@ -22459,6 +24264,8 @@
       "BT13-106"
     ],
     "trait_contains": [
+      "EX12-031",
+      "EX12-036",
       "EX3-014",
       "P-207"
     ],
@@ -22758,6 +24565,58 @@
       "EX11-065",
       "EX11-069",
       "EX11-071",
+      "EX12-002",
+      "EX12-005",
+      "EX12-006",
+      "EX12-007",
+      "EX12-009",
+      "EX12-010",
+      "EX12-011",
+      "EX12-012",
+      "EX12-013",
+      "EX12-014",
+      "EX12-015",
+      "EX12-016",
+      "EX12-017",
+      "EX12-018",
+      "EX12-019",
+      "EX12-020",
+      "EX12-021",
+      "EX12-022",
+      "EX12-024",
+      "EX12-025",
+      "EX12-026",
+      "EX12-029",
+      "EX12-031",
+      "EX12-032",
+      "EX12-034",
+      "EX12-035",
+      "EX12-036",
+      "EX12-037",
+      "EX12-039",
+      "EX12-040",
+      "EX12-042",
+      "EX12-043",
+      "EX12-044",
+      "EX12-045",
+      "EX12-046",
+      "EX12-047",
+      "EX12-048",
+      "EX12-056",
+      "EX12-057",
+      "EX12-061",
+      "EX12-062",
+      "EX12-063",
+      "EX12-065",
+      "EX12-066",
+      "EX12-069",
+      "EX12-070",
+      "EX12-071",
+      "EX12-073",
+      "EX12-074",
+      "EX12-075",
+      "EX12-076",
+      "EX12-077",
       "EX7-016",
       "EX7-021",
       "EX7-024",
@@ -23022,6 +24881,27 @@
       "EX11-016",
       "EX11-061",
       "EX11-069",
+      "EX12-002",
+      "EX12-004",
+      "EX12-005",
+      "EX12-006",
+      "EX12-007",
+      "EX12-009",
+      "EX12-011",
+      "EX12-012",
+      "EX12-020",
+      "EX12-021",
+      "EX12-022",
+      "EX12-025",
+      "EX12-026",
+      "EX12-039",
+      "EX12-040",
+      "EX12-045",
+      "EX12-046",
+      "EX12-066",
+      "EX12-069",
+      "EX12-073",
+      "EX12-074",
       "EX4-003",
       "EX4-005",
       "EX4-038",
@@ -23295,6 +25175,23 @@
       "EX11-061",
       "EX11-065",
       "EX11-069",
+      "EX12-005",
+      "EX12-006",
+      "EX12-012",
+      "EX12-013",
+      "EX12-020",
+      "EX12-021",
+      "EX12-022",
+      "EX12-025",
+      "EX12-026",
+      "EX12-031",
+      "EX12-043",
+      "EX12-044",
+      "EX12-061",
+      "EX12-066",
+      "EX12-069",
+      "EX12-076",
+      "EX12-077",
       "EX3-057",
       "EX3-063",
       "EX4-005",
@@ -23411,6 +25308,11 @@
       "BT12-022",
       "BT12-050"
     ],
+    "counter": [
+      "EX12-017",
+      "EX12-057",
+      "EX12-077"
+    ],
     "end_of_attack": [
       "AD1-002",
       "BT11-018",
@@ -23421,6 +25323,7 @@
       "BT21-029",
       "BT25-041",
       "EX11-012",
+      "EX12-046",
       "EX4-074",
       "EX8-073",
       "EX9-021",
@@ -23468,6 +25371,7 @@
       "BT25-086",
       "BT25-089",
       "EX11-069",
+      "EX12-001",
       "EX3-008",
       "EX8-055",
       "EX9-013",
@@ -23477,6 +25381,7 @@
       "BT25-043",
       "BT25-057",
       "BT3-103",
+      "EX12-018",
       "P-156",
       "ST23-09",
       "ST24-07"
@@ -23538,6 +25443,12 @@
       "EX1-068",
       "EX10-032",
       "EX10-069",
+      "EX12-069",
+      "EX12-070",
+      "EX12-071",
+      "EX12-073",
+      "EX12-074",
+      "EX12-075",
       "EX4-065",
       "EX6-072",
       "EX7-070",
@@ -23613,6 +25524,8 @@
       "BT25-089",
       "BT4-072",
       "EX11-071",
+      "EX12-013",
+      "EX12-043",
       "P-224",
       "ST4-13",
       "ST5-13",
@@ -23633,6 +25546,9 @@
       "BT18-092",
       "BT25-016",
       "EX11-069",
+      "EX12-066",
+      "EX12-069",
+      "EX12-074",
       "ST18-14"
     ],
     "on_ally_played": [
@@ -23645,6 +25561,10 @@
       "BT24-004",
       "BT25-002",
       "BT25-067",
+      "EX12-002",
+      "EX12-034",
+      "EX12-036",
+      "EX12-057",
       "EX8-066"
     ],
     "on_ally_won_battle": [
@@ -23705,6 +25625,7 @@
     "on_attack_target_change": [
       "BT21-025",
       "EX10-002",
+      "EX12-019",
       "P-137",
       "ST5-14"
     ],
@@ -23755,6 +25676,10 @@
       "EX11-019",
       "EX11-020",
       "EX11-053",
+      "EX12-025",
+      "EX12-047",
+      "EX12-063",
+      "EX12-065",
       "EX4-074",
       "EX8-046",
       "EX8-050",
@@ -23818,6 +25743,8 @@
       "EX11-054",
       "EX11-061",
       "EX11-065",
+      "EX12-035",
+      "EX12-036",
       "EX4-003",
       "EX4-038",
       "EX4-039",
@@ -23866,6 +25793,7 @@
       "BT25-077",
       "EX11-054",
       "EX11-065",
+      "EX12-035",
       "EX4-061",
       "EX8-074",
       "EX9-012",
@@ -23915,6 +25843,7 @@
       "EX10-034",
       "EX11-020",
       "EX11-021",
+      "EX12-056",
       "EX8-050",
       "EX9-024",
       "EX9-027",
@@ -23940,6 +25869,8 @@
       "BT24-016",
       "BT24-018",
       "EX11-008",
+      "EX12-019",
+      "EX12-046",
       "P-189"
     ],
     "on_option_placed": [
@@ -23964,7 +25895,9 @@
       "BT25-040",
       "BT25-042",
       "BT25-053",
-      "BT4-097"
+      "BT4-097",
+      "EX12-019",
+      "EX12-045"
     ],
     "on_play": [
       "AD1-001",
@@ -24186,6 +26119,40 @@
       "EX11-057",
       "EX11-069",
       "EX11-071",
+      "EX12-005",
+      "EX12-007",
+      "EX12-009",
+      "EX12-010",
+      "EX12-011",
+      "EX12-012",
+      "EX12-014",
+      "EX12-015",
+      "EX12-016",
+      "EX12-017",
+      "EX12-022",
+      "EX12-024",
+      "EX12-025",
+      "EX12-026",
+      "EX12-029",
+      "EX12-031",
+      "EX12-032",
+      "EX12-034",
+      "EX12-035",
+      "EX12-036",
+      "EX12-042",
+      "EX12-044",
+      "EX12-045",
+      "EX12-046",
+      "EX12-047",
+      "EX12-048",
+      "EX12-056",
+      "EX12-057",
+      "EX12-061",
+      "EX12-062",
+      "EX12-063",
+      "EX12-065",
+      "EX12-076",
+      "EX12-077",
       "EX3-014",
       "EX4-006",
       "EX4-038",
@@ -24370,6 +26337,13 @@
       "EX11-061",
       "EX11-065",
       "EX11-069",
+      "EX12-066",
+      "EX12-069",
+      "EX12-070",
+      "EX12-071",
+      "EX12-073",
+      "EX12-074",
+      "EX12-075",
       "EX4-061",
       "EX4-065",
       "EX6-072",
@@ -24550,6 +26524,8 @@
       "EX11-061",
       "EX11-065",
       "EX11-069",
+      "EX12-006",
+      "EX12-021",
       "EX4-005",
       "EX7-030",
       "EX7-063",
@@ -24590,6 +26566,7 @@
       "BT8-090",
       "EX11-054",
       "EX11-060",
+      "EX12-066",
       "EX8-067",
       "P-241",
       "RB1-035",
@@ -24685,6 +26662,27 @@
       "EX11-017",
       "EX11-024",
       "EX11-044",
+      "EX12-015",
+      "EX12-017",
+      "EX12-018",
+      "EX12-020",
+      "EX12-021",
+      "EX12-022",
+      "EX12-024",
+      "EX12-025",
+      "EX12-026",
+      "EX12-029",
+      "EX12-032",
+      "EX12-036",
+      "EX12-037",
+      "EX12-042",
+      "EX12-044",
+      "EX12-045",
+      "EX12-061",
+      "EX12-062",
+      "EX12-065",
+      "EX12-076",
+      "EX12-077",
       "EX3-057",
       "EX3-063",
       "EX4-051",
@@ -24965,6 +26963,34 @@
       "EX11-024",
       "EX11-044",
       "EX11-046",
+      "EX12-010",
+      "EX12-011",
+      "EX12-012",
+      "EX12-014",
+      "EX12-015",
+      "EX12-016",
+      "EX12-017",
+      "EX12-018",
+      "EX12-026",
+      "EX12-029",
+      "EX12-031",
+      "EX12-032",
+      "EX12-034",
+      "EX12-035",
+      "EX12-036",
+      "EX12-037",
+      "EX12-044",
+      "EX12-045",
+      "EX12-046",
+      "EX12-047",
+      "EX12-048",
+      "EX12-056",
+      "EX12-057",
+      "EX12-062",
+      "EX12-063",
+      "EX12-065",
+      "EX12-076",
+      "EX12-077",
       "EX3-008",
       "EX3-057",
       "EX3-063",
@@ -25098,6 +27124,7 @@
       "EX11-061",
       "EX11-069",
       "EX11-071",
+      "EX12-066",
       "EX8-066",
       "P-136",
       "P-217",
@@ -25118,7 +27145,9 @@
       "BT25-094",
       "BT25-095",
       "BT25-099",
-      "BT25-102"
+      "BT25-102",
+      "EX12-069",
+      "EX12-074"
     ],
     "add_dp_modifier": [
       "AD1-016",
@@ -25180,6 +27209,16 @@
       "EX11-008",
       "EX11-024",
       "EX11-054",
+      "EX12-015",
+      "EX12-018",
+      "EX12-019",
+      "EX12-037",
+      "EX12-044",
+      "EX12-045",
+      "EX12-046",
+      "EX12-047",
+      "EX12-048",
+      "EX12-057",
       "EX3-063",
       "EX6-004",
       "EX7-030",
@@ -25262,6 +27301,14 @@
       "EX10-033",
       "EX10-034",
       "EX11-017",
+      "EX12-026",
+      "EX12-029",
+      "EX12-032",
+      "EX12-035",
+      "EX12-036",
+      "EX12-046",
+      "EX12-063",
+      "EX12-076",
       "EX3-057",
       "EX4-074",
       "EX7-049",
@@ -25354,6 +27401,11 @@
       "EX11-014",
       "EX11-027",
       "EX11-071",
+      "EX12-007",
+      "EX12-009",
+      "EX12-022",
+      "EX12-073",
+      "EX12-075",
       "EX4-038",
       "EX4-039",
       "EX5-015",
@@ -25411,6 +27463,8 @@
       "BT25-091",
       "BT7-107",
       "EX11-069",
+      "EX12-010",
+      "EX12-047",
       "EX6-072",
       "EX9-024",
       "EX9-066",
@@ -25429,6 +27483,7 @@
       "BT25-036",
       "BT25-037",
       "BT25-041",
+      "EX12-042",
       "P-137",
       "ST20-15",
       "ST23-03"
@@ -25455,6 +27510,7 @@
       "BT21-024",
       "BT24-016",
       "BT24-017",
+      "EX12-047",
       "EX3-063",
       "EX5-060"
     ],
@@ -25466,7 +27522,8 @@
     ],
     "bind_permanent_property": [
       "BT17-078",
-      "BT8-107"
+      "BT8-107",
+      "EX12-069"
     ],
     "cancel_attack": [
       "BT21-060",
@@ -25502,6 +27559,7 @@
       "BT24-058",
       "BT25-063",
       "BT25-078",
+      "EX12-075",
       "P-167"
     ],
     "de_digivolve": [
@@ -25531,6 +27589,9 @@
       "BT25-100",
       "BT9-112",
       "EX10-032",
+      "EX12-017",
+      "EX12-056",
+      "EX12-057",
       "EX4-051",
       "EX4-073",
       "EX6-011",
@@ -25654,6 +27715,16 @@
       "EX11-023",
       "EX11-044",
       "EX11-046",
+      "EX12-011",
+      "EX12-015",
+      "EX12-016",
+      "EX12-017",
+      "EX12-018",
+      "EX12-037",
+      "EX12-047",
+      "EX12-062",
+      "EX12-070",
+      "EX12-077",
       "EX3-014",
       "EX3-057",
       "EX3-063",
@@ -25780,6 +27851,19 @@
       "EX11-054",
       "EX11-055",
       "EX11-060",
+      "EX12-005",
+      "EX12-006",
+      "EX12-012",
+      "EX12-020",
+      "EX12-021",
+      "EX12-022",
+      "EX12-024",
+      "EX12-025",
+      "EX12-026",
+      "EX12-061",
+      "EX12-062",
+      "EX12-070",
+      "EX12-071",
       "EX4-003",
       "EX4-005",
       "EX8-046",
@@ -25858,6 +27942,13 @@
       "EX10-069",
       "EX11-046",
       "EX11-069",
+      "EX12-002",
+      "EX12-032",
+      "EX12-044",
+      "EX12-046",
+      "EX12-066",
+      "EX12-071",
+      "EX12-074",
       "EX3-008",
       "EX3-063",
       "EX4-051",
@@ -25894,6 +27985,7 @@
       "BT20-016",
       "BT20-036",
       "BT24-035",
+      "EX12-017",
       "EX3-008",
       "EX9-013"
     ],
@@ -25958,7 +28050,8 @@
       "BT21-081",
       "BT23-032",
       "BT25-054",
-      "EX10-034"
+      "EX10-034",
+      "EX12-016"
     ],
     "gain_memory": [
       "AD1-019",
@@ -26035,6 +28128,10 @@
       "EX11-061",
       "EX11-065",
       "EX11-069",
+      "EX12-006",
+      "EX12-021",
+      "EX12-073",
+      "EX12-075",
       "EX4-005",
       "EX4-038",
       "EX4-039",
@@ -26093,6 +28190,7 @@
       "BT25-059",
       "BT25-060",
       "EX11-046",
+      "EX12-019",
       "EX6-011",
       "EX9-021",
       "LM-020",
@@ -26129,6 +28227,9 @@
       "EX10-032",
       "EX11-008",
       "EX11-046",
+      "EX12-015",
+      "EX12-029",
+      "EX12-056",
       "EX3-063",
       "EX4-006",
       "EX7-020",
@@ -26156,6 +28257,7 @@
       "BT6-102",
       "EX1-068",
       "EX10-034",
+      "EX12-016",
       "EX6-057"
     ],
     "hatch": [
@@ -26311,6 +28413,30 @@
       "EX11-046",
       "EX11-060",
       "EX11-065",
+      "EX12-002",
+      "EX12-005",
+      "EX12-006",
+      "EX12-012",
+      "EX12-015",
+      "EX12-017",
+      "EX12-018",
+      "EX12-021",
+      "EX12-025",
+      "EX12-029",
+      "EX12-034",
+      "EX12-036",
+      "EX12-037",
+      "EX12-045",
+      "EX12-047",
+      "EX12-056",
+      "EX12-061",
+      "EX12-062",
+      "EX12-066",
+      "EX12-069",
+      "EX12-070",
+      "EX12-071",
+      "EX12-076",
+      "EX12-077",
       "EX3-008",
       "EX3-057",
       "EX4-051",
@@ -26421,7 +28547,8 @@
     ],
     "may_add_top_security_to_hand": [
       "BT24-031",
-      "BT25-030"
+      "BT25-030",
+      "EX12-045"
     ],
     "may_attack_now": [
       "AD1-004",
@@ -26452,6 +28579,13 @@
       "BT25-057",
       "BT25-075",
       "BT25-086",
+      "EX12-001",
+      "EX12-014",
+      "EX12-015",
+      "EX12-018",
+      "EX12-029",
+      "EX12-048",
+      "EX12-056",
       "EX9-013",
       "P-213"
     ],
@@ -26466,6 +28600,7 @@
       "BT25-011",
       "BT25-018",
       "BT25-028",
+      "EX12-001",
       "EX4-051"
     ],
     "move_from_breeding": [
@@ -26582,6 +28717,11 @@
       "EX11-044",
       "EX11-053",
       "EX11-065",
+      "EX12-014",
+      "EX12-018",
+      "EX12-031",
+      "EX12-036",
+      "EX12-077",
       "EX8-055",
       "EX8-067",
       "EX9-058",
@@ -26597,6 +28737,8 @@
     ],
     "place_as_top_source": [
       "BT13-088",
+      "EX12-018",
+      "EX12-077",
       "EX9-074"
     ],
     "place_on_security": [
@@ -26623,6 +28765,9 @@
       "BT25-102",
       "EX10-020",
       "EX11-016",
+      "EX12-069",
+      "EX12-074",
+      "EX12-076",
       "EX4-060",
       "EX8-028",
       "EX9-021",
@@ -26667,6 +28812,11 @@
       "EX11-014",
       "EX11-027",
       "EX11-071",
+      "EX12-007",
+      "EX12-009",
+      "EX12-022",
+      "EX12-073",
+      "EX12-075",
       "EX4-038",
       "EX4-039",
       "EX5-015",
@@ -26739,6 +28889,10 @@
       "BT24-100",
       "BT25-098",
       "EX10-069",
+      "EX12-070",
+      "EX12-071",
+      "EX12-073",
+      "EX12-075",
       "LM-033",
       "LM-034",
       "LM-035",
@@ -26791,6 +28945,9 @@
       "BT25-099",
       "BT25-102",
       "EX11-071",
+      "EX12-045",
+      "EX12-069",
+      "EX12-074",
       "P-206"
     ],
     "play_from_hand_free": [
@@ -26845,6 +29002,11 @@
       "EX11-055",
       "EX11-060",
       "EX11-061",
+      "EX12-034",
+      "EX12-046",
+      "EX12-047",
+      "EX12-069",
+      "EX12-070",
       "EX4-061",
       "EX7-025",
       "EX7-027",
@@ -26874,6 +29036,16 @@
       "BT24-014",
       "BT25-025",
       "BT25-053",
+      "EX12-014",
+      "EX12-016",
+      "EX12-017",
+      "EX12-031",
+      "EX12-032",
+      "EX12-034",
+      "EX12-035",
+      "EX12-036",
+      "EX12-044",
+      "EX12-048",
       "EX4-060",
       "EX9-021",
       "P-213",
@@ -26958,6 +29130,7 @@
       "EX11-061",
       "EX11-065",
       "EX11-069",
+      "EX12-066",
       "EX4-061",
       "EX7-063",
       "EX8-066",
@@ -27012,6 +29185,8 @@
       "EX10-063",
       "EX10-069",
       "EX11-023",
+      "EX12-063",
+      "EX12-065",
       "EX4-061",
       "EX5-060",
       "EX7-049",
@@ -27031,9 +29206,15 @@
     "play_or_use_from_hand": [
       "BT25-041",
       "BT25-073",
+      "EX12-013",
+      "EX12-043",
+      "EX12-066",
       "ST23-04",
       "ST23-08",
       "ST24-06"
+    ],
+    "play_or_use_from_sources": [
+      "EX12-077"
     ],
     "play_security_card": [
       "BT13-012",
@@ -27052,6 +29233,8 @@
       "EX11-012",
       "EX11-019",
       "EX11-024",
+      "EX12-034",
+      "EX12-057",
       "EX7-030",
       "P-165",
       "ST19-12"
@@ -27087,6 +29270,7 @@
       "EX10-068",
       "EX11-022",
       "EX11-053",
+      "EX12-074",
       "EX7-074",
       "P-189",
       "P-193",
@@ -27112,6 +29296,10 @@
       "BT25-030",
       "BT25-036",
       "BT25-043",
+      "EX12-037",
+      "EX12-042",
+      "EX12-045",
+      "EX12-076",
       "EX4-074",
       "P-186",
       "ST23-03",
@@ -27127,6 +29315,8 @@
       "BT25-039",
       "BT25-055",
       "EX10-031",
+      "EX12-017",
+      "EX12-056",
       "EX8-050",
       "P-094",
       "ST18-14"
@@ -27152,6 +29342,9 @@
     ],
     "relink_self_to_own_digimon": [
       "EX11-027"
+    ],
+    "repeat_effect_choice": [
+      "EX12-037"
     ],
     "return_all_trash_to_deck_bottom": [
       "BT17-077"
@@ -27192,6 +29385,9 @@
       "BT25-056",
       "EX1-021",
       "EX10-020",
+      "EX12-034",
+      "EX12-035",
+      "EX12-065",
       "EX4-060",
       "EX7-023",
       "EX8-045",
@@ -27219,6 +29415,9 @@
       "BT25-027",
       "BT25-029",
       "BT25-104",
+      "EX12-024",
+      "EX12-025",
+      "EX12-031",
       "ST2-16",
       "ST24-03",
       "ST4-16"
@@ -27230,6 +29429,7 @@
       "BT24-017",
       "EX10-068",
       "EX11-012",
+      "EX12-047",
       "EX5-015",
       "LM-027",
       "P-220"
@@ -27289,6 +29489,11 @@
       "EX11-014",
       "EX11-027",
       "EX11-071",
+      "EX12-007",
+      "EX12-009",
+      "EX12-022",
+      "EX12-073",
+      "EX12-075",
       "EX4-038",
       "EX4-039",
       "EX5-015",
@@ -27389,6 +29594,7 @@
       "BT25-042",
       "BT25-059",
       "BT25-072",
+      "EX12-047",
       "EX4-051",
       "EX5-015",
       "EX8-067",
@@ -27405,6 +29611,7 @@
       "AD1-012",
       "BT20-016",
       "BT24-035",
+      "EX12-017",
       "EX9-013"
     ],
     "select_effect_choice": [
@@ -27448,6 +29655,10 @@
       "EX11-027",
       "EX11-060",
       "EX11-065",
+      "EX12-018",
+      "EX12-034",
+      "EX12-066",
+      "EX12-077",
       "EX3-008",
       "EX4-051",
       "EX4-061",
@@ -27619,6 +29830,29 @@
       "EX11-065",
       "EX11-069",
       "EX11-071",
+      "EX12-002",
+      "EX12-005",
+      "EX12-006",
+      "EX12-012",
+      "EX12-013",
+      "EX12-017",
+      "EX12-021",
+      "EX12-024",
+      "EX12-031",
+      "EX12-034",
+      "EX12-036",
+      "EX12-043",
+      "EX12-044",
+      "EX12-045",
+      "EX12-046",
+      "EX12-047",
+      "EX12-061",
+      "EX12-062",
+      "EX12-066",
+      "EX12-069",
+      "EX12-070",
+      "EX12-071",
+      "EX12-074",
       "EX3-008",
       "EX3-063",
       "EX4-051",
@@ -27693,6 +29927,16 @@
       "BT25-025",
       "BT25-038",
       "BT25-053",
+      "EX12-014",
+      "EX12-016",
+      "EX12-017",
+      "EX12-031",
+      "EX12-032",
+      "EX12-034",
+      "EX12-035",
+      "EX12-036",
+      "EX12-044",
+      "EX12-048",
       "EX4-060",
       "EX9-021",
       "P-213",
@@ -27885,6 +30129,33 @@
       "EX11-044",
       "EX11-046",
       "EX11-074",
+      "EX12-011",
+      "EX12-015",
+      "EX12-016",
+      "EX12-017",
+      "EX12-018",
+      "EX12-024",
+      "EX12-025",
+      "EX12-026",
+      "EX12-029",
+      "EX12-031",
+      "EX12-032",
+      "EX12-034",
+      "EX12-035",
+      "EX12-036",
+      "EX12-037",
+      "EX12-044",
+      "EX12-045",
+      "EX12-046",
+      "EX12-047",
+      "EX12-048",
+      "EX12-056",
+      "EX12-057",
+      "EX12-062",
+      "EX12-063",
+      "EX12-065",
+      "EX12-076",
+      "EX12-077",
       "EX3-014",
       "EX3-057",
       "EX3-063",
@@ -27972,6 +30243,7 @@
       "EX11-016",
       "EX11-017",
       "EX11-057",
+      "EX12-035",
       "EX7-021",
       "EX7-023",
       "EX8-023",
@@ -28101,6 +30373,16 @@
       "EX11-053",
       "EX11-054",
       "EX11-065",
+      "EX12-014",
+      "EX12-015",
+      "EX12-017",
+      "EX12-018",
+      "EX12-029",
+      "EX12-036",
+      "EX12-056",
+      "EX12-062",
+      "EX12-071",
+      "EX12-077",
       "EX3-008",
       "EX3-057",
       "EX4-051",
@@ -28177,6 +30459,7 @@
       "EX10-036",
       "EX10-056",
       "EX11-044",
+      "EX12-077",
       "EX4-073",
       "EX7-073",
       "EX8-055",
@@ -28196,6 +30479,7 @@
       "BT25-098",
       "EX1-066",
       "EX11-027",
+      "EX12-073",
       "EX7-074",
       "EX9-058",
       "EX9-067",
@@ -28261,6 +30545,9 @@
       "BT3-093",
       "EX11-014",
       "EX11-071",
+      "EX12-007",
+      "EX12-009",
+      "EX12-022",
       "EX4-038",
       "EX4-039",
       "EX5-015",
@@ -28345,6 +30632,11 @@
       "EX11-044",
       "EX11-065",
       "EX11-069",
+      "EX12-010",
+      "EX12-032",
+      "EX12-047",
+      "EX12-063",
+      "EX12-065",
       "EX3-008",
       "EX4-061",
       "EX5-060",
@@ -28421,6 +30713,10 @@
       "EX11-046",
       "EX11-053",
       "EX11-065",
+      "EX12-014",
+      "EX12-018",
+      "EX12-074",
+      "EX12-077",
       "EX7-074",
       "P-189",
       "P-193",
@@ -28450,6 +30746,7 @@
       "BT8-090",
       "EX11-054",
       "EX11-060",
+      "EX12-066",
       "EX8-067",
       "P-241",
       "ST16-14",
@@ -28523,6 +30820,7 @@
       "EX10-063",
       "EX11-060",
       "EX11-065",
+      "EX12-063",
       "EX4-061",
       "EX8-045",
       "EX8-067",
@@ -28581,6 +30879,8 @@
     ],
     "trash_bottom_sources": [
       "BT25-026",
+      "EX12-026",
+      "EX12-029",
       "EX7-020",
       "EX8-022",
       "ST2-03",
@@ -28623,6 +30923,15 @@
       "BT7-069",
       "EX11-055",
       "EX11-069",
+      "EX12-005",
+      "EX12-006",
+      "EX12-012",
+      "EX12-021",
+      "EX12-024",
+      "EX12-061",
+      "EX12-062",
+      "EX12-070",
+      "EX12-071",
       "EX5-015",
       "EX8-046",
       "EX9-024",
@@ -28680,6 +30989,7 @@
       "EX11-017",
       "EX11-044",
       "EX11-057",
+      "EX12-035",
       "EX4-073",
       "EX7-021",
       "EX7-023",
@@ -28729,6 +31039,8 @@
       "BT4-104",
       "EX10-036",
       "EX10-056",
+      "EX12-037",
+      "EX12-076",
       "EX4-051",
       "EX4-065",
       "EX4-073",
@@ -28801,6 +31113,8 @@
       "BT25-060",
       "BT5-106",
       "EX10-036",
+      "EX12-019",
+      "EX12-036",
       "EX7-021",
       "EX8-028",
       "EX8-055",

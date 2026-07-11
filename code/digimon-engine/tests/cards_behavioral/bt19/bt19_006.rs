@@ -111,9 +111,13 @@ fn push_to_trash(runner: &mut DebugRunner, player: u8, card_id: &str) {
         .position(|card| card.card_id == card_id)
         .unwrap_or_else(|| panic!("unknown card id {card_id}"));
     let instance_id = runner.game.next_card_index();
-    runner.game.players[player as usize].trash.push(
-        digimon_engine::card_source::CardSource::new(data_index, player, instance_id),
-    );
+    runner.game.players[player as usize]
+        .trash
+        .push(digimon_engine::card_source::CardSource::new(
+            data_index,
+            player,
+            instance_id,
+        ));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -244,7 +248,11 @@ fn bt19_006_does_not_fire_when_trash_has_no_matching_card() {
         runner.pending_selection().is_none(),
         "with no level-3 purple Digimon in trash the mandatory trigger must not fire at all"
     );
-    assert_eq!(runner.hand_size(0), 0, "no card returned when no match exists");
+    assert_eq!(
+        runner.hand_size(0),
+        0,
+        "no card returned when no match exists"
+    );
 }
 
 #[test]
@@ -343,7 +351,9 @@ fn bt19_006_selected_card_moves_from_trash_to_hand() {
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("choose the level-3 purple Digimon");
-    runner.auto_resolve().expect("finish the return-to-hand flow");
+    runner
+        .auto_resolve()
+        .expect("finish the return-to-hand flow");
 
     assert_eq!(
         runner.hand_size(0),
@@ -365,9 +375,7 @@ fn bt19_006_selected_card_moves_from_trash_to_hand() {
         "PURP3-A must be the card that landed in hand"
     );
     assert!(
-        runner
-            .game
-            .players[0]
+        runner.game.players[0]
             .trash
             .iter()
             .all(|c| c.card_id(&runner.game.card_data) != "PURP3-A"),
@@ -398,7 +406,9 @@ fn bt19_006_choosing_among_two_matches_returns_only_the_chosen_one() {
     runner
         .execute_action(0, view.valid_action_ids[0])
         .expect("choose one of the two matches");
-    runner.auto_resolve().expect("finish the return-to-hand flow");
+    runner
+        .auto_resolve()
+        .expect("finish the return-to-hand flow");
 
     assert_eq!(runner.hand_size(0), 1, "exactly one card returned to hand");
     let remaining_in_trash: Vec<&str> = runner.game.players[0]

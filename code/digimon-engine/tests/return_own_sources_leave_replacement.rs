@@ -96,7 +96,10 @@ fn returning_two_vemmon_sources_to_deck_bottom_prevents_leave() {
         .pending_selection_view()
         .expect("source-return cost selection installs");
     assert!(
-        matches!(cost_view.kind, SelectionKind::SourceMulti { min: 2, max: 2, .. }),
+        matches!(
+            cost_view.kind,
+            SelectionKind::SourceMulti { min: 2, max: 2, .. }
+        ),
         "the cost is an exact-2 digivolution-source pick, got {:?}",
         cost_view.kind
     );
@@ -110,7 +113,9 @@ fn returning_two_vemmon_sources_to_deck_bottom_prevents_leave() {
     runner
         .execute_action(0, cost_view.valid_action_ids[0])
         .expect("return the first Vemmon source");
-    runner.auto_resolve().expect("finish the second pick + return");
+    runner
+        .auto_resolve()
+        .expect("finish the second pick + return");
 
     assert!(
         permanent_exists(&runner, 0, "DX-LEAVE-RETURN"),
@@ -237,7 +242,12 @@ effects:
     // Stack: observer (bottom) / VEMMON-A / VEMMON-B / DX-LEAVE-RETURN (top).
     let host = runner.place_stack(
         0,
-        &["DX-UNDER-OBSERVER", "VEMMON-A", "VEMMON-B", "DX-LEAVE-RETURN"],
+        &[
+            "DX-UNDER-OBSERVER",
+            "VEMMON-A",
+            "VEMMON-B",
+            "DX-LEAVE-RETURN",
+        ],
     );
     runner.place_on_field(1, "OPP-DIGI", None);
 

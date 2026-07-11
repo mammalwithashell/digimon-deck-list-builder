@@ -186,10 +186,9 @@ fn bt19_101_compiles_from_dsl_pack() {
 #[test]
 fn bt19_101_has_standard_and_named_alt_digivolve_paths() {
     let card = compiled(CARD_ID);
-    let standard = card
-        .alt_paths
-        .iter()
-        .find(|p| p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(6)));
+    let standard = card.alt_paths.iter().find(|p| {
+        p.kind == CompiledAltPathKind::Digivolve && p.cost == Some(CompiledCost::Literal(6))
+    });
     assert!(
         standard.is_some(),
         "standard Lv.6/cost 6 digivolve box must compile"
@@ -236,7 +235,10 @@ fn bt19_101_grants_overclock_keyword_declaratively() {
                 if keyword == "Overclock"
         )
     });
-    assert!(has_overclock_grant, "Overclock must be a face-up keyword grant");
+    assert!(
+        has_overclock_grant,
+        "Overclock must be a face-up keyword grant"
+    );
 }
 
 // ════════════════════════════════════════════════════════════════════════════
@@ -366,7 +368,10 @@ fn bt19_101_on_play_returns_trash_to_top_then_bottom_decks_opp_digimon() {
     assert_eq!(r.game.players[1].trash.len(), opp_trash_before - 1);
     assert_eq!(r.game.players[1].deck.len(), opp_deck_before + 1);
     assert_eq!(
-        r.game.players[1].deck.last().map(|cs| cs.card_id(&r.game.card_data)),
+        r.game.players[1]
+            .deck
+            .last()
+            .map(|cs| cs.card_id(&r.game.card_data)),
         Some("OPP-A"),
         "the returned card must sit on TOP of the opponent's deck"
     );
@@ -379,7 +384,11 @@ fn bt19_101_on_play_returns_trash_to_top_then_bottom_decks_opp_digimon() {
         .expect("select the opponent Digimon to bottom-deck");
     let _ = r.auto_resolve();
 
-    assert_eq!(r.battle_area_size(1), 0, "the opponent Digimon left the field");
+    assert_eq!(
+        r.battle_area_size(1),
+        0,
+        "the opponent Digimon left the field"
+    );
     assert_eq!(
         r.game.players[1]
             .deck

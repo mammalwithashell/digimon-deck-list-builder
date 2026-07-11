@@ -1,0 +1,130 @@
+card: EX12-031
+name: MarineBullmon
+kind: digimon
+level: 5
+color: [blue, yellow]
+cost: 7
+dp: 7000
+traits: [Mollusk, Shambala, TB]
+attribute: Data
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 4, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from:
+      all_of:
+        - level_eq: 4
+        - any_of:
+            - trait_has: Aquatic
+            - trait_has: Shambala
+    cost: 3
+  - kind: assembly
+    materials:
+      - filter:
+          all_of:
+            - kind: digimon
+            - level_lte: 4
+            - any_of:
+                - trait_has: Aquatic
+                - trait_has: TB
+        zones: [trash]
+        stack_under: true
+    cost: 2
+
+effects:
+  - when: [on_play, when_digivolving]
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          kind: digimon
+          level_lte: 6
+          any_of:
+            - trait_contains: Aqua
+            - trait_contains: "Sea Animal"
+            - trait_has: TB
+        n: 1
+    summary: "[On Play][When Digivolving] By placing 1 level 6 or lower Aqua/Sea Animal/TB card from hand as bottom source, return 1 opponent Digimon with 1 or fewer sources to hand"
+    process:
+      - select_hand:
+          of: you
+          bind_as: placed_source
+          optional: true
+          cost: true
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 6
+              - any_of:
+                  - trait_contains: Aqua
+                  - trait_contains: "Sea Animal"
+                  - trait_has: TB
+          prompt: "Place 1 level 6 or lower [Aqua]/[Sea Animal]/[TB] card from hand as this Digimon's bottom source"
+      - place_as_bottom_source:
+          source: placed_source
+          target: source
+      - select_opponent_permanent:
+          bind_as: bounce_target
+          filter:
+            all_of:
+              - kind: digimon
+              - materials_count_lte: 1
+          prompt: "Return 1 opponent Digimon with 1 or fewer digivolution cards to hand"
+      - return_to_hand: { target: bounce_target }
+
+  - kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "<Decode (Lv.4 or lower Aqua/Sea Animal/TB)> play 1 matching source when this would leave outside battle"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_contains: Aqua
+                  - trait_contains: "Sea Animal"
+                  - trait_has: TB
+          prompt: "Choose a level 4 or lower [Aqua]/[Sea Animal]/[TB] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source
+          cost_delta: free
+
+  - scope: inherited
+    kind: replacement
+    trigger: when_would_leave_battle_area
+    optional: true
+    active_when:
+      none_of:
+        - replacement_cause: battle
+    summary: "[Inherited] <Decode (Lv.4 or lower Aqua/Sea Animal/TB)> play 1 matching source when this would leave outside battle"
+    process:
+      - select_material:
+          of_permanent: replacement_subject
+          bind_as: decode_source_inh
+          filter:
+            all_of:
+              - kind: digimon
+              - level_lte: 4
+              - any_of:
+                  - trait_contains: Aqua
+                  - trait_contains: "Sea Animal"
+                  - trait_has: TB
+          prompt: "Choose a level 4 or lower [Aqua]/[Sea Animal]/[TB] source to play"
+      - play_from_materials:
+          target: replacement_subject
+          source_index: decode_source_inh
+          cost_delta: free

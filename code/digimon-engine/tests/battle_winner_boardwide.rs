@@ -249,7 +249,12 @@ fn opt_body_fires_at_most_once_per_turn_across_two_wins() {
         .deck(1, &["F"; 10])
         .memory(10)
         .start();
-    r.register_effect("OBS", Arc::new(AllyWonBattleObserverOpt { fired: count.clone() }));
+    r.register_effect(
+        "OBS",
+        Arc::new(AllyWonBattleObserverOpt {
+            fired: count.clone(),
+        }),
+    );
     r.game.turn_count = 1;
     r.game.turn_player_idx = 0;
 

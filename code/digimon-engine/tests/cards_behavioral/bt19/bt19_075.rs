@@ -275,7 +275,8 @@ fn bt19_075_trash_four_deletes_two_tamers() {
     fill_opp_hand(
         &mut runner,
         &[
-            "HAND-A", "HAND-B", "HAND-C", "HAND-D", "HAND-E", "HAND-F", "HAND-G", "HAND-H", "HAND-I",
+            "HAND-A", "HAND-B", "HAND-C", "HAND-D", "HAND-E", "HAND-F", "HAND-G", "HAND-H",
+            "HAND-I",
         ],
     );
     assert_eq!(runner.game.players[1].hand.len(), 9);
@@ -287,7 +288,9 @@ fn bt19_075_trash_four_deletes_two_tamers() {
     runner.game.drain_effect_queue();
 
     // First: the opponent trashes 4 hand cards (mandatory count-capped).
-    runner.auto_resolve().expect("resolve trash + Tamer deletion");
+    runner
+        .auto_resolve()
+        .expect("resolve trash + Tamer deletion");
 
     assert_eq!(
         runner.game.players[1].hand.len(),
@@ -367,7 +370,8 @@ fn bt19_075_tamer_deletion_clamps_to_available() {
     fill_opp_hand(
         &mut runner,
         &[
-            "HAND-A", "HAND-B", "HAND-C", "HAND-D", "HAND-E", "HAND-F", "HAND-G", "HAND-H", "HAND-I",
+            "HAND-A", "HAND-B", "HAND-C", "HAND-D", "HAND-E", "HAND-F", "HAND-G", "HAND-H",
+            "HAND-I",
         ],
     );
 
@@ -395,7 +399,8 @@ fn bt19_075_only_deletes_tamers_not_digimon() {
     fill_opp_hand(
         &mut runner,
         &[
-            "HAND-A", "HAND-B", "HAND-C", "HAND-D", "HAND-E", "HAND-F", "HAND-G", "HAND-H", "HAND-I",
+            "HAND-A", "HAND-B", "HAND-C", "HAND-D", "HAND-E", "HAND-F", "HAND-G", "HAND-H",
+            "HAND-I",
         ],
     );
 
@@ -485,7 +490,11 @@ fn bt19_075_composite_cost_prevents_leaving_battle_area() {
         .pending_selection_view()
         .expect("Composite cost prompt");
     assert_eq!(cost.kind, SelectionKind::OwnField);
-    assert_eq!(cost.valid_action_ids.len(), 1, "only 1 Composite Digimon owned");
+    assert_eq!(
+        cost.valid_action_ids.len(),
+        1,
+        "only 1 Composite Digimon owned"
+    );
     runner
         .execute_action(0, cost.valid_action_ids[0])
         .expect("delete own Composite Digimon");
@@ -984,7 +993,11 @@ fn bt19_075_zero_opp_security_clean_noop() {
     let _ = runner.auto_resolve();
 
     assert!(!permanent_exists(&runner, 1, "HAND-A"));
-    assert_eq!(runner.security_count(1), 0, "nothing to trash — clean no-op");
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "nothing to trash — clean no-op"
+    );
     assert!(
         runner.pending_selection().is_none(),
         "no lingering selection after the 0-security no-op"

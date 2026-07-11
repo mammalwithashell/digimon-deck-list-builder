@@ -1,0 +1,33 @@
+card: EX12-001
+name: Nyaromon
+kind: digi_egg
+level: 2
+color: [yellow]
+traits: [Lesser, VB]
+
+effects:
+  - when: end_of_your_turn
+    scope: inherited
+    optional: true
+    active_when: { source_permanent_trait_has: VB }
+    summary: "[Inherited][EOT] This [VB] Digimon and another Digimon may DNA digivolve into a [VB] Digimon in hand; then that Digimon may attack"
+    process:
+      - may_dna_digivolve_now:
+          partner_filter:
+            all_of:
+              - of: you
+              - kind: digimon
+          target_filter:
+            all_of:
+              - of: you
+              - kind: digimon
+              - trait_has: VB
+          cost: 0
+          ignore_requirements: false
+          optional: true
+          prompt: "DNA digivolve this [VB] Digimon and another Digimon into a [VB] Digimon in hand"
+      - may_attack_now:
+          attacker: source
+          targets: any
+          optional: true
+          prompt: "That DNA-digivolved Digimon may attack"

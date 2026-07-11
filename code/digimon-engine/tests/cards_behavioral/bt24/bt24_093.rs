@@ -277,7 +277,9 @@ fn bt24_093_has_main_clause_that_adds_top_security_recovers_and_places_self() {
         "[Main] must add top security card to hand"
     );
     assert!(
-        main.process.iter().any(|s| matches!(s, CompiledStep::Recover { .. })),
+        main.process
+            .iter()
+            .any(|s| matches!(s, CompiledStep::Recover { .. })),
         "[Main] must <Recovery +1>"
     );
     assert!(
@@ -300,7 +302,9 @@ fn bt24_093_has_inherited_security_clause_with_union_zone_free_play() {
             CompiledClause::Triggered(t) => Some(t),
             _ => None,
         })
-        .find(|t| t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnSecurity))
+        .find(|t| {
+            t.scope == CompiledScope::Inherited && t.when.contains(&CompiledTiming::OnSecurity)
+        })
         .expect("inherited [Security] clause present");
 
     assert!(
@@ -346,7 +350,9 @@ fn bt24_093_main_adds_top_security_card_to_hand_when_security_nonempty() {
     // dedicated placement assertion).
     let result = runner.game.play_option_from_hand(0, 0);
     if matches!(result, OptionPlayResult::Pending) {
-        runner.auto_resolve().expect("Main body has no real player choices");
+        runner
+            .auto_resolve()
+            .expect("Main body has no real player choices");
     }
 
     assert_eq!(
@@ -374,11 +380,13 @@ fn bt24_093_main_adds_top_security_card_to_hand_when_security_nonempty() {
 fn bt24_093_main_recovers_even_when_security_is_empty() {
     // DCGO gates the add-to-hand step on `SecurityCards.Count > 0` but runs
     // <Recovery +1> unconditionally afterward (outside that `if`).
-    let mut runner = base().hand(0, &[CARD_ID]).security(0, &[]).memory(10).start();
+    let mut runner = base()
+        .hand(0, &[CARD_ID])
+        .security(0, &[])
+        .memory(10)
+        .start();
     runner.place_on_field(0, "YELLOW-BOARD", Some(0));
-    let deck_top_before = runner
-        .game
-        .players[0]
+    let deck_top_before = runner.game.players[0]
         .deck
         .last()
         .expect("deck has a top card")
@@ -408,12 +416,18 @@ fn bt24_093_main_recovers_even_when_security_is_empty() {
 
 #[test]
 fn bt24_093_main_places_self_in_battle_area_as_delay_option() {
-    let mut runner = base().hand(0, &[CARD_ID]).security(0, &["FILL"]).memory(10).start();
+    let mut runner = base()
+        .hand(0, &[CARD_ID])
+        .security(0, &["FILL"])
+        .memory(10)
+        .start();
     runner.place_on_field(0, "YELLOW-BOARD", Some(0));
 
     let result = runner.game.play_option_from_hand(0, 0);
     if matches!(result, OptionPlayResult::Pending) {
-        runner.auto_resolve().expect("Main body has no real player choices");
+        runner
+            .auto_resolve()
+            .expect("Main body has no real player choices");
     }
 
     let placed = runner
@@ -526,7 +540,11 @@ fn bt24_093_security_effect_declining_leaves_hand_and_trash_untouched() {
         .expect("decline the free play");
     runner.auto_resolve().ok();
 
-    assert_eq!(runner.hand_size(0), hand_before, "declining leaves hand untouched");
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before,
+        "declining leaves hand untouched"
+    );
     assert_eq!(
         runner.battle_area_size(0),
         field_before,
@@ -595,7 +613,9 @@ fn bt24_093_security_effect_picking_trash_plays_elecmon_free() {
         .first()
         .copied()
         .expect("at least one legal pick exists");
-    runner.execute_action(0, action).expect("pick the trash card");
+    runner
+        .execute_action(0, action)
+        .expect("pick the trash card");
     runner.auto_resolve().expect("finish the free play");
 
     assert!(

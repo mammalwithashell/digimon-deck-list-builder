@@ -393,7 +393,12 @@ fn lm_049_main_no_eligible_digimon_among_reveal_adds_nothing() {
         .deck(
             0,
             &[
-                "FILL", "FILL", "FILL", "BLACK-OPT", "RED-DIGI-2", "RED-DIGI-1",
+                "FILL",
+                "FILL",
+                "FILL",
+                "BLACK-OPT",
+                "RED-DIGI-2",
+                "RED-DIGI-1",
             ],
         )
         .deck(1, &["FILL"])

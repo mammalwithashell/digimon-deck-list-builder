@@ -1,0 +1,56 @@
+card: EX12-005
+name: Agumon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+traits: [Reptile, VB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  - kind: digivolve
+    from: { name_is: Koromon }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: VB }
+    cost: 0
+
+effects:
+  - when: on_play
+    condition:
+      count_gte:
+        filter:
+          of: you
+          zone: [hand]
+          any_of:
+            - name_contains: Greymon
+            - trait_has: VB
+        n: 1
+    summary: "[On Play] By trashing 1 [Greymon] or [VB] card from hand, draw 2"
+    process:
+      - select_hand:
+          of: you
+          bind_as: discard
+          optional: true
+          cost: true
+          filter:
+            any_of:
+              - name_contains: Greymon
+              - trait_has: VB
+          prompt: "Trash 1 card with [Greymon] in its name or the [VB] trait from your hand to draw 2"
+      - if:
+          condition: { binding_present: discard }
+          then:
+            - trash_from_hand_by_index: { of: you, hand_index: discard }
+            - draw: { of: you, count: 2 }
+
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"

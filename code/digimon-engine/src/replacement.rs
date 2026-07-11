@@ -158,11 +158,10 @@ pub struct ParkedReplacement {
 
 #[derive(Debug, Clone)]
 pub struct OptionalReplacementState {
-    pub(crate) card_id: String,
+    pub(crate) candidate_kind: CandidateKind,
     pub(crate) source_card: CardHandle,
     pub(crate) source_permanent: Option<PermanentHandle>,
     pub(crate) controller: PlayerId,
-    pub(crate) effect_slot: u8,
     pub(crate) subject: ReplacementSubject,
     pub(crate) cause: ReplacementCause,
     pub(crate) event_cause_override: Option<crate::trigger_context::EventCause>,
@@ -185,12 +184,22 @@ pub(crate) fn subject_controller_id(
 /// - `EffectClosure { card_id, effect_slot }` — a card effect with a
 ///   `replacement_process` closure. The dispatcher re-looks-up the effect
 ///   by `(card_id, effect_slot)` and runs its process closure.
+/// - `GrantedKeywordEffect { keyword, effect_slot }` — a replacement
+///   auto-effect synthesized from an active modifier/declarative keyword grant
+///   on a permanent. Used for aura-granted replacement keywords like Guard.
 /// - `PassiveCancel` — a passive restriction modifier (e.g.
 ///   `CannotBeReturnedToDeck`). Passives always cancel mandatorily; the
 ///   dispatcher synthesizes a `rctx.cancel()` directly.
 #[derive(Debug, Clone)]
-enum CandidateKind {
-    EffectClosure { card_id: String, effect_slot: u8 },
+pub(crate) enum CandidateKind {
+    EffectClosure {
+        card_id: String,
+        effect_slot: u8,
+    },
+    GrantedKeywordEffect {
+        keyword: crate::enums::Keyword,
+        effect_slot: u8,
+    },
     PassiveCancel,
 }
 
@@ -461,6 +470,55 @@ fn collect_candidates(
                 });
             }
         }
+
+        if let Some(top) = perm.card_sources.last() {
+            let source_card = top.handle();
+            for keyword in game.modifiers.granted_keywords(h) {
+                let effects =
+                    crate::cards::keyword_effects::keyword_to_auto_effect(keyword, source_card);
+                for (slot, effect) in effects.iter().enumerate() {
+                    if effect.timing != timing {
+                        continue;
+                    }
+                    if effect.replacement_process.is_none() {
+                        continue;
+                    }
+                    if let Some(cond) = &effect.condition {
+                        let ctx = EffectReadContext::new(game, source_card, Some(h), h.player)
+                            .with_replacement_context(
+                                cause,
+                                replacement_source_controller,
+                                replacement_subject_controller,
+                            );
+                        if !cond(&ctx) {
+                            continue;
+                        }
+                    }
+                    if let Some(rcond) = &effect.replacement_condition {
+                        let ctx = EffectReadContext::new(game, source_card, Some(h), h.player)
+                            .with_replacement_context(
+                                cause,
+                                replacement_source_controller,
+                                replacement_subject_controller,
+                            );
+                        if !rcond(&ctx, &subject) {
+                            continue;
+                        }
+                    }
+                    out.push(Candidate {
+                        source_card,
+                        source_permanent: Some(h),
+                        source_controller: h.player,
+                        is_mandatory: !effect.optional,
+                        effect_name: effect.name.clone(),
+                        kind: CandidateKind::GrantedKeywordEffect {
+                            keyword,
+                            effect_slot: slot as u8,
+                        },
+                    });
+                }
+            }
+        }
     };
 
     // Collect from a permanent's LINK cards: a `.linked()` replacement effect
@@ -727,26 +785,74 @@ fn run_mandatory_candidate(
     original_destination: Option<Zone>,
 ) -> ReplacementOutcome {
     match &cand.kind {
-        CandidateKind::EffectClosure {
-            card_id,
-            effect_slot,
-        } => run_candidate_inner(
-            game,
-            card_id,
-            cand.source_card,
-            cand.source_permanent,
-            cand.source_controller,
-            *effect_slot,
-            subject,
-            cause,
-            original_destination,
-        ),
+        CandidateKind::EffectClosure { .. } | CandidateKind::GrantedKeywordEffect { .. } => {
+            run_candidate_kind_inner(
+                game,
+                &cand.kind,
+                cand.source_card,
+                cand.source_permanent,
+                cand.source_controller,
+                subject,
+                cause,
+                original_destination,
+            )
+        }
         CandidateKind::PassiveCancel => {
             // Passive restriction modifiers always cancel. No effect closure
             // to run; just return Cancelled.
             let _ = (game, subject, cause, original_destination);
             ReplacementOutcome::Cancelled
         }
+    }
+}
+
+fn run_candidate_kind_inner(
+    game: &mut crate::game::Game,
+    candidate_kind: &CandidateKind,
+    source_card: CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    controller: PlayerId,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+    original_destination: Option<Zone>,
+) -> ReplacementOutcome {
+    match candidate_kind {
+        CandidateKind::EffectClosure {
+            card_id,
+            effect_slot,
+        } => run_candidate_inner(
+            game,
+            card_id,
+            source_card,
+            source_permanent,
+            controller,
+            *effect_slot,
+            subject,
+            cause,
+            original_destination,
+        ),
+        CandidateKind::GrantedKeywordEffect {
+            keyword,
+            effect_slot,
+        } => {
+            let effects =
+                crate::cards::keyword_effects::keyword_to_auto_effect(*keyword, source_card);
+            let Some(effect) = effects.get(*effect_slot as usize) else {
+                return ReplacementOutcome::None;
+            };
+            run_effect_inner(
+                game,
+                effect,
+                source_card,
+                source_permanent,
+                controller,
+                *effect_slot,
+                subject,
+                cause,
+                original_destination,
+            )
+        }
+        CandidateKind::PassiveCancel => ReplacementOutcome::Cancelled,
     }
 }
 
@@ -778,6 +884,30 @@ fn run_candidate_inner(
     let Some(effect) = effects.get(effect_slot as usize) else {
         return ReplacementOutcome::None;
     };
+    run_effect_inner(
+        game,
+        effect,
+        source_card,
+        source_permanent,
+        controller,
+        effect_slot,
+        subject,
+        cause,
+        original_destination,
+    )
+}
+
+fn run_effect_inner(
+    game: &mut crate::game::Game,
+    effect: &crate::effect::Effect,
+    source_card: CardHandle,
+    source_permanent: Option<PermanentHandle>,
+    controller: PlayerId,
+    effect_slot: u8,
+    subject: ReplacementSubject,
+    cause: ReplacementCause,
+    original_destination: Option<Zone>,
+) -> ReplacementOutcome {
     let Some(process) = effect.replacement_process.as_ref() else {
         return ReplacementOutcome::None;
     };
@@ -983,11 +1113,10 @@ fn install_optional_selection(
 
     // Passive modifiers are always mandatory — install_optional_selection
     // should never be reached for a PassiveCancel candidate.
-    let (card_id, effect_slot) = match &cand.kind {
-        CandidateKind::EffectClosure {
-            card_id,
-            effect_slot,
-        } => (card_id.clone(), *effect_slot),
+    let candidate_kind = match &cand.kind {
+        CandidateKind::EffectClosure { .. } | CandidateKind::GrantedKeywordEffect { .. } => {
+            cand.kind.clone()
+        }
         CandidateKind::PassiveCancel => {
             debug_assert!(
                 false,
@@ -1008,11 +1137,10 @@ fn install_optional_selection(
     let event_cause_override = game.current_deletion_event_cause_override;
 
     let callback = make_accept_callback(
-        card_id.clone(),
+        candidate_kind.clone(),
         source_card,
         source_permanent,
         controller,
-        effect_slot,
         subject,
         cause,
         event_cause_override,
@@ -1039,11 +1167,10 @@ fn install_optional_selection(
     game.pending_selection_resume = Some(crate::resume::ResumeStack {
         frames: vec![crate::resume::ResumeFrame::OptionalReplacement(
             OptionalReplacementState {
-                card_id,
+                candidate_kind,
                 source_card,
                 source_permanent,
                 controller,
-                effect_slot,
                 subject,
                 cause,
                 event_cause_override,
@@ -1133,24 +1260,22 @@ pub(crate) fn try_drain_parked_replacement_with_guard(game: &mut crate::game::Ga
 /// printed optional keywords (Barrier/Evade/Fragment/Decode) behave
 /// end-to-end without additional fire-site plumbing.
 fn make_accept_callback(
-    card_id: String,
+    candidate_kind: CandidateKind,
     source_card: CardHandle,
     source_permanent: Option<PermanentHandle>,
     controller: PlayerId,
-    effect_slot: u8,
     subject: ReplacementSubject,
     cause: ReplacementCause,
     event_cause_override: Option<crate::trigger_context::EventCause>,
     original_destination: Option<Zone>,
 ) -> crate::selection::SelectionCallback {
     Box::new(move |game: &mut crate::game::Game, _action_id: u16| {
-        let outcome = run_candidate_inner(
+        let outcome = run_candidate_kind_inner(
             game,
-            &card_id,
+            &candidate_kind,
             source_card,
             source_permanent,
             controller,
-            effect_slot,
             subject,
             cause,
             original_destination,
@@ -1249,13 +1374,12 @@ pub(crate) fn run_optional_replacement_step(
         return;
     }
 
-    let outcome = run_candidate_inner(
+    let outcome = run_candidate_kind_inner(
         game,
-        &state.card_id,
+        &state.candidate_kind,
         state.source_card,
         state.source_permanent,
         state.controller,
-        state.effect_slot,
         state.subject,
         state.cause,
         state.original_destination,

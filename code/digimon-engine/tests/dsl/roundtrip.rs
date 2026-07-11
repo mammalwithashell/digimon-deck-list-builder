@@ -26,6 +26,32 @@ fn registry_for_examples() -> StubRegistry {
 
 #[test]
 fn every_example_parses() {
+    run_roundtrip_guard(check_every_example_parses);
+}
+
+#[test]
+fn every_example_validates() {
+    run_roundtrip_guard(check_every_example_validates);
+}
+
+#[test]
+fn every_example_round_trips() {
+    run_roundtrip_guard(check_every_example_round_trips);
+}
+
+fn run_roundtrip_guard(f: fn()) {
+    // Example-pack parse / validate / pretty round-trip sweeps are stack-heavy
+    // on the default Windows libtest thread. Keep the mitigation local to
+    // these guards instead of requiring a process-wide RUST_MIN_STACK override.
+    std::thread::Builder::new()
+        .stack_size(64 * 1024 * 1024)
+        .spawn(f)
+        .expect("spawn large-stack thread")
+        .join()
+        .expect("roundtrip guard thread panicked");
+}
+
+fn check_every_example_parses() {
     let (loaded, errors) = loader::load_dir_ok(&examples_dir());
     assert!(errors.is_empty(), "parse errors: {:#?}", errors);
     assert!(
@@ -35,8 +61,7 @@ fn every_example_parses() {
     );
 }
 
-#[test]
-fn every_example_validates() {
+fn check_every_example_validates() {
     let (specs, _) = loader::load_dir_ok(&examples_dir());
     let reg = registry_for_examples();
     let ctx = ValidationContext { raw_rust: &reg };
@@ -55,8 +80,7 @@ fn every_example_validates() {
     );
 }
 
-#[test]
-fn every_example_round_trips() {
+fn check_every_example_round_trips() {
     let (specs, _) = loader::load_dir_ok(&examples_dir());
     for spec in specs {
         let formatted = format_spec(&spec);

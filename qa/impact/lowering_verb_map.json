@@ -47,7 +47,8 @@
     ],
     "code/digimon-engine/src/dsl_cards/step/iteration.rs": [
       "for_each",
-      "per_selected"
+      "per_selected",
+      "repeat_effect_choice"
     ],
     "code/digimon-engine/src/dsl_cards/step/link_cards.rs": [
       "link_cards",
@@ -105,6 +106,7 @@
       "play_from_trash",
       "play_from_trash_free",
       "play_or_use_from_hand",
+      "play_or_use_from_sources",
       "play_security_card",
       "play_token",
       "play_under_tamer_source",

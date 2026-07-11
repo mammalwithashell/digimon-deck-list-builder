@@ -207,7 +207,10 @@ fn bt24_084_is_tamer_cost_3_yellow_ts() {
         .compiled_card("BT24-084")
         .expect("BT24-084 compiled card present");
 
-    assert_eq!(compiled.kind, digimon_dsl::compiled::CompiledCardKind::Tamer);
+    assert_eq!(
+        compiled.kind,
+        digimon_dsl::compiled::CompiledCardKind::Tamer
+    );
     assert_eq!(compiled.cost, Some(3));
 }
 
@@ -482,7 +485,10 @@ fn bt24_084_start_of_main_gains_memory_at_4_or_less() {
 
     runner.game.enqueue_triggered(
         EffectTiming::StartOfYourMainPhase,
-        TriggerSource::Permanent(PermanentHandle { player: 0, index: 0 }),
+        TriggerSource::Permanent(PermanentHandle {
+            player: 0,
+            index: 0,
+        }),
     );
     runner.game.drain_effect_queue();
     runner.auto_resolve().expect("clause resolves");
@@ -508,7 +514,10 @@ fn bt24_084_start_of_main_no_gain_above_4() {
 
     runner.game.enqueue_triggered(
         EffectTiming::StartOfYourMainPhase,
-        TriggerSource::Permanent(PermanentHandle { player: 0, index: 0 }),
+        TriggerSource::Permanent(PermanentHandle {
+            player: 0,
+            index: 0,
+        }),
     );
     runner.game.drain_effect_queue();
     runner.auto_resolve().expect("clause resolves (no-op)");
@@ -592,8 +601,7 @@ fn bt24_084_security_removed_offers_aegiomon_selection() {
     assert_eq!(view.kind, SelectionKind::OwnField);
     assert!(view.is_optional, "'may digivolve' must be declinable");
 
-    let want_aegiomon =
-        digimon_engine::action::space::encode_attack(0, aegiomon.index as u16);
+    let want_aegiomon = digimon_engine::action::space::encode_attack(0, aegiomon.index as u16);
     let want_non_aegiomon =
         digimon_engine::action::space::encode_attack(0, non_aegiomon.index as u16);
     assert!(
@@ -701,7 +709,9 @@ fn bt24_084_security_removed_outer_confirm_declinable() {
     runner
         .execute_action(view.selecting_player, PASS)
         .expect("decline the outer confirm");
-    runner.auto_resolve().expect("clause resolves after decline");
+    runner
+        .auto_resolve()
+        .expect("clause resolves after decline");
 
     assert!(
         hand_contains(&runner, 0, "EVO"),
@@ -746,7 +756,9 @@ fn bt24_084_security_removed_permanent_pick_declinable() {
     runner
         .execute_action(view.selecting_player, PASS)
         .expect("decline the permanent pick");
-    runner.auto_resolve().expect("clause resolves after decline");
+    runner
+        .auto_resolve()
+        .expect("clause resolves after decline");
 
     assert!(
         hand_contains(&runner, 0, "EVO"),

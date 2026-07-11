@@ -161,7 +161,10 @@ fn bt19_065_has_printed_metadata() {
     assert_eq!(card.level, Some(6));
     assert_eq!(card.cost, Some(11));
     assert_eq!(card.dp, Some(11000));
-    assert_eq!(card.color, vec![CompiledColor::Black, CompiledColor::Purple]);
+    assert_eq!(
+        card.color,
+        vec![CompiledColor::Black, CompiledColor::Purple]
+    );
     assert_eq!(card.attribute.as_deref(), Some("Virus"));
     for trait_name in ["Machine", "Composite"] {
         assert!(
@@ -220,12 +223,14 @@ fn bt19_065_declares_digixros_five_distinct_card_number_materials_each_minus_one
     );
 
     fn predicate_has_level_lte(predicate: &CompiledPredicate, level: u8) -> bool {
-        predicate.level_lte == Some(digimon_dsl::compiled::CompiledDpConstraint::Literal(
-            level as i32,
-        )) || predicate
-            .all_of
-            .iter()
-            .any(|p| predicate_has_level_lte(p, level))
+        predicate.level_lte
+            == Some(digimon_dsl::compiled::CompiledDpConstraint::Literal(
+                level as i32,
+            ))
+            || predicate
+                .all_of
+                .iter()
+                .any(|p| predicate_has_level_lte(p, level))
             || predicate
                 .any_of
                 .iter()
@@ -294,9 +299,7 @@ fn bt19_065_has_on_deletion_clause() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnDeletion) => {
-                Some(t)
-            }
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnDeletion) => Some(t),
             _ => None,
         })
         .expect("BT19-065 must have an OnDeletion clause");
@@ -323,9 +326,7 @@ fn bt19_065_has_inherited_redirect_attack_clause() {
         .effects
         .iter()
         .find_map(|c| match c {
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::OnOpponentAttack) =>
-            {
+            CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::OnOpponentAttack) => {
                 Some(t)
             }
             _ => None,
@@ -591,7 +592,12 @@ fn bt19_065_on_deletion_excludes_trash_card_without_matching_trait() {
 #[test]
 fn bt19_065_on_deletion_accepting_plays_the_selected_card_free() {
     let mut runner = base_builder()
-        .add_card(trash_digimon("COMPOSITE-L3", "CompositeThree", 3, "Composite"))
+        .add_card(trash_digimon(
+            "COMPOSITE-L3",
+            "CompositeThree",
+            3,
+            "Composite",
+        ))
         .memory(15)
         .start();
     let target = runner.place_on_field(0, CARD_ID, Some(0));
@@ -635,7 +641,12 @@ fn bt19_065_on_deletion_accepting_plays_the_selected_card_free() {
 #[test]
 fn bt19_065_on_deletion_declining_leaves_trash_untouched() {
     let mut runner = base_builder()
-        .add_card(trash_digimon("COMPOSITE-L3", "CompositeThree", 3, "Composite"))
+        .add_card(trash_digimon(
+            "COMPOSITE-L3",
+            "CompositeThree",
+            3,
+            "Composite",
+        ))
         .memory(15)
         .start();
     let target = runner.place_on_field(0, CARD_ID, Some(0));
@@ -767,7 +778,11 @@ fn bt19_065_digixros_rejects_duplicate_card_number() {
     // Both XR-DUP copies occupy field slots 0 and 1 at prompt-install time.
     let first_slot: u16 = 0;
     assert_eq!(
-        prompt.valid_action_ids.iter().filter(|&&a| a == 0 || a == 1).count(),
+        prompt
+            .valid_action_ids
+            .iter()
+            .filter(|&&a| a == 0 || a == 1)
+            .count(),
         2,
         "both same-card-number copies start out selectable"
     );
@@ -905,9 +920,9 @@ fn bt19_065_inherited_redirect_switches_attack_to_composite_digimon() {
         cost_upgrade: None,
     });
 
-    runner
-        .accept_optional_trigger()
-        .expect("accept the outer optional-trigger prompt (buried Machinedramon's inherited clause fires)");
+    runner.accept_optional_trigger().expect(
+        "accept the outer optional-trigger prompt (buried Machinedramon's inherited clause fires)",
+    );
 
     let pending = runner
         .game

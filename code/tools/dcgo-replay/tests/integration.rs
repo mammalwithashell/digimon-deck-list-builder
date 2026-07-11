@@ -197,7 +197,10 @@ fn integration_opaque_pvp_recording_passes() {
     match outcome {
         ReplayOutcome::Pass { winner, .. } => {
             // Player 0 conceded, so winner is player 1.
-            assert_eq!(winner, 1, "opaque replay: player 1 should win after p0 concedes");
+            assert_eq!(
+                winner, 1,
+                "opaque replay: player 1 should win after p0 concedes"
+            );
         }
         other => panic!("expected Pass for opaque replay, got {:?}", other),
     }
@@ -239,7 +242,8 @@ fn integration_opaque_pvp_kind_mismatch_surfaces_opaque_error() {
             // The engine's RevealQueue rejected the mismatch; the
             // construction wrapper surfaced it as OpaqueRevealError.
             assert!(
-                message.contains("security") || message.contains("draw")
+                message.contains("security")
+                    || message.contains("draw")
                     || message.contains("Game::new_with_opaque_opponent"),
                 "expected message to reference the kind mismatch, got: {}",
                 message

@@ -43,10 +43,20 @@ pub struct InvariantResult {
 
 impl InvariantResult {
     fn pass(name: &'static str, detail: impl Into<String>, data: Value) -> Self {
-        Self { name, passed: true, detail: detail.into(), data }
+        Self {
+            name,
+            passed: true,
+            detail: detail.into(),
+            data,
+        }
     }
     fn fail(name: &'static str, detail: impl Into<String>, data: Value) -> Self {
-        Self { name, passed: false, detail: detail.into(), data }
+        Self {
+            name,
+            passed: false,
+            detail: detail.into(),
+            data,
+        }
     }
 }
 
@@ -91,11 +101,13 @@ pub fn repo_root() -> Result<PathBuf, String> {
         return Ok(r);
     }
     let cwd = std::env::current_dir().map_err(|e| e.to_string())?;
-    find_repo_root(&cwd).ok_or_else(|| "could not locate repo root (no data/cards.json found)".into())
+    find_repo_root(&cwd)
+        .ok_or_else(|| "could not locate repo root (no data/cards.json found)".into())
 }
 
 pub fn load_json(path: &Path) -> Result<Value, String> {
-    let text = std::fs::read_to_string(path).map_err(|e| format!("reading {}: {}", path.display(), e))?;
+    let text =
+        std::fs::read_to_string(path).map_err(|e| format!("reading {}: {}", path.display(), e))?;
     serde_json::from_str(&text).map_err(|e| format!("parsing {}: {}", path.display(), e))
 }
 
@@ -121,7 +133,11 @@ pub fn canonicalize(name: &str, aliases: &Value) -> String {
                 return canonical.clone();
             }
             if let Some(arr) = alts.as_array() {
-                if arr.iter().filter_map(|a| a.as_str()).any(|a| a.to_lowercase() == lname) {
+                if arr
+                    .iter()
+                    .filter_map(|a| a.as_str())
+                    .any(|a| a.to_lowercase() == lname)
+                {
                     return canonical.clone();
                 }
             }
@@ -140,7 +156,11 @@ fn parse_decklist(entry: &Value) -> Option<Vec<String>> {
 /// Resolve an archetype name to a representative decklist + unique-card pool.
 /// The representative decklist prefers a top-cut / best-placement list; the
 /// unique pool is deduped across all the archetype's decklists.
-pub fn resolve_pool(name: &str, deck_library: &Value, aliases: &Value) -> Result<ArchetypePool, String> {
+pub fn resolve_pool(
+    name: &str,
+    deck_library: &Value,
+    aliases: &Value,
+) -> Result<ArchetypePool, String> {
     let canonical = canonicalize(name, aliases);
     let archetypes = deck_library
         .get("archetypes")
@@ -152,23 +172,40 @@ pub fn resolve_pool(name: &str, deck_library: &Value, aliases: &Value) -> Result
         .iter()
         .find(|(k, _)| k.to_lowercase() == canonical.to_lowercase())
         .map(|(_, v)| v)
-        .ok_or_else(|| format!("archetype '{}' (canonical '{}') not in deck_library.json", name, canonical))?;
+        .ok_or_else(|| {
+            format!(
+                "archetype '{}' (canonical '{}') not in deck_library.json",
+                name, canonical
+            )
+        })?;
 
     let decklists = entry
         .get("decklists")
         .and_then(|v| v.as_array())
         .ok_or_else(|| format!("archetype '{}' has no decklists", canonical))?;
     if decklists.is_empty() {
-        return Err(format!("archetype '{}' has an empty decklists array", canonical));
+        return Err(format!(
+            "archetype '{}' has an empty decklists array",
+            canonical
+        ));
     }
 
     // Representative: prefer a top-cut list, else the first.
     let representative = decklists
         .iter()
-        .find(|d| d.get("is_top_cut").and_then(|v| v.as_bool()).unwrap_or(false))
+        .find(|d| {
+            d.get("is_top_cut")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false)
+        })
         .or_else(|| decklists.first())
         .and_then(parse_decklist)
-        .ok_or_else(|| format!("archetype '{}' representative decklist failed to parse", canonical))?;
+        .ok_or_else(|| {
+            format!(
+                "archetype '{}' representative decklist failed to parse",
+                canonical
+            )
+        })?;
 
     // Unique pool: dedupe across all decklists (preserve first-seen order).
     let mut seen = HashSet::new();
@@ -183,7 +220,11 @@ pub fn resolve_pool(name: &str, deck_library: &Value, aliases: &Value) -> Result
         }
     }
 
-    Ok(ArchetypePool { name: canonical, decklist: representative, unique_cards: unique })
+    Ok(ArchetypePool {
+        name: canonical,
+        decklist: representative,
+        unique_cards: unique,
+    })
 }
 
 // ── invariant 1: deck legality + construction ────────────────────────────────
@@ -192,7 +233,10 @@ pub fn resolve_pool(name: &str, deck_library: &Value, aliases: &Value) -> Result
 /// main deck, 0–5 digi-egg deck, ≤4 copies of any card number, all cards in the
 /// pool) and confirm the engine constructs a game from it. Reports the specific
 /// violation on failure.
-pub fn check_deck_legality(decklist: &[String], card_data: &HashMap<String, CardData>) -> InvariantResult {
+pub fn check_deck_legality(
+    decklist: &[String],
+    card_data: &HashMap<String, CardData>,
+) -> InvariantResult {
     const NAME: &str = "deck_legality";
     let mut violations: Vec<String> = Vec::new();
 
@@ -203,7 +247,12 @@ pub fn check_deck_legality(decklist: &[String], card_data: &HashMap<String, Card
         .cloned()
         .collect();
     if !unknown.is_empty() {
-        let mut uniq: Vec<String> = unknown.iter().cloned().collect::<HashSet<_>>().into_iter().collect();
+        let mut uniq: Vec<String> = unknown
+            .iter()
+            .cloned()
+            .collect::<HashSet<_>>()
+            .into_iter()
+            .collect();
         uniq.sort();
         violations.push(format!("cards not in pool: {:?}", uniq));
     }
@@ -224,7 +273,10 @@ pub fn check_deck_legality(decklist: &[String], card_data: &HashMap<String, Card
         violations.push(format!("main deck must be 50 cards, found {}", main_count));
     }
     if egg_count > 5 {
-        violations.push(format!("digi-egg deck must be 0–5 cards, found {}", egg_count));
+        violations.push(format!(
+            "digi-egg deck must be 0–5 cards, found {}",
+            egg_count
+        ));
     }
 
     // Copy limit (≤4 of any single card number).
@@ -287,7 +339,11 @@ fn is_passing_status(status: &str) -> bool {
 /// (reported, never counted as passing); any other status = "failing". Passes
 /// iff the implemented ratio ≥ `threshold` and nothing is unknown/failing
 /// below it.
-pub fn coverage_gate(unique_cards: &[String], validated: &Value, threshold: f64) -> InvariantResult {
+pub fn coverage_gate(
+    unique_cards: &[String],
+    validated: &Value,
+    threshold: f64,
+) -> InvariantResult {
     const NAME: &str = "coverage_gate";
     let cards = validated.get("cards").and_then(|v| v.as_object());
 
@@ -365,8 +421,15 @@ pub fn smoke_games(
     let mut failure: Option<(u64, String)> = None;
     for seed in 0..n as u64 {
         let result = catch_unwind(AssertUnwindSafe(|| -> Result<(), String> {
-            let mut runner =
-                HeadlessRunner::new(decklist.to_vec(), decklist.to_vec(), card_data, false, false, false, Some(seed))?;
+            let mut runner = HeadlessRunner::new(
+                decklist.to_vec(),
+                decklist.to_vec(),
+                card_data,
+                false,
+                false,
+                false,
+                Some(seed),
+            )?;
             let mut rng = StdRng::seed_from_u64(seed ^ 0x9E37_79B9_7F4A_7C15);
             runner.run_until_conclusion(
                 max_steps,
@@ -430,7 +493,12 @@ pub fn implemented_set(validated: &Value) -> HashSet<String> {
     let mut set: HashSet<String> = build_registry().registered_card_ids().into_iter().collect();
     if let Some(cards) = validated.get("cards").and_then(|v| v.as_object()) {
         for (id, entry) in cards {
-            if entry.get("status").and_then(|s| s.as_str()).map(is_passing_status).unwrap_or(false) {
+            if entry
+                .get("status")
+                .and_then(|s| s.as_str())
+                .map(is_passing_status)
+                .unwrap_or(false)
+            {
                 set.insert(id.clone());
             }
         }
@@ -465,7 +533,11 @@ pub fn combo_presence(combos: &[Combo], implemented: &HashSet<String>) -> Invari
     } else {
         InvariantResult::fail(
             NAME,
-            format!("{}/{} combo(s) blocked on a missing card", blocked.len(), combos.len()),
+            format!(
+                "{}/{} combo(s) blocked on a missing card",
+                blocked.len(),
+                combos.len()
+            ),
             data,
         )
     }
@@ -475,7 +547,9 @@ pub fn combo_presence(combos: &[Combo], implemented: &HashSet<String>) -> Invari
 
 /// Path to the verdict tracker under `root`.
 pub fn tracker_path(root: &Path) -> PathBuf {
-    root.join("qa").join("qa-reports").join("archetype_interactions.json")
+    root.join("qa")
+        .join("qa-reports")
+        .join("archetype_interactions.json")
 }
 
 /// Record a run's results into the tracker JSON (created if absent), keyed by
@@ -489,14 +563,17 @@ pub fn record_run(
     findings: &[String],
     timestamp: &str,
 ) -> Value {
-    let mut doc = existing.unwrap_or_else(|| {
-        json!({ "version": 1, "last_updated": timestamp, "archetypes": {} })
-    });
+    let mut doc = existing
+        .unwrap_or_else(|| json!({ "version": 1, "last_updated": timestamp, "archetypes": {} }));
     if !doc.is_object() {
         doc = json!({ "version": 1, "last_updated": timestamp, "archetypes": {} });
     }
     doc["last_updated"] = json!(timestamp);
-    if !doc.get("archetypes").map(|a| a.is_object()).unwrap_or(false) {
+    if !doc
+        .get("archetypes")
+        .map(|a| a.is_object())
+        .unwrap_or(false)
+    {
         doc["archetypes"] = json!({});
     }
 
@@ -532,8 +609,10 @@ mod tests {
     fn deck_legality_real_rocks_deck_passes_and_constructs() {
         let Some(root) = real_root() else { return };
         let card_data = load_card_data(&root).expect("cards.json loads");
-        let deck_library = load_json(&root.join("data").join("deck_library.json")).expect("deck_library");
-        let aliases = load_json(&root.join("data").join("archetype_aliases.json")).expect("aliases");
+        let deck_library =
+            load_json(&root.join("data").join("deck_library.json")).expect("deck_library");
+        let aliases =
+            load_json(&root.join("data").join("archetype_aliases.json")).expect("aliases");
         let pool = resolve_pool("Rocks", &deck_library, &aliases).expect("Rocks resolves");
         let r = check_deck_legality(&pool.decklist, &card_data);
         assert!(
@@ -548,8 +627,10 @@ mod tests {
     fn deck_legality_short_deck_reports_size_violation() {
         let Some(root) = real_root() else { return };
         let card_data = load_card_data(&root).expect("cards.json loads");
-        let deck_library = load_json(&root.join("data").join("deck_library.json")).expect("deck_library");
-        let aliases = load_json(&root.join("data").join("archetype_aliases.json")).expect("aliases");
+        let deck_library =
+            load_json(&root.join("data").join("deck_library.json")).expect("deck_library");
+        let aliases =
+            load_json(&root.join("data").join("archetype_aliases.json")).expect("aliases");
         let pool = resolve_pool("Rocks", &deck_library, &aliases).expect("Rocks resolves");
         // Truncate to an illegal 10-card list → main deck != 50.
         let short: Vec<String> = pool.decklist.iter().take(10).cloned().collect();
@@ -557,7 +638,9 @@ mod tests {
         assert!(!r.passed, "a 10-card deck must fail deck-legality");
         let violations = r.data["violations"].as_array().unwrap();
         assert!(
-            violations.iter().any(|v| v.as_str().unwrap().contains("main deck must be 50")),
+            violations
+                .iter()
+                .any(|v| v.as_str().unwrap().contains("main deck must be 50")),
             "must name the size violation; got {:?}",
             violations
         );
@@ -621,7 +704,10 @@ mod tests {
         let mut impl_set = HashSet::new();
         impl_set.insert("X".to_string());
         impl_set.insert("Y".to_string());
-        let combos = vec![Combo { name: "c1".into(), cards: vec!["X".into(), "Y".into()] }];
+        let combos = vec![Combo {
+            name: "c1".into(),
+            cards: vec!["X".into(), "Y".into()],
+        }];
         let r = combo_presence(&combos, &impl_set);
         assert!(r.passed);
     }
@@ -643,10 +729,23 @@ mod tests {
     #[test]
     fn record_run_keys_by_archetype_and_stamps_timestamp() {
         let results = vec![InvariantResult::pass("coverage_gate", "ok", json!({}))];
-        let doc = record_run(None, "Rocks", &results, &["combo1".into()], &[], "2026-05-29");
+        let doc = record_run(
+            None,
+            "Rocks",
+            &results,
+            &["combo1".into()],
+            &[],
+            "2026-05-29",
+        );
         assert_eq!(doc["last_updated"], "2026-05-29");
-        assert_eq!(doc["archetypes"]["Rocks"]["static_tests"]["coverage_gate"]["passed"], true);
-        assert_eq!(doc["archetypes"]["Rocks"]["combos_tested"], json!(["combo1"]));
+        assert_eq!(
+            doc["archetypes"]["Rocks"]["static_tests"]["coverage_gate"]["passed"],
+            true
+        );
+        assert_eq!(
+            doc["archetypes"]["Rocks"]["combos_tested"],
+            json!(["combo1"])
+        );
 
         // A second archetype merges without clobbering the first.
         let doc2 = record_run(Some(doc), "Puppets", &results, &[], &[], "2026-05-30");

@@ -1,0 +1,101 @@
+card: EX12-066
+name: Hiro Amanokawa
+kind: tamer
+color: [red]
+cost: 4
+traits: [VB]
+
+effects:
+  - when: start_of_your_turn
+    summary: "[Start of Your Turn] If memory ≤ 2, set it to 3"
+    condition: { memory_lte: 2 }
+    process:
+      - set_memory: 3
+
+  - when: on_ally_attack
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - source_is_unsuspended: true
+        - event_target_owner: you
+        - any_of:
+            - event_target_in_text_contains: Gammamon
+            - event_target_trait_has: VB
+    summary: "[Your Turn] When your [Gammamon]-text or [VB] Digimon attacks, suspend this Tamer to activate 1 of 2 effects"
+    process:
+      - activation_cost: { suspend_self: true }
+      - select_effect_choice:
+          bind_as: branch
+          labels:
+            - "Digivolve into a level 6 or lower [Gammamon]-text/[VB] card"
+            - "Use a [Gammamon]-text/[VB] Option"
+          prompt: "Activate 1 of Hiro Amanokawa's effects"
+      - if:
+          condition: { equals: [branch, 0] }
+          then:
+            - if:
+                condition:
+                  count_gte:
+                    filter:
+                      of: you
+                      zone: [hand]
+                      all_of:
+                        - kind: digimon
+                        - level_lte: 6
+                        - any_of:
+                            - in_text_contains: Gammamon
+                            - trait_has: VB
+                    n: 1
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: evo
+                      filter:
+                        all_of:
+                          - kind: digimon
+                          - level_lte: 6
+                          - any_of:
+                              - in_text_contains: Gammamon
+                              - trait_has: VB
+                      prompt: "Digivolve the attacking Digimon into a level 6 or lower [Gammamon]-text/[VB] card with the cost reduced by 1"
+                  - effect_initiated_digivolve:
+                      target: event_target
+                      from_hand: evo
+                      cost: { reduce: 1 }
+                      ignore_requirements: false
+      - if:
+          condition: { equals: [branch, 1] }
+          then:
+            - if:
+                condition:
+                  count_gte:
+                    filter:
+                      of: you
+                      zone: [hand]
+                      all_of:
+                        - kind: option
+                        - any_of:
+                            - in_text_contains: Gammamon
+                            - trait_has: VB
+                    n: 1
+                then:
+                  - select_hand:
+                      of: you
+                      bind_as: option_pick
+                      filter:
+                        all_of:
+                          - kind: option
+                          - any_of:
+                              - in_text_contains: Gammamon
+                              - trait_has: VB
+                      prompt: "Use 1 [Gammamon]-text or [VB] Option card from your hand with the cost reduced by 2"
+                  - play_or_use_from_hand:
+                      of: you
+                      hand_index: option_pick
+                      cost_delta: { reduce: 2 }
+
+  - when: on_security
+    summary: "[Security] Play this card without paying the cost"
+    process:
+      - play_from_security: {}

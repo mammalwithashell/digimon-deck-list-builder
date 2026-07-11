@@ -12,21 +12,24 @@
 //!
 //! Auto-installed: Barrier, Evade, Decode (Phase 7); Fragment(N), ArmorPurge,
 //! Save, Decoy, Fortitude, Partition, MaterialSave(N) (Phase D);
-//! Retaliation, Scapegoat (Phase E); Execute, MindLink, Training (Phase F).
+//! Retaliation, Scapegoat (Phase E); Execute, MindLink, Training (Phase F);
+//! Engage and Guard (EX12).
 //!
 //! Selection-bearing replacements consume Phase C's parked-replacement
 //! substrate via `ctx.cancel_leave / handle_replacement / substitute_replacement`.
 //! Trigger-based keywords (Fortitude, Partition, Retaliation) use the standard
 //! observer pattern. Scapegoat is an optional `WhenWouldBeDeleted` substitute
-//! replacement. MindLink and Training are `[Main]` active skills; MaterialSave(N)
-//! is a deletion-timed source rescue trigger. Execute is an `EndOfYourTurn`
-//! triggered effect granting
-//! `MayAttack` + `CanAttackUnsuspended` for the EOT-attack window with an
-//! `EndOfAttack` self-delete observer.
+//! replacement. Guard is an optional cross-permanent `WhenWouldLeaveBattleArea`
+//! cancel replacement. MindLink and Training are `[Main]` active skills;
+//! MaterialSave(N) is a deletion-timed source rescue trigger. Execute is an
+//! `EndOfYourTurn` triggered effect granting `MayAttack` +
+//! `CanAttackUnsuspended` for the EOT-attack window with an `EndOfAttack`
+//! self-delete observer; Engage grants only normal `MayAttack` for that same
+//! EOT-attack window.
 //!
-//! Phase F closed all printed-keyword gaps: every DCGO `KeyWordEffects/*.cs`
-//! now has a matching Rust enum variant + consumer (auto-install or
-//! resolution-site consumption).
+//! The legacy DCGO `KeyWordEffects/*.cs` keyword set has matching Rust enum
+//! variants + consumers (auto-install or resolution-site consumption). Later
+//! card sets can still add new printed keywords such as EX12's Engage/Guard.
 //!
 //! Intentionally NOT auto-installed (per Phase E cards.json survey — zero
 //! bare printings; auto-install would double-fire alongside hand-rolled
@@ -108,10 +111,10 @@
 
 use crate::card_source::CardHandle;
 use crate::effect::Effect;
-use crate::effect_context::{CountCappedZone, EffectContext};
+use crate::effect_context::{CountCappedZone, EffectContext, EffectReadContext};
 use crate::enums::{EffectTiming, Expiry, Keyword, ModifierType, Zone};
 use crate::modifiers::ModifierEntry;
-use crate::replacement::ReplacementSubject;
+use crate::replacement::{ReplacementCause, ReplacementSubject};
 use crate::resume::{
     KeywordAscensionChoiceState, KeywordMaterialSaveTamerSelectionState,
     KeywordMindLinkSelectionState, KeywordSaveSelectionState, KeywordScapegoatSelectionState,
@@ -134,6 +137,57 @@ fn park_keyword_frame(ctx: &mut EffectContext<'_>, frame: ResumeFrame) {
             frames: vec![frame],
         });
     }
+}
+
+fn guard_carrier_can_be_deleted_for_cost(
+    game: &crate::game::Game,
+    carrier: crate::permanent::PermanentHandle,
+) -> bool {
+    let subject = ReplacementSubject::Permanent(carrier);
+    let cause = ReplacementCause::OwnEffect;
+    let subject_controller = subject.controller(game);
+
+    for entry in game.modifiers.permanent_modifiers_iter(carrier) {
+        if crate::replacement::passive_modifier_to_would(entry.modifier)
+            != Some(EffectTiming::WhenWouldBeDeleted)
+        {
+            continue;
+        }
+        if entry.cause_filter.is_some_and(|filter| filter != cause) {
+            continue;
+        }
+        if let Some(cond) = &entry.replacement_condition {
+            let read_ctx =
+                EffectReadContext::new(game, CardHandle(0), Some(carrier), carrier.player)
+                    .with_replacement_context(cause, game.effect_source_player, subject_controller);
+            if !cond(&read_ctx, &subject) {
+                continue;
+            }
+        }
+        return false;
+    }
+
+    for entry in game.modifiers.player_modifiers_iter(carrier.player) {
+        if crate::replacement::passive_modifier_to_would(entry.modifier)
+            != Some(EffectTiming::WhenWouldBeDeleted)
+        {
+            continue;
+        }
+        if entry.cause_filter.is_some_and(|filter| filter != cause) {
+            continue;
+        }
+        if let Some(cond) = &entry.replacement_condition {
+            let read_ctx =
+                EffectReadContext::new(game, CardHandle(0), Some(carrier), carrier.player)
+                    .with_replacement_context(cause, game.effect_source_player, subject_controller);
+            if !cond(&read_ctx, &subject) {
+                continue;
+            }
+        }
+        return false;
+    }
+
+    true
 }
 
 fn park_keyword_count_capped_frame(
@@ -1560,6 +1614,92 @@ pub fn keyword_to_auto_effect(keyword: Keyword, card: CardHandle) -> Vec<Effect>
                 })
                 .build(),
         ],
+
+        // EX12 — printed Engage: "At the end of your turn, this Digimon may
+        // attack." Official rules 16-44. This is intentionally narrower than
+        // Execute/Vortex:
+        //   - normal attack legality (`game.can_attack(..., false)`) controls
+        //     whether `has_end_of_turn_keywords` parks the phase;
+        //   - no `CanAttackUnsuspended` grant, so the action mask offers only
+        //     normal targets;
+        //   - no `EndOfAttack` self-delete observer.
+        //
+        // Optionality follows the same practical shape as Execute: the EOT
+        // trigger grants the temporary attack permission, and PASS in
+        // EndOfTurnAction is the player-facing decline path.
+        Keyword::Engage => vec![Effect::end_of_your_turn(card)
+            .name("<Engage>")
+            .process(|ctx| {
+                let Some(me) = ctx.source_permanent else {
+                    return;
+                };
+                let owner = me.player;
+                ctx.game.modifiers.add(
+                    me,
+                    ModifierEntry::simple(ModifierType::MayAttack, 1, Expiry::EndOfTurn, owner),
+                );
+            })
+            .build()],
+
+        // EX12 — printed Guard: "When another of your Digimon would leave the
+        // battle area by an opponent's effect, by deleting this Digimon,
+        // prevent that Digimon from leaving." Official rules 16-45. Model as
+        // an optional replacement on the leave-field route:
+        //   - opponent-effect cause only;
+        //   - own Digimon subject only;
+        //   - non-self subject ("another");
+        //   - process pays the delete-self cost, then cancels the original
+        //     leave event.
+        Keyword::Guard => vec![Effect::when_would_leave_battle_area(card)
+            .name("<Guard>")
+            .optional()
+            .replacement_condition(|ctx, subject| {
+                use crate::replacement::{ReplacementCause, ReplacementSubject};
+                if !matches!(
+                    ctx.replacement_cause(),
+                    Some(ReplacementCause::OpponentEffect)
+                ) {
+                    return false;
+                }
+                let Some(me) = ctx.source_permanent else {
+                    return false;
+                };
+                let ReplacementSubject::Permanent(subject) = subject else {
+                    return false;
+                };
+                if *subject == me || subject.player != me.player {
+                    return false;
+                }
+                ctx.game.permanent_is_digimon_for_rules(*subject)
+                    && guard_carrier_can_be_deleted_for_cost(ctx.game, me)
+            })
+            .replacement_process(|rctx| {
+                use crate::replacement::ReplacementSubject;
+                let Some(me) = rctx.effect.source_permanent else {
+                    return;
+                };
+                let subject = match rctx.subject {
+                    ReplacementSubject::Permanent(h) => h,
+                    _ => return,
+                };
+                if subject == me || subject.player != me.player {
+                    return;
+                }
+                if !rctx.effect.game.permanent_is_digimon_for_rules(subject) {
+                    return;
+                }
+                if !guard_carrier_can_be_deleted_for_cost(rctx.effect.game, me) {
+                    return;
+                }
+                let outcome = rctx
+                    .effect
+                    .game
+                    .delete_permanents_batch(vec![me], ReplacementCause::OwnEffect);
+                if outcome.completed.contains(&me) {
+                    rctx.cancel();
+                }
+            })
+            .build()],
 
         // Phase F §F3 — printed Mind Link: `[Main]` active skill on Tamers.
         // "Place this Tamer at the bottom of one of your Digimon's

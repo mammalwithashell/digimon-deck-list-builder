@@ -218,10 +218,9 @@ fn bt24_063_grants_collision_face_up_and_inherited() {
         .effects
         .iter()
         .filter_map(|c| match c {
-            CompiledClause::Declarative(d @ CompiledDeclarativeClause::GrantKeyword {
-                keyword,
-                ..
-            }) if keyword == "Collision" => Some(d),
+            CompiledClause::Declarative(
+                d @ CompiledDeclarativeClause::GrantKeyword { keyword, .. },
+            ) if keyword == "Collision" => Some(d),
             _ => None,
         })
         .collect();
@@ -299,7 +298,10 @@ fn bt24_063_shared_clause_reveals_3_and_offers_optional_bucket() {
                 && buckets[0].min == 0
                 && buckets[0].max == 1)
     });
-    assert!(bucket_ok, "must offer exactly one optional single-pick bucket");
+    assert!(
+        bucket_ok,
+        "must offer exactly one optional single-pick bucket"
+    );
 
     assert!(
         shared

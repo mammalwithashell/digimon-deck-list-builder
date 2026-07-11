@@ -139,7 +139,10 @@ fn bind_count_as_floors_the_division() {
     let carrier = runner.place_on_field(0, CARD_ID, Some(0));
     runner.place_on_field(1, "T1", Some(0));
     runner.place_on_field(1, "T2", Some(0));
-    fill_opp_hand(&mut runner, &["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8"]); // 8 → trash 3
+    fill_opp_hand(
+        &mut runner,
+        &["H1", "H2", "H3", "H4", "H5", "H6", "H7", "H8"],
+    ); // 8 → trash 3
 
     runner
         .game

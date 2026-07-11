@@ -10,6 +10,7 @@ use crate::card_source::{CardHandle, CardSource};
 use crate::dsl_cards::bindings::{BindingValue, Bindings};
 use crate::dsl_cards::formula_eval;
 use crate::dsl_cards::modifier_map::lookup_keyword;
+use crate::dsl_cards::source_stats::same_level_pairs_in_sources;
 use crate::effect_context::EffectReadContext;
 use crate::enums::{CardColor, CardKind, PlayerId};
 use crate::permanent::PermanentHandle;
@@ -473,6 +474,20 @@ pub fn eval_predicate_with_bindings(
             .unwrap_or(0);
         let threshold = eval_int_constraint_read(&spec.value, rctx, None, bindings);
         if !spec.op.apply(count, threshold) {
+            return false;
+        }
+    }
+    if let Some(floor) = pred.self_same_level_source_pairs_gte {
+        // G-DSL-SELF-SAME-LEVEL-SOURCE-PAIRS: count pairs among the effect
+        // carrier's own source cards below its top card. This mirrors the
+        // `same_level_pairs_in_sources` formula selector so trigger predicates
+        // and formula counts agree.
+        let count = rctx
+            .source_permanent
+            .and_then(|handle| permanent_for_handle(rctx, handle))
+            .map(|perm| same_level_pairs_in_sources(perm, rctx.card_data()))
+            .unwrap_or(0);
+        if count < i32::from(floor) {
             return false;
         }
     }
@@ -1673,6 +1688,17 @@ fn eval_event_fields(
             if !data.card_name.to_lowercase().contains(&want) {
                 return false;
             }
+        }
+    }
+    if let Some(ref needle) = pred.event_target_in_text_contains {
+        let Some(card) = event_target_card(rctx) else {
+            return false;
+        };
+        let Some(data) = rctx.game.card_data_for_handle(card) else {
+            return false;
+        };
+        if !card_in_text_contains(data, needle) {
+            return false;
         }
     }
     if let Some(want) = pred.event_target_owner {

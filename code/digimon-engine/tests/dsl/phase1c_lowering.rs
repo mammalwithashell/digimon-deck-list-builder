@@ -30,6 +30,9 @@ fn modifier_map_covers_flood_gate_names_used_by_examples() {
 fn keyword_map_covers_aura_grants_used_by_examples() {
     assert_eq!(lookup_keyword("Blocker", None), Some(Keyword::Blocker));
     assert_eq!(lookup_keyword("Raid", None), Some(Keyword::Raid));
+    assert_eq!(lookup_keyword("Execute", None), Some(Keyword::Execute));
+    assert_eq!(lookup_keyword("Guard", None), Some(Keyword::Guard));
+    assert_eq!(lookup_keyword("Engage", None), Some(Keyword::Engage));
     assert_eq!(
         lookup_keyword("SecurityAttackPlus", Some(1)),
         Some(Keyword::SecurityAttackPlus(1))

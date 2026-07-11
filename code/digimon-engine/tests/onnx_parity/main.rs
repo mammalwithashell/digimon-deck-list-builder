@@ -120,8 +120,9 @@ fn lstm_reset_matches_fresh_policy() {
 fn batched_evaluator_parity_with_python() {
     let expected = load_expected();
     let mv = &expected.mlp_value;
-    let mut evaluator = BatchedPolicyValueEvaluator::load(&fixtures_dir().join("mlp_tiny_value.onnx"))
-        .expect("load value-head MLP");
+    let mut evaluator =
+        BatchedPolicyValueEvaluator::load(&fixtures_dir().join("mlp_tiny_value.onnx"))
+            .expect("load value-head MLP");
 
     let obs_refs: Vec<&[f32]> = mv.batch_obs.iter().map(|r| r.as_slice()).collect();
     let mask_refs: Vec<&[f32]> = mv.masks.iter().map(|r| r.as_slice()).collect();

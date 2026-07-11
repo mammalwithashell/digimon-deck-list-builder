@@ -1,0 +1,89 @@
+card: EX12-069
+name: Virus Busters
+kind: option
+color: [yellow]
+cost: 2
+traits: [VB]
+
+use_requirement:
+  any_field_permanent:
+    of: you
+    trait_has: VB
+
+effects:
+  - kind: flood_gate
+    scope: face_up
+    active_when: { your_turn: true }
+    modifier: IgnoreColorRequirement
+    target: { card_number_is: "EX12-069" }
+    summary: "<Use Req. ([VB] trait)> — ignore this card's color requirements"
+
+  - scope: security
+    when: on_ally_attack
+    optional: true
+    active_when:
+      all_of:
+        - your_turn: true
+        - event_target_owner: you
+        - event_target_level_gte: 4
+        - event_target_trait_has: VB
+    summary: "[Security][Your Turn] When your level 4 or higher [VB] Digimon attacks, you may play 1 [VB] Digimon of the same level from your hand with cost reduced by 3"
+    process:
+      - bind_permanent_property:
+          from: event_target
+          property: level
+          bind_as: attacker_level
+      - if:
+          condition:
+            count_gte:
+              filter:
+                of: you
+                zone: [hand]
+                all_of:
+                  - kind: digimon
+                  - trait_has: VB
+                  - level_eq_binding: attacker_level
+              n: 1
+          then:
+            - select_hand:
+                of: you
+                bind_as: vb_play
+                optional: true
+                filter:
+                  all_of:
+                    - kind: digimon
+                    - trait_has: VB
+                    - level_eq_binding: attacker_level
+                prompt: "Play 1 [VB] Digimon card of the same level from your hand with the play cost reduced by 3"
+            - play_from_hand:
+                of: you
+                hand_index: vb_play
+                cost_delta: { reduce: 3 }
+
+  - when: main_from_hand
+    summary: "[Main] Add your bottom security card to the hand and place this card face up as the bottom security card"
+    process:
+      - add_bottom_security_to_hand: { of: you }
+      - place_on_security:
+          source: self_option
+          position: bottom
+          face_up: true
+
+  - scope: inherited
+    when: on_security
+    optional: true
+    summary: "[Security] You may play 1 level 5 or lower [VB] Digimon from your hand without paying the cost"
+    process:
+      - select_hand:
+          of: you
+          bind_as: vb_free
+          optional: true
+          filter:
+            all_of:
+              - kind: digimon
+              - trait_has: VB
+              - level_lte: 5
+          prompt: "Play 1 level 5 or lower [VB] Digimon card from your hand without paying the cost"
+      - play_from_hand_free:
+          of: you
+          hand_index: vb_free

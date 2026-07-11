@@ -264,6 +264,8 @@ pub const DISPLAY_KEYWORDS: &[(Keyword, &str)] = &[
     (Keyword::Retaliation, "retaliation"),
     (Keyword::Scapegoat, "scapegoat"),
     (Keyword::Execute, "execute"),
+    (Keyword::Engage, "engage"),
+    (Keyword::Guard, "guard"),
     (Keyword::Iceclad, "iceclad"),
     (Keyword::MindLink, "mind_link"),
     (Keyword::Training, "training"),

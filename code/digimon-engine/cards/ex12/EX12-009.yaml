@@ -1,0 +1,46 @@
+card: EX12-009
+name: Wankomon
+kind: digimon
+level: 3
+color: [red]
+cost: 3
+dp: 2000
+traits: [Beast, Shambala, TB]
+attribute: Vaccine
+
+alt_paths:
+  - kind: digivolve
+    from: { level_eq: 2, color_is: red }
+    cost: 0
+  - kind: digivolve
+    from: { level_eq: 2, trait_has: Shambala }
+    cost: 0
+
+effects:
+  - when: on_play
+    summary: "[On Play] Reveal 3; add 1 [Shambala] card and 1 [TB] card; rest to deck bottom"
+    process:
+      - reveal_top_deck: { of: you, count: 3, bind_as: revealed }
+      - select_reveal_buckets:
+          from: revealed
+          no_duplicate_cards: true
+          buckets:
+            - bind_as: shambala_pick
+              min: 1
+              max: 1
+              filter: { trait_has: Shambala }
+            - bind_as: tb_pick
+              min: 1
+              max: 1
+              filter: { trait_has: TB }
+          prompt: "Select 1 [Shambala] trait card and 1 [TB] trait card"
+      - add_to_hand_from_reveal: { of: you, card: shambala_pick }
+      - add_to_hand_from_reveal: { of: you, card: tb_pick }
+      - place_remainder_on_deck: { of: you, position: bottom }
+
+  - scope: inherited
+    kind: aura
+    target: {}
+    active_when: { your_turn: true }
+    dp_modifier: 2000
+    summary: "[Inherited][Your Turn] This Digimon gets +2000 DP"
