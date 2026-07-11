@@ -1,9 +1,12 @@
 # EX8-028 Skadimon — Digimon, Lv.6, Blue/Yellow, DP 12000, Cost 12.
 # Traits: Ice-Snow, LIBERATOR. Form: Mega. Attribute: Vaccine. Rarity: SR.
 #
-# Printed card text (card image EX8-028.webp — authoritative; cards.json
-# agrees):
-#   Evo box: Lv.5 from blue: Cost 4   (JSON evo_costs [{card_color:1, level:5, memory_cost:4}])
+# Printed card text (card image EX8-028.webp; official Bandai DB
+# data/card_official.json is AUTHORITATIVE for the digivolution cost table):
+#   Evo box (official DB digivolve_costs — THREE standard circles): Blue Lv.5
+#     / Cost 4, Yellow Lv.5 / Cost 4, Purple Lv.5 / Cost 4. cards.json's
+#     evo_costs keeps only the blue half (lossy API ingest — the multi-colour
+#     circle is dropped); the official DB wins for printed digivolution data.
 #   Evo box: "Digivolve Lv.5 w/[Ice-Snow] trait: Cost 3"   (JSON xros_req)
 #   <Iceclad> (Other than against Security Digimon, compare the number of
 #     digivolution cards instead of DP in this Digimon's battles.)
@@ -84,7 +87,7 @@
 #     `unsuspend: { target: source }`.
 #
 # Implementation status (faithfulness diff):
-# | Std digivolve Lv.5 blue / Cost 4                          | IMPLEMENTED (alt_paths + JSON evo_costs) |
+# | Std digivolve Lv.5 blue/yellow/purple / Cost 4 (3 circles)| IMPLEMENTED (alt_paths; official DB digivolve_costs) |
 # | Alt digivolve Lv.5 w/[Ice-Snow] / Cost 3                  | IMPLEMENTED (alt_paths trait_has)        |
 # | <Iceclad>                                                 | IMPLEMENTED (grant_keyword)              |
 # | <Barrier>                                                 | IMPLEMENTED (grant_keyword)              |
@@ -117,10 +120,19 @@ attribute: Vaccine
 form: Mega
 
 alt_paths:
-  # Printed standard evo box: Lv.5 from blue, cost 4 (encoded explicitly like
-  # neighbor EX8 specs so DSL-only loads carry the printed cost table).
+  # Printed standard evo box — THREE circles per the official Bandai DB
+  # (data/card_official.json digivolve_costs: card_color 1/2/6 = blue/yellow/
+  # purple, each Lv.5 cost 4). cards.json drops the yellow + purple halves
+  # (lossy API ingest), so all three are encoded explicitly like neighbor
+  # EX8-022/EX8-023 so DSL-only loads carry the full printed cost table.
   - kind: digivolve
     from: { level_eq: 5, color_is: blue }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: yellow }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 5, color_is: purple }
     cost: 4
   # Printed alt evo box: "Digivolve Lv.5 w/[Ice-Snow] trait: Cost 3". DCGO
   # gates on EqualsTraits("Ice-Snow") && Level == 5 — no color restriction.

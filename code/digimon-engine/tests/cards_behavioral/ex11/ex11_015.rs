@@ -1,9 +1,12 @@
 //! EX11-015 Frigimon — Digimon, Lv.4, Blue/Yellow, DP 6000, Cost 5.
 //! Traits: Ice-Snow, LIBERATOR. Attribute: Vaccine. Form: Champion. Rarity: U.
 //!
-//! # Card text (card image EX11-015.webp, authoritative; cards.json agrees)
+//! # Card text (official Bandai DB bundle data/card_bundles/EX11-015.md,
+//! # authoritative; card image EX11-015.webp confirms)
 //!
-//! Evo box: Lv.3 from blue: Cost 3.
+//! Evo box: SPLIT-COLOR circle — Blue Lv.3: Cost 3 AND Yellow Lv.3: Cost 3
+//! (the official DB lists both circles; cards.json evo_costs is lossy and
+//! carries only the blue half).
 //! Evo box: "Digivolve Lv.3 w/[Ice-Snow] trait: Cost 2" (cards.json `xros_req`).
 //!
 //! [When Digivolving] If you have 1 or fewer Tamers, you may play 1
@@ -32,10 +35,12 @@
 //!   — EX8-048 / BT21-017 idiom.
 //! - Inherited static keyword grant (<Jamming>) verified in a real losing
 //!   security-Digimon battle — EX11-014 / security_effects.rs combat idiom.
-//! - Alt digivolve recipe registration (standard Lv.3 blue + Lv.3 [Ice-Snow]).
+//! - Alt digivolve recipe registration (standard split-circle Lv.3 blue +
+//!   Lv.3 yellow, plus the Lv.3 [Ice-Snow] cost-2 alt path).
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledScope, CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost,
+    CompiledDeclarativeClause, CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
@@ -204,15 +209,50 @@ fn ex11_015_registers_standard_and_ice_snow_digivolve_paths() {
         .compiled_card(CARD_ID)
         .expect("EX11-015 compiled card present");
 
-    let digivolve_paths = card
+    let digivolve_paths: Vec<_> = card
         .alt_paths
         .iter()
         .filter(|p| matches!(p.kind, CompiledAltPathKind::Digivolve))
-        .count();
+        .collect();
     assert_eq!(
-        digivolve_paths, 2,
-        "EX11-015 must register the standard Lv.3-blue cost-3 path and the \
-         Lv.3 [Ice-Snow] cost-2 alt path"
+        digivolve_paths.len(),
+        3,
+        "EX11-015 must register the split-circle Lv.3-blue cost-3 AND \
+         Lv.3-yellow cost-3 standard paths plus the Lv.3 [Ice-Snow] cost-2 \
+         alt path (official Bandai DB lists both circle halves)"
+    );
+
+    // Standard split-color circle: Blue Lv.3 / 3 and Yellow Lv.3 / 3.
+    for color in [CompiledColor::Blue, CompiledColor::Yellow] {
+        assert!(
+            digivolve_paths.iter().any(|path| {
+                let from = path
+                    .from
+                    .as_deref()
+                    .expect("digivolve path has a source predicate");
+                from.level_eq == Some(3)
+                    && from.color_is == Some(color)
+                    && path.cost == Some(CompiledCost::Literal(3))
+            }),
+            "missing standard Lv.3/{color:?}/cost-3 circle half; paths={digivolve_paths:?}"
+        );
+    }
+
+    // Alt evo box: "Digivolve Lv.3 w/[Ice-Snow] trait: Cost 2" — trait +
+    // level gate, NO color restriction (DCGO EqualsTraits && IsLevel3).
+    assert!(
+        digivolve_paths.iter().any(|path| {
+            let from = path
+                .from
+                .as_deref()
+                .expect("digivolve path has a source predicate");
+            from.level_eq == Some(3)
+                && from.trait_has.as_deref() == Some("Ice-Snow")
+                && from.color_is.is_none()
+                && path.cost == Some(CompiledCost::Literal(2))
+        }),
+        "missing the Lv.3 [Ice-Snow] cost-2 alt path (color-unrestricted); \
+         paths={digivolve_paths:?}"
     );
 }
 

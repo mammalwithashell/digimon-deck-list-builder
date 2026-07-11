@@ -55,12 +55,12 @@
 //!   card count against THIS Digimon's own LIVE count — "as many or fewer".
 //!   Both DCGO `DigivolutionCards.Count` values exclude the top card, so the
 //!   compare is sources(opp) <= sources(self) ⟺ stack(opp) <= stack(self).
-//! - KNOWN ENGINE GAP (pre-existing, shared with BT25-026/028, EX9-019,
-//!   BT20-084, EX8-023): `CannotSuspend` installs/expires correctly but has
-//!   no engine consult site yet — attack/suspend actions are not blocked.
-//!   Enforcement-dependent assertions are `#[ignore]`d below; the
-//!   non-ignored aura tests assert the modifier lands on exactly the right
-//!   Digimon set.
+//! - ENFORCEMENT (landed engine-wide): `CannotSuspend` is consulted at the
+//!   attack-declaration paths (combat/mod.rs), the action mask
+//!   (action/mask.rs), effect-driven suspends (game/suspend.rs), and
+//!   suspend-as-cost sites — the formerly-tracked "no consult site" gap is
+//!   CLOSED. The enforcement test below runs un-ignored; the aura tests
+//!   additionally assert the modifier lands on exactly the right Digimon set.
 //!
 //! # Patterns this test covers
 //! - Face-up unconditional <Security A. +1> (BT10-013 self-aura idiom) and
@@ -924,9 +924,9 @@ fn ex7_023_opp_turn_aura_compares_live_own_source_count() {
     );
 }
 
-/// ENFORCEMENT (shared with BT25-026/028, EX9-019, BT20-084, EX8-023): a
-/// CannotSuspend-locked Digimon must be unable to declare an attack
-/// (general_rule.pdf 11-2-5; consult site in `Game::can_attack*`).
+/// ENFORCEMENT: a CannotSuspend-locked Digimon must be unable to declare an
+/// attack (an attack suspends the attacker — general_rule.pdf 11-2-5; consult
+/// sites live in combat/mod.rs attack declaration + action/mask.rs).
 #[test]
 fn ex7_023_locked_opponent_digimon_cannot_declare_attack() {
     let (mut runner, owner, tp, _hexe) = aura_runner(1);

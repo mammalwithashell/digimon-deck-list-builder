@@ -1,19 +1,34 @@
-//! P-215 Icemon — Digimon, Lv.4, Blue/Black, Cost 5, DP 6000.
-//! Traits: [Ice-Snow]
+//! P-215 Icemon — Digimon, Lv.4, Blue/Black, Cost 5, DP 6000, Form: Champion.
+//! Traits: [Ice-Snow] + (Rule) Trait: Has [Mineral] Type (official Bandai DB;
+//! encoded as `traits: [Ice-Snow, Mineral]` in the YAML).
 //!
-//! # Card text (cards.json)
+//! # Card text (official Bandai DB — data/card_bundles/P-215.md)
 //!
 //! [When Moving] [On Play] [When Digivolving] By placing 1 level 4 or lower
 //! [Ice-Snow], [Mineral] or [Rock] trait card from your hand or trash as this
 //! Digimon's bottom digivolution card, until your opponent's turn ends, their
 //! effects can't return 1 of your [Ice-Snow], [Mineral] or [Rock] trait Digimon
 //! to hands or decks or affect it with <De-Digivolve> effects.
+//! (Rule) Trait: Has [Mineral] Type.
 //!
 //! Inherited Effect: <Blocker>
 //!
+//! Digivolve: Blue Lv.3 cost 3 / Black Lv.3 cost 3 (standard circles) +
+//! [Digivolve] Lv.3 w/[Ice-Snow]/[Mineral]/[Rock] trait: Cost 2 (alt).
+//!
 //! # DCGO C# reference
-//! DCGO/Assets/Scripts/CardEffect/P/P_215.cs (absent — DCGO submodule
-//! uninitialized; behavioral inferred from printed card text and EX8-070 pattern)
+//! DCGO/Assets/Scripts/CardEffect/P/Blue/P_215.cs (base repo, rule 29):
+//! shared WM/OP/WD coroutine — hand-or-trash pick (`canNoSelect: true`),
+//! `AddDigivolutionCardsBottom` on this permanent, then a MANDATORY
+//! (`canNoSelect: false`) protect-target pick; the hand/deck-return grants
+//! are gated `IsOpponentEffect`; OnMove is self-gated
+//! (`permanent == card.PermanentOfThisCard()`); cost filter requires
+//! `HasLevel && Level <= 4` (level-less cards ineligible).
+//!
+//! # Known modelling caveat (DSL vocab gap — see YAML status table)
+//! The three protection modifiers install cause-agnostic (`cause_filter:
+//! None`); printed scope is opponent-only ("THEIR effects"). No DSL `cause:`
+//! knob exists yet.
 //!
 //! # Patterns this test covers
 //! - D6: CannotBeReturnedToHand / CannotBeReturnedToDeck / CannotBeDeDigivolved
@@ -30,7 +45,7 @@ use digimon_dsl::compiled::{
 use digimon_engine::action::space::PASS;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner};
-use digimon_engine::enums::{Keyword, ModifierType, PlayerId};
+use digimon_engine::enums::{CardKind, Keyword, ModifierType, PlayerId};
 use digimon_engine::selection::{SelectionError, SelectionKind};
 use digimon_engine::CardData;
 
@@ -210,6 +225,38 @@ fn p_215_triggered_clause_has_three_timings() {
         t.when.len(),
         3,
         "triggered clause must have exactly 3 timings"
+    );
+}
+
+/// Structural guard for the bug-sheet fix: the OnMove timing must carry the
+/// `event_permanent_is_source: true` gate (printed [When Moving] is
+/// SELF-scoped; the engine's on_move dispatch is a board-wide observer scan).
+/// Behavioral coverage is in Section 9; this pins the YAML shape so a
+/// refactor can't silently drop the gate.
+#[test]
+fn p_215_on_move_timing_carries_self_gate() {
+    let runner = runner();
+    let card = runner.compiled_card("P-215").expect("P-215 in pack");
+
+    let t = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t) => Some(t),
+            _ => None,
+        })
+        .expect("triggered clause must exist");
+
+    let on_move_gate = t
+        .timing_conditions
+        .iter()
+        .find(|tc| tc.when == CompiledTiming::OnMove)
+        .expect("[When Moving] must have a timing_conditions entry");
+    assert_eq!(
+        on_move_gate.condition.event_permanent_is_source,
+        Some(true),
+        "the OnMove timing condition must gate on event_permanent_is_source \
+         (self-scoped [When Moving], DCGO permanent == card.PermanentOfThisCard())"
     );
 }
 
@@ -405,6 +452,31 @@ fn p_215_on_play_places_cost_card_as_bottom_source_and_then_prompts_protect() {
         "cost card must leave hand after being placed as bottom source (before: {hand_before}, after: {hand_after})"
     );
 
+    // The cost card must be THIS Icemon's bottom digivolution card ("as this
+    // Digimon's bottom digivolution card" — DCGO AddDigivolutionCardsBottom
+    // on card.PermanentOfThisCard()).
+    let icemon = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "P-215")
+        .expect("P-215 must be on the battle area");
+    // digivolution_cards() is the WHOLE stack including the top card; a
+    // freshly played P-215 has stack [P-215], so after the cost the stack is
+    // [COST-PLACE, P-215] (bottom insert = index 0, Permanent::push_under).
+    let sources = icemon.digivolution_cards();
+    assert_eq!(
+        sources.len(),
+        2,
+        "P-215's stack must be [cost card, P-215] after paying the cost"
+    );
+    assert_eq!(
+        sources[0].card_id(&runner.game.card_data),
+        "COST-PLACE",
+        "the placed cost card must sit at the BOTTOM of the digivolution stack"
+    );
+
     // The next selection should be the protect-target (OwnField kind).
     let kind = runner
         .pending_kind()
@@ -581,6 +653,117 @@ fn p_215_no_trait_card_not_eligible_as_cost() {
         runner.pending_selection().is_none(),
         "P-215 must not install a selection when the only hand card has no matching trait"
     );
+}
+
+/// A LEVEL-LESS card (e.g. an Option card) with a matching trait is NOT
+/// eligible as the cost card. Printed text requires a "level 4 or lower ...
+/// trait card"; DCGO's CardSelectCondition requires `HasLevel && Level <= 4`,
+/// and the DSL `level_lte` predicate fails closed on `level: None`.
+#[test]
+fn p_215_level_less_trait_card_not_eligible_as_cost() {
+    let mut levelless = make_test_card("LVLESS-COST", "LevellessIceOption");
+    levelless.card_kind = CardKind::Option;
+    levelless.level = None;
+    levelless.dp = None;
+    levelless.traits.push("Ice-Snow".to_string());
+    let protect_digi = make_ice_snow_lv5("PROT-LL");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("P-215")
+        .expect("P-215 YAML parses and compiles")
+        .add_card(levelless)
+        .add_card(protect_digi)
+        .hand(0, &["P-215"])
+        .memory(10)
+        .start();
+
+    push_to_trash(&mut runner, 0, "LVLESS-COST");
+    runner.place_on_field(0, "PROT-LL", None);
+
+    runner.play(0, 0);
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "P-215 must not install a selection when the only candidate is a \
+         level-less trait card (printed cost requires 'level 4 or lower')"
+    );
+}
+
+/// The cost is OPTIONAL ("By placing..." — DCGO `canNoSelect: true`): with an
+/// eligible cost card available, the player may PASS the union-zone selection.
+/// Declining must skip the whole effect — no source placed, no protect-target
+/// selection, no modifiers granted.
+#[test]
+fn p_215_declining_optional_cost_skips_entire_effect() {
+    let cost_card = make_ice_snow_lv3("COST-DECLINE");
+    let protect_digi = make_ice_snow_lv5("PROT-DECLINE");
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("P-215")
+        .expect("P-215 YAML parses and compiles")
+        .add_card(cost_card)
+        .add_card(protect_digi)
+        .hand(0, &["P-215", "COST-DECLINE"])
+        .memory(10)
+        .start();
+
+    let protect_handle = runner.place_on_field(0, "PROT-DECLINE", None);
+
+    runner.play(0, 0);
+
+    // The optional union-zone cost prompt installs (an eligible card exists).
+    let selecting_player = {
+        let sel = runner
+            .pending_selection()
+            .expect("union-zone cost selection must install");
+        assert!(
+            matches!(runner.pending_kind(), Some(SelectionKind::UnionZone { .. })),
+            "first selection must be the UnionZone cost prompt"
+        );
+        assert!(sel.is_optional, "the cost selection must be declinable");
+        sel.selecting_player
+    };
+
+    let hand_before = runner.hand_size(0);
+
+    // Decline the cost.
+    runner
+        .execute_action(selecting_player, PASS)
+        .expect("PASS on the optional cost selection must be legal");
+
+    // Nothing else may happen: no protect-target selection, no hand change,
+    // no source placed under P-215, no protection modifiers.
+    assert!(
+        runner.pending_selection().is_none(),
+        "declining the cost must skip the protect-target selection entirely"
+    );
+    assert_eq!(
+        runner.hand_size(0),
+        hand_before,
+        "declining the cost must not remove any card from hand"
+    );
+    let icemon = runner
+        .game
+        .player(0)
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&runner.game.card_data) == "P-215")
+        .expect("P-215 must be on the battle area");
+    assert_eq!(
+        icemon.digivolution_cards().len(),
+        1,
+        "declining the cost must leave P-215's stack untouched (top card only)"
+    );
+    for modifier in [
+        ModifierType::CannotBeReturnedToHand,
+        ModifierType::CannotBeReturnedToDeck,
+        ModifierType::CannotBeDeDigivolved,
+    ] {
+        assert!(
+            !runner.game.modifiers.has(protect_handle, modifier),
+            "declining the cost must not grant {modifier:?}"
+        );
+    }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

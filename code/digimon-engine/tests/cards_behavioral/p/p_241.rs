@@ -10,26 +10,34 @@
 //!   Then, 1 of your Digimon may app fuse into a Digimon card in the hand.
 //! [Security] Play this card without paying the cost.
 //!
-//! # Gaps and omissions
-//! The clause-tail "Then, 1 of your Digimon may app fuse into a Digimon card
-//! in the hand." is OMITTED — no engine primitive for effect-initiated App
-//! Fusion (`EffectContext::effect_initiated_app_fuse` / DSL `app_fuse` step).
-//! Gap: effect-initiated app fuse — see docs/RUST_ENGINE_GAPS.md (App Fuse
-//! entry). Same gap keeps BT21-084, BT23-079, BT24-087, BT25-089 PARTIAL.
+//! # Implementation notes (audited 2026-07-10)
+//! All clauses are implemented — the earlier "app fuse OMITTED / PARTIAL"
+//! header was stale: the tail "Then, 1 of your Digimon may app fuse into a
+//! Digimon card in the hand." ships via the effect-initiated `app_fuse` step
+//! (`app_fuse: { from: hand, optional: true }`, 2026-06-13) and is covered by
+//! `p_241_app_fuse_from_hand_after_vortex_grant` below.
 //!
-//! The "<Vortex> + +3000 DP for the turn" portion IS implemented:
+//! The "<Vortex> + +3000 DP for the turn" portion:
 //!   - `grant_keyword: { target: tgt, keyword: Vortex, expiry: end_of_your_turn }`
 //!   - `add_dp_modifier: { target: tgt, value: 3000, expiry: end_of_your_turn }`
-//! Both expire end_of_your_turn. `tgt` is a player-chosen Appmon Digimon
-//! (NOT event_target — the card says "1 of your Digimon with the [Appmon] trait").
+//! Both expire end_of_your_turn (DCGO EffectDuration.UntilEachTurnEnd; the
+//! effect is [Your Turn]-gated so the current turn is always yours). `tgt` is
+//! a player-chosen [Appmon] Digimon, MANDATORY once the suspend cost is paid
+//! (DCGO buff select canNoSelect: false) and NOT event_target — the card says
+//! "1 of your Digimon with the [Appmon] trait".
 //!
-//! # Verdict: PARTIAL
-//! Gap kind: engine (effect-initiated app fuse)
+//! DCGO guarded regions: with no [Appmon] Digimon on the field the buff pick
+//! is skipped (`if (HasMatchConditionPermanent(...))`) but the app-fuse region
+//! STILL runs — covered by `p_241_no_appmon_buff_skipped_app_fuse_still_offered`.
+//! No [Once Per Turn] (DCGO use cap -1); the suspend cost is the natural lock,
+//! covered by `p_241_already_suspended_yujin_no_prompt`.
+//!
+//! # Verdict: IMPLEMENTED
 //!
 //! # DCGO C# reference
-//! ABSENT — P-241 is a promo with no DCGO file.
-//! Ground truth: printed card text + on_any_link sibling cards
-//! (BT21-084, BT23-079, BT24-087) for observer shape.
+//! DCGO/Assets/Scripts/CardEffect/P/Green/P_241.cs (base repo — the earlier
+//! "ABSENT — promo with no DCGO file" note was stale; the file exists and
+//! this suite was cross-checked against it).
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
@@ -275,6 +283,53 @@ fn p_241_accept_suspends_yujin_then_prompts_appmon_target_and_grants_vortex_plus
         r.effective_dp(appmon_handle),
         Some(dp_before + 3000),
         "selected Appmon Digimon must gain +3000 DP for the turn"
+    );
+}
+
+/// The buff target selection is MANDATORY (DCGO buff select canNoSelect: false
+/// — no PASS once the suspend cost is paid) and restricted to [Appmon]-trait
+/// Digimon (the plain, non-Appmon linked host is NOT offered).
+#[test]
+fn p_241_buff_selection_is_mandatory_and_appmon_only() {
+    use digimon_engine::action::space::encode_attack;
+
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(5).start();
+    let _yujin = r.place_on_field(0, CARD_ID, Some(0));
+    let host = r.place_on_field(0, "PLAIN-DIG", Some(0));
+    let appmon = r.place_on_field(0, "APPMON-DIG", Some(0));
+    r.game.enter_main_phase();
+
+    let host_handle = r.perm_handle(0, host.index as usize);
+    fire_link_event(&mut r, 0, host_handle, "LINKED-CARD");
+
+    // Accept the outer optional prompt (pays the suspend cost).
+    {
+        let sel = r.game.pending_selection.as_ref().unwrap();
+        let action = sel.valid_action_ids[0];
+        let _ = r.game.resolve_selection(0, action);
+        r.game.drain_effect_queue();
+    }
+
+    let sel = r
+        .game
+        .pending_selection
+        .as_ref()
+        .expect("buff target selection installs after the cost is paid");
+    let appmon_action = encode_attack(0, appmon.index as u16);
+    let host_action = encode_attack(0, host.index as u16);
+    assert!(
+        sel.valid_action_ids.contains(&appmon_action),
+        "the [Appmon]-trait Digimon must be a valid buff target"
+    );
+    assert!(
+        !sel.valid_action_ids.contains(&host_action),
+        "the plain (non-Appmon) linked host must NOT be a valid buff target — \
+         printed text scopes the buff to 'your Digimon with the [Appmon] trait'"
+    );
+    assert!(
+        !sel.valid_action_ids.contains(&PASS),
+        "buff selection is mandatory once the suspend cost is paid \
+         (DCGO canNoSelect: false) — PASS must not be offered"
     );
 }
 
@@ -542,5 +597,93 @@ fn p_241_app_fuse_from_hand_after_vortex_grant() {
             .card_id(&r.game.card_data),
         "TEST-APPFUSE",
         "hand result app-fused onto the host after the Vortex/DP grant"
+    );
+}
+
+/// DCGO guarded regions (P_241.cs): with NO [Appmon] Digimon on the field,
+/// accepting still pays the suspend cost, the Vortex/+3000 buff pick is
+/// skipped (DCGO wraps it in `if (HasMatchConditionPermanent(...))`), and the
+/// app-fuse rider STILL runs — "Then, 1 of your Digimon may app fuse into a
+/// Digimon card in the hand." is its own sentence and does not depend on the
+/// buff having a target.
+#[test]
+fn p_241_no_appmon_buff_skipped_app_fuse_still_offered() {
+    use digimon_engine::action::space::{encode_attack, HAND_EFFECT_START};
+
+    // Deliberately NO Appmon trait — eligible app-fuse material by NAME only.
+    fn plain_named(id: &str, name: &str) -> CardData {
+        let mut c = make_test_card(id, name);
+        c.card_kind = CardKind::Digimon;
+        c.level = Some(4);
+        c.dp = Some(4000);
+        c.play_cost = 4;
+        c
+    }
+
+    let mut r = base()
+        .from_dsl_yaml(APP_FUSE_RESULT)
+        .expect("APP_FUSE_RESULT compiles")
+        .add_card(plain_named("PLAIN-KABEMON", "Kabemon"))
+        .add_card(plain_named("PLAIN-GOMIMON", "Gomimon"))
+        .deck(0, &["DECK-PAD"; 12])
+        .hand(0, &["TEST-APPFUSE"])
+        .memory(5)
+        .start();
+    let yujin = r.place_on_field(0, CARD_ID, Some(0));
+    // Host is a NON-Appmon Kabemon — an app-fuse target once Gomimon links,
+    // but NOT a valid Vortex/+3000 buff target.
+    let host = r.place_on_field(0, "PLAIN-KABEMON", Some(0));
+    r.game.enter_main_phase();
+
+    let host_handle = r.perm_handle(0, host.index as usize);
+    let host_action = encode_attack(0, host.index as u16);
+    fire_link_event(&mut r, 0, host_handle, "PLAIN-GOMIMON");
+
+    // Accept the outer optional prompt → suspend cost is paid.
+    {
+        let sel = r.game.pending_selection.as_ref().expect("optional prompt");
+        let action = sel.valid_action_ids[0];
+        let _ = r.game.resolve_selection(0, action);
+        r.game.drain_effect_queue();
+    }
+    assert!(
+        r.game.players[0].battle_area[yujin.index as usize].is_suspended,
+        "Yujin suspends even with no [Appmon] Digimon on the field"
+    );
+
+    // No [Appmon] Digimon → the buff pick is skipped and the NEXT prompt is
+    // the app-fuse permanent selection.
+    {
+        let view = r
+            .pending_selection_view()
+            .expect("app-fuse perm selection still installs with no [Appmon] on field");
+        assert!(
+            view.valid_action_ids.contains(&host_action),
+            "host with Kabemon+Gomimon linked is an eligible app-fuse target"
+        );
+        r.execute_action(0, host_action).expect("pick host");
+    }
+    // App-fuse selection #2: the hand result.
+    {
+        let card_pos = r.game.players[0]
+            .hand
+            .iter()
+            .position(|c| c.card_id(&r.game.card_data) == "TEST-APPFUSE")
+            .expect("result still in hand");
+        r.execute_action(0, HAND_EFFECT_START + card_pos as u16)
+            .expect("pick hand result");
+    }
+
+    assert_eq!(
+        r.game.players[0].battle_area[host.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "TEST-APPFUSE",
+        "app fuse still resolves when the buff pick had no targets"
+    );
+    // The buff never happened — no Vortex on the fused host.
+    assert!(
+        !r.game.has_keyword(host_handle, Keyword::Vortex),
+        "no [Appmon] Digimon at buff time → the Vortex/+3000 grant is skipped"
     );
 }

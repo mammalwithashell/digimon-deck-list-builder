@@ -10,32 +10,44 @@
 #     Then, 1 of your Digimon may app fuse into a Digimon card in the hand.
 #   [Security] Play this card without paying the cost.
 #
-# DCGO C# reference: ABSENT — P-241 is a promo with no DCGO file.
-# Ground truth: printed card text + on_any_link sibling cards (BT21-084, BT23-079, BT24-087).
+# DCGO C# reference: DCGO/Assets/Scripts/CardEffect/P/Green/P_241.cs
+# (base repo; earlier "ABSENT — promo with no DCGO file" note was stale — the
+# file exists and was audited 2026-07-10).
 #
-# ─── DCGO crosscheck (per clause) ────────────────────────────────────────────
-#
-# No DCGO C# for this card. Modeled from printed text and sibling patterns:
+# ─── DCGO crosscheck (per clause, vs P_241.cs) ───────────────────────────────
 #
 # Clause 1 — `[Start of Your Turn] if memory <= 2, set it to 3`:
-#   Canonical ramp idiom — same as BT21-084.cs `SetMemoryTo3TamerEffect`.
+#   P_241.cs OnStartTurn → `CardEffectFactory.SetMemoryTo3TamerEffect(card)`.
 #   Maps to `when: start_of_your_turn` + `condition: { memory_lte: 2 }` + `set_memory: 3`.
 #
 # Clause 2 — `[Your Turn] When any of your Digimon get linked`:
-#   Same on_any_link sibling shape as BT21-084/BT23-079/BT24-087:
-#     active_when.all_of: [your_turn: true, event_target_owner: you]
-#     optional: true (canNoSelect: true in DCGO siblings)
-#     condition: { source_is_unsuspended: true } (CanActivateSuspendCostEffect)
-#     activation_cost: { suspend_self: true }
-#   Then — P-241-specific:
-#     Select 1 of YOUR Digimon with [Appmon] trait (NOT event_target — "1 of
-#     your Digimon with the [Appmon] trait", distinct from the linked host).
-#     grant_keyword Vortex to that Digimon, expiry end_of_your_turn.
-#     add_dp_modifier +3000 to that Digimon, expiry end_of_your_turn.
-#   App-fuse rider → `app_fuse { from: hand, optional: true }`.
+#   P_241.cs WhenLinked ActivateClass:
+#     CanUseCondition = on battle area + IsOwnerTurn + link HOST is owner's
+#       battle-area Digimon → active_when.all_of: [your_turn: true,
+#       event_target_owner: you]
+#     CanActivateCondition = CanActivateSuspendCostEffect (Yujin unsuspended)
+#       → condition: { source_is_unsuspended: true }
+#     SetUpActivateClass(..., -1, true, ...) → optional: true; -1 = no
+#       per-turn cap (no [Once Per Turn]; the suspend cost is the natural lock)
+#     Body: SuspendPermanentsClass(self).Tap() → activation_cost: { suspend_self: true }
+#   Buff pick — CanSelectBuffPermanentCondition = owner's battle-area Digimon
+#     with trait "Appmon", canNoSelect: false (MANDATORY once cost paid; NOT
+#     event_target — a free selection distinct from the linked host).
+#     grant_keyword Vortex + add_dp_modifier +3000, DCGO EffectDuration
+#     .UntilEachTurnEnd → expiry end_of_your_turn ([Your Turn]-gated, so the
+#     current turn is always yours).
+#   Guarded regions: DCGO wraps the buff pick in
+#     `if (HasMatchConditionPermanent(...))` — with NO [Appmon] Digimon on the
+#     field the buff is skipped but the app-fuse region STILL runs. The engine
+#     matches: empty-candidate select_own_permanent → Continue (tail runs);
+#     grant_keyword/add_dp_modifier skip on the unresolved `tgt` binding;
+#     app_fuse still installs.
+#   App-fuse rider — both DCGO selects (permanent, then hand card) are
+#     canNoSelect: true (optional) → `app_fuse { from: hand, optional: true }`.
 #
 # Clause 3 — `[Security] Play this card without paying the cost`:
-#   Canonical Tamer security idiom. `when: on_security`, `play_from_security: {}`.
+#   P_241.cs SecuritySkill → `CardEffectFactory.PlaySelfTamerSecurityEffect(card)`.
+#   `when: on_security`, `play_from_security: {}`.
 #
 # ─── IMPLEMENTED (2026-06-13) ─────────────────────────────────────────────────
 #
@@ -63,10 +75,13 @@ effects:
   #     then 1 of your Digimon may app fuse into a hand card.
   #
   # active_when.all_of:
-  #   - your_turn: true            — [Your Turn] scope
+  #   - your_turn: true            — [Your Turn] scope (P_241.cs IsOwnerTurn)
   #   - event_target_owner: you    — the link HOST must be our Digimon
-  # optional: true — player may decline (canNoSelect: true in siblings).
-  # condition: { source_is_unsuspended: true } — Yujin must be unsuspended to pay.
+  #                                  (P_241.cs LinkPermanentCondition)
+  # optional: true — "by suspending this Tamer" is a declinable cost
+  #   (P_241.cs SetUpActivateClass optional flag; -1 use cap = no OPT).
+  # condition: { source_is_unsuspended: true } — Yujin must be unsuspended to pay
+  #   (P_241.cs CanActivateSuspendCostEffect).
   # activation_cost: { suspend_self: true } — must be first body step.
   # select_own_permanent bind_as: tgt — choose 1 of our Digimon with [Appmon] trait.
   #   NOTE: this is NOT event_target (the linked host) — the printed text says

@@ -29,6 +29,12 @@
 //! - Event-gated <Delay> on a matching [Suzune Kazuki] play after the placing
 //!   turn: trash-this-card cost, then optional digivolve of one of your Digimon
 //!   into a level <= 6 [LIBERATOR] card from hand at cost -3.
+//! - Negative gates: placing turn (16-16-3), non-Suzune plays, and an
+//!   opponent-owned Suzune play on the opponent's turn ([Your Turn] + "any of
+//!   YOUR [Suzune Kazuki]s") must all leave the Delay parked.
+//! - Behavioral [Security] drive: a real security check runs the [Main] search
+//!   for the DEFENDER and places P-228 in the defender's battle area via the
+//!   security clause's explicit `place_self_as_delay_option`.
 
 use std::path::Path;
 
@@ -510,6 +516,70 @@ fn p_228_security_clause_mirrors_main_search_then_places_self() {
     );
 }
 
+/// Behavioral [Security] drive — printed text: "[Security] Activate this
+/// card's [Main] effects." When P-228 is checked from security, the DEFENDER
+/// (the card's owner) reveals THEIR top 3, adds the [Ice-Snow] Digimon and
+/// [LIBERATOR] picks to hand, bottoms the rest, and P-228 is placed in the
+/// defender's battle area as the same OnAllyPlayed event-gated Delayed Option
+/// (via the security clause's explicit `place_self_as_delay_option` — the
+/// security pipeline does not auto-place Delay Options).
+#[test]
+fn p_228_security_check_activates_main_search_and_places_self_as_delay_option() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&p_228_yaml())
+        .expect("P-228 YAML parses")
+        .add_card(ice_snow_digimon("ICE"))
+        .add_card(liberator_option("LIB"))
+        .add_card(base_digimon("BASE"))
+        .add_card(filler("FILL"))
+        .security(1, &["P-228"])
+        .deck(0, &["FILL"])
+        .deck(1, &["FILL", "LIB", "ICE"])
+        .memory(0)
+        .start();
+
+    let attacker = runner.place_on_field(0, "BASE", Some(0));
+    let hand_before = runner.game.player(1).hand.len();
+
+    runner.attack_player(attacker, 1, false);
+    runner
+        .auto_resolve()
+        .expect("resolve the security reveal buckets and battle-area placement");
+
+    assert_eq!(
+        runner.security_count(1),
+        0,
+        "P-228 must be checked and leave the security stack"
+    );
+    assert!(
+        hand_contains(&runner, 1, "ICE"),
+        "the defender adds the revealed [Ice-Snow] Digimon card to hand"
+    );
+    assert!(
+        hand_contains(&runner, 1, "LIB"),
+        "the defender adds the revealed [LIBERATOR] card to hand"
+    );
+    assert_eq!(
+        runner.game.player(1).hand.len(),
+        hand_before + 2,
+        "exactly the two bucket picks are added; the rest returns to the deck"
+    );
+    assert!(
+        !trash_contains(&runner, 1, "P-228"),
+        "[Security] 'place this card in the battle area' — P-228 must not be trashed"
+    );
+    assert!(
+        matches!(
+            p_228_delayed_option(&runner, 1),
+            OptionState::Delayed {
+                trigger: DelayTrigger::OnEvent(EffectTiming::OnAllyPlayed),
+                ..
+            }
+        ),
+        "the security placement parks P-228 as the same OnAllyPlayed event-gated Delayed Option"
+    );
+}
+
 #[test]
 fn p_228_main_reveal_buckets_expose_mandatory_masked_choices() {
     let yaml = p_228_yaml();
@@ -925,6 +995,71 @@ fn p_228_delay_does_not_fire_when_a_non_suzune_is_played() {
     assert!(
         battle_area_contains(&runner, 0, "P-228"),
         "P-228 stays parked when the play event does not match"
+    );
+    assert!(
+        hand_contains(&runner, 0, "EVO"),
+        "the evolution card stays in hand because the Delay body never ran"
+    );
+}
+
+/// Negative gate ([Your Turn] + ownership): the trigger is printed "[Your
+/// Turn] When any of YOUR [Suzune Kazuki]s are played". The OPPONENT playing
+/// their own [Suzune Kazuki] — necessarily on the opponent's turn, after the
+/// placing turn — fails both the `your_turn` tag and the `event_target_owner:
+/// you` gate, so P-228's Delay must NOT fire.
+/// DCGO crosscheck: P_228.cs gates on `IsOwnerTurn(card)` and
+/// `IsPermanentExistsOnOwnerBattleArea(permanent, card)`.
+#[test]
+fn p_228_delay_does_not_fire_when_opponent_plays_their_own_suzune() {
+    let mut runner = DebugRunner::builder()
+        .from_dsl_yaml(&p_228_yaml())
+        .expect("P-228 YAML parses")
+        .add_card(ice_snow_digimon("ICE"))
+        .add_card(liberator_option("LIB"))
+        .add_card(suzune("SUZUNE"))
+        .add_card(base_digimon("BASE"))
+        .add_card(liberator_evo("EVO"))
+        .add_card(filler("FILL"))
+        .hand(0, &["P-228", "EVO"])
+        .hand(1, &["SUZUNE"])
+        .deck(0, &["FILL", "FILL", "FILL", "ICE", "LIB", "FILL"])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+
+    runner.place_on_field(0, "BASE", Some(0));
+    runner.game.enter_main_phase();
+    assert_eq!(
+        runner.game.play_option_from_hand(0, 0),
+        OptionPlayResult::Pending
+    );
+    runner.auto_resolve().expect("resolve Main and placement");
+
+    // Pass the turn: it is now AFTER the placing turn (the 16-16-3 gate
+    // passes), so only the [Your Turn] / event-owner gates can reject the
+    // opponent's play.
+    runner.end_turn();
+    assert_eq!(runner.game.turn_player(), 1);
+    runner.game.enter_main_phase();
+
+    // The OPPONENT plays their own [Suzune Kazuki].
+    let suzune_idx = hand_index_of(&runner, 1, "SUZUNE");
+    assert!(
+        runner.game.play_from_hand(1, suzune_idx).is_some(),
+        "the opponent's Suzune Kazuki must be playable"
+    );
+
+    assert!(
+        runner.pending_selection().is_none(),
+        "an opponent-owned Suzune play on the opponent's turn must not fire the Delay"
+    );
+    assert!(
+        battle_area_contains(&runner, 0, "P-228"),
+        "P-228 stays parked when the play event fails the [Your Turn]/ownership gates"
+    );
+    assert!(
+        !trash_contains(&runner, 0, "P-228"),
+        "the Delay activation cost must not be paid"
     );
     assert!(
         hand_contains(&runner, 0, "EVO"),

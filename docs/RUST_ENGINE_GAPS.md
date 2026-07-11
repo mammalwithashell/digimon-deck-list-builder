@@ -2132,3 +2132,10 @@ Surfaced: 2026-07-09 bug-list faithfulness campaign, while fixing "Delay trigger
 - **What's still wrong:** turn-scheduled delays (`start_of_your_turn` / `end_of_your_next_turn` triggers: LM-027/029/030/031/032/034, BT15-096, BT21-093, BT22-099, BT24-100, P-206, ST23-15, ST24-15, LM-055) resolve through the legacy `resolve_delayed_options_matching` scan (game_phases.rs), which fires them WITHOUT an accept/decline choice — a §16-16-2 violation (the player may keep the Delay parked) and a missing RL action-space choice (no-approximations).
 - **Suggested fix:** route the scheduled scan through the same outer-optional prompt machinery (`install_outer_optional_trigger_selection`) the OnEvent path now uses; decline leaves the Delay parked and re-armable at the next matching boundary.
 - **Blast radius:** any scheduled-delay card where declining is strategically meaningful (e.g. keeping the option in the battle area as Decode/Partition fodder or to dodge a punish window).
+
+## G-ENGINE-DELAY-BODY-BEFORE-TRASH — [Main]-activated Delay runs its body before trashing the Option (OPEN 2026-07-10)
+
+- **Found by:** buglist faithfulness campaign, BT25-098 audit.
+- **What's wrong:** `activate_delayed_option_main` resolves the Delay BODY first, then trashes the Option card (cause=Cost). DCGO trashes the Option FIRST and only runs the body on trash success (§16-16: "trash this card to activate the linked effect" — the trash is the cost). Divergence surfaces when the trash can be replaced/prevented (e.g. an effect protecting Options in the battle area) or when the body cares about the Option's zone.
+- **Scope:** shared machinery for all MainPhaseActivated Delay options (P-035/037/039/103–107/193/205/235/236, LM-033/035/037/047/049/054/056, BT13-110, BT21-097, BT25-098, ST12-15).
+- **Fix shape:** reorder in `activate_delayed_option_main`: pay the trash cost (through the replacement pipeline) first; abort the body if the Option did not actually leave.

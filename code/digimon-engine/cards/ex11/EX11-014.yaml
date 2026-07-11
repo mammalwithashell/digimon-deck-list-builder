@@ -2,11 +2,15 @@
 # Traits: Avian, LIBERATOR (+ rule-box [Ice-Snow]). Attribute: Vaccine.
 # Form: Rookie. Rarity: C.
 #
-# Printed card text (card image EX11-014.webp, authoritative; cards.json
-# agrees):
+# Printed card text (card image EX11-014.webp + official Bandai DB bundle
+# data/card_bundles/EX11-014.md, authoritative):
 #
-#   Evo box: Lv.2 from blue: Cost 1
-#     (JSON evo_costs [{card_color:1, level:2, memory_cost:1}])
+#   Evo box: Lv.2 from blue OR yellow: Cost 1 — the printed circle is a
+#     blue/yellow SPLIT half (official DB lists both: "Blue Lv.2 / cost 1"
+#     AND "Yellow Lv.2 / cost 1"; the card image shows one split-colour
+#     circle). cards.json evo_costs carries ONLY the blue half
+#     ([{card_color:1, level:2, memory_cost:1}]) — lossy API ingest; the
+#     yellow half must be encoded here as an alt_path.
 #   Evo box: "Digivolve [Hiyarimon]: Cost 0"  (JSON xros_req)
 #
 #   [On Play] Reveal the top 3 cards of your deck. Add 1 [Suzune Kazuki] and
@@ -80,10 +84,16 @@ attribute: Vaccine
 form: Rookie
 
 alt_paths:
-  # Printed standard evo box: Lv.2 from blue, cost 1 (encoded explicitly like
-  # sibling EX8-019 so DSL-only loads carry the printed cost table).
+  # Printed standard evo box: a blue/yellow SPLIT circle — Lv.2 from blue OR
+  # yellow, cost 1 (official Bandai DB: "Blue Lv.2 / cost 1" + "Yellow Lv.2 /
+  # cost 1"). Encoded explicitly, one alt_path per colour half like sibling
+  # EX11-022, so DSL-only loads carry the full printed cost table —
+  # cards.json's evo_costs drops the yellow half.
   - kind: digivolve
     from: { level_eq: 2, color_is: blue }
+    cost: 1
+  - kind: digivolve
+    from: { level_eq: 2, color_is: yellow }
     cost: 1
   # Printed alt evo box: "Digivolve [Hiyarimon]: Cost 0". DCGO gates on
   # EqualsCardName("Hiyarimon") only — exact name, no level/color restriction.

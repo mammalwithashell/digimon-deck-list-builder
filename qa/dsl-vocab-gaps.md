@@ -8141,3 +8141,32 @@ Surfaced: 2026-07-09 bug-list faithfulness campaign (user-reported: "certain tim
 - **Evidence it's a footgun:** 8 of 13 `on_move` users were mis-authored without the gate (P-215, ST24-04, ST23-06, BT25-008, EX11-008, BT24-034, BT25-063, BT25-078 — all fixed + regression-tested this campaign). Their effects fired when ANY Digimon (even the opponent's) moved from breeding.
 - **Suggested vocabulary:** split the timing into `when_moving` (self-scoped, implies the event_permanent_is_source gate) vs `on_any_move` (observer scan, current semantics), or make `on_move` default to self-scope with an explicit `observe: any` opt-out. Lowering: same dispatch, gate injected at lower time.
 - **Consumers today:** all 13 current `on_move` cards compile against the workaround; new cards keep paying the tax until the split lands.
+
+## G-DSL-TOKEN-HOST-EXCLUSION — no `is_token` predicate for host/target filters (OPEN 2026-07-10)
+
+- **Found by:** buglist faithfulness campaign, BT21-071 audit.
+- **What's missing:** DCGO's `CanTuckUnderCondition` (and several host-pick conditions) exclude TOKENS as hosts for place-under/link effects; the DSL predicate vocabulary has no `is_token` / `not_token` leaf, so `select_own_permanent { kind: digimon }` can offer a token host where DCGO would not.
+- **Affected:** BT21-071 (place-as-bottom-source host pick), likely every tuck/link host pick vs tokens.
+- **Suggested vocabulary:** `is_token: true|false` predicate leaf reading the token registry provenance on the permanent's top card.
+
+## G-DSL-CANDIDATE-LINKABILITY — link-card candidate filters can't require the candidate's own link condition to accept the host (OPEN 2026-07-10)
+
+- **Found by:** buglist faithfulness campaign, BT25-056/BT25-072/BT25-052/BT25-089 audits (documented in each YAML).
+- **What's missing:** DCGO gates link candidates with `CanLinkToTargetPermanent` (the CANDIDATE's own `<Link>` condition must accept the chosen host). The DSL `link_cards` filter is trait/kind-only, so a candidate whose link condition rejects the host is still offered (the engine link action then applies its own legality, but effect-driven links may over-offer).
+- **Practical exposure:** narrow today (Appmon pools all share `[Appmon] trait` link conditions), but structurally wrong for mixed pools.
+- **Suggested vocabulary:** `candidate_can_link_to_host: true` flag on `link_cards`, lowering to the existing link-condition legality check.
+
+## G-DSL-MODIFIER-CAUSE-SCOPE — `add_modifier` cannot scope protection modifiers to opponent effects (OPEN 2026-07-10)
+
+- **Found by:** buglist faithfulness campaign, P-215 audit.
+- **What's wrong:** printed "your opponent's effects can't return it to hands/decks or affect it with <De-Digivolve>" installs `CannotBeReturnedToHand`/`CannotBeReturnedToDeck`/`CannotBeDeDigivolved` via `add_modifier`, which lowers to `ModifierEntry::simple` with `cause_filter: None` — cause-agnostic, so the OWNER's own effects are also blocked. DCGO gates the hand/deck halves with `IsOpponentEffect`.
+- **Engine primitive exists:** `EffectContext::grant_zone_return_immunity_to_opponent_effects` (passive replacement with `ReplacementCause::OpponentEffect`); `grant_narrow_opponent_effect_protection` (PUPPETS-G024) covers a related narrow shape. No DSL knob reaches either from `add_modifier`.
+- **Affected:** P-215, EX8-070, BT18-064, BT19-051, BT23-054, ST17-07 (every DSL user of these modifiers with printed "their effects" scoping).
+- **Suggested vocabulary:** `cause: opponent_effect` field on `add_modifier`, lowering to the passive-replacement entry.
+
+## G-DSL-PREDICATE-UNKNOWN-FIELDS — PredicateSpec silently drops unknown YAML fields (OPEN 2026-07-10, SERIOUS)
+
+- **Found by:** buglist faithfulness campaign, AD1-005 audit (concrete casualties found).
+- **What's wrong:** `PredicateSpec` deserializes without `deny_unknown_fields`, so a typo'd or never-implemented predicate key parses as a NO-OP and the gate silently vanishes. Concrete casualties: `color_includes:` on BT24-017, EX11-012, EX11-074 — their circle color gates are UNENFORCED in production.
+- **Fix shape:** (a) add `#[serde(deny_unknown_fields)]` to `PredicateSpec` (and audit other Spec structs), or (b) a dsl-lint rule diffing YAML keys against the schema; then sweep and fix the three known casualties (+ whatever the sweep finds).
+- **Priority:** high — this converts authoring typos into silent rules violations, defeating the no-approximations policy invisibly. (An earlier note at ~L3705 flagged the same class; this entry adds the concrete casualties.)

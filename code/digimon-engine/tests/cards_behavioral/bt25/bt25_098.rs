@@ -29,6 +29,16 @@
 //! no `canNoSelect`). The YAML's `optional: true` was corrected to
 //! `optional: false`. When no [Appmon] is revealed the select finds no
 //! candidates and auto-skips.
+//!
+//! RE-AUDIT note (2026-07-10): card face verified — the delay header prints
+//! "[Main] <Delay>", the standard MainPhaseActivated shape (trigger: delayed);
+//! the delay body's own printed "You may play" keeps the hand pick optional.
+//! <Use Req.> is an ignore-color RIDER (additive with the ordinary color
+//! requirement), scanning battle AND breeding areas per DCGO's UseRequirements
+//! ((IsDigimon || IsTamer) && Appmon trait). The YAML's belt-and-braces flood
+//! gate was aligned to that battle+breeding scan (was battle-only). New tests:
+//! color-requirement-alone positive, breeding-Appmon Use-Req positive, and the
+//! placing-turn <Delay> negative (16-16).
 
 use digimon_dsl::compiled::{
     CompiledCardKind, CompiledClause, CompiledCostDelta, CompiledDeclarativeClause, CompiledScope,
@@ -522,6 +532,52 @@ fn bt25_098_delay_play_can_be_declined() {
     );
 }
 
+/// Placing-turn gate negative (rule 16-16: a <Delay> can't be activated the
+/// turn the card entered the battle area). Seat BT25-098 as a delayed Option
+/// placed THIS turn and confirm the [Main] activation is refused, the card
+/// stays parked, and nothing is trashed.
+#[test]
+fn bt25_098_delay_not_activatable_on_placing_turn() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-098")
+        .expect("BT25-098 YAML loads")
+        .add_card(appmon_digimon("APP-PLAY", 4))
+        .add_card(plain_digimon("FILL", 3))
+        .hand(0, &["APP-PLAY"])
+        .deck(0, &["FILL"; 6])
+        .deck(1, &["FILL"; 6])
+        .memory(10)
+        .start();
+
+    let handle = runner.place_on_field(0, "BT25-098", Some(0));
+    let placing_turn = runner.game.turn_count;
+    runner.game.player_mut(0).battle_area[handle.index as usize].option_state =
+        OptionState::Delayed {
+            owner: 0,
+            trash_on_turn: u16::MAX,
+            trigger: DelayTrigger::MainPhaseActivated,
+            placed_on_turn: placing_turn,
+        };
+    runner.game.enter_main_phase();
+
+    assert!(
+        !runner.game.activate_field_main(0, handle.index as usize),
+        "the standard <Delay> must NOT be activatable on the placing turn (16-16)"
+    );
+    assert!(
+        field_contains(&runner, 0, "BT25-098"),
+        "BT25-098 stays parked in the battle area after the refused activation"
+    );
+    assert!(
+        !trash_ids(&runner, 0).contains(&"BT25-098".to_string()),
+        "no self-trash cost is paid on a refused activation"
+    );
+    assert!(
+        hand_ids(&runner, 0).contains(&"APP-PLAY".to_string()),
+        "the hand [Appmon] is untouched by the refused activation"
+    );
+}
+
 // ── Section 4: Use Req. gating — IgnoreColorRequirement ─────────────────────
 
 /// The flood gate that lets BT25-098 ignore color requirements is active only
@@ -578,6 +634,80 @@ fn bt25_098_play_blocked_without_appmon_on_field() {
     assert!(
         hand_ids(&runner, 0).contains(&"BT25-098".to_string()),
         "BT25-098 stays in hand after a failed play attempt"
+    );
+}
+
+/// Use Req. is an ignore-color RIDER, not a hard use gate (printed reminder:
+/// "Specified cards let you ignore color requirements."; DCGO models it as a
+/// purely additive IgnoreColorConditionClass). A plain YELLOW non-Appmon
+/// Digimon satisfies the ordinary color requirement, so the play must be
+/// accepted even with zero [Appmon] cards anywhere.
+#[test]
+fn bt25_098_play_allowed_via_color_requirement_without_appmon() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-098")
+        .expect("BT25-098 YAML loads")
+        .add_card(plain_digimon("PLAIN-Y", 3)) // yellow, NOT Appmon
+        .add_card(plain_digimon("FILLER", 3))
+        .hand(0, &["BT25-098"])
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .memory(10)
+        .start();
+    runner.place_on_field(0, "PLAIN-Y", Some(0));
+    runner.game.enter_main_phase();
+    stack_deck_top(&mut runner, &["FILLER", "FILLER", "FILLER"]);
+
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert!(
+        result != OptionPlayResult::Invalid,
+        "a yellow non-Appmon Digimon satisfies the normal color requirement; \
+         <Use Req.> must not be a hard gate; got {:?}",
+        result
+    );
+}
+
+/// DCGO's UseRequirements scans the breeding area too
+/// (HasMatchConditionOwnersBreedingPermanent): a NON-yellow [Appmon] Digimon
+/// in the breeding area — with an empty battle area, so the ordinary color
+/// requirement fails — still satisfies the Use Req. and the play is accepted.
+#[test]
+fn bt25_098_use_requirement_satisfied_by_breeding_appmon() {
+    // Black Appmon: wrong color for the yellow Option, so only the Use Req.
+    // bypass can make the play legal.
+    let mut black_appmon = make_test_card("APP-BREED", "APP-BREED");
+    black_appmon.card_kind = CardKind::Digimon;
+    black_appmon.colors = vec![CardColor::Black];
+    black_appmon.level = Some(3);
+    black_appmon.dp = Some(3000);
+    black_appmon.play_cost = 3;
+    black_appmon.traits = vec!["Appmon".to_string()];
+
+    let mut runner = DebugRunner::builder()
+        .dsl_card("BT25-098")
+        .expect("BT25-098 YAML loads")
+        .add_card(black_appmon)
+        .add_card(plain_digimon("FILLER", 3))
+        .hand(0, &["BT25-098"])
+        .deck(0, &["FILLER"; 5])
+        .deck(1, &["FILLER"; 5])
+        .memory(10)
+        .start();
+    runner.place_in_breeding(0, "APP-BREED");
+    runner.game.enter_main_phase();
+    stack_deck_top(&mut runner, &["FILLER", "FILLER", "FILLER"]);
+
+    assert!(
+        runner.game.player(0).battle_area.is_empty(),
+        "precondition: battle area empty so only the breeding Appmon can \
+         satisfy anything"
+    );
+    let result = runner.game.play_option_from_hand(0, 0);
+    assert!(
+        result != OptionPlayResult::Invalid,
+        "an [Appmon] Digimon in the BREEDING area satisfies <Use Req.> \
+         (DCGO scans breeding too); got {:?}",
+        result
     );
 }
 

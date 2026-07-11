@@ -7,20 +7,24 @@
 //! and 1 [Creation], [Navi] or [Tool] trait card among them to the hand.
 //! Return the rest to the bottom of the deck.
 //!
-//! [Your Turn] When any of your Digimon get linked to a [Social], [Creation],
-//! [Navi] or [Tool] trait card, by suspending this Tamer, gain 1 memory.
+//! [Your Turn] When any of your Digimon get linked to a [Social], [Navi] or
+//! [Tool] trait card, by suspending this Tamer, gain 1 memory.
 //!
 //! [Security] Play this card without paying the cost.
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/P/Red/P_217.cs
 //!
-//! # Printed-vs-DCGO disagreement
-//! DCGO's LinkCardCondition (P_217.cs:113-117) checks ONLY Social, Navi, Tool —
-//! it omits [Creation]. The printed text explicitly includes [Creation]. This
-//! implementation faithfully implements all four traits per printed text. This is
-//! a DCGO bug. Tests explicitly cover the Creation-trait case as a deliberate
-//! divergence guard.
+//! # [Creation] adjudication (re-verified 2026-07-10)
+//! The [Your Turn] link observer prints ONLY [Social], [Navi], [Tool] —
+//! [Creation] belongs only to the [On Play] clause's second bucket. Verified
+//! against the card image (P-217.webp, zoomed) and the official Bandai DB
+//! bundle (data/card_bundles/P-217.md); DCGO's LinkCardCondition matches.
+//! The lossy cards.json entry wrongly adds [Creation] to the [Your Turn] line;
+//! an earlier version of this suite treated that as a "DCGO bug" and asserted
+//! the observer fires on [Creation] — that was drift and is now inverted:
+//! [Creation] links must NOT fire the observer, but a [Creation] card DOES
+//! qualify for On Play bucket 2.
 //!
 //! # Patterns this test covers
 //! - `when: on_any_link` board-wide link observer (G-DSL-WHEN-ANY-OWN-DIGIMON-LINKED)
@@ -67,8 +71,9 @@ fn make_social_card(id: &str) -> CardData {
 }
 
 /// A Digimon with the [Creation] trait.
-/// NOTE: DCGO omits [Creation]; printed text includes it. Tests must PASS for
-/// this trait.
+/// NOTE: [Creation] qualifies for On Play bucket 2 but NOT for the [Your Turn]
+/// link observer (printed observer list is Social/Navi/Tool only — verified
+/// against the card image + official Bandai DB; cards.json is wrong here).
 fn make_creation_card(id: &str) -> CardData {
     make_digimon(id, &["Creation"])
 }
@@ -83,7 +88,8 @@ fn make_tool_card(id: &str) -> CardData {
     make_digimon(id, &["Tool"])
 }
 
-/// A Digimon with none of the four observer-triggering traits.
+/// A Digimon with none of the card's relevant traits (neither On Play bucket
+/// nor the Social/Navi/Tool observer list).
 fn make_irrelevant_card(id: &str) -> CardData {
     make_digimon(id, &["Reptile"])
 }
@@ -262,6 +268,38 @@ fn p_217_on_play_both_buckets_matched_adds_two_returns_one() {
     assert_eq!(r.trash_size(0), 0, "No card must go to trash");
 }
 
+/// [On Play] bucket 2 accepts a [Creation] card: adds 1 Social + 1 Creation,
+/// returns the third card to deck bottom. ([Creation] qualifies for the On Play
+/// clause even though it is NOT in the [Your Turn] observer list.)
+#[test]
+fn p_217_on_play_creation_qualifies_for_bucket_two() {
+    let mut r = base()
+        .hand(0, &[CARD_ID])
+        .deck(0, &["DECK-PAD", "SOCIAL-X", "CREATION-X"]) // top = CREATION-X
+        .memory(10)
+        .start();
+
+    let hand_before = r.hand_size(0);
+    let deck_before = r.deck_size(0);
+
+    r.play(0, 0).expect("P-217 must be playable");
+    r.auto_resolve().ok();
+
+    // Net hand: -1 (played tamer) + 2 (Social + Creation) = +1.
+    assert_eq!(
+        r.hand_size(0),
+        hand_before + 1,
+        "[Creation] must qualify for On Play bucket 2 (Social + Creation added)"
+    );
+    // Deck: -3 revealed + 1 remainder returned to bottom = -2.
+    assert_eq!(
+        r.deck_size(0),
+        deck_before - 2,
+        "Deck must lose 3 revealed cards and gain 1 remainder at bottom"
+    );
+    assert_eq!(r.trash_size(0), 0, "No card must go to trash");
+}
+
 /// [On Play] only-Social matched: Bucket 1 adds Social; Bucket 2 has no
 /// candidates → clamped, adds nothing. Two cards go to deck bottom.
 #[test]
@@ -404,8 +442,8 @@ fn p_217_observer_social_link_on_your_turn_decline_no_effect() {
 // Section 4 — Observer: trait gating
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// [Your Turn] linked card with NONE of the four traits → observer does NOT
-/// fire. No selection, no memory change.
+/// [Your Turn] linked card with NONE of the observer traits (Social/Navi/Tool)
+/// → observer does NOT fire. No selection, no memory change.
 #[test]
 fn p_217_observer_irrelevant_trait_does_not_fire() {
     let mut r = base().deck(0, &["DECK-PAD"; 8]).memory(3).start();
@@ -416,7 +454,7 @@ fn p_217_observer_irrelevant_trait_does_not_fire() {
 
     let memory_before = r.game.memory;
 
-    // Link an [Reptile] card — not Social/Creation/Navi/Tool.
+    // Link a [Reptile] card — not Social/Navi/Tool (and not an On Play trait).
     fire_link_event(&mut r, host, "IRREL-X");
 
     assert!(
@@ -429,10 +467,13 @@ fn p_217_observer_irrelevant_trait_does_not_fire() {
     );
 }
 
-/// [Your Turn] linked card has [Creation] trait → observer FIRES.
-/// (DCGO omits Creation; printed text includes it — this tests the divergence.)
+/// [Your Turn] linked card has [Creation] trait → observer does NOT fire.
+/// The printed observer list is [Social], [Navi] or [Tool] ONLY (verified on
+/// the card image + official Bandai DB bundle; DCGO agrees). [Creation] is an
+/// On Play-bucket-2 trait, not a link-observer trait. cards.json wrongly adds
+/// it — this test guards against re-importing that drift.
 #[test]
-fn p_217_observer_creation_trait_fires_not_dcgo_bug() {
+fn p_217_observer_creation_trait_does_not_fire() {
     let mut r = base().deck(0, &["DECK-PAD"; 8]).memory(3).start();
 
     let tamer = r.place_on_field(0, CARD_ID, None);
@@ -441,23 +482,22 @@ fn p_217_observer_creation_trait_fires_not_dcgo_bug() {
 
     let memory_before = r.game.memory;
 
-    // Link a [Creation] card. DCGO skips this trait; we do not.
+    // Link a [Creation] card — not in the printed observer trait list.
     fire_link_event(&mut r, host, "CREATION-X");
 
     assert!(
-        r.game.pending_selection.is_some(),
-        "Observer MUST fire for [Creation] trait (DCGO bug: it omits Creation; \
-         printed text is authoritative and includes it)"
+        r.game.pending_selection.is_none(),
+        "Observer must NOT fire for [Creation] trait — printed [Your Turn] list \
+         is Social/Navi/Tool only (cards.json wrongly adds Creation)"
     );
-    // Accept the prompt.
-    let action_id = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
-    r.game.resolve_selection(0, action_id).ok();
-    r.auto_resolve().ok();
-
+    let tamer_perm = &r.game.player(0).battle_area[tamer.index as usize];
+    assert!(
+        !tamer_perm.is_suspended,
+        "Tamer must stay unsuspended when a [Creation] card is linked"
+    );
     assert_eq!(
-        r.game.memory,
-        memory_before + 1,
-        "Memory must increase by 1 when Creation-trait link fires and cost is paid"
+        r.game.memory, memory_before,
+        "Memory must be unchanged when a [Creation] card is linked"
     );
 }
 

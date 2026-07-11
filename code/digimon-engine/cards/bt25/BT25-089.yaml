@@ -1,33 +1,40 @@
-# BT25-089 Kazuki & Itsuki — Tamer, Purple, Cost 4.
+# BT25-089 Kazuki & Itsuki — Tamer, GREEN, Cost 4. Traits: App Driver/Appmon.
 #
-# DCGO BT25_089.cs (authoritative) + cards.json:
+# Official Bandai DB (data/card_bundles/BT25-089.md) + DCGO BT25_089.cs:
 #   [Start of Your Main Phase] If your opponent has a Digimon, gain 1 memory.
 #   [Main] By suspending this Tamer, you may link 1 [Appmon] trait Digimon card
 #     from your hand or your Digimon's digivolution cards to 1 of your Digimon
 #     with the cost reduced by 2.
-#   [End of Your Turn][OPT] 1 of your Digimon may app fuse into a Digimon card
-#     in hand. — now shipped via the `app_fuse` step (effect-initiated App Fuse).
-#   Inherited [Security]: Play this card without paying the cost.
+#   [End of Your Turn] [Once Per Turn] 1 of your Digimon may app fuse into a
+#     Digimon card in the hand. — via the `app_fuse` step (effect-initiated
+#     App Fuse, shipped 2026-06-13).
+#   [Security] Play this card without paying the cost.
 #
-# PARTIAL — the [Main] link's "from your Digimon's digivolution cards" source is
-# omitted: the `link_card_to_self` digivolution-sources zone is anchored to the
-# effect's own permanent, but the effect source here is a Tamer (no Digimon
-# under-sources). The hand source is authored; the all-your-Digimon source scan
-# is a residual gap (G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES). The App Fuse
-# clause is now IMPLEMENTED (2026-06-13); the link-source scan is the only
-# remaining PARTIAL gap.
+# 2026-07-10 audit — prior PARTIAL closed:
+#   The [Main] link's "from your Digimon's digivolution cards" source
+#   (G-DSL-LINK-FROM-ANY-OWN-DIGIMON-SOURCES) is now expressible:
+#   `from: [hand, own_digimon_sources]`. With candidates in BOTH zones the
+#   engine first prompts the zone choice ("From hand" / "From your Digimon's
+#   digivolution cards") — DCGO SetIntSelection parity. The link cost is
+#   modeled as `cost: { reduce: 2 }` ("with the cost reduced by 2"); the cards
+#   this step serves carry no base link cost, so the paid amount resolves to 0
+#   (same as before) but the printed reduction is now threaded faithfully.
 #
-# Cost-modeling note: "-2" reduces the linked card's own link cost; fixtures
-# carry no engine link cost so we model paid cost as cost: 0.
+# DCGO note: BT25_089.cs's [Main] description string says "[Once Per Turn]"
+# but its ActivateClass maxUseCount is -1 (unlimited) and the OFFICIAL printed
+# text has no [Once Per Turn] on the [Main] — so no once_per_turn here (the
+# suspend activation cost is the practical limiter).
 
 card: BT25-089
 name: Kazuki & Itsuki
 kind: tamer
 color: [green]
 cost: 4
+traits: [App Driver, Appmon]
 
 effects:
   # ─── [Start of Your Main Phase] if opp has a Digimon, gain 1 memory ─────────
+  # Mandatory (no "you may" in the printed text).
   - when: start_of_your_main_phase
     condition:
       count_gte:
@@ -37,31 +44,37 @@ effects:
     process:
       - gain_memory: 1
 
-  # ─── [Main] suspend self → link 1 Appmon from hand to 1 of your Digimon (-2) ─
-  # PARTIAL: "your Digimon's digivolution cards" source omitted (see header).
+  # ─── [Main] suspend self → "you may link 1 [Appmon] trait Digimon card from
+  #     your hand or your Digimon's digivolution cards to 1 of your Digimon
+  #     with the cost reduced by 2" ────────────────────────────────────────────
   - when: main_on_field
     optional: true
-    summary: "[Main] By suspending this Tamer, link 1 [Appmon] Digimon card from hand to 1 of your Digimon (-2)"
+    summary: "[Main] By suspending this Tamer, link 1 [Appmon] Digimon card from hand or your Digimon's digivolution cards to 1 of your Digimon (-2)"
     process:
       - activation_cost: { suspend_self: true }
       - link_cards:
-          from: [hand]
+          # "from your hand or your Digimon's digivolution cards"
+          from: [hand, own_digimon_sources]
           filter:
             all_of:
               - kind: digimon
               - trait_has: Appmon
+          # "to 1 of your Digimon"
           to: own_digimon
+          # "you may link 1" — declinable
           count: { up_to: 1 }
-          cost: free
+          # "with the cost reduced by 2"
+          cost: { reduce: 2 }
 
-  # ─── [End of Your Turn][OPT] 1 of your Digimon may app fuse into a hand card ─
+  # ─── [End of Your Turn][Once Per Turn] 1 of your Digimon may app fuse into a
+  #     Digimon card in the hand ("may" → optional) ───────────────────────────
   - when: end_of_your_turn
     once_per_turn: true
     summary: "[End of Your Turn][OPT] 1 of your Digimon may app fuse into a Digimon card in the hand"
     process:
       - app_fuse: { from: hand, optional: true }
 
-  # ─── Inherited [Security] play this card free ──────────────────────────────
+  # ─── [Security] Play this card without paying the cost ─────────────────────
   - when: on_security
     summary: "[Security] Play this card without paying the cost"
     process:

@@ -1,8 +1,12 @@
-//! BT17-077 Imperialdramon: Paladin Mode — Digimon, Lv.7, Blue, DP 16000, Cost 9.
-//! Traits: Free, Mythical Dragon.
-//! Evo: Lv.6 Blue / Cost 6 (standard). Also: Lv.6 [Imperialdramon]-named / Cost 5 (DCGO alt).
+//! BT17-077 Imperialdramon: Paladin Mode — Digimon, Lv.7, White/Blue/Green,
+//! DP 16000, Cost 9.
+//! Traits: Ancient Holy Warrior. Form: Mega. Attribute: Vaccine + Rule-granted
+//! [Free] ("(Rule) Trait: Has [Free] attribute." — kept in `traits:`).
+//! Evo (official Bandai DB, data/card_bundles/BT17-077.md; the card face prints
+//! one SPLIT blue/green digivolve circle): Lv.6 Blue / Cost 6 AND Lv.6 Green /
+//! Cost 6 (standard). Also: Lv.6 [Imperialdramon]-named / Cost 5 (black-text alt).
 //!
-//! # Card text (cards.json — printed)
+//! # Card text (official Bandai DB bundle — printed)
 //!
 //! [Hand] [Counter] <Blast Digivolve>
 //!   (Your Digimon may digivolve into this card without paying the cost.)
@@ -22,7 +26,9 @@
 //! DCGO/Assets/Scripts/CardEffect/BT17/White/BT17_077.cs
 //!
 //! # Source priority
-//! Per CLAUDE.md: printed text > docs/RULES_CONTEXT.md > fandom > DCGO.
+//! Per CLAUDE.md: official Bandai DB (printed data) > DCGO (behavior) >
+//! cards.json. cards.json drops the green circle, the green color, and the
+//! Rule-granted [Free] attribute for this card.
 //!
 //! # Patterns exercised
 //! - H12 Blast Digivolve (single-card hand-counter, `burst_digivolve` alt-path)
@@ -37,9 +43,9 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause,
-    CompiledDpConstraint, CompiledPredicate, CompiledScope, CompiledTiming,
-    CompiledTriggeredClause,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost,
+    CompiledDeclarativeClause, CompiledDpConstraint, CompiledPredicate, CompiledScope,
+    CompiledTiming, CompiledTriggeredClause,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
@@ -192,6 +198,41 @@ fn bt17_077_card_metadata_matches_print() {
     assert_eq!(c.cost, Some(9), "Play cost is 9");
 }
 
+/// Identity per the official Bandai DB (data/card_bundles/BT17-077.md):
+/// Colors White/Blue/Green (cards.json lossily drops Green), Form Mega,
+/// Attribute Vaccine, trait line Ancient Holy Warrior, plus the Rule-granted
+/// [Free] attribute — "(Rule) Trait: Has [Free] attribute." — kept in traits.
+#[test]
+fn bt17_077_identity_matches_official_db() {
+    let c = compiled_bt17_077();
+    for color in [
+        CompiledColor::White,
+        CompiledColor::Blue,
+        CompiledColor::Green,
+    ] {
+        assert!(
+            c.color.contains(&color),
+            "official DB colors are White/Blue/Green — missing {color:?}"
+        );
+    }
+    assert_eq!(c.color.len(), 3, "exactly three printed colors");
+    assert!(
+        c.traits.iter().any(|t| t == "Ancient Holy Warrior"),
+        "printed trait line: Ancient Holy Warrior"
+    );
+    assert!(
+        c.traits.iter().any(|t| t == "Free"),
+        "Rule-granted [Free] attribute must stay in traits: \
+         '(Rule) Trait: Has [Free] attribute.'"
+    );
+    assert_eq!(c.form.as_deref(), Some("Mega"), "Form: Mega (official DB)");
+    assert_eq!(
+        c.attribute.as_deref(),
+        Some("Vaccine"),
+        "printed Attribute: Vaccine"
+    );
+}
+
 /// ACE Overflow: top-level `ace_overflow: -5` per Group 8 closure.
 #[test]
 fn bt17_077_ace_overflow_is_minus_5() {
@@ -203,22 +244,33 @@ fn bt17_077_ace_overflow_is_minus_5() {
     );
 }
 
-/// Standard digivolve alt-path: Lv.6 Blue / Cost 6 (cards.json evo_costs).
+/// Standard digivolve circles: Lv.6 Blue / Cost 6 AND Lv.6 Green / Cost 6
+/// (official Bandai DB; the card face prints one split blue/green circle —
+/// cards.json evo_costs lossily drops the green half).
 #[test]
-fn bt17_077_has_standard_digivolve_alt_path_lv6_blue_cost_6() {
+fn bt17_077_has_standard_digivolve_circles_lv6_blue_and_green_cost_6() {
     let c = compiled_bt17_077();
-    let has_std = c.alt_paths.iter().any(|p| {
-        p.kind == CompiledAltPathKind::Digivolve
-            && !p.ignore_requirements
-            && matches!(p.cost, Some(CompiledCost::Literal(6)))
-            && p.from
-                .as_ref()
-                .map_or(false, |f| pred_any(f, |q| q.level_eq == Some(6)))
-    });
+    let has_circle = |color: CompiledColor| {
+        c.alt_paths.iter().any(|p| {
+            p.kind == CompiledAltPathKind::Digivolve
+                && !p.ignore_requirements
+                && matches!(p.cost, Some(CompiledCost::Literal(6)))
+                && p.from.as_ref().map_or(false, |f| {
+                    pred_any(f, |q| q.level_eq == Some(6))
+                        && pred_any(f, |q| q.color_is == Some(color))
+                })
+        })
+    };
     assert!(
-        has_std,
-        "Must have a standard Digivolve alt-path at Lv.6 / Cost 6 \
-         (per cards.json evo_costs)"
+        has_circle(CompiledColor::Blue),
+        "Must have the standard Lv.6 Blue / Cost 6 digivolve circle \
+         (official Bandai DB)"
+    );
+    assert!(
+        has_circle(CompiledColor::Green),
+        "Must have the standard Lv.6 Green / Cost 6 digivolve circle \
+         (green half of the printed split circle; official Bandai DB — \
+         cards.json drops it)"
     );
 }
 

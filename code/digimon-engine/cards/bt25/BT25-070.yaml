@@ -1,42 +1,109 @@
-# BT25-070 Logamon — Digimon, Lv.4, Purple, DP 6000, Cost 5.
-# Trait line: Logging (App Name) — Game/Appmon. (per DCGO HasAppmonTraits host.)
+# BT25-070 Logamon — Digimon, Lv.4, Black/Purple dual, DP 6000, Cost 5.
+# Trait line (card image — authoritative): Sup./Appmon | Social | Logoff
+#   → traits: ["Sup.", Appmon, Social, Logoff], attribute: Social.
+#   (BT25-052 convention: every trait-line segment goes in traits, since
+#    predicate `trait_has` consults only `traits`.)
 #
-# DCGO BT25_070.cs (authoritative):
-#   - AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits, cost 2) — alt-digivolve.
-#   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 2) — self link-condition.
-#   - App Fusion (Offmon & Hackmon) — BLOCKED (no App Fuse primitive). OMITTED.
-#   - [Main][OPT][Once Per Turn]: link 1 [Social]/[Tool]/[Game] Digimon card from
-#     your trash or this Digimon's digivolution cards to THIS Digimon, cost -1.
-#   - [Your Turn][OPT][Once Per Turn] When this Digimon gets linked: delete 1 opp
-#     Digimon with play cost 4 or less.
-#   - [When Linking] (link-source / inherited): 1 opp Digimon/Tamer can't
-#     unsuspend until their turn ends.
-#
-# Cost-modeling note: "reduced by 1" reduces the linked card's own link cost;
-# DSL fixtures carry no engine link cost, so we model the paid cost as cost: 0
-# (see BT25-072/056). The flat ChangeLinkCost path covers any nonzero residual.
+# Printed clauses (official bundle data/card_bundles/BT25-070.md + card image
+# + DCGO BT25_070.cs — near-twin of BT25-052 Logimon):
+#   1. Standard digivolve circles: Black Lv.3 / cost 3 AND Purple Lv.3 / cost 3
+#      (one dual-ring circle on the card face; official Bandai DB). Authored as
+#      equal-cost alt_paths at the printed costs per pool convention (backfills
+#      the DebugRunner fixture's empty evo_costs; production dedupes the
+#      equal-cost route).
+#   2. "Stnd." circle / Cost 2 (rainbow ring — ANY colour, NO level).
+#      DCGO AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits, 2)
+#      with no level parameter; HasStandardAppTraits == EqualsTraits("Stnd.").
+#      → alt_paths digivolve from { trait_has: "Stnd." }, cost 2.
+#      (Was mis-authored as { level_eq: 3, trait_has: Standard App } — the
+#      trait string "Standard App" matches no card and DCGO has no level gate.)
+#   3. [App Fusion] [Offmon] & [Hackmon]: Cost 0 — "If 2 such cards are linked
+#      together, stack the link card on top and digivolve."
+#      DCGO AddAppfuseMethodByName(["Offmon","Hackmon"]).
+#      → alt_paths app_fusion (previously OMITTED as BLOCKED; the app_fusion
+#      alt-play primitive has since landed — BT25-036/BT25-052/BT25-060).
+#   4. Link box: "<Link> [Appmon] trait: Cost 2" → kind: link_condition
+#      (DCGO AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 2)).
+#   5. Link box "+DP 3000" — host gets +3000 DP while this card is linked.
+#      → scope: linked aura dp_modifier 3000 (BT21-073/BT25-052 idiom).
+#      (Was missing entirely.)
+#   6. [Main][Once Per Turn] "You may link 1 [Social], [Tool] or [Game] trait
+#      Digimon card from your trash or this Digimon's digivolution cards to
+#      this Digimon with the cost reduced by 1."
+#      → main_on_field once_per_turn + link_cards from [trash, self_sources],
+#      cost: { reduce: 1 } (printed "-1"; the cards this step links carry a
+#      base link cost of 0 in this context, so it pays 0 today — the reduce
+#      form is threaded faithfully for a future non-zero base, see step.rs
+#      LinkCardsCost and BT25-089/BT25-052 precedent; was modeled as
+#      cost: free).
+#   7. [Your Turn][Once Per Turn] "When this Digimon gets linked, delete 1 of
+#      your opponent's Digimon with a play cost of 4 or less."
+#      DCGO: WhenLinked ActivateClass, CanTriggerWhenLinked(perm == this);
+#      target = opponent Digimon with HasPlayCost && GetCostItself <= 4;
+#      canNoSelect: false → MANDATORY (no "you may" printed); silently skips
+#      when no legal target exists.
+#      → when_card_linked_to_this + active_when { your_turn } + mandatory
+#      select_opponent_permanent → delete_permanent.
+#   8. [When Linking] "1 of your opponent's Digimon or Tamers can't unsuspend
+#      until their turn ends." Link-source effect (DCGO SetIsLinkedEffect(true);
+#      canNoSelect: false → mandatory when a target exists) → scope: linked,
+#      when: when_linked, CannotUnsuspend with end_of_opponents_turn expiry.
 
 card: BT25-070
 name: Logamon
 kind: digimon
 level: 4
-color: [purple]
+color: [black, purple] # printed: Black Purple dual (bundle + split frame; was mis-authored purple-only)
 cost: 5
 dp: 6000
-traits: [Logoff, Appmon]  # official Bandai DB: type "Logoff" (was mis-authored "Logging")
+traits: ["Sup.", Appmon, Social, Logoff] # form Sup./Appmon + attribute Social + type Logoff (official DB)
+attribute: Social
 
 alt_paths:
+  # ─── Standard digivolution: Black Lv.3 / cost 3 (printed circle, colour 1) ──
   - kind: digivolve
-    from: { level_eq: 3, trait_has: Standard App }
+    from: { level_eq: 3, color_is: black }
+    cost: 3
+
+  # ─── Standard digivolution: Purple Lv.3 / cost 3 (printed circle, colour 2) ─
+  - kind: digivolve
+    from: { level_eq: 3, color_is: purple }
+    cost: 3
+
+  # ─── [Digivolve] "Stnd." circle: Cost 2 (any colour, trait gate only) ───────
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits, 2)
+  # — no level parameter → no level_eq gate. HasStandardAppTraits == "Stnd.".
+  - kind: digivolve
+    from: { trait_has: "Stnd." }
     cost: 2
+
+  # ─── [App Fusion] [Offmon] & [Hackmon]: Cost 0 ──────────────────────────────
+  # DCGO: AddAppfuseMethodByName(["Offmon","Hackmon"]).
+  - kind: app_fusion
+    materials:
+      - filter:
+          name_in: [Offmon, Hackmon]
+    cost: 0
 
 effects:
   # ─── Self link-condition: link onto an [Appmon] host for cost 2 ─────────────
+  # Printed: "<Link> [Appmon] trait: Cost 2".
   - kind: link_condition
     cost: 2
     filter: { trait_has: Appmon }
 
+  # ─── Link box +3000 DP: host gets +3000 DP while this card is linked ────────
+  # Printed link box: "+DP 3000". BT21-073/BT25-052 linked-aura idiom.
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] This Digimon's host gets +3000 DP while Logamon is linked"
+
   # ─── [Main][OPT][Once Per Turn] link from trash/sources to this (-1) ────────
+  # Printed: "You may link 1 [Social], [Tool] or [Game] trait Digimon card from
+  # your trash or this Digimon's digivolution cards to this Digimon with the
+  # cost reduced by 1."
   - when: main_on_field
     once_per_turn: true
     summary: "[Main][OPT] You may link 1 [Social]/[Tool]/[Game] Digimon card from trash or digivolution cards to this Digimon (-1)"
@@ -52,13 +119,16 @@ effects:
                   - trait_has: Game
           to: self
           count: { up_to: 1 }
-          cost: free
+          cost: { reduce: 1 }
 
-  # ─── [Your Turn][OPT] When linked: delete 1 opp Digimon cost <= 4 ───────────
+  # ─── [Your Turn][Once Per Turn] When linked: delete 1 opp Digimon cost <=4 ──
+  # Printed: "[Your Turn] [Once Per Turn] When this Digimon gets linked, delete
+  # 1 of your opponent's Digimon with a play cost of 4 or less." MANDATORY (no
+  # "you may"; DCGO canNoSelect: false) — skips silently when no target exists.
   - when: when_card_linked_to_this
     once_per_turn: true
     active_when: { your_turn: true }
-    summary: "[Your Turn][OPT] When this Digimon gets linked, delete 1 opp Digimon with play cost 4 or less"
+    summary: "[Your Turn][Once Per Turn] When this Digimon gets linked, delete 1 opp Digimon with play cost 4 or less"
     process:
       - select_opponent_permanent:
           bind_as: del_target
@@ -70,6 +140,9 @@ effects:
       - delete_permanent: { target: del_target }
 
   # ─── [When Linking] (link-source): 1 opp can't unsuspend until turn end ─────
+  # Printed: "1 of your opponent's Digimon or Tamers can't unsuspend until
+  # their turn ends." Mandatory (DCGO canNoSelect: false); skips silently when
+  # no target exists.
   - scope: linked
     when: when_linked
     summary: "[When Linking] 1 of your opponent's Digimon or Tamers can't unsuspend until their turn ends"

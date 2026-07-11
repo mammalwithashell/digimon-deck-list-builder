@@ -1,5 +1,7 @@
 //! EX7-020 Paledramon — Digimon, Lv.4, Blue, DP 5000, Cost 5.
-//! Traits: Dragon. Attribute: Data. Rule box: "Trait: Has [Ice-Snow] Type."
+//! Traits: Dragon. Form: Champion (official Bandai DB; cards.json form_eng is
+//! empty — lossy API ingest). Attribute: Data. Rule box: "Trait: Has
+//! [Ice-Snow] Type."
 //! Evo cost: from blue Lv.3 for 2 memory (cards.json evo_costs; matches the
 //! card image's single digivolve circle — no alt evo box printed).
 //!
@@ -172,6 +174,16 @@ fn ex7_020_compiles_with_printed_stats_and_lv3_blue_path() {
     assert!(
         compiled.traits.iter().any(|t| t == "Ice-Snow"),
         "rule box 'Trait: Has [Ice-Snow] Type.' must surface as an Ice-Snow trait"
+    );
+    assert_eq!(
+        compiled.form.as_deref(),
+        Some("Champion"),
+        "official Bandai DB prints Form: Champion (cards.json form_eng is empty — lossy ingest)"
+    );
+    assert_eq!(
+        compiled.attribute.as_deref(),
+        Some("Data"),
+        "printed attribute is Data"
     );
 
     assert!(

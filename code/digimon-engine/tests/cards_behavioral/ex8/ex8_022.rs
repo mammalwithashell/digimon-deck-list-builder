@@ -1,6 +1,9 @@
 //! EX8-022 Frigimon — Digimon, Lv.4, Blue/Yellow, DP 5000, Cost 5.
 //! Traits: Ice-Snow, LIBERATOR. Attribute: Vaccine. Rarity: R.
-//! Standard digivolution: Lv.3 blue for 3 memory (printed evo box).
+//! Standard digivolution: SPLIT half-blue/half-yellow circle, Lv.3 for 3
+//! memory (printed evo box) — the official Bandai DB decomposes it as TWO
+//! standard circles: "Blue Lv.3 / cost 3" AND "Yellow Lv.3 / cost 3"
+//! (data/card_bundles/EX8-022.md; cards.json dropped the yellow half).
 //! Alt digivolution (printed evo box): "Digivolve Lv.3 w/[Ice-Snow] trait: Cost 2".
 //!
 //! # Card text (card image EX8-022 — authoritative)
@@ -99,6 +102,32 @@ fn red_ice_snow_lv3(id: &str) -> CardData {
     c.play_cost = 3;
     c.colors = vec![CardColor::Red];
     c.traits = vec!["Ice-Snow".to_string()];
+    c
+}
+
+/// A YELLOW Lv.3 Digimon WITHOUT the [Ice-Snow] trait — matches ONLY the
+/// yellow half of Frigimon's printed split digivolve circle ("Yellow Lv.3 /
+/// cost 3" per the official Bandai DB), not the blue half and not the
+/// Ice-Snow cost-2 alt box.
+fn yellow_lv3(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Yellow Lv3");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(3);
+    c.dp = Some(2000);
+    c.play_cost = 3;
+    c.colors = vec![CardColor::Yellow];
+    c
+}
+
+/// A RED Lv.3 Digimon with NO traits — matches NONE of Frigimon's printed
+/// digivolve requirements (not blue, not yellow, no [Ice-Snow]).
+fn red_plain_lv3(id: &str) -> CardData {
+    let mut c = make_test_card(id, "Red Plain Lv3");
+    c.card_kind = CardKind::Digimon;
+    c.level = Some(3);
+    c.dp = Some(2000);
+    c.play_cost = 3;
+    c.colors = vec![CardColor::Red];
     c
 }
 
@@ -210,6 +239,27 @@ fn ex8_022_compiles_with_printed_stats_and_digivolve_paths() {
                 })
         }),
         "Frigimon must digivolve from a blue Lv.3 for cost 3 (printed evo box)"
+    );
+
+    // Standard printed evo box, YELLOW half of the split circle: Lv.3 yellow
+    // for 3 memory (official Bandai DB: "Yellow Lv.3 / cost 3"; dropped by
+    // cards.json's lossy multi-colour ingest).
+    assert!(
+        compiled.alt_paths.iter().any(|path| {
+            path.kind == CompiledAltPathKind::Digivolve
+                && path.cost == Some(CompiledCost::Literal(3))
+                && path.from.as_ref().is_some_and(|from| {
+                    (from.level_eq == Some(3)
+                        || from.all_of.iter().any(|pred| pred.level_eq == Some(3)))
+                        && (from.color_is == Some(CompiledColor::Yellow)
+                            || from
+                                .all_of
+                                .iter()
+                                .any(|pred| pred.color_is == Some(CompiledColor::Yellow)))
+                })
+        }),
+        "Frigimon must digivolve from a YELLOW Lv.3 for cost 3 (yellow half of \
+         the printed split digivolve circle — official Bandai DB)"
     );
 
     // Printed alt evo box: Lv.3 with [Ice-Snow] trait for 2 memory.
@@ -704,6 +754,98 @@ fn ex8_022_when_digivolving_via_ice_snow_alt_path_costs_2_and_fires_effect() {
         runner.game.memory,
         memory_before - 2 + 1,
         "after the trash the opponent has no sourced Digimon → gain 1 memory"
+    );
+}
+
+/// YELLOW half of the printed split digivolve circle: Frigimon digivolves over
+/// a YELLOW Lv.3 base with NO [Ice-Snow] trait (matching neither the blue half
+/// nor the cost-2 alt box) for the printed cost 3, and [When Digivolving]
+/// fires (no opponent Digimon → selection skipped, vacuous memory leg +1).
+#[test]
+fn ex8_022_digivolves_via_yellow_half_of_split_circle_for_cost_3() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX8-022 found in embedded DSL pack")
+        .add_card(yellow_lv3("YELBASE"))
+        .add_card(filler("FILL"))
+        .deck(0, &["FILL", "FILL", "FILL"])
+        .deck(1, &["FILL"])
+        .memory(8)
+        .start();
+    runner.game.turn_count = 1;
+
+    let base = runner.place_on_field(0, "YELBASE", Some(0));
+    let hand_idx = put_in_hand(&mut runner, 0, CARD_ID);
+
+    let memory_before = runner.game.memory;
+    let digivolved =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByHand);
+    assert!(
+        digivolved,
+        "Frigimon must digivolve over a yellow Lv.3 via the yellow half of the \
+         printed split digivolve circle (official Bandai DB: Yellow Lv.3 / cost 3)"
+    );
+    // [When Digivolving] resolves inline within `digivolve_from_hand` (no
+    // opponent Digimon → the mandatory trash selection is skipped and the
+    // vacuously-true memory leg grants +1), so the observable memory is
+    // (printed circle cost 3 paid) + (WD memory leg +1) in one step. The
+    // yellow circle charging its printed 3 — not the Ice-Snow cost-2 alt
+    // box, which the trait-less base cannot match — is what the net delta
+    // pins: -2 could only arise from cost 3 + the WD leg, since a cost-2
+    // route would net -1.
+    runner.game.drain_effect_queue();
+    assert!(
+        runner.pending_selection().is_none(),
+        "no opponent Digimon — no selection to install"
+    );
+    assert_eq!(
+        runner.game.memory,
+        memory_before - 3 + 1,
+        "yellow standard circle pays printed cost 3; [When Digivolving] memory \
+         leg runs (vacuously true with no opponent Digimon)"
+    );
+}
+
+/// NEGATIVE (digivolve gate): a RED Lv.3 with no [Ice-Snow] trait matches NONE
+/// of Frigimon's printed requirements (not blue, not yellow, no trait box) —
+/// the digivolve must be refused and no memory charged.
+#[test]
+fn ex8_022_cannot_digivolve_over_off_color_non_ice_snow_base() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX8-022 found in embedded DSL pack")
+        .add_card(red_plain_lv3("REDBASE"))
+        .memory(8)
+        .start();
+    runner.game.turn_count = 1;
+
+    let base = runner.place_on_field(0, "REDBASE", Some(0));
+    let hand_idx = put_in_hand(&mut runner, 0, CARD_ID);
+
+    let memory_before = runner.game.memory;
+    let digivolved =
+        runner
+            .game
+            .digivolve_from_hand(0, hand_idx, base.index as usize, PlaySource::ByHand);
+    assert!(
+        !digivolved,
+        "a red non-[Ice-Snow] Lv.3 matches no printed digivolve requirement — \
+         the digivolve must be refused"
+    );
+    assert_eq!(runner.game.memory, memory_before, "no cost charged");
+    assert_eq!(
+        runner.game.players[0].battle_area[base.index as usize]
+            .card_sources
+            .len(),
+        1,
+        "the base is untouched (no digivolution happened)"
+    );
+    assert_eq!(
+        runner.game.player(0).hand.len(),
+        1,
+        "Frigimon stays in hand"
     );
 }
 

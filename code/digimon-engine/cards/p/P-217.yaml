@@ -13,12 +13,16 @@
 #     Body: suspend self, gain 1 memory.
 #   [Security] PlaySelfTamerSecurityEffect → play_from_security.
 #
-# FAITHFULNESS NOTE (pre-adjudicated):
-#   DCGO's LinkCardCondition omits [Creation] — it only checks Social, Navi, Tool.
-#   The printed card text (authoritative) explicitly includes [Creation].
-#   This implementation includes all FOUR traits (Social, Creation, Navi, Tool)
-#   as printed. The DCGO omission is a DCGO bug. Documented as a
-#   printed-vs-DCGO disagreement.
+# FAITHFULNESS NOTE (re-adjudicated 2026-07-10, from the card image + official
+# Bandai DB bundle):
+#   The printed [Your Turn] clause lists ONLY [Social], [Navi] or [Tool] —
+#   [Creation] is NOT in the link-observer trait list. It appears only in the
+#   [On Play] clause's second bucket. The card image (P-217.webp) and
+#   data/card_bundles/P-217.md (official Bandai DB) both confirm this, and DCGO
+#   matches. The lossy cards.json entry is the outlier — it wrongly adds
+#   [Creation] to the [Your Turn] line. An earlier note here claimed the
+#   opposite ("DCGO bug"); that adjudication was based on cards.json and was
+#   wrong.
 #
 # DCGO also uses `when: WhenLinked` (EffectTiming.WhenLinked) for board-wide
 # link observers with a `LinkPermanentCondition` that filters to the observer's
@@ -73,9 +77,9 @@ effects:
       - place_remainder_on_deck: { of: you, position: bottom }
 
   # ─── Clause 1: [Your Turn] Board-wide link observer — suspend self → +1 mem ─
-  # Printed:
-  #   [Your Turn] When any of your Digimon get linked to a [Social], [Creation],
-  #   [Navi] or [Tool] trait card, by suspending this Tamer, gain 1 memory.
+  # Printed (card image + official Bandai DB — NOTE: no [Creation] here):
+  #   [Your Turn] When any of your Digimon get linked to a [Social], [Navi] or
+  #   [Tool] trait card, by suspending this Tamer, gain 1 memory.
   #
   # DCGO: EffectTiming.WhenLinked, is_skippable=true (optional), maxUsableCount=-1
   # (no once_per_turn), CanTriggerWhenLinked with LinkPermanentCondition
@@ -84,14 +88,15 @@ effects:
   #
   # DSL: when: on_any_link (board-wide OnLink observer without host-self-filter).
   # active_when gates on: your turn, host owned by you (event_target_owner: you),
-  # and the linked card (event_card) having one of the four traits.
+  # and the linked card (event_card) having one of the three printed traits
+  # (Social / Navi / Tool — [Creation] is On Play-only, see note above).
   # activation_cost: { suspend_self: true } is the first body step; if already
   # suspended the cost is unpayable and the activation fails (engine's
   # CanActivateSuspendCostEffect semantics — the selection is not offered).
   # optional: true because DCGO marks it skippable.
   - when: on_any_link
     optional: true
-    summary: "[Your Turn] When any of your Digimon get linked to a [Social]/[Creation]/[Navi]/[Tool] card, suspend this Tamer to gain 1 memory"
+    summary: "[Your Turn] When any of your Digimon get linked to a [Social]/[Navi]/[Tool] card, suspend this Tamer to gain 1 memory"
     active_when:
       all_of:
         - your_turn: true
@@ -99,7 +104,6 @@ effects:
         - source_is_unsuspended: true
         - any_of:
             - event_card_trait_has: Social
-            - event_card_trait_has: Creation
             - event_card_trait_has: Navi
             - event_card_trait_has: Tool
     process:
