@@ -1,5 +1,6 @@
-//! BT21-005 Swipemon — Digi-Egg (In-Training), Lv.2, Green, Cost 0, no DP.
-//! Traits: Appmon, Social, Swipe. Attribute: Social.
+//! BT21-005 Swipemon — Digi-Egg, Lv.2, Green, Cost 0, no DP.
+//! Traits: Appmon, Social, Swipe. Form: Appmon (official Bandai DB — the
+//! digimoncard.io API drops the form field). Attribute: Social.
 //!
 //! # Card text (card image — authoritative)
 //!
@@ -119,6 +120,22 @@ fn bt21_005_metadata_is_green_lv2_egg_no_dp() {
         card.kind,
         digimon_dsl::compiled::CompiledCardKind::DigiEgg,
         "kind must be digi_egg"
+    );
+    assert_eq!(card.cost, Some(0), "play cost 0");
+    for t in ["Appmon", "Social", "Swipe"] {
+        assert!(
+            card.traits.iter().any(|x| x == t),
+            "traits must include {t}; traits={:?}",
+            card.traits
+        );
+    }
+    // Official Bandai DB (card_bundles/BT21-005.md) + DCGO BT21-005.json
+    // form_eng both print Form: Appmon (the API-dropped Appmon mechanic form),
+    // NOT In-Training.
+    assert_eq!(
+        card.form.as_deref(),
+        Some("Appmon"),
+        "printed form is Appmon (official DB), not In-Training"
     );
 }
 
@@ -332,5 +349,31 @@ fn bt21_005_no_draw_when_egg_not_under_host() {
         r.hand_size(0),
         hand_before,
         "no draw when the egg is not a source under the host that got linked"
+    );
+}
+
+/// Host self-filter (DCGO `PermanentCondition: permanent ==
+/// card.PermanentOfThisCard()`): the egg IS on the board under host A, but the
+/// link attaches to a SIBLING host B. "When this Digimon gets linked" must not
+/// fire for a link on a different permanent, even on your turn.
+#[test]
+fn bt21_005_no_draw_when_sibling_host_gets_linked() {
+    let mut r = base_runner();
+    // Host A carries the egg as a digivolution source.
+    let _host_with_source = host_with_egg(&mut r, 0);
+    // Host B is a separate permanent with no egg source.
+    let sibling = r.place_on_field(0, "HOST", Some(0));
+    advance_to_main(&mut r);
+
+    let hand_before = r.hand_size(0);
+
+    // Link onto the SIBLING — the egg's host was not linked.
+    simulate_link(&mut r, sibling, "LINK-CARD");
+    let _ = r.auto_resolve();
+
+    assert_eq!(
+        r.hand_size(0),
+        hand_before,
+        "host self-filter: a link to a sibling host must not trigger the egg's inherited draw"
     );
 }

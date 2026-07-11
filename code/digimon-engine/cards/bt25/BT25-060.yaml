@@ -1,4 +1,6 @@
-# BT25-060 Rebootmon — Digimon, Lv.6, Green, DP 12000, Play Cost 12.
+# BT25-060 Rebootmon — Digimon, Lv.6, GREEN/WHITE, DP 12000, Play Cost 12.
+# Colors (official Bandai DB "Colors: Green White" + card image: green/white
+#   split name bar and play-cost ring) → color: [green, white].
 # Trait line (card image): God/Appmon | God | Reboot.
 #   → traits: [God, Appmon, Reboot], attribute: God.
 #
@@ -35,35 +37,48 @@
 #     (UntilOwnerTurnEnd) + DigimonEffectImmunity on UntilOwnerTurnEndEffects.
 #
 # ─── Modeling notes ───────────────────────────────────────────────────────────
-# WD/WA clause: link_card_to_self optional:true. Declining the link selection
-#   (PASS) takes the on_decline:None path, so the parked tail (the unsuspend) is
-#   NOT run — matching DCGO's `if (linked)` gate (the unsuspend only happens when
-#   a card was actually linked). The unsuspend itself is "1 of your Digimon MAY
+# WD/WA clause: link_cards up_to:1 (declinable). Declining the link selection
+#   (PASS) leaves `linked_appmon` unbound, so the unsuspend tail is NOT run —
+#   matching DCGO's `if (linked)` gate (the unsuspend only happens when a card
+#   was actually linked). If nothing linked, `refund_opt` un-records the
+#   once-per-turn — DCGO `else activateClass.RemoveUse()` — so declining [WD]
+#   leaves the clause available at [WA] later the same turn
+#   (G-OPT-REFUND-ON-DECLINE). The unsuspend itself is "1 of your Digimon MAY
 #   unsuspend" → select_own_permanent optional:true, then unsuspend the binding.
 # All-Turns clause: dual-timing [when_card_linked_to_this, on_unsuspend] shares one
 #   once-per-turn (G-OPT-MULTI-TIMING-SHARED-LOCKOUT), mirroring DCGO's shared
 #   hash across the two ActivateClasses. [All Turns] → no your_turn gate.
+#   "When THIS Digimon ... unsuspends" is self-scoped: the engine's OnUnsuspend
+#   dispatch is a board-wide observer scan, so the on_unsuspend timing carries an
+#   `event_permanent_is_source` gate (DCGO CanTriggerWhenSelfPermanentUnsuspends;
+#   BT25-063 / BT24-030 idiom). when_card_linked_to_this is host-self-filtered by
+#   the lowering itself.
 #   grant_keyword Piercing/Blocker (end_of_your_turn = DCGO UntilOwnerTurnEnd) +
 #   grant_effect_immunity (digimon / opponent / end_of_your_turn).
 # Precedents: BT21-101 Gaiamon (sister God/Appmon Lv.6: Ult.+App Fusion+<Link +1>
 #   aura + WD/WA link_card_to_self); AD1-009 (grant_effect_immunity self,
 #   end-of-turn keyword grant via grant_keyword step).
 #
-# ─── Faithfulness diff ────────────────────────────────────────────────────────
+# ─── Faithfulness diff (audit 2026-07-10) ─────────────────────────────────────
+# | Colors: Green White (official DB + image)                 | FIXED — was [green]; now [green, white] |
 # | Std digivolve Lv.5 Green / Cost 4                         | IMPLEMENTED (alt_paths digivolve) |
-# | Ult. digivolve / Cost 4 (trait gate, no level)           | IMPLEMENTED (alt_paths digivolve trait_has Ult.) |
-# | App Fusion [Bootmon] & [Shutmon] / Cost 0                | IMPLEMENTED (alt_paths app_fusion) |
+# | Ult. digivolve / Cost 4 (trait gate, no level/color)      | IMPLEMENTED (alt_paths digivolve trait_has Ult.; rainbow circle = any color) |
+# | App Fusion [Bootmon] & [Shutmon] / Cost 0                | IMPLEMENTED (alt_paths app_fusion; engine enforces 2 distinct names) |
 # | <Security A. +1>                                          | IMPLEMENTED (grant_keyword SecurityAttackPlus 1) |
 # | <Reboot>                                                  | IMPLEMENTED (grant_keyword Reboot) |
 # | <Link +1>                                                 | IMPLEMENTED (aura ChangeLinkMax 1) |
-# | [WD][WA][OPT] link Appmon → unsuspend 1 own Digimon       | IMPLEMENTED (link_card_to_self + select+unsuspend) |
+# | [WD][WA][OPT] link Appmon → unsuspend 1 own Digimon       | IMPLEMENTED (link_cards + select+unsuspend) |
+# |   OPT refund when nothing linked (DCGO RemoveUse)         | FIXED — added refund_opt on binding_absent |
 # | [All Turns][OPT] on link/unsuspend: Pierce+Blocker+immune | IMPLEMENTED (dual-timing grant + grant_effect_immunity) |
+# |   "when THIS Digimon unsuspends" self-scope               | FIXED — added event_permanent_is_source timing gate |
 
 card: BT25-060
 name: Rebootmon
 kind: digimon
 level: 6
-color: [green]
+# Official Bandai DB: "Colors: Green White" (dual-color; card image shows the
+# green/white split name bar + play-cost ring).
+color: [green, white]
 cost: 12
 dp: 12000
 traits: [God, Appmon, Reboot]
@@ -147,6 +162,14 @@ effects:
                 condition: { binding_present: unsuspend_target }
                 then:
                   - unsuspend: { target: unsuspend_target }
+      # If NOTHING was linked (the link selection was declined), the per-turn
+      # use is not consumed — DCGO `else activateClass.RemoveUse()` — so the
+      # clause can still fire at the other timing later this turn
+      # (G-OPT-REFUND-ON-DECLINE).
+      - if:
+          condition: { binding_absent: linked_appmon }
+          then:
+            - refund_opt: {}
 
   # ─── [All Turns][OPT] when this gets linked OR unsuspends → gain keywords + immunity ─
   # Dual-timing: when_card_linked_to_this (host-side: a card links TO Rebootmon)
@@ -156,6 +179,14 @@ effects:
   # all until your turn ends (DCGO UntilOwnerTurnEnd → expiry end_of_your_turn).
   - when: [when_card_linked_to_this, on_unsuspend]
     once_per_turn: true
+    # "When THIS Digimon ... unsuspends" — the engine's OnUnsuspend dispatch is
+    # a board-wide observer scan, so gate the on_unsuspend timing on the
+    # unsuspended permanent being this Digimon (DCGO
+    # CanTriggerWhenSelfPermanentUnsuspends; BT25-063 / BT24-030 idiom).
+    # when_card_linked_to_this is already host-self-filtered by the lowering.
+    timing_conditions:
+      - when: on_unsuspend
+        condition: { event_permanent_is_source: true }
     summary: "[All Turns][OPT] When this Digimon gets linked or unsuspends, until your turn ends it gains <Piercing> + <Blocker> and isn't affected by opponent Digimon effects"
     process:
       - grant_keyword:

@@ -34,8 +34,8 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
+    CompiledScope, CompiledTiming,
 };
 use digimon_engine::card_data::{CardData, EvoCost};
 use digimon_engine::card_source::CardSource;
@@ -113,13 +113,13 @@ fn bt21_023_has_link_condition_appmon_cost_3() {
     let has = card.effects.iter().any(|c| {
         matches!(
             c,
-            CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition { cost, .. })
-                if *cost == 3
+            CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition { cost, filter, .. })
+                if *cost == 3 && filter.trait_has.as_deref() == Some("Appmon")
         )
     });
     assert!(
         has,
-        "BT21-023 declares a self link-condition with cost 3 for [Appmon] hosts"
+        "BT21-023 declares a self link-condition with cost 3 gated on [Appmon] trait hosts"
     );
 }
 
@@ -132,6 +132,75 @@ fn bt21_023_has_app_fusion_altpath() {
         .iter()
         .any(|p| matches!(p.kind, CompiledAltPathKind::AppFusion));
     assert!(has, "BT21-023 declares an App Fusion alt-path");
+}
+
+/// App Fusion box: "[App Fusion] [DoGatchmon] & [Timemon]: Cost 0".
+#[test]
+fn bt21_023_app_fusion_cost_0_named_dogatchmon_timemon() {
+    let runner = base().deck(0, &["DECK-PAD"; 12]).start();
+    let card = runner.compiled_card(CARD_ID).expect("present");
+    let fusion = card
+        .alt_paths
+        .iter()
+        .find(|p| matches!(p.kind, CompiledAltPathKind::AppFusion))
+        .expect("App Fusion alt-path must exist");
+    assert_eq!(
+        fusion.cost,
+        Some(CompiledCost::Literal(0)),
+        "App Fusion cost must be 0 (printed: Cost 0)"
+    );
+    let names: Vec<String> = fusion
+        .materials
+        .iter()
+        .flat_map(|m| m.filter.name_in.clone().unwrap_or_default())
+        .collect();
+    assert!(
+        names.contains(&"DoGatchmon".to_string()) && names.contains(&"Timemon".to_string()),
+        "App Fusion materials must name DoGatchmon and Timemon, got {names:?}"
+    );
+}
+
+/// Printed standard digivolve circle: Lv.4 / Cost 4 with a dual RED/YELLOW
+/// ring. The official Bandai DB mirror (data/card_official.json) lists both
+/// rows (card_color 0 and 2, level 4, cost 4). The per-card JSON evo_costs
+/// only carries the red row, so both circles must exist as alt_paths.
+#[test]
+fn bt21_023_printed_circles_red_and_yellow_lv4_cost_4() {
+    let runner = base().deck(0, &["DECK-PAD"; 12]).start();
+    let card = runner.compiled_card(CARD_ID).expect("present");
+    for color in [CompiledColor::Red, CompiledColor::Yellow] {
+        let has = card.alt_paths.iter().any(|p| {
+            matches!(p.kind, CompiledAltPathKind::Digivolve)
+                && p.cost == Some(CompiledCost::Literal(4))
+                && p.from
+                    .as_ref()
+                    .is_some_and(|f| f.level_eq == Some(4) && f.color_is == Some(color))
+        });
+        assert!(
+            has,
+            "BT21-023 must author the printed {color:?} Lv.4 / Cost 4 digivolve circle as an alt_path"
+        );
+    }
+}
+
+/// Grade circle: digivolve from a "Sup." form Appmon for cost 4
+/// (DCGO AddSelfDigivolutionRequirementStaticEffect(EqualsTraits("Sup."), 4);
+/// visible on the card image's second digivolve circle).
+#[test]
+fn bt21_023_has_sup_digivolve_alt_path_cost_4() {
+    let runner = base().deck(0, &["DECK-PAD"; 12]).start();
+    let card = runner.compiled_card(CARD_ID).expect("present");
+    let has = card.alt_paths.iter().any(|p| {
+        matches!(p.kind, CompiledAltPathKind::Digivolve)
+            && p.cost == Some(CompiledCost::Literal(4))
+            && p.from
+                .as_ref()
+                .is_some_and(|f| f.trait_has.as_deref() == Some("Sup."))
+    });
+    assert!(
+        has,
+        "BT21-023 must declare a cost-4 digivolve alt-path gated on the Sup. trait"
+    );
 }
 
 #[test]
@@ -173,17 +242,24 @@ fn bt21_023_has_on_play_when_digivolving_link_clause() {
 fn bt21_023_has_when_card_linked_once_per_turn() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let has = card.effects.iter().any(|c| {
-        matches!(
-            c,
-            CompiledClause::Triggered(t)
-                if t.when.contains(&CompiledTiming::WhenCardLinkedToThis)
-                && t.once_per_turn
-        )
+    let clause = card.effects.iter().find_map(|c| match c {
+        CompiledClause::Triggered(t) if t.when.contains(&CompiledTiming::WhenCardLinkedToThis) => {
+            Some(t)
+        }
+        _ => None,
     });
+    let clause = clause.expect(
+        "BT21-023 must have a when_card_linked_to_this triggered clause ([Your Turn][Once Per Turn])",
+    );
+    assert!(clause.once_per_turn, "clause must be once_per_turn (printed [Once Per Turn])");
     assert!(
-        has,
-        "BT21-023 must have a when_card_linked_to_this clause with once_per_turn"
+        clause.active_when.is_some(),
+        "clause must carry the [Your Turn] active_when gate (DCGO IsOwnerTurn)"
+    );
+    assert!(
+        !clause.optional,
+        "delete is MANDATORY once triggered — printed text has no 'you may' \
+         (DCGO canNoSelect: false); the trigger must not expose a decline"
     );
 }
 
@@ -191,17 +267,19 @@ fn bt21_023_has_when_card_linked_once_per_turn() {
 fn bt21_023_has_linked_when_linked_ess_clause() {
     let runner = base().deck(0, &["DECK-PAD"; 12]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
-    let has = card.effects.iter().any(|c| {
-        matches!(
-            c,
-            CompiledClause::Triggered(t)
-                if t.scope == CompiledScope::Linked
-                && t.when.contains(&CompiledTiming::WhenLinked)
-        )
+    let clause = card.effects.iter().find_map(|c| match c {
+        CompiledClause::Triggered(t)
+            if t.scope == CompiledScope::Linked && t.when.contains(&CompiledTiming::WhenLinked) =>
+        {
+            Some(t)
+        }
+        _ => None,
     });
+    let clause = clause.expect("BT21-023 must have a scope:Linked WhenLinked ESS clause");
     assert!(
-        has,
-        "BT21-023 must have a scope:Linked WhenLinked ESS clause"
+        !clause.optional,
+        "[When Linking] delete is MANDATORY — printed text has no 'you may' \
+         (DCGO SharedLinkedActivateCoroutine, canNoSelect: false)"
     );
 }
 

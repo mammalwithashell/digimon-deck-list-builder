@@ -4,11 +4,12 @@
 //! # Card text (DCGO BT21_071.cs — authoritative)
 //!
 //! Digivolve paths:
-//!   - Standard: Lv.3 / Cost 2 (cards.json evo_costs).
-//!   - Alt: Lv.3 w/ [Stnd.] trait / Cost 2
+//!   - Standard circle: PURPLE Lv.3 / Cost 2 (printed purple circle;
+//!     cards.json evo_costs `{card_color: 6, level: 3, memory_cost: 2}`).
+//!   - Alt: [Stnd.]-form trait / Cost 2 — trait-only, NO level gate
 //!     (DCGO `AddSelfDigivolutionRequirementStaticEffect(EqualsTraits("Stnd."), 2)`).
-//!   - Alt: Lv.3 w/ [Three Musketeers] in text / Cost 2
-//!     (DCGO `HasText("Three Musketeers") && Level == 3`).
+//!   - Alt: Lv.3 w/ [Three Musketeers] in text / Cost 2 — BROAD in-text scan
+//!     (DCGO `HasText("Three Musketeers") && Level == 3`; catches trait-only carriers).
 //!
 //! [On Play] [When Digivolving]:
 //!   By placing 1 card with the [Appmon] or [Three Musketeers] trait from your
@@ -26,8 +27,9 @@
 //! - [On Play] and [When Digivolving] shared effect body (two separate clauses)
 //! - Self link-condition (kind: link_condition, cost 2, trait_has Appmon)
 //! - [When Linking] linked-scope draw + mandatory hand-discard
-//! - Alt-path via `effect_text_contains` predicate (Three Musketeers in text)
-//! - Alt-path via `trait_has: "Stnd."` (predecessor form trait)
+//! - Alt-path via `in_text_contains` predicate (Three Musketeers "in text" — broad HasText scan)
+//! - Alt-path via `trait_has: "Stnd."` (predecessor form trait, no level gate)
+//! - Standard printed circle as color+level alt_path (purple Lv.3 / cost 2)
 //! - Decline flow: no card selected → no memory gain
 
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
@@ -208,9 +210,10 @@ fn bt21_071_registers_three_alt_paths() {
         .iter()
         .filter(|p| matches!(p.kind, CompiledAltPathKind::Digivolve))
         .collect();
-    assert!(
-        digivolve_paths.len() >= 2,
-        "BT21-071 must have at least 2 digivolve alt-paths (standard + Stnd. + Three Musketeers); got {}",
+    assert_eq!(
+        digivolve_paths.len(),
+        3,
+        "BT21-071 must have exactly 3 digivolve alt-paths (purple Lv.3 standard circle + Stnd. circle + Three Musketeers in-text); got {}",
         digivolve_paths.len()
     );
     // All paths must be cost 2.
@@ -220,6 +223,169 @@ fn bt21_071_registers_three_alt_paths() {
             .all(|p| matches!(p.cost, Some(CompiledCost::Literal(2)))),
         "all digivolve paths on BT21-071 must have cost 2"
     );
+}
+
+/// Per-circle from-filter shapes (printed card face + DCGO BT21_071.cs):
+///   1. Standard circle: PURPLE Lv.3 — must gate on BOTH level and color
+///      (a colorless `level_eq: 3` would widen to any-color Lv.3 at cost 2).
+///   2. "Stnd." circle: trait-only — DCGO `EqualsTraits("Stnd.")` carries NO
+///      level check (and the printed circle shows "Stnd." in the level slot).
+///   3. "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2" — DCGO
+///      `HasText(...) && Level == 3`. "in text" is the BROAD whole-card scan
+///      (`in_text_contains`, name + traits + printed text — see the card's
+///      official Q&A), NOT `effect_text_contains` (which misses cards that
+///      carry the [Three Musketeers] TRAIT without the literal string in
+///      their effect text).
+#[test]
+fn bt21_071_alt_path_from_filters_match_printed_circles() {
+    use digimon_dsl::compiled::CompiledColor;
+
+    let runner = base().memory(0).start();
+    let card = runner.compiled_card(CARD_ID).expect("present");
+    let froms: Vec<_> = card
+        .alt_paths
+        .iter()
+        .filter(|p| matches!(p.kind, CompiledAltPathKind::Digivolve))
+        .map(|p| p.from.as_ref().expect("digivolve alt-path has from:"))
+        .collect();
+
+    // 1. Purple Lv.3 standard circle.
+    assert!(
+        froms
+            .iter()
+            .any(|f| f.level_eq == Some(3) && f.color_is == Some(CompiledColor::Purple)),
+        "BT21-071 must gate its standard circle on purple Lv.3 (printed purple digivolve circle)"
+    );
+    // 2. Stnd. circle: trait-only, no level gate (DCGO EqualsTraits(\"Stnd.\") only).
+    assert!(
+        froms
+            .iter()
+            .any(|f| f.trait_has.as_deref() == Some("Stnd.") && f.level_eq.is_none()),
+        "BT21-071 Stnd. circle must be trait-only with no level gate (DCGO EqualsTraits)"
+    );
+    // 3. Three Musketeers: Lv.3 + BROAD in-text scan.
+    assert!(
+        froms.iter().any(|f| f.level_eq == Some(3)
+            && f.in_text_contains.as_deref() == Some("Three Musketeers")),
+        "BT21-071 Three Musketeers path must use in_text_contains (DCGO HasText broad scan) at Lv.3"
+    );
+    assert!(
+        froms.iter().all(|f| f.effect_text_contains.is_none()),
+        "BT21-071 must NOT use effect_text_contains (misses [Three Musketeers]-TRAIT cards)"
+    );
+}
+
+// ─── Section 1b — Alt-path behavioral digivolve routes ───────────────────────
+//
+// `Game::digivolve_from_hand` in Main phase exercises the same
+// `alt_path_registry` route real gameplay uses (p_220 idiom).
+
+fn purple_lv3(id: &str) -> CardData {
+    use digimon_engine::enums::CardColor;
+    let mut c = make_digimon(id, 3, 3000, 3, &["Reptile"]);
+    c.colors = vec![CardColor::Purple];
+    c
+}
+
+fn digivolve_runner(base_card: CardData) -> (DebugRunner, PermanentHandle) {
+    let base_id = base_card.card_id.clone();
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("BT21-071 loads")
+        .add_card(base_card)
+        .add_card(filler_card("FILLER"))
+        .hand(0, &[CARD_ID])
+        .deck(0, &["FILLER"; 12])
+        .deck(1, &["FILLER"; 12])
+        .memory(20)
+        .start();
+    runner.game.turn_count = 1;
+    runner.game.current_phase = digimon_engine::enums::GamePhase::Main;
+    let base = runner.place_on_field(0, &base_id, Some(0));
+    (runner, base)
+}
+
+/// Positive — standard printed circle: a PURPLE Lv.3 base digivolves at cost 2.
+#[test]
+fn bt21_071_can_digivolve_from_purple_lv3_standard_circle() {
+    let (mut runner, base) = digivolve_runner(purple_lv3("PURPLE-LV3"));
+    let proceeded = runner.game.digivolve_from_hand(
+        0,
+        0,
+        base.index as usize,
+        digimon_engine::enums::PlaySource::ByHand,
+    );
+    assert!(
+        proceeded,
+        "BT21-071 must digivolve from a purple Lv.3 base (printed purple Lv.3 / cost 2 circle)"
+    );
+    let _ = runner.auto_resolve();
+}
+
+/// Negative — an off-color (red) Lv.3 base with no Stnd. trait and no
+/// [Three Musketeers] anything must NOT be a legal base. Guards the
+/// printed-circle color gate (a colorless `level_eq: 3` alt-path would
+/// wrongly accept this base).
+#[test]
+fn bt21_071_cannot_digivolve_from_red_lv3_plain_base() {
+    let (mut runner, base) = digivolve_runner(make_digimon("RED-LV3", 3, 3000, 3, &["Reptile"]));
+    let proceeded = runner.game.digivolve_from_hand(
+        0,
+        0,
+        base.index as usize,
+        digimon_engine::enums::PlaySource::ByHand,
+    );
+    assert!(
+        !proceeded,
+        "BT21-071 must NOT digivolve from a red Lv.3 base with no Stnd./Three Musketeers match \
+         (standard circle is purple-only)"
+    );
+}
+
+/// Positive — Stnd. circle: an off-color base with the "Stnd." form trait
+/// digivolves at cost 2 (DCGO EqualsTraits(\"Stnd.\"), no color/level gate).
+#[test]
+fn bt21_071_can_digivolve_from_stnd_trait_base() {
+    let (mut runner, base) =
+        digivolve_runner(make_digimon("STND-BASE", 3, 3000, 3, &["Stnd.", "Appmon"]));
+    let proceeded = runner.game.digivolve_from_hand(
+        0,
+        0,
+        base.index as usize,
+        digimon_engine::enums::PlaySource::ByHand,
+    );
+    assert!(
+        proceeded,
+        "BT21-071 must digivolve from a [Stnd.]-form base via the Stnd. circle (trait-only gate)"
+    );
+    let _ = runner.auto_resolve();
+}
+
+/// Positive — the [Three Musketeers] alt-path must match a Lv.3 card that
+/// carries the trait WITHOUT the literal string in its effect text (empty
+/// text on test cards). This is exactly the case `effect_text_contains`
+/// misses and DCGO's broad `HasText` (trait scan) catches.
+#[test]
+fn bt21_071_can_digivolve_from_three_musketeers_trait_only_base() {
+    let (mut runner, base) = digivolve_runner(make_digimon(
+        "MUSKET-BASE",
+        3,
+        3000,
+        3,
+        &["Three Musketeers"],
+    ));
+    let proceeded = runner.game.digivolve_from_hand(
+        0,
+        0,
+        base.index as usize,
+        digimon_engine::enums::PlaySource::ByHand,
+    );
+    assert!(
+        proceeded,
+        "BT21-071 must digivolve from a Lv.3 [Three Musketeers]-TRAIT base (broad in-text scan; \
+         effect_text_contains would miss this card)"
+    );
+    let _ = runner.auto_resolve();
 }
 
 // ─── Section 2 — [On Play] place+gain behavioral tests ───────────────────────
@@ -311,29 +477,38 @@ fn bt21_071_on_play_no_eligible_cards_no_memory() {
     );
 }
 
-/// [On Play] with eligible card in hand but no own Digimon on field → no placement, no memory.
-/// (Player can select the card but has no valid host — selecting PASS for host → no memory.)
+/// [On Play] with no OTHER Digimon on the field: Scopemon itself is a legal
+/// host — printed "1 of your Digimon" and DCGO `CanTuckUnderCondition`
+/// (own battle-area Digimon, incl. the effect's own permanent) both include
+/// it. Placing the Appmon under Scopemon gains 1 memory and grows its stack.
 #[test]
-fn bt21_071_on_play_no_own_digimon_to_place_under_no_memory() {
+fn bt21_071_on_play_can_place_under_itself_gains_memory() {
     let mut r = base().hand(0, &[CARD_ID]).memory(5).start();
 
     push_to_hand(&mut r, "APPMON-HAND");
-    // No other Digimon on P0's field; only Scopemon itself (which will just
-    // have been played, not yet usable as host via the effect in the same step).
-
-    let mem_before = r.game.memory;
+    // No other Digimon on P0's field; Scopemon itself is the only host.
 
     r.play(0, 0).expect("Scopemon played");
-    // Resolve union-zone pick (APPMON-HAND), then PASS on permanent selection.
+    let mem_after_play = r.game.memory;
     let _ = r.auto_resolve();
 
-    // If auto_resolve can't pick a host (empty field / Scopemon only is eligible),
-    // memory stays the same.
-    // NOTE: If Scopemon itself is offered as target (kind: digimon), the test may
-    // show a +1; in that case remove this and add a host-count assertion.
-    // For now assert that the selection path doesn't panic.
     let mem_after = r.game.memory;
-    let _ = mem_after; // just verify no crash
+    assert_eq!(
+        mem_after,
+        mem_after_play + 1,
+        "[On Play] Scopemon itself is a legal host ('1 of your Digimon') — placing under itself must gain 1 memory"
+    );
+    // Scopemon's own stack grew by the tucked card (top + 1 bottom source).
+    let scopo_stack = r.game.players[0]
+        .battle_area
+        .iter()
+        .find(|p| p.top_card().card_id(&r.game.card_data) == CARD_ID)
+        .map(|p| p.card_sources.len())
+        .expect("Scopemon on field");
+    assert_eq!(
+        scopo_stack, 2,
+        "[On Play] the Appmon must be placed as Scopemon's bottom digivolution card"
+    );
 }
 
 /// [On Play] decline the union-zone pick (PASS) → no placement, no memory.
@@ -449,17 +624,20 @@ fn bt21_071_when_linked_draw2_trash2_net_zero() {
     );
 }
 
-/// [When Linking] with only 1 card in hand after drawing: trashes that 1 card.
-/// Math.Min(2, HandCards.Count) means at most 2 but no error if fewer.
+/// [When Linking] from an EMPTY hand: draw 2 (deck has fillers), then the
+/// mandatory trash consumes exactly the 2 drawn cards — hand back to 0 and
+/// trash grows by 2. Exercises the Math.Min(2, HandCards.Count) accounting
+/// when the pre-link hand contributes nothing.
 #[test]
-fn bt21_071_when_linked_trash_clamped_to_available() {
+fn bt21_071_when_linked_empty_hand_draws_then_trashes_both() {
     let mut r = base().memory(5).start();
 
     let host = r.place_on_field(0, "APPMON-HOST", Some(0));
     let scopo = r.place_on_field(0, CARD_ID, Some(0));
 
-    // Give P0 exactly 0 hand cards — draw 2 then trash min(2, remaining).
-    let hand_before = r.hand_size(0);
+    // P0 has exactly 0 hand cards — draw 2 then trash min(2, hand) = 2.
+    assert_eq!(r.hand_size(0), 0, "precondition: empty hand");
+    let trash_before = r.trash_size(0);
 
     advance_to_main(&mut r);
 
@@ -471,12 +649,17 @@ fn bt21_071_when_linked_trash_clamped_to_available() {
     r.auto_resolve().ok();
     r.auto_resolve().ok();
 
-    // After drawing 2 from an empty-hand state, hand should have drawn 2.
-    // The draw-2 should have occurred (deck has 12 fillers).
-    // Then trash 2 from hand → back to 0.
-    let hand_after = r.hand_size(0);
-    // hand started at 0, drew 2, trashed 2 → should be 0.
-    let _ = hand_after; // Just verify no crash; hand accounting may vary by deck state.
+    // Drew 2 from an empty hand, then mandatorily trashed both.
+    assert_eq!(
+        r.hand_size(0),
+        0,
+        "[When Linking] from empty hand: draw 2 then trash 2 must end at 0 hand cards"
+    );
+    assert_eq!(
+        r.trash_size(0),
+        trash_before + 2,
+        "[When Linking] both drawn cards must end up in the trash"
+    );
 }
 
 // ─── Section 5 — Link condition structural gate ───────────────────────────────

@@ -84,8 +84,17 @@ impl Game {
 
         crate::scheduled_effects::fire_scheduled_for_timing(self, EffectTiming::UntilNextUnsuspend);
 
-        // Reset per-turn state
+        // Reset per-turn state. [Once Per Turn] counters reset for BOTH
+        // players — "per turn" is per GAME turn, so an [All Turns][Once Per
+        // Turn] effect (e.g. BT21-073's linked leave-replacement) re-arms on
+        // the opponent's turn too. Attack counters stay owner-turn-scoped.
         self.player_mut(tp).new_turn();
+        for pid in 0..self.players.len() {
+            if pid as crate::PlayerId != tp {
+                self.player_mut(pid as crate::PlayerId)
+                    .reset_effect_activations();
+            }
+        }
         if let Some(count) = self.digimon_attacks_this_turn.get_mut(tp as usize) {
             *count = 0;
         }

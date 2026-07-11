@@ -10,31 +10,41 @@ attribute: Tool
 
 # ─── Digivolve paths ──────────────────────────────────────────────────────────
 #
-# 1. Standard: Lv.3 / Cost 2 (cards.json evo_costs, purple Lv.3 source).
-#    This is the default evo_costs path; modelled as alt_path.
-# 2. Stnd. alt-path: DCGO `EqualsTraits("Stnd.")` — predecessor has "Stnd."
-#    form trait, Lv.3 implied, Cost 2.
-# 3. "[Three Musketeers] in text: Cost 2" — DCGO `HasText("Three Musketeers")
-#    && Level == 3`. Text-presence predicate on predecessor card text.
-#    Uses `effect_text_contains` (G-DSL-PREDICATE-TEXT-CONTAINS, RESOLVED).
-#    BT21-072 exemplar: `effect_text_contains: "＜Save＞"` in alt_path from:.
+# Card image / official DB circles:
+# 1. Standard circle: PURPLE Lv.3 / Cost 2 (printed purple digivolve circle;
+#    cards.json evo_costs `{card_color: 6, level: 3, memory_cost: 2}`).
+#    Authored as an equal-cost printed-circle alt_path WITH `color_is: purple`
+#    — omitting the color would widen it to any-color Lv.3 (drift vs the
+#    printed circle) and would also skip the DebugRunner evo-cost backfill
+#    (G-DSL-FIXTURE-EVO-COSTS needs both level_eq + color_is).
+# 2. "Stnd." circle / Cost 2 — DCGO `EqualsTraits("Stnd.")` ONLY (no level
+#    check in DCGO, and the printed circle shows "Stnd." where a level would
+#    normally appear). BT21-070 sibling convention: trait-only from filter.
+# 3. Printed black text: "[Digivolve] Lv.3 w/[Three Musketeers] in text: Cost 2"
+#    — DCGO `HasText("Three Musketeers") && Level == 3`. "in text" is the
+#    BROAD whole-card scan (name + traits + all printed text — see this
+#    card's official Q&A), i.e. `in_text_contains` (G-DSL-IN-TEXT-CONTAINS),
+#    NOT `effect_text_contains` (which misses [Three Musketeers]-TRAIT cards
+#    that never spell the string in their effect text).
 
 alt_paths:
-  # Standard: Lv.3 / Cost 2 (default evo_costs path).
+  # Standard printed circle: Purple Lv.3 / Cost 2.
   - kind: digivolve
-    from: { level_eq: 3 }
+    from: { level_eq: 3, color_is: purple }
     cost: 2
 
-  # Alt-path: Stnd. (Lv.3 w/ "Stnd." form trait) / Cost 2.
-  # DCGO: AddSelfDigivolutionRequirementStaticEffect(EqualsTraits("Stnd."), 2, ...).
+  # Alt-path: "Stnd." circle / Cost 2.
+  # DCGO: AddSelfDigivolutionRequirementStaticEffect(EqualsTraits("Stnd."), 2, ...)
+  # — trait-only, no level gate.
   - kind: digivolve
-    from: { level_eq: 3, trait_has: "Stnd." }
+    from: { trait_has: "Stnd." }
     cost: 2
 
   # Alt-path: Lv.3 w/ [Three Musketeers] in text / Cost 2.
   # DCGO: AddSelfDigivolutionRequirementStaticEffect(HasText("Three Musketeers") && Level == 3, 2, ...).
+  # `in_text_contains` = DCGO CardSource.HasText (name/traits/all printed text).
   - kind: digivolve
-    from: { level_eq: 3, effect_text_contains: "Three Musketeers" }
+    from: { level_eq: 3, in_text_contains: "Three Musketeers" }
     cost: 2
 
 # ─── Effects ─────────────────────────────────────────────────────────────────

@@ -8,20 +8,22 @@
 //!   Then, 1 of your Digimon may app fuse into a Digimon card in the hand.
 //! [Security] Play this card without paying the cost.
 //!
-//! # Gaps and omissions
+//! # Coverage notes
 //! The "Then, 1 of your Digimon may app fuse into a Digimon card in the hand."
-//! rider is OMITTED — no engine primitive for effect-initiated App Fusion
-//! (`EffectContext::effect_initiated_app_fuse` / DSL `app_fuse` step).
-//! Gap: effect-initiated app fuse — see docs/RUST_ENGINE_GAPS.md (App Fuse entry).
-//! Same gap keeps BT21-084, BT24-087, and BT25-089 PARTIAL.
+//! rider IS implemented (2026-06-13) via the effect-initiated `app_fuse` DSL
+//! step (`EffectContext::initiate_effect_app_fuse`, from: hand, optional) and
+//! covered end-to-end by `bt23_079_app_fuse_from_hand_after_dp_buff` below.
+//! Per the official Q&A, declining to suspend forfeits the app fuse — the
+//! `app_fuse` step lives inside the same clause body after `activation_cost`,
+//! so declining the outer prompt never reaches it
+//! (`bt23_079_decline_prompt_no_effect`).
 //!
-//! The "+3000 DP until your opponent's turn ends" IS implemented via
+//! The "+3000 DP until your opponent's turn ends" is implemented via
 //! `add_dp_modifier { target: event_target, value: 3000, expiry: end_of_opponents_turn }`.
 //! `CompiledBindingRef::EventTarget` resolves to `event_permanent` (the link host)
 //! in the `OnLink` trigger context — confirmed in `dsl_cards/binding_ref.rs`.
 //!
-//! # Verdict: PARTIAL
-//! Gap kind: engine (effect-initiated app fuse)
+//! # Verdict: OK (all printed clauses implemented)
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/BT23/Blue/BT23_079.cs
@@ -212,6 +214,14 @@ fn bt23_079_accept_suspends_eri_and_boosts_dp() {
         r.effective_dp(host_handle),
         Some(dp_before + 3000),
         "linked host must gain +3000 DP"
+    );
+    // No app-fuse-capable card is in hand, so the optional app-fuse rider
+    // ("Then, 1 of your Digimon may app fuse into a Digimon card in the hand.")
+    // must no-op without leaving a dangling selection (DCGO gates the selection
+    // on HasMatchConditionOwnersPermanent).
+    assert!(
+        r.pending_selection().is_none(),
+        "no fusable hand card → app_fuse step must not install a selection"
     );
 }
 
@@ -451,5 +461,82 @@ fn bt23_079_app_fuse_from_hand_after_dp_buff() {
             .card_id(&r.game.card_data),
         "TEST-APPFUSE",
         "hand result app-fused onto the host after the DP buff"
+    );
+}
+
+/// Inner "may": declining the app-fuse permanent selection keeps the suspend
+/// and DP buff (already paid/applied), but performs no fusion — the printed
+/// rider is "1 of your Digimon MAY app fuse" (DCGO canNoSelect: true).
+#[test]
+fn bt23_079_app_fuse_may_be_declined_after_dp_buff() {
+    use digimon_engine::action::space::PASS;
+
+    let mut r = base()
+        .from_dsl_yaml(APP_FUSE_RESULT)
+        .expect("APP_FUSE_RESULT compiles")
+        .add_card(named_material("TEST-KABEMON", "Kabemon"))
+        .add_card(named_material("TEST-GOMIMON", "Gomimon"))
+        .deck(0, &["DECK-PAD"; 12])
+        .hand(0, &["TEST-APPFUSE"])
+        .memory(5)
+        .start();
+    let eri = r.place_on_field(0, CARD_ID, Some(0));
+    let host = r.place_on_field(0, "TEST-KABEMON", Some(0));
+    r.game.enter_main_phase();
+    let dp_before = r.effective_dp(host).expect("host on field");
+
+    let host_handle = r.perm_handle(0, host.index as usize);
+    fire_link_event(&mut r, 0, host_handle, "TEST-GOMIMON");
+
+    // Accept the outer optional prompt (suspend + DP buff).
+    {
+        let sel = r.game.pending_selection.as_ref().expect("optional prompt");
+        let action = sel.valid_action_ids[0];
+        let _ = r.game.resolve_selection(0, action);
+        r.game.drain_effect_queue();
+    }
+
+    // The app-fuse permanent selection installs; it must be optional
+    // (is_optional: true admits PASS — the printed "may" / DCGO canNoSelect).
+    {
+        let view = r
+            .pending_selection_view()
+            .expect("app-fuse perm selection installs after the DP buff");
+        assert!(
+            view.is_optional,
+            "app-fuse rider is 'may' → the selection must be optional (PASS legal)"
+        );
+    }
+    let _ = r.game.resolve_selection(0, PASS);
+    r.game.drain_effect_queue();
+
+    // Suspend + DP buff stick (cost was paid, buff already applied)...
+    assert!(
+        r.game.players[0].battle_area[eri.index as usize].is_suspended,
+        "Eri stays suspended after declining the app fuse"
+    );
+    assert_eq!(
+        r.effective_dp(host),
+        Some(dp_before + 3000),
+        "+3000 DP buff persists after declining the app fuse"
+    );
+    // ...but no fusion happened: host top card unchanged, result still in hand.
+    assert_eq!(
+        r.game.players[0].battle_area[host.index as usize]
+            .top_card()
+            .card_id(&r.game.card_data),
+        "TEST-KABEMON",
+        "declining the app fuse must not change the host stack"
+    );
+    assert!(
+        r.game.players[0]
+            .hand
+            .iter()
+            .any(|c| c.card_id(&r.game.card_data) == "TEST-APPFUSE"),
+        "declining the app fuse must leave the result card in hand"
+    );
+    assert!(
+        r.pending_selection().is_none(),
+        "declining must fully resolve the effect — no dangling selection"
     );
 }

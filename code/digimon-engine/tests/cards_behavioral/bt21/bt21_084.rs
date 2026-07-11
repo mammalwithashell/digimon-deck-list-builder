@@ -8,14 +8,13 @@
 //!   in the hand.
 //! [Security] Play this card without paying the cost.
 //!
-//! # Gaps and omissions
+//! # Coverage note
 //! The "Then, 1 of your Digimon may app fuse into a Digimon card in the hand."
-//! rider is OMITTED — no engine primitive for effect-initiated App Fusion exists
-//! (`EffectContext::effect_initiated_app_fuse` / DSL `app_fuse` step).
-//! Gap: effect-initiated app fuse — see docs/RUST_ENGINE_GAPS.md (App Fuse entry).
-//! Same gap keeps BT25-089 PARTIAL.
+//! rider IS implemented (2026-06-13) via the effect-initiated `app_fuse` DSL
+//! step (`EffectContext::initiate_effect_app_fuse`, from: hand, optional) and
+//! covered end-to-end by `bt21_084_app_fuse_from_hand_after_draw` below.
 //!
-//! # Verdict: PARTIAL
+//! # Verdict: FULL (all three printed clauses implemented and tested)
 //!
 //! # DCGO C# reference
 //! DCGO/Assets/Scripts/CardEffect/BT21/Red/BT21_084.cs

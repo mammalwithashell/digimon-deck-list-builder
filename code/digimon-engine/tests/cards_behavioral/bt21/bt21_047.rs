@@ -116,13 +116,14 @@ fn bt21_047_has_link_condition_appmon_cost_1() {
     let has = card.effects.iter().any(|c| {
         matches!(
             c,
-            CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition { cost, .. })
-                if *cost == 1
+            CompiledClause::Declarative(CompiledDeclarativeClause::LinkCondition { cost, filter, .. })
+                if *cost == 1 && filter.trait_has.as_deref() == Some("Appmon")
         )
     });
     assert!(
         has,
-        "BT21-047 must declare a self link-condition with cost 1"
+        "BT21-047 must declare a self link-condition with cost 1 over [Appmon] hosts \
+         (printed: 'Link [Appmon] trait: Cost 1')"
     );
 }
 
@@ -134,10 +135,14 @@ fn bt21_047_registers_appmon_alt_digivolve_cost_0() {
     let has = card.alt_paths.iter().any(|p| {
         matches!(p.kind, CompiledAltPathKind::Digivolve)
             && matches!(p.cost, Some(CompiledCost::Literal(0)))
+            && p.from.as_ref().is_some_and(|f| {
+                f.level_eq == Some(2) && f.trait_has.as_deref() == Some("Appmon")
+            })
     });
     assert!(
         has,
-        "BT21-047 must register a cost-0 alt-digivolve over Appmon Lv.2"
+        "BT21-047 must register a cost-0 alt-digivolve gated on Lv.2 + [Appmon] trait \
+         (printed: '[Digivolve] Lv.2 w/[Appmon] trait: Cost 0')"
     );
 }
 
@@ -186,13 +191,15 @@ fn bt21_047_has_linked_piercing_grant() {
             c,
             CompiledClause::Declarative(CompiledDeclarativeClause::GrantKeyword {
                 scope: CompiledScope::Linked,
+                keyword,
                 ..
-            })
+            }) if keyword == "Piercing"
         )
     });
     assert!(
         has,
-        "BT21-047 must declare a scope:Linked GrantKeyword clause (for Piercing)"
+        "BT21-047 must declare a scope:Linked GrantKeyword clause for Piercing \
+         (printed link box: <Piercing>)"
     );
 }
 
@@ -219,6 +226,20 @@ fn bt21_047_on_play_adds_both_bucket_cards_to_hand() {
         r.hand_size(0),
         hand_before + 1,
         "On Play must add exactly 2 cards to hand (one per bucket)"
+    );
+    // The specific bucket picks must land in hand: 1 [Appmon] + 1 [App Driver].
+    let hand_ids: Vec<&str> = r.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&r.game.card_data))
+        .collect();
+    assert!(
+        hand_ids.contains(&"APPMON-CARD"),
+        "the [Appmon]-trait card must be added to hand: {hand_ids:?}"
+    );
+    assert!(
+        hand_ids.contains(&"DRIVER-CARD"),
+        "the [App Driver]-trait card must be added to hand: {hand_ids:?}"
     );
     // No revealed card should go to trash; remainder goes to deck bottom.
     assert_eq!(

@@ -1,19 +1,40 @@
 # BT25-045 Onmon — Digimon, Lv.3, Green, DP 2000, Cost 3.
-# Trait line: Online (App Name) — Appmon.
+# Trait line (image): Stnd./Appmon | Game | Online. Attribute: Game.
 #
-# Card image (authoritative printed text) + DCGO BT25_045.cs:
-#   [Digivolve] Lv.2 w/[Appmon] trait: Cost 0
-#       → alt_paths digivolve from { level_eq: 2, trait_has: Appmon } cost 0.
+# Card image (authoritative printed text) + official DB bundle
+# data/card_bundles/BT25-045.md + DCGO BT25_045.cs (behavior):
+#   Digivolve box — the card prints BOTH requirements:
+#     (a) standard circle "Green Lv.2 / cost 0" (official DB standard circle)
+#         → bare { level_eq: 2, color_is: green } alt_path per the
+#           printed-circle convention (tests/alt_path_printed_cost_guard.rs).
+#     (b) special condition "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+#         → alt_paths digivolve from { level_eq: 2, trait_has: Appmon } cost 0.
+#           (DCGO AddSelfDigivolutionRequirementStaticEffect(HasAppmonTraits,
+#           lvl 2, cost 0).)
 #   [Your Turn][Once Per Turn] When a [Social],[Tool] or [Game] trait card would
 #     link to this Digimon, you may reduce the cost by 1.
 #       → face-up when_would_link_to_this reducer (Gap 5), optional + OPT,
 #         trait gate Social/Tool/Game, your-turn gate.
 #   [Link] [Appmon] trait: Cost 1
 #       → kind: link_condition, cost 1, host filter trait_has Appmon.
+#   Link box DP bonus: DP+2000 to the host while linked (official DB
+#     "Link DP: DP+2000"; DCGO applies it via the generic LinkEffect factory)
+#       → scope: linked, kind: aura, dp_modifier 2000.
 #   [When Linking] Suspend 1 of your opponent's Digimon.
 #       → scope: linked, when: when_linked, select_opponent_permanent (Digimon)
 #         + suspend. (DCGO `WhenLinked`, SetIsLinkedEffect(true). cards.json
 #         slots this lower-box clause as "inherited"; it is the linked effect.)
+#
+# Notes (audit 2026-07-10, mirrors sibling BT25-007):
+#   - The printed standard circle "Green Lv.2 / cost 0" was missing — only the
+#     trait-gated special condition was authored, so a plain green Lv.2 without
+#     [Appmon] had NO digivolve route (fixed 2026-07-10).
+#   - The link box "DP +2000" aura was missing entirely (fixed 2026-07-10).
+#   - `attribute: Game` (image + official DB "Attribute: Game") — was
+#     mis-authored as Free; kept for attribute_is predicates.
+#   - Traits include all segments from the image: Stnd., Appmon, Game, Online
+#     (the API-lossy cards.json drops the form segments; DCGO EqualsTraits spans
+#     the whole trait line, e.g. Onmon itself is a [Game] trait card).
 #
 # ─── Re-adjudication 2026-06-07 (prior verdict: BLOCKED engine / facet #10) ───
 # The face-up host-filtered optional WhenWouldLink reducer (Gap 5) has LANDED —
@@ -29,10 +50,17 @@ level: 3
 color: [green]
 cost: 3
 dp: 2000
-traits: [Online, Appmon]
-attribute: Free
+traits: ["Stnd.", Appmon, Game, Online]
+attribute: Game
 
 alt_paths:
+  # Printed standard circle: "Green Lv.2 / cost 0" (card image digivolve circle;
+  # official DB "Standard digivolve cost circles: Green Lv.2 / cost 0").
+  - kind: digivolve
+    from: { level_eq: 2, color_is: green }
+    cost: 0
+  # Printed special condition: "[Digivolve] Lv.2 w/[Appmon] trait: Cost 0"
+  # (DCGO AddSelfDigivolutionRequirementStaticEffect: HasAppmonTraits, lvl 2, cost 0).
   - kind: digivolve
     from: { level_eq: 2, trait_has: Appmon }
     cost: 0
@@ -42,6 +70,14 @@ effects:
   - kind: link_condition
     cost: 1
     filter: { trait_has: Appmon }
+
+  # ─── [Link] +2000 DP to the host while linked ───────────────────────────────
+  # Printed link box "DP +2000" (card image + official DB "Link DP: DP+2000").
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 2000
+    summary: "[Link] +2000 DP to the linked Digimon"
 
   # ─── [Your Turn][OPT] face-up host-side link-cost reducer ──────────────────
   - when: when_would_link_to_this

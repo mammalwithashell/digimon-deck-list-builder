@@ -1,4 +1,6 @@
-//! BT25-060 Rebootmon — Digimon, Lv.6, Green, DP 12000, Play Cost 12.
+//! BT25-060 Rebootmon — Digimon, Lv.6, GREEN/WHITE, DP 12000, Play Cost 12.
+//! Colors: official Bandai DB "Green White" (dual-color; green/white split name
+//!   bar + play-cost ring on the card image) → color: [green, white].
 //! Trait line (card image): God/Appmon | God | Reboot →
 //!   traits: [God, Appmon, Reboot], attribute: God.
 //!
@@ -22,9 +24,12 @@
 //!   - ChangeSelfSAttackStaticEffect(+1), RebootSelfStaticEffect, ChangeSelfLinkMaxStaticEffect(1).
 //!   - Shared WD/WA (maxCountPerTurn 1, shared hash): link 1 [Appmon] from hand/
 //!     digivolution cards to self (free); if linked, 1 of your Digimon MAY unsuspend
-//!     (canNoSelect: true). If NOT linked, RemoveUse() (OPT refunded).
+//!     (canNoSelect: true). If NOT linked, RemoveUse() (OPT refunded) — modeled by
+//!     the YAML's `refund_opt` on `binding_absent: linked_appmon`.
 //!   - Shared All-Turns (WhenLinked + OnUnTappedAnyone, shared hash, maxCount 1):
 //!     gain <Piercing> + <Blocker> + DigimonEffectImmunity UntilOwnerTurnEnd.
+//!     SELF-scoped (CanTriggerWhenSelfPermanentUnsuspends) — modeled by the
+//!     on_unsuspend timing_condition `event_permanent_is_source: true`.
 //!
 //! Pattern tags: Appmon link box (no link_condition — receives links), Ult.
 //!   alt-digivolve trait gate, App Fusion (Gap 4), <Link +1> aura (ChangeLinkMax),
@@ -36,7 +41,8 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledDeclarativeClause, CompiledStep, CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledDeclarativeClause, CompiledStep,
+    CompiledTiming,
 };
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
@@ -158,6 +164,13 @@ fn bt25_060_yaml_printed_metadata() {
     assert_eq!(card.name, "Rebootmon");
     assert_eq!(card.level, Some(6));
     assert_eq!(card.dp, Some(12000));
+    // Official Bandai DB: "Colors: Green White" (dual-color — the card image
+    // shows the green/white split name bar and play-cost ring).
+    assert_eq!(
+        card.color,
+        vec![CompiledColor::Green, CompiledColor::White],
+        "Rebootmon is a GREEN/WHITE dual-color card (official DB)"
+    );
     for t in ["God", "Appmon", "Reboot"] {
         assert!(
             card.traits.iter().any(|x| x == t),
@@ -298,11 +311,19 @@ fn bt25_060_has_all_turns_dual_timing_grant_clause() {
             .process
             .iter()
             .any(|s| matches!(s, CompiledStep::GrantEffectImmunity { .. }));
-        linked && unsusp && t.once_per_turn && grants_kw && grants_immunity
+        // "When THIS Digimon ... unsuspends" — OnUnsuspend dispatch is a
+        // board-wide scan, so the on_unsuspend timing must carry the
+        // event_permanent_is_source self-gate (DCGO
+        // CanTriggerWhenSelfPermanentUnsuspends).
+        let self_gated_unsuspend = t.timing_conditions.iter().any(|tc| {
+            tc.when == CompiledTiming::OnUnsuspend
+                && tc.condition.event_permanent_is_source == Some(true)
+        });
+        linked && unsusp && t.once_per_turn && grants_kw && grants_immunity && self_gated_unsuspend
     });
     assert!(
         has,
-        "[All Turns][OPT] clause fires on link-to-this OR unsuspend, grants keywords + immunity"
+        "[All Turns][OPT] clause fires on link-to-this OR SELF-unsuspend (event_permanent_is_source gate), grants keywords + immunity"
     );
 }
 
@@ -510,6 +531,55 @@ fn bt25_060_wd_wa_share_once_per_turn_lockout() {
     );
 }
 
+/// Declining the [WD] link REFUNDS the shared once-per-turn (DCGO
+/// `else activateClass.RemoveUse()` — "if nothing executed, the per-turn use
+/// is not consumed"), so [When Attacking] can still offer the effect the SAME
+/// turn and actually link.
+#[test]
+fn bt25_060_declining_wd_link_refunds_opt_so_wa_can_fire_same_turn() {
+    let mut r = base()
+        .hand(0, &["APPMON-IN-HAND"])
+        .deck(0, &["DECK-PAD"; 12])
+        .memory(10)
+        .start();
+    let reboot = r.place_on_field(0, CARD_ID, Some(0));
+    advance_to_main(&mut r);
+
+    // [WD] surfaces the link selection — decline it (PASS → nothing linked).
+    assert!(
+        fire_when_digivolving(&mut r, 0, reboot.index as usize),
+        "[WD] installs the link selection"
+    );
+    let _ = r
+        .game
+        .resolve_selection(0, digimon_engine::action::space::PASS);
+    resolve_all_first(&mut r, 0);
+    assert_eq!(
+        r.game.player(0).battle_area[reboot.index as usize]
+            .linked_cards
+            .len(),
+        0,
+        "nothing linked after declining [WD]"
+    );
+
+    // The once-per-turn was refunded (DCGO RemoveUse), so [WA] re-offers the
+    // link the SAME turn — and this time completing it links the Appmon.
+    assert!(
+        fire_when_attacking(&mut r, 0, reboot.index as usize),
+        "[WA] offers the link again after the declined [WD] refunded the OPT"
+    );
+    let link_action = r.game.pending_selection.as_ref().unwrap().valid_action_ids[0];
+    let _ = r.game.resolve_selection(0, link_action);
+    resolve_all_first(&mut r, 0);
+    assert_eq!(
+        r.game.player(0).battle_area[reboot.index as usize]
+            .linked_cards
+            .len(),
+        1,
+        "[WA] linked the Appmon after the refunded [WD] decline"
+    );
+}
+
 /// [All Turns] grant fires when a card gets linked TO Rebootmon (host-side):
 /// it gains <Piercing> + <Blocker> + opponent-Digimon-effect immunity.
 #[test]
@@ -580,6 +650,46 @@ fn bt25_060_grant_fires_on_unsuspend() {
         r.game
             .permanent_is_unaffected_by_effect(reboot, 1, EffectSourceKind::Digimon),
         "Rebootmon immune to opponent Digimon effects on unsuspend"
+    );
+}
+
+/// Negative: "when THIS Digimon ... unsuspends" is SELF-scoped — ANOTHER own
+/// Digimon unsuspending must NOT trigger the grant (DCGO
+/// CanTriggerWhenSelfPermanentUnsuspends), and must not consume the shared
+/// once-per-turn: a self-unsuspend afterwards still fires it.
+#[test]
+fn bt25_060_grant_does_not_fire_when_another_digimon_unsuspends() {
+    let mut r = base().deck(0, &["DECK-PAD"; 12]).memory(10).start();
+    let reboot = r.place_on_field(0, CARD_ID, Some(0));
+    let ally = r.place_on_field(0, "OWN-ALLY", Some(1));
+    advance_to_main(&mut r);
+
+    // The ALLY unsuspends — Rebootmon gains nothing.
+    r.game.suspend(ally);
+    r.game.unsuspend(ally);
+    resolve_all_first(&mut r, 0);
+    assert!(
+        !r.game.has_keyword(reboot, Keyword::Piercing),
+        "no Piercing when a DIFFERENT Digimon unsuspends (self-scoped trigger)"
+    );
+    assert!(
+        !r.game.has_keyword(reboot, Keyword::Blocker),
+        "no Blocker when a different Digimon unsuspends"
+    );
+    assert!(
+        !r.game
+            .permanent_is_unaffected_by_effect(reboot, 1, EffectSourceKind::Digimon),
+        "no effect-immunity when a different Digimon unsuspends"
+    );
+
+    // The non-fire did not consume the shared OPT: Rebootmon's OWN unsuspend
+    // still triggers the grant this turn.
+    r.game.suspend(reboot);
+    r.game.unsuspend(reboot);
+    resolve_all_first(&mut r, 0);
+    assert!(
+        r.game.has_keyword(reboot, Keyword::Piercing),
+        "self-unsuspend still fires the grant after the ally's unsuspend non-fire"
     );
 }
 

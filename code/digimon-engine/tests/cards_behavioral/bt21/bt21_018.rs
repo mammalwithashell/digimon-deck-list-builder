@@ -4,7 +4,10 @@
 //!
 //! Trait line: Sup./Appmon | Social | Super Search/Hero
 //!
-//! Digivolve: Lv.3: Cost 3 (red); Stnd.: Cost 3 (from a "Stnd." form Appmon).
+//! Digivolve circles (official Bandai DB, data/card_bundles/BT21-018.md):
+//!   Red Lv.3: Cost 3  AND  Green "Stnd." icon: Cost 3 (DB grades it Green
+//!   Lv.3 / cost 3). Both authored as alt_paths at printed cost; the
+//!   colour-free `trait_has: "Stnd."` path is the DCGO behavioral reading.
 //!
 //! App Fusion [Gatchmon] & [Navimon] & [Tweetmon]: Cost 0 — If 2 such cards
 //!   are linked together, stack the link card on top and digivolve.
@@ -39,8 +42,8 @@
 #![allow(dead_code, unused_imports, unused_variables, unused_mut)]
 
 use digimon_dsl::compiled::{
-    CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
-    CompiledTiming,
+    CompiledAltPathKind, CompiledClause, CompiledColor, CompiledCost, CompiledDeclarativeClause,
+    CompiledScope, CompiledTiming,
 };
 use digimon_engine::action::space::{
     EFFECTS_PER_PERMANENT, FIELD_EFFECT_SLOT_FOR_LINK, FIELD_EFFECT_START, PASS,
@@ -246,7 +249,8 @@ fn bt21_018_app_fusion_cost_is_zero() {
     );
 }
 
-/// Stnd. form digivolve alt-path is declared with cost 3.
+/// Stnd. form digivolve alt-path is declared with cost 3 and a "Stnd." trait
+/// gate (DCGO HasStandardAppTraits — no level/colour gate).
 #[test]
 fn bt21_018_has_stnd_digivolve_alt_path_cost_3() {
     let runner = base().start();
@@ -254,10 +258,54 @@ fn bt21_018_has_stnd_digivolve_alt_path_cost_3() {
     let has = card.alt_paths.iter().any(|p| {
         matches!(p.kind, CompiledAltPathKind::Digivolve)
             && matches!(p.cost, Some(CompiledCost::Literal(3)))
+            && p.from
+                .as_ref()
+                .is_some_and(|f| f.trait_has.as_deref() == Some("Stnd."))
     });
     assert!(
         has,
-        "BT21-018 must declare a cost-3 digivolve alt-path (Stnd. form)"
+        "BT21-018 must declare a cost-3 digivolve alt-path gated on the Stnd. trait"
+    );
+}
+
+/// Printed standard circle #1 (official Bandai DB): Red Lv.3 / Cost 3.
+#[test]
+fn bt21_018_has_red_lv3_standard_circle_cost_3() {
+    let runner = base().start();
+    let card = runner.compiled_card(CARD_ID).expect("present");
+    let has = card.alt_paths.iter().any(|p| {
+        matches!(p.kind, CompiledAltPathKind::Digivolve)
+            && matches!(p.cost, Some(CompiledCost::Literal(3)))
+            && p.from.as_ref().is_some_and(|f| {
+                f.level_eq == Some(3)
+                    && f.color_is == Some(CompiledColor::Red)
+                    && f.trait_has.is_none()
+            })
+    });
+    assert!(
+        has,
+        "BT21-018 must declare its printed Red Lv.3 / cost 3 standard digivolve circle"
+    );
+}
+
+/// Printed standard circle #2 (official Bandai DB): Green Lv.3 ("Stnd." icon
+/// on the card face) / Cost 3.
+#[test]
+fn bt21_018_has_green_lv3_standard_circle_cost_3() {
+    let runner = base().start();
+    let card = runner.compiled_card(CARD_ID).expect("present");
+    let has = card.alt_paths.iter().any(|p| {
+        matches!(p.kind, CompiledAltPathKind::Digivolve)
+            && matches!(p.cost, Some(CompiledCost::Literal(3)))
+            && p.from.as_ref().is_some_and(|f| {
+                f.level_eq == Some(3)
+                    && f.color_is == Some(CompiledColor::Green)
+                    && f.trait_has.is_none()
+            })
+    });
+    assert!(
+        has,
+        "BT21-018 must declare its printed Green Lv.3 (Stnd. icon) / cost 3 standard digivolve circle"
     );
 }
 
@@ -423,80 +471,85 @@ fn bt21_018_host_side_when_linked_pass_does_nothing() {
     );
 }
 
-/// Negative: On opponent's turn, a card linking to DoGatchmon should NOT
-/// trigger the attack prompt for the controller (active_when: your_turn gate).
-/// We set up DoGatchmon as player 1's card and link on player 1's turn —
-/// player 0's DoGatchmon has no trigger.
-/// (The your_turn gate blocks P0's DoGatchmon trigger on P1's turn.)
+/// Negative gate ([Your Turn]): the host-side when_card_linked_to_this clause
+/// must compile with an `active_when: { your_turn: true }` gate, so a link
+/// happening on the opponent's turn (via an opponent effect) cannot fire it.
+/// A behavioral opponent-turn link needs an opponent-side linking effect
+/// (main-phase link actions belong to the turn player), so the gate is
+/// asserted structurally on the compiled clause — the same predicate the
+/// dispatcher evaluates at trigger time.
 #[test]
-fn bt21_018_host_side_no_prompt_when_linked_on_opponents_turn() {
-    let mut r = base().memory(10).start();
-    advance_to_main(&mut r);
-
-    // Place DoGatchmon and a link card for P0.
-    let dogatch = r.place_on_field(0, CARD_ID, Some(0));
-    let gatch = r.place_on_field(0, "BT25-007", Some(0));
-
-    // Switch to P1's turn.
-    r.pass_turn();
-    advance_to_main(&mut r);
-
-    // On P1's turn, try to link Gatchmon to DoGatchmon (owned by P0).
-    // P0's card on P1's turn → your_turn gate (active_when: your_turn) must block.
-    // Since link requires P0's memory, this setup is tricky; we'll verify structurally
-    // that the clause has the active_when gate (covered in Section 1).
-    // As a behavioral negative, we confirm that the OPT clause is properly gated
-    // by using the structural check from Section 1 (your_turn flag).
-    // The structural test bt21_018_when_card_linked_to_this_is_opt_and_optional
-    // verifies the once_per_turn flag, and the YAML active_when: { your_turn: true }
-    // gates behavioral dispatch. This test just confirms no panic on opponent turn.
-    assert!(true, "no crash on opponent turn setup");
+fn bt21_018_when_card_linked_to_this_gated_to_your_turn() {
+    let runner = base().start();
+    let card = runner.compiled_card(CARD_ID).expect("present");
+    let clause = card
+        .effects
+        .iter()
+        .find_map(|c| match c {
+            CompiledClause::Triggered(t)
+                if t.when.contains(&CompiledTiming::WhenCardLinkedToThis) =>
+            {
+                Some(t)
+            }
+            _ => None,
+        })
+        .expect("must have when_card_linked_to_this triggered clause");
+    let gate = clause
+        .active_when
+        .as_ref()
+        .expect("[Your Turn] must compile to an active_when gate");
+    assert_eq!(
+        gate.your_turn,
+        Some(true),
+        "the when_card_linked_to_this clause must be gated to [Your Turn]"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Section 4 — OPT lockout on when_card_linked_to_this
 // ═══════════════════════════════════════════════════════════════════════════════
 
-/// OPT: second link to DoGatchmon same turn must NOT re-surface the attack prompt.
+/// OPT: second link to DoGatchmon the same turn must NOT re-surface the
+/// attack prompt. Uses DSL-CLEAN-LINKER (no when_linked effects), so after a
+/// link the ONLY possible prompt source is DoGatchmon's host-side OPT clause.
+/// The engine records the once-per-turn activation BEFORE the body's optional
+/// attack selection surfaces (run_queued_effect_process_tail), so PASSing the
+/// first prompt still consumes the OPT.
 #[test]
 fn bt21_018_opt_lockout_second_link_same_turn() {
-    let mut r = base()
-        .dsl_card("BT25-070")
-        .expect("BT25-070 (Logamon) YAML parses")
-        .memory(15)
-        .start();
+    let mut r = base_host_test().memory(15).start();
     advance_to_main(&mut r);
 
     let dogatch = r.place_on_field(0, CARD_ID, Some(0));
-    let link1 = r.place_on_field(0, "BT25-007", Some(0)); // Gatchmon, cost 1 link
-    let link2 = r.place_on_field(0, "BT25-070", Some(0)); // Logamon, cost 2 link
+    let linker1 = r.place_on_field(0, "DSL-CLEAN-LINKER", Some(0));
+    let _opp = r.place_on_field(1, "OPP-DIG", Some(0));
 
-    // First link → prompt appears.
-    perform_link(&mut r, link1, dogatch, 0);
-    // PASS the optional prompt to consume the OPT.
+    // First link → the host-side OPT attack prompt fires.
+    perform_link(&mut r, linker1, dogatch, 0);
+    assert!(
+        r.pending_selection().is_some(),
+        "first link must surface the host-side OPT attack prompt"
+    );
     while r.pending_selection().is_some() && r.pending_is_optional() {
         let _ = r.execute_action(0u8, PASS);
     }
     let _ = r.auto_resolve();
+    assert!(
+        r.pending_selection().is_none(),
+        "prompts must be fully drained after the first link"
+    );
 
-    // Second link same turn.
-    perform_link(&mut r, link2, dogatch, 0);
+    // Second clean linker placed AFTER the first link resolved (battle-area
+    // indices shift when a linked card leaves the area).
+    let linker2 = r.place_on_field(0, "DSL-CLEAN-LINKER", Some(0));
+    perform_link(&mut r, linker2, dogatch, 0);
     let _ = r.auto_resolve();
 
-    // After second link, no pending attack prompt (OPT locked).
-    // The pending_selection may be None or point to something else (when_linked from link2).
-    // We check that the when_card_linked_to_this OPT from DoGatchmon is NOT re-fired.
-    // Since we can't distinguish prompt origin here, we check that it's either None
-    // or the count of optional prompts is no more than the linked-side effects.
-    // The structural test (once_per_turn) and the behavioral first-link test above
-    // together verify the OPT contract.
-    // A simpler behavioral check: drain all prompts and see no board changes (attack not forced).
-    while r.pending_selection().is_some() && r.pending_is_optional() {
-        let _ = r.execute_action(0u8, PASS);
-    }
-    let _ = r.auto_resolve();
-    // If we reach here without the OPT firing twice, the lockout is correct.
-    assert!(true, "OPT lockout test passed (no double-fire)");
+    assert!(
+        r.pending_selection().is_none(),
+        "[Once Per Turn]: a second link to DoGatchmon the same turn must NOT \
+         re-surface the host-side attack prompt"
+    );
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════

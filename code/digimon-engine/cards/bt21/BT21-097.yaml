@@ -72,13 +72,16 @@ effects:
   #   maxCount: 1, mode AddHand, remainingCardsPlace Trash),
   #   then PlaceDelayOptionCards (places the option card as a Delay permanent).
   #
-  # DSL: reveal_top_deck 3, select_reveal (optional: true, filter trait_has Appmon
+  # DSL: reveal_top_deck 3, select_reveal (optional: false, filter trait_has Appmon
   #   or trait_has "App Driver"), add_to_hand_from_reveal, trash remainder via
   #   per_selected + trash_from_reveal, then place_self_as_delay_option.
   #
-  # NOTE: optional: true on select_reveal matches BT25-098's drift note — the
-  # printed text has no "may" but the DSL uses optional to allow the fizzle
-  # case when no eligible card is among the revealed three.
+  # Printed "Add 1 card ... to the hand" has no "may" — the add is MANDATORY
+  # when an [Appmon]/[App Driver] card is among the reveal (DCGO
+  # SimplifiedRevealDeckTopCardsAndSelect has no canNoSelect). When none is
+  # revealed the select finds no candidates and auto-skips (fizzle needs no
+  # `optional`). Mirrors BT25-098's audited clause 1 (drift fix 2026-06-12).
+  # (Audit drift fix 2026-07-10: was `optional: true`, over-exposing PASS.)
   - when: main_from_hand
     summary: "[Main] Reveal top 3; add 1 [Appmon]/[App Driver] to hand; trash the rest; place self in battle area"
     process:
@@ -86,7 +89,7 @@ effects:
       - select_reveal:
           of: you
           bind_as: picked
-          optional: true
+          optional: false
           filter:
             any_of:
               - trait_has: Appmon
@@ -115,23 +118,42 @@ effects:
   #        then SelectPermanentEffect (own Digimon, CanLinkToTargetPermanent),
   #        then AddLinkCard.
   #
-  # DSL: kind: delay, trigger: delayed (standard end-of-your-turn / main-phase-
-  #   activated standard Delay). The process is optional (you may) — "you may
-  #   link" makes PASS legal. The link_cards step covers:
+  # DSL: kind: delay, trigger: end_of_your_next_turn.
+  #
+  # TIMING (audit drift fix 2026-07-10 — was `trigger: delayed`): the printed
+  # timing header is [End of Your Turn], NOT [Main]. `trigger: delayed`
+  # (DelayTrigger::MainPhaseActivated) is the shape for printed [Main] <Delay>
+  # cards (BT25-098, LM-033, P-035) — it would let the player activate the
+  # link during their MAIN phase, before attacks, which is strictly stronger
+  # than the printed card. DCGO registers this body at EffectTiming.OnEndTurn
+  # gated on IsOwnerTurn && CanDeclareOptionDelayEffect. The engine's trigger
+  # for owner-turn-end Delay bodies is `end_of_your_next_turn`
+  # (DelayTrigger::EndOfYourNextTurn): the scheduled scan fires at the end of
+  # the owner's NEXT turn — the first legal activation window per rule
+  # 16-16-3 ("can't be used the turn this card is placed"); placed via
+  # [Security] on the opponent's turn it fires at the end of the owner's next
+  # (first) turn. Symmetric with the [Start of Your Turn] <Delay> precedents
+  # (LM-027/029/030/031/032 → `start_of_your_turn`).
+  #
+  # KNOWN residual (engine, tracked): the scheduled scan is MANDATORY — no
+  # accept/decline prompt, and the Option is trashed even if the link is
+  # declined, where DCGO offers an optional prompt each owner turn-end and a
+  # decline keeps the card parked. That is the OPEN engine gap
+  # G-ENGINE-SCHEDULED-DELAY-MANDATORY-SCAN (docs/RUST_ENGINE_GAPS.md,
+  # 2026-07-09), which covers this whole trigger family; do not route around
+  # it card-side.
+  #
+  # BODY: printed "・You may link 1 card..." — the link itself is optional,
+  # so PASS stays legal on the pick. The link_cards step covers:
   #   - from: [hand] — link from own hand
   #   - to: own_digimon — attach to a chosen own Digimon
-  #   - count: { up_to: 1 } — optional pick (you may stop early / PASS)
+  #   - count: { up_to: 1 } — optional pick ("you may" → PASS legal)
   #   - cost: free — "without paying the cost"
-  #
-  # NOTE: The Delay activation cost (trash-self) is the standard <Delay>
-  # mechanic: placing the Option card in the battle area via
-  # place_self_as_delay_option above, then the standard delay body fires at
-  # end-of-turn (MainPhaseActivated trigger). The engine's standard Delay
-  # machinery trashes the Delay option card as the activation cost, so no
-  # explicit `activation_cost: { trash_self: true }` step is needed here —
-  # it's handled by the engine's Delay activation path.
+  # The Delay activation cost (trash-self) is the standard <Delay> mechanic —
+  # the scheduled-scan machinery trashes the Delay option after the body, so
+  # no explicit `activation_cost: { trash_self: true }` step is needed here.
   - kind: delay
-    trigger: delayed
+    trigger: end_of_your_next_turn
     summary: "[End of Your Turn]<Delay> You may link 1 card from your hand with 1 of your Digimon free"
     process:
       - link_cards:

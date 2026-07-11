@@ -1,5 +1,9 @@
-# BT25-004 Tapmon — Digimon, Lv.2, Green, Cost 0.
-# Trait line: Tap (App Name) — an Appmon Lv.2 source card.
+# BT25-004 Tapmon — DIGI-EGG, Lv.2, Green.
+# Official Bandai DB (data/card_bundles/BT25-004.md): Form "Appmon",
+# Attribute "Tool", Type "Tap" — the printed trait line reads
+# "Appmon | Tool | Tap". Production (cards.json load) folds
+# form+attribute+type into `traits`, so the faithful trait set here is
+# [Appmon, Tool, Tap] (Tapmon IS a [Tool] trait card).
 #
 # DCGO BT25_004.cs (authoritative). The whole card is a single INHERITED
 # (source) effect — Tapmon's printed body is its inherited ability:
@@ -30,12 +34,15 @@
 
 card: BT25-004
 name: Tapmon
-kind: digimon
+# Printed card face: "DIGI-EGG" banner (image) — a Lv.2 Digi-Egg, not a
+# playable Digimon (was mis-authored `kind: digimon`; cf. BT25-001/003).
+kind: digi_egg
 level: 2
 color: [green]
 cost: 0
-traits: [Tap, Appmon]
-attribute: Free
+# Official trait line "Appmon | Tool | Tap" (form / attribute / type fold).
+traits: [Appmon, Tool, Tap]
+attribute: Tool
 
 effects:
   # ─── Inherited [Your Turn][OPT] host-side link-cost reducer ────────────────

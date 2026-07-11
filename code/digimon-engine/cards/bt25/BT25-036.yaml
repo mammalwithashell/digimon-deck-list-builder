@@ -1,18 +1,28 @@
 # BT25-036 Craftmon — Digimon, Lv.4, Yellow, DP 5000, Cost 5.
-# Trait line: Design (App Name) — Appmon; Appmon Grade "Sup.".
+# Trait line (card image — authoritative): Sup./Appmon | Tool | Design.
+#   → traits: ["Sup.", Appmon, Tool, Design], attribute: Tool. ("Sup." is the
+#     Appmon Grade: Superior form; convention per BT21-059/070/071.)
 #
 # Card image (authoritative printed text) + DCGO BT25_036.cs:
+#   Digivolve circles (image, 2026-07-10 audit — both cost 2):
+#     Circle #1 (yellow ring): "Lv.3 / 2" — standard circle, Yellow Lv.3, cost 2.
+#       Official Bandai DB (data/card_bundles/BT25-036.md): "Yellow Lv.3 / cost 2".
+#       → alt_paths digivolve from { level_eq: 3, color_is: yellow } cost 2.
+#     Circle #2 (rainbow ring): "Stnd. / 2" — grade circle, any-colour [Stnd.]
+#       form, cost 2. DCGO AddSelfDigivolutionRequirementStaticEffect(
+#       HasStandardAppTraits == EqualsTraits("Stnd."), cost 2) — trait gate
+#       ONLY, no level/colour gate.
+#       → alt_paths digivolve from { trait_has: "Stnd." } cost 2.
 #   [App Fusion] [Kabemon] & [Gomimon] & [Ecomon] & [Puzzlemon]: Cost 0.
 #     If 2 such cards are linked together, stack the link card on top and
 #     digivolve.
 #       → alt_paths app_fusion, materials name_in [Kabemon,Gomimon,Ecomon,
 #         Puzzlemon], cost 0. (DCGO AddAppfuseMethodByName.)
-#   [Digivolve] Lv.2 w/[Stnd.] trait: Cost 2
-#       → alt_paths digivolve from { level_eq: 2, trait_has: "Stnd." } cost 2.
-#         (DCGO AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits,
-#         level 2, cost 2). HasStandardAppTraits == trait "Stnd.".)
 #   [Link] [Appmon] trait: Cost 2
 #       → kind: link_condition, cost 2, host filter trait_has Appmon.
+#   Link box DP: "+3000" (image + official DB "Link DP: DP+3000"; DCGO applies
+#     it via the generic LinkEffect factory)
+#       → scope: linked, kind: aura, dp_modifier 3000 (BT21-018 §1.2 pattern).
 #   [Security] At the end of the battle, play this card without paying the cost.
 #       → when: on_security, play_from_security (Digimon after-battle play —
 #         same pattern as BT21-015, identical printed text).
@@ -22,8 +32,8 @@
 #   [When Linking] By trashing 1 [Appmon] trait card from your hand, <Draw 2>.
 #       → scope: linked, when: when_linked; optional cost (trash 1 Appmon) gated
 #         payoff draw 2. (DCGO WhenLinked, SetIsLinkedEffect(true), skippable.)
-#   Inherited: By trashing 1 [Appmon] trait card from your hand, Draw 2.
-#       → scope: inherited; same optional-cost trash → draw 2.
+#   (NO inherited clause — the lower box IS the [When Linking] link effect;
+#    cards.json's "inherited" field mis-slots it. See in-body NOTE.)
 #
 # ─── Re-adjudication 2026-06-07 (prior verdict: BLOCKED engine / App Fuse) ────
 # App Fusion is now implemented end-to-end (alt_paths app_fusion →
@@ -39,13 +49,26 @@ level: 4
 color: [yellow]
 cost: 5
 dp: 5000
-traits: [Design, Appmon]
+# Card image trait line: "Sup./Appmon | Tool | Design" — the Sup. grade and the
+# Tool attribute are traits too (dropped by the lossy cards.json ingest; sibling
+# convention BT21-059/070/071).
+traits: ["Sup.", Appmon, Tool, Design]
 attribute: Tool
 
 alt_paths:
-  # ─── [Digivolve] Lv.2 w/[Stnd.] trait: Cost 2 ──────────────────────────────
+  # ─── Printed standard circle: Yellow Lv.3 / Cost 2 ──────────────────────────
+  # Card image circle #1 (yellow ring, "Lv.3 / 2"); official Bandai DB
+  # (data/card_bundles/BT25-036.md): "Yellow Lv.3 / cost 2".
   - kind: digivolve
-    from: { level_eq: 2, trait_has: "Stnd." }
+    from: { level_eq: 3, color_is: yellow }
+    cost: 2
+  # ─── Printed grade circle: [Stnd.] form / Cost 2 (rainbow — any colour) ─────
+  # Card image circle #2 ("Stnd. / 2"). DCGO:
+  # AddSelfDigivolutionRequirementStaticEffect(HasStandardAppTraits, cost 2) —
+  # HasStandardAppTraits == EqualsTraits("Stnd."); trait gate ONLY (no level or
+  # colour gate; the prior `level_eq: 2` was drift).
+  - kind: digivolve
+    from: { trait_has: "Stnd." }
     cost: 2
   # ─── [App Fusion] Kabemon & Gomimon & Ecomon & Puzzlemon: Cost 0 ───────────
   - kind: app_fusion
@@ -59,6 +82,17 @@ effects:
   - kind: link_condition
     cost: 2
     filter: { trait_has: Appmon }
+
+  # ─── Link box DP: +3000 to the host while this card is linked ───────────────
+  # Printed in the link box: "+3000" (official DB "Link DP: DP+3000"). While
+  # Craftmon is linked, the host permanent gets +3000 DP. scope:linked aura
+  # (target: {} = the host permanent) — BT21-018 / BT25-007 pattern; this was
+  # one of the shipped BT25 link cards that omitted the clause (known drift).
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 3000
+    summary: "[Link] +3000 DP to the linked Digimon (host)"
 
   # ─── [Security] play self for free at end of battle ────────────────────────
   - when: on_security

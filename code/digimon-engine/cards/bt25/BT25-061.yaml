@@ -1,30 +1,54 @@
-# BT25-061 Offmon — Digimon, Lv.3, Purple, DP 2000, Cost 3.
-# Trait line: Offline (App Name) — Appmon.
+# BT25-061 Offmon — Digimon, Lv.3, Black, DP 2000, Play Cost 3.
+# Trait line (official Bandai DB / card image): Stnd./Appmon | Offline | Game
+#   → traits: ["Stnd.", Appmon, Offline], attribute: Game.
 #
-# DCGO BT25_061.cs (authoritative — cards.json mis-slots the WhenLinked clause
-# as the card's "inherited" text):
+# ─── Printed card text (data/card_bundles/BT25-061.md — authoritative) ────────
+# Digivolve circles (check ALL): Black Lv.2 / Cost 0 (standard circle) AND
+#   [Digivolve] Lv.2 w/[Appmon] trait: Cost 0 (black-banner alt condition).
+# [Start of Your Main Phase] By trashing 1 card with the [Appmon] trait from
+#   your hand, <Draw 1> and gain 1 memory.
+# Link box: <Link> [Appmon] trait: Cost 1 · Link DP +2000 ·
+#   [When Linking] 1 of your opponent's Digimon can't unsuspend until their
+#   turn ends.
+#
+# ─── DCGO C# crosscheck (DCGO/Assets/Scripts/CardEffect/BT25/Black/BT25_061.cs)
 #   - AddSelfLinkConditionStaticEffect(HasAppmonTraits, linkCost 1)
 #       → kind: link_condition, cost 1, host filter trait_has Appmon.
-#   - AddSelfDigivolutionRequirementStaticEffect(HasAppmonTraits, 0, lvl 2)
+#   - AddSelfDigivolutionRequirementStaticEffect(HasAppmonTraits, cost 0, lvl 2)
 #       → alt_paths digivolve from { level_eq: 2, trait_has: Appmon } cost 0.
+#     (The standard Black Lv.2 / Cost 0 circle is data-driven in DCGO, not
+#      per-card C# — authored here as an equal-cost alt_path per pool
+#      convention; both circles cost 0 so no cost-choice prompt arises.)
 #   - OnStartMainPhase: by trashing 1 [Appmon] from hand, AddMemory(1) + Draw(1).
-#       Optional (DCGO canNoSelect: true; payoff gated on a card being trashed).
-#   - WhenLinked (SetIsLinkedEffect true): 1 opp Digimon can't unsuspend until
-#       their turn ends (CanNotUnsuspendClass, UntilOwnerTurnEnd expiry).
-#       → scope: linked, when: when_linked, add_modifier CannotUnsuspend with
-#         expiry end_of_opponents_turn on the chosen opp Digimon.
+#       Optional (DCGO canNoSelect: true); payoff gated on a card actually
+#       being trashed (AfterSelectCardCoroutine `cardSources.Count >= 1`).
+#   - Link DP +2000: printed in the link box; DCGO applies link DP through its
+#       global link system (absent from per-card C# by design — same as
+#       BT21-043 / BT24-097 / ST22-12) → scope: linked, kind: aura,
+#       dp_modifier: 2000 (DigiLink Shape-B, G-LINK-INHERITED-ESS).
+#   - WhenLinked (SetIsLinkedEffect true; canNoSelect: false → mandatory when a
+#       target exists): 1 opp Digimon can't unsuspend until their turn ends
+#       (CanNotUnsuspendClass on UntilOwnerTurnEndEffects) → scope: linked,
+#       when: when_linked, add_modifier CannotUnsuspend with expiry
+#       end_of_opponents_turn on the chosen opponent Digimon.
 
 card: BT25-061
 name: Offmon
 kind: digimon
 level: 3
-color: [purple]
+color: [black] # printed: Black (bundle + card image; was mis-authored purple)
 cost: 3
 dp: 2000
-traits: [Offline, Appmon]
-attribute: Virus
+traits: ["Stnd.", Appmon, Offline] # form Stnd./Appmon + type Offline (official DB)
+attribute: Game # printed Attribute: Game (was mis-authored Virus)
 
 alt_paths:
+  # ─── Printed standard circle: Black Lv.2 / Cost 0 ───────────────────────────
+  - kind: digivolve
+    from: { level_eq: 2, color_is: black }
+    cost: 0
+
+  # ─── [Digivolve] Lv.2 w/[Appmon] trait: Cost 0 (DCGO alt condition) ─────────
   - kind: digivolve
     from: { level_eq: 2, trait_has: Appmon }
     cost: 0
@@ -34,8 +58,22 @@ effects:
   - kind: link_condition
     cost: 1
     filter: { trait_has: Appmon }
+    summary: "<Link> [Appmon] trait: Cost 1"
+
+  # ─── Link box: Link DP +2000 to the host while linked ───────────────────────
+  # Printed "DP +2000" in the link box. Modeled as a scope:linked self-aura
+  # (target: {} = the host permanent) — DigiLink Shape-B, same as BT21-043.
+  - scope: linked
+    kind: aura
+    target: {}
+    dp_modifier: 2000
+    summary: "[Link] +2000 DP to the linked Digimon (host)"
 
   # ─── [Start of Your Main Phase] trash 1 [Appmon] from hand → draw + memory ─
+  # "By trashing 1 card with the [Appmon] trait from your hand, <Draw 1> and
+  # gain 1 memory." Cost is optional (DCGO canNoSelect: true); both payoffs
+  # only fire when a card was actually trashed. Memory-then-draw order follows
+  # DCGO (AddMemory before DrawClass).
   - when: start_of_your_main_phase
     summary: "[Start of Your Main Phase] By trashing 1 [Appmon] card from hand, draw 1 and gain 1 memory"
     process:
@@ -53,6 +91,7 @@ effects:
             - draw: { of: you, count: 1 }
 
   # ─── [When Linking] 1 opp Digimon can't unsuspend until their turn ends ────
+  # Mandatory selection when a target exists (DCGO canNoSelect: false).
   - scope: linked
     when: when_linked
     summary: "[When Linking] 1 of your opponent's Digimon can't unsuspend until their turn ends"

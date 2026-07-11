@@ -49,6 +49,7 @@ use digimon_dsl::compiled::{
     CompiledAltPathKind, CompiledClause, CompiledCost, CompiledDeclarativeClause, CompiledScope,
     CompiledTiming,
 };
+use digimon_engine::action::space::PASS;
 use digimon_engine::card_data::CardData;
 use digimon_engine::card_source::CardSource;
 use digimon_engine::debug_runner::{make_test_card, DebugRunner, DebugRunnerBuilder};
@@ -100,8 +101,15 @@ fn base() -> DebugRunnerBuilder {
         ))
         // Non-Appmon Digimon — must NOT be selectable by the trash filter.
         .add_card(make_digimon("NON-APPMON", 3, 2000, 3, &["Dragon"]))
-        // Non-Digimon Appmon (Option card) — must NOT be selectable (kind: digimon filter).
-        .add_card(make_test_card("APPMON-OPT", "AppmonOption"))
+        // Non-Digimon Appmon (Option card) — must NOT be selectable (kind: digimon
+        // filter; DCGO `card.IsDigimon`). make_test_card defaults to Digimon with
+        // no traits, so both fields must be set explicitly here.
+        .add_card({
+            let mut c = make_test_card("APPMON-OPT", "AppmonOption");
+            c.card_kind = CardKind::Option;
+            c.traits = vec!["Appmon".to_string()];
+            c
+        })
         // Appmon host for link tests.
         .add_card(make_digimon("HOST-APP", 4, 5000, 5, &["Appmon"]))
         // Stnd. base for alt-digivolve tests (no level_eq gate in DCGO).
@@ -116,14 +124,14 @@ fn advance_to_main(r: &mut DebugRunner) {
 
 // ─── Section 1 — Structural assertions ───────────────────────────────────────
 
-/// The card compiles with exactly 4 clauses:
+/// The card compiles with exactly 5 clauses:
 ///   1. on_security triggered
 ///   2. [on_play, when_digivolving] triggered (optional)
 ///   3. link_condition declarative
 ///   4. linked scope +3000 DP aura declarative
 ///   5. linked scope when_linked triggered (optional)
 #[test]
-fn bt21_070_compiles_with_four_clauses() {
+fn bt21_070_compiles_with_five_clauses() {
     let runner = base().deck(0, &["DECK-PAD"; 5]).start();
     let card = runner.compiled_card(CARD_ID).expect("BT21-070 in pack");
     assert_eq!(
@@ -226,13 +234,20 @@ fn bt21_070_registers_stnd_alt_digivolve_cost_2() {
     let runner = base().deck(0, &["DECK-PAD"; 5]).start();
     let card = runner.compiled_card(CARD_ID).expect("present");
 
+    // Assert the FROM filter too: the standard purple Lv.3 circle is ALSO
+    // cost 2, so kind+cost alone would pass even if the Stnd. path were
+    // dropped. The Stnd. path is trait_has "Stnd." with NO level gate
+    // (DCGO AddSelfDigivolutionRequirementStaticEffect has no level param).
     let has = card.alt_paths.iter().any(|p| {
         matches!(p.kind, CompiledAltPathKind::Digivolve)
             && matches!(p.cost, Some(CompiledCost::Literal(2)))
+            && p.from.as_ref().is_some_and(|f| {
+                f.trait_has.as_deref() == Some("Stnd.") && f.level_eq.is_none()
+            })
     });
     assert!(
         has,
-        "BT21-070 must register a cost-2 alt-digivolve (Stnd. trait path)"
+        "BT21-070 must register a cost-2 alt-digivolve from trait [Stnd.] with no level gate"
     );
 }
 
@@ -332,6 +347,73 @@ fn bt21_070_on_play_non_appmon_not_selectable() {
         );
     }
     // else: no selection installed at all — also correct (optional + no eligible target).
+}
+
+/// Negative: an Appmon-trait OPTION card in trash is NOT selectable — the
+/// printed text says "1 Digimon card with the [Appmon] trait" (filter
+/// kind: digimon; DCGO `card.IsDigimon`).
+#[test]
+fn bt21_070_on_play_appmon_option_not_selectable() {
+    let mut r = base()
+        .hand(0, &[CARD_ID])
+        .deck(0, &["DECK-PAD"; 5])
+        .memory(10)
+        .start();
+
+    // Only an Appmon-trait Option card in trash — wrong kind.
+    seed_trash(&mut r, 0, "APPMON-OPT");
+
+    r.play(0, 0).expect("Gossipmon plays");
+
+    if let Some(sel) = r.pending_selection() {
+        assert_eq!(
+            sel.valid_action_ids.len(),
+            0,
+            "an Appmon Option card must not be selectable (Digimon cards only)"
+        );
+    }
+    // else: no selection installed at all — also correct (optional + no eligible target).
+}
+
+/// Decline: PASS on the optional On Play pick leaves everything untouched
+/// ("You may return" — declining is legal and does nothing).
+#[test]
+fn bt21_070_on_play_decline_leaves_trash_untouched() {
+    let mut r = base()
+        .hand(0, &[CARD_ID])
+        .deck(0, &["DECK-PAD"; 5])
+        .memory(10)
+        .start();
+
+    seed_trash(&mut r, 0, "APPMON-DIGI");
+    let hand_before = r.hand_size(0);
+    let trash_before = r.trash_size(0);
+
+    r.play(0, 0).expect("Gossipmon plays");
+    assert_eq!(r.pending_kind(), Some(SelectionKind::Trash));
+    assert!(
+        r.pending_is_optional(),
+        "the trash pick must be declinable (printed: 'You may return')"
+    );
+
+    let player = r.pending_selection().unwrap().selecting_player;
+    r.execute_action(player, PASS)
+        .expect("PASS declines the optional pick");
+
+    assert!(
+        r.pending_selection().is_none(),
+        "no further selection after declining"
+    );
+    assert_eq!(
+        r.hand_size(0),
+        hand_before - 1,
+        "only the played Gossipmon left the hand; nothing was returned"
+    );
+    assert_eq!(
+        r.trash_size(0),
+        trash_before,
+        "APPMON-DIGI stays in trash when the return is declined"
+    );
 }
 
 // ─── Section 3 — [When Digivolving] optional trash-to-hand behavioral ─────────

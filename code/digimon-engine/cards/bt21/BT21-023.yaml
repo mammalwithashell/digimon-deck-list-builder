@@ -3,8 +3,13 @@
 #
 # CORRECTED printed card text (transcribed from card image — authoritative):
 #
-#   Digivolve: Lv.4: Cost 4 (red), plus form-gated "Sup.": Cost 4
+#   Digivolve: Lv.4: Cost 4 (dual-ring RED or YELLOW — the official Bandai DB
+#     mirror `data/card_official.json` lists BOTH rows: card_color 0 (red)
+#     Lv.4/4 AND card_color 2 (yellow) Lv.4/4), plus form-gated "Sup.": Cost 4
 #     (digivolve from a "Sup." form Appmon — DCGO EqualsTraits("Sup.")).
+#     NOTE: the per-card JSON (DCGO-derived evo_costs) carries only the red
+#     row — the yellow circle is supplied here as an equal-cost alt_path
+#     (the established convention; see alt_path_printed_cost_guard.rs).
 #
 #   App Fusion box: "App Fusion [DoGatchmon] & [Timemon]: Cost 0 —
 #     If 2 such cards are linked together, stack the link card on top and
@@ -79,7 +84,8 @@
 #
 # | Card-text element                                            | Status       |
 # |--------------------------------------------------------------|--------------|
-# | Std digivolve Lv.4 Red / Cost 4                             | IMPLEMENTED (printed evo_costs) |
+# | Std digivolve Lv.4 Red / Cost 4                             | IMPLEMENTED (printed evo_costs + alt_path) |
+# | Std digivolve Lv.4 Yellow / Cost 4 (official DB row 2)      | IMPLEMENTED (alt_path — JSON evo_costs lacks the yellow row) |
 # | Alt-digivolve Lv. from "Sup." form / Cost 4                 | IMPLEMENTED (alt_paths digivolve trait_has Sup.) |
 # | App Fusion [DoGatchmon] & [Timemon]: Cost 0                  | IMPLEMENTED (alt_paths app_fusion) |
 # | <Security A. +1>                                            | IMPLEMENTED (grant_keyword SecurityAttackPlus 1) |
@@ -99,9 +105,17 @@ traits: ["Ult.", Appmon, Social, Global, Hero]
 attribute: Social
 
 alt_paths:
-  # ─── Standard digivolve: Lv.4 Red / Cost 4 (printed evo_costs) ─────────────
+  # ─── Standard digivolve circle: Lv.4 / Cost 4, RED or YELLOW ────────────────
+  # Official Bandai DB (data/card_official.json, authoritative for printed
+  # data) lists TWO rows: Red Lv.4 / 4 AND Yellow Lv.4 / 4 — the printed
+  # circle is dual-ring on this Red/Yellow card. The per-card JSON evo_costs
+  # (DCGO-derived) only carries the red row, so both circles are authored
+  # here at the printed cost (equal-cost paths dedupe in production).
   - kind: digivolve
     from: { level_eq: 4, color_is: red }
+    cost: 4
+  - kind: digivolve
+    from: { level_eq: 4, color_is: yellow }
     cost: 4
 
   # ─── Alt-digivolve: from a "Sup." form Digimon / Cost 4 ─────────────────────
