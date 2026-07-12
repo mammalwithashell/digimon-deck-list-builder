@@ -37,7 +37,7 @@ export function PeekButton() {
       data-testid="peek-board"
       onClick={toggle}
       title="Temporarily hide the prompt to view the board (`)"
-      className={`fixed top-12 left-1/2 z-[55] flex -translate-x-1/2 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium shadow-lg backdrop-blur-sm transition-colors ${
+      className={`fixed top-24 left-1/2 z-[55] flex -translate-x-1/2 items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium shadow-lg backdrop-blur-sm transition-colors ${
         peeking
           ? 'bg-[var(--ib-player)] border-[var(--ib-player)] text-[#1a0d02]'
           : 'bg-[var(--ib-graphite)] border-[var(--ib-line)] text-[var(--ib-bone)] hover:border-[var(--ib-player)]'

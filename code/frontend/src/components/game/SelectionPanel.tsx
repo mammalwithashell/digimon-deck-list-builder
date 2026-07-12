@@ -72,6 +72,7 @@ export function SelectionPanel({
   if (!PANEL_PHASES.has(currentPhase) && !isSourceSelect) return null;
 
   const isEffectChoice = currentPhase === GamePhase.SelectEffectChoice;
+  const validActionIds = new Set(pendingSelection.validIndices);
   let title = pendingSelection.prompt || (isEffectChoice
     ? 'Multiple effects are triggered. Choose which effect to process.'
     : 'Select a card');
@@ -81,7 +82,7 @@ export function SelectionPanel({
     cards = handIds.map((cardId, i) => ({
       cardId,
       actionId: SELECTION.HAND_START + i,
-      isValid: actionMask[SELECTION.HAND_START + i] === 1,
+      isValid: validActionIds.has(SELECTION.HAND_START + i),
     }));
   } else if (currentPhase === GamePhase.SelectSecurity) {
     // Security is face-down, so we render positional placeholders (one per
@@ -216,8 +217,11 @@ export function SelectionPanel({
             /* Card selection: grid layout */
             <div className="grid grid-cols-5 gap-3 justify-items-center">
               {cards.map((entry) => (
-                <div
+                <button
+                  type="button"
                   key={`${entry.cardId}-${entry.actionId}`}
+                  disabled={!entry.isValid}
+                  onClick={() => entry.isValid && onAction(entry.actionId)}
                   className={`transition-all ${
                     entry.isValid
                       ? 'cursor-pointer hover:scale-105'
@@ -230,12 +234,11 @@ export function SelectionPanel({
                     faceDown={entry.faceDown}
                     highlighted={entry.isValid}
                     dimmed={!entry.isValid}
-                    onClick={entry.isValid ? () => onAction(entry.actionId) : undefined}
                     onContextMenu={
                       entry.faceDown ? undefined : inspectOnRightClick(entry.cardId)
                     }
                   />
-                </div>
+                </button>
               ))}
             </div>
           )}

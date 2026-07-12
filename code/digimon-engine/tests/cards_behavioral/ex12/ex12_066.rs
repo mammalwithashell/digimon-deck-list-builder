@@ -71,6 +71,43 @@ fn ex12_066_attack_trigger_suspends_hiro_to_digivolve_attacking_vb_with_cost_red
 }
 
 #[test]
+fn ex12_066_attack_trigger_can_use_a_vb_option_from_hand_with_cost_reduced() {
+    let mut runner = DebugRunner::builder()
+        .dsl_card(CARD_ID)
+        .expect("EX12-066 YAML loads")
+        .dsl_card("EX12-069")
+        .expect("EX12-069 YAML loads")
+        .add_card(vb_digimon("ATTACKER", CardColor::Red, 4, 5000))
+        .add_card(plain_digimon("SEC", CardColor::Purple, 3, 2000))
+        .hand(0, &["EX12-069"])
+        .security(1, &["SEC"])
+        .memory(5)
+        .start();
+    runner.set_turn(1);
+    let hiro = runner.place_on_field(0, CARD_ID, Some(0));
+    let attacker = runner.place_on_field(0, "ATTACKER", Some(0));
+    let memory_before = runner.memory();
+
+    runner.attack_player(attacker, 1, false);
+    select_first_non_pass(&mut runner);
+    runner.execute_branch(1).expect("choose use-option mode");
+
+    let option_pick = runner
+        .pending_selection_view()
+        .expect("Hiro should offer the eligible VB Option in hand");
+    assert_eq!(option_pick.kind, SelectionKind::Hand);
+    select_hand_card(&mut runner, 0, "EX12-069");
+    runner.auto_resolve().expect("resolve Hiro option use");
+
+    assert!(is_suspended(&runner, 0, hiro.index as usize));
+    assert!(runner.game.players[0]
+        .security
+        .iter()
+        .any(|card| card.card_id(&runner.game.card_data) == "EX12-069"));
+    assert_eq!(memory_before, runner.memory(), "cost 2 reduced by 2 is free");
+}
+
+#[test]
 fn ex12_066_security_plays_hiro_without_paying_cost() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
