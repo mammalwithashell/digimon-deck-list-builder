@@ -247,6 +247,41 @@ class TestDeckIngestor:
         # DigimonMeta should win (higher priority)
         assert ingestor.archetypes["A"].decklists[0].source == "digimonmeta"
 
+    def test_deduplicate_drops_unclassified_exact_match(self):
+        """A classified exact duplicate replaces a stale unclassified row."""
+        ingestor = DeckIngestor()
+        card_counts = {"BT25-031": 4, "BT25-034": 4}
+        ingestor.archetypes["Unclassified"] = ArchetypeMeta(
+            archetype_name="Unclassified",
+            decklists=[
+                IngestedDeck(
+                    deck_id="egman_old",
+                    source="egman",
+                    card_ids=["BT25-031"] * 4 + ["BT25-034"] * 4,
+                    card_counts=card_counts,
+                    archetype_name="Unclassified",
+                )
+            ],
+        )
+        ingestor.archetypes["TS Angels"] = ArchetypeMeta(
+            archetype_name="TS Angels",
+            decklists=[
+                IngestedDeck(
+                    deck_id="egman_new",
+                    source="egman",
+                    card_ids=["BT25-031"] * 4 + ["BT25-034"] * 4,
+                    card_counts=card_counts,
+                    archetype_name="TS Angels",
+                )
+            ],
+        )
+
+        removed = ingestor.deduplicate()
+
+        assert removed == 1
+        assert ingestor.archetypes["Unclassified"].decklists == []
+        assert len(ingestor.archetypes["TS Angels"].decklists) == 1
+
     def test_deduplicate_no_duplicates(self):
         """Unique decklists are preserved."""
         ingestor = DeckIngestor()
@@ -413,6 +448,58 @@ class TestEgmanRowParsing:
         assert placement is None
         assert player_name is None
 
+    def test_parse_egman_row_four_cell_topcut_layout(self):
+        """Extracts archetype from BT25 Egman top-cut 4-cell rows."""
+        from bs4 import BeautifulSoup
+
+        row = BeautifulSoup(
+            """
+            <tr>
+              <td>4th</td>
+              <td><a href="https://deckbuilder.egmanevents.com/?deck=BT25-031:4&type=digimon"><img /></a></td>
+              <td><a href="https://deckbuilder.egmanevents.com/?deck=BT25-031:4&type=digimon">TS Angels</a></td>
+              <td>Celeste</td>
+            </tr>
+            """,
+            "html.parser",
+        )
+
+        archetype, placement, event_date, event_players, player_name = (
+            DeckIngestor._parse_egman_row(row.find_all("td"))
+        )
+
+        assert archetype == "TS Angels"
+        assert placement == "4th"
+        assert event_date is None
+        assert event_players is None
+        assert player_name == "Celeste"
+
+    def test_parse_egman_row_four_cell_creator_layout(self):
+        """Extracts archetype from BT25 Egman creator-list 4-cell rows."""
+        from bs4 import BeautifulSoup
+
+        row = BeautifulSoup(
+            """
+            <tr>
+              <td>I</td>
+              <td><a href="https://deckbuilder.egmanevents.com/?deck=BT25-047:4&type=digimon">CS Ceresmon</a></td>
+              <td><img /></td>
+              <td><a href="https://www.youtube.com/@DigiDane0">DigiDane</a></td>
+            </tr>
+            """,
+            "html.parser",
+        )
+
+        archetype, placement, event_date, event_players, player_name = (
+            DeckIngestor._parse_egman_row(row.find_all("td"))
+        )
+
+        assert archetype == "CS Ceresmon"
+        assert placement is None
+        assert event_date is None
+        assert event_players is None
+        assert player_name == "DigiDane"
+
 
 # ─── DigiLabStats Persistence ────────────────────────────────────────
 
@@ -570,3 +657,382 @@ class TestDigiLabJsonConversion:
         """DigiLab source has priority 2 (same as egman)."""
         from tools.meta_loader import SOURCE_PRIORITY
         assert SOURCE_PRIORITY["digilab"] == 2
+
+
+# ─── DCG Nexus ───────────────────────────────────────────────────────
+
+# Markup below is trimmed from real dcg-nexus.com pages (Core TCG - Pomona
+# Regionals, 2026-07-18) so the regexes are exercised against production shape.
+
+DCG_NEXUS_EVENT_HTML = """
+<div class="archetype-stats-grid">
+    <div class="archetype-stat-item archetype-stat-item--level">
+        <span class="archetype-stat-label">Level</span>
+        <span class="archetype-stat-value ev-badge ev-s3">&#x2605;&#x2605;&#x2605;</span>
+    </div>
+    <div class="archetype-stat-item">
+        <span class="archetype-stat-label">Format</span>
+        <span class="archetype-stat-value ev-badge ev-format">EX12</span>
+    </div>
+    <div class="archetype-stat-item">
+        <span class="archetype-stat-label">Players</span>
+        <span class="archetype-stat-value">398</span>
+    </div>
+</div>
+<div class="archetype-decklists" id="decklistRows">
+    <div class="archetype-decklist-item" data-player="tom&#x2019;s big bro [g4r]" data-deck="dna alter s">
+        <a href="/decklist/4ac81113-cbec-4ebd-9d8d-e5ff2cfec2da">
+            <div class="archetype-placement-badge ">
+                1
+            </div>
+            <div class="archetype-decklist-player">
+                <span class="archetype-decklist-name">DNA Alter S</span>
+                <span class="archetype-decklist-archetype">Archetype: Omni Ladder</span>
+            </div>
+            <div class="archetype-decklist-player-name">Tom&#x2019;s Big Bro [G4R]</div>
+        </a>
+    </div>
+    <div class="archetype-decklist-item" data-player="joshh" data-deck="blue green imperialdramon">
+        <a href="/decklist/0f80cc55-ed1a-465c-a2dd-23b26fca797d">
+            <div class="archetype-placement-badge ">
+                DNF
+            </div>
+            <div class="archetype-decklist-player">
+                <span class="archetype-decklist-name">Blue Green Imperialdramon</span>
+                <span class="archetype-decklist-archetype">Archetype: Blue Green Imperialdramon</span>
+            </div>
+            <div class="archetype-decklist-player-name">JoshH</div>
+        </a>
+    </div>
+</div>
+"""
+
+DCG_NEXUS_DECKLIST_HTML = (
+    """<button class="decklist-export-item" onclick="copyDecklist(this); return false;"""
+    """ data-decklist='// DCG Nexus&#xA;&#xA;"""
+    """4 Onibimon                       EX12-004&#xA;"""
+    """4 Hanimon                        EX12-061&#xA;"""
+    """3 Susanoomon                     EX12-076&#xA;"""
+    """3 Analog Youth                   EX1-066&#xA;"""
+    """1 MarineBullmon                  EX12-031&#xA;'>Export</button>"""
+)
+
+
+class TestDCGNexusParsing:
+    """Regex-level parsing of DCG Nexus event and decklist markup."""
+
+    def test_slug_date_extraction(self):
+        assert DeckIngestor._dcg_nexus_slug_date(
+            "/tournament/core-tcg---pasadena-regionals-2026-07-18"
+        ) == "2026-07-18"
+
+    def test_slug_date_missing(self):
+        assert DeckIngestor._dcg_nexus_slug_date("/tournament/no-date-here") is None
+
+    def test_slug_date_ignores_digits_inside_name(self):
+        """A trailing date wins over set/season numbers earlier in the slug."""
+        assert DeckIngestor._dcg_nexus_slug_date(
+            "/tournament/eagle-s-nest-s10w3-0-ex12-webcam-locals-2026-07-20"
+        ) == "2026-07-20"
+
+    def test_event_stats_parsed(self):
+        from tools.meta_loader import RE_DCG_NEXUS_STAT
+        stats = dict(RE_DCG_NEXUS_STAT.findall(DCG_NEXUS_EVENT_HTML))
+        assert stats["Format"] == "EX12"
+        assert stats["Players"] == "398"
+
+    def test_event_rows_parsed(self):
+        from tools.meta_loader import RE_DCG_NEXUS_ROW
+        rows = RE_DCG_NEXUS_ROW.findall(DCG_NEXUS_EVENT_HTML)
+        assert len(rows) == 2
+
+        href, placement, archetype, player = rows[0]
+        assert href == "/decklist/4ac81113-cbec-4ebd-9d8d-e5ff2cfec2da"
+        assert placement == "1"
+        assert archetype == "Omni Ladder"
+        assert player == "Tom&#x2019;s Big Bro [G4R]"
+
+    def test_event_row_archetype_differs_from_deck_name(self):
+        """The row's deck name ("DNA Alter S") must not shadow the archetype."""
+        from tools.meta_loader import RE_DCG_NEXUS_ROW
+        _, _, archetype, _ = RE_DCG_NEXUS_ROW.findall(DCG_NEXUS_EVENT_HTML)[0]
+        assert archetype == "Omni Ladder"
+
+    def test_decklist_payload_parsed(self, monkeypatch):
+        """The embedded clipboard payload yields exact card counts."""
+        ingestor = DeckIngestor()
+
+        class _Resp:
+            text = DCG_NEXUS_DECKLIST_HTML
+
+            @staticmethod
+            def raise_for_status():
+                return None
+
+        monkeypatch.setattr(
+            "requests.get", lambda *a, **k: _Resp(), raising=False
+        )
+        counts = ingestor._fetch_dcg_nexus_decklist("https://dcg-nexus.com/decklist/x")
+
+        assert counts == {
+            "EX12-004": 4,
+            "EX12-061": 4,
+            "EX12-076": 3,
+            "EX1-066": 3,
+            "EX12-031": 1,
+        }
+
+    def test_decklist_payload_absent(self, monkeypatch):
+        """A page with no payload yields no cards rather than raising."""
+        ingestor = DeckIngestor()
+
+        class _Resp:
+            text = "<html><body>nothing here</body></html>"
+
+            @staticmethod
+            def raise_for_status():
+                return None
+
+        monkeypatch.setattr(
+            "requests.get", lambda *a, **k: _Resp(), raising=False
+        )
+        assert ingestor._fetch_dcg_nexus_decklist("https://dcg-nexus.com/decklist/x") == {}
+
+    def test_scrape_event_end_to_end(self, monkeypatch):
+        """Event page + decklist pages produce fully-populated IngestedDecks."""
+        ingestor = DeckIngestor()
+
+        def _fake_get(url, *a, **k):
+            class _Resp:
+                text = (
+                    DCG_NEXUS_DECKLIST_HTML if "/decklist/" in url
+                    else DCG_NEXUS_EVENT_HTML
+                )
+
+                @staticmethod
+                def raise_for_status():
+                    return None
+
+            return _Resp()
+
+        monkeypatch.setattr("requests.get", _fake_get, raising=False)
+        count = ingestor._scrape_dcg_nexus_event(
+            "https://dcg-nexus.com/tournament/core-tcg---pasadena-regionals-2026-07-18",
+            formats={"EX12"},
+            delay=0.0,
+        )
+
+        assert count == 2
+        winner = ingestor.archetypes["Omni Ladder"].decklists[0]
+        assert winner.source == "dcg_nexus"
+        assert winner.format_tag == "EX12"
+        assert winner.placement == "1"
+        assert winner.is_top_cut is True
+        assert winner.event_players == 398
+        assert winner.event_date == "2026-07-18"
+        assert winner.player_name == "Tom’s Big Bro [G4R]"
+        assert sum(winner.card_counts.values()) == 15
+
+    def test_scrape_event_dnf_placement_is_none(self, monkeypatch):
+        """"DNF" is not a placement and must not count as a top cut."""
+        ingestor = DeckIngestor()
+
+        def _fake_get(url, *a, **k):
+            class _Resp:
+                text = (
+                    DCG_NEXUS_DECKLIST_HTML if "/decklist/" in url
+                    else DCG_NEXUS_EVENT_HTML
+                )
+
+                @staticmethod
+                def raise_for_status():
+                    return None
+
+            return _Resp()
+
+        monkeypatch.setattr("requests.get", _fake_get, raising=False)
+        ingestor._scrape_dcg_nexus_event(
+            "https://dcg-nexus.com/tournament/x-2026-07-18", delay=0.0
+        )
+
+        dnf = ingestor.archetypes["Blue Green Imperialdramon"].decklists[0]
+        assert dnf.placement is None
+        assert dnf.is_top_cut is False
+
+    def test_scrape_event_format_filter_skips(self, monkeypatch):
+        """An event outside the requested format is skipped without fetching decks."""
+        ingestor = DeckIngestor()
+        fetched = []
+
+        def _fake_get(url, *a, **k):
+            fetched.append(url)
+
+            class _Resp:
+                text = DCG_NEXUS_EVENT_HTML
+
+                @staticmethod
+                def raise_for_status():
+                    return None
+
+            return _Resp()
+
+        monkeypatch.setattr("requests.get", _fake_get, raising=False)
+        count = ingestor._scrape_dcg_nexus_event(
+            "https://dcg-nexus.com/tournament/x-2026-07-18",
+            formats={"BT25"},
+            delay=0.0,
+        )
+
+        assert count == 0
+        assert ingestor.archetypes == {}
+        assert not any("/decklist/" in u for u in fetched)
+
+    def test_dcg_nexus_source_priority(self):
+        """DCG Nexus outranks every other source for dedup."""
+        from tools.meta_loader import SOURCE_PRIORITY
+        assert SOURCE_PRIORITY["dcg_nexus"] == 4
+        assert SOURCE_PRIORITY["dcg_nexus"] > SOURCE_PRIORITY["digimonmeta"]
+
+
+class TestFormatScopedStats:
+    """meta_share over the whole corpus cannot represent one format."""
+
+    @staticmethod
+    def _deck(arch, fmt, placement=None, top_cut=False, card="BT1-010"):
+        return IngestedDeck(
+            deck_id=f"d_{arch}_{fmt}_{placement}_{card}",
+            source="dcg_nexus",
+            card_ids=[card],
+            card_counts={card: 1},
+            archetype_name=arch,
+            format_tag=fmt,
+            placement=placement,
+            is_top_cut=top_cut,
+        )
+
+    def test_share_is_scoped_within_each_format(self):
+        ingestor = DeckIngestor()
+        # EX12: 3 Toho / 1 Glowing.  BT25: 1 Toho / 3 Glowing.
+        for i in range(3):
+            ingestor._add_deck_to_archetype("Toho Braves", self._deck("toho", "EX12", card=f"BT1-01{i}"))
+        ingestor._add_deck_to_archetype("Glowing Dawn", self._deck("glow", "EX12"))
+        ingestor._add_deck_to_archetype("Toho Braves", self._deck("toho", "BT25"))
+        for i in range(3):
+            ingestor._add_deck_to_archetype("Glowing Dawn", self._deck("glow", "BT25", card=f"BT2-02{i}"))
+
+        ingestor.compute_meta_stats()
+
+        toho = ingestor.archetypes["Toho Braves"]
+        glow = ingestor.archetypes["Glowing Dawn"]
+
+        # Global share dilutes both to 50% of an 8-deck corpus...
+        assert toho.stats.meta_share == pytest.approx(0.5)
+        assert glow.stats.meta_share == pytest.approx(0.5)
+        # ...but within EX12, Toho is dominant and Glowing is fringe.
+        assert toho.format_stats["EX12"].meta_share == pytest.approx(0.75)
+        assert glow.format_stats["EX12"].meta_share == pytest.approx(0.25)
+        assert toho.format_stats["BT25"].meta_share == pytest.approx(0.25)
+        assert glow.format_stats["BT25"].meta_share == pytest.approx(0.75)
+
+    def test_format_shares_sum_to_one(self):
+        ingestor = DeckIngestor()
+        for i in range(4):
+            ingestor._add_deck_to_archetype(f"A{i}", self._deck(f"a{i}", "EX12", card=f"BT1-0{i}0"))
+        ingestor.compute_meta_stats()
+        total = sum(a.format_stats["EX12"].meta_share
+                    for a in ingestor.archetypes.values())
+        assert total == pytest.approx(1.0)
+
+    def test_untagged_decks_excluded_not_bucketed(self):
+        """Sources with no format tag must not create a phantom bucket."""
+        ingestor = DeckIngestor()
+        ingestor._add_deck_to_archetype("Tagged", self._deck("t", "EX12"))
+        ingestor._add_deck_to_archetype("Untagged", IngestedDeck(
+            deck_id="u", source="digimonmeta", card_ids=["BT9-001"],
+            card_counts={"BT9-001": 1}, archetype_name="Untagged",
+        ))
+        ingestor.compute_meta_stats()
+
+        assert ingestor.archetypes["Untagged"].format_stats == {}
+        # EX12 share is 1.0 — the untagged deck does not dilute it.
+        assert ingestor.archetypes["Tagged"].format_stats["EX12"].meta_share == pytest.approx(1.0)
+        assert None not in ingestor.archetypes["Tagged"].format_stats
+
+    def test_format_stats_persisted(self, tmp_path):
+        ingestor = DeckIngestor()
+        ingestor._add_deck_to_archetype("Toho Braves", self._deck("toho", "EX12", "1", True))
+        ingestor.compute_meta_stats()
+        path = str(tmp_path / "lib.json")
+        ingestor.save(path)
+
+        raw = json.loads(open(path, encoding="utf-8").read())
+        fs = raw["archetypes"]["Toho Braves"]["format_stats"]["EX12"]
+        assert fs["times_played"] == 1
+        assert fs["meta_share"] == 1.0
+        assert fs["top_cut_count"] == 1
+
+    def test_format_stats_survive_reload_and_rebuild(self, tmp_path):
+        """format_tag round-trips, so a later --build reproduces the scoping."""
+        ingestor = DeckIngestor()
+        ingestor._add_deck_to_archetype("Toho Braves", self._deck("toho", "EX12"))
+        ingestor._add_deck_to_archetype("Glowing Dawn", self._deck("glow", "BT25"))
+        ingestor.compute_meta_stats()
+        path = str(tmp_path / "lib.json")
+        ingestor.save(path)
+
+        rebuilt = DeckIngestor()
+        rebuilt.load(path)
+        rebuilt.compute_meta_stats()
+        assert rebuilt.archetypes["Toho Braves"].format_stats["EX12"].meta_share == pytest.approx(1.0)
+        assert rebuilt.archetypes["Glowing Dawn"].format_stats["BT25"].meta_share == pytest.approx(1.0)
+
+
+class TestEventPlayersRoundTrip:
+    """event_players must survive save/load — placements are meaningless without it."""
+
+    def test_event_players_persisted_and_reloaded(self, tmp_path):
+        ingestor = DeckIngestor()
+        ingestor._add_deck_to_archetype("Toho Braves", IngestedDeck(
+            deck_id="dcg_nexus_abc123",
+            source="dcg_nexus",
+            source_url="https://dcg-nexus.com/decklist/abc",
+            card_ids=["EX12-047"] * 4,
+            card_counts={"EX12-047": 4},
+            archetype_name="Toho Braves",
+            format_tag="EX12",
+            placement="8",
+            event_date="2026-07-18",
+            event_players=398,
+            player_name="Someone",
+        ))
+
+        path = str(tmp_path / "lib.json")
+        ingestor.compute_meta_stats()
+        ingestor.save(path)
+
+        raw = json.loads(open(path, encoding="utf-8").read())
+        entry = raw["archetypes"]["Toho Braves"]["decklists"][0]
+        assert entry["event_players"] == 398
+
+        reloaded = DeckIngestor()
+        reloaded.load(path)
+        deck = reloaded.archetypes["Toho Braves"].decklists[0]
+        assert deck.event_players == 398
+        assert deck.format_tag == "EX12"
+
+    def test_event_players_omitted_when_unknown(self, tmp_path):
+        """Sources without a field size must not emit a null key."""
+        ingestor = DeckIngestor()
+        ingestor._add_deck_to_archetype("Whatever", IngestedDeck(
+            deck_id="file_x",
+            source="file",
+            card_ids=["BT1-010"],
+            card_counts={"BT1-010": 1},
+            archetype_name="Whatever",
+        ))
+        path = str(tmp_path / "lib.json")
+        ingestor.compute_meta_stats()
+        ingestor.save(path)
+
+        raw = json.loads(open(path, encoding="utf-8").read())
+        assert "event_players" not in raw["archetypes"]["Whatever"]["decklists"][0]

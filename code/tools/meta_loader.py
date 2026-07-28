@@ -1,11 +1,15 @@
 """Fetch meta stats and scrape decklists from external sources, build deck_library.json.
 
-Ingests tournament decklists from DigimonMeta.com, Egman Events, DigimonCard.io,
-and DigiLab PostgreSQL database.
+Ingests tournament decklists from DCG Nexus, DigimonMeta.com, Egman Events,
+DigimonCard.io, and the DigiLab PostgreSQL database.
 Optionally enriches with meta stats from DigiLab.
 Computes meta share and conversion rate from scraped placement data.
 
+DCG Nexus is the only source that tags events with their legal format, so it is
+the one to reach for when scoping a run to the current format.
+
 Usage:
+    python tools/meta_loader.py --scrape-dcg-nexus --dcg-nexus-format EX12
     python tools/meta_loader.py --scrape-digimonmeta URL   # Scrape BT24/EX11 decks
     python tools/meta_loader.py --scrape-egman URL          # Scrape Egman tournament decks
     python tools/meta_loader.py --scrape-digimoncard-io URL # Scrape DigimonCard.io tourney
@@ -52,7 +56,13 @@ DECK_LIBRARY_PATH = str(_DECK_LIBRARY_PATH)
 ARCHETYPE_ALIASES_PATH = str(_ARCHETYPE_ALIASES_PATH)
 
 # Source priority for deduplication (higher = preferred)
-SOURCE_PRIORITY = {"digimonmeta": 3, "digilab": 2, "egman": 2, "digimoncard_io": 1, "manual": 0, "file": 0}
+# dcg_nexus outranks digimonmeta: it is the only source that tags each event
+# with its legal format, and it carries placement, player count, and player
+# name together on the same page.
+SOURCE_PRIORITY = {
+    "dcg_nexus": 4, "digimonmeta": 3, "digilab": 2, "egman": 2,
+    "digimoncard_io": 1, "manual": 0, "file": 0,
+}
 
 
 # ─── Archetype Alias Resolution ─────────────────────────────────────
@@ -99,6 +109,37 @@ TOP_CUT_PLACEMENTS = {"1st Place", "2nd Place", "3rd Place", "4th Place",
 
 # DigimonMeta deck code parser: {qty}n{card_id}a
 RE_DIGIMONMETA_ENTRY = re.compile(r"(\d)n([A-Z]{1,3}\d*-\d{2,3})a?")
+
+# ─── DCG Nexus ───────────────────────────────────────────────────────
+DCG_NEXUS_BASE = "https://dcg-nexus.com"
+
+# Tournament slugs end in the event date: ".../my-event-name-2026-07-18"
+RE_DCG_NEXUS_SLUG_DATE = re.compile(r"-(\d{4})-(\d{2})-(\d{2})$")
+
+# Header stat tiles: <span class="archetype-stat-label">Format</span>
+#                    <span class="archetype-stat-value ...">EX12</span>
+RE_DCG_NEXUS_STAT = re.compile(
+    r'archetype-stat-label"[^>]*>\s*([A-Za-z ]+?)\s*</span>\s*'
+    r'<span class="archetype-stat-value[^"]*"[^>]*>\s*(.*?)\s*</span>',
+    re.S,
+)
+
+# One result row per submitted decklist.
+RE_DCG_NEXUS_ROW = re.compile(
+    r'<div class="archetype-decklist-item".*?'
+    r'href="(/decklist/[0-9a-fA-F-]+)".*?'
+    r'<div class="archetype-placement-badge[^"]*">\s*(.*?)\s*</div>.*?'
+    r'<span class="archetype-decklist-archetype"[^>]*>\s*Archetype:\s*(.*?)\s*</span>.*?'
+    r'<div class="archetype-decklist-player-name"[^>]*>\s*(.*?)\s*</div>',
+    re.S,
+)
+
+# The export button embeds the whole list as a clipboard payload. Parsing this
+# avoids /Deck/Decklist/ExportCSV, which the site's robots.txt disallows.
+RE_DCG_NEXUS_PAYLOAD = re.compile(r"data-decklist='(.*?)'", re.S)
+
+# A payload line: "4 Amaterasumon                   EX12-047"
+RE_DCG_NEXUS_PAYLOAD_LINE = re.compile(r"^\s*(\d+)\s+.*?([A-Z]{1,3}\d*-\d{2,3})\s*$")
 
 
 # ─── Data Classes ────────────────────────────────────────────────────
@@ -155,6 +196,11 @@ class ArchetypeMeta:
     secondary_color: Optional[str] = None
     display_card_id: Optional[str] = None
     stats: ComputedStats = field(default_factory=ComputedStats)
+    # Share recomputed within each format's own decklists. `stats.meta_share`
+    # spans the whole corpus (multiple years, several rotations), which cannot
+    # represent the current format: a deck at 12% of EX12 is ~1% of everything
+    # ever recorded. Consumers reasoning about "the meta" want this instead.
+    format_stats: Dict[str, ComputedStats] = field(default_factory=dict)
     digilab_stats: Optional[DigiLabStats] = None
     decklists: List[IngestedDeck] = field(default_factory=list)
 
@@ -469,6 +515,24 @@ class DeckIngestor:
             if re.match(r"\d{1,2}/\d{1,2}/\d{2,4}", date_text):
                 event_date = date_text
 
+        elif len(cells) == 4:
+            # Squarespace table layout used by BT25 Egman pages:
+            #   top-cut:      [placement, image deck link, archetype deck link, player]
+            #   creator list: [letter/record, archetype deck link, image, creator]
+            first_text = cells[0].get_text(strip=True)
+            if re.match(r"^\d+(st|nd|rd|th)?$", first_text, re.IGNORECASE):
+                placement = first_text
+
+            for cell in cells[1:3]:
+                arch_text = cell.get_text(strip=True)
+                if arch_text:
+                    archetype_name = arch_text
+                    break
+
+            player_text = cells[3].get_text(" ", strip=True)
+            if player_text:
+                player_name = player_text
+
         else:
             # Fallback: scan all cells heuristically
             for cell in cells:
@@ -588,6 +652,198 @@ class DeckIngestor:
             card_counts=card_counts,
             archetype_name=archetype_name,
         )
+
+    # ── DCG Nexus ────────────────────────────────────────────────
+
+    def scrape_dcg_nexus(
+        self,
+        since: Optional[str] = None,
+        formats: Optional[Set[str]] = None,
+        max_events: Optional[int] = None,
+        delay: float = 0.5,
+        event_url: Optional[str] = None,
+    ) -> int:
+        """Scrape tournament decklists from dcg-nexus.com.
+
+        Walks the event archive, then each event page, then each submitted
+        decklist. Unlike the other sources, DCG Nexus tags every event with the
+        legal format (e.g. "EX12"), so ``formats`` can scope a run to the
+        current format without post-filtering by date.
+
+        Args:
+            since: ISO date (YYYY-MM-DD); skip events held before it.
+            formats: Format tags to keep (e.g. {"EX12"}). None keeps all.
+            max_events: Stop after this many matching events.
+            delay: Seconds to sleep between requests. The site is a hobby
+                project on Cloudflare — do not lower this without reason.
+            event_url: Scrape a single event instead of walking the archive.
+
+        Returns number of decklists scraped.
+        """
+        import time
+
+        import requests
+
+        if event_url:
+            event_urls = [event_url]
+        else:
+            logger.info("Fetching DCG Nexus event archive...")
+            response = requests.get(
+                f"{DCG_NEXUS_BASE}/Event/ViewAll",
+                headers=self._SESSION_HEADERS,
+                timeout=30,
+            )
+            response.raise_for_status()
+            # The archive is server-rendered newest-first, so slug order is
+            # already reverse-chronological.
+            event_urls = []
+            seen: Set[str] = set()
+            for href in re.findall(r'href="(/tournament/[^"]+)"', response.text):
+                if href in seen:
+                    continue
+                seen.add(href)
+                if since:
+                    slug_date = self._dcg_nexus_slug_date(href)
+                    if slug_date and slug_date < since:
+                        continue
+                event_urls.append(f"{DCG_NEXUS_BASE}{href}")
+            logger.info(
+                "DCG Nexus: %d events in archive after date filter", len(event_urls)
+            )
+
+        count = 0
+        events_used = 0
+
+        for url in event_urls:
+            if max_events is not None and events_used >= max_events:
+                break
+            try:
+                time.sleep(delay)
+                scraped = self._scrape_dcg_nexus_event(url, formats=formats, delay=delay)
+            except Exception:
+                logger.warning("DCG Nexus: failed to scrape %s", url, exc_info=True)
+                continue
+            if scraped:
+                events_used += 1
+                count += scraped
+
+        logger.info(
+            "DCG Nexus: scraped %d decklists from %d events", count, events_used
+        )
+        return count
+
+    @staticmethod
+    def _dcg_nexus_slug_date(href: str) -> Optional[str]:
+        """Extract the ISO event date encoded in a tournament slug."""
+        m = RE_DCG_NEXUS_SLUG_DATE.search(href.rstrip("/"))
+        if not m:
+            return None
+        return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+
+    def _scrape_dcg_nexus_event(
+        self,
+        url: str,
+        formats: Optional[Set[str]] = None,
+        delay: float = 0.5,
+    ) -> int:
+        """Scrape one DCG Nexus event page and all of its decklists."""
+        import html as html_mod
+        import time
+
+        import requests
+
+        response = requests.get(url, headers=self._SESSION_HEADERS, timeout=30)
+        response.raise_for_status()
+        page = response.text
+
+        stats = {
+            html_mod.unescape(label).strip(): html_mod.unescape(
+                re.sub(r"<[^>]+>", "", value)
+            ).strip()
+            for label, value in RE_DCG_NEXUS_STAT.findall(page)
+        }
+        format_tag = stats.get("Format") or None
+        if formats and format_tag not in formats:
+            logger.debug("Skipping %s (format %s)", url, format_tag)
+            return 0
+
+        event_players = None
+        if stats.get("Players", "").isdigit():
+            event_players = int(stats["Players"])
+
+        event_date = self._dcg_nexus_slug_date(urllib.parse.urlparse(url).path)
+
+        count = 0
+        for deck_href, placement_raw, archetype_raw, player_raw in (
+            RE_DCG_NEXUS_ROW.findall(page)
+        ):
+            placement = html_mod.unescape(placement_raw).strip() or None
+            # "DNF" and other non-numeric badges are not placements.
+            if placement and not RE_PLACEMENT_NUM.match(placement):
+                placement = None
+            archetype_name = html_mod.unescape(archetype_raw).strip() or None
+            player_name = html_mod.unescape(player_raw).strip() or None
+
+            deck_url = f"{DCG_NEXUS_BASE}{deck_href}"
+            time.sleep(delay)
+            card_counts = self._fetch_dcg_nexus_decklist(deck_url)
+            if not card_counts:
+                continue
+
+            deck = IngestedDeck(
+                deck_id=f"dcg_nexus_{_deck_fingerprint(card_counts)[:12]}",
+                source="dcg_nexus",
+                source_url=deck_url,
+                card_ids=expand_deck_dict(card_counts),
+                card_counts=card_counts,
+                archetype_name=archetype_name,
+                format_tag=format_tag,
+                placement=placement,
+                is_top_cut=_is_top_cut(placement, event_players),
+                event_date=event_date,
+                event_players=event_players,
+                player_name=player_name,
+            )
+
+            if archetype_name:
+                self._add_deck_to_archetype(archetype_name, deck)
+            else:
+                self.unresolved_decks.append(deck)
+            count += 1
+
+        logger.info(
+            "DCG Nexus: %s (%s) — %d decklists", url, format_tag or "?", count
+        )
+        return count
+
+    def _fetch_dcg_nexus_decklist(self, deck_url: str) -> Dict[str, int]:
+        """Fetch one DCG Nexus decklist page, returning {card_id: count}."""
+        import html as html_mod
+
+        import requests
+
+        try:
+            response = requests.get(
+                deck_url, headers=self._SESSION_HEADERS, timeout=20
+            )
+            response.raise_for_status()
+        except Exception as e:
+            logger.debug("Failed to fetch %s: %s", deck_url, e)
+            return {}
+
+        m = RE_DCG_NEXUS_PAYLOAD.search(response.text)
+        if not m:
+            logger.debug("No decklist payload in %s", deck_url)
+            return {}
+
+        card_counts: Dict[str, int] = {}
+        for line in html_mod.unescape(m.group(1)).splitlines():
+            entry = RE_DCG_NEXUS_PAYLOAD_LINE.match(line)
+            if not entry:
+                continue
+            card_id = entry.group(2)
+            card_counts[card_id] = card_counts.get(card_id, 0) + int(entry.group(1))
+        return card_counts
 
     # ── DigiLab PostgreSQL ───────────────────────────────────────
 
@@ -986,6 +1242,22 @@ class DeckIngestor:
         """
         removed = 0
 
+        unclassified = self.archetypes.get("Unclassified")
+        if unclassified and unclassified.decklists:
+            classified_fps = {
+                _deck_fingerprint(deck.card_counts)
+                for name, arch in self.archetypes.items()
+                if name != "Unclassified"
+                for deck in arch.decklists
+            }
+            kept_unclassified = []
+            for deck in unclassified.decklists:
+                if _deck_fingerprint(deck.card_counts) in classified_fps:
+                    removed += 1
+                else:
+                    kept_unclassified.append(deck)
+            unclassified.decklists = kept_unclassified
+
         for arch in self.archetypes.values():
             if len(arch.decklists) <= 1:
                 continue
@@ -1085,10 +1357,65 @@ class DeckIngestor:
                 sources=dict(source_stats),
             )
 
+        self._compute_format_stats()
+
         logger.info(
             "Computed meta stats: %d archetypes, %d total entries",
             len(self.archetypes), total_entries,
         )
+
+    def _compute_format_stats(self) -> None:
+        """Recompute per-archetype stats scoped to each format's own decklists.
+
+        Decks whose source does not record a format are skipped rather than
+        pooled into an "unknown" bucket, so a format's share always sums to 1
+        across the decks actually played in it.
+        """
+        format_totals: Dict[str, int] = Counter()
+        for arch in self.archetypes.values():
+            for deck in arch.decklists:
+                if deck.format_tag:
+                    format_totals[deck.format_tag] += 1
+
+        for arch in self.archetypes.values():
+            arch.format_stats = {}
+            by_format: Dict[str, List[IngestedDeck]] = defaultdict(list)
+            for deck in arch.decklists:
+                if deck.format_tag:
+                    by_format[deck.format_tag].append(deck)
+
+            for fmt, decks in by_format.items():
+                n = len(decks)
+                total = format_totals[fmt]
+                top_cuts = sum(1 for d in decks if d.is_top_cut)
+                placements: List[int] = []
+                source_stats: Dict[str, SourceStats] = defaultdict(SourceStats)
+                for deck in decks:
+                    ss = source_stats[deck.source]
+                    ss.count += 1
+                    if deck.is_top_cut:
+                        ss.top_cuts += 1
+                    if deck.placement:
+                        m = RE_PLACEMENT_NUM.match(deck.placement.strip())
+                        if m:
+                            placements.append(int(m.group(1)))
+
+                arch.format_stats[fmt] = ComputedStats(
+                    times_played=n,
+                    meta_share=n / total if total > 0 else 0.0,
+                    top_cut_count=top_cuts,
+                    conversion_rate=top_cuts / n if n > 0 else 0.0,
+                    avg_placement=(
+                        sum(placements) / len(placements) if placements else 0.0
+                    ),
+                    sources=dict(source_stats),
+                )
+
+        if format_totals:
+            logger.info(
+                "Computed format-scoped stats: %s",
+                ", ".join(f"{f}={n}" for f, n in sorted(format_totals.items())),
+            )
 
     # ── Persistence ──────────────────────────────────────────────
 
@@ -1121,6 +1448,22 @@ class DeckIngestor:
                 "decklists": [],
             }
 
+            if arch.format_stats:
+                arch_data["format_stats"] = {
+                    fmt: {
+                        "times_played": fs.times_played,
+                        "meta_share": round(fs.meta_share, 6),
+                        "top_cut_count": fs.top_cut_count,
+                        "conversion_rate": round(fs.conversion_rate, 4),
+                        "avg_placement": round(fs.avg_placement, 2),
+                        "sources": {
+                            src: {"count": ss.count, "top_cuts": ss.top_cuts}
+                            for src, ss in fs.sources.items()
+                        },
+                    }
+                    for fmt, fs in sorted(arch.format_stats.items())
+                }
+
             if arch.digilab_stats:
                 arch_data["digilab_stats"] = {
                     "times_played": arch.digilab_stats.times_played,
@@ -1143,6 +1486,10 @@ class DeckIngestor:
                     "is_top_cut": deck.is_top_cut,
                     "event_date": deck.event_date,
                 }
+                # Field size is what makes a placement comparable across events:
+                # 8th of 400 and 8th of 12 are not the same result.
+                if deck.event_players:
+                    entry["event_players"] = deck.event_players
                 if deck.player_name:
                     entry["player_name"] = deck.player_name
                 arch_data["decklists"].append(entry)
@@ -1211,6 +1558,7 @@ class DeckIngestor:
                     placement=dl.get("placement"),
                     is_top_cut=dl.get("is_top_cut", False),
                     event_date=dl.get("event_date"),
+                    event_players=dl.get("event_players"),
                     player_name=dl.get("player_name"),
                 )
                 arch.decklists.append(deck)
@@ -1439,6 +1787,30 @@ def main():
         help="Scrape tournament decklists from DigimonCard.io",
     )
     parser.add_argument(
+        "--scrape-dcg-nexus", action="store_true",
+        help="Scrape tournament decklists from dcg-nexus.com",
+    )
+    parser.add_argument(
+        "--dcg-nexus-since", metavar="YYYY-MM-DD", default=None,
+        help="Only scrape DCG Nexus events on or after this date",
+    )
+    parser.add_argument(
+        "--dcg-nexus-format", metavar="TAGS", default=None,
+        help="Comma-separated format tags to keep (e.g. 'EX12')",
+    )
+    parser.add_argument(
+        "--dcg-nexus-max-events", metavar="N", type=int, default=None,
+        help="Stop after N matching DCG Nexus events",
+    )
+    parser.add_argument(
+        "--dcg-nexus-event", metavar="URL", default=None,
+        help="Scrape a single DCG Nexus event page",
+    )
+    parser.add_argument(
+        "--dcg-nexus-delay", metavar="SECONDS", type=float, default=0.5,
+        help="Delay between DCG Nexus requests (default: 0.5)",
+    )
+    parser.add_argument(
         "--scrape-digilab", action="store_true",
         help="Scrape decklists from DigiLab PostgreSQL database",
     )
@@ -1516,6 +1888,20 @@ def main():
 
     if args.scrape_digimoncard_io:
         ingestor.scrape_digimoncard_io(args.scrape_digimoncard_io)
+        actions_taken = True
+
+    if args.scrape_dcg_nexus or args.dcg_nexus_event:
+        fmts = (
+            {t.strip() for t in args.dcg_nexus_format.split(",") if t.strip()}
+            if args.dcg_nexus_format else None
+        )
+        ingestor.scrape_dcg_nexus(
+            since=args.dcg_nexus_since,
+            formats=fmts,
+            max_events=args.dcg_nexus_max_events,
+            delay=args.dcg_nexus_delay,
+            event_url=args.dcg_nexus_event,
+        )
         actions_taken = True
 
     if args.scrape_digilab:

@@ -199,3 +199,96 @@ class TestTierThresholds:
         arch, tier, _ = classify_deck(deck, lib)
         assert arch == "Rocks"
         assert tier == "rogue"  # 6% no longer meta under tighter threshold
+
+
+# ── Format scoping ───────────────────────────────────────────────────────
+
+TOHO = ["EX12-076"] * 4 + ["EX12-047"] * 4 + ["EX12-061"] * 4 + ["EX12-004"] * 5
+
+
+def _scoped_doc() -> dict:
+    """A corpus where the current format is a thin slice of all-time history.
+
+    Mirrors the real 2026-07 numbers: Toho Braves was 12.19% of EX12 but only
+    1.04% of the merged corpus — under the 2% threshold, so the unscoped
+    classifier called the format's most-played deck "rogue".
+    """
+    def lists(cards, n, fmt):
+        return [
+            {
+                "deck_id": f"{fmt}-{i}",
+                "source": "dcg_nexus",
+                "decklist": json.dumps(cards),
+                "format": fmt,
+                "placement": "1",
+                "is_top_cut": True,
+                "event_date": "2026-07-18",
+            }
+            for i in range(n)
+        ]
+
+    return {
+        "archetypes": {
+            "Toho Braves": {
+                "archetype_name": "Toho Braves",
+                "stats": {"times_played": 3, "meta_share": 0.0104},
+                "format_stats": {"EX12": {"times_played": 3, "meta_share": 0.1219}},
+                "decklists": lists(TOHO, 3, "EX12"),
+            },
+            "Old Guard": {
+                "archetype_name": "Old Guard",
+                "stats": {"times_played": 95, "meta_share": 0.95},
+                "format_stats": {"BT23": {"times_played": 95, "meta_share": 0.95}},
+                "decklists": lists(["BT23-001"] * 4 + ["BT23-002"] * 4, 95, "BT23"),
+            },
+        }
+    }
+
+
+class TestFormatScope:
+    def test_unscoped_tiers_current_format_deck_as_rogue(self):
+        """The bug: all-time share buries the format's best deck."""
+        lib = build_library_from_deck_library(_scoped_doc())
+        arch, tier, _ = classify_deck(TOHO, lib)
+        assert arch == "Toho Braves"
+        assert tier == "rogue"  # 1.04% of all time, under the 2% meta threshold
+
+    def test_scoped_tiers_same_deck_as_meta(self):
+        lib = build_library_from_deck_library(_scoped_doc(), format_scope="EX12")
+        arch, tier, _ = classify_deck(TOHO, lib)
+        assert arch == "Toho Braves"
+        assert tier == "meta"  # 12.19% of EX12
+
+    def test_scope_excludes_archetypes_absent_from_format(self):
+        lib = build_library_from_deck_library(_scoped_doc(), format_scope="EX12")
+        assert [a.name for a in lib.archetypes] == ["Toho Braves"]
+
+    def test_unknown_scope_yields_empty_library(self):
+        lib = build_library_from_deck_library(_scoped_doc(), format_scope="EX99")
+        assert lib.archetypes == []
+
+    def test_default_behaviour_unchanged(self, library: ClassifierLibrary):
+        """format_scope=None must reproduce the pre-existing result exactly."""
+        doc = _scoped_doc()
+        assert (
+            [(a.name, a.meta_share)
+             for a in build_library_from_deck_library(doc).archetypes]
+            == [(a.name, a.meta_share)
+                for a in build_library_from_deck_library(
+                    doc, format_scope=None).archetypes]
+        )
+
+    def test_staples_scoped_to_format_lists(self):
+        """Staples come only from the scoped format's decks, not all history."""
+        doc = _scoped_doc()
+        # Give Toho a stale BT23-era list that would pollute its fingerprint.
+        doc["archetypes"]["Toho Braves"]["decklists"].append({
+            "deck_id": "stale", "source": "dcg_nexus",
+            "decklist": json.dumps(["BT23-999"] * 50),
+            "format": "BT23", "placement": "1", "is_top_cut": True,
+            "event_date": "2025-11-01",
+        })
+        lib = build_library_from_deck_library(doc, format_scope="EX12")
+        toho = next(a for a in lib.archetypes if a.name == "Toho Braves")
+        assert "BT23-999" not in toho.staples
+        assert "EX12-076" in toho.staples
