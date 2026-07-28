@@ -83,6 +83,33 @@ describe('SelectionPanel does not own trash selection', () => {
   });
 });
 
+describe('SelectionPanel hand selection', () => {
+  it('dispatches the exact pending-selection action IDs, including hand index zero', () => {
+    const onAction = vi.fn();
+    renderPanel({
+      currentPhase: GamePhase.SelectHand,
+      pendingSelection: {
+        phase: GamePhase.SelectHand,
+        selectingPlayer: 1,
+        validIndices: [0, 2],
+        isOptional: false,
+        prompt: 'Use 1 [Gammamon]-text or [VB] Option card',
+        kind: 'Hand',
+      } as PendingSelection,
+      // The pending selection is the click-routing authority. A response can
+      // briefly carry an older mask while React renders the new prompt.
+      actionMask: new Array(2192).fill(0),
+      handIds: ['EX12-069', 'EX12-068', 'EX12-073'],
+      onAction,
+    });
+
+    fireEvent.click(screen.getByTitle('EX12-069'));
+    fireEvent.click(screen.getByTitle('EX12-073'));
+    expect(onAction).toHaveBeenNthCalledWith(1, 0);
+    expect(onAction).toHaveBeenNthCalledWith(2, 2);
+  });
+});
+
 function makeSecuritySelection(zoneOwner?: number): PendingSelection {
   return {
     phase: GamePhase.SelectSecurity,
