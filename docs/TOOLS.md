@@ -2,68 +2,117 @@
 
 Scripts and modules for managing card data, running AI reviews, and building/deploying the engine.
 
+Card-data authority, schemas, failure/freshness rules, committed producer
+ownership, preview/plan/apply/check commands, scheduled reconciliation,
+rollback, and wrapper-retirement criteria live in
+[`CARD_DATA_PIPELINE.md`](CARD_DATA_PIPELINE.md). Pool/campaign and deferred
+consumer-cutover semantics live in
+[`CARD_POOL_CONTRACTS.md`](CARD_POOL_CONTRACTS.md). `data/cards.json` is a
+committed compatibility ABI, not printed-data authority.
+
 ---
 
 ## 1. Card Data Pipeline
 
-### 1.1 Card Ingester
+### 1.1 Canonical Sync and Legacy Ingest Preview
 
 **Script:** `code/tools/ingest_cards.py`
 
-Fetches card data from the digimoncard.io API and merges it into `data/cards.json`. This is the first step when adding a new set — it populates card metadata (name, colors, level, DP, evo costs, traits, effect text) before `build_registry.py` assigns stable indices.
+This is a deprecated compatibility command. Its accepted mode is a read-only,
+secondary-source preview; it does not admit cards, allocate indices, or write
+`data/cards.json`:
 
 ```bash
-# Ingest a single set by ID
-python code/tools/ingest_cards.py --set BT26
-
-# Ingest all priority sets missing from cards.json
-python code/tools/ingest_cards.py --bulk
+# Read-only provisional diagnostic
+python code/tools/ingest_cards.py --preview-set BT26
 ```
 
-**Priority sets** are read from `code/tools/scraper/priority_sets.txt`. Bulk mode skips sets already in `cards.json`.
+The old `--set`, `--bulk`, `--backfill`, and positional `SET NAME` mutation
+modes are recognized only to return a nonzero refusal with migration guidance.
+They fail before fetching or changing fixed artifacts. Source publication now
+uses a complete candidate plus the reviewed canonical transaction:
 
-When re-ingesting an existing set, existing `index` and `norm_id` values are preserved on matching card IDs so stable tensor encoding is not corrupted. Genuinely new cards will lack these fields until `build_registry.py` is run. The script warns if cards with existing indices are missing from the API response.
+```bash
+python -m tools.card_data sync --plan \
+  --repo-root . --candidate-dir <candidate-dir> \
+  --source-plan <source-plan.json> --plan-file <publication-plan.json>
+python -m tools.card_data sync --apply \
+  --repo-root . --candidate-dir <candidate-dir> \
+  --plan-file <publication-plan.json>
+```
 
----
+Plan is write-free. Apply is a separate reviewed operation protected by the
+repository writer lock, base-revision check, transaction journal, rollback,
+and marker-last publication. Private transaction files use short ordinal paths
+for Windows safety; the journal fsyncs bounded write-ahead prefixes before
+replacement and records rollback progress only after a whole reverse batch is
+restored.
 
-### 1.2 Card Registry Builder
+### 1.2 Stable Card Registry Compatibility Wrapper
 
 **Script:** `code/tools/build_registry.py`
 
-Assigns stable integer indices to every card in `cards.json`. These indices are used by the RL tensor writer and `nn.Embedding` lookup. Must be run after `ingest_cards.py` to assign indices to newly ingested cards.
+This legacy command name delegates to the canonical append-only registry
+library. It is network-free and manages only registry assignments plus the
+derived `index`, `norm_id`, and suffix-derived `card_index` compatibility
+values. It never fetches or normalizes printed card data. The committed fixed
+paths are transaction-owned: the wrapper may check/dry-run them or write
+explicit non-fixed scratch paths, but it cannot publish a revision.
 
 ```bash
-# Full build from API (fetches all known sets)
-python code/tools/build_registry.py
-
-# Dry run — fetch + stats, no write
+# Accepted read-only automation against committed fixed paths
+python code/tools/build_registry.py --check
 python code/tools/build_registry.py --dry-run
 
-# Rebuild norm_ids only (no API fetch)
-python code/tools/build_registry.py --offline
+# Optional scratch projection; both paths must be non-fixed
+python code/tools/build_registry.py \
+  --cards-json <scratch-cards-json> \
+  --registry <scratch-registry-json>
 
-# Fetch specific sets only
-python code/tools/build_registry.py --sets BT25 EX12
+# Deprecated no-op alias; the command is always offline
+python code/tools/build_registry.py --check --offline
 ```
 
 | Argument | Default | Description |
 |---|---|---|
-| `--dry-run` | off | Fetch and compute stats without writing |
-| `--offline` | off | Skip API fetch; rebuild norm_ids from existing data |
-| `--sets` | all known | Override with specific set IDs |
-| `--capacity` | 20000 | Registry capacity ceiling |
-| `--force` | off | Override reindex safety check |
+| `--check` | off | Fail when the registry or derived values are stale; no writes |
+| `--dry-run` | off | Report candidate changes without writing fixed paths |
+| `--offline` | off | Deprecated compatibility alias; operation is always offline |
+| `--sets` | n/a | Retired and refused; source discovery belongs to canonical sync |
+| `--capacity` | 20000 | Fixed compatibility ceiling; other values are refused |
+| `--force` | off | Retired and refused; indices cannot be reassigned |
+| `--cards-json` | `data/cards.json` | Compatibility input/output; with a committed marker, a write requires an explicit non-fixed path |
+| `--registry` | `data/card_registry.json` | Registry input/output; with a committed marker, a write requires an explicit non-fixed path |
 
 **Key properties:**
 
 - **Append-only indices**: existing card→index mappings are never changed. New cards get the next available index after the highest existing one.
-- **Reindex safety check**: detects if any card would be reassigned a different index (which would break trained RL agent weights). Aborts unless `--force` is used.
-- **Output**: `data/cards.json` — dict-format with `index` and `norm_id` fields per card.
+- **Reindex safety check**: any reassignment aborts. `--force` is refused and cannot bypass the tensor/model compatibility contract.
+- **Outputs**: explicit scratch paths only. Fixed `data/card_registry.json` and `data/cards.json` changes must be generated in a complete candidate and published by the canonical transaction; no printed fields are changed by this wrapper.
 - **Capacity**: 20,000 slots (indices 1–20000). Index 0 is reserved for padding/empty.
 
 ---
 
-### 1.3 Card Autoencoder Trainer
+### 1.3 Official Bundle and Evolution-Cost Compatibility Commands
+
+`code/tools/build_card_bundles.py` and
+`code/tools/scrape_official_evo_costs.py` retain their shared official parser
+APIs for in-memory callers. Their accepted CLI modes are read-only previews:
+
+```bash
+python code/tools/build_card_bundles.py --preview --ids BT13-020 ST9-05
+python code/tools/scrape_official_evo_costs.py --ids BT13-020 EX1-014
+```
+
+Both emit deprecation guidance on stderr while preserving JSON stdout.
+`build_card_bundles.py` refuses the old fixed bundle/official-mirror write, and
+`scrape_official_evo_costs.py --out` is retired. Revision-bound official
+mirrors, bundles, evolution-cost views, and lexicons are generated together by
+the canonical pipeline and published only through reviewed sync apply.
+
+---
+
+### 1.4 Card Autoencoder Trainer
 
 **Script:** `code/tools/train_card_autoencoder.py`
 
@@ -210,9 +259,10 @@ Exits non-zero if any expected namespace is empty or spot-check queries return n
 
 **Script:** `code/tools/meta_loader.py`
 
-Scrapes tournament decklists from multiple sources and builds `data/deck_library.json`. Sources include DigimonMeta.com, Egman Events, DigimonCard.io, and a DigiLab PostgreSQL database. Computes meta share and conversion rate from placement data.
+Scrapes tournament decklists from multiple sources and builds `data/deck_library.json`. Sources include DCG Nexus, DigimonMeta.com, Egman Events, DigimonCard.io, and a DigiLab PostgreSQL database. Computes meta share and conversion rate from placement data.
 
 ```bash
+python code/tools/meta_loader.py --scrape-dcg-nexus --dcg-nexus-format EX12
 python code/tools/meta_loader.py --scrape-digimonmeta URL   # Scrape BT24/EX11 decks
 python code/tools/meta_loader.py --scrape-egman URL          # Scrape Egman tournament decks
 python code/tools/meta_loader.py --scrape-digimoncard-io URL # Scrape DigimonCard.io tournament
@@ -224,6 +274,63 @@ python code/tools/meta_loader.py --report                    # Print summary of 
 ```
 
 The `--build` step deduplicates decklists, groups them into archetypes, and computes meta_share and conversion_rate fields. The resulting `deck_library.json` is consumed by `GauntletWrapper` and `rank_archetypes.py`.
+
+#### `stats` vs `format_stats` — pick the right share
+
+Each archetype carries two stat blocks:
+
+- **`stats.meta_share`** — the archetype's fraction of the *entire* corpus, which
+  spans several years and rotations. Use for all-time questions.
+- **`format_stats["EX12"].meta_share`** — its fraction of the decks played in
+  that format only. Use for "what will I face in a competitive room today".
+
+The difference is large enough to change conclusions. In July 2026 the
+most-played EX12 deck was **12.19% of EX12 but 1.04% of the merged corpus** —
+below the classifier's 2% meta threshold, so the unscoped number tiered the
+format's best deck as "rogue". Half the format tiered as unranked.
+
+`format_stats` is keyed on each deck's `format` field, so it only covers sources
+that record one (currently DCG Nexus). Untagged decks are excluded rather than
+pooled into an "unknown" bucket, so a format's shares always sum to 1.
+
+`server/classifier/meta_tier.py` takes a matching `format_scope` argument, which
+scopes both the share and the staple fingerprint:
+
+```python
+load_library_from_path(format_scope="EX12")   # current-format tiering
+load_library_from_path()                       # all-time, unchanged default
+```
+
+#### Source notes
+
+**DCG Nexus** (`dcg-nexus.com`) is the only source that tags each event with its
+legal format, so it is the one to reach for when scoping to the current format:
+
+```bash
+python code/tools/meta_loader.py --scrape-dcg-nexus \
+    --dcg-nexus-since 2026-07-01 --dcg-nexus-format EX12
+```
+
+Useful flags: `--dcg-nexus-since YYYY-MM-DD` (filters on the date encoded in the
+event slug, before any page is fetched), `--dcg-nexus-max-events N`,
+`--dcg-nexus-event URL` (single event), and `--dcg-nexus-delay` (default 0.5s
+between requests — the site is a hobby project behind Cloudflare, so do not
+lower it without reason). A full-format scrape is roughly 40 event pages plus
+~600 decklist pages, so budget ~10 minutes and run it detached.
+
+The scraper reads the decklist payload embedded in each page's export button
+rather than `/Deck/Decklist/ExportCSV`, which the site's `robots.txt` disallows.
+Note that `robots.txt` also sets `ai-train=no` and blocks named AI crawlers —
+see the ingestion caveat before using this data for model training.
+
+**DigiLab** stopped ingesting on 2026-03-12 (newest format EX11). It remains
+useful as a historical corpus but contributes nothing to current-format meta.
+
+**Placement caveat:** `_is_top_cut` treats the top 25% of a field as a top cut,
+which is right for a 16-player local but flags 94th place at a 398-player
+regional. Treat `conversion_rate` as comparable only within similar event sizes.
+DCG Nexus also carries only *submitted* decklists (e.g. 33 of 398 at a
+regional), which skews toward players who did well.
 
 ---
 
@@ -631,21 +738,44 @@ scalars = observations[:, profile.scalar_positions]             # (batch, 7778)
 
 When a new Digimon TCG set releases, follow these steps:
 
-### Step 1: Ingest Card Metadata
+### Step 1: Preview, Stage, and Review Card Metadata
 
 ```bash
-python code/tools/ingest_cards.py --set BT26
+# Optional secondary-source diagnostic; never writes or admits cards
+python code/tools/ingest_cards.py --preview-set BT26
+
+# Publish only a complete canonical candidate through plan then reviewed apply
+python -m tools.card_data sync --plan \
+  --repo-root . --candidate-dir <candidate-dir> \
+  --source-plan <source-plan.json> --plan-file <publication-plan.json>
+python -m tools.card_data sync --apply \
+  --repo-root . --candidate-dir <candidate-dir> \
+  --plan-file <publication-plan.json>
 ```
 
-Fetches card data from digimoncard.io and merges it into `cards.json`. New cards will not yet have `index` or `norm_id` fields.
+Do not use the retired `ingest_cards.py --set` or `--bulk` writers. Official
+observations, completeness checks, reviewed corrections, compatibility
+artifacts, and fixed-path publication belong to the canonical revision.
+Run `python -m tools.card_data.generate --check` for the network-free freshness
+gate. It regenerates from the marker-owned canonical, source, correction,
+registry, and narrow compatibility-projection inputs;
+`data/cards.json` is only the checked output, never its own generation input.
 
 ### Step 2: Assign Stable Registry Indices
 
+Stable assignments are part of the complete canonical candidate. Review their
+append-only allocation in the publication plan, then publish them with the same
+`sync --apply` shown in Step 1. The compatibility wrapper is useful only for
+network-free verification:
+
 ```bash
-python code/tools/build_registry.py --sets BT26
+python code/tools/build_registry.py --check
+python code/tools/build_registry.py --dry-run
 ```
 
-New cards get append-only indices. Existing indices are preserved, so old trained agents remain valid.
+New admitted canonical IDs receive indices after the current maximum; existing
+indices are never reassigned. Direct fixed-path writes, `--sets`, and `--force`
+are refused.
 
 ### Step 3: Implement Card Effects with the Rust DSL
 
@@ -659,7 +789,7 @@ assess-rust-engine-archetype BT26
 batch-implement-cards-rust-dsl BT26
 ```
 
-The C# files at `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CARD_ID}.cs` remain available as the behavioral source of truth.
+The C# files at `DCGO/Assets/Scripts/CardEffect/{SET}/{COLOR}/{CARD_ID}.cs` remain available as behavioral implementation references; official printed text and rules govern.
 
 ### Step 4: Verify Frozen Integrity (Python sunset only)
 

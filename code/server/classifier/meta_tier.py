@@ -119,19 +119,34 @@ def build_library_from_deck_library(
     rogue_threshold: float = DEFAULT_ROGUE_THRESHOLD,
     staple_min_rate: float = DEFAULT_STAPLE_MIN_RATE,
     min_match_coverage: float = DEFAULT_MIN_MATCH_COVERAGE,
+    format_scope: str | None = None,
 ) -> ClassifierLibrary:
     """Distill the deck_library.json document into classifier fingerprints.
 
     Archetypes with no decklists are skipped (nothing to fingerprint against).
     Staples are cards with inclusion rate ≥ `staple_min_rate` across the
     archetype's decklists.
+
+    `format_scope` (e.g. "EX12") restricts both the share and the staple
+    fingerprint to decks played in that format. Without it, `meta_share` is a
+    fraction of the entire recorded corpus — several years and rotations deep —
+    so a deck at 12% of the current format reads as ~1% and tiers as rogue.
+    Pass a scope whenever the question is "what will I face in a competitive
+    room today"; leave it None for an all-time view.
     """
     archetypes: list[ArchetypeFingerprint] = []
     for name, entry in (doc.get("archetypes") or {}).items():
-        stats = entry.get("stats") or {}
+        raw_lists = entry.get("decklists") or []
+        if format_scope is None:
+            stats = entry.get("stats") or {}
+        else:
+            stats = (entry.get("format_stats") or {}).get(format_scope)
+            if not stats:
+                continue  # archetype was not played in this format
+            raw_lists = [r for r in raw_lists if r.get("format") == format_scope]
+
         meta_share = float(stats.get("meta_share", 0.0))
         times_played = int(stats.get("times_played", 0))
-        raw_lists = entry.get("decklists") or []
         parsed = [_parse_decklist_field(r.get("decklist")) for r in raw_lists]
         parsed = [p for p in parsed if p]
         if not parsed:
