@@ -195,6 +195,7 @@ mod tests {
                 game_id: game_id.into(),
                 timestamp: "t".into(),
                 my_player_id: 0,
+                first_player: None,
                 is_ai: true,
                 my_deck_post_shuffle: (0..50).map(|i| format!("CARD-{}", i)).collect(),
                 opp_deck_post_shuffle: Some((0..50).map(|i| format!("CARD-{}", i)).collect()),

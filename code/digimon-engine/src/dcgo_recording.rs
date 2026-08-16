@@ -36,6 +36,9 @@ pub enum Row {
     /// An encoded decision. Either an `action` (success) or `encoder_failure`
     /// (the recorder couldn't map the decision to a 2192-space ID).
     Action(ActionRow),
+    /// A selection answer with semantic payload (task 3.5) — resolved to
+    /// engine action IDs at replay time against the live `PendingSelection`.
+    Selection(SelectionRow),
     EncoderFailure(EncoderFailureRow),
     /// A card revealed from the opaque opponent's pile — produced by the
     /// DCGO recorder's PvP mode for every observed opponent reveal (draws,
@@ -104,6 +107,54 @@ pub struct ActionRow {
     pub action_id: u16,
     pub phase: String,
     pub source: String,
+}
+
+/// A selection answer captured with SEMANTIC payload rather than a
+/// pre-encoded action ID (task 3.5). The C# recorder writes the prompt's
+/// class name plus absolute identities (frame targets, card ids, counts,
+/// bools); the harness resolves them against the engine's live
+/// `PendingSelection` at replay time, where candidate ordering and the
+/// action-id scheme are authoritative. All payload fields are optional —
+/// each prompt type fills only what it knows.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SelectionRow {
+    pub step: u32,
+    pub actor: u8,
+    /// DCGO prompt class name (e.g. `SelectPermanentEffect`) or
+    /// `generic_int` / `generic_bool` for the UserSelectionManager channel.
+    pub prompt: String,
+    #[serde(default)]
+    pub phase: String,
+    /// Field-permanent picks: absolute (owner, DCGO FrameID) pairs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub targets: Option<Vec<FrameTarget>>,
+    /// Card identities picked (hand/trash/reveal prompts).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_ids: Option<Vec<String>>,
+    /// Zone positions picked, when DCGO knows them (hand indexes etc.).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub indexes: Option<Vec<i32>>,
+    /// SelectCountEffect payload.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub count: Option<i32>,
+    /// Generic int channel payload.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub int_value: Option<i64>,
+    /// Generic bool channel payload.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bool_value: Option<bool>,
+    /// True when the player cancelled / declined the prompt.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cancel: Option<bool>,
+}
+
+/// One absolute field-permanent reference: `player` seat + DCGO FrameID
+/// (battle frames 0.., breeding frame = last — the harness maps to engine
+/// slots, breeding → 14).
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct FrameTarget {
+    pub player: u8,
+    pub frame: i32,
 }
 
 /// An unencodable decision — the recorder saw it happen but couldn't map

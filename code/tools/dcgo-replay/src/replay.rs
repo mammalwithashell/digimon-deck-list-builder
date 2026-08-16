@@ -253,6 +253,10 @@ fn map_divergence(div: &Divergence) -> ReplayFail {
                 message: message.clone(),
             }
         }
+        DivergenceKind::SelectionResolution { reason } => ReplayFail::EngineError {
+            step: Some(div.step),
+            message: format!("selection resolution: {reason}"),
+        },
         DivergenceKind::Memory { recorded, replayed } => ReplayFail::EngineError {
             step: Some(div.step),
             message: format!(
@@ -363,6 +367,7 @@ mod tests {
                 game_id: "test".into(),
                 timestamp: "t".into(),
                 my_player_id: 0,
+                first_player: None,
                 is_ai: true,
                 my_deck_post_shuffle: micro_deck(),
                 opp_deck_post_shuffle: Some(micro_deck()),
@@ -405,6 +410,7 @@ mod tests {
                 game_id: "test".into(),
                 timestamp: "t".into(),
                 my_player_id: 0,
+                first_player: None,
                 is_ai: true,
                 my_deck_post_shuffle: micro_deck(),
                 opp_deck_post_shuffle: Some(micro_deck()),
@@ -456,6 +462,7 @@ mod tests {
                 game_id: "test".into(),
                 timestamp: "t".into(),
                 my_player_id: 0,
+                first_player: None,
                 is_ai: true,
                 my_deck_post_shuffle: micro_deck(),
                 opp_deck_post_shuffle: Some(micro_deck()),

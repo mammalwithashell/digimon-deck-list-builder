@@ -148,6 +148,9 @@ pub enum DivergenceKind {
     RevealKind { message: String },
     /// Opaque: engine requested a reveal with none remaining.
     RevealExhausted { message: String },
+    /// A semantic selection payload (task 3.5) could not be mapped onto the
+    /// engine's live `PendingSelection`.
+    SelectionResolution { reason: String },
 }
 
 /// A differential divergence recorded by `CheckThenApply` — the engine
@@ -555,6 +558,11 @@ pub struct StepSpec {
     pub turn: Option<u64>,
     pub is_game_over: Option<bool>,
     pub expected_digest: Option<u64>,
+    /// DCGO semantic selection payload (task 3.5). When set, `action_id` is
+    /// a placeholder and the step resolves against the engine's live
+    /// `PendingSelection` (possibly into MULTIPLE engine actions — one per
+    /// pick plus an optional trailing PASS).
+    pub selection: Option<crate::dcgo_recording::SelectionRow>,
 }
 
 /// A pluggable replay source. Knows how to build the initial post-mulligan
@@ -656,6 +664,7 @@ impl NativeAdapter {
                     turn: a.get("turn").and_then(|v| v.as_u64()),
                     is_game_over: a.get("is_game_over").and_then(|v| v.as_bool()),
                     expected_digest: None,
+                    selection: None,
                 });
             }
         }
@@ -811,6 +820,20 @@ impl DcgoAdapter {
                     turn: None,
                     is_game_over: None,
                     expected_digest: None,
+                    selection: None,
+                }),
+                // Semantic selection payload (task 3.5) — resolved against
+                // the live PendingSelection at step time.
+                Row::Selection(s) => steps.push(StepSpec {
+                    actor: s.actor,
+                    action_id: 0,
+                    phase: s.phase.clone(),
+                    source: "selection".to_string(),
+                    memory_after: None,
+                    turn: None,
+                    is_game_over: None,
+                    expected_digest: None,
+                    selection: Some(s.clone()),
                 }),
                 // Can't fabricate an unencoded selection — the replayable
                 // prefix ends here (matches the batch harness's PartialPass).
@@ -953,6 +976,7 @@ impl VerificationReplayAdapter {
                 turn: None,
                 is_game_over: None,
                 expected_digest: Some(*digest),
+                selection: None,
             })
             .collect();
 
@@ -1207,6 +1231,72 @@ impl ReplayDriver {
         }
     }
 
+    /// Apply one recorded SELECTION step (task 3.5): resolve the semantic
+    /// payload against the live `PendingSelection` pick-by-pick, applying
+    /// each resolved engine action. Advances the cursor once for the whole
+    /// payload. Resolution failure records a
+    /// [`DivergenceKind::SelectionResolution`] and pauses.
+    fn apply_selection_step(
+        &mut self,
+        game: &mut Game,
+        payload: &crate::dcgo_recording::SelectionRow,
+    ) -> ReplayStepResult {
+        use super::selection_resolve::resolve_next;
+
+        let phase_before = game.current_phase.py_name().to_string();
+        let memory_before = game.memory;
+        let turn_number = game.turn_count;
+        let actor = payload.actor;
+
+        let mut picks_done = 0usize;
+        let mut last_action: u16 = 0;
+        loop {
+            match resolve_next(game, payload, picks_done) {
+                Ok(None) => break,
+                Ok(Some(id)) => {
+                    // Selection answers must come from the recorded actor and
+                    // be accepted by the parked prompt (or PASS). The
+                    // resolver only emits ids from valid_action_ids/PASS, so
+                    // a decode no-op here means engine-side disagreement.
+                    game.decode_action(id, actor);
+                    last_action = id;
+                    picks_done += 1;
+                    // Safety valve: a payload can't sanely resolve into more
+                    // engine actions than picks + trailing PASS.
+                    if picks_done > super::selection_resolve::payload_pick_count(payload) + 1 {
+                        break;
+                    }
+                }
+                Err(reason) => {
+                    self.divergences.push(Divergence {
+                        step: self.cursor,
+                        action_id: last_action,
+                        actor,
+                        phase: payload.phase.clone(),
+                        kind: DivergenceKind::SelectionResolution { reason },
+                    });
+                    self.paused = true;
+                    return self.no_progress_result(game);
+                }
+            }
+        }
+
+        self.cursor += 1;
+        ReplayStepResult {
+            step_number: self.cursor,
+            player_id: actor,
+            action_id: last_action,
+            phase_before,
+            phase_after: game.current_phase.py_name().to_string(),
+            memory_before,
+            memory_after: game.memory,
+            turn_number,
+            is_game_over: game.game_over,
+            winner_id: game.winner,
+            divergences: Vec::new(),
+        }
+    }
+
     /// Apply exactly one replayable step against `game`. No-op once complete
     /// or paused. Under `CheckThenApply`, verifies actor + mask-membership
     /// first. `CONCEDE_GAME` is accepted as the decoder-supported surrender
@@ -1218,6 +1308,15 @@ impl ReplayDriver {
         }
 
         let cur = self.cursor as usize;
+
+        // Semantic selection step (task 3.5): resolve the DCGO payload
+        // against the live PendingSelection, applying one engine action per
+        // pick (plus an optional trailing PASS). Handled as its own path —
+        // one recorded step may consume several engine actions.
+        if let Some(payload) = self.source.steps()[cur].selection.clone() {
+            return self.apply_selection_step(game, &payload);
+        }
+
         let (action_id, actor, phase_rec, mem_after_rec, turn_rec, game_over_rec, expected_digest) = {
             let s = &self.source.steps()[cur];
             (

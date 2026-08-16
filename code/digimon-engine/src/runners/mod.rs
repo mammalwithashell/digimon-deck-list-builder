@@ -1,5 +1,6 @@
 pub mod headless;
 pub mod replay;
+pub mod selection_resolve;
 
 pub use headless::HeadlessRunner;
 pub use replay::{

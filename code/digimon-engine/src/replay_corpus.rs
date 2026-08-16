@@ -710,6 +710,10 @@ fn describe_divergence(divergence: &Divergence) -> String {
             "reveal-exhausted divergence at step {}: {message}",
             divergence.step
         ),
+        DivergenceKind::SelectionResolution { reason } => format!(
+            "selection-resolution divergence at step {}: {reason}",
+            divergence.step
+        ),
     }
 }
 
