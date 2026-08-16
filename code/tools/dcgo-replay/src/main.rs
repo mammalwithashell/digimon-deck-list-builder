@@ -86,7 +86,9 @@ fn main() -> ExitCode {
 
     for path in &recording_paths {
         let text = match fs::read_to_string(path) {
-            Ok(t) => t,
+            // Recordings written before the recorder's UTF8Encoding(false) fix
+            // start with a BOM, which serde_json rejects as invalid JSON.
+            Ok(t) => t.trim_start_matches('\u{feff}').to_string(),
             Err(e) => {
                 eprintln!("warn: skipping {}: read failed: {}", path.display(), e);
                 continue;
