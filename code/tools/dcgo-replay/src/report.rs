@@ -200,6 +200,8 @@ mod tests {
                 my_deck_post_shuffle: (0..50).map(|i| format!("CARD-{}", i)).collect(),
                 opp_deck_post_shuffle: Some((0..50).map(|i| format!("CARD-{}", i)).collect()),
                 opp_decklist_composition: None,
+                my_egg_deck: None,
+                opp_egg_deck: None,
             },
             rows: Vec::new(),
             end: GameEnd {

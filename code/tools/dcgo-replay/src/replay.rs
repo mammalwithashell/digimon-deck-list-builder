@@ -372,6 +372,8 @@ mod tests {
                 my_deck_post_shuffle: micro_deck(),
                 opp_deck_post_shuffle: Some(micro_deck()),
                 opp_decklist_composition: None,
+                my_egg_deck: None,
+                opp_egg_deck: None,
             },
             rows: vec![Row::EncoderFailure(crate::recording::EncoderFailureRow {
                 step: 0,
@@ -415,6 +417,8 @@ mod tests {
                 my_deck_post_shuffle: micro_deck(),
                 opp_deck_post_shuffle: Some(micro_deck()),
                 opp_decklist_composition: None,
+                my_egg_deck: None,
+                opp_egg_deck: None,
             },
             rows: vec![
                 Row::Action(crate::recording::ActionRow {
@@ -467,6 +471,8 @@ mod tests {
                 my_deck_post_shuffle: micro_deck(),
                 opp_deck_post_shuffle: Some(micro_deck()),
                 opp_decklist_composition: None,
+                my_egg_deck: None,
+                opp_egg_deck: None,
             },
             rows: vec![
                 // First mulligan decision: action_id 999 is wildly out of

@@ -62,7 +62,16 @@ Emitted exactly once, as the first line.
   // their decklists there during room setup).
   // The replay harness uses this to construct an opaque-mode game via
   // Game::new_with_opaque_opponent.
-  "opp_decklist_composition": ["BT1-001", "BT1-001", "BT1-010", ...]
+  "opp_decklist_composition": ["BT1-001", "BT1-001", "BT1-010", ...],
+
+  // OPTIONAL (absent in pre-2026-08-16 recordings). Local player's
+  // digitama (egg) deck, post-shuffle order — index 0 is hatched first.
+  "my_egg_deck": ["ST1-01", "ST1-01", ...],
+
+  // OPTIONAL. Bot Match only: opponent's digitama deck, post-shuffle
+  // order. Absent for PvP (the opponent's digitama order is not
+  // observable, same as their main deck) and in older recordings.
+  "opp_egg_deck": ["ST1-01", ...]
 }
 ```
 
@@ -80,6 +89,8 @@ Emitted exactly once, as the first line.
 | `my_deck_post_shuffle` | string[] | yes | Local player's deck (post-shuffle order). |
 | `opp_deck_post_shuffle` | string[] \| null | yes | Bot Match: ordered. PvP: null. |
 | `opp_decklist_composition` | string[] | no\* | \*Required for PvP. The opponent's decklist as an unordered multiset (composition only). |
+| `my_egg_deck` | string[] | no | Local player's digitama (egg) deck, post-shuffle order (index 0 hatched first). Absent in pre-2026-08-16 recordings; the replay adapter then uses an empty egg deck. |
+| `opp_egg_deck` | string[] | no | Opponent's digitama deck, post-shuffle order. Bot Match only — absent for PvP and in older recordings. The replay adapter appends both egg lists to the ordered deck lists; `Game`'s card-kind routing places `DigiEgg` cards into the digitama deck without re-shuffling. |
 
 ## Decision row: `action`
 

@@ -766,8 +766,14 @@ pub struct DcgoAdapter {
     /// mulligans first), else 0.
     first_player: u8,
     my_deck: Vec<String>,
+    /// Local player's digitama (egg) deck in recorded post-shuffle order.
+    /// Empty for recordings predating egg capture.
+    my_egg_deck: Vec<String>,
     /// Ordered opponent deck (bot-vs-bot). `None` for opaque PvP.
     opp_deck: Option<Vec<String>>,
+    /// Opponent's digitama (egg) deck in recorded post-shuffle order
+    /// (bot-vs-bot only). Empty for PvP and pre-egg-capture recordings.
+    opp_egg_deck: Vec<String>,
     /// Opaque opponent decklist multiset (PvP). `None` for bot-vs-bot.
     opp_decklist: Option<Vec<String>>,
     /// Ordered reveal stream consumed by the opaque `RevealQueue`.
@@ -792,7 +798,9 @@ impl DcgoAdapter {
 
         let my_pid = recording.start.my_player_id;
         let my_deck = recording.start.my_deck_post_shuffle.clone();
+        let my_egg_deck = recording.start.my_egg_deck.clone().unwrap_or_default();
         let opp_deck = recording.start.opp_deck_post_shuffle.clone();
+        let opp_egg_deck = recording.start.opp_egg_deck.clone().unwrap_or_default();
 
         // Turn-1 player: explicit field when present, else inferred from the
         // first mulligan actor (DCGO's first player mulligans first — pre-
@@ -855,7 +863,9 @@ impl DcgoAdapter {
             my_pid,
             first_player,
             my_deck,
+            my_egg_deck,
             opp_deck,
+            opp_egg_deck,
             opp_decklist,
             reveal_pairs,
             steps,
@@ -876,10 +886,21 @@ impl RecordingSource for DcgoAdapter {
                 // would re-shuffle it), and the first player comes from the
                 // recording rather than seed parity. Seed 0 still drives
                 // card-internal random effects.
+                //
+                // Egg (digitama) decks ride the same list: `Game::new_inner`
+                // routes `CardKind::DigiEgg` entries into
+                // `player.digitama_deck` (relative order preserved) and the
+                // ordered constructor skips the digitama shuffle, so the
+                // recorded egg order is placed verbatim — the same
+                // orientation convention as the main deck.
+                let mut my_full = self.my_deck.clone();
+                my_full.extend(self.my_egg_deck.iter().cloned());
+                let mut opp_full = opp_deck.clone();
+                opp_full.extend(self.opp_egg_deck.iter().cloned());
                 let (deck1, deck2) = if self.my_pid == 0 {
-                    (self.my_deck.clone(), opp_deck.clone())
+                    (my_full, opp_full)
                 } else {
-                    (opp_deck.clone(), self.my_deck.clone())
+                    (opp_full, my_full)
                 };
                 Game::new_with_ordered_decks(
                     &[deck1, deck2],

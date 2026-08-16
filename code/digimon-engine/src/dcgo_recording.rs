@@ -97,6 +97,18 @@ pub struct GameStart {
     /// doesn't know the post-shuffle order.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub opp_decklist_composition: Option<Vec<String>>,
+    /// Local player's digitama (egg) deck in post-shuffle order — index 0
+    /// is hatched first in DCGO. Absent (`None`) in recordings made before
+    /// the recorder started emitting egg decks; the adapter then replays
+    /// with an empty egg deck (pre-egg-capture behavior).
+    #[serde(default)]
+    pub my_egg_deck: Option<Vec<String>>,
+    /// Opponent's digitama (egg) deck in post-shuffle order. Bot matches
+    /// only — `None` for PvP (the opponent's digitama order is not
+    /// observable, same as their main deck) and for pre-egg-capture
+    /// recordings.
+    #[serde(default)]
+    pub opp_egg_deck: Option<Vec<String>>,
 }
 
 /// An encoded decision row.

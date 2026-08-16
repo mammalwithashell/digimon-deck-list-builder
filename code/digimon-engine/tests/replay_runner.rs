@@ -27,6 +27,14 @@ fn minimal_db() -> HashMap<String, CardData> {
             "effect_description_eng": "", "inherited_effect_description_eng": "",
             "security_effect_description_eng": "", "evo_costs": []
         },
+        "ST1-02": {
+            "card_id": "ST1-02", "card_name_eng": "Punimon",
+            "card_effect_class_name": "ST1_02", "play_cost": 0, "dp": -1,
+            "level": 2, "card_kind": 3, "rarity": 0, "card_colors": [0],
+            "type_eng": ["Lesser"], "form_eng": ["In-Training"], "attribute_eng": [],
+            "effect_description_eng": "", "inherited_effect_description_eng": "",
+            "security_effect_description_eng": "", "evo_costs": []
+        },
         "ST1-03": {
             "card_id": "ST1-03", "card_name_eng": "Koromon",
             "card_effect_class_name": "ST1_03", "play_cost": 3, "dp": 2000,
@@ -500,10 +508,13 @@ fn dcgo_bot_recording() -> RecordingV1 {
             game_id: "bot-test".into(),
             timestamp: "t".into(),
             my_player_id: 0,
+            first_player: None,
             is_ai: true,
             my_deck_post_shuffle: test_deck(),
             opp_deck_post_shuffle: Some(test_deck()),
             opp_decklist_composition: None,
+            my_egg_deck: None,
+            opp_egg_deck: None,
         },
         rows: vec![
             Row::Action(ActionRow {
@@ -562,6 +573,68 @@ fn dcgo_bot_recording_reconstructs_deterministically() {
     assert_eq!(a.game.current_phase.py_name(), "Mulligan");
 }
 
+/// Egg (digitama) decks recorded in `game_start` are placed at replay
+/// construction: the adapter appends them to the ordered deck lists,
+/// `Game`'s card-kind routing splits `DigiEgg` cards into `digitama_deck`
+/// (relative order preserved), and ordered construction does NOT re-shuffle
+/// them — the recorded order lands verbatim.
+#[test]
+fn dcgo_bot_recording_places_recorded_egg_decks() {
+    let db = minimal_db();
+    let mut rec = dcgo_bot_recording();
+    // Pure main decks + explicit, distinctly-ordered egg decks.
+    rec.start.my_deck_post_shuffle = vec!["ST1-03".to_string(); 50];
+    rec.start.opp_deck_post_shuffle = Some(vec!["ST1-03".to_string(); 50]);
+    rec.start.my_egg_deck = Some(vec![
+        "ST1-01".to_string(),
+        "ST1-02".to_string(),
+        "ST1-01".to_string(),
+        "ST1-02".to_string(),
+    ]);
+    rec.start.opp_egg_deck = Some(vec!["ST1-01".to_string(); 5]);
+
+    let s = ReplaySession::from_dcgo(rec, &db, false).unwrap();
+    // my_player_id = 0 in the fixture.
+    let my_eggs: Vec<&str> = s.game.players[0]
+        .digitama_deck
+        .iter()
+        .map(|c| c.card_id(&s.game.card_data))
+        .collect();
+    assert_eq!(
+        my_eggs,
+        vec!["ST1-01", "ST1-02", "ST1-01", "ST1-02"],
+        "recorded egg order placed verbatim (no shuffle)"
+    );
+    assert_eq!(
+        s.game.players[1].digitama_deck.len(),
+        5,
+        "opp egg deck placed"
+    );
+    // Main decks are unaffected by the egg append (50 = deck + dealt hand).
+    for i in 0..2 {
+        assert_eq!(
+            s.game.players[i].deck.len() + s.game.players[i].hand.len(),
+            50,
+            "player {} main deck intact",
+            i
+        );
+    }
+}
+
+/// Pre-egg-capture recordings (no egg fields in `game_start`) still
+/// construct — with empty digitama decks, matching prior behavior.
+#[test]
+fn dcgo_bot_recording_without_egg_decks_still_constructs() {
+    let db = minimal_db();
+    let mut rec = dcgo_bot_recording();
+    rec.start.my_deck_post_shuffle = vec!["ST1-03".to_string(); 50];
+    rec.start.opp_deck_post_shuffle = Some(vec!["ST1-03".to_string(); 50]);
+
+    let s = ReplaySession::from_dcgo(rec, &db, false).unwrap();
+    assert!(s.game.players[0].digitama_deck.is_empty());
+    assert!(s.game.players[1].digitama_deck.is_empty());
+}
+
 /// Task 4.2: the DCGO mulligan actions replay under `Trust` (Trust avoids
 /// coupling the test to the engine's seed-0 mulligan order).
 #[test]
@@ -606,10 +679,13 @@ fn dcgo_opaque_recording() -> RecordingV1 {
             game_id: "opaque-test".into(),
             timestamp: "t".into(),
             my_player_id: 0,
+            first_player: None,
             is_ai: false,
             my_deck_post_shuffle: opaque_micro_deck(),
             opp_deck_post_shuffle: None,
             opp_decklist_composition: Some(opaque_micro_deck()),
+            my_egg_deck: None,
+            opp_egg_deck: None,
         },
         rows: reveals,
         end: GameEnd {
