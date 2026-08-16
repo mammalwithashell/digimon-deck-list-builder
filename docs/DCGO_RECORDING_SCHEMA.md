@@ -124,6 +124,79 @@ The `source` field tells you which emitter site produced the row:
 | `selection_bool` | `UserSelectionManager.SetBoolForPlayer` |
 | `play_card_extra` | A digivolution-source pick decomposed out of a `PlayCardAction`'s baked-in jogress / burst / app-fusion fields |
 
+### Board-position index space
+
+Every board reference in a recording — `action_id` operands for attacks,
+digivolves and field effects, plus the `targets` of a `selection` row —
+is a **compact battle-area index**: the position of the permanent within
+the player's packed list of occupied slots, counting from 0.
+
+This matters because DCGO itself has two index spaces and they are easy
+to confuse:
+
+| DCGO representation | Shape | Matches our action space? |
+|---|---|---|
+| `Player.FieldPermanents[]` indexed by `FieldCardFrame.FrameID` | Sparse — empty frames are `null` holes | **No** |
+| `Player.GetFieldPermanents()` | Compact, ascending frame order | **Yes** |
+
+The gameplay packets carry the compact form already
+(`TurnStateMachine.SetActSkill` and `SetAttackingPermaent` both index
+`GetFieldPermanents()` directly), so the encoder passes them through
+after a bounds check (`ActionEncoder.ValidateFieldSlot`). The one packet
+that carries a *sparse* frame id is `PlayCardAction.TargetFrameID`, which
+`ActionEncoder.FrameIdToFieldSlot` converts.
+
+Residual fidelity caveat: DCGO compacts by ascending frame id while the
+engine's `battle_area` is in play order. Those agree whenever permanents
+are placed left-to-right, but a player who drops a card into a higher
+frame before a lower one can reorder the two lists. Such a game surfaces
+as an `illegal_action` / wrong-target divergence in the replay harness
+rather than silently mis-replaying.
+
+## Selection row: `selection`
+
+Emitted for each response to a `Select*Effect` prompt — the semantic
+counterpart to an `action` row. Where an `action` row carries a resolved
+2192-space `action_id`, a `selection` row carries the *payload* of the
+choice and lets the replay harness resolve it against whatever
+`PendingSelection` the engine has installed at that point. That
+indirection is deliberate: the same DCGO prompt maps to different engine
+action IDs depending on which selection is pending.
+
+```jsonc
+{
+  "type": "selection",
+  "step": 11,                        // monotonic step counter (shared with action rows)
+  "actor": 0,                        // the player answering the prompt
+  "prompt": "SelectPermanentEffect", // which Select*Effect asked
+  "phase": "Main",                   // DCGO phase name at capture time
+  "targets": [{"player": 0, "frame": 3}]  // payload — shape varies by prompt
+}
+```
+
+Exactly one payload field is present, keyed by prompt kind:
+
+| `prompt` | Payload field | Meaning |
+|---|---|---|
+| `SelectPermanentEffect` | `targets` | Battle-area picks: `player` is the absolute player ID, `frame` the compact battle-area index (see above) |
+| `SelectAttackEffect` | `targets` | Attack target; `frame: -1` means the player/security rather than a Digimon |
+| `SelectHandEffect` | `card_ids` | Hand picks, by card ID |
+| `SelectCardEffect` | `card_ids` | Generic card picks (deck/trash/security), by card ID |
+| `SelectCountEffect` | `count` | A numeric "how many" answer |
+| `SelectDigiXrosClass` | `int_value` | Chosen DigiXros recipe index |
+| `MultipleSkills` | `int_value` | Which of several simultaneous effects to process first |
+| `OptionalSkill` | `bool_value` | Yes/no on a "you may" trigger |
+| `generic_bool` | `bool_value` | `UserSelectionManager` fallback channel |
+
+A `cancel: true` field replaces the payload when the player backed out of
+the prompt.
+
+Resolution happens in `runners/selection_resolve.rs`: the harness reads
+the engine's live `PendingSelection`, matches the recorded payload
+against the offered targets (by identity for card picks, by index for
+board picks and effect choices), and emits the corresponding action ID —
+or `PASS` for a decline.
+
 ## Sentinel row: `encoder_failure`
 
 Emitted when the DCGO recorder cannot map a decision to a 2192-space ID.
@@ -150,8 +223,10 @@ Common reasons:
 |---|---|
 | `selection_prompt_kind_unknown` | A `SetIntForPlayer` / `SetBoolForPlayer` call fired but the recorder doesn't yet know which `Select*Effect` is prompting (Phase 1 fallback; task 3.5 follow-up plumbs prompt identity). |
 | `play_card_hand_index_out_of_range` | `PlayCardAction.CardIndex` outside [0, 30). |
-| `attack_attacker_frame_lookup_failed` | DCGO compact index → frame ID translation failed for the attacker. |
+| `attack_attacker_frame_lookup_failed` | The attacker's compact index was out of range for the actor's battle area. |
 | `activate_card_nonzero_skill_index` | Activating a hand effect with skill_idx > 0 — the action space's `HAND_EFFECT` range is single-skill-per-slot. |
+| `activate_permanent_nonzero_skill_index` | Activating the 2nd+ `[Main]` ability of a permanent — the action space reserves one `[Main]` sub-slot per permanent. |
+| `digivolve_frame_beyond_engine_slots` | The digivolve target resolved past `MAX_FIELD_SLOTS` (more than 14 occupied battle slots), or onto an empty frame. |
 | `cheat_action_unsupported` | Debug-mode `CheatAction` (never appears in real recordings). |
 
 ## Reveal row: `reveal`

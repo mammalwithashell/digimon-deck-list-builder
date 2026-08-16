@@ -22,7 +22,7 @@ use clap::Parser;
 use digimon_engine::card_data::CardData;
 
 use dcgo_replay::{
-    aggregate, parse_jsonl, replay_recording, ParityReport, RecordingV1, ReplayConfig,
+    aggregate, parse_jsonl, replay_recording, ParityReport, RecordingV1, ReplayConfig, ReplayFail,
     ReplayOutcome,
 };
 
@@ -104,6 +104,7 @@ fn main() -> ExitCode {
         let outcome = replay_recording(&recording, &card_data, &cfg);
         if args.verbose {
             eprintln!("  {} → {}", path.display(), summary(&outcome));
+            eprintln!("{}", detail(&outcome));
         }
         recordings.push(recording);
         outcomes.push(outcome);
@@ -132,6 +133,90 @@ fn summary(outcome: &ReplayOutcome) -> &'static str {
         ReplayOutcome::Pass { .. } => "PASS",
         ReplayOutcome::PartialPass { .. } => "PARTIAL",
         ReplayOutcome::Fail(_) => "FAIL",
+    }
+}
+
+/// Human-readable failure detail for `--verbose` triage. The aggregated
+/// JSON report deliberately stays compact (one key per failing card), so
+/// this is where the per-divergence specifics — notably the engine's
+/// sampled legal action IDs — surface for a human diagnosing a single
+/// recording.
+fn detail(outcome: &ReplayOutcome) -> String {
+    match outcome {
+        ReplayOutcome::Pass {
+            steps_consumed,
+            winner,
+        } => format!("      {} steps, winner=P{}", steps_consumed, winner),
+        ReplayOutcome::PartialPass {
+            steps_consumed,
+            stop_reason,
+        } => format!("      {} steps; halted: {}", steps_consumed, stop_reason),
+        ReplayOutcome::Fail(fail) => match fail {
+            ReplayFail::IllegalAction(ia) => format!(
+                "      illegal_action @ step {} (actor P{}, phase {}, source {})\n\
+                 \x20       recorded action_id={} ({})\n\
+                 \x20       engine legal sample: {:?}",
+                ia.step,
+                ia.actor,
+                ia.phase,
+                ia.source,
+                ia.action_id,
+                describe_action(ia.action_id),
+                ia.sample_legal_ids
+                    .iter()
+                    .map(|id| format!("{} ({})", id, describe_action(*id)))
+                    .collect::<Vec<_>>()
+            ),
+            ReplayFail::ActorMismatch(am) => format!(
+                "      actor_mismatch @ step {}: engine expected P{}, recording said P{} \
+                 (action_id={}, phase {})",
+                am.step, am.expected_actor, am.recorded_actor, am.action_id, am.phase
+            ),
+            ReplayFail::WinnerMismatch(wm) => format!(
+                "      winner_mismatch after {} steps: recording={}, engine={}",
+                wm.steps_consumed, wm.expected_winner, wm.engine_winner
+            ),
+            ReplayFail::EngineError { step, message } => {
+                format!("      engine_error @ step {:?}: {}", step, message)
+            }
+            ReplayFail::OpaqueRevealError { step, message } => {
+                format!("      opaque_reveal_error @ step {:?}: {}", step, message)
+            }
+        },
+    }
+}
+
+/// Decode an action ID into its action-space range + operands, so a
+/// verbose failure line reads as gameplay rather than as a bare integer.
+fn describe_action(id: u16) -> String {
+    use digimon_engine::action::space as sp;
+    match id {
+        sp::PASS => "pass".to_string(),
+        sp::CONCEDE_GAME => "concede".to_string(),
+        id if id < sp::HAND_EFFECT_START => format!("play_hand_{}", id),
+        id if id < sp::HAND_EFFECT_START + 30 => {
+            format!("hand_effect_{}", id - sp::HAND_EFFECT_START)
+        }
+        id if (sp::ATTACK_START..sp::ATTACK_END).contains(&id) => {
+            let (attacker, target) = sp::decode_attack(id);
+            format!("attack_{}_to_{}", attacker, target)
+        }
+        id if (sp::DIGIVOLVE_START..sp::DIGIVOLVE_END).contains(&id) => {
+            let (hand, field) = sp::decode_digivolve(id);
+            format!("digivolve_hand_{}_to_field_{}", hand, field)
+        }
+        id if (sp::FIELD_EFFECT_START..sp::FIELD_EFFECT_END).contains(&id) => {
+            let (perm, effect) = sp::decode_field_effect(id);
+            format!("field_slot_{}_effect_{}", perm, effect)
+        }
+        id if (sp::TRASH_EFFECT_START..sp::TRASH_EFFECT_END).contains(&id) => {
+            format!("trash_effect_{}", id - sp::TRASH_EFFECT_START)
+        }
+        id if (sp::SOURCE_SELECT_START..sp::SOURCE_SELECT_END).contains(&id) => {
+            let (field, source) = sp::decode_source_select(id);
+            format!("source_select_field_{}_src_{}", field, source)
+        }
+        id => format!("action_{}", id),
     }
 }
 
