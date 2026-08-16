@@ -70,6 +70,11 @@ pub struct GameStart {
     /// 0 or 1 — the DCGO client's player ID (which side the recording is
     /// from). In bot mode this is conventionally 0.
     pub my_player_id: u8,
+    /// 0 or 1 — who takes turn 1. Absent in recordings made before the
+    /// recorder started emitting it; the adapter then infers it from the
+    /// first mulligan actor (DCGO's first player mulligans first).
+    #[serde(default)]
+    pub first_player: Option<u8>,
     /// True for bot-vs-bot games (both decks observable). False for PvP.
     pub is_ai: bool,
     /// Local player's deck in post-shuffle order. Drawn from index 0 first.

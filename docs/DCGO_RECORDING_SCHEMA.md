@@ -45,6 +45,7 @@ Emitted exactly once, as the first line.
   "game_id": "abc123def456",               // stable per-game uuid
   "timestamp": "2026-05-26T14:00:00Z",     // UTC ISO-8601
   "my_player_id": 0,                       // 0 or 1 — local client's seat
+  "first_player": 1,                       // 0 or 1 — who takes turn 1 (absent in pre-2026-08-16 recordings)
   "is_ai": true,                           // true for Bot Match, false for PvP
 
   // Local player's deck, post-shuffle order. Drawn from index 0 first.
@@ -74,6 +75,7 @@ Emitted exactly once, as the first line.
 | `game_id` | string | yes | Stable per-game UUID; appears in parity reports. |
 | `timestamp` | string | yes | UTC ISO-8601. |
 | `my_player_id` | u8 | yes | 0 or 1 — the local client's player ID. |
+| `first_player` | u8 | no | 0 or 1 — who takes turn 1 (DCGO's `NonTurnPlayer` at `StartGame`). Absent in recordings made before 2026-08-16; the replay adapter then infers it from the first mulligan actor (DCGO's first player mulligans first). |
 | `is_ai` | bool | yes | true for Bot Match (against DCGO's heuristic bot); false for PvP. |
 | `my_deck_post_shuffle` | string[] | yes | Local player's deck (post-shuffle order). |
 | `opp_deck_post_shuffle` | string[] \| null | yes | Bot Match: ordered. PvP: null. |

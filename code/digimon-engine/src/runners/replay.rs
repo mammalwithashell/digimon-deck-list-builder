@@ -752,6 +752,10 @@ impl RecordingSource for NativeAdapter {
 /// against the DCGO oracle).
 pub struct DcgoAdapter {
     my_pid: u8,
+    /// Who takes turn 1: `game_start.first_player` when the recording carries
+    /// it, else inferred from the first mulligan actor (DCGO's first player
+    /// mulligans first), else 0.
+    first_player: u8,
     my_deck: Vec<String>,
     /// Ordered opponent deck (bot-vs-bot). `None` for opaque PvP.
     opp_deck: Option<Vec<String>>,
@@ -780,6 +784,20 @@ impl DcgoAdapter {
         let my_pid = recording.start.my_player_id;
         let my_deck = recording.start.my_deck_post_shuffle.clone();
         let opp_deck = recording.start.opp_deck_post_shuffle.clone();
+
+        // Turn-1 player: explicit field when present, else inferred from the
+        // first mulligan actor (DCGO's first player mulligans first — pre-
+        // first_player recordings), else 0.
+        let first_player = recording.start.first_player.unwrap_or_else(|| {
+            recording
+                .rows
+                .iter()
+                .find_map(|row| match row {
+                    Row::Action(a) if a.source == "mulligan" => Some(a.actor),
+                    _ => None,
+                })
+                .unwrap_or(0)
+        });
 
         let mut steps = Vec::new();
         for row in &recording.rows {
@@ -812,6 +830,7 @@ impl DcgoAdapter {
 
         Ok(Self {
             my_pid,
+            first_player,
             my_deck,
             opp_deck,
             opp_decklist,
@@ -829,16 +848,24 @@ impl RecordingSource for DcgoAdapter {
     ) -> Result<Game, ReplayError> {
         match &self.opp_deck {
             Some(opp_deck) => {
-                // Bot-vs-bot — both decks known. Seed 0 (RNG only affects
-                // card-internal random effects; deck order comes from the
-                // recording).
+                // Bot-vs-bot — both decks known. Ordered construction: the
+                // recorded post-shuffle order is taken verbatim (`Game::new`
+                // would re-shuffle it), and the first player comes from the
+                // recording rather than seed parity. Seed 0 still drives
+                // card-internal random effects.
                 let (deck1, deck2) = if self.my_pid == 0 {
                     (self.my_deck.clone(), opp_deck.clone())
                 } else {
                     (opp_deck.clone(), self.my_deck.clone())
                 };
-                Game::new(&[deck1, deck2], &self.card_data, Rules::standard(), Some(0))
-                    .map_err(ReplayError::GameConstruction)
+                Game::new_with_ordered_decks(
+                    &[deck1, deck2],
+                    &self.card_data,
+                    Rules::standard(),
+                    Some(0),
+                    self.first_player,
+                )
+                .map_err(ReplayError::GameConstruction)
             }
             None => {
                 // Opaque PvP — fresh RevealQueue at cursor 0 so a rebuild

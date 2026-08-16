@@ -25,6 +25,38 @@ impl Game {
         rules: Rules,
         seed: Option<u64>,
     ) -> Result<Self, String> {
+        Self::new_inner(deck_card_ids, all_card_data, rules, seed, true, None)
+    }
+
+    /// Replay construction: decks are taken verbatim in the given order (no
+    /// setup shuffle — the order IS the recorded post-shuffle order) and the
+    /// first player is set explicitly instead of by seed parity. RNG stream
+    /// consumption matches `new` so in-game random effects stay comparable.
+    pub fn new_with_ordered_decks(
+        deck_card_ids: &[Vec<String>],
+        all_card_data: &std::collections::HashMap<String, CardData>,
+        rules: Rules,
+        seed: Option<u64>,
+        first_player: PlayerId,
+    ) -> Result<Self, String> {
+        Self::new_inner(
+            deck_card_ids,
+            all_card_data,
+            rules,
+            seed,
+            false,
+            Some(first_player),
+        )
+    }
+
+    fn new_inner(
+        deck_card_ids: &[Vec<String>],
+        all_card_data: &std::collections::HashMap<String, CardData>,
+        rules: Rules,
+        seed: Option<u64>,
+        shuffle_decks: bool,
+        forced_first_player: Option<PlayerId>,
+    ) -> Result<Self, String> {
         if deck_card_ids.len() != rules.player_count as usize {
             return Err(format!(
                 "Expected {} decks, got {}",
@@ -90,9 +122,12 @@ impl Game {
                 })
                 .collect();
 
-            // Shuffle decks
-            player.shuffle_deck(&mut rng);
-            player.shuffle_digitama_deck(&mut rng);
+            // Shuffle decks (skipped for replay construction, where the
+            // caller's order is the recorded post-shuffle order).
+            if shuffle_decks {
+                player.shuffle_deck(&mut rng);
+                player.shuffle_digitama_deck(&mut rng);
+            }
 
             players.push(player);
         }
@@ -102,7 +137,13 @@ impl Game {
         // matching RNG algorithms. Preserve the historical RNG consumption for
         // seeded games so deck/mulligan reshuffles remain stable.
         let mut turn_order: Vec<PlayerId> = (0..rules.player_count).collect();
-        if let Some(s) = seed {
+        if let Some(fp) = forced_first_player {
+            // Replay construction: explicit first player, no RNG involvement.
+            let start = turn_order.iter().position(|&p| p == fp).ok_or_else(|| {
+                format!("first_player {} out of range for {} players", fp, rules.player_count)
+            })?;
+            turn_order.rotate_left(start);
+        } else if let Some(s) = seed {
             let mut consumed_turn_order = turn_order.clone();
             consumed_turn_order.shuffle(&mut rng);
             if !turn_order.is_empty() {
