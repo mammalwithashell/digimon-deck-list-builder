@@ -893,10 +893,16 @@ impl RecordingSource for DcgoAdapter {
                 // ordered constructor skips the digitama shuffle, so the
                 // recorded egg order is placed verbatim — the same
                 // orientation convention as the main deck.
-                let mut my_full = self.my_deck.clone();
-                my_full.extend(self.my_egg_deck.iter().cloned());
-                let mut opp_full = opp_deck.clone();
-                opp_full.extend(self.opp_egg_deck.iter().cloned());
+                // Orientation: DCGO draws/hatches from index 0 of its lists;
+                // the engine pops from the END of its deck Vecs. Reverse each
+                // recorded list (main and egg separately — the kind-splitter
+                // preserves relative order) so the engine's first draw is the
+                // recording's first card.
+                let rev = |v: &[String]| v.iter().rev().cloned().collect::<Vec<_>>();
+                let mut my_full = rev(&self.my_deck);
+                my_full.extend(rev(&self.my_egg_deck));
+                let mut opp_full = rev(&opp_deck);
+                opp_full.extend(rev(&self.opp_egg_deck));
                 let (deck1, deck2) = if self.my_pid == 0 {
                     (my_full, opp_full)
                 } else {
