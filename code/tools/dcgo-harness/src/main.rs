@@ -45,6 +45,15 @@ enum Command {
         #[arg(long, default_value_t = 180)]
         timeout_seconds: u64,
     },
+    /// Report queue counts; sweep overdue claims.
+    Status {
+        /// Also requeue/quarantine claims older than their budget.
+        #[arg(long, default_value_t = false)]
+        sweep: bool,
+        /// Timeout used when sweeping.
+        #[arg(long, default_value_t = 180)]
+        timeout_seconds: u64,
+    },
 }
 
 fn main() -> ExitCode {
@@ -90,6 +99,21 @@ fn run(args: &Args) -> Result<ExitCode, String> {
                 jobs.len(),
                 jobs_dir.display()
             );
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Status {
+            sweep,
+            timeout_seconds,
+        } => {
+            if *sweep {
+                let (requeued, quarantined) =
+                    dcgo_harness::queue::sweep_timeouts(&args.root, *timeout_seconds)?;
+                if requeued > 0 || quarantined > 0 {
+                    println!("swept: requeued={} quarantined={}", requeued, quarantined);
+                }
+            }
+            let status = dcgo_harness::queue::scan(&args.root)?;
+            println!("{}", status.summary());
             Ok(ExitCode::SUCCESS)
         }
     }
