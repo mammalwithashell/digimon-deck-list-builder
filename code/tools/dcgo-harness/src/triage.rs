@@ -253,9 +253,11 @@ impl TriageReport {
 
     /// True when the run was conclusive and found nothing wrong: at least
     /// one recording fully replayed to a matching game-end (`passed > 0`),
-    /// zero illegal-action clusters, AND zero replay failures of any other
-    /// kind (see `CorpusStats::failed`'s doc comment for why the third
-    /// clause matters — clustering alone can't tell you a corpus is clean).
+    /// zero illegal-action clusters, zero replay failures of any other
+    /// kind (see `CorpusStats::failed`'s doc comment for why that clause
+    /// matters — clustering alone can't tell you a corpus is clean), AND
+    /// zero files skipped during discovery (`read_failed == 0 &&
+    /// parse_failed == 0`).
     ///
     /// G1/G2 (second triage review pass): the previous version checked only
     /// `failed == 0 && clusters.is_empty()`, which is `true` for
@@ -273,8 +275,23 @@ impl TriageReport {
     /// `is_conclusive()` the way `main.rs` does — cannot silently
     /// reintroduce this bug. Mirrors `queue::QueueStatus::is_clean()`'s
     /// `completed > 0 && failed == 0` convention.
+    ///
+    /// H1 (third triage review pass): `read_failed` and `parse_failed`
+    /// count files that never even reached `replay_recording` — they are
+    /// invisible to `passed`/`failed`/`clusters` entirely, so the checks
+    /// above cannot see them. Without this, a corpus of 200 files where
+    /// 199 fail to parse and 1 passes still satisfies `passed > 0 &&
+    /// failed == 0 && clusters.is_empty()` and reads clean. This is not
+    /// hypothetical either: the real corpus reports `parse_failed=1` of 9
+    /// files today. Requiring both to be zero makes a corpus with ANY
+    /// unreadable/unparseable file un-clean, no matter how well the files
+    /// that DID make it through replayed.
     pub fn is_clean(&self) -> bool {
-        self.corpus_stats.passed > 0 && self.corpus_stats.failed == 0 && self.clusters.is_empty()
+        self.corpus_stats.passed > 0
+            && self.corpus_stats.failed == 0
+            && self.corpus_stats.read_failed == 0
+            && self.corpus_stats.parse_failed == 0
+            && self.clusters.is_empty()
     }
 
     /// Render the report. Both denominators are unconditional and clearly
@@ -294,12 +311,26 @@ impl TriageReport {
         out.push_str(&format!("corpus: {}\n", self.corpus_stats.summary()));
         out.push_str(&format!("queue: {}\n", self.status.summary()));
 
+        // H1: files that failed to read or parse never reach
+        // `replay_recording` at all — they are invisible to
+        // `replayed`/`passed`/`failed`/`clusters`, and therefore invisible
+        // to every verdict branch below unless computed and disclosed up
+        // front. See `is_clean()`'s doc comment for the live example: the
+        // real corpus run today has `parse_failed=1` of 9 files.
+        let skipped = self.corpus_stats.read_failed + self.corpus_stats.parse_failed;
+
         // Gate on the corpus denominator (what triage itself replayed), NOT
         // the queue's `completed` bucket — see `CorpusStats`'s doc comment.
         if !self.is_conclusive() {
             out.push_str(
                 "VERDICT: inconclusive — no recordings were replayed, so nothing was actually checked.\n",
             );
+            if skipped > 0 {
+                out.push_str(&format!(
+                    "  ({} of {} discovered file(s) were skipped: unreadable or unparseable.)\n",
+                    skipped, self.corpus_stats.files_seen
+                ));
+            }
             if !self.clusters.is_empty() {
                 // Defensive and currently unreachable via `main.rs` (a
                 // `Cluster` can only exist once at least one recording
@@ -347,12 +378,50 @@ impl TriageReport {
                  nothing was actually checked end to end.\n",
                 partial, self.corpus_stats.replayed
             ));
+            if skipped > 0 {
+                out.push_str(&format!(
+                    "  (additionally, {} of {} discovered file(s) were skipped: unreadable or \
+                     unparseable, and never reached replay at all.)\n",
+                    skipped, self.corpus_stats.files_seen
+                ));
+            }
+            return out;
+        }
+
+        // H1 (third triage review pass): a corpus that otherwise looks
+        // clean — no illegal-action clusters, no unclustered failures, at
+        // least one full pass — but skipped one or more files during
+        // discovery must NOT read as a clean pass. A skipped file was
+        // never pushed through `replay_recording` at all, so it could be
+        // hiding anything; without this branch the run falls straight
+        // through to "no divergences" below and both the text AND the
+        // exit code (`is_conclusive() && is_clean()`) read green on a
+        // corpus that is mostly unreadable. This is not hypothetical: the
+        // real corpus reports `parse_failed=1` of 9 files. `is_clean()`
+        // requires `read_failed == 0 && parse_failed == 0` for the same
+        // reason — this branch is `render()`'s half of that fix. Like the
+        // partial-only branch above, this deliberately avoids the exact
+        // substring "no divergences" so the two verdicts can never be
+        // confused for each other.
+        if self.clusters.is_empty() && unclustered_failures == 0 && skipped > 0 {
+            out.push_str(&format!(
+                "VERDICT: not verified — {} of {} discovered file(s) were skipped (unreadable \
+                 or unparseable) and never reached replay; the {} that did replay showed \
+                 nothing wrong ({} passed, {} partial). A skipped file could be hiding \
+                 anything, so this is NOT a clean pass.\n",
+                skipped,
+                self.corpus_stats.files_seen,
+                self.corpus_stats.replayed,
+                self.corpus_stats.passed,
+                partial
+            ));
             return out;
         }
 
         if self.clusters.is_empty() && unclustered_failures == 0 {
-            // `is_clean()` is true here: passed > 0, failed == 0, no
-            // clusters.
+            // `is_clean()` is true here: passed > 0, failed == 0,
+            // read_failed == 0, parse_failed == 0 (skipped == 0 — the
+            // branch above already returned otherwise), no clusters.
             out.push_str(&format!(
                 "VERDICT: no divergences across {} replayed game(s) ({} passed, {} partial).\n",
                 self.corpus_stats.replayed, self.corpus_stats.passed, partial
@@ -369,6 +438,13 @@ impl TriageReport {
                  --verbose` to inspect a specific recording.\n",
                 unclustered_failures, partial
             ));
+            if skipped > 0 {
+                out.push_str(&format!(
+                    "  (additionally, {} of {} discovered file(s) were skipped: unreadable or \
+                     unparseable.)\n",
+                    skipped, self.corpus_stats.files_seen
+                ));
+            }
             return out;
         }
 
@@ -382,6 +458,12 @@ impl TriageReport {
             out.push_str(&format!(
                 " (+{} failed replay(s) of other kinds, not clustered)",
                 unclustered_failures
+            ));
+        }
+        if skipped > 0 {
+            out.push_str(&format!(
+                " (+{} discovered file(s) skipped: unreadable or unparseable)",
+                skipped
             ));
         }
         out.push_str(".\n\n");
@@ -684,15 +766,87 @@ mod tests {
         );
     }
 
+    // --- H1 (third triage review pass): skipped files must not read clean ---
+
+    /// H1: a corpus where 199 of 200 files failed to parse and only 1
+    /// recording actually replayed (and passed) must NOT be reported clean
+    /// and must NOT read as a clean pass — `read_failed`/`parse_failed`
+    /// never reach `replayed`/`passed`/`failed`/`clusters` at all, so
+    /// without this check a near-entirely-unreadable corpus prints "no
+    /// divergences" and the exit-code gate (`is_conclusive() &&
+    /// is_clean()`) reads green. Not hypothetical: the real corpus run
+    /// today has `parse_failed=1` of 9 files (see `is_clean()`'s doc
+    /// comment). Mirrors
+    /// `partial_only_corpus_is_not_clean_and_discloses_partial_in_the_verdict_line`
+    /// above, but for skipped (unreadable/unparseable) files instead of
+    /// `PartialPass`.
+    #[test]
+    fn skipped_files_prevent_a_false_clean_verdict_and_are_disclosed_in_the_verdict_line() {
+        let report = TriageReport {
+            status: crate::queue::QueueStatus::default(),
+            corpus_stats: CorpusStats {
+                files_seen: 9,
+                parse_failed: 1,
+                replayed: 8,
+                passed: 8,
+                ..Default::default()
+            },
+            clusters: Vec::new(),
+        };
+        assert!(report.is_conclusive(), "8 recordings were replayed");
+        assert!(
+            !report.is_clean(),
+            "a corpus with 1 skipped (unparseable) file must not be reported clean even though 8/8 replayed games passed"
+        );
+        let text = report.render();
+        assert!(
+            !text.to_lowercase().contains("no divergences"),
+            "a corpus with a skipped file must not read as a clean pass: {}",
+            text
+        );
+        let verdict_line = text
+            .lines()
+            .find(|l| l.starts_with("VERDICT"))
+            .expect("render() must always emit a VERDICT line");
+        assert!(
+            verdict_line.to_lowercase().contains("skip"),
+            "the VERDICT line itself must disclose that files were skipped, not just the corpus: summary above it: {}",
+            verdict_line
+        );
+        assert!(
+            verdict_line.contains('1'),
+            "the VERDICT line itself must disclose the skipped-file count: {}",
+            verdict_line
+        );
+        // Exit-code contract: is_conclusive() && is_clean() must be false,
+        // which is what main.rs's Triage handler gates the exit code on.
+        assert!(!(report.is_conclusive() && report.is_clean()));
+    }
+
     // --- G3: `scan_corpus` (extracted from main.rs) over a fixture corpus ---
 
-    /// Minimal card pool matching `dcgo-replay`'s own
+    /// Card pool for the fixture corpus below. `BT1-010` alone matches
+    /// `dcgo-replay`'s own
     /// `opaque_recording_without_reveals_surfaces_opaque_error` fixture —
     /// just enough for `ReplaySession::from_dcgo` to run far enough to
     /// surface a real `ReplayFail` rather than an unrelated card-lookup
-    /// error.
+    /// error. `BT1-001` and `BT1-025` are added (H2, third triage review
+    /// pass) for the `PartialPass` fixture below, which — unlike the
+    /// opaque one — needs a legal 50-card non-opaque deck to get past
+    /// `ReplaySession::from_dcgo` construction at all. All three entries
+    /// are copied verbatim from `dcgo_replay::replay::tests::micro_card_db`
+    /// so this pool matches the card data the reused recording shape was
+    /// authored against.
     fn scan_corpus_micro_card_db() -> HashMap<String, CardData> {
         let json = r#"{
+            "BT1-001": {
+                "card_id": "BT1-001", "card_name_eng": "Koromon",
+                "card_effect_class_name": "BT1_001", "play_cost": 0, "dp": -1,
+                "level": 2, "card_kind": 3, "rarity": 0, "card_colors": [0],
+                "type_eng": ["Lesser"], "form_eng": ["In-Training"], "attribute_eng": [],
+                "effect_description_eng": "", "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "", "evo_costs": []
+            },
             "BT1-010": {
                 "card_id": "BT1-010", "card_name_eng": "Agumon",
                 "card_effect_class_name": "BT1_010", "play_cost": 3, "dp": 2000,
@@ -700,9 +854,32 @@ mod tests {
                 "type_eng": ["Reptile"], "form_eng": ["Rookie"], "attribute_eng": ["Vaccine"],
                 "effect_description_eng": "", "inherited_effect_description_eng": "",
                 "security_effect_description_eng": "", "evo_costs": []
+            },
+            "BT1-025": {
+                "card_id": "BT1-025", "card_name_eng": "Greymon",
+                "card_effect_class_name": "BT1_025", "play_cost": 5, "dp": 5000,
+                "level": 4, "card_kind": 0, "rarity": 0, "card_colors": [0],
+                "type_eng": ["Dinosaur"], "form_eng": ["Champion"], "attribute_eng": ["Vaccine"],
+                "effect_description_eng": "", "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "",
+                "evo_costs": [{"card_color": 0, "level": 3, "memory_cost": 2}]
             }
         }"#;
         CardData::load_from_str(json).unwrap()
+    }
+
+    /// A legal 50-card deck (4 DigiEggs + 46 main) as a JSON array literal
+    /// — mirrors `dcgo_replay::replay::tests::micro_deck`. Needed by the
+    /// `PartialPass` fixture below: `ReplaySession::from_dcgo` must
+    /// succeed (which requires a legal deck) before an `encoder_failure`
+    /// row can even be observed.
+    fn scan_corpus_micro_deck_json() -> String {
+        let ids: Vec<&str> = std::iter::repeat("\"BT1-001\"")
+            .take(4)
+            .chain(std::iter::repeat("\"BT1-010\"").take(30))
+            .chain(std::iter::repeat("\"BT1-025\"").take(16))
+            .collect();
+        format!("[{}]", ids.join(","))
     }
 
     /// A process-unique temp directory under `std::env::temp_dir()` — no
@@ -730,6 +907,21 @@ mod tests {
     /// through `replay_recording` (proving the read -> parse -> replay ->
     /// tally path is actually exercised, not just eyeballed from a manual
     /// run).
+    ///
+    /// H2 (third triage review pass): the original version of this test
+    /// only had that one "makes it through replay_recording" fixture, and
+    /// it happens to fail *construction* with `OpaqueRevealError` — so it
+    /// only ever exercised `ReplayOutcome::Fail`, never `Pass` or
+    /// `PartialPass`. That made `stats.partial += 1` in `scan_corpus`
+    /// completely untested: mutating the `ReplayOutcome::PartialPass { .. }
+    /// => stats.partial += 1` arm to `stats.passed += 1` left this whole
+    /// suite green, silently resurrecting the exact "partial-only corpus
+    /// reads clean" bug the G1 fix (see `is_clean()`'s doc comment) closed.
+    /// The `partial.jsonl` fixture below closes that hole: it reuses the
+    /// exact recording shape from `dcgo_replay::replay::tests::
+    /// encoder_failure_row_yields_partial_pass` (a legal 50-card non-opaque
+    /// deck plus a single `encoder_failure` row) so the file actually
+    /// reaches and exercises the `PartialPass` arm.
     #[test]
     fn scan_corpus_counts_read_parse_and_replay_outcomes_over_a_fixture_corpus() {
         let dir = scan_corpus_temp_dir("mixed");
@@ -763,20 +955,51 @@ mod tests {
         )
         .expect("seed replayable recording");
 
+        // H2: a recording that survives `ReplaySession::from_dcgo`
+        // construction (legal 50-card non-opaque deck on both sides) and
+        // then hits a single `encoder_failure` row — the same shape as
+        // `dcgo_replay`'s `encoder_failure_row_yields_partial_pass` test —
+        // so `replay_recording` returns `ReplayOutcome::PartialPass`
+        // rather than `Pass` or `Fail`.
+        let partial_pass = dir.join("partial.jsonl");
+        let deck = scan_corpus_micro_deck_json();
+        std::fs::write(
+            &partial_pass,
+            format!(
+                "{{\"v\":1,\"type\":\"game_start\",\"game_id\":\"pp\",\"timestamp\":\"t\",\
+                 \"my_player_id\":0,\"is_ai\":true,\"my_deck_post_shuffle\":{deck},\
+                 \"opp_deck_post_shuffle\":{deck}}}\n\
+                 {{\"type\":\"encoder_failure\",\"step\":0,\"actor\":0,\"phase\":\"Mulligan\",\
+                 \"source\":\"selection_int\",\"reason\":\"selection_prompt_kind_unknown\",\
+                 \"raw_value\":\"int_value=5\"}}\n\
+                 {{\"type\":\"game_end\",\"winner\":0,\"reason\":\"win\",\"total_steps\":1}}\n",
+                deck = deck
+            ),
+        )
+        .expect("seed partial-pass recording");
+
         let card_data = scan_corpus_micro_card_db();
-        let paths = vec![unreadable, unparseable, replayable];
+        let paths = vec![unreadable, unparseable, replayable, partial_pass];
         let (stats, findings) = scan_corpus(&paths, &card_data);
 
-        assert_eq!(stats.files_seen, 3);
+        assert_eq!(stats.files_seen, 4);
         assert_eq!(stats.read_failed, 1, "the directory path must count as a read failure: {:?}", stats);
         assert_eq!(stats.parse_failed, 1, "the garbage file must count as a parse failure: {:?}", stats);
-        assert_eq!(stats.replayed, 1, "the opaque recording must be pushed through replay_recording: {:?}", stats);
+        assert_eq!(
+            stats.replayed, 2,
+            "the opaque recording AND the partial-pass recording must both be pushed through replay_recording: {:?}",
+            stats
+        );
         assert_eq!(stats.failed, 1, "OpaqueRevealError is a genuine Fail outcome: {:?}", stats);
         assert_eq!(stats.passed, 0);
-        assert_eq!(stats.partial, 0);
+        assert_eq!(
+            stats.partial, 1,
+            "the encoder_failure recording must land in ReplayOutcome::PartialPass, not Pass or Fail: {:?}",
+            stats
+        );
         assert!(
             findings.is_empty(),
-            "OpaqueRevealError is not an IllegalAction and must not become a Finding: {:?}",
+            "OpaqueRevealError and PartialPass are not IllegalAction and must not become a Finding: {:?}",
             findings
         );
 
