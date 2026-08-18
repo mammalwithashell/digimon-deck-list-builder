@@ -141,8 +141,8 @@ harness decides only *which games are played*, never *how they are recorded*.
 ### Host-side component
 
 One Rust crate, `code/tools/dcgo-harness/`, a workspace member alongside
-`code/tools/dcgo-replay/`. It holds all logic: job-spec types, corpus triage, the
-decklist → DCGO deck-code converter, and (phase 3) the state differ.
+`code/tools/dcgo-replay/`. It holds all logic: job-spec types, deck-pool sampling,
+corpus triage, and (phase 3) the state differ.
 
 The MCP is a **subcommand of that same binary** (`dcgo-harness mcp`), not a
 fourth MCP crate. This keeps every behavior unit-testable without an MCP client
@@ -180,10 +180,20 @@ Claiming by atomic rename makes crash recovery legible: a job sitting in
 `claimed/` past its timeout is a hung Unity run. `done/<job_id>.result.json`
 carries the recording path, outcome, step count, and duration.
 
-Jobs carry **DCGO deck codes**, so the CLI converts our decklists
-(`data/deck_library.json`, filtered through the tested-cards gate) into DCGO's
-own `DeckData.GetDeckCode` format. This is what makes the corpus use real meta
-decks rather than toy piles.
+Jobs carry **card ID lists**, not DCGO deck codes. DCGO's deck code is a base-n
+encoding over its internal integer `CEntity_Base.CardIndex`, so reimplementing it
+host-side would mean mirroring DCGO's card-index table and its n-ary/m-ary
+conversion — fragile, and duplicated logic that would silently rot when DCGO
+re-indexes.
+
+Instead the job carries `[EX12-035, ...]`, and DCGO resolves each ID against
+`ContinuousController.instance.SortedCardList` (matching `CEntity_Base.CardID`),
+builds the code with its own `DeckData.GetDeckCode`, and constructs the
+`DeckData`. The encoding stays owned by the one codebase that defines it.
+
+The CLI still owns deck *selection* — sampling real meta decks from
+`data/deck_library.json` filtered through the tested-cards gate, so the corpus
+exercises real matchups rather than toy piles.
 
 Job root defaults to `<Application.persistentDataPath>/dcgo_harness/`, beside the
 existing `dcgo_recordings/`, with a config override so the repo-side CLI can be
