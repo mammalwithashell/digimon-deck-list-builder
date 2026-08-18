@@ -13,17 +13,15 @@
 //!   1 — at least one recording reported a parity failure.
 //!   2 — argument or I/O error (no recordings processed).
 
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::Parser;
-use digimon_engine::card_data::CardData;
 
 use dcgo_replay::{
-    aggregate, parse_jsonl, replay_recording, ParityReport, RecordingV1, ReplayConfig, ReplayFail,
-    ReplayOutcome,
+    aggregate, load_card_data, parse_jsonl, replay_recording, ParityReport, RecordingV1,
+    ReplayConfig, ReplayFail, ReplayOutcome,
 };
 
 #[derive(Parser, Debug)]
@@ -51,7 +49,26 @@ struct Args {
 
 fn main() -> ExitCode {
     let args = Args::parse();
+    // Run the real work on a worker thread with a large stack. Replaying a
+    // recording constructs the engine's `CardEffectRegistry`, which recurses
+    // deeply enough to overflow the OS-default main-thread stack on Windows
+    // (~1 MB), aborting with STATUS_STACK_OVERFLOW. `RUST_MIN_STACK` only
+    // governs spawned threads, not `main`, so the fix is to spawn one
+    // explicitly. Mirrors `digimon-engine-cli/src/main.rs`.
+    let stack_size = std::env::var("RUST_MIN_STACK")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(256 * 1024 * 1024);
+    std::thread::Builder::new()
+        .stack_size(stack_size)
+        .spawn(move || run(args))
+        .expect("failed to spawn worker thread")
+        .join()
+        .expect("worker thread panicked")
+}
 
+fn run(args: Args) -> ExitCode {
     let card_data = match load_card_data(args.cards_json.as_deref()) {
         Ok(d) => d,
         Err(e) => {
@@ -268,33 +285,4 @@ fn collect_recording_paths(path: &Path) -> Result<Vec<PathBuf>, String> {
     }
     out.sort(); // deterministic processing order
     Ok(out)
-}
-
-fn load_card_data(cards_json: Option<&Path>) -> Result<HashMap<String, CardData>, String> {
-    let path = match cards_json {
-        Some(p) => p.to_path_buf(),
-        None => default_cards_json_path()
-            .ok_or_else(|| "no --cards-json provided and no data/cards.json found".to_string())?,
-    };
-    let bytes = fs::read(&path).map_err(|e| format!("reading {}: {}", path.display(), e))?;
-    let text =
-        std::str::from_utf8(&bytes).map_err(|e| format!("cards.json is not valid UTF-8: {}", e))?;
-    CardData::load_from_str(text).map_err(|e| format!("parsing cards.json: {}", e))
-}
-
-/// Walk up from CWD looking for `data/cards.json`. Mirrors the engine CLI's
-/// resolver so the harness works without flags in a developer's typical
-/// repo-root invocation.
-fn default_cards_json_path() -> Option<PathBuf> {
-    let mut dir = std::env::current_dir().ok()?;
-    for _ in 0..6 {
-        let candidate = dir.join("data").join("cards.json");
-        if candidate.exists() {
-            return Some(candidate);
-        }
-        if !dir.pop() {
-            break;
-        }
-    }
-    None
 }

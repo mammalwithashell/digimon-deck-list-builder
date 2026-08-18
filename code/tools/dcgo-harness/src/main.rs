@@ -54,17 +54,43 @@ enum Command {
         #[arg(long, default_value_t = 180)]
         timeout_seconds: u64,
     },
+    /// Replay every recording in the corpus and rank distinct divergences.
+    Triage {
+        /// Directory of .jsonl recordings.
+        #[arg(long)]
+        corpus: PathBuf,
+        /// Path to data/cards.json.
+        #[arg(long)]
+        cards_json: PathBuf,
+    },
 }
 
 fn main() -> ExitCode {
     let args = Args::parse();
-    match run(&args) {
-        Ok(code) => code,
-        Err(e) => {
-            eprintln!("error: {}", e);
-            ExitCode::from(2)
-        }
-    }
+    // Run the real work on a worker thread with a large stack. `triage`
+    // replays recordings through `dcgo_replay::replay_recording`, which
+    // constructs the engine's `CardEffectRegistry` — that recurses deeply
+    // enough to overflow the OS-default main-thread stack on Windows
+    // (~1 MB), aborting with STATUS_STACK_OVERFLOW. `RUST_MIN_STACK` only
+    // governs spawned threads, not `main`, so the fix is to spawn one
+    // explicitly. Mirrors `digimon-engine-cli/src/main.rs`.
+    let stack_size = std::env::var("RUST_MIN_STACK")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(256 * 1024 * 1024);
+    std::thread::Builder::new()
+        .stack_size(stack_size)
+        .spawn(move || match run(&args) {
+            Ok(code) => code,
+            Err(e) => {
+                eprintln!("error: {}", e);
+                ExitCode::from(2)
+            }
+        })
+        .expect("failed to spawn worker thread")
+        .join()
+        .expect("worker thread panicked")
 }
 
 fn run(args: &Args) -> Result<ExitCode, String> {
@@ -115,6 +141,54 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             let status = dcgo_harness::queue::scan(&args.root)?;
             println!("{}", status.summary());
             Ok(ExitCode::SUCCESS)
+        }
+        Command::Triage { corpus, cards_json } => {
+            use dcgo_harness::triage::{cluster, Finding, TriageReport};
+
+            let card_data = dcgo_replay::load_card_data_at(cards_json)
+                .map_err(|e| format!("loading cards.json: {}", e))?;
+
+            let mut findings: Vec<Finding> = Vec::new();
+            let entries = std::fs::read_dir(corpus)
+                .map_err(|e| format!("reading corpus {}: {}", corpus.display(), e))?;
+            for entry in entries.filter_map(|e| e.ok()) {
+                let path = entry.path();
+                if path.extension().map(|x| x != "jsonl").unwrap_or(true) {
+                    continue;
+                }
+                let Ok(text) = std::fs::read_to_string(&path) else { continue };
+                let text = text.trim_start_matches('\u{feff}').to_string();
+                let Ok(recording) = dcgo_replay::parse_jsonl(&text) else { continue };
+                let outcome = dcgo_replay::replay_recording(
+                    &recording,
+                    &card_data,
+                    &dcgo_replay::ReplayConfig::default(),
+                );
+                if let dcgo_replay::ReplayOutcome::Fail(dcgo_replay::ReplayFail::IllegalAction(ia)) =
+                    &outcome
+                {
+                    findings.push(Finding {
+                        game_id: recording.start.game_id.clone(),
+                        step: ia.step,
+                        kind: "illegal_action".to_string(),
+                        action_id: ia.action_id,
+                        card_at_slot: None,
+                        recording_path: path.display().to_string(),
+                    });
+                }
+            }
+
+            let status = dcgo_harness::queue::scan(&args.root)?;
+            let report = TriageReport {
+                status,
+                clusters: cluster(&findings),
+            };
+            print!("{}", report.render());
+            Ok(if findings.is_empty() {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            })
         }
     }
 }

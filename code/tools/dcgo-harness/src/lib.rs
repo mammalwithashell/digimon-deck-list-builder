@@ -6,3 +6,4 @@
 pub mod job;
 pub mod pool;
 pub mod queue;
+pub mod triage;
