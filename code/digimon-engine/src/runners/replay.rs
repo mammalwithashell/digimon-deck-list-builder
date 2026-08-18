@@ -164,6 +164,15 @@ pub struct Divergence {
     pub actor: PlayerId,
     pub phase: String,
     pub kind: DivergenceKind,
+    /// Both players' battle areas as the engine saw them at the moment of
+    /// divergence, in `battle_area` index order.
+    ///
+    /// Board-position action IDs are indices into this list, so triaging any
+    /// target mismatch ("engine wanted slot 1, recording said slot 0") is
+    /// guesswork without it. Captured eagerly because the divergence pauses
+    /// the cursor but callers routinely inspect it after further stepping.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub board: String,
 }
 
 /// Errors surfaced by `ReplayRunner::new`.
@@ -563,6 +572,12 @@ pub struct StepSpec {
     /// `PendingSelection` (possibly into MULTIPLE engine actions — one per
     /// pick plus an optional trailing PASS).
     pub selection: Option<crate::dcgo_recording::SelectionRow>,
+    /// DCGO battle-area snapshots at decision time, in the compact order this
+    /// step's board operands index. Used to remap those operands into the
+    /// engine's play-ordered `battle_area` (see `remap_board_slots`). Empty
+    /// for native recordings and pre-0.4 DCGO ones.
+    pub board_p0: Option<Vec<String>>,
+    pub board_p1: Option<Vec<String>>,
 }
 
 /// A pluggable replay source. Knows how to build the initial post-mulligan
@@ -665,6 +680,8 @@ impl NativeAdapter {
                     is_game_over: a.get("is_game_over").and_then(|v| v.as_bool()),
                     expected_digest: None,
                     selection: None,
+                    board_p0: None,
+                    board_p1: None,
                 });
             }
         }
@@ -829,6 +846,8 @@ impl DcgoAdapter {
                     is_game_over: None,
                     expected_digest: None,
                     selection: None,
+                    board_p0: a.board_p0.clone(),
+                    board_p1: a.board_p1.clone(),
                 }),
                 // Semantic selection payload (task 3.5) — resolved against
                 // the live PendingSelection at step time.
@@ -842,6 +861,8 @@ impl DcgoAdapter {
                     is_game_over: None,
                     expected_digest: None,
                     selection: Some(s.clone()),
+                    board_p0: s.board_p0.clone(),
+                    board_p1: s.board_p1.clone(),
                 }),
                 // Can't fabricate an unencoded selection — the replayable
                 // prefix ends here (matches the batch harness's PartialPass).
@@ -1004,6 +1025,8 @@ impl VerificationReplayAdapter {
                 is_game_over: None,
                 expected_digest: Some(*digest),
                 selection: None,
+                board_p0: None,
+                board_p1: None,
             })
             .collect();
 
@@ -1270,6 +1293,17 @@ impl ReplayDriver {
     ) -> ReplayStepResult {
         use super::selection_resolve::resolve_next;
 
+        // Selection `targets` carry DCGO board slots, which need the same
+        // frame-order -> play-order remap as action operands.
+        let remapped;
+        let payload = match remap_selection_targets(game, payload) {
+            Some(p) => {
+                remapped = p;
+                &remapped
+            }
+            None => payload,
+        };
+
         let phase_before = game.current_phase.py_name().to_string();
         let memory_before = game.memory;
         let turn_number = game.turn_count;
@@ -1301,6 +1335,7 @@ impl ReplayDriver {
                         actor,
                         phase: payload.phase.clone(),
                         kind: DivergenceKind::SelectionResolution { reason },
+                        board: describe_board(game),
                     });
                     self.paused = true;
                     return self.no_progress_result(game);
@@ -1357,6 +1392,20 @@ impl ReplayDriver {
             )
         };
 
+        // DCGO indexes the battle area by on-screen frame order; the engine
+        // indexes it by play order. Rewrite the recorded action's board
+        // operands into the engine's index space before anything inspects it.
+        let action_id = {
+            let s = &self.source.steps()[cur];
+            remap_board_slots(
+                game,
+                action_id,
+                actor,
+                s.board_p0.as_ref(),
+                s.board_p1.as_ref(),
+            )
+        };
+
         if self.policy == StepPolicy::CheckThenApply {
             // Differential pre-check: does the engine agree the recorded actor
             // is on decision, and is the recorded action legal here?
@@ -1371,6 +1420,7 @@ impl ReplayDriver {
                         expected,
                         recorded: actor,
                     },
+                    board: describe_board(game),
                 });
                 self.paused = true;
                 return self.no_progress_result(game);
@@ -1388,6 +1438,7 @@ impl ReplayDriver {
                     kind: DivergenceKind::MaskMiss {
                         sample_legal_ids: sample,
                     },
+                    board: describe_board(game),
                 });
                 self.paused = true;
                 return self.no_progress_result(game);
@@ -1735,6 +1786,222 @@ fn current_decision_player(game: &Game) -> PlayerId {
     game.turn_player()
 }
 
+/// Rewrite a selection payload's `targets` slots from DCGO's board ordering
+/// into the engine's. Returns `None` when nothing needs rewriting (no board
+/// snapshots, no targets, or every slot already maps to itself), so the
+/// caller can keep borrowing the original payload.
+fn remap_selection_targets(
+    game: &Game,
+    payload: &crate::dcgo_recording::SelectionRow,
+) -> Option<crate::dcgo_recording::SelectionRow> {
+    let targets = payload.targets.as_ref()?;
+    if payload.board_p0.is_none() && payload.board_p1.is_none() {
+        return None;
+    }
+
+    let mut out = payload.clone();
+    let mut changed = false;
+    let slots = out.targets.as_mut()?;
+    for t in slots.iter_mut() {
+        // -1 addresses the player (security), not a permanent.
+        if t.frame < 0 {
+            continue;
+        }
+        let recorded = match t.player {
+            0 => payload.board_p0.as_ref(),
+            _ => payload.board_p1.as_ref(),
+        };
+        let Some(recorded) = recorded else { continue };
+        let mapped = build_slot_map(recorded, &engine_board_ids(game, t.player));
+        if let Some(Some(j)) = mapped.get(t.frame as usize).copied() {
+            if j as i32 != t.frame {
+                t.frame = j as i32;
+                changed = true;
+            }
+        }
+    }
+    let _ = targets;
+    changed.then_some(out)
+}
+
+/// Rewrite the board-position operands of `action_id` from DCGO's slot
+/// ordering into the engine's, using the recording's board snapshots.
+///
+/// Returns the action unchanged when the recording predates board snapshots,
+/// when the action carries no board operand, or when any operand fails to map
+/// — an unmapped operand means the boards genuinely disagree, which is a
+/// divergence to report rather than paper over.
+fn remap_board_slots(
+    game: &Game,
+    action_id: u16,
+    actor: PlayerId,
+    board_p0: Option<&Vec<String>>,
+    board_p1: Option<&Vec<String>>,
+) -> u16 {
+    use crate::action::space::*;
+
+    let recorded_for = |p: PlayerId| -> Option<&Vec<String>> {
+        if p == 0 {
+            board_p0
+        } else {
+            board_p1
+        }
+    };
+    // Map one player's DCGO slot to the engine's, or None if unmappable.
+    let map_slot = |p: PlayerId, slot: u16| -> Option<u16> {
+        let recorded = recorded_for(p)?;
+        let mapped = build_slot_map(recorded, &engine_board_ids(game, p));
+        mapped.get(slot as usize).copied().flatten()
+    };
+    let opponent = 1 - actor;
+
+    if (ATTACK_START..ATTACK_END).contains(&action_id) {
+        let (attacker, target) = decode_attack(action_id);
+        let new_attacker = match map_slot(actor, attacker) {
+            Some(v) => v,
+            None => return action_id,
+        };
+        // SECURITY_TARGET (14) addresses the player, not a permanent.
+        let new_target = if target == SECURITY_TARGET {
+            target
+        } else {
+            match map_slot(opponent, target) {
+                Some(v) => v,
+                None => return action_id,
+            }
+        };
+        return encode_attack(new_attacker, new_target);
+    }
+
+    if (DIGIVOLVE_START..DIGIVOLVE_END).contains(&action_id) {
+        let (hand, field) = decode_digivolve(action_id);
+        // BREEDING_TARGET (14) is a named slot on both sides.
+        if field == BREEDING_TARGET {
+            return action_id;
+        }
+        return match map_slot(actor, field) {
+            Some(v) => encode_digivolve(hand, v),
+            None => action_id,
+        };
+    }
+
+    if (FIELD_EFFECT_START..FIELD_EFFECT_END).contains(&action_id) {
+        let (perm, effect) = decode_field_effect(action_id);
+        return match map_slot(actor, perm) {
+            Some(v) => FIELD_EFFECT_START + v * EFFECTS_PER_PERMANENT + effect,
+            None => action_id,
+        };
+    }
+
+    if (SOURCE_SELECT_START..SOURCE_SELECT_END).contains(&action_id) {
+        let (field, source) = decode_source_select(action_id);
+        return match map_slot(actor, field).and_then(|v| encode_source_select(v, source)) {
+            Some(v) => v,
+            None => action_id,
+        };
+    }
+
+    action_id
+}
+
+/// Engine battle-area card IDs for `player`, in `battle_area` index order.
+fn engine_board_ids(game: &Game, player: PlayerId) -> Vec<String> {
+    game.player(player)
+        .battle_area
+        .iter()
+        .map(|perm| {
+            perm.card_sources
+                .last()
+                .map(|c| c.card_id(&game.card_data).to_string())
+                .unwrap_or_default()
+        })
+        .collect()
+}
+
+/// Map each DCGO battle-area slot onto the engine's `battle_area` index for
+/// the same permanent, by card identity.
+///
+/// DCGO orders its compact battle area by on-screen frame and lets permanents
+/// migrate between frames at runtime; the engine's `battle_area` is in play
+/// order. The two therefore disagree routinely, not exceptionally — a recorded
+/// `attack_0` can mean the engine's slot 1.
+///
+/// Duplicates (two copies of one card on the same board) are matched in
+/// occurrence order, which is exact whenever the two boards hold the same
+/// multiset. A slot whose card the engine does not have maps to `None`, and
+/// the caller leaves the operand alone so the mismatch surfaces as a
+/// divergence instead of being silently rewritten onto the wrong permanent.
+fn build_slot_map(recorded: &[String], engine: &[String]) -> Vec<Option<u16>> {
+    let mut claimed = vec![false; engine.len()];
+    recorded
+        .iter()
+        .map(|want| {
+            let hit = engine
+                .iter()
+                .enumerate()
+                .find(|(j, have)| !claimed[*j] && *have == want)
+                .map(|(j, _)| j);
+            if let Some(j) = hit {
+                claimed[j] = true;
+                Some(j as u16)
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Render both players' battle areas in `battle_area` index order, which is
+/// the index space every board-position action ID uses.
+///
+/// Shows each permanent's slot, card id, DP, and whether it is suspended, plus
+/// the digivolution-source depth — enough to answer the three questions a
+/// target mismatch raises: does the engine hold the same permanents as the
+/// oracle, in the same order, in the same state?
+fn describe_board(game: &Game) -> String {
+    let mut out = String::new();
+    for pid in [0u8, 1u8] {
+        let area = &game.player(pid).battle_area;
+        out.push_str(&format!("P{} battle_area ({}): ", pid, area.len()));
+        if area.is_empty() {
+            out.push_str("(empty)");
+        } else {
+            let entries: Vec<String> = area
+                .iter()
+                .enumerate()
+                .map(|(i, perm)| {
+                    let card_id = perm
+                        .card_sources
+                        .last()
+                        .map(|c| c.card_id(&game.card_data).to_string())
+                        .unwrap_or_else(|| "?".to_string());
+                    let handle = crate::permanent::PermanentHandle {
+                        player: pid,
+                        index: i as u8,
+                    };
+                    let dp = perm
+                        .base_dp(&game.card_data)
+                        .map(|base| base + game.modifiers.sum(handle, crate::ModifierType::ChangeDp))
+                        .map(|d| d.to_string())
+                        .unwrap_or_else(|| "-".to_string());
+                    format!(
+                        "[{}] {} dp={}{} srcs={}",
+                        i,
+                        card_id,
+                        dp,
+                        if perm.is_suspended { " SUSPENDED" } else { "" },
+                        perm.card_sources.len().saturating_sub(1)
+                    )
+                })
+                .collect();
+            out.push_str(&entries.join(", "));
+        }
+        out.push_str("
+");
+    }
+    out
+}
+
 /// Up to `max` action IDs the engine WOULD accept here (`mask` value > 0.5).
 /// Surfaced in `MaskMiss` divergences to help triage "wrong target index"
 /// vs "engine refuses a legal action".
@@ -2062,4 +2329,55 @@ mod tests {
         // r is in scope for borrow-checker fragility tests.
         drop(r);
     }
+
+    // ── DCGO board-slot remapping ────────────────────────────────────────
+
+    fn ids(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn slot_map_matches_by_identity_not_position() {
+        // DCGO ordered by frame; the engine by play order. Same two
+        // permanents, opposite indexes.
+        let map = build_slot_map(&ids(&["BT16-082", "EX10-010"]), &ids(&["EX10-010", "BT16-082"]));
+        assert_eq!(map, vec![Some(1), Some(0)]);
+    }
+
+    #[test]
+    fn slot_map_pairs_duplicates_in_occurrence_order() {
+        let map = build_slot_map(
+            &ids(&["EX12-035", "BT16-082", "EX12-035"]),
+            &ids(&["EX12-035", "EX12-035", "BT16-082"]),
+        );
+        assert_eq!(map, vec![Some(0), Some(2), Some(1)]);
+    }
+
+    #[test]
+    fn slot_map_reports_unknown_card_as_unmapped() {
+        // A card the engine does not have on board must NOT be silently
+        // rewritten onto some other permanent.
+        let map = build_slot_map(&ids(&["EX10-010", "ZZ99-999"]), &ids(&["EX10-010"]));
+        assert_eq!(map, vec![Some(0), None]);
+    }
+
+    #[test]
+    fn remap_rewrites_attacker_and_preserves_security_target() {
+        use crate::action::space::{decode_attack, encode_attack, SECURITY_TARGET};
+        // Engine play order: EX10-010 then BT16-082.
+        let engine = ids(&["EX10-010", "BT16-082"]);
+        let dcgo = ids(&["BT16-082", "EX10-010"]);
+        let map = build_slot_map(&dcgo, &engine);
+        assert_eq!(map[0], Some(1));
+
+        // Sanity on the encoding itself: DCGO slot 0 attacking security must
+        // become engine slot 1 attacking security.
+        let recorded = encode_attack(0, SECURITY_TARGET);
+        let (a, t) = decode_attack(recorded);
+        assert_eq!((a, t), (0, SECURITY_TARGET));
+        let expected = encode_attack(1, SECURITY_TARGET);
+        let (a2, t2) = decode_attack(expected);
+        assert_eq!((a2, t2), (1, SECURITY_TARGET));
+    }
+
 }

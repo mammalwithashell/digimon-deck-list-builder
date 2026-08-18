@@ -108,6 +108,9 @@ pub struct IllegalAction {
     /// for diagnosing "did the recorder emit the wrong target index" vs.
     /// "is the engine refusing actions it should accept".
     pub sample_legal_ids: Vec<u16>,
+    /// Both players' battle areas as the engine saw them, in the index space
+    /// the recorded action ID uses.
+    pub board: String,
 }
 
 #[derive(Debug, Clone)]
@@ -231,6 +234,7 @@ fn map_divergence(div: &Divergence) -> ReplayFail {
             // closest stable descriptor for triage clustering.
             source: div.phase.clone(),
             sample_legal_ids: sample_legal_ids.clone(),
+            board: div.board.clone(),
         }),
         DivergenceKind::Actor { expected, recorded } => ReplayFail::ActorMismatch(ActorMismatch {
             step: div.step,
@@ -427,6 +431,8 @@ mod tests {
                     action_id: 0, // mulligan keep
                     phase: "Mulligan".into(),
                     source: "mulligan".into(),
+                    board_p0: None,
+                    board_p1: None,
                 }),
                 Row::Action(crate::recording::ActionRow {
                     step: 1,
@@ -434,6 +440,8 @@ mod tests {
                     action_id: 0,
                     phase: "Mulligan".into(),
                     source: "mulligan".into(),
+                    board_p0: None,
+                    board_p1: None,
                 }),
             ],
             end: crate::recording::GameEnd {
@@ -483,6 +491,8 @@ mod tests {
                     action_id: 999,
                     phase: "Mulligan".into(),
                     source: "mulligan".into(),
+                    board_p0: None,
+                    board_p1: None,
                 }),
             ],
             end: crate::recording::GameEnd {

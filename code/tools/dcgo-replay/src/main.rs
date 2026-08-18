@@ -166,7 +166,7 @@ fn detail(outcome: &ReplayOutcome) -> String {
                     .iter()
                     .map(|id| format!("{} ({})", id, describe_action(*id)))
                     .collect::<Vec<_>>()
-            ),
+            ) + &indent_board(&ia.board),
             ReplayFail::ActorMismatch(am) => format!(
                 "      actor_mismatch @ step {}: engine expected P{}, recording said P{} \
                  (action_id={}, phase {})",
@@ -184,6 +184,19 @@ fn detail(outcome: &ReplayOutcome) -> String {
             }
         },
     }
+}
+
+/// Indent a captured board snapshot to line up under the failure detail.
+/// Empty input yields empty output so pre-board recordings print unchanged.
+fn indent_board(board: &str) -> String {
+    if board.trim().is_empty() {
+        return String::new();
+    }
+    board
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| format!("\n        {}", l))
+        .collect()
 }
 
 /// Decode an action ID into its action-space range + operands, so a

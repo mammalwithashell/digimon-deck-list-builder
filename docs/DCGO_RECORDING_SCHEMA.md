@@ -146,12 +146,34 @@ after a bounds check (`ActionEncoder.ValidateFieldSlot`). The one packet
 that carries a *sparse* frame id is `PlayCardAction.TargetFrameID`, which
 `ActionEncoder.FrameIdToFieldSlot` converts.
 
-Residual fidelity caveat: DCGO compacts by ascending frame id while the
-engine's `battle_area` is in play order. Those agree whenever permanents
-are placed left-to-right, but a player who drops a card into a higher
-frame before a lower one can reorder the two lists. Such a game surfaces
-as an `illegal_action` / wrong-target divergence in the replay harness
-rather than silently mis-replaying.
+#### Why board operands are remapped at replay time
+
+Compact index alone is still not enough. DCGO compacts by ascending frame
+id, and permanents **migrate between frames at runtime**
+(`CardController` repositions them toward `PreferredFrame`), while the
+engine's `battle_area` is in play order. The two orderings disagree
+routinely, not exceptionally — a recorded `attack_0` can mean the
+engine's slot 1.
+
+So every `action` and `selection` row carries a snapshot of both players'
+battle areas:
+
+```jsonc
+board_p0: [EX10-010, BT16-082],   // DCGO compact order, card IDs
+board_p1: [EX12-035]
+```
+
+At replay time `remap_board_slots` (and `remap_selection_targets`) match
+these against the engine's board by card identity and rewrite the board
+operands of attack / digivolve / field-effect / source-select action IDs
+and of selection `targets`. Duplicates are paired in occurrence order,
+which is exact whenever both sides hold the same multiset.
+
+A slot whose card the engine does not have maps to nothing and the
+operand is left alone, so a genuine board desync surfaces as a divergence
+instead of being silently rewritten onto the wrong permanent. Recordings
+without these fields (pre-0.4) replay unchanged, on the assumption that
+the orders agree.
 
 ## Selection row: `selection`
 

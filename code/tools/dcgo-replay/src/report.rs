@@ -242,6 +242,7 @@ mod tests {
             phase: "Main".into(),
             source: "main_phase".into(),
             sample_legal_ids: vec![62],
+            board: String::new(),
         }));
         let fail2 = ReplayOutcome::Fail(ReplayFail::WinnerMismatch(WinnerMismatch {
             expected_winner: 0,
@@ -277,6 +278,7 @@ mod tests {
             phase: "Main".into(),
             source: "main_phase".into(),
             sample_legal_ids: vec![],
+            board: String::new(),
         }));
         let o3 = ReplayOutcome::Fail(ReplayFail::IllegalAction(IllegalAction {
             step: 2,
@@ -285,6 +287,7 @@ mod tests {
             phase: "Main".into(),
             source: "main_phase".into(),
             sample_legal_ids: vec![],
+            board: String::new(),
         }));
         let a = aggregate(&[(&r1, &o1), (&r2, &o2), (&r3, &o3)]);
         let b = aggregate(&[(&r3, &o3), (&r2, &o2), (&r1, &o1)]);

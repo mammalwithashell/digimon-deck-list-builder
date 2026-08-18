@@ -119,6 +119,19 @@ pub struct ActionRow {
     pub action_id: u16,
     pub phase: String,
     pub source: String,
+    /// Battle-area card IDs at decision time, in the DCGO compact order the
+    /// row's board operands index. Absent in pre-0.4 recordings.
+    ///
+    /// DCGO orders its compact battle area by on-screen frame, and permanents
+    /// physically migrate between frames at runtime (`PreferredFrame`), so a
+    /// DCGO slot index does NOT correspond to the engine's play-ordered
+    /// `battle_area`. The replay harness rebuilds the mapping by matching card
+    /// identity against the engine's board; without these lists it can only
+    /// assume the orders agree, which they routinely do not.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub board_p0: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub board_p1: Option<Vec<String>>,
 }
 
 /// A selection answer captured with SEMANTIC payload rather than a
@@ -158,6 +171,19 @@ pub struct SelectionRow {
     /// True when the player cancelled / declined the prompt.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cancel: Option<bool>,
+    /// Battle-area card IDs at decision time, in the DCGO compact order the
+    /// row's board operands index. Absent in pre-0.4 recordings.
+    ///
+    /// DCGO orders its compact battle area by on-screen frame, and permanents
+    /// physically migrate between frames at runtime (`PreferredFrame`), so a
+    /// DCGO slot index does NOT correspond to the engine's play-ordered
+    /// `battle_area`. The replay harness rebuilds the mapping by matching card
+    /// identity against the engine's board; without these lists it can only
+    /// assume the orders agree, which they routinely do not.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub board_p0: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub board_p1: Option<Vec<String>>,
 }
 
 /// One absolute field-permanent reference: `player` seat + DCGO FrameID
