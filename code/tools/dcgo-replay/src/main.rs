@@ -20,8 +20,8 @@ use std::process::ExitCode;
 use clap::Parser;
 
 use dcgo_replay::{
-    aggregate, load_card_data, parse_jsonl, replay_recording, ParityReport, RecordingV1,
-    ReplayConfig, ReplayFail, ReplayOutcome,
+    aggregate, collect_recording_paths, load_card_data, parse_jsonl, replay_recording,
+    ParityReport, RecordingV1, ReplayConfig, ReplayFail, ReplayOutcome,
 };
 
 #[derive(Parser, Debug)]
@@ -259,30 +259,4 @@ fn write_report(report: &ParityReport, output: Option<&Path>) {
         },
         None => println!("{}", json),
     }
-}
-
-/// Collect every `.jsonl` file in `path` (recursively, one level deep) or
-/// the single file at `path`.
-fn collect_recording_paths(path: &Path) -> Result<Vec<PathBuf>, String> {
-    if !path.exists() {
-        return Err(format!("input path does not exist: {}", path.display()));
-    }
-    if path.is_file() {
-        return Ok(vec![path.to_path_buf()]);
-    }
-
-    // Directory mode — one level deep. We don't recurse arbitrarily so a
-    // user can co-locate misc files next to a `recordings/` subdir without
-    // surprises.
-    let mut out = Vec::new();
-    let entries = fs::read_dir(path).map_err(|e| format!("read_dir {}: {}", path.display(), e))?;
-    for entry in entries {
-        let entry = entry.map_err(|e| format!("dir entry: {}", e))?;
-        let p = entry.path();
-        if p.is_file() && p.extension().and_then(|s| s.to_str()) == Some("jsonl") {
-            out.push(p);
-        }
-    }
-    out.sort(); // deterministic processing order
-    Ok(out)
 }

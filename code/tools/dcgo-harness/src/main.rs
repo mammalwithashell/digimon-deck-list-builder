@@ -143,48 +143,87 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             Ok(ExitCode::SUCCESS)
         }
         Command::Triage { corpus, cards_json } => {
-            use dcgo_harness::triage::{cluster, Finding, TriageReport};
+            use dcgo_harness::triage::{cluster, CorpusStats, Finding, TriageReport};
 
             let card_data = dcgo_replay::load_card_data_at(cards_json)
                 .map_err(|e| format!("loading cards.json: {}", e))?;
 
+            // Shared with `dcgo-replay` so both tools agree on what counts
+            // as a recording in the corpus and process it in the same
+            // (sorted, deterministic) order — see F3/F5b.
+            let recording_paths = dcgo_replay::collect_recording_paths(corpus)
+                .map_err(|e| format!("collecting corpus {}: {}", corpus.display(), e))?;
+
+            let mut stats = CorpusStats {
+                files_seen: recording_paths.len(),
+                ..Default::default()
+            };
             let mut findings: Vec<Finding> = Vec::new();
-            let entries = std::fs::read_dir(corpus)
-                .map_err(|e| format!("reading corpus {}: {}", corpus.display(), e))?;
-            for entry in entries.filter_map(|e| e.ok()) {
-                let path = entry.path();
-                if path.extension().map(|x| x != "jsonl").unwrap_or(true) {
-                    continue;
-                }
-                let Ok(text) = std::fs::read_to_string(&path) else { continue };
-                let text = text.trim_start_matches('\u{feff}').to_string();
-                let Ok(recording) = dcgo_replay::parse_jsonl(&text) else { continue };
+
+            for path in &recording_paths {
+                let text = match std::fs::read_to_string(path) {
+                    // Recordings written before the recorder's
+                    // UTF8Encoding(false) fix start with a BOM, which
+                    // serde_json rejects as invalid JSON.
+                    Ok(t) => t.trim_start_matches('\u{feff}').to_string(),
+                    Err(e) => {
+                        eprintln!("warn: skipping {}: read failed: {}", path.display(), e);
+                        stats.read_failed += 1;
+                        continue;
+                    }
+                };
+                let recording = match dcgo_replay::parse_jsonl(&text) {
+                    Ok(r) => r,
+                    Err(e) => {
+                        eprintln!("warn: skipping {}: parse failed: {}", path.display(), e);
+                        stats.parse_failed += 1;
+                        continue;
+                    }
+                };
                 let outcome = dcgo_replay::replay_recording(
                     &recording,
                     &card_data,
                     &dcgo_replay::ReplayConfig::default(),
                 );
-                if let dcgo_replay::ReplayOutcome::Fail(dcgo_replay::ReplayFail::IllegalAction(ia)) =
-                    &outcome
-                {
-                    findings.push(Finding {
-                        game_id: recording.start.game_id.clone(),
-                        step: ia.step,
-                        kind: "illegal_action".to_string(),
-                        action_id: ia.action_id,
-                        card_at_slot: None,
-                        recording_path: path.display().to_string(),
-                    });
+                stats.replayed += 1;
+                match &outcome {
+                    dcgo_replay::ReplayOutcome::Pass { .. } => stats.passed += 1,
+                    dcgo_replay::ReplayOutcome::PartialPass { .. } => stats.partial += 1,
+                    dcgo_replay::ReplayOutcome::Fail(fail) => {
+                        // Every failure counts toward the denominator (F6);
+                        // only `IllegalAction` also becomes a clusterable
+                        // `Finding` — `cluster()`'s signature scheme
+                        // (action-range + card-at-slot) is specific to
+                        // board-addressed illegal actions and doesn't apply
+                        // to actor/winner mismatches or engine errors.
+                        stats.failed += 1;
+                        if let dcgo_replay::ReplayFail::IllegalAction(ia) = fail {
+                            findings.push(Finding {
+                                game_id: recording.start.game_id.clone(),
+                                step: ia.step,
+                                kind: "illegal_action".to_string(),
+                                action_id: ia.action_id,
+                                card_at_slot: None,
+                                recording_path: path.display().to_string(),
+                            });
+                        }
+                    }
                 }
             }
 
             let status = dcgo_harness::queue::scan(&args.root)?;
             let report = TriageReport {
                 status,
+                corpus_stats: stats,
                 clusters: cluster(&findings),
             };
             print!("{}", report.render());
-            Ok(if findings.is_empty() {
+            // The exit code follows the verdict, not just `findings`: a
+            // corpus that failed to replay at all (inconclusive) or that
+            // failed for reasons `cluster()` doesn't track (unclustered
+            // failures — F6) must both exit non-zero, not just the case
+            // where clustering itself found something (F2).
+            Ok(if report.is_conclusive() && report.is_clean() {
                 ExitCode::SUCCESS
             } else {
                 ExitCode::from(1)

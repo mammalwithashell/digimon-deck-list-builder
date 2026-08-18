@@ -79,3 +79,37 @@ pub fn default_cards_json_path() -> Option<PathBuf> {
     }
     None
 }
+
+/// Collect every `.jsonl` file under `path` (one level deep) or the single
+/// file at `path`, in a deterministic (sorted) order.
+///
+/// Shared by both `dcgo-replay` (single/directory replay) and
+/// `dcgo-harness triage` (corpus triage) so there is exactly one definition
+/// of "what counts as a recording in this corpus" and one guarantee about
+/// its ordering. The sort is not just tidiness: `dcgo-harness triage`
+/// attributes each divergence cluster to the FIRST recording that exhibited
+/// it, so an unsorted `read_dir` order would make a cluster's "repro" line
+/// flip between runs of an otherwise-identical corpus.
+pub fn collect_recording_paths(path: &Path) -> Result<Vec<PathBuf>, String> {
+    if !path.exists() {
+        return Err(format!("input path does not exist: {}", path.display()));
+    }
+    if path.is_file() {
+        return Ok(vec![path.to_path_buf()]);
+    }
+
+    // Directory mode — one level deep. We don't recurse arbitrarily so a
+    // user can co-locate misc files next to a `recordings/` subdir without
+    // surprises.
+    let mut out = Vec::new();
+    let entries = fs::read_dir(path).map_err(|e| format!("read_dir {}: {}", path.display(), e))?;
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("dir entry: {}", e))?;
+        let p = entry.path();
+        if p.is_file() && p.extension().and_then(|s| s.to_str()) == Some("jsonl") {
+            out.push(p);
+        }
+    }
+    out.sort(); // deterministic processing order
+    Ok(out)
+}
