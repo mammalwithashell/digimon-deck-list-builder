@@ -143,7 +143,7 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             Ok(ExitCode::SUCCESS)
         }
         Command::Triage { corpus, cards_json } => {
-            use dcgo_harness::triage::{cluster, CorpusStats, Finding, TriageReport};
+            use dcgo_harness::triage::{cluster, scan_corpus, TriageReport};
 
             let card_data = dcgo_replay::load_card_data_at(cards_json)
                 .map_err(|e| format!("loading cards.json: {}", e))?;
@@ -154,62 +154,14 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             let recording_paths = dcgo_replay::collect_recording_paths(corpus)
                 .map_err(|e| format!("collecting corpus {}: {}", corpus.display(), e))?;
 
-            let mut stats = CorpusStats {
-                files_seen: recording_paths.len(),
-                ..Default::default()
-            };
-            let mut findings: Vec<Finding> = Vec::new();
-
-            for path in &recording_paths {
-                let text = match std::fs::read_to_string(path) {
-                    // Recordings written before the recorder's
-                    // UTF8Encoding(false) fix start with a BOM, which
-                    // serde_json rejects as invalid JSON.
-                    Ok(t) => t.trim_start_matches('\u{feff}').to_string(),
-                    Err(e) => {
-                        eprintln!("warn: skipping {}: read failed: {}", path.display(), e);
-                        stats.read_failed += 1;
-                        continue;
-                    }
-                };
-                let recording = match dcgo_replay::parse_jsonl(&text) {
-                    Ok(r) => r,
-                    Err(e) => {
-                        eprintln!("warn: skipping {}: parse failed: {}", path.display(), e);
-                        stats.parse_failed += 1;
-                        continue;
-                    }
-                };
-                let outcome = dcgo_replay::replay_recording(
-                    &recording,
-                    &card_data,
-                    &dcgo_replay::ReplayConfig::default(),
-                );
-                stats.replayed += 1;
-                match &outcome {
-                    dcgo_replay::ReplayOutcome::Pass { .. } => stats.passed += 1,
-                    dcgo_replay::ReplayOutcome::PartialPass { .. } => stats.partial += 1,
-                    dcgo_replay::ReplayOutcome::Fail(fail) => {
-                        // Every failure counts toward the denominator (F6);
-                        // only `IllegalAction` also becomes a clusterable
-                        // `Finding` — `cluster()`'s signature scheme
-                        // (action-range + card-at-slot) is specific to
-                        // board-addressed illegal actions and doesn't apply
-                        // to actor/winner mismatches or engine errors.
-                        stats.failed += 1;
-                        if let dcgo_replay::ReplayFail::IllegalAction(ia) = fail {
-                            findings.push(Finding {
-                                game_id: recording.start.game_id.clone(),
-                                step: ia.step,
-                                kind: "illegal_action".to_string(),
-                                action_id: ia.action_id,
-                                card_at_slot: None,
-                                recording_path: path.display().to_string(),
-                            });
-                        }
-                    }
-                }
-            }
+            // G3 (second triage review pass): the read -> parse -> replay ->
+            // tally loop used to live inline here, exercised only by a
+            // manual corpus run — and this handler is exactly where the
+            // earlier Critical finding (F1: wrong denominator reaching the
+            // report) actually lived. It now lives in `triage::scan_corpus`,
+            // which has direct unit-test coverage over an on-disk fixture
+            // corpus; this handler just calls it and prints the report.
+            let (stats, findings) = scan_corpus(&recording_paths, &card_data);
 
             let status = dcgo_harness::queue::scan(&args.root)?;
             let report = TriageReport {
