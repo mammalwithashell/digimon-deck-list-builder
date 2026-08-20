@@ -12,6 +12,12 @@ use crate::manifest;
 
 /// PID of the launched player, relative to the harness root.
 pub const PID_FILE: &str = "harness.pid";
+/// Image name (e.g. "DCGO.exe") of the process recorded in `PID_FILE`,
+/// written alongside it. A PID alone is not proof of identity -- PIDs get
+/// reused, and a stale PID file pointing at an unrelated process must never
+/// be mistaken for "our DCGO is already running" (or force-killed as if it
+/// were).
+pub const IMAGE_FILE: &str = "harness.image";
 /// Written by JobWatcher every poll. Must match HarnessConfig.HeartbeatPath.
 pub const HEARTBEAT_FILE: &str = "harness.heartbeat";
 /// A heartbeat older than this means DCGO is hung.
@@ -35,11 +41,14 @@ pub fn classify_heartbeat(age_seconds: Option<u64>, threshold_seconds: u64) -> H
     }
 }
 
-/// Seconds since the heartbeat was last written.
+/// Seconds since the heartbeat was last written. A future mtime (clock skew:
+/// VM time sync, DST, a filesystem with coarser granularity) still means the
+/// file exists and was just written -- that reads as age 0, not as absent.
+/// `Missing` must mean only "the file is not there".
 pub fn heartbeat_age(root: &Path) -> Option<u64> {
     let meta = std::fs::metadata(root.join(HEARTBEAT_FILE)).ok()?;
     let modified = meta.modified().ok()?;
-    modified.elapsed().ok().map(|d| d.as_secs())
+    Some(modified.elapsed().map(|d| d.as_secs()).unwrap_or(0))
 }
 
 pub fn read_pid(root: &Path) -> Option<u32> {
@@ -58,10 +67,37 @@ pub fn write_pid(root: &Path, pid: u32) -> Result<(), String> {
 
 pub fn clear_pid(root: &Path) -> Result<(), String> {
     match std::fs::remove_file(root.join(PID_FILE)) {
+        Ok(()) => {}
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {}
+        Err(e) => return Err(format!("removing pid file: {}", e)),
+    }
+    // The pid and image files must never disagree, so they are cleared
+    // together. Otherwise a leftover image file could later be paired (by
+    // pid reuse) with an unrelated live process and misidentify it.
+    match std::fs::remove_file(root.join(IMAGE_FILE)) {
         Ok(()) => Ok(()),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(()),
-        Err(e) => Err(format!("removing pid file: {}", e)),
+        Err(e) => Err(format!("removing image file: {}", e)),
     }
+}
+
+/// Image name recorded for the PID in `PID_FILE`, if any was ever written.
+/// `None` covers both "never launched" and "launched by an older harness
+/// version that did not record identity" -- callers must treat both as
+/// "identity unknown", not as "no image, so anything goes".
+fn read_image(root: &Path) -> Option<String> {
+    let text = std::fs::read_to_string(root.join(IMAGE_FILE)).ok()?;
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
+    }
+}
+
+fn write_image(root: &Path, image_name: &str) -> Result<(), String> {
+    let path = root.join(IMAGE_FILE);
+    std::fs::write(&path, image_name).map_err(|e| format!("writing {}: {}", path.display(), e))
 }
 
 /// True if a process with this PID currently exists.
@@ -73,6 +109,89 @@ pub fn pid_alive(pid: u32) -> bool {
     match out {
         Ok(o) => String::from_utf8_lossy(&o.stdout).contains(&pid.to_string()),
         Err(_) => false,
+    }
+}
+
+/// True if `pid` is currently running the executable named `image_name`
+/// (e.g. "DCGO.exe"). False for a dead PID and false for a live PID running
+/// something else -- callers must not treat "the PID exists" as "our
+/// process exists". Uses `tasklist`'s CSV output and parses it rather than
+/// substring-matching the raw text, so a PID digit-string that happens to
+/// appear inside another column (e.g. a memory-usage field) cannot produce
+/// a false positive.
+pub fn pid_is_image(pid: u32, image_name: &str) -> bool {
+    let out = Command::new("tasklist")
+        .args(["/FI", &format!("PID eq {}", pid), "/NH", "/FO", "CSV"])
+        .output();
+    let out = match out {
+        Ok(o) => o,
+        Err(_) => return false,
+    };
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    for line in stdout.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        // A non-matching filter prints an unquoted "INFO: No tasks are
+        // running..." line, not a CSV row. `parse_csv_line` still returns
+        // something for it, but that something is never equal to a real
+        // image name, so it falls through to `false` safely.
+        if let Some(fields) = parse_csv_line(line) {
+            if let Some(found_image) = fields.first() {
+                if found_image.eq_ignore_ascii_case(image_name) {
+                    return true;
+                }
+            }
+        }
+    }
+    false
+}
+
+/// Parse one line of `tasklist /FO CSV` output: quoted, comma-separated
+/// fields (doubled quotes escape a literal quote inside a field). Returns
+/// the fields in order; the image name is always the first.
+fn parse_csv_line(line: &str) -> Option<Vec<String>> {
+    let mut fields = Vec::new();
+    let mut chars = line.chars().peekable();
+    while let Some(&c) = chars.peek() {
+        if c == '"' {
+            chars.next();
+            let mut field = String::new();
+            while let Some(c) = chars.next() {
+                if c == '"' {
+                    if chars.peek() == Some(&'"') {
+                        field.push('"');
+                        chars.next();
+                    } else {
+                        break;
+                    }
+                } else {
+                    field.push(c);
+                }
+            }
+            fields.push(field);
+        } else {
+            // Defensive fallback: tasklist's own CSV output always quotes
+            // every field, but don't assume it for arbitrary input.
+            let mut field = String::new();
+            while let Some(&c) = chars.peek() {
+                if c == ',' {
+                    break;
+                }
+                field.push(c);
+                chars.next();
+            }
+            fields.push(field);
+        }
+        if chars.peek() == Some(&',') {
+            chars.next();
+        }
+    }
+    if fields.is_empty() {
+        None
+    } else {
+        Some(fields)
     }
 }
 
@@ -99,16 +218,24 @@ pub fn up(root: &Path, build_dir: &Path) -> Result<String, String> {
             exe.display()
         ));
     }
+    let image_name = Path::new(&m.executable)
+        .file_name()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or_else(|| m.executable.clone());
 
     if let Some(pid) = read_pid(root) {
-        if pid_alive(pid) {
+        if pid_alive(pid) && pid_is_image(pid, &image_name) {
             return Ok(format!(
                 "already running (pid {}, heartbeat {:?})",
                 pid,
                 classify_heartbeat(heartbeat_age(root), DEFAULT_STALE_SECONDS)
             ));
         }
-        // A pid file outliving its process is normal after a crash.
+        // A pid file outliving its process is normal after a crash. So is a
+        // pid file whose pid has since been recycled to an unrelated
+        // process -- both are stale in the same way and get the same
+        // treatment: clear and relaunch, rather than silently doing nothing
+        // while believing an unrelated process is our oracle.
         clear_pid(root)?;
     }
 
@@ -120,6 +247,7 @@ pub fn up(root: &Path, build_dir: &Path) -> Result<String, String> {
 
     let pid = child.id();
     write_pid(root, pid)?;
+    write_image(root, &image_name)?;
     Ok(format!(
         "launched {} (pid {}, dcgo {})",
         exe.display(),
@@ -129,6 +257,11 @@ pub fn up(root: &Path, build_dir: &Path) -> Result<String, String> {
 }
 
 /// Stop a running oracle. Not an error if none is running.
+///
+/// Kills only after confirming the recorded pid still belongs to the image
+/// we launched. `/T` (kill the whole process tree) is deliberate for a real
+/// DCGO process, but is exactly why identity must be confirmed first: on
+/// pid reuse it would otherwise tear down an unrelated process tree.
 pub fn down(root: &Path) -> Result<String, String> {
     let pid = match read_pid(root) {
         Some(p) => p,
@@ -137,6 +270,31 @@ pub fn down(root: &Path) -> Result<String, String> {
     if !pid_alive(pid) {
         clear_pid(root)?;
         return Ok(format!("not running (stale pid {} cleared)", pid));
+    }
+    let image = match read_image(root) {
+        Some(img) => img,
+        None => {
+            // Identity can't be confirmed at all -- state written by an
+            // older harness version, or otherwise lost. A safety check
+            // that cannot do its job must fail closed: report clearly and
+            // leave the process alone rather than guessing.
+            return Err(format!(
+                "pid {} is alive but its image identity was never recorded ({} not found); \
+                 refusing to kill without confirming identity -- stop it manually.",
+                pid,
+                root.join(IMAGE_FILE).display()
+            ));
+        }
+    };
+    if !pid_is_image(pid, &image) {
+        // The pid was recycled to an unrelated process since we launched.
+        // Our recorded state is stale, but the live process is not ours --
+        // clear the stale record and stop, without touching that process.
+        clear_pid(root)?;
+        return Ok(format!(
+            "not running (pid {} no longer belongs to {}; stale state cleared, nothing killed)",
+            pid, image
+        ));
     }
     let out = Command::new("taskkill")
         .args(["/PID", &pid.to_string(), "/T", "/F"])
@@ -268,6 +426,190 @@ mod tests {
         std::fs::create_dir_all(&root).unwrap();
         let msg = down(&root).unwrap();
         assert!(msg.contains("not running"), "got: {}", msg);
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    /// Spawn a short-lived, easily identified process that is not our
+    /// image, for tests that need a genuinely live PID belonging to
+    /// something else. The reviewer's own reproduction used the same
+    /// decoy: "a spawned PING.EXE".
+    fn spawn_decoy() -> std::process::Child {
+        let child = Command::new("ping")
+            .args(["-n", "2", "127.0.0.1"])
+            .stdout(std::process::Stdio::null())
+            .spawn()
+            .expect("spawn decoy process");
+        assert!(
+            pid_alive(child.id()),
+            "decoy must be alive immediately after spawn for the test to mean anything"
+        );
+        child
+    }
+
+    #[test]
+    fn pid_is_image_is_true_for_the_actual_image_and_false_for_another() {
+        let mut decoy = spawn_decoy();
+        let pid = decoy.id();
+
+        assert!(pid_is_image(pid, "PING.EXE"));
+        assert!(pid_is_image(pid, "ping.exe"), "must be case-insensitive");
+        assert!(!pid_is_image(pid, "DCGO.exe"));
+
+        // Reap so no stray process survives the test.
+        let _ = decoy.wait();
+    }
+
+    #[test]
+    fn pid_is_image_is_false_for_a_dead_pid() {
+        let mut decoy = spawn_decoy();
+        let pid = decoy.id();
+        let _ = decoy.kill();
+        let _ = decoy.wait();
+
+        assert!(!pid_alive(pid), "decoy must actually be dead for this test to mean anything");
+        assert!(!pid_is_image(pid, "PING.EXE"));
+    }
+
+    #[test]
+    fn parse_csv_line_handles_tasklist_style_quoted_fields() {
+        let line = r#""DCGO.exe","1234","Console","1","123,456 K""#;
+        let fields = parse_csv_line(line).unwrap();
+        assert_eq!(fields[0], "DCGO.exe");
+        assert_eq!(fields[1], "1234");
+        assert_eq!(fields[4], "123,456 K");
+    }
+
+    #[test]
+    fn parse_csv_line_does_not_let_an_embedded_pid_digit_match_the_image_column() {
+        // A pid that happens to appear as a substring of another column
+        // (here, inside the memory-usage field) must not make `pid_is_image`
+        // match on it -- only the first (image name) field counts.
+        let line = r#""cmd.exe","4242","Console","1","4,242 K""#;
+        let fields = parse_csv_line(line).unwrap();
+        assert_eq!(fields[0], "cmd.exe");
+        assert_ne!(fields[0], "4242");
+    }
+
+    #[test]
+    fn up_relaunches_when_the_recorded_pid_is_a_different_image() {
+        let root = std::env::temp_dir().join("dcgo_daemon_wrong_image_root");
+        let build = std::env::temp_dir().join("dcgo_daemon_wrong_image_build");
+        for d in [&root, &build] {
+            let _ = std::fs::remove_dir_all(d);
+            std::fs::create_dir_all(d).unwrap();
+        }
+
+        // Record a live-but-unrelated pid as if it were a prior harness run --
+        // the reviewer-confirmed reproduction (a pid file pointing at an
+        // unrelated PING.EXE, e.g. after a crash + pid reuse).
+        let mut decoy = spawn_decoy();
+        let decoy_pid = decoy.id();
+        write_pid(&root, decoy_pid).unwrap();
+
+        let m = crate::manifest::BuildManifest {
+            dcgo_commit: "be359bb5b".into(),
+            built_at: "2026-08-20T00:00:00Z".into(),
+            artifact_sha256: "deadbeef".into(),
+            action_space_hash: crate::manifest::action_space_hash(),
+            executable: "DCGO.exe".into(),
+        };
+        crate::manifest::save(&build, &m).unwrap();
+        // Not a real launchable binary -- this test only needs to prove `up`
+        // does not stop at "already running" for the wrong-image pid and
+        // actually attempts a relaunch; a genuinely launchable fixture is
+        // exercised by the other `up` tests via the same fake-bytes pattern.
+        std::fs::write(build.join("DCGO.exe"), b"fake").unwrap();
+
+        let err = up(&root, &build).unwrap_err();
+        assert!(
+            !err.to_lowercase().contains("already running"),
+            "must not treat an unrelated live pid as our own process: {}",
+            err
+        );
+        assert_eq!(
+            read_pid(&root),
+            None,
+            "the wrong-image pid must be cleared, not kept as if verified"
+        );
+
+        let _ = decoy.wait();
+
+        for d in [&root, &build] {
+            let _ = std::fs::remove_dir_all(d);
+        }
+    }
+
+    #[test]
+    fn down_refuses_to_kill_when_the_image_name_is_missing() {
+        let root = std::env::temp_dir().join("dcgo_daemon_down_no_image");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+
+        // Simulate state written by an older harness version: a pid file
+        // recording a genuinely live process, but no sibling image file
+        // saying what that pid is supposed to be.
+        let mut decoy = spawn_decoy();
+        let pid = decoy.id();
+        write_pid(&root, pid).unwrap();
+        assert!(read_image(&root).is_none(), "no image file written yet");
+
+        let err = down(&root).unwrap_err();
+        assert!(
+            err.to_lowercase().contains("manually"),
+            "must fail closed and tell the caller to stop it manually: {}",
+            err
+        );
+        assert!(
+            pid_alive(pid),
+            "down must not have killed anything it could not identify"
+        );
+
+        // We spawned the decoy, so we reap it -- not by calling `down`,
+        // which is exactly the destructive path this test proves must not
+        // fire without a confirmed identity.
+        let _ = decoy.kill();
+        let _ = decoy.wait();
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_future_dated_heartbeat_is_healthy_not_missing() {
+        let root = std::env::temp_dir().join("dcgo_daemon_future_heartbeat");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+        let path = root.join(HEARTBEAT_FILE);
+        std::fs::write(&path, b"beat").unwrap();
+
+        // Simulate clock skew: a heartbeat mtime an hour ahead of "now".
+        let future = std::time::SystemTime::now() + std::time::Duration::from_secs(3600);
+        let f = std::fs::OpenOptions::new().write(true).open(&path).unwrap();
+        f.set_modified(future).unwrap();
+        drop(f);
+
+        let age = heartbeat_age(&root);
+        assert_eq!(age, Some(0), "a future mtime must read as age 0, not absent");
+        assert_eq!(
+            classify_heartbeat(age, DEFAULT_STALE_SECONDS),
+            Health::Healthy,
+            "the file exists and is heartbeating -- clock skew must not read as never-started"
+        );
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn a_genuinely_absent_heartbeat_file_still_classifies_as_missing() {
+        let root = std::env::temp_dir().join("dcgo_daemon_absent_heartbeat");
+        let _ = std::fs::remove_dir_all(&root);
+        std::fs::create_dir_all(&root).unwrap();
+
+        assert_eq!(heartbeat_age(&root), None);
+        assert_eq!(
+            classify_heartbeat(heartbeat_age(&root), DEFAULT_STALE_SECONDS),
+            Health::Missing
+        );
+
         let _ = std::fs::remove_dir_all(&root);
     }
 }
