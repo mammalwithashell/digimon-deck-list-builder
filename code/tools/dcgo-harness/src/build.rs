@@ -67,15 +67,22 @@ pub fn git_commit(project_path: &Path) -> Result<String, String> {
 ///
 /// `output_dir` need not exist yet (`run()` creates it later) -- in fact
 /// that is the *common* case, not an edge case: `--output` names a fresh
-/// directory on essentially every first build. So each side is resolved
-/// independently by [`resolve_for_containment_check`] (full canonicalize
-/// when possible, otherwise canonicalize the deepest existing ancestor and
-/// lexically normalize the rest), and compared component-wise -- case-folded
-/// on Windows, since NTFS is case-insensitive by default and a case typo
+/// directory on essentially every first build, often as a bare relative
+/// path like `--output build`. So each side is first absolutized against
+/// the current working directory (a relative path is meaningless for a
+/// containment check until it is anchored), then resolved independently by
+/// [`resolve_for_containment_check`] (full canonicalize when possible,
+/// otherwise canonicalize the deepest existing ancestor and lexically
+/// normalize the rest), and compared component-wise -- case-folded on
+/// Windows, since NTFS is case-insensitive by default and a case typo
 /// genuinely names the same on-disk directory.
+///
+/// If the current working directory itself can't be determined, this
+/// fails closed with an error rather than silently skipping the check --
+/// a safety check that can't do its job must not report success.
 pub fn validate_output_outside_project(project_path: &Path, output_dir: &Path) -> Result<(), String> {
-    let project = resolve_for_containment_check(project_path);
-    let output = resolve_for_containment_check(output_dir);
+    let project = resolve_for_containment_check(project_path)?;
+    let output = resolve_for_containment_check(output_dir)?;
     if path_contains(&project, &output) {
         return Err(format!(
             "--output {} is at or beneath --project {} -- this would write a \
@@ -91,23 +98,55 @@ pub fn validate_output_outside_project(project_path: &Path, output_dir: &Path) -
 /// Resolve `path` into an absolute, normalized form suitable for the
 /// component-wise containment check in [`validate_output_outside_project`].
 ///
-/// A path that exists is canonicalized outright, which gets the OS to
-/// resolve both `..` and (on Windows) case for us. A path that doesn't
-/// exist yet -- the normal shape of a fresh `--output` directory -- can't
-/// be canonicalized as a whole, so instead: canonicalize the deepest
-/// existing ancestor (this always bottoms out, since the filesystem
-/// root/drive always exists) and lexically normalize the non-existent
-/// trailing components onto it. That resolves `..` in the trailing part
-/// even though nothing there exists yet, and gets the real on-disk case
-/// for the part that does. If even the ancestor fails to canonicalize
-/// (e.g. a permissions error), fall back to a purely lexical normalization
-/// of the whole path so `..` traversal is still caught.
-fn resolve_for_containment_check(path: &Path) -> PathBuf {
-    if let Ok(canon) = path.canonicalize() {
-        return canon;
+/// A relative path is meaningless for a containment check until it is
+/// anchored, so the first step -- before any canonicalization or lexical
+/// normalization -- is absolutizing against the current working directory
+/// (a no-op if `path` is already absolute). Skipping this step is the
+/// actual defect this function guards against: a relative `--output` like
+/// `build` that doesn't exist yet can't be canonicalized, and a single
+/// bare component has no intermediate ancestor for the fallback below to
+/// anchor to either, so it would otherwise reach the final lexical-only
+/// fallback still relative and only one component long -- short enough
+/// that the length guard in [`path_contains`] would wrongly wave it
+/// through as "not contained" without ever comparing it against the
+/// project path.
+///
+/// Once absolute: a path that exists is canonicalized outright, which gets
+/// the OS to resolve both `..` and (on Windows) case for us. A path that
+/// doesn't exist yet -- the normal shape of a fresh `--output` directory
+/// -- can't be canonicalized as a whole, so instead: canonicalize the
+/// deepest existing ancestor (this always bottoms out, since the
+/// filesystem root/drive always exists) and lexically normalize the
+/// non-existent trailing components onto it. That resolves `..` in the
+/// trailing part even though nothing there exists yet, and gets the real
+/// on-disk case for the part that does. If even the ancestor fails to
+/// canonicalize (e.g. a permissions error), fall back to a purely lexical
+/// normalization of the whole (now-absolute) path so `..` traversal is
+/// still caught.
+///
+/// Fails closed: if the current working directory can't be determined for
+/// a relative `path`, this returns an error instead of silently treating
+/// the path as if it were already anchored.
+fn resolve_for_containment_check(path: &Path) -> Result<PathBuf, String> {
+    let absolute = if path.is_absolute() {
+        path.to_path_buf()
+    } else {
+        let cwd = std::env::current_dir().map_err(|e| {
+            format!(
+                "could not determine the current directory to resolve relative path {}: {} \
+                 -- containment against --project cannot be verified",
+                path.display(),
+                e
+            )
+        })?;
+        cwd.join(path)
+    };
+
+    if let Ok(canon) = absolute.canonicalize() {
+        return Ok(canon);
     }
 
-    let components: Vec<Component> = path.components().collect();
+    let components: Vec<Component> = absolute.components().collect();
     for split in (0..components.len()).rev() {
         let candidate: PathBuf = components[..split].iter().collect();
         if candidate.as_os_str().is_empty() || !candidate.exists() {
@@ -118,11 +157,11 @@ fn resolve_for_containment_check(path: &Path) -> PathBuf {
             for component in &components[split..] {
                 push_component_lexically(&mut resolved, component);
             }
-            return resolved;
+            return Ok(resolved);
         }
     }
 
-    lexically_normalize(path)
+    Ok(lexically_normalize(&absolute))
 }
 
 /// Append one path component onto `base`, resolving `.` and `..` lexically
@@ -526,5 +565,56 @@ mod tests {
 
         let err = validate_output_outside_project(&project, &output).unwrap_err();
         assert!(err.contains("submodule"), "got: {}", err);
+    }
+
+    #[test]
+    fn validate_output_outside_project_rejects_a_relative_output_resolving_inside() {
+        // A relative --output that is a single bare component (the natural
+        // `--output build` on a first build) doesn't exist yet, so it can't
+        // be canonicalized. Crucially, `resolve_for_containment_check`'s
+        // ancestor-search fallback can *never* anchor a single-component
+        // relative path to a real directory: the only candidate split
+        // point (0) yields an empty path, which the loop explicitly skips.
+        // So, before the fix, it fell straight through to pure lexical
+        // normalization of the still-relative "build" -- one component --
+        // with zero CWD context. Compared against the many-component
+        // absolute --project, `path_contains`'s length guard fired and
+        // returned "not contained" without comparing anything -- the
+        // reviewer's exact repro. Anchor `project` on the actual CWD
+        // (rather than assuming a fixed CWD) and never mutate the
+        // process's CWD, so this test holds no matter where the suite
+        // runs from -- and needs no filesystem setup, since `project`
+        // already exists (it *is* the CWD).
+        let cwd = std::env::current_dir().expect("current_dir");
+        let project = cwd.clone();
+        let relative_output = Path::new("dcgo_build_validate_output_relative_probe_inside");
+        // Guard against stray state from an interrupted prior run -- this
+        // test creates nothing, but a leftover directory of the same name
+        // would still be a real (if accidental) match and should not be
+        // mistaken for this test's own signal.
+        let _ = std::fs::remove_dir_all(cwd.join(relative_output));
+
+        let err = validate_output_outside_project(&project, relative_output).unwrap_err();
+        assert!(err.contains("submodule"), "got: {}", err);
+    }
+
+    #[test]
+    fn validate_output_outside_project_accepts_a_relative_output_resolving_outside() {
+        // Mirrors the previous test's single-bare-component shape, but the
+        // relative --output resolves to a sibling of --project under CWD,
+        // not beneath it, so it must be accepted -- confirming the
+        // CWD-anchoring fix doesn't turn into a blanket rejection of every
+        // relative path.
+        let cwd = std::env::current_dir().expect("current_dir");
+        let project = cwd.join("dcgo_build_validate_output_relative_outside_project");
+        let _ = std::fs::remove_dir_all(&project);
+        std::fs::create_dir_all(&project).unwrap();
+
+        let relative_output = Path::new("dcgo_build_validate_output_relative_outside_sibling");
+        let _ = std::fs::remove_dir_all(cwd.join(relative_output));
+
+        assert!(validate_output_outside_project(&project, relative_output).is_ok());
+
+        let _ = std::fs::remove_dir_all(&project);
     }
 }
