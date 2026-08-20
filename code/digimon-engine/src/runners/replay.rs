@@ -2022,6 +2022,11 @@ fn describe_board(game: &Game) -> String {
 ", pid, list(&p.hand)));
         out.push_str(&format!("P{} trash: {}
 ", pid, list(&p.trash)));
+        // Security top is the END of the vec. A battle outcome hinges entirely
+        // on which card the check flips, so a divergence in the security stack
+        // masquerades as a combat bug.
+        out.push_str(&format!("P{} sec:   {} (top = last)
+", pid, list(&p.security)));
         out.push_str(&format!(
             "P{} zones: hand={} deck={} trash={} security={} memory={}
 ",

@@ -2161,3 +2161,47 @@ after Claude workflow `wf_6f7700f2-6c5` produced no usable verdicts. See
 - **Rules authority:** Comprehensive Rules Manual 16-44: Engage is an optional trigger at End of Your Turn that lets the Digimon attack.
 - **Resolution:** `Keyword::Engage` is wired through the engine enum, printed-keyword parser, DSL keyword lookup/validator, serialization, keyword auto-effects, and the end-of-turn attack mask/decode path. Engage uses normal attack legality rather than Vortex target or played-this-turn exceptions.
 - **Regression tests:** `keyword_parsing::parser_ex12_guard_and_engage_keywords`; `keyword_phase_f::engage::*`; DSL keyword map/validator coverage.
+
+## DSL-granted replacement-process keywords never install their handler
+
+**Found by:** the DCGO parity corpus (2026-08-20). Six of twelve recordings in
+the first clean batch shared the signature; reduced to a failing unit test at
+`code/digimon-engine/tests/cards_behavioral/ex12/ex12_042.rs`
+(`ex12_042_inherited_barrier_prevents_a_lethal_battle_deletion`, `#[ignore]`d so
+CI stays green).
+
+**Symptom.** A card grants a keyword through the DSL (`kind: grant_keyword`,
+including `scope: inherited`). `Game::has_keyword` reports the keyword, so a
+test that asserts the grant passes — but the keyword does nothing.
+
+**Cause.** `effect_context/action/modifiers.rs` (~line 494) builds the auto
+effects and then skips any without a plain `process`:
+
+```rust
+let autos = keyword_to_auto_effect(keyword, card);
+for effect in autos {
+    let Some(process) = effect.process else { continue };
+```
+
+Replacement-process keywords are built with `replacement_process` and no
+`process`, so they are silently dropped. The comment documents the skip, but
+the consequence — the keyword is inert rather than merely unrouted — does not
+appear to have been intended. The printed-keyword path
+(`game/mod.rs` ~2893) installs them correctly, so printed Barrier works and
+granted Barrier does not.
+
+**Blast radius.** Every replacement-process keyword granted this way: Barrier,
+Evade, Armor Purge, Fragment, Decode, Scapegoat, Partition. Any card whose
+inherited or granted form of these keywords is authored in the DSL is affected.
+
+**Worked example.** `EX12-042 Gatomon` grants inherited `<Barrier>`. In DCGO an
+attacker carrying Gatomon as a digivolution source survives a lethal security
+battle by trashing its top security card. Our engine deletes it, sending the
+attacker and its whole stack to the trash. Neither `EX12-042` nor `EX12-032`
+appears in `validated_cards_dsl.json` or `validated_cards.json` — the cards were
+authored but never behaviorally validated, and the existing tests only assert
+that the keyword is *granted*, never that it fires.
+
+**Fix direction.** Route replacement-process keywords into a granted-replacement
+store the deletion path consults, alongside the existing granted-triggered
+store. Then un-ignore the test above.
