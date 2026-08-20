@@ -852,11 +852,13 @@ dependencies = [
 name = "dcgo-harness"
 version = "0.1.0"
 dependencies = [
+ "action-space-export",
  "clap",
  "dcgo-replay",
  "digimon-engine",
  "serde",
  "serde_json",
+ "sha2",
 ]
 
 [[package]]

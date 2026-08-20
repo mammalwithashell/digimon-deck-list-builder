@@ -4,6 +4,7 @@
 //! `docs/superpowers/specs/2026-08-17-dcgo-automation-harness-design.md`.
 
 pub mod job;
+pub mod manifest;
 pub mod pool;
 pub mod queue;
 pub mod triage;
