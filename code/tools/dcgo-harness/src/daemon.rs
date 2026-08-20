@@ -6,7 +6,7 @@
 //! failure mode that has actually happened, twice.
 
 use std::path::{Path, PathBuf};
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 use crate::manifest;
 
@@ -20,6 +20,14 @@ pub const PID_FILE: &str = "harness.pid";
 pub const IMAGE_FILE: &str = "harness.image";
 /// Written by JobWatcher every poll. Must match HarnessConfig.HeartbeatPath.
 pub const HEARTBEAT_FILE: &str = "harness.heartbeat";
+/// Where the launched player's own Unity log is written, relative to the
+/// harness root -- NOT the build directory, which is versioned derived data
+/// that may be shared by several roots. Passed to the player via `-logFile`
+/// instead of Unity's "-" (stdout) convention: `Command::spawn` inherits the
+/// parent's stdio by default, so `-logFile -` would hold this process's
+/// stdout pipe open for the player's entire lifetime, blocking any caller
+/// that pipes or captures `up`'s output. See `player_command`.
+pub const LOG_FILE: &str = "dcgo-player.log";
 /// A heartbeat older than this means DCGO is hung.
 pub const DEFAULT_STALE_SECONDS: u64 = 30;
 
@@ -200,6 +208,23 @@ fn executable_path(build_dir: &Path, m: &manifest::BuildManifest) -> PathBuf {
     build_dir.join(&m.executable)
 }
 
+/// Build the command used to launch the player: log to `log_path` instead of
+/// stdout, and detach stdin/stdout/stderr from this process entirely.
+///
+/// Split out from `up` so the regression this guards against -- launching
+/// with `-logFile -` and inherited stdio, which holds a caller's pipe open
+/// for the oracle's whole lifetime -- can be pinned by asserting on
+/// `Command::get_args()` without spawning a real player.
+fn player_command(exe: &Path, log_path: &Path) -> Command {
+    let mut cmd = Command::new(exe);
+    cmd.arg("-logFile")
+        .arg(log_path)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
+        .stderr(Stdio::null());
+    cmd
+}
+
 /// Ensure a DCGO oracle is running against `build_dir`, and return a status line.
 pub fn up(root: &Path, build_dir: &Path) -> Result<String, String> {
     std::fs::create_dir_all(root).map_err(|e| format!("creating {}: {}", root.display(), e))?;
@@ -239,9 +264,14 @@ pub fn up(root: &Path, build_dir: &Path) -> Result<String, String> {
         clear_pid(root)?;
     }
 
-    let child = Command::new(&exe)
-        .arg("-logFile")
-        .arg("-")
+    // Create/truncate the log up front so a stale prior run's contents can
+    // never be mistaken for this launch's, and so the path exists even if
+    // Unity is slow to open it.
+    let log_path = root.join(LOG_FILE);
+    std::fs::write(&log_path, b"")
+        .map_err(|e| format!("creating {}: {}", log_path.display(), e))?;
+
+    let child = player_command(&exe, &log_path)
         .spawn()
         .map_err(|e| format!("launching {}: {}", exe.display(), e))?;
 
@@ -249,10 +279,11 @@ pub fn up(root: &Path, build_dir: &Path) -> Result<String, String> {
     write_pid(root, pid)?;
     write_image(root, &image_name)?;
     Ok(format!(
-        "launched {} (pid {}, dcgo {})",
+        "launched {} (pid {}, dcgo {}, log {})",
         exe.display(),
         pid,
-        &m.dcgo_commit[..m.dcgo_commit.len().min(9)]
+        &m.dcgo_commit[..m.dcgo_commit.len().min(9)],
+        log_path.display()
     ))
 }
 
@@ -611,5 +642,36 @@ mod tests {
         );
 
         let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn player_command_redirects_the_log_to_a_file_not_stdout() {
+        // Regression: `up` used to launch with `-logFile -`, which is Unity's
+        // convention for "write the log to stdout". Combined with
+        // `Command::spawn`'s default of inheriting the parent's stdio, that
+        // held this process's stdout pipe open for as long as the player
+        // lived -- so a caller piping or capturing `up`'s output (e.g.
+        // `dcgo-harness up | grep ...`) blocked for the oracle's entire
+        // lifetime instead of `up` returning immediately.
+        let exe = Path::new("DCGO.exe");
+        let log_path = std::env::temp_dir()
+            .join("dcgo_daemon_player_command_test")
+            .join(LOG_FILE);
+
+        let cmd = player_command(exe, &log_path);
+        let args: Vec<&std::ffi::OsStr> = cmd.get_args().collect();
+
+        let flag_pos = args
+            .iter()
+            .position(|a| *a == "-logFile")
+            .expect("-logFile must be passed");
+        let log_arg = args
+            .get(flag_pos + 1)
+            .expect("-logFile must be followed by a path");
+        assert_ne!(
+            *log_arg, "-",
+            "must not tell Unity to write its log to stdout"
+        );
+        assert_eq!(*log_arg, log_path.as_os_str());
     }
 }
