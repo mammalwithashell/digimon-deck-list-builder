@@ -45,8 +45,12 @@ plan.
 `Build()`, invoked headlessly:
 
 ```bash
-Unity.exe -quit -batchmode -projectPath <base>/DCGO -executeMethod Digimon.Harness.Editor.HarnessBuild.Build -logFile -
+Unity.exe -quit -batchmode -projectPath <base>/DCGO -executeMethod Digimon.Harness.EditorTools.HarnessBuild.Build -logFile -
 ```
+
+(`EditorTools`, not `Editor` — matching the namespace `HarnessMenu.cs` already
+uses. `Editor` is reserved-ish and collides with `UnityEditor.Editor` in
+`using`-heavy files.)
 
 Output goes to `D:\dcgo-build\<version>\` — outside the submodule. It is
 multi-GB derived data and DCGO is an LFS checkout, so it must not land anywhere
