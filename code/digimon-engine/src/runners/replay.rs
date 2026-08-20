@@ -1999,6 +1999,40 @@ fn describe_board(game: &Game) -> String {
         out.push_str("
 ");
     }
+    // Zone counts alongside the board. A permanent that vanished between two
+    // steps went SOMEWHERE, and trash-vs-security tells you whether it was
+    // deleted, returned, or lost to a security check -- which is the difference
+    // between an engine bug and a mis-mapped action.
+    for pid in [0u8, 1u8] {
+        let p = game.player(pid);
+        // Hand and trash contents, indexed. A digivolve/play action names a hand
+        // SLOT, so "is the recorded slot even that card?" is unanswerable without
+        // the list -- and a card the recording plays from one zone while the
+        // engine holds it in another is exactly the kind of divergence worth
+        // separating from a plain mistarget.
+        let list = |cards: &[crate::card_source::CardSource]| -> String {
+            cards
+                .iter()
+                .enumerate()
+                .map(|(i, c)| format!("[{}]{}", i, c.card_id(&game.card_data)))
+                .collect::<Vec<_>>()
+                .join(" ")
+        };
+        out.push_str(&format!("P{} hand:  {}
+", pid, list(&p.hand)));
+        out.push_str(&format!("P{} trash: {}
+", pid, list(&p.trash)));
+        out.push_str(&format!(
+            "P{} zones: hand={} deck={} trash={} security={} memory={}
+",
+            pid,
+            p.hand.len(),
+            p.deck.len(),
+            p.trash.len(),
+            p.security.len(),
+            game.memory
+        ));
+    }
     out
 }
 
