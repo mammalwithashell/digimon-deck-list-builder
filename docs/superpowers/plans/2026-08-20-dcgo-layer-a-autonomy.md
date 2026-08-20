@@ -734,37 +734,15 @@ pub fn run(req: &BuildRequest) -> Result<BuildManifest, String> {
         ));
     }
 
-    let built_at = rfc3339_now();
+    let built_at = chrono::Utc::now().to_rfc3339();
     let m = stamp(req, DEFAULT_EXECUTABLE, commit, built_at)?;
     manifest::save(&req.output_dir, &m)?;
     Ok(m)
 }
-
-/// RFC3339 UTC timestamp without pulling in a date crate.
-fn rfc3339_now() -> String {
-    let secs = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
-    // Days since epoch -> civil date (Howard Hinnant's algorithm).
-    let days = (secs / 86_400) as i64;
-    let tod = secs % 86_400;
-    let z = days + 719_468;
-    let era = z.div_euclid(146_097);
-    let doe = z.rem_euclid(146_097);
-    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
-    let y = yoe + era * 400;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let d = doy - (153 * mp + 2) / 5 + 1;
-    let m = if mp < 10 { mp + 3 } else { mp - 9 };
-    let y = if m <= 2 { y + 1 } else { y };
-    format!(
-        "{:04}-{:02}-{:02}T{:02}:{:02}:{:02}Z",
-        y, m, d, tod / 3600, (tod % 3600) / 60, tod % 60
-    )
-}
 ```
+
+Add `chrono = "0.4"` to `code/tools/dcgo-harness/Cargo.toml`. It is already in
+`Cargo.lock` (used by `code/src-tauri`), so this pulls in nothing new.
 
 Add `pub mod build;` to `code/tools/dcgo-harness/src/lib.rs` (alphabetically first, before `job`).
 
@@ -1432,12 +1410,37 @@ ROOT="C:/Users/james/AppData/LocalLow/DCGO/DCGO/dcgo_harness"; cargo run -p dcgo
 - [ ] **Step 5: Diff the two recordings**
 
 ```bash
-CORPUS="C:/Users/james/AppData/LocalLow/DCGO/DCGO/dcgo_recordings"; cp "$(ls -t "$CORPUS"/*.jsonl | head -1)" D:/dcgo-build/acceptance/player.jsonl && diff <(jq -c 'del(.timestamp, .recording_id)' D:/dcgo-build/acceptance/editor.jsonl) <(jq -c 'del(.timestamp, .recording_id)' D:/dcgo-build/acceptance/player.jsonl) && echo "IDENTICAL"
+CORPUS="C:/Users/james/AppData/LocalLow/DCGO/DCGO/dcgo_recordings"; cp "$(ls -t "$CORPUS"/*.jsonl | head -1)" D:/dcgo-build/acceptance/player.jsonl && python code/tools/dcgo-harness/scripts/strip_volatile.py D:/dcgo-build/acceptance/editor.jsonl D:/dcgo-build/acceptance/editor.norm.jsonl && python code/tools/dcgo-harness/scripts/strip_volatile.py D:/dcgo-build/acceptance/player.jsonl D:/dcgo-build/acceptance/player.norm.jsonl && diff D:/dcgo-build/acceptance/editor.norm.jsonl D:/dcgo-build/acceptance/player.norm.jsonl && echo "IDENTICAL"
+```
+
+Create `code/tools/dcgo-harness/scripts/strip_volatile.py` first (`jq` is not
+installed on this machine):
+
+```python
+"""Drop wall-clock fields so two runs of the same seed can be compared.
+
+Only `timestamp` and `recording_id` are removed -- they are facts about when a
+game was recorded, not about the game. Do NOT widen this list: anything else
+differing between an Editor run and a player run of the same seed is a real
+divergence, and excluding it would hide exactly what this check exists to find.
+"""
+import json
+import sys
+
+VOLATILE = ("timestamp", "recording_id")
+
+with open(sys.argv[1], encoding="utf-8") as src, open(sys.argv[2], "w", encoding="utf-8") as dst:
+    for line in src:
+        line = line.strip()
+        if not line:
+            continue
+        row = json.loads(line)
+        for key in VOLATILE:
+            row.pop(key, None)
+        dst.write(json.dumps(row, sort_keys=True, separators=(",", ":")) + "\n")
 ```
 
 Expected: `IDENTICAL`.
-
-Timestamps and the recording id are excluded because they are wall-clock facts, not game facts. If `jq` is unavailable, compare with `grep -v` on those two keys instead — but do **not** widen the exclusions further. Anything else differing is a real divergence.
 
 - [ ] **Step 6: Record the verdict**
 
