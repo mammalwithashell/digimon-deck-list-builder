@@ -159,9 +159,18 @@ pub struct SelectionRow {
     /// Zone positions picked, when DCGO knows them (hand indexes etc.).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub indexes: Option<Vec<i32>>,
-    /// SelectCountEffect payload.
+    /// SelectCountEffect payload: the VALUE chosen (a digivolution cost, a
+    /// number of cards), NOT an index. See `candidates`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub count: Option<i32>,
+    /// The option set `count` was chosen from, ascending, as DCGO presented it.
+    ///
+    /// A count answer is a domain value; our engine models the same question as
+    /// an indexed branch list. Mapping one to the other needs the option set,
+    /// which is why the recorder emits it. Absent in pre-0.5 recordings, and a
+    /// count without it cannot be resolved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub candidates: Option<Vec<i64>>,
     /// Generic int channel payload.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub int_value: Option<i64>,

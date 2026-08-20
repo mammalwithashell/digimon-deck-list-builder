@@ -148,6 +148,29 @@ coroutines that yield per frame; re-measure if you change it.
   DCGO, so upstream never noticed. Use `IsValidDeckData()` — the real legality
   check (50 main, ≤5 egg, per-card legality) that DCGO gates battles on.
 
+## Count payloads carry a value, not an index
+
+`SelectCountEffect` answers "how many?" / "which cost?" with the chosen NUMBER —
+its buttons are labelled with the values themselves. Our engine models the same
+question as an indexed branch list, so the two must be reconciled.
+
+The resolver matches the recorded value against the engine's branch **labels**,
+which embed it (`"Digivolve for cost 2"`). That compares what each side thinks
+an option MEANS rather than where it sits, and it works on recordings made
+before the recorder emitted `candidates`. When labels do not carry the value,
+the recorded `candidates` array supplies the index; without either, the payload
+fails loudly.
+
+This was the top cluster in the first clean corpus. The resolver had folded
+count in with `int_value` (`int_value.or(count)`) and indexed branches with a
+raw quantity, so `count: 2` meant "pick branch 2".
+
+The error was the harmless half. With costs `{0, 1}` the value equals the index,
+so positional matching looked correct in every early test; with costs `{2, 3}`
+the same code silently picked the wrong branch and replayed clean. Fixing it did
+not reduce the failure count — it moved five games *past* a bogus stop and into
+their real divergence, growing the genuine clusters from 3+1 to 6+2.
+
 ## Known gaps
 
 - `job.first_player` is written by `submit` but not yet honored by DCGO, so seat
@@ -157,20 +180,4 @@ coroutines that yield per frame; re-measure if you change it.
 - `triage` passes `card_at_slot: None`, so clusters key on action range only and
   the ranked output is coarser than the signature allows. Deriving it from the
   divergence's board snapshot is the obvious next refinement.
-- **The resolver conflates `count` with `int_value`** (`selection_resolve.rs`).
-  `count` is a QUANTITY from `SelectCountEffect` ("pay 2 memory", "choose 2
-  cards"); `int_value` is a BRANCH INDEX. The resolver does
-  `int_value.or(count)` and indexes `effect_choices` with the result, so
-  `count: 2` becomes "pick branch 2" and errors on a 2-branch prompt. This was
-  the top cluster in the first clean corpus -- 5 of 12 games.
-
-  The dangerous half is not the error: `count: 0` resolves to branch 0 and
-  replays cleanly while meaning something entirely different. A silently wrong
-  answer that passes is worse than a loud failure.
-
-  Fixing it needs a decision, not a patch. DCGO's `SelectCountEffect` covers
-  several distinct questions ("which digivolution cost?", "how many to trash?")
-  and the engine has no single matching kind -- the nearest are
-  `CountCappedMultiSelect`, `DpBudget` and `PlayCostBudget`, all "pick N things"
-  rather than "state a number". The mapping has to be made per pending kind,
-  and until then `count` should fail loudly rather than index branches.
+- `job.first_player` is still not honored by DCGO (see above).

@@ -69,6 +69,39 @@ fn yes_no_branches(pending: &crate::selection::PendingSelection) -> Option<(u16,
     }
 }
 
+/// Does this branch label describe the numeric value `want`?
+///
+/// The engine labels value-carrying branches with the value itself — e.g.
+/// `"Digivolve for cost 2"`, `"Digivolve for cost 2 (App Fusion)"`. DCGO records
+/// the chosen VALUE, so comparing against the label matches on what each side
+/// thinks the option means rather than on where it happens to sit in a list.
+///
+/// Positional matching is the trap this avoids: with costs {0, 1} the value
+/// equals the index and everything looks correct, then with costs {2, 3} the
+/// same code silently picks the wrong branch.
+///
+/// Scans whole integer tokens so `"cost 2"` does not match `12` or `20`.
+fn label_mentions_value(label: &str, want: i64) -> bool {
+    let bytes = label.as_bytes();
+    let mut i = 0usize;
+    while i < bytes.len() {
+        if bytes[i].is_ascii_digit() {
+            let start = i;
+            while i < bytes.len() && bytes[i].is_ascii_digit() {
+                i += 1;
+            }
+            if let Ok(n) = label[start..i].parse::<i64>() {
+                if n == want {
+                    return true;
+                }
+            }
+        } else {
+            i += 1;
+        }
+    }
+    false
+}
+
 /// Render an `EffectChoice` prompt's branch labels for an error message.
 ///
 /// When a recorded payload can't be mapped, the labels are what tell you
@@ -323,7 +356,97 @@ pub fn resolve_next(
         ));
     }
 
-    if let Some(v) = payload.int_value.or(payload.count.map(|c| c as i64)) {
+    // ── Count payloads (a VALUE, not an index) ───────────────────────────
+    //
+    // `SelectCountEffect` answers "how many?" / "which cost?" with the chosen
+    // NUMBER — the button text is the value itself. Our engine models the same
+    // question as an indexed branch list, so the value must first be located in
+    // the option set DCGO offered.
+    //
+    // These were previously folded in with `int_value` via
+    // `int_value.or(count)`, which indexed the branch list with a raw quantity:
+    // `count: 2` became "pick branch 2". The visible half was an out-of-range
+    // error; the dangerous half was `count: 0` resolving to branch 0 and
+    // replaying clean while meaning something entirely different.
+    if let Some(c) = payload.count {
+        // Preferred path: the engine's own branch labels embed the value
+        // ("Digivolve for cost 2"), so a recorded value can be matched directly.
+        // This works on recordings made before the recorder emitted
+        // `candidates`, and is stricter than positional matching — it compares
+        // what each side thinks the option MEANS, not merely where it sits.
+        if let Some(entries) = &pending.effect_choices {
+            let matches: Vec<&crate::selection::EffectChoiceEntry> = entries
+                .iter()
+                .filter(|e| label_mentions_value(&e.label, c as i64))
+                .collect();
+            if matches.len() == 1 {
+                return Ok(Some(matches[0].action_id));
+            }
+            if matches.len() > 1 {
+                return Err(format!(
+                    "count payload {} matches {} branches of the {:?} prompt '{}'                      — ambiguous{}",
+                    c,
+                    matches.len(),
+                    pending.kind,
+                    pending.prompt,
+                    describe_choices(pending)
+                ));
+            }
+        }
+
+        let Some(candidates) = &payload.candidates else {
+            return Err(format!(
+                "count payload {} has no candidate set, so it cannot be mapped onto                  the {:?} prompt '{}' — re-record with a recorder that emits                  `candidates`{}",
+                c,
+                pending.kind,
+                pending.prompt,
+                describe_choices(pending)
+            ));
+        };
+        let Some(index) = candidates.iter().position(|v| *v == c as i64) else {
+            return Err(format!(
+                "count payload {} is not in its own candidate set {:?} (prompt '{}')",
+                c, candidates, pending.prompt
+            ));
+        };
+        // The candidate set and the engine's branch list must describe the same
+        // question. A length mismatch means they do not, and picking by index
+        // anyway is how a wrong answer replays clean.
+        if let Some(entries) = &pending.effect_choices {
+            if entries.len() != candidates.len() {
+                return Err(format!(
+                    "count payload {} chose option {} of {:?}, but the {:?} prompt                      '{}' offers {} branch(es) — the two option sets disagree{}",
+                    c,
+                    index,
+                    candidates,
+                    pending.kind,
+                    pending.prompt,
+                    entries.len(),
+                    describe_choices(pending)
+                ));
+            }
+            if let Some(e) = entries.get(index) {
+                return Ok(Some(e.action_id));
+            }
+        }
+        if valid.len() == candidates.len() {
+            if let Some(id) = valid.get(index) {
+                return Ok(Some(*id));
+            }
+        }
+        return Err(format!(
+            "count payload {} chose option {} of {:?}, but the {:?} prompt '{}'              offers {} valid id(s)",
+            c,
+            index,
+            candidates,
+            pending.kind,
+            pending.prompt,
+            valid.len()
+        ));
+    }
+
+    // ── Branch-index payloads ────────────────────────────────────────────
+    if let Some(v) = payload.int_value {
         // EffectChoice: the int is DCGO's branch index — map through entries
         // by position (both sides present branches in card-text order).
         if let Some(entries) = &pending.effect_choices {
@@ -331,17 +454,18 @@ pub fn resolve_next(
                 return Ok(Some(e.action_id));
             }
         }
-        // Fallback: nth valid id (covers count prompts lowered to id lists).
         if v >= 0 {
             if let Some(id) = valid.get(v as usize) {
                 return Ok(Some(*id));
             }
         }
         return Err(format!(
-            "int payload {} out of range for {:?} prompt ({} valid ids)",
+            "int payload {} out of range for {:?} prompt '{}' ({} valid ids){}",
             v,
             pending.kind,
-            valid.len()
+            pending.prompt,
+            valid.len(),
+            describe_choices(pending)
         ));
     }
 
@@ -349,4 +473,49 @@ pub fn resolve_next(
         "selection payload for prompt '{}' carries no usable fields (kind {:?})",
         payload.prompt, pending.kind
     ))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn label_matching_finds_whole_integer_tokens_only() {
+        assert!(label_mentions_value("Digivolve for cost 2", 2));
+        assert!(label_mentions_value("Digivolve for cost 2 (App Fusion)", 2));
+        assert!(!label_mentions_value("Digivolve for cost 12", 2));
+        assert!(!label_mentions_value("Digivolve for cost 20", 2));
+        assert!(label_mentions_value("Digivolve for cost 12", 12));
+        assert!(!label_mentions_value("Play Tamer", 0));
+    }
+
+    #[test]
+    fn label_matching_beats_positional_when_values_do_not_start_at_zero() {
+        // The exact case that shipped a silently wrong answer: costs {2, 3}.
+        // Positionally, count 2 indexes branch 2 -- out of range here, and on a
+        // longer list simply the wrong branch. By label it is branch 0.
+        let labels = ["Digivolve for cost 2", "Digivolve for cost 3"];
+        let hit: Vec<usize> = (0..labels.len())
+            .filter(|i| label_mentions_value(labels[*i], 2))
+            .collect();
+        assert_eq!(hit, vec![0]);
+
+        let hit3: Vec<usize> = (0..labels.len())
+            .filter(|i| label_mentions_value(labels[*i], 3))
+            .collect();
+        assert_eq!(hit3, vec![1]);
+    }
+
+    #[test]
+    fn label_matching_agrees_on_the_coincidental_zero_based_case() {
+        // Costs {0, 1}: the value happens to equal the index, which is exactly
+        // why the old positional code looked correct in testing.
+        let labels = ["Digivolve for cost 0", "Digivolve for cost 1"];
+        for want in [0i64, 1i64] {
+            let hit: Vec<usize> = (0..labels.len())
+                .filter(|i| label_mentions_value(labels[*i], want))
+                .collect();
+            assert_eq!(hit, vec![want as usize]);
+        }
+    }
 }
