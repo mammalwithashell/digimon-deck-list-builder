@@ -83,6 +83,14 @@ enum Command {
         #[arg(long)]
         output: PathBuf,
     },
+    /// Ensure a DCGO oracle is running against a build.
+    Up {
+        /// Build directory containing manifest.json.
+        #[arg(long)]
+        build: PathBuf,
+    },
+    /// Stop the running DCGO oracle.
+    Down,
 }
 
 fn main() -> ExitCode {
@@ -184,6 +192,19 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             // the same silent-failure shape the triage denominator guards.
             let enabled = args.root.join(MARKER_FILE).exists();
             println!("harness: {}", if enabled { "ENABLED" } else { "disabled" });
+            // A queue that is not draining looks identical whether DCGO is
+            // stopped, hung, or simply switched off. Say which.
+            match dcgo_harness::daemon::read_pid(&args.root) {
+                Some(pid) if dcgo_harness::daemon::pid_alive(pid) => {
+                    let health = dcgo_harness::daemon::classify_heartbeat(
+                        dcgo_harness::daemon::heartbeat_age(&args.root),
+                        dcgo_harness::daemon::DEFAULT_STALE_SECONDS,
+                    );
+                    println!("process: pid {}, heartbeat {:?}", pid, health);
+                }
+                Some(pid) => println!("process: pid {} recorded but not alive (crashed)", pid),
+                None => println!("process: not running"),
+            }
             println!("{}", status.summary());
             if !enabled && status.pending > 0 {
                 println!(
@@ -247,6 +268,14 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             println!("  dcgo_commit       {}", m.dcgo_commit);
             println!("  artifact_sha256   {}", m.artifact_sha256);
             println!("  action_space_hash {}", m.action_space_hash);
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Up { build } => {
+            println!("{}", dcgo_harness::daemon::up(&args.root, build)?);
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Down => {
+            println!("{}", dcgo_harness::daemon::down(&args.root)?);
             Ok(ExitCode::SUCCESS)
         }
     }
