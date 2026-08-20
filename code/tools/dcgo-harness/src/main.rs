@@ -12,6 +12,10 @@ use std::process::ExitCode;
 use clap::{Parser, Subcommand};
 
 use dcgo_harness::job::{JobLimits, DIR_CLAIMED, DIR_DONE, DIR_FAILED, DIR_JOBS};
+
+/// Marker file whose presence tells DCGO the harness is on. Must match
+/// HarnessConfig.EnabledMarkerPath on the C# side.
+const MARKER_FILE: &str = "harness.enabled";
 use dcgo_harness::pool;
 
 #[derive(Parser, Debug)]
@@ -45,6 +49,10 @@ enum Command {
         #[arg(long, default_value_t = 180)]
         timeout_seconds: u64,
     },
+    /// Create the marker file that lets DCGO claim jobs.
+    Enable,
+    /// Remove the marker file so DCGO ignores the queue.
+    Disable,
     /// Report queue counts; sweep overdue claims.
     Status {
         /// Also requeue/quarantine claims older than their budget.
@@ -127,6 +135,26 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             );
             Ok(ExitCode::SUCCESS)
         }
+        Command::Enable => {
+            let marker = args.root.join(MARKER_FILE);
+            std::fs::write(&marker, "enabled by dcgo-harness
+")
+                .map_err(|e| format!("writing {}: {}", marker.display(), e))?;
+            println!("harness ENABLED ({})", marker.display());
+            println!("DCGO will claim jobs on its next Play. Run 'disable' when done.");
+            Ok(ExitCode::SUCCESS)
+        }
+        Command::Disable => {
+            let marker = args.root.join(MARKER_FILE);
+            match std::fs::remove_file(&marker) {
+                Ok(()) => println!("harness disabled ({} removed)", marker.display()),
+                Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+                    println!("harness already disabled (no {})", marker.display())
+                }
+                Err(e) => return Err(format!("removing {}: {}", marker.display(), e)),
+            }
+            Ok(ExitCode::SUCCESS)
+        }
         Command::Status {
             sweep,
             timeout_seconds,
@@ -139,7 +167,18 @@ fn run(args: &Args) -> Result<ExitCode, String> {
                 }
             }
             let status = dcgo_harness::queue::scan(&args.root)?;
+            // Surface the enable state. A queue full of pending jobs with the
+            // harness switched off looks exactly like a hung DCGO otherwise --
+            // the same silent-failure shape the triage denominator guards.
+            let enabled = args.root.join(MARKER_FILE).exists();
+            println!("harness: {}", if enabled { "ENABLED" } else { "disabled" });
             println!("{}", status.summary());
+            if !enabled && status.pending > 0 {
+                println!(
+                    "note: {} job(s) queued but the harness is disabled -- run 'enable'.",
+                    status.pending
+                );
+            }
             Ok(ExitCode::SUCCESS)
         }
         Command::Triage { corpus, cards_json } => {
