@@ -3259,6 +3259,12 @@ impl Game {
                     };
                     let kind = state.card_kind;
                     let attacker_opt = state.attacker;
+                    let attacker_top_before = attacker_opt.and_then(|h| {
+                        self.player(h.player)
+                            .battle_area
+                            .get(h.index as usize)
+                            .map(|p| p.top_card().handle())
+                    });
                     if kind == CardKind::Digimon {
                         if let Some(attacker) = attacker_opt {
                             if self.handle_valid(attacker)
@@ -3292,11 +3298,41 @@ impl Game {
                                 if attacker_dp <= sec_dp
                                     && !self.has_keyword(attacker, Keyword::Jamming)
                                 {
-                                    self.delete_permanent_with_effects(attacker);
-                                    if let Some(st) = self.security_resolution.as_mut() {
-                                        st.outcome_so_far = AttackResult::AttackerDeletedBySecurity;
-                                    }
+                                    // Cause must be Battle, NOT the inferred
+                                    // SecurityCheck. `infer_deletion_cause`
+                                    // tests `security_resolution.is_some()`
+                                    // before `pending_attack.is_some()`, and
+                                    // during a security battle BOTH are set —
+                                    // so the attacker's deletion was attributed
+                                    // to the check rather than to the battle.
+                                    // <Barrier>/<Evade> gate their replacement
+                                    // on ReplacementCause::Battle and were
+                                    // therefore filtered out before ever being
+                                    // offered. Losing to a Security Digimon is
+                                    // a battle deletion: rule 16-8 <Jamming>
+                                    // names it outright ("not deleted as a
+                                    // result of a battle with a Security
+                                    // Digimon"), and the Jamming check directly
+                                    // above relies on exactly that reading.
+                                    self.delete_permanent_with_cause(
+                                        attacker,
+                                        crate::replacement::ReplacementCause::Battle,
+                                    );
                                 }
+                            }
+                        }
+                    }
+                    // Record the outcome from what actually HAPPENED rather than
+                    // assuming a losing compare was lethal. Now that the cause is
+                    // Battle, <Barrier>/<Evade> can prevent the deletion, so the
+                    // old unconditional `AttackerDeletedBySecurity` would report a
+                    // survivor as deleted. Compared by top-card identity, not by
+                    // index: deleting a permanent shifts every later
+                    // `battle_area` index down.
+                    if let Some(attacker) = attacker_opt {
+                        if !self.attacker_still_on_field(attacker, attacker_top_before) {
+                            if let Some(st) = self.security_resolution.as_mut() {
+                                st.outcome_so_far = AttackResult::AttackerDeletedBySecurity;
                             }
                         }
                     }
@@ -3532,6 +3568,29 @@ impl Game {
         // Defensive fallback: some branch break'd out (state unexpectedly
         // cleared). Treat as survived.
         Some(AttackResult::SecurityCheckSurvived)
+    }
+
+    /// True when `handle`'s permanent is still on the field carrying the same
+    /// top card it had before a battle deletion was attempted.
+    ///
+    /// Index-independent on purpose: deleting a permanent removes it from
+    /// `battle_area` and shifts every later index down, so a bare
+    /// `handle_valid` can report "still there" while pointing at a different
+    /// Digimon that slid into the slot.
+    fn attacker_still_on_field(
+        &self,
+        handle: PermanentHandle,
+        top_before: Option<crate::card_source::CardHandle>,
+    ) -> bool {
+        let Some(card) = top_before else {
+            // Nothing was there to begin with; treat as "not deleted here" so
+            // the caller does not report a deletion that never happened.
+            return true;
+        };
+        self.player(handle.player)
+            .battle_area
+            .iter()
+            .any(|p| p.top_card().handle() == card)
     }
 
     pub(crate) fn commit_pending_security_loss_replacement(

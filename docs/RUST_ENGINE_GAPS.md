@@ -2162,55 +2162,50 @@ after Claude workflow `wf_6f7700f2-6c5` produced no usable verdicts. See
 - **Resolution:** `Keyword::Engage` is wired through the engine enum, printed-keyword parser, DSL keyword lookup/validator, serialization, keyword auto-effects, and the end-of-turn attack mask/decode path. Engage uses normal attack legality rather than Vortex target or played-this-turn exceptions.
 - **Regression tests:** `keyword_parsing::parser_ex12_guard_and_engage_keywords`; `keyword_phase_f::engage::*`; DSL keyword map/validator coverage.
 
-## Security-check battle skips the `WhenWouldBeDeleted` replacement scan
+## RESOLVED (2026-08-20): security battles attributed deletions to the check, not the battle
 
-**Found by:** the DCGO parity corpus (2026-08-20). Six of twelve recordings in
-the first clean batch shared the signature.
+Kept as a record because the tests it produced only make sense with it, and
+because the misdiagnosis is instructive.
 
-**Symptom.** An attacker that loses the DP compare against a security Digimon is
-deleted without ever being offered a `WhenWouldBeDeleted` replacement. Every
-replacement keyword is silently skipped on a security battle: Barrier, Evade,
-Armor Purge, Fragment, Scapegoat, Partition.
+**Symptom.** An attacker that lost the DP compare against a Security Digimon was
+deleted without ever being offered a `WhenWouldBeDeleted` replacement, so
+`<Barrier>` and `<Evade>` never fired on a security battle.
 
-**Cause.** `combat/mod.rs`, `SecurityPhase::BattleResolved`:
+**Root cause.** `Game::infer_deletion_cause` tests
+`security_resolution.is_some()` before `pending_attack.is_some()`. During a
+security battle BOTH are set, so the attacker's deletion was attributed
+`ReplacementCause::SecurityCheck`. `<Barrier>`/`<Evade>` gate their
+`replacement_condition` on `ReplacementCause::Battle`, so the candidate was
+filtered out before the prompt could be built. The replacement scan itself ran
+correctly the whole time.
 
-```rust
-if attacker_dp <= sec_dp && !self.has_keyword(attacker, Keyword::Jamming) {
-    self.delete_permanent_with_effects(attacker);   // no try_replace
-```
+Losing to a Security Digimon *is* a battle deletion: rule 16-8 `<Jamming>` says
+so outright ("not deleted as a result of a battle with a Security Digimon"), and
+the Jamming check sitting directly above the bug relies on exactly that reading.
 
-It deletes directly. It special-cases the PASSIVE keyword `Jamming` inline,
-which shows keyword protection was considered, but never calls
-`try_replace(EffectTiming::WhenWouldBeDeleted, …)`. The sibling phase
-`WhenWouldLoseSecurity` in the same state machine does it correctly, including
-parking and resuming when a replacement installs a selection.
+**Fix.** `SecurityPhase::BattleResolved` now calls
+`delete_permanent_with_cause(attacker, ReplacementCause::Battle)` rather than
+`delete_permanent_with_effects` (which infers). Because an optional replacement
+can now park a selection, the phase also guards re-entry with
+`phase_enqueue_done`, yields while the prompt is open, and records
+`AttackerDeletedBySecurity` from whether the attacker actually survived —
+compared by top-card identity, since deleting a permanent shifts `battle_area`
+indices.
 
-**Not a grant-path bug.** An earlier revision of this entry blamed
-`effect_context/action/modifiers.rs` for dropping replacement-process keywords
-from granted keywords. That was wrong, and the paired tests prove it:
+**Two wrong diagnoses on the way**, both cheap to kill once a discriminating
+test existed rather than more code-reading:
 
-- `granted_barrier_prevents_a_lethal_digimon_battle_deletion` — PASSES. Same
-  card, same lethal DP compare, plain Digimon battle. The grant machinery,
-  keyword lookup and replacement scan all work.
-- `granted_barrier_is_ignored_by_the_security_check` — FAILS. Only the path
-  differs.
+1. *"The engine mistimes the `[When Attacking]` window."* Falsified by
+   `ex12_032_when_attacking_window_opens_before_the_security_check`, which
+   passes — the window is correctly opened before the security check.
+2. *"DSL-granted replacement keywords never install their handler."* Falsified by
+   `granted_barrier_prevents_a_lethal_digimon_battle_deletion`, which passes:
+   same card, same granted Barrier, same lethal compare, plain Digimon battle.
+   Only the path differed.
 
-Both live in `code/digimon-engine/tests/cards_behavioral/ex12/ex12_042.rs`;
-the failing ones are `#[ignore]`d so CI stays green.
-
-**Worked example.** `EX12-042 Gatomon` grants inherited `<Barrier>`. In DCGO an
-attacker carrying Gatomon as a digivolution source survives a lethal security
-battle by trashing its top security card, then digivolves. Our engine deletes
-it, sending the attacker and its whole stack to the trash and making the
-follow-up digivolve illegal. Neither `EX12-042` nor `EX12-032` appears in
-`validated_cards_dsl.json` or `validated_cards.json` — authored, never
-behaviorally validated. The tests that did exist only asserted the keyword was
-GRANTED, never that it fires, which is how this survived.
-
-**Fix direction.** Add a security phase between `BattleResolved` and
-`OnSecurityCheckDrain` that runs
-`try_replace(WhenWouldBeDeleted, Permanent(attacker), Battle, None)`, parks when
-a selection is installed (as `WhenWouldLoseSecurity` does), and applies the
-deletion plus the `AttackerDeletedBySecurity` outcome only if not prevented.
-This is a combat state-machine change, not a local edit: the phase must resume
-without re-running the DP compare. Then un-ignore both tests above.
+**Standing coverage note.** Before this, no test in the suite asserted that
+Barrier *fires* — BT15-037's only checks that the clause compiles, and
+EX12-042's only checked `has_keyword`. Both `EX12-032` and `EX12-042` were
+authored and registered but appear in neither `validated_cards_dsl.json` nor
+`validated_cards.json`. A keyword that is granted but inert passes every
+"is it implemented?" check that existed.

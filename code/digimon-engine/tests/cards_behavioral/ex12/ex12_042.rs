@@ -65,7 +65,6 @@ fn ex12_042_on_play_adds_top_security_to_hand_then_recovers() {
 /// whole digivolution stack ended up in the trash and the follow-up digivolve
 /// was rejected as illegal. Six recordings in that corpus share the signature.
 #[test]
-#[ignore = "ENGINE GAP: DSL-granted replacement-process keywords never install their handler -- see docs/RUST_ENGINE_GAPS.md. Un-ignore when fixed."]
 fn ex12_042_inherited_barrier_prevents_a_lethal_battle_deletion() {
     let mut runner = DebugRunner::builder()
         .dsl_card(CARD_ID)
@@ -121,8 +120,14 @@ fn ex12_042_inherited_barrier_prevents_a_lethal_battle_deletion() {
     );
 }
 
-/// The security check deletes a losing attacker WITHOUT offering
-/// `WhenWouldBeDeleted` replacements.
+/// The security check must offer `WhenWouldBeDeleted` replacements before
+/// deleting a losing attacker.
+///
+/// REGRESSION: it did not. `infer_deletion_cause` tests
+/// `security_resolution.is_some()` before `pending_attack.is_some()`, and during
+/// a security battle BOTH are set — so the attacker's deletion was attributed to
+/// the CHECK rather than the BATTLE, and `<Barrier>`/`<Evade>` (which gate on
+/// `ReplacementCause::Battle`) were filtered out before ever being offered.
 ///
 /// Paired with `granted_barrier_prevents_a_lethal_digimon_battle_deletion`
 /// below, which is the same card and the same lethal DP compare in a plain
@@ -136,8 +141,7 @@ fn ex12_042_inherited_barrier_prevents_a_lethal_battle_deletion() {
 /// silently skipped on a security battle. The sibling phase
 /// `WhenWouldLoseSecurity` does it correctly.
 #[test]
-#[ignore = "ENGINE GAP: security-check battle skips the WhenWouldBeDeleted replacement scan -- see docs/RUST_ENGINE_GAPS.md. Un-ignore when fixed."]
-fn granted_barrier_is_ignored_by_the_security_check() {
+fn granted_barrier_prevents_a_lethal_security_check_deletion() {
     const YAML: &str = r#"
 card: PROBE-BARRIER
 name: Probe Barrier
