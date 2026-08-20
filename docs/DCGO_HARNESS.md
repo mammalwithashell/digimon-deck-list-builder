@@ -157,3 +157,20 @@ coroutines that yield per frame; re-measure if you change it.
 - `triage` passes `card_at_slot: None`, so clusters key on action range only and
   the ranked output is coarser than the signature allows. Deriving it from the
   divergence's board snapshot is the obvious next refinement.
+- **The resolver conflates `count` with `int_value`** (`selection_resolve.rs`).
+  `count` is a QUANTITY from `SelectCountEffect` ("pay 2 memory", "choose 2
+  cards"); `int_value` is a BRANCH INDEX. The resolver does
+  `int_value.or(count)` and indexes `effect_choices` with the result, so
+  `count: 2` becomes "pick branch 2" and errors on a 2-branch prompt. This was
+  the top cluster in the first clean corpus -- 5 of 12 games.
+
+  The dangerous half is not the error: `count: 0` resolves to branch 0 and
+  replays cleanly while meaning something entirely different. A silently wrong
+  answer that passes is worse than a loud failure.
+
+  Fixing it needs a decision, not a patch. DCGO's `SelectCountEffect` covers
+  several distinct questions ("which digivolution cost?", "how many to trash?")
+  and the engine has no single matching kind -- the nearest are
+  `CountCappedMultiSelect`, `DpBudget` and `PlayCostBudget`, all "pick N things"
+  rather than "state a number". The mapping has to be made per pending kind,
+  and until then `count` should fail loudly rather than index branches.
