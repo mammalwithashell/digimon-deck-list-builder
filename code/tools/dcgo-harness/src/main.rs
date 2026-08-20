@@ -71,6 +71,18 @@ enum Command {
         #[arg(long)]
         cards_json: PathBuf,
     },
+    /// Build a standalone DCGO player and stamp its manifest.
+    Build {
+        /// Unity editor executable.
+        #[arg(long, default_value = "C:/Program Files/Unity/Hub/Editor/2021.3.45f2/Editor/Unity.exe")]
+        unity: PathBuf,
+        /// DCGO project path (base repo, not a worktree -- CLAUDE.md rule 29).
+        #[arg(long)]
+        project: PathBuf,
+        /// Where the player goes. Must be outside the DCGO submodule.
+        #[arg(long)]
+        output: PathBuf,
+    },
 }
 
 fn main() -> ExitCode {
@@ -219,6 +231,23 @@ fn run(args: &Args) -> Result<ExitCode, String> {
             } else {
                 ExitCode::from(1)
             })
+        }
+        Command::Build {
+            unity,
+            project,
+            output,
+        } => {
+            let req = dcgo_harness::build::BuildRequest {
+                unity_exe: unity.clone(),
+                project_path: project.clone(),
+                output_dir: output.clone(),
+            };
+            let m = dcgo_harness::build::run(&req)?;
+            println!("built {}", output.display());
+            println!("  dcgo_commit       {}", m.dcgo_commit);
+            println!("  artifact_sha256   {}", m.artifact_sha256);
+            println!("  action_space_hash {}", m.action_space_hash);
+            Ok(ExitCode::SUCCESS)
         }
     }
 }
