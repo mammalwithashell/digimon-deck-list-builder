@@ -2162,46 +2162,55 @@ after Claude workflow `wf_6f7700f2-6c5` produced no usable verdicts. See
 - **Resolution:** `Keyword::Engage` is wired through the engine enum, printed-keyword parser, DSL keyword lookup/validator, serialization, keyword auto-effects, and the end-of-turn attack mask/decode path. Engage uses normal attack legality rather than Vortex target or played-this-turn exceptions.
 - **Regression tests:** `keyword_parsing::parser_ex12_guard_and_engage_keywords`; `keyword_phase_f::engage::*`; DSL keyword map/validator coverage.
 
-## DSL-granted replacement-process keywords never install their handler
+## Security-check battle skips the `WhenWouldBeDeleted` replacement scan
 
 **Found by:** the DCGO parity corpus (2026-08-20). Six of twelve recordings in
-the first clean batch shared the signature; reduced to a failing unit test at
-`code/digimon-engine/tests/cards_behavioral/ex12/ex12_042.rs`
-(`ex12_042_inherited_barrier_prevents_a_lethal_battle_deletion`, `#[ignore]`d so
-CI stays green).
+the first clean batch shared the signature.
 
-**Symptom.** A card grants a keyword through the DSL (`kind: grant_keyword`,
-including `scope: inherited`). `Game::has_keyword` reports the keyword, so a
-test that asserts the grant passes — but the keyword does nothing.
+**Symptom.** An attacker that loses the DP compare against a security Digimon is
+deleted without ever being offered a `WhenWouldBeDeleted` replacement. Every
+replacement keyword is silently skipped on a security battle: Barrier, Evade,
+Armor Purge, Fragment, Scapegoat, Partition.
 
-**Cause.** `effect_context/action/modifiers.rs` (~line 494) builds the auto
-effects and then skips any without a plain `process`:
+**Cause.** `combat/mod.rs`, `SecurityPhase::BattleResolved`:
 
 ```rust
-let autos = keyword_to_auto_effect(keyword, card);
-for effect in autos {
-    let Some(process) = effect.process else { continue };
+if attacker_dp <= sec_dp && !self.has_keyword(attacker, Keyword::Jamming) {
+    self.delete_permanent_with_effects(attacker);   // no try_replace
 ```
 
-Replacement-process keywords are built with `replacement_process` and no
-`process`, so they are silently dropped. The comment documents the skip, but
-the consequence — the keyword is inert rather than merely unrouted — does not
-appear to have been intended. The printed-keyword path
-(`game/mod.rs` ~2893) installs them correctly, so printed Barrier works and
-granted Barrier does not.
+It deletes directly. It special-cases the PASSIVE keyword `Jamming` inline,
+which shows keyword protection was considered, but never calls
+`try_replace(EffectTiming::WhenWouldBeDeleted, …)`. The sibling phase
+`WhenWouldLoseSecurity` in the same state machine does it correctly, including
+parking and resuming when a replacement installs a selection.
 
-**Blast radius.** Every replacement-process keyword granted this way: Barrier,
-Evade, Armor Purge, Fragment, Decode, Scapegoat, Partition. Any card whose
-inherited or granted form of these keywords is authored in the DSL is affected.
+**Not a grant-path bug.** An earlier revision of this entry blamed
+`effect_context/action/modifiers.rs` for dropping replacement-process keywords
+from granted keywords. That was wrong, and the paired tests prove it:
+
+- `granted_barrier_prevents_a_lethal_digimon_battle_deletion` — PASSES. Same
+  card, same lethal DP compare, plain Digimon battle. The grant machinery,
+  keyword lookup and replacement scan all work.
+- `granted_barrier_is_ignored_by_the_security_check` — FAILS. Only the path
+  differs.
+
+Both live in `code/digimon-engine/tests/cards_behavioral/ex12/ex12_042.rs`;
+the failing ones are `#[ignore]`d so CI stays green.
 
 **Worked example.** `EX12-042 Gatomon` grants inherited `<Barrier>`. In DCGO an
 attacker carrying Gatomon as a digivolution source survives a lethal security
-battle by trashing its top security card. Our engine deletes it, sending the
-attacker and its whole stack to the trash. Neither `EX12-042` nor `EX12-032`
-appears in `validated_cards_dsl.json` or `validated_cards.json` — the cards were
-authored but never behaviorally validated, and the existing tests only assert
-that the keyword is *granted*, never that it fires.
+battle by trashing its top security card, then digivolves. Our engine deletes
+it, sending the attacker and its whole stack to the trash and making the
+follow-up digivolve illegal. Neither `EX12-042` nor `EX12-032` appears in
+`validated_cards_dsl.json` or `validated_cards.json` — authored, never
+behaviorally validated. The tests that did exist only asserted the keyword was
+GRANTED, never that it fires, which is how this survived.
 
-**Fix direction.** Route replacement-process keywords into a granted-replacement
-store the deletion path consults, alongside the existing granted-triggered
-store. Then un-ignore the test above.
+**Fix direction.** Add a security phase between `BattleResolved` and
+`OnSecurityCheckDrain` that runs
+`try_replace(WhenWouldBeDeleted, Permanent(attacker), Battle, None)`, parks when
+a selection is installed (as `WhenWouldLoseSecurity` does), and applies the
+deletion plus the `AttackerDeletedBySecurity` outcome only if not prevented.
+This is a combat state-machine change, not a local edit: the phase must resume
+without re-running the DP compare. Then un-ignore both tests above.
