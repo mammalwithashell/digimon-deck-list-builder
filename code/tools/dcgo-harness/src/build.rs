@@ -5,7 +5,7 @@
 //! Keeping both halves here means the digest and the artifact can never be
 //! stamped by two different notions of "current".
 
-use std::path::{Path, PathBuf};
+use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::time::SystemTime;
 
@@ -65,17 +65,18 @@ pub fn git_commit(project_path: &Path) -> Result<String, String> {
 /// multi-GB player into the LFS-tracked DCGO submodule -- the disk-bloat
 /// scenario CLAUDE.md rule 29 exists to prevent, and painful to undo.
 ///
-/// `output_dir` need not exist yet (`run()` creates it later), so this only
-/// canonicalizes paths that currently exist; if either side fails to
-/// canonicalize (typically because `output_dir` doesn't exist yet) it falls
-/// back to a plain prefix comparison on the given paths rather than
-/// silently passing.
+/// `output_dir` need not exist yet (`run()` creates it later) -- in fact
+/// that is the *common* case, not an edge case: `--output` names a fresh
+/// directory on essentially every first build. So each side is resolved
+/// independently by [`resolve_for_containment_check`] (full canonicalize
+/// when possible, otherwise canonicalize the deepest existing ancestor and
+/// lexically normalize the rest), and compared component-wise -- case-folded
+/// on Windows, since NTFS is case-insensitive by default and a case typo
+/// genuinely names the same on-disk directory.
 pub fn validate_output_outside_project(project_path: &Path, output_dir: &Path) -> Result<(), String> {
-    let (project, output) = match (project_path.canonicalize(), output_dir.canonicalize()) {
-        (Ok(p), Ok(o)) => (p, o),
-        _ => (project_path.to_path_buf(), output_dir.to_path_buf()),
-    };
-    if output.starts_with(&project) {
+    let project = resolve_for_containment_check(project_path);
+    let output = resolve_for_containment_check(output_dir);
+    if path_contains(&project, &output) {
         return Err(format!(
             "--output {} is at or beneath --project {} -- this would write a \
              multi-GB build artifact into the LFS-tracked DCGO submodule \
@@ -85,6 +86,92 @@ pub fn validate_output_outside_project(project_path: &Path, output_dir: &Path) -
         ));
     }
     Ok(())
+}
+
+/// Resolve `path` into an absolute, normalized form suitable for the
+/// component-wise containment check in [`validate_output_outside_project`].
+///
+/// A path that exists is canonicalized outright, which gets the OS to
+/// resolve both `..` and (on Windows) case for us. A path that doesn't
+/// exist yet -- the normal shape of a fresh `--output` directory -- can't
+/// be canonicalized as a whole, so instead: canonicalize the deepest
+/// existing ancestor (this always bottoms out, since the filesystem
+/// root/drive always exists) and lexically normalize the non-existent
+/// trailing components onto it. That resolves `..` in the trailing part
+/// even though nothing there exists yet, and gets the real on-disk case
+/// for the part that does. If even the ancestor fails to canonicalize
+/// (e.g. a permissions error), fall back to a purely lexical normalization
+/// of the whole path so `..` traversal is still caught.
+fn resolve_for_containment_check(path: &Path) -> PathBuf {
+    if let Ok(canon) = path.canonicalize() {
+        return canon;
+    }
+
+    let components: Vec<Component> = path.components().collect();
+    for split in (0..components.len()).rev() {
+        let candidate: PathBuf = components[..split].iter().collect();
+        if candidate.as_os_str().is_empty() || !candidate.exists() {
+            continue;
+        }
+        if let Ok(canon_ancestor) = candidate.canonicalize() {
+            let mut resolved = canon_ancestor;
+            for component in &components[split..] {
+                push_component_lexically(&mut resolved, component);
+            }
+            return resolved;
+        }
+    }
+
+    lexically_normalize(path)
+}
+
+/// Append one path component onto `base`, resolving `.` and `..` lexically
+/// (without touching the filesystem) instead of appending them literally.
+fn push_component_lexically(base: &mut PathBuf, component: &Component) {
+    match component {
+        Component::CurDir => {}
+        Component::ParentDir => {
+            base.pop();
+        }
+        other => base.push(other.as_os_str()),
+    }
+}
+
+/// Lexically normalize a path -- collapse `.` and `..` by walking
+/// components and maintaining a stack, without ever touching the
+/// filesystem. Used only as a last-resort fallback when not even the
+/// deepest existing ancestor of a path can be canonicalized.
+fn lexically_normalize(path: &Path) -> PathBuf {
+    let mut result = PathBuf::new();
+    for component in path.components() {
+        push_component_lexically(&mut result, &component);
+    }
+    result
+}
+
+/// Component-wise "is `output` at or beneath `project`", case-folded on
+/// Windows (NTFS is case-insensitive by default, so a case-only difference
+/// names the same directory there). Component-wise -- not a string
+/// prefix -- so a sibling directory with a shared name prefix (`DCGO` vs
+/// `DCGO-sibling`) is correctly treated as outside.
+fn path_contains(project: &Path, output: &Path) -> bool {
+    let project_components: Vec<Component> = project.components().collect();
+    let output_components: Vec<Component> = output.components().collect();
+    if project_components.len() > output_components.len() {
+        return false;
+    }
+    project_components
+        .iter()
+        .zip(output_components.iter())
+        .all(|(p, o)| component_eq(p, o))
+}
+
+fn component_eq(a: &Component, b: &Component) -> bool {
+    if cfg!(windows) {
+        a.as_os_str().to_string_lossy().to_lowercase() == b.as_os_str().to_string_lossy().to_lowercase()
+    } else {
+        a == b
+    }
 }
 
 /// Guard against Unity exiting 0 without producing a new artifact -- e.g. a
@@ -371,12 +458,57 @@ mod tests {
         let root = std::env::temp_dir().join("dcgo_build_validate_output_sibling");
         let _ = std::fs::remove_dir_all(&root);
         let project = root.join("DCGO");
-        let output = root.join("dcgo-build").join("v1");
+        // "DCGO-sibling" is unambiguously a different directory from
+        // "DCGO" even under case folding, so this exercises the
+        // shared-name-prefix pitfall (a naive string-prefix check would
+        // wrongly reject it) without overlapping with the case-typo
+        // test's intent below.
+        let output = root.join("DCGO-sibling").join("v1");
         std::fs::create_dir_all(&project).unwrap();
         // output_dir need not exist yet -- run() creates it later.
         let _ = std::fs::remove_dir_all(&output);
 
         assert!(validate_output_outside_project(&project, &output).is_ok());
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    #[cfg(windows)]
+    fn validate_output_outside_project_rejects_a_case_only_difference() {
+        // NTFS is case-insensitive by default, so "dcgo" and "DCGO"
+        // genuinely refer to the same on-disk directory -- a very
+        // plausible typo on Windows. `output_dir` doesn't exist yet
+        // (the common case for a first build), so this exercises the
+        // non-canonicalizable fallback path, not the both-exist path.
+        let root = std::env::temp_dir().join("dcgo_build_validate_output_case_typo");
+        let _ = std::fs::remove_dir_all(&root);
+        let project = root.join("DCGO");
+        std::fs::create_dir_all(&project).unwrap();
+        let output = root.join("dcgo").join("v1");
+
+        let err = validate_output_outside_project(&project, &output).unwrap_err();
+        assert!(err.contains("submodule"), "got: {}", err);
+
+        let _ = std::fs::remove_dir_all(&root);
+    }
+
+    #[test]
+    fn validate_output_outside_project_rejects_dot_dot_traversal_back_inside() {
+        // `Path::components()` does not collapse a `Normal("DCGO-sibling")`
+        // component against a following `ParentDir`, so a naive
+        // component-wise prefix walk over the raw (non-normalized) path
+        // never notices this resolves back inside the project. The
+        // non-existent trailing components must be lexically normalized
+        // before the containment check.
+        let root = std::env::temp_dir().join("dcgo_build_validate_output_dotdot");
+        let _ = std::fs::remove_dir_all(&root);
+        let project = root.join("DCGO");
+        std::fs::create_dir_all(&project).unwrap();
+        let output = root.join("DCGO-sibling").join("..").join("DCGO").join("v1");
+
+        let err = validate_output_outside_project(&project, &output).unwrap_err();
+        assert!(err.contains("submodule"), "got: {}", err);
 
         let _ = std::fs::remove_dir_all(&root);
     }
