@@ -219,28 +219,84 @@ fn component_eq(a: &Component, b: &Component) -> bool {
 /// it. Without this, `run()` would stamp the stale bytes as if they were the
 /// just-built commit: a silent, plausible lie (see module doc).
 ///
+/// Freshness is judged from the *whole build output directory*, not just
+/// `exe`, because DCGO is a Unity Mono build: `exe` is only a launcher
+/// stub, and the actual C# lives in
+/// `DCGO_Data/Managed/Assembly-CSharp.dll`. An incremental build that only
+/// recompiled C# does not rewrite the stub, so checking the executable
+/// alone is a false positive on the most common kind of rebuild there is --
+/// confirmed live: `DCGO.exe` predating `started` next to a same-build
+/// `Assembly-CSharp.dll` and `globalgamemanagers` that postdated it, from a
+/// build that genuinely shipped new C# behavior. If ANY file anywhere
+/// under the output directory is at or newer than `started`, something was
+/// genuinely rebuilt.
+///
+/// The executable's own existence is still checked first and reported as
+/// its own distinct error -- "unity produced nothing at all" is a
+/// different failure from "unity touched nothing during this run", and the
+/// caller should be able to tell them apart.
+///
 /// `started` must be captured immediately before spawning Unity. A build
-/// takes minutes, so a plain `>=` comparison against the artifact's mtime is
-/// enough -- no tolerance slop that would reopen the hole this closes.
+/// takes minutes, so a plain `>=` comparison against mtimes is enough -- no
+/// tolerance slop that would reopen the hole this closes.
 pub fn ensure_fresh(exe: &Path, started: SystemTime) -> Result<(), String> {
-    let modified = std::fs::metadata(exe)
-        .and_then(|m| m.modified())
-        .map_err(|e| {
-            format!(
-                "unity reported success but produced no new artifact: {} ({}). \
-                 The output directory may hold a stale build.",
-                exe.display(),
-                e
-            )
-        })?;
-    if modified < started {
-        return Err(format!(
-            "unity reported success but produced no new artifact: {} was not \
-             modified during this build. The output directory may hold a stale build.",
-            exe.display()
-        ));
+    std::fs::metadata(exe).map_err(|e| {
+        format!(
+            "unity reported success but produced no new artifact: {} ({}). \
+             The output directory may hold a stale build.",
+            exe.display(),
+            e
+        )
+    })?;
+
+    let output_dir = exe.parent().unwrap_or_else(|| Path::new("."));
+    let newest = newest_mtime(output_dir)
+        .map_err(|e| format!("checking build output {}: {}", output_dir.display(), e))?;
+
+    match newest {
+        Some(modified) if modified >= started => Ok(()),
+        _ => Err(format!(
+            "unity reported success but produced no new artifact: nothing under {} \
+             was modified during this build -- nothing was rebuilt. The output \
+             directory may hold a stale build.",
+            output_dir.display()
+        )),
     }
-    Ok(())
+}
+
+/// Newest modification time of any file under `dir`, walked recursively.
+/// Returns `None` if the directory holds no files at all.
+///
+/// Only file mtimes are compared -- a directory entry can be touched
+/// without any new content landing inside it, so trusting directory mtimes
+/// would risk exactly the kind of false positive [`ensure_fresh`] exists to
+/// avoid.
+fn newest_mtime(dir: &Path) -> Result<Option<SystemTime>, String> {
+    let mut newest: Option<SystemTime> = None;
+    let entries =
+        std::fs::read_dir(dir).map_err(|e| format!("reading directory {}: {}", dir.display(), e))?;
+    for entry in entries {
+        let entry = entry.map_err(|e| format!("reading an entry in {}: {}", dir.display(), e))?;
+        let path = entry.path();
+        let file_type = entry
+            .file_type()
+            .map_err(|e| format!("reading file type of {}: {}", path.display(), e))?;
+
+        let candidate = if file_type.is_dir() {
+            newest_mtime(&path)?
+        } else {
+            let modified = entry
+                .metadata()
+                .and_then(|m| m.modified())
+                .map_err(|e| format!("reading metadata for {}: {}", path.display(), e))?;
+            Some(modified)
+        };
+
+        if let Some(candidate) = candidate {
+            newest = Some(newest.map_or(candidate, |n| n.max(candidate)));
+        }
+    }
+    Ok(newest)
 }
 
 /// Build the manifest for an artifact already on disk.
@@ -266,6 +322,32 @@ pub fn stamp(
     })
 }
 
+/// Prepare the output directory before Unity runs: ensure it exists, and
+/// remove any `manifest.json` left over from a previous build.
+///
+/// `ensure_fresh` runs *after* `BuildPipeline.BuildPlayer` has already
+/// rewritten the output directory. If it rejects the build -- or Unity
+/// itself fails -- the directory is left holding brand-new build artifacts
+/// next to a `manifest.json` that still describes the *previous*, different
+/// build. That stale manifest still passes its own action-space gate (the
+/// gate only compares it against the current engine, not against what is
+/// actually on disk), so `up` would happily launch a build the manifest
+/// positively misdescribes -- worse than the staleness `ensure_fresh`
+/// exists to catch in the first place. Deleting the manifest before Unity
+/// runs means a failed or rejected build leaves no manifest at all, so
+/// `manifest::load` in `up` fails loudly instead of launching a lie.
+fn prepare_output_dir(output_dir: &Path) -> Result<(), String> {
+    std::fs::create_dir_all(output_dir)
+        .map_err(|e| format!("creating {}: {}", output_dir.display(), e))?;
+
+    let manifest_path = output_dir.join(manifest::MANIFEST_FILE);
+    if manifest_path.exists() {
+        std::fs::remove_file(&manifest_path)
+            .map_err(|e| format!("removing stale manifest {}: {}", manifest_path.display(), e))?;
+    }
+    Ok(())
+}
+
 /// Run the Unity build, then stamp and save its manifest.
 pub fn run(req: &BuildRequest) -> Result<BuildManifest, String> {
     // Fail fast, before the 20-minute Unity invocation: a mistaken --output
@@ -276,8 +358,7 @@ pub fn run(req: &BuildRequest) -> Result<BuildManifest, String> {
     if !req.unity_exe.exists() {
         return Err(format!("unity not found at {}", req.unity_exe.display()));
     }
-    std::fs::create_dir_all(&req.output_dir)
-        .map_err(|e| format!("creating {}: {}", req.output_dir.display(), e))?;
+    prepare_output_dir(&req.output_dir)?;
 
     let commit = git_commit(&req.project_path)?;
 
@@ -312,6 +393,7 @@ pub fn run(req: &BuildRequest) -> Result<BuildManifest, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::time::Duration;
 
     fn req() -> BuildRequest {
         BuildRequest {
@@ -452,6 +534,129 @@ mod tests {
             err
         );
         assert!(err.contains("DCGO.exe"), "must name the missing file: {}", err);
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// Sets a file's mtime to `time`, so a test can simulate an artifact
+    /// left behind by a previous build without sleeping in real time.
+    fn set_mtime(path: &Path, time: SystemTime) {
+        std::fs::OpenOptions::new()
+            .write(true)
+            .open(path)
+            .unwrap()
+            .set_modified(time)
+            .unwrap();
+    }
+
+    #[test]
+    fn ensure_fresh_accepts_when_only_a_nested_dcgo_data_file_is_newer() {
+        // The exact live regression: DCGO is a Unity Mono build, so
+        // DCGO.exe is just a launcher stub and the actual C# lives in
+        // DCGO_Data/Managed/Assembly-CSharp.dll. An incremental build that
+        // only recompiled C# does not rewrite the stub -- observed live as
+        // DCGO.exe at 18:18:10 (the previous build) next to
+        // Assembly-CSharp.dll at 19:02:35 and globalgamemanagers at
+        // 19:05:52 (this build, C# demonstrably recompiled and shipped).
+        // Freshness must be judged from the whole output directory, not
+        // just the executable, or every C#-only incremental rebuild is a
+        // false positive.
+        let dir = std::env::temp_dir().join("dcgo_build_ensure_fresh_nested_fresh");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let exe = dir.join("DCGO.exe");
+        std::fs::write(&exe, b"launcher stub from a previous build").unwrap();
+        // Age the stub so it predates `started`, mirroring the live case
+        // where the launcher genuinely was not rewritten this build.
+        set_mtime(&exe, SystemTime::now() - Duration::from_secs(300));
+
+        let started = SystemTime::now() - Duration::from_secs(60);
+
+        let managed = dir.join("DCGO_Data").join("Managed");
+        std::fs::create_dir_all(&managed).unwrap();
+        // Written after `started` was captured -- the recompiled DLL.
+        std::fs::write(managed.join("Assembly-CSharp.dll"), b"recompiled C#").unwrap();
+
+        assert!(
+            ensure_fresh(&exe, started).is_ok(),
+            "a rebuild that only touched DCGO_Data must be accepted -- the launcher \
+             stub is not rewritten by an incremental Mono build"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn ensure_fresh_rejects_when_nothing_in_the_output_dir_is_newer_than_start() {
+        let dir = std::env::temp_dir().join("dcgo_build_ensure_fresh_nothing_rebuilt");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+
+        let exe = dir.join("DCGO.exe");
+        std::fs::write(&exe, b"stale player from a previous build").unwrap();
+        let managed = dir.join("DCGO_Data").join("Managed");
+        std::fs::create_dir_all(&managed).unwrap();
+        std::fs::write(managed.join("Assembly-CSharp.dll"), b"stale dll").unwrap();
+
+        // started is in the future relative to every write above, so
+        // nothing anywhere under the output directory was touched during
+        // "this build" -- a genuine no-op rebuild, not the false-positive
+        // case above.
+        let started = SystemTime::now() + Duration::from_secs(60);
+
+        let err = ensure_fresh(&exe, started).unwrap_err();
+        assert!(
+            err.to_lowercase().contains("nothing") && err.to_lowercase().contains("rebuilt"),
+            "must say plainly that nothing was rebuilt: {}",
+            err
+        );
+        assert!(
+            err.to_lowercase().contains("stale"),
+            "must warn the output directory may hold a stale build: {}",
+            err
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // --- prepare_output_dir ----------------------------------------------
+    //
+    // ensure_fresh runs after BuildPipeline.BuildPlayer has already
+    // rewritten the output directory, so a rejected or failed build must
+    // not leave a stale manifest.json behind describing the previous
+    // build's bytes -- `up` would load it, see it passes its own
+    // action-space gate, and launch a build the manifest misdescribes.
+
+    #[test]
+    fn prepare_output_dir_removes_a_stale_manifest_before_the_build() {
+        let dir = std::env::temp_dir().join("dcgo_build_prepare_output_removes_manifest");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        let manifest_path = dir.join(manifest::MANIFEST_FILE);
+        std::fs::write(&manifest_path, b"{\"stale\": true}").unwrap();
+        assert!(manifest_path.exists());
+
+        prepare_output_dir(&dir).unwrap();
+
+        assert!(
+            !manifest_path.exists(),
+            "a stale manifest must not survive prepare_output_dir -- otherwise a \
+             failed or rejected rebuild leaves it describing artifacts that are no \
+             longer accurate"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn prepare_output_dir_creates_a_missing_directory() {
+        let dir = std::env::temp_dir().join("dcgo_build_prepare_output_creates_dir");
+        let _ = std::fs::remove_dir_all(&dir);
+
+        prepare_output_dir(&dir).unwrap();
+
+        assert!(dir.is_dir());
 
         let _ = std::fs::remove_dir_all(&dir);
     }
