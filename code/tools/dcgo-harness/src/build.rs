@@ -316,7 +316,7 @@ pub fn stamp(
     Ok(BuildManifest {
         dcgo_commit: commit,
         built_at,
-        artifact_sha256: manifest::sha256_file(&exe)?,
+        artifact_sha256: manifest::sha256_build_identity(&req.output_dir, exe_name)?,
         action_space_hash: manifest::action_space_hash(),
         executable: exe_name.to_string(),
     })

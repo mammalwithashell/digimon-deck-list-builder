@@ -77,6 +77,74 @@ fn write_canonical(v: &serde_json::Value, out: &mut String) {
 }
 
 /// SHA256 of a file, streamed so a multi-GB artifact does not need to fit in RAM.
+/// Digest identifying a *built player* by the content that actually decides
+/// how it behaves.
+///
+/// NOT `sha256_file(exe)`. DCGO is a Unity Mono build, so the executable is a
+/// launcher stub and every line of game logic — the whole recorder mod, the
+/// scripted input driver, the deck stacker — lives in
+/// `DCGO_Data/Managed/Assembly-CSharp.dll`. A C#-only rebuild does not rewrite
+/// the stub, so hashing it makes two builds with completely different
+/// behaviour share an identity.
+///
+/// That is not hypothetical: builds at `dcgo_commit` 8c4f98cb6 and a2eb37e10,
+/// 656 lines of new C# apart, stamped the SAME `artifact_sha256` while their
+/// `Assembly-CSharp.dll`s differed (0d8dc951… vs a5d3fdd7…). The freshness
+/// check in `build.rs` already knew the stub was not the artifact; identity
+/// had not caught up.
+///
+/// It matters because the manifest is provenance. The test drafter cites
+/// "DCGO build <hash>" in the header of every drafted test, and the design
+/// defers publishing the artifact behind exactly this digest. A hash that
+/// cannot distinguish two builds turns both into plausible lies.
+///
+/// Digest = SHA-256 over `<rel-path>` + LF + `<file-sha256>` + LF, for the launcher plus
+/// every file under `DCGO_Data/Managed`, sorted by relative path so the walk
+/// order cannot change the answer.
+pub fn sha256_build_identity(dir: &Path, exe_name: &str) -> Result<String, String> {
+    let exe = dir.join(exe_name);
+    if !exe.is_file() {
+        return Err(format!("no executable at {}", exe.display()));
+    }
+
+    let managed = dir.join("DCGO_Data").join("Managed");
+    if !managed.is_dir() {
+        return Err(format!(
+            "no managed assembly directory at {} — a DCGO player without one is malformed,              and hashing the launcher stub alone would silently produce an identity that              cannot distinguish two builds",
+            managed.display()
+        ));
+    }
+
+    let mut entries: Vec<(String, std::path::PathBuf)> = vec![(exe_name.to_string(), exe)];
+    for e in std::fs::read_dir(&managed)
+        .map_err(|e| format!("reading {}: {}", managed.display(), e))?
+    {
+        let e = e.map_err(|e| format!("reading {}: {}", managed.display(), e))?;
+        let path = e.path();
+        if path.is_file() {
+            let name = path
+                .file_name()
+                .and_then(|s| s.to_str())
+                .ok_or_else(|| format!("non-UTF8 filename under {}", managed.display()))?;
+            entries.push((format!("DCGO_Data/Managed/{name}"), path));
+        }
+    }
+
+    // Sort so a filesystem that enumerates differently cannot change identity.
+    entries.sort_by(|a, b| a.0.cmp(&b.0));
+
+    let mut h = Sha256::new();
+    for (rel, path) in entries {
+        h.update(rel.as_bytes());
+        h.update(b"
+");
+        h.update(sha256_file(&path)?.as_bytes());
+        h.update(b"
+");
+    }
+    Ok(format!("{:x}", h.finalize()))
+}
+
 pub fn sha256_file(path: &Path) -> Result<String, String> {
     use std::io::Read;
     let mut f = std::fs::File::open(path)
@@ -221,5 +289,90 @@ mod tests {
         let err = load(&dir).unwrap_err();
         assert!(err.contains("manifest.json"), "got: {}", err);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+}
+
+#[cfg(test)]
+mod build_identity_tests {
+    use super::*;
+
+    fn write(p: &Path, bytes: &[u8]) {
+        std::fs::create_dir_all(p.parent().unwrap()).unwrap();
+        std::fs::write(p, bytes).unwrap();
+    }
+
+    /// Build two output dirs that differ ONLY in the managed assembly --
+    /// exactly what a C#-only rebuild produces.
+    fn two_builds(tag: &str) -> (std::path::PathBuf, std::path::PathBuf) {
+        let base = std::env::temp_dir().join(format!("dcgo_build_identity_{tag}"));
+        let _ = std::fs::remove_dir_all(&base);
+        let (a, b) = (base.join("a"), base.join("b"));
+        for (d, dll) in [(&a, &b"old C#"[..]), (&b, &b"new C# with InputDriver"[..])] {
+            // Byte-identical launcher stub in both: Unity does not rewrite it
+            // when only scripts changed.
+            write(&d.join("DCGO.exe"), b"identical launcher stub");
+            write(&d.join("DCGO_Data").join("Managed").join("Assembly-CSharp.dll"), dll);
+            write(&d.join("DCGO_Data").join("Managed").join("UnityEngine.dll"), b"engine");
+        }
+        (a, b)
+    }
+
+    #[test]
+    fn hashing_only_the_exe_cannot_tell_two_builds_apart() {
+        // Pins the defect this function exists to fix, so nobody "simplifies"
+        // build identity back to the executable. Observed live: a build at
+        // dcgo_commit 8c4f98cb6 and one at a2eb37e10, 656 lines of new C#
+        // apart, stamped the SAME artifact_sha256.
+        let (a, b) = two_builds("exe_only");
+        assert_eq!(
+            sha256_file(&a.join("DCGO.exe")).unwrap(),
+            sha256_file(&b.join("DCGO.exe")).unwrap(),
+            "the stub is identical -- which is precisely why it is not an identity"
+        );
+    }
+
+    #[test]
+    fn build_identity_distinguishes_a_csharp_only_rebuild() {
+        let (a, b) = two_builds("csharp_only");
+        let ha = sha256_build_identity(&a, "DCGO.exe").unwrap();
+        let hb = sha256_build_identity(&b, "DCGO.exe").unwrap();
+        assert_ne!(
+            ha, hb,
+            "a build whose game logic changed must not share an identity with one that did not"
+        );
+    }
+
+    #[test]
+    fn build_identity_is_stable_for_identical_content() {
+        let (a, _) = two_builds("stable");
+        assert_eq!(
+            sha256_build_identity(&a, "DCGO.exe").unwrap(),
+            sha256_build_identity(&a, "DCGO.exe").unwrap(),
+            "identity must not depend on directory-walk order"
+        );
+    }
+
+    #[test]
+    fn build_identity_covers_the_launcher_too() {
+        let (a, b) = two_builds("launcher");
+        // Same managed assemblies, different stub -> still a different build.
+        std::fs::write(b.join("DCGO_Data").join("Managed").join("Assembly-CSharp.dll"), b"old C#")
+            .unwrap();
+        std::fs::write(b.join("DCGO.exe"), b"a DIFFERENT launcher stub").unwrap();
+        assert_ne!(
+            sha256_build_identity(&a, "DCGO.exe").unwrap(),
+            sha256_build_identity(&b, "DCGO.exe").unwrap()
+        );
+    }
+
+    #[test]
+    fn build_identity_errors_when_managed_is_missing() {
+        // Silently hashing just the stub is how the original defect read as
+        // success. A build with no managed dir is malformed; say so.
+        let dir = std::env::temp_dir().join("dcgo_build_identity_nomanaged");
+        let _ = std::fs::remove_dir_all(&dir);
+        write(&dir.join("DCGO.exe"), b"stub");
+        let err = sha256_build_identity(&dir, "DCGO.exe").unwrap_err();
+        assert!(err.to_lowercase().contains("managed"), "got: {err}");
     }
 }
