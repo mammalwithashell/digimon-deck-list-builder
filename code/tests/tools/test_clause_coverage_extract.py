@@ -105,7 +105,14 @@ def test_full_vb_deck_denominator_counts_are_internally_consistent():
         pool = json.load(f)
     deck_cards = pool["decks"][0]["cards"]
     distinct = sorted(set(deck_cards))
-    assert len(distinct) == 20  # the VB deck's 20 distinct card IDs
+    # Derived, never pinned. This test asserts INTERNAL CONSISTENCY -- every
+    # other assertion below relates the denominator to itself -- so the input
+    # size must track whatever the pool currently holds. A hard-coded count
+    # (it was `== 20`) broke the moment a2b0d9573 revised the decklist to 22
+    # distinct IDs, and that failure said nothing about extractor correctness.
+    # What IS worth guarding is that the pool is real and that dedup behaved.
+    assert deck_cards, "vb_pool.json's first deck is empty"
+    assert 0 < len(distinct) <= len(deck_cards)
 
     result = run(distinct, "test:vb-deck")
     denom = result["denominator"]
