@@ -13,17 +13,15 @@
 //!   1 — at least one recording reported a parity failure.
 //!   2 — argument or I/O error (no recordings processed).
 
-use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::ExitCode;
 
 use clap::Parser;
-use digimon_engine::card_data::CardData;
 
 use dcgo_replay::{
-    aggregate, parse_jsonl, replay_recording, ParityReport, RecordingV1, ReplayConfig,
-    ReplayOutcome,
+    aggregate, collect_recording_paths, load_card_data, parse_jsonl, replay_recording,
+    ParityReport, RecordingV1, ReplayConfig, ReplayFail, ReplayOutcome,
 };
 
 #[derive(Parser, Debug)]
@@ -51,7 +49,26 @@ struct Args {
 
 fn main() -> ExitCode {
     let args = Args::parse();
+    // Run the real work on a worker thread with a large stack. Replaying a
+    // recording constructs the engine's `CardEffectRegistry`, which recurses
+    // deeply enough to overflow the OS-default main-thread stack on Windows
+    // (~1 MB), aborting with STATUS_STACK_OVERFLOW. `RUST_MIN_STACK` only
+    // governs spawned threads, not `main`, so the fix is to spawn one
+    // explicitly. Mirrors `digimon-engine-cli/src/main.rs`.
+    let stack_size = std::env::var("RUST_MIN_STACK")
+        .ok()
+        .and_then(|v| v.parse::<usize>().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(256 * 1024 * 1024);
+    std::thread::Builder::new()
+        .stack_size(stack_size)
+        .spawn(move || run(args))
+        .expect("failed to spawn worker thread")
+        .join()
+        .expect("worker thread panicked")
+}
 
+fn run(args: Args) -> ExitCode {
     let card_data = match load_card_data(args.cards_json.as_deref()) {
         Ok(d) => d,
         Err(e) => {
@@ -86,7 +103,9 @@ fn main() -> ExitCode {
 
     for path in &recording_paths {
         let text = match fs::read_to_string(path) {
-            Ok(t) => t,
+            // Recordings written before the recorder's UTF8Encoding(false) fix
+            // start with a BOM, which serde_json rejects as invalid JSON.
+            Ok(t) => t.trim_start_matches('\u{feff}').to_string(),
             Err(e) => {
                 eprintln!("warn: skipping {}: read failed: {}", path.display(), e);
                 continue;
@@ -102,6 +121,7 @@ fn main() -> ExitCode {
         let outcome = replay_recording(&recording, &card_data, &cfg);
         if args.verbose {
             eprintln!("  {} → {}", path.display(), summary(&outcome));
+            eprintln!("{}", detail(&outcome));
         }
         recordings.push(recording);
         outcomes.push(outcome);
@@ -114,8 +134,19 @@ fn main() -> ExitCode {
     write_report(&report, args.output.as_deref());
 
     eprintln!(
-        "\nDone. {} pass, {} partial_pass, {} fail (of {}).",
-        report.pass, report.partial_pass, report.fail, report.total_recordings
+        "\nDone. {} pass, {} partial_pass, {} fail (of {}).{}",
+        report.pass,
+        report.partial_pass,
+        report.fail,
+        report.total_recordings,
+        if report.skipped_actions > 0 {
+            format!(
+                " {} recorded DCGO play(s) skipped as never-completed (not verified).",
+                report.skipped_actions
+            )
+        } else {
+            String::new()
+        }
     );
 
     if report.fail > 0 {
@@ -133,6 +164,133 @@ fn summary(outcome: &ReplayOutcome) -> &'static str {
     }
 }
 
+/// Human-readable failure detail for `--verbose` triage. The aggregated
+/// JSON report deliberately stays compact (one key per failing card), so
+/// this is where the per-divergence specifics — notably the engine's
+/// sampled legal action IDs — surface for a human diagnosing a single
+/// recording.
+fn detail(outcome: &ReplayOutcome) -> String {
+    match outcome {
+        ReplayOutcome::Pass {
+            steps_consumed,
+            winner,
+            skipped_actions,
+        } => format!(
+            "      {} steps, winner=P{}{}",
+            steps_consumed,
+            winner,
+            skip_suffix(*skipped_actions)
+        ),
+        ReplayOutcome::PartialPass {
+            steps_consumed,
+            stop_reason,
+            skipped_actions,
+        } => format!(
+            "      {} steps; halted: {}{}",
+            steps_consumed,
+            stop_reason,
+            skip_suffix(*skipped_actions)
+        ),
+        ReplayOutcome::Fail(fail) => match fail {
+            ReplayFail::IllegalAction(ia) => format!(
+                "      illegal_action @ step {} (actor P{}, phase {}, source {})\n\
+                 \x20       recorded action_id={} ({})\n\
+                 \x20       engine legal sample: {:?}",
+                ia.step,
+                ia.actor,
+                ia.phase,
+                ia.source,
+                ia.action_id,
+                describe_action(ia.action_id),
+                ia.sample_legal_ids
+                    .iter()
+                    .map(|id| format!("{} ({})", id, describe_action(*id)))
+                    .collect::<Vec<_>>()
+            ) + &indent_board(&ia.board),
+            ReplayFail::ActorMismatch(am) => format!(
+                "      actor_mismatch @ step {}: engine expected P{}, recording said P{} \
+                 (action_id={}, phase {})",
+                am.step, am.expected_actor, am.recorded_actor, am.action_id, am.phase
+            ),
+            ReplayFail::WinnerMismatch(wm) => format!(
+                "      winner_mismatch after {} steps: recording={}, engine={}",
+                wm.steps_consumed, wm.expected_winner, wm.engine_winner
+            ),
+            ReplayFail::MemoryMismatch(mm) => format!(
+                "      memory_mismatch @ step {}: recorded {} (P{} perspective), engine {}",
+                mm.step, mm.recorded, mm.my_player_id, mm.replayed
+            ),
+            ReplayFail::EngineError { step, message } => {
+                format!("      engine_error @ step {:?}: {}", step, message)
+            }
+            ReplayFail::OpaqueRevealError { step, message } => {
+                format!("      opaque_reveal_error @ step {:?}: {}", step, message)
+            }
+        },
+    }
+}
+
+/// Trailing note disclosing recorded DCGO plays this replay skipped as
+/// never-completed (see `ReplayOutcome::Pass::skipped_actions`). Empty when
+/// zero, so a recording unaffected by this feature prints exactly as before.
+fn skip_suffix(skipped_actions: u32) -> String {
+    if skipped_actions == 0 {
+        String::new()
+    } else {
+        format!(
+            " ({} recorded play(s) skipped as never-completed)",
+            skipped_actions
+        )
+    }
+}
+
+/// Indent a captured board snapshot to line up under the failure detail.
+/// Empty input yields empty output so pre-board recordings print unchanged.
+fn indent_board(board: &str) -> String {
+    if board.trim().is_empty() {
+        return String::new();
+    }
+    board
+        .lines()
+        .filter(|l| !l.trim().is_empty())
+        .map(|l| format!("\n        {}", l))
+        .collect()
+}
+
+/// Decode an action ID into its action-space range + operands, so a
+/// verbose failure line reads as gameplay rather than as a bare integer.
+fn describe_action(id: u16) -> String {
+    use digimon_engine::action::space as sp;
+    match id {
+        sp::PASS => "pass".to_string(),
+        sp::CONCEDE_GAME => "concede".to_string(),
+        id if id < sp::HAND_EFFECT_START => format!("play_hand_{}", id),
+        id if id < sp::HAND_EFFECT_START + 30 => {
+            format!("hand_effect_{}", id - sp::HAND_EFFECT_START)
+        }
+        id if (sp::ATTACK_START..sp::ATTACK_END).contains(&id) => {
+            let (attacker, target) = sp::decode_attack(id);
+            format!("attack_{}_to_{}", attacker, target)
+        }
+        id if (sp::DIGIVOLVE_START..sp::DIGIVOLVE_END).contains(&id) => {
+            let (hand, field) = sp::decode_digivolve(id);
+            format!("digivolve_hand_{}_to_field_{}", hand, field)
+        }
+        id if (sp::FIELD_EFFECT_START..sp::FIELD_EFFECT_END).contains(&id) => {
+            let (perm, effect) = sp::decode_field_effect(id);
+            format!("field_slot_{}_effect_{}", perm, effect)
+        }
+        id if (sp::TRASH_EFFECT_START..sp::TRASH_EFFECT_END).contains(&id) => {
+            format!("trash_effect_{}", id - sp::TRASH_EFFECT_START)
+        }
+        id if (sp::SOURCE_SELECT_START..sp::SOURCE_SELECT_END).contains(&id) => {
+            let (field, source) = sp::decode_source_select(id);
+            format!("source_select_field_{}_src_{}", field, source)
+        }
+        id => format!("action_{}", id),
+    }
+}
+
 fn write_report(report: &ParityReport, output: Option<&Path>) {
     let json = serde_json::to_string_pretty(report).expect("serialize report");
     match output {
@@ -142,59 +300,4 @@ fn write_report(report: &ParityReport, output: Option<&Path>) {
         },
         None => println!("{}", json),
     }
-}
-
-/// Collect every `.jsonl` file in `path` (recursively, one level deep) or
-/// the single file at `path`.
-fn collect_recording_paths(path: &Path) -> Result<Vec<PathBuf>, String> {
-    if !path.exists() {
-        return Err(format!("input path does not exist: {}", path.display()));
-    }
-    if path.is_file() {
-        return Ok(vec![path.to_path_buf()]);
-    }
-
-    // Directory mode — one level deep. We don't recurse arbitrarily so a
-    // user can co-locate misc files next to a `recordings/` subdir without
-    // surprises.
-    let mut out = Vec::new();
-    let entries = fs::read_dir(path).map_err(|e| format!("read_dir {}: {}", path.display(), e))?;
-    for entry in entries {
-        let entry = entry.map_err(|e| format!("dir entry: {}", e))?;
-        let p = entry.path();
-        if p.is_file() && p.extension().and_then(|s| s.to_str()) == Some("jsonl") {
-            out.push(p);
-        }
-    }
-    out.sort(); // deterministic processing order
-    Ok(out)
-}
-
-fn load_card_data(cards_json: Option<&Path>) -> Result<HashMap<String, CardData>, String> {
-    let path = match cards_json {
-        Some(p) => p.to_path_buf(),
-        None => default_cards_json_path()
-            .ok_or_else(|| "no --cards-json provided and no data/cards.json found".to_string())?,
-    };
-    let bytes = fs::read(&path).map_err(|e| format!("reading {}: {}", path.display(), e))?;
-    let text =
-        std::str::from_utf8(&bytes).map_err(|e| format!("cards.json is not valid UTF-8: {}", e))?;
-    CardData::load_from_str(text).map_err(|e| format!("parsing cards.json: {}", e))
-}
-
-/// Walk up from CWD looking for `data/cards.json`. Mirrors the engine CLI's
-/// resolver so the harness works without flags in a developer's typical
-/// repo-root invocation.
-fn default_cards_json_path() -> Option<PathBuf> {
-    let mut dir = std::env::current_dir().ok()?;
-    for _ in 0..6 {
-        let candidate = dir.join("data").join("cards.json");
-        if candidate.exists() {
-            return Some(candidate);
-        }
-        if !dir.pop() {
-            break;
-        }
-    }
-    None
 }

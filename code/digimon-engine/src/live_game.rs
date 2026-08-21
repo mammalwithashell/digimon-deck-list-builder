@@ -1512,7 +1512,7 @@ fn card_ids_in_play(game: &Game) -> Vec<String> {
 fn dcgo_deck_ids(recording: &crate::dcgo_recording::RecordingV1) -> [Vec<String>; 2] {
     let me = (recording.start.my_player_id as usize).min(1);
     let opp_idx = 1 - me;
-    let opp = recording
+    let mut opp = recording
         .start
         .opp_deck_post_shuffle
         .clone()
@@ -1520,6 +1520,13 @@ fn dcgo_deck_ids(recording: &crate::dcgo_recording::RecordingV1) -> [Vec<String>
         .unwrap_or_default();
     let mut out: [Vec<String>; 2] = [Vec::new(), Vec::new()];
     out[me] = recording.start.my_deck_post_shuffle.clone();
+    // Egg (digitama) decks, when the recording carries them (2026-08-16+).
+    if let Some(eggs) = &recording.start.my_egg_deck {
+        out[me].extend(eggs.iter().cloned());
+    }
+    if let Some(eggs) = &recording.start.opp_egg_deck {
+        opp.extend(eggs.iter().cloned());
+    }
     out[opp_idx] = opp;
     out
 }

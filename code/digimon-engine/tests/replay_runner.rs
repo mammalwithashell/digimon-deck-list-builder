@@ -10,7 +10,9 @@
 use std::collections::HashMap;
 
 use digimon_engine::card_data::CardData;
-use digimon_engine::dcgo_recording::{ActionRow, GameEnd, GameStart, RecordingV1, RevealRow, Row};
+use digimon_engine::dcgo_recording::{
+    ActionRow, GameEnd, GameStart, InitialStateRow, InitialStateSide, RecordingV1, RevealRow, Row,
+};
 use digimon_engine::recorder::VerificationReplayRecording;
 use digimon_engine::runners::replay::{
     DivergenceKind, ReplayError, ReplayRunner, ReplaySession, StepPolicy, VerificationReplayCheck,
@@ -22,6 +24,14 @@ fn minimal_db() -> HashMap<String, CardData> {
         "ST1-01": {
             "card_id": "ST1-01", "card_name_eng": "Botamon",
             "card_effect_class_name": "ST1_01", "play_cost": 0, "dp": -1,
+            "level": 2, "card_kind": 3, "rarity": 0, "card_colors": [0],
+            "type_eng": ["Lesser"], "form_eng": ["In-Training"], "attribute_eng": [],
+            "effect_description_eng": "", "inherited_effect_description_eng": "",
+            "security_effect_description_eng": "", "evo_costs": []
+        },
+        "ST1-02": {
+            "card_id": "ST1-02", "card_name_eng": "Punimon",
+            "card_effect_class_name": "ST1_02", "play_cost": 0, "dp": -1,
             "level": 2, "card_kind": 3, "rarity": 0, "card_colors": [0],
             "type_eng": ["Lesser"], "form_eng": ["In-Training"], "attribute_eng": [],
             "effect_description_eng": "", "inherited_effect_description_eng": "",
@@ -500,10 +510,13 @@ fn dcgo_bot_recording() -> RecordingV1 {
             game_id: "bot-test".into(),
             timestamp: "t".into(),
             my_player_id: 0,
+            first_player: None,
             is_ai: true,
             my_deck_post_shuffle: test_deck(),
             opp_deck_post_shuffle: Some(test_deck()),
             opp_decklist_composition: None,
+            my_egg_deck: None,
+            opp_egg_deck: None,
         },
         rows: vec![
             Row::Action(ActionRow {
@@ -512,6 +525,11 @@ fn dcgo_bot_recording() -> RecordingV1 {
                 action_id: 0,
                 phase: "Mulligan".into(),
                 source: "mulligan".into(),
+                board_p0: None,
+                board_p1: None,
+                memory: None,
+                card_id: None,
+                memory_before: None,
             }),
             Row::Action(ActionRow {
                 step: 1,
@@ -519,6 +537,11 @@ fn dcgo_bot_recording() -> RecordingV1 {
                 action_id: 0,
                 phase: "Mulligan".into(),
                 source: "mulligan".into(),
+                board_p0: None,
+                board_p1: None,
+                memory: None,
+                card_id: None,
+                memory_before: None,
             }),
         ],
         end: GameEnd {
@@ -562,6 +585,82 @@ fn dcgo_bot_recording_reconstructs_deterministically() {
     assert_eq!(a.game.current_phase.py_name(), "Mulligan");
 }
 
+/// Egg (digitama) decks recorded in `game_start` are placed at replay
+/// construction: the adapter appends them to the ordered deck lists,
+/// `Game`'s card-kind routing splits `DigiEgg` cards into `digitama_deck`
+/// (relative order preserved), and ordered construction does NOT re-shuffle
+/// them — the recorded order lands verbatim in HATCH order.
+///
+/// `Player::hatch()` pops from the *end* of `digitama_deck` (same
+/// pop-from-end convention `Player::draw()`/`setup_security()` use for the
+/// main deck — verified against real DCGO recordings: a recording's
+/// `*_deck_post_shuffle[0:5]` matches the built hand exactly, and `[5:10]`
+/// matches the built security stack exactly, order for order). Per
+/// `dcgo_recording.rs`'s `my_egg_deck` doc ("index 0 is hatched first in
+/// DCGO" — the same convention as the main deck's "drawn from index 0
+/// first"), the adapter must store `digitama_deck` as the REVERSE of the
+/// recorded order so the first `.pop()`/`hatch()` yields the recording's
+/// first egg. So `digitama_deck.iter().rev()` — not raw `.iter()` order —
+/// is what "placed verbatim" means here.
+#[test]
+fn dcgo_bot_recording_places_recorded_egg_decks() {
+    let db = minimal_db();
+    let mut rec = dcgo_bot_recording();
+    // Pure main decks + explicit, distinctly-ordered egg decks.
+    rec.start.my_deck_post_shuffle = vec!["ST1-03".to_string(); 50];
+    rec.start.opp_deck_post_shuffle = Some(vec!["ST1-03".to_string(); 50]);
+    rec.start.my_egg_deck = Some(vec![
+        "ST1-01".to_string(),
+        "ST1-02".to_string(),
+        "ST1-01".to_string(),
+        "ST1-02".to_string(),
+    ]);
+    rec.start.opp_egg_deck = Some(vec!["ST1-01".to_string(); 5]);
+
+    let s = ReplaySession::from_dcgo(rec, &db, false).unwrap();
+    // my_player_id = 0 in the fixture. `.rev()` converts storage order
+    // (pop-from-end) to hatch order (first `.pop()` first).
+    let my_eggs: Vec<&str> = s.game.players[0]
+        .digitama_deck
+        .iter()
+        .rev()
+        .map(|c| c.card_id(&s.game.card_data))
+        .collect();
+    assert_eq!(
+        my_eggs,
+        vec!["ST1-01", "ST1-02", "ST1-01", "ST1-02"],
+        "recorded egg order placed verbatim in hatch order (no shuffle)"
+    );
+    assert_eq!(
+        s.game.players[1].digitama_deck.len(),
+        5,
+        "opp egg deck placed"
+    );
+    // Main decks are unaffected by the egg append (50 = deck + dealt hand).
+    for i in 0..2 {
+        assert_eq!(
+            s.game.players[i].deck.len() + s.game.players[i].hand.len(),
+            50,
+            "player {} main deck intact",
+            i
+        );
+    }
+}
+
+/// Pre-egg-capture recordings (no egg fields in `game_start`) still
+/// construct — with empty digitama decks, matching prior behavior.
+#[test]
+fn dcgo_bot_recording_without_egg_decks_still_constructs() {
+    let db = minimal_db();
+    let mut rec = dcgo_bot_recording();
+    rec.start.my_deck_post_shuffle = vec!["ST1-03".to_string(); 50];
+    rec.start.opp_deck_post_shuffle = Some(vec!["ST1-03".to_string(); 50]);
+
+    let s = ReplaySession::from_dcgo(rec, &db, false).unwrap();
+    assert!(s.game.players[0].digitama_deck.is_empty());
+    assert!(s.game.players[1].digitama_deck.is_empty());
+}
+
 /// Task 4.2: the DCGO mulligan actions replay under `Trust` (Trust avoids
 /// coupling the test to the engine's seed-0 mulligan order).
 #[test]
@@ -572,6 +671,118 @@ fn dcgo_bot_replays_mulligan_under_trust() {
     s.run_to_completion();
     assert_eq!(s.current_step(), s.total_steps());
     assert!(!s.is_paused());
+}
+
+/// Like [`dcgo_bot_recording`], but the local player (actor 0) actually
+/// **redraws** (`action_id: 1`) instead of keeping. DCGO's recorder only
+/// ever logs the keep/redraw *decision* for a mulligan
+/// (`Digimon.Recording.GameRecorder.LogMulligan(playerID, isRedraw)` in
+/// `TurnStateMachine.SetRedraw`) — it never captures the resulting
+/// redrawn hand, so a DCGO recording can never carry a genuine
+/// post-mulligan `initial_state` snapshot the way a native `GameRecorder`
+/// recording does. Uses an all-identical-card deck so the redrawn hand's
+/// *content* is deterministic (mod shuffle order) regardless of the
+/// engine's own RNG stream, letting the regression assert exact
+/// post-mulligan hand content without coupling to a specific seed or to
+/// DCGO's (unrecoverable) actual redraw.
+fn dcgo_bot_recording_with_redraw() -> RecordingV1 {
+    let uniform_deck: Vec<String> = std::iter::repeat("ST1-03".to_string()).take(50).collect();
+    RecordingV1 {
+        start: GameStart {
+            v: 1,
+            game_id: "redraw-test".into(),
+            timestamp: "t".into(),
+            my_player_id: 0,
+            first_player: Some(0),
+            is_ai: true,
+            my_deck_post_shuffle: uniform_deck.clone(),
+            opp_deck_post_shuffle: Some(uniform_deck),
+            opp_decklist_composition: None,
+            my_egg_deck: None,
+            opp_egg_deck: None,
+        },
+        rows: vec![
+            Row::Action(ActionRow {
+                step: 0,
+                actor: 0,
+                action_id: 1, // redraw, not keep
+                phase: "Mulligan".into(),
+                source: "mulligan".into(),
+                board_p0: None,
+                board_p1: None,
+                memory: None,
+                card_id: None,
+                memory_before: None,
+            }),
+            Row::Action(ActionRow {
+                step: 1,
+                actor: 1,
+                action_id: 0, // keep
+                phase: "Mulligan".into(),
+                source: "mulligan".into(),
+                board_p0: None,
+                board_p1: None,
+                memory: None,
+                card_id: None,
+                memory_before: None,
+            }),
+        ],
+        end: GameEnd {
+            winner: 0,
+            reason: "win".into(),
+            total_steps: 2,
+        },
+    }
+}
+
+/// Regression (see module docs "Mulligan handling"): a DCGO-shaped
+/// recording with no `initial_state` and a real redraw (not just a keep)
+/// must replay the mulligan decisions — under the DCGO adapter's real
+/// default policy, `CheckThenApply`, not just under `Trust` — without a
+/// spurious divergence, and must land on a legitimate, fully-drawn
+/// post-mulligan hand rather than silently keeping the pre-mulligan deal.
+#[test]
+fn dcgo_bot_redraw_replays_under_check_then_apply_without_divergence() {
+    let db = minimal_db();
+    let mut s = ReplaySession::from_dcgo(dcgo_bot_recording_with_redraw(), &db, false).unwrap();
+    assert_eq!(
+        s.policy(),
+        StepPolicy::CheckThenApply,
+        "DCGO's real default policy — this must hold under production settings, not just Trust"
+    );
+
+    s.run_to_completion();
+
+    assert_eq!(
+        s.current_step(),
+        s.total_steps(),
+        "both mulligan decisions (including the redraw) were consumed as replayable steps"
+    );
+    assert!(
+        !s.is_paused(),
+        "no pausing divergence — the redraw must be legal under the engine's own mask/actor checks"
+    );
+    assert!(
+        s.divergences().is_empty(),
+        "no divergence recorded while replaying the mulligan decisions: {:?}",
+        s.divergences()
+    );
+    // Mulligan is complete for both players — phase advanced past Mulligan.
+    assert_ne!(s.game.current_phase.py_name(), "Mulligan");
+
+    // The redraw actually happened: a fresh 5-card hand, not the stale
+    // pre-mulligan deal silently left in place by a dropped/filtered action.
+    assert_eq!(s.game.players[0].hand.len(), 5, "redrawn hand is full size");
+    for card in &s.game.players[0].hand {
+        assert_eq!(
+            card.card_id(&s.game.card_data),
+            "ST1-03",
+            "uniform deck: every redrawn card is deterministically ST1-03"
+        );
+    }
+    // The keeping opponent is unaffected and drew directly from the ordered
+    // deck (sanity check on the fixture, not the regression itself).
+    assert_eq!(s.game.players[1].hand.len(), 5);
 }
 
 /// A 50-card deck (4 DigiEggs + 46 main) over the micro DB — the shape the
@@ -606,10 +817,13 @@ fn dcgo_opaque_recording() -> RecordingV1 {
             game_id: "opaque-test".into(),
             timestamp: "t".into(),
             my_player_id: 0,
+            first_player: None,
             is_ai: false,
             my_deck_post_shuffle: opaque_micro_deck(),
             opp_deck_post_shuffle: None,
             opp_decklist_composition: Some(opaque_micro_deck()),
+            my_egg_deck: None,
+            opp_egg_deck: None,
         },
         rows: reveals,
         end: GameEnd {
@@ -723,4 +937,232 @@ fn dcgo_bot_backward_seek_rebuilds_to_fresh_state() {
             fresh.game.players[i].hand.len()
         );
     }
+}
+
+// ── Group 6: DCGO memory-gauge parity check ─────────────────────────────
+
+/// A DCGO row whose recorded `memory` agrees with the engine's own value
+/// (converted to `my_player_id`'s perspective) produces no divergence.
+/// Fresh construction leaves `game.memory == 0` and `memory_pair.0 ==
+/// my_player_id == 0` here, so the perspective-converted value is 0.
+#[test]
+fn dcgo_row_memory_agreeing_produces_no_divergence() {
+    let db = minimal_db();
+    let mut rec = dcgo_bot_recording();
+    if let Row::Action(a) = &mut rec.rows[0] {
+        a.memory = Some(0);
+    }
+    let mut s = ReplaySession::from_dcgo(rec, &db, false).unwrap();
+    let _ = s.step();
+    assert!(
+        s.divergences().is_empty(),
+        "agreeing memory must not produce a divergence: {:?}",
+        s.divergences()
+    );
+}
+
+/// A DCGO row whose recorded `memory` disagrees with the engine's value
+/// surfaces a distinct `DivergenceKind::Memory` naming both values, the
+/// perspective player, and the step — and does NOT pause the cursor
+/// (informational, unlike `Actor`/`MaskMiss`), so a batch replay keeps
+/// going and the drift is visible at the exact step it happened.
+#[test]
+fn dcgo_row_memory_disagreeing_produces_memory_divergence() {
+    let db = minimal_db();
+    let mut rec = dcgo_bot_recording();
+    if let Row::Action(a) = &mut rec.rows[0] {
+        a.memory = Some(7); // engine memory is 0 here -> mismatch
+    }
+    let mut s = ReplaySession::from_dcgo(rec, &db, false).unwrap();
+    let _ = s.step();
+    assert_eq!(s.divergences().len(), 1);
+    match &s.divergences()[0].kind {
+        DivergenceKind::Memory {
+            recorded,
+            replayed,
+            my_player_id,
+        } => {
+            assert_eq!(*recorded, 7);
+            assert_eq!(*replayed, 0);
+            assert_eq!(*my_player_id, 0);
+        }
+        other => panic!("expected DivergenceKind::Memory, got {:?}", other),
+    }
+    assert_eq!(s.divergences()[0].step, 0);
+    assert!(
+        !s.is_paused(),
+        "memory divergence is informational and must not pause the cursor"
+    );
+}
+
+/// A DCGO row with no recorded `memory` (today's corpus shape, predating
+/// the field) triggers no check at all — absence is neither agreement
+/// nor a failure. `dcgo_bot_recording()`'s fixture rows carry no memory.
+#[test]
+fn dcgo_row_without_memory_field_produces_no_divergence() {
+    let db = minimal_db();
+    let rec = dcgo_bot_recording();
+    let mut s = ReplaySession::from_dcgo(rec, &db, false).unwrap();
+    let _ = s.step();
+    assert!(s.divergences().is_empty());
+}
+
+// ── Group 7: DCGO post-mulligan `initial_state` snapshot ────────────────
+
+/// A recording WITHOUT an `initial_state` row keeps today's behavior:
+/// mulligan actions stay in the replayable stream and the constructed
+/// game starts in `Mulligan` phase. Explicit contrast for
+/// `dcgo_bot_recording_with_initial_state_snapshot_reconstructs_exact_zones`
+/// below.
+#[test]
+fn dcgo_recording_without_initial_state_row_keeps_mulligan_in_stream() {
+    let db = minimal_db();
+    let s = ReplaySession::from_dcgo(dcgo_bot_recording(), &db, false).unwrap();
+    assert_eq!(
+        s.total_steps(),
+        2,
+        "both mulligan actions remain replayable steps"
+    );
+    assert_eq!(s.game.current_phase.py_name(), "Mulligan");
+}
+
+/// A bot-vs-bot recording WITH a post-mulligan `initial_state` snapshot
+/// filters the mulligan actions out of the replayable stream (baked into
+/// the snapshot, same contract as a native recording) and reconstructs
+/// EXACT zone contents from it rather than re-simulating the mulligan
+/// through the engine's own RNG. Uses distinguishable card IDs so
+/// ORDERING (not just presence) is pinned: `library_order`/
+/// `security_order` use DCGO's "index 0 = top" convention, and the
+/// engine's zones pop from the end — `.iter().rev()` must read back in
+/// the SAME order as recorded, or the reversal direction is backwards.
+#[test]
+fn dcgo_bot_recording_with_initial_state_snapshot_reconstructs_exact_zones() {
+    let db = minimal_db();
+    let my_lib = vec![
+        "ST1-03".to_string(),
+        "ST1-01".to_string(),
+        "ST1-02".to_string(),
+    ];
+    let my_sec = vec!["ST1-01".to_string(), "ST1-03".to_string()];
+    let my_hand = vec!["ST1-02".to_string(), "ST1-02".to_string()];
+    let opp_lib = vec!["ST1-01".to_string()];
+    let opp_sec = vec!["ST1-03".to_string()];
+    let opp_hand = vec!["ST1-01".to_string()];
+
+    let mut rec = dcgo_bot_recording();
+    rec.rows.push(Row::InitialState(InitialStateRow {
+        first_player_id: 0,
+        my: InitialStateSide {
+            library_order: my_lib.clone(),
+            digitama_library_order: vec![],
+            security_order: my_sec.clone(),
+            initial_hand: my_hand.clone(),
+        },
+        opp: Some(InitialStateSide {
+            library_order: opp_lib.clone(),
+            digitama_library_order: vec![],
+            security_order: opp_sec.clone(),
+            initial_hand: opp_hand.clone(),
+        }),
+        memory: Some(0),
+    }));
+
+    let s = ReplaySession::from_dcgo(rec, &db, false)
+        .expect("recording with initial_state reconstructs");
+
+    assert_eq!(
+        s.total_steps(),
+        0,
+        "mulligan rows filtered; nothing else recorded"
+    );
+    assert_ne!(
+        s.game.current_phase.py_name(),
+        "Mulligan",
+        "already past mulligan"
+    );
+
+    let my_lib_draw_order: Vec<&str> = s.game.players[0]
+        .deck
+        .iter()
+        .rev()
+        .map(|c| c.card_id(&s.game.card_data))
+        .collect();
+    assert_eq!(my_lib_draw_order, my_lib, "my library in recorded draw order");
+
+    let my_sec_draw_order: Vec<&str> = s.game.players[0]
+        .security
+        .iter()
+        .rev()
+        .map(|c| c.card_id(&s.game.card_data))
+        .collect();
+    assert_eq!(
+        my_sec_draw_order, my_sec,
+        "my security in recorded top-first order"
+    );
+
+    let mut my_hand_ids: Vec<&str> = s.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&s.game.card_data))
+        .collect();
+    my_hand_ids.sort_unstable();
+    let mut expected_my_hand: Vec<&str> = my_hand.iter().map(|s| s.as_str()).collect();
+    expected_my_hand.sort_unstable();
+    assert_eq!(my_hand_ids, expected_my_hand, "my exact hand content");
+
+    let opp_lib_draw_order: Vec<&str> = s.game.players[1]
+        .deck
+        .iter()
+        .rev()
+        .map(|c| c.card_id(&s.game.card_data))
+        .collect();
+    assert_eq!(
+        opp_lib_draw_order, opp_lib,
+        "opp library in recorded draw order (bot-vs-bot: fully observable)"
+    );
+}
+
+/// A PvP-opaque recording's `initial_state` row carries only `my` (the
+/// opponent's post-mulligan hand isn't observable — same visibility
+/// split as `opp_deck_post_shuffle`). Only MY zones get overwritten from
+/// the snapshot; the opponent's opaque/`RevealQueue`-backed
+/// representation from the pre-snapshot construction is untouched and
+/// still functions.
+#[test]
+fn dcgo_opaque_recording_with_initial_state_overwrites_only_my_side() {
+    let db = opaque_micro_db();
+    let mut rec = dcgo_opaque_recording();
+    let my_lib = vec!["ST1-03".to_string(), "ST1-01".to_string()];
+    let my_sec = vec!["ST1-01".to_string()];
+    let my_hand = vec!["ST1-03".to_string(), "ST1-03".to_string()];
+    rec.rows.push(Row::InitialState(InitialStateRow {
+        first_player_id: 0,
+        my: InitialStateSide {
+            library_order: my_lib.clone(),
+            digitama_library_order: vec![],
+            security_order: my_sec.clone(),
+            initial_hand: my_hand.clone(),
+        },
+        opp: None,
+        memory: Some(0),
+    }));
+
+    let s = ReplaySession::from_dcgo(rec, &db, false)
+        .expect("opaque recording with initial_state still reconstructs");
+
+    let my_lib_draw_order: Vec<&str> = s.game.players[0]
+        .deck
+        .iter()
+        .rev()
+        .map(|c| c.card_id(&s.game.card_data))
+        .collect();
+    assert_eq!(my_lib_draw_order, my_lib);
+    assert_eq!(s.game.players[0].hand.len(), my_hand.len());
+    // Opponent side is still the opaque/reveal-queue construction from
+    // `build_initial_game_inner` -- unaffected by (and un-overwritten by)
+    // the snapshot, since `opp` was `None`.
+    assert!(
+        !s.game.players[1].hand.is_empty(),
+        "opponent's opaque hand from the pre-snapshot construction is intact"
+    );
 }

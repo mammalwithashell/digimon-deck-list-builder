@@ -2161,3 +2161,51 @@ after Claude workflow `wf_6f7700f2-6c5` produced no usable verdicts. See
 - **Rules authority:** Comprehensive Rules Manual 16-44: Engage is an optional trigger at End of Your Turn that lets the Digimon attack.
 - **Resolution:** `Keyword::Engage` is wired through the engine enum, printed-keyword parser, DSL keyword lookup/validator, serialization, keyword auto-effects, and the end-of-turn attack mask/decode path. Engage uses normal attack legality rather than Vortex target or played-this-turn exceptions.
 - **Regression tests:** `keyword_parsing::parser_ex12_guard_and_engage_keywords`; `keyword_phase_f::engage::*`; DSL keyword map/validator coverage.
+
+## RESOLVED (2026-08-20): security battles attributed deletions to the check, not the battle
+
+Kept as a record because the tests it produced only make sense with it, and
+because the misdiagnosis is instructive.
+
+**Symptom.** An attacker that lost the DP compare against a Security Digimon was
+deleted without ever being offered a `WhenWouldBeDeleted` replacement, so
+`<Barrier>` and `<Evade>` never fired on a security battle.
+
+**Root cause.** `Game::infer_deletion_cause` tests
+`security_resolution.is_some()` before `pending_attack.is_some()`. During a
+security battle BOTH are set, so the attacker's deletion was attributed
+`ReplacementCause::SecurityCheck`. `<Barrier>`/`<Evade>` gate their
+`replacement_condition` on `ReplacementCause::Battle`, so the candidate was
+filtered out before the prompt could be built. The replacement scan itself ran
+correctly the whole time.
+
+Losing to a Security Digimon *is* a battle deletion: rule 16-8 `<Jamming>` says
+so outright ("not deleted as a result of a battle with a Security Digimon"), and
+the Jamming check sitting directly above the bug relies on exactly that reading.
+
+**Fix.** `SecurityPhase::BattleResolved` now calls
+`delete_permanent_with_cause(attacker, ReplacementCause::Battle)` rather than
+`delete_permanent_with_effects` (which infers). Because an optional replacement
+can now park a selection, the phase also guards re-entry with
+`phase_enqueue_done`, yields while the prompt is open, and records
+`AttackerDeletedBySecurity` from whether the attacker actually survived —
+compared by top-card identity, since deleting a permanent shifts `battle_area`
+indices.
+
+**Two wrong diagnoses on the way**, both cheap to kill once a discriminating
+test existed rather than more code-reading:
+
+1. *"The engine mistimes the `[When Attacking]` window."* Falsified by
+   `ex12_032_when_attacking_window_opens_before_the_security_check`, which
+   passes — the window is correctly opened before the security check.
+2. *"DSL-granted replacement keywords never install their handler."* Falsified by
+   `granted_barrier_prevents_a_lethal_digimon_battle_deletion`, which passes:
+   same card, same granted Barrier, same lethal compare, plain Digimon battle.
+   Only the path differed.
+
+**Standing coverage note.** Before this, no test in the suite asserted that
+Barrier *fires* — BT15-037's only checks that the clause compiles, and
+EX12-042's only checked `has_keyword`. Both `EX12-032` and `EX12-042` were
+authored and registered but appear in neither `validated_cards_dsl.json` nor
+`validated_cards.json`. A keyword that is granted but inert passes every
+"is it implemented?" check that existed.

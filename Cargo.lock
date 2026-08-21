@@ -849,6 +849,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "dcgo-harness"
+version = "0.1.0"
+dependencies = [
+ "action-space-export",
+ "chrono",
+ "clap",
+ "dcgo-replay",
+ "digimon-engine",
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "dcgo-replay"
 version = "0.1.0"
 dependencies = [

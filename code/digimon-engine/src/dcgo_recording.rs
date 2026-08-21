@@ -36,7 +36,19 @@ pub enum Row {
     /// An encoded decision. Either an `action` (success) or `encoder_failure`
     /// (the recorder couldn't map the decision to a 2192-space ID).
     Action(ActionRow),
+    /// The RESOLVED detail of a preceding `action` row (diagnostic fields,
+    /// added post-v1 — see [`ActionDetailRow`]). Correlate to the `action`
+    /// row that shares its `step` (and `actor`).
+    ActionDetail(ActionDetailRow),
+    /// A selection answer with semantic payload (task 3.5) — resolved to
+    /// engine action IDs at replay time against the live `PendingSelection`.
+    Selection(SelectionRow),
     EncoderFailure(EncoderFailureRow),
+    /// Post-mulligan zone snapshot — emitted once per game, after BOTH
+    /// players' mulligan decisions have resolved and security has been
+    /// dealt. See [`InitialStateRow`] for the full contract. Optional:
+    /// absent in recordings made before the recorder started emitting it.
+    InitialState(InitialStateRow),
     /// A card revealed from the opaque opponent's pile — produced by the
     /// DCGO recorder's PvP mode for every observed opponent reveal (draws,
     /// security pops, mill effects). The replay harness preloads these
@@ -46,6 +58,13 @@ pub enum Row {
     /// Order matters: the queue serves reveals FIFO, so this row's
     /// position in the JSONL stream dictates when the engine sees it.
     Reveal(RevealRow),
+    /// A card-effect activation — one row per `ICardEffect` that reached
+    /// `Activate_Effect_Execute` (offered-and-declined "you may" effects do
+    /// NOT get a row; see [`EffectActivationRow::executed`]). Diagnostic
+    /// only: turns clause-level coverage (did this printed effect clause
+    /// actually run at some point in the recording?) from unmeasurable into
+    /// measured. Added post-v1; absent in recordings predating this hook.
+    EffectActivation(EffectActivationRow),
     /// Terminal row — exactly one per recording, the last line.
     GameEnd(GameEnd),
     /// Tolerated escape hatch — captures rows whose `type` is unrecognized
@@ -70,6 +89,11 @@ pub struct GameStart {
     /// 0 or 1 — the DCGO client's player ID (which side the recording is
     /// from). In bot mode this is conventionally 0.
     pub my_player_id: u8,
+    /// 0 or 1 — who takes turn 1. Absent in recordings made before the
+    /// recorder started emitting it; the adapter then infers it from the
+    /// first mulligan actor (DCGO's first player mulligans first).
+    #[serde(default)]
+    pub first_player: Option<u8>,
     /// True for bot-vs-bot games (both decks observable). False for PvP.
     pub is_ai: bool,
     /// Local player's deck in post-shuffle order. Drawn from index 0 first.
@@ -89,6 +113,18 @@ pub struct GameStart {
     /// doesn't know the post-shuffle order.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub opp_decklist_composition: Option<Vec<String>>,
+    /// Local player's digitama (egg) deck in post-shuffle order — index 0
+    /// is hatched first in DCGO. Absent (`None`) in recordings made before
+    /// the recorder started emitting egg decks; the adapter then replays
+    /// with an empty egg deck (pre-egg-capture behavior).
+    #[serde(default)]
+    pub my_egg_deck: Option<Vec<String>>,
+    /// Opponent's digitama (egg) deck in post-shuffle order. Bot matches
+    /// only — `None` for PvP (the opponent's digitama order is not
+    /// observable, same as their main deck) and for pre-egg-capture
+    /// recordings.
+    #[serde(default)]
+    pub opp_egg_deck: Option<Vec<String>>,
 }
 
 /// An encoded decision row.
@@ -99,6 +135,235 @@ pub struct ActionRow {
     pub action_id: u16,
     pub phase: String,
     pub source: String,
+    /// Battle-area card IDs at decision time, in the DCGO compact order the
+    /// row's board operands index. Absent in pre-0.4 recordings.
+    ///
+    /// DCGO orders its compact battle area by on-screen frame, and permanents
+    /// physically migrate between frames at runtime (`PreferredFrame`), so a
+    /// DCGO slot index does NOT correspond to the engine's play-ordered
+    /// `battle_area`. The replay harness rebuilds the mapping by matching card
+    /// identity against the engine's board; without these lists it can only
+    /// assume the orders agree, which they routinely do not.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub board_p0: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub board_p1: Option<Vec<String>>,
+    /// Shared memory gauge at decision time, converted to THIS
+    /// recording's `my_player_id` perspective — positive favors the
+    /// recording player, negative favors the opponent. Always relative to
+    /// the SAME fixed player for the whole recording, never to whoever is
+    /// turn-player at this row (that would require re-deriving whose
+    /// favor a bare number means at every row — see `GameContext.Memory`
+    /// / `Player.MemoryForPlayer` in the C# recorder and the engine's
+    /// opposite, active-player-relative `Game::memory` convention;
+    /// `runners::replay::memory_from_recording_perspective` reconciles
+    /// the two explicitly, never by inference). Absent in recordings made
+    /// before the recorder started emitting this field — `None` must be
+    /// treated as "unknown", not as agreement or zero.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory: Option<i32>,
+    /// [Diagnostic, added post-v1] The physical card this action references
+    /// (play/digivolve card, activated hand card, activated permanent's top
+    /// card) — the printed card ID (e.g. `"EX12-035"`), resolved by the C#
+    /// recorder BEFORE the `photonView.RPC` dispatch (index lookup into the
+    /// actor's own already-known hand/field, not the outcome of resolving
+    /// the action). `None` when the action references no card (pass, hatch,
+    /// phase actions) or in recordings predating this field. Not to be
+    /// confused with the AUTHORITATIVE resolved identity carried on this
+    /// action's correlated [`ActionDetailRow`] (same value in practice,
+    /// captured from the actual `CardSource` instance once resolved,
+    /// intended as a same-source cross-check).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_id: Option<String>,
+    /// [Diagnostic, added post-v1] Identical read to `memory`, under its
+    /// own key — see `memory`'s doc for the perspective convention. Exists
+    /// so a reader never has to know that, specifically for an `action`
+    /// row, `memory` means "before this action resolves" (true only
+    /// because `LogAction` fires pre-dispatch) as opposed to what `memory`
+    /// means on a `selection` row (captured mid-resolution). `None` in
+    /// recordings predating this field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_before: Option<i32>,
+}
+
+/// [Diagnostic, added post-v1] The RESOLVED detail of a preceding `action`
+/// row — the data that genuinely cannot be known until DCGO's
+/// `CardController.PlayCardClass.PlayCard()` actually pays the cost
+/// (Assembly/DigiXros material selection, cost-modifying effects, and the
+/// memory gauge afterward all resolve strictly AFTER the `action` row's
+/// pre-dispatch `LogAction` call already ran).
+///
+/// Emitted as a SEPARATE row rather than inline fields on the `action` row
+/// because the C# recorder streams each row to disk immediately
+/// (append-only, no buffering) — by the time this data exists, the
+/// `action` row's line is already flushed. Correlate the two via matching
+/// `step` (this row's `step` equals its `action` row's `step`) and
+/// `actor`.
+///
+/// Scoped to player-facing top-level plays only: the C# recorder emits
+/// this only when a `PlayCardAction` row was JUST logged for the same
+/// actor (see `GameRecorder.LogActionResolution`'s doc) — an internal
+/// `PlayCardClass.PlayCard()` invocation triggered by a card EFFECT (e.g.
+/// "play a card from your security/trash", ~5 call sites in
+/// `CardEffectCommons.cs`) does not produce one.
+///
+/// This round is diagnostic only — no assertions are made on these fields
+/// yet; parsing plus availability is the goal (see the `dcgo-recorder-
+/// action-detail-fields` investigation).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionDetailRow {
+    /// Matches the correlated `action` row's `step`.
+    pub step: u32,
+    pub actor: u8,
+    /// The resolved card's printed ID, read directly from the actual
+    /// `CardSource` instance being played (not re-derived from index
+    /// lookups) — a same-source cross-check against the correlated
+    /// `action` row's own `card_id`. `None` only defensively (should
+    /// always be present when this row is emitted at all).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_id: Option<String>,
+    /// The memory actually deducted for this play/digivolve — DCGO's
+    /// `CardController.cs` local `Cost` at its `AddMemory(-1 * Cost, ...)`
+    /// call site. This is the value AFTER any Assembly/DigiXros/DNA/
+    /// Burst/AppFusion alternate-path reduction or other cost-modifying
+    /// effect — never the printed cost.
+    pub cost_paid: i32,
+    /// Shared memory gauge immediately AFTER this play's cost was
+    /// deducted, same `my_player_id`-relative perspective convention as
+    /// [`ActionRow::memory`] / [`ActionRow::memory_before`]. `None` when
+    /// the recording client's own `Player` (`GManager.instance.You`)
+    /// wasn't available at write time (defensive; should not happen
+    /// mid-game).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_after: Option<i32>,
+    /// One of `"assembly"`, `"digixros"`, `"dna_digivolve"`, `"burst"`,
+    /// `"app_fusion"`, `"cost_modifier"` (a reduction/change from some
+    /// other effect not captured by the named paths), or `None` when the
+    /// ordinary path/cost applied. See DCGO's
+    /// `CardController.PlayCardClass.DetermineAltPath` for exactly which
+    /// state each label reads — each named path mirrors the SAME gate
+    /// DCGO's own `CardSource.GetPayingCostWithBaseCost` checks before
+    /// applying that path's reduction, not a guess.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alt_path: Option<String>,
+    /// Card IDs placed/used for the alt path (Assembly/DigiXros trash
+    /// materials, the two DNA digivolve partner permanents' top cards, the
+    /// Burst tamer, the AppFusion linked card). `None`/absent when not
+    /// applicable or not identifiable (e.g. `"cost_modifier"`, which has
+    /// no discrete materials).
+    ///
+    /// CORRECTION (2026-08-21, assembly-selection-recorder-hook
+    /// investigation): an earlier revision of this doc claimed Assembly/
+    /// DigiXros material selection (DCGO's `SelectCardEffect.
+    /// SetTargetCardAndIndicies` RPC) sat entirely outside the recorder's
+    /// existing hooks and that this field was the only record of that
+    /// prompt ever produced. That was wrong — Task 3.5 (`5b1284ded`, landed
+    /// five days before this field's commit) already emits a `selection`
+    /// row for that RPC (and `SelectHandEffect`'s / `SelectPermanentEffect`'s
+    /// equivalents, and `SelectDigiXrosClass`'s own zone-choice RPC), on the
+    /// AI path too. This field is a genuinely separate, complementary
+    /// thing: the RESOLVED outcome (final material set + cost actually
+    /// paid), correlated to the `action` row, rather than the player's
+    /// individual choice — which the `selection` row(s) preceding it already
+    /// carry, now additionally tagged with `mechanic` /
+    /// `zone` (see [`SelectionRow`]) so a reader doesn't have to infer
+    /// "this row was an Assembly/DigiXros material pick" from prompt name
+    /// and timing alone.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub materials: Option<Vec<String>>,
+}
+
+/// A selection answer captured with SEMANTIC payload rather than a
+/// pre-encoded action ID (task 3.5). The C# recorder writes the prompt's
+/// class name plus absolute identities (frame targets, card ids, counts,
+/// bools); the harness resolves them against the engine's live
+/// `PendingSelection` at replay time, where candidate ordering and the
+/// action-id scheme are authoritative. All payload fields are optional —
+/// each prompt type fills only what it knows.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SelectionRow {
+    pub step: u32,
+    pub actor: u8,
+    /// DCGO prompt class name (e.g. `SelectPermanentEffect`) or
+    /// `generic_int` / `generic_bool` for the UserSelectionManager channel.
+    pub prompt: String,
+    #[serde(default)]
+    pub phase: String,
+    /// Field-permanent picks: absolute (owner, DCGO FrameID) pairs.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub targets: Option<Vec<FrameTarget>>,
+    /// Card identities picked (hand/trash/reveal prompts).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_ids: Option<Vec<String>>,
+    /// Zone positions picked, when DCGO knows them (hand indexes etc.).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub indexes: Option<Vec<i32>>,
+    /// SelectCountEffect payload: the VALUE chosen (a digivolution cost, a
+    /// number of cards), NOT an index. See `candidates`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub count: Option<i32>,
+    /// The option set `count` was chosen from, ascending, as DCGO presented it.
+    ///
+    /// A count answer is a domain value; our engine models the same question as
+    /// an indexed branch list. Mapping one to the other needs the option set,
+    /// which is why the recorder emits it. Absent in pre-0.5 recordings, and a
+    /// count without it cannot be resolved.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub candidates: Option<Vec<i64>>,
+    /// Generic int channel payload.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub int_value: Option<i64>,
+    /// Generic bool channel payload.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub bool_value: Option<bool>,
+    /// True when the player cancelled / declined the prompt.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub cancel: Option<bool>,
+    /// Battle-area card IDs at decision time, in the DCGO compact order the
+    /// row's board operands index. Absent in pre-0.4 recordings.
+    ///
+    /// DCGO orders its compact battle area by on-screen frame, and permanents
+    /// physically migrate between frames at runtime (`PreferredFrame`), so a
+    /// DCGO slot index does NOT correspond to the engine's play-ordered
+    /// `battle_area`. The replay harness rebuilds the mapping by matching card
+    /// identity against the engine's board; without these lists it can only
+    /// assume the orders agree, which they routinely do not.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub board_p0: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub board_p1: Option<Vec<String>>,
+    /// Shared memory gauge at decision time, `my_player_id` perspective.
+    /// Same convention as [`ActionRow::memory`] — see its doc comment.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory: Option<i32>,
+    /// [Diagnostic, added post-v1] Which alt-cost mechanic this selection is
+    /// a material declaration for — `"assembly"` or `"digixros"` — when the
+    /// C# recorder's calling `Select*Effect` instance can determine it
+    /// cheaply (its own `_isAssembly`/`_isDigiXros`-family flag, set by
+    /// `SetAssembly()`/`SetDigiXros()` before the prompt ever ran). `None`
+    /// for the overwhelming majority of `selection` rows, which serve dozens
+    /// of unrelated prompts reusing the same `SelectCardEffect`/
+    /// `SelectHandEffect`/`SelectPermanentEffect` classes (bounce, discard,
+    /// security look, attack targets, ...) — absent in recordings predating
+    /// this field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mechanic: Option<String>,
+    /// [Diagnostic, added post-v1] The zone this selection drew its
+    /// candidates from (e.g. `"Trash"`, `"Hand"`, `"BattleArea"`,
+    /// `"Custom"`), when the C# recorder's call site can name it cheaply.
+    /// `None` when not determinable at the hook, or for prompt kinds where
+    /// zone doesn't apply — absent in recordings predating this field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub zone: Option<String>,
+}
+
+/// One absolute field-permanent reference: `player` seat + DCGO FrameID
+/// (battle frames 0.., breeding frame = last — the harness maps to engine
+/// slots, breeding → 14).
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct FrameTarget {
+    pub player: u8,
+    pub frame: i32,
 }
 
 /// An unencodable decision — the recorder saw it happen but couldn't map
@@ -113,6 +378,12 @@ pub struct EncoderFailureRow {
     pub reason: String,
     #[serde(default)]
     pub raw_value: String,
+    /// [Diagnostic, added post-v1] The physical card the encoder choked on,
+    /// when resolvable — same field/semantics as [`ActionRow::card_id`].
+    /// `None` when the action referenced no card, the lookup failed, or in
+    /// recordings predating this field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_id: Option<String>,
 }
 
 /// Opponent-deck reveal observed during PvP recording. The recorder
@@ -130,6 +401,140 @@ pub struct RevealRow {
     pub actor: u8,
     pub card_id: String,
     pub source: String,
+}
+
+/// A card-effect activation, emitted by the C# recorder's
+/// `GameRecorder.LogEffectActivation` (called from
+/// `ICardEffectExtensionClass.Activate_Optional_Effect_Execute` in
+/// `ICardEffect.cs`, immediately AFTER its `Activate_Effect_Execute`
+/// coroutine returns).
+///
+/// **Offered-vs-executed, not attempted-vs-resolved**: this row is only
+/// emitted once the optional yes/no decision (when [`is_optional`] is
+/// `true`) has already been resolved — an optional effect that was offered
+/// and DECLINED still gets a row (so a reader can see the clause was
+/// evaluated), but with `executed: false`. This mirrors the same
+/// attempted-vs-resolved split that [`ActionRow`] / [`ActionDetailRow`]
+/// already needed for main-phase actions (`LogAction` fires pre-dispatch,
+/// `LogActionResolution` fires post-resolution) — see that pair's docs for
+/// why conflating the two is a recurring source of false parity findings.
+///
+/// Diagnostic only: no replay assertions are made against this row. Its
+/// purpose is clause-level coverage measurement — given a deck's printed
+/// clauses (see `code/tools/clause_coverage/`), a reader can now check
+/// whether a given `effect_description` (which contains the printed clause
+/// marker, e.g. `"[On Deletion]"`) actually fired anywhere in a corpus of
+/// recordings, rather than only knowing the source card was present on
+/// board at some point.
+///
+/// [`is_optional`]: EffectActivationRow::is_optional
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectActivationRow {
+    pub step: u32,
+    /// The effect source card's owner — matches every other row's `actor`
+    /// convention.
+    pub actor: u8,
+    /// DCGO phase name at activation time (debugging breadcrumb, matches
+    /// `ActionRow::phase` / `SelectionRow::phase`).
+    #[serde(default)]
+    pub phase: String,
+    /// The resolved printed card ID (e.g. `"EX12-035"`) of the effect's
+    /// source card — `CardSource.CardID`, NOT the display name. `None`
+    /// only defensively; the C# call site already guards on a non-null
+    /// `EffectSourceCard` before emitting this row at all.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_id: Option<String>,
+    /// `ICardEffect.EffectName` — short identifier (e.g. `"OnPlay"`), not
+    /// the printed clause text. See `effect_description` for that.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effect_name: Option<String>,
+    /// `ICardEffect.EffectDescription` — the printed clause text (starts
+    /// with a bracketed timing tag such as `"[On Play]"`, `"[On Deletion]"`,
+    /// `"[Security]"`, ...). This is the field a consumer maps back to a
+    /// printed clause with, so it matters most of everything on this row.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effect_description: Option<String>,
+    /// `ICardEffect.IsOptional` — whether this is a "you may" effect.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_optional: Option<bool>,
+    /// Whether the effect body actually ran, as opposed to merely being
+    /// offered. Mirrors the exact gate DCGO's own `Activate_Effect_Execute`
+    /// checks (`UseOptional || !IsOptional`): always `true` for a mandatory
+    /// effect (`is_optional: false`); for an optional effect, `true` only
+    /// when the player answered "Use" to the yes/no prompt (human click, or
+    /// under the harness DCGO's own AI/auto branch in
+    /// `OptionalSkill.SelectOptional` — both seats route through it under
+    /// `Digimon.Harness.HarnessAuto.DrivesLocalSeat`). A row with
+    /// `is_optional: true, executed: false` means the clause was offered
+    /// and declined, not that it never fired.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub executed: Option<bool>,
+}
+
+/// A post-mulligan zone snapshot for ONE player, as observed by the
+/// recording client.
+///
+/// **Ordering convention**: card-id lists use the SAME "index 0 = first
+/// drawn / top" convention as [`GameStart::my_deck_post_shuffle`] — NOT
+/// the native `GameRecorder`'s opposite, bottom-first `library_order`
+/// convention (see `runners::replay::restore_player_zone`, which expects
+/// index 0 = bottom because it pushes straight into the engine's
+/// pop-from-end `Vec` zones). Callers restoring engine zones from THIS
+/// struct must reverse `library_order`, `digitama_library_order`, and
+/// `security_order` before pushing (`runners::replay`'s DCGO snapshot
+/// restorer does this — mirroring the existing `rev()` used for
+/// `DcgoAdapter`'s bot-vs-bot ordered-deck construction). `initial_hand`
+/// has no top/bottom concept and is pushed in recorded order, unreversed.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InitialStateSide {
+    pub library_order: Vec<String>,
+    #[serde(default)]
+    pub digitama_library_order: Vec<String>,
+    pub security_order: Vec<String>,
+    pub initial_hand: Vec<String>,
+}
+
+/// Post-mulligan zone snapshot row (added post-v1, optional field on the
+/// wire — see [`Row::InitialState`]). Emitted once per game, from DCGO's
+/// `TurnStateMachine.StartGame` immediately after BOTH players' mulligan
+/// decisions have resolved and security has been dealt.
+///
+/// Closes a real gap: rule 5-2-1-5 of the official rules manual (general
+/// rule PDF) makes a mulligan a TRUE reshuffle — "the player returns
+/// their entire hand to their deck, shuffles it, then draws 5 cards for
+/// their new initial hand" — so [`GameStart::my_deck_post_shuffle`]
+/// (captured BEFORE mulligan) does not reflect a mulliganed game's actual
+/// post-mulligan order. Absent in recordings made before the recorder
+/// started emitting it; `DcgoAdapter` then falls back to replaying the
+/// recorded mulligan actions against the pre-mulligan order (today's
+/// behavior — see `should_filter_mulligan_actions`).
+///
+/// `my`/`opp` mirrors [`GameStart::my_deck_post_shuffle`] /
+/// `opp_deck_post_shuffle`: `opp` is `None` for PvP (the opponent's
+/// post-mulligan hand/library isn't observable — same visibility split
+/// as the pre-mulligan deck), `Some` for Bot Match (fully observable).
+///
+/// `first_player_id`: 0 or 1 — DCGO's OWN player-id convention (matches
+/// [`GameStart::my_player_id`] / `first_player`), explicitly NOT the
+/// native `GameRecorder`'s 1/2 (Python) convention that
+/// `ReplayRunner`/`NativeAdapter` translate via `saturating_sub(1)`. Do
+/// not reuse that translation for this row — it would silently swap
+/// which player's deck is which.
+///
+/// `memory`: shared gauge from `my_player_id`'s perspective, positive =
+/// favor of the recording player — same convention as the per-row
+/// `memory` field on [`ActionRow`]/[`SelectionRow`]. Always 0 at this
+/// point in a real game (the memory gauge only starts moving once turn 1
+/// begins) — carried for schema symmetry / a sanity cross-check, not
+/// because reconstruction needs to read it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InitialStateRow {
+    pub first_player_id: u8,
+    pub my: InitialStateSide,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opp: Option<InitialStateSide>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory: Option<i32>,
 }
 
 /// Terminal row payload.
@@ -242,6 +647,39 @@ pub fn parse_jsonl(text: &str) -> Result<RecordingV1, SchemaError> {
         rows: middle,
         end,
     })
+}
+
+/// Convert the engine's active-player-relative memory seesaw value
+/// (`Game::memory` — positive favors `Game::memory_pair.0`, whichever
+/// player currently holds turn-player status; the seesaw flips every
+/// turn, see `game_phases.rs`'s `rotate_turn_player`) into the
+/// perspective a DCGO recording's `memory` field uses: always relative
+/// to the recording's FIXED `my_player_id`, positive = favor of that
+/// player, never to whoever is active at a given row.
+///
+/// These are genuinely different conventions reconciling two independent
+/// systems (the engine's turn-relative seesaw vs. DCGO's own
+/// `GameContext.Memory` / `Player.MemoryForPlayer`, which is fixed to
+/// PlayerID rather than to turn order) — comparing the raw numbers
+/// without this conversion silently inverts on every turn where
+/// `memory_pair_favored != my_player_id`, which is exactly the kind of
+/// unfalsifiable-parity-investigation bug this field exists to prevent.
+///
+/// `memory_pair_favored` must be `Game::memory_pair.0` read at the SAME
+/// instant as `game_memory` — the seesaw only moves at turn rotation, so
+/// pairing a `memory` reading with a `memory_pair` reading taken at a
+/// later point would silently reintroduce the same bug this function
+/// exists to prevent.
+pub fn memory_from_recording_perspective(
+    game_memory: i16,
+    memory_pair_favored: u8,
+    my_player_id: u8,
+) -> i32 {
+    if memory_pair_favored == my_player_id {
+        game_memory as i32
+    } else {
+        -(game_memory as i32)
+    }
 }
 
 #[cfg(test)]
@@ -369,5 +807,283 @@ this is not json
         let r = parse_jsonl(txt).expect("parse");
         assert_eq!(r.rows.len(), 1);
         assert!(matches!(r.rows[0], Row::Unknown));
+    }
+
+    // ── effect_activation row (clause-level coverage) ────────────────────
+
+    #[test]
+    fn parses_effect_activation_row_executed() {
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"effect_activation","step":3,"actor":0,"card_id":"EX12-035","effect_name":"OnPlay","effect_description":"[On Play] Draw 1 card.","is_optional":false,"executed":true,"phase":"Main"}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        assert_eq!(r.rows.len(), 1);
+        match &r.rows[0] {
+            Row::EffectActivation(e) => {
+                assert_eq!(e.step, 3);
+                assert_eq!(e.actor, 0);
+                assert_eq!(e.card_id.as_deref(), Some("EX12-035"));
+                assert_eq!(e.effect_name.as_deref(), Some("OnPlay"));
+                assert_eq!(
+                    e.effect_description.as_deref(),
+                    Some("[On Play] Draw 1 card.")
+                );
+                assert_eq!(e.is_optional, Some(false));
+                assert_eq!(e.executed, Some(true));
+                assert_eq!(e.phase, "Main");
+            }
+            other => panic!("expected EffectActivation, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parses_effect_activation_row_offered_and_declined() {
+        // is_optional: true, executed: false -- the clause was offered and
+        // the player declined it, NOT "this clause never fired". Confirms
+        // the row is emitted (with the distinction intact) for a declined
+        // "you may" effect, not only for effects that actually ran.
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"effect_activation","step":5,"actor":1,"card_id":"BT1-010","effect_name":"OnDeletion","effect_description":"[On Deletion] You may play 1 card from your hand.","is_optional":true,"executed":false,"phase":"Battle"}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::EffectActivation(e) => {
+                assert_eq!(e.is_optional, Some(true));
+                assert_eq!(e.executed, Some(false));
+            }
+            other => panic!("expected EffectActivation, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn effect_activation_row_absent_fields_parse_as_none() {
+        // Minimal row -- only the fields required to be present (step,
+        // actor). Every diagnostic field is optional so a partially-filled
+        // or defensively-degraded row still parses.
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"effect_activation","step":0,"actor":0}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::EffectActivation(e) => {
+                assert_eq!(e.card_id, None);
+                assert_eq!(e.effect_name, None);
+                assert_eq!(e.effect_description, None);
+                assert_eq!(e.is_optional, None);
+                assert_eq!(e.executed, None);
+                assert_eq!(e.phase, "");
+            }
+            other => panic!("expected EffectActivation, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn recording_without_effect_activation_rows_still_parses() {
+        // Today's corpus shape -- no effect_activation rows at all. Must
+        // keep parsing unchanged now that the type is recognized.
+        let r = parse_jsonl(well_formed_jsonl()).expect("parse");
+        assert!(
+            !r.rows
+                .iter()
+                .any(|row| matches!(row, Row::EffectActivation(_))),
+            "well_formed_jsonl fixture carries no effect_activation row"
+        );
+    }
+
+    // ── memory field (task: memory-gauge parity) ────────────────────────
+
+    #[test]
+    fn action_row_parses_memory_when_present() {
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"action","step":0,"actor":0,"action_id":0,"phase":"Main","source":"main_phase","memory":3}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::Action(a) => assert_eq!(a.memory, Some(3)),
+            other => panic!("expected Action, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn action_row_memory_absent_parses_as_none() {
+        // Shape of the existing 9-game corpus (predates this field) — must
+        // still parse, and absence must not be inferred as agreement/zero.
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"action","step":0,"actor":0,"action_id":0,"phase":"Main","source":"main_phase"}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::Action(a) => assert_eq!(a.memory, None),
+            other => panic!("expected Action, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn selection_row_parses_memory_when_present() {
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":1,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"selection","step":0,"actor":1,"prompt":"generic_int","phase":"Main","int_value":2,"memory":-4}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::Selection(s) => assert_eq!(s.memory, Some(-4)),
+            other => panic!("expected Selection, got {:?}", other),
+        }
+    }
+
+    // ── selection row: mechanic/zone (assembly-selection-recorder-hook) ──
+    // Assembly/DigiXros material-selection prompts route through the SAME
+    // Select*Effect RPCs used by dozens of unrelated selections; `mechanic`/
+    // `zone` disambiguate a material declaration from the rest without a
+    // reader having to infer it from prompt name + timing alone. Diagnostic
+    // only — parsing/availability is the goal, no replay assertions.
+
+    #[test]
+    fn selection_row_parses_mechanic_and_zone_when_present() {
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"selection","step":4,"actor":0,"prompt":"SelectCardEffect","phase":"Main","card_ids":["BT1-010","BT1-011"],"mechanic":"assembly","zone":"Trash"}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::Selection(s) => {
+                assert_eq!(s.prompt, "SelectCardEffect");
+                assert_eq!(s.mechanic.as_deref(), Some("assembly"));
+                assert_eq!(s.zone.as_deref(), Some("Trash"));
+                assert_eq!(
+                    s.card_ids,
+                    Some(vec!["BT1-010".to_string(), "BT1-011".to_string()])
+                );
+            }
+            other => panic!("expected Selection, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn selection_row_mechanic_and_zone_absent_parses_as_none() {
+        // Shape of every pre-existing recording (and every non-Assembly/
+        // DigiXros SelectCardEffect/SelectHandEffect/SelectPermanentEffect
+        // selection going forward) — must still parse, absence is not "not
+        // assembly/digixros", it's "the recorder didn't tag it".
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"selection","step":0,"actor":0,"prompt":"SelectCardEffect","phase":"Main","card_ids":["BT1-010"]}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::Selection(s) => {
+                assert_eq!(s.mechanic, None);
+                assert_eq!(s.zone, None);
+            }
+            other => panic!("expected Selection, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn selection_row_parses_digixros_zone_choice_mechanic_without_zone() {
+        // SelectDigiXrosClass's own "which area?" prompt tags `mechanic`
+        // (always "digixros" for this class) but never `zone` — this row
+        // IS the zone declaration (as `int_value`), not a pick made within
+        // one.
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"selection","step":2,"actor":0,"prompt":"SelectDigiXrosClass","phase":"Main","int_value":2,"mechanic":"digixros"}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::Selection(s) => {
+                assert_eq!(s.mechanic.as_deref(), Some("digixros"));
+                assert_eq!(s.zone, None);
+                assert_eq!(s.int_value, Some(2));
+            }
+            other => panic!("expected Selection, got {:?}", other),
+        }
+    }
+
+    // ── initial_state row (task: post-mulligan snapshot) ────────────────
+
+    #[test]
+    fn parses_initial_state_row_bot_match() {
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"initial_state","first_player_id":0,"my":{"library_order":["BT1-010"],"digitama_library_order":[],"security_order":["BT1-025"],"initial_hand":["BT1-010"]},"opp":{"library_order":["BT1-025"],"digitama_library_order":[],"security_order":["BT1-010"],"initial_hand":["BT1-025"]},"memory":0}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        assert_eq!(r.rows.len(), 1);
+        match &r.rows[0] {
+            Row::InitialState(s) => {
+                assert_eq!(s.first_player_id, 0);
+                assert_eq!(s.my.library_order, vec!["BT1-010".to_string()]);
+                let opp = s.opp.as_ref().expect("opp side present for bot match");
+                assert_eq!(opp.initial_hand, vec!["BT1-025".to_string()]);
+                assert_eq!(s.memory, Some(0));
+            }
+            other => panic!("expected InitialState, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parses_initial_state_row_pvp_without_opp_side() {
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":false,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":null}
+{"type":"initial_state","first_player_id":1,"my":{"library_order":["BT1-010"],"security_order":["BT1-025"],"initial_hand":["BT1-010"]}}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::InitialState(s) => {
+                assert_eq!(s.first_player_id, 1);
+                assert!(s.opp.is_none(), "opp side absent for PvP");
+                // digitama_library_order defaults to empty when omitted.
+                assert!(s.my.digitama_library_order.is_empty());
+                assert_eq!(s.memory, None);
+            }
+            other => panic!("expected InitialState, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn recording_without_initial_state_row_still_parses() {
+        // Today's corpus shape — no initial_state row at all.
+        let r = parse_jsonl(well_formed_jsonl()).expect("parse");
+        assert!(
+            !r.rows.iter().any(|row| matches!(row, Row::InitialState(_))),
+            "well_formed_jsonl fixture carries no initial_state row"
+        );
+    }
+
+    // ── memory perspective conversion (pinned both directions, both seats) ──
+
+    #[test]
+    fn perspective_conversion_my_player_id_0_favored() {
+        // memory_pair favors player 0, recording is player 0's own —
+        // no sign flip.
+        assert_eq!(memory_from_recording_perspective(5, 0, 0), 5);
+    }
+
+    #[test]
+    fn perspective_conversion_my_player_id_0_not_favored() {
+        // memory_pair favors player 1, recording is player 0's own —
+        // sign flips: what favors the engine's active side (P1) reads as
+        // negative (unfavorable) from P0's fixed perspective.
+        assert_eq!(memory_from_recording_perspective(5, 1, 0), -5);
+    }
+
+    #[test]
+    fn perspective_conversion_my_player_id_1_favored() {
+        // memory_pair favors player 1, recording is player 1's own —
+        // no sign flip.
+        assert_eq!(memory_from_recording_perspective(-7, 1, 1), -7);
+    }
+
+    #[test]
+    fn perspective_conversion_my_player_id_1_not_favored() {
+        // memory_pair favors player 0, recording is player 1's own —
+        // sign flips.
+        assert_eq!(memory_from_recording_perspective(-7, 0, 1), 7);
     }
 }

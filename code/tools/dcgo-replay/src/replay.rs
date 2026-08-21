@@ -53,7 +53,20 @@ impl Default for ReplayConfig {
 pub enum ReplayOutcome {
     /// Action stream fully consumed and winner matches. The parity oracle's
     /// happy path.
-    Pass { steps_consumed: u32, winner: u8 },
+    Pass {
+        steps_consumed: u32,
+        winner: u8,
+        /// Recorded hand-play attempts dropped because the recording
+        /// carries positive evidence (an uncorrelated `action_detail` row)
+        /// they never actually completed in DCGO — see
+        /// `digimon_engine::runners::replay`'s module docs "Skipping DCGO
+        /// plays that never completed". Always `0` for recordings that
+        /// carry no `action_detail` rows. A pass with a nonzero count here
+        /// still fully verified the rest of the action stream — it is not
+        /// a failure — but it did not verify the skipped decisions, so it
+        /// must be visible rather than folded silently into a clean PASS.
+        skipped_actions: u32,
+    },
     /// The harness halted before reaching `game_end`, but not because of an
     /// engine-vs-recording disagreement. Typical cause: an unencoded
     /// selection (`encoder_failure` row).
@@ -65,6 +78,8 @@ pub enum ReplayOutcome {
     PartialPass {
         steps_consumed: u32,
         stop_reason: String,
+        /// See `Pass::skipped_actions`.
+        skipped_actions: u32,
     },
     /// A genuine parity disagreement.
     Fail(ReplayFail),
@@ -80,6 +95,14 @@ pub enum ReplayFail {
     /// Engine arrived at a different winner (or no winner where the
     /// recording had one, or vice versa).
     WinnerMismatch(WinnerMismatch),
+    /// A DCGO row's recorded `memory` gauge (converted to the recording's
+    /// `my_player_id` perspective) disagreed with the engine's own memory
+    /// at that step. Distinct from `EngineError` so triage can cluster
+    /// memory-gauge drift separately — it is the class of bug that closes
+    /// the unfalsifiable-parity-investigation gap this field exists for
+    /// (a divergence that looked like an illegal action was actually
+    /// memory drift from an earlier step, invisible without this check).
+    MemoryMismatch(MemoryMismatch),
     /// The Game constructor or step path returned an engine-level error.
     /// Usually a deck-data issue (card ID unknown to our pool) or a
     /// step taken past game_over.
@@ -108,6 +131,9 @@ pub struct IllegalAction {
     /// for diagnosing "did the recorder emit the wrong target index" vs.
     /// "is the engine refusing actions it should accept".
     pub sample_legal_ids: Vec<u16>,
+    /// Both players' battle areas as the engine saw them, in the index space
+    /// the recorded action ID uses.
+    pub board: String,
 }
 
 #[derive(Debug, Clone)]
@@ -124,6 +150,20 @@ pub struct WinnerMismatch {
     pub expected_winner: i8, // signed so -1 (no winner) round-trips
     pub engine_winner: i8,
     pub steps_consumed: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct MemoryMismatch {
+    pub step: u32,
+    /// Memory gauge value DCGO recorded, converted to the recording's
+    /// `my_player_id` perspective (positive = favor of that player).
+    pub recorded: i64,
+    /// Engine's memory-before-this-step, converted to the SAME
+    /// perspective for a like-for-like comparison.
+    pub replayed: i64,
+    /// Which player id the perspective above is relative to (the
+    /// recording's `my_player_id`).
+    pub my_player_id: u8,
 }
 
 /// Replay one recording through the engine via the shared
@@ -194,6 +234,7 @@ pub fn replay_recording(
                  advance without the corresponding selection encoded.",
                 ef.step, ef.reason, ef.raw_value
             ),
+            skipped_actions: session.skipped_incomplete_plays(),
         };
     }
 
@@ -215,6 +256,7 @@ pub fn replay_recording(
     ReplayOutcome::Pass {
         steps_consumed: session.current_step(),
         winner: engine_winner_raw,
+        skipped_actions: session.skipped_incomplete_plays(),
     }
 }
 
@@ -231,6 +273,7 @@ fn map_divergence(div: &Divergence) -> ReplayFail {
             // closest stable descriptor for triage clustering.
             source: div.phase.clone(),
             sample_legal_ids: sample_legal_ids.clone(),
+            board: div.board.clone(),
         }),
         DivergenceKind::Actor { expected, recorded } => ReplayFail::ActorMismatch(ActorMismatch {
             step: div.step,
@@ -253,13 +296,20 @@ fn map_divergence(div: &Divergence) -> ReplayFail {
                 message: message.clone(),
             }
         }
-        DivergenceKind::Memory { recorded, replayed } => ReplayFail::EngineError {
+        DivergenceKind::SelectionResolution { reason } => ReplayFail::EngineError {
             step: Some(div.step),
-            message: format!(
-                "memory divergence: recorded={} replayed={}",
-                recorded, replayed
-            ),
+            message: format!("selection resolution: {reason}"),
         },
+        DivergenceKind::Memory {
+            recorded,
+            replayed,
+            my_player_id,
+        } => ReplayFail::MemoryMismatch(MemoryMismatch {
+            step: div.step,
+            recorded: *recorded,
+            replayed: *replayed,
+            my_player_id: *my_player_id,
+        }),
         DivergenceKind::Phase { recorded, replayed } => ReplayFail::EngineError {
             step: Some(div.step),
             message: format!(
@@ -363,10 +413,13 @@ mod tests {
                 game_id: "test".into(),
                 timestamp: "t".into(),
                 my_player_id: 0,
+                first_player: None,
                 is_ai: true,
                 my_deck_post_shuffle: micro_deck(),
                 opp_deck_post_shuffle: Some(micro_deck()),
                 opp_decklist_composition: None,
+                my_egg_deck: None,
+                opp_egg_deck: None,
             },
             rows: vec![Row::EncoderFailure(crate::recording::EncoderFailureRow {
                 step: 0,
@@ -375,6 +428,7 @@ mod tests {
                 source: "selection_int".into(),
                 reason: "selection_prompt_kind_unknown".into(),
                 raw_value: "int_value=5".into(),
+                card_id: None,
             })],
             end: crate::recording::GameEnd {
                 winner: 0,
@@ -405,10 +459,13 @@ mod tests {
                 game_id: "test".into(),
                 timestamp: "t".into(),
                 my_player_id: 0,
+                first_player: None,
                 is_ai: true,
                 my_deck_post_shuffle: micro_deck(),
                 opp_deck_post_shuffle: Some(micro_deck()),
                 opp_decklist_composition: None,
+                my_egg_deck: None,
+                opp_egg_deck: None,
             },
             rows: vec![
                 Row::Action(crate::recording::ActionRow {
@@ -417,6 +474,11 @@ mod tests {
                     action_id: 0, // mulligan keep
                     phase: "Mulligan".into(),
                     source: "mulligan".into(),
+                    board_p0: None,
+                    board_p1: None,
+                    memory: None,
+                    card_id: None,
+                    memory_before: None,
                 }),
                 Row::Action(crate::recording::ActionRow {
                     step: 1,
@@ -424,6 +486,11 @@ mod tests {
                     action_id: 0,
                     phase: "Mulligan".into(),
                     source: "mulligan".into(),
+                    board_p0: None,
+                    board_p1: None,
+                    memory: None,
+                    card_id: None,
+                    memory_before: None,
                 }),
             ],
             end: crate::recording::GameEnd {
@@ -456,10 +523,13 @@ mod tests {
                 game_id: "test".into(),
                 timestamp: "t".into(),
                 my_player_id: 0,
+                first_player: None,
                 is_ai: true,
                 my_deck_post_shuffle: micro_deck(),
                 opp_deck_post_shuffle: Some(micro_deck()),
                 opp_decklist_composition: None,
+                my_egg_deck: None,
+                opp_egg_deck: None,
             },
             rows: vec![
                 // First mulligan decision: action_id 999 is wildly out of
@@ -470,6 +540,11 @@ mod tests {
                     action_id: 999,
                     phase: "Mulligan".into(),
                     source: "mulligan".into(),
+                    board_p0: None,
+                    board_p1: None,
+                    memory: None,
+                    card_id: None,
+                    memory_before: None,
                 }),
             ],
             end: crate::recording::GameEnd {

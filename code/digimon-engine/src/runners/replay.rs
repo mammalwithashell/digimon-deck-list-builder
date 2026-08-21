@@ -24,11 +24,80 @@
 //!
 //! ## Mulligan handling
 //!
-//! `GameRecorder` captures `initial_state` AFTER mulligan completes
-//! (security has been dealt, hands settled). The actions array still
-//! contains the mulligan decisions, but replaying them against an
-//! already-post-mulligan game would error. We filter mulligan-phase
-//! actions out during replay.
+//! One signal decides whether mulligan-phase actions are filtered out of
+//! the replayable step stream or replayed like any other decision: does the
+//! recording carry a genuine post-mulligan `initial_state` snapshot? See
+//! `should_filter_mulligan_actions`, the single shared decision point both
+//! adapters below call into — the branch is driven by that presence check,
+//! never by a hard-coded "this source never/always has one" assumption, so
+//! a recorder that starts emitting `initial_state` later gets the right
+//! behavior without another code change here.
+//!
+//! - **Native `GameRecorder` recordings carry one.** `GameRecorder` captures
+//!   `initial_state` AFTER mulligan completes (security has been dealt,
+//!   hands settled). The `actions` array still contains the mulligan
+//!   decisions, but replaying them against an already-post-mulligan game
+//!   would error, so [`NativeAdapter`] (and the older [`ReplayRunner`],
+//!   which requires `initial_state` unconditionally) filter mulligan-phase
+//!   actions out of the replayable stream.
+//! - **DCGO recordings never carry one.** DCGO's own recorder only ever
+//!   logs the keep/redraw *decision* for a mulligan
+//!   (`Digimon.Recording.GameRecorder.LogMulligan` in
+//!   `TurnStateMachine.SetRedraw`) — it never captures the resulting
+//!   redrawn hand, so there is no post-mulligan snapshot to bake the
+//!   decisions into. [`DcgoAdapter`] therefore leaves the constructed game
+//!   in `Mulligan` phase and replays the recorded mulligan actions like any
+//!   other decision. A player who redraws lands on a fresh, real 5-card
+//!   hand (the engine performs the actual reshuffle-then-draw DCGO also
+//!   performs — general_rule.pdf rule 5-2-1-5) — but since DCGO's own
+//!   reshuffle is never recorded, that hand's *exact content* cannot be
+//!   expected to match DCGO's, which is the same "RNG path isn't
+//!   exercised" limitation called out below, not a defect in this
+//!   filtering logic.
+//!
+//! ## Skipping DCGO plays that never completed
+//!
+//! DCGO's recorder hooks `TurnStateMachine.QueueMainPhaseAction`, which
+//! fires when an action is QUEUED — before DCGO itself decides whether it
+//! is legal. So the recorded `action` stream includes attempted plays DCGO
+//! went on to reject (e.g. it couldn't actually afford the memory cost).
+//! Naively replaying one of those against our engine looks like the engine
+//! wrongly refusing a legal action (`MaskMiss` / `illegal_action`), when in
+//! fact DCGO refused it too — the worst kind of oracle defect, since it
+//! blames the engine for something it did correctly.
+//!
+//! [`ActionDetailRow`](crate::dcgo_recording::ActionDetailRow) is positive
+//! evidence a play actually completed: DCGO's recorder emits one, correlated
+//! by `(step, actor)`, only from inside `PlayCardClass.PlayCard()` — i.e.
+//! only once the cost was actually paid. `DcgoAdapter` uses its ABSENCE as
+//! the (only) skip signal: a recorded `action` row is dropped from the
+//! replayable stream when, and only when, it is BOTH
+//!
+//!   1. in the hand-play range (`PLAY_HAND_START..PLAY_HAND_END`) under
+//!      `GamePhase::Main` — see `is_hand_play_action`. The action space is
+//!      phase-dependent (`Game::decode_mulligan` vs `decode_main`), so the
+//!      same raw ids 0/1 are the mulligan keep/redraw decision under
+//!      `GamePhase::Mulligan`, NOT a play — those are never skipped.
+//!   2. NOT correlated to any `Row::ActionDetail` in this recording.
+//!
+//! This is deliberately narrow. `ActionDetailRow` is scoped to player-facing
+//! top-level plays only (see its doc comment) — a pass, hatch, attack, or
+//! phase action legitimately has no correlated detail row, and skipping one
+//! of those would silently drop a real decision instead of an unconfirmed
+//! one. Absence of a signal is never treated as evidence of non-completion
+//! outside the hand-play range.
+//!
+//! For the same reason, a recording with NO `action_detail` rows at all
+//! (the entire pre-existing corpus, recorded before this diagnostic field
+//! existed) must not have every hand-play attempt look "unconfirmed" and
+//! get skipped wholesale — `DcgoAdapter` gates the whole mechanism on
+//! whether the recording carries at least one `Row::ActionDetail` anywhere;
+//! recordings without one replay exactly as they did before this feature.
+//!
+//! Skips are counted, not silent — see `RecordingSource::skipped_incomplete_plays`
+//! / `ReplaySession::skipped_incomplete_plays`. A replay that skipped a
+//! meaningful fraction of its actions must not read as a clean, fully-
+//! verified pass.
 //!
 //! ## Known v1 limitations
 //!
@@ -37,14 +106,16 @@
 //!   selection. The `verify: true` mode reports divergences but does
 //!   not halt replay.
 //! - Replay does not exercise the RNG path. Effects that consume RNG
-//!   (e.g. random reveal selection) will diverge from the recorded
-//!   outcome since the post-construction RNG state is fresh.
+//!   (e.g. random reveal selection, or a DCGO mulligan redraw) will diverge
+//!   from the recorded outcome since the post-construction RNG state is
+//!   fresh.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::action::space::{PLAY_HAND_END, PLAY_HAND_START};
 use crate::card_data::CardData;
 use crate::card_source::CardSource;
 use crate::enums::{GamePhase, PlayerId};
@@ -135,8 +206,20 @@ pub enum DivergenceKind {
         expected: PlayerId,
         recorded: PlayerId,
     },
-    /// Replayed memory differs from the recorded value.
-    Memory { recorded: i64, replayed: i64 },
+    /// Replayed memory differs from a DCGO row's recorded `memory` field.
+    /// Both `recorded` and `replayed` are already converted to `my_player_id`'s
+    /// perspective (see `crate::dcgo_recording::memory_from_recording_perspective`)
+    /// so they're directly comparable. Distinct from the native
+    /// `GameRecorder`'s `memory_after` check (reported as a `DivergenceReport`
+    /// with `field: "memory_after"`, not a `DivergenceKind`) — DCGO's `memory`
+    /// uses a different (fixed-player, not active-player) perspective, and
+    /// keeping the two apart lets triage cluster memory-gauge drift found via
+    /// the DCGO oracle separately from anything else.
+    Memory {
+        recorded: i64,
+        replayed: i64,
+        my_player_id: PlayerId,
+    },
     /// Replayed phase differs from the recorded value.
     Phase { recorded: String, replayed: String },
     /// Terminal winner differs (populated at completion by the DCGO path).
@@ -148,6 +231,9 @@ pub enum DivergenceKind {
     RevealKind { message: String },
     /// Opaque: engine requested a reveal with none remaining.
     RevealExhausted { message: String },
+    /// A semantic selection payload (task 3.5) could not be mapped onto the
+    /// engine's live `PendingSelection`.
+    SelectionResolution { reason: String },
 }
 
 /// A differential divergence recorded by `CheckThenApply` — the engine
@@ -161,6 +247,15 @@ pub struct Divergence {
     pub actor: PlayerId,
     pub phase: String,
     pub kind: DivergenceKind,
+    /// Both players' battle areas as the engine saw them at the moment of
+    /// divergence, in `battle_area` index order.
+    ///
+    /// Board-position action IDs are indices into this list, so triaging any
+    /// target mismatch ("engine wanted slot 1, recording said slot 0") is
+    /// guesswork without it. Captured eagerly because the divergence pauses
+    /// the cursor but callers routinely inspect it after further stepping.
+    #[serde(default, skip_serializing_if = "String::is_empty")]
+    pub board: String,
 }
 
 /// Errors surfaced by `ReplayRunner::new`.
@@ -465,13 +560,17 @@ impl ReplayRunner {
         // diverge from the recorded one. Verify mode will report it.
         self.game.begin_turn();
 
-        // Filter out mulligan-phase actions — those are already baked into
-        // initial_state. Capture indices into the actions array.
+        // See module docs "Mulligan handling": `ReplayRunner::new` requires
+        // `initial_state` (checked above / by the caller), so mulligan
+        // decisions are already baked into it — filter them out of the
+        // replayable stream. Driven by the same shared decision point
+        // `NativeAdapter` and `DcgoAdapter` use, not a bespoke check here.
+        let filter_mulligan = should_filter_mulligan_actions(true);
         self.replayable_action_indices.clear();
         if let Some(actions) = self.recording["actions"].as_array() {
             for (idx, a) in actions.iter().enumerate() {
                 let phase = a["phase"].as_str().unwrap_or("");
-                if phase != "Mulligan" {
+                if !filter_mulligan || phase != "Mulligan" {
                     self.replayable_action_indices.push(idx);
                 }
             }
@@ -552,9 +651,29 @@ pub struct StepSpec {
     /// Source tag (DCGO: `mulligan`/`main_phase`/…; native: empty).
     pub source: String,
     pub memory_after: Option<i64>,
+    /// DCGO row's `memory` field — already in the recording's
+    /// `my_player_id` perspective (positive = favor of that player). NOT
+    /// comparable to `memory_after` directly (different perspective
+    /// convention); the driver converts `Game::memory` via
+    /// `RecordingSource::my_player_id` + `Game::memory_pair` before
+    /// comparing. `None` for native/verification recordings (which never
+    /// carry this field) and for DCGO rows recorded before the field
+    /// existed.
+    pub dcgo_memory: Option<i32>,
     pub turn: Option<u64>,
     pub is_game_over: Option<bool>,
     pub expected_digest: Option<u64>,
+    /// DCGO semantic selection payload (task 3.5). When set, `action_id` is
+    /// a placeholder and the step resolves against the engine's live
+    /// `PendingSelection` (possibly into MULTIPLE engine actions — one per
+    /// pick plus an optional trailing PASS).
+    pub selection: Option<crate::dcgo_recording::SelectionRow>,
+    /// DCGO battle-area snapshots at decision time, in the compact order this
+    /// step's board operands index. Used to remap those operands into the
+    /// engine's play-ordered `battle_area` (see `remap_board_slots`). Empty
+    /// for native recordings and pre-0.4 DCGO ones.
+    pub board_p0: Option<Vec<String>>,
+    pub board_p1: Option<Vec<String>>,
 }
 
 /// A pluggable replay source. Knows how to build the initial post-mulligan
@@ -587,6 +706,61 @@ pub trait RecordingSource: Send {
     fn default_policy(&self) -> StepPolicy {
         StepPolicy::Trust
     }
+
+    /// The fixed player id a `StepSpec::dcgo_memory` reading is relative
+    /// to, when this source carries recorded memory at all. `None` for
+    /// sources that never do (native/verification recordings are the
+    /// engine's own perspective already, so there is no separate "my
+    /// player" to convert against). `DcgoAdapter` overrides this to
+    /// `Some(my_player_id)`.
+    fn my_player_id(&self) -> Option<PlayerId> {
+        None
+    }
+
+    /// Count of recorded actions dropped from the replayable step stream
+    /// because the recording carries positive evidence they never actually
+    /// completed (see the module docs' "Skipping DCGO plays that never
+    /// completed"). `0` for every source except `DcgoAdapter`, which is the
+    /// only one that ever has this evidence available. Surfaced so a skip
+    /// is counted, not silent — a replay result must not read as a clean
+    /// pass when it quietly dropped recorded decisions.
+    fn skipped_incomplete_plays(&self) -> u32 {
+        0
+    }
+}
+
+/// The single shared decision point for whether mulligan-phase actions
+/// should be filtered out of a recording's replayable step stream. See the
+/// module docs' "Mulligan handling" section for the full contract.
+///
+/// `has_initial_state` must reflect whether *this specific recording*
+/// actually carries a genuine post-mulligan `initial_state` snapshot — not
+/// a hard-coded assumption about the recording's source/format. Native
+/// `GameRecorder` recordings always do (by construction: both
+/// `ReplayRunner::new` and `NativeAdapter::from_recording` reject a missing
+/// one before reaching this point), so they pass `true` and mulligan
+/// actions get filtered — they're already baked into the snapshot. DCGO
+/// recordings never carry one (DCGO's recorder only logs the keep/redraw
+/// decision, never the resulting hand), so `DcgoAdapter` passes `false` and
+/// mulligan actions replay like any other decision. A future recorder that
+/// starts emitting an equivalent snapshot only needs to thread that
+/// presence through to this call — not add a new branch here.
+fn should_filter_mulligan_actions(has_initial_state: bool) -> bool {
+    has_initial_state
+}
+
+/// True when a recorded DCGO `action` row is a hand-play attempt — the ONLY
+/// action shape `ActionDetailRow` is ever correlated to (see the module docs'
+/// "Skipping DCGO plays that never completed"). `PLAY_HAND_START..
+/// PLAY_HAND_END` (raw ids 0..30) is reused across phases for unrelated
+/// decisions — most importantly `GamePhase::Mulligan`'s keep (0) / redraw
+/// (1) — so the id range alone is not enough; only `Game::decode_main`
+/// (`GamePhase::Main`) actually dispatches that range as "play the hand
+/// card at this index" (see `action/decode.rs`). Requiring `phase == "Main"`
+/// keeps ids 0/1 recorded under `GamePhase::Mulligan` (or any other phase)
+/// from ever being mistaken for a play.
+fn is_hand_play_action(action_id: u16, phase: &str) -> bool {
+    phase == "Main" && (PLAY_HAND_START..PLAY_HAND_END).contains(&action_id)
 }
 
 /// [`RecordingSource`] over a native `GameRecorder` JSON recording. Holds
@@ -638,11 +812,16 @@ impl NativeAdapter {
             return Err(ReplayError::UnknownCard(missing));
         }
 
+        // See module docs "Mulligan handling": `initial_state` is present
+        // (validated above), so mulligan decisions are already baked into
+        // it — filter them out of the replayable stream. Driven by the same
+        // shared decision point `ReplayRunner` and `DcgoAdapter` use.
+        let filter_mulligan = should_filter_mulligan_actions(true);
         let mut steps = Vec::new();
         if let Some(actions) = recording["actions"].as_array() {
             for a in actions {
                 let phase = a["phase"].as_str().unwrap_or("").to_string();
-                if phase == "Mulligan" {
+                if filter_mulligan && phase == "Mulligan" {
                     continue;
                 }
                 let action_id = a["action_id"].as_u64().unwrap_or(0) as u16;
@@ -653,9 +832,13 @@ impl NativeAdapter {
                     phase,
                     source: String::new(),
                     memory_after: a.get("memory_after").and_then(|v| v.as_i64()),
+                    dcgo_memory: None,
                     turn: a.get("turn").and_then(|v| v.as_u64()),
                     is_game_over: a.get("is_game_over").and_then(|v| v.as_bool()),
                     expected_digest: None,
+                    selection: None,
+                    board_p0: None,
+                    board_p1: None,
                 });
             }
         }
@@ -752,47 +935,161 @@ impl RecordingSource for NativeAdapter {
 /// against the DCGO oracle).
 pub struct DcgoAdapter {
     my_pid: u8,
+    /// Who takes turn 1: `game_start.first_player` when the recording carries
+    /// it, else inferred from the first mulligan actor (DCGO's first player
+    /// mulligans first), else 0.
+    first_player: u8,
     my_deck: Vec<String>,
+    /// Local player's digitama (egg) deck in recorded post-shuffle order.
+    /// Empty for recordings predating egg capture.
+    my_egg_deck: Vec<String>,
     /// Ordered opponent deck (bot-vs-bot). `None` for opaque PvP.
     opp_deck: Option<Vec<String>>,
+    /// Opponent's digitama (egg) deck in recorded post-shuffle order
+    /// (bot-vs-bot only). Empty for PvP and pre-egg-capture recordings.
+    opp_egg_deck: Vec<String>,
     /// Opaque opponent decklist multiset (PvP). `None` for bot-vs-bot.
     opp_decklist: Option<Vec<String>>,
     /// Ordered reveal stream consumed by the opaque `RevealQueue`.
     reveal_pairs: Vec<(crate::opaque_deck::RevealKind, String)>,
     steps: Vec<StepSpec>,
+    /// Post-mulligan zone snapshot (`Row::InitialState`), when the
+    /// recording carries one. `Some` drives BOTH `should_filter_mulligan_actions`
+    /// (mulligan actions are already baked in — filter them like a native
+    /// recording) AND `build_initial_game` (zone-restore instead of
+    /// replaying the mulligan through RNG). `None` preserves today's
+    /// behavior for recordings made before the recorder emitted this row.
+    initial_state: Option<crate::dcgo_recording::InitialStateRow>,
     /// Card DB retained so backward-seek can reconstruct (DCGO games are not
     /// restored zone-by-zone; see `relay_initial_state`).
     card_data: HashMap<String, CardData>,
+    /// Count of recorded hand-play attempts dropped from `steps` because the
+    /// recording carries positive evidence (an absent correlated
+    /// `Row::ActionDetail`) they never actually completed. See the module
+    /// docs' "Skipping DCGO plays that never completed".
+    skipped_incomplete_plays: u32,
 }
 
 impl DcgoAdapter {
     /// Build an adapter from a parsed DCGO recording. Lowers the `Action`
-    /// rows up to the first `encoder_failure` into the step stream (DCGO
-    /// replays mulligan actions too — the game lands in `Mulligan` phase),
-    /// and precomputes the opaque opponent decklist + reveal stream when the
-    /// recording is PvP.
+    /// rows up to the first `encoder_failure` into the step stream. See
+    /// module docs "Mulligan handling": whether mulligan rows are filtered
+    /// out of the replayable stream is driven by `should_filter_mulligan_actions`,
+    /// keyed off whether THIS recording actually carries a `Row::InitialState`
+    /// snapshot (recordings made before the recorder emitted that row never
+    /// do, and fall back to replaying the mulligan actions like any other
+    /// decision — the game lands in `Mulligan` phase). Precomputes the
+    /// opaque opponent decklist + reveal stream when the recording is PvP.
     pub fn from_recording(
         recording: crate::dcgo_recording::RecordingV1,
         card_data: &HashMap<String, CardData>,
     ) -> Result<Self, ReplayError> {
         use crate::dcgo_recording::Row;
 
+        let initial_state = recording.rows.iter().find_map(|row| match row {
+            Row::InitialState(s) => Some(s.clone()),
+            _ => None,
+        });
+        // See module docs "Mulligan handling" — driven by the same shared
+        // decision point `ReplayRunner`/`NativeAdapter` use, keyed off
+        // whether THIS recording actually carries the snapshot (not a
+        // hard-coded "DCGO never has one" assumption).
+        let filter_mulligan = should_filter_mulligan_actions(initial_state.is_some());
+
         let my_pid = recording.start.my_player_id;
         let my_deck = recording.start.my_deck_post_shuffle.clone();
+        let my_egg_deck = recording.start.my_egg_deck.clone().unwrap_or_default();
         let opp_deck = recording.start.opp_deck_post_shuffle.clone();
+        let opp_egg_deck = recording.start.opp_egg_deck.clone().unwrap_or_default();
+
+        // Turn-1 player: explicit field when present, else inferred from the
+        // first mulligan actor (DCGO's first player mulligans first — pre-
+        // first_player recordings), else 0.
+        let first_player = recording.start.first_player.unwrap_or_else(|| {
+            recording
+                .rows
+                .iter()
+                .find_map(|row| match row {
+                    Row::Action(a) if a.source == "mulligan" => Some(a.actor),
+                    _ => None,
+                })
+                .unwrap_or(0)
+        });
+
+        // See module docs "Skipping DCGO plays that never completed":
+        // `ActionDetailRow` is positive evidence a hand-play attempt
+        // actually completed (DCGO's recorder emits one, correlated by
+        // (step, actor), only from inside `PlayCardClass.PlayCard()` — after
+        // the cost was paid). Gate the whole mechanism on whether this
+        // recording carries the diagnostic field set AT ALL: an empty
+        // `completed_plays` set must mean "no signal available" (today's
+        // whole pre-existing corpus), never "nothing completed" — the
+        // latter reading would skip every real play in an old recording.
+        let has_action_detail_rows = recording
+            .rows
+            .iter()
+            .any(|row| matches!(row, Row::ActionDetail(_)));
+        let completed_plays: HashSet<(u32, u8)> = recording
+            .rows
+            .iter()
+            .filter_map(|row| match row {
+                Row::ActionDetail(d) => Some((d.step, d.actor)),
+                _ => None,
+            })
+            .collect();
 
         let mut steps = Vec::new();
+        let mut skipped_incomplete_plays: u32 = 0;
         for row in &recording.rows {
             match row {
-                Row::Action(a) => steps.push(StepSpec {
-                    actor: a.actor,
-                    action_id: a.action_id,
-                    phase: a.phase.clone(),
-                    source: a.source.clone(),
+                Row::Action(a) => {
+                    if filter_mulligan && a.phase == "Mulligan" {
+                        continue;
+                    }
+                    // Conservative skip: ONLY a hand-play attempt (see
+                    // `is_hand_play_action` — phase-disambiguated, so
+                    // Mulligan's ids 0/1 are never mistaken for a play)
+                    // with NO correlated `action_detail` is dropped. Every
+                    // other action kind (pass/hatch/attack/…) legitimately
+                    // never gets a detail row, so absence there is not
+                    // evidence of anything — never skip on absence alone.
+                    if has_action_detail_rows
+                        && is_hand_play_action(a.action_id, &a.phase)
+                        && !completed_plays.contains(&(a.step, a.actor))
+                    {
+                        skipped_incomplete_plays += 1;
+                        continue;
+                    }
+                    steps.push(StepSpec {
+                        actor: a.actor,
+                        action_id: a.action_id,
+                        phase: a.phase.clone(),
+                        source: a.source.clone(),
+                        memory_after: None,
+                        dcgo_memory: a.memory,
+                        turn: None,
+                        is_game_over: None,
+                        expected_digest: None,
+                        selection: None,
+                        board_p0: a.board_p0.clone(),
+                        board_p1: a.board_p1.clone(),
+                    })
+                }
+                // Semantic selection payload (task 3.5) — resolved against
+                // the live PendingSelection at step time.
+                Row::Selection(s) => steps.push(StepSpec {
+                    actor: s.actor,
+                    action_id: 0,
+                    phase: s.phase.clone(),
+                    source: "selection".to_string(),
                     memory_after: None,
+                    dcgo_memory: s.memory,
                     turn: None,
                     is_game_over: None,
                     expected_digest: None,
+                    selection: Some(s.clone()),
+                    board_p0: s.board_p0.clone(),
+                    board_p1: s.board_p1.clone(),
                 }),
                 // Can't fabricate an unencoded selection — the replayable
                 // prefix ends here (matches the batch harness's PartialPass).
@@ -812,12 +1109,17 @@ impl DcgoAdapter {
 
         Ok(Self {
             my_pid,
+            first_player,
             my_deck,
+            my_egg_deck,
             opp_deck,
+            opp_egg_deck,
             opp_decklist,
             reveal_pairs,
             steps,
+            initial_state,
             card_data: card_data.clone(),
+            skipped_incomplete_plays,
         })
     }
 }
@@ -827,18 +1129,93 @@ impl RecordingSource for DcgoAdapter {
         &self,
         _card_data: &HashMap<String, CardData>,
     ) -> Result<Game, ReplayError> {
+        let mut game = self.build_initial_game_inner()?;
+        // Post-mulligan snapshot present: overwrite the observable side(s)'
+        // zones with the exact recorded post-mulligan state instead of
+        // leaving the mulligan to be replayed through the engine's own RNG
+        // (see module docs "Mulligan handling" and `InitialStateRow`'s doc
+        // comment). This runs AFTER the ordered/opaque construction above
+        // rather than replacing it, so the opaque path's opponent-side
+        // `RevealQueue` setup is untouched — only `my` (and, bot-vs-bot,
+        // `opp`) zones get overwritten.
+        if let Some(snapshot) = &self.initial_state {
+            apply_dcgo_initial_state(&mut game, snapshot, self.my_pid)?;
+        }
+        Ok(game)
+    }
+
+    fn relay_initial_state(&self, game: &mut Game) -> Result<(), ReplayError> {
+        // DCGO games are reconstructed rather than restored zone-by-zone:
+        // `Game::new` shuffles from the recorded post-shuffle order (seed 0),
+        // and the opaque path must re-attach a fresh `RevealQueue` at cursor 0.
+        // Backward seek therefore rebuilds — deterministic and correct, but not
+        // as cheap as the native zone-restore. (The batch parity replay never
+        // seeks backward, so this only costs interactive DCGO back-stepping; a
+        // future Game-setup extraction could make it in-place.)
+        *game = self.build_initial_game(&self.card_data)?;
+        Ok(())
+    }
+
+    fn steps(&self) -> &[StepSpec] {
+        &self.steps
+    }
+
+    fn default_policy(&self) -> StepPolicy {
+        StepPolicy::CheckThenApply
+    }
+
+    fn my_player_id(&self) -> Option<PlayerId> {
+        Some(self.my_pid)
+    }
+
+    fn skipped_incomplete_plays(&self) -> u32 {
+        self.skipped_incomplete_plays
+    }
+}
+
+impl DcgoAdapter {
+    /// The pre-snapshot construction: bot-vs-bot (ordered decks) or opaque
+    /// PvP (RevealQueue). Unchanged from before the post-mulligan-snapshot
+    /// feature — `build_initial_game` applies `self.initial_state` on top
+    /// of this when present.
+    fn build_initial_game_inner(&self) -> Result<Game, ReplayError> {
         match &self.opp_deck {
             Some(opp_deck) => {
-                // Bot-vs-bot — both decks known. Seed 0 (RNG only affects
-                // card-internal random effects; deck order comes from the
-                // recording).
+                // Bot-vs-bot — both decks known. Ordered construction: the
+                // recorded post-shuffle order is taken verbatim (`Game::new`
+                // would re-shuffle it), and the first player comes from the
+                // recording rather than seed parity. Seed 0 still drives
+                // card-internal random effects.
+                //
+                // Egg (digitama) decks ride the same list: `Game::new_inner`
+                // routes `CardKind::DigiEgg` entries into
+                // `player.digitama_deck` (relative order preserved) and the
+                // ordered constructor skips the digitama shuffle, so the
+                // recorded egg order is placed verbatim — the same
+                // orientation convention as the main deck.
+                // Orientation: DCGO draws/hatches from index 0 of its lists;
+                // the engine pops from the END of its deck Vecs. Reverse each
+                // recorded list (main and egg separately — the kind-splitter
+                // preserves relative order) so the engine's first draw is the
+                // recording's first card.
+                let rev = |v: &[String]| v.iter().rev().cloned().collect::<Vec<_>>();
+                let mut my_full = rev(&self.my_deck);
+                my_full.extend(rev(&self.my_egg_deck));
+                let mut opp_full = rev(&opp_deck);
+                opp_full.extend(rev(&self.opp_egg_deck));
                 let (deck1, deck2) = if self.my_pid == 0 {
-                    (self.my_deck.clone(), opp_deck.clone())
+                    (my_full, opp_full)
                 } else {
-                    (opp_deck.clone(), self.my_deck.clone())
+                    (opp_full, my_full)
                 };
-                Game::new(&[deck1, deck2], &self.card_data, Rules::standard(), Some(0))
-                    .map_err(ReplayError::GameConstruction)
+                Game::new_with_ordered_decks(
+                    &[deck1, deck2],
+                    &self.card_data,
+                    Rules::standard(),
+                    Some(0),
+                    self.first_player,
+                )
+                .map_err(ReplayError::GameConstruction)
             }
             None => {
                 // Opaque PvP — fresh RevealQueue at cursor 0 so a rebuild
@@ -862,26 +1239,166 @@ impl RecordingSource for DcgoAdapter {
             }
         }
     }
+}
 
-    fn relay_initial_state(&self, game: &mut Game) -> Result<(), ReplayError> {
-        // DCGO games are reconstructed rather than restored zone-by-zone:
-        // `Game::new` shuffles from the recorded post-shuffle order (seed 0),
-        // and the opaque path must re-attach a fresh `RevealQueue` at cursor 0.
-        // Backward seek therefore rebuilds — deterministic and correct, but not
-        // as cheap as the native zone-restore. (The batch parity replay never
-        // seeks backward, so this only costs interactive DCGO back-stepping; a
-        // future Game-setup extraction could make it in-place.)
-        *game = self.build_initial_game(&self.card_data)?;
+/// Apply a DCGO post-mulligan zone snapshot on top of an already-constructed
+/// `Game` (built by `DcgoAdapter::build_initial_game_inner`, still sitting in
+/// `Mulligan` phase with pre-mulligan hands dealt and both players pending).
+/// Overwrites the observable side(s)' zones with the exact recorded state,
+/// clears the mulligan queue, sets turn order from `first_player_id`, and
+/// fast-forwards into turn 1 — mirroring `NativeAdapter::relay_initial_state`
+/// / `restore_player_zone`'s proven zone-restore pattern (this is the same
+/// structural problem: a recording that captured a post-mulligan snapshot
+/// rather than the mulligan's random outcome).
+///
+/// `snapshot.opp` is `None` for PvP (not observable) — only `my_pid`'s
+/// zones get overwritten; the opaque opponent's `RevealQueue`-backed
+/// representation from `build_initial_game_inner` is left untouched.
+/// Bot-vs-bot recordings normally carry `opp` too (fully observable), and
+/// both sides get overwritten.
+///
+/// Does NOT rebuild `original_deck` — mulligan reshuffles the deck, it
+/// doesn't change which cards the player started with, so the aggregate
+/// ledger `build_initial_game_inner` already populated (from
+/// `my_deck`/`my_egg_deck`) remains accurate post-mulligan.
+fn apply_dcgo_initial_state(
+    game: &mut Game,
+    snapshot: &crate::dcgo_recording::InitialStateRow,
+    my_pid: PlayerId,
+) -> Result<(), ReplayError> {
+    // `next_card_index` must keep counting up from wherever the opening
+    // construction left it — reusing an index would alias two `CardSource`s
+    // onto one card-object slot. `Game::next_card_index()` allocates-and-
+    // returns the current counter value (the field itself is private); the
+    // single index it allocates here before we start assigning our own is
+    // simply left unused — a harmless gap, not a collision. Read this
+    // BEFORE building `data_index_map` below — that map borrows
+    // `game.card_data` immutably, which would conflict with the `&mut
+    // self` this method needs.
+    let mut next_card_index = game.next_card_index();
+
+    let data_index_map: HashMap<&str, usize> = game
+        .card_data
+        .iter()
+        .enumerate()
+        .map(|(idx, cd)| (cd.card_id.as_str(), idx))
+        .collect();
+
+    restore_side_from_dcgo_snapshot(
+        &mut game.players[my_pid as usize],
+        &snapshot.my,
+        &data_index_map,
+        my_pid,
+        &mut next_card_index,
+    )?;
+    if let Some(opp) = &snapshot.opp {
+        let opp_pid: PlayerId = 1 - my_pid;
+        restore_side_from_dcgo_snapshot(
+            &mut game.players[opp_pid as usize],
+            opp,
+            &data_index_map,
+            opp_pid,
+            &mut next_card_index,
+        )?;
+    }
+    game.advance_card_index_to(next_card_index);
+
+    game.mulligan_pending.clear();
+    for used in game.mulligan_used.iter_mut() {
+        *used = false;
+    }
+
+    let first_player = snapshot.first_player_id;
+    game.turn_order = {
+        let mut order: Vec<PlayerId> = (0..game.rules.player_count).collect();
+        if let Some(pos) = order.iter().position(|&p| p == first_player) {
+            order.rotate_left(pos);
+        }
+        order
+    };
+    game.turn_player_idx = 0;
+    game.memory_pair = if game.turn_order.len() >= 2 {
+        (game.turn_order[0], game.turn_order[1])
+    } else {
+        (game.turn_order[0], game.turn_order[0])
+    };
+    game.turn_count = 1;
+    game.memory = 0;
+    game.current_phase = GamePhase::Unsuspend;
+    game.begin_turn();
+    Ok(())
+}
+
+/// Wipe and restore ONE player's zones from a DCGO post-mulligan snapshot
+/// side. Reverses `library_order`/`digitama_library_order`/`security_order`
+/// (DCGO's "index 0 = top" convention -> the engine's pop-from-end `Vec`
+/// convention — see `InitialStateSide`'s doc comment); leaves `initial_hand`
+/// in recorded order (no top/bottom concept, same as `restore_player_zone`'s
+/// treatment of the native `initial_hand` field).
+fn restore_side_from_dcgo_snapshot(
+    player: &mut Player,
+    side: &crate::dcgo_recording::InitialStateSide,
+    data_index_map: &HashMap<&str, usize>,
+    owner: PlayerId,
+    next_card_index: &mut u16,
+) -> Result<(), ReplayError> {
+    player.hand.clear();
+    player.deck.clear();
+    player.security.clear();
+    player.digitama_deck.clear();
+    player.battle_area.clear();
+    player.breeding_area = None;
+    player.trash.clear();
+
+    fn push(
+        zone: &mut Vec<CardSource>,
+        ids: &[String],
+        data_index_map: &HashMap<&str, usize>,
+        owner: PlayerId,
+        next_card_index: &mut u16,
+    ) -> Result<(), ReplayError> {
+        for card_id in ids {
+            let data_idx = *data_index_map
+                .get(card_id.as_str())
+                .ok_or_else(|| ReplayError::UnknownCard(vec![card_id.clone()]))?;
+            let cs = CardSource::new(data_idx, owner, *next_card_index);
+            *next_card_index += 1;
+            zone.push(cs);
+        }
         Ok(())
     }
 
-    fn steps(&self) -> &[StepSpec] {
-        &self.steps
-    }
+    let rev = |v: &[String]| -> Vec<String> { v.iter().rev().cloned().collect() };
+    push(
+        &mut player.deck,
+        &rev(&side.library_order),
+        data_index_map,
+        owner,
+        next_card_index,
+    )?;
+    push(
+        &mut player.digitama_deck,
+        &rev(&side.digitama_library_order),
+        data_index_map,
+        owner,
+        next_card_index,
+    )?;
+    push(
+        &mut player.security,
+        &rev(&side.security_order),
+        data_index_map,
+        owner,
+        next_card_index,
+    )?;
+    push(
+        &mut player.hand,
+        &side.initial_hand,
+        data_index_map,
+        owner,
+        next_card_index,
+    )?;
 
-    fn default_policy(&self) -> StepPolicy {
-        StepPolicy::CheckThenApply
-    }
+    Ok(())
 }
 
 /// [`RecordingSource`] over the compact verification-ladder replay format.
@@ -923,9 +1440,13 @@ impl VerificationReplayAdapter {
                 phase: String::new(),
                 source: "verification_replay".to_string(),
                 memory_after: None,
+                dcgo_memory: None,
                 turn: None,
                 is_game_over: None,
                 expected_digest: Some(*digest),
+                selection: None,
+                board_p0: None,
+                board_p1: None,
             })
             .collect();
 
@@ -1148,6 +1669,10 @@ impl ReplayDriver {
         self.source.steps().len() as u32
     }
 
+    pub(crate) fn skipped_incomplete_plays(&self) -> u32 {
+        self.source.skipped_incomplete_plays()
+    }
+
     pub(crate) fn cursor(&self) -> u32 {
         self.cursor
     }
@@ -1180,6 +1705,102 @@ impl ReplayDriver {
         }
     }
 
+    /// Apply one recorded SELECTION step (task 3.5): resolve the semantic
+    /// payload against the live `PendingSelection` pick-by-pick, applying
+    /// each resolved engine action. Advances the cursor once for the whole
+    /// payload. Resolution failure records a
+    /// [`DivergenceKind::SelectionResolution`] and pauses.
+    fn apply_selection_step(
+        &mut self,
+        game: &mut Game,
+        payload: &crate::dcgo_recording::SelectionRow,
+    ) -> ReplayStepResult {
+        use super::selection_resolve::resolve_next;
+
+        // Selection `targets` carry DCGO board slots, which need the same
+        // frame-order -> play-order remap as action operands.
+        let remapped;
+        let payload = match remap_selection_targets(game, payload) {
+            Some(p) => {
+                remapped = p;
+                &remapped
+            }
+            None => payload,
+        };
+
+        let phase_before = game.current_phase.py_name().to_string();
+        let memory_before = game.memory;
+        let memory_pair_before = game.memory_pair;
+        let turn_number = game.turn_count;
+        let actor = payload.actor;
+
+        // DCGO memory-gauge check (see `check_dcgo_memory` doc comment):
+        // compare BEFORE applying the picks, matching when DCGO's own
+        // recorder read the gauge (at prompt-answer time, before the
+        // resolution that follows takes effect).
+        check_dcgo_memory(
+            &mut self.divergences,
+            self.cursor,
+            0,
+            actor,
+            &payload.phase,
+            self.source.steps()[self.cursor as usize].dcgo_memory,
+            self.source.my_player_id(),
+            memory_before,
+            memory_pair_before,
+            game,
+        );
+
+        let mut picks_done = 0usize;
+        let mut last_action: u16 = 0;
+        loop {
+            match resolve_next(game, payload, picks_done) {
+                Ok(None) => break,
+                Ok(Some(id)) => {
+                    // Selection answers must come from the recorded actor and
+                    // be accepted by the parked prompt (or PASS). The
+                    // resolver only emits ids from valid_action_ids/PASS, so
+                    // a decode no-op here means engine-side disagreement.
+                    game.decode_action(id, actor);
+                    last_action = id;
+                    picks_done += 1;
+                    // Safety valve: a payload can't sanely resolve into more
+                    // engine actions than picks + trailing PASS.
+                    if picks_done > super::selection_resolve::payload_pick_count(payload) + 1 {
+                        break;
+                    }
+                }
+                Err(reason) => {
+                    self.divergences.push(Divergence {
+                        step: self.cursor,
+                        action_id: last_action,
+                        actor,
+                        phase: payload.phase.clone(),
+                        kind: DivergenceKind::SelectionResolution { reason },
+                        board: describe_board(game),
+                    });
+                    self.paused = true;
+                    return self.no_progress_result(game);
+                }
+            }
+        }
+
+        self.cursor += 1;
+        ReplayStepResult {
+            step_number: self.cursor,
+            player_id: actor,
+            action_id: last_action,
+            phase_before,
+            phase_after: game.current_phase.py_name().to_string(),
+            memory_before,
+            memory_after: game.memory,
+            turn_number,
+            is_game_over: game.game_over,
+            winner_id: game.winner,
+            divergences: Vec::new(),
+        }
+    }
+
     /// Apply exactly one replayable step against `game`. No-op once complete
     /// or paused. Under `CheckThenApply`, verifies actor + mask-membership
     /// first. `CONCEDE_GAME` is accepted as the decoder-supported surrender
@@ -1191,6 +1812,15 @@ impl ReplayDriver {
         }
 
         let cur = self.cursor as usize;
+
+        // Semantic selection step (task 3.5): resolve the DCGO payload
+        // against the live PendingSelection, applying one engine action per
+        // pick (plus an optional trailing PASS). Handled as its own path —
+        // one recorded step may consume several engine actions.
+        if let Some(payload) = self.source.steps()[cur].selection.clone() {
+            return self.apply_selection_step(game, &payload);
+        }
+
         let (action_id, actor, phase_rec, mem_after_rec, turn_rec, game_over_rec, expected_digest) = {
             let s = &self.source.steps()[cur];
             (
@@ -1201,6 +1831,20 @@ impl ReplayDriver {
                 s.turn,
                 s.is_game_over,
                 s.expected_digest,
+            )
+        };
+
+        // DCGO indexes the battle area by on-screen frame order; the engine
+        // indexes it by play order. Rewrite the recorded action's board
+        // operands into the engine's index space before anything inspects it.
+        let action_id = {
+            let s = &self.source.steps()[cur];
+            remap_board_slots(
+                game,
+                action_id,
+                actor,
+                s.board_p0.as_ref(),
+                s.board_p1.as_ref(),
             )
         };
 
@@ -1218,6 +1862,7 @@ impl ReplayDriver {
                         expected,
                         recorded: actor,
                     },
+                    board: describe_board(game),
                 });
                 self.paused = true;
                 return self.no_progress_result(game);
@@ -1235,6 +1880,7 @@ impl ReplayDriver {
                     kind: DivergenceKind::MaskMiss {
                         sample_legal_ids: sample,
                     },
+                    board: describe_board(game),
                 });
                 self.paused = true;
                 return self.no_progress_result(game);
@@ -1243,7 +1889,27 @@ impl ReplayDriver {
 
         let phase_before = game.current_phase.py_name().to_string();
         let memory_before = game.memory;
+        let memory_pair_before = game.memory_pair;
         let turn_number = game.turn_count;
+
+        // DCGO memory-gauge check (see `check_dcgo_memory` doc comment):
+        // compare BEFORE applying the action, matching when DCGO's own
+        // recorder read the gauge (immediately before the RPC dispatch
+        // that will mutate it). No-op when this step carries no recorded
+        // memory (native/verification sources, or a pre-memory-field DCGO
+        // row) — absence is never treated as agreement.
+        check_dcgo_memory(
+            &mut self.divergences,
+            self.cursor,
+            action_id,
+            actor,
+            &phase_rec,
+            self.source.steps()[cur].dcgo_memory,
+            self.source.my_player_id(),
+            memory_before,
+            memory_pair_before,
+            game,
+        );
 
         game.decode_action(action_id, actor);
         self.cursor += 1;
@@ -1469,6 +2135,15 @@ impl ReplaySession {
         self.driver.total_steps()
     }
 
+    /// Recorded hand-play attempts dropped from the replayable stream
+    /// because the recording carries positive evidence they never actually
+    /// completed in DCGO — see the module docs' "Skipping DCGO plays that
+    /// never completed". Always `0` for non-DCGO sources and for DCGO
+    /// recordings that carry no `action_detail` rows at all.
+    pub fn skipped_incomplete_plays(&self) -> u32 {
+        self.driver.skipped_incomplete_plays()
+    }
+
     pub fn current_step(&self) -> u32 {
         self.driver.cursor()
     }
@@ -1569,6 +2244,62 @@ fn report_from_step_divergence(
     }
 }
 
+/// Compare a DCGO row's recorded `memory` (already in `my_player_id`
+/// perspective) against the engine's `Game::memory` immediately before this
+/// step, converted to the same perspective via
+/// `crate::dcgo_recording::memory_from_recording_perspective`. Pushes a
+/// non-pausing [`DivergenceKind::Memory`] on disagreement — non-pausing so a
+/// batch replay keeps going and the drift is visible at the exact step it
+/// happened, rather than surfacing later as unrelated-looking illegal-action
+/// noise (the motivating failure this check exists to prevent).
+///
+/// No-op when either `dcgo_recorded` is `None` (old corpus predating the
+/// field, or a native/verification `StepSpec` which never populates
+/// `dcgo_memory`) or `my_player_id` is `None` (source has no fixed
+/// recording-player perspective to convert against) — absence must never be
+/// reported as agreement.
+///
+/// `memory_pair_before` MUST be `game.memory_pair` read at the same instant
+/// as `memory_before` (the seesaw only moves at turn rotation, but pairing
+/// a stale reading would silently reintroduce the perspective bug this
+/// check exists to prevent).
+#[allow(clippy::too_many_arguments)]
+fn check_dcgo_memory(
+    divergences: &mut Vec<Divergence>,
+    cursor: u32,
+    action_id: u16,
+    actor: PlayerId,
+    phase: &str,
+    dcgo_recorded: Option<i32>,
+    my_player_id: Option<PlayerId>,
+    memory_before: i16,
+    memory_pair_before: (PlayerId, PlayerId),
+    game: &Game,
+) {
+    let (Some(recorded), Some(my_pid)) = (dcgo_recorded, my_player_id) else {
+        return;
+    };
+    let replayed = crate::dcgo_recording::memory_from_recording_perspective(
+        memory_before,
+        memory_pair_before.0,
+        my_pid,
+    );
+    if replayed != recorded {
+        divergences.push(Divergence {
+            step: cursor,
+            action_id,
+            actor,
+            phase: phase.to_string(),
+            kind: DivergenceKind::Memory {
+                recorded: recorded as i64,
+                replayed: replayed as i64,
+                my_player_id: my_pid,
+            },
+            board: describe_board(game),
+        });
+    }
+}
+
 /// The player the engine expects to make the next decision: a pending
 /// mulligan, else a pending selection's owner, else the turn player. Mirrors
 /// `LiveGame::current_decision_player` and the dcgo-replay harness helper.
@@ -1580,6 +2311,261 @@ fn current_decision_player(game: &Game) -> PlayerId {
         return sel.selecting_player;
     }
     game.turn_player()
+}
+
+/// Rewrite a selection payload's `targets` slots from DCGO's board ordering
+/// into the engine's. Returns `None` when nothing needs rewriting (no board
+/// snapshots, no targets, or every slot already maps to itself), so the
+/// caller can keep borrowing the original payload.
+fn remap_selection_targets(
+    game: &Game,
+    payload: &crate::dcgo_recording::SelectionRow,
+) -> Option<crate::dcgo_recording::SelectionRow> {
+    let targets = payload.targets.as_ref()?;
+    if payload.board_p0.is_none() && payload.board_p1.is_none() {
+        return None;
+    }
+
+    let mut out = payload.clone();
+    let mut changed = false;
+    let slots = out.targets.as_mut()?;
+    for t in slots.iter_mut() {
+        // -1 addresses the player (security), not a permanent.
+        if t.frame < 0 {
+            continue;
+        }
+        let recorded = match t.player {
+            0 => payload.board_p0.as_ref(),
+            _ => payload.board_p1.as_ref(),
+        };
+        let Some(recorded) = recorded else { continue };
+        let mapped = build_slot_map(recorded, &engine_board_ids(game, t.player));
+        if let Some(Some(j)) = mapped.get(t.frame as usize).copied() {
+            if j as i32 != t.frame {
+                t.frame = j as i32;
+                changed = true;
+            }
+        }
+    }
+    let _ = targets;
+    changed.then_some(out)
+}
+
+/// Rewrite the board-position operands of `action_id` from DCGO's slot
+/// ordering into the engine's, using the recording's board snapshots.
+///
+/// Returns the action unchanged when the recording predates board snapshots,
+/// when the action carries no board operand, or when any operand fails to map
+/// — an unmapped operand means the boards genuinely disagree, which is a
+/// divergence to report rather than paper over.
+fn remap_board_slots(
+    game: &Game,
+    action_id: u16,
+    actor: PlayerId,
+    board_p0: Option<&Vec<String>>,
+    board_p1: Option<&Vec<String>>,
+) -> u16 {
+    use crate::action::space::*;
+
+    let recorded_for = |p: PlayerId| -> Option<&Vec<String>> {
+        if p == 0 {
+            board_p0
+        } else {
+            board_p1
+        }
+    };
+    // Map one player's DCGO slot to the engine's, or None if unmappable.
+    let map_slot = |p: PlayerId, slot: u16| -> Option<u16> {
+        let recorded = recorded_for(p)?;
+        let mapped = build_slot_map(recorded, &engine_board_ids(game, p));
+        mapped.get(slot as usize).copied().flatten()
+    };
+    let opponent = 1 - actor;
+
+    if (ATTACK_START..ATTACK_END).contains(&action_id) {
+        let (attacker, target) = decode_attack(action_id);
+        let new_attacker = match map_slot(actor, attacker) {
+            Some(v) => v,
+            None => return action_id,
+        };
+        // SECURITY_TARGET (14) addresses the player, not a permanent.
+        let new_target = if target == SECURITY_TARGET {
+            target
+        } else {
+            match map_slot(opponent, target) {
+                Some(v) => v,
+                None => return action_id,
+            }
+        };
+        return encode_attack(new_attacker, new_target);
+    }
+
+    if (DIGIVOLVE_START..DIGIVOLVE_END).contains(&action_id) {
+        let (hand, field) = decode_digivolve(action_id);
+        // BREEDING_TARGET (14) is a named slot on both sides.
+        if field == BREEDING_TARGET {
+            return action_id;
+        }
+        return match map_slot(actor, field) {
+            Some(v) => encode_digivolve(hand, v),
+            None => action_id,
+        };
+    }
+
+    if (FIELD_EFFECT_START..FIELD_EFFECT_END).contains(&action_id) {
+        let (perm, effect) = decode_field_effect(action_id);
+        return match map_slot(actor, perm) {
+            Some(v) => FIELD_EFFECT_START + v * EFFECTS_PER_PERMANENT + effect,
+            None => action_id,
+        };
+    }
+
+    if (SOURCE_SELECT_START..SOURCE_SELECT_END).contains(&action_id) {
+        let (field, source) = decode_source_select(action_id);
+        return match map_slot(actor, field).and_then(|v| encode_source_select(v, source)) {
+            Some(v) => v,
+            None => action_id,
+        };
+    }
+
+    action_id
+}
+
+/// Engine battle-area card IDs for `player`, in `battle_area` index order.
+fn engine_board_ids(game: &Game, player: PlayerId) -> Vec<String> {
+    game.player(player)
+        .battle_area
+        .iter()
+        .map(|perm| {
+            perm.card_sources
+                .last()
+                .map(|c| c.card_id(&game.card_data).to_string())
+                .unwrap_or_default()
+        })
+        .collect()
+}
+
+/// Map each DCGO battle-area slot onto the engine's `battle_area` index for
+/// the same permanent, by card identity.
+///
+/// DCGO orders its compact battle area by on-screen frame and lets permanents
+/// migrate between frames at runtime; the engine's `battle_area` is in play
+/// order. The two therefore disagree routinely, not exceptionally — a recorded
+/// `attack_0` can mean the engine's slot 1.
+///
+/// Duplicates (two copies of one card on the same board) are matched in
+/// occurrence order, which is exact whenever the two boards hold the same
+/// multiset. A slot whose card the engine does not have maps to `None`, and
+/// the caller leaves the operand alone so the mismatch surfaces as a
+/// divergence instead of being silently rewritten onto the wrong permanent.
+fn build_slot_map(recorded: &[String], engine: &[String]) -> Vec<Option<u16>> {
+    let mut claimed = vec![false; engine.len()];
+    recorded
+        .iter()
+        .map(|want| {
+            let hit = engine
+                .iter()
+                .enumerate()
+                .find(|(j, have)| !claimed[*j] && *have == want)
+                .map(|(j, _)| j);
+            if let Some(j) = hit {
+                claimed[j] = true;
+                Some(j as u16)
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
+/// Render both players' battle areas in `battle_area` index order, which is
+/// the index space every board-position action ID uses.
+///
+/// Shows each permanent's slot, card id, DP, and whether it is suspended, plus
+/// the digivolution-source depth — enough to answer the three questions a
+/// target mismatch raises: does the engine hold the same permanents as the
+/// oracle, in the same order, in the same state?
+fn describe_board(game: &Game) -> String {
+    let mut out = String::new();
+    for pid in [0u8, 1u8] {
+        let area = &game.player(pid).battle_area;
+        out.push_str(&format!("P{} battle_area ({}): ", pid, area.len()));
+        if area.is_empty() {
+            out.push_str("(empty)");
+        } else {
+            let entries: Vec<String> = area
+                .iter()
+                .enumerate()
+                .map(|(i, perm)| {
+                    let card_id = perm
+                        .card_sources
+                        .last()
+                        .map(|c| c.card_id(&game.card_data).to_string())
+                        .unwrap_or_else(|| "?".to_string());
+                    let handle = crate::permanent::PermanentHandle {
+                        player: pid,
+                        index: i as u8,
+                    };
+                    let dp = perm
+                        .base_dp(&game.card_data)
+                        .map(|base| base + game.modifiers.sum(handle, crate::ModifierType::ChangeDp))
+                        .map(|d| d.to_string())
+                        .unwrap_or_else(|| "-".to_string());
+                    format!(
+                        "[{}] {} dp={}{} srcs={}",
+                        i,
+                        card_id,
+                        dp,
+                        if perm.is_suspended { " SUSPENDED" } else { "" },
+                        perm.card_sources.len().saturating_sub(1)
+                    )
+                })
+                .collect();
+            out.push_str(&entries.join(", "));
+        }
+        out.push_str("
+");
+    }
+    // Zone counts alongside the board. A permanent that vanished between two
+    // steps went SOMEWHERE, and trash-vs-security tells you whether it was
+    // deleted, returned, or lost to a security check -- which is the difference
+    // between an engine bug and a mis-mapped action.
+    for pid in [0u8, 1u8] {
+        let p = game.player(pid);
+        // Hand and trash contents, indexed. A digivolve/play action names a hand
+        // SLOT, so "is the recorded slot even that card?" is unanswerable without
+        // the list -- and a card the recording plays from one zone while the
+        // engine holds it in another is exactly the kind of divergence worth
+        // separating from a plain mistarget.
+        let list = |cards: &[crate::card_source::CardSource]| -> String {
+            cards
+                .iter()
+                .enumerate()
+                .map(|(i, c)| format!("[{}]{}", i, c.card_id(&game.card_data)))
+                .collect::<Vec<_>>()
+                .join(" ")
+        };
+        out.push_str(&format!("P{} hand:  {}
+", pid, list(&p.hand)));
+        out.push_str(&format!("P{} trash: {}
+", pid, list(&p.trash)));
+        // Security top is the END of the vec. A battle outcome hinges entirely
+        // on which card the check flips, so a divergence in the security stack
+        // masquerades as a combat bug.
+        out.push_str(&format!("P{} sec:   {} (top = last)
+", pid, list(&p.security)));
+        out.push_str(&format!(
+            "P{} zones: hand={} deck={} trash={} security={} memory={}
+",
+            pid,
+            p.hand.len(),
+            p.deck.len(),
+            p.trash.len(),
+            p.security.len(),
+            game.memory
+        ));
+    }
+    out
 }
 
 /// Up to `max` action IDs the engine WOULD accept here (`mask` value > 0.5).
@@ -1908,5 +2894,344 @@ mod tests {
         let _ = serde_json::to_string(&result).unwrap();
         // r is in scope for borrow-checker fragility tests.
         drop(r);
+    }
+
+    // ── DCGO board-slot remapping ────────────────────────────────────────
+
+    fn ids(v: &[&str]) -> Vec<String> {
+        v.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn slot_map_matches_by_identity_not_position() {
+        // DCGO ordered by frame; the engine by play order. Same two
+        // permanents, opposite indexes.
+        let map = build_slot_map(&ids(&["BT16-082", "EX10-010"]), &ids(&["EX10-010", "BT16-082"]));
+        assert_eq!(map, vec![Some(1), Some(0)]);
+    }
+
+    #[test]
+    fn slot_map_pairs_duplicates_in_occurrence_order() {
+        let map = build_slot_map(
+            &ids(&["EX12-035", "BT16-082", "EX12-035"]),
+            &ids(&["EX12-035", "EX12-035", "BT16-082"]),
+        );
+        assert_eq!(map, vec![Some(0), Some(2), Some(1)]);
+    }
+
+    #[test]
+    fn slot_map_reports_unknown_card_as_unmapped() {
+        // A card the engine does not have on board must NOT be silently
+        // rewritten onto some other permanent.
+        let map = build_slot_map(&ids(&["EX10-010", "ZZ99-999"]), &ids(&["EX10-010"]));
+        assert_eq!(map, vec![Some(0), None]);
+    }
+
+    #[test]
+    fn remap_rewrites_attacker_and_preserves_security_target() {
+        use crate::action::space::{decode_attack, encode_attack, SECURITY_TARGET};
+        // Engine play order: EX10-010 then BT16-082.
+        let engine = ids(&["EX10-010", "BT16-082"]);
+        let dcgo = ids(&["BT16-082", "EX10-010"]);
+        let map = build_slot_map(&dcgo, &engine);
+        assert_eq!(map[0], Some(1));
+
+        // Sanity on the encoding itself: DCGO slot 0 attacking security must
+        // become engine slot 1 attacking security.
+        let recorded = encode_attack(0, SECURITY_TARGET);
+        let (a, t) = decode_attack(recorded);
+        assert_eq!((a, t), (0, SECURITY_TARGET));
+        let expected = encode_attack(1, SECURITY_TARGET);
+        let (a2, t2) = decode_attack(expected);
+        assert_eq!((a2, t2), (1, SECURITY_TARGET));
+    }
+
+    // ── Skipping DCGO plays that never completed ────────────────────────
+    //
+    // `DcgoAdapter::from_recording` must skip a recorded play-range action
+    // only when there is POSITIVE evidence (an absent correlated
+    // `action_detail` row, in a recording that otherwise carries the field
+    // set) it never actually completed in DCGO. Everything else — other
+    // action kinds, mulligan decisions at the same raw ids, and recordings
+    // that never carry `action_detail` at all — must replay unchanged. See
+    // the module docs' "Skipping DCGO plays that never completed".
+
+    fn dcgo_game_start(
+        my_deck: Vec<String>,
+        opp_deck: Option<Vec<String>>,
+    ) -> crate::dcgo_recording::GameStart {
+        crate::dcgo_recording::GameStart {
+            v: 1,
+            game_id: "skip-test".into(),
+            timestamp: "t".into(),
+            my_player_id: 0,
+            // Fixed explicitly so construction never depends on inferring
+            // it from a mulligan row's `source` string (irrelevant to what
+            // these tests are checking).
+            first_player: Some(0),
+            is_ai: true,
+            my_deck_post_shuffle: my_deck,
+            opp_deck_post_shuffle: opp_deck,
+            opp_decklist_composition: None,
+            my_egg_deck: None,
+            opp_egg_deck: None,
+        }
+    }
+
+    fn dcgo_action_row(step: u32, actor: u8, action_id: u16, phase: &str) -> crate::dcgo_recording::Row {
+        crate::dcgo_recording::Row::Action(crate::dcgo_recording::ActionRow {
+            step,
+            actor,
+            action_id,
+            phase: phase.to_string(),
+            source: "main_phase".to_string(),
+            board_p0: None,
+            board_p1: None,
+            memory: None,
+            card_id: None,
+            memory_before: None,
+        })
+    }
+
+    /// An `action_detail` row correlated to `(step, actor)` — positive
+    /// evidence that play actually completed in DCGO.
+    fn dcgo_action_detail_row(step: u32, actor: u8) -> crate::dcgo_recording::Row {
+        crate::dcgo_recording::Row::ActionDetail(crate::dcgo_recording::ActionDetailRow {
+            step,
+            actor,
+            card_id: Some("BT1-010".to_string()),
+            cost_paid: 3,
+            memory_after: None,
+            alt_path: None,
+            materials: None,
+        })
+    }
+
+    fn dcgo_game_end() -> crate::dcgo_recording::GameEnd {
+        crate::dcgo_recording::GameEnd {
+            winner: -1,
+            reason: "test".into(),
+            total_steps: 0,
+        }
+    }
+
+    /// `DcgoAdapter::from_recording` performs no card-data validation (that
+    /// is `NativeAdapter`'s contract, not this one's — see its doc comment),
+    /// so construction-only tests can pass an empty pool.
+    fn no_card_data() -> HashMap<String, CardData> {
+        HashMap::new()
+    }
+
+    // Test 2 of the skip spec: a play-range action WITH a correlated
+    // `action_detail` is retained — replayed like any other decision.
+    #[test]
+    fn dcgo_adapter_retains_play_range_action_with_correlated_action_detail() {
+        let recording = crate::dcgo_recording::RecordingV1 {
+            start: dcgo_game_start(vec![], Some(vec![])),
+            rows: vec![dcgo_action_row(0, 0, 5, "Main"), dcgo_action_detail_row(0, 0)],
+            end: dcgo_game_end(),
+        };
+        let adapter =
+            DcgoAdapter::from_recording(recording, &no_card_data()).expect("adapter builds");
+        assert_eq!(
+            adapter.steps().len(),
+            1,
+            "a confirmed play must be retained in the replayable stream"
+        );
+        assert_eq!(adapter.skipped_incomplete_plays(), 0);
+    }
+
+    // Test 1 of the skip spec (construction half — the end-to-end
+    // divergence-free half is `dcgo_session_skips_incomplete_play_...`
+    // below): a play-range action with NO correlated `action_detail`, in a
+    // recording that otherwise carries the field, is dropped.
+    #[test]
+    fn dcgo_adapter_skips_play_range_action_with_no_correlated_action_detail() {
+        let recording = crate::dcgo_recording::RecordingV1 {
+            start: dcgo_game_start(vec![], Some(vec![])),
+            rows: vec![
+                dcgo_action_row(0, 0, 5, "Main"),
+                // A detail row for a DIFFERENT step keeps the "this
+                // recording carries action_detail rows" gate open while
+                // leaving step 0 itself uncorrelated.
+                dcgo_action_detail_row(1, 0),
+            ],
+            end: dcgo_game_end(),
+        };
+        let adapter =
+            DcgoAdapter::from_recording(recording, &no_card_data()).expect("adapter builds");
+        assert!(
+            adapter.steps().is_empty(),
+            "an unconfirmed play must be dropped from the replayable stream, got {:?}",
+            adapter.steps()
+        );
+        assert_eq!(adapter.skipped_incomplete_plays(), 1);
+    }
+
+    // Test 3 of the skip spec — the regression that matters most: a
+    // non-play action (pass / attack / hatch) with no correlated
+    // `action_detail` must NEVER be skipped. `action_detail` is only ever
+    // emitted for `PlayCardAction`s, so absence here carries no signal.
+    #[test]
+    fn dcgo_adapter_never_skips_non_play_actions_even_without_action_detail() {
+        let recording = crate::dcgo_recording::RecordingV1 {
+            start: dcgo_game_start(vec![], Some(vec![])),
+            rows: vec![
+                dcgo_action_row(0, 0, 60, "Breeding"), // hatch
+                dcgo_action_row(1, 0, 62, "Main"),      // pass
+                dcgo_action_row(2, 0, 100, "Main"),     // attack slot 0 -> security
+                // Detail row elsewhere proves the gate is armed and these
+                // still are not skipped.
+                dcgo_action_detail_row(99, 0),
+            ],
+            end: dcgo_game_end(),
+        };
+        let adapter =
+            DcgoAdapter::from_recording(recording, &no_card_data()).expect("adapter builds");
+        assert_eq!(
+            adapter.steps().len(),
+            3,
+            "pass/hatch/attack must never be skipped, got {:?}",
+            adapter.steps()
+        );
+        assert_eq!(adapter.skipped_incomplete_plays(), 0);
+    }
+
+    // Test 4 of the skip spec: ids 0/1 recorded under `GamePhase::Mulligan`
+    // are the keep/redraw decision, NOT plays, even though they alias the
+    // play-hand range's first two ids. Must never be skipped.
+    #[test]
+    fn dcgo_adapter_never_skips_mulligan_decisions_even_at_play_range_ids() {
+        let recording = crate::dcgo_recording::RecordingV1 {
+            start: dcgo_game_start(vec![], Some(vec![])),
+            rows: vec![
+                dcgo_action_row(0, 0, 0, "Mulligan"), // keep — aliases play_hand[0]
+                dcgo_action_row(1, 1, 1, "Mulligan"), // redraw — aliases play_hand[1]
+                dcgo_action_detail_row(99, 0),        // gate armed
+            ],
+            end: dcgo_game_end(),
+        };
+        let adapter =
+            DcgoAdapter::from_recording(recording, &no_card_data()).expect("adapter builds");
+        assert_eq!(
+            adapter.steps().len(),
+            2,
+            "mulligan decisions must never be treated as plays, got {:?}",
+            adapter.steps()
+        );
+        assert_eq!(adapter.skipped_incomplete_plays(), 0);
+    }
+
+    // Test 5 of the skip spec: a recording with ZERO `action_detail` rows —
+    // today's entire pre-existing corpus, recorded before the field
+    // existed — must replay exactly as before this feature. Total absence
+    // of the diagnostic field set is "no signal available", never "nothing
+    // completed".
+    #[test]
+    fn dcgo_adapter_never_skips_when_recording_has_no_action_detail_rows_at_all() {
+        let recording = crate::dcgo_recording::RecordingV1 {
+            start: dcgo_game_start(vec![], Some(vec![])),
+            rows: vec![dcgo_action_row(0, 0, 5, "Main")],
+            end: dcgo_game_end(),
+        };
+        let adapter =
+            DcgoAdapter::from_recording(recording, &no_card_data()).expect("adapter builds");
+        assert_eq!(
+            adapter.steps().len(),
+            1,
+            "a recording with no action_detail rows must replay unchanged"
+        );
+        assert_eq!(adapter.skipped_incomplete_plays(), 0);
+    }
+
+    /// Minimal viable card pool for the end-to-end skip test: a DigiEgg +
+    /// a Rookie, enough to build a legal 50-card deck and let mulligan +
+    /// main-phase actions play out. Mirrors
+    /// `dcgo_replay::replay::tests::micro_card_db`.
+    fn skip_test_card_db() -> HashMap<String, CardData> {
+        let json = r#"{
+            "BT1-001": {
+                "card_id": "BT1-001", "card_name_eng": "Koromon",
+                "card_effect_class_name": "BT1_001", "play_cost": 0, "dp": -1,
+                "level": 2, "card_kind": 3, "rarity": 0, "card_colors": [0],
+                "type_eng": ["Lesser"], "form_eng": ["In-Training"], "attribute_eng": [],
+                "effect_description_eng": "", "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "", "evo_costs": []
+            },
+            "BT1-010": {
+                "card_id": "BT1-010", "card_name_eng": "Agumon",
+                "card_effect_class_name": "BT1_010", "play_cost": 3, "dp": 2000,
+                "level": 3, "card_kind": 0, "rarity": 0, "card_colors": [0],
+                "type_eng": ["Reptile"], "form_eng": ["Rookie"], "attribute_eng": ["Vaccine"],
+                "effect_description_eng": "", "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "", "evo_costs": []
+            }
+        }"#;
+        CardData::load_from_str(json).unwrap()
+    }
+
+    fn skip_test_deck() -> Vec<String> {
+        let mut d = Vec::new();
+        for _ in 0..4 {
+            d.push("BT1-001".to_string());
+        }
+        for _ in 0..46 {
+            d.push("BT1-010".to_string());
+        }
+        d
+    }
+
+    // Test 1 (end-to-end half) + Test 6 of the skip spec: a play DCGO
+    // attempted but never completed must never surface as an
+    // `illegal_action` (`DivergenceKind::MaskMiss`) divergence, and the
+    // skip must be counted, not silent.
+    #[test]
+    fn dcgo_session_skips_incomplete_play_and_reports_no_illegal_action() {
+        let card_data = skip_test_card_db();
+        let deck = skip_test_deck();
+        let recording = crate::dcgo_recording::RecordingV1 {
+            start: dcgo_game_start(deck.clone(), Some(deck)),
+            rows: vec![
+                dcgo_action_row(0, 0, 0, "Mulligan"),
+                dcgo_action_row(1, 1, 0, "Mulligan"),
+                // Player 0's post-mulligan hand only has 5 cards (indices
+                // 0..5) — the LAST play-hand id is out of range and would
+                // be a genuine MaskMiss if replayed. DCGO attempted it (the
+                // row exists) but never completed it (no correlated
+                // `action_detail`, even though the recorder does emit the
+                // field elsewhere in this same recording).
+                dcgo_action_row(2, 0, PLAY_HAND_END - 1, "Main"),
+                dcgo_action_detail_row(50, 0),
+                // Ends the game cleanly once the unconfirmed play is
+                // skipped — CONCEDE_GAME is legal regardless of mask state.
+                dcgo_action_row(3, 0, crate::action::space::CONCEDE_GAME, "Main"),
+            ],
+            end: crate::dcgo_recording::GameEnd {
+                winner: 1,
+                reason: "concede".into(),
+                total_steps: 4,
+            },
+        };
+
+        let mut session =
+            ReplaySession::from_dcgo(recording, &card_data, false).expect("session builds");
+        session.run_to_completion();
+
+        assert!(
+            session.divergences().is_empty(),
+            "the unconfirmed play must never reach the legality check: {:?}",
+            session.divergences()
+        );
+        assert!(!session.is_paused());
+        assert_eq!(
+            session.skipped_incomplete_plays(),
+            1,
+            "the skip must be counted, not silent"
+        );
+        // Only the 2 mulligan keeps + the concede made it into the
+        // replayable stream — the unconfirmed play did not.
+        assert_eq!(session.total_steps(), 3);
+        assert!(session.is_game_over());
+        assert_eq!(session.winner_id(), Some(1));
     }
 }

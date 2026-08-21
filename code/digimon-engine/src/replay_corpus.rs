@@ -688,9 +688,13 @@ fn describe_divergence(divergence: &Divergence) -> String {
             "actor mismatch at step {}: recording seat {}, replay seat {}",
             divergence.step, recorded, expected
         ),
-        DivergenceKind::Memory { recorded, replayed } => format!(
-            "memory divergence at step {}: recorded {}, replayed {}",
-            divergence.step, recorded, replayed
+        DivergenceKind::Memory {
+            recorded,
+            replayed,
+            my_player_id,
+        } => format!(
+            "memory mismatch @ step {}: recorded {} (P{} perspective), engine {}",
+            divergence.step, recorded, my_player_id, replayed
         ),
         DivergenceKind::Phase { recorded, replayed } => format!(
             "phase divergence at step {}: recorded {}, replayed {}",
@@ -708,6 +712,10 @@ fn describe_divergence(divergence: &Divergence) -> String {
         }
         DivergenceKind::RevealExhausted { message } => format!(
             "reveal-exhausted divergence at step {}: {message}",
+            divergence.step
+        ),
+        DivergenceKind::SelectionResolution { reason } => format!(
+            "selection-resolution divergence at step {}: {reason}",
             divergence.step
         ),
     }
