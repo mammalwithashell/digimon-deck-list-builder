@@ -43,6 +43,7 @@
 | [DCGO_KEYWORD_PARITY.md](DCGO_KEYWORD_PARITY.md) | DCGO ↔ Rust per-keyword behavioral parity tracker — every printed keyword cross-referenced against the C# source of truth |
 | [DCGO_BUILD.md](DCGO_BUILD.md) | Building the modded DCGO client from source — Unity 2021.3.45f2 setup, asset-bundle acquisition, submodule pinning, bot-match smoke test |
 | [DCGO_RECORDING_SCHEMA.md](DCGO_RECORDING_SCHEMA.md) | JSONL recording format produced by the DCGO mod and consumed by `dcgo-replay` — game_start / action / encoder_failure / reveal / game_end row shapes, opaque-mode `opp_decklist_composition`, schema versioning |
+| [DCGO_EXAM.md](DCGO_EXAM.md) | DCGO card-clause exam — scripted scenarios (`qa/dcgo-exams/<SET>/<CARD-ID>.yaml`) that make DCGO answer "what does it do HERE" per printed clause; scenario format, the five verdict classes (`confirmed`/`diverged`/`unreachable`/`unavailable`/`unmeasured`, denominator always printed), the sim-only PR gate vs the local oracle pass, and the known gaps |
 | [RULES_CONTEXT.md](RULES_CONTEXT.md) | Official Digimon TCG rules reference |
 | [TITAN_MODE.md](TITAN_MODE.md) | Titan/Commander variant rules |
 | [EDH_COMMANDER_MODE.md](EDH_COMMANDER_MODE.md) | EDH Commander mode design |

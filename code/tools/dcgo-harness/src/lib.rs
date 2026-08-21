@@ -5,6 +5,7 @@
 
 pub mod build;
 pub mod daemon;
+pub mod exam;
 pub mod job;
 pub mod manifest;
 pub mod pool;
