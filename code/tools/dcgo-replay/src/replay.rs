@@ -80,6 +80,14 @@ pub enum ReplayFail {
     /// Engine arrived at a different winner (or no winner where the
     /// recording had one, or vice versa).
     WinnerMismatch(WinnerMismatch),
+    /// A DCGO row's recorded `memory` gauge (converted to the recording's
+    /// `my_player_id` perspective) disagreed with the engine's own memory
+    /// at that step. Distinct from `EngineError` so triage can cluster
+    /// memory-gauge drift separately — it is the class of bug that closes
+    /// the unfalsifiable-parity-investigation gap this field exists for
+    /// (a divergence that looked like an illegal action was actually
+    /// memory drift from an earlier step, invisible without this check).
+    MemoryMismatch(MemoryMismatch),
     /// The Game constructor or step path returned an engine-level error.
     /// Usually a deck-data issue (card ID unknown to our pool) or a
     /// step taken past game_over.
@@ -127,6 +135,20 @@ pub struct WinnerMismatch {
     pub expected_winner: i8, // signed so -1 (no winner) round-trips
     pub engine_winner: i8,
     pub steps_consumed: u32,
+}
+
+#[derive(Debug, Clone)]
+pub struct MemoryMismatch {
+    pub step: u32,
+    /// Memory gauge value DCGO recorded, converted to the recording's
+    /// `my_player_id` perspective (positive = favor of that player).
+    pub recorded: i64,
+    /// Engine's memory-before-this-step, converted to the SAME
+    /// perspective for a like-for-like comparison.
+    pub replayed: i64,
+    /// Which player id the perspective above is relative to (the
+    /// recording's `my_player_id`).
+    pub my_player_id: u8,
 }
 
 /// Replay one recording through the engine via the shared
@@ -261,13 +283,16 @@ fn map_divergence(div: &Divergence) -> ReplayFail {
             step: Some(div.step),
             message: format!("selection resolution: {reason}"),
         },
-        DivergenceKind::Memory { recorded, replayed } => ReplayFail::EngineError {
-            step: Some(div.step),
-            message: format!(
-                "memory divergence: recorded={} replayed={}",
-                recorded, replayed
-            ),
-        },
+        DivergenceKind::Memory {
+            recorded,
+            replayed,
+            my_player_id,
+        } => ReplayFail::MemoryMismatch(MemoryMismatch {
+            step: div.step,
+            recorded: *recorded,
+            replayed: *replayed,
+            my_player_id: *my_player_id,
+        }),
         DivergenceKind::Phase { recorded, replayed } => ReplayFail::EngineError {
             step: Some(div.step),
             message: format!(
@@ -433,6 +458,7 @@ mod tests {
                     source: "mulligan".into(),
                     board_p0: None,
                     board_p1: None,
+                    memory: None,
                 }),
                 Row::Action(crate::recording::ActionRow {
                     step: 1,
@@ -442,6 +468,7 @@ mod tests {
                     source: "mulligan".into(),
                     board_p0: None,
                     board_p1: None,
+                    memory: None,
                 }),
             ],
             end: crate::recording::GameEnd {
@@ -493,6 +520,7 @@ mod tests {
                     source: "mulligan".into(),
                     board_p0: None,
                     board_p1: None,
+                    memory: None,
                 }),
             ],
             end: crate::recording::GameEnd {

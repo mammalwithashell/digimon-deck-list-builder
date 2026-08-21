@@ -10,7 +10,9 @@
 use std::collections::HashMap;
 
 use digimon_engine::card_data::CardData;
-use digimon_engine::dcgo_recording::{ActionRow, GameEnd, GameStart, RecordingV1, RevealRow, Row};
+use digimon_engine::dcgo_recording::{
+    ActionRow, GameEnd, GameStart, InitialStateRow, InitialStateSide, RecordingV1, RevealRow, Row,
+};
 use digimon_engine::recorder::VerificationReplayRecording;
 use digimon_engine::runners::replay::{
     DivergenceKind, ReplayError, ReplayRunner, ReplaySession, StepPolicy, VerificationReplayCheck,
@@ -525,6 +527,7 @@ fn dcgo_bot_recording() -> RecordingV1 {
                 source: "mulligan".into(),
                 board_p0: None,
                 board_p1: None,
+                memory: None,
             }),
             Row::Action(ActionRow {
                 step: 1,
@@ -534,6 +537,7 @@ fn dcgo_bot_recording() -> RecordingV1 {
                 source: "mulligan".into(),
                 board_p0: None,
                 board_p1: None,
+                memory: None,
             }),
         ],
         end: GameEnd {
@@ -702,6 +706,7 @@ fn dcgo_bot_recording_with_redraw() -> RecordingV1 {
                 source: "mulligan".into(),
                 board_p0: None,
                 board_p1: None,
+                memory: None,
             }),
             Row::Action(ActionRow {
                 step: 1,
@@ -711,6 +716,7 @@ fn dcgo_bot_recording_with_redraw() -> RecordingV1 {
                 source: "mulligan".into(),
                 board_p0: None,
                 board_p1: None,
+                memory: None,
             }),
         ],
         end: GameEnd {
@@ -923,4 +929,232 @@ fn dcgo_bot_backward_seek_rebuilds_to_fresh_state() {
             fresh.game.players[i].hand.len()
         );
     }
+}
+
+// ── Group 6: DCGO memory-gauge parity check ─────────────────────────────
+
+/// A DCGO row whose recorded `memory` agrees with the engine's own value
+/// (converted to `my_player_id`'s perspective) produces no divergence.
+/// Fresh construction leaves `game.memory == 0` and `memory_pair.0 ==
+/// my_player_id == 0` here, so the perspective-converted value is 0.
+#[test]
+fn dcgo_row_memory_agreeing_produces_no_divergence() {
+    let db = minimal_db();
+    let mut rec = dcgo_bot_recording();
+    if let Row::Action(a) = &mut rec.rows[0] {
+        a.memory = Some(0);
+    }
+    let mut s = ReplaySession::from_dcgo(rec, &db, false).unwrap();
+    let _ = s.step();
+    assert!(
+        s.divergences().is_empty(),
+        "agreeing memory must not produce a divergence: {:?}",
+        s.divergences()
+    );
+}
+
+/// A DCGO row whose recorded `memory` disagrees with the engine's value
+/// surfaces a distinct `DivergenceKind::Memory` naming both values, the
+/// perspective player, and the step — and does NOT pause the cursor
+/// (informational, unlike `Actor`/`MaskMiss`), so a batch replay keeps
+/// going and the drift is visible at the exact step it happened.
+#[test]
+fn dcgo_row_memory_disagreeing_produces_memory_divergence() {
+    let db = minimal_db();
+    let mut rec = dcgo_bot_recording();
+    if let Row::Action(a) = &mut rec.rows[0] {
+        a.memory = Some(7); // engine memory is 0 here -> mismatch
+    }
+    let mut s = ReplaySession::from_dcgo(rec, &db, false).unwrap();
+    let _ = s.step();
+    assert_eq!(s.divergences().len(), 1);
+    match &s.divergences()[0].kind {
+        DivergenceKind::Memory {
+            recorded,
+            replayed,
+            my_player_id,
+        } => {
+            assert_eq!(*recorded, 7);
+            assert_eq!(*replayed, 0);
+            assert_eq!(*my_player_id, 0);
+        }
+        other => panic!("expected DivergenceKind::Memory, got {:?}", other),
+    }
+    assert_eq!(s.divergences()[0].step, 0);
+    assert!(
+        !s.is_paused(),
+        "memory divergence is informational and must not pause the cursor"
+    );
+}
+
+/// A DCGO row with no recorded `memory` (today's corpus shape, predating
+/// the field) triggers no check at all — absence is neither agreement
+/// nor a failure. `dcgo_bot_recording()`'s fixture rows carry no memory.
+#[test]
+fn dcgo_row_without_memory_field_produces_no_divergence() {
+    let db = minimal_db();
+    let rec = dcgo_bot_recording();
+    let mut s = ReplaySession::from_dcgo(rec, &db, false).unwrap();
+    let _ = s.step();
+    assert!(s.divergences().is_empty());
+}
+
+// ── Group 7: DCGO post-mulligan `initial_state` snapshot ────────────────
+
+/// A recording WITHOUT an `initial_state` row keeps today's behavior:
+/// mulligan actions stay in the replayable stream and the constructed
+/// game starts in `Mulligan` phase. Explicit contrast for
+/// `dcgo_bot_recording_with_initial_state_snapshot_reconstructs_exact_zones`
+/// below.
+#[test]
+fn dcgo_recording_without_initial_state_row_keeps_mulligan_in_stream() {
+    let db = minimal_db();
+    let s = ReplaySession::from_dcgo(dcgo_bot_recording(), &db, false).unwrap();
+    assert_eq!(
+        s.total_steps(),
+        2,
+        "both mulligan actions remain replayable steps"
+    );
+    assert_eq!(s.game.current_phase.py_name(), "Mulligan");
+}
+
+/// A bot-vs-bot recording WITH a post-mulligan `initial_state` snapshot
+/// filters the mulligan actions out of the replayable stream (baked into
+/// the snapshot, same contract as a native recording) and reconstructs
+/// EXACT zone contents from it rather than re-simulating the mulligan
+/// through the engine's own RNG. Uses distinguishable card IDs so
+/// ORDERING (not just presence) is pinned: `library_order`/
+/// `security_order` use DCGO's "index 0 = top" convention, and the
+/// engine's zones pop from the end — `.iter().rev()` must read back in
+/// the SAME order as recorded, or the reversal direction is backwards.
+#[test]
+fn dcgo_bot_recording_with_initial_state_snapshot_reconstructs_exact_zones() {
+    let db = minimal_db();
+    let my_lib = vec![
+        "ST1-03".to_string(),
+        "ST1-01".to_string(),
+        "ST1-02".to_string(),
+    ];
+    let my_sec = vec!["ST1-01".to_string(), "ST1-03".to_string()];
+    let my_hand = vec!["ST1-02".to_string(), "ST1-02".to_string()];
+    let opp_lib = vec!["ST1-01".to_string()];
+    let opp_sec = vec!["ST1-03".to_string()];
+    let opp_hand = vec!["ST1-01".to_string()];
+
+    let mut rec = dcgo_bot_recording();
+    rec.rows.push(Row::InitialState(InitialStateRow {
+        first_player_id: 0,
+        my: InitialStateSide {
+            library_order: my_lib.clone(),
+            digitama_library_order: vec![],
+            security_order: my_sec.clone(),
+            initial_hand: my_hand.clone(),
+        },
+        opp: Some(InitialStateSide {
+            library_order: opp_lib.clone(),
+            digitama_library_order: vec![],
+            security_order: opp_sec.clone(),
+            initial_hand: opp_hand.clone(),
+        }),
+        memory: Some(0),
+    }));
+
+    let s = ReplaySession::from_dcgo(rec, &db, false)
+        .expect("recording with initial_state reconstructs");
+
+    assert_eq!(
+        s.total_steps(),
+        0,
+        "mulligan rows filtered; nothing else recorded"
+    );
+    assert_ne!(
+        s.game.current_phase.py_name(),
+        "Mulligan",
+        "already past mulligan"
+    );
+
+    let my_lib_draw_order: Vec<&str> = s.game.players[0]
+        .deck
+        .iter()
+        .rev()
+        .map(|c| c.card_id(&s.game.card_data))
+        .collect();
+    assert_eq!(my_lib_draw_order, my_lib, "my library in recorded draw order");
+
+    let my_sec_draw_order: Vec<&str> = s.game.players[0]
+        .security
+        .iter()
+        .rev()
+        .map(|c| c.card_id(&s.game.card_data))
+        .collect();
+    assert_eq!(
+        my_sec_draw_order, my_sec,
+        "my security in recorded top-first order"
+    );
+
+    let mut my_hand_ids: Vec<&str> = s.game.players[0]
+        .hand
+        .iter()
+        .map(|c| c.card_id(&s.game.card_data))
+        .collect();
+    my_hand_ids.sort_unstable();
+    let mut expected_my_hand: Vec<&str> = my_hand.iter().map(|s| s.as_str()).collect();
+    expected_my_hand.sort_unstable();
+    assert_eq!(my_hand_ids, expected_my_hand, "my exact hand content");
+
+    let opp_lib_draw_order: Vec<&str> = s.game.players[1]
+        .deck
+        .iter()
+        .rev()
+        .map(|c| c.card_id(&s.game.card_data))
+        .collect();
+    assert_eq!(
+        opp_lib_draw_order, opp_lib,
+        "opp library in recorded draw order (bot-vs-bot: fully observable)"
+    );
+}
+
+/// A PvP-opaque recording's `initial_state` row carries only `my` (the
+/// opponent's post-mulligan hand isn't observable — same visibility
+/// split as `opp_deck_post_shuffle`). Only MY zones get overwritten from
+/// the snapshot; the opponent's opaque/`RevealQueue`-backed
+/// representation from the pre-snapshot construction is untouched and
+/// still functions.
+#[test]
+fn dcgo_opaque_recording_with_initial_state_overwrites_only_my_side() {
+    let db = opaque_micro_db();
+    let mut rec = dcgo_opaque_recording();
+    let my_lib = vec!["ST1-03".to_string(), "ST1-01".to_string()];
+    let my_sec = vec!["ST1-01".to_string()];
+    let my_hand = vec!["ST1-03".to_string(), "ST1-03".to_string()];
+    rec.rows.push(Row::InitialState(InitialStateRow {
+        first_player_id: 0,
+        my: InitialStateSide {
+            library_order: my_lib.clone(),
+            digitama_library_order: vec![],
+            security_order: my_sec.clone(),
+            initial_hand: my_hand.clone(),
+        },
+        opp: None,
+        memory: Some(0),
+    }));
+
+    let s = ReplaySession::from_dcgo(rec, &db, false)
+        .expect("opaque recording with initial_state still reconstructs");
+
+    let my_lib_draw_order: Vec<&str> = s.game.players[0]
+        .deck
+        .iter()
+        .rev()
+        .map(|c| c.card_id(&s.game.card_data))
+        .collect();
+    assert_eq!(my_lib_draw_order, my_lib);
+    assert_eq!(s.game.players[0].hand.len(), my_hand.len());
+    // Opponent side is still the opaque/reveal-queue construction from
+    // `build_initial_game_inner` -- unaffected by (and un-overwritten by)
+    // the snapshot, since `opp` was `None`.
+    assert!(
+        !s.game.players[1].hand.is_empty(),
+        "opponent's opaque hand from the pre-snapshot construction is intact"
+    );
 }

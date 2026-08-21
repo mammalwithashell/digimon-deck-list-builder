@@ -26,9 +26,9 @@ left-to-right; the engine consumes reveals in stream order via a FIFO
 Each row carries a `"type"` field — the discriminator the parser uses to
 deserialize into the right variant.
 
-Recognized types: `game_start`, `action`, `encoder_failure`, `reveal`,
-`game_end`. Unknown types are tolerated (Rust harness reads them as
-`Row::Unknown` and skips) for forward compatibility.
+Recognized types: `game_start`, `action`, `selection`, `initial_state`,
+`encoder_failure`, `reveal`, `game_end`. Unknown types are tolerated (Rust
+harness reads them as `Row::Unknown` and skips) for forward compatibility.
 
 A well-formed recording starts with exactly one `game_start`, ends with
 exactly one `game_end`, and has any mix of `action` / `encoder_failure` /
@@ -104,7 +104,17 @@ turn-of-decision order.
   "actor": 0,                     // 0 or 1 — the player making the decision
   "action_id": 0,                 // 0..2191 — the 2192-space action ID
   "phase": "Mulligan",            // DCGO phase name at encoding time (debugging breadcrumb)
-  "source": "mulligan"            // emitter-side categorical (mulligan|main_phase|selection_int|selection_bool|play_card_extra)
+  "source": "mulligan",           // emitter-side categorical (mulligan|main_phase|selection_int|selection_bool|play_card_extra)
+
+  // OPTIONAL (absent in pre-memory-field recordings). The shared memory
+  // gauge read IMMEDIATELY BEFORE this decision, converted to THIS
+  // recording's `my_player_id` perspective: positive favors the
+  // recording player, negative favors the opponent. Always relative to
+  // the SAME fixed player for the whole recording — never to whoever is
+  // turn-player at this row — so a reader never has to re-derive whose
+  // favor a bare number means. See "Memory gauge (`memory` field)" below
+  // for the full convention and why it exists.
+  "memory": 3
 }
 ```
 
@@ -192,7 +202,8 @@ action IDs depending on which selection is pending.
   "actor": 0,                        // the player answering the prompt
   "prompt": "SelectPermanentEffect", // which Select*Effect asked
   "phase": "Main",                   // DCGO phase name at capture time
-  "targets": [{"player": 0, "frame": 3}]  // payload — shape varies by prompt
+  "targets": [{"player": 0, "frame": 3}],  // payload — shape varies by prompt
+  "memory": -2                       // OPTIONAL — same convention as `action`'s `memory` field
 }
 ```
 
@@ -218,6 +229,117 @@ the engine's live `PendingSelection`, matches the recorded payload
 against the offered targets (by identity for card picks, by index for
 board picks and effect choices), and emits the corresponding action ID —
 or `PASS` for a decline.
+
+## Memory gauge (`memory` field)
+
+**Why this exists**: without a recorded memory value, a DCGO-vs-engine
+divergence that *looks* like an illegal action (the engine masks out a
+recorded play because it computed a different memory total) is
+**unfalsifiable** — the recording carries no independent memory reading to
+check against, so there is no way to tell "real rules bug" apart from "our
+memory drifted at some earlier step for an unrelated reason." A prior
+investigation found exactly this: DCGO played a cost-12 Digimon while the
+engine reported `memory = 1` and masked the action out, and the finding had
+to be retracted because it could not be confirmed either way. The `memory`
+field on `action` and `selection` rows closes that gap by giving the
+replay harness DCGO's own memory reading to assert against, at the exact
+step a divergence happens — not several steps later as unrelated-looking
+illegal-action noise.
+
+**Sign convention** — read carefully, this is the part that's easy to get
+backwards:
+
+- Digimon's memory is **one shared gauge**, but the recorded value is
+  always expressed from **this recording's own `my_player_id`**
+  perspective: **positive means the recording player is favored**
+  (has more room to act), **negative means the opponent is favored**.
+  This perspective is FIXED for the whole recording — it does not flip
+  with whoever currently holds turn-player status, so a reader never
+  has to re-derive whose favor a given row's number means.
+- This is DCGO's own `Player.MemoryForPlayer` getter (`Player.cs`), which
+  already performs this conversion: the underlying `GameContext.Memory`
+  field is stored positive-favors-PlayerID-1 always, and
+  `MemoryForPlayer` negates it for PlayerID 0 so both players read
+  "positive = mine, negative = theirs." The C# emitter (`AppendMemory`
+  in `GameRecorder.cs`) just serializes this already-converted value —
+  it does not do the conversion itself.
+- **This is a genuinely different convention from the Rust engine's own
+  `Game::memory`**, which is a seesaw expressed relative to
+  `Game::memory_pair.0` — whichever player currently holds turn-player
+  status, flipping every turn (`game_phases.rs::rotate_turn_player`).
+  Comparing the two raw numbers without converting is wrong on every turn
+  where the active player differs from `my_player_id`; the conversion
+  lives in `digimon_engine::dcgo_recording::memory_from_recording_perspective`
+  (Rust) and is pinned by unit tests in both directions for both seats.
+
+**Absence** (`memory` field missing — the entire corpus prior to this
+schema addition) must be treated as **unknown, never as agreement or
+zero**. The replay harness skips the check silently when absent; it never
+reports a false pass.
+
+## Post-mulligan snapshot row: `initial_state`
+
+Emitted **at most once per game**, from `TurnStateMachine.StartGame`
+immediately after BOTH players' mulligan decisions have resolved and
+security has been dealt (i.e. right before `DoneStartGame = true`).
+Absent in recordings made before the recorder started emitting it.
+
+**Why this exists**: rule 5-2-1-5 of the official rules manual makes a
+mulligan a TRUE reshuffle — "the player returns their entire hand to
+their deck, shuffles it, then draws 5 cards for their new initial hand."
+`game_start`'s `my_deck_post_shuffle` is captured **before** mulligan, so
+it does not reflect a mulliganed game's actual post-mulligan zone
+contents — the replay harness's only option, without this row, is to
+re-simulate the mulligan through its own RNG, which cannot reproduce
+DCGO's actual redraw. This row instead carries the exact resulting state,
+so the harness can lay it down directly and skip re-simulating the
+mulligan entirely (mulligan `action` rows are then filtered out of the
+replayable step stream, the same treatment a native `GameRecorder`
+recording's `initial_state` already gets).
+
+```jsonc
+{
+  "type": "initial_state",
+  "first_player_id": 0,              // 0 or 1 — DCGO's OWN convention (matches my_player_id/first_player above)
+  "my": {
+    "library_order": ["BT1-010", ...],       // index 0 = first drawn / top (SAME convention as my_deck_post_shuffle)
+    "digitama_library_order": ["ST1-01", ...],
+    "security_order": ["BT1-025", ...],      // index 0 = top of security
+    "initial_hand": ["BT1-010", "BT1-010", ...]  // no top/bottom concept
+  },
+  "opp": {                            // OPTIONAL — present for Bot Match, absent for PvP
+    "library_order": ["BT1-025", ...],
+    "digitama_library_order": [],
+    "security_order": ["BT1-010", ...],
+    "initial_hand": ["BT1-025", ...]
+  },
+  "memory": 0                         // OPTIONAL — same convention as the per-row memory field; always 0 here in a real game
+}
+```
+
+### Field reference
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `first_player_id` | u8 | yes | 0 or 1 — who takes turn 1. **DCGO's own convention** (matches `game_start`'s `my_player_id`/`first_player`) — explicitly NOT the native Rust recorder's opposite 1/2 (Python) convention that `ReplayRunner`/`NativeAdapter` translate via `saturating_sub(1)`. Getting this wrong silently swaps which player's deck is which. |
+| `my.library_order` | string[] | yes | Local player's post-mulligan library, top-first (same convention as `my_deck_post_shuffle`). |
+| `my.digitama_library_order` | string[] | no (defaults empty) | Local player's digitama deck — unaffected by mulligan, captured for schema symmetry. |
+| `my.security_order` | string[] | yes | Local player's post-mulligan security stack, top-first. |
+| `my.initial_hand` | string[] | yes | Local player's post-mulligan hand. No top/bottom ordering concept. |
+| `opp` | object \| absent | no | Opponent's post-mulligan zones, same shape as `my`. **Present for Bot Match** (fully observable), **absent for PvP** — same visibility split as `opp_deck_post_shuffle`. |
+| `memory` | i32 | no | Same convention as the per-row `memory` field (see above). Always 0 at this point in a real game (the gauge only starts moving once turn 1 begins) — carried for schema symmetry / a sanity cross-check, not because reconstruction needs to read it. |
+
+**Ordering convention, again because it's the easiest thing to get
+backwards**: `library_order` / `digitama_library_order` / `security_order`
+use the SAME "index 0 = first drawn / top" convention as `game_start`'s
+`my_deck_post_shuffle` — **not** the native `GameRecorder`'s opposite,
+bottom-first `library_order` convention (native's format pushes straight
+into the engine's pop-from-end `Vec` zones, so it needs bottom-first;
+DCGO's format stays consistent with its own `my_deck_post_shuffle`
+instead). The Rust `DcgoAdapter` reverses these lists itself before laying
+them into the engine's zones — mirroring the existing reversal already
+used for `DcgoAdapter`'s bot-vs-bot ordered-deck construction. `initial_hand`
+has no top/bottom concept and is placed in recorded order, unreversed.
 
 ## Sentinel row: `encoder_failure`
 
@@ -341,7 +463,15 @@ also does not require a bump if the field is `#[serde(default)]`-able
 
 The replay harness validates `v == SUPPORTED_SCHEMA_VERSION` at parse
 time and rejects mismatched recordings with a clear error pointing at
-the regeneration path.
+the regeneration path — **the check is an exact match, not a range**, so
+bumping `v` immediately invalidates every existing recording (including
+the corpus) until the harness's `SUPPORTED_SCHEMA_VERSION` is bumped in
+lockstep too. This is why the `memory` field and the `initial_state` row
+were added as `v: 1` (no version bump): both are pure field/row additions
+— `#[serde(default)]`-able and, for `initial_state`, a wholly new
+`Row::Unknown`-tolerated type — so existing `v: 1` recordings (which
+simply lack them) keep parsing unchanged. Per the two bullets above, an
+addition like this never required a bump in the first place.
 
 ## Example: minimal bot game
 

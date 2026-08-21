@@ -40,6 +40,11 @@ pub enum Row {
     /// engine action IDs at replay time against the live `PendingSelection`.
     Selection(SelectionRow),
     EncoderFailure(EncoderFailureRow),
+    /// Post-mulligan zone snapshot — emitted once per game, after BOTH
+    /// players' mulligan decisions have resolved and security has been
+    /// dealt. See [`InitialStateRow`] for the full contract. Optional:
+    /// absent in recordings made before the recorder started emitting it.
+    InitialState(InitialStateRow),
     /// A card revealed from the opaque opponent's pile — produced by the
     /// DCGO recorder's PvP mode for every observed opponent reveal (draws,
     /// security pops, mill effects). The replay harness preloads these
@@ -132,6 +137,20 @@ pub struct ActionRow {
     pub board_p0: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub board_p1: Option<Vec<String>>,
+    /// Shared memory gauge at decision time, converted to THIS
+    /// recording's `my_player_id` perspective — positive favors the
+    /// recording player, negative favors the opponent. Always relative to
+    /// the SAME fixed player for the whole recording, never to whoever is
+    /// turn-player at this row (that would require re-deriving whose
+    /// favor a bare number means at every row — see `GameContext.Memory`
+    /// / `Player.MemoryForPlayer` in the C# recorder and the engine's
+    /// opposite, active-player-relative `Game::memory` convention;
+    /// `runners::replay::memory_from_recording_perspective` reconciles
+    /// the two explicitly, never by inference). Absent in recordings made
+    /// before the recorder started emitting this field — `None` must be
+    /// treated as "unknown", not as agreement or zero.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory: Option<i32>,
 }
 
 /// A selection answer captured with SEMANTIC payload rather than a
@@ -193,6 +212,10 @@ pub struct SelectionRow {
     pub board_p0: Option<Vec<String>>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub board_p1: Option<Vec<String>>,
+    /// Shared memory gauge at decision time, `my_player_id` perspective.
+    /// Same convention as [`ActionRow::memory`] — see its doc comment.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory: Option<i32>,
 }
 
 /// One absolute field-permanent reference: `player` seat + DCGO FrameID
@@ -233,6 +256,72 @@ pub struct RevealRow {
     pub actor: u8,
     pub card_id: String,
     pub source: String,
+}
+
+/// A post-mulligan zone snapshot for ONE player, as observed by the
+/// recording client.
+///
+/// **Ordering convention**: card-id lists use the SAME "index 0 = first
+/// drawn / top" convention as [`GameStart::my_deck_post_shuffle`] — NOT
+/// the native `GameRecorder`'s opposite, bottom-first `library_order`
+/// convention (see `runners::replay::restore_player_zone`, which expects
+/// index 0 = bottom because it pushes straight into the engine's
+/// pop-from-end `Vec` zones). Callers restoring engine zones from THIS
+/// struct must reverse `library_order`, `digitama_library_order`, and
+/// `security_order` before pushing (`runners::replay`'s DCGO snapshot
+/// restorer does this — mirroring the existing `rev()` used for
+/// `DcgoAdapter`'s bot-vs-bot ordered-deck construction). `initial_hand`
+/// has no top/bottom concept and is pushed in recorded order, unreversed.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InitialStateSide {
+    pub library_order: Vec<String>,
+    #[serde(default)]
+    pub digitama_library_order: Vec<String>,
+    pub security_order: Vec<String>,
+    pub initial_hand: Vec<String>,
+}
+
+/// Post-mulligan zone snapshot row (added post-v1, optional field on the
+/// wire — see [`Row::InitialState`]). Emitted once per game, from DCGO's
+/// `TurnStateMachine.StartGame` immediately after BOTH players' mulligan
+/// decisions have resolved and security has been dealt.
+///
+/// Closes a real gap: rule 5-2-1-5 of the official rules manual (general
+/// rule PDF) makes a mulligan a TRUE reshuffle — "the player returns
+/// their entire hand to their deck, shuffles it, then draws 5 cards for
+/// their new initial hand" — so [`GameStart::my_deck_post_shuffle`]
+/// (captured BEFORE mulligan) does not reflect a mulliganed game's actual
+/// post-mulligan order. Absent in recordings made before the recorder
+/// started emitting it; `DcgoAdapter` then falls back to replaying the
+/// recorded mulligan actions against the pre-mulligan order (today's
+/// behavior — see `should_filter_mulligan_actions`).
+///
+/// `my`/`opp` mirrors [`GameStart::my_deck_post_shuffle`] /
+/// `opp_deck_post_shuffle`: `opp` is `None` for PvP (the opponent's
+/// post-mulligan hand/library isn't observable — same visibility split
+/// as the pre-mulligan deck), `Some` for Bot Match (fully observable).
+///
+/// `first_player_id`: 0 or 1 — DCGO's OWN player-id convention (matches
+/// [`GameStart::my_player_id`] / `first_player`), explicitly NOT the
+/// native `GameRecorder`'s 1/2 (Python) convention that
+/// `ReplayRunner`/`NativeAdapter` translate via `saturating_sub(1)`. Do
+/// not reuse that translation for this row — it would silently swap
+/// which player's deck is which.
+///
+/// `memory`: shared gauge from `my_player_id`'s perspective, positive =
+/// favor of the recording player — same convention as the per-row
+/// `memory` field on [`ActionRow`]/[`SelectionRow`]. Always 0 at this
+/// point in a real game (the memory gauge only starts moving once turn 1
+/// begins) — carried for schema symmetry / a sanity cross-check, not
+/// because reconstruction needs to read it.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct InitialStateRow {
+    pub first_player_id: u8,
+    pub my: InitialStateSide,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub opp: Option<InitialStateSide>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory: Option<i32>,
 }
 
 /// Terminal row payload.
@@ -345,6 +434,39 @@ pub fn parse_jsonl(text: &str) -> Result<RecordingV1, SchemaError> {
         rows: middle,
         end,
     })
+}
+
+/// Convert the engine's active-player-relative memory seesaw value
+/// (`Game::memory` — positive favors `Game::memory_pair.0`, whichever
+/// player currently holds turn-player status; the seesaw flips every
+/// turn, see `game_phases.rs`'s `rotate_turn_player`) into the
+/// perspective a DCGO recording's `memory` field uses: always relative
+/// to the recording's FIXED `my_player_id`, positive = favor of that
+/// player, never to whoever is active at a given row.
+///
+/// These are genuinely different conventions reconciling two independent
+/// systems (the engine's turn-relative seesaw vs. DCGO's own
+/// `GameContext.Memory` / `Player.MemoryForPlayer`, which is fixed to
+/// PlayerID rather than to turn order) — comparing the raw numbers
+/// without this conversion silently inverts on every turn where
+/// `memory_pair_favored != my_player_id`, which is exactly the kind of
+/// unfalsifiable-parity-investigation bug this field exists to prevent.
+///
+/// `memory_pair_favored` must be `Game::memory_pair.0` read at the SAME
+/// instant as `game_memory` — the seesaw only moves at turn rotation, so
+/// pairing a `memory` reading with a `memory_pair` reading taken at a
+/// later point would silently reintroduce the same bug this function
+/// exists to prevent.
+pub fn memory_from_recording_perspective(
+    game_memory: i16,
+    memory_pair_favored: u8,
+    my_player_id: u8,
+) -> i32 {
+    if memory_pair_favored == my_player_id {
+        game_memory as i32
+    } else {
+        -(game_memory as i32)
+    }
 }
 
 #[cfg(test)]
@@ -472,5 +594,130 @@ this is not json
         let r = parse_jsonl(txt).expect("parse");
         assert_eq!(r.rows.len(), 1);
         assert!(matches!(r.rows[0], Row::Unknown));
+    }
+
+    // ── memory field (task: memory-gauge parity) ────────────────────────
+
+    #[test]
+    fn action_row_parses_memory_when_present() {
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"action","step":0,"actor":0,"action_id":0,"phase":"Main","source":"main_phase","memory":3}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::Action(a) => assert_eq!(a.memory, Some(3)),
+            other => panic!("expected Action, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn action_row_memory_absent_parses_as_none() {
+        // Shape of the existing 9-game corpus (predates this field) — must
+        // still parse, and absence must not be inferred as agreement/zero.
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"action","step":0,"actor":0,"action_id":0,"phase":"Main","source":"main_phase"}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::Action(a) => assert_eq!(a.memory, None),
+            other => panic!("expected Action, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn selection_row_parses_memory_when_present() {
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":1,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"selection","step":0,"actor":1,"prompt":"generic_int","phase":"Main","int_value":2,"memory":-4}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::Selection(s) => assert_eq!(s.memory, Some(-4)),
+            other => panic!("expected Selection, got {:?}", other),
+        }
+    }
+
+    // ── initial_state row (task: post-mulligan snapshot) ────────────────
+
+    #[test]
+    fn parses_initial_state_row_bot_match() {
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"initial_state","first_player_id":0,"my":{"library_order":["BT1-010"],"digitama_library_order":[],"security_order":["BT1-025"],"initial_hand":["BT1-010"]},"opp":{"library_order":["BT1-025"],"digitama_library_order":[],"security_order":["BT1-010"],"initial_hand":["BT1-025"]},"memory":0}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        assert_eq!(r.rows.len(), 1);
+        match &r.rows[0] {
+            Row::InitialState(s) => {
+                assert_eq!(s.first_player_id, 0);
+                assert_eq!(s.my.library_order, vec!["BT1-010".to_string()]);
+                let opp = s.opp.as_ref().expect("opp side present for bot match");
+                assert_eq!(opp.initial_hand, vec!["BT1-025".to_string()]);
+                assert_eq!(s.memory, Some(0));
+            }
+            other => panic!("expected InitialState, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parses_initial_state_row_pvp_without_opp_side() {
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":false,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":null}
+{"type":"initial_state","first_player_id":1,"my":{"library_order":["BT1-010"],"security_order":["BT1-025"],"initial_hand":["BT1-010"]}}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::InitialState(s) => {
+                assert_eq!(s.first_player_id, 1);
+                assert!(s.opp.is_none(), "opp side absent for PvP");
+                // digitama_library_order defaults to empty when omitted.
+                assert!(s.my.digitama_library_order.is_empty());
+                assert_eq!(s.memory, None);
+            }
+            other => panic!("expected InitialState, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn recording_without_initial_state_row_still_parses() {
+        // Today's corpus shape — no initial_state row at all.
+        let r = parse_jsonl(well_formed_jsonl()).expect("parse");
+        assert!(
+            !r.rows.iter().any(|row| matches!(row, Row::InitialState(_))),
+            "well_formed_jsonl fixture carries no initial_state row"
+        );
+    }
+
+    // ── memory perspective conversion (pinned both directions, both seats) ──
+
+    #[test]
+    fn perspective_conversion_my_player_id_0_favored() {
+        // memory_pair favors player 0, recording is player 0's own —
+        // no sign flip.
+        assert_eq!(memory_from_recording_perspective(5, 0, 0), 5);
+    }
+
+    #[test]
+    fn perspective_conversion_my_player_id_0_not_favored() {
+        // memory_pair favors player 1, recording is player 0's own —
+        // sign flips: what favors the engine's active side (P1) reads as
+        // negative (unfavorable) from P0's fixed perspective.
+        assert_eq!(memory_from_recording_perspective(5, 1, 0), -5);
+    }
+
+    #[test]
+    fn perspective_conversion_my_player_id_1_favored() {
+        // memory_pair favors player 1, recording is player 1's own —
+        // no sign flip.
+        assert_eq!(memory_from_recording_perspective(-7, 1, 1), -7);
+    }
+
+    #[test]
+    fn perspective_conversion_my_player_id_1_not_favored() {
+        // memory_pair favors player 0, recording is player 1's own —
+        // sign flips.
+        assert_eq!(memory_from_recording_perspective(-7, 0, 1), 7);
     }
 }

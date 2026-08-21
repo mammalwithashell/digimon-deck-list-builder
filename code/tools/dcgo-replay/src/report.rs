@@ -80,6 +80,7 @@ pub fn aggregate(entries: &[(&RecordingV1, &ReplayOutcome)]) -> ParityReport {
                     ReplayFail::IllegalAction(_) => "illegal_action",
                     ReplayFail::ActorMismatch(_) => "actor_mismatch",
                     ReplayFail::WinnerMismatch(_) => "winner_mismatch",
+                    ReplayFail::MemoryMismatch(_) => "memory_mismatch",
                     ReplayFail::EngineError { .. } => "engine_error",
                     ReplayFail::OpaqueRevealError { .. } => "opaque_reveal_error",
                 };
@@ -177,6 +178,7 @@ fn step_of(fail: &ReplayFail) -> u32 {
         ReplayFail::IllegalAction(ia) => ia.step,
         ReplayFail::ActorMismatch(am) => am.step,
         ReplayFail::WinnerMismatch(wm) => wm.steps_consumed,
+        ReplayFail::MemoryMismatch(mm) => mm.step,
         ReplayFail::EngineError { step, .. } => step.unwrap_or(0),
         ReplayFail::OpaqueRevealError { step, .. } => step.unwrap_or(0),
     }

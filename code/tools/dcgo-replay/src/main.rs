@@ -193,6 +193,10 @@ fn detail(outcome: &ReplayOutcome) -> String {
                 "      winner_mismatch after {} steps: recording={}, engine={}",
                 wm.steps_consumed, wm.expected_winner, wm.engine_winner
             ),
+            ReplayFail::MemoryMismatch(mm) => format!(
+                "      memory_mismatch @ step {}: recorded {} (P{} perspective), engine {}",
+                mm.step, mm.recorded, mm.my_player_id, mm.replayed
+            ),
             ReplayFail::EngineError { step, message } => {
                 format!("      engine_error @ step {:?}: {}", step, message)
             }
