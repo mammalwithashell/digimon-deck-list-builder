@@ -523,6 +523,8 @@ fn dcgo_bot_recording() -> RecordingV1 {
                 action_id: 0,
                 phase: "Mulligan".into(),
                 source: "mulligan".into(),
+                board_p0: None,
+                board_p1: None,
             }),
             Row::Action(ActionRow {
                 step: 1,
@@ -530,6 +532,8 @@ fn dcgo_bot_recording() -> RecordingV1 {
                 action_id: 0,
                 phase: "Mulligan".into(),
                 source: "mulligan".into(),
+                board_p0: None,
+                board_p1: None,
             }),
         ],
         end: GameEnd {
@@ -645,6 +649,112 @@ fn dcgo_bot_replays_mulligan_under_trust() {
     s.run_to_completion();
     assert_eq!(s.current_step(), s.total_steps());
     assert!(!s.is_paused());
+}
+
+/// Like [`dcgo_bot_recording`], but the local player (actor 0) actually
+/// **redraws** (`action_id: 1`) instead of keeping. DCGO's recorder only
+/// ever logs the keep/redraw *decision* for a mulligan
+/// (`Digimon.Recording.GameRecorder.LogMulligan(playerID, isRedraw)` in
+/// `TurnStateMachine.SetRedraw`) — it never captures the resulting
+/// redrawn hand, so a DCGO recording can never carry a genuine
+/// post-mulligan `initial_state` snapshot the way a native `GameRecorder`
+/// recording does. Uses an all-identical-card deck so the redrawn hand's
+/// *content* is deterministic (mod shuffle order) regardless of the
+/// engine's own RNG stream, letting the regression assert exact
+/// post-mulligan hand content without coupling to a specific seed or to
+/// DCGO's (unrecoverable) actual redraw.
+fn dcgo_bot_recording_with_redraw() -> RecordingV1 {
+    let uniform_deck: Vec<String> = std::iter::repeat("ST1-03".to_string()).take(50).collect();
+    RecordingV1 {
+        start: GameStart {
+            v: 1,
+            game_id: "redraw-test".into(),
+            timestamp: "t".into(),
+            my_player_id: 0,
+            first_player: Some(0),
+            is_ai: true,
+            my_deck_post_shuffle: uniform_deck.clone(),
+            opp_deck_post_shuffle: Some(uniform_deck),
+            opp_decklist_composition: None,
+            my_egg_deck: None,
+            opp_egg_deck: None,
+        },
+        rows: vec![
+            Row::Action(ActionRow {
+                step: 0,
+                actor: 0,
+                action_id: 1, // redraw, not keep
+                phase: "Mulligan".into(),
+                source: "mulligan".into(),
+                board_p0: None,
+                board_p1: None,
+            }),
+            Row::Action(ActionRow {
+                step: 1,
+                actor: 1,
+                action_id: 0, // keep
+                phase: "Mulligan".into(),
+                source: "mulligan".into(),
+                board_p0: None,
+                board_p1: None,
+            }),
+        ],
+        end: GameEnd {
+            winner: 0,
+            reason: "win".into(),
+            total_steps: 2,
+        },
+    }
+}
+
+/// Regression (see module docs "Mulligan handling"): a DCGO-shaped
+/// recording with no `initial_state` and a real redraw (not just a keep)
+/// must replay the mulligan decisions — under the DCGO adapter's real
+/// default policy, `CheckThenApply`, not just under `Trust` — without a
+/// spurious divergence, and must land on a legitimate, fully-drawn
+/// post-mulligan hand rather than silently keeping the pre-mulligan deal.
+#[test]
+fn dcgo_bot_redraw_replays_under_check_then_apply_without_divergence() {
+    let db = minimal_db();
+    let mut s = ReplaySession::from_dcgo(dcgo_bot_recording_with_redraw(), &db, false).unwrap();
+    assert_eq!(
+        s.policy(),
+        StepPolicy::CheckThenApply,
+        "DCGO's real default policy — this must hold under production settings, not just Trust"
+    );
+
+    s.run_to_completion();
+
+    assert_eq!(
+        s.current_step(),
+        s.total_steps(),
+        "both mulligan decisions (including the redraw) were consumed as replayable steps"
+    );
+    assert!(
+        !s.is_paused(),
+        "no pausing divergence — the redraw must be legal under the engine's own mask/actor checks"
+    );
+    assert!(
+        s.divergences().is_empty(),
+        "no divergence recorded while replaying the mulligan decisions: {:?}",
+        s.divergences()
+    );
+    // Mulligan is complete for both players — phase advanced past Mulligan.
+    assert_ne!(s.game.current_phase.py_name(), "Mulligan");
+
+    // The redraw actually happened: a fresh 5-card hand, not the stale
+    // pre-mulligan deal silently left in place by a dropped/filtered action.
+    assert_eq!(s.game.players[0].hand.len(), 5, "redrawn hand is full size");
+    for card in &s.game.players[0].hand {
+        assert_eq!(
+            card.card_id(&s.game.card_data),
+            "ST1-03",
+            "uniform deck: every redrawn card is deterministically ST1-03"
+        );
+    }
+    // The keeping opponent is unaffected and drew directly from the ordered
+    // deck (sanity check on the fixture, not the regression itself).
+    assert_eq!(s.game.players[1].hand.len(), 5);
 }
 
 /// A 50-card deck (4 DigiEggs + 46 main) over the micro DB — the shape the

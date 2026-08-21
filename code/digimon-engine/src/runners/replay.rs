@@ -24,11 +24,36 @@
 //!
 //! ## Mulligan handling
 //!
-//! `GameRecorder` captures `initial_state` AFTER mulligan completes
-//! (security has been dealt, hands settled). The actions array still
-//! contains the mulligan decisions, but replaying them against an
-//! already-post-mulligan game would error. We filter mulligan-phase
-//! actions out during replay.
+//! One signal decides whether mulligan-phase actions are filtered out of
+//! the replayable step stream or replayed like any other decision: does the
+//! recording carry a genuine post-mulligan `initial_state` snapshot? See
+//! `should_filter_mulligan_actions`, the single shared decision point both
+//! adapters below call into — the branch is driven by that presence check,
+//! never by a hard-coded "this source never/always has one" assumption, so
+//! a recorder that starts emitting `initial_state` later gets the right
+//! behavior without another code change here.
+//!
+//! - **Native `GameRecorder` recordings carry one.** `GameRecorder` captures
+//!   `initial_state` AFTER mulligan completes (security has been dealt,
+//!   hands settled). The `actions` array still contains the mulligan
+//!   decisions, but replaying them against an already-post-mulligan game
+//!   would error, so [`NativeAdapter`] (and the older [`ReplayRunner`],
+//!   which requires `initial_state` unconditionally) filter mulligan-phase
+//!   actions out of the replayable stream.
+//! - **DCGO recordings never carry one.** DCGO's own recorder only ever
+//!   logs the keep/redraw *decision* for a mulligan
+//!   (`Digimon.Recording.GameRecorder.LogMulligan` in
+//!   `TurnStateMachine.SetRedraw`) — it never captures the resulting
+//!   redrawn hand, so there is no post-mulligan snapshot to bake the
+//!   decisions into. [`DcgoAdapter`] therefore leaves the constructed game
+//!   in `Mulligan` phase and replays the recorded mulligan actions like any
+//!   other decision. A player who redraws lands on a fresh, real 5-card
+//!   hand (the engine performs the actual reshuffle-then-draw DCGO also
+//!   performs — general_rule.pdf rule 5-2-1-5) — but since DCGO's own
+//!   reshuffle is never recorded, that hand's *exact content* cannot be
+//!   expected to match DCGO's, which is the same "RNG path isn't
+//!   exercised" limitation called out below, not a defect in this
+//!   filtering logic.
 //!
 //! ## Known v1 limitations
 //!
@@ -37,8 +62,9 @@
 //!   selection. The `verify: true` mode reports divergences but does
 //!   not halt replay.
 //! - Replay does not exercise the RNG path. Effects that consume RNG
-//!   (e.g. random reveal selection) will diverge from the recorded
-//!   outcome since the post-construction RNG state is fresh.
+//!   (e.g. random reveal selection, or a DCGO mulligan redraw) will diverge
+//!   from the recorded outcome since the post-construction RNG state is
+//!   fresh.
 
 use std::collections::HashMap;
 
@@ -477,13 +503,17 @@ impl ReplayRunner {
         // diverge from the recorded one. Verify mode will report it.
         self.game.begin_turn();
 
-        // Filter out mulligan-phase actions — those are already baked into
-        // initial_state. Capture indices into the actions array.
+        // See module docs "Mulligan handling": `ReplayRunner::new` requires
+        // `initial_state` (checked above / by the caller), so mulligan
+        // decisions are already baked into it — filter them out of the
+        // replayable stream. Driven by the same shared decision point
+        // `NativeAdapter` and `DcgoAdapter` use, not a bespoke check here.
+        let filter_mulligan = should_filter_mulligan_actions(true);
         self.replayable_action_indices.clear();
         if let Some(actions) = self.recording["actions"].as_array() {
             for (idx, a) in actions.iter().enumerate() {
                 let phase = a["phase"].as_str().unwrap_or("");
-                if phase != "Mulligan" {
+                if !filter_mulligan || phase != "Mulligan" {
                     self.replayable_action_indices.push(idx);
                 }
             }
@@ -612,6 +642,26 @@ pub trait RecordingSource: Send {
     }
 }
 
+/// The single shared decision point for whether mulligan-phase actions
+/// should be filtered out of a recording's replayable step stream. See the
+/// module docs' "Mulligan handling" section for the full contract.
+///
+/// `has_initial_state` must reflect whether *this specific recording*
+/// actually carries a genuine post-mulligan `initial_state` snapshot — not
+/// a hard-coded assumption about the recording's source/format. Native
+/// `GameRecorder` recordings always do (by construction: both
+/// `ReplayRunner::new` and `NativeAdapter::from_recording` reject a missing
+/// one before reaching this point), so they pass `true` and mulligan
+/// actions get filtered — they're already baked into the snapshot. DCGO
+/// recordings never carry one (DCGO's recorder only logs the keep/redraw
+/// decision, never the resulting hand), so `DcgoAdapter` passes `false` and
+/// mulligan actions replay like any other decision. A future recorder that
+/// starts emitting an equivalent snapshot only needs to thread that
+/// presence through to this call — not add a new branch here.
+fn should_filter_mulligan_actions(has_initial_state: bool) -> bool {
+    has_initial_state
+}
+
 /// [`RecordingSource`] over a native `GameRecorder` JSON recording. Holds
 /// the canonical native relay logic (previously inlined in `ReplayRunner`),
 /// so `ReplaySession` and any future native caller share one code path.
@@ -661,11 +711,16 @@ impl NativeAdapter {
             return Err(ReplayError::UnknownCard(missing));
         }
 
+        // See module docs "Mulligan handling": `initial_state` is present
+        // (validated above), so mulligan decisions are already baked into
+        // it — filter them out of the replayable stream. Driven by the same
+        // shared decision point `ReplayRunner` and `DcgoAdapter` use.
+        let filter_mulligan = should_filter_mulligan_actions(true);
         let mut steps = Vec::new();
         if let Some(actions) = recording["actions"].as_array() {
             for a in actions {
                 let phase = a["phase"].as_str().unwrap_or("").to_string();
-                if phase == "Mulligan" {
+                if filter_mulligan && phase == "Mulligan" {
                     continue;
                 }
                 let action_id = a["action_id"].as_u64().unwrap_or(0) as u16;
@@ -803,15 +858,24 @@ pub struct DcgoAdapter {
 
 impl DcgoAdapter {
     /// Build an adapter from a parsed DCGO recording. Lowers the `Action`
-    /// rows up to the first `encoder_failure` into the step stream (DCGO
-    /// replays mulligan actions too — the game lands in `Mulligan` phase),
-    /// and precomputes the opaque opponent decklist + reveal stream when the
-    /// recording is PvP.
+    /// rows up to the first `encoder_failure` into the step stream. See
+    /// module docs "Mulligan handling": `RecordingV1` never carries an
+    /// `initial_state`-equivalent snapshot, so `should_filter_mulligan_actions`
+    /// evaluates `false` here and mulligan rows are NOT filtered — the game
+    /// lands in `Mulligan` phase and mulligan actions replay like any other
+    /// decision. Precomputes the opaque opponent decklist + reveal stream
+    /// when the recording is PvP.
     pub fn from_recording(
         recording: crate::dcgo_recording::RecordingV1,
         card_data: &HashMap<String, CardData>,
     ) -> Result<Self, ReplayError> {
         use crate::dcgo_recording::Row;
+
+        // DCGO recordings never carry a post-mulligan `initial_state`
+        // snapshot (see module docs) — driven by the same shared decision
+        // point `ReplayRunner` and `NativeAdapter` use, not a bespoke
+        // "DCGO never filters" assumption.
+        let filter_mulligan = should_filter_mulligan_actions(false);
 
         let my_pid = recording.start.my_player_id;
         let my_deck = recording.start.my_deck_post_shuffle.clone();
@@ -836,19 +900,24 @@ impl DcgoAdapter {
         let mut steps = Vec::new();
         for row in &recording.rows {
             match row {
-                Row::Action(a) => steps.push(StepSpec {
-                    actor: a.actor,
-                    action_id: a.action_id,
-                    phase: a.phase.clone(),
-                    source: a.source.clone(),
-                    memory_after: None,
-                    turn: None,
-                    is_game_over: None,
-                    expected_digest: None,
-                    selection: None,
-                    board_p0: a.board_p0.clone(),
-                    board_p1: a.board_p1.clone(),
-                }),
+                Row::Action(a) => {
+                    if filter_mulligan && a.phase == "Mulligan" {
+                        continue;
+                    }
+                    steps.push(StepSpec {
+                        actor: a.actor,
+                        action_id: a.action_id,
+                        phase: a.phase.clone(),
+                        source: a.source.clone(),
+                        memory_after: None,
+                        turn: None,
+                        is_game_over: None,
+                        expected_digest: None,
+                        selection: None,
+                        board_p0: a.board_p0.clone(),
+                        board_p1: a.board_p1.clone(),
+                    })
+                }
                 // Semantic selection payload (task 3.5) — resolved against
                 // the live PendingSelection at step time.
                 Row::Selection(s) => steps.push(StepSpec {
