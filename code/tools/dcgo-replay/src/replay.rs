@@ -411,6 +411,7 @@ mod tests {
                 source: "selection_int".into(),
                 reason: "selection_prompt_kind_unknown".into(),
                 raw_value: "int_value=5".into(),
+                card_id: None,
             })],
             end: crate::recording::GameEnd {
                 winner: 0,
@@ -459,6 +460,8 @@ mod tests {
                     board_p0: None,
                     board_p1: None,
                     memory: None,
+                    card_id: None,
+                    memory_before: None,
                 }),
                 Row::Action(crate::recording::ActionRow {
                     step: 1,
@@ -469,6 +472,8 @@ mod tests {
                     board_p0: None,
                     board_p1: None,
                     memory: None,
+                    card_id: None,
+                    memory_before: None,
                 }),
             ],
             end: crate::recording::GameEnd {
@@ -521,6 +526,8 @@ mod tests {
                     board_p0: None,
                     board_p1: None,
                     memory: None,
+                    card_id: None,
+                    memory_before: None,
                 }),
             ],
             end: crate::recording::GameEnd {

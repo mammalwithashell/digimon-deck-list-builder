@@ -26,9 +26,10 @@ left-to-right; the engine consumes reveals in stream order via a FIFO
 Each row carries a `"type"` field — the discriminator the parser uses to
 deserialize into the right variant.
 
-Recognized types: `game_start`, `action`, `selection`, `initial_state`,
-`encoder_failure`, `reveal`, `game_end`. Unknown types are tolerated (Rust
-harness reads them as `Row::Unknown` and skips) for forward compatibility.
+Recognized types: `game_start`, `action`, `action_detail`, `selection`,
+`initial_state`, `encoder_failure`, `reveal`, `game_end`. Unknown types are
+tolerated (Rust harness reads them as `Row::Unknown` and skips) for forward
+compatibility.
 
 A well-formed recording starts with exactly one `game_start`, ends with
 exactly one `game_end`, and has any mix of `action` / `encoder_failure` /
@@ -114,7 +115,22 @@ turn-of-decision order.
   // turn-player at this row — so a reader never has to re-derive whose
   // favor a bare number means. See "Memory gauge (`memory` field)" below
   // for the full convention and why it exists.
-  "memory": 3
+  "memory": 3,
+
+  // OPTIONAL, diagnostic (absent in pre-2026-08-20 recordings). The
+  // physical card this action references — play/digivolve card, activated
+  // hand card, or activated permanent's top card — resolved BEFORE the
+  // photonView.RPC dispatch (an index lookup into the actor's own already-
+  // known hand/field, not the outcome of resolving the action). Absent
+  // when the action references no card (pass, hatch, phase actions). See
+  // "Resolved-action detail row (`action_detail`)" below.
+  "card_id": "EX12-035",
+
+  // OPTIONAL, diagnostic (absent in pre-2026-08-20 recordings). Identical
+  // read to `memory` above, under its own key — see that section's
+  // dedicated note on why `action` rows get a distinct `memory_before`
+  // key instead of relying on `memory`'s ambiguous-by-row-type meaning.
+  "memory_before": 3
 }
 ```
 
@@ -184,6 +200,87 @@ operand is left alone, so a genuine board desync surfaces as a divergence
 instead of being silently rewritten onto the wrong permanent. Recordings
 without these fields (pre-0.4) replay unchanged, on the assumption that
 the orders agree.
+
+## Resolved-action detail row: `action_detail`
+
+**Why this exists**: a parity investigation can stall for rounds when it
+has to reason about what DCGO actually did from the *engine's* view of the
+same moment (hand ordering, computed costs, alt-path guesses) rather than
+from DCGO's own resolved state. `card_id` in particular is the
+single highest-value diagnostic field: it answers "which physical card did
+this action resolve to?" directly, instead of requiring the reader to
+re-derive it (and get it wrong) from hand-index bookkeping across
+intervening plays.
+
+Emitted (diagnostic, added 2026-08-20; absent in older recordings) once
+per `PlayCardAction` **the moment DCGO actually pays its cost** —
+`CardController.cs`'s `PlayCardClass.PlayCard()`, right after
+`AddMemory(-1 * Cost, ...)`. This is deliberately a **separate row from
+its `action` row**, not inline fields on it: the C# recorder streams each
+row to disk immediately (an append-only `StreamWriter`, no buffering), and
+`LogAction` (which writes the `action` row) fires **before** the
+`photonView.RPC` dispatch — i.e. before Assembly/DigiXros material
+selection, cost computation, or the memory deduction have happened. By the
+time that data exists, the `action` row's line is already flushed. Rather
+than restructure the recorder's write timing (out of scope for this
+diagnostic round), the resolved data goes out as its own row, correlated
+back to the originating `action` row by matching `step` (and `actor`).
+
+Scoped to player-facing top-level plays only: the C# recorder only emits
+this row when a `PlayCardAction` row was *just* logged for the same actor
+(`GameRecorder`'s single-slot pending-resolution correlation, cleared once
+consumed). An internal `PlayCardClass.PlayCard()` invocation triggered by
+a card **effect** (e.g. "play a card from your security/trash" — roughly
+5 call sites in `CardEffectCommons.cs`) does not produce one; this round's
+diagnostic scope matches what `action` rows already record.
+
+```jsonc
+{
+  "type": "action_detail",
+  "step": 6,                 // matches the correlated `action` row's step
+  "actor": 0,
+  "card_id": "EX12-035",     // same-source cross-check against the action row's own card_id — read from the actual CardSource being played, not re-derived from index lookups
+  "cost_paid": 6,            // memory ACTUALLY deducted — after any alt-path reduction, never the printed cost
+  "memory_after": -6,        // OPTIONAL — memory gauge immediately after this play's cost was deducted, same my_player_id-relative convention as `memory`/`memory_before`
+  "alt_path": "assembly",    // OPTIONAL — see table below; null/absent when the ordinary cost applied
+  "materials": ["BT1-010", "BT1-011", "BT1-012"]  // OPTIONAL — card IDs placed/used for the alt path
+}
+```
+
+### `alt_path` values
+
+Each value mirrors the EXACT gate DCGO's own
+`CardSource.GetPayingCostWithBaseCost` checks before applying that path's
+reduction (`DetermineAltPath` in `CardController.cs`, verified against the
+real conditions, not guessed):
+
+| `alt_path` | Condition mirrored | `materials` |
+|---|---|---|
+| `assembly` | `card.HasAssembly && !isEvolution && selectAssemblyClass.playCard == card && selectedAssemblyCards.Count == card.assemblyCondition.elementCount` (the FULL match DCGO itself requires — a partial selection does not reduce cost in production either) | The selected trash cards |
+| `digixros` | `card.HasDigiXros && !isEvolution && selectDigiXrosClass.playCard == card && selectedDigicrossCards.Count > 0` | The selected cards |
+| `dna_digivolve` | `isJogress` (two `JogressEvoRootsFrameIDs`) | The two tributing permanents' top cards |
+| `burst` | `IsBurst(card)` (tamer bounced) | The bounced tamer |
+| `app_fusion` | `IsAppFusion(card)` (link card added) | The linked card |
+| `cost_modifier` | None of the above applied, but `Cost != baseCost` anyway | Absent — catches passive/continuous cost-changing effects (`ChangeCostClass`-based card effects, e.g. BT1-109) that run with no player-facing selection UI at all, so there's nothing specific to name as materials. Best-effort catch-all, not a verified enumeration of every possible modifier source. |
+| absent/null | Ordinary cost, unmodified | — |
+
+**A note specific to the investigation this field set was built to
+settle**: Assembly and DigiXros material selection is driven by DCGO's
+`SelectCardEffect.SetTargetCardAndIndicies` RPC — a chokepoint entirely
+outside every existing `GameRecorder` hook
+(`QueueMainPhaseAction`/`SetRedraw`/`StartGame`/`EndGame`/
+`UserSelectionManager.SetIntForPlayer`/`SetBoolForPlayer`, see
+`docs/DCGO_HARNESS.md` and CLAUDE.md rule 27's chokepoint list). The
+player genuinely sees and acts on a real selection prompt in-game for
+Assembly/DigiXros, but **no `selection` row was ever recorded for it**
+before this field existed — the JSONL stream was silent on that decision
+entirely, which is exactly the kind of gap that makes a memory-delta
+mystery unresolvable from the recording alone. `materials` on this row is
+the fix: the resolved outcome of that unrecorded prompt, carried on the
+one row a reader would already be looking at.
+
+This diagnostic round makes no assertions on any `action_detail` field —
+availability, not verification, is the goal for now.
 
 ## Selection row: `selection`
 
@@ -472,6 +569,13 @@ were added as `v: 1` (no version bump): both are pure field/row additions
 `Row::Unknown`-tolerated type — so existing `v: 1` recordings (which
 simply lack them) keep parsing unchanged. Per the two bullets above, an
 addition like this never required a bump in the first place.
+
+The same pattern applies to the 2026-08-20 diagnostic additions: `action`'s
+new `card_id` / `memory_before` fields and the new `action_detail` row
+type are all `#[serde(default, skip_serializing_if = "Option::is_none")]`
+`Option`s on the Rust side, so the existing corpus (predating all of them)
+still parses unchanged — verified against the real 12-recording
+`vb-corpus2` corpus, not just synthetic fixtures. No `v` bump.
 
 ## Example: minimal bot game
 

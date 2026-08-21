@@ -36,6 +36,10 @@ pub enum Row {
     /// An encoded decision. Either an `action` (success) or `encoder_failure`
     /// (the recorder couldn't map the decision to a 2192-space ID).
     Action(ActionRow),
+    /// The RESOLVED detail of a preceding `action` row (diagnostic fields,
+    /// added post-v1 — see [`ActionDetailRow`]). Correlate to the `action`
+    /// row that shares its `step` (and `actor`).
+    ActionDetail(ActionDetailRow),
     /// A selection answer with semantic payload (task 3.5) — resolved to
     /// engine action IDs at replay time against the live `PendingSelection`.
     Selection(SelectionRow),
@@ -151,6 +155,102 @@ pub struct ActionRow {
     /// treated as "unknown", not as agreement or zero.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memory: Option<i32>,
+    /// [Diagnostic, added post-v1] The physical card this action references
+    /// (play/digivolve card, activated hand card, activated permanent's top
+    /// card) — the printed card ID (e.g. `"EX12-035"`), resolved by the C#
+    /// recorder BEFORE the `photonView.RPC` dispatch (index lookup into the
+    /// actor's own already-known hand/field, not the outcome of resolving
+    /// the action). `None` when the action references no card (pass, hatch,
+    /// phase actions) or in recordings predating this field. Not to be
+    /// confused with the AUTHORITATIVE resolved identity carried on this
+    /// action's correlated [`ActionDetailRow`] (same value in practice,
+    /// captured from the actual `CardSource` instance once resolved,
+    /// intended as a same-source cross-check).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_id: Option<String>,
+    /// [Diagnostic, added post-v1] Identical read to `memory`, under its
+    /// own key — see `memory`'s doc for the perspective convention. Exists
+    /// so a reader never has to know that, specifically for an `action`
+    /// row, `memory` means "before this action resolves" (true only
+    /// because `LogAction` fires pre-dispatch) as opposed to what `memory`
+    /// means on a `selection` row (captured mid-resolution). `None` in
+    /// recordings predating this field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_before: Option<i32>,
+}
+
+/// [Diagnostic, added post-v1] The RESOLVED detail of a preceding `action`
+/// row — the data that genuinely cannot be known until DCGO's
+/// `CardController.PlayCardClass.PlayCard()` actually pays the cost
+/// (Assembly/DigiXros material selection, cost-modifying effects, and the
+/// memory gauge afterward all resolve strictly AFTER the `action` row's
+/// pre-dispatch `LogAction` call already ran).
+///
+/// Emitted as a SEPARATE row rather than inline fields on the `action` row
+/// because the C# recorder streams each row to disk immediately
+/// (append-only, no buffering) — by the time this data exists, the
+/// `action` row's line is already flushed. Correlate the two via matching
+/// `step` (this row's `step` equals its `action` row's `step`) and
+/// `actor`.
+///
+/// Scoped to player-facing top-level plays only: the C# recorder emits
+/// this only when a `PlayCardAction` row was JUST logged for the same
+/// actor (see `GameRecorder.LogActionResolution`'s doc) — an internal
+/// `PlayCardClass.PlayCard()` invocation triggered by a card EFFECT (e.g.
+/// "play a card from your security/trash", ~5 call sites in
+/// `CardEffectCommons.cs`) does not produce one.
+///
+/// This round is diagnostic only — no assertions are made on these fields
+/// yet; parsing plus availability is the goal (see the `dcgo-recorder-
+/// action-detail-fields` investigation).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ActionDetailRow {
+    /// Matches the correlated `action` row's `step`.
+    pub step: u32,
+    pub actor: u8,
+    /// The resolved card's printed ID, read directly from the actual
+    /// `CardSource` instance being played (not re-derived from index
+    /// lookups) — a same-source cross-check against the correlated
+    /// `action` row's own `card_id`. `None` only defensively (should
+    /// always be present when this row is emitted at all).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_id: Option<String>,
+    /// The memory actually deducted for this play/digivolve — DCGO's
+    /// `CardController.cs` local `Cost` at its `AddMemory(-1 * Cost, ...)`
+    /// call site. This is the value AFTER any Assembly/DigiXros/DNA/
+    /// Burst/AppFusion alternate-path reduction or other cost-modifying
+    /// effect — never the printed cost.
+    pub cost_paid: i32,
+    /// Shared memory gauge immediately AFTER this play's cost was
+    /// deducted, same `my_player_id`-relative perspective convention as
+    /// [`ActionRow::memory`] / [`ActionRow::memory_before`]. `None` when
+    /// the recording client's own `Player` (`GManager.instance.You`)
+    /// wasn't available at write time (defensive; should not happen
+    /// mid-game).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub memory_after: Option<i32>,
+    /// One of `"assembly"`, `"digixros"`, `"dna_digivolve"`, `"burst"`,
+    /// `"app_fusion"`, `"cost_modifier"` (a reduction/change from some
+    /// other effect not captured by the named paths), or `None` when the
+    /// ordinary path/cost applied. See DCGO's
+    /// `CardController.PlayCardClass.DetermineAltPath` for exactly which
+    /// state each label reads — each named path mirrors the SAME gate
+    /// DCGO's own `CardSource.GetPayingCostWithBaseCost` checks before
+    /// applying that path's reduction, not a guess.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub alt_path: Option<String>,
+    /// Card IDs placed/used for the alt path (Assembly/DigiXros trash
+    /// materials, the two DNA digivolve partner permanents' top cards, the
+    /// Burst tamer, the AppFusion linked card). `None`/absent when not
+    /// applicable or not identifiable (e.g. `"cost_modifier"`, which has
+    /// no discrete materials — see the doc on the C# side:
+    /// Assembly/DigiXros material selection is driven by DCGO's
+    /// `SelectCardEffect.SetTargetCardAndIndicies` RPC, a chokepoint
+    /// entirely outside the recorder's existing hooks, so prior to this
+    /// field there was NO recorded row at all for that selection despite
+    /// it being a real player-facing prompt in-game).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub materials: Option<Vec<String>>,
 }
 
 /// A selection answer captured with SEMANTIC payload rather than a
@@ -239,6 +339,12 @@ pub struct EncoderFailureRow {
     pub reason: String,
     #[serde(default)]
     pub raw_value: String,
+    /// [Diagnostic, added post-v1] The physical card the encoder choked on,
+    /// when resolvable — same field/semantics as [`ActionRow::card_id`].
+    /// `None` when the action referenced no card, the lookup failed, or in
+    /// recordings predating this field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_id: Option<String>,
 }
 
 /// Opponent-deck reveal observed during PvP recording. The recorder
