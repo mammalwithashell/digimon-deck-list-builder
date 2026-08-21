@@ -264,20 +264,31 @@ real conditions, not guessed):
 | `cost_modifier` | None of the above applied, but `Cost != baseCost` anyway | Absent — catches passive/continuous cost-changing effects (`ChangeCostClass`-based card effects, e.g. BT1-109) that run with no player-facing selection UI at all, so there's nothing specific to name as materials. Best-effort catch-all, not a verified enumeration of every possible modifier source. |
 | absent/null | Ordinary cost, unmodified | — |
 
-**A note specific to the investigation this field set was built to
-settle**: Assembly and DigiXros material selection is driven by DCGO's
-`SelectCardEffect.SetTargetCardAndIndicies` RPC — a chokepoint entirely
-outside every existing `GameRecorder` hook
-(`QueueMainPhaseAction`/`SetRedraw`/`StartGame`/`EndGame`/
-`UserSelectionManager.SetIntForPlayer`/`SetBoolForPlayer`, see
-`docs/DCGO_HARNESS.md` and CLAUDE.md rule 27's chokepoint list). The
-player genuinely sees and acts on a real selection prompt in-game for
-Assembly/DigiXros, but **no `selection` row was ever recorded for it**
-before this field existed — the JSONL stream was silent on that decision
-entirely, which is exactly the kind of gap that makes a memory-delta
-mystery unresolvable from the recording alone. `materials` on this row is
-the fix: the resolved outcome of that unrecorded prompt, carried on the
-one row a reader would already be looking at.
+**Correction (2026-08-21, `assembly-selection-recorder-hook`
+investigation)**: an earlier revision of this section claimed Assembly and
+DigiXros material selection — driven by DCGO's `SelectCardEffect.
+SetTargetCardAndIndicies` RPC — sat entirely outside every existing
+`GameRecorder` hook, and that **no `selection` row was ever recorded for
+it** before `materials` existed. That claim was checked against the actual
+DCGO source for this round and was **wrong**: Task 3.5 (`5b1284ded`,
+landed 2026-08-16, five days before this field's commit) already emits a
+`selection` row for that exact RPC — and for `SelectHandEffect`'s /
+`SelectPermanentEffect`'s equivalent RPCs, and `SelectDigiXrosClass`'s own
+zone-choice RPC — including on the AI path (DCGO's own AI plays both
+seats under the harness; see `SelectCardEffect.Activate()`'s
+`GManager.instance.IsAI` branch / `Digimon.Harness.HarnessAuto.
+DrivesLocalSeat` routing). See the "Selection row: `selection`" section
+below for that row shape.
+
+`materials` on this row is a genuinely separate, complementary thing, not
+a fix for a missing row: the RESOLVED outcome (the final material set +
+the cost actually paid), correlated back to the `action` row, versus the
+player's individual in-flight CHOICE, which the preceding `selection`
+row(s) already carry. What *was* missing — and is now fixed — is that
+those `selection` rows didn't say **which mechanic** (Assembly vs.
+DigiXros vs. one of the dozens of unrelated prompts reusing the same
+`Select*Effect` classes) or **which zone** a given pick came from; see the
+`mechanic` / `zone` fields below.
 
 This diagnostic round makes no assertions on any `action_detail` field —
 availability, not verification, is the goal for now.
@@ -321,11 +332,55 @@ Exactly one payload field is present, keyed by prompt kind:
 A `cancel: true` field replaces the payload when the player backed out of
 the prompt.
 
+### `mechanic` / `zone` (Assembly/DigiXros material-declaration tags)
+
+Two further OPTIONAL diagnostic fields, added for the
+`assembly-selection-recorder-hook` investigation:
+
+```jsonc
+{
+  "type": "selection",
+  "step": 4,
+  "actor": 0,
+  "prompt": "SelectCardEffect",
+  "phase": "Main",
+  "card_ids": ["BT1-010", "BT1-011"],
+  "mechanic": "assembly",   // OPTIONAL — "assembly" | "digixros" | absent
+  "zone": "Trash"           // OPTIONAL — e.g. "Trash" | "Hand" | "BattleArea" | "Custom"
+}
+```
+
+`SelectCardEffect`, `SelectHandEffect`, and `SelectPermanentEffect` each
+serve dozens of unrelated prompts (bounce, discard, security look, attack
+targets, ...) in addition to Assembly/DigiXros material selection — from
+the row alone there was previously no way to tell a material-declaration
+`selection` row apart from any other use of the same class. `mechanic`
+closes that gap, read straight from the same `_isAssembly`/
+`_isDigiXros`-family flag the C# class already tracks internally for its
+own UI text (`SetAssembly()`/`SetDigiXros()`, called before the prompt
+ever runs — valid for both the accept and the decline-to-0 branch). `zone`
+similarly surfaces where the candidates were drawn from, when the call
+site can name it cheaply:
+
+| `prompt` | `mechanic` source | `zone` source |
+|---|---|---|
+| `SelectCardEffect` | `_isAssembly` / `_isDigiXros` (both possible; Assembly only ever sets `_isAssembly`) | `_root.ToString()` — DCGO's own `Root` enum (`Trash`, `Hand`, `Library`, `Custom`, ...) |
+| `SelectHandEffect` | `_digiXros` (Assembly never draws from hand) | Always `"Hand"` (fixed literal — the class is scoped to one zone) |
+| `SelectPermanentEffect` | `_isdigiXros` (Assembly never selects a Permanent) | Always `"BattleArea"` (fixed literal) |
+| `SelectDigiXrosClass` | Always `"digixros"` (this RPC exists solely for DigiXros's zone-choice prompt) | Absent — this row **is** the zone declaration (`int_value`), not a pick made within one |
+
+Both fields are `null`/absent for the overwhelming majority of `selection`
+rows (any non-Assembly/DigiXros use of these classes, and every other
+prompt kind), and absent entirely in recordings predating this change —
+parse as "not tagged", not as "confirmed not Assembly/DigiXros".
+
 Resolution happens in `runners/selection_resolve.rs`: the harness reads
 the engine's live `PendingSelection`, matches the recorded payload
 against the offered targets (by identity for card picks, by index for
 board picks and effect choices), and emits the corresponding action ID —
-or `PASS` for a decline.
+or `PASS` for a decline. `mechanic`/`zone` are diagnostic only and are not
+consulted by resolution — the payload fields above remain the sole
+authoritative identity of what was picked.
 
 ## Memory gauge (`memory` field)
 

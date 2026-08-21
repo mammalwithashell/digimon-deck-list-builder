@@ -243,12 +243,25 @@ pub struct ActionDetailRow {
     /// materials, the two DNA digivolve partner permanents' top cards, the
     /// Burst tamer, the AppFusion linked card). `None`/absent when not
     /// applicable or not identifiable (e.g. `"cost_modifier"`, which has
-    /// no discrete materials — see the doc on the C# side:
-    /// Assembly/DigiXros material selection is driven by DCGO's
-    /// `SelectCardEffect.SetTargetCardAndIndicies` RPC, a chokepoint
-    /// entirely outside the recorder's existing hooks, so prior to this
-    /// field there was NO recorded row at all for that selection despite
-    /// it being a real player-facing prompt in-game).
+    /// no discrete materials).
+    ///
+    /// CORRECTION (2026-08-21, assembly-selection-recorder-hook
+    /// investigation): an earlier revision of this doc claimed Assembly/
+    /// DigiXros material selection (DCGO's `SelectCardEffect.
+    /// SetTargetCardAndIndicies` RPC) sat entirely outside the recorder's
+    /// existing hooks and that this field was the only record of that
+    /// prompt ever produced. That was wrong — Task 3.5 (`5b1284ded`, landed
+    /// five days before this field's commit) already emits a `selection`
+    /// row for that RPC (and `SelectHandEffect`'s / `SelectPermanentEffect`'s
+    /// equivalents, and `SelectDigiXrosClass`'s own zone-choice RPC), on the
+    /// AI path too. This field is a genuinely separate, complementary
+    /// thing: the RESOLVED outcome (final material set + cost actually
+    /// paid), correlated to the `action` row, rather than the player's
+    /// individual choice — which the `selection` row(s) preceding it already
+    /// carry, now additionally tagged with `mechanic` /
+    /// `zone` (see [`SelectionRow`]) so a reader doesn't have to infer
+    /// "this row was an Assembly/DigiXros material pick" from prompt name
+    /// and timing alone.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub materials: Option<Vec<String>>,
 }
@@ -316,6 +329,25 @@ pub struct SelectionRow {
     /// Same convention as [`ActionRow::memory`] — see its doc comment.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub memory: Option<i32>,
+    /// [Diagnostic, added post-v1] Which alt-cost mechanic this selection is
+    /// a material declaration for — `"assembly"` or `"digixros"` — when the
+    /// C# recorder's calling `Select*Effect` instance can determine it
+    /// cheaply (its own `_isAssembly`/`_isDigiXros`-family flag, set by
+    /// `SetAssembly()`/`SetDigiXros()` before the prompt ever ran). `None`
+    /// for the overwhelming majority of `selection` rows, which serve dozens
+    /// of unrelated prompts reusing the same `SelectCardEffect`/
+    /// `SelectHandEffect`/`SelectPermanentEffect` classes (bounce, discard,
+    /// security look, attack targets, ...) — absent in recordings predating
+    /// this field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub mechanic: Option<String>,
+    /// [Diagnostic, added post-v1] The zone this selection drew its
+    /// candidates from (e.g. `"Trash"`, `"Hand"`, `"BattleArea"`,
+    /// `"Custom"`), when the C# recorder's call site can name it cheaply.
+    /// `None` when not determinable at the hook, or for prompt kinds where
+    /// zone doesn't apply — absent in recordings predating this field.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub zone: Option<String>,
 }
 
 /// One absolute field-permanent reference: `player` seat + DCGO FrameID
@@ -741,6 +773,75 @@ this is not json
         let r = parse_jsonl(txt).expect("parse");
         match &r.rows[0] {
             Row::Selection(s) => assert_eq!(s.memory, Some(-4)),
+            other => panic!("expected Selection, got {:?}", other),
+        }
+    }
+
+    // ── selection row: mechanic/zone (assembly-selection-recorder-hook) ──
+    // Assembly/DigiXros material-selection prompts route through the SAME
+    // Select*Effect RPCs used by dozens of unrelated selections; `mechanic`/
+    // `zone` disambiguate a material declaration from the rest without a
+    // reader having to infer it from prompt name + timing alone. Diagnostic
+    // only — parsing/availability is the goal, no replay assertions.
+
+    #[test]
+    fn selection_row_parses_mechanic_and_zone_when_present() {
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"selection","step":4,"actor":0,"prompt":"SelectCardEffect","phase":"Main","card_ids":["BT1-010","BT1-011"],"mechanic":"assembly","zone":"Trash"}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::Selection(s) => {
+                assert_eq!(s.prompt, "SelectCardEffect");
+                assert_eq!(s.mechanic.as_deref(), Some("assembly"));
+                assert_eq!(s.zone.as_deref(), Some("Trash"));
+                assert_eq!(
+                    s.card_ids,
+                    Some(vec!["BT1-010".to_string(), "BT1-011".to_string()])
+                );
+            }
+            other => panic!("expected Selection, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn selection_row_mechanic_and_zone_absent_parses_as_none() {
+        // Shape of every pre-existing recording (and every non-Assembly/
+        // DigiXros SelectCardEffect/SelectHandEffect/SelectPermanentEffect
+        // selection going forward) — must still parse, absence is not "not
+        // assembly/digixros", it's "the recorder didn't tag it".
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"selection","step":0,"actor":0,"prompt":"SelectCardEffect","phase":"Main","card_ids":["BT1-010"]}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::Selection(s) => {
+                assert_eq!(s.mechanic, None);
+                assert_eq!(s.zone, None);
+            }
+            other => panic!("expected Selection, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn selection_row_parses_digixros_zone_choice_mechanic_without_zone() {
+        // SelectDigiXrosClass's own "which area?" prompt tags `mechanic`
+        // (always "digixros" for this class) but never `zone` — this row
+        // IS the zone declaration (as `int_value`), not a pick made within
+        // one.
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"selection","step":2,"actor":0,"prompt":"SelectDigiXrosClass","phase":"Main","int_value":2,"mechanic":"digixros"}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::Selection(s) => {
+                assert_eq!(s.mechanic.as_deref(), Some("digixros"));
+                assert_eq!(s.zone, None);
+                assert_eq!(s.int_value, Some(2));
+            }
             other => panic!("expected Selection, got {:?}", other),
         }
     }
