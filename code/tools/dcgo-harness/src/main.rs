@@ -91,6 +91,34 @@ enum Command {
     },
     /// Stop the running DCGO oracle.
     Down,
+    /// Supervise a batch end-to-end: keep the oracle running, restart it on
+    /// a hang (dead process, or a live process stuck on one job), and drain
+    /// the queue. Exits 0 when the queue drains, 1 if the restart budget
+    /// runs out with work remaining.
+    Watch {
+        /// Build directory containing manifest.json.
+        #[arg(long)]
+        build: PathBuf,
+        /// Seconds between polls.
+        #[arg(long, default_value_t = 15)]
+        poll_seconds: u64,
+        /// Heartbeat age past which the process is considered hung (mode 1).
+        #[arg(long, default_value_t = dcgo_harness::daemon::DEFAULT_STALE_SECONDS)]
+        stale_seconds: u64,
+        /// How many hang-triggered restarts to allow before giving up.
+        #[arg(long, default_value_t = 3)]
+        max_restarts: u32,
+        /// Recordings corpus directory, used as the forward-progress signal
+        /// that breaks the tie on an overdue claim (mode 2 is necessary but
+        /// not sufficient -- see `watch::classify`). Falls back to the
+        /// player log's own mtime under --root when omitted.
+        #[arg(long)]
+        corpus: Option<PathBuf>,
+        /// How old the progress signal may be before an overdue claim is
+        /// judged truly stalled rather than just a long game.
+        #[arg(long, default_value_t = dcgo_harness::watch::DEFAULT_PROGRESS_STALE_SECONDS)]
+        progress_stale_seconds: u64,
+    },
 }
 
 fn main() -> ExitCode {
@@ -277,6 +305,53 @@ fn run(args: &Args) -> Result<ExitCode, String> {
         Command::Down => {
             println!("{}", dcgo_harness::daemon::down(&args.root)?);
             Ok(ExitCode::SUCCESS)
+        }
+        Command::Watch {
+            build,
+            poll_seconds,
+            stale_seconds,
+            max_restarts,
+            corpus,
+            progress_stale_seconds,
+        } => {
+            let outcome = dcgo_harness::watch::run(
+                &args.root,
+                build,
+                std::time::Duration::from_secs(*poll_seconds),
+                *stale_seconds,
+                *max_restarts,
+                corpus.as_deref(),
+                *progress_stale_seconds,
+            )?;
+
+            // Always print the full denominator, win or lose -- a batch
+            // where most jobs died must never read as a success.
+            println!(
+                "watch: {}",
+                if outcome.drained {
+                    "drained"
+                } else {
+                    "restart budget exhausted with work remaining"
+                }
+            );
+            println!(
+                "watch: restarts used {}/{}",
+                outcome.restarts_used, outcome.max_restarts
+            );
+            if outcome.events.is_empty() {
+                println!("watch: no hangs detected");
+            } else {
+                for (i, event) in outcome.events.iter().enumerate() {
+                    println!("watch: hang #{}: {}", i + 1, event);
+                }
+            }
+            println!("{}", outcome.final_status.summary());
+
+            Ok(if outcome.drained {
+                ExitCode::SUCCESS
+            } else {
+                ExitCode::from(1)
+            })
         }
     }
 }

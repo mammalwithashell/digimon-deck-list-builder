@@ -10,3 +10,4 @@ pub mod manifest;
 pub mod pool;
 pub mod queue;
 pub mod triage;
+pub mod watch;
