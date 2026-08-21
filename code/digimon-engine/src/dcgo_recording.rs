@@ -58,6 +58,13 @@ pub enum Row {
     /// Order matters: the queue serves reveals FIFO, so this row's
     /// position in the JSONL stream dictates when the engine sees it.
     Reveal(RevealRow),
+    /// A card-effect activation — one row per `ICardEffect` that reached
+    /// `Activate_Effect_Execute` (offered-and-declined "you may" effects do
+    /// NOT get a row; see [`EffectActivationRow::executed`]). Diagnostic
+    /// only: turns clause-level coverage (did this printed effect clause
+    /// actually run at some point in the recording?) from unmeasurable into
+    /// measured. Added post-v1; absent in recordings predating this hook.
+    EffectActivation(EffectActivationRow),
     /// Terminal row — exactly one per recording, the last line.
     GameEnd(GameEnd),
     /// Tolerated escape hatch — captures rows whose `type` is unrecognized
@@ -396,6 +403,74 @@ pub struct RevealRow {
     pub source: String,
 }
 
+/// A card-effect activation, emitted by the C# recorder's
+/// `GameRecorder.LogEffectActivation` (called from
+/// `ICardEffectExtensionClass.Activate_Optional_Effect_Execute` in
+/// `ICardEffect.cs`, immediately AFTER its `Activate_Effect_Execute`
+/// coroutine returns).
+///
+/// **Offered-vs-executed, not attempted-vs-resolved**: this row is only
+/// emitted once the optional yes/no decision (when [`is_optional`] is
+/// `true`) has already been resolved — an optional effect that was offered
+/// and DECLINED still gets a row (so a reader can see the clause was
+/// evaluated), but with `executed: false`. This mirrors the same
+/// attempted-vs-resolved split that [`ActionRow`] / [`ActionDetailRow`]
+/// already needed for main-phase actions (`LogAction` fires pre-dispatch,
+/// `LogActionResolution` fires post-resolution) — see that pair's docs for
+/// why conflating the two is a recurring source of false parity findings.
+///
+/// Diagnostic only: no replay assertions are made against this row. Its
+/// purpose is clause-level coverage measurement — given a deck's printed
+/// clauses (see `code/tools/clause_coverage/`), a reader can now check
+/// whether a given `effect_description` (which contains the printed clause
+/// marker, e.g. `"[On Deletion]"`) actually fired anywhere in a corpus of
+/// recordings, rather than only knowing the source card was present on
+/// board at some point.
+///
+/// [`is_optional`]: EffectActivationRow::is_optional
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct EffectActivationRow {
+    pub step: u32,
+    /// The effect source card's owner — matches every other row's `actor`
+    /// convention.
+    pub actor: u8,
+    /// DCGO phase name at activation time (debugging breadcrumb, matches
+    /// `ActionRow::phase` / `SelectionRow::phase`).
+    #[serde(default)]
+    pub phase: String,
+    /// The resolved printed card ID (e.g. `"EX12-035"`) of the effect's
+    /// source card — `CardSource.CardID`, NOT the display name. `None`
+    /// only defensively; the C# call site already guards on a non-null
+    /// `EffectSourceCard` before emitting this row at all.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub card_id: Option<String>,
+    /// `ICardEffect.EffectName` — short identifier (e.g. `"OnPlay"`), not
+    /// the printed clause text. See `effect_description` for that.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effect_name: Option<String>,
+    /// `ICardEffect.EffectDescription` — the printed clause text (starts
+    /// with a bracketed timing tag such as `"[On Play]"`, `"[On Deletion]"`,
+    /// `"[Security]"`, ...). This is the field a consumer maps back to a
+    /// printed clause with, so it matters most of everything on this row.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub effect_description: Option<String>,
+    /// `ICardEffect.IsOptional` — whether this is a "you may" effect.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub is_optional: Option<bool>,
+    /// Whether the effect body actually ran, as opposed to merely being
+    /// offered. Mirrors the exact gate DCGO's own `Activate_Effect_Execute`
+    /// checks (`UseOptional || !IsOptional`): always `true` for a mandatory
+    /// effect (`is_optional: false`); for an optional effect, `true` only
+    /// when the player answered "Use" to the yes/no prompt (human click, or
+    /// under the harness DCGO's own AI/auto branch in
+    /// `OptionalSkill.SelectOptional` — both seats route through it under
+    /// `Digimon.Harness.HarnessAuto.DrivesLocalSeat`). A row with
+    /// `is_optional: true, executed: false` means the clause was offered
+    /// and declined, not that it never fired.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub executed: Option<bool>,
+}
+
 /// A post-mulligan zone snapshot for ONE player, as observed by the
 /// recording client.
 ///
@@ -732,6 +807,90 @@ this is not json
         let r = parse_jsonl(txt).expect("parse");
         assert_eq!(r.rows.len(), 1);
         assert!(matches!(r.rows[0], Row::Unknown));
+    }
+
+    // ── effect_activation row (clause-level coverage) ────────────────────
+
+    #[test]
+    fn parses_effect_activation_row_executed() {
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"effect_activation","step":3,"actor":0,"card_id":"EX12-035","effect_name":"OnPlay","effect_description":"[On Play] Draw 1 card.","is_optional":false,"executed":true,"phase":"Main"}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        assert_eq!(r.rows.len(), 1);
+        match &r.rows[0] {
+            Row::EffectActivation(e) => {
+                assert_eq!(e.step, 3);
+                assert_eq!(e.actor, 0);
+                assert_eq!(e.card_id.as_deref(), Some("EX12-035"));
+                assert_eq!(e.effect_name.as_deref(), Some("OnPlay"));
+                assert_eq!(
+                    e.effect_description.as_deref(),
+                    Some("[On Play] Draw 1 card.")
+                );
+                assert_eq!(e.is_optional, Some(false));
+                assert_eq!(e.executed, Some(true));
+                assert_eq!(e.phase, "Main");
+            }
+            other => panic!("expected EffectActivation, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn parses_effect_activation_row_offered_and_declined() {
+        // is_optional: true, executed: false -- the clause was offered and
+        // the player declined it, NOT "this clause never fired". Confirms
+        // the row is emitted (with the distinction intact) for a declined
+        // "you may" effect, not only for effects that actually ran.
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"effect_activation","step":5,"actor":1,"card_id":"BT1-010","effect_name":"OnDeletion","effect_description":"[On Deletion] You may play 1 card from your hand.","is_optional":true,"executed":false,"phase":"Battle"}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::EffectActivation(e) => {
+                assert_eq!(e.is_optional, Some(true));
+                assert_eq!(e.executed, Some(false));
+            }
+            other => panic!("expected EffectActivation, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn effect_activation_row_absent_fields_parse_as_none() {
+        // Minimal row -- only the fields required to be present (step,
+        // actor). Every diagnostic field is optional so a partially-filled
+        // or defensively-degraded row still parses.
+        let txt = r#"{"v":1,"type":"game_start","game_id":"x","timestamp":"t","my_player_id":0,"is_ai":true,"my_deck_post_shuffle":[],"opp_deck_post_shuffle":[]}
+{"type":"effect_activation","step":0,"actor":0}
+{"type":"game_end","winner":0,"reason":"win","total_steps":1}
+"#;
+        let r = parse_jsonl(txt).expect("parse");
+        match &r.rows[0] {
+            Row::EffectActivation(e) => {
+                assert_eq!(e.card_id, None);
+                assert_eq!(e.effect_name, None);
+                assert_eq!(e.effect_description, None);
+                assert_eq!(e.is_optional, None);
+                assert_eq!(e.executed, None);
+                assert_eq!(e.phase, "");
+            }
+            other => panic!("expected EffectActivation, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn recording_without_effect_activation_rows_still_parses() {
+        // Today's corpus shape -- no effect_activation rows at all. Must
+        // keep parsing unchanged now that the type is recognized.
+        let r = parse_jsonl(well_formed_jsonl()).expect("parse");
+        assert!(
+            !r.rows
+                .iter()
+                .any(|row| matches!(row, Row::EffectActivation(_))),
+            "well_formed_jsonl fixture carries no effect_activation row"
+        );
     }
 
     // ── memory field (task: memory-gauge parity) ────────────────────────

@@ -27,9 +27,9 @@ Each row carries a `"type"` field — the discriminator the parser uses to
 deserialize into the right variant.
 
 Recognized types: `game_start`, `action`, `action_detail`, `selection`,
-`initial_state`, `encoder_failure`, `reveal`, `game_end`. Unknown types are
-tolerated (Rust harness reads them as `Row::Unknown` and skips) for forward
-compatibility.
+`initial_state`, `effect_activation`, `encoder_failure`, `reveal`,
+`game_end`. Unknown types are tolerated (Rust harness reads them as
+`Row::Unknown` and skips) for forward compatibility.
 
 A well-formed recording starts with exactly one `game_start`, ends with
 exactly one `game_end`, and has any mix of `action` / `encoder_failure` /
@@ -493,6 +493,74 @@ them into the engine's zones — mirroring the existing reversal already
 used for `DcgoAdapter`'s bot-vs-bot ordered-deck construction. `initial_hand`
 has no top/bottom concept and is placed in recorded order, unreversed.
 
+## Effect-activation row: `effect_activation`
+
+**Why this exists**: a clause-coverage tool (`code/tools/clause_coverage/`)
+enumerates a deck's printed clauses — for a real 20-card deck, 112 of them.
+Before this row existed, every one of those 112 clauses was UNKNOWN:
+recordings carried no evidence that a clause ever actually fired. A card
+being on board says nothing about whether its `[On Deletion]` clause ran —
+this row is what turns that from unmeasurable into measured.
+
+Emitted by `GameRecorder.LogEffectActivation`, called from
+`ICardEffectExtensionClass.Activate_Optional_Effect_Execute`
+(`ICardEffect.cs`) immediately AFTER its `Activate_Effect_Execute`
+coroutine returns. This is the single funnel every card-effect activation
+in DCGO passes through — both the generic queue-driven path
+(`AutoProcessing.ActivateEffectProcess`, itself called from 4 sites) and
+the ~35 call sites where an individual card script directly activates a
+linked/cutin/chain sub-effect (`Activate_Effect_Execute` has exactly one
+caller in the whole codebase: `Activate_Optional_Effect_Execute` itself).
+
+**Offered-vs-executed, not attempted-vs-resolved.** The hook is
+deliberately placed AFTER `Activate_Effect_Execute` returns, not at the
+pre-existing `Debug.Log($"Activate_Optional_Effect_Execute: ...")` earlier
+in the same method — that line fires BEFORE the optional yes/no decision
+is even asked, so hooking there would misrecord a DECLINED "you may"
+effect as having executed. This is the same distinction `LogAction` /
+`LogActionResolution` already needed for main-phase actions (see
+`action_detail` above) — attempted and resolved are not interchangeable,
+and a diagnostic hook placed at the wrong point silently conflates them.
+
+```jsonc
+{
+  "type": "effect_activation",
+  "step": 12,
+  "actor": 0,
+  "card_id": "EX12-035",
+  "effect_name": "OnDeletion",
+  "effect_description": "[On Deletion] You may play 1 card from your hand.",
+  "is_optional": true,
+  "executed": false,           // offered, then declined -- NOT "never fired"
+  "phase": "Battle"
+}
+```
+
+### Field reference
+
+| Field | Type | Required | Notes |
+|---|---|---|---|
+| `step` | u32 | yes | Shares the monotonic step counter with `action`/`selection`/`reveal` rows. |
+| `actor` | u8 | yes | The effect source card's owner — `CardSource.Owner.PlayerID`. |
+| `phase` | string | yes | DCGO `GameContext.TurnPhase` at activation time (debugging breadcrumb, same convention as `action`/`selection`). |
+| `card_id` | string | no | The effect's source card's printed ID (`CardSource.CardID`), NOT the display name. `None` only defensively — the C# call site already guards on a non-null `EffectSourceCard`. |
+| `effect_name` | string | no | `ICardEffect.EffectName` — a short identifier (e.g. `"OnPlay"`), not the printed clause text. |
+| `effect_description` | string | no | `ICardEffect.EffectDescription` — the printed clause text, starting with a bracketed timing tag (`"[On Play]"`, `"[On Deletion]"`, `"[Security]"`, ...). **The highest-value field on this row**: it's what a consumer maps back to a printed clause with. |
+| `is_optional` | bool | no | `ICardEffect.IsOptional` — whether this is a "you may" effect. |
+| `executed` | bool | no | Whether the effect body actually ran. Mirrors the EXACT gate `Activate_Effect_Execute` itself checks one line before this row is emitted: `UseOptional \|\| !IsOptional`. Always `true` for a mandatory effect (`is_optional: false`). For an optional effect, `true` only when the player answered "Use" — human click, or under the harness DCGO's own AI/auto branch in `OptionalSkill.SelectOptional` (both seats route through it under `Digimon.Harness.HarnessAuto.DrivesLocalSeat`, confirmed by that method's own harness-mod comment). A row with `is_optional: true, executed: false` means offered-and-declined, not "this clause never fired anywhere in the recording" — the absence of ANY row for a clause is the signal that it never fired. |
+
+Diagnostic only, same as `action_detail` — no replay assertions are made
+against this row; availability for coverage measurement is the goal.
+
+**Known bypass**: 25 cards register `SetIsBackgroundProcess(true)`
+("always-on" passive/continuous effects). These are activated by
+`AutoProcessing.ActivateBackgroundEffectsOfCards`, which calls
+`ActivateICardEffect.Activate(hashtable)` directly — skipping
+`Activate_Optional_Effect_Execute` (and therefore this hook) entirely.
+A clause belonging to one of these cards will never produce an
+`effect_activation` row even when it runs; treat its coverage as
+structurally unmeasured, not as evidence it didn't fire.
+
 ## Sentinel row: `encoder_failure`
 
 Emitted when the DCGO recorder cannot map a decision to a 2192-space ID.
@@ -631,6 +699,12 @@ type are all `#[serde(default, skip_serializing_if = "Option::is_none")]`
 `Option`s on the Rust side, so the existing corpus (predating all of them)
 still parses unchanged — verified against the real 12-recording
 `vb-corpus2` corpus, not just synthetic fixtures. No `v` bump.
+
+Same again for the `effect_activation` row (2026-08-21, clause-activation
+recorder hook): a wholly new `Row::Unknown`-tolerated type, every field but
+`step`/`actor`/`phase` an `Option`, `phase` itself `#[serde(default)]` —
+the existing corpus (which has none of these rows) parses unchanged. No
+`v` bump.
 
 ## Example: minimal bot game
 
