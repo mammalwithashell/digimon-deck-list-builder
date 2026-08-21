@@ -18,7 +18,7 @@ PYTHONPATH=code python -m tools.clause_coverage.extract \
 
 # coverage: clause list + a directory of DCGO .jsonl recordings -> what fired
 PYTHONPATH=code python -m tools.clause_coverage.coverage \
-    --clauses clauses.json --recordings-dir D:\dcgo-build\vb-corpus2 --out coverage.json
+    --clauses clauses.json --recordings-dir D:\dcgo-build\vb-corpus3 --out coverage.json
 ```
 
 Both commands print a JSON document (to `--out`, or stdout) plus a short
@@ -161,60 +161,70 @@ consulted (and split through the same clause rules, tagged
 way the image-reading work is done once per card, not once per `extract`
 run.
 
-## The coverage report's honest limit — clause-level firing is not measurable today
+## Clause-level coverage — now measured from `effect_activation` rows
 
-`docs/DCGO_RECORDING_SCHEMA.md` rows carry `card_id`/`cost_paid` only on the
-2026-08-20-and-later `action`/`action_detail` diagnostic fields, and even
-those never record "this card's clause fired" — there is no
-effect-activation row in the schema at all. So:
+DCGO commit `8c4f98cb6` added `effect_activation` rows to the recording
+schema (`docs/DCGO_RECORDING_SCHEMA.md` §"Effect-activation row"): `card_id`
++ the printed `effect_description` + `is_optional` + `executed`. This is
+the "cheap next step" this README used to describe as future work — it has
+landed, and `coverage.py` now consumes it for real, measured clause-level
+coverage instead of a blanket `UNKNOWN` placeholder.
 
-- **card-level** (which deck cards ever appeared on a battle area) IS
-  measurable — from the union of `board_p0`/`board_p1` snapshots carried on
-  every `action`/`selection` row, which are present in every recording
-  regardless of schema vintage. But "never on board" is not "never played":
-  `board_p0`/`board_p1` list only the TOP card of each stack, so a Digi-Egg
-  that hatched and immediately digivolved further is buried as
-  digivolution material and invisible to it, and a card whose own effect
-  routes it somewhere other than the battle area never shows up even if it
-  fired every game. Both are confirmed, not hypothetical, on the measured
-  VB corpus: `EX12-001` (the deck's only Digi-Egg) and `EX12-069` (an
-  Option whose `[Main]` effect places itself as a security card, never the
-  battle area) both read `never_on_board` despite almost certainly being
-  played in most/all of the 12 games.
-- **prompt-level** (which `selection.prompt` kinds fired, and how often) IS
+- **card-level** (which deck cards ever appeared on a battle area) is
+  measurable from the union of `board_p0`/`board_p1` snapshots carried on
+  every `action`/`selection` row. "Never on board" is still NOT "never
+  played" — see the `card_level.method` note in the report JSON for the
+  Digi-Egg-buried-as-material and effect-routes-elsewhere caveats,
+  confirmed directly on the VB corpus (`EX12-001`, `EX12-069`).
+- **prompt-level** (which `selection.prompt` kinds fired, and how often) is
   measurable directly from the `selection` rows.
-- **clause-level** is **NOT** measurable. A card's presence on the board is
-  not evidence any specific clause of that card executed — a card can sit
-  on the board the entire game without its `[On Deletion]` clause ever
-  running, or with an optional `[On Play]` effect declined every time it
-  was played. `coverage.py` reports every clause `"UNKNOWN"`, explicitly,
-  with the reason spelled out in the JSON. **This is the correct output
-  right now** — a report that quietly implies coverage it cannot measure is
-  the exact failure this whole effort exists to prevent. The UNKNOWN count
-  is the report's headline number for exactly that reason.
+- **clause-level** is now measured. Each clause in the denominator gets
+  exactly one status:
+  - `FIRED` — matched at least one activation with `executed: true`.
+  - `OFFERED_ONLY` — matched, but every matching activation had
+    `executed: false` (offered and declined — DCGO's recorder deliberately
+    distinguishes this from "never fired"; see the schema doc).
+  - `NOT_FIRED` — no activation matched anywhere in the corpus, and the
+    clause is of a kind the hook can observe.
+  - `UNOBSERVABLE` — the clause's KIND is a confirmed structural blind spot
+    of the hook: angle-bracket keyword clauses (persistent/passive, not
+    dispatched as an activated effect) and digivolve/Use-Req. cost-line
+    timing clauses (`[Digivolve]`, `[DNA Digivolve]`, `[Use Req.]`, and the
+    other alt-digivolve-mechanism markers). Calling these `NOT_FIRED` would
+    assert a falsehood the instrument cannot back up. If the corpus happens
+    to catch real matched evidence for one of these anyway, that evidence
+    wins and reports `FIRED`/`OFFERED_ONLY` instead — the kind-based rule
+    is only the fallback for absence of evidence, never a reason to discard
+    evidence that exists. Separately, 25 DCGO cards register
+    `SetIsBackgroundProcess(true)` and bypass the hook entirely regardless
+    of clause kind; which cards those are cannot be determined from
+    recordings alone, so this is called out in the report's
+    `clause_level.known_limitations` text rather than reflected in any
+    single clause's status.
 
-The measured 12-game `vb-corpus2` corpus (read from `D:\dcgo-build\vb-corpus2\`,
-read-only, never written to) predates even the `action.card_id` /
-`action_detail` fields — `coverage.py` detects this dynamically per corpus
-(counts action rows carrying `card_id`, counts `action_detail` rows) and
-says so in the report's `corpus.schema_note`, rather than assuming.
+  Matching an activation row to a denominator clause
+  (`tools.clause_coverage.activation_match`) is fuzzy (normalized
+  similarity ratio), not exact string equality: `effect_description`
+  (DCGO's live rendering) and this package's extracted clause text come
+  from two independent pipelines that agree on content but not
+  byte-for-byte (full/half-width punctuation, curly vs. straight quotes,
+  bullet glyph choice, small independent wording differences). Any
+  activation that cannot be matched to any clause on its card at all is a
+  genuine signal — a card missing from the denominator, an unresolved
+  `image-required` clause, or (observed in the real corpus) a granted
+  ability logged under its *recipient's* `card_id` rather than the
+  granting card's — and is surfaced loudly in
+  `clause_level.unmatched_activations`, never silently dropped. See
+  `.superpowers/sdd/clause-coverage-v2-report.md` for the measured result
+  against the real `vb-corpus3` corpus, including the specific unmatched
+  findings.
 
-### The cheap next step (not built here — out of scope for this task)
-
-DCGO's own player log already emits effect-activation lines, e.g.:
-
-```
-Activate_Optional_Effect_Execute: Siriusmon
-```
-
-Hooking that into `GameRecorder.cs` as a new JSONL row type (say,
-`effect_activation`, with `card_id` + a resolved clause reference) would be
-the direct path to real clause-level coverage — parallel to how
-`action_detail` was added for the resolved-play diagnostic round
-(`docs/DCGO_RECORDING_SCHEMA.md` §"Resolved-action detail row"). This is
-explicitly **not** implemented by this task (YAGNI: extractor + coverage
-report only, no DCGO integration) — it's recorded here so the next piece of
-this pipeline knows where to start.
+`coverage.py` still detects corpora that predate the `action.card_id` /
+`action_detail` fields and says so in `corpus.schema_note` rather than
+assuming; the same applies for corpora with zero `effect_activation` rows
+(every clause simply has no matching evidence, which — per the rules
+above — resolves to `NOT_FIRED` or `UNOBSERVABLE` as appropriate, not a
+special-cased blanket status).
 
 ## Scope (YAGNI)
 
