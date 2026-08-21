@@ -581,7 +581,19 @@ fn dcgo_bot_recording_reconstructs_deterministically() {
 /// construction: the adapter appends them to the ordered deck lists,
 /// `Game`'s card-kind routing splits `DigiEgg` cards into `digitama_deck`
 /// (relative order preserved), and ordered construction does NOT re-shuffle
-/// them — the recorded order lands verbatim.
+/// them — the recorded order lands verbatim in HATCH order.
+///
+/// `Player::hatch()` pops from the *end* of `digitama_deck` (same
+/// pop-from-end convention `Player::draw()`/`setup_security()` use for the
+/// main deck — verified against real DCGO recordings: a recording's
+/// `*_deck_post_shuffle[0:5]` matches the built hand exactly, and `[5:10]`
+/// matches the built security stack exactly, order for order). Per
+/// `dcgo_recording.rs`'s `my_egg_deck` doc ("index 0 is hatched first in
+/// DCGO" — the same convention as the main deck's "drawn from index 0
+/// first"), the adapter must store `digitama_deck` as the REVERSE of the
+/// recorded order so the first `.pop()`/`hatch()` yields the recording's
+/// first egg. So `digitama_deck.iter().rev()` — not raw `.iter()` order —
+/// is what "placed verbatim" means here.
 #[test]
 fn dcgo_bot_recording_places_recorded_egg_decks() {
     let db = minimal_db();
@@ -598,16 +610,18 @@ fn dcgo_bot_recording_places_recorded_egg_decks() {
     rec.start.opp_egg_deck = Some(vec!["ST1-01".to_string(); 5]);
 
     let s = ReplaySession::from_dcgo(rec, &db, false).unwrap();
-    // my_player_id = 0 in the fixture.
+    // my_player_id = 0 in the fixture. `.rev()` converts storage order
+    // (pop-from-end) to hatch order (first `.pop()` first).
     let my_eggs: Vec<&str> = s.game.players[0]
         .digitama_deck
         .iter()
+        .rev()
         .map(|c| c.card_id(&s.game.card_data))
         .collect();
     assert_eq!(
         my_eggs,
         vec!["ST1-01", "ST1-02", "ST1-01", "ST1-02"],
-        "recorded egg order placed verbatim (no shuffle)"
+        "recorded egg order placed verbatim in hatch order (no shuffle)"
     );
     assert_eq!(
         s.game.players[1].digitama_deck.len(),
