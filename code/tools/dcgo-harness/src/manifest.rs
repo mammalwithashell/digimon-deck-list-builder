@@ -110,7 +110,7 @@ pub fn sha256_build_identity(dir: &Path, exe_name: &str) -> Result<String, Strin
     let managed = dir.join("DCGO_Data").join("Managed");
     if !managed.is_dir() {
         return Err(format!(
-            "no managed assembly directory at {} — a DCGO player without one is malformed,              and hashing the launcher stub alone would silently produce an identity that              cannot distinguish two builds",
+            "no managed assembly directory at {}: a DCGO player without one is malformed, and \n             hashing the launcher stub alone would silently produce an identity that \n             cannot distinguish two builds",
             managed.display()
         ));
     }
