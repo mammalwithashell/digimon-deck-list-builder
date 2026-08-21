@@ -134,8 +134,19 @@ fn run(args: Args) -> ExitCode {
     write_report(&report, args.output.as_deref());
 
     eprintln!(
-        "\nDone. {} pass, {} partial_pass, {} fail (of {}).",
-        report.pass, report.partial_pass, report.fail, report.total_recordings
+        "\nDone. {} pass, {} partial_pass, {} fail (of {}).{}",
+        report.pass,
+        report.partial_pass,
+        report.fail,
+        report.total_recordings,
+        if report.skipped_actions > 0 {
+            format!(
+                " {} recorded DCGO play(s) skipped as never-completed (not verified).",
+                report.skipped_actions
+            )
+        } else {
+            String::new()
+        }
     );
 
     if report.fail > 0 {
@@ -163,11 +174,23 @@ fn detail(outcome: &ReplayOutcome) -> String {
         ReplayOutcome::Pass {
             steps_consumed,
             winner,
-        } => format!("      {} steps, winner=P{}", steps_consumed, winner),
+            skipped_actions,
+        } => format!(
+            "      {} steps, winner=P{}{}",
+            steps_consumed,
+            winner,
+            skip_suffix(*skipped_actions)
+        ),
         ReplayOutcome::PartialPass {
             steps_consumed,
             stop_reason,
-        } => format!("      {} steps; halted: {}", steps_consumed, stop_reason),
+            skipped_actions,
+        } => format!(
+            "      {} steps; halted: {}{}",
+            steps_consumed,
+            stop_reason,
+            skip_suffix(*skipped_actions)
+        ),
         ReplayOutcome::Fail(fail) => match fail {
             ReplayFail::IllegalAction(ia) => format!(
                 "      illegal_action @ step {} (actor P{}, phase {}, source {})\n\
@@ -204,6 +227,20 @@ fn detail(outcome: &ReplayOutcome) -> String {
                 format!("      opaque_reveal_error @ step {:?}: {}", step, message)
             }
         },
+    }
+}
+
+/// Trailing note disclosing recorded DCGO plays this replay skipped as
+/// never-completed (see `ReplayOutcome::Pass::skipped_actions`). Empty when
+/// zero, so a recording unaffected by this feature prints exactly as before.
+fn skip_suffix(skipped_actions: u32) -> String {
+    if skipped_actions == 0 {
+        String::new()
+    } else {
+        format!(
+            " ({} recorded play(s) skipped as never-completed)",
+            skipped_actions
+        )
     }
 }
 

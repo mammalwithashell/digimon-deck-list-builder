@@ -53,7 +53,20 @@ impl Default for ReplayConfig {
 pub enum ReplayOutcome {
     /// Action stream fully consumed and winner matches. The parity oracle's
     /// happy path.
-    Pass { steps_consumed: u32, winner: u8 },
+    Pass {
+        steps_consumed: u32,
+        winner: u8,
+        /// Recorded hand-play attempts dropped because the recording
+        /// carries positive evidence (an uncorrelated `action_detail` row)
+        /// they never actually completed in DCGO — see
+        /// `digimon_engine::runners::replay`'s module docs "Skipping DCGO
+        /// plays that never completed". Always `0` for recordings that
+        /// carry no `action_detail` rows. A pass with a nonzero count here
+        /// still fully verified the rest of the action stream — it is not
+        /// a failure — but it did not verify the skipped decisions, so it
+        /// must be visible rather than folded silently into a clean PASS.
+        skipped_actions: u32,
+    },
     /// The harness halted before reaching `game_end`, but not because of an
     /// engine-vs-recording disagreement. Typical cause: an unencoded
     /// selection (`encoder_failure` row).
@@ -65,6 +78,8 @@ pub enum ReplayOutcome {
     PartialPass {
         steps_consumed: u32,
         stop_reason: String,
+        /// See `Pass::skipped_actions`.
+        skipped_actions: u32,
     },
     /// A genuine parity disagreement.
     Fail(ReplayFail),
@@ -219,6 +234,7 @@ pub fn replay_recording(
                  advance without the corresponding selection encoded.",
                 ef.step, ef.reason, ef.raw_value
             ),
+            skipped_actions: session.skipped_incomplete_plays(),
         };
     }
 
@@ -240,6 +256,7 @@ pub fn replay_recording(
     ReplayOutcome::Pass {
         steps_consumed: session.current_step(),
         winner: engine_winner_raw,
+        skipped_actions: session.skipped_incomplete_plays(),
     }
 }
 

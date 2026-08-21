@@ -50,6 +50,13 @@ pub struct ParityReport {
     /// Bare list of failed game_ids — useful for someone who wants to
     /// re-run the harness in --verbose on just the failures. Sorted.
     pub failed_games: Vec<String>,
+    /// Sum, across every `Pass`/`PartialPass` outcome, of recorded DCGO
+    /// hand-play attempts dropped because the recording carried positive
+    /// evidence (an uncorrelated `action_detail` row) they never actually
+    /// completed — see `ReplayOutcome::Pass::skipped_actions`. A corpus
+    /// where this is large should not be read as a fully-verified clean
+    /// run: those decisions were never checked against the engine at all.
+    pub skipped_actions: u32,
 }
 
 /// Aggregate per-recording outcomes into a [`ParityReport`].
@@ -66,12 +73,19 @@ pub fn aggregate(entries: &[(&RecordingV1, &ReplayOutcome)]) -> ParityReport {
         by_kind: BTreeMap::new(),
         per_card: BTreeMap::new(),
         failed_games: Vec::new(),
+        skipped_actions: 0,
     };
 
     for (recording, outcome) in entries {
         match outcome {
-            ReplayOutcome::Pass { .. } => report.pass += 1,
-            ReplayOutcome::PartialPass { .. } => report.partial_pass += 1,
+            ReplayOutcome::Pass { skipped_actions, .. } => {
+                report.pass += 1;
+                report.skipped_actions += skipped_actions;
+            }
+            ReplayOutcome::PartialPass { skipped_actions, .. } => {
+                report.partial_pass += 1;
+                report.skipped_actions += skipped_actions;
+            }
             ReplayOutcome::Fail(fail) => {
                 report.fail += 1;
                 report.failed_games.push(recording.start.game_id.clone());
@@ -221,16 +235,22 @@ mod tests {
         let o1 = ReplayOutcome::Pass {
             steps_consumed: 10,
             winner: 0,
+            skipped_actions: 0,
         };
         let o2 = ReplayOutcome::Pass {
             steps_consumed: 12,
             winner: 1,
+            skipped_actions: 2,
         };
         let report = aggregate(&[(&r1, &o1), (&r2, &o2)]);
         assert_eq!(report.total_recordings, 2);
         assert_eq!(report.pass, 2);
         assert_eq!(report.fail, 0);
         assert!(report.failed_games.is_empty());
+        // A skip is a real DCGO-play-never-completed event and must sum
+        // into the aggregate report — a clean-looking corpus can still
+        // disclose it did not verify every recorded decision.
+        assert_eq!(report.skipped_actions, 2);
     }
 
     #[test]
@@ -272,6 +292,7 @@ mod tests {
         let o1 = ReplayOutcome::Pass {
             steps_consumed: 1,
             winner: 0,
+            skipped_actions: 0,
         };
         let o2 = ReplayOutcome::Fail(ReplayFail::IllegalAction(IllegalAction {
             step: 1,

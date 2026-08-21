@@ -77,10 +77,12 @@ fn integration_surrender_recording_passes() {
         ReplayOutcome::Pass {
             steps_consumed,
             winner,
+            skipped_actions,
         } => {
             // 3 actions consumed; the conceder (player 0) loses so winner = 1.
             assert_eq!(steps_consumed, 3);
             assert_eq!(winner, 1);
+            assert_eq!(skipped_actions, 0);
         }
         other => panic!("expected Pass, got {:?}", other),
     }

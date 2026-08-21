@@ -55,6 +55,50 @@
 //!   exercised" limitation called out below, not a defect in this
 //!   filtering logic.
 //!
+//! ## Skipping DCGO plays that never completed
+//!
+//! DCGO's recorder hooks `TurnStateMachine.QueueMainPhaseAction`, which
+//! fires when an action is QUEUED — before DCGO itself decides whether it
+//! is legal. So the recorded `action` stream includes attempted plays DCGO
+//! went on to reject (e.g. it couldn't actually afford the memory cost).
+//! Naively replaying one of those against our engine looks like the engine
+//! wrongly refusing a legal action (`MaskMiss` / `illegal_action`), when in
+//! fact DCGO refused it too — the worst kind of oracle defect, since it
+//! blames the engine for something it did correctly.
+//!
+//! [`ActionDetailRow`](crate::dcgo_recording::ActionDetailRow) is positive
+//! evidence a play actually completed: DCGO's recorder emits one, correlated
+//! by `(step, actor)`, only from inside `PlayCardClass.PlayCard()` — i.e.
+//! only once the cost was actually paid. `DcgoAdapter` uses its ABSENCE as
+//! the (only) skip signal: a recorded `action` row is dropped from the
+//! replayable stream when, and only when, it is BOTH
+//!
+//!   1. in the hand-play range (`PLAY_HAND_START..PLAY_HAND_END`) under
+//!      `GamePhase::Main` — see `is_hand_play_action`. The action space is
+//!      phase-dependent (`Game::decode_mulligan` vs `decode_main`), so the
+//!      same raw ids 0/1 are the mulligan keep/redraw decision under
+//!      `GamePhase::Mulligan`, NOT a play — those are never skipped.
+//!   2. NOT correlated to any `Row::ActionDetail` in this recording.
+//!
+//! This is deliberately narrow. `ActionDetailRow` is scoped to player-facing
+//! top-level plays only (see its doc comment) — a pass, hatch, attack, or
+//! phase action legitimately has no correlated detail row, and skipping one
+//! of those would silently drop a real decision instead of an unconfirmed
+//! one. Absence of a signal is never treated as evidence of non-completion
+//! outside the hand-play range.
+//!
+//! For the same reason, a recording with NO `action_detail` rows at all
+//! (the entire pre-existing corpus, recorded before this diagnostic field
+//! existed) must not have every hand-play attempt look "unconfirmed" and
+//! get skipped wholesale — `DcgoAdapter` gates the whole mechanism on
+//! whether the recording carries at least one `Row::ActionDetail` anywhere;
+//! recordings without one replay exactly as they did before this feature.
+//!
+//! Skips are counted, not silent — see `RecordingSource::skipped_incomplete_plays`
+//! / `ReplaySession::skipped_incomplete_plays`. A replay that skipped a
+//! meaningful fraction of its actions must not read as a clean, fully-
+//! verified pass.
+//!
 //! ## Known v1 limitations
 //!
 //! - Games whose start-of-turn triggers install a `pending_selection`
@@ -66,11 +110,12 @@
 //!   from the recorded outcome since the post-construction RNG state is
 //!   fresh.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use serde::Serialize;
 use serde_json::Value;
 
+use crate::action::space::{PLAY_HAND_END, PLAY_HAND_START};
 use crate::card_data::CardData;
 use crate::card_source::CardSource;
 use crate::enums::{GamePhase, PlayerId};
@@ -671,6 +716,17 @@ pub trait RecordingSource: Send {
     fn my_player_id(&self) -> Option<PlayerId> {
         None
     }
+
+    /// Count of recorded actions dropped from the replayable step stream
+    /// because the recording carries positive evidence they never actually
+    /// completed (see the module docs' "Skipping DCGO plays that never
+    /// completed"). `0` for every source except `DcgoAdapter`, which is the
+    /// only one that ever has this evidence available. Surfaced so a skip
+    /// is counted, not silent — a replay result must not read as a clean
+    /// pass when it quietly dropped recorded decisions.
+    fn skipped_incomplete_plays(&self) -> u32 {
+        0
+    }
 }
 
 /// The single shared decision point for whether mulligan-phase actions
@@ -691,6 +747,20 @@ pub trait RecordingSource: Send {
 /// presence through to this call — not add a new branch here.
 fn should_filter_mulligan_actions(has_initial_state: bool) -> bool {
     has_initial_state
+}
+
+/// True when a recorded DCGO `action` row is a hand-play attempt — the ONLY
+/// action shape `ActionDetailRow` is ever correlated to (see the module docs'
+/// "Skipping DCGO plays that never completed"). `PLAY_HAND_START..
+/// PLAY_HAND_END` (raw ids 0..30) is reused across phases for unrelated
+/// decisions — most importantly `GamePhase::Mulligan`'s keep (0) / redraw
+/// (1) — so the id range alone is not enough; only `Game::decode_main`
+/// (`GamePhase::Main`) actually dispatches that range as "play the hand
+/// card at this index" (see `action/decode.rs`). Requiring `phase == "Main"`
+/// keeps ids 0/1 recorded under `GamePhase::Mulligan` (or any other phase)
+/// from ever being mistaken for a play.
+fn is_hand_play_action(action_id: u16, phase: &str) -> bool {
+    phase == "Main" && (PLAY_HAND_START..PLAY_HAND_END).contains(&action_id)
 }
 
 /// [`RecordingSource`] over a native `GameRecorder` JSON recording. Holds
@@ -893,6 +963,11 @@ pub struct DcgoAdapter {
     /// Card DB retained so backward-seek can reconstruct (DCGO games are not
     /// restored zone-by-zone; see `relay_initial_state`).
     card_data: HashMap<String, CardData>,
+    /// Count of recorded hand-play attempts dropped from `steps` because the
+    /// recording carries positive evidence (an absent correlated
+    /// `Row::ActionDetail`) they never actually completed. See the module
+    /// docs' "Skipping DCGO plays that never completed".
+    skipped_incomplete_plays: u32,
 }
 
 impl DcgoAdapter {
@@ -941,11 +1016,48 @@ impl DcgoAdapter {
                 .unwrap_or(0)
         });
 
+        // See module docs "Skipping DCGO plays that never completed":
+        // `ActionDetailRow` is positive evidence a hand-play attempt
+        // actually completed (DCGO's recorder emits one, correlated by
+        // (step, actor), only from inside `PlayCardClass.PlayCard()` — after
+        // the cost was paid). Gate the whole mechanism on whether this
+        // recording carries the diagnostic field set AT ALL: an empty
+        // `completed_plays` set must mean "no signal available" (today's
+        // whole pre-existing corpus), never "nothing completed" — the
+        // latter reading would skip every real play in an old recording.
+        let has_action_detail_rows = recording
+            .rows
+            .iter()
+            .any(|row| matches!(row, Row::ActionDetail(_)));
+        let completed_plays: HashSet<(u32, u8)> = recording
+            .rows
+            .iter()
+            .filter_map(|row| match row {
+                Row::ActionDetail(d) => Some((d.step, d.actor)),
+                _ => None,
+            })
+            .collect();
+
         let mut steps = Vec::new();
+        let mut skipped_incomplete_plays: u32 = 0;
         for row in &recording.rows {
             match row {
                 Row::Action(a) => {
                     if filter_mulligan && a.phase == "Mulligan" {
+                        continue;
+                    }
+                    // Conservative skip: ONLY a hand-play attempt (see
+                    // `is_hand_play_action` — phase-disambiguated, so
+                    // Mulligan's ids 0/1 are never mistaken for a play)
+                    // with NO correlated `action_detail` is dropped. Every
+                    // other action kind (pass/hatch/attack/…) legitimately
+                    // never gets a detail row, so absence there is not
+                    // evidence of anything — never skip on absence alone.
+                    if has_action_detail_rows
+                        && is_hand_play_action(a.action_id, &a.phase)
+                        && !completed_plays.contains(&(a.step, a.actor))
+                    {
+                        skipped_incomplete_plays += 1;
                         continue;
                     }
                     steps.push(StepSpec {
@@ -1007,6 +1119,7 @@ impl DcgoAdapter {
             steps,
             initial_state,
             card_data: card_data.clone(),
+            skipped_incomplete_plays,
         })
     }
 }
@@ -1053,6 +1166,10 @@ impl RecordingSource for DcgoAdapter {
 
     fn my_player_id(&self) -> Option<PlayerId> {
         Some(self.my_pid)
+    }
+
+    fn skipped_incomplete_plays(&self) -> u32 {
+        self.skipped_incomplete_plays
     }
 }
 
@@ -1552,6 +1669,10 @@ impl ReplayDriver {
         self.source.steps().len() as u32
     }
 
+    pub(crate) fn skipped_incomplete_plays(&self) -> u32 {
+        self.source.skipped_incomplete_plays()
+    }
+
     pub(crate) fn cursor(&self) -> u32 {
         self.cursor
     }
@@ -2012,6 +2133,15 @@ impl ReplaySession {
 
     pub fn total_steps(&self) -> u32 {
         self.driver.total_steps()
+    }
+
+    /// Recorded hand-play attempts dropped from the replayable stream
+    /// because the recording carries positive evidence they never actually
+    /// completed in DCGO — see the module docs' "Skipping DCGO plays that
+    /// never completed". Always `0` for non-DCGO sources and for DCGO
+    /// recordings that carry no `action_detail` rows at all.
+    pub fn skipped_incomplete_plays(&self) -> u32 {
+        self.driver.skipped_incomplete_plays()
     }
 
     pub fn current_step(&self) -> u32 {
@@ -2816,4 +2946,292 @@ mod tests {
         assert_eq!((a2, t2), (1, SECURITY_TARGET));
     }
 
+    // ── Skipping DCGO plays that never completed ────────────────────────
+    //
+    // `DcgoAdapter::from_recording` must skip a recorded play-range action
+    // only when there is POSITIVE evidence (an absent correlated
+    // `action_detail` row, in a recording that otherwise carries the field
+    // set) it never actually completed in DCGO. Everything else — other
+    // action kinds, mulligan decisions at the same raw ids, and recordings
+    // that never carry `action_detail` at all — must replay unchanged. See
+    // the module docs' "Skipping DCGO plays that never completed".
+
+    fn dcgo_game_start(
+        my_deck: Vec<String>,
+        opp_deck: Option<Vec<String>>,
+    ) -> crate::dcgo_recording::GameStart {
+        crate::dcgo_recording::GameStart {
+            v: 1,
+            game_id: "skip-test".into(),
+            timestamp: "t".into(),
+            my_player_id: 0,
+            // Fixed explicitly so construction never depends on inferring
+            // it from a mulligan row's `source` string (irrelevant to what
+            // these tests are checking).
+            first_player: Some(0),
+            is_ai: true,
+            my_deck_post_shuffle: my_deck,
+            opp_deck_post_shuffle: opp_deck,
+            opp_decklist_composition: None,
+            my_egg_deck: None,
+            opp_egg_deck: None,
+        }
+    }
+
+    fn dcgo_action_row(step: u32, actor: u8, action_id: u16, phase: &str) -> crate::dcgo_recording::Row {
+        crate::dcgo_recording::Row::Action(crate::dcgo_recording::ActionRow {
+            step,
+            actor,
+            action_id,
+            phase: phase.to_string(),
+            source: "main_phase".to_string(),
+            board_p0: None,
+            board_p1: None,
+            memory: None,
+            card_id: None,
+            memory_before: None,
+        })
+    }
+
+    /// An `action_detail` row correlated to `(step, actor)` — positive
+    /// evidence that play actually completed in DCGO.
+    fn dcgo_action_detail_row(step: u32, actor: u8) -> crate::dcgo_recording::Row {
+        crate::dcgo_recording::Row::ActionDetail(crate::dcgo_recording::ActionDetailRow {
+            step,
+            actor,
+            card_id: Some("BT1-010".to_string()),
+            cost_paid: 3,
+            memory_after: None,
+            alt_path: None,
+            materials: None,
+        })
+    }
+
+    fn dcgo_game_end() -> crate::dcgo_recording::GameEnd {
+        crate::dcgo_recording::GameEnd {
+            winner: -1,
+            reason: "test".into(),
+            total_steps: 0,
+        }
+    }
+
+    /// `DcgoAdapter::from_recording` performs no card-data validation (that
+    /// is `NativeAdapter`'s contract, not this one's — see its doc comment),
+    /// so construction-only tests can pass an empty pool.
+    fn no_card_data() -> HashMap<String, CardData> {
+        HashMap::new()
+    }
+
+    // Test 2 of the skip spec: a play-range action WITH a correlated
+    // `action_detail` is retained — replayed like any other decision.
+    #[test]
+    fn dcgo_adapter_retains_play_range_action_with_correlated_action_detail() {
+        let recording = crate::dcgo_recording::RecordingV1 {
+            start: dcgo_game_start(vec![], Some(vec![])),
+            rows: vec![dcgo_action_row(0, 0, 5, "Main"), dcgo_action_detail_row(0, 0)],
+            end: dcgo_game_end(),
+        };
+        let adapter =
+            DcgoAdapter::from_recording(recording, &no_card_data()).expect("adapter builds");
+        assert_eq!(
+            adapter.steps().len(),
+            1,
+            "a confirmed play must be retained in the replayable stream"
+        );
+        assert_eq!(adapter.skipped_incomplete_plays(), 0);
+    }
+
+    // Test 1 of the skip spec (construction half — the end-to-end
+    // divergence-free half is `dcgo_session_skips_incomplete_play_...`
+    // below): a play-range action with NO correlated `action_detail`, in a
+    // recording that otherwise carries the field, is dropped.
+    #[test]
+    fn dcgo_adapter_skips_play_range_action_with_no_correlated_action_detail() {
+        let recording = crate::dcgo_recording::RecordingV1 {
+            start: dcgo_game_start(vec![], Some(vec![])),
+            rows: vec![
+                dcgo_action_row(0, 0, 5, "Main"),
+                // A detail row for a DIFFERENT step keeps the "this
+                // recording carries action_detail rows" gate open while
+                // leaving step 0 itself uncorrelated.
+                dcgo_action_detail_row(1, 0),
+            ],
+            end: dcgo_game_end(),
+        };
+        let adapter =
+            DcgoAdapter::from_recording(recording, &no_card_data()).expect("adapter builds");
+        assert!(
+            adapter.steps().is_empty(),
+            "an unconfirmed play must be dropped from the replayable stream, got {:?}",
+            adapter.steps()
+        );
+        assert_eq!(adapter.skipped_incomplete_plays(), 1);
+    }
+
+    // Test 3 of the skip spec — the regression that matters most: a
+    // non-play action (pass / attack / hatch) with no correlated
+    // `action_detail` must NEVER be skipped. `action_detail` is only ever
+    // emitted for `PlayCardAction`s, so absence here carries no signal.
+    #[test]
+    fn dcgo_adapter_never_skips_non_play_actions_even_without_action_detail() {
+        let recording = crate::dcgo_recording::RecordingV1 {
+            start: dcgo_game_start(vec![], Some(vec![])),
+            rows: vec![
+                dcgo_action_row(0, 0, 60, "Breeding"), // hatch
+                dcgo_action_row(1, 0, 62, "Main"),      // pass
+                dcgo_action_row(2, 0, 100, "Main"),     // attack slot 0 -> security
+                // Detail row elsewhere proves the gate is armed and these
+                // still are not skipped.
+                dcgo_action_detail_row(99, 0),
+            ],
+            end: dcgo_game_end(),
+        };
+        let adapter =
+            DcgoAdapter::from_recording(recording, &no_card_data()).expect("adapter builds");
+        assert_eq!(
+            adapter.steps().len(),
+            3,
+            "pass/hatch/attack must never be skipped, got {:?}",
+            adapter.steps()
+        );
+        assert_eq!(adapter.skipped_incomplete_plays(), 0);
+    }
+
+    // Test 4 of the skip spec: ids 0/1 recorded under `GamePhase::Mulligan`
+    // are the keep/redraw decision, NOT plays, even though they alias the
+    // play-hand range's first two ids. Must never be skipped.
+    #[test]
+    fn dcgo_adapter_never_skips_mulligan_decisions_even_at_play_range_ids() {
+        let recording = crate::dcgo_recording::RecordingV1 {
+            start: dcgo_game_start(vec![], Some(vec![])),
+            rows: vec![
+                dcgo_action_row(0, 0, 0, "Mulligan"), // keep — aliases play_hand[0]
+                dcgo_action_row(1, 1, 1, "Mulligan"), // redraw — aliases play_hand[1]
+                dcgo_action_detail_row(99, 0),        // gate armed
+            ],
+            end: dcgo_game_end(),
+        };
+        let adapter =
+            DcgoAdapter::from_recording(recording, &no_card_data()).expect("adapter builds");
+        assert_eq!(
+            adapter.steps().len(),
+            2,
+            "mulligan decisions must never be treated as plays, got {:?}",
+            adapter.steps()
+        );
+        assert_eq!(adapter.skipped_incomplete_plays(), 0);
+    }
+
+    // Test 5 of the skip spec: a recording with ZERO `action_detail` rows —
+    // today's entire pre-existing corpus, recorded before the field
+    // existed — must replay exactly as before this feature. Total absence
+    // of the diagnostic field set is "no signal available", never "nothing
+    // completed".
+    #[test]
+    fn dcgo_adapter_never_skips_when_recording_has_no_action_detail_rows_at_all() {
+        let recording = crate::dcgo_recording::RecordingV1 {
+            start: dcgo_game_start(vec![], Some(vec![])),
+            rows: vec![dcgo_action_row(0, 0, 5, "Main")],
+            end: dcgo_game_end(),
+        };
+        let adapter =
+            DcgoAdapter::from_recording(recording, &no_card_data()).expect("adapter builds");
+        assert_eq!(
+            adapter.steps().len(),
+            1,
+            "a recording with no action_detail rows must replay unchanged"
+        );
+        assert_eq!(adapter.skipped_incomplete_plays(), 0);
+    }
+
+    /// Minimal viable card pool for the end-to-end skip test: a DigiEgg +
+    /// a Rookie, enough to build a legal 50-card deck and let mulligan +
+    /// main-phase actions play out. Mirrors
+    /// `dcgo_replay::replay::tests::micro_card_db`.
+    fn skip_test_card_db() -> HashMap<String, CardData> {
+        let json = r#"{
+            "BT1-001": {
+                "card_id": "BT1-001", "card_name_eng": "Koromon",
+                "card_effect_class_name": "BT1_001", "play_cost": 0, "dp": -1,
+                "level": 2, "card_kind": 3, "rarity": 0, "card_colors": [0],
+                "type_eng": ["Lesser"], "form_eng": ["In-Training"], "attribute_eng": [],
+                "effect_description_eng": "", "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "", "evo_costs": []
+            },
+            "BT1-010": {
+                "card_id": "BT1-010", "card_name_eng": "Agumon",
+                "card_effect_class_name": "BT1_010", "play_cost": 3, "dp": 2000,
+                "level": 3, "card_kind": 0, "rarity": 0, "card_colors": [0],
+                "type_eng": ["Reptile"], "form_eng": ["Rookie"], "attribute_eng": ["Vaccine"],
+                "effect_description_eng": "", "inherited_effect_description_eng": "",
+                "security_effect_description_eng": "", "evo_costs": []
+            }
+        }"#;
+        CardData::load_from_str(json).unwrap()
+    }
+
+    fn skip_test_deck() -> Vec<String> {
+        let mut d = Vec::new();
+        for _ in 0..4 {
+            d.push("BT1-001".to_string());
+        }
+        for _ in 0..46 {
+            d.push("BT1-010".to_string());
+        }
+        d
+    }
+
+    // Test 1 (end-to-end half) + Test 6 of the skip spec: a play DCGO
+    // attempted but never completed must never surface as an
+    // `illegal_action` (`DivergenceKind::MaskMiss`) divergence, and the
+    // skip must be counted, not silent.
+    #[test]
+    fn dcgo_session_skips_incomplete_play_and_reports_no_illegal_action() {
+        let card_data = skip_test_card_db();
+        let deck = skip_test_deck();
+        let recording = crate::dcgo_recording::RecordingV1 {
+            start: dcgo_game_start(deck.clone(), Some(deck)),
+            rows: vec![
+                dcgo_action_row(0, 0, 0, "Mulligan"),
+                dcgo_action_row(1, 1, 0, "Mulligan"),
+                // Player 0's post-mulligan hand only has 5 cards (indices
+                // 0..5) — the LAST play-hand id is out of range and would
+                // be a genuine MaskMiss if replayed. DCGO attempted it (the
+                // row exists) but never completed it (no correlated
+                // `action_detail`, even though the recorder does emit the
+                // field elsewhere in this same recording).
+                dcgo_action_row(2, 0, PLAY_HAND_END - 1, "Main"),
+                dcgo_action_detail_row(50, 0),
+                // Ends the game cleanly once the unconfirmed play is
+                // skipped — CONCEDE_GAME is legal regardless of mask state.
+                dcgo_action_row(3, 0, crate::action::space::CONCEDE_GAME, "Main"),
+            ],
+            end: crate::dcgo_recording::GameEnd {
+                winner: 1,
+                reason: "concede".into(),
+                total_steps: 4,
+            },
+        };
+
+        let mut session =
+            ReplaySession::from_dcgo(recording, &card_data, false).expect("session builds");
+        session.run_to_completion();
+
+        assert!(
+            session.divergences().is_empty(),
+            "the unconfirmed play must never reach the legality check: {:?}",
+            session.divergences()
+        );
+        assert!(!session.is_paused());
+        assert_eq!(
+            session.skipped_incomplete_plays(),
+            1,
+            "the skip must be counted, not silent"
+        );
+        // Only the 2 mulligan keeps + the concede made it into the
+        // replayable stream — the unconfirmed play did not.
+        assert_eq!(session.total_steps(), 3);
+        assert!(session.is_game_over());
+        assert_eq!(session.winner_id(), Some(1));
+    }
 }
