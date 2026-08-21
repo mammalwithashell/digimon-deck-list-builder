@@ -69,13 +69,29 @@ Both were verified against the DCGO checkout while writing this spec.
    have inverted polarity — they route *to* the AI path rather than gating away
    from it. The driver must handle both shapes.
 
-2. **"Initial shuffle only" is enforceable as one named exclusion, not a latch.**
-   `RandomUtility.ShuffledDeckCards` is the single helper behind every shuffle,
-   and mid-game re-shuffle is exactly one call site
-   (`CardObjectController.cs:1040`, `player.LibraryCards = ...`). `DeckStacker`
-   applies in the helper; that one site bypasses it explicitly. A stateful
-   first-call latch would be fragile — main deck and egg deck are two separate
-   initial calls per player.
+2. **`DeckStacker` does not hook `RandomUtility.ShuffledDeckCards` at all.**
+   The 2026-08-20 design proposed hooking that helper because it sits behind
+   every shuffle site — and then had to carve out mid-game shuffles to avoid
+   re-imposing the opening order on a "shuffle your deck" effect.
+
+   That carve-out is unnecessary. Phase 1 already added two harness
+   short-circuits that are the *only* deck-construction path taken under a job:
+
+   - `CardObjectController.cs:141` — `DeckRecipie(player)`, main deck
+   - `CardObjectController.cs:235` — `DigitamaDeckRecipie(player)`, egg deck
+
+   Both already resolve the seat (`player == MasterPlayer ? P0 : P1`) and both
+   already return `RandomUtility.ShuffledDeckCards(chosen.…)`. Applying the stack
+   to those two return values gives the stacker the player identity for free, and
+   makes "initial shuffle only" **structural rather than enforced**: mid-game
+   `CardObjectController.Shuffle(Player)` (line 1040) never passes through a
+   harness short-circuit, so there is nothing to exclude and no latch to get
+   wrong.
+
+   This also resolves the problem that `ShuffledDeckCards` receives no player
+   argument, which would have forced the stacker to guess the seat from call
+   order — precisely the fragile design the original latch concern was pointing
+   at.
 
 ## Scope
 
@@ -114,7 +130,7 @@ not findings.
 
 ```yaml
 card: EX12-035
-clause: on_play                # keys into the clause_coverage denominator
+clause: EX12-035#effect#0      # a clause_coverage Clause.id: {card_id}#{zone}#{idx}
 seed: 424242
 decks:
   p0: { stack: [ST1-02, EX12-035, BT16-082], rest: <deck-name> }
@@ -139,12 +155,14 @@ assert:
 You name the first N cards in draw order; the remainder is seeded-shuffled from a
 named deck. Requiring all 50 would make every file unauthorable.
 
-Initial-shuffle-only is a correctness requirement, not an optimization. Search
-and shuffle effects route through the same helper. If the stack applied to every
-shuffle, a card reading "shuffle your deck" would silently re-impose the opening
-order and the exam would confidently answer a question about a game that cannot
-occur. Mid-game shuffles fall through to seeded `GameRandom` — still fully
-deterministic, but honest.
+Initial-shuffle-only is a correctness requirement, not an optimization. If the
+stack applied to every shuffle, a card reading "shuffle your deck" would silently
+re-impose the opening order and the exam would confidently answer a question
+about a game that cannot occur. Mid-game shuffles fall through to seeded
+`GameRandom` — still fully deterministic, but honest.
+
+Per Correction 2, this property is structural: the stack is applied at the two
+harness deck-construction short-circuits, which mid-game shuffles never reach.
 
 ### `expect` is asserted before the step is answered
 
@@ -244,13 +262,22 @@ Bandai bundle first, `cards.json` + overrides second, and emitting an explicit
 The exam keys into that same clause identity, so "all its clauses" is checkable
 rather than a feeling.
 
-The scenario's `clause:` field is **not free text** — it must resolve to a clause
-key that `clause_coverage.extract` actually emits for that card, and the exam
-rejects a scenario naming a clause the extractor does not produce. Otherwise a
-typo silently creates a 6th, invisible verdict class: a scenario that passes
-while covering nothing in the denominator. Pinning the exact key format is the
-first task of the exam-layer plan, since it is `extract`'s output shape and not a
-choice this spec gets to make.
+The scenario's `clause:` field is **not free text** — it is a
+`clause_coverage.models.Clause.id`, formatted `{card_id}#{zone}#{idx}` (e.g.
+`EX12-073#security#0`, from `card_sources.py:149`). That id is documented as
+stable across runs for the same underlying data, which is what lets verdicts be
+diffed run over run.
+
+The exam rejects a scenario naming a clause `extract` does not produce for that
+card. Otherwise a typo silently creates a sixth, invisible verdict class: a
+scenario that passes while covering nothing in the denominator.
+
+The id's stability is *conditional on the underlying card text*, since `idx` is
+positional within a zone. If an override or a re-scrape changes a card's text,
+clause ids shift and previously-recorded verdicts silently re-point at different
+clauses. The verdict store therefore records the clause `label` and a hash of its
+`text` alongside the id, and a mismatch on re-read invalidates that verdict back
+to `unmeasured` rather than reporting a stale `confirmed`.
 
 ### Verdict store
 
