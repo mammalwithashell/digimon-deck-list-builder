@@ -16,8 +16,8 @@
 //! explicit stop; exact-N prompts have already resolved by then).
 
 use crate::action::space::{
-    ATTACK_START, PASS, PLAY_HAND_START, SEL_MY_SECURITY_START, SEL_OPP_SECURITY_START,
-    SEL_REVEAL_START, TARGETS_PER_ATTACKER, TRASH_EFFECT_START,
+    ATTACK_START, PASS, PLAY_HAND_START, SECURITY_TARGET, SEL_MY_SECURITY_START,
+    SEL_OPP_SECURITY_START, SEL_REVEAL_START, TARGETS_PER_ATTACKER, TRASH_EFFECT_START,
 };
 use crate::dcgo_recording::SelectionRow;
 use crate::game::Game;
@@ -255,7 +255,31 @@ pub fn resolve_next(
     // ── Field-permanent picks ────────────────────────────────────────────
     if let Some(targets) = &payload.targets {
         let t = targets[picks_done];
-        let slot = t.frame as u16;
+        // DCGO's `SelectAttackEffect.SetAttackTarget` (the attack-target
+        // prompt's chokepoint) uses `SecurityIndex = -1` as a sentinel for
+        // "attack the player" rather than a battle-area permanent — see
+        // its `__frame = permanentIndex < 0 ? -1 : ValidateFieldSlot(...)`.
+        // `remap_selection_targets` in `runners/replay.rs` already treats
+        // negative frames the same way ("-1 addresses the player
+        // (security), not a permanent"). Casting a negative frame straight
+        // to `u16` wraps to 65535 and blows up the `ATTACK_START` addition
+        // below (the reported overflow panic), so the sign is handled
+        // explicitly first: `-1` maps onto the engine's own
+        // `SECURITY_TARGET` slot (reusing the exact same candidate
+        // formulas that already resolve ordinary in-range frames), and any
+        // other negative value — which no known DCGO chokepoint emits — is
+        // an honest, legible `Err` rather than a guess.
+        let slot: u16 = if t.frame >= 0 {
+            t.frame as u16
+        } else if t.frame == -1 {
+            SECURITY_TARGET
+        } else {
+            return Err(format!(
+                "frame target (player {}, frame {}) is not a valid battle-area slot or the \
+                 -1 \"attack the player\" sentinel (kind {:?}, valid {:?})",
+                t.player, t.frame, pending.kind, valid
+            ));
+        };
         // Candidate encodings, most-specific first:
         //   OwnField/OppField: 100 + slot (side implicit in kind)
         //   AnyField:          100 + player*15 + slot
@@ -517,5 +541,155 @@ mod tests {
                 .collect();
             assert_eq!(hit, vec![want as usize]);
         }
+    }
+
+    // ── Field-permanent frame resolution: sentinel + overflow safety ─────
+    //
+    // Regression coverage for the reported panic: DCGO's `SelectAttackEffect`
+    // chokepoint (`SetAttackTarget` in
+    // `DCGO/Assets/Scripts/Script/SelectAttackEffect.cs`) records
+    // `frame: -1` for "attack the player" instead of a battle-area
+    // permanent — see its `const int SecurityIndex = -1;` and
+    // `__frame = permanentIndex < 0 ? -1 : ValidateFieldSlot(...)`. Casting
+    // that straight to `u16` wraps to 65535 and overflows the `ATTACK_START`
+    // addition a few lines down.
+
+    use crate::card_source::CardHandle;
+    use crate::dcgo_recording::FrameTarget;
+    use crate::debug_runner::DebugRunner;
+    use crate::enums::{EffectSourceKind, GamePhase};
+    use crate::selection::PendingSelection;
+
+    /// Build a bare `SelectionRow` carrying only one `FrameTarget` pick —
+    /// every other field empty, matching a decoded `SelectAttackEffect` row.
+    fn attack_target_row(player: u8, frame: i32) -> SelectionRow {
+        SelectionRow {
+            step: 0,
+            actor: player,
+            prompt: "SelectAttackEffect".to_string(),
+            phase: "Main".to_string(),
+            targets: Some(vec![FrameTarget { player, frame }]),
+            card_ids: None,
+            indexes: None,
+            count: None,
+            candidates: None,
+            int_value: None,
+            bool_value: None,
+            cancel: None,
+            board_p0: None,
+            board_p1: None,
+            memory: None,
+            mechanic: None,
+            zone: None,
+        }
+    }
+
+    /// Park a `Target`-kind pending selection — the kind an attack-target
+    /// prompt installs (`effect_context::action::combat`'s
+    /// `may_attack_now_optional_with_upgrade_and_summoning` /
+    /// `select_redirect_attack_target`) — with the given valid action ids.
+    fn park_attack_target_selection(game: &mut Game, valid_action_ids: Vec<u16>) {
+        game.pending_selection = Some(PendingSelection {
+            kind: SelectionKind::Target,
+            selecting_player: 0,
+            previous_phase: GamePhase::Main,
+            valid_action_ids,
+            is_optional: true,
+            prompt: "Select attack target".to_string(),
+            effect_choices: None,
+            source_card: CardHandle(0),
+            source_permanent: None,
+            source_kind: EffectSourceKind::Digimon,
+            callback: Box::new(|_, _| {}),
+            on_decline: None,
+            zone_owner: None,
+        });
+    }
+
+    #[test]
+    fn attack_target_sentinel_resolves_side_implicit_security_target() {
+        let mut runner = DebugRunner::new();
+        // side-implicit candidate: encode_attack(0, SECURITY_TARGET).
+        park_attack_target_selection(&mut runner.game, vec![ATTACK_START + SECURITY_TARGET]);
+
+        let payload = attack_target_row(1, -1);
+        let result = resolve_next(&runner.game, &payload, 0);
+
+        assert_eq!(result, Ok(Some(ATTACK_START + SECURITY_TARGET)));
+    }
+
+    #[test]
+    fn attack_target_sentinel_resolves_absolute_security_target() {
+        let mut runner = DebugRunner::new();
+        // absolute candidate: encode_attack(player=1, SECURITY_TARGET).
+        let absolute = ATTACK_START + TARGETS_PER_ATTACKER + SECURITY_TARGET;
+        park_attack_target_selection(&mut runner.game, vec![absolute]);
+
+        let payload = attack_target_row(1, -1);
+        let result = resolve_next(&runner.game, &payload, 0);
+
+        assert_eq!(result, Ok(Some(absolute)));
+    }
+
+    #[test]
+    fn attack_target_sentinel_never_panics_when_unmatched() {
+        let mut runner = DebugRunner::new();
+        // Neither security-target candidate is offered — must be an honest
+        // Err, not a panic, and not a wrong match either.
+        park_attack_target_selection(&mut runner.game, vec![ATTACK_START]);
+
+        let payload = attack_target_row(1, -1);
+        let result = resolve_next(&runner.game, &payload, 0);
+
+        assert!(result.is_err(), "expected Err, got {:?}", result);
+    }
+
+    #[test]
+    fn unusable_negative_frame_returns_legible_err_not_panic() {
+        let mut runner = DebugRunner::new();
+        park_attack_target_selection(&mut runner.game, vec![ATTACK_START, ATTACK_START + 1]);
+
+        // -5 is neither the -1 "attack the player" sentinel nor a valid
+        // slot; no known DCGO chokepoint emits it. This is the "genuinely
+        // unusable" case — it must name the offending value, not panic.
+        let payload = attack_target_row(0, -5);
+        let result = resolve_next(&runner.game, &payload, 0);
+
+        let err = result.expect_err("frame -5 must not resolve to an action id");
+        assert!(
+            err.contains("-5"),
+            "error must name the offending value, got: {err}"
+        );
+        assert!(
+            err.contains("Target"),
+            "error must name the prompt kind, got: {err}"
+        );
+    }
+
+    #[test]
+    fn ordinary_in_range_frame_still_resolves_side_implicit() {
+        let mut runner = DebugRunner::new();
+        // Regression guard: frame 0 must still resolve exactly as before —
+        // encode_attack(0, 0).
+        park_attack_target_selection(&mut runner.game, vec![ATTACK_START]);
+
+        let payload = attack_target_row(1, 0);
+        let result = resolve_next(&runner.game, &payload, 0);
+
+        assert_eq!(result, Ok(Some(ATTACK_START)));
+    }
+
+    #[test]
+    fn ordinary_in_range_frame_still_resolves_absolute() {
+        let mut runner = DebugRunner::new();
+        // Regression guard: frame 1 on player 1's target must still resolve
+        // via encode_attack(1, 1) exactly as before.
+        let absolute = ATTACK_START + TARGETS_PER_ATTACKER + 1;
+        park_attack_target_selection(&mut runner.game, vec![absolute]);
+
+        let payload = attack_target_row(1, 1);
+        let result = resolve_next(&runner.game, &payload, 0);
+
+        assert_eq!(result, Ok(Some(absolute)));
     }
 }
