@@ -21,50 +21,50 @@ core clauses awaiting the tooling noted below.
 
 | Card | Name | Clauses | confirmed | diverged | unreachable | unmeasured | tier |
 |---|---|---|---|---|---|---|---|
-| EX1-066 | ? | 3 | 1 |  | 1 | 1 | core |
-| EX12-004 | ? | 5 |  |  | 5 |  | core |
-| EX12-009 | ? | 4 | 2 |  | 2 |  | core |
-| EX12-011 | ? | 5 | 2 |  | 2 | 1 | core |
-| EX12-020 | ? | 5 | 4 |  | 1 |  | core |
-| EX12-026 | ? | 6 | 3 |  | 2 | 1 | core |
-| EX12-031 | ? | 5 | 1 |  | 4 |  | core |
-| EX12-036 | ? | 9 | 2 |  | 7 |  | core |
-| EX12-046 | ? | 6 | 3 | 1 | 2 |  | core |
-| EX12-047 | ? | 8 | 1 |  | 6 | 1 | core |
-| EX12-061 | ? | 6 | 3 |  | 3 |  | core |
-| EX12-062 | ? | 5 | 1 |  | 4 |  | core |
-| EX12-063 | ? | 5 | 1 |  | 4 |  | core |
-| EX12-065 | ? | 7 | 3 |  | 1 | 3 | core |
-| EX12-070 | ? | 6 | 4 | 1 | 1 |  | core |
-| EX12-074 | ? | 4 | 3 |  | 1 |  | core |
-| EX12-075 | ? | 4 | 2 |  | 1 | 1 | core |
-| EX12-076 | ? | 9 |  |  | 9 |  | core |
-| BT11-089 | ? | 4 |  |  |  | 4 | support |
-| BT20-037 | ? | 5 |  |  |  | 5 | support |
-| BT8-084 | ? | 3 |  |  |  | 3 | support |
-| BT8-097 | ? | 4 |  |  |  | 4 | support |
-| EX12-002 | ? | 4 |  |  |  | 4 | support |
-| EX12-006 | ? | 5 |  |  |  | 5 | support |
-| EX12-012 | ? | 6 |  |  |  | 6 | support |
-| EX12-015 | ? | 7 |  |  |  | 7 | support |
-| EX12-019 | ? | 11 |  |  |  | 11 | support |
-| EX12-022 | ? | 5 |  |  |  | 5 | support |
-| EX12-025 | ? | 6 |  |  |  | 6 | support |
-| EX12-029 | ? | 7 |  |  |  | 7 | support |
-| EX12-034 | ? | 7 |  |  |  | 7 | support |
-| EX12-039 | ? | 4 |  |  |  | 4 | support |
-| EX12-043 | ? | 4 |  |  |  | 4 | support |
-| EX12-045 | ? | 6 |  |  |  | 6 | support |
-| EX12-048 | ? | 8 |  |  |  | 8 | support |
-| EX12-056 | ? | 8 |  |  |  | 8 | support |
-| EX12-057 | ? | 8 |  |  |  | 8 | support |
-| EX12-071 | ? | 6 |  |  |  | 6 | support |
-| EX4-074 | ? | 4 |  |  |  | 4 | support |
-| P-130 | ? | 3 |  |  |  | 3 | support |
-| ST1-12 | ? | 2 |  |  |  | 2 | support |
-| ST1-15 | ? | 3 | 1 |  |  | 2 | support |
-| ST16-14 | ? | 3 |  |  |  | 3 | support |
-| ST19-14 | ? | 4 |  |  |  | 4 | support |
+| EX1-066 | Analog Youth | 3 | 1 |  | 1 | 1 | core |
+| EX12-004 | Onibimon | 5 |  |  | 5 |  | core |
+| EX12-009 | Wankomon | 4 | 2 |  | 2 |  | core |
+| EX12-011 | Seasarmon | 5 | 2 |  | 2 | 1 | core |
+| EX12-020 | Gasamon | 5 | 4 |  | 1 |  | core |
+| EX12-026 | Shellmon | 6 | 3 |  | 2 | 1 | core |
+| EX12-031 | MarineBullmon | 5 | 1 |  | 4 |  | core |
+| EX12-036 | Ryugumon | 9 | 2 |  | 7 |  | core |
+| EX12-046 | Shishimamon | 6 | 3 | 1 | 2 |  | core |
+| EX12-047 | Amaterasumon | 8 | 1 |  | 6 | 1 | core |
+| EX12-061 | Hanimon | 6 | 3 |  | 3 |  | core |
+| EX12-062 | Kokeshimon | 5 | 1 |  | 4 |  | core |
+| EX12-063 | Karakurumon | 5 | 1 |  | 4 |  | core |
+| EX12-065 | Kaguyamon | 7 | 3 |  | 1 | 3 | core |
+| EX12-070 | Sanmyojin Arrival | 6 | 4 | 1 | 1 |  | core |
+| EX12-074 | Genshi Continent & Ashin | 4 | 3 |  | 1 |  | core |
+| EX12-075 | Kunlun's Imperial Decree | 4 | 2 |  | 1 | 1 | core |
+| EX12-076 | Susanoomon | 9 |  |  | 9 |  | core |
+| BT11-089 | Akiho Rindou | 4 |  |  |  | 4 | support |
+| BT20-037 | Chaosmon: Valdur Arm | 5 |  |  |  | 5 | support |
+| BT8-084 | Kimeramon | 3 |  |  |  | 3 | support |
+| BT8-097 | Crimson Blaze | 4 |  |  |  | 4 | support |
+| EX12-002 | Mococomon | 4 |  |  |  | 4 | support |
+| EX12-006 | Kakamon | 5 |  |  |  | 5 | support |
+| EX12-012 | Apemon | 6 |  |  |  | 6 | support |
+| EX12-015 | Gokuumon | 7 |  |  |  | 7 | support |
+| EX12-019 | Nezhamon | 11 |  |  |  | 11 | support |
+| EX12-022 | Kamemon | 5 |  |  |  | 5 | support |
+| EX12-025 | Gawappamon | 6 |  |  |  | 6 | support |
+| EX12-029 | Sagomon | 7 |  |  |  | 7 | support |
+| EX12-034 | Erlangmon | 7 |  |  |  | 7 | support |
+| EX12-039 | Takinmon | 4 |  |  |  | 4 | support |
+| EX12-043 | Hakubamon | 4 |  |  |  | 4 | support |
+| EX12-045 | Sanzomon | 6 |  |  |  | 6 | support |
+| EX12-048 | SeitenGokuumon | 8 |  |  |  | 8 | support |
+| EX12-056 | Cho-Hakkaimon | 8 |  |  |  | 8 | support |
+| EX12-057 | Takutoumon | 8 |  |  |  | 8 | support |
+| EX12-071 | Saneiketsu Invitation | 6 |  |  |  | 6 | support |
+| EX4-074 | ShineGreymon: Ruin Mode | 4 |  |  |  | 4 | support |
+| P-130 | Lui Ohwada | 3 |  |  |  | 3 | support |
+| ST1-12 | Tai Kamiya | 2 |  |  |  | 2 | support |
+| ST1-15 | Giga Destroyer | 3 | 1 |  |  | 2 | support |
+| ST16-14 | Matt Ishida | 3 |  |  |  | 3 | support |
+| ST19-14 | Arisa Kinosaki | 4 |  |  |  | 4 | support |
 
 ## What "confirmed" means here
 
