@@ -57,6 +57,7 @@ pub use projection::{
     parse_sidecar, PermanentProjection, SeatProjection, StateProjection, KEYWORD_PROBES,
 };
 pub use scenario::{
-    Assertion, Expect, Scenario, ScenarioDecks, ScenarioSeat, ScenarioStep, StepAction,
+    Assertion, Expect, Scenario, ScenarioDecks, ScenarioSeat, ScenarioStep, SelectPayload,
+    StepAction,
 };
 pub use verdict::{ClauseVerdict, Verdict, VerdictStore, VerdictSummary};

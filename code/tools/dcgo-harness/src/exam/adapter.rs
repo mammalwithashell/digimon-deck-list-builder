@@ -15,11 +15,14 @@
 
 use std::collections::HashMap;
 
+use digimon_engine::dcgo_recording::{FrameTarget, SelectionRow};
 use digimon_engine::runners::replay::{RecordingSource, ReplayError, StepPolicy, StepSpec};
+use digimon_engine::runners::selection_resolve::{payload_pick_count, resolve_next};
+use digimon_engine::selection::SelectionKind;
 use digimon_engine::{CardData, Game, PlayerId, Rules};
 
 use crate::exam::lower::{lower_step, LowerError};
-use crate::exam::scenario::Scenario;
+use crate::exam::scenario::{Expect, Scenario, SelectPayload, StepAction};
 
 /// Seat that acts first in a scenario game.
 ///
@@ -31,10 +34,33 @@ use crate::exam::scenario::Scenario;
 /// adapter's -- but our side must at least be deterministic.
 const SCENARIO_FIRST_PLAYER: PlayerId = 0;
 
+/// The wire carrier for one lowered `select:` step — the SYMBOLIC identities
+/// the emitted DCGO job will carry (`select_card_ids` / `select_value` /
+/// `select_has_bool`+`select_bool` / `select_cancel`), never engine action
+/// ids. For `targets:` picks, `card_ids` holds the targeted permanents'
+/// TOP-CARD ids resolved against the live game at lowering time: identity
+/// matching on DCGO's side dissolves the compact-ordering divergence between
+/// the two engines' battle-area orderings.
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct SelectWire {
+    pub card_ids: Vec<String>,
+    pub value: Option<i32>,
+    pub bool_answer: Option<bool>,
+    pub cancel: bool,
+}
+
+/// One lowered scenario step, as the job emitter consumes it: either a
+/// concrete 2192-space action id, or a selection answer carried symbolically.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LoweredStep {
+    Action(u16),
+    Select(SelectWire),
+}
+
 #[derive(Debug)]
 pub struct ScenarioAdapter {
     steps: Vec<StepSpec>,
-    lowered: Vec<u16>,
+    lowered: Vec<LoweredStep>,
     deck_p0: Vec<String>,
     deck_p1: Vec<String>,
     seed: u64,
@@ -65,46 +91,100 @@ impl ScenarioAdapter {
 
         for (i, step) in s.steps.iter().enumerate() {
             let actor = step.actor as PlayerId;
-            let action_id = lower_step(&game, actor, &step.act).map_err(|e| match e {
-                LowerError::NoMatch { intent, legal } => format!(
-                    "step {i}: no legal action matches {intent}\n  legal here:\n    {}",
-                    legal.join("\n    ")
-                ),
-                LowerError::Ambiguous { intent, matches } => format!(
-                    "step {i}: {intent} is ambiguous -- {matches:?} all match. \
-                     Narrow the step; picking arbitrarily would silently answer \
-                     a different question than the scenario asks."
-                ),
-            })?;
+            match &step.act {
+                StepAction::Select(payload) => {
+                    let (row, wire) =
+                        build_selection_row(&game, i, actor, payload, step.expect.as_ref())?;
+                    check_select_expectations(&game, i, step.expect.as_ref())?;
+                    steps.push(StepSpec {
+                        actor,
+                        // Placeholder: the replay driver branches on
+                        // `selection` BEFORE it ever reads `action_id`, and
+                        // the job emitter reads the SelectWire, never this.
+                        action_id: 0,
+                        phase: game.current_phase.py_name().to_string(),
+                        source: "scenario".to_string(),
+                        memory_after: None,
+                        dcgo_memory: None,
+                        turn: Some(game.turn_count as u64),
+                        is_game_over: None,
+                        expected_digest: None,
+                        selection: Some(row.clone()),
+                        board_p0: None,
+                        board_p1: None,
+                    });
+                    lowered.push(LoweredStep::Select(wire));
+                    advance_through_selection(&mut game, i, actor, &row)?;
+                }
+                _ => {
+                    let action_id = lower_step(&game, actor, &step.act).map_err(|e| match e {
+                        LowerError::NoMatch { intent, legal } => format!(
+                            "step {i}: no legal action matches {intent}\n  legal here:\n    {}",
+                            legal.join("\n    ")
+                        ),
+                        LowerError::Ambiguous { intent, matches } => format!(
+                            "step {i}: {intent} is ambiguous -- {matches:?} all match. \
+                             Narrow the step; picking arbitrarily would silently answer \
+                             a different question than the scenario asks."
+                        ),
+                    })?;
 
-            steps.push(StepSpec {
-                actor,
-                action_id,
-                phase: game.current_phase.py_name().to_string(),
-                source: "scenario".to_string(),
-                memory_after: None,
-                dcgo_memory: None,
-                turn: Some(game.turn_count as u64),
-                is_game_over: None,
-                expected_digest: None,
-                selection: None,
-                board_p0: None,
-                board_p1: None,
-            });
-            lowered.push(action_id);
+                    steps.push(StepSpec {
+                        actor,
+                        action_id,
+                        phase: game.current_phase.py_name().to_string(),
+                        source: "scenario".to_string(),
+                        memory_after: None,
+                        dcgo_memory: None,
+                        turn: Some(game.turn_count as u64),
+                        is_game_over: None,
+                        expected_digest: None,
+                        selection: None,
+                        board_p0: None,
+                        board_p1: None,
+                    });
+                    lowered.push(LoweredStep::Action(action_id));
 
-            // `Game::decode_action` returns unit and SILENTLY IGNORES an
-            // illegal or out-of-range id, so there is no error to propagate
-            // from the apply itself. The mask check below is what makes a bad
-            // lowering loud instead of silent; without it a scenario could
-            // "run" while every step after the first was a no-op.
-            let mask = digimon_engine::action::mask::build_action_mask(&game, actor);
-            if mask[action_id as usize] != 1.0 {
-                return Err(format!(
-                    "step {i}: lowered action {action_id} is not in the mask"
-                ));
+                    // `Game::decode_action` returns unit and SILENTLY IGNORES an
+                    // illegal or out-of-range id, so there is no error to propagate
+                    // from the apply itself. The mask check below is what makes a bad
+                    // lowering loud instead of silent; without it a scenario could
+                    // "run" while every step after the first was a no-op.
+                    let mask = digimon_engine::action::mask::build_action_mask(&game, actor);
+                    if mask[action_id as usize] != 1.0 {
+                        return Err(format!(
+                            "step {i}: lowered action {action_id} is not in the mask"
+                        ));
+                    }
+                    game.decode_action(action_id, actor);
+                }
             }
-            game.decode_action(action_id, actor);
+
+            // The pending-selection invariant, both directions of the exam's
+            // prompt-mismatch finding. If our engine parked a prompt, the very
+            // next step must answer it -- any other step would lower against a
+            // position the author never saw (the selection mask), and on the
+            // DCGO side the same prompt would sit unanswered until the job
+            // timeout, indistinguishable from a hung Unity.
+            if let Some(pending) = game.pending_selection.as_ref() {
+                let answered_next = matches!(
+                    s.steps.get(i + 1).map(|n| &n.act),
+                    Some(StepAction::Select(_))
+                );
+                if !answered_next {
+                    return Err(format!(
+                        "step {i}: our engine asks a selection here; the scenario must \
+                         answer it with a `select:` step (pending kind: {:?}, prompt: '{}'){}",
+                        pending.kind,
+                        pending.prompt,
+                        if i + 1 == s.steps.len() {
+                            " -- the line ends while the prompt is still parked"
+                        } else {
+                            ""
+                        }
+                    ));
+                }
+            }
         }
 
         Ok(ScenarioAdapter {
@@ -118,8 +198,244 @@ impl ScenarioAdapter {
         })
     }
 
-    pub fn lowered_action_ids(&self) -> &[u16] {
+    /// The action ids of the non-select steps, in line order. Select steps are
+    /// carried symbolically and have no single action id -- see
+    /// [`Self::lowered_steps`] for the full per-step carrier.
+    pub fn lowered_action_ids(&self) -> Vec<u16> {
+        self.lowered
+            .iter()
+            .filter_map(|l| match l {
+                LoweredStep::Action(id) => Some(*id),
+                LoweredStep::Select(_) => None,
+            })
+            .collect()
+    }
+
+    /// One carrier per scenario step: `Action(id)` or `Select(wire)`.
+    pub fn lowered_steps(&self) -> &[LoweredStep] {
         &self.lowered
+    }
+}
+
+/// The unambiguous `SelectionKind` -> DCGO prompt-class mappings, for the
+/// LOOSE sim-side `expect.prompt` check on select steps. Kinds whose DCGO
+/// class depends on context (`Target` may be `SelectAttackEffect` or
+/// `SelectPermanentEffect`; `EffectChoice` may be `OptionalSkill`,
+/// `MultipleSkills`, or `SelectCountEffect`; ...) return `None` and are left
+/// unasserted here with a printed note -- the STRICT assertion is DCGO's job,
+/// where the real prompt class is in hand.
+fn dcgo_prompt_name(kind: &SelectionKind) -> Option<&'static str> {
+    match kind {
+        SelectionKind::Hand => Some("SelectHandEffect"),
+        SelectionKind::OwnField | SelectionKind::OppField | SelectionKind::AnyField => {
+            Some("SelectPermanentEffect")
+        }
+        SelectionKind::Trash | SelectionKind::Reveal => Some("SelectCardEffect"),
+        _ => None,
+    }
+}
+
+/// Sim-side `expect.prompt` on a select step: assert loosely against the
+/// parked prompt's kind where the kind->DCGO mapping is unambiguous, and say
+/// so out loud where it is not.
+fn check_select_expectations(game: &Game, i: usize, expect: Option<&Expect>) -> Result<(), String> {
+    let Some(want) = expect.and_then(|e| e.prompt.as_deref()) else {
+        return Ok(());
+    };
+    let Some(pending) = game.pending_selection.as_ref() else {
+        println!(
+            "  note: step {i} expect.prompt '{want}' cannot be asserted sim-side -- our \
+             engine auto-resolved the prompt; DCGO will assert it strictly"
+        );
+        return Ok(());
+    };
+    match dcgo_prompt_name(&pending.kind) {
+        Some(name) if name == want => Ok(()),
+        Some(name) => Err(format!(
+            "step {i}: expect.prompt is '{want}' but our engine's parked {:?} prompt \
+             maps to DCGO '{name}'",
+            pending.kind
+        )),
+        None => {
+            println!(
+                "  note: step {i} expect.prompt '{want}' not asserted sim-side (kind {:?} \
+                 has no unambiguous DCGO prompt mapping); DCGO will assert it strictly",
+                pending.kind
+            );
+            Ok(())
+        }
+    }
+}
+
+/// Resolve one `own.field.N` / `opp.field.N` slot reference against the live
+/// game, returning both halves the brief requires: the `FrameTarget` our own
+/// `resolve_next` consumes, and the targeted permanent's TOP-CARD id for the
+/// wire (DCGO matches identities against ITS candidate list).
+fn resolve_target_ref(
+    game: &Game,
+    actor: PlayerId,
+    reference: &str,
+) -> Result<(FrameTarget, String), String> {
+    let parts: Vec<&str> = reference.split('.').collect();
+    let err = |why: &str| {
+        format!(
+            "target '{reference}': {why} (expected `own.field.N` or `opp.field.N`)"
+        )
+    };
+    if parts.len() != 3 || parts[1] != "field" {
+        return Err(err("not a field slot reference"));
+    }
+    let player: PlayerId = match parts[0] {
+        "own" => actor,
+        "opp" => 1 - actor,
+        _ => return Err(err("side must be `own` or `opp`")),
+    };
+    let slot: usize = parts[2]
+        .parse()
+        .map_err(|_| err("slot index is not a number"))?;
+    let perm = game.player(player).battle_area.get(slot).ok_or_else(|| {
+        format!(
+            "target '{reference}': player {player} has {} battle-area permanent(s), \
+             none at slot {slot}",
+            game.player(player).battle_area.len()
+        )
+    })?;
+    let top = perm.top_card().card_id(&game.card_data).to_string();
+    Ok((
+        FrameTarget {
+            player: player as u8,
+            frame: slot as i32,
+        },
+        top,
+    ))
+}
+
+/// Build the `SelectionRow` (for our own resolve path) and the `SelectWire`
+/// (for the emitted DCGO job) from one symbolic select payload, resolved
+/// against the CURRENT game state at lowering time.
+fn build_selection_row(
+    game: &Game,
+    i: usize,
+    actor: PlayerId,
+    payload: &SelectPayload,
+    expect: Option<&Expect>,
+) -> Result<(SelectionRow, SelectWire), String> {
+    if let Some(pending) = game.pending_selection.as_ref() {
+        if pending.selecting_player != actor {
+            return Err(format!(
+                "step {i}: the select step is authored for actor {actor}, but our \
+                 engine's parked {:?} prompt belongs to player {}",
+                pending.kind, pending.selecting_player
+            ));
+        }
+    }
+
+    let mut row = SelectionRow {
+        step: i as u32,
+        actor: actor as u8,
+        prompt: expect
+            .and_then(|e| e.prompt.clone())
+            .or_else(|| {
+                game.pending_selection
+                    .as_ref()
+                    .and_then(|p| dcgo_prompt_name(&p.kind))
+                    .map(str::to_string)
+            })
+            .unwrap_or_else(|| "select".to_string()),
+        phase: game.current_phase.py_name().to_string(),
+        targets: None,
+        card_ids: None,
+        indexes: None,
+        count: None,
+        candidates: None,
+        int_value: None,
+        bool_value: None,
+        cancel: None,
+        board_p0: None,
+        board_p1: None,
+        memory: None,
+        mechanic: None,
+        zone: None,
+    };
+    let mut wire = SelectWire::default();
+
+    match payload {
+        SelectPayload::Cards(ids) => {
+            row.card_ids = Some(ids.clone());
+            wire.card_ids = ids.clone();
+        }
+        SelectPayload::Targets(refs) => {
+            let mut frames = Vec::with_capacity(refs.len());
+            let mut tops = Vec::with_capacity(refs.len());
+            for r in refs {
+                let (frame, top) =
+                    resolve_target_ref(game, actor, r).map_err(|e| format!("step {i}: {e}"))?;
+                frames.push(frame);
+                tops.push(top);
+            }
+            row.targets = Some(frames);
+            wire.card_ids = tops;
+        }
+        SelectPayload::Value(v) => {
+            row.count = Some(*v);
+            wire.value = Some(*v);
+        }
+        SelectPayload::Yes => {
+            row.bool_value = Some(true);
+            wire.bool_answer = Some(true);
+        }
+        SelectPayload::Decline => {
+            row.cancel = Some(true);
+            wire.cancel = true;
+        }
+    }
+    Ok((row, wire))
+}
+
+/// Advance the lowering game through one selection row with the SAME resolver
+/// the replay driver uses (`resolve_next` + `decode_action` until `Ok(None)`),
+/// so later steps lower against the post-selection state. Reused, not
+/// reimplemented: a second resolution path here would let lowering and replay
+/// disagree about what the row means.
+fn advance_through_selection(
+    game: &mut Game,
+    i: usize,
+    actor: PlayerId,
+    row: &SelectionRow,
+) -> Result<(), String> {
+    if game.pending_selection.is_none() {
+        // `resolve_next` returns `Ok(None)` immediately here: the engine
+        // auto-resolved a prompt DCGO still asks about. Allowed -- the row is
+        // kept for the wire, and the replay driver skips it the same way.
+        println!(
+            "  note: step {i} select answered no live prompt -- our engine auto-resolved \
+             it; the row is kept for the DCGO wire"
+        );
+    }
+    let mut picks_done = 0usize;
+    loop {
+        match resolve_next(game, row, picks_done) {
+            Ok(None) => return Ok(()),
+            Ok(Some(id)) => {
+                game.decode_action(id, actor);
+                picks_done += 1;
+                // Same safety valve as the replay driver: a payload cannot
+                // sanely resolve into more actions than picks + trailing PASS.
+                if picks_done > payload_pick_count(row) + 1 {
+                    return Err(format!(
+                        "step {i}: selection resolution ran away ({picks_done} engine \
+                         actions for a {}-pick payload)",
+                        payload_pick_count(row)
+                    ));
+                }
+            }
+            Err(e) => {
+                return Err(format!(
+                    "step {i}: the select payload cannot be resolved against our \
+                     engine's prompt: {e}"
+                ))
+            }
+        }
     }
 }
 
@@ -255,6 +571,189 @@ steps:
             "{:?}",
             session.divergences()
         );
+    }
+
+    // ── select steps ────────────────────────────────────────────────────
+
+    /// The ST-1 deck reordered so `prefix` is the top-first deal/draw order:
+    /// prefix[0..5] is the opening hand, prefix[5..10] the security stack,
+    /// prefix[10..] the draws — the same deal order the EX12 scenarios probed
+    /// empirically. `Player::draw` pops the END of the deck vector, so the
+    /// prefix is appended reversed (mirrors `ordered_deck` in main.rs).
+    fn st1_deck_stacked(prefix: &[&str]) -> Vec<String> {
+        let (mut main, egg) = test_support::st1_decks();
+        for id in prefix {
+            let pos = main
+                .iter()
+                .position(|c| c == id)
+                .unwrap_or_else(|| panic!("{id} not left in the ST-1 main deck"));
+            main.remove(pos);
+        }
+        main.extend(egg);
+        main.extend(prefix.iter().rev().map(|s| s.to_string()));
+        main
+    }
+
+    /// A real ST-1 line whose step 4 (play ST1-15 Giga Destroyer, "[Main]
+    /// Delete up to 2 of your opponent's Digimon with 4000 DP or less") parks
+    /// a field selection over p1's ST1-03 — the real-card fixture for the
+    /// whole `select:` path.
+    ///
+    /// Probed empirically (2026-08-22): p0 must have a RED card in its battle
+    /// area before ST1-15 becomes playable (the breeding-area Lv2 alone did
+    /// not satisfy the option color gate), hence the turn-1 ST1-02 play; and
+    /// p0's turn-3 Breeding phase is auto-skipped by the engine (the occupied
+    /// breeding area has no legal hatch/move), so the line goes straight from
+    /// p1's ST1-03 play to p0's Main. The cost-2 / cost-3 plays each push
+    /// memory across zero, ending those turns without explicit passes.
+    const SELECT_LINE: &str = r#"
+card: ST1-15
+clause: ST1-15#effect#0
+seed: 11
+decks:
+  p0: { stack: [], rest: st1 }
+  p1: { stack: [], rest: st1 }
+steps:
+  - actor: 0
+    do: { hatch: {} }
+  - actor: 0
+    do: { play: { card: ST1-02, from: hand } }
+  - actor: 1
+    do: { pass: {} }
+  - actor: 1
+    do: { play: { card: ST1-03, from: hand } }
+  - actor: 0
+    do: { play: { card: ST1-15, from: hand } }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+"#;
+
+    /// Deterministic opening hands + draws for SELECT_LINE: exactly one copy
+    /// of each played card in its seat's hand, so every intent lowers
+    /// unambiguously.
+    fn select_line_decks() -> (Vec<String>, Vec<String>) {
+        let p0 = st1_deck_stacked(&[
+            "ST1-15", "ST1-02", "ST1-04", "ST1-05", "ST1-06", // hand
+            "ST1-13", "ST1-13", "ST1-14", "ST1-14", "ST1-12", // security
+            "ST1-02", // p0's turn-3 draw — NOT a second ST1-15
+        ]);
+        let p1 = st1_deck_stacked(&[
+            "ST1-03", "ST1-04", "ST1-05", "ST1-06", "ST1-07", // hand
+            "ST1-09", "ST1-09", "ST1-12", "ST1-12", "ST1-13", // security
+            "ST1-08", // p1's turn-2 draw — NOT a second ST1-03
+        ]);
+        (p0, p1)
+    }
+
+    #[test]
+    fn a_select_step_lowers_through_a_real_selection() {
+        let card_data = test_support::load_card_data();
+        let (p0, p1) = select_line_decks();
+        let s = Scenario::from_yaml(SELECT_LINE).unwrap();
+        let a = ScenarioAdapter::from_scenario(&s, p0, p1, &card_data)
+            .expect("the select line should lower");
+
+        // The select step rides the replay wire as a semantic SelectionRow…
+        let spec = &a.steps()[5];
+        let row = spec.selection.as_ref().expect("step 5 carries a selection");
+        let targets = row.targets.as_deref().expect("targets present");
+        assert_eq!(targets.len(), 1);
+        assert_eq!(
+            (targets[0].player, targets[0].frame),
+            (1, 0),
+            "opp.field.0 for actor 0 is (player 1, slot 0)"
+        );
+
+        // …and the wire carrier holds the targeted permanent's TOP-CARD id,
+        // resolved at lowering time — the identity DCGO matches against its
+        // own candidate list.
+        match &a.lowered_steps()[5] {
+            LoweredStep::Select(w) => {
+                assert_eq!(w.card_ids, vec!["ST1-03".to_string()]);
+                assert_eq!(w.value, None);
+                assert_eq!(w.bool_answer, None);
+                assert!(!w.cancel);
+            }
+            other => panic!("expected a Select carrier, got {other:?}"),
+        }
+        // 5 action steps, 1 select step.
+        assert_eq!(a.lowered_action_ids().len(), 5);
+
+        // The full session replays the same line through the shared replay
+        // core with no divergence.
+        let mut session = ReplaySession::with_source(Box::new(a), &card_data, false)
+            .expect("session should build");
+        session.run_to_completion();
+        assert!(session.is_complete());
+        assert!(
+            session.divergences().is_empty(),
+            "{:?}",
+            session.divergences()
+        );
+        // The selection actually resolved: Agumon was deleted.
+        assert!(
+            session.game.player(1).battle_area.is_empty(),
+            "the selected Agumon should have been deleted"
+        );
+    }
+
+    #[test]
+    fn an_unanswered_selection_fails_lowering_loudly() {
+        // Drop the select step: our engine parks the ST1-15 prompt and the
+        // line just… ends. That must be a lowering failure naming the pending
+        // kind — on the DCGO side the same prompt would sit unanswered until
+        // the job timeout, indistinguishable from a hung Unity.
+        let text = SELECT_LINE.replace(
+            "  - actor: 0\n    do: { select: { targets: [opp.field.0] } }\n    expect: { prompt: SelectPermanentEffect }",
+            "",
+        );
+        let card_data = test_support::load_card_data();
+        let (p0, p1) = select_line_decks();
+        let s = Scenario::from_yaml(&text).unwrap();
+        let err = ScenarioAdapter::from_scenario(&s, p0, p1, &card_data).unwrap_err();
+        assert!(
+            err.contains("our engine asks a selection here"),
+            "got: {err}"
+        );
+        assert!(err.contains("pending kind"), "must name the kind: {err}");
+    }
+
+    #[test]
+    fn a_wrong_expect_prompt_on_a_select_step_fails_lowering() {
+        // The ST1-15 prompt is a field-permanent pick; its kind maps
+        // unambiguously to DCGO's SelectPermanentEffect, so claiming
+        // SelectHandEffect is a sim-side-checkable authoring error.
+        let text = SELECT_LINE.replace(
+            "expect: { prompt: SelectPermanentEffect }",
+            "expect: { prompt: SelectHandEffect }",
+        );
+        let card_data = test_support::load_card_data();
+        let (p0, p1) = select_line_decks();
+        let s = Scenario::from_yaml(&text).unwrap();
+        let err = ScenarioAdapter::from_scenario(&s, p0, p1, &card_data).unwrap_err();
+        assert!(err.contains("SelectHandEffect"), "got: {err}");
+        assert!(err.contains("SelectPermanentEffect"), "got: {err}");
+    }
+
+    #[test]
+    fn a_select_step_with_no_live_prompt_is_an_allowed_auto_resolve() {
+        // A `select:` answering a prompt our engine never parks (it
+        // auto-resolves some prompts DCGO still asks about) is allowed: the
+        // row is kept for the wire and skipped locally. `resolve_next`
+        // returns Ok(None) immediately, which is the documented contract.
+        let text = LINE.replace(
+            "  - actor: 0\n    do: { pass: {} }",
+            "  - actor: 0\n    do: { pass: {} }\n  - actor: 0\n    do: { select: { decline: true } }",
+        );
+        let card_data = test_support::load_card_data();
+        let deck = simple_deck();
+        let s = Scenario::from_yaml(&text).unwrap();
+        let a = ScenarioAdapter::from_scenario(&s, deck.clone(), deck, &card_data)
+            .expect("auto-resolved select must not fail lowering");
+        assert_eq!(a.steps().len(), 2);
+        assert!(a.steps()[1].selection.is_some(), "the row rides the wire");
+        assert!(matches!(a.lowered_steps()[1], LoweredStep::Select(_)));
     }
 
     #[test]

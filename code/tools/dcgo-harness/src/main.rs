@@ -721,7 +721,7 @@ fn exam_one(
     // Unity time is spent.
     let adapter = ScenarioAdapter::from_scenario(&s, deck_p0, deck_p1, card_data)?;
     *lowered += 1;
-    println!("  lowered {} step(s): {:?}", s.steps.len(), adapter.lowered_action_ids());
+    println!("  lowered {} step(s): {:?}", s.steps.len(), adapter.lowered_steps());
 
     // Sim-only path (checked in run_exam): the line lowered cleanly, so emit
     // the DCGO scripted job that runs the same line against the oracle.
@@ -732,7 +732,7 @@ fn exam_one(
             .ok_or_else(|| format!("unnamed scenario {}", path.display()))?;
         let e0 = book.resolve(&s.decks.p0.rest)?;
         let e1 = book.resolve(&s.decks.p1.rest)?;
-        let job = build_exam_job(stem, &s, e0, e1, adapter.lowered_action_ids())?;
+        let job = build_exam_job(stem, &s, e0, e1, adapter.lowered_steps())?;
         std::fs::create_dir_all(dir)
             .map_err(|e| format!("creating {}: {e}", dir.display()))?;
         let out = dir.join(format!("{}.json", job.job_id));
@@ -1268,12 +1268,32 @@ struct ExamDeckOrder {
 /// One scripted answer: which seat, which lowered action id, and which prompt
 /// it expects to be answering (asserted BEFORE answering — see the exam doc).
 /// Our prompt vocabulary maps 1:1 onto DCGO's, so the name passes through.
+///
+/// A `select:` step carries no action id — it answers a selection RPC, not a
+/// main-phase/breeding prompt — and instead fills the `select_*` fields, whose
+/// names are the C# `HarnessJobStep` contract verbatim (`select_card_ids` /
+/// `select_value` / `select_has_bool` + `select_bool` / `select_cancel`; the
+/// C# side treats an absent `select_value` as `int.MinValue` via its field
+/// initializer, so absence is expressed by OMITTING the key). The values are
+/// the scenario's SYMBOLIC identities (card ids, counts, bools), never engine
+/// action ids: DCGO resolves them against its own candidate lists.
 #[derive(Debug, Serialize)]
 struct ScriptedInput {
     actor: u8,
-    action_id: u16,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    action_id: Option<u16>,
     #[serde(skip_serializing_if = "Option::is_none")]
     expect_prompt: Option<String>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    select_card_ids: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    select_value: Option<i32>,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    select_has_bool: bool,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    select_bool: bool,
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    select_cancel: bool,
 }
 
 /// One seat's flat job deck in DCGO's top-first convention: full main deck
@@ -1320,7 +1340,7 @@ fn build_exam_job(
     s: &dcgo_harness::exam::scenario::Scenario,
     entry_p0: &DeckEntry,
     entry_p1: &DeckEntry,
-    lowered: &[u16],
+    lowered: &[dcgo_harness::exam::adapter::LoweredStep],
 ) -> Result<ExamJobSpec, String> {
     if lowered.len() != s.steps.len() {
         return Err(format!(
@@ -1348,13 +1368,31 @@ fn build_exam_job(
         .steps
         .iter()
         .zip(lowered)
-        .map(|(step, id)| ScriptedInput {
-            actor: step.actor,
-            action_id: *id,
-            expect_prompt: step
-                .expect
-                .as_ref()
-                .and_then(|e| e.prompt.clone()),
+        .map(|(step, l)| {
+            use dcgo_harness::exam::adapter::LoweredStep;
+            let expect_prompt = step.expect.as_ref().and_then(|e| e.prompt.clone());
+            match l {
+                LoweredStep::Action(id) => ScriptedInput {
+                    actor: step.actor,
+                    action_id: Some(*id),
+                    expect_prompt,
+                    select_card_ids: Vec::new(),
+                    select_value: None,
+                    select_has_bool: false,
+                    select_bool: false,
+                    select_cancel: false,
+                },
+                LoweredStep::Select(w) => ScriptedInput {
+                    actor: step.actor,
+                    action_id: None,
+                    expect_prompt,
+                    select_card_ids: w.card_ids.clone(),
+                    select_value: w.value,
+                    select_has_bool: w.bool_answer.is_some(),
+                    select_bool: w.bool_answer.unwrap_or(false),
+                    select_cancel: w.cancel,
+                },
+            }
         })
         .collect();
 
@@ -1384,7 +1422,13 @@ fn build_exam_job(
 #[cfg(test)]
 mod emit_job_tests {
     use super::*;
+    use dcgo_harness::exam::adapter::{LoweredStep, SelectWire};
     use dcgo_harness::exam::scenario::Scenario;
+
+    /// Shorthand: a lowered line of plain action ids.
+    fn actions(ids: &[u16]) -> Vec<LoweredStep> {
+        ids.iter().map(|id| LoweredStep::Action(*id)).collect()
+    }
 
     const LINE: &str = r#"
 card: ST1-12
@@ -1418,7 +1462,7 @@ steps:
         // top-first job deck must be [B, D, C, A] -- stack first, remainder
         // reversed -- with the egg deck appended after the main deck.
         let s = Scenario::from_yaml(LINE).unwrap();
-        let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &[62, 62, 62]).unwrap();
+        let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
         assert_eq!(job.decks.p0, vec!["B", "D", "C", "A", "E1"]);
         // No stack: the whole main deck reversed, then eggs.
         assert_eq!(job.decks.p1, vec!["D", "C", "B", "A", "E1"]);
@@ -1429,10 +1473,10 @@ steps:
     #[test]
     fn inputs_carry_actor_action_id_and_expect_prompt() {
         let s = Scenario::from_yaml(LINE).unwrap();
-        let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &[62, 63, 64]).unwrap();
+        let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &actions(&[62, 63, 64])).unwrap();
         assert_eq!(job.inputs.len(), 3);
         assert_eq!(job.inputs[0].actor, 0);
-        assert_eq!(job.inputs[0].action_id, 62);
+        assert_eq!(job.inputs[0].action_id, Some(62));
         assert_eq!(job.inputs[0].expect_prompt.as_deref(), Some("breeding_action"));
         assert_eq!(job.inputs[1].expect_prompt.as_deref(), Some("main_phase"));
         assert_eq!(job.inputs[2].actor, 1);
@@ -1442,7 +1486,7 @@ steps:
     #[test]
     fn job_identity_fields_come_from_the_scenario() {
         let s = Scenario::from_yaml(LINE).unwrap();
-        let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &[62, 62, 62]).unwrap();
+        let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
         assert_eq!(job.job_id, "exam-ST1-12");
         assert_eq!(job.policy, "scripted");
         assert_eq!(job.seed, 424242);
@@ -1456,7 +1500,7 @@ steps:
             main: entry().main,
             eggs: vec![],
         };
-        let err = build_exam_job("ST1-12", &s, &eggless, &entry(), &[62, 62, 62]).unwrap_err();
+        let err = build_exam_job("ST1-12", &s, &eggless, &entry(), &actions(&[62, 62, 62])).unwrap_err();
         assert!(err.contains("no egg cards"), "got: {err}");
         assert!(err.contains("tiny"), "must name the deck: {err}");
     }
@@ -1466,7 +1510,7 @@ steps:
         // 3 steps but only 2 lowered ids: emitting would hand DCGO a line that
         // answers the wrong prompts from the first mismatch onward.
         let s = Scenario::from_yaml(LINE).unwrap();
-        let err = build_exam_job("ST1-12", &s, &entry(), &entry(), &[62, 62]).unwrap_err();
+        let err = build_exam_job("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62])).unwrap_err();
         assert!(err.contains("desynchronized"), "got: {err}");
     }
 
@@ -1475,7 +1519,7 @@ steps:
         // The DCGO reader is the consumer; these exact key names are the
         // contract (see qa/dcgo-harness/golden-scripted-job.json).
         let s = Scenario::from_yaml(LINE).unwrap();
-        let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &[62, 62, 62]).unwrap();
+        let job = build_exam_job("ST1-12", &s, &entry(), &entry(), &actions(&[62, 62, 62])).unwrap();
         let v: serde_json::Value =
             serde_json::from_str(&serde_json::to_string(&job).unwrap()).unwrap();
         for key in [
@@ -1496,5 +1540,99 @@ steps:
         // A step without `expect:` must OMIT the key, not write null -- the
         // driver treats presence as "assert this prompt".
         assert!(v["inputs"][2].get("expect_prompt").is_none());
+        // A non-select step must not wear ANY selection field: on the C# side
+        // `IsSelection` keys off their presence, and a stray one would turn an
+        // action step into a selection answer.
+        for key in [
+            "select_card_ids",
+            "select_value",
+            "select_has_bool",
+            "select_bool",
+            "select_cancel",
+        ] {
+            assert!(
+                v["inputs"][0].get(key).is_none(),
+                "action step must omit {key}"
+            );
+        }
+    }
+
+    // ── select steps on the wire ────────────────────────────────────────
+    //
+    // The field names below are the C# `HarnessJobStep` contract verbatim
+    // (read from `Assets/Scripts/Script/Harness/HarnessJob.cs`, DCGO
+    // 9bbc7e5f3): `select_card_ids` / `select_value` (absent = int.MinValue
+    // via the field initializer) / `select_has_bool` + `select_bool` /
+    // `select_cancel`. The values are symbolic identities from the scenario,
+    // never engine action ids.
+
+    /// LINE with its final pass replaced by a select step carrying `args`.
+    fn select_line(args: &str) -> Scenario {
+        let text = LINE.replace(
+            "  - actor: 1\n    do: { pass: {} }",
+            &format!("  - actor: 1\n    do: {{ select: {args} }}"),
+        );
+        Scenario::from_yaml(&text).expect("select line parses")
+    }
+
+    fn job_json(s: &Scenario, lowered: &[LoweredStep]) -> serde_json::Value {
+        let job = build_exam_job("ST1-12", s, &entry(), &entry(), lowered).unwrap();
+        serde_json::from_str(&serde_json::to_string(&job).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn select_card_ids_ride_the_wire_and_action_id_is_omitted() {
+        let s = select_line("{ cards: [ST1-03, ST1-03] }");
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::Select(SelectWire {
+            card_ids: vec!["ST1-03".to_string(), "ST1-03".to_string()],
+            ..SelectWire::default()
+        }));
+        let v = job_json(&s, &lowered);
+        assert_eq!(
+            v["inputs"][2]["select_card_ids"],
+            serde_json::json!(["ST1-03", "ST1-03"])
+        );
+        // A selection step answers a selection RPC, not a 2192-space prompt;
+        // an action id here would be an engine-internal leak.
+        assert!(v["inputs"][2].get("action_id").is_none());
+        assert_eq!(v["inputs"][2]["actor"], 1);
+    }
+
+    #[test]
+    fn select_value_and_bool_and_cancel_use_the_csharp_field_names() {
+        let s = select_line("{ value: 3 }");
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::Select(SelectWire {
+            value: Some(3),
+            ..SelectWire::default()
+        }));
+        let v = job_json(&s, &lowered);
+        assert_eq!(v["inputs"][2]["select_value"], 3);
+        assert!(v["inputs"][2].get("select_card_ids").is_none());
+        assert!(v["inputs"][2].get("select_has_bool").is_none());
+
+        let s = select_line("{ yes: true }");
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::Select(SelectWire {
+            bool_answer: Some(true),
+            ..SelectWire::default()
+        }));
+        let v = job_json(&s, &lowered);
+        assert_eq!(v["inputs"][2]["select_has_bool"], true);
+        assert_eq!(v["inputs"][2]["select_bool"], true);
+        // Absent select_value must be OMITTED (the C# initializer, not 0, is
+        // the absent sentinel -- writing 0 would claim a count answer of 0).
+        assert!(v["inputs"][2].get("select_value").is_none());
+
+        let s = select_line("{ decline: true }");
+        let mut lowered = actions(&[62, 62]);
+        lowered.push(LoweredStep::Select(SelectWire {
+            cancel: true,
+            ..SelectWire::default()
+        }));
+        let v = job_json(&s, &lowered);
+        assert_eq!(v["inputs"][2]["select_cancel"], true);
+        assert!(v["inputs"][2].get("select_bool").is_none());
     }
 }

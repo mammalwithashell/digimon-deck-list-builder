@@ -49,7 +49,29 @@ pub enum StepAction {
     Play { card: String, from: String },
     Digivolve { from: String, using: String },
     Attack { attacker: String, target: String },
-    Select { targets: Vec<String> },
+    Select(SelectPayload),
+}
+
+/// The answer a `select:` step gives to the engine's parked selection prompt.
+///
+/// Exactly one form per step, validated loudly at parse time: a step carrying
+/// two forms is answering two different questions, and silently preferring one
+/// would desynchronize the line the same way an unknown verb would.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum SelectPayload {
+    /// Identity picks, in pick order, resolved in occurrence order against the
+    /// prompt's candidate list (documented limitation for duplicate ids).
+    Cards(Vec<String>),
+    /// Field-permanent picks as OUR slot references (`own.field.N` /
+    /// `opp.field.N`), resolved at lowering time against the live game.
+    Targets(Vec<String>),
+    /// Count / generic-int prompts: the VALUE chosen (a cost, a quantity),
+    /// never a branch index.
+    Value(i32),
+    /// Affirm an optional (yes/no) prompt.
+    Yes,
+    /// Cancel / decline an optional prompt.
+    Decline,
 }
 
 /// Every verb this format understands, in the order shown to an author whose
@@ -93,10 +115,89 @@ struct AttackArgs {
     target: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// The raw YAML surface of a `select:` step. All five forms are optional here
+/// so the exactly-one rule can be validated with a message that names every
+/// form, instead of serde's opaque "unknown field" refusal.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 struct SelectArgs {
-    targets: Vec<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    cards: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    targets: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    value: Option<i32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    yes: Option<bool>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    decline: Option<bool>,
+}
+
+/// The five select forms, for the exactly-one error message.
+const SELECT_FORMS: &str = "cards: [..] / targets: [..] / value: N / yes: true / decline: true";
+
+impl SelectArgs {
+    fn into_payload(self) -> Result<SelectPayload, String> {
+        let present = [
+            self.cards.is_some(),
+            self.targets.is_some(),
+            self.value.is_some(),
+            self.yes.is_some(),
+            self.decline.is_some(),
+        ]
+        .iter()
+        .filter(|p| **p)
+        .count();
+        if present != 1 {
+            return Err(format!(
+                "a select step must carry exactly one of {SELECT_FORMS}, got {present}"
+            ));
+        }
+        if let Some(cards) = self.cards {
+            if cards.is_empty() {
+                return Err("select `cards:` must name at least one card id".to_string());
+            }
+            return Ok(SelectPayload::Cards(cards));
+        }
+        if let Some(targets) = self.targets {
+            if targets.is_empty() {
+                return Err("select `targets:` must name at least one slot".to_string());
+            }
+            return Ok(SelectPayload::Targets(targets));
+        }
+        if let Some(value) = self.value {
+            return Ok(SelectPayload::Value(value));
+        }
+        if let Some(yes) = self.yes {
+            if !yes {
+                return Err(
+                    "select `yes:` must be true; to answer no, write `decline: true`".to_string(),
+                );
+            }
+            return Ok(SelectPayload::Yes);
+        }
+        if let Some(decline) = self.decline {
+            if !decline {
+                return Err(
+                    "select `decline:` must be true; to affirm, write `yes: true`".to_string(),
+                );
+            }
+            return Ok(SelectPayload::Decline);
+        }
+        unreachable!("exactly-one check above guarantees a form is present")
+    }
+
+    fn from_payload(p: &SelectPayload) -> SelectArgs {
+        let mut a = SelectArgs::default();
+        match p {
+            SelectPayload::Cards(c) => a.cards = Some(c.clone()),
+            SelectPayload::Targets(t) => a.targets = Some(t.clone()),
+            SelectPayload::Value(v) => a.value = Some(*v),
+            SelectPayload::Yes => a.yes = Some(true),
+            SelectPayload::Decline => a.decline = Some(true),
+        }
+        a
+    }
 }
 
 impl<'de> Deserialize<'de> for StepAction {
@@ -162,7 +263,10 @@ impl<'de> Deserialize<'de> for StepAction {
             }
             "select" => {
                 let a: SelectArgs = args_of::<SelectArgs, D::Error>(verb, args)?;
-                StepAction::Select { targets: a.targets }
+                StepAction::Select(
+                    a.into_payload()
+                        .map_err(|e| D::Error::custom(format!("step `do: select`: {e}")))?,
+                )
             }
             other => {
                 return Err(D::Error::custom(format!(
@@ -209,12 +313,9 @@ impl Serialize for StepAction {
                     target: target.clone(),
                 },
             )?,
-            StepAction::Select { targets } => map.serialize_entry(
-                "select",
-                &SelectArgs {
-                    targets: targets.clone(),
-                },
-            )?,
+            StepAction::Select(payload) => {
+                map.serialize_entry("select", &SelectArgs::from_payload(payload))?
+            }
         }
         map.end()
     }
@@ -439,6 +540,100 @@ assert:
         let yaml = serde_yml::to_string(&s.steps[0].act).expect("serializes");
         let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
         assert_eq!(back, s.steps[0].act);
+    }
+
+    // ── select: the five symbolic forms ─────────────────────────────────
+
+    /// Parse GOOD with its select step's args replaced by `args`, returning
+    /// the parsed payload of that step.
+    fn select_payload_of(args: &str) -> Result<SelectPayload, String> {
+        let text = GOOD.replace(
+            "do: { select: { targets: [opp.field.0] } }",
+            &format!("do: {{ select: {args} }}"),
+        );
+        let s = Scenario::from_yaml(&text)?;
+        match &s.steps[2].act {
+            StepAction::Select(p) => Ok(p.clone()),
+            other => Err(format!("expected a select step, got {other:?}")),
+        }
+    }
+
+    #[test]
+    fn select_targets_form_still_parses() {
+        // Backward compat: every already-authored scenario writes `targets:`.
+        let s = Scenario::from_yaml(GOOD).unwrap();
+        assert_eq!(
+            s.steps[2].act,
+            StepAction::Select(SelectPayload::Targets(vec!["opp.field.0".to_string()]))
+        );
+    }
+
+    #[test]
+    fn select_cards_form_parses() {
+        let p = select_payload_of("{ cards: [EX12-020, EX12-020] }").unwrap();
+        assert_eq!(
+            p,
+            SelectPayload::Cards(vec!["EX12-020".to_string(), "EX12-020".to_string()])
+        );
+    }
+
+    #[test]
+    fn select_value_yes_and_decline_forms_parse() {
+        assert_eq!(select_payload_of("{ value: 3 }").unwrap(), SelectPayload::Value(3));
+        assert_eq!(select_payload_of("{ value: -1 }").unwrap(), SelectPayload::Value(-1));
+        assert_eq!(select_payload_of("{ yes: true }").unwrap(), SelectPayload::Yes);
+        assert_eq!(
+            select_payload_of("{ decline: true }").unwrap(),
+            SelectPayload::Decline
+        );
+    }
+
+    #[test]
+    fn select_with_two_forms_is_rejected_loudly() {
+        // Two forms answer two different questions; preferring one silently
+        // would desynchronize the line.
+        let err = select_payload_of("{ value: 3, yes: true }").unwrap_err();
+        assert!(err.contains("exactly one"), "got: {err}");
+        assert!(err.contains("decline"), "must list the forms: {err}");
+    }
+
+    #[test]
+    fn select_with_no_form_is_rejected_loudly() {
+        let err = select_payload_of("{}").unwrap_err();
+        assert!(err.contains("exactly one"), "got: {err}");
+    }
+
+    #[test]
+    fn select_empty_lists_are_rejected() {
+        assert!(select_payload_of("{ cards: [] }").is_err());
+        assert!(select_payload_of("{ targets: [] }").is_err());
+    }
+
+    #[test]
+    fn select_yes_false_and_decline_false_are_rejected() {
+        // `yes: false` is an author trying to decline through the wrong form;
+        // silently treating it as either answer would be a coin flip.
+        let err = select_payload_of("{ yes: false }").unwrap_err();
+        assert!(err.contains("decline: true"), "got: {err}");
+        let err = select_payload_of("{ decline: false }").unwrap_err();
+        assert!(err.contains("yes: true"), "got: {err}");
+    }
+
+    #[test]
+    fn select_forms_round_trip_through_yaml() {
+        // The drafter serializes StepAction back to YAML; an asymmetric codec
+        // would emit scenarios that fail to re-parse.
+        for act in [
+            StepAction::Select(SelectPayload::Cards(vec!["ST1-03".to_string()])),
+            StepAction::Select(SelectPayload::Targets(vec!["own.field.1".to_string()])),
+            StepAction::Select(SelectPayload::Value(3)),
+            StepAction::Select(SelectPayload::Yes),
+            StepAction::Select(SelectPayload::Decline),
+        ] {
+            let yaml = serde_yml::to_string(&act).expect("serializes");
+            let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
+            assert_eq!(back, act, "round trip of {yaml}");
+        }
     }
 
     #[test]

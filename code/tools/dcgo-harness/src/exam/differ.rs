@@ -158,6 +158,13 @@ impl fmt::Display for DiffReport {
 ///
 /// See the module docs: leads with the first divergence, keeps the rest as
 /// `downstream`, and always reports the full denominator.
+/// True for our engine's selection-interlude phases -- phases DCGO does not
+/// represent at all (its TurnPhase stays on the interrupted phase while a
+/// selection UI is open).
+fn is_selection_phase(phase: &str) -> bool {
+    phase.starts_with("Select") || phase == "EffectChoice"
+}
+
 pub fn diff(ours: &[StateProjection], dcgo: &[StateProjection]) -> DiffReport {
     // Keyed by `step`, not by position — the two sides may skip different
     // rows and a positional zip would offset one of them by one.
@@ -200,7 +207,19 @@ pub fn diff(ours: &[StateProjection], dcgo: &[StateProjection]) -> DiffReport {
 fn diff_projection(ours: &StateProjection, dcgo: &StateProjection) -> Vec<FieldDiff> {
     let mut diffs = Vec::new();
     push_ne(&mut diffs, "turn", &ours.turn, &dcgo.turn);
-    push_ne(&mut diffs, "phase", ours.phase.as_str(), dcgo.phase.as_str());
+    // Phase compares through a normalization: our engine models a pending
+    // selection as its own GamePhase (SelectTarget / SelectBudgeted /
+    // SelectHand / EffectChoice / ...), while DCGO's TurnPhase stays on the
+    // phase the selection interrupted ("Main", "Attack"...). Which engine
+    // parks a phase marker is REPRESENTATION; whether the selection resolved
+    // to the same board state is the semantics, and every other field still
+    // compares. So a Select*/EffectChoice phase on our side never diffs
+    // against DCGO's phase -- observed live on the ST1-15 gate: step 12 read
+    // `phase: ours=SelectBudgeted dcgo=Main` with every state field equal,
+    // turning a CLEAN selection round-trip into a false divergence.
+    if !is_selection_phase(&ours.phase) {
+        push_ne(&mut diffs, "phase", ours.phase.as_str(), dcgo.phase.as_str());
+    }
     push_ne(&mut diffs, "memory", &ours.memory, &dcgo.memory);
     diff_seat(&mut diffs, "p0", &ours.p0, &dcgo.p0);
     diff_seat(&mut diffs, "p1", &ours.p1, &dcgo.p1);
@@ -325,6 +344,39 @@ mod tests {
                "p1":{{"security":5,"hand":[],"trash":[],"field":[]}}}}"#
         ))
         .unwrap()
+    }
+
+
+    #[test]
+    fn a_selection_phase_on_our_side_is_representation_not_a_divergence() {
+        // Live case from the ST1-15 gate: our engine parks in a Select* phase
+        // while DCGO's TurnPhase stays "Main" during the selection UI. All
+        // state fields equal -> must be CLEAN.
+        let ours = StateProjection::from_sidecar_line(
+            r#"{"step":0,"turn":1,"phase":"SelectBudgeted","memory":0,
+                "p0":{"security":5,"hand":[],"trash":[],"field":[]},
+                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
+        let dcgo = StateProjection::from_sidecar_line(
+            r#"{"step":0,"turn":1,"phase":"Main","memory":0,
+                "p0":{"security":5,"hand":[],"trash":[],"field":[]},
+                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
+        let r = diff(&[ours], &[dcgo]);
+        assert!(r.is_clean(), "{:?}", r.divergences);
+    }
+
+    #[test]
+    fn a_real_phase_mismatch_still_diffs() {
+        // The normalization must not swallow a genuine phase disagreement.
+        let ours = StateProjection::from_sidecar_line(
+            r#"{"step":0,"turn":1,"phase":"Breeding","memory":0,
+                "p0":{"security":5,"hand":[],"trash":[],"field":[]},
+                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
+        let dcgo = StateProjection::from_sidecar_line(
+            r#"{"step":0,"turn":1,"phase":"Main","memory":0,
+                "p0":{"security":5,"hand":[],"trash":[],"field":[]},
+                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
+        let r = diff(&[ours], &[dcgo]);
+        assert!(!r.is_clean(), "Breeding-vs-Main is semantics and must diff");
     }
 
     #[test]

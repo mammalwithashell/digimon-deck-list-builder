@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-08-22T15:03:08.166795600+00:00",
+  "last_updated": "2026-08-22T15:41:18.294630800+00:00",
   "clauses": {
     "EX12-009#effect#1": {
       "clause_id": "EX12-009#effect#1",
@@ -181,6 +181,15 @@
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-075-security0.yaml",
       "recorded_at": "2026-08-22T15:03:08.166795600+00:00"
+    },
+    "ST1-15#effect#0": {
+      "clause_id": "ST1-15#effect#0",
+      "card_id": "ST1-15",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "45873d5865b9972ea303c699455434309b9480e1d449bc0ee3f29a5a903dbc21",
+      "scenario_path": "qa/dcgo-exams/ST1/ST1-15-effect0.yaml",
+      "recorded_at": "2026-08-22T15:41:18.294630800+00:00"
     }
   }
 }
