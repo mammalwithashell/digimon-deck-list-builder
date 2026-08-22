@@ -523,7 +523,7 @@ fn exam_one(
 ) -> Result<ExamOutcome, String> {
     use dcgo_harness::exam::adapter::ScenarioAdapter;
     use dcgo_harness::exam::differ::diff;
-    use dcgo_harness::exam::projection::{parse_sidecar, StateProjection};
+    use dcgo_harness::exam::projection::{align_to_scenario_origin, parse_sidecar, StateProjection};
     use dcgo_harness::exam::scenario::Scenario;
     use digimon_engine::runners::replay::ReplaySession;
 
@@ -531,8 +531,51 @@ fn exam_one(
         .map_err(|e| format!("reading {}: {e}", path.display()))?;
     let s = Scenario::from_yaml(&text)?;
 
-    let deck_p0 = ordered_deck(&s.decks.p0, book)?;
-    let deck_p1 = ordered_deck(&s.decks.p1, book)?;
+    // Resolve the oracle artifacts BEFORE building our game, because in oracle
+    // mode the decks come from the recording, not from the scenario's `rest:`.
+    let oracle: Option<(std::path::PathBuf, String)> = if sim_only {
+        None
+    } else {
+        let sp = resolve_sidecar(sidecar.expect("checked by run_exam"), path, scenario_count)?;
+        let rp = {
+            let s = sp.to_string_lossy();
+            std::path::PathBuf::from(
+                s.strip_suffix(".state.jsonl")
+                    .map(|stem| format!("{stem}.jsonl"))
+                    .unwrap_or_else(|| s.to_string()),
+            )
+        };
+        let rt = std::fs::read_to_string(&rp).map_err(|e| {
+            format!(
+                "reading the recording beside the sidecar ({}): {e}. It is required both                  to align the oracle trace to the scenario's origin and to take DCGO's                  post-shuffle deck order.",
+                rp.display()
+            )
+        })?;
+        Some((sp, rt))
+    };
+
+    // In oracle mode, take the decks VERBATIM from DCGO's own post-shuffle
+    // order rather than from `rest:`.
+    //
+    // Otherwise the two engines play different games and every scenario
+    // diverges on hand contents at step 0. `Game::new_with_ordered_decks` is
+    // the replay constructor and does NOT shuffle -- its doc says "the order IS
+    // the recorded post-shuffle order" -- so feeding it a decklist gave both
+    // seats the identical top five cards while DCGO had seeded-shuffled each.
+    // Observed exactly that: ours p0.hand == p1.hand, DCGO's two hands distinct
+    // and different again from ours.
+    //
+    // Reimplementing DCGO's Fisher-Yates over its Xoshiro256** stream in Rust
+    // would be the alternative, and it would be a second copy of a shuffle whose
+    // definition lives in DCGO -- exactly the kind of mirrored table the job
+    // spec avoids by sending card IDs instead of deck codes.
+    let (deck_p0, deck_p1) = match &oracle {
+        Some((_, rt)) => decks_from_recording(rt)?,
+        None => (
+            ordered_deck(&s.decks.p0, book)?,
+            ordered_deck(&s.decks.p1, book)?,
+        ),
+    };
 
     // Lowering resolves every symbolic step against the live mask, so an
     // illegal or ambiguous line fails HERE -- in milliseconds, before any
@@ -588,15 +631,31 @@ fn exam_one(
         });
     }
 
-    let sidecar_path = resolve_sidecar(
-        sidecar.expect("checked by run_exam"),
-        path,
-        scenario_count,
-    )?;
+    let (sidecar_path, recording_text) = oracle.expect("built above when !sim_only");
     let sidecar_text = std::fs::read_to_string(&sidecar_path)
         .map_err(|e| format!("reading sidecar {}: {e}", sidecar_path.display()))?;
     let dcgo = parse_sidecar(&sidecar_text)?;
-    let report = diff(&projections, &dcgo);
+
+    // Align the oracle trace to the scenario's origin: DCGO records the
+    // mulligan as action rows and dumps state at them, while our line begins
+    // after it. Left alone the traces sit two steps apart and every scenario
+    // reports a spurious divergence at step 0.
+    let dcgo = align_to_scenario_origin(dcgo, &recording_text)?;
+    // Compare "state at each decision point" on both sides. Ours holds one
+    // projection BEFORE each step plus a trailing one AFTER the last, while
+    // StateDumper writes one before each decision and stops -- 14 vs 13 for a
+    // 13-step line. Dropping our trailing entry aligns the two; keeping it made
+    // the differ report TRUNCATED (correctly -- it refuses to call an unequal
+    // comparison clean) on a run that had no divergence at all.
+    //
+    // `projections` itself keeps the trailing state, because an `assert:` block
+    // legitimately wants to talk about the position AFTER the final step.
+    let ours_for_diff: Vec<_> = projections
+        .iter()
+        .take(s.steps.len())
+        .cloned()
+        .collect();
+    let report = diff(&ours_for_diff, &dcgo);
     *diffed += 1;
     println!("  {report}");
 
@@ -645,6 +704,58 @@ fn collect_scenario_paths(root: &Path) -> Result<Vec<PathBuf>, String> {
 
 /// Which `.state.jsonl` belongs to this scenario.
 ///
+
+/// Both seats' decks in DCGO's own post-shuffle order, taken from a recording's
+/// `game_start` row.
+///
+/// The row is written from one seat's perspective (`my_player_id`), so the two
+/// lists have to be assigned by that id rather than positionally. Egg cards are
+/// appended: `Game::new_inner` splits them out by card kind, and the scenario's
+/// deck argument is one flat list per seat.
+fn decks_from_recording(text: &str) -> Result<(Vec<String>, Vec<String>), String> {
+    let first = text
+        .lines()
+        .map(str::trim)
+        .find(|l| !l.is_empty())
+        .ok_or_else(|| "recording is empty".to_string())?;
+    let row: serde_json::Value =
+        serde_json::from_str(first).map_err(|e| format!("malformed game_start row: {e}"))?;
+    if row.get("type").and_then(|v| v.as_str()) != Some("game_start") {
+        return Err("first recording row is not game_start".to_string());
+    }
+
+    let arr = |k: &str| -> Result<Vec<String>, String> {
+        row.get(k)
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| format!("game_start has no array `{k}`"))
+            .map(|a| {
+                a.iter()
+                    .filter_map(|v| v.as_str().map(str::to_string))
+                    .collect()
+            })
+    };
+
+    let my_id = row
+        .get("my_player_id")
+        .and_then(|v| v.as_u64())
+        .ok_or_else(|| "game_start has no my_player_id".to_string())?;
+
+    // REVERSED: the two engines number a deck from opposite ends. DCGO records
+    // top-first (`my_deck_post_shuffle[..5]` is exactly its `initial_hand`),
+    // while our `Player::draw` pops from the BACK of the vector. Feeding the
+    // recorded order straight through dealt our seats the deck's LAST five
+    // cards -- verified precisely: our p0 hand equalled
+    // `my_deck_post_shuffle[45..]`, card for card, and p1 the same on its own
+    // list. Reversing makes the top of the deck the back of the vector, so both
+    // engines deal the same opening hand from the same recorded shuffle.
+    let mut mine: Vec<String> = arr("my_deck_post_shuffle")?.into_iter().rev().collect();
+    mine.extend(arr("my_egg_deck").unwrap_or_default());
+    let mut theirs: Vec<String> = arr("opp_deck_post_shuffle")?.into_iter().rev().collect();
+    theirs.extend(arr("opp_egg_deck").unwrap_or_default());
+
+    Ok(if my_id == 0 { (mine, theirs) } else { (theirs, mine) })
+}
+
 /// A single sidecar file paired with a whole directory of scenarios is an
 /// error, not a fallback: diffing every scenario against one trace would
 /// manufacture divergences that say nothing about any of them.

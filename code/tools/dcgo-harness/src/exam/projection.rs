@@ -290,6 +290,59 @@ impl StateProjection {
 /// error: silently dropping it would shorten one side of the diff and
 /// misalign every step after it, turning a parse bug into a phantom
 /// engine divergence.
+/// Drop the DCGO sidecar rows that precede the scenario's own origin.
+///
+/// A scenario line begins AFTER the mulligan: `ScenarioAdapter` resolves both
+/// mulligans itself (keep) and DCGO is pinned to match, consuming no scripted
+/// step for it. But DCGO still RECORDS the mulligan as ordinary `action` rows,
+/// and `StateDumper` dumps state at those steps -- so the sidecar carries two
+/// leading rows our trace has no counterpart for.
+///
+/// The differ aligns by step index, so without this the two traces sit two
+/// steps apart and EVERY scenario reports a divergence at step 0 with
+/// `security: ours=5 dcgo=0` (DCGO's step 0 is pre-mulligan, before security is
+/// laid). That is an artifact of the harness, not a finding about the card, and
+/// it would drown every real divergence beneath it.
+///
+/// Takes the recording alongside the sidecar because `source: "mulligan"` lives
+/// on the `action` row, not in the state dump -- the sidecar's `phase` field
+/// reads "Active" at that point and cannot identify it.
+///
+/// Returns the sidecar re-indexed from 0 so both traces share an origin.
+pub fn align_to_scenario_origin(
+    sidecar: Vec<StateProjection>,
+    recording_text: &str,
+) -> Result<Vec<StateProjection>, String> {
+    let mut mulligan_steps = std::collections::HashSet::new();
+    for line in recording_text.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+        let row: serde_json::Value = serde_json::from_str(line)
+            .map_err(|e| format!("malformed recording row: {e}"))?;
+        if row.get("type").and_then(|v| v.as_str()) == Some("action")
+            && row.get("source").and_then(|v| v.as_str()) == Some("mulligan")
+        {
+            if let Some(s) = row.get("step").and_then(|v| v.as_u64()) {
+                mulligan_steps.insert(s as u32);
+            }
+        }
+    }
+
+    let mut kept: Vec<StateProjection> = sidecar
+        .into_iter()
+        .filter(|p| !mulligan_steps.contains(&p.step))
+        .collect();
+
+    // Re-index from 0: the scenario's step N must line up with the Nth
+    // post-mulligan decision, whatever absolute index DCGO gave it.
+    for (i, p) in kept.iter_mut().enumerate() {
+        p.step = i as u32;
+    }
+    Ok(kept)
+}
+
 pub fn parse_sidecar(text: &str) -> Result<Vec<StateProjection>, String> {
     let stream = serde_json::Deserializer::from_str(text).into_iter::<StateProjection>();
     let mut rows = Vec::new();
@@ -367,6 +420,49 @@ mod tests {
         )
         .unwrap();
         assert_ne!(a, b, "suspended is semantics, not representation");
+    }
+
+
+    #[test]
+    fn align_drops_leading_mulligan_rows_and_reindexes() {
+        // The live shape: DCGO records two mulligan actions at steps 0-1, and
+        // the sidecar dumps state at those steps. Our scenario trace has no
+        // counterpart, so without alignment every scenario "diverges at step 0".
+        let rec = concat!(
+            r#"{"type":"action","step":0,"actor":0,"action_id":0,"source":"mulligan"}"#, "
+",
+            r#"{"type":"action","step":1,"actor":1,"action_id":0,"source":"mulligan"}"#, "
+",
+            r#"{"type":"action","step":2,"actor":0,"action_id":62,"source":"breeding"}"#, "
+",
+        );
+        let side = concat!(
+            r#"{"step":0,"turn":0,"phase":"Active","memory":0,"p0":{"security":0,"hand":[],"trash":[],"field":[]},"p1":{"security":0,"hand":[],"trash":[],"field":[]}}"#, "
+",
+            r#"{"step":1,"turn":0,"phase":"Active","memory":0,"p0":{"security":0,"hand":[],"trash":[],"field":[]},"p1":{"security":0,"hand":[],"trash":[],"field":[]}}"#, "
+",
+            r#"{"step":2,"turn":1,"phase":"Breeding","memory":0,"p0":{"security":5,"hand":[],"trash":[],"field":[]},"p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#, "
+",
+        );
+        let out = align_to_scenario_origin(parse_sidecar(side).unwrap(), rec).unwrap();
+        assert_eq!(out.len(), 1, "both mulligan rows must be dropped");
+        assert_eq!(out[0].step, 0, "the survivor must be re-indexed to the origin");
+        assert_eq!(out[0].p0.security, 5, "and it must be the post-mulligan row");
+    }
+
+    #[test]
+    fn align_is_a_no_op_without_mulligan_rows() {
+        let rec = concat!(
+            r#"{"type":"action","step":0,"actor":0,"action_id":62,"source":"breeding"}"#, "
+",
+        );
+        let side = concat!(
+            r#"{"step":0,"turn":1,"phase":"Breeding","memory":0,"p0":{"security":5,"hand":[],"trash":[],"field":[]},"p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#, "
+",
+        );
+        let out = align_to_scenario_origin(parse_sidecar(side).unwrap(), rec).unwrap();
+        assert_eq!(out.len(), 1);
+        assert_eq!(out[0].step, 0);
     }
 
     #[test]

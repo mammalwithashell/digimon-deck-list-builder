@@ -1,0 +1,67 @@
+# Exam scenario: ST1-12 (Tai Kamiya), [Your Turn] All of your Digimon get +1000 DP.
+#
+# The first exam scenario that PLAYS A CARD rather than passing. The prefix is
+# eleven passes, which is not padding: with both seats declining everything, the
+# memory gauge only reaches this Tamer's cost-2 threshold on the sixth turn.
+# That is the honest cost of DCGO reaching a position by legally playing to it
+# instead of having a board materialised for it.
+#
+# Both seats are scripted. `first_player: 0` is honoured by DCGO as of the
+# 2026-08-22 fix, so this actor sequence is authored against OUR engine's
+# convention rather than against whatever DCGO happened to roll.
+#
+# Steps alternate breeding / main within a turn, and turns alternate in pairs:
+# actors 0,0, 1,1, 0,0, ... Even steps are the breeding decision (hatch or
+# decline); odd steps are the main phase. A card can only be played on an odd
+# step -- probing an even one only ever offers Hatch/Pass.
+card: ST1-12
+clause: ST1-12#effect#0
+seed: 424242
+decks:
+  p0: { stack: [], rest: starter_st1_gaia_red }
+  p1: { stack: [], rest: starter_st1_gaia_red }
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  # Turn 6 main phase: memory has finally reached 2, so the Tamer is affordable.
+  - actor: 1
+    do: { play: { card: ST1-12, from: hand.6 } }
+    expect: { prompt: main_phase }
+  # Playing a card does NOT end the turn -- DCGO returns to the main phase and
+  # asks the same seat again. Without this trailing pass the line runs out and
+  # the job aborts on "line exhausted", which is the driver working correctly
+  # and the LINE being wrong.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }

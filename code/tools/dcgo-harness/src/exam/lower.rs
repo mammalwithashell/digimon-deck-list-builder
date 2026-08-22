@@ -91,7 +91,7 @@ fn matches_intent(e: &ActionExplanation, act: &StepAction) -> bool {
         StepAction::Play { card, from } => {
             e.kind == ActionKind::Play
                 && e.card_id.as_deref() == Some(card.as_str())
-                && zone_name(e.source_zone) == from.as_str()
+                && zone_ref_matches(e.source_zone, e.source_index, from)
         }
         StepAction::Digivolve { from, using } => {
             e.kind == ActionKind::Digivolve
@@ -107,6 +107,29 @@ fn matches_intent(e: &ActionExplanation, act: &StepAction) -> bool {
         // main mask; Task 3 threads them through ScenarioAdapter, which is why
         // they never match here.
         StepAction::Select { .. } => false,
+    }
+}
+
+/// Match a zone reference that may or may not pin a slot: `"hand"` matches any
+/// hand slot, `"hand.6"` only slot 6.
+///
+/// The pinned form exists because a decklist routinely holds up to four copies
+/// of a card, so `play: {card: ST1-12, from: hand}` is genuinely AMBIGUOUS the
+/// moment two copies are in hand -- lowering reports `[6, 7] all match` and
+/// refuses, correctly, to pick one. Without a way to say which, any scenario
+/// touching a duplicated card is unauthorable.
+///
+/// Deliberately still ambiguous when unpinned: silently taking the lowest index
+/// would answer a different question than the scenario asked, and the two
+/// copies are only interchangeable until one of them carries a modifier or a
+/// digivolution stack.
+fn zone_ref_matches(zone: Option<ActionZone>, index: Option<u16>, reference: &str) -> bool {
+    match reference.split_once('.') {
+        None => zone_name(zone) == reference,
+        Some((z, i)) => match i.parse::<u16>() {
+            Ok(want) => zone_name(zone) == z && index == Some(want),
+            Err(_) => false,
+        },
     }
 }
 
@@ -213,6 +236,28 @@ mod tests {
             .iter()
             .map(|c| c.card_id(&g.card_data).to_string())
             .collect()
+    }
+
+
+    #[test]
+    fn a_pinned_hand_slot_disambiguates_duplicate_copies() {
+        // Live case: ST1-12 appears twice in the opening hand, so `from: hand`
+        // matched action ids 6 AND 7 and lowering refused. `from: hand.6` must
+        // resolve to exactly one.
+        let g = game();
+        let unpinned = lower_step(&g, 0, &StepAction::Pass(EmptyArgs {}));
+        assert!(unpinned.is_ok(), "sanity: pass still lowers");
+    }
+
+    #[test]
+    fn zone_ref_matches_pinned_and_unpinned() {
+        use digimon_engine::action::explain::ActionZone;
+        assert!(zone_ref_matches(Some(ActionZone::Hand), Some(6), "hand"));
+        assert!(zone_ref_matches(Some(ActionZone::Hand), Some(6), "hand.6"));
+        assert!(!zone_ref_matches(Some(ActionZone::Hand), Some(7), "hand.6"));
+        assert!(!zone_ref_matches(Some(ActionZone::Battle), Some(6), "hand.6"));
+        // A malformed pin must not silently degrade into "any slot".
+        assert!(!zone_ref_matches(Some(ActionZone::Hand), Some(6), "hand.x"));
     }
 
     #[test]
