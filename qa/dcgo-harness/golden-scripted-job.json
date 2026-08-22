@@ -1,0 +1,434 @@
+{
+  "job_id": "golden-scripted-002",
+  "policy": "scripted",
+  "decks": {
+    "p0": [
+      "ST1-02",
+      "ST1-02",
+      "ST1-02",
+      "ST1-02",
+      "ST1-03",
+      "ST1-03",
+      "ST1-03",
+      "ST1-03",
+      "ST1-04",
+      "ST1-04",
+      "ST1-04",
+      "ST1-04",
+      "ST1-05",
+      "ST1-05",
+      "ST1-05",
+      "ST1-05",
+      "ST1-06",
+      "ST1-06",
+      "ST1-06",
+      "ST1-06",
+      "ST1-07",
+      "ST1-07",
+      "ST1-08",
+      "ST1-08",
+      "ST1-08",
+      "ST1-08",
+      "ST1-09",
+      "ST1-09",
+      "ST1-09",
+      "ST1-09",
+      "ST1-10",
+      "ST1-10",
+      "ST1-11",
+      "ST1-11",
+      "ST1-12",
+      "ST1-12",
+      "ST1-12",
+      "ST1-12",
+      "ST1-13",
+      "ST1-13",
+      "ST1-13",
+      "ST1-13",
+      "ST1-14",
+      "ST1-14",
+      "ST1-14",
+      "ST1-14",
+      "ST1-15",
+      "ST1-15",
+      "ST1-16",
+      "ST1-16",
+      "ST1-01",
+      "ST1-01",
+      "ST1-01",
+      "ST1-01"
+    ],
+    "p1": [
+      "ST1-02",
+      "ST1-02",
+      "ST1-02",
+      "ST1-02",
+      "ST1-03",
+      "ST1-03",
+      "ST1-03",
+      "ST1-03",
+      "ST1-04",
+      "ST1-04",
+      "ST1-04",
+      "ST1-04",
+      "ST1-05",
+      "ST1-05",
+      "ST1-05",
+      "ST1-05",
+      "ST1-06",
+      "ST1-06",
+      "ST1-06",
+      "ST1-06",
+      "ST1-07",
+      "ST1-07",
+      "ST1-08",
+      "ST1-08",
+      "ST1-08",
+      "ST1-08",
+      "ST1-09",
+      "ST1-09",
+      "ST1-09",
+      "ST1-09",
+      "ST1-10",
+      "ST1-10",
+      "ST1-11",
+      "ST1-11",
+      "ST1-12",
+      "ST1-12",
+      "ST1-12",
+      "ST1-12",
+      "ST1-13",
+      "ST1-13",
+      "ST1-13",
+      "ST1-13",
+      "ST1-14",
+      "ST1-14",
+      "ST1-14",
+      "ST1-14",
+      "ST1-15",
+      "ST1-15",
+      "ST1-16",
+      "ST1-16",
+      "ST1-01",
+      "ST1-01",
+      "ST1-01",
+      "ST1-01"
+    ]
+  },
+  "deck_order": {
+    "p0": [
+      "ST1-08",
+      "ST1-06",
+      "ST1-03"
+    ],
+    "p1": []
+  },
+  "inputs": [
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    }
+  ],
+  "first_player": 0,
+  "seed": 424242,
+  "limits": {
+    "max_turns": 25,
+    "timeout_seconds": 180
+  }
+}

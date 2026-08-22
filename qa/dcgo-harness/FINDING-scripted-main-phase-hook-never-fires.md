@@ -1,6 +1,8 @@
-# FINDING: the scripted main-phase hook never fires under the harness
+# RESOLVED FINDING: the scripted main-phase hook never fired under the harness
 
-**Status:** open, blocks scripted lines from playing cards
+**Status:** FIXED 2026-08-22 (DCGO 16f7aeda0). Kept as the record of the
+misplacement and how it was proven, since the wrong inference that produced it
+is an easy one to repeat.
 **Found:** 2026-08-21, while wiring the phase-2 `InputDriver`
 **Severity:** blocks the exam's primary use case; does NOT affect the phase-1
 volume corpus or the `policy: "ai"` determinism guarantee
@@ -104,3 +106,39 @@ Play, which the phase-2 design deliberately scoped out.
 `job.first_player` is written by `submit` but remains **unhonored by DCGO**. The
 job requested `first_player: 0`; the recording reports `first_player_id: 1`.
 Previously a documented suspicion, now observed directly.
+
+
+---
+
+## Resolution (2026-08-22)
+
+The seam moved onto the AI brain, decoding a scripted step with
+`InputDriver.BuildMainPhaseAction` and applying it via
+`MainPhaseAction.Execute(this)` -- reusing DCGO's own `SetPlayCard` /
+`SetAttackingPermaent` / `SetActSkill` translation instead of duplicating it.
+
+Verified end to end: a 60-step scripted line, **every step carrying an
+`expect_prompt` assertion**, ran the full 25-turn cap with **zero mismatches**.
+52 action rows = 2 mulligan (auto-kept, no step consumed) + 25 `breeding` + 25
+`main_phase`, ids `{0, 62}`.
+
+The bot chose nothing, which is the point: the same deck under `policy: "ai"`
+yields 46 actions with 22 `action_detail` plays and 6 `effect_activation`s; this
+scripted run has **zero** of either.
+
+Scripted determinism, two runs at seed `424242`:
+
+| Artifact | Result |
+|---|---|
+| State sidecar | **Byte-identical**, SHA-256 `8846f6dbe4a384fa59146096fa0e7080` |
+| Recording | 54/54 rows identical; only line 1 differs (`game_id`, `timestamp`) |
+
+### Still open
+
+- **`job.first_player` remains unhonored.** The scripted line's actor sequence
+  had to be authored against DCGO's own roll (seat 1 first). A line authored
+  against our engine's assumption would fail its actor assertion immediately.
+  This is now the largest remaining obstacle to authoring scenarios from our
+  engine's lowering output.
+- **The mulligan is pinned to keep on both sides, not measured.**
+- **Editor vs player** determinism is still unverified; only player-vs-player is.
