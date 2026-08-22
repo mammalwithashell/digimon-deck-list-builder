@@ -162,7 +162,17 @@ impl fmt::Display for DiffReport {
 /// represent at all (its TurnPhase stays on the interrupted phase while a
 /// selection UI is open).
 fn is_selection_phase(phase: &str) -> bool {
-    phase.starts_with("Select") || phase == "EffectChoice"
+    // Combat-interrupt windows are the same representation class: DCGO's
+    // TurnPhase stays on the interrupted phase while its block/counter/
+    // alliance UI is open. Observed live on EX12-065#effect#4: the only diff
+    // line was `phase: ours=BlockTiming dcgo=Main` with every state field
+    // equal -- the blocker prompt round-tripped correctly and the projection
+    // still compares suspension, DP and zones.
+    phase.starts_with("Select")
+        || phase == "EffectChoice"
+        || phase == "BlockTiming"
+        || phase == "CounterTiming"
+        || phase == "AllianceTiming"
 }
 
 pub fn diff(ours: &[StateProjection], dcgo: &[StateProjection]) -> DiffReport {
@@ -362,6 +372,21 @@ mod tests {
                 "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
         let r = diff(&[ours], &[dcgo]);
         assert!(r.is_clean(), "{:?}", r.divergences);
+    }
+
+
+    #[test]
+    fn a_combat_interrupt_phase_on_our_side_is_representation() {
+        // EX12-065#effect#4 live case: BlockTiming vs Main, all state equal.
+        let ours = StateProjection::from_sidecar_line(
+            r#"{"step":0,"turn":1,"phase":"BlockTiming","memory":0,
+                "p0":{"security":5,"hand":[],"trash":[],"field":[]},
+                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
+        let dcgo = StateProjection::from_sidecar_line(
+            r#"{"step":0,"turn":1,"phase":"Main","memory":0,
+                "p0":{"security":5,"hand":[],"trash":[],"field":[]},
+                "p1":{"security":5,"hand":[],"trash":[],"field":[]}}"#).unwrap();
+        assert!(diff(&[ours], &[dcgo]).is_clean());
     }
 
     #[test]
