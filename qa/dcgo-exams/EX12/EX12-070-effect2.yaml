@@ -1,0 +1,76 @@
+# Exam scenario: EX12-070 Sanmyojin Arrival effect clause #2 -- "<Draw 2>
+# (Draw 2 cards from your deck.) After, place this card in the battle area."
+#
+# The CONSEQUENCE half of the paid [Main] path (the cost itself is effect1's
+# exam, the declined path effect0's). The same line as effect1, but the
+# assert pins this clause's two observables: the hand grew by exactly the
+# two pinned draw cards ([11]/[12] of the stack), and EX12-070 sits in the
+# battle area as a permanent (dp -1, an option) instead of the trash --
+# DCGO's EX12_070.cs only reaches DrawClass + PlaceDelayOptionCards when a
+# card was actually trashed, so both observables hang off the paid cost.
+#
+# Gasamon on the battle area meets the yellow/green option's use
+# requirement ([TB]).
+#
+#   T1 (P0, memory 0): pass breeding, hard-cast Gasamon (0 -> -3 overshoot,
+#       turn ends).
+#   T2: P1 passes everything.
+#   T3 (P0, memory 3): play EX12-070 (3 -> 0), trash Wankomon through the
+#       parked hand prompt -- THE CLAUSE: <Draw 2> resolves and the option
+#       is placed. P0 keeps the turn at memory 0; trailing main prompt.
+#
+# Stack layout: hand [0..4], security [5..9], [10] = T3 turn draw,
+# [11]/[12] = the <Draw 2> (the two EX12-046 the assert finds in hand).
+# After T1 plays hand.0 the hand is [070, 009, 074, 074]; the T3 draw
+# appends 046, so the option plays from hand.0 and exactly one EX12-009 is
+# in hand when the prompt parks.
+card: EX12-070
+clause: EX12-070#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-020, EX12-070, EX12-009, EX12-074, EX12-074,
+            EX12-075, EX12-075, EX12-075, EX12-074, EX12-074,
+            EX12-046, EX12-046, EX12-046]
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): the use-requirement enabler.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): pay the discard so the clause under exam can fire.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-070, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Trash the [TB] Wankomon; THE CLAUSE resolves: draw 2, place the option.
+  - actor: 0
+    do: { select: { cards: [EX12-009] } }
+    expect: { prompt: SelectHandEffect }
+  # Memory sits at 0 after the cost-3 play, so P0 keeps the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 7
+    that:
+      p0.memory: 0
+      p0.trash: [EX12-009]
+      p0.hand: [EX12-074, EX12-074, EX12-046, EX12-046, EX12-046]
+      p0.security: 5
+      p0.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }

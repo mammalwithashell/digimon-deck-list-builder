@@ -1,0 +1,61 @@
+# Exam scenario: EX12-061 (Hanimon), clause effect#0 -- "[On Play] By trashing
+# 1 card with the [Puppet] or [TB] trait from your hand, <Draw 2>."
+#
+# One turn. Playing Hanimon turn 1 from memory 0 is an overshooting play
+# (0 - 3 = -3, above the -10 floor), so the turn ends right after the effect
+# resolves. DCGO's flow (EX12_061.cs) is a single SelectHandEffect with
+# canNoSelect -- no separate yes/no -- so the one select step trashes the
+# [TB]-trait EX12-070 from hand and the Draw 2 fires because a card was picked.
+#
+# TRAP CHECKED: the trash filter is [Puppet]/[TB]; nearly every EX12 Toho card
+# carries [TB] (verified in cards.json), so the whole hand is candidate-legal --
+# the pick is by identity and EX12-070 is the only copy in hand.
+#
+# p0's stack pins hand (0-4), security (5-9, never touched) and the two cards
+# the <Draw 2> pulls (10-11; p0 has no turn-1 draw), so the closing hand
+# assertion is exact.
+card: EX12-061
+clause: EX12-061#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-061
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      # security (5-9)
+      - EX12-031
+      - EX12-031
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # <Draw 2> (10-11)
+      - EX12-020
+      - EX12-026
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # Turn 1 (p0): decline breeding, play Hanimon as an overshooting play.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-061, from: hand } }
+    expect: { prompt: main_phase }
+  # The clause: trash the [TB] EX12-070 from hand; <Draw 2> then resolves.
+  - actor: 0
+    do: { select: { cards: [EX12-070] } }
+    expect: { prompt: SelectHandEffect }
+  # The overshoot ended p0's turn, so the next question is p1's breeding
+  # decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Hand lost Hanimon (played) and EX12-070 (trashed), gained the two draws.
+  - at: 3
+    that:
+      p0.hand: [EX12-074, EX12-075, EX12-065, EX12-020, EX12-026]

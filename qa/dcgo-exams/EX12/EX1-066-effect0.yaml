@@ -1,0 +1,69 @@
+# Exam scenario: EX1-066 (Analog Youth), clause EX1-066#effect#0 --
+# "[On Play] Reveal the top 3 cards of your deck. Add 1 Digimon card among
+#  them to your hand. Trash the remaining cards."
+#
+# Analog Youth is a Tamer (play cost 2, no color requirement to play), so the
+# clause is reachable on turn 1: pass the breeding action, play the Tamer from
+# hand (memory 0 -> -2; the overshoot ends the turn AFTER the effect
+# resolves), and answer the reveal pick. The first player takes no turn-1
+# draw, so the top of the deck at play time is stack indexes 10-12 exactly:
+# pinned as Hanimon (Digimon), Sanmyojin Arrival (Option), Wankomon (Digimon)
+# -- two eligible Digimon and one ineligible Option, so the "add 1 Digimon
+# card among them" pick is a real choice, answered by identity (EX12-061 is
+# the only Hanimon in the reveal). The remaining two cards are trashed by the
+# clause's mandatory tail.
+#
+# Deck note: EX1-066 is not in the toho-braves list, and stacked cards must be
+# members of the `rest:` deck, so p0 uses `toho-analog` (toho-braves with the
+# 3x EX12-075 / 1x EX12-076 swapped for 4x EX1-066; same eggs).
+#
+# The trailing pass is p1's next breeding decision after the -2 overshoot
+# hands them the turn.
+card: EX1-066
+clause: EX1-066#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the Tamer plus inert filler
+      - EX1-066
+      - EX12-074
+      - EX12-074
+      - EX12-020
+      - EX12-020
+      # security (5-9): never touched
+      - EX12-046
+      - EX12-046
+      - EX12-026
+      - EX12-026
+      - EX12-036
+      # deck top at play time = the reveal (10-12)
+      - EX12-061
+      - EX12-070
+      - EX12-009
+    rest: toho-analog
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # Turn 1 (p0): no breeding needs, straight to the Tamer.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX1-066, from: hand } }
+    expect: { prompt: main_phase }
+  # The clause: pick the 1 Digimon to add among [Hanimon, Sanmyojin Arrival,
+  # Wankomon]. Hanimon by identity; the other two go to trash.
+  - actor: 0
+    do: { select: { cards: [EX12-061] } }
+    expect: { prompt: SelectCardEffect }
+  # Memory -2 ended p0's turn after resolution: p1's breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # After the reveal pick resolves: Hanimon joined the hand, the other two
+  # revealed cards (Sanmyojin Arrival, Wankomon) went to trash.
+  - at: 3
+    that:
+      p0.hand: [EX12-020, EX12-020, EX12-061, EX12-074, EX12-074]
+      p0.trash: [EX12-009, EX12-070]

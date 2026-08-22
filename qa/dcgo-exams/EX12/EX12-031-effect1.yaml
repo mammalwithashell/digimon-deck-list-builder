@@ -1,0 +1,119 @@
+# Exam scenario: EX12-031 (MarineBullmon), clause effect#1 -- "[On Play]
+# [When Digivolving] By placing 1 level 6 or lower card with [Aqua] or
+# [Sea Animal] in any of its traits or the [TB] trait from your hand as this
+# Digimon's bottom digivolution card, return 1 of your opponent's Digimon
+# with 1 or fewer digivolution cards to the hand."
+#
+# The line: p1 plays a bare Gasamon (0 digivolution cards -- a legal bounce
+# target); p0 then plays MarineBullmon from hand and answers both halves of
+# the clause: the tuck (Gasamon EX12-020 from p0's own hand -- it carries the
+# [TB] trait, like nearly every Toho card) and the bounce target (p1's
+# Gasamon). The tucked card under MarineBullmon and Gasamon back in p1's hand
+# are the two-sided witness.
+#
+# Gasamon is both the tuck and the target on purpose: no [On Play] on either
+# side, so the clause's own two prompts are the only prompts on the line.
+#
+# Memory: T1 all-pass gives p1 3; Gasamon (3 -> 0) keeps p1's turn; p0 gets
+# 3 and the cost-7 MarineBullmon (3 -> -4) ends p0's turn after resolution.
+# REVIEW 2026-08-22 -- VERIFIED WITH KNOWN POST-WITNESS ABORT: the clause's
+# witness (tuck + bounce) fully resolves on both sides BEFORE the final
+# engine-oddity Decode decline row, which answers a LIVE sim prompt DCGO
+# never asks (Decode is self-scoped in DCGO). The strict driver will abort
+# at P1's trailing breeding question -- that abort IS the finding (our
+# engine's spurious Decode window), already owned by the header below.
+card: EX12-031
+clause: EX12-031#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): MarineBullmon + exactly one Gasamon (the tuck)
+      - EX12-031
+      - EX12-020
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T3 turn (10)
+      - EX12-074
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): exactly one Gasamon so the play intent is unambiguous
+      - EX12-020
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T2 turn (10), T4 turn (11)
+      - EX12-074
+      - EX12-075
+    rest: toho-braves
+steps:
+  # T1 (p0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): play Gasamon (cost 3, memory 3 -> 0), keep the turn, pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0): the clause -- play MarineBullmon (cost 7, memory 3 -> -4).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-031, from: hand } }
+    expect: { prompt: main_phase }
+  # The tuck: Gasamon from p0's hand ([TB] trait, level 3 <= 6) goes under
+  # MarineBullmon as its bottom digivolution card.
+  - actor: 0
+    do: { select: { cards: [EX12-020] } }
+    expect: { prompt: SelectHandEffect }
+  # The bounce: p1's Gasamon (0 digivolution cards) returns to the hand.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # ENGINE ODDITY (kept honest, not routed around): our engine parks a
+  # "May accept replacement: <Decode> (hand)" prompt on the BOUNCED Gasamon's
+  # leave -- but Decode belongs to MarineBullmon and its subject is itself,
+  # so this replacement window should not open here. Declining keeps the line
+  # card-text-faithful; if DCGO never asks, the differ owns that finding.
+  # (Our engine hands the window to the LEAVING permanent's controller, p1.)
+  - actor: 1
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # The overshooting play ended p0's turn; p1's breeding decision closes.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Both halves landed: MarineBullmon stands with the tucked Gasamon beneath
+  # it, p1's field is empty, and p1's Gasamon is back in hand (T2 draw
+  # EX12-074 + T4 draw EX12-075 + the 4 unplayed openers + the bounce).
+  - at: 11
+    that:
+      p0.field: [{ card_id: EX12-031, dp: 7000, suspended: false, sources: [EX12-020] }]
+      p1.field: []
+      p1.hand: [EX12-020, EX12-070, EX12-074, EX12-074, EX12-075, EX12-075, EX12-065]

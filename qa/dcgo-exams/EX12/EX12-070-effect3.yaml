@@ -1,0 +1,129 @@
+# Exam scenario: EX12-070 Sanmyojin Arrival effect clause #3 -- the [All
+# Turns] trigger condition "When any of your level 5 or higher [TB] trait
+# Digimon would leave the battle area,".
+#
+# The observable is the <Delay> window OPENING at exactly that event -- and
+# nothing happening when it is DECLINED (the accepted payload is effect4's
+# exam): EX12-070 stays in the battle area and the leave completes.
+#
+# The leaver is Shishimamon (EX12-046: Lv.5, [TB], 7000 DP), and the leave
+# is a BOUNCE, not a deletion: P1's MarineBullmon (EX12-031) pays its
+# [On Play] cost (place a [TB] card from hand as its bottom source) to
+# return P0's only ≤1-source Digimon to the hand. Chosen over two rejected
+# alternatives, both probed empirically: Kaguyamon as the leaver parks a
+# TriggerOrder our engine asks and DCGO never would (its deletion kit
+# queues two mandatory triggers), and Amaterasumon as the deleter parks its
+# "return 2 cards from their trash" follow-up as a mandatory
+# CountCappedMultiSelect the select vocabulary cannot answer. The bounce
+# has no follow-up at all, and Shishimamon bounced on P1's turn queues
+# nothing of its own ([Your Turn] gates its security trigger).
+#
+#   T1 (P0, memory 0): hard-cast Shishimamon (cost 7, 0 -> -7 overshoot,
+#       legal above the -10 floor; empty enemy board keeps its On Play
+#       silent; turn ends). Shishimamon is ALSO the [TB] body that meets
+#       EX12-070's use requirement.
+#   T2: P1 passes everything.
+#   T3 (P0, memory 3): play EX12-070 (3 -> 0), pay the discard (Wankomon),
+#       <Draw 2>, option placed. Pass (memory 3 to P1) -- placement turn
+#       over, so <Delay> becomes declarable.
+#   T4 (P1, memory 3): hard-cast MarineBullmon (cost 7, 3 -> -4). P1 pays
+#       the source-placement cost (a hand EX12-046) and bounces
+#       Shishimamon; THE CLAUSE: the would-leave window parks for P0 and
+#       is DECLINED -- the option stays put, Shishimamon reaches P0's
+#       hand. The turn ends on the overshoot; trailing step is P0's
+#       breeding decision.
+#
+# Stack layout: hand [0..4], security [5..9], then draws in deal order
+# (P0: [10] = T3 turn draw, [11]/[12] = the <Draw 2>, [13] = the T5 turn
+# draw that lands the moment P1's overshoot ends the turn; P1: [10] = T2,
+# [11] = T4).
+# REVIEW 2026-08-22 -- BLOCKED ON HARNESS BRIDGE (OptionalSkill decline):
+# the `decline:` payload serializes as select_cancel, but DCGO's
+# OptionalSkill hook (OptionalSkill.cs ~line 150) accepts ONLY
+# select_bool (select_has_bool) and ABORTS on a cancel payload -- and the
+# scenario schema has no bool-no form (`yes:` must be true). Every
+# decline aimed at a DCGO OptionalSkill prompt therefore aborts the job
+# at that row until the bridge maps Decline -> select_bool=false for
+# OptionalSkill (or the hook accepts cancel as "don't use").
+# Here: the Delay-window decline row -- the clause's own witness (EX12_070
+# [All Turns] trigger is isOptional=true -> OptionalSkill).
+card: EX12-070
+clause: EX12-070#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-046, EX12-070, EX12-009, EX12-065, EX12-074,
+            EX12-075, EX12-075, EX12-075, EX12-074, EX12-074,
+            EX12-020, EX12-020, EX12-020, EX12-074]
+    rest: toho-braves
+  p1:
+    stack: [EX12-031, EX12-046, EX12-046, EX12-046, EX12-074,
+            EX12-075, EX12-075, EX12-075, EX12-047, EX12-047,
+            EX12-070, EX12-070]
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): the Lv.5 [TB] body (and use-req enabler) lands.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-046, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 7)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): place the option (its Main path, proven in effect1/2).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-070, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-009] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): MarineBullmon bounces Shishimamon -- the clause's event.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-031, from: hand } }
+    expect: { prompt: main_phase }
+  # The [On Play] cost: place a hand EX12-046 ([TB], Lv.5) as the bottom
+  # source (three identical copies in hand -- occurrence order is fine,
+  # they are interchangeable).
+  - actor: 1
+    do: { select: { cards: [EX12-046] } }
+    expect: { prompt: SelectHandEffect }
+  # The bounce target: P0's Shishimamon (the only ≤1-source Digimon).
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: the would-leave <Delay> window opens for P0; decline it.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # P1's overshoot ended the turn once the effects resolved.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 13
+    that:
+      p0.memory: 4
+      p0.security: 5
+      p0.trash: [EX12-009]
+      p0.hand: [EX12-065, EX12-074, EX12-074, EX12-020, EX12-020, EX12-020, EX12-046]
+      p0.field:
+        - { card_id: EX12-070, dp: -1, suspended: false, sources: [] }
+      p1.security: 5
+      p1.trash: []
+      p1.field:
+        - { card_id: EX12-031, dp: 7000, suspended: false, sources: [EX12-046] }

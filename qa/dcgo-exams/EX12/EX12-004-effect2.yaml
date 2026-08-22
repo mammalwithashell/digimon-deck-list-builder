@@ -1,0 +1,140 @@
+# Exam scenario: EX12-004 Onibimon, clause EX12-004#effect#2 -- the <Execute>
+# keyword body: "(At the end of your turn, this Digimon may attack. At the end
+# of that attack, delete this Digimon. Your opponent's unsuspended Digimon can
+# also be attacked with this effect.)"
+#
+# To watch the END-OF-ATTACK SELF-DELETE separately from ordinary battle
+# deletion, the carrier must WIN its battle: build Onibimon -> Wankomon ->
+# Shellmon (EX12-026, [TB], both digivolves via the [Shambala] alt circles,
+# entirely in breeding where nothing triggers), then move. On the owner's
+# turn Shellmon reads 7000 DP (5000 + Wankomon's inherited +2000), the
+# defender is P1's unsuspended 2000 DP Wankomon: the defender loses the
+# battle, then <Execute> deletes the surviving attacker at the end of that
+# attack -- both deletions are the keyword body's own observables.
+#
+# P1 mirrors the cheap Wankomon build as the target. P1's own carrier
+# becomes attack-capable at the end of P1's T6, so DCGO opens P1's OWN
+# <Execute> dialog there -- the line declines it to keep P1 inert.
+#
+# ENGINE-GAP NOTE (same as EX12-004-effect1/-inherited0): our engine omits
+# keyword auto-effects for CONDITIONAL declarative grants (game/mod.rs
+# build_effects_for_card), so no EndOfTurnAction window parks sim-side; all
+# three select rows answer no live prompt and ride the wire for DCGO's
+# OptionalSkill / SelectAttackEffect prompts (asserted strictly there). The
+# sim board keeps everything; the oracle side resolves attack + self-delete.
+# An oracle-pass board divergence localizes the sim gap -- the finding this
+# exam exists to surface.
+# REVIEW 2026-08-22 -- BLOCKED ON HARNESS BRIDGE (OptionalSkill decline):
+# the `decline:` payload serializes as select_cancel, but DCGO's
+# OptionalSkill hook (OptionalSkill.cs ~line 150) accepts ONLY
+# select_bool (select_has_bool) and ABORTS on a cancel payload -- and the
+# scenario schema has no bool-no form (`yes:` must be true). Every
+# decline aimed at a DCGO OptionalSkill prompt therefore aborts the job
+# at that row until the bridge maps Decline -> select_bool=false for
+# OptionalSkill (or the hook accepts cancel as "don't use").
+# Here: P1's T6 Execute-window decline row (the T7 `yes` rows are fine).
+card: EX12-004
+clause: EX12-004#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-009, EX12-026, EX12-011, EX12-031, EX12-046,   # opening hand
+            EX12-046, EX12-046, EX12-061, EX12-062, EX12-070,   # security
+            EX12-011, EX12-031, EX12-061]                       # T3 / T5 / T7 draws
+    rest: toho-braves
+  p1:
+    stack: [EX12-009, EX12-011, EX12-031, EX12-046, EX12-061,   # opening hand
+            EX12-046, EX12-046, EX12-062, EX12-070, EX12-070,   # security
+            EX12-011, EX12-031, EX12-061]                       # T2 / T4 / T6 draws
+    rest: toho-braves
+steps:
+  # Turn 1 (P0): hatch Onibimon, digivolve Wankomon (alt circle, cost 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 2 (P1): the target's build, one turn behind.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (P0, memory 3): digivolve Shellmon over the breeding Wankomon via
+  # its alt circle "Lv.3 w/[Shambala]: Cost 2" (3 -> 1; the standard blue
+  # circle does not match the red Wankomon, so the path is unambiguous, and
+  # no [When Digivolving] trigger fires in breeding).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-026 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 4 (P1): move the target to battle; it stays unsuspended for good.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (P0): move the Shellmon stack to battle (no attack on the move
+  # turn, so T5's end opens no window).
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 6 (P1): pass -- and decline P1's OWN <Execute> dialog (P1's carrier
+  # is [TB] over Onibimon too, fielded since T4, so DCGO prompts here).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Turn 7 (P0): pass everything -- the exam window opens at end of turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Accept the optional end-of-turn attack...
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # ...into the UNSUSPENDED Wankomon (the keyword's widened defender set).
+  # 7000 vs 2000: the defender is deleted by battle, then <Execute> deletes
+  # the surviving Shellmon at the end of that attack.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectAttackEffect }
+  # Trailing pass: P1's next breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Pre-attack setup, at the T7 main-phase pass (turn 7, P0's turn): the
+  # attacker reads 7000 DP -- Wankomon's inherited [Your Turn] +2000 over the
+  # printed 5000 -- with both sources under it; the defender sits unsuspended
+  # at its printed 2000.
+  - at: 17
+    that:
+      turn: 7
+      p0.field: [{ card_id: EX12-026, dp: 7000, suspended: false, sources: [EX12-004, EX12-009] }]
+      p1.field: [{ card_id: EX12-009, dp: 2000, suspended: false, sources: [EX12-004] }]

@@ -1,0 +1,137 @@
+# Exam scenario: EX12-074 Genshi Continent & Ashino Island, "[Security]
+# [Your Turn] [Once Per Turn] When one of your [Shambala] trait Digimon
+# attacks, it may digivolve into a [Shambala] trait Digimon card in the hand
+# with the cost reduced by 1."
+#
+# The clause only lives while EX12-074 sits FACE UP in the security stack, so
+# the line first runs the card's own [Main] (the EX12-074-effect2 pattern):
+# T3 plays EX12-074, the bottom security card (pinned EX12-075, an Option)
+# swaps to hand, and EX12-074 becomes the face-up bottom security card. The
+# [Main] "may play" tail is defused exactly as in the effect#0/#2 exams: the
+# hand at resolution holds ONLY options (EX12-070 x4 + the added EX12-075), so
+# both engines find zero Digimon-shaped candidates and skip without a prompt.
+#
+# THE CLAUSE fires on T5: Gasamon (played T1, sickness long shed) attacks
+# security; EX12-074 triggers from the security stack and offers the
+# digivolve. The T5 draw put EX12-026 Shellmon in the hand -- the pick.
+# Shellmon is chosen (over Seasarmon) because its PRINTED blue Lv.3 circle
+# matches blue Gasamon: our engine's effect-initiated digivolve currently
+# consults only printed circles, not registry alt trait circles (engine gap
+# noted 2026-08-22; Seasarmon's only matching route from Gasamon is its
+# [Shambala] trait circle and silently no-ops). Cost arithmetic: printed
+# circle 2, the clause's -1, and Gasamon's own printed passive ("[Your Turn]
+# would digivolve into a [TB] card: -1") stack to cost 0 -- memory stays 3.
+#
+# After the mid-attack digivolve: Shellmon's [When Digivolving] "trash the
+# bottom 2 digivolution cards of 1 of your opponent's Digimon..." finds P1's
+# field EMPTY and skips promptlessly; the security check flips P1's pinned
+# top card EX12-009 (Wankomon, 2000 DP, no [Security] text) -- Shellmon wins
+# the security battle 5000 > 2000 and survives; Wankomon is trashed and the
+# attack ends.
+#
+# Stack layout: [0..4] opening hand, [5..9] security (5 = bottom, pinned
+# EX12-075 for the swap), [10] T3 draw (4th EX12-070, keeps the [Main] tail
+# defused), [11] T5 draw (EX12-026, the digivolve pick), [12] the digivolve
+# bonus draw.
+# REVIEW 2026-08-22 -- REJECTED (prompt-shape conflict): DCGO's EX12_074
+# [Security][Your Turn] attack-digivolve trigger is isOptional=true (line
+# ~30) -> an OptionalSkill gate parks BEFORE the SelectHandEffect digivolve
+# pick. This line answers the pick directly (live sim prompt, no gate
+# sim-side) and cannot host a `yes:` row. The oracle run will kind-mismatch
+# at the gate. Needs engine/harness gate-shape alignment.
+card: EX12-074
+clause: EX12-074#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-020, EX12-074, EX12-070, EX12-070, EX12-070,
+            EX12-075, EX12-009, EX12-009, EX12-009, EX12-009,
+            EX12-070,
+            EX12-026, EX12-047]
+    rest: toho-braves
+  p1:
+    stack: [EX12-026, EX12-026, EX12-026, EX12-031, EX12-031,
+            EX12-046, EX12-046, EX12-046, EX12-031, EX12-009]
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): play Gasamon -- the future [Shambala] attacker and the
+  # use-req provider for EX12-074. The play overshoots (0 -> -3), ending the
+  # turn immediately.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1): decline everything.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): play EX12-074 (3 -> 0, turn continues). The security
+  # swap is prompt-free and the "may play" tail fizzles on an options-only
+  # hand; EX12-074 is now the face-up bottom security card.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-074, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1): decline everything.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): THE CLAUSE -- Gasamon attacks security; EX12-074
+  # triggers from the security stack and parks the digivolve pick.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Digivolve the attacker into Shellmon, cost 2 - 1 (clause) - 1 (Gasamon's
+  # own [TB] passive) = 0.
+  - actor: 0
+    do: { select: { cards: [EX12-026] } }
+    expect: { prompt: SelectHandEffect }
+  # Shellmon's WD source-trash finds no opponent Digimon and skips; the
+  # security check resolves the battle (5000 > 2000). Attacking spends no
+  # memory, so the same seat answers the trailing main_phase pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # After the attack: the attacker is now a suspended Shellmon carrying
+  # Gasamon as its digivolution card, memory untouched at 3, P0 still on 5
+  # security (EX12-074 face up at the bottom), and P1 lost the checked
+  # EX12-009 from security to trash.
+  #
+  # KNOWN SOFT SPOT: our engine's effect-initiated digivolve deliberately
+  # skips the digivolution bonus draw (game_actions/digivolve.rs), so the
+  # hand below has no drawn card. The printed rules and DCGO draw 1 on every
+  # digivolution -- if the oracle pass diffs an extra hand card here, that is
+  # a real engine divergence to triage, not a scenario bug. Stack position
+  # [12] pins EX12-047 as the card such a draw would take.
+  - at: 12
+    that:
+      p0.memory: 3
+      p0.security: 5
+      p0.trash: []
+      p0.hand: [EX12-070, EX12-070, EX12-070, EX12-070, EX12-075]
+      p0.field:
+        - { card_id: EX12-026, dp: 5000, suspended: true, sources: [EX12-020] }
+      p1.security: 4
+      p1.trash: [EX12-009]
+      p1.field: []
+  # After the trailing pass the turn ends; the seesaw hands P1 3 memory.
+  - at: 13
+    that:
+      p0.memory: -3

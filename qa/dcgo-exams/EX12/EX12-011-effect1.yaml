@@ -1,0 +1,84 @@
+# Exam scenario: EX12-011 Seasarmon effect clause #1 -- "[On Play] [When
+# Digivolving] delete 1 of your opponent's Digimon with 5000 DP or less."
+#
+# The selection-bearing exam of the deletion itself (the alt-digivolve circle
+# is EX12-011-effect2's exam; Raid is effect0's). P1 builds TWO 2000 DP
+# Gasamon so the mandatory delete has two candidates -- DCGO's EX12_011.cs
+# opens a SelectPermanentEffect (canNoSelect: false) whenever more than zero
+# candidates exist, and two identical candidates make the pick a real
+# decision instead of an auto-resolve. The `select:` step answers with OUR
+# slot ref opp.field.0; the wire carries the permanent's top-card id
+# (EX12-020) for DCGO's identity matching.
+#
+#   T1 (P0, memory 0): pass everything (memory 3 to P1).
+#   T2 (P1, memory 3): play Gasamon (3 -> 0), play the second Gasamon
+#       (0 -> -3, overshoot, turn ends). Gasamon's only effect is a [Your
+#       Turn] digivolve-cost passive, so neither play opens a prompt.
+#   T3 (P0, memory 3): THE CLAUSE -- hard-cast Seasarmon (cost 5, 3 -> -2,
+#       overshoot legal above the -10 floor). P1's field is empty of
+#       digivolution sources, so [On Play] parks the 5000-DP-or-less delete
+#       pick over the two Gasamon; the select answers it. The turn ends on
+#       the overshoot, so the trailing step is P1's breeding decision.
+#
+# Stack layout: hand [0..4], security [5..9], then per-seat draws. P1 plays
+# both Gasamon from hand.0 (the second copy shifts down after the first
+# play), which keeps the duplicated card id unambiguous. No draw pin adds a
+# second copy of any referenced card before it is used.
+card: EX12-011
+clause: EX12-011#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-011, EX12-074, EX12-074, EX12-046, EX12-046,
+            EX12-075, EX12-075, EX12-075, EX12-046, EX12-046,
+            EX12-070]
+    rest: toho-braves
+  p1:
+    stack: [EX12-020, EX12-020, EX12-046, EX12-046, EX12-046,
+            EX12-074, EX12-074, EX12-074, EX12-074, EX12-075,
+            EX12-075, EX12-075]
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): pass everything.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): two Gasamon, the second an overshoot that ends the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): the clause under exam -- Seasarmon's [On Play] delete.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-011, from: hand } }
+    expect: { prompt: main_phase }
+  # Two 2000 DP candidates; pick P1's slot 0.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The cost-5 play took memory to -2, ending P0's turn after resolution.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  - at: 8
+    that:
+      p0.memory: -2
+      p0.trash: []
+      p0.security: 5
+      p0.field:
+        - { card_id: EX12-011, dp: 5000, suspended: false, sources: [] }
+      p1.trash: [EX12-020]
+      p1.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }

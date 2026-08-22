@@ -1,0 +1,229 @@
+# Exam scenario: EX12-031 (MarineBullmon), clause inherited#0 -- the
+# INHERITED "<Decode (Lv.4 or lower w/[Aqua]/[Sea Animal] in any trait or
+# w/[TB] trait)>" granted while MarineBullmon sits in the digivolution cards.
+#
+# The carrier is built on the BATTLE AREA (not breeding) so the digivolution
+# stack stays minimal: play Shellmon (Lv.4), digivolve MarineBullmon over it,
+# digivolve Amaterasumon over that. The stack under the carrier is then
+# exactly [EX12-026, EX12-031] -- ONE card qualifying for Decode's Lv.4-or-
+# lower filter (Shellmon; MarineBullmon itself is Lv.5), so each Decode
+# window prompt has a single accept id and `yes` answers it. When p1's
+# Amaterasumon deletes the carrier by effect (a non-battle leave), the
+# inherited Decode from EX12-031 fires: accepting plays Shellmon for free
+# before the rest of the stack hits the trash.
+#
+# Silence ledger on the way up:
+#   - Shellmon's [On Play] at T3 and both [When Digivolving] triggers at
+#     T5/T7 are condition- or target-starved (p1 fieldless; p0's hand holds
+#     no Aqua/Sea Animal/TB Digimon -- every pinned filler is an Option, and
+#     Amaterasumon carries no [TB] trait).
+#   - both field digivolves offer two distinct costs (printed circle 4 vs
+#     the [Shambala] alt path 3), so each parks the cost-choice prompt,
+#     answered with the VALUE 3.
+# After the deletion the carrier's own [On Deletion] + <Ascension> triggers
+# bundle into a mandatory TriggerOrder prompt (each body carries its own
+# optionality): the On Deletion body's trash pick is declined, the Ascension
+# yes/no gate is ACCEPTED (its EffectChoice offers no decline-shaped PASS,
+# and placing the carrier as top security is a crisp extra witness), and
+# p1's "by returning 2 cards from their trash" cost prompt is declined: the
+# clause under exam stays the Decode play.
+# REVIEW 2026-08-22 -- REJECTED (MultipleSkills value-space mismatch): the
+# `value: 5` / `value: 6` answers are OUR engine's TriggerOrder slot values
+# (probe: choices "30 => EX12-047 slot 5", "31 => slot 6"), but DCGO's
+# SetTargetSkill (MultipleSkills.cs) treats select_value as a 0-BASED index
+# into skillInfos_active -- and an out-of-range index silently CLEARS the
+# whole trigger stack (Count < _skillIndex -> StackedSkillInfos reset,
+# yield break), dropping every stacked trigger and desyncing all later
+# rows. Blocked until the bridge translates slot values <-> DCGO skill
+# indices.
+# PLUS three more structural conflicts:
+# (1) Continuation-vs-trigger ordering: DCGO's EX12_047.cs asks p1's
+#     'Select 2 cards to bottom deck' INSIDE the On Play coroutine, right
+#     after the delete/Decode (trash count 2 >= 2), BEFORE the queued
+#     Shellmon-On-Play / On-Deletion / Ascension triggers drain -- this
+#     line has that row LAST (our engine's inline-trigger order). The
+#     strict cursor mismatches at that point.
+# (2) The T5 MarineBullmon [When Digivolving] tuck: DCGO parks its
+#     canNoSelect SelectHandEffect (EX12-047 in hand prints [TB] on its
+#     face; EX12_031.cs gates only on the HAND having a candidate, not on
+#     a bounce target existing) while the sim stays silent (stale
+#     cards.json) -- a decline wire row after the T5 'value: 3' is needed
+#     once the other blocks lift.
+# (3) The Decode material pick is answered with 'yes:' but DCGO's
+#     SelectCardEffect hook accepts only select_card_ids / select_cancel.
+card: EX12-031
+clause: EX12-031#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): the three stack cards + Option fillers (no Digimon that
+      # could satisfy MarineBullmon's tuck condition)
+      - EX12-026
+      - EX12-031
+      - EX12-047
+      - EX12-070
+      - EX12-074
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws (Options only, keeping the tuck condition false):
+      # T3 turn (10), T5 turn (11), T5 dv (12), T7 turn (13), T7 dv (14),
+      # T9 turn (15, drawn before the trailing breeding prompt)
+      - EX12-075
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      - EX12-074
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): exactly one Amaterasumon; inert fillers
+      - EX12-047
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T2 (10), T4 (11), T6 (12), T8 (13)
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-070
+    rest: toho-braves
+steps:
+  # T1 (p0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0): play Shellmon (cost 5, memory 3 -> -2; turn ends, [On Play]
+  # target-starved).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-026, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0): MarineBullmon over the field Shellmon -- printed blue circle
+  # (cost 4) vs alt [Shambala] (cost 3): the VALUE 3 picks the alt (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-031 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0): Amaterasumon over the stack -- printed yellow circle (cost 4)
+  # vs alt [Shambala] (cost 3): VALUE 3 again (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-047 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (p1): play Amaterasumon (cost 12, memory 3 -> -9) and aim its
+  # mandatory delete at p0's only Digimon -- the carrier.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-047, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: the non-battle leave opens the inherited Decode window...
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # ...whose single qualifying digivolution card (Shellmon) is the one
+  # accept id of the material pick.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: SelectCardEffect }
+  # Decode PLAYED Shellmon, so its [On Play] fires for real now: both target
+  # picks aim at p1's fresh Amaterasumon (0 sources: the trash-2 no-ops, the
+  # attack/block lock lands).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The deleted carrier's own bundle: [On Deletion] (slot 5) + <Ascension>
+  # (slot 6), both queued as mandatory carriers. Resolve slot 5 first.
+  - actor: 0
+    do: { select: { value: 5 } }
+    expect: { prompt: MultipleSkills }
+  # [On Deletion] body: decline the optional "return 1 [TB] from trash" pick
+  # (its follow-up hand play then has no candidate and stays silent).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectCardEffect }
+  # <Ascension>: accept -- the deleted carrier's card goes to p0's top
+  # security (5 -> 6) instead of staying in trash.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # p1's optional "by returning 2 cards from their trash" cost: decline.
+  - actor: 1
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # The overshoot ended p1's turn; p0's breeding decision closes.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # The Decode play is the witness: Shellmon alone (and fresh) on p0's field,
+  # MarineBullmon in p0's trash, the carrier's top card on security via the
+  # accepted Ascension (5 -> 6), p1's Amaterasumon standing.
+  - at: 30
+    that:
+      p0.field: [{ card_id: EX12-026, dp: 5000, suspended: false, sources: [] }]
+      p0.trash: [EX12-031]
+      p0.security: 6
+      p1.field: [{ card_id: EX12-047, dp: 12000, suspended: false, sources: [] }]

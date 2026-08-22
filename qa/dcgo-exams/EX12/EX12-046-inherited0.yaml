@@ -1,0 +1,192 @@
+# Exam scenario: EX12-046 (Shishimamon), clause inherited#0 -- "[End of
+# Attack] [Once Per Turn] You may play 1 [TB] trait Digimon card with 5000 DP
+# or less from your hand without paying the cost."
+#
+# The carrier is Amaterasumon (EX12-047) digivolved over Shishimamon in the
+# BREEDING area, so the inherited text is live on the field while every
+# [When Digivolving] along the highway stays suppressed. The blue highway is
+# the same single-route line as the EX12-046-effect3 scenario (Onibimon ->
+# Gasamon alt-Shambala 0 -> Shellmon 2 -> Shishimamon alt-Shambala 3); the
+# ONE new prompt on the way up is Amaterasumon over the yellow/red
+# Shishimamon: its printed yellow-Lv5 circle (cost 4) AND its
+# "Lv.5 w/[Shambala]: Cost 3" alt path both match -- two distinct costs park
+# the engine's cost-choice prompt, answered with the VALUE 3.
+#
+# T11 attacks security: Amaterasumon's own <Security A. +1> checks 2 cards
+# (both stacked as plain low-DP Digimon -> silent battles the 12000 DP
+# attacker survives), and at END OF ATTACK the clause under exam parks its
+# optional hand pick. The answer plays the second Gasamon (TB, 2000 DP <=
+# 5000) from hand for FREE -- Gasamon has no [On Play], so nothing else fires.
+#
+# Silence ledger: Gasamon/Shellmon inherited draws are gated on hand <= 7 (p0's
+# hand is 9+ by T11); Onibimon's <Execute> grant DOES land in DCGO --
+# Amaterasumon's card face prints [TB] (cards.json is stale, review
+# 2026-08-22) -- but the dialog's CanAttack gate stays closed at every turn
+# end (moved-this-turn at T9, suspended after the T11 attack), so no window
+# opens; Piercing never fires (no Digimon battle).
+card: EX12-046
+clause: EX12-046#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): exactly one copy of each digivolver
+      - EX12-020
+      - EX12-026
+      - EX12-046
+      - EX12-047
+      - EX12-070
+      # security (5-9) -- never checked
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T1 dv (10), T3 turn (11) = the SECOND Gasamon for the free
+      # play (safely after the T1 `using:` intent), T3 dv (12), T5 turn (13),
+      # T5 dv (14), T7 turn (15), T7 dv (16), T9 turn (17), T11 turn (18)
+      - EX12-074
+      - EX12-020
+      - EX12-075
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      - EX12-036
+      - EX12-070
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): inert, p1 all-passes
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      # security (5-9): Digimon only, no [Security] text, DP < 12000 -- the
+      # T11 attack checks the top TWO as silent security battles
+      - EX12-009
+      - EX12-020
+      - EX12-026
+      - EX12-011
+      - EX12-062
+    rest: toho-braves
+steps:
+  # T1 (p0): hatch, Gasamon over Onibimon (alt Shambala, cost 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-020 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0): Shellmon over Gasamon (all matching routes cost 2; 3 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-026 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0): Shishimamon over the blue Lv.4 Shellmon (only the alt
+  # "Lv.4 w/[Shambala]: Cost 3" route matches; 3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-046 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0): Amaterasumon over Shishimamon -- printed yellow circle (cost 4)
+  # and the Shambala alt path (cost 3) both match, so the cost-choice prompt
+  # parks; the VALUE 3 picks the alt route (3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-047 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { value: 3 } }
+    expect: { prompt: SelectCountEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (p0): move the stack to the battle area.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T10 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T11 (p0): attack security -- 2 checks (<Security A. +1>), then the clause
+  # under exam parks its optional End of Attack hand pick.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # The answer: play the second Gasamon (TB, 2000 DP) from hand for free.
+  - actor: 0
+    do: { select: { cards: [EX12-020] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Trailing pass: p1's next breeding decision closes the line.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Two security cards checked (5 -> 3), the free play landed (Gasamon fresh
+  # on the field beside the suspended carrier), and memory still 3 right
+  # after the pick -- the play cost nothing.
+  - at: 29
+    that:
+      p1.security: 3
+      p0.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-047, dp: 12000, suspended: true,
+            sources: [EX12-004, EX12-020, EX12-026, EX12-046] }

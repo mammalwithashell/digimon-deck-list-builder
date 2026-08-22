@@ -1,0 +1,94 @@
+# Exam scenario: EX12-011 Seasarmon effect clause #0 -- "<Raid> (When this
+# Digimon attacks, you may switch the target of attack to 1 of your
+# opponent's unsuspended Digimon with the highest DP.)"
+#
+# The observable is the switched attack itself: Seasarmon declares on P1's
+# SECURITY, the Raid window opens (P1 has exactly one unsuspended Digimon,
+# the 2000 DP Gasamon -- trivially the highest-DP candidate), the `select:`
+# answers the optional switch, and the battle deletes Gasamon while P1's
+# security stays at 5. Without Raid an unsuspended Digimon is not a legal
+# attack target at all, so the deletion + untouched security is explicable
+# only by the keyword.
+#
+# Order of plays matters: Seasarmon lands BEFORE Gasamon, because its
+# [On Play] "delete 1 opponent Digimon with 5000 DP or less" (effect1's
+# exam, mandatory) would otherwise eat the Raid target on arrival. Played
+# into an empty enemy board, the On Play has zero candidates and stays
+# silent.
+#
+#   T1 (P0, memory 0): pass breeding, hard-cast Seasarmon (cost 5, 0 -> -5
+#       overshoot, legal above the -10 floor; turn ends).
+#   T2 (P1, memory 5): play Gasamon (5 -> 2; its only effect is a [Your
+#       Turn] passive -- no prompt), pass (memory 3 to P0).
+#   T3 (P0, memory 3): THE CLAUSE -- Seasarmon attacks security; the Raid
+#       switch prompt parks and the select redirects the attack onto
+#       Gasamon. 5000 vs 2000 deletes Gasamon; Seasarmon stays suspended.
+#       Attacking costs no memory, so P0 gets a trailing main prompt.
+#
+# Stack layout: hand [0..4], security [5..9], then per-seat draws
+# ([10] = the seat's first turn-start draw).
+# REVIEW 2026-08-22 -- REJECTED (prompt-shape conflict): DCGO's Raid is
+# isOptional=true (Raid.cs) -> an OptionalSkill "activate Raid?" gate parks
+# BEFORE the switch-target SelectPermanentEffect. This line has no `yes:` row
+# (our engine models Raid as one declinable target pick, live sim-side), and
+# one cannot be inserted (it would answer the sim's pending target prompt).
+# The oracle run will kind-mismatch at the Raid window. Needs engine/harness
+# alignment of optional-keyword gate shapes.
+card: EX12-011
+clause: EX12-011#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-011, EX12-074, EX12-074, EX12-046, EX12-046,
+            EX12-075, EX12-075, EX12-075, EX12-046, EX12-046,
+            EX12-070]
+    rest: toho-braves
+  p1:
+    stack: [EX12-020, EX12-046, EX12-046, EX12-046, EX12-074,
+            EX12-074, EX12-074, EX12-074, EX12-075, EX12-075,
+            EX12-075]
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): Seasarmon into an empty enemy board -- On Play silent.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-011, from: hand } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 5): the Raid target arrives.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): the clause under exam -- attack security, Raid switch.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # The Raid window: switch the attack onto the unsuspended Gasamon.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Attacking costs no memory; P0 keeps the turn after the battle.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 8
+    that:
+      p0.memory: 3
+      p0.security: 5
+      p0.trash: []
+      p0.field:
+        - { card_id: EX12-011, dp: 5000, suspended: true, sources: [] }
+      p1.security: 5
+      p1.trash: [EX12-020]
+      p1.field: []

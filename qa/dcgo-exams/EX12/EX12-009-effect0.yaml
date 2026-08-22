@@ -1,0 +1,85 @@
+# Exam scenario: EX12-009 Wankomon, clause EX12-009#effect#0 --
+# "[On Play] Reveal the top 3 cards of your deck. Add 1 card with the
+#  [Shambala] trait and 1 card with the [TB] trait among them to the hand.
+#  Return the rest to the bottom of the deck."
+#
+# One turn: P0 plays Wankomon from hand at memory 0 (cost 3 -> -3, an
+# overshooting play that ends the turn after the effect resolves). The On Play
+# reveals stack positions 10-12 (deal order is hand 0-4, security 5-9,
+# deck 10+ -- P0 goes first and takes no turn-1 draw, so the reveal is exactly
+# the pinned 10-12).
+#
+# The reveal trio is chosen so each prompt's answer is provable:
+#   EX12-036 Ryugumon   -- the Shambala pick (DCGO EX12_009.cs asks Shambala
+#                          first, TB second -- verified in the C#).
+#   EX12-020 Gasamon    -- [Shambala]+[TB]: the TB pick.
+#   EX12-011 Seasarmon  -- the leftover, returned to the deck bottom.
+# All three ids are distinct, so identity picks are unambiguous. TRAIT-DATA
+# NOTE (review 2026-08-22): cards.json shows EX12-036 without [TB], but the
+# card FACE prints [TB] -- so in DCGO all three revealed cards satisfy BOTH
+# filters. That widens candidate sets only (the emitted job carries no
+# candidate expectations); both identity picks stay offered on both sides.
+# Only the original "picking 036 proves prompt order" rationale is void --
+# the C# itself proves the order instead.
+#
+# KNOWN ORACLE ABORT (review 2026-08-22, post-witness): the third select --
+# our engine's 1-card OrderedPermutation for the leftover -- has NO DCGO
+# counterpart: ReturnRevealedCardsToLibraryBottom (RevealLibrary.cs) places
+# a SINGLE remaining card automatically, prompting only for 2+. The DCGO
+# driver's cursor is STRICT (no skip tolerance), so the unconsumed row
+# aborts the job at the trailing breeding question -- AFTER both witness
+# picks resolved. The row cannot be removed (it answers a live sim prompt).
+# Un-blocks when the engine auto-resolves single-card orderings or the wire
+# learns to mark sim-only rows.
+#
+# EX12-009 is the only copy of itself in the opening hand, keeping the play
+# intent unambiguous.
+card: EX12-009
+clause: EX12-009#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-009, EX12-011, EX12-020, EX12-026, EX12-031,   # opening hand
+            EX12-046, EX12-046, EX12-061, EX12-061, EX12-062,   # security
+            EX12-036, EX12-020, EX12-011]                       # the reveal 3
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # Turn 1 (P0, memory 0): no hatch needed -- straight to the play.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-009, from: hand } }
+    expect: { prompt: main_phase }
+  # First prompt: "Select 1 [Shambala] trait card." -- take the one that has
+  # no [TB], so this pick can only belong to the Shambala question.
+  - actor: 0
+    do: { select: { cards: [EX12-036] } }
+    expect: { prompt: SelectCardEffect }
+  # Second prompt: "Select 1 [TB] trait card." -- EX12-011 is left to bottom.
+  - actor: 0
+    do: { select: { cards: [EX12-020] } }
+    expect: { prompt: SelectCardEffect }
+  # Our engine additionally asks to ORDER the remaining card onto the deck
+  # bottom (OrderedPermutation, 1 card -- only one possible answer). DCGO's
+  # SimplifiedRevealDeckTopCardsAndSelect places the leftover automatically,
+  # so on the oracle side this row is expected to be skipped (the differ keys
+  # rows by step and tolerates side-local skips).
+  - actor: 0
+    do: { select: { cards: [EX12-011] } }
+    expect: { prompt: SelectCardEffect }
+  # The cost-3 play at memory 0 overshot to -3, so the turn ends after the
+  # effect resolves; the trailing pass is P1's breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # THE clause observable, at the ordering step that closes the effect: the
+  # hand lost the played EX12-009 and gained exactly the two picks -- EX12-036
+  # (Shambala pick) and EX12-020 (TB pick, now a second copy alongside the
+  # opening-hand one). EX12-011 went to the deck bottom, NOT the hand.
+  - at: 4
+    that:
+      p0.hand: [EX12-011, EX12-020, EX12-020, EX12-026, EX12-031, EX12-036]
+      p0.field: [{ card_id: EX12-009, dp: 2000, suspended: false, sources: [] }]

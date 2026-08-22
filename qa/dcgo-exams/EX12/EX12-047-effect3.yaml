@@ -1,0 +1,140 @@
+# Exam scenario: EX12-047 (Amaterasumon), clause effect#3 -- "[On Play]
+# [When Digivolving] Delete 1 of your opponent's lowest DP Digimon. Then, by
+# returning 2 cards from their trash to the bottom of the deck, for the
+# turn, this Digimon gets +6000 DP and, to 1 of their Digimon, give -5000 DP
+# for each of those returned cards' colors."
+#
+# p1 spends two turns playing two Hanimon (EX12-061), DECLINING each one's
+# optional trash-for-draw-2 so its trash stays empty -- that builds the
+# board (two 2000 DP Digimon, a genuine lowest-DP TIE the delete must
+# choose between) while starving the "returning 2 cards" cost. p0 then
+# plays Amaterasumon: the mandatory delete prompt offers both Hanimon (the
+# tie is the proof the choice is exposed, not auto-picked); the follow-up
+# return-2 window sees a 1-card trash (just the deleted Hanimon) and our
+# engine auto-skips the underfunded cost without parking -- the decline row
+# stays in the line for the DCGO wire in case DCGO does park it.
+#
+# SELECT-SUPPORT LIMIT (honest, not routed around): the return-2 prompt is
+# a count-capped MULTI-PICK over the opponent's trash; identity picks
+# against that prompt kind are outside the current `select:` vocabulary
+# (only the decline is expressible -- and with 2+ cards in trash our engine
+# parks it as NON-declinable, which no authorable payload can answer). The
+# line therefore measures the delete, the tie choice, and the declined
+# cost, and leaves the +6000/-5000 DP payloads unmeasured here. If DCGO
+# resolves the window differently, the differ owns that finding.
+card: EX12-047
+clause: EX12-047#effect#3
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Amaterasumon + inert Option fillers
+      - EX12-047
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T3 turn (10), T5 turn (11)
+      - EX12-074
+      - EX12-075
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): two Hanimon (the T2 play is pinned to hand.0); fillers
+      - EX12-070
+      - EX12-061
+      - EX12-061
+      - EX12-070
+      - EX12-074
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws, pinned Hanimon-free so the T4 play intent stays unambiguous:
+      # T2 turn (10), T4 turn (11)
+      - EX12-075
+      - EX12-074
+    rest: toho-braves
+steps:
+  # T1 (p0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): first Hanimon (cost 3, memory 3 -> 0; pinned -- two copies in
+  # hand), DECLINING its optional trash-for-draw-2, keep the turn.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-061, from: hand.1 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1): second Hanimon (now the only copy in hand), same decline.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-061, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0): the clause -- play Amaterasumon (cost 12, memory 3 -> -9).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-047, from: hand } }
+    expect: { prompt: main_phase }
+  # The mandatory delete: both Hanimon sit at 2000 DP, so the lowest-DP
+  # filter leaves a genuine TIE -- the prompt must offer both. Take slot 0.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The "by returning 2 cards from their trash" window over the 1-card trash:
+  # BOTH engines skip it silently -- our engine auto-skips the underfunded
+  # cost, and DCGO's EX12_047.cs gates the whole select on
+  # `card.Owner.Enemy.TrashCards.Count >= 2` (verified in the C#), so it
+  # never parks either. A decline row here previously rode the wire "in case
+  # DCGO does park it" -- but the DCGO driver's cursor is STRICT (no skip
+  # tolerance, ScriptedLine.cs), so an unconsumed row would abort the job at
+  # the next real question. Removed in review 2026-08-22.
+  # The overshoot ended p0's turn; p1's breeding decision closes.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # One Hanimon deleted (its card joins the two trashed Options), the other
+  # untouched at its printed 2000 DP -- no -5000 landed, the cost was
+  # never payable -- and Amaterasumon at printed 12000, no +6000.
+  - at: 16
+    that:
+      p1.field: [{ card_id: EX12-061, dp: 2000, suspended: false, sources: [] }]
+      p1.trash: [EX12-061]
+      p0.field: [{ card_id: EX12-047, dp: 12000, suspended: false, sources: [] }]

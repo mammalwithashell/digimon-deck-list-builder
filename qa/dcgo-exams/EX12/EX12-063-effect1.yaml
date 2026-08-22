@@ -1,0 +1,141 @@
+# Exam scenario: EX12-063 (Karakurumon), clause effect#1 -- "[On Deletion] You
+# may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from your
+# trash without paying the cost." -- the ON-CARD copy (Karakurumon is the top
+# card when it dies).
+#
+# Three ingredients, all reached by legal play:
+#   1. Karakurumon on the field: T1 p0 plays it from hand (overshoot 0 -> -7,
+#      above the -10 floor). Playing it FIRST, while the trash is still empty,
+#      matters: with a level<=4 [Puppet]/[TB] card already in the trash the
+#      play would park Karakurumon's Assembly material prompt. Its [On Play]
+#      suspend fizzles silently against p1's empty board.
+#   2. A trash target: T3 p0 plays Hanimon #1 (cost 3, memory 3 -> 0); its
+#      [On Play] trashes the second Hanimon copy from hand and draws 2, so
+#      the trash holds a level-3 [Puppet] Digimon.
+#   3. A deletion: T5 Karakurumon (7000 DP, on the field since T1) attacks
+#      security. p1's security is pinned to blank-security Digimon of 12000+
+#      DP, so the security battle deletes the attacker.
+# The clause then parks the trash pick. Candidates: only the trashed Hanimon
+# (Karakurumon itself is level 5 and fails the filter). The revived Hanimon's
+# own [On Play] hand-trash prompt is declined.
+# REVIEW 2026-08-22 -- REJECTED (prompt-shape conflict): DCGO's EX12_063
+# [On Deletion] is SetUpActivateClass(..., isOptional: false) -- NO
+# OptionalSkill gate; DCGO goes straight to the cancelable trash pick
+# (SelectCardEffect). Our engine parks a live OptionalSkill gate first, so
+# the `yes:` row is required sim-side but kind-mismatches on the oracle,
+# aborting BEFORE the revive. Needs engine/harness gate-shape alignment.
+# (The inherited copy's exam, EX12-063-inherited0, dodges this: its rows are
+# wire-only there and the gate row was removed in review.)
+card: EX12-063
+clause: EX12-063#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): two Hanimon (one played, one trashed as its cost)
+      - EX12-061
+      - EX12-061
+      - EX12-063
+      - EX12-074
+      - EX12-075
+      # security (5-9) -- deliberately free of EX12-074, whose
+      # [Security]-area passive would trigger on our own [Shambala] attack.
+      - EX12-031
+      - EX12-031
+      - EX12-070
+      - EX12-011
+      - EX12-070
+      # T3 turn (10), T3 <Draw 2> (11-12), T5 turn (13)
+      - EX12-020
+      - EX12-026
+      - EX12-065
+      - EX12-036
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): never acted on
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      # security (5-9): blank-security Digimon of 12000+ DP -- whichever is
+      # on top, the 7000 DP attacker loses the check and is deleted.
+      - EX12-076
+      - EX12-076
+      - EX12-047
+      - EX12-047
+      - EX12-036
+    rest: toho-braves
+steps:
+  # Turn 1 (p0): play Karakurumon (overshoot 0 -> -7); its suspend fizzles on
+  # the empty board; the turn ends.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-063, from: hand } }
+    expect: { prompt: main_phase }
+  # Turn 2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (p0): play Hanimon #1 (cost 3, memory 3 -> 0); trash Hanimon #2
+  # for its [On Play]; <Draw 2> resolves; turn continues at memory 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-061, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-061] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (p0): Karakurumon attacks security and dies to the 12000+ DP
+  # security Digimon; the clause parks the trash pick.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # The clause is optional ("You may play..."): affirm the trigger.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # The clause: revive the trashed Hanimon (the only level<=4 [Puppet]/[TB]
+  # Digimon card in the trash; Karakurumon itself is level 5 and filtered out).
+  - actor: 0
+    do: { select: { cards: [EX12-061] } }
+    expect: { prompt: SelectCardEffect }
+  # The revived Hanimon's own [On Play] hand-trash is declined.
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # Attack over; still p0's turn at memory 3; close it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # After the deletion window: Karakurumon is in the trash, and the revived
+  # Hanimon stands next to the T3 copy (its own [On Play] was declined, so
+  # the hand is untouched by it).
+  - at: 15
+    that:
+      p0.field:
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-061, dp: 2000, suspended: false, sources: [] }
+      p0.trash: [EX12-063]

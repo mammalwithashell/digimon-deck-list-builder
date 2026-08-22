@@ -1,0 +1,137 @@
+# Exam scenario: EX12-047 (Amaterasumon), clause effect#2 -- "<Ascension>
+# (When this Digimon is deleted, you may place this card as the top security
+# card.)"
+#
+# The mirror match makes the deletion cheap: p0 plays Amaterasumon (its
+# [On Play] is target- and trash-starved -- p1 has no Digimon and an empty
+# trash), then p1 plays its own and aims the mandatory "delete 1 of your
+# opponent's lowest DP Digimon" at p0's only Digimon. The deleted carrier's
+# [On Deletion] + <Ascension> triggers bundle into a mandatory TriggerOrder:
+# the [On Deletion] body is candidate-starved on purpose (p0's trash is
+# empty and its hand holds only Options, so both optional picks skip
+# silently), leaving the <Ascension> yes/no gate as the clause's own
+# decision. Accepting it moves the deleted card to p0's TOP SECURITY:
+# security 5 -> 6 with an empty trash is a witness nothing else on this
+# board can produce.
+#
+# p1's follow-up "by returning 2 cards from their trash" stays silent too:
+# after Ascension resolves, p0's trash is empty.
+#
+# Memory: two all-pass turns hand p0 3; the cost-12 play lands at -9 and
+# hands p1 9; p1's cost-12 play lands at -3 and ends its turn.
+# REVIEW 2026-08-22 -- REJECTED (MultipleSkills value-space mismatch): the
+# `value: 5` / `value: 6` answers are OUR engine's TriggerOrder slot values
+# (probe: choices "30 => EX12-047 slot 5", "31 => slot 6"), but DCGO's
+# SetTargetSkill (MultipleSkills.cs) treats select_value as a 0-BASED index
+# into skillInfos_active -- and an out-of-range index silently CLEARS the
+# whole trigger stack (Count < _skillIndex -> StackedSkillInfos reset,
+# yield break), dropping every stacked trigger and desyncing all later
+# rows. Blocked until the bridge translates slot values <-> DCGO skill
+# indices.
+# Also: DCGO WILL park the [On Deletion] trash-return pick (the deleted
+# EX12-047 prints [TB] on its face; EX12_047.cs gates on trash-TB) while the
+# sim stays silent (stale cards.json) -- once the value bridge is fixed, a
+# decline row would be needed between the `value:` row and the Ascension
+# `yes:` row, which conflicts with the sim's pending Ascension prompt;
+# consider resolving Ascension (slot 6) FIRST so the emptied trash silences
+# the On Deletion body on both sides.
+card: EX12-047
+clause: EX12-047#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): Amaterasumon + Option-only fillers (the [On Deletion]
+      # hand pick must stay candidate-free)
+      - EX12-047
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-070
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws (Options only): T3 turn (10), T5 turn (11, drawn before the
+      # trailing breeding prompt)
+      - EX12-074
+      - EX12-075
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): exactly one Amaterasumon; inert fillers
+      - EX12-047
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T2 turn (10), T4 turn (11)
+      - EX12-070
+      - EX12-074
+    rest: toho-braves
+steps:
+  # T1 (p0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0): play Amaterasumon (cost 12, memory 3 -> -9; [On Play] silent:
+  # p1 has no Digimon and no trash).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-047, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (p1): play Amaterasumon (cost 12, memory 9 -> -3) and aim the
+  # mandatory delete at p0's lone Digimon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-047, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The deleted carrier's bundle: [On Deletion] (slot 5) + <Ascension>
+  # (slot 6). Resolve slot 5 first -- both of its optional picks are
+  # candidate-starved and skip without prompting.
+  - actor: 0
+    do: { select: { value: 5 } }
+    expect: { prompt: MultipleSkills }
+  # THE CLAUSE: the <Ascension> gate -- accept, placing the deleted card as
+  # p0's top security card.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # p1's turn ended at -3; p0's breeding decision closes the line.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Ascension's witness: 6 security with an EMPTY trash and empty field --
+  # the deleted Amaterasumon went up, not out.
+  - at: 12
+    that:
+      p0.security: 6
+      p0.trash: []
+      p0.field: []
+      p1.field: [{ card_id: EX12-047, dp: 12000, suspended: false, sources: [] }]

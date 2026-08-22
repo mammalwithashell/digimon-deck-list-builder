@@ -1,0 +1,169 @@
+# Exam scenario: EX12-063 (Karakurumon), clause inherited#0 -- "[On Deletion]
+# You may play 1 level 4 or lower [Puppet] or [TB] trait Digimon card from
+# your trash without paying the cost." -- the INHERITED copy, live only while
+# Karakurumon sits in a carrier's digivolution cards.
+#
+# Built like EX12-063-effect1, plus a carrier on top:
+#   T1 play Karakurumon (overshoot 0 -> -7) while the trash is still empty
+#      (with a level<=4 [Puppet]/[TB] card in the trash, the play would park
+#      its Assembly material prompt); its suspend fizzles on the empty board.
+#   T3 play Hanimon #1 (3 -> 0); its [On Play] trashes Hanimon #2 -- the
+#      revival target -- and draws 2.
+#   T5 Ryugumon (EX12-036) over Karakurumon: the printed BLUE Lv.5 circle
+#      misses the purple/green base, so only the alt [Aquatic]/[Shambala]
+#      route (cost 3) matches and the cost-choice prompt stays closed.
+#      Ryugumon is deliberate: it has no [On Deletion] of its own (its Decode
+#      only fires on NON-battle exits), so the carrier's death fires exactly
+#      one On Deletion -- Karakurumon's inherited clause under exam. Its
+#      [When Digivolving] hand-placement prompt is declined; its [When
+#      Attacking] copy shares the [Once Per Turn] and is not offered again,
+#      and its [All Turns] lock fizzles on p1's empty board.
+#   The attack runs the 12000 DP carrier into p1's pinned 12000+ DP
+#      blank-security Digimon (the flip is the LAST stacked security slot,
+#      EX12-036, a 12000 tie -- attacker deleted). Barrier is declined; Evade
+#      is not offered (the attacker is already suspended, so its
+#      suspend-to-prevent cost is unpayable).
+#
+# SIM-SIDE GAP, stated honestly: after the declined Barrier replacement, our
+# engine never fires Karakurumon's INHERITED [On Deletion] (the on-card copy
+# in EX12-063-effect1 fires from the identical battle deletion, and the
+# inherited copy fires from effect deletions in the behavioral suite). The
+# affirm/pick/decline steps below therefore answer no live sim prompt and are
+# carried as wire rows for DCGO, which is expected to ask them -- so the
+# assertions here pin only state both engines agree on (the revival zones are
+# the differ's to adjudicate). If the oracle revives the Hanimon, that is an
+# engine divergence to fix, not a scenario fault.
+# REVIEW 2026-08-22 -- BLOCKED ON HARNESS BRIDGE (OptionalSkill decline):
+# the `decline:` payload serializes as select_cancel, but DCGO's
+# OptionalSkill hook (OptionalSkill.cs ~line 150) accepts ONLY
+# select_bool (select_has_bool) and ABORTS on a cancel payload -- and the
+# scenario schema has no bool-no form (`yes:` must be true). Every
+# decline aimed at a DCGO OptionalSkill prompt therefore aborts the job
+# at that row until the bridge maps Decline -> select_bool=false for
+# OptionalSkill (or the hook accepts cancel as "don't use").
+# Here: the Barrier decline row (DCGO Barrier is isOptional=true ->
+# OptionalSkill). That row is LIVE sim-side and cannot be removed.
+card: EX12-063
+clause: EX12-063#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): two Hanimon (one played, one trashed as its cost)
+      - EX12-061
+      - EX12-061
+      - EX12-063
+      - EX12-036
+      - EX12-075
+      # security (5-9) -- deliberately free of EX12-074, whose
+      # [Security]-area passive would trigger on our own [Shambala] attack.
+      - EX12-031
+      - EX12-031
+      - EX12-070
+      - EX12-011
+      - EX12-070
+      # T3 turn (10), T3 <Draw 2> (11-12), T5 turn (13), T5 digivolve (14)
+      - EX12-020
+      - EX12-026
+      - EX12-065
+      - EX12-074
+      - EX12-047
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): never acted on
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      # security (5-9): blank-security Digimon of 12000+ DP -- whichever is
+      # on top, the 12000 DP carrier ties or loses the check and is deleted.
+      - EX12-076
+      - EX12-076
+      - EX12-047
+      - EX12-047
+      - EX12-036
+    rest: toho-braves
+steps:
+  # Turn 1 (p0): play Karakurumon (overshoot 0 -> -7); suspend fizzles; the
+  # turn ends.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-063, from: hand } }
+    expect: { prompt: main_phase }
+  # Turn 2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (p0): play Hanimon #1 (3 -> 0); trash Hanimon #2; <Draw 2>.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-061, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-061] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (p0): Ryugumon over Karakurumon via the alt route (cost 3,
+  # memory 3 -> 0); decline its [When Digivolving] hand-placement.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-036 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # Attack: the battle deletes the carrier. Decline Barrier (trash top
+  # security to survive); Evade never opens (attacker already suspended).
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # The clause (inherited): revive the trashed Hanimon, then decline the
+  # revived Hanimon's own [On Play]. Our engine currently asks none of these
+  # (see header); the rows ride the wire for DCGO. REVIEW 2026-08-22: DCGO's
+  # EX12_063.cs [On Deletion] is SetUpActivateClass(..., isOptional: false)
+  # -- there is NO OptionalSkill gate; the optionality lives inside
+  # PlayByEffect's cancelable trash pick (SelectCardEffect, Root.Trash). The
+  # former `yes:` row expecting OptionalSkill would have kind-mismatched and
+  # aborted the job; removed.
+  - actor: 0
+    do: { select: { cards: [EX12-061] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  # Still p0's turn at memory 0; close it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Pinned to state both engines agree on (see the header note): the security
+  # battle happened -- p1 is down to 4 security with the flipped EX12-036 in
+  # trash -- and the digivolve's cost-3 alt route emptied the gauge.
+  - at: 15
+    that:
+      memory: 0
+      p1.security: 4
+      p1.trash: [EX12-036]

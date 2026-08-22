@@ -1,0 +1,206 @@
+# Exam scenario: EX12-036 Ryugumon effect clause #3 -- "[On Play] [When
+# Digivolving] [When Attacking] [Once Per Turn] By placing 1 level 6 or lower
+# card with [Aqua] or [Sea Animal] in any of its traits or with the [TB]
+# trait from your hand as this Digimon's bottom digivolution card, 1 of your
+# Digimon may unsuspend."
+#
+# The [When Attacking] leg is the measurable one: the breeding spine keeps
+# every earlier trigger suppressed (as in the effect#6 exam), Ryugumon moves
+# out on T9, and on T11 it attacks security. The spine's Lv.3 is GASAMON
+# (EX12-020, over Onibimon via its [Shambala] Lv.2 circle, cost 0) rather
+# than the effect#6 exam's Hanimon: Hanimon's inherited "[When Attacking]
+# Draw 1 and trash 1" would fire alongside the clause and force a
+# trigger-order prompt, while Gasamon's inherited draw is gated on "hand has
+# 7 or fewer cards" -- the hand holds 9 here, so the clause triggers ALONE.
+# (Gasamon's [TB]-digivolve cost passive changes the spine's memory line:
+# Seasarmon costs 1, Karakurumon 2. TRAIT-DATA NOTE, review 2026-08-22: the
+# card FACE prints [TB] on Ryugumon -- cards.json is stale there -- so DCGO
+# may also reduce the T7 digivolve to 2 while our engine pays 3; both stay
+# >= 0 and the turn ends by pass either way, so the line cannot desync on
+# it.) Declaring the attack suspends
+# Ryugumon and fires the clause (DCGO EX12_036.cs: optional-by-skippable-
+# select, NOT a yes/no -- SelectHandEffect with canNoSelect, then a
+# SelectPermanentEffect in Mode.UnTap):
+#   1. hand pick: EX12-009 Wankomon (Lv.3, [TB]) is placed as Ryugumon's
+#      bottom digivolution card -- picked BY IDENTITY (the hand also holds
+#      EX12-046/EX12-031 copies, all valid candidates, but only one EX12-009).
+#   2. permanent pick: "1 of your Digimon may unsuspend" -- Ryugumon itself,
+#      the lone Digimon, freshly suspended by its own attack declaration.
+#      (DCGO's candidate filter is ALL your Digimon; our engine offers only
+#      suspended ones -- with Ryugumon as the only Digimon the sets agree,
+#      dodging that known filter difference rather than measuring it.)
+# The attack then checks P1's pinned top security EX12-009 (2000 DP, no
+# security text): the security battle is won easily, the checked card is
+# trashed, and the attack ends with Ryugumon UNSUSPENDED -- the clause's
+# whole point. Effective DP at that moment is 16000: the Seasarmon source's
+# inherited "[Your Turn] +2000" aura PLUS the freshly placed Wankomon
+# source's identical aura.
+#
+# Stack layout (P0): hand [0..4], security [5..9], draws [10..16] as in the
+# effect#6 exam, [17] the T9 draw, [18] the T11 draw (pinned EX12-047 copies
+# so the hand's lone EX12-009 stays unique).
+# REVIEW 2026-08-22 -- BLOCKED ON HARNESS BRIDGE (OptionalSkill decline):
+# the `decline:` payload serializes as select_cancel, but DCGO's
+# OptionalSkill hook (OptionalSkill.cs ~line 150) accepts ONLY
+# select_bool (select_has_bool) and ABORTS on a cancel payload -- and the
+# scenario schema has no bool-no form (`yes:` must be true). Every
+# decline aimed at a DCGO OptionalSkill prompt therefore aborts the job
+# at that row until the bridge maps Decline -> select_bool=false for
+# OptionalSkill (or the hook accepts cancel as "don't use").
+# Here: the T11-end Execute-window decline row added in review. Without
+# it the line desyncs anyway (DCGO's window would meet the trailing pass),
+# so it stays as the semantically correct answer.
+card: EX12-036
+clause: EX12-036#effect#3
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-020, EX12-011, EX12-063, EX12-036, EX12-009,
+            EX12-070, EX12-070, EX12-070, EX12-070, EX12-074,
+            EX12-046, EX12-046, EX12-046, EX12-046, EX12-031,
+            EX12-031, EX12-031,
+            EX12-047, EX12-047]
+    rest: toho-braves
+  p1:
+    stack: [EX12-026, EX12-026, EX12-026, EX12-031, EX12-031,
+            EX12-011, EX12-011, EX12-011, EX12-011, EX12-009]
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): hatch Onibimon, digivolve Gasamon in breeding via its
+  # [Shambala] Lv.2 circle (cost 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-020 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Seasarmon over Gasamon via its [Shambala] circle
+  # (cost 2, Gasamon's [TB] passive -1 => memory 3 -> 2).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): Karakurumon over Seasarmon via its trait circle
+  # (cost 3, Gasamon's [TB] passive -1 => memory 3 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): Ryugumon over Karakurumon via its [Aquatic]/[Shambala]
+  # circle (cost 3 -> 0; no [TB] on Ryugumon, so no reduction), still in
+  # breeding -- no triggers.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-036 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (P0, memory 3): move Ryugumon to the battle area, pass out.
+  - actor: 0
+    do: { move: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T10 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T11 (P0, memory 3): THE CLAUSE -- Ryugumon attacks security; the
+  # declaration suspends it and parks the hand pick.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Place Wankomon from hand as Ryugumon's bottom digivolution card.
+  - actor: 0
+    do: { select: { cards: [EX12-009] } }
+    expect: { prompt: SelectHandEffect }
+  # "1 of your Digimon may unsuspend": unsuspend the attacker itself.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Security battle (16000 > 2000) resolves prompt-free; attacking spends no
+  # memory, so the same seat answers the trailing main_phase pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # End of T11 (added in review): Ryugumon's card face prints [TB] (cards.json
+  # is stale there), so DCGO's Onibimon grant (EX12-004, the egg under the
+  # spine) gives it <Execute> -- and having been UNSUSPENDED by the clause
+  # under exam, it CanAttack again at its own turn end, so DCGO parks the
+  # optional end-of-turn attack dialog. Decline it (sim-side this row answers
+  # no live prompt -- conditional-grant engine gap, as in EX12-004-effect1).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Trailing pass: p1's next breeding decision closes the line.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # After the attack: Ryugumon ends its own attack UNSUSPENDED, now carrying
+  # Wankomon as a 5th digivolution card (whose aura lifts it to 16000 on the
+  # owner's turn); the placed card left the hand; P1 lost the checked
+  # EX12-009 from security to trash.
+  - at: 28
+    that:
+      p0.memory: 3
+      p0.security: 5
+      p0.trash: []
+      p0.hand: [EX12-031, EX12-031, EX12-031, EX12-046, EX12-046, EX12-046,
+                EX12-046, EX12-047, EX12-047]
+      p0.field:
+        - { card_id: EX12-036, dp: 16000, suspended: false,
+            sources: [EX12-004, EX12-009, EX12-011, EX12-020, EX12-063] }
+      p1.security: 4
+      p1.trash: [EX12-009]

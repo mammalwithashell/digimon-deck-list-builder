@@ -1,0 +1,151 @@
+# Exam scenario: EX12-036 Ryugumon effect clause #4 -- the head of the
+# "[All Turns] [Once Per Turn] When any of your Digimon are played or
+# digivolve, 1 of your opponent's Digimon can't activate [When Digivolving]
+# effects or suspend until their turn ends." clause pair (#4 carries the
+# trigger + the mandatory opponent-Digimon pick; the imposed restriction is
+# measured by the companion EX12-036-effect5 scenario).
+#
+# Ryugumon reaches the battle area via the proven breeding spine of the
+# EX12-036-effect6 exam (hatch Onibimon; Hanimon T1, Seasarmon T3,
+# Karakurumon T5, Ryugumon T7 -- every [When Digivolving] suppressed in
+# breeding), then MOVES out on T9. Moving is neither a play nor a digivolve,
+# so the clause stays silent until P0 plays Gasamon from hand the same turn:
+# that play trips the trigger, and DCGO's script (EX12_036.cs, canNoSelect:
+# false) parks a MANDATORY SelectPermanentEffect over the opponent's Digimon.
+# P1's Gasamon -- played back on T2 -- is the lone candidate; the `select:
+# targets:` step answers with our slot reference.
+#
+# Prompt engineering kept closed:
+#   - P1 plays Gasamon T2 (memory 3 -> 0, turn continues): Gasamon's only
+#     printed effect is a passive would-digivolve cost reduction, prompt-free.
+#   - P0's T9 play of Gasamon (cost 3, memory 3 -> 0) triggers ONLY clause #4:
+#     Gasamon has no on-play effect, and Ryugumon's OP/WD/WA unsuspend clause
+#     (#3) is self-referential -- another Digimon's play does not fire it.
+#
+# Stack layout (P0): hand [0..4], security [5..9], draws [10..16] as in the
+# effect#6 exam ([10] T1 digi-draw ... [16] T7 digi-draw), [17] the T9 draw.
+# Ryugumon's effective DP on P0's own turn is 14000: the Seasarmon
+# digivolution card's inherited "[Your Turn] +2000 DP" aura is live.
+card: EX12-036
+clause: EX12-036#effect#4
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-061, EX12-011, EX12-063, EX12-036, EX12-020,
+            EX12-070, EX12-070, EX12-070, EX12-070, EX12-074,
+            EX12-046, EX12-046, EX12-046, EX12-046, EX12-031,
+            EX12-031, EX12-031,
+            EX12-047]
+    rest: toho-braves
+  p1:
+    stack: [EX12-020, EX12-009, EX12-009, EX12-009, EX12-009,
+            EX12-026, EX12-026, EX12-026, EX12-031, EX12-031]
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0): hatch Onibimon, digivolve Hanimon in breeding (cost 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-061 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): play Gasamon -- the future lock target (3 -> 0).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Seasarmon over Hanimon via its [Shambala] circle
+  # (cost 2 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): Karakurumon over Seasarmon via its trait circle
+  # (cost 3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (P0, memory 3): Ryugumon over Karakurumon via its [Aquatic]/[Shambala]
+  # circle (cost 3 -> 0), still in breeding -- no triggers.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-036 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (P0, memory 3): move Ryugumon to the battle area (not a play -- clause
+  # silent), then play Gasamon (3 -> 0) -- THE CLAUSE fires and parks the
+  # mandatory opponent-Digimon pick.
+  - actor: 0
+    do: { move: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Lock P1's Gasamon: it can't activate [When Digivolving] effects or
+  # suspend until P1's turn ends.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # After the play + pick: both Gasamon are fielded and unsuspended (the lock
+  # is a restriction, not a suspension), Ryugumon sits at 14000 effective DP
+  # (Seasarmon inherited aura, own turn) with the full breeding spine beneath
+  # it, and the play landed memory on exactly 0.
+  - at: 24
+    that:
+      p0.memory: 0
+      p0.security: 5
+      p0.trash: []
+      p0.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-036, dp: 14000, suspended: false,
+            sources: [EX12-004, EX12-011, EX12-061, EX12-063] }
+      p1.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }

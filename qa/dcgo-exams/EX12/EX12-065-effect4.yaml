@@ -1,0 +1,113 @@
+# Exam scenario: EX12-065 Kaguyamon effect clause #4 -- the <Blocker> half of
+# "[All Turns] All of your [Puppet] or [TB] trait Digimon gain <Blocker> and
+# <Retaliation>."
+#
+# The observable is the block itself. Kaguyamon prints NO <Blocker> of its
+# own -- the only way P0 can block here is the [All Turns] aura, whose
+# target filter ([Puppet]/[TB]) includes Kaguyamon itself ([Puppet] AND
+# [TB]). P1's 2000 DP Gasamon attacks P0's security; the blocker window
+# parks; the `select:` blocks with Kaguyamon; the 12000-vs-2000 battle
+# deletes Gasamon while P0's security stays at 5. Without the aura there is
+# no blocker window at all -- the attack would just check security.
+#
+#   T1/T2: both seats pass everything (P0 cannot hard-cast the cost-12
+#       Kaguyamon at memory 0: 0 - 12 = -12 is below the -10 floor).
+#   T3 (P0, memory 3): hard-cast Kaguyamon (3 -> -9, legal). Its [On Play]
+#       revive (clause #2's exam) has an EMPTY trash, so no prompt parks;
+#       the turn ends on the overshoot.
+#   T4 (P1, memory 9): play Gasamon (9 -> 6; only a [Your Turn] passive, no
+#       prompt), pass (memory 3 to P0).
+#   T5 (P0): pass everything (memory 3 to P1) -- Gasamon shakes summoning
+#       sickness.
+#   T6 (P1, memory 3): THE CLAUSE -- Gasamon attacks security; the aura
+#       opens P0's blocker window; the select answers it with Kaguyamon.
+#       Gasamon is deleted in the block battle, Kaguyamon suspends, and P1
+#       keeps the turn (attacking costs no memory), so the trailing step is
+#       P1's main prompt.
+#
+# Stack layout: hand [0..4], security [5..9], then per-seat turn draws in
+# order (P0: T3, T5; P1: T2, T4, T6). No pin adds a second copy of
+# EX12-065 / EX12-020 before they are referenced.
+card: EX12-065
+clause: EX12-065#effect#4
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-065, EX12-074, EX12-074, EX12-046, EX12-046,
+            EX12-075, EX12-075, EX12-075, EX12-046, EX12-046,
+            EX12-070, EX12-070]
+    rest: toho-braves
+  # P1's security deliberately holds NO EX12-074: its "[Security] [Your
+  # Turn] [Once Per Turn] when one of your [Shambala] Digimon attacks..."
+  # works from the security stack and would bury the blocker window under a
+  # TriggerOrder prompt when Gasamon ([Shambala]) declares.
+  p1:
+    stack: [EX12-020, EX12-046, EX12-046, EX12-046, EX12-074,
+            EX12-075, EX12-075, EX12-075, EX12-047, EX12-047,
+            EX12-070, EX12-070, EX12-070]
+    rest: toho-braves
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): Kaguyamon lands (empty trash keeps its On Play silent).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-065, from: hand } }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 9): the attacker arrives.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): pass everything.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (P1, memory 3): the clause under exam -- attack into the aura's block.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # P0's blocker window: block with the aura-granted Kaguyamon.
+  - actor: 0
+    do: { select: { targets: [own.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Attacking costs no memory; P1 keeps the turn after the battle.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 14
+    that:
+      p0.memory: -3
+      p0.security: 5
+      p0.trash: []
+      p0.field:
+        - { card_id: EX12-065, dp: 12000, suspended: true, sources: [] }
+      p1.security: 5
+      p1.trash: [EX12-020]
+      p1.field: []

@@ -1,0 +1,183 @@
+# Exam scenario: EX12-062 (Kokeshimon), clause inherited#1 -- the "<Draw 1>"
+# keyword half of the inherited "[When Attacking] [Once Per Turn] <Draw 1> and
+# trash 1 card in your hand."
+#
+# The inherited text lives only while Kokeshimon is a digivolution source, so
+# the stack is built to put it UNDER a carrier that adds no [When Attacking]
+# trigger of its own:
+#   T3 play Wankomon (EX12-009, red Lv.3; inherited is a passive +2000, so the
+#      attack window stays clean). Its [On Play] reveals the top 3 -- pinned to
+#      three distinct ids -- and asks for 1 [Shambala] pick then 1 [TB] pick.
+#   T5 Kokeshimon over Wankomon: printed purple circle misses the red base, so
+#      only the alt [Puppet]/[Shambala] route (cost 2) matches. Its [When
+#      Digivolving] payment prompt opens against an empty enemy board (DCGO
+#      gates the enemy check after the payment) -- declined.
+#   T7 MarineBullmon (EX12-031) over Kokeshimon: the printed BLUE Lv.4 circle
+#      misses the purple base, so only the alt [Aquatic]/[Shambala] route
+#      (cost 3) matches and the rule-17 cost-choice prompt stays closed
+#      (Karakurumon would instead open it: printed purple + alt both match).
+#      MarineBullmon has no [When Attacking] text, so the attack fires exactly
+#      ONE trigger: Kokeshimon's inherited clause under exam. Its [When
+#      Digivolving] "By placing 1 card from your hand..." payment prompt is
+#      declined.
+#
+# The attack targets security; p1's pinned security is all blank-security
+# Digimon under 7000 DP, so the 7000 DP attacker survives and the only
+# selection in the attack window is the clause's forced hand-trash (the
+# <Draw 1> half is witnessed by the pinned deck card EX12-047 landing in hand).
+# REVIEW 2026-08-22 -- REJECTED (mid-line oracle abort): the T3 one-card
+# ordering row ("The leftover EX12-047 is bottomed") answers our engine's
+# OrderedPermutation{remaining:1}, but DCGO's
+# ReturnRevealedCardsToLibraryBottom auto-places a SINGLE leftover with NO
+# prompt (RevealLibrary.cs; it prompts only for 2+). The strict driver
+# cursor cannot skip the row, so the job aborts at the next question --
+# BEFORE the T7 clause. Un-blocks when the engine auto-resolves single-card
+# orderings or the wire can mark sim-only rows.
+# (Also: EX12-047 prints [TB] on its card face -- cards.json is stale -- so
+# DCGO offers it in the TB reveal pick too; the identity pick EX12-070 is
+# still offered and fine.)
+card: EX12-062
+clause: EX12-062#inherited#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-009
+      - EX12-062
+      - EX12-031
+      - EX12-074
+      - EX12-075
+      # security (5-9) -- deliberately free of EX12-074, whose
+      # [Security]-area passive would trigger on our own [Shambala] attack.
+      - EX12-031
+      - EX12-031
+      - EX12-070
+      - EX12-061
+      - EX12-076
+      # T3 turn draw (10)
+      - EX12-026
+      # Wankomon's reveal window (11-13): Shambala pick, TB pick, bottomed rest
+      - EX12-070
+      - EX12-065
+      - EX12-047
+      # T5 turn (14), T5 digivolve (15), T7 turn (16), T7 digivolve (17),
+      # the clause's <Draw 1> (18)
+      - EX12-011
+      - EX12-020
+      - EX12-036
+      - EX12-046
+      - EX12-047
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): never acted on
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      # security (5-9): blank-security Digimon, all under 7000 DP.
+      - EX12-009
+      - EX12-009
+      - EX12-020
+      - EX12-020
+      - EX12-061
+    rest: toho-braves
+steps:
+  # Turn 1 (p0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (p0): play Wankomon (cost 3, memory 3 -> 0); answer its reveal.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-009, from: hand } }
+    expect: { prompt: main_phase }
+  # Reveal picks (EX12-070 / EX12-065 / EX12-047 revealed): 1 [Shambala]...
+  - actor: 0
+    do: { select: { cards: [EX12-065] } }
+    expect: { prompt: SelectCardEffect }
+  # ...then 1 [TB]; EX12-047 has no [TB], so EX12-070 is the pick.
+  - actor: 0
+    do: { select: { cards: [EX12-070] } }
+    expect: { prompt: SelectCardEffect }
+  # The leftover EX12-047 is bottomed -- a one-card ordering pick.
+  - actor: 0
+    do: { select: { cards: [EX12-047] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (p0): Kokeshimon over Wankomon via the alt trait route (cost 2,
+  # memory 3 -> 1); decline its [When Digivolving] payment.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-062 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectPermanentEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 6 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 7 (p0): MarineBullmon over Kokeshimon via the alt route (cost 3,
+  # memory 3 -> 0); decline its [When Digivolving] hand-placement payment;
+  # then the attack fires the clause.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-031 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # The clause's forced trash half; the <Draw 1> half already pulled EX12-047.
+  - actor: 0
+    do: { select: { cards: [EX12-075] } }
+    expect: { prompt: SelectHandEffect }
+  # Attack resolves (2000-DP security card loses the check); close the turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # After the attack window: the keyword's draw (EX12-047, deck 18) is in
+  # hand, EX12-075 was trashed, and the stack survived the security check.
+  # DP is 9000: Wankomon's inherited "[Your Turn] +2000" is live from the
+  # sources.
+  - at: 23
+    that:
+      p0.hand: [EX12-074, EX12-026, EX12-065, EX12-070, EX12-011, EX12-020, EX12-036, EX12-046, EX12-047]
+      p0.field: [{ card_id: EX12-031, dp: 9000, suspended: true, sources: [EX12-009, EX12-062] }]

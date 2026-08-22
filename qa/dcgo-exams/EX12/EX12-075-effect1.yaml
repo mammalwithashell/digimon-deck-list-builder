@@ -1,0 +1,90 @@
+# Exam scenario: EX12-075 Kunlun's Imperial Decree, "[Main] Reveal the top 3
+# cards of your deck. Add 1 [Shambala] trait card among them to the hand.
+# Return the rest to the bottom of the deck. Then, place this card in the
+# battle area."
+#
+# The measured observable is the WHOLE main clause: the 3-card reveal parks a
+# mandatory pick (DCGO SimplifiedRevealDeckTopCardsAndSelect -> SelectCardEffect
+# with Mode.AddHand; our `choose_from_reveal`), the `select: cards:` step
+# answers it BY IDENTITY, the two unpicked cards go to the deck bottom, and the
+# option lands in the battle area as a DP-less Delay permanent (dp -1, same
+# projection as the EX12-075-security0 exam).
+#
+# Every card in the toho-braves pool carries the [Shambala] trait, so all 3
+# revealed cards are candidates; the reveal is pinned to three DISTINCT ids
+# ([11..13] = EX12-011 / EX12-026 / EX12-046) so the identity pick is
+# unambiguous. EX12-011 is chosen; EX12-026 + EX12-046 return to the bottom.
+#
+# Use requirement: EX12-075 is white; Gasamon (EX12-020, played T1) provides
+# the [Shambala] trait, same engineering as the EX12-074 exam lines. Gasamon's
+# only printed effect is a passive would-digivolve cost reduction -- no prompt.
+#
+# Memory line: T1 plays Gasamon at memory 0 (0 -> -3, turn ends). T3 starts at
+# 3; EX12-075 costs 3 -> exactly 0, so the turn continues and P0 answers the
+# trailing main_phase pass.
+#
+# Stack layout (a stack is a draw-order prefix: [0..4] opening hand, [5..9]
+# security with 5 = BOTTOM and 9 = TOP, [10] the T3 draw, then the deck top):
+#   [11][12][13] are the three revealed cards.
+card: EX12-075
+clause: EX12-075#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-020, EX12-075, EX12-070, EX12-070, EX12-070,
+            EX12-009, EX12-009, EX12-009, EX12-009, EX12-026,
+            EX12-070,
+            EX12-011, EX12-026, EX12-046]
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): play Gasamon -- the [Shambala] use-req provider. The
+  # play overshoots (0 -> -3) and ends the turn immediately.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1): decline everything; the main pass hands P0 3 memory.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): THE CLAUSE -- play EX12-075 (cost 3 -> 0). The reveal
+  # parks the mandatory [Shambala] pick.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-075, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Add EX12-011 to hand; EX12-026 + EX12-046 go to the deck bottom, then the
+  # option is placed in the battle area (prompt-free).
+  - actor: 0
+    do: { select: { cards: [EX12-011] } }
+    expect: { prompt: SelectCardEffect }
+  # "Return the rest to the bottom of the deck": our engine asks the order of
+  # the 2 remaining cards (OrderedPermutation); answer bottom-most first.
+  - actor: 0
+    do: { select: { cards: [EX12-026, EX12-046] } }
+    expect: { prompt: SelectCardEffect }
+  # Memory landed on exactly 0, so the same seat answers the trailing pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # After the play + reveal pick: EX12-075 sits fielded as a DP-less Delay
+  # option next to Gasamon, the picked EX12-011 is in hand with the four
+  # EX12-070, security and trash untouched, memory on exactly 0.
+  - at: 8
+    that:
+      p0.memory: 0
+      p0.security: 5
+      p0.trash: []
+      p0.hand: [EX12-011, EX12-070, EX12-070, EX12-070, EX12-070]
+      p0.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }
+        - { card_id: EX12-075, dp: -1, suspended: false, sources: [] }

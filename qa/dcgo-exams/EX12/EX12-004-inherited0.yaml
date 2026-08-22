@@ -1,0 +1,102 @@
+# Exam scenario: EX12-004 Onibimon, clause EX12-004#inherited#0 --
+# "This Digimon with the [TB] trait gains" (the inherited-zone rendering of
+# the same grant: [Your Turn] the [TB] carrier gains <Execute>).
+#
+# Complement to EX12-004-effect1 (which DECLINES the granted end-of-turn
+# dialog): this line ACCEPTS it and spends the granted attack on the
+# opponent's UNSUSPENDED Digimon -- legal only because <Execute> widens the
+# target set ("Your opponent's unsuspended Digimon can also be attacked with
+# this effect"). Both seats build the same stack (hatch Onibimon, digivolve
+# Wankomon EX12-009 [TB] via its cost-0 alt circle, move); P1's copy never
+# attacks and sits unsuspended as the target. The battle is 2000 vs 2000.
+#
+# ENGINE-GAP NOTE (same as EX12-004-effect1): our engine omits keyword
+# auto-effects for CONDITIONAL declarative grants (game/mod.rs
+# build_effects_for_card), so no EndOfTurnAction window parks sim-side and
+# both select rows answer no live prompt -- they ride the wire for DCGO's
+# OptionalSkill + SelectAttackEffect prompts, which DCGO asserts strictly.
+# The sim board therefore keeps both Wankomon; the oracle side resolves the
+# attack. An oracle-pass board divergence here localizes the sim gap, which
+# is exactly what this exam should surface.
+card: EX12-004
+clause: EX12-004#inherited#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-009, EX12-011, EX12-031, EX12-046, EX12-061,   # opening hand
+            EX12-011, EX12-011, EX12-046, EX12-046, EX12-062,   # security
+            EX12-031, EX12-046]                                 # T3 / T5 draws
+    rest: toho-braves
+  p1:
+    stack: [EX12-009, EX12-011, EX12-031, EX12-046, EX12-061,   # opening hand
+            EX12-011, EX12-011, EX12-046, EX12-046, EX12-062,   # security
+            EX12-031, EX12-061]                                 # T2 / T4 draws
+    rest: toho-braves
+steps:
+  # Turn 1 (P0): hatch Onibimon, digivolve Wankomon over it in breeding.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 2 (P1): the same build, one turn behind.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (P0): move to battle (no attack this turn, so no window at T3 end).
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 4 (P1): move the target to battle; it stays unsuspended for good.
+  # (Moved-this-turn: P1's carrier cannot attack at T4's end, so P1 gets no
+  # <Execute> dialog of its own on this line.)
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (P0): pass everything -- the granted <Execute> window opens.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Accept the optional end-of-turn attack...
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # ...and aim it at the opponent's UNSUSPENDED Wankomon -- the pick that only
+  # <Execute>'s widened defender condition makes legal. The wire carries the
+  # target's top-card identity (EX12-009) for DCGO's candidate list.
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectAttackEffect }
+  # Trailing pass: P1's next breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Pre-attack setup, at the T5 main-phase pass (turn 5, P0's turn): both
+  # carriers fielded with Onibimon under them, the defender UNSUSPENDED.
+  # (Wankomon reads printed 2000 DP: its own +2000 inherited only applies
+  # while it is a SOURCE, and Onibimon grants only <Execute>.)
+  - at: 11
+    that:
+      turn: 5
+      p0.field: [{ card_id: EX12-009, dp: 2000, suspended: false, sources: [EX12-004] }]
+      p1.field: [{ card_id: EX12-009, dp: 2000, suspended: false, sources: [EX12-004] }]

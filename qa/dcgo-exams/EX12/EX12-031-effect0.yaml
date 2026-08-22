@@ -1,0 +1,148 @@
+# Exam scenario: EX12-031 (MarineBullmon), clause effect#0 -- "<Decode (Lv.4
+# or lower w/[Aqua]/[Sea Animal] in any trait or w/[TB] trait)> (When this
+# Digimon would leave the battle area other than in battle, you may play 1
+# specified Digimon card from its digivolution cards without paying the
+# cost.)"
+#
+# Decode needs its carrier to (a) own a qualifying digivolution card and (b)
+# leave the battle area outside battle. Both come from the card's own kit:
+#   T3  p0 plays MarineBullmon and tucks Gasamon (EX12-020, Lv.3 [TB]) under
+#       it via effect#1, bouncing p1's bare Gasamon back to hand.
+#   T4  p1 plays its own MarineBullmon, tucks the returned Gasamon, and
+#       bounces p0's MarineBullmon -- legal, it holds exactly 1 digivolution
+#       card. That leave (a return to hand, not battle) opens p0's Decode
+#       window: accept, and the tucked Gasamon is played for free while
+#       MarineBullmon continues to p0's hand.
+#
+# Gasamon everywhere on purpose: no [On Play] on any of the four entrances,
+# so every parked prompt on the line belongs to the two MarineBullmon kits.
+#
+# ENGINE ODDITY (kept honest): our engine also opens a Decode replacement
+# window when the OTHER side's plain Gasamon is bounced at T3 -- a permanent
+# with no Decode at all -- and hands it to the leaving permanent's
+# controller. It is declined; if DCGO never asks, the differ owns that
+# finding.
+# REVIEW 2026-08-22 -- REJECTED (pre-witness oracle abort): the T3
+# engine-oddity Decode decline row answers a LIVE sim prompt that DCGO
+# never asks (Decode is self-scoped in DCGO; the bounced plain Gasamon has
+# none). The strict driver cursor cannot skip it, so the job aborts at
+# P1's T4 breeding question -- BEFORE the clause's T4 Decode window.
+# Fix the engine's Decode leave-scoping first. Also: the Decode material
+# pick is answered with 'yes:', but DCGO's SelectCardEffect hook accepts
+# only select_card_ids / select_cancel -- express it as a 'cards:' pick
+# once the sim's single-candidate EffectChoice collapse allows it.
+card: EX12-031
+clause: EX12-031#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4): MarineBullmon + exactly one Gasamon (the tuck)
+      - EX12-031
+      - EX12-020
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T3 turn (10), T5 turn (11, drawn just before the trailing
+      # breeding prompt)
+      - EX12-074
+      - EX12-075
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): one Gasamon (played, bounced back, then tucked) and one
+      # MarineBullmon; Option fillers can never match the tuck filter
+      - EX12-020
+      - EX12-031
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T2 turn (10), T4 turn (11)
+      - EX12-074
+      - EX12-075
+    rest: toho-braves
+steps:
+  # T1 (p0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): play Gasamon (cost 3, memory 3 -> 0), keep the turn, pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0): play MarineBullmon (cost 7, 3 -> -4), tuck Gasamon, bounce p1's
+  # Gasamon (its arrival is what makes the T4 bounce of THIS stack legal).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-031, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { cards: [EX12-020] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The engine-oddity window on the bounced plain Gasamon: decline.
+  - actor: 1
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # T4 (p1): play MarineBullmon (cost 7, 4 -> -3), tuck the returned
+  # Gasamon, bounce p0's 1-source MarineBullmon.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-031, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { select: { cards: [EX12-020] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # THE CLAUSE: p0's Decode window on its MarineBullmon's non-battle leave.
+  # Accept it...
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # ...then pick the card to play from its digivolution cards. The tucked
+  # Gasamon is the single qualifying candidate, so the affirmative resolves
+  # the Material prompt's one accept id.
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: SelectCardEffect }
+  # T4's overshoot ended p1's turn; p0's breeding decision closes.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Decode's witness: Gasamon played for free onto p0's field, MarineBullmon
+  # back in p0's hand, and p1's MarineBullmon standing with its own tuck.
+  - at: 17
+    that:
+      p0.field: [{ card_id: EX12-020, dp: 2000, suspended: false, sources: [] }]
+      p1.field: [{ card_id: EX12-031, dp: 7000, suspended: false, sources: [EX12-020] }]
+      p0.hand: [EX12-031, EX12-070, EX12-074, EX12-074, EX12-075, EX12-075]

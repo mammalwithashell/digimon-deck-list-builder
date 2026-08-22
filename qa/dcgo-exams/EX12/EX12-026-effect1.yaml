@@ -1,0 +1,101 @@
+# Exam scenario: EX12-026 Shellmon, clause EX12-026#effect#1 --
+# "[On Play] [When Digivolving] Trash the bottom 2 digivolution cards of 1 of
+#  your opponent's Digimon. Then, 1 of their Digimon with 1 or fewer
+#  digivolution cards can't attack or block until their turn ends."
+# Exercised on the On Play arm (DCGO EX12_026.cs routes both timings through
+# one shared coroutine, so the arm choice does not change the effect body).
+#
+# P1 builds the target entirely in breeding (no triggers fire there): hatch
+# Onibimon (EX12-004, purple Lv2 [Shambala]), digivolve Wankomon (EX12-009)
+# via its alt circle "Lv.2 w/[Shambala]: Cost 0" -- the standard red circle
+# does not match the purple egg, so the intent is single-path -- then move.
+# The fielded Wankomon carries exactly ONE digivolution card (the Onibimon).
+#
+# P0 then plays Shellmon (cost 5 at the pass-granted 3 memory -> -2, an
+# overshooting play that ends the turn after resolution). The effect asks two
+# SelectPermanentEffect questions in sequence (DCGO EX12_026.cs):
+#   1. "Select 1 Digimon that will trash digivolution cards." -- candidates
+#      are opponent Digimon with >=1 digivolution cards: the Wankomon. Trash
+#      the bottom 2 -> only 1 exists, so the Onibimon is trashed.
+#   2. "Select 1 Digimon that can't attack or block." -- candidates are
+#      opponent Digimon with <=1 digivolution cards: the now-source-less
+#      Wankomon again.
+# Both picks are OUR slot references; the wire carries the top-card identity
+# (EX12-009) for DCGO to resolve against its own candidate list.
+#
+# Stacks pin hand (0-4), security (5-9), and both draws (10-11) per seat so
+# the play/digivolve intents stay single-copy-unambiguous all line long.
+card: EX12-026
+clause: EX12-026#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-026, EX12-011, EX12-031, EX12-046, EX12-061,   # opening hand
+            EX12-046, EX12-046, EX12-061, EX12-062, EX12-070,   # security
+            EX12-011, EX12-031]                                 # T3 / T5 draws
+    rest: toho-braves
+  p1:
+    stack: [EX12-009, EX12-011, EX12-031, EX12-046, EX12-061,   # opening hand
+            EX12-046, EX12-046, EX12-061, EX12-062, EX12-070,   # security
+            EX12-011, EX12-031]                                 # T2 / T4 draws
+    rest: toho-braves
+steps:
+  # Turn 1 (P0): nothing to do yet.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 2 (P1): hatch Onibimon, digivolve Wankomon via the alt circle (cost 0).
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (P0): still waiting.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 4 (P1): move the Wankomon stack to the battle area -- the target.
+  - actor: 1
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (P0, memory 3): play Shellmon; the On Play arm fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-026, from: hand } }
+    expect: { prompt: main_phase }
+  # Prompt 1: the Digimon that trashes digivolution cards (>=1 source).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Prompt 2: the Digimon that can't attack or block (<=1 source, now 0).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The cost-5 play overshot to -2, so the turn ends after resolution; the
+  # trailing pass is P1's next breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # THE clause observables, at the second pick that closes the effect: the
+  # Wankomon lost its single (bottom) digivolution card to the trash -- the
+  # hatched Onibimon EX12-004 -- and stays on the field, source-less.
+  - at: 13
+    that:
+      p1.field: [{ card_id: EX12-009, dp: 2000, suspended: false, sources: [] }]
+      p1.trash: [EX12-004]

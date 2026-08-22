@@ -1,0 +1,55 @@
+# Exam scenario: EX12-061 (Hanimon), clause effect#1 -- the "<Draw 2>" keyword
+# half of "[On Play] By trashing 1 card with the [Puppet] or [TB] trait from
+# your hand, <Draw 2>."
+#
+# Same line as EX12-061-effect0 (the cost and the keyword are one DCGO
+# ActivateClass: paying the trash IS what makes the <Draw 2> fire), but this
+# scenario's assertion is aimed at the keyword: the two pinned deck cards
+# (10-11) MUST be in hand after the select resolves -- a line where the trash
+# was paid but the draw did not happen fails exactly here.
+#
+# Turn-1 play from memory 0 is an overshooting play (-3, above the -10 floor):
+# the turn ends after resolution, hence the trailing p1 breeding pass.
+card: EX12-061
+clause: EX12-061#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-061
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      # security (5-9)
+      - EX12-031
+      - EX12-031
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # <Draw 2> (10-11) -- the keyword under exam pulls exactly these two.
+      - EX12-020
+      - EX12-026
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-061, from: hand } }
+    expect: { prompt: main_phase }
+  # Pay the trash cost (identity pick: the only EX12-070 in hand); the
+  # <Draw 2> under exam resolves immediately after.
+  - actor: 0
+    do: { select: { cards: [EX12-070] } }
+    expect: { prompt: SelectHandEffect }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # The keyword: EX12-020 and EX12-026 (deck 10-11) arrived in hand.
+  - at: 3
+    that:
+      p0.hand: [EX12-074, EX12-075, EX12-065, EX12-020, EX12-026]

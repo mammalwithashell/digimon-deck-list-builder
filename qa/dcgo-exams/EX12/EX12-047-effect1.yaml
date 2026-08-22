@@ -7,9 +7,12 @@
 # scenario (the pool has no Takinmon, and the recon's purple line would open the
 # rule-17 cost-choice prompt AND put Hanimon/Kokeshimon draw-then-trash
 # inherited effects under the attacker -- a mandatory selection at the attack no
-# `select:` step could answer). Wankomon/Seasarmon inherit only DP auras and
-# Onibimon's Execute grant is gated on [TB], which Amaterasumon is not, so the
-# attack resolves without a single prompt:
+# `select:` step could answer). Wankomon/Seasarmon inherit only DP auras.
+# (TRAIT-DATA NOTE, review 2026-08-22: Amaterasumon's card face DOES print
+# [TB] -- cards.json is stale -- so DCGO's Onibimon grant lands; but the
+# carrier is moved-this-turn at T9's end and suspended after the T11 attack,
+# so the <Execute> dialog's CanAttack gate stays closed at every turn end.)
+# The attack resolves without a single prompt:
 #   T1 hatch + Wankomon (0) / T3 Seasarmon (2) / T5 Karakurumon (3) /
 #   T7 Amaterasumon (alt Shambala, 3) / T9 move to battle (moved Digimon can't
 #   attack the turn they move) / T11 attack the player.
@@ -32,9 +35,13 @@ decks:
       - EX12-063
       - EX12-047
       - EX12-070
-      # security (5-9) -- never touched, p1 all-passes
-      - EX12-074
-      - EX12-074
+      # security (5-9) -- never checked (p1 all-passes), but load-bearingly
+      # QUIET: EX12-074's "[Security] [Your Turn] When one of your [Shambala]
+      # trait Digimon attacks..." functions FROM the security stack, so two
+      # copies here parked a 2-trigger TriggerOrder prompt on the T11 attack
+      # (the original defect). Digimon with no [Security]-timed text instead.
+      - EX12-009
+      - EX12-062
       - EX12-075
       - EX12-065
       - EX12-031

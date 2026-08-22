@@ -1,0 +1,110 @@
+# Exam scenario: EX12-046 (Shishimamon), clause effect#1 -- the payload of the
+# [On Play]/[When Digivolving] give: "<Security A. -1> (This Digimon checks 1
+# fewer security card.) and -3000 DP until their turn ends."
+#
+# BOTH halves are witnessed on a target that SURVIVES the DP hit (unlike the
+# effect#0 scenario, whose 2000 DP target dies to it):
+#   - -3000 DP: p1's Shellmon (5000 DP) drops to 2000 and stays on the field.
+#   - Security A. -1: on p1's NEXT turn -- still inside "until their turn
+#     ends" -- Shellmon attacks p0's security and checks 1-1 = 0 cards, so
+#     p0's security stays at 5 after a resolved attack.
+#
+# Shellmon is the target because it is the pool's only cheap 5000 DP body
+# whose [On Play] ("trash the bottom 2 digivolution cards of 1 of your
+# opponent's Digimon...") is silent here: p0's field is empty when it enters.
+# Its inherited draw text never applies (played from hand, no sources).
+#
+# Memory: T1 all-pass gives p1 3; the cost-5 Shellmon (3 -> -2) ends p1's
+# turn; p0 gets 2, and the cost-7 Shishimamon (2 -> -5) ends p0's turn; p1
+# gets 5, attacks, and passes main to leave the last prompt answered by p0's
+# trailing breeding pass.
+card: EX12-046
+clause: EX12-046#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-046
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      # security (5-9) -- never checked (the 0-check attack is the witness)
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T3 turn (10)
+      - EX12-074
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4): exactly one EX12-026 so the play intent is unambiguous
+      - EX12-026
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      # security (5-9) -- never touched
+      - EX12-009
+      - EX12-011
+      - EX12-062
+      - EX12-063
+      - EX12-036
+      # draws: T2 turn (10), T4 turn (11)
+      - EX12-074
+      - EX12-075
+    rest: toho-braves
+steps:
+  # T1 (p0): all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): play Shellmon (cost 5, memory 3 -> -2; turn ends). Its [On Play]
+  # is silent: p0 has no Digimon to strip digivolution cards from.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-026, from: hand } }
+    expect: { prompt: main_phase }
+  # T3 (p0): the clause -- play Shishimamon (cost 7, memory 2 -> -5) and give
+  # Shellmon <Security A. -1> and -3000 DP (5000 -> 2000, survives).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-046, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # T4 (p1): still "until their turn ends" -- the debuffed Shellmon attacks
+  # security and checks 0 cards; then p1 passes main (memory 5 stays >= 0).
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Trailing pass: p0's next breeding decision closes the line.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # After the target pick resolves: Shellmon at 2000 DP (5000 - 3000), still
+  # fielded. (`at: N` reads the projection AFTER the first N steps.)
+  - at: 7
+    that: { p1.field: [{ card_id: EX12-026, dp: 2000, suspended: false, sources: [] }] }
+  # After the attack: ZERO security checked (5 intact) while the attacker sits
+  # suspended -- the attack really happened.
+  - at: 9
+    that: { p0.security: 5, p1.field: [{ card_id: EX12-026, dp: 2000, suspended: true, sources: [] }] }

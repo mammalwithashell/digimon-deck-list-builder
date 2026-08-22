@@ -1,0 +1,209 @@
+# Exam scenario: EX1-066 (Analog Youth), clause EX1-066#effect#1 --
+# "[All Turns] When one of your level 5 or higher Digimon with a digivolution
+#  card is deleted, you may suspend this Tamer. If you do, gain 1 memory,
+#  then hatch 1 Digi-Egg card to your Breeding Area if it's empty."
+#
+# The deleted Lv.5 is MarineBullmon raised on the proven EX12-065 breeding
+# highway (every digivolve has exactly ONE distinct-cost route): Onibimon ->
+# Hanimon EX12-061 (cost 0) -> Seasarmon EX12-011 ([Shambala] circle, cost 2)
+# -> MarineBullmon EX12-031 (its [Aquatic]/[Shambala] circle is the only
+# match over the red Seasarmon, cost 3). Raised in breeding, so every WD
+# trigger on the spine is suppressed; moved out on T7, it carries 3
+# digivolution cards -- satisfying both "level 5 or higher" and "with a
+# digivolution card".
+#
+# The deletion vehicle is a BATTLE loss, deliberately: MarineBullmon's Decode
+# only fires on leaving the battle area "other than in battle", so dying in a
+# security battle leaves EX1-066's trigger as the only post-deletion prompt
+# (no trigger-ordering step). p1's security is pinned all-12000+ (Ryugumon /
+# Amaterasumon / Susanoomon, none of which has a [Security] effect), so the
+# T9 security attack -- 7000 +2000 from Seasarmon's inherited [Your Turn]
+# +2000 DP = 9000 -- always loses the security battle regardless of which
+# pinned card is on top.
+#
+# Known prompts on the T9 attack, in order:
+#   1. Hanimon's inherited [When Attacking] (mandatory): Draw 1, then trash 1
+#      card from hand -- answered by identity with the pinned attack-draw
+#      Karakurumon (EX12-063), the only copy that ever reaches p0's hand.
+#   2. The clause under exam: the deletion fires EX1-066's optional -- YES.
+#      Suspend the Tamer, gain 1 memory (3 -> 4), and since the breeding area
+#      has been empty since the T7 move, hatch the top Digi-Egg (Onibimon).
+#
+# p0's breeding stays empty from the T7 move until the trigger, so the hatch
+# arm of the clause is live, not just the suspend/memory arm.
+#
+# Deck note: EX1-066 is not in toho-braves; p0 uses `toho-analog` (see
+# EX1-066-effect0.yaml). p0's security avoids EX12-074, whose [Security]
+# [Your Turn] effect works from the security stack when a [Shambala] Digimon
+# attacks and would add a foreign prompt to the T9 attack.
+#
+# Stack layout (p0): hand 0-4, security 5-9, then every deck exit in order:
+# [10] T1 digivolve draw, [11] T3 turn draw, [12] T3 digivolve draw,
+# [13] T5 turn draw, [14] T5 digivolve draw, [15] T7 turn draw,
+# [16-18] the T7 On Play reveal (playing the Tamer fires clause #0 too:
+# Shishimamon is the one eligible Digimon and is picked to hand, the two
+# Options are trashed), [19] T9 turn draw, [20] the Hanimon attack draw
+# (EX12-063, the trash pick -- the only Karakurumon that ever reaches p0's
+# hand). No pin duplicates a `using:`/`play:` card id, keeping every intent
+# unambiguous.
+card: EX1-066
+clause: EX1-066#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-061
+      - EX12-011
+      - EX12-031
+      - EX1-066
+      - EX12-070
+      # security (5-9): never touched; no security-stack effects
+      - EX12-009
+      - EX12-009
+      - EX12-020
+      - EX12-020
+      - EX12-026
+      # draws + reveal (10-20), see header
+      - EX12-074
+      - EX12-074
+      - EX12-020
+      - EX12-020
+      - EX12-009
+      - EX12-009
+      - EX12-046
+      - EX12-070
+      - EX12-074
+      - EX12-026
+      - EX12-063
+    rest: toho-analog
+  p1:
+    stack:
+      # hand (0-4): inert
+      - EX12-009
+      - EX12-009
+      - EX12-020
+      - EX12-020
+      - EX12-070
+      # security (5-9): every card 12000+ DP, no [Security] effects, so the
+      # T9 security battle deletes the 9000 attacker whichever card is on top.
+      - EX12-036
+      - EX12-036
+      - EX12-047
+      - EX12-047
+      - EX12-076
+    rest: toho-braves
+steps:
+  # T1 (p0, memory 0): hatch, digivolve Hanimon in breeding (cost 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-061 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0, memory 3): Seasarmon over Hanimon, Shambala circle, cost 2 -> 1.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0, memory 3): MarineBullmon over the red Seasarmon, trait circle
+  # only, cost 3 -> 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-031 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0, memory 3): move MarineBullmon out (breeding empties and stays
+  # empty), play the Tamer (cost 2, memory 3 -> 1), pass.
+  - actor: 0
+    do: { move: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX1-066, from: hand } }
+    expect: { prompt: main_phase }
+  # The Tamer's own [On Play] (clause #0) fires on this play too: reveal
+  # [Shishimamon, Sanmyojin Arrival, Genshi Continent], one eligible Digimon.
+  # Pick it by identity; the two Options are trashed by the clause's tail.
+  - actor: 0
+    do: { select: { cards: [EX12-046] } }
+    expect: { prompt: SelectCardEffect }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (p1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (p0, memory 3): the clause. MarineBullmon attacks security.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Hanimon's inherited [When Attacking]: Draw 1 (the pinned Karakurumon),
+  # then trash 1 card from hand -- the Karakurumon itself, by identity.
+  - actor: 0
+    do: { select: { cards: [EX12-063] } }
+    expect: { prompt: SelectHandEffect }
+  # Security battle: 9000 vs 12000+, MarineBullmon deleted -> the clause's
+  # optional fires. YES: suspend the Tamer, gain 1 memory, hatch (breeding
+  # empty since T7).
+  - actor: 0
+    do: { select: { yes: true } }
+    expect: { prompt: OptionalSkill }
+  # Attack over; still p0's turn (memory 4 > 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T10 (p1): trailing breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # After the YES (step 25): Tamer suspended on an otherwise-emptied field,
+  # memory 3 + 1 from p0's perspective; trash = MarineBullmon's whole stack
+  # (Onibimon + the three digivolvers), the Hanimon-inherited trash pick, and
+  # the two un-picked T7 reveal cards. The checked security card left p1's
+  # stack for their trash (5 -> 4).
+  - at: 25
+    that:
+      p0.memory: 4
+      p0.trash: [EX12-004, EX12-011, EX12-031, EX12-061, EX12-063, EX12-070, EX12-074]
+      p1.security: 4

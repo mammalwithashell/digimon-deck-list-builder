@@ -1,0 +1,105 @@
+# Exam scenario: EX12-004 Onibimon, clause EX12-004#effect#1 --
+# "[Your Turn] This Digimon with the [TB] trait gains <Execute>" (the grant).
+#
+# Onibimon is a Digi-Egg: its printed text IS the inherited effect, live while
+# Onibimon sits under a [TB] carrier. Build: hatch Onibimon, digivolve
+# Wankomon (EX12-009, [TB]) via its alt circle (cost 0 -- the standard red
+# circle does not match the purple egg), move to battle on T3, wait a turn so
+# the carrier is attack-capable. At the end of P0's T5 main phase the granted
+# <Execute> opens DCGO's optional end-of-turn dialog (OptionalSkill) -- the
+# prompt EXISTING is the observable that the grant landed. This line DECLINES
+# it, so the carrier stays on field and both engines' boards stay aligned.
+#
+# ENGINE-GAP NOTE (why the select is a sim-side no-op): our engine omits
+# keyword auto-effects for CONDITIONAL declarative grants
+# (game/mod.rs build_effects_for_card: "Conditional grants are omitted here
+# for now because ConditionFn is boxed and not cloneable"), so the granted
+# <Execute> never parks the EndOfTurnAction window sim-side -- verified by
+# probing: a normal T5 main-phase attack lowers (can_attack holds), yet the
+# T5 pass-main rotates straight to P1's turn. The decline row is kept for the
+# DCGO wire ("select answered no live prompt" note is EXPECTED); DCGO asserts
+# the OptionalSkill prompt strictly. If DCGO prompts here, the sim side's
+# missing window is the divergence to triage, not the scenario.
+# REVIEW 2026-08-22 -- BLOCKED ON HARNESS BRIDGE (OptionalSkill decline):
+# the `decline:` payload serializes as select_cancel, but DCGO's
+# OptionalSkill hook (OptionalSkill.cs ~line 150) accepts ONLY
+# select_bool (select_has_bool) and ABORTS on a cancel payload -- and the
+# scenario schema has no bool-no form (`yes:` must be true). Every
+# decline aimed at a DCGO OptionalSkill prompt therefore aborts the job
+# at that row until the bridge maps Decline -> select_bool=false for
+# OptionalSkill (or the hook accepts cancel as "don't use").
+# Here: the Execute-window decline row.
+card: EX12-004
+clause: EX12-004#effect#1
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-009, EX12-011, EX12-031, EX12-046, EX12-061,   # opening hand
+            EX12-011, EX12-011, EX12-046, EX12-046, EX12-062,   # security
+            EX12-031, EX12-046]                                 # T3 / T5 draws
+    rest: toho-braves
+  p1:
+    stack: [EX12-011, EX12-031, EX12-046, EX12-061, EX12-062,   # opening hand
+            EX12-011, EX12-011, EX12-046, EX12-046, EX12-062,   # security
+            EX12-031, EX12-061]                                 # T2 / T4 draws
+    rest: toho-braves
+steps:
+  # Turn 1 (P0): hatch Onibimon, digivolve Wankomon over it in breeding.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 2 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (P0): move the stack to battle. Moved-this-turn means no attack,
+  # so this turn's end opens no <Execute> window on either side.
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 4 (P1): nothing.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (P0): pass everything. Ending the main phase reaches the granted
+  # <Execute> end-of-turn window: DCGO parks its optional attack dialog.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Decline the optional <Execute> attack: no attack, no self-delete, the
+  # carrier stays. (Sim-side this row answers no live prompt -- engine gap
+  # above -- and rides the wire for DCGO's OptionalSkill.)
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Trailing pass: P1's next breeding decision.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # Declined <Execute>: the carrier survives its own end-of-turn with the
+  # Onibimon still under it (pre-step state of the trailing pass, P1's turn:
+  # Wankomon reads its printed 2000 DP -- its own inherited is [Your Turn]
+  # and it is not P0's turn anymore).
+  - at: 12
+    that:
+      p0.field: [{ card_id: EX12-009, dp: 2000, suspended: false, sources: [EX12-004] }]
+      p1.field: []

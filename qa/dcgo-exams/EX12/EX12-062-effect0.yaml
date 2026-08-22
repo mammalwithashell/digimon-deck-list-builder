@@ -1,0 +1,182 @@
+# Exam scenario: EX12-062 (Kokeshimon), clause effect#0 -- "[On Play] [When
+# Digivolving] By deleting 1 of your Digimon, delete 1 of your opponent's
+# level 4 or lower Digimon." -- exercised on the [When Digivolving] side with
+# BOTH selections live.
+#
+# Both seats hatch Onibimon and digivolve Hanimon over it in breeding (cost 0)
+# then move it out: p1's Hanimon is the level-3 deletion target; p0's Hanimon
+# is the digivolution base. On T5 p0 plays Gasamon (EX12-020, cost 3, the
+# pool's promptless Lv.3) as the payment fodder. On T7 Kokeshimon digivolves
+# over the Hanimon stack -- printed purple Lv.3 and alt Puppet/Shambala routes
+# both cost 2, so the rule-17 cost-choice prompt stays closed (Gasamon's -1
+# reduction is self-scoped and does not apply to a digivolve over Hanimon).
+#
+# DCGO's flow (EX12_062.cs): payment SelectPermanentEffect over OWN Digimon
+# (answered with Gasamon, own.field.1), the deletion resolves, then the enemy
+# SelectPermanentEffect (answered with p1's Hanimon, opp.field.0).
+#
+# EXECUTE-WINDOW LEDGER (added in review): both fielded stacks sit on an
+# Onibimon egg, and their tops -- Hanimon and later Kokeshimon -- carry the
+# [TB] trait, so DCGO's EX12-004 grant gives the carrier <Execute> and parks
+# an OPTIONAL end-of-turn attack dialog at every turn end where the carrier
+# CanAttack (EX12_004.cs -> CardEffectFactory ExecuteEffect ->
+# CanActivateExecute gates on CanAttack: not on the move turn, not while
+# suspended). That happens at THREE points on this line: end of p0's T5
+# (Hanimon, fielded T3), end of p1's T6 (Hanimon, fielded T4), end of p0's
+# T7 (Kokeshimon, never attacked). Each is declined. Sim-side these rows
+# answer no live prompt (conditional-grant engine gap, same as
+# EX12-004-effect1) and ride the wire for DCGO's OptionalSkill.
+# REVIEW 2026-08-22 -- BLOCKED ON HARNESS BRIDGE (OptionalSkill decline):
+# the `decline:` payload serializes as select_cancel, but DCGO's
+# OptionalSkill hook (OptionalSkill.cs ~line 150) accepts ONLY
+# select_bool (select_has_bool) and ABORTS on a cancel payload -- and the
+# scenario schema has no bool-no form (`yes:` must be true). Every
+# decline aimed at a DCGO OptionalSkill prompt therefore aborts the job
+# at that row until the bridge maps Decline -> select_bool=false for
+# OptionalSkill (or the hook accepts cancel as "don't use").
+# Here: the three Execute-window decline rows added in review. Without
+# them the line desyncs anyway (DCGO's window would meet an action row),
+# so they stay as the semantically correct answers.
+card: EX12-062
+clause: EX12-062#effect#0
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-061
+      - EX12-020
+      - EX12-062
+      - EX12-070
+      - EX12-074
+      # security (5-9)
+      - EX12-031
+      - EX12-031
+      - EX12-075
+      - EX12-076
+      - EX12-065
+      # draws: T1 digivolve (10), T3 turn (11), T5 turn (12), T7 turn (13),
+      # T7 digivolve (14)
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-026
+      - EX12-047
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4)
+      - EX12-061
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      # security (5-9)
+      - EX12-031
+      - EX12-031
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # draws: T2 turn (10), T2 digivolve (11), T4 turn (12), T6 turn (13)
+      - EX12-020
+      - EX12-026
+      - EX12-036
+      - EX12-047
+    rest: toho-braves
+steps:
+  # Turn 1 (p0): hatch, digivolve Hanimon in breeding (cost 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-061 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 2 (p1): the same.
+  - actor: 1
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { digivolve: { from: breeding, using: EX12-061 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 3 (p0): move Hanimon out (the digivolution base).
+  - actor: 0
+    do: { move: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 4 (p1): move Hanimon out (the deletion target).
+  - actor: 1
+    do: { move: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # Turn 5 (p0): play Gasamon (cost 3, memory 3 -> 0) as payment fodder.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # End of T5: decline the granted <Execute> dialog on p0's Hanimon (see the
+  # Execute-window ledger above; sim-side this answers no live prompt).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Turn 6 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # End of T6: decline the granted <Execute> dialog on p1's OWN Hanimon.
+  - actor: 1
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Turn 7 (p0): the clause -- Kokeshimon over Hanimon (cost 2, memory 3 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-062 } }
+    expect: { prompt: main_phase }
+  # Payment: delete our own Gasamon (own.field.1).
+  - actor: 0
+    do: { select: { targets: [own.field.1] } }
+    expect: { prompt: SelectPermanentEffect }
+  # The paid-for deletion: p1's level-3 Hanimon (opp.field.0).
+  - actor: 0
+    do: { select: { targets: [opp.field.0] } }
+    expect: { prompt: SelectPermanentEffect }
+  # Turn is still p0's at memory 1; close it.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # End of T7: decline the granted <Execute> dialog on p0's Kokeshimon (the
+  # [TB] top over the same Onibimon egg; it never attacked, so it CanAttack).
+  - actor: 0
+    do: { select: { decline: true } }
+    expect: { prompt: OptionalSkill }
+  # Trailing pass: p1's next breeding decision closes the line.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+assert:
+  # After both deletions: p0's battle area is just the Kokeshimon stack
+  # (Gasamon paid), p1's is empty (Hanimon deleted), memory 1.
+  - at: 21
+    that:
+      memory: 1
+      p0.field: [{ card_id: EX12-062, dp: 5000, suspended: false, sources: [EX12-004, EX12-061] }]
+      p1.field: []
