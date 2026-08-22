@@ -1,0 +1,168 @@
+# Exam scenario: EX12-047 (Amaterasumon), clause effect#1 -- "<Security A. +1>".
+#
+# The witness is the attack itself: Amaterasumon attacks the player and checks
+# TWO security cards (5 -> 3), which only <Security A. +1> explains.
+#
+# The highway is the same single-route red breeding line as the effect#5
+# scenario (the pool has no Takinmon, and the recon's purple line would open the
+# rule-17 cost-choice prompt AND put Hanimon/Kokeshimon draw-then-trash
+# inherited effects under the attacker -- a mandatory selection at the attack no
+# `select:` step could answer). Wankomon/Seasarmon inherit only DP auras and
+# Onibimon's Execute grant is gated on [TB], which Amaterasumon is not, so the
+# attack resolves without a single prompt:
+#   T1 hatch + Wankomon (0) / T3 Seasarmon (2) / T5 Karakurumon (3) /
+#   T7 Amaterasumon (alt Shambala, 3) / T9 move to battle (moved Digimon can't
+#   attack the turn they move) / T11 attack the player.
+#
+# p1's stack pins its hand (0-4, inert -- p1 all-passes) and, load-bearingly,
+# its SECURITY (5-9): five Digimon with no [Security] text and DP well under
+# the attacker, so both checks resolve as silent security battles the 12000 DP
+# (+2000/+2000 inherited) attacker survives. p0's stack pins hand, security and
+# every draw (10-18) so no duplicate digivolver makes a `using:` intent
+# ambiguous.
+card: EX12-047
+clause: EX12-047#effect#1
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-009
+      - EX12-011
+      - EX12-063
+      - EX12-047
+      - EX12-070
+      # security (5-9) -- never touched, p1 all-passes
+      - EX12-074
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      # draws: T1 dv (10), T3 turn (11), T3 dv (12), T5 turn (13), T5 dv (14),
+      # T7 turn (15), T7 dv (16), T9 turn (17), T11 turn (18)
+      - EX12-070
+      - EX12-036
+      - EX12-075
+      - EX12-031
+      - EX12-070
+      - EX12-076
+      - EX12-074
+      - EX12-036
+      - EX12-065
+    rest: toho-braves
+  p1:
+    stack:
+      # hand (0-4), inert
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      # security (5-9): Digimon only, no [Security] text, DP <= 5000
+      - EX12-009
+      - EX12-020
+      - EX12-026
+      - EX12-011
+      - EX12-062
+    rest: toho-braves
+steps:
+  # T1 (p0): hatch, Wankomon over the egg (alt Shambala, cost 0).
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-009 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0): Seasarmon over Wankomon (cost 2).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0): Karakurumon over the red Lv.4 Seasarmon (trait path, cost 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0): Amaterasumon over Karakurumon (alt Shambala, cost 3).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-047 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T8 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T9 (p0): move Amaterasumon to the battle area (breeding-phase action).
+  - actor: 0
+    do: { move: { from: breeding } }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T10 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T11 (p0): the clause -- attack the player; <Security A. +1> checks 2.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Trailing pass so the last game question is answered.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Two security cards checked by a single attack: 5 -> 3. Asserted after the
+  # trailing pass, not after the attack step itself: the step-26 projection is
+  # captured before the combat state machine drains, so the checks only show up
+  # at the next step boundary.
+  - at: 27
+    that: { p1.security: 3 }

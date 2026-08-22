@@ -41,6 +41,11 @@ pub struct ScenarioDecks {
 pub enum StepAction {
     Hatch(EmptyArgs),
     Pass(EmptyArgs),
+    /// Move the breeding-area Digimon to the battle area (the second breeding
+    /// action besides `hatch`). `from` defaults to `breeding` — the only zone
+    /// a move can come from — but accepts an explicit `breeding` / `breeding.0`
+    /// so authors who pin slots everywhere else can here too.
+    Move { from: String },
     Play { card: String, from: String },
     Digivolve { from: String, using: String },
     Attack { attacker: String, target: String },
@@ -49,10 +54,21 @@ pub enum StepAction {
 
 /// Every verb this format understands, in the order shown to an author whose
 /// spelling was wrong.
-const STEP_VERBS: &[&str] = &["hatch", "pass", "play", "digivolve", "attack", "select"];
+const STEP_VERBS: &[&str] = &["hatch", "pass", "move", "play", "digivolve", "attack", "select"];
 
 fn hand() -> String {
     "hand".to_string()
+}
+
+fn breeding() -> String {
+    "breeding".to_string()
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct MoveArgs {
+    #[serde(default = "breeding")]
+    from: String,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -119,6 +135,10 @@ impl<'de> Deserialize<'de> for StepAction {
         Ok(match verb {
             "hatch" => StepAction::Hatch(args_of::<EmptyArgs, D::Error>(verb, args)?),
             "pass" => StepAction::Pass(args_of::<EmptyArgs, D::Error>(verb, args)?),
+            "move" => {
+                let a: MoveArgs = args_of::<MoveArgs, D::Error>(verb, args)?;
+                StepAction::Move { from: a.from }
+            }
             "play" => {
                 let a: PlayArgs = args_of::<PlayArgs, D::Error>(verb, args)?;
                 StepAction::Play {
@@ -165,6 +185,9 @@ impl Serialize for StepAction {
         match self {
             StepAction::Hatch(a) => map.serialize_entry("hatch", a)?,
             StepAction::Pass(a) => map.serialize_entry("pass", a)?,
+            StepAction::Move { from } => {
+                map.serialize_entry("move", &MoveArgs { from: from.clone() })?
+            }
             StepAction::Play { card, from } => map.serialize_entry(
                 "play",
                 &PlayArgs {
@@ -373,6 +396,49 @@ assert:
             "steps: []\nunused:",
         );
         assert!(Scenario::from_yaml(&bad).is_err());
+    }
+
+    #[test]
+    fn move_verb_parses_with_a_pinned_breeding_slot() {
+        let s = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { move: { from: breeding.0 } }",
+        ))
+        .expect("move step should parse");
+        assert_eq!(
+            s.steps[0].act,
+            StepAction::Move {
+                from: "breeding.0".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn move_verb_defaults_from_to_breeding() {
+        // The breeding area is the ONLY zone a move can come from, so an
+        // author should be allowed to omit it -- like `play`'s `from: hand`.
+        let s = Scenario::from_yaml(&GOOD.replace("do: { hatch: {} }", "do: { move: {} }"))
+            .expect("bare move step should parse");
+        assert_eq!(
+            s.steps[0].act,
+            StepAction::Move {
+                from: "breeding".to_string()
+            }
+        );
+    }
+
+    #[test]
+    fn move_verb_round_trips_through_yaml() {
+        // The drafter serializes StepAction back to YAML; an asymmetric codec
+        // would emit scenarios that fail to re-parse.
+        let s = Scenario::from_yaml(&GOOD.replace(
+            "do: { hatch: {} }",
+            "do: { move: { from: breeding.0 } }",
+        ))
+        .unwrap();
+        let yaml = serde_yml::to_string(&s.steps[0].act).expect("serializes");
+        let back: StepAction = serde_yml::from_str(&yaml).expect("re-parses");
+        assert_eq!(back, s.steps[0].act);
     }
 
     #[test]

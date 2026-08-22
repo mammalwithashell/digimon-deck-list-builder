@@ -88,6 +88,9 @@ fn matches_intent(e: &ActionExplanation, act: &StepAction) -> bool {
     match act {
         StepAction::Pass(_) => e.kind == ActionKind::Pass,
         StepAction::Hatch(_) => e.kind == ActionKind::Hatch,
+        StepAction::Move { from } => {
+            e.kind == ActionKind::Move && breeding_source_matches(e.source_zone, e.source_index, from)
+        }
         StepAction::Play { card, from } => {
             e.kind == ActionKind::Play
                 && e.card_id.as_deref() == Some(card.as_str())
@@ -145,6 +148,21 @@ fn zone_name(z: Option<ActionZone>) -> &'static str {
         Some(ActionZone::EffectChoice) => "effect_choice",
         None => "",
     }
+}
+
+/// Matches a `move` step's `from` against the explanation's source.
+///
+/// The breeding area holds exactly one permanent, and the engine encodes the
+/// move-to-battle action as a single sentinel id (`MOVE_FROM_BREEDING`, kind
+/// `Move`) whose explanation carries `source_zone = Breeding` with NO source
+/// index — like `SECURITY_TARGET` / `BREEDING_TARGET`, it names a place, not a
+/// slot. So the bare form `breeding` and the only pin that can exist,
+/// `breeding.0`, are the same intent and both must match; any other reference
+/// (another zone, another index) names a move the game does not have.
+fn breeding_source_matches(zone: Option<ActionZone>, index: Option<u16>, reference: &str) -> bool {
+    zone == Some(ActionZone::Breeding)
+        && index.is_none()
+        && (reference == "breeding" || reference == "breeding.0")
 }
 
 /// Matches a slot reference against an explanation's `(zone, index)` pair.
@@ -303,6 +321,131 @@ mod tests {
                 assert_eq!(mask[id as usize], 1.0, "{act:?} lowered to an illegal id");
             }
         }
+    }
+
+    /// Drives ST-1 to the exact position where `MOVE_FROM_BREEDING` is legal:
+    /// the breeding Digimon at level 3+ and the turn player back in the
+    /// Breeding phase. Every intermediate step is itself lowered (never a raw
+    /// id), so the fixture exercises the same path a scenario line does.
+    fn game_with_movable_breeding() -> digimon_engine::Game {
+        let mut g = game_from(st1_deck_with_opening_hand(&[
+            "ST1-02", "ST1-04", "ST1-05", "ST1-06", "ST1-07",
+        ]));
+
+        // Turn 1 (p0): hatch, then digivolve the hatched Lv2 to the Lv3
+        // ST1-02 in the breeding area (evo cost 0), then pass the main phase.
+        let hatch = lower_step(&g, 0, &StepAction::Hatch(EmptyArgs {})).expect("hatch");
+        g.decode_action(hatch, 0);
+        assert_eq!(
+            g.current_phase,
+            digimon_engine::GamePhase::Main,
+            "expected Main after the hatch"
+        );
+        let digivolve = lower_step(
+            &g,
+            0,
+            &StepAction::Digivolve {
+                from: "breeding".to_string(),
+                using: "ST1-02".to_string(),
+            },
+        )
+        .expect("digivolve onto the breeding area");
+        g.decode_action(digivolve, 0);
+        let pass = lower_step(&g, 0, &StepAction::Pass(EmptyArgs {})).expect("p0 main pass");
+        g.decode_action(pass, 0);
+
+        // Turn 2 (p1): pass breeding, pass main.
+        for label in ["p1 breeding pass", "p1 main pass"] {
+            let pass = lower_step(&g, 1, &StepAction::Pass(EmptyArgs {})).expect(label);
+            g.decode_action(pass, 1);
+        }
+
+        // Turn 3 (p0): back at the Breeding phase with a Lv3 in breeding.
+        assert_eq!(g.turn_player(), 0, "expected p0's turn again");
+        assert_eq!(
+            g.current_phase,
+            digimon_engine::GamePhase::Breeding,
+            "expected p0's Breeding phase"
+        );
+        let level = g
+            .player(0)
+            .breeding_area
+            .as_ref()
+            .expect("breeding area should be occupied")
+            .level(&g.card_data)
+            .unwrap_or(0);
+        assert!(level >= 3, "breeding Digimon should be Lv3+, got {level}");
+        g
+    }
+
+    #[test]
+    fn move_from_breeding_lowers_when_pinned_and_when_bare() {
+        let g = game_with_movable_breeding();
+        let mask = digimon_engine::action::mask::build_action_mask(&g, 0);
+
+        // The pinned form the drafter/authors write: `from: breeding.0`.
+        let pinned = lower_step(
+            &g,
+            0,
+            &StepAction::Move {
+                from: "breeding.0".to_string(),
+            },
+        )
+        .expect("pinned move should lower");
+        assert_eq!(mask[pinned as usize], 1.0, "lowered to a forbidden action");
+        let e = digimon_engine::action::explain::explain_action(&g, 0, pinned);
+        assert_eq!(e.kind, digimon_engine::action::explain::ActionKind::Move);
+
+        // The bare form: the breeding area has exactly one slot, so `breeding`
+        // and `breeding.0` are the same intent and must lower to the same id.
+        let bare = lower_step(
+            &g,
+            0,
+            &StepAction::Move {
+                from: "breeding".to_string(),
+            },
+        )
+        .expect("bare move should lower");
+        assert_eq!(bare, pinned);
+    }
+
+    #[test]
+    fn move_before_the_digimon_is_level_3_reports_what_was_legal() {
+        // Fresh game, turn-1 Breeding phase: nothing in breeding yet, so the
+        // mask holds hatch + pass but NOT move. The move step must fail with
+        // the legal set, not lower to something else.
+        let g = game();
+        let err = lower_step(
+            &g,
+            0,
+            &StepAction::Move {
+                from: "breeding.0".to_string(),
+            },
+        )
+        .expect_err("move must not lower when the mask forbids it");
+        match err {
+            LowerError::NoMatch { legal, .. } => {
+                assert!(!legal.is_empty(), "must report what WAS legal");
+            }
+            other => panic!("expected NoMatch, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn move_from_a_non_breeding_zone_does_not_match() {
+        // `from: field.0` names a zone a move can never come from; matching it
+        // against the breeding-move action would silently answer a different
+        // question than the step asks.
+        let g = game_with_movable_breeding();
+        let err = lower_step(
+            &g,
+            0,
+            &StepAction::Move {
+                from: "field.0".to_string(),
+            },
+        )
+        .expect_err("a non-breeding from must not match the move action");
+        assert!(matches!(err, LowerError::NoMatch { .. }));
     }
 
     #[test]

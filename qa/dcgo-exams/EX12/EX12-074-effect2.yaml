@@ -1,0 +1,91 @@
+# Exam scenario: EX12-074 Genshi Continent & Ashino Island, "[Main] Add your
+# bottom security card to the hand and place this card face up as the bottom
+# security card. Then, you may play 1 [Shambala] trait card from your hand with
+# the cost reduced by 3."
+#
+# The measured part is the SECURITY SWAP, which is prompt-free in both engines:
+# bottom security -> hand, EX12-074 placed face up as the new bottom security
+# (security count stays 5). The "then you may play" tail is deliberately made
+# to FIZZLE, because answering its optional selection would need a `select:`
+# step the ScenarioAdapter does not support yet. The tail therefore stays
+# UNMEASURED in this line -- note that in the verdict.
+#
+# How the tail is defused: the shared toho-braves pool is ALL [Shambala] trait
+# cards (even the eggs), so "no Shambala card in hand" is unreachable -- but
+# both engines filter the tail's candidates to DIGIMON-shaped cards (DCGO
+# EX12_074.cs line 89 `cardSource.IsDigimon`, guarded by
+# HasMatchConditionOwnersHand at line 98; our DSL filter is digimon|tamer,
+# deliberately wider). Options are never candidates. So P0's hand at
+# resolution time is engineered to be OPTIONS ONLY:
+#   - opening hand: EX12-020 (played T1), EX12-074 (played T3), 3x EX12-070
+#   - T3 draw (stack[10]): the 4th EX12-070
+#   - the added bottom security card (stack[5]): EX12-075, itself an Option
+# Zero candidates -> DCGO's guard skips, ours fizzles -- no prompt. (Probed
+# empirically: the post-play legal set is ordinary main-phase actions, not
+# selection rows.) Because our filter admits Tamers and DCGO's does not, a
+# hand with a Shambala TAMER at resolution would diverge -- this line dodges
+# that known edge; it does not measure it.
+#
+# Memory line: a play is legal whenever memory - cost >= -10, so T1's play of
+# Gasamon at memory 0 is legal and immediately ends the turn (0 -> -3). T3
+# starts at memory 3; playing EX12-074 (cost 3) lands on exactly 0, so the
+# turn does NOT end and the same seat answers one trailing main_phase pass.
+#
+# Stack layout for P0 (a stack is a draw-order prefix: positions 0-4 are the
+# opening hand, 5-9 the security pile with position 5 the BOTTOM and 9 the
+# top -- both probed empirically -- and position 10 the turn-3 draw):
+#   [EX12-020, EX12-074, EX12-070, EX12-070, EX12-070,   <- hand
+#    EX12-075, EX12-009, EX12-009, EX12-009, EX12-009,   <- security (5=bottom)
+#    EX12-070]                                           <- T3 draw
+card: EX12-074
+clause: EX12-074#effect#2
+seed: 424242
+decks:
+  p0: { stack: [EX12-020, EX12-074, EX12-070, EX12-070, EX12-070, EX12-075, EX12-009, EX12-009, EX12-009, EX12-009, EX12-070], rest: toho-braves }
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): play Gasamon to satisfy EX12-074's <Use Req. ([Shambala]
+  # trait)>. The play drops memory to -3 and ends the turn immediately, so P0
+  # gets no further main_phase question this turn.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1): decline everything; the main pass hands P0 3 memory.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): play EX12-074. Use req is met by Gasamon. The security
+  # swap resolves prompt-free; the optional tail finds zero Digimon-shaped
+  # [Shambala] candidates in the options-only hand and fizzles without asking.
+  # Memory 3 -> 0, so the turn continues and the trailing pass is P0's.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-074, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # After the EX12-074 play: security count unchanged at 5 (bottom swapped for
+  # this card, face up), the former bottom security card (EX12-075) is in hand
+  # alongside the four EX12-070, nothing was trashed, and the play cost 3
+  # landed memory on exactly 0.
+  - at: 6
+    that:
+      p0.memory: 0
+      p0.security: 5
+      p0.trash: []
+      p0.hand: [EX12-070, EX12-070, EX12-070, EX12-070, EX12-075]
+      p0.field: [{ card_id: EX12-020, dp: 2000, suspended: false, sources: [] }]
+  - at: 7
+    that:
+      p0.memory: -3
+      p0.security: 5

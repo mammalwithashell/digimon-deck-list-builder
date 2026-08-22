@@ -1,0 +1,34 @@
+# Exam scenario: EX12-020 Gasamon, alt digivolve circle "Lv.2 w/[Shambala]: Cost 0".
+#
+# The breeding egg is EX12-004 Onibimon: PURPLE Lv2 with the [Shambala] trait.
+# Gasamon's standard circle is blue Lv2, which does not match a purple egg, so
+# the only path that can legalize this digivolve is the alt circle under exam.
+# Single applicable path, cost 0 at memory 0, breeding digivolves trigger no
+# effects: one turn, zero selections.
+#
+# Stack: EX12-020 must be the ONLY copy in the opening hand, or the digivolve
+# intent would be ambiguous. Fillers are distinct other Toho cards.
+card: EX12-020
+clause: EX12-020#effect#1
+seed: 424242
+decks:
+  p0: { stack: [EX12-020, EX12-011, EX12-031, EX12-046, EX12-061], rest: toho-braves }
+  p1: { stack: [], rest: toho-braves }
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  # The clause under exam: cost-0 alt digivolve onto the purple breeding Onibimon.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-020 } }
+    expect: { prompt: main_phase }
+  # Trailing pass: one step after the clause fires, answering the re-asked
+  # main-phase question so the line ends cleanly.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # Cost-0 witness: the digivolve started at memory 0 and left it at 0. Any
+  # nonzero-cost route would have pushed memory negative.
+  - at: 2
+    that: { memory: 0 }

@@ -319,6 +319,131 @@ impl VerdictStore {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Clause text book — the bridge between a scenario's clause id and the clause
+// text the verdict must be hashed against.
+// ---------------------------------------------------------------------------
+
+/// One clause as `clause_coverage extract` emitted it. Only the fields the
+/// verdict store needs; the extract file carries more.
+#[derive(Debug, Clone, Deserialize)]
+pub struct ClauseText {
+    pub id: String,
+    #[serde(default)]
+    pub label: String,
+    #[serde(default)]
+    pub text: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct ClauseTextFile {
+    clauses: Vec<ClauseText>,
+}
+
+/// The clause-text index loaded from a `clause_coverage extract` output
+/// (`{"clauses": [{"id": ..., "label": ..., "text": ...}, ...]}`).
+///
+/// The scenario file only names a clause **id**; the label and text live in
+/// the extractor's output, which is also the denominator. Recording a verdict
+/// for an id absent from this book is refused (the orphan-scenario rule): a
+/// verdict keyed outside the denominator would count toward nothing while
+/// looking like coverage.
+#[derive(Debug, Clone)]
+pub struct ClauseTextBook {
+    by_id: BTreeMap<String, ClauseText>,
+    source: String,
+}
+
+impl ClauseTextBook {
+    pub fn load(path: &Path) -> Result<ClauseTextBook, String> {
+        let text = std::fs::read_to_string(path)
+            .map_err(|e| format!("failed to read clause-text file {}: {e}", path.display()))?;
+        Self::from_json(&text, &path.display().to_string())
+    }
+
+    pub fn from_json(text: &str, source: &str) -> Result<ClauseTextBook, String> {
+        let file: ClauseTextFile = serde_json::from_str(text)
+            .map_err(|e| format!("invalid clause-text JSON ({source}): {e}"))?;
+        let mut by_id = BTreeMap::new();
+        for c in file.clauses {
+            by_id.insert(c.id.clone(), c);
+        }
+        Ok(ClauseTextBook {
+            by_id,
+            source: source.to_string(),
+        })
+    }
+
+    pub fn get(&self, clause_id: &str) -> Option<&ClauseText> {
+        self.by_id.get(clause_id)
+    }
+
+    /// Every clause id in the book, sorted — the denominator for
+    /// [`VerdictStore::summary`].
+    pub fn clause_ids(&self) -> Vec<String> {
+        self.by_id.keys().cloned().collect()
+    }
+
+    pub fn source(&self) -> &str {
+        &self.source
+    }
+}
+
+/// SHA-256 of a clause's text, lowercase hex — the drift fingerprint stored in
+/// [`ClauseVerdict::text_sha256`].
+pub fn sha256_hex(text: &str) -> String {
+    use sha2::{Digest, Sha256};
+    let mut h = Sha256::new();
+    h.update(text.as_bytes());
+    format!("{:x}", h.finalize())
+}
+
+/// Record one scenario run's verdict, or refuse.
+///
+/// Refusal (the orphan-scenario rule): a clause id absent from `book` gets
+/// **no** verdict and an error naming the id, because the book IS the
+/// `clause_coverage` denominator — a verdict keyed outside it would silently
+/// create a sixth, invisible class: a scenario that passes while covering
+/// nothing. The store is left untouched on refusal.
+pub fn record_scenario_verdict(
+    store: &mut VerdictStore,
+    book: &ClauseTextBook,
+    clause_id: &str,
+    verdict: Verdict,
+    scenario_path: Option<String>,
+    reason: Option<String>,
+    recorded_at: String,
+) -> Result<(), String> {
+    let ct = book.get(clause_id).ok_or_else(|| {
+        format!(
+            "refusing to record a verdict for clause `{clause_id}`: it is not in the \
+             clause-text file ({}). A verdict keyed outside the clause_coverage \
+             denominator would count toward nothing (the orphan-scenario rule) -- \
+             re-run `clause_coverage extract` to include the card, or fix the \
+             scenario's `clause:`.",
+            book.source()
+        )
+    })?;
+    let card_id = clause_id
+        .split('#')
+        .next()
+        .unwrap_or_default()
+        .to_string();
+    store.record(ClauseVerdict {
+        clause_id: clause_id.to_string(),
+        card_id,
+        verdict,
+        label: ct.label.clone(),
+        text_sha256: sha256_hex(&ct.text),
+        scenario_path,
+        reason,
+        dcgo_build: None,
+        job_id: None,
+        recorded_at,
+    });
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -433,5 +558,118 @@ mod tests {
             .as_ref()
             .unwrap()
             .contains("BT27_001.cs"));
+    }
+
+    // --- record_scenario_verdict / ClauseTextBook --------------------------
+
+    const EXTRACT_JSON: &str = r#"{
+        "clauses": [
+            {"id": "ST1-12#effect#0", "card_id": "ST1-12", "zone": "effect",
+             "label": "[Your Turn]", "kind": "timing", "timings": ["Your Turn"],
+             "keyword": null,
+             "text": "[Your Turn] All of your Digimon get +1000 DP.",
+             "source": "bundle"},
+            {"id": "ST1-12#security#0", "card_id": "ST1-12", "zone": "security",
+             "label": "[Security]", "kind": "timing", "timings": ["Security"],
+             "keyword": null,
+             "text": "[Security] Play this card without paying its memory cost.",
+             "source": "bundle"}
+        ]
+    }"#;
+
+    #[test]
+    fn clause_text_book_parses_the_extract_shape() {
+        let book = ClauseTextBook::from_json(EXTRACT_JSON, "test").unwrap();
+        let ct = book.get("ST1-12#effect#0").expect("clause present");
+        assert_eq!(ct.label, "[Your Turn]");
+        assert!(ct.text.contains("+1000 DP"));
+        assert_eq!(
+            book.clause_ids(),
+            vec!["ST1-12#effect#0".to_string(), "ST1-12#security#0".to_string()]
+        );
+    }
+
+    #[test]
+    fn recording_a_confirmed_verdict_hashes_the_book_text() {
+        let book = ClauseTextBook::from_json(EXTRACT_JSON, "test").unwrap();
+        let mut store = VerdictStore::default();
+        record_scenario_verdict(
+            &mut store,
+            &book,
+            "ST1-12#effect#0",
+            Verdict::Confirmed,
+            Some("qa/dcgo-exams/ST1/ST1-12.yaml".to_string()),
+            None,
+            "2026-08-22T00:00:00Z".to_string(),
+        )
+        .expect("clause is in the book");
+
+        let cv = store.get("ST1-12#effect#0").unwrap();
+        assert_eq!(cv.verdict, Verdict::Confirmed);
+        assert_eq!(cv.card_id, "ST1-12");
+        assert_eq!(cv.label, "[Your Turn]");
+        assert_eq!(
+            cv.text_sha256,
+            sha256_hex("[Your Turn] All of your Digimon get +1000 DP."),
+            "the stored sha must be the hash of the book's clause text"
+        );
+        // And the round trip validates against the same text.
+        assert!(store
+            .get_validated("ST1-12#effect#0", &cv.text_sha256.clone())
+            .is_some());
+    }
+
+    #[test]
+    fn a_diverged_verdict_carries_its_reason() {
+        let book = ClauseTextBook::from_json(EXTRACT_JSON, "test").unwrap();
+        let mut store = VerdictStore::default();
+        record_scenario_verdict(
+            &mut store,
+            &book,
+            "ST1-12#effect#0",
+            Verdict::Diverged,
+            None,
+            Some("step 11: p1.memory ours=2 dcgo=1".to_string()),
+            "2026-08-22T00:00:00Z".to_string(),
+        )
+        .unwrap();
+        assert!(store
+            .get("ST1-12#effect#0")
+            .unwrap()
+            .reason
+            .as_ref()
+            .unwrap()
+            .contains("p1.memory"));
+    }
+
+    #[test]
+    fn an_orphan_clause_id_is_refused_and_the_store_is_untouched() {
+        // The orphan-scenario rule: a clause id outside the extract denominator
+        // must never grow a verdict -- it would count toward nothing while
+        // looking like coverage.
+        let book = ClauseTextBook::from_json(EXTRACT_JSON, "test").unwrap();
+        let mut store = VerdictStore::default();
+        let err = record_scenario_verdict(
+            &mut store,
+            &book,
+            "ST1-12#effect#7",
+            Verdict::Confirmed,
+            None,
+            None,
+            "2026-08-22T00:00:00Z".to_string(),
+        )
+        .unwrap_err();
+        assert!(err.contains("ST1-12#effect#7"), "got: {err}");
+        assert!(store.is_empty(), "a refused verdict must not touch the store");
+    }
+
+    #[test]
+    fn sha256_hex_is_the_standard_digest() {
+        // Pin against a known vector so the fingerprint is stable across
+        // writers (the Python side hashes the same text).
+        assert_eq!(
+            sha256_hex("abc"),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
     }
 }

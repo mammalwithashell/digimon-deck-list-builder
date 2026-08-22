@@ -1,0 +1,94 @@
+# Exam scenario: EX12-020 Gasamon inherited clause #1 -- the "<Draw 1>" half of
+# "[When Attacking] [Once Per Turn] If your hand has 7 or fewer cards, <Draw 1>".
+#
+# Same line as EX12-020-inherited0: the draw IS the observable of the same
+# activation, so the two clauses share one legal line and differ only in which
+# clause id the verdict is keyed to (#0 = the hand-size condition, #1 = the
+# draw it gates).
+#
+# Gasamon must be a digivolution SOURCE in the battle area, so the line plays
+# Gasamon and digivolves Shellmon over it in the battle area (never through
+# breeding -- that would put Onibimon's end-of-turn <Execute> inherited under
+# the stack, a prompt this line must not depend on):
+#   T1: both seats pass everything.
+#   T2 (memory 3): play Gasamon (3 -> 0), pass.
+#   T3 (memory 3): digivolve Shellmon over Gasamon (2-1=1 with Gasamon's own
+#       reduction; vacuous [When Digivolving] on an empty opponent board), then
+#       attack the player with the same stack -- Gasamon entered on T2, so the
+#       stack may attack. Gasamon's inherited [When Attacking] fires: hand is
+#       5 (<= 7), so <Draw 1> is automatic in both engines, no prompt. The
+#       observation is hand 5 -> 6 during the attack step.
+#
+# The attack checks P1's top security card. P1's stack pins the whole security
+# stage: security is stack[5..10] and the engine pops stack[9] FIRST, so
+# stack[9] is EX12-061 Hanimon -- a 2000 DP Digimon with no security text. It
+# loses the security battle to Shellmon (5000 DP) and is simply trashed: no
+# prompts, attacker survives.
+#
+# The line ends one step after the attack resolves, with a trailing main-phase
+# pass. Ending the turn is safe here: no Onibimon inherited means no
+# end-of-turn <Execute> window.
+card: EX12-020
+clause: EX12-020#inherited#1
+seed: 424242
+decks:
+  p0: { stack: [EX12-020, EX12-026, EX12-011, EX12-031, EX12-046, EX12-011, EX12-031], rest: toho-braves }
+  p1: { stack: [EX12-011, EX12-011, EX12-031, EX12-031, EX12-046, EX12-046, EX12-046, EX12-031, EX12-031, EX12-061], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): nothing affordable.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): play Gasamon to the battle area.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): stack Shellmon over Gasamon, then attack the player.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-026 } }
+    expect: { prompt: main_phase }
+  # The clause under exam fires during this step: Gasamon's inherited
+  # [When Attacking] activation resolves its <Draw 1> (hand 5 -> 6) before
+  # the security check.
+  - actor: 0
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # The attack resolved: one security card popped (5 -> 4) and the attacker is
+  # suspended with Gasamon as its digivolution source. The <Draw 1> itself is
+  # only observable via the oracle backfill (the drawn card comes from the
+  # unpinned seeded remainder, so its identity cannot be authored here).
+  - at: 13
+    that:
+      p1.security: 4
+      p0.field: [{ card_id: EX12-026, dp: 5000, suspended: true, sources: [EX12-020] }]

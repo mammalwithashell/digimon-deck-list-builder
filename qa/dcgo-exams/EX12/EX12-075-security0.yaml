@@ -1,0 +1,80 @@
+# Exam scenario: EX12-075 Kunlun's Imperial Decree, "[Security] Place this
+# card in the battle area."
+#
+# EX12-075 is pinned as P0's TOP security card and flipped by a P1 security
+# attack. The flip runs prompt-free in both engines (DCGO
+# PlaceSelfDelayOptionSecurityEffect; our `place_self_as_delay_option`): the
+# Option leaves the security stack and lands in P0's battle area as a Delay
+# option, so P0 ends on 4 security with EX12-075 fielded and nothing trashed.
+#
+# Security-pile mapping (probed empirically via the EX12-074 exam line, which
+# proved stack position 5 is the BOTTOM security card): a seat's stack is a
+# draw-order prefix -- positions 0-4 are the opening hand, 5-9 the security
+# pile with position 5 the bottom and position 9 the TOP. EX12-075 therefore
+# sits at stack position 9. Positions 5-8 are EX12-009 fillers that are never
+# flipped (one security check only).
+#
+# P1's line: Gasamon (EX12-020, Lv3, cost 3, prompt-free) is played on P1's
+# first turn at memory 3 (play lands on 0, so the turn continues and P1
+# passes out), sits a turn for summoning sickness, then attacks security on
+# P1's second turn. Gasamon's only printed effect is a [Your Turn]
+# would-digivolve cost reduction -- passive, so no prompt fires on play or on
+# attack. P0 keeps an empty battle area (all-pass), so there is no blocker
+# window on the attack.
+card: EX12-075
+clause: EX12-075#security#0
+seed: 424242
+decks:
+  p0: { stack: [EX12-011, EX12-011, EX12-026, EX12-026, EX12-031, EX12-009, EX12-009, EX12-009, EX12-009, EX12-075], rest: toho-braves }
+  p1: { stack: [EX12-020, EX12-011, EX12-011, EX12-026, EX12-026], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): decline everything; the main pass hands P1 3 memory.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3): play Gasamon (3 -> 0, turn continues), then pass out.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0): all-pass; Gasamon sheds summoning sickness.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1, memory 3): attack security with Gasamon. The check flips P0's top
+  # security card, EX12-075, whose [Security] effect places it in P0's battle
+  # area. Attacking spends no memory, so P1 answers one more main_phase pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { attack: { attacker: field.0, target: security } }
+    expect: { prompt: main_phase }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # After the attack: the flipped EX12-075 sits in P0's battle area as a
+  # DP-less Option permanent (dp -1), P0 is down to 4 security with nothing
+  # trashed, and Gasamon is suspended from attacking.
+  - at: 9
+    that:
+      p0.security: 4
+      p0.trash: []
+      p0.field: [{ card_id: EX12-075, dp: -1, suspended: false, sources: [] }]
+      p1.field: [{ card_id: EX12-020, dp: 2000, suspended: true, sources: [] }]
+  - at: 10
+    that:
+      p0.security: 4
+      p0.memory: 3

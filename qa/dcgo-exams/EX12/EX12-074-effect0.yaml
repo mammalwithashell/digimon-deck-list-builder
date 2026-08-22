@@ -1,0 +1,96 @@
+# Exam scenario: EX12-074 Genshi Continent & Ashino Island effect clause #0 --
+# the use requirement "<Use Req. ([Shambala] trait)> (Specified cards let you
+# ignore color requirements.)".
+#
+# The observable is the LEGAL PLAY itself: EX12-074 is white and P0's board
+# provides no color, so the play lowering at all is explicable only by the use
+# requirement being met by Gasamon's [Shambala] trait (EX12-020, battle area).
+#
+# The [Main] effect resolves along the way and every branch is kept closed:
+#   - "Add your bottom security card to the hand": no prompt. The bottom card
+#     is the FIRST security card dealt (security[0] <- stack[5]), pinned to an
+#     EX12-070 copy so the card entering the hand is an option.
+#   - "place this card face up as the bottom security card": no prompt; the
+#     option ends in SECURITY (count back to 5), NOT the trash.
+#   - "you may play 1 [Shambala] trait card from your hand with the cost
+#     reduced by 3": DCGO's EX12_074.cs filter requires IsDigimon +
+#     EqualsTraits("Shambala") (our YAML also admits tamers); the hand at
+#     resolution holds ONLY options (EX12-070/EX12-074/EX12-075 copies), so
+#     both filters are empty and the select auto-skips -- no `select:` needed.
+#
+#   T1/T2: both seats pass everything (P0 cannot afford anything useful and
+#       an overshoot is not needed here).
+#   T3 (memory 3): play Gasamon from hand (3 -> 0) -- the [Shambala] provider;
+#       Gasamon has no on-play effect. Pass out.
+#   T5 (memory 3): THE CLAUSE -- play EX12-074 (cost 3 -> 0, color ignored).
+#       Trailing pass one step after.
+#
+# Stack layout: hand [0..4], security [5..9] (stack[5] = bottom), [10] = T3
+# draw, [11] = T5 draw. Hand tracking: after T3 plays hand.0 the hand is
+# [074, 070, 070, 074, 070(T3 draw)]; the T5 draw appends 075; EX12-074 is
+# played from hand.0. Final hand = 070 x4 + 074 + 075 (all options).
+card: EX12-074
+clause: EX12-074#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-020, EX12-074, EX12-070, EX12-070, EX12-074,
+            EX12-070, EX12-011, EX12-011, EX12-011, EX12-011,
+            EX12-070, EX12-075]
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0)
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): play the [Shambala] provider, memory 3 -> 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): the clause under exam -- the white option is playable
+  # ONLY because Gasamon's [Shambala] trait meets the use requirement (color
+  # ignored). The [Main] security swap resolves promptlessly; the may-play
+  # select is empty (hand is all options) and auto-skips.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-074, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 11
+    that:
+      p0.memory: 0
+      p0.security: 5
+      p0.trash: []
+      p0.hand: [EX12-070, EX12-070, EX12-070, EX12-070, EX12-074, EX12-075]
+      p0.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }

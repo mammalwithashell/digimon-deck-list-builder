@@ -1,0 +1,120 @@
+# Exam scenario: EX12-063 (Karakurumon), clause effect#2 -- "Non-white Lv.4
+# w/[Puppet]/[Shambala] trait: Cost 3" (alt digivolve), exercised on the FIELD.
+#
+# The base must be a Lv.4 that only the trait circle matches: over a PURPLE
+# Lv.4, Karakurumon's printed purple circle (cost 3) and its alt purple path
+# (cost 4) would both match -- two distinct costs, which opens the rule-17
+# cost-choice prompt no `select:` step can answer. A RED Lv.4 Shambala
+# (Seasarmon EX12-011) leaves exactly one route: the clause under test.
+#
+# The recon sketch's Takinmon opener is not in the pool; Gasamon EX12-020 is
+# the pool's promptless playable Lv.3 (its only main effect is a passive cost
+# reduction; Wankomon EX12-009 would fire an [On Play] reveal-selection).
+# The line, one action per p0 turn under the all-pass memory law (turn player
+# has 3 from turn 2 on):
+#   T3 play Gasamon (cost 3, memory 3 -> 0).
+#   T5 digivolve Seasarmon over it -- only the alt Shambala route (printed/alt
+#      red circles miss the blue base); Gasamon's own "-1 when digivolving into
+#      [TB]" reduction applies on the field. Its When Digivolving (delete an
+#      opponent Digimon with <=5000 DP) fizzles silently: p1's board is empty.
+#   T7 the clause: Karakurumon over the red Lv.4 Seasarmon at alt cost 3,
+#      memory 3 -> 0 (Gasamon is now a digivolution source, so its main-scope
+#      reduction no longer functions). Its When Digivolving (suspend/lock an
+#      opponent Digimon or Tamer) also fizzles against the empty board.
+#
+# p0's stack pins hand (0-4), security (5-9, never touched) and every draw
+# (10-14) so no duplicate of EX12-011/EX12-063 can reach the hand and make a
+# `using:` card-id intent ambiguous (the played Gasamon is pinned by hand slot).
+card: EX12-063
+clause: EX12-063#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-020
+      - EX12-011
+      - EX12-063
+      - EX12-070
+      - EX12-074
+      # security (5-9)
+      - EX12-075
+      - EX12-065
+      - EX12-031
+      - EX12-036
+      - EX12-076
+      # draws: T3 turn (10), T5 turn (11), T5 digivolve (12),
+      # T7 turn (13), T7 digivolve (14)
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-031
+      - EX12-070
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (p0): memory 0, nothing affordable -- all-pass.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (p0): play Gasamon to the battle area (cost 3, memory 3 -> 0).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (p0): Seasarmon over the field Gasamon (alt Shambala route only).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T6 (p1): all-pass.
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T7 (p0): the clause -- Karakurumon over the red Lv.4 Seasarmon, alt cost 3,
+  # memory 3 -> 0.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-063 } }
+    expect: { prompt: main_phase }
+  # Trailing pass so the last game question is answered.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # The alt route's full cost 3 was paid from a fresh gauge of 3 -- also
+  # witnesses that Gasamon's reduction stopped functioning as a source.
+  - at: 16
+    that: { memory: 0 }

@@ -1,0 +1,86 @@
+# Exam scenario: EX12-070 Sanmyojin Arrival effect clause #0 -- the use
+# requirement "<Use Req. ([TB] trait)> (Specified cards let you ignore color
+# requirements.)".
+#
+# The observable is the LEGAL PLAY itself: EX12-070 is yellow/green and P0's
+# board provides no color, so the play lowering at all is explicable only by
+# the use requirement being met by Gasamon's [TB] trait (EX12-020, on the
+# battle area -- breeding does not satisfy a use requirement).
+#
+# The [Main] effect must stay silent: "By trashing 1 [TB] trait card from your
+# hand, <Draw 2>" -- DCGO's EX12_070.cs filter is EqualsTraits("TB") over ANY
+# hand card (options included), so the hand at resolution must hold ZERO [TB]
+# cards or a SelectHandEffect prompt opens (no `select:` support). The pool
+# has exactly FOUR non-[TB] cards (EX12-036 x2, EX12-047 x2), which only
+# covers the hand if P0 plays Gasamon on T1 at memory 0 -- an overshooting
+# hard-cast (0 -> -3, turn ends). That is legal: our mask floors at
+# memory_range.0 = -10 (action/mask.rs:148), and the DCGO corpus shows the
+# oracle playing a cost-7 card at memory 0 (WITHDRAWN-memory-floor-
+# affordability.md). With no trashed [TB], there is no draw and the option is
+# NOT placed -- it goes to the trash, which the assert pins.
+#
+# Residual risk for the oracle pass (cannot be probed sim-only): EX12-036 /
+# EX12-047 carry no [TB] in cards.json, but the official-DB mirror has no
+# EX12 entry for them, so a Rule-granted [TB] on DCGO's side would open the
+# discard prompt there. If the oracle aborts on step 5, check that first.
+#
+#   T1 (memory 0): pass breeding, hard-cast Gasamon (3 memory into 0 ->
+#       overshoot, memory -3, TURN ENDS -- no trailing main prompt).
+#   T2: P1 passes everything (memory back to 3 for P0).
+#   T3 (memory 3): THE CLAUSE -- play EX12-070 (cost 3 -> 0). Hand at
+#       resolution is [EX12-036, EX12-036, EX12-047, EX12-047(draw)]: zero
+#       [TB], the discard select auto-skips, no draw, option to trash.
+#       Trailing pass one step after.
+#
+# Stack layout: hand [0..4], security [5..9], [10] = T3 turn draw. Hand after
+# T1 play of hand.0 is [070, 036, 036, 047]; the T3 draw appends 047, so the
+# option is played from hand.0.
+card: EX12-070
+clause: EX12-070#effect#0
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-020, EX12-070, EX12-036, EX12-036, EX12-047,
+            EX12-074, EX12-074, EX12-074, EX12-074, EX12-075,
+            EX12-047]
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): overshoot hard-cast of Gasamon -- memory 0 -> -3, the
+  # turn ends immediately, so P0 gets no second main-phase question.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # T2 (P1, memory 3)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): the clause under exam -- the option is playable ONLY
+  # because Gasamon's [TB] trait meets the use requirement (color ignored).
+  # Zero [TB] in hand keeps the [Main] discard select closed; the option is
+  # not placed and lands in the trash.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-070, from: hand.0 } }
+    expect: { prompt: main_phase }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 6
+    that:
+      p0.memory: 0
+      p0.trash: [EX12-070]
+      p0.hand: [EX12-036, EX12-036, EX12-047, EX12-047]
+      p0.security: 5
+      p0.field:
+        - { card_id: EX12-020, dp: 2000, suspended: false, sources: [] }

@@ -1,0 +1,53 @@
+# Exam scenario: EX12-061 (Hanimon), clause effect#2 -- "Digivolve: Lv.2 w/[Shambala]: Cost 0".
+#
+# One turn. The egg deck is all EX12-004 Onibimon (purple Lv.2, [Shambala]), so
+# the hatch is deterministic. Hanimon's routes over Onibimon: printed purple
+# Lv.2 (cost 0), alt purple Lv.2 (cost 0), alt Shambala Lv.2 (cost 0) -- every
+# matching route costs 0, so the engine's rule-17 cost-choice prompt (which only
+# opens on >1 DISTINCT cost) stays closed and the digivolve resolves unprompted.
+# Hanimon's [On Play] does not fire on a digivolve, and breeding-area effects
+# don't function, so no selection can open.
+#
+# p0's stack pins hand (0-4), security (5-9, never touched -- p1 never attacks)
+# and the digivolve draw (10), so the closing hand assertion is exact: Hanimon
+# left the hand, EX12-036 arrived via the digivolve draw.
+card: EX12-061
+clause: EX12-061#effect#2
+seed: 424242
+decks:
+  p0:
+    stack:
+      # hand (0-4)
+      - EX12-061
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      - EX12-065
+      # security (5-9)
+      - EX12-031
+      - EX12-031
+      - EX12-070
+      - EX12-074
+      - EX12-075
+      # digivolve draw (10)
+      - EX12-036
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  # The clause: Hanimon digivolves over the purple Lv.2 Shambala egg at cost 0,
+  # at memory 0 -- affordable only because the Shambala circle really is cost 0.
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-061 } }
+    expect: { prompt: main_phase }
+  # Trailing pass so the last game question is answered.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 2
+    that:
+      memory: 0
+      p0.hand: [EX12-070, EX12-074, EX12-075, EX12-065, EX12-036]

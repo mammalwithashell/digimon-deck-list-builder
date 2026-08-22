@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "last_updated": "2026-07-10",
+  "last_updated": "2026-08-22",
   "cards": {
     "ST2-01": {
       "card_name": "Tsunomon",
@@ -10682,6 +10682,25 @@
         "BIND-PLACED-AS"
       ],
       "notes": "Both printed clauses green with 0 ignores. Clause (a) cast-time assembly: kind: cast_time_assembly alt-path over the DigiXros transaction substrate (is_digixros=false firewall; DCGO CanNoSelect payability gate on the stop; mask declare-then-pay vs unique-name potential reduction; battle-area picks take TOP card only per official Q&A, remainder stack trashed). Clause (b) End of Your Turn OPT: mandatory trigger w/ declinable trash pick (DCGO isOptional=false + canNoSelect=true), place_as_bottom_source.bind_placed_as -> refire_card_effect (foreign OnPlay with Apocalymon as this Digimon; mandatory EffectChoice on >1), then formula mill 2x per lv6 digivolution card runs even on decline (DCGO parity). Substrate tests: tests/cast_time_assembly.rs (8), effect_context/effect_refiring.rs foreign-card tests (5), dsl/effect_refiring.rs verb tests (2). Clone-safety proven mid-assembly-select and mid-refire-choice."
+    },
+    "BT8-084": {
+      "card_name": "Kimeramon",
+      "validated_date": "2026-08-22",
+      "report": "toho-braves-exam",
+      "status": "PARTIAL",
+      "gap_kind": "engine/dsl-gap",
+      "archetype": "Toho Braves",
+      "yaml_path": "code/digimon-engine/cards/bt8/BT8-084.yaml",
+      "test_path": "code/digimon-engine/tests/cards_behavioral/bt8/bt8_084.rs",
+      "test_count": 12,
+      "tests_passing": 12,
+      "patterns": [
+        "DNA-ALT-PATH",
+        "OPTIONAL-TRASH-TO-BOTTOM-SOURCE",
+        "GAP-TRIPWIRE"
+      ],
+      "notes": "DNA path (0 from Lv.4+Lv.4) + [When Digivolving] optional place Lv.5- Digimon from trash as BOTTOM digivolution card authored. Remaining 3 clauses gap-blocked, NOT approximated: up-to-4 -1000xColors DP-minus (G-DSL-SOURCE-STACK-UNION-COLOR-COUNT), [Your Turn] treated-as-source-colors (G-ENGINE-ADDITIVE-COLOR-TREATMENT), 4-color +4000 DP (G-DSL-OWN-STACK-COLOR-COUNT-GTE). Tripwire tests pin the omissions. See qa/dsl-vocab-gaps.md entries dated 2026-08-22.",
+      "audit_note": "Authored 2026-08-22 (toho-braves-exam); three clauses on genuine residual gaps -- see YAML header for the DCGO crosscheck."
     }
   }
 }

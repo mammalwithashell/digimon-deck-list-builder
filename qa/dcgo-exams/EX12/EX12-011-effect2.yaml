@@ -1,0 +1,75 @@
+# Exam scenario: EX12-011 Seasarmon effect clause #2 -- the alternate
+# digivolution path "[Digivolve] Lv.3 w/[Shambala] trait: Cost 2".
+#
+# Attribution: the base under Seasarmon must NOT be red, or the standard red
+# Lv.3 circle (also cost 2) would equally explain the digivolve. The pool has
+# no yellow Lv.3 (the sketch's Takinmon is not in toho-braves), so the base is
+# Hanimon (EX12-061, PURPLE Lv.3, [Puppet]/[Shambala]/[TB]) -- only the
+# [Shambala]-trait circle matches, a single cost-2 route, no EffectChoice.
+# Hanimon (not Gasamon) on purpose: Gasamon's [Your Turn] TB-digivolve
+# discount would perturb the paid cost (Seasarmon is [TB]); Hanimon has no
+# cost passives at all, and its On Play prompt is suppressed in breeding.
+#
+# The whole line stays in the BREEDING area (same pattern as
+# EX12-026-effect2): no [When Digivolving] triggers fire there, so Seasarmon's
+# WD "delete 1 opponent Digimon with 5000 DP or less" never opens a prompt
+# and the opponent's board state is irrelevant.
+#
+#   T1 (memory 0): hatch Onibimon (EX12-004, purple), digivolve Hanimon over
+#       it in breeding (Shambala alt circle, cost 0 -- Onibimon is purple, and
+#       Hanimon's standard purple circle is also cost 0, one distinct cost).
+#   T2: P1 passes everything.
+#   T3 (memory 3): digivolve Seasarmon over the purple Hanimon in breeding --
+#       ONLY the [Shambala] alt circle matches, cost 2, memory 3 -> 1.
+#       Trailing pass one step after the clause fires.
+#
+# Stack layout (draws pop the stack in order): hand [0..4], security [5..9],
+# then [10] = T1 digivolve draw, [11] = T3 turn draw, [12] = T3 digivolve
+# draw. Draw pins carry no extra EX12-061/EX12-011 copies, so the card-id
+# matched `using:` steps stay unambiguous.
+card: EX12-011
+clause: EX12-011#effect#2
+seed: 424242
+decks:
+  p0:
+    stack: [EX12-061, EX12-011, EX12-070, EX12-070, EX12-070,
+            EX12-046, EX12-046, EX12-046, EX12-046, EX12-031,
+            EX12-074, EX12-074, EX12-074]
+    rest: toho-braves
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): hatch, then the free Shambala-circle digivolve in breeding.
+  - actor: 0
+    do: { hatch: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-061 } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): the clause under exam -- Seasarmon's [Shambala] alt
+  # circle over the purple Hanimon, the only legal route, cost 2 (3 -> 1).
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: breeding, using: EX12-011 } }
+    expect: { prompt: main_phase }
+  # Trailing pass: one step after the clause fires.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  - at: 7
+    that:
+      p0.memory: 1
+      p0.field: []
+      p0.trash: []

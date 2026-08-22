@@ -1,0 +1,83 @@
+# Exam scenario: EX12-020 Gasamon "[Your Turn] When this Digimon would digivolve
+# into a Digimon card with the [TB] trait, reduce the cost by 1".
+#
+# The effect only works in the battle area, so Gasamon is PLAYED there (cost 3),
+# never hatched:
+#   T1: both seats pass everything (P0 cannot afford anything at memory 0).
+#   T2 (memory 3): play Gasamon (3 -> 0), pass.
+#   T3 (memory 3): digivolve Shellmon EX12-026 over the battle-area Gasamon.
+#       Shellmon has the [TB] trait, so the printed cost 2 is reduced to 1 --
+#       the discriminating observation is memory 3 -> 2 (unreduced it would be
+#       3 -> 1). Gasamon is blue [Shambala] Lv3, so Shellmon's standard circle
+#       and its alt circle both match at the SAME cost: no EffectChoice.
+#
+# The opponent's board is kept empty so Shellmon's [When Digivolving] clause
+# resolves vacuously: DCGO guards both selects on HasMatchCondition, and this
+# line verifies our engine skips the empty selections the same way (a prompt
+# here would surface as a lowering failure on the trailing pass).
+#
+# Stack: 5-card opening hand; stack[5..6] land in SECURITY (deal order is hand
+# 0-4, security 5-9, draws 10+ -- probed empirically by the EX12-074/EX12-061
+# lines), so every draw on this line comes from the seeded shuffle of the rest.
+# Exactly one copy each of EX12-020 and EX12-026 in the stacked prefix keeps
+# the play and digivolve intents unique in hand; the seeded draws happen to add
+# no duplicate before either step (verified by the sim lowering).
+card: EX12-020
+clause: EX12-020#effect#0
+seed: 424242
+decks:
+  p0: { stack: [EX12-020, EX12-026, EX12-011, EX12-031, EX12-046, EX12-011, EX12-031], rest: toho-braves }
+  p1: { stack: [], rest: toho-braves }
+steps:
+  # T1 (P0, memory 0): nothing affordable.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T2 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T3 (P0, memory 3): play Gasamon to the battle area.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { play: { card: EX12-020, from: hand } }
+    expect: { prompt: main_phase }
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T4 (P1)
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 1
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+  # T5 (P0, memory 3): the clause under exam -- digivolve into [TB] Shellmon
+  # for 2-1=1, leaving memory at 2.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: breeding_action }
+  - actor: 0
+    do: { digivolve: { from: field.0, using: EX12-026 } }
+    expect: { prompt: main_phase }
+  # Trailing pass: one step after the clause fires; also proves the vacuous
+  # [When Digivolving] left no pending selection behind.
+  - actor: 0
+    do: { pass: {} }
+    expect: { prompt: main_phase }
+assert:
+  # THE clause observable: the printed cost-2 digivolve was paid at 1 (memory
+  # 3 -> 2). Unreduced it would read memory 1. Shellmon sits on the field with
+  # Gasamon as its source.
+  - at: 11
+    that:
+      p0.memory: 2
+      p0.field: [{ card_id: EX12-026, dp: 5000, suspended: false, sources: [EX12-020] }]
