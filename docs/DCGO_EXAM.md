@@ -214,6 +214,56 @@ Unity.
 `Game::decode_action` returns `()` and silently ignores an out-of-range id, so
 the mask bit is the only check there is — lowering asserts it before applying.
 
+## Selection steps (`select:`) — added 2026-08-22
+
+Clauses whose resolution prompts a selection are authorable. Five forms, exactly
+one per step:
+
+```yaml
+- actor: 0
+  do: { select: { cards: [EX12-020, EX12-020] } }   # hand/trash/reveal picks, by identity
+  expect: { prompt: SelectHandEffect }
+- actor: 0
+  do: { select: { targets: [opp.field.0] } }        # permanent picks, by OUR slot ref
+  expect: { prompt: SelectPermanentEffect }
+- actor: 0
+  do: { select: { value: 3 } }                      # count/int prompts (the VALUE, not an index)
+- actor: 0
+  do: { select: { yes: true } }                     # optional yes/no (OptionalSkill)
+- actor: 0
+  do: { select: { decline: true } }                 # cancel an optional prompt
+```
+
+**The wire carries identities, never engine-internal indices.** Our selection
+encodings and DCGO's `ActiveCardList` CardIndex / frame ids are both internal;
+the job ships card-ID strings (for permanents, the target's top-card id) and
+each engine resolves them against its *own* candidate list —
+`SelectionAnswer.MatchCardIds` on the DCGO side, `selection_resolve::resolve_next`
+on ours. Duplicates resolve in occurrence order; an identity the prompt cannot
+offer **aborts the job as a finding** ("DCGO does not offer what our engine
+offered").
+
+Two lowering invariants make selection mistakes loud at sim time, before any
+Unity is spent:
+
+- a pending selection **must** be answered by the next scenario step
+  ("our engine asks a selection here; the scenario must answer it");
+- a `select:` while nothing is pending is an error, unless the engine
+  auto-resolved the prompt (allowed and logged — DCGO may still ask).
+
+Phase at a selection boundary is **representation**: our engine parks in a
+`Select*`/`EffectChoice` `GamePhase` while DCGO's `TurnPhase` stays on the
+interrupted phase, so the differ compares every state field but not `phase` on
+those steps (`Breeding`-vs-`Main` still diffs).
+
+Proven end to end on `qa/dcgo-exams/ST1/ST1-15-effect0.yaml` ("Delete up to 2 of
+your opponent's Digimon with 4000 DP or less"): CLEAN, 14/14 steps.
+
+Out of scope, stated per the brief: multi-pick DigiXros/Assembly material
+declarations and `indexes`-payload prompts; `generic_int`/`generic_bool` values
+can be scripted but their candidates cannot be asserted (no candidate list on
+that channel).
+
 ## Execution
 
 ```
@@ -439,16 +489,10 @@ Plus the standing rule: **always print the full denominator.**
 Stated plainly, because each one is a way a report can read better than the
 evidence supports.
 
-- **`job.first_player` is written by `submit` but NOT honored by DCGO.** Seat
-  assignment still comes from DCGO's own roll. Our engine *can* honor it
-  (`Game::new_with_ordered_decks` takes `first_player`), so the two disagree —
-  and if DCGO's roll gives the other seat, **every step's actor is inverted** and
-  the line fails its first prompt assertion. The runner must **reconcile or
-  refuse**: read `my_player_id` from the paired recording, and either re-run with
-  the seats swapped or fail with a message naming the mismatch. Never silently
-  swap the projections to make the diff line up — that converts a real seat bug
-  into a clean pass. (Phase 1 records the same gap for its own corpus, where it
-  shows up as seat bias rather than an inverted line.)
+- ~~`job.first_player` not honored~~ — **fixed 2026-08-22** (see
+  `docs/DCGO_HARNESS.md`). DCGO seats the requested player first; lines are
+  authored against our engine's convention (seat 0 first) and verified both
+  directions at one seed.
 
 - **The 25 `SetIsBackgroundProcess(true)` cards are structurally unmeasurable.**
   They bypass the `effect_activation` hook entirely, so their clauses can never
