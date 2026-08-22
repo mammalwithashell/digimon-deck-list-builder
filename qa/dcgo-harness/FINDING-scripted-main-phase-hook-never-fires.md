@@ -135,10 +135,10 @@ Scripted determinism, two runs at seed `424242`:
 
 ### Still open
 
-- **`job.first_player` remains unhonored.** The scripted line's actor sequence
-  had to be authored against DCGO's own roll (seat 1 first). A line authored
-  against our engine's assumption would fail its actor assertion immediately.
-  This is now the largest remaining obstacle to authoring scenarios from our
-  engine's lowering output.
+- ~~`job.first_player` unhonored~~ — **fixed 2026-08-22.** A 60-step line
+  authored against OUR engine's convention (seat 0 first) now runs clean:
+  `first_player` records 0, 52 action rows, zero prompt mismatches, actors
+  `[0, 1, 0, 0, 1, 1, ...]`. Previously such a line failed its very first actor
+  assertion because DCGO rolled seat 1.
 - **The mulligan is pinned to keep on both sides, not measured.**
 - **Editor vs player** determinism is still unverified; only player-vs-player is.

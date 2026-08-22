@@ -173,11 +173,14 @@ their real divergence, growing the genuine clusters from 3+1 to 6+2.
 
 ## Known gaps
 
-- `job.first_player` is written by `submit` but not yet honored by DCGO, so seat
-  assignment comes from DCGO's own roll and a corpus is seat-biased in a
-  dimension the job spec claims to control.
+- ~~`job.first_player` not honored~~ — **fixed 2026-08-22.** DCGO now seats the
+  requested player first (`TurnStateMachine`, immediately after the PvP
+  room-property block). Verified both directions at one seed: `first_player: 0`
+  records `first_player: 0`, `first_player: 1` records `1`, where the roll
+  previously always produced `1`. Note DCGO's own inversion — the FIRST player is
+  the NON-turn player at that point, so honoring it means seating
+  `PlayerFromID(P).Enemy`, exactly as the PvP path does.
 - `JobResultWriter` reports `steps: 0`; the real count is in the recording.
 - `triage` passes `card_at_slot: None`, so clusters key on action range only and
   the ranked output is coarser than the signature allows. Deriving it from the
   divergence's board snapshot is the obvious next refinement.
-- `job.first_player` is still not honored by DCGO (see above).

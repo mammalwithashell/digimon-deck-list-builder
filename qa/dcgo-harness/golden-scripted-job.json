@@ -1,5 +1,5 @@
 {
-  "job_id": "golden-scripted-002",
+  "job_id": "golden-scripted-003",
   "policy": "scripted",
   "decks": {
     "p0": [
@@ -125,16 +125,6 @@
   },
   "inputs": [
     {
-      "actor": 1,
-      "action_id": 62,
-      "expect_prompt": "breeding_action"
-    },
-    {
-      "actor": 1,
-      "action_id": 62,
-      "expect_prompt": "main_phase"
-    },
-    {
       "actor": 0,
       "action_id": 62,
       "expect_prompt": "breeding_action"
@@ -421,6 +411,16 @@
     },
     {
       "actor": 0,
+      "action_id": 62,
+      "expect_prompt": "main_phase"
+    },
+    {
+      "actor": 1,
+      "action_id": 62,
+      "expect_prompt": "breeding_action"
+    },
+    {
+      "actor": 1,
       "action_id": 62,
       "expect_prompt": "main_phase"
     }
