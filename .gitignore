@@ -82,3 +82,7 @@ wandb/
 .superpowers/
 .trial/
 /playwright-launcher.png
+
+# spritekit: downloaded Digimon Up reference art (third-party; the committed
+# index in data/sprite_refs/ is enough to re-fetch any of it on demand)
+.cache/sprite_refs/
