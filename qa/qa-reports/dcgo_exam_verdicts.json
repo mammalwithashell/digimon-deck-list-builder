@@ -1,7 +1,52 @@
 {
   "version": 1,
-  "last_updated": "2026-08-23T15:15:20.503451400+00:00",
+  "last_updated": "2026-08-23T22:14:56.917661600+00:00",
   "clauses": {
+    "BT11-089#effect#0": {
+      "clause_id": "BT11-089#effect#0",
+      "card_id": "BT11-089",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e81e2ffc58759b2acfc68244a569ff81c87080755441a368649eabbc78eca48d",
+      "scenario_path": "qa/dcgo-exams/BT11/BT11-089-effect0.yaml",
+      "recorded_at": "2026-08-23T22:11:25.759422900+00:00"
+    },
+    "BT11-089#effect#3": {
+      "clause_id": "BT11-089#effect#3",
+      "card_id": "BT11-089",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "qa/dcgo-exams/EX12/BT11-089-effect3.yaml",
+      "recorded_at": "2026-08-23T22:11:29.187314400+00:00"
+    },
+    "BT8-097#effect#0": {
+      "clause_id": "BT8-097#effect#0",
+      "card_id": "BT8-097",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e814400c9aca84315589e7d6537c07b76593e058b9c1a383cec112da2cfbdce0",
+      "scenario_path": "qa/dcgo-exams/EX12/BT8-097-effect0.yaml",
+      "recorded_at": "2026-08-23T22:11:31.689540+00:00"
+    },
+    "BT8-097#effect#1": {
+      "clause_id": "BT8-097#effect#1",
+      "card_id": "BT8-097",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "5ecfd31853ca935f20637730904bc3c8afd140465f3bee6e1b145e62c67ade69",
+      "scenario_path": "qa/dcgo-exams/EX12/BT8-097-effect1.yaml",
+      "recorded_at": "2026-08-23T22:11:34.118764500+00:00"
+    },
+    "BT8-097#effect#2": {
+      "clause_id": "BT8-097#effect#2",
+      "card_id": "BT8-097",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "4bdbcca3019740331dcb40e2bee74b37330245ecb726a13996c7412a1bd0ea1d",
+      "scenario_path": "qa/dcgo-exams/EX12/BT8-097-effect2.yaml",
+      "recorded_at": "2026-08-23T22:11:36.525924100+00:00"
+    },
     "EX1-066#effect#0": {
       "clause_id": "EX1-066#effect#0",
       "card_id": "EX1-066",
@@ -9,7 +54,7 @@
       "label": "Effect",
       "text_sha256": "6ef2a72b9af483b07b1d6dfc91e82390a94b9f143915bd2947b5730a121c64d0",
       "scenario_path": "qa/dcgo-exams/EX12/EX1-066-effect0.yaml",
-      "recorded_at": "2026-08-22T19:15:32.209422200+00:00"
+      "recorded_at": "2026-08-23T22:11:38.925909100+00:00"
     },
     "EX1-066#effect#1": {
       "clause_id": "EX1-066#effect#1",
@@ -18,17 +63,36 @@
       "label": "Effect",
       "text_sha256": "db914dc64761b53ef147ceba156c24a72b8865807447ee20eef634744281e5b5",
       "scenario_path": "qa/dcgo-exams/EX12/EX1-066-effect1.yaml",
-      "recorded_at": "2026-08-23T15:14:56.378048500+00:00"
+      "recorded_at": "2026-08-23T22:11:41.495590300+00:00"
     },
-    "EX12-004#effect#0": {
-      "clause_id": "EX12-004#effect#0",
-      "card_id": "EX12-004",
-      "verdict": "unreachable",
+    "EX1-066#effect#2": {
+      "clause_id": "EX1-066#effect#2",
+      "card_id": "EX1-066",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "321051d9d40d4dc4b6c89186837ddc5f03489dd105085bce198cd347da35809d",
+      "scenario_path": "qa/dcgo-exams/EX12/EX1-066-effect2.yaml",
+      "recorded_at": "2026-08-23T22:11:43.910179300+00:00"
+    },
+    "EX12-002#effect#1": {
+      "clause_id": "EX12-002#effect#1",
+      "card_id": "EX12-002",
+      "verdict": "diverged",
       "label": "effect_description_eng",
-      "text_sha256": "fdcad12bb003afc5852c9231a104cd44b15b92ea0e13c98c53d74a3d1b58ba9b",
-      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+      "text_sha256": "7d271e1aed3ee3efdddf0d0000723fc42e1bcb39ecc02c8ae4c04dd8441a76e3",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-002-effect1.yaml",
+      "reason": "DIVERGED at step 12 (compared 13 of 13 ours / 14 dcgo steps (1 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-08-23T22:11:46.291034600+00:00"
+    },
+    "EX12-002#inherited#0": {
+      "clause_id": "EX12-002#inherited#0",
+      "card_id": "EX12-002",
+      "verdict": "diverged",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "7d271e1aed3ee3efdddf0d0000723fc42e1bcb39ecc02c8ae4c04dd8441a76e3",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-002-inherited0.yaml",
+      "reason": "DIVERGED at step 12 (compared 13 of 13 ours / 14 dcgo steps (1 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-08-23T22:11:48.711250900+00:00"
     },
     "EX12-004#effect#1": {
       "clause_id": "EX12-004#effect#1",
@@ -47,7 +111,7 @@
       "label": "effect_description_eng",
       "text_sha256": "1b7faea4ff2532355e393e4a51588b148d790ff067b3115402ff7475732df5c5",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-004-effect2.yaml",
-      "recorded_at": "2026-08-23T15:14:58.595645900+00:00"
+      "recorded_at": "2026-08-23T22:11:51.513563600+00:00"
     },
     "EX12-004#inherited#0": {
       "clause_id": "EX12-004#inherited#0",
@@ -56,7 +120,7 @@
       "label": "inherited_effect_description_eng",
       "text_sha256": "2f8294e6613ee827f4e522a1548d33c057083ea556c682119f8f67cd9f673ae8",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-004-inherited0.yaml",
-      "recorded_at": "2026-08-23T15:15:00.709652600+00:00"
+      "recorded_at": "2026-08-23T22:11:53.853981800+00:00"
     },
     "EX12-004#security#0": {
       "clause_id": "EX12-004#security#0",
@@ -67,6 +131,42 @@
       "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
       "dcgo_build": "scripted-v7 f6f726088",
       "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    },
+    "EX12-006#effect#0": {
+      "clause_id": "EX12-006#effect#0",
+      "card_id": "EX12-006",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "3b2b25539b205b299c618382d2b0c66ec086a62b6bf2ee83b8c1c6f5c00cc431",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-006-effect0.yaml",
+      "recorded_at": "2026-08-23T22:11:56.154466900+00:00"
+    },
+    "EX12-006#effect#1": {
+      "clause_id": "EX12-006#effect#1",
+      "card_id": "EX12-006",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "6f912d15f0a9492f902d128654c1db514c070979af0a8ac927c5bfc78cb4751e",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-006-effect1.yaml",
+      "recorded_at": "2026-08-23T22:11:58.516258600+00:00"
+    },
+    "EX12-006#effect#2": {
+      "clause_id": "EX12-006#effect#2",
+      "card_id": "EX12-006",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "6f912d15f0a9492f902d128654c1db514c070979af0a8ac927c5bfc78cb4751e",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-006-effect2.yaml",
+      "recorded_at": "2026-08-23T22:12:01.311001400+00:00"
+    },
+    "EX12-006#inherited#0": {
+      "clause_id": "EX12-006#inherited#0",
+      "card_id": "EX12-006",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "985ce1fea5836719754f0faa1b48ecc1aa5d8cc73562061197ed4c1847dbb36b",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-006-inherited0.yaml",
+      "recorded_at": "2026-08-23T22:12:03.623505200+00:00"
     },
     "EX12-009#effect#0": {
       "clause_id": "EX12-009#effect#0",
@@ -113,7 +213,7 @@
       "label": "effect_description_eng",
       "text_sha256": "769c51b24d9a9d22b266a55147692d78b8fe22c162e9ff185c0d2f34a3f2a5c5",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-011-effect0.yaml",
-      "recorded_at": "2026-08-23T15:15:03.088297500+00:00"
+      "recorded_at": "2026-08-23T22:12:06.457235900+00:00"
     },
     "EX12-011#effect#1": {
       "clause_id": "EX12-011#effect#1",
@@ -122,7 +222,7 @@
       "label": "effect_description_eng",
       "text_sha256": "b1a2965845b302ddbde9d1f8ee9469c100632d5dca97f45f91c21a55ac234516",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-011-effect1.yaml",
-      "recorded_at": "2026-08-22T19:17:17.332842900+00:00"
+      "recorded_at": "2026-08-23T22:12:08.821720600+00:00"
     },
     "EX12-011#effect#2": {
       "clause_id": "EX12-011#effect#2",
@@ -133,6 +233,15 @@
       "scenario_path": "qa/dcgo-exams/EX12/EX12-011-effect2.yaml",
       "recorded_at": "2026-08-22T14:47:45.485767200+00:00"
     },
+    "EX12-011#inherited#0": {
+      "clause_id": "EX12-011#inherited#0",
+      "card_id": "EX12-011",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "985ce1fea5836719754f0faa1b48ecc1aa5d8cc73562061197ed4c1847dbb36b",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-011-inherited0.yaml",
+      "recorded_at": "2026-08-23T22:12:11.256319700+00:00"
+    },
     "EX12-011#security#0": {
       "clause_id": "EX12-011#security#0",
       "card_id": "EX12-011",
@@ -142,6 +251,146 @@
       "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
       "dcgo_build": "scripted-v7 f6f726088",
       "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    },
+    "EX12-012#effect#0": {
+      "clause_id": "EX12-012#effect#0",
+      "card_id": "EX12-012",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "769c51b24d9a9d22b266a55147692d78b8fe22c162e9ff185c0d2f34a3f2a5c5",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-012-effect0.yaml",
+      "recorded_at": "2026-08-23T22:12:13.645768400+00:00"
+    },
+    "EX12-012#effect#1": {
+      "clause_id": "EX12-012#effect#1",
+      "card_id": "EX12-012",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "dc81d55a8b8c3056ff84e993329de1d31f4e43340c7270402310af072211891a",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-012-effect1.yaml",
+      "recorded_at": "2026-08-23T22:12:15.937835900+00:00"
+    },
+    "EX12-012#effect#2": {
+      "clause_id": "EX12-012#effect#2",
+      "card_id": "EX12-012",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "e9d07f36bbbeb81ec7df384fef2abf419a1b080be9fa88c386485db190a9369b",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-012-effect2.yaml",
+      "recorded_at": "2026-08-23T22:12:18.213778+00:00"
+    },
+    "EX12-012#effect#3": {
+      "clause_id": "EX12-012#effect#3",
+      "card_id": "EX12-012",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "e9d07f36bbbeb81ec7df384fef2abf419a1b080be9fa88c386485db190a9369b",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-012-effect3.yaml",
+      "recorded_at": "2026-08-23T22:12:20.497158300+00:00"
+    },
+    "EX12-012#inherited#0": {
+      "clause_id": "EX12-012#inherited#0",
+      "card_id": "EX12-012",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "985ce1fea5836719754f0faa1b48ecc1aa5d8cc73562061197ed4c1847dbb36b",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-012-inherited0.yaml",
+      "recorded_at": "2026-08-23T22:12:22.857419+00:00"
+    },
+    "EX12-015#effect#0": {
+      "clause_id": "EX12-015#effect#0",
+      "card_id": "EX12-015",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "769c51b24d9a9d22b266a55147692d78b8fe22c162e9ff185c0d2f34a3f2a5c5",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-015-effect0.yaml",
+      "recorded_at": "2026-08-23T22:12:25.384535600+00:00"
+    },
+    "EX12-015#effect#1": {
+      "clause_id": "EX12-015#effect#1",
+      "card_id": "EX12-015",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "81851ee3ad8d0be417e85de0a1536e448f3c7df3c7800416285c9b2eb02e4c4c",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-015-effect1.yaml",
+      "recorded_at": "2026-08-23T22:12:27.776744400+00:00"
+    },
+    "EX12-015#effect#4": {
+      "clause_id": "EX12-015#effect#4",
+      "card_id": "EX12-015",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "3b02fb5cbeceda5702afa99d2b3ef02c49ceefcce7086d385f62acd225580ddf",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-015-effect4.yaml",
+      "recorded_at": "2026-08-23T22:12:30.956605+00:00"
+    },
+    "EX12-019#effect#1": {
+      "clause_id": "EX12-019#effect#1",
+      "card_id": "EX12-019",
+      "verdict": "diverged",
+      "label": "effect_description_eng",
+      "text_sha256": "78f7684587009e1f1bcf4ecde6c169edc5313e827127c9f2e494ee78d30087be",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-019-effect1.yaml",
+      "reason": "DIVERGED at step 29 (compared 31 of 31 ours / 31 dcgo steps)",
+      "recorded_at": "2026-08-23T22:12:34.001095300+00:00"
+    },
+    "EX12-019#effect#3": {
+      "clause_id": "EX12-019#effect#3",
+      "card_id": "EX12-019",
+      "verdict": "diverged",
+      "label": "effect_description_eng",
+      "text_sha256": "da37b3513c253581acd58fb279b5a7fd68f5a7e2b7187af928bad07c0006b995",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-019-effect3.yaml",
+      "reason": "DIVERGED at step 29 (compared 31 of 31 ours / 31 dcgo steps)",
+      "recorded_at": "2026-08-23T22:12:36.723866900+00:00"
+    },
+    "EX12-019#effect#4": {
+      "clause_id": "EX12-019#effect#4",
+      "card_id": "EX12-019",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "d4d920244a089f84b9c94e7aa1fc2fb92ea6f1a327096926427ae785370a5fee",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-019-effect4.yaml",
+      "recorded_at": "2026-08-23T22:12:39.404675+00:00"
+    },
+    "EX12-019#effect#5": {
+      "clause_id": "EX12-019#effect#5",
+      "card_id": "EX12-019",
+      "verdict": "diverged",
+      "label": "effect_description_eng",
+      "text_sha256": "d3a30888801382810c7c78b2fddbf89b9543cd2c348241eddae87eb2dcf030ae",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-019-effect5.yaml",
+      "reason": "DIVERGED at step 28 (compared 29 of 30 ours / 30 dcgo steps (1 sim-only row(s) with no DCGO prompt + 1 DCGO intermediate row(s) not comparable))",
+      "recorded_at": "2026-08-23T22:12:42.081636600+00:00"
+    },
+    "EX12-019#effect#6": {
+      "clause_id": "EX12-019#effect#6",
+      "card_id": "EX12-019",
+      "verdict": "diverged",
+      "label": "effect_description_eng",
+      "text_sha256": "fba4263c3912fda701325d840bd0d27a64909e0e54d88698d35be11c48dd9623",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-019-effect6.yaml",
+      "reason": "DIVERGED at step 29 (compared 31 of 31 ours / 31 dcgo steps)",
+      "recorded_at": "2026-08-23T22:12:44.736843800+00:00"
+    },
+    "EX12-019#effect#7": {
+      "clause_id": "EX12-019#effect#7",
+      "card_id": "EX12-019",
+      "verdict": "diverged",
+      "label": "xros_req",
+      "text_sha256": "fce12f28918aa06adac04a1a15befe4cf34c55d9add6cc1ab6a7441624b8d98d",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-019-effect7.yaml",
+      "reason": "DIVERGED at step 27 (compared 30 of 30 ours / 30 dcgo steps)",
+      "recorded_at": "2026-08-23T22:12:47.392129700+00:00"
+    },
+    "EX12-019#effect#8": {
+      "clause_id": "EX12-019#effect#8",
+      "card_id": "EX12-019",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "fce12f28918aa06adac04a1a15befe4cf34c55d9add6cc1ab6a7441624b8d98d",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-019-effect8.yaml",
+      "recorded_at": "2026-08-23T22:12:49.813493100+00:00"
     },
     "EX12-020#effect#0": {
       "clause_id": "EX12-020#effect#0",
@@ -160,15 +409,6 @@
       "text_sha256": "6f912d15f0a9492f902d128654c1db514c070979af0a8ac927c5bfc78cb4751e",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-020-effect1.yaml",
       "recorded_at": "2026-08-22T14:48:26.165021500+00:00"
-    },
-    "EX12-020#inherited#0": {
-      "clause_id": "EX12-020#inherited#0",
-      "card_id": "EX12-020",
-      "verdict": "confirmed",
-      "label": "inherited_effect_description_eng",
-      "text_sha256": "65b6245d200b26603ea82dfab391da3f0cc7583c182888647b0f20c37bb045dd",
-      "scenario_path": "qa/dcgo-exams/EX12/EX12-020-inherited0.yaml",
-      "recorded_at": "2026-08-22T14:48:51.680024300+00:00"
     },
     "EX12-020#inherited#1": {
       "clause_id": "EX12-020#inherited#1",
@@ -189,6 +429,78 @@
       "dcgo_build": "scripted-v7 f6f726088",
       "recorded_at": "2026-08-22T19:39:40.183200+00:00"
     },
+    "EX12-022#effect#1": {
+      "clause_id": "EX12-022#effect#1",
+      "card_id": "EX12-022",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "6f912d15f0a9492f902d128654c1db514c070979af0a8ac927c5bfc78cb4751e",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-022-effect1.yaml",
+      "recorded_at": "2026-08-23T22:12:52.598185300+00:00"
+    },
+    "EX12-022#inherited#0": {
+      "clause_id": "EX12-022#inherited#0",
+      "card_id": "EX12-022",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "ed6ae462b769af6c7dd4e3f2563728f81ad9fe9b0230e1a3a9b9075ea20bcc91",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-022-inherited0.yaml",
+      "recorded_at": "2026-08-23T22:12:54.932961600+00:00"
+    },
+    "EX12-022#inherited#1": {
+      "clause_id": "EX12-022#inherited#1",
+      "card_id": "EX12-022",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "55311f4a7383e65b8f68e93b41e9222d6b8690d45c8b5d5023ba9bc672deee86",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-022-inherited1.yaml",
+      "recorded_at": "2026-08-23T22:12:57.467571800+00:00"
+    },
+    "EX12-025#effect#0": {
+      "clause_id": "EX12-025#effect#0",
+      "card_id": "EX12-025",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "da37b3513c253581acd58fb279b5a7fd68f5a7e2b7187af928bad07c0006b995",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-025-effect0.yaml",
+      "recorded_at": "2026-08-23T22:12:59.846522800+00:00"
+    },
+    "EX12-025#effect#1": {
+      "clause_id": "EX12-025#effect#1",
+      "card_id": "EX12-025",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "daf88b23fc1e6bfb3aa0bfa8941f5128bbdc9f5641e1f397cd2ad93021cefb4d",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-025-effect1.yaml",
+      "recorded_at": "2026-08-23T22:13:02.215956900+00:00"
+    },
+    "EX12-025#effect#2": {
+      "clause_id": "EX12-025#effect#2",
+      "card_id": "EX12-025",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "e9d07f36bbbeb81ec7df384fef2abf419a1b080be9fa88c386485db190a9369b",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-025-effect2.yaml",
+      "recorded_at": "2026-08-23T22:13:04.739604900+00:00"
+    },
+    "EX12-025#inherited#0": {
+      "clause_id": "EX12-025#inherited#0",
+      "card_id": "EX12-025",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "ed6ae462b769af6c7dd4e3f2563728f81ad9fe9b0230e1a3a9b9075ea20bcc91",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-025-inherited0.yaml",
+      "recorded_at": "2026-08-23T22:13:07.247716+00:00"
+    },
+    "EX12-025#inherited#1": {
+      "clause_id": "EX12-025#inherited#1",
+      "card_id": "EX12-025",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "55311f4a7383e65b8f68e93b41e9222d6b8690d45c8b5d5023ba9bc672deee86",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-025-inherited1.yaml",
+      "recorded_at": "2026-08-23T22:13:09.721697+00:00"
+    },
     "EX12-026#effect#1": {
       "clause_id": "EX12-026#effect#1",
       "card_id": "EX12-026",
@@ -196,7 +508,7 @@
       "label": "effect_description_eng",
       "text_sha256": "2d4fce0217b240f7266fc6bc2698ac18047e99603a8d1e9978ec46d6b04eea8d",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-026-effect1.yaml",
-      "recorded_at": "2026-08-23T15:15:05.180675600+00:00"
+      "recorded_at": "2026-08-23T22:13:12.419049900+00:00"
     },
     "EX12-026#effect#2": {
       "clause_id": "EX12-026#effect#2",
@@ -206,15 +518,6 @@
       "text_sha256": "e9d07f36bbbeb81ec7df384fef2abf419a1b080be9fa88c386485db190a9369b",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-026-effect2.yaml",
       "recorded_at": "2026-08-22T14:50:00.321501900+00:00"
-    },
-    "EX12-026#inherited#0": {
-      "clause_id": "EX12-026#inherited#0",
-      "card_id": "EX12-026",
-      "verdict": "confirmed",
-      "label": "inherited_effect_description_eng",
-      "text_sha256": "65b6245d200b26603ea82dfab391da3f0cc7583c182888647b0f20c37bb045dd",
-      "scenario_path": "qa/dcgo-exams/EX12/EX12-026-inherited0.yaml",
-      "recorded_at": "2026-08-22T14:50:24.676949900+00:00"
     },
     "EX12-026#inherited#1": {
       "clause_id": "EX12-026#inherited#1",
@@ -329,18 +632,18 @@
       "card_id": "EX12-036",
       "verdict": "confirmed",
       "label": "effect_description_eng",
-      "text_sha256": "e3513eee8ad0e63f84ae326f0cf32605f203a08aa12158be59325d38c904c88c",
+      "text_sha256": "01676e15e9f2bd2bf3901f805696a358cbb1b20c8aa8e189bb94817267a189a3",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-036-effect4.yaml",
-      "recorded_at": "2026-08-22T19:19:11.305434100+00:00"
+      "recorded_at": "2026-08-23T22:13:17.203664500+00:00"
     },
     "EX12-036#effect#5": {
       "clause_id": "EX12-036#effect#5",
       "card_id": "EX12-036",
       "verdict": "confirmed",
-      "label": "effect_description_eng",
-      "text_sha256": "4eba17fe177349b57714cc7fe8f9a1ac457508ab2e1f1b9ce820b1ce6f2099c4",
+      "label": "xros_req",
+      "text_sha256": "95c56f78c1b4d2b0ecbc7b7019bf301a06139907711b68e754709c594ab2b2d7",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-036-effect5.yaml",
-      "recorded_at": "2026-08-23T15:15:07.677581+00:00"
+      "recorded_at": "2026-08-23T22:13:19.943110700+00:00"
     },
     "EX12-036#effect#6": {
       "clause_id": "EX12-036#effect#6",
@@ -371,33 +674,61 @@
       "dcgo_build": "scripted-v7 f6f726088",
       "recorded_at": "2026-08-22T19:39:40.183200+00:00"
     },
+    "EX12-043#effect#0": {
+      "clause_id": "EX12-043#effect#0",
+      "card_id": "EX12-043",
+      "verdict": "diverged",
+      "label": "effect_description_eng",
+      "text_sha256": "56c0f7c0fda1dea2114191feff94831bc60edcc4cd71c1cc0fdefa761499691e",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-043-effect0.yaml",
+      "reason": "DIVERGED at step 6 (compared 7 of 8 ours / 7 dcgo steps; trace truncated)",
+      "recorded_at": "2026-08-23T22:13:22.350411400+00:00"
+    },
+    "EX12-043#effect#1": {
+      "clause_id": "EX12-043#effect#1",
+      "card_id": "EX12-043",
+      "verdict": "confirmed",
+      "label": "xros_req",
+      "text_sha256": "e9d07f36bbbeb81ec7df384fef2abf419a1b080be9fa88c386485db190a9369b",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-043-effect1.yaml",
+      "recorded_at": "2026-08-23T22:13:24.646584700+00:00"
+    },
+    "EX12-043#inherited#0": {
+      "clause_id": "EX12-043#inherited#0",
+      "card_id": "EX12-043",
+      "verdict": "confirmed",
+      "label": "inherited_effect_description_eng",
+      "text_sha256": "a21b668cef733b509ed7fd63595f875b81a6eb29bbf53cf047e8a1d26e2a7558",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-043-inherited0.yaml",
+      "recorded_at": "2026-08-23T22:13:27.038129800+00:00"
+    },
     "EX12-046#effect#0": {
       "clause_id": "EX12-046#effect#0",
       "card_id": "EX12-046",
       "verdict": "confirmed",
       "label": "effect_description_eng",
-      "text_sha256": "99a4c081ad00ce66eb4465639336eaa4fd36ef6e9a36647279bf996a8cd5a72d",
+      "text_sha256": "a1f4bf3d71dc0482d860f413481a6c9ca694dd7866e5072e71d7802b29761629",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-046-effect0.yaml",
-      "recorded_at": "2026-08-22T19:20:08.707800400+00:00"
+      "recorded_at": "2026-08-23T22:13:29.393423800+00:00"
     },
     "EX12-046#effect#1": {
       "clause_id": "EX12-046#effect#1",
       "card_id": "EX12-046",
       "verdict": "confirmed",
       "label": "effect_description_eng",
-      "text_sha256": "f067f22adc2a50ae9af5ad09effc464739e9aed3f255398ec60e576b3036078f",
+      "text_sha256": "487692e25886594f727d22fa91dcdcbbecbce70d15abd0762d3ce166d6f36712",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-046-effect1.yaml",
-      "recorded_at": "2026-08-22T19:20:33.010045+00:00"
+      "recorded_at": "2026-08-23T22:13:31.799299800+00:00"
     },
     "EX12-046#effect#2": {
       "clause_id": "EX12-046#effect#2",
       "card_id": "EX12-046",
       "verdict": "diverged",
-      "label": "effect_description_eng",
-      "text_sha256": "487692e25886594f727d22fa91dcdcbbecbce70d15abd0762d3ce166d6f36712",
+      "label": "xros_req",
+      "text_sha256": "3b02fb5cbeceda5702afa99d2b3ef02c49ceefcce7086d385f62acd225580ddf",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-046-effect2.yaml",
       "reason": "DIVERGED at step 10 (compared 13 of 13 ours / 13 dcgo steps)",
-      "recorded_at": "2026-08-23T15:15:09.855861+00:00"
+      "recorded_at": "2026-08-23T22:13:34.191729500+00:00"
     },
     "EX12-046#effect#3": {
       "clause_id": "EX12-046#effect#3",
@@ -428,6 +759,15 @@
       "dcgo_build": "scripted-v7 f6f726088",
       "recorded_at": "2026-08-22T19:39:40.183200+00:00"
     },
+    "EX12-047#effect#0": {
+      "clause_id": "EX12-047#effect#0",
+      "card_id": "EX12-047",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "8a010cb9a2a7038f7a6011b625008b58d3e06106acd738a70abb3f9db65d744c",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-047-effect0.yaml",
+      "recorded_at": "2026-08-23T22:13:37.387069300+00:00"
+    },
     "EX12-047#effect#1": {
       "clause_id": "EX12-047#effect#1",
       "card_id": "EX12-047",
@@ -435,7 +775,7 @@
       "label": "effect_description_eng",
       "text_sha256": "6023e4c1fc29ad27f281823b07e60eac231f2b4c6500dbc8080695cdc3b9ca6f",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-047-effect1.yaml",
-      "recorded_at": "2026-08-23T15:15:12.145120200+00:00"
+      "recorded_at": "2026-08-23T22:13:39.987723600+00:00"
     },
     "EX12-047#effect#2": {
       "clause_id": "EX12-047#effect#2",
@@ -501,18 +841,18 @@
       "card_id": "EX12-061",
       "verdict": "confirmed",
       "label": "effect_description_eng",
-      "text_sha256": "ff061722a17ffdbdc53098708da6c9f133cdf5108da418089ae8e7a214d60f6d",
+      "text_sha256": "33305746d0cf60dc48fb22a38b7455aa6ab5df0d98ea232ab41d149587ed10bf",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-061-effect0.yaml",
-      "recorded_at": "2026-08-22T19:23:20.806310500+00:00"
+      "recorded_at": "2026-08-23T22:13:43.388566500+00:00"
     },
     "EX12-061#effect#1": {
       "clause_id": "EX12-061#effect#1",
       "card_id": "EX12-061",
       "verdict": "confirmed",
-      "label": "effect_description_eng",
-      "text_sha256": "f3f1c03e6d76183f8eb8c2f77e3094fd0832bfbc85e3e55cd66089f1162d3156",
+      "label": "xros_req",
+      "text_sha256": "6f912d15f0a9492f902d128654c1db514c070979af0a8ac927c5bfc78cb4751e",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-061-effect1.yaml",
-      "recorded_at": "2026-08-22T19:23:44.829515500+00:00"
+      "recorded_at": "2026-08-23T22:13:45.699907600+00:00"
     },
     "EX12-061#effect#2": {
       "clause_id": "EX12-061#effect#2",
@@ -530,7 +870,7 @@
       "label": "inherited_effect_description_eng",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-061-inherited0.yaml",
-      "recorded_at": "2026-08-23T15:15:14.239368300+00:00"
+      "recorded_at": "2026-08-23T22:13:48.572566700+00:00"
     },
     "EX12-061#inherited#1": {
       "clause_id": "EX12-061#inherited#1",
@@ -539,7 +879,7 @@
       "label": "inherited_effect_description_eng",
       "text_sha256": "b6635794790963847e7cdf33242fd6a31e885de8ed139686cc2aeb84654d2478",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-061-inherited1.yaml",
-      "recorded_at": "2026-08-23T15:15:16.360779900+00:00"
+      "recorded_at": "2026-08-23T22:13:50.955640200+00:00"
     },
     "EX12-061#security#0": {
       "clause_id": "EX12-061#security#0",
@@ -568,7 +908,7 @@
       "label": "xros_req",
       "text_sha256": "d5fcb2c56946d3306d6dc8b2eb9ee8ea7961af3f1ec0d0fd0a2a28a6f3224d4c",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-062-effect1.yaml",
-      "recorded_at": "2026-08-22T19:25:37.711330300+00:00"
+      "recorded_at": "2026-08-23T22:13:53.577081800+00:00"
     },
     "EX12-062#inherited#0": {
       "clause_id": "EX12-062#inherited#0",
@@ -607,7 +947,7 @@
       "label": "effect_description_eng",
       "text_sha256": "582c9e9f3181e2a3b80f507ed29f6f08d477a398e12bb006a772cb540158a39e",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-063-effect0.yaml",
-      "recorded_at": "2026-08-23T15:15:18.478111200+00:00"
+      "recorded_at": "2026-08-23T22:13:56.281814100+00:00"
     },
     "EX12-063#effect#1": {
       "clause_id": "EX12-063#effect#1",
@@ -657,6 +997,15 @@
       "scenario_path": "qa/dcgo-exams/EX12/EX12-065-effect0.yaml",
       "recorded_at": "2026-08-22T14:59:27.325089200+00:00"
     },
+    "EX12-065#effect#1": {
+      "clause_id": "EX12-065#effect#1",
+      "card_id": "EX12-065",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-065-effect1.yaml",
+      "recorded_at": "2026-08-23T22:13:59.455548500+00:00"
+    },
     "EX12-065#effect#2": {
       "clause_id": "EX12-065#effect#2",
       "card_id": "EX12-065",
@@ -664,16 +1013,16 @@
       "label": "Effect",
       "text_sha256": "1330ddf39ae229c330ce69859333a3b7456189d854ff80bea09b89fbdda5bd20",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-065-effect2.yaml",
-      "recorded_at": "2026-08-22T19:27:38.689890800+00:00"
+      "recorded_at": "2026-08-23T22:14:01.879862500+00:00"
     },
     "EX12-065#effect#4": {
       "clause_id": "EX12-065#effect#4",
       "card_id": "EX12-065",
       "verdict": "confirmed",
       "label": "Effect",
-      "text_sha256": "6201111b83a0cb5b0922cb37cc442b9a40e24e3b1ce100a4bb204f4c63fd2ac0",
+      "text_sha256": "8c52985984ddb63702fa87a961ac4831fac55911caa85a9cdff751db358b778a",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-065-effect4.yaml",
-      "recorded_at": "2026-08-22T19:38:23.530705100+00:00"
+      "recorded_at": "2026-08-23T22:14:04.687833700+00:00"
     },
     "EX12-065#effect#6": {
       "clause_id": "EX12-065#effect#6",
@@ -692,25 +1041,25 @@
       "label": "effect_description_eng",
       "text_sha256": "101001429c7648a0ec80f1d3882e4b6ebc12e830aabe0e44bc3d4205f952e561",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-070-effect0.yaml",
-      "recorded_at": "2026-08-23T15:15:20.503451400+00:00"
+      "recorded_at": "2026-08-23T22:14:07.765091200+00:00"
     },
     "EX12-070#effect#1": {
       "clause_id": "EX12-070#effect#1",
       "card_id": "EX12-070",
       "verdict": "confirmed",
       "label": "effect_description_eng",
-      "text_sha256": "06cd8b6ad440f1d8c70dea8a3a39fd2dad5fb72fe4322b51c595e799edc44e91",
+      "text_sha256": "850f840d7b980faf63508e4279dbb7d6ce8be5cf108e1b92059fc99419456cf0",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-070-effect1.yaml",
-      "recorded_at": "2026-08-22T19:29:32.040810600+00:00"
+      "recorded_at": "2026-08-23T22:14:10.097271800+00:00"
     },
     "EX12-070#effect#2": {
       "clause_id": "EX12-070#effect#2",
       "card_id": "EX12-070",
       "verdict": "confirmed",
       "label": "effect_description_eng",
-      "text_sha256": "4ae3fefe30dd283b29136bcbcdbcde3fae3350f897dc830ddaa293aa057b7b32",
+      "text_sha256": "5941c9db6ad218e12e491454ee20783541a9cd680215949ada8cbe7a8dffc320",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-070-effect2.yaml",
-      "recorded_at": "2026-08-22T19:30:16.443449100+00:00"
+      "recorded_at": "2026-08-23T22:14:12.442881800+00:00"
     },
     "EX12-070#effect#3": {
       "clause_id": "EX12-070#effect#3",
@@ -719,7 +1068,7 @@
       "label": "effect_description_eng",
       "text_sha256": "ac4cc6c4c24b6d67887d579360ab2ba699acf4fd47e05607d3f09562837946c7",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-070-effect3.yaml",
-      "recorded_at": "2026-08-22T19:31:11.005789900+00:00"
+      "recorded_at": "2026-08-23T22:14:14.904735+00:00"
     },
     "EX12-070#effect#4": {
       "clause_id": "EX12-070#effect#4",
@@ -738,7 +1087,16 @@
       "label": "image-required",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-070-security0.yaml",
-      "recorded_at": "2026-08-22T19:31:55.539490100+00:00"
+      "recorded_at": "2026-08-23T22:14:17.570910700+00:00"
+    },
+    "EX12-071#security#0": {
+      "clause_id": "EX12-071#security#0",
+      "card_id": "EX12-071",
+      "verdict": "confirmed",
+      "label": "image-required",
+      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-071-security0.yaml",
+      "recorded_at": "2026-08-23T22:14:20.135772400+00:00"
     },
     "EX12-074#effect#0": {
       "clause_id": "EX12-074#effect#0",
@@ -775,7 +1133,16 @@
       "label": "image-required",
       "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-074-security0.yaml",
-      "recorded_at": "2026-08-22T19:32:39.981636+00:00"
+      "recorded_at": "2026-08-23T22:14:22.935789400+00:00"
+    },
+    "EX12-075#effect#0": {
+      "clause_id": "EX12-075#effect#0",
+      "card_id": "EX12-075",
+      "verdict": "confirmed",
+      "label": "effect_description_eng",
+      "text_sha256": "101001429c7648a0ec80f1d3882e4b6ebc12e830aabe0e44bc3d4205f952e561",
+      "scenario_path": "qa/dcgo-exams/EX12/EX12-075-effect0.yaml",
+      "recorded_at": "2026-08-23T22:14:25.301070+00:00"
     },
     "EX12-075#effect#1": {
       "clause_id": "EX12-075#effect#1",
@@ -784,7 +1151,7 @@
       "label": "effect_description_eng",
       "text_sha256": "b8962968f5a51b6acdf55af9a3484511a9d4100661f68081b1945f1a514e53ac",
       "scenario_path": "qa/dcgo-exams/EX12/EX12-075-effect1.yaml",
-      "recorded_at": "2026-08-22T19:33:24.380006800+00:00"
+      "recorded_at": "2026-08-23T22:14:27.620406100+00:00"
     },
     "EX12-075#effect#2": {
       "clause_id": "EX12-075#effect#2",
@@ -845,55 +1212,52 @@
       "dcgo_build": "scripted-v7 f6f726088",
       "recorded_at": "2026-08-22T19:39:40.183200+00:00"
     },
-    "EX12-076#effect#4": {
-      "clause_id": "EX12-076#effect#4",
-      "card_id": "EX12-076",
-      "verdict": "unreachable",
-      "label": "effect_description_eng",
-      "text_sha256": "0b2b5ce6cbb916f449500f7ad95864fb277082b770b9e3294f8f7e36ddde946c",
-      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    "P-130#effect#0": {
+      "clause_id": "P-130#effect#0",
+      "card_id": "P-130",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "74665ee731b6a1b0274b17e7eeaf2872f648281b5f67704f5d6b3aa02fc4490d",
+      "scenario_path": "qa/dcgo-exams/EX12/P-130-effect0.yaml",
+      "reason": "DIVERGED at step 8 (compared 10 of 10 ours / 10 dcgo steps)",
+      "recorded_at": "2026-08-23T22:14:30.056714900+00:00"
     },
-    "EX12-076#effect#5": {
-      "clause_id": "EX12-076#effect#5",
-      "card_id": "EX12-076",
-      "verdict": "unreachable",
-      "label": "effect_description_eng",
-      "text_sha256": "77b4bd7a1a7db3a5813acccd8e1956c39e1fb9aa9718d9bd6488b4d09f53b759",
-      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    "P-130#effect#1": {
+      "clause_id": "P-130#effect#1",
+      "card_id": "P-130",
+      "verdict": "diverged",
+      "label": "Effect",
+      "text_sha256": "ad6e9dd66ee456596356043fb63ff57bc9c0385cd23e026abf097a6e4a054578",
+      "scenario_path": "qa/dcgo-exams/EX12/P-130-effect1.yaml",
+      "reason": "DIVERGED at step 8 (compared 10 of 10 ours / 10 dcgo steps)",
+      "recorded_at": "2026-08-23T22:14:32.410129100+00:00"
     },
-    "EX12-076#effect#6": {
-      "clause_id": "EX12-076#effect#6",
-      "card_id": "EX12-076",
-      "verdict": "unreachable",
-      "label": "xros_req",
-      "text_sha256": "51c3a09b0f76e0767bdd01be2147fdb7ce1aacc5a2cecaa927ce195928925455",
-      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    "P-130#effect#2": {
+      "clause_id": "P-130#effect#2",
+      "card_id": "P-130",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "qa/dcgo-exams/EX12/P-130-effect2.yaml",
+      "recorded_at": "2026-08-23T22:14:34.774784800+00:00"
     },
-    "EX12-076#inherited#0": {
-      "clause_id": "EX12-076#inherited#0",
-      "card_id": "EX12-076",
-      "verdict": "unreachable",
-      "label": "inherited_effect_description_eng",
-      "text_sha256": "fa868a61ca973d8c04c09d82e07d2d848abe9e81b00a9e0ce9f2018341ca1071",
-      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    "ST1-08#effect#0": {
+      "clause_id": "ST1-08#effect#0",
+      "card_id": "ST1-08",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "79ff505c83f16c2de69cfd691f9027d89d194a5ba6c8c9d400290098e9163399",
+      "scenario_path": "qa/dcgo-exams/ST1/ST1-08.yaml",
+      "recorded_at": "2026-08-23T22:14:46.534105800+00:00"
     },
-    "EX12-076#security#0": {
-      "clause_id": "EX12-076#security#0",
-      "card_id": "EX12-076",
-      "verdict": "unreachable",
-      "label": "image-required",
-      "text_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "reason": "recon: structurally unmeasurable with the current line vocabulary (security-trigger context or Susanoomon's execution-context clauses) -- see the wave-1 recon classification in the toho report.",
-      "dcgo_build": "scripted-v7 f6f726088",
-      "recorded_at": "2026-08-22T19:39:40.183200+00:00"
+    "ST1-12#effect#1": {
+      "clause_id": "ST1-12#effect#1",
+      "card_id": "ST1-12",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "321051d9d40d4dc4b6c89186837ddc5f03489dd105085bce198cd347da35809d",
+      "scenario_path": "qa/dcgo-exams/EX12/ST1-12-effect1.yaml",
+      "recorded_at": "2026-08-23T22:14:37.219528800+00:00"
     },
     "ST1-15#effect#0": {
       "clause_id": "ST1-15#effect#0",
@@ -902,7 +1266,61 @@
       "label": "Effect",
       "text_sha256": "45873d5865b9972ea303c699455434309b9480e1d449bc0ee3f29a5a903dbc21",
       "scenario_path": "qa/dcgo-exams/ST1/ST1-15-effect0.yaml",
-      "recorded_at": "2026-08-22T15:41:18.294630800+00:00"
+      "recorded_at": "2026-08-23T22:14:49.849919200+00:00"
+    },
+    "ST1-15#effect#1": {
+      "clause_id": "ST1-15#effect#1",
+      "card_id": "ST1-15",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "d6627b6f7acc8431f74514b83fc5c9f6f054e8cfdf034ec33d7d78d2773e0cfe",
+      "scenario_path": "qa/dcgo-exams/EX12/ST1-15-effect1.yaml",
+      "recorded_at": "2026-08-23T22:14:39.559693700+00:00"
+    },
+    "ST16-14#effect#0": {
+      "clause_id": "ST16-14#effect#0",
+      "card_id": "ST16-14",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "659a34328f74aa1ae7ebc589c65341825e78b2591982d99ba1db4c5d53387505",
+      "scenario_path": "qa/dcgo-exams/ST16/ST16-14-effect0.yaml",
+      "recorded_at": "2026-08-23T22:14:52.218113800+00:00"
+    },
+    "ST16-14#effect#1": {
+      "clause_id": "ST16-14#effect#1",
+      "card_id": "ST16-14",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "cd747c3da7a26d0facdee268625e8c04a61c4ddc4a436f968e1cb3ff3f65ea61",
+      "scenario_path": "qa/dcgo-exams/ST16/ST16-14-effect1.yaml",
+      "recorded_at": "2026-08-23T22:14:54.560364700+00:00"
+    },
+    "ST16-14#effect#2": {
+      "clause_id": "ST16-14#effect#2",
+      "card_id": "ST16-14",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "qa/dcgo-exams/EX12/ST16-14-effect2.yaml",
+      "recorded_at": "2026-08-23T22:14:41.927396700+00:00"
+    },
+    "ST19-14#effect#0": {
+      "clause_id": "ST19-14#effect#0",
+      "card_id": "ST19-14",
+      "verdict": "confirmed",
+      "label": "Effect",
+      "text_sha256": "319624210e2fd10fc6781bcaf75494dee931c5e0c3a25e3b14dea109f1bd1ebc",
+      "scenario_path": "qa/dcgo-exams/ST19/ST19-14-effect0.yaml",
+      "recorded_at": "2026-08-23T22:14:56.917661600+00:00"
+    },
+    "ST19-14#effect#3": {
+      "clause_id": "ST19-14#effect#3",
+      "card_id": "ST19-14",
+      "verdict": "confirmed",
+      "label": "Security Effect",
+      "text_sha256": "1f5841089f002726ba14b763934d11fe4abc23357866c6c689e96791dfcafaa8",
+      "scenario_path": "qa/dcgo-exams/EX12/ST19-14-effect3.yaml",
+      "recorded_at": "2026-08-23T22:14:44.258473800+00:00"
     }
   }
 }

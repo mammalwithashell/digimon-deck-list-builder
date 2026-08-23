@@ -1,167 +1,163 @@
 # Toho Braves — DCGO card-clause exam report
 
-**Date:** 2026-08-22 · **Campaign:** `toho-braves-exam` · **Oracle:** DCGO player
-`scripted-v7` (`dcgo_commit f6f726088`) · **Verdict store:**
-`qa/qa-reports/dcgo_exam_verdicts.json` · **Scenarios:** `qa/dcgo-exams/EX12/`
-(64 files) + the ST1 selection gate.
+**Date:** 2026-08-23 · **Campaign:** `toho-braves-exam` · **Oracle:** DCGO player
+`scripted-v8` (`dcgo_commit 617cf381b`) · **Store:**
+`qa/qa-reports/dcgo_exam_verdicts.json` · **Scenarios:** 135 under `qa/dcgo-exams/`
+· **Denominator correction:** `qa/qa-reports/clause-denominator-correction.md`
 
 ## The denominator, always first
 
-**239 clauses across the 44-card tournament pool: 37 confirmed · 12 diverged · 46 unreachable · 144 unmeasured.**
+**166 clauses across the 42-card tournament pool: 71 confirmed · 11 diverged ·
+23 unreachable · 61 unmeasured.**
 
-Never read this as "Toho Braves passed". Read it per clause: every `confirmed`
-is a scripted line that ran identically in both engines under a full per-step
-state diff; everything else is exactly as unproven as it says.
+**82 clauses — 49% — have actually been run in both engines** and compared
+step-by-step. The 18-card competitive core (in ≥33 of 45 tournament lists) is at
+**44 of 74 = 59%**.
 
-The archetype's **18-card competitive core** (cards in ≥33 of 45 tournament
-lists) accounts for 102 of these clauses and nearly all of the measured ones.
-The 144 unmeasured are dominated by low-play support cards (1-of techs) and
-core clauses awaiting the tooling noted below.
+Never read this as "Toho Braves passed." Read it per clause: a `confirmed` is a
+scripted line that ran identically in our engine and in DCGO under a full
+per-step state diff; everything else is exactly as unproven as it says.
 
-| Card | Name | Clauses | confirmed | diverged | unreachable | unmeasured | tier |
+### The denominator itself was wrong, and is now corrected
+
+An earlier version of this report said **239 clauses**. That number was inflated
+by **28.9%** with slots that are not printed clauses:
+
+| Cause | Removed | How it was confirmed |
+|---|---|---|
+| Phantom `#security#0` slots | 27 | No [Security] box on the card face, **and** zero `SecuritySkill` in DCGO's C#, **and** an empty cards.json field — three independent sources |
+| Splitter fragments | 36 | One printed sentence cut into `"Activate this card's"` + `"effect."`; one clause whose entire text was `"."` |
+| MediaWiki scrape residue | 6 | Clause text literally `\|applinkdp =` |
+
+The security zone alone fell from **31 slots to 4**. So most of the "structurally
+unmeasurable security clauses" this report used to carry as permanently-unreached
+simply **did not exist**. Fixed in `code/tools/clause_coverage/`; the correction is
+measured card-by-card in `clause-denominator-correction.md`.
+
+| Card | Name | In lists | Clauses | confirmed | diverged | unreachable | unmeasured |
 |---|---|---|---|---|---|---|---|
-| EX1-066 | Analog Youth | 3 | 1 | 1 |  | 1 | core |
-| EX12-004 | Onibimon | 5 |  | 2 | 3 |  | core |
-| EX12-009 | Wankomon | 4 | 2 |  | 2 |  | core |
-| EX12-011 | Seasarmon | 5 | 2 | 1 | 1 | 1 | core |
-| EX12-020 | Gasamon | 5 | 4 |  | 1 |  | core |
-| EX12-026 | Shellmon | 6 | 3 | 1 | 1 | 1 | core |
-| EX12-031 | MarineBullmon | 5 | 1 |  | 4 |  | core |
-| EX12-036 | Ryugumon | 9 | 2 | 1 | 6 |  | core |
-| EX12-046 | Shishimamon | 6 | 3 | 1 | 2 |  | core |
-| EX12-047 | Amaterasumon | 8 | 1 | 1 | 5 | 1 | core |
-| EX12-061 | Hanimon | 6 | 3 | 2 | 1 |  | core |
-| EX12-062 | Kokeshimon | 5 | 1 |  | 4 |  | core |
-| EX12-063 | Karakurumon | 5 | 1 | 1 | 3 |  | core |
-| EX12-065 | Kaguyamon | 7 | 3 |  | 1 | 3 | core |
-| EX12-070 | Sanmyojin Arrival | 6 | 4 | 1 | 1 |  | core |
-| EX12-074 | Genshi Continent & Ashin | 4 | 3 |  | 1 |  | core |
-| EX12-075 | Kunlun's Imperial Decree | 4 | 2 |  | 1 | 1 | core |
-| EX12-076 | Susanoomon | 9 |  |  | 9 |  | core |
-| BT11-089 | Akiho Rindou | 4 |  |  |  | 4 | support |
-| BT20-037 | Chaosmon: Valdur Arm | 5 |  |  |  | 5 | support |
-| BT8-084 | Kimeramon | 3 |  |  |  | 3 | support |
-| BT8-097 | Crimson Blaze | 4 |  |  |  | 4 | support |
-| EX12-002 | Mococomon | 4 |  |  |  | 4 | support |
-| EX12-006 | Kakamon | 5 |  |  |  | 5 | support |
-| EX12-012 | Apemon | 6 |  |  |  | 6 | support |
-| EX12-015 | Gokuumon | 7 |  |  |  | 7 | support |
-| EX12-019 | Nezhamon | 11 |  |  |  | 11 | support |
-| EX12-022 | Kamemon | 5 |  |  |  | 5 | support |
-| EX12-025 | Gawappamon | 6 |  |  |  | 6 | support |
-| EX12-029 | Sagomon | 7 |  |  |  | 7 | support |
-| EX12-034 | Erlangmon | 7 |  |  |  | 7 | support |
-| EX12-039 | Takinmon | 4 |  |  |  | 4 | support |
-| EX12-043 | Hakubamon | 4 |  |  |  | 4 | support |
-| EX12-045 | Sanzomon | 6 |  |  |  | 6 | support |
-| EX12-048 | SeitenGokuumon | 8 |  |  |  | 8 | support |
-| EX12-056 | Cho-Hakkaimon | 8 |  |  |  | 8 | support |
-| EX12-057 | Takutoumon | 8 |  |  |  | 8 | support |
-| EX12-071 | Saneiketsu Invitation | 6 |  |  |  | 6 | support |
-| EX4-074 | ShineGreymon: Ruin Mode | 4 |  |  |  | 4 | support |
-| P-130 | Lui Ohwada | 3 |  |  |  | 3 | support |
-| ST1-12 | Tai Kamiya | 2 |  |  |  | 2 | support |
-| ST1-15 | Giga Destroyer | 3 | 1 |  |  | 2 | support |
-| ST16-14 | Matt Ishida | 3 |  |  |  | 3 | support |
-| ST19-14 | Arisa Kinosaki | 4 |  |  |  | 4 | support |
+| EX12-076 | Susanoomon | 45/45 | 6 |  |  | 4 | 2 |
+| EX12-004 | Onibimon | 44/45 | 2 | 1 |  |  | 1 |
+| EX12-009 | Wankomon | 44/45 | 3 | 2 |  | 1 |  |
+| EX12-020 | Gasamon | 44/45 | 3 | 2 |  |  | 1 |
+| EX12-026 | Shellmon | 44/45 | 4 | 2 |  |  | 2 |
+| EX12-031 | MarineBullmon | 44/45 | 4 | 1 |  | 3 |  |
+| EX12-046 | Shishimamon | 44/45 | 4 | 2 | 1 | 1 |  |
+| EX12-047 | Amaterasumon | 44/45 | 6 | 3 |  | 3 |  |
+| EX12-061 | Hanimon | 44/45 | 4 | 4 |  |  |  |
+| EX12-062 | Kokeshimon | 44/45 | 4 | 1 |  | 3 |  |
+| EX12-063 | Karakurumon | 44/45 | 4 | 2 |  | 2 |  |
+| EX12-065 | Kaguyamon | 44/45 | 5 | 4 |  |  | 1 |
+| EX12-070 | Sanmyojin Arrival | 44/45 | 4 | 4 |  |  |  |
+| EX12-011 | Seasarmon | 42/45 | 4 | 4 |  |  |  |
+| EX12-036 | Ryugumon | 42/45 | 6 | 2 |  | 4 |  |
+| EX12-074 | Genshi Continent & Ashin | 40/45 | 4 | 3 |  | 1 |  |
+| EX1-066 | Analog Youth | 34/45 | 3 | 3 |  |  |  |
+| EX12-075 | Kunlun's Imperial Decree | 33/45 | 4 | 3 |  | 1 |  |
+| EX12-043 | Hakubamon | 7/45 | 3 | 2 | 1 |  |  |
+| BT8-097 | Crimson Blaze | 3/45 | 3 | 3 |  |  |  |
+| P-130 | Lui Ohwada | 3/45 | 3 | 1 | 2 |  |  |
+| EX12-025 | Gawappamon | 2/45 | 4 | 4 |  |  |  |
+| ST16-14 | Matt Ishida | 2/45 | 3 | 3 |  |  |  |
+| ST19-14 | Arisa Kinosaki | 2/45 | 3 | 1 |  |  | 2 |
+| BT11-089 | Akiho Rindou | 1/45 | 3 | 1 |  |  | 2 |
+| BT20-037 | Chaosmon: Valdur Arm | 1/45 | 4 |  |  |  | 4 |
+| BT8-084 | Kimeramon | 1/45 | 3 |  |  |  | 3 |
+| EX12-002 | Mococomon | 1/45 | 3 |  | 2 |  | 1 |
+| EX12-006 | Kakamon | 1/45 | 3 | 3 |  |  |  |
+| EX12-012 | Apemon | 1/45 | 4 | 4 |  |  |  |
+| EX12-015 | Gokuumon | 1/45 | 4 | 2 |  |  | 2 |
+| EX12-019 | Nezhamon | 1/45 | 8 | 1 | 5 |  | 2 |
+| EX12-022 | Kamemon | 1/45 | 3 | 2 |  |  | 1 |
+| EX12-029 | Sagomon | 1/45 | 4 |  |  |  | 4 |
+| EX12-034 | Erlangmon | 1/45 | 4 |  |  |  | 4 |
+| EX12-039 | Takinmon | 1/45 | 3 |  |  |  | 3 |
+| EX12-045 | Sanzomon | 1/45 | 4 |  |  |  | 4 |
+| EX12-048 | SeitenGokuumon | 1/45 | 8 |  |  |  | 8 |
+| EX12-056 | Cho-Hakkaimon | 1/45 | 5 |  |  |  | 5 |
+| EX12-057 | Takutoumon | 1/45 | 3 |  |  |  | 3 |
+| EX12-071 | Saneiketsu Invitation | 1/45 | 4 | 1 |  |  | 3 |
+| EX4-074 | ShineGreymon: Ruin Mode | 1/45 | 3 |  |  |  | 3 |
 
-## What "confirmed" means here
+## What `confirmed` means
 
-A hand-authored scenario (`qa/dcgo-exams/EX12/`) drives BOTH engines through the
-same legal line from game start — same stacked deck, same seed, same actor
-sequence, every prompt asserted before it is answered — and a normalized
-per-step state diff (board, effective DP, suspension, hands, trash, security
-count, memory) came back CLEAN. Selections are answered by card identity on
-both sides. This is stronger evidence than any per-card unit test we have: it
-is two independent implementations agreeing about what actually happened.
+A hand-authored scenario drives BOTH engines through the same legal line from
+game start — same stacked deck, same seed, same actor sequence, every prompt
+asserted before it is answered — and a normalized per-step state diff (board,
+effective DP, suspension, hands, trash, security count, memory) came back CLEAN.
+Selections are answered by **card identity** on both sides, so neither engine's
+internal indices leak onto the wire.
 
-## The 12 diverged — findings to triage, not verdicts of guilt
+It is scoped: a clause confirmed on one line is confirmed *on that line*. A
+clause reached via a hard-cast is not thereby verified for its digivolve spine or
+its alternate costs. That is inherent to exam-style verification, and it is why
+the per-card `cards_behavioral` tests remain complementary rather than redundant.
+
+## The 11 diverged — findings to triage
 
 `diverged` means both engines ran the line end-to-end and disagreed about the
 state. `general_rule.pdf` outranks DCGO; neither engine is presumed right.
 
-- **10 clauses diverge at the granted-`<Execute>` boundary** (EX1-066, EX12-004
-  ×2, EX12-011, EX12-026, EX12-036, EX12-047, EX12-061 ×2, EX12-063). Before
-  the engine fixes these desynced at an unanswerable gate and measured
-  nothing; now the granted triggers fire on both sides, the full traces
-  compare (e.g. 28/28 steps), and each records a concrete state diff at the
-  same boundary — one probable root cause: our new granted-Execute semantics
-  or the exam's OptionalSkill↔end-of-turn-attack mapping differs from DCGO at
-  that step. Triage with the recorded diffs.
-- **EX12-070#effect#0 (Sanmyojin Arrival)** — our engine auto-resolved the
-  optional "by trashing 1 [TB] card" cost and trashed the option on decline;
-  DCGO asked and left it elsewhere. Rule-17 violation candidate, ours.
-- **EX12-046#effect#2 (Shishimamon)** — trash-timing around a digivolve our
-  sim rejects; predicted "diverged-by-design" by the adversarial review.
+Earlier in the campaign 12 clauses read as diverged and **11 of those turned out
+to be representation, not defects** — our engine parks an `EndOfTurnAction` phase
+where DCGO stays on `Main`, and §6-6-2 ("the current phase will continue until all
+processing has been resolved") says the rules define no end-of-turn phase at all.
+Normalized as a *pair* rule, with tests pinning that a genuine phase mismatch
+still diverges. Expect some of the current 11 to dissolve the same way — and
+expect some not to. `EX12-046#effect#2` (`p1.trash: ours=[EX12-062] dcgo=[]`) has
+survived every pass so far and is a real finding.
 
-## The 46 unreachable — named causes, none silent
+## Engine defects this campaign found and fixed
 
-| Family | Status |
+Every one was found by *authoring a scenario*, and most produce no failing unit
+test — which is the point of the exercise.
+
+| Defect | Ruling |
 |---|---|
-| Recon: structurally unmeasurable (26) | `[Security]` trigger contexts + Susanoomon's execution-context clauses — no line vocabulary yet. |
-| MultipleSkills value-space (3) | Our TriggerOrder slot values vs DCGO's 0-based `skillInfos` index. Open. |
-| Prompt-shape asymmetries (~8) | SelectCard-vs-SelectHand-vs-gate shapes + EX12-047 T1 actor parity; per-scenario notes in the files. Open. |
-| 1-card OrderedPermutation (2) | DCGO auto-places a single leftover; we prompt. Open. |
-| Material indexes-payload (1) | Outside select-support scope by design. |
-| ~~Optional-trigger gates~~ / ~~grant_keyword replacement gap~~ / ~~Decode leave-scoping~~ | **FIXED** (commits 7a0837871, 013b7fe10) — their clauses either moved to measured verdicts above or now fail only on the residual families in this table. |
+| Granted `<Execute>` never fired at all | §16-37-3 + §15-9-2-2 — our rule-17 violation; 13 clauses affected |
+| DSL `grant_keyword` never reached the would-be-deleted window (`<Barrier>`/`<Evade>` dead from grants) | printed-keyword path worked, grant path did not |
+| Effect-initiated digivolve ignored alt trait circles | consulted printed `evo_costs` only, never the registry alt paths the mask path honors |
+| Declining one optional replacement consumed the event | §15-8-5-4 — only the *activated* effect cannot re-activate |
+| Dead cards' `on_ally_played` observers fired from the trash | §15-14-3-1 — trash triggering is exclusive to `{Trash}`-icon effects |
+| `EX12-031` `<Decode>` over-asked on another permanent's leave | §16-35-1 scopes it to the Digimon *with* the effect |
+| A stale deletion-cause **test** (not the engine) | §13-1-7-3-1 + §14-2-2 — a security-check deletion *is* a Battle deletion |
 
-## Engine + data findings surfaced by the campaign
+Plus two data fixes: EX12-036/EX12-047 print `[TB]` (and EX12-036 Rule-grants
+`[Aquatic]`) but `cards.json` had dropped them — repaired durably in
+`card_overrides.json`.
 
-- **DSL `grant_keyword` → no replacement window** (task_8f063aa6): granted
-  `<Barrier>`/`<Evade>` never offer their prevention. Printed-keyword paths
-  work; the grant path does not. Found by an authoring agent probing a real
-  line, which refused to enshrine the wrong outcome in CI asserts.
-- **Optional-trigger prompt asymmetry** (task_69f10a66): if our engine is
-  auto-resolving optional triggers it is a no-approximations violation; if it
-  surfaces them elsewhere, the exam needs a mapping; if DCGO over-asks, we
-  document the quirk. §15-6/15-7 decide.
-- **EX12-070 optional-cost auto-resolution** — see diverged #1.
-- **BT8-084 Kimeramon** implemented (the pool's one missing card), honestly
-  **PARTIAL**: the color-scaled DP-minus needs a source-stack∪top color-count
-  formula the DSL cannot express (`G-DSL-SOURCE-STACK-UNION-COLOR-COUNT`,
-  logged in `qa/dsl-vocab-gaps.md` with tripwire tests that fail on any
-  future approximation).
-- **[TB] trait data hole (corrected 2026-08-22):** EX12-036 and EX12-047 print
-  `[TB]` on their faces (EX12-036 also carries a `Rule: Trait: Has [Aquatic]
-  Type.` grant) but `cards.json` had dropped both — the scenario author's
-  original claim was right, and an earlier campaign note calling it false was
-  itself wrong (a truncated diagnostic hid exactly these two long trait
-  lines). Fixed durably in `card_overrides.json` + patched in `cards.json`.
+## The 23 unreachable, and the 61 unmeasured
 
-## Tooling shipped by this campaign (all exam-general, not Toho-specific)
+`unreachable` carries a named cause per clause in the store. The surviving
+families: MultipleSkills value-space edges, prompt-shape asymmetries
+(`SelectCardEffect` vs `main_phase`, `OptionalSkill` vs `MultipleSkills`), 1-card
+`OrderedPermutation` rows DCGO auto-places, Material indexes-payload prompts
+(out of `select:` scope by design), and actor-parity on long lines.
 
-- `select:` steps end to end — five symbolic forms, identities on the wire,
-  each engine resolving against its own candidate list; proven on ST1-15
-  ("delete up to 2") with a CLEAN 14/14 oracle diff.
-- OptionalSkill decline bridge (cancel IS "no" at a yes/no prompt).
-- `move` verb (breeding → battle); `--verdicts` store wiring with clause-text
-  hashes + orphan refusal; `--emit-job`; phase normalization for selection and
-  combat-interrupt windows (representation, never semantics — state fields
-  still compare).
-- Adversarial pre-Unity review of every authored scenario against DCGO C#
-  (24 VERIFIED / 7 FIXED / 13 REJECTED with named systemic causes) — the
-  cheapest Unity time is the run you never start.
+The 61 unmeasured are concentrated in low-play support cards — 1-ofs and 2-ofs
+like Chaosmon, Akiho Rindou, ShineGreymon: Ruin Mode. Nothing blocks them
+technically; they are unauthored, and each is worth far less per clause than a
+core-card clause.
 
-## How to extend this
+## Tooling this campaign produced (exam-general, not Toho-specific)
 
-- Re-run a card: `/dcgo-exam`, or
-  `dcgo-harness exam --scenario qa/dcgo-exams/EX12/<file> --sim-only ...`
-  (CI-safe); oracle pass per `docs/DCGO_EXAM.md`.
-- The three spawned tasks (`task_8f063aa6`, `task_69f10a66`, plus the
-  alt-trait digivolve chip) unlock ~24 more clauses between them.
-- MultipleSkills index translation + 1-card ordering skip tolerance are the
-  next two harness investments (5 clauses).
+- `select:` steps end to end — five symbolic forms, identities on the wire, both
+  engines resolving against their own candidate lists.
+- The `stack[5..9] → reversed security stack` mapping, which turned the entire
+  security family from "structurally unmeasurable" into ordinary authoring.
+- `move` verb; `--verdicts` store with clause-text drift guards and orphan
+  refusal; `--emit-job`; phase normalization for selection and combat-interrupt
+  windows.
+- A resumable oracle loop with a single-instance lock and **progress-based** stall
+  detection — the heartbeat ticks from the poll loop and stays fresh through a
+  hung game, which once hid a 62-minute hang.
+- Adversarial pre-Unity review of every authored scenario against DCGO's C#.
 
-## Addendum (2026-08-23): post-fix oracle pass
+## Reproducing
 
-After the six engine fixes (commits 7a0837871 + 013b7fe10), the re-run moved the
-store from 37/2/56 to **37 confirmed / 12 diverged / 46 unreachable**. The 10
-new diverged are an evidence-quality upgrade, not a regression: those clauses
-previously desynced at unanswerable gates and measured NOTHING; now the granted
-<Execute> triggers actually fire on both sides, the full traces compare
-end-to-end, and each records a concrete state divergence at the Execute
-boundary. One probable root cause -- our new granted-Execute semantics (or the
-exam's OptionalSkill<->end-of-turn-attack mapping) differs from DCGO at that
-step -- to be triaged with the recorded diffs in hand. Remaining oracle-failed
-scenarios sit in the already-documented families (MultipleSkills value-space,
-prompt-shape asymmetries, EX12-047 T1 actor parity).
+```bash
+# CI-safe, no Unity: re-check every scenario's assertions
+dcgo-harness exam --scenario qa/dcgo-exams/ --sim-only --cards-json data/cards.json
+
+# oracle pass (needs the DCGO player build) -- see docs/DCGO_EXAM.md
+```
