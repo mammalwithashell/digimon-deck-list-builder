@@ -7,8 +7,7 @@
 
 ## The denominator, always first
 
-**239 clauses across the 44-card tournament pool: 37 confirmed · 2 diverged ·
-56 unreachable · 144 unmeasured.**
+**239 clauses across the 44-card tournament pool: 37 confirmed · 12 diverged · 46 unreachable · 144 unmeasured.**
 
 Never read this as "Toho Braves passed". Read it per clause: every `confirmed`
 is a scripted line that ran identically in both engines under a full per-step
@@ -21,19 +20,19 @@ core clauses awaiting the tooling noted below.
 
 | Card | Name | Clauses | confirmed | diverged | unreachable | unmeasured | tier |
 |---|---|---|---|---|---|---|---|
-| EX1-066 | Analog Youth | 3 | 1 |  | 1 | 1 | core |
-| EX12-004 | Onibimon | 5 |  |  | 5 |  | core |
+| EX1-066 | Analog Youth | 3 | 1 | 1 |  | 1 | core |
+| EX12-004 | Onibimon | 5 |  | 2 | 3 |  | core |
 | EX12-009 | Wankomon | 4 | 2 |  | 2 |  | core |
-| EX12-011 | Seasarmon | 5 | 2 |  | 2 | 1 | core |
+| EX12-011 | Seasarmon | 5 | 2 | 1 | 1 | 1 | core |
 | EX12-020 | Gasamon | 5 | 4 |  | 1 |  | core |
-| EX12-026 | Shellmon | 6 | 3 |  | 2 | 1 | core |
+| EX12-026 | Shellmon | 6 | 3 | 1 | 1 | 1 | core |
 | EX12-031 | MarineBullmon | 5 | 1 |  | 4 |  | core |
-| EX12-036 | Ryugumon | 9 | 2 |  | 7 |  | core |
+| EX12-036 | Ryugumon | 9 | 2 | 1 | 6 |  | core |
 | EX12-046 | Shishimamon | 6 | 3 | 1 | 2 |  | core |
-| EX12-047 | Amaterasumon | 8 | 1 |  | 6 | 1 | core |
-| EX12-061 | Hanimon | 6 | 3 |  | 3 |  | core |
+| EX12-047 | Amaterasumon | 8 | 1 | 1 | 5 | 1 | core |
+| EX12-061 | Hanimon | 6 | 3 | 2 | 1 |  | core |
 | EX12-062 | Kokeshimon | 5 | 1 |  | 4 |  | core |
-| EX12-063 | Karakurumon | 5 | 1 |  | 4 |  | core |
+| EX12-063 | Karakurumon | 5 | 1 | 1 | 3 |  | core |
 | EX12-065 | Kaguyamon | 7 | 3 |  | 1 | 3 | core |
 | EX12-070 | Sanmyojin Arrival | 6 | 4 | 1 | 1 |  | core |
 | EX12-074 | Genshi Continent & Ashin | 4 | 3 |  | 1 |  | core |
@@ -148,3 +147,17 @@ is two independent implementations agreeing about what actually happened.
   alt-trait digivolve chip) unlock ~24 more clauses between them.
 - MultipleSkills index translation + 1-card ordering skip tolerance are the
   next two harness investments (5 clauses).
+
+## Addendum (2026-08-23): post-fix oracle pass
+
+After the six engine fixes (commits 7a0837871 + 013b7fe10), the re-run moved the
+store from 37/2/56 to **37 confirmed / 12 diverged / 46 unreachable**. The 10
+new diverged are an evidence-quality upgrade, not a regression: those clauses
+previously desynced at unanswerable gates and measured NOTHING; now the granted
+<Execute> triggers actually fire on both sides, the full traces compare
+end-to-end, and each records a concrete state divergence at the Execute
+boundary. One probable root cause -- our new granted-Execute semantics (or the
+exam's OptionalSkill<->end-of-turn-attack mapping) differs from DCGO at that
+step -- to be triaged with the recorded diffs in hand. Remaining oracle-failed
+scenarios sit in the already-documented families (MultipleSkills value-space,
+prompt-shape asymmetries, EX12-047 T1 actor parity).
