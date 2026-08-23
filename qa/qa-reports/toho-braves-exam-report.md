@@ -75,31 +75,35 @@ count, memory) came back CLEAN. Selections are answered by card identity on
 both sides. This is stronger evidence than any per-card unit test we have: it
 is two independent implementations agreeing about what actually happened.
 
-## The 2 diverged — findings to triage, not verdicts of guilt
+## The 12 diverged — findings to triage, not verdicts of guilt
 
-`diverged` means both engines ran the line and disagreed about the state.
-`general_rule.pdf` outranks DCGO; neither engine is presumed right.
+`diverged` means both engines ran the line end-to-end and disagreed about the
+state. `general_rule.pdf` outranks DCGO; neither engine is presumed right.
 
-1. **EX12-070#effect#0 (Sanmyojin Arrival)** — declining the optional
-   "by trashing 1 [TB] card" cost: our engine **auto-resolved the optional
-   cost prompt** (the exam CLI's own note: "select answered no live prompt --
-   our engine auto-resolved it") and put the option in the trash;
-   DCGO asked, was declined, and left the option elsewhere at the same step.
-   Two suspicions, both ours: an auto-resolution (rule 17 violation candidate)
-   and possibly the wrong placement on decline. **Highest-priority triage.**
-2. **EX12-046#effect#2 (Shishimamon)** — trash-timing divergence around a
-   digivolve our sim rejects; predicted by the adversarial review
-   ("diverged-by-design", note in the scenario header).
+- **10 clauses diverge at the granted-`<Execute>` boundary** (EX1-066, EX12-004
+  ×2, EX12-011, EX12-026, EX12-036, EX12-047, EX12-061 ×2, EX12-063). Before
+  the engine fixes these desynced at an unanswerable gate and measured
+  nothing; now the granted triggers fire on both sides, the full traces
+  compare (e.g. 28/28 steps), and each records a concrete state diff at the
+  same boundary — one probable root cause: our new granted-Execute semantics
+  or the exam's OptionalSkill↔end-of-turn-attack mapping differs from DCGO at
+  that step. Triage with the recorded diffs.
+- **EX12-070#effect#0 (Sanmyojin Arrival)** — our engine auto-resolved the
+  optional "by trashing 1 [TB] card" cost and trashed the option on decline;
+  DCGO asked and left it elsewhere. Rule-17 violation candidate, ours.
+- **EX12-046#effect#2 (Shishimamon)** — trash-timing around a digivolve our
+  sim rejects; predicted "diverged-by-design" by the adversarial review.
 
-## The 56 unreachable — five named causes, none silent
+## The 46 unreachable — named causes, none silent
 
-| Family | Count | Cause |
-|---|---|---|
-| Optional-trigger gate asymmetry | ~20 | DCGO parks an `OptionalSkill`/`MultipleSkills` gate at `isOptional` trigger boundaries; our engine surfaces no prompt there. The scripted line desyncs at the gate. **Triage task `task_69f10a66`** — the rules manual decides which engine is right. |
-| Recon: structurally unmeasurable | 26 | `[Security]` trigger contexts and Susanoomon's (EX12-076) execution-context clauses — no line vocabulary reaches them yet. |
-| MultipleSkills value-space | 3 | Our TriggerOrder slot values vs DCGO's 0-based `skillInfos` index; out-of-range silently clears DCGO's trigger stack. |
-| 1-card OrderedPermutation | 2 | DCGO auto-places a single leftover; we park an ordering prompt; the strict cursor aborts. |
-| Engine/DSL gaps | 4 | `grant_keyword` keywords never reach the would-be-deleted replacement window (`<Barrier>`/`<Evade>` never fire from grants — **task `task_8f063aa6`**); Material-source prompts are an indexes-payload class outside select-support scope; a spurious Decode leave-window our sim parks. |
+| Family | Status |
+|---|---|
+| Recon: structurally unmeasurable (26) | `[Security]` trigger contexts + Susanoomon's execution-context clauses — no line vocabulary yet. |
+| MultipleSkills value-space (3) | Our TriggerOrder slot values vs DCGO's 0-based `skillInfos` index. Open. |
+| Prompt-shape asymmetries (~8) | SelectCard-vs-SelectHand-vs-gate shapes + EX12-047 T1 actor parity; per-scenario notes in the files. Open. |
+| 1-card OrderedPermutation (2) | DCGO auto-places a single leftover; we prompt. Open. |
+| Material indexes-payload (1) | Outside select-support scope by design. |
+| ~~Optional-trigger gates~~ / ~~grant_keyword replacement gap~~ / ~~Decode leave-scoping~~ | **FIXED** (commits 7a0837871, 013b7fe10) — their clauses either moved to measured verdicts above or now fail only on the residual families in this table. |
 
 ## Engine + data findings surfaced by the campaign
 
