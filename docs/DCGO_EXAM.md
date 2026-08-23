@@ -136,6 +136,38 @@ reporting a stale `confirmed`.
 
 ### `stack` is a PREFIX, and applies to the INITIAL SHUFFLE ONLY
 
+#### What each stack position becomes (verified empirically, 2026-08-23)
+
+This mapping is the key that made `[Security]` clauses authorable at all — it
+had been folklore in a few scenario headers, and knowing it turns "structurally
+unmeasurable" into ordinary authoring:
+
+```
+stack[0..4]   -> the OPENING HAND, drawn in that order
+stack[5..9]   -> the SECURITY STACK, REVERSED:
+                   stack[9] = TOP    (flipped first, so THIS is the card a
+                                      [Security] scenario puts under exam)
+                   stack[5] = BOTTOM
+stack[10..]   -> subsequent draws / deck top, in order
+```
+
+It holds because of four preconditions that are all currently true, and it
+breaks if any of them changes:
+
+- `Rules::standard()` sets `starting_hand = 5` and `security_count = 5`.
+- Security is laid **after** the mulligan on both sides (our `finalize_mulligan`;
+  DCGO's `TurnStateMachine` security setup).
+- Both engines are pinned to **keep** under a scripted line (`ScenarioAdapter`
+  auto-keeps; DCGO's `SetRedraw` forces `isRedraw = false` while
+  `InputDriver.IsActive`).
+- **If the scenario format ever gains a mulligan verb, this mapping dies** — a
+  mulligan is a true reshuffle (§5-2-1-5), and every stack position past the
+  opening hand becomes meaningless. Re-derive it then; do not assume.
+
+So a `[Security]` line is: pin the card under exam at the DEFENDER's `stack[9]`,
+give the attacker a Digimon that can legally attack by that turn, attack the
+player, and end the line one step after the security effect resolves.
+
 You name the first N cards in draw order; the remainder is seeded-shuffled from
 the named deck. Requiring all 50 would make every file unauthorable.
 
