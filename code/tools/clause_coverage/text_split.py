@@ -9,10 +9,14 @@ package's `README.md`:
   whitespace (`[When Digivolving] [When Attacking]`) are a single COMPOUND
   clause carrying every timing in the run, not one clause per marker.
 - Each **angle-bracket keyword** (`<Progress>`, `<Security A. +1>`, full- or
-  half-width `＜...＞`) is its OWN clause, unconditionally — even one
-  embedded mid-sentence inside another clause's action list. See the
-  README's "Known limitations" for why that's a deliberate simplification,
-  not an oversight.
+  half-width `＜...＞`) is its own clause too.
+- **Both marker families only start a clause at a clause boundary.** A
+  marker sitting *inside* a printed sentence is a reference to an ability,
+  not the start of a new one — `"[Security] Activate this card's [Main]
+  effect."` is ONE clause, and `"... Digimon gain ＜Blocker＞ and
+  ＜Retaliation＞."` keeps both granted keywords inline. See
+  `_is_clause_boundary` for the predicate and the README's "Positional
+  boundary rule" for the worked cases and for what it still cannot see.
 - A handful of marker names are printed via angle brackets in the raw text
   (`＜Use Req. (...)＞`, `＜Delay＞`, `＜Arts Digivolve＞`, ...) despite being
   *timing* markers conceptually (they gate WHEN/HOW an effect activates, not
@@ -91,6 +95,42 @@ _USE_REQUIREMENT_PREFIX_RE = re.compile(
 _APOSTROPHE_RE = re.compile("[’ʼ]")
 _STRIP_CHARS = " \n\t　・"  # space/tab/newline, ideographic space, ・ bullet
 
+# Whitespace-ish characters that may sit between a clause's last real
+# character and the next marker. Deliberately excludes "\n" -- a line break
+# is itself boundary evidence (see `_is_clause_boundary`).
+_INLINE_SPACE_CHARS = " \t　・"
+
+# Characters that END a printed clause, so a marker following one opens a
+# new clause. Beyond the obvious sentence enders these are:
+#   - `)` `）` `]` -- the close of a reminder-text / parenthetical span,
+#     e.g. "＜Use Req. ([VB] trait)＞ (Specified cards ...) [Main] ...".
+#   - `}` -- the `{Hand}` / `{Security}` / `{Trash}` zone prefix printed
+#     immediately before its timing marker ("{Hand} [Counter] ...").
+#   - quote characters -- a granting sentence opens a quote around the
+#     granted ability ('1 of your Digimon gains "[On Deletion] ..."'), and
+#     that ability is independently testable, so it keeps its own clause.
+_CLAUSE_END_CHARS = frozenset('.!?。！？)）]}"“”「」')
+
+# Timing markers that head a *structured cost line* rather than prose:
+# consecutive digivolution-condition lines run together with no sentence
+# punctuation ("[Digivolve] Lv.6 w/[CS] trait: Cost 5 [DNA Digivolve] ..."),
+# and these names are never printed as inline nouns, so they always open a
+# clause. Kept in step with `activation_match.COST_LINE_MARKERS` (which
+# imports FROM this module, so the constant cannot travel the other way);
+# `test_clause_coverage_text_split.py` pins the two sets equal.
+_ALWAYS_BOUNDARY_MARKER_NAMES: frozenset[str] = frozenset(
+    {
+        "Digivolve",
+        "DNA Digivolve",
+        "Use Req.",
+        "Assembly",
+        "DigiXros",
+        "Arts Digivolve",
+        "Blast Digivolve",
+        "Burst Digivolve",
+    }
+)
+
 
 def _canonical_marker_name(raw: str) -> str:
     """Normalize a bracket's inner text to a marker-name comparison key.
@@ -104,6 +144,25 @@ def _canonical_marker_name(raw: str) -> str:
     name = _APOSTROPHE_RE.sub("'", name)
     name = re.sub(r"\s+", " ", name)
     return name
+
+
+def _is_clause_boundary(text: str, prev_end: int, start: int) -> bool:
+    """Is the marker at `start` opening a new clause, or embedded in one?
+
+    `prev_end` is the end offset of the last marker that WAS accepted as a
+    boundary (0 for the start of the field), so `text[prev_end:start]` is
+    the body accumulated so far for the clause in progress. The marker opens
+    a new clause when that body is empty (marker runs like
+    `＜Progress＞ ＜Piercing＞` or `[When Digivolving] [When Attacking]`),
+    ends at a line break, or ends on a clause-ending character. Otherwise
+    the marker is a mid-sentence reference and stays inline.
+    """
+    segment = text[prev_end:start].rstrip(_INLINE_SPACE_CHARS)
+    if not segment:
+        return True
+    if segment.endswith("\n"):
+        return True
+    return segment[-1] in _CLAUSE_END_CHARS
 
 
 def _normalize_plain_use_requirement(text: str) -> str:
@@ -138,6 +197,7 @@ def split_clauses(raw_text: str | None) -> list[ClauseSpan]:
     text = _normalize_plain_use_requirement(text)
 
     events: list[dict] = []
+    prev_boundary_end = 0
     for m in _BRACKET_RE.finditer(text):
         if m.group("sq") is not None:
             style, raw_inner = "square", m.group("sq")
@@ -153,6 +213,15 @@ def split_clauses(raw_text: str | None) -> list[ClauseSpan]:
             # card-name reference (e.g. [VB], [Gammamon]) -- inline text,
             # not a clause boundary.
             continue
+        if canonical not in _ALWAYS_BOUNDARY_MARKER_NAMES and not _is_clause_boundary(
+            text, prev_boundary_end, m.start()
+        ):
+            # Embedded mid-sentence ("Activate this card's [Main] effect.",
+            # "... Digimon gain ＜Blocker＞ and ＜Retaliation＞.") -- a
+            # reference to an ability, not the start of one. Leave it as
+            # ordinary body text of the clause in progress.
+            continue
+        prev_boundary_end = m.end()
         events.append({"start": m.start(), "end": m.end(), "kind": kind, "name": canonical})
 
     clauses: list[ClauseSpan] = []
